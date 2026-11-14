@@ -62,6 +62,7 @@ struct QWorld {
     std::mutex mMutex;
     std::condition_variable mTurn;
     // the Rust side's op record (cargo's replay)
+    bool mZeroWaitTicks = false;
     bool mRecord = false;
     bool mEcho = false;
     std::string mOps;
@@ -201,7 +202,7 @@ struct QWorld {
             Thread* t = this->mThreads[this->mCurrent];
             t->mState = kBlocked;
             t->mEvent = inEvent;
-            t->mInfinite = inTimeout == kQInfinite;
+            t->mInfinite = inTimeout == kQInfinite || (this->mZeroWaitTicks && this->mClock + inTimeout < this->mClock);
             t->mDeadline = this->mClock + inTimeout;
             this->Switch(false);
             theResult = t->mWake;
@@ -213,6 +214,10 @@ struct QWorld {
     // (failed); a waiter woken by a Set whose event was cleared before it ran answers that event's index
     long WaitAny(const std::vector<int>& inEvents, unsigned long inTimeout)
     {
+        // (ne_server_test: a wait of no time lets a millisecond pass, else a thread polling with it never lets the
+        // clock move)
+        if (inTimeout == 0 && this->mZeroWaitTicks)
+            inTimeout = 1;
         long theResult = -3;
         for (size_t i = 0; theResult == -3 && i < inEvents.size(); i++)
             if (this->mEvents[inEvents[i]])
@@ -224,7 +229,8 @@ struct QWorld {
             t->mState = kBlocked;
             t->mEvent = 0;
             t->mWaitSet = inEvents;
-            t->mInfinite = inTimeout == kQInfinite;
+            // (ne_server_test: a timeout past the clock's wrap is as good as forever, as a real one is weeks)
+            t->mInfinite = inTimeout == kQInfinite || (this->mZeroWaitTicks && this->mClock + inTimeout < this->mClock);
             t->mDeadline = this->mClock + inTimeout;
             this->Switch(false);
             t->mWaitSet.clear();

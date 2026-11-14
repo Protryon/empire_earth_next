@@ -132,7 +132,7 @@ void EESETSETMaintainObject::Show(EESETSEffectControls* inControls)
     inControls->mScenarioComboBoxes[1]->ChangeWidth(200);
     inControls->mScenarioComboBoxes[1]->mMode = kSETriggerScreenObject;
     inControls->mScenarioComboBoxes[1]->DeleteAllEntries();
-    gWorld.mScenarioManager->GetObjectNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     inControls->mScenarioComboBoxes[1]->AppendStringArray(theNames);
     inControls->mScenarioComboBoxes[1]->SetDisplayMode(kDisplayModeShown);
 }

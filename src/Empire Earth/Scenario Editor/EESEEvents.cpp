@@ -335,11 +335,11 @@ void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLa
     UWideString theTitle;
     std::vector<UWideString> theNames;
     if (inAreas == true) {
-        gWorld.mScenarioManager->GetAreaNames(theNames);
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
         gResource->GetString(IDS_AREA, theTitle);
         inComboBox->mMode = kSETriggerScreenArea;
     } else {
-        gWorld.mScenarioManager->GetObjectNames(theNames);
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
         gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theTitle);
         inComboBox->mMode = kSETriggerScreenObject;
     }

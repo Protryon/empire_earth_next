@@ -404,6 +404,23 @@ enum class EeUiOp : uint32_t {
   TextSetBgColor = 189,
   /// Text `a`'s `SetIsTransparent(b != 0)`.
   TextSetTransparent = 190,
+  /// *Pure*: the virtual `GetNumLines()`.
+  ListNumLines = 191,
+  /// The virtual `ChangeSelectionIndex(a, b != 0, c != 0)`.
+  ListChangeSelection = 192,
+  /// The virtual `ClearSelection()`.
+  ListClearSelection = 193,
+  /// The visible lines copied: `mCopyLineArray` grown to `a` lines if shorter, then lines `b .. c` of `mData` copied
+  /// to its start.
+  ListCopyLines = 194,
+  /// The virtual `ProcessDown()` (`a` 0), `ProcessUp()` (1), `ProcessHome()` (2), `ProcessEnd()` (3).
+  ListProcess = 195,
+  /// `*rhombus a = *rhombus b`.
+  RhombusAssign = 196,
+  /// *Pure*: the combo box's question `a >> 24` (`comboobj::EeUiComboQuery`) with its argument `a & 0xffffff`.
+  ComboQuery = 197,
+  /// The combo box's action `a` (`comboobj::EeUiComboAct`) with `b`, `c`, `d`.
+  ComboAct = 198,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -599,6 +616,68 @@ enum class EeUiButtonCall : uint32_t {
 };
 
 /// The inward calls (the C++ shim's methods).
+enum class EeUiComboCall : uint32_t {
+  /// `AddString()`.
+  AddString = 1,
+  /// `AppendLine` / `AppendStringArray` after the C++ dirtied the box and appended: an open list reopens.
+  Reopen = 2,
+  /// `ChangeSelection()`.
+  ChangeSelection = 3,
+  /// `ChangeWidth(a)`.
+  ChangeWidth = 4,
+  /// `CloseListBox()`.
+  CloseListBox = 5,
+  /// `CopyData()`.
+  CopyData = 6,
+  /// `DeleteAllEntries()`.
+  DeleteAllEntries = 7,
+  /// `DeleteLine(a)`.
+  DeleteLine = 8,
+  /// `DrawPolygons()`.
+  DrawPolygons = 9,
+  /// `DrawTextA()`.
+  DrawText = 10,
+  /// `HideControl()`.
+  HideControl = 11,
+  /// `InsertLine(a bytes, b)`.
+  InsertLine = 12,
+  /// `MouseLButtonDown()`.
+  MouseLButtonDown = 13,
+  /// `MouseLButtonUp()`.
+  MouseLButtonUp = 14,
+  /// `MouseMove(f[0], f[1])`.
+  MouseMove = 15,
+  /// `MouseWheelTurned(a)`.
+  MouseWheelTurned = 16,
+  /// `OpenListBox()`.
+  OpenListBox = 17,
+  /// `ProcessDown()` / `ProcessUp()` (the two bodies are one).
+  ProcessArrow = 18,
+  /// `SetCurrentSelection(a)`.
+  SetCurrentSelection = 19,
+  /// `SetLocation(f[0], f[1])`.
+  SetLocation = 20,
+  /// `TabbedTo()` (`a` != 0) or `TabbedFrom()`.
+  Tabbed = 21,
+  /// `UpdateKeyboard()`.
+  UpdateKeyboard = 22,
+  /// `UpdateTranslatedKey(a bytes, b)`.
+  UpdateTranslatedKey = 23,
+  /// `mCurrentSelection`.
+  Selection = 24,
+  /// `mIsListBoxOpen`.
+  IsListBoxOpen = 25,
+  /// `mTextBoxType`.
+  TextBoxType = 26,
+  /// Part `a` ([`ComboPart`]) -> its address (0 for a missing label or edit box).
+  Part = 27,
+  /// `SetListBoxAlwaysDirty(a != 0)`.
+  SetListBoxAlwaysDirty = 28,
+  /// The focus highlight's `SetColor(f[0..3])` (`SetListBoxSelectedBgColor`'s second half).
+  SetSelectedColor = 29,
+};
+
+/// The inward calls (the C++ shim's methods).
 enum class EeUiEditCall : uint32_t {
   /// `AddIMEResultString(a)` (a NUL-terminated bytes).
   AddImeResult = 1,
@@ -790,6 +869,105 @@ enum class EeUiLabelCall : uint32_t {
   SetStartingLine = 59,
 };
 
+/// The inward calls (the C++ template's forwarders).
+enum class EeUiListCall : uint32_t {
+  /// `CopyData()` (after the per-`T` copy of the lines, op `ListCopyLines`).
+  CopyData = 1,
+  /// `DrawPolygons()`.
+  DrawPolygons = 2,
+  /// `DrawTextA()`.
+  DrawText = 3,
+  /// `DrawScrollBarText()`.
+  DrawScrollBarText = 4,
+  /// `ChangeSelectionIndex(a, b & 1 fire, b & 2 scroll to)` (the base class's body).
+  ChangeSelectionIndex = 5,
+  /// `ChangeWidth(a)`.
+  ChangeWidth = 6,
+  /// `ClearSelection()` (the base class's body).
+  ClearSelection = 7,
+  /// `DeleteAllEntries()` after `mData.clear()`.
+  Cleared = 8,
+  /// `DeleteLine(a)` after the erase.
+  DeletedLine = 9,
+  /// `InsertLine` after the line went in at `a`.
+  Inserted = 10,
+  /// `CheckScrollBar()`.
+  CheckScrollBar = 11,
+  /// `SetLocation(f[0], f[1])` (the base class's body).
+  SetLocation = 12,
+  /// `SetScrollBarBgOpacity(f[0])`.
+  SetScrollBarBgOpacity = 13,
+  /// `SetScrollBarBgColor(f[0..3])`.
+  SetScrollBarBgColor = 14,
+  /// `UpdateKeyboard()`.
+  UpdateKeyboard = 15,
+  /// `ButtonDown()` (the base class's body).
+  ButtonDown = 16,
+  /// `MouseLButtonDown()`.
+  MouseLButtonDown = 17,
+  /// `MouseLButtonUp()`.
+  MouseLButtonUp = 18,
+  /// `MouseLButtonDoublePressed()`.
+  MouseDoublePressed = 19,
+  /// `MouseMove(f[0], f[1])`.
+  MouseMove = 20,
+  /// `ProcessDown()` (the base class's body).
+  ProcessDown = 21,
+  /// `ProcessEnd()`.
+  ProcessEnd = 22,
+  /// `ProcessHome()`.
+  ProcessHome = 23,
+  /// `ProcessUp()`.
+  ProcessUp = 24,
+  /// `TabbedFrom()`.
+  TabbedFrom = 25,
+  /// `MouseWheelTurned(a)`.
+  MouseWheelTurned = 26,
+  /// `GetDisplayLine()`.
+  DisplayLine = 27,
+  /// `SetScrollBarCurrentRange(a)`, `SetStartingDisplayLine(a)`.
+  SetScrollValue = 28,
+  /// `GetSelectedBackground()`.
+  SelectedBackground = 29,
+  /// `GetCopiedSelectedBackground()`.
+  CopiedSelectedBackground = 30,
+  /// `GetNumberLinesDisplayed()`.
+  NumberLinesDisplayed = 31,
+  /// `GetScrollBar()`.
+  ScrollBar = 32,
+  /// `GetScrollBarCaptured()`.
+  ScrollBarCaptured = 33,
+  /// `GetHasSelection()`.
+  HasSelection = 34,
+  /// `SetAutoSelect(a != 0)`.
+  SetAutoSelect = 35,
+  /// `SetFocusedRectColor(f[0..3])`.
+  SetFocusedRectColor = 36,
+  /// `GetLineHeight()`.
+  LineHeight = 37,
+  /// `GetSelectionIndex()` (`mCurrentSelection`).
+  SelectionIndex = 38,
+  /// `GetAutoSelect()`.
+  AutoSelect = 39,
+  /// `GetCopiedHasSelection()`.
+  CopiedHasSelection = 40,
+  /// `SetCopiedHasSelection(a != 0)`.
+  SetCopiedHasSelection = 41,
+  /// `SetCopiedHasFocus(a != 0)`.
+  SetCopiedHasFocus = 42,
+  /// `GetFocusedRectColor()` -> `f[0..3]`.
+  FocusedRectColor = 43,
+  /// `GetCopiedFocusedRectColor()` -> `f[0..3]`.
+  CopiedFocusedRectColor = 44,
+  /// `SetCopiedFocusedRectColor(f[0..3])`.
+  SetCopiedFocusedRectColor = 45,
+  /// `GetCopyTextRectangle()` -> the address of the copied text rectangle (`GERectangle`'s layout; valid while
+  /// the object lives).
+  CopyTextRectangle = 46,
+  /// `GetDrawCount()` (`mDrawLineCount`).
+  DrawCount = 47,
+};
+
 /// The inward calls (the C++ shim's methods).
 enum class EeUiScrollBarCall : uint32_t {
   /// `CopyData()` -> the slider's result.
@@ -928,14 +1106,132 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// The questions (`ComboQuery`'s `a >> 24`).
+enum class EeUiComboQuery : uint32_t {
+  /// Part `a`'s rectangle -> `f`.
+  RectOf = 1,
+  /// The text box's border thickness.
+  TextBoxBorder = 2,
+  /// The list's `GetLineCount()`.
+  LineCount = 3,
+  /// The list's line `a` -> its NUL-terminated bytes.
+  Line = 4,
+  /// The list's line height.
+  LineHeight = 5,
+  /// The list's border thickness.
+  ListBorder = 6,
+  /// The list's scroll bar rectangle -> whether it has one, the rectangle in `f`.
+  ListScrollBarRect = 7,
+  /// The list's `GetScrollBarCaptured()`.
+  ListScrollBarCaptured = 8,
+  /// The list's `GetCurrentSelection(out)` -> its result, `out` in `f[0]`'s bits.
+  ListSelection = 9,
+  /// The window's height.
+  WindowHeight = 10,
+  /// The edit box's text -> its NUL-terminated bytes.
+  EditText = 11,
+  /// The form's `GetTabbingOn()`.
+  TabbingOn = 12,
+  /// The form's `GetTabStop()`.
+  TabStop = 13,
+  /// `GetHasMouseCapture()`.
+  HasMouseCapture = 14,
+  /// `GetMouseLocation()` -> `f[0]`, `f[1]`.
+  MouseLocation = 15,
+  /// Key `a` ([`ComboKey`]).
+  Key = 16,
+};
+
+/// The actions (`ComboAct`'s `a`).
+enum class EeUiComboAct : uint32_t {
+  /// The list's virtual `ChangeSelectionIndex(b, c & 1, c & 2)`.
+  ListChangeSelection = 0,
+  /// The list's `InsertLine(UWideString(b bytes), c)`.
+  ListInsertLine = 1,
+  /// The list's virtual `DeleteLine(b)`.
+  ListDeleteLine = 2,
+  /// The list's virtual `DeleteAllEntries()`.
+  ListDeleteAll = 3,
+  /// The list's `ChangeWidth(b)`.
+  ListChangeWidth = 4,
+  /// The text box shows list line `b`.
+  ShowLine = 5,
+  /// The text box's text set empty.
+  ClearText = 6,
+  /// The text box's text deleted (the label's line 0, the edit box's `DeleteText()`).
+  DeleteText = 7,
+  /// Part `b`'s virtual `MouseLButtonDown()`.
+  PartMouseDown = 8,
+  /// Part `b`'s virtual `MouseLButtonUp()`.
+  PartMouseUp = 9,
+  /// Part `b`'s virtual `MouseMove(f[0], f[1])`.
+  PartMouseMove = 10,
+  /// The list's virtual `MouseWheelTurned(b)`.
+  ListWheel = 11,
+  /// Part `b`'s virtual `UpdateKeyboard()`.
+  PartUpdateKeyboard = 12,
+  /// Part `b`'s virtual `UpdateTranslatedKey(c bytes, d)`.
+  PartTranslatedKey = 13,
+  /// Part `b`'s virtual `TabbedTo()` (`c` != 0) or `TabbedFrom()`.
+  PartTabbed = 14,
+  /// Part `b`'s virtual `SetRectangle(f)`.
+  PartSetRectangle = 15,
+  /// Part `b`'s virtual `SetLocation(f[0], f[1])`.
+  PartSetLocation = 16,
+  /// Part `b`'s virtual `CopyData()`.
+  PartCopyData = 17,
+  /// The list's text takes the text box's colours and transparency.
+  CopyListColours = 18,
+  /// `UIControl::CopyData()`.
+  BaseCopyData = 20,
+  /// The form's `SetPopup(b != 0 ? this : NULL)`.
+  SetPopup = 21,
+  /// The virtual `SetDirty(true)`.
+  SetDirty = 22,
+  /// The virtual `SetRectangle(f)`.
+  SetRectangle = 23,
+  /// `UIControl::SetRectangle(f)`.
+  BaseSetRectangle = 24,
+  /// `UIControl::SetLocation(f[0], f[1])`.
+  BaseSetLocation = 25,
+  /// `SetAlwaysDirty(b != 0)`.
+  SetAlwaysDirty = 26,
+  /// `FireTriggerEvent(b)`.
+  Fire = 27,
+  /// `CaptureMouse()`.
+  CaptureMouse = 28,
+  /// `CaptureKeyboard()`.
+  CaptureKeyboard = 29,
+  /// The virtual `ReleaseCapturedMouse()`.
+  ReleaseMouse = 30,
+  /// The virtual `ReleaseCapturedKeyboard()`.
+  ReleaseKeyboard = 31,
+  /// The virtual `OpenListBox()`.
+  OpenList = 32,
+  /// The virtual `CloseListBox()`.
+  CloseList = 33,
+  /// The virtual `AddString()`.
+  AddString = 34,
+  /// The virtual `ChangeSelection()`.
+  ChangeSelection = 35,
+  /// The virtual `ProcessDown()` (`b` != 0) or `ProcessUp()`.
+  ProcessArrow = 36,
+};
+
 /// The Rust UIButton.
 struct EeUiButton;
+
+/// The Rust UIComboBox.
+struct EeUiCombo;
 
 /// The Rust UIEditBox.
 struct EeUiEdit;
 
 /// The Rust UITextLabel (and UITLScrolling).
 struct EeUiLabel;
+
+/// The Rust UIListBox.
+struct EeUiList;
 
 /// The Rust UIScrollBar.
 struct EeUiScrollBar;
@@ -1072,29 +1368,6 @@ struct EeUiBackgroundTableRefs {
   EeUiLayout *layout;
   EeUiRect *texture_rect;
   EeUiColor *color;
-};
-
-/// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
-struct EeUiComboFields {
-  void *text_box;
-  unsigned long text_box_type;
-  unsigned long current_selection;
-  unsigned long max_list_box_height;
-  bool is_list_box_open;
-  bool released_once;
-  bool copied_list_box_open;
-  bool list_box_always_dirty;
-  bool copied_has_focus;
-};
-
-/// One combo box as Rust sees it: the C++ object, its record from `mTextBox` on, `mRectangle`, `mIndex`, and `ctx`,
-/// the C++ forwarder's context for a host call (`UpdateTranslatedKey`'s key; NULL otherwise).
-struct EeUiComboRefs {
-  void *combo;
-  EeUiComboFields *fields;
-  const EeUiRect *rect;
-  const unsigned long *index;
-  void *ctx;
 };
 
 /// `UIControlsTable`'s plain members in their C++ order (the record starts at `mBackgroundOpacity`).
@@ -1330,66 +1603,6 @@ struct EeUiClipInfo {
 /// The C++'s text draw: `Draw(text, *r, drawing surface)` -> its result.
 using EeUiTextDrawFn = long(*)(void *ctx, const EeUiRect *r);
 
-/// `UIListBox::CopyData`'s copied lines `first .. end` and the count drawn.
-struct EeUiListRange {
-  unsigned long first;
-  unsigned long end;
-  unsigned long count;
-};
-
-/// The host functions of one `UIListBox<T>` instantiation.
-struct EeUiListHost {
-  unsigned long (*num_lines)(void *list);
-  void (*change_selection)(void *list, unsigned long index, bool fire, bool scroll_to);
-  void (*clear_selection)(void *list);
-  bool (*has_scroll_bar)(void *list);
-  long (*scroll_value)(void *list);
-  long (*scroll_max)(void *list);
-  void (*set_scroll_value)(void *list, unsigned long value);
-  void (*set_scroll_range)(void *list, unsigned long min, unsigned long max);
-  void (*scroll_set_rectangle)(void *list, const EeUiRect *r);
-  void (*create_scroll_bar)(void *list,
-                            float x,
-                            float y,
-                            float length,
-                            unsigned long page,
-                            unsigned long value);
-  void (*set_dirty)(void *list);
-  void (*fire)(void *list, unsigned long event);
-  void (*set_bg_rectangle)(void *list, const EeUiRect *r);
-  void (*base_set_location)(void *list, float x, float y);
-  void (*mouse_location)(void *list, EeUiPoint *out);
-};
-
-/// `UIListBox`'s members from `mScrollBarBgOpacity` to `mHasSelection`, in order (offsets `static_assert`ed in
-/// `lle/UIListBox.h`).
-struct EeUiListFields {
-  float scroll_bar_bg_opacity;
-  unsigned long number_lines_displayed;
-  unsigned long current_selection;
-  unsigned long draw_line_count;
-  unsigned long line_height;
-  bool auto_select;
-  bool button_down;
-  bool scroll_bar_captured;
-  bool copied_has_focus;
-  bool copied_has_selection;
-  bool scroll_bar_removed;
-  bool copied_scroll_bar_visible;
-  bool has_selection;
-};
-
-/// One list box as Rust sees it: the object, its host table, its record from `mScrollBarBgOpacity` on,
-/// `mTextRectangle`, `mRectangle` and `mBorderThickness`.
-struct EeUiListRefs {
-  void *list;
-  const EeUiListHost *host;
-  EeUiListFields *fields;
-  EeUiRect *text;
-  const EeUiRect *rect;
-  const unsigned long *border;
-};
-
 /// `UICheckBox`'s members in their C++ order (from `mTextLabel` on).
 struct EeUiCheckFields {
   /// `UITextLabel*`, C++'s.
@@ -1472,6 +1685,46 @@ ptrdiff_t ee_ui_button_call(const EeUiButton *button,
 EeUiRect ee_ui_button_box_rect(EeUiRect rect,
                                bool scale_bitmap);
 
+/// A new Rust combo box for the C++ `combo` (its parts made; see [`EeUiCombo::new`]).
+///
+/// # Safety
+/// `host` answers the ops for `combo`; `color` is three floats.
+EeUiCombo *ee_ui_combo_new(void *combo,
+                           EeUiHostFn host,
+                           void *label,
+                           void *drop,
+                           void *list,
+                           void *edit,
+                           unsigned long text_box_type,
+                           unsigned long max_list_box_height,
+                           unsigned long selection,
+                           const float *color);
+
+/// The destructor: deletes the parts and the focus highlight and frees the object.
+///
+/// # Safety
+/// `combo` came from `ee_ui_combo_new` (or is NULL) and is not used again.
+void ee_ui_combo_free(EeUiCombo *combo);
+
+/// One of UIComboBox's methods ([`EeUiComboCall`]).
+///
+/// # Safety
+/// `combo` is live; see [`EeUiCombo::call`].
+ptrdiff_t ee_ui_combo_call(const EeUiCombo *combo,
+                           EeUiComboCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           float *f);
+
+/// The constructor's drop button ([`combo::drop_rect`]).
+EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);
+
+/// The constructor's text box ([`combo::text_rect`]).
+EeUiRect ee_ui_combo_text_rect(EeUiRect control, EeUiRect given, unsigned long drop_width);
+
+/// The constructor's list ([`combo::list_rect`]).
+EeUiRect ee_ui_combo_list_rect(EeUiRect control, float text_bottom, unsigned long max_height);
+
 /// A new Rust edit box for the C++ `edit` (its `UIControl` part constructed): `flags` bit 0 numbers only, bit 1
 /// multi-line, bit 2 a password box.
 ///
@@ -1530,6 +1783,39 @@ ptrdiff_t ee_ui_label_call(const EeUiLabel *label,
                            ptrdiff_t a,
                            ptrdiff_t b,
                            float *f);
+
+/// A new Rust list box for the C++ `list` (its `UIControl` part constructed); the C++ then sizes the copy, assigns
+/// the lines and calls `CheckScrollBar`.
+///
+/// # Safety
+/// `host` answers the ops for `list`.
+EeUiList *ee_ui_list_new(void *list,
+                         EeUiHostFn host,
+                         unsigned long line_height,
+                         bool auto_select,
+                         unsigned long border);
+
+/// The destructor (after `mData.clear()`): the rest of `DeleteAllEntries`, then the parts deleted; frees the object.
+///
+/// # Safety
+/// `list` came from `ee_ui_list_new` (or is NULL) and is not used again.
+void ee_ui_list_free(EeUiList *list);
+
+/// One of UIListBox's methods ([`EeUiListCall`]).
+///
+/// # Safety
+/// `list` is live; `f` is NULL or four live floats.
+ptrdiff_t ee_ui_list_call(const EeUiList *list,
+                          EeUiListCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          float *f);
+
+/// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
+///
+/// # Safety
+/// Both are NUL-terminated bytes.
+bool ee_ui_text_less_no_case(const char *left, const char *right);
 
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.
@@ -1686,78 +1972,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// The constructor's drop button ([`combo::drop_rect`]).
-EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);
-
-/// The constructor's text box ([`combo::text_rect`]).
-EeUiRect ee_ui_combo_text_rect(EeUiRect control, EeUiRect given, unsigned long drop_width);
-
-/// The constructor's list ([`combo::list_rect`]).
-EeUiRect ee_ui_combo_list_rect(EeUiRect control, float text_bottom, unsigned long max_height);
-
-/// `UIComboBox::AddString`.
-long ee_ui_combo_add_string(const EeUiComboRefs *refs);
-
-/// `UIComboBox::InsertLine` (`text` NUL-terminated).
-void ee_ui_combo_insert_line(const EeUiComboRefs *refs, const char *text, unsigned long i);
-
-/// `AppendLine` / `AppendStringArray`'s end: an open list reopens.
-void ee_ui_combo_reopen(const EeUiComboRefs *refs);
-
-/// `UIComboBox::ChangeSelection`.
-void ee_ui_combo_change_selection(const EeUiComboRefs *refs);
-
-/// `UIComboBox::ChangeWidth`.
-void ee_ui_combo_change_width(const EeUiComboRefs *refs, unsigned long width);
-
-/// `UIComboBox::CloseListBox`.
-void ee_ui_combo_close_list_box(const EeUiComboRefs *refs);
-
-/// `UIComboBox::CopyData`.
-long ee_ui_combo_copy_data(const EeUiComboRefs *refs);
-
-/// `UIComboBox::DeleteAllEntries`.
-void ee_ui_combo_delete_all_entries(const EeUiComboRefs *refs);
-
-/// `UIComboBox::DeleteLine`.
-void ee_ui_combo_delete_line(const EeUiComboRefs *refs, unsigned long line);
-
-/// `UIComboBox::HideControl`.
-void ee_ui_combo_hide_control(const EeUiComboRefs *refs);
-
-/// `UIComboBox::MouseLButtonDown`.
-long ee_ui_combo_mouse_l_button_down(const EeUiComboRefs *refs);
-
-/// `UIComboBox::MouseLButtonUp`.
-long ee_ui_combo_mouse_l_button_up(const EeUiComboRefs *refs);
-
-/// `UIComboBox::MouseMove`.
-long ee_ui_combo_mouse_move(const EeUiComboRefs *refs, EeUiPoint at);
-
-/// `UIComboBox::MouseWheelTurned`.
-long ee_ui_combo_mouse_wheel_turned(const EeUiComboRefs *refs, long delta);
-
-/// `UIComboBox::OpenListBox`.
-void ee_ui_combo_open_list_box(const EeUiComboRefs *refs);
-
-/// `UIComboBox::ProcessDown` and `ProcessUp`.
-void ee_ui_combo_process_arrow(const EeUiComboRefs *refs);
-
-/// `UIComboBox::SetCurrentSelection`.
-void ee_ui_combo_set_current_selection(const EeUiComboRefs *refs, unsigned long i);
-
-/// `UIComboBox::SetLocation`.
-void ee_ui_combo_set_location(const EeUiComboRefs *refs, EeUiPoint at);
-
-/// `UIComboBox::TabbedTo` (`to`) or `TabbedFrom`.
-void ee_ui_combo_tabbed(const EeUiComboRefs *refs, bool to);
-
-/// `UIComboBox::UpdateKeyboard`.
-long ee_ui_combo_update_keyboard(const EeUiComboRefs *refs);
-
-/// `UIComboBox::UpdateTranslatedKey` (`ctx`: the C++ key and repeat count).
-long ee_ui_combo_update_translated_key(const EeUiComboRefs *refs);
 
 /// The default constructor's fields (written whole).
 void ee_ui_controls_table_init(const EeUiControlsTableRefs *refs);
@@ -2020,25 +2234,6 @@ long ee_ui_form_draw_clipped_text(const EeUiClipInfo *info,
                                   EeUiTextDrawFn draw_text,
                                   void *ctx);
 
-EeUiListRange ee_ui_list_line_range(bool has_scroll,
-                                    long value,
-                                    unsigned long shown,
-                                    unsigned long lines);
-
-/// `UIListBox::CopyData`'s selection rectangle -> whether the selection is drawn (`out` set then).
-bool ee_ui_list_selection(unsigned long lines,
-                          bool has_selection,
-                          unsigned long selection,
-                          unsigned long first,
-                          unsigned long end,
-                          EeUiRect tr,
-                          unsigned long line_height,
-                          EeUiRect *out);
-
-/// `UIListBox::DrawPolygons`'s focus rectangle: `out[2k]` and `out[2k + 1]` are line k's start and end.
-void ee_ui_list_focus_lines(EeUiRect r,
-                            EeUiPoint *out);
-
 /// `UILBString::DrawTextA`'s row `i`.
 EeUiRect ee_ui_string_list_row(EeUiRect ctr, unsigned long i, unsigned long line_height);
 
@@ -2069,54 +2264,6 @@ long ee_ui_control_update_mouse(void *control,
 
 /// `UIForm::UpdateMouse` -> its result.
 long ee_ui_form_update_mouse(void *form);
-
-/// `UIListBox::ChangeSelectionIndex`.
-void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
-                                       unsigned long index,
-                                       bool fire,
-                                       bool scroll_to);
-
-/// `UIListBox::CheckScrollBar`.
-void ee_ui_list_check_scroll_bar(const EeUiListRefs *refs);
-
-/// `UIListBox::DeleteAllEntries` after `mData.clear()`.
-void ee_ui_list_cleared(const EeUiListRefs *refs);
-
-/// `UIListBox::DeleteLine` after the erase.
-void ee_ui_list_deleted_line(const EeUiListRefs *refs, unsigned long line);
-
-/// `UIListBox::InsertLine` after the insert at `index`.
-void ee_ui_list_inserted(const EeUiListRefs *refs, unsigned long index);
-
-/// `UIListBox::ButtonDown`.
-void ee_ui_list_button_down(const EeUiListRefs *refs);
-
-/// `UIListBox::MouseLButtonDoublePressed` inside the text (false: the C++ hands the click to `UIControl`).
-bool ee_ui_list_double_pressed(const EeUiListRefs *refs);
-
-/// `UIListBox::MouseLButtonUp`'s test: the button went up on the selected line.
-bool ee_ui_list_up_on_selection(const EeUiListRefs *refs);
-
-/// `UIListBox::MouseMove` off the scroll bar.
-void ee_ui_list_mouse_move(const EeUiListRefs *refs, EeUiPoint at);
-
-/// `UIListBox::ProcessDown`.
-void ee_ui_list_down(const EeUiListRefs *refs);
-
-/// `UIListBox::ProcessUp`.
-void ee_ui_list_up(const EeUiListRefs *refs);
-
-/// `UIListBox::ProcessHome`.
-void ee_ui_list_home(const EeUiListRefs *refs);
-
-/// `UIListBox::ProcessEnd`.
-void ee_ui_list_end(const EeUiListRefs *refs);
-
-/// `UIListBox::SetLocation`.
-void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
-
-/// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
-bool ee_ui_text_less_no_case(const char *left, const char *right);
 
 /// `UIManager::AddDirtyRectangle(rect, form)`.
 void ee_ui_manager_add_dirty_rectangle(void *manager, const EeUiRect *rect, void *form);

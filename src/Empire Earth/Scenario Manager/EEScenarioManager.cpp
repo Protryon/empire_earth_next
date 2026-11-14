@@ -96,23 +96,6 @@ static const float kTriggerInterval = 500.0f;  // 0x445fcc (trigger interval, ms
 extern float gF4BE374;                       // 0x4be374 (= 1.0f; Update ends the cinematic when it is 1; provisional name)
 extern float& gSideScrollSpeed;               // 0x530828 (MoveCameraToStart's camera step scale; provisional name)
 
-// the stable_sort predicates (empty function objects passed by value: 0x1b5e77..0x1b5f7b; provisional names)
-struct EESMConditionLess {
-    bool operator()(EESMCondition* inA, EESMCondition* inB) const { return inA->mName < inB->mName; }
-};
-struct EESMEffectLess {
-    bool operator()(EESMEffect* inA, EESMEffect* inB) const { return inA->mName < inB->mName; }
-};
-struct EESMObjectLess {
-    bool operator()(EESMObject* inA, EESMObject* inB) const { return inA->mName < inB->mName; }
-};
-struct EESMAreaLess {
-    bool operator()(EESMArea* inA, EESMArea* inB) const { return inA->mName < inB->mName; }
-};
-struct EESMTriggerLess {
-    bool operator()(EESMTrigger* inA, EESMTrigger* inB) const { return inA->mName < inB->mName; }
-};
-
 // FUNCTION: EXE 0x5afa90
 // Creates a scenario holding only the default entries (see Reset)
 EEScenarioManager::EEScenarioManager()
@@ -216,536 +199,11 @@ void EEScenarioManager::AddTimedEffect(long inEffect, unsigned long inTime, bool
     ee_scenario_timed_add(this->mTimedEffects, inEffect, inTime, inIsInCinematic);
 }
 
-// FUNCTION: EXE 0x5b00c1
-// Sorts the user areas by name (the two built-in areas stay first) and remaps every area reference
-void EEScenarioManager::SortAreas()
-{
-    std::vector<EESMArea*> theOldAreas(this->mAreas);
-    EESMIDMap theMap;
-    std::stable_sort(this->mAreas.begin() + 2, this->mAreas.end(), EESMAreaLess());
-    for (unsigned long i = 0; i < this->mAreas.size(); i++) {
-        for (unsigned long j = 0; j < theOldAreas.size(); j++) {
-            if (theOldAreas[j] == this->mAreas[i]) {
-                theMap.insert(EESMIDMap::value_type(j, i));
-                break;
-            }
-        }
-    }
-    this->RemapAreas(theMap);
-}
-
-// FUNCTION: EXE 0x5b01a6
-// Sorts the user conditions by name (Always True stays first, the object conditions last) and remaps every
-// condition reference
-void EEScenarioManager::SortConditions()
-{
-    std::vector<EESMCondition*> theOldConditions(this->mConditions);
-    EESMIDMap theMap;
-    unsigned long i;
-    for (i = 0; i < this->mConditions.size(); i++)
-        if (this->mConditions[i]->GetType() == kSMConditionObject)
-            break;
-    std::stable_sort(this->mConditions.begin() + 1, this->mConditions.end() - (this->mConditions.size() - i), EESMConditionLess());
-    for (unsigned long theNew = 0; theNew < this->mConditions.size(); theNew++) {
-        for (unsigned long theOld = 0; theOld < theOldConditions.size(); theOld++) {
-            if (theOldConditions[theOld] == this->mConditions[theNew]) {
-                theMap.insert(EESMIDMap::value_type(theOld, theNew));
-                break;
-            }
-        }
-    }
-    this->RemapConditions(theMap);
-}
-
-// FUNCTION: EXE 0x5b02f6
-// Drops every timed effect, sorts the user effects by name (Do Nothing stays first) and remaps effect references
-void EEScenarioManager::SortEffects()
-{
-    std::vector<EESMEffect*> theOldEffects(this->mEffects);
-    EESMIDMap theMap;
-    ee_scenario_timed_clear(this->mTimedEffects);
-    std::stable_sort(this->mEffects.begin() + 1, this->mEffects.end(), EESMEffectLess());
-    for (unsigned long theNew = 1; theNew < this->mEffects.size(); theNew++) {
-        for (unsigned long theOld = 0; theOld < theOldEffects.size(); theOld++) {
-            if (theOldEffects[theOld] == this->mEffects[theNew]) {
-                theMap.insert(EESMIDMap::value_type(theOld, theNew));
-                break;
-            }
-        }
-    }
-    this->RemapEffects(theMap);
-}
-
-// FUNCTION: EXE 0x5b041c
-// Sorts the user objects (None stays first) and the object conditions by name, then remaps object and condition
-// references
-void EEScenarioManager::SortObjects()
-{
-    std::vector<EESMObject*> theOldObjects(this->mObjects);
-    std::vector<EESMCondition*> theOldConditions(this->mConditions);
-    EESMIDMap theMap;
-    std::stable_sort(this->mObjects.begin() + 1, this->mObjects.end(), EESMObjectLess());
-    unsigned long i;
-    for (i = 0; i < this->mConditions.size(); i++)
-        if (this->mConditions[i]->mType == kSMConditionObject)
-            break;
-    std::stable_sort(this->mConditions.begin() + i, this->mConditions.end(), EESMConditionLess());
-    for (unsigned long theNew = 1; theNew < this->mObjects.size(); theNew++) {
-        for (unsigned long theOld = 0; theOld < theOldObjects.size(); theOld++) {
-            if (theOldObjects[theOld] == this->mObjects[theNew]) {
-                theMap.insert(EESMIDMap::value_type(theOld, theNew));
-                break;
-            }
-        }
-    }
-    this->RemapObjects(theMap);
-    theMap.clear();
-    for (unsigned long theNewCondition = 1; theNewCondition < this->mConditions.size(); theNewCondition++) {
-        for (unsigned long theOldCondition = 0; theOldCondition < theOldConditions.size(); theOldCondition++) {
-            if (theOldConditions[theOldCondition] == this->mConditions[theNewCondition]) {
-                theMap.insert(EESMIDMap::value_type(theOldCondition, theNewCondition));
-                break;
-            }
-        }
-    }
-    this->RemapConditions(theMap);
-}
-
-// FUNCTION: EXE 0x5b0674
-// Sorts the triggers by name and remaps every trigger reference
-void EEScenarioManager::SortTriggers()
-{
-    std::vector<EESMTrigger*> theOldTriggers(this->mTriggers);
-    EESMIDMap theMap;
-    std::stable_sort(this->mTriggers.begin(), this->mTriggers.end(), EESMTriggerLess());
-    for (unsigned long i = 0; i < this->mTriggers.size(); i++) {
-        for (unsigned long j = 0; j < theOldTriggers.size(); j++) {
-            if (theOldTriggers[j] == this->mTriggers[i]) {
-                theMap.insert(EESMIDMap::value_type(j, i));
-                break;
-            }
-        }
-    }
-    this->RemapTriggers(theMap);
-}
-
-// FUNCTION: EXE 0x5b074c
-// Appends a new area named <AreaN> and returns it (its ID is the incremented counter, N + 1)
-EESMArea* EEScenarioManager::NewArea()
-{
-    UWideString theName;
-    sprintf(theName, "<Area%ld>", this->mNextAreaID++);
-    EESMArea* theArea = new EESMArea;
-    theArea->mName = theName;
-    theArea->mID = this->mNextAreaID;
-    this->mAreas.push_back(theArea);
-    return theArea;
-}
-
-// FUNCTION: EXE 0x5b07d2
-// Inserts a new condition named <ConditionN> before the object conditions, remaps condition references and
-// returns it (its ID is N + 1)
-EESMCondition* EEScenarioManager::NewCondition()
-{
-    std::vector<EESMCondition*> theOldConditions(this->mConditions);
-    EESMIDMap theMap;
-    UWideString theName;
-    unsigned long i;
-    for (i = 0; i < this->mConditions.size(); i++)
-        if (this->mConditions[i]->mType == kSMConditionObject)
-            break;
-    sprintf(theName, "<Condition%ld>", this->mNextConditionID++);
-    EESMCondition* theCondition = new EESMCondition;
-    theCondition->mName = theName;
-    theCondition->mID = this->mNextConditionID;
-    this->mConditions.insert(this->mConditions.begin() + i, theCondition);
-    for (unsigned long theNew = 0; theNew < this->mConditions.size(); theNew++) {
-        for (unsigned long theOld = 0; theOld < theOldConditions.size(); theOld++) {
-            if (theOldConditions[theOld] == this->mConditions[theNew]) {
-                theMap.insert(EESMIDMap::value_type(theOld, theNew));
-                break;
-            }
-        }
-    }
-    this->RemapConditions(theMap);
-    return theCondition;
-}
-
 // FUNCTION: EXE 0x5b0982
 // Creates a new, default scenario manager (the persistent object factory)
 FSPersistent* EEScenarioManager::CreateDefault() const
 {
     return new EEScenarioManager;
-}
-
-// FUNCTION: EXE 0x5b099c
-// Appends a new effect named <EffectN> and returns it (its ID is the incremented counter, N + 1)
-EESMEffect* EEScenarioManager::NewEffect()
-{
-    UWideString theName;
-    sprintf(theName, "<Effect%ld>", this->mNextEffectID++);
-    EESMEffect* theEffect = new EESMEffect;
-    theEffect->mName = theName;
-    theEffect->mID = this->mNextEffectID;
-    this->mEffects.push_back(theEffect);
-    return theEffect;
-}
-
-// FUNCTION: EXE 0x5b0a28
-// Appends a new scenario object with the next object ID and an Exists condition for it, named from the object's
-// default name (<id:None Exists>); returns the object
-EESMObject* EEScenarioManager::NewObject()
-{
-    UWideString theName;
-    UWideString theText;
-    EESMObject* theObject = new EESMObject;
-    theObject->mL64 = ++this->mNextObjectID;
-    this->mObjects.push_back(theObject);
-    if (this->mObjects.size() <= 1)
-        return theObject;
-    EESMCondition* theCondition = new EESMCondition;
-    this->mConditions.push_back(theCondition);
-    ++this->mNextConditionID;
-    gResource->GetString(IDS_EXISTS, theText);
-    sprintf(theName, "<%ld:%s %s>", this->mNextConditionID, (const char*)theObject->mName, (const char*)theText);
-    theCondition->mName = theName;
-    theCondition->mID = this->mNextConditionID;
-    theCondition->mType = kSMConditionObject;
-    theCondition->mObjectIndex = this->mObjects.size() - 1;
-    return theObject;
-}
-
-// FUNCTION: EXE 0x5b0b65
-// Appends a new trigger named <TriggerN> and returns it (its ID is the incremented counter, N + 1)
-EESMTrigger* EEScenarioManager::NewTrigger()
-{
-    UWideString theName;
-    sprintf(theName, "<Trigger%ld>", this->mNextTriggerID++);
-    EESMTrigger* theTrigger = new EESMTrigger;
-    theTrigger->mName = theName;
-    theTrigger->mID = this->mNextTriggerID;
-    this->mTriggers.push_back(theTrigger);
-    return theTrigger;
-}
-
-// FUNCTION: EXE 0x5b0beb
-// Swaps a user area with the next one and renumbers area references (not a built-in area or the last one)
-void EEScenarioManager::MoveAreaDown(unsigned long inIndex)
-{
-    EESMArea* theArea = this->mAreas[inIndex];
-    if (inIndex <= 1 || inIndex == this->mAreas.size() - 1)
-        return;
-    this->mAreas[inIndex] = this->mAreas[inIndex + 1];
-    this->mAreas[inIndex + 1] = theArea;
-    this->RenumberAreas(inIndex, inIndex + 1);
-}
-
-// FUNCTION: EXE 0x5b0c45
-// Swaps a user condition with the next user condition and renumbers references
-void EEScenarioManager::MoveConditionDown(unsigned long inIndex)
-{
-    EESMCondition* theCondition = this->mConditions[inIndex];
-    unsigned long theCount;
-    for (theCount = 0; theCount < this->mConditions.size() && this->mConditions[theCount]->mType != kSMConditionObject; theCount++)
-        ;
-    // the next condition must be a user condition too (the object conditions stay at the end)
-    if (inIndex <= 0 || inIndex + 1 >= theCount || !(inIndex < this->mConditions.size() - 1))
-        return;
-    this->mConditions[inIndex] = this->mConditions[inIndex + 1];
-    this->mConditions[inIndex + 1] = theCondition;
-    this->RenumberConditions(inIndex, inIndex + 1);
-}
-
-// FUNCTION: EXE 0x5b0cde
-// Swaps a user effect with the next one and renumbers effect references (not Do Nothing or the last effect)
-void EEScenarioManager::MoveEffectDown(unsigned long inIndex)
-{
-    EESMEffect* theEffect = this->mEffects[inIndex];
-    if (inIndex <= 0 || inIndex == this->mEffects.size() - 1)
-        return;
-    this->mEffects[inIndex] = this->mEffects[inIndex + 1];
-    this->mEffects[inIndex + 1] = theEffect;
-    this->RenumberEffects(inIndex, inIndex + 1);
-}
-
-// FUNCTION: EXE 0x5b0d37
-// Swaps a user object with the next one, moves its Exists condition down one place too and renumbers references
-void EEScenarioManager::MoveObjectDown(unsigned long inIndex)
-{
-    EESMObject* theObject = this->mObjects[inIndex];
-    if (inIndex <= 0 || inIndex == this->mObjects.size() - 1)
-        return;
-    this->mObjects[inIndex] = this->mObjects[inIndex + 1];
-    this->mObjects[inIndex + 1] = theObject;
-    for (unsigned long i = 1; i < this->mConditions.size() - 1; i++) {
-        EESMCondition* theCondition = this->mConditions[i];
-        if (theCondition->GetType() != kSMConditionObject || theCondition->GetObjectIndex() != inIndex)
-            continue;
-        this->mConditions[i] = this->mConditions[i + 1];
-        this->mConditions[i + 1] = theCondition;
-        this->RenumberConditions(i, i + 1);
-        break;
-    }
-    this->RenumberObjects(inIndex, inIndex + 1);
-}
-
-// FUNCTION: EXE 0x5b0e71
-// Swaps a trigger with the next one and renumbers trigger references (not the last trigger)
-void EEScenarioManager::MoveTriggerDown(unsigned long inIndex)
-{
-    EESMTrigger* theTrigger = this->mTriggers[inIndex];
-    if (inIndex == this->mTriggers.size() - 1)
-        return;
-    this->mTriggers[inIndex] = this->mTriggers[inIndex + 1];
-    this->mTriggers[inIndex + 1] = theTrigger;
-    this->RenumberTriggers(inIndex, inIndex + 1);
-}
-
-// FUNCTION: EXE 0x5b0ec6
-// Deletes a user area and renumbers area references (references to it become Off Map); false for a built-in area
-bool EEScenarioManager::DeleteArea(unsigned long inIndex)
-{
-    if (inIndex >= 2) {
-        EESMArea* theArea = this->GetArea(inIndex);
-        this->mAreas.erase(this->mAreas.begin() + inIndex);
-        delete theArea;
-        this->RenumberAreas(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
-        return true;
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x5b0f3f
-// Deletes a condition (not Always True) and renumbers the triggers' condition references; returns whether it did
-bool EEScenarioManager::DeleteCondition(unsigned long inIndex)
-{
-    bool theResult = false;
-    if (inIndex != 0) {
-        EESMCondition* theCondition = this->GetCondition(inIndex);
-        this->mConditions.erase(this->mConditions.begin() + inIndex);
-        delete theCondition;
-        this->RenumberConditions(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
-        theResult = true;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b0fb5
-// Deletes an effect (not Do Nothing) with its timed entries and renumbers effect references; returns whether it did
-bool EEScenarioManager::DeleteEffect(unsigned long inIndex)
-{
-    bool theResult = false;
-    if (inIndex != 0) {
-        EESMEffect* theEffect = this->GetEffect(inIndex);
-        this->RemoveTimedEffects(inIndex);
-        this->mEffects.erase(this->mEffects.begin() + inIndex);
-        delete theEffect;
-        this->RenumberEffects(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
-        theResult = true;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b1033
-// Deletes a scenario object (not None) and its Exists condition, then renumbers object references; returns whether
-// it did
-bool EEScenarioManager::DeleteObject(unsigned long inIndex)
-{
-    bool theResult = true;
-    if (inIndex > 0) {
-        EESMObject* theObject = this->GetScenarioObject(inIndex);
-        this->mObjects.erase(this->mObjects.begin() + inIndex);
-        delete theObject;
-        for (unsigned long i = 1; i < this->mConditions.size(); i++) {
-            EESMCondition* theCondition = this->mConditions[i];
-            if (theCondition->mType == kSMConditionObject && theCondition->mObjectIndex == inIndex) {
-                this->DeleteCondition(i);
-                break;
-            }
-        }
-        this->RenumberObjects(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
-    } else
-        theResult = false;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b10ed
-// Deletes a trigger and renumbers trigger references; always returns true
-bool EEScenarioManager::DeleteTrigger(unsigned long inIndex)
-{
-    EESMTrigger* theTrigger = this->GetTrigger(inIndex);
-    this->mTriggers.erase(this->mTriggers.begin() + inIndex);
-    delete theTrigger;
-    this->RenumberTriggers(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
-    return true;
-}
-
-// FUNCTION: EXE 0x5b115a
-// Drops every timed entry of the given effect
-void EEScenarioManager::RemoveTimedEffects(long inEffect)
-{
-    ee_scenario_timed_remove_effect(this->mTimedEffects, inEffect);
-}
-
-// FUNCTION: EXE 0x5b11d1
-// Drops one timed effect entry by position
-void EEScenarioManager::EraseTimedEffect(unsigned long inIndex)
-{
-    ee_scenario_timed_erase(this->mTimedEffects, inIndex);
-}
-
-// FUNCTION: EXE 0x5b120d
-// Appends a copy of an area named <name_Copy> with the next area ID and returns it
-EESMArea* EEScenarioManager::DuplicateArea(unsigned long inIndex)
-{
-    UWideString theNewName;
-    UWideString theName;
-    theName = this->mAreas[inIndex]->GetName();
-    if (theName.GetLength() > 2) {
-        if (theName[0] == '<') {
-            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
-            if (theName[(int)theName.GetLength() - 1] == '>')
-                theName.CopyString(theName, theName.GetLength() - 1);
-        }
-    }
-    UWideString theCopyOf;
-    gResource->GetString(IDS_COPY, theCopyOf);
-    sprintf(theNewName, "<%s_%s>", (const char*)theName, (const char*)theCopyOf);
-    EESMArea* theArea = new EESMArea;
-    theArea->Copy(*this->mAreas[inIndex]);
-    theArea->mName = theNewName;
-    long theID = ++this->mNextAreaID;   // one new ID per area, as in NewArea
-    theArea->mID = theID;
-    this->mAreas.push_back(theArea);
-    return theArea;
-}
-
-// FUNCTION: EXE 0x5b1358
-// Inserts a copy of a condition named <name_Copy> before the object conditions, remaps condition references and
-// returns it
-EESMCondition* EEScenarioManager::DuplicateCondition(unsigned long inIndex)
-{
-    std::vector<EESMCondition*> theOldConditions(this->mConditions);
-    EESMIDMap theMap;
-    UWideString theNewName;
-    UWideString theName;
-    unsigned long i;
-    for (i = 0; i < this->mConditions.size(); i++)
-        if (this->mConditions[i]->mType == kSMConditionObject)
-            break;
-    theName = this->mConditions[inIndex]->mName;
-    if (theName.GetLength() > 2) {
-        if (theName[0] == '<') {
-            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
-            if (theName[(int)theName.GetLength() - 1] == '>')
-                theName.CopyString(theName, theName.GetLength() - 1);
-        }
-    }
-    UWideString theCopyOf;
-    gResource->GetString(IDS_COPY, theCopyOf);
-    sprintf(theNewName, "<%s_%s>", (const char*)theName, (const char*)theCopyOf);
-    EESMCondition* theCondition = new EESMCondition;
-    theCondition->Copy(*this->mConditions[inIndex]);
-    theCondition->mName = theNewName;
-    theCondition->mID = ++this->mNextConditionID;
-    this->mConditions.insert(this->mConditions.begin() + i, theCondition);
-    for (unsigned long theNew = 0; theNew < this->mConditions.size(); theNew++) {
-        for (unsigned long theOld = 0; theOld < theOldConditions.size(); theOld++) {
-            if (theOldConditions[theOld] == this->mConditions[theNew]) {
-                theMap.insert(EESMIDMap::value_type(theOld, theNew));
-                break;
-            }
-        }
-    }
-    this->RemapConditions(theMap);
-    return theCondition;
-}
-
-// FUNCTION: EXE 0x5b15a7
-// Appends a copy of an effect named <name_Copy> with the next effect ID and returns it
-EESMEffect* EEScenarioManager::DuplicateEffect(unsigned long inIndex)
-{
-    UWideString theNewName;
-    UWideString theName;
-    theName = this->mEffects[inIndex]->mName;
-    theName = this->mEffects[inIndex]->mName;
-    if (theName.GetLength() > 2) {
-        if (theName[0] == '<') {
-            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
-            if (theName[(int)theName.GetLength() - 1] == '>')
-                theName.CopyString(theName, theName.GetLength() - 1);
-        }
-    }
-    UWideString theCopyOf;
-    gResource->GetString(IDS_COPY, theCopyOf);
-    sprintf(theNewName, "<%s_%s>", (const char*)theName, (const char*)theCopyOf);
-    EESMEffect* theEffect = new EESMEffect;
-    theEffect->Copy(*this->mEffects[inIndex]);
-    theEffect->mName = theNewName;
-    theEffect->mID = ++this->mNextEffectID;
-    this->mEffects.push_back(theEffect);
-    return theEffect;
-}
-
-// FUNCTION: EXE 0x5b1719
-// Appends a copy of a scenario object named <name_Copy> (name_Copy for an unbracketed name) with its own
-// "name Exists" condition; returns the copy
-EESMObject* EEScenarioManager::DuplicateObject(unsigned long inIndex)
-{
-    UWideString theNewName;
-    UWideString theName;
-    UWideString theStripped;
-    theName = this->mObjects[inIndex]->mName;
-    theName = this->mObjects[inIndex]->mName;
-    UWideString theCopyOf;
-    gResource->GetString(IDS_COPY, theCopyOf);
-    if (theName.GetLength() > 2 && theName[0] == '<') {
-        theStripped = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
-        if (theStripped[(int)theStripped.GetLength() - 1] == '>')
-            theName.CopyString(theStripped, theStripped.GetLength() - 1);
-        sprintf(theNewName, "<%s_%s>", (const char*)theName, (const char*)theCopyOf);
-    } else
-        sprintf(theNewName, "%s_%s", (const char*)theName, (const char*)theCopyOf);
-    EESMObject* theObject = new EESMObject;
-    theObject->Copy(*this->mObjects[inIndex]);
-    theObject->SetName(theNewName);
-    theObject->mL64 = ++this->mNextObjectID;
-    this->mObjects.push_back(theObject);
-    EESMCondition* theCondition = new EESMCondition;
-    this->mConditions.push_back(theCondition);
-    UWideString theText;
-    gResource->GetString(IDS_EXISTS, theText);
-    theCondition->SetName(theObject->mName + " " + theText);
-    theCondition->mType = kSMConditionObject;
-    theCondition->mObjectIndex = this->mObjects.size() - 1;
-    theCondition->mID = ++this->mNextConditionID;
-    return theObject;
-}
-
-// FUNCTION: EXE 0x5b1978
-// Appends a copy of a trigger named <name_Copy> with the next trigger ID and returns it
-EESMTrigger* EEScenarioManager::DuplicateTrigger(unsigned long inIndex)
-{
-    UWideString theNewName;
-    UWideString theName;
-    theName = this->mTriggers[inIndex]->mName;
-    theName = this->mTriggers[inIndex]->mName;
-    if (theName.GetLength() > 2) {
-        if (theName[0] == '<') {
-            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
-            if (theName[(int)theName.GetLength() - 1] == '>')
-                theName.CopyString(theName, theName.GetLength() - 1);
-        }
-    }
-    UWideString theCopyOf;
-    gResource->GetString(IDS_COPY, theCopyOf);
-    sprintf(theNewName, "<%s_%s>", (const char*)theName, (const char*)theCopyOf);
-    EESMTrigger* theTrigger = new EESMTrigger;
-    theTrigger->Copy(*this->mTriggers[inIndex]);
-    theTrigger->mName = theNewName;
-    theTrigger->mID = ++this->mNextTriggerID;
-    this->mTriggers.push_back(theTrigger);
-    return theTrigger;
 }
 
 // FUNCTION: EXE 0x5b1ae4
@@ -903,65 +361,6 @@ void EEScenarioManager::Update()
     ee_scenario_manager_update(&theHost);
 }
 
-// FUNCTION: EXE 0x5b23dc
-// Writes the trigger text file (EESEIAExport): the media strings, then the effect, condition and player name
-// entries; 9 on a write error
-// Called by EESEIAExport 0x16ffd0
-long EEScenarioManager::ExportText(FSFileSpec& inFile)
-{
-    UWideString theText;
-    long theResult = this->mMediaStrings.Export(inFile);
-    if (theResult == 0) {
-        unsigned long i;
-        for (i = 0; i < this->mEffects.size() && theResult == 0; i++) {
-            EESMEffect* theEffect = this->mEffects[i];
-            if (theEffect == NULL)
-                continue;
-            theText = "";
-            if (theEffect->GetType() == kSMEffectMedia) {
-                switch (theEffect->mMediaAction) {
-                case kSMMediaActionChangeText:
-                    theText = theEffect->mDescription;
-                    break;
-                case kSMMediaActionSendDialogue:
-                case kSMMediaActionSendChatMessage:
-                    theText = theEffect->mMessage;
-                    break;
-                }
-            } else if (theEffect->GetType() == kSMEffectObject && theEffect->mObjectAction == kSMObjectActionClassName) {
-                theText = theEffect->mNewName;
-            }
-            if (!(theText.GetLength() > 0))
-                continue;
-            if (fprintf(inFile, "{%ld_Effect:%s}\n", theEffect->GetID(), (const char*)theEffect->GetName()) < 0
-                || fprintf(inFile, "%s\n\n", (const char*)theText) < 0)
-                theResult = 9;
-        }
-        for (i = 0; i < this->mConditions.size() && theResult == 0; i++) {
-            EESMCondition* theCondition = this->mConditions[i];
-            if (theCondition == NULL)
-                continue;
-            theText = "";
-            if (theCondition->GetType() == kSMConditionChatMessageContains)
-
-                theText = theCondition->mChatText;
-            if (!(theText.GetLength() > 0))
-                continue;
-            if (fprintf(inFile, "{%ld_Condition:%s}\n", theCondition->GetID(),
-                        (const char*)theCondition->GetName()) < 0
-                || fprintf(inFile, "%s\n\n", (const char*)theText) < 0)
-                theResult = 9;
-        }
-        for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
-            if (gWorld.GetPlayer(p) != NULL) {
-                if (fprintf(inFile, "{%ld_Player Name:%s}\n", p, (const char*)gWorld.GetPlayer(p)->mName) < 0)
-                    theResult = 9;
-            }
-        }
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5b260a
 // Resolves a scenario player choice (0 nature, 1/3 a random/every human, 2/4 a random/every computer, 5/6 a random
 // player with/without nature, 7+ player n-6) into a list; returns the chosen player, -1 for none or a group
@@ -1035,156 +434,6 @@ void EEScenarioManager::Prepare()
     }
 }
 
-// FUNCTION: EXE 0x5b2b78
-// Passes a trigger index change (move or delete) to every condition, effect and pending effect
-void EEScenarioManager::RenumberTriggers(unsigned long inOld, unsigned long inNew)
-{
-    unsigned long theCount = this->mConditions.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mConditions[i]->RenumberTriggers(inOld, inNew);
-    theCount = this->mEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mEffects[i]->RenumberTriggers(inOld, inNew);
-    theCount = this->mPendingEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mPendingEffects[i]->RenumberTriggers(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5b2c2f
-// Applies an old-to-new trigger index map to every condition, effect and pending effect
-void EEScenarioManager::RemapTriggers(EESMIDMap& inMap)
-{
-    unsigned long theCount = this->mConditions.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mConditions[i]->RemapTriggers(inMap);
-    theCount = this->mEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mEffects[i]->RemapTriggers(inMap);
-    theCount = this->mPendingEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mPendingEffects[i]->RemapTriggers(inMap);
-}
-
-// FUNCTION: EXE 0x5b2cdc
-// Passes a condition index change (move or delete) to every trigger
-void EEScenarioManager::RenumberConditions(unsigned long inOld, unsigned long inNew)
-{
-    unsigned long theCount = this->mTriggers.size();
-    for (unsigned long i = 0; i < theCount; i++)
-        this->mTriggers[i]->RenumberConditions(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5b2d21
-// Applies an old-to-new condition index map to every trigger
-void EEScenarioManager::RemapConditions(EESMIDMap& inMap)
-{
-    unsigned long theCount = this->mTriggers.size();
-    for (unsigned long i = 0; i < theCount; i++)
-        this->mTriggers[i]->RemapConditions(inMap);
-}
-
-// FUNCTION: EXE 0x5b2d62
-// Passes an effect index change to every trigger; timed entries of the old index follow it (or go on a delete),
-// but entries of the swapped or later effects are not renumbered
-void EEScenarioManager::RenumberEffects(unsigned long inOld, unsigned long inNew)
-{
-    unsigned long theCount = this->mTriggers.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mTriggers[i]->RenumberEffects(inOld, inNew);
-    // Bounded by the current size: after an erase the cached count read a stale slot past the end.
-    ee_scenario_timed_renumber(this->mTimedEffects, inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5b2e33
-// Applies an old-to-new effect index map to every trigger and timed entry (unmapped entries become Do Nothing)
-void EEScenarioManager::RemapEffects(EESMIDMap& inMap)
-{
-    unsigned long theCount = this->mTriggers.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mTriggers[i]->RemapEffects(inMap);
-    std::vector<unsigned long> theOlds;
-    std::vector<unsigned long> theNews;
-    for (EESMIDMap::iterator theEntry = inMap.begin(); theEntry != inMap.end(); ++theEntry) {
-        theOlds.push_back(theEntry->first);
-        theNews.push_back(theEntry->second);
-    }
-    ee_scenario_timed_remap(this->mTimedEffects, theOlds.data(), theNews.data(), theOlds.size());
-}
-
-// FUNCTION: EXE 0x5b2eb2
-// Passes an object index change (move or delete) to every condition, effect, object and pending effect
-void EEScenarioManager::RenumberObjects(unsigned long inOld, unsigned long inNew)
-{
-    unsigned long theCount = this->mConditions.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mConditions[i]->RenumberObjects(inOld, inNew);
-    theCount = this->mEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mEffects[i]->RenumberObjects(inOld, inNew);
-    theCount = this->mObjects.size();
-    for (i = 0; i < theCount; i++)
-        this->mObjects[i]->RenumberObjects(inOld, inNew);
-    theCount = this->mPendingEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mPendingEffects[i]->RenumberObjects(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5b2fa1
-// Applies an old-to-new object index map to every condition, effect, object and pending effect
-void EEScenarioManager::RemapObjects(EESMIDMap& inMap)
-{
-    unsigned long theCount = this->mConditions.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mConditions[i]->RemapObjects(inMap);
-    theCount = this->mEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mEffects[i]->RemapObjects(inMap);
-    theCount = this->mObjects.size();
-    for (i = 0; i < theCount; i++)
-        this->mObjects[i]->RemapObjects(inMap);
-    theCount = this->mPendingEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mPendingEffects[i]->RemapObjects(inMap);
-}
-
-// FUNCTION: EXE 0x5b3084
-// Passes an area index change (move or delete) to every effect, object and pending effect
-void EEScenarioManager::RenumberAreas(unsigned long inOld, unsigned long inNew)
-{
-    unsigned long theCount = this->mEffects.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mEffects[i]->RenumberAreas(inOld, inNew);
-    theCount = this->mObjects.size();
-    for (i = 0; i < theCount; i++)
-        this->mObjects[i]->RenumberAreas(inOld, inNew);
-    theCount = this->mPendingEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mPendingEffects[i]->RenumberAreas(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5b313b
-// Applies an old-to-new area index map to every effect, object and pending effect
-void EEScenarioManager::RemapAreas(EESMIDMap& inMap)
-{
-    unsigned long theCount = this->mEffects.size();
-    unsigned long i;
-    for (i = 0; i < theCount; i++)
-        this->mEffects[i]->RemapAreas(inMap);
-    theCount = this->mObjects.size();
-    for (i = 0; i < theCount; i++)
-        this->mObjects[i]->RemapAreas(inMap);
-    theCount = this->mPendingEffects.size();
-    for (i = 0; i < theCount; i++)
-        this->mPendingEffects[i]->RemapAreas(inMap);
-}
-
 // FUNCTION: EXE 0x5b31e8
 // Replaces a unit ID with another in every scenario object
 void EEScenarioManager::ReplaceUnit(long inOldUnit, long inNewUnit)
@@ -1192,337 +441,6 @@ void EEScenarioManager::ReplaceUnit(long inOldUnit, long inNewUnit)
     unsigned long theCount = this->mObjects.size();
     for (unsigned long i = 0; i < theCount; i++)
         this->mObjects[i]->ReplaceUnit(inOldUnit, inNewUnit);
-}
-
-// FUNCTION: EXE 0x5b322d
-// Returns the condition with the given ID, or NULL
-EESMCondition* EEScenarioManager::FindConditionByID(long inID)
-{
-    EESMCondition* theResult = NULL;
-    const std::vector<EESMCondition*>& theConditions = this->mConditions;
-    for (unsigned long i = 0; i < this->mConditions.size(); i++)
-        if (theConditions[i]->mID == inID) { theResult = theConditions[i]; break; }
-
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b3269
-// Returns the effect with the given ID, or NULL
-EESMEffect* EEScenarioManager::FindEffectByID(long inID)
-{
-    EESMEffect* theResult = NULL;
-    const std::vector<EESMEffect*>& theEffects = this->mEffects;
-    for (unsigned long i = 0; i < this->mEffects.size(); i++)
-        if (theEffects[i]->mID == inID) { theResult = theEffects[i]; break; }
-
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b32a8
-// Returns the scenario object with the given object ID, or NULL
-EESMObject* EEScenarioManager::FindObjectByID(long inID)
-{
-    EESMObject* theResult = NULL;
-    const std::vector<EESMObject*>& theObjects = this->mObjects;
-    for (unsigned long i = 0; i < this->mObjects.size(); i++)
-        if (theObjects[i]->mL64 == inID) { theResult = theObjects[i]; break; }
-
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b32e4
-// Returns a scenario object's index in the object list, or -1
-long EEScenarioManager::GetObjectIndex(EESMObject* inObject)
-{
-    for (unsigned long i = 0, theCount = this->mObjects.size(); i < theCount; i++)
-        if (this->mObjects[i] == inObject)
-            return i;
-    return -1;
-}
-
-// FUNCTION: EXE 0x5b3317
-// Appends the user areas' names to a list ("[id]" prefixed while debug IDs are shown)
-void EEScenarioManager::GetUserAreaNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mAreas.size();
-    for (unsigned long i = 2; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mAreas[i]->mID);
-        theName = (const char*)(theID + (const char*)this->mAreas[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b33d7
-// Appends every area's name, the built-in ones included ("[id]" prefixed while debug IDs are shown)
-void EEScenarioManager::GetAreaNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mAreas.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mAreas[i]->mID);
-        theName = (const char*)(theID + (const char*)this->mAreas[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b3496
-// Appends every condition's name, first renaming each object condition "<object name Exists>" (English text)
-void EEScenarioManager::GetAllConditionNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mConditions.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mConditions[i]->mID);
-        if (this->mConditions[i]->GetType() == kSMConditionObject) {
-            UWideString thePrefix("<");
-            this->mConditions[i]->mName = thePrefix + this->GetScenarioObject(this->mConditions[i]->GetObjectIndex())->mName + " Exists>";
-        }
-        theName = (const char*)(theID + (const char*)this->mConditions[i]->GetName());
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b3656
-// Appends the user conditions' names, without Always True and the object conditions ("[id]" prefixed while
-// debug IDs are shown)
-void EEScenarioManager::GetUserConditionNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mConditions.size();
-    for (unsigned long i = 1; i < theCount; i++) {
-        EESMCondition* theCondition = this->mConditions[i];
-        if (theCondition->mType == kSMConditionObject)
-            continue;
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", theCondition->mID);
-        theName = (const char*)(theID + (const char*)this->mConditions[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b3726
-// Appends the user effects' names, without Do Nothing ("[id]" prefixed while debug IDs are shown)
-void EEScenarioManager::GetUserEffectNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mEffects.size();
-    for (unsigned long i = 1; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mEffects[i]->mID);
-        theName = (const char*)(theID + (const char*)this->mEffects[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b37e9
-// Appends every effect's name, Do Nothing included ("[id]" prefixed while debug IDs are shown)
-void EEScenarioManager::GetAllEffectNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mEffects.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mEffects[i]->mID);
-        theName = (const char*)(theID + (const char*)this->mEffects[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b38ab
-// Appends the user scenario objects' names, without None ("[id]" prefixed while debug IDs are shown)
-void EEScenarioManager::GetUserObjectNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mObjects.size();
-    for (unsigned long i = 1; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mObjects[i]->mL64);
-        theName = (const char*)(theID + (const char*)this->mObjects[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b396b
-// Appends every scenario object's name, None included ("[id]" prefixed while debug IDs are shown)
-void EEScenarioManager::GetObjectNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mObjects.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mObjects[i]->mL64);
-        theName = (const char*)(theID + (const char*)this->mObjects[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b3a2a
-// Appends every trigger's name ("[id]" prefixed while debug IDs are shown)
-void EEScenarioManager::GetTriggerNames(std::vector<UWideString>& outNames)
-{
-    UWideString theName;
-    UString theID;
-    unsigned long theCount = this->mTriggers.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (this->mShowDebugIDs)
-            sprintf(theID, "[%ld]", this->mTriggers[i]->mID);
-        theName = (const char*)(theID + (const char*)this->mTriggers[i]->mName);
-        outNames.push_back(theName);
-    }
-}
-
-// FUNCTION: EXE 0x5b3ae9
-// Reads a trigger text file (EESEIAImport) of "{id_Kind:name}" lines, each followed by its text; with inValidate
-// checks the entries first (ValidateText), then applies them (ImportText); 9 on a malformed file
-// Called by EESEIAImport 0x170439
-long EEScenarioManager::ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate)
-{
-    EESMMediaStrings theMediaStrings;
-    std::vector<UString> theTokens;
-    UWideString theText;
-    std::vector<UString> theLines;
-    std::vector<UWideString> theTexts;
-    UString theLine;
-    UString theSeparators("{}");
-    char theBuffer[0x200];
-    long theResult = 0;
-    bool theInEntry = false;
-    while (!feof((FILE*)inFile) && theResult == 0) {
-        char* theRead = fgets(theBuffer, 0x200, inFile);
-        if (theRead != NULL) {
-            theLine = theRead;
-            theLine.Tokenize(theSeparators, theTokens);
-            if (theTokens.size() == 2) {
-                if (theInEntry == true) {
-                    if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                        if (theText.GetLength() > 1)
-                            theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                        else
-                            theText = "";
-                    }
-                    if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                        if (theText.GetLength() > 1)
-                            theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                        else
-                            theText = "";
-                    }
-                    theTexts.push_back(theText);
-                    theResult = theTexts.size() != theLines.size() ? 9 : 0;
-                }
-                theLines.push_back(theTokens[0]);
-                theText = "";
-                theInEntry = true;
-            } else if (theTokens.size() <= 2) {
-                if (theInEntry == true)
-                    theText += theRead;
-            }
-        } else {
-            if (theInEntry == true) {
-                if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                    if (theText.GetLength() > 1)
-                        theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                    else
-                        theText = "";
-                }
-                if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                    if (theText.GetLength() > 1)
-                        theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                    else
-                        theText = "";
-                }
-                theTexts.push_back(theText);
-            }
-            theResult = theTexts.size() != theLines.size() ? 9 : 0;
-        }
-    }
-    if (theResult == 0) {
-        if (inValidate == true)
-            theResult = this->ValidateText(theLines, inKind, theTexts);
-        if (theResult == 0)
-            theResult = this->ImportText(theLines, inKind, theTexts);
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b3e75
-// Swaps a user area with the previous one and renumbers area references (not the first user area)
-void EEScenarioManager::MoveAreaUp(unsigned long inIndex)
-{
-    EESMArea* theElement = this->mAreas[inIndex];
-    if (inIndex <= 2)
-        return;
-    this->mAreas[inIndex] = this->mAreas[inIndex - 1];
-    this->mAreas[inIndex - 1] = theElement;
-    this->RenumberAreas(inIndex, inIndex - 1);
-}
-
-// FUNCTION: EXE 0x5b3ea9
-// Swaps a condition with the previous one and renumbers condition references (not the first user condition)
-void EEScenarioManager::MoveConditionUp(unsigned long inIndex)
-{
-    EESMCondition* theElement = this->mConditions[inIndex];
-    if (inIndex <= 1)
-        return;
-    this->mConditions[inIndex] = this->mConditions[inIndex - 1];
-    this->mConditions[inIndex - 1] = theElement;
-    this->RenumberConditions(inIndex, inIndex - 1);
-}
-
-// FUNCTION: EXE 0x5b3edd
-// Swaps an effect with the previous one and renumbers effect references (not the first user effect)
-void EEScenarioManager::MoveEffectUp(unsigned long inIndex)
-{
-    EESMEffect* theElement = this->mEffects[inIndex];
-    if (inIndex <= 1)
-        return;
-    this->mEffects[inIndex] = this->mEffects[inIndex - 1];
-    this->mEffects[inIndex - 1] = theElement;
-    this->RenumberEffects(inIndex, inIndex - 1);
-}
-
-// FUNCTION: EXE 0x5b3f11
-// Swaps a user object with the previous one, moves its Exists condition up one place too and renumbers references
-void EEScenarioManager::MoveObjectUp(unsigned long inIndex)
-{
-    EESMObject* theObject = this->mObjects[inIndex];
-    if (inIndex <= 1)
-        return;
-    this->mObjects[inIndex] = this->mObjects[inIndex - 1];
-    this->mObjects[inIndex - 1] = theObject;
-    for (unsigned long i = 1; i < this->mConditions.size(); i++) {
-        EESMCondition* theCondition = this->mConditions[i];
-        if (theCondition->GetType() != kSMConditionObject || theCondition->GetObjectIndex() != inIndex)
-            continue;
-        this->mConditions[i] = this->mConditions[i - 1];
-        this->mConditions[i - 1] = theCondition;
-        this->RenumberConditions(i, i - 1);
-        break;
-    }
-    this->RenumberObjects(inIndex, inIndex - 1);
-}
-
-// FUNCTION: EXE 0x5b4017
-// Swaps a trigger with the previous one and renumbers trigger references (not the first trigger)
-void EEScenarioManager::MoveTriggerUp(unsigned long inIndex)
-{
-    EESMTrigger* theElement = this->mTriggers[inIndex];
-    if (inIndex == 0)
-        return;
-    this->mTriggers[inIndex] = this->mTriggers[inIndex - 1];
-    this->mTriggers[inIndex - 1] = theElement;
-    this->RenumberTriggers(inIndex, inIndex - 1);
 }
 
 // FUNCTION: EXE 0x5b404a
@@ -1622,70 +540,6 @@ void EEScenarioManager::SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag)
                                   inFlag);
 }
 
-// FUNCTION: EXE 0x5b463b
-// Parses "<id>_Condition:<name>" into the ID and the name; 9 when the line is not a condition entry
-long EEScenarioManager::ParseConditionID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest)
-{
-    UWideString theNumber;
-    long theResult;
-    unsigned long theIndex = inLine.Find("_Condition:", 0);
-    if (theIndex <= 0 || theIndex >= inLine.GetLength())
-        theResult = 9;
-    else {
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 11);
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b46bf
-// Parses "<id>_Effect:<name>" (kind 0: "<id>_<name>") into the ID and the name; 9 when it is not an effect entry
-long EEScenarioManager::ParseEffectID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest)
-{
-    UWideString theNumber;
-    unsigned long theIndex;
-    if (inKind <= 0) {
-        theIndex = inLine.Find("_", 0);
-        if (theIndex <= 0 || theIndex >= inLine.GetLength())
-            return 9;
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 1);
-    } else {
-        theIndex = inLine.Find("_Effect:", 0);
-        if (theIndex <= 0 || theIndex >= inLine.GetLength())
-            return 9;
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 8);
-    }
-    return 0;
-}
-
-// FUNCTION: EXE 0x5b4796
-// Parses "<id>_Player Name:<name>" into the player number and the name; 9 when it is not a player entry
-long EEScenarioManager::ParsePlayerName(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest)
-{
-    UWideString theNumber;
-    long theResult;
-    unsigned long theIndex = inLine.Find("_Player Name:", 0);
-    if (theIndex <= 0 || theIndex >= inLine.GetLength())
-        theResult = 9;
-    else {
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 13);
-        theResult = 0;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5b481a
 // Shows the next queued dialog message (in a cinematic the next cinematic one), stopping one-shot sounds for a
 // voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused
@@ -1736,71 +590,6 @@ void EEScenarioManager::ShowDialogMessage()
     gSoundManager->StopAllOneShotSounds();
 }
 
-// FUNCTION: EXE 0x5b4a95
-// Applies the trigger text entries: each goes to the media strings, else renames the effect / condition / player
-// it names and sets its text; stops with 9 at an unknown ID or an entry whose kind takes no text
-// The trigger text import's second pass (after ValidateText)
-long EEScenarioManager::ImportText(const std::vector<UString>& inLines, unsigned long inKind,
-                                   const std::vector<UWideString>& inTexts)
-{
-    UWideString theName;
-    long theResult = 0;
-    long theID;
-    for (unsigned long i = 0; i < inLines.size() && theResult == 0; i++) {
-        theResult = this->mMediaStrings.Import(*(inLines.begin() + i), inKind, inTexts[i]);
-        if (theResult == 0)
-            continue;
-        theResult = this->ParseEffectID(inLines[i], inKind, &theID, theName);
-        if (theResult == 0) {
-            EESMEffect* theEffect = this->FindEffectByID(theID);
-            if (theEffect == NULL) {
-                theResult = 9;
-                continue;
-            }
-            theEffect->mName = theName;
-            if (theEffect->mType == kSMEffectMedia) {
-                switch (theEffect->mMediaAction) {
-                case kSMMediaActionChangeText:
-                    theEffect->mDescription = *(inTexts.begin() + i);
-                    break;
-                case kSMMediaActionSendDialogue:
-                case kSMMediaActionSendChatMessage:
-                    theEffect->mMessage = *(inTexts.begin() + i);
-                    break;
-                default:
-                    theResult = 9;
-                    break;
-                }
-            } else if (theEffect->mType == kSMEffectObject) {
-                if (theEffect->mObjectAction == kSMObjectActionClassName)
-                    theEffect->mNewName = UWideString(*(inTexts.begin() + i));
-                else
-                    theResult = 9;
-            }
-            continue;
-        }
-        theResult = this->ParseConditionID(*(inLines.begin() + i), inKind, &theID, theName);
-        if (theResult == 0) {
-            EESMCondition* theCondition = this->FindConditionByID(theID);
-            if (theCondition != NULL && theCondition->mType == kSMConditionChatMessageContains) {
-                theCondition->mName = theName;
-                theCondition->mChatText = inTexts[i];
-            } else {
-                theResult = 9;
-            }
-            continue;
-        }
-        theResult = this->ParsePlayerName(inLines[i], inKind, &theID, theName);
-        if (theResult != 0 || (unsigned long)theID <= 0 || !((unsigned long)theID < gWorld.mNumPlayers))
-            continue;
-        if (gWorld.GetPlayer(theID) != NULL)
-            gWorld.GetPlayer(theID)->mName = theName;
-        else
-            theResult = 9;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5b4d1a
 // Writes triggers, conditions, effects, objects and areas (not the built-ins), timed and pending effects, ID
 // counters, clocks, media strings, start camera and dialog messages; returns the first write error (ee_scenario
@@ -1841,65 +630,6 @@ void EEScenarioManager::MoveCameraToStart()
     theLocation.SetX(theLocation.GetX() + theStepX);
     theLocation.SetY(theLocation.GetY() + theStepY);
     gWorld.mCameraControl.SetLocation(theLocation, false, true);
-}
-
-// FUNCTION: EXE 0x5b52bb
-// Checks the trigger text entries: lists an error (mImportErrors) for each unknown token, ID or player number,
-// wrong effect / condition kind or name that differs from the scenario's; 9 when there are any
-// The trigger text import's first pass
-long EEScenarioManager::ValidateText(std::vector<UString>& inLines, unsigned long inKind,
-                                     const std::vector<UWideString>& inTexts)
-{
-    UWideString theFormat;
-    UWideString theMessage;
-    UWideString theName;
-    long theID;
-    this->mImportErrors.clear();
-    for (unsigned long i = 0; i < inLines.size(); i++) {
-        if (this->mMediaStrings.Validate(inLines[i], inKind) == 0)
-            continue;
-        if (this->ParseEffectID(inLines[i], inKind, &theID, theName) == 0) {
-            EESMEffect* theEffect = this->FindEffectByID(theID);
-            if (theEffect == NULL) {
-                gResource->GetString(IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, theID, (const char*)inLines[i]);
-            } else if (theEffect->GetType() == kSMEffectMedia
-                       && (theEffect->mMediaAction == kSMMediaActionChangeText || theEffect->mMediaAction == kSMMediaActionSendDialogue || theEffect->mMediaAction == kSMMediaActionSendChatMessage)
-                       || theEffect->GetType() == kSMEffectObject && theEffect->mObjectAction == kSMObjectActionClassName) {
-                if (!(theName != theEffect->GetName()))
-                    continue;
-                gResource->GetString(IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i], (const char*)theEffect->GetName());
-            } else {
-                gResource->GetString(IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i]);
-            }
-        } else if (this->ParseConditionID(inLines[i], inKind, &theID, theName) == 0) {
-            EESMCondition* theCondition = this->FindConditionByID(theID);
-            if (theCondition == NULL) {
-                gResource->GetString(IDS_IS_INVALID_CONDITION_ID_FOR_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, theID, (const char*)inLines[i]);
-            } else if (theCondition->GetType() == kSMConditionChatMessageContains) {
-                if (!(theName != theCondition->GetName()))
-                    continue;
-                gResource->GetString(IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS_2747, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i], (const char*)theCondition->GetName());
-            } else {
-                gResource->GetString(IDS_IS_INVALID_CONDITION_TYPE_TO_BE_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i]);
-            }
-        } else if (this->ParsePlayerName(inLines[i], inKind, &theID, theName) == 0) {
-            if (theID != 0 && (unsigned long)theID < gWorld.mNumPlayers)
-                continue;
-            gResource->GetString(IDS_INVALID_PLAYER_NUMBER_FOR_THIS_SCENARIO, theFormat);
-            sprintf(theMessage, theFormat, theID);
-        } else {
-            gResource->GetString(IDS_IS_INVALID_TOKEN, theFormat);
-            sprintf(theMessage, theFormat, (const char*)inLines[i]);
-        }
-        this->mImportErrors.push_back(theMessage);
-    }
-    return this->mImportErrors.size() > 0 ? 9 : 0;
 }
 
 // FUNCTION: EXE 0x5b5652
@@ -2337,15 +1067,260 @@ EESMEffect* EEScenarioManager::GetTimedEffect(unsigned long inIndex)
     return theEffect;
 }
 
-// FUNCTION: EXE 0x5b9fcf
-// Maps an index through an old-to-new index map; an index the map lacks becomes 0
-void EERemapID(unsigned long& ioID, EESMIDMap& inMap)
-{
-    if (inMap.find(ioID) == inMap.end())
-        ioID = 0;
-    else
-        ioID = inMap[ioID];
-}
-
 // TEMPLATE: EXE 0x5ba01a
 // ??H?$_Ptrit@UEESMTimedEffect@@HPAU1@AAU1@PAU1@AAU1@@std@@QBE?AV01@H@Z (Dinkum COMDAT)
+
+// ------------------------------------------------------------------------------------------------ the lists
+// The editor's list operations, the name lists and the id searches are ee_scenario lists.rs (with the index upkeep
+// each change makes: the Renumber/Remap broadcasts over every element, the elements' own and EERemapID); the vectors
+// and elements stay here, reached by operation (EESMListOp)
+
+namespace {
+struct EESMListContext {
+    EEScenarioManager* mManager;
+    std::vector<UWideString>* mNames;
+    UWideString mText;
+};
+
+unsigned long& EESMListID(EESMObject* inObject) { return inObject->mL64; }
+template<class T> unsigned long& EESMListID(T* inElement) { return inElement->mID; }
+void EESMListSetName(EESMObject* inObject, const char* inName) { inObject->SetName(inName); }
+template<class T> void EESMListSetName(T* inElement, const char* inName) { inElement->mName = inName; }
+void* EESMListFields(void*) { return NULL; }
+void* EESMListFields(EeScenarioConditionFields* inFields) { return inFields; }
+void* EESMListFields(EeScenarioEffectFields* inFields) { return inFields; }
+void* EESMListFields(EeScenarioObjectFields* inFields) { return inFields; }
+
+// One list's operations (EE_SCENARIO_LIST_OP_*)
+template<class T> void* EESMListEdit(std::vector<T*>& ioList, uint32_t inOp, size_t inIndex, void* inElement, const char* inText)
+{
+    T* theElement = static_cast<T*>(inElement);
+    switch (inOp) {
+    case EE_SCENARIO_LIST_OP_COUNT: return (void*)(uintptr_t)ioList.size();
+    case EE_SCENARIO_LIST_OP_AT: return inIndex < ioList.size() ? ioList[inIndex] : NULL;
+    case EE_SCENARIO_LIST_OP_SET: ioList[inIndex] = theElement; break;
+    case EE_SCENARIO_LIST_OP_INSERT: ioList.insert(ioList.begin() + inIndex, theElement); break;
+    case EE_SCENARIO_LIST_OP_ERASE: ioList.erase(ioList.begin() + inIndex); break;
+    case EE_SCENARIO_LIST_OP_PUSH: ioList.push_back(theElement); break;
+    case EE_SCENARIO_LIST_OP_CREATE: return new T;
+    case EE_SCENARIO_LIST_OP_COPY: theElement->Copy(*ioList[inIndex]); break;
+    case EE_SCENARIO_LIST_OP_DESTROY: delete theElement; break;
+    case EE_SCENARIO_LIST_OP_NAME: return (void*)(const char*)theElement->mName;
+    case EE_SCENARIO_LIST_OP_SET_NAME: EESMListSetName(theElement, inText); break;
+    case EE_SCENARIO_LIST_OP_ID: return (void*)(uintptr_t)EESMListID(theElement);
+    case EE_SCENARIO_LIST_OP_SET_ID: EESMListID(theElement) = (unsigned long)inIndex; break;
+    case EE_SCENARIO_LIST_OP_FIELDS: return EESMListFields(theElement);
+    }
+    return NULL;
+}
+
+void* EESMListOp(void* inContext, uint32_t inOp, uint32_t inList, uintptr_t inIndex, void* inElement, const char* inText)
+{
+    EESMListContext* theContext = static_cast<EESMListContext*>(inContext);
+    EEScenarioManager* m = theContext->mManager;
+    EESMTrigger* theTrigger = static_cast<EESMTrigger*>(inElement);
+    switch (inOp) {
+    case EE_SCENARIO_LIST_OP_OBJECT_COUNT: return (void*)(uintptr_t)static_cast<EESMEffect*>(inElement)->mObjects.size();
+    case EE_SCENARIO_LIST_OP_OBJECTS: return static_cast<EESMEffect*>(inElement)->mObjects.data();
+    case EE_SCENARIO_LIST_OP_ENTRY_COUNT:
+        return (void*)(uintptr_t)(inList ? theTrigger->mEffects.size() : theTrigger->mConditions.size());
+    case EE_SCENARIO_LIST_OP_ENTRY:
+        return inList ? (void*)&theTrigger->mEffects[inIndex]->mEffectIndex : (void*)&theTrigger->mConditions[inIndex]->mValue;
+    case EE_SCENARIO_LIST_OP_RESOURCE:
+        gResource->GetString(inIndex ? IDS_EXISTS : IDS_COPY, theContext->mText);
+        return (void*)(const char*)theContext->mText;
+    case EE_SCENARIO_LIST_OP_OUT_NAME: theContext->mNames->push_back(UWideString(inText)); return NULL;
+    }
+    switch (inList) {
+    case EE_SCENARIO_LIST_TRIGGERS: return EESMListEdit(m->mTriggers, inOp, inIndex, inElement, inText);
+    case EE_SCENARIO_LIST_CONDITIONS: return EESMListEdit(m->mConditions, inOp, inIndex, inElement, inText);
+    case EE_SCENARIO_LIST_EFFECTS: return EESMListEdit(m->mEffects, inOp, inIndex, inElement, inText);
+    case EE_SCENARIO_LIST_OBJECTS: return EESMListEdit(m->mObjects, inOp, inIndex, inElement, inText);
+    case EE_SCENARIO_LIST_AREAS: return EESMListEdit(m->mAreas, inOp, inIndex, inElement, inText);
+    case EE_SCENARIO_LIST_PENDING: return EESMListEdit(m->mPendingEffects, inOp, inIndex, inElement, inText);
+    }
+    return NULL;
+}
+
+struct EESMLists {
+    EESMListContext mContext;
+    EeScenarioListHost mHost;
+    EESMLists(EEScenarioManager* inManager, std::vector<UWideString>* inNames = NULL) : mContext{inManager, inNames}
+    {
+        this->mHost = {&this->mContext, inManager, inManager->mTimedEffects, EESMListOp};
+    }
+};
+}   // namespace
+
+// The editor's Sort, New, MoveUp/MoveDown, Delete and Duplicate of a list (EE_SCENARIO_LIST_*: 0x1b00c1..0x1b0674,
+// 0x1b074c..0x1b0b65, 0x1b0beb..0x1b0e71 and 0x1b3e75..0x1b4017, 0x1b0ec6..0x1b10ed, 0x1b120d..0x1b1978)
+void EEScenarioManager::SortList(unsigned long inList) 
+{
+    EESMLists theLists(this);
+    ee_scenario_list_sort(&theLists.mHost, inList);
+}
+void* EEScenarioManager::NewEntry(unsigned long inList) 
+{
+    EESMLists theLists(this);
+    return ee_scenario_list_new(&theLists.mHost, inList);
+}
+void EEScenarioManager::MoveEntry(unsigned long inList, unsigned long inIndex, bool inUp)
+{
+    EESMLists theLists(this);
+    ee_scenario_list_move(&theLists.mHost, inList, inIndex, inUp);
+}
+bool EEScenarioManager::DeleteEntry(unsigned long inList, unsigned long inIndex)
+{
+    EESMLists theLists(this);
+    return ee_scenario_list_delete(&theLists.mHost, inList, inIndex);
+}
+void* EEScenarioManager::DuplicateEntry(unsigned long inList, unsigned long inIndex)
+{
+    EESMLists theLists(this);
+    return ee_scenario_list_duplicate(&theLists.mHost, inList, inIndex);
+}
+
+// The name lists (EE_SCENARIO_NAMES_*: 0x1b3317..0x1b3a2a)
+void EEScenarioManager::GetNames(unsigned long inWhich, std::vector<UWideString>& outNames)
+{
+    EESMLists theLists(this, &outNames);
+    ee_scenario_list_names(&theLists.mHost, inWhich);
+}
+
+// FUNCTION: EXE 0x5b322d
+EESMCondition* EEScenarioManager::FindConditionByID(long inID)
+{
+    EESMLists theLists(this);
+    return static_cast<EESMCondition*>(ee_scenario_list_find(&theLists.mHost, EE_SCENARIO_LIST_CONDITIONS, inID));
+}
+
+// FUNCTION: EXE 0x5b3269
+EESMEffect* EEScenarioManager::FindEffectByID(long inID)
+{
+    EESMLists theLists(this);
+    return static_cast<EESMEffect*>(ee_scenario_list_find(&theLists.mHost, EE_SCENARIO_LIST_EFFECTS, inID));
+}
+
+// FUNCTION: EXE 0x5b32a8
+EESMObject* EEScenarioManager::FindObjectByID(long inID)
+{
+    EESMLists theLists(this);
+    return static_cast<EESMObject*>(ee_scenario_list_find(&theLists.mHost, EE_SCENARIO_LIST_OBJECTS, inID));
+}
+
+// FUNCTION: EXE 0x5b32e4
+long EEScenarioManager::GetObjectIndex(EESMObject* inObject)
+{
+    EESMLists theLists(this);
+    return ee_scenario_list_index_of(&theLists.mHost, EE_SCENARIO_LIST_OBJECTS, inObject);
+}
+
+// EESMObject::SetName's conditions (inParent false) or SetParent (true) over the lists
+void EEScenarioManager::ObjectChanged(EESMObject* inObject, bool inParent, long inValue)
+{
+    EESMLists theLists(this);
+    if (inParent)
+        ee_scenario_list_set_parent(&theLists.mHost, inObject, inValue);
+    else
+        ee_scenario_list_rename_object_conditions(&theLists.mHost, inObject);
+}
+
+// ------------------------------------------------------------------------------------------------ the text file
+// The trigger text file of the instructions tab (EESEIAExport, EESEIAImport) is ee_scenario text.rs: ExportText
+// 0x1b23dc, ImportTriggerText 0x1b3ae9 with ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers
+// (ParseConditionID 0x1b463b, ParseEffectID 0x1b46bf, ParsePlayerName 0x1b4796). The elements' texts, the players'
+// names, the media strings' sections, the file and the language's error formats stay here, reached by operation
+// (EESMTextOp)
+
+namespace {
+struct EESMTextContext {
+    EEScenarioManager* mManager;
+    FSFileSpec* mFile;
+    char mBuffer[0x200];
+};
+
+// an element's text by slot (EE_SCENARIO_TEXT_*: an effect's three, a condition's chat text)
+UWideString& EESMText(void* inElement, uint32_t inSlot)
+{
+    EESMEffect* theEffect = static_cast<EESMEffect*>(inElement);
+    switch (inSlot) {
+    case EE_SCENARIO_TEXT_DESCRIPTION: return theEffect->mDescription;
+    case EE_SCENARIO_TEXT_MESSAGE: return theEffect->mMessage;
+    case EE_SCENARIO_TEXT_NEW_NAME: return theEffect->mNewName;
+    }
+    return static_cast<EESMCondition*>(inElement)->mChatText;
+}
+
+// the import's messages by EE_SCENARIO_TEXT_ERROR_*
+const unsigned long kSMTextErrors[] = {IDS_IS_INVALID_TOKEN, IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN,
+                                       IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN,
+                                       IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS,
+                                       IDS_IS_INVALID_CONDITION_ID_FOR_TOKEN, IDS_IS_INVALID_CONDITION_TYPE_TO_BE_TOKEN,
+                                       IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS_2747,
+                                       IDS_INVALID_PLAYER_NUMBER_FOR_THIS_SCENARIO};
+
+void* EESMTextOp(void* inContext, uint32_t inOp, uint32_t inSlot, long inValue, void* inElement, const char* inText,
+                 const char* inText2)
+{
+    EESMTextContext* theContext = static_cast<EESMTextContext*>(inContext);
+    EEScenarioManager* m = theContext->mManager;
+    FILE* theFile = *theContext->mFile;
+    EEPlayer* thePlayer;
+    switch (inOp) {
+    case EE_SCENARIO_TEXT_OP_GET: return (void*)(const char*)EESMText(inElement, inSlot);
+    case EE_SCENARIO_TEXT_OP_SET: EESMText(inElement, inSlot) = inText; break;
+    case EE_SCENARIO_TEXT_OP_PLAYERS: return (void*)(uintptr_t)gWorld.mNumPlayers;
+    case EE_SCENARIO_TEXT_OP_PLAYER_NAME:
+        thePlayer = gWorld.GetPlayer(inValue);
+        return thePlayer != NULL ? (void*)(const char*)thePlayer->mName : NULL;
+    case EE_SCENARIO_TEXT_OP_SET_PLAYER_NAME: gWorld.GetPlayer(inValue)->mName = inText; break;
+    case EE_SCENARIO_TEXT_OP_WRITE: return fprintf(theFile, "%s", inText) < 0 ? NULL : theContext;
+    case EE_SCENARIO_TEXT_OP_EOF: return feof(theFile) ? theContext : NULL;
+    case EE_SCENARIO_TEXT_OP_READ: return fgets(theContext->mBuffer, sizeof(theContext->mBuffer), theFile);
+    case EE_SCENARIO_TEXT_OP_CLEAR_ERRORS: m->mImportErrors.clear(); break;
+    case EE_SCENARIO_TEXT_OP_ERROR: {
+        UWideString theFormat;
+        UWideString theMessage;
+        gResource->GetString(kSMTextErrors[inSlot], theFormat);
+        if (inSlot == EE_SCENARIO_TEXT_ERROR_EFFECT_ID || inSlot == EE_SCENARIO_TEXT_ERROR_CONDITION_ID
+            || inSlot == EE_SCENARIO_TEXT_ERROR_PLAYER)
+            sprintf(theMessage, theFormat, inValue, inText);
+        else
+            sprintf(theMessage, theFormat, inText, inText2);
+        m->mImportErrors.push_back(theMessage);
+        break;
+    }
+    case EE_SCENARIO_TEXT_OP_MEDIA: return (void*)(const char*)m->mMediaStrings.GetSection(inSlot);
+    case EE_SCENARIO_TEXT_OP_SET_MEDIA: m->mMediaStrings.GetSection(inSlot) = inText; break;
+    }
+    return NULL;
+}
+
+struct EESMTextFile {
+    EESMTextContext mContext;
+    EESMLists mLists;
+    EeScenarioTextHost mHost;
+    EESMTextFile(EEScenarioManager* inManager, FSFileSpec& inFile) : mContext{inManager, &inFile}, mLists(inManager)
+    {
+        this->mHost = {&this->mLists.mHost, &this->mContext, EESMTextOp};
+    }
+};
+}   // namespace
+
+// FUNCTION: EXE 0x5b23dc
+// Writes the trigger text file (EESEIAExport): the media strings, then the effect, condition and player name
+// entries; 9 on a write error
+long EEScenarioManager::ExportText(FSFileSpec& inFile)
+{
+    EESMTextFile theText(this, inFile);
+    return ee_scenario_text_export(&theText.mHost);
+}
+
+// FUNCTION: EXE 0x5b3ae9
+// Reads a trigger text file (EESEIAImport) of "{id_Kind:name}" lines, each followed by its text; with inValidate
+// lists the bad entries first (mImportErrors), then applies them; 9 on a bad entry
+long EEScenarioManager::ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate)
+{
+    EESMTextFile theText(this, inFile);
+    return ee_scenario_text_import(&theText.mHost, inKind, inValidate);
+}

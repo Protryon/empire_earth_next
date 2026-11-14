@@ -209,16 +209,14 @@ void EEMap::UpdateWater(long inX, long inY)
 
 // FUNCTION: EXE 0x51bf4a
 // Builds a new map of the given size: fresh unit and effect region tables, every tile on the base terrain
-// (the terrain mesh is assigned to itself, as in the original)
+// (the original assigned the terrain mesh to itself here, a no-op; the mesh is a Rust object now and is not copied)
 void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
 {
-    GETerrainMesh& theMesh = this->mTerrainMesh;
     this->Create(inWidth, inHeight, inPlayerCount, true);
     ee_combat_regions_free(this->mUnitRegions);
     delete this->mEffectRegions;
     this->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)this->mSize / 3L), 3);
     this->mEffectRegions = new EEEffectsTable(this, 10);
-    theMesh = theMesh;
     unsigned long theCount = this->mSize + 1;
     long theTextureSet = EETerrainTable::Get(this->mU195650)->mTextureSetID;
     long theTerrainType = EETerrainTable::Get(this->mU195650)->mTerrainType;

@@ -1861,7 +1861,7 @@ static int LuaStop(lua_State* L)
     int r;
     if (!EECPUnitsBegin(L, me, s, false, NULL, "stop", r))
         return r;
-    EEMStopActiveGroup theMessage;
+    EEMRecord theMessage(kMessageStopActiveGroup);
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "stop", kOK, (long)s->mIds2.size(), 0, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1874,7 +1874,7 @@ static int LuaExplore(lua_State* L)
     int r;
     if (!EECPUnitsBegin(L, me, s, false, EECPUnitsMobile, "explore", r))
         return r;
-    EEMExplore theMessage;
+    EEMRecord theMessage(kMessageExplore);
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "explore", kOK, (long)s->mIds2.size(), 0, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);

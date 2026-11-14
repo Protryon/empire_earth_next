@@ -9,8 +9,10 @@
 //! refresh hands it ([`EeWonLightCert`]; the op's run is a plain C++ `AsyncOp`).
 //!
 //! The C++ `AuthContext` keeps its lock (taken around each call where the original took it) and the login data;
-//! the objects this flow holds (sessions, ops) are C++ `RefCount`s reached through [`EeWonAuthFlowHooks`], the
-//! peer data is peerobj.rs's `PeerData`. No borrow of the state lives across a hook: an op's `Kill`, `Run` or `Finish` can
+//! the ops this flow holds are C++ `RefCount`s reached through [`EeWonAuthFlowHooks`], the peer data is
+//! peerobj.rs's `PeerData`, and the sessions are hostauth.rs's handles (round 22: the game's `AuthSession` is a
+//! Rust handle; a flow made by `ee_won_auth_flow_new` with a last-use hook holds the drivers' stand-in sessions
+//! through the hooks instead). No borrow of the state lives across a hook: an op's `Kill`, `Run` or `Finish` can
 //! complete it inside the call, and its completion comes back into this object (the timer's into
 //! `auto_refresh_callback`, the request's into `get_cert_callback`, a waiting op's into a new `refresh_async`).
 //! References are dropped where the original's `SmartPtr` assignments dropped them, after the state's lock is let
@@ -35,8 +37,6 @@ pub struct EeWonAuthFlowHooks {
     pub add_ref: unsafe extern "C" fn(*mut c_void),
     /// `RefCount::Release`
     pub release: unsafe extern "C" fn(*mut c_void),
-    /// `AuthSession::GetLastUseTime`
-    pub session_last_use: unsafe extern "C" fn(*mut c_void) -> i64,
     /// `AsyncOp::Kill(true)`
     pub op_kill: unsafe extern "C" fn(*mut c_void),
     /// `AsyncOp::IsKilled`
@@ -112,9 +112,14 @@ struct State {
     peer: Option<Arc<PeerData>>,
 }
 
+/// `AuthSession::GetLastUseTime` of a stand-in session (the drivers'; its references through the hooks).
+pub type EeWonAuthSessionLastUse = unsafe extern "C" fn(*mut c_void) -> i64;
+
 /// `AuthContext`'s sessions and certificate flow.
 pub struct EeWonAuthFlow {
     hooks: EeWonAuthFlowHooks,
+    /// None: the sessions are hostauth.rs's handles (the game's)
+    stand_in: Option<EeWonAuthSessionLastUse>,
     state: Mutex<State>,
 }
 
@@ -127,8 +132,44 @@ fn next_key<K: Ord + Copy, V>(map: &BTreeMap<K, V>, key: K) -> Option<K> {
 }
 
 impl EeWonAuthFlow {
+    /// A flow whose sessions are hostauth.rs's handles.
     pub(crate) fn new(hooks: EeWonAuthFlowHooks) -> Self {
-        EeWonAuthFlow { hooks, state: Mutex::new(State { refresh_status: 0x186a4, ..State::default() }) }
+        Self::with_sessions(hooks, None)
+    }
+
+    /// A flow whose sessions are the hooks' objects with this last-use read (None: handles).
+    pub(crate) fn with_sessions(hooks: EeWonAuthFlowHooks, stand_in: Option<EeWonAuthSessionLastUse>) -> Self {
+        EeWonAuthFlow { hooks, stand_in, state: Mutex::new(State { refresh_status: 0x186a4, ..State::default() }) }
+    }
+
+    fn session_add_ref(&self, p: Obj) {
+        match self.stand_in {
+            // SAFETY: a live stand-in session
+            Some(_) => unsafe { (self.hooks.add_ref)(p) },
+            None => crate::hostauth::add_ref(crate::hostop::Obj(p as usize)),
+        }
+    }
+
+    fn session_release(&self, p: Obj) {
+        match self.stand_in {
+            // SAFETY: a reference this object held
+            Some(_) => unsafe { (self.hooks.release)(p) },
+            None => crate::hostauth::release(crate::hostop::Obj(p as usize)),
+        }
+    }
+
+    fn sessions_release(&self, list: impl IntoIterator<Item = Obj>) {
+        for p in list {
+            self.session_release(p);
+        }
+    }
+
+    fn session_last_use(&self, p: Obj) -> i64 {
+        match self.stand_in {
+            // SAFETY: a live stand-in session this object holds
+            Some(f) => unsafe { f(p) },
+            None => crate::hostauth::session_last_use(crate::hostop::Obj(p as usize)),
+        }
     }
 
     fn lock(&self) -> MutexGuard<'_, State> {
@@ -164,8 +205,7 @@ impl EeWonAuthFlow {
         if session.is_null() {
             return;
         }
-        // SAFETY: a live session (the list's reference)
-        unsafe { (self.hooks.add_ref)(session) };
+        self.session_add_ref(session);
         let mut dropped = Vec::new();
         {
             let mut s = self.lock();
@@ -186,7 +226,7 @@ impl EeWonAuthFlow {
             }
         }
         for list in dropped {
-            self.release_all(list);
+            self.sessions_release(list);
         }
     }
 
@@ -211,12 +251,11 @@ impl EeWonAuthFlow {
             let Some(session) = next else {
                 return std::ptr::null_mut();
             };
-            // SAFETY: a live session this object held
-            let used = unsafe { (self.hooks.session_last_use)(session) };
+            let used = self.session_last_use(session);
             if now.wrapping_sub(used) < 300 {
                 return session;
             }
-            self.release(Some(session));
+            self.session_release(session);
         }
     }
 
@@ -240,7 +279,7 @@ impl EeWonAuthFlow {
         };
         drop(old);
         for (_, r) in map {
-            self.release_all(r.sessions);
+            self.sessions_release(r.sessions);
         }
     }
 
@@ -404,7 +443,7 @@ impl Drop for EeWonAuthFlow {
     fn drop(&mut self) {
         let s = std::mem::take(&mut *self.lock());
         for (_, r) in s.sessions {
-            self.release_all(r.sessions);
+            self.sessions_release(r.sessions);
         }
         self.release(s.auto_op);
         self.release(s.get_cert);
@@ -426,12 +465,18 @@ macro_rules! flow {
     };
 }
 
+/// A flow alone (the drivers'; the game's is the auth context's): its sessions are stand-ins held through the hooks
+/// with `session_last_use` as their `GetLastUseTime`, or session handles when it is NULL.
+///
 /// # Safety
 /// `hooks` points to a hook table; its context outlives the flow.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_auth_flow_new(hooks: *const EeWonAuthFlowHooks) -> *mut EeWonAuthFlow {
+pub unsafe extern "C" fn ee_won_auth_flow_new(
+    hooks: *const EeWonAuthFlowHooks,
+    session_last_use: Option<unsafe extern "C" fn(*mut c_void) -> i64>,
+) -> *mut EeWonAuthFlow {
     // SAFETY: the caller's table
-    Box::into_raw(Box::new(EeWonAuthFlow::new(unsafe { *hooks })))
+    Box::into_raw(Box::new(EeWonAuthFlow::with_sessions(unsafe { *hooks }, session_last_use)))
 }
 
 /// The members' references dropped.
@@ -447,7 +492,7 @@ pub unsafe extern "C" fn ee_won_auth_flow_free(f: *mut EeWonAuthFlow) {
 }
 
 /// # Safety
-/// `f` a flow, `a` a live IPAddr value, `session` an `AuthSession`'s `RefCount*` or NULL.
+/// `f` a flow, `a` a live IPAddr value, `session` a session (as the flow was made) or NULL.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_auth_flow_put_session(
     f: *const EeWonAuthFlow,

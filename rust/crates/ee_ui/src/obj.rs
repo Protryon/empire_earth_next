@@ -338,6 +338,28 @@ pub enum EeUiOp {
     TextSetBgColor = 189,
     /// Text `a`'s `SetIsTransparent(b != 0)`.
     TextSetTransparent = 190,
+
+    // ---- UIListBox<T> (R6 ui round 15): the per-`T` host's ops (`UIListBoxRust<T>::Op`, lle/UIListBox.h); the list
+    // box's rhombi take their address (`RhombusRect`, `RhombusSetRect`, `RhombusDraw` too)
+    /// *Pure*: the virtual `GetNumLines()`.
+    ListNumLines = 191,
+    /// The virtual `ChangeSelectionIndex(a, b != 0, c != 0)`.
+    ListChangeSelection = 192,
+    /// The virtual `ClearSelection()`.
+    ListClearSelection = 193,
+    /// The visible lines copied: `mCopyLineArray` grown to `a` lines if shorter, then lines `b .. c` of `mData` copied
+    /// to its start.
+    ListCopyLines = 194,
+    /// The virtual `ProcessDown()` (`a` 0), `ProcessUp()` (1), `ProcessHome()` (2), `ProcessEnd()` (3).
+    ListProcess = 195,
+    /// `*rhombus a = *rhombus b`.
+    RhombusAssign = 196,
+
+    // ---- UIComboBox (R6 ui round 15): its questions and actions, numbered as the record FFI's host calls were
+    /// *Pure*: the combo box's question `a >> 24` (`comboobj::EeUiComboQuery`) with its argument `a & 0xffffff`.
+    ComboQuery = 197,
+    /// The combo box's action `a` (`comboobj::EeUiComboAct`) with `b`, `c`, `d`.
+    ComboAct = 198,
 }
 
 impl EeUiOp {
@@ -383,6 +405,8 @@ impl EeUiOp {
                 | ClipboardGet
                 | FormMouseLocation
                 | TextFgColor
+                | ListNumLines
+                | ComboQuery
         )
     }
 }

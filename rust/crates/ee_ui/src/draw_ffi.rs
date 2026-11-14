@@ -5,7 +5,7 @@
 use core::ffi::{c_long, c_ulong, c_void};
 
 use crate::draw::{self, BorderLine, Clipping, TextDraw};
-use crate::rect::{UiPoint, UiRect};
+use crate::rect::UiRect;
 
 /// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
 #[no_mangle]
@@ -58,56 +58,6 @@ pub unsafe extern "C" fn ee_ui_form_draw_clipped_text(
         Clipping::Plain { candidate: info.has_candidate.then_some(info.candidate_rect) }
     };
     draw::draw_clipped_text(&mut Draws { f: draw_text, ctx }, r, &clipping)
-}
-
-/// `UIListBox::CopyData`'s copied lines `first .. end` and the count drawn.
-#[repr(C)]
-pub struct EeUiListRange {
-    pub first: c_ulong,
-    pub end: c_ulong,
-    pub count: c_ulong,
-}
-
-#[no_mangle]
-pub extern "C" fn ee_ui_list_line_range(
-    has_scroll: bool,
-    value: c_long,
-    shown: c_ulong,
-    lines: c_ulong,
-) -> EeUiListRange {
-    let (first, end, count) = draw::list_line_range(has_scroll.then_some(value), shown, lines);
-    EeUiListRange { first, end, count }
-}
-
-/// `UIListBox::CopyData`'s selection rectangle -> whether the selection is drawn (`out` set then).
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn ee_ui_list_selection(
-    lines: c_ulong,
-    has_selection: bool,
-    selection: c_ulong,
-    first: c_ulong,
-    end: c_ulong,
-    tr: UiRect,
-    line_height: c_ulong,
-    out: *mut UiRect,
-) -> bool {
-    match draw::list_selection(lines, has_selection, selection, first, end, &tr, line_height) {
-        Some(r) => {
-            *out = r;
-            true
-        }
-        None => false,
-    }
-}
-
-/// `UIListBox::DrawPolygons`'s focus rectangle: `out[2k]` and `out[2k + 1]` are line k's start and end.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_list_focus_lines(r: UiRect, out: *mut UiPoint) {
-    for (k, (s, e)) in draw::list_focus_lines(&r).iter().enumerate() {
-        *out.add(2 * k) = *s;
-        *out.add(2 * k + 1) = *e;
-    }
 }
 
 /// `UILBString::DrawTextA`'s row `i`.

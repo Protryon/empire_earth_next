@@ -17,6 +17,7 @@ use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
 use crate::effect_hurricane::{hurricane, load_hurricane, save_hurricane, EE_GFX_EFFECT_KIND_HURRICANE};
+use crate::effect_icon::{icon, load_icon, save_icon, EE_GFX_EFFECT_KIND_GOAL, EE_GFX_EFFECT_KIND_ICON};
 use crate::effect_multi::{multi, EE_GFX_EFFECT_KIND_MULTI_EFFECT};
 use crate::effect_nuclear::{
     blast, load_blast, save_blast, EeGfxUnitTile, EE_GFX_EFFECT_KIND_ENERGY_WAVE, EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION,
@@ -109,6 +110,12 @@ pub struct EeGfxGraphicFacts {
     pub param8: f32,
     /// `gPhysics->mSpeed` (the game speed)
     pub speed: f32,
+    /// `mParam9` .. `mParam11`
+    pub param9: f32,
+    pub param10: f32,
+    pub param11: f32,
+    /// the effect has its graphic effect
+    pub has_effect: bool,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -213,6 +220,16 @@ pub struct EeGfxEffect3DHost {
     pub frames: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxFrames,
     /// the unit's class's scale (`GetClass()->GetScale()`)
     pub unit_class_scale: extern "C" fn(context: *mut c_void) -> f32,
+    /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
+    pub reload_media: extern "C" fn(context: *mut c_void) -> i32,
+    /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
+    /// without a unit)
+    pub unit_raised_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
+    /// the unit is an unbuilt market (a complex unit of type market, not built, not a foundation)
+    pub market_unbuilt: extern "C" fn(context: *mut c_void) -> bool,
+    /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
+    /// screen (none without an object)
+    pub queue_screen: extern "C" fn(context: *mut c_void, index: u32),
 }
 
 /// The world as the effects ask it.
@@ -330,6 +347,17 @@ pub trait Effect3DHost {
     fn unit_class_scale(&mut self) -> f32 {
         0.0
     }
+    /// the tests' hosts that make no icon load nothing more and stand at the origin
+    fn reload_media(&mut self) -> i32 {
+        0
+    }
+    fn unit_raised_position(&mut self) -> Ge3DPoint {
+        Ge3DPoint::default()
+    }
+    fn market_unbuilt(&mut self) -> bool {
+        false
+    }
+    fn queue_screen(&mut self, _index: u32) {}
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -479,6 +507,18 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn unit_class_scale(&mut self) -> f32 {
         (self.unit_class_scale)(self.context)
     }
+    fn reload_media(&mut self) -> i32 {
+        (self.reload_media)(self.context)
+    }
+    fn unit_raised_position(&mut self) -> Ge3DPoint {
+        (self.unit_raised_position)(self.context)
+    }
+    fn market_unbuilt(&mut self) -> bool {
+        (self.market_unbuilt)(self.context)
+    }
+    fn queue_screen(&mut self, index: u32) {
+        (self.queue_screen)(self.context, index)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -510,6 +550,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_MULTI_EFFECT => unsafe { multi(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_ENERGY_WALL => unsafe { wall(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_DAMAGE_VENT => unsafe { damage_vent(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_ICON | EE_GFX_EFFECT_KIND_GOAL => unsafe { icon(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -606,6 +647,16 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 h.load_media()
             } else {
                 base
+            }
+        }
+        // the base's error stops it
+        EE_GFX_EFFECT_KIND_ICON | EE_GFX_EFFECT_KIND_GOAL => {
+            if base != 0 {
+                base
+            } else if load {
+                load_icon(r, f)
+            } else {
+                save_icon(r, f)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {

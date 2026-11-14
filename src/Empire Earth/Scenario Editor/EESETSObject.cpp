@@ -779,21 +779,21 @@ EESETSObject::~EESETSObject()
 // Sorts the scenario's objects
 void EESETSObject::Sort()
 {
-    gWorld.mScenarioManager->SortObjects();
+    gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_OBJECTS);
 }
 
 // FUNCTION: EXE 0x591bbf
 // Moves the selected scenario object one place down
 void EESETSObject::MoveDown()
 {
-    gWorld.mScenarioManager->MoveObjectDown(this->mSelection + 1);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_OBJECTS, this->mSelection + 1, false);
 }
 
 // FUNCTION: EXE 0x591bd0
 // Moves the selected scenario object one place up
 void EESETSObject::MoveUp()
 {
-    gWorld.mScenarioManager->MoveObjectUp(this->mSelection + 1);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_OBJECTS, this->mSelection + 1, true);
 }
 
 // FUNCTION: EXE 0x591be1
@@ -801,7 +801,7 @@ void EESETSObject::MoveUp()
 void EESETSObject::Delete()
 {
     gUIManager->mScenarioEditorForm->ClearSelection();
-    gWorld.mScenarioManager->DeleteObject(this->mSelection + 1);
+    gWorld.mScenarioManager->DeleteEntry(EE_SCENARIO_LIST_OBJECTS, this->mSelection + 1);
 }
 
 // FUNCTION: EXE 0x591c06
@@ -862,7 +862,7 @@ void EESETSObject::Refresh()
 // Duplicates the selected scenario object
 void EESETSObject::Duplicate()
 {
-    gWorld.mScenarioManager->DuplicateObject(this->mSelection + 1);
+    gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_OBJECTS, this->mSelection + 1);
 }
 
 // NEAR: inline budget: the original expands GetPlayerScreen with its operator[] out of line (ours refuses the
@@ -885,7 +885,7 @@ void EESETSObject::Activate()
     this->GetPlayer()->SetPlayerCount(thePlayer);
     this->GetPlayer()->SetFlags(0xe7);
     this->mAreaComboBox->DeleteAllEntries();
-    gWorld.GetScenarioManager()->GetAreaNames(theNames);
+    gWorld.GetScenarioManager()->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
     for (i = 0; i < theNames.size(); i++)
         this->GetAreaComboBox()->AppendLine(theNames[i]);
     // The class list is built on the first call for this page, which is recreated with every scenario editor
@@ -1017,7 +1017,7 @@ void EESETSObject::Store()
 // Returns the names of the user-defined scenario objects
 void EESETSObject::GetNames(std::vector<UWideString>& outNames)
 {
-    gWorld.mScenarioManager->GetUserObjectNames(outNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_OBJECTS, outNames);
 }
 
 // FUNCTION: EXE 0x5924f3
@@ -1062,7 +1062,7 @@ void EESETSObject::Load()
     unsigned long i;
     this->mNearObjectComboBox->DeleteAllEntries();
     this->mParentComboBox->DeleteAllEntries();
-    gWorld.mScenarioManager->GetObjectNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     for (i = 0; i < theNames.size(); i++) {
         this->mNearObjectComboBox->AppendLine(theNames[i]);
         this->mParentComboBox->AppendLine(theNames[i]);
@@ -1144,7 +1144,7 @@ void EESETSObject::Load()
 // Adds a new scenario object
 void EESETSObject::New()
 {
-    gWorld.mScenarioManager->NewObject();
+    gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_OBJECTS);
 }
 
 // NEAR: inline budget (the original calls mSelectedUnits.begin()/operator+ out of line, frame 0xb0); the

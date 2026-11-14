@@ -319,7 +319,6 @@ class AsyncOp;
 class GetCertOp;
 class AuthPeerData;
 class WriteBuffer;
-class AuthSession; //actual borrowed session API identity
 class ElGamal;
 class ServerContext; //actual complete3c owner in Routing
 // AuthContext (0xc0 bytes in the original) is ee_won's (rust/crates/ee_won/src/authobj.rs): its lock, sessions and
@@ -371,8 +370,6 @@ public:
     std::wstring GetUserName() const { return this->LoginText(1); }
     std::wstring GetPassword() const { return this->LoginText(2); }
 
-    SmartPtr<AuthSession> GetSession(const IPAddr&); //2df080, owning return; call-only
-    void PutSession(const IPAddr&,AuthSession*); //2deeb0, actual borrowed parameters; call-only
     void SetDoAutoRefresh(bool); //actual reference-only flag/reset API2deb30
     void SetCommunity(const std::wstring&); //2dfcc0 preserves selected existing full3c record before clear
     void SetCDKey(const std::wstring&,const CDKey&); //2e0380 original locked map mutation, borrowed call-only

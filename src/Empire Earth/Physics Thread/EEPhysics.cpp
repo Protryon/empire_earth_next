@@ -1341,7 +1341,7 @@ void EEPhysics::ServeLoadSaveRequests()
                 this->mLoadSaveRequests[i] = NULL;
             }
             this->mLoadSaveRequests.clear();
-            EEMLoadOrSaveGameResponse* theResponse = new EEMLoadOrSaveGameResponse(theResult);
+            EEMRecord* theResponse = new EEMRecord(kMessageLoadOrSaveGameResponse, {theResult});
             theResponse->SetOriginatingSlot(gWorld.GetCurrentPlayer()->GetSlot());
             if (gCommunications->IsServer()) {
                 static_cast<NESynchronousServer*>(gCommunications)->LogResponse(theResponse);

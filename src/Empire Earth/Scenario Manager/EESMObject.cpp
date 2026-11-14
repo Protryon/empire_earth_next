@@ -393,35 +393,6 @@ long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_object_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c84db
-// Updates the object's area index after areas inOld/inNew swap, or after inOld is deleted (inNew -1)
-void EESMObject::RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_object_renumber(this, EE_SCENARIO_RENUMBER_AREAS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5c8511
-// Updates the parent and near-object indices after objects inOld/inNew swap, or after inOld is deleted
-void EESMObject::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_object_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5c856e
-// Maps the object's area index through the ID map
-void EESMObject::RemapAreas(EESMIDMap& inMap)
-{
-    EERemapID(this->mArea, inMap);
-}
-
-// FUNCTION: EXE 0x5c8580
-// Maps the object's parent and near-object indices through the ID map
-void EESMObject::RemapObjects(EESMIDMap& inMap)
-{
-    EERemapID(this->mParent, inMap);
-    EERemapID(this->mNearObject, inMap);
-}
-
 // FUNCTION: EXE 0x5c85a4
 // Replaces every occurrence of a unit id in the object's unit list by a new id
 void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
@@ -869,48 +840,22 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
 }
 
 // FUNCTION: EXE 0x5c9628
-// Renames the object and renames its object conditions to "<name> Exists"
+// Renames the object and renames its object conditions to "<name> Exists" (ee_scenario lists.rs)
 void EESMObject::SetName(const UWideString& inName)
 {
-    UWideString theConditionName = inName + " Exists";
     this->mName = inName;
-    if (gWorld.mScenarioManager != NULL) {
-        long theIndex = gWorld.mScenarioManager->GetObjectIndex(this);
-        std::vector<EESMCondition*>& theConditions = gWorld.mScenarioManager->mConditions;
-        for (unsigned long i = 1; i < theConditions.size(); i++) {
-            EESMCondition* theCondition = theConditions[i];
-            if (theCondition->mType == kSMConditionObject && theCondition->mObjectIndex == theIndex)
-                theCondition->mName = theConditionName;
-        }
-    }
+    if (gWorld.mScenarioManager != NULL)
+        gWorld.mScenarioManager->ObjectChanged(this, false, 0);
 }
 
 // FUNCTION: EXE 0x5c96b7
-// Sets the parent object; a parent chain that loops back to this object resets the parent to 0
+// Sets the parent object; a parent chain that loops back to this object resets the parent to 0 (ee_scenario
+// lists.rs set_parent)
 void EESMObject::SetParent(long inParent)
 {
-    std::vector<EESMObject*> theVisited;
-    EESMObject* theObject = gWorld.GetScenarioManager()->GetScenarioObject(this->mParent);
     this->mParent = inParent;
-    if (gWorld.mScenarioManager != NULL) {
-        EESMObject* theThis = this;
-        theVisited.push_back(theThis);
-        long theParent = inParent;
-        EESMObject* theRoot = gWorld.mScenarioManager->GetScenarioObject(0);
-        while (true) {
-            theObject = gWorld.mScenarioManager->GetScenarioObject(theParent);
-            if (theObject == NULL || theObject == theRoot)
-                break;
-            if (std::find(theVisited.begin(), theVisited.end(), theObject) != theVisited.end()) {
-                this->mParent = 0;
-                theObject = NULL;
-                return;
-            }
-            theVisited.push_back(theObject);
-            theParent = theObject->mParent;
-        }
-        this->mParent = inParent;
-    }
+    if (gWorld.mScenarioManager != NULL)
+        gWorld.mScenarioManager->ObjectChanged(this, true, inParent);
 }
 
 // FUNCTION: EXE 0x5c97a8
@@ -1072,70 +1017,6 @@ long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     EESMStream theStream = {&inFile, theStrings, NULL, this};
     EeScenarioStream theTable = EESMStreamTable(&theStream);
     return ee_scenario_trigger_load(&theTable, this);
-}
-
-// FUNCTION: EXE 0x5c9f3d
-// Updates the entry's condition index after conditions inOld/inNew swap, or after inOld is deleted
-void EESMTConditionWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
-{
-    ee_scenario_renumber_ids(&this->mValue, 1, inOld, inNew);   // ee_scenario fields.rs renumber
-}
-
-// FUNCTION: EXE 0x5c9f73
-// Maps the entry's condition index through the ID map
-void EESMTConditionWrapper::Virtual0(EESMIDMap& inMap)
-{
-    EERemapID(this->mValue, inMap);
-}
-
-// FUNCTION: EXE 0x5c9f85
-// Updates the entry's effect index after effects inOld/inNew swap, or after inOld is deleted
-void EESMTEffectWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
-{
-    ee_scenario_renumber_ids(&this->mEffectIndex, 1, inOld, inNew);   // ee_scenario fields.rs renumber
-}
-
-// FUNCTION: EXE 0x5c9fbb
-// Maps the entry's effect index through the ID map
-void EESMTEffectWrapper::Virtual0(EESMIDMap& inMap)
-{
-    EERemapID(this->mEffectIndex, inMap);
-}
-
-// FUNCTION: EXE 0x5c9fcd
-// Updates every condition entry after conditions inOld/inNew swap or inOld is deleted
-void EESMTrigger::RenumberConditions(unsigned long inOld, unsigned long inNew)
-{
-    long theCount = this->mConditions.size();
-    for (long i = 0; i < theCount; i++)
-        this->mConditions[i]->Virtual4(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5ca009
-// Updates every effect entry after effects inOld/inNew swap or inOld is deleted
-void EESMTrigger::RenumberEffects(unsigned long inOld, unsigned long inNew)
-{
-    long theCount = this->mEffects.size();
-    for (long i = 0; i < theCount; i++)
-        this->mEffects[i]->Virtual4(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5ca045
-// Maps every condition entry's index through the ID map
-void EESMTrigger::RemapConditions(EESMIDMap& inMap)
-{
-    long theCount = this->mConditions.size();
-    for (long i = 0; i < theCount; i++)
-        this->mConditions[i]->Virtual0(inMap);
-}
-
-// FUNCTION: EXE 0x5ca07c
-// Maps every effect entry's index through the ID map
-void EESMTrigger::RemapEffects(EESMIDMap& inMap)
-{
-    long theCount = this->mEffects.size();
-    for (long i = 0; i < theCount; i++)
-        this->mEffects[i]->Virtual0(inMap);
 }
 
 // FUNCTION: EXE 0x5ca0b3

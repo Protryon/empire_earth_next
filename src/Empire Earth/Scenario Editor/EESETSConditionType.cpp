@@ -860,7 +860,7 @@ void EESETSCTTriggerAttribute::Show(EESETSConditionControls* inControls)
     inControls->mLabels[1]->SetDisplayMode(kDisplayModeShown);
     theLocation.SetY(666.0f);
     inControls->mScenarioComboBoxes[0]->DeleteAllEntries();
-    gWorld.mScenarioManager->GetTriggerNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, theNames);
     for (unsigned long i = 0; i < theNames.size(); i++)
         inControls->mScenarioComboBoxes[0]->AppendLine(theNames[i]);
     inControls->mScenarioComboBoxes[0]->SetLocation(theLocation);
