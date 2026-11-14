@@ -68,7 +68,7 @@ pub const EE_SCREENS_SB_OP_WORLD_LONG: u32 = 23;
 pub const EE_SCREENS_SB_OP_CHAT_STRING: u32 = 24;
 /// `EECanAffordTrade(a)`.
 pub const EE_SCREENS_SB_OP_CAN_AFFORD_TRADE: u32 = 25;
-/// `EEDecodeTradeButton(a, ...)`: -1 when it fails, else the resource * 2 + the sell flag.
+/// `EEDecodeTradeButton(a, ...)`: -1 when it fails (b 0), else (or b 1) the resource * 2 + the sell flag.
 pub const EE_SCREENS_SB_OP_DECODE_TRADE: u32 = 26;
 /// `UIControl::ShiftKeyPressed()`.
 pub const EE_SCREENS_SB_OP_SHIFT: u32 = 27;
@@ -504,6 +504,170 @@ pub fn right_button_up(host: &mut impl ButtonHost) {
         h.send(EE_SCREENS_SB_SEND_REMOVE, shift as i64, 0);
     }
     h.o(EE_SCREENS_SB_OP_BASE_BUTTON_UP);
+}
+
+/// The help text's held text = a text of kind a (`EE_SCREENS_SB_TEXT_*`) with b; its length in bytes, -1 when there is
+/// none (a button without a hot key).
+pub const EE_SCREENS_SB_OP_HELP_TEXT: u32 = 65;
+/// The held text's bytes copied to a (b bytes at most); its length.
+pub const EE_SCREENS_SB_OP_HELP_TEXT_READ: u32 = 66;
+/// The help string = the b bytes at a (UTF-8).
+pub const EE_SCREENS_SB_OP_HELP_OUT: u32 = 67;
+/// `EEGetTradePrice(current player, a, b != 0)`.
+pub const EE_SCREENS_SB_OP_TRADE_PRICE: u32 = 68;
+/// The selected group's unit a exists and its class is a priest.
+pub const EE_SCREENS_SB_OP_UNIT_PRIEST: u32 = 69;
+/// `EEGetConversionCost` of the selected group's unit a.
+pub const EE_SCREENS_SB_OP_CONVERSION_COST: u32 = 70;
+/// The button's tech tree node exists.
+pub const EE_SCREENS_SB_OP_NODE_PRESENT: u32 = 71;
+/// The node's `mData->mNameID`.
+pub const EE_SCREENS_SB_OP_NODE_NAME_ID: u32 = 72;
+/// The current player's upgrade of the class at table index a has a name.
+pub const EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED: u32 = 73;
+/// The class at table index a's `GetPopulationCost()`.
+pub const EE_SCREENS_SB_OP_CLASS_POPULATION: u32 = 74;
+/// The class at table index a's `mNameStringID`.
+pub const EE_SCREENS_SB_OP_CLASS_NAME_ID: u32 = 75;
+
+/// `gResource->GetString(b)`.
+pub const EE_SCREENS_SB_TEXT_STRING: i64 = 1;
+/// The command's button object's hot key's name (none without an object or hot key).
+pub const EE_SCREENS_SB_TEXT_OBJECT_HOT_KEY: i64 = 2;
+/// The node's hot key's name (none without one).
+pub const EE_SCREENS_SB_TEXT_NODE_HOT_KEY: i64 = 3;
+/// The current player's upgrade name of the class at table index b.
+pub const EE_SCREENS_SB_TEXT_UPGRADE_NAME: i64 = 4;
+/// The node's `GetCostString(mUnitType, 1.0f)`.
+pub const EE_SCREENS_SB_TEXT_COST: i64 = 5;
+
+/// `IDS_TRADE_BUY`, `IDS_TRADE_SELL`, `IDS_TRADE_FOR`, `IDS_RESOURCE_NAME_BASE`, `IDS_RESOURCE_NAME_GOLD`,
+/// `IDS_IMPROVEMENT_POWER`, `IDS_POP_COST`.
+pub const EE_SCREENS_SB_IDS_TRADE_BUY: i64 = 5538;
+pub const EE_SCREENS_SB_IDS_TRADE_SELL: i64 = 5539;
+pub const EE_SCREENS_SB_IDS_TRADE_FOR: i64 = 5540;
+pub const EE_SCREENS_SB_IDS_RESOURCE_NAME_BASE: i64 = 30114;
+pub const EE_SCREENS_SB_IDS_RESOURCE_NAME_GOLD: i64 = 30119;
+pub const EE_SCREENS_SB_IDS_IMPROVEMENT_POWER: i64 = 30024;
+pub const EE_SCREENS_SB_IDS_POP_COST: i64 = 30469;
+
+impl<H: ButtonHost> Ops<'_, H> {
+    /// A text of `kind` with `arg`, `None` when there is none.
+    fn text(&mut self, kind: i64, arg: i64) -> Option<Vec<u8>> {
+        let len = self.0.op(EE_SCREENS_SB_OP_HELP_TEXT, kind, arg, 0);
+        if len < 0 {
+            return None;
+        }
+        let mut out = vec![0u8; len as usize];
+        self.0.op(EE_SCREENS_SB_OP_HELP_TEXT_READ, out.as_mut_ptr() as i64, len, 0);
+        Some(out)
+    }
+    fn string(&mut self, id: i64) -> Vec<u8> {
+        self.text(EE_SCREENS_SB_TEXT_STRING, id).unwrap_or_default()
+    }
+}
+
+/// `" (" + name + ")"` after `out` when there is a hot key.
+fn hot_key(out: &mut Vec<u8>, name: Option<Vec<u8>>) {
+    if let Some(name) = name {
+        out.extend_from_slice(b" (");
+        out.extend_from_slice(&name);
+        out.push(b')');
+    }
+}
+
+/// `EEUIFMGStatusButton::GetHelpString` (0x26ebdf): the tooltip, handed to the host (`EE_SCREENS_SB_OP_HELP_OUT`);
+/// always true. A command: the market's trade and its price, or the command's help (a priest's conversion cost for
+/// the flares), then its hot key. A technology: the name, the cost (a calamity's power), the population cost, the
+/// unit's name, the hot key.
+pub fn help_string(host: &mut impl ButtonHost) -> bool {
+    let mut h = Ops(host);
+    let mut out: Vec<u8> = Vec::new();
+    if h.o(EE_SCREENS_SB_OP_IS_COMMAND) != 0 {
+        let button = h.o(EE_SCREENS_SB_OP_BUTTON) as u32;
+        if (0x5dc..=0x5e3).contains(&button) {
+            // the decode's outputs, resource * 2 + sell, whether it accepted the button or not (b 1)
+            let decoded = h.0.op(EE_SCREENS_SB_OP_DECODE_TRADE, button as i64, 1, 0);
+            let (resource, sell) = (decoded >> 1, decoded & 1 != 0);
+            let name = h.string(if sell { EE_SCREENS_SB_IDS_TRADE_SELL } else { EE_SCREENS_SB_IDS_TRADE_BUY });
+            let price = h.0.op(EE_SCREENS_SB_OP_TRADE_PRICE, resource, sell as i64, 0) as i32;
+            let cost = h.string(resource + EE_SCREENS_SB_IDS_RESOURCE_NAME_BASE);
+            // "%s %d %s"
+            out.extend_from_slice(&name);
+            out.extend_from_slice(b" 100 ");
+            out.extend_from_slice(&cost);
+            let cost = h.string(EE_SCREENS_SB_IDS_TRADE_FOR);
+            out.push(b' ');
+            out.extend_from_slice(&cost);
+            let cost = h.string(EE_SCREENS_SB_IDS_RESOURCE_NAME_GOLD);
+            // " %ld %s"
+            out.extend_from_slice(format!(" {price} ").as_bytes());
+            out.extend_from_slice(&cost);
+        } else {
+            out = h.string(command_panel::command_help_string(button as c_ulong) as i64);
+            if command_panel::command_help_priest(button as c_ulong)
+                && h.a(EE_SCREENS_SB_OP_GROUP_COUNT, 0) > 0
+                && h.a(EE_SCREENS_SB_OP_UNIT_PRIEST, 0) != 0
+            {
+                out.extend_from_slice(b": ");
+                let power = h.string(EE_SCREENS_SB_IDS_IMPROVEMENT_POWER);
+                out.extend_from_slice(&power);
+                out.extend_from_slice(b": ");
+                let cost = h.a(EE_SCREENS_SB_OP_CONVERSION_COST, 0) as i32;
+                out.extend_from_slice(cost.to_string().as_bytes());
+            }
+        }
+        let name = h.text(EE_SCREENS_SB_TEXT_OBJECT_HOT_KEY, 0);
+        hot_key(&mut out, name);
+    } else if h.o(EE_SCREENS_SB_OP_NODE_PRESENT) != 0 {
+        let index = h.o(EE_SCREENS_SB_OP_NODE_CLASS);
+        let has_class = index > 0 && h.a(EE_SCREENS_SB_OP_CLASS_PRESENT, index) != 0;
+        let (named, population) = if has_class {
+            let named = h.a(EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED, index) != 0;
+            (named, h.a(EE_SCREENS_SB_OP_CLASS_POPULATION, index) as c_long)
+        } else {
+            (false, 0)
+        };
+        let kind = h.o(EE_SCREENS_SB_OP_NODE_KIND) as c_long;
+        let calamity_cost = if kind == 5 { h.o(EE_SCREENS_SB_OP_CALAMITY_COST) as c_long } else { 0 };
+        let makes_unit = h.o(EE_SCREENS_SB_OP_NODE_MAKES_UNIT) != 0;
+        let name_id = h.o(EE_SCREENS_SB_OP_NODE_NAME_ID) as c_long;
+        let plan = command_panel::tech_help(has_class, named, population, kind, calamity_cost, makes_unit, name_id);
+        out = match plan.name {
+            1 => h.text(EE_SCREENS_SB_TEXT_UPGRADE_NAME, index).unwrap_or_default(),
+            0 => {
+                let id = h.a(EE_SCREENS_SB_OP_CLASS_NAME_ID, index);
+                h.string(id)
+            }
+            // "%s"
+            _ => h.string(name_id as i64),
+        };
+        out.extend_from_slice(b": ");
+        if plan.power {
+            let power = h.string(EE_SCREENS_SB_IDS_IMPROVEMENT_POWER);
+            out.extend_from_slice(&power);
+            out.extend_from_slice(format!(": {calamity_cost}").as_bytes());
+        } else {
+            let cost = h.text(EE_SCREENS_SB_TEXT_COST, 0).unwrap_or_default();
+            out.extend_from_slice(&cost);
+        }
+        if plan.population {
+            // " %s: %ld" of the (unsigned long) count
+            let pop = h.string(EE_SCREENS_SB_IDS_POP_COST);
+            out.push(b' ');
+            out.extend_from_slice(&pop);
+            out.extend_from_slice(format!(": {}", population as c_ulong as i32).as_bytes());
+        }
+        if plan.unit_name {
+            let name = h.string(name_id as i64);
+            out.push(b' ');
+            out.extend_from_slice(&name);
+        }
+        let name = h.text(EE_SCREENS_SB_TEXT_NODE_HOT_KEY, 0);
+        hot_key(&mut out, name);
+    }
+    h.0.op(EE_SCREENS_SB_OP_HELP_OUT, out.as_ptr() as i64, out.len() as i64, 0);
+    true
 }
 
 #[cfg(test)]

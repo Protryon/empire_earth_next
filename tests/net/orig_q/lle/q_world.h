@@ -41,6 +41,8 @@ struct QWorld {
         bool mInfinite = false;
         unsigned long mDeadline = 0;
         long mWake = 0;
+        std::vector<int> mWaitSet;        // a WaitAny's events (mEvent is then 0)
+        long mWakeIndex = 0;              // the index of the event whose Set woke it
         std::thread mThread;
     };
 
@@ -116,11 +118,21 @@ struct QWorld {
     {
         this->Line("event set e%d", inID);
         this->mEvents[inID] = true;
-        for (auto& t : this->mThreads)
-            if (t.second->mState == kBlocked && t.second->mEvent == inID) {
+        for (auto& t : this->mThreads) {
+            if (t.second->mState != kBlocked)
+                continue;
+            if (t.second->mEvent == inID) {
                 t.second->mState = kReady;
                 t.second->mWake = kQWaitOK;
             }
+            for (size_t i = 0; t.second->mEvent == 0 && i < t.second->mWaitSet.size(); i++)
+                if (t.second->mWaitSet[i] == inID) {
+                    t.second->mState = kReady;
+                    t.second->mWake = kQWaitOK;
+                    t.second->mWakeIndex = (long)i;
+                    break;
+                }
+        }
     }
     void Clear(int inID)
     {
@@ -195,6 +207,44 @@ struct QWorld {
             theResult = t->mWake;
         }
         this->Line("event wait e%d %lu = %ld", inEvent, inTimeout, theResult);
+        return theResult;
+    }
+    // several events (ne_client_test): the index of the lowest set one when the wait ends, -1 (timed out) or -2
+    // (failed); a waiter woken by a Set whose event was cleared before it ran answers that event's index
+    long WaitAny(const std::vector<int>& inEvents, unsigned long inTimeout)
+    {
+        long theResult = -3;
+        for (size_t i = 0; theResult == -3 && i < inEvents.size(); i++)
+            if (this->mEvents[inEvents[i]])
+                theResult = (long)i;
+        if (theResult == -3 && inTimeout == 0)
+            theResult = -1;
+        if (theResult == -3) {
+            Thread* t = this->mThreads[this->mCurrent];
+            t->mState = kBlocked;
+            t->mEvent = 0;
+            t->mWaitSet = inEvents;
+            t->mInfinite = inTimeout == kQInfinite;
+            t->mDeadline = this->mClock + inTimeout;
+            this->Switch(false);
+            t->mWaitSet.clear();
+            if (t->mWake == kQWaitTimeout)
+                theResult = -1;
+            else if (t->mWake != kQWaitOK)
+                theResult = -2;
+            else {
+                theResult = t->mWakeIndex;
+                for (size_t i = 0; i < inEvents.size(); i++)
+                    if (this->mEvents[inEvents[i]]) {
+                        theResult = (long)i;
+                        break;
+                    }
+            }
+        }
+        std::string theList;
+        for (int e : inEvents)
+            theList += (theList.empty() ? "e" : ",e") + std::to_string(e);
+        this->Line("event waitany %s %lu = %ld", theList.c_str(), inTimeout, theResult);
         return theResult;
     }
     // a new thread: it can run from now, its body called with its argument

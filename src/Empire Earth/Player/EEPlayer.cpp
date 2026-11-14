@@ -114,7 +114,7 @@ struct EEPDereferencer {
 
 // the interval of the healing units' hit-point bonus (0x4429b8, just before kTributeFee; ComputeLoadDistance)
 // (provisional name)
-static const float kPlayerHealInterval = 10000.0f;
+static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee_units player_tick.rs)
 
 // the default tribute fee (0x4429bc, the unit's .rdata just before sPlayerEffects; ResetTechTree loads it as a dword)
 // (provisional name)
@@ -1775,12 +1775,12 @@ void EEPlayer::Reset()
         this->mViewedUnit->Dereference();
         this->mViewedUnit = NULL;
     }
-    for (long theResource = 2; theResource < 7; theResource++)
-        this->mResourceCaps[theResource] = 0;
+    // port (R5b.4): the record's fields (EeUnitsPlayerSaved: the caps, enemies, counters, flags, timers) are set by
+    // ee_units player_tick.rs `reset`: those the original set before the events' clear here (no call between reads
+    // them), the trade, refunds and vital buildings after it
+    ee_units_player_reset(static_cast<EeUnitsPlayerSaved*>(this), (uint32_t)this->mPlayerID, 0);
     this->mSavedGroups.Clear();
     this->mSavedGroups.SetName(this->GetName());
-    for (unsigned long thePlayer = 0; thePlayer <= 16; thePlayer++)
-        this->mEnemies[thePlayer] = this->mPlayerID != thePlayer;
     EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
     this->mUnitClassUpgrades.resize(EEUnitClassCount());
     for (long theClass = 0; theClass < EEUnitClassCount(); theClass++) {
@@ -1794,16 +1794,9 @@ void EEPlayer::Reset()
     for (long theAirport = 0; theAirport < 4; theAirport++)
         mAirTraffic[theAirport] = new EEAirTrafficControl(this);
     this->mConversionFactor = 1.0f;
-    this->mHighGroundBonus = 0.0f;
-    this->mPopulationCount = 0;
-    this->mEndOfGameCount = 0;
     this->mNumHeroes = 0;
     this->mHeroLimit = 1;
     this->mNumHeroesInProduction = 0;
-    this->mPopLimit = 0;
-    this->mNumCapitols = 0;
-    this->mSharedLOS = true;
-    this->mChatType = 1;
     this->mTributeFee = kTributeFee;
     this->mShareBonus = 0;
     this->mPopulationLimitBonus = 0;
@@ -1813,39 +1806,22 @@ void EEPlayer::Reset()
     this->mLAF0 = 0;
     this->mHealsUnits = false;
     this->mHealedUnitSet = NULL;
-    this->mGameResult = 0;
     this->mMaxStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     this->mMiningLimit = gWorldTable.GetLongValue(kWorldGatherersPerResourceMax);
-    this->mHealTimer = 0.0f;
     this->mAreaConversion = false;
     this->mBehindFirewall = false;
-    this->mDisconnected = false;
     this->mBB42 = false;
-    this->mCivilizationLocked = false;
-    this->mCivilizationChosen = false;
-    this->mCivUpgradesPurchased = false;
     this->mShiftMode = false;
     this->mLastAcknowledgementTime = 0;
     this->mLastAcknowledgedGroup = 0;
     this->mEarthquakeShaken = false;
-    this->mFreeUnitCounter = 0;
-    this->mFreeUnitInterval = 1;
     this->mNumTeleporters = 0;
-    for (long theStat = 0; theStat < 10; theStat++)
-        this->mTributes[theStat] = 0;
-    for (unsigned long theOther = 0; theOther <= 16; theOther++) {
+    for (unsigned long theOther = 0; theOther <= 16; theOther++)
         this->mDamageFrom[theOther] = 0;
-        this->mSendChatMessage[theOther] = true;
-    }
     this->mNumAttacks = 0;
-    this->mCombatState = 0;
     this->mHackUnitClass = kNoUnitClass;
-    for (long theValue = 0; theValue < 10; theValue++)
-        this->mScenarioVariables[theValue] = 0;
     this->mEvents.Clear(this);
-    memset(this->mResourceTrade, 0, sizeof(this->mResourceTrade));
-    memset(this->mInsuranceRefunds, 0, sizeof(this->mInsuranceRefunds));
-    this->mNumVitalBuildings = 0;
+    ee_units_player_reset(static_cast<EeUnitsPlayerSaved*>(this), (uint32_t)this->mPlayerID, 1);
     this->LoadPlayerEffects();
 }
 
@@ -4069,80 +4045,125 @@ void EEPlayer::RefreshTownGroups()
     }
 }
 
+// The context of UpdatePlayer's operations: the player and the queued improvements' walk
+struct EEPlayerTickContext {
+    EEPlayer* mPlayer;
+    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator mQueued;
+};
+
+// The walk's entry: its key and float, or 0 at the end
+static int32_t EEPlayerQueuedEntry(EEPlayerTickContext& inContext, EeUnitsPlayerSaveIo* io)
+{
+    if (inContext.mQueued == inContext.mPlayer->mQueuedImprovements.end())
+        return 0;
+    io->i = (int64_t)(*inContext.mQueued).first;
+    io->f = (*inContext.mQueued).second.first;
+    return 1;
+}
+
+// The C++ parts of the player's tick (ee_units player_tick.rs): the groups, herds, air traffic, events, the queued
+// improvements' map and the units, by operation
+static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEPlayerTickContext& theContext = *static_cast<EEPlayerTickContext*>(inContext);
+    EEPlayer* thePlayer = theContext.mPlayer;
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(io->i));
+    switch (inOp) {
+    case EE_UNITS_PLAYER_TICK_VALIDATE:
+        if (thePlayer->mViewedUnit != NULL && thePlayer->mViewedUnit->mReferenceCount == 1)
+            thePlayer->UpdateSelection(NULL, true);
+        if (thePlayer->mSelectedViewedUnit != NULL && thePlayer->mSelectedViewedUnit->mReferenceCount == 1)
+            thePlayer->SetSelectedViewedUnit(NULL);
+        thePlayer->mActiveGroup->Validate();
+        thePlayer->mSelectedGroup->Validate();
+        for (long theGroup = 0; theGroup < 20; theGroup++)
+            thePlayer->mGroups[theGroup]->Validate();
+        for (unsigned long i = 0, theCount = thePlayer->GetNumRunningGroups(); i < theCount; i++)
+            thePlayer->mRunningGroups[i]->Validate();
+        return 0;
+    case EE_UNITS_PLAYER_TICK_HERD_COUNT:
+        return (int32_t)thePlayer->mHerds.size();
+    case EE_UNITS_PLAYER_TICK_GAME_TIME:
+        io->i = (int64_t)gPhysics->mGameTime;
+        return 0;
+    case EE_UNITS_PLAYER_TICK_HERD_DUE:
+        io->i = (int64_t)thePlayer->mHerds[inIndex]->mNextUpdateTime;
+        io->b = thePlayer->mHerds[inIndex]->mIsActive ? 1 : 0;
+        return 0;
+    case EE_UNITS_PLAYER_TICK_HERD_UPDATE:
+        thePlayer->mHerds[inIndex]->Update((unsigned long)io->i);
+        return 0;
+    case EE_UNITS_PLAYER_TICK_HERD_STATE:
+        return (int32_t)thePlayer->mHerds[inIndex]->mState;
+    case EE_UNITS_PLAYER_TICK_HERD_KILL:
+        thePlayer->KillHerdUnits(thePlayer->mHerds[inIndex], 0);
+        return 0;
+    case EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS:
+        thePlayer->UpdateAirTraffic();
+        thePlayer->mEvents.TickEvents(thePlayer, gPhysics->mTickTime);
+        return 0;
+    case EE_UNITS_PLAYER_TICK_QUEUED_FIRST:
+        theContext.mQueued = thePlayer->mQueuedImprovements.begin();
+        return EEPlayerQueuedEntry(theContext, io);
+    case EE_UNITS_PLAYER_TICK_QUEUED_NEXT:
+        theContext.mQueued++;
+        return EEPlayerQueuedEntry(theContext, io);
+    case EE_UNITS_PLAYER_TICK_QUEUED_ERASE:
+        theContext.mQueued = thePlayer->mQueuedImprovements.erase(theContext.mQueued);
+        return EEPlayerQueuedEntry(theContext, io);
+    case EE_UNITS_PLAYER_TICK_QUEUED_SET:
+        (*theContext.mQueued).second.first = io->f;
+        return 0;
+    case EE_UNITS_PLAYER_TICK_TICK_TIME:
+        io->f = gPhysics->GetTickTime();
+        return 0;
+    case EE_UNITS_PLAYER_TICK_INSTANT_BUILD:
+        return thePlayer->mInstantBuild ? 1 : 0;
+    case EE_UNITS_PLAYER_TICK_QUEUED_APPLY:
+        thePlayer->ApplyImprovement((*theContext.mQueued).first, (*theContext.mQueued).second.second.front(), false);
+        (*theContext.mQueued).second.second.erase((*theContext.mQueued).second.second.begin());
+        (*theContext.mQueued).second.first = 0.0f;
+        return 0;
+    case EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE:
+        return thePlayer->AdvanceImprovement((unsigned long)io->i) ? 1 : 0;
+    case EE_UNITS_PLAYER_TICK_HEALS_UNITS:
+        return thePlayer->mHealsUnits == true ? 1 : 0;
+    case EE_UNITS_PLAYER_TICK_TICK_MS:
+        io->i = (int64_t)gPhysics->mTickTimeMs;
+        return 0;
+    case EE_UNITS_PLAYER_TICK_HEAL_VALUE:
+        if (inIndex == 0)
+            io->i = gWorldTable.GetLongValue(kWorldWonderHealAmount);
+        else if (inIndex == 1)
+            io->i = thePlayer->mTechnologies->mCurrentEpoch;
+        else if (inIndex == 2)
+            io->i = gWorldTable.GetLongValue(kWorldWonderHealEpochStep);
+        else
+            io->f = gWorldTable.GetFloatValue(kWorldWonderHealEpochFactor);
+        return 0;
+    case EE_UNITS_PLAYER_TICK_UNIT_NEXT:
+        theUnit = theUnit == NULL ? thePlayer->mFirstUnit : static_cast<EEUnit*>(theUnit->mNext);
+        io->i = (int64_t)reinterpret_cast<uintptr_t>(theUnit);
+        return theUnit != NULL && thePlayer->mHealedUnitSet->Contains(theUnit->mUnitClass->mUnitType) ? 1 : 0;
+    case EE_UNITS_PLAYER_TICK_UNIT_HIT_POINTS:
+        return inIndex == 0 ? (int32_t)theUnit->mHitPoints : (int32_t)theUnit->mStats->mMaxHitPoints;
+    case EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS:
+        theUnit->SetHitPoints((long)(int32_t)inIndex);
+        return 0;
+    }
+    return 0;
+}
+
 // FUNCTION: EXE 0x56be3f
 // Updates the player each tick: validates groups, herds, air traffic, events, improvement timers and wonder healing
-// NEAR: inline budget (the original calls begin() / _Ptrit::operator+ out of line for mRunningGroups and the four world-table
-// reads), frame slots
+// port (R5b.4): the body is Rust (ee_units player_tick.rs: the herds' and timers' decisions, the heal) over the
+// record this class derives from and EEPlayerTickOperation's parts
 void EEPlayer::UpdatePlayer()
 {
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator;
-    float theElapsed = gPhysics->mTickTime;
-    long theTicks = gPhysics->mTickTimeMs;
-    if (theTicks <= 0)
-        theTicks = 0;
-    if (this->mViewedUnit != NULL && this->mViewedUnit->mReferenceCount == 1)
-        this->UpdateSelection(NULL, true);
-    if (this->mSelectedViewedUnit != NULL && this->mSelectedViewedUnit->mReferenceCount == 1)
-        this->SetSelectedViewedUnit(NULL);
-    this->mActiveGroup->Validate();
-    this->mSelectedGroup->Validate();
-    for (long theGroup = 0; theGroup < 20; theGroup++)
-        this->mGroups[theGroup]->Validate();
-    unsigned long theCount = this->GetNumRunningGroups();
-    for (unsigned long i = 0; i < theCount; i++)
-        this->mRunningGroups[i]->Validate();
-    for (long theHerd = this->mHerds.size() - 1; theHerd >= 0; theHerd--) {
-        unsigned long theTime = gPhysics->mGameTime;
-        EEHerd* theHerdObject = this->mHerds[theHerd];
-        if (theHerdObject->mNextUpdateTime <= theTime && theHerdObject->mIsActive)
-            theHerdObject->Update(theTime);
-        if (this->mHerds[theHerd]->mState == 0xb)
-            this->KillHerdUnits(this->mHerds[theHerd], 0);
-    }
-    this->UpdateAirTraffic();
-    this->mEvents.TickEvents(this, theElapsed);
-    theIterator = this->mQueuedImprovements.begin();
-    while (true) {
-        if (theIterator == this->mQueuedImprovements.end())
-            break;
-        if ((*theIterator).second.first != 0.0f) {
-            (*theIterator).second.first -= gPhysics->GetTickTime();
-            if (this->mInstantBuild && (*theIterator).second.first > 1.0f)
-                (*theIterator).second.first = 1.0f;
-            if ((*theIterator).second.first > 0.0f) {
-                theIterator++;
-                continue;
-            }
-            this->ApplyImprovement((*theIterator).first, (*theIterator).second.second.front(), false);
-            (*theIterator).second.second.erase((*theIterator).second.second.begin());
-            (*theIterator).second.first = 0.0f;
-        }
-        if (!(this->AdvanceImprovement((*theIterator).first)))
-            theIterator++;
-        else
-            theIterator = this->mQueuedImprovements.erase(theIterator);
-    }
-    if (this->mHealsUnits != true)
-        return;
-    float theTime = this->mHealTimer - theTicks;
-    if (theTime <= 0.0f) {
-        long theBase = gWorldTable.GetLongValue(kWorldWonderHealAmount);
-        long theFactor = gWorldTable.GetLongValue(kWorldWonderHealAmount);
-        long theEpoch = this->mTechnologies->mCurrentEpoch;
-        long theDivisor = gWorldTable.GetLongValue(kWorldWonderHealEpochStep);
-        long theHeal = theBase + (long)((theEpoch / theDivisor) * gWorldTable.GetFloatValue(kWorldWonderHealEpochFactor) * theFactor);
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (this->mHealedUnitSet->Contains(theUnit->mUnitClass->mUnitType) != true)
-                continue;
-            long theHitPoints = theUnit->mHitPoints + theHeal;
-            if (theHitPoints > theUnit->mStats->mMaxHitPoints)
-                theHitPoints = theUnit->mStats->mMaxHitPoints;
-            if (theUnit->mHitPoints > 0)
-                theUnit->SetHitPoints(theHitPoints);
-        }
-        theTime = kPlayerHealInterval;
-    }
-    this->mHealTimer = theTime;
+    EEPlayerTickContext theContext;
+    theContext.mPlayer = this;
+    theContext.mQueued = this->mQueuedImprovements.end();
+    ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this));
 }
 
 // FUNCTION: EXE 0x56c1e1

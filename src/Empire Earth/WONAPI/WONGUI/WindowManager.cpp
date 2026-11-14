@@ -16,16 +16,17 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
 using namespace WONAPI;
-// The popup stack, the modal dialog, the message loop and focus are ee_won's Rust manager (wmobj.rs; R6 WON round
-// 33); which call an event makes (the timer step, the popups' end on focus, mouse and key events, focus and capture,
-// the merged moves and sizes) is its guievent module (guievent.rs); this unit keeps the windows, the events, the
-// timers, the broadcasts and the caches.
+// The popup stack, the modal dialog, the message loop, focus and the caches are ee_won's Rust manager (wmobj.rs,
+// wmcache.rs; R6 WON round 33); the window set, the event list, the timers, the broadcasts, the event loop and the
+// screen resolution are its wmloop.rs (round 34). This unit keeps the colour scheme, the decoders, the font
+// helpers and the forwarders.
 static EeWonRect4 WinRect4(const WONRectangle& inRect)
 {
     EeWonRect4 aRect = { inRect.x, inRect.y, inRect.width, inRect.height };
     return aRect;
 }
-// R6 WON round 33: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won/src/wmobj.rs)
+// R6 WON rounds 33-34: the Rust manager's calls out (EeWonGuiOp's Wm* ops; rust/crates/ee_won/src/wmobj.rs,
+// wmloop.rs)
 typedef EeWonGuiOp Op;
 
 static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
@@ -52,6 +53,8 @@ static intptr_t WmCompCall(Component* t, intptr_t call, intptr_t c, intptr_t d)
     case EeWonWmComp::AsContainer: return (intptr_t)(Component*)dynamic_cast<Container*>(t);
     case EeWonWmComp::Hold: t->AddRef(); return 0;
     case EeWonWmComp::Release: t->Release(); return 0;
+    case EeWonWmComp::MouseWheel: t->MouseWheel((int)c); return 0;
+    case EeWonWmComp::HandleComponentEvent: t->HandleComponentEvent((ComponentEvent*)c); return 0;
     }
     return 0;
 }
@@ -86,6 +89,56 @@ static intptr_t WmWinCall(Window* t, intptr_t call, intptr_t c, intptr_t d)
     case EeWonWmWin::IsVisible: return t->PlatformIsVisible() ? 1 : 0;
     case EeWonWmWin::Hold: t->AddRef(); return 0;
     case EeWonWmWin::Release: t->Release(); return 0;
+    case EeWonWmWin::MinimizeOnRestore: return t->GetMinimizeOnResolutionRestore() ? 1 : 0;
+    case EeWonWmWin::Minimize: t->Minimize(c != 0); return 0;
+    case EeWonWmWin::InClient: return t->IsMouseInClientArea() ? 1 : 0;
+    case EeWonWmWin::HandleMouse: t->HandleMouseEvent((MouseEvent*)c); return 0;
+    case EeWonWmWin::HandleKey: t->HandleKeyEvent((KeyEvent*)c); return 0;
+    case EeWonWmWin::HandleInput: t->HandleInputEvent((InputEvent*)c); return 0;
+    case EeWonWmWin::PlatformClose: t->PlatformClose(); return 0;
+    case EeWonWmWin::CloseEvent: return (intptr_t)t->mCloseEvent.get();
+    case EeWonWmWin::TimerEvent: t->TimerEvent((DWORD)c); return 0;
+    case EeWonWmWin::IdleUpdate: t->IdleUpdate(); return 0;
+    }
+    return 0;
+}
+
+// R6 WON round 34: a window event's fields and methods (EeWonGuiOp::WmEvent)
+static intptr_t WmEventCall(WindowEventBase* t, intptr_t call, intptr_t c)
+{
+    switch ((EeWonWmEvent)call) {
+    case EeWonWmEvent::Type: return (intptr_t)t->mEventType;
+    case EeWonWmEvent::Window: return (intptr_t)t->mWindow;
+    case EeWonWmEvent::SetWindow: t->mWindow = (Window*)c; return 0;
+    case EeWonWmEvent::Mouse: {
+        MouseEvent* m = static_cast<MouseEvent*>(t);
+        EeWonWmMouse* o = (EeWonWmMouse*)c;
+        o->window = (intptr_t)m->mWindow; o->x = m->mx; o->y = m->my; o->button = m->mButtonOrAmount;
+        return 0;
+    }
+    case EeWonWmEvent::SetMouse: {
+        MouseEvent* m = static_cast<MouseEvent*>(t);
+        const EeWonWmMouse* o = (const EeWonWmMouse*)c;
+        m->mWindow = (Window*)o->window; m->mx = o->x; m->my = o->y;
+        return 0;
+    }
+    case EeWonWmEvent::Button: return static_cast<MouseEvent*>(t)->mButtonOrAmount;
+    case EeWonWmEvent::Key: return static_cast<KeyEvent*>(t)->mKey;
+    case EeWonWmEvent::Size: {
+        SizeEvent* z = static_cast<SizeEvent*>(t);
+        EeWonRect4 r = { z->mx, z->my, z->mWidth, z->mHeight };
+        *(EeWonRect4*)c = r;
+        return 0;
+    }
+    case EeWonWmEvent::SetSize: {
+        SizeEvent* z = static_cast<SizeEvent*>(t);
+        const EeWonRect4& r = *(const EeWonRect4*)c;
+        z->mx = r.x; z->my = r.y; z->mWidth = r.w; z->mHeight = r.h;
+        return 0;
+    }
+    case EeWonWmEvent::Deliver: t->Deliver(); return 0;
+    case EeWonWmEvent::Hold: t->AddRef(); return 0;
+    case EeWonWmEvent::Release: t->Release(); return 0;
     }
     return 0;
 }
@@ -147,12 +200,11 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     case Op::WmNextEvent: t->GetNextEvent(); return 0;
     case Op::WmSelfHold: t->AddRef(); return 0;
     case Op::WmSelfRelease: t->Release(); return 0;
-    case Op::WmWindowAt: {
-        WindowManager::WindowSet::iterator anItr = t->mWindowSet.begin();
-        for (intptr_t i = 0; i < a && anItr != t->mWindowSet.end(); i++)
-            ++anItr;
-        return anItr == t->mWindowSet.end() ? 0 : (intptr_t)anItr->get();
-    }
+    case Op::WmEvent: return WmEventCall((WindowEventBase*)b, a, c);
+    case Op::WmResolution:
+        if (a == 0) { t->GetScreenResolutionHook(*(int*)b, *(int*)c); return 0; }
+        return t->SetScreenResolutionHook((int)b, (int)c) ? 1 : 0;
+    case Op::WmSignal: t->Signal(); return 0;
     default: return 0;
     }
 }
@@ -164,17 +216,12 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
 WindowManager::WindowManager() {
     this->mWmObj.p = ee_won_wm_new(this, ee_won_guicpp_wm_call);
     WindowManager::mThreadId=PlatCurrentThreadId();
-    this->mIsFullScreen=false;
-    this->mOriginalScreenWidth=this->mOriginalScreenHeight=0;
     WindowManager::mDefaultWindowManager=this;
-    this->mLastTimerTick=WONTickCount();
-    this->mDefaultWindow=NULL;this->mWindowCount=0;
-    this->mLastInputTick=0;
-    this->mIsValid=true;
-    this->mCallingTimers=false;
+    this->WmSet(EeWonWmField::LastTimerTick, (intptr_t)(uint32_t)WONTickCount());
     this->mColorScheme=new ColorScheme;
     this->InitColorScheme();
-    // The original leaves the image cache count (+0x94) and the full-screen size (+0xb0, +0xb4) uninitialised
+    // The window set, the events, the timers, the broadcasts and the screen state start empty in the Rust manager
+    // (wmloop.rs); the original left the image cache count and the full-screen size unset
 }
 // FUNCTION: WON 0x0072ba90
 // Deleting destructor of the window manager (compiler-generated)
@@ -262,34 +309,14 @@ void WindowManager::NotifyGotFocus(Window *theWindow)
 // from the current mode
 void WindowManager::SetScreenResolution(int theWidth, int theHeight)
 {
-	int aWidth = 0,aHeight = 0;
-	this->GetScreenResolutionHook(aWidth, aHeight);
-	if(aWidth==theWidth || aHeight==theHeight)
-		return;
-	this->SetScreenResolutionHook(theWidth,theHeight);
-	this->mOriginalScreenWidth = aWidth;
-	this->mOriginalScreenHeight = aHeight;
+	this->WmCall(EeWonWmCall::SetScreenResolution, theWidth, theHeight);
 }
 
 // FUNCTION: WON 0x0072c390
 // Minimizes open windows that ask for it and switches back to the remembered screen resolution, if any
 void WindowManager::RestoreScreenResolution()
 {
-	WindowSet::iterator anItr = this->mWindowSet.begin();
-	while(anItr!=this->mWindowSet.end())
-	{
-		Window *aWindow = anItr->get();
-		if(aWindow->GetWindowState()==Window::WindowState_Open && aWindow->GetMinimizeOnResolutionRestore())
-			aWindow->Minimize(true);
-
-		++anItr;
-	}
-
-	if(this->mOriginalScreenWidth==0 || this->mOriginalScreenHeight==0)
-		return;
-	this->SetScreenResolution(this->mOriginalScreenWidth, this->mOriginalScreenHeight);
-	this->mOriginalScreenWidth = 0;
-	this->mOriginalScreenHeight = 0;
+	this->WmCall(EeWonWmCall::RestoreScreenResolution);
 }
 
 // FUNCTION: WON 0x0072c440
@@ -330,7 +357,7 @@ Font* WindowManager::GetDefaultFontMod(int theStyle, int theSize)
 	if(theSize>0)
 		aDesc.mSize = theSize;
 
-	return this->mDefaultWindow->GetFont(aDesc).get();
+	return this->GetDefaultWindow()->GetFont(aDesc).get();
 }
 
 // FUNCTION: WON 0x0072c7f0
@@ -359,10 +386,10 @@ SmartPtr<NativeImage> WindowManager::DecodeImage(DisplayContext *theContext, con
 // Decodes an image file for the default window's display context; NULL when there is no window
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 {
-	if(this->mDefaultWindow==NULL)
+	if(this->GetDefaultWindow()==NULL)
 		return NULL;
 
-	return this->DecodeImage(this->mDefaultWindow->mDisplayContext.get(),theFilePath);
+	return this->DecodeImage(this->GetDefaultWindow()->mDisplayContext.get(),theFilePath);
 }
 
 // FUNCTION: WON 0x0072ccf0
@@ -413,37 +440,14 @@ SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
 // Closes every window, processes the resulting events and restores the screen resolution when full screen
 void WindowManager::CloseAllWindows()
 {
-	bool hadWindows = !this->mWindowSet.empty();
-	AutoCrit aCrit(this->mDataCrit);
-	WindowSet::iterator anItr = this->mWindowSet.begin();
-	while(anItr!=this->mWindowSet.end())
-	{
-		Window *aWindow = anItr->get();
-		aWindow->Close();
-		++anItr;
-	}
-
-	aCrit.Leave();
-
-	if(hadWindows)
-		this->ProcessEvents();
-
-	if(this->mIsFullScreen)
-		this->RestoreScreenResolution();
+	this->WmCall(EeWonWmCall::CloseAllWindows);
 }
 
 // FUNCTION: WON 0x0072d6a0
 // Adds a window to the managed set (the first one becomes the default window); always returns true
 bool WindowManager::AddWindow(Window *theWindow)
 {
-	AutoCrit aCrit(this->mDataCrit);
-	if(this->mWindowSet.empty())
-		this->mDefaultWindow = theWindow;
-
-	if(this->mWindowSet.insert(theWindow).second)
-		this->mWindowCount++;
-
-	return true;
+	return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)theWindow) != 0;
 }
 
 // FUNCTION: WON 0x0072d840
@@ -451,40 +455,7 @@ bool WindowManager::AddWindow(Window *theWindow)
 // it as the saved popup window; false when it was not managed
 bool WindowManager::RemoveWindow(Window *theWindow)
 {
-	AutoCrit aCrit(this->mDataCrit);
-
-	if(this->mWindowSet.erase(theWindow)>0)
-	{
-		this->mWindowCount--;
-		if(this->mWindowCount<=0)
-			this->WmSet(EeWonWmField::TargetDepth, 0);
-
-		if(this->mWindowSet.empty())
-			this->mDefaultWindow = NULL;
-		else
-			this->mDefaultWindow = this->mWindowSet.begin()->get();
-
-
-		WindowEventList::iterator anItr = this->mWindowEventList.begin();
-		while(anItr!=this->mWindowEventList.end())
-		{
-			WindowEventBase *anEvent = anItr->get();
-			if(anEvent->mWindow==theWindow)
-				this->mWindowEventList.erase(anItr++);
-			else
-				++anItr;
-		}
-
-		if(theWindow==((Window*)this->WmField(EeWonWmField::ModalWindow)))
-			this->EndDialog(-1,NULL,NULL);
-
-		if(theWindow==((Window*)this->WmField(EeWonWmField::PopupWindowSave)))
-			this->WmSet(EeWonWmField::PopupWindowSave, 0);
-
-		return true;
-	}
-
-	return false;
+	return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)theWindow) != 0;
 }
 
 // FUNCTION: WON 0x0072ddf0
@@ -505,73 +476,49 @@ int WindowManager::MessageLoop()
 // Queues a window event and signals the event loop when asked or when no message loop is running
 void WindowManager::PostEvent(WindowEventBase *theEvent, bool needSignal)
 {
-	WONAPI::AutoCrit aCrit(this->mDataCrit);
-	this->mWindowEventList.push_back(theEvent);
-	if(((int)this->WmField(EeWonWmField::CurDepth))<=0)
-		needSignal = true;
-
-	aCrit.Leave();
-
-	if(needSignal)
-		this->Signal();
+	this->WmCall(EeWonWmCall::PostEvent, (intptr_t)theEvent, needSignal ? 1 : 0);
 }
 
 // FUNCTION: WON 0x0072e960
 // Adds an event to be delivered on every timer tick
 void WindowManager::AddTimerEvent(WindowEventBase *theEvent)
 {
-	this->mTimerEvents.insert(theEvent);
+	this->WmCall(EeWonWmCall::AddTimerEvent, (intptr_t)theEvent);
 }
 
 // FUNCTION: WON 0x0072ea70
 // Removes a timer event, deferring the removal while timers are being delivered
 void WindowManager::RemoveTimerEvent(WindowEventBase *theEvent)
 {
-	if(this->mCallingTimers)
-		this->mRemoveTimerEvents.insert(theEvent);
-	else
-		this->mTimerEvents.erase(theEvent);
+	this->WmCall(EeWonWmCall::RemoveTimerEvent, (intptr_t)theEvent);
 }
 
 // FUNCTION: WON 0x0072f3f0
 // Adds a component to or removes it from the set that receives broadcast events
 void WindowManager::SubscribeToBroadcast(Component *theComponent, bool subscribe)
 {
-	if(subscribe)
-		this->mBroadcastSet.insert(theComponent);
-	else
-		this->mBroadcastSet.erase(theComponent);
+	this->WmCall(EeWonWmCall::SubscribeToBroadcast, (intptr_t)theComponent, subscribe ? 1 : 0);
 }
 
 // FUNCTION: WON 0x0072f5d0
 // Removes every component from the broadcast set
 void WindowManager::ClearSubscriptions()
 {
-	this->mBroadcastSet.clear();
+	this->WmCall(EeWonWmCall::ClearSubscriptions);
 }
 
 // FUNCTION: WON 0x0072f680
 // Sends a component event to every subscribed component
 void WindowManager::BroadcastEvent(ComponentEvent *theEvent)
 {
-	BroadcastSet::iterator anItr = this->mBroadcastSet.begin();
-	while(anItr!=this->mBroadcastSet.end())
-	{
-		Component *aComponent = anItr->get();
-		aComponent->HandleComponentEvent(theEvent);
-		++anItr;
-	}
+	this->WmCall(EeWonWmCall::BroadcastEvent, (intptr_t)theEvent);
 }
 
 // FUNCTION: WON 0x0072f700
 // Returns the next queued window event without removing it, or NULL
 WindowEventBase* WindowManager::PeekNextEvent()
 {
-	AutoCrit aCrit(this->mDataCrit);
-	if(this->mWindowEventList.empty())
-		return NULL;
-	else
-		return this->mWindowEventList.front().get();
+	return (WindowEventBase*)this->WmCall(EeWonWmCall::PeekNextEvent);
 }
 
 // FUNCTION: WON 0x0072f760
@@ -579,83 +526,8 @@ WindowEventBase* WindowManager::PeekNextEvent()
 // timer events; then delivers queued events and idles every window (deferred timer removals are never cleared)
 void WindowManager::ProcessEvents()
 {
-
-	DWORD aTick = WONTickCount();
-	uint32_t anElapsed;
-	if(ee_won_gui_wm_timer_step(aTick, this->mLastTimerTick, &anElapsed))
-	{
-		this->mLastTimerTick = aTick;
-
-		switch(ee_won_gui_wm_popup_focus_step((this->WmField(EeWonWmField::PopupIsUp)!=0), ((Window*)this->WmField(EeWonWmField::FocusWindow))==((Window*)this->WmField(EeWonWmField::PopupOwnerWindow)),
-		                                      ((int)this->WmField(EeWonWmField::PopupFlags)), ((Window*)this->WmField(EeWonWmField::FocusWindow))!=NULL,
-		                                      ((Window*)this->WmField(EeWonWmField::FocusWindow))!=NULL && ((Window*)this->WmField(EeWonWmField::FocusWindow))->IsPopup(), (this->WmField(EeWonWmField::EndPopup)!=0)))
-		{
-			case 1:
-				this->WmSet(EeWonWmField::EndPopup, 0);
-				((Window*)this->WmField(EeWonWmField::PopupOwnerWindow))->PlatformSetFocus();
-				break;
-			case 2:
-				this->EndPopup(NULL);
-				break;
-			case 3:
-				this->WmSet(EeWonWmField::EndPopup, 1);
-				break;
-			default:
-				this->WmSet(EeWonWmField::EndPopup, 0);
-				break;
-		}
-
-		if(ee_won_gui_wm_restore_due(((DWORD)this->WmField(EeWonWmField::LastLoseFocusTick)), ((Window*)this->WmField(EeWonWmField::FocusWindow))!=NULL, aTick))
-		{
-			this->WmSet(EeWonWmField::LastLoseFocusTick, 0);
-			if(this->mIsFullScreen)
-				this->RestoreScreenResolution();
-		}
-
-		WindowSet::iterator anItr = this->mWindowSet.begin();
-		while(anItr!=this->mWindowSet.end())
-		{
-			Window *aWindow = anItr->get();
-			aWindow->TimerEvent(anElapsed);
-			++anItr;
-		}
-
-		if(!this->mTimerEvents.empty())
-		{
-			this->mCallingTimers = true;
-			for(WindowEventSet::iterator aTimerItr = this->mTimerEvents.begin(); aTimerItr != this->mTimerEvents.end(); ++aTimerItr)
-				(*aTimerItr)->Deliver();
-			this->mCallingTimers = false;
-		}
-
-		if(!this->mRemoveTimerEvents.empty())
-		{
-			for(WindowEventSet::iterator aTimerItr = this->mRemoveTimerEvents.begin(); aTimerItr != this->mRemoveTimerEvents.end(); ++aTimerItr)
-				this->mTimerEvents.erase(*aTimerItr);
-		}
-	}
-
-	WONAPI::AutoCrit aCrit(this->mDataCrit, false);
-	while(!this->mWindowEventList.empty()  && ((int)this->WmField(EeWonWmField::CurDepth))<=((int)this->WmField(EeWonWmField::TargetDepth)))
-	{
-		aCrit.Enter();
-		SmartPtr<WindowEventBase> anEvent = this->mWindowEventList.front();
-		this->mWindowEventList.pop_front();
-		aCrit.Leave();
-
-		this->DeliverEvent(anEvent.get());
-	}
-
-
-	WindowSet::iterator anItr = this->mWindowSet.begin();
-	while(anItr!=this->mWindowSet.end())
-	{
-		Window *aWindow = anItr->get();
-		aWindow->IdleUpdate();
-		++anItr;
-	}
+	this->WmCall(EeWonWmCall::ProcessEvents);
 }
-
 
 // FUNCTION: WON 0x0072da30
 // Recomputes modal state from the open popups and the modal dialog: flags popups, the popup input component
@@ -721,205 +593,12 @@ void WindowManager::CheckEndPopup(Component *theAncestor)
 	this->WmCall(EeWonWmCall::CheckEndPopup, (intptr_t)theAncestor);
 }
 
-// FUNCTION: WON 0x0072ec60
-// Redirects a mouse event to the popup owner, the mouse-down window or the topmost popup window under the mouse
-void WindowManager::FindMouseWindow(MouseEvent *theEvent)
-{
-	EeWonWmMouse anEvent = { (intptr_t)theEvent->mWindow, theEvent->mx, theEvent->my, theEvent->mButtonOrAmount };
-	this->WmCall(EeWonWmCall::FindMouseWindow, (intptr_t)&anEvent);
-	theEvent->mWindow = (Window*)anEvent.window;
-	theEvent->mx = anEvent.x;
-	theEvent->my = anEvent.y;
-}
-
-// FUNCTION: WON 0x0072ee40
-// Handles a mouse click while a popup is up: closes the popup on an outside click; returns true when that
-// click is to be swallowed
-bool WindowManager::CheckPopupClick(MouseEvent *theEvent)
-{
-	EeWonWmMouse anEvent = { (intptr_t)theEvent->mWindow, theEvent->mx, theEvent->my, theEvent->mButtonOrAmount };
-	bool eat = this->WmCall(EeWonWmCall::CheckPopupClick, (intptr_t)&anEvent) != 0;
-	theEvent->mWindow = (Window*)anEvent.window;
-	theEvent->mx = anEvent.x;
-	theEvent->my = anEvent.y;
-	return eat;
-}
-
 // FUNCTION: WON 0x0072ef20
 // Dispatches one window event: mouse, key, focus, resize, close and other events, applying popup, modal
 // and full-screen rules; merges repeated mouse moves and size changes
 void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 {
-	switch(theEvent->mEventType)
-	{
-		case InputEvent_MouseDoubleClick:
-		case InputEvent_MouseDownCheckDoubleClick:
-		case InputEvent_MouseDown:
-		{
-			MouseEvent *anEvent = static_cast<MouseEvent*>(theEvent);
-			if((this->WmField(EeWonWmField::PopupIsUp)!=0))
-			{
-				if(this->CheckPopupClick(anEvent))
-					break;
-			}
-			if(ee_won_gui_wm_press_focuses(((Window*)this->WmField(EeWonWmField::FocusWindow))==anEvent->mWindow, anEvent->mWindow->IsPopup(),
-			                               ((Window*)this->WmField(EeWonWmField::FocusWindow))!=anEvent->mWindow && !anEvent->mWindow->IsPopup() &&
-			                               this->NotModalWindow(anEvent->mWindow)))
-				anEvent->mWindow->PlatformSetFocus();
-
-			if(ee_won_gui_wm_capture_changes(anEvent->mButtonOrAmount, (this->WmField(EeWonWmField::PopupIsUp)!=0), (this->WmField(EeWonWmField::CaptureSupport)!=0)))
-				anEvent->mWindow->PlatformSetMouseCapture(true);
-		}
-
-		if(theEvent->mWindow->IsMouseInClientArea())
-			theEvent->mWindow->HandleMouseEvent(static_cast<MouseEvent*>(theEvent));
-		break;
-
-		case InputEvent_MouseMove:
-		{
-			WindowEventBase *nextEvent = this->PeekNextEvent();
-			if(nextEvent!=NULL && nextEvent->mEventType==InputEvent_MouseMove && nextEvent->mWindow==theEvent->mWindow)
-				return;
-
-			this->FindMouseWindow(static_cast<MouseEvent*>(theEvent));
-			if(ee_won_gui_wm_move_ends_popup((this->WmField(EeWonWmField::PopupIsUp)!=0), ((int)this->WmField(EeWonWmField::PopupFlags))))
-				this->EndPopup(NULL);
-
-			theEvent->mWindow->HandleMouseEvent(static_cast<MouseEvent*>(theEvent));
-			break;
-		}
-
-		case InputEvent_MouseUp:
-		{
-			MouseEvent *anEvent = static_cast<MouseEvent*>(theEvent);
-			this->FindMouseWindow(anEvent);
-			if(anEvent->mButtonOrAmount==0)
-				this->WmSet(EeWonWmField::MouseDownWindow, 0);
-
-			if(ee_won_gui_wm_capture_changes(anEvent->mButtonOrAmount, (this->WmField(EeWonWmField::PopupIsUp)!=0), (this->WmField(EeWonWmField::CaptureSupport)!=0)))
-				theEvent->mWindow->PlatformSetMouseCapture(false);
-
-			theEvent->mWindow->HandleMouseEvent(static_cast<MouseEvent*>(theEvent));
-			break;
-		}
-
-		case InputEvent_MouseWheel:
-		{
-			MouseEvent *anEvent = static_cast<MouseEvent*>(theEvent);
-			this->FindMouseWindow(anEvent);
-			if(ee_won_gui_wm_wheel_to_popup((this->WmField(EeWonWmField::PopupIsUp)!=0), ((int)this->WmField(EeWonWmField::PopupFlags))))
-			{
-
-				Component *aPopupComponent = ((Component*)this->WmField(EeWonWmField::PopupBack));
-				aPopupComponent->MouseWheel(anEvent->mButtonOrAmount);
-				return;
-
-
-			}
-			theEvent->mWindow->HandleMouseEvent(anEvent);
-			break;
-		}
-
-		case InputEvent_KeyDown:
-		case InputEvent_KeyUp:
-		case InputEvent_KeyChar:
-			{
-				uint8_t aKeyStep = ee_won_gui_wm_popup_key((this->WmField(EeWonWmField::PopupIsUp)!=0), theEvent->mEventType, ((int)this->WmField(EeWonWmField::PopupFlags)),
-				                                           static_cast<KeyEvent*>(theEvent)->mKey);
-				if(aKeyStep==1)
-				{
-					this->EndPopup(NULL);
-					break;
-				}
-
-				if(aKeyStep==2)
-				{
-					Window *aPopupWindow = ((Component*)this->WmField(EeWonWmField::PopupBack))->GetRoot();
-					if(aPopupWindow!=theEvent->mWindow)
-						theEvent->mWindow = aPopupWindow;
-				}
-			}
-			theEvent->mWindow->HandleKeyEvent(static_cast<KeyEvent*>(theEvent));
-			break;
-
-		case InputEvent_GotFocus:
-			if(this->mIsFullScreen)
-				this->SetScreenResolution(this->mFullScreenWidth,this->mFullScreenHeight);
-
-			this->NotifyGotFocus(theEvent->mWindow);
-			theEvent->mWindow->HandleInputEvent(static_cast<InputEvent*>(theEvent));
-			if(this->NotModalWindow(theEvent->mWindow))
-				((Window*)this->WmField(EeWonWmField::ModalWindow))->PlatformSetFocus();
-			return;
-
-		case InputEvent_LostFocus:
-			this->NotifyLostFocus();
-			theEvent->mWindow->HandleInputEvent(static_cast<InputEvent*>(theEvent));
-			return;
-
-		case InputEvent_SizeChange:
-			if(theEvent->mWindow==((Window*)this->WmField(EeWonWmField::PopupOwnerWindow)))
-				this->EndPopup(NULL);
-			else
-			{
-				WindowEventBase *nextEvent = this->PeekNextEvent();
-				if(nextEvent!=NULL && nextEvent->mEventType==InputEvent_SizeChange && nextEvent->mWindow==theEvent->mWindow)
-				{
-					SizeEvent *s1 = static_cast<SizeEvent*>(theEvent);
-					SizeEvent *s2 = static_cast<SizeEvent*>(nextEvent);
-					int32_t a1[4] = { s1->mx, s1->my, s1->mWidth, s1->mHeight };
-					int32_t a2[4] = { s2->mx, s2->my, s2->mWidth, s2->mHeight };
-					ee_won_gui_wm_size_merge(a1, a2);
-					s2->mx = a2[0];
-					s2->my = a2[1];
-					s2->mWidth = a2[2];
-					s2->mHeight = a2[3];
-					return;
-				}
-			}
-
-			theEvent->mWindow->HandleInputEvent(static_cast<InputEvent*>(theEvent));
-			return;
-
-
-		case InputEvent_MouseExit:
-			theEvent->mWindow->HandleInputEvent(static_cast<InputEvent*>(theEvent));
-			return;
-
-		case InputEvent_WindowClose:
-		{
-			if(ee_won_gui_wm_close_ends_popup((this->WmField(EeWonWmField::PopupIsUp)!=0), theEvent->mWindow==((Window*)this->WmField(EeWonWmField::PopupOwnerWindow)),
-			                                  theEvent->mWindow->IsPopup()))
-				this->EndPopup(NULL);
-
-
-
-
-			if(((Window*)this->WmField(EeWonWmField::FocusWindow))==theEvent->mWindow)
-				this->NotifyLostFocus();
-
-			if(((Window*)this->WmField(EeWonWmField::MouseDownWindow))==theEvent->mWindow)
-				this->WmSet(EeWonWmField::MouseDownWindow, 0);
-
-			theEvent->mWindow->PlatformClose();
-			SmartPtr<WindowEventBase> aCloseEvent = theEvent->mWindow->mCloseEvent;
-			if(aCloseEvent.get()!=NULL)
-			{
-				aCloseEvent->mWindow = theEvent->mWindow;
-				aCloseEvent->Deliver();
-			}
-
-			this->RemoveWindow(theEvent->mWindow);
-		}
-		return;
-
-
-		default:
-			theEvent->Deliver();
-			return;
-	}
-
-	this->mLastInputTick = WONTickCount();
+	this->WmCall(EeWonWmCall::DeliverEvent, (intptr_t)theEvent);
 }
 
 // Class statics: the default window manager and the GUI thread id (constant-initialised)
@@ -937,7 +616,7 @@ Font* WindowManager::GetNamedFontMod(const std::string& theName, int theStyle, i
     if(theSize > 0)
         aDesc.mSize = theSize;
 
-    return this->mDefaultWindow->GetFont(aDesc).get();
+    return this->GetDefaultWindow()->GetFont(aDesc).get();
 }
 
 SmartPtr<Font> WindowManager::GetDefaultFont(const FontDescriptor& theDescriptor)
@@ -965,10 +644,7 @@ bool WindowManager::CheckModalValid()
 
 void WindowManager::RemoveAllTimerEvents()
 {
-    if(this->mCallingTimers)
-        this->mRemoveTimerEvents = this->mTimerEvents;
-    else
-        this->mTimerEvents.clear();
+    this->WmCall(EeWonWmCall::RemoveAllTimerEvents);
 }
 
 // Runs one pass of the event loop (not identified in the original exe)
