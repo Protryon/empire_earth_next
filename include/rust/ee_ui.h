@@ -322,6 +322,48 @@ enum class EeUiOp : uint32_t {
   /// Bitmap `a`'s `ComputeStretchedCoordsAndScale(f, f, source, GetScreenIndex())`: `f` the destination, the source
   /// rectangle's bottom and left float bits in `c` (high, low), its right and top in `d`.
   BitmapStretch = 149,
+  /// `new UWideString((const char*)a)` -> the string (the goldens trace the bytes' hash, not the address).
+  StringNew = 150,
+  /// `delete` string `a`.
+  StringDelete = 151,
+  /// `*string a = *string b`.
+  StringAssign = 152,
+  /// Text `a`'s `SetText(UWideString((const char*)b))` (the goldens trace the bytes' hash).
+  TextSetBytes = 153,
+  /// *Pure*: text `a`'s `GetFont()->GetHeight()`.
+  TextFontHeight = 154,
+  /// `mDrawCount--`.
+  DrawCountDecrement = 155,
+  /// `SetBgRectangle(f)`.
+  SetBgRectangle = 156,
+  /// The form's `RedrawIntersectControls(f)`.
+  RedrawIntersect = 157,
+  /// `new UIScrollBar(GetId(), (f[0], f[1]), f[2], 1, GetForm(), GetIndex(), GetBorderThickness())` -> the bar.
+  CreateScrollBar = 158,
+  /// The scroll bar `a`'s `SetRange(0, b)`.
+  BarSetRange = 159,
+  /// The scroll bar `a`'s `SetPageSize(b)`.
+  BarSetPageSize = 160,
+  /// *Pure*: the scroll bar `a`'s `GetSlider()->GetCurrentRangeValue()`.
+  BarValue = 161,
+  /// The scroll bar `a`'s `IncrementBy(b)`.
+  BarIncrementBy = 162,
+  /// The scroll bar `a`'s `SetCurrentRangeValue(b)`.
+  BarSetValue = 163,
+  /// *Pure*: part `a`'s `GetCopiedDrawRectangle()` -> `f`.
+  PartCopiedDrawRect = 164,
+  /// Poll `a`'s `Pause()`.
+  PollPause = 165,
+  /// Poll `a`'s `Resume()`.
+  PollResume = 166,
+  /// The virtual `CheckScrollBar()`.
+  VirtCheckScrollBar = 167,
+  /// The virtual `RecomputeDisplayRange()`.
+  VirtRecompute = 168,
+  /// The virtual `SetLocation(f[0], f[1])`.
+  VirtSetLocation = 169,
+  /// The virtual `SetRectangle(f)`.
+  VirtSetRectangle = 170,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -516,6 +558,95 @@ enum class EeUiButtonCall : uint32_t {
   ScalableDrawPolygons = 112,
 };
 
+/// The inward calls (the C++ shims' methods).
+enum class EeUiLabelCall : uint32_t {
+  /// The constructor's text: `SetText(a, true)` (a NUL-terminated bytes).
+  Init = 1,
+  /// `SetText(a, b != 0)` (the private one; a NUL-terminated bytes).
+  SetText = 2,
+  /// `ChangeFont(a)`.
+  ChangeFont = 3,
+  /// `CopyData()` (a scrolling label's own).
+  CopyData = 4,
+  /// `DeleteArray()`.
+  DeleteArray = 5,
+  /// `DeleteLine(a)`.
+  DeleteLine = 6,
+  /// `DrawPolygons()`.
+  DrawPolygons = 7,
+  /// `DrawTextA()` (a scrolling label's own).
+  DrawText = 8,
+  /// `MouseLButtonDown()`.
+  MouseLButtonDown = 9,
+  /// `MouseLButtonUp()`.
+  MouseLButtonUp = 10,
+  /// `MouseMove(f[0], f[1])`.
+  MouseMove = 11,
+  /// `MouseWheelTurned(a)`.
+  MouseWheelTurned = 12,
+  /// `RecomputeDisplayRange()`.
+  RecomputeDisplayRange = 13,
+  /// `SetFitRectToText(a != 0)`.
+  SetFitRectToText = 14,
+  /// `SetLocation(f[0], f[1])`.
+  SetLocation = 15,
+  /// `SetRectangle(f)`.
+  SetRectangle = 16,
+  /// `CheckScrollBar()` (a scrolling label's does nothing).
+  CheckScrollBar = 17,
+  /// `GetFitRectToText()`.
+  FitRectToText = 20,
+  /// `GetGEText()`.
+  Text = 21,
+  /// `GetLineCount()`.
+  LineCount = 22,
+  /// `GetNumberLinesDisplayed()`.
+  LinesDisplayed = 23,
+  /// `GetScrollBar()`: the scroll bar unless it is marked removed, else 0.
+  ScrollBar = 24,
+  /// `ScrollBarExists()`.
+  ScrollBarExists = 25,
+  /// `GetText(a)`: the line's `UWideString`.
+  Line = 26,
+  /// `GetTextRectangle()`: the address of the rectangle (a `GERectangle`).
+  TextRectangle = 27,
+  /// `GetCopiedTextRectangle()`: its address.
+  CopiedTextRectangle = 28,
+  /// `GetScrollBarRectangle()`: its address.
+  ScrollBarRectangle = 29,
+  /// `SetAlignment(a)`.
+  SetAlignment = 30,
+  /// `SetStartingDisplayLine(a)`.
+  SetStartingDisplayLine = 31,
+  /// `SetScrollBarBgOpacity(f[0])`.
+  SetScrollBarBgOpacity = 32,
+  /// `SetScrollBarBgColor(f[0..3])`.
+  SetScrollBarBgColor = 33,
+  /// `SetTextRectangle(f)`.
+  SetTextRectangle = 34,
+  /// The constructor's part after `UITextLabel`'s: the polls, the draw text (font `a`), the offsets.
+  ScrollInit = 50,
+  /// `PauseScrolling()`.
+  PauseScrolling = 51,
+  /// `ResumeScrolling()`.
+  ResumeScrolling = 52,
+  /// `ScrollText(f[0] speed, a start delay, b end delay, f[1] start offset, f[2] end offset)`: the offsets are
+  /// `long`s whose bits travel in the floats.
+  ScrollText = 53,
+  /// `ScrollText(a time, b end delay)`.
+  ScrollTextFor = 54,
+  /// `StopScrolling()`.
+  StopScrolling = 55,
+  /// `GetPixelStartingOffset()`.
+  PixelStartingOffset = 56,
+  /// `GetStartingLine()`.
+  StartingLine = 57,
+  /// `SetPixelStartingOffset(a)`.
+  SetPixelStartingOffset = 58,
+  /// `SetStartingLine(a)`.
+  SetStartingLine = 59,
+};
+
 /// The inward calls (the C++ shim's methods).
 enum class EeUiScrollBarCall : uint32_t {
   /// `CopyData()` -> the slider's result.
@@ -656,6 +787,9 @@ enum class EeUiEdge {
 
 /// The Rust UIButton.
 struct EeUiButton;
+
+/// The Rust UITextLabel (and UITLScrolling).
+struct EeUiLabel;
 
 /// The Rust UIScrollBar.
 struct EeUiScrollBar;
@@ -1100,20 +1234,6 @@ struct EeUiClipInfo {
 /// The C++'s text draw: `Draw(text, *r, drawing surface)` -> its result.
 using EeUiTextDrawFn = long(*)(void *ctx, const EeUiRect *r);
 
-/// `UITextLabel::CopyData`, a multi-line label: the lines copied for drawing, `first .. end`, and the last line
-/// `DrawTextA` draws (`mLastDisplayLine`): the scroll bar's window of `shown` lines from its value, or every line.
-struct EeUiLineRange {
-  unsigned long first;
-  unsigned long end;
-  long last;
-};
-
-/// A line of `UITextLabel::DrawTextA`: the text's location and clip rectangle.
-struct EeUiLabelLine {
-  EeUiPoint at;
-  EeUiRect rect;
-};
-
 /// `UIListBox::CopyData`'s copied lines `first .. end` and the count drawn.
 struct EeUiListRange {
   unsigned long first;
@@ -1290,6 +1410,35 @@ ptrdiff_t ee_ui_button_call(const EeUiButton *button,
 /// without scaling: [`button::box_rect`]).
 EeUiRect ee_ui_button_box_rect(EeUiRect rect,
                                bool scale_bitmap);
+
+/// A new Rust label for the C++ `label` (its `UIControl` part constructed): `f` the rectangle given (a
+/// `GERectangle`), `font` the text font. Its text is set by the first [`ee_ui_label_call`] (`Init`).
+///
+/// # Safety
+/// `f` points at four live floats.
+EeUiLabel *ee_ui_label_new(void *label,
+                           EeUiHostFn host,
+                           const float *f,
+                           void *font,
+                           unsigned long label_type,
+                           unsigned long border);
+
+/// The destructor: deletes the lines, the scroll bar, the texts (and a scrolling label's polls) and frees the
+/// object.
+///
+/// # Safety
+/// `label` came from `ee_ui_label_new` (or is NULL) and is not used again.
+void ee_ui_label_free(EeUiLabel *label);
+
+/// One of UITextLabel's or UITLScrolling's methods ([`EeUiLabelCall`]).
+///
+/// # Safety
+/// `label` is live; `f` is NULL or four live floats; a text argument is NUL-terminated bytes.
+ptrdiff_t ee_ui_label_call(const EeUiLabel *label,
+                           EeUiLabelCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           float *f);
 
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.
@@ -1880,20 +2029,6 @@ EeUiCandidateFrame ee_ui_ime_frame(EeUiRect rect, long selection, unsigned long 
 /// `DrawTextA`'s row of line `index`.
 EeUiRect ee_ui_ime_row(EeUiRect rect, unsigned long index, unsigned long height);
 
-/// `UITextLabel::ComputeTextLabelRect`.
-void ee_ui_label_compute_rect(void *label);
-
-/// `UITextLabel::CheckScrollBar`.
-void ee_ui_label_check_scroll_bar(void *label);
-
-/// `UITextLabel::SetLocation`'s rectangles after the control's move: the label's rectangle and border and whether
-/// it has a scroll bar -> the scroll bar strip in `scroll_bar`, the text rectangle in `text`.
-void ee_ui_label_location_rects(EeUiRect rect,
-                                unsigned long border,
-                                bool has_scroll_bar,
-                                EeUiRect *scroll_bar,
-                                EeUiRect *text);
-
 /// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
 unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
 
@@ -1938,29 +2073,6 @@ long ee_ui_form_draw_clipped_text(const EeUiClipInfo *info,
                                   EeUiRect r,
                                   EeUiTextDrawFn draw_text,
                                   void *ctx);
-
-/// `UITextLabel::CopyData`'s one-line text location.
-EeUiPoint ee_ui_label_one_line_location(unsigned long alignment,
-                                        bool fit,
-                                        EeUiRect tr,
-                                        float w,
-                                        float h);
-
-/// `UITextLabel::CopyData`'s copied lines of a multi-line label (`has_scroll`: it has a scroll bar at `value`).
-EeUiLineRange ee_ui_label_line_range(bool has_scroll,
-                                     long value,
-                                     unsigned long shown,
-                                     unsigned long lines);
-
-EeUiLabelLine ee_ui_label_line(unsigned long alignment,
-                               bool fit,
-                               EeUiRect rect,
-                               EeUiRect ctr,
-                               float w,
-                               bool has_scroll,
-                               float scroll_width,
-                               unsigned long offset,
-                               unsigned long line_height);
 
 EeUiListRange ee_ui_list_line_range(bool has_scroll,
                                     long value,
@@ -2214,9 +2326,6 @@ long ee_ui_manager_close_candidate_window(void *manager);
 
 /// `UIManager::CopyData`'s candidate window, after the forms (`result`: theirs) -> the result.
 long ee_ui_manager_copy_candidate_window(void *manager, long result);
-
-/// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
-void ee_ui_label_wrap(void *ctx, const char *text, float width);
 
 }  // extern "C"
 

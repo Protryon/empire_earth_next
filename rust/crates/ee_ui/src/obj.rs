@@ -252,6 +252,50 @@ pub enum EeUiOp {
     /// Bitmap `a`'s `ComputeStretchedCoordsAndScale(f, f, source, GetScreenIndex())`: `f` the destination, the source
     /// rectangle's bottom and left float bits in `c` (high, low), its right and top in `d`.
     BitmapStretch = 149,
+
+    // ---- UITextLabel and UITLScrolling (R6 ui round 13): their strings, texts and scroll bar by address
+    /// `new UWideString((const char*)a)` -> the string (the goldens trace the bytes' hash, not the address).
+    StringNew = 150,
+    /// `delete` string `a`.
+    StringDelete = 151,
+    /// `*string a = *string b`.
+    StringAssign = 152,
+    /// Text `a`'s `SetText(UWideString((const char*)b))` (the goldens trace the bytes' hash).
+    TextSetBytes = 153,
+    /// *Pure*: text `a`'s `GetFont()->GetHeight()`.
+    TextFontHeight = 154,
+    /// `mDrawCount--`.
+    DrawCountDecrement = 155,
+    /// `SetBgRectangle(f)`.
+    SetBgRectangle = 156,
+    /// The form's `RedrawIntersectControls(f)`.
+    RedrawIntersect = 157,
+    /// `new UIScrollBar(GetId(), (f[0], f[1]), f[2], 1, GetForm(), GetIndex(), GetBorderThickness())` -> the bar.
+    CreateScrollBar = 158,
+    /// The scroll bar `a`'s `SetRange(0, b)`.
+    BarSetRange = 159,
+    /// The scroll bar `a`'s `SetPageSize(b)`.
+    BarSetPageSize = 160,
+    /// *Pure*: the scroll bar `a`'s `GetSlider()->GetCurrentRangeValue()`.
+    BarValue = 161,
+    /// The scroll bar `a`'s `IncrementBy(b)`.
+    BarIncrementBy = 162,
+    /// The scroll bar `a`'s `SetCurrentRangeValue(b)`.
+    BarSetValue = 163,
+    /// *Pure*: part `a`'s `GetCopiedDrawRectangle()` -> `f`.
+    PartCopiedDrawRect = 164,
+    /// Poll `a`'s `Pause()`.
+    PollPause = 165,
+    /// Poll `a`'s `Resume()`.
+    PollResume = 166,
+    /// The virtual `CheckScrollBar()`.
+    VirtCheckScrollBar = 167,
+    /// The virtual `RecomputeDisplayRange()`.
+    VirtRecompute = 168,
+    /// The virtual `SetLocation(f[0], f[1])`.
+    VirtSetLocation = 169,
+    /// The virtual `SetRectangle(f)`.
+    VirtSetRectangle = 170,
 }
 
 impl EeUiOp {
@@ -289,6 +333,9 @@ impl EeUiOp {
                 | RhombusRect
                 | TextLength
                 | TextExtent
+                | TextFontHeight
+                | BarValue
+                | PartCopiedDrawRect
         )
     }
 }

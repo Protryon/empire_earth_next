@@ -27,6 +27,7 @@ pub mod graph;
 pub mod hotkey;
 pub mod ime;
 pub mod label_fit;
+pub mod labelobj;
 pub mod layout;
 pub mod list;
 pub mod manager;
@@ -81,8 +82,6 @@ mod graph_ffi;
 #[cfg(not(test))]
 mod ime_ffi;
 // imports the C++ text label's members, text and scroll bar (UITextLabel.cpp), absent from a test binary
-#[cfg(not(test))]
-mod label_fit_ffi;
 // imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod hotkey_ffi;
@@ -107,8 +106,6 @@ mod manager_ffi;
 #[cfg(not(test))]
 mod manager_media_ffi;
 // imports the C++ text measuring (UITextLabel.cpp)
-#[cfg(not(test))]
-mod wrap_ffi;
 
 pub use layout::{Edge, Layout};
 pub use rect::{float_to_long, um_floor, um_floor_unsigned, UiPoint, UiRect};
