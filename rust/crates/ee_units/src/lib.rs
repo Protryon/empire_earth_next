@@ -24,6 +24,7 @@
 pub mod actions;
 pub mod ai;
 pub mod animate;
+pub mod atc;
 pub mod atc_save;
 pub mod boarding;
 pub mod build;

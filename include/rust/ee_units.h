@@ -363,35 +363,109 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
-/// `mSlots.clear()`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_CLEAR = 301;
+/// the unit's class's `mWeight`
+constexpr static const int32_t EE_UNITS_ATC_WEIGHT = 1;
 
-/// a new airport (the original's local `theSlot`): its airport the id `io.i`, its queues empty
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_BEGIN = 302;
+/// the unit's class's `mTransportCapacity`
+constexpr static const int32_t EE_UNITS_ATC_TRANSPORT_CAPACITY = 2;
 
-/// the item `io.i` (a unit id) of kind `index` into the new airport's landings (kind 1) or takeoffs
-constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM_PUSH = 303;
+/// `unit->Reference()`
+constexpr static const int32_t EE_UNITS_ATC_REFERENCE = 3;
 
-/// `mSlots.push_back(theSlot)`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_PUSH = 304;
+/// `unit->Dereference()`
+constexpr static const int32_t EE_UNITS_ATC_DEREFERENCE = 4;
 
-/// the cargo total `index` (0 `mMaxCargo`, 1 `mUsedCargo`) into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_CARGO = 305;
+/// `mIsClearanceGranted`, written only when it differs: = `io.a != 0`
+constexpr static const int32_t EE_UNITS_ATC_SET_CLEARANCE = 5;
 
-/// the cargo total `index` = `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SET_CARGO = 306;
+/// `mIsClearanceGranted`
+constexpr static const int32_t EE_UNITS_ATC_CLEARANCE = 6;
 
-/// `mSlots.size()` into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_COUNT = 307;
+/// `mHitPoints`
+constexpr static const int32_t EE_UNITS_ATC_HIT_POINTS = 7;
 
-/// airport `index`'s unit id into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_AIRPORT = 308;
+/// the airport's `mCargoRoom`
+constexpr static const int32_t EE_UNITS_ATC_CARGO_ROOM = 8;
 
-/// airport `index`'s queue `io.b` (0 the landings, 1 the takeoffs): its length into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_QUEUE_COUNT = 309;
+/// whether `other` is in the airport `unit`'s `mCargo`
+constexpr static const int32_t EE_UNITS_ATC_IN_CARGO = 9;
 
-/// airport `index`'s queue `io.b`, item `io.i`: its unit's id into `io.i`, its kind into `io.f`'s bits
-constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM = 310;
+/// the unit's class's `mFamily`
+constexpr static const int32_t EE_UNITS_ATC_FAMILY = 10;
+
+/// `GetCommandType()`
+constexpr static const int32_t EE_UNITS_ATC_COMMAND_TYPE = 11;
+
+/// the airport `unit`'s exiting unit set to -1 when it is set and its passenger is the plane `other`
+constexpr static const int32_t EE_UNITS_ATC_RELEASE_EXITING = 12;
+
+/// `mTileX` into `io.a`, `mTileY` into `io.b`
+constexpr static const int32_t EE_UNITS_ATC_TILE = 13;
+
+/// the physical model's location: x, y, z into `io.p`
+constexpr static const int32_t EE_UNITS_ATC_LOCATION = 14;
+
+/// the unit's class's `mAirTrafficType`
+constexpr static const int32_t EE_UNITS_ATC_AIR_TRAFFIC_TYPE = 15;
+
+/// the unit's class's `GetCruiseAltitude()` into `io.f`
+constexpr static const int32_t EE_UNITS_ATC_CRUISE_ALTITUDE = 16;
+
+/// `mContainer != NULL`
+constexpr static const int32_t EE_UNITS_ATC_IN_CONTAINER = 17;
+
+/// `Kill(1, 0, 0)`
+constexpr static const int32_t EE_UNITS_ATC_KILL = 18;
+
+/// `SetHomeBase(other)`, `StartAction(kActionRequestLanding)`, the class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_ATC_REROUTE = 19;
+
+/// the unit's class is an airplane or a planet spaceship (by category)
+constexpr static const int32_t EE_UNITS_ATC_IS_AIRCRAFT = 20;
+
+/// `mHomeBase`
+constexpr static const int32_t EE_UNITS_ATC_HOME_BASE = 21;
+
+/// `GetUnitID()`
+constexpr static const int32_t EE_UNITS_ATC_UNIT_ID = 22;
+
+/// the complex unit of id `io.a` in the world (`EEUnitCast<EEComplexUnit>(gWorld.GetUnit(id))`), or null
+constexpr static const int32_t EE_UNITS_ATC_RESOLVE = 23;
+
+/// the dump's line: the NUL-terminated text at `unit`
+constexpr static const int32_t EE_UNITS_ATC_DUMP_LINE = 24;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT = 1;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT = 2;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_AIRPORT = 3;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_REQUEST = 4;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT = 5;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES = 6;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE = 7;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_DUMP = 8;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_CHECKSUM = 9;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_LENGTH = 10;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_POSITION = 11;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_AIRPORT = 12;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_PLANE = 13;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REPAIR_POINTERS = 14;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT = 15;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_UPDATE = 16;
 
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
@@ -2257,6 +2331,9 @@ constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
 /// every next part's `SetRottingAwayTime(a)`
 constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
 
+/// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
+struct EeUnitsAtc;
+
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {
   void *ctx;
@@ -2369,6 +2446,18 @@ struct EeUnitsAnimateOut {
   uint32_t steps;
 };
 
+/// One host operation's values.
+struct EeUnitsAtcIo {
+  int64_t a;
+  int64_t b;
+  float f;
+  /// a location's x, y, z
+  float p[3];
+};
+
+/// The host: `(ctx, op, unit, other, io) -> the answer`.
+using EeUnitsAtcFn = int64_t(*)(void*, int32_t, void*, void*, EeUnitsAtcIo*);
+
 /// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
 struct EeUnitsPlayerSaveIo {
   int64_t i;
@@ -2378,6 +2467,9 @@ struct EeUnitsPlayerSaveIo {
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
 using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
+/// A unit's id (`GetUnitID()`).
+using EeUnitsAtcUnitIdFn = unsigned long(*)(void*);
 
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
@@ -3436,17 +3528,70 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
 /// `input` and `out` are valid.
 void ee_units_animate(const EeUnitsAnimateIn *input, EeUnitsAnimateOut *out);
 
-/// `EEAirTrafficControl::Load` over the C++ parts in `f`.
-///
-/// # Safety
-/// `f` is valid with `ctx` for the call.
-int32_t ee_units_atc_load(void *ctx, EeUnitsPlayerSaveFn f);
+/// A new, empty air traffic control.
+EeUnitsAtc *ee_units_atc_new();
 
-/// `EEAirTrafficControl::Save`: as [`ee_units_atc_load`].
+/// The destructor's body over the host, then the state freed. Null does nothing.
 ///
 /// # Safety
-/// As [`ee_units_atc_load`].
-int32_t ee_units_atc_save(void *ctx, EeUnitsPlayerSaveFn f);
+/// `p` came from [`ee_units_atc_new`] and is not used again; `f` is valid with `ctx`.
+void ee_units_atc_free(EeUnitsAtc *p, void *ctx, EeUnitsAtcFn f);
+
+/// The maximum (0) or the used (1) air cargo.
+///
+/// # Safety
+/// `p` is a live state.
+long ee_units_atc_cargo(const EeUnitsAtc *p, int32_t which);
+
+/// The number of airports.
+///
+/// # Safety
+/// `p` is a live state.
+unsigned long ee_units_atc_slot_count(const EeUnitsAtc *p);
+
+/// Airport `index` (null past the end).
+///
+/// # Safety
+/// `p` is a live state.
+void *ee_units_atc_slot_airport(const EeUnitsAtc *p, unsigned long index);
+
+/// The class's methods by kind (the `EE_UNITS_ATC_CALL_*` values): `unit`, `other` and `value` their arguments.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx`.
+int64_t ee_units_atc_call(EeUnitsAtc *p,
+                          void *ctx,
+                          EeUnitsAtcFn f,
+                          int32_t call,
+                          void *unit,
+                          void *other,
+                          long value);
+
+/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx`; `olds` and `news` hold `count` units each.
+void ee_units_atc_replace_units(EeUnitsAtc *p,
+                                void *ctx,
+                                EeUnitsAtcFn f,
+                                void *const *olds,
+                                void *const *news,
+                                size_t count);
+
+/// `EEAirTrafficControl::Load` into `p` over the file in `f`.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx` for the call.
+int32_t ee_units_atc_load(EeUnitsAtc *p, void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEAirTrafficControl::Save` of `p` over the file in `f`; `unit_id` gives each unit's id.
+///
+/// # Safety
+/// As [`ee_units_atc_load`]; `unit_id` is valid for every unit listed.
+int32_t ee_units_atc_save(const EeUnitsAtc *p,
+                          void *ctx,
+                          EeUnitsPlayerSaveFn f,
+                          EeUnitsAtcUnitIdFn unit_id);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);

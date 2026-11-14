@@ -632,7 +632,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
             bool theCanLoad;
             if (theTraffic != NULL) {
                 theNeeded = inClass->mWeight;
-                theCanLoad = theTraffic->mUsedCargo + theNeeded <= theTraffic->mMaxCargo;
+                theCanLoad = theTraffic->GetUsedCargo() + theNeeded <= theTraffic->GetMaxCargo();
                 if (theCanLoad)
                     theCanLoad = theTraffic->GetFreeCargoWeight(inUnit) >= theNeeded;
             } else {

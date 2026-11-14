@@ -52,7 +52,7 @@ void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     if (inUnit->mHomeBase == NULL) {
         if (theControl->GetNumSlots() > 0)
-            inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
+            inUnit->SetHomeBase(theControl->GetSlotAirport(0));
         else
             inUnit->Kill(true, false, false);
     }

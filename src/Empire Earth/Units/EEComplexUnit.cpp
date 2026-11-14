@@ -3412,7 +3412,7 @@ void EEComplexUnit::StartProduction()
                 theTimeScale = this->GetPlayer()->GetUpgrade(theType)->mBuildTimeScale;
                 if (theClass->IsAircraft()) {
                     EEAirTrafficControl* theTraffic = this->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1];
-                    theAllowed = theClass->mWeight <= theTraffic->mMaxCargo - theTraffic->mUsedCargo;
+                    theAllowed = theClass->mWeight <= theTraffic->GetMaxCargo() - theTraffic->GetUsedCargo();
                 }
             }
             if (!theAllowed)
