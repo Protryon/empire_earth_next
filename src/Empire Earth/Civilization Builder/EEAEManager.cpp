@@ -1,8 +1,8 @@
 // C:\EEX\Empire Earth\Civilization Builder\EEAEManager.cpp (named by its "fix me in EEAEManager.cpp!" message; folder
 // inferred). 0x27adb0..0x27b911: the area-effect manager (vtable 0x44bb40; the game's gAEManager): ctor, ??_G,
 // dtor, the unit functor passes (vtables 0x44bb50.., 0x44bd28..), CollectEffects, Load, CreateAreaEffect with the inline
-// area-effect kinds it emits (EEAEMorale's slots and ??_G 0x27b2d7..0x27b335, the immunities' and economy's ??_G and
-// slots), the effect queries, the template loads, Tick, the functors' slots, then the template COMDATs
+// area-effect kinds it emitted (EEAEMorale's slots and ??_G 0x27b2d7..0x27b335, the immunities' and economy's ??_G and
+// slots 0x27b357..0x27b3d2; port: one class, ee/EEAreaEffect.h), the effect queries, the template loads, Tick, the functors' slots, then the template COMDATs
 // (vector<EEAreaEffectTemplate*>::push_back 0x27b751, EEGetUnitsInRectangle<EEAEAliveUnit> 0x27b77d).
 // EEAEMoraleFromBuildings.cpp starts at 0x27b911. Unit flags: the exe's module set.
 #include <windows.h>
@@ -41,11 +41,6 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "ee/EEAEMorale.h"
-#include "ee/EEAEImmunity.h"
-#include "ee/EEAEEconomy.h"
-#include "ee/EEAEHealing.h"
-#include "ee/EEAECloaking.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
@@ -234,38 +229,15 @@ long EEAEManager::Load(FSFile* inFile)
 }
 
 // FUNCTION: EXE 0x67b16e
-// Creates the area effect of the template at an index (by its kind) for a unit; NULL for an unknown kind
+// Creates the area effect of the template at an index (its kind's: healing, morale, calamity and conversion immunity,
+// morale from buildings, from military heroes, economy from units, cloaking) for a unit; NULL for an unknown kind
 EEAreaEffect* EEAEManager::CreateAreaEffect(unsigned long inIndex, EEComplexUnit* inUnit)
 {
     EEAreaEffect* theEffect = NULL;
     if (inIndex < this->mTemplates.size()) {
         EEAreaEffectTemplate* theTemplate = this->mTemplates[inIndex];
-        switch (theTemplate->mKind) {
-        case kAreaEffectHealing:
-            theEffect = new EEAEHealing(theTemplate);
-            break;
-        case kAreaEffectMorale:
-            theEffect = new EEAEMorale(theTemplate);
-            break;
-        case kAreaEffectCalamityImmunity:
-            theEffect = new EEAECalamityImmunity(theTemplate);
-            break;
-        case kAreaEffectConversionImmunity:
-            theEffect = new EEAEConversionImmunity(theTemplate);
-            break;
-        case kAreaEffectMoraleFromBuildings:
-            theEffect = new EEAEMoraleFromBuildings(theTemplate);
-            break;
-        case kAreaEffectMoraleFromMilitaryHeroes:
-            theEffect = new EEAEMoraleFromMilitaryHeroes(theTemplate);
-            break;
-        case kAreaEffectEconomyFromUnits:
-            theEffect = new EEAEEconomyFromUnits(theTemplate);
-            break;
-        case kAreaEffectCloaking:
-            theEffect = new EEAECloaking(theTemplate);
-            break;
-        }
+        if (ee_area_effect_known_kind(theTemplate->mKind))
+            theEffect = new EEAreaEffect(theTemplate);
         if (theEffect != NULL) {
             theEffect->SetUnit(inUnit);
             theEffect->mPlayer = inUnit->mPlayer->mPlayerID;
@@ -554,12 +526,11 @@ void EEAESaveRunningState(FSFile& outFile)
             EEAreaEffect* theEffect = theUnit->mAreaEffects.mItems[i];
             outFile.Write(theEffect->mLocation.mX);
             outFile.Write(theEffect->mLocation.mY);
-            EEAEMoraleFromBuildings* theMorale = dynamic_cast<EEAEMoraleFromBuildings*>(theEffect);
-            bool theIsMorale = theMorale != NULL;
+            bool theIsMorale = theEffect->mKind == kAreaEffectMoraleFromBuildings;
             outFile.Write(theIsMorale);
-            if (theMorale != NULL) {
-                outFile.Write(theMorale->mDirty);
-                outFile.Write(theMorale->mCount);
+            if (theIsMorale) {
+                outFile.Write(theEffect->mDirty);
+                outFile.Write(theEffect->mCount);
             }
         }
         EEAEWriteRefs(outFile, theUnit->mAffectingAreaEffects);
@@ -610,10 +581,9 @@ long EEAELoadRunningState(FSFile& inFile)
                     EEAreaEffect* theEffect = theUnit->mAreaEffects.mItems[i];
                     theEffect->mLocation.mX = theSaved.mOwn[i].mX;
                     theEffect->mLocation.mY = theSaved.mOwn[i].mY;
-                    EEAEMoraleFromBuildings* theMorale = dynamic_cast<EEAEMoraleFromBuildings*>(theEffect);
-                    if (theMorale != NULL && theSaved.mOwn[i].mIsMorale) {
-                        theMorale->mDirty = theSaved.mOwn[i].mDirty;
-                        theMorale->mCount = theSaved.mOwn[i].mCount;
+                    if (theEffect->mKind == kAreaEffectMoraleFromBuildings && theSaved.mOwn[i].mIsMorale) {
+                        theEffect->mDirty = theSaved.mOwn[i].mDirty;
+                        theEffect->mCount = theSaved.mOwn[i].mCount;
                     }
                 }
             }
@@ -647,15 +617,6 @@ long EEAELoadRunningState(FSFile& inFile)
 }
 
 // Inline slots and template COMDATs emitted in this unit's range (first-reference order)
-// TEMPLATE: EXE 0x67b2d7
-// TEMPLATE: EXE 0x67b2dc
-// TEMPLATE: EXE 0x67b2e3
-// TEMPLATE: EXE 0x67b335
-// TEMPLATE: EXE 0x67b357
-// TEMPLATE: EXE 0x67b379
-// TEMPLATE: EXE 0x67b39b
-// TEMPLATE: EXE 0x67b3ab
-// TEMPLATE: EXE 0x67b3b0
 // TEMPLATE: EXE 0x67b6b3
 // TEMPLATE: EXE 0x67b6bf
 // TEMPLATE: EXE 0x67b6cb

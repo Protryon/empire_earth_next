@@ -26,7 +26,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "ee/EEAEMorale.h"
+#include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EEAEManager.h"
 
 namespace {
@@ -52,12 +52,11 @@ int MediaIndex(EEMedia* inMedia)
 // the morale-from-buildings count (dirty flag, cap, count); false for the other kinds
 bool MoraleCount(EEAreaEffect* inEffect, bool& outDirty, long& outMax, long& outCount)
 {
-    EEAEMoraleFromBuildings* theMorale = dynamic_cast<EEAEMoraleFromBuildings*>(inEffect);
-    if (theMorale == NULL)
+    if (inEffect->mKind != kAreaEffectMoraleFromBuildings)
         return false;
-    outDirty = theMorale->mDirty;
-    outMax = theMorale->mMax;
-    outCount = theMorale->mCount;
+    outDirty = inEffect->mDirty;
+    outMax = inEffect->mMax;
+    outCount = inEffect->mCount;
     return true;
 }
 
@@ -133,9 +132,9 @@ void Templates()
             r.F32(t->mF60);
             r.U32((t->mB64 ? 1u : 0u) | (t->mB65 ? 2u : 0u) | (t->mB66 ? 4u : 0u) | (t->mB67 ? 8u : 0u) |
                   (t->mB68 ? 16u : 0u));
-            r.F32(t->mColor.GetRed());
-            r.F32(t->mColor.GetGreen());
-            r.F32(t->mColor.GetBlue());
+            r.F32(t->mColorRed);
+            r.F32(t->mColorGreen);
+            r.F32(t->mColorBlue);
             r.F32(t->mColorAlpha);
             r.I32(EffectIndex(t->mGraphicEffect));
             r.I32(EffectIndex(t->mGraphicEffect18));
