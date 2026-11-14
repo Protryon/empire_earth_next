@@ -1647,6 +1647,8 @@ enum class EeUiManagerCall : uint32_t {
   /// The constructor's work after `ee_ui_manager_new` (the C++ constructor's, once `mRust` is set: the host's ops
   /// read the manager through its forwarders).
   Init = 60,
+  /// The UI lock (`TSCriticalSection*`; the harness's bridge try-enters it).
+  UiLock = 61,
 };
 
 /// The inward calls (the C++ shim's methods).

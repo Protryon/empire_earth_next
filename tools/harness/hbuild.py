@@ -112,13 +112,9 @@ class Build:
 
     def bridge_defines(self):
         """-D values for presentation_bridge.c (its offsets and the renderer's ShowScene entry)."""
+        # the UI manager's and forms' state is Rust's (ee_ui managerobj.rs, formobj.rs): the bridge asks UIManager.cpp's
+        # EETestUI* functions by name instead of reading it at offsets
         d = self.layout.constants({
-            "EE_OFF_UIM_CRITICAL": ("field", "UIManager", "mCriticalSection"),
-            "EE_OFF_UIM_FORMS_FIRST": ("first", "UIManager", "mFormStack"),
-            "EE_OFF_UIM_FORMS_LAST": ("last", "UIManager", "mFormStack"),
-            "EE_OFF_FORM_COUNT": ("field", "UIForm", "mControlCount"),
-            "EE_OFF_FORM_ID": ("field", "UIForm", "mFormID"),
-            "EE_OFF_FORM_CONTROLS": ("field", "UIForm", "mControls"),
             "EE_OFF_MOUSE_POS": ("field", "EEMouse", "mPosition"),
             "EE_OFF_MOUSE_BOUNDS": ("field", "EEMouse", "mBounds"),
             "EE_OFF_RAST_STATES_FIRST": ("first", "DX7Rasterizer", "mScreenStates"),

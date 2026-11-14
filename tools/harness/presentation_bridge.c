@@ -66,14 +66,10 @@ static void print_text(FILE* out,const char* text) {
 static void ui_test(void) {
 #ifndef EE_UI_MANAGER_RVA
 /* Offsets into the game's objects. Defaults: VC6/Dinkum layout (the original). The fork's harness passes each build's
-   own values, looked up by member name in its record layouts (tools/harness/layout.py). */
-#ifndef EE_OFF_UIM_CRITICAL
-#define EE_OFF_UIM_CRITICAL 0x4         /* UIManager::mCriticalSection */
-#define EE_OFF_UIM_FORMS_FIRST 0x30     /* UIManager::mFormStack first */
-#define EE_OFF_UIM_FORMS_LAST 0x34      /* UIManager::mFormStack last */
-#define EE_OFF_FORM_COUNT 0x170         /* UIForm::mControlCount */
-#define EE_OFF_FORM_ID 0x180            /* UIForm::mFormID */
-#define EE_OFF_FORM_CONTROLS 0xf8       /* UIForm::mControls */
+   own values, looked up by member name in its record layouts (tools/harness/layout.py). The UI manager's and forms'
+   state is Rust's (ee_ui managerobj.rs, formobj.rs): the bridge reaches it through the EETestUI* functions
+   (UIManager.cpp), by name, not by offset. */
+#ifndef EE_OFF_MOUSE_POS
 #define EE_OFF_MOUSE_POS 0x4            /* EEMouse::mPosition */
 #define EE_OFF_MOUSE_BOUNDS 0x14        /* EEMouse::mBounds */
 #define EE_OFF_RAST_STATES_FIRST 0x20   /* DX7Rasterizer::mScreenStates first */
@@ -120,27 +116,38 @@ static void ui_test(void) {
     GetIndexOut list_get=(GetIndexOut)ee_sym("?GetCurrentSelection@?$UIListBox@VUWideString@@@@QEBAJAEAK@Z");
     int edits=edit_vtbl && edit_set && edit_get && edit_lines && wide_ctor && wide_dtor;
     int flists=flist_vtbl && list_change && list_get && list_count && list_data && chars;
-    void* critical=*(void**)(manager+EE_OFF_UIM_CRITICAL);
+    /* the manager's UI lock, its form stack and the forms' controls (UIManager.cpp's EETestUI*) */
+    typedef void* (*UILock)(void*);
+    typedef unsigned long (*UICount)(void*);
+    typedef void* (*UIAt)(void*,unsigned long);
+    UILock ui_lock=(UILock)ee_sym("EETestUILock");
+    UICount ui_forms=(UICount)ee_sym("EETestUIFormCount");
+    UIAt ui_form=(UIAt)ee_sym("EETestUIForm");
+    UICount form_id_of=(UICount)ee_sym("EETestUIFormID");
+    UICount form_controls=(UICount)ee_sym("EETestUIFormControlCount");
+    UIAt form_control=(UIAt)ee_sym("EETestUIFormControl");
+    if(!ui_lock || !ui_forms || !ui_form || !form_id_of || !form_controls || !form_control){OutputDebugStringA("TEST UI forms unavailable\n");return;}
+    void* critical=ui_lock(manager);
     /* UI events can hold this lock while waiting for the render thread. Never
        block that render thread to inspect or enqueue a test command. */
     typedef unsigned char (*TryEnter)(void*);
     TryEnter try_enter=(TryEnter)ee_sym("?TryEnter@TSCriticalSection@@QEAA_NXZ");
     if(!try_enter || !try_enter(critical))return;
-    BYTE** first=*(BYTE***)(manager+EE_OFF_UIM_FORMS_FIRST);BYTE** end=*(BYTE***)(manager+EE_OFF_UIM_FORMS_LAST);
-    if(end>first) {
-        BYTE* form=end[-1];unsigned long count=*(DWORD*)(form+EE_OFF_FORM_COUNT);
-        unsigned long form_id=*(DWORD*)(form+EE_OFF_FORM_ID);
-        BYTE** controls=*(BYTE***)(form+EE_OFF_FORM_CONTROLS);
+    unsigned long forms=ui_forms(manager);
+    if(forms>0) {
+        void* form=ui_form(manager,forms-1);unsigned long count=form_controls(form);
+        unsigned long form_id=form_id_of(form);
+#define controls_at(i) ((BYTE*)form_control(form,(i)))
         char path[MAX_PATH];stage_path(path,"ui-state.tmp");FILE* state=fopen(path,"w");
         if(state) {
             fprintf(state,"form %lu controls %lu\n",form_id,count);
             fprintf(state,"command %lu\n",last_command);
             fprintf(state,"pid %lu\n",GetCurrentProcessId());
             fprintf(state,"stack");
-            for(BYTE** f=first;f<end && f-first<64;f++)if(*f)fprintf(state," %lu",*(DWORD*)(*f+EE_OFF_FORM_ID));
+            for(unsigned long f=0;f<forms && f<64;f++){void* stacked=ui_form(manager,f);if(stacked)fprintf(state," %lu",form_id_of(stacked));}
             fprintf(state,"\n");
-            for(unsigned long i=0;i<count && i<2000;i++)if(controls[i]) {
-                void* event=get(controls[i],0x3f0);
+            for(unsigned long i=0;i<count && i<2000;i++)if(controls_at(i)) {
+                void* event=get(controls_at(i),0x3f0);
                 if(!event)continue;
                 void* process=(*(void***)event)[1];
                 fprintf(state,"control %lu event-rva %08lx",i,(unsigned long)((BYTE*)process-(BYTE*)GetModuleHandleA(NULL)));
@@ -149,25 +156,26 @@ static void ui_test(void) {
                     fprintf(state," screen %lx",(unsigned long)*(DWORD*)((BYTE*)event+EE_OFF_SCREEN_EVENT_CODE));
                 fprintf(state,"\n");
             }
-            for(unsigned long i=0;i<count && i<2000;i++)if(controls[i]) {
-                void* vtbl=*(void**)controls[i];
+            for(unsigned long i=0;i<count && i<2000;i++)if(controls_at(i)) {
+                BYTE* control=controls_at(i);
+                void* vtbl=*(void**)control;
                 if(combos && vtbl==combo_vtbl) {
-                    unsigned long selection=0xffffffff;combo_get(controls[i],&selection);
-                    void* list=combo_list(controls[i]);unsigned long lines=list?list_count(list):0;
+                    unsigned long selection=0xffffffff;combo_get(control,&selection);
+                    void* list=combo_list(control);unsigned long lines=list?list_count(list):0;
                     fprintf(state,"combo %lu sel %ld lines %lu",i,(long)selection,lines);
                     for(unsigned long k=0;k<lines && k<64;k++){fputc(k?0x7c:' ',state);print_text(state,chars(list_data(list,k)));}
                     fprintf(state,"\n");
                 } else if(checks && vtbl==check_vtbl)
-                    fprintf(state,"check %lu %u\n",i,(unsigned)check_get(controls[i]));
+                    fprintf(state,"check %lu %u\n",i,(unsigned)check_get(control));
                 else if(edits && vtbl==edit_vtbl) {
                     /* line 0 only (what the save screen reads); an empty box has no line */
-                    unsigned long lines=edit_lines(controls[i]);
-                    fprintf(state,"edit %lu lines %lu ",i,lines);if(lines)print_text(state,edit_get(controls[i],0));fprintf(state,"\n");
+                    unsigned long lines=edit_lines(control);
+                    fprintf(state,"edit %lu lines %lu ",i,lines);if(lines)print_text(state,edit_get(control,0));fprintf(state,"\n");
                 } else if(flists && (vtbl==flist_vtbl || (lbs_vtbl && vtbl==lbs_vtbl))) {
-                    unsigned long selection=0xffffffff;list_get(controls[i],&selection);
-                    unsigned long lines=list_count(controls[i]);
+                    unsigned long selection=0xffffffff;list_get(control,&selection);
+                    unsigned long lines=list_count(control);
                     fprintf(state,"list %lu sel %ld lines %lu",i,(long)selection,lines);
-                    for(unsigned long k=0;k<lines && k<64;k++){fputc(k?0x7c:' ',state);print_text(state,chars(list_data(controls[i],k)));}
+                    for(unsigned long k=0;k<lines && k<64;k++){fputc(k?0x7c:' ',state);print_text(state,chars(list_data(control,k)));}
                     fprintf(state,"\n");
                 }
             }
@@ -185,7 +193,7 @@ static void ui_test(void) {
                     last_command=seq;
                     char message[200];const char* verdict="rejected";
                     if(op[0]>='0' && op[0]<='9'){b=strtoul(op,NULL,10);a=form_id;c=0;strcpy(op,"click");fields=4;}
-                    BYTE* control=(a==form_id && b<count)?controls[b]:NULL;
+                    BYTE* control=(a==form_id && b<count)?controls_at(b):NULL;
                     if(!strcmp(op,"click") && fields>=4 && control && get(control,0x3f0)) {
                         if(form_id==5 && b>=1 && b<=3) {
                             Critical check=(Critical)ee_sym("?Check@UIRadioButton@@UEAAXXZ");
@@ -216,6 +224,7 @@ static void ui_test(void) {
             }
             fclose(command);
         }
+#undef controls_at
     }
     leave(critical);
 }
