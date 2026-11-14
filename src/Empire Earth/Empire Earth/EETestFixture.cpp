@@ -465,7 +465,9 @@ void LobbyWork(int)
              (theManager != NULL && theManager->GetModalComponent() != NULL) ? 1 : 0, theGame != NULL ? 1 : 0,
              (theGame != NULL && theGame->GetIsHost()) ? 1 : 0,
              (theGame != NULL && theGame->GetClients().get() != NULL) ? (int)theGame->GetClients()->GetCount() : 0,
-             (theClient != NULL && theClient->IsReady()) ? 1 : 0, (theGame != NULL && theGame->AreAllReady()) ? 1 : 0,
+             // AreAllReady reads the client list: a just-joined game has none yet (a fixture-only crash at Join Game)
+             (theClient != NULL && theClient->IsReady()) ? 1 : 0,
+             (theGame != NULL && theGame->GetClients().get() != NULL && theGame->AreAllReady()) ? 1 : 0,
              theGame != NULL ? GUIText(theGame->GetName()).c_str() : "-");
     theText += theLine;
     std::vector<ListArea*> theLists;
