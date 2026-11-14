@@ -375,7 +375,15 @@ struct Ask {
         return EeGfxVentUnit{(theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionDead,
                              (float)theUnit->mStats->mMaxHitPoints};
     }
-    static uint32_t VentCount(void* inAsk) { return (uint32_t)static_cast<Ask*>(inAsk)->mVentFrom->GetNumTagPoints(); }
+    // the vents' count; none on a model without both tag lists (the original read the first list's count through a
+    // null pointer there: a crash the effects sweep met on seed 4, a unit without vents; no vent, no jet now)
+    static uint32_t VentCount(void* inAsk)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        if (theAsk->mVentFrom == NULL || theAsk->mVentTo == NULL)
+            return 0;
+        return (uint32_t)theAsk->mVentFrom->GetNumTagPoints();
+    }
     // a jet's vent's and aim's offsets (EEE3DDamageVentPart::Aim, 0xeb4e9)
     static void VentOffsets(void* inAsk, int32_t inTag, EeGe3DPoint* outPoints)
     {
