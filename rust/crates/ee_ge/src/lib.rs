@@ -72,6 +72,7 @@ pub mod physical_walk;
 pub mod pixel;
 /// cbindgen:ignore
 pub mod point;
+pub mod rastobj;
 pub mod surface_px;
 pub mod terrain;
 pub mod terrain_mesh;

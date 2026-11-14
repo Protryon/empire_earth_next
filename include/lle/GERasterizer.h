@@ -46,47 +46,10 @@ struct GERFogAttributes {                   // sizeof 0x20 (GetFogAttributes 0xe
     float mScale;                           // +0x1c 1 / (mEnd - mStart)
 };
 
-// The rasterizer's state for one screen (provisional name; offsets proven by the inline accessors and setters).
-// The ctor/dtor are inline: GERasterizer.cpp emits them after AddValidScreen (0x23a0e) and Deactivate (0x23b6a).
+// The rasterizer's state for one screen (provisional name; offsets proven by the inline accessors and setters): the
+// layout of the Rust record (rust/crates/ee_ge rastobj.rs EeGeRastScreen, pinned by GERasterizer.cpp). Rust makes,
+// sets and frees it; the plug-in reads and writes its device-side fields through GERasterizer::GetScreenState.
 struct GERScreenState {
-    GERScreenState(GEScreen* inScreen)
-    {
-        this->mScreen = inScreen;
-        this->mPrimarySurface = NULL;
-        this->mSecondarySurface = NULL;
-        this->mRenderTarget = NULL;
-        this->mTexture = NULL;
-        this->mWindow = NULL;
-        this->mDrawnPolyArea = 0.0f;
-        this->mDrawnPolyAreaPerFrame = 0.0f;
-        this->mDrawnPolyAreaPerSecond = 0.0f;
-        this->mDrawnPolysPerFrame = 0.0f;
-        this->mDrawnPolysPerSecond = 0.0f;
-        this->mFramesPerSecond = 0.0f;
-        this->mScenePolysPerFrame = 0.0f;
-        this->mScenePolysPerSecond = 0.0f;
-        this->mTotalTextureChangesPerFrame = 0.0f;
-        this->mDrawnPolyCount = 0;
-        this->m32C[0] = 0;
-        this->m32C[1] = 0;
-        this->m32C[2] = 0;
-        this->m32C[3] = 0;
-        this->m33C = false;
-        this->mIsScreenActivated = false;
-        this->mWaitForVSync = true;
-    }
-    ~GERScreenState()
-    {
-        if (this->mPrimarySurface != NULL)
-            this->mPrimarySurface->Dereference();
-        if (this->mSecondarySurface != NULL)
-            this->mSecondarySurface->Dereference();
-        if (this->mRenderTarget != NULL)
-            this->mRenderTarget->Dereference();
-        if (this->mTexture != NULL)
-            this->mTexture->Dereference();
-    }
-
     GEViewport mViewport;                   // +0x000 (GetViewport returns the element)
     GERFogAttributes mFog;                  // +0x288
     GEScreen* mScreen;                      // +0x2a8
@@ -128,10 +91,10 @@ struct GERScreenState {
     bool mWaitForVSync;                     // +0x33e
 };
 
-class LLE_API GERasterizer {                // sizeof 0x68 (vector deleting dtor 0xf279)
-public:
-    struct TransformStack;
+struct EeGeRasterizer;                      // rust/ee_ge.h
 
+class LLE_API GERasterizer {                // sizeof 0x68 in the original (vector deleting dtor 0xf279)
+public:
     virtual long ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                 unsigned long inMode, bool inFullScreen, unsigned long inBackBuffers) = 0;
     virtual long ActivateRenderingSurface(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
@@ -220,102 +183,88 @@ public:
     long CreateFontBitmap(GEFont* inFont, unsigned long inScreen);
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
     long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
-    static GERasterizer* GetActiveRasterizer() { return GERasterizer::sActiveRasterizer; }
-    unsigned long GetAlphaTesting(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mAlphaTesting; }
+    static GERasterizer* GetActiveRasterizer();
+    unsigned long GetAlphaTesting(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mAlphaTesting; }
     unsigned long GetAlphaTestingCompareState(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mAlphaTestingCompareState; }
+        { return this->GetScreenState(inScreen)->mAlphaTestingCompareState; }
     float GetAlphaTestingRefValue(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mAlphaTestingRefValue; }
-    const GEColor& GetAmbientColor() const { return this->mAmbientColor; }
-    float GetAmbientIntensity() const { return this->mAmbientIntensity; }
-    unsigned long GetAntiAliasing(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mAntiAliasing; }
+        { return this->GetScreenState(inScreen)->mAlphaTestingRefValue; }
+    const GEColor& GetAmbientColor() const;
+    float GetAmbientIntensity() const;
+    unsigned long GetAntiAliasing(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mAntiAliasing; }
     void GetBlending(unsigned long& outSource, unsigned long& outDestination, unsigned long inScreen) const
     {
-        outSource = this->mScreenStates[inScreen]->mBlendSource;
-        outDestination = this->mScreenStates[inScreen]->mBlendDestination;
+        outSource = this->GetScreenState(inScreen)->mBlendSource;
+        outDestination = this->GetScreenState(inScreen)->mBlendDestination;
     }
-    unsigned long GetColorKeying(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mColorKeying; }
-    const GEColor& GetComputedAmbientColor() const { return this->mComputedAmbientColor; }
-    unsigned long GetCulling() const { return this->mCulling; }
-    unsigned long GetDithering(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mDithering; }
-    unsigned long GetDrawStyle(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mDrawStyle; }
+    unsigned long GetColorKeying(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mColorKeying; }
+    const GEColor& GetComputedAmbientColor() const;
+    unsigned long GetCulling() const;
+    unsigned long GetDithering(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mDithering; }
+    unsigned long GetDrawStyle(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mDrawStyle; }
     float GetDrawnPolyAreaPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolyAreaPerFrame; }
+        { return this->GetScreenState(inScreen)->mDrawnPolyAreaPerFrame; }
     float GetDrawnPolyAreaPerSecond(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolyAreaPerSecond; }
+        { return this->GetScreenState(inScreen)->mDrawnPolyAreaPerSecond; }
     float GetDrawnPolysPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolysPerFrame; }
+        { return this->GetScreenState(inScreen)->mDrawnPolysPerFrame; }
     float GetDrawnPolysPerSecond(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolysPerSecond; }
-    unsigned long GetFog(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mFogState; }
+        { return this->GetScreenState(inScreen)->mDrawnPolysPerSecond; }
+    unsigned long GetFog(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mFogState; }
     void GetFogAttributes(GERFogAttributes& outAttributes, unsigned long inScreen) const
     {
-        outAttributes.mType = this->mScreenStates[inScreen]->mFog.mType;
-        outAttributes.mDensity = this->mScreenStates[inScreen]->mFog.mDensity;
-        outAttributes.mColor = this->mScreenStates[inScreen]->mFog.mColor;
-        outAttributes.mStart = this->mScreenStates[inScreen]->mFog.mStart;
-        outAttributes.mEnd = this->mScreenStates[inScreen]->mFog.mEnd;
-        outAttributes.mScale = this->mScreenStates[inScreen]->mFog.mScale;
+        outAttributes.mType = this->GetScreenState(inScreen)->mFog.mType;
+        outAttributes.mDensity = this->GetScreenState(inScreen)->mFog.mDensity;
+        outAttributes.mColor = this->GetScreenState(inScreen)->mFog.mColor;
+        outAttributes.mStart = this->GetScreenState(inScreen)->mFog.mStart;
+        outAttributes.mEnd = this->GetScreenState(inScreen)->mFog.mEnd;
+        outAttributes.mScale = this->GetScreenState(inScreen)->mFog.mScale;
     }
-    float GetFramesPerSecond(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mFramesPerSecond; }
-    bool GetIsActivated() const { return this->mIsActivated; }
+    float GetFramesPerSecond(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mFramesPerSecond; }
+    bool GetIsActivated() const;
     bool GetIsScreenActivated(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mIsScreenActivated; }
-    bool GetIsPolyAreaProfiling() { return this->mIsPolyAreaProfiling; }
-    unsigned long GetLighting(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mLighting; }
-    const UString& GetName() const { return this->mName; }
+        { return this->GetScreenState(inScreen)->mIsScreenActivated; }
+    bool GetIsPolyAreaProfiling();
+    unsigned long GetLighting(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mLighting; }
+    const UString& GetName() const;
     unsigned long GetProjectionMode(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mProjectionMode; }
+        { return this->GetScreenState(inScreen)->mProjectionMode; }
     float GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation, float inScale,
                        bool inOrthographic);
     float GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic);
-    GESurface* GetPrimarySurface(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mPrimarySurface; }
-    static GERasterizer* GetRasterizer(unsigned long inIndex) { return GERasterizer::sRasterizers[inIndex]; }
-    static unsigned long GetRasterizerCount() { return GERasterizer::sRasterizers.size(); }
-    GESurface* GetRenderTarget(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mRenderTarget; }
-    GEScreen* GetScreen(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mScreen; }
-    unsigned long GetScreenCount() const { return this->mScreenStates.size(); }
-    unsigned long GetScreenID() const { return this->mScreenID; }
+    GESurface* GetPrimarySurface(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mPrimarySurface; }
+    static GERasterizer* GetRasterizer(unsigned long inIndex);
+    static unsigned long GetRasterizerCount();
+    GESurface* GetRenderTarget(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mRenderTarget; }
+    GEScreen* GetScreen(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mScreen; }
+    unsigned long GetScreenCount() const;
+    unsigned long GetScreenID() const;
     float GetScenePolysPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mScenePolysPerFrame; }
+        { return this->GetScreenState(inScreen)->mScenePolysPerFrame; }
     float GetScenePolysPerSecond(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mScenePolysPerSecond; }
+        { return this->GetScreenState(inScreen)->mScenePolysPerSecond; }
     GESurface* GetSecondarySurface(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mSecondarySurface; }
-    unsigned long GetShading(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mShading; }
-    unsigned long GetSpecular(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mSpecular; }
+        { return this->GetScreenState(inScreen)->mSecondarySurface; }
+    unsigned long GetShading(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mShading; }
+    unsigned long GetSpecular(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mSpecular; }
     GETextureManager* GetTextureManager(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mScreen->GetTextureManager(); }
+        { return this->GetScreenState(inScreen)->mScreen->GetTextureManager(); }
     float GetTotalTextureChangesPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mTotalTextureChangesPerFrame; }
-    GEViewport& GetViewport(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mViewport; }
-    GEWindow* GetWindow(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mWindow; }
-    unsigned long GetZBuffer(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mZBuffer; }
-    unsigned long GetZCompare(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mZCompare; }
-    void SetPolyAreaProfiling(bool inState) { this->mIsPolyAreaProfiling = inState; }
-    void SetScreenID(unsigned long inID) { this->mScreenID = inID; }
-    void SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
-    {
-        this->mWaterRipple0 = inWaterRipple0;
-        this->mWaterRipple1 = inWaterRipple1;
-        this->mWaterRipple2 = inWaterRipple2;
-    }
+        { return this->GetScreenState(inScreen)->mTotalTextureChangesPerFrame; }
+    GEViewport& GetViewport(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mViewport; }
+    GEWindow* GetWindow(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mWindow; }
+    unsigned long GetZBuffer(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mZBuffer; }
+    unsigned long GetZCompare(unsigned long inScreen) const { return this->GetScreenState(inScreen)->mZCompare; }
+    void SetPolyAreaProfiling(bool inState);
+    void SetScreenID(unsigned long inID);
+    void SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2);
 protected:
     GERasterizer(const UString& inName);
-    void AddToDrawnPolyArea(float inArea, unsigned long inScreen)
-        { this->mScreenStates[inScreen]->mDrawnPolyArea += inArea; }
-    void AddToDrawnPolyCount(unsigned long inCount, unsigned long inScreen)
-        { this->mScreenStates[inScreen]->mDrawnPolyCount += inCount; }
     // The plug-in's access to the base's state (the census of R4.3's twelfth part: no member is read directly)
-    GERScreenState* GetScreenState(unsigned long inScreen) const { return this->mScreenStates[inScreen]; }
-    TSCriticalSection* GetDrawingAccess() const { return this->mDrawingAccess; }
-    void GetWaterRippleEffect(float& outRipple0, float& outRipple1, float& outRipple2) const
-    {
-        outRipple0 = this->mWaterRipple0;
-        outRipple1 = this->mWaterRipple1;
-        outRipple2 = this->mWaterRipple2;
-    }
-    static void SetActiveRasterizer(GERasterizer* inRasterizer) { GERasterizer::sActiveRasterizer = inRasterizer; }
+    GERScreenState* GetScreenState(unsigned long inScreen) const;
+    TSCriticalSection* GetDrawingAccess() const;
+    void GetWaterRippleEffect(float& outRipple0, float& outRipple1, float& outRipple2) const;
+    static void SetActiveRasterizer(GERasterizer* inRasterizer);
     void IsOrthographicModelVisible(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
                                     bool& outVisible, bool& outClipped);
     void IsPerspectiveModelVisible(GEModel* inModel, float inScale, GEViewport* inViewport,
@@ -334,43 +283,19 @@ protected:
     virtual long PromoteTexture(GETexture* inTexture) = 0;          // slot 0x130
     virtual void SetRenderTarget(GESurface* inTarget, unsigned long inScreen) = 0;      // slot 0x134
 
-    GEColor mAmbientColor;                  // +0x04
-    GEColor mComputedAmbientColor;          // +0x10
-    std::vector<GERScreenState*> mScreenStates;   // +0x1c
-    GEFont* mDebugFont;                     // +0x2c provisional name ("Arial Bold" 9pt, ctor)
-    GEText* mDebugText;                     // +0x30 (provisional name)
-    unsigned long m34;                      // +0x34
-    TSCriticalSection* mDrawingAccess;      // +0x38 (ctor ESVERIFY text)
-    float mAmbientIntensity;                // +0x3c
-    float mWaterRipple0;                    // +0x40
-    float mWaterRipple1;                    // +0x44
-    float mWaterRipple2;                    // +0x48
-    unsigned long mCulling;                 // +0x4c
-    bool mIsPolyAreaProfiling;              // +0x50
-    bool mIsActivated;                      // +0x51
-    UString mName;                          // +0x54
-    unsigned long mScreenID;                // +0x64
+    // The state is Rust's (rust/crates/ee_ge rastobj.rs: the colours, the screen records, the debug font and text,
+    // the drawing lock, the ripple, the culling, the flags, the name, the screen id, and the statics sRasterizers and
+    // sActiveRasterizer); every call it makes on another object goes through GERasterizerHost (GERasterizer.cpp).
+    EeGeRasterizer* mRust;
 
-    static std::vector<TransformStack> sTransformStack;
     friend LLE_API long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance);   // Graphics Engine.cpp
     friend void GEShutdown(bool inForced);
-    static void ClearRasterizers() { GERasterizer::sRasterizers.clear(); }
-    static void AddRasterizer(GERasterizer* inRasterizer) { GERasterizer::sRasterizers.push_back(inRasterizer); }
+    static void ClearRasterizers();
+    static void AddRasterizer(GERasterizer* inRasterizer);
     friend class GETexture;                 // calls CreateTextureHandle/DestroyTextureHandle (GETexture.cpp)
-    static std::vector<GERasterizer*> sRasterizers;
-    static GERasterizer* sActiveRasterizer;
-};
-
-// One level of the model-hierarchy transform stack (element size 8: GERasterizer.cpp's _Buy 0x1002462c). Layout from
-// DX7Rasterizer::DrawModelHierarchy (DX7HRDisplay.dll 0x100042c1): back() gives the parent's combined transform
-// (Apply's this) at +0 and its accumulated scale at +4; push_back stores the address of a stack local. Names
-// are provisional.
-struct GERasterizer::TransformStack {
-    TransformStack() {}
-    TransformStack(GETransformation* inTransformation, float inScale)
-        : mTransformation(inTransformation), mScale(inScale) {}
-    GETransformation* mTransformation;
-    float mScale;
+    friend struct GERasterizerHost;
+    GERasterizer(const GERasterizer&) = delete;
+    GERasterizer& operator=(const GERasterizer&) = delete;
 };
 
 #endif
