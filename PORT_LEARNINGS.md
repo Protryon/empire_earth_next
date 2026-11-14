@@ -15534,14 +15534,14 @@ error and Yes/No boxes on the LAN path (a leave or dissolve confirmation, a conn
 
 ### Gates
 
-| Gate | cae2f609 |
-|---|---|
-| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates |
-| oracle against the main checkout's `ref` | seeds 2-3 identical |
-| `rust_build.py gate` | tests and clippy pass; rustfmt (fixed before the commit) and the header check (stale while the header was regenerated; passes alone after) failed on the first runs |
-| `build.py --test-profile windowed-software` | 0 / 0 |
-| `xbuild.py wontest` | won_dlglogic_test, won_lobbydlg_test exit 0 |
-| `lan_game.py` (harness lock) | `RESULT PASS lan-game` |
+| Gate | cae2f609 | final tree (merged with rust) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests and clippy pass; rustfmt (fixed before the commit) and the header check (stale while the header was regenerated; passes alone after) failed on the first runs | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | won_dlglogic_test, won_lobbydlg_test exit 0 | all 97 programs exit 0 (before the merge of rust) |
+| `lan_game.py` (harness lock) | `RESULT PASS lan-game` | `RESULT PASS lan-game` |
 
 ### Left for the next rounds
 
