@@ -75,6 +75,11 @@ public:
     // inline accessors (EESETSCondition::Store/Virtual2C)
     UIEditBox* GetNameEditBox() const { return this->mNameEditBox; }
     UIEditBox* GetTextEditBox() const { return this->mTextEditBox; }
+    // read from outside (the scenario combo boxes' jump to an entry, the editor gate): the entry list, a sub-tab,
+    // the open sub-screen
+    UILBString* GetList() const { return this->mList; }
+    UIRadioButton* GetTab(long inScreen) const { return this->mTabs[inScreen]; }
+    long GetCurrentScreen() const { return this->mCurrentScreen; }
 
     EESETSBaseObject* mScreens[5];          // +0x04 (0 trigger, 1 condition, 2 effect, 3 object, 4 area)
     GERectangle mR18;                       // +0x18

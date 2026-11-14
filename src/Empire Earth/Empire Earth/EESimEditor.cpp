@@ -1733,7 +1733,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             theCode = [=] {
                 EESETriggerScreen* s = gUIManager->mScenarioEditorForm->GetTriggerScreen();
                 if (w[1] == "select") {
-                    s->mList->ChangeSelectionIndex((unsigned long)L(2), false, false);
+                    s->GetList()->ChangeSelectionIndex((unsigned long)L(2), false, false);
                     s->SelectEntry();
                 } else if (w[1] == "new") s->NewEntry();
                 else if (w[1] == "dup") s->DuplicateEntry();
