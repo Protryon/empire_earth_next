@@ -489,6 +489,9 @@ WON_TESTS = {
     # that models the platform, the windows and the components as logged host ops (golden:
     # rust/crates/ee_won/src/golden_wmobj.txt)
     "won_wmobj_test": [],
+    # MSButtonBase and the check box and radio button over it as whole Rust objects (msbtnobj.rs) over a logged draw
+    # world (golden: rust/crates/ee_won/src/golden_msbtnobj.txt)
+    "won_msbtnobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

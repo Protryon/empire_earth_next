@@ -1,0 +1,2255 @@
+seq 0
+start 159 27 12 1
+call hpad 6 6 -> 0
+call get 9 0 -> 6
+call text 17 0 -> 0
+call get 7 0 -> 2
+call draw-text 0 1 -> 0
+133 0 0 0 -> 102
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 28 8 0 0 0 0 0
+607 2 0 0 -> 0
+call focus-style 3 0 -> 0
+call size 4 54 -> 0
+3 0 0 0 -> 0
+130 -8 0 0 -> 0
+call transparent 0 0 -> 0
+call color -1 0 -> 0
+call vpad 4 10 -> 0
+call adjust-now 0 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 102
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -48 18 0 0 0 0 0
+607 2 0 0 -> 0
+call hpad 261 0 -> 0
+call adjust-now 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 4 26 -> 1
+3 0 0 0 -> 0
+130 -1 0 0 -> 0
+134 0 0 0 -> 12
+call world 40 0 -> 0
+call size 19 53 -> 0
+3 0 0 0 -> 0
+130 14 0 0 -> 0
+134 0 0 0 -> 96
+134 0 0 0 -> 96
+45 set-size 19 110 -> 1
+3 0 0 0 -> 0
+130 14 0 0 -> 0
+134 0 0 0 -> 96
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 14
+134 0 0 0 -> 96
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 5 5 0 0 0 0 0
+607 2 0 0 -> 0
+end bits 256 flags 0
+seq 1
+start 47 24 10 1
+call focus-style 0 0 -> 0
+call inc-h 0 53 -> 0
+call std-color 8 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 8 0 0 0 0 0 0 0
+90 draw 6 15 0 -3 7 0 0 0 0 0
+607 2 0 0 -> 0
+call vpad 9 5 -> 0
+call hpad 10 5 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 8 0 0 0 0 0 0 0
+90 draw 6 15 0 26 10 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust-now 0 0 -> 0
+call size -9 21 -> 0
+3 0 0 0 -> 0
+130 -24 0 0 -> 0
+call focus-style 0 0 -> 0
+call text 16 0 -> 0
+call size -5 37 -> 0
+3 0 0 0 -> 0
+130 -20 0 0 -> 0
+call hpad 1 2 -> 0
+call text 25 0 -> 0
+call world 31 0 -> 0
+call get 6 0 -> 9
+call text 24 0 -> 0
+call hpad 4 10 -> 0
+call text 38 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 228
+134 0 0 0 -> 10
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 -118 16 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 -119 15 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 0
+end bits 0 flags 0
+seq 2
+start 136 22 14 1
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 68 4 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 68 5 0 0 0 0 0
+607 2 0 0 -> 0
+call text 30 0 -> 0
+call vert 1 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 180
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -22 4 0 0 0 0 0
+607 2 0 0 -> 0
+call text 4 0 -> 0
+call std-color 2 0 -> 0
+call text 7 0 -> 0
+call size 77 22 -> 0
+3 0 0 0 -> 0
+130 73 0 0 -> 0
+call hpad 4 2 -> 0
+call std-color 1 0 -> 0
+call vert 1 0 -> 0
+call world 51 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 42
+134 0 0 0 -> 14
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 20 5 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 19 4 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 119
+607 4 119 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 42
+134 0 0 0 -> 14
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 20 6 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 19 5 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 119
+607 4 119 0 -> 0
+call vert 0 0 -> 0
+call world 0 0 -> 0
+call text 33 0 -> 0
+call get 1 0 -> 1
+end bits 256 flags 0
+seq 3
+start 193 19 12 1
+call transparent 0 0 -> 0
+call inc-h -1 3 -> 0
+call hpad 6 9 -> 0
+call size 17 21 -> 0
+3 0 0 0 -> 0
+130 2 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 7 4 0 0 0 0 0
+607 2 0 0 -> 0
+call text 39 0 -> 0
+call world 41 0 -> 0
+call vpad 10 10 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 1404
+134 0 0 0 -> 1404
+45 set-size 17 1424 -> 1
+3 0 0 0 -> 0
+130 2 0 0 -> 0
+134 0 0 0 -> 1404
+call adjust-now 0 0 -> 0
+134 0 0 0 -> 1404
+call adjust-now 0 0 -> 0
+134 0 0 0 -> 1404
+call world 19 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call world 48 0 -> 0
+call desired 0 0 -> 18424
+133 0 0 0 -> 2
+134 0 0 0 -> 1404
+call text 2 0 -> 0
+134 0 0 0 -> 72
+134 0 0 0 -> 72
+45 set-size 17 92 -> 1
+3 0 0 0 -> 0
+130 2 0 0 -> 0
+134 0 0 0 -> 72
+call draw-text 1 0 -> 0
+133 0 0 0 -> 2
+134 0 0 0 -> 72
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 7 10 0 0 0 0 0
+607 2 0 0 -> 0
+call get 9 0 -> 9
+call std-color 5 0 -> 0
+call text 28 0 -> 0
+134 0 0 0 -> 1008
+134 0 0 0 -> 1008
+45 set-size 17 1028 -> 1
+3 0 0 0 -> 0
+130 2 0 0 -> 0
+134 0 0 0 -> 1008
+end bits 256 flags 0
+seq 4
+start 82 17 10 1
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 41 3 0 0 0 0 0
+607 2 0 0 -> 0
+call inc-v 3 203 -> 0
+call horz 1 0 -> 0
+131 1 0 0 -> 0
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call adjust-now 0 0 -> 0
+call get 1 0 -> 5
+call size 44 55 -> 0
+3 0 0 0 -> 0
+130 40 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 3 -77 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust-now 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 2 -77 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 3 -76 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust-now 0 0 -> 0
+call hpad 4 1 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 10
+134 0 0 0 -> 10
+45 set-size 44 220 -> 1
+3 0 0 0 -> 0
+130 39 0 0 -> 0
+134 0 0 0 -> 10
+call inc-h 1 131 -> 0
+call text 23 0 -> 0
+134 0 0 0 -> 40
+134 0 0 0 -> 40
+45 set-size 44 250 -> 1
+3 0 0 0 -> 0
+130 -93 0 0 -> 0
+134 0 0 0 -> 10
+134 0 0 0 -> 10
+45 set-size 44 220 -> 1
+3 0 0 0 -> 0
+130 -93 0 0 -> 0
+134 0 0 0 -> 10
+call adjust 1 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 138
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 5 5 0 0 0 0 0
+607 2 0 0 -> 0
+call color 11972 0 -> 0
+call world 47 0 -> 0
+end bits 0 flags 0
+seq 5
+start 170 22 14 0
+call text 31 0 -> 0
+call text 29 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 174
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -2 4 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 170 18 -> 1
+3 0 0 0 -> 0
+130 166 0 0 -> 0
+134 0 0 0 -> 14
+call vert 2 0 -> 0
+call get 1 0 -> 5
+call adjust-now 0 0 -> 0
+134 0 0 0 -> 14
+call get 1 0 -> 5
+call std-color 3 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call adjust 1 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 174
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 3 0 0 0 0 0 0 0
+90 draw 6 15 0 -6 3 0 0 0 0 0
+607 2 0 0 -> 0
+call size 105 47 -> 0
+3 0 0 0 -> 0
+130 101 0 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 105 18 -> 1
+3 0 0 0 -> 0
+130 101 0 0 -> 0
+134 0 0 0 -> 14
+call size 165 29 -> 0
+3 0 0 0 -> 0
+130 161 0 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 165 18 -> 1
+3 0 0 0 -> 0
+130 161 0 0 -> 0
+134 0 0 0 -> 14
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call desired 0 0 -> 178018
+133 0 0 0 -> 174
+134 0 0 0 -> 14
+call text 4 0 -> 0
+134 0 0 0 -> 14
+call adjust 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 24
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 3 0 0 0 0 0 0 0
+90 draw 6 15 0 140 2 0 0 0 0 0
+607 2 0 0 -> 0
+call focus-style 1 0 -> 0
+end bits 256 flags 0
+seq 6
+start 27 19 12 0
+call world 38 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 27 16 -> 1
+3 0 0 0 -> 0
+130 23 0 0 -> 0
+134 0 0 0 -> 12
+call world 29 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 15 3 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 14 2 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 15 3 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 14 2 0 0 0 0 0
+607 2 0 0 -> 0
+call text 14 0 -> 0
+134 0 0 0 -> 12
+call world 55 0 -> 0
+call text 1 0 -> 0
+134 0 0 0 -> 12
+call std-color 4 0 -> 0
+call inc-h 2 130 -> 0
+call size 63 43 -> 0
+3 0 0 0 -> 0
+130 -73 0 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 63 16 -> 1
+3 0 0 0 -> 0
+130 -73 0 0 -> 0
+134 0 0 0 -> 12
+call adjust 1 0 -> 0
+call size 7 39 -> 0
+3 0 0 0 -> 0
+130 -129 0 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 7 16 -> 1
+3 0 0 0 -> 0
+130 -129 0 0 -> 0
+134 0 0 0 -> 12
+call color 32492 0 -> 0
+call color -1 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 6
+134 0 0 0 -> 12
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 -62 4 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 -63 3 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 119
+607 4 119 0 -> 1
+90 draw 6 2 4 0 0 0 0 0 0 0
+90 draw 6 5 4 3 -1 9 0 0 0 0
+call get 6 0 -> 2
+call world 17 0 -> 0
+call world 53 0 -> 0
+call world 9 0 -> 0
+end bits 0 flags 0
+seq 7
+start 116 17 10 0
+call hpad 4 1 -> 0
+call std-color 2 0 -> 0
+call vert 1 0 -> 0
+call size 187 25 -> 0
+3 0 0 0 -> 0
+130 182 0 0 -> 0
+call hpad 8 11 -> 0
+call world 60 0 -> 0
+call hpad 251 2 -> 0
+call focus-style 2 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 10
+134 0 0 0 -> 10
+45 set-size 187 14 -> 1
+3 0 0 0 -> 0
+130 -66 0 0 -> 0
+134 0 0 0 -> 10
+call text 7 0 -> 0
+134 0 0 0 -> 10
+call draw-text 0 1 -> 0
+133 0 0 0 -> 42
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 197 3 0 0 0 0 0
+607 2 0 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call desired 0 0 -> 295014
+133 0 0 0 -> 42
+134 0 0 0 -> 10
+call text 17 0 -> 0
+134 0 0 0 -> 10
+call draw-text 1 1 -> 0
+133 0 0 0 -> 102
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 84 3 0 0 0 0 0
+607 2 0 0 -> 0
+call get 3 0 -> 2
+call color -1 0 -> 0
+call inc-v -1 161 -> 0
+call world 56 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 102
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 84 -79 0 0 0 0 0
+607 2 0 0 -> 0
+end bits 0 flags 0
+seq 8
+start 5 14 14 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 5 18 -> 1
+3 0 0 0 -> 0
+130 1 0 0 -> 0
+134 0 0 0 -> 14
+call hpad 3 9 -> 0
+call adjust 1 0 -> 0
+call text 9 0 -> 0
+134 0 0 0 -> 14
+call desired 0 0 -> 66018
+133 0 0 0 -> 54
+134 0 0 0 -> 14
+call size 163 61 -> 0
+3 0 0 0 -> 0
+130 151 0 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 163 18 -> 1
+3 0 0 0 -> 0
+130 151 0 0 -> 0
+134 0 0 0 -> 14
+call size 91 20 -> 0
+3 0 0 0 -> 0
+130 79 0 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 91 18 -> 1
+3 0 0 0 -> 0
+130 79 0 0 -> 0
+134 0 0 0 -> 14
+call draw-text 0 0 -> 0
+133 0 0 0 -> 54
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 15 2 0 0 0 0 0
+607 2 0 0 -> 0
+call vert 3 0 -> 0
+call desired 0 0 -> 66018
+133 0 0 0 -> 54
+134 0 0 0 -> 14
+call draw-text 1 0 -> 0
+133 0 0 0 -> 54
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 16 2 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust 0 0 -> 0
+call text 5 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call desired 0 0 -> 42018
+133 0 0 0 -> 30
+134 0 0 0 -> 14
+call inc-v -1 99 -> 0
+call transparent 0 0 -> 0
+call std-color 8 0 -> 0
+call desired 0 0 -> 42116
+133 0 0 0 -> 30
+134 0 0 0 -> 14
+call draw-text 1 1 -> 0
+133 0 0 0 -> 30
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 8 0 0 0 0 0 0 0
+90 draw 6 15 0 53 2 0 0 0 0 0
+607 2 0 0 -> 0
+end bits 0 flags 0
+seq 9
+start 61 12 12 0
+call transparent 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 30 0 0 0 0 0 0
+607 2 0 0 -> 0
+call desired 0 0 -> 4016
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+call get 7 0 -> 2
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 30 1 0 0 0 0 0
+607 2 0 0 -> 0
+call world 33 0 -> 0
+call hpad 11 8 -> 0
+call desired 0 0 -> 19016
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+call std-color 8 0 -> 0
+call world 37 0 -> 0
+call desired 0 0 -> 19016
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+call desired 0 0 -> 19016
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+call hpad 4 11 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 29 1 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 28 0 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust 0 0 -> 0
+call text 28 0 -> 0
+call inc-h 3 142 -> 0
+call size 166 33 -> 0
+3 0 0 0 -> 0
+130 6 0 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 168
+134 0 0 0 -> 12
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 -72 12 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 -73 11 0 0 0 0 0
+607 2 0 0 -> 0
+call std-color 4 0 -> 0
+end bits 0 flags 0
+seq 10
+start 150 17 10 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 76 4 0 0 0 0 0
+607 2 0 0 -> 0
+call std-color 5 0 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 2 3 0 0 0 0 0
+607 2 0 0 -> 0
+call text 31 0 -> 0
+call vpad 1 1 -> 0
+call desired 0 0 -> 190012
+133 0 0 0 -> 186
+134 0 0 0 -> 10
+call hpad 5 2 -> 0
+call text 30 0 -> 0
+call size 46 42 -> 0
+3 0 0 0 -> 0
+130 39 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 10
+134 0 0 0 -> 10
+45 set-size 46 12 -> 1
+3 0 0 0 -> 0
+130 39 0 0 -> 0
+134 0 0 0 -> 10
+call adjust 1 0 -> 0
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call std-color 2 0 -> 0
+call text 24 0 -> 0
+134 0 0 0 -> 10
+call focus-style 3 0 -> 0
+call focus-style 2 0 -> 0
+call text 15 0 -> 0
+134 0 0 0 -> 10
+call text 23 0 -> 0
+134 0 0 0 -> 10
+call hpad 8 9 -> 0
+end bits 0 flags 0
+seq 11
+start 39 14 14 0
+call text 39 0 -> 0
+call std-color 2 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 234
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 -97 0 0 0 0 0 0
+607 2 0 0 -> 0
+call vert 2 0 -> 0
+call focus-style 2 0 -> 0
+call vpad 10 10 -> 0
+call transparent 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 234
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 -97 -10 0 0 0 0 0
+607 2 0 0 -> 0
+call transparent 0 0 -> 0
+call vpad 0 2 -> 0
+call hpad 10 10 -> 0
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call std-color 4 0 -> 0
+call inc-v 2 126 -> 0
+call vert 2 0 -> 0
+call desired 0 0 -> 254144
+133 0 0 0 -> 234
+134 0 0 0 -> 14
+call vpad 11 5 -> 0
+call color 6580 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call get 11 0 -> 0
+end bits 0 flags 0
+seq 12
+start 95 12 12 0
+call world 62 0 -> 0
+call world 42 0 -> 0
+call inc-h 2 24 -> 0
+call size 58 8 -> 0
+3 0 0 0 -> 0
+130 28 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 18 -2 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 0
+call text 28 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 58 16 -> 1
+3 0 0 0 -> 0
+130 28 0 0 -> 0
+134 0 0 0 -> 12
+call color 52103 0 -> 0
+call hpad 252 2 -> 0
+call color 61053 0 -> 0
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call inc-h 2 244 -> 0
+call std-color 7 0 -> 0
+call text 26 0 -> 0
+134 0 0 0 -> 12
+call world 44 0 -> 0
+call vpad 10 4 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 156
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 7 0 0 0 0 0 0 0
+90 draw 6 15 0 255 6 0 0 0 0 0
+607 2 0 0 -> 0
+call size 65 26 -> 0
+3 0 0 0 -> 0
+130 -435 0 0 -> 0
+134 0 0 0 -> 12
+call draw-text 1 1 -> 0
+133 0 0 0 -> 156
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 2 7 0 0 0 0 0 0 0
+90 draw 6 15 0 255 11 0 0 0 0 0
+607 2 0 0 -> 0
+call get 11 0 -> 1
+end bits 0 flags 0
+seq 13
+start 184 39 14 0
+call hpad 5 4 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 92 12 0 0 0 0 0
+607 2 0 0 -> 0
+call text 15 0 -> 0
+call std-color 4 0 -> 0
+call size 17 44 -> 0
+3 0 0 0 -> 0
+130 8 0 0 -> 0
+call inc-v 2 254 -> 0
+call world 60 0 -> 0
+call world 21 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 90
+134 0 0 0 -> 14
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 -35 19 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 -36 18 0 0 0 0 0
+607 2 0 0 -> 0
+call size 169 24 -> 0
+3 0 0 0 -> 0
+130 160 0 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 90
+134 0 0 0 -> 14
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 42 9 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 41 8 0 0 0 0 0
+607 2 0 0 -> 0
+call std-color 2 0 -> 0
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call inc-h 3 37 -> 0
+call transparent 0 0 -> 0
+call adjust-now 0 0 -> 0
+call size 125 47 -> 0
+3 0 0 0 -> 0
+130 76 0 0 -> 0
+call horz 1 0 -> 0
+131 1 0 0 -> 0
+call world 18 0 -> 0
+call vpad 7 2 -> 0
+end bits 0 flags 0
+seq 14
+start 73 37 12 1
+call adjust 1 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 73 16 -> 1
+3 0 0 0 -> 0
+130 69 0 0 -> 0
+134 0 0 0 -> 12
+call world 45 0 -> 0
+call text 29 0 -> 0
+134 0 0 0 -> 36
+134 0 0 0 -> 36
+45 set-size 73 40 -> 1
+3 0 0 0 -> 0
+130 69 0 0 -> 0
+134 0 0 0 -> 36
+call size -9 26 -> 0
+3 0 0 0 -> 0
+130 -13 0 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size -9 16 -> 1
+3 0 0 0 -> 0
+130 -13 0 0 -> 0
+134 0 0 0 -> 12
+call text 30 0 -> 0
+134 0 0 0 -> 12
+call world 55 0 -> 0
+call get 6 0 -> 2
+call world 9 0 -> 0
+call adjust 1 0 -> 0
+call focus-style 0 0 -> 0
+call get 6 0 -> 2
+call size 30 25 -> 0
+3 0 0 0 -> 0
+130 26 0 0 -> 0
+134 0 0 0 -> 84
+134 0 0 0 -> 84
+45 set-size 30 88 -> 1
+3 0 0 0 -> 0
+130 26 0 0 -> 0
+134 0 0 0 -> 84
+call hpad 4 2 -> 0
+call std-color 6 0 -> 0
+call horz 1 0 -> 0
+131 1 0 0 -> 0
+call size 98 50 -> 0
+3 0 0 0 -> 0
+130 92 0 0 -> 0
+134 0 0 0 -> 24
+134 0 0 0 -> 24
+45 set-size 98 28 -> 1
+3 0 0 0 -> 0
+130 92 0 0 -> 0
+134 0 0 0 -> 24
+call vpad 5 10 -> 0
+call text 31 0 -> 0
+134 0 0 0 -> 36
+134 0 0 0 -> 36
+45 set-size 98 51 -> 1
+3 0 0 0 -> 0
+130 92 0 0 -> 0
+134 0 0 0 -> 36
+call std-color 7 0 -> 0
+call vpad 1 8 -> 0
+end bits 0 flags 0
+seq 15
+start 130 12 10 1
+call transparent 0 0 -> 0
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call adjust 0 0 -> 0
+call size 167 57 -> 0
+3 0 0 0 -> 0
+130 163 0 0 -> 0
+call world 3 0 -> 0
+call text 36 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 163
+134 0 0 0 -> 20
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 3 19 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 2 18 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 119
+607 4 119 0 -> 0
+call size 106 63 -> 0
+3 0 0 0 -> 0
+130 102 0 0 -> 0
+call transparent 0 0 -> 0
+call world 57 0 -> 0
+call adjust 0 0 -> 0
+call hpad 3 0 -> 0
+call vpad 11 0 -> 0
+call text 12 0 -> 0
+call inc-h 3 138 -> 0
+call size 83 36 -> 0
+3 0 0 0 -> 0
+130 -61 0 0 -> 0
+call text 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 10
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 8 19 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 7 18 0 0 0 0 0
+607 2 0 0 -> 0
+call focus-style 1 0 -> 0
+call get 5 0 -> 1
+end bits 0 flags 0
+seq 16
+start 18 39 14 1
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 14
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 10 13 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust 0 0 -> 0
+call vpad 4 9 -> 0
+call size 166 41 -> 0
+3 0 0 0 -> 0
+130 162 0 0 -> 0
+call vert 1 0 -> 0
+call std-color 7 0 -> 0
+call focus-style 0 0 -> 0
+call text 39 0 -> 0
+call size 135 10 -> 0
+3 0 0 0 -> 0
+130 131 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 131
+134 0 0 0 -> 28
+607 1 0 0 -> 0
+90 draw 6 2 7 0 0 0 0 0 0 0
+90 draw 6 15 0 2 -10 0 0 0 0 0
+607 2 0 0 -> 0
+call hpad 7 9 -> 0
+call color 14404 0 -> 0
+call desired 0 0 -> 147041
+133 0 0 0 -> 131
+134 0 0 0 -> 28
+call size 164 62 -> 0
+3 0 0 0 -> 0
+130 148 0 0 -> 0
+call size 69 36 -> 0
+3 0 0 0 -> 0
+130 53 0 0 -> 0
+call adjust 0 0 -> 0
+call vpad 7 9 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 53
+134 0 0 0 -> 70
+607 1 0 0 -> 0
+90 draw 6 1 14404 0 0 0 0 0 0 0
+90 draw 6 15 0 7 -18 0 0 0 0 0
+607 2 0 0 -> 0
+call inc-v 3 252 -> 0
+call adjust 0 0 -> 0
+end bits 0 flags 0
+seq 17
+start 107 37 12 1
+call text 7 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call focus-style 2 0 -> 0
+call inc-v 3 209 -> 0
+call focus-style 2 0 -> 0
+call color 57977 0 -> 0
+call hpad 1 10 -> 0
+call inc-v 1 251 -> 0
+call desired 0 0 -> 53224
+133 0 0 0 -> 42
+134 0 0 0 -> 12
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 42
+134 0 0 0 -> 12
+607 1 0 0 -> 0
+90 draw 6 1 57977 0 0 0 0 0 0 0
+90 draw 6 15 0 55 -86 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 107 224 -> 1
+3 0 0 0 -> 0
+130 96 0 0 -> 0
+134 0 0 0 -> 12
+call vert 2 0 -> 0
+call world 21 0 -> 0
+call inc-h 1 86 -> 0
+call size 169 61 -> 0
+3 0 0 0 -> 0
+130 71 0 0 -> 0
+134 0 0 0 -> 12
+134 0 0 0 -> 12
+45 set-size 169 224 -> 1
+3 0 0 0 -> 0
+130 71 0 0 -> 0
+134 0 0 0 -> 12
+call inc-h 2 178 -> 0
+call focus-style 3 0 -> 0
+call adjust 0 0 -> 0
+call vpad 0 8 -> 0
+end bits 0 flags 0
+seq 18
+start 164 34 10 1
+call text 30 0 -> 0
+call inc-h 1 242 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call focus-style 3 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 180
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 4 12 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 180
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 3 13 0 0 0 0 0
+607 2 0 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call text 29 0 -> 0
+call adjust 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 174
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 4 12 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 174
+134 0 0 0 -> 10
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 4 12 0 0 0 0 0
+607 2 0 0 -> 0
+call text 12 0 -> 0
+call world 32 0 -> 0
+call get 6 0 -> 2
+call desired 0 0 -> 319014
+133 0 0 0 -> 72
+134 0 0 0 -> 10
+call vpad 261 8 -> 0
+call hpad 7 11 -> 0
+call text 31 0 -> 0
+call desired 0 0 -> 204023
+133 0 0 0 -> 186
+134 0 0 0 -> 10
+call vpad 5 5 -> 0
+end bits 256 flags 0
+seq 19
+start 53 31 14 1
+call hpad 5 7 -> 0
+call get 8 0 -> 5
+call text 1 0 -> 0
+call size 184 33 -> 0
+3 0 0 0 -> 0
+130 172 0 0 -> 0
+call text 13 0 -> 0
+call hpad 251 11 -> 0
+call size 96 28 -> 0
+3 0 0 0 -> 0
+130 -166 0 0 -> 0
+call hpad 11 5 -> 0
+call desired 0 0 -> 94018
+133 0 0 0 -> 78
+134 0 0 0 -> 14
+call desired 0 0 -> 94018
+133 0 0 0 -> 78
+134 0 0 0 -> 14
+call focus-style 1 0 -> 0
+call desired 0 0 -> 94018
+133 0 0 0 -> 78
+134 0 0 0 -> 14
+call text 6 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 96 18 -> 1
+3 0 0 0 -> 0
+130 80 0 0 -> 0
+134 0 0 0 -> 14
+call inc-v 3 208 -> 0
+call inc-v 1 186 -> 0
+call focus-style 3 0 -> 0
+call size 144 12 -> 0
+3 0 0 0 -> 0
+130 128 0 0 -> 0
+134 0 0 0 -> 14
+134 0 0 0 -> 14
+45 set-size 144 160 -> 1
+3 0 0 0 -> 0
+130 128 0 0 -> 0
+134 0 0 0 -> 14
+call adjust 1 0 -> 0
+call color 59596 0 -> 0
+end bits 0 flags 0
+seq 20
+start 141 37 13 1
+call adjust 1 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 141 17 -> 1
+3 0 0 0 -> 0
+130 137 0 0 -> 0
+134 0 0 0 -> 13
+call inc-v 0 207 -> 0
+call world 12 0 -> 0
+call text 32 0 -> 0
+134 0 0 0 -> 26
+134 0 0 0 -> 26
+45 set-size 141 237 -> 1
+3 0 0 0 -> 0
+130 137 0 0 -> 0
+134 0 0 0 -> 26
+call text 13 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 141 224 -> 1
+3 0 0 0 -> 0
+130 137 0 0 -> 0
+134 0 0 0 -> 13
+call text 26 0 -> 0
+134 0 0 0 -> 26
+134 0 0 0 -> 26
+45 set-size 141 237 -> 1
+3 0 0 0 -> 0
+130 137 0 0 -> 0
+134 0 0 0 -> 26
+call vert 3 0 -> 0
+call world 11 0 -> 0
+call vert 0 0 -> 0
+call text 13 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 141 224 -> 1
+3 0 0 0 -> 0
+130 137 0 0 -> 0
+134 0 0 0 -> 13
+call adjust 1 0 -> 0
+call std-color 7 0 -> 0
+call get 5 0 -> 1
+call world 63 0 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call std-color 2 0 -> 0
+call desired 0 0 -> 82224
+133 0 0 0 -> 78
+134 0 0 0 -> 13
+call hpad 1 8 -> 0
+call text 15 0 -> 0
+134 0 0 0 -> 13
+call std-color 4 0 -> 0
+end bits 0 flags 0
+seq 21
+start 198 34 11 1
+call adjust 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 11
+134 0 0 0 -> 11
+45 set-size 198 15 -> 1
+3 0 0 0 -> 0
+130 194 0 0 -> 0
+134 0 0 0 -> 11
+call get 3 0 -> 1
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 100 2 0 0 0 0 0
+607 2 0 0 -> 0
+call world 3 0 -> 0
+call color 40300 0 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call transparent 0 0 -> 0
+call desired 0 0 -> 4015
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+call inc-h 2 147 -> 0
+call inc-h 1 197 -> 0
+call text 26 0 -> 0
+134 0 0 0 -> 11
+call adjust-now 0 0 -> 0
+134 0 0 0 -> 11
+call std-color 3 0 -> 0
+call color 62678 0 -> 0
+call inc-v 3 70 -> 0
+call text 14 0 -> 0
+134 0 0 0 -> 11
+134 0 0 0 -> 11
+45 set-size 198 88 -> 1
+3 0 0 0 -> 0
+130 103 0 0 -> 0
+134 0 0 0 -> 11
+call adjust-now 0 0 -> 0
+134 0 0 0 -> 11
+call color -1 0 -> 0
+call std-color 2 0 -> 0
+end bits 0 flags 0
+seq 22
+start 87 32 15 1
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 44 8 0 0 0 0 0
+607 2 0 0 -> 0
+call inc-h 2 113 -> 0
+call text 9 0 -> 0
+call vert 0 0 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call text 1 0 -> 0
+call world 35 0 -> 0
+call text 16 0 -> 0
+call text 7 0 -> 0
+call adjust-now 0 0 -> 0
+call hpad 5 4 -> 0
+call world 56 0 -> 0
+call get 6 0 -> 2
+call world 55 0 -> 0
+call world 38 0 -> 0
+call text 13 0 -> 0
+call hpad 11 3 -> 0
+call vert 3 0 -> 0
+call vert 1 0 -> 0
+call adjust 0 0 -> 0
+end bits 0 flags 0
+seq 23
+start 176 29 13 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 88 9 0 0 0 0 0
+607 2 0 0 -> 0
+call vpad 4 4 -> 0
+call color -1 0 -> 0
+call focus-style 1 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 89 9 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 88 9 0 0 0 0 0
+607 2 0 0 -> 0
+call get 2 0 -> -1
+call get 1 0 -> 5
+call vpad 1 4 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 175 7 0 0 0 0 0
+607 2 0 0 -> 0
+call size 170 51 -> 0
+3 0 0 0 -> 0
+130 166 0 0 -> 0
+call vert 3 0 -> 0
+call world 30 0 -> 0
+call hpad 11 9 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 161 1 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 0
+call size 97 47 -> 0
+3 0 0 0 -> 0
+130 77 0 0 -> 0
+call size -3 25 -> 0
+3 0 0 0 -> 0
+130 -23 0 0 -> 0
+call world 62 0 -> 0
+end bits 256 flags 0
+seq 24
+start 32 26 11 0
+call text 38 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 228
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -98 8 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust-now 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 228
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -97 7 0 0 0 0 0
+607 2 0 0 -> 0
+call get 1 0 -> 5
+call text 4 0 -> 0
+call get 11 0 -> 0
+call transparent 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 24
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 4 8 0 0 0 0 0
+607 2 0 0 -> 0
+call std-color 0 0 -> 0
+call world 52 0 -> 0
+call text 39 0 -> 0
+call focus-style 3 0 -> 0
+call size 67 20 -> 0
+3 0 0 0 -> 0
+130 63 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 11
+134 0 0 0 -> 11
+45 set-size 67 15 -> 1
+3 0 0 0 -> 0
+130 63 0 0 -> 0
+134 0 0 0 -> 11
+call text 23 0 -> 0
+134 0 0 0 -> 11
+call draw-text 1 0 -> 0
+133 0 0 0 -> 138
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 0 0 0 0 0 0 0 0
+90 draw 6 15 0 -34 2 0 0 0 0 0
+607 2 0 0 -> 0
+call get 6 0 -> 2
+call inc-h 1 194 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+end bits 0 flags 0
+seq 25
+start 121 24 15 0
+call vpad 255 9 -> 0
+call hpad 5 10 -> 0
+call size 83 37 -> 0
+3 0 0 0 -> 0
+130 68 0 0 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 5 135 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 5 135 0 0 0 0 0
+607 2 0 0 -> 0
+call color -1 0 -> 0
+call text 25 0 -> 0
+call size 150 24 -> 0
+3 0 0 0 -> 0
+130 135 0 0 -> 0
+call focus-style 2 0 -> 0
+call inc-v 2 245 -> 0
+call std-color 5 0 -> 0
+call color 37477 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 150 270 -> 1
+3 0 0 0 -> 0
+130 135 0 0 -> 0
+134 0 0 0 -> 15
+call std-color 8 0 -> 0
+call inc-h -1 183 -> 0
+call std-color 6 0 -> 0
+call size 101 59 -> 0
+3 0 0 0 -> 0
+130 -96 0 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 101 270 -> 1
+3 0 0 0 -> 0
+130 -96 0 0 -> 0
+134 0 0 0 -> 15
+call vpad 252 6 -> 0
+call size 146 29 -> 0
+3 0 0 0 -> 0
+130 -51 0 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 146 273 -> 1
+3 0 0 0 -> 0
+130 -51 0 0 -> 0
+134 0 0 0 -> 15
+end bits 0 flags 0
+seq 26
+start 10 29 13 0
+call hpad 4 2 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 6 8 0 0 0 0 0
+607 2 0 0 -> 0
+call desired 0 0 -> 6017
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+call color 29037 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 1 29037 0 0 0 0 0 0 0
+90 draw 6 15 0 7 8 0 0 0 0 0
+607 2 0 0 -> 0
+call desired 0 0 -> 6017
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+call get 3 0 -> 1
+call size 64 57 -> 0
+3 0 0 0 -> 0
+130 58 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 64 17 -> 1
+3 0 0 0 -> 0
+130 58 0 0 -> 0
+134 0 0 0 -> 13
+call world 32 0 -> 0
+call focus-style 1 0 -> 0
+call text 25 0 -> 0
+134 0 0 0 -> 13
+call color 45416 0 -> 0
+call text 10 0 -> 0
+134 0 0 0 -> 13
+call size 0 38 -> 0
+3 0 0 0 -> 0
+130 -6 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 0 17 -> 1
+3 0 0 0 -> 0
+130 -6 0 0 -> 0
+134 0 0 0 -> 13
+call world 36 0 -> 0
+call size 139 36 -> 0
+3 0 0 0 -> 0
+130 133 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 139 17 -> 1
+3 0 0 0 -> 0
+130 133 0 0 -> 0
+134 0 0 0 -> 13
+call draw-text 0 0 -> 0
+133 0 0 0 -> 60
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 1 45416 0 0 0 0 0 0 0
+90 draw 6 15 0 40 2 0 0 0 0 0
+607 2 0 0 -> 0
+call focus-style 3 0 -> 0
+end bits 256 flags 0
+seq 27
+start 67 27 11 0
+call adjust 0 0 -> 0
+call hpad 0 3 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 11
+134 0 0 0 -> 11
+45 set-size 67 15 -> 1
+3 0 0 0 -> 0
+130 64 0 0 -> 0
+134 0 0 0 -> 11
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 32 3 0 0 0 0 0
+607 2 0 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call size 149 38 -> 0
+3 0 0 0 -> 0
+130 146 0 0 -> 0
+134 0 0 0 -> 11
+134 0 0 0 -> 11
+45 set-size 149 15 -> 1
+3 0 0 0 -> 0
+130 146 0 0 -> 0
+134 0 0 0 -> 11
+call vpad 8 7 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 73 3 0 0 0 0 0
+607 2 0 0 -> 0
+call transparent 0 0 -> 0
+call get 4 0 -> 1
+call hpad 1 11 -> 0
+call world 56 0 -> 0
+call desired 0 0 -> 12026
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+call get 6 0 -> 8
+call hpad 10 6 -> 0
+call world 37 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 77 4 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 76 3 0 0 0 0 0
+607 2 0 0 -> 0
+call vpad 9 8 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 77 5 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 76 4 0 0 0 0 0
+607 2 0 0 -> 0
+call vpad 3 11 -> 0
+end bits 256 flags 0
+seq 28
+start 155 24 15 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 78 4 0 0 0 0 0
+607 2 0 0 -> 0
+call std-color 4 0 -> 0
+call world 60 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 155 19 -> 1
+3 0 0 0 -> 0
+130 151 0 0 -> 0
+134 0 0 0 -> 15
+call size 174 5 -> 0
+3 0 0 0 -> 0
+130 170 0 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 174 19 -> 1
+3 0 0 0 -> 0
+130 170 0 0 -> 0
+134 0 0 0 -> 15
+call world 21 0 -> 0
+call adjust 0 0 -> 0
+call get 3 0 -> 1
+call hpad 0 9 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call vert 2 0 -> 0
+call focus-style 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 15
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 167 3 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 166 2 0 0 0 0 0
+607 2 0 0 -> 0
+call get 10 0 -> 0
+call text 20 0 -> 0
+call focus-style 2 0 -> 0
+call text 11 0 -> 0
+call text 23 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call inc-v 3 206 -> 0
+end bits 256 flags 0
+seq 29
+start 44 21 13 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 22 4 0 0 0 0 0
+607 2 0 0 -> 0
+call color 53329 0 -> 0
+call focus-style 1 0 -> 0
+call get 6 0 -> 2
+call adjust 1 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 44 17 -> 1
+3 0 0 0 -> 0
+130 40 0 0 -> 0
+134 0 0 0 -> 13
+call size 135 44 -> 0
+3 0 0 0 -> 0
+130 131 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 135 17 -> 1
+3 0 0 0 -> 0
+130 131 0 0 -> 0
+134 0 0 0 -> 13
+call inc-v 2 56 -> 0
+call size -6 22 -> 0
+3 0 0 0 -> 0
+130 -10 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size -6 75 -> 1
+3 0 0 0 -> 0
+130 -10 0 0 -> 0
+134 0 0 0 -> 13
+call world 32 0 -> 0
+call size 134 23 -> 0
+3 0 0 0 -> 0
+130 130 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 134 75 -> 1
+3 0 0 0 -> 0
+130 130 0 0 -> 0
+134 0 0 0 -> 13
+call focus-style 0 0 -> 0
+call adjust 1 0 -> 0
+call inc-v 0 173 -> 0
+call desired 0 0 -> 4248
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+call get 2 0 -> 53329
+call text 11 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 134 248 -> 1
+3 0 0 0 -> 0
+130 130 0 0 -> 0
+134 0 0 0 -> 13
+call vpad 6 7 -> 0
+call adjust 0 0 -> 0
+call world 52 0 -> 0
+call get 4 0 -> 1
+end bits 0 flags 0
+seq 30
+start 101 19 11 0
+call text 6 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call adjust-now 0 0 -> 0
+call std-color 8 0 -> 0
+call get 7 0 -> 2
+call vert 2 0 -> 0
+call std-color 7 0 -> 0
+call std-color 8 0 -> 0
+call horz 3 0 -> 0
+131 0 0 0 -> 0
+call desired 0 0 -> 40015
+133 0 0 0 -> 36
+134 0 0 0 -> 11
+call inc-v 1 144 -> 0
+call adjust 0 0 -> 0
+call vert 0 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 36
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 8 0 0 0 0 0 0 0
+90 draw 6 15 0 3 4 0 0 0 0 0
+607 2 0 0 -> 0
+call size 55 18 -> 0
+3 0 0 0 -> 0
+130 51 0 0 -> 0
+call text 7 0 -> 0
+call text 33 0 -> 0
+call color 19180 0 -> 0
+call adjust 0 0 -> 0
+end bits 256 flags 0
+seq 31
+start 190 24 15 0
+call vpad 5 0 -> 0
+call size 125 31 -> 0
+3 0 0 0 -> 0
+130 121 0 0 -> 0
+call get 9 0 -> 2
+call transparent 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 125 20 -> 1
+3 0 0 0 -> 0
+130 121 0 0 -> 0
+134 0 0 0 -> 15
+call text 38 0 -> 0
+134 0 0 0 -> 15
+call draw-text 1 0 -> 0
+133 0 0 0 -> 228
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -50 5 0 0 0 0 0
+607 2 0 0 -> 0
+call hpad 0 7 -> 0
+call text 19 0 -> 0
+134 0 0 0 -> 15
+call inc-h -1 125 -> 0
+call inc-h 2 27 -> 0
+call size 63 18 -> 0
+3 0 0 0 -> 0
+130 -97 0 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 63 20 -> 1
+3 0 0 0 -> 0
+130 -97 0 0 -> 0
+134 0 0 0 -> 15
+call desired 0 0 -> 274020
+133 0 0 0 -> 114
+134 0 0 0 -> 15
+call adjust 1 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 114
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -104 5 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 114
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -103 5 0 0 0 0 0
+607 2 0 0 -> 0
+call vpad 10 6 -> 0
+call world 22 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 114
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -103 5 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 119
+607 4 119 0 -> 1
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 5 4 3 55 13 0 0 0 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 114
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -103 6 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 119
+607 4 119 0 -> 1
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 5 4 3 55 13 0 0 0 0
+end bits 0 flags 0
+seq 32
+start 78 22 13 1
+call vpad 4 5 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call hpad 9 1 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 78 5 0 0 0 0 0
+607 2 0 0 -> 0
+call world 0 0 -> 0
+call get 3 0 -> 2
+call adjust-now 0 0 -> 0
+call size 118 20 -> 0
+3 0 0 0 -> 0
+130 108 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 117 4 0 0 0 0 0
+607 2 0 0 -> 0
+call vpad 8 3 -> 0
+call text 13 0 -> 0
+call size 7 19 -> 0
+3 0 0 0 -> 0
+130 -3 0 0 -> 0
+call inc-v 3 179 -> 0
+call world 41 0 -> 0
+call size 142 36 -> 0
+3 0 0 0 -> 0
+130 132 0 0 -> 0
+call text 4 0 -> 0
+call adjust-now 0 0 -> 0
+call text 39 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call color 62370 0 -> 0
+end bits 256 flags 0
+seq 33
+start 135 19 11 1
+call adjust 0 0 -> 0
+call size 124 45 -> 0
+3 0 0 0 -> 0
+130 120 0 0 -> 0
+call world 26 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 62 18 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 0
+call size 159 17 -> 0
+3 0 0 0 -> 0
+130 155 0 0 -> 0
+call world 18 0 -> 0
+call focus-style 3 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call transparent 0 0 -> 0
+call transparent 0 0 -> 0
+call size 117 6 -> 0
+3 0 0 0 -> 0
+130 113 0 0 -> 0
+call focus-style 1 0 -> 0
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 116 -1 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 119
+607 4 119 0 -> 0
+call get 5 0 -> 1
+call desired 0 0 -> 4015
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+call adjust 0 0 -> 0
+call vert 2 0 -> 0
+call vert 2 0 -> 0
+call vert 0 0 -> 0
+call text 6 0 -> 0
+end bits 0 flags 0
+seq 34
+start 24 16 13 1
+call draw-text 1 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 13 3 0 0 0 0 0
+607 2 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 24 17 -> 1
+3 0 0 0 -> 0
+130 20 0 0 -> 0
+134 0 0 0 -> 13
+call color 2721 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call vert 0 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 1 2721 0 0 0 0 0 0 0
+90 draw 6 15 0 12 2 0 0 0 0 0
+607 2 0 0 -> 0
+call hpad 6 4 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+607 1 0 0 -> 0
+90 draw 6 1 2721 0 0 0 0 0 0 0
+90 draw 6 15 0 13 2 0 0 0 0 0
+607 2 0 0 -> 0
+call world 0 0 -> 0
+call focus-style 2 0 -> 0
+call focus-style 1 0 -> 0
+call adjust 1 0 -> 0
+call size 160 35 -> 0
+3 0 0 0 -> 0
+130 150 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 160 17 -> 1
+3 0 0 0 -> 0
+130 150 0 0 -> 0
+134 0 0 0 -> 13
+call inc-v 3 41 -> 0
+call desired 0 0 -> 10061
+133 0 0 0 -> 0
+134 0 0 0 -> 13
+call size 39 10 -> 0
+3 0 0 0 -> 0
+130 29 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 39 61 -> 1
+3 0 0 0 -> 0
+130 29 0 0 -> 0
+134 0 0 0 -> 13
+call transparent 0 0 -> 0
+call world 61 0 -> 0
+call world 10 0 -> 0
+call adjust-now 0 0 -> 0
+134 0 0 0 -> 13
+end bits 256 flags 0
+seq 35
+start 113 14 11 1
+call draw-text 0 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 56 2 0 0 0 0 0
+607 2 0 0 -> 0
+call vert 2 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 56 2 0 0 0 0 0
+607 2 0 0 -> 0
+call get 3 0 -> 1
+call text 15 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 11
+134 0 0 0 -> 11
+45 set-size 113 15 -> 1
+3 0 0 0 -> 0
+130 109 0 0 -> 0
+134 0 0 0 -> 11
+call vert 3 0 -> 0
+call vpad 4 8 -> 0
+call adjust 0 0 -> 0
+call hpad 8 7 -> 0
+call get 8 0 -> 8
+call focus-style 3 0 -> 0
+call size 168 36 -> 0
+3 0 0 0 -> 0
+130 153 0 0 -> 0
+call desired 0 0 -> 105023
+133 0 0 0 -> 90
+134 0 0 0 -> 11
+call vert 2 0 -> 0
+call get 1 0 -> 5
+call hpad 3 11 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 90
+134 0 0 0 -> 11
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 36 17 0 0 0 0 0
+607 2 0 0 -> 0
+call size 51 8 -> 0
+3 0 0 0 -> 0
+130 37 0 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+end bits 256 flags 0
+seq 36
+start 169 19 15 1
+call text 14 0 -> 0
+call get 3 0 -> 1
+call adjust 0 0 -> 0
+call size 63 20 -> 0
+3 0 0 0 -> 0
+130 59 0 0 -> 0
+call get 2 0 -> -1
+call size 87 11 -> 0
+3 0 0 0 -> 0
+130 83 0 0 -> 0
+call vpad 255 0 -> 0
+call get 11 0 -> 0
+call vpad 260 4 -> 0
+call std-color 9 0 -> 0
+call get 5 0 -> 1
+call world 37 0 -> 0
+call size 112 36 -> 0
+3 0 0 0 -> 0
+130 108 0 0 -> 0
+call inc-v 0 147 -> 0
+call color 8363 0 -> 0
+call size 189 52 -> 0
+3 0 0 0 -> 0
+130 185 0 0 -> 0
+call desired 0 0 -> 88170
+133 0 0 0 -> 84
+134 0 0 0 -> 15
+call draw-text 1 1 -> 0
+133 0 0 0 -> 84
+134 0 0 0 -> 15
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 54 -53 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 53 -54 0 0 0 0 0
+607 2 0 0 -> 0
+call size 86 12 -> 0
+3 0 0 0 -> 0
+130 82 0 0 -> 0
+call horz 1 0 -> 0
+131 1 0 0 -> 0
+end bits 0 flags 0
+seq 37
+start 58 16 13 1
+call inc-h 1 154 -> 0
+call text 36 0 -> 0
+call size 72 14 -> 0
+3 0 0 0 -> 0
+130 -87 0 0 -> 0
+call world 10 0 -> 0
+call std-color 6 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call horz 0 0 -> 0
+131 0 0 0 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 72 17 -> 1
+3 0 0 0 -> 0
+130 -87 0 0 -> 0
+134 0 0 0 -> 13
+call text 0 0 -> 0
+134 0 0 0 -> 13
+call adjust 1 0 -> 0
+call color -1 0 -> 0
+call get 10 0 -> 1
+call world 63 0 -> 0
+call size 121 52 -> 0
+3 0 0 0 -> 0
+130 -38 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size 121 17 -> 1
+3 0 0 0 -> 0
+130 -38 0 0 -> 0
+134 0 0 0 -> 13
+call text 8 0 -> 0
+134 0 0 0 -> 13
+call desired 0 0 -> 207017
+133 0 0 0 -> 48
+134 0 0 0 -> 13
+call size -2 61 -> 0
+3 0 0 0 -> 0
+130 -161 0 0 -> 0
+134 0 0 0 -> 13
+134 0 0 0 -> 13
+45 set-size -2 17 -> 1
+3 0 0 0 -> 0
+130 -161 0 0 -> 0
+134 0 0 0 -> 13
+call desired 0 0 -> 207017
+133 0 0 0 -> 48
+134 0 0 0 -> 13
+call text 35 0 -> 0
+134 0 0 0 -> 13
+end bits 256 flags 0
+seq 38
+start 147 14 11 1
+call vpad 4 7 -> 0
+call focus-style 0 0 -> 0
+call text 25 0 -> 0
+call color -1 0 -> 0
+call vpad 5 6 -> 0
+call world 15 0 -> 0
+call text 31 0 -> 0
+call get 10 0 -> 0
+call horz 2 0 -> 0
+131 0 0 0 -> 0
+call get 2 0 -> -1
+call vpad 4 7 -> 0
+call desired 0 0 -> 190022
+133 0 0 0 -> 186
+134 0 0 0 -> 11
+call adjust 0 0 -> 0
+call get 2 0 -> -1
+call color 40049 0 -> 0
+call horz 1 0 -> 0
+131 1 0 0 -> 0
+call size 59 55 -> 0
+3 0 0 0 -> 0
+130 55 0 0 -> 0
+call color 10045 0 -> 0
+call focus-style 3 0 -> 0
+call draw-text 0 0 -> 0
+133 0 0 0 -> 54
+134 0 0 0 -> 44
+607 1 0 0 -> 1
+90 draw 6 2 2 0 0 0 0 0 0 0
+90 draw 6 15 0 3 5 0 0 0 0 0
+90 draw 6 2 6 0 0 0 0 0 0 0
+90 draw 6 15 0 2 4 0 0 0 0 0
+607 2 0 0 -> 1
+607 3 0 0 -> 0
+end bits 0 flags 0
+seq 39
+start 4 11 15 1
+call adjust-now 0 0 -> 0
+call draw-text 1 0 -> 0
+133 0 0 0 -> 0
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 3 -2 0 0 0 0 0
+607 2 0 0 -> 0
+call desired 0 0 -> 4019
+133 0 0 0 -> 0
+134 0 0 0 -> 15
+call transparent 0 0 -> 0
+call text 38 0 -> 0
+call text 11 0 -> 0
+call vpad 2 8 -> 0
+call vert 2 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 66
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -31 -11 0 0 0 0 0
+607 2 0 0 -> 0
+call get 1 0 -> 5
+call vert 1 0 -> 0
+call adjust-now 0 0 -> 0
+call adjust 1 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 4 25 -> 1
+3 0 0 0 -> 0
+130 0 0 0 -> 0
+134 0 0 0 -> 15
+call vert 2 0 -> 0
+call inc-h 0 43 -> 0
+call transparent 1 0 -> 0
+607 7 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 66
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -52 3 0 0 0 0 0
+607 2 0 0 -> 0
+call draw-text 0 1 -> 0
+133 0 0 0 -> 66
+134 0 0 0 -> 15
+607 1 0 0 -> 0
+90 draw 6 2 5 0 0 0 0 0 0 0
+90 draw 6 15 0 -52 3 0 0 0 0 0
+607 2 0 0 -> 0
+call size 17 10 -> 0
+3 0 0 0 -> 0
+130 -30 0 0 -> 0
+134 0 0 0 -> 15
+134 0 0 0 -> 15
+45 set-size 17 25 -> 1
+3 0 0 0 -> 0
+130 -30 0 0 -> 0
+134 0 0 0 -> 15
+call desired 0 0 -> 113025
+133 0 0 0 -> 66
+134 0 0 0 -> 15
+end bits 256 flags 0

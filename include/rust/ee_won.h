@@ -2927,6 +2927,8 @@ enum class EeWonGuiOp : uint32_t {
   WmResolution,
   /// `Signal()` (virtual; any thread: PostEvent's wake-up).
   WmSignal,
+  /// a button's or component's method (`a` an `EeWonSkinBtn`; `b`, `c` its arguments).
+  SkinBtn = 607,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4008,6 +4010,36 @@ enum class EeWonMenuCall : uint32_t {
   TimerAcc,
   /// `mMouseUpCount`.
   MouseUpCount,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonMsBtnCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `SetTextHook`'s step after the C++ set the text: `AdjustHeightToFitText`.
+  TextSet,
+  /// `SetTransparent(a != 0)`.
+  SetTransparent,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `AdjustHeightToFitText()`.
+  AdjustHeightToFitText,
+  /// `DrawButtonText(*a, b, c)` (`a` the Graphics).
+  DrawButtonText,
+  /// the field `a` (`EeWonMsBtnField`).
+  Get,
+  /// the field `a` = `b`.
+  Set,
+  /// `SetHorzAlign(a)`: the field, then the text centred when it is `HorzAlign_Center`.
+  SetHorzAlign,
+  /// `SetStandardTextColor(a)`: the standard colour, the own colour -1.
+  SetStandardTextColor,
+  /// `IncrementHorzTextPad(a, b)` (each pad plus the low byte, as `unsigned char`).
+  IncrementHorzTextPad,
+  /// `IncrementVertTextPad(a, b)`.
+  IncrementVertTextPad,
 };
 
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
@@ -5295,6 +5327,55 @@ enum class EeWonWmSet : uint32_t {
   Broadcast,
 };
 
+/// The button's and component's methods a skin button calls (`SkinBtn`).
+enum class EeWonSkinBtn : uint32_t {
+  /// `IsDisabled()` (0 or 1).
+  IsDisabled = 1,
+  /// `HasFocus()` (0 or 1).
+  HasFocus,
+  /// `mParent` (a `Container*`; a pure read).
+  Parent,
+  /// `((Container*)b)->HasUsedDialogKeys()` (0 or 1).
+  UsedDialogKeys,
+  /// `IsPressed()` (0 or 1).
+  IsPressed,
+  /// `IsChecked()` (0 or 1).
+  IsChecked,
+  /// `SetComponentFlags(ComponentFlag_GrabBG, true)`.
+  SetGrabBG,
+  /// `SetComponentFlags(ComponentFlag_WantFocus, b != 0)`.
+  SetWantFocus,
+  /// `SetButtonFlags(b, c != 0)`.
+  SetButtonFlags,
+};
+
+/// A field of the button base (`Get` / `Set` calls). A set stores what the original's member held: the
+/// alignments, focus style and pads as `unsigned char`.
+enum class EeWonMsBtnField : uint32_t {
+  /// `mStandardTextColor`.
+  StandardTextColor = 1,
+  /// `mTextColor` (-1: the standard colour).
+  TextColor,
+  /// `mHAlign` (the field alone; `SetHorzAlign` also centres the text).
+  HAlign,
+  /// `mVAlign`.
+  VAlign,
+  /// `mFocusStyle`.
+  FocusStyle,
+  /// `mTopTextPad`.
+  TopTextPad,
+  /// `mBottomTextPad`.
+  BottomTextPad,
+  /// `mLeftTextPad`.
+  LeftTextPad,
+  /// `mRightTextPad`.
+  RightTextPad,
+  /// `mIsTransparent` (the flag alone; `SetTransparent` also grabs the background).
+  Transparent,
+  /// `mAdjustHeightToFitText` (the flag alone).
+  AdjustHeight,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -5404,6 +5485,9 @@ struct EeWonMRow;
 
 /// The Rust PopupMenu.
 struct EeWonMenu;
+
+/// The Rust MSButtonBase.
+struct EeWonMsButton;
 
 /// The Rust MultiListArea.
 struct EeWonMulti;
@@ -12718,6 +12802,23 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
+EeWonMsButton *ee_won_msbtn_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `btn` came from `ee_won_msbtn_new` (or is NULL) and is not used again.
+void ee_won_msbtn_free(EeWonMsButton *btn);
+
+/// One of MSButtonBase's methods (`EeWonMsBtnCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_msbtn_call(const EeWonMsButton *btn,
+                            EeWonMsBtnCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMulti *ee_won_multi_new(void *component,

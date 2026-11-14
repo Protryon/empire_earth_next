@@ -615,44 +615,46 @@ public:
     const GUIString& GetText() { return this->mText; } // inline; returns the text at +0x08
     int GetHeight(); // inline, defined after Font below
 };
-// MSButtonBase (0x5c bytes): Button (0x44), the wrapped text at +0x44, scalars +0x48..0x58, padding +0x59..0x5b.
-// The derived MS controls are declared separately below.
+// MSButtonBase (R6 WON round 35): its colours, alignments, focus style, text pads, transparency, fit to text and
+// the text's paint (DrawButtonText) are the Rust MSButtonBase (rust/crates/ee_won/src/msbtnobj.rs); the C++ keeps
+// the wrapped text (GetText, the fixture, the lobby and the header button's paint read it). The derived MS controls
+// are declared separately below.
 class MSButtonBase : public Button {
 public:
     MSButtonBase(); // 0x2fe6e0: allocates the WrappedText (0x30 bytes)
     virtual ~MSButtonBase(); // 0x2fe910, out of line
-    virtual void Virtual08(); //2fea10
-    virtual void GetDesiredSize(int&,int&); //2fe8c0
-    virtual void SetTextHook(const GUIString&); //2fe880 real SetTextHook
-    virtual const GUIString& GetText(); //2fe850 real B8
-    void SetTransparent(bool); //2fe8a0
-    void SetAdjustHeightToFitText(bool); //2fe9f0
-    void AdjustHeightToFitText(); //2fe980
-    void DrawButtonText(Graphics&,int,int); //2fea40
+    virtual void Virtual08() { this->MCall(EeWonMsBtnCall::SizeChanged); } //2fea10
+    virtual void GetDesiredSize(int& w,int& h) { this->MCall(EeWonMsBtnCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } //2fe8c0
+    virtual void SetTextHook(const GUIString& t) { this->mText->SetText(t); this->MCall(EeWonMsBtnCall::TextSet); } //2fe880
+    virtual const GUIString& GetText() { return this->mText->mText; } //2fe850
+    void SetTransparent(bool t) { this->MCall(EeWonMsBtnCall::SetTransparent,t); } //2fe8a0
+    void SetAdjustHeightToFitText(bool a) { this->MCall(EeWonMsBtnCall::SetAdjustHeightToFitText,a); } //2fe9f0
+    void AdjustHeightToFitText() { this->MCall(EeWonMsBtnCall::AdjustHeightToFitText); } //2fe980
+    void DrawButtonText(Graphics& g,int x,int y) { this->MCall(EeWonMsBtnCall::DrawButtonText,(intptr_t)&g,x,y); } //2fea40
     void SetFont(Font* f) { this->mText->SetFont(f); }
-    void SetTextColor(int c) { this->mTextColor=c; }
-    void SetStandardTextColor(StandardColor c) { this->mStandardTextColor=c;this->mTextColor=-1; }
+    void SetTextColor(int c) { this->MSet(EeWonMsBtnField::TextColor,c); }
+    void SetStandardTextColor(StandardColor c) { this->MCall(EeWonMsBtnCall::SetStandardTextColor,(intptr_t)c); }
     void SetWrap(bool b) { this->mText->SetWrap(b); }
-    void SetHorzAlign(HorzAlign h) { this->mHAlign=(unsigned char)h;this->mText->SetCentered(this->mHAlign==HorzAlign_Center); }
-    void SetVertAlign(VertAlign v) { this->mVAlign=(unsigned char)v; }
+    void SetHorzAlign(HorzAlign h) { this->MCall(EeWonMsBtnCall::SetHorzAlign,(intptr_t)h); }
+    void SetVertAlign(VertAlign v) { this->MSet(EeWonMsBtnField::VAlign,v); }
     enum FocusStyle { FocusStyle_None,FocusStyle_AroundWindow,FocusStyle_AroundText };
-    void SetFocusStyle(FocusStyle s) { this->mFocusStyle=(unsigned char)s; }
-    void SetHorzTextPad(int l,int r) { this->mLeftTextPad=(unsigned char)l;this->mRightTextPad=(unsigned char)r; }
-    void SetVertTextPad(int t,int b) { this->mTopTextPad=(unsigned char)t;this->mBottomTextPad=(unsigned char)b; }
-    void IncrementHorzTextPad(int l,int r) { this->mLeftTextPad=this->mLeftTextPad+(unsigned char)l;this->mRightTextPad=this->mRightTextPad+(unsigned char)r; }
-    void IncrementVertTextPad(int t,int b) { this->mTopTextPad=this->mTopTextPad+(unsigned char)t;this->mBottomTextPad=this->mBottomTextPad+(unsigned char)b; }
+    void SetFocusStyle(FocusStyle s) { this->MSet(EeWonMsBtnField::FocusStyle,s); }
+    void SetHorzTextPad(int l,int r) { this->MSet(EeWonMsBtnField::LeftTextPad,l); this->MSet(EeWonMsBtnField::RightTextPad,r); }
+    void SetVertTextPad(int t,int b) { this->MSet(EeWonMsBtnField::TopTextPad,t); this->MSet(EeWonMsBtnField::BottomTextPad,b); }
+    void IncrementHorzTextPad(int l,int r) { this->MCall(EeWonMsBtnCall::IncrementHorzTextPad,l,r); }
+    void IncrementVertTextPad(int t,int b) { this->MCall(EeWonMsBtnCall::IncrementVertTextPad,t,b); }
     // the fields the subclasses and the skins read or set alone (R6 WON round 35's census)
-    bool IsTransparent() { return this->mIsTransparent; }
-    void SetTransparentField(bool t) { this->mIsTransparent=t; } // the flag alone (no background grab)
-    int GetLeftTextPad() { return this->mLeftTextPad; }
-    void SetLeftTextPad(int l) { this->mLeftTextPad=(unsigned char)l; }
-    void SetHorzAlignField(HorzAlign h) { this->mHAlign=(unsigned char)h; } // the field alone (the text's centring kept)
-    SmartPtr<WrappedText> mText; // at +0x44
-    StandardColor mStandardTextColor; //48
-    int mTextColor; //4c
-    unsigned char mHAlign,mVAlign,mFocusStyle; //50/51/52
-    unsigned char mTopTextPad,mBottomTextPad,mLeftTextPad,mRightTextPad; //53..56
-    bool mIsTransparent,mAdjustHeightToFitText; //57/58
+    bool IsTransparent() { return this->MCall(EeWonMsBtnCall::Get,(intptr_t)EeWonMsBtnField::Transparent)!=0; }
+    void SetTransparentField(bool t) { this->MSet(EeWonMsBtnField::Transparent,t); } // the flag alone (no background grab)
+    int GetLeftTextPad() { return (int)this->MCall(EeWonMsBtnCall::Get,(intptr_t)EeWonMsBtnField::LeftTextPad); }
+    void SetLeftTextPad(int l) { this->MSet(EeWonMsBtnField::LeftTextPad,l); }
+    void SetHorzAlignField(HorzAlign h) { this->MSet(EeWonMsBtnField::HAlign,h); } // the field alone (the text's centring kept)
+    int MsField(EeWonMsBtnField f) { return (int)this->MCall(EeWonMsBtnCall::Get,(intptr_t)f); }
+    SmartPtr<WrappedText> mText;
+    EeWonMsButton* mMsb;
+protected:
+    intptr_t MCall(EeWonMsBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t d=0) { return ee_won_msbtn_call(this->mMsb,c,a,b,d); }
+    void MSet(EeWonMsBtnField f,int v) { this->MCall(EeWonMsBtnCall::Set,(intptr_t)f,v); }
 };
 // SDK utility class: static functions only, never instantiated.
 class MSGraphicsUtil {

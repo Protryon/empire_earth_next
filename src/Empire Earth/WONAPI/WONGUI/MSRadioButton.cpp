@@ -24,13 +24,13 @@ void MSRadioButton::DefaultRadioPainterFunc(Graphics& g,MSRadioButton* button) {
 void MSRadioButton::Paint(Graphics& g) {
     Component::Paint(g);
     g.SetSysColor(StandardColor_3DFace);
-    if(!this->mIsTransparent) g.FillRect(0,0,this->Width(),this->Height());
+    if(!this->IsTransparent()) g.FillRect(0,0,this->Width(),this->Height());
     int height=MSRadioButton::mRadioHeight;
     int y=0;
-    if(this->mVAlign==VertAlign_Center) y=(this->Height()-height-this->mTopTextPad-this->mBottomTextPad)/2;
-    else if(this->mVAlign==VertAlign_Bottom) y=this->Height()-height-this->mTopTextPad-this->mBottomTextPad;
-    g.Translate(0,this->mTopTextPad+y);
+    if(this->MsField(EeWonMsBtnField::VAlign)==VertAlign_Center) y=(this->Height()-height-this->MsField(EeWonMsBtnField::TopTextPad)-this->MsField(EeWonMsBtnField::BottomTextPad))/2;
+    else if(this->MsField(EeWonMsBtnField::VAlign)==VertAlign_Bottom) y=this->Height()-height-this->MsField(EeWonMsBtnField::TopTextPad)-this->MsField(EeWonMsBtnField::BottomTextPad);
+    g.Translate(0,this->MsField(EeWonMsBtnField::TopTextPad)+y);
     MSRadioButton::RadioPainter(g,this);
-    g.Translate(0,-y-this->mTopTextPad);
+    g.Translate(0,-y-this->MsField(EeWonMsBtnField::TopTextPad));
     this->DrawButtonText(g,0,0);
 }

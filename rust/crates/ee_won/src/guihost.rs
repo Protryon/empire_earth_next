@@ -798,6 +798,34 @@ pub enum EeWonGuiOp {
     WmResolution,
     /// `Signal()` (virtual; any thread: PostEvent's wake-up).
     WmSignal,
+    // ---- the skins' button subclasses (R6 WON round 35: `msbtnobj`, the receiver the `MSButtonBase*`; the wrapped
+    // text's calls are the label's `Wrap*` ops on `mText`, its paint the `Draw` op's text slot)
+    /// a button's or component's method (`a` an `EeWonSkinBtn`; `b`, `c` its arguments).
+    SkinBtn = 607,
+}
+
+/// The button's and component's methods a skin button calls (`SkinBtn`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonSkinBtn {
+    /// `IsDisabled()` (0 or 1).
+    IsDisabled = 1,
+    /// `HasFocus()` (0 or 1).
+    HasFocus,
+    /// `mParent` (a `Container*`; a pure read).
+    Parent,
+    /// `((Container*)b)->HasUsedDialogKeys()` (0 or 1).
+    UsedDialogKeys,
+    /// `IsPressed()` (0 or 1).
+    IsPressed,
+    /// `IsChecked()` (0 or 1).
+    IsChecked,
+    /// `SetComponentFlags(ComponentFlag_GrabBG, true)`.
+    SetGrabBG,
+    /// `SetComponentFlags(ComponentFlag_WantFocus, b != 0)`.
+    SetWantFocus,
+    /// `SetButtonFlags(b, c != 0)`.
+    SetButtonFlags,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

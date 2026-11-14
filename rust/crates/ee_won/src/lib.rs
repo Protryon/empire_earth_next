@@ -91,6 +91,7 @@ pub mod md5;
 pub mod menuobj;
 pub mod miscops;
 pub mod model;
+pub mod msbtnobj;
 pub mod multiobj;
 pub mod multiping;
 /// cbindgen:ignore
