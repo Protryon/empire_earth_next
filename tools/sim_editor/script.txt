@@ -587,3 +587,63 @@ unittab
 tab 3
 unittab
 form 55 73
+# editor screens round 3: the trigger tab itself (EESETriggerScreen): its list and sub-screens' selections after
+# each sub-tab, list button and Enter, a sub-tab through its radio's event, the hide-UI box (Disable, Enable), the
+# tab left and entered; then its own controls (the form's 97..113)
+tab 4
+tscreenstate
+trigger 0
+tscreenstate
+tscreen new
+tscreen new
+tscreenstate
+tscreen select 0
+tscreenstate
+tscreen down
+tscreenstate
+tscreen up
+tscreenstate
+tscreen up
+tscreenstate
+tscreen dup
+tscreenstate
+tscreen sort
+tscreenstate
+tscreen name
+tscreenstate
+tscreen delete
+tscreenstate
+trigger 1
+tscreenstate
+radio %101                         # the object sub-tab through its radio
+tscreenstate
+form 97 113
+tscreen new
+tscreenstate
+tscreen select 9
+tscreenstate
+check 0x12 1
+form 97 113
+check 0x12 0
+tscreenstate
+radio %99                          # the condition sub-tab
+tscreenstate
+tscreen new
+tscreen new
+tscreen new
+tscreenstate
+tscreen select 2                   # the last one deleted: the new last one selected
+tscreen delete
+tscreenstate
+tscreen select 0
+tscreen delete
+tscreenstate
+tscreen delete
+tscreenstate                       # empty: the name and buttons hidden
+form 103 113
+tab 0
+tscreenstate
+form 97 113
+tab 4
+tscreenstate
+form 97 113

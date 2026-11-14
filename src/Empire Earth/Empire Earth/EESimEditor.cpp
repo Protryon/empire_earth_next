@@ -1758,6 +1758,25 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 if (UIEvent* theEvent = theControl->GetTriggerEvent(kControlTriggerButtonUp))
                     theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
             };
+        else if (c == "tscreenstate")   // the trigger tab's list, open sub-screen and the sub-screens' selections
+            theCode = [=, &theOutput] {
+                EESETriggerScreen* s = gUIManager->mScenarioEditorForm->GetTriggerScreen();
+                UILBString* theList = s->GetList();
+                std::string theLine = "  tscreen screen=" + std::to_string(s->GetCurrentScreen()) +
+                                      " storing=" + std::to_string(gB4C3220 ? 1 : 0) + " list " +
+                                      std::to_string(theList->GetLineCount()) + ":";
+                for (unsigned long k = 0; k < theList->GetLineCount() && k < 6; k++)
+                    theLine += std::string(" '") + (const char*)theList->GetData(k) + "'";
+                unsigned long theSelected;
+                if (theList->GetCurrentSelection(theSelected) == kErrorOK)
+                    theLine += " selected " + std::to_string(theSelected);
+                else
+                    theLine += " none";
+                for (long k = 0; k < 5; k++)
+                    theLine += " s" + std::to_string(k) + "=" + std::to_string(s->GetScreen(k)->mSelection) +
+                               (s->GetScreen(k)->mHasSelection ? "+" : "-");
+                theOutput.push_back(theLine);
+            };
         else if (c == "triggerstate")   // the trigger tab's open trigger (TriggerDigest)
             theCode = [=, &theOutput] { TriggerDigest(theOutput); };
         else if (c == "object")   // the trigger tab's open scenario object (ObjectDigest)

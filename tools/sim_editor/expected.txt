@@ -6662,3 +6662,162 @@ step 589 form 55 73
   c71 EEUIFSEBRotation id=0x3f5 ix=71 g=6 r=500,633,549,682 m=1 bg=0,0,0,0 b=0 h=8516 fg=none
   c72 EEUICSelectUnits id=0x3f6 ix=72 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
   c73 EESEUICCommandUnits id=0x3f7 ix=73 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+step 593 tab 4
+step 594 tscreenstate
+  tscreen screen=0 storing=0 list 0: none s0=1- s1=0+ s2=0- s3=0+ s4=0+
+step 595 trigger 0
+step 596 tscreenstate
+  tscreen screen=0 storing=0 list 0: none s0=0- s1=0+ s2=0- s3=0+ s4=0+
+step 597 tscreen new
+step 598 tscreen new
+step 599 tscreenstate
+  tscreen screen=0 storing=0 list 2: '<Trigger0>' '<Trigger1>' selected 1 s0=1+ s1=0+ s2=0- s3=0+ s4=0+
+step 600 tscreen select 0
+step 601 tscreenstate
+  tscreen screen=0 storing=0 list 2: '<Trigger0>' '<Trigger1>' selected 0 s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 602 tscreen down
+step 603 tscreenstate
+  tscreen screen=0 storing=0 list 2: '<Trigger1>' '<Trigger0>' selected 1 s0=1+ s1=0+ s2=0- s3=0+ s4=0+
+step 604 tscreen up
+step 605 tscreenstate
+  tscreen screen=0 storing=0 list 2: '<Trigger0>' '<Trigger1>' selected 0 s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 606 tscreen up
+step 607 tscreenstate
+  tscreen screen=0 storing=0 list 2: '<Trigger0>' '<Trigger1>' selected 0 s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 608 tscreen dup
+step 609 tscreenstate
+  tscreen screen=0 storing=0 list 3: '<Trigger0>' '<Trigger1>' '<Trigger0_Copy>' selected 2 s0=2+ s1=0+ s2=0- s3=0+ s4=0+
+step 610 tscreen sort
+step 611 tscreenstate
+  tscreen screen=0 storing=0 list 3: '<Trigger0>' '<Trigger0_Copy>' '<Trigger1>' selected 0 s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 612 tscreen name
+step 613 tscreenstate
+  tscreen screen=0 storing=0 list 3: '<Trigger0>' '<Trigger0_Copy>' '<Trigger1>' selected 0 s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 614 tscreen delete
+step 615 tscreenstate
+  tscreen screen=0 storing=0 list 2: '<Trigger0_Copy>' '<Trigger1>' selected 0 s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 616 trigger 1
+step 617 tscreenstate
+  tscreen screen=1 storing=0 list 0: none s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 618 radio %101                         # the object sub-tab through its radio
+step 619 tscreenstate
+  tscreen screen=3 storing=0 list 0: none s0=0+ s1=0- s2=0- s3=0- s4=0+
+step 620 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14 r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14 r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14 r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14 r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14 r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14 r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14 r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14 r=104,586,193,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14 r=204,586,293,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14 r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14 r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14 r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14 r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14 r=329,458,578,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Trigger0_Copy>'
+  c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 621 tscreen new
+step 622 tscreenstate
+  tscreen screen=3 storing=0 list 1: '<NONE>' selected 0 s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 623 tscreen select 9
+step 624 tscreenstate
+  tscreen screen=3 storing=0 list 1: '<<NONE>>' selected 0 s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 625 check 0x12 1
+step 626 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14 r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=1 sel=0 '<<NONE>>' e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14 r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14 r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14 r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14 r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14 r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14 r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14 r=104,586,193,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14 r=204,586,293,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14 r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14 r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14 r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14 r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14 r=329,458,578,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<<NONE>>'
+  c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 627 check 0x12 0
+step 628 tscreenstate
+  tscreen screen=3 storing=0 list 1: '<<NONE>>' selected 0 s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 629 radio %99                          # the condition sub-tab
+step 630 tscreenstate
+  tscreen screen=1 storing=0 list 0: none s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 631 tscreen new
+step 632 tscreen new
+step 633 tscreen new
+step 634 tscreenstate
+  tscreen screen=1 storing=0 list 3: '<Player-Attribute Player 1>' '<Player-Attribute Player 1>' '<Condition3>' selected 2 s0=0+ s1=2+ s2=0- s3=0+ s4=0+
+step 635 tscreen select 2                   # the last one deleted: the new last one selected
+step 636 tscreen delete
+step 637 tscreenstate
+  tscreen screen=1 storing=0 list 2: '<Player-Attribute Player 1>' '<Player-Attribute Player 1>' selected 1 s0=0+ s1=1+ s2=0- s3=0+ s4=0+
+step 638 tscreen select 0
+step 639 tscreen delete
+step 640 tscreenstate
+  tscreen screen=1 storing=0 list 1: '<Player-Attribute Player 1>' selected 0 s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 641 tscreen delete
+step 642 tscreenstate                       # empty: the name and buttons hidden
+  tscreen screen=1 storing=0 list 0: none s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 643 form 103 113
+  c103 UIButton id=0x7d5 ix=103 g=14d r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14d r=104,586,193,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14d r=204,586,293,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14d r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14d r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14d r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14d r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14d r=329,458,578,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14d r=329,480,578,496 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Player-Attribute Player 1>'
+  c112 UITextLabel id=0x962 ix=112 g=14d r=589,458,808,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14d r=589,478,808,575 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 644 tab 0
+step 645 tscreenstate
+  tscreen screen=1 storing=1 list 0: none s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 646 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14d r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14d r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14d r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14d r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14d r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14d r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14d r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14d r=104,586,193,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14d r=204,586,293,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14d r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14d r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14d r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14d r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14d r=329,458,578,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14d r=329,480,578,496 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Player-Attribute Player 1>'
+  c112 UITextLabel id=0x962 ix=112 g=14d r=589,458,808,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14d r=589,478,808,575 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 647 tab 4
+step 648 tscreenstate
+  tscreen screen=1 storing=0 list 0: none s0=0+ s1=0- s2=0- s3=0+ s4=0+
+step 649 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14 r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14 r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14 r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14 r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14 r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14 r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14 r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14 r=104,586,193,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14 r=204,586,293,605 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14 r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14 r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14 r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14 r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14 r=329,458,578,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Player-Attribute World>'
+  c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
