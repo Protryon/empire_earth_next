@@ -180,6 +180,8 @@ static bool Connected()
 }
 static void* sWaitTimer;
 static bool TimerDone() { return static_cast<AsyncOp*>(static_cast<RefCount*>(sWaitTimer))->GetStatus() != WS_Pending; }
+// the timer thread gave the timer back (its entry's reference, released after it finished the timer, on its thread)
+static bool TimerAlone() { return Refs(sWaitTimer) <= 1; }
 static void Release(RustServerOp* inOp)
 {
     if (inOp->GetStatus() == WS_Pending) inOp->Kill(true);
@@ -419,6 +421,8 @@ int main(int argc, char** argv)
             sWaitTimer = t;
             PumpUntil(TimerDone);
             PumpUntilDone(p);
+            sWaitTimer = t;
+            PumpUntil(TimerAlone);
             Log("timer done " + N(Num(EE_WON_HOST_OP_STATUS, t)) + " refs " + N(Refs(t)));
             Own("after tracked timer");
             Log("op refs " + N(Refs(R(p))) + " tracker " + N(p->mTracker.GetNumTrack()));
@@ -438,6 +442,8 @@ int main(int argc, char** argv)
             sWaitTimer = t;
             PumpUntil(TimerDone);
             PumpUntilDone(p);
+            sWaitTimer = t;
+            PumpUntil(TimerAlone);
             Log("timer done " + N(Num(EE_WON_HOST_OP_STATUS, t)) + " refs " + N(Refs(t)));
             Own("after own timer");
             Call(EE_WON_HOST_RELEASE, t);
@@ -457,6 +463,8 @@ int main(int argc, char** argv)
             Call(EE_WON_HOST_RUN_ASYNC, t, NULL, 60000);
             Call(EE_WON_HOST_KILL, t, NULL, 1);
             PumpUntilDone(p);
+            sWaitTimer = t;
+            PumpUntil(TimerAlone);
             Log("killed timer " + N(Num(EE_WON_HOST_OP_STATUS, t)) + " refs " + N(Refs(t)));
             Own("after killed timer");
             Call(EE_WON_HOST_RELEASE, t);
@@ -476,6 +484,8 @@ int main(int argc, char** argv)
             Log("tracker " + N(p->mTracker.GetNumTrack()) + " empty " + N(Num(EE_WON_HOST_TRACKER_EMPTY)));
             Call(EE_WON_HOST_KILL_ALL);
             for (int i = 0; i < 5; i++) aCore.Pump(10);
+            sWaitTimer = t;
+            PumpUntil(TimerAlone);
             Log("killed all: timer " + N(Num(EE_WON_HOST_OP_STATUS, t)) + " refs " + N(Refs(t)) + " tracker "
                 + N(p->mTracker.GetNumTrack()));
             Own("after kill all");
