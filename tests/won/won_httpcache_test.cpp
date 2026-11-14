@@ -29,16 +29,20 @@ using namespace WONAPI;
 using std::string;
 namespace fs = std::filesystem;
 
-// ---- the three statements that name the cache (a new cache with one reference; the global one, borrowed; reset)
+// ---- the three statements that name the cache (a new cache with one reference; the global one, borrowed; reset).
+// The golden was recorded with the C++ class here: new HTTPCache(path, full) and AddRef, HTTPCache::GetGlobalCache(),
+// HTTPCache::SetGlobalCache(NULL)
 
 static void* NewCache(const string& inPath, bool inFullPath)
 {
-    HTTPCache* c = new HTTPCache(inPath, inFullPath);
-    c->AddRef();
-    return static_cast<RefCount*>(c);
+    return ee_won_http_cache_new(reinterpret_cast<const uint8_t*>(inPath.data()), inPath.size(), inFullPath);
 }
-static void* GlobalCache() { return static_cast<RefCount*>(HTTPCache::GetGlobalCache()); }
-static void ResetGlobalCache() { HTTPCache::SetGlobalCache(NULL); }
+static void* GlobalCache()
+{
+    const string& aDir = WONAPICore::GetDefaultFileDirectory();
+    return ee_won_http_cache_global(reinterpret_cast<const uint8_t*>(aDir.data()), aDir.size());
+}
+static void ResetGlobalCache() { ee_won_http_cache_reset_global(); }
 
 // ---- the log
 

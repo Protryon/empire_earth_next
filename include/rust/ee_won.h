@@ -11651,6 +11651,33 @@ void ee_won_http_cache_file_name(int32_t id,
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
+/// `new HTTPCache(path, fullPath)`: a handle with one reference (released with the op base's `EE_WON_HOST_RELEASE`
+/// or [`ee_won_http_cache_release`]).
+///
+/// # Safety
+/// `path` holds `len` bytes.
+void *ee_won_http_cache_new(const uint8_t *path,
+                            size_t len,
+                            bool full_path);
+
+/// A reference released (the cache's last one writes its index).
+///
+/// # Safety
+/// `cache` is NULL or a handle from [`ee_won_http_cache_new`] the caller holds a reference to.
+void ee_won_http_cache_release(void *cache);
+
+/// `HTTPCache::GetGlobalCache()`: the process's cache in `dir + "_wonHTTPCache"` (the WON directory with its
+/// separator), made at the first call; borrowed (the op base's setters take their own reference). Released at exit.
+///
+/// # Safety
+/// `dir` holds `len` bytes.
+void *ee_won_http_cache_global(const uint8_t *dir,
+                               size_t len);
+
+/// `HTTPCache::SetGlobalCache(NULL)`: the global cache's reference released (its index written when it was the
+/// last); the next [`ee_won_http_cache_global`] makes a new one.
+void ee_won_http_cache_reset_global();
+
 /// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
 /// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
 ///

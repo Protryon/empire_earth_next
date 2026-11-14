@@ -2,7 +2,8 @@
 // and writes cachemap.dat on the Rust file layer and decides which entries are kept; these build the entry objects
 // and the maps from what it read, hand it the entries in the id map's order and delete the cached files it drops
 // (HTTPCache.cpp's statements). A template over the cache and its entry so that tests/won/won_cachemap_test.cpp
-// runs the same code over stand-ins; HTTPCache and HTTPCacheEntry make it a friend.
+// runs the same code over stand-ins. Test glue since round 21: the game's cache is Rust's whole
+// (rust/crates/ee_won/src/httpcache.rs reads and writes the index through cachemap.rs directly).
 #pragma once
 #include <time.h>
 #include <string>

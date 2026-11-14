@@ -32,7 +32,6 @@
 2bcd30 2c7d36 WONRouting/RoutingOp.cpp
 2bfb00 2c4165 WONRouting/SmartRoutingConnection.cpp
 2c6630 2c6c08 WONRouting/RoutingGetUserStatusOp.cpp
-2d1260 2d271c WONMisc/HTTPCache.cpp
 2d28f0 2d3782 WONMisc/HTTPEngine.cpp
 2d7a20 2d8391 WONMisc/URL.cpp
 2d83a0 2d8c7e WONMisc/PatchTypes.cpp

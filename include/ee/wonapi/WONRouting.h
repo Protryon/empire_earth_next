@@ -1033,55 +1033,8 @@ public:
 // HTTP operation, 0x15c bytes.
 class FileReader;
 class FileWriter;
-// Cache entry, 0x68 bytes; ctor 2d1260; implicit dtor 2d1330 (no own-vtable store).
-template <class Cache, class Entry> struct HttpCacheMsg;
-class HTTPCacheEntry : public RefCount {
-    friend class HTTPCache;
-    template <class Cache, class Entry> friend struct HttpCacheMsg;
-    int mId; //08
-    bool mIsValid; //0c,naturalpadding0d..0f
-    std::string mRemoteLocation; //10
-    std::string mLocalPath; //20
-    std::string mFileName; //30
-    std::string mFileType; //40
-    std::string mEntityTag; //50
-    time_t mExpirationTime; //60
-    time_t mLastAccessTime; //64
-public:
-    HTTPCacheEntry(); //2d1260
-    // ReadFromFile 2d1450 and WriteToFile 2d14c0 are ee_won's (cachemap.rs, through WONHttpCacheMsg.h)
-    bool IsValid(); //2d1540, small getter, out of line
-    void SetValid(bool inValid) {this->mIsValid=inValid;}
-    void SetExpirationTime(time_t inTime) {this->mExpirationTime=inTime;}
-    void SetEntityTag(const std::string& inTag) {this->mEntityTag=inTag;}
-    const std::string& GetLocalPath() {return this->mLocalPath;}
-    const std::string& GetEntityTag() {return this->mEntityTag;}
-    time_t GetExpirationTime() {return this->mExpirationTime;}
-};
-// Cache, 0x34 bytes. No mCreatedDirectory boolean (added in a later SDK).
-// Constructor 2d1670 and the singleton allocation at 2d192d give sizeof 0x34.
-class HTTPCache : public RefCount {
-protected:
-    std::string mCachePath; //08
-    typedef std::map<std::string,SmartPtr<HTTPCacheEntry> > CacheLocationMap;
-    typedef std::map<int,SmartPtr<HTTPCacheEntry> > CacheIdMap;
-    CacheLocationMap mCacheLocationMap; //18
-    CacheIdMap mCacheIdMap; //24
-    int mNextFreeId; //30
-    void ReadCacheMap(); //2d1a10
-    void WriteCacheMap(); //2d1ca0
-    void DeleteCachedFile(HTTPCacheEntry*); // WriteCacheMap's deletion of a dropped entry's file
-    template <class Cache, class Entry> friend struct HttpCacheMsg;
-    int GetFreeId(); //2d2170
-    virtual ~HTTPCache(); //2d1820 explicitownVT then WriteCacheMap
-public:
-    HTTPCache(const std::string&,bool inFullPath=false); //2d1670
-    void SetCachePath(const std::string&,bool); //2d1ef0 always creates dir; empty path returns before read
-    HTTPCacheEntry* GetEntry(const std::string&); //2d2210 rawborrowed ret4, mapsretain
-    static HTTPCache* GetGlobalCache(); //2d1900, no-argument getter
-    static void SetGlobalCache(HTTPCache*);
-    void UpdateEntry(HTTPCacheEntry*); //2fa500, called with an empty version
-};
+// HTTPCache and HTTPCacheEntry (cache 0x34 bytes, entry 0x68) are Rust's whole (rust/crates/ee_won/src/httpcache.rs):
+// the HTTP get op's cache and entry are Rust handles; the global cache is ee_won_http_cache_global
 // HTTPGetOp is a Rust op on the base (rust/crates/ee_won/src/httpget.rs): RustServerOp::NewHttpGet, its members by
 // EE_WON_HTTPGET_* number
 
