@@ -21,9 +21,14 @@ CBPJ/CBPS/CBMA/CBMH captures and the drop target live there), the carrier planes
 
 Gate: PMST (every model step's unit state after it, folded per tick) recorded on the unmodified C++ in the oracle,
 late, space and calamity profiles at seeds 2-3; the USST notes of the arithmetic leaves keep their words; the sim
-oracle.
+oracle (seeds 2-7 identical); the saveload matrix. C++ net -4,200 lines this round.
 
-**Next:** `EEPPatrolGroup` (a reference-counted list of patrol point units with its save; its callers are the patrol
+Coverage (EE-PM-COUNT): the gate games step land, building, naval, projectile and air animal units in every profile,
+helicopters only in the calamity profile, and no airplane, hovercraft, submarine, sea animal or spaceship; those
+bodies are checked by unit tests and review only.
+
+**Next:** a golden for the unreached models (a scratch driver over the original C++ of 56802c88^, or a capture
+profile with aircraft, submarines and spaceships); `EEPPatrolGroup` (a reference-counted list of patrol point units with its save; its callers are the patrol
 goal, `EEMAddPatrolPoint`, `EETown` and the player); the deck walk once the model's tag points are readable from Rust
 (R4.3's `GEModel` records); the projectile and missile steps' input gathering if the combat lane hands over its
 captures.

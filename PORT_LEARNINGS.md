@@ -19463,3 +19463,14 @@ Started on the final tree (61a9d843) with a 3-hour limit, in the background; whe
   the captures of the oracle, space, late and calamity profiles at seeds 2-3 equal to every golden (PMST, USST, USTM,
   USCK and the rest: 171, 173, 172 and 185 digests); the Rust gate. C++ of the commit: 5,146 lines deleted, 852 added
   (the host and the moved projectile, missile and deck-walk bodies), net -4,294.
+- **What the gate games reach (EE-PM-COUNT, steps per model over a game's first 40,000 ticks, seeds 2-3).** Every
+  profile: land 2.0-4.5 million, building 42k-363k, naval 2.6k-430k, projectile 14k-1.26 million (the calamity
+  casts' shots), air animal 32k-127k (the birds); the helicopter (2,538) only in the calamity profile. No game of the
+  five profiles steps an airplane, hovercraft, submarine, sea animal or spaceship (the space profile's computer
+  players build none by 2700 s), and missiles fly through `Step0` alone (the missile sweep). Those bodies are gated by
+  their unit tests and the review against the C++ only: a golden driver, or a profile that builds aircraft, ships
+  under water and spaceships, is owed.
+- **Final gates (merged with rust 024b9ef2):** build `--sim` 0/0; test-profile build 0/0; oracle seeds 2-7
+  identical; captures at seeds 2-3 of oracle (171), late (172), space (173), calamity (185) and missile (22 golden
+  digests) all PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) PASS; the Rust gate
+  PASS.
