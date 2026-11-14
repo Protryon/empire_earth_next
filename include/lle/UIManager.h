@@ -79,7 +79,6 @@ public:
     GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle);
     UIEvent* CreateControlEvent(UIForm* inForm, unsigned long inEventID);
     UIEvent* CreateFormEvent(unsigned long inEventID);
-    void CreateIMECandidateWindow(GEFont* inFont);
     virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable) { return NULL; }
     virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable) { return NULL; }
     // inline: exported 0x1005a028 (UIBackground.cpp's inline block)
@@ -109,7 +108,6 @@ public:
 #endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
-    static bool GetMouseLeftHanded() { return UIManager::sMouseLeftHanded; }
     static ISEntity* GetMouseWheel() { return UIManager::sMouseWheel; }
 #endif
 #endif
@@ -135,7 +133,6 @@ public:
     SESoundManager* GetSoundManager() const;
     UResourceFile* GetStringTable() const;
     unsigned long GetUITextureBitDepth() const;
-    unsigned long GetVisibleFormCount() const;
     bool IsFormOnStack(UIForm* inForm);
     bool IsFormVisible(UIForm* inForm);
     void LoadDatabase(FSPath* inPath, const UString& inDirectory);

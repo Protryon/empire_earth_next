@@ -142,7 +142,6 @@ public:
     EEOrbital* GetOrbital(unsigned long inIndex) const { return this->mOrbitals[inIndex]; }
     // inline; out of line after their first user EEUnitClass::TurretsFacePoint (0x23a59b / 0x23a5ad, in this order)
     // (provisional names)
-    GEModel* GetTurretPartModel(unsigned long inIndex) const { return this->mTurretParts[inIndex]->mModel; }
     const GETransformation& GetTurretPartTransformation(unsigned long inIndex) const { return this->mTurretParts[inIndex]->mTransformation; }
     // The members below were EEUnit.h's `EEModel` (what EEUnit/EEComplexUnit::Virtual54 return: the same object;
     // EEModel is now a typedef of this class)

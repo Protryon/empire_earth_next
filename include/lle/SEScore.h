@@ -11,10 +11,6 @@ struct DmSegment;
 class LLE_API SEScore {
     friend class SEConductor;
 public:
-    bool GetIsSecondaryScore() const { return this->mIsSecondaryScore; }
-    unsigned long GetRepeatCount();
-    SEScore* GetSecondaryScore(unsigned long inIndex) const { return this->mSecondaryScores[inIndex]; }
-    unsigned long GetSecondaryScoreCount() const { return this->mSecondaryScores.size(); }
     void SetRepeatCount(unsigned long inCount);
 private:
     DmSegment* GetSegment() const { return this->mSegment; }

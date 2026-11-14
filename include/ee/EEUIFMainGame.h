@@ -74,8 +74,6 @@ public:
     void StartCalamity(long inTechnology);  // 0x26662d (state 5)
     void StartFlare();                      // 0x26679a (state 0x15)
     void StartPatrol();                     // 0x26681d (state 0x10)
-    void SetHotKeyMode(long inMode);        // 0x2668a0 (hot-key groups 0..2)
-    void RefreshStatus();                   // 0x266a3b (the status update, each mPoll tick)
     void UpdateCursorKind();                // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
                                             // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
                                             // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)

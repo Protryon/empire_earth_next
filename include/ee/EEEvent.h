@@ -71,7 +71,6 @@ public:
     {
         return (inID >= 0 && (unsigned long)inID < EEEvent::sEvents.size()) ? EEEvent::sEvents[inID].get() : NULL;
     }
-    static unsigned long GetNumEvents() { return (unsigned long)EEEvent::sEvents.size(); }
     static std::vector<std::unique_ptr<EEEvent>> sEvents;
     // 0x1ca63b (cdecl, 0x141937): every effect record of inEffects, then every event of inEvents (its 100-byte name,
     // +0x0c, count and indices) to the end of the file (both opened first; provisional names)

@@ -54,7 +54,6 @@ public:
     long mHelperID;                         // +0x1c
     float mTimeSinceLastSpread;             // +0x20
     float mTimeSinceLastUpdate;             // +0x24
-    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x28 (Load; RestorePointers turns them into mUnits)
 
     // the save keys (init chains 0xb5b7d..0xb5c89; guard 0x4e6008; not used by Load/Save)

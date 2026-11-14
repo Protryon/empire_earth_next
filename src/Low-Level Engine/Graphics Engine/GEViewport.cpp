@@ -62,13 +62,6 @@ void GEViewport::ComputePerspectiveMatrix()
     ee_ge_viewport_perspective_matrix(GERust(*this));
 }
 
-// FUNCTION: LLE 0x10037144
-// Recomputes the camera-space clipping planes (front, rear, left, right, bottom, top) from the field of view
-void GEViewport::ComputePlanes()
-{
-    ee_ge_viewport_planes(GERust(*this));
-}
-
 // FUNCTION: LLE 0x100372ea
 // Returns the six world-space planes of the frustum under a screen rectangle (perspective or orthographic)
 void GEViewport::GetFrustrumWorldPlanes(const GERectangle& inRectangle, std::vector<GE3DPlane>& outPlanes,

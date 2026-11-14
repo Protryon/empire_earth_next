@@ -82,36 +82,6 @@ GEVector* GEVector::GetQuantizedVersion() const
     return theQuantizedVector;
 }
 
-// FUNCTION: LLE 0x1003676f
-// Reads a quantized direction index from an open file and returns its table entry (the zero vector if
-// out of range)
-long GEVector::LoadQuantizedIndex(FSFile& inFile, GEVector*& outVector)
-{
-    long theResult;
-    unsigned short theIndex;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Read(theIndex);
-        if (theResult == kErrorOK) {
-            if (theIndex < sizeof(GEVector::sQuantizedVectorArray.mVectors) / sizeof(GEVector))
-                outVector = &GEVector::sQuantizedVectorArray.mVectors[0][0] + theIndex;
-            else
-                outVector = &sZeroVector;
-        }
-    } else
-        theResult = 4;
-    return theResult;
-}
-
-// FUNCTION: LLE 0x100367be
-// Writes the vector's quantized direction index to an open file
-long GEVector::SaveQuantizedIndex(FSFile& inFile) const
-{
-    unsigned short theIndex = this->GetQuantizedVersion() - &GEVector::sQuantizedVectorArray.mVectors[0][0];
-    if (inFile.GetIsOpen())
-        return inFile.Write(theIndex);
-    return 4;
-}
-
 // The zero vector's destructor (the members below have no address of their own)
 // FUNCTION: LLE 0x10035aaf
 // Destroys the file-static zero vector at shutdown (an empty body)

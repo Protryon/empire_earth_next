@@ -43,18 +43,6 @@ long GERectangle::Load(FSFile& inFile)
     return GERustFields(inFile, theFields, 4, inFile.GetIsOpen(), false, false);
 }
 
-// FUNCTION: LLE 0x1002490c
-// Splits the rectangle around another one into left/right/top/bottom pieces; the whole rectangle when no edge cuts
-void GERectangle::RemoveIntersectingRectangle(const GERectangle& inRectangle,
-                                              std::vector<GERectangle>& outRectangles) const
-{
-    // the whole rectangle is added only to an empty vector (the C++ tested its size, not its own pieces)
-    GERectangle theThis(*this);
-    GERectangle theOther(inRectangle);   // copies: either may be an element of outRectangles
-    ee_ge_rect_remove_intersecting(GERust(theThis), GERust(theOther), outRectangles.size(), GERustPushRectangle,
-                                   &outRectangles);
-}
-
 // FUNCTION: LLE 0x10024a82
 // Writes the left, top, right and bottom edges to a file; returns the first write error (or not-open)
 long GERectangle::Save(FSFile& inFile) const
