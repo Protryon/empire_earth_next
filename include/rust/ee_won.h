@@ -4635,24 +4635,11 @@ enum class EeWonLobbyCtlOp : uint32_t {
   FillMapTypes,
   /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
   ComboHasSel,
-  /// `((EELobbyGame*)a)->GetOption(b)`.
-  GameOption,
-  /// `((EELobbyGame*)a)->SetOption(b, c)`.
-  GameSetOption,
-  /// `((EELobbyGame*)a)->ChangeOption(b, c, true)`.
-  GameChangeOption,
-  /// `((EELobbyGame*)a)->SendGameState()`.
-  GameSendState,
-  /// `((EELobbyGame*)a)->HasGameFile()` (0 or 1).
-  GameHasFile,
-  /// `((Label*)a)->SetText(((EELobbyGame*)b)->GetGameFileName())`.
-  LabelSetGameFile,
-  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-  GameSlot,
-  /// `((EELobbyPlayerSlot*)a)->mOptions[0]` (the slot's state).
-  SlotState,
-  /// `((EELobbyPlayerSlot*)a)->SetOpen()`.
-  SlotSetOpen,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the game's
+  /// options, slots and changes were ops that bounced through the C++ forwarders).
+  GameRust,
+  /// `((Label*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string).
+  LabelSetName,
   /// `LobbyIAmCaptain()` (0 or 1).
   IAmCaptain,
   /// `((EELobbySyncOptionEvent*)a)->mParam`.
@@ -4660,10 +4647,9 @@ enum class EeWonLobbyCtlOp : uint32_t {
   /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
   /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
   ChooseSavedGame,
-  /// `((EELobbyPlayerSlot*)a)->mOptions[b]` (round 5: EELobbyPlayerOptionsCtrl).
-  SlotOption,
-  /// `((ComboBox*)a)->SetText(((EELobbyPlayerSlot*)b)->GetName())`.
-  ComboSetSlotName,
+  /// `((ComboBox*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string; round 5:
+  /// EELobbyPlayerOptionsCtrl).
+  ComboSetName,
   /// `((ComboBox*)a)->mEdit->mTextColor = b`.
   ComboSetTextColor,
   /// `GetMyLobbyPlayer()->GetReady()` (0 or 1).
@@ -4680,8 +4666,6 @@ enum class EeWonLobbyCtlOp : uint32_t {
   ColorGetColor,
   /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
   LabelSetPercent,
-  /// `((EELobbyGame*)a)->ChangePlayerOption(b, c & 0xff, c >> 8)` (the slot, the option, the value).
-  GameChangePlayerOption,
 };
 
 /// The inward calls.
@@ -4943,11 +4927,11 @@ enum class EeWonLobbyDlgOp : uint32_t {
   DefaultFontStringWidth,
   /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
   GameIsHost,
-  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-  GameSlot,
-  /// `((EELobbyPlayerSlot*)a)->Option(0)` (the slot's state).
-  SlotState,
-  /// `((ListArea*)a)->InsertItem(new ConnectListItem(((EELobbyPlayerSlot*)b)->GetName(), image, c & 0xff), -1)`,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the slots'
+  /// states were ops through the C++ slot views).
+  GameRust,
+  /// `((ListArea*)a)->InsertItem(new ConnectListItem(GUIString(b), image, c & 0xff), -1)` (`b` the slot's name, a
+  /// `GUIStringData`),
   /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
   /// image is not the ready one.
   ConnectInsert,

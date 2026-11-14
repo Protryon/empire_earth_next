@@ -401,19 +401,8 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     }
     case Op::FillMapTypes: EELobbyFillMapTypeCombo(aCombo); return 0;
     case Op::ComboHasSel: return aCombo->mListArea->GetSelItem() != NULL ? 1 : 0;
-    case Op::GameOption: return (intptr_t)static_cast<EELobbyGame*>(aGame)->GetOption((int)b);
-    case Op::GameSetOption: static_cast<EELobbyGame*>(aGame)->SetOption((int)b, (unsigned long)c); return 0;
-    case Op::GameChangeOption:
-        static_cast<EELobbyGame*>(aGame)->ChangeOption((int)b, (unsigned long)(long)c, true);
-        return 0;
-    case Op::GameSendState: static_cast<EELobbyGame*>(aGame)->SendGameState(); return 0;
-    case Op::GameHasFile: return static_cast<EELobbyGame*>(aGame)->HasGameFile() ? 1 : 0;
-    case Op::LabelSetGameFile:
-        aLabel->SetText(static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(b))->GetGameFileName());
-        return 0;
-    case Op::GameSlot: return (intptr_t)static_cast<EELobbyGame*>(aGame)->GetPlayerSlot((int)b);
-    case Op::SlotState: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option(0);
-    case Op::SlotSetOpen: reinterpret_cast<EELobbyPlayerSlot*>(a)->SetOpen(); return 0;
+    case Op::GameRust: return (intptr_t) static_cast<EELobbyGame*>(aGame)->mRust;
+    case Op::LabelSetName: aLabel->SetText(EELobbyStr(b)); return 0;
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::EventParam: return static_cast<EELobbySyncOptionEvent*>(anEvent)->mParam;
     case Op::ChooseSavedGame: {
@@ -428,8 +417,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         return theResult;
     }
     // EELobbyPlayerOptionsCtrl
-    case Op::SlotOption: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option((int)b);
-    case Op::ComboSetSlotName: aCombo->SetText(reinterpret_cast<EELobbyPlayerSlot*>(b)->GetName()); return 0;
+    case Op::ComboSetName: aCombo->SetText(EELobbyStr(b)); return 0;
     case Op::ComboSetTextColor: aCombo->mEdit->mTextColor = (unsigned long)b; return 0;
     case Op::MyPlayerReady: return GetMyLobbyPlayer()->GetReady() ? 1 : 0;
     case Op::MyPlayer: return (intptr_t) static_cast<EELobbyPlayer*>(GetMyLobbyPlayer());
@@ -443,9 +431,6 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         aLabel->SetText(LobbyFormatString(gEELobbyPlayerOptionsCtrl_TransferPercent, theBuffer));
         return 0;
     }
-    case Op::GameChangePlayerOption:
-        static_cast<EELobbyGame*>(aGame)->ChangePlayerOption((int)b, (int)(c & 0xff), (unsigned char)(c >> 8));
-        return 0;
     }
     return 0;
 }

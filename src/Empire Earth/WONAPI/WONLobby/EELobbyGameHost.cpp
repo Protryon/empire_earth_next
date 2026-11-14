@@ -35,14 +35,6 @@ typedef EeWonEeGameCall GC;
 
 static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 
-// a GUIStringData from the Rust as a GUIString (0: the shared empty string)
-static GUIString Str(intptr_t inData)
-{
-    if (inData == 0)
-        return GUIString();
-    return GUIString(reinterpret_cast<GUIStringData*>(inData));
-}
-
 static intptr_t Threw(intptr_t inResult)
 {
     if (inResult == INTPTR_MIN)
@@ -76,7 +68,7 @@ intptr_t EELobbyGame::RCall(EeWonEeGameCall inCall, intptr_t a, intptr_t b, intp
 }
 
 int EELobbyGame::GetNumFiles() { return (int)this->RCall(GC::GetNumFiles); }
-GUIString EELobbyGame::GetFile(int inIndex) { return Str(this->RCall(GC::GetFile, inIndex)); }
+GUIString EELobbyGame::GetFile(int inIndex) { return EELobbyStr(this->RCall(GC::GetFile, inIndex)); }
 void EELobbyGame::SetGameFile(const GUIString& inName, unsigned long inSize, unsigned long inChecksum, bool inFlag)
 {
     this->RCall(GC::SetGameFile, (intptr_t)inName.mData.get(), (intptr_t)(uint32_t)inSize, (intptr_t)(uint32_t)inChecksum,
@@ -167,7 +159,7 @@ intptr_t EELobbyPlayerSlot::RCall(EeWonEeGameCall inCall, intptr_t b, intptr_t c
     return this->mGame->RCall(inCall, this->mIndex, b, c);
 }
 void EELobbyPlayerSlot::Reset() { this->RCall(GC::SlotReset); }
-GUIString EELobbyPlayerSlot::GetName() { return Str(this->RCall(GC::SlotGetName)); }
+GUIString EELobbyPlayerSlot::GetName() { return EELobbyStr(this->RCall(GC::SlotGetName)); }
 void EELobbyPlayerSlot::SetState(int inState) { this->RCall(GC::SlotSetState, (unsigned char)inState); }
 unsigned char EELobbyPlayerSlot::GetOption(int inOption) { return (unsigned char)this->RCall(GC::SlotGetOption, inOption); }
 void EELobbyPlayerSlot::SetOption(int inOption, unsigned char inValue) { this->RCall(GC::SlotSetOption, inOption, inValue); }
@@ -265,7 +257,7 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::AppendShort: aWrite->AppendShort((short)b); return 0;
     case Op::AppendBool: aWrite->AppendBool(b != 0); return 0;
     case Op::AppendLong: aWrite->AppendLong((int32_t)b); return 0;
-    case Op::AppendWString: aWrite->AppendWString(Str(b), 2); return 0;
+    case Op::AppendWString: aWrite->AppendWString(EELobbyStr(b), 2); return 0;
     case Op::Length: return (intptr_t)aWrite->length();
     case Op::SetByte: aWrite->SetByte((unsigned long)b, (unsigned char)c); return 0;
     case Op::NewBuffer: return (intptr_t) new WriteBuffer(0, true);
@@ -329,9 +321,9 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
         aData->AddRef();
         return (intptr_t)aData;
     }
-    case Op::StringsEqual: return Str(a) == Str(b) ? 1 : 0;
+    case Op::StringsEqual: return EELobbyStr(a) == EELobbyStr(b) ? 1 : 0;
     case Op::TransferNew: return (intptr_t) new EELobbyFileTransfer;
-    case Op::TransferSetFileInfo: aTransfer->SetFileInfo(Str(b), (unsigned long)c, (unsigned long)d); return 0;
+    case Op::TransferSetFileInfo: aTransfer->SetFileInfo(EELobbyStr(b), (unsigned long)c, (unsigned long)d); return 0;
     case Op::TransferSetSavesPath: {
         GUIString thePath = EELobbyFn2988E9();
         thePath.append(aTransfer->mName);

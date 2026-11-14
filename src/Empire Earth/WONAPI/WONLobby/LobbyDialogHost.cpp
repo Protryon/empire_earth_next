@@ -432,12 +432,11 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     }
     // EELobbyConnectDialog
     case Op::GameIsHost: return reinterpret_cast<EELobbyGame*>(a)->GetIsHost() ? 1 : 0;
-    case Op::GameSlot: return (intptr_t) reinterpret_cast<EELobbyGame*>(a)->GetPlayerSlot((int)b);
-    case Op::SlotState: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option(0);
+    case Op::GameRust: return (intptr_t) reinterpret_cast<EELobbyGame*>(a)->mRust;
     case Op::ConnectInsert: {
         Image* theImage = ((c >> 8) == 0 ? ::GameUserListCtrl_Ready_Image : ::LobbyGlobal_Searching_Image).mPtr;
         reinterpret_cast<ListArea*>(a)->InsertItem(
-            new ConnectListItem(reinterpret_cast<EELobbyPlayerSlot*>(b)->GetName(), theImage, (unsigned char)c), -1);
+            new ConnectListItem(EELobbyStr(b), theImage, (unsigned char)c), -1);
         return theImage != ::GameUserListCtrl_Ready_Image.mPtr ? 1 : 0;
     }
     case Op::DoDialog: return LobbyDoDialog(aDialog);

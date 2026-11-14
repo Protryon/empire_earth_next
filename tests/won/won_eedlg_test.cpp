@@ -47,6 +47,11 @@ static const intptr_t kConfig = 0x77, kEvent = 0xE1, kDialog = 0xD1A, kGame = 0x
                       kRoot = 0x4000, kItem = 0x5000;
 static bool sRust;
 static EeWonLobbyDlg* sRustDlg;
+// R6 WONLobby round 6: the game is a real ee_won game on both sides (the original's slot calls are the C++ views'
+// forwarders, the Rust dialog calls it directly); its ops are traced as "gop"
+static EeWonEeGame* sGame;
+typedef EeWonEeGameCall GC;
+static intptr_t EG(GC inCall, intptr_t a = 0, intptr_t b = 0) { return ee_won_eegame_call(sGame, inCall, a, b, 0, 0); }
 static int sDepth;
 static intptr_t OrigCall(Call inCall, intptr_t a, intptr_t b, intptr_t c);
 
@@ -81,8 +86,7 @@ static intptr_t Host(Op inOp, intptr_t a, intptr_t b, intptr_t c)
         return r;
     }
     case Op::GameIsHost: case Op::ConnectItemNotReady: r = R(2); break;
-    case Op::GameSlot: r = R(6) ? kSlot + b : 0; break;
-    case Op::SlotState: r = R(3) ? 3 : R(5); break;
+    case Op::GameRust: return (intptr_t)sGame; // a field read, not traced
     case Op::ConnectInsert: r = (c >> 8) != 0 ? R(5) != 0 : R(5) == 0; break;
     case Op::DoDialog: r = R(3) ? 100001 : R(2) ? 100002 : -1; break;
     case Op::RootWindow: r = R(5) ? kRoot : 0; break;
@@ -97,6 +101,15 @@ static intptr_t Host(Op inOp, intptr_t a, intptr_t b, intptr_t c)
 }
 
 static intptr_t O(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0) { return Host(inOp, a, b, c); }
+
+static intptr_t GameHost(void*, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    if (inOp == EeWonEeGameOp::NumMapTypes) return 12; // read by a new game (untraced; the Rust tests answer 12)
+    intptr_t r = inOp == EeWonEeGameOp::ClientName ? 0x7100 + R(4) : R(4);
+    Line("gop %lld %lld %lld %lld %lld", (long long)inOp, a, b, c, d);
+    sTrace.back() += " = " + std::to_string((long long)r);
+    return r;
+}
 
 // ---- the original EELobbyConnectDialog, every call on another object replaced by its op
 
@@ -138,10 +151,12 @@ static bool OrigRun(intptr_t inGame)
     O(Op::ListBeginUpdate, sO.mConnectList);
     O(Op::ListClear, sO.mConnectList, 1);
     for (int i = 0; i < 8; i++) {
-        intptr_t theSlot = O(Op::GameSlot, inGame, i);
-        if (theSlot != 0 && O(Op::SlotState, theSlot) == 3) {
-            // Image* theImage = (i == 0 ? Ready : Searching); InsertItem(new ConnectListItem(name, theImage, i))
-            if (O(Op::ConnectInsert, sO.mConnectList, theSlot, i | (i == 0 ? 0 : 1) << 8))
+        // inGame->GetPlayerSlot(i) (&mSlots[i], never NULL); theSlot->Option(0)
+        if ((unsigned char)EG(GC::SlotRawOption, i, 0) == 3) {
+            // Image* theImage = (i == 0 ? Ready : Searching); InsertItem(new ConnectListItem(theSlot->GetName(),
+            // theImage, i))
+            intptr_t theName = EG(GC::SlotGetName, i);
+            if (O(Op::ConnectInsert, sO.mConnectList, theName, i | (i == 0 ? 0 : 1) << 8))
                 theAllConnected = false;
         }
     }
@@ -203,13 +218,21 @@ static void OrigFree()
 static intptr_t RustHost(void*, Op inOp, intptr_t a, intptr_t b, intptr_t c) { return Host(inOp, a, b, c); }
 
 struct Step { Call mCall; intptr_t a, b, c; };
+struct Setup { int mSlot, mOption; intptr_t mValue; };
 
-static std::vector<std::string> RunSide(bool inRust, unsigned inSeed, const std::vector<Step>& inSteps)
+static std::vector<std::string> RunSide(bool inRust, unsigned inSeed, const std::vector<Step>& inSteps,
+                                        const std::vector<Setup>& inSetup)
 {
     sTrace.clear();
     sSeed = inSeed;
     sRust = inRust;
     sDepth = 0;
+    sGame = ee_won_eegame_new((void*)0x6000, GameHost);
+    for (size_t i = 0; i < inSetup.size(); i++) {
+        const Setup& u = inSetup[i];
+        Line("gslot %lld %lld %lld", u.mSlot, u.mOption, u.mValue);
+        ee_won_eegame_call(sGame, GC::SlotSetRawOption, u.mSlot, u.mOption, u.mValue, 0);
+    }
     // the dialog's address as the ops on the dialog itself name it
     if (inRust) sRustDlg = ee_won_lobbydlg_new((void*)kDialog, Kind::Connect, RustHost);
     else memset(&sO, 0, sizeof(sO));
@@ -222,6 +245,9 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeed, const std:
     Line("free");
     if (inRust) ee_won_lobbydlg_free(sRustDlg);
     else OrigFree();
+    Line("gfree");
+    ee_won_eegame_free(sGame);
+    sGame = NULL;
     return sTrace;
 }
 
@@ -258,11 +284,15 @@ int main(int argc, char** argv)
             }
             aSteps.push_back(s);
         }
+        // the slots' states (two thirds seated, as the old scripted answers) and some reserved names' slots
+        std::vector<Setup> aSetup;
+        for (int i = 0; i < 8; i++)
+            aSetup.push_back(Setup{i, 0, R(3) ? 3 : (intptr_t)R(5)});
         aStepSeed = sSeed;
         sSeed = aSave;
         unsigned aSeed = 101u + (unsigned)n * 7919u;
-        std::vector<std::string> a = RunSide(false, aSeed, aSteps);
-        std::vector<std::string> b = RunSide(true, aSeed, aSteps);
+        std::vector<std::string> a = RunSide(false, aSeed, aSteps, aSetup);
+        std::vector<std::string> b = RunSide(true, aSeed, aSteps, aSetup);
         aLines += a.size();
         sChecks++;
         if (a != b) {

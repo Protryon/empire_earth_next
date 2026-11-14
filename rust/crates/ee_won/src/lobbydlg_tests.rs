@@ -20,6 +20,8 @@ struct Replay {
     at: usize,
     dlg: *const EeWonLobbyDlg,
     failed: Option<String>,
+    // round 6: the connect dialog's game is a real one (the direct path); its ops are the "gop" lines
+    game: *mut crate::eegame::EeWonEeGame,
 }
 
 thread_local! {
@@ -54,7 +56,15 @@ fn peek_line() -> Option<&'static str> {
     })
 }
 
+fn replay_game_ops(op: crate::eegame::EeWonEeGameOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+    expect(format!("gop {} {a} {b} {c} {d}", op as u32))
+}
+
 unsafe extern "C" fn replay_host(_dialog: *mut c_void, op: EeWonLobbyDlgOp, a: isize, b: isize, c: isize) -> isize {
+    if op == EeWonLobbyDlgOp::GameRust {
+        // a field read, not recorded
+        return REPLAY.with(|r| r.borrow().as_ref().unwrap().game) as isize;
+    }
     let made = if op == EeWonLobbyDlgOp::Find {
         // SAFETY: a Find's b is a slot of the table
         let slot = unsafe { &*(b as *const EeWonLobbyDlgSlot) };
@@ -64,6 +74,11 @@ unsafe extern "C" fn replay_host(_dialog: *mut c_void, op: EeWonLobbyDlgOp, a: i
     } else {
         format!("op {} {} {} {}", op as u32, a, b, c)
     };
+    expect(made)
+}
+
+/// The next recorded op must be `made`: its answer, after the re-entry recorded behind it.
+fn expect(made: String) -> isize {
     let Some(line) = next_line() else {
         fail(format!("op past the end: {made}"));
         return 0;
@@ -164,6 +179,7 @@ fn kind_of(n: u32) -> EeWonLobbyDlgKind {
 
 /// Replays every sequence; the number replayed.
 fn replay(golden: &'static str) -> Result<usize, String> {
+    let _l = crate::eegame::testgame::lock();
     let lines: Vec<&str> = golden.lines().filter(|l| !l.is_empty()).collect();
     let mut starts: Vec<usize> =
         lines.iter().enumerate().filter(|(_, l)| l.starts_with("seq ")).map(|(i, _)| i).collect();
@@ -172,10 +188,12 @@ fn replay(golden: &'static str) -> Result<usize, String> {
         let head: Vec<&str> = lines[w[0]].split(' ').collect();
         let kind = kind_of(head[3].parse().unwrap());
         // the C++ dialog's address as the golden's driver gave it (the ops on the dialog itself name it)
+        let game = crate::eegame::testgame::new(replay_game_ops);
         let dlg = ee_won_lobbydlg_new(0xD1A as *mut c_void, kind, Some(replay_host));
         REPLAY.with(|r| {
-            *r.borrow_mut() = Some(Replay { lines: lines[w[0] + 1..w[1]].to_vec(), at: 0, dlg, failed: None })
+            *r.borrow_mut() = Some(Replay { lines: lines[w[0] + 1..w[1]].to_vec(), at: 0, dlg, failed: None, game })
         });
+        let mut game_freed = false;
         while let Some(line) = next_line() {
             let t: Vec<&str> = line.split(' ').collect();
             match t[0] {
@@ -190,12 +208,30 @@ fn replay(golden: &'static str) -> Result<usize, String> {
                 }
                 // SAFETY: the live object, freed once
                 "free" => unsafe { ee_won_lobbydlg_free(dlg) },
+                "gset" | "gslot" => {
+                    let n: Vec<isize> = t[1..].iter().map(|x| x.parse().unwrap()).collect();
+                    if t[0] == "gset" {
+                        crate::eegame::testgame::setup(game, &[(n[0], n[1])], &[]);
+                    } else {
+                        crate::eegame::testgame::setup(game, &[], &[(n[0], n[1], n[2])]);
+                    }
+                }
+                "gfree" => {
+                    game_freed = true;
+                    // SAFETY: the live game, freed once
+                    unsafe { crate::eegame::ee_won_eegame_free(game) }
+                }
                 _ => fail(format!("unexpected line '{line}'")),
             }
             let failed = REPLAY.with(|r| r.borrow().as_ref().unwrap().failed.clone());
             if let Some(f) = failed {
                 return Err(format!("{}: {f}", lines[w[0]]));
             }
+        }
+        if !game_freed {
+            // the other goldens make no game: it has no ops to free
+            // SAFETY: the live game, freed once
+            unsafe { crate::eegame::ee_won_eegame_free(game) }
         }
     }
     Ok(starts.len() - 1)

@@ -15,6 +15,12 @@ namespace WONAPI {
 
 class EELobbyPlayer;
 
+// a GUIStringData from the Rust as a GUIString (0: the shared empty string)
+inline GUIString EELobbyStr(intptr_t inData)
+{
+    return inData == 0 ? GUIString() : GUIString(reinterpret_cast<GUIStringData*>(inData));
+}
+
 class EELobbyGame;
 // one player slot of a lobby game (0x18 bytes in the original; EELobbyGame +0xc0, eight of them). Its six options:
 // 0 state (0 open, 1 computer, 2 closed, 3 a client's, 4 reserved by name for a human player of a saved game), 1

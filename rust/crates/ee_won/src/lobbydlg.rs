@@ -21,6 +21,7 @@ use std::cell::Cell;
 use std::ffi::{c_char, c_void, CStr};
 
 use crate::dialogs;
+use crate::eegame::{game_call, EeWonEeGameCall as GC};
 
 /// The dialog kinds (each one of the original classes).
 #[repr(u32)]
@@ -322,11 +323,11 @@ pub enum EeWonLobbyDlgOp {
     // ---- round 5: EELobbyConnectDialog
     /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
     GameIsHost,
-    /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-    GameSlot,
-    /// `((EELobbyPlayerSlot*)a)->Option(0)` (the slot's state).
-    SlotState,
-    /// `((ListArea*)a)->InsertItem(new ConnectListItem(((EELobbyPlayerSlot*)b)->GetName(), image, c & 0xff), -1)`,
+    /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the slots'
+    /// states were ops through the C++ slot views).
+    GameRust,
+    /// `((ListArea*)a)->InsertItem(new ConnectListItem(GUIString(b), image, c & 0xff), -1)` (`b` the slot's name, a
+    /// `GUIStringData`),
     /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
     /// image is not the ready one.
     ConnectInsert,
@@ -1170,11 +1171,13 @@ impl EeWonLobbyDlg {
         self.on(CN_CANCEL, Op::ButtonSetString, text as isize, 0);
         self.on(CN_LIST, Op::ListBeginUpdate, 0, 0);
         self.on(CN_LIST, Op::ListClear, 1, 0);
+        // GetPlayerSlot(i) of 0..7 is never NULL
         for i in 0..8 {
-            let slot = self.op(Op::GameSlot, game, i, 0);
-            if slot != 0 && self.op(Op::SlotState, slot, 0, 0) == 3 {
+            let handle = self.op(Op::GameRust, game, 0, 0);
+            if game_call(handle, GC::SlotRawOption, i, 0, 0) == 3 {
                 let searching = (i != 0) as isize;
-                if self.op(Op::ConnectInsert, self.ctl(CN_LIST), slot, i | searching << 8) != 0 {
+                let name = game_call(handle, GC::SlotGetName, i, 0, 0);
+                if self.op(Op::ConnectInsert, self.ctl(CN_LIST), name, i | searching << 8) != 0 {
                     all = false;
                 }
             }
