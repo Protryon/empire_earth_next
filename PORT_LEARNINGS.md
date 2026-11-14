@@ -16755,3 +16755,177 @@ The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names
 - Then top-down: the controls of the LAN screens (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl,
   GameStagingCtrl), the EE room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic,
   RoutingLogic last, Internet only), and the resource tables and factories.
+
+## R5b.4 game messages, round 3: the capture through the codec slots, 43 message classes as one record class (ee_netmsg records.rs; EEMRecord; branch rust-msg3, 2026-11-13)
+
+The game messages lane's third round (RUST_PLAN R5b.4 leaf 4 (c)). Its aim was to delete C++: rounds 1-2 moved
+`Execute` bodies but grew the test-only sweep more than the game shrank.
+
+- **The census** (`build/msg3/census.py`: every name `EEM*` in src, include and tests outside EEMessage.cpp/.h and
+  EEMessageCapture.cpp, comments and strings stripped; a use is a constructor (`new EEMx(...)`, a stack object) or a
+  reader (a cast, a member, a pointer variable)). Of the 110 classes, 43 are touched only by their senders'
+  constructors, their own `Execute` and the capture, have no import of their own, no base or subclass beyond
+  EEMessage and only fixed members (no string, list or blob):
+  AddRemoveResources, AttackPlayers, CameraLocationInfo, ChangeSelectedUnitCollisionSphere, CheatCode,
+  EdictPreProposal, EdictPreProposalResponse, EnterShiftMode, GameSpeed, HaltSelectedGroup, IncrementEpic,
+  IncrementRallyTimer, LagStatus, LoadMainScreen, LoadMainScreenResponse, LoadOrSaveGameResponse (its one reader,
+  EEMLoadOrSaveGame::IsResponse, is in EEMessage.cpp), LoadPercent, LoadUnitData, MigrationSlotInfo, PayTribute,
+  PlayerInformation, RecordFrames, RemoveImprovement, RemoveUnitFromSelectedGroup, ReturnToBase, SavedGroupAddSelection,
+  SavedGroupClear, SavedGroupCreate, SavedGroupSelect, ScrambleAircraft, SelectCustomPlayerForChat,
+  SelectPlayerChatType, SelectUnit, SendFlare, SetAirportCommand, SetDiplomaticStance, SetWaterLevel, SnapToDaylight,
+  StartLoading (restored as a class after the merge: see below), ToggleCollisionDetection, ToggleDayNight,
+  UpdatePingStat, ZoomInfo.
+  Kept, and why: a member reader outside the class (EEPhysics.cpp's order log: AddPatrolPoint, AttackGround,
+  AttackUnit, BuildGate, BuildUnit, BuildWall, ChangeFormation, DropoffResource, GatherResource, HealUnit,
+  ImmediateCargoUnload, ImproveUnit, LoadGarrison, LoadTransport, PackUnpack, PathTo, RepairUnit,
+  ResearchTechnology, SetRallyGoal, SetUnitBehavior, UnloadTransport; EEServer/EEClient: EdictProposal, EdictVote,
+  FullPlayerInformation, PlayerSlotInfo, NewEdictEnacted; EESEARust: AddUnitToSelectedGroup; the test fixture:
+  Patrol; EEACalamity's pointer: CastCalamity; EEDataPreLoading's: StartLoadingResponse; EEPhysics's pointer:
+  CivTimerExpired), an import of their own (Chat, InGameChat, GameOptions, FullGameOptions, FullPlayerInformation,
+  PlayerSlotInfo, CivUpgrades and its two subclasses, LoadOrSaveGame, SelectUnits and its two subclasses,
+  SelectTheseUnits), a subclass (AddUnitToSelectedGroup / AlwaysAddUnitToSelectedGroup), EEMSelectPatrolGroup (the
+  lasso holds it as an `EEMSelectUnits*`, the original's cast), EEMEndCinematic (type 0x9d, which the factory does
+  not build), the Lua AI's stack messages and out-of-line constructors elsewhere (Explore, StopActiveGroup, KillUnit,
+  LockUnlock, ExchangeResources, RemoveTechnology, SmartFarmers, HackANewUnit, ReplantFarms, ReportStatistics,
+  ExitShiftMode, MakeWorldVisible) and the member-less ones the UI builds with `new X` (ClearAirportCommands,
+  Disband, GameRestarting, GoFanatic, JITManufacturing, Resign, SelfDestruct, UnselectAllUnits): the second group
+  (and MakeWorldVisible, Explore, StopActiveGroup) became record types too in this round's third commit.
+- **The capture through the slots** (`EEMessageCapture.cpp`'s `Members`): one loop over `GetCodecSlots` replaces the
+  107 cases that read the members by name: a fixed slot writes its bytes (the slot is the member's address and
+  `sizeof`, the size the codec already checks against the layout, so the bytes are the old ones), a string its byte
+  count, bytes and character count (`PlatMbsLen` of the bytes: `UWideString::GetLength` is that count for every
+  string the import or a sender builds; the sweep's strings never hold a NUL), records their count and bytes (an
+  `EECivUpgrade` is a `uint32_t`: the old per-record `U32` wrote the same bytes), a blob its bytes; only the import's
+  members (`ee_netmsg_import_fields`: EEMChangeFormation's import stops before `mB14`, which the capture never
+  wrote). What the slots do not carry stays by name: EEMSelectTheseUnits' id list (its class has no codec slots) and
+  the selections' `mUnitIDs` after the blob. A type the factory does not build still writes 0xffffffff. A script
+  first compared the old cases with the classes' slot lists: 100 of the 107 types equal member for member, the 7
+  others the special cases above. `ee_netmsg_field_kind` says what a slot holds. Gate: the oracle capture's NM*
+  digests (NMIM, NMEX, NMSW, NMDC, NMNE, NMCU) equal to the goldens with no re-recording.
+- **EEMRecord** (ee/EEMessage.h, EEMessage.cpp; `ee_netmsg` records.rs). The 43 census classes (42 after EEMStartLoading went back), then 11 member-less
+  ones whose only outside uses were `new X` or a stack object (ClearAirportCommands, Disband, GameRestarting,
+  GoFanatic, JITManufacturing, Resign, SelfDestruct, UnselectAllUnits, Explore, StopActiveGroup, MakeWorldVisible),
+  are one class: `unsigned char mRecord[32]` holds the codec class's members after the selection id, packed in wire
+  order; `GetCodecSlots` points one slot per member into it (`ee_netmsg_record_field`: kind, offset, size), so the
+  wire bytes, the export size and the capture's records are the old ones. The type's two flags (can send while
+  paused; may be sent while out, which only a sender's constructor set) and its debug label are the Rust table's
+  (`ee_netmsg_record_flags`, `ee_netmsg_record_label`). The factory builds an `EEMRecord` for a record type before
+  its switch; the import constructor keeps EEMessage's defaults as the old ones did. A sender passes the members in
+  wire order (`new EEMRecord(kMessagePayTribute, {food, gold, iron, stone, wood, receiver})`): six constructors took
+  them in another order (MigrationSlotInfo, PayTribute, PlayerInformation, AddRemoveResources, ScrambleAircraft,
+  SetAirportCommand) and their call sites were reordered by a script from the old constructors; an
+  `EEMRecordValue` converts each value as the old constructor's assignment did (an integer to the member's low
+  bytes, a bool member as != 0, a float, a point, a vector). The `Execute` bodies are static functions over the
+  record (`m->Get<T>(i)` with the old member's C++ type, the size verified; `m->Set` for EEMLoadPercent's clamp,
+  which the NMEX record sees) in a table by type; a type whose body was empty has no entry. EEMLoadOrSaveGame's
+  `IsResponse` reads the response's tick as `Get<int32_t>(1)`.
+- **Behaviour changes.** A record sender's members start at 0: EEMLagStatus and the others set every member, but a
+  member a constructor left out (none of the 53 does) would have been stack garbage before. `GetMessageLabel`
+  returns the Rust's static strings (debug only). The vtables of the 53 types are one (`EEMRecord`'s; no caller
+  depends on them). Nothing in a game's simulation changed: the oracle traces and the captures are identical.
+- **What only a played game runs.** Single-player games execute these messages unencoded (the physics takes the
+  objects); the capture's NMEX/NMIM records and the sweep (NMSW: every type exported, sized and imported over edge
+  payloads, through `EEMRecord` for the record types) cover the codec and the record layout. The senders are UI
+  clicks (saved groups, chat type, tribute, diplomacy, flares, airport commands, explore, disband, ...), the lobby
+  (PlayerInformation, LoadMainScreen(Response), MigrationSlotInfo, LagStatus, UpdatePingStat,
+  LoadPercent) and the Lua AI's stop and explore: the LAN game and the orders game exercise a part (see the gates).
+- **EEMStartLoading stays a class.** The test-profile build failed on the merged tree: build.py's HARNESS_HOOKS
+  keep `void EEMStartLoading::Execute()` out of line for the debugger harness (game_session.py, `gates.sh --legacy`),
+  which breaks at `?Execute@EEMStartLoading@@UEAAXXZ` and writes the seed at the class's `mSeed` offset from the
+  PDB layout. The class came back unchanged (its senders too) and records.rs lists 53 types. Lesson: before
+  deleting a class, grep tools/ (build.py's overlays and hooks, the harness's symbols) as well as src.
+- **Net C++** (src + include/ee, without include/rust): the capture through the slots -739 (+34, -773); the 43
+  classes as records -1,181 (+381, -1,562); the 11 member-less ones -295 (+48, -343); EEMStartLoading back +28; the editor's read +3. Round: -2,184 (after the merge of rust: EEMessage.cpp
+  3,854 lines, was 4,653; ee/EEMessage.h 1,062, was 1,702; EEMessageCapture.cpp 1,025, was 1,764).
+- **The scenario editor's message read.** EESEARust's `EE_SCREENS_SEU_MESSAGE_UNIT` read `mUnitID` of the editor's
+  click message through an `EEMAddUnitToSelectedGroup*` whatever its type (Select Unit, the toggle, Always Add:
+  the three classes put the id at +0x10). EEMSelectUnit is a record now (its id in `mRecord`), so a Select Unit reads
+  `Get<uint32_t>(1)`. The census had counted EESEARust's read under EEMAddUnitToSelectedGroup only: a cast to a
+  sibling class is a layout read of every type it can see. Only the scenario editor's clicks run it (no gate).
+- **Gates.** Each code commit: build `--sim` 0/0, the oracle identical on seeds 2-3, the oracle capture at seeds 2-3
+  PASS (no re-recording), the Rust gate PASS (once `ee_plat_core` failed two timing tests under load and passed
+  alone). On the result merged with rust d8551990 (WON round 33, WON Internet 20, screens: the command buttons in
+  Rust): build `--sim` 0/0; the oracle identical on seeds 2-7; the captures at seeds 2-7 equal to the goldens with no
+  re-recording: oracle 500 digests, late 513, space 511, calamity 540, scenario 65 (NMIM, NMEX, NMSW, NMDC, NMNE,
+  NMCU among them); `saveload --settings all --seeds 2-3 --at 1000,1900` expect PASS (oracle 4/4, plains 2/4,
+  islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust
+  gate PASS; the test-profile build 0/0 (after EEMStartLoading came back). Under the harness lock, on the final
+  test exe: `lan_game.py` RESULT PASS lan-game (host PT 2887, joiner 2882; no crash at Join Game);
+  `fixture_game.py --exercise random-game --orders` ORDERS PASS (gather, repair, repair queued, move; patrol and
+  attack ground skipped as before). With `--box-select` the run failed three times at the Shift box ("add-right": the
+  selection became the box's one unit, or no box message was built) where the main checkout's test exe of 20:47
+  passed that step once (and failed the next, "dead", step): see "Open" below. A debug print showed every record
+  type executing and no command message dropped by its selection id during the failing drag. Not run: a tour, a
+  played game sending the record types, macOS or Linux builds.
+- **Open: the Shift box selection.** Not resolved this round. Shift sends EEMEnterShiftMode, now a record; it
+  executes (the debug print) and sets the player's and the mouse's shift mode as before. The lasso picks its message
+  from the keyboard modifiers (EEALasso::SelectUnits), none of which is a record type. The lead should run the box
+  selection on rust's head and on this branch side by side to tell a regression from the known flakiness.
+- **Left:** the classes with outside member readers (EEPhysics.cpp's order log reads 21 unit orders by name: it
+  could read them through the slots as the capture now does, which would make most of them records too), the
+  Lua AI's stack messages with members (KillUnit, LockUnlock, ExchangeResources, RemoveTechnology, SmartFarmers,
+  HackANewUnit), the out-of-line constructors elsewhere (ReplantFarms, ReportStatistics, ExitShiftMode,
+  CivTimerExpired), then the record bodies themselves in Rust.
+
+## Box selection: the intermittent failure (the fixture's boxselect drag; branch rust-boxsel, 2026-11-14)
+
+`fixture_game.py --exercise random-game --play-seconds 60 --box-select` failed now and then at any of its steps:
+the Shift box ("add-right": the selection became the box's one unit, or "no box selection message was built"), the
+dead-unit box (the disbanded unit outside the box's ids, or already dying), and here also the first box ("caught
+none of the local player's units"). It was the fixture's timing, not the game.
+
+- **Rates before the fix** (5 runs each, test-profile exes, the machine saturated by other lanes' builds): `origin/rust`
+  57ae2ad1 (before LLE round 2): 4/5, one of the passes with late-press boxes of 1 unit; the main checkout's exe of 20:47 (5523e0ee + d8551990's tooling): 2/5;
+  this branch (ef44ea2d, game messages round 3): 1/5 (an instrumented build of it passed once more). The failures
+  spread over the steps (select 2, dead 5 of the 7 failures in the last two builds), none was the add step in these
+  runs, and the earlier 3/3 add failures on this branch had the same cause. The 57ae runs came last (02:35-02:53,
+  with the new driver; the failing step was the fixture's drag, which the driver change does not touch), so the
+  rates mix build and load: no build is shown to have made the UI's frames slower, and every failure in every build
+  was the same fixture race.
+- **Cause.** The UI thread reads the input devices once a frame (`EEUserInterface::UpdateInterface`: keyboard and
+  mouse `Refresh`, then `UpdateUI` under the world's read lock). The fixture drove the drag from its own thread with
+  fixed sleeps (Shift, 150 ms, pointer, 300 ms, press, 250 ms, 12 moves 50 ms apart, 300 ms, release, 400 ms, Shift
+  up). Under load a UI frame took 300-900 ms (measured: press to `StartSelection` 426 ms, release to `MouseLButtonUp`
+  320 ms and 894 ms), so:
+  - the press was taken with the pointer already 4 steps along the drag (`StartSelection at 552,328` for a box from
+    276,176): a smaller box, which caught no unit or missed the unit the dead step disbands;
+  - the release was read after Shift's release: `GetModifierState()` was 0 at `MouseLButtonUp`, the lasso built
+    EEMSelectUnits instead of EEMAddUnitsToSelectedGroup, and the group became the box's one unit (exactly the
+    original's behaviour for a player who lets go of Shift that early: DirectInput was polled the same way);
+  - the press, the moves and the release fell into one frame: no drag, no box message;
+  - the dead step's select and kill (UI actions posted just before the release) ran a frame before the release was
+    read, and the physics could kill the unit before the box's pick, which then left it out.
+- **Not the cause** (instrumented, then removed): EEMEnterShiftMode/EEMExitShiftMode (records since game messages
+  round 3) are stamped with the current fast-selection id and run (`ExecuteMessage ... runs 1`); no command was
+  dropped by its selection id and no group was cleared by `UnselectAllUnits`; the lasso sees Shift whenever the
+  release is read while Shift is held (`flags 1 -> 0x4f`); `ee_input`'s modifiers follow the key records exactly.
+  "EEMEnterShiftMode executing during the drag" is the Shift hot key's normal effect.
+- **A second race in the dead step's check**: once the disbanded unit is dying the game may drop it from the selected
+  group (`EEPlayer::DeselectUnit`, unless it is the viewed unit) before or after the box's message put it there, while
+  the original's rule (the fixture's expected group) counts it until it leaves the player's list, about 26 s later at
+  Very Fast. The group matched the rule either at once (it stayed) or only when the unit was gone, close to the
+  driver's 30 s limit.
+- **The fix** (EETestFixture.cpp, fixture_driver.py; commit "Box selection fixture: each stage waits ..."): the drag
+  thread waits for each state the UI thread must reach (polled every 5 ms, 20 s at most): no Shift or Control seen
+  (Shift seen in mode 1, `GetModifierState`), the form's mouse held by the selection control (the press taken at
+  x0, y0), the control dragging at the end point clamped as `MouseMove` clamps it (`ee_gfx_select_drag_end`), the
+  mouse let go (the release taken), Shift's release seen. A stage not reached gives the verdict `box-stalled` and
+  `BOXSELECT seq N stalled at <stage>`; `BOXSELECT seq N waits (ms): ...` logs each stage's time. The dead unit's
+  EEMSelectTheseUnits and EEMKillUnit(0) are posted by the box message's own hook (`gEESelectUnitsTestHook`, on the
+  UI thread, after the pick and before the lasso posts its action), so they run before the box's message and after
+  its ids were picked. The driver waits up to 150 s for the drag, settles the dead step once its unit is gone (120 s)
+  and records the states each wait saw (`seen` in the step's row). `EEUICSelectUnits` has two test-only readers
+  (`GetIsDragging`, `GetDragEnd`). Nothing the steps check was loosened; the dead step now checks the final group.
+- **Proof**: 10 consecutive runs of the box-select exercise on the fixed test exe (1f5a4121) passed (01:47 to 02:35,
+  interleaved with other lanes' harness sessions and builds): every first box caught all 5 units, every Shift box grew
+  the group, every dead unit was in the box's ids and gone at the check. The longest stage waits in those runs:
+  press 689 ms, drag end 1321 ms, release 894 ms, i.e. more than the old fixed sleeps allowed.
+- **Other lanes' reports** match these mechanisms: "caught none" with the fixture's own expected group empty (the box
+  started late, so its ids were empty: the projection is computed from those ids), the dead unit "still alive at the
+  check" (the old driver settled while the kill had not run), "no box selection message was built" (the press and
+  release read in one frame). If a first box still catches none with the waits in place, the camera really holds
+  none of the player's units at that time: the driver does not move the camera.
+- **Also seen**: one run failed before the game ("main-menu: the window capture is blank"), a capture glitch of
+  another kind. Before the merge of rust the self test's `probe` part failed here (`game_state_probe` read `EEPlayer`
+  0xb49 past the record, fixed on rust by d53fca8d); after it the whole self test passes (its fixture part runs the
+  box selection against the stand-in).

@@ -145,6 +145,11 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEGraphics.h"
+#include "ee/EEAMouseClick.h"
+#include "ee/EEALasso.h"
+#include "ee/EEUICSelectUnits.h"
+#include "lle/ISModifierState.h"
+#include "rust/ee_gfx.h"   // the drag end the selection control computes
 #include <algorithm>
 #include <atomic>
 #include <mutex>
@@ -498,12 +503,23 @@ void LobbyPostWork()
 //   0 select   a plain box: the local player's selected group becomes the box's units;
 //   1 add      Shift held (DIK_LSHIFT, a key press as the platform delivers it) from before the press to after the
 //              release: the box's units are added to the group;
-//   2 dead     as 0, but just before the release one unit of the current selection (a living one the player may
-//              delete, EEComplexUnit::CanDelete: the candidate of the last poll) is selected alone and deleted,
-//              through the game's own messages (EEMSelectTheseUnits as the unit icon bar sends it, EEMKillUnit(0) as
-//              the Delete key's event does, both as UI actions queued before the box's): the box's ids are picked
-//              while it lives, and the physics kills it before it executes the box selection, which then holds a
-//              dead unit's id.
+//   2 dead     as 0, but one unit of the current selection (a living one the player may delete,
+//              EEComplexUnit::CanDelete: the candidate of the last poll) is selected alone and deleted, through the
+//              game's own messages (EEMSelectTheseUnits as the unit icon bar sends it, EEMKillUnit(0) as the Delete
+//              key's event does), posted as UI actions by the box's own message as it is built (the hook below, on
+//              the UI thread, after the pick; the lasso posts its own action after that): the box's ids are picked
+//              while it lives, the two actions run before the box's, and the physics kills it before it executes the
+//              box selection, which then holds a dead unit's id.
+// Each stage waits for the state the UI thread must have reached, never for a time: the UI thread reads the input
+// devices once a frame, and on a loaded machine its frames stall for hundreds of ms, so fixed sleeps let it take the
+// press with the pointer already part way along the drag, take the release after Shift's release (a plain select
+// instead of the add), or run the kill before the box's pick (PORT_LEARNINGS "Box selection: the intermittent
+// failure"). The stages: no Shift or Control seen (modes 0 and 2) or Shift seen (mode 1: the keyboard's modifier
+// state), the press taken (the selection control holds the form's mouse: StartSelection, at (x0, y0)), the drag at
+// its end (the control dragging, at the end point clamped as MouseMove clamps it), the release taken (the control
+// let the mouse go: MouseLButtonUp read the modifiers and built the message), and in mode 1 Shift's release seen.
+// A stage not reached within 20 s gives the verdict "box-stalled" (a line "BOXSELECT seq <s> stalled at <stage>");
+// "BOXSELECT seq <s> waits (ms): <stage> <ms> ..." says how long the UI thread took to reach each.
 // The verdicts: "box-started" (or "box-busy", "box-no-candidate"), then "box-released" when the drag is done. Each
 // box selection message's decoded ids reach the fixture through gEESelectUnitsTestHook (EEMSelectUnits' ctor, armed
 // only for the release). Every poll then writes, read under the world's read lock:
@@ -532,15 +548,28 @@ std::vector<long> sBoxGroup;                 // the last poll's selection
 long sBoxCandidate = -1;                     // the last poll's dead candidate
 std::atomic<int> sBoxDragging(0);
 
-// EEMSelectUnits' ctor (the UI thread), each box selection's decoded ids
+void BoxPost(NEMessage* inMessage);
+
+// EEMSelectUnits' ctor (the UI thread, inside EEALasso::SelectUnits, before the lasso posts its action), each box
+// selection's decoded ids; in mode 2 the dead unit's selection and deletion are posted here, after the pick
 void BoxLassoHook(const std::vector<long>& inUnitIDs)
 {
-    std::lock_guard<std::mutex> theLock(sBoxMutex);
-    if (!sBox.mArmed)
-        return;
-    sBox.mArmed = false;
-    sBox.mLasso = inUnitIDs;
-    sBox.mPhase = 3;
+    long theDead = -1;
+    {
+        std::lock_guard<std::mutex> theLock(sBoxMutex);
+        if (!sBox.mArmed)
+            return;
+        sBox.mArmed = false;
+        sBox.mLasso = inUnitIDs;
+        sBox.mPhase = 3;
+        if (sBox.mMode == 2)
+            theDead = sBox.mDead;
+    }
+    if (theDead >= 0) {   // (the lock is released: these messages' ctors run the hook too, disarmed now)
+        std::vector<long> theOne(1, theDead);
+        BoxPost(new EEMSelectTheseUnits(theOne));
+        BoxPost(new EEMKillUnit((unsigned char)0));   // the first selected unit
+    }
 }
 
 // A UI action that sends one game message as local input (as the UI's own buttons do, on the UI thread)
@@ -589,40 +618,102 @@ void BoxEvent(uint32_t inType, uint32_t inCode)
     ISHandleEvent(theEvent);
 }
 
-void BoxDrag(unsigned long inSeq, int inMode, float inX0, float inY0, float inX1, float inY1, long inDead)
+// The selection control's state as the UI thread last left it (read under the UI lock, as UpdateMouse writes it)
+struct BoxControlState {
+    bool mCaptured;                          // the form's mouse held (by this control: StartSelection to MouseLButtonUp)
+    bool mDragging;
+    GE2DPoint mEnd;
+};
+BoxControlState BoxControl(EEUICSelectUnits* inControl)
+{
+    BoxControlState theState;
+    gUIManager->LockUIForCopyData();
+    theState.mCaptured = inControl->GetForm()->GetIsMouseCaptured();
+    theState.mDragging = inControl->GetIsDragging();
+    theState.mEnd = inControl->GetDragEnd();
+    gUIManager->UnlockUIForCopyData();
+    return theState;
+}
+
+// Polls inReached until it holds -> true; false (and a note on stderr) when it does not within 20 s. ioWaits gets
+// " <stage> <ms>": how long the UI thread took to reach it
+template <class T>
+bool BoxWait(unsigned long inSeq, const char* inStage, T inReached, std::string& ioWaits)
+{
+    std::chrono::steady_clock::time_point theStart = std::chrono::steady_clock::now();
+    bool theReached = false;
+    while (!(theReached = inReached()) && std::chrono::steady_clock::now() - theStart < std::chrono::seconds(20))
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    long long theMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - theStart).count();
+    char theText[64];
+    snprintf(theText, sizeof(theText), " %s %lld", inStage, theMs);
+    ioWaits += theText;
+    if (!theReached) {
+        fprintf(stderr, "BOXSELECT seq %lu stalled at %s\n", inSeq, inStage);
+        fflush(stderr);
+    }
+    return theReached;
+}
+
+unsigned long BoxModifiers()
+{
+    return gISKeyboard->GetModifierState() & (kModifierShift | kModifierControl);
+}
+
+void BoxDrag(unsigned long inSeq, int inMode, float inX0, float inY0, float inX1, float inY1, long inDead,
+             EEUICSelectUnits* inControl)
 {
     const uint32_t kLeftShift = 0x2a;        // DIK_LSHIFT
+    bool theReached;
+    std::string theWaits;
     if (inMode == 1) {
         BoxEvent(PLAT_EVENT_KEY_DOWN, kLeftShift);
-        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        theReached = BoxWait(inSeq, "shift-held", [] { return BoxModifiers() == kModifierShift; }, theWaits);
+    } else
+        theReached = BoxWait(inSeq, "no-modifier", [] { return BoxModifiers() == 0; }, theWaits);
+    if (theReached) {
+        BoxPointer(inX0, inY0);
+        gUIManager->ForceUIUpdate();
+        BoxEvent(PLAT_EVENT_MOUSE_DOWN, 1);
+        theReached = BoxWait(inSeq, "press", [inControl] { return BoxControl(inControl).mCaptured; }, theWaits);
     }
-    BoxPointer(inX0, inY0);
-    gUIManager->ForceUIUpdate();
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    BoxEvent(PLAT_EVENT_MOUSE_DOWN, 1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-    for (int k = 1; k <= 12; k++) {
-        BoxPointer(inX0 + (inX1 - inX0) * k / 12.0f, inY0 + (inY1 - inY0) * k / 12.0f);
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    if (inMode == 2 && inDead >= 0) {        // queued before the release: sent, and executed, before the box
-        std::vector<long> theOne(1, inDead);
-        BoxPost(new EEMSelectTheseUnits(theOne));
-        BoxPost(new EEMKillUnit((unsigned char)0));   // the first selected unit
+    if (theReached) {
+        for (int k = 1; k <= 12; k++) {      // as a player drags (the UI may see any number of these points)
+            BoxPointer(inX0 + (inX1 - inX0) * k / 12.0f, inY0 + (inY1 - inY0) * k / 12.0f);
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        GE2DPoint theLast(inX1, inY1);
+        GE2DPoint theEnd;
+        ee_gfx_select_drag_end(reinterpret_cast<const EeGe2DPoint*>(&theLast),
+                               reinterpret_cast<const EeGeRectangle*>(&gViewport.GetViewRectangle()),
+                               reinterpret_cast<EeGe2DPoint*>(&theEnd));
+        theReached = BoxWait(inSeq, "drag-end", [inControl, theEnd] {
+            BoxControlState theState = BoxControl(inControl);
+            return theState.mDragging && theState.mEnd == theEnd;
+        }, theWaits);
     }
     {
         std::lock_guard<std::mutex> theLock(sBoxMutex);
-        sBox.mArmed = true;
+        sBox.mArmed = theReached;
         sBox.mPhase = 2;
     }
     BoxEvent(PLAT_EVENT_MOUSE_UP, 1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(400));
-    if (inMode == 1)
+    if (theReached)
+        theReached = BoxWait(inSeq, "release", [inControl] { return !BoxControl(inControl).mCaptured; }, theWaits);
+    if (inMode == 1) {
         BoxEvent(PLAT_EVENT_KEY_UP, kLeftShift);
+        bool theReleased = BoxWait(inSeq, "shift-released", [] { return BoxModifiers() == 0; }, theWaits);
+        theReached = theReached && theReleased;
+    }
+    {
+        std::lock_guard<std::mutex> theLock(sBoxMutex);
+        sBox.mArmed = false;
+    }
     sBoxDragging = 0;
-    fprintf(stderr, "TEST UI box-released boxselect control %d value %ld on form 0 (seq %lu, top form 0)\n", inMode, inDead,
-            inSeq);
+    fprintf(stderr, "BOXSELECT seq %lu waits (ms):%s\n", inSeq, theWaits.c_str());
+    fprintf(stderr, "TEST UI %s boxselect control %d value %ld on form 0 (seq %lu, top form 0)\n",
+            theReached ? "box-released" : "box-stalled", inMode, inDead, inSeq);
     fflush(stderr);
 }
 
@@ -747,13 +838,17 @@ std::string BoxSnapshot()
 }
 
 // The boxselect command (under the UI lock, from Execute) -> its verdict
-const char* BoxStart(unsigned long inSeq, const char* inLine)
+const char* BoxStart(unsigned long inSeq, const char* inLine, UIForm* inForm)
 {
     unsigned long theSeq = 0, theForm = 0;
     long theMode = -1, x0 = 0, y0 = 0, x1 = 0, y1 = 0;
     char theOp[32] = {0};
     if (sscanf(inLine, "%lu %31s %lu %ld %ld %ld %ld %ld", &theSeq, theOp, &theForm, &theMode, &x0, &y0, &x1, &y1) != 8
-        || theMode < 0 || theMode > 2 || gMouse == NULL)
+        || theMode < 0 || theMode > 2 || gMouse == NULL || gISKeyboard == NULL)
+        return "rejected";
+    EEUICSelectUnits* theControl = kMainGameSelectUnits < inForm->GetControlCount()
+        ? dynamic_cast<EEUICSelectUnits*>(inForm->GetControl(kMainGameSelectUnits)) : NULL;
+    if (theControl == NULL)
         return "rejected";
     if (sBoxDragging.exchange(1))
         return "box-busy";
@@ -772,7 +867,7 @@ const char* BoxStart(unsigned long inSeq, const char* inLine)
         sBox.mDead = theDead;
         sBox.mBefore = sBoxGroup;
     }
-    std::thread(BoxDrag, inSeq, (int)theMode, (float)x0, (float)y0, (float)x1, (float)y1, theDead).detach();
+    std::thread(BoxDrag, inSeq, (int)theMode, (float)x0, (float)y0, (float)x1, (float)y1, theDead, theControl).detach();
     return "box-started";
 }
 
@@ -882,7 +977,7 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         }).detach();
         theVerdict = "wheeled";
     } else if (!strcmp(theOp, "boxselect") && a == inFormID) {
-        theVerdict = BoxStart(theSeq, theLine);
+        theVerdict = BoxStart(theSeq, theLine, inForm);
     } else if (!strcmp(theOp, "order") && a == inFormID) {
         theVerdict = EETestOrderStart(theSeq, b);
     } else if (theControl && !strcmp(theOp, "lselect") && theFields >= 5) {
