@@ -2659,17 +2659,17 @@ void EEMPlayerSlotInfo::ImportMessage(unsigned char* inPayloadPointer)
 static void ExecuteRecordFrames(EEMRecord* m)
 {
     if ((gCommunications->IsClient() == true
-         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)
+         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
         || (gCommunications->IsServer() == true
-            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)) {
+            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
         if (m->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot) {
             gGraphics->PostSetFlag5B(m->Get<bool>(1));
             gPhysics->SetSlowPlayback(m->Get<bool>(1));
             if (gCommunications->IsClient()) {
                 if (m->Get<bool>(1))
-                    (static_cast<NESynchronousClient*>(gCommunications))->GetRecordPlayback()->SetSlowPlayback();
+                    (static_cast<NESynchronousClient*>(gCommunications))->SetSlowPlayback();
                 else
-                    (static_cast<NESynchronousClient*>(gCommunications))->GetRecordPlayback()->SetNormalPlayback();
+                    (static_cast<NESynchronousClient*>(gCommunications))->SetNormalPlayback();
             }
         }
     }
@@ -3594,9 +3594,9 @@ size_t EEMImproveUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 static void ExecuteZoomInfo(EEMRecord* m)
 {
     if ((gCommunications->IsClient() == true
-         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)
+         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
         || (gCommunications->IsServer() == true
-            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)) {
+            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
         if (m->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot)
             gWorld.mCameraControl.SetZoom(m->Get<float>(1));
     }

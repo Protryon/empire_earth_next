@@ -32,6 +32,64 @@ constexpr static const size_t TERRAIN_POLYGON_CAPACITY = 12000;
 
 constexpr static const size_t WATER_POLYGON_CAPACITY = 5000;
 
+/// The calls a bitmap makes on other objects. `obj` is the object called; `a`, `b` as each says.
+enum class EeGeBmpOp : uint32_t {
+  /// `GERasterizer::GetActiveRasterizer()`.
+  RasterActive = 1,
+  /// `obj->GetScreenCount()`.
+  RasterScreenCount,
+  /// `obj->CreateVertexArray(a, b)`.
+  RasterVertexArray,
+  /// `delete (GEVertexArray*)obj`.
+  VertexDelete,
+  /// `obj->GetColor(*(GEColor*)b, a)`.
+  VertexGetColor,
+  /// `obj->SetColor(*(const GEColor*)b, a)`.
+  VertexSetColor,
+  /// `obj->GetPoint(*(GE3DPoint*)b, a)`.
+  VertexGetPoint,
+  /// `obj->SetPoint(*(const GE3DPoint*)b, a)`.
+  VertexSetPoint,
+  /// `obj->SetNormal(*(const GEVector*)b, a)`.
+  VertexSetNormal,
+  /// `obj->GetOpacity(a)`, as its bits.
+  VertexGetOpacity,
+  /// `obj->SetOpacity(b's bits, a)`.
+  VertexSetOpacity,
+  /// `obj->GetTextureCoordinate(*(GETextureCoordinate*)b, a)`.
+  VertexGetUv,
+  /// `obj->SetTextureCoordinate(*(const GETextureCoordinate*)b, a)`.
+  VertexSetUv,
+  /// `obj->Reference()` (a texture).
+  TexReference,
+  /// `obj->Dereference()` (GETexture's own).
+  TexDereference,
+  /// `obj->GetFrameWidth()`, as its bits.
+  TexFrameWidth,
+  /// `obj->GetFrameHeight()`, as its bits.
+  TexFrameHeight,
+  /// `obj->GetWidth()`.
+  TexWidth,
+  /// `obj->GetHeight()`.
+  TexHeight,
+  /// `obj->GetNumMipLevelsToDrop()`.
+  TexDropLevels,
+};
+
+/// A float of the header's accessors (`ee_ge_bmp_getf`).
+enum class EeGeBmpFloat : uint32_t {
+  /// `mRotation`.
+  Rotation = 1,
+  /// `mXScale`.
+  XScale,
+  /// `mYScale`.
+  YScale,
+  /// `GetWidth()`: `mXScale * mWidth`.
+  Width,
+  /// `GetHeight()`: `mYScale * mHeight`.
+  Height,
+};
+
 /// A call the managers make on another object (the C++ hosts `GEModelManagerHost` and `GETextureManagerHost`).
 /// `obj`, `a`, `b` and `c` are the operation's arguments as each describes; the result is the call's.
 enum class EeGeManOp : uint32_t {
@@ -111,6 +169,191 @@ enum class EeGeManOp : uint32_t {
   TexAllocatedSize,
   /// The texture pack's log line of `obj` named `a` with `b` MIP levels dropped (when `EE_TEXTURE_PACK_LOG` is set).
   TexPackLog,
+};
+
+/// The calls a model makes on other objects. `obj` is the object called; `a`..`c` as each says.
+enum class EeGeModOp : uint32_t {
+  /// `GERasterizer::GetActiveRasterizer()`.
+  RasterActive = 1,
+  /// `obj->CreateVertexArray(a, b)` (flags, count).
+  RasterVertexArray,
+  /// `obj->CreatePolygonArray(a)`.
+  RasterPolygonArray,
+  /// `obj->GetScreenID()`.
+  RasterScreenId,
+  /// `obj->GetScreen(a)->GetTextureManager()`.
+  RasterTextureManager,
+  /// `delete (GEVertexArray*)obj`.
+  VertexDelete,
+  /// `obj->GetPoint(((GE3DPoint*)b)[i], i)` for `i < a`.
+  VertexGather,
+  /// `obj->GetPoint(*(GE3DPoint*)b, a)`.
+  VertexGetPoint,
+  /// `obj->SetPoint(*(const GE3DPoint*)b, a)`.
+  VertexSetPoint,
+  /// `obj->GetNormal(*(GEVector*)b, a)`.
+  VertexGetNormal,
+  /// `obj->SetNormal(*(const GEVector*)b, a)`.
+  VertexSetNormal,
+  /// `obj->SetTextureCoordinate(GETextureCoordinate(b[0], b[1]), a)` (`b` two floats).
+  VertexSetUv,
+  /// `obj->GetSize()`.
+  VertexSize,
+  /// `obj->SizeOf()`.
+  VertexSizeOf,
+  /// `delete (GEPolygonArray*)obj`.
+  PolygonDelete,
+  /// `GetVertexIndex1`, `2` and `3` of each polygon `i < a` into `((uint32_t*)b)[3 i ..]`.
+  PolygonGather,
+  /// `obj->SetVertexIndex{c}(a, b)` (`c` 1, 2 or 3).
+  PolygonSetIndex,
+  /// `obj->SizeOf()`.
+  PolygonSizeOf,
+  /// `new GEMaterial(a, b)` (screens, LODs).
+  MaterialNew,
+  /// `obj->UReferenceCounter::Dereference()`.
+  MaterialDereference,
+  /// `obj->SetTexture((GETexture*)a, b)`.
+  MaterialSetTexture,
+  /// `obj->GetPolygonRangeLength(a)`.
+  MaterialRangeLength,
+  /// `obj->GetPolygonStartingIndex(a)`.
+  MaterialStart,
+  /// `obj->GetVertexStartingIndex()`.
+  MaterialVertexStart,
+  /// `obj->SizeOf()`.
+  MaterialSizeOf,
+  /// `obj->SetName(UString(a's b bytes))`.
+  MaterialSetName,
+  /// `c` 0: `obj->SetTextureIndex(a)`; 1: `SetPolygonStartingIndex(a, b)`; 2: `SetPolygonRangeLength(a, b)`;
+  /// 3: `SetVertexStartingIndex(a)`; 4: `SetVertexRangeLength(a)`.
+  MaterialSetValue,
+  /// `new GEModel((GEModelManager*)obj)`.
+  ModelNew,
+  /// The Rust object of model `obj`.
+  ModelObj,
+  /// `obj->Reference()`.
+  ModelReference,
+  /// `obj->UReferenceCounter::Dereference()`.
+  ModelBaseDereference,
+  /// `obj->mReferenceCount`.
+  ModelRefCount,
+  /// `((GEModelManager*)obj)->RemoveModel((GEModel*)a)`.
+  ManagerRemove,
+  /// `new UString`.
+  StrNew,
+  /// `delete (UString*)obj`.
+  StrDelete,
+  /// `new UString[a]`.
+  StrArrayNew,
+  /// `delete[] (UString*)obj`.
+  StrArrayDelete,
+  /// `&((UString*)obj)[a]`.
+  StrAt,
+  /// `*(UString*)obj = *(const UString*)a`.
+  StrAssign,
+  /// `*(UString*)obj = UString(a's b bytes)`.
+  StrSetBytes,
+  /// `obj->GetLength()`.
+  StrLength,
+  /// `obj->SizeOf()`.
+  StrSizeOf,
+  /// `((const char*)*obj)[0]`.
+  StrFirst,
+  /// `((GETextureManager*)obj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b)`.
+  TexLoad,
+  /// `obj->SetStageMinFilterMode(a, b)`.
+  TexMinFilter,
+  /// `obj->SetStageMagFilterMode(a, b)`.
+  TexMagFilter,
+  /// `obj->SetStageMipFilterMode(a, b)`.
+  TexMipFilter,
+};
+
+/// A field the header's accessors read (`ee_ge_mod_get`).
+enum class EeGeModVal : uint32_t {
+  /// `mManager`.
+  Manager = 1,
+  /// `mParentModel`.
+  Parent,
+  /// `mGraphicsCurrentFrame`.
+  CurrentFrame,
+  /// `mGraphicsNextFrame`.
+  NextFrame,
+  /// `mSubModelCount`.
+  SubModelCount,
+  /// `mFrameCount`.
+  FrameCount,
+  /// `mMaterialCount`.
+  MaterialCount,
+  /// `mPolygonCount`.
+  PolygonCount,
+  /// `mVertexCount`.
+  VertexCount,
+  /// `mTagPointCount`.
+  TagPointCount,
+  /// `mLODCount`.
+  LodCount,
+  /// `mSharedFrames.size()`.
+  SharedFrameCount,
+};
+
+/// A float the header's accessors read (`ee_ge_mod_getf`).
+enum class EeGeModFloat : uint32_t {
+  /// `mGraphicsScale`.
+  GraphicsScale = 1,
+  /// `mModelOpacity`.
+  Opacity,
+  /// `mFractionalFramePosition`.
+  FractionalFramePosition,
+};
+
+/// An array or member the header's accessors return a pointer to (`ee_ge_mod_ptr`).
+enum class EeGeModPtr : uint32_t {
+  /// `mInternalTransforms` (`GETransformation[frames]`).
+  InternalTransforms = 1,
+  /// `mSubModels` (`GEModel*[sub-models]`).
+  SubModels,
+  /// `mPolygonArrays` (`GEPolygonArray*[LODs]`).
+  PolygonArrays,
+  /// `mVertexArrays` (`GEVertexArray*[frames]`).
+  VertexArrays,
+  /// `mMaterials` (`GEMaterial*[materials]`).
+  Materials,
+  /// `mFrameTagPoints` (`GE3DPoint*[frames]`).
+  FrameTagPoints,
+  /// `mBoundingBoxes` (`GEBoundingBox[frames]`).
+  BoundingBoxes,
+  /// `mGraphicsBoundingBox` (the current frame's box).
+  GraphicsBoundingBox,
+  /// `mTagPoints` (the current frame's tag points).
+  TagPoints,
+  /// `mTextureFilenames` (`UString[materials]`).
+  TextureFilenames,
+  /// `mTagPointNames` (`UString[tag points]`).
+  TagPointNames,
+  /// `mBoundingRadii` (`float[frames]`).
+  BoundingRadii,
+  /// `mName` (`UString`).
+  Name,
+  /// `mGraphicsPreModelTransform`.
+  PreTransform,
+  /// `mGraphicsPostModelTransform`.
+  PostTransform,
+  /// `mGraphicsTransform`.
+  GraphicsTransform,
+  /// `mCenterPoint`.
+  Center,
+};
+
+/// A transform a setter writes (`ee_ge_mod_set_transform`).
+enum class EeGeModXf : uint32_t {
+  /// `SetGraphicsPreModelTransform`.
+  Pre = 1,
+  /// `SetGraphicsPostModelTransform`.
+  Post,
+  /// `SetInternalTransform(frame, ...)`.
+  Internal,
 };
 
 /// The calls a texture makes on other objects. `obj` is the object called; `a`..`c` as each says.
@@ -269,6 +512,12 @@ enum class EeGeTexStage : uint32_t {
 /// A model as `GEModel::StoreLoaded` takes it.
 struct EeGeCemModel;
 
+/// The bitmap.
+struct EeGeBitmap;
+
+/// The model.
+struct EeGeModel;
+
 /// The model manager.
 struct EeGeModelManager;
 
@@ -280,6 +529,20 @@ struct EeGeTextureManager;
 
 /// The plan of one frame.
 struct EeGeVisiblePlan;
+
+/// The host: `owner` is the C++ bitmap of the object calling.
+using EeGeBmpHostFn = ptrdiff_t(*)(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
+
+/// `GERectangle` (sizeof 0x10), in the C++'s member order.
+struct EeGeRectangle {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// Four out (or in) pointers in vertex order: top left, top right, then the original's third and fourth.
+using EeGeBmpQuad = void*[4];
 
 /// `GE2DPoint` (sizeof 8).
 struct EeGe2DPoint {
@@ -346,14 +609,6 @@ struct EeGeBoundingBox {
   float width;
   float height;
   float depth;
-};
-
-/// `GERectangle` (sizeof 0x10), in the C++'s member order.
-struct EeGeRectangle {
-  float bottom;
-  float left;
-  float right;
-  float top;
 };
 
 /// Receives one rectangle of a split.
@@ -473,85 +728,18 @@ using EeGeManHostFn = ptrdiff_t(*)(void *owner,
                                    ptrdiff_t b,
                                    ptrdiff_t c);
 
-/// Borrowed bytes (no terminating NUL).
-struct EeGeBytes {
-  const uint8_t *data;
-  size_t length;
-};
+/// The host: `owner` is the C++ model of the object calling.
+using EeGeModHostFn = ptrdiff_t(*)(void *owner,
+                                   EeGeModOp op,
+                                   void *obj,
+                                   ptrdiff_t a,
+                                   ptrdiff_t b,
+                                   ptrdiff_t c);
 
-/// The model's result, counts and scalar fields.
-struct EeGeCemInfo {
-  long result;
-  /// The counts were read and the arrays are to be allocated with them.
-  bool allocated;
-  uint32_t polygon_count;
-  uint32_t vertex_count;
-  uint32_t tag_point_count;
-  uint32_t material_count;
-  uint32_t frame_count;
-  uint32_t sub_model_count;
-  uint32_t lod_count;
-  EeGeBytes name;
-  /// The centre's values read (x, y, z; a prefix).
-  const float *center;
-  size_t center_count;
-  /// The sub-models created (all of `sub_model_count` when the model's own chunks loaded, else none).
-  size_t sub_models_loaded;
-};
-
-/// One LOD's polygons: `created` when the LOD's array is created with `count` polygons (LOD 0 has the allocation's);
-/// `indices` the vertex indices set, three per polygon (a prefix).
-struct EeGeCemLod {
-  bool created;
-  uint32_t count;
-  const uint32_t *indices;
-  size_t index_count;
-};
-
-/// One material: its name, the values set in order (texture index, polygon start and length per LOD, vertex start,
-/// vertex length; a prefix) and its texture file name.
-struct EeGeCemMaterial {
-  EeGeBytes name;
-  const uint32_t *values;
-  size_t value_count;
-  EeGeBytes texture_filename;
-};
-
-/// One frame: the radius when read; the vertices and tag points for frame `target`'s arrays; the transform's
-/// elements read (row by row) and the box's corner values read (prefixes).
-struct EeGeCemFrame {
-  bool has_radius;
-  float radius;
-  uint32_t target;
-  const EeGe3DPoint *points;
-  size_t point_count;
-  const EeGeVector *normals;
-  size_t normal_count;
-  /// u, v pairs.
-  const float *uvs;
-  size_t uv_count;
-  const EeGe3DPoint *tag_points;
-  size_t tag_point_count;
-  const float *transform;
-  size_t transform_count;
-  const float *bbox;
-  size_t bbox_count;
-};
-
-/// `RemoveModelScale`'s matrices for one frame.
-struct EeGeScaleRemoval {
-  /// The scale baked into the frame's points, normals, tag points, box and (frame 0) centre.
-  EeGeTransformation scale;
-  /// The largest of the three scales (the radius's factor).
-  float largest;
-  /// The frame's transform within its parent (`parent x internal`), for the sub-models.
-  EeGeTransformation transform;
-  /// The new internal transform: the rotation without its scale, the translation re-derived.
-  EeGeTransformation unscaled;
-  /// The accumulated scales the sub-models receive.
-  float x;
-  float y;
-  float z;
+/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
+struct EeGeSharedFrame {
+  uint32_t frame;
+  int32_t offset;
 };
 
 /// A material's ranges at one LOD: `GetVertexStartingIndex()`, `GetPolygonStartingIndex(lod)`,
@@ -774,20 +962,6 @@ struct EeGeVisibleOut {
   const uint32_t *cliff_links;
 };
 
-/// `ComputeStretchedCoordsAndScale`'s result: the texture coordinates per corner (top left, top right, bottom left,
-/// bottom right) and the x and y scale.
-struct EeGeBitmapStretch {
-  float uv[4][2];
-  float x_scale;
-  float y_scale;
-};
-
-/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
-struct EeGeSharedFrame {
-  uint32_t frame;
-  int32_t offset;
-};
-
 /// `GETerrainMesh::GETMPoint`: height, quantized normal (a pointer into the quantized-vector table), colour index.
 struct EeGeTmPoint {
   float z;
@@ -825,6 +999,137 @@ struct EeGeTexCopy {
 };
 
 extern "C" {
+
+/// `GEBitmap()`.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_bmp_destroy`.
+EeGeBitmap *ee_ge_bmp_new(EeGeBmpHostFn host, void *owner);
+
+/// `~GEBitmap`.
+///
+/// # Safety
+/// `p` is live (freed).
+void ee_ge_bmp_destroy(EeGeBitmap *p);
+
+/// `ComputeStretchedCoordsAndScale(texture, source, destination, screen)`.
+///
+/// # Safety
+/// `p` is live; the rectangles are valid.
+void ee_ge_bmp_stretch(EeGeBitmap *p,
+                       const EeGeRectangle *texture,
+                       const EeGeRectangle *source,
+                       const EeGeRectangle *destination,
+                       unsigned long screen);
+
+/// `FlipHorizontally` (`vertical` false) or `FlipVertically`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_bmp_flip(EeGeBitmap *p, bool vertical);
+
+/// `GetColorPerVertex` (`out` four `GEColor*`).
+///
+/// # Safety
+/// `p` is live; the outputs are valid.
+void ee_ge_bmp_colors(EeGeBitmap *p, const EeGeBmpQuad *out);
+
+/// `SetColorPerVertex` (`colors` four `const GEColor*`; `SetColor` passes one four times).
+///
+/// # Safety
+/// `p` is live; the inputs are valid.
+void ee_ge_bmp_set_colors(EeGeBitmap *p, const EeGeBmpQuad *colors);
+
+/// `GetLocationPerVertex` (`out` four `GE2DPoint*`): the four points read, then their x and y written.
+///
+/// # Safety
+/// `p` is live; the outputs are valid.
+void ee_ge_bmp_locations(EeGeBitmap *p,
+                         const EeGeBmpQuad *out);
+
+/// `GetZPerVertex` (`out` four `float*`).
+///
+/// # Safety
+/// `p` is live; the outputs are valid.
+void ee_ge_bmp_depths(EeGeBitmap *p, const EeGeBmpQuad *out);
+
+/// `GetOpacityPerVertex` (`out` four `float*`).
+///
+/// # Safety
+/// `p` is live; the outputs are valid.
+void ee_ge_bmp_opacities(EeGeBitmap *p, const EeGeBmpQuad *out);
+
+/// `SetOpacityPerVertex` (`SetOpacity` passes one four times).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_bmp_set_opacities(EeGeBitmap *p, const float (*opacities)[4]);
+
+/// `GetTextureCoordinatesPerVertex` (`out` four `GETextureCoordinate*`).
+///
+/// # Safety
+/// `p` is live; the outputs are valid.
+void ee_ge_bmp_uvs(EeGeBitmap *p, const EeGeBmpQuad *out);
+
+/// `SetTextureCoordinates` (`uvs` four `GETextureCoordinate*`).
+///
+/// # Safety
+/// `p` is live; the inputs are valid.
+void ee_ge_bmp_set_uvs(EeGeBitmap *p, const EeGeBmpQuad *uvs);
+
+/// `SetZPerVertex` (`SetZ` passes one four times).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_bmp_set_depths(EeGeBitmap *p, const float (*z)[4]);
+
+/// `SetLocation` (the header's).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_bmp_set_location(EeGeBitmap *p, const EeGe2DPoint *location);
+
+/// `SetRotation`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_bmp_set_rotation(EeGeBitmap *p, float rotation);
+
+/// `SetXYScale` (the header's; `SetScale` passes one twice).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_bmp_set_xy_scale(EeGeBitmap *p, float x, float y);
+
+/// `SetTexture(texture, screen)`.
+///
+/// # Safety
+/// `p` is live; `texture` a texture or NULL.
+void ee_ge_bmp_set_texture(EeGeBitmap *p, void *texture, unsigned long screen);
+
+/// A float of the header's accessors.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_bmp_getf(EeGeBitmap *p, EeGeBmpFloat field);
+
+/// `GetLocation()`: the location inside the object.
+///
+/// # Safety
+/// `p` is live.
+const EeGe2DPoint *ee_ge_bmp_location(EeGeBitmap *p);
+
+/// `GetTexture(screen)` (NULL past the screens: the original read past its array).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_bmp_texture(EeGeBitmap *p, unsigned long screen);
+
+/// `GetVertexArray()`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_bmp_vertices(EeGeBitmap *p);
 
 /// `UMCos`.
 float ee_ge_um_cos(float angle);
@@ -1582,107 +1887,199 @@ void ee_ge_modman_verify(EeGeModelManager *p);
 /// `model` came from `ee_of_gltf_to_model` and is freed once.
 void ee_ge_cem_free(EeGeCemModel *model);
 
-/// The model's result, counts and scalars.
+/// `GEModel(manager)`.
 ///
 /// # Safety
-/// `model` is live; `out` valid for a write.
-void ee_ge_cem_info(const EeGeCemModel *model, EeGeCemInfo *out);
+/// `host` serves `owner` until `ee_ge_mod_destroy`.
+EeGeModel *ee_ge_mod_new(EeGeModHostFn host, void *owner, void *manager);
 
-/// LOD `lod`'s polygons (`lod` below the LOD count of an allocated model).
+/// `GEModel(polygons, vertices, materials, tag points, frames, sub-models, name, flags, manager)`.
 ///
 /// # Safety
-/// `model` is live; `out` valid for a write.
-void ee_ge_cem_lod(const EeGeCemModel *model, uint32_t lod, EeGeCemLod *out);
+/// As `ee_ge_mod_new`; `name` a `UString`.
+EeGeModel *ee_ge_mod_new_with_counts(EeGeModHostFn host,
+                                     void *owner,
+                                     const unsigned long *counts,
+                                     const void *name,
+                                     unsigned long flags,
+                                     void *manager);
 
-/// Material `index`.
+/// `~GEModel`.
 ///
 /// # Safety
-/// `model` is live; `out` valid for a write.
-void ee_ge_cem_material(const EeGeCemModel *model, uint32_t index, EeGeCemMaterial *out);
+/// `p` is live (freed).
+void ee_ge_mod_destroy(EeGeModel *p);
 
-/// Tag point `index`'s name.
+/// `StoreLoaded(model, shared frames)`.
 ///
 /// # Safety
-/// `model` is live.
-EeGeBytes ee_ge_cem_tag_point_name(const EeGeCemModel *model, uint32_t index);
+/// `p` is live; `model` a decoded model; `shared` holds `count` entries (or is NULL).
+long ee_ge_mod_store_loaded(EeGeModel *p,
+                            const EeGeCemModel *model,
+                            const EeGeSharedFrame *shared,
+                            size_t count);
 
-/// Frame `index`.
+/// `LoadTexturesForScreen(description, screen)`.
 ///
 /// # Safety
-/// `model` is live; `out` valid for a write.
-void ee_ge_cem_frame(const EeGeCemModel *model, uint32_t index, EeGeCemFrame *out);
+/// `p` is live; `description` a `GETextureDescription`.
+long ee_ge_mod_load_textures(EeGeModel *p, const void *description, unsigned long screen);
 
-/// Sub-model `index` (borrowed from its parent: never freed on its own).
+/// `ComputeBoundingVolumes`.
 ///
 /// # Safety
-/// `model` is live.
-const EeGeCemModel *ee_ge_cem_sub_model(const EeGeCemModel *model, uint32_t index);
+/// `p` is live.
+void ee_ge_mod_compute_bounding_volumes(EeGeModel *p);
 
-/// `ComputeBoundingBoxes` for one frame's points.
+/// `ComputeModelNormals`.
 ///
 /// # Safety
-/// `points` holds `count` points; `out` is valid for a write.
-void ee_ge_model_frame_box(const EeGe3DPoint *points, size_t count, EeGeBoundingBox *out);
+/// `p` is live.
+void ee_ge_mod_compute_normals(EeGeModel *p);
 
-/// `ComputeBoundingVolumes`' centre from the frames' boxes.
+/// `Dereference` (GEModel's own).
 ///
 /// # Safety
-/// `boxes` holds `count` boxes; `out` is valid for a write.
-void ee_ge_model_center(const EeGeBoundingBox *boxes, size_t count, EeGe3DPoint *out);
+/// `p` is live; it may be freed.
+void ee_ge_mod_dereference(EeGeModel *p);
 
-/// `ComputeBoundingVolumes`' radius of one frame.
+/// `GetPolygonCount(lod)`.
 ///
 /// # Safety
-/// `center` is valid; `points` holds `count` points.
-float ee_ge_model_radius(const EeGe3DPoint *center, const EeGe3DPoint *points, size_t count);
+/// `p` is live.
+unsigned long ee_ge_mod_polygon_count(EeGeModel *p, unsigned long lod);
 
-/// `ComputeModelNormals` for one frame: `out` receives one normal per point.
+/// `GetPolygonCountOfHierarchy(lod)`.
 ///
 /// # Safety
-/// `points` and `out` hold `count` elements; `indices` holds `index_count`.
-void ee_ge_model_vertex_normals(const EeGe3DPoint *points,
-                                size_t count,
-                                const uint32_t *indices,
-                                size_t index_count,
-                                EeGeVector *out);
+/// `p` is live.
+unsigned long ee_ge_mod_polygon_count_of_hierarchy(EeGeModel *p, unsigned long lod);
 
-/// `PrepareTransforms`' graphics transform.
+/// `PrepareTransforms`.
 ///
 /// # Safety
-/// The pointers are valid; `out` may be any of the inputs.
-void ee_ge_model_graphics_transform(const EeGeTransformation *internal,
-                                    const EeGeTransformation *pre,
-                                    const EeGeTransformation *post,
-                                    float scale,
-                                    EeGeTransformation *out);
+/// `p` is live.
+void ee_ge_mod_prepare_transforms(EeGeModel *p);
 
-/// `RemoveModelScale`'s matrices for one frame.
+/// `RemoveScale`.
 ///
 /// # Safety
-/// The pointers are valid.
-void ee_ge_model_scale_removal(const EeGeTransformation *internal,
-                               const EeGeTransformation *parent,
-                               float x,
-                               float y,
-                               float z,
-                               EeGeScaleRemoval *out);
+/// `p` is live.
+void ee_ge_mod_remove_scale(EeGeModel *p);
 
-/// `SortTagPoints`' order: `out[i]` is the index swapped into position `i`.
+/// `SetFractionalFramePosition`.
 ///
 /// # Safety
-/// `first` and `out` hold `count` elements.
-void ee_ge_model_tag_point_order(const int8_t *first, size_t count, uint32_t *out);
+/// `p` is live.
+void ee_ge_mod_set_fractional(EeGeModel *p, float position);
 
-/// `Verify` for one frame: `ranges` holds per material its LOD 0 polygon start, polygon count and first vertex.
+/// `SetGraphicsCurrentFrame`.
 ///
 /// # Safety
-/// `points` holds `count` points, `indices` `index_count` values, `ranges` `range_count` triples.
-bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
-                                size_t count,
-                                const uint32_t *indices,
-                                size_t index_count,
-                                const uint32_t *ranges,
-                                size_t range_count);
+/// `p` is live.
+void ee_ge_mod_set_current_frame(EeGeModel *p, unsigned long frame);
+
+/// `SetGraphicsNextFrame`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mod_set_next_frame(EeGeModel *p, unsigned long frame);
+
+/// `SetOpacity`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mod_set_opacity(EeGeModel *p, float opacity);
+
+/// `SetSubModel(model, index)`.
+///
+/// # Safety
+/// `p` is live; `model` a live model or NULL.
+void ee_ge_mod_set_sub_model(EeGeModel *p, void *model, unsigned long index);
+
+/// `SetTexture(texture, screen)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mod_set_texture(EeGeModel *p, void *texture, unsigned long screen);
+
+/// `SizeOf`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_mod_size_of(EeGeModel *p);
+
+/// `SortTagPoints`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mod_sort_tag_points(EeGeModel *p);
+
+/// `Verify`.
+///
+/// # Safety
+/// `p` is live.
+bool ee_ge_mod_verify(EeGeModel *p);
+
+/// A field of the header's accessors.
+///
+/// # Safety
+/// `p` is live.
+ptrdiff_t ee_ge_mod_get(EeGeModel *p, EeGeModVal field);
+
+/// A float of the header's accessors.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_mod_getf(EeGeModel *p, EeGeModFloat field);
+
+/// `SetGraphicsScale`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mod_set_graphics_scale(EeGeModel *p, float scale);
+
+/// A pointer the header's accessors return or index (NULL for an array not allocated).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_mod_ptr(EeGeModel *p, EeGeModPtr field);
+
+/// `mSharedFrames`' entry `index` in frame order.
+///
+/// # Safety
+/// `p` is live; the outputs are valid for writes.
+void ee_ge_mod_shared_frame(EeGeModel *p, unsigned long index, unsigned long *frame, long *offset);
+
+/// `GetClipToPlane(plane)` (false past the six planes).
+///
+/// # Safety
+/// `p` is live.
+bool ee_ge_mod_clip(EeGeModel *p, unsigned long plane);
+
+/// `SetClipToPlane(plane, clip)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_mod_set_clip(EeGeModel *p, unsigned long plane, bool clip);
+
+/// `SetGraphicsPreModelTransform`, `SetGraphicsPostModelTransform` or `SetInternalTransform(frame, ...)`.
+///
+/// # Safety
+/// `p` is live; `t` a transform.
+void ee_ge_mod_set_transform(EeGeModel *p,
+                             EeGeModXf which,
+                             unsigned long frame,
+                             const EeGeTransformation *t);
+
+/// `SetTagPoint(index, point)` (`frame` -1: the current frame's) or `SetTagPoint(frame, index, point)`.
+///
+/// # Safety
+/// `p` is live; `point` a point.
+void ee_ge_mod_set_tag_point(EeGeModel *p,
+                             long frame,
+                             unsigned long index,
+                             const EeGe3DPoint *point);
 
 /// `GEPhysicalModel::Intersects(location, model, frame, line, lod, distance, exact)`; `scale` is the placed model's.
 ///
@@ -2177,35 +2574,11 @@ EeGeVisiblePlan *ee_ge_terrain_visible_plan(const EeGeVisibleInput *input,
 /// `plan` came from `ee_ge_terrain_visible_plan` and is freed once.
 void ee_ge_terrain_visible_free(EeGeVisiblePlan *plan);
 
-/// `GEBitmap::ComputeRotation`'s corners (top left, top right, bottom left, bottom right) into `out`.
-///
-/// # Safety
-/// `location` is valid; `out` holds four points.
-void ee_ge_bitmap_corners(const EeGe2DPoint *location,
-                          float width,
-                          float height,
-                          float x_scale,
-                          float y_scale,
-                          float rotation,
-                          EeGe2DPoint *out);
-
 /// `GERhombus::ComputeRotation`'s corners into `out`.
 ///
 /// # Safety
 /// `rectangle` is valid; `out` holds four points.
 void ee_ge_rhombus_corners(const EeGeRectangle *rectangle, float rotation, EeGe2DPoint *out);
-
-/// `GEBitmap::ComputeStretchedCoordsAndScale`'s coordinates and scale.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_bitmap_stretch(const EeGeRectangle *texture,
-                          const EeGeRectangle *source,
-                          const EeGeRectangle *destination,
-                          unsigned long width,
-                          unsigned long height,
-                          unsigned long drop,
-                          EeGeBitmapStretch *out);
 
 }  // extern "C"
 

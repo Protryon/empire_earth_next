@@ -1183,13 +1183,14 @@ enum HTTPDocOwner {
 
 
 // AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...): a Rust op on the base
-// (ee_won certhost.rs over getcert.rs: its members, every step and the session key). The class is its constructor
-// (the auth context and its server list, ServerOp.cpp) and the two accessors the game uses.
+// (ee_won certhost.rs over getcert.rs: its members, every step and the session key; its certificates, key blocks,
+// private key and peer data are Rust handles, hostauth.rs). The class is its constructor (the auth context and its
+// server list, ServerOp.cpp) and the two accessors the game uses.
 class AuthPeerData;
 class GetCertOp : public RustServerOp {
 public:
     explicit GetCertOp(AuthContext*); //2e3c30
-    const AuthPeerData* GetPeerData() const; // borrowed; NULL before a login
+    ConstSmartPtr<AuthPeerData> GetPeerData() const; // a shim over the Rust peer data; NULL before a login
     void SetCreateAccount(bool value) { this->SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, value); }
 };
 

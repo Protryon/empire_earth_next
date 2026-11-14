@@ -80,7 +80,7 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
     case EeGeManOp::ModelNewSub: {
         GEModel* theSubModel = new GEModel(theArgs->mPolygonCount, theArgs->mVertexCount, theArgs->mMaterialCount,
                                            theArgs->mTagPointCount, theArgs->mFrameCount, theArgs->mSubModelCount,
-                                           theModel->mName, theArgs->mFlags, theManager);
+                                           theModel->GetName(), theArgs->mFlags, theManager);
         theModel->SetSubModel(theSubModel, (unsigned long)b);
         theSubModel->UReferenceCounter::Dereference();
         return (intptr_t)theSubModel;

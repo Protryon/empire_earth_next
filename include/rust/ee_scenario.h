@@ -222,6 +222,161 @@ constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE = 47;
 /// `GetScenarioObject(a)->PickUnitType()`.
 constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_PICK = 48;
 
+/// `gWorld.mPlayers[a]->mShareBonus`.
+constexpr static const uint32_t EE_SCENARIO_READ_SHARE_BONUS = 50;
+
+/// `gWorld.mPlayerPopulationLimit`.
+constexpr static const uint32_t EE_SCENARIO_READ_WORLD_POPULATION_LIMIT = 51;
+
+/// `gWorld.mPlayers[a]->mPlayerID`.
+constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_ID = 52;
+
+/// The manager's string slots in its stream: `mExportFileName`, `mLastChatText`.
+constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
+
+constexpr static const uint32_t EE_SCENARIO_MANAGER_LAST_CHAT = 1;
+
+/// The context object's `mUnits.size()`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_UNIT_COUNT = 53;
+
+/// The context object's `mUnits[a]`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_UNIT_AT = 54;
+
+/// `GetScenarioObject(a)->Evaluate(b != 0)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_EVALUATE = 55;
+
+/// Unit `a` (`gWorld.GetUnit`): 0 for none, else bit 0 set, bit 1 `GetHitPoints() > 0`, bit 2 its class's
+/// `mIsTree`, bit 3 a complex unit, bit 4 the complex unit's `mPreviousPart`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_FLAGS = 56;
+
+/// Unit `a`'s `mUnitClass->mUnitType`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_CLASS_TYPE = 57;
+
+/// Unit `a`'s `mPlayer->GetPlayerID()`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_PLAYER = 58;
+
+/// Unit `a`'s complex unit's `GetCommandType()`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_COMMAND = 59;
+
+/// The context object's `GetUnitAttribute(b, c != 0, GetUnit(a), 0, 0)`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_ATTRIBUTE = 60;
+
+/// Player `a`'s `mActiveGroup->Contains(unit b's complex unit) || mViewedUnit == unit b` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SELECTED_BY = 61;
+
+/// `EEIsSeenBy(unit a, player b, false)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SEEN_BY = 62;
+
+/// `GetArea(a)`: -1 without the area, else its `ContainsUnit(unit b)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_AREA_CONTAINS_UNIT = 63;
+
+/// `GetScenarioObject(a)`: -1 without the object, else its `IsNearUnit(unit b, c, false)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_NEAR_UNIT = 64;
+
+/// Player `a`'s first unit (`mFirstUnit`, the context's cursor set to it), the next (`mNext`) when `b` is 1: its id
+/// in the low 32 bits and its `mUnitClass->mUnitType` in the high, -1 at the end.
+constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_UNIT = 65;
+
+/// The context object's `mUnits.clear()`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_CLEAR = 11;
+
+/// `GetScenarioObject(b)->GetUnits(mUnits)` (the context object's list replaced by the parent's).
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_COPY_PARENT = 12;
+
+/// `mUnits.erase(begin() + b)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_ERASE = 13;
+
+/// `mUnits.push_back(b)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_PUSH = 14;
+
+/// `EEAIRandomShuffle(mUnits.begin(), mUnits.end())` (the physics stream's draws).
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_SHUFFLE = 15;
+
+/// `mUnits.erase(begin() + b, end())`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_TRUNCATE = 16;
+
+/// `SetPlayerAttribute(player, b, c, d)` again, through the C++ entry (the any/all resources' recursion).
+constexpr static const uint32_t EE_SCENARIO_WRITE_SET_ATTRIBUTE = 0;
+
+/// `mResourceCaps[b] = c`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_RESOURCE = 1;
+
+/// `mShareBonus = b`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_SHARE_BONUS = 2;
+
+/// A copy of the effect with `mPlayer = b`, `mPlayerAttributeMode = 0`, `mPlayerAttributeAmount = c` handed to
+/// `AddV134Effect` (the population cap a saved game replays).
+constexpr static const uint32_t EE_SCENARIO_WRITE_PENDING_POPULATION = 3;
+
+/// `mComputerPlayer->mDifficulty = b`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_DIFFICULTY = 4;
+
+/// `mScenarioVariables[b] = c`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_VARIABLE = 5;
+
+/// `mTributes[b] = c`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_TRIBUTE = 6;
+
+/// `AddTribute(b, c, d)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_ADD_TRIBUTE = 7;
+
+/// `mSavedGroups.Reset(b, c)` (the statistics).
+constexpr static const uint32_t EE_SCENARIO_WRITE_STATISTIC_ADD = 8;
+
+/// `mSavedGroups.Set(b, c)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_STATISTIC_SET = 9;
+
+/// `mMiningLimit = b`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_MINING_LIMIT = 10;
+
+/// `gWorld.mGameSpeed`'s bits (an `f32`).
+constexpr static const uint32_t EE_SCENARIO_ROUND_GAME_SPEED = 0;
+
+/// `gPhysics->GetTickSeconds()`'s bits (an `f32`).
+constexpr static const uint32_t EE_SCENARIO_ROUND_TICK_SECONDS = 1;
+
+/// `mMessages.size()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_COUNT = 2;
+
+/// `ShowDialogMessage()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_SHOW_DIALOG = 3;
+
+/// Whether a player is human and not an observer (1/0).
+constexpr static const uint32_t EE_SCENARIO_ROUND_HUMAN_PLAYING = 4;
+
+/// `gWorld.mInCinematic` (1/0).
+constexpr static const uint32_t EE_SCENARIO_ROUND_IN_CINEMATIC = 5;
+
+/// `MoveCameraToStart()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_MOVE_CAMERA = 6;
+
+/// `mTriggers.size()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_TRIGGER_COUNT = 7;
+
+/// `GetTrigger(a)->Evaluate(time)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_EVALUATE_TRIGGER = 8;
+
+/// `mEffects[a] != NULL` (1/0; the original's unchecked index).
+constexpr static const uint32_t EE_SCENARIO_ROUND_EFFECT_EXISTS = 9;
+
+/// `mEffects[a]->Execute(b != 0)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_EXECUTE = 10;
+
+/// `mLastChatText.Clear()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_CLEAR_CHAT = 11;
+
+/// TEST ONLY: the SMUP record (`a`: the human flag) while the capture is on.
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAPTURE = 12;
+
+/// The letterbox's state `gF4BE374`'s bits (an `f32`; 1 once it is gone).
+constexpr static const uint32_t EE_SCENARIO_ROUND_LETTERBOX = 13;
+
+/// `ExitCinematic()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_EXIT_CINEMATIC = 14;
+
+/// The trigger interval (ms; `kTriggerInterval`).
+constexpr static const float TRIGGER_INTERVAL = 500.0;
+
 /// The effect's string slots (`EESMEffect`'s members; the C++ hands them in this order).
 constexpr static const uint32_t EE_SCENARIO_EFFECT_NAME = 0;
 
@@ -303,6 +458,35 @@ constexpr static const uint32_t EE_SCENARIO_IO_ENTRY_AT = 15;
 /// value)` then `SetConditionOperator(index, op)`, or `SetEffect(index, first, value)` then `SetEffectOperator`.
 constexpr static const uint32_t EE_SCENARIO_IO_ENTRY_SET = 16;
 
+/// The manager's element list `slot` (`EE_SCENARIO_ELEMENT_*`): a new element read by its `Load` and kept as the
+/// original kept it (the result the element's).
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_LOAD = 17;
+
+/// The manager's element `index` of list `slot`: its `Save` (the result).
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_SAVE = 18;
+
+/// The manager's element list `slot`: its `size()` into `*value` (an `unsigned long`).
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_COUNT = 19;
+
+/// The manager's media strings: `Load` (`slot` 0) or `Save` (1).
+constexpr static const uint32_t EE_SCENARIO_IO_MEDIA = 20;
+
+/// The manager's dialog messages (`EESMLoadVector` / `EESMSaveVector`): `slot` 0 load, 1 save.
+constexpr static const uint32_t EE_SCENARIO_IO_MESSAGES = 21;
+
+/// The manager's element lists: triggers, conditions, effects, objects, areas, pending effects.
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_TRIGGERS = 0;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_CONDITIONS = 1;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_EFFECTS = 2;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_OBJECTS = 3;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_AREAS = 4;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_PENDING = 5;
+
 /// The trigger's condition entries (`EESMTConditionWrapper`) and effect entries (`EESMTEffectWrapper`).
 constexpr static const uint32_t EE_SCENARIO_ENTRIES_CONDITIONS = 0;
 
@@ -314,6 +498,9 @@ constexpr static const int32_t EE_SCENARIO_OPERATOR_END = 0;
 constexpr static const int32_t EE_SCENARIO_OPERATOR_AND = 1;
 
 constexpr static const int32_t EE_SCENARIO_OPERATOR_OR = 2;
+
+/// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
+struct EeScenarioTimedQueue;
 
 /// The C ABI's host: a context and the read callback.
 struct EeScenarioHost {
@@ -328,6 +515,8 @@ struct EeScenarioHost {
                   const int32_t *players,
                   size_t count,
                   uint32_t seed);
+  /// [`Host::write`].
+  void (*write)(void *ctx, uint32_t op, long player, int64_t b, int64_t c, int64_t d);
 };
 
 /// `EESMCondition`'s numbers, in the class's order.
@@ -533,6 +722,49 @@ struct EeScenarioAreaSave {
   unsigned long select_mode;
   unsigned long tiles_time;
   unsigned long id;
+};
+
+/// One timed effect (`EESMTimedEffect`): an `mEffects` index, the scenario time it is due, the cinematic flag, and
+/// whether it has run (the round erases those).
+struct EeScenarioTimedEntry {
+  unsigned long mEffectIndex;
+  unsigned long mTime;
+  bool mIsInCinematic;
+  bool mHasRun;
+};
+
+/// `EEScenarioManager`'s numbers, in the class's order.
+struct EeScenarioManagerFields {
+  long mGameResult;
+  /// The camera zoom `StartCinematic` saves.
+  float mSavedZoom;
+  float mStartX;
+  float mStartY;
+  /// The scenario clock (ms).
+  float mTime;
+  /// The time since the last trigger round (ms).
+  float mTriggerTimer;
+  float mCinematicStartTime;
+  long mSavedCameraMode;
+  unsigned long mNextTriggerID;
+  unsigned long mNextConditionID;
+  unsigned long mNextEffectID;
+  unsigned long mNextObjectID;
+  unsigned long mNextAreaID;
+  /// Set by `Reset`: new pending effects are not recorded until `ApplyPendingEffects` has run.
+  bool mB234;
+  bool mIsMovingCamera;
+  bool mShowDebugIDs;
+  bool mIsShowingDialog;
+  bool mIsEndingCinematic;
+};
+
+/// The C ABI's round host: the manager's numbers and queue, and the operation callback.
+struct EeScenarioRoundHost {
+  void *ctx;
+  EeScenarioManagerFields *fields;
+  EeScenarioTimedQueue *queue;
+  int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
 };
 
 /// One trigger entry: the NOT flag (0/1) or the delay, the operator, the condition or effect index.
@@ -758,6 +990,134 @@ int32_t ee_scenario_area_io(const EeScenarioStream *stream, EeScenarioAreaSave *
 int32_t ee_scenario_strings_io(const EeScenarioStream *stream,
                                uint32_t count,
                                bool save);
+
+/// A new, empty timed effects' queue.
+EeScenarioTimedQueue *ee_scenario_timed_new();
+
+/// Frees a queue of `ee_scenario_timed_new` (null: nothing).
+///
+/// # Safety
+/// `queue` must be null or a queue of `ee_scenario_timed_new` not freed before.
+void ee_scenario_timed_free(EeScenarioTimedQueue *queue);
+
+/// The number of timed effects.
+///
+/// # Safety
+/// `queue` must be a live queue.
+size_t ee_scenario_timed_count(EeScenarioTimedQueue *queue);
+
+/// Timed effect `index` (a copy; `index` must be below the count).
+///
+/// # Safety
+/// `queue` must be a live queue.
+EeScenarioTimedEntry ee_scenario_timed_at(EeScenarioTimedQueue *queue, size_t index);
+
+/// `EEScenarioManager::AddTimedEffect`.
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_add(EeScenarioTimedQueue *queue,
+                           long effect,
+                           unsigned long time,
+                           bool cinematic);
+
+/// `EEScenarioManager::RemoveTimedEffects`.
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_remove_effect(EeScenarioTimedQueue *queue, long effect);
+
+/// `EEScenarioManager::EraseTimedEffect` (`index` below the count).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_erase(EeScenarioTimedQueue *queue, size_t index);
+
+/// Empties the queue (`SortEffects`).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_clear(EeScenarioTimedQueue *queue);
+
+/// `RenumberEffects`' timed part.
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_renumber(EeScenarioTimedQueue *queue, unsigned long old, unsigned long new_);
+
+/// `RemapEffects`' timed part: the map as `count` pairs `olds[i]` -> `news[i]`.
+///
+/// # Safety
+/// `queue` must be a live queue; `olds` and `news` valid for `count` reads (either may be null when it is 0).
+void ee_scenario_timed_remap(EeScenarioTimedQueue *queue,
+                             const unsigned long *olds,
+                             const unsigned long *news,
+                             size_t count);
+
+/// `SetTimedEffectHasRun`: the effect's `mEffects` index (`found` false: not in the list).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_set_has_run(EeScenarioTimedQueue *queue,
+                                   bool found,
+                                   unsigned long effect,
+                                   bool flag);
+
+/// `EndCinematic`'s timed part (`shift` = `(long)elapsed + 3000`).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_end_cinematic(EeScenarioTimedQueue *queue, long shift);
+
+/// `EEScenarioManager::Reset`'s numbers and the queue emptied.
+///
+/// # Safety
+/// `fields` must be valid for a read and a write, `queue` a live queue.
+void ee_scenario_manager_reset(EeScenarioManagerFields *fields, EeScenarioTimedQueue *queue);
+
+/// `EEScenarioManager::Load` after its `Reset`: the first error. The numbers are read into a copy stored back after
+/// the last callback; each timed effect is appended to the queue as it is read.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write, `queue` a live queue no callback touches.
+int32_t ee_scenario_manager_load(const EeScenarioStream *stream,
+                                 EeScenarioManagerFields *fields,
+                                 EeScenarioTimedQueue *queue,
+                                 unsigned long minor);
+
+/// `EEScenarioManager::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read, `queue` a live queue.
+int32_t ee_scenario_manager_save(const EeScenarioStream *stream,
+                                 const EeScenarioManagerFields *fields,
+                                 EeScenarioTimedQueue *queue,
+                                 unsigned long minor);
+
+/// `EEScenarioManager::Update` (round.rs): the clocks and, every 500 ms while a human plays, the trigger round.
+///
+/// # Safety
+/// `host` must be valid for the call: its `fields` and `queue` the live manager's, reached only between callbacks.
+void ee_scenario_manager_update(const EeScenarioRoundHost *host);
+
+/// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+void ee_scenario_set_player_attribute(const EeScenarioHost *host,
+                                      long player,
+                                      unsigned long attribute,
+                                      long mode,
+                                      long amount);
+
+/// `EESMObject::Evaluate`'s body (objeval.rs): the object's units by the host's operations, its numbers through
+/// `fields`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` the live object's numbers.
+bool ee_scenario_object_evaluate(const EeScenarioHost *host,
+                                 EeScenarioObjectFields *fields,
+                                 bool include_dead);
 
 }  // extern "C"
 

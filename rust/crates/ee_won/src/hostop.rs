@@ -296,6 +296,9 @@ pub const EE_WON_HOST_PEER_NEW_LIGHT: i32 = 157;
 pub const EE_WON_HOST_PEER_REFRESH_ASYNC: i32 = 158;
 /// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
 pub const EE_WON_HOST_PEER_NEW_SESSION: i32 = 160;
+/// a C++ `AuthContext*` obj0 (NULL: the op's `mAuthContext`) -> out_obj: its Rust object (`AuthContext::Core()`,
+/// borrowed; NULL for none). The certificate and auth context calls are answered in Rust over it (hostauth.rs).
+pub const EE_WON_HOST_AUTH_CORE: i32 = 161;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
@@ -457,10 +460,23 @@ impl<P: Plan> Host<P> {
         #[cfg(test)]
         assert!(self.st.try_lock().is_ok(), "a call under the op's lock (code {code})");
         if self.native.load(std::sync::atomic::Ordering::Relaxed) {
+            let core = |ctx: Obj| {
+                let r = self.send(EE_WON_HOST_AUTH_CORE, [ctx, Obj::none(), Obj::none()], [0, 0], &[], [0; 6]);
+                // SAFETY: the C++ side's borrowed object (its AuthContext alive: the op or the caller holds it)
+                unsafe { crate::authobj::ctx_ref(r.obj.ptr() as *const crate::authobj::EeWonAuthCtx) }
+            };
+            if let Some(r) = crate::hostauth::answer(code, obj, num, data, addr, &core) {
+                return r;
+            }
             if let Some(r) = crate::hostnative::answer(&self.file, code, num, data) {
                 return r;
             }
         }
+        self.send(code, obj, num, data, addr)
+    }
+
+    /// One call sent to the C++ side.
+    fn send(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
         let (f, host) = *self.bind.lock().unwrap_or_else(|e| e.into_inner());
         let mut out: Option<Vec<u8>> = None;
         let mut c = EeWonHostCall {

@@ -32,7 +32,7 @@ extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t
     case Op::DlgInvalidateRect: t->InvalidateRect(*(WONRectangle*)a); return 0;
     case Op::DlgEndDialog: t->GetRoot()->EndDialog((int)a, (Component*)b); return 0;
     case Op::DlgClick: ((Button*)(Component*)a)->Fn2F3440(); return 0;
-    case Op::DlgIsModal: return t->GetRoot()->mManager->mModalComponent == t ? 1 : 0;
+    case Op::DlgIsModal: return t->GetRoot()->mManager->GetModalComponent() == t ? 1 : 0;
     case Op::DlgIsDefault: return ((Button*)(Component*)a)->IsDefaultButton() ? 1 : 0;
     case Op::DlgEventButtonFlags: return static_cast<Button*>(((ComponentEvent*)a)->mComponent)->GetButtonFlags();
     case Op::ChildSetPos: ((Component*)a)->SetPos((int)b, (int)c); return 0;

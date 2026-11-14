@@ -1892,726 +1892,263 @@ void EEPlayer::KillStrandedUnits()
     this->mStrandedUnits.clear();
 }
 
+// The context of EEPlayer::Load and Save's operations (EEPlayerSaveOperation)
+struct EEPlayerSaveContext {
+    EEPlayer* mPlayer;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+    EEUnitClassUpgrade* mDummyUpgrade;      // the load's stand-in upgrade (UPGRADE_DUMMY_NEW .. DELETE)
+};
+
+static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
+
 // FUNCTION: EXE 0x565cfa
-// Loads the player's state from a saved game (the mirror of Save); returns the read status, some reads' errors ignored
-// One reader per saved-game era (minor version < 0xd7, < 0xe1, < 0xe8, later), each with its own assertion
-// sites, as in the original
+// Loads the player's state from a saved game (the mirror of Save); returns the read status, some reads' errors ignored.
+// port (R5b.4): the body is Rust (ee_units player_save.rs `load`: the original's four bodies, one per saved-game era,
+// as one sequence with the eras' returns and assertion lines) over the record this class derives from
+// (EeUnitsPlayerSaved) and EEPlayer::SaveOperation's parts
 long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    std::vector<long> theUnused;
-    long theRows = 0;
-    long theColumns = 0;
-    unsigned long theCount = 0;
-    unsigned long theGoalCounter = 0;
-    unsigned long theFormatVersion;
-    unsigned long theID;
-    long theResult = kErrorOK;
-    unsigned long i;
-    if (inMajorVersion == 0 && inMinorVersion < 0xd7) {
-        for (i = 0; i < 10 && theResult == kErrorOK; i++)
-            theResult = inFile.Read(this->mScenarioVariables[i]);
-        inFile.Read(theCount);
-        long theUpgradeResult = inFile.Read(theFormatVersion);
-        EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < EEUnitClassCount(); i++) {
+    EEPlayerSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
+    return ee_units_player_load(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this),
+                                (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+}
+
+// The C++ parts of the player's Load and Save (ee_units player_save.rs): the file's primitives with the overload the
+// original called (io holds the old value in, the read value out; a bool as 0 or 1) and the player's containers and
+// sub-objects by operation
+static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEPlayerSaveContext& theContext = *static_cast<EEPlayerSaveContext*>(inContext);
+    EEPlayer* thePlayer = theContext.mPlayer;
+    FSFile& theFile = *theContext.mFile;
+    unsigned long theMajor = theContext.mMajorVersion;
+    unsigned long theMinor = theContext.mMinorVersion;
+    switch (inOp) {
+    case EE_UNITS_PLAYER_SAVE_READ_ULONG: {
+        unsigned long theValue = (unsigned long)io->i;
+        long theResult = theFile.Read(theValue);
+        io->i = (int64_t)theValue;
+        return theResult;
+    }
+    case EE_UNITS_PLAYER_SAVE_READ_LONG: {
+        long theValue = (long)io->i;
+        long theResult = theFile.Read(theValue);
+        io->i = (int64_t)theValue;
+        return theResult;
+    }
+    case EE_UNITS_PLAYER_SAVE_READ_FLOAT: {
+        float theValue = io->f;
+        long theResult = theFile.Read(theValue);
+        io->f = theValue;
+        return theResult;
+    }
+    case EE_UNITS_PLAYER_SAVE_READ_BOOL: {
+        bool theValue = io->b != 0;
+        long theResult = theFile.Read(theValue);
+        io->b = theValue ? 1 : 0;
+        return theResult;
+    }
+    case EE_UNITS_PLAYER_SAVE_WRITE_ULONG: {
+        unsigned long theValue = (unsigned long)io->i;
+        return theFile.Write(theValue);
+    }
+    case EE_UNITS_PLAYER_SAVE_WRITE_LONG: {
+        long theValue = (long)io->i;
+        return theFile.Write(theValue);
+    }
+    case EE_UNITS_PLAYER_SAVE_WRITE_FLOAT: {
+        float theValue = io->f;
+        return theFile.Write(theValue);
+    }
+    case EE_UNITS_PLAYER_SAVE_WRITE_BOOL: {
+        bool theValue = io->b != 0;
+        return theFile.Write(theValue);
+    }
+    // the load
+    case EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW: {
+        theContext.mDummyUpgrade = NULL;
+        for (unsigned long i = 0; i < EEUnitClassCount(); i++) {
             if (gUnitClassTable[i] != NULL) {
-                theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
+                theContext.mDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
                 break;
             }
         }
-
-        ESVERIFY_AT(theDummyUpgrade != NULL, 4282);
-        for (i = 0; theUpgradeResult == kErrorOK && i < theCount; i++) {
-            theUpgradeResult = inFile.Read(theID);
-            if (theUpgradeResult != kErrorOK)
-                continue;
-            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
-                this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
-            else
-                theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
+        ESVERIFY_AT(theContext.mDummyUpgrade != NULL, inIndex);
+        return kErrorOK;
+    }
+    case EE_UNITS_PLAYER_SAVE_UPGRADE_LOAD: {
+        unsigned long theID = (unsigned long)io->i;
+        if (theID < EEUnitClassCount() && thePlayer->mUnitClassUpgrades[theID] != NULL) {
+            thePlayer->mUnitClassUpgrades[theID]->Load(theMajor, theMinor, theFile);   // result ignored
+            return kErrorOK;
         }
-        delete theDummyUpgrade;
-        RTSPlayer::Load(inMajorVersion, inMinorVersion, inFile);
-        theResult = inFile.Read(theGoalCounter);
+        return theContext.mDummyUpgrade->Load(theMajor, theMinor, theFile);
+    }
+    case EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_DELETE:
+        delete theContext.mDummyUpgrade;
+        theContext.mDummyUpgrade = NULL;
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_RTS_LOAD:
+        thePlayer->RTSPlayer::Load(theMajor, theMinor, theFile);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_SET_GOAL_COUNTER:
+        sGoalCounter = (unsigned long)io->i;
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_TECH_DELETE:
+        delete thePlayer->mTechnologies;
+        thePlayer->mTechnologies = NULL;
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_TECH_LOAD:
+        thePlayer->mTechnologies = new EETechTree;
+        *thePlayer->mTechnologies = gTechTree;
+        thePlayer->mTechnologies->SetPlayerIndex(thePlayer->mPlayerID);
+        thePlayer->mTechnologies->SetPlayer(thePlayer);
+        return thePlayer->mTechnologies->Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_PATROL_CLEAR:
+        thePlayer->mPatrolGroups.clear();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_PATROL_LOAD: {
+        EEPPatrolGroup* theGroup = new EEPPatrolGroup;
+        long theResult = theGroup->Load(theMajor, theMinor, &theFile);
         if (theResult == kErrorOK)
-            sGoalCounter = theGoalCounter;
-        delete this->mTechnologies;
-        this->mTechnologies = NULL;
-        bool theHaveTechTree;
-        theResult = inFile.Read(theHaveTechTree);
-        if (theResult == kErrorOK) {
-            theResult = kErrorOK;
-            if (theHaveTechTree) {
-                this->mTechnologies = new EETechTree;
-                *this->mTechnologies = gTechTree;
-                this->mTechnologies->SetPlayerIndex(this->mPlayerID);
-                this->mTechnologies->SetPlayer(this);
-                theResult = this->mTechnologies->Load(inMajorVersion, inMinorVersion, inFile);
-            }
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mPopLimit);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                    theResult = inFile.Read(this->mResourceCaps[i]);
-                if (theResult == kErrorOK) {
-                    long thePatrolResult = inFile.Read(theCount);
-                    if (thePatrolResult == kErrorOK && theCount > 0) {
-                        this->mPatrolGroups.clear();
-                        for (i = 0; i < theCount && thePatrolResult == kErrorOK; i++) {
-                            EEPPatrolGroup* theGroup = new EEPPatrolGroup;
-                            thePatrolResult = theGroup->Load(inMajorVersion, inMinorVersion, &inFile);
-                            if (thePatrolResult == kErrorOK)
-                                this->AddPatrolGroup(theGroup);
-                            theGroup->Dereference();
-                        }
-                    }
-                }
-            }
-        }
-        // These calls intentionally discard their results in the original, even after a prior record failed.
-        this->mSavedGroups.Load(inMajorVersion, inMinorVersion, inFile);
-        inFile.Read(this->mPopulationCount);
-        theResult = inFile.Read(this->mEndOfGameCount);
-        for (i = 0; i < 17 && theResult == kErrorOK; i++) {
-            theResult = inFile.Read(this->mEnemies[i]);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSendChatMessage[i]);
-        }
-        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                theResult = mAirTraffic[i]->Load(inMajorVersion, inMinorVersion, &inFile);
-            if (theResult == kErrorOK)
-                theResult = this->mActiveGroup->Load(inMajorVersion, inMinorVersion, inFile);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mCombatState);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theFormatVersion); // Original reads/discards the saved mNumCapitols word.
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSharedLOS);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mChatType);
-            if (theResult == kErrorOK)
-                theResult = this->mCivilization.Load(inMajorVersion, inMinorVersion, inFile);
-        }
-        for (i = 0; i < 20; i++)
-            if (theResult == kErrorOK)
-                theResult = this->mGroups[i]->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mCivilizationFile.Load(inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theResult = inFile.Read(theID);
-                if (theResult != kErrorOK)
-                    continue;
-                theResult = inFile.Read(this->mQueuedImprovements[theID].first);
-                if (theResult == kErrorOK)
-                    theResult = FSLoadVector(inFile, this->mQueuedImprovements[theID].second, UString("Queued Improvements"));
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                long theUnitID;
-                theResult = inFile.Read(theUnitID);
-                if (theResult == kErrorOK)
-                    this->mConstructionSiteIDs.push_back(theUnitID);
-            }
-        }
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                this->mHerds.resize(theCount, NULL);
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    this->mHerds[i] = new EEHerd;
-                    theResult = this->mHerds[i]->Load(inMajorVersion, inMinorVersion, inFile);
-                }
-            }
-        }
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(theRows);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(theColumns);
-                for (unsigned long r = 0; r < theRows; r++)
-                    for (unsigned long c = 0; c < theColumns && theResult == kErrorOK; c++)
-                        theResult = inFile.Read(this->mTributes[r * 5 + c]);
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mGameResult);
-        if (theResult == kErrorOK)
-            theResult = this->mEvents.Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHighGroundBonus);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHealTimer);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mDisconnected);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationLocked);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationChosen);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivUpgradesPurchased);
+            thePlayer->AddPatrolGroup(theGroup);
+        theGroup->Dereference();
         return theResult;
     }
-    else if (inMajorVersion == 0 && inMinorVersion < 0xe1) {
-        for (i = 0; i < 10 && theResult == kErrorOK; i++)
-            theResult = inFile.Read(this->mScenarioVariables[i]);
-        inFile.Read(theCount);
-        long theUpgradeResult = inFile.Read(theFormatVersion);
-        EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < EEUnitClassCount(); i++) {
-            if (gUnitClassTable[i] != NULL) {
-                theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
-                break;
-            }
-        }
-
-        ESVERIFY_AT(theDummyUpgrade != NULL, 4610);
-        for (i = 0; theUpgradeResult == kErrorOK && i < theCount; i++) {
-            theUpgradeResult = inFile.Read(theID);
-            if (theUpgradeResult != kErrorOK)
-                continue;
-            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
-                this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
-            else
-                theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
-        }
-        delete theDummyUpgrade;
-        RTSPlayer::Load(inMajorVersion, inMinorVersion, inFile);
-        theResult = inFile.Read(theGoalCounter);
-        if (theResult == kErrorOK)
-            sGoalCounter = theGoalCounter;
-        delete this->mTechnologies;
-        this->mTechnologies = NULL;
-        bool theHaveTechTree;
-        theResult = inFile.Read(theHaveTechTree);
-        if (theResult == kErrorOK) {
-            theResult = kErrorOK;
-            if (theHaveTechTree) {
-                this->mTechnologies = new EETechTree;
-                *this->mTechnologies = gTechTree;
-                this->mTechnologies->SetPlayerIndex(this->mPlayerID);
-                this->mTechnologies->SetPlayer(this);
-                theResult = this->mTechnologies->Load(inMajorVersion, inMinorVersion, inFile);
-            }
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mPopLimit);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                    theResult = inFile.Read(this->mResourceCaps[i]);
-                if (theResult == kErrorOK) {
-                    long thePatrolResult = inFile.Read(theCount);
-                    if (thePatrolResult == kErrorOK && theCount > 0) {
-                        this->mPatrolGroups.clear();
-                        for (i = 0; i < theCount && thePatrolResult == kErrorOK; i++) {
-                            EEPPatrolGroup* theGroup = new EEPPatrolGroup;
-                            thePatrolResult = theGroup->Load(inMajorVersion, inMinorVersion, &inFile);
-                            if (thePatrolResult == kErrorOK)
-                                this->AddPatrolGroup(theGroup);
-                            theGroup->Dereference();
-                        }
-                    }
-                }
-            }
-        }
-        // These calls intentionally discard their results in the original, even after a prior record failed.
-        this->mSavedGroups.Load(inMajorVersion, inMinorVersion, inFile);
-        inFile.Read(this->mPopulationCount);
-        theResult = inFile.Read(this->mEndOfGameCount);
-        for (i = 0; i < 17 && theResult == kErrorOK; i++) {
-            theResult = inFile.Read(this->mEnemies[i]);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSendChatMessage[i]);
-        }
-        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                theResult = mAirTraffic[i]->Load(inMajorVersion, inMinorVersion, &inFile);
-            if (theResult == kErrorOK)
-                theResult = this->mActiveGroup->Load(inMajorVersion, inMinorVersion, inFile);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mCombatState);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theFormatVersion); // Original reads/discards the saved mNumCapitols word.
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSharedLOS);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mChatType);
-            if (theResult == kErrorOK)
-                theResult = this->mCivilization.Load(inMajorVersion, inMinorVersion, inFile);
-        }
-        for (i = 0; i < 20; i++)
-            if (theResult == kErrorOK)
-                theResult = this->mGroups[i]->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mCivilizationFile.Load(inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theResult = inFile.Read(theID);
-                if (theResult != kErrorOK)
-                    continue;
-                theResult = inFile.Read(this->mQueuedImprovements[theID].first);
-                if (theResult == kErrorOK)
-                    theResult = FSLoadVector(inFile, this->mQueuedImprovements[theID].second, UString("Queued Improvements"));
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                long theUnitID;
-                theResult = inFile.Read(theUnitID);
-                if (theResult == kErrorOK)
-                    this->mConstructionSiteIDs.push_back(theUnitID);
-            }
-        }
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                this->mHerds.resize(theCount, NULL);
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    this->mHerds[i] = new EEHerd;
-                    theResult = this->mHerds[i]->Load(inMajorVersion, inMinorVersion, inFile);
-                }
-            }
-        }
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(theRows);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(theColumns);
-                for (unsigned long r = 0; r < theRows; r++)
-                    for (unsigned long c = 0; c < theColumns && theResult == kErrorOK; c++)
-                        theResult = inFile.Read(this->mTributes[r * 5 + c]);
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mGameResult);
-        if (theResult == kErrorOK)
-            theResult = this->mEvents.Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHighGroundBonus);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHealTimer);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mDisconnected);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationLocked);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationChosen);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivUpgradesPurchased);
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                this->mUnitsOffMap.resize(theCount, NULL);
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    this->mUnitsOffMap[i] = new EEWUnitsOffMapInfo;
-                    theResult = this->mUnitsOffMap[i]->Load(inMajorVersion, inMinorVersion, inFile);
-                }
-            }
-        }
-        return theResult;
+    case EE_UNITS_PLAYER_SAVE_SAVED_GROUPS_LOAD:
+        thePlayer->mSavedGroups.Load(theMajor, theMinor, theFile);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_STORE_PLAYER_TABLE:
+        EEUnitStorePlayerTable(thePlayer);   // New (R5b.4): the store's diplomacy table
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_AIR_LOAD:
+        return thePlayer->mAirTraffic[inIndex]->Load(theMajor, theMinor, &theFile);
+    case EE_UNITS_PLAYER_SAVE_ACTIVE_LOAD:
+        return thePlayer->mActiveGroup->Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_CIV_LOAD:
+        return thePlayer->mCivilization.Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_GROUP_LOAD:
+        return thePlayer->mGroups[inIndex]->Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_CIVFILE_LOAD:
+        return thePlayer->mCivilizationFile.Load(theFile);
+    case EE_UNITS_PLAYER_SAVE_QUEUED_FLOAT:
+        io->f = thePlayer->mQueuedImprovements[(unsigned long)io->i].first;
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_QUEUED_SET_FLOAT:
+        thePlayer->mQueuedImprovements[(unsigned long)io->i].first = io->f;
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_LOAD:
+        return FSLoadVector(theFile, thePlayer->mQueuedImprovements[(unsigned long)io->i].second,
+                            UString("Queued Improvements"));
+    case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_PUSH:
+        thePlayer->mConstructionSiteIDs.push_back((long)io->i);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_HERDS_RESIZE:
+        thePlayer->mHerds.resize((unsigned long)io->i, NULL);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_HERD_LOAD:
+        thePlayer->mHerds[inIndex] = new EEHerd;
+        return thePlayer->mHerds[inIndex]->Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_EVENTS_LOAD:
+        return thePlayer->mEvents.Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_RESIZE:
+        thePlayer->mUnitsOffMap.resize((unsigned long)io->i, NULL);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_LOAD:
+        thePlayer->mUnitsOffMap[inIndex] = new EEWUnitsOffMapInfo;
+        return thePlayer->mUnitsOffMap[inIndex]->Load(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_WONDER_PUSH:
+        thePlayer->mWonderIDs.push_back((long)io->i);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_WONDERS_CLEAR:
+        thePlayer->mWonders->Clear();
+        thePlayer->mWonders->mItems.clear();
+        return kErrorOK;
+    // the save
+    case EE_UNITS_PLAYER_SAVE_UPGRADE_SLOTS:
+        io->i = (int64_t)thePlayer->mUnitClassUpgrades.size();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_UPGRADE_PRESENT:
+        return thePlayer->mUnitClassUpgrades[inIndex] != NULL;
+    case EE_UNITS_PLAYER_SAVE_UPGRADE_SAVE:
+        return thePlayer->mUnitClassUpgrades[inIndex]->Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_RTS_SAVE:
+        thePlayer->RTSPlayer::Save(theMajor, theMinor, theFile);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_GOAL_COUNTER:
+        io->i = (int64_t)sGoalCounter;
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_TECH_PRESENT:
+        return thePlayer->mTechnologies != NULL;
+    case EE_UNITS_PLAYER_SAVE_TECH_SAVE:
+        if (thePlayer->mTechnologies != NULL)
+            return thePlayer->mTechnologies->Save(theMajor, theMinor, theFile);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_PATROL_SLOTS:
+        io->i = (int64_t)thePlayer->mPatrolGroups.size();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_PATROL_KIND: {
+        EEPPatrolGroup* theGroup = thePlayer->mPatrolGroups[inIndex];
+        return theGroup == NULL ? 0 : theGroup->mIsTownPatrol ? 1 : 2;
     }
-    else if (inMajorVersion == 0 && inMinorVersion < 0xe8) {
-        for (i = 0; i < 10 && theResult == kErrorOK; i++)
-            theResult = inFile.Read(this->mScenarioVariables[i]);
-        inFile.Read(theCount);
-        long theUpgradeResult = inFile.Read(theFormatVersion);
-        EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < EEUnitClassCount(); i++) {
-            if (gUnitClassTable[i] != NULL) {
-                theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
-                break;
-            }
-        }
-
-        ESVERIFY_AT(theDummyUpgrade != NULL, 4960);
-        for (i = 0; theUpgradeResult == kErrorOK && i < theCount; i++) {
-            theUpgradeResult = inFile.Read(theID);
-            if (theUpgradeResult != kErrorOK)
-                continue;
-            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
-                this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
-            else
-                theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
-        }
-        delete theDummyUpgrade;
-        RTSPlayer::Load(inMajorVersion, inMinorVersion, inFile);
-        theResult = inFile.Read(theGoalCounter);
-        if (theResult == kErrorOK)
-            sGoalCounter = theGoalCounter;
-        delete this->mTechnologies;
-        this->mTechnologies = NULL;
-        bool theHaveTechTree;
-        theResult = inFile.Read(theHaveTechTree);
-        if (theResult == kErrorOK) {
-            theResult = kErrorOK;
-            if (theHaveTechTree) {
-                this->mTechnologies = new EETechTree;
-                *this->mTechnologies = gTechTree;
-                this->mTechnologies->SetPlayerIndex(this->mPlayerID);
-                this->mTechnologies->SetPlayer(this);
-                theResult = this->mTechnologies->Load(inMajorVersion, inMinorVersion, inFile);
-            }
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mPopLimit);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                    theResult = inFile.Read(this->mResourceCaps[i]);
-                if (theResult == kErrorOK) {
-                    long thePatrolResult = inFile.Read(theCount);
-                    if (thePatrolResult == kErrorOK && theCount > 0) {
-                        this->mPatrolGroups.clear();
-                        for (i = 0; i < theCount && thePatrolResult == kErrorOK; i++) {
-                            EEPPatrolGroup* theGroup = new EEPPatrolGroup;
-                            thePatrolResult = theGroup->Load(inMajorVersion, inMinorVersion, &inFile);
-                            if (thePatrolResult == kErrorOK)
-                                this->AddPatrolGroup(theGroup);
-                            theGroup->Dereference();
-                        }
-                    }
-                }
-            }
-        }
-        // These calls intentionally discard their results in the original, even after a prior record failed.
-        this->mSavedGroups.Load(inMajorVersion, inMinorVersion, inFile);
-        inFile.Read(this->mPopulationCount);
-        theResult = inFile.Read(this->mEndOfGameCount);
-        for (i = 0; i < 17 && theResult == kErrorOK; i++) {
-            theResult = inFile.Read(this->mEnemies[i]);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSendChatMessage[i]);
-        }
-        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                theResult = mAirTraffic[i]->Load(inMajorVersion, inMinorVersion, &inFile);
-            if (theResult == kErrorOK)
-                theResult = this->mActiveGroup->Load(inMajorVersion, inMinorVersion, inFile);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mCombatState);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theFormatVersion); // Original reads/discards the saved mNumCapitols word.
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSharedLOS);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mChatType);
-            if (theResult == kErrorOK)
-                theResult = this->mCivilization.Load(inMajorVersion, inMinorVersion, inFile);
-        }
-        for (i = 0; i < 20; i++)
-            if (theResult == kErrorOK)
-                theResult = this->mGroups[i]->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mCivilizationFile.Load(inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theResult = inFile.Read(theID);
-                if (theResult != kErrorOK)
-                    continue;
-                theResult = inFile.Read(this->mQueuedImprovements[theID].first);
-                if (theResult == kErrorOK)
-                    theResult = FSLoadVector(inFile, this->mQueuedImprovements[theID].second, UString("Queued Improvements"));
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                long theUnitID;
-                theResult = inFile.Read(theUnitID);
-                if (theResult == kErrorOK)
-                    this->mConstructionSiteIDs.push_back(theUnitID);
-            }
-        }
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                this->mHerds.resize(theCount, NULL);
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    this->mHerds[i] = new EEHerd;
-                    theResult = this->mHerds[i]->Load(inMajorVersion, inMinorVersion, inFile);
-                }
-            }
-        }
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(theRows);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(theColumns);
-                for (unsigned long r = 0; r < theRows; r++)
-                    for (unsigned long c = 0; c < theColumns && theResult == kErrorOK; c++)
-                        theResult = inFile.Read(this->mTributes[r * 5 + c]);
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mGameResult);
-        if (theResult == kErrorOK)
-            theResult = this->mEvents.Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHighGroundBonus);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHealTimer);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mDisconnected);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationLocked);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationChosen);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivUpgradesPurchased);
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                this->mUnitsOffMap.resize(theCount, NULL);
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    this->mUnitsOffMap[i] = new EEWUnitsOffMapInfo;
-                    theResult = this->mUnitsOffMap[i]->Load(inMajorVersion, inMinorVersion, inFile);
-                }
-            }
-        }
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    long theUnitID;
-                    theResult = inFile.Read(theUnitID);
-                    if (theResult == kErrorOK)
-                        this->mWonderIDs.push_back(theUnitID);
-                }
-            }
-        }
-        if (inMajorVersion == 0 && inMinorVersion < 0xe2) {
-            this->mWonders->Clear();
-            this->mWonders->mItems.clear();
-        }
-        return theResult;
+    case EE_UNITS_PLAYER_SAVE_PATROL_SAVE:
+        return thePlayer->mPatrolGroups[inIndex]->Save(theMajor, theMinor, &theFile);
+    case EE_UNITS_PLAYER_SAVE_SAVED_GROUPS_SAVE:
+        thePlayer->mSavedGroups.Save(theMajor, theMinor, theFile);
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_AIR_SAVE:
+        return thePlayer->mAirTraffic[inIndex]->Save(theMajor, theMinor, &theFile);
+    case EE_UNITS_PLAYER_SAVE_ACTIVE_SAVE:
+        return thePlayer->mActiveGroup->Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_CIV_SAVE:
+        return thePlayer->mCivilization.Save(theFile);
+    case EE_UNITS_PLAYER_SAVE_GROUP_SAVE:
+        return thePlayer->mGroups[inIndex]->Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_CIVFILE_SAVE:
+        return thePlayer->mCivilizationFile.Save(theFile);
+    case EE_UNITS_PLAYER_SAVE_QUEUED_COUNT:
+        io->i = (int64_t)thePlayer->mQueuedImprovements.size();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_QUEUED_ENTRY:
+    case EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE: {
+        std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theEntry =
+            thePlayer->mQueuedImprovements.begin();
+        std::advance(theEntry, inIndex);
+        if (inOp == EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE)
+            return FSSaveVector(theFile, theEntry->second.second, UString("Queued Improvements"));
+        io->i = (int64_t)theEntry->first;
+        io->f = theEntry->second.first;
+        return kErrorOK;
     }
-    else {
-        for (i = 0; i < 10 && theResult == kErrorOK; i++)
-            theResult = inFile.Read(this->mScenarioVariables[i]);
-        inFile.Read(theCount);
-        long theUpgradeResult = inFile.Read(theFormatVersion);
-        EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < EEUnitClassCount(); i++) {
-            if (gUnitClassTable[i] != NULL) {
-                theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
-                break;
-            }
-        }
-
-        ESVERIFY_AT(theDummyUpgrade != NULL, 5331);
-        for (i = 0; theUpgradeResult == kErrorOK && i < theCount; i++) {
-            theUpgradeResult = inFile.Read(theID);
-            if (theUpgradeResult != kErrorOK)
-                continue;
-            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
-                this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
-            else
-                theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
-        }
-        delete theDummyUpgrade;
-        RTSPlayer::Load(inMajorVersion, inMinorVersion, inFile);
-        theResult = inFile.Read(theGoalCounter);
-        if (theResult == kErrorOK)
-            sGoalCounter = theGoalCounter;
-        delete this->mTechnologies;
-        this->mTechnologies = NULL;
-        bool theHaveTechTree;
-        theResult = inFile.Read(theHaveTechTree);
-        if (theResult == kErrorOK) {
-            theResult = kErrorOK;
-            if (theHaveTechTree) {
-                this->mTechnologies = new EETechTree;
-                *this->mTechnologies = gTechTree;
-                this->mTechnologies->SetPlayerIndex(this->mPlayerID);
-                this->mTechnologies->SetPlayer(this);
-                theResult = this->mTechnologies->Load(inMajorVersion, inMinorVersion, inFile);
-            }
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mPopLimit);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                    theResult = inFile.Read(this->mResourceCaps[i]);
-                if (theResult == kErrorOK) {
-                    long thePatrolResult = inFile.Read(theCount);
-                    if (thePatrolResult == kErrorOK && theCount > 0) {
-                        this->mPatrolGroups.clear();
-                        for (i = 0; i < theCount && thePatrolResult == kErrorOK; i++) {
-                            EEPPatrolGroup* theGroup = new EEPPatrolGroup;
-                            thePatrolResult = theGroup->Load(inMajorVersion, inMinorVersion, &inFile);
-                            if (thePatrolResult == kErrorOK)
-                                this->AddPatrolGroup(theGroup);
-                            theGroup->Dereference();
-                        }
-                    }
-                }
-            }
-        }
-        // These calls intentionally discard their results in the original, even after a prior record failed.
-        this->mSavedGroups.Load(inMajorVersion, inMinorVersion, inFile);
-        inFile.Read(this->mPopulationCount);
-        theResult = inFile.Read(this->mEndOfGameCount);
-        for (i = 0; i < 17 && theResult == kErrorOK; i++) {
-            theResult = inFile.Read(this->mEnemies[i]);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSendChatMessage[i]);
-        }
-        EEUnitStorePlayerTable(this);   // New (R5b.4): the store's diplomacy table
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++)
-                theResult = mAirTraffic[i]->Load(inMajorVersion, inMinorVersion, &inFile);
-            if (theResult == kErrorOK)
-                theResult = this->mActiveGroup->Load(inMajorVersion, inMinorVersion, inFile);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mCombatState);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(theFormatVersion); // Original reads/discards the saved mNumCapitols word.
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mSharedLOS);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mChatType);
-            if (theResult == kErrorOK)
-                theResult = this->mCivilization.Load(inMajorVersion, inMinorVersion, inFile);
-        }
-        for (i = 0; i < 20; i++)
-            if (theResult == kErrorOK)
-                theResult = this->mGroups[i]->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mCivilizationFile.Load(inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theResult = inFile.Read(theID);
-                if (theResult != kErrorOK)
-                    continue;
-                theResult = inFile.Read(this->mQueuedImprovements[theID].first);
-                if (theResult == kErrorOK)
-                    theResult = FSLoadVector(inFile, this->mQueuedImprovements[theID].second, UString("Queued Improvements"));
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                long theUnitID;
-                theResult = inFile.Read(theUnitID);
-                if (theResult == kErrorOK)
-                    this->mConstructionSiteIDs.push_back(theUnitID);
-            }
-        }
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                this->mHerds.resize(theCount, NULL);
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    this->mHerds[i] = new EEHerd;
-                    theResult = this->mHerds[i]->Load(inMajorVersion, inMinorVersion, inFile);
-                }
-            }
-        }
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(theRows);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(theColumns);
-                for (unsigned long r = 0; r < theRows; r++)
-                    for (unsigned long c = 0; c < theColumns && theResult == kErrorOK; c++)
-                        theResult = inFile.Read(this->mTributes[r * 5 + c]);
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mGameResult);
-        if (theResult == kErrorOK)
-            theResult = this->mEvents.Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHighGroundBonus);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mHealTimer);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mDisconnected);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationLocked);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivilizationChosen);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mCivUpgradesPurchased);
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                this->mUnitsOffMap.resize(theCount, NULL);
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    this->mUnitsOffMap[i] = new EEWUnitsOffMapInfo;
-                    theResult = this->mUnitsOffMap[i]->Load(inMajorVersion, inMinorVersion, inFile);
-                }
-            }
-        }
-        if (theResult == kErrorOK) {
-            theCount = 0;
-            theResult = inFile.Read(theCount);
-            if (theResult == kErrorOK) {
-                for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                    long theUnitID;
-                    theResult = inFile.Read(theUnitID);
-                    if (theResult == kErrorOK)
-                        this->mWonderIDs.push_back(theUnitID);
-                }
-            }
-        }
-        if (inMajorVersion == 0 && inMinorVersion < 0xe2) {
-            this->mWonders->Clear();
-            this->mWonders->mItems.clear();
-        }
-        if (inMajorVersion == 0 && inMinorVersion < 0xe9)
-            this->mFreeUnitCounter = 0;
-        else
-            theResult = inFile.Read(this->mFreeUnitCounter);
-        if (theResult == kErrorOK) {
-            if (inMajorVersion != 0 || inMinorVersion > 0xf0)
-                for (i = 0; i < theColumns && theResult == kErrorOK; i++)
-                    theResult = inFile.Read(this->mResourceTrade[i]);
-            if (inMajorVersion != 0 || inMinorVersion > 0xf1)
-                for (i = 0; i < theColumns && theResult == kErrorOK; i++)
-                    theResult = inFile.Read(this->mInsuranceRefunds[i]);
-            if (theResult == kErrorOK && (inMajorVersion != 0 || inMinorVersion >= 0xf5))
-                theResult = inFile.Read(this->mNumVitalBuildings);
-            if (theResult == kErrorOK && (inMajorVersion != 0 || inMinorVersion > 0xf5))
-                theResult = inFile.Read(this->mFreeUnitInterval);
-        }
-        return theResult;
+    case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_COUNT:
+        io->i = (int64_t)thePlayer->mConstructionSites->GetSize();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_ID:
+        io->i = (int64_t)(unsigned long)thePlayer->mConstructionSites->mItems[inIndex]->mUnitID;
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_HERD_COUNT:
+        io->i = (int64_t)thePlayer->mHerds.size();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_HERD_SAVE:
+        return thePlayer->mHerds[inIndex]->Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_EVENTS_SAVE:
+        return thePlayer->mEvents.Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_COUNT:
+        io->i = (int64_t)thePlayer->mUnitsOffMap.size();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE:
+        return thePlayer->mUnitsOffMap[inIndex]->Save(theMajor, theMinor, theFile);
+    case EE_UNITS_PLAYER_SAVE_WONDER_COUNT:
+        io->i = (int64_t)thePlayer->mWonders->GetSize();
+        return kErrorOK;
+    case EE_UNITS_PLAYER_SAVE_WONDER_ID:
+        io->i = (int64_t)(unsigned long)thePlayer->mWonders->mItems[inIndex]->mUnitID;
+        return kErrorOK;
     }
+    ESVERIFY_AT(false, inOp);
+    return kErrorOK;
 }
 
 // FUNCTION: EXE 0x567bff
@@ -3684,209 +3221,14 @@ void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
 }
 
 // FUNCTION: EXE 0x569c46
-// Writes the player's state to a saved game; returns the write status (some writes' errors are ignored)
-// mQueuedImprovements value is pair<float, vector<unsigned long> > (Write slot 0x7c, FSSaveVector<unsigned long>); +0xb64 is a long[5]
+// Writes the player's state to a saved game; returns the write status (some writes' errors are ignored).
+// port (R5b.4): the body is Rust (ee_units player_save.rs `save`) over the record this class derives from and
+// EEPlayerSaveOperation's parts
 long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator;
-    std::vector<long> theUnused;
-    bool theHaveTechTree;
-    long theResult = kErrorOK;
-    unsigned long i;
-    for (i = 0; i < 10 && theResult == kErrorOK; i++)
-        theResult = outFile.Write(this->mScenarioVariables[i]);
-    unsigned long theCount = 0;
-    for (unsigned long j = 0; j < this->mUnitClassUpgrades.size(); j++)
-        if (this->mUnitClassUpgrades[j] != NULL)
-            theCount++;
-    outFile.Write(theCount);
-    unsigned long theVersion = 0x10;
-    theResult = outFile.Write(theVersion);
-    if (theResult == kErrorOK) {
-        for (theCount = 0; theCount < this->mUnitClassUpgrades.size() && theResult == kErrorOK; theCount++) {
-            if (this->mUnitClassUpgrades[theCount] == NULL)
-                continue;
-            theResult = outFile.Write(theCount);
-            if (theResult == kErrorOK)
-                theResult = this->mUnitClassUpgrades[theCount]->Save(inMajorVersion, inMinorVersion, outFile);
-        }
-    }
-    RTSPlayer::Save(inMajorVersion, inMinorVersion, outFile);
-    {
-        unsigned long theGoalCounter = sGoalCounter;
-        theResult = outFile.Write(theGoalCounter);
-    }
-    if (theResult == kErrorOK) {
-        theHaveTechTree = this->mTechnologies != NULL;
-        theResult = outFile.Write(theHaveTechTree);
-    }
-    if (theResult == kErrorOK) {
-        if (this->mTechnologies != NULL)
-            theResult = this->mTechnologies->Save(inMajorVersion, inMinorVersion, outFile);
-        if (theResult == kErrorOK)
-            theResult = outFile.Write(this->mPopLimit);
-        if (theResult == kErrorOK) {
-            theCount = 7;
-            theResult = outFile.Write(theCount);
-            if (theResult == kErrorOK && theCount > 0) {
-                for (unsigned long r = 0; r < theCount && theResult == kErrorOK; r++)
-                    theResult = outFile.Write(this->mResourceCaps[r]);
-            }
-            if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-                // port (0.254): every patrol group, the towns' too, in their order (the original left the towns'
-                // out, rebuilt them at load with new path points, and wrote the others backwards)
-                theCount = 0;
-                for (unsigned long p = 0; p < this->mPatrolGroups.size(); p++)
-                    if (this->mPatrolGroups[p] != NULL)
-                        theCount++;
-                theResult = outFile.Write(theCount);
-                for (unsigned long p = 0; p < this->mPatrolGroups.size() && theResult == kErrorOK; p++)
-                    if (this->mPatrolGroups[p] != NULL)
-                        theResult = this->mPatrolGroups[p]->Save(inMajorVersion, inMinorVersion, &outFile);
-            } else if (theResult == kErrorOK) {
-                theCount = 0;
-                long p;
-                for (p = this->mPatrolGroups.size() - 1; p >= 0; p--)
-                    if (this->mPatrolGroups[p] != NULL && !this->mPatrolGroups[p]->mIsTownPatrol)
-                        theCount++;
-                theResult = outFile.Write(theCount);
-                if (theResult == kErrorOK && theCount > 0) {
-                    for (p = this->mPatrolGroups.size() - 1; p >= 0 && theResult == kErrorOK; p--) {
-                        EEPPatrolGroup*& theGroup = this->mPatrolGroups[p];
-                        if (this->mPatrolGroups[p] != NULL && !this->mPatrolGroups[p]->mIsTownPatrol)
-                            theResult = theGroup->Save(inMajorVersion, inMinorVersion, &outFile);
-                    }
-                }
-            }
-        }
-    }
-    this->mSavedGroups.Save(inMajorVersion, inMinorVersion, outFile);
-    outFile.Write(this->mPopulationCount);
-    outFile.Write(this->mEndOfGameCount);
-    for (theCount = 0; theCount < 17; theCount++) {
-        outFile.Write(this->mEnemies[theCount]);
-        outFile.Write(this->mSendChatMessage[theCount]);
-    }
-    theCount = 4;
-    theResult = outFile.Write(theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (i = 0; i < 4 && theResult == kErrorOK; i++)
-        theResult = mAirTraffic[i]->Save(inMajorVersion, inMinorVersion, &outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mActiveGroup->Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCombatState);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumCapitols);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSharedLOS);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mChatType);
-    if (theResult == kErrorOK)
-        theResult = this->mCivilization.Save(outFile);
-    if (theResult == kErrorOK) {
-        for (i = 0; i < 20; i++)
-            if (theResult == kErrorOK)
-                theResult = this->mGroups[i]->Save(inMajorVersion, inMinorVersion, outFile);
-    }
-    if (theResult == kErrorOK)
-        theResult = this->mCivilizationFile.Save(outFile);
-    if (theResult == kErrorOK) {
-        unsigned long theSize = this->mQueuedImprovements.size();
-        theResult = outFile.Write(theSize);
-    }
-    if (theResult == kErrorOK) {
-        for (theIterator = this->mQueuedImprovements.begin(); theIterator != this->mQueuedImprovements.end(); ++theIterator) {
-            theResult = outFile.Write((*theIterator).first);
-            if (theResult != kErrorOK)
-                continue;
-            theResult = outFile.Write((*theIterator).second.first);
-            if (theResult == kErrorOK)
-                theResult = FSSaveVector(outFile, (*theIterator).second.second, UString("Queued Improvements"));
-        }
-    }
-    if (theResult == kErrorOK) {
-        unsigned long theSize = this->mConstructionSites->GetSize();
-        theResult = outFile.Write(theSize);
-    }
-    if (theResult == kErrorOK) {
-        std::vector<EEComplexUnit*>::iterator theUnit;
-        for (theUnit = this->mConstructionSites->mItems.begin(); theUnit != this->mConstructionSites->mItems.end(); theUnit++) {
-            unsigned long theID = (*theUnit)->mUnitID;
-            theResult = outFile.Write(theID);
-        }
-    }
-    if (theResult == kErrorOK) {
-        theCount = this->mHerds.size();
-        theResult = outFile.Write(theCount);
-    }
-    if (theResult == kErrorOK) {
-        for (i = 0; i < theCount && theResult == kErrorOK; i++)
-            theResult = this->mHerds[i]->Save(inMajorVersion, inMinorVersion, outFile);
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write((unsigned long)2);
-    if (theResult == kErrorOK) {
-        theResult = outFile.Write((unsigned long)5);
-        for (long theDirection = 0; theDirection < 2; theDirection++)
-            for (theCount = 0; theCount < 5 && theResult == kErrorOK; theCount++)
-                theResult = outFile.Write(this->mTributes[theDirection * 5 + theCount]);
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGameResult);
-    if (theResult == kErrorOK)
-        theResult = this->mEvents.Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHighGroundBonus);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHealTimer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDisconnected);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCivilizationLocked);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCivilizationChosen);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCivUpgradesPurchased);
-    if (theResult == kErrorOK) {
-        theCount = this->mUnitsOffMap.size();
-        theResult = outFile.Write(theCount);
-    }
-    if (theResult == kErrorOK) {
-        for (i = 0; i < theCount && theResult == kErrorOK; i++)
-            theResult = this->mUnitsOffMap[i]->Save(inMajorVersion, inMinorVersion, outFile);
-    }
-    if (theResult == kErrorOK) {
-        theCount = this->mWonders->GetSize();
-        theResult = outFile.Write(theCount);
-    }
-    if (theResult == kErrorOK) {
-        std::vector<EEComplexUnit*>::iterator theCloaked;
-        theCloaked = this->mWonders->mItems.begin();
-        while (true) {
-            if (theCloaked == this->mWonders->mItems.end() || theResult != kErrorOK)
-                break;
-            unsigned long theID = (*theCloaked)->mUnitID;
-            theResult = outFile.Write(theID);
-            theCloaked++;
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFreeUnitCounter);
-    if (theResult == kErrorOK) {
-        for (theCount = 0; theCount < 5 && theResult == kErrorOK; theCount++)
-            theResult = outFile.Write(this->mResourceTrade[theCount]);
-    }
-    if (theResult == kErrorOK) {
-        for (theCount = 0; theCount < 5 && theResult == kErrorOK; theCount++)
-            theResult = outFile.Write(this->mInsuranceRefunds[theCount]);
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumVitalBuildings);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFreeUnitInterval);
-    return theResult;
+    EEPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
+    return ee_units_player_save(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this),
+                                (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // FUNCTION: EXE 0x56a4b5

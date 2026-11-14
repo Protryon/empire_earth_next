@@ -158,9 +158,6 @@ static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c.
 
 // the IME strings' buffer (0x56536c, its size 0x565368; grown in 0x100-byte steps)
 static unsigned long sLastLoadPercent;      // 0x565370 (SetLoadProgress)
-static bool sMinimized;                     // 0x565374 (WM_SIZE: the volumes are muted)
-static bool sControlDown;                   // 0x565375
-static bool sAltDown;                       // 0x565376
 // FUNCTION: EXE 0x676631
 // Creates the UI thread object: its thread and the message-done event (the action, undo and redo queues and their
 // locks are Rust's: ee_screens actions.rs)
@@ -812,370 +809,174 @@ void EEUserInterface::AddIMEResultString(const char* inText)
 }
 
 // FUNCTION: EXE 0x67828f
-// Handles one UI thread message (0x401..0x443): loading, forms, saved games, scenario editor, screenshots,
-// chat log, movies, civilization builder, lobby updates and load progress
+// Handles one UI thread message (0x401..0x443): the switch is Rust's (ee_screens ui_thread.rs), over the host below
 void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParameter1, LONG_PTR inParameter2)
 {
-    switch (inMessage) {
-    case 0x407: {
-        this->PauseGraphics();
-        this->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true);
-        UIForm* theCurrent = gUIManager->GetCurrentForm();
-        if (theCurrent == gUIManager->GetFormByID(kFormLobby) || theCurrent == gUIManager->GetFormByID(kFormSinglePlayerLoadGame) ||
-            theCurrent == gUIManager->GetFormByID(kFormScenarioIntro))
-            gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
-        else
-            gUIManager->Push(gUIManager->GetFormByID(kFormSplash));
-        gWorld.mLock->WriteLock();
-        gGameScreenActive = true;
-        gWorld.mLock->WriteUnlock();
-        gDataPreLoading->PostLoadGame(false, false);
-        gUIManager->FnE123D();
-        this->ResumeGraphics();
-        break;
-    }
-    case 0x404:
-        this->ShowEpochName();
-        break;
-    case 0x403:
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->ReadLock();
-        gUIManager->mMainGameForm->UpdateBackgroundMedia(true);
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x402:
-        this->mIsUpdating = inParameter1;
-        break;
-    case WM_QUIT:
-    case kThreadMessageQuit:
-        this->mIsQuitting = true;
-        break;
+    ee_screens_ui_message(this, (uint32_t)inMessage, inParameter1, inParameter2);
+}
 
-    case 0x408:
-        this->LoadSavedGame(reinterpret_cast<FSFile*>(inParameter1));
+// The thread messages' calls (EE_SCREENS_UI_OP_*) on the UI object inUI: the UI manager and its forms, the locks,
+// the graphics thread, the thread object's handlers; the pointers are the messages' parameters
+extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    EEUserInterface* theUI = static_cast<EEUserInterface*>(inUI);
+    EEUIFMainGame* theMain = gUIManager != NULL ? gUIManager->mMainGameForm : NULL;
+    UIForm* theForm = reinterpret_cast<UIForm*>(inA);
+    switch (inOp) {
+    case EE_SCREENS_UI_OP_PAUSE: theUI->PauseGraphics(); break;
+    case EE_SCREENS_UI_OP_RESUME: theUI->ResumeGraphics(); break;
+    case EE_SCREENS_UI_OP_LOCK:
+        if (inA == 0) gUIManager->LockUIForCopyData();
+        else if (inA == 1) gWorld.mLock->ReadLock();
+        else gWorld.mLock->WriteLock();
         break;
-    case 0x40e: {
-        this->PauseGraphics();
-        gWorld.mLock->ReadLock();
-        UIEvent* theEvent = reinterpret_cast<UIEvent*>(inParameter1);
-        theEvent->ProcessEvent(NULL, reinterpret_cast<UIEntity*>(inParameter2));
-        theEvent->Dereference();
-        gWorld.mLock->ReadUnlock();
-        this->ResumeGraphics();
+    case EE_SCREENS_UI_OP_UNLOCK:
+        if (inA == 0) gUIManager->UnlockUIForCopyData();
+        else if (inA == 1) gWorld.mLock->ReadUnlock();
+        else gWorld.mLock->WriteUnlock();
         break;
-    }
-    case 0x40d:
-        this->PauseGraphics();
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->ReadLock();
-        gUIManager->SwapForm(reinterpret_cast<UIForm*>(inParameter1));
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
-        this->ResumeGraphics();
+    case EE_SCREENS_UI_OP_HAS_MANAGER: return gUIManager != NULL;
+    case EE_SCREENS_UI_OP_MAIN_FORM: return (int64_t)theMain;
+    case EE_SCREENS_UI_OP_EDITOR_FORM: return (int64_t)gUIManager->mScenarioEditorForm;
+    case EE_SCREENS_UI_OP_CURRENT_FORM: return (int64_t)gUIManager->GetCurrentForm();
+    case EE_SCREENS_UI_OP_FORM_BY_ID: return (int64_t)gUIManager->GetFormByID(inA);
+    case EE_SCREENS_UI_OP_SWAP: gUIManager->SwapForm(theForm); break;
+    case EE_SCREENS_UI_OP_PUSH: gUIManager->Push(theForm); break;
+    case EE_SCREENS_UI_OP_POP: gUIManager->Pop(); break;
+    case EE_SCREENS_UI_OP_POP_TO: gUIManager->PopTo(theForm); break;
+    case EE_SCREENS_UI_OP_ON_STACK: return gUIManager->IsFormOnStack(theForm);
+    case EE_SCREENS_UI_OP_VISIBLE: return gUIManager->IsFormVisible(theForm);
+    case EE_SCREENS_UI_OP_REDRAW: gUIManager->RedrawAll(); break;
+    case EE_SCREENS_UI_OP_STATUS_VALUE:
+        static_cast<UIStatusBar*>(theForm->GetControl(inB))->SetCurrentRangeValue(inC);
         break;
-    case 0x40c: {
-        if (gGraphics->PostPause() != kErrorOK)
-            break;
-        for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-            PlatSleep(1);
-        EEAQuickSaveLoad* theAction = reinterpret_cast<EEAQuickSaveLoad*>(inParameter1);
+    case EE_SCREENS_UI_OP_RESIZE_GAME: theUI->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true); break;
+    case EE_SCREENS_UI_OP_RESIZE_MENU: theUI->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false); break;
+    case EE_SCREENS_UI_OP_SCREEN_ACTIVE: gGameScreenActive = true; break;
+    case EE_SCREENS_UI_OP_POST_LOAD_GAME: gDataPreLoading->PostLoadGame(false, false); break;
+    case EE_SCREENS_UI_OP_SHOW_EPOCH_NAME: theUI->ShowEpochName(); break;
+    case EE_SCREENS_UI_OP_BACKGROUND_MEDIA: theMain->UpdateBackgroundMedia(true); break;
+    case EE_SCREENS_UI_OP_SET_UPDATING: theUI->mIsUpdating = inA; break;
+    case EE_SCREENS_UI_OP_SET_QUITTING: theUI->mIsQuitting = true; break;
+    case EE_SCREENS_UI_OP_LOAD_SAVED_GAME: theUI->LoadSavedGame(reinterpret_cast<FSFile*>(inA)); break;
+    case EE_SCREENS_UI_OP_PROCESS_EVENT:
+        reinterpret_cast<UIEvent*>(inA)->ProcessEvent(NULL, reinterpret_cast<UIEntity*>(inB));
+        reinterpret_cast<UIEvent*>(inA)->Dereference();
+        break;
+    case EE_SCREENS_UI_OP_GFX_POST_PAUSE: return gGraphics->PostPause() == kErrorOK;
+    case EE_SCREENS_UI_OP_GFX_PAUSED: return gGraphics->mIsPaused;
+    case EE_SCREENS_UI_OP_SLEEP: PlatSleep(1); break;
+    case EE_SCREENS_UI_OP_GFX_POST_RESUME: gGraphics->PostResume(); break;
+    case EE_SCREENS_UI_OP_QUICK_LOAD: {
+        EEAQuickSaveLoad* theAction = reinterpret_cast<EEAQuickSaveLoad*>(inA);
         theAction->mIsLoad = true;
         theAction->mGameState = &gGameState;
         gUserInterface->PostAction(theAction);
         theAction->Dereference();
         break;
     }
-    case 0x40b:
-        this->ShowLoadingText(inParameter1);
-        break;
-    case 0x40a:
-        gUIManager->LockUIForCopyData();
-        if (gUIManager != NULL && gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormSplash))
-            (static_cast<UIStatusBar*>(gUIManager->GetFormByID(kFormSplash)->GetControl(kSplashLoadStatus)))->SetCurrentRangeValue(inParameter1);
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x40f:
-        this->SaveAndTestScenario();
-        break;
-    case 0x41b: {
-        bool theKeepCursor = inParameter2 > 0;
-        if (!theKeepCursor)
-            EEResetGraphicsValues();
-        EEScreenCapture* theScreenCaptureStruct = reinterpret_cast<EEScreenCapture*>(inParameter1);
-        ESVERIFY_AT(TSScheduler::CreateEvent(theScreenCaptureStruct->mCaptureComplete) == keseOK, 1956);
-        gGraphics->PostScreenShot(theScreenCaptureStruct);
-        theScreenCaptureStruct->mCaptureComplete->Wait(kTSWaitInfinite);
-        TSScheduler::DestroyEvent(theScreenCaptureStruct->mCaptureComplete);
-        if (theScreenCaptureStruct->mWidth != -1)
-            theScreenCaptureStruct->mSurface->Dereference();
-        delete theScreenCaptureStruct;
-        if (!theKeepCursor)
-            EEPostGraphicsAll();
-        gUIManager->RedrawAll();
+    case EE_SCREENS_UI_OP_LOADING_TEXT: theUI->ShowLoadingText(inA); break;
+    case EE_SCREENS_UI_OP_SAVE_AND_TEST: theUI->SaveAndTestScenario(); break;
+    case EE_SCREENS_UI_OP_RESET_GFX_VALUES: EEResetGraphicsValues(); break;
+    case EE_SCREENS_UI_OP_SCREEN_CAPTURE: {
+        EEScreenCapture* theCapture = reinterpret_cast<EEScreenCapture*>(inA);
+        ESVERIFY_AT(TSScheduler::CreateEvent(theCapture->mCaptureComplete) == keseOK, 1956);
+        gGraphics->PostScreenShot(theCapture);
+        theCapture->mCaptureComplete->Wait(kTSWaitInfinite);
+        TSScheduler::DestroyEvent(theCapture->mCaptureComplete);
+        if (theCapture->mWidth != -1)
+            theCapture->mSurface->Dereference();
+        delete theCapture;
         break;
     }
-    case 0x410:
-        this->CloseScenarioEditor();
-        break;
-    case 0x411:
-        this->EnterScenarioEditor(inParameter1 > 0);
-        break;
-    case 0x412:
-        this->CancelGame();
-        break;
-    case 0x413:
-        this->StartLoadingFromEditor();
-        break;
-    case 0x415:
-        this->TestScenario();
-        break;
-    case 0x416:
-        if (gUIManager->mMainGameForm != NULL)
-            gUIManager->mMainGameForm->mRefreshGroup = true;
-        break;
-    case 0x419:
-        this->PauseGraphics();
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->ReadLock();
-        if (inParameter1 == 0)
-            gUIManager->Pop();
-        else
-            gUIManager->PopTo(reinterpret_cast<UIForm*>(inParameter1));
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
-        this->ResumeGraphics();
-        break;
-    case 0x414:
-        this->PauseGraphics();
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->ReadLock();
-        gUIManager->Push(reinterpret_cast<UIForm*>(inParameter1));
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
-        this->ResumeGraphics();
-        break;
-    case 0x417: {
-        this->PauseGraphics();
-        gUIManager->LockUIForCopyData();
-        UIForm* theForm = reinterpret_cast<UIForm*>(inParameter1);
-        if (!gUIManager->IsFormOnStack(theForm)) {
-            EEUIFErrorCallbackData* theData = reinterpret_cast<EEUIFErrorCallbackData*>(inParameter2);
-            if (theData->mCallback != NULL) {
-                gWorld.mLock->ReadLock();
-                theData->mCallback(static_cast<UIForm*>(theData->mData));
-                gWorld.mLock->ReadUnlock();
-            }
-            if (theForm != NULL)
-                delete theForm;
-            delete theData;
-        }
-        gUIManager->UnlockUIForCopyData();
-        this->ResumeGraphics();
+    case EE_SCREENS_UI_OP_POST_GFX_ALL: EEPostGraphicsAll(); break;
+    case EE_SCREENS_UI_OP_CLOSE_EDITOR: theUI->CloseScenarioEditor(); break;
+    case EE_SCREENS_UI_OP_ENTER_EDITOR: theUI->EnterScenarioEditor(inA != 0); break;
+    case EE_SCREENS_UI_OP_CANCEL_GAME: theUI->CancelGame(); break;
+    case EE_SCREENS_UI_OP_LOAD_FROM_EDITOR: theUI->StartLoadingFromEditor(); break;
+    case EE_SCREENS_UI_OP_TEST_SCENARIO: theUI->TestScenario(); break;
+    case EE_SCREENS_UI_OP_REFRESH_GROUP: theMain->mRefreshGroup = true; break;
+    case EE_SCREENS_UI_OP_ERROR_HAS_CALLBACK: return reinterpret_cast<EEUIFErrorCallbackData*>(inA)->mCallback != NULL;
+    case EE_SCREENS_UI_OP_ERROR_CALLBACK: {
+        EEUIFErrorCallbackData* theData = reinterpret_cast<EEUIFErrorCallbackData*>(inA);
+        theData->mCallback(static_cast<UIForm*>(theData->mData));
         break;
     }
-    case 0x418: {
-        if (gUIManager == NULL || gUIManager->mMainGameForm == NULL)
-            break;
-        EEChatLogEntry* theEntry = reinterpret_cast<EEChatLogEntry*>(inParameter1);
-        gUIManager->LockUIForCopyData();
-        gUIManager->mMainGameForm->DisplayChat(theEntry->mColor, theEntry->mName, theEntry->mText,
-                                               theEntry->mTime, theEntry->mType);
-        gUIManager->UnlockUIForCopyData();
-        if (theEntry->mType != 2)
-            EEUIECLEFormManager::AddEntry(*theEntry);
-        if (theEntry != NULL)
-            delete theEntry;
+    case EE_SCREENS_UI_OP_DELETE_FORM: delete theForm; break;
+    case EE_SCREENS_UI_OP_DELETE_ERROR_DATA: delete reinterpret_cast<EEUIFErrorCallbackData*>(inA); break;
+    case EE_SCREENS_UI_OP_CHAT_SHOW: {
+        EEChatLogEntry* theEntry = reinterpret_cast<EEChatLogEntry*>(inA);
+        theMain->DisplayChat(theEntry->mColor, theEntry->mName, theEntry->mText, theEntry->mTime, theEntry->mType);
         break;
     }
-    case 0x41c: {
-        FSFileSpec* theSpec = reinterpret_cast<FSFileSpec*>(inParameter1);
-        if (!gGraphics->mIsMoviePlaying) {
-            if (gGraphics->PlayMovie(*theSpec, reinterpret_cast<UReferenceCounter*>(inParameter2)) == kErrorOK)
-                gMouse->mPointer = 6;
-            while (!gGraphics->mIsMoviePlaying)
-                PlatSleep(1);
-        } else {
-            gGraphics->PostStopMovie();
-            while (gGraphics->mIsMoviePlaying)
-                ;
-            PlatSleep(1);
-            gUserInterface->PostPlayMovie(*theSpec, reinterpret_cast<UReferenceCounter*>(inParameter2));
-        }
-        if (inParameter2 != 0)
-            (reinterpret_cast<UReferenceCounter*>(inParameter2))->Dereference();
-        if (theSpec != NULL)
-            delete theSpec;
+    case EE_SCREENS_UI_OP_CHAT_TYPE: return reinterpret_cast<EEChatLogEntry*>(inA)->mType;
+    case EE_SCREENS_UI_OP_CHAT_LOG: EEUIECLEFormManager::AddEntry(*reinterpret_cast<EEChatLogEntry*>(inA)); break;
+    case EE_SCREENS_UI_OP_DELETE_CHAT: delete reinterpret_cast<EEChatLogEntry*>(inA); break;
+    case EE_SCREENS_UI_OP_MOVIE_PLAYING: return gGraphics->mIsMoviePlaying;
+    case EE_SCREENS_UI_OP_PLAY_MOVIE:
+        return gGraphics->PlayMovie(*reinterpret_cast<FSFileSpec*>(inA), reinterpret_cast<UReferenceCounter*>(inB)) == kErrorOK;
+    case EE_SCREENS_UI_OP_SET_POINTER: gMouse->mPointer = inA; break;
+    case EE_SCREENS_UI_OP_STOP_MOVIE: gGraphics->PostStopMovie(); break;
+    case EE_SCREENS_UI_OP_REPOST_MOVIE:
+        gUserInterface->PostPlayMovie(*reinterpret_cast<FSFileSpec*>(inA), reinterpret_cast<UReferenceCounter*>(inB));
         break;
-    }
-    case 0x422: {
-        EESMDialogMessage* theDialog = reinterpret_cast<EESMDialogMessage*>(inParameter1);
-        if (gUIManager != NULL && gUIManager->mMainGameForm != NULL) {
-            gUIManager->LockUIForCopyData();
-            gUIManager->mMainGameForm->ShowInformation((EEUIFMGInformation*)theDialog);
-            gUIManager->UnlockUIForCopyData();
-        }
+    case EE_SCREENS_UI_OP_DEREFERENCE: reinterpret_cast<UReferenceCounter*>(inA)->Dereference(); break;
+    case EE_SCREENS_UI_OP_DELETE_SPEC: delete reinterpret_cast<FSFileSpec*>(inA); break;
+    case EE_SCREENS_UI_OP_SHOW_INFORMATION: theMain->ShowInformation(reinterpret_cast<EEUIFMGInformation*>(inA)); break;
+    case EE_SCREENS_UI_OP_DIALOG_LOG: {
         EEChatLogEntry* theEntry = new EEChatLogEntry;
-        theEntry->mText = theDialog->mText;
+        theEntry->mText = reinterpret_cast<EESMDialogMessage*>(inA)->mText;
         theEntry->mType = 1;
         EEUIECLEFormManager::AddEntry(*theEntry);
         delete theEntry;
-        if (theDialog != NULL)
-            delete theDialog;
         break;
     }
-    case 0x429:
-        this->PauseGraphics();
-        this->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true);
-        gWorld.mLock->ReadLock();
-        gUIManager->Pop();
-        gWorld.mLock->ReadUnlock();
-        this->ResumeGraphics();
-        break;
-    case 0x430: {
-        this->PauseGraphics();
-        this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
-        if (inParameter2 <= 0) {
-            gUIManager->Pop();
-        } else {
-            EESetQuitFlag();
-            EEABootClientFromCanceledGame* theAction = new EEABootClientFromCanceledGame(IDS_HOST_OF_THIS_GAME_HAS_GONE);
-            gUserInterface->PostAction(theAction);
-            theAction->Dereference();
-            static_cast<NESynchronousClient*>(gCommunications)->Disconnect();
-            if (gCommunications != NULL)
-                delete gCommunications;
-            gCommunications = new EEClient;
-            static_cast<EEClient*>(gCommunications)->StartThreads();
-        }
-        this->ResumeGraphics();
+    case EE_SCREENS_UI_OP_DELETE_DIALOG: delete reinterpret_cast<EESMDialogMessage*>(inA); break;
+    case EE_SCREENS_UI_OP_HOST_GONE: {
+        EESetQuitFlag();
+        EEABootClientFromCanceledGame* theAction = new EEABootClientFromCanceledGame(IDS_HOST_OF_THIS_GAME_HAS_GONE);
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        static_cast<NESynchronousClient*>(gCommunications)->Disconnect();
+        if (gCommunications != NULL)
+            delete gCommunications;
+        gCommunications = new EEClient;
+        static_cast<EEClient*>(gCommunications)->StartThreads();
         break;
     }
-    case 0x424:
-        if (gUIManager == NULL || gUIManager->mMainGameForm == NULL)
-            break;
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->ReadLock();
-        gUIManager->mMainGameForm->UpdateIconBar();
-        this->mIconBarUpdatePosted = false;
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
+    case EE_SCREENS_UI_OP_UPDATE_ICON_BAR:
+        theMain->UpdateIconBar();
+        theUI->mIconBarUpdatePosted = false;
         break;
-    case 0x41e: {
-        if (gGraphics->PostPause() != kErrorOK)
-            break;
-        for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-            PlatSleep(1);
-        this->ChangeRasterizer(inParameter1, inParameter2);
-        gGraphics->PostResume();
-        for (bool theStopped = gGraphics->mIsPaused; theStopped != false; theStopped = gGraphics->mIsPaused)
-            PlatSleep(1);
-        gUIManager->RedrawAll();
+    case EE_SCREENS_UI_OP_CHANGE_RASTERIZER: theUI->ChangeRasterizer(inA, inB); break;
+    case EE_SCREENS_UI_OP_INFORMATION:
+        if (inA != 0) theMain->PauseInformation();
+        else theMain->ResumeInformation();
         break;
+    case EE_SCREENS_UI_OP_CIV_BUILDER:
+        if (inC != 0) theUI->ShowCivilizationBuilder(0, false, true);
+        else theUI->ShowCivilizationBuilder(inA, *reinterpret_cast<bool*>(&inB), false);  // STAND-IN (owner 2026-11-01): re-typing read, 0x278b46 pushes the raw dword
+        break;
+    case EE_SCREENS_UI_OP_POST_EVENT: gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inA), NULL); break;
+    case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->HideMessages(); break;
+    case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->mScenarioEditorForm->SelectTab((unsigned char)inA, inB); break;
+    case EE_SCREENS_UI_OP_RESTART: theUI->RestartGame(); break;
+    case EE_SCREENS_UI_OP_SAVED_GROUP: static_cast<EEUIBSavedGroup*>(theMain->GetControl(inA))->Refresh(); break;
+    case EE_SCREENS_UI_OP_SELECT_SERVER: theUI->OpenSelectServer(); break;
+    case EE_SCREENS_UI_OP_MOTD:
+        theUI->ShowMessageOfTheDay(*reinterpret_cast<UWideString*>(inA), *reinterpret_cast<UWideString*>(inB));
+        break;
+    case EE_SCREENS_UI_OP_DELETE_WSTRING: delete reinterpret_cast<UWideString*>(inA); break;
+    case EE_SCREENS_UI_OP_LOBBY:
+        if (inA == 0) ee_screens_lobby_update_player(inB, inC);
+        else if (inA == 1) ee_screens_lobby_update_game_options();
+        else if (inA == 2) ee_screens_lobby_show_transfer_progress((uint8_t)inB, (uint8_t)inC);
+        else ee_screens_lobby_update_form();
+        break;
+    case EE_SCREENS_UI_OP_LAG: theUI->ShowLagStatus(inA, inB != 0); break;
+    case EE_SCREENS_UI_OP_QUEUE_DONE: theUI->mMessageQueueDone->Set(); break;
     }
-    case 0x427:
-        if (gUIManager == NULL || gUIManager->mMainGameForm == NULL)
-            break;
-        gUIManager->LockUIForCopyData();
-        if ((unsigned long)inParameter1 > 0)
-            gUIManager->mMainGameForm->PauseInformation();
-        else
-            gUIManager->mMainGameForm->ResumeInformation();
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x420:
-        this->ShowCivilizationBuilder(inParameter1, *reinterpret_cast<bool*>(&inParameter2), false);  // STAND-IN (owner 2026-11-01): re-typing read, 0x278b46 pushes the raw dword
-        break;
-    case 0x41d:
-        gUIManager->RedrawAll();
-        gMouse->mPointer = 0;
-        if (inParameter1 != 0) {
-            gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inParameter1), NULL);
-            reinterpret_cast<UIEvent*>(inParameter1)->Dereference();
-        }
-        break;
-    case 0x432:
-        if (gUIManager->mMainGameForm != NULL)
-            gUIManager->mMainGameForm->HideMessages();
-        break;
-    case 0x421:
-        if (gUIManager->mScenarioEditorForm == NULL)
-            break;
-        this->PauseGraphics();
-        gWorld.mLock->WriteLock();
-        gUIManager->mScenarioEditorForm->SelectTab((unsigned char)inParameter1, inParameter2);
-        gWorld.mLock->WriteUnlock();
-        this->ResumeGraphics();
-        break;
-    case 0x426:
-        gUIManager->LockUIForCopyData();
-        if (gUIManager != NULL) {
-            if (gUIManager->GetMainGameForm() == gUIManager->GetCurrentForm())
-                gUIManager->mMainGameForm->FnE123D();
-        }
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x428:
-        this->RestartGame();
-        break;
-    case 0x435:
-        if (gUIManager == NULL || gUIManager->mMainGameForm == NULL)
-            break;
-        gUIManager->LockUIForCopyData();
-        gWorld.mLock->ReadLock();
-        if (gUIManager->IsFormVisible(gUIManager->mMainGameForm))
-            (static_cast<EEUIBSavedGroup*>(gUIManager->mMainGameForm->GetControl(inParameter1 + 0xd3)))->Refresh();
-        gWorld.mLock->ReadUnlock();
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x441:
-        this->OpenSelectServer();
-        break;
-    case 0x440:
-        this->ShowMessageOfTheDay(*reinterpret_cast<UWideString*>(inParameter1), *reinterpret_cast<UWideString*>(inParameter2));
-        if (inParameter1 != 0)
-            delete reinterpret_cast<UWideString*>(inParameter1);
-        if (inParameter2 != 0)
-            delete reinterpret_cast<UWideString*>(inParameter2);
-        break;
-    case 0x41f:
-        this->ShowCivilizationBuilder(0, false, true);
-        break;
-    case 0x436:
-        gUIManager->LockUIForCopyData();
-        ee_screens_lobby_update_player(inParameter1, inParameter2);
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x437:
-        gUIManager->LockUIForCopyData();
-        ee_screens_lobby_update_game_options();
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x439: {
-        gUIManager->LockUIForCopyData();
-        unsigned char theTotal = (unsigned char)inParameter2;
-        unsigned char theCurrent = (unsigned char)inParameter1;
-        ee_screens_lobby_show_transfer_progress(theCurrent, theTotal);
-        gUIManager->UnlockUIForCopyData();
-        break;
-    }
-    case 0x438:
-        gUIManager->LockUIForCopyData();
-        ee_screens_lobby_update_form();
-        gUIManager->UnlockUIForCopyData();
-        break;
-    case 0x442:
-        this->ShowLagStatus((unsigned short)inParameter1, (unsigned long)inParameter2 > 0);
-    case 0x443:
-        gUIManager->LockUIForCopyData();
-        if (gUIManager->IsFormVisible(gUIManager->GetFormByID(kFormSplash)))
-            (static_cast<UIStatusBar*>(gUIManager->GetFormByID(kFormSplash)->GetControl(inParameter1 + 0x14)))
-                ->SetCurrentRangeValue(inParameter2);
-        gUIManager->UnlockUIForCopyData();
-    case 0x431:
-        this->mMessageQueueDone->Set();
-        break;
-    }
+    return 0;
 }
 
 // FUNCTION: EXE 0x678ebc
@@ -1626,137 +1427,76 @@ void EEUserInterface::ResumeGraphics()
 // Handles the game window's events (platform/PlatWindow.h; the original's window procedure, case by case): close,
 // minimise and restore (muting while minimised), focus (the game minimises itself and suspends input while inactive),
 // the Control/AltGr state, typed text and the input method's composition (shown by the edit box; the system draws
-// its candidate list). The window's cursor is hidden at creation (WM_SETCURSOR's SetCursor(NULL)), and the screen
-// saver / Alt-Tab system commands need no handling.
+// its candidate list). The decisions and the original's statics are Rust's (ee_screens ui_thread.rs), over the host
+// below. The window's cursor is hidden at creation (WM_SETCURSOR's SetCursor(NULL)), and the screen saver / Alt-Tab
+// system commands need no handling.
 void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
 {
-    static bool sComposing;   // an input method composition is open (the edit box shows it)
-    static float sMasterVolume = gSoundManager != NULL ? gSoundManager->GetMasterVolume() : 0.0f;
-    static float sMusicVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;
-    // while the lobby is shown it owns the event loop and passes these on (EELobbyForwardEvent)
-    if (EELobbyIsShown() && inEvent.mType != PLAT_EVENT_MINIMIZED && inEvent.mType != PLAT_EVENT_RESTORED
-        && inEvent.mType != PLAT_EVENT_RESIZED && inEvent.mType != PLAT_EVENT_QUIT
-        && inEvent.mType != PLAT_EVENT_CLOSE)
-        return;
-    switch (inEvent.mType) {
-    case PLAT_EVENT_QUIT:
-    case PLAT_EVENT_CLOSE:   // WM_CLOSE / WM_DESTROY: PostQuitMessage to the UI thread
-        // port: a shown lobby is inside its event loop (the event came through it): it closes its own window, which
-        // ends LobbyRun, and EELobbyRunLoop shuts it down; shutting it down here would free the running manager
-        if (EEIsLobbyOpen() && !EELobbyIsShown())
-            EELobbyShutdown();
-        if (gUserInterface != NULL)
-            gUserInterface->mThread->Post(0x12, NULL, NULL, false);   // WM_QUIT
-        break;
-    case PLAT_EVENT_MINIMIZED:   // WM_SIZE SIZE_MINIMIZED
-        if (!sMinimized) {
-            if (gConductor != NULL) {
-                sMusicVolume = gConductor->GetConductor().GetVolume();
-                gConductor->GetConductor().SetVolume(0.0f);
-            }
-            if (gSoundManager != NULL) {
-                sMasterVolume = gSoundManager->GetMasterVolume();
-                gSoundManager->SetMasterVolume(0.0f);
-            }
-            sMinimized = true;
+    ee_screens_ui_event(inEvent.mType, inEvent.mKey.mVirtualKey, inEvent.mText.mText, inEvent.mText.mCursor,
+                        inEvent.mText.mLength);
+}
+
+// The window events' calls (EE_SCREENS_UI_EV_*): the globals' NULL tests, the lobby, the volumes, the input
+// devices, the mouse pointer's thread, the input method; inA is the event's text for the IME ops
+extern "C" int64_t ee_screenscpp_ui_event(uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    float theVolume;
+    uint32_t theBits = (uint32_t)inA;
+    memcpy(&theVolume, &theBits, 4);
+    const char* theText = reinterpret_cast<const char*>(inA);
+    switch (inOp) {
+    case EE_SCREENS_UI_EV_HAS:
+        switch (inA) {
+        case EE_SCREENS_UI_GLOBAL_USER_INTERFACE: return gUserInterface != NULL;
+        case EE_SCREENS_UI_GLOBAL_MANAGER: return gUIManager != NULL;
+        case EE_SCREENS_UI_GLOBAL_CONDUCTOR: return gConductor != NULL;
+        case EE_SCREENS_UI_GLOBAL_SOUND: return gSoundManager != NULL;
+        case EE_SCREENS_UI_GLOBAL_KEYBOARD: return gISKeyboard != NULL;
+        case EE_SCREENS_UI_GLOBAL_MOUSE: return gISMouse != NULL;
+        case EE_SCREENS_UI_GLOBAL_WINDOW_AND_MOUSE: return gGameWindow != NULL && gMouse != NULL;
+        case EE_SCREENS_UI_GLOBAL_POINTER: return gMousePointer != NULL;
+        default: return gGameWindow != NULL;
         }
+    case EE_SCREENS_UI_EV_LOBBY_SHOWN: return EELobbyIsShown();
+    case EE_SCREENS_UI_EV_LOBBY_OPEN: return EEIsLobbyOpen();
+    case EE_SCREENS_UI_EV_LOBBY_SHUTDOWN: EELobbyShutdown(); break;
+    case EE_SCREENS_UI_EV_POST_QUIT: gUserInterface->mThread->Post(0x12, NULL, NULL, false); break;   // WM_QUIT
+    case EE_SCREENS_UI_EV_MUSIC_VOLUME:
+        theVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;
+        memcpy(&theBits, &theVolume, 4);
+        return theBits;
+    case EE_SCREENS_UI_EV_SET_MUSIC_VOLUME: gConductor->GetConductor().SetVolume(theVolume); break;
+    case EE_SCREENS_UI_EV_MASTER_VOLUME:
+        theVolume = gSoundManager != NULL ? gSoundManager->GetMasterVolume() : 0.0f;
+        memcpy(&theBits, &theVolume, 4);
+        return theBits;
+    case EE_SCREENS_UI_EV_SET_MASTER_VOLUME: gSoundManager->SetMasterVolume(theVolume); break;
+    case EE_SCREENS_UI_EV_MUTE: SPIMSetMuted(inA != 0); break;   // port: "Mute in Background"
+    case EE_SCREENS_UI_EV_KEYBOARD:
+        if (inA != 0) gISKeyboard->Resume();
+        else gISKeyboard->Suspend();
         break;
-    case PLAT_EVENT_RESTORED:   // WM_SIZE SIZE_RESTORED
-        if (sMinimized == true) {
-            if (gConductor != NULL)
-                gConductor->GetConductor().SetVolume(sMusicVolume);
-            if (gSoundManager != NULL)
-                gSoundManager->SetMasterVolume(sMasterVolume);
-            sMinimized = false;
-        }
+    case EE_SCREENS_UI_EV_MOUSE:
+        if (inA != 0) gISMouse->Resume();
+        else gISMouse->Suspend();
         break;
-    case PLAT_EVENT_FOCUS_GAINED:   // WM_ACTIVATEAPP TRUE (and WM_ACTIVATE, which did the same once not minimised)
-        SPIMSetMuted(false);   // port: "Mute in Background"
-        if (gISKeyboard != NULL)
-            gISKeyboard->Resume();
-        if (gISMouse != NULL)
-            gISMouse->Resume();
-        if (gGameWindow != NULL && gMouse != NULL) {
-            gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1),
-                                            (float)(gGameWindow->GetHeight() >> 1)));
-        }
-        if (gMousePointer != NULL)
-            gMousePointer->mThread->Post(0x404, NULL, NULL, true);
+    case EE_SCREENS_UI_EV_CENTER_MOUSE:
+        gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1), (float)(gGameWindow->GetHeight() >> 1)));
         break;
-    case PLAT_EVENT_FOCUS_LOST:   // WM_ACTIVATEAPP FALSE
-        if (gGamePreferences.mSettings.mMuteInBackground)   // port
-            SPIMSetMuted(true);
-        // port: a windowed game stays on screen in the background (the original's full screen minimised)
-        if (gUserInterface != NULL && !gUserInterface->mIsQuitting && gGameWindow != NULL &&
-            gGamePreferences.mSettings.GetFullScreen())
-            PlatWindowMinimize(gGameWindow->GetOSRepresentation());   // CloseWindow
-        if (gISKeyboard != NULL)
-            gISKeyboard->Suspend();
-        if (gISMouse != NULL)
-            gISMouse->Suspend();
-        if (gGameWindow != NULL && gMouse != NULL) {
-            gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1),
-                                            (float)(gGameWindow->GetHeight() >> 1)));
-        }
-        if (gMousePointer != NULL) {
-            gMousePointer->mThread->Post(0x402, NULL, NULL, true);
-            while (gMousePointer->mIsShown)
-                PlatSleep(1);
-        }
-        break;
-    case PLAT_EVENT_KEY_DOWN: {   // WM_KEYDOWN: Control, and AltGr (Control + Alt: the one Alt WM_KEYDOWN sees)
-        uint32_t theKey = inEvent.mKey.mVirtualKey;
-        if (!sControlDown)
-            sControlDown = theKey == VK_CONTROL || theKey == VK_LCONTROL || theKey == VK_RCONTROL;
-        if (!sAltDown)
-            sAltDown = theKey == VK_MENU || theKey == VK_RMENU;
-        break;
+    case EE_SCREENS_UI_EV_POINTER_POST: gMousePointer->mThread->Post(inA, NULL, NULL, true); break;
+    case EE_SCREENS_UI_EV_POINTER_SHOWN: return gMousePointer->mIsShown;
+    case EE_SCREENS_UI_EV_SLEEP: PlatSleep(1); break;
+    case EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND: return gGamePreferences.mSettings.mMuteInBackground;   // port
+    case EE_SCREENS_UI_EV_QUITTING: return gUserInterface->mIsQuitting;
+    case EE_SCREENS_UI_EV_FULL_SCREEN: return gGamePreferences.mSettings.GetFullScreen();
+    case EE_SCREENS_UI_EV_MINIMIZE: PlatWindowMinimize(gGameWindow->GetOSRepresentation()); break;   // CloseWindow
+    case EE_SCREENS_UI_EV_IME_OPEN: gUserInterface->OpenIMECompositionString(); break;
+    case EE_SCREENS_UI_EV_IME_UPDATE: gUserInterface->UpdateIMECompositionString(theText, inB, inC); break;
+    case EE_SCREENS_UI_EV_IME_RESULT: gUserInterface->AddIMEResultString(theText); break;
+    case EE_SCREENS_UI_EV_IME_CLOSE: gUserInterface->CloseIMECompositionString(); break;
+    case EE_SCREENS_UI_EV_TRANSLATED_KEY: gUIManager->UpdateTranslatedKey(theText, 1); break;
     }
-    case PLAT_EVENT_KEY_UP: {
-        uint32_t theKey = inEvent.mKey.mVirtualKey;
-        if (sControlDown == true)
-            sControlDown = !(theKey == VK_CONTROL || theKey == VK_LCONTROL || theKey == VK_RCONTROL);
-        if (sAltDown == true)
-            sAltDown = !(theKey == VK_MENU || theKey == VK_RMENU);
-        break;
-    }
-    case PLAT_EVENT_TEXT_EDITING:   // WM_IME_STARTCOMPOSITION / WM_IME_COMPOSITION (GCS_COMPSTR) / WM_IME_ENDCOMPOSITION
-        if (gUserInterface == NULL || gUIManager == NULL)
-            break;
-        if (inEvent.mText.mText[0] != 0) {
-            if (!sComposing) {
-                gUserInterface->OpenIMECompositionString();
-                sComposing = true;
-            }
-            gUserInterface->UpdateIMECompositionString(inEvent.mText.mText, inEvent.mText.mCursor,
-                                                       inEvent.mText.mLength);
-        } else if (sComposing) {
-            gUserInterface->CloseIMECompositionString();
-            sComposing = false;
-        }
-        break;
-    case PLAT_EVENT_TEXT:   // WM_CHAR, one per character (UTF-8, decision D6); a composition's result: GCS_RESULTSTR
-        if (sComposing && gUserInterface != NULL && gUIManager != NULL) {
-            gUserInterface->AddIMEResultString(inEvent.mText.mText);
-            gUserInterface->CloseIMECompositionString();
-            sComposing = false;
-            break;
-        }
-        if (!sControlDown || sAltDown == true) {
-            for (const char* p = inEvent.mText.mText; *p;) {
-                uint32_t theLength = 0;
-                PlatUtf8Decode(p, &theLength);
-                char theKey[8] = {0, 0, 0, 0, 0, 0, 0, 0};   // WM_CHAR's wParam: one character's bytes
-                memcpy(theKey, p, theLength);
-                if (theKey[0] != '\t' && theKey[0] != 0x1b && theKey[0] != '\b' && theKey[0] != '\r')
-                    gUIManager->UpdateTranslatedKey(theKey, 1);
-                p += theLength;
-            }
-        }
-        break;
-    default:
-        break;
-    }
+    return 0;
 }
 
 // Receive's window event pump on the window thread (TSThread::SetEventPump): one event per call

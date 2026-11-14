@@ -10,6 +10,8 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
+#include "ee/EEPlayer.h"
+#include "ee/EEComputerPlayer.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESMTrigger.h"
@@ -59,8 +61,9 @@ void Units(EESimCaptureRecord& ioRecord, const std::vector<unsigned long>& inUni
 
 void TimedEffects(EESimCaptureRecord& ioRecord, EEScenarioManager* inManager)
 {
-    ioRecord.U32((unsigned int)inManager->mTimedEffects.size());
-    for (const EESMTimedEffect& e : inManager->mTimedEffects) {
+    ioRecord.U32((unsigned int)inManager->GetNumTimedEffects());
+    for (unsigned long i = 0; i < inManager->GetNumTimedEffects(); i++) {
+        EeScenarioTimedEntry e = inManager->GetTimedEntry(i);
         ioRecord.U32((unsigned int)e.mEffectIndex);
         ioRecord.U32((unsigned int)e.mTime);
         ioRecord.U32((e.mIsInCinematic ? 1u : 0u) | (e.mHasRun ? 2u : 0u));
@@ -335,6 +338,62 @@ void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying)
     TimedEffects(r, inManager);
     r.U32((unsigned int)inManager->mMessages.size());
     r.I32((int)inManager->mGameResult);
+    r.U32(EESMCaptureSeed());
+    r.Commit();
+}
+
+void EESMCapturePlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount, unsigned int inSeed)
+{
+    EESimCaptureRecord r(EECaptureTag("SMPA"));
+    r.I32((int)inPlayer);
+    r.U32((unsigned int)inAttribute);
+    r.I32((int)inMode);
+    r.I32((int)inAmount);
+    r.U32(inSeed);
+    r.U32(EESMCaptureSeed());
+    EEPlayer* thePlayer = inPlayer >= 0 && inPlayer < (long)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0]))
+                              ? gWorld.mPlayers[inPlayer] : NULL;
+    r.U32(thePlayer != NULL ? 1u : 0u);
+    if (thePlayer != NULL) {
+        for (int i = 0; i < 7; i++)
+            r.I32((int)thePlayer->mResourceCaps[i]);
+        r.I32((int)thePlayer->mShareBonus);
+        r.I32(thePlayer->mComputerPlayer != NULL ? (int)thePlayer->mComputerPlayer->mDifficulty : -1);
+        for (int i = 0; i < 10; i++)
+            r.U32((unsigned int)thePlayer->mScenarioVariables[i]);
+        for (int i = 0; i < 10; i++)
+            r.U32((unsigned int)thePlayer->mTributes[i]);
+        r.I32((int)thePlayer->mMiningLimit);
+        FSMemoryFile theFile;
+        r.I32((int)thePlayer->mSavedGroups.Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile));
+        U64(r, FileHash(theFile));
+    }
+    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    if (theManager != NULL)
+        SavedList(r, theManager->mPendingEffects, kSaveGameMajorVersion, kSaveGameMinorVersion);
+    r.Commit();
+}
+
+void EESMCaptureTokens(const UWideString& inText, const UWideString& outText, unsigned int inSeed)
+{
+    EESimCaptureRecord r(EECaptureTag("SMTK"));
+    U64(r, TextHash(inText));
+    U64(r, TextHash(outText));
+    r.U32(inSeed);
+    r.U32(EESMCaptureSeed());
+    r.Commit();
+}
+
+void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult, float inX,
+                          float inY, unsigned int inSeed)
+{
+    EESimCaptureRecord r(EECaptureTag("SMFP"));
+    r.I32((int)IndexOf(inObject));
+    r.U32((unsigned int)inUnitType);
+    r.U32((inTryRandom ? 1u : 0u) | (inResult ? 2u : 0u));
+    r.F32(inX);
+    r.F32(inY);
+    r.U32(inSeed);
     r.U32(EESMCaptureSeed());
     r.Commit();
 }

@@ -146,7 +146,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     case Op::CtRoot: return (intptr_t)static_cast<Component*>(t->GetRootContainer());
     case Op::CtRootFocused: {
         Window* aWindow = t->GetRoot(); // GetWindow in the SDK
-        return aWindow->mManager->mFocusWindow == aWindow ? 1 : 0;
+        return aWindow->mManager->GetFocusWindow() == aWindow ? 1 : 0;
     }
     case Op::CtMouseInClient: return t->GetRoot()->IsMouseInClientArea() ? 1 : 0;
     case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
