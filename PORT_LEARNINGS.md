@@ -15432,3 +15432,29 @@ became one host unit (`LobbyDialogHost.cpp`, 168) and the shells (69).
   Only a person reaches LanPortDialog (the Options tab's port), DirectConnectDialog, PasswordDialog (joining a LAN
   game with a password; RoutingLogic's rooms); only the Internet path reaches AddFriendDialog, CreateRoomDialog and
   AdminActionDialog (a routing server's moderator). Those run only in the golden.
+
+### Gates
+
+| Gate | Commit 93e2c368 (the dialogs) | Merged with rust (59f87447) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests and clippy pass; rustfmt failed on one line of lobbydlg.rs (fixed before the commit, `cargo fmt --check` clean) | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | all 92 programs exit 0 | won_lobbydlg_test, won_dialogs_test, won_lanobj_test, won_stagingobj_test, won_dialogobj_test exit 0 (the full set takes two hours on the loaded machine) |
+| `lan_game.py` (harness lock) | `RESULT PASS lan-game` (both LAN names through LanNameDialog, the host's game through CreateGameDialog) | `RESULT PASS lan-game` |
+
+The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names: kept both), the generated
+`ee_won.h` (regenerated) and the docs' ends (both sections and rows kept).
+
+### Left for the next rounds
+
+- DialogLogic with StatusDialog and OkCancelDialog (LAN reaches the status wait; OkCancelDialog's SetText is a sizing
+  routine over the label's font: ~25 ops), then BadUserDialog (a list), ChooseNetworkAdapterDialog, CreditsDialog with
+  its ScrollingTextComponent (a Component: paint and timer), TOUDialog, RoomDialog: most fit the same table, with a
+  few ops more.
+- The popups (ClientOptionsPopup, GameOptionsPopup, FriendOptionsPopup: a PopupMenu filled by rules).
+- ChatCommandParser (its decisions are Rust since round 5; the class is the command table and the dispatch).
+- Then top-down: the controls of the LAN screens (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl,
+  GameStagingCtrl), the EE room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic,
+  RoutingLogic last, Internet only), and the resource tables and factories.
