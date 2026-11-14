@@ -221,12 +221,15 @@ fn destroy_detaches_and_kills_every_point() {
     let p = m.with_points(&[(0, 0), (5, 0)]);
     destroy(G, &mut m);
     assert!(m.points[&G].is_empty());
-    assert_eq!(m.log, vec![
-        format!("group {:x} 0", p[0]),
-        format!("kill {:x} false", p[0]),
-        format!("group {:x} 0", p[1]),
-        format!("kill {:x} false", p[1]),
-    ]);
+    assert_eq!(
+        m.log,
+        vec![
+            format!("group {:x} 0", p[0]),
+            format!("kill {:x} false", p[0]),
+            format!("group {:x} 0", p[1]),
+            format!("kill {:x} false", p[1]),
+        ]
+    );
 }
 
 #[test]

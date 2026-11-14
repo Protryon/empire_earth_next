@@ -732,7 +732,9 @@ fn docked_needs_a_carrier_plane_taxiing_with_clearance_short_of_the_deck() {
     assert!(!crate::pm_air::docked(&mut w.ctx(), u));
     w.u(plane).waypoints.clear();
     assert!(crate::pm_air::docked(&mut w.ctx(), u));
-    for (att, command, clearance) in [(1, ACTION_TAXI, true), (2, ACTION_CONTINUE_TO_BRAKE, true), (4, ACTION_BRAKE, false)] {
+    for (att, command, clearance) in
+        [(1, ACTION_TAXI, true), (2, ACTION_CONTINUE_TO_BRAKE, true), (4, ACTION_BRAKE, false)]
+    {
         let p = w.u(plane);
         p.class.air_traffic_type = att;
         p.command = command;
