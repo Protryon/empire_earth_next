@@ -18000,3 +18000,130 @@ Measured as rounds 18-34 (every file under `src/Empire Earth/WONAPI` and `includ
   `xbuild.py wontest` 97 programs exit 0, `lan_game.py` as above.
 - **Left:** the painters and compositions those classes share (MSControlPainters, MSRemainingPainters'
   MSButton/MSHeaderButton/MSLabel paints, MSTabButton, the skins' compositions), then the remaining WONGUI paint.
+
+## R6 WONLobby, round 3: four screens as lobby dialog kinds, the credits' scrolling text, the options popups (ee_won lobbydlg.rs, scrolltext.rs, lobbypopup.rs; branch rust-wonlobby3, 2026-11-14)
+
+Round 2's list, top-down: the dialogs left on round 1's `LobbyRustDialog`, the credits, then the popups. Every commit
+has its golden over the original statements (copied from the units before their deletion), mutations of the Rust
+that the golden catches, and a cargo replay of a recorded subset.
+
+### What moved (net WON C++ = `src/Empire Earth/WONAPI` + `include/ee/wonapi`, `git diff --numstat`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 0aca9d7d | RoomDialog, TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog as lobbydlg kinds `Room`, `Tou`, `BadUser`, `ChooseAdapter`; four units deleted | +213 -425 = -212 |
+| ad56821c | ScrollingTextComponent's state, timer and paint in `scrolltext.rs`; CreditsDialog as kind `Credits` | +82 -225 = -143 |
+| b9e86381 | ClientOptionsPopup, GameOptionsPopup, FriendOptionsPopup as one `lobbypopup.rs` object; three units deleted | +160 -306 = -146 |
+
+Total -501 lines of WON C++ (seven units deleted, CreditsDialog.cpp shrunk to the config reader and the scrolling
+text's shell and host).
+
+- **The four dialogs** fit round 1's per-kind control tables with three control types more (`BrowserComponent`,
+  `MultiListArea`, `ListArea`). RoomDialog has an empty table: its `RoomCtrl` member was never set and its
+  InitComponent was empty; RoutingLogic only shows and ends it. TOUDialog's `Paint` (Container's, skipping Dialog's)
+  stays a C++ one-liner in its shell; the `GotHTTPDocumentEvent` is a fifth `EeWonLobbyDlgEvent` (`GotHttpDocument`)
+  mapped by the shell, and the document's type is an op (`HttpDocType`), compared with `HTTPDocType_TOU` in Rust.
+  The list rows (`BadUserItem`, `NetworkAdapterListItem`) stay C++ widgets, moved into LobbyDialogHost.cpp; the
+  bad-user fill is one op (the loop of `InsertItem(new BadUserItem(...))`, no decision), the selected ids a
+  rewind/has-more/next loop of ops. The adapters' list is ops over a copy of `LobbyGetNetAddresses`' list (count,
+  handle, name length, the row's insert and its two strings, free). Handles are compared with the local host as the
+  original's `long`s (the full `intptr_t`, so LP64 compares as the original did).
+- **The credits.** ScrollingTextComponent stays a C++ `Component` (vtable, clip flag) whose Paint and TimerEvent
+  forward to `EeWonScrollText`: the lines (each a host-made `GUIString` copy and its colour, freed front to back by the
+  destructor), the last colour, the scroll clock (one pixel per 60 ms), the scroll top and the text's height; Paint's
+  every `Width()`/`Height()` read is an op in the original's places, so the golden sees each one. Its host has its own
+  op enum (`EeWonScrollTextOp`, eight arguments: the rectangles need four integers). `DimColor` is `scrolltext::dim_color`.
+  CreditsDialog is the kind `Credits`: two buttons, plus the scrolling text it holds (the constructor's `new`, through
+  `HoldScrollText` with `ConstSmartPtr::operator=`'s release-then-reference order; released after the controls, as
+  its first member), placed in the credits button's stead (`CreditsPlace`, the original's `Fn2F6140` call) and fed by
+  AddLine's widening of the component to the line plus 20.
+- **The popups** are not dialogs (they are `Container`s holding a `PopupMenu`), so they got their own object
+  (`EeWonLobbyPopup`, `EeWonLobbyPopupOp`, 45 ops) and shell (`LobbyRustPopup : Container`). Init's menu rules (the
+  player menu's whisper, invite, locate, friends, AFK, ignore, block, the moderator's and captain's actions; the game
+  menu's join, ping, details and remove with the lobby config's no-ping-in-progress; the friend menu) are Rust; the
+  bold title's two local `SmartPtr<Font>`s are references released in reverse order at the end of Init; the client
+  menu restores its font by assignment (`mFont = old`), the others by `SetFont`, as the originals did. The menu and the
+  subject are released in reverse member order (GameOptionsPopup's game was its first member, the others' menu).
+  Every held pointer is a `RefCount` at offset 0 (single, polymorphic inheritance), so one `AddRef`/`Release` op serves
+  menus, fonts, clients, games and friends. The two enums the C ABI does not name (`EeWonLobbyPopupString`,
+  `EeWonLobbyPopupEvent`) are in cbindgen.toml's `include`.
+
+### Goldens, mutations, replays
+
+| Golden (`xbuild.py wontest ...`) | Sequences | Trace lines | Replayed by cargo |
+|---|---|---|---|
+| `won_lobbyscr_test` (the four dialogs) | 20,000 | 1,254,777 | `golden_lobbyscr.txt` (63 sequences) |
+| `won_credits_test` (scrolling text; CreditsDialog) | 20,000 + 20,000 | 17,923,215 | `golden_scrolltext.txt` (20), `golden_credits.txt` (60) |
+| `won_lobbypopup_test` (the three popups) | 30,000 | 1,422,730 | `golden_lobbypopup.txt` (65) |
+
+All identical on the first run. The host answers from a seeded stream; the scrolling text's Graphics answers its colour
+with the last one set (the paint reads `g.mColor` back), its heights run from 3 (a third of 1) to 300 and runs of 40
+ticks scroll the text out and back. Each replay test also fails on one changed op.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| a terms download marks the page on any document type | 1,866 of 20,000 |
+| TOUDialog subscribes to broadcasts before its reset | 4,986 |
+| GetIds reads the full list always | 1,643 |
+| SetUserList's boxes both follow the simple flag | 4,469 |
+| the default adapter row selected when the local host is not 0 | 4,565 |
+| an adapter's handle compared as 16 bits | 1,518 |
+| the scrolling text's bottom fade without the line's height | 7,198 of 20,000 |
+| the text wraps one pixel early | 8,741 |
+| a line without a colour sets the last colour | 6,835 |
+| Start does not move the text to the bottom | 8,902 |
+| AddLine widens a component as wide as the line | 1,516 of 20,000 |
+| AddLine's margin 10, not 20 | 17,384 |
+| the invite entry offered without the captain check | 5,309 of 30,000 |
+| a game in progress not pinged when the config is missing | 2,592 |
+| the client menu's font restored by SetFont | 6,771 |
+| a right click delivers the action | 14,451 |
+| the game popup's members released in the client popup's order | 6,334 |
+
+Unit tests (new): TOUDialog rebuilds only after a terms download; accept follows the agree box only; the bad user ids
+come from the list in use; the adapter rows select the local host; `dim_color`; the tick, wrap and colour carry-over;
+Stop and the destructor's frees; a LAN captain's kick; no ping for a game in progress when the config says so; a click's
+delivery, close and the release order.
+
+A lesson for the next golden: print keys must not include returned values (`ret 123`): the first scrolling-text print
+picked 5,180 "new" sequences (5.8 million lines) because each Field answer was a new key.
+
+### Behaviour changes
+
+None on a defined path. RoomDialog's `SmartPtr<RoomCtrl>` member (never set) is gone. GameOptionsPopup's Init of a
+NULL game faults in both (the golden passes 0 only to its scripted host).
+
+### What runs it
+
+EE-SIM never builds the lobby (the oracle is unchanged by construction). The LAN game reaches the shared shell's event
+mapping (every lobby dialog's HandleComponentEvent now also tests for `LobbyEvent_GotHTTPDocument`) and LobbyDialogHost
+(LanNameDialog, CreateGameDialog), and ChooseNetworkAdapterDialog only on a machine with more than one adapter (InitLogic
+asks then). Only a person reaches the client and game popups on the LAN path (a right click on a player or a game).
+Only the Internet path reaches TOUDialog, the credits (AccountLogic), BadUserDialog, RoomDialog and the friend popup:
+those run only in their goldens. Nothing here is drawn by a gate except through the LAN game's screens; the credits'
+paint (`ScrollingTextComponent::Paint`) is reached by no gate at all.
+
+### Gates
+
+| Gate | per commit (on that commit) | final tree b9e86381 (rust 008e14c0 already merged: `rust` did not move during the round) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0aca9d7d, ad56821c, b9e86381: EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same (b9e86381's build) |
+| oracle against the main checkout's `ref` | 0aca9d7d, ad56821c: seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | 0aca9d7d: PASS. ad56821c as first committed: one test failed (the credits golden's sequence heads lacked their kind) and, after the fix, rustfmt (module order in lib.rs); both fixed and amended into ad56821c | PASS |
+| `build.py --test-profile windowed-software` | 0aca9d7d, ad56821c: 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | each commit's own golden (`won_lobbyscr_test`, `won_credits_test`, `won_lobbypopup_test`) exits 0 | the full set was started and stopped at 9 of about 100 programs (all exit 0) after 80 minutes: the loaded machine ran one program every 5-10 minutes. Run instead on b9e86381, all exit 0: the lobby set won_lobbydlg_test, won_dlglogic_test, won_dialogs_test, won_lobbyscr_test, won_credits_test, won_lobbypopup_test, won_lanobj_test, won_stagingobj_test, won_dialogobj_test, and the first nine (won_wire_test .. won_smartroute_test). The full set is still owed |
+| `lan_game.py` (harness lock) | 0aca9d7d: `RESULT PASS lan-game` (PT 2862 / 2862) | `RESULT PASS lan-game` (PT 2840 / 2847) |
+
+b9e86381 had no gate run of its own besides its build and its golden: the final tree is that commit, so the final
+column is its gates. ad56821c had no LAN run (the credits are Internet-only; LobbyDialogHost's change there only adds
+op cases); the final tree's LAN run covers it.
+
+### Left for the next rounds
+
+- ChatCommandParser: its parsing and state are Rust since earlier rounds (`chat.rs`, `chatobj.rs`); what is left is the
+  command table's registration (`AddCommands`' StringParser split of the localized names), the help text's rules and
+  the client list glue. Not moved this round.
+- The LAN screen's controls top-down (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl, GameStagingCtrl), the EE
+  room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
+  resource tables and factories.
+- The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.

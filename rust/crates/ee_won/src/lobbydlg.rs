@@ -38,6 +38,16 @@ pub enum EeWonLobbyDlgKind {
     Status = 8,
     /// OkCancelDialog (round 2): DialogLogic's OK/Cancel and Yes/No box.
     OkCancel = 9,
+    /// RoomDialog (round 3): no control (its RoomCtrl member was never set).
+    Room = 10,
+    /// TOUDialog (round 3): the terms of use.
+    Tou = 11,
+    /// BadUserDialog (round 3): the moderators' banned and muted users.
+    BadUser = 12,
+    /// ChooseNetworkAdapterDialog (round 3): InitLogic's adapter choice.
+    ChooseAdapter = 13,
+    /// CreditsDialog (round 3): AccountLogic's credits, with the scrolling text it holds.
+    Credits = 14,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -52,6 +62,12 @@ pub enum EeWonLobbyDlgType {
     Component = 4,
     /// a `WONFrameComponent` (round 2)
     Frame = 5,
+    /// a `BrowserComponent` (round 3)
+    Browser = 6,
+    /// a `MultiListArea` (round 3)
+    MultiList = 7,
+    /// a `ListArea` (round 3)
+    List = 8,
 }
 
 /// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
@@ -93,6 +109,8 @@ pub enum EeWonLobbyDlgEvent {
     InputTextChanged = 1,
     ButtonPressed = 2,
     ComboSelChanged = 3,
+    /// `LobbyEvent_GotHTTPDocument` (round 3: a `GotHTTPDocumentEvent`, broadcast when a download finished)
+    GotHttpDocument = 4,
 }
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -214,6 +232,87 @@ pub enum EeWonLobbyDlgOp {
     SetDragging,
     /// `&((Label*)a)->mWrappedText->mText` (the title's own text, as SetStatus passed it on).
     TitleText,
+    // ---- round 3: TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog
+    /// `((Button*)a)->mControlId = b`.
+    ButtonSetControlId,
+    /// `((Component*)a)->SubscribeToBroadcast(b != 0)` (the dialog).
+    SubscribeBroadcast,
+    /// `((BrowserComponent*)a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false)`.
+    BrowserShowTou,
+    /// `((BrowserComponent*)a)->GetHTMLView()->SetOffsets(0, 0)`.
+    BrowserTop,
+    /// `((GotHTTPDocumentEvent*)a)->mOp->GetNum(EE_WON_HTTPDOC_TYPE)`.
+    HttpDocType,
+    /// `((ListArea*)a)->BeginUpdate()`.
+    ListBeginUpdate,
+    /// `((ListArea*)a)->EndUpdate()`.
+    ListEndUpdate,
+    /// `((ListArea*)a)->Clear(b != 0)`.
+    ListClear,
+    /// `for (each user of *(const RoutingBadUserList*)b) ((ListArea*)a)->InsertItem(new BadUserItem(user, c != 0),
+    /// -1)`.
+    BadUsersInsert,
+    /// `((BadUserDialog::IdList*)a)->clear()`.
+    IdsClear,
+    /// `((ListArea*)a)->RewindSelections()`.
+    ListRewind,
+    /// `((ListArea*)a)->HasMoreSelections()` (0 or 1).
+    ListHasMore,
+    /// `((ListArea*)a)->GetNextSelection()`.
+    ListNextSel,
+    /// `((BadUserItem*)a)->mValues[1]` (the user's WON id).
+    BadUserId,
+    /// `((BadUserDialog::IdList*)a)->push_back((unsigned long)b)`.
+    IdsPush,
+    /// `InsertItem(new NetworkAdapterListItem(0), -1); SetString(0, 0, ChooseNetworkAdapterDialog_Default_String,
+    /// NULL)` on the list `a`.
+    AdapterAddDefault,
+    /// `IPAddr::GetLocalHost()`.
+    LocalHost,
+    /// `((ListArea*)a)->SetSelItem(b, c != 0)`.
+    ListSetSel,
+    /// `((ListArea*)a)->GetNumItems()`.
+    ListNumItems,
+    /// `LobbyGetNetAddresses(aList, true)` into a new list; the list (freed by `AdaptersFree`).
+    AdaptersGet,
+    /// the number of addresses in the list `a`.
+    AdaptersCount,
+    /// the `b`-th address's `mHandle` of the list `a`.
+    AdapterHandle,
+    /// the `b`-th address's `GUIString(mName).length()` of the list `a`.
+    AdapterNameLength,
+    /// `((MultiListArea*)a)->InsertItem(new NetworkAdapterListItem(b), -1)`.
+    AdapterInsertRow,
+    /// `SetString(GetNumItems() - 1, 0, GUIString(the c-th address of the list b's mName), NULL)` on the list `a`.
+    AdapterSetName,
+    /// `SetString(GetNumItems() - 1, 0, ChooseNetworkAdapterDialog_Unknown_String, NULL)` on the list `a`.
+    AdapterSetUnknownName,
+    /// `SetString(GetNumItems() - 1, 1, IPAddr(b, 0).GetHostString(true), NULL)` on the list `a`.
+    AdapterSetAddress,
+    /// frees the list `a` (the original's local list).
+    AdaptersFree,
+    /// `((ListArea*)a)->GetSelItem()`.
+    ListGetSel,
+    /// `((NetworkAdapterListItem*)a)->mHost`.
+    AdapterHost,
+    // ---- round 3: CreditsDialog
+    /// `a->AddRef()` (a `SmartPtr` assignment's).
+    AddRef,
+    /// `Component* aParent = ((Component*)b)->mParent; this->Fn2F6140((Component*)a, 0x5003, (Component*)b,
+    /// aParent->Left(), aParent->Top(), 0, 0, 0)` (the scrolling text `a` in place of the credits button `b`).
+    CreditsPlace,
+    /// `this->AddChild((Component*)a)`.
+    AddChild,
+    /// `((ScrollingTextComponent*)a)->Start()`.
+    ScrollStart,
+    /// `((ScrollingTextComponent*)a)->Stop()`.
+    ScrollStop,
+    /// `((ScrollingTextComponent*)a)->Reset()`.
+    ScrollReset,
+    /// `((ScrollingTextComponent*)a)->AddLine(*(const GUIString*)b, (unsigned long)c)`.
+    ScrollAddLine,
+    /// `this->GetDefaultFont()->GetStringWidth(t, 0, t.length())` of the string `a`.
+    DefaultFontStringWidth,
 }
 
 /// The inward calls (the shells' methods).
@@ -249,7 +348,7 @@ pub enum EeWonLobbyDlgCall {
     /// AdminAction: `GetNumSeconds()`.
     NumSeconds,
     /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional,
-    /// 4 StatusDialog's start tick.
+    /// 4 StatusDialog's start tick, 5 TOUDialog's need-to-rebuild flag, 6 BadUserDialog's simple flag.
     Field,
     /// StatusDialog: `SetText(*(GUIString*)a, *(GUIString*)b, c != 0)`; OkCancelDialog: `SetText(title a, body b,
     /// ((GUIString**)c)[0], ((GUIString**)c)[1])`.
@@ -258,6 +357,22 @@ pub enum EeWonLobbyDlgCall {
     SetStatus,
     /// StatusDialog: `mStartTick = a`.
     SetStartTick,
+    /// BadUserDialog: `SetUserList(*(const RoutingBadUserList*)a, b != 0)`.
+    SetUserList,
+    /// BadUserDialog: `GetIds(*(IdList*)a)`.
+    GetIds,
+    /// ChooseNetworkAdapterDialog: `GetSelectedAddress()`.
+    SelectedAddress,
+    /// CreditsDialog's constructor: `mScrollingText = (ScrollingTextComponent*)a` (held).
+    HoldScrollText,
+    /// CreditsDialog: `StartScrolling()`.
+    StartScrolling,
+    /// CreditsDialog: `StopScrolling()`.
+    StopScrolling,
+    /// CreditsDialog: `ResetScrolling()`.
+    ResetScrolling,
+    /// CreditsDialog: `AddLine(*(const GUIString*)a, (Component*)b, (unsigned long)c)`.
+    AddLine,
 }
 
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
@@ -345,6 +460,27 @@ static OK_CANCEL: [EeWonLobbyDlgSlot; 7] = [
     slot!(c"DialogComponent", c"OkCancelDialog.cpp", 34, Component),
     slot!(c"Back", c"OkCancelDialog.cpp", 33, Frame),
 ];
+static ROOM: [EeWonLobbyDlgSlot; 0] = [];
+static CREDITS: [EeWonLobbyDlgSlot; 2] = [
+    slot!(c"CreditsButton", c"CreditsDialog.cpp", 271, Button),
+    slot!(c"CancelButton", c"CreditsDialog.cpp", 272, Button),
+];
+static TOU: [EeWonLobbyDlgSlot; 4] = [
+    slot!(c"Browser", c"TOUDialog.cpp", 30, Browser),
+    slot!(c"AgreeCheck", c"TOUDialog.cpp", 31, Button),
+    slot!(c"AcceptButton", c"TOUDialog.cpp", 32, Button),
+    slot!(c"RejectButton", c"TOUDialog.cpp", 33, Button),
+];
+static BAD_USER: [EeWonLobbyDlgSlot; 4] = [
+    slot!(c"UserList", c"BadUserDialog.cpp", 157, MultiList),
+    slot!(c"SimpleUserList", c"BadUserDialog.cpp", 158, List),
+    slot!(c"UserListBox", c"BadUserDialog.cpp", 159, Component),
+    slot!(c"SimpleUserListBox", c"BadUserDialog.cpp", 160, Component),
+];
+static CHOOSE_ADAPTER: [EeWonLobbyDlgSlot; 2] = [
+    slot!(c"AdapterList", c"ChooseNetworkAdapterDialog.cpp", 60, MultiList),
+    slot!(c"ActivateButton", c"ChooseNetworkAdapterDialog.cpp", 61, Button),
+];
 /// StatusDialog looked its frame up before its body.
 const STATUS_INIT_ORDER: [usize; 6] = [0, 1, 2, 3, 5, 4];
 /// OkCancelDialog looked up its title, close button, body, buttons, frame, then its body component.
@@ -365,6 +501,11 @@ pub fn slots(kind: EeWonLobbyDlgKind) -> &'static [EeWonLobbyDlgSlot] {
         EeWonLobbyDlgKind::AdminAction => &ADMIN_ACTION,
         EeWonLobbyDlgKind::Status => &STATUS,
         EeWonLobbyDlgKind::OkCancel => &OK_CANCEL,
+        EeWonLobbyDlgKind::Room => &ROOM,
+        EeWonLobbyDlgKind::Tou => &TOU,
+        EeWonLobbyDlgKind::BadUser => &BAD_USER,
+        EeWonLobbyDlgKind::ChooseAdapter => &CHOOSE_ADAPTER,
+        EeWonLobbyDlgKind::Credits => &CREDITS,
     }
 }
 
@@ -416,6 +557,18 @@ const OC_CANCEL: usize = 3;
 const OC_CLOSE: usize = 4;
 const OC_COMPONENT: usize = 5;
 const OC_BACK: usize = 6;
+const TOU_BROWSER: usize = 0;
+const TOU_AGREE: usize = 1;
+const TOU_ACCEPT: usize = 2;
+const TOU_REJECT: usize = 3;
+const BU_LIST: usize = 0;
+const BU_SIMPLE_LIST: usize = 1;
+const BU_BOX: usize = 2;
+const BU_SIMPLE_BOX: usize = 3;
+const AD_LIST: usize = 0;
+const CD_CREDITS: usize = 0;
+/// `HTTPDocType_TOU` (WONRouting.h): the terms of use document.
+const HTTPDOC_TYPE_TOU: isize = 1;
 
 /// One lobby dialog's Rust half.
 pub struct EeWonLobbyDlg {
@@ -433,6 +586,12 @@ pub struct EeWonLobbyDlg {
     reason_optional: Cell<bool>,
     /// StatusDialog's `mStartTick` (its constructor's tick, set through `SetStartTick`).
     start_tick: Cell<u32>,
+    /// TOUDialog's `mNeedGenHTML` (false from its constructor).
+    need_gen_html: Cell<bool>,
+    /// BadUserDialog's `mIsSimple` (false from its constructor).
+    is_simple: Cell<bool>,
+    /// CreditsDialog's `mScrollingText` (its first member: released after the controls).
+    scroll_text: Cell<isize>,
 }
 
 impl EeWonLobbyDlg {
@@ -447,6 +606,9 @@ impl EeWonLobbyDlg {
             action_type: Cell::new(0),
             reason_optional: Cell::new(false),
             start_tick: Cell::new(0),
+            need_gen_html: Cell::new(false),
+            is_simple: Cell::new(false),
+            scroll_text: Cell::new(0),
         }
     }
 
@@ -494,11 +656,117 @@ impl EeWonLobbyDlg {
         if self.kind == EeWonLobbyDlgKind::CreateRoom {
             self.check_input();
         }
+        if self.kind == EeWonLobbyDlgKind::Credits {
+            // the scrolling text in place of the hidden credits button (UpdateCredits was empty)
+            self.op(Op::CreditsPlace, self.scroll_text.get(), self.ctl(CD_CREDITS), 0);
+            self.op(Op::AddChild, self.scroll_text.get(), 0, 0);
+            self.on(CD_CREDITS, Op::SetVisible, 0, 0);
+        }
+        if self.kind == EeWonLobbyDlgKind::Tou {
+            self.on(TOU_ACCEPT, Op::ButtonSetControlId, 1, 0);
+            self.on(TOU_REJECT, Op::ButtonSetControlId, -1, 0);
+            self.tou_reset();
+            self.me(Op::SubscribeBroadcast, 1, 0);
+        }
+    }
+
+    /// TOUDialog::Reset: the terms page rebuilt if new terms arrived, scrolled to the top, agree unticked, accept
+    /// disabled.
+    fn tou_reset(&self) {
+        if self.need_gen_html.get() {
+            self.need_gen_html.set(false);
+            self.on(TOU_BROWSER, Op::BrowserShowTou, 0, 0);
+        }
+        self.on(TOU_BROWSER, Op::BrowserTop, 0, 0);
+        self.on(TOU_AGREE, Op::ButtonSetCheck, 0, 0);
+        self.on(TOU_ACCEPT, Op::SetEnabled, 0, 0);
+    }
+
+    /// BadUserDialog's list in use (`mIsSimple`).
+    fn bad_user_list(&self) -> isize {
+        self.ctl(if self.is_simple.get() { BU_SIMPLE_LIST } else { BU_LIST })
+    }
+
+    /// BadUserDialog::SetUserList: the full or the simple list filled and shown alone.
+    fn set_user_list(&self, users: isize, simple: bool) {
+        self.is_simple.set(simple);
+        self.on(BU_BOX, Op::SetVisible, !simple as isize, 0);
+        self.on(BU_SIMPLE_BOX, Op::SetVisible, simple as isize, 0);
+        let list = self.bad_user_list();
+        self.op(Op::SetVisible, list, 1, 0);
+        self.op(Op::ListBeginUpdate, list, 0, 0);
+        self.op(Op::ListClear, list, 1, 0);
+        self.op(Op::BadUsersInsert, list, users, simple as isize);
+        self.op(Op::ListEndUpdate, list, 0, 0);
+    }
+
+    /// BadUserDialog::GetIds: the selected users' WON ids.
+    fn get_ids(&self, ids: isize) {
+        let list = self.bad_user_list();
+        self.op(Op::IdsClear, ids, 0, 0);
+        self.op(Op::ListRewind, list, 0, 0);
+        while self.op(Op::ListHasMore, list, 0, 0) != 0 {
+            let item = self.op(Op::ListNextSel, list, 0, 0);
+            let id = self.op(Op::BadUserId, item, 0, 0);
+            self.op(Op::IdsPush, ids, id, 0);
+        }
+    }
+
+    /// ChooseNetworkAdapterDialog::Reset: the default row and one row per adapter (name, address), the one in use
+    /// selected.
+    fn adapter_reset(&self) {
+        let list = self.ctl(AD_LIST);
+        self.op(Op::ListBeginUpdate, list, 0, 0);
+        self.op(Op::ListClear, list, 0, 0);
+        self.op(Op::AdapterAddDefault, list, 0, 0);
+        if self.op(Op::LocalHost, 0, 0, 0) == 0 {
+            self.op(Op::ListSetSel, list, 0, 0);
+        }
+        let addresses = self.op(Op::AdaptersGet, 0, 0, 0);
+        let count = self.op(Op::AdaptersCount, addresses, 0, 0);
+        for i in 0..count {
+            // the original's `long` handle, compared with the local host's `long`
+            let handle = self.op(Op::AdapterHandle, addresses, i, 0);
+            let unnamed = self.op(Op::AdapterNameLength, addresses, i, 0) == 0;
+            self.op(Op::AdapterInsertRow, list, handle, 0);
+            if unnamed {
+                self.op(Op::AdapterSetUnknownName, list, 0, 0);
+            } else {
+                self.op(Op::AdapterSetName, list, addresses, i);
+            }
+            self.op(Op::AdapterSetAddress, list, handle, 0);
+            if self.op(Op::LocalHost, 0, 0, 0) == handle {
+                let last = self.op(Op::ListNumItems, list, 0, 0).wrapping_sub(1);
+                self.op(Op::ListSetSel, list, last, 1);
+            }
+        }
+        self.op(Op::AdaptersFree, addresses, 0, 0);
+        self.op(Op::ListEndUpdate, list, 0, 0);
+    }
+
+    /// ChooseNetworkAdapterDialog::GetSelectedAddress: the selected row's address, else the local host.
+    fn selected_address(&self) -> u32 {
+        let item = self.op(Op::ListGetSel, self.ctl(AD_LIST), 0, 0);
+        let host = if item != 0 { Some(self.op(Op::AdapterHost, item, 0, 0) as u32) } else { None };
+        let local = self.op(Op::LocalHost, 0, 0, 0) as u32;
+        dialogs::selected_address(host, local)
     }
 
     fn event(&self, event: isize, kind: u32, component: isize) {
         let text_changed = kind == EeWonLobbyDlgEvent::InputTextChanged as u32;
         match self.kind {
+            EeWonLobbyDlgKind::Tou if kind == EeWonLobbyDlgEvent::GotHttpDocument as u32 => {
+                // HandleHTTPDocEvent: a terms of use download marks the page for rebuilding
+                if self.op(Op::HttpDocType, event, 0, 0) == HTTPDOC_TYPE_TOU {
+                    self.need_gen_html.set(true);
+                }
+            }
+            EeWonLobbyDlgKind::Tou
+                if kind == EeWonLobbyDlgEvent::ButtonPressed as u32 && component == self.ctl(TOU_AGREE) =>
+            {
+                let checked = self.flag(TOU_AGREE, Op::ButtonIsChecked);
+                self.on(TOU_ACCEPT, Op::SetEnabled, checked as isize, 0);
+            }
             EeWonLobbyDlgKind::AddFriend if text_changed => self.check_input(),
             EeWonLobbyDlgKind::LanPort if text_changed && component == self.ctl(S_INPUT) => self.check_input(),
             EeWonLobbyDlgKind::CreateRoom
@@ -568,7 +836,13 @@ impl EeWonLobbyDlg {
                 self.check_input();
             }
             EeWonLobbyDlgKind::AdminAction => self.admin_reset(a as i32, b),
-            EeWonLobbyDlgKind::Status | EeWonLobbyDlgKind::OkCancel => {}
+            EeWonLobbyDlgKind::Tou => self.tou_reset(),
+            EeWonLobbyDlgKind::ChooseAdapter => self.adapter_reset(),
+            EeWonLobbyDlgKind::Status
+            | EeWonLobbyDlgKind::OkCancel
+            | EeWonLobbyDlgKind::Room
+            | EeWonLobbyDlgKind::BadUser
+            | EeWonLobbyDlgKind::Credits => {}
         }
     }
 
@@ -742,6 +1016,8 @@ impl EeWonLobbyDlg {
                     2 => self.action_type.get() as isize,
                     3 => self.reason_optional.get() as isize,
                     4 => self.start_tick.get() as isize,
+                    5 => self.need_gen_html.get() as isize,
+                    6 => self.is_simple.get() as isize,
                     _ => 0,
                 }
             }
@@ -766,6 +1042,44 @@ impl EeWonLobbyDlg {
                 }
             }
             C::SetStartTick => self.start_tick.set(a as u32),
+            C::SetUserList => {
+                if self.kind == EeWonLobbyDlgKind::BadUser {
+                    self.set_user_list(a, b != 0)
+                }
+            }
+            C::GetIds => {
+                if self.kind == EeWonLobbyDlgKind::BadUser {
+                    self.get_ids(a)
+                }
+            }
+            C::SelectedAddress => {
+                if self.kind == EeWonLobbyDlgKind::ChooseAdapter {
+                    return self.selected_address() as isize;
+                }
+            }
+            C::HoldScrollText => {
+                // the SmartPtr assignment: nothing for the same pointer, else the old one released, the new one held
+                let old = self.scroll_text.get();
+                if old != a {
+                    if old != 0 {
+                        self.op(Op::Release, old, 0, 0);
+                    }
+                    self.scroll_text.set(a);
+                    if a != 0 {
+                        self.op(Op::AddRef, a, 0, 0);
+                    }
+                }
+            }
+            C::StartScrolling => {
+                self.op(Op::ScrollStart, self.scroll_text.get(), 0, 0);
+            }
+            C::StopScrolling => {
+                self.op(Op::ScrollStop, self.scroll_text.get(), 0, 0);
+            }
+            C::ResetScrolling => {
+                self.op(Op::ScrollReset, self.scroll_text.get(), 0, 0);
+            }
+            C::AddLine => self.credits_add_line(a, b, c as u32),
         }
         0
     }
@@ -917,13 +1231,29 @@ impl EeWonLobbyDlg {
         );
     }
 
-    /// The destructor: the controls released in reverse member order (the `SmartPtr` members' destruction).
+    /// CreditsDialog::AddLine: the component `comp` widened to the line (its default font's width and 20), the line
+    /// added to the scrolling text.
+    fn credits_add_line(&self, text: isize, comp: isize, color: u32) {
+        let width = (self.op(Op::DefaultFontStringWidth, text, 0, 0) as i32).wrapping_add(20);
+        if width > self.op(Op::Width, comp, 0, 0) as i32 {
+            let height = self.op(Op::Height, comp, 0, 0);
+            self.op(Op::SetSize, comp, width as isize, height);
+        }
+        self.op(Op::ScrollAddLine, self.scroll_text.get(), text, color as isize);
+    }
+
+    /// The destructor: the controls released in reverse member order (the `SmartPtr` members' destruction), then
+    /// CreditsDialog's scrolling text (its first member).
     fn release_all(&self) {
         for i in (0..slots(self.kind).len()).rev() {
             let c = self.controls[i].replace(0);
             if c != 0 {
                 self.op(Op::Release, c, 0, 0);
             }
+        }
+        let s = self.scroll_text.replace(0);
+        if s != 0 {
+            self.op(Op::Release, s, 0, 0);
         }
     }
 }
