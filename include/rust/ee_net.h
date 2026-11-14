@@ -215,6 +215,24 @@ enum class EeNetClOp : uint32_t {
   ProcessLocalUserInput = 41,
 };
 
+/// The server's calls out; a, b, c, d as each op says, the answer as isize.
+enum class EeNetSvOp : uint32_t {
+  /// a field (EeNetSvField) -> its value
+  Get = 0,
+  /// a field, a value
+  Set = 1,
+  /// a player -> IsPlayerPresent
+  IsPlayerPresent = 2,
+  /// a player -> GetPlayerSendToSlot
+  PlayerSendToSlot = 3,
+  /// a slot: UnregisterSlot
+  UnregisterSlot = 4,
+  /// BeforeRemovingPlayers()
+  BeforeRemovingPlayers = 5,
+  /// player, booted, out of sync, exiting: ProcessLocalUserInput(new NEMRemovePlayer(...), kSlotNone)
+  RemovePlayerInput = 6,
+};
+
 /// The tuning's calls out; a, b, c as each op says, the answer as isize.
 enum class EeNetTuOp : uint32_t {
   /// a field (EeNetTuField) -> its value
@@ -285,6 +303,14 @@ enum class EeNetTuField : uint32_t {
   CurrentCommunicationsTick = 11,
   /// mPTsPerCT (written)
   PTsPerCt = 12,
+};
+
+/// The server's fields the Rust reads and writes (still the C++ class's)
+enum class EeNetSvField : uint32_t {
+  /// mNumHumanPlayers (read, written)
+  NumHumanPlayers = 0,
+  /// mMaxPlayers
+  MaxPlayers = 1,
 };
 
 /// The base class's (`NESynchronousCommunications`) fields this class read and wrote
@@ -365,6 +391,9 @@ struct EeNetMsgMgr;
 /// The client's and the server's message recorder (`NERecordPlayback`).
 struct EeNetRecPlay;
 
+/// NESynchronousServer's Rust part.
+struct EeNetServer;
+
 /// The server's tuning and booting state (NESynchronousServer's network and CPU tuning).
 struct EeNetTune;
 
@@ -373,6 +402,8 @@ using EeNetMmHostFn = ptrdiff_t(*)(void *ctx, EeNetMmOp op, size_t a, size_t b, 
 using EeNetQHostFn = ptrdiff_t(*)(void *ctx, EeNetQOp op, size_t a, size_t b, size_t c, size_t d);
 
 using EeNetClHostFn = ptrdiff_t(*)(void *ctx, EeNetClOp op, size_t a, size_t b, size_t c, size_t d);
+
+using EeNetSvHostFn = ptrdiff_t(*)(void *ctx, EeNetSvOp op, size_t a, size_t b, size_t c, size_t d);
 
 using EeNetTuHostFn = ptrdiff_t(*)(void *ctx, EeNetTuOp op, size_t a, size_t b, size_t c, size_t d);
 
@@ -594,6 +625,38 @@ uint8_t ee_net_cl_record_playback_mode(const EeNetClient *c);
 void ee_net_cl_set_slow_playback(const EeNetClient *c);
 
 void ee_net_cl_set_normal_playback(const EeNetClient *c);
+
+/// # Safety
+/// `host` answers every op for `ctx` until `ee_net_sv_free`.
+EeNetServer *ee_net_sv_new(void *ctx, EeNetSvHostFn host);
+
+/// # Safety
+/// `s` from `ee_net_sv_new` (or NULL), used by nothing after.
+void ee_net_sv_free(EeNetServer *s);
+
+bool ee_net_sv_is_oos(const EeNetServer *s);
+
+void ee_net_sv_log_checksum_response(const EeNetServer *s,
+                                     uint32_t tick,
+                                     uint32_t checksum,
+                                     uint8_t slot);
+
+void ee_net_sv_remove_player_from_game_in_progress(const EeNetServer *s,
+                                                   uint8_t slot,
+                                                   bool was_booted,
+                                                   bool is_oos,
+                                                   bool game_is_exiting);
+
+void ee_net_sv_remove_oos_players(const EeNetServer *s);
+
+/// The checksums' state (the tests): writes at most `size` bytes of `Server::checks_state` (NUL-terminated) and
+/// answers its length.
+///
+/// # Safety
+/// `out` holds `size` bytes.
+size_t ee_net_sv_checks_state(const EeNetServer *s,
+                              uint8_t *out,
+                              size_t size);
 
 /// # Safety
 /// `host` answers every op for `ctx` until `ee_net_tu_free`.

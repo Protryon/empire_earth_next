@@ -25,6 +25,8 @@ class NEMWorldDatabaseChecksumResponse;
 struct EeNetRecPlay;                        // NERecordPlayback, whole in Rust (rust/ee_net.h)
 struct EeNetTune;                           // the tuning and booting (ee_net tune.rs)
 enum class EeNetTuOp : uint32_t;
+struct EeNetServer;                         // the server's Rust part (ee_net server.rs)
+enum class EeNetSvOp : uint32_t;
 class NEServer;
 class FSFileSpec;
 class TSEvent;
@@ -89,7 +91,6 @@ public:
     const NECDIServer& GetDebugInfo() const { return this->mDebugInfo; }
     unsigned char GetGameState() const { return this->mGameState; }
     bool GetGameWasPublished() const { return this->mGameWasPublished; }
-    bool GetIsOOS() const { return this->mIsOOS; }
     // the recorder's mode (NERecordPlaybackMode; ee_net recplay.rs)
     unsigned char GetRecordPlaybackMode() const;
     unsigned long GetLastCTMessageID() const { return this->mLastCTMessageID; }
@@ -209,7 +210,6 @@ private:
     void ProcessPendingPlayerInputs();
     void ProcessPendingPlayerInputs2(NEMessage* inMessage);
     static void RecordPlaybackCallback(NEMessage* inMessage, void* inThisPointer);
-    void RemovePlayer(unsigned char inPlayer, bool inA);
     static unsigned long Send(void* inServerObject);
     void SendCommunicationsTick(bool inGenerateChecksum, bool inB);
     bool TuneServer();
@@ -220,14 +220,16 @@ private:
     static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
     // the tuning's and booting's calls out (ee_net's EeNetTuOp): the server's fields, its manager, the game
     static ptrdiff_t TuneHost(void* inServer, EeNetTuOp inOp, size_t a, size_t b, size_t c, size_t d);
+    // the calls out of the Rust part (ee_net's EeNetSvOp): the server's fields, the game, the message manager
+    static ptrdiff_t ServerHost(void* inServer, EeNetSvOp inOp, size_t a, size_t b, size_t c, size_t d);
 
     NECDIServer mDebugInfo;                 // +0x30
     UWideString mName;                      // +0x70
     std::deque<NEMessage*> mIncomingPlayerInputs;   // +0x84 (mIncomingPlayerInputsLock)
     std::vector<NESendToAllAndWaitRequest> mSendToAllAndWaitRequests;   // +0x98
     std::map<unsigned char, unsigned char> mSendToSlotArray;            // +0xa8
-    std::map<unsigned long, std::multimap<unsigned long, unsigned char> > mChecksumResponses;   // +0xb4
-    std::vector<unsigned char> mOOSSlots;   // +0xc0
+    EeNetServer* mRust;                     // the Rust part (ee_net server.rs: mChecksumResponses +0xb4, mOOSSlots +0xc0,
+                                            // mChecksumResponsesLock +0x158, mIsOOS +0x203)
     EeNetTune* mTune;                       // the tuning and booting (ee_net tune.rs: mSlotsD0 +0xd0, the counts)
     EeNetMsgMgr* mMessageManager;           // +0xe0 NEMessageManager, whole in Rust (ee_net msgmgr.rs)
     NEProtocol* mProtocol;                  // +0xe4 protocol 0
@@ -259,7 +261,6 @@ private:
     TSEvent* mWaitForReconnectsEvent;       // +0x14c
     TSEvent* mStartPingEvent;               // +0x150
     TSEvent* mStopPingEvent;                // +0x154
-    TSCriticalSection* mChecksumResponsesLock;  // +0x158 provisional name (LogChecksumResponse)
     TSCriticalSection* mIncomingPlayerInputsLock;   // +0x15c
     TSCriticalSection* mPauseUnpauseLock;   // +0x160
     TSCriticalSection* mSendToAllLock;      // +0x164
@@ -301,7 +302,6 @@ private:
     bool mB200;                             // +0x200
     bool mGameWasPublished;                 // +0x201
     bool mPing;                             // +0x202
-    bool mIsOOS;                            // +0x203
     bool mB205;                             // +0x205 (true)
     bool mProcessingSendToAllAndWait;       // +0x206
 };

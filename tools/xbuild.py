@@ -798,6 +798,10 @@ NET_TESTS = {
     # NESynchronousServer's tuning and booting (golden: rust/crates/ee_net/src/golden_tune.txt; the original members are
     # tests/net/orig_s/NESynchronousServerTune.inc)
     "ne_tune_test": [],
+    # NESynchronousServer's checksums, out-of-sync slots and player removal (golden:
+    # rust/crates/ee_net/src/golden_checks.txt; the original members are tests/net/orig_s/NESynchronousServerChecks.inc
+    # and NESynchronousServerOOS.inc)
+    "ne_checks_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
     # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead

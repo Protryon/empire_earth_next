@@ -3,7 +3,6 @@
 // The class's inline members are emitted by NEMessageManager.cpp (first includer); this unit opens with the ctor.
 // Members in alphabetical order, then the three thread functions (Main, Send, Xfer); vector/map COMDATs last.
 #include <windows.h>
-#include <algorithm>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
@@ -59,8 +58,9 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
     this->mReconnectCount = 0;
     this->mB205 = true;
     this->mProcessingSendToAllAndWait = false;
-    this->mIsOOS = false;
     this->mPhysicsTickCostFactor = inPhysicsTickCostFactor;
+    // the world checksums, the out-of-sync slots, the removal of players (ee_net server.rs)
+    this->mRust = ee_net_sv_new(this, NESynchronousServer::ServerHost);
     this->mMessageManager = ee_net_mm_new(this, NESynchronousServer::MessageManagerHost);
     ee_net_mm_register_slot(this->mMessageManager, kSlotServer);
     this->mNextChecksumCT = 40;
@@ -112,9 +112,6 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
     this->mRecordPlayback = ee_net_rp_new(this, NESynchronousServer::QueueHost);
     ee_net_rp_pass_mode(this->mRecordPlayback);
 
-    theResult = TSScheduler::CreateCriticalSection(this->mChecksumResponsesLock);
-    ESVERIFY_AT(theResult == keseOK, 283);
-
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mSendToAllLock) == keseOK, 286);
 
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mPauseUnpauseLock) == keseOK, 289);
@@ -159,7 +156,6 @@ NESynchronousServer::~NESynchronousServer()
         TSScheduler::DestroyThread(this->mSendThread);
         TSScheduler::DestroyThread(this->mMainThread);
         TSScheduler::DestroyThread(this->mXferThread);
-        TSScheduler::DestroyCriticalSection(this->mChecksumResponsesLock);
         TSScheduler::DestroyCriticalSection(this->mIncomingPlayerInputsLock);
         TSScheduler::DestroyCriticalSection(this->mSendToAllLock);
         TSScheduler::DestroyCriticalSection(this->mPauseUnpauseLock);
@@ -171,6 +167,7 @@ NESynchronousServer::~NESynchronousServer()
     TSScheduler::DestroyEvent(this->mXferStuffWaitingToGoEvent);
     ee_net_mm_free(this->mMessageManager);
     ee_net_tu_free(this->mTune);
+    ee_net_sv_free(this->mRust);
     if (this->mGameWasPublished == true)
         this->mServer->Close();
 }
@@ -352,72 +349,13 @@ unsigned char NESynchronousServer::GetSendToSlotForPlayer(unsigned char inPlayer
     return theSlot;
 }
 
-struct NESSSlotOrder { NESSSlotOrder(unsigned char inFirst) : mFirst(inFirst) {} bool operator()(unsigned char inA, unsigned char inB) const { return inA == this->mFirst && inB != this->mFirst; } unsigned char mFirst; };
 // FUNCTION: LLE 0x10048139
 // Collects world checksums per tick; once every human has answered, marks the out-of-sync slots
-// (with 2 humans the client; else those off the most common checksum, server wins ties)
+// (with 2 humans the client; else those off the most common checksum, server wins ties) (ee_net server.rs)
 void NESynchronousServer::LogChecksumResponse(NEMWorldDatabaseChecksumResponse* inMessage)
 {
-    std::map<unsigned long, unsigned long> theCounts;
-    std::multimap<unsigned long, unsigned char>::iterator theResponses;
-    std::map<unsigned long, unsigned long>::iterator theCount;
-    unsigned char theNumPlayers = this->mNumHumanPlayers;
-    unsigned long theServersChecksum = 0;
-    unsigned long theHighestCount = 0;
-    unsigned long theMostCommon = 0;
-    this->mChecksumResponsesLock->Enter();
-    unsigned long theTick = inMessage->GetCommunicationsTick();
-    unsigned long theChecksum = inMessage->GetWorldDatabaseChecksum();
-    unsigned char theSlot = inMessage->GetOriginatingSlot();
-    if (theTick > 0 && theNumPlayers > 1) {
-        std::map<unsigned long, std::multimap<unsigned long, unsigned char> >::iterator theTickResponses =
-            this->mChecksumResponses.find(theTick);
-        if (theTickResponses == this->mChecksumResponses.end())
-            this->mChecksumResponses[theTick].insert(std::make_pair(theChecksum, theSlot));
-        else {
-            this->mChecksumResponses[theTick].insert(std::make_pair(theChecksum, theSlot));
-            if (this->mChecksumResponses[theTick].size() == theNumPlayers) {
-                for (theResponses = this->mChecksumResponses[theTick].begin();
-                     theResponses != this->mChecksumResponses[theTick].end(); ++theResponses) {
-                    unsigned long theKey = theResponses->first;
-                    theCounts[theKey] = theCounts[theKey] + 1;
-                }
-                if (theCounts.size() != 1) {
-                    for (theResponses = this->mChecksumResponses[theTick].begin();
-                         theResponses != this->mChecksumResponses[theTick].end(); ++theResponses)
-                        ;
-                    if (this->mNumHumanPlayers == 2) {
-                        for (theResponses = this->mChecksumResponses[theTick].begin();
-                             theResponses != this->mChecksumResponses[theTick].end(); ++theResponses)
-                            if (theResponses->second != 0xfe)
-                                this->mOOSSlots.push_back(theResponses->second);
-                    } else {
-                        for (theResponses = this->mChecksumResponses[theTick].begin();
-                             theResponses != this->mChecksumResponses[theTick].end(); ++theResponses)
-                            if (theResponses->second == 0xfe) {
-                                theServersChecksum = theResponses->first;
-                                break;
-                            }
-                        for (theCount = theCounts.begin(); theCount != theCounts.end(); ++theCount)
-                            if (theCount->second > theHighestCount ||
-                                (theCount->second == theHighestCount && theCount->first == theServersChecksum)) {
-                                theMostCommon = theCount->first;
-                                theHighestCount = theCount->second;
-                            }
-                        for (theResponses = this->mChecksumResponses[theTick].begin();
-                             theResponses != this->mChecksumResponses[theTick].end(); ++theResponses)
-                            if (theResponses->first != theMostCommon)
-                                this->mOOSSlots.push_back(theResponses->second);
-                        if (this->mOOSSlots.size() > 1)
-                            std::sort(this->mOOSSlots.begin(), this->mOOSSlots.end(), NESSSlotOrder(kSlotServer));
-                    }
-                    this->mIsOOS = true;
-                }
-                this->mChecksumResponses.erase(this->mChecksumResponses.begin(), theTickResponses);
-            }
-        }
-    }
-    this->mChecksumResponsesLock->Leave();
+    ee_net_sv_log_checksum_response(this->mRust, (uint32_t)inMessage->GetCommunicationsTick(),
+                                    (uint32_t)inMessage->GetWorldDatabaseChecksum(), inMessage->GetOriginatingSlot());
 }
 
 // FUNCTION: LLE 0x10048472
@@ -612,43 +550,12 @@ void NESynchronousServer::RegisterSlot(unsigned char inSlot)
     ee_net_mm_register_slot(this->mMessageManager, inSlot);
 }
 
-// FUNCTION: LLE 0x100488f1
-// Announces the removal of every player that uses the given send slot
-void NESynchronousServer::RemovePlayer(unsigned char inSlot, bool inA)
-{
-    for (unsigned char i = 0; i < this->mMaxPlayers; i++)
-        if (this->IsPlayerPresent(i) && inSlot == this->GetPlayerSendToSlot(i)) {
-            NEMessage* theMessage = new NEMRemovePlayer(i, false, false, false);
-            if (theMessage != NULL)
-                this->ProcessLocalUserInput(theMessage, kSlotNone);
-        }
-}
-
 // FUNCTION: LLE 0x10048983
 // Announces a player's removal from a running game; a booted client's slot is unregistered and counted out
+// (ee_net server.rs)
 void NESynchronousServer::RemovePlayerFromGameInProgress(unsigned char inSlot, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
 {
-    unsigned char thePlayer = 0xfe;
-    bool theFound = true;
-    if (inSlot != kSlotServer) {
-        theFound = false;
-        for (thePlayer = 1; thePlayer < this->mMaxPlayers; thePlayer++) {
-            this->GetPlayerSendToSlot(thePlayer);
-            if (!this->IsPlayerPresent(thePlayer) || this->GetPlayerSendToSlot(thePlayer) != inSlot)
-                continue;
-            if (thePlayer != kSlotServer && inWasBooted == true) {
-                this->UnregisterSlot(inSlot);
-                this->mNumHumanPlayers--;
-            }
-            theFound = true;
-            break;
-        }
-    }
-    if (!theFound)
-        return;
-    NEMessage* theMessage = new NEMRemovePlayer(thePlayer, inWasBooted, inPlayerIsOOS, inGameIsExiting);
-    if (theMessage != NULL)
-        this->ProcessLocalUserInput(theMessage, kSlotNone);
+    ee_net_sv_remove_player_from_game_in_progress(this->mRust, inSlot, inWasBooted, inPlayerIsOOS, inGameIsExiting);
 }
 
 // FUNCTION: LLE 0x10048a4a
@@ -668,7 +575,7 @@ void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool i
     unsigned char thePTs;
     this->mSendCommunicationsTickLock->Enter();
     this->mSendToAllLock->Enter();
-    if (!this->mIsOOS && inB && this->TuneServer() != true) {
+    if (!ee_net_sv_is_oos(this->mRust) && inB && this->TuneServer() != true) {
         NEMessage* theMessage = new NEMServerIsAlive();
         theMessage->SetOriginatingSlot(kSlotServer);
         ee_net_mm_send(this->mMessageManager, theMessage, false);
@@ -690,14 +597,14 @@ void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool i
                 this->mLastPingTime = TMGetTime();
                 this->ProcessLocalUserInput(new NEMPlayerConnectionCheck(this->mLastPingTime), kSlotNone);
             }
-        } else if (!this->mIsOOS && !this->mProcessingSendToAllAndWait && (!this->ServerSlot28() || this->mIsMultiplayerSession != true)) {
+        } else if (!ee_net_sv_is_oos(this->mRust) && !this->mProcessingSendToAllAndWait && (!this->ServerSlot28() || this->mIsMultiplayerSession != true)) {
             thePTs = this->mPTsPerCT;
             this->mCurrentPhysicsTick += thePTs;
         } else
             thePTs = 0;
-        bool theGenerateChecksum = ((inGenerateChecksum && thePTs > 0) || this->mIsOOS) && this->mIsMultiplayerSession;
+        bool theGenerateChecksum = ((inGenerateChecksum && thePTs > 0) || ee_net_sv_is_oos(this->mRust)) && this->mIsMultiplayerSession;
         NEMCommunicationsTick* theTick = new NEMCommunicationsTick(this->mCurrentCommunicationsTick, thePTs, this->mPTsPerSecond,
-                                                            theGenerateChecksum, this->mIsOOS);
+                                                            theGenerateChecksum, ee_net_sv_is_oos(this->mRust));
         if (theTick != NULL) {
             unsigned long theSize = theTick->ExportSize();
             if (!this->mProcessingSendToAllAndWait) {
@@ -716,14 +623,9 @@ void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool i
             this->mLastCTMessageID = ee_net_mm_send(this->mMessageManager, theTick, true);
             this->mCurrentCommunicationsTick++;
             theTick->Dereference();
-            if (this->mIsOOS) {
-                this->BeforeRemovingPlayers();
-                for (unsigned long i = 0; i < this->mOOSSlots.size(); i++)
-                    this->RemovePlayerFromGameInProgress(this->mOOSSlots[i], true, true, false);
-                this->mIsOOS = false;
-                // (RemovePlayerFromGameInProgress has already counted each removed human out of mNumHumanPlayers)
-                this->mOOSSlots.clear();
-            }
+            // out of sync: the game told, each out-of-sync slot's player removed (counted out of the humans once),
+            // in sync again (ee_net server.rs)
+            ee_net_sv_remove_oos_players(this->mRust);
         }
     }
     this->mSendToAllLock->Leave();
@@ -828,6 +730,40 @@ void NESynchronousServer::StopThreads()
 bool NESynchronousServer::TuneServer()
 {
     return ee_net_tu_tune_server(this->mTune);
+}
+
+// The calls out of the server's Rust part (ee_net server.rs), each the statement the original members made
+ptrdiff_t NESynchronousServer::ServerHost(void* inServer, EeNetSvOp inOp, size_t a, size_t b, size_t c, size_t d)
+{
+    NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServer);
+    switch (inOp) {
+    case EeNetSvOp::Get:
+        if ((EeNetSvField)a == EeNetSvField::NumHumanPlayers)
+            return theServer->mNumHumanPlayers;
+        return theServer->mMaxPlayers;
+    case EeNetSvOp::Set:
+        if ((EeNetSvField)a == EeNetSvField::NumHumanPlayers)
+            theServer->mNumHumanPlayers = (unsigned char)b;
+        return 0;
+    case EeNetSvOp::IsPlayerPresent:
+        return theServer->IsPlayerPresent((unsigned char)a);
+    case EeNetSvOp::PlayerSendToSlot:
+        return theServer->GetPlayerSendToSlot((unsigned char)a);
+    case EeNetSvOp::UnregisterSlot:
+        theServer->UnregisterSlot((unsigned char)a);
+        return 0;
+    case EeNetSvOp::BeforeRemovingPlayers:
+        theServer->BeforeRemovingPlayers();
+        return 0;
+    case EeNetSvOp::RemovePlayerInput: {
+        unsigned char thePlayer = (unsigned char)a;
+        NEMessage* theMessage = new NEMRemovePlayer(thePlayer, b != 0, c != 0, d != 0);
+        if (theMessage != NULL)
+            theServer->ProcessLocalUserInput(theMessage, kSlotNone);
+        return 0;
+    }
+    }
+    return 0;
 }
 
 // The tuning's calls out (ee_net tune.rs), each the statement the original members made
@@ -1329,6 +1265,7 @@ unsigned long NESynchronousServer::Xfer(void* inServerObject)
 // TEMPLATE: LLE 0x1004afca
 // TEMPLATE: LLE 0x1004afdd
 // TEMPLATE: LLE 0x1004b01e
-// The std::sort chain over vector<unsigned char> 0x1004a9c6..0x1004b04f (Dinkum 2.33 <algorithm>, NESSSlotOrder).
+// The std::sort chain over vector<unsigned char> 0x1004a9c6..0x1004b04f (Dinkum 2.33 <algorithm>, NESSSlotOrder):
+// LogChecksumResponse's out-of-sync order, ee_net server.rs now.
 // TEMPLATE: LLE 0x1004a067
 // TEMPLATE: LLE 0x1004a440
