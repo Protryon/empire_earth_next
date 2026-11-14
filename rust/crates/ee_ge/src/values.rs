@@ -1,6 +1,7 @@
 //! The value types' members that copied, compared and coded their fields in C++ (R4.3, twelfth part):
 //! `GETransformation`'s constructors, `operator=`, comparisons, identity, scale and zero-orientation setters and its
-//! file codec. The pointers are the C++ objects themselves (`this` and the arguments, which may be the same object).
+//! file codec; the value types' float codecs (`GEVector`, `GE3DPoint`, `GEOrientation`, `GERectangle`, `GEColor`,
+//! `GETextureCoordinate`); `GEViewport::operator=`. The pointers are the C++ objects themselves (`this` and the arguments, which may be the same object).
 //! The simulation copies transformations everywhere: the copies are the sixteen floats as they are (bit for bit,
 //! a NaN's payload and -0 kept), the comparisons IEEE's (a NaN never equals).
 
@@ -8,6 +9,7 @@ use std::ffi::c_long;
 
 use crate::io::{CppIo, EeGeFieldIo, FieldIo, OK};
 use crate::types::{Ge3DPoint, GeTransformation};
+use crate::viewport::GeViewport;
 
 /// `GETransformation()` and `MakeIdentity()`: the identity.
 ///
@@ -95,6 +97,71 @@ pub unsafe extern "C" fn ee_ge_t_io(t: *mut GeTransformation, io: *const EeGeFie
         }
     }
     result
+}
+
+/// `kErrorNotOpen`.
+const NOT_OPEN: c_long = 4;
+
+/// The value types' file codecs (`GEVector`, `GE3DPoint`, `GEOrientation`, `GERectangle`, `GEColor`,
+/// `GETextureCoordinate` `Load`/`Save`): the fields in the order given through the file's own float reads or writes,
+/// stopping at the first error. `open` is the file's `GetIsOpen()` (false: `kErrorNotOpen` with no access), or -1 for
+/// the codecs that do not ask (`GEColor`). `restore` (`GETextureCoordinate`): the position is read first (its error
+/// returned as is) and set back after a failed field.
+///
+/// # Safety
+/// `fields` holds `count` valid float pointers; `io` is a live field stream.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_fields_io(
+    fields: *const *mut f32,
+    count: u32,
+    io: *const EeGeFieldIo,
+    open: i32,
+    write: bool,
+    restore: bool,
+) -> c_long {
+    if open == 0 {
+        return NOT_OPEN;
+    }
+    // SAFETY: the function's contract
+    let (fields, mut io) = unsafe { (std::slice::from_raw_parts(fields, count as usize), CppIo(*io)) };
+    let mut position: c_long = 0;
+    if restore {
+        let result = io.get_position(&mut position);
+        if result != OK {
+            return result;
+        }
+    }
+    let mut result = OK;
+    for &field in fields {
+        // SAFETY: the function's contract
+        result = unsafe {
+            if write {
+                io.write_f32(*field)
+            } else {
+                io.read_f32(&mut *field)
+            }
+        };
+        if result != OK {
+            break;
+        }
+    }
+    if restore && result != OK {
+        io.set_position(position);
+    }
+    result
+}
+
+/// `GEViewport::operator=`: every field.
+///
+/// # Safety
+/// `out` and `v` are valid (they may be the same viewport).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_viewport_copy(out: *mut GeViewport, v: *const GeViewport) {
+    // SAFETY: the function's contract (the source is read whole before the store)
+    unsafe {
+        let source = *v;
+        *out = source;
+    }
 }
 
 #[cfg(test)]

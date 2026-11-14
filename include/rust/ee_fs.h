@@ -15,8 +15,6 @@ constexpr static const uint32_t ARCHIVE_RESERVED = 0;
 
 constexpr static const int32_t NOT_SUSPENDED = 2;
 
-constexpr static const int32_t NOT_OPEN = 4;
-
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 

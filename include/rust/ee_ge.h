@@ -3127,6 +3127,27 @@ long ee_ge_t_io(EeGeTransformation *t,
                 const EeGeFieldIo *io,
                 bool write);
 
+/// The value types' file codecs (`GEVector`, `GE3DPoint`, `GEOrientation`, `GERectangle`, `GEColor`,
+/// `GETextureCoordinate` `Load`/`Save`): the fields in the order given through the file's own float reads or writes,
+/// stopping at the first error. `open` is the file's `GetIsOpen()` (false: `kErrorNotOpen` with no access), or -1 for
+/// the codecs that do not ask (`GEColor`). `restore` (`GETextureCoordinate`): the position is read first (its error
+/// returned as is) and set back after a failed field.
+///
+/// # Safety
+/// `fields` holds `count` valid float pointers; `io` is a live field stream.
+long ee_ge_fields_io(float *const *fields,
+                     uint32_t count,
+                     const EeGeFieldIo *io,
+                     int32_t open,
+                     bool write,
+                     bool restore);
+
+/// `GEViewport::operator=`: every field.
+///
+/// # Safety
+/// `out` and `v` are valid (they may be the same viewport).
+void ee_ge_viewport_copy(EeGeViewport *out, const EeGeViewport *v);
+
 /// `GEViewport()`.
 ///
 /// # Safety

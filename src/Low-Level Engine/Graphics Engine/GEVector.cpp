@@ -44,6 +44,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/FSFile.h"
 #include "GERustMath.h"
+#include "GERustIO.h"
 
 // The unit cube's six faces (-X, -Y, -Z, +X, +Y, +Z), each sampled on a 41 x 41 grid of normalized directions.
 // (The original also kept the six face planes here, +0x1d8c8; the Rust search has its own.)
@@ -118,30 +119,12 @@ long GEVector::SaveQuantizedIndex(FSFile& inFile) const
 // ---- Exported members with no address of their own (ICF-folded: Load 0xdc23, Save 0x20dc6)
 long GEVector::Load(FSFile& inFile)
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Read(this->mX);
-        if (theResult == 0) {
-            theResult = inFile.Read(this->mY);
-            if (theResult == 0)
-                theResult = inFile.Read(this->mZ);
-        }
-    } else
-        theResult = 4;
-    return theResult;
+    const float* theFields[] = {&this->mX, &this->mY, &this->mZ};
+    return GERustFields(inFile, theFields, 3, inFile.GetIsOpen(), false, false);
 }
 
 long GEVector::Save(FSFile& inFile) const
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Write(this->mX);
-        if (theResult == 0) {
-            theResult = inFile.Write(this->mY);
-            if (theResult == 0)
-                theResult = inFile.Write(this->mZ);
-        }
-    } else
-        theResult = 4;
-    return theResult;
+    const float* theFields[] = {&this->mX, &this->mY, &this->mZ};
+    return GERustFields(inFile, theFields, 3, inFile.GetIsOpen(), true, false);
 }
