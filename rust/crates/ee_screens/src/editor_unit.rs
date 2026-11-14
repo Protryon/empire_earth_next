@@ -308,7 +308,8 @@ pub fn in_palette(c: i32, mode: i32) -> bool {
 /// Whether the owner `layer` (0 gaia, 1 players, 2 none) may place a class with the flags `c` that the editor lists.
 pub fn placeable(c: i32, layer: i32) -> bool {
     c & EE_SCREENS_SEUN_CLASS_SELECTABLE != 0
-        && ((layer == 0 && c & EE_SCREENS_SEUN_CLASS_GAIA != 0) || (layer == 1 && c & EE_SCREENS_SEUN_CLASS_PLAYER != 0))
+        && ((layer == 0 && c & EE_SCREENS_SEUN_CLASS_GAIA != 0)
+            || (layer == 1 && c & EE_SCREENS_SEUN_CLASS_PLAYER != 0))
 }
 
 impl UnitTab {
@@ -367,7 +368,8 @@ impl UnitTab {
                 .extra([EE_SCREENS_SEPL_LIST_CARGO, 0, 0, 0]),
         );
         let x = rect(m.h, u.cargo_list)[2] + 2.0;
-        u.remove_cargo = made(m.h, EE_SCREENS_SEUN_OP_REMOVE_CARGO, form, 0, [m.index as i32, 0, 0, 0], [x, 0.0, 0.0, 0.0]);
+        u.remove_cargo =
+            made(m.h, EE_SCREENS_SEUN_OP_REMOVE_CARGO, form, 0, [m.index as i32, 0, 0, 0], [x, 0.0, 0.0, 0.0]);
         m.index += 1;
         u.rotation = made(m.h, EE_SCREENS_SEUN_OP_ROTATION, form, 0, [m.index as i32, 0, 0, 0], [0.0; 4]);
         m.index += 1;
@@ -741,7 +743,8 @@ impl UnitTab {
                 op(h, EE_SCREENS_SEUN_OP_BUILD_UPDATE, [self.shell, 0, 0], [1, 0, 0, 0], xy);
             } else {
                 let buttons = mouse(h);
-                let held = EE_SCREENS_SEUN_MOUSE_L_RELEASED | EE_SCREENS_SEUN_MOUSE_L_DOWN | EE_SCREENS_SEUN_MOUSE_L_PRESSED;
+                let held =
+                    EE_SCREENS_SEUN_MOUSE_L_RELEASED | EE_SCREENS_SEUN_MOUSE_L_DOWN | EE_SCREENS_SEUN_MOUSE_L_PRESSED;
                 if buttons & held == 0 {
                     self.gate_held.set(false);
                 }
@@ -883,7 +886,17 @@ mod tests {
         let ids: Vec<(u32, u32)> = r.made.iter().map(|c| (c.id, c.index)).collect();
         assert_eq!(
             ids,
-            [(0x3f3, 55), (1000, 56), (0x3ea, 57), (0x3ed, 58), (0x3f1, 65), (0x3ee, 66), (0x3ef, 67), (0x3f0, 68), (0x3f2, 69)]
+            [
+                (0x3f3, 55),
+                (1000, 56),
+                (0x3ea, 57),
+                (0x3ed, 58),
+                (0x3f1, 65),
+                (0x3ee, 66),
+                (0x3ef, 67),
+                (0x3f0, 68),
+                (0x3f2, 69)
+            ]
         );
         // the type buttons at 59..64, 35 apart, the bitmaps paired
         let buttons = logged(&r, EE_SCREENS_SEUN_OP_TYPE_BUTTON);
@@ -925,7 +938,8 @@ mod tests {
         let mut r = Rec::default();
         let u = tab(&mut r);
         let s = EE_SCREENS_SEUN_CLASS_SELECTABLE | EE_SCREENS_SEUN_CLASS_PLAYER;
-        r.classes = vec![s | EE_SCREENS_SEUN_CLASS_LAND, s | EE_SCREENS_SEUN_CLASS_SEA, s, s | EE_SCREENS_SEUN_CLASS_LAND];
+        r.classes =
+            vec![s | EE_SCREENS_SEUN_CLASS_LAND, s | EE_SCREENS_SEUN_CLASS_SEA, s, s | EE_SCREENS_SEUN_CLASS_LAND];
         r.type_mode = EE_SCREENS_SEUN_PALETTE_LAND;
         r.log.clear();
         u.refresh_unit_list(&mut r);
