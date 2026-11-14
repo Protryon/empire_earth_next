@@ -17,20 +17,6 @@ namespace WONAPI {
 static RefCount* AsRef(const ByteBuffer* inBuffer) { return const_cast<ByteBuffer*>(inBuffer); }
 static const ByteBuffer* AsBytes(void* inRef) { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(inRef)); }
 
-// FUNCTION: WON 0x006b5e50
-// Starts sending the op's bytes from the beginning
-WONStatus SendBytesOp::Start()
-{
-    return ee_won_socketop_start(this->GetSocketOpObject(), this->GetTiming());
-}
-
-// FUNCTION: WON 0x006b5e70
-// Sends the remaining bytes as the socket accepts them; returns WS_TimedOut when time runs out or the send error
-WONStatus SendBytesOp::Continue()
-{
-    return ee_won_socketop_continue(this->GetSocketOpObject(), this->GetTiming());
-}
-
 // Creates an op sending the bytes (a reference held; NULL sends nothing)
 SendBytesOp::SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket) : SocketOp(inSocket)
 {
@@ -52,27 +38,6 @@ SendBytesToOp::SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, 
     ee_won_socketop_init_send_to(this->GetSocketOpObject(), AsRef(inData), inAddress.GetValue());
 }
 
-// FUNCTION: WON 0x006b5f10
-// Sends the op's datagram to its address, or on the connection if the socket is connected
-WONStatus SendBytesToOp::Continue()
-{
-    return ee_won_socketop_continue(this->GetSocketOpObject(), this->GetTiming());
-}
-
-// FUNCTION: WON 0x006b5fa0
-// Runs the message through the socket's send transforms, then starts sending it
-WONStatus SendMsgOp::Start()
-{
-    return ee_won_socketop_start(this->GetSocketOpObject(), this->GetTiming());
-}
-
-// FUNCTION: WON 0x006b6020
-// Continues sending the message and counts it as sent once it is complete
-WONStatus SendMsgOp::Continue()
-{
-    return ee_won_socketop_continue(this->GetSocketOpObject(), this->GetTiming());
-}
-
 // FUNCTION: WON 0x006b4de0
 // Creates an op that receives the given number of bytes (0 = until the peer closes) into memory
 RecvBytesOp::RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket) : SocketOp(inSocket)
@@ -86,20 +51,6 @@ RecvBytesOp::RecvBytesOp(AsyncSocket* inSocket, MessageTag) : SocketOp(inSocket)
 {
     this->SetWaitForEvent(0,true);
     ee_won_socketop_init_recv(this->GetSocketOpObject(), 0, true);
-}
-
-// FUNCTION: WON 0x006b5b00
-// Starts receiving a message by reading its 1-, 2- or 4-byte length prefix
-WONStatus RecvMsgOp::Start()
-{
-    return ee_won_socketop_start(this->GetSocketOpObject(), this->GetTiming());
-}
-
-// FUNCTION: WON 0x006b5e20
-// Continues receiving the length prefix or the body and moves to the next stage when it is complete
-WONStatus RecvMsgOp::Continue()
-{
-    return ee_won_socketop_continue(this->GetSocketOpObject(), this->GetTiming());
 }
 
 // FUNCTION: WON 0x006b5580
@@ -127,12 +78,6 @@ void RecvBytesFromOp::RunHook()
 {
     ee_won_socketop_recv_from_prepare(this->GetSocketOpObject());
     SocketOp::RunHook();
-}
-// FUNCTION: WON 0x006b5820
-// Receives one datagram and its sender (the peer address if connected) into a new byte buffer
-WONStatus RecvBytesFromOp::Continue()
-{
-    return ee_won_socketop_continue(this->GetSocketOpObject(), this->GetTiming());
 }
 }
 namespace WONAPI {

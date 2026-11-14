@@ -19113,3 +19113,104 @@ and line of sight (`mStats->`: the unit picker, light glows, render objects). On
 - **For the next round.** `RTSPlayer::Load`/`Save` (72 lines) and `EEAirTrafficControl`'s (84) by the same pattern;
   `EETechTree`'s (137) once its nodes' state is a record; the unit save host's primitives onto `EESavePrimitive` (its
   io type is the same shape); `EEPWorldHelper`'s plain reads (mostly sub-object loads).
+
+## R6: WON's Internet code, round 23 (the op base's socket and op calls answered in Rust; the socket ops' forwarders)
+
+Branch `rust-won-net23`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 22.
+Round 22 recommended WONSocket (1,996 lines in 13 units) bottom-up, so that ServerOp.cpp's remaining socket host
+calls could be answered in Rust.
+
+- **What WONSocket was at the start.** Every class was already a shim over a Rust object (the lobby lane's rounds
+  13-16): IPAddr over `EeWonIpAddr` (a value handle, copied at every copy), AsyncSocket over `EeWonAsyncSocket`,
+  QueueSocket over `EeWonQueueSocket`, the socket ops over `EeWonSocketOp`, UDPManager and its ops over
+  `EeWonUdpManager` / `EeWonUdpRecvOp` / `EeWonUdpSendRecvOp`, the socket thread over `sockthread.rs`. What is left
+  in the units is (a) the classes callers hold (IPAddr in 42 files, AsyncSocket 9, QueueSocket 6, BlockingSocket 8,
+  UDPManager 9, the ops 2-5 each: LanLogic, EELobbyFileTransfer, PingLogic, the routing and server connections),
+  (b) one-line forwarders, (c) the hook tables through which the Rust objects call back into the C++ objects they
+  hold (AsyncOp's virtuals, completions, ByteBuffers, transforms, the ops a queue runs) and (d) BlockingSocket's
+  blocking calls (a C++ op made, run blocking, read). Deleting a class needs its callers to hold the Rust object
+  instead, which is the WONLobby lane's ground (LanLogic, the file transfer, PingLogic) and AsyncOp's (every op class
+  derives from it). So this round deleted what no caller holds: ServerOp's socket and op host calls, and the socket
+  op classes' Start/Continue forwarders.
+- **The golden first** (`won_hostsock_test`, its own commit, over ServerOp.cpp's unmodified `HostCall`): a real
+  HTTP get op as the call path (`ee_won_hostop_call`), real `BlockingSocket`s from `EE_WON_HOST_NEW_SOCKET` over
+  127.0.0.1 (a listener bound to the local host, a client connected through `EE_WON_HOST_CONNECT`, the server side
+  accepted by an `AcceptOp` queued through `EE_WON_HOST_QUEUE`; two datagram sockets), and every socket and op call:
+  bind, port, listen, the length field set to 2, 1 and 4, the connected flag and status; messages, bytes and a
+  CR-LF line each way through the blocking calls, the three time-outs with nothing to read; ops of each kind from
+  `EE_WON_HOST_NEW_OP` run blocking, run (mode 2), run async and pumped, queued and pumped, killed without and with
+  finish; their bytes, sender, socket and kind; a connect op without a socket; a timer (a plain AsyncOp); a receive
+  into a file (binary with its modify time, then appended as text), a skipped receive, a receive with progress;
+  datagrams sent and received with their sender, a receive op's sender, a closed datagram socket reopened by a
+  send; a stream closed (read to the end, then the shutdown, a send on the closed socket), a killed socket, a
+  refused connect; the op's own killed flag and kill (obj NULL). 103 lines, six runs the same; 0 failures after the
+  move.
+  - **Waits on events, not time** (round 22's lesson): a blocking call returns when its data arrives; an async op is
+    pumped until it is no longer pending (`PumpUntilDone`, at most ten seconds); the only time-outs are of calls that
+    can get no data.
+  - **Driver traps met again.** Naming objects by address: a released op's address came back for the next one, and
+    three first runs differed only in names; objects are named by the answer that made them (`Fresh`), as round 21
+    said. One effect per statement: `Log("x " + N(Run()) + " " + Bytes(OpBytes()))` may read the bytes before the
+    run (round 22's lesson); every run is its own statement. Platform-dependent answers left out: a datagram larger
+    than the receive (WSAEMSGSIZE on Windows, truncation on POSIX) and a connect to 0.0.0.0:0.
+- **What moved** (`hostsock.rs`): the C++ side answers one call for all of them, `EE_WON_HOST_SOCK_CORE` (an object,
+  or NULL for the op itself, and a kind: `EE_WON_HOST_CORE_SOCKET`, `_QUEUE`, `_OP`, `_SOCKET_OP` -> its Rust object
+  by `dynamic_cast`, or NULL), as round 20's `EE_WON_HOST_AUTH_CORE` did for the auth context, and the op base
+  answers 33 codes on the Rust objects when the op is bound natively: the sockets' `SOCKET_CONNECTED`, `_STATUS`,
+  `_LFS`, `_SET_LFS`, `_PORT`, `_LISTEN` (1000), `_BIND` (`Fn2B0D90`: the local host and the port), `CLOSE`,
+  `SOCKET_KILL`; BlockingSocket's `CONNECT`, `SEND_BYTES`, `SEND_MSG`, `SEND_BYTES_TO`, `RECV_BYTES`, `RECV_MSG`,
+  `RECV_CR`, `RECV_BYTES_FROM` (the op is still made by the C++ side, `EE_WON_HOST_NEW_OP`, then run blocking, read
+  when it succeeded and released here, as BlockingSocket's methods did); the socket ops' `OP_BYTES` (by class: a
+  datagram's, a message, a line, a receive's), `OP_ADDR` (a datagram's sender only), `OP_SOCKET`, `OP_IS_RECV_MSG`,
+  `RECV_PROGRESS`, `RECV_FILE`, `RECV_BINARY`, `RECV_SKIP`, `RECV_MODIFY_TIME`; the ops' `OP_STATUS`, `OP_KILLED`,
+  `KILL`, `RUN`, `RUN_ASYNC`, `RUN_BLOCK`; the queue socket's `QUEUE`. `HostCall` went from 76 cases to 44.
+  RecvCRMsgOp's message became its Rust object's (`OpKind::Line`: the line buffer was already there), so its bytes
+  are answered by kind like the others; `ee_won_socketop_line_reset` / `_line_continue` are gone. The drivers'
+  stand-ins (`ee_won_hostop_bind`) still see every call, so every op golden is unchanged. src+include +26 -102.
+- **The socket ops' Start and Continue.** `SocketOp::Start` and `Continue` (the base's, which every socket op class
+  overrode with a one-line forwarder to `ee_won_socketop_start` / `_continue`) are now those forwarders; the Rust
+  `op_start` of a class without a start of its own (`OpKind::Base`, the datagram ops, accept) calls the op's virtual
+  `Continue` through the hook, so a C++ class that overrides only `Continue` (CloseOp, QueueSocket's close op, the
+  lobby's SendFileOp, won_asyncop_test's ScriptOp) still starts by its own `Continue`, as the original's base `Start`
+  (0x29151c) did. ConnectOp, AcceptOp, SendBytesOp, SendMsgOp, SendBytesToOp, RecvBytesOp, RecvMsgOp,
+  RecvBytesFromOp and RecvCRMsgOp lose 15 overrides; SocketOperationDispatch.cpp and RecvCRMsgOp.cpp are deleted
+  (`SocketOp::CleanupHook` moved to SocketRunHooks.cpp; both lines gone from `link/won/units.txt`, which build.py
+  reads: a deleted unit left there stops the build with "unit ... does not exist"). src+include +13 -136.
+- **Mutations** (`won_hostsock_test`): the killed flag read on the op itself instead of the object, 4 failures; a
+  run async run blocking, 5; the length field not set, 2. Two did not show and are equivalent here: the bind's reuse
+  flag inverted (no port is contended) and the blocking calls' bytes read after a failure too (a failed receive
+  holds no buffer: the receive's buffer is set only when it completes). Unit tests (`hostsock_tests.rs`, 3, real
+  sockets on 127.0.0.1 behind a stand-in C++ side): the socket answers and the core asked once per call, zeros and
+  no call for no object; the socket ops' answers by kind and the progress completion's reference; a line op's
+  message kept, dropped by the next start and kept from a time-out, a blocking call's call sequence (`NEW_OP` with
+  the kind, length, data and address, the op's and the socket op's core, `RELEASE`) and each blocking call's kind
+  and length (the length's cast: `DWORD`, `unsigned short`).
+- **Behaviour.** None on defined paths. A socket or op call with no object answers 0 where the C++ dereferenced NULL.
+  The blocking calls make one more host call per call (the core of the new op, then of its socket op), as round 20's
+  core call did.
+- **Reach.** The ops of the Internet path make these calls (the request ops' connect, sends and receives, the
+  routing connection's, the HTTP get, the firewall detection, the peer authentication); the LAN game's direct connect
+  with the CD key check runs a peer authentication (round 22). The socket op classes' Start and Continue are every
+  socket op's, the LAN lobby's included (discovery's SendBytesToOp and RecvBytesFromOp, the game channel, the file
+  transfer). EE-SIM makes no op. Gates: the LAN game after each socket commit (below).
+- **What is left in WONSocket** (1,875 lines in 11 units, mostly classes callers hold and hook tables): IPAddr (a value
+  handle in 42 files: replacing it is a callers' change), AsyncSocket/QueueSocket/BlockingSocket (held by the LAN
+  lobby, the routing and server connections; their hooks call back into AsyncOp's virtuals and completions),
+  UDPManager and its ops (PingLogic, RoutingGetUserStatusOp derive from them), the socket thread. BlockingSocket's
+  seven blocking calls now have no game caller (only the tests' drivers use them: won_ops_test, won_sockobj_test and
+  more); deleting them means moving those drivers to the host calls. The next real step is AsyncOp itself: while the
+  ops are C++ classes with virtual hooks, every Rust socket object needs its hook table back into them.
+
+### Gates
+
+| Gate | 7210398b (host calls) | a7a2c32f (Start/Continue) | Merged with rust |
+|---|---|---|---|
+| `build.py -j 3 --sim` | 0 / 0 | 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | clippy failed (`useless_conversion` x4), then rustfmt; fixed before the commit, PASS | PASS | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | won_hostsock_test, won_sockobj_test, won_ops_test, won_serverop_test exit 0 | won_hostsock_test, won_sockobj_test, won_asyncop_test, won_servconn_test, won_authsession_test exit 0 | all 105 programs exit 0 |
+| `lan_game.py` (harness lock) | `RESULT PASS lan-game PT host=2876 joiner=2871` | `RESULT PASS lan-game PT host=2943 joiner=2943` | `RESULT PASS lan-game PT host=3091 joiner=3093` |
+
+The merge of rust (92 commits, at 354fde6a) needed nothing: no conflict, `rust_build.py header` current,
+`rust_includes.py` changed nothing.
