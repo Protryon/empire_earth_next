@@ -85,6 +85,7 @@
 //! - [`icon_bar`]: the selected-units icon bar whole (its state, refill, snapshot, drawing and clicks) over the
 //!   C++ host.
 //! - [`portrait`]: the selected unit's portrait's bars, level, drawing, tooltip and click over the C++ host.
+//! - [`upgrade`]: the improvement button's availability, tooltip, presses and cost update over the C++ host.
 
 pub mod actions;
 #[cfg(not(test))]
@@ -207,3 +208,6 @@ mod ui_thread_ffi;
 pub mod unit_hack;
 #[cfg(not(test))]
 mod unit_hack_ffi;
+pub mod upgrade;
+#[cfg(not(test))]
+mod upgrade_ffi;

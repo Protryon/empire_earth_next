@@ -5307,6 +5307,150 @@ constexpr static const uint32_t EE_SCREENS_UH_OP_LEFT_BUTTON = 18;
 /// `EEPointUnitOrTile(f, ..., true)`: whether a point was found; its x and y into f.
 constexpr static const uint32_t EE_SCREENS_UH_OP_POINT = 19;
 
+/// (field) -> the button's field (`EE_SCREENS_UP_FIELD_*`).
+constexpr static const uint32_t EE_SCREENS_UP_OP_FIELD = 0;
+
+/// (field, value) stores the field.
+constexpr static const uint32_t EE_SCREENS_UP_OP_SET_FIELD = 1;
+
+/// -> whether the local player has a selected group.
+constexpr static const uint32_t EE_SCREENS_UP_OP_HAS_GROUP = 2;
+
+/// -> the group's first unit (`GetFirstUnit`).
+constexpr static const uint32_t EE_SCREENS_UP_OP_FIRST_UNIT = 3;
+
+/// -> the group's unit count.
+constexpr static const uint32_t EE_SCREENS_UP_OP_GROUP_COUNT = 4;
+
+/// -> the group's unit 0.
+constexpr static const uint32_t EE_SCREENS_UP_OP_GROUP_UNIT = 5;
+
+/// -> whether unit improvements are allowed.
+constexpr static const uint32_t EE_SCREENS_UP_OP_ALLOWED = 6;
+
+/// (unit) -> whether its player can buy the improvement for its type (the reason into the out text, if any).
+constexpr static const uint32_t EE_SCREENS_UP_OP_CAN_BUY = 7;
+
+/// -> the scenario editor's first selected unit.
+constexpr static const uint32_t EE_SCREENS_UP_OP_EDITOR_UNIT = 8;
+
+/// (unit) -> whether its stats' improvements can raise the improvement for its class.
+constexpr static const uint32_t EE_SCREENS_UP_OP_CAN_RAISE = 9;
+
+/// (unit) -> whether its player has the improvement at its maximum for its type.
+constexpr static const uint32_t EE_SCREENS_UP_OP_MAXED = 10;
+
+/// (unit) -> f32 bits of its class's step factor of the improvement.
+constexpr static const uint32_t EE_SCREENS_UP_OP_STEP = 11;
+
+/// (unit) -> f32 bits of its class's cost factor of the improvement.
+constexpr static const uint32_t EE_SCREENS_UP_OP_COST_FACTOR = 12;
+
+/// (unit) -> its player's level of the improvement for its type.
+constexpr static const uint32_t EE_SCREENS_UP_OP_LEVEL = 13;
+
+/// (unit) -> the local player's tech tree node of its type's technology.
+constexpr static const uint32_t EE_SCREENS_UP_OP_NODE = 14;
+
+/// (unit) the held text: the improvement's name.
+constexpr static const uint32_t EE_SCREENS_UP_OP_TEXT_NAME = 15;
+
+/// (unit, level) the held text: the improvement's gain at the level.
+constexpr static const uint32_t EE_SCREENS_UP_OP_TEXT_GAIN = 16;
+
+/// (string id) the held text: the string.
+constexpr static const uint32_t EE_SCREENS_UP_OP_TEXT_STRING = 17;
+
+/// (node, unit, f32 bits of the scale) the held text: the node's cost for the unit's type at the scale.
+constexpr static const uint32_t EE_SCREENS_UP_OP_TEXT_COST = 18;
+
+/// The out text += the held text.
+constexpr static const uint32_t EE_SCREENS_UP_OP_OUT_APPEND = 19;
+
+/// The out text = the held text.
+constexpr static const uint32_t EE_SCREENS_UP_OP_OUT_SET = 20;
+
+/// (bytes, length) the out text += the bytes.
+constexpr static const uint32_t EE_SCREENS_UP_OP_OUT_BYTES = 21;
+
+/// (0 the out text, 1 the held text) the control's own tooltip into it.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BASE_HELP = 22;
+
+/// (1 the press sound, 2 the refusal sound) plays it.
+constexpr static const uint32_t EE_SCREENS_UP_OP_SOUND = 23;
+
+/// (unit, raise) raises (or sells back) the improvement for the unit.
+constexpr static const uint32_t EE_SCREENS_UP_OP_UPGRADE = 24;
+
+/// -> the out text's length.
+constexpr static const uint32_t EE_SCREENS_UP_OP_OUT_LENGTH = 25;
+
+/// -> the world table's refusal message interval (unsigned).
+constexpr static const uint32_t EE_SCREENS_UP_OP_REFUSAL_INTERVAL = 26;
+
+/// -> `TMGetTime()`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_TIME = 27;
+
+/// The out text into the chat log.
+constexpr static const uint32_t EE_SCREENS_UP_OP_CHAT = 28;
+
+/// The form's help text updated.
+constexpr static const uint32_t EE_SCREENS_UP_OP_UPDATE_HELP = 29;
+
+/// -> whether the button is pressed.
+constexpr static const uint32_t EE_SCREENS_UP_OP_PRESSED = 30;
+
+/// `UIButton::ButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BASE_BUTTON_UP = 31;
+
+/// -> `UIButton::MouseMove(the call's location)`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BASE_MOVE = 32;
+
+/// The button's tooltip (`GetHelpString`) into the held text.
+constexpr static const uint32_t EE_SCREENS_UP_OP_HELP_TEXT = 33;
+
+/// The form's help label (when it has one) shows the held text.
+constexpr static const uint32_t EE_SCREENS_UP_OP_HELP_LABEL = 34;
+
+/// -> whether the button's rectangle contains the mouse.
+constexpr static const uint32_t EE_SCREENS_UP_OP_CONTAINS = 35;
+
+/// Releases the captured mouse.
+constexpr static const uint32_t EE_SCREENS_UP_OP_RELEASE_MOUSE = 36;
+
+/// -> whether the button has a cost label whose text differs from the out text.
+constexpr static const uint32_t EE_SCREENS_UP_OP_COST_DIFFERS = 37;
+
+/// The cost label's text = the out text.
+constexpr static const uint32_t EE_SCREENS_UP_OP_COST_SET = 38;
+
+/// `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_DIRTY = 39;
+
+/// (f32 bits) `SetBgOpacity`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BG_OPACITY = 40;
+
+/// (f32 bits) `SetBorderOpacity`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BORDER_OPACITY = 41;
+
+/// (thickness) `SetBorderThickness`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BORDER_THICKNESS = 42;
+
+/// -> the scenario editor's first selected unit's complex unit.
+constexpr static const uint32_t EE_SCREENS_UP_OP_EDITOR_COMPLEX = 43;
+
+/// The fields of [`EE_SCREENS_UP_OP_FIELD`]: the improvement, the scenario editor flag, the level last shown, the
+/// greyed-out state of the last cost update, the time of the last refusal line.
+constexpr static const int64_t EE_SCREENS_UP_FIELD_ATTRIBUTE = 0;
+
+constexpr static const int64_t EE_SCREENS_UP_FIELD_EDITOR = 1;
+
+constexpr static const int64_t EE_SCREENS_UP_FIELD_LEVEL = 2;
+
+constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
+
+constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
+
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
@@ -6340,6 +6484,27 @@ void ee_screens_unit_hack_call(EeScreensUnitHack *hack,
                                uint32_t call,
                                float x,
                                float y);
+
+/// `EEUIBUpgrade::ButtonUp` (the call's out text is the reason's).
+void ee_screens_upgrade_button_up(void *call);
+
+/// `EEUIBUpgrade::GetCanUpgrade`: `unit` gets the unit it stores (left alone when none).
+bool ee_screens_upgrade_can_upgrade(void *call, int64_t *unit);
+
+/// `EEUIBUpgrade::GetDisabled`.
+bool ee_screens_upgrade_disabled(void *call);
+
+/// `EEUIBUpgrade::GetHelpString` (appending to the call's out text).
+bool ee_screens_upgrade_help(void *call);
+
+/// `EEUIBUpgrade::MouseMove` (the call's location).
+int64_t ee_screens_upgrade_mouse_move(void *call);
+
+/// `EEUIBUpgrade::MouseRButtonUp`.
+int64_t ee_screens_upgrade_mouse_r_up(void *call);
+
+/// `EEUIBUpgrade::UpdateCost` (the call's out text is the new cost).
+void ee_screens_upgrade_update_cost(void *call);
 
 }  // extern "C"
 
