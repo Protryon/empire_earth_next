@@ -14,9 +14,15 @@
 #include "ee/EEResourceType.h"
 #include "rust/ee_units.h"             // EeUnitsPlayerSaved (EEPlayer's saved numbers)
 class FSFile;
-// New (R5b.4, round 28): the Rust saves' file primitives (ee_units player_save.rs's READ_ULONG .. WRITE_BOOL, shared by
-// the player's and the physics' hosts; EEPlayer.cpp); -1 for another operation
+// New (R5b.4, round 28): the Rust saves' file primitives (ee_units player_save.rs's READ_ULONG .. WRITE_BOOL and the
+// unsigned short's two, shared by the player's, the physics', the map's and the units' hosts; EEPlayer.cpp); -1 for
+// another operation
 int32_t EESavePrimitive(FSFile& inFile, int32_t inOp, EeUnitsPlayerSaveIo* io);
+inline bool EESaveIsPrimitive(int32_t inOp)
+{
+    return (inOp >= EE_UNITS_PLAYER_SAVE_READ_ULONG && inOp <= EE_UNITS_PLAYER_SAVE_WRITE_BOOL) ||
+           inOp == EE_UNITS_PLAYER_SAVE_READ_USHORT || inOp == EE_UNITS_PLAYER_SAVE_WRITE_USHORT;
+}
 
 class EEPlayer;
 void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);   // ee/EEGameLog.h
@@ -668,7 +674,9 @@ struct RTSUnitBucket {
 
 // C:\EEX\RTS Engine\Player\RTSPlayer.h (RECONSTRUCTION; file name inferred; vtable 0x442b5c). Virtual slots
 // from the vtable, named by offset.
-class RTSPlayer {
+// port (R5b.4, round 29): the plain members mNextUniqueID .. mObserverMode are the Rust record EeUnitsRtsPlayerFields
+// (ee_units rts_player_save.rs; names, types and order kept), Load and Save Rust over it
+class RTSPlayer : public EeUnitsRtsPlayerFields {
 public:
     RTSPlayer();                            // 0x16f095
     RTSPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x16f12e (EEPlayer's ctor; mSaveVisMap = inPlayerID != 0)
@@ -740,14 +748,11 @@ public:
     GEColor mShadeColor;                    // +0x444 (1, 1, 1)
     EEUnit* mFirstUnit;                     // +0x450 its units, linked through EEUnit::mNext
     EEUnit* mLastUnit;                      // +0x454 (provisional name; the unit-removal code 0x16f27f fixes both ends)
-    unsigned long mNextUniqueID;            // +0x458 (saved)
-    unsigned long mPlayerID;                // +0x45c (index into another player's mEnemies; saved)
-    unsigned long mUnitCount;               // +0x460 (saved)
-    unsigned char mSlot;                    // +0x464 (= 0xff; EEWorld::GetPlayerBySlot compares it)
+    // the record (EeUnitsRtsPlayerFields): mNextUniqueID (+0x458, saved), mPlayerID (+0x45c: the index into another
+    // player's mEnemies; saved), mUnitCount (+0x460, saved), mSlot (+0x464, = 0xff; EEWorld::GetPlayerBySlot compares
+    // it), mSeesAll (+0x465: toggled by EEMMakeWorldVisible), mSaveVisMap (+0x466: saved; checked when a unit is
+    // removed), mObserverMode (+0x467: chat everybody / observer)
     bool GetSeesAll() const { return this->mSeesAll; }
-    bool mSeesAll;                          // +0x465 toggled by EEMMakeWorldVisible (0xc212b; provisional name)
-    bool mSaveVisMap;                       // +0x466 (saved; checked when a unit is removed)
-    bool mObserverMode;                     // +0x467 (chat: everybody / observer; provisional name)
 };
 
 // port (R5b.4): the saved numbers (mScenarioVariables, mEnemies, mTributes, mResourceCaps, mPopLimit, ... the 24

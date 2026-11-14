@@ -363,6 +363,36 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
+/// `mSlots.clear()`
+constexpr static const int32_t EE_UNITS_ATC_SAVE_CLEAR = 301;
+
+/// a new airport (the original's local `theSlot`): its airport the id `io.i`, its queues empty
+constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_BEGIN = 302;
+
+/// the item `io.i` (a unit id) of kind `index` into the new airport's landings (kind 1) or takeoffs
+constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM_PUSH = 303;
+
+/// `mSlots.push_back(theSlot)`
+constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_PUSH = 304;
+
+/// the cargo total `index` (0 `mMaxCargo`, 1 `mUsedCargo`) into `io.i`
+constexpr static const int32_t EE_UNITS_ATC_SAVE_CARGO = 305;
+
+/// the cargo total `index` = `io.i`
+constexpr static const int32_t EE_UNITS_ATC_SAVE_SET_CARGO = 306;
+
+/// `mSlots.size()` into `io.i`
+constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_COUNT = 307;
+
+/// airport `index`'s unit id into `io.i`
+constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_AIRPORT = 308;
+
+/// airport `index`'s queue `io.b` (0 the landings, 1 the takeoffs): its length into `io.i`
+constexpr static const int32_t EE_UNITS_ATC_SAVE_QUEUE_COUNT = 309;
+
+/// airport `index`'s queue `io.b`, item `io.i`: its unit's id into `io.i`, its kind into `io.f`'s bits
+constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM = 310;
+
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
 
@@ -731,6 +761,11 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_FLOAT = 7;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_BOOL = 8;
 
+/// the units' `unsigned short` (unit_save.rs, unit_load.rs)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_USHORT = 98;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_USHORT = 99;
+
 /// a stand-in upgrade of the first unit class (index: the era's assertion line)
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW = 10;
 
@@ -939,6 +974,30 @@ constexpr static const float EE_UNITS_PLAYER_HEAL_INTERVAL = 10000.0;
 
 /// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
 constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
+
+/// `mColor.Load(inFile)`, the result
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_COLOR_LOAD = 201;
+
+/// the shade colour from the colour (each channel times 0.6)
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_SHADE = 202;
+
+/// `mName.Load(inFile)`, the result
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_NAME_LOAD = 203;
+
+/// `LoadUnit(major, minor, inFile)`, the result
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_LOAD_UNIT = 204;
+
+/// `AddPendingUnits(true, false)`
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_ADD_PENDING = 205;
+
+/// `mColor.Save(outFile)`, the result
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_COLOR_SAVE = 206;
+
+/// `mName.Save(outFile)`, the result
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_NAME_SAVE = 207;
+
+/// `SaveUnits(major, minor, outFile)`, the result
+constexpr static const int32_t EE_UNITS_RTS_PLAYER_SAVE_SAVE_UNITS = 208;
 
 /// `kTriggerUnitFacingNotRequired`: the base goal's one trigger
 constexpr static const int64_t TRIGGER_UNIT_FACING_NOT_REQUIRED = 9014;
@@ -1723,16 +1782,6 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
-constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_LONG = 101;
-
-constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_ULONG = 102;
-
-constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_FLOAT = 103;
-
-constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_BOOL = 104;
-
-constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_USHORT = 105;
-
 /// a section (`index`: `EE_UNITS_UNIT_LOAD_SECTION_*`), the result; io.b = 1 when the held units' loop left for
 /// `LoadLateVersions`; io.i carries the original's `theValue` (the citizen queue, the cargo, the held units) or
 /// `theState` (the unit variables) in and out
@@ -1848,16 +1897,6 @@ constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_MINE_UNSET = 23;
 
 /// `kUnsetHeading` (0x446db0): `mInitialContactHeading` before its read.
 constexpr static const float EE_UNITS_UNSET_HEADING = -10000.0;
-
-constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_LONG = 1;
-
-constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_ULONG = 2;
-
-constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_FLOAT = 3;
-
-constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_BOOL = 4;
-
-constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_USHORT = 5;
 
 /// `mStats->mMaxHitPoints`, `mStats->mFlightTime`, `mStats->mPower`, `GetUnitClass()->mGarrisonCapacity`
 constexpr static const int32_t EE_UNITS_UNIT_SAVE_MAX = 20;
@@ -2329,6 +2368,16 @@ struct EeUnitsAnimateOut {
   /// the frames stepped (the return value)
   uint32_t steps;
 };
+
+/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsPlayerSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
+using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
@@ -2943,16 +2992,6 @@ struct EeUnitsLocationGoal {
   uint8_t group_path_state;
 };
 
-/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
-struct EeUnitsPlayerSaveIo {
-  int64_t i;
-  float f;
-  uint8_t b;
-};
-
-/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
-using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
-
 /// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
 struct EeUnitsRtsMapFields {
   /// the constructor's tile size (copied to `gMapTileSize`)
@@ -3154,6 +3193,24 @@ struct EeUnitsPlayerSaved {
 /// The host: `(ctx, op, index, io) -> the operation's result`.
 using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
+/// `RTSPlayer`'s plain members (ee/EEPlayer.h), in the class's order.
+struct EeUnitsRtsPlayerFields {
+  /// the next unit id's low 24 bits (saved)
+  unsigned long mNextUniqueID;
+  /// the player's index (saved)
+  unsigned long mPlayerID;
+  /// its units (saved)
+  unsigned long mUnitCount;
+  /// the lobby slot (0xff none; not saved)
+  uint8_t mSlot;
+  /// sees the whole map (saved; cleared for 0.207 and older)
+  bool mSeesAll;
+  /// keeps a visibility map (saved)
+  bool mSaveVisMap;
+  /// an observer (saved)
+  bool mObserverMode;
+};
+
 /// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
 struct EeUnitsGoalIo {
   int64_t i[8];
@@ -3264,12 +3321,9 @@ struct EeUnitsUnitClassFillIn {
   uint64_t ai_script;
 };
 
-/// One operation's values: a number (`long`/`unsigned long`/`unsigned short`/an id/a count), a float, a bool (0 or 1).
-struct EeUnitsUnitSaveIo {
-  int64_t i;
-  float f;
-  uint8_t b;
-};
+/// One operation's values: a number (`long`/`unsigned long`/`unsigned short`/an id/a count), a float, a bool (0 or 1):
+/// the player's saves' io, so the file's primitives are `EESavePrimitive`'s (ee/EEPlayer.h).
+using EeUnitsUnitSaveIo = EeUnitsPlayerSaveIo;
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer in `io`).
 using EeUnitsUnitSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsUnitSaveIo*);
@@ -3381,6 +3435,18 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
 /// # Safety
 /// `input` and `out` are valid.
 void ee_units_animate(const EeUnitsAnimateIn *input, EeUnitsAnimateOut *out);
+
+/// `EEAirTrafficControl::Load` over the C++ parts in `f`.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+int32_t ee_units_atc_load(void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEAirTrafficControl::Save`: as [`ee_units_atc_load`].
+///
+/// # Safety
+/// As [`ee_units_atc_load`].
+int32_t ee_units_atc_save(void *ctx, EeUnitsPlayerSaveFn f);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
@@ -4297,6 +4363,22 @@ uint32_t ee_units_player_check(const uint64_t *objects,
                                const uint32_t *ids,
                                const uint32_t *enemies,
                                size_t count);
+
+/// `RTSPlayer::Load`: the record `rec` (the player's `EeUnitsRtsPlayerFields` base) and its C++ parts through `f`.
+///
+/// # Safety
+/// `rec` points to the player's live record; `f` is valid with `ctx` for the call.
+int32_t ee_units_rts_player_load(void *ctx,
+                                 EeUnitsPlayerSaveFn f,
+                                 EeUnitsRtsPlayerFields *rec,
+                                 uint32_t major,
+                                 uint32_t minor);
+
+/// `RTSPlayer::Save`: as [`ee_units_rts_player_load`].
+///
+/// # Safety
+/// As [`ee_units_rts_player_load`].
+int32_t ee_units_rts_player_save(void *ctx, EeUnitsPlayerSaveFn f, EeUnitsRtsPlayerFields *rec);
 
 /// The host pushes one tile onto a list sink (`io.sink` of the ring tiles' operation).
 ///
