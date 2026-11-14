@@ -11,6 +11,9 @@ fn unit(id: u64) -> u64 {
     0x100 + id
 }
 
+/// A forest: its address, its renewal, its tiles.
+type Forest = (u64, u64, Vec<(i64, i64)>);
+
 #[derive(Default)]
 struct World {
     file: VecDeque<i64>,
@@ -23,7 +26,7 @@ struct World {
     steps: [Vec<u64>; 3],
     refs: BTreeMap<u64, i64>,
     active: Vec<u64>,
-    forests: Vec<(u64, u64, Vec<(i64, i64)>)>,
+    forests: Vec<Forest>,
     ai: (i64, i64, i64),
     tiles: Vec<Vec<u64>>,
     players: Vec<Vec<u64>>,
@@ -209,10 +212,10 @@ fn the_save_writes_every_part_in_order() {
         2, // two ghosts, the first complex
         40, 7, 2, 50, 3, 4, 1,
     ];
-    expect.extend(std::iter::repeat(f15).take(16));
+    expect.extend(std::iter::repeat_n(f15, 16));
     expect.extend([1, 125, 1]);
     expect.extend([41, 7, 2, 50, 3, 4, 0]);
-    expect.extend(std::iter::repeat(0).take(16));
+    expect.extend(std::iter::repeat_n(0, 16));
     expect.extend([1, 125, 0]);
     expect.extend([2, 0, 3, 2, 0x82, 5]); // the players' lists
     assert_eq!(words, expect);
@@ -295,7 +298,10 @@ fn tiles_forests_schedule_and_players_are_put_back() {
     restore(&mut w, &Pending::TileOrder(vec![(1, vec![2, 5]), (3, vec![9, 2, 7]), (9, vec![1])]));
     assert_eq!(w.tiles[1], vec![unit(2), unit(5)]);
     assert_eq!(w.tiles[3], vec![unit(2), 0, unit(9)]);
-    assert_eq!(w.debug, vec!["EEPWorldHelper: 1 tiles hold other units than the saved ones: their order is the load's\n"]);
+    assert_eq!(
+        w.debug,
+        vec!["EEPWorldHelper: 1 tiles hold other units than the saved ones: their order is the load's\n"]
+    );
     restore(&mut w, &Pending::Forests(vec![(77, vec![(1, 2), (1, 3)]), (88, vec![(4, 4), (9, 9)])]));
     assert_eq!(w.forests.iter().map(|f| f.1).collect::<Vec<_>>(), vec![77, 88, 3400]);
     assert_eq!(w.debug.len(), 2);

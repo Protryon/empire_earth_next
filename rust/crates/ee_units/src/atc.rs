@@ -155,7 +155,12 @@ pub trait AtcHost {
         self.get(EE_UNITS_ATC_DEREFERENCE, unit);
     }
     fn set_clearance(&mut self, unit: Unit, value: bool) {
-        self.call(EE_UNITS_ATC_SET_CLEARANCE, unit, std::ptr::null_mut(), &mut EeUnitsAtcIo { a: value as i64, ..Default::default() });
+        self.call(
+            EE_UNITS_ATC_SET_CLEARANCE,
+            unit,
+            std::ptr::null_mut(),
+            &mut EeUnitsAtcIo { a: value as i64, ..Default::default() },
+        );
     }
     fn hit_points(&mut self, unit: Unit) -> c_long {
         self.get(EE_UNITS_ATC_HIT_POINTS, unit) as c_long
@@ -440,9 +445,9 @@ pub fn dump<H: AtcHost + ?Sized>(p: AtcRef, h: &mut H) {
             while let Some(item) = p.item(s, takeoff, i) {
                 let id = h.unit_id(item.unit);
                 let mut text = String::new();
-                let _ = write!(
+                let _ = writeln!(
                     text,
-                    "EEAirTrafficControl::DumpOOSInformation - The {name} Request {i} has a unit ID of #{id:08x} with a request of {}\n",
+                    "EEAirTrafficControl::DumpOOSInformation - The {name} Request {i} has a unit ID of #{id:08x} with a request of {}",
                     item.kind as c_long
                 );
                 line(h, text);
@@ -533,6 +538,7 @@ pub fn queue_position<H: AtcHost + ?Sized>(p: AtcRef, h: &mut H, unit: Unit, whi
 
 /// `IsTakeOffDone` (0x54f6e9): outside the airport and, for air traffic type 1, at 5% of the cruise altitude above
 /// it, else more than sqrt(6) away.
+#[allow(clippy::neg_cmp_op_on_partial_ord)] // the original's: a NaN height or distance counts as done
 pub fn is_takeoff_done<H: AtcHost + ?Sized>(p: AtcRef, h: &mut H, s: usize, unit: Unit) -> bool {
     let airport = p.airport(s);
     let away = if h.get(EE_UNITS_ATC_AIR_TRAFFIC_TYPE, unit) == 1 {
@@ -842,7 +848,8 @@ pub unsafe extern "C" fn ee_units_atc_cargo(p: *const EeUnitsAtc, which: i32) ->
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_atc_slot_count(p: *const EeUnitsAtc) -> c_ulong {
     // SAFETY: the contract
-    unsafe { (&(*p).slots).len() as c_ulong }
+    let a = unsafe { &*p };
+    a.slots.len() as c_ulong
 }
 
 /// Airport `index` (null past the end).
@@ -852,7 +859,8 @@ pub unsafe extern "C" fn ee_units_atc_slot_count(p: *const EeUnitsAtc) -> c_ulon
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_atc_slot_airport(p: *const EeUnitsAtc, index: c_ulong) -> *mut c_void {
     // SAFETY: the contract
-    unsafe { (&(*p).slots).get(index as usize).map_or(std::ptr::null_mut(), |s| s.airport) }
+    let a = unsafe { &*p };
+    a.slots.get(index as usize).map_or(std::ptr::null_mut(), |s| s.airport)
 }
 
 /// The class's methods by kind (the `EE_UNITS_ATC_CALL_*` values): `unit`, `other` and `value` their arguments.

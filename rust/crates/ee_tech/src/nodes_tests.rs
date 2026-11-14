@@ -554,7 +554,10 @@ fn assignment_copies_each_kinds_fields() {
     assert_eq!((node.mEpoch, node.mObsoleteEpoch, node.mResearchDelay, node.mPrerequisiteFlags), (3, 9, 2, 6));
     assert!(node.mIsResearched && node.mIsObsolete && node.mIsAvailable && !node.mIsAllowed);
     assert!(node.mScenEditorObsoleted && node.mIsUnitMediaLoaded && node.mIsCountingSOL);
-    assert_eq!((node.mRequiredSOL, node.mFirstNodeID, node.mCurrentSOL, node.mNextEpoch, node.mTitleID), (0, 0, 0, 0, 5));
+    assert_eq!(
+        (node.mRequiredSOL, node.mFirstNodeID, node.mCurrentSOL, node.mNextEpoch, node.mTitleID),
+        (0, 0, 0, 0, 5)
+    );
     let mut epoch = base;
     assign(&mut epoch, &src, true);
     assert_eq!((epoch.mRequiredSOL, epoch.mFirstNodeID, epoch.mCurrentSOL, epoch.mNextEpoch), (4, 3001, 1, 4));

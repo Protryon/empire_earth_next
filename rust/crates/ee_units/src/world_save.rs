@@ -866,7 +866,9 @@ fn restore_tile_order<H: WorldHost + ?Sized>(h: &mut H, tiles: &[(c_ulong, Vec<c
         }
     }
     if other != 0 {
-        h.debug(&format!("EEPWorldHelper: {other} tiles hold other units than the saved ones: their order is the load's\n"));
+        h.debug(&format!(
+            "EEPWorldHelper: {other} tiles hold other units than the saved ones: their order is the load's\n"
+        ));
     }
 }
 
