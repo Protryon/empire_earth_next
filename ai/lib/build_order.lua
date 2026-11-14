@@ -52,6 +52,7 @@ M.OPT = {
     pre_hunt_patch = false, -- (off until benched) with pre_lean, the third patch when the game near home holds fewer than
                             -- PRE_HUNT_MIN hunters
     pre_wood_cap = false,   -- (off until benched) the Prehistoric wood at most PRE_WOOD_MOST, its leftover idle (exact = 2)
+    early_towers = false,   -- (off until benched) the Prehistoric towers from EARLY_TOWERS_AT citizens (his: 1.1 min)
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -121,6 +122,7 @@ M.STONE_WOOD = 7           -- (OPT.owner_mines) wood gatherers at most until STO
 M.STONE_WOOD_MIN = 12
 M.wood_cap = nil           -- (set by boom each step)
 M.OWNER_BARRACKS_AT = 6    -- (OPT.owner_barracks) citizens
+M.EARLY_TOWERS_AT = 6      -- (OPT.early_towers) citizens
 M.PRE_HUNT_MIN = 3         -- (OPT.pre_hunt_patch) the owner's 3-6 hunting
 M.MINES_TOWER_MS = 60000   -- (OPT.mines_after_barracks) the tower waited for at most this long after the barracks
 M.PRE_WOOD_MOST = 8        -- (OPT.pre_wood_cap) the owner's 5-8
