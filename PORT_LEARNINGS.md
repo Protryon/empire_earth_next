@@ -16456,3 +16456,133 @@ Round 20 left the HTTP get op's cache calls as the last object calls of group 4 
   C++ caller left, the flow's `session_last_use` hook) can become a handle like the cache's; `CryptTransform` then
   holds the handle. Its golden needs a socket pair on 127.0.0.1 to see the transform (`ADD_CRYPT`) work; that is
   why it was not this round's.
+
+## R4.3, tenth part: GEFontBitmap whole in Rust; GESurface's image-file pixel loops in Rust (ee_ge fbobj.rs, surface_px.rs; branch rust-ge10, 2026-11-13)
+
+The fourth whole-class round of the Graphics Engine, in parts seven to nine's pattern (a golden over the unmodified
+unit with traced fakes, mutations, a cargo replay). By `tools/ge_census.py`: 2,847 logic lines at the start, 2,724
+after (GEFontBitmap.cpp 129 -> 157, the host's switch counted as logic; GESurface.cpp 663 -> 512).
+
+| Commit | What | C++ (`git diff --numstat` over src, include/lle, include/ee) |
+|---|---|---|
+| 3f3496b8 | GEFontBitmap whole in Rust (`fbobj.rs`) | +195 -201, net -6 |
+| de902105 | GESurface's image-file pixel loops in Rust (`surface_px.rs`) | +55 -197, net -142 |
+
+- **GEFontBitmap** needed no census: its members were private, it has no subclass and no friend; the only outside
+  reader of `GEFBCharacter` was `GERustText.h`'s layout check (gone with the struct: the cells are `GeFbCharacter`
+  inside the Rust object). The C++ class keeps its `UReferenceCounter` base (the fonts and the UI hold it by
+  reference) and one member, `mRust`; its methods are one-line forwarders; its copy is deleted. The Rust object
+  (`EeGeFontBitmap`) holds the cells, the drawing bitmap and the first character, and runs every method of
+  GEFontBitmap.cpp: the constructor's rendering of each character into the glyph textures (a new texture when the
+  packer reaches the bottom, each finished one made alpha), the destructor, `CreateNewFontTexture` (the description
+  as `EeGeSurfaceDescription`, part seven's mirror, `static_assert`ed against `GESurfaceDescription` in the unit),
+  `CreateSurfaceAlpha` and the two draws over `font.rs`'s plan. Every call on another object is one host operation
+  (`EeGeFbOp`, 37 operations, `GEFontBitmap::Host`): the working text (made with `new GEText`, the original's local),
+  the font's range and `SetFontBitmap`, the rasterizer's screen, blending and draws, the drawing bitmap's setters
+  and readers, the textures' surface, reference and stage setters, the surfaces' locks, pixels and clear, the
+  screen's `CreateSurface` and its manager's `MakeTexture`, and the two `ESVerify`s. `font_ffi.rs` lost
+  `ee_ge_font_cell_place`, `ee_ge_font_surface_alpha` and `ee_ge_font_draw_plan` (only the C++ GEFontBitmap called
+  them; the scratch library keeps them for the original side).
+- **The census counts the host's switch as logic** (as GEModelManager's and GETextureManager's): GEFontBitmap.cpp
+  went from 129 logic lines to 157. What moved is the decisions, walks and state; the host is a table of calls.
+- **The golden** (scratch, `build/ge10/golden`: `build.py gfb orig 8a01a235 | cur`, `mutate_fb.py`): GEFontBitmap.cpp
+  and its header of 8a01a235 (unmodified) or the worktree's, over traced fakes (`fake_gfb.h`: fonts with a character
+  range, a height, a width range and a salt from which the texts' extents follow; texts; a rasterizer whose text
+  draw writes a pattern into the surface's pixels and whose bitmap draw answers a varying result; surfaces with
+  pixel buffers hashed at each unlock; textures; drawing bitmaps whose stretch derives scales and coordinates from
+  its rectangles; the real `PlatCp1252ToUtf8` and text functions of ee_plat_core), linked with a scratch staticlib of
+  `ee_ge`, `ee_plat_core` and `ee_openformats`. Random sequences of fonts, font bitmaps over them on three screens
+  with saved blending, plain and clipped draws of random UTF-8 texts (multi-byte characters, characters outside the
+  font and the code page), `operator==`, references given back (the font's own release of its font bitmap
+  included). 5,000 sequences, 4,939,686 trace lines, identical over the shell. 26 sequences (8,598 lines) are
+  `golden_gfb.txt`, which cargo replays through a mock host keeping the world by construction serial
+  (`fbobj_tests.rs`).
+
+  | Mutation of the Rust | Sequences of 5,000 that change | cargo |
+  |---|---|---|
+  | the blending is not restored | 4,134 | replay, unit test |
+  | the stretch's inner rectangle keeps the right edge | 4,134 | replay |
+  | the cell's bottom right is its top left | 2,607 | replay |
+  | a finished texture is not made alpha | 747 | unit test |
+  | a cell takes no texture reference | 4,134 | replay |
+  | the clipped draw draws the glyphs outside | 2,579 | replay, unit test |
+  | the cell's scales are swapped | 0 (the fakes' scales are equal) | unit test (added) |
+  | the draw's top right and bottom left are swapped | 2,607 | replay |
+  | the glyph textures are min-filtered | 4,134 | replay |
+  | the destructor keeps the bitmap | 4,134 | replay, unit test |
+  | the glyph is drawn at the cell's bottom | 4,134 | replay |
+  | the draw answers the sum of the results | 1,470 | replay, unit test |
+  | the glyph surfaces are 32-bit | 4,134 | replay |
+  | the font does not hold the font bitmap | 4,134 | replay, unit test |
+
+  The restored source: 0.
+- **Behaviour changes:** none on defined paths. The working text is a heap object (`new GEText`, deleted at the
+  constructor's end where the local's destructor ran: the same calls in the same order); the unused `m1C` member is
+  gone (sizeof GEFontBitmap changes; every `new` is through the header). A glyph cell's texture coordinate pair the
+  original wrote through `theCoordinate` twice is the host's local.
+- **What runs it: the tour only.** EE-SIM never makes a font bitmap (no rasterizer): fonts' glyph textures and every
+  text draw through a font bitmap (the UI's and the status bar's text) are drawn only in a real game.
+- **GESurface: the pixel loops, not the class.** GESurface is an abstract base (DX7Surface and the GX surface
+  implement its 30 virtuals); its own code is the image files: SaveAsBMP, the JPEG and JPG2 codecs over the game's
+  libjpeg (C, statically linked: decoder and encoder state, stdio streams, `jpeg_*` calls) and LoadPNG over
+  ee_openformats. A whole move would put libjpeg's plumbing behind a host table of about as many lines, with no
+  JPEG in Rust; its non-virtual state is three `unsigned long`s (the logical shift and the explicit logical size)
+  read by the header's inline accessors in every surface, which a Rust object would only make an allocation per
+  surface. What moved is every pixel loop (`surface_px.rs`): a row out as 3-byte pixels (BMP's blue-green-red, the
+  JPEG's red-green-blue, the JPG2 alpha image's alpha three times: `ee_ge_surf_row_out`), a decoded scanline into the
+  surface (opaque, or merged as alpha into the pixels there, the row's padding skipped from where the last one
+  ended, as the original's pointer walk: `ee_ge_surf_row_in`) and a decoded PNG into the top left
+  (`ee_ge_surf_png_store`), over `pixel.rs`'s pack and unpack. GESurface.cpp keeps the files, libjpeg and the
+  virtual calls; its six loops are one call each.
+- **The golden** (scratch, `build/ge10/golden`: `build.py gsurf orig 8a01a235 | cur`, `run_gsurf.sh`,
+  `mutate_surf.py`): GESurface.cpp and its header of 8a01a235 (unmodified) or the worktree's, with the game's
+  libjpeg objects, over a fake `FSFileSpec` on real files (open, close, `FOpen`, positions, reads and writes traced
+  with hashes) and a fake surface of each pixel format 0-7 with random pixels and row padding, whose lock fails 6% of
+  the time. Random sequences of saves (BMP, JPG, JPG2, the refused TGA and PNG) into closed files and at a position
+  of files open for writing or reading, loads of the saved JPG/JPG2 images (at their position, into a surface at
+  least as large) and of eight PNG files (RGB and RGBA) from closed and open files, the attributes of every type;
+  each save's file hashed whole, each load's surface pixels hashed. Every allocation is zeroed (the BMP row's
+  padding bytes are never written: a first run differed on them through `new`'s garbage). 2,285 sequences, 112,456
+  trace lines, identical over the shell. libjpeg's error handler exits the process on a stream that is not a JPEG,
+  so the driver only loads what it saved (a JPG2 saved into a file open for reading patches its header at the open
+  position, before the appended image: such a file is not loadable, by the original's design, and is not loaded).
+
+  | Mutation of the Rust | Sequences of 600 that change | cargo |
+  |---|---|---|
+  | the BMP row's red is its blue | 129 | unit test |
+  | the alpha image takes red | 240 | unit test |
+  | a scanline skips no padding | 151 | unit test |
+  | the 32-bit scanline is not opaque | 45 | unit test |
+  | the alpha image is not merged | 65 | unit test |
+  | the PNG keeps its alpha on a no-alpha surface | 35 | unit test |
+  | the PNG rows ignore the pitch | 243 | unit test |
+
+  The restored source: 0. No cargo replay for this golden: its trace is file and pixel hashes through libjpeg,
+  which the Rust tests cannot run; `surface_px_tests.rs` pins each loop's formula instead.
+- **Behaviour changes** (undefined paths only): a scanline shorter than its pixels' three bytes (a one-component
+  JPEG; the game writes only RGB JPEGs) reads 0 past its end where the original read past libjpeg's buffer.
+- **What runs it: the tour only, and not even the tour for most of it.** EE-SIM saves and loads no image file.
+  Screenshots (SaveAsBMP/SaveAsJPG on the screen's surface, the game's screenshot key), JPEG and JPG2 loads (none in
+  the open tree's data that we know of) and LoadPNG (the pictures read outside the texture manager: pointers,
+  palettes, the volcano) are game-only; the tour draws the PNG pictures, no screenshot or JPEG.
+- **Driver lessons.** The GESurface driver's PNG inputs were emptied twice by the driver itself: a load from a file
+  the fake opened "for writing" truncated it, and later runs read the empty files on both sides (identical, and
+  wrong). Load from a fresh copy each time and rebuild the inputs before each run (`run_gsurf.sh`). libjpeg's default
+  error handler `exit`s: a driver must only hand it what it wrote. The Bash tool's heredocs ate backslashes again
+  (`\n` in a Python string and a `\0` in a Rust byte literal became a newline and a NUL byte: parts seven to nine's
+  lesson): write such files with the editor tool. A mutation that changes nothing over the fakes (the cell scales:
+  the fakes' stretch gives equal scales for a whole cell) needs a mock that makes them differ.
+- **GETerrainMesh and GERasterizer** were not started: GETerrainMesh's members are read in 141 outside files (the
+  renderer lane's among them), so it needs a census round of its own first; GERasterizer is DX7Rasterizer's base.
+- **Gates.** Each commit: build `--sim` 0/0, the Rust gate (PASS for GEFontBitmap after a rustfmt fix; at the
+  GESurface commit clippy's `unnecessary_cast` on `c_ulong as u32`, which is a cast on Linux: allowed with a
+  comment, `cargo clippy -p ee_ge` clean after), the store gate PASS (25,140 lines), the oracle identical on seeds
+  2-3. The merge of `rust` (d8551990, 89 commits: WON 33, WON net 20, screens 22-23, UI 12, ge9, gfx 22, msg 2,
+  triggers 3, core 24, LLE 2, NE 2) merged without a conflict; `rust_build.py header` current, `rust_includes.py`
+  changed nothing. On the merged tree: build `--sim` 0/0, the Rust gate PASS, the store gate PASS (25,140 lines), the
+  oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169, late 170, calamity 183 digests),
+  `--profile effects` at seeds 2-3 PASS (6 digests), the test profile 0/0, and the tour (`fixture_game.py --exercise tour --play-seconds 60`, under the harness lock)
+  `RESULT PASS tour`. Not run: the LAN game, the menu pixel comparison, macOS or Linux builds.
+- **Left** (by the census, 2,724 logic lines): GETerrainMesh (a census of its outside readers first), GERasterizer
+  (DX7Rasterizer's base), GESurface's libjpeg plumbing (stays: C), GETransformation's member copies, the managers'
+  and the moved classes' hosts.

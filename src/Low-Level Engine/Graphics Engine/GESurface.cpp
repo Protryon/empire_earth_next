@@ -23,6 +23,7 @@
 #include "lle/GESurface.h"
 #include "lle/Graphics Engine.h"
 #include "rust/ee_openformats.h"   // ee_of_png_to_picture (LoadPNG)
+#include "rust/ee_ge.h"            // the pixel loops (ee_ge surface_px.rs)
 
 extern "C" {
 #include "jpeglib/jpeglib.h"
@@ -65,10 +66,9 @@ long GESurface::SaveAsBMP(FSFileSpec& inFile)
     unsigned char* theBuffer;
     unsigned long theWritten;
     unsigned long theBytesPerRow;
+    unsigned long theDepth;
     unsigned long thePitch;
-    uint32_t* the32BitPixel;
-    unsigned short* the16BitPixel;
-    unsigned long x;
+    unsigned char* theRow;
     unsigned long y;
 
     if (theWasOpen) {
@@ -104,33 +104,14 @@ long GESurface::SaveAsBMP(FSFileSpec& inFile)
             if (theResult == kErrorOK) {
                 theResult = this->Lock();
                 if (theResult == kErrorOK) {
+                    // bottom row first, each as blue, green, red (the row's conversion: ee_ge surface_px.rs)
                     theBytesPerRow = this->GetBytesPerRow();
-                    if (this->GetPixelDepth() == 32) {
-                        thePitch = theBytesPerRow / 4;
-                        the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
-                        for (y = 0; y < theHeight; y++) {
-                            for (x = 0; x < theWidth; x++) {
-                                theBuffer[x * 3 + 2] = GEUnpackRed(theFormat, *the32BitPixel);
-                                theBuffer[x * 3 + 1] = GEUnpackGreen(theFormat, *the32BitPixel);
-                                theBuffer[x * 3] = GEUnpackBlue(theFormat, *the32BitPixel);
-                                the32BitPixel++;
-                            }
-                            inFile.Write(theBuffer, theRowSize, theWritten);
-                            the32BitPixel -= thePitch + theWidth;
-                        }
-                    } else {
-                        thePitch = theBytesPerRow / 2;
-                        the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
-                        for (y = 0; y < theHeight; y++) {
-                            for (x = 0; x < theWidth; x++) {
-                                theBuffer[x * 3 + 2] = GEUnpackRed(theFormat, *the16BitPixel);
-                                theBuffer[x * 3 + 1] = GEUnpackGreen(theFormat, *the16BitPixel);
-                                theBuffer[x * 3] = GEUnpackBlue(theFormat, *the16BitPixel);
-                                the16BitPixel++;
-                            }
-                            inFile.Write(theBuffer, theRowSize, theWritten);
-                            the16BitPixel -= thePitch + theWidth;
-                        }
+                    theDepth = this->GetPixelDepth() == 32 ? 32 : 16;
+                    thePitch = theBytesPerRow / (theDepth / 8) * (theDepth / 8);
+                    theRow = this->GetMemoryAddress() + (theHeight - 1) * thePitch;
+                    for (y = 0; y < theHeight; y++, theRow -= thePitch) {
+                        ee_ge_surf_row_out(theFormat, theDepth, theRow, theWidth, EeGeSurfRow::Bgr, theBuffer);
+                        inFile.Write(theBuffer, theRowSize, theWritten);
                     }
                     this->Unlock();
                     theResult = inFile.Write((unsigned short)0);
@@ -185,8 +166,8 @@ long GESurface::GetJPG2FileAttributes(FSFileSpec& inFile, unsigned long& outWidt
 // Decodes a JPEG into the surface (opaque), from the file's current position; reopens a file that was open
 long GESurface::LoadJPG(FSFileSpec& inFile)
 {
-    uint32_t* the32BitPixel = NULL;
-    unsigned short* the16BitPixel = NULL;
+    unsigned char* thePixel = NULL;
+    unsigned long theDepth;
     unsigned long theFormat = this->GetPixelFormat();
     long thePosition = 0;
     bool theWasOpen;
@@ -198,10 +179,6 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
     JSAMPARRAY theBuffer;
     unsigned long theRowStride;
     unsigned long theSkip;
-    unsigned long theIndex;
-    unsigned char theRed;
-    unsigned char theGreen;
-    unsigned char theBlue;
 
     theWasOpen = inFile.GetIsOpen();
     if (theWasOpen && inFile.GetPosition(thePosition) == kErrorOK)
@@ -221,29 +198,14 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
             jpeg_start_decompress(&theInfo);
             theRowStride = theInfo.output_width * theInfo.output_components;
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
-            if (this->GetPixelDepth() == 32) {
-                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 4) / 4;
-                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
-            } else {
-                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 2) / 2;
-                the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
-            }
+            // each scanline packed opaque (ee_ge surface_px.rs), the rows' padding skipped
+            theDepth = this->GetPixelDepth() == 32 ? 32 : 16;
+            theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * (theDepth / 8)) / (theDepth / 8);
+            thePixel = this->GetMemoryAddress();
             while (theInfo.output_scanline < theInfo.output_height) {
                 if (jpeg_read_scanlines(&theInfo, theBuffer, 1) < 1)
                     break;
-                for (theIndex = 0; theIndex < theRowStride; theIndex += 3) {
-                    theRed = theBuffer[0][theIndex];
-                    theGreen = theBuffer[0][theIndex + 1];
-                    theBlue = theBuffer[0][theIndex + 2];
-                    if (this->GetPixelDepth() == 32)
-                        *the32BitPixel++ = 0xff000000 | (theRed << 16) | (theGreen << 8) | theBlue;
-                    else
-                        *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed, theGreen, theBlue, 0xff);
-                }
-                if (this->GetPixelDepth() == 32)
-                    the32BitPixel += theSkip;
-                else
-                    the16BitPixel += theSkip;
+                thePixel = ee_ge_surf_row_in(theFormat, theDepth, theBuffer[0], theRowStride, false, thePixel, theSkip);
             }
             jpeg_finish_decompress(&theInfo);
             jpeg_destroy_decompress(&theInfo);
@@ -272,8 +234,8 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
 // Decodes a JPG2 into the surface: the colour image, then the alpha image merged into each pixel's alpha
 long GESurface::LoadJPG2(FSFileSpec& inFile)
 {
-    uint32_t* the32BitPixel = NULL;
-    unsigned short* the16BitPixel = NULL;
+    unsigned char* thePixel = NULL;
+    unsigned long theDepth;
     unsigned long theFormat = this->GetPixelFormat();
     long thePosition = 0;
     long theAlphaPosition;
@@ -286,11 +248,6 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
     JSAMPARRAY theBuffer;
     unsigned long theRowStride;
     unsigned long theSkip;
-    unsigned long theIndex;
-    unsigned char theRed;
-    unsigned char theGreen;
-    unsigned char theBlue;
-    unsigned char theAlpha;
 
     theWasOpen = inFile.GetIsOpen();
     if (theWasOpen && inFile.GetPosition(thePosition) == kErrorOK)
@@ -311,29 +268,14 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
             jpeg_start_decompress(&theInfo);
             theRowStride = theInfo.output_width * theInfo.output_components;
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
-            if (this->GetPixelDepth() == 32) {
-                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 4) / 4;
-                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
-            } else {
-                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 2) / 2;
-                the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
-            }
+            // each scanline packed opaque (ee_ge surface_px.rs)
+            theDepth = this->GetPixelDepth() == 32 ? 32 : 16;
+            theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * (theDepth / 8)) / (theDepth / 8);
+            thePixel = this->GetMemoryAddress();
             while (theInfo.output_scanline < theInfo.output_height) {
                 if (jpeg_read_scanlines(&theInfo, theBuffer, 1) < 1)
                     break;
-                for (theIndex = 0; theIndex < theRowStride; theIndex += 3) {
-                    theRed = theBuffer[0][theIndex];
-                    theGreen = theBuffer[0][theIndex + 1];
-                    theBlue = theBuffer[0][theIndex + 2];
-                    if (this->GetPixelDepth() == 32)
-                        *the32BitPixel++ = 0xff000000 | (theRed << 16) | (theGreen << 8) | theBlue;
-                    else
-                        *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed, theGreen, theBlue, 0xff);
-                }
-                if (this->GetPixelDepth() == 32)
-                    the32BitPixel += theSkip;
-                else
-                    the16BitPixel += theSkip;
+                thePixel = ee_ge_surf_row_in(theFormat, theDepth, theBuffer[0], theRowStride, false, thePixel, theSkip);
             }
             jpeg_finish_decompress(&theInfo);
             jpeg_destroy_decompress(&theInfo);
@@ -346,35 +288,14 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
             jpeg_start_decompress(&theInfo);
             theRowStride = theInfo.output_width * theInfo.output_components;
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
-            if (this->GetPixelDepth() == 32) {
-                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 4) / 4;
-                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
-            } else {
-                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 2) / 2;
-                the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
-            }
+            // each scanline merged into the pixels as their alpha (ee_ge surface_px.rs)
+            theDepth = this->GetPixelDepth() == 32 ? 32 : 16;
+            theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * (theDepth / 8)) / (theDepth / 8);
+            thePixel = this->GetMemoryAddress();
             while (theInfo.output_scanline < theInfo.output_height) {
                 if (jpeg_read_scanlines(&theInfo, theBuffer, 1) < 1)
                     break;
-                for (theIndex = 0; theIndex < theRowStride; theIndex += 3) {
-                    theAlpha = theBuffer[0][theIndex];
-                    if (this->GetPixelDepth() == 32) {
-                        theRed = GEUnpackRed(theFormat, *the32BitPixel);
-                        theGreen = GEUnpackGreen(theFormat, *the32BitPixel);
-                        theBlue = GEUnpackBlue(theFormat, *the32BitPixel);
-                        *the32BitPixel++ = (theAlpha << 24) | (theRed << 16) | (theGreen << 8) | theBlue;
-                    } else {
-                        theRed = GEUnpackRed(theFormat, *the16BitPixel);
-                        theGreen = GEUnpackGreen(theFormat, *the16BitPixel);
-                        theBlue = GEUnpackBlue(theFormat, *the16BitPixel);
-                        *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed, theGreen, theBlue,
-                                                                       theAlpha);
-                    }
-                }
-                if (this->GetPixelDepth() == 32)
-                    the32BitPixel += theSkip;
-                else
-                    the16BitPixel += theSkip;
+                thePixel = ee_ge_surf_row_in(theFormat, theDepth, theBuffer[0], theRowStride, true, thePixel, theSkip);
             }
             jpeg_finish_decompress(&theInfo);
             jpeg_destroy_decompress(&theInfo);
@@ -412,9 +333,7 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
     struct jpeg_error_mgr theError;
     JSAMPARRAY theBuffer;
     unsigned long theBytesPerRow;
-    uint32_t* the32BitPixel;
-    unsigned short* the16BitPixel;
-    unsigned long x;
+    unsigned long theDepth;
     unsigned long y;
 
     theWasOpen = inFile.GetIsOpen();
@@ -446,28 +365,13 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
                                                  theWidth * 3 + theWidth % 4, 1);
         if (this->Lock() == kErrorOK) {
             theBytesPerRow = this->GetBytesPerRow();
-            if (this->GetPixelDepth() == 32) {
-                for (y = 0; y < theHeight; y++) {
-                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
-                    for (x = 0; x < theWidth; x++) {
-                        theBuffer[0][x * 3] = GEUnpackRed(theFormat, *the32BitPixel);
-                        theBuffer[0][x * 3 + 1] = GEUnpackGreen(theFormat, *the32BitPixel);
-                        theBuffer[0][x * 3 + 2] = GEUnpackBlue(theFormat, *the32BitPixel);
-                        the32BitPixel++;
-                    }
-                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
-                }
-            } else {
-                for (y = 0; y < theHeight; y++) {
-                    the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 2);
-                    for (x = 0; x < theWidth; x++) {
-                        theBuffer[0][x * 3] = GEUnpackRed(theFormat, *the16BitPixel);
-                        theBuffer[0][x * 3 + 1] = GEUnpackGreen(theFormat, *the16BitPixel);
-                        theBuffer[0][x * 3 + 2] = GEUnpackBlue(theFormat, *the16BitPixel);
-                        the16BitPixel++;
-                    }
-                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
-                }
+            // each row as red, green, blue (ee_ge surface_px.rs)
+            theDepth = this->GetPixelDepth() == 32 ? 32 : 16;
+            for (y = 0; y < theHeight; y++) {
+                ee_ge_surf_row_out(theFormat, theDepth,
+                                   this->GetMemoryAddress() + y * (theBytesPerRow / (theDepth / 8)) * (theDepth / 8),
+                                   theWidth, EeGeSurfRow::Rgb, theBuffer[0]);
+                jpeg_write_scanlines(&theInfo, theBuffer, 1);
             }
             // Unlock only a surface that was locked.
             this->Unlock();
@@ -513,9 +417,7 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
     JSAMPARRAY theBuffer;
     unsigned long theRowSize;
     unsigned long theBytesPerRow;
-    uint32_t* the32BitPixel;
-    unsigned short* the16BitPixel;
-    unsigned long x;
+    unsigned long theDepth;
     unsigned long y;
 
     theWasOpen = inFile.GetIsOpen();
@@ -550,28 +452,13 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
         bool theLocked = this->Lock() == kErrorOK;
         if (theLocked) {
             theBytesPerRow = this->GetBytesPerRow();
-            if (this->GetPixelDepth() == 32) {
-                for (y = 0; y < theHeight; y++) {
-                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
-                    for (x = 0; x < theWidth; x++) {
-                        theBuffer[0][x * 3] = GEUnpackRed(theFormat, *the32BitPixel);
-                        theBuffer[0][x * 3 + 1] = GEUnpackGreen(theFormat, *the32BitPixel);
-                        theBuffer[0][x * 3 + 2] = GEUnpackBlue(theFormat, *the32BitPixel);
-                        the32BitPixel++;
-                    }
-                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
-                }
-            } else {
-                for (y = 0; y < theHeight; y++) {
-                    the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 2);
-                    for (x = 0; x < theWidth; x++) {
-                        theBuffer[0][x * 3] = GEUnpackRed(theFormat, *the16BitPixel);
-                        theBuffer[0][x * 3 + 1] = GEUnpackGreen(theFormat, *the16BitPixel);
-                        theBuffer[0][x * 3 + 2] = GEUnpackBlue(theFormat, *the16BitPixel);
-                        the16BitPixel++;
-                    }
-                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
-                }
+            // each row as red, green, blue (ee_ge surface_px.rs)
+            theDepth = this->GetPixelDepth() == 32 ? 32 : 16;
+            for (y = 0; y < theHeight; y++) {
+                ee_ge_surf_row_out(theFormat, theDepth,
+                                   this->GetMemoryAddress() + y * (theBytesPerRow / (theDepth / 8)) * (theDepth / 8),
+                                   theWidth, EeGeSurfRow::Rgb, theBuffer[0]);
+                jpeg_write_scanlines(&theInfo, theBuffer, 1);
             }
         } else {
             // Write blank rows so the image is complete (libjpeg aborts on an image with missing rows).
@@ -597,28 +484,13 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
         // Without the lock the surface memory is not valid: read it only when locked.
         if (theLocked) {
             theBytesPerRow = this->GetBytesPerRow();
-            if (this->GetPixelDepth() == 32) {
-                for (y = 0; y < theHeight; y++) {
-                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
-                    for (x = 0; x < theWidth; x++) {
-                        theBuffer[0][x * 3] = GEUnpackAlpha(theFormat, *the32BitPixel);
-                        theBuffer[0][x * 3 + 1] = GEUnpackAlpha(theFormat, *the32BitPixel);
-                        theBuffer[0][x * 3 + 2] = GEUnpackAlpha(theFormat, *the32BitPixel);
-                        the32BitPixel++;
-                    }
-                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
-                }
-            } else {
-                for (y = 0; y < theHeight; y++) {
-                    the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 2);
-                    for (x = 0; x < theWidth; x++) {
-                        theBuffer[0][x * 3] = GEUnpackAlpha(theFormat, *the16BitPixel);
-                        theBuffer[0][x * 3 + 1] = GEUnpackAlpha(theFormat, *the16BitPixel);
-                        theBuffer[0][x * 3 + 2] = GEUnpackAlpha(theFormat, *the16BitPixel);
-                        the16BitPixel++;
-                    }
-                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
-                }
+            // each row as the alpha three times (ee_ge surface_px.rs)
+            theDepth = this->GetPixelDepth() == 32 ? 32 : 16;
+            for (y = 0; y < theHeight; y++) {
+                ee_ge_surf_row_out(theFormat, theDepth,
+                                   this->GetMemoryAddress() + y * (theBytesPerRow / (theDepth / 8)) * (theDepth / 8),
+                                   theWidth, EeGeSurfRow::Alpha, theBuffer[0]);
+                jpeg_write_scanlines(&theInfo, theBuffer, 1);
             }
             this->Unlock();
         } else {
@@ -749,23 +621,9 @@ long GESurface::LoadPNG(FSFileSpec& inFile)
     theResult = this->Lock();
     if (theResult != kErrorOK)
         return theResult;
-    unsigned char* theRow = reinterpret_cast<unsigned char*>(this->GetMemoryAddress());
-    unsigned long theBytesPerRow = this->GetBytesPerRow();
-    const unsigned char* theSource = thePixels.empty() ? NULL : &thePixels[0];
-    for (unsigned long y = 0; y < theHeight; y++, theRow += theBytesPerRow) {
-        uint32_t* the32BitPixel = reinterpret_cast<uint32_t*>(theRow);
-        unsigned short* the16BitPixel = reinterpret_cast<unsigned short*>(theRow);
-        for (unsigned long x = 0; x < theWidth; x++, theSource += 4) {
-            unsigned char theBlue = theSource[0];
-            unsigned char theGreen = theSource[1];
-            unsigned char theRed = theSource[2];
-            unsigned char theAlpha = theNoAlpha ? 0xff : theSource[3];
-            if (this->GetPixelDepth() == 32)
-                *the32BitPixel++ = ((uint32_t)theAlpha << 24) | (theRed << 16) | (theGreen << 8) | theBlue;
-            else
-                *the16BitPixel++ = (unsigned short)GEPackColor(theFormat, theRed, theGreen, theBlue, theAlpha);
-        }
-    }
+    // the picture's rows into the surface (ee_ge surface_px.rs)
+    ee_ge_surf_png_store(theFormat, this->GetPixelDepth() == 32 ? 32 : 16, theNoAlpha, thePixels.empty() ? NULL : &thePixels[0],
+                         theWidth, theHeight, this->GetMemoryAddress(), this->GetBytesPerRow());
     return this->Unlock();
 }
 
