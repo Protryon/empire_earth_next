@@ -2,6 +2,8 @@
 //! Engine, round 1" and "round 2"). Each object holds its class's state and every method; the C++ keeps a forwarder
 //! only while a C++ caller needs the type, and answers the object's calls out through one host function per class.
 //!
+//! - `comms`: `NESynchronousCommunications`' state, the base class's fields the C++ base, the server and the
+//!   client share;
 //! - `rlock`: a lock a thread may take again while it holds it (the engine's critical sections are Win32's);
 //! - `msgmgr`: `NEMessageManager`, the server's ring of the last 50 sent messages with the slots that still owe an
 //!   answer, the clients' response times and CPU loads, and the per-slot file transfer queues;
@@ -16,10 +18,12 @@
 //! - `server`: `NESynchronousServer`, the lock-step server with its main, send and transfer threads, its message
 //!   manager, tuning and recorder;
 //! - `qhost`: the two queues' calls out, and the timestamped record format;
-//! - `ffi`, `ffi_client`, `ffi_tune`, `ffi_server`: the C ABI (`rust/ee_net.h`).
+//! - `ffi`, `ffi_comms`, `ffi_client`, `ffi_tune`, `ffi_server`: the C ABI (`rust/ee_net.h`).
 
 /// cbindgen:ignore
 pub mod client;
+/// cbindgen:ignore
+pub mod comms;
 /// cbindgen:ignore
 pub mod lagloss;
 /// cbindgen:ignore
@@ -37,6 +41,7 @@ pub mod tune;
 
 pub mod ffi;
 pub mod ffi_client;
+pub mod ffi_comms;
 pub mod ffi_server;
 pub mod ffi_tune;
 

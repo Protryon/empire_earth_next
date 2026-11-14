@@ -64,23 +64,21 @@
 #include "lle/UIControlsTable.h"
 #include "ee/EEUICUnitIconBar.h"
 
+#include "rust/ee_screens.h"   // ee_screens_icon_bar_* (ee_screens icon_bar.rs)
+
 static unsigned long sIconBarUpSound;           // 0x56458c (sound 0x208)
 static unsigned long sIconBarDownSound;         // 0x564590 (sound 0x207)
 
 // FUNCTION: EXE 0x659f7f
-// Creates the selected-units icon bar with its icon frame bitmap and click sounds
+// Creates the selected-units icon bar with its icon frame bitmap and click sounds (its state and icon rectangle:
+// ee_screens icon_bar.rs)
 EEUICUnitIconBar::EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& inRectangle, UIForm* inForm)
     : UIControl(kControlTypeCustom, inTable.GetID(), inRectangle, inForm, inTable.GetFormIndex(), 0), mIcon(new GEBitmap)
 {
-    this->mButtons.clear();
-    this->mCopiedButtons.clear();
-    this->mHealth.clear();
-    this->mCopiedHealth.clear();
-    this->mIconRectangle.SetLeft(0.0f);
-    this->mIconRectangle.SetRight((this->GetRectangle().GetWidth() - 25.0f + 1.0f) * 0.04f);
-    this->mIconRectangle.SetTop(0.0f);
-    this->mIconRectangle.SetBottom(this->GetRectangle().GetHeight());
-    this->mBackground = inTable.CreateNormalBitmap(inForm->GetManager(), this->mIconRectangle);
+    float theIcon[4];
+    this->mState = ee_screens_icon_bar_new(this->GetRectangle().GetWidth(), this->GetRectangle().GetHeight(), theIcon);
+    this->mBackground =
+        inTable.CreateNormalBitmap(inForm->GetManager(), GERectangle(theIcon[0], theIcon[1], theIcon[2], theIcon[3]));
     EESoundObject* theSound = EESoundObject::Get(kSoundButton1);
     if (theSound) {
         theSound->LoadMedia();
@@ -91,10 +89,6 @@ EEUICUnitIconBar::EEUICUnitIconBar(UIControlsTable& inTable, const GERectangle& 
         theSound->LoadMedia();
         sIconBarUpSound = theSound->GetSampleID();
     }
-    this->mShowCargo = false;
-    this->mSelecting = false;
-    this->mSpacing = 0.0f;
-    this->mCopiedSpacing = 0.0f;
 }
 
 // SYNTHETIC: EXE 0x65a178
@@ -112,210 +106,26 @@ EEUICUnitIconBar::~EEUICUnitIconBar()
         theSound->UnloadMedia();
     this->mIcon->Dereference();
     this->mBackground->Dereference();
-    for (std::vector<EEButtonObject*>::iterator theIterator = this->mCopiedButtons.begin();
-         theIterator != this->mCopiedButtons.end(); theIterator++)
-        (*theIterator)->Release();
+    ee_screens_icon_bar_free(this->mState, this);
 }
 
 // FUNCTION: EXE 0x65a258
-// Snapshots the icons, health values, multi-select marks and spacing for drawing
-long EEUICUnitIconBar::CopyData()
-{
-    std::vector<EEButtonObject*>::iterator theIterator;
-    for (theIterator = this->mCopiedButtons.begin(); theIterator != this->mCopiedButtons.end(); theIterator++)
-        (*theIterator)->Release();
-    this->mCopiedButtons.clear();
-    this->mCopiedHealth.clear();
-    this->mCopiedSelectIcons.clear();
-    for (theIterator = this->mButtons.begin(); theIterator != this->mButtons.end(); theIterator++) {
-        this->mCopiedButtons.push_back(*theIterator);
-        (*theIterator)->Acquire();
-    }
-    for (std::vector<float>::iterator theHealth = this->mHealth.begin(); theHealth != this->mHealth.end(); theHealth++)
-        this->mCopiedHealth.push_back(*theHealth);
-    for (std::vector<long>::iterator theIcon = this->mSelectIcons.begin(); theIcon != this->mSelectIcons.end(); theIcon++)
-        this->mCopiedSelectIcons.push_back(*theIcon);
-    this->mCopiedSpacing = this->mSpacing;
-    this->mCopiedIconRectangle = this->mIconRectangle;
-    return UIControl::CopyData();
-}
-
 // FUNCTION: EXE 0x65a32f
-// Draws up to 35 unit icons, each with a health bar (green over red) and a red outline when marked
-// NEAR: inline budget (the original calls _Ptrit::operator+ and vector<long>::begin/end out of line and expands GEBitmap::SetLocation) and the frame layout of the seven locals
-long EEUICUnitIconBar::DrawPolygons()
-{
-    GERectangle theIconRectangle;
-    GERectangle theRedBar;
-    GERectangle theGreenBar;
-    GERectangle theBlackBar;
-    GE2DPoint theLocation;
-    GERhombus theRhombus;
-    GELine theLine;
-    long theResult = UIControl::DrawPolygons();
-    float theOffset = this->GetCopiedDrawRectangle().GetHeight() * 0.1f;
-    float theStep = this->mCopiedIconRectangle.GetWidth() * this->mCopiedSpacing;
-    theLocation.SetX(this->GetCopiedDrawRectangle().GetLeft());
-    theLocation.SetY(this->GetCopiedDrawRectangle().GetTop());
-    GE2DPoint theIconLocation(theLocation.GetX(),
-                              this->GetCopiedDrawRectangle().GetHeight() * 0.18f + theLocation.GetY() + theOffset);
-    theIconRectangle.SetLeft(0.0f);
-    theIconRectangle.SetTop(theIconLocation.GetY());
-    theIconRectangle.SetRight(this->mCopiedIconRectangle.GetWidth());
-    theIconRectangle.SetBottom(this->mCopiedIconRectangle.GetHeight() + theIconRectangle.GetTop() -
-                               (this->GetCopiedDrawRectangle().GetHeight() * 0.18f + theOffset));
-    theBlackBar.SetLeft(theLocation.GetX());
-    theBlackBar.SetTop(theLocation.GetY());
-    theBlackBar.SetRight(this->mCopiedIconRectangle.GetWidth() + theBlackBar.GetLeft());
-    theBlackBar.SetBottom(this->GetCopiedDrawRectangle().GetHeight() * 0.18f + theBlackBar.GetTop() + theOffset);
-    theRedBar.SetTop(this->GetCopiedDrawRectangle().GetHeight() * 0.09f + theLocation.GetY());
-    theRedBar.SetBottom(theRedBar.GetTop() + theOffset);
-    theGreenBar.SetTop(this->GetCopiedDrawRectangle().GetHeight() * 0.09f + theLocation.GetY());
-    theGreenBar.SetBottom(theGreenBar.GetTop() + theOffset);
-    for (unsigned long i = 0; i < this->mCopiedButtons.size() && i < 35; i++) {
-        theBlackBar.SetLeft(theLocation.GetX());
-        theBlackBar.SetRight(this->mCopiedIconRectangle.GetWidth() + theBlackBar.GetLeft());
-        float theLeft = this->mCopiedIconRectangle.GetWidth() * 0.1f + theLocation.GetX();
-        theGreenBar.SetLeft(theLeft);
-        theGreenBar.SetRight(this->mCopiedIconRectangle.GetWidth() * 0.8f * this->mCopiedHealth[i] + theLeft);
-        theRedBar.SetLeft(theGreenBar.GetRight());
-        theRedBar.SetRight(this->mCopiedIconRectangle.GetWidth() * 0.9f + theLocation.GetX());
-        this->mIcon->SetTexture(this->mCopiedButtons[i]->GetTexture(), this->GetScreenIndex());
-        this->mCopiedButtons[i]->SetFaceBitmap(this->mIcon, theIconRectangle, gScreenIndex);
-        this->mIcon->SetLocation(theIconLocation);
-        this->GetRasterizer()->Draw(this->mIcon, this->GetScreenIndex());
-        theRhombus.SetColor(GEColor(0.0f, 0.0f, 0.0f));
-        theRhombus.SetRectangle(theBlackBar);
-        this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
-        theRhombus.SetColor(GEColor(1.0f, 0.0f, 0.0f));
-        theRhombus.SetRectangle(theRedBar);
-        this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
-        theRhombus.SetColor(GEColor(0.0f, 1.0f, 0.0f));
-        theRhombus.SetRectangle(theGreenBar);
-        this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
-        this->mBackground->SetLocation(theLocation);
-        theResult = this->GetRasterizer()->Draw(this->mBackground, this->GetScreenIndex());
-        if (std::find(this->mCopiedSelectIcons.begin(), this->mCopiedSelectIcons.end(), i) != this->mCopiedSelectIcons.end()) {
-            theLine.SetStartPoint(theLocation);
-            theLine.SetEndPoint(GE2DPoint(this->mCopiedIconRectangle.GetWidth() + theLocation.GetX(), theLocation.GetY()));
-            theLine.SetColor(GEColor(1.0f, 0.0f, 0.0f));
-            gRasterizer->Draw(&theLine, 1, this->GetScreenIndex());
-            theLine.SetEndPoint(GE2DPoint(theLocation.GetX(), this->mCopiedIconRectangle.GetHeight() + theLocation.GetY()));
-            gRasterizer->Draw(&theLine, 1, this->GetScreenIndex());
-            theLine.SetStartPoint(GE2DPoint(this->mCopiedIconRectangle.GetWidth() + theLocation.GetX(),
-                                            this->mCopiedIconRectangle.GetHeight() + theLocation.GetY()));
-            gRasterizer->Draw(&theLine, 1, this->GetScreenIndex());
-            theLine.SetEndPoint(GE2DPoint(this->mCopiedIconRectangle.GetWidth() + theLocation.GetX(), theLocation.GetY()));
-            theResult = gRasterizer->Draw(&theLine, 1, this->GetScreenIndex());
-        }
-        theLocation.SetXY(theLocation.GetX() + theStep + 1.0f, theLocation.GetY());
-        theIconLocation = GE2DPoint(theLocation.GetX(),
-                                    this->GetCopiedDrawRectangle().GetHeight() * 0.18f + theLocation.GetY() + theOffset);
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x65a954
-// Returns the unit of an icon: a cargo unit of the selected transport, or a selected unit; NULL for 100
-EEComplexUnit* EEUICUnitIconBar::GetUnit(unsigned long inIndex)
-{
-    EEComplexUnit* theResult = NULL;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
-    if (inIndex != 100 && theGroup && theGroup->GetNumUnits() > 0) {
-        EEComplexUnit* theFirst = theGroup->GetUnit(0);
-        if (this->mShowCargo && inIndex < theFirst->GetNumCargoUnits())
-            theResult = theFirst->GetCargo(inIndex);
-        else if (inIndex < theGroup->GetNumUnits())
-            theResult = thePlayer->mSelectedGroup->GetUnit(inIndex);
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x65a9e2
-// Returns the index of the icon under the mouse, or 100 when the bar is empty
-// the mouse offset from the bar, x over the icon pitch
-long EEUICUnitIconBar::GetIconIndex()
-{
-    long theResult = 100;
-    if (this->mButtons.size() > 0) {
-        GE2DPoint theOffset = this->GetMouseLocation();
-        theOffset.SetX(theOffset.GetX() - this->GetRectangle().GetLeft());
-        theOffset.SetY(this->GetMouseLocation().GetY() - this->GetRectangle().GetTop());
-        theResult = theOffset.GetX() / (this->mIconRectangle.GetWidth() * this->mSpacing + 1.0f);
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x65aa43
-// Collects the ids of the listed units of a type
-void EEUICUnitIconBar::GetUnitIDs(unsigned long inType, std::vector<long>& outIDs)
-{
-    for (unsigned long i = 0; i < this->mButtons.size(); i++) {
-        EEComplexUnit* theUnit = this->GetUnit(i);
-        if (theUnit && theUnit->GetUnitClass()->mUnitType == inType)
-            outIDs.push_back(theUnit->GetUnitID());
-    }
-}
-
 // FUNCTION: EXE 0x65aa9b
-// On a click on an icon: selects that unit (Ctrl: all of its type, Shift: marks it for a multi-select), or
-// unloads a cargo unit, or scrambles an idle aircraft from an airbase
-// NEAR: inline budget (the original expands EEMSelectUnit/EEMImmediateCargoUnload with EEMessage's ctor refused; ours refuses EEMSelectUnit) and a 4-byte smaller frame
-long EEUICUnitIconBar::MouseLButtonUp()
-{
-    std::vector<long> theIDs;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    if (this->GetRectangle().Contains(this->GetMouseLocation())) {
-        EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
-        long theIndex = this->GetIconIndex();
-        EEComplexUnit* theUnit = this->GetUnit(theIndex);
-        if (theUnit) {
-            EEComplexUnit* theFirst = theGroup->GetUnit(0);
-            EEMessage* theMessage;
-            if (!this->mShowCargo) {
-                if (UIControl::ControlKeyPressed()) {
-                    this->GetUnitIDs(theUnit->GetUnitClass()->mUnitType, theIDs);
-                    theMessage = new EEMSelectTheseUnits(theIDs);
-                    gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
-                    gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-                } else if (!this->mSelecting && !UIControl::ShiftKeyPressed()) {
-                    theMessage = new EEMRecord(kMessageSelectUnit, {theUnit->GetUnitID()});
-                    gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
-                    gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-                } else {
-                    this->mSelecting = true;
-                    this->mSelectIDs.push_back(theUnit->GetUnitID());
-                    this->mSelectIcons.push_back(theIndex);
-                    gSoundManager->Play(sIconBarUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
-                    this->SetDirty(true);
-                }
-            } else if (theFirst->GetUnitClass()->IsTransport()) {
-                theMessage = new EEMImmediateCargoUnload(theFirst->GetUnitID(), theUnit->GetUnitID(), false);
-                gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
-                gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-            } else if (theFirst->GetUnitClass()->IsAirBase()) {
-                EEUnitClass* theClass = theUnit->GetUnitClass();
-                EEUnitGoal* theGoal = NULL;
-                if (theClass->mFamily == kUnitFamilyAircraft || theClass->mFamily == kUnitFamilySpaceFighter)
-                    theGoal = theFirst->GetQueuedGoal(1);
-                else if (theClass->mFamily == kUnitFamilyBomber) {
-                    if (!theClass->mIsParatrooperBomber)
-                        theGoal = theFirst->GetQueuedGoal(2);
-                } else if (theClass->mFamily == kUnitFamilyAtomicBomber)
-                    theGoal = theFirst->GetQueuedGoal(3);
-                if (theGoal == NULL &&
-                    (theUnit->GetQueueGoals(1).size() == 0 || theUnit->mGoalQueues[1].GetFront() == NULL)) {
-                    theMessage = new EEMRecord(kMessageScrambleAircraft, {theFirst->GetTileX(), theFirst->GetTileY(), theUnit->GetUnitID()});
-                    gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
-                    gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-                }
-            }
-        }
-    }
-    this->ReleaseCapturedMouse();
-    return 0;
-}
+// FUNCTION: EXE 0x65ae44
+// FUNCTION: EXE 0x65afa5
+// FUNCTION: EXE 0x65b010
+// The snapshot, the drawing, the clicks and the refill from the selection (and the original's GetUnit,
+// GetIconIndex, GetUnitIDs): ee_screens icon_bar.rs over the host below
+long EEUICUnitIconBar::CopyData() { return ee_screens_icon_bar_copy_data(this->mState, this); }
+long EEUICUnitIconBar::DrawPolygons() { return ee_screens_icon_bar_draw(this->mState, this); }
+long EEUICUnitIconBar::MouseLButtonUp() { return ee_screens_icon_bar_mouse_l_up(this->mState, this); }
+long EEUICUnitIconBar::MouseRButtonUp() { return ee_screens_icon_bar_mouse_r_up(this->mState, this); }
+long EEUICUnitIconBar::MouseMove(const GE2DPoint& inLocation) { return ee_screens_icon_bar_mouse_move(this->mState, this); }
+void EEUICUnitIconBar::Update() { ee_screens_icon_bar_update(this->mState, this); }
 
 // FUNCTION: EXE 0x65ad92
 // Creates a scramble-aircraft message for a unit and a tile
@@ -339,28 +149,6 @@ long EEUICUnitIconBar::MouseLButtonDown()
     return 0;
 }
 
-// FUNCTION: EXE 0x65ae44
-// On a right click on an icon, removes the unit from the selection, or unloads a cargo unit
-long EEUICUnitIconBar::MouseRButtonUp()
-{
-    if (this->GetRectangle().Contains(this->GetMouseLocation())) {
-        EEComplexUnit* theUnit = this->GetUnit(this->GetIconIndex());
-        if (theUnit && !this->mShowCargo) {
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveUnitFromSelectedGroup, {theUnit->GetUnitID()}), kSlotNone);
-            gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
-        } else if (this->mShowCargo && theUnit) {
-            EEComplexUnit* theTransport = gWorld.GetCurrentPlayer()->mSelectedGroup->GetUnit(0);
-            if (theTransport && theTransport->GetUnitClass()->IsTransport()) {
-                gCommunications->ProcessLocalUserInput(
-                    new EEMImmediateCargoUnload(theTransport->GetUnitID(), theUnit->GetUnitID(), false), kSlotNone);
-                gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
-            }
-        }
-    }
-    this->ReleaseCapturedMouse();
-    return 0;
-}
-
 // FUNCTION: EXE 0x65af3d
 // Creates an immediate cargo unload message for a transport and a cargo unit
 // (EEMImmediateCargoUnload::EEMImmediateCargoUnload(long, long, bool), inline in EEMessage.h; emitted after its first user)
@@ -369,64 +157,133 @@ long EEUICUnitIconBar::MouseRButtonUp()
 // Creates a remove-from-selection message for a unit
 // (EEMRemoveUnitFromSelectedGroup::EEMRemoveUnitFromSelectedGroup(long), inline in EEMessage.h; emitted after its first user)
 
-// FUNCTION: EXE 0x65afa5
-// Sends the Shift-marked units as the new selection once Shift is released
-long EEUICUnitIconBar::MouseMove(const GE2DPoint& inLocation)
-{
-    if (!this->mSelecting)
-        return 0;
-    this->mSelecting = UIControl::ShiftKeyPressed();
-    if (this->mSelecting)
-        return 0;
-    gCommunications->ProcessLocalUserInput(new EEMSelectTheseUnits(this->mSelectIDs), kSlotNone);
-    this->mSelectIDs.clear();
-    this->mSelectIcons.clear();
-    return 0;
-}
-
-// FUNCTION: EXE 0x65b010
-// Refills the bar from the selection (or the single selected transport's cargo): icons, health and spacing
-// NEAR: the original calls mCargo.size() out of line (inline budget) and keeps the group in edi, the first unit in ebx
-void EEUICUnitIconBar::Update()
-{
-    EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-    EEComplexUnit* theFirst;
-    unsigned long i;
-    EEComplexUnit* theUnit;
-    unsigned long j;
-    EEComplexUnit* theCargo;
-    float theHealth;
-    theFirst = theGroup->GetNumUnits() > 0 ? theGroup->GetUnit(0) : NULL;
-    unsigned long theCount;
-    if (theGroup->GetNumUnits() == 1 && theFirst && theFirst->mCargo.size() != 0)
-        theCount = min(theFirst->mCargo.size(), 35);
-    else
-        theCount = min(theGroup->GetNumUnits(), 35);
-    this->mSpacing = min(1.0f, ((this->GetRectangle().GetWidth() - this->mIconRectangle.GetWidth() - 25.0f + 1.0f) /
-                          this->mIconRectangle.GetWidth() - 1.0f) / (theCount - 1.0f));
-    this->mButtons.clear();
-    this->mHealth.clear();
-    this->mSelectIDs.clear();
-    this->mSelectIcons.clear();
-    this->mShowCargo = false;
-    for (i = 0; i < theGroup->GetNumUnits(); i++) {
-        theUnit = theGroup->GetUnit(i);
-        if (theGroup->GetNumUnits() == 1 && theUnit->GetNumCargoUnits() != 0) {
-            for (j = 0; j < theUnit->GetNumCargoUnits(); j++) {
-                theCargo = theUnit->mCargo[j];
-                this->mButtons.push_back(theCargo->mStats->mButton);
-                theHealth = (float)theCargo->GetHitPoints() / theCargo->mStats->mMaxHitPoints;
-                this->mHealth.push_back(max(min(theHealth, 1.0f), 0.0f));
-                this->mShowCargo = true;
-            }
-        } else {
-            this->mButtons.push_back(theUnit->mStats->mButton);
-            this->mHealth.push_back((float)theUnit->GetHitPoints() / (float)theUnit->mStats->mMaxHitPoints);
-        }
-    }
-    this->SetDirty(true);
-}
-
 // FUNCTION: EXE 0x65b2a2
 // Appends a button to a vector (std::vector<EEButtonObject*>::push_back)
 // (std::vector<EEButtonObject*>::push_back, a template COMDAT closing the unit)
+
+// The bar's host (icon_bar.rs EE_SCREENS_IB_OP_*): units and buttons as handles, ioF the op's floats
+extern "C" int64_t ee_screenscpp_icon_bar(void* inBar, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+{
+    return EEUICUnitIconBar::HostOp(static_cast<EEUICUnitIconBar*>(inBar), inOp, inA, inB, ioF);
+}
+
+int64_t EEUICUnitIconBar::HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+{
+    EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
+    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
+    EEButtonObject* theButton = reinterpret_cast<EEButtonObject*>(inA);
+    NEMessage* theMessage = NULL;
+    switch (inOp) {
+    case EE_SCREENS_IB_OP_GROUP_COUNT:
+        return theGroup ? (int64_t)theGroup->GetNumUnits() : -1;
+    case EE_SCREENS_IB_OP_GROUP_UNIT:
+        return (int64_t)theGroup->GetUnit((unsigned long)inA);
+    case EE_SCREENS_IB_OP_CARGO_COUNT:
+        return (int64_t)theUnit->GetNumCargoUnits();
+    case EE_SCREENS_IB_OP_CARGO:
+        return (int64_t)theUnit->GetCargo((unsigned long)inB);
+    case EE_SCREENS_IB_OP_UNIT_ID:
+        return theUnit->GetUnitID();
+    case EE_SCREENS_IB_OP_UNIT_TYPE:
+        return theUnit->GetUnitClass()->mUnitType;
+    case EE_SCREENS_IB_OP_CLASS: {
+        EEUnitClass* theClass = theUnit->GetUnitClass();
+        return (theClass->IsTransport() ? EE_SCREENS_IB_CLASS_TRANSPORT : 0) |
+               (theClass->IsAirBase() ? EE_SCREENS_IB_CLASS_AIR_BASE : 0) |
+               (theClass->mIsParatrooperBomber ? EE_SCREENS_IB_CLASS_PARATROOPER_BOMBER : 0) | (int64_t)theClass->mFamily << 8;
+    }
+    case EE_SCREENS_IB_OP_QUEUED_GOAL:
+        return theUnit->GetQueuedGoal((unsigned long)inB) != NULL;
+    case EE_SCREENS_IB_OP_NO_GOALS:
+        return theUnit->GetQueueGoals(1).size() == 0 || theUnit->mGoalQueues[1].GetFront() == NULL;
+    case EE_SCREENS_IB_OP_TILE:
+        return (int64_t)(uint32_t)theUnit->GetTileX() | (int64_t)theUnit->GetTileY() << 32;
+    case EE_SCREENS_IB_OP_HIT_POINTS:
+        return theUnit->GetHitPoints();
+    case EE_SCREENS_IB_OP_MAX_HIT_POINTS:
+        return theUnit->mStats->mMaxHitPoints;
+    case EE_SCREENS_IB_OP_BUTTON:
+        return (int64_t)theUnit->mStats->mButton;
+    case EE_SCREENS_IB_OP_SELECT_THESE: {
+        const int32_t* theIDs = reinterpret_cast<const int32_t*>(inA);
+        std::vector<long> theList(theIDs, theIDs + inB);
+        theMessage = new EEMSelectTheseUnits(theList);
+        break;
+    }
+    case EE_SCREENS_IB_OP_SELECT:
+        theMessage = new EEMRecord(kMessageSelectUnit, {(long)inA});
+        break;
+    case EE_SCREENS_IB_OP_UNLOAD:
+        theMessage = new EEMImmediateCargoUnload((long)inA, (long)inB, false);
+        break;
+    case EE_SCREENS_IB_OP_SCRAMBLE:
+        theMessage = new EEMRecord(kMessageScrambleAircraft, {(long)(int32_t)inB, (long)(inB >> 32), (long)inA});
+        break;
+    case EE_SCREENS_IB_OP_REMOVE:
+        theMessage = new EEMRecord(kMessageRemoveUnitFromSelectedGroup, {(long)inA});
+        break;
+    case EE_SCREENS_IB_OP_SOUND:
+        gSoundManager->Play(inA == 0 ? sIconBarDownSound : sIconBarUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
+        break;
+    case EE_SCREENS_IB_OP_DIRTY:
+        inBar->SetDirty(true);
+        break;
+    case EE_SCREENS_IB_OP_CTRL:
+        return UIControl::ControlKeyPressed();
+    case EE_SCREENS_IB_OP_SHIFT:
+        return UIControl::ShiftKeyPressed();
+    case EE_SCREENS_IB_OP_MOUSE:
+        ioF[0] = inBar->GetMouseLocation().GetX();
+        break;
+    case EE_SCREENS_IB_OP_CONTAINS:
+        return inBar->GetRectangle().Contains(inBar->GetMouseLocation());
+    case EE_SCREENS_IB_OP_RECT:
+    case EE_SCREENS_IB_OP_DRAW_RECT: {
+        GERectangle theRect = inOp == EE_SCREENS_IB_OP_RECT ? inBar->GetRectangle() : inBar->GetCopiedDrawRectangle();
+        ioF[0] = theRect.GetLeft();
+        ioF[1] = theRect.GetTop();
+        ioF[2] = theRect.GetRight();
+        ioF[3] = theRect.GetBottom();
+        break;
+    }
+    case EE_SCREENS_IB_OP_RELEASE_MOUSE:
+        inBar->ReleaseCapturedMouse();
+        break;
+    case EE_SCREENS_IB_OP_ACQUIRE:
+        theButton->Acquire();
+        break;
+    case EE_SCREENS_IB_OP_RELEASE:
+        theButton->Release();
+        break;
+    case EE_SCREENS_IB_OP_COPY_BASE:
+        return inBar->UIControl::CopyData();
+    case EE_SCREENS_IB_OP_DRAW_BASE:
+        return inBar->UIControl::DrawPolygons();
+    case EE_SCREENS_IB_OP_ICON:
+        inBar->mIcon->SetTexture(theButton->GetTexture(), inBar->GetScreenIndex());
+        theButton->SetFaceBitmap(inBar->mIcon, GERectangle(ioF[2], ioF[3], ioF[4], ioF[5]), gScreenIndex);
+        inBar->mIcon->SetLocation(GE2DPoint(ioF[0], ioF[1]));
+        inBar->GetRasterizer()->Draw(inBar->mIcon, inBar->GetScreenIndex());
+        break;
+    case EE_SCREENS_IB_OP_RHOMBUS: {
+        GERhombus theRhombus;
+        theRhombus.SetColor(GEColor(inA == 1 ? 1.0f : 0.0f, inA == 2 ? 1.0f : 0.0f, 0.0f));
+        theRhombus.SetRectangle(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]));
+        inBar->GetRasterizer()->Draw(&theRhombus, inBar->GetScreenIndex());
+        break;
+    }
+    case EE_SCREENS_IB_OP_FRAME:
+        inBar->mBackground->SetLocation(GE2DPoint(ioF[0], ioF[1]));
+        return inBar->GetRasterizer()->Draw(inBar->mBackground, inBar->GetScreenIndex());
+    case EE_SCREENS_IB_OP_LINE: {
+        GELine theLine;
+        theLine.SetStartPoint(GE2DPoint(ioF[0], ioF[1]));
+        theLine.SetEndPoint(GE2DPoint(ioF[2], ioF[3]));
+        theLine.SetColor(GEColor(1.0f, 0.0f, 0.0f));
+        return gRasterizer->Draw(&theLine, 1, inBar->GetScreenIndex());
+    }
+    }
+    if (theMessage != NULL)
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+    return 0;
+}

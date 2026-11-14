@@ -125,15 +125,9 @@ public:
     void TestScenario();                    // 0x276ab0 (message 0x415: starts the tested scenario)
     void CloseIMECompositionString();       // 0x276cb1 (WM_IME_ENDCOMPOSITION)
     void SaveAndTestScenario();             // 0x276cbc (message 0x40f: saves ScenDefault and starts it)
-    void LeaveMap(UIForm* inForm, bool inResize);      // 0x277023 (clears the three queues, then the form)
-    void CancelGame();                      // 0x277170 (message 0x412)
-    void CloseScenarioEditor();             // 0x277290 (message 0x410)
-    void EnterScenarioEditor(bool inLoad);  // 0x277315 (message 0x411: into the scenario editor)
     long CreateRenderObject();              // 0x27754b (pushes the UI's render object)
     void LoadSavedGame(FSFile* inFile);     // 0x27757c (message 0x408: loads a saved game; deletes inFile)
-    void StartLoadingFromEditor();          // 0x2777cd (message 0x413)
     void OpenSelectServer();                // 0x27783c (message 0x441)
-    void ShowCivilizationBuilder(long inX, bool inFlag1, bool inFlag2);  // 0x277c1f (messages 0x41f/0x420)
     void PauseGraphics();                   // 0x277e63 (waits for the graphics thread's +0x56 flag)
     void ProcessActions();                  // 0x277f21 (runs the queued actions: ee_screens actions.rs)
     // the input method's composition (PLAT_EVENT_TEXT_EDITING) and result (PLAT_EVENT_TEXT while composing)
@@ -141,7 +135,6 @@ public:
     void AddIMEResultString(const char* inText);  // 0x2781da
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
     void OpenIMECompositionString();        // 0x278fc0 (WM_IME_STARTCOMPOSITION)
-    void RestartGame();                     // 0x279013 (message 0x428)
     void ShowLagStatus(unsigned long inPlayer, bool inLagging);  // 0x27977c (message 0x442; the caller passes (unsigned short))
     void ResumeGraphics();                  // 0x2798a3
     void ShowLoadingText(long inStringID);  // 0x279fbc (message 0x40b)

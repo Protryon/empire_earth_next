@@ -255,12 +255,6 @@ impl ServerHost for Replay {
     fn sim_mode(&self) -> bool {
         self.num("s3".into()) != 0
     }
-    fn base_get(&self, f: BaseField) -> u32 {
-        self.num(format!("s4 {}", f as u32)) as u32
-    }
-    fn base_set(&self, f: BaseField, value: u32) {
-        self.num(format!("s5 {} {value}", f as u32));
-    }
     fn mm(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize {
         let o = op as u32;
         match op {
@@ -445,6 +439,7 @@ fn replay(lines: Vec<String>) {
     }));
     ME.with(|m| m.set(0));
     let mut server: Option<Box<Server<Replay>>> = None;
+    let mut comms: Option<Arc<Comms>> = None;
     loop {
         let Some(line) = host.0.lines.lock().unwrap().pop_front() else { break };
         if let Some(k) = line.strip_prefix("sw ") {
@@ -502,7 +497,11 @@ fn replay(lines: Vec<String>) {
                     current_physics_tick: 0,
                     allow_new_connections: w[11] == "1",
                 };
-                let s = Server::new(host.clone(), a);
+                // the C++ base class's fields: the driver's (one human; the base takes the first tick)
+                let c = Arc::new(Comms::new(n(10)));
+                c.set(BaseField::NumHumanPlayers, 1);
+                comms = Some(c.clone());
+                let s = Server::new(host.clone(), c, a);
                 *host.0.server.lock().unwrap() = &*s as *const Server<Replay> as usize;
                 server = Some(s);
             }
@@ -511,7 +510,18 @@ fn replay(lines: Vec<String>) {
                 s.release();
                 drop(s);
             }
-            "run" | "pass" | "packets" | "base" | "xferevent" => {}
+            "run" | "pass" | "packets" | "xferevent" => {}
+            "base" => {
+                // the driver's fields: the humans, multiplayer, paused, the average, the CTs processed
+                let f = [
+                    BaseField::NumHumanPlayers,
+                    BaseField::IsMultiplayerSession,
+                    BaseField::IsGamePaused,
+                    BaseField::AveragePhysicsUpdateTime,
+                    BaseField::CtsProcessed,
+                ][n(1) as usize];
+                comms.as_ref().unwrap().set(f, w[2].parse::<i64>().unwrap() as u32);
+            }
             _ => {
                 let s = server.as_ref().unwrap();
                 match w[0] {

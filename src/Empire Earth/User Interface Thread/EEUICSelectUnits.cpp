@@ -95,7 +95,7 @@ EEUICSelectUnits::EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned 
                 inIndex, 0),
       mClick(inClick)
 {
-    this->mDisplayMode = kDisplayModeHidden;
+    this->StoreDisplayMode(kDisplayModeHidden);
     this->mDragging = false;
     this->mD1 = false;
     this->mClick->Reference();

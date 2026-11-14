@@ -242,7 +242,10 @@ name = "ee_fs"
 version = "0.1.0"
 dependencies = [
  "ee_codec",
+ "ee_error",
  "ee_plat_core",
+ "ee_plat_sys",
+ "ee_ustring",
 ]
 
 [[package]]
