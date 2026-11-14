@@ -15388,3 +15388,84 @@ each move is checked against the sweep's golden recorded from the original C++.
 - **Next:** the tracer beam (its target unit as an `EEE3DRust` member with `ReplaceUnit`, the vertex stretch as a
   table entry), the farm and volcano (their meshes are Rust already), the text draw in the table for the icon and
   goal (0x3c derives from the icon: they move together), then the 2D sprites on `EEE2DRust` with a 2D sweep.
+
+## LLE lane, round 3: the Time Manager and the Thread System whole in Rust, UString's searches and tokenizers in Rust (ee_time, ee_ts, ee_ustring; branch rust-lle3, 2026-11-13)
+
+Round 3 of the Low-Level Engine lane (rounds 1-2 above). Net C++ over src + include without the generated
+`include/rust` (`git diff --numstat`), per commit: Time Manager -305; Thread System -564; UString -72: -941 in all.
+Each move has a golden over the unmodified units (a driver under `tests/`, the originals copied verbatim into an
+`*_orig.h` beside it), replayed by cargo; a long run checked the mutations.
+
+- **The Time Manager** (`ee_time`, a new crate): `TMPoll`, `TMTimer`, `TMGetTime`, `TMGetMicroTime`,
+  `TMGetTimeOfDay` and `TMInitialize`'s time base. `TMPoll.cpp` and `TMTimer.cpp` are deleted.
+  - **Pattern: a C++ class holding a Rust record by value.** `TMPoll` is embedded by value (`UIBlinkingButton`,
+    `UIGraph`, `EEAScroll`, three statics), so it keeps one `EeTimePoll` member with the original's fields, sizeof
+    0x20, 8-aligned (a Rust test pins the layout); every member is an inline forwarder. `TMTimer` (one instance, the
+    physics clock) owns a boxed `EeTimeTimer` whose fields are atomics: the platform's timer thread runs its
+    procedure (the original raced on plain fields). `TMTimer::SetEvent` now reads the event's handle at once (the
+    original read it at `Start`, where a NULL event crashed).
+  - **`TMPoll::sCounterFrequency` kept bit for bit.** It is one shared value that every new poll overwrites (ticks
+    per millisecond, per microsecond for a microsecond poll, 1 without a counter). All 20 polls the game constructs
+    are millisecond polls on the one counter, so after the first poll the value never changes: no caller can see
+    the difference either way, and the shared value (now `ee_time::TIME`) is kept as it was rather than fixed.
+  - EE-SIM's pinned time (`gTMPinnedTime`, a C++ `thread_local`) is `ee_time_pin` now (`EESimEditor.cpp`).
+  - **The golden** (`tests/time/tm_golden.cpp` over `tm_orig.h`, on a scripted counter, millisecond clock, local
+    time and timer table): 20,000 sequences on three polls, one timer and the clocks (frequencies 0, 3.58 MHz,
+    10 MHz, 1 GHz, 2.4-3.4 GHz changing mid-sequence; delays up to 2^32-1; the millisecond clock across its wrap;
+    microsecond polls with and without a counter; callback and event timers, failed starts and stops, the timer
+    firing), 2,899,225 lines equal. Nine mutations fail it (47..13,632 sequences): a poll counting one tick early,
+    the shared frequency set by the first poll only, a microsecond delay not converted without a counter, a delay
+    past 2^31 compared signed, Resume adding the paused part (the original's bug the port fixed), Pause keeping the
+    time left, a one-shot timer still running after firing, SetInterval keeping microseconds, the micro time in
+    f64, month 0 wrapping in 16 bits. One mutation was equivalent (`<` against `<=` in the time left: at equality
+    both give 0). cargo replays the first 60 sequences.
+- **The Thread System** (`ee_ts`, a new crate): `TSCriticalSection`, `TSEvent`, `TSReadWriteLock`, `TSThread`
+  (its message-id queue under the message lock, its posted messages under the post lock), `TSScheduler`'s registry
+  and the window-event pump, `TSInitialize`/`TSShutdown`. `TSCriticalSection.cpp`, `TSEvent.cpp`,
+  `TSReadWriteLock.cpp` and `TSThread.cpp` are deleted; `TSScheduler.cpp` and `Thread System.cpp` are forwarders.
+  - The four classes are data-less C++ classes over the Rust objects (round 2's keyboard pattern): private deleted
+    constructor and destructor, a `TSThread*` is an `EeTsThread*`, each member one line. `TSEvent::mHandle` became
+    `GetHandle()` (its readers: `TMTimer`; the TCP plug-in's `Handle()` read it until the Network Engine
+    lane's move, which put the same read in `NEProtocol.cpp`'s `NEHandle`: one line there after merging `rust`).
+    `TSThread::GetName` went (no caller); the name is still stored.
+  - **Determinism:** every platform call (`PlatMutex*`, `PlatEvent*`, `PlatThread*`, `PlatSleep`) and every
+    `ESRecordNativeError`/`ESVerify` is the original's, in its order, with the same arguments: the golden checks the
+    whole call sequence, not only the results. The registry is behind a Rust `Mutex` (the original's `std::vector`
+    raced); it calls no platform function, so the threads' interleaving is as before.
+  - **The golden** (`tests/thread/ts_golden.cpp` over `ts_orig.h`): a recorded platform layer: the driver prints
+    each platform call with its arguments and the result it chose (failed creations, waits that time out or fail,
+    suspend counts, a failed exit-code read...), and the Rust replay's host checks each call it makes against the
+    next recorded one and answers with the recorded result. 20,000 sequences of sections, events, wait-any, locks,
+    threads (posts with and without the id queue, receives on and off the pump's thread, resume/suspend/terminate,
+    priorities, names, the procedure run), the registry, `TSInitialize` (with its shutdown registration failing),
+    `TSShutdown` and the pump: 6,936,301 lines equal. Eleven mutations fail it (714..20,000 sequences); one was
+    equivalent (a pumped receive keeping its queued id: a queued id always comes with a posted message, so the
+    queue of ids is empty whenever nothing was posted). cargo replays the first 60 sequences.
+- **UString's algorithms** (`ee_ustring`, a new crate): `Find` and `FindBackwards` (both overloads), `Tokenize`
+  and `NestedTokenize`. They take the bytes and lengths and hand back indices; the class keeps its buffer and
+  builds its substrings (`GetIndexedSubstring`) from the (first, last) pairs.
+  - **Measured before deciding:** `UString` is named in 382 files and `UWideString` in 323, with 50 and 119
+    by-value members, `operator const char*` read inline everywhere, 229 `sprintf(UString&, ...)` calls on the
+    C++ varargs, and `FSFile` I/O in Load/Save. A full move of the storage is too wide for one round: it needs the
+    by-value members to hold a Rust record (as `TMPoll` does now) with the buffer and its allocation in Rust, and
+    `sprintf` kept as a C++ formatter writing into it. Moving the algorithms first keeps every caller unchanged.
+  - Out-of-bounds reads of the original are not reproduced: `Find` with a start past the end and a needle longer
+    than the string read past the string (it now finds nothing there), and `NestedTokenize` with a one-byte quote
+    opening the text at position 0 built a substring from a wrapped index (unchanged: the indices are the
+    original's, the C++ builds the same substring). The golden avoids both.
+  - **The golden** (`tests/string/us_golden.cpp` over `us_orig.h`): 200,000 random cases (UTF-8 bytes, separators
+    including the empty set and a lead byte, brackets including same-byte quotes and a one-byte pair, starts past the
+    end), all equal. Six of eight mutations fail it (1,182..29,984 cases; one of them makes the replay index past the
+    text); two are equivalent on what the class holds (`strncmp` running past a terminator both strings share, and
+    the terminator looked up as a one-byte needle: at the end the token closes either way). cargo replays 3,000
+    cases.
+  - Not moved: `UWideString`'s `Find`/`Tokenize` (character positions through `PlatMbs*`, and a 3-byte character
+    buffer that a 4-byte UTF-8 character overflows: worth fixing when it moves), `Copy`, the comparisons
+    (`strcmp`), `sprintf`, Load/Save.
+- **What runs it.** EE-SIM runs the Thread System (every thread, lock and event of the simulation), the Time
+  Manager's `TMGetTime` and the string searches (data loading, scripts): oracle, captures and saveload cover them.
+  Only a windowed game reaches the UI's polls (`TMPoll`: button blinks, edit-box repeat, scrolling, chat lines,
+  help text), the physics timer's event (`TMTimer`), the window-event pump on the window thread
+  (`SetEventPump`/`DispatchWindowEvents`/`Receive`) and the TCP plug-in's events: the tour is their check.
+- **Left:** `UString`/`UWideString` storage (above), then the File System's walk (`FSFileSpec`, `FSPath`,
+  `FSArchive`) and the Sound Engine's objects, which wait on the string classes and the `FSFile` virtuals.
