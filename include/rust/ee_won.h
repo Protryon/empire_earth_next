@@ -225,7 +225,8 @@ constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
 /// The clear part's end: the rest (`at`, `len`) is the encrypted part.
 constexpr static const uint8_t EE_WON_CERT_REST = 10;
 
-/// `GetPeerData()` (a borrowed `RefCount*`, NULL before a login): `ee_won_hostop_num`
+/// the op's peer data object as the op holds it (a hostauth.rs handle in the game, a stand-in's number in the drivers;
+/// 0 before a login): `ee_won_hostop_num`
 constexpr static const int32_t EE_WON_GETCERT_PEER = 1;
 
 /// `GetSessionKey()` (the `Blowfish`, as round 6's `ee_won_getcert_session_key`): `ee_won_hostop_num`
@@ -251,6 +252,10 @@ constexpr static const int32_t EE_WON_GETCERT_NEW_PASSWORD = 8;
 
 /// `SetAuthContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
 constexpr static const int32_t EE_WON_GETCERT_AUTH_CONTEXT = 9;
+
+/// `GetPeerData()`: a new `EeWonAuthObj*` reference (`ee_won_authobj_free`), 0 before a login or for a driver's
+/// stand-in: `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_PEER_DATA = 10;
 
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
@@ -1209,6 +1214,10 @@ constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_ASYNC = 158;
 
 /// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
 constexpr static const int32_t EE_WON_HOST_PEER_NEW_SESSION = 160;
+
+/// a C++ `AuthContext*` obj0 (NULL: the op's `mAuthContext`) -> out_obj: its Rust object (`AuthContext::Core()`,
+/// borrowed; NULL for none). The certificate and auth context calls are answered in Rust over it (hostauth.rs).
+constexpr static const int32_t EE_WON_HOST_AUTH_CORE = 161;
 
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
@@ -2227,6 +2236,9 @@ constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
 /// The last field.
 constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
 
+/// The last field (`EeWonWmField::PopupFront`; a number, as a cbindgen constant from an enum does not compile).
+constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 22;
+
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
   /// the field `a` (`EeWonGuiField`).
@@ -2874,6 +2886,36 @@ enum class EeWonGuiOp : uint32_t {
   WinStdArrow,
   /// `((Cursor*)a)->GetNative()`.
   WinCursorNative,
+  /// `WONTickCount()`.
+  WmTick = 590,
+  /// a component's method (`a` an `EeWonWmComp`, `b` the component; `c`, `d` its arguments).
+  WmComp,
+  /// a window's method (`a` an `EeWonWmWin`, `b` the window; `c`, `d` its arguments).
+  WmWin,
+  /// `GetScreenRect(*(WONRectangle*)a)` (virtual).
+  WmScreenRect,
+  /// DoPopup's new popup window: `CreateNativeWindow()` held once (the Rust's reference), one-component, style
+  /// 0x20, parent `a`, a popup, created at `*(WONRectangle*)b`.
+  WmNewPopupWindow,
+  /// `GetNextEvent()` (virtual).
+  WmNextEvent,
+  /// `AddRef()` on the manager.
+  WmSelfHold,
+  /// `Release()` on the manager.
+  WmSelfRelease,
+  /// the window set's `a`-th window (0 past the end; a pure read).
+  WmWindowAt,
+  /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
+  WmRef,
+  /// `mImageDecoder.Decode((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with one reference, or 0).
+  WmDecode,
+  /// `mImageDecoder.DecodeRaw(path a of b bytes)` (a `RawImage*` with one reference, or 0).
+  WmDecodeRaw,
+  /// `new DelayLoadImage(path a of b bytes, its width, its height)` with one reference, or 0 when the file's
+  /// attributes cannot be read.
+  WmDelayImage,
+  /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
+  WmDefaultWindowFont,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4629,6 +4671,59 @@ enum class EeWonWinCall : uint32_t {
   SetField,
 };
 
+/// The inward calls (`ee_won_wm_call`).
+enum class EeWonWmCall : uint32_t {
+  NotifyLostFocus = 1,
+  /// `NotifyGotFocus((Window*)a)`.
+  NotifyGotFocus,
+  /// `GetPopupWindow()` (a `Window*`).
+  PopupWindow,
+  CalcModality,
+  /// `NotModalWindow((Window*)a)` (0 or 1).
+  NotModalWindow,
+  /// `DoDialog((Window*)a, (Component*)b)` (the result).
+  DoDialog,
+  /// `EndDialog(a, (Window*)b, (Component*)c)`.
+  EndDialog,
+  ExitMessageLoop,
+  /// `MessageLoop()` (the result).
+  MessageLoop,
+  /// `AdjustPopupPosition((Window*)a, (Component*)b, c != 0, *(EeWonRect4*)d)`.
+  AdjustPopupPosition,
+  /// `DoPopup` of `*(EeWonWmPopup*)a`.
+  DoPopup,
+  /// `EndPopup((Component*)a)`.
+  EndPopup,
+  /// `CheckEndPopup((Component*)a)`.
+  CheckEndPopup,
+  /// `FindMouseWindow` over `*(EeWonWmMouse*)a` (changed in place).
+  FindMouseWindow,
+  /// `CheckPopupClick` over `*(EeWonWmMouse*)a` (changed in place; 0 or 1).
+  CheckPopupClick,
+  /// `CheckModalValid()` (0 or 1).
+  CheckModalValid,
+  /// the field `a` (`EeWonWmField`).
+  GetField,
+  /// the field `a` set to `b`.
+  SetField,
+  /// `SetNamedFont` of the name `a` (`b` bytes) to the font `c`.
+  SetNamedFont,
+  /// `GetNamedFont` of the name `a` (`b` bytes; a raw `Font*`).
+  GetNamedFont,
+  /// `GetDefaultFont()` (a raw `Font*`).
+  GetDefaultFont,
+  /// `SetDefaultFont((Font*)a)`.
+  SetDefaultFont,
+  /// `SetCacheImages(a != 0)`.
+  SetCacheImages,
+  /// `DecodeImage((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with the caller's reference).
+  DecodeImage,
+  /// `DecodeImageRaw(path a of b bytes)` (a `RawImage*` with the caller's reference).
+  DecodeImageRaw,
+  /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
+  DecodeDelayImage,
+};
+
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
 /// caught it in `HandleMessage` and did nothing more); outside every `short` status.
 enum class EeWonLobbyResult {
@@ -4945,6 +5040,141 @@ enum class EeWonWinField : uint32_t {
   ChildCount,
 };
 
+/// A component's methods the manager calls (`WmComp`'s `a`; `b` the component, `c`, `d` the arguments).
+enum class EeWonWmComp : uint32_t {
+  /// `SetComponentFlags(c, d != 0)`.
+  SetFlags = 1,
+  /// `mParent` (a pure read).
+  Parent,
+  /// `((Container*)b)->EnterModal()`.
+  EnterModal,
+  /// `((Container*)b)->LeaveModal()`.
+  LeaveModal,
+  RequestFocus,
+  /// `SetPos(c, d)`.
+  SetPos,
+  /// the bounds' reads (pure)
+  Left,
+  Top,
+  Width,
+  Height,
+  /// `GetRoot()` (a `Window*`; a pure read).
+  Root,
+  /// `GetOwnColorScheme()` (a pure read).
+  OwnScheme,
+  /// `GetColorScheme()` (a pure read).
+  Scheme,
+  /// `SetColorScheme((ColorScheme*)c)`.
+  SetScheme,
+  /// `Fn2F5380(ComponentEvent_EndPopup, 0)`.
+  FireEndPopup,
+  /// `mComponentBits` (a pure read).
+  Bits,
+  /// `GetRootContainer()` (a pure read).
+  RootContainer,
+  /// `((Container*)b)->FindClickChildAt(c, d)` (virtual).
+  ClickChildAt,
+  /// `dynamic_cast<Container*>(b)` as a `Component*` (0 when not a container; a pure read).
+  AsContainer,
+  /// `AddRef()` (a `SmartPtr<Component>`).
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// A window's methods the manager calls (`WmWin`'s `a`; `b` the window, `c`, `d` the arguments).
+enum class EeWonWmWin : uint32_t {
+  /// `PlatformSetFocus()`.
+  SetFocus = 1,
+  /// `PlatformSetMouseCapture(c != 0)`.
+  SetCapture,
+  /// `GetRect(*(WONRectangle*)c, d != 0)` (virtual).
+  GetRect,
+  /// `IsPopup()` (a pure read).
+  IsPopup,
+  /// `SetIsPopup(c != 0)`.
+  SetIsPopup,
+  /// `Show(c != 0)` (virtual).
+  Show,
+  /// `Close()`.
+  Close,
+  /// `SetPosSize` of `*(WONRectangle*)c` (virtual).
+  SetPosSize,
+  /// `GetParent()` (a pure read).
+  Parent,
+  /// `AddComponent((Component*)c)`.
+  AddComponent,
+  /// `SetModal(c != 0)`.
+  SetModal,
+  /// `IsMouseDown(c)` (a pure read).
+  IsMouseDown,
+  /// `GetMouseX()` / `GetMouseY()` (pure reads).
+  MouseX,
+  MouseY,
+  /// `mRoot.get()` as a `Component*` (a pure read).
+  Root,
+  /// `mRoot->LostFocus()`.
+  RootLostFocus,
+  /// `mRoot->GotFocus()`.
+  RootGotFocus,
+  /// `mRoot->RemoveAllChildren()`.
+  RootRemoveAll,
+  /// `mRoot->RemoveChild((Component*)c)` (virtual).
+  RootRemoveChild,
+  /// `GetWindowState()` (a pure read).
+  State,
+  /// `PlatformIsVisible()` (virtual; 0 or 1).
+  IsVisible,
+  /// `AddRef()` (a `SmartPtr<Window>`).
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// The fields (the accessors, the goldens and the unit tests).
+enum class EeWonWmField : uint32_t {
+  /// `mEndPopup`
+  EndPopup = 1,
+  InDoPopup,
+  InEndPopup,
+  PopupIsUp,
+  /// `mBA5`: popups in their own window by default
+  OwnWindow,
+  PopupFlags,
+  /// `mDoMouseCapturePopupSupport`
+  CaptureSupport,
+  /// `mCurMsgLoopDepth`
+  CurDepth,
+  /// `mTargetMsgLoopDepth`
+  TargetDepth,
+  DialogResult,
+  ModalWindow,
+  ModalComponent,
+  /// `mPopupWindowSave` (held; set with the `SmartPtr`'s assignment)
+  PopupWindowSave,
+  PopupOwnerWindow,
+  /// `mPopupInputComponent` (held)
+  PopupInput,
+  /// `mPopupOwnerComponent` (held)
+  PopupOwner,
+  FocusWindow,
+  MouseDownWindow,
+  LastLoseFocusTick,
+  /// the popup list's length, last and first entries (0 when empty)
+  PopupCount,
+  PopupBack,
+  PopupFront,
+};
+
+/// Which kind of object a reference op is on (`WmRef`'s `a`).
+enum class EeWonWmRefKind : uint32_t {
+  Font = 1,
+  NativeImage,
+  RawImage,
+  /// a delay-load image (an `Image`)
+  Image,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -4953,6 +5183,9 @@ struct EeWonAsyncOp;
 
 /// `AsyncSocket`'s state and steps.
 struct EeWonAsyncSocket;
+
+/// `AuthContext`: the members in the original's destruction order (the flow, the login data, the server list).
+struct EeWonAuthCtx;
 
 /// `AuthContext`'s sessions and certificate flow.
 struct EeWonAuthFlow;
@@ -5147,6 +5380,9 @@ struct EeWonUserStatus;
 
 /// The Rust Window.
 struct EeWonWindow;
+
+/// The Rust WindowManager.
+struct EeWonWm;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -7271,6 +7507,27 @@ struct EeWonWinEvent {
   int32_t height;
 };
 
+/// A mouse event's fields FindMouseWindow and CheckPopupClick read and change (`MouseEvent`'s `mWindow`, `mx`,
+/// `my`, `mButtonOrAmount`).
+struct EeWonWmMouse {
+  ptrdiff_t window;
+  int32_t x;
+  int32_t y;
+  int32_t button;
+};
+
+/// `PopupParams`.
+struct EeWonWmPopup {
+  ptrdiff_t parent;
+  ptrdiff_t popup;
+  ptrdiff_t input;
+  ptrdiff_t owner;
+  int32_t flags;
+  int32_t x;
+  int32_t y;
+  EeWonRect4 avoid;
+};
+
 extern "C" {
 
 /// An op's request data into `sink` (`values`: its members in its table's order).
@@ -7555,6 +7812,135 @@ bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
                                const uint8_t *key,
                                int64_t t0,
                                int64_t t1);
+
+/// A new auth context (one reference, `ee_won_authctx_free`): `Init()`'s flow over `hooks` (whose context is the C++
+/// `AuthContext`), its login data with the secret file `secret_file` and its empty peer data.
+///
+/// # Safety
+/// `hooks` points to a hook table whose context outlives the context; `secret_file` holds `len` bytes.
+const EeWonAuthCtx *ee_won_authctx_new(const EeWonAuthFlowHooks *hooks,
+                                       const uint8_t *secret_file,
+                                       size_t len);
+
+/// Drops a reference (NULL: nothing); the last one releases the members.
+///
+/// # Safety
+/// `c` is NULL or a reference from `ee_won_authctx_new`, not used afterwards.
+void ee_won_authctx_free(const EeWonAuthCtx *c);
+
+/// The login data (borrowed, for `ee_won_auth_login_*`).
+///
+/// # Safety
+/// `c` is a live context.
+const EeWonAuthLogin *ee_won_authctx_login(const EeWonAuthCtx *c);
+
+/// `PutSession(address, session)` (a session's `RefCount*`; NULL: nothing).
+///
+/// # Safety
+/// `c` a live context, `a` a live IPAddr value, `session` NULL or a live session.
+void ee_won_authctx_put_session(const EeWonAuthCtx *c, const EeWonIpAddr *a, void *session);
+
+/// `GetSession(address)`: a reference the caller adopts, or NULL.
+///
+/// # Safety
+/// `c` a live context, `a` a live IPAddr value.
+void *ee_won_authctx_get_session(const EeWonAuthCtx *c, const EeWonIpAddr *a);
+
+/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
+///
+/// # Safety
+/// `c` a live context.
+EeWonAuthObj *ee_won_authctx_peer_data(const EeWonAuthCtx *c);
+
+/// `SetPeerData(data)` (NULL, or anything but peer data: none).
+///
+/// # Safety
+/// `c` a live context, `peer` NULL or a live object.
+void ee_won_authctx_set_peer_data(const EeWonAuthCtx *c, const EeWonAuthObj *peer);
+
+/// `IsExpired(extra)`.
+///
+/// # Safety
+/// `c` a live context.
+bool ee_won_authctx_is_expired(const EeWonAuthCtx *c, int64_t extra);
+
+/// `AutoRefreshCallback(op)` (the completing timer's `RefCount*`).
+///
+/// # Safety
+/// `c` a live context, `op` a live op.
+void ee_won_authctx_auto_refresh_callback(const EeWonAuthCtx *c, void *op);
+
+/// `StopAutoRefresh()`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_stop_auto_refresh(const EeWonAuthCtx *c);
+
+/// `SetDoAutoRefresh(enabled)`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_set_do_auto_refresh(const EeWonAuthCtx *c, bool enabled);
+
+/// `Kill()`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_kill(const EeWonAuthCtx *c);
+
+/// `StartAutoRefresh(force)`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_start_auto_refresh(const EeWonAuthCtx *c, bool force);
+
+/// `GetCertCallback(op)` (the completing `GetCertOp`'s `RefCount*`).
+///
+/// # Safety
+/// `c` a live context, `op` a live op.
+void ee_won_authctx_get_cert_callback(const EeWonAuthCtx *c, void *op);
+
+/// `RefreshAsync(op, cert, timeout)`: `light` NULL or a waiting op's run, `cert` its member (borrowed).
+///
+/// # Safety
+/// `c` a live context; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
+void ee_won_authctx_refresh_async(const EeWonAuthCtx *c,
+                                  void *light,
+                                  const EeWonLightCert *cert,
+                                  uint32_t timeout);
+
+/// `RefreshBlock(timeout)`: the status.
+///
+/// # Safety
+/// `c` a live context.
+long ee_won_authctx_refresh_block(const EeWonAuthCtx *c, uint32_t timeout);
+
+/// `SetServerContext(context)` (a `ServerContext`'s `RefCount*`, NULL: none; a reference of its own).
+///
+/// # Safety
+/// `c` a live context, `servers` NULL or a live object.
+void ee_won_authctx_set_server_context(const EeWonAuthCtx *c,
+                                       void *servers);
+
+/// `GetServerContext()`: a new reference the caller adopts, or NULL.
+///
+/// # Safety
+/// `c` a live context.
+void *ee_won_authctx_server_context(const EeWonAuthCtx *c);
+
+/// `Init()`'s verifier file: unless a file was checked already (in this process), `LoadVerifierKey(dir +
+/// "_wonkver.pub")`.
+///
+/// # Safety
+/// `dir` holds `len` bytes.
+void ee_won_auth_verifier_init(const uint8_t *dir,
+                               size_t len);
+
+/// `AuthContext::LoadVerifierKey(filename)`.
+///
+/// # Safety
+/// `path` holds `len` bytes.
+bool ee_won_auth_verifier_load(const uint8_t *path, size_t len);
 
 /// A new Rust Scrollbar for the C++ `component`, its calls out through `host`.
 EeWonScrollbar *ee_won_bar_new(void *component, EeWonGuiHostFn host, bool vertical);
@@ -15355,6 +15741,41 @@ void ee_won_win_free(EeWonWindow *win);
 /// # Safety
 /// `win` is live; the call's arguments as documented.
 ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
+EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
+
+/// The manager's object freed, its held members given back first (the popup members, then the caches: the
+/// original's members in reverse order).
+///
+/// # Safety
+/// `wm` came from `ee_won_wm_new` (or is NULL) and is not used again.
+void ee_won_wm_free(EeWonWm *wm);
+
+/// One of WindowManager's methods (`EeWonWmCall`).
+///
+/// # Safety
+/// `wm` is live; the call's arguments as documented.
+ptrdiff_t ee_won_wm_call(const EeWonWm *wm,
+                         EeWonWmCall call,
+                         ptrdiff_t a,
+                         ptrdiff_t b,
+                         ptrdiff_t c,
+                         ptrdiff_t d);
+
+/// The popup list's `i`-th entry (0 past the end; the goldens' trace of the list).
+///
+/// # Safety
+/// `wm` is live.
+ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
+
+/// The caches as one line (the goldens' trace) into `buf` (at most `cap` bytes); the length written.
+///
+/// # Safety
+/// `wm` is live; `buf` has room for `cap` bytes.
+size_t ee_won_wm_cache_line(const EeWonWm *wm,
+                            uint8_t *buf,
+                            size_t cap);
 
 }  // extern "C"
 

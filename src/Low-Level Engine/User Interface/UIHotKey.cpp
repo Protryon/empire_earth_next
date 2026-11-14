@@ -12,7 +12,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/TMPoll.h"
 #include "lle/Input System.h"
-#include "lle/ISKey.h"
 #include "lle/ISKeyboard.h"
 #include "lle/UIEvent.h"
 #include "lle/UIHotKey.h"
@@ -147,7 +146,7 @@ struct UIHotKeyRust {
         case 2:
             return gISKeyboard->GetModifierState();
         case 3:
-            return ISKeyboard::ComputeModifierState(static_cast<ISKey*>(theKey->mKey)->GetIndex());
+            return ISKeyboard::ComputeModifierState(theKey->mKey->GetIndex());
         default:
             return theKey->mModifiers[inWhich - 4] != NULL;
         }

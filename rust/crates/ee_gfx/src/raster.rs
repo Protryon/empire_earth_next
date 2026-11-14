@@ -22,6 +22,8 @@ pub(crate) const BLEND_INV_SRC_ALPHA: u32 = 5;
 /// `kCompareLess`, `kCompareLessEqual` (the z compare).
 pub(crate) const COMPARE_LESS: u32 = 1;
 pub(crate) const COMPARE_LESS_EQUAL: u32 = 2;
+/// `kCullCW` (the culling).
+pub(crate) const CULL_CW: u32 = 1;
 
 /// A model to draw (`GEModel*`), opaque to Rust.
 pub type EeGfxModel = *mut c_void;
@@ -78,6 +80,21 @@ pub struct EeGfxRaster {
     pub model_scroll_u: extern "C" fn(model: EeGfxModel, delta: f32),
     /// puts back the texture coordinates `model_scroll_u` kept
     pub model_restore_u: extern "C" fn(model: EeGfxModel),
+    /// `GetCulling()`, `SetCulling(mode)`
+    pub get_culling: extern "C" fn() -> u32,
+    pub set_culling: extern "C" fn(mode: u32),
+    /// adds `delta` to the v of every texture coordinate of vertex array 0 for good (nothing kept)
+    pub model_shift_v: extern "C" fn(model: EeGfxModel, delta: f32),
+    /// `AddGroundQuad(center, color, yaw, size, heights, brightness, alpha reference)` (four heights)
+    pub ground_quad: extern "C" fn(
+        center: *const Ge3DPoint,
+        color: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: *const f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ),
 }
 
 /// The rasterizer as the draws call it.
@@ -113,6 +130,20 @@ pub trait Raster {
     fn model_pre_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation);
     fn model_scroll_u(&mut self, model: EeGfxModel, delta: f32);
     fn model_restore_u(&mut self, model: EeGfxModel);
+    fn get_culling(&mut self) -> u32;
+    fn set_culling(&mut self, mode: u32);
+    fn model_shift_v(&mut self, model: EeGfxModel, delta: f32);
+    #[allow(clippy::too_many_arguments)]
+    fn ground_quad(
+        &mut self,
+        center: &Ge3DPoint,
+        color: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: &[f32; 4],
+        brightness: f32,
+        alpha_ref: f32,
+    );
 }
 
 impl Raster for &EeGfxRaster {
@@ -209,6 +240,27 @@ impl Raster for &EeGfxRaster {
     fn model_restore_u(&mut self, model: EeGfxModel) {
         (self.model_restore_u)(model)
     }
+    fn get_culling(&mut self) -> u32 {
+        (self.get_culling)()
+    }
+    fn set_culling(&mut self, mode: u32) {
+        (self.set_culling)(mode)
+    }
+    fn model_shift_v(&mut self, model: EeGfxModel, delta: f32) {
+        (self.model_shift_v)(model, delta)
+    }
+    fn ground_quad(
+        &mut self,
+        center: &Ge3DPoint,
+        color: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: &[f32; 4],
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        (self.ground_quad)(center, color, yaw, size, heights.as_ptr(), brightness, alpha_ref)
+    }
 }
 
 /// A rasterizer that logs every call (the tests').
@@ -220,6 +272,7 @@ pub struct LogRaster {
     pub ambient: EeGfxColor,
     pub fog_value: f32,
     pub camera: GeTransformation,
+    pub culling: u32,
 }
 
 #[cfg(test)]
@@ -318,5 +371,29 @@ impl Raster for LogRaster {
     }
     fn model_restore_u(&mut self, _model: EeGfxModel) {
         self.calls.push("restore u".into());
+    }
+    fn get_culling(&mut self) -> u32 {
+        self.culling
+    }
+    fn set_culling(&mut self, mode: u32) {
+        self.calls.push(format!("culling {mode}"));
+    }
+    fn model_shift_v(&mut self, _model: EeGfxModel, delta: f32) {
+        self.calls.push(format!("shift v {delta}"));
+    }
+    fn ground_quad(
+        &mut self,
+        c: &Ge3DPoint,
+        k: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: &[f32; 4],
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        self.calls.push(format!(
+            "quad {} {} {} color {} {} {} yaw {yaw} size {size} heights {heights:?} {brightness} {alpha_ref}",
+            c.x, c.y, c.z, k.red, k.green, k.blue
+        ));
     }
 }

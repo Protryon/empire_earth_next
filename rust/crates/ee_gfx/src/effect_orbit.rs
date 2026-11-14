@@ -6,6 +6,8 @@
 //! unit's location, the virus at its first tag point with its texture scrolled in u, drawn in pass 5 alpha blended
 //! with z writes, unit lit, their orbitals turned, fading over the last tenth of their life.
 //!
+//! The hurricane (`effect_hurricane.rs`) shares the orbitals and the animation.
+//!
 //! The orbitals (`EEOrbital`) are copies of the graphic object's (the host's `orbital`): each a part model of the
 //! graphic's model, turning at its speed (radians a second, `EEOrbital::Update`), set as that model's pre-model
 //! transformation (`SetOrientationYPR(angle, 0, 0)`) before the draw. They are owned by the record
@@ -93,6 +95,11 @@ pub struct EeGfxEffectOrbit {
     /// the virus's `mScroll` (the texture's u offset, saved) and the draw's copy
     pub scroll: f32,
     pub draw_scroll: f32,
+    /// the hurricane's (`effect_hurricane.rs`) `mSpawnTime` (ms until its next linked effect) and `mScale` (0.1..1),
+    /// both saved, and the draw's scale
+    pub spawn_time: f32,
+    pub scale: f32,
+    pub draw_scale: f32,
 }
 
 impl Default for EeGfxEffectOrbit {
@@ -105,6 +112,9 @@ impl Default for EeGfxEffectOrbit {
             draw_frame: 0,
             scroll: 0.0,
             draw_scroll: 0.0,
+            spawn_time: 0.0,
+            scale: 0.0,
+            draw_scale: 0.0,
         }
     }
 }
@@ -128,7 +138,7 @@ unsafe fn orbitals<'a>(r: *mut EeGfxEffectRecord) -> &'a mut EeGfxOrbitals {
 ///
 /// # Safety
 /// As `orbit`.
-unsafe fn copy_orbitals<H: Effect3DHost>(r: *mut EeGfxEffectRecord, h: &mut H, turn: bool) {
+pub(crate) unsafe fn copy_orbitals<H: Effect3DHost>(r: *mut EeGfxEffectRecord, h: &mut H, turn: bool) {
     let count = h.orbital_count();
     // SAFETY (every access below): the function's contract; the host's orbital calls do not reach the record
     unsafe {
@@ -149,7 +159,7 @@ unsafe fn copy_orbitals<H: Effect3DHost>(r: *mut EeGfxEffectRecord, h: &mut H, t
 ///
 /// # Safety
 /// As `orbit`.
-unsafe fn update_orbitals(r: *mut EeGfxEffectRecord, tick_seconds: f32) {
+pub(crate) unsafe fn update_orbitals(r: *mut EeGfxEffectRecord, tick_seconds: f32) {
     // SAFETY: the function's contract
     unsafe {
         let count = (*r).orbit.count;
@@ -164,7 +174,7 @@ unsafe fn update_orbitals(r: *mut EeGfxEffectRecord, tick_seconds: f32) {
 ///
 /// # Safety
 /// As `orbit`.
-unsafe fn keep_angles(r: *mut EeGfxEffectRecord) {
+pub(crate) unsafe fn keep_angles(r: *mut EeGfxEffectRecord) {
     // SAFETY: the function's contract
     unsafe {
         let count = (*r).orbit.count;
@@ -179,7 +189,7 @@ unsafe fn keep_angles(r: *mut EeGfxEffectRecord) {
 ///
 /// # Safety
 /// As `orbit`.
-unsafe fn turn_orbitals<R: Raster>(r: *mut EeGfxEffectRecord, x: &mut R) {
+pub(crate) unsafe fn turn_orbitals<R: Raster>(r: *mut EeGfxEffectRecord, x: &mut R) {
     // SAFETY: the function's contract; the rasterizer does not reach the record
     unsafe {
         let count = (*r).orbit.count;

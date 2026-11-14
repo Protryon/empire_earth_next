@@ -10,6 +10,7 @@
 #include "ee_combat.h"
 #include "ee_data.h"
 #include "ee_dx7.h"
+#include "ee_error.h"
 #include "ee_formations.h"
 #include "ee_fs.h"
 #include "ee_ge.h"

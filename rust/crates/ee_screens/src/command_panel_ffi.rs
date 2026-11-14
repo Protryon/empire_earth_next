@@ -5,8 +5,7 @@
 use core::ffi::{c_long, c_ulong};
 
 use crate::command_panel::{
-    self, EeScreensButtonFacts, EeScreensButtonUnit, EeScreensCommandMode, EeScreensPanelButton,
-    EeScreensPanelResearch, EeScreensPanelView, EeScreensTechHelp,
+    self, EeScreensCommandMode, EeScreensPanelButton, EeScreensPanelResearch, EeScreensPanelView, EeScreensTechHelp,
 };
 
 unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
@@ -15,48 +14,6 @@ unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
     } else {
         core::slice::from_raw_parts(p, n)
     }
-}
-
-/// The test a command button's availability takes (`EE_SCREENS_BUTTON_*`).
-#[no_mangle]
-pub extern "C" fn ee_screens_button_command_test(button: c_ulong) -> u32 {
-    command_panel::command_test(button)
-}
-
-/// Whether a technology button is a calamity's (its cost then decides the test).
-#[no_mangle]
-pub extern "C" fn ee_screens_button_tech_is_calamity(kind: c_long, calamity: c_ulong) -> bool {
-    command_panel::tech_is_calamity(kind, calamity)
-}
-
-/// A technology button's test (`EE_SCREENS_BUTTON_POWER` or `_PRODUCE`).
-#[no_mangle]
-pub extern "C" fn ee_screens_button_tech_test(calamity: bool, cost: c_long) -> u32 {
-    command_panel::tech_test(calamity, cost)
-}
-
-/// Whether the button is available under `test` (`units`: `count` selected units).
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_button_available(
-    test: u32,
-    facts: *const EeScreensButtonFacts,
-    units: *const EeScreensButtonUnit,
-    count: usize,
-) -> bool {
-    command_panel::available(test, &*facts, slice(units, count))
-}
-
-/// The icon `CopyData` draws (`EE_SCREENS_BUTTON_ICON_*`).
-#[no_mangle]
-pub extern "C" fn ee_screens_button_icon(
-    has_object: bool,
-    button: c_ulong,
-    state: c_ulong,
-    normal_is_pressed: bool,
-    focused_is_pressed: bool,
-    pressed_is_none: bool,
-) -> u32 {
-    command_panel::icon(has_object, button, state, normal_is_pressed, focused_is_pressed, pressed_is_none)
 }
 
 /// A command button's first tooltip string.

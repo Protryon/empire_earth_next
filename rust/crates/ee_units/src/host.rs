@@ -353,7 +353,68 @@ pub trait Host {
     fn unit_action_changed(&mut self, unit: u32);
     /// `unit->Halt()`
     fn unit_halt(&mut self, unit: u32);
+    /// The class flags the load orders read on the object: `EE_UNITS_LOAD_CAN_GARRISON` (`mUnitClass->mCanGarrison`),
+    /// `EE_UNITS_LOAD_TRANSPORT` (`mUnitClass->IsTransport()`), `EE_UNITS_LOAD_MOVES` (`mStats->mMaxVelocity > 0.0f`)
+    fn unit_load_traits(&mut self, unit: u32) -> u8;
+    /// The carrier's load goal of the kind, a goal the carrier owns (null: none): a garrison's `mGoalState`, a
+    /// transport's `GetLoadGoal()`, when its `mKind` is `kind`
+    fn unit_load_goal(&mut self, unit: u32, kind: u8) -> HostRef;
+    /// `goal->AddLoadUnits(units)` on a load goal
+    fn load_goal_add_units(&mut self, goal: HostRef, units: &[u32]);
+    /// `EEUGRust::NewLoad(kind, carrier, units, flag)` (the units sorted by id, no id twice): a goal the host keeps
+    /// (the carrier takes it through `unit_take_load_goal`; an invalid garrison goal is never deleted, as the original)
+    fn load_goal_new(&mut self, kind: u8, carrier: u32, units: &[u32], flag: bool) -> HostRef;
+    /// A load goal's `IsLoadGarrisonValid()` and `GetLoadUnitTile()`
+    fn load_goal_fields(&mut self, goal: HostRef) -> (bool, i64, i64);
+    /// `goal->Clone()` of a load goal
+    fn load_goal_clone(&mut self, goal: HostRef) -> Option<GoalHandle>;
+    /// `unit->SetGoal(goal, 0, 0)`: the carrier takes the new load goal
+    fn unit_take_load_goal(&mut self, unit: u32, goal: HostRef);
+    /// `player->mEvents.AddEvent(U2DPoint<long>(x, y), 2, player, code, false)`
+    fn player_event(&mut self, player: HostRef, x: i64, y: i64, code: i32);
+    /// `group->AddMember(unit, true)` (a complex unit)
+    fn group_add_unit(&mut self, group: HostRef, unit: u32);
+    /// `EEUCTransport::FilterLoadable(&units, transport, &rejected)`: the units the transport cannot take leave
+    /// `units` (in order) for `rejected`
+    fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>);
+    /// The player's node of the technology (`player->GetTechTree()->Get(technology)`), None when it has none
+    fn research_node(&mut self, player: HostRef, technology: i32) -> Option<crate::research::ResearchNode>;
+    /// `gWorld.mGameOptions.mIsScenarioGame`
+    fn scenario_game(&mut self) -> bool;
+    /// `unit->mUnitClass->SharesResearch(unit_type)`
+    fn unit_shares_research(&mut self, unit: u32, unit_type: i64) -> bool;
+    /// `unit->GetBuildQueueSize()`, `mCurrentResearch`, `mIsDisabled`
+    fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool);
+    /// `unit->QueueResearch(technology, front)`
+    fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool);
+    /// `player->mHackUnitClass`
+    fn player_hack_class(&mut self, player: HostRef) -> i32;
+    /// `EEUnitClassCount()`
+    fn unit_class_count(&mut self) -> i64;
+    /// `gUnitClassTable[unit_type]`'s `mCategory` and `IsLandBuilding()`, None for no class
+    fn unit_class_info(&mut self, unit_type: i32) -> Option<(i64, bool)>;
+    /// `gWorld.mPlayers[player_id]->mUnitClassUpgrades[the class's type]->mScale`
+    fn player_class_scale(&mut self, player_id: i64, unit_type: i32) -> f32;
+    /// `gWorld.GetMap()->GetTile(x, y) != NULL`
+    fn map_has_tile(&mut self, x: i64, y: i64) -> bool;
+    /// The cheat's unit of the class for the player at the point's ground, facing pi (its reload cleared, its power
+    /// full; the creation sound for the current player)
+    fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64);
+    /// The cheat's building of the class for the player at its lower left corner, built (the creation sound for the
+    /// current player)
+    fn hack_create_building(&mut self, unit_type: i32, x: i64, y: i64, player_id: i64);
 }
+
+/// `Host::unit_load_traits`' bits
+pub const EE_UNITS_LOAD_CAN_GARRISON: u8 = 1;
+pub const EE_UNITS_LOAD_TRANSPORT: u8 = 2;
+pub const EE_UNITS_LOAD_MOVES: u8 = 4;
+/// `Host::research_node`'s bits: the node was found, `ResearchNode`'s flags
+pub const EE_UNITS_RESEARCH_FOUND: u8 = 1;
+pub const EE_UNITS_RESEARCH_HERO: u8 = 2;
+pub const EE_UNITS_RESEARCH_BUNDESWEHR: u8 = 4;
+pub const EE_UNITS_RESEARCH_MAKES_UNIT: u8 = 8;
+pub const EE_UNITS_RESEARCH_EPOCH: u8 = 16;
 
 /// The game's host (C++). Absent from a test binary.
 #[cfg(not(test))]
@@ -487,6 +548,32 @@ pub mod game {
         fn ee_units_host_unit_clear_build_targets(unit: u32);
         fn ee_units_host_unit_action_changed(unit: u32);
         fn ee_units_host_unit_halt(unit: u32);
+        fn ee_units_host_unit_load_traits(unit: u32) -> u8;
+        fn ee_units_host_unit_load_goal(unit: u32, kind: u8) -> *mut c_void;
+        fn ee_units_host_load_goal_add_units(goal: *mut c_void, units: *const u32, count: usize);
+        fn ee_units_host_load_goal_new(
+            kind: u8,
+            carrier: u32,
+            units: *const u32,
+            count: usize,
+            flag: u8,
+        ) -> *mut c_void;
+        fn ee_units_host_load_goal_fields(goal: *mut c_void, x: *mut i64, y: *mut i64) -> u8;
+        fn ee_units_host_player_event(player: *mut c_void, x: i64, y: i64, code: i32);
+        fn ee_units_host_group_add_unit(group: *mut c_void, unit: u32);
+        fn ee_units_host_research_node(player: *mut c_void, technology: i32, kind: *mut i32) -> u8;
+        fn ee_units_host_scenario_game() -> u8;
+        fn ee_units_host_unit_shares_research(unit: u32, unit_type: i64) -> u8;
+        fn ee_units_host_unit_research_state(unit: u32, current: *mut i64, disabled: *mut u8) -> i64;
+        fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
+        fn ee_units_host_player_hack_class(player: *mut c_void) -> i32;
+        fn ee_units_host_unit_class_count() -> i64;
+        fn ee_units_host_unit_class_info(unit_type: i32, category: *mut i64, land_building: *mut u8) -> u8;
+        fn ee_units_host_player_class_scale(player_id: i64, unit_type: i32) -> f32;
+        fn ee_units_host_map_has_tile(x: i64, y: i64) -> u8;
+        fn ee_units_host_hack_create_unit(unit_type: i32, x: f32, y: f32, player_id: i64);
+        fn ee_units_host_hack_create_building(unit_type: i32, x: i64, y: i64, player_id: i64);
+        fn ee_units_host_transport_filter(transport: u32, units: *mut u32, count: usize, rejected: *mut u32) -> usize;
     }
 
     /// A list the host fills: one call (`capacity` 0) for the count, a second for the ids. The host answers the
@@ -869,6 +956,98 @@ pub mod game {
         fn unit_halt(&mut self, unit: u32) {
             unsafe { ee_units_host_unit_halt(unit) }
         }
+        fn unit_load_traits(&mut self, unit: u32) -> u8 {
+            unsafe { ee_units_host_unit_load_traits(unit) }
+        }
+        fn unit_load_goal(&mut self, unit: u32, kind: u8) -> HostRef {
+            HostRef(unsafe { ee_units_host_unit_load_goal(unit, kind) })
+        }
+        fn load_goal_add_units(&mut self, goal: HostRef, units: &[u32]) {
+            // SAFETY: the host reads `count` ids for the call
+            unsafe { ee_units_host_load_goal_add_units(goal.0, units.as_ptr(), units.len()) }
+        }
+        fn load_goal_new(&mut self, kind: u8, carrier: u32, units: &[u32], flag: bool) -> HostRef {
+            // SAFETY: as load_goal_add_units
+            HostRef(unsafe { ee_units_host_load_goal_new(kind, carrier, units.as_ptr(), units.len(), flag as u8) })
+        }
+        fn load_goal_fields(&mut self, goal: HostRef) -> (bool, i64, i64) {
+            let (mut x, mut y) = (0i64, 0i64);
+            // SAFETY: the two values are written for the call
+            let valid = unsafe { ee_units_host_load_goal_fields(goal.0, &mut x, &mut y) };
+            (valid != 0, x, y)
+        }
+        fn load_goal_clone(&mut self, goal: HostRef) -> Option<GoalHandle> {
+            GoalHandle::from_ptr(unsafe { ee_units_host_goal_clone(goal.0) })
+        }
+        fn unit_take_load_goal(&mut self, unit: u32, goal: HostRef) {
+            unsafe { ee_units_host_unit_set_goal(unit, goal.0) }
+        }
+        fn player_event(&mut self, player: HostRef, x: i64, y: i64, code: i32) {
+            unsafe { ee_units_host_player_event(player.0, x, y, code) }
+        }
+        fn group_add_unit(&mut self, group: HostRef, unit: u32) {
+            unsafe { ee_units_host_group_add_unit(group.0, unit) }
+        }
+        fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>) {
+            let mut out = vec![0u32; units.len()];
+            // SAFETY: the host keeps at most `count` ids in `units` and writes the others (at most `count`) to `out`
+            let kept =
+                unsafe { ee_units_host_transport_filter(transport, units.as_mut_ptr(), units.len(), out.as_mut_ptr()) };
+            let gone = units.len() - kept.min(units.len());
+            units.truncate(kept);
+            rejected.extend_from_slice(&out[..gone]);
+        }
+        fn research_node(&mut self, player: HostRef, technology: i32) -> Option<crate::research::ResearchNode> {
+            let mut kind = 0i32;
+            // SAFETY: the kind is written for the call
+            let bits = unsafe { ee_units_host_research_node(player.0, technology, &mut kind) };
+            (bits & EE_UNITS_RESEARCH_FOUND != 0).then_some(crate::research::ResearchNode {
+                kind,
+                hero: bits & EE_UNITS_RESEARCH_HERO != 0,
+                bundeswehr: bits & EE_UNITS_RESEARCH_BUNDESWEHR != 0,
+                makes_unit: bits & EE_UNITS_RESEARCH_MAKES_UNIT != 0,
+                epoch: bits & EE_UNITS_RESEARCH_EPOCH != 0,
+            })
+        }
+        fn scenario_game(&mut self) -> bool {
+            unsafe { ee_units_host_scenario_game() != 0 }
+        }
+        fn unit_shares_research(&mut self, unit: u32, unit_type: i64) -> bool {
+            unsafe { ee_units_host_unit_shares_research(unit, unit_type) != 0 }
+        }
+        fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool) {
+            let (mut current, mut disabled) = (0i64, 0u8);
+            // SAFETY: the two values are written for the call
+            let queue = unsafe { ee_units_host_unit_research_state(unit, &mut current, &mut disabled) };
+            (queue, current, disabled != 0)
+        }
+        fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool) {
+            unsafe { ee_units_host_unit_queue_research(unit, technology, front as u8) }
+        }
+        fn player_hack_class(&mut self, player: HostRef) -> i32 {
+            unsafe { ee_units_host_player_hack_class(player.0) }
+        }
+        fn unit_class_count(&mut self) -> i64 {
+            unsafe { ee_units_host_unit_class_count() }
+        }
+        fn unit_class_info(&mut self, unit_type: i32) -> Option<(i64, bool)> {
+            let (mut category, mut land) = (0i64, 0u8);
+            // SAFETY: the two values are written for the call
+            let found = unsafe { ee_units_host_unit_class_info(unit_type, &mut category, &mut land) };
+            (found != 0).then_some((category, land != 0))
+        }
+        fn player_class_scale(&mut self, player_id: i64, unit_type: i32) -> f32 {
+            unsafe { ee_units_host_player_class_scale(player_id, unit_type) }
+        }
+        fn map_has_tile(&mut self, x: i64, y: i64) -> bool {
+            unsafe { ee_units_host_map_has_tile(x, y) != 0 }
+        }
+        fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64) {
+            unsafe { ee_units_host_hack_create_unit(unit_type, x, y, player_id) }
+        }
+        fn hack_create_building(&mut self, unit_type: i32, x: i64, y: i64, player_id: i64) {
+            unsafe { ee_units_host_hack_create_building(unit_type, x, y, player_id) }
+        }
     }
 }
 
@@ -985,6 +1164,18 @@ pub(crate) mod tests {
         ClearBuildTargets(u32),
         ActionChanged(u32),
         Halt(u32),
+        /// the load orders' calls (goals by address)
+        LoadGoal(u32, u8),
+        AddLoadUnits(usize, Vec<u32>),
+        NewLoad(u8, u32, Vec<u32>, bool),
+        TakeLoadGoal(u32, usize),
+        Event(HostRef, i64, i64, i32),
+        AddUnit(HostRef, u32),
+        Filter(u32, Vec<u32>),
+        QueueResearch(u32, i32, bool),
+        /// the cheat's unit (type, the point's bits, player id) and building (type, corner, player id)
+        HackUnit(i32, u32, u32, i64),
+        HackBuilding(i32, i64, i64, i64),
     }
 
     /// A host over plain values: groups as id lists (new ones at 0x1001, 0x1002, ...), goals as boxed kinds; Fill
@@ -1062,6 +1253,26 @@ pub(crate) mod tests {
         /// the units read on the objects (absent from the store); the classes' air traffic types
         pub objects: BTreeMap<u32, EeUnitRecord>,
         pub air_traffic: BTreeMap<u32, i64>,
+        /// the load orders: the units' class flags; the carriers' load goals (by address); the load goals' fields by
+        /// address (new ones at 0x9001, ...: `new_load` gives their fields); the units a transport rejects
+        pub load_traits: BTreeMap<u32, u8>,
+        pub load_goals: BTreeMap<u32, usize>,
+        pub load_fields: BTreeMap<usize, (bool, i64, i64)>,
+        pub new_load: (bool, i64, i64),
+        pub unloadable: Vec<u32>,
+        /// the research order: the technologies' nodes; the buildings' (queue, research, disabled) (absent: (0,
+        /// kTechNone, false)); the units sharing the research; a scenario game
+        pub research_nodes: BTreeMap<i32, crate::research::ResearchNode>,
+        pub research_states: BTreeMap<u32, (i64, i64, bool)>,
+        pub shares_research: Vec<u32>,
+        pub scenario: bool,
+        /// the cheat: the class table's size, its classes (category, land building), the sender's cheat class, the
+        /// classes' scale, the map's size (tiles 0..size on both axes)
+        pub class_count: i64,
+        pub classes: BTreeMap<i32, (i64, bool)>,
+        pub hack_class: i32,
+        pub scale: f32,
+        pub map_size: i64,
     }
 
     impl Host for MockHost {
@@ -1447,7 +1658,8 @@ pub(crate) mod tests {
         }
         fn unit_ghost_seen(&mut self, unit: u32) -> bool {
             self.calls.push(Call::GhostSeen(unit));
-            self.ghosts.contains(&unit)
+            // a unit off the tiles (in a carrier) has no tile and so no doppelganger (EEUnitHost.cpp)
+            !self.off_tiles.contains(&unit) && self.ghosts.contains(&unit)
         }
         fn unit_attackable(&mut self, unit: u32, damage_index: i64) -> bool {
             self.calls.push(Call::Attackable(unit, damage_index));
@@ -1533,6 +1745,82 @@ pub(crate) mod tests {
         }
         fn unit_halt(&mut self, unit: u32) {
             self.calls.push(Call::Halt(unit));
+        }
+        fn unit_load_traits(&mut self, unit: u32) -> u8 {
+            self.load_traits.get(&unit).copied().unwrap_or(0)
+        }
+        fn unit_load_goal(&mut self, unit: u32, kind: u8) -> HostRef {
+            self.calls.push(Call::LoadGoal(unit, kind));
+            HostRef(self.load_goals.get(&unit).copied().unwrap_or(0) as *mut c_void)
+        }
+        fn load_goal_add_units(&mut self, goal: HostRef, units: &[u32]) {
+            self.calls.push(Call::AddLoadUnits(goal.0 as usize, units.to_vec()));
+        }
+        fn load_goal_new(&mut self, kind: u8, carrier: u32, units: &[u32], flag: bool) -> HostRef {
+            self.calls.push(Call::NewLoad(kind, carrier, units.to_vec(), flag));
+            let at = 0x9001 + self.load_fields.len();
+            self.load_fields.insert(at, self.new_load);
+            HostRef(at as *mut c_void)
+        }
+        fn load_goal_fields(&mut self, goal: HostRef) -> (bool, i64, i64) {
+            self.load_fields.get(&(goal.0 as usize)).copied().unwrap_or((false, 0, 0))
+        }
+        fn load_goal_clone(&mut self, _goal: HostRef) -> Option<GoalHandle> {
+            self.calls.push(Call::Clone(7));
+            self.live += 1;
+            GoalHandle::from_ptr(Box::into_raw(Box::new(7u8)) as *mut c_void)
+        }
+        fn unit_take_load_goal(&mut self, unit: u32, goal: HostRef) {
+            self.calls.push(Call::TakeLoadGoal(unit, goal.0 as usize));
+        }
+        fn player_event(&mut self, player: HostRef, x: i64, y: i64, code: i32) {
+            self.calls.push(Call::Event(player, x, y, code));
+        }
+        fn group_add_unit(&mut self, group: HostRef, unit: u32) {
+            self.calls.push(Call::AddUnit(group, unit));
+            self.groups.entry(group.0 as usize).or_default().push(unit);
+        }
+        fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>) {
+            self.calls.push(Call::Filter(transport, units.clone()));
+            let gone: Vec<u32> = units.iter().copied().filter(|u| self.unloadable.contains(u)).collect();
+            units.retain(|u| !gone.contains(u));
+            rejected.extend(gone);
+        }
+        fn research_node(&mut self, _player: HostRef, technology: i32) -> Option<crate::research::ResearchNode> {
+            self.research_nodes.get(&technology).copied()
+        }
+        fn scenario_game(&mut self) -> bool {
+            self.scenario
+        }
+        fn unit_shares_research(&mut self, unit: u32, _unit_type: i64) -> bool {
+            self.shares_research.contains(&unit)
+        }
+        fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool) {
+            self.research_states.get(&unit).copied().unwrap_or((0, 100000, false))
+        }
+        fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool) {
+            self.calls.push(Call::QueueResearch(unit, technology, front));
+        }
+        fn player_hack_class(&mut self, _player: HostRef) -> i32 {
+            self.hack_class
+        }
+        fn unit_class_count(&mut self) -> i64 {
+            self.class_count
+        }
+        fn unit_class_info(&mut self, unit_type: i32) -> Option<(i64, bool)> {
+            self.classes.get(&unit_type).copied()
+        }
+        fn player_class_scale(&mut self, _player_id: i64, _unit_type: i32) -> f32 {
+            self.scale
+        }
+        fn map_has_tile(&mut self, x: i64, y: i64) -> bool {
+            (0..self.map_size).contains(&x) && (0..self.map_size).contains(&y)
+        }
+        fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64) {
+            self.calls.push(Call::HackUnit(unit_type, x.to_bits(), y.to_bits(), player_id));
+        }
+        fn hack_create_building(&mut self, unit_type: i32, x: i64, y: i64, player_id: i64) {
+            self.calls.push(Call::HackBuilding(unit_type, x, y, player_id));
         }
     }
 
