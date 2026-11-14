@@ -31,7 +31,8 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize) = 0;   // +0x18
     virtual unsigned long ExportSize() = 0;                                     // +0x1c
     virtual void ImportMessage(unsigned char* inData) = 0;                      // +0x20
-    virtual bool IsResponse(NEMessage* inMessage) = 0;                          // +0x24
+    // +0x24: no message answers this one (the original's 26 one-line overrides, folded at 0x3ed59)
+    virtual bool IsResponse(NEMessage* inMessage) { return false; }
     virtual void Execute() = 0;                                                 // +0x28
     virtual char* GetMessageLabel() const = 0;                                  // +0x2c
     unsigned char GetType() const { return this->mType; }
@@ -43,8 +44,6 @@ public:
     static NEMessage* ConvertMemoryToMessage(unsigned char* inData);
     static NEMessage* BuildNEMessage(unsigned char* inData);
     static void RegisterKnownMessages();
-    unsigned long ExportHeader(unsigned char* outData);
-    unsigned long ImportHeader(unsigned char* inData);
     void GetHeaderSlots(EeNetMsgSlot* outSlots);   // New (port): the header as the codec's first four slots
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe registers its game messages here (imports it; 0xb8cda)
     static NEMessage* (*sConstructors[256])(unsigned char*);   // ?sConstructors@NEMessage@@2PAP6APAV1@PAE@ZA (0x12d9cc)
@@ -71,7 +70,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     UWideString mPlayerName;                // +0x0c
@@ -87,7 +85,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 };
 
@@ -111,7 +108,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     UWideString mPlayerName;                // +0x0c
@@ -143,7 +139,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     int32_t mError;                         // +0x0c
@@ -162,7 +157,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     bool mIsExiting;                        // +0x0c
@@ -178,7 +172,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     int32_t mError;                         // +0x0c
@@ -196,7 +189,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mCurrentCT;                    // +0x0c
@@ -216,7 +208,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     int32_t mError;                         // +0x0c
@@ -232,7 +223,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 };
 
@@ -249,7 +239,6 @@ protected:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
 public:
@@ -297,7 +286,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mLastCommunicationsTickProcessed;        // +0x1c
@@ -334,7 +322,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mUniqueID;                     // +0x0c
@@ -356,7 +343,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mNumberOfPlayerInputs;         // +0x0c
@@ -376,7 +362,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mPingTimeStart;                // +0x0c
@@ -392,7 +377,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mPingTimeStart;                // +0x0c
@@ -413,7 +397,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     unsigned char mPlayerIndex;             // +0x0c
@@ -431,7 +414,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 };
 
@@ -445,7 +427,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mOffsetStartTime;              // +0x0c
@@ -461,7 +442,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mApplicationTimeAtStart;       // +0x0c
@@ -475,7 +455,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 };
 
@@ -488,7 +467,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 };
 
@@ -521,7 +499,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mUniqueID;                     // +0x0c
@@ -538,7 +515,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mPhysicsTickTrigger;           // +0x0c
@@ -556,7 +532,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mCommunicationsTick;           // +0x0c
@@ -582,7 +557,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     unsigned char mData[0x400];             // +0x0c
@@ -609,7 +583,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
     uint32_t mXferID;                       // +0x0c

@@ -18127,3 +18127,86 @@ op cases); the final tree's LAN run covers it.
   room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
   resource tables and factories.
 - The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.
+
+## LLE Network Engine, round 5: NESynchronousCommunications' state in Rust, NEConnection/NEServer as the plug-in's handles, NEMessage's dead members (ee_net comms.rs; branch rust-ne5, 2026-11-14)
+
+Round 4 left the Network Engine's remainder: the base class of the server and client (its fields read by the game
+and by the two Rust objects through their hosts), the protocol's connection and server wrappers, and NEMessage.
+
+| Commit | What | C++ (src + include, without include/rust) |
+|---|---|---|
+| 826539e3 | Census: the one direct base-class field access in `src/Empire Earth/Communications` (EEServer.cpp's `mNumHumanPlayers--` in RemovePlayerFromGameInProgress) through the accessors; EEClient.cpp had none (its only mention is a comment) | +1 -1, net 0 |
+| 44610d44 | NESynchronousCommunications' state in Rust (`comms.rs`, `ffi_comms.rs`), shared by the C++ base and the Rust server and client | +36 -138, net -102 |
+| 6f131893 | NEConnection and NEServer are the TCP plug-in's handles: the two wrapper headers deleted, NEProtocol's members take the handles | +88 -190, net -102 |
+| 4e1c7b09 | NEMessage: ExportHeader/ImportHeader (no caller since the codec took the header) deleted; IsResponse's "no" is the base's, the 26 one-line overrides deleted | +2 -80, net -78 |
+
+Round: +127 -409, net -282. The Network Engine's C++ (src + include/lle NE*) is 3,655 lines (3,935 before).
+
+**The base class** (`comms.rs`): the eight fields the game and the Rust objects use (last tick received, player
+number, CTs processed in physics, the two physics averages, human players, paused, multiplayer) as atomics in a
+`Comms` the C++ base creates in its constructor (`ee_net_comms_new(cts)`) and hands to `ee_net_sv_new` /
+`ee_net_cl_new`, which keep their own `Arc`; the base's destructor drops its reference after the subclass freed
+the Rust object. The base keeps the type the game holds, its pure virtuals and one-line inline forwarders
+(`ee_net_comms_get/set/increment_cts`). The values are the original's 32 bits: `GetLastTickReceived` returns the
+`long` sign-extended into `unsigned long` as before (LP64 too). Gone: the client's `BaseGet`/`BaseSet` ops and
+`EeNetClBase`, the server's `BaseGet`/`BaseSet` and `EeNetSvBase`, and the C++ answers of the message manager's
+`LastTick`/`SetLastTick`/`CtsProcessed`/`AvgPhysics` (the Rust server's `Back` answers them; the ops stay for the
+standalone manager's C ABI, which ne_msgmgr_test drives). Deleted with no caller: the debug lock
+(`LockDebugInfo`/`UnlockDebugInfo`), the two bytes-per-second meters and their four fields,
+`GetAverageTimeBetweenPhysicsTicks`, the protected `SetIsGamePaused`; the implicit copy constructor is now
+declared private (nothing copied the class).
+
+- **Goldens:** the unmodified original units' drivers needed only their Rust side moved onto an `EeNetComms`
+  (`BGet`/`BSet`; the "base" step sets it): ne_client_test 1,500 sequences (1,037,471 trace lines) and
+  ne_server_test 1,500 sequences (26,640,797 lines) equal. The cargo records were re-recorded with `--print`:
+  `golden_client.txt` lost 2,944 lines and `golden_server.txt` 13,092, all of them the removed base ops and their
+  answers, nothing added; the replays set the shared fields at the driver's "base" steps (the server's starts with
+  one human and the first tick, as the driver's). Mutation: the constructor's last tick -1 (for -2) fails the
+  client and server replays; `comms.rs` has its own unit test (the constructor, the byte and flag fields, the
+  wrapping count).
+
+**The protocol** (`NEProtocol.h/.cpp`): the original wrapped each plug-in connection and server in an object (the
+plug-in's handle in its first word, which the plug-in was handed as its slot, and the protocol) whose inline
+members called NEProtocol's private ones. The engine now holds ee_net_tcp's `Connection*`/`Server*` themselves:
+`NEConnection`/`NEServer` are never-defined types, NEProtocol's members are public and take them, each call hands
+the plug-in a one-call slot (`NESlot`), an open returns the handle the plug-in wrote (NULL on failure), a close only
+closes. NESynchronousClient's and NESynchronousServer's hosts call the protocol with the handles (the Rust objects
+always held them as opaque words). The byte counters stay C++ (NEProtocol's own state; tcp_test checks them).
+
+- **Golden:** ne_protocol_test's trace equals `golden_protocol.txt`, made by the original units. Its stand-in
+  plug-in knew a handle by the address of its slot (the wrapper); it now knows it by value: an open's handle is
+  the original stand-in's random number with a unique count above bit 12, the trace prints the low bits as before,
+  and each open (failed or not) takes the next id as the slot of a new wrapper did. That stand-in was checked equal
+  to the golden over the old wrappers first, then over the new code.
+- **A bug the golden caught while writing it:** `NEOpened(ee_tcp_accept(slot, &theNew), theNew, out)` read
+  `theNew` before the call (MSVC's right-to-left argument order): the accepted handle was lost (`= 0 0` in the
+  trace, tcp_test's accept-for-xfer NULL). The call now comes first in its own statement.
+- **Behaviour changes:** a connection whose close failed after the plug-in freed it (the plug-in's listen-socket
+  close failing) was a leaked wrapper holding NULL; the callers drop the handle after any close, as they dropped the
+  wrapper. `ConnectForXfer` with no game connection handed the plug-in a NULL slot (a crash); it now hands a slot
+  holding NULL, which the plug-in treats as "no connection". The server's accept-for-xfer no longer leaks a wrapper.
+
+**NEMessage** (`NEMessage.h/.cpp`): `ExportHeader`/`ImportHeader` had no caller since the codec (ee_netmsg) took
+the header as every message's first four slots: deleted. `IsResponse` is no longer pure: the base answers "no", as
+the 26 engine messages nobody answers did through one folded body (0x3ed59); their overrides went. The three
+answered messages (the communications tick, pause, unpause) and the game's messages keep theirs.
+
+- **What blocks the rest:** NEMessage's own state is the four header bytes (type, target slot, originating slot,
+  reserved) on a `UReferenceCounter`; every engine message and every `EEMessage` reads them inline, the game
+  subclasses NEMessage (vtable, `sConstructors`, which EEMessage::RegisterKnownMessages writes directly), and the
+  server's and client's hosts and the game hold `NEMessage*`. The codec is already Rust (ee_netmsg); the factory
+  must construct the C++ classes. Moving the header into a Rust object would put a handle in every message for four
+  bytes; the next real step is the engine messages as data (one class for the 28, as the game lane's `EEMRecord`
+  did for 53 game messages), which needs the server's and client's hosts (`EeNetSvMsgField`, `EeNetClMsgField`,
+  the typed constructors) and EEServer/EEClient's typed reads (`GetPlayerNumber`, `GetCurrentCT`, ...) moved onto
+  it first, and EEMessage to stop writing `sConstructors` (a registration call), which is the game messages lane's
+  file.
+
+- **Gates.** Commit 1 (44610d44): build --sim 0/0; oracle seeds 2-3 identical; the Rust gate PASS (after a rustfmt fix); nettest client and server equal. Commit 2 (6f131893): build --sim 0/0; oracle seeds 2-3 identical; ne_protocol_test equal; the test-profile build 0/0; tcptest failed twice at Publish with WSAEADDRINUSE while another lane's harness game ran, then passed under the harness lock; `lan_game.py` on commits 1-2 RESULT PASS lan-game PT host=2986 joiner=2989 (CTs within 1 at every 5 s sample, 213/213 at 60 s), no FAULT. Commit 3 (4e1c7b09): build --sim 0/0; oracle seeds 2-3 identical; nettest all six equal (msgmgr 20,000, queues 1,500, client 1,500, tune 20,000, server 1,500 sequences, protocol equal to its golden). End of round (rust unchanged since 008e14c0, already merged: no merge needed): oracle seeds 2-7 identical; sim_capture seeds 2-3 oracle PASS (169 digests, 4 without a golden), late PASS (170, 4 without); the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) expect PASS; the test-profile build 0/0; tcptest passes; `lan_game.py` on the final test exe RESULT PASS lan-game PT host=2928 joiner=2941, no EE-AOC FAULT in either game.log.
+- **What runs it:** every game builds the base (the single-player game's local server, EE-SIM), so the oracle
+  runs the constructor and the fields; the protocol's handle calls and the client's base fields only in a LAN game
+  (`lan_game.py`), tcp_test and the goldens. NEMessage's change is compile-level plus the LAN game's messages.
+- **Lessons:** a function call's other arguments may be evaluated before it (MSVC goes right to left): never pass a
+  value an out-parameter of a call in the same argument list writes; a stand-in that identifies objects by address
+  ties a golden to the object layout: key it by a value the change keeps, and prove the re-keyed stand-in against
+  the golden over the old code before changing the code.

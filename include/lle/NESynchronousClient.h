@@ -9,7 +9,6 @@
 
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NEProtocol.h"
-#include "lle/NEConnection.h"
 #include "rust/ee_net.h"
 
 class FSFile;
