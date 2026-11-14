@@ -208,23 +208,14 @@ public:
     bool IsEnded() { return this->LCall(EeWonLobbyDlgCall::Field, 8) != 0; }    // mIsEnded (ended by End)
 };
 
-// the saved-games dialog (EELobbyFileDialog.cpp; 0xc8 bytes; vtable 0x84c338)
-class EELobbyFileDialog : public Dialog {
+// the saved-games dialog (EELobbyFileDialog.cpp; 0xc8 bytes; vtable 0x84c338).
+// R6 WONLobby round 6: a lobbydlg.rs kind (its list and buttons held, the directory and extension, ListFiles, the
+// selected file's load or delete); the host is WONLobby/LobbyDialogHost.cpp's
+class EELobbyFileDialog : public LobbyRustDialog {
 public:
-    EELobbyFileDialog();                    // 0x290e89 (0xc8 bytes)
-    virtual ~EELobbyFileDialog();           // 0x290efc
-    virtual void InitComponent(ComponentInit& inInit);         // +0x1c 0x290f66
-    void ListFiles(const std::string& inDirectory, const std::string& inExtension);  // 0x290fd9 (lists the files)
-    void LoadSelectedFile();                // 0x291249 (loads the selected saved game)
-    std::string GetSelectedFile();          // 0x29129a ("" without a selection)
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);    // +0x7c 0x29136a
-
-    std::string mDirectory;                 // +0x98
-    std::string mExtension;                 // +0xa8
-    SmartPtr<ListArea> mFileList;           // +0xb8 "FileList"
-    SmartPtr<Button> mDeleteButton;         // +0xbc "DeleteButton"
-    SmartPtr<Button> mLoadButton;           // +0xc0 "LoadButton"
-    SmartPtr<Button> mCancelButton;         // +0xc4 "CancelButton"
+    EELobbyFileDialog() : LobbyRustDialog(EeWonLobbyDlgKind::File) {}
+    void ListFiles(const std::string& inDirectory, const std::string& inExtension)  // 0x290fd9 (lists the files)
+    { this->LCall(EeWonLobbyDlgCall::FileListFiles, (intptr_t)inDirectory.c_str(), (intptr_t)inExtension.c_str()); }
 };
 
 // the game room's game options (EELobbyGameOptionsCtrl.cpp; 0xd8 bytes; vtable 0x84c540). Its 16 option controls

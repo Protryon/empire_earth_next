@@ -1209,7 +1209,7 @@ op 101 5072 2 0 = 20512
 op 102 20512 0 0 = 6
 op 104 20512 0 0 = 1
 op 75 5072 0 0 = 0
-op 105 5072 20480 0 = 0
+op 118 5072 20480 0 = 0
 op 2 20480 0 0 = 0
 back 0
 back 1
@@ -1677,7 +1677,7 @@ op 101 5072 3 0 = 20528
 op 102 20528 0 0 = 4
 op 104 20528 0 0 = 1
 op 75 5072 0 0 = 1
-op 105 5072 20496 0 = 0
+op 118 5072 20496 0 = 0
 op 2 20496 0 0 = 0
 back 0
 ret 1
@@ -1768,7 +1768,7 @@ op 101 5072 2 0 = 20512
 op 102 20512 0 0 = 145
 op 104 20512 0 0 = 0
 op 75 5072 0 0 = 0
-op 105 5072 20480 0 = 0
+op 118 5072 20480 0 = 0
 op 2 20480 0 0 = 0
 back 0
 ret 1
@@ -2056,7 +2056,7 @@ op 103 20496 1 0 = 0
 op 87 20496 0 0 = 0
 op 104 20496 0 0 = 1
 op 75 5072 0 0 = 0
-op 105 5072 20496 0 = 0
+op 118 5072 20496 0 = 0
 op 2 20496 0 0 = 0
 back 0
 back 1
@@ -2942,4 +2942,226 @@ ret 0
 free
 op 2 5088 0 0 = 0
 op 2 5072 0 0 = 0
+gfree
+seq 30000 kind 16
+gslot 0 0 3
+gslot 1 0 3
+gslot 2 0 3
+gslot 3 0 3
+gslot 4 0 3
+gslot 5 0 2
+gslot 6 0 3
+gslot 7 0 3
+call 1 119 0 0
+op 1 119 FileList EELobbyFileDialog.cpp 37 8 = 4688
+op 1 119 LoadButton EELobbyFileDialog.cpp 38 1 = 4704
+op 1 119 CancelButton EELobbyFileDialog.cpp 39 1 = 0
+op 1 119 DeleteButton EELobbyFileDialog.cpp 40 1 = 0
+ret 0
+call 2 225 2 0
+op 113 0 0 0 = 100001
+op 85 4688 0 0 = 20480
+op 110 20480 0 0 = text:
+op 114 str: 0 0 = 0
+op 85 4688 0 0 = 0
+op 115 4688 0 0 = 0
+ret 0
+call 2 225 2 4736
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4704 0 0 = 0
+op 2 4688 0 0 = 0
+gfree
+seq 30002 kind 16
+gslot 0 0 3
+gslot 1 0 4
+gslot 2 0 4
+gslot 3 0 3
+gslot 4 0 2
+gslot 5 0 3
+gslot 6 0 3
+gslot 7 0 3
+call 1 119 0 0
+op 1 119 FileList EELobbyFileDialog.cpp 37 8 = 0
+op 1 119 LoadButton EELobbyFileDialog.cpp 38 1 = 4704
+op 1 119 CancelButton EELobbyFileDialog.cpp 39 1 = 4720
+op 1 119 DeleteButton EELobbyFileDialog.cpp 40 1 = 4736
+ret 0
+call 1 119 0 0
+op 1 119 FileList EELobbyFileDialog.cpp 37 8 = 4688
+op 1 119 LoadButton EELobbyFileDialog.cpp 38 1 = 4704
+op 2 4704 0 0 = 0
+op 1 119 CancelButton EELobbyFileDialog.cpp 39 1 = 0
+op 2 4720 0 0 = 0
+op 1 119 DeleteButton EELobbyFileDialog.cpp 40 1 = 4736
+op 2 4736 0 0 = 0
+ret 0
+call 2 225 2 4736
+op 113 0 0 0 = 100002
+op 3 225 0 0 = 0
+ret 0
+call 30 str:x\y str:.x 0
+op 62 4688 0 0 = 0
+op 64 4688 1 0 = 0
+op 105 str:x\y\*.x 0 0 = 24576
+op 106 24576 0 0 = 5
+op 107 4688 24576 3 = 0
+op 108 24576 0 0 = 1
+op 106 24576 0 0 = 5
+op 107 4688 24576 3 = 0
+op 108 24576 0 0 = 1
+op 106 24576 0 0 = 8
+op 107 4688 24576 6 = 0
+op 108 24576 0 0 = 0
+op 109 24576 0 0 = 0
+op 63 4688 0 0 = 0
+ret 0
+call 2 225 3 0
+op 3 225 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 FileList EELobbyFileDialog.cpp 37 8 = 4688
+op 2 4688 0 0 = 0
+op 1 119 LoadButton EELobbyFileDialog.cpp 38 1 = 4704
+op 2 4704 0 0 = 0
+op 1 119 CancelButton EELobbyFileDialog.cpp 39 1 = 4720
+op 1 119 DeleteButton EELobbyFileDialog.cpp 40 1 = 4736
+op 2 4736 0 0 = 0
+ret 0
+call 2 225 2 4720
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4720 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 4688 0 0 = 0
+gfree
+seq 30006 kind 16
+gslot 0 0 3
+gslot 1 0 3
+gslot 2 0 0
+gslot 3 0 3
+gslot 4 0 3
+gslot 5 0 3
+gslot 6 0 3
+gslot 7 0 3
+call 1 119 0 0
+op 1 119 FileList EELobbyFileDialog.cpp 37 8 = 4688
+op 1 119 LoadButton EELobbyFileDialog.cpp 38 1 = 4704
+op 1 119 CancelButton EELobbyFileDialog.cpp 39 1 = 4720
+op 1 119 DeleteButton EELobbyFileDialog.cpp 40 1 = 0
+ret 0
+call 2 225 5 0
+op 116 225 0 0 = 0
+ret 0
+call 2 225 5 0
+op 116 225 0 0 = 1
+op 117 225 0 0 = 0
+op 85 4688 0 0 = 20482
+op 110 20482 0 0 = text:save
+op 111 str:save 0 0 = 0
+ret 0
+call 2 225 2 0
+op 113 0 0 0 = 100002
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4720
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 0
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4720
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4736
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4704
+op 85 4688 0 0 = 20480
+op 110 20480 0 0 = text:Game 1
+op 111 str:Game 1 0 0 = 0
+ret 0
+call 2 225 2 4720
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 0
+op 113 0 0 0 = 100002
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4720 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4688 0 0 = 0
+gfree
+seq 30029 kind 16
+gslot 0 0 3
+gslot 1 0 3
+gslot 2 0 3
+gslot 3 0 3
+gslot 4 0 0
+gslot 5 0 3
+gslot 6 0 3
+gslot 7 0 4
+call 2 225 5 0
+op 116 225 0 0 = 0
+ret 0
+call 2 225 2 0
+op 113 0 0 0 = 100001
+op 85 0 0 0 = 20480
+op 110 20480 0 0 = text:save
+op 114 str:save 0 0 = 0
+op 85 0 0 0 = 0
+op 115 0 0 0 = 0
+ret 0
+call 2 225 2 4720
+op 3 225 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 FileList EELobbyFileDialog.cpp 37 8 = 4688
+op 1 119 LoadButton EELobbyFileDialog.cpp 38 1 = 4704
+op 1 119 CancelButton EELobbyFileDialog.cpp 39 1 = 4720
+op 1 119 DeleteButton EELobbyFileDialog.cpp 40 1 = 4736
+ret 0
+call 2 225 2 4704
+op 85 4688 0 0 = 20480
+op 110 20480 0 0 = text:a.ees
+op 111 str:a.ees 0 0 = 1
+op 112 3354 0 0 = 16384
+op 100 16384 100001 0 = 0
+ret 0
+call 2 225 2 4736
+op 113 0 0 0 = 100002
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4704
+op 85 4688 0 0 = 0
+ret 0
+call 2 225 2 4736
+op 113 0 0 0 = 100001
+op 85 4688 0 0 = 20482
+op 110 20482 0 0 = text:x
+op 114 str:x 0 0 = 0
+op 85 4688 0 0 = 20480
+op 115 4688 20480 0 = 0
+ret 0
+call 2 225 2 4736
+op 113 0 0 0 = 100001
+op 85 4688 0 0 = 20480
+op 110 20480 0 0 = text:x
+op 114 str:x 0 0 = 0
+op 85 4688 0 0 = 20480
+op 115 4688 20480 0 = 0
+ret 0
+call 2 225 2 4736
+op 113 0 0 0 = 100002
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4720 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 4688 0 0 = 0
 gfree

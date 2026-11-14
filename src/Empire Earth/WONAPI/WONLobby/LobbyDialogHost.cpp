@@ -1,8 +1,9 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The lobby's small dialogs' shell and host (R6 WONLobby round 1): LanNameDialog, PasswordDialog, AddFriendDialog,
 // DirectConnectDialog, LanPortDialog, CreateRoomDialog, CreateGameDialog and AdminActionDialog are one Rust object
-// each (rust/crates/ee_won/src/lobbydlg.rs), as are StatusDialog and OkCancelDialog (round 2) and RoomDialog,
-// TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog and CreditsDialog (round 3); the options popups
+// each (rust/crates/ee_won/src/lobbydlg.rs), as are StatusDialog and OkCancelDialog (round 2), RoomDialog,
+// TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog and CreditsDialog (round 3) and the EE game room's connect
+// (round 5) and saved game (round 6) dialogs; the options popups
 // (ClientOptionsPopup, GameOptionsPopup, FriendOptionsPopup) are lobbypopup.rs objects with their host below. This unit is the C++ shell's two virtuals and the host: each op is the
 // original's statements on a control, the dialog's base, a lobby game or a resource string, with no decision.
 #include <windows.h>
@@ -11,6 +12,7 @@
 #include <list>
 #include <vector>
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatFile.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
@@ -27,6 +29,14 @@ using namespace WONAPI;
 
 extern GUIString gEELobbyConnectDialog_AbortLaunch;    // 0x96598c (EELobbyResource.cpp)
 extern GUIString gEELobbyConnectDialog_LeaveGame;      // 0x965948 (EELobbyResource.cpp)
+extern GUIString gEELobbyFileDialog_DeleteTitle;       // 0x965938 (EELobbyResource.cpp)
+extern GUIString gEELobbyFileDialog_DeleteDetails;     // 0x96599c (EELobbyResource.cpp)
+
+// the EE file dialog's search (EELobbyFileDialog::ListFiles' locals)
+struct EELobbyFind {
+    PlatFind* mFind;
+    PlatFindData mData;
+};
 
 namespace {
 // One player's line of the EE connect dialog (EELobbyConnectDialog.cpp's anonymous namespace; 0x2c bytes; vtable
@@ -187,6 +197,8 @@ void LobbyRustDialog::HandleComponentEvent(ComponentEvent* inEvent)
         aType = EeWonLobbyDlgEvent::ComboSelChanged;
     else if (inEvent->mType == LobbyEvent_GotHTTPDocument)
         aType = EeWonLobbyDlgEvent::GotHttpDocument;
+    else if (inEvent->mType == ComponentEvent_ListItemClicked)
+        aType = EeWonLobbyDlgEvent::ListItemClicked;
     this->LCall(EeWonLobbyDlgCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
 }
 
@@ -451,6 +463,40 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::ConnectItemNotReady:
         return reinterpret_cast<ConnectListItem*>(a)->mImage.mPtr != ::GameUserListCtrl_Ready_Image.mPtr ? 1 : 0;
     case Op::ListRefresh: reinterpret_cast<ListArea*>(a)->RefreshItem(reinterpret_cast<ListItem*>(b)); return 0;
+    // EELobbyFileDialog
+    case Op::FindFirst: {
+        EELobbyFind* aFind = new EELobbyFind;
+        aFind->mFind = PlatFindFirst(reinterpret_cast<const char*>(a), &aFind->mData);
+        if (aFind->mFind != NULL)
+            return (intptr_t)aFind;
+        delete aFind;
+        return 0;
+    }
+    case Op::FindNameLength: return (intptr_t)GUIString(reinterpret_cast<EELobbyFind*>(a)->mData.mName).length();
+    case Op::FileListInsert: {
+        GUIString theName(reinterpret_cast<EELobbyFind*>(b)->mData.mName);
+        theName.resize((int)c);
+        aList->InsertString(theName, -1);
+        return 0;
+    }
+    case Op::FindNext:
+        return PlatFindNext(reinterpret_cast<EELobbyFind*>(a)->mFind, &reinterpret_cast<EELobbyFind*>(a)->mData) == PLAT_FILE_OK;
+    case Op::FindClose:
+        PlatFindClose(reinterpret_cast<EELobbyFind*>(a)->mFind);
+        delete reinterpret_cast<EELobbyFind*>(a);
+        return 0;
+    case Op::ItemText: {
+        static std::string sText; // the Rust copies it before its next op
+        sText = static_cast<TextListItem*>(reinterpret_cast<ListItem*>(a))->mText.mData->GetString();
+        return (intptr_t)sText.c_str();
+    }
+    case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;
+    case Op::Root: return (intptr_t)aDialog->GetRoot();
+    case Op::FileAskDelete: return LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true);
+    case Op::FileDelete: WONFile(reinterpret_cast<const char*>(a)).Delete(true); return 0;
+    case Op::ListRemove: aList->RemoveItem(reinterpret_cast<ListItem*>(b)); return 0;
+    case Op::EventDoubleClick: return reinterpret_cast<ListItemClickedEvent*>(a)->mDoubleClick ? 1 : 0;
+    case Op::EventButton: return reinterpret_cast<ListItemClickedEvent*>(a)->mButton;
     }
     return 0;
 }

@@ -4728,6 +4728,8 @@ enum class EeWonLobbyDlgKind : uint32_t {
   Credits = 14,
   /// EELobbyConnectDialog (round 5): the players' connection wait before a launch.
   Connect = 15,
+  /// EELobbyFileDialog (round 6): the game room's saved games, loaded or deleted.
+  File = 16,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -4949,6 +4951,34 @@ enum class EeWonLobbyDlgOp : uint32_t {
   ConnectItemSetImage,
   /// `((ConnectListItem*)a)->mImage.mPtr != GameUserListCtrl_Ready_Image.mPtr` (0 or 1).
   ConnectItemNotReady,
+  /// `PlatFindFirst((const char*)a, &data)` into a new find record (the find and its data); NULL when nothing
+  /// was found (the record freed).
+  FindFirst,
+  /// `GUIString(data.mName).length()` of the find record `a`.
+  FindNameLength,
+  /// `GUIString theName(data.mName); theName.resize(c); ((ListArea*)a)->InsertString(theName, -1)` (`b` the
+  /// find record).
+  FileListInsert,
+  /// `PlatFindNext(find, &data) == PLAT_FILE_OK` of the find record `a` (0 or 1).
+  FindNext,
+  /// `PlatFindClose(find)` and the find record freed.
+  FindClose,
+  /// `static_cast<TextListItem*>(a)->mText.mData->GetString()`, NUL-terminated (valid until the next op).
+  ItemText,
+  /// `EELobbyLoadSavedGame((const char*)a)` (0 or 1).
+  LoadSavedGame,
+  /// `this->GetRoot()`.
+  Root,
+  /// `LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true)`.
+  FileAskDelete,
+  /// `WONFile theFile((const char*)a); theFile.Delete(true)`.
+  FileDelete,
+  /// `((ListArea*)a)->RemoveItem((ListItem*)b)`.
+  ListRemove,
+  /// `((ListItemClickedEvent*)a)->mDoubleClick` (0 or 1).
+  EventDoubleClick,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
   /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
   ListRefresh,
 };
@@ -5016,6 +5046,8 @@ enum class EeWonLobbyDlgCall : uint32_t {
   ConnectEnd,
   /// EELobbyConnectDialog: `SetConnected(a, b != 0)`.
   ConnectSetConnected,
+  /// EELobbyFileDialog: `ListFiles(a, b)` (the directory and the extension, NUL-terminated).
+  FileListFiles,
 };
 
 /// A container's key kind (its comparator).
@@ -6683,6 +6715,8 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   ComboSelChanged = 3,
   /// `LobbyEvent_GotHTTPDocument` (round 3: a `GotHTTPDocumentEvent`, broadcast when a download finished)
   GotHttpDocument = 4,
+  /// `ComponentEvent_ListItemClicked` (round 6: a `ListItemClickedEvent`)
+  ListItemClicked = 5,
 };
 
 /// The button's and component's methods a skin button calls (`SkinBtn`).
