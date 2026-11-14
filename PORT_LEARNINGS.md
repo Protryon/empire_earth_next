@@ -19214,3 +19214,67 @@ calls could be answered in Rust.
 
 The merge of rust (92 commits, at 354fde6a) needed nothing: no conflict, `rust_build.py header` current,
 `rust_includes.py` changed nothing.
+
+## LLE lane, round 5: the File System's walk in Rust: FSBasicFile, FSFileSpec and FSArchive whole, FSPath's searches (ee_fs spec.rs, archive_obj.rs, path.rs; branch rust-lle5, 2026-11-14)
+
+Round 5 of the Low-Level Engine lane (rounds 1-4 above). Net C++ over src + include without the generated
+`include/rust` (`git diff --numstat`), per commit: FSBasicFile/FSFileSpec -565; FSArchive -330; FSPath -57:
+-952 in all. The Sound Engine's objects (item 2 of the round) were not started.
+
+- **Step 0 dropped** on the lead's word: the Network Engine lane fixed `tools/xbuild.py`'s tcptest/nettest unit
+  lists (the deleted `TSCriticalSection.cpp`/`TSEvent.cpp`) in commit 5684cefe (branch `rust-ne4`).
+- **FSBasicFile and FSFileSpec whole in Rust** (`ee_fs` `spec.rs`). Round 4's by-value pattern one level up: the C++
+  classes keep their vtables (`FSMemoryFile` derives from `FSFileSpec` and overrides most virtuals) and their members
+  (three `UString`s, the access, version and open flag, the handle and the stream; `sizeof(FSFileSpec)` is in every
+  embedding class), and each member is one line handing the object, from its vtable pointer on, to Rust as an
+  `EeFsSpec` (`EeFsString` mirrors a `UString` member: its vtable pointer, then round 4's `EeUString`).
+  `static_assert`s pin the size and five offsets. The strings are worked through `ee_ustring`'s record functions in
+  the original's order (an `operator+` is a fresh record, `operator=` an assignment), so capacities and the bytes past
+  a terminator are the original's; every platform call is the original's, in its order, with the same native errors.
+  - Stays C++: `operator<` and `GetLengthFromClosedFile` (they call `Open`/`GetLength`/`Close`, which `FSMemoryFile`
+    overrides), the names' getters and setters (one assignment each). `CloseSearchHandle` (inline in the header) is
+    an out-of-line forwarder.
+  - **The golden** (`tests/fs/fs_spec_golden.cpp` over `fs_spec_orig.h`, the two classes copied verbatim): 5,000
+    sequences on four specs in a real directory emptied before each (names near `PLAT_MAX_PATH`, invalid and blank
+    names, read-only files, every open mode, short and long reads and writes, the scalar overloads, seeks past the
+    end, searches with eleven patterns, parents, copies), printing every result, every spec's names, capacities and
+    flags and the last native error: 340,440 lines. cargo replays them all (`golden_spec.rs`, 60 sequences checked in,
+    Windows only: native error numbers and the search order are the system's) in a directory of its own whose path
+    has the same length; the driver relinked over the forwarders prints the same 340,440 lines. 12 mutations: 11 fail
+    it (sequences 1..1705), 1 is equivalent (the path constructor's empty file name assigned to a member that is
+    always freshly empty).
+  - Driver lessons: the root's parent is reachable through `GetParentDirectory`, and an early version wrote into the
+    scratch folder above it (a file made read-only, the driver's own exe overwritten): the driver now resets a spec
+    that leaves the root. An `operator+` chain is not sequenced in C++17, so `Line("x" + to_string(f()) + State())`
+    printed the state before the call: results are computed first. The original crashes or leaks on some sequences
+    (Create on an open file drops its handle and Close then `fclose(NULL)`s; an assignment or search into an open spec
+    leaks its handle): the driver skips those, said in its comments.
+- **FSArchive whole in Rust** (`archive_obj.rs`): open (header, tables, mapping), close, find (the member decompressed;
+  the C++ wraps it in an `FSMemoryFile` and Rust names it), both `Create`s (the directory walk with pattern and
+  recursion, or a name list; compressed lengths, offsets, the write and the reopen check with the original's
+  verifications), `ExtractAll` (its progress lines through a CR LF text-mode writer, as the C runtime's stdout wrote
+  them), `SetArchive`, assignment, copy. The archive file is a by-value `FSFileSpec`: its calls are `spec.rs`'s; the
+  compression's memory files are Rust `EeFsMemFile`s. Stays C++: `GetTag`, `SetTag`, `ListFiles` (they fill a
+  `UWideString` and a `std::set` through the table's sinks), `FindFile`'s `new FSMemoryFile`.
+- **FSPath's searches in Rust** (`path.rs`): `FindFile` (directories first, each through a copy of its spec, then the
+  archives with the name lower-cased) and `ListFiles`' directory walk run over the vectors' element arrays. The
+  `std::vector`s of `FSArchive`/`FSFileSpec` stay C++ members (`GetArchive` hands out a reference into one) with their
+  plumbing (`AddArchive`'s close/insert/reopen, the removals, copies).
+- **The archive golden** (`tests/fs/fs_archive_golden.cpp` over `fs_archive_orig.h` and `fs_archive_orig_class.h`,
+  the original units and class): 2,000 sequences, each on a fresh source tree of 3-12 random files (compressible runs
+  or noise, up to 20 KB, empty ones) under five directories: builds from the walk (four roots, seven patterns,
+  recursive or not, three dictionary sizes) and from name lists, opens, finds in any case, tags, listings, extractions
+  with and without the target's subdirectories, assignments, `SetArchive`; the even sequences also drive a search path
+  (archives and directories added in front or behind, finds with `GetFileArchiveStatus`, listings, removals, copies
+  and assignment of the path): 83,801 lines (902 archive finds and 254 path finds succeed, 1,903 members extracted).
+  The driver relinked over the new units prints the same 83,801 lines; cargo replays the 1,000 archive-only sequences
+  (`golden_archive.rs`, 20 checked in; the path's sequences need the C++ vectors and are the relinked driver's
+  check). Mutations: 9 of 10 in `archive_obj.rs` fail the cargo replay (two by the original's verification or a replay panic), the tenth (a failed open leaving the file open) only shows on a corrupt archive, which the golden never opens; 5 of 5 in `path.rs` fail the relinked driver (first 300 sequences).
+- **Behaviour changes:** ExtractAll's lines are written by Rust (same bytes, CR LF on Windows, after a flush of the C
+  runtime's stdout); a member whose decompression fails during an `FSPath` search is freed (the original leaked it).
+- **What runs it.** Every data load and save goes through `FSFileSpec` (EE-SIM too: oracle seeds 2-3 identical after
+  each commit, the saveload matrix PASS, `sim_editor.py` PASS); `.ssa` archives are only the campaigns (`EECampaign`
+  Load/Save, the campaign editor) and `gDataPath`'s archives (none in the open data tree): the tour does not open a
+  campaign, so only the golden covers `FSArchive`'s build and extraction.
+- **Left:** `operator<`/`GetLengthFromClosedFile` (virtual dispatch), the `FSPath` vectors (a Rust-owned list of C++
+  objects needs C++ construction callbacks), `File System.cpp`'s startup paths; then the Sound Engine's objects.
