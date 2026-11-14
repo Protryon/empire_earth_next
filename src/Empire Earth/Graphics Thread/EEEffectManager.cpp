@@ -620,7 +620,8 @@ static void EECaptureEffectStates(EEEffectManager* inManager)
 // position, from A to B, from A to B's position, or between the two positions. Then three manager updates, the
 // effect saved, a load-time effect of its kind loaded from those bytes, its pointers repaired and saved again (the
 // copy is left out of the manager: its resources released, the object kept), forty updates more and the effect
-// destroyed. EFSW holds one record per case: the kind, the graphic effect's row, the entry, the creation's result,
+// destroyed. Since the nineteenth round the 2D kinds follow the 3D ones, with two entry points more: at A's location
+// (a transformation) and along the line from A's position to B's. EFSW holds one record per case: the kind, the graphic effect's row, the entry, the creation's result,
 // whether it made an effect, whether the effect lived to its save, the load's and repair's results and the length and
 // FNV-1a 64 of both saves, then the first save's bytes. Only EFSW, EFST and EFMU are written, and no other
 // thread's records while it runs (the updates' EFST and EFMU cover every step); the game is over and nothing
@@ -631,7 +632,7 @@ void EEEffectCaptureSweep()
         (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) | ((unsigned int)'W' << 24),
         (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) | ((unsigned int)'T' << 24),
         (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'M' << 16) | ((unsigned int)'U' << 24)};
-    enum { kOnUnit, kAtPoint, kBetweenUnits, kUnitToPoint, kBetweenPoints };
+    enum { kOnUnit, kAtPoint, kBetweenUnits, kUnitToPoint, kBetweenPoints, kTransformation, kLine };
     struct Case {
         long mKind;
         int mEntry;
@@ -651,6 +652,16 @@ void EEEffectCaptureSweep()
         {0x29, kOnUnit, 0},        {0x2b, kOnUnit, 0},        {0x2b, kAtPoint, 0},       {0x2c, kOnUnit, 0},
         {0x1e, kOnUnit, 0},        {0x3a, kOnUnit, 0},        {0x3a, kAtPoint, 0},       {0x3b, kOnUnit, 0},
         {0x3b, kAtPoint, 0},       {0x20, kAtPoint, 0},
+        // R4.4, nineteenth round: the 2D kinds through each entry point that makes them. Not the muzzle flash (0x09), the
+        // smoke muzzle blast (0x14) or the 2D projectile (0x30): their start faults in EECombatEffectWeaponPoint on a unit
+        // without weapon tag points at its animation (the sweep's unit; f839d277 faults there too, checked for 0x09)
+        {0x03, kOnUnit, 0},        {0x04, kOnUnit, 0},        {0x05, kOnUnit, 0},        {0x06, kOnUnit, 0},
+        {0x07, kOnUnit, 0},        {0x08, kOnUnit, 0},        {0x0a, kOnUnit, 0},
+        {0x0d, kOnUnit, 0},        {0x0e, kOnUnit, 0},        {0x0f, kOnUnit, 0},        {0x10, kOnUnit, 0},
+        {0x12, kOnUnit, 0},        {0x2e, kOnUnit, 0},        {0x2f, kOnUnit, 0},        {0x06, kAtPoint, 0},
+        {0x08, kAtPoint, 0},       {0x0b, kAtPoint, 0},       {0x12, kAtPoint, 0},       {0x22, kAtPoint, 0},
+        {0x2e, kAtPoint, 0},       {0x31, kAtPoint, 0},       {0x32, kAtPoint, 0},       {0x16, kBetweenUnits, 0},
+        {0x22, kTransformation, 0}, {0x32, kTransformation, 0}, {0x0c, kLine, 0},       {0x2e, kLine, 0},
     };
     EEEffectManager* theManager = gEffectManager;
     if (theManager == NULL)
@@ -696,6 +707,17 @@ void EEEffectCaptureSweep()
                 case kAtPoint: theResult = theManager->CreatePlacedEffect(theAt, theEffect, &theHandle); break;
                 case kBetweenUnits: theResult = theManager->CreateEffectBetweenUnits(a, b, theEffect, &theHandle); break;
                 case kUnitToPoint: theResult = theManager->CreateEffect(a, theTo, theEffect, &theHandle, 0); break;
+                case kTransformation:
+                    theResult = theManager->CreateTransformationEffect(a->mComplexUnit->mPhysicalModel.GetLocation(), theEffect,
+                                                                       &theHandle);
+                    break;
+                case kLine: {
+                    GE3DLine theLine;
+                    theLine.SetStart(theAt);
+                    theLine.SetDirection(GEVector(theTo.mX - theAt.mX, theTo.mY - theAt.mY, theTo.mZ - theAt.mZ));
+                    theResult = theManager->CreateLineEffect(theLine, theEffect, &theHandle);
+                    break;
+                }
                 default: theResult = theManager->CreateEffectBetween(theAt, theTo, theEffect, &theHandle); break;
                 }
                 theEffect->mKind = theOwnKind;
