@@ -21376,3 +21376,104 @@ the base's and the continent's data into Rust records.
   2-3, and the four capture profiles passed at seeds 2-3 on the area record. Not run: `gates.sh` or any harness
   session (the tour is the only thing that draws: nothing here is drawn, the hulls are read by the AI only),
   `eedata check`/`cppgate` (no data change), macOS or Linux builds.
+
+## R6: the scenario editor screens, round 4: the effect types whole in Rust over one generic host; the editor gate drives every effect action and the trigger tab's sub-tab fallback (ee_screens editor_effects*.rs; branch rust-editor4, 2026-11-14)
+
+### Why a generic host
+
+Round 3 moved two classes for -564 lines because each class's host was nearly as long as what it replaced. The effect
+screen's seven types (`EESETSEffectType`: no effect, object, player, trigger, media, game, AI) and their 44 actions
+(about 45 C++ classes in ten units, 5,500 lines) all do the same thing: lay out, fill, read and hide the effect
+screen's shared controls (`EESETSEffectControls`: 13 labels, 2 check boxes, 4 combo boxes, 2 effect combo boxes, 4
+scenario combo boxes, 6 edit boxes, 6 radios, 4 sliders, 3 player pickers, 2 list boxes). So the host addresses a
+control by array and index (`EE_SCREENS_SEET_A_*`, `ee_screenscpp_seet` in EESETSEffect.cpp, about 450 lines with
+`FillAreaObjectComboBox` and `FillPlaceComboBox` moved in) and every type is plain Rust over it: `Fx` (the host,
+the controls, the effect, its `EeScenarioEffectFields` read in place, the types' own handle) with one method per
+toolkit call (`set_rect`, `text_id`, `select_silent`, `event_hold` / `event_restore`, `player_flags` ...). The ten
+`EESETSET*.cpp`, their nine headers and `EESETSEffectType.h` are deleted; `EESETSEffect` keeps `mType` and holds
+one `EeScreensSeEffects*` in place of `mTypes[7]` (its slots go through `TypeCall`). Net C++ -5,743.
+
+- The "hold the event, set, give it back" pattern (`GetTriggerEvent`, `Reference`, `SetTriggerEvent(NULL)`, set,
+  restore, `Dereference`) appears about 30 times in the originals; it is two host ops and one Rust helper
+  (`select_silent`, `set_player_silent`).
+- Texts cross as UTF-8 bytes (D6): the host writes into a Rust buffer and answers the full length (Rust grows the
+  buffer and asks again). Resource formats the original `sprintf`s (the player name format, "%g", "%#2.1f") stay
+  host ops; the plain `%ld` / `%d:%d` / `%s %s` compositions are Rust `format!`s.
+- The editor's technology list keeps its `std::sort` in the host (equal names: an unstable sort's order is the
+  algorithm's).
+- The military group, dialogue and AI attribute events (`EESEERust` kinds 8-10) used to carry the C++ type
+  objects; they now carry the Rust object and the controls, and the events' host calls `ee_screens_seet_event`.
+- A host call can come back into the types (the action combo box's event, the effect combo boxes'
+  `RefreshControls`): the types are used through `&self`, their state in `Cell`/`RefCell`, never borrowed across a
+  host call.
+- The language's 111 string ids the types use are private Rust constants (no cbindgen names); a unit test reads
+  `include/ee/EEStringIDs.h` and checks each.
+
+### Traps
+
+- **A crate-private constant named like another crate's public one moves to `ee_rust_common.h`.** `pub(crate) const
+  ALIGN_LEFT` in ee_screens and ee_dx7's `pub const ALIGN_LEFT` made the header splitter move the name into
+  `ee_rust_common.h` and drop it from `ee_dx7.h` (seen in `git status include/rust` after `rust_build.py header`).
+  Renamed `AL_LEFT`; check `git status include/rust` for headers you did not expect to change.
+- `kControlTriggerButtonUp` is 0x3f0, not 0x3ef: the host's `static_assert` of every Rust copy of a C++ constant
+  stopped the first build.
+- The enum orders differ from the class lists in the constructors (`kSMObjectActionFreeze` is 1, the face-object
+  action 11): read `ee/EEScenarioIDs.h`, not the constructor's order.
+
+### The gate (two commits, TEST ONLY)
+
+- The effect types (recorded on the unmodified classes, twice identical, old lines unchanged): `ectl` (an effect
+  control's text typed or line set), `erefresh` (`RefreshControls`), `effectstate` (every effect's numbers as words,
+  its texts and objects); on the first of two new effects each of the 44 type/action pairs is picked, the controls
+  dumped (form group 13), values typed, the name refreshed, the effect stored by selecting the second and loaded
+  back, everything dumped again. 6,823 -> 11,612. The move passed it on the first run.
+- The trigger tab's sub-tab fallback (round 3's gap): conditions deleted behind the trigger and area sub-tabs
+  (`sm delete`), the condition sub-tab entered by `ShowTab` and by its radio. Recorded on the pre-move
+  `EESETriggerScreen` (a scratch worktree of ac6a2c1a under build/, its own `EE_ORIG_SRC_ROOT`) over round 3's
+  script plus the tail, and on the Rust tab: identical. 11,612 -> 11,673. Round 3's zero-diff mutation (the
+  fallback picks the first entry) now shows 4 lines.
+
+### Mutations of the Rust against the editor gate (build/ed4/mut.py; each built and run)
+
+| Mutation | Diff lines |
+|---|---|
+| player Show: the picker's flags 0x80 -> 0x81 | 36 |
+| object task actions: the action base 0x72bf -> 0x72be | 82 |
+| dialogue Store: the scroll speed slider - 1 -> the slider | 92 |
+| camera Load: the zoom slider's event not fired | 174 |
+| AI attribute ranges: the float modifier 1/scale -> scale | **0**: the modifier only matters when the float slider's event runs; no step drags that slider (not equivalent: a person sees the wrong label) |
+| trigger UpdateName: no state word | 2 |
+| graphic effect Load: the place radio's event not held off | **0**: checking the radio fires the place event, which refills the place combo box exactly as Load just did, and the selection is set after it (equivalent here) |
+| trigger tab ShowTab: the fallback picks the first entry (round 3's) | 4 |
+| diplomacy hide: `mLabels[5]` left shown | 44 |
+
+### Behaviour
+
+None intended. On undefined paths (the original reads an unset `GetCurrentSelection` local): a Store whose combo box
+has no selection keeps the field (the task action, attribute mode, AI attribute, favourite units), an UpdateName
+without one leaves the detail word out, and lists indexed past their end are skipped.
+
+### Only a person reaches
+
+The effect controls' look (EE-SIM draws nothing), dragging the AI attribute's float slider (its modifier), clicking
+the effect combo boxes (`EESETSEComboBox::ChangeSelection`: the gate calls `RefreshControls` directly), the military
+group's list clicks beyond the gate's two, closing the editor (the types' destructors). No tour opens the editor.
+
+### Gates
+
+| Gate | After the move | Merged with rust (f6cde783) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates | EE-AOC and EE-SIM 0 unresolved, 0 duplicates |
+| `tools/sim_editor.py` | PASS 11,612 | PASS 11,673 |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (3,398 tests) | PASS (3,446 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: no simulation code changed | |
+
+The merge of rust (f6cde783) needed nothing: no conflict, headers current, no duplicate constant.
+
+### Left
+
+The condition types (`EESETSConditionType.cpp`, 888 lines, the same shape over `EESETSConditionControls`: the
+generic host's pattern applies directly), then the effect, condition and area screens (`EESETSEffect`,
+`EESETSCondition`, `EESETSArea`), the editor form (`EEUIFScenarioEditor`), the unit tab's small control classes.
