@@ -16078,3 +16078,104 @@ drawn.
   one Rust fill); `EEComplexUnit::RepairPointers` (the ids the load left, now set by named operations) and
   `FinishLoad` (the four fractions over the records: plain arithmetic, a small Rust function); the load's live-state
   block; the store's remaining holders are pointers, whose derived values could become reads of a Rust handle table.
+
+## R5b.5, fourth round: ExpandTokens and GetUnitAttribute in Rust (ee_scenario tokens.rs, attribute.rs; branch rust-triggers4, 2026-11-13)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EESMEffect::ExpandTokens` | a 60-line scan over `UWideString` (`Find`, `GetIndexedSubstring`, `atoi`, `sprintf`) | tokens.rs `expand_tokens` over UTF-8 bytes; the replacements through `EE_SCENARIO_READ_TOKEN_OBJECT`, `_VALUE`, `_CONDITION`; the player choice and value are the Rust `choose_player_recorded` and `player_value` |
+| `EESMObject::GetUnitAttribute` | a 474-line switch of unit, complex unit, upgrade and class members | attribute.rs `unit_attribute`: one match over the 75 attributes, the members through one read (`EE_SCENARIO_READ_UNIT_FIELD`, `EESMUnitField` in EESMObject.cpp: integers as they are, floats as bits) |
+
+- **UWideString's semantics in the crate.** ee_scenario now depends on ee_plat_core and uses its `utf8` module, the
+  same code behind `PlatMbsLen`, `PlatMbsNInc`, `PlatMbsNCmp` (decision D6): a character is a code point, a stray byte
+  one character, every count clamped at the end as `_mbsninc` is. `Find` is the original's (the last start
+  `(long)(mLength - inLength) > 0 ? ... : 0`, the length when not found); `GetIndexedSubstring(first, last)` is
+  inclusive, so the number after a tag is 5 characters and the 5th stays in the text after the replacement
+  (`"/#OC00071"` asks object 71 and leaves `"1"`): kept. The result goes back as a C string the Rust allocates and
+  `ee_scenario_text_free` frees.
+- **The hang, fixed (the one behaviour change).** For a text under 4 characters `Find(...) < GetLength() - 4` is
+  true for every tag (the unsigned subtraction wraps); the original then read the number past the end (empty: id 0),
+  appended the replacement to the whole text and looked again. When the replacement is empty (no object or condition
+  with id 0, an object without an attribute check or units, a condition that is not a Player Attribute) the text is
+  unchanged and the loop never ends: the simulation thread spins forever, a hang of the original. The port goes on to
+  the next tag after making that pass's reads (an object's `Evaluate`, a player choice). A short text whose
+  replacement is not empty still grows by it until it has 4 characters, as the original. Any Send Dialogue or Send
+  Chat Message effect with a message under 4 characters ("Go!", "OK") reached the hang; none of the six capture
+  scenarios has one (SMTK: 60 calls, none changed).
+- **Read order is free in GetUnitAttribute.** Every read is a member read with no side effect, so the Rust reads the
+  three presences (complex unit, upgrade, class) first and the values where it needs them. Where the original
+  dereferenced a NULL upgrade or class (the bonus and total attributes 20..61 never test them) the host dereferences
+  it too: the same crash, no new check.
+- **The types decide the arithmetic.** The upgrade's armor, attack and leadership are `float`s, the class's `long`s:
+  a bonus is `float - (float)long` cut toward zero (`ftol`), a percentage `(float)result * 100.0f / capacity` in that
+  order (no FMA) and cut; the flight times are `long` milliseconds divided by `1000.0f`; Ammunition's capacity is
+  zero-extended before its conversion but compared as a `long`; Power+ compares the class's power as a `long`, Total
+  Power as its `float`; the scale without a complex unit is `UMFloatToLong` (aivar.rs `lrintf`: half to even, the
+  UCRT's 0 out of range).
+- **Checked against the original on real units (a shadow run, TEST ONLY, not committed).** The original body was
+  kept for one build as a static function and every call compared all 77 attributes x both percent flags of the unit
+  asked against the Rust (`EE_SM_ATTR_SHADOW=file`): about 35,800 calls on scenario seeds 2, 3, 5, 6 and 7 (5.5 million comparisons), no difference. The shadow build also ran the scenario capture check: PASS (54 digests equal to the golden). The unit tests cover the paths no scenario unit
+  reaches (no upgrade, no complex unit, zero capacities, out-of-range casts).
+- **cbindgen and generics.** A private `struct Unit<'a, H: Host>` in the crate stopped the header generator ("cannot
+  name the header item `template<typename H = void>`"): the reader is `&mut dyn Host` instead (the `Host` trait is
+  object-safe).
+- **Coverage.** ExpandTokens: SMTK (60 calls in six scenarios, the text never has a tag), the unit tests for every
+  tag, the 5th character, the short texts and multi-byte text. GetUnitAttribute: SMOB's attribute checks (50,005
+  evaluations) and the shadow run above; the token's `/#OA` path only in the unit tests.
+- **C++ lines** (src and include, include/rust aside): ExpandTokens -44 (EESMEffect.cpp -61, the host +18, the
+  header -1), GetUnitAttribute -383 (EESMObject.cpp 466 deleted, 80 added for the field read and the entry; the host
+  +1, its header +2): net -427.
+- **Not moved, and why.** `FindPlacement` (SMFP is its golden; its tile lists, `EEGetTilesNearPoint`, the side and
+  corner tiles and `EEPlayerBlockTakes` are world calls: a list host is the next step), `IsNearUnit`/`IsNearTile` and
+  `GetTiles` (thin: the host operations they need are as long as their bodies, so they move with FindPlacement, their
+  main caller), the world-glue effect bodies (`CreateUnits`, `TaskUnitsTo*`, the calamity and graphic effects,
+  `ScriptCamera`): not started this round.
+
+## R5b.5, fifth round: FindPlacement, IsNearUnit, IsNearTile, the area's GetTiles and Create Units' decisions in Rust (ee_scenario placement.rs, create.rs, area.rs tiles; branch rust-triggers5, 2026-11-13)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EESMObject::FindPlacement` | a 170-line body over five tile vectors, `std::find`, the shuffle | placement.rs `find_placement`: the same candidates, walks and tests over host reads; the world's tile lists through a new host callback |
+| `EESMObject::IsNearUnit`, `IsNearTile` | 39 + 29 lines, members of the class | placement.rs `near_unit`, `near_tile` (the C++ members are gone; objeval.rs calls `near_unit` itself) |
+| `EESMArea::GetTiles`' rebuild | a 36-line switch (rectangle, continent, towns) | area.rs `tiles`, each tile back through `EE_SCENARIO_WRITE_TILE`; the cache test stays C++ |
+| `EESMEffect::CreateUnits`' decisions | the count, owners, classes and loop (50 lines) | create.rs `create_units`; each unit one write to `EESMCreateUnit` (the original's placement and finishing) |
+
+- **Tile lists through a callback.** `EeScenarioHost` gained `tiles(ctx, op, a, b, c, list)`: the C++ builds its
+  `std::vector<U2DPoint<long> >` with the original call (`EEGetTilesNearPoint` with the radius's bits, `EEGetSideTiles`,
+  `EEGetCornerTiles(0, ...)`, an area's `GetTiles` with its cache and SMAR record, `GetContinentTiles`, a town's
+  `GetTiles`) and hands it over with `ee_scenario_tiles_push`. The other direction (the area's rebuilt cache) is one
+  write per tile into the context's `mTiles`. `EESMHostContext` grew `mTiles`, `mCreated` and `mLocation`; the
+  zero-initialised `= {}` / `{NULL, NULL}` initialisers stay valid.
+- **The original's quirks kept.** A missing or dead unit of the near object appends the previous unit's tile lists
+  again, and at first the area's own tiles (`theTiles` held them in the 'not in the area' branch); the area walk adds
+  each tile and its (x + 1, y) neighbour, the nearness walk only the tile; an unset area answers (-10000, -10000)
+  only after the nearness work (the near object's `Evaluate`); type 0x41 runs the dry-land test whether or not its
+  far corner is a candidate, and a dry tile makes it answer true without writing the location (the caller's previous
+  one stays: `CreateUnits` therefore keeps one location for its whole loop, in the context); random tries pass
+  `(long)(float)` coordinates to the area. The retry without random tries goes back through the C++ entry
+  (`EE_SCENARIO_PLACEMENT_RETRY`), so SMFP keeps its record per call.
+- **Sets for `std::find`.** The membership tests over vectors (the area's tiles in the map walk, the near tiles, the
+  far corner among the candidates) are `HashSet` lookups: the same answers, never iterated, and the 'not near' walk
+  is no longer quadratic.
+- **Read in order, by object id.** The near object's units are read by id (`EE_SCENARIO_READ_OBJECT_UNIT_COUNT/_AT`),
+  live at each use: its `Evaluate` (or this object's own, when it is its own near object) can change the list.
+  `IsNearTile`'s count is read before the units, as the original; `IsNearUnit`'s after its `Evaluate(0)`.
+  `GetNearestFootprintTile` and `EEGetFootprintDistance` write their outputs before reading them, so the host's
+  fresh locals give the original's values.
+- **How it was checked.** FindPlacement against SMFP (recorded from the unmodified C++ in round 3): 2,529 placements
+  in the six scenarios (seed 7 alone 2,327), with SMAR (the area queries inside it) and SMOB (the near objects'
+  evaluations, IsNearUnit's 20,768 nearness checks). Create Units: the scenario capture PASS and all 504 digests of
+  the six games (the unit store, units, AI and everything without a golden) identical to the previous commit's run,
+  byte sizes equal: the effect creates the same units in the same order with the same draws.
+- **Coverage.** Reached by the six scenarios: placements with and without random tries, the retry (SMFP's random flag
+  0 records), Create Units' create and copy branches. Unit tests only: the coastal types 0x24/0x41, larger units' far
+  corner, the stale-list quirk, area check 2 per mode, near modes 1 and 2 of `near_tile`, `tiles`' three modes (which
+  of these the scenarios reach the records cannot tell; no temporary print was added).
+- **C++ lines** (src and include, include/rust aside): FindPlacement, the nearness and GetTiles +121 -329 (net -208);
+  Create Units +70 -94 (net -24); the round -232. EESMObject.cpp 1,395 -> 1,218 lines.
+- **Not moved, and why.** `TaskUnitsToObject`/`TaskUnitsToArea`, the calamity and graphic effects inside `Execute`,
+  `ScriptCamera`, `FreezeUnits`, `SetUnitsStance`: their statements are world calls (goals, groups, effects, the
+  camera), one host operation each; the decisions between them are a few conditions. A host per statement does not
+  drop C++. The calamity effect also passes one shared `GE3DPoint` to every `CanCastAt`, which a host local would not
+  reproduce. `ScriptCamera` only draws (a harness tour reaches it, no gate here). Next: the task effects' source
+  filter and bucket split (pure lists) with the actions as writes, if the lead wants the bodies smaller still.

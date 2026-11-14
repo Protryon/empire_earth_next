@@ -406,6 +406,9 @@ dependencies = [
 [[package]]
 name = "ee_scenario"
 version = "0.1.0"
+dependencies = [
+ "ee_plat_core",
+]
 
 [[package]]
 name = "ee_screens"

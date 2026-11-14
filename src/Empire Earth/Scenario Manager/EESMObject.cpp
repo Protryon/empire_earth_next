@@ -19,11 +19,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 
-// 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
-// (inX, inY), the unit's nearest tile out (provisional name)
-float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
-#include "ee/EEUnit.h"
-#include "ee/EEUnitSetManager.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEPlayer.h"
@@ -31,7 +26,17 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-// 0x246ea2 again, as IsNearTile uses it (provisional name)
+#include "lle/GE3DPoint.h"
+#include "lle/GEVector.h"
+#include "lle/GEColor.h"
+#include "lle/GETextureCoordinate.h"
+#include "lle/GE3DPlane.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEUUUnitFunctor.h"
+#include "ee/EEMap.h"
+#include "ee/EEUnitUtilities.h"
+// 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
+// (inX, inY), the unit's nearest tile out (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
 // FUNCTION: EXE 0x5c5f73
@@ -65,82 +70,10 @@ bool EESMObject::AcceptsClass(unsigned long inClass)
 }
 
 // FUNCTION: EXE 0x5c6148
-// Returns whether one of the object's units is near the unit (mode 0: within the sight range of either side's unit,
-// 1: within reach, 2: adjacent); refreshes the object's units first
-// (provisional name)
-bool EESMObject::IsNearUnit(EEUnit* inUnit, long inMode, bool inFromUnit)
-{
-    bool theResult = false;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    if (theX != -10000) {
-        this->Evaluate(0);
-        long theCount = this->mUnits.size();
-        for (long i = 0; i < theCount && !theResult; i++) {
-            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnits[i]));
-            if (theUnit != NULL && theUnit != inUnit && theUnit->mTileX != -10000) {
-                long theUnitX;
-                long theUnitY;
-                inUnit->GetNearestFootprintTile(theUnit, &theUnitX, &theUnitY);
-                theUnit->GetNearestFootprintTile(inUnit, &theX, &theY);
-                long theDY = theUnitY - theY;
-                long theDX = theUnitX - theX;
-                float theDistance = (float)(theDX * theDX + theDY * theDY);
-                switch (inMode) {
-                case 0: {
-                    float theRange = (inFromUnit ? inUnit->mComplexUnit : theUnit->mComplexUnit)->GetLineOfSight();
-                    theResult = theDistance <= theRange * theRange;
-                    break;
-                }
-                case 1:
-                    if (inFromUnit)
-                        theResult = inUnit->mComplexUnit != NULL ? inUnit->mComplexUnit->IsInReach(theUnit) : false;
-                    else
-                        theResult = theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->IsInReach(inUnit) : false;
-                    break;
-                case 2:
-                    theResult = theDistance <= 2.0f;
-                    break;
-                }
-            }
-        }
-    }
-    return theResult;
-}
+// IsNearUnit: ee_scenario placement.rs near_unit (objeval.rs asks it)
 
 // FUNCTION: EXE 0x5c629f
-// Returns whether one of the object's units is near a tile (mode 0: within its sight range, 1: can reach it,
-// 2: adjacent); optionally refreshes the units first, after reading their count
-// (provisional name)
-bool EESMObject::IsNearTile(long inX, long inY, long inMode, bool inEvaluate)
-{
-    long theTileX = 0;
-    long theTileY = 0;
-    long theCount = this->mUnits.size();
-    if (inEvaluate)
-        this->Evaluate(0);
-    bool theResult = false;
-    for (long i = 0; i < theCount && !theResult; i++) {
-        EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnits[i]));
-        if (theUnit == NULL)
-            continue;
-        float theDistance = EEGetFootprintDistance(theUnit, inX, inY, &theTileX, &theTileY);
-        switch (inMode) {
-        case 0: {
-            float theRange = theUnit->mComplexUnit->GetLineOfSight();
-            theResult = theDistance <= theRange * theRange;
-            break;
-        }
-        case 1:
-            theResult = theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->CanReachTile(inX, inY) : false;
-            break;
-        case 2:
-            theResult = theDistance <= 2.0f;
-            break;
-        }
-    }
-    return theResult;
-}
+// IsNearTile: ee_scenario placement.rs near_tile (find_placement asks it)
 
 // FUNCTION: EXE 0x5c6386
 // Copies another object's name and filter settings, and its unit list when it picks units on the map
@@ -188,10 +121,24 @@ int64_t SMChainUnit(EEUnit* inUnit)
     return inUnit == NULL ? -1 : (int64_t)(uint32_t)inUnit->GetUnitID() | ((int64_t)(uint32_t)inUnit->mUnitClass->mUnitType << 32);
 }
 
+// two longs as one read: x in the low 32 bits, y in the high (ee_scenario area.rs unpack)
+int64_t SMPack(long inX, long inY)
+{
+    return (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32);
+}
+
+int64_t SMFloat(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
 }   // namespace
 
-// Evaluate's reads, each the original's expression (objeval.rs EE_SCENARIO_READ_OBJ_* and the unit reads)
-int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC)
+// Evaluate's and FindPlacement's reads, each the original's expression (objeval.rs EE_SCENARIO_READ_OBJ_* and the unit
+// reads, placement.rs)
+int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, int32_t inD)
 {
     EESMObject* theObject = inContext->mObject;
     EEScenarioManager* theManager = gWorld.mScenarioManager;
@@ -222,10 +169,6 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
         EESMArea* theArea = theManager->GetArea((unsigned long)inA);
         return theArea == NULL ? -1 : theArea->ContainsUnit(SMUnit(inB));
     }
-    case EE_SCENARIO_READ_OBJ_NEAR_UNIT: {
-        EESMObject* theTarget = theManager->GetScenarioObject((unsigned long)inA);
-        return theTarget == NULL ? -1 : theTarget->IsNearUnit(SMUnit(inB), (long)inC, false);
-    }
     case EE_SCENARIO_READ_PLAYER_UNIT:
         if (inB == 0) {
             EEPlayer* thePlayer = gWorld.mPlayers[inA];
@@ -233,6 +176,39 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
         } else
             inContext->mCursor = static_cast<EEUnit*>(inContext->mCursor->mNext);
         return SMChainUnit(inContext->mCursor);
+    case EE_SCENARIO_READ_MAP_SIZE: return SMPack((long)gWorld.mMap->mL195610, (long)gWorld.mMap->mL195614);
+    case EE_SCENARIO_READ_AREA_CONTAINS_TILE:
+        return theManager->GetArea((unsigned long)inA)->ContainsTile(U2DPoint<long>(inB, inC));
+    case EE_SCENARIO_READ_OBJECT_UNIT_COUNT: return (int64_t)theManager->GetScenarioObject((unsigned long)inA)->mUnits.size();
+    case EE_SCENARIO_READ_OBJECT_UNIT_AT:
+        return (int64_t)(uint32_t)theManager->GetScenarioObject((unsigned long)inA)->mUnits[(size_t)inB];
+    case EE_SCENARIO_READ_OBJECT_SELECTED_BY_CHECK: return theManager->GetScenarioObject((unsigned long)inA)->mSelectedByCheck;
+    case EE_SCENARIO_READ_UNIT_TILE_OF: return SMPack(SMUnit(inA)->mTileX, SMUnit(inA)->mTileY);
+    case EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT: return SMFloat(SMUnit(inA)->mComplexUnit->GetLineOfSight());
+    case EE_SCENARIO_READ_UNIT_RANGE: return SMFloat(SMUnit(inA)->mStats->mRange);
+    case EE_SCENARIO_READ_UNIT_TILE_SIZE: return SMUnit(inA)->mUnitClass->mTileSize;
+    case EE_SCENARIO_READ_CLASS_TILE_SIZE: return gUnitClassTable[inA]->mTileSize;
+    case EE_SCENARIO_READ_BLOCK_TAKES: return EEPlayerBlockTakes(NULL, inA, inB, inC, inD, inD, 0);
+    case EE_SCENARIO_READ_MAP_TILE_DRY: {
+        EEMapTile* theTile = gWorld.mMap->GetTile(inA, inB);
+        return theTile != NULL && theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainShallowWater;
+    }
+    case EE_SCENARIO_READ_MAP_TILE_EXISTS: return gWorld.mMap->GetTile(inA, inB) != NULL;
+    case EE_SCENARIO_READ_FOOTPRINT_DISTANCE: {
+        long theX = 0;
+        long theY = 0;
+        return SMFloat(EEGetFootprintDistance(static_cast<EEComplexUnit*>(SMUnit(inA)), inB, inC, &theX, &theY));
+    }
+    case EE_SCENARIO_READ_UNIT_CAN_REACH_TILE:
+        return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->CanReachTile(inB, inC);
+    case EE_SCENARIO_READ_UNIT_NEAREST_TILE: {
+        long theX;
+        long theY;
+        SMUnit(inA)->GetNearestFootprintTile(SMUnit(inB), &theX, &theY);
+        return SMPack(theX, theY);
+    }
+    case EE_SCENARIO_READ_UNIT_IN_REACH:
+        return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->IsInReach(SMUnit(inB));
     }
     return 0;
 }
@@ -253,6 +229,17 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
     }
 }
 
+// FindPlacement's tile lists (placement.rs EE_SCENARIO_TILES_NEAR_POINT, _SIDE, _CORNER)
+void EESMObjectTiles(uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, std::vector<U2DPoint<long> >& outTiles)
+{
+    float theRadius;
+    memcpy(&theRadius, &inC, 4);
+    switch (inOp) {
+    case EE_SCENARIO_TILES_NEAR_POINT: EEGetTilesNearPoint(GE3DPoint((float)inA, (float)inB, 0.0f), theRadius, outTiles); break;
+    case EE_SCENARIO_TILES_SIDE: EEGetSideTiles(inA, inB, inC, outTiles); break;
+    case EE_SCENARIO_TILES_CORNER: EEGetCornerTiles(0, inA, inB, inC, outTiles); break;
+    }
+}
 
 // FUNCTION: EXE 0x5c6b14
 // Picks the unit type to create for the object: the parent's first unit's type, the object's class, or a random
@@ -263,16 +250,6 @@ long EESMObject::PickUnitType()
     EeScenarioHost theHost = EESMHost(&theContext);
     return ee_scenario_object_pick_unit_type(&theHost, this);
 }
-
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "ee/EEUUUnitFunctor.h"
-#include "ee/EEMap.h"
-#include "ee/EEUnitUtilities.h"
 
 // FUNCTION: EXE 0x5c6d4f
 // Finds a free spot for a new unit of the type that meets the object's area and nearness filters (random tries for
@@ -288,176 +265,22 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
     return theResult;
 }
 
-// FindPlacement's body (FindPlacement adds the simulation capture's SMFP record: ee/EEScenarioCapture.h)
+// FindPlacement's body (FindPlacement adds the simulation capture's SMFP record: ee/EEScenarioCapture.h): ee_scenario
+// placement.rs find_placement over the area's record; the retry without random tries goes through FindPlacement
 bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
 {
-    std::vector<U2DPoint<long> > theCandidates;
-    std::vector<U2DPoint<long> > theAreaTiles;
-    std::vector<U2DPoint<long> > theObjectTiles;
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<U2DPoint<long> > theOtherTiles;
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mNearObject);
     EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mArea);
-    unsigned long theHeight = gWorld.mMap->mL195610;
-    unsigned long theWidth = gWorld.mMap->mL195614;
-    bool theFound = false;
-    bool theNoArea = false;
-    bool theTriedRandom = false;
-    if ((inTryRandom && this->mInAreaCheck == 2 && theArea != NULL) || (this->mNearCheck == 2 && theObject != NULL)) {
-        theTriedRandom = true;
-        if (this->mNearCheck == 2 && theObject != NULL)
-            theObject->Evaluate(false);
-        for (long i = 0; i < 25; ++i) {
-            long theA = gPhysics->GetRandom(0L,theWidth - 1);
-            long theB = gPhysics->GetRandom(0L,theHeight - 1);
-            long theX = theB + theA;
-            long theY = theHeight + theB - theA;
-            bool theAllowed = true;
-            if (this->mInAreaCheck == 2 && theArea != NULL) {
-                U2DPoint<long> theTile((long)(float)theX,(long)(float)theY);
-                if (theArea->ContainsTile(theTile))
-                    theAllowed = false;
-            }
-            if (this->mNearCheck == 2 && theObject != NULL && theObject->IsNearTile(theX,theY,this->mNearMode,false))
-                theAllowed = false;
-            if (theAllowed) {
-                U2DPoint<long> theTile(theX,theY);
-                theCandidates.push_back(theTile);
-            }
-        }
-    } else {
-        if (this->mInAreaCheck == 1 && theArea != NULL) {
-            if (theArea->IsUnset()) {
-                theNoArea = true;
-                outLocation.mX = -10000.0f;
-                theFound = true;
-                outLocation.mY = -10000.0f;
-            } else {
-                if (!theArea->IsOffMap())
-                    theArea->GetTiles(theAreaTiles);
-            }
-        } else if (this->mInAreaCheck == 2 && theArea != NULL) {
-            // the area's own tiles, to leave out below
-            if (!theArea->IsUnset() && theArea->mSelectMode != 0)
-                theArea->GetTiles(theTiles);
-            for (long row = 0; row < theWidth; ++row) {
-                long x = row;
-                long y = row + theHeight;
-                for (long count = theHeight; count != 0; --count, ++x, --y) {
-                    U2DPoint<long> theTile(x,y);
-                    if (theArea->IsUnset())
-                        theAreaTiles.push_back(theTile);
-                    else if (theArea->mSelectMode == 0) {
-                        if (!theArea->ContainsTile(theTile))
-                            theAreaTiles.push_back(theTile);
-                    } else if (std::find(theTiles.begin(),theTiles.end(),theTile) == theTiles.end())
-                        theAreaTiles.push_back(theTile);
-                    U2DPoint<long> theNextTile(x + 1,y);
-                    if (theArea->IsUnset())
-                        theAreaTiles.push_back(theNextTile);
-                    else if (theArea->mSelectMode == 0) {
-                        if (!theArea->ContainsTile(theNextTile))
-                            theAreaTiles.push_back(theNextTile);
-                    } else if (std::find(theTiles.begin(),theTiles.end(),theNextTile) == theTiles.end())
-                        theAreaTiles.push_back(theNextTile);
-                }
-            }
-        }
-        if (this->mNearCheck != 0 && theObject != NULL
-            && ((theObject->mSelectedByCheck != 0 && theObject->mUnits.size() > 0) || theObject->Evaluate(false))) {
-            for (unsigned long i = 0; i < theObject->mUnits.size(); ++i) {
-                EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[i]);
-                if (theUnit != NULL && theUnit->mHitPoints > 0) {
-                    theTiles.clear();
-                    theOtherTiles.clear();
-                    switch (this->mNearMode) {
-                    case 0:
-                        if (theUnit->mComplexUnit->GetLineOfSight() > 0.0f) {
-                            GE3DPoint thePoint((float)theUnit->GetTileX(),(float)theUnit->GetTileY(),0.0f);
-                            EEGetTilesNearPoint(thePoint,theUnit->mComplexUnit->GetLineOfSight(),theTiles);
-                        }
-                        break;
-                    case 1:
-                        if (theUnit->mStats->mRange > 0.0f) {
-                            GE3DPoint thePoint((float)theUnit->GetTileX(),(float)theUnit->GetTileY(),0.0f);
-                            EEGetTilesNearPoint(thePoint,theUnit->mStats->mRange,theTiles);
-                        }
-                        break;
-                    case 2:
-                        EEGetSideTiles(theUnit->GetTileX(),theUnit->GetTileY(),theUnit->mUnitClass->mTileSize,theTiles);
-                        EEGetCornerTiles(0,theUnit->GetTileX(),theUnit->GetTileY(),theUnit->mUnitClass->mTileSize,theOtherTiles);
-                        break;
-                    }
-                }
-                for (unsigned long j = 0; j < theTiles.size(); ++j)
-                    theObjectTiles.push_back(theTiles[j]);
-                for (unsigned long k = 0; k < theOtherTiles.size(); ++k)
-                    theObjectTiles.push_back(theOtherTiles[k]);
-            }
-            if (this->mNearCheck == 2) {
-                theTiles = theObjectTiles;
-                theObjectTiles.clear();
-                for (long row = 0; row < theWidth; ++row) {
-                    long x = row;
-                    long y = row + theHeight;
-                    for (long count = theHeight; count != 0; --count, ++x, --y) {
-                        U2DPoint<long> theTile(x,y);
-                        if (std::find(theTiles.begin(),theTiles.end(),theTile) == theTiles.end())
-                            theObjectTiles.push_back(theTile);
-                    }
-                }
-            }
-        }
-        if (this->mInAreaCheck == 0) {
-            if (this->mNearCheck != 0)
-                theCandidates = theObjectTiles;
-        } else if (this->mNearCheck == 0)
-            theCandidates = theAreaTiles;
-        else {
-            for (unsigned long i = 0; i < theAreaTiles.size(); ++i) {
-                if (std::find(theObjectTiles.begin(),theObjectTiles.end(),theAreaTiles[i]) != theObjectTiles.end())
-                    theCandidates.push_back(theAreaTiles[i]);
-            }
-        }
-        if (theNoArea)
-            return theFound;
-    }
-    long theSize = gUnitClassTable[inUnitType]->mTileSize;
-    EEAIRandomShuffle(theCandidates.begin(),theCandidates.end());
-    for (std::vector<U2DPoint<long> >::iterator i = theCandidates.begin(); !theFound && i != theCandidates.end(); ++i) {
-        long theX = i->mX;
-        long theY = i->mY;
-        if (EEPlayerBlockTakes(NULL,inUnitType,theX,theY,theSize,theSize,0)) {
-            if (theSize == 1) {
-                theFound = true;
-                outLocation.mX = (float)theX;
-                outLocation.mY = (float)theY;
-            } else {
-                for (unsigned long j = 0; j < theCandidates.size(); ++j) {
-                    if (theCandidates[j].mX == theSize - 1 + theX && theCandidates[j].mY == theSize - 1 + theY) {
-                        theFound = true;
-                        outLocation.mX = (float)theX;
-                        outLocation.mY = (float)theY;
-                        break;
-                    }
-                }
-                // The original type 0x41 test is independent of whether the far footprint corner was found.
-                if ((theFound && inUnitType == 0x24) || inUnitType == 0x41) {
-                    theFound = false;
-                    for (long x = theX - 1; !theFound && x <= theX + theSize; ++x) {
-                        for (long y = theY - 1; !theFound && y <= theY + theSize; ++y) {
-                            EEMapTile* theMapTile = gWorld.mMap->GetTile(x,y);
-                            if (theMapTile != NULL && theMapTile->mTerrainType != kTerrainDeepWater && theMapTile->mTerrainType != kTerrainShallowWater)
-                                theFound = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    if (!theFound && inTryRandom && theTriedRandom)
-        theFound = this->FindPlacement(inUnitType,outLocation,false);
-    return theFound;
+    EeScenarioAreaRecord theRecord = theArea != NULL ? EESMAreaRecord(*theArea) : EeScenarioAreaRecord();
+    EESMHostContext theContext = {};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    float theLocation[2] = {outLocation.mX, outLocation.mY};
+    uint32_t theResult = ee_scenario_find_placement(&theHost, this, theArea != NULL ? &theRecord : NULL,
+                                                    (uint32_t)inUnitType, inTryRandom, &theLocation);
+    outLocation.mX = theLocation[0];
+    outLocation.mY = theLocation[1];
+    if (theResult == EE_SCENARIO_PLACEMENT_RETRY)
+        return this->FindPlacement(inUnitType, outLocation, false);
+    return theResult == EE_SCENARIO_PLACEMENT_FOUND;
 }
 
 // FUNCTION: EXE 0x5c7749
@@ -466,476 +289,90 @@ bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& ou
 long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEUnit* inUnit,
     long inArg4, long inArg5)
 {
-    long theResult = 0;
     if (inUnit == NULL)
-        return theResult;
+        return 0;
+    EESMHostContext theContext = {NULL, inUnit, NULL, NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);   // ee_scenario attribute.rs unit_attribute
+    return ee_scenario_unit_attribute(&theHost, (uint32_t)inAttribute, inPercent);
+}
+
+// a unit's member for GetUnitAttribute (ee_scenario attribute.rs EE_SCENARIO_UNIT_*, _STATS_*, _CLASS_*): integers and
+// bools as they are, floats as their bits; a class field + EE_SCENARIO_OF_STATS reads the upgrade's class
+int64_t EESMUnitField(EEUnit* inUnit, int32_t inField)
+{
     EEComplexUnit* theComplex = inUnit->GetComplexUnit();
-    EEUnitClass* theClass = inUnit->GetUnitClass();
     EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    switch (inAttribute) {
-    case kSMUnitAttributeHitPoints:
-        theResult = inUnit->GetHitPoints();
-        if (inPercent && theStats != NULL) {
-            float theCapacity = (float)theStats->mMaxHitPoints;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theStats->mMaxHitPoints)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeStone:
-        if (inUnit->mResourceType != kResourceStone) break;
-        goto check_carrying;
-    case kSMUnitAttributeGold:
-        if (inUnit->mResourceType != kResourceGold) break;
-        goto check_carrying;
-    case kSMUnitAttributeWood:
-        if (inUnit->mResourceType != kResourceWood) break;
-        goto check_carrying;
-    case kSMUnitAttributeFood:
-        if (inUnit->mResourceType != kResourceFood) break;
-        goto check_carrying;
-    case kSMUnitAttributeIron:
-        if (inUnit->mResourceType != kResourceIron) break;
-    case kSMUnitAttributeAnyResource:
-    check_carrying:
-        theResult = inUnit->mResourceAmount;
-        if (inPercent && theStats != NULL) {
-            float theCapacity = (float)theStats->mCarryAmount;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theStats->mCarryAmount)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeFlightTime:
-        if (theComplex == NULL) break;
-        theResult = (long)(theComplex->mFlightTime / 1000.0f);
-        if (inPercent && theStats != NULL) {
-            float theCapacity = (float)theStats->mFlightTime;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theStats->mFlightTime)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeCargoCount:
-        if (theComplex == NULL) break;
-        theResult = theComplex->GetNumCargoUnits();
-        if (inPercent && theStats != NULL) {
-            float theCapacity = (float)theStats->mMaxObjectCarry;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theStats->mMaxObjectCarry)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeGarrisonLevel:
-        if (theComplex == NULL) break;
-        theResult = theComplex->mGarrisonCount;
-        if (inPercent && theClass != NULL) {
-            float theCapacity = (float)theClass->mGarrisonCapacity;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theClass->mGarrisonCapacity)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeAmmunition:
-        if (theComplex == NULL) break;
-        theResult = theComplex->mAmmunition;
-        if (inPercent && theClass != NULL) {
-            // Original 1c78d1..de zero-extends capacity +0x29c before FILD; the signed field spelling remains provisional.
-            float theCapacity = (float)(unsigned long)theClass->mAmmunition;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theClass->mAmmunition)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeAnimationIsPaused:
-        if (theComplex != NULL) theResult = theComplex->mIsAnimationPaused;
-        break;
-    case kSMUnitAttributeReloadTime:
-        if (theComplex == NULL) break;
-        theResult = theComplex->mReloadTimer;
-        if (inPercent && theStats != NULL) {
-            float theCapacity = (float)theStats->mReloadTime;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theStats->mReloadTime)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeGraphicScale:
-        if (theComplex != NULL) {
-            theResult = (long)theComplex->mPhysicalModel.GetScale();
-            if (inPercent && theStats != NULL) {
-                if (theStats->mScale > 0.0f) {
-                    if (theResult == 0) break;
-                    if (theResult != (long)theStats->mScale)
-                        { theResult = (long)(theResult * 100.0f / theStats->mScale); break; }
-                }
-                { theResult = 100; break; }
-            }
-        } else {
-            if (theStats != NULL) return UMFloatToLong(theStats->mScale);
-            { theResult = 1; break; }
-        }
-        break;
-    case kSMUnitAttributePower:
-        if (theComplex == NULL) break;
-        theResult = theComplex->GetPower();
-        if (inPercent && theStats != NULL) {
-            float theCapacity = (float)theStats->mPower;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theStats->mPower)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeRottingTime:
-        if (theComplex == NULL) break;
-        theResult = theComplex->mRottingAwayTime;
-        if (inPercent && theClass != NULL) {
-            float theCapacity = (float)theClass->mRottingTime;
-            if (theCapacity > 0.0f) {
-                if (theResult == 0) break;
-                if (theResult != theClass->mRottingTime)
-                    { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeConstructionComplete:
-        if (theComplex != NULL) theResult = theComplex->mIsBuilt;
-        break;
-    case kSMUnitAttributeUnitVariable1:
-        if (theComplex != NULL) theResult = theComplex->mUnitVariables[0];
-        break;
-    case kSMUnitAttributeUnitVariable2:
-        if (theComplex != NULL) theResult = theComplex->mUnitVariables[1];
-        break;
-    case kSMUnitAttributeUnitVariable3:
-        if (theComplex != NULL) theResult = theComplex->mUnitVariables[2];
-        break;
-    case kSMUnitAttributeShockArmorPlus:
-        theResult = theStats->mArmor[0] - theStats->mUnitClass->mArmor[0];
-        goto attribute_42;
-    case kSMUnitAttributeArrowArmorPlus:
-        theResult = theStats->mArmor[1] - theStats->mUnitClass->mArmor[1];
-        goto attribute_44;
-    case kSMUnitAttributePierceArmorPlus:   // armor slot 2, as the attribute effect uses (shared the arrow body)
-        theResult = theStats->mArmor[2] - theStats->mUnitClass->mArmor[2];
-        goto attribute_pierce;
-    case kSMUnitAttributeGunArmorPlus:
-        theResult = theStats->mArmor[3] - theStats->mUnitClass->mArmor[3];
-        goto attribute_45;
-    case kSMUnitAttributeLaserArmorPlus:
-        theResult = theStats->mArmor[4] - theStats->mUnitClass->mArmor[4];
-        goto attribute_46;
-    case kSMUnitAttributeMissileArmorPlus:
-        theResult = theStats->mArmor[5] - theStats->mUnitClass->mArmor[5];
-        goto attribute_47;
-    case kSMUnitAttributeReloadTimePlus:
-        theResult = theStats->mReloadTime - theStats->mUnitClass->mReloadTime;
-        goto attribute_48;
-    case kSMUnitAttributeAttackPlus:
-        theResult = (long)(theStats->mAttack - theStats->mUnitClass->mAttack);
-        goto attribute_49;
-    case kSMUnitAttributeWorkRatePlus:
-        theResult = theStats->mWorkRate - theStats->mUnitClass->mWorkRate;
-        goto attribute_50;
-    case kSMUnitAttributeFlightTimePlus:
-        theResult = (long)((theStats->mFlightTime - theStats->mUnitClass->mFlightTime) / 1000.0f);
-        goto attribute_51;
-    case kSMUnitAttributeLeadershipPlus:
-        theResult = (long)(theStats->mLeadership - theStats->mUnitClass->mLeadership);
-        goto attribute_52;
-    case kSMUnitAttributeMaxObjectsCarriedPlus:
-        theResult = theStats->mMaxObjectCarry - theStats->mUnitClass->mMaxObjectCarry;
-        goto attribute_53;
-    case kSMUnitAttributeRepairPlus:
-        theResult = theStats->mRepairRate - theStats->mUnitClass->mRepairRate;
-        goto attribute_54;
-    case kSMUnitAttributeHitPointsPlus:
-        theResult = theStats->mMaxHitPoints - theStats->mUnitClass->mHitPoints;
-        goto attribute_55;
-    case kSMUnitAttributeCarryAmountPlus:
-        theResult = theStats->mCarryAmount - theStats->mUnitClass->mCarryAmount;
-        goto attribute_56;
-    case kSMUnitAttributeContainerHealingHPPerSecPlus:
-        theResult = theStats->mHealingPoints - theStats->mUnitClass->mHealingPoints;
-        goto attribute_57;
-    case kSMUnitAttributeRangePlus:
-        theResult = (long)(theStats->mRange - theStats->mUnitClass->mRange);
-        goto attribute_58;
-    case kSMUnitAttributeLineOfSightPlus:
-        theResult = (long)(theStats->mLineOfSight - theStats->mUnitClass->mLineOfSight);
-        goto attribute_59;
-    case kSMUnitAttributeMaxVelocityPlus:
-        theResult = (long)((theStats->mMaxVelocity - theStats->mUnitClass->mMaxVelocity) * 20.0f);
-        goto attribute_60;
-    case kSMUnitAttributePowerPlus:
-        theResult = theStats->mPower - theStats->mUnitClass->mPower;
-        if (inPercent) {
-            if (theClass->mPower > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mPower); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeAnimalAIActivePlus:
-        theResult = theStats->mIsInitialized;
-        break;
-    case kSMUnitAttributeCameraFocusPlus:
-        theResult = (long)(theStats->mCameraFocus * 100.0f);
-        break;
-    case kSMUnitAttributeTotalShockArmor:
-        theResult = theStats->mArmor[0];
-    attribute_42:
-        if (inPercent) {
-            if (theClass->mArmor[0] > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mArmor[0]); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalArrowArmor:
-        theResult = theStats->mArmor[1];
-    attribute_44:
-        if (inPercent) {
-            if (theClass->mArmor[1] > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mArmor[1]); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalPierceArmor:   // armor slot 2 (shared the arrow body)
-        theResult = theStats->mArmor[2];
-    attribute_pierce:
-        if (inPercent) {
-            if (theClass->mArmor[2] > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mArmor[2]); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalGunArmor:
-        theResult = theStats->mArmor[3];
-    attribute_45:
-        if (inPercent) {
-            if (theClass->mArmor[3] > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mArmor[3]); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalLaserArmor:
-        theResult = theStats->mArmor[4];
-    attribute_46:
-        if (inPercent) {
-            if (theClass->mArmor[4] > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mArmor[4]); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalMissileArmor:
-        theResult = theStats->mArmor[5];
-    attribute_47:
-        if (inPercent) {
-            if (theClass->mArmor[5] > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mArmor[5]); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalReloadTime:
-        theResult = theStats->mReloadTime;
-    attribute_48:
-        if (inPercent) {
-            if (theClass->mReloadTime > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mReloadTime); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalAttack:
-        theResult = (long)(theStats->mAttack);
-    attribute_49:
-        if (inPercent) {
-            if (theClass->mAttack > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mAttack); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalWorkRate:
-        theResult = theStats->mWorkRate;
-    attribute_50:
-        if (inPercent) {
-            if (theClass->mWorkRate > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mWorkRate); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalFlightTime:
-        theResult = (long)(theStats->mFlightTime / 1000.0f);
-    attribute_51:
-        if (inPercent) {
-            if (theClass->mFlightTime > 0)
-                { theResult = (long)(theResult * 100.0f / (theClass->mFlightTime / 1000.0f)); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalLeadership:
-        theResult = (long)(theStats->mLeadership);
-    attribute_52:
-        if (inPercent) {
-            if (theClass->mLeadership > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mLeadership); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalMaxObjectsCarried:
-        theResult = theStats->mMaxObjectCarry;
-        if (theResult == 0) {
-            theResult = theClass->mGarrisonCapacity;
-            if (inPercent) { theResult = 100; break; }
-            break;
-        }
-    attribute_53:
-        if (inPercent) {
-            if (theClass->mMaxObjectCarry > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mMaxObjectCarry); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalRepair:
-        theResult = theStats->mRepairRate;
-    attribute_54:
-        if (inPercent) {
-            if (theClass->mRepairRate > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mRepairRate); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalHitPoints:
-        theResult = theStats->mMaxHitPoints;
-    attribute_55:
-        if (inPercent) {
-            if (theClass->mHitPoints > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mHitPoints); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalCarryAmount:
-        theResult = theStats->mCarryAmount;
-    attribute_56:
-        if (inPercent) {
-            if (theClass->mCarryAmount > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mCarryAmount); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalHealingHPPerSec:
-        theResult = theStats->mHealingPoints;
-    attribute_57:
-        if (inPercent) {
-            if (theClass->mHealingPoints > 0)
-                { theResult = (long)(theResult * 100.0f / theClass->mHealingPoints); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalRange:
-        theResult = (long)(theStats->mRange);
-    attribute_58:
-        if (inPercent) {
-            if (theClass->mRange > 0.0f)
-                { theResult = (long)(theResult * 100.0f / theClass->mRange); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalLineOfSight:
-        theResult = (long)(theStats->mLineOfSight);
-    attribute_59:
-        if (inPercent) {
-            if (theClass->mLineOfSight > 0.0f)
-                { theResult = (long)(theResult * 100.0f / theClass->mLineOfSight); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalMaxVelocity:
-        theResult = (long)(theStats->mMaxVelocity * 20.0f);
-    attribute_60:
-        if (inPercent) {
-            if (theClass->mMaxVelocity > 0.0001f)
-                { theResult = (long)(theResult * 100.0f / (theClass->mMaxVelocity * 20.0f)); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalPower:
-        theResult = theStats->mPower;
-        if (inPercent) {
-            float theCapacity = (float)theClass->mPower;
-            if (theCapacity > 0.0f)
-                { theResult = (long)(theResult * 100.0f / theCapacity); break; }
-            { theResult = 100; break; }
-        }
-        break;
-    case kSMUnitAttributeTotalPlaceHolder2:
-    case kSMUnitAttributeTotalPlaceHolder3:
-        break;
-    case kSMUnitAttributeTotalTransportWeight:
-        theResult = theClass->mTransportCapacity;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalWeight:
-        theResult = theClass->mWeight;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalTileSize:
-        theResult = theClass->mTileSize;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalCruiseAltitude:
-        theResult = (long)theClass->GetCruiseAltitude();
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalMinimumRange:
-        theResult = (long)theClass->mMinRange;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalCanEnterAirTransports:
-        theResult = theClass->mCanEnterAirTransports != 0;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalCanEnterLandTransports:
-        theResult = theClass->mCanEnterLandTransports != 0;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalCanEnterSeaTransports:
-        theResult = theClass->mCanEnterSeaTransports != 0;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalPlaceHolder1:
-        theResult = theClass->mCanEnterFortresses != 0;
-        if (inPercent) { theResult = 100; break; }
-        break;
-    case kSMUnitAttributeTotalPlaceHolder2B:
-    case kSMUnitAttributeTotalPlaceHolder3B:
-        if (inPercent) { theResult = 100; break; }
-        break;
+    EEUnitClass* theClass = inField >= EE_SCENARIO_OF_STATS ? theStats->mUnitClass : inUnit->GetUnitClass();
+    auto Bits = [](float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return (int64_t)theBits; };
+    int32_t theField = inField >= EE_SCENARIO_OF_STATS ? inField - EE_SCENARIO_OF_STATS : inField;
+    if (theField >= EE_SCENARIO_UNIT_VARIABLE && theField < EE_SCENARIO_UNIT_VARIABLE + 3)
+        return theComplex->mUnitVariables[theField - EE_SCENARIO_UNIT_VARIABLE];
+    if (theField >= EE_SCENARIO_STATS_ARMOR && theField < EE_SCENARIO_STATS_ARMOR + 6)
+        return Bits(theStats->mArmor[theField - EE_SCENARIO_STATS_ARMOR]);
+    if (theField >= EE_SCENARIO_CLASS_ARMOR && theField < EE_SCENARIO_CLASS_ARMOR + 6)
+        return theClass->mArmor[theField - EE_SCENARIO_CLASS_ARMOR];
+    switch (theField) {
+    case EE_SCENARIO_UNIT_HAS_COMPLEX: return theComplex != NULL;
+    case EE_SCENARIO_UNIT_HAS_STATS: return theStats != NULL;
+    case EE_SCENARIO_UNIT_HAS_CLASS: return theClass != NULL;
+    case EE_SCENARIO_UNIT_HIT_POINTS: return inUnit->GetHitPoints();
+    case EE_SCENARIO_UNIT_RESOURCE_TYPE: return inUnit->mResourceType;
+    case EE_SCENARIO_UNIT_RESOURCE_AMOUNT: return (long)inUnit->mResourceAmount;
+    case EE_SCENARIO_UNIT_FLIGHT_TIME: return (long)theComplex->mFlightTime;
+    case EE_SCENARIO_UNIT_CARGO: return (long)theComplex->GetNumCargoUnits();
+    case EE_SCENARIO_UNIT_GARRISON: return theComplex->mGarrisonCount;
+    case EE_SCENARIO_UNIT_AMMUNITION: return (long)theComplex->mAmmunition;
+    case EE_SCENARIO_UNIT_PAUSED: return theComplex->mIsAnimationPaused;
+    case EE_SCENARIO_UNIT_RELOAD_TIMER: return (long)theComplex->mReloadTimer;
+    case EE_SCENARIO_UNIT_SCALE: return Bits(theComplex->mPhysicalModel.GetScale());
+    case EE_SCENARIO_UNIT_POWER: return theComplex->GetPower();
+    case EE_SCENARIO_UNIT_ROTTING: return (long)theComplex->mRottingAwayTime;
+    case EE_SCENARIO_UNIT_BUILT: return theComplex->mIsBuilt;
+    case EE_SCENARIO_STATS_MAX_HIT_POINTS: return theStats->mMaxHitPoints;
+    case EE_SCENARIO_STATS_CARRY: return theStats->mCarryAmount;
+    case EE_SCENARIO_STATS_FLIGHT_TIME: return theStats->mFlightTime;
+    case EE_SCENARIO_STATS_MAX_CARRY: return theStats->mMaxObjectCarry;
+    case EE_SCENARIO_STATS_RELOAD: return theStats->mReloadTime;
+    case EE_SCENARIO_STATS_SCALE: return Bits(theStats->mScale);
+    case EE_SCENARIO_STATS_POWER: return theStats->mPower;
+    case EE_SCENARIO_STATS_ATTACK: return Bits(theStats->mAttack);
+    case EE_SCENARIO_STATS_WORK_RATE: return theStats->mWorkRate;
+    case EE_SCENARIO_STATS_LEADERSHIP: return Bits(theStats->mLeadership);
+    case EE_SCENARIO_STATS_REPAIR: return theStats->mRepairRate;
+    case EE_SCENARIO_STATS_HEALING: return theStats->mHealingPoints;
+    case EE_SCENARIO_STATS_RANGE: return Bits(theStats->mRange);
+    case EE_SCENARIO_STATS_LINE_OF_SIGHT: return Bits(theStats->mLineOfSight);
+    case EE_SCENARIO_STATS_VELOCITY: return Bits(theStats->mMaxVelocity);
+    case EE_SCENARIO_STATS_INITIALIZED: return theStats->mIsInitialized;
+    case EE_SCENARIO_STATS_CAMERA_FOCUS: return Bits(theStats->mCameraFocus);
+    case EE_SCENARIO_CLASS_GARRISON: return theClass->mGarrisonCapacity;
+    case EE_SCENARIO_CLASS_AMMUNITION: return theClass->mAmmunition;
+    case EE_SCENARIO_CLASS_ROTTING: return theClass->mRottingTime;
+    case EE_SCENARIO_CLASS_POWER: return theClass->mPower;
+    case EE_SCENARIO_CLASS_RELOAD: return theClass->mReloadTime;
+    case EE_SCENARIO_CLASS_ATTACK: return theClass->mAttack;
+    case EE_SCENARIO_CLASS_WORK_RATE: return theClass->mWorkRate;
+    case EE_SCENARIO_CLASS_FLIGHT_TIME: return theClass->mFlightTime;
+    case EE_SCENARIO_CLASS_LEADERSHIP: return theClass->mLeadership;
+    case EE_SCENARIO_CLASS_MAX_CARRY: return theClass->mMaxObjectCarry;
+    case EE_SCENARIO_CLASS_REPAIR: return theClass->mRepairRate;
+    case EE_SCENARIO_CLASS_HIT_POINTS: return theClass->mHitPoints;
+    case EE_SCENARIO_CLASS_CARRY: return theClass->mCarryAmount;
+    case EE_SCENARIO_CLASS_HEALING: return theClass->mHealingPoints;
+    case EE_SCENARIO_CLASS_RANGE: return Bits(theClass->mRange);
+    case EE_SCENARIO_CLASS_LINE_OF_SIGHT: return Bits(theClass->mLineOfSight);
+    case EE_SCENARIO_CLASS_VELOCITY: return Bits(theClass->mMaxVelocity);
+    case EE_SCENARIO_CLASS_TRANSPORT: return theClass->mTransportCapacity;
+    case EE_SCENARIO_CLASS_WEIGHT: return theClass->mWeight;
+    case EE_SCENARIO_CLASS_TILE_SIZE: return theClass->mTileSize;
+    case EE_SCENARIO_CLASS_CRUISE: return Bits(theClass->GetCruiseAltitude());
+    case EE_SCENARIO_CLASS_MIN_RANGE: return Bits(theClass->mMinRange);
+    case EE_SCENARIO_CLASS_AIR: return theClass->mCanEnterAirTransports;
+    case EE_SCENARIO_CLASS_LAND: return theClass->mCanEnterLandTransports;
+    case EE_SCENARIO_CLASS_SEA: return theClass->mCanEnterSeaTransports;
+    case EE_SCENARIO_CLASS_FORTRESS: return theClass->mCanEnterFortresses;
     }
-    return theResult;
+    return 0;
 }
 
 
