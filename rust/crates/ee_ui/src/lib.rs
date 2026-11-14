@@ -47,6 +47,7 @@ pub mod slider;
 pub mod sliderobj;
 pub mod status;
 pub mod statusobj;
+pub mod tableobj;
 pub mod text;
 pub mod variantobj;
 pub mod wrap;
@@ -58,9 +59,6 @@ mod background_ffi;
 // absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
-// imports the C++ controls table's static array (UIControlsTable.cpp), absent from a test binary
-#[cfg(not(test))]
-mod controls_table_ffi;
 // imports the C++ shared font list (UIFontTable.cpp), absent from a test binary
 #[cfg(not(test))]
 mod font_ffi;

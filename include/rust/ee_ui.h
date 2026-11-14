@@ -711,6 +711,75 @@ enum class EeUiOp : uint32_t {
   MgrSoundParameters = 446,
   /// Sound instance `a`'s `Reference()` (`b` 0) or `Dereference()` (1).
   MgrInstanceRef = 447,
+  /// *Pure*: the manager's window's `GetWidth()`.
+  TblWindowWidth = 460,
+  /// *Pure*: the manager's window's `GetHeight()`.
+  TblWindowHeight = 461,
+  /// *Pure*: the manager's `GetFormByID(a)`.
+  TblFormById = 462,
+  /// *Pure*: form `a`'s `GetUseExclusiveCoords()`.
+  TblFormExclusive = 463,
+  /// *Pure*: form `a`'s `GetDesignedHeight()`.
+  TblFormDesignedHeight = 464,
+  /// *Pure*: form `a`'s `GetUseGDIForText()`.
+  TblFormGdi = 465,
+  /// *Pure*: font `a`'s `GetHeight()`.
+  TblFontHeight = 466,
+  /// *Pure*: whether font `a` has its `GetFontBitmap()`.
+  TblFontHasBitmap = 467,
+  /// *Pure*: string `a`'s `GetLength()`.
+  TblStringLength = 468,
+  /// File `a`'s `Open(kFileAccessRead)`.
+  TblFileOpen = 470,
+  /// File `a`'s `Read(count)` -> the count in the high 32 bits, the result in the low.
+  TblFileReadCount = 471,
+  /// File `a`'s `Read(b, c bytes)` -> its result (the bytes at `b`).
+  TblFileRead = 472,
+  /// File `a`'s `Close()`.
+  TblFileClose = 473,
+  /// `new UIControlsTable(the Rust table a)` -> the C++ table.
+  TblWrap = 474,
+  /// `delete` the C++ table `a` (its destructor frees the Rust table).
+  TblDelete = 475,
+  /// Form `a`'s `AddDatabaseControl({b, NULL})`.
+  TblAddDatabaseControl = 476,
+  /// Form `a`'s `ReserveControlIndex(b)`.
+  TblReserveIndex = 477,
+  /// A new `UWideString`: the string table's string `a`, empty for 0 -> the string.
+  TblStringNew = 478,
+  /// `delete` string `a`.
+  TblStringDelete = 479,
+  /// A new `std::vector<UWideString>` filled by `SetupStringArray` -> the strings.
+  TblStringsNew = 480,
+  /// `delete` strings `a`.
+  TblStringsDelete = 481,
+  /// `UIFontTable::GetFont(a)` -> the font (referenced).
+  TblFontGet = 482,
+  /// `UIFontTable::CreateClosestFont(a, b)` -> the font.
+  TblFontClosest = 483,
+  /// Font `a`'s `Dereference()`.
+  TblFontRelease = 484,
+  /// `new GEFontBitmap(the rasterizer, font a, the screen)`.
+  TblFontBitmapNew = 485,
+  /// The table's `CreateNormalBitmap` (a 0), `CreatePressedBitmap` (1) or `CreateFocusedBitmap` (2) over `f` -> the
+  /// bitmap or NULL.
+  TblBitmapNew = 486,
+  /// Bitmap `a`'s `Dereference()` (none for NULL).
+  TblBitmapRelease = 487,
+  /// A control's constructor, its arguments at `a` ([`crate::tableobj::EeUiTableMake`]) -> the control.
+  TblMake = 488,
+  /// Control `a`'s setter `b` ([`crate::tableobj::EeUiTableSet`]) with `c`, `d` and `f`.
+  TblSet = 489,
+  /// The manager's virtual `CreateUserDefinedControl(the table)` -> the control or NULL.
+  TblUserDefined = 490,
+  /// The table's `CreateMovie(the manager, f)` -> the control.
+  TblMovie = 491,
+  /// Form `a`'s manager's `CreateControlEvent(a, b)` -> the event or NULL.
+  TblEventNew = 492,
+  /// Event `a`'s `Dereference()`.
+  TblEventRelease = 493,
+  /// Form `a`'s `GetControl(b)`.
+  TblFormControl = 494,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1612,6 +1681,35 @@ enum class EeUiStatusBarCall : uint32_t {
   SetText = 16,
 };
 
+/// The static calls ([`ee_ui_controls_tables`]).
+enum class EeUiTablesCall : uint32_t {
+  /// `Create(file a, manager b)` -> the last read's result.
+  Create = 1,
+  /// `AddControlLike(manager a, the arguments at b)` -> `kErrorOK` or `kErrorNotFound`.
+  AddControlLike = 2,
+  /// `MoveControlsHorizontally(form a, first and last packed in b (low and high 32 bits), f[0], f[1])` -> how many
+  /// moved.
+  MoveControlsHorizontally = 3,
+  /// `DeleteAll()`.
+  DeleteAll = 4,
+  /// `GetUIControlsTable(a)` -> the C++ table (NULL past the array or for a record that is no control).
+  At = 5,
+};
+
+/// The inward calls (the C++ shim's methods).
+enum class EeUiTableCall : uint32_t {
+  /// `CreateControl(manager a)` -> the control.
+  CreateControl = 1,
+  /// `CreateControlEvent(form a)`.
+  CreateControlEvent = 2,
+  /// `RelayoutControl(control a, manager b)`.
+  RelayoutControl = 3,
+  /// `SetupFont(manager a, f, b != 0)`.
+  SetupFont = 4,
+  /// `AddEvent({a, b})`.
+  AddEvent = 5,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -1732,11 +1830,92 @@ enum class EeUiComboAct : uint32_t {
   ProcessArrow = 36,
 };
 
+/// The control classes a table makes ([`EeUiTableMake::kind`]).
+enum class EeUiTableKind : uint32_t {
+  Bitmap = 0,
+  Button = 1,
+  BlinkingButton = 2,
+  ScalableButton = 3,
+  DualButton = 4,
+  CheckBox = 5,
+  ComboBox = 6,
+  FileComboBox = 7,
+  EditBox = 8,
+  FileListBox = 9,
+  LineGraph = 10,
+  ListBox = 11,
+  RadioButton = 12,
+  ScrollBar = 13,
+  ScrollingLabel = 14,
+  Slider = 15,
+  StatusBar = 16,
+  TextLabel = 17,
+};
+
+/// The setters a table calls on a control it made ([`Op::TblSet`]'s `b`).
+enum class EeUiTableSet : uint32_t {
+  /// `UIButton::SetText(string c, font d)`.
+  ButtonText = 0,
+  ButtonFocusedColor = 1,
+  /// `SetButtonDownSound` (the bytes at `c`).
+  ButtonDownSound = 2,
+  ButtonUpSound = 3,
+  /// `SetupGEText` of the control's text: `c` 0 the button's, 1 the check box's label's, 2 the combo box's, 3 the
+  /// edit box's, 4 the list box's, 5 the radio button's label's, 6 the text label's, 7 the status bar's.
+  SetupText = 4,
+  CheckSetChecked = 5,
+  ComboFocusedRect = 6,
+  ComboSelectedBg = 7,
+  ComboSelection = 8,
+  ComboTextBoxOpacity = 9,
+  ComboTextBoxColor = 10,
+  ComboListAlwaysDirty = 11,
+  EditNumber = 12,
+  EditText = 13,
+  EditSelectedBg = 14,
+  ListFocusedRect = 15,
+  ListSelectedBg = 16,
+  ListScrollOpacity = 17,
+  ListSelection = 18,
+  /// `AddValidExtension` of each of the strings `c`.
+  FileListExtensions = 19,
+  GraphFont = 20,
+  GraphFontColor = 21,
+  RadioUpUnchecked = 22,
+  /// `SetDownUncheckedBitmap`, `SetDownCheckedBitmap`, `SetUpCheckedBitmap` (bitmap `c`).
+  RadioPressed = 23,
+  ScrollRange = 24,
+  ScrollValue = 25,
+  SliderRange = 26,
+  SliderValue = 27,
+  SliderPage = 28,
+  StatusRange = 29,
+  StatusValue = 30,
+  StatusColor = 31,
+  StatusOpacity = 32,
+  StatusText = 33,
+  StatusFocusedColor = 34,
+  LabelNumber = 35,
+  LabelAlign = 36,
+  LabelScrollOpacity = 37,
+  LabelFit = 38,
+  BgColor = 39,
+  BgOpacity = 40,
+  AlwaysDirty = 41,
+  SetRectangle = 42,
+  ChangeFont = 43,
+  /// `SetTriggerEvent(c, event d)`.
+  SetTrigger = 44,
+};
+
 /// The Rust UIButton.
 struct EeUiButton;
 
 /// The Rust UIComboBox.
 struct EeUiCombo;
+
+/// The Rust UIControlsTable.
+struct EeUiControlsTable;
 
 /// The Rust UIEditBox.
 struct EeUiEdit;
@@ -1791,6 +1970,81 @@ struct EeUiScrollBarLayout {
   EeUiRect rect;
   EeUiRect slider;
   EeUiPoint increment;
+};
+
+/// `UIControlsTable`'s plain members in their C++ order (the record starts at `mBackgroundOpacity`).
+struct EeUiControlsTableFields {
+  float background_opacity;
+  float text_box_opacity;
+  float scroll_bar_bg_opacity;
+  /// `mUnknown100`: the record's unused id, copied and never read.
+  long unknown100;
+  long id;
+  long form_id;
+  unsigned long group;
+  unsigned long control_type;
+  long form_index;
+  long border_thickness;
+  unsigned long string_table_id;
+  unsigned long font_table_index;
+  long blink_rate;
+  long string_table_begin;
+  long string_table_end;
+  long text_alignment;
+  long max_chars;
+  long start_current_selection;
+  long start_range;
+  long end_range;
+  long current_range;
+  long page_size;
+  bool is_visible;
+  bool start_checked;
+  bool list_box_always_dirty;
+  bool sort_list_box;
+  bool focused_has_alpha;
+  bool pressed_has_alpha;
+  bool normal_has_alpha;
+  bool always_dirty;
+  bool fit_rect_to_text;
+  bool scale_to_control;
+  bool loop_movie;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
+};
+
+/// `GEColor`: red, green, blue.
+struct EeUiColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// The table's data as the C++ getters read it.
+struct EeUiControlsTableData {
+  EeUiControlsTableFields fields;
+  EeUiLayout layout;
+  EeUiRect normal_rect;
+  EeUiRect pressed_rect;
+  EeUiRect focused_rect;
+  EeUiColor background;
+  EeUiColor text_foreground;
+  EeUiColor selected_list_box;
+  EeUiColor focused_line;
+  /// `mFont`: set by `SetupFont`, released after each `CreateControl` and `RelayoutControl`.
+  void *font;
+  /// The normal, pressed and focused file names and the button down and up sounds, NUL-terminated (owned by the
+  /// object).
+  const char *names[5];
 };
 
 /// What a tiling class's `DrawBackground` hands its (virtual) `DrawTiledBackground`: the redraw rectangle's overlap
@@ -1863,159 +2117,12 @@ struct EeUiBackgroundTableFields {
   bool attribute3;
 };
 
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
-};
-
-/// `GEColor`: red, green, blue.
-struct EeUiColor {
-  float red;
-  float green;
-  float blue;
-};
-
 /// One table entry as Rust writes it: its record from `mTileWidthPercent` on, `mLayout`, `mTextureRect`, `mColor`.
 struct EeUiBackgroundTableRefs {
   EeUiBackgroundTableFields *fields;
   EeUiLayout *layout;
   EeUiRect *texture_rect;
   EeUiColor *color;
-};
-
-/// `UIControlsTable`'s plain members in their C++ order (the record starts at `mBackgroundOpacity`).
-struct EeUiControlsTableFields {
-  float background_opacity;
-  float text_box_opacity;
-  float scroll_bar_bg_opacity;
-  /// `mUnknown100`: the record's unused id, copied and never read.
-  long unknown100;
-  long id;
-  long form_id;
-  unsigned long group;
-  unsigned long control_type;
-  long form_index;
-  long border_thickness;
-  unsigned long string_table_id;
-  unsigned long font_table_index;
-  long blink_rate;
-  long string_table_begin;
-  long string_table_end;
-  long text_alignment;
-  long max_chars;
-  long start_current_selection;
-  long start_range;
-  long end_range;
-  long current_range;
-  long page_size;
-  bool is_visible;
-  bool start_checked;
-  bool list_box_always_dirty;
-  bool sort_list_box;
-  bool focused_has_alpha;
-  bool pressed_has_alpha;
-  bool normal_has_alpha;
-  bool always_dirty;
-  bool fit_rect_to_text;
-  bool scale_to_control;
-  bool loop_movie;
-};
-
-/// Where one `UIControlsTable` keeps what the Rust side writes.
-struct EeUiControlsTableRefs {
-  EeUiControlsTableFields *fields;
-  EeUiLayout *layout;
-  EeUiColor *background;
-  EeUiColor *text_foreground;
-  EeUiColor *selected_list_box;
-  EeUiColor *focused_line;
-  EeUiRect *normal_rect;
-  EeUiRect *pressed_rect;
-  EeUiRect *focused_rect;
-};
-
-/// One record of the controls database file (`UIDbControl`, 860 bytes on every target).
-struct EeUiDbControl {
-  uint8_t label[100];
-  uint8_t normal_file_name[100];
-  uint8_t pressed_file_name[100];
-  uint8_t focused_file_name[100];
-  uint8_t button_down_sound[100];
-  uint8_t button_up_sound[100];
-  float background_opacity;
-  float text_box_opacity;
-  float scroll_bar_bg_opacity;
-  uint32_t unused1[5];
-  float left_offset;
-  float right_offset;
-  float bottom_offset;
-  float top_offset;
-  int32_t unused_db_record_id;
-  int32_t id;
-  int32_t form_id;
-  uint32_t group;
-  uint32_t control_type;
-  int32_t form_index;
-  int32_t border_thickness;
-  uint32_t left_offset_type;
-  uint32_t right_offset_type;
-  uint32_t top_offset_type;
-  uint32_t bottom_offset_type;
-  uint32_t background_red;
-  uint32_t background_green;
-  uint32_t background_blue;
-  int32_t string_table_begin;
-  int32_t string_table_end;
-  uint32_t font_table_index;
-  uint32_t text_foreground_red;
-  uint32_t text_foreground_green;
-  uint32_t text_foreground_blue;
-  int32_t text_alignment;
-  int32_t normal_left;
-  int32_t normal_right;
-  int32_t normal_top;
-  int32_t normal_bottom;
-  int32_t pressed_left;
-  int32_t pressed_right;
-  int32_t pressed_top;
-  int32_t pressed_bottom;
-  int32_t focused_left;
-  int32_t focused_right;
-  int32_t focused_top;
-  int32_t focused_bottom;
-  int32_t max_chars;
-  uint32_t selected_list_box_red;
-  uint32_t selected_list_box_green;
-  uint32_t selected_list_box_blue;
-  int32_t start_current_selection;
-  uint32_t focused_line_red;
-  uint32_t focused_line_green;
-  uint32_t focused_line_blue;
-  int32_t start_range;
-  int32_t end_range;
-  int32_t current_range;
-  int32_t page_size;
-  int32_t string_table_id;
-  int32_t blink_rate;
-  uint32_t unused2[3];
-  uint8_t is_visible;
-  uint8_t start_checked;
-  uint8_t list_box_always_dirty;
-  uint8_t sort_list_box;
-  uint8_t focused_has_alpha;
-  uint8_t pressed_has_alpha;
-  uint8_t normal_has_alpha;
-  uint8_t always_dirty;
-  uint8_t fit_rect_to_text;
-  uint8_t scale_to_control;
-  uint8_t loop_movie;
 };
 
 /// What `Create` makes of a record: no entry for an empty font name, else its face (by string ID), style, quality
@@ -2157,6 +2264,57 @@ struct EeUiTrigger {
 struct EeUiDirtyRect {
   EeUiRect rect;
   unsigned long surface_count;
+};
+
+/// A control's constructor's arguments ([`Op::TblMake`]); each kind reads the fields its constructor takes.
+struct EeUiTableMake {
+  EeUiTableKind kind;
+  unsigned long id;
+  ptrdiff_t form;
+  unsigned long index;
+  unsigned long border;
+  ptrdiff_t font;
+  /// A `UWideString` ([`Op::TblStringNew`]).
+  ptrdiff_t text;
+  /// A `std::vector<UWideString>` ([`Op::TblStringsNew`]).
+  ptrdiff_t strings;
+  ptrdiff_t normal;
+  ptrdiff_t focused;
+  ptrdiff_t pressed;
+  /// The combo box's text box type, the scroll bar's and slider's style, the label's type.
+  long style;
+  long max_chars;
+  long blink_rate;
+  /// The combo boxes' list height.
+  long list_height;
+  /// The edit box's numbers only, the list box's auto-select, the radio button's push button (a tab), the check
+  /// box's bitmap scale.
+  bool flag_a;
+  /// The edit box's multi-line, the radio button's start check.
+  bool flag_b;
+  /// The edit box's start check (`mStartChecked`), the radio button's bitmap scale.
+  bool flag_c;
+  EeUiRect rect;
+  EeUiRect normal_rect;
+  EeUiRect focused_rect;
+  EeUiRect pressed_rect;
+  /// The scroll bar's length, the file combo box's width.
+  float length;
+};
+
+/// `AddControlLike`'s arguments.
+struct EeUiTableLike {
+  long template_id;
+  long id;
+  long form_index;
+  unsigned long group;
+  float left;
+  float right;
+  float top;
+  float bottom;
+  long string_table_begin;
+  long string_table_end;
+  unsigned long help_string_id;
 };
 
 extern "C" {
@@ -2462,6 +2620,48 @@ ptrdiff_t ee_ui_status_bar_call(const EeUiStatusBar *bar,
                                 ptrdiff_t b,
                                 float *f);
 
+/// `UIControlsTable`'s statics ([`EeUiTablesCall`]); `host` is the C++ host for the tables `Create` makes.
+///
+/// # Safety
+/// `f` is NULL or four live floats; `b` is `AddControlLike`'s arguments for that call; the host answers the ops.
+ptrdiff_t ee_ui_controls_tables(EeUiTablesCall call,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                EeUiHostFn host,
+                                float *f);
+
+/// The default constructor's table for the C++ table `obj`.
+///
+/// # Safety
+/// `obj` is the C++ table the host answers for.
+EeUiControlsTable *ee_ui_controls_table_new(void *obj, EeUiHostFn host);
+
+/// Frees a table (the C++ destructor): the font it holds released first.
+///
+/// # Safety
+/// `table` came from this module (or is NULL) and is not used after this returns.
+void ee_ui_controls_table_free(EeUiControlsTable *table);
+
+/// The table's data, read in place by the C++ getters.
+///
+/// # Safety
+/// `table` is live.
+const EeUiControlsTableData *ee_ui_controls_table_data(const EeUiControlsTable *table);
+
+/// One of the table's methods ([`EeUiTableCall`]).
+///
+/// # Safety
+/// `table` is live; `f` is NULL or four live floats.
+ptrdiff_t ee_ui_controls_table_call(const EeUiControlsTable *table,
+                                    EeUiTableCall call,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    float *f);
+
+/// `SetupStringArray`'s count: the strings `begin..=end` (none unless `begin` is positive and `end` not before it).
+unsigned long ee_ui_controls_table_string_count(long begin,
+                                                long end);
+
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
 
@@ -2542,80 +2742,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// The default constructor's fields (written whole).
-void ee_ui_controls_table_init(const EeUiControlsTableRefs *refs);
-
-/// The record constructor: the fields, layout, colours and texture rectangles from a database record (written whole).
-void ee_ui_controls_table_from_record(const EeUiControlsTableRefs *refs,
-                                      const EeUiDbControl *record);
-
-/// `Create` keeps a record whose id is not negative.
-bool ee_ui_controls_table_record_is_control(int32_t id);
-
-/// `AddControlLike`'s searches over the static array -> whether a template was found, at `*index`.
-bool ee_ui_controls_table_find_template(long template_id,
-                                        long id,
-                                        long form_index,
-                                        unsigned long *index);
-
-/// `AddControlLike`'s edits to the template's copy.
-void ee_ui_controls_table_like(const EeUiControlsTableRefs *refs,
-                               long id,
-                               long form_index,
-                               unsigned long group,
-                               float left,
-                               float right,
-                               float top,
-                               float bottom,
-                               long string_table_begin,
-                               long string_table_end,
-                               unsigned long help_string_id);
-
-/// `MoveControlsHorizontally` -> how many tables moved.
-long ee_ui_controls_table_move_horizontally(long form_id,
-                                            long first,
-                                            long last,
-                                            float left_delta,
-                                            float right_delta);
-
-/// `SetupFont`: the scaled font follows the window.
-bool ee_ui_controls_table_font_scales_to_window(unsigned long control_type, bool scale_to_window);
-
-/// `SetupFont`: the size of a font scaled to the control.
-long ee_ui_controls_table_control_font_size(float height, long border);
-
-/// `SetupFont`: the size of a font scaled to the window.
-long ee_ui_controls_table_window_font_size(long font_height,
-                                           unsigned long window_height,
-                                           unsigned long designed_height);
-
-/// `SetupStringArray`: how many strings the range names (0: none).
-unsigned long ee_ui_controls_table_string_count(long begin, long end);
-
-/// `CreateControl`'s parent rectangle.
-EeUiRect ee_ui_controls_table_parent_rect(unsigned long window_width,
-                                          unsigned long window_height,
-                                          bool exclusive);
-
-/// `CreateControl`'s font rectangle.
-EeUiRect ee_ui_controls_table_font_rect(const EeUiRect *rect, bool exclusive);
-
-/// `CreateComboBox`: the closed box's rectangle, the list's height at `*list_height`.
-EeUiRect ee_ui_controls_table_combo_list(const EeUiRect *rect,
-                                         bool scale_to_control,
-                                         long font_height,
-                                         long border,
-                                         long *list_height);
-
-/// `CreateFileComboBox`: the box's width, its height at `*height`.
-float ee_ui_controls_table_file_combo_size(const EeUiRect *rect, long *height);
-
-/// `CreateScrollBar`: the bar's length.
-float ee_ui_controls_table_scroll_bar_length(const EeUiRect *rect, bool vertical);
-
-/// `CreateSlider`: the page size, capped below the range.
-long ee_ui_controls_table_slider_page_size(long start_range, long end_range, long page_size);
 
 /// `UIFontTable::Create`'s reading of one font record.
 EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
