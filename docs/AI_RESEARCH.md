@@ -5114,6 +5114,47 @@ tile seen now.
 On land (balanced, 32 seeds, 90 minutes) the C++ won 15, the port 11, with 6 close (17-10 with 5 close in §8.77). Determinism (seeds 2 and 5, --repeat 2) is identical on land and at the WW2 start.
 
 0 script errors. Next: the late-start army, then the wall count (§8.70).
+### 8.79 Stage 3: the late-start army (tried, not kept), and the wall planner's way (2026-11-13, EE-SIM)
+
+**The late-start army.** At the WW2 start with cheats the port's army trails the C++'s (12 against 21 at 10
+minutes, §8.78). The cause is in the C++'s KeepStandingArmy (a port addition, §8.13). It counts its army with
+CountMilitaryUnits(false, true): with inByClass false, GatherUnits skips the unit lists and counts only the military
+asked for and being made. So the C++ never sees its standing army and keeps a steady trickle of its favourite land
+unit up to the military room. The port counts its units, as the rule meant.
+
+Two versions were benched against the same scripts, 32 seeds each (balanced; the C++ unchanged):
+
+| | WW2 + cheats, 45 min: won-lost (close) | port's citizens/army at 20 min | land, 90 min: won-lost (close) |
+|---|---|---|---|
+| the port as it is (§8.78) | 0-11 (21) | 32.5/10.2 | 11-15 (6) |
+| as the C++: requests and production only | 3-8 (21) | 37.4/20.3 | 7-18 (7) |
+| requests, production and the free soldiers | 1-9 (22) | 35.7/15.6 | 8-20 (4) |
+
+Counting as the C++ does closes the late-start army (20.3 against the C++'s 22.8) and wins 3 games. On land, though,
+its bigger army (7.6 against 4.2 at 30 minutes) costs citizens: 42 against 49 at 40 minutes, and 7-18. **Not kept.**
+The choice between them is a design one, for the owner:
+- copy the C++'s trickle everywhere;
+- copy it only at late starts;
+- or leave the late-start army behind the C++'s.
+
+**The wall planner's way.** New generic helper `ai.wall_route(enemy, x1, y1, x2, y2)` with
+`ai.wall_route_result(handle)` (AI_LUA_UNITS §11). It is the C++ wall planner's own path request: the path manager's
+coarse graph with the planner modifier (the enemy's influence costs), asynchronous across ticks, not saved.
+walls.lua now takes its way from it:
+- the path reversed, its ends the unit and the enemy's centre;
+- each step refined with ai.wall_path, as PlanWall does;
+- the way kept for the next sizes;
+- ai.route's cells only when the request fails.
+
+| | the port before (§8.70) | the port now | the C++ |
+|---|---|---|---|
+| land, 8 games, 90 min: wall orders (games) | 3 (2) | 8 (4) | 62 (5) |
+| Copper start, 8 games, 45 min: wall orders | 9 (4) | 10 (4) | 21 in 4 games |
+
+Better on land, still far from the C++. The walls stay OPEN.
+
+The trace prints `wall.way route|cells tiles=`. 0 script errors. Determinism with the asynchronous route (land, seeds
+2 and 6, 90 minutes, --repeat 2, walls in both) is identical.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
