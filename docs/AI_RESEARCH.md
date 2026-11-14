@@ -4153,6 +4153,47 @@ with no barracks (barracks_at 24: it stood at 11-14.5 minutes) and 0-2 towers.
   5 defeats against 6, Bronze in 40 games against 33, citizens lost 77 against 86; against Age of AI 33-3-28 against
   39-5-20, Bronze 65.4 in 60 against 65.0 in 57, no defeats. On in boom_order.
 
+**The lost iron mine, and the metal sites recovered (2026-11-14, the owner's playtest 8dd9737d).** His Copper save
+starved on iron for 40 minutes. There were three causes:
+- the reserve's iron flipped between 1320 and 0, because the army took its exemption with `iron_guard` off;
+- iron stood at 12 places on 2 sites;
+- he took boom's third iron site (site 10) at 42-52 minutes, with spearmen on the miners, then a tower, a settlement
+  and a barracks, and boom never tried to take it back.
+
+The new options, 32 seeds each, exe from main 9eb89ea2:
+- `iron_guard` (boom's existing switch);
+- `lib.recover` (`iron_recover`): a held metal site that an enemy blocks is lost. Under 2 working sites the whole
+  army goes and the stockpile is spent on soldiers. Above that, a proportionate force goes or none ("recover
+  noforce"), and a site that cannot be retaken gets a replacement claimed further out;
+- `metal_parity`: behind the enemy's known metal sites also counts as existential, and without a lost site the army
+  takes an enemy-held or contested site;
+- `copper_mines`: from Copper, a third gold and a third iron site are claimed at once;
+- `save_retarget`: the banked gatherers moved to the short resource while saving. It never fires (iron is bound by
+  its places), so it stays off.
+
+Results:
+- From a Copper start (60 minutes), Bronze reached / median:
+  - against the classic: K0 27 / 49.0, `iron_guard` 29 / 44.0;
+  - against Age of AI (with the tactics.lua:715 fix): K0 30 / 47.0, K5 (all of the above) 32 / 42.0.
+- From a normal start (120 minutes), won-lost-close, defeats, Bronze reached / median:
+
+  | | the improved classic | Age of AI |
+  |---|---|---|
+  | K0 | 16-10-6, 3, 22 / 81.5 | 15-1-16, 31 / 66.0 |
+  | `iron_guard` | 16-13-3, 4, 20 / 77.5 | 18-2-12, 32 / 63.0 |
+  | + `iron_recover` | 15-11-6, 2-3, 21 / 83.0 | |
+  | + `metal_parity` (K4) | 16-8-8, 4, 23 / 86.0 | 23-1-8, 31 / 64.0 |
+  | + `copper_mines` (K5) | as K4 | 24-1-7, 31 / 64.0 |
+
+  - Gold and iron income over minutes 5-35 rose from 7.2/6.5 a minute to 8.0/7.0 against the classic.
+  - About 23 operations ran a game against the classic, nearly all cleared (705 of 736). Most were passing raids.
+  - The Prehistoric and Stone pace did not change.
+- `copper_mines` acts only from a Copper start: from a normal start boom reaches Copper late.
+
+`iron_guard`, `iron_recover`, `metal_parity` and `copper_mines` are on in boom_order (decided on 32 seeds, not yet
+confirmed on 64).
+
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
