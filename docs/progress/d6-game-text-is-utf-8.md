@@ -1,0 +1,6 @@
+# D6 game text is UTF-8
+
+The lane's state, moved from RUST_PLAN's Progress table. Each round rewrites this file to the
+current state; the round's story goes in PORT_LEARNINGS.md.
+
+Done (branch `rust-d6-utf8`, a declared rebaseline; PORT_LEARNINGS "D6: game text is UTF-8"): `ee_plat_core::utf8` is the one text implementation (`PlatStrICmp`, the `PlatMbs*` family, the case folding, the wide conversions) on every system, the CRT and the POSIX single-byte port gone; `PlatFont` renders by code point (U+0020..U+00FF at creation, the rest on first use), `GEFontBitmap` keeps its Windows-1252 cells; `ee_ui`'s `text.rs`, SDL text input, the clipboard, WON's `StringUtil` (through `ee_won`'s `text.rs`), `PlatGUIFont`, `PlatClipboard` and the lobby's pages are UTF-8; the text compiler keeps UTF-8 in the records (the Python importer the same, retail transcoded once at load), the Language strings are UTF-8; saves are version 0.255, older saves and files without a version convert their strings from Windows-1252 on load. Sim oracle identical, the Rust gate, eedata check/cppgate, plat_test, font_test and the WON tests pass; the menus' pixels are for the lead's tours. Left: the fonts' coverage (Liberation: Latin, Greek, Cyrillic; no CJK), `GEFontBitmap` draws only what Windows-1252 has, `_mbs*` stubs in tools/rmap_gate, campaign archive tags are not converted
