@@ -58,14 +58,17 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 military count, coast_fishing's two docks, no airport before the attacks, the granary for the farms),
                 RepairBuildings (idle citizens to buildings under 80%), ChooseGarrison / ChooseFortress /
                 FillGarrison (on island and planets maps a town centre hires its garrison and any available citizen fills it; early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
-                none through the manifest's "fills_garrison" - the classic's garrison cheat; new citizens routed there
+                none through the manifest's "fills_garrison" - the classic's garrison cheat; with no idle citizen the
+                nearest gatherer goes in so the rest is topped up at once - New, AI_RESEARCH 8.78; new citizens routed there
                 every 2 s, DEVIATION from UnitAdded's at once), QueueMoraleBuilding. DEVIATIONS: the morale effect's fill is not
                 readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); GetFarmType's robotic farm (Nano) is not ported; the gate
                 chains' repair end is not ported.
   EECPUnitManager.cpp
                 PORTED -> units.lua: the per-epoch request FIFOs, RequestUnits (a producer first: the cheapest
                 available producer class ordered), Update (the citizens up to GetWantedCitizens, 10 at a time, 5 on an
-                island map; the requests started while the population has room, all at once when affordable, else one),
+                island map; the requests started while the population has room, all at once when affordable, else one;
+                New, AI_RESEARCH 8.78: a citizen batch waits up to 30 s while a settlement is filled to become a town
+                centre, so both centres share it),
                 StartProduction (round robin at the least busy producers: ai.train), DropObsoleteRequests,
                 GetWantedCitizens (with max_citizen_share). DEVIATIONS: the units in production are the producers'
                 queue lengths; the transports'
@@ -261,7 +264,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 the unit allowance and 20, one defence group each). AidAllies: PORTED (army.lua aid_allies, every defence update: the allies shuffled,
                 the first with a threatened town - else a town of more than 2 buildings without a package - gets an
                 aid package while the unit allowance holds; a human ally's is sent at once; the allies' towns are
-                their buildings clustered as the own). CheckSpecials: PORTED (army.lua check_specials, every ship_maintenance_timer / 2
+                their buildings clustered as the own). CheckSpecials: PORTED (the ICBM found through its loaded missile base - a missile is in no script list; the
+                targets with the remembered buildings too, DEVIATION; army.lua check_specials, every ship_maintenance_timer / 2
                 minutes: the anti-missile batteries, one and one more per town centre, settlement or capitol up to
                 10, those past 10 deleted - the most batteries and fewest town centres within 4 tiles first; one
                 ICBM kept once the missile base can make it; the capitols' cloak cast where the nearest town's threat
@@ -271,7 +275,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 ChooseUnitsToKill: land citizens deleted for the room past the units available; the space units join the land sub-groups until the air and space
                 sub-groups are ported). CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
                 50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
-                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter; its ChooseUnitsToKill: land citizens deleted for the room past the units available).
+                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter - DEVIATION: only with an own carrier, AI_RESEARCH 8.78; its ChooseUnitsToKill: land citizens deleted for the room past the units available).
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
                 class drafted or requested, explore with the difficulty's stance, every 30 s), the sea explorers
                 (num_sea_explorers of the fastest warship class, once the dock is researched, with water on the map).
