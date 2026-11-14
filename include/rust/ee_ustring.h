@@ -17,6 +17,18 @@ struct EeUString {
   unsigned long capacity;
 };
 
+/// A `UWideString`'s state, held by value in the C++ class (after its vtable pointer).
+struct EeUWideString {
+  /// The buffer (`mString`): `capacity` bytes, at least 1.
+  char *string;
+  /// The bytes of the characters (`mByteLength`, `GetTCHARLength`).
+  unsigned long byte_length;
+  /// The characters (`mLength`, `GetLength`).
+  unsigned long length;
+  /// The bytes allocated (`mCapacity`).
+  unsigned long capacity;
+};
+
 extern "C" {
 
 /// `UString::Find` (`backwards`: `FindBackwards`) on `s` for `needle_length` bytes of `needle` (a `UString`'s
@@ -245,6 +257,218 @@ char *ee_ustring_format_buffer(EeUString *s,
 void ee_ustring_format_end(EeUString *s,
                            char *buffer,
                            unsigned long size);
+
+/// `UWideString()`: empty, the default capacity.
+///
+/// # Safety
+/// `s` points at a record to initialise.
+void ee_uwstring_init(EeUWideString *s);
+
+/// `UWideString(const UWideString&)`: the source's lengths and capacity, its text.
+///
+/// # Safety
+/// As [`ee_uwstring_init`]; `source` is a live record.
+void ee_uwstring_init_copy(EeUWideString *s, const EeUWideString *source);
+
+/// `UWideString(const char*)`: room for two bytes a character and the terminator, or the bytes and the terminator
+/// when they need more (port, decision D6).
+///
+/// # Safety
+/// As [`ee_uwstring_init`]; `source` is a C string.
+void ee_uwstring_init_text(EeUWideString *s,
+                           const char *source);
+
+/// `UWideString(unsigned long)`: empty, room for `characters` characters of two bytes and the terminator.
+///
+/// # Safety
+/// As [`ee_uwstring_init`].
+void ee_uwstring_init_characters(EeUWideString *s,
+                                 unsigned long characters);
+
+/// `~UWideString()`.
+///
+/// # Safety
+/// `s` is a live record; it is dead afterwards.
+void ee_uwstring_free(EeUWideString *s);
+
+/// `UWideString::SetDefaultAllocationLength`.
+void ee_uwstring_set_default_allocation(unsigned long length);
+
+/// `Clear`: empty, the buffer kept.
+///
+/// # Safety
+/// `s` is a live record.
+void ee_uwstring_clear(EeUWideString *s);
+
+/// `Reallocate`: an empty buffer of `size + 1` bytes.
+///
+/// # Safety
+/// `s` is a live record.
+void ee_uwstring_reallocate(EeUWideString *s, unsigned long size);
+
+/// `operator=(const UWideString&)`: an empty source empties the string (the buffer kept); otherwise the buffer is
+/// fitted to the source's capacity and the text copied. Assigning a string to itself does nothing (port: the
+/// original's strcpy onto itself).
+///
+/// # Safety
+/// Both are live records.
+void ee_uwstring_assign(EeUWideString *s,
+                        const EeUWideString *source);
+
+/// `operator=(const char*)`: the buffer fitted to the text's bytes plus 2, the text copied.
+///
+/// # Safety
+/// `s` is a live record, `source` a C string.
+void ee_uwstring_assign_text(EeUWideString *s, const char *source);
+
+/// `CopyString(const UWideString&, count)`: the first `count` characters of the source (an empty source empties
+/// the string), the buffer fitted as `operator=` fits it.
+///
+/// # Safety
+/// Both are live records; `count` is at most the source's characters.
+void ee_uwstring_copy(EeUWideString *s,
+                      const EeUWideString *source,
+                      unsigned long count);
+
+/// `CopyString(const char*, count)`: the first `count` characters of the text, the buffer fitted to their bytes
+/// plus 1.
+///
+/// # Safety
+/// `s` is a live record, `source` a C string of at least `count` characters.
+void ee_uwstring_copy_text(EeUWideString *s,
+                           const char *source,
+                           unsigned long count);
+
+/// The two `operator+=`s: appends the text when it fits the free space plus 2 (the original's test), else moves to
+/// a buffer of exactly the bytes, the text's and 2.
+///
+/// # Safety
+/// `s` is a live record, `source` a C string.
+void ee_uwstring_append(EeUWideString *s,
+                        const char *source);
+
+/// `InsertString`: the text at character `position`, the old tail after it unless `replace`; always into a new
+/// buffer, of the needed size when that is more than the capacity or the free space plus 2.
+///
+/// # Safety
+/// `s` is a live record, `source` a C string (it may lie in the string's own buffer).
+void ee_uwstring_insert(EeUWideString *s,
+                        const char *source,
+                        unsigned long position,
+                        bool replace);
+
+/// `operator[]`: the first byte of character `index`, 0 outside the length.
+///
+/// # Safety
+/// `s` is a live record.
+char ee_uwstring_at(const EeUWideString *s, int32_t index);
+
+/// `Find(const UWideString&, start)`.
+///
+/// # Safety
+/// Both are live records whose lengths are their texts' (not a `GetIndexedSubstring` result).
+unsigned long ee_uwstring_find(const EeUWideString *s,
+                               const EeUWideString *needle,
+                               unsigned long start);
+
+/// `Find(const char*, start)`.
+///
+/// # Safety
+/// As [`ee_uwstring_find`]; `needle` is a C string.
+unsigned long ee_uwstring_find_text(const EeUWideString *s,
+                                    const char *needle,
+                                    unsigned long start);
+
+/// `GetBytesUsedToSave`: a 4-byte size, the bytes of the characters and the terminator.
+///
+/// # Safety
+/// `s` is a live record.
+unsigned long ee_uwstring_bytes_to_save(const EeUWideString *s);
+
+/// `GetExportSize`: a 4-byte size, the bytes and a 2-byte terminator.
+///
+/// # Safety
+/// `s` is a live record.
+unsigned long ee_uwstring_export_size(const EeUWideString *s);
+
+/// `Export`: the size (bytes + 2, 4 bytes little-endian), the bytes, a 2-byte zero.
+///
+/// # Safety
+/// `s` is a live record, `out` has room for [`ee_uwstring_export_size`] bytes.
+void ee_uwstring_export(const EeUWideString *s, uint8_t *out);
+
+/// `Import`: a size and that many bytes (`Export`'s form); the buffer grows (emptied) when the size is more than
+/// the capacity; the lengths are the input text's. Returns the bytes consumed.
+///
+/// # Safety
+/// `s` is a live record; `data` holds a size and that many bytes, with a terminator among them.
+unsigned long ee_uwstring_import(EeUWideString *s,
+                                 const uint8_t *data);
+
+/// `GetChecksum`'s value: the bytes (signed) weighted by position plus 2 over the character length, times it.
+///
+/// # Safety
+/// `s` is a live record.
+unsigned long ee_uwstring_checksum(const EeUWideString *s);
+
+/// `GetIndexedSubstring(first, last)`: `out` (uninitialised) becomes characters `first` through `last`; its
+/// lengths stay the whole tail's from `first` (the original did not measure the cut).
+///
+/// # Safety
+/// `out` is a record to initialise, `s` a live record.
+void ee_uwstring_indexed_substring(EeUWideString *out,
+                                   const EeUWideString *s,
+                                   unsigned long first,
+                                   unsigned long last);
+
+/// `operator+`: `out` (uninitialised) is made with room for `characters` characters (the left's length plus the
+/// right's length or bytes, plus 1), then becomes `left` and has `right` appended.
+///
+/// # Safety
+/// `out` is a record to initialise, `left` a live record, `right` a C string.
+void ee_uwstring_concat(EeUWideString *out,
+                        unsigned long characters,
+                        const EeUWideString *left,
+                        const char *right);
+
+/// `Tokenize`: the tokens between separator characters as (first, last) character pairs (empty ones skipped), each
+/// character looked up in `separators` with `Find` as the original did. Returns the count (at most `length + 1`).
+///
+/// # Safety
+/// Both are live records whose lengths are their texts'; `out` has room for `2 * (length + 1)` values.
+uint32_t ee_uwstring_tokenize(const EeUWideString *s,
+                              const EeUWideString *separators,
+                              uint32_t *out);
+
+/// `Load`'s buffer for a stored size: grown to `size + 1` when smaller, `size + 1` bytes zeroed.
+///
+/// # Safety
+/// `s` is a live record.
+char *ee_uwstring_load_buffer(EeUWideString *s, unsigned long size);
+
+/// `Load`'s end after the bytes were read: terminated at `size`, converted from Windows-1252 when they are not
+/// UTF-8 or a legacy load runs, measured.
+///
+/// # Safety
+/// `s` is a live record after [`ee_uwstring_load_buffer`] with `size`.
+void ee_uwstring_load_end(EeUWideString *s,
+                          unsigned long size);
+
+/// `sprintf(UWideString&, ...)`'s buffer for `size` bytes: the string's own when it fits, else a larger one with
+/// the old bytes (the arguments may point into the old buffer).
+///
+/// # Safety
+/// `s` is a live record.
+char *ee_uwstring_format_buffer(EeUWideString *s,
+                                unsigned long size);
+
+/// `sprintf(UWideString&, ...)`'s end: adopts `buffer` (of `size` bytes) if it is not the string's own, measures.
+///
+/// # Safety
+/// `s` is a live record, `buffer` what [`ee_uwstring_format_buffer`] gave for `size`, now terminated.
+void ee_uwstring_format_end(EeUWideString *s,
+                            char *buffer,
+                            unsigned long size);
 
 }  // extern "C"
 

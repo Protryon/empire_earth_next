@@ -1,26 +1,12 @@
 // C:\EEX\Low-Level Engine\Utilities\UString.cpp
 // Whole in Rust (rust/crates/ee_ustring, LLE lane round 4; UString.h): what stays here touches C++ (the FSFile
-// virtuals, the token vectors, the varargs formatter) and the conversion UWideString::Load still uses.
+// virtuals, the token vectors, the varargs formatter).
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
-
-// port (decision D6): the conversion of old Windows-1252 inputs (UString.h)
-void UConvertLoadedText(char*& ioString, unsigned long& ioCapacity)
-{
-    unsigned long theLength = strlen(ioString);
-    if (!UIsLegacyTextLoad() && PlatUtf8IsValid(ioString, theLength))
-        return;
-    uint32_t theNeeded = PlatCp1252ToUtf8(ioString, theLength, NULL, 0);
-    char* theText = new char[theNeeded + 1];
-    PlatCp1252ToUtf8(ioString, theLength, theText, theNeeded + 1);
-    delete[] ioString;
-    ioString = theText;
-    ioCapacity = theNeeded + 1;
-}
 
 // FUNCTION: LLE 0x10082e38
 // Formats into the string's buffer (grown first when the text does not fit: the original wrote past it), then

@@ -268,6 +268,8 @@ impl Replay {
 
 /// -> (lines, lines that differ, the first difference)
 fn replay(golden: &str) -> (usize, usize, Option<String>) {
+    // the legacy text flag and the default capacities are process-wide: one replay at a time
+    let _held = crate::GOLDEN_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let (mut failed, mut first) = (0, None);
     let mut count = 0;
     let null = || EeUString { string: std::ptr::null_mut(), length: 0, capacity: 0 };

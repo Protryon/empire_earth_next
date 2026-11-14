@@ -1,4 +1,4 @@
-//! `UString` whole in Rust (LLE lane rounds 3-4). Round 3 moved its searches (`Find`, `FindBackwards`) and splits
+//! `UString` and `UWideString` (`wide.rs`) whole in Rust (LLE lane rounds 3-4). Round 3 moved its searches (`Find`, `FindBackwards`) and splits
 //! (`Tokenize`, `NestedTokenize`); round 4 its storage (`record.rs`): the C++ class holds an [`EeUString`] by value
 //! (the original's buffer, length and capacity, so every record embedding a `UString` keeps its layout and
 //! `operator const char*` stays an inline read) and every member forwards here. C++ keeps what touches C++: the
@@ -10,18 +10,26 @@
 //!
 //! Goldens: `golden_us.txt` (the searches, `tests/string/us_golden.cpp`, replayed by `golden.rs`) and
 //! `golden_store.txt` (every member, `tests/string/us_store_golden.cpp`, replayed by `golden_store.rs`), both
-//! traces of the original class.
+//! traces of the original class; `golden_wide.txt` (`UWideString`, `tests/string/uws_golden.cpp`, replayed by
+//! `golden_wide.rs`).
 
 // `c_ulong` is the build's `unsigned long`: u32 on Windows, u64 on LP64, so its casts are needed on one of them
 #![allow(clippy::unnecessary_cast)]
 
 #[cfg(test)]
 mod golden;
+/// Serialises the golden replays (they set the process-wide legacy flag and default capacities).
+#[cfg(test)]
+static GOLDEN_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 #[cfg(test)]
 mod golden_store;
+#[cfg(test)]
+mod golden_wide;
 mod record;
+mod wide;
 
 pub use record::*;
+pub use wide::*;
 use std::ffi::{c_char, c_ulong};
 
 /// `strncmp(a, b, n) == 0` over strings whose bytes past their slices read as the terminator.

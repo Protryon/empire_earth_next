@@ -16,11 +16,9 @@ class FSFile;
 
 // port (decision D6): game text is UTF-8. A string a file gives UString::Load or UWideString::Load is converted from
 // Windows-1252 when it is not well-formed UTF-8, or always while a file written before the switch loads (a save of
-// version < 0.255: the loader that read the version sets the flag around the load). UConvertLoadedText (for
-// UWideString) replaces the buffer when the text grows; ioCapacity follows.
+// version < 0.255: the loader that read the version sets the flag around the load).
 inline void USetLegacyTextLoad(bool inLegacy) { ee_ustring_set_legacy_text_load(inLegacy); }
 inline bool UIsLegacyTextLoad() { return ee_ustring_is_legacy_text_load(); }
-LLE_API void UConvertLoadedText(char*& ioString, unsigned long& ioCapacity);
 
 class LLE_API UString {                    // proven sizeof 0x10 (TCP DetectedGame: UStrings at +0x20, +0x30)
 public:
