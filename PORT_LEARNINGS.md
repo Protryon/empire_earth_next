@@ -17881,3 +17881,122 @@ ChooseNetworkAdapterDialog (its NetworkAdapterListItem likewise; Reset needs the
 CreditsDialog with ScrollingTextComponent (a Component: paint and timer), TOUDialog (a `Paint` override that stays a
 C++ one-liner, the HTTP document event as a new event kind), RoomDialog (an empty table: its RoomCtrl member is never
 set); the three options popups; ChatCommandParser; then the LAN screen's controls top-down.
+
+## R6 WON round 35: the skins' Button subclasses whole in Rust: MSButtonBase, MSCheckbox, MSRadioButton and WONButton (ee_won msbtnobj.rs, wonbtnobj.rs; branch rust-r6-won35, 2026-11-14)
+
+Measured as rounds 18-34 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+75,011 at the branch's start (round 34's head merged with rust) -> 75,016 (the census, +5) -> 74,972 (MSButtonBase,
+-44) -> 74,965 (MSCheckbox, -7) -> 74,952 (MSRadioButton, -13) -> 74,616 (WONButton, -336). This round's own net:
+-395. Merged with rust (itself 73,695): 73,300.
+
+- **The census first** (its own commit). Round 34's list was a plain grep of the field names: most of its hits are
+  other classes' own fields of the same name (`mIsTransparent` of MSScrollComposition, MSTabComposition, SkinTab,
+  WONScrollbar, WONTabCtrl and the configs in WONLobbyMSExtraConfig.h / WONLobbyWONListConfig.h; WONSimpleButton's
+  `mScaleImage` in WONControlDuplicates; the TabCtrl's in MSControlPainters). The real readers outside the classes:
+  MSButton's paint and MSLabel's (the transparency), MSHeaderButton's (the left pad), the constructors of MSButton,
+  MSTabButton (the transparency flag alone), MSLabel, MSCheckbox and MSRadioButton (the pads, the colour, the
+  alignment field alone: their original wrote `mHAlign` without the text's `SetCentered`), WONHeaderButton's
+  constructor and paint (the pads). They now use accessors (`IsTransparent`, `SetTransparentField`, `GetLeftTextPad`,
+  `SetLeftTextPad`, `SetHorzAlignField`; WONButton's `GetLeftTextPad`) or the existing inline setters, whose stores
+  are the same (`unsigned char` pads). MSCheckbox's and MSRadioButton's own paints also read the base's fields: the
+  census missed them (they are the next commits' classes) and the MSButtonBase commit routed them through a
+  temporary `MsField` read until their own moves.
+- **The NULL-receiver audit.** Every moved method's original body reads `this` on every path (the wrapped text,
+  a member or a virtual) but one: `WONButton::DrawButtonText` returned before reading anything when the text is
+  NULL. It has no caller in the tree (WONButton's paint uses the plan directly; WONHeaderButton calls
+  GetButtonState only), so no guard was added. The other receivers: `this` in the paints and constructors, the
+  configs' `mMSButton` / `mButton` (set by SetComponent), the header controls' new buttons, the skin composition's
+  push buttons. The painter functions read their button argument, a live `this`.
+- **MSButtonBase** (`msbtnobj.rs`): the standard and own text colours, the alignments, the focus style, the four
+  pads (bytes, as the original's), the transparent and fit-to-text flags, with GetDesiredSize, SetTransparent,
+  AdjustHeightToFitText, SetAdjustHeightToFitText, Virtual08, DrawButtonText and the header's setters
+  (`EeWonMsBtnCall`, the fields `EeWonMsBtnField`). The C++ keeps the wrapped text `mText` (GetText, the fixture,
+  the lobby and MSHeaderButton's paint read it; SetTextHook sets it before the Rust's refit); its calls are the
+  label's `Wrap*` ops, its paint the `Draw` op's text slot. Op 607 `SkinBtn` (`EeWonSkinBtn`): the disabled,
+  focus, pressed and checked reads, the parent and its dialog keys, the grab and want-focus flags, the button
+  flags. MSButton, MSTabButton, MSLabel and MSHeaderButton keep their C++ paints over the accessors and the Rust
+  DrawButtonText.
+- **MSCheckbox and MSRadioButton** (their own commits): Init and Paint are `BoxInit` / `BoxPaint` of the Rust
+  button base with the subclass (`EeWonMsBox`) and the box's size (the C++ statics, read at the call as the
+  original read them). The replaceable painter functions stay C++ statics, called through op 608
+  `SkinBoxPainter`; the host asserts `StandardColor_Text == 14` (the check box's colour in Rust).
+- **WONButton** (`wonbtnobj.rs`): the ten states (a text, an image and a colour each), the font map (`Font*` ->
+  wrapped text, a `BTreeMap` by address as the original's `std::map<Font*,...>` ordered it; the keys raw, as the
+  original's), the text and focus pads, the push, the default colour, the five flags and three bytes, with every
+  method of WONButton.cpp and WONButtonSetup.cpp's state; SetButtonState and CopyAttributes have their own entry
+  points. The texts, images and fonts are C++ objects whose references the Rust holds as the original's `SmartPtr`s
+  did: ops 609-612 (`WbText`: new, hold, release, set text / maximum width / wrap / centring / font, the measures,
+  the font, the text; `WbImage`: hold, release, size, Duplicate; `WbFont`: the default font, hold, release;
+  `WbBaseCopy`: Button::CopyAttributes). A new text or a duplicate is answered with one reference (the Rust's), as
+  round 33's popup window was. The paint is the existing `guidraw::button` / `button_text_paint` plans, each
+  operation through the `Draw` op with the state's image and text in the slots; GetButtonState uses guifocus's
+  state and cells directly. Duplicate stays C++ (a new button and CopyAttributes); the constructor keeps its two
+  Button calls (the button flag 1, WantFocus).
+- **Behaviour changes, on undefined paths only:** SetButtonState with a state outside 0..4 is clamped (the
+  original wrote past `mStates`); AdjustHeightToFitText calls the Rust GetTextSize (the original's was virtual; no
+  subclass overrides it); the font map's and states' references go back in key order at a clear, a copy and the
+  destructor (the original's tree in its own order). A WONButton copied onto itself is not supported (no caller does).
+- **The goldens.**
+  - `tests/won/won_msbtnobj_test.cpp`: the original statements over a logged draw world (the size, a wrapped text
+    whose measures follow its text, wrap, centring and maximum width, the button's disabled, focus, pressed and
+    checked state, the parent and its dialog keys; every draw traced). 20,000 sequences of 40 calls, 3,034,184
+    trace lines at the radio commit, identical at each commit on the first run. Mutations (each restored with `git
+    checkout` after its commit; the restored source: 0 every time): MSButtonBase: the disabled emboss without the
+    x shift (13,078 sequences), the focus without the parent's dialog keys (7,761), SetTransparent grabbing when
+    cleared (11,701), the fit ignoring its flag (19,182), SetAdjustHeightToFitText not refitting (14,751), the wrap
+    width without the right pad (19,704), SetHorzAlign never centring (7,136), the text's focus rectangle not one
+    pixel out (757), SetStandardTextColor keeping the own colour (3,590), the vertical centre not halved (15,132).
+    MSCheckbox: the face filled when transparent (7,581), the box without the top pad (19,416), the translation
+    back without the box's place (16,864), the bottom box placed as centred (4,034), the text pad without the gap
+    (14,519), no WantFocus (15,791), the button text colour kept (10,353). MSRadioButton: flag 4 for 8 (10,699),
+    the focus around the window (1,747), the text left centred (5,250), every box drawn by the check box's painter
+    (17,145).
+  - `tests/won/won_wonbtnobj_test.cpp`: two buttons over a world of fonts, images and wrapped texts as ids with
+    reference counts (a release to zero deletes; an op on a deleted object is traced as a use after free), the
+    texts' measures following their text, wrap, centring, maximum width and font. Holds and releases are not traced
+    (the original's `std::map` copy and clear order differ between standard libraries); the counts are compared
+    after every call and at the end every reference must be back at the world's. 20,000 sequences of 40 calls,
+    4,004,655 trace lines, identical and clean on the first run. Mutations: a SmartPtr assignment never giving the old object back (16,236
+    sequences), SetHorzAlign switching left and right (1,828), SetTextColor with scaled images missing the checked
+    default state (54), GetDesiredSize growing to the images when scaled (11,865), a new font's text made wrapping
+    (19,943), CopyAttributes not copying the default text colour (266), CopyAttributes giving the new texts the
+    source's wrap (3,621), CopyAttributes sharing the images when scaled (7,118), the state's colour without the
+    default fallback (13,355), the size change wrapping when not asked (15,365), CopyAttributes ignoring the
+    source's translucency (7,192), the destructor keeping the font map's texts (18,760). All twelve failed it at
+    once; the restored source: 0.
+  - `golden_msbtnobj.txt` (40 sequences) and `golden_wonbtnobj.txt` (40) are replayed by cargo: each op must be the
+    next line and is answered by it; the replays fail on a text draw moved by one and on a draw's text slot changed.
+- **Lessons:**
+  - A census by field name over-reports: the same member names are other classes' own. Build with the fields
+    removed (round 32's method) and read each error's class.
+  - A golden whose world counts references but does not trace the holds and releases stays the same across
+    standard libraries; the cargo replay then must skip the reference lines and model nothing of them.
+  - The NULL-text op in the world needs its own replay line (the replay first failed on `609 NULL text 8`, the
+    SetFont over an empty normal state).
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-3 identical
+  after every commit). The LAN game (`lan_game.py`) builds every MS-skin button of the lobby screens and the
+  dialogs (push buttons, tabs, check boxes, radio buttons, headers, labels) and, where a WON skin is loaded, the
+  WON buttons: their constructors, configs (SetButtonState, the pads, the alignments), the texts set and fitted,
+  the size changes and the paints. `lan_game.py` RESULT PASS after the three MS commits (7459670d: PT host 2953, joiner 2933) and after
+  WONButton (e7c9d00e: PT 2855, 2850), no fault line in either game.log. On the merged tree the first run failed:
+  the joiner faulted (0xc0000005) in `LobbyGame::AreAllReady` reading a NULL client list, called by the test
+  fixture's `LobbyWork` (EETestFixture.cpp's "lobby shown ..." line) from a timer while the join's status dialog
+  ran (`DialogLogic::RunOpWithStatus` -> `DoDialog` -> the message loop). No button frame; neither this round nor
+  the merge touched those files: the fixture reads a game whose client list is not made yet (it tests the list
+  for the count but not for `AreAllReady`). The rerun passed (PT 2837, 2841). Both crash game.logs are kept in
+  `build/r35/lan3_crash` of the branch's worktree.
+- **Draws that changed path (for the lobby captures):** MSButtonBase::DrawButtonText (every MS button's, tab's,
+  check box's, radio button's, header's and MS label's text: the colour, the grey emboss, the text, the dotted
+  focus rectangle) is now Rust's operations through the button's `Draw` op (WONDrawOne: `SetSysColor`, `SetColor`
+  with the same bits, `WrappedText::Paint`, `DrawDottedRect`); MSCheckbox's and MSRadioButton's whole paint
+  (Component::Paint, the 3D-face fill, the two translations around the C++ painter); WONButton's paint and text
+  (the same guidraw plans as before, now run one operation at a time through the host instead of WONDrawRun). The
+  lobby captures alone show them; only a person tabs to a check box for its focus rectangle around the text.
+- **The merge of rust** (008e14c0, WONLobby round 1 among others) conflicted only in `rust/cbindgen.toml`'s include
+  list (this round's seven names added to rust's) and the generated `ee_won.h` (regenerated); `rust_includes.py`
+  changed nothing. **Gates:** per commit the build `--sim` 0/0 and the oracle at seeds 2-3 identical; the Rust gate
+  PASS at the MSButtonBase and WONButton commits (clippy and the msbtnobj tests at the check box and radio ones). On
+  the merged tree: build `--sim` and the test profile 0/0, the oracle at seeds 2-7 identical, the Rust gate PASS,
+  `xbuild.py wontest` 97 programs exit 0, `lan_game.py` as above.
+- **Left:** the painters and compositions those classes share (MSControlPainters, MSRemainingPainters'
+  MSButton/MSHeaderButton/MSLabel paints, MSTabButton, the skins' compositions), then the remaining WONGUI paint.

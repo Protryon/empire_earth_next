@@ -94,6 +94,7 @@ pub mod md5;
 pub mod menuobj;
 pub mod miscops;
 pub mod model;
+pub mod msbtnobj;
 pub mod multiobj;
 pub mod multiping;
 /// cbindgen:ignore
@@ -155,6 +156,7 @@ pub mod wire;
 pub mod wmcache;
 pub mod wmloop;
 pub mod wmobj;
+pub mod wonbtnobj;
 
 #[cfg(test)]
 mod buffer_golden;

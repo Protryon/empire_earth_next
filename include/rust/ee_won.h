@@ -2928,6 +2928,19 @@ enum class EeWonGuiOp : uint32_t {
   WmResolution,
   /// `Signal()` (virtual; any thread: PostEvent's wake-up).
   WmSignal,
+  /// a button's or component's method (`a` an `EeWonSkinBtn`; `b`, `c` its arguments).
+  SkinBtn = 607,
+  /// the check box's or radio button's painter function on the Graphics `a` (`b` an `EeWonMsBox`):
+  /// `MSCheckbox::CheckboxPainter(*(Graphics*)a, this)` / `MSRadioButton::RadioPainter`.
+  SkinBoxPainter,
+  /// a wrapped text's method (`a` an `EeWonWbText`, `b` the `WrappedText*`, `c` its argument).
+  WbText,
+  /// an image's method (`a` an `EeWonWbImage`, `b` the `Image*`).
+  WbImage,
+  /// a font's (`a` an `EeWonWbFont`, `b` the `Font*`).
+  WbFont,
+  /// `Button::CopyAttributes((Button*)a)`.
+  WbBaseCopy,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4306,6 +4319,40 @@ enum class EeWonMenuCall : uint32_t {
   MouseUpCount,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonMsBtnCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `SetTextHook`'s step after the C++ set the text: `AdjustHeightToFitText`.
+  TextSet,
+  /// `SetTransparent(a != 0)`.
+  SetTransparent,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `AdjustHeightToFitText()`.
+  AdjustHeightToFitText,
+  /// `DrawButtonText(*a, b, c)` (`a` the Graphics).
+  DrawButtonText,
+  /// the field `a` (`EeWonMsBtnField`).
+  Get,
+  /// the field `a` = `b`.
+  Set,
+  /// `SetHorzAlign(a)`: the field, then the text centred when it is `HorzAlign_Center`.
+  SetHorzAlign,
+  /// `SetStandardTextColor(a)`: the standard colour, the own colour -1.
+  SetStandardTextColor,
+  /// `IncrementHorzTextPad(a, b)` (each pad plus the low byte, as `unsigned char`).
+  IncrementHorzTextPad,
+  /// `IncrementVertTextPad(a, b)`.
+  IncrementVertTextPad,
+  /// the subclass `a`'s (`EeWonMsBox`) `Init()`, its box `b` pixels wide.
+  BoxInit,
+  /// the subclass `a`'s `Paint(*b)`, its box `c` pixels high.
+  BoxPaint,
+};
+
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
 enum class EeWonMultiCall : uint32_t {
   /// `AdjustPosition(a != 0)`.
@@ -5056,6 +5103,50 @@ enum class EeWonWmCall : uint32_t {
   DeliverEvent,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonWbCall : uint32_t {
+  /// `SetTextHook(*(const GUIString*)a)`.
+  SetTextHook = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `AdjustHeightToFitText()`.
+  AdjustHeightToFitText,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `SetWrapText(a != 0)`.
+  SetWrapText,
+  /// `SetTransparent(a != 0)`.
+  SetTransparent,
+  /// `SetButtonState(a, (Image*)b, c, (Font*)d, checked)` with the checked flag as `e`: see
+  /// `ee_won_wonbtn_set_state`.
+  SetButtonState,
+  /// `GetTextSize(*a, *b)` (`a`, `b` point at i32s).
+  GetTextSize,
+  /// `GetDesiredSize(*a, *b)`.
+  DesiredSize,
+  /// `SetHorzAlign(a)`.
+  SetHorzAlign,
+  /// `SetTextColor(a)`.
+  SetTextColor,
+  /// `SetFont((Font*)a)`.
+  SetFont,
+  /// `CopyAttributes(from)`, `a` the source's Rust button (`ee_won_wonbtn_of`) and `b` its C++ `WONButton*`.
+  CopyAttributes,
+  /// `DrawButtonText(*a, (WrappedText*)b, c)`.
+  DrawButtonText,
+  /// `GetButtonState`: the colour into `*(int*)b`, the text into `*(WrappedText**)c` and the image into
+  /// `*(Image**)d` (each skipped when NULL); `a` the Graphics (unused, as in the original).
+  GetButtonState,
+  /// `Paint(*a)`.
+  Paint,
+  /// `GetText()`: the first font's text's `GUIString*`, 0 when there is no font.
+  GetText,
+  /// the field `a` (`EeWonWbField`).
+  Get,
+  /// the field `a` = `b`.
+  Set,
+};
+
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
 /// caught it in `HandleMessage` and did nothing more); outside every `short` status.
 enum class EeWonLobbyResult {
@@ -5628,6 +5719,152 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   ComboSelChanged = 3,
 };
 
+/// The button's and component's methods a skin button calls (`SkinBtn`).
+enum class EeWonSkinBtn : uint32_t {
+  /// `IsDisabled()` (0 or 1).
+  IsDisabled = 1,
+  /// `HasFocus()` (0 or 1).
+  HasFocus,
+  /// `mParent` (a `Container*`; a pure read).
+  Parent,
+  /// `((Container*)b)->HasUsedDialogKeys()` (0 or 1).
+  UsedDialogKeys,
+  /// `IsPressed()` (0 or 1).
+  IsPressed,
+  /// `IsChecked()` (0 or 1).
+  IsChecked,
+  /// `SetComponentFlags(ComponentFlag_GrabBG, true)`.
+  SetGrabBG,
+  /// `SetComponentFlags(ComponentFlag_WantFocus, b != 0)`.
+  SetWantFocus,
+  /// `SetButtonFlags(b, c != 0)`.
+  SetButtonFlags,
+  /// `GetButtonFlags()`.
+  ButtonFlags,
+  /// `IsDefaultButton()` (0 or 1).
+  IsDefaultButton,
+  /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
+  FlagSet,
+  /// `SetComponentFlags(b, true)`.
+  SetFlag,
+};
+
+/// A field of the button base (`Get` / `Set` calls). A set stores what the original's member held: the
+/// alignments, focus style and pads as `unsigned char`.
+enum class EeWonMsBtnField : uint32_t {
+  /// `mStandardTextColor`.
+  StandardTextColor = 1,
+  /// `mTextColor` (-1: the standard colour).
+  TextColor,
+  /// `mHAlign` (the field alone; `SetHorzAlign` also centres the text).
+  HAlign,
+  /// `mVAlign`.
+  VAlign,
+  /// `mFocusStyle`.
+  FocusStyle,
+  /// `mTopTextPad`.
+  TopTextPad,
+  /// `mBottomTextPad`.
+  BottomTextPad,
+  /// `mLeftTextPad`.
+  LeftTextPad,
+  /// `mRightTextPad`.
+  RightTextPad,
+  /// `mIsTransparent` (the flag alone; `SetTransparent` also grabs the background).
+  Transparent,
+  /// `mAdjustHeightToFitText` (the flag alone).
+  AdjustHeight,
+};
+
+/// The subclass whose box a `BoxInit` / `BoxPaint` call makes (`MSCheckbox`, `MSRadioButton`); the painter op's
+/// `b`.
+enum class EeWonMsBox : uint32_t {
+  /// `MSCheckbox`: its `CheckboxPainter`.
+  Checkbox = 0,
+  /// `MSRadioButton`: its `RadioPainter`.
+  Radio = 1,
+};
+
+/// A wrapped text's method (`WbText`; `b` the text).
+enum class EeWonWbText : uint32_t {
+  /// `new WrappedText`, answered with one reference (the Rust's).
+  New = 1,
+  /// `AddRef()` (a `SmartPtr` the Rust holds).
+  Hold,
+  /// `Release()`.
+  Release,
+  /// `SetText(*(const GUIString*)c)`.
+  SetText,
+  /// `SetMaxWidth(c)`.
+  SetMaxWidth,
+  /// `SetWrap(c != 0)`.
+  SetWrap,
+  /// `SetCentered(c != 0)`.
+  SetCentered,
+  /// `SetFont((Font*)c)`.
+  SetFont,
+  /// `GetWidth()`.
+  Width,
+  /// `GetHeight()`.
+  Height,
+  /// `mFont.get()` (a pure read).
+  Font,
+  /// `&GetText()` (a `const GUIString*`).
+  Text,
+};
+
+/// An image's method (`WbImage`; `b` the image).
+enum class EeWonWbImage : uint32_t {
+  /// `AddRef()`.
+  Hold = 1,
+  /// `Release()`.
+  Release,
+  /// `mWidth`.
+  Width,
+  /// `mHeight`.
+  Height,
+  /// `Duplicate()`, answered with the returned `SmartPtr`'s reference.
+  Duplicate,
+};
+
+/// A font's (`WbFont`; `b` the font).
+enum class EeWonWbFont : uint32_t {
+  /// `WindowManager::GetDefaultWindowManager()->GetDefaultFont()` (raw).
+  Default = 1,
+  /// `AddRef()`.
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// A field of the button (`Get` / `Set` calls).
+enum class EeWonWbField : uint32_t {
+  /// `mAdjustHeightToFitText` (the flag alone).
+  AdjustHeight = 1,
+  LeftTextPad,
+  TopTextPad,
+  RightTextPad,
+  BottomTextPad,
+  LeftFocusPad,
+  TopFocusPad,
+  RightFocusPad,
+  BottomFocusPad,
+  PushDX,
+  PushDY,
+  DefaultTextColor,
+  HasCheck,
+  ScaleImage,
+  /// `mWrapText` (the flag alone; `SetWrapText` also sets the texts').
+  WrapText,
+  DrawGrayText,
+  /// `mIsTransparent` (the flag alone; `SetTransparent` also grabs the background).
+  Transparent,
+  /// `mHAlign` (the field alone; `SetHorzAlign` also centres the texts).
+  HAlign,
+  VAlign,
+  FocusStyle,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -5744,6 +5981,9 @@ struct EeWonMRow;
 /// The Rust PopupMenu.
 struct EeWonMenu;
 
+/// The Rust MSButtonBase.
+struct EeWonMsButton;
+
 /// The Rust MultiListArea.
 struct EeWonMulti;
 
@@ -5847,6 +6087,9 @@ struct EeWonWindow;
 /// `cur_depth` (an atomic: the message loop's depth PostEvent reads), and make the event's `Hold` and the
 /// `Signal` ops, which the C++ answers on any thread.
 struct EeWonWm;
+
+/// The Rust WONButton.
+struct EeWonWonButton;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -13165,6 +13408,23 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 size_t data_length,
                                 uint16_t *out_count);
 
+/// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
+EeWonMsButton *ee_won_msbtn_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `btn` came from `ee_won_msbtn_new` (or is NULL) and is not used again.
+void ee_won_msbtn_free(EeWonMsButton *btn);
+
+/// One of MSButtonBase's methods (`EeWonMsBtnCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_msbtn_call(const EeWonMsButton *btn,
+                            EeWonMsBtnCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
 /// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMulti *ee_won_multi_new(void *component,
                              EeWonGuiHostFn host,
@@ -16354,6 +16614,41 @@ ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
 size_t ee_won_wm_cache_line(const EeWonWm *wm,
                             uint8_t *buf,
                             size_t cap);
+
+/// A new Rust WONButton for the C++ `component`, its calls out through `host`.
+EeWonWonButton *ee_won_wonbtn_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `btn` came from `ee_won_wonbtn_new` (or is NULL) and is not used again.
+void ee_won_wonbtn_free(EeWonWonButton *btn);
+
+/// One of WONButton's methods (`EeWonWbCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_wonbtn_call(const EeWonWonButton *btn,
+                             EeWonWbCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d);
+
+/// `SetButtonState(state, image, color, font, checked)`.
+///
+/// # Safety
+/// `btn` is live.
+void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
+                             int32_t state,
+                             void *image,
+                             int32_t color,
+                             void *font,
+                             bool checked);
+
+/// `CopyAttributes(from)`: `from` the source's Rust button, `from_comp` its C++ `WONButton*`.
+///
+/// # Safety
+/// Both buttons are live and distinct (`Duplicate` copies onto a new button).
+void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
 
 }  // extern "C"
 
