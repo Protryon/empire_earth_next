@@ -23,6 +23,7 @@
 
 pub mod actions;
 pub mod ai;
+pub mod animate;
 pub mod build;
 pub mod calamity;
 pub mod commands;

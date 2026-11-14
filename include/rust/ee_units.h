@@ -1870,6 +1870,68 @@ struct EeUnitsAIHost {
   void (*set_next_trigger_time)(void *ctx, uint32_t value);
 };
 
+/// The unit's and its model's numbers for its current animation state (`state`).
+struct EeUnitsAnimateIn {
+  /// `mIsAnimationPaused`
+  bool paused;
+  /// the model's `mLoops[state]`
+  bool loops;
+  /// `mIsSpeedScaled[state]`
+  bool speed_scaled;
+  /// `mSharesFrames[state]`
+  bool shares_frames;
+  /// the unit's stats' `mCanFireOverWalls`
+  bool can_fire_over_walls;
+  /// `IsFoundation()`
+  bool foundation;
+  /// `GetAnimation()`
+  uint32_t state;
+  /// `gPhysics->mTickTimeMs`
+  uint32_t tick_ms;
+  /// `mAnimationTime`
+  uint32_t time;
+  /// `mPhysicalModel.GetFrame()`
+  uint32_t frame;
+  uint32_t hold_time;
+  uint32_t start_frame;
+  uint32_t last_frame;
+  uint32_t frame_count;
+  uint32_t frame_time;
+  uint32_t sound1_frame;
+  uint32_t sound2_frame;
+  /// `GetVelocity()`, the class's `GetMaxVelocity()`
+  float velocity;
+  float max_velocity;
+  /// `mAngularVelocity.GetYaw()`, the class's `mMaxAngularVelocity`
+  float yaw_velocity;
+  float max_angular_velocity;
+};
+
+/// What the tick does: each `set_*` flag with its value, applied in this order.
+struct EeUnitsAnimateOut {
+  /// `SetIsAnimationPaused(paused)`
+  bool set_paused;
+  bool paused;
+  /// `SetAnimationFrame(frame)`
+  bool set_frame;
+  uint32_t frame;
+  /// `SetAnimationTime(time)`
+  bool set_time;
+  uint32_t time;
+  /// the unit's sound stopped and released
+  bool stop_sound;
+  /// the paused loop's idle pick: the C++ draws `GetRandom()` and sets animation 7 or 8 (with the horse's breath)
+  bool idle_pick;
+  /// the sound to play: 0 none, 1 the state's first, 2 its second
+  uint32_t sound;
+  /// a running animation only: `mAnimationFraction = fraction` when it differs (the C++ compares, after the
+  /// setters), `SetNextFrame(next_frame)`
+  float fraction;
+  uint32_t next_frame;
+  /// the frames stepped (the return value)
+  uint32_t steps;
+};
+
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
 struct EeUnitRecord {
@@ -2408,6 +2470,12 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
                                   uint64_t object,
                                   uint8_t is_citizen,
                                   int64_t game_time);
+
+/// `EEUnitClass::Animate`'s decisions (`out` filled).
+///
+/// # Safety
+/// `input` and `out` are valid.
+void ee_units_animate(const EeUnitsAnimateIn *input, EeUnitsAnimateOut *out);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
