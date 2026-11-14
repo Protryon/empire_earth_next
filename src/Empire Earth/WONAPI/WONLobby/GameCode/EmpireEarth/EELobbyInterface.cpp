@@ -172,7 +172,7 @@ void EELobbySlotToPlayer(EEGameOptionsPlayer& outPlayer, EELobbyPlayerSlot* inSl
         outPlayer.mType = 4;
         return;
     }
-    switch (inSlot->mOptions[0]) {
+    switch (inSlot->Option(0)) {
     case 0:
         outPlayer.mType = 4;
         return;
@@ -183,18 +183,18 @@ void EELobbySlotToPlayer(EEGameOptionsPlayer& outPlayer, EELobbyPlayerSlot* inSl
         outPlayer.mType = 4;
         return;
     case 3:
-        outPlayer.mType = inSlot->mOptions[4] != 0 ? 2 : 1;
+        outPlayer.mType = inSlot->Option(4) != 0 ? 2 : 1;
         break;
     }
-    if (inSlot->mOptions[0] == 3)
+    if (inSlot->Option(0) == 3)
         outPlayer.mName = EELobbyToWideString(inSlot->GetName());
     outPlayer.mIsReady = false;
     outPlayer.mB36 = false;
     if (outPlayer.mType == 1)
-        outPlayer.mColor = inSlot->mOptions[2];
+        outPlayer.mColor = inSlot->Option(2);
     if (outPlayer.mType != 2) {
-        outPlayer.mTeam = inSlot->mOptions[1];
-        outPlayer.mStartingCitizens = inSlot->mOptions[3];
+        outPlayer.mTeam = inSlot->Option(1);
+        outPlayer.mStartingCitizens = inSlot->Option(3);
     }
 }
 
