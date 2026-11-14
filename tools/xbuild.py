@@ -495,6 +495,9 @@ WON_TESTS = {
     # WONButton as a whole Rust object (wonbtnobj.rs) over a logged world of texts, images and fonts with reference
     # counts (golden: rust/crates/ee_won/src/golden_wonbtnobj.txt)
     "won_wonbtnobj_test": [],
+    # the Windows skin's drawing helpers and MS control paints as Rust plans (mspaint.rs) against the original
+    # statements over a logged Graphics (golden: rust/crates/ee_won/src/golden_mspaint.txt)
+    "won_mspaint_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

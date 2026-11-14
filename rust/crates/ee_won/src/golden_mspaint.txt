@@ -1,0 +1,4650 @@
+P 6 2007 47 21 33 27 32 26 51
+translate 33 27
+sys 1
+ellipse 0 0 47 21
+sys 3
+arc 0 0 47 21 45 180
+sys 0
+arc 1 1 45 19 45 180
+sys 2
+arc 0 0 47 21 235 180
+sys 1
+arc 1 1 45 19 235 180
+translate -33 -27
+P 19 862 51 21 38 51 33 40 53
+sys 2
+rect 0 0 51 21
+rect 1 1 50 20
+sys 3
+rect 0 0 50 20
+P 23 1976 23 56 59 23 27 26 25
+sys 4
+fill 59 49 27 25
+P 16 1299 29 5 1 26 0 28 49
+translate 0 0
+sys 2
+rect 0 0 29 5
+sys 0
+line 0 0 28 0
+line 0 0 0 4
+sys 1
+line 27 1 27 3
+line 27 3 2 3
+sys 3
+line 1 1 27 1
+line 1 1 1 3
+translate 0 0
+P 21 168 13 40 31 52 28 20 46
+P 14 120 39 56 3 -1 50 16 39
+sys 1
+fill 0 0 39 56
+translate 0 0
+sys 0
+line 38 0 38 55
+line 0 55 38 55
+sys 2
+line 1 1 1 54
+line 1 1 37 1
+sys 3
+line 1 54 37 54
+line 37 54 37 1
+translate 0 0
+P 14 398 25 35 9 39 40 19 44
+sys 1
+fill 0 0 25 35
+translate 0 0
+sys 0
+line 24 0 24 34
+line 0 34 24 34
+sys 2
+line 1 1 1 33
+line 1 1 23 1
+sys 3
+line 1 33 23 33
+line 23 33 23 1
+translate 0 0
+P 2 1208 56 8 15 11 12 17 25
+translate 15 11
+sys 0
+line 55 0 55 7
+line 0 7 55 7
+sys 2
+line 1 1 1 6
+line 1 1 54 1
+sys 3
+line 1 6 54 6
+line 54 6 54 1
+translate -15 -11
+P 1 1217 53 4 40 5 18 8 0
+translate 40 5
+sys 2
+rect 0 0 53 4
+sys 0
+line 0 0 52 0
+line 0 0 0 3
+sys 1
+line 51 1 51 2
+line 51 2 2 2
+sys 3
+line 1 1 51 1
+line 1 1 1 2
+translate -40 -5
+P 18 888 23 18 42 39 40 37 31
+sys 1
+fill 0 0 23 18
+P 24 1293 -3 44 34 31 20 9 6
+translate 0 17
+sys 2
+line 0 1 31 1
+line 20 1 -4 1
+line -4 0 -4 26
+line 0 26 -4 26
+line 1 1 1 26
+sys 3
+line 0 0 31 0
+line 20 0 -5 0
+line -5 0 -5 25
+line 0 25 -5 25
+line 0 0 0 25
+translate 0 -17
+P 13 1398 11 8 11 7 9 41 50
+sys 1
+fill 0 0 11 8
+translate 0 0
+sys 2
+rect 0 0 11 8
+sys 0
+line 10 0 10 7
+line 0 7 10 7
+sys 3
+line 1 6 9 6
+line 9 6 9 1
+translate 0 0
+translate 0 0
+sys 5
+line 1 0 2 0
+line 8 0 7 0
+line 1 7 2 7
+line 8 7 7 7
+line 2 1 3 1
+line 7 1 6 1
+line 2 6 3 6
+line 7 6 6 6
+line 3 2 4 2
+line 6 2 5 2
+line 3 5 4 5
+line 6 5 5 5
+line 4 3 5 3
+line 5 3 4 3
+line 4 4 5 4
+line 5 4 4 4
+translate 0 0
+P 8 1687 1 11 19 20 59 52 7
+translate 19 20
+sys 5
+line -4 1 -3 1
+line 3 1 2 1
+line -4 8 -3 8
+line 3 8 2 8
+line -3 2 -2 2
+line 2 2 1 2
+line -3 7 -2 7
+line 2 7 1 7
+line -2 3 -1 3
+line 1 3 0 3
+line -2 6 -1 6
+line 1 6 0 6
+line -1 4 0 4
+line 0 4 -1 4
+line -1 5 0 5
+line 0 5 -1 5
+translate -19 -20
+P 14 534 55 1 28 25 32 14 53
+sys 1
+fill 0 0 55 1
+translate 0 0
+sys 0
+line 54 0 54 0
+line 0 0 54 0
+sys 2
+line 1 1 1 -1
+line 1 1 53 1
+sys 3
+line 1 -1 53 -1
+line 53 -1 53 1
+translate 0 0
+P 5 1448 60 -2 56 27 18 59 39
+translate 56 27
+sys 13
+fill 0 0 60 -2
+sys 3
+line 0 0 59 0
+line 0 0 0 -3
+sys 2
+line 59 0 59 -3
+line 0 -3 59 -3
+sys 0
+line 1 1 58 1
+line 1 1 1 -4
+sys 1
+line 58 1 58 -4
+line 1 -4 58 -4
+sys 14
+line 3 -2 3 0
+line 4 -1 4 1
+line 5 0 5 2
+line 6 -1 6 1
+line 7 -2 7 0
+line 8 -3 8 -1
+line 9 -4 9 -2
+translate -56 -27
+P 23 731 53 55 10 46 26 9 7
+translate 0 0
+sys 2
+rect 0 0 53 55
+sys 0
+line 0 0 52 0
+line 0 0 0 54
+sys 1
+line 51 1 51 53
+line 51 53 2 53
+sys 3
+line 1 1 51 1
+line 1 1 1 53
+translate 0 0
+P 20 794 25 43 29 14 12 45 13
+translate 0 0
+sys 0
+rect 0 0 25 43
+sys 2
+line 24 0 24 42
+line 0 42 24 42
+sys 3
+line 1 1 23 1
+line 1 1 1 41
+sys 1
+line 23 1 23 41
+line 1 41 23 41
+translate 0 0
+P 14 1723 42 1 11 45 46 59 5
+sys 1
+fill 0 0 42 1
+translate 0 0
+sys 0
+line 41 0 41 0
+line 0 0 41 0
+sys 2
+line 1 1 1 -1
+line 1 1 40 1
+sys 3
+line 1 -1 40 -1
+line 40 -1 40 1
+translate 0 0
+P 1 905 39 28 7 55 -8468 60 34
+translate 7 55
+sys 2
+rect 0 0 39 28
+sys 0
+line 0 0 38 0
+line 0 0 0 27
+sys 1
+line 37 1 37 26
+line 37 26 2 26
+sys 3
+line 1 1 37 1
+line 1 1 1 26
+translate -7 -55
+P 7 670 12 54 9 14 36 25 16
+sys 1
+fill 9 16 3 38
+line 11 15 11 15
+line 10 16 11 16
+sys 2
+line 9 16 9 53
+pixel 10 15 5002
+line 11 14 10 14
+sys 3
+line 10 16 10 53
+sys 0
+pixel 10 15 5000
+line 11 16 11 53
+P 22 1249 8 16 13 5 30 52 21
+translate 0 0
+sys 0
+rect 0 0 8 16
+sys 2
+line 7 0 7 15
+line 0 15 7 15
+sys 3
+line 1 1 6 1
+line 1 1 1 14
+sys 1
+line 6 1 6 14
+line 1 14 6 14
+translate 0 0
+P 22 1987 36 58 40 48 19 20 12
+translate 0 0
+sys 0
+rect 0 0 36 58
+sys 2
+line 35 0 35 57
+line 0 57 35 57
+sys 3
+line 1 1 34 1
+line 1 1 1 56
+sys 1
+line 34 1 34 56
+line 1 56 34 56
+translate 0 0
+P 24 130 41 21 56 54 2147483632 51 26
+translate 0 28
+sys 2
+line 0 1 54 1
+line 2147483632 1 40 1
+line 40 0 40 -8
+line 0 -8 40 -8
+line 1 1 1 -8
+sys 3
+line 0 0 54 0
+line 2147483632 0 39 0
+line 39 0 39 -9
+line 0 -9 39 -9
+line 0 0 0 -9
+translate 0 -28
+P 22 1326 15 15 47 10 47 11 53
+P 5 823 37 -1 31 -3 56 4 5
+translate 31 -3
+sys 1
+fill 0 0 37 -1
+sys 3
+line 0 0 36 0
+line 0 0 0 -2
+sys 2
+line 36 0 36 -2
+line 0 -2 36 -2
+sys 0
+line 1 1 35 1
+line 1 1 1 -3
+sys 1
+line 35 1 35 -3
+line 1 -3 35 -3
+sys 14
+line 3 -1 3 1
+line 4 0 4 2
+line 5 1 5 3
+line 6 0 6 2
+line 7 -1 7 1
+line 8 -2 8 0
+line 9 -3 9 -1
+translate -31 3
+P 12 1856 -1 60 2 25 31 49 45
+P 20 3 8 47 50 35 2 10 43
+translate 0 0
+sys 0
+rect 0 0 8 47
+sys 2
+line 7 0 7 46
+line 0 46 7 46
+sys 3
+line 1 1 6 1
+line 1 1 1 45
+sys 1
+line 6 1 6 45
+line 1 45 6 45
+translate 0 0
+P 21 817 57 29 36 30 3 53 43
+P 14 1967 0 0 2147483632 36 5 42 17
+sys 1
+fill 0 0 0 0
+translate 0 0
+sys 0
+line -1 0 -1 -1
+line 0 -1 -1 -1
+sys 2
+line 1 1 1 -2
+line 1 1 -2 1
+sys 3
+line 1 -2 -2 -2
+line -2 -2 -2 1
+translate 0 0
+P 11 834 42 26 0 53 48 25 13
+sys 1
+fill 0 0 42 26
+text 0 0
+P 23 957 5 50 14 37 15 9 47
+P 19 119 27 14 25 21 35 14 8
+sys 2
+rect 0 0 27 14
+rect 1 1 26 13
+sys 3
+rect 0 0 26 13
+P 5 918 30 25 56 39 20 29 27
+translate 56 39
+sys 13
+fill 0 0 30 25
+sys 3
+line 0 0 29 0
+line 0 0 0 24
+sys 2
+line 29 0 29 24
+line 0 24 29 24
+sys 0
+line 1 1 28 1
+line 1 1 1 23
+sys 1
+line 28 1 28 23
+line 1 23 28 23
+translate -56 -39
+P 25 931 11 17 0 15 19 -2 39
+translate 0 0
+sys 2
+rect 0 0 11 17
+sys 0
+line 0 0 10 0
+line 0 0 0 16
+sys 1
+line 9 1 9 15
+line 9 15 2 15
+sys 3
+line 1 1 9 1
+line 1 1 1 15
+translate 0 0
+P 12 963 9 31 0 0 1 51 23
+sys 5
+line 3 14 3 14
+line 2 15 4 15
+line 1 16 5 16
+line 0 17 6 17
+P 23 776 20 59 49 27 39 -8358 50
+sys 4
+fill 49 -8331 39 50
+P 15 634 31 16 3 53 -2 25 -30140
+sys 1
+fill 0 0 31 16
+translate 0 0
+sys 0
+line 30 0 30 15
+line 0 15 30 15
+sys 2
+line 1 1 1 14
+line 1 1 29 1
+sys 3
+line 1 14 29 14
+line 29 14 29 1
+translate 0 0
+sys 6
+line 12 6 18 6
+line 13 7 17 7
+sys 2
+line 18 7 19 7
+sys 6
+line 14 8 16 8
+sys 2
+line 17 8 18 8
+sys 6
+line 15 9 15 9
+sys 2
+line 16 9 17 9
+sys 6
+pixel 16 10 5002
+P 2 249 47 -1 14 58 40 -2 -2
+translate 14 58
+sys 3
+rect 0 0 47 -1
+translate -14 -58
+P 18 1912 41 40 55 2 46 12 1
+sys 1
+fill 0 0 41 40
+P 21 731 3 51 44 28 -11599 50 1
+P 17 1484 42 51 42 3 8 5 7
+sys 11
+fill 0 0 42 51
+sys 2
+line 1 1 40 1
+line 1 1 1 49
+sys 0
+line 41 0 41 50
+line 1 50 41 50
+sys 3
+line 40 0 40 49
+line 2 49 40 49
+P 10 1775 -2 50 38 31 14 34 54
+sys 1
+fill 0 2 -2 48
+line 2 1 -3 1
+line 1 2 -3 2
+sys 2
+line 0 2 0 49
+pixel 1 1 5002
+line 2 0 -4 0
+sys 3
+line -4 2 -4 49
+sys 0
+pixel -4 1 5000
+line -3 2 -3 49
+text 0 0
+P 22 953 11 54 38 53 26 5 38
+P 2 1165 17 21 50 23 36 27 -3
+translate 50 23
+sys 3
+rect 0 0 17 21
+translate -50 -23
+P 10 1394 54 21 59 48 29 46 49
+sys 1
+fill 0 2 54 19
+line 2 1 53 1
+line 1 2 53 2
+sys 2
+line 0 2 0 20
+pixel 1 1 5002
+line 2 0 52 0
+sys 3
+line 52 2 52 20
+sys 0
+pixel 52 1 5000
+line 53 2 53 20
+text 0 0
+P 4 1321 6 26 2 40 18 60 17
+sys 5
+line 3 11 3 11
+line 2 12 4 12
+line 1 13 5 13
+line 0 14 6 14
+P 16 1879 18 1 2 53 13 58 52
+translate 0 0
+sys 3
+rect 0 0 18 1
+translate 0 0
+P 9 169 29 13 43 51 19 27 16
+sys 1
+fill 0 0 29 13
+sys 0
+rect 0 0 29 13
+translate 1 1
+sys 3
+rect 0 0 27 11
+translate -1 -1
+text 1 1
+P 21 1989 42 29 18 -10196 52 4 54
+P 8 1893 34 12 11 34 54 4 29
+translate 11 34
+sys 5
+line 13 2 14 2
+line 20 2 19 2
+line 13 9 14 9
+line 20 9 19 9
+line 14 3 15 3
+line 19 3 18 3
+line 14 8 15 8
+line 19 8 18 8
+line 15 4 16 4
+line 18 4 17 4
+line 15 7 16 7
+line 18 7 17 7
+line 16 5 17 5
+line 17 5 16 5
+line 16 6 17 6
+line 17 6 16 6
+translate -11 -34
+P 15 945 43 59 2 9 21 22 19
+sys 1
+fill 0 0 43 59
+translate 0 0
+sys 3
+rect 0 0 43 59
+translate 0 0
+sys 5
+line 21 27 21 27
+line 20 28 22 28
+line 19 29 23 29
+line 18 30 24 30
+P 14 784 46 35 40 55 -2 1 50
+sys 1
+fill 0 0 46 35
+translate 0 0
+sys 0
+line 45 0 45 34
+line 0 34 45 34
+sys 2
+line 1 1 1 33
+line 1 1 44 1
+sys 3
+line 1 33 44 33
+line 44 33 44 1
+translate 0 0
+P 22 723 30 21 47 32 59 42 50
+translate 0 0
+sys 0
+rect 0 0 30 21
+sys 2
+line 29 0 29 20
+line 0 20 29 20
+sys 3
+line 1 1 28 1
+line 1 1 1 19
+sys 1
+line 28 1 28 19
+line 1 19 28 19
+translate 0 0
+P 12 157 0 -3 2 36 34 50 16
+P 16 269 -2 52 4 2 60 5 27
+P 25 1138 18 38 6 6 54 42 3
+sys 1
+fill 0 0 18 38
+translate 0 0
+sys 0
+line 17 0 17 37
+line 0 37 17 37
+sys 2
+line 1 1 1 36
+line 1 1 16 1
+sys 3
+line 1 36 16 36
+line 16 36 16 1
+translate 0 0
+sys 6
+line 6 17 12 17
+line 7 18 11 18
+sys 2
+line 12 18 13 18
+sys 6
+line 8 19 10 19
+sys 2
+line 11 19 12 19
+sys 6
+line 9 20 9 20
+sys 2
+line 10 20 11 20
+sys 6
+pixel 10 21 5002
+P 21 870 30 53 0 54 2147483639 13 21
+P 22 171 14 7 -2 -3 7 37 14
+P 12 24 -1 36 1 0 54 28 37
+sys 5
+line -5 16 1 16
+line -4 17 0 17
+line -3 18 -1 18
+line -2 19 -2 19
+P 16 49 58 37 -1 11 22 12 31
+P 9 1667 22 42 43 16 -10047 38 45
+sys 1
+fill 0 0 22 42
+translate 0 0
+sys 2
+rect 0 0 22 42
+sys 0
+line 0 0 21 0
+line 0 0 0 41
+sys 1
+line 20 1 20 40
+line 20 40 2 40
+sys 3
+line 1 1 20 1
+line 1 1 1 40
+translate 0 0
+text 1 1
+P 9 142 9 -1 51 3 -1 24 10
+sys 1
+sys 0
+rect 0 0 9 -1
+translate 1 1
+sys 2
+rect 0 0 7 -3
+sys 0
+line 6 0 6 -4
+line 0 -4 6 -4
+sys 3
+line 1 -5 5 -5
+line 5 -5 5 1
+translate -1 -1
+text 0 0
+P 7 1611 23 16 32 -10397 43 8 0
+sys 1
+fill 32 -10395 -9 10411
+line 34 -10396 22 -10396
+line 33 -10395 22 -10395
+sys 2
+line 32 -10395 32 15
+pixel 33 -10396 5002
+line 34 -10397 21 -10397
+sys 3
+line 21 -10395 21 15
+sys 0
+pixel 21 -10396 5000
+line 22 -10395 22 15
+P 20 640 1 13 11 -1 10 55 32
+translate 0 0
+sys 0
+rect 0 0 1 13
+sys 2
+line 0 0 0 12
+line 0 12 0 12
+sys 3
+line 1 1 -1 1
+line 1 1 1 11
+sys 1
+line -1 1 -1 11
+line 1 11 -1 11
+translate 0 0
+P 7 1047 34 55 26 16 5 36 37
+sys 1
+fill 26 18 8 37
+line 28 17 33 17
+line 27 18 33 18
+sys 2
+line 26 18 26 54
+pixel 27 17 5002
+line 28 16 32 16
+sys 3
+line 32 18 32 54
+sys 0
+pixel 32 17 5000
+line 33 18 33 54
+P 9 1731 23 19 32 0 37 27 36
+sys 1
+fill 0 0 23 19
+translate 0 0
+sys 2
+rect 0 0 23 19
+sys 0
+line 0 0 22 0
+line 0 0 0 18
+sys 1
+line 21 1 21 17
+line 21 17 2 17
+sys 3
+line 1 1 21 1
+line 1 1 1 17
+translate 0 0
+text 1 1
+P 22 1309 50 39 8 56 29 40 41
+P 11 1189 54 11 32 11 24 21 55
+sys 1
+text 0 0
+P 10 723 -3 49 15 37 54 21 52
+sys 1
+fill 0 2 -3 47
+line 2 1 -4 1
+line 1 2 -4 2
+sys 2
+line 0 2 0 48
+pixel 1 1 5002
+line 2 0 -5 0
+sys 3
+line -5 2 -5 48
+sys 0
+pixel -5 1 5000
+line -4 2 -4 48
+text 0 0
+P 17 161 27 19 43 20 28 42 7
+sys 11
+fill 0 0 27 19
+sys 2
+line 1 1 25 1
+line 1 1 1 17
+sys 0
+line 26 0 26 18
+line 1 18 26 18
+sys 3
+line 25 0 25 17
+line 2 17 25 17
+P 2 1728 53 31 2147483647 44 32 21 60
+translate 2147483647 44
+sys 0
+line 52 0 52 30
+line 0 30 52 30
+sys 2
+line 1 1 1 29
+line 1 1 51 1
+sys 3
+line 1 29 51 29
+line 51 29 51 1
+translate -2147483647 -44
+P 8 1594 30 30 49 55 51 55 29
+translate 49 55
+sys 5
+line 11 11 12 11
+line 18 11 17 11
+line 11 18 12 18
+line 18 18 17 18
+line 12 12 13 12
+line 17 12 16 12
+line 12 17 13 17
+line 17 17 16 17
+line 13 13 14 13
+line 16 13 15 13
+line 13 16 14 16
+line 16 16 15 16
+line 14 14 15 14
+line 15 14 14 14
+line 14 15 15 15
+line 15 15 14 15
+translate -49 -55
+P 3 1632 17 0 2147483637 14 27 36 2147483640
+translate 2147483637 14
+sys 0
+rect 0 0 17 0
+sys 2
+line 16 0 16 -1
+line 0 -1 16 -1
+sys 3
+line 1 1 15 1
+line 1 1 1 -2
+sys 1
+line 15 1 15 -2
+line 1 -2 15 -2
+translate -2147483637 -14
+P 17 1946 34 35 15 55 9 15 34
+sys 11
+fill 0 0 34 35
+sys 2
+line 1 1 32 1
+line 1 1 1 33
+sys 0
+line 33 0 33 34
+line 1 34 33 34
+sys 3
+line 32 0 32 33
+line 2 33 32 33
+P 3 52 24 3 39 18 11 30 53
+translate 39 18
+sys 0
+rect 0 0 24 3
+sys 2
+line 23 0 23 2
+line 0 2 23 2
+sys 3
+line 1 1 22 1
+line 1 1 1 1
+sys 1
+line 22 1 22 1
+line 1 1 22 1
+translate -39 -18
+P 2 1506 15 55 40 2 45 39 46
+translate 40 2
+sys 0
+line 14 0 14 54
+line 0 54 14 54
+sys 2
+line 1 1 1 53
+line 1 1 13 1
+sys 3
+line 1 53 13 53
+line 13 53 13 1
+translate -40 -2
+P 24 1435 50 44 58 30 35 30 31
+translate 0 29
+sys 2
+line 0 1 30 1
+line 35 1 49 1
+line 49 0 49 14
+line 0 14 49 14
+line 1 1 1 14
+sys 3
+line 0 0 30 0
+line 35 0 48 0
+line 48 0 48 13
+line 0 13 48 13
+line 0 0 0 13
+translate 0 -29
+P 18 457 17 36 28 37 35 7 47
+sys 1
+fill 0 0 17 36
+P 23 239 2147483635 46 37 -1 10 13 28
+translate 0 0
+sys 2
+rect 0 0 2147483635 46
+sys 0
+line 0 0 2147483634 0
+line 0 0 0 45
+sys 1
+line 2147483633 1 2147483633 44
+line 2147483633 44 2 44
+sys 3
+line 1 1 2147483633 1
+line 1 1 1 44
+translate 0 0
+P 5 1093 15 13 2147483646 13 42 19 50
+translate 2147483646 13
+sys 1
+fill 0 0 15 13
+sys 3
+line 0 0 14 0
+line 0 0 0 12
+sys 2
+line 14 0 14 12
+line 0 12 14 12
+sys 0
+line 1 1 13 1
+line 1 1 1 11
+sys 1
+line 13 1 13 11
+line 1 11 13 11
+translate -2147483646 -13
+P 22 1854 -3 2 5 5 -1 52 46
+P 1 413 42 47 7 26 47 49 44
+translate 7 26
+sys 2
+rect 0 0 42 47
+sys 0
+line 0 0 41 0
+line 0 0 0 46
+sys 1
+line 40 1 40 45
+line 40 45 2 45
+sys 3
+line 1 1 40 1
+line 1 1 1 45
+translate -7 -26
+P 14 1227 40 57 25 56 31 9 26
+sys 1
+fill 0 0 40 57
+translate 0 0
+sys 0
+line 39 0 39 56
+line 0 56 39 56
+sys 2
+line 1 1 1 55
+line 1 1 38 1
+sys 3
+line 1 55 38 55
+line 38 55 38 1
+translate 0 0
+P 9 1614 7 47 34 51 34 56 28
+sys 1
+sys 0
+rect 0 0 7 47
+translate 1 1
+sys 2
+rect 0 0 5 45
+sys 0
+line 4 0 4 44
+line 0 44 4 44
+sys 3
+line 1 43 3 43
+line 3 43 3 1
+translate -1 -1
+text 0 0
+P 12 1580 39 38 3 0 -2 7 31
+sys 5
+P 14 1873 44 35 39 15 23 59 39
+sys 1
+fill 0 0 44 35
+translate 0 0
+sys 0
+line 43 0 43 34
+line 0 34 43 34
+sys 2
+line 1 1 1 33
+line 1 1 42 1
+sys 3
+line 1 33 42 33
+line 42 33 42 1
+translate 0 0
+P 13 1758 26 17 14 10 25 33 11
+sys 1
+fill 0 0 26 17
+translate 0 0
+sys 2
+rect 0 0 26 17
+sys 0
+line 25 0 25 16
+line 0 16 25 16
+sys 3
+line 1 15 24 15
+line 24 15 24 1
+translate 0 0
+translate 0 0
+sys 5
+line 9 4 10 4
+line 16 4 15 4
+line 9 11 10 11
+line 16 11 15 11
+line 10 5 11 5
+line 15 5 14 5
+line 10 10 11 10
+line 15 10 14 10
+line 11 6 12 6
+line 14 6 13 6
+line 11 9 12 9
+line 14 9 13 9
+line 12 7 13 7
+line 13 7 12 7
+line 12 8 13 8
+line 13 8 12 8
+translate 0 0
+P 21 305 9 6 22 5 43 4 2
+P 25 503 12 60 11 9 24 55 57
+sys 4
+fill 0 0 12 60
+P 9 1531 37 47 39 39 13 42 51
+sys 1
+fill 0 0 37 47
+sys 0
+rect 0 0 37 47
+translate 1 1
+sys 3
+rect 0 0 35 45
+translate -1 -1
+text 1 1
+P 12 186 31 8 2 26 27 6 58
+P 4 158 40 -2 2 17 54 36 41
+sys 6
+line 20 -3 20 -3
+line 19 -2 21 -2
+line 18 -1 22 -1
+line 17 0 23 0
+sys 2
+line 18 1 24 1
+P 8 612 59 19 60 60 14 39 49
+translate 60 60
+sys 5
+line 25 5 26 5
+line 32 5 31 5
+line 25 12 26 12
+line 32 12 31 12
+line 26 6 27 6
+line 31 6 30 6
+line 26 11 27 11
+line 31 11 30 11
+line 27 7 28 7
+line 30 7 29 7
+line 27 10 28 10
+line 30 10 29 10
+line 28 8 29 8
+line 29 8 28 8
+line 28 9 29 9
+line 29 9 28 9
+translate -60 -60
+P 25 1009 45 1 7 0 24 56 26
+sys 1
+fill 0 0 45 1
+translate 0 0
+sys 2
+rect 0 0 45 1
+sys 0
+line 44 0 44 0
+line 0 0 44 0
+sys 3
+line 1 -1 43 -1
+line 43 -1 43 1
+translate 0 0
+P 2 687 7 4 7 55 43 14 13
+translate 7 55
+sys 3
+rect 0 0 7 4
+translate -7 -55
+P 2 1377 25 60 -1 40 44 20 14
+translate -1 40
+sys 3
+rect 0 0 25 60
+translate 1 -40
+P 2 537 25 56 53 58 54 38 31
+translate 53 58
+sys 3
+rect 0 0 25 56
+translate -53 -58
+P 15 969 39 26 3 48 44 43 -16819
+sys 1
+fill 0 0 39 26
+translate 0 0
+sys 3
+rect 0 0 39 26
+translate 0 0
+sys 5
+line 16 11 22 11
+line 17 12 21 12
+line 18 13 20 13
+line 19 14 19 14
+P 5 843 25 52 31 20 28 2 50
+translate 31 20
+sys 1
+fill 0 0 25 52
+sys 3
+line 0 0 24 0
+line 0 0 0 51
+sys 2
+line 24 0 24 51
+line 0 51 24 51
+sys 0
+line 1 1 23 1
+line 1 1 1 50
+sys 1
+line 23 1 23 50
+line 1 50 23 50
+translate -31 -20
+P 16 1276 8 32 1 22 55 2 5
+translate 0 0
+sys 2
+rect 0 0 8 32
+sys 0
+line 7 0 7 31
+line 0 31 7 31
+sys 3
+line 1 30 6 30
+line 6 30 6 1
+translate 0 0
+P 10 998 17 6 28 12 17 2147483632 33
+sys 1
+fill 0 2 17 4
+line 2 1 16 1
+line 1 2 16 2
+sys 2
+line 0 2 0 5
+pixel 1 1 5002
+line 2 0 15 0
+sys 3
+line 15 2 15 5
+sys 0
+pixel 15 1 5000
+line 16 2 16 5
+text 0 0
+P 7 1959 25 4 44 -3 54 25 7
+sys 1
+fill 44 -1 -19 5
+line 46 -2 24 -2
+line 45 -1 24 -1
+sys 2
+line 44 -1 44 3
+pixel 45 -2 5002
+line 46 -3 23 -3
+sys 3
+line 23 -1 23 3
+sys 0
+pixel 23 -2 5000
+line 24 -1 24 3
+P 7 814 40 21 28 4 2147483646 -2 12
+sys 1
+fill 28 6 12 15
+line 30 5 39 5
+line 29 6 39 6
+sys 2
+line 28 6 28 20
+pixel 29 5 5002
+line 30 4 38 4
+sys 3
+line 38 6 38 20
+sys 0
+pixel 38 5 5000
+line 39 6 39 20
+P 9 1996 16 60 12 37 6 14 49
+sys 1
+sys 0
+rect 0 0 16 60
+translate 1 1
+sys 2
+rect 0 0 14 58
+sys 0
+line 13 0 13 57
+line 0 57 13 57
+sys 3
+line 1 56 12 56
+line 12 56 12 1
+translate -1 -1
+text 0 0
+P 5 1500 50 44 6 12 45 16 -1
+translate 6 12
+sys 13
+fill 0 0 50 44
+sys 3
+line 0 0 49 0
+line 0 0 0 43
+sys 2
+line 49 0 49 43
+line 0 43 49 43
+sys 0
+line 1 1 48 1
+line 1 1 1 42
+sys 1
+line 48 1 48 42
+line 1 42 48 42
+translate -6 -12
+P 9 68 0 32 17 1 30 51 2
+sys 1
+translate 0 0
+sys 2
+rect 0 0 0 32
+sys 0
+line -1 0 -1 31
+line 0 31 -1 31
+sys 3
+line 1 30 -2 30
+line -2 30 -2 1
+translate 0 0
+text 0 0
+P 8 1684 39 43 -2 49 57 42 21
+translate -2 49
+sys 5
+line 15 17 16 17
+line 22 17 21 17
+line 15 24 16 24
+line 22 24 21 24
+line 16 18 17 18
+line 21 18 20 18
+line 16 23 17 23
+line 21 23 20 23
+line 17 19 18 19
+line 20 19 19 19
+line 17 22 18 22
+line 20 22 19 22
+line 18 20 19 20
+line 19 20 18 20
+line 18 21 19 21
+line 19 21 18 21
+translate 2 -49
+P 16 965 30 29 1 10 35 58 31
+translate 0 0
+sys 2
+rect 0 0 30 29
+sys 0
+line 0 0 29 0
+line 0 0 0 28
+sys 1
+line 28 1 28 27
+line 28 27 2 27
+sys 3
+line 1 1 28 1
+line 1 1 1 27
+translate 0 0
+P 23 308 2147483634 18 53 12 17 38 26
+P 2 1346 18 18 8 22 10 56 58
+translate 8 22
+sys 0
+line 17 0 17 17
+line 0 17 17 17
+sys 2
+line 1 1 1 16
+line 1 1 16 1
+sys 3
+line 1 16 16 16
+line 16 16 16 1
+translate -8 -22
+P 19 1006 19 46 8 15 42 15 12
+sys 2
+rect 0 0 19 46
+rect 1 1 18 45
+sys 3
+rect 0 0 18 45
+P 3 1342 59 27 19 0 57 0 40
+translate 19 0
+sys 0
+rect 0 0 59 27
+sys 2
+line 58 0 58 26
+line 0 26 58 26
+sys 3
+line 1 1 57 1
+line 1 1 1 25
+sys 1
+line 57 1 57 25
+line 1 25 57 25
+translate -19 0
+P 21 577 52 0 6 -24744 42 9 17
+P 1 335 2 11 25 52 42 52 7
+translate 25 52
+sys 2
+rect 0 0 2 11
+sys 0
+line 0 0 1 0
+line 0 0 0 10
+sys 1
+line 0 1 0 9
+line 0 9 2 9
+sys 3
+line 1 1 0 1
+line 1 1 1 9
+translate -25 -52
+P 21 582 11 39 59 39 46 58 46
+P 13 549 48 51 29 25 39 33 16
+sys 1
+fill 0 0 48 51
+translate 0 0
+sys 2
+rect 0 0 48 51
+sys 0
+line 0 0 47 0
+line 0 0 0 50
+sys 1
+line 46 1 46 49
+line 46 49 2 49
+sys 3
+line 1 1 46 1
+line 1 1 1 49
+translate 0 0
+translate 1 1
+sys 5
+line 20 21 21 21
+line 27 21 26 21
+line 20 28 21 28
+line 27 28 26 28
+line 21 22 22 22
+line 26 22 25 22
+line 21 27 22 27
+line 26 27 25 27
+line 22 23 23 23
+line 25 23 24 23
+line 22 26 23 26
+line 25 26 24 26
+line 23 24 24 24
+line 24 24 23 24
+line 23 25 24 25
+line 24 25 23 25
+translate -1 -1
+P 16 2025 40 5 3 29 -28775 54 28
+translate 0 0
+sys 0
+rect 0 0 40 5
+sys 2
+line 39 0 39 4
+line 0 4 39 4
+sys 3
+line 1 1 38 1
+line 1 1 1 3
+sys 1
+line 38 1 38 3
+line 1 3 38 3
+translate 0 0
+P 9 1586 25 44 27 40 21 57 44
+sys 1
+fill 0 0 25 44
+translate 0 0
+sys 0
+line 24 0 24 43
+line 0 43 24 43
+sys 2
+line 1 1 1 42
+line 1 1 23 1
+sys 3
+line 1 42 23 42
+line 23 42 23 1
+translate 0 0
+text 0 0
+P 14 981 36 35 47 53 8 20 60
+sys 1
+fill 0 0 36 35
+translate 0 0
+sys 0
+line 35 0 35 34
+line 0 34 35 34
+sys 2
+line 1 1 1 33
+line 1 1 34 1
+sys 3
+line 1 33 34 33
+line 34 33 34 1
+translate 0 0
+P 7 1936 23 56 49 39 44 43 7
+sys 1
+fill 49 41 -26 15
+line 51 40 22 40
+line 50 41 22 41
+sys 2
+line 49 41 49 55
+pixel 50 40 5002
+line 51 39 21 39
+sys 3
+line 21 41 21 55
+sys 0
+pixel 21 40 5000
+line 22 41 22 55
+P 23 154 57 -7920 -3 30 27 15 42
+P 8 1183 20 53 8 12 48 10 54
+translate 8 12
+sys 5
+line 6 22 7 22
+line 13 22 12 22
+line 6 29 7 29
+line 13 29 12 29
+line 7 23 8 23
+line 12 23 11 23
+line 7 28 8 28
+line 12 28 11 28
+line 8 24 9 24
+line 11 24 10 24
+line 8 27 9 27
+line 11 27 10 27
+line 9 25 10 25
+line 10 25 9 25
+line 9 26 10 26
+line 10 26 9 26
+translate -8 -12
+P 8 795 30 14 37 24 17 31 9
+translate 37 24
+sys 5
+line 11 3 12 3
+line 18 3 17 3
+line 11 10 12 10
+line 18 10 17 10
+line 12 4 13 4
+line 17 4 16 4
+line 12 9 13 9
+line 17 9 16 9
+line 13 5 14 5
+line 16 5 15 5
+line 13 8 14 8
+line 16 8 15 8
+line 14 6 15 6
+line 15 6 14 6
+line 14 7 15 7
+line 15 7 14 7
+translate -37 -24
+P 20 1289 60 9 25 54 27 -29673 4
+translate 0 0
+sys 0
+rect 0 0 60 9
+sys 2
+line 59 0 59 8
+line 0 8 59 8
+sys 3
+line 1 1 58 1
+line 1 1 1 7
+sys 1
+line 58 1 58 7
+line 1 7 58 7
+translate 0 0
+P 11 853 56 38 12 17 31 60 43
+sys 1
+text 0 0
+P 16 1371 6 36 3 12 40 2 33
+translate 0 0
+sys 0
+rect 0 0 6 36
+sys 2
+line 5 0 5 35
+line 0 35 5 35
+sys 3
+line 1 1 4 1
+line 1 1 1 34
+sys 1
+line 4 1 4 34
+line 1 34 4 34
+translate 0 0
+P 6 732 29 -3 28 20 26 20 27
+translate 28 20
+sys 13
+ellipse 0 0 29 -3
+sys 3
+arc 0 0 29 -3 45 180
+sys 0
+arc 1 1 27 -5 45 180
+sys 2
+arc 0 0 29 -3 235 180
+sys 1
+arc 1 1 27 -5 235 180
+translate -28 -20
+P 12 464 26 23 0 3 46 14 36
+sys 5
+line 59 9 59 9
+line 58 10 60 10
+line 57 11 61 11
+line 56 12 62 12
+P 9 874 8 18 20 41 13 22 58
+sys 1
+fill 0 0 8 18
+sys 0
+rect 0 0 8 18
+translate 1 1
+sys 2
+rect 0 0 6 16
+sys 0
+line 5 0 5 15
+line 0 15 5 15
+sys 3
+line 1 14 4 14
+line 4 14 4 1
+translate -1 -1
+text 0 0
+P 10 1493 53 0 15 33 29 33 7
+sys 1
+fill 0 2 53 -2
+line 2 1 52 1
+line 1 2 52 2
+sys 2
+line 0 2 0 -1
+pixel 1 1 5002
+line 2 0 51 0
+sys 3
+line 51 2 51 -1
+sys 0
+pixel 51 1 5000
+line 52 2 52 -1
+text 0 0
+P 17 1710 45 39 34 42 24 34 0
+sys 11
+fill 0 0 45 39
+sys 2
+line 1 1 43 1
+line 1 1 1 37
+sys 0
+line 44 0 44 38
+line 1 38 44 38
+sys 3
+line 43 0 43 37
+line 2 37 43 37
+P 11 341 56 4 5 23 -2 7 48
+sys 1
+text 0 0
+P 12 894 48 29 0 0 20 48 56
+sys 5
+line 22 12 22 12
+line 21 13 23 13
+line 20 14 24 14
+line 19 15 25 15
+P 25 897 -3 0 7 15 40 4 8
+sys 1
+fill 0 0 -3 0
+sys 0
+rect 0 0 -3 0
+translate 1 1
+sys 3
+rect 0 0 -5 -2
+translate -1 -1
+P 1 985 49 55 32 57 35 34 59
+translate 32 57
+sys 2
+rect 0 0 49 55
+sys 0
+line 0 0 48 0
+line 0 0 0 54
+sys 1
+line 47 1 47 53
+line 47 53 2 53
+sys 3
+line 1 1 47 1
+line 1 1 1 53
+translate -32 -57
+P 20 620 48 48 54 -2 2 39 2147483636
+translate 0 0
+sys 0
+rect 0 0 48 48
+sys 2
+line 47 0 47 47
+line 0 47 47 47
+sys 3
+line 1 1 46 1
+line 1 1 1 46
+sys 1
+line 46 1 46 46
+line 1 46 46 46
+translate 0 0
+P 25 1723 7 56 11 4 55 -1 49
+sys 4
+fill 0 0 7 56
+P 19 358 -3 55 2147483646 16 55 55 59
+sys 2
+rect 0 0 -3 55
+rect 1 1 -4 54
+sys 3
+rect 0 0 -4 54
+P 22 1171 55 -31398 13 2147483646 1 39 27
+P 5 895 6 27 40 60 44 7 36
+translate 40 60
+sys 1
+fill 0 0 6 27
+sys 3
+line 0 0 5 0
+line 0 0 0 26
+sys 2
+line 5 0 5 26
+line 0 26 5 26
+sys 0
+line 1 1 4 1
+line 1 1 1 25
+sys 1
+line 4 1 4 25
+line 1 25 4 25
+sys 14
+line 3 12 3 14
+line 4 13 4 15
+line 5 14 5 16
+line 6 13 6 15
+line 7 12 7 14
+line 8 11 8 13
+line 9 10 9 12
+translate -40 -60
+P 17 296 17 21 36 -2 36 23 17
+sys 11
+fill 0 0 17 21
+sys 2
+line 1 1 15 1
+line 1 1 1 19
+sys 0
+line 16 0 16 20
+line 1 20 16 20
+sys 3
+line 15 0 15 19
+line 2 19 15 19
+P 8 1833 57 41 54 40 45 24 3
+translate 54 40
+sys 5
+line 24 16 25 16
+line 31 16 30 16
+line 24 23 25 23
+line 31 23 30 23
+line 25 17 26 17
+line 30 17 29 17
+line 25 22 26 22
+line 30 22 29 22
+line 26 18 27 18
+line 29 18 28 18
+line 26 21 27 21
+line 29 21 28 21
+line 27 19 28 19
+line 28 19 27 19
+line 27 20 28 20
+line 28 20 27 20
+translate -54 -40
+P 24 1645 60 0 23 47 44 5 53
+translate 0 11
+sys 2
+line 0 1 47 1
+line 44 1 59 1
+line 59 0 59 -12
+line 0 -12 59 -12
+line 1 1 1 -12
+sys 3
+line 0 0 47 0
+line 44 0 58 0
+line 58 0 58 -13
+line 0 -13 58 -13
+line 0 0 0 -13
+translate 0 -11
+P 1 1120 29 26 15 46 57 0 34
+translate 15 46
+sys 2
+rect 0 0 29 26
+sys 0
+line 28 0 28 25
+line 0 25 28 25
+sys 3
+line 1 24 27 24
+line 27 24 27 1
+translate -15 -46
+P 3 1856 36 44 10 34 23 35 7
+translate 10 34
+sys 0
+rect 0 0 36 44
+sys 2
+line 35 0 35 43
+line 0 43 35 43
+sys 3
+line 1 1 34 1
+line 1 1 1 42
+sys 1
+line 34 1 34 42
+line 1 42 34 42
+translate -10 -34
+P 21 1999 17 -1 46 36 33 0 3
+P 14 138 49 23 30 57 23 43 11
+sys 1
+fill 0 0 49 23
+translate 0 0
+sys 0
+line 48 0 48 22
+line 0 22 48 22
+sys 2
+line 1 1 1 21
+line 1 1 47 1
+sys 3
+line 1 21 47 21
+line 47 21 47 1
+translate 0 0
+P 2 1217 18 8 49 33 5 40 36
+translate 49 33
+sys 3
+rect 0 0 18 8
+translate -49 -33
+P 1 234 21 1 -2 39 56 23 38
+translate -2 39
+sys 2
+rect 0 0 21 1
+sys 0
+line 20 0 20 0
+line 0 0 20 0
+sys 3
+line 1 -1 19 -1
+line 19 -1 19 1
+translate 2 -39
+P 11 327 3 54 20 25 13 47 57
+sys 1
+text 0 0
+P 5 1575 55 51 54 55 50 36 59
+translate 54 55
+sys 1
+fill 0 0 55 51
+sys 3
+line 0 0 54 0
+line 0 0 0 50
+sys 2
+line 54 0 54 50
+line 0 50 54 50
+sys 0
+line 1 1 53 1
+line 1 1 1 49
+sys 1
+line 53 1 53 49
+line 1 49 53 49
+sys 14
+line 3 24 3 26
+line 4 25 4 27
+line 5 26 5 28
+line 6 25 6 27
+line 7 24 7 26
+line 8 23 8 25
+line 9 22 9 24
+translate -54 -55
+P 3 1659 58 0 47 57 45 18 40
+translate 47 57
+sys 0
+rect 0 0 58 0
+sys 2
+line 57 0 57 -1
+line 0 -1 57 -1
+sys 3
+line 1 1 56 1
+line 1 1 1 -2
+sys 1
+line 56 1 56 -2
+line 1 -2 56 -2
+translate -47 -57
+P 16 1322 33 17 0 -1 14 5 5
+P 24 1918 39 45 35 54 29 12 57
+translate 0 17
+sys 2
+line 0 1 54 1
+line 29 1 38 1
+line 38 0 38 27
+line 0 27 38 27
+line 1 1 1 27
+sys 3
+line 0 0 54 0
+line 29 0 37 0
+line 37 0 37 26
+line 0 26 37 26
+line 0 0 0 26
+translate 0 -17
+P 2 1459 34 47 37 21 14 8 5
+translate 37 21
+sys 3
+rect 0 0 34 47
+translate -37 -21
+P 22 1562 37 34 45 4 52 38 45
+P 24 950 6 55 16 50 57 3 1
+translate 0 8
+sys 2
+line 0 1 50 1
+line 57 1 5 1
+line 5 0 5 46
+line 0 46 5 46
+line 1 1 1 46
+sys 3
+line 0 0 50 0
+line 57 0 4 0
+line 4 0 4 45
+line 0 45 4 45
+line 0 0 0 45
+translate 0 -8
+P 18 1547 36 13 49 7 51 -2 30
+sys 1
+fill 0 0 36 13
+P 16 129 51 27 1 2 42 14 -13116
+translate 0 0
+sys 2
+rect 0 0 51 27
+sys 0
+line 0 0 50 0
+line 0 0 0 26
+sys 1
+line 49 1 49 25
+line 49 25 2 25
+sys 3
+line 1 1 49 1
+line 1 1 1 25
+translate 0 0
+P 21 1442 19 49 49 1 43 7 25
+sys 4
+fill 49 1 43 7
+P 13 974 55 31 -29045 50 14 23 -2
+sys 1
+fill 0 0 55 31
+translate 0 0
+sys 2
+rect 0 0 55 31
+sys 0
+line 54 0 54 30
+line 0 30 54 30
+sys 3
+line 1 29 53 29
+line 53 29 53 1
+translate 0 0
+translate 0 0
+sys 5
+line 23 11 24 11
+line 30 11 29 11
+line 23 18 24 18
+line 30 18 29 18
+line 24 12 25 12
+line 29 12 28 12
+line 24 17 25 17
+line 29 17 28 17
+line 25 13 26 13
+line 28 13 27 13
+line 25 16 26 16
+line 28 16 27 16
+line 26 14 27 14
+line 27 14 26 14
+line 26 15 27 15
+line 27 15 26 15
+translate 0 0
+P 1 1578 39 52 57 60 26 5 35
+translate 57 60
+sys 2
+rect 0 0 39 52
+sys 0
+line 38 0 38 51
+line 0 51 38 51
+sys 3
+line 1 50 37 50
+line 37 50 37 1
+translate -57 -60
+P 16 1166 57 38 1 -3630 31 51 22
+translate 0 0
+sys 2
+rect 0 0 57 38
+sys 0
+line 56 0 56 37
+line 0 37 56 37
+sys 3
+line 1 36 55 36
+line 55 36 55 1
+translate 0 0
+P 25 1068 38 12 8 14 -2 25 40
+translate 0 0
+sys 13
+fill 0 0 38 12
+sys 3
+line 0 0 37 0
+line 0 0 0 11
+sys 2
+line 37 0 37 11
+line 0 11 37 11
+sys 0
+line 1 1 36 1
+line 1 1 1 10
+sys 1
+line 36 1 36 10
+line 1 10 36 10
+sys 14
+line 3 5 3 7
+line 4 6 4 8
+line 5 7 5 9
+line 6 6 6 8
+line 7 5 7 7
+line 8 4 8 6
+line 9 3 9 5
+translate 0 0
+P 11 2018 11 17 0 55 52 33 35
+sys 1
+fill 0 0 11 17
+text 0 0
+P 3 433 33 56 10 40 19 -3 39
+translate 10 40
+sys 0
+rect 0 0 33 56
+sys 2
+line 32 0 32 55
+line 0 55 32 55
+sys 3
+line 1 1 31 1
+line 1 1 1 54
+sys 1
+line 31 1 31 54
+line 1 54 31 54
+translate -10 -40
+P 21 1782 20 48 50 35 54 -2 7
+P 3 1722 16 17 45 54 -2 5 4
+translate 45 54
+sys 0
+rect 0 0 16 17
+sys 2
+line 15 0 15 16
+line 0 16 15 16
+sys 3
+line 1 1 14 1
+line 1 1 1 15
+sys 1
+line 14 1 14 15
+line 1 15 14 15
+translate -45 -54
+P 11 731 43 20 -2 58 26 49 15
+sys 1
+fill 0 0 43 20
+text 0 0
+P 4 1209 32 36 0 44 51 12 45
+sys 5
+line 14 18 14 18
+line 15 17 15 19
+line 16 16 16 20
+line 17 15 17 21
+P 16 968 52 24 1 2 48 43 54
+translate 0 0
+sys 2
+rect 0 0 52 24
+sys 0
+line 51 0 51 23
+line 0 23 51 23
+sys 3
+line 1 22 50 22
+line 50 22 50 1
+translate 0 0
+P 6 754 5 46 26 21 6 24 16
+translate 26 21
+sys 13
+ellipse 0 0 5 46
+sys 3
+arc 0 0 5 46 45 180
+sys 0
+arc 1 1 3 44 45 180
+sys 2
+arc 0 0 5 46 235 180
+sys 1
+arc 1 1 3 44 235 180
+sys 14
+ellipse 0 21 4 4
+translate -26 -21
+P 2 1722 37 2147483636 -2 49 26 32 43
+translate -2 49
+sys 0
+line 36 0 36 2147483635
+line 0 2147483635 36 2147483635
+sys 2
+line 1 1 1 2147483634
+line 1 1 35 1
+sys 3
+line 1 2147483634 35 2147483634
+line 35 2147483634 35 1
+translate 2 -49
+P 15 347 13 47 1 31 1 33 38
+sys 1
+fill 0 0 13 47
+translate 0 0
+sys 3
+rect 0 0 13 47
+translate 0 0
+sys 6
+line 7 23 7 23
+sys 2
+line 7 24 7 25
+sys 6
+line 6 22 6 24
+sys 2
+line 6 25 6 26
+sys 6
+line 5 21 5 25
+sys 2
+line 5 26 5 27
+sys 6
+line 4 20 4 26
+pixel 8 24 5002
+P 2 617 51 46 29 55 0 20 2
+translate 29 55
+sys 3
+rect 0 0 51 46
+translate -29 -55
+P 24 475 35 5 11 52 21 15 34
+translate 0 5
+sys 2
+line 0 1 52 1
+line 21 1 34 1
+line 34 0 34 -1
+line 0 -1 34 -1
+line 1 1 1 -1
+sys 3
+line 0 0 52 0
+line 21 0 33 0
+line 33 0 33 -2
+line 0 -2 33 -2
+line 0 0 0 -2
+translate 0 -5
+P 22 1447 37 57 28 30 40 28 39
+P 8 249 38 29 32 40 59 27 47
+translate 32 40
+sys 5
+line 15 10 16 10
+line 22 10 21 10
+line 15 17 16 17
+line 22 17 21 17
+line 16 11 17 11
+line 21 11 20 11
+line 16 16 17 16
+line 21 16 20 16
+line 17 12 18 12
+line 20 12 19 12
+line 17 15 18 15
+line 20 15 19 15
+line 18 13 19 13
+line 19 13 18 13
+line 18 14 19 14
+line 19 14 18 14
+translate -32 -40
+P 22 778 58 59 6 38 -29973 2 41
+P 24 968 40 35 54 29 30 -3 4
+translate 0 27
+sys 2
+line 0 1 29 1
+line 30 1 39 1
+line 39 0 39 7
+line 0 7 39 7
+line 1 1 1 7
+sys 3
+line 0 0 29 0
+line 30 0 38 0
+line 38 0 38 6
+line 0 6 38 6
+line 0 0 0 6
+translate 0 -27
+P 4 362 9 42 3 34 51 14 31
+sys 6
+line 1 19 7 19
+line 2 20 6 20
+sys 2
+line 7 20 8 20
+sys 6
+line 3 21 5 21
+sys 2
+line 6 21 7 21
+sys 6
+line 4 22 4 22
+sys 2
+line 5 22 6 22
+sys 6
+pixel 5 23 5002
+P 18 670 -3 10 8 2147483637 19 34 24
+sys 1
+fill 0 0 -3 10
+P 1 1947 37 -5628 14 0 43 -26995 48
+translate 14 0
+sys 2
+rect 0 0 37 -5628
+sys 0
+line 0 0 36 0
+line 0 0 0 -5629
+sys 1
+line 35 1 35 -5630
+line 35 -5630 2 -5630
+sys 3
+line 1 1 35 1
+line 1 1 1 -5630
+translate -14 0
+P 23 431 56 7 31 59 30 2 56
+P 11 981 28 30 58 24 -2 32 1
+sys 1
+text 0 0
+P 19 1058 24 26 27 36 6 9 43
+sys 2
+rect 0 0 24 26
+rect 1 1 23 25
+sys 3
+rect 0 0 23 25
+P 5 145 8 49 33 2 46 1 -3
+translate 33 2
+sys 1
+fill 0 0 8 49
+sys 3
+line 0 0 7 0
+line 0 0 0 48
+sys 2
+line 7 0 7 48
+line 0 48 7 48
+sys 0
+line 1 1 6 1
+line 1 1 1 47
+sys 1
+line 6 1 6 47
+line 1 47 6 47
+translate -33 -2
+P 15 656 58 32 1 44 24 9 9
+sys 1
+fill 0 0 58 32
+translate 0 0
+sys 0
+line 57 0 57 31
+line 0 31 57 31
+sys 2
+line 1 1 1 30
+line 1 1 56 1
+sys 3
+line 1 30 56 30
+line 56 30 56 1
+translate 0 0
+sys 5
+line 30 16 30 16
+line 29 15 29 17
+line 28 14 28 18
+line 27 13 27 19
+P 4 1860 24 35 2 48 43 44 35
+sys 5
+line 12 15 12 15
+line 11 16 13 16
+line 10 17 14 17
+line 9 18 15 18
+P 20 137 14 56 27 25 52 56 39
+translate 0 0
+sys 0
+rect 0 0 14 56
+sys 2
+line 13 0 13 55
+line 0 55 13 55
+sys 3
+line 1 1 12 1
+line 1 1 1 54
+sys 1
+line 12 1 12 54
+line 1 54 12 54
+translate 0 0
+P 15 1582 18 9 3 16 -1 44 45
+sys 1
+fill 0 0 18 9
+translate 0 0
+sys 0
+line 17 0 17 8
+line 0 8 17 8
+sys 2
+line 1 1 1 7
+line 1 1 16 1
+sys 3
+line 1 7 16 7
+line 16 7 16 1
+translate 0 0
+sys 6
+line 6 2 12 2
+line 7 3 11 3
+sys 2
+line 12 3 13 3
+sys 6
+line 8 4 10 4
+sys 2
+line 11 4 12 4
+sys 6
+line 9 5 9 5
+sys 2
+line 10 5 11 5
+sys 6
+pixel 10 6 5002
+P 21 1927 43 54 36 18 15 60 6
+P 3 1226 57 51 18 2 54 54 42
+translate 18 2
+sys 0
+rect 0 0 57 51
+sys 2
+line 56 0 56 50
+line 0 50 56 50
+sys 3
+line 1 1 55 1
+line 1 1 1 49
+sys 1
+line 55 1 55 49
+line 1 49 55 49
+translate -18 -2
+P 12 1227 -1 50 0 46 45 31 27
+sys 5
+line 102 24 102 24
+line 101 25 103 25
+line 100 26 104 26
+line 99 27 105 27
+P 25 1350 44 43 4 15 11 44 51
+sys 1
+fill 0 0 44 43
+translate 0 0
+sys 3
+rect 0 0 44 43
+translate 0 0
+sys 6
+line 23 21 23 21
+sys 2
+line 23 22 23 23
+sys 6
+line 22 20 22 22
+sys 2
+line 22 23 22 24
+sys 6
+line 21 19 21 23
+sys 2
+line 21 24 21 25
+sys 6
+line 20 18 20 24
+pixel 24 22 5002
+P 25 172 2 45 14 15 26 12 17
+sys 1
+fill 0 2 2 43
+line 2 1 1 1
+line 1 2 1 2
+sys 2
+line 0 2 0 44
+pixel 1 1 5002
+line 2 0 0 0
+sys 3
+line 0 2 0 44
+sys 0
+pixel 0 1 5000
+line 1 2 1 44
+P 23 449 46 58 23 33 60 57 8
+translate 0 0
+sys 2
+rect 0 0 46 58
+sys 0
+line 0 0 45 0
+line 0 0 0 57
+sys 1
+line 44 1 44 56
+line 44 56 2 56
+sys 3
+line 1 1 44 1
+line 1 1 1 56
+translate 0 0
+P 16 175 25 17 2 49 36 49 10
+translate 0 0
+sys 3
+rect 0 0 25 17
+translate 0 0
+P 15 2020 52 2 0 48 55 -3 49
+sys 1
+fill 0 0 52 2
+translate 0 0
+sys 0
+line 51 0 51 1
+line 0 1 51 1
+sys 2
+line 1 1 1 0
+line 1 1 50 1
+sys 3
+line 1 0 50 0
+line 50 0 50 1
+translate 0 0
+sys 5
+line 24 1 24 1
+line 25 0 25 2
+line 26 -1 26 3
+line 27 -2 27 4
+P 3 1137 20 17 11 15 19 51 53
+translate 11 15
+sys 0
+rect 0 0 20 17
+sys 2
+line 19 0 19 16
+line 0 16 19 16
+sys 3
+line 1 1 18 1
+line 1 1 1 15
+sys 1
+line 18 1 18 15
+line 1 15 18 15
+translate -11 -15
+P 15 1530 25 57 1 53 0 13 50
+sys 1
+fill 0 0 25 57
+translate 0 0
+sys 0
+line 24 0 24 56
+line 0 56 24 56
+sys 2
+line 1 1 1 55
+line 1 1 23 1
+sys 3
+line 1 55 23 55
+line 23 55 23 1
+translate 0 0
+sys 6
+line 13 28 13 28
+sys 2
+line 13 29 13 30
+sys 6
+line 12 27 12 29
+sys 2
+line 12 30 12 31
+sys 6
+line 11 26 11 30
+sys 2
+line 11 31 11 32
+sys 6
+line 10 25 10 31
+pixel 14 29 5002
+P 7 1839 23 22 58 -1 24 54 -3
+sys 1
+fill 58 1 -35 21
+line 60 0 22 0
+line 59 1 22 1
+sys 2
+line 58 1 58 21
+pixel 59 0 5002
+line 60 -1 21 -1
+sys 3
+line 21 1 21 21
+sys 0
+pixel 21 0 5000
+line 22 1 22 21
+P 22 608 22 52 8 31 4 28 9
+translate 0 0
+sys 0
+rect 0 0 22 52
+sys 2
+line 21 0 21 51
+line 0 51 21 51
+sys 3
+line 1 1 20 1
+line 1 1 1 50
+sys 1
+line 20 1 20 50
+line 1 50 20 50
+translate 0 0
+P 9 1329 1 -1 49 17 5 18 28
+sys 1
+fill 0 0 1 -1
+translate 0 0
+sys 3
+rect 0 0 1 -1
+translate 0 0
+text 1 1
+P 1 100 48 22 0 43 26 -3 -1
+translate 0 43
+sys 2
+rect 0 0 48 22
+sys 0
+line 47 0 47 21
+line 0 21 47 21
+sys 3
+line 1 20 46 20
+line 46 20 46 1
+translate 0 -43
+P 17 721 44 54 -2 42 35 47 52
+sys 11
+fill 0 0 44 54
+sys 2
+line 1 1 42 1
+line 1 1 1 52
+sys 0
+line 43 0 43 53
+line 1 53 43 53
+sys 3
+line 42 0 42 52
+line 2 52 42 52
+P 2 1733 10 35 37 20 27 8 36
+translate 37 20
+sys 3
+rect 0 0 10 35
+translate -37 -20
+P 21 932 8 14 18 45 11 20 46
+P 18 1954 32 38 44 55 37 51 -22034
+sys 1
+fill 0 0 32 38
+P 3 1173 9 36 55 34 26 59 12
+translate 55 34
+sys 0
+rect 0 0 9 36
+sys 2
+line 8 0 8 35
+line 0 35 8 35
+sys 3
+line 1 1 7 1
+line 1 1 1 34
+sys 1
+line 7 1 7 34
+line 1 34 7 34
+translate -55 -34
+P 12 672 57 56 3 0 50 5 9
+sys 5
+P 12 1234 20 11 3 28 2147483645 7 7
+sys 5
+P 13 496 15 18 21 8 21 16 50
+sys 1
+fill 0 0 15 18
+translate 0 0
+sys 2
+rect 0 0 15 18
+sys 0
+line 14 0 14 17
+line 0 17 14 17
+sys 3
+line 1 16 13 16
+line 13 16 13 1
+translate 0 0
+translate 0 0
+sys 5
+line 3 5 4 5
+line 10 5 9 5
+line 3 12 4 12
+line 10 12 9 12
+line 4 6 5 6
+line 9 6 8 6
+line 4 11 5 11
+line 9 11 8 11
+line 5 7 6 7
+line 8 7 7 7
+line 5 10 6 10
+line 8 10 7 10
+line 6 8 7 8
+line 7 8 6 8
+line 6 9 7 9
+line 7 9 6 9
+translate 0 0
+P 18 567 43 44 8 8 49 38 22
+sys 1
+fill 0 0 43 44
+P 24 1883 2 58 40 52 35 59 -2465
+translate 0 20
+sys 2
+line 0 1 52 1
+line 35 1 1 1
+line 1 0 1 37
+line 0 37 1 37
+line 1 1 1 37
+sys 3
+line 0 0 52 0
+line 35 0 0 0
+line 0 0 0 36
+line 0 36 0 36
+line 0 0 0 36
+translate 0 -20
+P 15 1528 42 41 2 21 31 13 58
+sys 1
+fill 0 0 42 41
+translate 0 0
+sys 0
+line 41 0 41 40
+line 0 40 41 40
+sys 2
+line 1 1 1 39
+line 1 1 40 1
+sys 3
+line 1 39 40 39
+line 40 39 40 1
+translate 0 0
+sys 5
+line 21 18 21 18
+line 20 19 22 19
+line 19 20 23 20
+line 18 21 24 21
+P 1 1269 56 14 -3 25 58 1 60
+translate -3 25
+sys 2
+rect 0 0 56 14
+sys 0
+line 0 0 55 0
+line 0 0 0 13
+sys 1
+line 54 1 54 12
+line 54 12 2 12
+sys 3
+line 1 1 54 1
+line 1 1 1 12
+translate 3 -25
+P 18 989 35 2147483641 32 13 44 49 9
+sys 1
+fill 0 0 35 2147483641
+P 15 1357 58 55 1 32 42 54 11
+sys 1
+fill 0 0 58 55
+translate 0 0
+sys 3
+rect 0 0 58 55
+translate 0 0
+sys 5
+line 30 27 30 27
+line 29 26 29 28
+line 28 25 28 29
+line 27 24 27 30
+P 12 1777 34 7 0 6 46 23 1
+sys 5
+line 63 2 63 2
+line 62 3 64 3
+line 61 4 65 4
+line 60 5 66 5
+P 23 270 56 50 13 7 32 51 33
+P 23 1349 25 27 12 58 48 39 6
+sys 0
+rect 0 0 25 27
+P 16 1160 17 21 -1 42 32 48 39
+P 18 350 40 19 28 6 26 58 43
+sys 1
+fill 0 0 40 19
+P 9 489 43 28 48 -3 21 50 30
+sys 1
+fill 0 0 43 28
+sys 0
+rect 0 0 43 28
+translate 1 1
+sys 3
+rect 0 0 41 26
+translate -1 -1
+text 1 1
+P 21 1730 45 58 19 24 10 2 14
+sys 4
+fill 19 24 10 2
+P 11 1595 41 19 6 21 9 16 22
+sys 1
+fill 0 0 41 19
+text 0 0
+P 24 281 41 34 59 35 45 2 3
+translate 0 29
+sys 2
+line 0 1 35 1
+line 45 1 40 1
+line 40 0 40 4
+line 0 4 40 4
+line 1 1 1 4
+sys 3
+line 0 0 35 0
+line 45 0 39 0
+line 39 0 39 3
+line 0 3 39 3
+line 0 0 0 3
+translate 0 -29
+P 14 1640 38 31 44 44 44 35 0
+sys 1
+fill 0 0 38 31
+translate 0 0
+sys 0
+line 37 0 37 30
+line 0 30 37 30
+sys 2
+line 1 1 1 29
+line 1 1 36 1
+sys 3
+line 1 29 36 29
+line 36 29 36 1
+translate 0 0
+P 3 244 37 46 36 -1 8 47 4
+translate 36 -1
+sys 0
+rect 0 0 37 46
+sys 2
+line 36 0 36 45
+line 0 45 36 45
+sys 3
+line 1 1 35 1
+line 1 1 1 44
+sys 1
+line 35 1 35 44
+line 1 44 35 44
+translate -36 1
+P 7 1147 57 30 17 5 50 6 51
+sys 1
+fill 17 7 40 23
+line 19 6 56 6
+line 18 7 56 7
+sys 2
+line 17 7 17 29
+pixel 18 6 5002
+line 19 5 55 5
+sys 3
+line 55 7 55 29
+sys 0
+pixel 55 6 5000
+line 56 7 56 29
+P 19 1531 2147483643 58 32 52 1 -27908 48
+sys 2
+rect 0 0 2147483643 58
+rect 1 1 2147483642 57
+sys 3
+rect 0 0 2147483642 57
+P 7 723 2 17 18 13 21 2147483643 52
+sys 1
+fill 18 15 -16 2
+line 20 14 1 14
+line 19 15 1 15
+sys 2
+line 18 15 18 16
+pixel 19 14 5002
+line 20 13 0 13
+sys 3
+line 0 15 0 16
+sys 0
+pixel 0 14 5000
+line 1 15 1 16
+P 15 1215 18 -2 2 37 60 52 3
+sys 1
+fill 0 0 18 -2
+translate 0 0
+sys 3
+rect 0 0 18 -2
+translate 0 0
+sys 6
+line 9 -3 9 -3
+line 8 -2 10 -2
+line 7 -1 11 -1
+line 6 0 12 0
+sys 2
+line 7 1 13 1
+P 4 582 33 13 3 2 25 35 40
+sys 6
+line 13 4 19 4
+line 14 5 18 5
+sys 2
+line 19 5 20 5
+sys 6
+line 15 6 17 6
+sys 2
+line 18 6 19 6
+sys 6
+line 16 7 16 7
+sys 2
+line 17 7 18 7
+sys 6
+pixel 17 8 5002
+P 7 107 33 9 8 20 20 18 26
+sys 1
+fill 8 22 25 -13
+line 10 21 32 21
+line 9 22 32 22
+sys 2
+line 8 22 8 8
+pixel 9 21 5002
+line 10 20 31 20
+sys 3
+line 31 22 31 8
+sys 0
+pixel 31 21 5000
+line 32 22 32 8
+P 2 1451 10 41 21 -3 22 18 14
+translate 21 -3
+sys 3
+rect 0 0 10 41
+translate -21 3
+P 18 668 17 21 26 58 48 1 20
+sys 1
+fill 0 0 17 21
+P 20 217 0 15 11 11 55 4 22
+translate 0 0
+sys 0
+rect 0 0 0 15
+sys 2
+line -1 0 -1 14
+line 0 14 -1 14
+sys 3
+line 1 1 -2 1
+line 1 1 1 13
+sys 1
+line -2 1 -2 13
+line 1 13 -2 13
+translate 0 0
+P 2 1869 47 44 21 52 23 24 22
+translate 21 52
+sys 3
+rect 0 0 47 44
+translate -21 -52
+P 25 865 8 47 76 15 17 19 35
+P 15 540 57 5 0 60 14 2147483634 3
+sys 1
+fill 0 0 57 5
+translate 0 0
+sys 0
+line 56 0 56 4
+line 0 4 56 4
+sys 2
+line 1 1 1 3
+line 1 1 55 1
+sys 3
+line 1 3 55 3
+line 55 3 55 1
+translate 0 0
+sys 5
+line 26 2 26 2
+line 27 1 27 3
+line 28 0 28 4
+line 29 -1 29 5
+P 14 1968 36 31 19 11 0 44 52
+sys 1
+fill 0 0 36 31
+translate 0 0
+sys 0
+line 35 0 35 30
+line 0 30 35 30
+sys 2
+line 1 1 1 29
+line 1 1 34 1
+sys 3
+line 1 29 34 29
+line 34 29 34 1
+translate 0 0
+P 20 1885 22 30 7 58 49 26 39
+translate 0 0
+sys 0
+rect 0 0 22 30
+sys 2
+line 21 0 21 29
+line 0 29 21 29
+sys 3
+line 1 1 20 1
+line 1 1 1 28
+sys 1
+line 20 1 20 28
+line 1 28 20 28
+translate 0 0
+P 13 1679 32 51 52 36 57 58 48
+sys 1
+fill 0 0 32 51
+translate 0 0
+sys 2
+rect 0 0 32 51
+sys 0
+line 0 0 31 0
+line 0 0 0 50
+sys 1
+line 30 1 30 49
+line 30 49 2 49
+sys 3
+line 1 1 30 1
+line 1 1 1 49
+translate 0 0
+translate 1 1
+sys 5
+line 12 21 13 21
+line 19 21 18 21
+line 12 28 13 28
+line 19 28 18 28
+line 13 22 14 22
+line 18 22 17 22
+line 13 27 14 27
+line 18 27 17 27
+line 14 23 15 23
+line 17 23 16 23
+line 14 26 15 26
+line 17 26 16 26
+line 15 24 16 24
+line 16 24 15 24
+line 15 25 16 25
+line 16 25 15 25
+translate -1 -1
+P 14 1216 5 16 33 43 59 45 27
+sys 1
+fill 0 0 5 16
+translate 0 0
+sys 0
+line 4 0 4 15
+line 0 15 4 15
+sys 2
+line 1 1 1 14
+line 1 1 3 1
+sys 3
+line 1 14 3 14
+line 3 14 3 1
+translate 0 0
+P 7 130 51 10 23 53 28 10 4
+sys 1
+fill 23 55 28 -45
+line 25 54 50 54
+line 24 55 50 55
+sys 2
+line 23 55 23 9
+pixel 24 54 5002
+line 25 53 49 53
+sys 3
+line 49 55 49 9
+sys 0
+pixel 49 54 5000
+line 50 55 50 9
+P 17 1168 0 0 33 2 4 25 52
+sys 11
+fill 0 0 0 0
+sys 2
+line 1 1 -2 1
+line 1 1 1 -2
+sys 0
+line -1 0 -1 -1
+line 1 -1 -1 -1
+sys 3
+line -2 0 -2 -2
+line 2 -2 -2 -2
+P 15 876 17 53 -1 -24772 48 -1 33
+sys 1
+fill 0 0 17 53
+translate 0 0
+sys 0
+line 16 0 16 52
+line 0 52 16 52
+sys 2
+line 1 1 1 51
+line 1 1 15 1
+sys 3
+line 1 51 15 51
+line 15 51 15 1
+translate 0 0
+sys 5
+P 20 1575 14 23 30 49 31 1 46
+translate 0 0
+sys 0
+rect 0 0 14 23
+sys 2
+line 13 0 13 22
+line 0 22 13 22
+sys 3
+line 1 1 12 1
+line 1 1 1 21
+sys 1
+line 12 1 12 21
+line 1 21 12 21
+translate 0 0
+P 23 1537 48 29 53 -2 35 13 17
+P 7 1690 54 12 52 13 38 35 4
+sys 1
+fill 52 15 2 -3
+line 54 14 53 14
+line 53 15 53 15
+sys 2
+line 52 15 52 11
+pixel 53 14 5002
+line 54 13 52 13
+sys 3
+line 52 15 52 11
+sys 0
+pixel 52 14 5000
+line 53 15 53 11
+P 6 1229 49 58 23 49 49 18 -3
+translate 23 49
+sys 1
+ellipse 0 0 49 58
+sys 3
+arc 0 0 49 58 45 180
+sys 0
+arc 1 1 47 56 45 180
+sys 2
+arc 0 0 49 58 235 180
+sys 1
+arc 1 1 47 56 235 180
+translate -23 -49
+P 16 1644 56 18 4 5 22 9 51
+P 19 1186 21 56 52 47 18 17 2
+sys 2
+rect 0 0 21 56
+rect 1 1 20 55
+sys 3
+rect 0 0 20 55
+P 16 1507 22 49 1 42 18 14 36
+translate 0 0
+sys 2
+rect 0 0 22 49
+sys 0
+line 0 0 21 0
+line 0 0 0 48
+sys 1
+line 20 1 20 47
+line 20 47 2 47
+sys 3
+line 1 1 20 1
+line 1 1 1 47
+translate 0 0
+P 20 1197 57 50 27 42 57 59 44
+translate 0 0
+sys 0
+rect 0 0 57 50
+sys 2
+line 56 0 56 49
+line 0 49 56 49
+sys 3
+line 1 1 55 1
+line 1 1 1 48
+sys 1
+line 55 1 55 48
+line 1 48 55 48
+translate 0 0
+P 10 117 21 40 26 53 18 -1 23
+sys 1
+fill 0 2 21 38
+line 2 1 20 1
+line 1 2 20 2
+sys 2
+line 0 2 0 39
+pixel 1 1 5002
+line 2 0 19 0
+sys 3
+line 19 2 19 39
+sys 0
+pixel 19 1 5000
+line 20 2 20 39
+text 0 0
+P 6 1263 44 -2 15 21 60 28 2
+translate 15 21
+sys 1
+ellipse 0 0 44 -2
+sys 3
+arc 0 0 44 -2 45 180
+sys 0
+arc 1 1 42 -4 45 180
+sys 2
+arc 0 0 44 -2 235 180
+sys 1
+arc 1 1 42 -4 235 180
+sys 14
+ellipse 20 -3 4 4
+translate -15 -21
+P 15 558 31 -25373 4 52 3 56 -3
+sys 1
+fill 0 0 31 -25373
+translate 0 0
+sys 0
+line 30 0 30 -25374
+line 0 -25374 30 -25374
+sys 2
+line 1 1 1 -25375
+line 1 1 29 1
+sys 3
+line 1 -25375 29 -25375
+line 29 -25375 29 1
+translate 0 0
+sys 6
+P 18 2025 33 60 53 17 40 12 40
+sys 1
+fill 0 0 33 60
+P 9 1548 12 14 48 40 48 53 29
+sys 1
+sys 0
+rect 0 0 12 14
+translate 1 1
+sys 2
+rect 0 0 10 12
+sys 0
+line 9 0 9 11
+line 0 11 9 11
+sys 3
+line 1 10 8 10
+line 8 10 8 1
+translate -1 -1
+text 0 0
+P 21 1550 33 54 -12308 43 23 38 13
+P 5 1356 56 36 35 11 57 23 24
+translate 35 11
+sys 13
+fill 0 0 56 36
+sys 3
+line 0 0 55 0
+line 0 0 0 35
+sys 2
+line 55 0 55 35
+line 0 35 55 35
+sys 0
+line 1 1 54 1
+line 1 1 1 34
+sys 1
+line 54 1 54 34
+line 1 34 54 34
+translate -35 -11
+P 1 1645 4 45 50 49 60 1 43
+translate 50 49
+sys 2
+rect 0 0 4 45
+sys 0
+line 0 0 3 0
+line 0 0 0 44
+sys 1
+line 2 1 2 43
+line 2 43 2 43
+sys 3
+line 1 1 2 1
+line 1 1 1 43
+translate -50 -49
+P 13 1028 51 17 55 58 34 25 6
+sys 1
+fill 0 0 51 17
+translate 0 0
+sys 2
+rect 0 0 51 17
+sys 0
+line 50 0 50 16
+line 0 16 50 16
+sys 3
+line 1 15 49 15
+line 49 15 49 1
+translate 0 0
+translate 0 0
+sys 5
+line 21 4 22 4
+line 28 4 27 4
+line 21 11 22 11
+line 28 11 27 11
+line 22 5 23 5
+line 27 5 26 5
+line 22 10 23 10
+line 27 10 26 10
+line 23 6 24 6
+line 26 6 25 6
+line 23 9 24 9
+line 26 9 25 9
+line 24 7 25 7
+line 25 7 24 7
+line 24 8 25 8
+line 25 8 24 8
+translate 0 0
+P 4 1907 55 2 1 10 28 14 37
+sys 6
+line 28 1 28 1
+sys 2
+line 28 2 28 3
+sys 6
+line 27 0 27 2
+sys 2
+line 27 3 27 4
+sys 6
+line 26 -1 26 3
+sys 2
+line 26 4 26 5
+sys 6
+line 25 -2 25 4
+pixel 29 2 5002
+P 6 960 28 7 13 23 26 19 0
+translate 13 23
+sys 13
+ellipse 0 0 28 7
+sys 3
+arc 0 0 28 7 45 180
+sys 0
+arc 1 1 26 5 45 180
+sys 2
+arc 0 0 28 7 235 180
+sys 1
+arc 1 1 26 5 235 180
+translate -13 -23
+P 19 1687 43 19 4 11 18 20 32
+sys 2
+rect 0 0 43 19
+rect 1 1 42 18
+sys 3
+rect 0 0 42 18
+P 10 40 30 58 9 56 35 0 11
+sys 1
+fill 0 2 30 56
+line 2 1 29 1
+line 1 2 29 2
+sys 2
+line 0 2 0 57
+pixel 1 1 5002
+line 2 0 28 0
+sys 3
+line 28 2 28 57
+sys 0
+pixel 28 1 5000
+line 29 2 29 57
+text 0 0
+P 17 1788 30 14 40 19 59 7 -1
+sys 11
+fill 0 0 30 14
+sys 2
+line 1 1 28 1
+line 1 1 1 12
+sys 0
+line 29 0 29 13
+line 1 13 29 13
+sys 3
+line 28 0 28 12
+line 2 12 28 12
+P 21 440 40 37 58 19 60 31 56
+P 13 1418 42 21 21 12 10 51 2147483638
+sys 1
+fill 0 0 42 21
+translate 0 0
+sys 2
+rect 0 0 42 21
+sys 0
+line 41 0 41 20
+line 0 20 41 20
+sys 3
+line 1 19 40 19
+line 40 19 40 1
+translate 0 0
+translate 0 0
+sys 5
+line 17 6 18 6
+line 24 6 23 6
+line 17 13 18 13
+line 24 13 23 13
+line 18 7 19 7
+line 23 7 22 7
+line 18 12 19 12
+line 23 12 22 12
+line 19 8 20 8
+line 22 8 21 8
+line 19 11 20 11
+line 22 11 21 11
+line 20 9 21 9
+line 21 9 20 9
+line 20 10 21 10
+line 21 10 20 10
+translate 0 0
+P 9 1444 3 5 4 19 24 21 19
+sys 1
+translate 0 0
+sys 2
+rect 0 0 3 5
+sys 0
+line 2 0 2 4
+line 0 4 2 4
+sys 3
+line 1 3 1 3
+line 1 3 1 1
+translate 0 0
+text 0 0
+P 5 412 6 22 51 43 36 33 -3
+translate 51 43
+sys 13
+fill 0 0 6 22
+sys 3
+line 0 0 5 0
+line 0 0 0 21
+sys 2
+line 5 0 5 21
+line 0 21 5 21
+sys 0
+line 1 1 4 1
+line 1 1 1 20
+sys 1
+line 4 1 4 20
+line 1 20 4 20
+translate -51 -43
+P 9 1434 -3 3 -3 15 15 25 3
+sys 1
+fill 0 0 -3 3
+sys 0
+rect 0 0 -3 3
+translate 1 1
+sys 0
+line -6 0 -6 0
+line 0 0 -6 0
+sys 2
+line 1 1 1 -1
+line 1 1 -7 1
+sys 3
+line 1 -1 -7 -1
+line -7 -1 -7 1
+translate -1 -1
+text 0 0
+P 9 129 47 44 16 41 43 55 20
+sys 1
+fill 0 0 47 44
+translate 0 0
+sys 2
+rect 0 0 47 44
+sys 0
+line 0 0 46 0
+line 0 0 0 43
+sys 1
+line 45 1 45 42
+line 45 42 2 42
+sys 3
+line 1 1 45 1
+line 1 1 1 42
+translate 0 0
+text 1 1
+P 11 670 40 41 53 21 26 1 23
+sys 1
+text 0 0
+P 10 665 48 18 19 11 22 39 36
+sys 1
+fill 0 2 48 16
+line 2 1 47 1
+line 1 2 47 2
+sys 2
+line 0 2 0 17
+pixel 1 1 5002
+line 2 0 46 0
+sys 3
+line 46 2 46 17
+sys 0
+pixel 46 1 5000
+line 47 2 47 17
+text 0 0
+P 24 1120 23 19 34 21 38 51 29
+translate 0 17
+sys 2
+line 0 1 21 1
+line 38 1 22 1
+line 22 0 22 1
+line 0 1 22 1
+line 1 1 1 1
+sys 3
+line 0 0 21 0
+line 38 0 21 0
+line 21 0 21 0
+line 0 0 21 0
+line 0 0 0 0
+translate 0 -17
+P 19 1670 46 35 30 35 2 46 19
+sys 2
+rect 0 0 46 35
+rect 1 1 45 34
+sys 3
+rect 0 0 45 34
+P 19 303 0 51 41 21 11 5 12
+sys 2
+rect 0 0 0 51
+rect 1 1 -1 50
+sys 3
+rect 0 0 -1 50
+P 20 541 40 53 15 22 38 23 -2
+translate 0 0
+sys 0
+rect 0 0 40 53
+sys 2
+line 39 0 39 52
+line 0 52 39 52
+sys 3
+line 1 1 38 1
+line 1 1 1 51
+sys 1
+line 38 1 38 51
+line 1 51 38 51
+translate 0 0
+P 12 1153 26 9 2 0 49 34 59
+P 23 106 59 7 39 59 5 20 57
+sys 0
+rect 0 0 59 7
+P 11 1180 2 47 -2 48 19 39 -3
+sys 1
+text 0 0
+P 11 470 19 23 2 2147483642 6 48 39
+sys 1
+text 0 0
+P 18 1058 8 59 22 37 18 2147483642 27
+sys 1
+fill 0 0 8 59
+P 12 1674 58 44 1 2 49 15 14
+sys 5
+line 58 20 64 20
+line 59 21 63 21
+line 60 22 62 22
+line 61 23 61 23
+P 22 75 8 58 52 3 39 1 39
+translate 0 0
+sys 0
+rect 0 0 8 58
+sys 2
+line 7 0 7 57
+line 0 57 7 57
+sys 3
+line 1 1 6 1
+line 1 1 1 56
+sys 1
+line 6 1 6 56
+line 1 56 6 56
+translate 0 0
+P 25 1921 25 52 9 8 58 16 55
+translate 0 0
+sys 13
+ellipse 0 0 25 52
+sys 3
+arc 0 0 25 52 45 180
+sys 0
+arc 1 1 23 50 45 180
+sys 2
+arc 0 0 25 52 235 180
+sys 1
+arc 1 1 23 50 235 180
+sys 14
+ellipse 10 24 4 4
+translate 0 0
+P 3 1758 2 14 58 46 46 15 19
+translate 58 46
+sys 0
+rect 0 0 2 14
+sys 2
+line 1 0 1 13
+line 0 13 1 13
+sys 3
+line 1 1 0 1
+line 1 1 1 12
+sys 1
+line 0 1 0 12
+line 1 12 0 12
+translate -58 -46
+P 24 1938 34 44 11 25 9 2147483641 37
+translate 0 5
+sys 2
+line 0 1 25 1
+line 9 1 33 1
+line 33 0 33 38
+line 0 38 33 38
+line 1 1 1 38
+sys 3
+line 0 0 25 0
+line 9 0 32 0
+line 32 0 32 37
+line 0 37 32 37
+line 0 0 0 37
+translate 0 -5
+P 4 761 -3 1 2 48 36 44 43
+sys 5
+line -1 -2 -1 -2
+line -2 -1 0 -1
+line -3 0 1 0
+line -4 1 2 1
+P 7 1389 24 5 21 -3677 -1 44 28
+sys 1
+fill 21 -3675 3 3680
+line 23 -3676 23 -3676
+line 22 -3675 23 -3675
+sys 2
+line 21 -3675 21 4
+pixel 22 -3676 5002
+line 23 -3677 22 -3677
+sys 3
+line 22 -3675 22 4
+sys 0
+pixel 22 -3676 5000
+line 23 -3675 23 4
+P 15 2020 7 7 0 23 30 7 41
+sys 1
+fill 0 0 7 7
+translate 0 0
+sys 0
+line 6 0 6 6
+line 0 6 6 6
+sys 2
+line 1 1 1 5
+line 1 1 5 1
+sys 3
+line 1 5 5 5
+line 5 5 5 1
+translate 0 0
+sys 5
+line 1 3 1 3
+line 2 2 2 4
+line 3 1 3 5
+line 4 0 4 6
+P 2 1546 0 31 18 -2 28 6 36
+translate 18 -2
+sys 0
+line -1 0 -1 30
+line 0 30 -1 30
+sys 2
+line 1 1 1 29
+line 1 1 -2 1
+sys 3
+line 1 29 -2 29
+line -2 29 -2 1
+translate -18 2
+P 4 1363 6 5 1 3 57 44 29
+sys 6
+line 4 2 4 2
+sys 2
+line 4 3 4 4
+sys 6
+line 3 1 3 3
+sys 2
+line 3 4 3 5
+sys 6
+line 2 0 2 4
+sys 2
+line 2 5 2 6
+sys 6
+line 1 -1 1 5
+pixel 5 3 5002
+P 25 1430 12 11 10 0 2 18 16
+sys 1
+fill 0 0 12 11
+translate 0 0
+sys 0
+line 11 0 11 10
+line 0 10 11 10
+sys 2
+line 1 1 1 9
+line 1 1 10 1
+sys 3
+line 1 9 10 9
+line 10 9 10 1
+translate 0 0
+P 16 743 39 46 2 39 12 45 4
+translate 0 0
+sys 3
+rect 0 0 39 46
+translate 0 0
+P 6 137 2147483645 21 37 50 14 48 42
+translate 37 50
+sys 1
+ellipse 0 0 2147483645 21
+sys 3
+arc 0 0 2147483645 21 45 180
+sys 0
+arc 1 1 2147483643 19 45 180
+sys 2
+arc 0 0 2147483645 21 235 180
+sys 1
+arc 1 1 2147483643 19 235 180
+translate -37 -50
+P 24 402 30 9 28 1 2147483643 46 25
+translate 0 14
+sys 2
+line 0 1 1 1
+line 2147483643 1 29 1
+line 29 0 29 -6
+line 0 -6 29 -6
+line 1 1 1 -6
+sys 3
+line 0 0 1 0
+line 2147483643 0 28 0
+line 28 0 28 -7
+line 0 -7 28 -7
+line 0 0 0 -7
+translate 0 -14
+P 22 1986 43 35 16 21 30 40 9
+translate 0 0
+sys 0
+rect 0 0 43 35
+sys 2
+line 42 0 42 34
+line 0 34 42 34
+sys 3
+line 1 1 41 1
+line 1 1 1 33
+sys 1
+line 41 1 41 33
+line 1 33 41 33
+translate 0 0
+P 14 948 57 12 46 3 56 56 16
+sys 1
+fill 0 0 57 12
+translate 0 0
+sys 0
+line 56 0 56 11
+line 0 11 56 11
+sys 2
+line 1 1 1 10
+line 1 1 55 1
+sys 3
+line 1 10 55 10
+line 55 10 55 1
+translate 0 0
+P 6 1556 38 24 42 2 32 0 16
+translate 42 2
+sys 13
+ellipse 0 0 38 24
+sys 3
+arc 0 0 38 24 45 180
+sys 0
+arc 1 1 36 22 45 180
+sys 2
+arc 0 0 38 24 235 180
+sys 1
+arc 1 1 36 22 235 180
+translate -42 -2
+P 11 974 5 23 10 27 35 42 32
+sys 1
+text 0 0
+P 4 428 47 6 3 -2 28 49 -1
+sys 5
+line 20 1 26 1
+line 21 2 25 2
+line 22 3 24 3
+line 23 4 23 4
+P 6 1623 24 3 10 17 19 50 2
+translate 10 17
+sys 1
+ellipse 0 0 24 3
+sys 3
+arc 0 0 24 3 45 180
+sys 0
+arc 1 1 22 1 45 180
+sys 2
+arc 0 0 24 3 235 180
+sys 1
+arc 1 1 22 1 235 180
+translate -10 -17
+P 24 1296 31 31 47 7 49 27 20
+translate 0 23
+sys 2
+line 0 1 7 1
+line 49 1 30 1
+line 30 0 30 7
+line 0 7 30 7
+line 1 1 1 7
+sys 3
+line 0 0 7 0
+line 49 0 29 0
+line 29 0 29 6
+line 0 6 29 6
+line 0 0 0 6
+translate 0 -23
+P 13 146 2 16 6 9 36 38 51
+sys 1
+fill 0 0 2 16
+translate 0 0
+sys 2
+rect 0 0 2 16
+sys 0
+line 1 0 1 15
+line 0 15 1 15
+sys 3
+line 1 14 0 14
+line 0 14 0 1
+translate 0 0
+translate 0 0
+sys 5
+line -3 4 -2 4
+line 4 4 3 4
+line -3 11 -2 11
+line 4 11 3 11
+line -2 5 -1 5
+line 3 5 2 5
+line -2 10 -1 10
+line 3 10 2 10
+line -1 6 0 6
+line 2 6 1 6
+line -1 9 0 9
+line 2 9 1 9
+line 0 7 1 7
+line 1 7 0 7
+line 0 8 1 8
+line 1 8 0 8
+translate 0 0
+P 12 559 13 6 1 0 18 9 45
+sys 5
+line 2 2 8 2
+line 3 3 7 3
+line 4 4 6 4
+line 5 5 5 5
+P 8 740 48 41 14 51 6 9 31
+translate 14 51
+sys 5
+line 20 16 21 16
+line 27 16 26 16
+line 20 23 21 23
+line 27 23 26 23
+line 21 17 22 17
+line 26 17 25 17
+line 21 22 22 22
+line 26 22 25 22
+line 22 18 23 18
+line 25 18 24 18
+line 22 21 23 21
+line 25 21 24 21
+line 23 19 24 19
+line 24 19 23 19
+line 23 20 24 20
+line 24 20 23 20
+translate -14 -51
+P 25 526 52 48 5 4 33 40 37
+sys 1
+fill 0 0 52 48
+translate 0 0
+sys 0
+line 51 0 51 47
+line 0 47 51 47
+sys 2
+line 1 1 1 46
+line 1 1 50 1
+sys 3
+line 1 46 50 46
+line 50 46 50 1
+translate 0 0
+sys 6
+line 26 22 26 22
+line 25 23 27 23
+line 24 24 28 24
+line 23 25 29 25
+sys 2
+line 24 26 30 26
+P 22 1251 4 47 26 44 44 50 52
+translate 0 0
+sys 0
+rect 0 0 4 47
+sys 2
+line 3 0 3 46
+line 0 46 3 46
+sys 3
+line 1 1 2 1
+line 1 1 1 45
+sys 1
+line 2 1 2 45
+line 1 45 2 45
+translate 0 0
+P 1 520 12 16 20 18 2 1 41
+translate 20 18
+sys 2
+rect 0 0 12 16
+sys 0
+line 11 0 11 15
+line 0 15 11 15
+sys 3
+line 1 14 10 14
+line 10 14 10 1
+translate -20 -18
+P 23 1975 16 2 1 60 42 9 46
+P 20 831 38 30 39 28 1 36 18
+translate 0 0
+sys 0
+rect 0 0 38 30
+sys 2
+line 37 0 37 29
+line 0 29 37 29
+sys 3
+line 1 1 36 1
+line 1 1 1 28
+sys 1
+line 36 1 36 28
+line 1 28 36 28
+translate 0 0
+P 14 2044 -3 21 46 56 3 26 38
+sys 1
+fill 0 0 -3 21
+translate 0 0
+sys 0
+line -4 0 -4 20
+line 0 20 -4 20
+sys 2
+line 1 1 1 19
+line 1 1 -5 1
+sys 3
+line 1 19 -5 19
+line -5 19 -5 1
+translate 0 0
+P 5 529 23 41 30 50 39 -3 40
+translate 30 50
+sys 1
+fill 0 0 23 41
+sys 3
+line 0 0 22 0
+line 0 0 0 40
+sys 2
+line 22 0 22 40
+line 0 40 22 40
+sys 0
+line 1 1 21 1
+line 1 1 1 39
+sys 1
+line 21 1 21 39
+line 1 39 21 39
+translate -30 -50
+P 19 936 28 6 3 2147483640 54 2 9
+sys 2
+rect 0 0 28 6
+rect 1 1 27 5
+sys 3
+rect 0 0 27 5
+P 8 335 29 16 44 34 2147483634 34 43
+translate 44 34
+sys 5
+line 10 4 11 4
+line 17 4 16 4
+line 10 11 11 11
+line 17 11 16 11
+line 11 5 12 5
+line 16 5 15 5
+line 11 10 12 10
+line 16 10 15 10
+line 12 6 13 6
+line 15 6 14 6
+line 12 9 13 9
+line 15 9 14 9
+line 13 7 14 7
+line 14 7 13 7
+line 13 8 14 8
+line 14 8 13 8
+translate -44 -34
+P 11 1300 11 53 53 46 8 9 22
+sys 1
+text 0 0
+P 10 741 14 35 45 22 51 49 9
+sys 1
+fill 0 2 14 33
+line 2 1 13 1
+line 1 2 13 2
+sys 2
+line 0 2 0 34
+pixel 1 1 5002
+line 2 0 12 0
+sys 3
+line 12 2 12 34
+sys 0
+pixel 12 1 5000
+line 13 2 13 34
+text 0 0
+P 19 2027 34 18 48 17 10 29 57
+sys 2
+rect 0 0 34 18
+rect 1 1 33 17
+sys 3
+rect 0 0 33 17
+P 25 72 14 45 7 11 28 27 36
+sys 1
+fill 0 0 14 45
+sys 0
+rect 0 0 14 45
+translate 1 1
+sys 3
+rect 0 0 12 43
+translate -1 -1
+P 8 566 7 49 25 1 21 15 44
+translate 25 1
+sys 5
+line -1 20 0 20
+line 6 20 5 20
+line -1 27 0 27
+line 6 27 5 27
+line 0 21 1 21
+line 5 21 4 21
+line 0 26 1 26
+line 5 26 4 26
+line 1 22 2 22
+line 4 22 3 22
+line 1 25 2 25
+line 4 25 3 25
+line 2 23 3 23
+line 3 23 2 23
+line 2 24 3 24
+line 3 24 2 24
+translate -25 -1
+P 9 72 -1 44 4 31 27 24 26
+sys 1
+fill 0 0 -1 44
+sys 0
+rect 0 0 -1 44
+translate 1 1
+sys 2
+rect 0 0 -3 42
+sys 0
+line -4 0 -4 41
+line 0 41 -4 41
+sys 3
+line 1 40 -5 40
+line -5 40 -5 1
+translate -1 -1
+text 0 0
+P 11 1216 37 34 -3 30 31 -3 39
+sys 1
+fill 0 0 37 34
+text 0 0
+P 8 797 5 57 54 16 45 14 30
+translate 54 16
+sys 5
+line -2 24 -1 24
+line 5 24 4 24
+line -2 31 -1 31
+line 5 31 4 31
+line -1 25 0 25
+line 4 25 3 25
+line -1 30 0 30
+line 4 30 3 30
+line 0 26 1 26
+line 3 26 2 26
+line 0 29 1 29
+line 3 29 2 29
+line 1 27 2 27
+line 2 27 1 27
+line 1 28 2 28
+line 2 28 1 28
+translate -54 -16
+P 3 1153 27 -1 54 46 46 46 39
+translate 54 46
+sys 0
+rect 0 0 27 -1
+sys 2
+line 26 0 26 -2
+line 0 -2 26 -2
+sys 3
+line 1 1 25 1
+line 1 1 1 -3
+sys 1
+line 25 1 25 -3
+line 1 -3 25 -3
+translate -54 -46
+P 19 1589 31 53 33 39 59 34 16
+sys 2
+rect 0 0 31 53
+rect 1 1 30 52
+sys 3
+rect 0 0 30 52
+P 3 17 18 57 23 41 1 7 8
+translate 23 41
+sys 0
+rect 0 0 18 57
+sys 2
+line 17 0 17 56
+line 0 56 17 56
+sys 3
+line 1 1 16 1
+line 1 1 1 55
+sys 1
+line 16 1 16 55
+line 1 55 16 55
+translate -23 -41
+P 17 634 18 58 60 25 48 43 29
+sys 11
+fill 0 0 18 58
+sys 2
+line 1 1 16 1
+line 1 1 1 56
+sys 0
+line 17 0 17 57
+line 1 57 17 57
+sys 3
+line 16 0 16 56
+line 2 56 16 56
+P 23 2005 13 -19745 3 55 55 29 0
+translate 0 0
+sys 2
+rect 0 0 13 -19745
+sys 0
+line 0 0 12 0
+line 0 0 0 -19746
+sys 1
+line 11 1 11 -19747
+line 11 -19747 2 -19747
+sys 3
+line 1 1 11 1
+line 1 1 1 -19747
+translate 0 0
+P 22 1772 -3 2 18 49 25 11 55
+translate 0 0
+sys 0
+rect 0 0 -3 2
+sys 2
+line -4 0 -4 1
+line 0 1 -4 1
+sys 3
+line 1 1 -5 1
+line 1 1 1 0
+sys 1
+line -5 1 -5 0
+line 1 0 -5 0
+translate 0 0
+P 10 415 57 22 31 49 48 19 59
+sys 1
+fill 0 2 57 20
+line 2 1 56 1
+line 1 2 56 2
+sys 2
+line 0 2 0 21
+pixel 1 1 5002
+line 2 0 55 0
+sys 3
+line 55 2 55 21
+sys 0
+pixel 55 1 5000
+line 56 2 56 21
+text 0 0
+P 18 1849 41 11 24 0 -2 11 28
+sys 1
+fill 0 0 41 11
+P 11 1175 26 -22545 58 29 3 -2 15
+sys 1
+text 0 0
+P 13 1412 2 21 60 52 12 8 27
+sys 1
+fill 0 0 2 21
+translate 0 0
+sys 2
+rect 0 0 2 21
+sys 0
+line 1 0 1 20
+line 0 20 1 20
+sys 3
+line 1 19 0 19
+line 0 19 0 1
+translate 0 0
+translate 0 0
+sys 5
+line -3 6 -2 6
+line 4 6 3 6
+line -3 13 -2 13
+line 4 13 3 13
+line -2 7 -1 7
+line 3 7 2 7
+line -2 12 -1 12
+line 3 12 2 12
+line -1 8 0 8
+line 2 8 1 8
+line -1 11 0 11
+line 2 11 1 11
+line 0 9 1 9
+line 1 9 0 9
+line 0 10 1 10
+line 1 10 0 10
+translate 0 0
+P 12 885 23 8 3 7 60 30 18
+sys 5
+P 23 996 53 50 1 37 49 0 35
+translate 0 0
+sys 2
+rect 0 0 53 50
+sys 0
+line 0 0 52 0
+line 0 0 0 49
+sys 1
+line 51 1 51 48
+line 51 48 2 48
+sys 3
+line 1 1 51 1
+line 1 1 1 48
+translate 0 0
+P 24 285 33 37 32 20 18 4 37
+translate 0 16
+sys 2
+line 0 1 20 1
+line 18 1 32 1
+line 32 0 32 20
+line 0 20 32 20
+line 1 1 1 20
+sys 3
+line 0 0 20 0
+line 18 0 31 0
+line 31 0 31 19
+line 0 19 31 19
+line 0 0 0 19
+translate 0 -16
+P 8 1019 36 3 49 45 24 -2 57
+translate 49 45
+sys 5
+line 14 -3 15 -3
+line 21 -3 20 -3
+line 14 4 15 4
+line 21 4 20 4
+line 15 -2 16 -2
+line 20 -2 19 -2
+line 15 3 16 3
+line 20 3 19 3
+line 16 -1 17 -1
+line 19 -1 18 -1
+line 16 2 17 2
+line 19 2 18 2
+line 17 0 18 0
+line 18 0 17 0
+line 17 1 18 1
+line 18 1 17 1
+translate -49 -45
+P 16 1056 2147483639 8 3 6 36 47 47
+translate 0 0
+sys 0
+rect 0 0 2147483639 8
+sys 2
+line 2147483638 0 2147483638 7
+line 0 7 2147483638 7
+sys 3
+line 1 1 2147483637 1
+line 1 1 1 6
+sys 1
+line 2147483637 1 2147483637 6
+line 1 6 2147483637 6
+translate 0 0
+P 8 1555 52 7 31 17 5 35 -27936
+translate 31 17
+sys 5
+line 22 -1 23 -1
+line 29 -1 28 -1
+line 22 6 23 6
+line 29 6 28 6
+line 23 0 24 0
+line 28 0 27 0
+line 23 5 24 5
+line 28 5 27 5
+line 24 1 25 1
+line 27 1 26 1
+line 24 4 25 4
+line 27 4 26 4
+line 25 2 26 2
+line 26 2 25 2
+line 25 3 26 3
+line 26 3 25 3
+translate -31 -17
+P 12 157 24 10 2 0 45 3 54
+P 10 470 25 59 26 11 -6899 44 5
+sys 1
+fill 0 2 25 57
+line 2 1 24 1
+line 1 2 24 2
+sys 2
+line 0 2 0 58
+pixel 1 1 5002
+line 2 0 23 0
+sys 3
+line 23 2 23 58
+sys 0
+pixel 23 1 5000
+line 24 2 24 58
+text 0 0
+P 9 1705 34 19 13 0 58 19 16
+sys 1
+fill 0 0 34 19
+sys 0
+rect 0 0 34 19
+translate 1 1
+sys 3
+rect 0 0 32 17
+translate -1 -1
+text 1 1
+P 8 253 17 34 29 -1 18 42 6
+translate 29 -1
+sys 5
+line 4 13 5 13
+line 11 13 10 13
+line 4 20 5 20
+line 11 20 10 20
+line 5 14 6 14
+line 10 14 9 14
+line 5 19 6 19
+line 10 19 9 19
+line 6 15 7 15
+line 9 15 8 15
+line 6 18 7 18
+line 9 18 8 18
+line 7 16 8 16
+line 8 16 7 16
+line 7 17 8 17
+line 8 17 7 17
+translate -29 1
+P 13 1699 42 44 39 17 34 21 5
+sys 1
+fill 0 0 42 44
+translate 0 0
+sys 2
+rect 0 0 42 44
+sys 0
+line 0 0 41 0
+line 0 0 0 43
+sys 1
+line 40 1 40 42
+line 40 42 2 42
+sys 3
+line 1 1 40 1
+line 1 1 1 42
+translate 0 0
+translate 1 1
+sys 5
+line 17 18 18 18
+line 24 18 23 18
+line 17 25 18 25
+line 24 25 23 25
+line 18 19 19 19
+line 23 19 22 19
+line 18 24 19 24
+line 23 24 22 24
+line 19 20 20 20
+line 22 20 21 20
+line 19 23 20 23
+line 22 23 21 23
+line 20 21 21 21
+line 21 21 20 21
+line 20 22 21 22
+line 21 22 20 22
+translate -1 -1
+P 5 1606 53 30 26 43 29 27 12
+translate 26 43
+sys 13
+fill 0 0 53 30
+sys 3
+line 0 0 52 0
+line 0 0 0 29
+sys 2
+line 52 0 52 29
+line 0 29 52 29
+sys 0
+line 1 1 51 1
+line 1 1 1 28
+sys 1
+line 51 1 51 28
+line 1 28 51 28
+translate -26 -43
+P 15 1173 2147483646 35 0 44 7 57 5
+sys 1
+fill 0 0 2147483646 35
+translate 0 0
+sys 3
+rect 0 0 2147483646 35
+translate 0 0
+sys 5
+line 1073741821 17 1073741821 17
+line 1073741822 16 1073741822 18
+line 1073741823 15 1073741823 19
+line 1073741824 14 1073741824 20
+P 7 59 26 11 56 12 8 17 50
+sys 1
+fill 56 14 -30 -3
+line 58 13 25 13
+line 57 14 25 14
+sys 2
+line 56 14 56 10
+pixel 57 13 5002
+line 58 12 24 12
+sys 3
+line 24 14 24 10
+sys 0
+pixel 24 13 5000
+line 25 14 25 10
+P 19 1629 0 34 43 14 56 25 2
+sys 2
+rect 0 0 0 34
+rect 1 1 -1 33
+sys 3
+rect 0 0 -1 33
+P 16 1692 30 54 2 49 56 34 27
+translate 0 0
+sys 0
+line 29 0 29 53
+line 0 53 29 53
+sys 2
+line 1 1 1 52
+line 1 1 28 1
+sys 3
+line 1 52 28 52
+line 28 52 28 1
+translate 0 0
+P 11 593 55 10 17 31 19 38 39
+sys 1
+fill 0 0 55 10
+text 0 0
+P 23 103 53 39 1 11 3 30 5
+sys 0
+rect 0 0 53 39
+P 4 218 34 51 3 48 -13710 12 52
+sys 6
+line 14 23 20 23
+line 15 24 19 24
+sys 2
+line 20 24 21 24
+sys 6
+line 16 25 18 25
+sys 2
+line 19 25 20 25
+sys 6
+line 17 26 17 26
+sys 2
+line 18 26 19 26
+sys 6
+pixel 18 27 5002
+P 2 1334 44 42 11 6 56 2 48
+translate 11 6
+sys 0
+line 43 0 43 41
+line 0 41 43 41
+sys 2
+line 1 1 1 40
+line 1 1 42 1
+sys 3
+line 1 40 42 40
+line 42 40 42 1
+translate -11 -6
+P 18 1513 60 57 -3 8 25 5 37
+sys 1
+fill 0 0 60 57
+P 1 958 18 18 39 45 33 50 2147483641
+translate 39 45
+sys 2
+rect 0 0 18 18
+sys 0
+line 17 0 17 17
+line 0 17 17 17
+sys 3
+line 1 16 16 16
+line 16 16 16 1
+translate -39 -45
+P 24 145 3 4 31 3 27 44 30
+translate 0 15
+sys 2
+line 0 1 3 1
+line 27 1 2 1
+line 2 0 2 -12
+line 0 -12 2 -12
+line 1 1 1 -12
+sys 3
+line 0 0 3 0
+line 27 0 1 0
+line 1 0 1 -13
+line 0 -13 1 -13
+line 0 0 0 -13
+translate 0 -15
+P 25 1525 25 3 10 14 53 8 -2
+sys 1
+fill 0 0 25 3
+translate 0 0
+sys 0
+line 24 0 24 2
+line 0 2 24 2
+sys 2
+line 1 1 1 1
+line 1 1 23 1
+sys 3
+line 1 1 23 1
+line 23 1 23 1
+translate 0 0
+P 8 105 56 51 34 2147483646 58 20 25
+translate 34 2147483646
+sys 5
+line 24 21 25 21
+line 31 21 30 21
+line 24 28 25 28
+line 31 28 30 28
+line 25 22 26 22
+line 30 22 29 22
+line 25 27 26 27
+line 30 27 29 27
+line 26 23 27 23
+line 29 23 28 23
+line 26 26 27 26
+line 29 26 28 26
+line 27 24 28 24
+line 28 24 27 24
+line 27 25 28 25
+line 28 25 27 25
+translate -34 -2147483646
+P 16 152 19 39 2 57 59 4 23
+translate 0 0
+sys 0
+line 18 0 18 38
+line 0 38 18 38
+sys 2
+line 1 1 1 37
+line 1 1 17 1
+sys 3
+line 1 37 17 37
+line 17 37 17 1
+translate 0 0
+P 10 1167 53 9 7 19 18 41 41
+sys 1
+fill 0 2 53 7
+line 2 1 52 1
+line 1 2 52 2
+sys 2
+line 0 2 0 8
+pixel 1 1 5002
+line 2 0 51 0
+sys 3
+line 51 2 51 8
+sys 0
+pixel 51 1 5000
+line 52 2 52 8
+text 0 0
+P 22 63 30 7 22 47 19 18 52
+P 3 608 59 18 22 46 36 2147483644 29
+translate 22 46
+sys 0
+rect 0 0 59 18
+sys 2
+line 58 0 58 17
+line 0 17 58 17
+sys 3
+line 1 1 57 1
+line 1 1 1 16
+sys 1
+line 57 1 57 16
+line 1 16 57 16
+translate -22 -46
+P 20 1825 0 59 6 22 11 26 7
+translate 0 0
+sys 0
+rect 0 0 0 59
+sys 2
+line -1 0 -1 58
+line 0 58 -1 58
+sys 3
+line 1 1 -2 1
+line 1 1 1 57
+sys 1
+line -2 1 -2 57
+line 1 57 -2 57
+translate 0 0
+P 3 241 29 38 44 22 58 -1 49
+translate 44 22
+sys 0
+rect 0 0 29 38
+sys 2
+line 28 0 28 37
+line 0 37 28 37
+sys 3
+line 1 1 27 1
+line 1 1 1 36
+sys 1
+line 27 1 27 36
+line 1 36 27 36
+translate -44 -22
+P 5 399 50 60 53 34 -2 51 7
+translate 53 34
+sys 1
+fill 0 0 50 60
+sys 3
+line 0 0 49 0
+line 0 0 0 59
+sys 2
+line 49 0 49 59
+line 0 59 49 59
+sys 0
+line 1 1 48 1
+line 1 1 1 58
+sys 1
+line 48 1 48 58
+line 1 58 48 58
+translate -53 -34
+P 13 565 48 16 18 5 56 14 20
+sys 1
+fill 0 0 48 16
+translate 0 0
+sys 2
+rect 0 0 48 16
+sys 0
+line 0 0 47 0
+line 0 0 0 15
+sys 1
+line 46 1 46 14
+line 46 14 2 14
+sys 3
+line 1 1 46 1
+line 1 1 1 14
+translate 0 0
+translate 1 1
+sys 5
+line 20 4 21 4
+line 27 4 26 4
+line 20 11 21 11
+line 27 11 26 11
+line 21 5 22 5
+line 26 5 25 5
+line 21 10 22 10
+line 26 10 25 10
+line 22 6 23 6
+line 25 6 24 6
+line 22 9 23 9
+line 25 9 24 9
+line 23 7 24 7
+line 24 7 23 7
+line 23 8 24 8
+line 24 8 23 8
+translate -1 -1
+P 22 1903 0 36 19 6 58 -2 38
+translate 0 0
+sys 0
+rect 0 0 0 36
+sys 2
+line -1 0 -1 35
+line 0 35 -1 35
+sys 3
+line 1 1 -2 1
+line 1 1 1 34
+sys 1
+line -2 1 -2 34
+line 1 34 -2 34
+translate 0 0
+P 10 901 48 52 -1 60 16 58 33
+sys 1
+fill 0 2 48 50
+line 2 1 47 1
+line 1 2 47 2
+sys 2
+line 0 2 0 51
+pixel 1 1 5002
+line 2 0 46 0
+sys 3
+line 46 2 46 51
+sys 0
+pixel 46 1 5000
+line 47 2 47 51
+text 0 0
+P 11 1509 12 41 6 19 14 20 12
+sys 1
+text 0 0
+P 3 1250 49 55 45 39 13 15 -2
+translate 45 39
+sys 0
+rect 0 0 49 55
+sys 2
+line 48 0 48 54
+line 0 54 48 54
+sys 3
+line 1 1 47 1
+line 1 1 1 53
+sys 1
+line 47 1 47 53
+line 1 53 47 53
+translate -45 -39
+P 14 775 45 9 6 54 27 5 44
+sys 1
+fill 0 0 45 9
+translate 0 0
+sys 0
+line 44 0 44 8
+line 0 8 44 8
+sys 2
+line 1 1 1 7
+line 1 1 43 1
+sys 3
+line 1 7 43 7
+line 43 7 43 1
+translate 0 0
+P 10 442 22 14 22 41 22 10 13
+sys 1
+fill 0 2 22 12
+line 2 1 21 1
+line 1 2 21 2
+sys 2
+line 0 2 0 13
+pixel 1 1 5002
+line 2 0 20 0
+sys 3
+line 20 2 20 13
+sys 0
+pixel 20 1 5000
+line 21 2 21 13
+text 0 0
+P 3 1078 18 3 44 29 28 3 16
+translate 44 29
+sys 0
+rect 0 0 18 3
+sys 2
+line 17 0 17 2
+line 0 2 17 2
+sys 3
+line 1 1 16 1
+line 1 1 1 1
+sys 1
+line 16 1 16 1
+line 1 1 16 1
+translate -44 -29
+P 9 474 14 18 36 44 30 44 20
+sys 1
+fill 0 0 14 18
+sys 0
+rect 0 0 14 18
+translate 1 1
+sys 0
+line 11 0 11 15
+line 0 15 11 15
+sys 2
+line 1 1 1 14
+line 1 1 10 1
+sys 3
+line 1 14 10 14
+line 10 14 10 1
+translate -1 -1
+text 0 0
+P 7 957 24 22 -2 45 54 13 38
+sys 1
+fill -2 47 26 -25
+line 0 46 23 46
+line -1 47 23 47
+sys 2
+line -2 47 -2 21
+pixel -1 46 5002
+line 0 45 22 45
+sys 3
+line 22 47 22 21
+sys 0
+pixel 22 46 5000
+line 23 47 23 21
+P 10 955 14 38 26 39 13 0 44
+sys 1
+fill 0 2 14 36
+line 2 1 13 1
+line 1 2 13 2
+sys 2
+line 0 2 0 37
+pixel 1 1 5002
+line 2 0 12 0
+sys 3
+line 12 2 12 37
+sys 0
+pixel 12 1 5000
+line 13 2 13 37
+text 0 0
+P 5 213 42 60 56 37 -2 28 11
+translate 56 37
+sys 1
+fill 0 0 42 60
+sys 3
+line 0 0 41 0
+line 0 0 0 59
+sys 2
+line 41 0 41 59
+line 0 59 41 59
+sys 0
+line 1 1 40 1
+line 1 1 1 58
+sys 1
+line 40 1 40 58
+line 1 58 40 58
+translate -56 -37
+P 2 1649 14 11 -12980 32 41 49 29
+translate -12980 32
+sys 3
+rect 0 0 14 11
+translate 12980 -32
+P 11 1829 35 52 3 11 -3 59 60
+sys 1
+text 0 0
+P 25 1 2 41 203 15 35 17 46
+P 14 598 11 39 2 21 54 36 37
+sys 1
+fill 0 0 11 39
+translate 0 0
+sys 0
+line 10 0 10 38
+line 0 38 10 38
+sys 2
+line 1 1 1 37
+line 1 1 9 1
+sys 3
+line 1 37 9 37
+line 9 37 9 1
+translate 0 0
+P 3 1033 42 59 17 54 53 58 34
+translate 17 54
+sys 0
+rect 0 0 42 59
+sys 2
+line 41 0 41 58
+line 0 58 41 58
+sys 3
+line 1 1 40 1
+line 1 1 1 57
+sys 1
+line 40 1 40 57
+line 1 57 40 57
+translate -17 -54
+P 17 667 -2 25 27 31 17 34 30
+sys 11
+fill 0 0 -2 25
+sys 2
+line 1 1 -4 1
+line 1 1 1 23
+sys 0
+line -3 0 -3 24
+line 1 24 -3 24
+sys 3
+line -4 0 -4 23
+line 2 23 -4 23
+P 17 1205 51 7 31 7 44 31 42
+sys 11
+fill 0 0 51 7
+sys 2
+line 1 1 49 1
+line 1 1 1 5
+sys 0
+line 50 0 50 6
+line 1 6 50 6
+sys 3
+line 49 0 49 5
+line 2 5 49 5
+P 15 1320 38 6 2 3 1 19 39
+sys 1
+fill 0 0 38 6
+translate 0 0
+sys 0
+line 37 0 37 5
+line 0 5 37 5
+sys 2
+line 1 1 1 4
+line 1 1 36 1
+sys 3
+line 1 4 36 4
+line 36 4 36 1
+translate 0 0
+sys 5
+line 19 1 19 1
+line 18 2 20 2
+line 17 3 21 3
+line 16 4 22 4
+P 22 1 42 5 14 60 52 36 60
+P 18 1406 16 6 30 4 1 56 29
+sys 1
+fill 0 0 16 6
+P 10 328 -482 32 38 9 8 60 46
+sys 1
+fill 0 2 -482 30
+line 2 1 -483 1
+line 1 2 -483 2
+sys 2
+line 0 2 0 31
+pixel 1 1 5002
+line 2 0 -484 0
+sys 3
+line -484 2 -484 31
+sys 0
+pixel -484 1 5000
+line -483 2 -483 31
+text 0 0
+P 10 1553 5 1 21 27 35 23 34
+sys 1
+fill 0 2 5 -1
+line 2 1 4 1
+line 1 2 4 2
+sys 2
+line 0 2 0 0
+pixel 1 1 5002
+line 2 0 3 0
+sys 3
+line 3 2 3 0
+sys 0
+pixel 3 1 5000
+line 4 2 4 0
+text 0 0
+P 24 2038 57 41 46 49 14 48 45
+translate 0 23
+sys 2
+line 0 1 49 1
+line 14 1 56 1
+line 56 0 56 17
+line 0 17 56 17
+line 1 1 1 17
+sys 3
+line 0 0 49 0
+line 14 0 55 0
+line 55 0 55 16
+line 0 16 55 16
+line 0 0 0 16
+translate 0 -23
+P 1 2045 49 15 15 58 4 37 4
+translate 15 58
+sys 2
+rect 0 0 49 15
+sys 0
+line 0 0 48 0
+line 0 0 0 14
+sys 1
+line 47 1 47 13
+line 47 13 2 13
+sys 3
+line 1 1 47 1
+line 1 1 1 13
+translate -15 -58
+P 9 1422 58 49 3 13 50 0 9
+sys 1
+sys 0
+rect 0 0 58 49
+translate 1 1
+sys 2
+rect 0 0 56 47
+sys 0
+line 55 0 55 46
+line 0 46 55 46
+sys 3
+line 1 45 54 45
+line 54 45 54 1
+translate -1 -1
+text 0 0
+P 3 1171 4 -3 22 48 52 38 34
+translate 22 48
+sys 0
+rect 0 0 4 -3
+sys 2
+line 3 0 3 -4
+line 0 -4 3 -4
+sys 3
+line 1 1 2 1
+line 1 1 1 -5
+sys 1
+line 2 1 2 -5
+line 1 -5 2 -5
+translate -22 -48
+P 8 1638 16 23 55 18 31 25 52
+translate 55 18
+sys 5
+line 4 7 5 7
+line 11 7 10 7
+line 4 14 5 14
+line 11 14 10 14
+line 5 8 6 8
+line 10 8 9 8
+line 5 13 6 13
+line 10 13 9 13
+line 6 9 7 9
+line 9 9 8 9
+line 6 12 7 12
+line 9 12 8 12
+line 7 10 8 10
+line 8 10 7 10
+line 7 11 8 11
+line 8 11 7 11
+translate -55 -18

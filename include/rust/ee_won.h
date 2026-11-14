@@ -1349,6 +1349,41 @@ constexpr static const int32_t EE_WON_HTTPGET_ONLY_SEND = 20;
 
 constexpr static const int32_t EE_WON_HTTPGET_ONLY_RECV = 21;
 
+/// `Graphics::SetPixel(a, b, g.GetStandardColor(c))`: a pixel in a standard colour.
+constexpr static const int32_t EE_WON_DRAW_SYS_PIXEL = 22;
+
+/// `Graphics::FillEllipse(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_FILL_ELLIPSE = 23;
+
+/// `Graphics::DrawArc(a, b, c, d, e, f)` (the start and arc angles in degrees).
+constexpr static const int32_t EE_WON_DRAW_ARC = 24;
+
+/// The `EE_WON_DRAW_CALL` of a button's paint: `DrawButtonText(g, b, c)`.
+constexpr static const int32_t EE_WON_MSPAINT_CALL_TEXT = 1;
+
+/// The state bits of an [`EeWonMsPaint`].
+constexpr static const uint32_t EE_WON_MSPAINT_PRESSED = 1;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DISABLED = 2;
+
+constexpr static const uint32_t EE_WON_MSPAINT_TRANSPARENT = 4;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DEFAULT = 8;
+
+constexpr static const uint32_t EE_WON_MSPAINT_FRAME2 = 16;
+
+constexpr static const uint32_t EE_WON_MSPAINT_CHECKED = 32;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DRAW_FRAME = 64;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DRAW_3D = 128;
+
+constexpr static const uint32_t EE_WON_MSPAINT_VERT = 256;
+
+constexpr static const uint32_t EE_WON_MSPAINT_HORZ = 512;
+
+constexpr static const uint32_t EE_WON_MSPAINT_INVALID = 1024;
+
 /// the finished list's length
 constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
 
@@ -4570,6 +4605,64 @@ enum class EeWonMsBtnCall : uint32_t {
   BoxPaint,
 };
 
+/// What is drawn; the arguments per kind are [`EeWonMsPaint`]'s.
+enum class EeWonMsPaintKind : int32_t {
+  /// `LobbyDraw3DFrame(g, a, b, width, height, PRESSED)`.
+  Frame3D = 1,
+  /// `LobbyDrawFrame(g, a, b, width, height, PRESSED)`.
+  Frame,
+  /// `MSGraphicsUtil::DrawFrame3(g, a, b, width, height, _)` (the down flag is not read).
+  Frame3,
+  /// `MSGraphicsUtil::DrawArrow(g, a, _, _, width, height, DISABLED)` (the offsets are not read).
+  Arrow,
+  /// `MSGraphicsUtil::DrawCheck(g, a, b, width, height, PRESSED, CHECKED)`.
+  Check,
+  /// `MSGraphicsUtil::DrawRadio(g, a, b, width, height, PRESSED, CHECKED)`.
+  Radio,
+  /// `MSGraphicsUtil::DrawTab(g, a, b, width, height)`.
+  Tab,
+  /// `MSGraphicsUtil::DrawCloseX(g, a, b, width, height)`.
+  CloseX,
+  /// `MSButton::Paint` after `Component::Paint` (PRESSED, TRANSPARENT, DEFAULT: `IsDefaultButton`, FRAME2).
+  Button,
+  /// `MSTabButton::Paint` after `Component::Paint`.
+  TabButton,
+  /// `MSLabel::Paint` after `MSButtonBase::Paint` (TRANSPARENT).
+  Label,
+  /// `MSHeaderButton::Paint` after `MSButton::Paint`: the sort arrow (`a` the sort type, `b` the text's width,
+  /// `c` the left pad, PRESSED).
+  HeaderSort,
+  /// `MSCloseButton::Paint` after `Button::Paint` (PRESSED).
+  CloseButton,
+  /// `MSScrollThumb::Paint` after `Component::Paint`.
+  ScrollThumb,
+  /// `MSArrowButton::Paint` after `Component::Paint` (`a` the direction, PRESSED, DISABLED).
+  ArrowButton,
+  /// `MS3DFrame::Paint` after `Component::Paint` (`a` the type, PRESSED: not `mIsUp`).
+  Frame3DComponent,
+  /// `MSPopup::Paint` after `Component::Paint`.
+  Popup,
+  /// `MSDlgBack::Paint` after `Component::Paint`.
+  DlgBack,
+  /// `MSEtchedFrame::Paint` after `Component::Paint`.
+  EtchedFrame,
+  /// `MSInputBox::Paint` after `InputBox::Paint`.
+  InputBox,
+  /// `MSScrollbar::Paint` before `Container::Paint` (INVALID: the scroll rectangle's invalid state, TRANSPARENT,
+  /// `a`..`d` the rectangle's left, top, width and height).
+  Scrollbar,
+  /// `MSComboBox::Paint` after `ComboBox::Paint` (DRAW_FRAME).
+  ComboBox,
+  /// `MSScrollContainer::Paint` after `Container::Paint` (VERT / HORZ: the scrollbars visible, TRANSPARENT,
+  /// DRAW_FRAME, DRAW_3D; `a`, `b`, `c`, `d` the vertical bar's left, top, width and height, `e` the horizontal
+  /// bar's height).
+  ScrollContainer,
+  /// `MSEtchedFrameGroup::Paint` after `Container::Paint` (`a` the label's height, `b` its left, `c` its right).
+  EtchedGroup,
+  /// `WONMSSkin::MSImage::Paint` (`a` the image type, `b` the image flags; the size is the image's).
+  SkinImage,
+};
+
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
 enum class EeWonMultiCall : uint32_t {
   /// `AdjustPosition(a != 0)`.
@@ -7716,6 +7809,19 @@ struct EeWonMemberReady {
   bool has_player;
   bool game_captain;
   bool ready;
+};
+
+/// One paint's inputs: the kind, the state bits (`EE_WON_MSPAINT_*`), the size and the kind's arguments.
+struct EeWonMsPaint {
+  EeWonMsPaintKind kind;
+  uint32_t flags;
+  int32_t width;
+  int32_t height;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
 };
 
 /// A C++ call on an op (`AsyncOp*`).
@@ -13788,6 +13894,15 @@ ptrdiff_t ee_won_msbtn_call(const EeWonMsButton *btn,
                             ptrdiff_t a,
                             ptrdiff_t b,
                             ptrdiff_t c);
+
+/// The plan of `p` (an [`EeWonMsPaintKind`] paint) into `out` (`cap` entries); answers the plan's length, which
+/// may be more than `cap` (the C++ asks again with room).
+///
+/// # Safety
+/// `p` is live; `out` has room for `cap` operations (or is NULL with `cap` 0).
+size_t ee_won_mspaint_plan(const EeWonMsPaint *p,
+                           EeWonDrawOp *out,
+                           size_t cap);
 
 /// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMulti *ee_won_multi_new(void *component,
