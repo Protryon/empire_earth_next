@@ -195,28 +195,16 @@ std::vector<unsigned long> EEUnitClass::sUnitTypes;
 
 // FUNCTION: EXE 0x62f317
 // Creates a unit class from its dbunits record: stats, sounds and effects (referenced), terrain table, movement
-// domains and kind flags (terrain slot 5 copies slot 0's record byte; the animal id is looked up twice)
+// domains and kind flags. Port (R5b.4 round 27): the plain stores are ee_units unit_class_fields.rs's fill of the
+// class's record base from the row, given the lookups it reads (the tech tree's epoch and calamity technology, the
+// animal id, the AI script); the media, effects and the improvement table stay here, in the original's order.
 EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysicsModel* inPhysicsModel)
 {
     this->mPhysicsModel = inPhysicsModel;
     this->mResearchTechnologies.resize(inRecord->mNumAttributes);   // (the original's fill value was never set; all overwritten)
     for (unsigned long i = 0; i < inRecord->mNumAttributes; i++)
         this->mResearchTechnologies[i] = inRecord->mAttributes[i];
-    for (unsigned long theIndex = 0; theIndex < 7; theIndex++)
-        this->mGatherTimes[theIndex] = 0;
     this->mIsMediaLoaded = false;
-    this->mIsCyber = false;
-    this->mIsHorse = false;
-    this->mNumUnits = 0;
-    this->mLastUnitGoneTime = 0;
-    this->mIsComplex = inIsComplex;
-    this->mCategory = inRecord->mCategory;
-    this->mUnitType = inRecord->mUnitType;
-    this->mResourceType = inRecord->mResourceType;
-    this->mFamily = inRecord->mFamily;
-    this->mL208 = inRecord->mUnusedUnitGroup;
-    this->mL294 = inRecord->mUnusedSelectionValue;
-    this->mTechnology = inRecord->mTechnology;
     this->mButton = EEButtonObject::Get(inRecord->mButton);
     this->mModel = (EEModel*)EEMedia::Get(inRecord->mGraphic);
     this->mCreationSound = EESoundObject::Get(inRecord->mCreationSound);
@@ -225,445 +213,75 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mSelectionSounds[0] = EESoundObject::Get(inRecord->mSelectionSound1);
     this->mSelectionSounds[1] = EESoundObject::Get(inRecord->mSelectionSound2);
     this->mDeathSound = EESoundObject::Get(inRecord->mDeathSound);
-    this->mMinRange = inRecord->mMinRange;
-    this->mRange = inRecord->mRange;
-    this->mLineOfSight = inRecord->mLineOfSight;
-    if (this->mLineOfSight > kMaxLineOfSight) {
-        this->mLineOfSight = kMaxLineOfSight;
+    if (inRecord->mLineOfSight > kMaxLineOfSight)
         ESDebugOut("EEUnitClass::EEUnitClass: unit %s has an LOS of %f.\n", inRecord->mName, inRecord->mLineOfSight);
-    }
-    this->mAreaEffect = inRecord->mAreaEffect;
-    this->mScale = inRecord->mScale > 0.0001f ? inRecord->mScale : 0.0f;
-    this->mAcceleration = inRecord->mAcceleration;
-    this->mMaxVelocity = inRecord->mMaxVelocity;
-    this->mF138 = 0.0f;
-    this->mMaxAngularVelocity = inRecord->mMaxAngularVelocity;
-    this->mAngularAcceleration = inRecord->mAngularAcceleration;
-    this->mTurretMaxAngularVelocity = inRecord->mTurretMaxAngularVelocity;
-    this->mResourceAmount = (long)inRecord->mResourceAmount;
-    this->mCarryAmount = (long)inRecord->mCarryAmount;
-    this->mWorkRate = (long)inRecord->mWorkRate;
-    this->mGatherTimes[0] = (long)inRecord->mWoodGatherTime;
-    this->mGatherTimes[1] = (long)inRecord->mStoneGatherTime;
-    this->mGatherTimes[2] = (long)inRecord->mGoldGatherTime;
-    this->mGatherTimes[3] = (long)inRecord->mIronGatherTime;
-    this->mGatherTimes[4] = (long)inRecord->mHuntGatherTime;
-    this->mGatherTimes[6] = (long)inRecord->mFarmGatherTime;
-    this->mGatherTimes[5] = (long)inRecord->mForageGatherTime;
-    this->mReloadTime = (long)(inRecord->mReloadTime * 1000.0f);
-    this->mFacingOffset = inRecord->mFacingOffset;
-    this->mFiringArc = inRecord->mFiringArc;
-    if (inRecord->mFiringArc == 0.0f)
-        this->mFiringArc = 0.34906587f;
-    this->mWeapon = inRecord->mWeapon;
-    this->mAttack = inRecord->mAttack;
-    this->mArmor[0] = inRecord->mShockArmor;
-    this->mArmor[1] = inRecord->mArrowArmor;
-    this->mArmor[2] = inRecord->mPierceArmor;
-    this->mArmor[3] = inRecord->mGunArmor;
-    this->mArmor[4] = inRecord->mLaserArmor;
-    this->mArmor[5] = inRecord->mMissileArmor;
-    this->mFlightTime = inRecord->mFlightTime * 1000;
-    this->mLeadership = inRecord->mLeadership;
-    this->mMaxObjectCarry = inRecord->mMaxObjectCarry;
-    this->mRottingTime = (long)(inRecord->mRottingTime * 1000.0f);
-    this->mBuildTimeScale = 1.0f;
-    this->mCostScale = 1.0f;
-    this->mAreaEffectScale = 1.0f;
-    this->mAmmoType = inRecord->mAmmoType;
-    this->mRepairRate = inRecord->mRepairRate;
-    this->mHitPoints = inRecord->mHitPoints;
-    this->mCombatReaction = 0;
-    this->mIsPlayerPlaceable = inRecord->mIsPlayerPlaceable;
-    this->mIsVital = inRecord->mIsVital;
-    this->mTileSize = inRecord->mTileSize;
-    this->mWaterKind = inRecord->mWaterKind;
-    this->mIsWall = false;
-    this->mIsHuman = false;
-    this->mLoadRange = inRecord->mLoadRange;
-    this->mUnloadRange = inRecord->mUnloadRange;
-    memset(this->mTerrainTypes, 0, sizeof(this->mTerrainTypes));
-    this->mCanCrossForest = inRecord->mCanCrossForest;
-    this->mTerrainTypes[0] = inRecord->mCanMoveOnLand;
-    this->mTerrainTypes[kTerrainDeepWater] = inRecord->mCanMoveOnDeepWater;
-    this->mTerrainTypes[2] = inRecord->mCanMoveOnRock;
-    this->mTerrainTypes[3] = inRecord->mCanMoveOnTerrainType3;
-    this->mTerrainTypes[4] = inRecord->mCanMoveOnMud;
-    this->mTerrainTypes[kTerrainSnow] = inRecord->mCanMoveOnLand;
-    this->mTerrainTypes[6] = inRecord->mCanMoveOnRoughGrass;
-    this->mTerrainTypes[7] = inRecord->mCanMoveOnTerrainType7;
-    this->mTerrainTypes[8] = inRecord->mCanMoveOnPavement;
-    this->mTerrainTypes[kTerrainCliff] = inRecord->mCanMoveOnCliffs;
-    this->mTerrainTypes[kTerrainShallowWater] = inRecord->mCanMoveOnShallowWater;
-    this->mTerrainTypes[11] = inRecord->mCanMoveOnSand;
-    this->mTerrainTypes[kTerrainSpace] = inRecord->mCanMoveInSpace;
-    this->mTerrainTypes[14] = inRecord->mCanCrossForest;
-    this->mIsDecoration = inRecord->mIsDecoration;
-    this->mFiresBroadside = inRecord->mFiresBroadside;
-    this->mCanFireOverWalls = inRecord->mCanFireOverWalls;
-    this->mCanAttackGround = inRecord->mCanAttackGround;
-    this->mIsMelee = inRecord->mIsMelee;
-    this->mCanDisband = inRecord->mCanDisband;
-    this->mIsScenarioSelectable = inRecord->mIsScenarioSelectable;
-    this->mIsEnabled = inRecord->mIsEnabled;
-    this->mFacesCamera = inRecord->mFacesCamera;
-    this->mFiresWhileMoving = inRecord->mFiresWhileMoving;
-    this->mCanFly = inRecord->mCanFly;
-    this->mB2FA = inRecord->mUnusedFlag6;
-    this->mBuildsOnElevation = inRecord->mBuildsOnElevation;
-    this->mTransportCapacity = inRecord->mTransportCapacity;
-    this->mWeight = inRecord->mTransportSize;
-    this->mPitchesWithTerrain = inRecord->mPitchesWithTerrain;
-    this->mRollsWithTerrain = inRecord->mRollsWithTerrain;
-    this->mUpgradesAreaEffect = inRecord->mCanUpgradeAreaEffect;
-    this->mUpgradesArrowArmor = inRecord->mCanUpgradeArrowArmor;
-    this->mUpgradesGunArmor = inRecord->mCanUpgradeGunArmor;
-    this->mUpgradesMissileArmor = inRecord->mCanUpgradeMissileArmor;
-    this->mUpgradesRange = inRecord->mCanUpgradeRange;
-    this->mUpgradesLaserArmor = inRecord->mCanUpgradeLaserArmor;
-    this->mUpgradesPierceArmor = inRecord->mCanUpgradePierceArmor;
-    this->mUpgradesRepair = inRecord->mCanUpgradeRepair;
-    this->mUpgradesShockArmor = inRecord->mCanUpgradeShockArmor;
     this->mAIScriptName.Copy(inRecord->mAIScriptName, 0, strlen(inRecord->mAIScriptName), 0, true);
-    this->mF19C = inRecord->mUnusedDefaultedValue;
-    if (this->mF19C == 0.0f)
-        this->mF19C = -20.0f;
-    this->mMaxRoll = inRecord->mMaxRoll;
-    this->mCruiseAltitude = inRecord->mCruiseAltitude;
-    this->mTargetSearchInterval = inRecord->mTargetSearchInterval;
-    this->mNameStringID = inRecord->mNameStringID;
-    this->mHealingPoints = inRecord->mHealingPoints;
-    this->mRegeneration = inRecord->mRegeneration;
-    this->mCanEnterAirTransports = inRecord->mCanEnterAirTransports;
-    this->mCanEnterLandTransports = inRecord->mCanEnterLandTransports;
-    this->mCanEnterSpaceTransports = this->mCanEnterSeaTransports = inRecord->mCanEnterSeaTransports;
-    this->mCanEnterFortresses = inRecord->mCanEnterFortresses;
-    this->mSelectionSize = inRecord->mSelectionSize;
-    this->mL170 = inRecord->mUnusedShadowOffset;
-    this->mShadowScale = inRecord->mShadowScale;
-    this->mOuterCollisionSphere = inRecord->mOuterCollisionSphere;
-    this->mInnerCollisionSphere = inRecord->mInnerCollisionSphere;
-    this->mIsCollidable = inRecord->mIsCollidable;
-    this->mAmmunition = inRecord->mAmmunition;
-    this->mUsesAmmunition = inRecord->mUsesAmmunition;
-    this->mIsAffectedByGravity = inRecord->mIsAffectedByGravity;
-    this->mShootsHigh = inRecord->mShootsHigh;
-    this->mL284 = inRecord->mUnusedReference;
-    this->mL180 = inRecord->mUnusedValue;
-    this->mMissileDelayTime = (long)(inRecord->mMissileDelayTime * 1000.0f);
-    this->mLaunchPitch = inRecord->mLaunchPitch * 0.017453292f;  // NEAR: the original multiplies by DAT_446094 (a named const)
-    this->mCanSetRallyPoint = inRecord->mCanSetRallyPoint;
-    this->mAIKind = inRecord->mAIKind;
-    this->mCounterKind1 = inRecord->mCounterKind1;
-    this->mCounterKind2 = inRecord->mCounterKind2;
-    this->mCounterKind3 = inRecord->mCounterKind3;
-    this->mB305 = inRecord->mUnusedGroundFlag;
-    this->mIsGaiaPlaceable = inRecord->mIsGaiaPlaceable;
-    this->mConvertsBuildings = false;
-    this->mConvertsPriests = false;
     this->mName.Copy(inRecord->mName, 0, strlen(inRecord->mName), 0, true);
-    this->mConversionResistance = inRecord->mConversionResistance;
-    this->mConversionRate = (float)inRecord->mConversionRate * 0.01f;
-    this->mSlopeSpeedPenalty = inRecord->mSlopeSpeedPenalty;
-    this->mBobHeight = inRecord->mBobHeight;
-    this->mBobPitch = inRecord->mBobPitch * 0.017453292f;
-    this->mIsCloakable = inRecord->mIsCloakable;
-    this->mCloakRadius = inRecord->mCloakRadius;
-    this->mIsExpansionUnit = inRecord->mIsExpansionUnit;
-    this->mCanEnterCarriers = inRecord->mCanEnterCarriers;
-    this->mCanEnterAirports = inRecord->mCanEnterAirports;
-    if (this->mUnitType == kUnitTypeCatalina)
-        this->mCanEnterNavyYards = true;
-    else
-        this->mCanEnterNavyYards = false;
-    this->mMiniMapColor = inRecord->mMiniMapColor;
-    this->mAirTrafficType = inRecord->mAirTrafficType;
-    this->mIsDeletable = inRecord->mIsDeletable;
-    this->mWonderBonus = inRecord->mWonderBonus;
-    this->mWonderUnitSet = inRecord->mWonderUnitSet;
-    this->mIsInactive = inRecord->mIsInactive;
-    this->mIsDefenseUnit = inRecord->mIsDefenseUnit;
-    this->mIsAttackUnit = inRecord->mIsAttackUnit;
-    this->mWaterKind = inRecord->mWaterKind;
-    this->mPowerRegeneration = inRecord->mPowerRegeneration;
-    this->mPower = inRecord->mPower;
-    this->mHealThreshold = inRecord->mHealThreshold;
-    this->mHealRange = inRecord->mHealRange;
-    this->mHealDelay = inRecord->mHealDelay;
-    this->mMinConversionTime = inRecord->mMinConversionTime;
-    this->mSkipsLineOfFireCheck = false;
-    this->mHasSpecialAttack = inRecord->mHasSpecialAttack;
-    if (this->mUnitType == kUnitTypeGuardTowerPaleo || (this->mUnitType > kUnitTypeAmbStarfish3 && (this->mUnitType <= kUnitTypeGuardTowerDigital || this->mUnitType == kUnitTypeGuardTowerSpace || this->mUnitType == kUnitTypeSpaceTurret
-        || this->mUnitType == kUnitTypeGuardTowerPalisades || this->mUnitType == kUnitTypeGuardTowerBamboo)))
-        this->mIsTower = true;
-    else
-        this->mIsTower = false;
-    this->mDomains = 0;
-    if (this->mCategory == kUnitCategoryLand || this->mCategory == kUnitCategoryLandCitizen || this->mCategory == kUnitCategoryLandPriest || this->mCategory == kUnitCategoryLandTransport || this->mCategory == kUnitCategoryLandMilitaryHero
-        || (this->mCategory == kUnitCategoryBuilding && (this->mIsTower || this->mUnitType == kUnitTypeMissileBase || this->mUnitType == kUnitTypeCpMissileBase)))
-        this->mDomains = kMovementLand;
-    if (this->mCategory == kUnitCategoryAirplane || this->mCategory == kUnitCategoryHelicopter || this->mCategory == kUnitCategoryHelicopterTransport || this->mCategory == kUnitCategoryHelicopterPriest || this->mCategory == kUnitCategoryAirAnimal)
-        this->mDomains |= kMovementAir;
-    if (this->mCategory == kUnitCategoryNaval || this->mCategory == kUnitCategoryNavalCitizen || this->mCategory == kUnitCategoryLand8 || this->mCategory == kUnitCategorySubmergedNaval || this->mCategory == kUnitCategoryNavalPriest
-        || this->mCategory == kUnitCategoryNavalTransport || this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySeaAnimal)
-        this->mDomains |= kMovementSea;
-    if (this->mCategory == kUnitCategorySpaceship || this->mCategory == kUnitCategorySpaceTransport || this->mCategory == kUnitCategorySpaceBuilding || this->mCategory == kUnitCategoryPlanetSpaceship)
-        this->mDomains |= kMovementSpace;
-    if (this->mUnitType == kUnitTypeResShark || this->mUnitType == kUnitTypeResDolphin)
-        this->mIsCollidable = false;
-    EEAnimal* theAnimal = EEAnimal::Find(this->mUnitType);
-    if (theAnimal != NULL)
-        this->mAnimalID = theAnimal->mAnimalID;
-    else
-        this->mAnimalID = 1000;
-    theAnimal = EEAnimal::Find(this->mUnitType);
-    if (theAnimal != NULL)
-        this->mAnimalID = theAnimal->mAnimalID;
-    else
-        this->mAnimalID = 1000;
-    this->mInfluence = inRecord->mInfluence;
-    if (this->mInfluence == 0 && inRecord->mAttack > 0)
-        this->mInfluence = 1;
-    this->mCanGarrison = inRecord->mCanGarrison;
-    this->mGarrisonCapacity = inRecord->mGarrisonCapacity;
-    this->mInitialGarrisonCount = inRecord->mInitialGarrisonCount;
-    this->mGarrisonTechnology = inRecord->mGarrisonTechnology;
-    this->mGarrisonBonus = inRecord->mGarrisonBonus;
-    EETechTreeNode* theNode = gTechTree.Get(this->mTechnology);
-    if (theNode != NULL)
-        this->mEpoch = theNode->mEpoch;
-    else
-    this->mEpoch = inRecord->mEpoch;
-    this->mHasCalamityPowers = false;
-    if (this->GetNumResearchTechnologies() != 0) {
-        for (unsigned long j = 0; j < this->GetNumResearchTechnologies() && !this->mHasCalamityPowers; j++) {
-            long& theID = this->mResearchTechnologies[j];
-            EETechTreeNode* theTechnology = gTechTree.Get(theID);
-            this->mHasCalamityPowers = theTechnology != NULL && theTechnology->mData->mKind == 5;
-        }
+    EeUnitsUnitClassFillIn theIn = {};
+    theIn.is_complex = inIsComplex;
+    EEAnimal* theAnimal = EEAnimal::Find(inRecord->mUnitType);
+    theIn.has_animal = theAnimal != NULL;
+    theIn.animal_id = theAnimal != NULL ? theAnimal->mAnimalID : 0;
+    EETechTreeNode* theNode = gTechTree.Get(inRecord->mTechnology);
+    theIn.has_tech_node = theNode != NULL;
+    theIn.tech_epoch = theNode != NULL ? theNode->mEpoch : 0;
+    for (unsigned long j = 0; j < this->GetNumResearchTechnologies() && !theIn.has_calamity_powers; j++) {
+        EETechTreeNode* theTechnology = gTechTree.Get(this->mResearchTechnologies[j]);
+        theIn.has_calamity_powers = theTechnology != NULL && theTechnology->mData->mKind == 5;
     }
-    this->mIsProjectile = this->mCategory == kUnitCategoryProjectile || this->mCategory == kUnitCategoryBomb || this->mCategory == kUnitCategoryMissile || this->mCategory == kUnitCategoryTorpedo;
-    this->mAreaEffectTemplates[0] = inRecord->mAreaEffectTemplate0;
-    this->mAreaEffectTemplates[1] = inRecord->mAreaEffectTemplate1;
-    this->mAreaEffectTemplates[2] = inRecord->mAreaEffectTemplate2;
-    this->mAreaEffectTemplates[3] = inRecord->mAreaEffectTemplate3;
     // (the two layouts must agree on every target: the entries and the maximum level at the same offsets)
     static_assert(offsetof(EEUnitClassImprovementTable, mEntries) == offsetof(EEUCUpgradeTable, mFactors)
         && offsetof(EEUnitClassImprovementTable, mMaxLevel) == offsetof(EEUCUpgradeTable, mMaxLevel)
         && sizeof(EEUnitClassImprovementEntry) == sizeof(EEUCUpgradeFactor), "improvement table layout");
-    EEUnitClassImprovementTable* theTable = reinterpret_cast<EEUnitClassImprovementTable*>(EEUCUpgradeTable::sTable[inRecord->mUpgradeTableIndex]);
-    if (theTable != NULL)
-        this->mImprovements = theTable;
-    else
-        this->mImprovements = NULL;
-    this->mOverlapUnitSet = inRecord->mOverlapUnitSet;
-    switch (this->mCategory) {
-    case kUnitCategoryAmbient:
-        if (this->mUnitType == kUnitTypePathPoint)
-            this->mKindFlags = kUnitKindPathPoint;
-        else
-            this->mKindFlags = 0;
-        break;
-    case kUnitCategoryLandCitizen:
-        this->mKindFlags = kUnitKindCitizen;
-        break;
-    case kUnitCategoryNavalCitizen:
-        this->mKindFlags = kUnitKindNavalCitizen;
-        break;
-    case kUnitCategoryBuilding:
-    case kUnitCategoryBuilding19:
-    case kUnitCategoryNavalBuilding:
-    case kUnitCategoryMiningBuilding:
-    case kUnitCategoryGate:
-    case kUnitCategorySpaceBuilding:
-        if (this->mIsTower || this->mUnitType == kUnitTypeMissileBase || this->mUnitType == kUnitTypeCpMissileBase
-            || ((this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySpaceBuilding) && this->mAirTrafficType != 0) || this->mUnitType == kUnitTypeAirport || this->mUnitType == kUnitTypePillbox)
-            this->mKindFlags = kUnitKindMilitary;
-        else
-            this->mKindFlags = 0x10;
-        break;
-    case kUnitCategoryAirplane:
-    case kUnitCategoryNaval:
-    case kUnitCategoryLand:
-    case kUnitCategoryHelicopter:
-    case kUnitCategoryLand8:
-    case kUnitCategorySubmergedNaval:
-    case kUnitCategoryLand15:
-    case kUnitCategoryLandMilitaryHero:
-    case kUnitCategorySpaceship:
-    case kUnitCategoryPlanetSpaceship:
-        this->mKindFlags = kUnitKindMilitary;
-        if (this->mRange > this->mLineOfSight)
-            this->mKindFlags = kUnitKindLongRangeMilitary;
-        break;
-    case kUnitCategoryLandPriest:
-    case kUnitCategoryNavalPriest:
-    case kUnitCategoryHelicopterPriest:
-        if (this->mUnitType == kUnitTypeProphet)
-            this->mKindFlags = kUnitKindMilitary;
-        else
-            this->mKindFlags = 4;
-        break;
-    case kUnitCategoryBuildingPriest:
-        this->mKindFlags = kUnitKindBuildingPriest;
-        break;
-    case kUnitCategoryLandTransport:
-        this->mKindFlags = kUnitKindLandTransport;
-        break;
-    case kUnitCategoryFortress:
-        this->mKindFlags = kUnitKindFortress;
-        break;
-    case kUnitCategoryHelicopterTransport:
-        this->mKindFlags = kUnitKindHelicopterTransport;
-        break;
-    case kUnitCategoryNavalTransport:
-        this->mKindFlags = kUnitKindNavalTransport;
-        break;
-    case kUnitCategorySpaceTransport:
-        this->mKindFlags = kUnitKindSpaceTransport;
-        break;
-    case kUnitCategoryResource:
-        this->mKindFlags = kUnitKindResource;
-        break;
-    default:
-        this->mKindFlags = 0;
-        break;
-    }
-    if (this->mCanEnterAirTransports)
-        this->mKindFlags |= kUnitKindCanEnterAirTransports;
-    if (this->mCanEnterLandTransports)
-        this->mKindFlags |= kUnitKindCanEnterLandTransports;
-    if (this->mCanEnterSeaTransports)
-        this->mKindFlags |= kUnitKindCanEnterSeaTransports;
-    if (this->mCanEnterFortresses)
-        this->mKindFlags |= kUnitKindCanEnterFortresses;
-    if (this->mCanEnterSpaceTransports)
-        this->mKindFlags |= kUnitKindCanEnterSpaceTransports;
-    this->mDeathEffect = EEGraphicEffect::Get(inRecord->mDeathEffect);
-    if (this->mDeathEffect != NULL)
-        this->mDeathEffect->Reference();
-    this->mDamageEffect = EEGraphicEffect::Get(inRecord->mDamageEffect);
-    if (this->mDamageEffect != NULL)
-        this->mDamageEffect->Reference();
-    this->mHealEffect = EEGraphicEffect::Get(inRecord->mHealEffect);
-    if (this->mHealEffect != NULL)
-        this->mHealEffect->Reference();
-    this->mFireTrailEffect = EEGraphicEffect::Get(inRecord->mUnusedFireTrailEffect);
-    if (this->mFireTrailEffect != NULL)
-        this->mFireTrailEffect->Reference();
-    this->mTrailEffect = EEGraphicEffect::Get(inRecord->mTrailEffect);
-    if (this->mTrailEffect != NULL)
-        this->mTrailEffect->Reference();
-    this->mMuzzleFlashEffect = EEGraphicEffect::Get(inRecord->mMuzzleFlashEffect);
-    if (this->mMuzzleFlashEffect != NULL)
-        this->mMuzzleFlashEffect->Reference();
-    this->mRippleEffect = EEGraphicEffect::Get(inRecord->mRippleEffect);
-    if (this->mRippleEffect != NULL)
-        this->mRippleEffect->Reference();
-    this->mSplashEffect = EEGraphicEffect::Get(inRecord->mSplashEffect);
-    if (this->mSplashEffect != NULL)
-        this->mSplashEffect->Reference();
-    this->mImpactSparksEffect = EEGraphicEffect::Get(inRecord->mImpactSparksEffect);
-    if (this->mImpactSparksEffect != NULL)
-        this->mImpactSparksEffect->Reference();
-    this->mImpactBloodEffect = EEGraphicEffect::Get(inRecord->mImpactBloodEffect);
-    if (this->mImpactBloodEffect != NULL)
-        this->mImpactBloodEffect->Reference();
-    this->mAttachedEffect = EEGraphicEffect::Get(inRecord->mAttachedEffect);
-    if (this->mAttachedEffect != NULL)
-        this->mAttachedEffect->Reference();
-    this->mEffect090 = EEGraphicEffect::Get(inRecord->mUnusedEffect1);
-    if (this->mEffect090 != NULL)
-        this->mEffect090->Reference();
-    this->mCreationEffect = EEGraphicEffect::Get(inRecord->mCreationEffect);
-    if (this->mCreationEffect != NULL)
-        this->mCreationEffect->Reference();
-    this->mEffect098 = EEGraphicEffect::Get(inRecord->mUnusedEffect2);
-    if (this->mEffect098 != NULL)
-        this->mEffect098->Reference();
-    this->mEffect09C = EEGraphicEffect::Get(inRecord->mUnusedEffect3);
-    if (this->mEffect09C != NULL)
-        this->mEffect09C->Reference();
-    this->mEffect0A0 = EEGraphicEffect::Get(inRecord->mUnusedEffect4);
-    if (this->mEffect0A0 != NULL)
-        this->mEffect0A0->Reference();
-    this->mEffect0A4 = EEGraphicEffect::Get(inRecord->mUnusedEffect5);
-    if (this->mEffect0A4 != NULL)
-        this->mEffect0A4->Reference();
-    this->mEffect0A8 = EEGraphicEffect::Get(inRecord->mUnusedEffect6);
-    if (this->mEffect0A8 != NULL)
-        this->mEffect0A8->Reference();
-    this->mSpecialAttackEffect = EEGraphicEffect::Get(inRecord->mSpecialAttackEffect);
-    if (this->mSpecialAttackEffect != NULL)
-        this->mSpecialAttackEffect->Reference();
-    this->mEffect0B0 = EEGraphicEffect::Get(inRecord->mUnusedEffect7);
-    if (this->mEffect0B0 != NULL)
-        this->mEffect0B0->Reference();
-    this->mShotEffect = EEGraphicEffect::Get(inRecord->mShotEffect);
-    if (this->mShotEffect != NULL)
-        this->mShotEffect->Reference();
-    this->mLeprosyEffect = EEGraphicEffect::Get(inRecord->mLeprosyEffect);
-    if (this->mLeprosyEffect != NULL)
-        this->mLeprosyEffect->Reference();
-    this->mPlagueEffect = EEGraphicEffect::Get(inRecord->mPlagueEffect);
-    if (this->mPlagueEffect != NULL)
-        this->mPlagueEffect->Reference();
-    this->mPulseCannonEffect = EEGraphicEffect::Get(inRecord->mPulseCannonEffect);
-    if (this->mPulseCannonEffect != NULL)
-        this->mPulseCannonEffect->Reference();
-    this->mMoraleEffect = EEGraphicEffect::Get(inRecord->mMoraleEffect);
-    if (this->mMoraleEffect != NULL)
-        this->mMoraleEffect->Reference();
-    this->mBattleCryEffect = EEGraphicEffect::Get(inRecord->mBattleCryEffect);
-    if (this->mBattleCryEffect != NULL)
-        this->mBattleCryEffect->Reference();
-    this->mShellHoleEffect = EEGraphicEffect::Get(inRecord->mShellHoleEffect);
-    if (this->mShellHoleEffect != NULL)
-        this->mShellHoleEffect->Reference();
-    this->mEffect0D0 = EEGraphicEffect::Get(inRecord->mUnusedEffect8);
-    if (this->mEffect0D0 != NULL)
-        this->mEffect0D0->Reference();
-    this->mBloodStainEffect = EEGraphicEffect::Get(inRecord->mBloodStainEffect);
-    if (this->mBloodStainEffect != NULL)
-        this->mBloodStainEffect->Reference();
-    this->mFriendlyDamageFactor = inRecord->mFriendlyDamageFactor;
-    this->mB2D1 = true;
+    this->mImprovements = reinterpret_cast<EEUnitClassImprovementTable*>(EEUCUpgradeTable::sTable[inRecord->mUpgradeTableIndex]);
+    // each effect referenced as it is found, in the original's order
+    auto theEffect = [](long inID) {
+        EEGraphicEffect* theResult = EEGraphicEffect::Get(inID);
+        if (theResult != NULL)
+            theResult->Reference();
+        return theResult;
+    };
+    this->mDeathEffect = theEffect(inRecord->mDeathEffect);
+    this->mDamageEffect = theEffect(inRecord->mDamageEffect);
+    this->mHealEffect = theEffect(inRecord->mHealEffect);
+    this->mFireTrailEffect = theEffect(inRecord->mUnusedFireTrailEffect);
+    this->mTrailEffect = theEffect(inRecord->mTrailEffect);
+    this->mMuzzleFlashEffect = theEffect(inRecord->mMuzzleFlashEffect);
+    this->mRippleEffect = theEffect(inRecord->mRippleEffect);
+    this->mSplashEffect = theEffect(inRecord->mSplashEffect);
+    this->mImpactSparksEffect = theEffect(inRecord->mImpactSparksEffect);
+    this->mImpactBloodEffect = theEffect(inRecord->mImpactBloodEffect);
+    this->mAttachedEffect = theEffect(inRecord->mAttachedEffect);
+    this->mEffect090 = theEffect(inRecord->mUnusedEffect1);
+    this->mCreationEffect = theEffect(inRecord->mCreationEffect);
+    this->mEffect098 = theEffect(inRecord->mUnusedEffect2);
+    this->mEffect09C = theEffect(inRecord->mUnusedEffect3);
+    this->mEffect0A0 = theEffect(inRecord->mUnusedEffect4);
+    this->mEffect0A4 = theEffect(inRecord->mUnusedEffect5);
+    this->mEffect0A8 = theEffect(inRecord->mUnusedEffect6);
+    this->mSpecialAttackEffect = theEffect(inRecord->mSpecialAttackEffect);
+    this->mEffect0B0 = theEffect(inRecord->mUnusedEffect7);
+    this->mShotEffect = theEffect(inRecord->mShotEffect);
+    this->mLeprosyEffect = theEffect(inRecord->mLeprosyEffect);
+    this->mPlagueEffect = theEffect(inRecord->mPlagueEffect);
+    this->mPulseCannonEffect = theEffect(inRecord->mPulseCannonEffect);
+    this->mMoraleEffect = theEffect(inRecord->mMoraleEffect);
+    this->mBattleCryEffect = theEffect(inRecord->mBattleCryEffect);
+    this->mShellHoleEffect = theEffect(inRecord->mShellHoleEffect);
+    this->mEffect0D0 = theEffect(inRecord->mUnusedEffect8);
+    this->mBloodStainEffect = theEffect(inRecord->mBloodStainEffect);
     this->mProjectileClass = NULL;
     this->mScaffoldingClass = NULL;
     this->mDeathClass = NULL;
     this->mDeathSpawnClass = NULL;
     this->mPackedClass = NULL;
     this->mRemainsClass = NULL;
-    this->mBlocksTile = inRecord->mBlocksTile;
     if (this->mAIScriptName.GetLength() > 0)
         this->mAIScript = EEUnitAction::GetScript(this->mAIScriptName);
     else
         this->mAIScript = NULL;
-    this->mCommands[0] = inRecord->mCommand0;
-    this->mCommands[1] = inRecord->mCommand1;
-    this->mCommands[2] = inRecord->mCommand2;
-    this->mCommands[3] = inRecord->mCommand3;
-    this->mCommands[4] = inRecord->mCommand4;
-    this->mCommands[5] = inRecord->mCommand5;
-    this->mCommands[6] = inRecord->mCommand6;
-    this->mCommands[7] = inRecord->mCommand7;
-    this->mCommands[8] = inRecord->mCommand8;
-    this->mCanChangeBehavior = false;
-    for (unsigned long k = 0; k < 8; k++) {
-        if (this->mCommands[k] == 0x1d) {
-            this->mCanChangeBehavior = true;
-            break;
-        }
-    }
-    this->mCanPatrol = false;
-    for (unsigned long m = 0; m < 8; m++) {
-        if (this->mCommands[m] == 0x12 && this->FindAction(kActionGetNextPatrolPoint) != NULL) {
-            this->mCanPatrol = true;
-            break;
-        }
-    }
-    this->mIsObstacle = inRecord->mIsObstacle;
-    this->mIsTree = this->mResourceType == kResourceWood;
+    theIn.ai_script = (uint64_t)(uintptr_t)this->mAIScript;
+    ee_units_unit_class_fill(static_cast<EeUnitsUnitClassFields*>(this), inRecord, &theIn);
     this->mBehavior = EEUnitBehavior::sTable[inRecord->mBehavior];
 }
 

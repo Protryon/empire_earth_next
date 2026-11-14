@@ -2920,6 +2920,203 @@ struct EeUnitsTurretPart {
   float angle;
 };
 
+/// `EEUnitClass`'s plain members (ee/EEUnit.h), in the class's order.
+struct EeUnitsUnitClassFields {
+  long mAirTrafficType;
+  /// the command buttons (30: formation)
+  unsigned long mCommands[9];
+  float mCruiseAltitude;
+  float mMinRange;
+  float mRange;
+  float mAreaEffect;
+  float mAreaEffectScale;
+  float mScale;
+  float mMaxVelocity;
+  float mF138;
+  float mAcceleration;
+  float mAngularAcceleration;
+  float mMaxAngularVelocity;
+  float mCostScale;
+  float mTurretMaxAngularVelocity;
+  float mBuildTimeScale;
+  float mGarrisonBonus;
+  float mMaxRoll;
+  float mFacingOffset;
+  float mFiringArc;
+  float mLineOfSight;
+  float mSelectionSize;
+  float mShadowScale;
+  float mL170;
+  float mOuterCollisionSphere;
+  float mInnerCollisionSphere;
+  float mLaunchPitch;
+  long mL180;
+  float mConversionResistance;
+  float mConversionRate;
+  float mSlopeSpeedPenalty;
+  float mBobHeight;
+  float mBobPitch;
+  float mFriendlyDamageFactor;
+  float mF19C;
+  float mHealThreshold;
+  float mHealRange;
+  float mHealDelay;
+  float mLoadRange;
+  float mUnloadRange;
+  long mIsComplex;
+  unsigned long mCategory;
+  unsigned long mUnitType;
+  long mCombatReaction;
+  long mWeapon;
+  unsigned long mFamily;
+  long mAmmoType;
+  unsigned long mAIKind;
+  unsigned long mCounterKind1;
+  unsigned long mCounterKind2;
+  unsigned long mCounterKind3;
+  long mKindFlags;
+  long mTechnology;
+  long mGarrisonTechnology;
+  long mWaterKind;
+  /// the base armour per weapon kind
+  long mArmor[6];
+  long mL208;
+  long mEpoch;
+  long mReloadTime;
+  long mAttack;
+  long mWorkRate;
+  long mGatherTimes[7];
+  long mFlightTime;
+  long mLeadership;
+  long mMaxObjectCarry;
+  long mInfluence;
+  long mRottingTime;
+  long mTransportCapacity;
+  long mGarrisonCapacity;
+  long mRepairRate;
+  long mWeight;
+  long mHitPoints;
+  long mNameStringID;
+  long mTargetSearchInterval;
+  long mResourceType;
+  long mResourceAmount;
+  long mCarryAmount;
+  long mHealingPoints;
+  long mRegeneration;
+  long mPowerRegeneration;
+  long mPower;
+  long mL284;
+  long mMissileDelayTime;
+  long mTileSize;
+  long mCloakRadius;
+  long mL294;
+  long mOverlapUnitSet;
+  long mAmmunition;
+  long mNumUnits;
+  long mLastUnitGoneTime;
+  long mMiniMapColor;
+  long mInitialGarrisonCount;
+  long mWonderBonus;
+  long mWonderUnitSet;
+  long mMinConversionTime;
+  /// the area-effect template ids
+  long mAreaEffectTemplates[4];
+  long mAnimalID;
+  /// the movement domains (land 2, air 1, sea 4, space 8)
+  uint8_t mDomains;
+  bool mB2D1;
+  /// per terrain type, whether the class may stand on it
+  bool mTerrainTypes[17];
+  bool mIsAffectedByGravity;
+  bool mUsesAmmunition;
+  bool mShootsHigh;
+  bool mUpgradesAreaEffect;
+  bool mUpgradesRepair;
+  bool mUpgradesShockArmor;
+  bool mUpgradesPierceArmor;
+  bool mUpgradesArrowArmor;
+  bool mUpgradesLaserArmor;
+  bool mUpgradesGunArmor;
+  bool mUpgradesMissileArmor;
+  bool mUpgradesRange;
+  bool mPitchesWithTerrain;
+  bool mRollsWithTerrain;
+  bool mFiresBroadside;
+  bool mCanAttackGround;
+  bool mCanFireOverWalls;
+  bool mIsScenarioSelectable;
+  bool mIsEnabled;
+  bool mFacesCamera;
+  bool mIsDecoration;
+  bool mFiresWhileMoving;
+  bool mCanFly;
+  bool mB2FA;
+  bool mBuildsOnElevation;
+  bool mBlocksTile;
+  bool mCanEnterAirTransports;
+  bool mCanEnterLandTransports;
+  bool mCanEnterSeaTransports;
+  bool mCanEnterSpaceTransports;
+  bool mCanEnterFortresses;
+  bool mCanGarrison;
+  bool mIsCollidable;
+  bool mCanSetRallyPoint;
+  bool mB305;
+  bool mIsGaiaPlaceable;
+  bool mConvertsBuildings;
+  bool mConvertsPriests;
+  bool mIsPlayerPlaceable;
+  bool mIsVital;
+  bool mIsCloakable;
+  bool mIsExpansionUnit;
+  bool mCanEnterAirports;
+  bool mCanEnterCarriers;
+  bool mCanEnterNavyYards;
+  bool mIsWall;
+  /// the contagion functors copy it to the unit's
+  bool mIsDeletable;
+  bool mIsInactive;
+  bool mIsAttackUnit;
+  bool mIsDefenseUnit;
+  bool mCanCrossForest;
+  bool mIsObstacle;
+  bool mIsTree;
+  bool mIsMelee;
+  bool mCanDisband;
+  bool mIsHuman;
+  bool mIsHorse;
+  bool mIsTower;
+  bool mHasCalamityPowers;
+  bool mIsProjectile;
+  bool mCanChangeBehavior;
+  bool mIsCyber;
+  bool mCanPatrol;
+  /// set by `CreateUnitClasses` (unit set 0x81)
+  bool mIsMedic;
+  bool mSkipsLineOfFireCheck;
+  /// set by `CreateUnitClasses` (unit sets 0x8a, 0x97, 0x96)
+  bool mIsFlare;
+  bool mIsBoobyTrap;
+  bool mIsParatrooperBomber;
+  bool mHasSpecialAttack;
+};
+
+/// What the constructor looks up outside the row: the C++ fills it before [`fill`].
+struct EeUnitsUnitClassFillIn {
+  /// the constructor's first argument
+  long is_complex;
+  /// the row's technology is in the tech tree: its node's epoch wins over the row's
+  bool has_tech_node;
+  long tech_epoch;
+  /// one of the research technologies is a kind-5 (calamity) technology
+  bool has_calamity_powers;
+  /// `EEAnimal::Find(unit type)` found a record: its animal id (else 1000)
+  bool has_animal;
+  long animal_id;
+  /// the class's AI script (a script.rs handle; 0: none)
+  uint64_t ai_script;
+};
+
 /// One operation's values: a number (`long`/`unsigned long`/`unsigned short`/an id/a count), a float, a bool (0 or 1).
 struct EeUnitsUnitSaveIo {
   int64_t i;
@@ -4033,6 +4230,15 @@ uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 /// # Safety
 /// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
 void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
+
+/// `EEUnitClass::EEUnitClass`'s plain stores: `out` (the class's record base) set from the db row `row`
+/// (an `EEUnitClassRecord`, ee/EEUnitClassRecord.h, the layout ee_data's generated record asserts).
+///
+/// # Safety
+/// `out` is a writable `EeUnitsUnitClassFields`; `row` a readable `EEUnitClassRecord`; `input` readable.
+void ee_units_unit_class_fill(EeUnitsUnitClassFields *out,
+                              const void *row,
+                              const EeUnitsUnitClassFillIn *input);
 
 /// The C ABI: `RTSUnit::Load` (`unit`, `complex` null), `EEUnit::Load` (`complex` null) or `EEComplexUnit::Load` (all
 /// three) of one unit over the host callback.
