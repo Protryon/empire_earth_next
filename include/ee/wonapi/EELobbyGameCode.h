@@ -231,32 +231,12 @@ public:
 };
 
 // the game room's players: eight rows of a name combo, team, color, citizen, observe and transfer controls
-// (EELobbyPlayerOptionsCtrl.cpp; 0x154 bytes; vtable 0x84c718); control ids are slot * 6 + column + 1
-class EELobbyPlayerOptionsCtrl : public Container {
+// (EELobbyPlayerOptionsCtrl.cpp; 0x154 bytes; vtable 0x84c718); control ids are slot * 6 + column + 1.
+// R6 WONLobby round 5: a lobbyctl.rs object (the 48 controls, the room flags, the active and host flags, its own
+// slot, every rule); the shell is WONLobbyRustCtrl.h's, the host WONLobby/LobbyCtrlHost.cpp
+class EELobbyPlayerOptionsCtrl : public LobbyRustCtrl {
 public:
-    EELobbyPlayerOptionsCtrl();             // 0x299b17
-    virtual ~EELobbyPlayerOptionsCtrl();    // 0x299ba5
-    virtual void InitComponent(ComponentInit& inInit);         // +0x1c 0x299c56
-    EELobbyGame* GetGame();                 // 0x299dcd (jmp GetMyLobbyGame; ICF-shared with the game options')
-    void UpdatePlayer(int inSlot, EELobbyGame* inGame);        // 0x299dd2
-    void UpdatePlayer(int inSlot);          // 0x29a0f5
-    void UpdateAll();                       // 0x29a10d
-    void Activate();                        // 0x29a132
-    void Deactivate();                      // 0x29a183
-    void PlayerOptionChanged(int inSlot, int inWhat);          // 0x29a19f
-    void HandlePlayerChanged(ComponentEvent* inEvent); // 0x29a240
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);    // +0x7c 0x29a27c
-
-    long mRoomSpec;                         // +0x84 (2; ORed with event 100054's parameter)
-    bool mIsActive;                         // +0x88
-    long mMySlot;                           // +0x8c (-1)
-    bool mIsHost;                           // +0x90
-    SmartPtr<ComboBox> mUserNameCombo[8];   // +0x94
-    SmartPtr<ComboBox> mTeamCombo[8];       // +0xb4
-    SmartPtr<EELobbyColorButton> mColorButton[8];  // +0xd4
-    SmartPtr<ComboBox> mCitizenCombo[8];    // +0xf4
-    SmartPtr<Button> mObserveCheck[8];      // +0x114
-    SmartPtr<Label> mFileTransferLabel[8];  // +0x134
+    EELobbyPlayerOptionsCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::PlayerOptions) {}
 };
 
 // the lobby's configuration: WONAPI's plus the file transfer port (0xfc bytes; vtable 0x44c610)

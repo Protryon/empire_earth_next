@@ -4351,6 +4351,8 @@ enum class EeWonLobbyCtlType : uint32_t {
   Container = 7,
   /// `Component`
   Component = 8,
+  /// `EELobbyColorButton` (round 5)
+  ColorButton = 9,
 };
 
 /// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
@@ -4364,6 +4366,8 @@ enum class EeWonLobbyCtlKind : uint32_t {
   UserList = 4,
   /// EELobbyGameOptionsCtrl (the EE game room's options panel)
   GameOptions = 5,
+  /// EELobbyPlayerOptionsCtrl (the EE game room's eight player rows; round 5)
+  PlayerOptions = 6,
 };
 
 /// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
@@ -4604,6 +4608,28 @@ enum class EeWonLobbyCtlOp : uint32_t {
   /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
   /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
   ChooseSavedGame,
+  /// `((EELobbyPlayerSlot*)a)->mOptions[b]` (round 5: EELobbyPlayerOptionsCtrl).
+  SlotOption,
+  /// `((ComboBox*)a)->SetText(((EELobbyPlayerSlot*)b)->GetName())`.
+  ComboSetSlotName,
+  /// `((ComboBox*)a)->mEdit->mTextColor = b`.
+  ComboSetTextColor,
+  /// `GetMyLobbyPlayer()->GetReady()` (0 or 1).
+  MyPlayerReady,
+  /// `GetMyLobbyPlayer()`.
+  MyPlayer,
+  /// `((EELobbyPlayer*)a)->GetSlot()`.
+  PlayerSlot,
+  /// `((LobbyClient*)a)->GetPlayer().mPtr`.
+  ClientPlayer,
+  /// `((EELobbyColorButton*)a)->SetColor(b)`.
+  ColorSetColor,
+  /// `((EELobbyColorButton*)a)->mColor`.
+  ColorGetColor,
+  /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
+  LabelSetPercent,
+  /// `((EELobbyGame*)a)->ChangePlayerOption(b, c & 0xff, c >> 8)` (the slot, the option, the value).
+  GameChangePlayerOption,
 };
 
 /// The inward calls.
@@ -4616,8 +4642,9 @@ enum class EeWonLobbyCtlCall : uint32_t {
   Paint,
   /// GameBrowserCtrl::ResetBrowser.
   ResetBrowser,
-  /// a member: `a` < 19 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl: active), 102
-  /// the last ready state, 103 the browser's reset flag.
+  /// a member: `a` < 48 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl and
+  /// EELobbyPlayerOptionsCtrl: active), 102 the last ready state, 103 the browser's reset flag, 104
+  /// EELobbyPlayerOptionsCtrl's own slot, 105 its host flag.
   Field,
 };
 
@@ -6741,6 +6768,10 @@ enum class EeWonLobbyCtlEvent : uint32_t {
   AllOptions,
   /// `LobbyEvent_EELobbySyncOption` (an `EELobbySyncOptionEvent`)
   SyncOption,
+  /// `LobbyEvent_EELobbySyncPlayer` (an `EELobbySyncPlayerEvent`; round 5)
+  SyncPlayer,
+  /// 100064: a colour button's colour changed (round 5)
+  ColorChanged,
 };
 
 /// The texts the controls set (the lobby's resource strings).

@@ -125,6 +125,8 @@ void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     case 100055: aType = E::PublicAddress; break;
     case 100065: aType = E::AllOptions; break;
     case LobbyEvent_EELobbySyncOption: aType = E::SyncOption; break;
+    case LobbyEvent_EELobbySyncPlayer: aType = E::SyncPlayer; break;
+    case 100064: aType = E::ColorChanged; break;
     default: break;
     }
     this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
@@ -153,6 +155,7 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     case T::Image: return FindAs<ImageComponent>(inConfig, inSlot);
     case T::Container: return FindAs<Container>(inConfig, inSlot);
     case T::Component: return FindAs<Component>(inConfig, inSlot);
+    case T::ColorButton: return FindAs<EELobbyColorButton>(inConfig, inSlot);
     }
     return NULL;
 }
@@ -424,6 +427,25 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         }
         return theResult;
     }
+    // EELobbyPlayerOptionsCtrl
+    case Op::SlotOption: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option((int)b);
+    case Op::ComboSetSlotName: aCombo->SetText(reinterpret_cast<EELobbyPlayerSlot*>(b)->GetName()); return 0;
+    case Op::ComboSetTextColor: aCombo->mEdit->mTextColor = (unsigned long)b; return 0;
+    case Op::MyPlayerReady: return GetMyLobbyPlayer()->GetReady() ? 1 : 0;
+    case Op::MyPlayer: return (intptr_t) static_cast<EELobbyPlayer*>(GetMyLobbyPlayer());
+    case Op::PlayerSlot: return reinterpret_cast<EELobbyPlayer*>(a)->GetSlot();
+    case Op::ClientPlayer: return (intptr_t)(EELobbyPlayer*)aClient->GetPlayer().mPtr;
+    case Op::ColorSetColor: reinterpret_cast<EELobbyColorButton*>(a)->SetColor((int)b); return 0;
+    case Op::ColorGetColor: return reinterpret_cast<EELobbyColorButton*>(a)->mColor;
+    case Op::LabelSetPercent: {
+        char theBuffer[50];
+        sprintf(theBuffer, "%d", (int)b);
+        aLabel->SetText(LobbyFormatString(gEELobbyPlayerOptionsCtrl_TransferPercent, theBuffer));
+        return 0;
+    }
+    case Op::GameChangePlayerOption:
+        static_cast<EELobbyGame*>(aGame)->ChangePlayerOption((int)b, (int)(c & 0xff), (unsigned char)(c >> 8));
+        return 0;
     }
     return 0;
 }

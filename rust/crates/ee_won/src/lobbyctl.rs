@@ -32,6 +32,8 @@ pub enum EeWonLobbyCtlKind {
     UserList = 4,
     /// EELobbyGameOptionsCtrl (the EE game room's options panel)
     GameOptions = 5,
+    /// EELobbyPlayerOptionsCtrl (the EE game room's eight player rows; round 5)
+    PlayerOptions = 6,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -50,6 +52,8 @@ pub enum EeWonLobbyCtlType {
     Container = 7,
     /// `Component`
     Component = 8,
+    /// `EELobbyColorButton` (round 5)
+    ColorButton = 9,
 }
 
 /// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
@@ -101,6 +105,10 @@ pub enum EeWonLobbyCtlEvent {
     AllOptions,
     /// `LobbyEvent_EELobbySyncOption` (an `EELobbySyncOptionEvent`)
     SyncOption,
+    /// `LobbyEvent_EELobbySyncPlayer` (an `EELobbySyncPlayerEvent`; round 5)
+    SyncPlayer,
+    /// 100064: a colour button's colour changed (round 5)
+    ColorChanged,
 }
 
 /// The texts the controls set (the lobby's resource strings).
@@ -410,6 +418,28 @@ pub enum EeWonLobbyCtlOp {
     /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
     /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
     ChooseSavedGame,
+    /// `((EELobbyPlayerSlot*)a)->mOptions[b]` (round 5: EELobbyPlayerOptionsCtrl).
+    SlotOption,
+    /// `((ComboBox*)a)->SetText(((EELobbyPlayerSlot*)b)->GetName())`.
+    ComboSetSlotName,
+    /// `((ComboBox*)a)->mEdit->mTextColor = b`.
+    ComboSetTextColor,
+    /// `GetMyLobbyPlayer()->GetReady()` (0 or 1).
+    MyPlayerReady,
+    /// `GetMyLobbyPlayer()`.
+    MyPlayer,
+    /// `((EELobbyPlayer*)a)->GetSlot()`.
+    PlayerSlot,
+    /// `((LobbyClient*)a)->GetPlayer().mPtr`.
+    ClientPlayer,
+    /// `((EELobbyColorButton*)a)->SetColor(b)`.
+    ColorSetColor,
+    /// `((EELobbyColorButton*)a)->mColor`.
+    ColorGetColor,
+    /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
+    LabelSetPercent,
+    /// `((EELobbyGame*)a)->ChangePlayerOption(b, c & 0xff, c >> 8)` (the slot, the option, the value).
+    GameChangePlayerOption,
 }
 
 /// The inward calls.
@@ -424,8 +454,9 @@ pub enum EeWonLobbyCtlCall {
     Paint,
     /// GameBrowserCtrl::ResetBrowser.
     ResetBrowser,
-    /// a member: `a` < 19 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl: active), 102
-    /// the last ready state, 103 the browser's reset flag.
+    /// a member: `a` < 48 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl and
+    /// EELobbyPlayerOptionsCtrl: active), 102 the last ready state, 103 the browser's reset flag, 104
+    /// EELobbyPlayerOptionsCtrl's own slot, 105 its host flag.
     Field,
 }
 
@@ -438,7 +469,7 @@ use EeWonLobbyCtlKind as Kind;
 use EeWonLobbyCtlOp as Op;
 use EeWonLobbyCtlString as S;
 
-const MEMBERS: usize = 19;
+const MEMBERS: usize = 48;
 
 macro_rules! slot {
     ($name:literal, $file:literal, $line:expr, $ty:ident, $id:expr, $member:expr) => {
@@ -496,12 +527,20 @@ const G_LABEL: usize = 0;
 const G_BOX1: usize = 1;
 const G_BOX2: usize = 2;
 const G_OPTION: usize = 3;
+// the player rows: `mUserNameCombo[8]`, `mTeamCombo[8]`, `mColorButton[8]`, `mCitizenCombo[8]`, `mObserveCheck[8]`,
+// `mFileTransferLabel[8]`
+const P_NAME: usize = 0;
+const P_TEAM: usize = 8;
+const P_COLOR: usize = 16;
+const P_CITIZEN: usize = 24;
+const P_OBSERVE: usize = 32;
+const P_TRANSFER: usize = 40;
 /// The game options' table (`sOptionTable`): the eleven combo boxes, then the five check boxes.
 const OPTION_IS_CHECK: [bool; 16] =
     [false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true];
 
 /// Every look-up, kind by kind in the originals' order (the slot index is what `Find` passes).
-pub static SLOTS: [EeWonLobbyCtlSlot; 55] = [
+pub static SLOTS: [EeWonLobbyCtlSlot; 103] = [
     // GameBrowserCtrl::InitComponent (0..=10)
     slot!(c"Browser", c"GameBrowserCtrl.cpp", 27, Browser, -1, B_BROWSER as i32),
     slot!(c"BackButton", c"GameBrowserCtrl.cpp", 28, Button, -1, B_BACK as i32),
@@ -564,6 +603,56 @@ pub static SLOTS: [EeWonLobbyCtlSlot; 55] = [
     slot!(c"LockTeamsCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 13),
     slot!(c"LockSpeedCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 14),
     slot!(c"VictoryCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 15),
+    // EELobbyPlayerOptionsCtrl::InitComponent (55..=102): each slot's name, team, colour, citizen, observe and
+    // transfer controls, ids slot * 6 + column + 1
+    slot!(c"UserNameCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 1, (P_NAME + 0) as i32),
+    slot!(c"TeamCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 2, (P_TEAM + 0) as i32),
+    slot!(c"ColorButton1", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 3, (P_COLOR + 0) as i32),
+    slot!(c"CitizenCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 4, (P_CITIZEN + 0) as i32),
+    slot!(c"ObserveCheck1", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 5, (P_OBSERVE + 0) as i32),
+    slot!(c"FileTransferLabel1", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 6, (P_TRANSFER + 0) as i32),
+    slot!(c"UserNameCombo2", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 7, (P_NAME + 1) as i32),
+    slot!(c"TeamCombo2", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 8, (P_TEAM + 1) as i32),
+    slot!(c"ColorButton2", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 9, (P_COLOR + 1) as i32),
+    slot!(c"CitizenCombo2", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 10, (P_CITIZEN + 1) as i32),
+    slot!(c"ObserveCheck2", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 11, (P_OBSERVE + 1) as i32),
+    slot!(c"FileTransferLabel2", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 12, (P_TRANSFER + 1) as i32),
+    slot!(c"UserNameCombo3", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 13, (P_NAME + 2) as i32),
+    slot!(c"TeamCombo3", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 14, (P_TEAM + 2) as i32),
+    slot!(c"ColorButton3", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 15, (P_COLOR + 2) as i32),
+    slot!(c"CitizenCombo3", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 16, (P_CITIZEN + 2) as i32),
+    slot!(c"ObserveCheck3", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 17, (P_OBSERVE + 2) as i32),
+    slot!(c"FileTransferLabel3", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 18, (P_TRANSFER + 2) as i32),
+    slot!(c"UserNameCombo4", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 19, (P_NAME + 3) as i32),
+    slot!(c"TeamCombo4", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 20, (P_TEAM + 3) as i32),
+    slot!(c"ColorButton4", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 21, (P_COLOR + 3) as i32),
+    slot!(c"CitizenCombo4", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 22, (P_CITIZEN + 3) as i32),
+    slot!(c"ObserveCheck4", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 23, (P_OBSERVE + 3) as i32),
+    slot!(c"FileTransferLabel4", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 24, (P_TRANSFER + 3) as i32),
+    slot!(c"UserNameCombo5", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 25, (P_NAME + 4) as i32),
+    slot!(c"TeamCombo5", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 26, (P_TEAM + 4) as i32),
+    slot!(c"ColorButton5", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 27, (P_COLOR + 4) as i32),
+    slot!(c"CitizenCombo5", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 28, (P_CITIZEN + 4) as i32),
+    slot!(c"ObserveCheck5", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 29, (P_OBSERVE + 4) as i32),
+    slot!(c"FileTransferLabel5", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 30, (P_TRANSFER + 4) as i32),
+    slot!(c"UserNameCombo6", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 31, (P_NAME + 5) as i32),
+    slot!(c"TeamCombo6", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 32, (P_TEAM + 5) as i32),
+    slot!(c"ColorButton6", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 33, (P_COLOR + 5) as i32),
+    slot!(c"CitizenCombo6", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 34, (P_CITIZEN + 5) as i32),
+    slot!(c"ObserveCheck6", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 35, (P_OBSERVE + 5) as i32),
+    slot!(c"FileTransferLabel6", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 36, (P_TRANSFER + 5) as i32),
+    slot!(c"UserNameCombo7", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 37, (P_NAME + 6) as i32),
+    slot!(c"TeamCombo7", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 38, (P_TEAM + 6) as i32),
+    slot!(c"ColorButton7", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 39, (P_COLOR + 6) as i32),
+    slot!(c"CitizenCombo7", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 40, (P_CITIZEN + 6) as i32),
+    slot!(c"ObserveCheck7", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 41, (P_OBSERVE + 6) as i32),
+    slot!(c"FileTransferLabel7", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 42, (P_TRANSFER + 6) as i32),
+    slot!(c"UserNameCombo8", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 43, (P_NAME + 7) as i32),
+    slot!(c"TeamCombo8", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 44, (P_TEAM + 7) as i32),
+    slot!(c"ColorButton8", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 45, (P_COLOR + 7) as i32),
+    slot!(c"CitizenCombo8", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 46, (P_CITIZEN + 7) as i32),
+    slot!(c"ObserveCheck8", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 47, (P_OBSERVE + 7) as i32),
+    slot!(c"FileTransferLabel8", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 48, (P_TRANSFER + 7) as i32),
 ];
 
 /// The number of members each kind holds (released in reverse by the destructor).
@@ -572,7 +661,8 @@ fn member_count(kind: Kind) -> usize {
         Kind::Browser => 11,
         Kind::Staging | Kind::UserList => 2,
         Kind::LanOptions | Kind::NetOptions => 18,
-        Kind::GameOptions => MEMBERS,
+        Kind::GameOptions => 19,
+        Kind::PlayerOptions => MEMBERS,
     }
 }
 
@@ -615,6 +705,10 @@ pub struct EeWonLobbyCtl {
     last_ready: Cell<bool>,
     /// GameBrowserCtrl's `mIsReset` (true from the constructor)
     is_reset: Cell<bool>,
+    /// EELobbyPlayerOptionsCtrl's `mMySlot` (-1 from the constructor)
+    my_slot: Cell<i32>,
+    /// EELobbyPlayerOptionsCtrl's `mIsHost`
+    is_host: Cell<bool>,
 }
 
 impl EeWonLobbyCtl {
@@ -623,15 +717,19 @@ impl EeWonLobbyCtl {
             ctl,
             host,
             kind,
-            members: Default::default(),
-            room_flags: Cell::new(if matches!(kind, Kind::Staging | Kind::UserList | Kind::GameOptions) {
-                2
-            } else {
-                0
-            }),
+            members: std::array::from_fn(|_| Cell::new(0)),
+            room_flags: Cell::new(
+                if matches!(kind, Kind::Staging | Kind::UserList | Kind::GameOptions | Kind::PlayerOptions) {
+                    2
+                } else {
+                    0
+                },
+            ),
             in_game: Cell::new(false),
             last_ready: Cell::new(false),
             is_reset: Cell::new(kind == Kind::Browser),
+            my_slot: Cell::new(-1),
+            is_host: Cell::new(false),
         }
     }
 
@@ -733,6 +831,7 @@ impl EeWonLobbyCtl {
                 self.op(Op::SubscribeBroadcast, 1, 0, 0);
             }
             Kind::GameOptions => self.game_options_init(config, &local),
+            Kind::PlayerOptions => self.player_options_init(config, &local),
         }
         // the local SmartPtr<Button> (LobbyOptionsCtrl's reset, restore and remove buttons in turn)
         let l = local.replace(0);
@@ -1483,6 +1582,172 @@ impl EeWonLobbyCtl {
         }
     }
 
+    // ---- EELobbyPlayerOptionsCtrl
+
+    fn player_options_init(&self, config: isize, local: &Cell<isize>) {
+        for slot in 55..=102 {
+            self.find(config, slot, local);
+        }
+        self.op(Op::SubscribeBroadcast, 1, 0, 0);
+    }
+
+    fn slot_option(&self, slot: isize, option: isize) -> isize {
+        self.op(Op::SlotOption, slot, option, 0)
+    }
+
+    /// UpdatePlayer(slot, game): one slot's row (name or state, team, colour, citizen, observer, transfer percent),
+    /// enabled by role.
+    fn update_player(&self, slot: i32, game: isize) {
+        if game == 0 || !(0..8).contains(&slot) {
+            return;
+        }
+        let s = self.op(Op::GameSlot, game, slot as isize, 0);
+        if s == 0 {
+            return;
+        }
+        let i = slot as usize;
+        let team = self.m(P_TEAM + i);
+        self.op(Op::ComboSetSel, team, self.slot_option(s, 1), 0);
+        let citizen = self.m(P_CITIZEN + i);
+        self.op(Op::ComboSetSel, citizen, self.slot_option(s, 3) - 1, 0);
+        let mut taken = false;
+        let mut show_team = false;
+        let not_random_map = self.op(Op::GameOption, game, 0, 0) != 0;
+        let is_me = slot == self.my_slot.get() && !self.ask(Op::MyPlayerReady, 0);
+        if self.slot_option(s, 0) == 1 {
+            show_team = true;
+        }
+        let name = self.m(P_NAME + i);
+        if self.slot_option(s, 0) != 3 && self.slot_option(s, 0) != 4 {
+            self.op(Op::ComboSetSel, name, self.slot_option(s, 0), 0);
+            self.op(Op::ComboSetTextColor, name, 0x8000000e, 0);
+            self.op(Op::SetVisible, self.m(P_OBSERVE + i), 0, 0);
+            self.op(Op::SetVisible, self.m(P_COLOR + i), 0, 0);
+            self.op(Op::SetVisible, self.m(P_TRANSFER + i), 0, 0);
+        } else {
+            show_team = self.slot_option(s, 4) == 0;
+            taken = true;
+            self.op(Op::ComboSetSlotName, name, s, 0);
+            let color = if self.slot_option(s, 0) == 4 { 0xff0000 } else { 0x8000000e };
+            self.op(Op::ComboSetTextColor, name, color, 0);
+            let observe = self.m(P_OBSERVE + i);
+            self.op(Op::SetVisible, observe, 1, 0);
+            self.set_enabled(observe, is_me && !not_random_map);
+            let checked = self.slot_option(s, 4) != 0;
+            self.op(Op::ButtonSetCheck, observe, checked as isize, 0);
+            let button = self.m(P_COLOR + i);
+            let visible = self.slot_option(s, 4) == 0;
+            self.op(Op::SetVisible, button, visible as isize, 0);
+            self.set_enabled(button, is_me && !not_random_map);
+            self.op(Op::ColorSetColor, button, self.slot_option(s, 2), 0);
+            let transfer = self.m(P_TRANSFER + i);
+            let percent = self.slot_option(s, 5);
+            if percent >= 100 {
+                self.op(Op::SetVisible, transfer, 0, 0);
+            } else {
+                self.op(Op::SetVisible, transfer, 1, 0);
+                self.op(Op::LabelSetPercent, transfer, self.slot_option(s, 5), 0);
+            }
+        }
+        let host = self.is_host.get();
+        self.set_enabled(name, host && slot != self.my_slot.get() && !not_random_map);
+        self.set_enabled(citizen, host && !not_random_map);
+        self.set_enabled(team, (is_me || (host && !taken)) && !not_random_map);
+        self.op(Op::SetVisible, citizen, show_team as isize, 0);
+        self.op(Op::SetVisible, team, show_team as isize, 0);
+    }
+
+    fn update_my_player(&self, slot: i32) {
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        self.update_player(slot, game);
+    }
+
+    fn update_players(&self) {
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        if game != 0 {
+            for i in 0..8 {
+                self.update_player(i, game);
+            }
+        }
+    }
+
+    fn activate_players(&self) {
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        if game == 0 || self.op(Op::GameMatchesSpec, game, self.room_flags.get() as isize, 0) == 0 {
+            return;
+        }
+        self.in_game.set(true);
+        self.is_host.set(self.ask(Op::IAmCaptain, 0));
+        let player = self.op(Op::MyPlayer, 0, 0, 0);
+        if player != 0 {
+            self.my_slot.set(self.op(Op::PlayerSlot, player, 0, 0) as u8 as i32);
+        }
+        self.update_players();
+    }
+
+    /// PlayerOptionChanged(slot, what): the changed row control's value sent to the game as the slot's option.
+    fn player_option_changed(&self, slot: i32, what: i32) {
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        if game == 0 || !(0..8).contains(&slot) || !(0..6).contains(&what) {
+            return;
+        }
+        let i = slot as usize;
+        let value = match what {
+            4 => self.op(Op::ButtonIsChecked, self.m(P_OBSERVE + i), 0, 0) as u8,
+            3 => (self.op(Op::ComboGetSel, self.m(P_CITIZEN + i), 0, 0) as i32).wrapping_add(1) as u8,
+            2 => self.op(Op::ColorGetColor, self.m(P_COLOR + i), 0, 0) as u8,
+            1 => self.op(Op::ComboGetSel, self.m(P_TEAM + i), 0, 0) as u8,
+            0 => self.op(Op::ComboGetSel, self.m(P_NAME + i), 0, 0) as u8,
+            // the transfer label (5) has no value of its own: 0
+            _ => 0,
+        };
+        self.op(Op::GameChangePlayerOption, game, slot as isize, what as isize | (value as isize) << 8);
+    }
+
+    fn players_event(&self, event: isize, kind: Ev) {
+        match kind {
+            Ev::LeftGame => {
+                if self.in_game.get() {
+                    self.my_slot.set(-1);
+                    self.in_game.set(false);
+                    self.is_host.set(false);
+                }
+            }
+            Ev::JoinedGame => self.activate_players(),
+            Ev::PlayerChanged | Ev::SyncPlayer => {
+                if kind == Ev::PlayerChanged && self.ask(Op::EventIsModify, event) {
+                    // HandlePlayerChanged: our own row
+                    let client = self.op(Op::PlayerChangedClient, event, 0, 0);
+                    if self.op(Op::ClientPlayer, client, 0, 0) != 0 {
+                        let player = self.op(Op::ClientPlayer, client, 0, 0);
+                        if self.op(Op::PlayerSlot, player, 0, 0) as u8 as i32 == self.my_slot.get() {
+                            self.update_my_player(self.my_slot.get());
+                        }
+                    }
+                }
+                // a player change falls through: its change kind read as the slot
+                if self.in_game.get() {
+                    let slot = self.op(Op::EventParam, event, 0, 0) as i32;
+                    self.update_my_player(slot);
+                }
+            }
+            Ev::AllOptions => {
+                if self.in_game.get() {
+                    self.update_players();
+                }
+            }
+            Ev::ButtonPressed | Ev::ComboSelChanged | Ev::ColorChanged => {
+                if self.in_game.get() {
+                    let id = (self.op(Op::EventControlId, event, 0, 0) as i32).wrapping_sub(1);
+                    self.player_option_changed(id / 6, id % 6);
+                }
+            }
+            Ev::SetRoomSpecFlags => self.add_room_flags(event),
+            // no base call
+            _ => {}
+        }
+    }
+
     // ---- the calls
 
     fn event(&self, event: isize, kind: u32, component: isize) {
@@ -1493,6 +1758,7 @@ impl EeWonLobbyCtl {
             Kind::LanOptions | Kind::NetOptions => self.options_event(event, kind, component),
             Kind::UserList => self.user_list_event(event, kind, component),
             Kind::GameOptions => self.game_options_event(event, kind),
+            Kind::PlayerOptions => self.players_event(event, kind),
         }
     }
 
@@ -1506,11 +1772,13 @@ impl EeWonLobbyCtl {
             C::ResetBrowser => self.reset_browser(),
             C::Field => {
                 return match a {
-                    0..=18 => self.members[a as usize].get(),
+                    0..=47 => self.members[a as usize].get(),
                     100 => self.room_flags.get() as isize,
                     101 => self.in_game.get() as isize,
                     102 => self.last_ready.get() as isize,
                     103 => self.is_reset.get() as isize,
+                    104 => self.my_slot.get() as isize,
+                    105 => self.is_host.get() as isize,
                     _ => 0,
                 }
             }
@@ -1529,7 +1797,7 @@ impl EeWonLobbyCtl {
     }
 }
 
-const EVENTS: [Ev; 18] = [
+const EVENTS: [Ev; 20] = [
     Ev::Other,
     Ev::ButtonPressed,
     Ev::ComboSelChanged,
@@ -1548,6 +1816,8 @@ const EVENTS: [Ev; 18] = [
     Ev::PublicAddress,
     Ev::AllOptions,
     Ev::SyncOption,
+    Ev::SyncPlayer,
+    Ev::ColorChanged,
 ];
 
 /// The look-up `index` of `SLOTS` (NULL past the end).
