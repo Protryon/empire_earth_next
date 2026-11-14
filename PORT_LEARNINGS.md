@@ -20431,3 +20431,91 @@ wrote in, member for member).
 - **Lesson.** A reader that called a getter by the same name on two classes (`GetNumberOfPlayerInputs`: the tick's
   input list, the physics tick's own count member) must be checked per class when the classes merge: one name, two
   meanings.
+
+## LLE Network Engine, round 7: NEProtocol whole in Rust, the server's and client's hosts thinned (ee_net ffi_protocol.rs, native.rs; branch rust-ne7, 2026-11-14)
+
+Round 6 named what was left: NEProtocol (forwarders to the plug-in plus its counters), the hosts' typed message ops,
+and the queue host. The seam the goldens need (their worlds answer the protocol, clock, event and thread ops) stays,
+but in Rust: the Rust server and client take a flag (`EeNetSvArgs::tcp`, `ee_net_cl_new(.., tcp)`); the game's C++
+passes true and the Rust answers those ops itself, the nettest programs pass false and answer them as before. So the
+round-3/4 goldens' protocol lines did not move.
+
+| Commit | What | C++ (src + include/lle, without include/rust) |
+|---|---|---|
+| 50d79683 | NEProtocol whole in Rust (ffi_protocol.rs); the server and client call it themselves | +84 -495, net **-411** |
+| 1d1627a0 | the server's and client's message ops as NEMRecord member indexes and records | +50 -91, net **-41** |
+| 02d1174a | the Rust gate's fixes (ee_rust's test binary, clippy, rustfmt) | 0 |
+| bfa870dc | the clock, events and threads (native.rs) and the message manager's sends in Rust | +6 -127, net **-121** |
+| fb2e3f5f | merge of rust (dead code round 2's ten server forwarders: -34, theirs) | |
+
+Round 7's own commits: +138 -711, net **-573**. The Network Engine's C++ is 1,671 lines after the merge (2,278
+before the round).
+
+**NEProtocol** (`ee_net` ffi_protocol.rs). The registry (`sProtocols`), the counters and every member, with what the
+C++ did on the way: a handle in a slot the call makes, a new connection or server the handle or NULL, an event's
+platform handle (`ee_ts_event_handle`), the received or sent count added. The plug-in is called through its C ABI
+(`extern "C"` `ee_tcp_*`, `#[cfg(not(test))]`; a stand-in module under `cargo test`), so the nettest's stand-in
+plug-in still replaces it at link time. `NEInitialize`/`NEShutdown` are `ee_net_pr_initialize`/`_shutdown`. The C++
+class has no data: a `NEProtocol*` is the Rust object, and it keeps the five members the game calls (GetProtocol,
+GetCount, GetStatus, GetLocalAddress, EnumerateNetworkAdapters, SendSingle) as inline forwarders, plus the sinks that
+write the plug-in's text into UString/UWideString. Publish's name, announcement and adapter moved into the Rust server
+(`EeNetSvArgs`); `Connect`'s strings travel as bytes (`EeNetClStrings`), `GetDetectedGame`'s answers through sinks
+(`EeNetClSinks`).
+- **Golden.** `ne_protocol_test` drives the Rust through `tests/net/ne_protocol_members.h` (the original's members,
+  test only): golden_protocol.txt (made by the original NEProtocol.cpp and the TCP shim in round 2) equal, 15,879
+  lines. tcptest drives the same members over 127.0.0.1: all checks pass. Unit tests: tests_protocol.rs (registry,
+  NULL on failure, counters, the forwards).
+- **Lesson.** `while let Some(x) = lock().first()` holds the guard for the whole body: the shutdown's free took the
+  registry's lock again and deadlocked the first test run. Copy out of the guard first.
+- **Lesson.** A Rust module that imports another crate's C ABI drags that crate into every program that links the
+  module: the client/server nettests now link the plug-in and need its engine calls (`tests/net/ne_tcp_host.h`), and
+  ee_rust's test binary (which leaves ee_net_tcp out) must leave ee_net out too.
+
+**The message ops.** `MsgGet(m, i)` is member `i` in NEMRecord's numbering (`NEMRecord::Value`: the value
+zero-extended, the inputs' count for the inputs, a block's address); `MsgNew(type, values, count)` is
+`new NEMRecord(type, values, count)` (fixed members in record order, the array constructor sharing the initializer
+list's `Fill`); the server's originating slot is `MsgSlot` (any message, game ones too); the client's received
+transfer message `MsgImport`. The typed field and message enums (`EeNetSvMsgField`, `EeNetSvNewMsg`,
+`EeNetClMsgField`, `EeNetClNewMsg`) went. The Rust names each member it reads (`TICK_RESPONSE_PHYSICS_TIME`, ...).
+- **Goldens.** The round-6 C++ re-recorded golden_server.txt and golden_client.txt byte for byte first (60
+  sequences each). After the change the nettests' worlds answer the new ops from the original classes' getters by
+  (type, index); the original units' traces and the Rust's are equal (server 200 sequences, 4,291,874 lines; client
+  300, 208,826), and only the op lines of the goldens changed (same line counts). ne_message_test also checks the
+  array constructor's export and Value against the senders' (711 checks, not traced into the golden).
+- **Mutations caught:** the tick response's servers' tick read as the physics time, the remove player's flags
+  swapped, the connection's lobby slot read as the send-to slot, the transfer status's percent and status swapped
+  (nettest differs); bools unconverted by the array constructor (76 checks fail); a block read as a number (the test
+  crashes).
+
+**The rest of the hosts.** With the flag the queues' clock, events and threads are ee_time/ee_ts called directly
+(native.rs; `TSScheduler::CreateEvent`'s manual reset kept; a thread kind is the object's entry function, the ten C++
+trampolines and `kThreads` went), and so are the server's and client's WaitAny, ThreadPriority and Sleep; the message
+manager's MsgSendTo, XferSend, MsgTick and ResetClientConnection are the server host's (the published server kept at
+Publish). Left in C++: the game's virtual members, the message virtuals, the files, Verify and the FPU control, and the
+message manager's NewResponse (it reads the base class's fields).
+
+- **What runs it.** Single-player games and EE-SIM construct the server (Publish, its threads and events: the oracle
+  covers C's clock, events and threads). Only a LAN game runs the protocol's connect, receive, send and transfer
+  paths and the message ops over real messages (the goldens run them over the original classes).
+- **Not tested by any gate** (item 3 of the round): the game's refusal branches (EEServer::ProcessConnectionRequest:
+  version, checksum, game closed, name in use, game full; EEClient's leave paths) and a server migration in a real
+  game. Their NE side is in the goldens: the client golden sends refused connection responses (error 3) and
+  reconnection responses, the server golden reconnection requests and the reconnect wait. A driver over EEServer or
+  EEClient would need the game's options, world, UI and lobby; none was written this round.
+
+- **Gates.** Per commit: build `--sim` 0/0 (A, B, C), oracle seeds 2-3 identical (A, B, C), ne_protocol_test equal,
+  nettest client/server/queues/msgmgr/tune/message 0 differing, tcptest pass; the Rust gate failed once on A/B (the
+  ee_rust test binary's link, clippy, rustfmt: 02d1174a) and passed after. After the merge of rust (fb2e3f5f): build
+  `--sim` 0/0, the test-profile build 0/0, oracle seeds 2-7 identical, capture oracle seeds 2-3 PASS (171 digests,
+  4 without a golden), the Rust gate PASS, nettest at full counts (msgmgr 20,000, queues 1,500, tune 20,000, server 1,500 sequences 0 differing; protocol
+  and message equal to their goldens, the round-7 API's 711 checks; client 1,500 with one sequence differing, 1330,
+  equal alone (3 runs), in 1250-1369 and in a second full run of 1,500: see the flake below), tcptest pass, and
+  `lan_game.py` (under the harness lock, on the merged test exe) RESULT PASS lan-game PT host=3023 joiner=3018 (CTs
+  within 1 at every 5 s sample, 206/206 at 60 s), no fault in either game.log.
+- **Behaviour changes.** None intended. The protocol's counters are Rust atomics (the original's were unlocked
+  `unsigned long`s); the queue host's ThreadName passes the name as a C string as the UString did.
+- **A client golden flake** (the test's, not the client's): sequence 1330 differed once in a full run, in
+  `v createxferfile`'s name. The test's transfer stream is sometimes cut mid-record, so a later record lands
+  misaligned; a misaligned record with id 0 has no NUL inside the stand-in message's data, and the world's
+  CreateXferFile reads the name past the data into whatever the heap holds next to each side's message. Run alone
+  (`--first`, added this round) or again it is equal. Bounding that print in the world would end it.
