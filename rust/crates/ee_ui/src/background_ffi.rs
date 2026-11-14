@@ -1,10 +1,11 @@
-//! `extern "C"` for the backgrounds' logic (`User Interface/UI*Background.cpp`, `UIForm.cpp`): each tile goes back
+//! `extern "C"` for the backgrounds' logic (`User Interface/UI*Background.cpp`; the form's tiles are the form
+//! object's, `formobj.rs`): each tile goes back
 //! to the C++ to draw (`ee_uicpp_background_*`), the moves' and visibility changes' calls too.
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::{c_int, c_long, c_ulong, c_void};
 
-use crate::background::{self, FormTileHost, FullHost, MoveHost, TileHost, TilePlan, Tiling};
+use crate::background::{self, FullHost, MoveHost, TileHost, TilePlan, Tiling};
 use crate::rect::UiRect;
 
 /// cbindgen:ignore
@@ -31,7 +32,6 @@ mod sys {
             tile: *const UiRect,
             clipped: *const UiRect,
         ) -> c_long;
-        pub fn ee_uicpp_form_tile_draw(form: *mut c_void, bitmap: *mut c_void, piece: *const UiRect, x: f32, y: f32);
         // value: 0 mIsVisible, 1 its form is the current form
         pub fn ee_uicpp_background_value(background: *mut c_void, which: c_int) -> bool;
         pub fn ee_uicpp_ustring_assign(out: *mut c_void, text: *const core::ffi::c_char);
@@ -94,17 +94,6 @@ impl MoveHost for Raw {
     }
     fn dirty(&mut self, r: UiRect) {
         unsafe { sys::ee_uicpp_background_call(self.0, 3, &r) }
-    }
-}
-
-struct FormTiles {
-    form: *mut c_void,
-    bitmap: *mut c_void,
-}
-
-impl FormTileHost for FormTiles {
-    fn draw(&mut self, piece: UiRect, location: (f32, f32)) {
-        unsafe { sys::ee_uicpp_form_tile_draw(self.form, self.bitmap, &piece, location.0, location.1) }
     }
 }
 
@@ -225,18 +214,6 @@ pub unsafe extern "C" fn ee_ui_background_set_rectangle(background: *mut c_void,
 #[no_mangle]
 pub unsafe extern "C" fn ee_ui_background_set_visibility(background: *mut c_void, visible: bool) {
     background::set_visibility(&mut Raw(background), visible);
-}
-
-/// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_form_draw_tiles(
-    form: *mut c_void,
-    bitmap: *mut c_void,
-    rect: UiRect,
-    draw: UiRect,
-    tiles: UiRect,
-) {
-    background::form_tiles(&mut FormTiles { form, bitmap }, rect, draw, tiles);
 }
 
 /// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.

@@ -53,6 +53,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | Fix: dead fishing boats in the AI's gatherer lists | Done: [progress/fix-dead-fishing-boats-in-the-ai-s-gatherer-lists.md](progress/fix-dead-fishing-boats-in-the-ai-s-gatherer-lists.md) |
 | **R5b.4 world and units** | **Started**: [progress/r5b4-world-and-units.md](progress/r5b4-world-and-units.md) |
 | **R5b.5 scenario manager and triggers** | **Started** (`ee_scenario`): [progress/r5b5-scenario-manager-and-triggers.md](progress/r5b5-scenario-manager-and-triggers.md) |
+| **R6 scenario editor screens** | **Started** (`ee_screens`): [progress/r6-scenario-editor-screens.md](progress/r6-scenario-editor-screens.md) |
 | **R5a.3 the renderer reads a snapshot** | **Done for units, players, the map and the camera**: [progress/r5a3-the-renderer-reads-a-snapshot.md](progress/r5a3-the-renderer-reads-a-snapshot.md) |
 | Merge of main 79be8619 (the Lua AI) | Done: [progress/merge-of-main-79be8619-the-lua-ai.md](progress/merge-of-main-79be8619-the-lua-ai.md) |
 | **R5a.8 the AI host (Lua) and bindings** | **Started** (`ee_ai`): [progress/r5a8-the-ai-host-lua-and-bindings.md](progress/r5a8-the-ai-host-lua-and-bindings.md) |

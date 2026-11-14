@@ -128,3 +128,25 @@ fn an_unknown_kind_shows_nothing() {
     open(&mut h, 5);
     assert!(h.0.is_empty());
 }
+
+/// The constructor against the real C++: a scratch driver (`build/sc27/err`) built the unmodified `EEUIFError`
+/// constructor (cut from e80deffc) and the new one (this module's `construct` over `ee_screenscpp_dialog`) over fake
+/// controls, fonts, layout and background on random windows, font heights and texture depths, comparing every
+/// toolkit call (seeds 2-4 x 2,000: 0 differences); `golden_dialog_construct.txt` is the new side's host log (the
+/// same for every world: the constructor reads nothing back).
+#[test]
+fn construct_replays_the_golden() {
+    let text = include_str!("../golden_dialog_construct.txt");
+    let mut lines = text.lines();
+    assert_eq!(lines.next(), Some("construct"));
+    let expected: Vec<[u32; 4]> = lines
+        .map(|l| {
+            let v: Vec<u32> = l.trim().split(' ').map(|x| x.parse().unwrap()).collect();
+            [v[0], v[1], v[2], v[3]]
+        })
+        .collect();
+    let mut h = Replay { calls: expected.iter(), case: "construct" };
+    construct(&mut h);
+    assert!(h.calls.next().is_none(), "calls left");
+    assert_eq!(expected.len(), 50);
+}

@@ -34,8 +34,6 @@
 #include "rust/ee_ts.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/NEProtocol.h"
-#include "lle/NEConnection.h"
-#include "lle/NEServer.h"
 #include "rust/ee_net_tcp.h"
 
 // The protocol's constructor and destructor are its friends' (NEInitialize, NEShutdown, the server): the test is
@@ -203,23 +201,23 @@ int main()
     long theResult = theProtocol->Publish("EEService", UWideString("tcp_test game"), 2, theHostData, theHostXfer,
                                           theHostAccept, theServer, false, false, 0);
     printf("publish: %ld\n", theResult);
-    REQUIRE(theResult == kOK && theServer != NULL && theServer->GetData() != NULL);
+    REQUIRE(theResult == kOK && theServer != NULL);
 
     // 2. client connects and joins
     NEConnection* theClient = NULL;
     theResult = theProtocol->Connect("127.0.0.1", "EEService", UWideString("tcp_test game"), 2, theClientData,
                                      theClient, 0);
     printf("connect: %ld\n", theResult);
-    REQUIRE(theResult == kOK && theClient != NULL && theClient->GetData() != NULL);
+    REQUIRE(theResult == kOK && theClient != NULL);
 
     std::vector<unsigned char> theJoin(200), theBuffer(0x10000 + 16);
     Fill(theJoin, 1);
     theJoin[1] = 0x22;                       // a join packet (byte 0 is the cipher key the plug-in writes)
     std::vector<unsigned char> theSent = theJoin;
-    CHECK(theClient->Send(theSent.data(), (unsigned long)theSent.size()) == kOK);
+    CHECK(theProtocol->Send(theClient, theSent.data(), (unsigned long)theSent.size()) == kOK);
     unsigned long theReceived = 0, theIndex = 99;
     theResult = ReceiveWithin(theHostData, [&] {
-        return theServer->ReceiveFrom((unsigned long)theBuffer.size(), theBuffer.data(), theReceived, theIndex);
+        return theProtocol->ReceiveFrom(theServer, (unsigned long)theBuffer.size(), theBuffer.data(), theReceived, theIndex);
     });
     printf("host receive (join): %ld, %lu bytes, client %lu\n", theResult, theReceived, theIndex);
     REQUIRE(theResult == kOK && theReceived == theJoin.size() && theIndex == 0);
@@ -233,10 +231,10 @@ int main()
     std::vector<unsigned char> theReply(900);
     Fill(theReply, 2);
     theSent = theReply;
-    CHECK(theServer->SendTo(0, theSent.data(), (unsigned long)theSent.size()) == kOK);
+    CHECK(theProtocol->SendTo(theServer, 0, theSent.data(), (unsigned long)theSent.size()) == kOK);
     theReceived = 0;
     theResult = ReceiveWithin(theClientData, [&] {
-        return theClient->Receive((unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
+        return theProtocol->Receive(theClient, (unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
     });
     printf("client receive (datagram): %ld, %lu bytes\n", theResult, theReceived);
     CHECK(theResult == kOK && theReceived == theReply.size()
@@ -244,20 +242,19 @@ int main()
 
     // 4. the file-transfer stream
     NEConnection *theClientStream = NULL, *theHostStream = NULL;
-    const NEConnection* theFrom = theClient;
-    theResult = theProtocol->ConnectForXfer(theFrom, 1, theClientXfer, theClientStream);
+    theResult = theProtocol->ConnectForXfer(theClient, 1, theClientXfer, theClientStream);
     printf("connect for xfer: %ld\n", theResult);
     REQUIRE(theResult == kOK && theClientStream != NULL);
-    theResult = ReceiveWithin(theHostAccept, [&] { return theServer->AcceptForXfer(theHostStream); });
+    theResult = ReceiveWithin(theHostAccept, [&] { return theProtocol->AcceptForXfer(theServer, theHostStream); });
     printf("accept for xfer: %ld\n", theResult);
     REQUIRE(theResult == kOK && theHostStream != NULL);
-    CHECK(theClientStream->IsAlive() && theHostStream->IsAlive());
+    CHECK(theProtocol->IsAlive(theClientStream) && theProtocol->IsAlive(theHostStream));
 
     // 5. host -> client transfer, client -> host stream reply
     std::vector<unsigned char> theFile(0x10000);
     Fill(theFile, 3);
     theSent = theFile;
-    CHECK(theServer->XferSendTo(0, theSent.data(), (unsigned long)theSent.size()) == kOK);
+    CHECK(theProtocol->XferSendTo(theServer, 0, theSent.data(), (unsigned long)theSent.size()) == kOK);
     std::vector<unsigned char> theGot;
     uint64_t theDeadline = PlatTimeMilliseconds() + kTimeout;
     while (theGot.size() < theFile.size() && PlatTimeMilliseconds() < theDeadline) {
@@ -276,12 +273,12 @@ int main()
     std::vector<unsigned char> theAnswer(3000);
     Fill(theAnswer, 4);
     theSent = theAnswer;
-    CHECK(theClientStream->Send(theSent.data(), (unsigned long)theSent.size()) == kOK);
+    CHECK(theProtocol->Send(theClientStream, theSent.data(), (unsigned long)theSent.size()) == kOK);
     theGot.clear();
     theDeadline = PlatTimeMilliseconds() + kTimeout;
     while (theGot.size() < theAnswer.size() && PlatTimeMilliseconds() < theDeadline) {
         theReceived = 0;
-        theResult = theHostStream->Receive((unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
+        theResult = theProtocol->Receive(theHostStream, (unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
         if (theResult == kOK)
             theGot.insert(theGot.end(), theBuffer.begin(), theBuffer.begin() + theReceived);
         else if (theResult == kWouldBlock)
@@ -296,26 +293,26 @@ int main()
     CHECK(theProtocol->GetBytesSent() == theJoin.size() + theReply.size() + theFile.size() + theAnswer.size());
     CHECK(theProtocol->GetBytesReceived() == theJoin.size() + theReply.size() + theFile.size() + theAnswer.size());
 
-    // 6. disconnect (a connection the plug-in closes is deleted)
-    theResult = theClientStream->Close();
+    // 6. disconnect (a connection the plug-in closes is freed)
+    theResult = theProtocol->Close(theClientStream);
     printf("client closes its stream: %ld\n", theResult);
     CHECK(theResult == kOK);
     bool theAlive = true;
     theDeadline = PlatTimeMilliseconds() + kTimeout;
     while (theAlive && PlatTimeMilliseconds() < theDeadline) {
-        theAlive = theHostStream->IsAlive();
+        theAlive = theProtocol->IsAlive(theHostStream);
         if (theAlive)
             PlatSleep(1);
     }
     CHECK(!theAlive);
-    theResult = theHostStream->Receive((unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
+    theResult = theProtocol->Receive(theHostStream, (unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
     printf("host sees the close: alive %d, receive %ld\n", (int)theAlive, theResult);
     CHECK(theResult == kUnavailable);
     // the shared xfer listen socket is closed already (see the head comment): these report 1 for it, and the
-    // protocol keeps the wrappers it could not close
-    printf("close host stream: %ld\n", theHostStream->Close());
-    printf("close client: %ld\n", theClient->Close());
-    printf("close server: %ld\n", theServer->Close());
+    // plug-in keeps the connections it could not close
+    printf("close host stream: %ld\n", theProtocol->Close(theHostStream));
+    printf("close client: %ld\n", theProtocol->Close(theClient));
+    printf("close server: %ld\n", theProtocol->Close(theServer));
     TSScheduler::DestroyEvent(theHostData);
     TSScheduler::DestroyEvent(theHostXfer);
     TSScheduler::DestroyEvent(theHostAccept);

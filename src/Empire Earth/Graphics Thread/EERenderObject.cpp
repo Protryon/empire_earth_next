@@ -1616,6 +1616,17 @@ void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
 extern const EeGfxRaster gEERustRaster;
 static std::vector<float> sKeptV;      // the texture coordinates' v that model_scroll_v changed
 static std::vector<float> sKeptU;      // the texture coordinates' u that model_scroll_u changed
+static std::vector<EeGfxBeamVertex> sKeptBeam;   // the vertices model_stretch changed
+static std::vector<float> sKeptBeamYs;           // the sub-models' internal ys model_stretch changed
+
+// a beam model's vertices' points and texture coordinates (the tracer beam's stretch and its restore)
+static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
+{
+    for (unsigned long i = 0; i < inValues.size(); i++) {
+        inVertices->SetPoint(*reinterpret_cast<const GE3DPoint*>(&inValues[i].point), i);
+        inVertices->SetTextureCoordinate(*reinterpret_cast<const GETextureCoordinate*>(&inValues[i].coord), i);
+    }
+}
 const EeGfxRaster gEERustRaster = {
     [](float inValue) { gRasterizer->SetAlphaTestingRefValue(inValue, gScreenIndex); },
     []() -> uint32_t { return gRasterizer->GetFog(gScreenIndex); },
@@ -1769,7 +1780,52 @@ const EeGfxRaster gEERustRaster = {
             gUIManager->mMainGameForm->DrawClippedText(theRectangle, &theText, NULL);
         else
             gUIManager->mScenarioEditorForm->DrawClippedText(theRectangle, &theText, NULL);
-    }
+    },
+    // EEE3DTracerBeam::DrawPass6's stretch (0xfca9b): vertex array 0 kept and stretched (ee_gfx beam.rs), the
+    // sub-models' internal ys kept and stretched, the bounding volumes
+    [](void* inModel, float inLength, float inWidth, float inScroll) {
+        GEModel* theModel = static_cast<GEModel*>(inModel);
+        GEVertexArray* theVertices = theModel->GetVertexArray(0);
+        sKeptBeam.assign(theVertices->GetSize(), EeGfxBeamVertex{});
+        for (unsigned long i = 0; i < sKeptBeam.size(); i++) {
+            theVertices->GetPoint(*reinterpret_cast<GE3DPoint*>(&sKeptBeam[i].point), i);
+            theVertices->GetTextureCoordinate(*reinterpret_cast<GETextureCoordinate*>(&sKeptBeam[i].coord), i);
+        }
+        std::vector<EeGfxBeamVertex> theStretched(sKeptBeam);
+        ee_gfx_beam_stretch(theStretched.empty() ? NULL : &theStretched[0], theStretched.size(), inLength, inWidth, inScroll);
+        EEBeamSetVertices(theVertices, theStretched);
+        sKeptBeamYs.clear();
+        for (long j = 0; j < (long)theModel->GetSubModelCount(); j++) {
+            GEModel* theSubModel = theModel->GetSubModel(j);
+            GETransformation theModelTransform = theSubModel->GetInternalTransform(0);
+            sKeptBeamYs.push_back(theModelTransform.GetY());
+            theModelTransform.SetY(ee_gfx_beam_stretch_y(theModelTransform.GetY(), inLength));
+            theSubModel->SetInternalTransform(0, theModelTransform);
+        }
+        theModel->ComputeBoundingVolumes();
+    },
+    [](void* inModel) {
+        GEModel* theModel = static_cast<GEModel*>(inModel);
+        EEBeamSetVertices(theModel->GetVertexArray(0), sKeptBeam);
+        for (long j = 0; j < (long)theModel->GetSubModelCount(); j++) {
+            GEModel* theSubModel = theModel->GetSubModel(j);
+            GETransformation theModelTransform = theSubModel->GetInternalTransform(0);
+            theModelTransform.SetY(sKeptBeamYs[j]);
+            theSubModel->SetInternalTransform(0, theModelTransform);
+        }
+    },
+    // the volcano's morph (EEE3DVolcano::Queue, 0x10068a): vertex array 0's points, the bounds and normals
+    [](void* inModel) -> uint32_t { return (uint32_t)static_cast<GEModel*>(inModel)->GetVertexArray(0)->GetSize(); },
+    [](void* inModel, uint32_t inIndex) {
+        GE3DPoint thePoint;
+        static_cast<GEModel*>(inModel)->GetVertexArray(0)->GetPoint(thePoint, inIndex);
+        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
+    },
+    [](void* inModel, uint32_t inIndex, const EeGe3DPoint* inPoint) {
+        static_cast<GEModel*>(inModel)->GetVertexArray(0)->SetPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), inIndex);
+    },
+    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeBoundingVolumes(); },
+    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeModelNormals(); }
 };
 
 // FUNCTION: EXE 0x50f60f

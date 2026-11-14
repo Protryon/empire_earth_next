@@ -11,3 +11,6 @@ crate-type = ["rlib"]
 [dependencies]
 ee_codec = { path = "../ee_codec" }
 ee_plat_core = { path = "../ee_plat_core" }
+ee_plat_sys = { path = "../ee_plat_sys" }
+ee_error = { path = "../ee_error" }
+ee_ustring = { path = "../ee_ustring" }

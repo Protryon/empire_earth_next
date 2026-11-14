@@ -5,21 +5,10 @@
 use std::ffi::c_void;
 
 use crate::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
+use crate::ffi_comms::{comms_of, EeNetComms};
 use crate::qhost::*;
 use crate::recplay::RecPlay;
 use crate::server::{Back, Server, ServerArgs, ServerHost};
-
-/// The base class's fields the server reads and writes (NESynchronousCommunications)
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetSvBase {
-    /// mNumHumanPlayers (read, written)
-    NumHumanPlayers = 0,
-    /// mIsMultiplayerSession
-    IsMultiplayerSession = 1,
-    /// mIsGamePaused (written through SetIsGamePaused)
-    IsGamePaused = 2,
-}
 
 /// The typed messages' fields the server reads
 #[repr(u32)]
@@ -83,10 +72,6 @@ pub enum EeNetSvOp {
     Sleep = 2,
     /// -> gPlatSimMode
     SimMode = 3,
-    /// a field (EeNetSvBase) -> its value
-    BaseGet = 4,
-    /// a field, a value
-    BaseSet = 5,
     /// -> NEProtocol::GetCount()
     ProtocolCount = 6,
     /// an NEProtocol** -> NEProtocol::GetProtocol(0, out)
@@ -333,12 +318,6 @@ impl ServerHost for SvFfiHost {
     fn sim_mode(&self) -> bool {
         self.call(EeNetSvOp::SimMode, 0, 0, 0, 0) != 0
     }
-    fn base_get(&self, f: EeNetSvBase) -> u32 {
-        self.call(EeNetSvOp::BaseGet, f as usize, 0, 0, 0) as u32
-    }
-    fn base_set(&self, f: EeNetSvBase, value: u32) {
-        self.call(EeNetSvOp::BaseSet, f as usize, value as usize, 0, 0);
-    }
     fn mm(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize {
         unsafe { (self.mm)(self.ctx, op, a, b, c, d) }
     }
@@ -455,7 +434,8 @@ fn sv<'a>(s: *const EeNetServer) -> &'a Server<SvFfiHost> {
 /// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).
 ///
 /// # Safety
-/// `host`, `mmhost` and `qhost` answer every op for `ctx` until `ee_net_sv_free`; `args` points at the arguments.
+/// `host`, `mmhost` and `qhost` answer every op for `ctx` until `ee_net_sv_free`; `args` points at the arguments;
+/// `comms` from `ee_net_comms_new` (the C++ base class's).
 #[no_mangle]
 pub unsafe extern "C" fn ee_net_sv_new(
     ctx: *mut c_void,
@@ -463,6 +443,7 @@ pub unsafe extern "C" fn ee_net_sv_new(
     mmhost: EeNetMmHostFn,
     qhost: EeNetQHostFn,
     args: *const EeNetSvArgs,
+    comms: *const EeNetComms,
 ) -> *mut EeNetServer {
     let a = &*args;
     let h = SvFfiHost { ctx, f: host, mm: mmhost, q: QFfiHost { ctx, f: qhost } };
@@ -480,7 +461,7 @@ pub unsafe extern "C" fn ee_net_sv_new(
         current_physics_tick: a.current_physics_tick,
         allow_new_connections: a.allow_new_connections,
     };
-    Box::into_raw(Box::new(EeNetServer(Server::new(h, a))))
+    Box::into_raw(Box::new(EeNetServer(Server::new(h, comms_of(comms), a))))
 }
 
 /// The destructor's work, then the object freed.
