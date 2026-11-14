@@ -18241,3 +18241,103 @@ shockwave (-138). `EEE3DTracerBeam`, `EEE3DVolcano` and `EEE2DShockwave` (`.cpp`
   other 2D sprites on `EEE2DRust` one at a time (each now checked by the 2D sweep against the original: the aged and
   simple ones first, the vortex, pulse wave, fire trail, water ripple); a sweep unit with weapon tag points for the
   three weapon-point sprites.
+
+## R4.4, twentieth round: seventeen 2D sprites whole in Rust on EEE2DRust; the sweep's armed unit (ee_gfx effect_sprite.rs, effect_parts.rs, effect_trail.rs, effect_vortex.rs; branch rust-gfx26, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 17,977 lines at the round's start (the merge of rust); 17,999
+with the sweep (+22, TEST ONLY); 16,382 after the first batch (-1,617), 15,220 after the second (-1,162), 14,431 after the third (-789); with the
+deleted headers (-284, -196, -140) 3,546 lines of `.cpp` and 620 of headers fewer (the round's diff over both: +418,
+-4,584). Seventeen classes deleted (`.cpp` and `.h`):
+`EEE2DImpact`, `EEE2DImpactBlood`, `EEE2DMuzzleFlash`, `EEE2DLightning`, `EEE2DPlasmaPulse`, `EEE2DFireTrail`,
+`EEE2DWaterRipple`, `EEE2DPulseWave`, `EEE2DExplosion`, `EEE2DFire`, `EEE2DExhaustTrail`, `EEE2DSmokePlume` (with the
+velocity particle, kind 0xc), `EEE2DSmokeMuzzleBlast`, `EEE2DWinterBreath`, `EEE2DLinearProjectile`, `EEE2DVortex`.
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| 2c6cd492 | merge of `rust` f2813578 (RUST_PLAN's Progress table taken from rust; round 19's row moved to docs/progress) | |
+| 4a7e73fb | the effects sweep's armed unit and the three weapon-point kinds; the golden from the pre-round C++ | +22 (TEST ONLY) |
+| 2b65ca0a | impact, blood impact, lightning, muzzle flash, plasma pulse, fire trail, water ripple, pulse wave (`effect_sprite.rs`) | -1,617 |
+| dbc32f04 | explosion, fire, exhaust trail, smoke puffs, smoke muzzle blast (`effect_parts.rs`) | -1,162 |
+| (third) | winter breath, 2D projectile (`effect_trail.rs`), vortex (`effect_vortex.rs`) | -789 |
+
+- **The sweep's armed unit.** `EEEffectCaptureSweep` finds the newest unit of any player whose model has a tag point
+  list at its animation holding its weapon tag point and makes the muzzle flash (on it), the smoke muzzle blast and the
+  2D projectile (between it and B, from it to B's position) there: EFSW 114 -> 124 records a seed. The golden was
+  recorded from this tree's C++ before any of the round's kinds moved (the pre-round C++: every 2D kind but the
+  shockwave and confirmation still its original class, and those two matched f839d277's); the first 114 EFSW records
+  and the EFST and EFMU records before the new cases equal the previous golden by prefix digests on seeds 2-7 (a
+  ten-line Python over the capture files), so only the new cases are new.
+- **One record state, three host families.** The kinds' own members are the record's `sprite` (`EeGfxEffectSprite`:
+  start, draw position, life, time, age, radius, rotation, frame, tag point, hit points, shrinking, velocity, angle,
+  clockwise, last part, the breath's timings; each kind uses its own fields, the water ripple keeps the aged record's
+  transformation and age, the smoke puffs `effect_state.rs`'s `plume`, the vortex the orbit record's list). The host
+  (`EeGfxEffect2DHost`) grew by family: the frame sprites' (tag points, weapon point, animation sound, blood flag, model
+  point, stats scale, blocked tile, wind), the parts' (`CreateParts`, each part read and written whole, its frames and
+  texture, the frames copied for the draw, a part on its model tag point, the maximum hit points, `GetUnitLocation`)
+  and the vortex's (the kept object's model and orbitals). Parts stay `EEEffect2D`'s C++ vector: its Load, Save,
+  destructor and `ReleaseResources` own them.
+- **Constructors that read two units** (the muzzle blast, the projectile, the winter breath) stay C++ for their world
+  reads (the weapon point through `EECombatEffectWeaponPoint` with its capture site, the target's model point, the
+  shooter's flags, the breath's mouth by unit type) and hand the results over in the record's stash fields (`start`,
+  `draw_position`, the aged transformation, `flag`, `shrinking`) with a new op (`CreateBetween`); Rust computes the
+  rest and clears the stash. The point and line constructors stash the same way (`CreateAt`, `CreateLine`), the
+  ripple's transformation constructor uses the aged record (`CreateTransformation`). The shockwave's point constructor
+  now sets its position in Rust too.
+- **The raster table** gains one entry for the three effect quads (`AddGlowSprite`, `AddGroundSprite`,
+  `AddBlendedSprite`, by kind). The facts gain the graphic effect's alpha. The files take the save's version (the
+  impact's tag point from 0.245). The explosion's Load and Save return `EEEffect2D`'s result (it has no state of its
+  own); the others ignore it, as the originals.
+- **Golden drivers** (`build/gx26/drv`: `make_r19.py` is round 19's generator, patched by `patch_sprite.py` then
+  `patch_sprite2.py`; `run2.sh NAME KINDS`: the original classes cut from 4a7e73fb over `build/gx26/ee_rust_P.lib`, the
+  library from before the round, against `EEE2DRust` over the current one). The stub world gained the default point,
+  the blood flag, the wind, the tile test, the three quads, a random part list for `CreateParts`, the model's tag
+  points, the unit's location, the shooter's and target's flags, the breath's unit types, the effect's alpha and a
+  target unit. 300 effects on seed 1 and 3,000 on seed 2, identical, for each batch: the frame sprites (7,014 and
+  70,619 lines: 6,234 draws, 3,481 animation sounds, 1,160 glow and 1,298 ground sprites, 1,082 blocked-tile tests,
+  366 weapon points, 975 tag lookups), the parts and puffs (7,029 and 70,302: 5,817 draws, 987 sounds, 5,956 blended
+  sprites, 1,489 part lists, 685 model tag points, 493 weapon points), the breath, projectile and vortex (6,944 and 69,618: 6,364 draws, 5,246 blended sprites, 985 weapon points, 532 mouth
+  tag lookups; the vortex's orbitals only through the unit tests: the driver never loads one); every batch's
+  driver rerun on the final generator, identical.
+  - **Trap (driver):** the stub `GETransformation::Apply(point)` summed in the textbook order (x, y, z); the real
+    header's (and `ee_ge`'s `apply_point`) is z, y, x for the first row and x, z, y for the others: the lightning's
+    model point differed by one ulp until the stub took the header's order. A stub that re-implements arithmetic must
+    copy the header's operation order, not a cleaner one.
+  - **Trap (driver):** the generator substitutes the token `CALL` (the new class's `Call`) anywhere in its template: a
+    helper macro named `CALL2` turned into a function body. Name helper macros so no template token is a prefix.
+  - **Trap (driver):** a function-like macro's argument list is split before expansion: `PRINT(a, MORE(s), b)` with
+    `MORE` expanding to four values is one argument; forward through a variadic macro (`OUT(...) PRINT(__VA_ARGS__)`).
+  - **Trap (patches):** a patch script that writes Python source for another script crosses two string levels: `\n`
+    in the target must be `\\n` in a normal string of the patch (`\\\\n` gave a literal backslash pair); keep such
+    edits in raw strings or in a small file-based fixer.
+- **Not moved (2D): the 2D particle** (pooled through `UMemoryPool` with a reference count and `LastDereference`:
+  `EEE2DRust` is not pooled), **the battlefield decals, the marching icons and the light glow** (each with its own
+  tag-point or icon list walks and draws). The 3D leaves and the farm as round 19 left them; the bulk vertex-array and
+  polygon-range entries of the table (round 20's second item) were not started.
+- **Behaviour:** none intended: each commit's effects capture equals the pre-round C++ golden on seeds 2-7 (EFSW, EFST
+  and EFMU: every swept kind's saved bytes after each update, and its load and second save). The unused
+  `ee_gfx_effect_plume_*` and `ee_gfx_effect_*_aged` exports were removed.
+- **Gates.** On the tree at 68173e53 (the merge of `rust` f2813578 is up to date: `rust` did not move during the
+  round): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (3,199 tests; clippy, rustfmt, header),
+  the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169 digests, late 170, calamity 183;
+  4, 4 and 3 records without a golden, as round 19), the effects capture at seeds 2-7 PASS (18 digests, the pre-round
+  C++ golden), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the
+  matrix as expected), the tour (`fixture_game.py --exercise tour --play-seconds 60` on the open tree, under the
+  harness lock) `RESULT PASS tour`, and the orders game `RESULT PASS random-game` (gather, repair, queued repair and
+  move given; patrol and attack-ground skipped: no button, no unit). Per commit: the build 0/0, the oracle at seeds
+  2-3 identical, the effects capture at seeds 2-7 PASS against the C++ golden, the Rust gate's tests PASS (3,192,
+  3,196, 3,199) with clippy; the first batch's rustfmt failure fixed before its commit.
+- **Only a tour or a person reaches:** every draw of the seventeen kinds through the raster table (the driver compares
+  them against the original over a logging rasterizer; no gate game draws): the impacts' and plasma pulse's additive
+  sprites and the impact's random spin, the blood impact's red tint and its reset to white (a missing reset would tint
+  every later 2D sprite), the lightning's flicker, the pulse wave's ring, the three effect quads through the new table
+  entry (the ripple's ground sprite, the fire trail's glow, the smoke puffs', muzzle blast's and winter breath's
+  blended sprites), the explosion's and fire's part sprites, the exhaust trail's spun parts, the projectile's sprite
+  and the vortex's model with its orbitals' pre-transforms; the animation sounds (impacts, lightning, plasma pulse, the
+  explosion's and fire's first part) and their stop in `EEE2DRust`'s destructor; loading saved games holding any of
+  these kinds (the sweep loads copies of each). Where they appear: impacts and blood on hits, muzzle flashes, blasts
+  and projectiles on firing units, explosions and fire on damaged and dying units and buildings, exhaust and fire
+  trails on vehicles and missiles, lightning and pulse waves from powers, ripples on water, breath in winter maps,
+  smoke puffs from the smoke generators, the vortex from its calamity or power.
+- **Next:** the battlefield decals and the marching icons on `EEE2DRust` (their records already Rust), the light
+  glow, the 2D particle (a pooled `EEE2DRust` or a pool of records); then the table's bulk vertex and polygon-range
+  entries with `EEROGroundShadows`, then the farm.
