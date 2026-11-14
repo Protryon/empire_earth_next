@@ -56,6 +56,8 @@ M.OPT = {
     iron_recover = false,   -- (off until benched) lost gold and iron sites retaken (all-in under 2 working), or replaced
     metal_parity = false,   -- (off until benched) with iron_recover: behind the enemy's known metal sites, a loss takes
                             -- the whole army, and without one the army takes an enemy or contested site
+    copper_mines = false,   -- (off until benched) from Copper a third gold and iron site claimed at once, further out if
+                            -- the claim range holds none
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
