@@ -3907,6 +3907,40 @@ Two fixes:
   wave dead are equal (940 against 947).
 - **The save is no shorter** (about 60 minutes unpaid in both). What it waits on after the walker is not measured yet.
 
+**The Bronze save with the walker (2026-11-12).** The same per-minute trace on the merged code (the walker, iron_lean
+50; 32 seeds against the improved classic). 23 games saved for Bronze in Copper, 792 minutes in all:
+- **What was short:** iron in 655 minutes (the only one in 176) and gold in 515 (76). Gold was short in 320 before;
+  iron_lean's bowmen cost gold.
+- **During the save:**
+
+| Resource | Gatherers | Income a minute | Stock growth a minute |
+|---|---|---|---|
+| Iron | 14.7 | 79 | 51 |
+| Gold | 13.3 | 68 | 44 |
+
+- **The rate:** about 5.4 a gatherer a minute. boom-econ's deposit trace puts the engine's pace at 5.6-6.0, so drop
+  sites are not the lever.
+- **The fast saves** (12-20 minutes) had 17-19 on iron at 100-110 a minute. **The slow ones** (s2, s4, s28, s5: 54-66
+  minutes, unpaid at the end) had 7-12 on iron at 27-65 a minute, all of it spent replacing soldiers lost to the
+  waves.
+- **The lever is the count of iron and gold gatherers** in the slow games. boom-econ's settlement caps (a03c6b9e) are
+  one cause.
+
+**The Stone soldiers paced (2026-11-12, `plan.soldier_pace`).** The owner trained his Stone soldiers about 1 a minute,
+where boom_order trained its 8 at once. `soldier_pace = 60000` trains one a minute after the advance, and all at once
+with enemy soldiers in sight or under a threat. 32 seeds, iron_lean 50 in both:
+
+| Variant | Opponent | Stone food a minute | Citizens at +15 min | Citizens gained a minute | Stone lost | Defeats | Bronze |
+|---|---|---|---|---|---|---|---|
+| Q0 | improved classic | 162.6 | 65.1 | 2.26 | 13.0 | 5 | 17, 76.7 |
+| Q1 paced | improved classic | 165.7 | 67.6 | 2.43 | 13.1 | 6 | 17, 82.9 |
+| Q0 | Age of AI | 196.8 | 74.6 | 2.79 | 8.2 | 0 | 27 |
+| Q1 paced | Age of AI | 200.1 | 76.3 | 2.91 | 8.6 | 0 | 28 |
+
+About 2 citizens more by Stone +15 against both opponents, at the same losses; nothing clear beyond (Bronze later
+against the classic). It stays off. Against the classic, enemy soldiers are in sight much of the Stone Age, so the
+pace rarely holds the soldiers back.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
@@ -4007,6 +4041,93 @@ off). What changed on the way, each benched on 32 seeds against the improved cla
 
 Still open: the owner's citizen growth (3.4 a minute against 1.6-2.1), gold and iron income (about half the
 requirement), the Prehistoric's exact counts (one over or one short on the mines in most games).
+
+**The gaps against the owner's spec (2026-11-12): the dock's wood and the granaries' fields.** G5 (as merged, 93c4ca7)
+confirmed on 64 seeds (2-65) against Rel4: against the improved classic won-lost-close 28-16-20 against 20-29-15,
+Copper in 56 games against 47, Bronze 87.1 in 44 against 79.6 in 37, 11 defeats against 9; against Age of AI 39-6-19
+against 31-14-19, Bronze 66.3 (61) against 67.8 (60). The diagnosis of the four gaps, in the owner's order:
+- **Gold and iron income** (31/38 a minute at minutes 30-45 against 81/74) is the gatherer count, not the rate: 3-6
+  gold and 6 iron gatherers at minutes 30-35 against the owner's 12-18, at 4.7-5.3 a gatherer (6.1 wanted; the
+  engine's pace, §8.50). The fill reaches 12/12 only at about 58 citizens, so it waits on the growth.
+- **The Stone Age's growth** (1.8-2.3 a minute against 3.4): food stock about 20 and the town centres idle 26-67 s a
+  minute in stone_start/grow, land food fixed at 18, so the boats carry the growth.
+- **The dock** (10 boats by +7 missed in 25 of 63 games against the classic): not refused. The fish verb queued it
+  in the Stone Age's first minute (afford=0), and it waited 12 minutes in the build queue while the Stone settlements
+  (cap 14) took the wood each time it reached about 100 (seed 2: one patch's settlement placed three times).
+  `BO.OPT.boat_wood` (the stone_start settlements wait for 10 boats) fixes it: H1.
+- **The granaries** (3 within 10 minutes of Copper missed in 20 of 56): no script orders the farms. A standing
+  granary lays its 8 fields as free foundations (EEComplexUnit::SetBuilt -> ReplantFarm, a game rule), and the engine's
+  food runner sends idle food gatherers to build them, each paying a farm's price: Copper's wood went into the first
+  granary's fields while granaries 2 and 3 waited queued (afford=0). More wood (W1: Copper's first wood step 15 -> 22)
+  did not help (+2/+12/+9 minutes on 3 seeds against +6/+11/+11): the fields took it. The decision stays in Lua: the
+  food `gather` order's `granary_farms = n` (AI_LUA_UNITS) stops the runner at n built farms a standing granary (0
+  none). `BO.OPT.lua_farms` holds the fields (0) until the plan's 3 granaries stand, then 8; lib.place sites each
+  granary (`granary_spot`: room for all 8 fields, clear of the other granaries' rings, standing or planned), one job at
+  a time, ordered once its cost is in hand (a cost refusal waits 20 s, not 5 minutes). The C++ build verb had put a
+  third granary on the second's laid field (build.stalled, the granary lost). Other field paths checked: the classic's
+  building counts do not run for a next seat, RepairBuildings skips farms, a farm exhausted is only laid again (built
+  by its farmer, after the hold), and boom orders no farms under the option. Smoke variants on seeds 12/13/16: L1
+  (Lua orders the farms: a farm ordered where no field was laid waits forever), L2 (fields allowed once all are
+  placed: +11/+13/+11), L3-L6 (the hold until they stand; the C++ verb's sites, then the reserve and the 5-minute cost
+  wait) led to L7 (+4/+7/+3).
+- **H2** (stone_start/grow land food 18 -> 21) raised growth against the classic (1.9 -> 2.2) but took the mines'
+  citizens (29/37 and 53/61 a minute), Bronze 90.4 against 78.0 on seeds 2-33: dropped.
+
+64 seeds (2-65; H1's first half on the old exe, identical game samples on the new one), G5 -> H1 -> L7 (L7 = H1 +
+lua_farms):
+
+| | G5 | H1 | L7 |
+|---|---|---|---|
+| classic: won-lost-close, defeated | 28-16-20, 11 | 29-21-14, 8 | 25-20-19, 9 |
+| classic: Copper (games), Bronze (games) | 51.7 (56), 87.1 (44) | 51.6 (54), 83.4 (42) | 51.6 (54), 78.3 (42) |
+| classic: docks / 10 boats by +7 missed | 9 / 25 | 4 / 21 | 4 / 21 |
+| classic: 3 granaries by Copper +10 missed (median) | 20 of 56 (+9) | 21 of 54 (+10) | 6 of 54 (+3) |
+| Age of AI: won-lost-close | 39-6-19 | 34-6-24 | 32-7-25 |
+| Age of AI: Copper, Bronze (games) | 45.0, 66.3 (61) | 45.3, 65.1 (60) | 45.3, 64.4 (59) |
+| Age of AI: 3 granaries missed (median) | 17 of 63 (+8) | 19 of 63 (+7) | 1 of 63 (+2) |
+
+Both are on in boom_order. The boats' remaining misses are the pace (a dock at +1 trains its tenth boat at +6 to +7),
+and the growth and the mines' income stay open.
+
+**The Stone Age's growth (2026-11-13).** The town centres wait on food, not on a cap: in stone_start and stone_grow
+they stood idle 26-57 s a minute with 21-47 food in stock, at the 76 cap 0-20% of the minutes (the population cap is
+400). The spending trace (6 seeds against the improved classic): stone_start took in 131 food a minute and spent 91
+on citizens, 38 on soldiers; stone_grow 162, 136 and 17. A boat brings 5.4-7.0 food a minute, a forager 6.9-7.5, a
+hunter 5.1-7.3 (least squares over the Stone minutes; hunters average 1.3-2.2, so the hunting reach has little to
+give). The 32-seed variants, against L7:
+- **B1** (20 boats and 2 docks from stone_grow): growth 1.9 -> 2.1 and 2.2 -> 2.5, citizens at 40 minutes +7/+9, but
+  Bronze later (86.9 in 19 against 82.9 in 22 against the classic), the second barracks and range short (the boats'
+  wood), one more defeat: dropped.
+- **S1** (`BO.OPT.soldiers_after_boats`: no new soldier in stone_start before 10 boats unless threatened or enemy
+  soldiers are in sight): kept, on in boom_order. Against the classic the threat is usually there at the advance, so
+  it acts mostly against Age of AI (stone_start's town centres idle 8 s a minute against 26).
+- **F1** (`settle_afford`: a settlement only with its whole cost in hand, a cost refusal retried in 20 s, not 5
+  minutes): Bronze against the classic in 16 games against 22: off.
+- **B5** (`builder_pool` with `gather(exact = 2)`, `blocked_skip`, F1 and S1): the owner's ranges hold (no spill
+  onto wood: the fill keeps its leftover out, the C++ idle runner sends no idle citizen to a resource that has its
+  count, the claim reaches out for a short mine; the Stone citizens are the claimed places plus lib.place's builders,
+  at most 86, none while 4 stand idle), but the town stops short: citizens at 40 minutes 61.7 against 70.1, Bronze
+  91.2 against 82.9, 7 defeats against 5 (against the classic). The citizens held back were the ones on wood or food
+  past the ranges, while a second mine waits for its settlement. Off; the end state once the mines can take them.
+- **Builders against the fill:** 76 counts every land citizen; in stone_grow and stone_developed 4-12 (with boats)
+  gathered nothing, 2-8 of them idle.
+
+64 seeds (2-65), L7 -> S1: against the improved classic won-lost-close 25-20-19 -> 29-21-14, defeated 9 -> 5, Copper
+51.6 (54) -> 51.3 (53), Bronze 78.3 (42) -> 77.5 (39), growth 1.9 -> 2.0; against Age of AI 32-7-25 -> 36-6-22,
+Bronze 64.4 (59) -> 65.6 (61), no defeats.
+
+**What delays the second and third mines** (3 games against Age of AI, the sites trace): the near-home gold and iron
+mines (12-16 tiles, explored) are claimed only from stone_grow (stone_start's fill wants 2 of each, so the claim for
+the phase target waits), about 5 minutes into the Stone Age, and their settlements stand 5-15 minutes after that:
+boat_wood holds every Stone settlement until 10 boats, the settlement's stone runs short (cannot_afford, then
+lib.place's 5-minute wait), and a wild animal on the tile had the same spot re-placed each minute (`blocked_skip`).
+Next: claim and settle them from the advance, near home only, then the pool and exact = 2 on top.
+
+**boom_order is the default boom (2026-11-13, the owner).** ai/ais.json's `boom` entry (random) now runs
+`ai/boom_order.lua`, the owner-order configuration (`boom.configure`), with its description; the `boom_order` entry
+("Boom (owner order)") is gone and the old default configuration is retired. boom.lua's own defaults are unchanged
+(every option off), so `boom` plays exactly what `boom_order` played: identical game samples on 3 seeds (2-4, 40
+minutes against the improved classic, the same exe). Benches name the engine `boom` from here on.
 
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
@@ -4532,6 +4653,88 @@ Small Islands, balanced, 90 minutes, 8 seeds:
 Determinism on islands (seeds 3 and 5, 90 minutes, --repeat 2, a landing in one of them) is identical. On land maps
 nothing changes (no crossing is needed).
 
+### 8.66 Porting everything, 2a: the island growth gap, the queues, the island garrisons (2026-11-13, EE-SIM)
+
+**Where the gap starts.** On Small Islands (8 seeds) the two sides train their citizens in the same batches of 5
+(at 30, 172, 314 and 456 s) for the first 8 minutes. They part from minute 6 (15.4 against 12.6 citizens), and by
+20 minutes stand at 32.2 against 25.9. The epoch reserve and the epoch pressure are the same on both sides (a
+traced game: 0.333 at 10 minutes on both, the Stone Age's 1,122 food reserved).
+
+**Two differences, both ported:**
+- **The queues (IsInProduction).** The C++ counts a class as in production while any producer is making it or has
+  it queued (EEComplexUnit::IsResearchQueued). The port saw only the item being made, a documented deviation, now
+  gone: own building records have `queued` (the techs behind the one being made; AI_LUA_UNITS §11), and the port's
+  IsInProduction reads it.
+- **The island garrisons (FillGarrison).** On island and planets maps the C++ fills a garrison with any available
+  citizen, a gatherer too, not only the idle ones. A town centre hires its garrison: the citizens for the free room
+  are trained at once when affordable, else requested. The upgrade then uses them up. In the C++, 73 citizens a
+  bench die inside a garrison in the first 20 minutes (4.6 a game, at tile -10000, no killer); the port lost 0.4.
+  The port now does both (civ.lua `fill_garrison`; the deviation in ORIGIN is gone).
+
+| Small Islands, 16 seeds, 60 min | before | queues | queues + garrisons |
+|---|---|---|---|
+| Lua won-lost | 10-3, 3 close (§8.64) | 10-2, 4 close | 8-2, 6 close |
+| citizens at 20 / 40 min, Lua | 31.1 / 63.8 | 31.1 / 63.2 | 27.9 / 58.9 |
+| citizens at 20 / 40 min, the C++ | 24.2 / 34.2 | 24.2 / 34.9 | 24.1 / 34.4 |
+| citizens lost by 20 min, Lua / C++ | 0.4 / 4.6 | 0.4 / 4.6 | 1.9 / 4.7 |
+
+On land (balanced, 32 seeds) the queues give 11-17, 4 close (12-16, 4 close before), within noise. The garrisons
+change only island and planets maps.
+
+**Open in 2a.** The gap has narrowed but is not closed: 27.9 against 24.1 citizens at 20 minutes, and Copper 12 of
+16 against 3. The C++ still loses more citizens in its first 20 minutes (4.7 against 1.9). The coast towers
+(FindTowerSite's island coasts) go with the gates' and choke points' towers in 2b.
+
+Determinism: islands (seeds 3 and 5) and land (seed 2), 60 minutes, --repeat 2, identical. 0 script errors.
+### 8.67 Porting everything, 2a closed (2026-11-13, EE-SIM)
+
+The close-out bench was Small Islands, balanced, 90 minutes, 32 seeds:
+- **The result:** Lua 19-3, 10 close. Copper 29 of 32 against the C++'s 15; Bronze 17 against 0.
+- **Citizens:** 54.1 against 36.4 at 40 minutes. Citizens lost: 14.7 against 14.4 in all, 1.8 against 3.6 by 20
+  minutes.
+- **The ferries:** 274 started, 214 landed, 43 aborted (3 found no plan).
+- **The attack crossings:** 3 started, 2 landed. Few groups attacked across water in these games.
+- 0 script errors.
+
+The port plays islands better than the C++. That is accepted, and recorded in ORIGIN as a known deviation: the aim
+is to replace the C++, not to copy its weaknesses. 2a is done: the ferries, the attack crossings, the queues, the
+island garrisons. The coast towers move to 2b with the walls and the other tower sites.
+### 8.68 Porting everything, 2b: the tower sites and the walls (2026-11-13, EE-SIM)
+
+**The tower sites** (EECPBuildManager::FindTowerSite). Before, the port placed its towers only at the resource
+centres. It now follows the C++'s order:
+1. an island map's coasts: the largest water's shore by each town (ai.water_sites), a site in the rings 1-2 round a
+   shore tile with no tower within 1.5 x the tower's range;
+2. the worked resource centres, as before;
+3. the gates: within 5 tiles of a gate, off the gate and the wall;
+4. the choke points within 7 tiles of a town, none of the class within twice its range.
+
+DEVIATION: the gate's and the choke point's site is the first placeable tile (ai.find_site), not a random one.
+Towers built: on Small Islands (16 seeds, 90 minutes) 168 for the port against the C++'s 158. On land the port
+builds more of them, as before this change (364 against 193 in 32 games). Balanced 32 seeds: 12-15, 5 close.
+
+**The walls** (EECPWallManager): `ai/classic_lua/walls.lua`, on two new generic helpers:
+- `ai.wall_line`: a wall line's tiles;
+- `ai.wall_stretches`: the planner's look at one line, whether a building blocks it and its open stretches between
+  forests, cliffs and water, with their levelness. Both are in AI_LUA_UNITS §11.
+
+How the port plans a wall:
+- **When.** From the Copper Age, a wall across the way from each enemy's known town to each own town centre and
+  capitol, the nearest enemy first. One wall every 30 s, once the last one's gate stands.
+- **The way.** It is cut at the size table's fraction of its length. Each step is looked at across, and the
+  shortest open level stretch clear of the resource centres and the gates is taken. With none, the next size is
+  tried; the 9th size takes the stretch nearest a gate.
+- **Building.** A builder for every 10 tiles; ai.wall lays the wall, and ai.gate puts the gate at its middle.
+- **DEVIATIONS** (ORIGIN): the way is ai.route's, straight between its 8-tile cells; the enemy's centre is its known
+  town; IsPathUsable is not tested; a lost wall piece is not queued again.
+
+In 40 bench games (32 Small Islands, 8 land) the C++ built no wall; why is not traced yet. The port builds about
+one a game on land: 30 walls and 15 gates in 31 balanced games. Balanced 32 seeds (1 lobby fault): 12-14, 5 close
+(12-15 before), within noise.
+
+Determinism: seeds 2 and 5, and seed 12 (4 walls), 90 minutes, --repeat 2: identical. 0 script errors.
+Both builds 0/0, eedata check PASS. Next: the late-epoch start benches (sim_bench `--start-epoch`), where walls and
+towers come up sooner and can be compared with the C++'s.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

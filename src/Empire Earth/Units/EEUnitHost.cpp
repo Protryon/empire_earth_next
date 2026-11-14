@@ -40,6 +40,9 @@
 #include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
+#include "ee/EEDoppelganger.h"
+#include "ee/EEUnitVectorItem.h"
+#include "ee/EEAirTrafficControl.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousClient.h"
 #include "ee/EEClient.h"
@@ -146,8 +149,25 @@ enum DryEvent {
     kDrySplit,            // tag, technology, target, the count, the ids kept
     kDryClone,            // ctor
     kDryRemoveUnit,       // tag, unit
-    kDryClearGoals        // unit
+    kDryClearGoals,       // unit
+    kDryPlayerSelection,  // player id
+    kDryClearQueue,       // unit, queue
+    kDryClearAllQueues,   // unit
+    kDryQueueGoal,        // unit, ctor, queue
+    kDryQueueTimer,       // unit, queue, ms
+    kDryGoalStateClone,   // unit, its goal's kind
+    kDryGarrisonLoad,     // garrison (the dry answer: valid)
+    kDryQueueClear,       // unit, queue
+    kDryClearAirTraffic,  // unit, its air traffic type
+    kDryRefreshGoals,     // unit
+    kDryClearBuildTargets,  // unit
+    kDryActionChanged,    // unit
+    kDryHalt              // unit
 };
+
+// the dry goals the host makes without a goal spec: a unit's active goal's clone, the garrison's load goal's clone
+const uint32_t kDryCtorGoalState = 0x101;
+const uint32_t kDryCtorGarrisonLoad = 0x102;
 
 // the dry host's building (EEMakeBuilding makes none) and its two dry farms (ids no unit has)
 const uint32_t kDryBuildingID = 0x7e000002u;
@@ -258,6 +278,7 @@ void* DryGoalNew(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_LOCATION_2D: theKind = kGoalLocation; break;
     case EE_GOAL_CTOR_CAST_CALAMITY: theKind = kGoalCastCalamity; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
     case EE_GOAL_CTOR_UNLOAD_TRANSPORT: theKind = kGoalUnloadTransport; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
+    case EE_GOAL_CTOR_BUILD_REPAIR: theKind = kGoalBuildRepair; theMade = UnitOf(inSpec->unit_a) != NULL; break;
     default: theMade = false; break;
     }
     Log({kDryGoalNew, inSpec->ctor, inSpec->unit_a, inSpec->unit_b, Bits(inSpec->point[0]), Bits(inSpec->point[1]),
@@ -461,6 +482,12 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_LOCATION_2D:   // EEMSmartFarmers' move
         return static_cast<EEUnitGoal*>(EEUGRust::NewLocation(GE2DPoint(inSpec->point[0], inSpec->point[1]), true, true, false,
                                                          0.0f, false, 0));
+    case EE_GOAL_CTOR_BUILD_REPAIR: {   // EEMSetRallyGoal's: the farm or damaged building's owner, the building
+        EEUnit* theTarget = UnitOf(inSpec->unit_a);
+        if (theTarget == NULL)
+            return NULL;
+        return static_cast<EEUnitGoal*>(EEUGRust::NewBuildRepair(theTarget->mPlayer, theTarget, theFlagA));
+    }
     case EE_GOAL_CTOR_CAST_CALAMITY: {   // EEMCastCalamity's: the caster, the target or none, the tile, the technology
         EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
         if (theUnit == NULL)
@@ -1346,4 +1373,238 @@ extern "C" int64_t ee_units_host_object_hit_points(uint32_t inUnit)
 {
     EEUnit* theUnit = UnitOf(inUnit);
     return theUnit != NULL ? (int64_t)theUnit->mHitPoints.Get() : 0;
+}
+
+// ---- EEMSetAirportCommand's and EEMSetRallyGoal's calls (rally.rs) ----
+
+extern "C" void* ee_units_host_player_selection(void* inPlayer)
+{
+    if (sDry != NULL) {
+        Log({kDryPlayerSelection, PlayerID(inPlayer)});
+        return sDry->mGroups[0];   // the sweep's selection
+    }
+    return static_cast<EEGroup*>(static_cast<EEPlayer*>(inPlayer)->mActiveGroup);
+}
+
+// the reads below are made on the objects (the dry host does not log them)
+extern "C" uint8_t ee_units_host_unit_seen_by(uint32_t inUnit, void* inPlayer)
+{
+    return EEIsSeenBy(UnitOf(inUnit), static_cast<EEPlayer*>(inPlayer), true) ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_host_unit_ghost_seen(uint32_t inUnit)
+{
+    EEUnit* theUnit = UnitOf(inUnit);
+    EETile* theTile = static_cast<EETile*>(theUnit->mTile);
+    for (unsigned long i = 0; i < theTile->GetNumDoppelgangers(); i++)
+        if (theTile->mDoppelgangers[i]->mUnit == theUnit)
+            return 1;
+    return 0;
+}
+
+extern "C" uint8_t ee_units_host_unit_attackable(uint32_t inUnit, int64_t inDamageIndex)
+{
+    EEUnit* theUnit = UnitOf(inUnit);
+    unsigned long theClass = theUnit->mUnitClass->mFamily;
+    return theUnit->mUnitClass->CanBeAttacked() && EEDamageFactor(theClass, (long)inDamageIndex) > 0.0f ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_host_unit_class_targetable(uint32_t inUnit)
+{
+    return EEUUGetIsUnitClassTargetable(NULL, UnitOf(inUnit)->mUnitClass) ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_host_unit_can_attack_class(uint32_t inUnit, uint32_t inTarget)
+{
+    return ComplexOf(inUnit)->CanAttackClass(UnitOf(inTarget)->mUnitClass) ? 1 : 0;
+}
+
+extern "C" int64_t ee_units_host_unit_max_hit_points(uint32_t inUnit)
+{
+    return (int64_t)UnitOf(inUnit)->mStats->mMaxHitPoints;
+}
+
+extern "C" int64_t ee_units_host_unit_garrison_capacity(uint32_t inUnit)
+{
+    return (int64_t)UnitOf(inUnit)->mUnitClass->mGarrisonCapacity;
+}
+
+extern "C" uint8_t ee_units_host_unit_has_tile_node(uint32_t inUnit)
+{
+    return UnitOf(inUnit)->mTileNode != NULL ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_host_unit_shares_rally_point(uint32_t inUnit, int64_t inUnitType)
+{
+    return ComplexOf(inUnit)->mUnitClass->SharesRallyPoint((unsigned long)inUnitType) ? 1 : 0;
+}
+
+extern "C" int64_t ee_units_host_unit_num_goal_queues(uint32_t inUnit)
+{
+    return (int64_t)ComplexOf(inUnit)->GetNumGoalQueues();
+}
+
+extern "C" void ee_units_host_unit_clear_goal_queue(uint32_t inUnit, int64_t inQueue)
+{
+    if (sDry != NULL) {
+        Log({kDryClearQueue, inUnit, (uint32_t)inQueue});
+        return;
+    }
+    ComplexOf(inUnit)->ClearGoalQueue((unsigned long)inQueue);
+}
+
+extern "C" void ee_units_host_unit_clear_all_goal_queues(uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryClearAllQueues, inUnit});
+        return;
+    }
+    ComplexOf(inUnit)->ClearAllGoalQueues();
+}
+
+extern "C" void ee_units_host_unit_queue_goal(uint32_t inUnit, void* inGoal, int64_t inQueue)
+{
+    if (sDry != NULL) {
+        Log({kDryQueueGoal, inUnit, static_cast<DryGoal*>(inGoal)->mCtor, (uint32_t)inQueue});
+        return;
+    }
+    ComplexOf(inUnit)->QueueGoal(static_cast<EEUnitGoal*>(inGoal), (long)inQueue);
+}
+
+extern "C" void ee_units_host_unit_queue_timer(uint32_t inUnit, int64_t inQueue, int64_t inMs)
+{
+    if (sDry != NULL) {
+        Log({kDryQueueTimer, inUnit, (uint32_t)inQueue, (uint32_t)inMs});
+        return;
+    }
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    theUnit->mGoalQueues[inQueue].ResetTimer();
+    theUnit->mGoalQueues[inQueue].AddTime((unsigned long)inMs);
+}
+
+extern "C" void* ee_units_host_unit_goal_clone(uint32_t inUnit)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    if (sDry != NULL) {
+        DryGoal* theGoal = new DryGoal();
+        theGoal->mCtor = kDryCtorGoalState;
+        theGoal->mKind = theUnit->mGoalState != NULL ? theUnit->mGoalState->mKind : 0;
+        sDry->mGoals.push_back(theGoal);
+        Log({kDryGoalStateClone, inUnit, theGoal->mKind});
+        return theGoal;
+    }
+    return theUnit->mGoalState->Clone();
+}
+
+// a unit the store does not hold, read on the object (rally.rs `selected`): the fields EEMClearAirportCommands and
+// EEMStopActiveGroup read
+extern "C" uint8_t ee_units_host_object_record(uint32_t inUnit, EeUnitRecord* outRecord)
+{
+    EEUnit* theUnit = UnitOf(inUnit);
+    if (theUnit == NULL)
+        return 0;
+    memset(outRecord, 0, sizeof(*outRecord));
+    outRecord->id = inUnit;
+    outRecord->hit_points = (int64_t)theUnit->mHitPoints.Get();
+    EEUnitClass* theClass = theUnit->mUnitClass.Get();
+    outRecord->category = theClass != NULL ? (int64_t)theClass->mCategory : -1;
+    outRecord->unit_type = theClass != NULL ? (int64_t)theClass->mUnitType : -1;
+    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
+    outRecord->command = (int64_t)theComplex->GetCommandType();
+    outRecord->tile_x = (int64_t)theUnit->GetTileX();
+    outRecord->tile_y = (int64_t)theUnit->GetTileY();
+    outRecord->goal_kind = -1;
+    return 1;
+}
+
+extern "C" int64_t ee_units_host_unit_air_traffic_type(uint32_t inUnit)
+{
+    return (int64_t)ComplexOf(inUnit)->GetUnitClass()->mAirTrafficType;
+}
+
+extern "C" void ee_units_host_unit_queue_clear(uint32_t inUnit, int64_t inQueue)
+{
+    if (sDry != NULL) {
+        Log({kDryQueueClear, inUnit, (uint32_t)inQueue});
+        return;
+    }
+    ComplexOf(inUnit)->mGoalQueues[inQueue].Clear();
+}
+
+extern "C" void ee_units_host_unit_clear_air_traffic(uint32_t inUnit)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    EEUnitClass* theClass = theUnit->GetUnitClass();
+    if (sDry != NULL) {
+        Log({kDryClearAirTraffic, inUnit, (uint32_t)theClass->mAirTrafficType});
+        return;
+    }
+    theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
+}
+
+extern "C" void ee_units_host_unit_refresh_goals(uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryRefreshGoals, inUnit});
+        return;
+    }
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    theUnit->RefreshGoals();
+    theUnit->RefreshActiveGoal();
+}
+
+extern "C" void ee_units_host_unit_clear_build_targets(uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryClearBuildTargets, inUnit});
+        return;
+    }
+    ComplexOf(inUnit)->ClearBuildTargets();
+}
+
+extern "C" void ee_units_host_unit_action_changed(uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryActionChanged, inUnit});
+        return;
+    }
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    theUnit->mUnitClass->ActionChanged(theUnit);
+}
+
+extern "C" void ee_units_host_unit_halt(uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryHalt, inUnit});
+        return;
+    }
+    ComplexOf(inUnit)->Halt();
+}
+
+// EEMSetRallyGoal's garrison (EEMessage.cpp's block, unchanged): a new load goal the garrison takes when it is valid
+extern "C" void* ee_units_host_garrison_rally_load(uint32_t inGarrison)
+{
+    if (sDry != NULL) {
+        // the dry answer: valid (the load goal is not made: a goal is a world change)
+        DryGoal* theGoal = new DryGoal();
+        theGoal->mCtor = kDryCtorGarrisonLoad;
+        theGoal->mKind = kGoalLoadGarrison;
+        sDry->mGoals.push_back(theGoal);
+        Log({kDryGarrisonLoad, inGarrison});
+        return theGoal;
+    }
+    EEComplexUnit* theGarrison = ComplexOf(inGarrison);
+    std::vector<EEComplexUnit*> theGarrisonUnits;
+    EEUGRust* theLoad = EEUGRust::NewLoad(kGoalLoadGarrison, theGarrison, theGarrisonUnits, true);
+    if (!theLoad->IsLoadGarrisonValid()) {
+        delete theLoad;
+        return NULL;
+    }
+    theGarrison->SetGoal(theLoad, 0, 0);
+    if (theGarrison->mStats->mMaxVelocity > 0.0f)
+        theGarrison->StartAction(kActionPrepareToMove);
+    else
+        theGarrison->StartAction(kActionPickedUpLoadableUnits);
+    theGarrison->mUnitClass->ActionChanged(theGarrison);
+    return static_cast<EEUnitGoal*>(theLoad->Clone());
 }

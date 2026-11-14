@@ -28,7 +28,7 @@ void Component::BroadcastEventDown(ComponentEvent* event)
 void Component::DeliverEvent(ComponentEvent* event, bool sendNow)
 {
     Window* window = this->GetRootWindow();
-    if(window == NULL || window->mWindowState != 0)
+    if(window == NULL || window->GetWindowState() != 0)
     {
         SmartPtr<ComponentEvent> eventRef = event;
         return;

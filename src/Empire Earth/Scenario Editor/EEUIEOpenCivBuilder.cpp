@@ -21,7 +21,6 @@
 #include "lle/GEVector.h"
 #include "lle/ISEntity.h"
 #include "lle/PIMModule.h"
-#include "lle/NEProtocolConfiguration.h"
 #include "lle/TSCriticalSection.h"
 #include "lle/SEConductor.h"
 #include "lle/SEMixer.h"

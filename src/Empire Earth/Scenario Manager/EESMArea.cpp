@@ -221,100 +221,40 @@ void EESMArea::GetTilesUncaptured(std::vector<U2DPoint<long> >& outTiles)
 }
 
 // FUNCTION: EXE 0x5ba670
-// Reads the area's name, text, anchor, rectangle, flags, select mode, tile time and ID; returns the first error
+// Reads the area's name, text, anchor (as floats), rectangle, flags, select mode, tile time and ID; returns the first
+// error (ee_scenario save.rs area_load)
 long EESMArea::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = this->mName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mText.Load(inFile);
-    if (theResult == kErrorOK) {
-        float theX = this->mAnchor.mX;
-        float theY;
-        theResult = inFile.Read(theX);
-        if (theResult == kErrorOK) {
-            theY = this->mAnchor.mY;
-            theResult = inFile.Read(theY);
-        }
-        if (theResult == kErrorOK) {
-            this->mAnchor.mX = theX;
-            this->mAnchor.mY = theY;
-        }
-    }
-    if (theResult == kErrorOK) {
-        float theLeft;
-        float theTop;
-        float theRight;
-        float theBottom;
-        theResult = inFile.Read(theLeft);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theTop);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theRight);
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theBottom);
-        if (theResult == kErrorOK) {
-            this->mRect.SetLeft(theLeft);
-            this->mRect.SetTop(theTop);
-            this->mRect.SetRight(theRight);
-            this->mRect.SetBottom(theBottom);
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHasRectangle);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHasAnchor);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSelectMode);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTilesTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mID);
-    return theResult;
+    return this->SaveIO(inFile, false);
 }
 
 // FUNCTION: EXE 0x5ba78e
 // Writes the area's name, text, anchor, rectangle, flags, select mode, tile time and ID; returns the first error
 long EESMArea::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mName.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mText.Save(outFile);
-    if (theResult == kErrorOK) {
-        float theX = this->mAnchor.mX;
-        theResult = outFile.Write(theX);
-        if (theResult == kErrorOK) {
-            float theY = this->mAnchor.mY;
-            theResult = outFile.Write(theY);
-        }
-    }
-    if (theResult == kErrorOK) {
-        float theLeft = this->mRect.GetLeft();
-        float theTop;
-        float theRight;
-        float theBottom;
-        theResult = outFile.Write(theLeft);
-        if (theResult == kErrorOK) {
-            theTop = this->mRect.GetTop();
-            theResult = outFile.Write(theTop);
-        }
-        if (theResult == kErrorOK) {
-            theRight = this->mRect.GetRight();
-            theResult = outFile.Write(theRight);
-        }
-        if (theResult == kErrorOK) {
-            theBottom = this->mRect.GetBottom();
-            theResult = outFile.Write(theBottom);
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHasRectangle);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHasAnchor);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSelectMode);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTilesTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mID);
+    return this->SaveIO(outFile, true);
+}
+
+// Load's or Save's values through a copy (ee_scenario save.rs area_load, area_save)
+long EESMArea::SaveIO(FSFile& inFile, bool inSave)
+{
+    UWideString* theStrings[] = {&this->mName, &this->mText};
+    EESMStream theStream = {&inFile, theStrings, NULL, NULL};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    EeScenarioAreaSave theArea = {this->mAnchor.mX, this->mAnchor.mY, this->mRect.GetLeft(), this->mRect.GetTop(),
+                                  this->mRect.GetRight(), this->mRect.GetBottom(), this->mHasRectangle,
+                                  this->mHasAnchor, this->mSelectMode, this->mTilesTime, this->mID};
+    long theResult = ee_scenario_area_io(&theTable, &theArea, inSave);
+    this->mAnchor.mX = theArea.anchor_x;
+    this->mAnchor.mY = theArea.anchor_y;
+    this->mRect.SetLeft(theArea.left);
+    this->mRect.SetTop(theArea.top);
+    this->mRect.SetRight(theArea.right);
+    this->mRect.SetBottom(theArea.bottom);
+    this->mHasRectangle = theArea.has_rectangle;
+    this->mHasAnchor = theArea.has_anchor;
+    this->mSelectMode = theArea.select_mode;
+    this->mTilesTime = theArea.tiles_time;
+    this->mID = theArea.id;
     return theResult;
 }

@@ -75,7 +75,7 @@ void PlatGUIWindow::Create(const WONRectangle& inRect)
         this->mY = inRect.y;
         this->mWidth = inRect.width;
         this->mHeight = inRect.height;
-        if (this->HasFrame() && (this->mStyle & 0x40)) {
+        if (this->HasFrame() && (this->GetStyle() & 0x40)) {
             this->mWidth += 2 * kFrameBorder;
             this->mHeight += 2 * kFrameBorder + kFrameCaption;
         }
@@ -89,23 +89,23 @@ void PlatGUIWindow::Create(const WONRectangle& inRect)
         theManager->AddPlatWindow(this);
 
     if (!this->FillsSurface()) {
-        if (this->mStyle & 0x01)
+        if (this->GetStyle() & 0x01)
             this->Center(true);
-        else if (this->mStyle & 0x80)
+        else if (this->GetStyle() & 0x80)
             this->Center(false);
     }
-    if (!(this->mStyle & 0x02)) {
-        this->mIsShowing = true;
+    if (!(this->GetStyle() & 0x02)) {
+        this->SetIsShowing(true);
         this->PlatformShow(true);
     } else
-        this->mIsShowing = false;
+        this->SetIsShowing(false);
 }
 
 // A window that fills the surface takes the surface's new size (WM_SIZE: a size event for the root)
 void PlatGUIWindow::FollowSurface()
 {
     PlatWindowManager* theManager = this->GetPlatManager();
-    if (!this->FillsSurface() || theManager == NULL || this->mWindowState != WindowState_Open)
+    if (!this->FillsSurface() || theManager == NULL || this->GetWindowState() != WindowState_Open)
         return;
     int theWidth = theManager->GetSurfaceWidth(), theHeight = theManager->GetSurfaceHeight();
     if (theWidth == this->mWidth && theHeight == this->mHeight)
@@ -123,7 +123,7 @@ void PlatGUIWindow::FollowPixelScale()
 {
     PlatWindowManager* theManager = this->GetPlatManager();
     PlatNativeImage* theOld = dynamic_cast<PlatNativeImage*>(this->mOffscreenImage.get());
-    if (theManager == NULL || theOld == NULL || this->mWindowState != WindowState_Open ||
+    if (theManager == NULL || theOld == NULL || this->GetWindowState() != WindowState_Open ||
         theOld->GetScale() == theManager->GetPixelScale())
         return;
     SmartPtr<NativeImage> theImage = this->CreateImage(theOld->GetWidth(), theOld->GetHeight());
@@ -137,7 +137,7 @@ void PlatGUIWindow::FollowPixelScale()
 // change queues a size event with the client size (WM_SIZE), a move one with the client position (WM_MOVE).
 void PlatGUIWindow::SetPosSize(int x, int y, int width, int height)
 {
-    if (this->mWindowState != WindowState_Open || this->FillsSurface())
+    if (this->GetWindowState() != WindowState_Open || this->FillsSurface())
         return;
     if (width == -1)
         width = this->mWidth;
@@ -185,7 +185,7 @@ void PlatGUIWindow::PlatformSetIcon() {}
 void PlatGUIWindow::PlatformSetCursor(Cursor* inCursor)
 {
     PlatWindowManager* theManager = this->GetPlatManager();
-    if (!this->mMouseIsInClientArea && (theManager == NULL || theManager->GetCaptureWindow() != this))
+    if (!this->IsMouseInClientArea() && (theManager == NULL || theManager->GetCaptureWindow() != this))
         return;
     if (PlatCursor* theCursor = dynamic_cast<PlatCursor*>(inCursor)) {
         PlatCursorShow(1);
@@ -198,7 +198,7 @@ void PlatGUIWindow::PlatformShowNativeCursor(bool inShow)
 {
     if (inShow)
         PlatCursorShow(1);
-    else if (this->mMouseIsInClientArea)
+    else if (this->IsMouseInClientArea())
         PlatCursorShow(0);
 }
 
@@ -214,12 +214,12 @@ void PlatGUIWindow::PlatformShow(bool inShow)
     theManager->SetDirty();
     if (inShow) {
         this->InvalidateRoot();
-        if (!this->mIsPopup) {
+        if (!this->IsPopup()) {
             theManager->BringToFront(this);
             theManager->SetFocusWindow(this);
         }
     } else if (theManager->GetFocusWindow() == this) {
-        PlatGUIWindow* theNext = dynamic_cast<PlatGUIWindow*>(this->mParent);
+        PlatGUIWindow* theNext = dynamic_cast<PlatGUIWindow*>(this->GetParent());
         if (theNext != NULL && !theNext->mVisible)
             theNext = NULL;
         theManager->SetFocusWindow(theNext);
@@ -255,9 +255,9 @@ void PlatGUIWindow::PlatformClose()
 void PlatGUIWindow::PlatformSetFocus()
 {
     PlatWindowManager* theManager = this->GetPlatManager();
-    if (theManager == NULL || this->mWindowState != WindowState_Open)
+    if (theManager == NULL || this->GetWindowState() != WindowState_Open)
         return;
-    if (!this->mIsPopup)
+    if (!this->IsPopup())
         theManager->BringToFront(this);
     theManager->SetFocusWindow(this);
 }
@@ -282,7 +282,7 @@ bool PlatGUIWindow::IdleUpdate()
 void PlatGUIWindow::TimerEvent(DWORD inElapsed)
 {
     Window::TimerEvent(inElapsed);
-    if (!this->mMouseIsInClientArea)
+    if (!this->IsMouseInClientArea())
         return;
     PlatWindowManager* theManager = this->GetPlatManager();
     if (theManager == NULL)

@@ -11,7 +11,6 @@
 #include "lle/TSEvent.h"
 #include "lle/TSScheduler.h"
 #include "lle/UReferenceCounter.h"
-#include "lle/NEPlayer.h"
 #include "lle/NEMessage.h"
 #include "lle/NETimestampedMessage.h"
 #include "lle/NELagLossSimulator.h"

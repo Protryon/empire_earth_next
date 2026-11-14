@@ -66,6 +66,5 @@ class GEWindow;
 LLE_API long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow);   // Sound Engine.cpp
 
 // ---- Network engine (NE)
-#include "lle/NEProtocolConfiguration.h"
 
 #endif

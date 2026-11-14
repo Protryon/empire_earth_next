@@ -7,6 +7,31 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// What a write is: a `long` field, a `float` field, a building count (`long`, and the civilization manager's
+/// `mMaxCounts`/`mUnitsPer` entry of `unit_type`), or a call.
+constexpr static const uint32_t EE_SCENARIO_AI_KIND_LONG = 0;
+
+constexpr static const uint32_t EE_SCENARIO_AI_KIND_FLOAT = 1;
+
+constexpr static const uint32_t EE_SCENARIO_AI_KIND_MAX_COUNT = 2;
+
+constexpr static const uint32_t EE_SCENARIO_AI_KIND_UNITS_PER = 3;
+
+constexpr static const uint32_t EE_SCENARIO_AI_KIND_CALL = 4;
+
+/// The most writes one behaviour makes.
+constexpr static const size_t EE_SCENARIO_AI_MAX_WRITES = 4;
+
+/// The calls (`EE_SCENARIO_AI_KIND_CALL`): `SetNextAttackTime(gPhysics->mGameTime)`, `SetIslandExpansionTimer`
+/// (the `long`), `SetDMAttackFrequencyModifier` and `SetDMInitialAttackModifier` (the `float`).
+constexpr static const uint32_t EE_SCENARIO_AI_CALL_NEXT_ATTACK_TIME_NOW = 0;
+
+constexpr static const uint32_t EE_SCENARIO_AI_CALL_ISLAND_EXPANSION_TIMER = 1;
+
+constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_ATTACK_FREQUENCY_MODIFIER = 2;
+
+constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_INITIAL_ATTACK_MODIFIER = 3;
+
 /// `kSMCondition*` (ee/EEScenarioIDs.h).
 constexpr static const uint32_t EE_SCENARIO_CONDITION_ALWAYS_TRUE = 0;
 
@@ -26,6 +51,25 @@ constexpr static const uint32_t EE_SCENARIO_CONDITION_CHAT_CONTAINS = 7;
 
 /// The most players a choice can list (`EEScenarioManager::ChoosePlayer`'s out buffer; the world has at most 17).
 constexpr static const size_t EE_SCENARIO_MAX_PLAYERS = 64;
+
+/// `kSMEffectObject`, `kSMEffectNone` (ee/EEScenarioIDs.h).
+constexpr static const unsigned long EE_SCENARIO_EFFECT_NONE = 0;
+
+constexpr static const unsigned long EE_SCENARIO_EFFECT_OBJECT = 1;
+
+/// `kSMPlayerActionTotal`: Load moves a later player action down by 2, then to Victory (0).
+constexpr static const unsigned long EE_SCENARIO_PLAYER_ACTION_TOTAL = 12;
+
+/// `kSMUnitAttributeConstructionComplete`: files before 0.0xcd number the attributes after it 3 lower.
+constexpr static const unsigned long EE_SCENARIO_ATTRIBUTE_CONSTRUCTION_COMPLETE = 16;
+
+/// What a renumbering follows (`EESMEffect::RenumberAreas`, `RenumberObjects`, `RenumberTriggers`; the condition's
+/// and the object's).
+constexpr static const uint32_t EE_SCENARIO_RENUMBER_AREAS = 0;
+
+constexpr static const uint32_t EE_SCENARIO_RENUMBER_OBJECTS = 1;
+
+constexpr static const uint32_t EE_SCENARIO_RENUMBER_TRIGGERS = 2;
 
 /// `gWorld.mNumPlayers`.
 constexpr static const uint32_t EE_SCENARIO_READ_NUM_PLAYERS = 0;
@@ -178,6 +222,92 @@ constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE = 47;
 /// `GetScenarioObject(a)->PickUnitType()`.
 constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_PICK = 48;
 
+/// The effect's string slots (`EESMEffect`'s members; the C++ hands them in this order).
+constexpr static const uint32_t EE_SCENARIO_EFFECT_NAME = 0;
+
+constexpr static const uint32_t EE_SCENARIO_EFFECT_TEXT = 1;
+
+constexpr static const uint32_t EE_SCENARIO_EFFECT_MESSAGE = 2;
+
+constexpr static const uint32_t EE_SCENARIO_EFFECT_S64 = 3;
+
+constexpr static const uint32_t EE_SCENARIO_EFFECT_S78 = 4;
+
+constexpr static const uint32_t EE_SCENARIO_EFFECT_NEW_NAME = 5;
+
+constexpr static const uint32_t EE_SCENARIO_EFFECT_FILE_NAME = 6;
+
+constexpr static const uint32_t EE_SCENARIO_EFFECT_DESCRIPTION = 7;
+
+/// The condition's string slots.
+constexpr static const uint32_t EE_SCENARIO_CONDITION_NAME = 0;
+
+constexpr static const uint32_t EE_SCENARIO_CONDITION_TEXT = 1;
+
+constexpr static const uint32_t EE_SCENARIO_CONDITION_CHAT_TEXT = 2;
+
+/// The object's string slot and the id list slot of the effect (`mObjects`) and the object (`mUnits`).
+constexpr static const uint32_t EE_SCENARIO_OBJECT_NAME = 0;
+
+constexpr static const uint32_t EE_SCENARIO_LIST_IDS = 0;
+
+/// `FSFile::Read(unsigned long&)` into `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_READ_ULONG = 0;
+
+/// `FSFile::Read(long&)` into `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_READ_LONG = 1;
+
+/// `FSFile::Read(float&)` into `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_READ_FLOAT = 2;
+
+/// `FSFile::Read(bool&)` into `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_READ_BOOL = 3;
+
+/// `FSFile::Write(const unsigned long&)` of `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_WRITE_ULONG = 4;
+
+/// `FSFile::Write(const long&)` of `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_WRITE_LONG = 5;
+
+/// `FSFile::Write(const float&)` of `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_WRITE_FLOAT = 6;
+
+/// `FSFile::Write(const bool&)` of `*value`.
+constexpr static const uint32_t EE_SCENARIO_IO_WRITE_BOOL = 7;
+
+/// `UWideString::Load` of the object's string `slot`.
+constexpr static const uint32_t EE_SCENARIO_IO_LOAD_STRING = 8;
+
+/// `UWideString::Save` of the object's string `slot`.
+constexpr static const uint32_t EE_SCENARIO_IO_SAVE_STRING = 9;
+
+/// The object's id list `slot`: `clear()`.
+constexpr static const uint32_t EE_SCENARIO_IO_LIST_CLEAR = 10;
+
+/// The object's id list `slot`: `push_back(*value)` (an `unsigned long`).
+constexpr static const uint32_t EE_SCENARIO_IO_LIST_PUSH = 11;
+
+/// The object's id list `slot`: its `size()` into `*value` (an `unsigned long`).
+constexpr static const uint32_t EE_SCENARIO_IO_LIST_COUNT = 12;
+
+/// The object's id list `slot`: element `index` into `*value` (an `unsigned long`).
+constexpr static const uint32_t EE_SCENARIO_IO_LIST_AT = 13;
+
+/// The trigger's entries `slot` (0 conditions, 1 effects): their number into `*value` (an `unsigned long`).
+constexpr static const uint32_t EE_SCENARIO_IO_ENTRY_COUNT = 14;
+
+/// The trigger's entry `index` of `slot` into `*value` (an [`EeScenarioEntry`]).
+constexpr static const uint32_t EE_SCENARIO_IO_ENTRY_AT = 15;
+
+/// The trigger's entry `index` of `slot` set from `*value` (an [`EeScenarioEntry`]): `SetCondition(index, first,
+/// value)` then `SetConditionOperator(index, op)`, or `SetEffect(index, first, value)` then `SetEffectOperator`.
+constexpr static const uint32_t EE_SCENARIO_IO_ENTRY_SET = 16;
+
+/// The trigger's condition entries (`EESMTConditionWrapper`) and effect entries (`EESMTEffectWrapper`).
+constexpr static const uint32_t EE_SCENARIO_ENTRIES_CONDITIONS = 0;
+
+constexpr static const uint32_t EE_SCENARIO_ENTRIES_EFFECTS = 1;
+
 /// `kSMTriggerOperator*`.
 constexpr static const int32_t EE_SCENARIO_OPERATOR_END = 0;
 
@@ -200,29 +330,30 @@ struct EeScenarioHost {
                   uint32_t seed);
 };
 
-/// A condition's settings (`EESMCondition`'s plain members).
-struct EeScenarioCondition {
-  uint32_t kind;
-  uint32_t op;
-  uint32_t difficulty;
-  uint32_t diplomacy;
-  uint32_t attribute;
-  uint32_t other_attribute;
-  int32_t technology;
-  uint32_t amount;
-  uint32_t object_index;
-  uint32_t player;
-  uint32_t other_player;
-  uint32_t min_time;
-  uint32_t max_time;
-  uint32_t hour;
-  uint32_t trigger;
-  bool is_trigger_on;
-  bool has_trigger_fired;
-  bool uses_difficulty;
-  bool uses_elapsed_time;
-  bool uses_hour;
-  bool uses_player_attribute;
+/// `EESMCondition`'s numbers, in the class's order.
+struct EeScenarioConditionFields {
+  unsigned long mType;
+  unsigned long mOperator;
+  unsigned long mDifficulty;
+  unsigned long mDiplomacy;
+  unsigned long mAttribute;
+  unsigned long mOtherAttribute;
+  long mTechnology;
+  unsigned long mAmount;
+  unsigned long mObjectIndex;
+  unsigned long mPlayer;
+  unsigned long mOtherPlayer;
+  unsigned long mMinTime;
+  unsigned long mMaxTime;
+  unsigned long mHour;
+  unsigned long mTrigger;
+  unsigned long mID;
+  bool mIsTriggerOn;
+  bool mHasTriggerFired;
+  bool mUsesDifficulty;
+  bool mUsesElapsedTime;
+  bool mUsesHour;
+  bool mUsesPlayerAttribute;
 };
 
 /// A trigger's state (in and out).
@@ -269,11 +400,146 @@ struct EeScenarioAreaRecord {
   int32_t center_y;
 };
 
-/// The object's filter (`EESMObject`'s plain members).
-struct EeScenarioObjectFilter {
-  uint32_t class_;
-  uint32_t family;
-  uint32_t parent;
+/// `EESMObject`'s numbers, in the class's order.
+struct EeScenarioObjectFields {
+  unsigned long mOwner;
+  unsigned long mFamily;
+  unsigned long mClass;
+  unsigned long mMinCount;
+  unsigned long mMaxCount;
+  unsigned long mArea;
+  unsigned long mNearMode;
+  unsigned long mNearObject;
+  unsigned long mParent;
+  unsigned long mAttribute;
+  unsigned long mAttributeMin;
+  unsigned long mAttributeMax;
+  unsigned long mVisibleByPlayer;
+  unsigned long mState;
+  unsigned long mSelectedByPlayer;
+  unsigned long mL64;
+  unsigned long mInAreaCheck;
+  unsigned long mNearCheck;
+  unsigned long mHasAttributeCheck;
+  unsigned long mVisibleByCheck;
+  unsigned long mHasStateCheck;
+  unsigned long mSelectedByCheck;
+  bool mIsSelectOnMap;
+  bool mIsDynamic;
+  bool mIsAttributePercent;
+};
+
+/// `EESMEffect`'s numbers, in the class's order.
+struct EeScenarioEffectFields {
+  unsigned long mPlayerAttribute;
+  unsigned long mDiplomacy;
+  unsigned long mULD0;
+  unsigned long mMessagePlayer;
+  unsigned long mNewOwner;
+  unsigned long mPlayer;
+  unsigned long mDiplomacyPlayer;
+  unsigned long mAIAction;
+  unsigned long mAIAttribute;
+  unsigned long mAIToggle;
+  unsigned long mMediaAction;
+  unsigned long mULF4;
+  unsigned long mPlayerAction;
+  unsigned long mTriggerState;
+  unsigned long mType;
+  unsigned long mObjectAction;
+  unsigned long mAttributeMode;
+  long mTechnology;
+  float mFloatValue;
+  long mIntValue1;
+  long mIntValue2;
+  long mAttributePlayer;
+  unsigned long mTargetArea;
+  unsigned long mTargetObject;
+  unsigned long mPlacedEffect;
+  unsigned long mPlaceArea;
+  unsigned long mPlaceObject;
+  unsigned long mDaylightHour;
+  unsigned long mCycleTime;
+  unsigned long mGameAction;
+  unsigned long mDuration;
+  unsigned long mTextObject;
+  unsigned long mAttribute;
+  unsigned long mAttributeAmount;
+  unsigned long mAttributeUnitType;
+  unsigned long mAttributeUnit;
+  unsigned long mObject;
+  unsigned long mStance;
+  unsigned long mTaskAction;
+  unsigned long mTaskArea;
+  unsigned long mTaskObject;
+  unsigned long mCivPoints;
+  unsigned long mPlayerAttributeMode;
+  unsigned long mPlayerAttributeAmount;
+  unsigned long mLocationArea;
+  unsigned long mLocationObject;
+  unsigned long mTrigger;
+  unsigned long mID;
+  bool mIsOn;
+  bool mUsesTargetArea;
+  bool mIsAttack;
+  bool mUsesFavorites;
+  bool mIsAddTarget;
+  bool mB18D;
+  bool mIsClearText;
+  bool mUsesLocationArea;
+  bool mUsesPercent;
+  bool mIsAddTechnology;
+  bool mUsesPlaceArea;
+  bool mB193;
+};
+
+/// The C ABI's stream: a context and the I/O callback (`value` the field or local the operation reads or writes).
+struct EeScenarioStream {
+  void *ctx;
+  int32_t (*io)(void *ctx, uint32_t op, uint32_t slot, unsigned long index, void *value);
+};
+
+/// One store on a computer player: `field` the position of the field in its kind's list (`EE_SM_AI_LONGS`,
+/// `EE_SM_AI_FLOATS`, `EE_SM_AI_BUILDINGS`, `EE_SM_AI_CALLS` in ee/EESMAIFields.h: the modules below in order).
+struct EeScenarioAiWrite {
+  uint32_t kind;
+  uint32_t field;
+  long long_value;
+  float float_value;
+};
+
+/// `EESMTrigger`'s numbers, in the class's order (its condition and effect entries stay the C++'s).
+struct EeScenarioTriggerFields {
+  unsigned long mConditionDuration;
+  unsigned long mConditionStartTime;
+  unsigned long mID;
+  bool mIsOn;
+  bool mHasFired;
+  bool mIsLooping;
+  bool mIsInCinematic;
+};
+
+/// `EESMArea`'s saved values (a copy the C++ fills from its members and stores back): the anchor tile, the
+/// rectangle, the flags, the select mode, the tiles' time and the id.
+struct EeScenarioAreaSave {
+  long anchor_x;
+  long anchor_y;
+  float left;
+  float top;
+  float right;
+  float bottom;
+  bool has_rectangle;
+  bool has_anchor;
+  unsigned long select_mode;
+  unsigned long tiles_time;
+  unsigned long id;
+};
+
+/// One trigger entry: the NOT flag (0/1) or the delay, the operator, the condition or effect index.
+struct EeScenarioEntry {
+  unsigned long first;
+  long op;
+  unsigned long value;
 };
 
 extern "C" {
@@ -281,12 +547,12 @@ extern "C" {
 /// `EESMCondition::Compare`.
 bool ee_scenario_compare(uint32_t value, uint32_t op, uint32_t target);
 
-/// `EESMCondition::Evaluate`.
+/// `EESMCondition::Evaluate` of the condition's numbers.
 ///
 /// # Safety
 /// `host` and `condition` must be valid for the call.
 bool ee_scenario_condition_evaluate(const EeScenarioHost *host,
-                                    const EeScenarioCondition *condition);
+                                    const EeScenarioConditionFields *condition);
 
 /// `EESMCondition::GetPlayerValue`.
 ///
@@ -352,7 +618,7 @@ void ee_scenario_area_center_tile(const EeScenarioHost *host,
 /// # Safety
 /// `host` and `filter` must be valid for the call.
 bool ee_scenario_object_accepts_class(const EeScenarioHost *host,
-                                      const EeScenarioObjectFilter *filter,
+                                      const EeScenarioObjectFields *filter,
                                       uint32_t class_);
 
 /// `EESMObject::PickUnitType`.
@@ -360,7 +626,138 @@ bool ee_scenario_object_accepts_class(const EeScenarioHost *host,
 /// # Safety
 /// `host` and `filter` must be valid for the call.
 int32_t ee_scenario_object_pick_unit_type(const EeScenarioHost *host,
-                                          const EeScenarioObjectFilter *filter);
+                                          const EeScenarioObjectFields *filter);
+
+/// `EESMEffect::Reset`'s numbers.
+EeScenarioEffectFields ee_scenario_effect_defaults();
+
+/// `EESMCondition`'s constructor's numbers.
+EeScenarioConditionFields ee_scenario_condition_defaults();
+
+/// `EESMObject`'s constructor's numbers.
+EeScenarioObjectFields ee_scenario_object_defaults();
+
+/// `EESMEffect::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+int32_t ee_scenario_effect_load(const EeScenarioStream *stream,
+                                EeScenarioEffectFields *fields,
+                                unsigned long major,
+                                unsigned long minor);
+
+/// `EESMEffect::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+int32_t ee_scenario_effect_save(const EeScenarioStream *stream,
+                                const EeScenarioEffectFields *fields,
+                                unsigned long major,
+                                unsigned long minor);
+
+/// `EESMCondition::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+int32_t ee_scenario_condition_load(const EeScenarioStream *stream,
+                                   EeScenarioConditionFields *fields);
+
+/// `EESMCondition::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+int32_t ee_scenario_condition_save(const EeScenarioStream *stream,
+                                   const EeScenarioConditionFields *fields);
+
+/// `EESMObject::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+int32_t ee_scenario_object_load(const EeScenarioStream *stream,
+                                EeScenarioObjectFields *fields,
+                                unsigned long major,
+                                unsigned long minor);
+
+/// `EESMObject::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+int32_t ee_scenario_object_save(const EeScenarioStream *stream,
+                                const EeScenarioObjectFields *fields,
+                                unsigned long minor);
+
+/// The effect's `Renumber*` of a kind (`EE_SCENARIO_RENUMBER_*`; its object list's entries:
+/// [`ee_scenario_renumber_ids`]).
+///
+/// # Safety
+/// `fields` must be valid for a read and a write.
+void ee_scenario_effect_renumber(EeScenarioEffectFields *fields,
+                                 uint32_t kind,
+                                 unsigned long old,
+                                 unsigned long new_);
+
+/// The condition's `Renumber*` of a kind.
+///
+/// # Safety
+/// `fields` must be valid for a read and a write.
+void ee_scenario_condition_renumber(EeScenarioConditionFields *fields,
+                                    uint32_t kind,
+                                    unsigned long old,
+                                    unsigned long new_);
+
+/// The object's `Renumber*` of a kind.
+///
+/// # Safety
+/// `fields` must be valid for a read and a write.
+void ee_scenario_object_renumber(EeScenarioObjectFields *fields,
+                                 uint32_t kind,
+                                 unsigned long old,
+                                 unsigned long new_);
+
+/// The same upkeep of each of `count` indices (an effect's object list).
+///
+/// # Safety
+/// `ids` must be valid for `count` reads and writes (any pointer when `count` is 0).
+void ee_scenario_renumber_ids(unsigned long *ids,
+                              size_t count,
+                              unsigned long old,
+                              unsigned long new_);
+
+/// `EESMEffect::SetAIVariable`'s stores for the effect's behaviour, in order, into `out` (room for
+/// [`EE_SCENARIO_AI_MAX_WRITES`]), their number into `out_count`; whether the applied effect is kept for a saved game.
+///
+/// # Safety
+/// `fields` must be valid for a read, `out` for `EE_SCENARIO_AI_MAX_WRITES` writes, `out_count` for one.
+bool ee_scenario_ai_variable(const EeScenarioEffectFields *fields,
+                             EeScenarioAiWrite *out,
+                             size_t *out_count);
+
+/// `EESMTrigger::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+int32_t ee_scenario_trigger_load(const EeScenarioStream *stream, EeScenarioTriggerFields *fields);
+
+/// `EESMTrigger::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+int32_t ee_scenario_trigger_save(const EeScenarioStream *stream,
+                                 const EeScenarioTriggerFields *fields);
+
+/// `EESMArea::Load` (`save` false) or `Save` of the area's values: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `area` for a read and a write.
+int32_t ee_scenario_area_io(const EeScenarioStream *stream, EeScenarioAreaSave *area, bool save);
+
+/// `EESMMediaStrings::Load` (`save` false) or `Save`: the `count` strings in order, the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call.
+int32_t ee_scenario_strings_io(const EeScenarioStream *stream,
+                               uint32_t count,
+                               bool save);
 
 }  // extern "C"
 

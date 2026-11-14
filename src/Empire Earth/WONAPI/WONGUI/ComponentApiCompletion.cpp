@@ -40,5 +40,5 @@ bool Component::CheckDoubleClick(int button)
 }
 // FUNCTION: WON 0x0072b110
 // Returns whether the last press of the mouse button was a double click
-bool Window::CheckDoubleClick(MouseButton button) { return this->mButtonDoubleClick[button]; }
+bool Window::CheckDoubleClick(MouseButton button) { return this->WCall(EeWonWinCall::CheckDoubleClick, (intptr_t)button) != 0; }
 }

@@ -1,12 +1,12 @@
 //! The C ABI of the pixel formats (`pixel.rs`; 'Graphics Engine.cpp' forwards `GEPackColor` and `GEUnpack*`), of a
-//! frame's store into a surface (`GETexture.cpp`'s `GEStoreFrame`) and of `GETexture`'s, `GETextureSet`'s and
-//! `GEMaterial`'s logic (`texture.rs`). The textures, surfaces and reference counts stay C++: it locks the surface and
-//! passes its memory, and copies a plan's fields into its descriptions.
+//! frame's store into a surface (`GETexture.cpp`'s `GEStoreFrame`) and of `GETextureSet`'s and `GEMaterial`'s logic
+//! (`texture.rs`; `GETexture` is the whole object of `texobj_tex.rs`). The surfaces stay C++: `GEStoreFrame` locks
+//! the surface and passes its memory.
 
-use std::ffi::{c_long, c_ulong};
+use std::ffi::c_ulong;
 
 use crate::pixel::{self, StoreTarget};
-use crate::texture::{self, FramePlan};
+use crate::texture;
 
 /// `GEPackColor(format, red, green, blue, alpha)`.
 #[no_mangle]
@@ -101,141 +101,6 @@ pub unsafe extern "C" fn ee_ge_texture_store_frame(
 ) {
     // SAFETY: the caller's contract
     unsafe { pixel::store_frame(&StoreTarget::from(&*target), width, height, channels, pixels, memory) };
-}
-
-/// `GETexture::Load`'s plan for frame format 0 (one texture per frame).
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeGeTextureFramePlan {
-    pub mip_levels: c_long,
-    pub drop: c_long,
-    pub surface_type: c_ulong,
-    pub mip_level_count: c_long,
-    pub has_drop: bool,
-    pub drop_type: c_ulong,
-    pub drop_mip_level_count: c_long,
-    pub drop_width: c_ulong,
-    pub drop_height: c_ulong,
-}
-
-impl From<FramePlan> for EeGeTextureFramePlan {
-    fn from(p: FramePlan) -> Self {
-        EeGeTextureFramePlan {
-            mip_levels: p.mip_levels,
-            drop: p.drop,
-            surface_type: p.surface_type,
-            mip_level_count: p.mip_level_count,
-            has_drop: p.has_drop,
-            drop_type: p.drop_type,
-            drop_mip_level_count: p.drop_mip_level_count,
-            drop_width: p.drop_width,
-            drop_height: p.drop_height,
-        }
-    }
-}
-
-/// The frame surfaces' description for a `width` x `height` file with `drop` levels dropped.
-///
-/// # Safety
-/// `out` is valid for a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_frame_plan(
-    width: u32,
-    height: u32,
-    create_mipmaps: bool,
-    drop: c_long,
-    out: *mut EeGeTextureFramePlan,
-) {
-    // SAFETY: the caller's contract
-    unsafe { *out = texture::frame_plan(width, height, create_mipmaps, drop).into() };
-}
-
-/// The frame grid of a one-surface texture (frame format 1): `mFramesPerRow` and `mFrameUVSize`.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_grid_plan(frame_count: u32, frames_per_row: *mut c_ulong, uv_size: *mut f32) {
-    let plan = texture::grid_plan(frame_count);
-    // SAFETY: the caller's contract
-    unsafe {
-        *frames_per_row = plan.frames_per_row;
-        *uv_size = plan.uv_size;
-    }
-}
-
-/// Frame `frame`'s cell in the grid surface: left, top, right, bottom (`out[4]`) for a `mip_width` x `mip_height` level.
-///
-/// # Safety
-/// `out` holds four floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_grid_cell(
-    frame: c_ulong,
-    frames_per_row: c_ulong,
-    mip_width: c_ulong,
-    mip_height: c_ulong,
-    out: *mut f32,
-) {
-    let cell = texture::grid_cell(frame, frames_per_row, mip_width, mip_height);
-    for (k, v) in cell.into_iter().enumerate() {
-        // SAFETY: the caller's contract
-        unsafe { *out.add(k) = v };
-    }
-}
-
-/// `SetFrame`'s UV corner of frame `frame`.
-///
-/// # Safety
-/// `u` and `v` are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_frame_corner(frame: c_ulong, frames_per_row: c_ulong, u: *mut f32, v: *mut f32) {
-    let (cu, cv) = texture::frame_corner(frame, frames_per_row);
-    // SAFETY: the caller's contract
-    unsafe {
-        *u = cu;
-        *v = cv;
-    }
-}
-
-/// `GETexture::Dereference`'s decision at reference count `count`: whether to drop a reference and whether to remove
-/// the texture from its manager.
-///
-/// # Safety
-/// `dereference` and `remove` are valid for writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_texture_dereference_decision(
-    count: c_ulong,
-    managed: bool,
-    dereference: *mut bool,
-    remove: *mut bool,
-) {
-    let (d, r) = texture::dereference_decision(count, managed);
-    // SAFETY: the caller's contract
-    unsafe {
-        *dereference = d;
-        *remove = r;
-    }
-}
-
-/// `GETexture::GetAllocatedSize`.
-#[no_mangle]
-pub extern "C" fn ee_ge_texture_allocated_size(
-    surface_size: c_ulong,
-    frame_format: c_ulong,
-    frame_count: c_ulong,
-) -> c_ulong {
-    texture::allocated_size(surface_size, frame_format, frame_count)
-}
-
-/// `SetStageMipFilterMode`'s mode after the texture pack's override.
-#[no_mangle]
-pub extern "C" fn ee_ge_texture_mip_filter_mode(
-    mode: c_ulong,
-    has_surface: bool,
-    logical_shift: c_ulong,
-    create_mipmaps: bool,
-) -> c_ulong {
-    texture::mip_filter_mode(mode, has_surface, logical_shift, create_mipmaps)
 }
 
 /// `GETextureSet`'s slot of tile (x, y): the texture column and row.

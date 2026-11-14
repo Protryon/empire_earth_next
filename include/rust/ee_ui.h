@@ -1231,6 +1231,16 @@ struct EeUiRadioFields {
   bool scale_bitmap;
 };
 
+/// `UIScrollBar`'s members in their C++ order (from `mIncrementButton` on). The pointers are C++'s.
+struct ScrollBarFields {
+  void *increment_button;
+  void *decrement_button;
+  void *slider;
+  bool increment_pressed;
+  bool decrement_pressed;
+  bool slider_pressed;
+};
+
 /// A table's identity as `AddControlLike` and `MoveControlsHorizontally` search the static array.
 struct EeUiControlsTableKey {
   long id;

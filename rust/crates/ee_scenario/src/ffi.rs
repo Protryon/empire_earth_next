@@ -2,10 +2,19 @@
 //! `Scenario Manager/EEScenarioHost.cpp`). Plain records in and out; the world through the host's reads, and no
 //! Rust reference lives across one (a read may run a condition's or an object's `Evaluate`, which calls back here).
 
+use std::os::raw::c_ulong;
+
+use crate::aivar::{self, EeScenarioAiWrite, EE_SCENARIO_AI_MAX_WRITES};
 use crate::area::{self, EeScenarioAreaRecord};
 use crate::condition::{self, EeScenarioCondition};
+use crate::fields::{
+    self, EeScenarioAreaSave, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields,
+    EeScenarioTriggerFields,
+};
 use crate::host::EeScenarioHost;
 use crate::object::{self, EeScenarioObjectFilter};
+use crate::save;
+use crate::stream::EeScenarioStream;
 use crate::trigger::{
     self, EeScenarioConditionEntry, EeScenarioEffectEntry, EeScenarioTimedEffect, EeScenarioTriggerState,
 };
@@ -31,17 +40,17 @@ pub extern "C" fn ee_scenario_compare(value: u32, op: u32, target: u32) -> bool 
     condition::compare(value, op, target)
 }
 
-/// `EESMCondition::Evaluate`.
+/// `EESMCondition::Evaluate` of the condition's numbers.
 ///
 /// # Safety
 /// `host` and `condition` must be valid for the call.
 #[no_mangle]
 pub unsafe extern "C" fn ee_scenario_condition_evaluate(
     host: *const EeScenarioHost,
-    condition: *const EeScenarioCondition,
+    condition: *const EeScenarioConditionFields,
 ) -> bool {
     // SAFETY: the caller's contract; the record is copied before the first read
-    let (mut host, condition) = unsafe { (host_of(host), *condition) };
+    let (mut host, condition) = unsafe { (host_of(host), EeScenarioCondition::from(&*condition)) };
     condition::evaluate(&mut host, &condition)
 }
 
@@ -183,11 +192,11 @@ pub unsafe extern "C" fn ee_scenario_area_center_tile(
 #[no_mangle]
 pub unsafe extern "C" fn ee_scenario_object_accepts_class(
     host: *const EeScenarioHost,
-    filter: *const EeScenarioObjectFilter,
+    filter: *const EeScenarioObjectFields,
     class: u32,
 ) -> bool {
     // SAFETY: the caller's contract; the record is copied before the first read
-    let (mut host, filter) = unsafe { (host_of(host), *filter) };
+    let (mut host, filter) = unsafe { (host_of(host), EeScenarioObjectFilter::from(&*filter)) };
     object::accepts_class(&mut host, &filter, class)
 }
 
@@ -198,9 +207,284 @@ pub unsafe extern "C" fn ee_scenario_object_accepts_class(
 #[no_mangle]
 pub unsafe extern "C" fn ee_scenario_object_pick_unit_type(
     host: *const EeScenarioHost,
-    filter: *const EeScenarioObjectFilter,
+    filter: *const EeScenarioObjectFields,
 ) -> i32 {
     // SAFETY: the caller's contract; the record is copied before the first read
-    let (mut host, filter) = unsafe { (host_of(host), *filter) };
+    let (mut host, filter) = unsafe { (host_of(host), EeScenarioObjectFilter::from(&*filter)) };
     object::pick_unit_type(&mut host, &filter)
+}
+
+/// A copy of the caller's stream table.
+///
+/// # Safety
+/// `stream` must be valid for a read.
+unsafe fn stream_of(stream: *const EeScenarioStream) -> EeScenarioStream {
+    // SAFETY: the caller's contract
+    unsafe { EeScenarioStream { ctx: (*stream).ctx, io: (*stream).io } }
+}
+
+/// `EESMEffect::Reset`'s numbers.
+#[no_mangle]
+pub extern "C" fn ee_scenario_effect_defaults() -> EeScenarioEffectFields {
+    fields::effect_defaults()
+}
+
+/// `EESMCondition`'s constructor's numbers.
+#[no_mangle]
+pub extern "C" fn ee_scenario_condition_defaults() -> EeScenarioConditionFields {
+    fields::condition_defaults()
+}
+
+/// `EESMObject`'s constructor's numbers.
+#[no_mangle]
+pub extern "C" fn ee_scenario_object_defaults() -> EeScenarioObjectFields {
+    fields::object_defaults()
+}
+
+// The saves (save.rs): the numbers are copied in, read or written through the stream (each value into or out of
+// the copy), and copied back after the last call; the stream's callbacks reach only the object's strings and list.
+
+/// `EESMEffect::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_effect_load(
+    stream: *const EeScenarioStream,
+    fields: *mut EeScenarioEffectFields,
+    major: c_ulong,
+    minor: c_ulong,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, mut f) = unsafe { (stream_of(stream), *fields) };
+    let r = save::effect_load(&mut s, &mut f, major, minor);
+    // SAFETY: the caller's contract
+    unsafe { *fields = f };
+    r
+}
+
+/// `EESMEffect::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_effect_save(
+    stream: *const EeScenarioStream,
+    fields: *const EeScenarioEffectFields,
+    major: c_ulong,
+    minor: c_ulong,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, f) = unsafe { (stream_of(stream), *fields) };
+    save::effect_save(&mut s, &f, major, minor)
+}
+
+/// `EESMCondition::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_condition_load(
+    stream: *const EeScenarioStream,
+    fields: *mut EeScenarioConditionFields,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, mut f) = unsafe { (stream_of(stream), *fields) };
+    let r = save::condition_load(&mut s, &mut f);
+    // SAFETY: the caller's contract
+    unsafe { *fields = f };
+    r
+}
+
+/// `EESMCondition::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_condition_save(
+    stream: *const EeScenarioStream,
+    fields: *const EeScenarioConditionFields,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, f) = unsafe { (stream_of(stream), *fields) };
+    save::condition_save(&mut s, &f)
+}
+
+/// `EESMObject::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_object_load(
+    stream: *const EeScenarioStream,
+    fields: *mut EeScenarioObjectFields,
+    major: c_ulong,
+    minor: c_ulong,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, mut f) = unsafe { (stream_of(stream), *fields) };
+    let r = save::object_load(&mut s, &mut f, major, minor);
+    // SAFETY: the caller's contract
+    unsafe { *fields = f };
+    r
+}
+
+/// `EESMObject::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_object_save(
+    stream: *const EeScenarioStream,
+    fields: *const EeScenarioObjectFields,
+    minor: c_ulong,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, f) = unsafe { (stream_of(stream), *fields) };
+    save::object_save(&mut s, &f, minor)
+}
+
+/// The effect's `Renumber*` of a kind (`EE_SCENARIO_RENUMBER_*`; its object list's entries:
+/// [`ee_scenario_renumber_ids`]).
+///
+/// # Safety
+/// `fields` must be valid for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_effect_renumber(
+    fields: *mut EeScenarioEffectFields,
+    kind: u32,
+    old: c_ulong,
+    new: c_ulong,
+) {
+    // SAFETY: the caller's contract
+    unsafe { fields::effect_renumber(&mut *fields, kind, old, new) }
+}
+
+/// The condition's `Renumber*` of a kind.
+///
+/// # Safety
+/// `fields` must be valid for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_condition_renumber(
+    fields: *mut EeScenarioConditionFields,
+    kind: u32,
+    old: c_ulong,
+    new: c_ulong,
+) {
+    // SAFETY: the caller's contract
+    unsafe { fields::condition_renumber(&mut *fields, kind, old, new) }
+}
+
+/// The object's `Renumber*` of a kind.
+///
+/// # Safety
+/// `fields` must be valid for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_object_renumber(
+    fields: *mut EeScenarioObjectFields,
+    kind: u32,
+    old: c_ulong,
+    new: c_ulong,
+) {
+    // SAFETY: the caller's contract
+    unsafe { fields::object_renumber(&mut *fields, kind, old, new) }
+}
+
+/// The same upkeep of each of `count` indices (an effect's object list).
+///
+/// # Safety
+/// `ids` must be valid for `count` reads and writes (any pointer when `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_renumber_ids(ids: *mut c_ulong, count: usize, old: c_ulong, new: c_ulong) {
+    if count == 0 {
+        return;
+    }
+    // SAFETY: the caller's contract
+    for id in unsafe { std::slice::from_raw_parts_mut(ids, count) } {
+        fields::renumber(id, old, new);
+    }
+}
+
+/// `EESMEffect::SetAIVariable`'s stores for the effect's behaviour, in order, into `out` (room for
+/// [`EE_SCENARIO_AI_MAX_WRITES`]), their number into `out_count`; whether the applied effect is kept for a saved game.
+///
+/// # Safety
+/// `fields` must be valid for a read, `out` for `EE_SCENARIO_AI_MAX_WRITES` writes, `out_count` for one.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_ai_variable(
+    fields: *const EeScenarioEffectFields,
+    out: *mut EeScenarioAiWrite,
+    out_count: *mut usize,
+) -> bool {
+    // SAFETY: the caller's contract
+    let f = unsafe { *fields };
+    let mut writes = Vec::new();
+    let deferred = aivar::ai_variable(&f, &mut writes);
+    assert!(writes.len() <= EE_SCENARIO_AI_MAX_WRITES);
+    // SAFETY: the caller's contract; at most EE_SCENARIO_AI_MAX_WRITES
+    unsafe {
+        std::ptr::copy_nonoverlapping(writes.as_ptr(), out, writes.len());
+        *out_count = writes.len();
+    }
+    deferred
+}
+
+/// `EESMTrigger::Load`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_trigger_load(
+    stream: *const EeScenarioStream,
+    fields: *mut EeScenarioTriggerFields,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, mut f) = unsafe { (stream_of(stream), *fields) };
+    let r = save::trigger_load(&mut s, &mut f);
+    // SAFETY: the caller's contract
+    unsafe { *fields = f };
+    r
+}
+
+/// `EESMTrigger::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_trigger_save(
+    stream: *const EeScenarioStream,
+    fields: *const EeScenarioTriggerFields,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, f) = unsafe { (stream_of(stream), *fields) };
+    save::trigger_save(&mut s, &f)
+}
+
+/// `EESMArea::Load` (`save` false) or `Save` of the area's values: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `area` for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_area_io(
+    stream: *const EeScenarioStream,
+    area: *mut EeScenarioAreaSave,
+    save: bool,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, mut a) = unsafe { (stream_of(stream), *area) };
+    let r = if save { save::area_save(&mut s, &a) } else { save::area_load(&mut s, &mut a) };
+    // SAFETY: the caller's contract
+    unsafe { *area = a };
+    r
+}
+
+/// `EESMMediaStrings::Load` (`save` false) or `Save`: the `count` strings in order, the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_strings_io(stream: *const EeScenarioStream, count: u32, save: bool) -> i32 {
+    // SAFETY: the caller's contract
+    let mut s = unsafe { stream_of(stream) };
+    save::strings(&mut s, count, save)
 }

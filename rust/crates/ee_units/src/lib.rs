@@ -41,6 +41,7 @@ pub mod order;
 pub mod patrol;
 pub mod physics;
 pub mod players;
+pub mod rally;
 pub mod registry;
 pub mod rust_goal;
 pub mod script;
@@ -51,5 +52,6 @@ pub mod store;
 pub mod tick;
 pub mod unload;
 pub mod update;
+pub mod world;
 
 pub use registry::Registry;

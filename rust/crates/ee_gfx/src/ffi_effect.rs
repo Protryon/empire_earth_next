@@ -152,6 +152,10 @@ pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
             // SAFETY: the lists came from `put_storm`'s Box and are owned by the record
             drop(unsafe { Box::from_raw(record.storm.lists) });
         }
+        if !record.orbit.orbitals.is_null() {
+            // SAFETY: the orbitals came from `effect_orbit`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.orbit.orbitals) });
+        }
     }
 }
 
