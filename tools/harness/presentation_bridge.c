@@ -434,6 +434,10 @@ static void gx_present(HWND hwnd, void* frame)
     unsigned long width = 0, height = 0;
     ReadFrame read = (ReadFrame)ee_sym("GXTestReadFrame");
 #ifndef EE_PLAY_ONLY   /* play.py: no test telemetry (frame dump, UI state/commands, human/lobby helpers) */
+    /* the communications' numbers for game_state_probe.py (EETestFixture.cpp's gEETestComms; their state is Rust's) */
+    typedef void (*Refresh)(void);
+    Refresh comms_refresh = (Refresh)ee_sym("EETestCommsRefresh");
+    if (comms_refresh) comms_refresh();
     if (GetTickCount() - last_dump > 1000) {
         read(frame, NULL, 0, &width, &height);
         if (width * height * 4 > capacity) {

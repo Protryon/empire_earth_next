@@ -47,6 +47,9 @@ HOOK Form *selftest_ui_form(Manager *m, unsigned long i) { return m->forms_first
 HOOK unsigned long selftest_form_id(Form *f) { return f->id; }
 HOOK unsigned long selftest_form_control_count(Form *f) { return f->count; }
 HOOK Control *selftest_form_control(Form *f, unsigned long i) { return f->controls[i]; }
+/* EETestFixture.cpp's EETestCommsRefresh (the probe's communications mirror): nothing to mirror here */
+static int comms_refreshes;
+HOOK void selftest_comms_refresh(void) { comms_refreshes++; }
 
 typedef void (*PresentHook)(HWND, void *);
 static PresentHook present;

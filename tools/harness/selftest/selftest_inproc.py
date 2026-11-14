@@ -39,6 +39,7 @@ BRIDGE_NAMES = {
     "EETestUIFormID": "selftest_form_id",
     "EETestUIFormControlCount": "selftest_form_control_count",
     "EETestUIFormControl": "selftest_form_control",
+    "EETestCommsRefresh": "selftest_comms_refresh",
 }
 
 
