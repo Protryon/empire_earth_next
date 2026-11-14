@@ -228,3 +228,41 @@ fn the_c_entry_answers_the_length_past_its_room() {
     // SAFETY: NULL with no room
     assert_eq!(unsafe { ee_won_mspaint_plan(&p, std::ptr::null_mut(), 0) }, n);
 }
+
+#[test]
+fn the_etched_group_halves_a_negative_label_height_toward_zero() {
+    let p = EeWonMsPaint {
+        kind: EeWonMsPaintKind::EtchedGroup,
+        flags: 0,
+        width: 30,
+        height: 20,
+        a: -3,
+        b: 4,
+        c: 9,
+        d: 0,
+        e: 0,
+    };
+    let lines = plan_lines(&p);
+    assert_eq!(lines.first().unwrap(), "translate 0 -1");
+    assert_eq!(lines.last().unwrap(), "translate 0 1");
+}
+
+#[test]
+fn list_header_and_scroll_thumb_images_use_the_flat_frame() {
+    for ty in [10, 13] {
+        let p = EeWonMsPaint {
+            kind: EeWonMsPaintKind::SkinImage,
+            flags: 0,
+            width: 20,
+            height: 10,
+            a: ty,
+            b: 0,
+            c: 0,
+            d: 0,
+            e: 0,
+        };
+        // the face, then LobbyDrawFrame raised: the dark shadow first (LobbyDraw3DFrame starts with the highlight)
+        let lines = plan_lines(&p);
+        assert_eq!(lines[..4], ["sys 1", "fill 0 0 20 10", "translate 0 0", "sys 0"]);
+    }
+}
