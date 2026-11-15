@@ -437,6 +437,14 @@ M.find_resource_unit = find_resource_unit
 
 -- the own drop sites (town centres, capitols, settlements; with food a granary): {id, x, y (the middle), built}
 function M.drops(food)
+    -- (once a step, each kind: a deathmatch's build queue read the drop sites for every centre it tried and passed the
+    -- step's instruction budget at 43 minutes; the callers only read the list)
+    return M.memo(food and "drops_food" or "drops", function()
+        return M.drops_now(food)
+    end)
+end
+
+function M.drops_now(food)
     local out = {}
     local types = {C.town_center, C.capitol, C.settlement}
     if food then
