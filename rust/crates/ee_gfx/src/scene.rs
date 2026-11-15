@@ -353,7 +353,9 @@ mod tests {
         assert_eq!(t.colors[12], EeGfxColor { red: 0.549, green: 0.549, blue: 1.0 });
         assert_eq!((t.light[9], t.ambient[10], t.unit_ambient[0], t.unit_ambient[11]), (0.0, 0.3, 0.7, 0.6));
         assert_eq!(t.fill[0], GeVector { x: 0.0, y: 0.0, z: -1.0 });
-        assert!((t.fill[1].magnitude() - 1.0).abs() < 1e-6 && t.fill[1].x == t.fill[1].y && t.fill[2].x == -t.fill[1].x);
+        assert!(
+            (t.fill[1].magnitude() - 1.0).abs() < 1e-6 && t.fill[1].x == t.fill[1].y && t.fill[2].x == -t.fill[1].x
+        );
     }
 
     #[test]
