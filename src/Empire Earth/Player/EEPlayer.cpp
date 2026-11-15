@@ -2185,75 +2185,59 @@ void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags)
         theStats->LoadMedia(this, inMediaFlags);
 }
 
+// LoadUnit's and SaveUnit's C++ parts (ee_units player_save.rs load_unit, save_unit): the file's primitives, the
+// class's fit, the loads, the saved unit's kind and its Save
+struct EEPlayerUnitContext {
+    EEPlayer* mPlayer;
+    FSFile* mFile;
+    RTSUnit* mUnit;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+};
+
+static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEPlayerUnitContext& c = *static_cast<EEPlayerUnitContext*>(inContext);
+    if (EESaveIsPrimitive(inOp))
+        return EESavePrimitive(*c.mFile, inOp, io);
+    EEUnitClass* theClass = (uint64_t)io->i < gUnitClassTable.size() ? gUnitClassTable[(size_t)io->i] : NULL;
+    bool theComplex = io->b != 0;
+    EEUnit* theUnit = static_cast<EEUnit*>(c.mUnit);
+    long theResult;
+    switch (inOp) {
+    case EE_UNITS_PLAYER_SAVE_UNIT_FITS:
+        return theClass != NULL && ((theClass->mUnitType != kUnitTypePathPoint && theClass->mIsComplex == 0 && !theComplex)
+                                    || ((theClass->mUnitType == kUnitTypePathPoint || theClass->mIsComplex == 1) && theComplex));
+    case EE_UNITS_PLAYER_SAVE_UNIT_LOAD:
+        theUnit = theClass->CreateUnitAtTile(c.mPlayer, -10000, -10000, NULL, 3.1415927f);
+        theResult = theUnit->Load(c.mMajorVersion, c.mMinorVersion, *c.mFile);
+        if (theUnit->mIsQueuedForDelete)
+            c.mPlayer->KillUnit(theUnit, true);
+        return theResult;
+    case EE_UNITS_PLAYER_SAVE_UNIT_STANDIN:   // (a unit of no class of this kind: its id kept, the unit dropped)
+        theUnit = theComplex ? EEComplexUnit::Create() : EEUnit::Create();
+        theResult = theUnit->Load(c.mMajorVersion, c.mMinorVersion, *c.mFile);
+        c.mPlayer->mLoadedUnitIDs.push_back(theUnit->GetUnitID());
+        theUnit->RepairPointers(c.mMajorVersion, c.mMinorVersion);
+        theUnit->Clear();
+        theUnit->Dereference();
+        return theResult;
+    case EE_UNITS_PLAYER_SAVE_UNIT_KIND:
+        io->i = theUnit->mUnitClass->mUnitType;
+        io->b = theUnit->mUnitClass->mUnitType == kUnitTypePathPoint;
+        return theUnit->mComplexUnit != NULL;
+    case EE_UNITS_PLAYER_SAVE_UNIT_SAVE:
+        return theUnit->Save(c.mMajorVersion, c.mMinorVersion, *c.mFile);
+    }
+    return 0;
+}
+
 // FUNCTION: EXE 0x567ca4
-// Reads one unit from a saved game and creates it on the player; a type/kind mismatch loads into a discarded unit
-// whose ID is kept in the loaded-ID list; returns the read status
+// Reads one unit from a saved game and creates it on the player (ee_units player_save.rs load_unit)
 long EEPlayer::LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theType = 0;
-    bool theComplex = false;
-    bool theHasData = true;
-    long theResult;
-    EEUnitClass* theClass;
-    EEUnit* theUnit;
-    if (inMajorVersion == 0 && inMinorVersion < 0xdf) {
-        theResult = inFile.Read(theType);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theResult = inFile.Read(theComplex);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theClass = gUnitClassTable[theType];
-        if (theClass != NULL && ((theClass->mUnitType != kUnitTypePathPoint && theClass->mIsComplex == 0 && !theComplex)
-            || ((theClass->mUnitType == kUnitTypePathPoint || theClass->mIsComplex == 1) && theComplex))) {
-            theUnit = theClass->CreateUnitAtTile(this, -10000, -10000, NULL, 3.1415927f);
-            theResult = theUnit->Load(0, inMinorVersion, inFile);
-            if (theUnit->mIsQueuedForDelete)
-                this->KillUnit(theUnit, true);
-            goto LoadComplete;
-        }
-        if (theComplex)
-            theUnit = EEComplexUnit::Create();
-        else
-            theUnit = EEUnit::Create();
-        theResult = theUnit->Load(0, inMinorVersion, inFile);
-        this->mLoadedUnitIDs.push_back(theUnit->GetUnitID());
-        theUnit->RepairPointers(0, inMinorVersion);
-        theUnit->Clear();
-        theUnit->Dereference();
-        goto LoadComplete;
-    } else {
-        theResult = inFile.Read(theType);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theResult = inFile.Read(theHasData);
-        if (!theHasData || theResult != kErrorOK)
-            goto LoadComplete;
-        theResult = inFile.Read(theComplex);
-        if (theResult != kErrorOK)
-            goto LoadComplete;
-        theClass = gUnitClassTable[theType];
-        if (theClass != NULL && ((theClass->mUnitType != kUnitTypePathPoint && theClass->mIsComplex == 0 && !theComplex)
-            || ((theClass->mUnitType == kUnitTypePathPoint || theClass->mIsComplex == 1) && theComplex))) {
-            theUnit = theClass->CreateUnitAtTile(this, -10000, -10000, NULL, 3.1415927f);
-            theResult = theUnit->Load(inMajorVersion, inMinorVersion, inFile);
-            if (theUnit->mIsQueuedForDelete)
-                this->KillUnit(theUnit, true);
-            goto LoadComplete;
-        }
-        if (theComplex)
-            theUnit = EEComplexUnit::Create();
-        else
-            theUnit = EEUnit::Create();
-        theResult = theUnit->Load(inMajorVersion, inMinorVersion, inFile);
-        this->mLoadedUnitIDs.push_back(theUnit->GetUnitID());
-        theUnit->RepairPointers(inMajorVersion, inMinorVersion);
-        theUnit->Clear();
-        theUnit->Dereference();
-        goto LoadComplete;
-    }
-LoadComplete:
-    return theResult;
+    EEPlayerUnitContext theContext = {this, &inFile, NULL, inMajorVersion, inMinorVersion};
+    return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, false, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // FUNCTION: EXE 0x567eda
@@ -3098,28 +3082,12 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 }
 
 // FUNCTION: EXE 0x56a4b5
-// Writes one unit's type, kind and data to a saved game (type 0xdf only as a type); returns the write status
+// Writes one unit's type, kind and data to a saved game (ee_units player_save.rs save_unit; path points saved as units
+// from 0.254)
 long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    bool theIsUnit = true;
-    bool theIsComplex;
-    EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(inUnit)->mComplexUnit;
-    EEUnitClass* theClass = static_cast<EEUnit*>(inUnit)->mUnitClass;
-    unsigned long theType = theClass->mUnitType;
-    long theResult = outFile.Write(theType);
-    if (theResult != kErrorOK)
-        return theResult;
-    // port (0.254): path points are saved as units too (the original wrote only their type and made the towns'
-    // patrol points again at load: other units, other ids)
-    theIsUnit = theClass->mUnitType != kUnitTypePathPoint || EESaveHasLiveState(inMajorVersion, inMinorVersion);
-    theResult = outFile.Write(theIsUnit);
-    if (!theIsUnit)
-        return theResult;
-    theIsComplex = theComplexUnit != NULL;
-    theResult = outFile.Write(theIsComplex);
-    if (theResult == kErrorOK)
-        theResult = inUnit->Save(inMajorVersion, inMinorVersion, outFile);
-    return theResult;
+    EEPlayerUnitContext theContext = {this, &outFile, inUnit, inMajorVersion, inMinorVersion};
+    return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // FUNCTION: EXE 0x56a53b

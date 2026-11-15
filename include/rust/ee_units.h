@@ -1174,6 +1174,21 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_COUNT = 66;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_ID = 67;
 
+/// whether unit type `io.i`'s class fits the saved kind (`io.b`: complex)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UNIT_FITS = 68;
+
+/// a unit of class `io.i` made on the player off the map, loaded, killed when it was queued for delete
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UNIT_LOAD = 69;
+
+/// a stand-in unit (complex: `io.b`) loaded, its id kept, repaired, cleared and dropped
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UNIT_STANDIN = 70;
+
+/// the unit saved: its type into `io.i`, whether it is a path point into `io.b`; the result whether it is complex
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UNIT_KIND = 71;
+
+/// the unit's own `Save`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UNIT_SAVE = 72;
+
 /// The series of a player's statistics.
 constexpr static const size_t EE_UNITS_STATS_SERIES = 31;
 
@@ -5442,6 +5457,16 @@ int32_t ee_units_player_save(void *ctx,
                              EeUnitsPlayerSaveFn f,
                              EeUnitsPlayerSaved *rec,
                              EeUnitsQueued *queued,
+                             uint32_t major,
+                             uint32_t minor);
+
+/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) through `f` on `ctx`.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+int32_t ee_units_player_unit(void *ctx,
+                             EeUnitsPlayerSaveFn f,
+                             bool save_it,
                              uint32_t major,
                              uint32_t minor);
 

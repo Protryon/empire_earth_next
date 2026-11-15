@@ -182,6 +182,17 @@ pub const EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE: i32 = 65;
 /// `mWonders->GetSize()` into `io.i`
 pub const EE_UNITS_PLAYER_SAVE_WONDER_COUNT: i32 = 66;
 pub const EE_UNITS_PLAYER_SAVE_WONDER_ID: i32 = 67;
+// `LoadUnit`'s and `SaveUnit`'s parts (load_unit, save_unit: their own context)
+/// whether unit type `io.i`'s class fits the saved kind (`io.b`: complex)
+pub const EE_UNITS_PLAYER_SAVE_UNIT_FITS: i32 = 68;
+/// a unit of class `io.i` made on the player off the map, loaded, killed when it was queued for delete
+pub const EE_UNITS_PLAYER_SAVE_UNIT_LOAD: i32 = 69;
+/// a stand-in unit (complex: `io.b`) loaded, its id kept, repaired, cleared and dropped
+pub const EE_UNITS_PLAYER_SAVE_UNIT_STANDIN: i32 = 70;
+/// the unit saved: its type into `io.i`, whether it is a path point into `io.b`; the result whether it is complex
+pub const EE_UNITS_PLAYER_SAVE_UNIT_KIND: i32 = 71;
+/// the unit's own `Save`
+pub const EE_UNITS_PLAYER_SAVE_UNIT_SAVE: i32 = 72;
 
 const OK: i32 = 0;
 
@@ -825,6 +836,53 @@ pub fn save<H: PlayerSaveHost + ?Sized>(h: &mut H, rec: Rec, major: u32, minor: 
     result
 }
 
+/// `EEPlayer::LoadUnit`: the unit's type, from 0.223 whether it was saved (none: done), whether it is complex, then the
+/// unit: made on the player when its class fits the kind, else loaded into a stand-in whose id is kept. (The original's
+/// two bodies by era, the earlier one passing major 0, which is its major.)
+pub fn load_unit<H: PlayerSaveHost + ?Sized>(h: &mut H, major: u32, minor: u32) -> i32 {
+    let mut unit_type: c_ulong = 0;
+    let mut result = h.read_ulong(&mut unit_type);
+    if result != OK {
+        return result;
+    }
+    if !(major == 0 && minor < 0xdf) {
+        let mut saved = true;
+        result = h.read_bool(&mut saved);
+        if !saved || result != OK {
+            return result;
+        }
+    }
+    let mut complex = false;
+    result = h.read_bool(&mut complex);
+    if result != OK {
+        return result;
+    }
+    let mut io = EeUnitsPlayerSaveIo { i: unit_type as i64, b: u8::from(complex), f: 0.0 };
+    let fits = h.call(EE_UNITS_PLAYER_SAVE_UNIT_FITS, 0, &mut io) != 0;
+    h.call(if fits { EE_UNITS_PLAYER_SAVE_UNIT_LOAD } else { EE_UNITS_PLAYER_SAVE_UNIT_STANDIN }, 0, &mut io)
+}
+
+/// `EEPlayer::SaveUnit`: the type, whether it is saved (not a path point before 0.254's live state), whether it is
+/// complex, then the unit's own save.
+pub fn save_unit<H: PlayerSaveHost + ?Sized>(h: &mut H, major: u32, minor: u32) -> i32 {
+    let mut io = EeUnitsPlayerSaveIo::default();
+    let complex = h.call(EE_UNITS_PLAYER_SAVE_UNIT_KIND, 0, &mut io) != 0;
+    let mut result = h.write_ulong(io.i as c_ulong);
+    if result != OK {
+        return result;
+    }
+    let saved = io.b == 0 || has_live_state(major, minor);
+    result = h.write_bool(saved);
+    if !saved {
+        return result;
+    }
+    result = h.write_bool(complex);
+    if result == OK {
+        result = h.op(EE_UNITS_PLAYER_SAVE_UNIT_SAVE);
+    }
+    result
+}
+
 // ---- FFI
 
 struct FfiHost {
@@ -920,6 +978,26 @@ pub unsafe extern "C" fn ee_units_player_save(
     minor: u32,
 ) -> i32 {
     save(&mut FfiHost { ctx, f, queued }, Rec::new(rec), major, minor)
+}
+
+/// `EEPlayer::LoadUnit` (`save` false) or `SaveUnit` (see [`load_unit`], [`save_unit`]) through `f` on `ctx`.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_player_unit(
+    ctx: *mut c_void,
+    f: EeUnitsPlayerSaveFn,
+    save_it: bool,
+    major: u32,
+    minor: u32,
+) -> i32 {
+    let mut h = FfiHost { ctx, f, queued: std::ptr::null_mut() };
+    if save_it {
+        save_unit(&mut h, major, minor)
+    } else {
+        load_unit(&mut h, major, minor)
+    }
 }
 
 #[cfg(test)]
