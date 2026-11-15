@@ -10209,6 +10209,13 @@ struct EeWonGameSummary {
   size_t rest;
 };
 
+/// A status's text: the resource string, and whether it is a general text formatted with the status's
+/// description.
+struct EeWonStatusLobbyText {
+  EeWonLobbyRes res;
+  bool general;
+};
+
 /// The constructor's parts (`ee_won_tab_init`): the bottom bar's Rust object, the four containers and the layout
 /// point, as `Component*`s.
 struct EeWonTabParts {
@@ -18290,6 +18297,9 @@ ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
                               void *b,
                               ptrdiff_t c,
                               ptrdiff_t d);
+
+/// `GetWONStatusString`'s choice for `status`.
+EeWonStatusLobbyText ee_won_status_lobby_text(int32_t status);
 
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///
