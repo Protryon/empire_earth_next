@@ -69,6 +69,7 @@ pub mod stats;
 pub mod step;
 pub mod store;
 pub mod tick;
+pub mod town_save;
 pub mod turret;
 pub mod unit_bulk;
 pub mod unit_class_fields;
