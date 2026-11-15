@@ -7,9 +7,9 @@
 return require("boom").configure{
     econ = {order = true, iron_guard = true, iron_guard_stone = true},
     order = {shore_scout = true, boat_wood = true, lua_farms = true, soldiers_after_boats = true, blocked_skip = true,
-             early_towers = true, owner_barracks = true, iron_recover = true,
-             copper_mines = true, recover_cap = true, stone_metal_keep = true, metal_parity = true, overrun_spend = true,
-             cit_grow = true},
+             early_towers = true, owner_barracks = true, iron_recover = true, overrun_spend = true,
+             copper_mines = true, recover_cap = true, stone_metal_keep = true, metal_parity = true,
+             cit_grow = true, recover_raids = true, grow_always = true, raid_towers = true},
     plan = {tower_up_ships = true, boat_guard = 2, iron_lean = 50},
     defence = {boats = true},
 }
