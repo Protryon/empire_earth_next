@@ -422,7 +422,7 @@ def main():
                                                                                              'linux-x86_64')
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--exe', type=pathlib.Path, default=ROOT / 'build' / 'xbuild' / host / 'game' / 'ee-aoc')
-    ap.add_argument('--data', default=os.environ.get('EE_DATA_ROOT', str(ROOT / 'data')))
+    ap.add_argument('--data', default=os.environ.get('EE_DATA_ROOT', str(ROOT / 'build' / 'data-root')))
     ap.add_argument('--out', default=str(ROOT / 'build' / 'posix_game' / time.strftime('%Y%m%d-%H%M%S')))
     ap.add_argument('--exercise', choices=['menu', 'settings', 'ui-captures', 'random-game', 'ai-game'],
                     default='ai-game')

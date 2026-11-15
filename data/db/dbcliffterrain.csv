@@ -1,0 +1,7 @@
+#eedata dbcliffterrain
+#format 3
+#rows 3
+row,id,mName,mIndex,mFirstTerrain,mLastTerrain
+0,defaultcliff,DefaultCliff,,cliff,cliff_2
+1,wintercliff,WinterCliff,,cliffwinter,cliffwinter_2
+2,rockycliff,RockyCliff,,cliffrock,cliffrock_2

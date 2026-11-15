@@ -1,0 +1,27 @@
+#eedata dbcivpowers
+#format 3
+#rows 23
+row,id,label,mID,mBonus,mUnitSet,mTechnology,mMiningLimit,mChance,mAmount,mUnitType
+0,flaming_arrows,Flaming Arrows,,0.25,calamity_fire,flaming_arrows_civ_power,0,50,0.0,flaming_arrow
+1,slavery,Slavery,,0.099999994,0,-1,0,0,0.0,-1
+2,priest_tower,Priest Tower,,0.29999998,0,priest_tower_civ_power,0,0,0.0,-1
+3,crusaders,Crusaders,,0.14999999,0,crusaders_civ_power,0,0,0.0,-1
+4,fanaticism,Fanaticism,,0.14999999,0,-1,0,0,0.0,-1
+5,emissaries,Emissaries,,0.19999999,0,emissary_civ_power,0,0,0.0,-1
+6,exploration,Exploration,,0.049999997,0,-1,0,0,50.0,-1
+7,insurance,Insurance,,0.19999999,all_units,-1,0,0,0.1,-1
+8,metallurgy,Metallurgy,,0.29999998,0,-1,0,0,0.0,-1
+9,advanced_mining,Advanced Mining,,0.25,0,-1,7,0,0.0,-1
+10,pathfinding,Pathfinding,,0.25,0,pathfinding_civ_power,0,0,0.0,-1
+11,camouflage,Camouflage,,0.25,camouflage_units,-1,0,0,0.0,-1
+12,bundeswehr,Bundeswehr,,0.049999997,0,bundeswehr_civ_power,0,0,0.0,-1
+13,sas,SAS,,0.14999999,0,sas_explosive_civ_power,0,0,0.0,-1
+14,paratroopers,Paratroopers,,0.14999999,0,paratrooper_civ_power,0,0,0.0,-1
+15,market,Market,,0.19999999,0,market_civ_power,0,0,0.0,-1
+16,cyber_ninja,Cyber Ninja,,0.14999999,0,cyber_ninja_civ_power,0,0,0.0,-1
+17,missile_base,Missile Base,,0.14999999,0,missile_base_civ_power,0,0,0.0,-1
+18,cloaking,Cloaking,,0.25,0,cloaking_effect_civ_power,0,0,0.0,-1
+19,adaptation,Adaptation,,0.14999999,0,-1,0,0,0.0,-1
+20,expansionism,Expansionism,,0.29999998,0,-1,0,0,0.0,-1
+21,conquistadors,Conquistadors,,0.049999997,0,conquistadors_civ_power,0,0,0.0,-1
+22,just_in_time_manufacturing,Just In Time Manufacturing,,0.19999999,0,-1,0,0,0.0,-1

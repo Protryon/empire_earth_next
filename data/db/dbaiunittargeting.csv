@@ -1,0 +1,7 @@
+#eedata dbaiunittargeting
+#format 3
+#rows 3
+row,id,label,mAttackerBonus,mInRangeBonus,mFasterTargetBonus,mStrongerTargetBonus,mPreferredUnitType,mToHitWeight,mProximityWeight,mImmobileTargetBonus,mMaxValue
+0,melee,Melee,2,50,1,1,0,1,50,-500,50
+1,short_range,Short Range,15,30,6,6,0,1,2,-500,15
+2,long_range,Long Range,10,50,4,4,0,1,0,-500,15

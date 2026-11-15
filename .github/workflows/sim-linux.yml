@@ -73,14 +73,13 @@ jobs:
           path: build/data_cache
           key: data-${{ steps.tags.outputs.tags }}
 
-      - name: Data (media and db parts)
+      - name: Data (the media part into data/, beside the committed data/db and data/ai)
         run: |
-          python -I tools/fetch_data.py data --without textures-4x
-          python -I tools/open_data.py ai data
+          python -I tools/fetch_data.py --without textures-4x
 
       - name: Simulations (each seed twice)
         run: |
-          python -I tools/sim_bench.py --name ci --data open --ai-scripts ai --seeds "$SEEDS" --repeat 2 \
+          python -I tools/sim_bench.py --name ci --data open --ai-scripts data/ai --seeds "$SEEDS" --repeat 2 \
             --jobs 2 --game-seconds "$GAME_SECONDS" --difficulty Medium
 
       - uses: actions/upload-artifact@v4

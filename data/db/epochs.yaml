@@ -1,0 +1,711 @@
+# epochs: Empire Earth: The Art of Conquest: every epoch, in order (tools/eedata/techtree.py; it compiles with dbtechtree.yaml into db\dbtechtree.dat). `music`: the epoch's songs (dbmusic ids);
+# `citizen`: its citizen media (high-tech tools from the nano age; the effects, sound and thunder of a unit a
+# research removes).
+eedata: epochs
+format: 3
+records:
+  - id: prehistoric_age
+    label: "Epoch Paleo"
+    slots: 929
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [lightning_unit, dust_effect, dust_effect, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 2
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_paleo
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 0
+    mCost6: 0
+    mCost2: 0
+    mBuildTime: 120000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: whoops
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9065
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: -1
+    mTitleID: 30145
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: stone_age
+    label: "Epoch Stone"
+    slots: 55
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [lightning_unit, dust_effect, dust_effect, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 2
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_stone
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 0
+    mCost6: 0
+    mCost2: 850
+    mBuildTime: 125000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: stone_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9168
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30146
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: copper_age
+    label: "Epoch Copper"
+    slots: 201
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [lightning_unit, dust_effect, dust_effect, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 2
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_copper
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 400
+    mCost6: 400
+    mCost2: 750
+    mBuildTime: 130000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: copper_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9167
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30147
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: bronze_age
+    label: "Epoch Bronze"
+    slots: 111
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [lightning_unit, dust_effect, dust_effect, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 2
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_bronze
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 500
+    mCost6: 500
+    mCost2: 1000
+    mBuildTime: 135000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: bronze_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9166
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30148
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: dark_age
+    label: "Epoch Dark"
+    slots: 202
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 3
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_dark
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 625
+    mCost6: 625
+    mCost2: 1200
+    mBuildTime: 140000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: dark_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9165
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30149
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: middle_ages
+    label: "Epoch Middle"
+    slots: 901
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 3
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_middle_ages
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 725
+    mCost6: 725
+    mCost2: 1450
+    mBuildTime: 145000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: middle_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9164
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30150
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: renaissance
+    label: "Epoch Renaissance"
+    slots: 103
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 3
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_renaissance
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 825
+    mCost6: 825
+    mCost2: 1650
+    mBuildTime: 150000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: renaissance_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9163
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30151
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: imperial_age
+    label: "Epoch Imperial"
+    slots: 93
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 3
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_imperial
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 850
+    mCost6: 850
+    mCost2: 1750
+    mBuildTime: 155000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: imperial_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9153
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30152
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: industrial_age
+    label: "Epoch Industrial"
+    slots: 95
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 3
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_industrial
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 900
+    mCost6: 900
+    mCost2: 1800
+    mBuildTime: 160000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: industrial_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9161
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30153
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: atomic_age_ww1
+    label: "Epoch Atomic - WW1"
+    slots: 205
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: -0.2
+      removal_thunder: thunder_2
+      removal_thunder_every: 0
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_atomic_ww1
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 1100
+    mCost6: 1100
+    mCost2: 2200
+    mBuildTime: 165000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: atomic_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9231
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30154
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: atomic_age_ww2
+    label: "Epoch Atomic - WW2"
+    slots: 921
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: -0.2
+      removal_thunder: thunder_2
+      removal_thunder_every: 0
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_atomic_ww2
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 1150
+    mCost6: 1150
+    mCost2: 2250
+    mBuildTime: 170000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: 0
+    mButton: atomic_epoch_ww2
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9232
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30155
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: atomic_age_modern
+    label: "Epoch Atomic - Modern"
+    slots: 113
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: -0.2
+      removal_thunder: thunder_2
+      removal_thunder_every: 0
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_atomic_modern
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 1175
+    mCost6: 1175
+    mCost2: 2350
+    mBuildTime: 175000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: 0
+    mButton: atomic_epoch_modern
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9174
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30156
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: digital_age
+    label: "Epoch Digital"
+    slots: 210
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 0
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 0
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_digital
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 1350
+    mCost6: 1350
+    mCost2: 2675
+    mBuildTime: 180000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: digitial_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9172
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30157
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: nano_age
+    label: "Epoch Nano"
+    slots: 301
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 1
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 0
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_nano
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 1375
+    mCost6: 1375
+    mCost2: 2700
+    mBuildTime: 185000
+    mPrerequisite1: 0
+    mPrerequisite2: 0
+    mPrerequisite3: 0
+    mPrerequisite4: 0
+    mUnitClass: -1
+    mButton: nano_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9198
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30158
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]
+  - id: space_age
+    label: "Epoch Space"
+    slots: 39
+    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]
+    citizen:
+      high_tech_tools: 1
+      removal_effects: [disintegration_area_effect_intermediate, dust_effect]
+      removal_sound: lightning
+      removal_pitch_offset: 0.0
+      removal_thunder: thunder_2
+      removal_thunder_every: 0
+    mObsoleteEpoch: never
+    mResearchedEvent: epoch_space
+    mObsoleteEvent: 0
+    mCost3: 0
+    mCost4: 0
+    mCost5: 1500
+    mCost6: 1500
+    mCost2: 3000
+    mBuildTime: 190000
+    mPrerequisite1: -1
+    mPrerequisite2: -1
+    mPrerequisite3: -1
+    mPrerequisite4: -1
+    mUnitClass: 0
+    mButton: space_age_epoch
+    mMakesUnit: 0
+    mCountsTowardEpoch: 0
+    mNameID: 9300
+    mKind: 2
+    mCostResource: 4
+    mRequiredStatistic: 0
+    mRequiredStatisticValue: 0
+    mCalamity: undefined
+    mHotKey: a_key
+    mTitleID: 30159
+    mFactor1: 1.0
+    mFactor2: 0.0
+    mFactor3: 0.0
+    mFactor4: 0.0
+    mShowInEditor: 1
+    mObsoletedByDefault: 0
+    mAvailableWithEpoch: 1
+    mResearchedWithEpoch: 1
+    mRequiredSOL: 2
+    mDefaultUnitClass: b_capitol
+    parents: [b_town_center, b_capitol]

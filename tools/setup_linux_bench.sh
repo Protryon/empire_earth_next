@@ -33,10 +33,9 @@ python3 -I tools/fetch_posix.py wgpu sdl3 fonts
 python3 -I tools/xbuild.py sim -j "$JOBS"
 
 gh auth status >/dev/null 2>&1 || { echo "gh is not logged in: gh auth login, then run this again"; exit 1; }
-python3 -I tools/fetch_data.py data --without textures-4x
-python3 -I tools/open_data.py ai data
+python3 -I tools/fetch_data.py --without textures-4x   # the media into data/ (beside data/db, data/ai)
 
 mkdir -p build/sim
 python3 -I tools/sim.py --data open --slot smoke -- --seed 2 --game-seconds 300 --report build/sim/smoke.json
 python3 -c 'import json; r = json.load(open("build/sim/smoke.json")); print("smoke:", r["outcome"], r["game_ms"] // 1000, "game s")'
-echo "ready: python3 -I tools/sim_bench.py --name NAME --data open --ai-scripts ai --seeds 2-33 --jobs $(nproc)"
+echo "ready: python3 -I tools/sim_bench.py --name NAME --data open --ai-scripts data/ai --seeds 2-33 --jobs $(nproc)"

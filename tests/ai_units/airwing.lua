@@ -1,9 +1,9 @@
--- TEST ONLY: the air force's bombing run (ai/ageofai/air.lua, upstream airstrike.c). Needs EE_AI_TEST_SPAWN=1 and
+-- TEST ONLY: the air force's bombing run (data/ai/ageofai/air.lua, upstream airstrike.c). Needs EE_AI_TEST_SPAWN=1 and
 -- the test folder as EE_AI_SCRIPTS (sim_bench --ai-scripts tests/ai_units --env EE_AI_TEST_SPAWN=1
 -- --env EE_AI_NEXT_SCRIPT=airwing --engine "next,classic" --game-seconds 300). The engine's require reads
 -- "ageofai.air" and "lib.*" from EE_AI_SCRIPTS first, then from the data tree's Data/ai: when the tree's copy of
--- ai/ is older than the checkout, run it from a folder that holds this script beside the checkout's ai/ modules
--- (tools: copy ai/* and this file into one scratch folder and pass that as --ai-scripts).
+-- data/ai is older than the checkout, run it from a folder that holds this script beside the checkout's data/ai modules
+-- (tools: copy data/ai/* and this file into one scratch folder and pass that as --ai-scripts).
 --
 -- At 30 s the script puts an Airport and 4 Gothas of its own 6 tiles from its town, an enemy WWI tower and an
 -- 88 mm AA gun 30 tiles away (towards the idle human's town; theirs), and a spotter (an observation balloon) 10

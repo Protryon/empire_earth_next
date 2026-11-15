@@ -1183,8 +1183,7 @@ void EEInitializeNetwork()
         theExeName[0] = 0;
     uint32_t theChecksum = EEGetFileChecksum(theFile, theExeName, 0);   // a 32-bit sum on every data model (LP64: the server compares it with the request's)
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
-    theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
-    // the db tables' text forms (EEDbFindFile loads them in place of the .dat); 0 when there are none
+    // the db tables: their text forms (EEDbFindFile; the original summed the *.dat, which the game no longer reads)
     theChecksum += EEGetFileChecksum(theFile, "*.csv", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.yaml", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Unit AI Scripts\\");

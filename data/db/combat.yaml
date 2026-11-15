@@ -1,0 +1,24 @@
+# combat: Empire Earth: The Art of Conquest rules (tools/eedata/rules.py; the game: EERules.cpp). The damage function and its neighbours.
+# A key left out keeps the game's default (the value written here).
+eedata: combat
+format: 3
+damage:                            # one function for a direct hit, splash damage and the trample
+  minimum: 1                       # the least damage of a direct or splash hit that gets through
+  fanatic_factor: fanaticism.F2    # attack factor of a fanatic attacker (direct hits; a number or <dbworld id>.F|F2|L|L2)
+  elevation_step: 1.0              # the elevation factor moves damage by at least this much (direct, splash)
+  ally_factor: 0.0                 # a direct hit on an own or allied unit does ceil(damage x this) ...
+  herd_ally_factor: 0.1            # ... or this when the attacker is a herd animal
+  dead_food_share: 0.25           # a land food source killed by a non-citizen keeps this share of its food
+  trample_damage: 1                # a moving unit tramples a stopped enemy for this much ...
+  trample_threshold: 1.0           # ... when its to-hit x (attack - armour) is above this
+elevation:                         # the high/low ground factor (dbworld high_ground_*, low_ground_*): unit categories
+  attackers: [land, land_citizen]
+  launchers: [projectile, bomb, missile, torpedo]   # count as their launcher's category
+  targets: [land, building, land_citizen, land_priest, building19, land15, land_military_hero, land_transport, fortress, mining_building, building_priest, gate]
+morale:
+  positive_factor: 0.8           # positive morale takes this share off a time (reload, build ...)
+  negative_factor: 0.6           # negative morale adds this share
+  buildings: [b_house]           # the unit types morale from buildings counts
+ticks:
+  regeneration: 1000               # ms between hit point regenerations and garrison heals
+  power_regeneration: 5000         # ms between power regenerations

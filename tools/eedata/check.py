@@ -9,6 +9,10 @@
 (c) specs: specs.json equals what specgen.py makes from the sources now (and the C++ EEDataTextSpecs.h what
     cppgen.py makes from specs.json), and every struct's size equals its static_assert (or the size its source
     states, for the one without one).
+(d) the committed tables: the repository's data/db (the game's Data/db; --tree-db names another folder) holds
+    exactly the text files this conversion of retail makes, byte for byte, and nothing else; every difference is
+    listed (file, the lines that differ), and the folder's own texts must still compile and validate. A deliberate
+    change to data/db (a mod of the tables) therefore shows here as a difference from retail, never silently.
 """
 import collections
 import pathlib
@@ -19,6 +23,7 @@ import specgen
 import tables
 
 SIZES = binfmt.SIZES
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 
 def _rows(t):
@@ -64,6 +69,64 @@ def hole_values(n, data, spec):
                 v = v[0]
             out[f['name']] = v
     return out
+
+
+def _line_diff(want, got, limit=3):
+    """the first differing lines of two texts -> ['line N: retail ... | data/db ...']"""
+    wl, gl = want.decode('utf-8', 'replace').split('\n'), got.decode('utf-8', 'replace').split('\n')
+    out, n = [], 0
+    for i in range(max(len(wl), len(gl))):
+        w, g = (wl[i] if i < len(wl) else '<none>'), (gl[i] if i < len(gl) else '<none>')
+        if w != g:
+            n += 1
+            if len(out) < limit:
+                out.append(f'line {i + 1}: retail {w[:90]!r} | data/db {g[:90]!r}')
+    return n, out
+
+
+def check_committed(folder, want, spec):
+    """(d): the committed text tables against this conversion of retail -> ok"""
+    import rules
+    ok = True
+    have = {p.name: p.read_bytes() for p in sorted(folder.iterdir()) if p.is_file()} if folder.is_dir() else {}
+    if not have:
+        print(f'(d) FAIL {folder}: no tables (python -I tools/open_data.py db-regen writes them from retail)')
+        return False
+    other = [n for n in have if not n.endswith(('.csv', '.yaml'))]
+    for n in other:
+        print(f'(d) FAIL {folder / n}: not a text table (data/db holds only .csv and .yaml)')
+        ok = False
+    missing = sorted(set(want) - set(have))
+    extra = sorted(n for n in set(have) - set(want) if n not in other)
+    differ = sorted(n for n in set(want) & set(have) if want[n] != have[n])
+    for n in missing:
+        print(f'(d) DIFF {n}: the conversion makes it, {folder.name}/ lacks it')
+    for n in extra:
+        print(f'(d) DIFF {n}: in {folder.name}/, not made by the conversion')
+    for n in differ:
+        k, lines = _line_diff(want[n], have[n])
+        print(f'(d) DIFF {n}: {k} lines differ from retail' + ''.join(f'\n      {x}' for x in lines))
+    # the folder's own texts: they must load, differences or not
+    texts = {p[:-len(tables.text_ext(spec, p.rsplit('.', 1)[0]))]: b for p, b in have.items() if p.endswith(('.csv', '.yaml'))}
+    try:
+        c = tables.Content(texts, spec)
+        for n in tables.binary_tables(spec):
+            if n in texts:
+                c.build(n)
+        for n, e in rules.check_all(texts, c, spec):
+            print(f'(d) FAIL {folder.name}/{n}.yaml: {e}')
+            ok = False
+    except Exception as e:   # TextError, FormatError: the place is in the message
+        print(f'(d) FAIL {folder.name}/: does not compile: {type(e).__name__}: {e}')
+        ok = False
+    if missing or extra or differ:
+        print(f'(d) FAIL {folder}: {len(differ)} files differ from this conversion of retail, {len(missing)} missing, '
+              f'{len(extra)} extra (a deliberate change? then the retail comparison needs to learn it; a converter '
+              f'change: python -I tools/open_data.py db-regen and commit data/db)')
+        ok = False
+    elif ok:
+        print(f'(d) {folder}: {len(have)} files, identical to this conversion of retail, and they compile')
+    return ok
 
 
 def run(a, spec, load_db):
@@ -188,6 +251,11 @@ def run(a, spec, load_db):
         junk_total += sum(junk.values())
         print(f'  {n:24s} {len(b):9,d} B -> {len(text):9,d} B text, {len(rc) - holes:5d} rows + {holes:4d} holes or unread'
               + (f'; 0xCC fill in hole rows (not loaded as values): {", ".join(sorted(junk))}' if junk else ''))
+    # (d) the committed tables (data/db): this conversion's texts and rules documents, by file name
+    want = {f'{n}{tables.text_ext(spec, n)}': t for n, t in texts.items()}
+    want.update({f'{n}.yaml': t for n, t in rtexts.items()})
+    committed = pathlib.Path(a.tree_db).resolve() if getattr(a, 'tree_db', None) else ROOT / 'data' / 'db'
+    ok &= check_committed(committed, want, spec)
     print(f'(a) {na}/{len(binary)} db files (+ epochs.yaml): text -> db -> text identical')
     print(f'(b) {nb}/{len(binary)} db files: every game-read value equals retail ({junk_total:,d} hole-row '
           f'fields were 0xCC fill)')

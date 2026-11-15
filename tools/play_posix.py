@@ -40,7 +40,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--fast', action='store_true', help='the plain build instead of the AddressSanitizer one')
     ap.add_argument('--build', action='store_true', help='build the chosen exe first (tools/xbuild.py game)')
-    ap.add_argument('--data', default=str(ROOT / 'data'), help='the data root (EE_DATA_ROOT), default data/')
+    ap.add_argument('--data', default=str(ROOT / 'build' / 'data-root'),
+                    help='the data root (EE_DATA_ROOT), default build/data-root (tools/fetch_data.py: Data is data/)')
     ap.add_argument('--exe', help='another exe to play (default: the chosen build)')
     ap.add_argument('--out', help='the session folder (default build/playtest/<time>)')
     ap.add_argument('game_args', nargs=argparse.REMAINDER, help='arguments for the game, after --')

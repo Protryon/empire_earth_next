@@ -2,4 +2,9 @@ build/
 toolchain/
 __pycache__/
 *.pyc
-data/
+# data/: the game's Data folder. data/db (the tables and the rules documents) and data/ai (the computer players'
+# scripts) are tracked; the media under it (Models, Textures, Sounds, ...; tools/fetch_data.py unpacks them from the
+# releases, data/.fetched.json lists them) and the saved games the game writes there stay out.
+/data/*
+!/data/db/
+!/data/ai/
