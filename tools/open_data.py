@@ -294,6 +294,8 @@ def cmd_build(a, out=None):
             else:
                 winner[low] = p
     spelled = canonical_dirs(plcs)
+    if 'db' in spelled:   # the converted tables go to Data/db: the copied ones (dbrandommap.dat, ...) must join them
+        spelled = {k: 'db' + v[2:] if k == 'db' or k.startswith('db\\') else v for k, v in spelled.items()}
     data = out / 'Data'
     data.mkdir(parents=True)
     report = dict(made=time.strftime('%Y-%m-%d %H:%M:%S'), binary=bool(a.binary), converters=converters_hash(),
@@ -351,14 +353,18 @@ def cmd_build(a, out=None):
         else:
             target.write_bytes(p.read(low))
         copied[pathlib.Path(low).suffix or '(none)'] += 1
-    for d in EMPTY_DIRS:
-        (data / d).mkdir(exist_ok=True)
+    for d in EMPTY_DIRS:   # unless the folder exists in another spelling (a case-sensitive file system: one folder)
+        if not any(e.name.lower() == d.lower() for e in data.iterdir() if e.is_dir()):
+            (data / d).mkdir()
     report['ai'] = refresh_scripts(out)   # the next engine's scripts (the repository's, not retail data)
     if a.binary:
         report['ids'] = write_row_ids(out)   # the scripts' names for the .dat rows (EEDbRowIds)
     report['copied'] = dict(sorted(copied.items()))
     game = dirs[0]
-    shutil.copytree(game / 'Users', out / 'Users')
+    if (game / 'Users').is_dir():
+        shutil.copytree(game / 'Users', out / 'Users')
+    else:   # an install that was never run has no Users folder yet (the game creates it)
+        (out / 'Users').mkdir(exist_ok=True)
     for f in ROOT_FILES:
         if (game / f).is_file():
             shutil.copy2(game / f, out / f)
