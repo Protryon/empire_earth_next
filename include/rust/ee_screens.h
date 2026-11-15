@@ -4837,6 +4837,244 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// `GetIsMouseCaptured()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CAPTURED = 152;
+
+/// `gMouse->mPointer = a`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_POINTER = 153;
+
+/// `SetUIState(a)` (b 0), or the placement's virtual `Cancel()` (b 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_UI_STATE = 154;
+
+/// The mouse buttons' states as `EE_SCREENS_MF_BTN_*` bits.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_BUTTONS = 155;
+
+/// The shift key's `GetValue()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_SHIFT = 156;
+
+/// Whether the view rectangle contains io.f[0..2]: `gViewport`'s (a 0) or the rasterizer's viewport of
+/// `gScreenIndex` (a 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_VIEW = 157;
+
+/// `EEPointUnitOrTile(io.f[0..2], tile, point, true)` (a 0: the point, from (0, 0, 0), into io.f[0..3]) or
+/// `EEPointUnitOrTileXY` (a 1: the tile, from (-10000, -10000), into io.n): found. The tile is held.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_POINT = 158;
+
+/// The held tile's `IsSeenBy(the current player)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_TILE_SEEN = 159;
+
+/// `gUnitPicker.PickUnit(io.f[0..2], 0)`, held: whether a unit was picked.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PICK = 160;
+
+/// The picked unit's `EE_SCREENS_MF_UNIT_*` a.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_UNIT = 161;
+
+/// `EEDamageFactor(a, b)` into io.f[0].
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_DAMAGE = 162;
+
+/// a 0: `EEGetFirstSelectedUnit(first)`, held: bit 0 its answer, bit 1 the unit non-null; a 1: the selected group's
+/// `GetFirstUnit()`, held: non-null.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_FIRST = 163;
+
+/// The held first unit's `EE_SCREENS_MF_FIRST_*` a (io.f[0..3] the point of `EE_SCREENS_MF_FIRST_IN_RANGE`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_FIRST_FIELD = 164;
+
+/// `EECanConvert(the selected group's unit a, the picked unit's complex unit, in range = b)`: bit 0 its answer, bit
+/// 1 in range.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CAN_CONVERT = 165;
+
+/// Sends the message `EE_SCREENS_MF_SEND_*` a (`ProcessLocalUserInput`) with b and io.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_SEND = 166;
+
+/// `EEOrderAtCursor(io.f[0..2], unit)`: the unit none (a 0), the picked one (1), its complex unit (2).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_ORDER_AT = 167;
+
+/// The current player's `mEvents.AddEvent((io.n[0], io.n[1]), 2, player, a, false)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_EVENT = 168;
+
+/// `EEMakeCalamityEffect(io.f[0..3], the picked unit)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CALAMITY_EFFECT = 169;
+
+/// `EEPreviewPlacement(GetMouseLocation())`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PREVIEW = 170;
+
+/// a -1: `gWorld.GetNumGhostUnits()`; else the ghost a's `EE_SCREENS_MF_GHOST_*` b.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GHOST = 171;
+
+/// `mBuild->mIsQueued = a`, then `mBuild->Build(io.f[0..2])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_BUILD = 172;
+
+/// `mCalamity->Check(io.f[0..2])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CALAMITY_CHECK = 173;
+
+/// `IsInGameView(io.f[0..2])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_IN_GAME_VIEW = 174;
+
+/// `GetEntityGroup(a)->GetIsEnabled()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_ENTITY_ENABLED = 175;
+
+/// `SetEntityGroup(a)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_SET_ENTITY_GROUP = 176;
+
+/// The camera: a 0 `ClearUnitA()` and `ClearUnitB()`, a 1 `Follow(NULL, false, 1, 0, 0)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CAMERA = 177;
+
+/// The unit hack's `Fn157269(io.f[0..2])` (a 0) or `PlaceUnit(io.f[0..2])` (a 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_HACK = 178;
+
+/// `StartSelection(io.f[0..2])` of the select-units control (a 0) or `StartCommand` of the command-units one (a 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_START = 179;
+
+/// The placement's `Build()` (a 0, the wall) or `Build(io.f[0..2], b)` (a 1, the gate): virtual (the scenario
+/// editor's placements build their own way).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_BUILD_WALL = 180;
+
+/// The gate placement's `ClearGhostUnits()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GATE_CLEAR = 181;
+
+/// `EEGhostUnit::CreateGate(0, the gate's mUnitClass, gWorld.GetPlayer(the gate's mPlayer))`, then
+/// `PreviewGate(io.f[0..2], io.n[0])` (the direction back in io.n[0]).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GATE_PREVIEW = 182;
+
+/// The form's `mBuildWall.Update(GetMouseLocation())` (a 0) or `mBuildGate.Update` (a 1): virtual, each back in
+/// [`wall_update`] / [`gate_update`] over a call of its own.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PLACEMENT = 183;
+
+/// The mouse buttons (`EE_SCREENS_MF_OP_MD_BUTTONS`): left just pressed, held, just released; the right's.
+constexpr static const int64_t EE_SCREENS_MF_BTN_L_PRESSED = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_L_HELD = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_L_RELEASED = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_R_PRESSED = 8;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_R_HELD = 16;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_R_RELEASED = 32;
+
+/// The picked unit's reads (`EE_SCREENS_MF_OP_MD_UNIT`): `mUnitID`; another player's unit, the current player's
+/// enemy, seen (`EEIsSeenBy(unit, player, true)`); its class's `mFamily`, `CanBeAttacked()`, `mIsWall`; its tile;
+/// its complex unit non-null, `mIsBuilt`, garrison capacity, room (capacity != `mGarrisonCount`); whether the first
+/// unit's wonder set holds that type; whether the first unit's complex unit has the complex unit's player.
+constexpr static const int64_t EE_SCREENS_MF_UNIT_ID = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_HOSTILE_SEEN = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_FAMILY = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_CAN_BE_ATTACKED = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_IS_WALL = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_TILE_X = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_TILE_Y = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_HAS_COMPLEX = 7;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_COMPLEX_BUILT = 8;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_COMPLEX_CAPACITY = 9;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_COMPLEX_ROOM = 10;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_IN_WONDER_SET = 11;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_SAME_PLAYER = 12;
+
+/// The first unit's reads (`EE_SCREENS_MF_OP_MD_FIRST_FIELD`): `mHitPoints > 0`; its complex unit non-null; its
+/// complex unit's `DistanceSquared3D(io.f) >= UMSquare(its class's mMinRange)`; its class's `mCanSetRallyPoint`;
+/// `mUnitID == mCalamity->mCasterID`.
+constexpr static const int64_t EE_SCREENS_MF_FIRST_ALIVE = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_HAS_COMPLEX = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_IN_RANGE = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_CAN_RALLY = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_IS_CASTER = 4;
+
+/// The ghost units' reads (`EE_SCREENS_MF_OP_MD_GHOST`): `mCanPlace`, its class's unit type, `mTileX`, `mTileY`.
+constexpr static const int64_t EE_SCREENS_MF_GHOST_CAN_PLACE = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_GHOST_TYPE = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_GHOST_TILE_X = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_GHOST_TILE_Y = 3;
+
+/// The messages (`EE_SCREENS_MF_OP_MD_SEND`): the airport command b at io.f[0..2] on the target io.n[0], queued
+/// io.n[1]; attack ground at io.f[0..2]; load the first unit's complex unit into the picked unit; unload the first
+/// unit at io.n; heal the picked unit's complex unit; attack (convert) it, queued b; the first unit's rally goal at
+/// io.f[0..2] on the target io.n[0], queued io.n[1]; a flare at io.n.
+constexpr static const int64_t EE_SCREENS_MF_SEND_AIRPORT = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_ATTACK_GROUND = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_LOAD_GARRISON = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_UNLOAD = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_HEAL = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_CONVERT = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_RALLY = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_FLARE = 7;
+
+/// The modes in the form's table order (main_form.rs' mouse tests: `mMouseTests[state]` holds one).
+constexpr static const int64_t EE_SCREENS_MF_MODE_NORMAL = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_BOMBER_RALLY = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_FIGHTER_RALLY = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_ATOMIC_BOMBER_RALLY = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_BUILD = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_RALLY = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_UNLOAD = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_GARRISON = 7;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_CALAMITY = 8;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_WALL = 9;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_GATE = 10;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_ATOMIC_BOMBER_RALLY = 11;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_BOMBER_RALLY = 12;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_FIGHTER_RALLY = 13;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_RALLY = 14;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_CAMERA = 15;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_HEAL = 16;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_NONE = 17;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_FLARE = 18;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_ATTACK_GROUND = 19;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_PARATROOPER_RALLY = 20;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_CONVERT = 21;
+
+/// `kUnitTypeFarm`, `kUnitTypeRoboticFarm` (the build mode's farms may overlap when several are placed).
+constexpr static const int64_t EE_SCREENS_MF_TYPE_FARM = 42;
+
+constexpr static const int64_t EE_SCREENS_MF_TYPE_ROBOTIC_FARM = 826;
+
 /// The flare's colour (`EeScreensMiniMapCopy::flare_color`): none set, `sFlareColor` (red), `sFlareBlinkColor`.
 constexpr static const uint8_t EE_SCREENS_MM_COLOR_NONE = 0;
 
@@ -7707,6 +7945,28 @@ struct EeScreensLobbyOptionsRecord {
   bool victory;
 };
 
+/// `EEUIBuildWall`'s members from `mState` on (the class's vptr before them): placing (0 no start, 1 dragging),
+/// the tile centres, the wall's technology and player.
+struct EeScreensBuildWallFields {
+  uint32_t state;
+  EeScreensPoint start;
+  EeScreensPoint end;
+  int32_t technology;
+  int32_t player;
+};
+
+/// `EEUIBuildGate`'s members from `mUnitClass` on: the gate's class, the tile of the last build, the technology,
+/// the highlighted walls' type, the gate's direction, the player.
+struct EeScreensBuildGateFields {
+  void *unit_class;
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t technology;
+  int32_t wall_type;
+  int32_t direction;
+  int32_t player;
+};
+
 /// `CopyData`'s record: what the C++ read (in), what it applies (out).
 struct EeScreensMiniMapCopy {
   float rect[4];
@@ -8721,6 +8981,31 @@ void ee_screens_main_form_start(void *call,
 int64_t ee_screens_main_form_member(void *call,
                                     uint32_t which,
                                     int64_t a);
+
+/// `EEUIFMainGame::UpdateMouse`'s mode: the mode `mode` (`EE_SCREENS_MF_MODE_*`) at the mouse (x, y); the mode's
+/// answer.
+int64_t ee_screens_main_form_mouse(void *call,
+                                   int64_t mode,
+                                   float x,
+                                   float y);
+
+/// `EEUIBuildWall::Update(x, y)` over the host's call record (its placement held) and the wall's members.
+///
+/// # Safety
+/// `call` is the host's call record; `wall` the placement's live members.
+void ee_screens_wall_update(void *call,
+                            EeScreensBuildWallFields *wall,
+                            float x,
+                            float y);
+
+/// `EEUIBuildGate::Update(x, y)` over the host's call record (its placement held) and the gate's members.
+///
+/// # Safety
+/// `call` is the host's call record; `gate` the placement's live members.
+void ee_screens_gate_update(void *call,
+                            EeScreensBuildGateFields *gate,
+                            float x,
+                            float y);
 
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.

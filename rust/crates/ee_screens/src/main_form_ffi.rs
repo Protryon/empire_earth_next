@@ -118,3 +118,38 @@ pub extern "C" fn ee_screens_main_form_start(call: *mut c_void, kind: u32, tech:
 pub extern "C" fn ee_screens_main_form_member(call: *mut c_void, which: u32, a: i64) -> i64 {
     main_form::member(&mut Host(call), which, a)
 }
+
+/// `EEUIFMainGame::UpdateMouse`'s mode: the mode `mode` (`EE_SCREENS_MF_MODE_*`) at the mouse (x, y); the mode's
+/// answer.
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_mouse(call: *mut c_void, mode: i64, x: f32, y: f32) -> i64 {
+    crate::mouse_modes::mouse(&mut Host(call), mode, x, y)
+}
+
+/// `EEUIBuildWall::Update(x, y)` over the host's call record (its placement held) and the wall's members.
+///
+/// # Safety
+/// `call` is the host's call record; `wall` the placement's live members.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_wall_update(
+    call: *mut c_void,
+    wall: *mut crate::mouse_modes::EeScreensBuildWallFields,
+    x: f32,
+    y: f32,
+) {
+    crate::mouse_modes::wall_update(&mut Host(call), &crate::hud_ctl::Rec::new(wall), x, y)
+}
+
+/// `EEUIBuildGate::Update(x, y)` over the host's call record (its placement held) and the gate's members.
+///
+/// # Safety
+/// `call` is the host's call record; `gate` the placement's live members.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_gate_update(
+    call: *mut c_void,
+    gate: *mut crate::mouse_modes::EeScreensBuildGateFields,
+    x: f32,
+    y: f32,
+) {
+    crate::mouse_modes::gate_update(&mut Host(call), &crate::hud_ctl::Rec::new(gate), x, y)
+}

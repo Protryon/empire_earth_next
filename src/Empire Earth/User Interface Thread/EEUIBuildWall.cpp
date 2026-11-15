@@ -56,10 +56,6 @@
 #include "ee/EEUIBuildGate.h"
 
 
-// cdecl helper (types inferred): the wall ghosts on inTiles for technology inTechnology of player inPlayer
-// (provisional name)
-void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, long inPlayer);  // 0x23eb4c
-
 // FUNCTION: EXE 0x65643d
 // Asks the main game form to build a wall from the start to the end point
 void EEUIBuildWall::Build()
@@ -99,79 +95,4 @@ void EEUIBuildWall::Terminate()
 }
 
 // FUNCTION: EXE 0x6564df
-// Tracks the mouse in wall placement: a left click sets the start, then builds each segment and chains from
-// its end; a right click cancels; moving previews the wall ghosts along the line
-// NEAR: the original keeps 0.5f on the FP stack for the tile centres and compares the floored ends through a
-// 4-byte copy of the tile's y (an inline tile helper not reconstructed yet); control flow and calls as here
-void EEUIBuildWall::Update(const GE2DPoint& inLocation)
-{
-    std::vector<EETileCoordinate> theTiles;
-    std::vector<GE2DPoint> thePoints;
-    GETransformation theCamera(gWorld.mTransformation);
-    EETileCoordinate theTile;
-    EETile* theUnit;
-    long theX;
-    long theY;
-    theTile.mX = 0;
-    theTile.mY = 0;
-    EEPointUnitOrTileXY(inLocation, theUnit, theX, theY, true);
-    theTile.mX = theX;
-    theTile.mY = theY;
-    if (UIManager::GetLMouseButton()->JustPressed() || UIManager::GetLMouseButton()->GetValue())
-        return;
-    if (UIManager::GetLMouseButton()->JustUnpressed() && gViewport.GetViewRectangle().Contains(inLocation)) {
-        switch (this->mState) {
-        case 0:
-            this->mState = 1;
-            this->mEnd = this->mStart = GE2DPoint(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f);
-            theTiles.clear();
-            this->Build();
-            break;
-        case 1:
-            this->mEnd.SetX(theTile.GetX() + 0.5f);
-            this->mEnd.SetY(theTile.GetY() + 0.5f);
-            theTiles.clear();
-            this->Build();
-            this->mStart.SetX(theTile.GetX() + 0.5f);
-            this->mStart.SetY(theTile.GetY() + 0.5f);
-            break;
-        }
-    } else if (!UIManager::GetRMouseButton()->JustPressed() && !UIManager::GetRMouseButton()->GetValue()) {
-        if (UIManager::GetRMouseButton()->JustUnpressed()) {
-            gWorld.mGhostUnitsLock->Enter();
-            gWorld.ClearGhostUnits();
-            gWorld.mGhostUnitsLock->Leave();
-            switch (this->mState) {
-            case 0:
-            case 1:
-                this->Cancel();
-                break;
-            }
-        } else if ((UMFloor(this->mStart.GetX()) != (float)theTile.GetX() || UMFloor(this->mStart.GetY()) != (float)theTile.GetY()) &&
-                   (UMFloor(this->mEnd.GetX()) != (float)theTile.GetX() || UMFloor(this->mEnd.GetY()) != (float)theTile.GetY())) {
-            if (this->mState == 0) {
-                theTiles.clear();
-                theTiles.push_back(theTile);
-                gWorld.mGhostUnitsLock->Enter();
-                EEPreviewWall(theTiles, this->mTechnology, this->mPlayer);
-                gWorld.mGhostUnitsLock->Leave();
-            }
-            if (this->mState == 1) {
-                this->mEnd.SetX(theTile.GetX() + 0.5f);
-                this->mEnd.SetY(theTile.GetY() + 0.5f);
-                theTiles.clear();
-                this->mStart.InterpolateTo(this->mEnd, 1.0f, thePoints);
-                for (unsigned long i = 0; i < thePoints.size(); i++) {
-                    GE2DPoint& thePoint = thePoints[i];
-                    EETileCoordinate theStep;
-                    theStep.mX = (long)thePoint.GetX();
-                    theStep.mY = (long)thePoint.GetY();
-                    theTiles.push_back(theStep);
-                }
-                gWorld.mGhostUnitsLock->Enter();
-                EEPreviewWall(theTiles, this->mTechnology, this->mPlayer);
-                gWorld.mGhostUnitsLock->Leave();
-            }
-        }
-    }
-}
+// (Update: EEUIFMainGame.cpp, next to its host; ee_screens mouse_modes.rs wall_update)
