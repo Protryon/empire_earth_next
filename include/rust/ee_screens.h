@@ -4057,6 +4057,10 @@ constexpr static const uint32_t EE_SCREENS_HC_VIEW_HAS_MOUSE = 23;
 /// -> the game window's width.
 constexpr static const uint32_t EE_SCREENS_HC_WINDOW_WIDTH = 24;
 
+/// A class's own ops from here (`EE_SCREENS_HC_CLASS + op` reaches its `RustOp` as `op`; the portrait's, the icon
+/// bar's).
+constexpr static const uint32_t EE_SCREENS_HC_CLASS = 64;
+
 /// `kDisplayModeHidden`, `kDisplayModeShown`.
 constexpr static const int64_t EE_SCREENS_HC_HIDDEN = 0;
 
@@ -4810,7 +4814,7 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_ENTITY_GROUP = 84;
 /// `mMouseTests[a]` = the host's mouse test b (`EE_SCREENS_MF_MOUSE_*`).
 constexpr static const uint32_t EE_SCREENS_MF_OP_MOUSE_TEST = 85;
 
-/// `mKeyboardTests[a]` = the host's keyboard test b (`EE_SCREENS_MF_KEYBOARD_*`).
+/// `mKeyboardModes[a]` = b (the keyboard mode: 2 the cinematic's, `EE_SCREENS_MF_KEYBOARD_CINEMATIC`; else none).
 constexpr static const uint32_t EE_SCREENS_MF_OP_KEYBOARD_TEST = 86;
 
 /// `mWheelZoom = EECreateScreenEvent(a)`; `SetMouseWheelMoveEvent(mWheelZoom)`.
@@ -5152,6 +5156,11 @@ constexpr static const int64_t EE_SCREENS_MF_BASE_CLOSE = 3;
 
 constexpr static const int64_t EE_SCREENS_MF_BASE_DRAW = 4;
 
+/// `UIForm::UpdateMouse`, `UIForm::UpdateKeyboard`: their results.
+constexpr static const int64_t EE_SCREENS_MF_BASE_UPDATE_MOUSE = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_BASE_UPDATE_KEYBOARD = 6;
+
 /// The members `ee_screens_main_form_member` runs (its `which`).
 constexpr static const uint32_t EE_SCREENS_MF_DO_ACTIVATE = 1;
 
@@ -5184,6 +5193,11 @@ constexpr static const uint32_t EE_SCREENS_MF_DO_CHAT_TOP = 12;
 constexpr static const uint32_t EE_SCREENS_MF_DO_SAVED_GROUPS = 13;
 
 constexpr static const uint32_t EE_SCREENS_MF_DO_ICON_BAR = 14;
+
+/// `UpdateKeyboard()` in the keyboard mode a (`mKeyboardModes[mUIState]`), `UpdateMouse()`: their results.
+constexpr static const uint32_t EE_SCREENS_MF_DO_KEYBOARD = 15;
+
+constexpr static const uint32_t EE_SCREENS_MF_DO_MOUSE = 16;
 
 /// The title label (`kMainGameTitle`), the error log, the information's scrolling text, the icon bar.
 constexpr static const int64_t EE_SCREENS_MF_CTL_TITLE = 25;
@@ -5889,6 +5903,44 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GATE_PREVIEW = 182;
 /// The form's `mBuildWall.Update(GetMouseLocation())` (a 0) or `mBuildGate.Update` (a 1): virtual, each back in
 /// [`wall_update`] / [`gate_update`] over a call of its own.
 constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PLACEMENT = 183;
+
+/// `GetMouseLocation()` into io.f[0..2]; the answer `mMouseModes[mUIState]` (`EE_SCREENS_MF_MODE_*`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_MOUSE_AT = 184;
+
+/// `gISKeyboard->GetEntity(a, key)`: `EE_SCREENS_MF_KEY_*` bits (the entity found, `GetValue()`, `JustPressed()`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_KEY = 185;
+
+/// The cinematic's calls (`EE_SCREENS_MF_CINE_*` a): the end-cinematic event posted, the scenario manager's
+/// `mIsEndingCinematic`, the pause screen event posted, `PostScreenShot(-1, true, false)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CINEMATIC = 186;
+
+/// The key's bits (`EE_SCREENS_MF_OP_MD_KEY`).
+constexpr static const int64_t EE_SCREENS_MF_KEY_FOUND = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_HELD = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_JUST_PRESSED = 4;
+
+/// The cinematic's calls (`EE_SCREENS_MF_OP_MD_CINEMATIC`).
+constexpr static const int64_t EE_SCREENS_MF_CINE_END = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_CINE_ENDING = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_CINE_PAUSE = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_CINE_SCREENSHOT = 3;
+
+/// The keyboard modes (`mKeyboardModes[state]`): none (the original's two `return false` tests), the cinematic's.
+constexpr static const int64_t EE_SCREENS_MF_KEYBOARD_CINEMATIC = 2;
+
+/// The cinematic's keys (DirectInput's codes: `kKeyEscape`, `kKeyF1`, `kKeyF3`, `kKeyF9`).
+constexpr static const int64_t EE_SCREENS_MF_KEY_ESCAPE = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_F1 = 59;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_F3 = 61;
+
+constexpr static const int64_t EE_SCREENS_MF_KEY_F9 = 67;
 
 /// The mouse buttons (`EE_SCREENS_MF_OP_MD_BUTTONS`): left just pressed, held, just released; the right's.
 constexpr static const int64_t EE_SCREENS_MF_BTN_L_PRESSED = 1;
@@ -7467,10 +7519,12 @@ constexpr static const uint32_t EE_SCREENS_SB_OP_WORLD_LONG = 23;
 /// The string a into the chat log (`gResource->GetString`, `gUserInterface->AddChatLogEntry(..., 0)`).
 constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_STRING = 24;
 
-/// `EECanAffordTrade(a)`.
+/// Whether the current player can make the market trade of the button a (the original's `EECanAffordTrade`: the
+/// adapter's, [`form_op`]).
 constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_AFFORD_TRADE = 25;
 
-/// `EEDecodeTradeButton(a, ...)`: -1 when it fails (b 0), else (or b 1) the resource * 2 + the sell flag.
+/// The market button a decoded ([`decode_trade`], the original's `EEDecodeTradeButton`): -1 when it is none (b 0),
+/// else (or b 1) the resource * 2 + the sell flag.
 constexpr static const uint32_t EE_SCREENS_SB_OP_DECODE_TRADE = 26;
 
 /// `UIControl::ShiftKeyPressed()`.
@@ -7718,6 +7772,21 @@ constexpr static const int64_t EE_SCREENS_SB_IDS_RESOURCE_NAME_GOLD = 30119;
 constexpr static const int64_t EE_SCREENS_SB_IDS_IMPROVEMENT_POWER = 30024;
 
 constexpr static const int64_t EE_SCREENS_SB_IDS_POP_COST = 30469;
+
+/// The form's host's status button ops: `EE_SCREENS_MF_OP_SB + EE_SCREENS_SB_OP_*`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SB = 256;
+
+/// `EEUIFMainGame::ButtonCall`'s members (`which`): `ButtonUp`, `MouseRButtonUp`, `CopyData`, `GetHelpString`.
+constexpr static const uint32_t EE_SCREENS_SB_DO_UP = 0;
+
+constexpr static const uint32_t EE_SCREENS_SB_DO_RIGHT_UP = 1;
+
+constexpr static const uint32_t EE_SCREENS_SB_DO_COPY_DATA = 2;
+
+constexpr static const uint32_t EE_SCREENS_SB_DO_HELP = 3;
+
+/// `kResourceGold` (`mResourceCaps`' index).
+constexpr static const int64_t EE_SCREENS_SB_RESOURCE_GOLD = 5;
 
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
@@ -8689,6 +8758,33 @@ constexpr static const uint32_t EE_SCREENS_UP_OP_BORDER_THICKNESS = 42;
 
 /// -> the scenario editor's first selected unit's complex unit.
 constexpr static const uint32_t EE_SCREENS_UP_OP_EDITOR_COMPLEX = 43;
+
+/// The bar's a: `mEnabled` (0), `mPressed` (1), `GetHasMouseCapture()` (2).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_FIELD = 44;
+
+/// The bar's `mPressed = a != 0`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_SET_PRESSED = 45;
+
+/// Whether the button's rectangle contains the form's mouse location (a 0) or the call's location (a 1).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_INSIDE = 46;
+
+/// The handler under the bar's: `UIButton::MouseLButtonDown` (a 0), `UIButton::MouseLButtonUp` (1),
+/// `EEUIBUpgrade::MouseRButtonDown` (2); its result.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_BASE = 47;
+
+/// The icon moved by (a, a) (`mIcon->SetLocation(its top left + (a, a))`).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_ICON = 48;
+
+/// The status bar's mouse handlers (`bar_mouse`'s which).
+constexpr static const uint32_t EE_SCREENS_UP_BAR_L_DOWN = 0;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_L_UP = 1;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_MOVE = 2;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_R_DOWN = 3;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_R_UP = 4;
 
 /// The fields of [`EE_SCREENS_UP_OP_FIELD`]: the improvement, the scenario editor flag, the level last shown, the
 /// greyed-out state of the last cost update, the time of the last refusal line.
@@ -10358,17 +10454,17 @@ void ee_screens_status_box_hide_backgrounds(void *call);
 /// `EEUIFMGStatusBox::LoadIcons`.
 void ee_screens_status_box_load_icons(void *call);
 
-/// `EEUIFMGStatusButton::ButtonUp` over the host's press record.
-void ee_screens_status_button_up(void *press);
+/// One button op (`EE_SCREENS_SB_OP_*`) over the form's call record, as [`form_op`] sends it to the form's host.
+int64_t ee_screens_status_button_op(void *call,
+                                    uint32_t op,
+                                    int64_t a,
+                                    int64_t b,
+                                    int64_t c);
 
-/// `EEUIFMGStatusButton::MouseRButtonUp` over the host's press record.
-void ee_screens_status_button_right_up(void *press);
-
-/// `EEUIFMGStatusButton::CopyData` over the host's press record: `UIButton::CopyData`'s result.
-int64_t ee_screens_status_button_copy_data(void *press);
-
-/// `EEUIFMGStatusButton::GetHelpString` over the host's press record (its result string): always true.
-bool ee_screens_status_button_help(void *press);
+/// `EEUIFMGStatusButton`'s member `which` (`EE_SCREENS_SB_DO_*`) over the form's call record: `CopyData`'s
+/// `UIButton::CopyData` result, `GetHelpString`'s true, else 0.
+int64_t ee_screens_status_button_member(void *call,
+                                        uint32_t which);
 
 /// `EEUserInterface::TestScenario` on the UI object `ui`.
 void ee_screens_ui_test_scenario(void *ui);
@@ -10458,6 +10554,10 @@ int64_t ee_screens_upgrade_mouse_r_up(void *call);
 
 /// `EEUIBUpgrade::UpdateCost` (the call's out text is the new cost).
 void ee_screens_upgrade_update_cost(void *call);
+
+/// `EEUIFMGStatusBar`'s mouse handler `which` (`EE_SCREENS_UP_BAR_*`; the call's location is `MouseMove`'s).
+int64_t ee_screens_upgrade_bar_mouse(void *call,
+                                     uint32_t which);
 
 }  // extern "C"
 
