@@ -23554,3 +23554,68 @@ Round total: net -1,464. The Graphics Engine directory: 10,134 -> 8,752 lines; t
 - **Left in the plug-in**: DX7Rasterizer.cpp (852 lines: the forwarders, the draws' reads of GE objects, the rasterizer's
   host, about 300 address markers), DX7Trampolines.cpp (366: the vertex arrays' shells, the screen, surface and movie
   shells and hosts, the layout pins) and GX.cpp (137: the GX shims the splash screen and `tools/gx_test`/`sdl_test` call).
+
+## R5b.4, thirty-third round: the transports', the flying kinds' and the gate's bodies of EEUnitClass in Rust (ee_units cls_transport.rs, cls_air.rs, cls_building.rs, cls_host.rs; branch rust-r5b4-core33, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 8ec8f28d | the UCBD record of the class bodies (TEST ONLY), golden from the unmodified C++ in the oracle, late, space, calamity and units profiles | +1120 -856, net +264 (TEST ONLY; ~600 of the lines are the bodies' re-indent inside their noting lambdas) |
+| bc0fa7ee | the scenario profile's UCBD golden (seeds 2-7, TEST ONLY) | tools only |
+| ba4c3aa8 | the transports' tile searches and the flying kinds' heights, flight plans, arrivals and trigger answers in Rust over one host | +222 -1754, net -1532 |
+| 6b0e83a3 | the buildings' facings and the gate's piece turns, tiles, level test and opening tests in Rust | +37 -303, net -266 |
+
+The round's C++: net about -1,534 (the moves -1,798, the UCBD scaffolding +264).
+
+**The record first (UCBD).** No tag pinned the family bodies, so round 33 began with a TEST ONLY record on the
+unmodified code: `EEUCNote` (ee/EEUnitClassKinds.h, the UUTL pattern) folds the outermost noted call of a thread
+(kind, inputs, outputs: units as ids, classes as unit types, floats as bits, tile lists and paths whole) into the
+physics tick's FNV-1a 64. Noted at the dispatchers (CanCarry, CanUnloadAt, FindGatheringTile, FindRendezvousTiles,
+FindUnloadTiles, FilterLoadable, FindBoardingLocation, HasRoom, GetHeightAt, HasArrived, GetSurroundingTiles,
+SelectUnitToRelease) and at the members the hosts call (CanLoad, CanUnloadNear, the flight state, the carrier and
+runway approaches and take-offs, the bomb and goal tests, the facings, the gate helpers); `EE-UCBD-COUNT` lines on
+stderr give the coverage. The notes stay at the C++ entries after the move, so the record compares the Rust bodies
+with the C++ goldens. EvaluateCondition needed no note: USST kind 2 pins every trigger's answer.
+
+**Coverage (UCBD counts, seeds 2-3).** Heights (GetHeightAt), arrivals, the flight state, the runway and carrier
+approaches and take-offs, the bomb test, the facings, the gate's turn, fit, level and opening tests: units, space,
+late (and the scenario profile for the facings and the gate tests). The transports' searches are NOT reached by
+any capture profile: FilterLoadable runs (units, scenario: 45-180 calls), CanCarry only inside it; CanUnloadAt,
+FindRendezvousTiles, FindUnloadTiles, CanLoad, CanUnloadNear, the shore and landing searches are 0 in all six
+profiles (no gate game loads a transport: the AI's transports run in the saveload matrix's island maps). They are
+covered by unit tests over a mock world (17 tests, each a C++ body worked by hand) and the saveload matrix games;
+the dock facing and the gate's part walk are not reached either.
+
+**The host.** One C++ switch (`ee_units_cls_host`, EEUnitClassTransports.cpp, 38 operations) for what the unit
+utilities' world reads (`uu_host::Game`: tiles, terrain, mesh, continents, unit records, tile lines) do not give:
+the continent manager's shore lists and adjacency, the noted leaves (`EEGetBlockingUnits`, `EEGetTilesInRadius`,
+`EEGetTilesNearPoint` keep their UUTL records, `EEGetTileLine` its CBTL), path lengths, a cargo's trial location,
+the members the bodies call (AddWaypointAt, PathToward, FlyToGoal, IsBombOnTarget, IsAwayFromGoal: their notes
+stay), the goals' targets. Lists come back through `ee_units_cls_push`; vectors cross as the unit utilities'
+`tiles_of`/`units_of`. Each family has its own small trait (`TrHost`, `AirHost`/`FlightHost`/`ConditionHost`,
+`BuildingHost`), so the tests mock only what a family asks.
+
+**What moved.**
+- Transports (cls_transport.rs): the gathering, meeting, rendezvous (base, land, helicopter, naval/space), unload
+  (fortress, naval/space search), landing and shore searches, `CanCarry`/`CanUnloadAt` of every transport kind
+  with their dispatch, `ContinentsConnect`, `CanLoad`, `CanUnloadNear`, `FilterLoadable`, the naval transport's
+  arrival. The naval and space transports' identical copies (FindUnloadTiles, CanUnloadAt) are one body each.
+- Flying kinds (cls_air.rs): the seven `GetHeightAt` bodies as one walk with three clamps; `GetNextFlightState`;
+  `ApproachRunway`/`TakeOffFromRunway` (the eight direction wrappers became `runway_direction`); the landable's
+  and the air animal's `HasArrived` and `EvaluateCondition` (None: the common unit class answers).
+- Buildings (cls_building.rs): `EEGetFacingQuarter`, the navy yard's and the dock's facings with their terrain run,
+  `EETurnGatePart`'s table, `EEGetWallGateTiles`, `EEAreTilesLevel`, `AreEnemiesNear`, `IsPasserNear`.
+- Left C++ (world calls with no decision, a move would not shrink them): the carrier approaches and take-off
+  (tag points), the bomb test, ReleaseUnit and SelectUnitToRelease (goal queues), the gate's replacement and
+  build, the boarding location, the unit-created bodies.
+
+**Behaviour.** None seen (oracle seeds 2-7 identical, every golden equal but UUTL). Two crash paths of the original
+became defined: `CanUnloadNear` with no transport for a land transport class (it read the null transport's tile;
+now the first cargo tile; no caller passes it) and `GetNavyYardFacing` with a quarter outside the side table (read
+past it; the quarter is always one of the four).
+
+**Gates.** Commit 1: the UCBD goldens recorded on its build (the other tags equal to their goldens but UUTL, stale on rust 42af0588). Commits ba4c3aa8 and 6b0e83a3: build `--sim` 0/0 each, oracle seeds 2-3 identical each; the captures at seeds 2-3 of oracle, late, space, calamity and units on the moved tree: every digest (UCBD, UUTL and the ungated tags included) equal to the unmodified build's. Merged with `rust` 3114725d (the goldens rust's with the UCBD lines; PORT_LEARNINGS and RUST_PLAN rust's; headers regenerated, nothing to narrow): build `--sim` 0/0, the test profile 0/0; oracle seeds 2-7 identical to `ref`; the captures at seeds 2-3 PASS in all six profiles (oracle 179 digests, late 180, space 181, calamity 197, scenario 24, units 195; the re-recorded UUTL now equal); the saveload matrix PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (3,735 tests, clippy, rustfmt, headers); a sim_bench game (seed 5, Small, Hard, 2 AI) to the time cap with both computers alive (populations 39 and 45); under the harness lock the tour (`--exercise tour --input-check --play-seconds 120`) `RESULT PASS tour` and the orders game (`--exercise random-game --orders`) `RESULT PASS random-game`.
+
+**For the next round.** The kinds' dispatchers (EEUnitClassKinds.cpp) now call Rust for every transport and flying
+body: the kind-to-body table can be Rust once the remaining C++ bodies (citizens, priests, shots) are. Coverage of
+the transports' searches needs a capture profile with transport landings (an islands map with the AI's naval
+invasions).
