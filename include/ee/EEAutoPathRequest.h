@@ -5,6 +5,8 @@
 #ifndef EE_EEAUTOPATHREQUEST_H
 #define EE_EEAUTOPATHREQUEST_H
 
+#include "ee/EECPASGFlags.h"
+
 #include <vector>
 #include "ee/EETileCoordinate.h"
 

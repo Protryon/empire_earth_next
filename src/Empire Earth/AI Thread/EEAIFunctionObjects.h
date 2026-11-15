@@ -8,6 +8,8 @@
 #ifndef EE_EEAIFUNCTIONOBJECTS_H
 #define EE_EEAIFUNCTIONOBJECTS_H
 
+#include "ee/EEAIFOUnitScreeners.h"
+
 class EEComplexUnit;
 class EEComputerPlayer;
 class EEUnitClass;
@@ -158,41 +160,6 @@ struct EEAIFOUnitClassGreater {
     bool operator()(const long& inA, const long& inB);
 };
 
-class EECPAttackSubGroup;
-class EECPILocation;
-
-// RTTI EEAIFOBestRegionToAttack (vtable 0x43a4dc: ??_G 0x2b1a4, +0x04 _purecall): a sub group's strike-location
-// scorer; sizeof 0x10 (EECPAttackGroup::FindLandTarget's frame); slot/member names provisional
-class EEAIFOBestRegionToAttack {
-public:
-    EEAIFOBestRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile);   // 0x2b100
-    virtual ~EEAIFOBestRegionToAttack() {}
-    virtual float operator()(const EECPILocation& inLocation) = 0;   // +0x04
-
-    EETileLocation mTile;                   // +0x04 (the attack's start tile: EECPILocation +0x04)
-    EECPAttackSubGroup* mSubGroup;          // +0x0c
-};
-
-// RTTI EEAIFOBestInfluenceRegionToAttack (vtable 0x43a4e8): the land scorer of EECPAttackGroup::FindLandTarget
-class EEAIFOBestInfluenceRegionToAttack : public EEAIFOBestRegionToAttack {
-public:
-    EEAIFOBestInfluenceRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile);   // 0x2b129
-    virtual float operator()(const EECPILocation& inLocation);   // +0x04 0x2b145 (0.0f)
-};
-
-// RTTI EEAIFOBestInfluenceRegionToAirStrike (vtable 0x43a4f8; bases: EEAIFOBestRegionToAttack only): the air scorer of
-// EECPAttackGroup::FindAirTarget (ctor 0x2b14e with a gPhysics draw); sizeof 0x20 (FindAirTarget's frame)
-class EEAIFOBestInfluenceRegionToAirStrike : public EEAIFOBestRegionToAttack {
-public:
-    EEAIFOBestInfluenceRegionToAirStrike(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile, float inChance);
-    virtual float operator()(const EECPILocation& inLocation);   // +0x04 (ICF-folded into 0x2b145: 0.0f)
-
-    // +0x10: 8 bytes the ctor leaves unset (sizeof 0x20; not a tile: a tile's ctor zeroes, r24 prep) PROVISIONAL
-    long mL10;
-    long mL14;
-    float mChance;                          // +0x18 (0, or the draw when positive)
-    long mCount;                            // +0x1c (1, or (long)(draw * 10) when that is not 0)
-};
 
 // The screeners' base slot +0x04 (COMDAT 0x2de43, first emitted by EEComputerPlayer.cpp): not to be called. The class
 // is declared in ee/EECPUnitSelector.h; the ESVERIFY line is the original's (0x1d8 = 472).

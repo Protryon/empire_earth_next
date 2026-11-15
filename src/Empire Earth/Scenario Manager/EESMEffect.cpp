@@ -169,103 +169,16 @@ void EESMEffect::Reset()
 #include "ee/EECPCombatManager.h"
 #include "ee/EETown.h"
 #include "ee/EECPUnitRequirement.h"
-#include "ee/EECPCombatStrategy.h"
-#include "ee/EECPAttackCommander.h"
-#include "ee/EECPIntelligence.h"
+#include "ee/EECPEngine.h"
 
 // FUNCTION: EXE 0x5bb82f
 // Has each chosen computer player raise a military group of the target object's unit kind (random min..max count)
 // for its first town, else the largest continent, aimed at a random enemy
 void EESMEffect::BuildObject()
 {
-    std::vector<long> theUnitIDs;
-    std::vector<long> thePlayers;
-    EECPCombatStrategy theStrategy;
-    EECPUnitRequirement theRequirement;
-    EECPILocation theLocation;
-    EECPAGTask theTask;
-    EEAIContinent* theContinent = NULL;
-    EETown* theTown = NULL;
-    bool theAnyCount = false;
-    if (gWorld.mScenarioManager != NULL) {
-        gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-        for (long i = (long)thePlayers.size() - 1; i >= 0; --i) {
-            EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(gWorld.GetPlayer(*(thePlayers.begin() + i)));
-            if (thePlayer == NULL)
-                continue;
-            // per player: no town, continent or "any count" carried over from the previous player
-            theTown = NULL;
-            theContinent = NULL;
-            theAnyCount = false;
-            if (thePlayer->mTowns.size() != 0)
-                theTown = thePlayer->mTowns[0];
-            if (theTown == NULL) {
-                theContinent = gContinentManager.GetContinentByID((unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand));
-                if (theContinent == NULL) {
-                    theContinent = gContinentManager.GetContinentByID((unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone));
-                    if (theContinent == NULL)
-                        continue;
-                }
-            }
-            EECPCombatManager* theCombat = thePlayer->mCombatManager;
-            if (theTown != NULL) {
-                theLocation.mSerial = theTown->mSerial;
-                theLocation.mType = kAIAreaTown;
-            } else {
-                theLocation.mSerial = theContinent->mSerial;
-                theLocation.mType = kAIAreaContinent;
-            }
-            theLocation.ResetToArea();
-            theTask.mLocation = theLocation;
-            EEPlayer* theTarget = theCombat->mIntelligence->GetRandomEnemy(thePlayer);
-            theTask.mPlayer = theTarget != NULL ? gWorld.GetPlayer(theTarget->mPlayerID) : gWorld.GetPlayer(0);
-            theTask.mType = kAGTaskLocation;
-            theTask.mIsActive = true;
-            theStrategy.Reset();
-            theStrategy.mKind = 1;
-            theStrategy.mAddFavorites = false;
-            theRequirement.Clear();
-            EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mTargetObject);
-            if (theObject == NULL)
-                continue;
-            if (theObject->GetMinCount() == 0 && theObject->GetMaxCount() == 0) {
-                theAnyCount = true;
-                theStrategy.mNumUnits = 0;
-                theStrategy.mNumRemaining = 0;
-            } else {
-                unsigned long theLow = min(theObject->GetMinCount(), theObject->GetMaxCount());
-                unsigned long theHigh = max(theObject->GetMinCount(), theObject->GetMaxCount());
-                long theCount = gPhysics->GetRandom((long)theLow, (long)theHigh);
-                theRequirement.mNumLeft = theCount;
-                theRequirement.mNumWanted = theCount;
-                if (!theAnyCount) {
-                    theStrategy.mNumUnits += theCount;
-                    theStrategy.mNumRemaining = theStrategy.mNumUnits;
-                }
-            }
-            bool theAddRequirement = true;
-            if (theObject->mFamily == 0) {
-                EEUnitClass* theClass = gUnitClassTable[theObject->mClass];
-                if (theClass != NULL && theClass->mIsScenarioSelectable)
-                    theRequirement.mUnitClass = theObject->mClass;
-                else
-                    theAddRequirement = false;
-            } else if (theObject->mFamily < 0x10)
-                theRequirement.mUnitClass = thePlayer->mFavoriteLandType;
-            else if (theObject->mFamily < 0x4b)
-                theRequirement.mFamily = theObject->mFamily - 0xf;
-            else if (theObject->mFamily <= 0x74)
-                theRequirement.mUnitKind = theObject->mFamily - 0x4a;
-            else
-                theAddRequirement = false;
-            if (theAddRequirement) {
-                theRequirement.mKind = kRequirementAlreadyDefined;
-                theStrategy.mRequirements.push_back(theRequirement);
-            }
-            if (theCombat->IsValidTask(theTask, theStrategy, theUnitIDs))
-                theCombat->mAttackCommander->CreateGroupFromStrategy(theTask, theStrategy, theUnitIDs);
-        }
-    }
+    // port: the computer players' C++ attack groups this effect raised or aimed were deleted in stage 5 (the Lua AIs
+    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.89)
+    EECPEngineLog("scenario effect BuildObject: no C++ attack groups since stage 5, ignored");
 }
 
 // FUNCTION: EXE 0x5bbba1
@@ -273,147 +186,9 @@ void EESMEffect::BuildObject()
 // are requested), aimed at the target area or the target object's unit; an attack or a defence group per mIsAttack
 void EESMEffect::CreateAIMilitaryGroup()
 {
-    std::vector<long> theUnitIDs;
-    std::vector<long> thePlayers;
-    EECPCombatStrategy theStrategy;
-    EECPUnitRequirement theRequirement;
-    EECPILocation theLocation;
-    EECPAGTask theTask;
-    EEPlayer* theTargetPlayer = NULL;
-    unsigned long theAreaSerial = 0;
-    unsigned long theUnitID = 0;
-    long theTotalUnits = 0;
-    bool theAnyCount = false;
-    bool theContinentArea = false;
-    if (gWorld.mScenarioManager != NULL) {
-        gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-        for (long i = (long)thePlayers.size() - 1; i >= 0; --i) {
-            EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(gWorld.GetPlayer(thePlayers[i]));
-            if (thePlayer == NULL)
-                continue;
-            EECPCombatManager* theCombat = thePlayer->mCombatManager;
-            theAnyCount = false;
-            theTask.mMode = kAGModeCombat;
-            if (this->mUsesTargetArea) {
-                EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mTargetArea);
-                if (theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
-                    for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
-                        EEAIRectangleArea* theRectangle = gContinentManager.mRectangleAreas[j];
-                        if (theRectangle != NULL && theRectangle->mScenarioAreaID == theArea->mID) {
-                            theAreaSerial = theRectangle->mSerial;
-                            break;
-                        }
-                    }
-                    if (theAreaSerial == 0 && theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
-                        EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
-                        if (theContinent != NULL) {
-                            theAreaSerial = theContinent->mSerial;
-                            theContinentArea = true;
-                        }
-                    }
-                }
-            }
-            if (!this->mUsesTargetArea) {
-                EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mTargetObject);
-                if (theObject != NULL && theObject->mUnits.size() != 0) {
-                    theUnitID = *theObject->mUnits.begin();
-                    for (long k = (long)theObject->mUnits.size() - 1; k >= 0; --k) {
-                        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theObject->mUnits[k]));
-                        if (theUnit != NULL && theUnit->GetHitPoints() > 0) {
-                            theUnitID = theUnit->GetUnitID();
-                            theTask.SetUnit(theUnit);
-                        }
-                    }
-                }
-            }
-            if (theAreaSerial != 0) {
-                theLocation.mSerial = theAreaSerial;
-                theLocation.mType = theContinentArea ? 1 : 8;
-                theLocation.ResetToArea();
-                theTask.mLocation = theLocation;
-                theTargetPlayer = theCombat->mIntelligence->GetRandomEnemy(thePlayer);
-            } else if (theUnitID != 0) {
-                EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theUnitID));
-                if (theUnit != NULL) {
-                    theTargetPlayer = theUnit->mPlayer;
-                    if (theUnit->mContainer != NULL)
-                        theLocation.mTile = EETileLocation(theUnit->mContainer->GetTileX(), theUnit->mContainer->GetTileY());
-                    else
-                        theLocation.mTile = EETileLocation(theUnit->GetTileX(), theUnit->GetTileY());
-                    theTask.mLocation = theLocation;
-                } else
-                    theTargetPlayer = theCombat->mIntelligence->GetRandomEnemy(thePlayer);
-            }
-            theTask.mPlayer = theTargetPlayer != NULL && theTargetPlayer != thePlayer
-                           ? gWorld.GetPlayer(theTargetPlayer->mPlayerID) : gWorld.GetPlayer(0);
-            theTask.mIsActive = true;
-            theTask.mType = kAGTaskLocation;
-            if (this->mIsAttack && theUnitID == 0)
-                theTask.mType = kAGTaskTerritory;
-            else if (this->mIsAttack && theTask.mUnit != NULL && theTask.mUnit->mPlayer != thePlayer
-                     && thePlayer->mEnemies[theTask.mUnit->mPlayer->mPlayerID] != 0)
-                theTask.mType = kAGTaskUnit;
-            theStrategy.Reset();
-            theStrategy.mKind = 5 - (this->mIsAttack != false);
-            theStrategy.mAddFavorites = this->mUsesFavorites;
-            for (long n = (long)this->mObjects.size() - 1; n >= 0; --n) {
-                theRequirement.Clear();
-                EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObjects[n]);
-                if (theObject == NULL)
-                    continue;
-                if (theObject->Evaluate(false) && theObject->mUnits.size() != 0) {
-                    theTotalUnits += theObject->mUnits.size();
-                    for (unsigned long u = 0; u < theObject->mUnits.size(); u++)
-                        theUnitIDs.push_back(theObject->mUnits[u]);
-                    continue;
-                }
-                if (theObject->mMinCount == 0 && theObject->mMaxCount == 0) {
-                    theAnyCount = true;
-                    theStrategy.mNumUnits = 0;
-                    theStrategy.mNumRemaining = 0;
-                } else {
-                    unsigned long theLow = min(theObject->mMinCount, theObject->mMaxCount);
-                    unsigned long theHigh = max(theObject->mMinCount, theObject->mMaxCount);
-                    long theCount = gPhysics->GetRandom((long)theLow, (long)theHigh);
-                    theRequirement.mNumLeft = theCount;
-                    theRequirement.mNumWanted = theCount;
-                    if (!theAnyCount) {
-                        theStrategy.mNumUnits += theCount;
-                        theStrategy.mNumRemaining = theStrategy.mNumUnits;
-                    }
-                }
-                bool theAddRequirement = true;
-                if (theObject->mFamily == 0) {
-                    EEUnitClass* theClass = gUnitClassTable[theObject->mClass];
-                    if (theClass != NULL && theClass->mIsScenarioSelectable)
-                        theRequirement.mUnitClass = theObject->mClass;
-                    else
-                        theAddRequirement = false;
-                } else if (theObject->mFamily < 0x10)
-                    theRequirement.mUnitClass = thePlayer->mFavoriteLandType;
-                else if (theObject->mFamily < 0x4b)
-                    theRequirement.mFamily = theObject->mFamily - 0xf;
-                else if (theObject->mFamily <= 0x74)
-                    theRequirement.mUnitKind = theObject->mFamily - 0x4a;
-                else
-                    theAddRequirement = false;
-                if (theAddRequirement) {
-                    theRequirement.mKind = kRequirementAlreadyDefined;
-                    theStrategy.mRequirements.push_back(theRequirement);
-                }
-            }
-            for (long v = (long)theUnitIDs.size() - 1; v >= 0; --v) {
-                EEUnit* theUnit = gWorld.GetUnit(theUnitIDs[v]);
-                if (theUnit == NULL || theUnit->mComplexUnit == NULL || theUnit->mPlayer != thePlayer
-                    || theUnit->GetHitPoints() < 1 || !theCombat->IsMilitaryUnit(theUnit->mComplexUnit))
-                    theUnitIDs.erase(theUnitIDs.begin() + v);
-                else if (theUnit->mComplexUnit->mIsDetachedFromAI)
-                    theUnit->mComplexUnit->mIsDetachedFromAI = false;
-            }
-            if (theCombat->IsValidTask(theTask, theStrategy, theUnitIDs))
-                theCombat->mAttackCommander->CreateGroupFromStrategy(theTask, theStrategy, theUnitIDs);
-        }
-    }
+    // port: the computer players' C++ attack groups this effect raised or aimed were deleted in stage 5 (the Lua AIs
+    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.89)
+    EECPEngineLog("scenario effect CreateAIMilitaryGroup: no C++ attack groups since stage 5, ignored");
 }
 
 // FUNCTION: EXE 0x5bc333
@@ -421,61 +196,9 @@ void EESMEffect::CreateAIMilitaryGroup()
 // for each chosen computer player; a new target must pass the combat manager's IsValidTarget
 void EESMEffect::ModifyAIMilitaryTarget()
 {
-    std::vector<unsigned long> theUnused;
-    std::vector<long> thePlayers;
-    unsigned long theSerial = 0;
-    if (gWorld.mScenarioManager == NULL)
-        return;
-    gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-    for (long i = (long)thePlayers.size() - 1; i >= 0; --i) {
-        EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(gWorld.GetPlayer(thePlayers[i]));
-        if (thePlayer == NULL)
-            continue;
-        EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mTargetArea);
-        EECPCombatManager* theCombat = thePlayer->mCombatManager;
-        if (theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
-            for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
-                if (gContinentManager.mRectangleAreas[j] != NULL
-                    && (gContinentManager.mRectangleAreas[j])->mScenarioAreaID == theArea->mID) {
-                    theSerial = (gContinentManager.mRectangleAreas[j])->mSerial;
-                    break;
-                }
-            }
-            if (theSerial == 0 && theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
-                EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
-                if (theContinent != NULL)
-                    theSerial = theContinent->mSerial;
-            }
-        }
-        unsigned long theUnitID = (unsigned long)-1;
-        EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mTargetObject);
-        if (theObject != NULL && theObject->mUnits.size() > 0) {
-            theUnitID = *theObject->mUnits.begin();
-            for (long k = (long)theObject->mUnits.size() - 1; k >= 0; --k) {
-                EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theObject->mUnits[k]));
-                if (theUnit != NULL && theUnit->GetHitPoints() > 0)
-                    theUnitID = theUnit->GetUnitID();
-            }
-        }
-        if (this->mIsAddTarget && !theCombat->IsValidTarget(theSerial, theUnitID, this->GetIsAttack()))
-            continue;
-        if (this->mIsAttack) {
-            if (this->mIsAddTarget)
-                theCombat->AddAttackTask(theUnitID, theSerial);
-            else if (UIsNone32(theUnitID))
-                theCombat->DropAreaTask(theSerial, false);
-            else
-                theCombat->DropUnitTask(theUnitID, true);
-        } else {
-            if (!this->mIsAddTarget) {
-                if (UIsNone32(theUnitID))
-                    theCombat->DropAreaTask(theSerial, false);
-                else
-                    theCombat->DropUnitTask(theUnitID, true);
-            } else
-                theCombat->AddDefendTask(theUnitID, theSerial);
-        }
-    }
+    // port: the computer players' C++ attack groups this effect raised or aimed were deleted in stage 5 (the Lua AIs
+    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.89)
+    EECPEngineLog("scenario effect ModifyAIMilitaryTarget: no C++ attack groups since stage 5, ignored");
 }
 
 // FUNCTION: EXE 0x5bc60f

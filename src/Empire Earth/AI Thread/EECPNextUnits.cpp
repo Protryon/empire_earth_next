@@ -75,7 +75,7 @@
 #include "ee/EETeam.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEMessageID.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEGameLog.h"
@@ -418,8 +418,6 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
         return;
     if (inUnit->mIsDetachedFromAI)
         inUnit->mIsDetachedFromAI = false;
-    if (inPlayer->mCombatManager != NULL)
-        inPlayer->mCombatManager->UnitAdded(inUnit);
     long theCategory = inUnit->mUnitClass->mCategory;
     if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen)
         || inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResourceManager == NULL)

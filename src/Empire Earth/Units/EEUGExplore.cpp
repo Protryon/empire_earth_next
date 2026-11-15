@@ -15,6 +15,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -26,8 +27,7 @@
 #include <math.h>
 #include "ee/EETileLocation.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include <map>
 #include "lle/U2DPolygon.h"
 #include "ee/EEAIArea.h"
@@ -39,7 +39,6 @@
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEMapDimensions.h"
 
 const UString EEUGExplore::sData("EEUGExplore-Data");
