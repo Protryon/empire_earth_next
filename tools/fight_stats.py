@@ -103,20 +103,20 @@ def homes(deaths):
         if e["d"] >= 0:
             by[e["p"]].append(e)
     for p, es in by.items():
-        es = es[:: max(1, len(es) // 150)]
+        es = es[:: max(1, len(es) // 60)]
         xs, ys = [e["x"] for e in es], [e["y"] for e in es]
 
         def err(cx, cy):
             return sum((((e["x"] - cx) ** 2 + (e["y"] - cy) ** 2) ** 0.5 - e["d"]) ** 2 for e in es)
         best = None
-        for cx in range(min(xs) - 60, max(xs) + 61, 4):
-            for cy in range(min(ys) - 60, max(ys) + 61, 4):
+        for cx in range(min(xs) - 60, max(xs) + 61, 8):
+            for cy in range(min(ys) - 60, max(ys) + 61, 8):
                 v = err(cx, cy)
                 if best is None or v < best[0]:
                     best = (v, cx, cy)
         _, bx, by_ = best
-        for cx in range(bx - 4, bx + 5):
-            for cy in range(by_ - 4, by_ + 5):
+        for cx in range(bx - 8, bx + 9):
+            for cy in range(by_ - 8, by_ + 9):
                 v = err(cx, cy)
                 if v < best[0]:
                     best = (v, cx, cy)
