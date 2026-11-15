@@ -921,6 +921,44 @@ pub enum EeUiOp {
     /// Hot key `a`'s `SetEnabled(b != 0)`.
     GrpSetEnabled = 649,
 
+    // ---- the file lists (R6 ui round 21, filelistobj.rs): on the list box or combo box
+    /// `DeleteAllEntries()`.
+    FlDeleteAll = 650,
+    /// Path `a`'s `GetDirectoryCount()`.
+    FlDirCount = 651,
+    /// Search `a`: path `b`'s directory `c` into its directory, then the directory's `GetFirstFile` -> its result.
+    FlDirFirst = 652,
+    /// Search `a`'s `GetNextFile` -> its result.
+    FlNext = 653,
+    /// Search `a`'s `GetFirstFile` again (the original's call after each directory; the result unused).
+    FlRewind = 654,
+    /// A new search (the original's `FSFileSpec` locals: the file and the directory) -> it.
+    FlSearchNew = 655,
+    /// `delete` search `a`.
+    FlSearchDelete = 656,
+    /// Search `a`'s file name's length in bytes.
+    FlNameLength = 657,
+    /// Search `a`'s file name copied into `b` (`c` bytes, NUL included).
+    FlNameCopy = 658,
+    /// `AppendLine(a)`: `a` NUL-terminated bytes.
+    FlAppend = 659,
+    /// `InsertLine(a, 0, UWSNoCaseAlphaSort())` (the combo box's list's): `a` NUL-terminated bytes.
+    FlInsertSorted = 660,
+    /// `GetCurrentSelection` -> its result, the selection's bits in `f[0]`.
+    FlSelection = 661,
+    /// Line `a`'s (`GetData(a)`) length in bytes.
+    FlLineLength = 662,
+    /// Line `a` copied into `b` (`c` bytes, NUL included).
+    FlLineCopy = 663,
+    /// Path `b`'s `FindFile(a)` (NUL-terminated bytes) and, when found, the file's `Delete()` (the file then
+    /// deleted) -> the delete's result, else the lookup's; `f[0]`'s bits 1 when found.
+    FlDeleteFile = 664,
+    /// `DeleteLine(a)`.
+    FlDeleteLine = 665,
+    /// Path `a`'s `Reference()`.
+    FlPathReference = 666,
+    /// Path `a`'s `Dereference()`.
+    FlPathRelease = 667,
 }
 
 impl EeUiOp {

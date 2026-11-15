@@ -953,6 +953,43 @@ enum class EeUiOp : uint32_t {
   GrpTab = 648,
   /// Hot key `a`'s `SetEnabled(b != 0)`.
   GrpSetEnabled = 649,
+  /// `DeleteAllEntries()`.
+  FlDeleteAll = 650,
+  /// Path `a`'s `GetDirectoryCount()`.
+  FlDirCount = 651,
+  /// Search `a`: path `b`'s directory `c` into its directory, then the directory's `GetFirstFile` -> its result.
+  FlDirFirst = 652,
+  /// Search `a`'s `GetNextFile` -> its result.
+  FlNext = 653,
+  /// Search `a`'s `GetFirstFile` again (the original's call after each directory; the result unused).
+  FlRewind = 654,
+  /// A new search (the original's `FSFileSpec` locals: the file and the directory) -> it.
+  FlSearchNew = 655,
+  /// `delete` search `a`.
+  FlSearchDelete = 656,
+  /// Search `a`'s file name's length in bytes.
+  FlNameLength = 657,
+  /// Search `a`'s file name copied into `b` (`c` bytes, NUL included).
+  FlNameCopy = 658,
+  /// `AppendLine(a)`: `a` NUL-terminated bytes.
+  FlAppend = 659,
+  /// `InsertLine(a, 0, UWSNoCaseAlphaSort())` (the combo box's list's): `a` NUL-terminated bytes.
+  FlInsertSorted = 660,
+  /// `GetCurrentSelection` -> its result, the selection's bits in `f[0]`.
+  FlSelection = 661,
+  /// Line `a`'s (`GetData(a)`) length in bytes.
+  FlLineLength = 662,
+  /// Line `a` copied into `b` (`c` bytes, NUL included).
+  FlLineCopy = 663,
+  /// Path `b`'s `FindFile(a)` (NUL-terminated bytes) and, when found, the file's `Delete()` (the file then
+  /// deleted) -> the delete's result, else the lookup's; `f[0]`'s bits 1 when found.
+  FlDeleteFile = 664,
+  /// `DeleteLine(a)`.
+  FlDeleteLine = 665,
+  /// Path `a`'s `Reference()`.
+  FlPathReference = 666,
+  /// Path `a`'s `Dereference()`.
+  FlPathRelease = 667,
 };
 
 /// The inward calls (each C++ class's methods forward here with their own call).
@@ -1412,6 +1449,22 @@ enum class EeUiEventCall : uint32_t {
   Initialize = 1,
   /// `Uninitialize()`: one user less, `UninitializeEvent` when the last leaves -> its result.
   Uninitialize = 2,
+};
+
+/// The inward calls.
+enum class EeUiFileListCall : uint32_t {
+  /// `AddValidExtension(a)`: `a` NUL-terminated bytes.
+  AddExtension = 1,
+  /// `CreateEntries(a)`: 0 appended, otherwise sorted (case-folded).
+  CreateEntries = 2,
+  /// `DeleteSelectedFile()` -> the lookup's or the delete's result.
+  DeleteSelected = 3,
+  /// `SetSearchPaths(a)`: the old path released, `a` referenced (NULL for none).
+  SetSearchPaths = 4,
+  /// `GetFilePath()`.
+  FilePath = 5,
+  /// The destructor's release of the path.
+  Release = 6,
 };
 
 /// The statics ([`ee_ui_font_tables`]).
@@ -2286,6 +2339,9 @@ struct EeUiEdit;
 /// The Rust UIEntityGroup.
 struct EeUiEntityGroup;
 
+/// The Rust file list (both classes'; `full_names` the combo box's).
+struct EeUiFileList;
+
 /// The Rust UIForm.
 struct EeUiForm;
 
@@ -2967,6 +3023,21 @@ long ee_ui_event_create(void *file,
                         EeUiHostFn host,
                         int kind,
                         void *manager);
+
+/// A new Rust file list for the C++ list box or combo box `obj` (`full_names`: the combo box's).
+EeUiFileList *ee_ui_file_list_new(void *obj, EeUiHostFn host, bool full_names);
+
+/// The destructor: the path released, the object freed.
+///
+/// # Safety
+/// `list` came from `ee_ui_file_list_new` (or is NULL) and is not used again.
+void ee_ui_file_list_free(EeUiFileList *list);
+
+/// One of the file lists' methods ([`EeUiFileListCall`]).
+///
+/// # Safety
+/// `list` is live; `a` as [`EeUiFileList::call`].
+ptrdiff_t ee_ui_file_list_call(const EeUiFileList *list, EeUiFileListCall call, ptrdiff_t a);
 
 /// `UIFontTable`'s statics ([`EeUiFontsCall`]).
 ///

@@ -25,6 +25,7 @@ pub mod editobj;
 pub mod entity_group;
 pub mod event;
 pub mod eventobj;
+pub mod filelistobj;
 pub mod find_key;
 pub mod font;
 pub mod fonttableobj;

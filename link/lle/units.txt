@@ -74,7 +74,6 @@
 6de9d 6e304 User Interface/UIEMouseWheelScroll.cpp
 6e5a8 6e6de User Interface/UIEPolledEvent.cpp
 6e6de 6f278 User Interface/UIESliderChange.cpp
-6f4ef 6fae7 User Interface/UIFileComboBox.cpp
 6fae7 6ff58 User Interface/UIFileListBox.cpp
 6ff58 7042f User Interface/UIFontTable.cpp
 7042f 75330 User Interface/UIForm.cpp
