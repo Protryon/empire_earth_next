@@ -8,11 +8,15 @@ screen) -> Host Game -> a name -> Create; the joiner opens the LAN screen, waits
 discovery broadcasts), selects it, Join, Ready; the host presses Start; both go through the connect dialog into the
 game, and the game must run (physics ticks advancing in both, the same player count) for --play-seconds.
 
-  python -I tools/harness/lan_game.py [--exe EXE] [--data TREE] [--out DIR] [--play-seconds 60] [--timeout 900]
+  python -I tools/harness/lan_game.py [--exe EXE] [--data TREE] [--out DIR] [--play-seconds 60] [--timeout 900] [--slot K]
 
-Evidence: --out (default build/lan_game/<time>): host/ and joiner/ (game.log, ui/, the frames), summary.json; the
-last line printed is "RESULT PASS|FAIL lan-game ...". Exit 0 on PASS. Two game processes of this machine's: run it
-only when no other game runs.
+Evidence: --out (default build/lan_game/<time>[-s<K>]): host/ and joiner/ (game.log, ui/, the frames), summary.json;
+the last line printed is "RESULT PASS|FAIL lan-game ...". Exit 0 on PASS.
+Slot: --slot K (else EE_HARNESS_SLOT; tools/harness/slot.py run) holds both ends: they share the stage
+build/fixture_game/stage-s<K> and one port offset 16 * (K + 1) (the TCP protocol's 33334/33335, the LAN discovery
+broadcast 8585 and the lobby port 8888: the joiner reaches the host's game port by its own offset, and another slot's
+games broadcast on another port, so its LAN list shows only this slot's game); the mutexes are s<K>-host and
+s<K>-joiner. Unslotted, the ends use the default ports: then no other LAN game may run.
 """
 import argparse
 import json
@@ -70,8 +74,8 @@ class End(fixture_game.Game):
 
     def __init__(self, a, out, label):
         self.label = label
-        os.environ['EE_TEST_INSTANCE'] = label   # its own single-instance mutex (EECreateInstanceMutex, TEST ONLY)
-        super().__init__(a, pathlib.Path(out) / label)
+        # its own single-instance mutex (EECreateInstanceMutex, TEST ONLY: EE_TEST_INSTANCE <label> or s<K>-<label>)
+        super().__init__(a, pathlib.Path(out) / label, label)
 
     def note(self, text):
         super().note(f'[{self.label}] {text}')
@@ -236,6 +240,7 @@ def run(a):
         ends.append(joiner)
         open_lan_screen(host)
         open_lan_screen(joiner)
+        summary['switches'] = {g.label: fixture_game.switches_taken(g, a) for g in ends}   # the slot's port offset
         set_lan_name(host, 'lanhost')
         set_lan_name(joiner, 'lanjoiner')
         host_game(host, a.game_name)
@@ -326,12 +331,14 @@ def main():
                                  epilog=__doc__.split('\n', 2)[2])
     ap.add_argument('--exe', type=pathlib.Path, default=ROOT / 'build' / 'clang-test' / 'exe' / 'EE-AOC.exe')
     ap.add_argument('--data', help='the unified open data tree to stage (default: build/open_data/tree)')
-    ap.add_argument('--out', default=str(ROOT / 'build' / 'lan_game' / time.strftime('%Y%m%d-%H%M%S')))
+    ap.add_argument('--out', help='the evidence directory (default build/lan_game/<time>[-s<K>])')
+    ap.add_argument('--slot', type=int, help='the harness slot (default EE_HARNESS_SLOT; tools/harness/slot.py)')
     ap.add_argument('--timeout', type=float, default=1200, help='wall seconds the whole run may take')
     ap.add_argument('--config', action='append', default=[], help='block.key=VALUE in the fresh config.yaml')
     ap.add_argument('--play-seconds', type=float, default=60, help='wall seconds of play after both ends run')
     ap.add_argument('--discovery-timeout', type=float, default=120, help='seconds for the LAN list to show the game')
-    ap.add_argument('--game-name', default='lantest')
+    ap.add_argument('--game-name', help='the hosted game (default lantest, lantest<K> in slot K: a game of another '
+                    'slot fails the name check at the join)')
     ap.add_argument('--pt-rate', type=int, help='pin the PT rate (network.pt_rate.min = max = N)')
     a = ap.parse_args()
     a.time_factor = None
@@ -341,6 +348,10 @@ def main():
     a.exe = a.exe.resolve()
     if not a.exe.exists():
         ap.error(f'{a.exe} does not exist: python -I build.py --test-profile windowed-software')
+    a.out_kind = 'lan_game'
+    fixture_game.use_slot(a)
+    if a.game_name is None:
+        a.game_name = 'lantest' + ('' if a.slot is None else str(a.slot))
     return 0 if run(a)['result'] == 'PASS' else 1
 
 
