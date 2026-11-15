@@ -6,6 +6,10 @@ A plan for writing the computer player again from scratch, as a second engine be
 
 The original AI stays in the tree and playable. The new one is a swap, chosen per computer seat.
 
+**Status (2026-11-15, stage 5):** the owner had the C++ classic's decision code deleted (AI_RESEARCH §8.89). Every
+computer player runs a Lua AI; the lobby's Classic is classic_lua. What follows is the plan as it was written: its
+"classic engine", EECPNextTest.cpp and the C++ attack commander no longer exist.
+
 Read with:
 - docs/AI_RESEARCH.md: §2 is the original AI, §4 the design options (this is option B), §8 the experiments;
 - docs/MODDING_PLAN.md: its rules on determinism and scripting;
@@ -960,7 +964,7 @@ army, numbers from a plan table); `ai/rush.lua`; `ai/balanced.lua`. Mapping for 
 
 **S6, the default.**
 - **When:** the next engine becomes the default when the owner's playtests say so.
-- **Classic stays selectable;** deleting it is the owner's call.
+- **Classic stays selectable;** deleting it is the owner's call. (Done 2026-11-15: stage 5 deleted it, §8.89.)
 
 **S7, documentation and Rust.**
 - **Modding:** the scripting reference in DATA_FORMATS.md and a modding guide.
