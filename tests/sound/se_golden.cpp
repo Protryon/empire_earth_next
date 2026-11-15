@@ -33,6 +33,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/SEScore.h"
 #include <dmusic.h>
+#include "rust/ee_sound.h"
 
 long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow);
 #ifdef SE_NEW

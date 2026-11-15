@@ -20562,7 +20562,8 @@ Round 6 of the Low-Level Engine lane (rounds 1-5 above). Net C++ over src + incl
 ## LLE lane, round 7: the Utilities whole in Rust (ee_util), the mixer's SPIM entry points, Input System.cpp's entry points, the subsystems' shutdown registration (branch rust-lle7, 2026-11-14)
 
 Round 7 of the Low-Level Engine lane (rounds 1-6 above). Net C++ over src + include without the generated `include/rust`
-(`git diff --numstat`): about -900 (per commit in the round's report). The lane's list is near its end: what stays is
+(`git diff --numstat`), per commit: the Utilities -568, the mixer's entry points -170, the Input System -58, the
+shutdown registration and TSScheduler -84: -880 in all. The lane's list is near its end: what stays is
 glue over C++ objects (see the progress file's "Left").
 
 - **A new crate, `ee_util`** (the Utilities):
@@ -20621,3 +20622,8 @@ glue over C++ objects (see the progress file's "Left").
   initialisation: the oracle covers them. The graphs (post-game statistics screens), the mixer and the Input System
   run only in a windowed game: the goldens and a tour are their checks; the statistics graphs need a game played to
   its end screen.
+- **The merge with rust** (which had not merged round 6): its dead-code round 2 deleted callerless members in the same
+  files; the merge keeps this branch's files without them (the Rust functions stay). The drivers
+  `tests/util/util_golden.cpp` and `tests/input/is_system_golden.cpp` call four of them (`RemoveDataPoint`,
+  `RemoveSeries`, `GetSquareDimension`, `ISSetDoublePressTimeDelta`) and ran before the merge; the cargo replay
+  still covers those paths through the C interface.
