@@ -162,59 +162,62 @@ bool EEUnitClass::TransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUni
 // range or the unit is next to it; across water when the unit and transport are near its shore tile
 bool EEUnitClass::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
 {
-    long theY;
-    long theX;
-    EEUnit* theArg;
-    std::vector<EETileCoordinate> theTiles;
-    U2DPoint<long> theUnitTile;
-    U2DPoint<long> theCargoTile;
-    U2DPoint<long> theTransportTile;
-    EEUGRust* theGoal = EELoadTransportGoalCast(inTransport->GetGoal());
-    float theRange = this->mLoadRange;
-    unsigned short theFrom = gContinentManager.GetContinentID(inTransport->GetTileX(), inTransport->GetTileY());
-    unsigned short theTo = gContinentManager.GetContinentID(inUnit->GetTileX(), inUnit->GetTileY());
-    theRange *= theRange;
-    bool theResult = false;
-    theTransportTile = U2DPoint<long>(inTransport->GetTileX(), inTransport->GetTileY());
-    if (theFrom == theTo) {
-        float theDistance = EEGetPathLengthTo(inUnit, theTransportTile, 0x10, false);
-        float theDistance2 = EEGetPathLengthTo(inUnit, theTransportTile, 0x10, false);
-        if (theDistance2 * theDistance <= theRange) {
-            theResult = true;
+    EEUCNote theNote(8); theNote.C(this).U(inTransport).U(inUnit);   // TEST ONLY (UCBD)
+    return theNote.R([&]() -> bool {
+        long theY;
+        long theX;
+        EEUnit* theArg;
+        std::vector<EETileCoordinate> theTiles;
+        U2DPoint<long> theUnitTile;
+        U2DPoint<long> theCargoTile;
+        U2DPoint<long> theTransportTile;
+        EEUGRust* theGoal = EELoadTransportGoalCast(inTransport->GetGoal());
+        float theRange = this->mLoadRange;
+        unsigned short theFrom = gContinentManager.GetContinentID(inTransport->GetTileX(), inTransport->GetTileY());
+        unsigned short theTo = gContinentManager.GetContinentID(inUnit->GetTileX(), inUnit->GetTileY());
+        theRange *= theRange;
+        bool theResult = false;
+        theTransportTile = U2DPoint<long>(inTransport->GetTileX(), inTransport->GetTileY());
+        if (theFrom == theTo) {
+            float theDistance = EEGetPathLengthTo(inUnit, theTransportTile, 0x10, false);
+            float theDistance2 = EEGetPathLengthTo(inUnit, theTransportTile, 0x10, false);
+            if (theDistance2 * theDistance <= theRange) {
+                theResult = true;
+            } else {
+                theResult = false;
+                inTransport->mUnitClass->GetSurroundingTiles(inTransport, theTiles, 0, false);
+                theCargoTile = U2DPoint<long>(inUnit->GetTileX(), inUnit->GetTileY());
+                for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); !theResult && it != theTiles.end(); it++)
+                    theResult = *it == theCargoTile;
+            }
         } else {
-            theResult = false;
-            inTransport->mUnitClass->GetSurroundingTiles(inTransport, theTiles, 0, false);
             theCargoTile = U2DPoint<long>(inUnit->GetTileX(), inUnit->GetTileY());
-            for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); !theResult && it != theTiles.end(); it++)
-                theResult = *it == theCargoTile;
-        }
-    } else {
-        theCargoTile = U2DPoint<long>(inUnit->GetTileX(), inUnit->GetTileY());
-        if (theGoal == NULL)
-            this->FindBestShoreTile(inTransport, theTransportTile, theCargoTile, theTransportTile, false, &theUnitTile);
-        else
-            theUnitTile = theGoal->GetLoadUnitTile();
-        if (theUnitTile.GetX() != -10000) {
-            float theDistance = inUnit->DistanceSquaredToTile(theUnitTile);
-            if (theDistance < theRange) {
-                if (!(inTransport->DistanceSquaredToTile(theUnitTile) + theDistance < theRange)) {
-                    theResult = false;
-                } else {
-                    if (EEGetPathLengthTo(inUnit, theUnitTile, 0x10, false) != kTransportNoPath) {
-                        theResult = true;
-                    } else if (inTransport->DistanceSquaredTo(inUnit) < theRange) {
-                        theResult = true;
-                        if (EEIsLineBlocked(inUnit->GetTileX(), inUnit->GetTileY(), inTransport->GetTileX(),
-                                       inTransport->GetTileY(), &theArg, &theX, &theY))
-                            theResult = false;
-                    } else {
+            if (theGoal == NULL)
+                this->FindBestShoreTile(inTransport, theTransportTile, theCargoTile, theTransportTile, false, &theUnitTile);
+            else
+                theUnitTile = theGoal->GetLoadUnitTile();
+            if (theUnitTile.GetX() != -10000) {
+                float theDistance = inUnit->DistanceSquaredToTile(theUnitTile);
+                if (theDistance < theRange) {
+                    if (!(inTransport->DistanceSquaredToTile(theUnitTile) + theDistance < theRange)) {
                         theResult = false;
+                    } else {
+                        if (EEGetPathLengthTo(inUnit, theUnitTile, 0x10, false) != kTransportNoPath) {
+                            theResult = true;
+                        } else if (inTransport->DistanceSquaredTo(inUnit) < theRange) {
+                            theResult = true;
+                            if (EEIsLineBlocked(inUnit->GetTileX(), inUnit->GetTileY(), inTransport->GetTileX(),
+                                           inTransport->GetTileY(), &theArg, &theX, &theY))
+                                theResult = false;
+                        } else {
+                            theResult = false;
+                        }
                     }
                 }
             }
         }
-    }
-    return theResult;
+        return theResult;
+    }());
 }
 
 // TEMPLATE: EXE 0x61b819
@@ -227,50 +230,55 @@ bool EEUnitClass::CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCar
                              U2DPoint<long>* ioUnloadTile, U2DPoint<long>* ioFirstCargoTile,
                              U2DPoint<long>* inDestination)
 {
-    GE3DPoint thePosition;
-    EETileCoordinate theDestination(inDestination->GetX(), inDestination->GetY());
-    GE3DPoint theInvalid;
-    GE3DPoint theFromPosition;
-    float theRange = this->mUnloadRange * this->mUnloadRange;
-    unsigned short theFrom = gContinentManager.GetContinentID(ioUnloadTile->GetX(), ioUnloadTile->GetY());
-    unsigned short theTo = gContinentManager.GetContinentID(inDestination->GetX(), inDestination->GetY());
-    bool theResult = false;
-    theInvalid.SetXYZ(-10000.0f, -10000.0f, 0.0f);
-    if (theFrom == theTo) {
-        bool theFlag = false;
-        if (this->mCategory == kUnitCategoryLandTransport || this->mCategory == kUnitCategoryFortress)
-            ::gWorld.mMap->GetTileLocation(inTransport->GetTileX(), inTransport->GetTileY(), thePosition);
-        else
-            ::gWorld.mMap->GetTileLocation(ioFirstCargoTile->GetX(), ioFirstCargoTile->GetY(), thePosition);
-        inCargo->SetLocation(thePosition, false);
-        if (this->GetUnitType() == kUnitTypeSiege04Tower || this->GetUnitType() == kUnitTypeSiege06HeavyTower)
-            theFlag = true;
-        float theFirst = EEGetPathLengthTo(inCargo, theDestination, 0x10, this->GetUnitType() == kUnitTypeSiege04Tower || this->GetUnitType() == kUnitTypeSiege06HeavyTower);
-        float theSecond = EEGetPathLengthTo(inCargo, theDestination, 0x10, theFlag);
-        float theDistance = theSecond * theFirst;
-        inCargo->SetLocation(theInvalid, false);
-        theResult = theDistance < theRange;
-    } else {
-        bool theFlag = false;
-        float theDistance;
-        ::gWorld.mMap->GetTileLocation(ioFirstCargoTile->GetX(), ioFirstCargoTile->GetY(), thePosition);
-        if (inTransport != NULL) {
-            theDistance = inTransport->DistanceSquared3D(thePosition);
-        } else {
-            ::gWorld.mMap->GetTileLocation(ioUnloadTile->GetX(), ioUnloadTile->GetY(), theFromPosition);
-            theDistance = theFromPosition.DistanceToSquared(thePosition);
-        }
-        if (theDistance < theRange) {
+    EEUCNote theNote(9); theNote.C(this).U(inTransport).U(inCargo).T(*ioUnloadTile).T(*ioFirstCargoTile).T(*inDestination);   // TEST ONLY (UCBD)
+    bool theResult = theNote.R([&]() -> bool {
+        GE3DPoint thePosition;
+        EETileCoordinate theDestination(inDestination->GetX(), inDestination->GetY());
+        GE3DPoint theInvalid;
+        GE3DPoint theFromPosition;
+        float theRange = this->mUnloadRange * this->mUnloadRange;
+        unsigned short theFrom = gContinentManager.GetContinentID(ioUnloadTile->GetX(), ioUnloadTile->GetY());
+        unsigned short theTo = gContinentManager.GetContinentID(inDestination->GetX(), inDestination->GetY());
+        bool theResult = false;
+        theInvalid.SetXYZ(-10000.0f, -10000.0f, 0.0f);
+        if (theFrom == theTo) {
+            bool theFlag = false;
+            if (this->mCategory == kUnitCategoryLandTransport || this->mCategory == kUnitCategoryFortress)
+                ::gWorld.mMap->GetTileLocation(inTransport->GetTileX(), inTransport->GetTileY(), thePosition);
+            else
+                ::gWorld.mMap->GetTileLocation(ioFirstCargoTile->GetX(), ioFirstCargoTile->GetY(), thePosition);
             inCargo->SetLocation(thePosition, false);
             if (this->GetUnitType() == kUnitTypeSiege04Tower || this->GetUnitType() == kUnitTypeSiege06HeavyTower)
                 theFlag = true;
             float theFirst = EEGetPathLengthTo(inCargo, theDestination, 0x10, this->GetUnitType() == kUnitTypeSiege04Tower || this->GetUnitType() == kUnitTypeSiege06HeavyTower);
             float theSecond = EEGetPathLengthTo(inCargo, theDestination, 0x10, theFlag);
-            float theCargoDistance = theSecond * theFirst;
+            float theDistance = theSecond * theFirst;
             inCargo->SetLocation(theInvalid, false);
-            theResult = theDistance + theCargoDistance < theRange;
+            theResult = theDistance < theRange;
+        } else {
+            bool theFlag = false;
+            float theDistance;
+            ::gWorld.mMap->GetTileLocation(ioFirstCargoTile->GetX(), ioFirstCargoTile->GetY(), thePosition);
+            if (inTransport != NULL) {
+                theDistance = inTransport->DistanceSquared3D(thePosition);
+            } else {
+                ::gWorld.mMap->GetTileLocation(ioUnloadTile->GetX(), ioUnloadTile->GetY(), theFromPosition);
+                theDistance = theFromPosition.DistanceToSquared(thePosition);
+            }
+            if (theDistance < theRange) {
+                inCargo->SetLocation(thePosition, false);
+                if (this->GetUnitType() == kUnitTypeSiege04Tower || this->GetUnitType() == kUnitTypeSiege06HeavyTower)
+                    theFlag = true;
+                float theFirst = EEGetPathLengthTo(inCargo, theDestination, 0x10, this->GetUnitType() == kUnitTypeSiege04Tower || this->GetUnitType() == kUnitTypeSiege06HeavyTower);
+                float theSecond = EEGetPathLengthTo(inCargo, theDestination, 0x10, theFlag);
+                float theCargoDistance = theSecond * theFirst;
+                inCargo->SetLocation(theInvalid, false);
+                theResult = theDistance + theCargoDistance < theRange;
+            }
         }
-    }
+        return theResult;
+    }());
+    theNote.S(inCargo);
     return theResult;
 }
 
