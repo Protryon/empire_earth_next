@@ -46,6 +46,38 @@ constexpr static const int32_t EE_APP_SAVE_WRITE_FLOAT = 7;
 
 constexpr static const int32_t EE_APP_SAVE_WRITE_BOOL = 8;
 
+/// The C++ string members by id ([`Strings`]): the settings' `UWideString`s, then their `UString`s.
+constexpr static const uint32_t EE_APP_SETTINGS_PLAYER_NAME = 0;
+
+constexpr static const uint32_t EE_APP_SETTINGS_HOST_GAME_NAME = 1;
+
+constexpr static const uint32_t EE_APP_SETTINGS_LAST_QUICK_SAVE = 2;
+
+constexpr static const uint32_t EE_APP_SETTINGS_LAST_AUTO_SAVE = 3;
+
+/// the last game options' map type (`mGameOptions.mMapType`)
+constexpr static const uint32_t EE_APP_SETTINGS_MAP_TYPE = 4;
+
+/// `UString`s (narrow)
+constexpr static const uint32_t EE_APP_SETTINGS_LAST_GAME_FILE = 5;
+
+constexpr static const uint32_t EE_APP_SETTINGS_LAST_SCENARIO_FILE = 6;
+
+/// `kErrorNotFound`: UConfig's failed read or write.
+constexpr static const int32_t EE_APP_SETTINGS_ERROR_NOT_FOUND = 3;
+
+/// the member's text's length in bytes
+constexpr static const int32_t EE_APP_SETTINGS_STRING_LENGTH = 1;
+
+/// the member's text into the buffer (size: the length + 1, NUL ended)
+constexpr static const int32_t EE_APP_SETTINGS_STRING_GET = 2;
+
+/// the member set to the buffer's `size` bytes
+constexpr static const int32_t EE_APP_SETTINGS_STRING_SET = 3;
+
+/// the member set to the defaults' member
+constexpr static const int32_t EE_APP_SETTINGS_STRING_DEFAULT = 4;
+
 /// `EEGameOptionsPlayer`'s plain members (its name stays a C++ `UWideString`), in the class's order.
 struct EeAppOptionsPlayerFields {
   /// 0/1 human, 2 computer, 3 closed
@@ -128,6 +160,113 @@ struct EeAppSaveIo {
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0).
 using EeAppSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeAppSaveIo*);
 
+/// `EEGameSettings`' plain members (the game options and the strings stay C++), in the class's order.
+struct EeAppSettingsFields {
+  float mMouseSensitivity;
+  float mSideScrollSpeed;
+  float mGrabScrollSpeed;
+  float mSoundVolume;
+  float mMusicVolume;
+  float mMaxNumberOfSounds;
+  float mUnitScaleFactor;
+  float mZoomLock;
+  long mZoomStyle;
+  long mL53C;
+  long mL540;
+  long mScreenMode;
+  long mButtonMIPLevelsToDrop;
+  long mL54C;
+  long mL550;
+  long mL554;
+  long mL558;
+  long mL55C;
+  long mL560;
+  /// `gDifficultyLevel`
+  long mComputerPlayerDifficultyLevel;
+  long mGameBitDepth;
+  unsigned long mGameWindowHeight;
+  unsigned long mGameWindowWidth;
+  long mCTSendIntervalStepUp;
+  long mCTSendIntervalStepDown;
+  long mMaxPTsPerSecond;
+  long mMinPTsPerSecond;
+  long mMaxCTSendInterval;
+  long mMIPLevelsToDrop;
+  long mModelDetail;
+  long mEffectDetail;
+  long mNetworkAdapter;
+  unsigned long mPTRateTuningThreshold;
+  long mScreenID;
+  long mStartingKeyboardLayout;
+  long mTerrainMIPLevelsToDrop;
+  long mTextureBitDepth;
+  unsigned long mNumberOfAutoSaves;
+  unsigned long mAutoSaveInMilliseconds;
+  long mLastOpenPostGameStatsPage;
+  long mL5B8;
+  long mL5BC;
+  bool mB5C0;
+  /// `gZoomEnabled`
+  bool mZoomEnabled;
+  bool mB5C2;
+  bool mAnimationSmoothing;
+  bool mB5C4;
+  bool mB5C5;
+  bool mB5C6;
+  bool mDisplayClouds;
+  bool mDisplayShadows;
+  bool mDisplayBattlefieldAmbients;
+  bool mB5CA;
+  bool mB5CB;
+  bool mB5CC;
+  bool mEnableAnimalHerds;
+  bool mTrilinearFilter;
+  /// the start screen shows when set
+  bool mFullScreen;
+  bool mReverbEnabled;
+  bool mWaitForVSync;
+  bool mAmbientSounds;
+  bool mShowBlood;
+  bool mMusicEnabled;
+  bool mRightHandMouseOrientation;
+  bool mB5D6;
+  bool mUnitLighting;
+  bool mUseAreaEffectOverlays;
+  bool mUseCandidateWindow;
+  bool mDisplayWeatherEffects;
+  bool mDebugOOSHandling;
+  bool mTakeJPGScreenshots;
+  bool mAntiAliasing;
+  bool mTakeEndGameScreenshots;
+  bool mShowAutoWaypoints;
+  /// port: 0 (the original textures), 2 or 4 (Data/Textures-4x)
+  long mTextureResolution;
+  /// port: percent, 0 Auto
+  long mUIScale;
+  /// port: percent of the display's pixels (50..100)
+  long mRenderResolution;
+  /// port: 0 full screen (borderless), 1 windowed
+  long mWindowMode;
+  /// port: 0 v-sync, -1 unlimited, else frames a second
+  long mFrameRateLimit;
+  /// port: 0 bilinear, 1 trilinear, 2 anisotropic
+  long mTextureFiltering;
+  /// port: percent (100 unchanged)
+  long mBrightness;
+  /// port: percent
+  long mMasterVolume;
+  bool mMuteInBackground;
+  /// port: percent of the original's farthest zoom (100..300)
+  long mMaximumZoomOut;
+  /// port: 1 writes Logs/game-*.log
+  long mGameLog;
+  /// port: the audio device's name (empty: the system's default)
+  char mAudioDevice[128];
+};
+
+/// The string host: `(ctx, op, id, buffer, size) -> a length` (`EE_APP_SETTINGS_STRING_*`).
+using EeAppSettingsStringFn = uint32_t(*)(void*, int32_t, uint32_t, char*, uint32_t);
+
 extern "C" {
 
 /// `EEGameOptionsPlayer()`'s plain members.
@@ -180,6 +319,50 @@ int32_t ee_app_options_save(const EeAppOptionsFields *options,
                             uint32_t count,
                             void *ctx,
                             EeAppSaveFn call);
+
+/// `EEGameSettings()`'s plain members.
+///
+/// # Safety
+/// `out` is a live record.
+void ee_app_settings_default(EeAppSettingsFields *out);
+
+/// The last game options' defaults (`EEDefaultSettings`'s literals, but the map type).
+///
+/// # Safety
+/// `out` is a live record.
+void ee_app_settings_last_options_default(EeAppOptionsFields *out, long epochs);
+
+/// `EEReadSettings`: every row of the settings (or, `game_options`, of the last game options) read from config.yaml,
+/// a missing or out-of-range value the defaults' (written back).
+///
+/// # Safety
+/// live records (the defaults' only read); `call` answers for `ctx` throughout.
+void ee_app_settings_read(EeAppSettingsFields *settings,
+                          EeAppOptionsFields *options,
+                          EeAppSettingsFields *default_settings,
+                          EeAppOptionsFields *default_options,
+                          bool game_options,
+                          void *ctx,
+                          EeAppSettingsStringFn call);
+
+/// `EEWriteSettings`: every row written to config.yaml; the first failure, else 0.
+///
+/// # Safety
+/// as [`ee_app_settings_read`]
+int32_t ee_app_settings_write(EeAppSettingsFields *settings,
+                              EeAppOptionsFields *options,
+                              bool game_options,
+                              void *ctx,
+                              EeAppSettingsStringFn call);
+
+/// `Load`'s rest after the rows (settings.rs `after_load`); true when the texture resolution was replaced and is to be
+/// written back.
+///
+/// # Safety
+/// live records.
+bool ee_app_settings_after_load(EeAppSettingsFields *settings,
+                                const EeAppSettingsFields *defaults,
+                                bool korean);
 
 }  // extern "C"
 

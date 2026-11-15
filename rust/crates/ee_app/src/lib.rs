@@ -3,12 +3,18 @@
 //!
 //! - [`game_options`]: `EEGameOptions` and `EEGameOptionsPlayer` as records the C++ classes derive from, their
 //!   defaults, validating copy, lobby defaults and saved game.
+//! - [`settings`]: `EEGameSettings`' plain members as a record the C++ class derives from, their defaults, and
+//!   config.yaml's rows read and written (the preferences' `Load` and `Save`; [`settings_ffi`]: its C ABI).
 //! - [`save_io`]: a saved game's primitives over a host callback (`EESavePrimitive`'s operations).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
 pub mod ffi;
 pub mod game_options;
 pub mod save_io;
+pub mod settings;
+pub mod settings_ffi;
 
 #[cfg(test)]
 mod game_options_tests;
+#[cfg(test)]
+mod settings_tests;

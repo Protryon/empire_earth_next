@@ -10,3 +10,6 @@ publish.workspace = true
 [lib]
 crate-type = ["rlib"]
 
+[dependencies]
+# config.yaml (PlatConfig*): the settings' rows
+ee_plat_core = { path = "../ee_plat_core" }
