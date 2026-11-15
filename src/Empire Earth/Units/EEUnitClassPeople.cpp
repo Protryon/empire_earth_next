@@ -88,6 +88,7 @@ void EEGetSquareRing(long inX, long inY, long inSizeX, long inSizeY, std::vector
 // whether one was found
 bool EEUnitClass::FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<float>& outLocation)
 {
+    EEUCNote theNote(40); theNote.C(this).U(inUnit).I(inUnitType);   // TEST ONLY (UCBD)
     std::vector<EETileCoordinate> theTiles;
     EEUnitClass* theClass = gUnitClassTable[inUnitType];
     bool theFound = false;
@@ -111,7 +112,8 @@ bool EEUnitClass::FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<
         }
         theRadius++;
     } while (theRadius < 10);
-    return theFound;
+    if (theFound) theNote.F(outLocation.GetX()).F(outLocation.GetY());   // TEST ONLY (UCBD)
+    return theNote.R(theFound);
 }
 
 // FUNCTION: EXE 0x60bf63
@@ -146,6 +148,7 @@ bool EEIsResourceOfKind(EEUnit* inUnit, EEUnit* inResource, unsigned long inKind
 EEUnit* EEUnitClass::FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange,
                                    unsigned long inKind, std::vector<EEUnit*>* ioUnits, bool inFarms)
 {
+    EEUCNote theNote(41); theNote.C(this).U(inUnit).U(inCenter).U(inResource).I(inRange).I((long)inKind).Us(*ioUnits).I(inFarms);   // TEST ONLY (UCBD)
     std::vector<U2DPoint<long> > theTiles;
     std::vector<U2DPoint<long> > theInner;
     std::vector<U2DPoint<long> > theOuter;
@@ -233,6 +236,7 @@ EEUnit* EEUnitClass::FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter,
             i++;
         } while (i < inRange);
     }
+    theNote.U(theResult);   // TEST ONLY (UCBD)
     return theResult;
 }
 
@@ -267,6 +271,7 @@ static const float kCitizenFarmRange = 20.0f;
 // owner's nearest built drop site that takes the load (docks and navy yards for boats)
 EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
 {
+    EEUCNote theNote(43); theNote.C(this).U(inUnit).I(inAnyStorage).I(inUnit->mResourceAmount).I((long)inUnit->mResourceType);   // TEST ONLY (UCBD)
     std::vector<EEUnit*> theUnits;
     EEUnit* theUnit = inUnit->GetPlayer()->mFirstUnit;
     bool theFarm = false;
@@ -327,6 +332,7 @@ EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
             }
         }
     }
+    theNote.U(theResult).I(inUnit->mResourceAmount).I((long)inUnit->mResourceType);   // TEST ONLY (UCBD)
     return theResult;
 }
 
@@ -336,6 +342,7 @@ EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
 void EEUnitClass::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY, long inSizeX,
                                 long inSizeY, GE3DPoint& outLocation)
 {
+    EEUCNote theNote(44); theNote.C(this).S(inUnit).I((long)inX).I((long)inY).I(inSizeX).I(inSizeY);   // TEST ONLY (UCBD)
     std::vector<U2DPoint<long> > theTiles;
     EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
     EEUGRust* theGather = EEGatherGoalCast(inUnit->GetGoal());
@@ -413,6 +420,7 @@ void EEUnitClass::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsi
         outLocation.SetY((float)(long)inY);
         outLocation.SetZ(gWorld.mMap->GetTile(inX, inY)->GetHeight());
     }
+    theNote.P(outLocation);   // TEST ONLY (UCBD)
 }
 
 // FUNCTION: EXE 0x60ccb8
@@ -630,11 +638,12 @@ done:
 // Returns whether the citizen has a gather point beside a resource (not just the resource's own corner tile)
 bool EEUnitClass::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
 {
+    EEUCNote theNote(45); theNote.C(this).U(inUnit).U(inResource);   // TEST ONLY (UCBD)
     GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
     long theX = inResource->mTileX;
     long theY = inResource->mTileY;
     this->FindGatherPoint(inUnit, theX, theY, inResource->mUnitClass->GetTileSize(), inResource->mUnitClass->GetTileSize(), theLocation);
-    return !(UMFloor(theLocation.GetX()) == theX && UMFloor(theLocation.GetY()) == theY);
+    return theNote.R(!(UMFloor(theLocation.GetX()) == theX && UMFloor(theLocation.GetY()) == theY));
 }
 
 // ---- EEUCLandCitizen.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).

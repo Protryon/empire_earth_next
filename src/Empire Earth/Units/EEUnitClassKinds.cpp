@@ -818,7 +818,7 @@ EEUCNote::~EEUCNote()
         }
         if (theTick / 20000 != sUCTick / 20000) {
             fprintf(stderr, "EE-UCBD-COUNT %lu", theTick);
-            for (int i = 1; i < 40; i++)
+            for (int i = 1; i < 50; i++)
                 fprintf(stderr, " %d:%u", i, sUCKinds[i]);
             fprintf(stderr, "\n");
         }
