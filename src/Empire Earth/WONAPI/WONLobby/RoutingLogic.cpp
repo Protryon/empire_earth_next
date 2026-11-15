@@ -52,81 +52,6 @@ public:
 
 namespace WONAPI {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // FUNCTION: WON 0x007e7200
 // Looks up the add-friend, admin-action, bad-user, create-room, password and room dialogs from the lobby layout
 void RoutingLogic::InitComponent(ComponentConfig* inConfig)
@@ -138,7 +63,6 @@ void RoutingLogic::InitComponent(ComponentConfig* inConfig)
     SafeGetComponent(inConfig, this->mPasswordDialog, "PasswordDialog", __FILE__, 129);
     SafeGetComponent(inConfig, this->mRoomDialog, "RoomDialog", __FILE__, 130);
 }
-
 
 // FUNCTION: WON 0x007e6e80
 // Creates the Internet lobby logic with an empty server list and game list, not idle and not yet a moderator
@@ -1467,7 +1391,6 @@ void RoutingLogic::JoinFriendsRoom(JoinFriendsRoomEvent* inEvent)
 
 }
 
-
 namespace WONAPI {
 // FUNCTION: WON 0x007ed670
 // Creates a room on a server with a status dialog and returns its id; false on failure
@@ -1539,7 +1462,6 @@ bool RoutingLogic::JoinGroup(LobbyServer* inServer, int inGroupId)
 }
 }
 
-
 namespace WONAPI {
 }
 
@@ -1556,8 +1478,6 @@ void RoutingLogic::ShowClientOptions(LobbyClient* inClient,int inRoomSpec)
     LobbyOpenPopup(popup.get(),PopupFlag_StandardPopup,-1,-1);
 }
 }
-
-
 
 namespace WONAPI {
 // A ban or mute names the player by client id when on the server, else by CD key id (or WON user id) as a CD key id
