@@ -24220,3 +24220,112 @@ crate-private constants are not exported).
 
 `EECivilizationManager` (915) and `EECivPowersManager` (271): data plus simulation (`ApplyUpgradeLevel`,
 `ApplyPower`); `EELoadCivilization` (the AI reaches it); these need the oracle and the capture profiles.
+
+## R6: the scenario editor screens, round 6: the condition and effect controls as tables; the map tab, the area screen and the instructions tab whole in Rust; the editor gate drives them and closes round 5's gaps (ee_screens editor_controls.rs, editor_map.rs, editor_area.rs, editor_instructions.rs; branch rust-editor6, 2026-11-14)
+
+### The gate first (TEST ONLY, recorded on the unmodified classes, two runs identical, old lines unchanged)
+
+- New commands: `areaset` / `areapoint` (a scenario area's rectangle or anchor set through `EESMArea`, what a
+  person's paint would leave), `areastate` (the area screen's state through a new `EESETSArea::GetState`, its centre,
+  the editor's paint area and highlight, every scenario area), `align c|e`, `seed`, `media` (the scenario's four
+  media texts and export file).
+- `align` needed a reader the toolkit does not have: `UITextLabel::SetAlignment` keeps the value in the Rust label
+  object with no getter (and its `GEText`'s alignment is not the label's). Toolkit headers are not this lane's, so
+  the types' host records the alignment it last gave each label (`gSeetAlignments`, TEST ONLY, EESETSEffect.cpp).
+- Tails: the area screen (three areas, a rectangle and an anchor given, each loaded, the mode combo box with and
+  without the UI hidden, the centre button, a name and text stored, the list buttons, the sub-tab left and entered);
+  round 5's gaps (the chat condition's Enter; the alignments as diplomacy is hidden and other types shown; the
+  sub-tab left and entered so Activate shows the type without a Load; every effect deleted, so no Load follows the
+  last delete); the map tab (its kind radios, the elevation file's boxes per kind, the create button for a seeded
+  random, a blank and a random map: the UI clock is pinned during a step, so the time seeds repeat); the
+  instructions tab (texts typed, the tab left and entered, a box's Enter). 12,723 -> 13,956 -> 14,049.
+
+### The moves
+
+- **The condition and effect controls** (`editor_controls.rs`): `EESETSConditionControls`' and
+  `EESETSEffectControls`' constructors are tables of maker records; each control is stored into its member by a
+  new slot op of the types' generic host (`EE_SCREENS_SEET_OP_SLOT`: one `SeetSlot` per class, a `SeetSwap`
+  template over each member's type, in place of `SeetControl`'s two switches) and hidden after it joins its group.
+  The effect radios skip a control index after each pair (the original's `if (i & 1) ioIndex++`). The destructors
+  are delete orders; the classes are made empty (value-initialised) and deleted after their members.
+- **The map tab** (`editor_map.rs`): the constructor lays each control out from the rectangles of the ones before it
+  (`GetWidth` is `floor(right - left + 1)`; the terrain labels span the two combo boxes, the map size label the two
+  labels: the original mixes them and the numbers only agree by accident); `UIRBMap::Check`/`HideControls` look the
+  controls up by id on the form as the original did (another tab's control could share an id). `UIBMap` and
+  `UIRBMap` stay C++ (form-owned controls), their slots forward.
+- **The area screen** (`editor_area.rs`): every slot; the base's `mSelection` stays C++ and is passed per call.
+  `MouseMove` and `Update` keep their logic in Rust, the picking, mouse buttons and paint action in the host.
+- **The instructions tab** (`editor_instructions.rs`): the host is a static member of `EESEInstructions`, because
+  `EESMMediaStrings` keeps its strings private with the class as a friend; Load's and Store's text transfers stay in
+  the host.
+- The shared maker grew: a combo box's list height and characters as two record fields (`list_height`,
+  `max_chars`, defaults 400 and 0), white and red text, no blue selected line, lines pushed before a combo box is
+  made (`EE_SCREENS_SEPL_OP_LINE_PUSH`), a label's border, a help string op, an edit box's text from bytes, a slider
+  without a range, the condition and effect combo boxes and the effect lists.
+
+### Traps
+
+- A mutation script started without `source build/env.sh` ran `build.py` with the default `EE_ORIG_SRC_ROOT`
+  (`C:\EEX`, another checkout's staging root) for under two minutes before it was stopped: wrap every tool run of a
+  script in the worktree's environment.
+- A Rust gate run while new modules were being added reported a stale header (the check compares against the
+  sources on disk): gate a commit with the tree quiet.
+- `--only UNIT` of `tools/clang_build.py` takes one unit per run (the last flag wins); a one-unit compile check
+  takes ten seconds against the full build's three minutes.
+
+### Mutations (build/ed6/mut.py; each built and run)
+
+| Mutation | Diff lines |
+|---|---|
+| controls: the effect scenario combo boxes' modes 0,3,3,4 -> 0,3,4,4 | 28 |
+| map ShowElevationControls: the height box and label left alone | 8 |
+| map CreateMap: the drawn seed not shown in the seed label | 4 |
+| map kind Check: the blank kind does not run the elevation file's event | 12 |
+| area SetAreaMode: the UI hidden ignored | 12 |
+| area Store: the anchor not stored | **0**: equivalent on the script's path (the stored area already holds the same anchor, loaded from it); not in general (a person's new anchor is lost) |
+| area Delete: the highlight kept | **0**: equivalent on the script's path (the trigger tab's Load of the next area sets the highlight again); not when the last area is deleted |
+| instructions: the aftermath label not hidden | 8 |
+| round 5's zero: diplomacy Hide keeps the towards label centred | 4 (now reached) |
+| round 5's zero: chat Show: no Enter event on the chat box | 2 (now reached) |
+| round 5's zero: effect screen Delete: the type not hidden after | 10 (now reached) |
+
+### Behaviour
+
+None intended. The instructions tab's four text boxes each get their own find-text screen event (the original
+shared one object: the same code runs). On undefined paths: a Store or Load of an area the scenario does not have
+does nothing (the original dereferences it); a blank map with a terrain selection past the editor's terrains uses
+terrain 0 (the original indexes past its list); a kind radio whose control is missing skips it.
+
+### Only a person reaches
+
+The area screen's `MouseMove` and `Update` (EE-SIM has no mouse buttons: the rectangle's paint, the anchor's
+release, the mouse bounds and edge scroll); the controls' look; the instructions tab's import and export buttons
+(their events are C++ and unchanged); closing the editor (every destructor). No tour opens the editor.
+
+### Gates
+
+| Gate | Per move | Merged with rust (209ea06a) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| `tools/sim_editor.py` | PASS 13,956 (controls), 13,956 (map and area, gated together), 14,049 (instructions), each on the first run | PASS 14,049 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical (after the controls and after the instructions) | seeds 2-7 identical |
+| `rust_build.py gate` | the controls' run was spoiled (modules added mid-run: a stale header); after the instructions clippy failed (an eight-argument table helper: allowed, own commit), then PASS (3,489 tests) | PASS (3,716 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: no simulation code changed | |
+
+The merge of rust needed two passes: the first (a08e075e) merged cleanly but did not compile
+(`EEFOFindNewTargetNearOldTarget.cpp` still named `EEUCAmbient`, which R5b.4 core 32 removed; rust's next head
+209ea06a had the fix); the second met only PORT_LEARNINGS (both sides' sections kept). Headers current; no
+`EE_SCREENS_*` name in two crates.
+
+C++ lines (src and include/ee, include/rust aside): the controls +98 -494, the map tab and area screen +228 -1,065,
+the instructions tab +140 -335, the area accessor +10 -0; the gate's TEST ONLY lines (EESimEditor.cpp, the
+alignment record) about +90. Net about **-1,330** for the moves and **-1,120** with the gate, short of the 1,500
+aimed at: the hosts of the world calls (the map's own controls and actions, the area's picking and paint action, the
+media strings' transfers) are a third of each moved unit.
+
+### Left
+
+The editor form (`EEUIFScenarioEditor.cpp`, 1,495 lines; its members are read across 16 units: accessors first), the
+terrain tab (857, its lists draw textures), the tech list box (595), the load thread (385), the elevation tab, the
+terrain paint radios, the unit tab's small control classes, the moved screens' hosts.

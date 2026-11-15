@@ -67,6 +67,11 @@
 //   object                                the trigger tab's open scenario object (ObjectDigest)
 //   triggerstate                          the trigger tab's open trigger (TriggerDigest)
 //   fire ID                               a control's button-up event processed
+//   areaset AREA L T R B | areapoint AREA X Y   a scenario area's rectangle or anchor set (as the area screen's Store)
+//   areastate                             the area screen's state and centre, the paint area, the scenario's areas
+//   align c|e                             the condition's or effect's labels' alignments (- never set)
+//   seed                                  the user interface's random seed (the map tab's CreateMap)
+//   media                                 the scenario's media texts (their lengths, first 60 bytes), the export file
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -216,6 +221,10 @@
 #include "ee/EESETSAMouseClick.h"
 #include "ee/EESETSCondition.h"
 #include "ee/EESETSConditionControls.h"
+#include "ee/EESETSArea.h"
+#include <map>
+// the alignments the condition and effect types gave their labels (EESETSEffect.cpp, the types' host)
+extern std::map<const void*, unsigned long> gSeetAlignments;
 #include "ee/EESETSEffect.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEScenarioComboBox.h"
@@ -935,6 +944,39 @@ EESETSEffectControls* EffectControls()
 {
     return static_cast<EESETSEffect*>(
                gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->GetControls();
+}
+
+// the area screen (TEST ONLY): its state and centre, the brush group's highlight and paint area, every scenario area's
+// name, text, select mode, rectangle and anchor
+void AreaDigest(std::vector<std::string>& outLines)
+{
+    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EESETSArea* s = static_cast<EESETSArea*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenArea));
+    GERectangle r;
+    GE2DPoint p;
+    unsigned long theFlags = 0;
+    s->GetState(r, p, theFlags);
+    GE2DPoint c;
+    bool theCenter = s->GetCenter(c);
+    EEUIFSEBrushGroup* b = theEditor->GetBrushGroup();
+    char theText[512];
+    snprintf(theText, sizeof(theText),
+             "  areascreen flags=%lu rect=%g,%g,%g,%g point=%g,%g center=%s highlight=%d paint=%g,%g,%g,%g", theFlags,
+             (double)r.GetLeft(), (double)r.GetTop(), (double)r.GetRight(), (double)r.GetBottom(), (double)p.GetX(),
+             (double)p.GetY(), theCenter ? (std::to_string(c.GetX()) + "," + std::to_string(c.GetY())).c_str() : "none",
+             b->mIsHighlightShown ? 1 : 0, (double)b->mRectangle.GetLeft(), (double)b->mRectangle.GetTop(),
+             (double)b->mRectangle.GetRight(), (double)b->mRectangle.GetBottom());
+    outLines.push_back(theText);
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    for (unsigned long i = 0; i < m->mAreas.size(); i++) {
+        EESMArea* a = m->GetArea(i);
+        const GERectangle& q = a->GetRect();
+        snprintf(theText, sizeof(theText), "  area %lu mode=%lu rect=%d %g,%g,%g,%g anchor=%d %ld,%ld '", i,
+                 a->GetSelectMode(), a->GetHasRectangle() ? 1 : 0, (double)q.GetLeft(), (double)q.GetTop(),
+                 (double)q.GetRight(), (double)q.GetBottom(), a->GetHasAnchor() ? 1 : 0, a->GetAnchor().GetX(),
+                 a->GetAnchor().GetY());
+        outLines.push_back(theText + std::string((const char*)a->GetName()) + "' '" + (const char*)a->GetText() + "'");
+    }
 }
 
 // one control: its display mode, then a label's first line, a slider's value, a combo box's lines and selection
@@ -1667,6 +1709,47 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                     theOutput.push_back(s);
                 }
             };
+        else if (c == "areaset" || c == "areapoint")   // areaset AREA L T R B | areapoint AREA X Y: a scenario area's
+            // rectangle or anchor set (EESMArea::SetRectangle, SetAnchor), as the area screen's Store sets them
+            theCode = [=] {
+                EESMArea* a = gWorld.mScenarioManager->GetArea((unsigned long)L(1));
+                if (c == "areaset")
+                    a->SetRectangle(GERectangle(F(2), F(3), F(4), F(5)));
+                else
+                    a->SetAnchor(U2DPoint<long>(L(2), L(3)));
+            };
+        else if (c == "areastate")   // the area screen and the scenario's areas (AreaDigest)
+            theCode = [=, &theOutput] { AreaDigest(theOutput); };
+        else if (c == "align")   // align c|e: the condition's or effect's labels' text alignments
+            theCode = [=, &theOutput] {
+                std::vector<UITextLabel*> theLabels;
+                if (w[1] == "c")
+                    theLabels.assign(ConditionControls()->mLabels, ConditionControls()->mLabels + 5);
+                else
+                    theLabels.assign(EffectControls()->mLabels, EffectControls()->mLabels + 13);
+                std::string theText = "  align";
+                for (UITextLabel* l : theLabels)
+                    theText += " " + (gSeetAlignments.count(l) ? std::to_string(gSeetAlignments[l]) : std::string("-"));
+                theOutput.push_back(theText);
+            };
+        else if (c == "media")   // the scenario's media texts (hints, aftermath, history, instructions) and export file
+            theCode = [=, &theOutput] {
+                EEScenarioManager* m = gWorld.mScenarioManager;
+                const char* theNames[4] = {"hints", "aftermath", "history", "instructions"};
+                for (unsigned long k = 0; k < 4; k++) {
+                    std::string theText = (const char*)m->mMediaStrings.GetSection(k);
+                    size_t n = (std::min)(theText.size(), (size_t)60);
+                    while (n > 0 && n < theText.size() && (theText[n] & 0xC0) == 0x80)   // a whole character
+                        n--;
+                    std::string theHead = theText.substr(0, n);
+                    std::replace(theHead.begin(), theHead.end(), '\n', '|');
+                    theOutput.push_back("  " + std::string(theNames[k]) + " " + std::to_string(theText.size()) + " '" +
+                                        theHead + "'");
+                }
+                theOutput.push_back(std::string("  export '") + (const char*)m->mExportFileName + "'");
+            };
+        else if (c == "seed")   // the user interface's random seed (the map tab's CreateMap draws or reads it)
+            theCode = [=, &theOutput] { theOutput.push_back("  seed " + std::to_string(gUserInterface->mRandomSeed)); };
         else if (c == "erefresh")   // the effect screen's RefreshControls (an effect combo box's change: UpdateName)
             theCode = [=] {
                 gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect)->RefreshControls();
