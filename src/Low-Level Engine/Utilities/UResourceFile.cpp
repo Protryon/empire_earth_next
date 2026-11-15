@@ -13,8 +13,9 @@
 
 // The strings come from a Rust table generated from Language.rc (tools/lang_strings.py; ee_util strings.rs), on
 // every system: the original enumerated the module's RT_STRING resources for their language (URFEnumNames/
-// URFEnumLanguages: the first table's, else UGetOSLanguage) and read each string with LoadStringA. The table holds what LoadStringA returned, its
-// language is the script's; an id it lacks fails as LoadStringA did (ERROR_RESOURCE_NAME_NOT_FOUND).
+// URFEnumLanguages: the first table's, else UGetOSLanguage) and read each string with LoadStringA. The table holds
+// what LoadStringA returned, its language is the script's; an id it lacks fails as LoadStringA did
+// (ERROR_RESOURCE_NAME_NOT_FOUND).
 static const uint32_t kErrorResourceNameNotFound = 1814;
 
 // Records the string table's language (the module is kept for GetModule; nothing is read from it)
