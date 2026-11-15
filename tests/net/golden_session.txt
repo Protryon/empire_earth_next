@@ -1438,10 +1438,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 182 server 13
 call prepare [84 o03 fff 0084ff03..4d00]
 player 0 execute selection [84 o03 fff 0084ff03..4d00]
@@ -1906,10 +1902,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 244 server 9
 call system [43 o00 f02 00430200..8efa5c6e050002]
 ref 2
@@ -2923,10 +2915,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 397 server 6
 call remove 2 0 1 0
 resource 31708
@@ -4555,10 +4543,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 603 client 10
 call lobby [23 o00 f01 002301000600000006ff05000000050000004465650000]
 ref 2
@@ -6009,10 +5993,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 819 server 8
 call system [26 o02 fff 0026ff02ae8501000005000101005fff04740000003f]
 physics queue enter
@@ -6695,10 +6675,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 935 client 10
 call lobby [23 o00 f04 0023040000000000d8020000000006000000312e30340000]
 ui lobby update form
@@ -7215,10 +7191,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 1020 server 20
 call laggers 1 1
 comms get multiplayer session
@@ -8772,10 +8744,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 1256 server 19
 call reconnect wait timed out
 comms current ct
@@ -9747,10 +9715,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 1336 server 8
 call system [26 o00 fff 0026ff00ff000000ff04000001005b04016f0f00000022bf00000200000005000000426f6200000000000001000000000000000000000001000000000000]
 physics queue enter
@@ -11341,10 +11305,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 1537 server 2
 call system [22 o04 ffe 0022fe040002000000000006000000312e30340000ff000000]
 server lock ct
@@ -12360,10 +12320,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 1680 server 7
 call getters 16
 server max players
@@ -12599,10 +12555,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 1713 server 13
 call prepare [5a o04 fff 005aff04..02050000004465650000]
 = fs 251
@@ -12862,10 +12814,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 1756 server 9
 call system [a8 o02 fff 00a8ff02..80189a]
 execute [a8 o02 fff 00a8ff02..80189a]
@@ -15089,10 +15037,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 2100 server 7
 call getters 7
 server max players
@@ -15687,10 +15631,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 2172 client 2
 call remove 3 0 1 1
 == 2173 client 2
@@ -18095,10 +18035,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 2466 client 0
 call slot update 10 type 1 loaded 2 "Ann" ping 0.25 slot 1 colour 4 team 1 cit 8 xfer 1 local 0 ready 0 b36 1 engine 0
 ui lobby update player 10 8
@@ -19590,10 +19526,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 2692 server 0
 call connection request 4 type 4 loaded 0 "Dee" ping 0.75 slot 3 colour 10 team 2 cit 8 xfer 0 local 1 ready 1 b36 0 engine 3 "1.04" 99
 server lock ct
@@ -19829,10 +19761,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 2723 client 13
 call timeout warning 61615
 resource 30621
@@ -20516,10 +20444,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 2828 client 0
 call slot update 11 type 2 loaded 2 "Ann" ping 0 slot 0 colour 10 team 2 cit 0 xfer 2 local 1 ready 1 b36 0 engine 3
 ui lobby update player 11 8
@@ -21505,10 +21429,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 2974 client 11
 call lobby [a9 o04 fff 00a9ff04..000000cd3700000ee600000200000013d700005ff40000010103000000010500000000050000000500000000040000000400000043790000]
 execute [a9 o04 fff 00a9ff04..000000cd3700000ee600000200000013d700005ff40000010103000000010500000000050000000500000000040000000400000043790000]
@@ -23746,10 +23666,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 3283 client 8
 call user input [5a o02 fff 005aff02..a505000000616e6e0000]
 = fs 239
@@ -24714,10 +24630,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 3383 client 12
 call start game
 graphics resume
@@ -27147,10 +27059,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 3677 client 11
 call lobby [33 off fff 0033ffffff00000002000000]
 ref 2
@@ -27652,10 +27560,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 3756 client 8
 call user input [33 ofe fff 0033fffeb6f3010066530000]
 = fs -1
@@ -27856,10 +27760,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 3787 server 11
 call filter [9a o00 fff 009aff00..bccb0000]
 server log response [9a o00 fff 009aff00..bccb0000]
@@ -28175,10 +28075,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 3810 client 4
 call message [33 o00 f03 0033030005000000ff000000]
 ref 2
@@ -28688,10 +28584,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 3878 server 15
 call lobby [33 o04 ffe 0033fe04ff00000004000000]
 ref 2
@@ -30957,10 +30849,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 4224 client 1
 call connection state 0
 is multiplayer game 1
@@ -31806,10 +31694,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 4327 client 2
 call remove 254 1 0 0
 client current pt
@@ -32117,10 +32001,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 4375 client 13
 call timeout warning 56958
 resource 30621
@@ -35469,10 +35349,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 4868 server 5
 call refuse type 1 loaded 2 "" ping 1 slot 2 colour 4 team 3 cit 7 xfer 0 local 0 ready 1 b36 0 engine 2
 comms current ct
@@ -36264,10 +36140,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 5002 server 8
 call system [24 off fff 0024ffff00]
 ui action remove player 255 0
@@ -36338,10 +36210,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 5012 server 16
 call lobby [5a o02 f02 005a0202..0105000000416e6e0000]
 execute [5a o02 f02 005a0202..0105000000416e6e0000]
@@ -37054,10 +36922,6 @@ became client
 client stop threads
 server base ctor 16 350 60 25 5 1.25 400 20 30 0 0 "Host" 1 1 1
 ref 2
-~ server: lag 0 loads 0 state 0 dropped 0 fs 0 exec 0 migrating 0 left 0
-~ server firewall: 
-~ server send-to: 
-~ server vote: edict 0 yes 0 no 0 votes 0 voted 
 == 5100 server 21
 call slot info
 comms humans

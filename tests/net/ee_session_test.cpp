@@ -633,6 +633,7 @@ static void ServerCall(unsigned long inStep)
     RandomServer(s);
     std::map<std::string, std::string> theBefore, theAfter;
     State(theBefore, s, NULL);
+    bool theBecameClient = false;   // the server deleted (a new one may reuse its address: compared by this flag)
     unsigned long theCall = R(25);
     T("== %lu server %lu", inStep, theCall);
     switch (theCall) {
@@ -738,6 +739,7 @@ static void ServerCall(unsigned long inStep)
         T("= %d", theResult);
         if (gCommunications != s) {   // the host became a client: the server is gone
             T("became client");
+            theBecameClient = true;
             delete gCommunications;
             sServer = NewServer();
         }
@@ -820,7 +822,7 @@ static void ServerCall(unsigned long inStep)
     for (size_t i = 0; i < gPhysics->mQueue.size(); i++)
         gPhysics->mQueue[i]->Dereference();
     gPhysics->mQueue.clear();
-    State(theAfter, sServer == s ? s : NULL, NULL);
+    State(theAfter, theBecameClient ? NULL : s, NULL);
     Changes(theBefore, theAfter);
 }
 
