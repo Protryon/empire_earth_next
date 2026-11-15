@@ -43,3 +43,5 @@ Changes made here (each marked "(EE patch)" at its place in the source):
   the game's thread); `playSegment` takes the boundary time and `playTransition` the playing style and band under
   the lock; each collection's voices are allocated once (`tsf_set_max_voices`, 128), so `tsf_note_on` never
   reallocates them.
+- `DmPerformance_setVolume` takes the performance's lock: the master volume shifts the sounding voices
+  (`tsf_set_volume`), and the render thread sets it as well, so each change is applied once, in order.

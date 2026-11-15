@@ -1094,7 +1094,15 @@ void DmPerformance_setVolume(DmPerformance* slf, float vol) {
 		return;
 	}
 
+	// (EE patch) Under the lock: the master volume now shifts the voices already sounding (tsf_set_volume), and the
+	// render thread sets it too (each band's fonts). Unlocked, the game's fade walked the voices while tsf_note_on
+	// changed them, and two threads applying the same change shifted a voice twice.
+	if (mtx_lock(&slf->lock) != thrd_success) {
+		return;
+	}
+
 	DmSynth_setVolume(&slf->synth, vol);
+	(void) mtx_unlock(&slf->lock);
 }
 
 void DmPerformance_setGrooveLevel(DmPerformance* slf, uint8_t level) {
