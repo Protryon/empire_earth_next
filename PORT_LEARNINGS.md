@@ -24668,3 +24668,67 @@ Round: -245 net for the moves (the TEST ONLY capture +106 aside), far under the 
   blocks, `EESMCreateUnit`, the cinematics, `EEEvent`'s handlers, the stream and list hosts); the elements' strings and
   lists. The next real saving is the element classes themselves as Rust records with C++ accessors, to be planned with
   the editor lane.
+
+## R5b.4, thirty-fourth round: the transport capture profile, the unit classes' trigger answers and the dispatch table in Rust (ee_units cls_condition.rs, cls_dispatch.rs; branch rust-r5b4-core34, 2026-11-15)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| f8d0f416 | the `transport` capture profile (TEST ONLY) and its golden, recorded on the 7fce1f3e build (a996a6d6 after the history fix) | tools only |
+| 023d362a | the UCBD notes of the citizens' searches (TEST ONLY); the UCBD golden lines of the seven profiles re-recorded on that build | +12 -3, net +9 |
+| 421a1974 | `EvaluateCondition` (the kinds' dispatch, every kind's body) and `BaseEvaluateCondition` in Rust over one host | +267 -931, net -664 |
+| f9980512 | the 37 dispatchers of EEUnitClassKinds.cpp as switches over one Rust kind-to-body table | +216 -356, net -140 |
+
+The round's C++: net about -795 (the moves -804, the notes +9). Short of the 1,500 aimed at: the citizens' searches
+were not moved (below).
+
+**The transport profile.** No profile loaded a transport (round 33). Trials on seeds 2-3 (UCBD counts): Large Islands
+to 45 minutes from the Middle Ages loaded and unloaded only on seed 3 (CanUnloadAt 4, CanLoad 15); Small and
+Tournament Islands to 45 minutes the same or less; seed 2 never invaded before 45 minutes on any islands map. Small
+Islands to 90 minutes (`transport`: Hard, the original's cheats, three computer players, `183=#5`) does on both seeds:
+seed 2 CanUnloadAt 12, FindRendezvousTiles 84, FindUnloadTiles 6, CanLoad 1392, CanUnloadNear 7, FilterLoadable 810,
+FindBoardingLocation 2546; seed 3 107, 69, 48, 1685, 29, 482, 970. FindGatheringTile stays 0 (no caller in a played
+game). About 1.5 GB of captures for the two seeds, 5 minutes each. Its golden was recorded on the round-33 head (the
+transports' bodies already Rust, proven equal by unit tests and the saveload games). **UUTL of seed 3 differs from run
+to run** (three runs, three digests, the same record count): the AI thread's calls of the noted unit utilities fall
+in different physics ticks under load. Read a lone transport UUTL mismatch like TCST and EVAT; every other tag of the
+profile was equal in all three runs.
+
+**The citizens' notes (UCBD kinds 40-45).** FindWoodSite, FindResourceOfKind, FindStorage, FindGatherPoint (inside
+the others: never outermost in a game) and HasGatherPoint, with their inputs and outputs (FindStorage's resource amount
+and type before and after: it changes them for a farm's drop site). Counts in the oracle games: 2, 147, 1075, 0, 78.
+The scenario profile's UCBD digests did not change (none of its six games runs them as an outermost call). They are the
+golden for moving the searches next round.
+
+**The trigger answers (cls_condition.rs).** `EEUnitClass::EvaluateCondition` asked the kinds deepest first and ran one
+of 17 bodies (the citizen's, priest's, building's, temple's, gate's, mine's, dock's, the ships' bounding-box sink test
+three times, the helicopters', spaceships', submarine's, fortress's), each falling back on the common answer
+(`BaseEvaluateCondition`, 60 triggers). All are Rust now: one chain by kind ([`condition`]) returning the answer, or
+the shot's kind for ee_combat's answer (the torpedo, missile and projectile stay ee_combat's), the landing kinds through
+cls_air.rs as before. The unit's and its class's plain members are read from their records in place at the moment the
+original read them; everything else is one of 47 host operations (`ee_units_cls_cond_host`, EEUnitAI.cpp, where the
+common body was): the goals (by the goal object, so a goal that answers keeps being the one the original captured), the
+behaviour and herd flags, the attackers, the reach and damage tests, and the statements with side effects (the
+obstacle wait and its random draw, the waypoint refreshes, the build queue's next build, the launch clearance) as the
+original's statements. The members that keep UCBD notes (SelectUnitToRelease, AreEnemiesNear, IsPasserNear, HasSunk)
+are called through the host so their notes still record. Pinned by USST kind 2 (every trigger's answer of every unit,
+golden from the C++ bodies): equal in all profiles. 13 mock-host tests.
+
+**The dispatch table (cls_dispatch.rs).** Each dispatcher's if-chain is a row of kinds in its order; the table of every
+row's body by category is computed at compile time and exported (`EE_UNIT_CLASS_BODIES[37][256]`, read by
+`EEClassBody`, ee/EEUnitKind.h). The C++ dispatchers are switches over the row's answer; ActionChanged and Update index
+an array of their Rust kinds; CanAttackMove, IsBuilding, IsLandBuilding and Virtual70 are the answer alone. The five
+dispatchers with UCBD notes (HasArrived, HasRoom, SelectUnitToRelease, GetSurroundingTiles, FindBoardingLocation) keep
+their chains inside the noting lambdas. A Python pass wrote the switches from the chains (no case written by hand but
+the four answer-only ones); a test checks the table against cls_condition.rs' attack-move test.
+
+**Left, and why.** The citizens' searches (FindResourceOfKind, FindStorage, FindGatherPoint, FindWoodSite): they call
+the noted unit utilities (EEGetSquareRing, EEGetSideTiles, EEGetRingCorners keep UUTL records) and about 25 world
+reads (CanGather, CanGetToUnit, the AI shuffle, CanTake, the farm drop sites, four distance forms); moving them keeps
+the UUTL leaves as host calls, about -200 net. The priests' conversion (UpdateConversion, ConvertTarget, the effects) is
+world effects around ee_combat's decision: a move would not shrink it. The shots' remaining C++ (the three
+LaunchProjectile geometries, BombUpdate, LaunchStoredMissile) is ee_ge transformations: the next candidates with a UCBD
+note first. The carrier approaches still need the tag points as host answers.
+
+**Behaviour.** None seen.
+
+**Gates.** Merged with `rust` c80a1b00 (79 commits; no conflict; the history first rewritten by the lead's fix_plan_history.sh: RUST_PLAN.md 81 kB in every commit; headers current, nothing to narrow): build `--sim` 0/0 (EE-AOC 910 inputs, EE-SIM 911); oracle seeds 2-7 identical to `ref`; the captures at seeds 2-3 PASS in oracle (179 digests), late (180), space (181), calamity (197), units (195), scenario at seeds 2-7 (82), transport equal but its seed 3 UUTL (the timing above); the saveload matrix equals its expect file (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (3,877 tests, clippy, rustfmt, headers); a sim_bench game (seed 5, Small, Hard, 2 AI) to the time cap with both computers alive (populations 39 and 45, as round 33); the test profile 0/0. Per commit: 421a1974 and f9980512 built 0/0 with oracle seeds 2-3 identical; 421a1974's captures at seeds 2-3 as above. Under the harness lock on that merge: the tour (`--exercise tour --input-check --play-seconds 120`) `RESULT PASS tour` and the orders game (`--exercise random-game --orders`) `RESULT PASS random-game`. Only the tour reaches the drawn paths among the dispatched bodies (UpdateEffects, GetSoundParameters, LoadMedia/UnloadMedia): it passed.
