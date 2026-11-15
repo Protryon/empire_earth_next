@@ -24,7 +24,6 @@
 #include "ee/EESMMediaStrings.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEUISCIFormManager.h"
-// FUNCTION: EXE 0x5e71cc
 // Resets the scenario intro manager: no open files and every flag cleared
 void EEUISCIFormManager::Clear()
 {
@@ -39,7 +38,6 @@ void EEUISCIFormManager::Clear()
     this->mScrollBriefingToEnd = false;
 }
 
-// FUNCTION: EXE 0x5e7205
 // Closes and deletes the manager's map, movie, scenario and sound files
 void EEUISCIFormManager::DeleteObjects()
 {
@@ -53,7 +51,6 @@ void EEUISCIFormManager::DeleteObjects()
     this->mSound = NULL;
 }
 
-// FUNCTION: EXE 0x5e7270
 // Returns the scenario intro form's manager, creating and attaching it on first use
 EEUISCIFormManager* EEUISCIFormManager::Get()
 {
@@ -68,14 +65,12 @@ EEUISCIFormManager* EEUISCIFormManager::Get()
     return theManager;
 }
 
-// FUNCTION: EXE 0x5e72cf
 // Returns the scenario's briefing text
 UWideString EEUISCIFormManager::GetBriefing()
 {
     return this->mMediaStrings.mInstructions;
 }
 
-// FUNCTION: EXE 0x5e72e4
 // Opens the scenario's map picture (.jpg, else .png; the original's second choice was .tga) from Scenarios; returns
 // whether one was found
 bool EEUISCIFormManager::OpenMap()
@@ -101,7 +96,6 @@ bool EEUISCIFormManager::OpenMap()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e73bd
 // Opens the scenario's movie (.bik) from Movies; returns whether it was found
 bool EEUISCIFormManager::OpenMovie()
 {
@@ -119,7 +113,6 @@ bool EEUISCIFormManager::OpenMovie()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e7444
 // Reopens the scenario file by name from Scenarios or the data path; returns whether it was found
 bool EEUISCIFormManager::OpenScenario()
 {
@@ -138,7 +131,6 @@ bool EEUISCIFormManager::OpenScenario()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e74dc
 // Opens the scenario's sound (.mp3) from Sounds; returns whether it was found
 bool EEUISCIFormManager::OpenSound()
 {
@@ -156,21 +148,18 @@ bool EEUISCIFormManager::OpenSound()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e7563
 // Returns the scenario's history text
 UWideString EEUISCIFormManager::GetHistory()
 {
     return this->mMediaStrings.mHistory;
 }
 
-// FUNCTION: EXE 0x5e7578
 // Returns the scenario's hints text
 UWideString EEUISCIFormManager::GetHints()
 {
     return this->mMediaStrings.mHints;
 }
 
-// FUNCTION: EXE 0x5e758d
 // Opens the scenario's map picture and copies its file spec; returns whether it was found
 bool EEUISCIFormManager::GetMap(FSFileSpec& outSpec)
 {
@@ -182,7 +171,6 @@ bool EEUISCIFormManager::GetMap(FSFileSpec& outSpec)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e75b5
 // Opens the scenario's movie and copies its file spec; returns whether it was found
 bool EEUISCIFormManager::GetMovie(FSFileSpec& outSpec)
 {
@@ -194,7 +182,6 @@ bool EEUISCIFormManager::GetMovie(FSFileSpec& outSpec)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e75dd
 // Reopens the scenario file and copies its file spec; returns whether it was found
 bool EEUISCIFormManager::GetScenario(FSFileSpec& outSpec)
 {
@@ -206,7 +193,6 @@ bool EEUISCIFormManager::GetScenario(FSFileSpec& outSpec)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e7605
 // Opens the scenario's sound and copies its file spec; returns whether it was found
 bool EEUISCIFormManager::GetSound(FSFileSpec& outSpec)
 {
@@ -218,7 +204,6 @@ bool EEUISCIFormManager::GetSound(FSFileSpec& outSpec)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e762d
 // Returns whether the scenario has any briefing, hints, history, map, movie or sound
 bool EEUISCIFormManager::HasMedia()
 {
@@ -229,7 +214,6 @@ bool EEUISCIFormManager::HasMedia()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5e766a
 // Starts or stops the main game's briefing button blinking, showing the large briefing alert while it blinks
 void EEUISCIFormManager::SetBlinking(bool inBlinking)
 {
@@ -248,9 +232,3 @@ void EEUISCIFormManager::SetBlinking(bool inBlinking)
         theOther->SetDisplayMode(kDisplayModeHidden);
     theOther->SetIsBlinking(inBlinking);
 }
-
-// FUNCTION: EXE 0x5e83cb
-// Destroys the scenario intro manager, deleting its open files, and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5e84a8
-// Appends an event trigger to the deque (std::deque push_back, from UIManager::AddEventToTrigger in Open)

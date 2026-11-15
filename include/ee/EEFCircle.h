@@ -6,10 +6,10 @@
 
 class EEFCircle : public EEFormation {
 public:
-    EEFCircle(long inMode, long inType);    // 0xdd160
+    EEFCircle(long inMode, long inType);
     // 0xdd1be (out of line: the ??_G 0xdd1a2 and the derived dtors call it; ICF-shared with ~EEFWedge)
     virtual ~EEFCircle();
-    virtual void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);   // 0xdd1cc
+    virtual void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);
 
     float mHalfArc;                         // +0x60 (= pi)
     float mF64;                             // +0x64

@@ -12,23 +12,11 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "rust/ee_won.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00727460
-// Constructs the global empty GUIString and registers its exit-time destructor
-// (_$E33)
-// FUNCTION: WON 0x00727470
-// Constructs the global empty GUIString
-// (_$E30)
-// FUNCTION: WON 0x00727480
-// Registers the global empty GUIString's destructor to run at exit
-// (_$E32)
-// FUNCTION: WON 0x00727490
 // Destroys the global empty GUIString at exit (once)
 // (_$E31)
 GUIString gEmptyGUIString;
-// FUNCTION: WON 0x007274b0
 // Clears the string data to empty with no text buffer
 void GUIStringData::Init() { this->mLength=this->mCapacity=0; this->mText=NULL; }
-// FUNCTION: WON 0x007274e0
 // Creates empty string data with room for the given number of characters
 GUIStringData::GUIStringData(unsigned short capacity) { this->Init(); this->resize(capacity,false); this->resize(0,false); }
 // Copy constructor (emitted at 0x00727600)
@@ -49,7 +37,6 @@ static void GUIStringDataAssignUnits(void* context, const void* units, size_t co
     data->resize((int)count,false);
     if(count!=0) memcpy(data->mText,units,count*sizeof(wchar_t));
 }
-// FUNCTION: WON 0x00727a20
 // Replaces the text with narrow text of the given length, the game's UTF-8 (D6; the original widened each byte:
 // Latin-1); a stray byte becomes U+FFFD (ee_won guistring.rs)
 void GUIStringData::AssignStr(const char* text,int length)
@@ -59,7 +46,6 @@ void GUIStringData::AssignStr(const char* text,int length)
         ee_won_guistring_widen(reinterpret_cast<const uint8_t*>(text),(size_t)length,sizeof(wchar_t),
                                GUIStringDataAssignUnits,this);
 }
-// FUNCTION: WON 0x00727ac0
 // Replaces the text with wide text of the given length
 void GUIStringData::AssignWStr(const wchar_t* text,int length)
 {
@@ -67,7 +53,6 @@ void GUIStringData::AssignWStr(const wchar_t* text,int length)
     this->mLength=length;
     for(int i=0;i<length;++i) this->mText[i]=text[i];
 }
-// FUNCTION: WON 0x00727b60
 // Sets the length to offset+length and fills that range with one character
 void GUIStringData::Fill(int character,unsigned short offset,unsigned short length)
 {
@@ -75,7 +60,6 @@ void GUIStringData::Fill(int character,unsigned short offset,unsigned short leng
     this->resize(end,false);
     for(int i=offset;i<end;++i) this->mText[i]=character;
 }
-// FUNCTION: WON 0x00727c10
 // Replaces the text with a range of another string's text
 void GUIStringData::assign(const GUIStringData* text,unsigned short offset,unsigned short length)
 {
@@ -155,19 +139,3 @@ int GUIStringData::setAt(int thePos, int theChar)
 	return theChar;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007277e0
-// (public: __thiscall WONAPI::GUIStringData::GUIStringData(char const *)    [??0GUIStringData@WONAPI@@QAE@PBD@Z])
-// TEMPLATE: WON 0x00727840
-// (public: __thiscall WONAPI::GUIStringData::GUIStringData(unsigned short const *)    [??0GUIStringData@WONAPI@@QAE@PBG@Z])
-// TEMPLATE: WON 0x007278a0
-// (public: __thiscall WONAPI::GUIStringData::GUIStringData(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const )
-// TEMPLATE: WON 0x00727910
-// (public: __thiscall WONAPI::GUIStringData::GUIStringData(class std::basic_string<unsigned short,struct std::char_traits<unsigned short>,class std::allo)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00727600
-// (public: __thiscall WONAPI::GUIStringData::GUIStringData(class WONAPI::GUIStringData const &)    [??0GUIStringData@WONAPI@@QAE@ABV01@@Z])
-// TEMPLATE: WON 0x007276f0
-// (public: __thiscall WONAPI::GUIStringData::GUIStringData(class WONAPI::GUIStringData const *,unsigned short,unsigned short)    [??0GUIStringData@WONAPI)

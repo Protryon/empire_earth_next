@@ -28,14 +28,9 @@ SelectionColor::SelectionColor(DWORD background,ForegroundSelectionMode mode)
 }
 SelectionColor::SelectionColor(DWORD background,DWORD foreground)
     :mBackgroundColor(background),mForegroundColor(foreground),mMode(ForegroundSelectionMode_UseForegroundColor) {}
-// FUNCTION: WON 0x007494e0
-// Creates a selection color with the given background and foreground colors (constructor body above)
-// (??0SelectionColor@WONAPI@@QAE@KK@Z)
 
-// FUNCTION: WON 0x00749500
 // Returns the selection background color (the graphics context is unused)
 unsigned long SelectionColor::GetBackgroundColor(Graphics&) const { return this->mBackgroundColor; }
-// FUNCTION: WON 0x00749510
 // Returns the selected-text color for the mode: the original color, its inverse, the set foreground, else white
 unsigned long SelectionColor::GetForegroundColor(Graphics&,unsigned long original) const
 {
@@ -44,9 +39,3 @@ unsigned long SelectionColor::GetForegroundColor(Graphics&,unsigned long origina
                                      (int32_t)this->mMode,(uint32_t)original);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007494a0
-// (public: __thiscall WONAPI::SelectionColor::SelectionColor(void))
-// TEMPLATE: WON 0x007494c0
-// (public: __thiscall WONAPI::SelectionColor::SelectionColor(unsigned long,enum WONAPI::ForegroundSelectionMode))

@@ -27,18 +27,18 @@ public:
     const GE2DPoint& GetLocation() const { return *(const GE2DPoint*)ee_ge_bmp_location(this->mRust); }  // exported, ICF-folded (0x38b41)
     void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
                              float& outBottomLeft) const;
-    GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_bmp_texture(this->mRust, inScreen); }  // 0xf4eb
+    GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_bmp_texture(this->mRust, inScreen); }
     // Provisional name (GELine/GEPoint/GERhombus have it); DX7Rasterizer::Draw(GEBitmap*) 0x10002c62 reads +0x10
     GEVertexArray* GetVertexArray() { return (GEVertexArray*)ee_ge_bmp_vertices(this->mRust); }
     void GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, GETextureCoordinate& outTopRight,
                                         GETextureCoordinate& outBottomRight, GETextureCoordinate& outBottomLeft) const;
     float GetWidth() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Width); }
     float GetXScale() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::XScale); }  // exported (ICF-folded 0x100112ce)
-    float GetYScale() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::YScale); }  // 0xf53e
+    float GetYScale() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::YScale); }
     void SetColor(const GEColor& inColor);
     void SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
                            const GEColor& inBottomLeft);
-    void SetLocation(const GE2DPoint& inLocation) { ee_ge_bmp_set_location(this->mRust, (const EeGe2DPoint*)&inLocation); }  // 0xf65c
+    void SetLocation(const GE2DPoint& inLocation) { ee_ge_bmp_set_location(this->mRust, (const EeGe2DPoint*)&inLocation); }
     void SetOpacity(float inOpacity);
     void SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft);
     void SetRotation(float inRotation) { ee_ge_bmp_set_rotation(this->mRust, inRotation); }
@@ -53,16 +53,15 @@ public:
                                const GETextureCoordinate& inBottomRight, const GETextureCoordinate& inBottomLeft)
         { SetTextureCoordinates(const_cast<GETextureCoordinate&>(inTopLeft), const_cast<GETextureCoordinate&>(inTopRight), const_cast<GETextureCoordinate&>(inBottomRight), const_cast<GETextureCoordinate&>(inBottomLeft)); }
 #endif
-    void SetXYScale(float inXScale, float inYScale) { ee_ge_bmp_set_xy_scale(this->mRust, inXScale, inYScale); }  // 0xf771
+    void SetXYScale(float inXScale, float inYScale) { ee_ge_bmp_set_xy_scale(this->mRust, inXScale, inYScale); }
     void SetZ(float inZ);
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft);
     GEBitmap(const GEBitmap&) = delete;
     GEBitmap& operator=(const GEBitmap&) = delete;
+    EeGeBitmap* GetRust() const { return this->mRust; }
 private:
     virtual ~GEBitmap();
-    // (ComputeRotation 0x1000fbb9 is the Rust object's)
-    // The calls the bitmap makes on other objects (EeGeBmpOp), in the original's statements
-    static intptr_t Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b);
+    // (ComputeRotation 0x1000fbb9 is the Rust object's; the calls on other objects are GEVertexHost's, lle/GELine.h)
 
     EeGeBitmap* mRust;                      // the bitmap (ee_ge bmpobj.rs)
 };

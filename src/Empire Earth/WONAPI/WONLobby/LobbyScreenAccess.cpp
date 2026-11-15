@@ -17,7 +17,6 @@
 #include "ee/wonapi/WONLobbyRoutingLogic.h"
 #include "ee/wonapi/WONLobbyLan.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0075b730
 // Returns the chat command parser, pointed at the user list of the Internet or LAN screen showing
 ChatCommandParser* LobbyGetRoomChatParser(int flags)
 {
@@ -31,7 +30,6 @@ ChatCommandParser* LobbyGetRoomChatParser(int flags)
     parser->SetClientList(clients,flags);
     return parser;
 }
-// FUNCTION: WON 0x00760ea0
 // Returns the Internet, LAN or login screen, whichever is showing, or NULL
 Component* LobbyGetCurrentScreen()
 {
@@ -41,7 +39,6 @@ Component* LobbyGetCurrentScreen()
     if(LobbyOnLoginScreen()) return gLobbyData->mLobbyContainer->mLoginScreen.get();
     return NULL;
 }
-// FUNCTION: WON 0x00760f00
 // Switches the lobby to the Internet screen and tells its controls they were entered
 void LobbyShowInternetScreen()
 {
@@ -51,7 +48,6 @@ void LobbyShowInternetScreen()
     LobbyEvent* event=new LobbyEvent(100014);
     gLobbyData->mLobbyContainer->mInternetScreen->BroadcastEventDown(event);
 }
-// FUNCTION: WON 0x00760f90
 // Switches the lobby to the LAN screen and tells its controls they were entered
 void LobbyShowLanScreen()
 {
@@ -61,7 +57,6 @@ void LobbyShowLanScreen()
     LobbyEvent* event=new LobbyEvent(100014);
     gLobbyData->mLobbyContainer->mLanScreen->BroadcastEventDown(event);
 }
-// FUNCTION: WON 0x007611b0
 // Returns the lobby's root container, or NULL before the lobby exists
 Container* GetLobbyRoot()
 {

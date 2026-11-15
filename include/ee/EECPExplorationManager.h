@@ -30,7 +30,7 @@ public:
 
 class EECPExplorationManager {
 public:
-    EECPExplorationManager(EEComputerPlayer* inPlayer);   // 0x7ed38 (ret 4)
+    EECPExplorationManager(EEComputerPlayer* inPlayer);
     virtual ~EECPExplorationManager();      // +0x00 (??_G 0x7ed7a, dtor 0x7ed96: releases the requests)
     virtual bool IsExplorer(unsigned long inUnitID);   // +0x04 0x7f14f
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x08 0x7f1a4

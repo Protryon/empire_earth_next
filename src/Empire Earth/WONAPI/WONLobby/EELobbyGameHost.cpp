@@ -37,7 +37,6 @@ static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a,
 // vtable 0x84c408)
 class SendFileOp : public SocketOp {
 public:
-    // FUNCTION: EXE 0x691463
     SendFileOp(const std::string& inPath)
         : SocketOp(NULL), mRust(ee_won_eexfer_send_new(this, EELobbyTransferHost,
                                                        reinterpret_cast<const uint8_t*>(inPath.data()), inPath.size()))
@@ -45,11 +44,8 @@ public:
         this->SetWaitForEvent(1, true);
     }
     virtual ~SendFileOp() { ee_won_eexfer_send_free(this->mRust); }
-    // FUNCTION: EXE 0x6916b3
     virtual void CleanupHook() { ee_won_eexfer_send_call(this->mRust, EeWonEeXferSendCall::Cleanup); }
-    // FUNCTION: EXE 0x6915d2
     virtual WONStatus Start() { return ee_won_eexfer_send_call(this->mRust, EeWonEeXferSendCall::Start); }
-    // FUNCTION: EXE 0x691613
     virtual WONStatus Continue() { return ee_won_eexfer_send_call(this->mRust, EeWonEeXferSendCall::Continue); }
     EeWonEeXferSend* mRust;
 };
@@ -64,9 +60,7 @@ public:
     EeWonEeXferCall mCall;
 };
 
-// FUNCTION: EXE 0x6916b8
 EELobbyFileTransfer::EELobbyFileTransfer() : mRust(ee_won_eexfer_new(this, EELobbyTransferHost)) {}
-// FUNCTION: EXE 0x69175b
 EELobbyFileTransfer::~EELobbyFileTransfer() { ee_won_eexfer_free(this->mRust); }
 
 static intptr_t EELobbyTransferHost(void* inObj, EeWonEeXferOp inOp, intptr_t a, intptr_t b, intptr_t c)
@@ -147,7 +141,6 @@ static intptr_t Threw(intptr_t inResult)
 
 // ---- the shell
 
-// FUNCTION: EXE 0x69222b
 // Creates a lobby game with every game option 0, its eight slots numbered and no saved game file here
 EELobbyGame::EELobbyGame() : mRust(NULL)
 {
@@ -158,7 +151,6 @@ EELobbyGame::EELobbyGame() : mRust(NULL)
     this->mRust = ee_won_eegame_new(this, EELobbyGameHost);
 }
 
-// FUNCTION: EXE 0x6922b2
 // Destroys the lobby game, releasing its slots, player names and file transfer
 EELobbyGame::~EELobbyGame()
 {
@@ -200,7 +192,6 @@ void EELobbyGame::HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuff
 {
     Threw(this->RCall(GC::HandleGameMessageHook, inType, (intptr_t)&inBuffer, (intptr_t)inFrom));
 }
-// FUNCTION: EXE 0x692df3
 // Returns the text for a refused join: not in the saved game, wrong version or modified game files
 GUIString EELobbyGame::GetStatusStringHook(short inStatus)
 {
@@ -222,34 +213,28 @@ unsigned char EELobbyPlayerSlot::Option(int inOption) { return (unsigned char)th
 
 // ---- the lobby player (EELobbyPlayer.cpp's)
 
-// FUNCTION: EXE 0x699a3f
 // Creates a lobby game player in slot 0 with no slot attached
 EELobbyPlayer::EELobbyPlayer()
 {
     this->mSlot = 0;
     this->mPlayerSlot = NULL;
 }
-// FUNCTION: EXE 0x699a75
 // Destroys the lobby game player (members only)
 EELobbyPlayer::~EELobbyPlayer() {}
-// FUNCTION: EXE 0x699a80
 // Reads the player's slot number from a game message; always succeeds
 bool EELobbyPlayer::ReadData(ReadBuffer& inBuffer)
 {
     this->mSlot = inBuffer.ReadByte();
     return true;
 }
-// FUNCTION: EXE 0x699a95
 // Writes the player's slot number to a game message
 void EELobbyPlayer::WriteData(WriteBuffer& outBuffer) { outBuffer.AppendByte(this->mSlot); }
-// FUNCTION: EXE 0x699aa7
 // Returns whether another player is on the same team (the rule is ee_won's)
 bool EELobbyPlayer::IsTeammate(LobbyPlayer* inOther)
 {
     unsigned char theTeam = static_cast<EELobbyPlayer*>(inOther)->GetTeam();
     return ee_won_eegame_is_teammate(this->GetTeam(), theTeam);
 }
-// FUNCTION: EXE 0x699ad1
 // Returns the team of the player's slot, or 0 when the player has no slot
 unsigned char EELobbyPlayer::GetTeam()
 {

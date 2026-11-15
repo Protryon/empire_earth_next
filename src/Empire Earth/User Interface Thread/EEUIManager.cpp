@@ -59,11 +59,11 @@
 
 class UIFileListBox;
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
-extern bool& gLoadingSavedGame;              // 0x5318d8
-extern UString gSavedGameExtension;         // 0x530ba8
-extern unsigned long& gTexturePixelDepth;    // 0x5308b4
-extern FSPath* gDataPath;                   // 0x531908
-void EEPostF9Key();                         // 0x27a7f5
+extern bool& gLoadingSavedGame;
+extern UString gSavedGameExtension;
+extern unsigned long& gTexturePixelDepth;
+extern FSPath* gDataPath;
+void EEPostF9Key();
 
 // the event factories (UIManager's control-event callbacks, then its form-event callback)
 UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID);
@@ -102,7 +102,6 @@ struct EEUIManagerCall {
     const GE2DPoint* mMouse;
 };
 
-// FUNCTION: EXE 0x671319
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
 // twice), loads the UI database and finds the main game form
 EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSurfaces, unsigned long inScreen,
@@ -117,10 +116,6 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     ee_screens_ui_manager_construct(&theCall);
 }
 
-// SYNTHETIC: EXE 0x671552
-// (EEUIManager's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x67156e
 // Destroys the UI manager and its scenario editor form
 EEUIManager::~EEUIManager()
 {
@@ -129,18 +124,6 @@ EEUIManager::~EEUIManager()
     this->mMainGameForm = NULL;
 }
 
-// FUNCTION: EXE 0x671598
-// FUNCTION: EXE 0x671f5d
-// FUNCTION: EXE 0x6724eb
-// FUNCTION: EXE 0x6726b3
-// FUNCTION: EXE 0x672ab1
-// FUNCTION: EXE 0x672ade
-// FUNCTION: EXE 0x672de6
-// FUNCTION: EXE 0x6734c5
-// FUNCTION: EXE 0x673a89
-// FUNCTION: EXE 0x673eac
-// FUNCTION: EXE 0x67406e
-// FUNCTION: EXE 0x6743d2
 // Creates a game form's event for a control id; NULL for an id no factory knows. The original's factories per form
 // (EECreateGameSettingsEvent, EECreateSaveLoadEvent, EECreateDebugSoundEvent, EECreateCampaignEditorEvent,
 // EECreateChatLogEvent, EECreateCivilizationBuilderEvent, EECreateMainGameEvent, EECreateMainScreenEvent with the
@@ -160,7 +143,6 @@ UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID)
     return EECreateScreenEvent(theCode);
 }
 
-// FUNCTION: EXE 0x671a10
 // Creates the event a form fires when it opens, closes or activates; NULL for other ids (ee_screens factories.rs;
 // WON's server select open is C++)
 UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
@@ -171,24 +153,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
     return EECreateScreenEvent(theCode);
 }
 
-// SYNTHETIC: EXE 0x671daf
-// (EEUIEWNSOpen's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x6724af
-// Opens the form the cancel event was made for (the save/load screens' cancel)
-// (EEUIECancel::ProcessEvent, inline in the class)
-
-// SYNTHETIC: EXE 0x6724c0
-// (EEUIECancel's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x673345
-// Reloads the unit data through the main game form's unit editing hack (debug load-unit event)
-// (EEUIELoadUnit::ProcessEvent, inline in the class)
-
-// SYNTHETIC: EXE 0x673359
-// (EEUIELoadUnit's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x673e7d
 // Creates the scenario editor form on first use
 void EEUIManager::CreateScenarioEditor()
 {
@@ -196,7 +160,6 @@ void EEUIManager::CreateScenarioEditor()
         this->mScenarioEditorForm = new EEUIFScenarioEditor(this);
 }
 
-// FUNCTION: EXE 0x674564
 // Creates the game's framed generic background for a background table entry (flags from its attributes)
 UIBackground* EEUIManager::CreateUserDefinedBackground(const UIBackgroundTable& inTable)
 {
@@ -224,7 +187,6 @@ UIBackground* EEUIManager::CreateUserDefinedBackground(const UIBackgroundTable& 
     return theResult;
 }
 
-// FUNCTION: EXE 0x674647
 // Creates the game's own controls from the UI database (mini map, status buttons, icon bars, WON lists ...)
 // The result lives in one variable kept in memory (the original's [ebp+8]): the line graph case
 // works through it (casts), which is what spills it. Case bodies in the original's layout order. The status bar
@@ -321,7 +283,6 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
     return theControl;
 }
 
-// FUNCTION: EXE 0x674c94
 // Creates the main game form as the game's own class; other forms as the base manager does
 UIForm* EEUIManager::CreateForm(const UIDbDataForms& inData)
 {
@@ -330,7 +291,6 @@ UIForm* EEUIManager::CreateForm(const UIDbDataForms& inData)
     return new EEUIFMainGame(this, inData);
 }
 
-// FUNCTION: EXE 0x674ccf
 // Creates the WON server select form's cancel event; NULL for other ids
 UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
 {
@@ -343,10 +303,6 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID)
     return theEvent;
 }
 
-// SYNTHETIC: EXE 0x674cf9
-// (EEUIEWNSCancel's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x674d24
 // Deletes the scenario editor form
 void EEUIManager::DeleteScenarioEditor()
 {
@@ -356,7 +312,6 @@ void EEUIManager::DeleteScenarioEditor()
     }
 }
 
-// FUNCTION: EXE 0x674d40
 // Shows a new message box asking for a text or password
 void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned long inAlignment, EEUIFPasswordCallback inCallback,
                                         bool inFlag)
@@ -365,7 +320,6 @@ void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned l
                                    NULL, NULL, inFlag);
 }
 
-// FUNCTION: EXE 0x674d79
 // Shows a new message box with only a Cancel button
 void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                 EEUIFErrorCallback inCallback, UIForm* inCancel)
@@ -373,7 +327,6 @@ void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAl
     (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_CANCEL, inMessage, inAlignment, inForm, inCallback, NULL, inCancel, false);
 }
 
-// FUNCTION: EXE 0x674db5
 // Shows a new message box with an optional OK button
 void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                  EEUIFErrorCallback inCallback, bool inFlag)
@@ -381,7 +334,6 @@ void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inA
     (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_MESSAGE, inMessage, inAlignment, inForm, inCallback, NULL, NULL, inFlag);
 }
 
-// FUNCTION: EXE 0x674df1
 // Shows a new Yes/No message box
 void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inYes,
                                   EEUIFErrorCallback inNo)
@@ -389,7 +341,6 @@ void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long in
     (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
 }
 
-// FUNCTION: EXE 0x674e2d
 // Shows a new Yes/No/Cancel message box
 void EEUIManager::DisplayYesNoCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                      EEUIFErrorCallback inYes, EEUIFErrorCallback inNo)
@@ -398,7 +349,6 @@ void EEUIManager::DisplayYesNoCancel(const UWideString& inMessage, unsigned long
                                    false);
 }
 
-// FUNCTION: EXE 0x674e69
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
 // (ee_screens ui_manager.rs)
 void EEUIManager::StartScenarioEditor()
@@ -407,7 +357,6 @@ void EEUIManager::StartScenarioEditor()
     ee_screens_ui_manager_start_editor(&theCall);
 }
 
-// FUNCTION: EXE 0x6750a9
 // Skips a playing movie on Escape, Return or Space; handles F9 screenshots outside text entry; then the keys
 // (ee_screens ui_manager.rs)
 long EEUIManager::UpdateKeyboard()
@@ -416,7 +365,6 @@ long EEUIManager::UpdateKeyboard()
     return (long)ee_screens_ui_manager_update_keyboard(&theCall);
 }
 
-// FUNCTION: EXE 0x6751ab
 // Skips a playing movie on a mouse click, then handles the mouse (ee_screens ui_manager.rs)
 long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 {
@@ -539,16 +487,6 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
     return 0;
 }
 
-// FUNCTION: EXE 0x67535d
-// Appends a callback to a callback vector (std::vector::push_back, ICF-shared)
-// (std::vector<long>::push_back (ICF: the callback vectors' push_back))
-
-// FUNCTION: EXE 0x675389
-// Copies callback vector elements (std::vector::_Ucopy, ICF-shared)
-// (std::vector<long>::_Ucopy (ICF))
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEUIManager::FnE123D()
 {
 }

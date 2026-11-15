@@ -15,13 +15,11 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x00782050
 // Creates a combo box configuration (base members only)
 ComboBoxConfig::ComboBoxConfig()
 {
 }
 
-// FUNCTION: WON 0x007821b0
 // Handles a combo box configuration key (list box size, text, items, selection, no-typing, max chars,
 // button-when-disabled); passes other keys to the container configuration
 bool ComboBoxConfig::Virtual24(const std::string& key)
@@ -54,7 +52,6 @@ bool ComboBoxConfig::Virtual24(const std::string& key)
     } else return ContainerConfig::Virtual24(key);
     return true;
 }
-// FUNCTION: WON 0x00782070
 // Returns the configuration and component for the predefined LISTAREA and INPUTBOX children; passes other
 // names to the container configuration
 bool ComboBoxConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)

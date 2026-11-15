@@ -13,7 +13,7 @@ class FSFile;
 
 class EESavedGroup : public EEGroup {
 public:
-    EESavedGroup(EEPlayer* inPlayer, long inIndex);   // 0x208e6b
+    EESavedGroup(EEPlayer* inPlayer, long inIndex);
     virtual ~EESavedGroup();                // +0x00 0x208ea6 (??_G 0x208e8a)
     virtual void Add(EEComplexUnit* inUnit);   // +0x04 0x208ebd (living units only)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x208f24

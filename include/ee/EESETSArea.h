@@ -16,7 +16,7 @@ class UITextLabel;
 
 class EESETSArea : public EESETSBaseObject {
 public:
-    EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x17ccf3
+    EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
     virtual ~EESETSArea();                  // +0x00 0x17d09b
     virtual void Sort();                    // +0x04 0x17d0e0 (sorts the areas)
     virtual void Update();                  // +0x08 0x17d0eb (drags the paint action's corner to the mouse)

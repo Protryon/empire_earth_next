@@ -17,8 +17,8 @@
 // also declared as separate globals by other units (the addresses in the comments): they are these members.
 class EEGameSettings {
 public:
-    EEGameSettings();                       // 0x1324f8
-    ~EEGameSettings();                      // 0x132466
+    EEGameSettings();
+    ~EEGameSettings();
     // inline (the local servers' ctor argument is loaded into eax before the other pushes: SIE Start 0x1e8310, SPE
     // RandomMap 0x1e8d4c; provisional name)
     long GetNetworkAdapter() const { return this->mNetworkAdapter; }
@@ -149,13 +149,13 @@ void EEApplyPortSettings(const EEGameSettings& inSettings);
 class EEGamePreferences {
 public:
     // out of line (Empire Earth.cpp's chain 0x13eaeb jumps to them; the vptr is URegistry's, not modelled)
-    EEGamePreferences();                    // 0x13281e
-    ~EEGamePreferences();                   // 0x132834
+    EEGamePreferences();
+    ~EEGamePreferences();
     const EEGameOptions& GetLastGameOptions() const { return this->mSettings.mGameOptions; }
     // never inlined: every caller (game settings 0x1d71c9.., 0x9b0db, 0x113685) calls the COMDAT 0x1d99fb
     // `lea eax, [ecx+4]` (provisional name)
     EEGameSettings& GetSettings() { return this->mSettings; }
-    void SetLastGameOptions(const EEGameOptions& inOptions);   // 0x136b49
+    void SetLastGameOptions(const EEGameOptions& inOptions);
     // 0x132848: false when the resource language or the OS language is Korean (0x412); the video tab shows check box
     // 13 only when true (provisional name)
     bool IsNotKorean();
@@ -177,7 +177,7 @@ public:
     static EEGameSettings sDefaultSettings;
 };
 
-extern EEGamePreferences gGamePreferences;  // 0x530308
+extern EEGamePreferences gGamePreferences;
 // 0x13286a: the resource defaults of gDefaultSettings' names (Empire Earth.cpp calls it before Load; provisional name)
 void EEInitializeDefaultSettings();
 

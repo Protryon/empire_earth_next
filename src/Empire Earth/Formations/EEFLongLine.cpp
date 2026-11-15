@@ -54,17 +54,12 @@
 const float kEEFLongLineSpacing = 1.0f;
 const float kEEFLongLineDepth = 0.0f;
 
-// FUNCTION: EXE 0x4ddc20
 // Creates the long line formation (type 1, rows of 10 at unit spacing, a gap row after every 5)
 EEFLongLine::EEFLongLine()
     : EEFLine(1, kEEFLongLineSpacing, kEEFLongLineDepth, 10, 5)
 {
 }
 
-// SYNTHETIC: EXE 0x4ddc4c
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4ddc68
 // Destroys the long line formation
 EEFLongLine::~EEFLongLine()
 {

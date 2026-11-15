@@ -35,7 +35,7 @@ private:
 
 class EEAIContinent : public EEAIArea, public AStarGraphableObjectBase, private EeAStarContinentRecord {
 public:
-    EEAIContinent();                        // 0x1d846
+    EEAIContinent();
     virtual ~EEAIContinent();               // +0x00 dtor 0x1d94d
     // +0x1c 0x1da61: the EEAIArea slot (closest points)
     virtual bool GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther);
@@ -64,10 +64,10 @@ public:
     void RemoveForestID(unsigned short inID) { ee_astar_continent_remove_id(this, EeAStarContinentList::Forests, inID); }
     // inline (COMDATs after their first user EEAIAStarPathAreaGoal::AssignKindIDs 0x17a4b; bodies in
     // EEAIAStarPathAreaGoal.cpp): push_back unless std::find finds it (provisional names)
-    void AddIDBC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsBc, inID); }   // 0x188e0
-    void AddIDCC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsCc, inID); }   // 0x1887f
-    void AddIDDC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsDc, inID); }   // 0x189a2
-    void AddIDEC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsEc, inID); }   // 0x18941
+    void AddIDBC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsBc, inID); }
+    void AddIDCC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsCc, inID); }
+    void AddIDDC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsDc, inID); }
+    void AddIDEC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsEc, inID); }
     // inline (COMDAT 0x26e7b in EEAIContinentManager.cpp's range): inContinent is in mNeighbors
     bool HasNeighbor(EEAIContinent* inContinent)
     {

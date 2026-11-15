@@ -29,10 +29,6 @@
 #include "ee/EEScenarioEditorIDs.h"
 #include "ee/EESETSEComboBox.h"
 
-// FUNCTION: EXE 0x581792
-// (EESETSEffectControls' constructor: ee_screens editor_controls.rs's table, made through the shared control maker)
-
-// FUNCTION: EXE 0x582445
 // Creates an effect-page combo box of the given width, 20 pixels high
 EESETSEComboBox::EESETSEComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString>& inData,
                                  GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
@@ -43,16 +39,9 @@ EESETSEComboBox::EESETSEComboBox(unsigned long inId, unsigned long inTextBoxType
 {
 }
 
-// FUNCTION: EXE 0x5824bd
 // Changes the selection and refreshes the effect page's generated name
 void EESETSEComboBox::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
     static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabTriggers])->GetScreen(kSETriggerScreenEffect)->RefreshControls();
 }
-
-// SYNTHETIC: EXE 0x5824df
-// (the scalar deleting destructor of EESETSEComboBox's implicit dtor; ICF-shared with EESETSCComboBox's)
-
-// FUNCTION: EXE 0x5824fc
-// (EESETSEffectControls' destructor: ee_screens editor_controls.rs, the controls deleted in its order)

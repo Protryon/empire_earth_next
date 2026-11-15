@@ -24669,6 +24669,193 @@ Round: -245 net for the moves (the TEST ONLY capture +106 aside), far under the 
   lists. The next real saving is the element classes themselves as Rust records with C++ accessors, to be planned with
   the editor lane.
 
+## The address markers removed (2026-11-15, branch rust-markers)
+
+- **Decision** (owner): the port is past the original exe for good, so the comments that recorded where each
+  function or global sat in it are gone. `tools/strip_markers.py` removes them; it is idempotent and keeps every
+  other byte (line endings, encodings), so each lane runs it on its own branch before merging `rust` and the two
+  sides' edits are identical. `--check` exits 1 while any is left. Upstream merges bring markers back: run it after.
+- **Census before the sweep** (src, include, tests; none in rust/ or tools/ sources): 19,949 marker lines in 764
+  files (`FUNCTION` 11,296, `TEMPLATE` 4,764, `SYNTHETIC` 3,889, then 235 `ICF-FOLDED`; modules EXE, WON, LLE, JPEG,
+  EXEIMG, DX7HR, DX7HRTNL, DEFAULT, TCP, MIXER; no `GLOBAL`, `LIBRARY`, `VTABLE` or `STRING` here, though the script
+  knows them), and about 2,400 declarations with a trailing address-only comment (`void Reset();  // 0xea26`).
+  2,880 marker blocks were "orphans" (nothing below them: the reconstruction's records of compiler-generated
+  functions and template COMDATs, with headers such as "Compiler-generated for this unit (names in ...):") and 9,198
+  sat on the function they named.
+- **What the script decides.** A marker's own note goes with it, except under the last marker of a block that sits
+  on code (or heads a file before its `#include`s): that note is the function's description and stays, less its
+  name-only lines (mangled names, undecorated signatures, "(no address of its own: ...)"). Paragraphs after a `//`
+  separator and comments above the markers of attached blocks stay; so do `// UNIT-FLAGS:` (the build reads it),
+  `// RTTI:`, `// DEAD-IN-AOC:`, `// NEAR:` and every sentence that only mentions an address. A trailing comment goes
+  only when it is nothing but addresses in the binaries' ranges (0x1000..0xa00000, 0x10000000..0x10200000) with an
+  optional `(ret N)`, `(??_G 0x..)`, `(provisional name)`, `(ICF)`, `(inline)` or `(cdecl)`; no such value equals a
+  literal on its line. Pitfalls met: a marker whose note runs on (an open parenthesis, a trailing comma) needs its
+  continuation lines too; a block followed by `#include` is a file header whose last note is real text (GEVector.cpp).
+- **Tools.** Only `tools/harness/differential/dump.py` read markers (the writer index named each write's function by
+  the `// FUNCTION: EXE` above it and joined a round-38 score file); it now takes the enclosing definition line. The
+  harness resolves functions by mangled name from the link `.map` (`LinkMap`), never from markers, so it is unchanged.
+- **Gates** on the sweep: build `--sim` 0/0, the test profile 0/0, oracle seeds 2-7 identical, the editor gate PASS
+  (a first run under the selftest's load differed in one form's view rectangle; the rerun passed). The harness self
+  test stops in `selftest_inproc.probe` with `NESynchronousCommunications has no member mLastTickReceived`, which
+  predates the sweep (the member moved to ee_net in 44610d44; PROBE_FIELDS still names it). Under the harness lock: the
+  fixture tour `RESULT PASS tour`; the legacy tour (`game_session.py --exercise tour --input-check --play-seconds
+  120`, which finds its functions in the `.map`) reached `STOP <windowed session complete>` both times, its F3 check
+  failing once (paused False -> False -> False, an RDP session) and passing on the rerun.
+
+## R4.3, fifteenth part: GELine, GEPoint and GERhombus whole in Rust; GESurface's image files and the open-format lookups in Rust; GE2DPoint.cpp and Graphics Engine.cpp folded (ee_ge prim.rs, ee_openformats surface_file.rs, find.rs; branch rust-ge15, 2026-11-15)
+
+Round 14's rule again: only whole files cut lines. Five Graphics Engine units are gone (GELine.cpp, GEPoint.cpp,
+GERhombus.cpp, GEOpenFormatsFile.cpp, GE2DPoint.cpp) plus Graphics Engine.cpp, and GESurface.cpp lost its image code.
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| 8f538483 | GELine, GEPoint and GERhombus whole in Rust; their three units deleted | +109 -544, net -435 |
+| e0b2186b | GESurface's image files and the open-format lookups in Rust; GEOpenFormatsFile.cpp deleted | +135 -834, net -699 |
+| a183fd8b | GE2DPoint.cpp and Graphics Engine.cpp folded and deleted | +127 -625, net -498 |
+
+Round total: net -1,632. The Graphics Engine directory (with the DX7 plug-in's 1,351 lines): 8,752 -> 7,284.
+
+- **The primitives** (`EeGePrim`, `prim.rs`): one Rust object for the three classes (a kind; the vertex array; a line's
+  and a point's per-screen textures; a rhombus's rectangle and rotation), with every member of the three units and the
+  headers' per-vertex members. The C++ classes keep their interfaces (the UI and the HUD hold them by value and draw
+  `GELine` arrays: `GERasterizer::Draw(GELine*, count)` steps by `sizeof`, so each class is exactly one pointer). Their
+  copy constructor and assignment are deleted where the original had an implicit memberwise copy nobody used (a copy
+  would have shared the vertex array and released it twice); `GERhombus::operator=` stays, through a new host operation
+  (`VertexCopyFrom`). The calls on the vertex array and the textures are the bitmap's host, renamed `GEVertexHost`
+  (GEBitmap.cpp). The DX7 draws read the bitmap's and the primitives' Rust objects directly; one C++ read is left (a
+  colour vertex array's vertices).
+- **GESurface's image files** (`surface_file.rs`): `Load`, `Save` and `GetImageFileAttributes` with the BMP writer,
+  the JPEG and JPG2 readers and writers and the PNG reader, in the original's statements. libjpeg's structures stay C:
+  a decompressor or compressor is a handle of the host (`EeOfSurfOp`, `GESurfaceHost` in GESurface.cpp, with the
+  surface's and the file's virtuals). The C stream's `fseek`, `ftell`, `_getw` and `_putw` are called from Rust on the
+  `FILE*` the file opened. `c_ulong` is `u32` on Windows and `u64` on the POSIX targets: the module allows
+  `clippy::unnecessary_cast` rather than splitting the casts per target (clippy on Windows flagged an `as u32` that is
+  needed on Linux).
+- **The open-format lookups** (`find.rs`): a model's `<name>.glb`, else `<name>.gltf` with its external buffers, a
+  texture's `<name>.png` and its `@n` frames, `ESVerify` on a file that does not decode. The path and its files are one
+  host (`EeOfFileOp`, `GEOpenFormatsHost` in GEModelManager.cpp). The decoders' C entry points (`ee_of_gltf_to_model`,
+  `ee_of_png_to_texture`, `ee_of_bytes_copy`) went with GEOpenFormatsFile.cpp.
+- **The fold**: GE2DPoint.cpp held the value types' component-wise members (compound assignments, comparisons, `Add`,
+  `Clear`, `SetXYZ`, GE3DLine's constructors, `GetPointAt`, `ComputeDirection`), the Rust forwarders (distances, side
+  test, magnitudes, interpolation) and GE2DPoint's `Load`/`Save`. The component-wise members are header inlines in the
+  original's statements; the forwarders and `Load`/`Save` moved to GE3DPoint.cpp and GEVector.cpp. These are value
+  types the simulation uses in nearly every unit: an inline is safe only because every unit compiles with
+  `-ffp-contract=off` (`tools/ee.py`), so `d * t + s` inlined rounds as the call did (no FMA). GE3DLine's copy is now the
+  implicit memberwise one (the exe's view already copied inline). The DLL-era conditionals in the four headers
+  (`LLE_EXE_HEADERS`, `LOWLEVELENGINE_EXPORTS`, the newer-header copy constructor) and GE2DPoint's three unused static
+  string ids went with the unit. Graphics Engine.cpp (`GEInitialize`, the shutdown hook, the pixel-format forwarders)
+  is the end of GERasterizer.cpp.
+- **The goldens** (scratch, `build/ge15/gpr`, `gsf`, `gof`: `build.py orig|cur|mut`, the fakes, the drivers,
+  `mutate.py`), each over the base commit's unmodified units:
+  - The primitives: a traced rasterizer (random screen counts), vertex arrays (the fake's whole state digested) and
+    textures with reference counts; random sequences of every constructor, setter, getter, `SetTexture`,
+    `ComputeRotation`, rhombus assignment and destruction, each step followed by a digest of every live primitive and
+    vertex array. 20,000 sequences identical (sha256 7b216a87...). 18 of 18 mutations caught (2,000 sequences each; the
+    weakest, "assign keeps the rotation", changes 3).
+  - The image files: fake surfaces (every pixel format, both depths, padded rows, failing locks) and fake files on disk
+    (closed, or open with any access at any position after a prefix; failing opens), the game's libjpeg, PNGs from a
+    small stored-deflate encoder (RGB, RGBA, some corrupt); after each call the result, the outputs, the surface's
+    pixels and the file's bytes hashed. 10,000 sequences identical (sha256 d62eb72f...). The driver's `operator new`
+    zeroes memory: `SaveAsBMP`'s row buffer leaves its padding unwritten and the original wrote whatever the heap held
+    into the file (the Rust writes zeros: the round's one behaviour change). 21 of 24 mutations caught; the three that
+    change nothing ("JPEG load locks before the decoder", "PNG short read accepted", "PNG attributes with the closed
+    result") reorder or relax steps whose difference no fake observes (the lock never fails between the two points;
+    a short read already fails the decode; both results are the same on every path the driver takes).
+  - The lookups: a fake path over the open tree's real model and texture files plus broken ones, failing opens and
+    short reads; after each lookup the result, the texture's size, frames and pixels or the model's presence, and the
+    trace of every path and file call. 10,000 sequences identical (sha256 56293f5a...). No mutation run.
+  - Store gate PASS after the lookups (25,140 lines).
+- **What only the game exercises**: the primitives exist only in a running game (the UI's and the HUD's lines, points
+  and rhombi): EE-SIM never constructs one. GESurface's image files need a renderer's surface, so EE-SIM never reaches
+  them either. The tour is these two changes' only gate beyond the goldens.
+- **The history rewrite**: local `rust` had a commit that bloated docs/RUST_PLAN.md to 300 MB (one line); the lead
+  rewrote the unpushed history. This branch had started from the old ge14 tip (63279061), whose ancestry carried the
+  300 MB blob. A merge would have kept that blob in the history (GitHub refuses files over 100 MB) and gave ten merge
+  bases and spurious conflicts in the capture goldens. The round's three commits were cherry-picked onto the rewritten
+  ge14 tip (c592cb99, whose tree differs from 63279061 only in RUST_PLAN.md), giving identical trees but for that file;
+  then `rust` merged without a conflict. The old line is kept as the local branch `rust-ge15-oldbase`.
+- **Gate artefact**: a second gate started while an earlier one (from a previous session) still ran in the same
+  worktree; both builds staged into the same root, EE-SIM's link failed, seed 3 differed at an AI debug line and an
+  `ee_gfx` test failed. Run alone, the same tree linked 0/0, matched the oracle and passed the Rust gate. Check for a
+  running gate (the process tree of `rust_build.py`/`build.py`, whose cargo children name the worktree) before
+  starting one.
+- **Gates on the tree merged with `rust`** (3114725d): `build.py --sim` and `--test-profile windowed-software` 0/0
+  (923/924 inputs); sim oracle seeds 2-7 identical; captures at seeds 2-3: oracle 177 and late 178 digests equal (4
+  without a golden each), effects 6 equal; Rust gate PASS (3,712 tests). Harness: the tour `RESULT PASS tour` (render
+  checks ok, 83.5% lit, no GX errors); the legacy tour `STOP <windowed session complete> reached`, F3 input check ok;
+  the orders game `ORDERS PASS` (gather, repair, repair-queued, move) with the edge scroll check failing as it does on
+  this machine (the camera moves 0.04); the LAN game `RESULT PASS lan-game`. Against the pre-round test exe (the ge14
+  merge, a8b2e340) on the same seed: the menus equal but the animated corner (main menu and closed settings 227
+  pixels, single player, random map setup and the settings tabs 0); the top HUD equal; the HUD bars, lines and
+  portraits of a selection drawn as before (by eye, the orders game's captures). The game views (play, zoom) differ in about 750,000 pixels between any two of the three exes (pre-round, the `rust`
+  tip 3114725d built in a scratch worktree, this round merged), the HUD rows excluded: the terrain view is not
+  reproduced pixel for pixel from run to run, so only the menus compare by pixel; by eye the three views are the same.
+
+## R4.3, sixteenth part: GEMaterial, GEFont, GEText and GEWindow whole in Rust; the value types' units folded into GEValues.cpp; the shells merged into three units (ee_ge smallobj.rs; branch rust-ge16, 2026-11-15)
+
+Rounds 14 and 15's rule held again: only whole files cut lines. Twenty-seven Graphics Engine units are gone: four with
+their classes (now Rust), fifteen value-type units folded into one, eight shells merged into three.
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| d684236d | GEMaterial, GEFont, GEText and GEWindow whole in Rust; their four units deleted | +211 -398, net -187 |
+| c204e613 | the value types' fifteen units folded into GEValues.cpp | +993 -1,795, net -802 |
+| c79a8c31 | the shells of GEModel, GEModelManager, GEPhysicalModel, GETerrainMesh, GETexture, GETextureManager, GETextureSet, GESurface, GEBitmap and GEFontBitmap merged into GEModel.cpp, GETexture.cpp and GEBitmap.cpp | +1,240 -1,866, net -626 |
+
+Round total: net -1,615. The Graphics Engine directory (with the DX7 plug-in's 1,351 lines): 7,284 -> 5,698; its units
+are GEBitmap.cpp, GEModel.cpp, GERasterizer.cpp, GETexture.cpp and GEValues.cpp.
+
+- **The four classes** (`smallobj.rs`): a material (name, colour, a texture per screen, polygon ranges per level of
+  detail, vertex range, texture index, opacity), a font (name, platform font, quality, style, size, cell height, glyph
+  bitmap), a text (location, colours, extent, string, font, alignment, transparency) and a window (platform window,
+  client origin, size, depth, full-screen flag), with every member of their units and headers. The C++ classes keep
+  their interfaces (the models, the UI's controls and the renderer use them); a material and a font keep their
+  `UReferenceCounter` base, so the count stays C++. The `UString`s and `UWideString` the originals held by value are
+  C++ objects the Rust object owns through the host (accessors such as `GetName()` and `GetText()` return references,
+  so they must be real C++ strings). One host, `GEObjectHost` (`EeGeObjOp`, GEBitmap.cpp), makes every call on the
+  strings, the referenced textures, fonts and font bitmaps, the platform fonts and windows and the platform's text
+  functions, in the original's order. The text extent calls `font_ffi.rs`'s `ee_ge_text_extent` from Rust.
+  - GEWindow.h is included by most of the game: it forward-declares the object (`struct EeGeWin`) and keeps its
+    forwarders out of line next to the host, so it does not pull `rust/ee_ge.h` into those units.
+  - `GEMaterial::SizeOf` feeds the model manager's footprint: it passes the size of the original object's layout (a
+    local struct of its old members) so the footprint did not change when the class shrank to a pointer.
+  - The copies are deleted. GEText's implicit copy shared the font without taking a reference (a double release when
+    both copies died); nothing used it, nor the others'. `GEText::operator=` stays (its self-assignment released the
+    font before taking it again, as the original did; the golden skips it).
+  - cbindgen: a function returning `*mut [f32; 3]` made the header generator stop with "`float` is declared twice";
+    the colour accessors return `*mut f32` (the first of three, `GEColor`'s layout).
+  - The store gate's digest read a material's members as a friend: it reads the accessors now (a `ScreenCount` field
+    for the texture slots); store gate PASS (25,140 lines).
+- **The fold** (`GEValues.cpp`, an extra lle unit in tools/units.py): GE3DPoint, GEVector, GE3DLine, GE3DPlane,
+  GETransformation, GEOrientation, GEQuaternion, GEBoundingBox, GEViewport, GERectangle, GEColor, GELight,
+  GETextureCoordinate, GEVertexArray and GEPolygonArray held Rust forwarders, the static string ids, the quantized
+  vector table, the file I/O and address markers. Their bodies are one unit in the same statements; the markers and
+  the include lists went with the files. The forwarders did not become header inlines: GE3DPoint.h and its siblings
+  are included by about 230 game units, and an inline over Rust would pull `rust/ee_ge.h` into each (any ee_ge FFI
+  change would rebuild them). The statics now initialize at the extra unit's link position; nothing reads them during
+  static initialization. GEVector.cpp's `#define LLE_GEVECTOR_CPP` (which makes the statics visible) is the unit's
+  first line.
+- **The shell merge**: by what the shells serve: GEModel.cpp (the model, its loader, the manager with the open-format
+  lookups' host, the physical model's walk table, the terrain mesh), GETexture.cpp (the texture, the manager, the
+  texture set, the surface with libjpeg's calls) and GEBitmap.cpp (the bitmap, the font bitmap, the vertex and object
+  hosts). A scratch script did the folds (build/ge16/fold.py: markers, the leading comment block and marker-only
+  comments dropped, includes merged in first-seen order); two things it could not see: GESurface.cpp included
+  libjpeg inside `extern "C" { }`, and the merged include list put the include outside it (16 unresolved `jpeg_*`
+  symbols at the link); GETerrainMesh.cpp's `#define LLE_GETERRAINMESH_CPP` had no reader and went.
+- **Cost**: a comment edited in GE2DPoint.h rebuilt nearly every unit (about 27 minutes at -j 3 on the loaded
+  machine). Comment-only header edits are not free here.
+- **The golden** (scratch, build/ge16/gms: `build.py orig|cur|mut`, `fake_ms.h`, `driver_ms.cpp`, `mutate.py`): over
+  the base commit's unmodified GEMaterial.cpp, GEFont.cpp, GEText.cpp and GEWindow.cpp and their headers, with traced
+  fakes of `UReferenceCounter`, `UString`, `UWideString`, textures, font bitmaps, platform fonts (one face that fails)
+  and windows and the platform's text functions (two-byte characters, a measure per byte); random sequences of every
+  constructor, setter, getter, `SetTexture`, `SizeOf`, `CompareFont`, `SetFontBitmap`, `SetText`, `SetFont`,
+  `operator=`, `GetClientOrigin`, `Resize` and destruction, each step followed by a digest of every live object. 20,000
+  sequences identical (5.7 M trace lines, sha256 of the digests 1ae1c6e8...). 25 of 25 mutations caught (the weakest,
+  "extent measured without a platform font" and "assign keeps the location", change 19 of 2,000 sequences).
+- **What only the game exercises**: the texts, fonts and windows exist only in a running game (EE-SIM draws no UI);
+  materials are made by every model load (the store gate covers them). The tour is the texts' and windows' gate.
+- **Gates on the tree merged with `rust`** (c80a1b00, local `rust`): `build.py --sim` and `--test-profile windowed-software` 0/0 (878/879 inputs); sim oracle seeds 2-7 identical; captures at seeds 2-3: oracle 179 and late 180 digests equal (4 without a golden each), effects 6 equal; store gate PASS (25,140 lines, before the merge); Rust gate PASS (3,876 tests; after a clippy and rustfmt fix to smallobj.rs, 26af197f, rerun with the relink and oracle seeds 2-3). Per commit: build 0/0 and oracle seeds 2-3 identical for each, the Rust gate after the first (its one failure, `ee_gx`'s `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`, a timing test under load, passed alone), the effects capture after the fold. Harness: the tour `RESULT PASS tour` (83.6% lit, render checks ok); the legacy tour `STOP <windowed session complete> reached`, F3 input check ok; the orders game `ORDERS PASS` (gather, repair, repair-queued, move) with the edge scroll check failing as it does on this machine (0.041); the LAN game `RESULT PASS lan-game`. Against round 15's merged tour (same seed): the settings tabs and single player equal; the main menu and closed settings 168 pixels (the animated corner); the random map setup 598 pixels, all in a 42 x 40 box that is the game's mouse pointer at another position; the game views differ run to run as before; the HUD by eye as before (the orders game's captures: the resource bar's texts, the age label, the mini map).
+
 ## R6: game screens B, round 1: the campaign editor's model whole in Rust; the moved forms' dead ids; the host's, dialogs', manager's and thread's include blocks (ee_screens campaign_model.rs; branch rust-screensb1, 2026-11-15)
 
 A second game screens lane. The first (`docs/progress/r6-game-screens-60k-lines-on-the-toolkit.md`) keeps the

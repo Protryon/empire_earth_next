@@ -15,7 +15,6 @@
 #include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 
-// FUNCTION: WON 0x007193C0
 // Paints the header button plus a small up or down sort arrow after its text, shifted by one pixel while pressed
 void WONHeaderButton::Paint(Graphics &g)
 {
@@ -36,7 +35,6 @@ void WONHeaderButton::Paint(Graphics &g)
 	WONDrawRun(g,anOps,WONDrawSlots());
 }
 
-// FUNCTION: WON 0x0071A450
 // Sets a column's header to a skinned text button and its width; the first header fixes the header height (15 if
 // none; skinlay.rs)
 void WONListCtrl::SetStandarColumnHeader(int theCol, const GUIString &theTitle, int theWidth)
@@ -44,7 +42,6 @@ void WONListCtrl::SetStandarColumnHeader(int theCol, const GUIString &theTitle, 
 	WONSkinLayout(this,EeWonSkinLayKind::WonListTextHeader,theCol,(intptr_t)&theTitle,theWidth);
 }
 
-// FUNCTION: WON 0x0071A4C0
 // Sets a column's header to the given component and its width; the first header fixes the header height (15 if
 // none; skinlay.rs)
 void WONListCtrl::SetColumnHeader(int theCol, Component *theHeader, int theWidth)
@@ -53,7 +50,6 @@ void WONListCtrl::SetColumnHeader(int theCol, Component *theHeader, int theWidth
 }
 
 
-// FUNCTION: WON 0x0071a580
 // Lays out the scroll container, then places the header strip directly above the list area (skinlay.rs)
 void WONListCtrl::Virtual08()
 {
@@ -63,14 +59,12 @@ void WONListCtrl::Virtual08()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x0071a060
 // Creates a skinned list header that takes its buttons from the given skin
 WONHeaderControl::WONHeaderControl(WONSkin* skin)
 {
     this->mSkin=skin;
     this->mTextLeftPad=0;
 }
-// FUNCTION: WON 0x0071a1c0
 // Puts a new skinned header button with the title on a column, optionally returning its desired height
 void WONHeaderControl::SetColumn(int column,const GUIString& title,int* desiredHeight)
 {
@@ -83,9 +77,3 @@ void WONHeaderControl::SetColumn(int column,const GUIString& title,int* desiredH
     this->SetColumnItem(column,button.get());
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0071a100
-// (public: virtual void * __thiscall WONAPI::WONHeaderControl::`scalar deleting destructor'(unsigned int)    [??_GWONHeaderControl@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x0071a120
-// (public: virtual __thiscall WONAPI::WONHeaderControl::~WONHeaderControl(void)    [??1WONHeaderControl@WONAPI@@UAE@XZ])

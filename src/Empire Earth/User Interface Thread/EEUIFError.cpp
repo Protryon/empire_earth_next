@@ -28,10 +28,10 @@
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEUIFError.h"
 #include "rust/ee_screens.h"   // ee_screens_dialog_show, _open, _construct (ee_screens dialog.rs)
-static const float kMessageButtonOpacity = 0.4f;                // 0x44a638
-static const GEColor kMessageButtonColor(1.0f, 1.0f, 1.0f);     // 0x5645e8
-static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);       // 0x5645d8
-static const GEColor kMessageFocusedColor(0.61f, 0.46f, 0.0f);  // 0x5645c8
+static const float kMessageButtonOpacity = 0.4f;
+static const GEColor kMessageButtonColor(1.0f, 1.0f, 1.0f);
+static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);
+static const GEColor kMessageFocusedColor(0.61f, 0.46f, 0.0f);
 
 // The OK button (RTTI EEUIFEBOK > UIButton; vtable 0x44a640; sizeof 0x110). The in-class virtuals follow the ctor
 // with the ??_G in declaration order.
@@ -92,7 +92,6 @@ protected:
     bool mPressed;                          // +0x110
 };
 
-// FUNCTION: EXE 0x660d85
 // Creates the message box's OK/Yes button (50x20) with its callback unset
 EEUIFEBOK::EEUIFEBOK(UIForm* inForm, unsigned long inId)
     : UIButton(inId, NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f), inForm, inId, 1),
@@ -102,14 +101,6 @@ EEUIFEBOK::EEUIFEBOK(UIForm* inForm, unsigned long inId)
     this->mPressed = false;
 }
 
-// FUNCTION: EXE 0x660e01
-// Draws the button over a light translucent panel
-// (EEUIFEBOK::DrawPolygons, in the class)
-
-// SYNTHETIC: EXE 0x660e7b
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFEBOK+0x0)
-
-// FUNCTION: EXE 0x660e9e
 // Marks the OK/Yes button pressed and closes the message box
 void EEUIFEBOK::ButtonUp()
 {
@@ -118,7 +109,6 @@ void EEUIFEBOK::ButtonUp()
     gUserInterface->CloseForm(NULL);
 }
 
-// FUNCTION: EXE 0x660eb9
 // Creates a No or Cancel button (50x20) with its callback and close form unset
 EEUIFEBCancel::EEUIFEBCancel(UIForm* inForm, unsigned long inId)
     : UIButton(inId, NULL, NULL, NULL, GERectangle(GE2DPoint(0.0f, 0.0f), 50.0f, 20.0f), inForm, inId, 1),
@@ -128,14 +118,6 @@ EEUIFEBCancel::EEUIFEBCancel(UIForm* inForm, unsigned long inId)
     this->mPressed = false;
 }
 
-// FUNCTION: EXE 0x660f3b
-// Draws the button over a light translucent panel
-// (EEUIFEBCancel::DrawPolygons, in the class)
-
-// SYNTHETIC: EXE 0x660fb5
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFEBCancel+0x0)
-
-// FUNCTION: EXE 0x660fd8
 // Marks the No/Cancel button pressed and closes the message box (or its close form)
 void EEUIFEBCancel::ButtonUp()
 {
@@ -144,7 +126,6 @@ void EEUIFEBCancel::ButtonUp()
     gUserInterface->CloseForm(this->mCloseForm);
 }
 
-// FUNCTION: EXE 0x660ffb
 // Creates the game's message box form: message label, OK, No and Cancel buttons, an edit box and the gold
 // framed background, laid out for a 1024x768 design (ee_screens dialog.rs construct: the order, sizes, colours and
 // layout; each step one op of the host below)
@@ -154,10 +135,6 @@ EEUIFError::EEUIFError(UIManager* inManager)
     ee_screens_dialog_construct(this);
 }
 
-// SYNTHETIC: EXE 0x66149b
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFError+0x0)
-
-// FUNCTION: EXE 0x6614b7
 // Destroys the message box and its controls
 EEUIFError::~EEUIFError()
 {
@@ -177,11 +154,6 @@ static GERectangle sDialogRectangle;
 static GEFont* sDialogFont;
 static float sDialogFloats[9];   // the constructor's sizes, colours and layout (EE_SCREENS_DLG_FLOAT)
 
-// FUNCTION: EXE 0x66151a
-// FUNCTION: EXE 0x66167f
-// FUNCTION: EXE 0x661788
-// FUNCTION: EXE 0x661894
-// FUNCTION: EXE 0x6619f9
 // Shows the box as a message, question, Yes/No/Cancel, text prompt or Cancel box (the original's DisplayMessage,
 // DisplayQuestion, DisplayYesNoCancel, DisplayPassword and DisplayCancel: ee_screens dialog.rs)
 void EEUIFError::Display(unsigned long inKind, const UWideString& inMessage, unsigned long inAlignment, void* inData,
@@ -347,19 +319,12 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
     return 0;
 }
 
-// FUNCTION: EXE 0x661baf
 // Draws the message box background
 long EEUIFError::DrawBackground(const GERectangle& inRectangle)
 {
     return UIForm::DrawBackground(inRectangle);
 }
 
-// FUNCTION: EXE 0x661bbc
-// FUNCTION: EXE 0x661cda
-// FUNCTION: EXE 0x661e18
-// FUNCTION: EXE 0x661f9c
-// FUNCTION: EXE 0x662121
-// FUNCTION: EXE 0x6622ed
 // Opens the message box, scales its background to the window and lays out the buttons for its mode (the original's
 // LayoutCancel, LayoutPassword, LayoutQuestion, LayoutYesNoCancel and LayoutMessage: ee_screens dialog.rs)
 void EEUIFError::Open()
@@ -370,7 +335,6 @@ void EEUIFError::Open()
     ee_screens_dialog_open(this, this->mMode);
 }
 
-// FUNCTION: EXE 0x661c4c
 // Closes the message box and posts the pressed button's callback and data (OK first, then No, then Cancel)
 void EEUIFError::Close()
 {
@@ -390,32 +354,3 @@ void EEUIFError::Close()
     gUserInterface->PostErrorClosed(this, theData);
     UIForm::Close();
 }
-
-// SYNTHETIC: EXE 0x660c27
-// SYNTHETIC: EXE 0x660c31
-// SYNTHETIC: EXE 0x660c4a
-// SYNTHETIC: EXE 0x660c56
-// SYNTHETIC: EXE 0x660c57
-// SYNTHETIC: EXE 0x660c61
-// SYNTHETIC: EXE 0x660c7a
-// SYNTHETIC: EXE 0x660c86
-// SYNTHETIC: EXE 0x660c87
-// SYNTHETIC: EXE 0x660c91
-// SYNTHETIC: EXE 0x660caa
-// SYNTHETIC: EXE 0x660cb6
-// SYNTHETIC: EXE 0x660cb7
-// SYNTHETIC: EXE 0x660cc1
-// SYNTHETIC: EXE 0x660cde
-// SYNTHETIC: EXE 0x660cea
-// SYNTHETIC: EXE 0x660ceb
-// SYNTHETIC: EXE 0x660cf5
-// SYNTHETIC: EXE 0x660d0e
-// SYNTHETIC: EXE 0x660d1a
-// SYNTHETIC: EXE 0x660d1b
-// SYNTHETIC: EXE 0x660d25
-// SYNTHETIC: EXE 0x660d42
-// SYNTHETIC: EXE 0x660d4e
-// SYNTHETIC: EXE 0x660d4f
-// SYNTHETIC: EXE 0x660d59
-// SYNTHETIC: EXE 0x660d78
-// SYNTHETIC: EXE 0x660d84

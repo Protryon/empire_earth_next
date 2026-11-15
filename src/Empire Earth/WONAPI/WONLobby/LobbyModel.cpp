@@ -59,7 +59,6 @@ static void ModelAppendUnits(void* inContext, const uint16_t* inUnits, size_t in
         WideAppendUtf16Unit(*anOut, inUnits[i]);
 }
 
-// FUNCTION: WON 0x7a51a0
 // Creates a lobby client with no id, no room or game membership and no flags
 LobbyClient::LobbyClient() : mName(GetEmptyGUIStringData())
 {
@@ -79,11 +78,9 @@ LobbyClient::LobbyClient() : mName(GetEmptyGUIStringData())
     this->mInvited = false;
 }
 
-// FUNCTION: WON 0x7a5260
 // Destroys the client, releasing its name and player data
 LobbyClient::~LobbyClient() {}
 
-// FUNCTION: WON 0x7a52f0
 // Takes the client out of the given chat room or game if it is in it, clearing its flags and captaincy there
 void LobbyClient::ClearGroup(unsigned short inId, bool inGame)
 {
@@ -96,15 +93,12 @@ void LobbyClient::ClearGroup(unsigned short inId, bool inGame)
     }
 }
 
-// FUNCTION: WON 0x7a5330
 // Returns whether the client is in a chat room
 bool LobbyClient::IsInChatGroup() { return this->mChatGroupId != 0xffff; }
 
-// FUNCTION: WON 0x7a5340
 // Returns whether the client is in a game
 bool LobbyClient::IsInGameGroup() { return this->mGameGroupId != 0xffff; }
 
-// FUNCTION: WON 0x7a5350
 // Copies the client's name, flags, ids and CD key id from the routing server's client info
 void LobbyClient::ReadRoutingInfo(RoutingClientInfo* inInfo)
 {
@@ -115,7 +109,6 @@ void LobbyClient::ReadRoutingInfo(RoutingClientInfo* inInfo)
     this->mCDKeyId = inInfo->mAddress;
 }
 
-// FUNCTION: WON 0x7a5450
 // Refreshes whether the client is ignored by name and blocked by CD key
 void LobbyClient::UpdateIgnoreStatus()
 {
@@ -123,7 +116,6 @@ void LobbyClient::UpdateIgnoreStatus()
     this->mBlocked = LobbyIsCDKeyBlocked(this->mCDKeyId);
 }
 
-// FUNCTION: WON 0x7a5470
 // Returns whether the client is flagged anonymous on the server
 bool LobbyClient::IsAnonymous()
 {
@@ -131,7 +123,6 @@ bool LobbyClient::IsAnonymous()
         .anonymous;
 }
 
-// FUNCTION: WON 0x7a5480
 // Returns whether the client is muted server-wide or in the given chat room or game
 bool LobbyClient::IsMuted(bool inGame)
 {
@@ -140,23 +131,18 @@ bool LobbyClient::IsMuted(bool inGame)
     return inGame ? aStatus.muted_game : aStatus.muted_chat;
 }
 
-// FUNCTION: WON 0x7a54b0
 // Returns whether the client is flagged away
 bool LobbyClient::IsAway() { return ee_won_model_client_status((uint32_t)this->mClientFlags, 0, 0).away; }
 
-// FUNCTION: WON 0x7a54c0
 // Returns whether the client is a server administrator
 bool LobbyClient::IsAdmin() { return ee_won_model_client_status((uint32_t)this->mClientFlags, 0, 0).admin; }
 
-// FUNCTION: WON 0x7a54d0
 // Returns whether the client is a moderator
 bool LobbyClient::IsModerator() { return ee_won_model_client_status((uint32_t)this->mClientFlags, 0, 0).moderator; }
 
-// FUNCTION: WON 0x7a54e0
 // Returns whether the client captains its game or its chat room
 bool LobbyClient::IsCaptain(bool inGame) { return inGame ? this->mIsGameCaptain : this->mIsChatCaptain; }
 
-// FUNCTION: WON 0x7a5500
 // Sets whether the client captains its game or its chat room
 void LobbyClient::SetCaptain(bool inCaptain, bool inGame)
 {
@@ -164,19 +150,15 @@ void LobbyClient::SetCaptain(bool inCaptain, bool inGame)
     else this->mIsChatCaptain = inCaptain;
 }
 
-// FUNCTION: WON 0x7a5520
 // Attaches the client's in-game player data (NULL detaches it)
 void LobbyClient::SetPlayer(LobbyPlayer* inPlayer) { this->mPlayer = inPlayer; }
 
-// FUNCTION: WON 0x7a5580
 // Returns whether the client has joined the game as a player
 bool LobbyClient::HasPlayer() { return this->mPlayer.get() != NULL; }
 
-// FUNCTION: WON 0x7a5590
 // Returns whether the client's player has clicked ready; false without a player
 bool LobbyClient::IsReady() { return this->mPlayer.get() != NULL ? this->mPlayer->GetReady() : false; }
 
-// FUNCTION: WON 0x7a55a0
 // Returns the client's player ping, or 0xfffe (unknown) without a player
 unsigned short LobbyClient::GetPing()
 {
@@ -184,7 +166,6 @@ unsigned short LobbyClient::GetPing()
     return 0xfffe;
 }
 
-// FUNCTION: WON 0x7a55c0
 // Returns whether both clients have players on the same team
 bool LobbyClient::IsTeammate(LobbyClient* inOther)
 {
@@ -192,19 +173,15 @@ bool LobbyClient::IsTeammate(LobbyClient* inOther)
     return this->mPlayer->IsSameTeam(inOther->mPlayer.get());
 }
 
-// FUNCTION: WON 0x7a55f0
 // Creates an empty client list
 LobbyClientList::LobbyClientList() : mClients(EeWonLobbyKeyKind::Unsigned) {}
 
-// FUNCTION: WON 0x7a56a0
 // Destroys the client list, releasing every client
 LobbyClientList::~LobbyClientList() {}
 
-// FUNCTION: WON 0x7a5770
 // Removes every client from the list
 void LobbyClientList::Clear() { this->mClients.clear(); }
 
-// FUNCTION: WON 0x7a5820
 // Merges the routing server's client map into the list: drops gone clients, adds new ones, refreshes the rest
 // (the plan is ee_won_model_sync_plan; a new client goes in under the routing map's key, its own id; the walk's
 // place is a position, moved past an entry inserted before it)
@@ -239,7 +216,6 @@ void LobbyClientList::SyncClients(const RoutingClientMap& inMap)
     }
 }
 
-// FUNCTION: WON 0x7a5c50
 // Refreshes the ignored/blocked state of every client in the list
 void LobbyClientList::UpdateIgnoreStatus()
 {
@@ -247,28 +223,24 @@ void LobbyClientList::UpdateIgnoreStatus()
         this->mClients.At(i)->UpdateIgnoreStatus();
 }
 
-// FUNCTION: WON 0x7a5cc0
 // Adds the client under its id, replacing any client with the same id
 void LobbyClientList::AddClient(LobbyClient* inClient) {
     unsigned short clientId = inClient->GetClientId();
     this->mClients.Set(clientId, inClient);
 }
 
-// FUNCTION: WON 0x7a5d30
 // Returns the client with the given id, or NULL
 LobbyClient* LobbyClientList::FindClient(unsigned short inId)
 {
     return this->mClients.Get(inId);
 }
 
-// FUNCTION: WON 0x7a5d90
 // Removes the client with the given id and returns it (NULL if absent)
 SmartPtr<LobbyClient> LobbyClientList::RemoveClient(unsigned short inId)
 {
     return this->mClients.Remove(inId);
 }
 
-// FUNCTION: WON 0x7a5ea0
 // Returns the first client with the given WON user id, or NULL
 LobbyClient* LobbyClientList::FindClientByWONId(unsigned long inId)
 {
@@ -280,7 +252,6 @@ LobbyClient* LobbyClientList::FindClientByWONId(unsigned long inId)
     return NULL;
 }
 
-// FUNCTION: WON 0x7a5f10
 // Clears the invited mark on every client in the list
 void LobbyClientList::ClearInvited()
 {
@@ -288,14 +259,12 @@ void LobbyClientList::ClearInvited()
         this->mClients.At(i)->SetInvited(false);
 }
 
-// FUNCTION: WON 0x7a5f70
 // Starts iterating the list's clients (an empty list when NULL)
 LobbyClientIterator::LobbyClientIterator(LobbyClientList* inList) : mList(inList)
 {
     this->Rewind();
 }
 
-// FUNCTION: WON 0x7a5fa0
 // Returns the shared empty client map used by iterators over no list
 LobbyClientMap& GetEmptyClientMap() { static LobbyClientMap aMap(EeWonLobbyKeyKind::Unsigned); return aMap; }
 
@@ -304,11 +273,9 @@ const LobbyClientMap& LobbyClientIterator::Clients() const
     return this->mList != NULL ? this->mList->mClients : GetEmptyClientMap();
 }
 
-// FUNCTION: WON 0x7a60b0
 // Returns whether clients remain
 bool LobbyClientIterator::HasMore() { return this->mItr.HasMore(this->Clients()); }
 
-// FUNCTION: WON 0x7a60d0
 // Returns the next client and advances, or NULL at the end
 LobbyClient* LobbyClientIterator::Next()
 {
@@ -317,11 +284,9 @@ LobbyClient* LobbyClientIterator::Next()
     return i < aClients.size() ? aClients.At(i) : NULL;
 }
 
-// FUNCTION: WON 0x7a6140
 // Restarts the iteration at the first client
 void LobbyClientIterator::Rewind() { this->mItr.Rewind(); }
 
-// FUNCTION: WON 0x7a6150
 // Starts iterating the list's clients that joined the game as players (an empty list when NULL)
 LobbyClientSetIterator::LobbyClientSetIterator(LobbyClientList* inList) : mList(inList)
 {
@@ -333,7 +298,6 @@ const LobbyClientMap& LobbyClientSetIterator::Clients() const
     return this->mList != NULL ? this->mList->mClients : GetEmptyClientMap();
 }
 
-// FUNCTION: WON 0x7a6180
 // Skips to the next client that has a player; returns whether one remains
 bool LobbyClientSetIterator::HasMore()
 {
@@ -350,7 +314,6 @@ bool LobbyClientSetIterator::HasMore()
     return false;
 }
 
-// FUNCTION: WON 0x7a6210
 // Returns the next player and advances, also passing out its client; NULL at the end
 LobbyPlayer* LobbyClientSetIterator::Next(LobbyClient** outClient)
 {
@@ -365,11 +328,9 @@ LobbyPlayer* LobbyClientSetIterator::Next(LobbyClient** outClient)
     return NULL;
 }
 
-// FUNCTION: WON 0x7a62a0
 // Restarts the iteration at the first client
 void LobbyClientSetIterator::Rewind() { this->mItr.Rewind(); this->mReady = false; }
 
-// FUNCTION: WON 0x7a62b0
 // Creates a friends-list entry for the given name and WON user id, with no known location
 LobbyFriend::LobbyFriend(const GUIString& inName, unsigned long inUserId)
     : mName(inName), mLocation(GetEmptyGUIStringData())
@@ -383,7 +344,6 @@ LobbyFriend::LobbyFriend(const GUIString& inName, unsigned long inUserId)
 }
 
 
-// FUNCTION: WON 0x7a6440
 // Records the server address, server name and status flags where the friend was found
 void LobbyFriend::SetLocation(const IPAddr& inAddress, const GUIString& inLocation,
                           int inFlags)
@@ -393,7 +353,6 @@ void LobbyFriend::SetLocation(const IPAddr& inAddress, const GUIString& inLocati
     this->mFlags = inFlags;
 }
 
-// FUNCTION: WON 0x7a65b0
 // Forgets where the friend is: address, location name, status, last locate time and anonymity
 void LobbyFriend::ClearLocation()
 {
@@ -404,7 +363,6 @@ void LobbyFriend::ClearLocation()
     this->mAnonymous = false;
 }
 
-// FUNCTION: WON 0x7a66b0
 // Sets the friend's status (in a chat room, in a game) and anonymity from their lobby client
 void LobbyFriend::SetStatusFromClient(LobbyClient* inClient)
 {
@@ -412,11 +370,9 @@ void LobbyFriend::SetStatusFromClient(LobbyClient* inClient)
     this->mAnonymous = inClient->IsAnonymous();
 }
 
-// FUNCTION: WON 0x7a66f0
 // Sets whether the friend is anonymous
 void LobbyFriend::SetAnonymous(bool inAnonymous) { this->mAnonymous = inAnonymous; }
 
-// FUNCTION: WON 0x7a6700
 // Marks the friend as being located (replacing the other status flags) and records when the search started
 void LobbyFriend::StartLocate(unsigned long inTime)
 {
@@ -424,7 +380,6 @@ void LobbyFriend::StartLocate(unsigned long inTime)
     this->mSearchStart = inTime;
 }
 
-// FUNCTION: WON 0x7a6710
 // Clears the locating mark and records the time of the last locate
 void LobbyFriend::EndLocate(unsigned long inTime)
 {
@@ -432,7 +387,6 @@ void LobbyFriend::EndLocate(unsigned long inTime)
     this->mLastLocate = inTime;
 }
 
-// FUNCTION: WON 0x7a6790
 // Creates an empty game: no captain or room, no players or slots, ping unknown
 LobbyGame::LobbyGame() : mName(GetEmptyGUIStringData()), mPassword(GetEmptyGUIStringData())
 {
@@ -454,7 +408,6 @@ LobbyGame::LobbyGame() : mName(GetEmptyGUIStringData()), mPassword(GetEmptyGUISt
     this->mLastSeenTime = 0;
 }
 
-// FUNCTION: WON 0x7a69d0
 // Copies every setting of another game (name, password, flags, counts, address, ping) and its game-code data
 void LobbyGame::CopyFrom(LobbyGame* inGame)
 {
@@ -482,11 +435,9 @@ void LobbyGame::CopyFrom(LobbyGame* inGame)
     this->CopyFromHook(inGame);
 }
 
-// FUNCTION: WON 0x7a6c10
 // Sets the client list of the game's members
 void LobbyGame::SetClients(LobbyClientList* inClients) { this->mClients = inClients; }
 
-// FUNCTION: WON 0x7a6c70
 // Returns the game member with the given client id, or NULL
 LobbyClient* LobbyGame::FindClient(unsigned short inId)
 {
@@ -494,46 +445,36 @@ LobbyClient* LobbyGame::FindClient(unsigned short inId)
     return NULL;
 }
 
-// FUNCTION: WON 0x7a6d40
 // Returns whether the game suits the room: Internet games for flag 4, LAN or direct-connect games for flag 8
 bool LobbyGame::MatchesRoomSpec(long inFlags)
 {
     return ee_won_game_matches_room_spec((int32_t)inFlags, (int32_t)this->mGameType);
 }
 
-// FUNCTION: WON 0x7a6d70
 // Returns whether a ping or a details query is outstanding for the game
 bool LobbyGame::IsPinging() { return ee_won_model_game_pinging(this->mPing); }
 
-// FUNCTION: WON 0x7a6d90
 // Returns whether a details query is outstanding for the game
 bool LobbyGame::IsQueryingDetails() { return ee_won_model_game_querying(this->mPing); }
 
-// FUNCTION: WON 0x7a6da0
 // Lets the game code prepare before the lobby joins the game on the network
 bool LobbyGame::PreNetJoinGame() { return this->PreNetJoinGameHook(); }
 
-// FUNCTION: WON 0x7a6db0
 // Lets the game code react after the lobby joined the game on the network
 bool LobbyGame::PostNetJoinGame() { return this->PostNetJoinGameHook(); }
 
-// FUNCTION: WON 0x7a6dc0
 // Lets the game code prepare before the lobby creates the game on the network
 bool LobbyGame::PreNetCreateGame() { return this->PreNetCreateGameHook(); }
 
-// FUNCTION: WON 0x7a6dd0
 // Lets the game code react after the lobby created the game on the network
 bool LobbyGame::PostNetCreateGame() { return this->PostNetCreateGameHook(); }
 
-// FUNCTION: WON 0x7a6de0
 // Lets the game code react before the lobby leaves the game on the network
 void LobbyGame::PreNetLeaveGame() { this->PreNetLeaveGameHook(); }
 
-// FUNCTION: WON 0x7a6df0
 // Lets the game code react after the lobby left the game on the network
 void LobbyGame::PostNetLeaveGame() { this->PostNetLeaveGameHook(); }
 
-// FUNCTION: WON 0x7a6ed0
 // Writes the game's listing summary (address or product id, name, skill, join flags, players, slots)
 void LobbyGame::WriteSummary(WriteBuffer& outBuffer)
 {
@@ -560,7 +501,6 @@ void LobbyGame::WriteSummary(WriteBuffer& outBuffer)
     this->WriteSummaryHook(outBuffer);
 }
 
-// FUNCTION: WON 0x7a7000
 // Reads a game's listing summary; false for another product or a short buffer
 // (a short summary keeps the fields read before the cut, as the original assigned them while reading)
 bool LobbyGame::ReadSummary(ReadBuffer& inBuffer)
@@ -590,11 +530,9 @@ bool LobbyGame::ReadSummary(ReadBuffer& inBuffer)
     catch (ReadBufferException&) { return false; }
 }
 
-// FUNCTION: WON 0x7a7240
 // Writes the game code's detailed game description
 void LobbyGame::WriteDetails(WriteBuffer& outBuffer) { this->WriteDetailsHook(outBuffer); }
 
-// FUNCTION: WON 0x7a7250
 // Reads the game code's detailed game description and marks the details as received
 bool LobbyGame::ReadDetails(ReadBuffer& inBuffer)
 {
@@ -608,19 +546,15 @@ bool LobbyGame::ReadDetails(ReadBuffer& inBuffer)
     catch (ReadBufferException&) { return false; }
 }
 
-// FUNCTION: WON 0x7a74b0
 // Returns whether the game code lets the local player click ready
 bool LobbyGame::CanReady() { return this->CanReadyHook(); }
 
-// FUNCTION: WON 0x7a74c0
 // Asks the game code to start the game; returns whether it did
 bool LobbyGame::TryStartGame() { return this->TryStartGameHook(); }
 
-// FUNCTION: WON 0x7a74d0
 // Passes a newly joined player to the game code
 void LobbyGame::HandlePlayerJoined(LobbyClient* inClient) { this->HandlePlayerJoinedHook(inClient); }
 
-// FUNCTION: WON 0x7a74e0
 // Removes the client's player from the game, lowering the player count and telling the game code
 void LobbyGame::RemoveClient(LobbyClient* inClient)
 {
@@ -631,20 +565,16 @@ void LobbyGame::RemoveClient(LobbyClient* inClient)
     this->HandlePlayerLeftHook(inClient, aPlayer.get());
 }
 
-// FUNCTION: WON 0x7a79e0
 // Passes a game message from another client to the game code
 void LobbyGame::HandleGameMessage(unsigned char inType, ReadBuffer& inBuffer, LobbyClient* inFrom)
 { this->HandleGameMessageHook(inType, inBuffer, inFrom); }
 
-// FUNCTION: WON 0x7a7a00
 // Returns whether every open slot is taken (never full without slots)
 bool LobbyGame::IsFull() { return ee_won_game_is_full((int32_t)this->mNumPlayers, (int32_t)this->mNumOpenSlots); }
 
-// FUNCTION: WON 0x7a7a20
 // Returns whether the local player may join the game
 bool LobbyGame::CanJoin() { return this->GetJoinStatus() == 0; }
 
-// FUNCTION: WON 0x7a7a30
 // Returns why the game cannot be joined (full, not invited, in progress, game code's reason) or 0
 short LobbyGame::GetJoinStatus()
 {
@@ -653,7 +583,6 @@ short LobbyGame::GetJoinStatus()
     return aStatus >= 0 ? aStatus : this->GetJoinStatusHook();
 }
 
-// FUNCTION: WON 0x7a8a90
 // Creates an empty chat room or game group with its own client list
 LobbyGroup::LobbyGroup() : mName(GetEmptyGUIStringData()), mClients(NULL)
 {
@@ -662,11 +591,9 @@ LobbyGroup::LobbyGroup() : mName(GetEmptyGUIStringData()), mClients(NULL)
     this->mClients = new LobbyClientList;
 }
 
-// FUNCTION: WON 0x7a8ba0
 // Destroys the group, releasing its client list
 LobbyGroup::~LobbyGroup() {}
 
-// FUNCTION: WON 0x7a8c30
 // Copies a room's id, name, member count, flags, captain and capacity from the routing server; fills members
 void LobbyGroup::ReadRoutingInfo(RoutingGroupInfo* inInfo, LobbyClientList* inClients)
 {
@@ -679,7 +606,6 @@ void LobbyGroup::ReadRoutingInfo(RoutingGroupInfo* inInfo, LobbyClientList* inCl
     if (inClients != NULL) this->SetMembers(inInfo->mMembers, inClients);
 }
 
-// FUNCTION: WON 0x7a8d50
 // Rebuilds the member list from the routing server, setting each member's flags, captaincy and room
 void LobbyGroup::SetMembers(const RoutingMemberMap& inMembers, LobbyClientList* inClients)
 {
@@ -699,7 +625,6 @@ void LobbyGroup::SetMembers(const RoutingMemberMap& inMembers, LobbyClientList* 
     this->mNumClients = this->mClients->GetCount();
 }
 
-// FUNCTION: WON 0x7a8e40
 // Adds the client as a member with the given flags, marking its room and captaincy
 void LobbyGroup::AddClient(LobbyClient* inClient, unsigned char inFlags)
 {
@@ -710,7 +635,6 @@ void LobbyGroup::AddClient(LobbyClient* inClient, unsigned char inFlags)
     this->mNumClients = this->mClients->GetCount();
 }
 
-// FUNCTION: WON 0x7a8eb0
 // Removes the member with the given id, clearing its room membership; returns it
 SmartPtr<LobbyClient> LobbyGroup::RemoveClient(unsigned short inId)
 {
@@ -720,7 +644,6 @@ SmartPtr<LobbyClient> LobbyGroup::RemoveClient(unsigned short inId)
     return client;
 }
 
-// FUNCTION: WON 0x7a8f80
 // Moves the captaincy to the given member (0xffff: none); returns the new captain, passes out the old
 LobbyClient* LobbyGroup::SetCaptain(unsigned short inId, LobbyClient** outOld)
 {
@@ -736,7 +659,6 @@ LobbyClient* LobbyGroup::SetCaptain(unsigned short inId, LobbyClient** outOld)
     return newClient;
 }
 
-// FUNCTION: WON 0x7a8ff0
 // Returns the group's captain, or NULL
 LobbyClient* LobbyGroup::GetCaptain()
 {
@@ -744,43 +666,33 @@ LobbyClient* LobbyGroup::GetCaptain()
     return NULL;
 }
 
-// FUNCTION: WON 0x7a9010
 // Returns the member with the given client id, or NULL
 LobbyClient* LobbyGroup::FindClient(unsigned short inId) { return this->mClients->FindClient(inId); }
 
-// FUNCTION: WON 0x7a9020
 // Returns whether joining the group needs a password
 bool LobbyGroup::IsPasswordProtected() { return ee_won_model_group_kind((uint32_t)this->mFlags).password; }
 
-// FUNCTION: WON 0x7a9030
 // Returns whether joining the group needs the captain's approval
 bool LobbyGroup::IsAskToJoin() { return ee_won_model_group_kind((uint32_t)this->mFlags).ask_to_join; }
 
-// FUNCTION: WON 0x7a9040
 // Returns whether the group can only be joined by invitation
 bool LobbyGroup::IsInviteOnly() { return ee_won_model_group_kind((uint32_t)this->mFlags).invite_only; }
 
-// FUNCTION: WON 0x7a9050
 // Returns whether the group is a chat room
 bool LobbyGroup::IsChatGroup() { return ee_won_model_group_kind((uint32_t)this->mFlags).chat; }
 
-// FUNCTION: WON 0x7a9060
 // Returns whether the group is a game
 bool LobbyGroup::IsGameGroup() { return !ee_won_model_group_kind((uint32_t)this->mFlags).chat; }
 
-// FUNCTION: WON 0x7a9070
 // Returns whether the group is a chat room anyone may enter (no password, invitation or approval)
 bool LobbyGroup::IsPublicChatGroup() { return ee_won_model_group_kind((uint32_t)this->mFlags).public_chat; }
 
-// FUNCTION: WON 0x7a90b0
 // Creates a player who is not ready and has an unknown ping
 LobbyPlayer::LobbyPlayer() { this->mPing=0xfffe; this->mIsReady=false; }
 
-// FUNCTION: WON 0x7a90d0
 // Returns false: the base player has no teams
 bool LobbyPlayer::IsTeammate(LobbyPlayer* inOther) { return false; }
 
-// FUNCTION: WON 0x7a90f0
 // Reads the player's ping, ready state and game data; false on a short buffer
 bool LobbyPlayer::ReadFromBuffer(ReadBuffer& inBuffer)
 {
@@ -794,7 +706,6 @@ bool LobbyPlayer::ReadFromBuffer(ReadBuffer& inBuffer)
     }
 }
 
-// FUNCTION: WON 0x7a9170
 // Writes the player's ping, ready state and game data
 void LobbyPlayer::WriteToBuffer(WriteBuffer& outBuffer)
 {
@@ -804,7 +715,6 @@ void LobbyPlayer::WriteToBuffer(WriteBuffer& outBuffer)
     this->WriteData(outBuffer);
 }
 
-// FUNCTION: WON 0x7a91a0
 // Returns whether the other player is this one or on its team
 bool LobbyPlayer::IsSameTeam(LobbyPlayer* inOther)
 {
@@ -813,7 +723,6 @@ bool LobbyPlayer::IsSameTeam(LobbyPlayer* inOther)
     return this->IsTeammate(inOther);
 }
 
-// FUNCTION: WON 0x7a91c0
 // Creates a disconnected lobby server entry with an empty client list
 LobbyServer::LobbyServer()
     : mName(GetEmptyGUIStringData()), mAddresses(EeWonLobbyKeyKind::NarrowNoCase, EeWonLobbyMapHooks()),
@@ -823,7 +732,6 @@ LobbyServer::LobbyServer()
     this->mClients = new LobbyClientList;
 }
 
-// FUNCTION: WON 0x7a9490
 // Returns whether the server lists the given address name (case-insensitive)
 bool LobbyServer::HasAddress(const std::string& inName)
 {
@@ -831,11 +739,9 @@ bool LobbyServer::HasAddress(const std::string& inName)
 }
 
 
-// FUNCTION: WON 0x7a9640
 // Sets the server's routing connection
 void LobbyServer::SetConnection(RoutingConnection* inConnection) { this->mConnection = inConnection; }
 
-// FUNCTION: WON 0x7a9ad0
 // Merges the routing server's client map into the server's clients and refreshes who is ignored
 void LobbyServer::SyncClients(const RoutingClientMap& inMap)
 {
@@ -843,7 +749,6 @@ void LobbyServer::SyncClients(const RoutingClientMap& inMap)
     this->mClients->UpdateIgnoreStatus();
 }
 
-// FUNCTION: WON 0x7a9af0
 // Marks which clients are friends and records this server as each friend's location
 void LobbyServer::UpdateFriends()
 {
@@ -858,7 +763,6 @@ void LobbyServer::UpdateFriends()
     }
 }
 
-// FUNCTION: WON 0x7a9b60
 // Forgets the location of anonymous friends on the server and stamps the others' last locate time
 void LobbyServer::ClearFriendLocations()
 {
@@ -875,7 +779,6 @@ void LobbyServer::ClearFriendLocations()
     }
 }
 
-// FUNCTION: WON 0x7a9be0
 // Merges the routing server's room map into the server's rooms and recounts the people in them
 // (the plan is ee_won_model_sync_plan, the counts EeWonPopulation; a new room goes in under the routing map's key,
 // its own id)
@@ -917,7 +820,6 @@ void LobbyServer::SyncGroups(const RoutingGroupMap& inGroups, bool inUpdateClien
     this->mNumClients = aPopulation.total;
 }
 
-// FUNCTION: WON 0x7a9f50
 // Creates a client from the routing server's info, checks ignore/block and adds it
 LobbyClient* LobbyServer::AddClient(RoutingClientInfo* inInfo)
 {
@@ -928,7 +830,6 @@ LobbyClient* LobbyServer::AddClient(RoutingClientInfo* inInfo)
     return client.get();
 }
 
-// FUNCTION: WON 0x7aa000
 // Adds the client to the room or game, counting it in the chat population for chat rooms
 void LobbyServer::AddClientToGroup(LobbyClient* inClient, unsigned char inFlags, LobbyGroup* inGroup)
 {
@@ -938,7 +839,6 @@ void LobbyServer::AddClientToGroup(LobbyClient* inClient, unsigned char inFlags,
     this->mNumChatClients = aPopulation.chat;
 }
 
-// FUNCTION: WON 0x7aa030
 // Creates a room from the routing server's info, fills its members and adds it
 LobbyGroup* LobbyServer::AddGroup(RoutingGroupInfo* inInfo)
 {
@@ -948,21 +848,18 @@ LobbyGroup* LobbyServer::AddGroup(RoutingGroupInfo* inInfo)
     return group.get();
 }
 
-// FUNCTION: WON 0x7aa170
 // Removes the room with the given id and returns it (NULL if absent)
 SmartPtr<LobbyGroup> LobbyServer::RemoveGroup(unsigned short inId)
 {
     return this->mGroups.Remove(inId);
 }
 
-// FUNCTION: WON 0x7aa280
 // Removes the client with the given id from the server and returns it
 SmartPtr<LobbyClient> LobbyServer::RemoveClient(unsigned short inId)
 {
     return this->mClients->RemoveClient(inId);
 }
 
-// FUNCTION: WON 0x7aa2b0
 // Removes the client from the room or game, lowering the chat population for chat rooms
 SmartPtr<LobbyClient> LobbyServer::RemoveClientFromGroup(unsigned short inId, LobbyGroup* inGroup)
 {
@@ -975,15 +872,12 @@ SmartPtr<LobbyClient> LobbyServer::RemoveClientFromGroup(unsigned short inId, Lo
     return client;
 }
 
-// FUNCTION: WON 0x7aa370
 // Returns the client with the given id, or NULL
 LobbyClient* LobbyServer::GetClient(int inId) { return this->mClients->FindClient(inId); }
 
-// FUNCTION: WON 0x7aa380
 // Returns the client with the given WON user id, or NULL
 LobbyClient* LobbyServer::FindClientByWONId(unsigned long inId) { return this->mClients->FindClientByWONId(inId); }
 
-// FUNCTION: WON 0x7aa390
 // Returns the local player's client on this server, or NULL
 LobbyClient* LobbyServer::GetMyClient()
 {
@@ -991,14 +885,12 @@ LobbyClient* LobbyServer::GetMyClient()
     return this->GetClient(this->mMyClientId);
 }
 
-// FUNCTION: WON 0x7aa3b0
 // Returns the room or game with the given id, or NULL
 LobbyGroup* LobbyServer::GetGroup(int inId)
 {
     return this->mGroups.Get((unsigned short)inId); // the original's find converted the int to the key type
 }
 
-// FUNCTION: WON 0x7aa410
 // Returns the server's population: the live client count when connected, else the listed count
 int LobbyServer::GetNumClients()
 {
@@ -1006,23 +898,18 @@ int LobbyServer::GetNumClients()
                                            this->mNumClients);
 }
 
-// FUNCTION: WON 0x7aa430
 // Returns whether the lobby is connected to the server
 bool LobbyServer::IsConnected() { return this->mConnection.get() != NULL; }
 
-// FUNCTION: WON 0x7aa440
 // Removes every room and game of the server
 void LobbyServer::ClearGroups() { this->mGroups.clear(); }
 
-// FUNCTION: WON 0x7aa4f0
 // Creates an empty server list
 LobbyServerList::LobbyServerList() : mServers(EeWonLobbyKeyKind::Addr) {}
 
-// FUNCTION: WON 0x7aa5a0
 // Destroys the server list, releasing every server
 LobbyServerList::~LobbyServerList() {}
 
-// FUNCTION: WON 0x7aa670
 // Adds the directory's servers by address and refreshes the listing of each one not connected
 void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
 {
@@ -1035,7 +922,6 @@ void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
     }
 }
 
-// FUNCTION: WON 0x7aa980
 // Returns the server at the given address, or NULL
 LobbyServer* LobbyServerList::FindServer(const IPAddr& inAddress)
 {
@@ -1053,7 +939,6 @@ LobbyServer* LobbyServerList::FindServer(const IPAddr& inAddress)
 
 
 namespace WONAPI {
-// FUNCTION: WON 0x7a6c90
 // Detaches the player data of every member of the game
 void LobbyGame::ClearPlayers()
 {
@@ -1062,14 +947,12 @@ void LobbyGame::ClearPlayers()
     for (size_t i=0; i<clients->GetCount(); ++i)
         clients->ClientAt(i)->SetPlayer(NULL);
 }
-// FUNCTION: WON 0x7a6d00
 // Returns whether two games are the same: same type and same room (Internet) or same address
 bool LobbyGame::IsSameGame(LobbyGame* inOther)
 {
     return ee_won_model_same_game((int32_t)this->mGameType, (int32_t)inOther->mGameType, this->mGroupId,
                                   inOther->mGroupId, inOther->mAddress == this->mAddress);
 }
-// FUNCTION: WON 0x7a6e00
 // Copies the game room's name, join restrictions, id, captain and members into the game
 void LobbyGame::ReadGroup(LobbyGroup* inGroup)
 {
@@ -1081,7 +964,6 @@ void LobbyGame::ReadGroup(LobbyGroup* inGroup)
     this->mCaptainId = inGroup->GetCaptainId();
     this->mClients = inGroup->GetClients();
 }
-// FUNCTION: WON 0x7a7200
 // Reads the game's listing summary from a byte buffer; false without one
 bool LobbyGame::ReadSummaryBuffer(const ByteBuffer* inData)
 {
@@ -1089,7 +971,6 @@ bool LobbyGame::ReadSummaryBuffer(const ByteBuffer* inData)
     ReadBuffer buffer(inData->data(),inData->length());
     return this->ReadSummary(buffer);
 }
-// FUNCTION: WON 0x7a72c0
 // Builds the join request for the game: message 1, the local ping and the game code's data
 ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest()
 {
@@ -1104,7 +985,6 @@ ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest()
     this->GetJoinGameRequestHook(buffer);
     return buffer.ToByteBuffer(true);
 }
-// FUNCTION: WON 0x7a7360
 // Gives the host a player, lets the game code set up and counts one player
 void LobbyGame::HandleHostGame(LobbyClient* inClient)
 {
@@ -1113,7 +993,6 @@ void LobbyGame::HandleHostGame(LobbyClient* inClient)
     this->HandleHostGameHook(inClient);
     this->mNumPlayers = 1;
 }
-// FUNCTION: WON 0x7a7400
 // Returns whether every player except the captain has clicked ready
 bool LobbyGame::AreAllReady()
 {
@@ -1129,14 +1008,12 @@ bool LobbyGame::AreAllReady()
     }
     return ee_won_model_all_ready(members.empty() ? NULL : &members[0], members.size());
 }
-// FUNCTION: WON 0x7a7490
 // Returns whether all players are ready and the game code allows the start
 bool LobbyGame::CanStartGame()
 {
     if (!this->AreAllReady()) return false;
     return this->CanStartGameHook();
 }
-// FUNCTION: WON 0x7a7570
 // Admits or refuses a join request; on success writes the player count and every player into the reply
 short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,WriteBuffer& outBuffer)
 {
@@ -1174,7 +1051,6 @@ short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,Wr
     this->GetJoinGameReplyHook(inClient,outBuffer);
     return 0;
 }
-// FUNCTION: WON 0x7a7830
 // Handles a join request and builds the reply: message 2, the join status and the players
 ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinReply(ReadBuffer& inBuffer,LobbyClient* inClient)
 {
@@ -1184,7 +1060,6 @@ ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinReply(ReadBuffer& inBuffer,LobbyClie
     buffer.SetShort(1,this->HandleJoinRequest(inBuffer,inClient,buffer));
     return buffer.ToByteBuffer(true);
 }
-// FUNCTION: WON 0x7a78e0
 // Reads the host's join reply: on success creates every listed player; returns the join status
 short LobbyGame::HandleJoinReply(ReadBuffer& inBuffer)
 {
@@ -1205,20 +1080,16 @@ short LobbyGame::HandleJoinReply(ReadBuffer& inBuffer)
     return result;
 }
 
-// FUNCTION: WON 0x7a7c50
 // Creates an empty game list for the given game type
 LobbyGameList::LobbyGameList(int inType)
     : mIdGames(EeWonLobbyKeyKind::Unsigned), mAddrGames(EeWonLobbyKeyKind::Addr), mIdItr(), mAddrItr()
 {
     this->mType = inType;
 }
-// FUNCTION: WON 0x7a7e00
 // Destroys the game list, releasing every game
 LobbyGameList::~LobbyGameList() {}
-// FUNCTION: WON 0x7a7f10
 // Removes every game from the list
 void LobbyGameList::Clear() { this->mIdGames.clear(); this->mAddrGames.clear(); }
-// FUNCTION: WON 0x7a8030
 // Adds the game under its room id (Internet) or its address, setting its type to the list's
 void LobbyGameList::AddGame(LobbyGame* inGame)
 {
@@ -1229,7 +1100,6 @@ void LobbyGameList::AddGame(LobbyGame* inGame)
     }
     else this->mAddrGames.Set(inGame->GetAddress(), inGame);
 }
-// FUNCTION: WON 0x7a80f0
 // Returns the game in the given room, creating it if new; passes out whether it existed
 LobbyGame* LobbyGameList::GetOrCreateGame(unsigned short inId,bool* outExisted)
 {
@@ -1243,7 +1113,6 @@ LobbyGame* LobbyGameList::GetOrCreateGame(unsigned short inId,bool* outExisted)
     } else if (outExisted!=NULL) *outExisted=true;
     return game;
 }
-// FUNCTION: WON 0x7a8290
 // Returns the game at the given address, creating it if new; passes out whether it existed
 LobbyGame* LobbyGameList::GetOrCreateGame(const IPAddr& inAddress,bool* outExisted)
 {
@@ -1257,19 +1126,16 @@ LobbyGame* LobbyGameList::GetOrCreateGame(const IPAddr& inAddress,bool* outExist
     } else if (outExisted!=NULL) *outExisted=true;
     return game;
 }
-// FUNCTION: WON 0x7a8560
 // Returns the game in the given room, or NULL
 LobbyGame* LobbyGameList::GetGame(unsigned short inId)
 {
     return this->mIdGames.Get(inId);
 }
-// FUNCTION: WON 0x7a85c0
 // Returns the game at the given address, or NULL
 LobbyGame* LobbyGameList::GetGame(const IPAddr& inAddress)
 {
     return this->mAddrGames.Get(inAddress);
 }
-// FUNCTION: WON 0x7a8620
 // Removes the game in the given room, resetting its ping; returns it (NULL if absent)
 SmartPtr<LobbyGame> LobbyGameList::RemoveGame(unsigned short inId)
 {
@@ -1277,7 +1143,6 @@ SmartPtr<LobbyGame> LobbyGameList::RemoveGame(unsigned short inId)
     if (game.get()!=NULL) game->SetPing(0xfffe);
     return game;
 }
-// FUNCTION: WON 0x7a8730
 // Removes the game at the given address, resetting its ping; returns it (NULL if absent)
 SmartPtr<LobbyGame> LobbyGameList::RemoveGame(const IPAddr& inAddress)
 {
@@ -1285,35 +1150,30 @@ SmartPtr<LobbyGame> LobbyGameList::RemoveGame(const IPAddr& inAddress)
     if (game.get()!=NULL) game->SetPing(0xfffe);
     return game;
 }
-// FUNCTION: WON 0x7a8850
 // Restarts iteration over the games
 void LobbyGameList::Rewind()
 {
     if (ee_won_model_game_list_by_id(this->mType)) this->mIdItr.Rewind();
     else this->mAddrItr.Rewind();
 }
-// FUNCTION: WON 0x7a8870
 // Returns whether games remain in the iteration
 bool LobbyGameList::HasMore()
 {
     if (ee_won_model_game_list_by_id(this->mType)) return this->mIdItr.HasMore(this->mIdGames);
     return this->mAddrItr.HasMore(this->mAddrGames);
 }
-// FUNCTION: WON 0x7a88a0
 // Returns the next game and advances (callers test HasMore first; NULL at the end, where the original read past it)
 LobbyGame* LobbyGameList::Next()
 {
     if (ee_won_model_game_list_by_id(this->mType)) return this->mIdGames.At(this->mIdItr.Next(this->mIdGames));
     return this->mAddrGames.At(this->mAddrItr.Next(this->mAddrGames));
 }
-// FUNCTION: WON 0x7a8960
 // Returns whether the list has no games
 bool LobbyGameList::IsEmpty()
 {
     if (ee_won_model_game_list_by_id(this->mType)) return this->mIdGames.empty();
     return this->mAddrGames.empty();
 }
-// FUNCTION: WON 0x7a8980
 // Drops LAN/direct games not seen for longer than the given seconds; returns whether any went
 bool LobbyGameList::RemoveStaleGames(long inMaxAge)
 {
@@ -1332,17 +1192,14 @@ bool LobbyGameList::RemoveStaleGames(long inMaxAge)
 }
 }
 namespace WONAPI {
-// FUNCTION: WON 0x7a68f0
 // Destroys the game, releasing its name, password, address and member list
 LobbyGame::~LobbyGame() {}
-// FUNCTION: WON 0x7a9500
 // Destroys the server entry, releasing its rooms, clients, connection and address names
 LobbyServer::~LobbyServer() {}
 
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007a9700
 // Reads the server's name, address, population (_C) and address names (_L) from its directory entry
 void LobbyServer::ReadDirEntity(DirEntity* inEntity)
 {
@@ -1378,7 +1235,6 @@ void LobbyServer::ReadDirEntity(DirEntity* inEntity)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007a96a0
 // Disconnects from the server, keeping its last population and forgetting the local client and clients
 void LobbyServer::Disconnect()
 {
@@ -1394,7 +1250,6 @@ void LobbyServer::Disconnect()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007a7a90
 // Returns the text for a join status: the lobby's strings, the game code's text, or the number
 GUIString LobbyGame::GetStatusString(short status)
 {
@@ -1431,7 +1286,6 @@ LobbyPlayer::~LobbyPlayer() {}
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007a7a80
 // Returns 0 (joinable): the default for a game code with no extra join rules
 short LobbyGame::GetJoinStatusHook()
 {
@@ -1440,7 +1294,6 @@ short LobbyGame::GetJoinStatusHook()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007a6c00
 // Creates a game of the given type through the installed game factory
 LobbyGame* LobbyGame::CreateGame(LobbyGameType inType)
 {
@@ -1448,7 +1301,6 @@ LobbyGame* LobbyGame::CreateGame(LobbyGameType inType)
     game->mGameType=inType;
     return game;
 }
-// FUNCTION: WON 0x007a90e0
 // Creates a player through the installed player factory
 LobbyPlayer* LobbyPlayer::CreatePlayer()
 {
@@ -1462,131 +1314,3 @@ namespace WONAPI {
 LobbyGame::LobbyGameFactory LobbyGame::mGameFactory = LobbyGame::DefaultGameFactory;
 LobbyPlayer::LobbyPlayerFactory LobbyPlayer::mPlayerFactory = LobbyPlayer::DefaultPlayerFactory;
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a5240
-// (public: virtual void * __thiscall WONAPI::LobbyClient::`scalar deleting destructor'(unsigned int)    [??_GLobbyClient@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007a5680
-// (public: virtual void * __thiscall WONAPI::LobbyClientList::`scalar deleting destructor'(unsigned int)    [??_GLobbyClientList@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007a6380
-// (public: virtual __thiscall WONAPI::LobbyFriend::~LobbyFriend(void)    [??1LobbyFriend@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007a6730
-// (protected: static class WONAPI::LobbyGame * __cdecl WONAPI::LobbyGame::DefaultGameFactory(void)    [?DefaultGameFactory@LobbyGame@WONAPI@@KAPAV12@XZ])
-// TEMPLATE: WON 0x007a68d0
-// (public: virtual void * __thiscall WONAPI::LobbyGame::`scalar deleting destructor'(unsigned int)    [??_GLobbyGame@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007a7d20
-// (public: virtual void * __thiscall WONAPI::LobbyGameList::`scalar deleting destructor'(unsigned int)    [??_GLobbyGameList@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007a8b80
-// (public: virtual void * __thiscall WONAPI::LobbyGroup::`scalar deleting destructor'(unsigned int)    [??_GLobbyGroup@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007a92f0
-// (public: virtual void * __thiscall WONAPI::LobbyServer::`scalar deleting destructor'(unsigned int)    [??_GLobbyServer@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007a93d0
-// (public: __thiscall std::map<unsigned short,class WONAPI::SmartPtr<class WONAPI::LobbyGroup>,struct std::less<unsigned short>,class std::allocator<stru)
-// TEMPLATE: WON 0x007aa580
-// (public: virtual void * __thiscall WONAPI::LobbyServerList::`scalar deleting destructor'(unsigned int)    [??_GLobbyServerList@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a6870
-// (public: virtual short __thiscall WONAPI::LobbyGame::Virtual38(class WONAPI::ReadBuffer &,class WONAPI::LobbyClient *)    [?Virtual38@LobbyGame@WONAPI@)
-// TEMPLATE: WON 0x007a6890
-// (public: virtual class WONAPI::GUIString __thiscall WONAPI::LobbyGame::Virtual64(short)    [?Virtual64@LobbyGame@WONAPI@@UAE?AVGUIString@2@F@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a6360
-// (public: virtual void * __thiscall WONAPI::LobbyFriend::`scalar deleting destructor'(unsigned int)    [??_GLobbyFriend@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a5c20
-// (public: __thiscall std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyClient> >::~pair<unsigned short const ,class WONAPI::Smar)
-// TEMPLATE: WON 0x007a9310
-// (public: __thiscall std::set<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct WONAPI::StringLessNoCase,cl)
-// TEMPLATE: WON 0x007aa8f0
-// (public: __thiscall std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyServer> >::~pair<class WONAPI::IPAddr const ,class )
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a7d40
-// (public: __thiscall std::map<unsigned short,class WONAPI::SmartPtr<class WONAPI::LobbyGame>,struct std::less<unsigned short>,class std::allocator<struc)
-// TEMPLATE: WON 0x007a84d0
-// (public: __thiscall std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >::~pair<class WONAPI::IPAddr const ,class WO)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007aace0
-// (public: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyClient> >,struct std::_Mapk<u)
-// TEMPLATE: WON 0x007ab310
-// (public: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >,struct std::_Mapk<uns)
-// TEMPLATE: WON 0x007ab990
-// (public: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >,struct st)
-// TEMPLATE: WON 0x007ac070
-// (public: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,struct std::_Mapk<un)
-// TEMPLATE: WON 0x007ac560
-// (public: __thiscall std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >::pair<unsigned short const ,class WONAPI::SmartP)
-// TEMPLATE: WON 0x007ac5a0
-// (public: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyClient> >,struct std::_Mapk<u)
-// TEMPLATE: WON 0x007ac700
-// (protected: void __thiscall std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyClient> >,struct)
-// TEMPLATE: WON 0x007aca40
-// (protected: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >,struct std::_Mapk<)
-// TEMPLATE: WON 0x007acd40
-// (public: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >,struct st)
-// TEMPLATE: WON 0x007acdf0
-// (protected: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >,struct)
-// TEMPLATE: WON 0x007ad0f0
-// (public: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,struct s)
-// TEMPLATE: WON 0x007ad1a0
-// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,struc)
-// TEMPLATE: WON 0x007ad940
-// (protected: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyServer> >,stru)
-// TEMPLATE: WON 0x007adc40
-// (protected: void __thiscall std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >,struct s)
-// TEMPLATE: WON 0x007adc80
-// (protected: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame)
-// TEMPLATE: WON 0x007adcc0
-// (protected: struct std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >,struc)
-// TEMPLATE: WON 0x007ae260
-// (protected: void __thiscall std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<)
-// TEMPLATE: WON 0x007ae2a0
-// (protected: struct std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,stru)
-// TEMPLATE: WON 0x007ae330
-// (protected: void __thiscall std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,struct )
-// TEMPLATE: WON 0x007ae370
-// (public: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyServer> >,struct )
-// TEMPLATE: WON 0x007ae890
-// (protected: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyServ)
-// TEMPLATE: WON 0x007ae8d0
-// (public: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> >)
-// TEMPLATE: WON 0x007aa9e0
-// (public: class WONAPI::SmartPtr<class WONAPI::LobbyClient> & __thiscall std::map<unsigned short,class WONAPI::SmartPtr<class WONAPI::LobbyClient>,struc)
-// TEMPLATE: WON 0x007ab1d0
-// (public: class WONAPI::SmartPtr<class WONAPI::LobbyGame> & __thiscall std::map<unsigned short,class WONAPI::SmartPtr<class WONAPI::LobbyGame>,struct st)
-// TEMPLATE: WON 0x007ab800
-// (public: class WONAPI::SmartPtr<class WONAPI::LobbyGame> & __thiscall std::map<class WONAPI::IPAddr,class WONAPI::SmartPtr<class WONAPI::LobbyGame>,str)
-// TEMPLATE: WON 0x007ac610
-// (public: struct std::pair<class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyClient> >,st)
-// TEMPLATE: WON 0x007ac740
-// (protected: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyClient> >,struct std::_Map)
-// TEMPLATE: WON 0x007ad4a0
-// (public: struct std::pair<class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,str)
-// TEMPLATE: WON 0x007ad590
-// (public: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,struct std::_Mapk<un)
-// TEMPLATE: WON 0x007ad640
-// (protected: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,struct std::_Mapk)
-// TEMPLATE: WON 0x007add10
-// (public: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,struct s)
-// TEMPLATE: WON 0x007ae1f0
-// (protected: void __thiscall std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<)
-// TEMPLATE: WON 0x007ae2f0
-// (protected: void __thiscall std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,struct )
-// TEMPLATE: WON 0x007ae930
-// (void __cdecl std::_Construct(struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyGame> > *,struct std::pair<class W)
-// TEMPLATE: WON 0x007ae9e0
-// (void __cdecl std::_Construct(struct std::pair<class WONAPI::IPAddr const ,class WONAPI::SmartPtr<class WONAPI::LobbyServer> > *,struct std::pair<class)
-// TEMPLATE: WON 0x007a6880
-// (public: virtual void __thiscall WONAPI::LobbyGame::Virtual60(unsigned char,class WONAPI::ReadBuffer &,class WONAPI::LobbyClient *))
-// TEMPLATE: WON 0x0076cff0
-// (protected: void __thiscall std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,struct )
-// TEMPLATE: WON 0x007aab20
-// (public: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyClient> >,struct std::_Mapk<u)
-// TEMPLATE: WON 0x007abeb0
-// (public: class std::_Tree<unsigned short,struct std::pair<unsigned short const ,class WONAPI::SmartPtr<class WONAPI::LobbyGroup> >,struct std::_Mapk<un)
-// TEMPLATE: WON 0x007a5140
-// (protected: static class WONAPI::LobbyPlayer * __cdecl WONAPI::LobbyPlayer::DefaultPlayerFactory(void))

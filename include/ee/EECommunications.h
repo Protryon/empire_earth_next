@@ -3,6 +3,6 @@
 #ifndef EE_EECOMMUNICATIONS_H
 #define EE_EECOMMUNICATIONS_H
 
-extern NESynchronousCommunications* gCommunications;   // 0x5319c8
+extern NESynchronousCommunications* gCommunications;
 
 #endif

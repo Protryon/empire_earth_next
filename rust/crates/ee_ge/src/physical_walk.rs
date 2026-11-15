@@ -362,7 +362,7 @@ pub fn model_walk<A: Models>(
     result
 }
 
-// ---- the C ABI: the C++ fills the table over GEModel* handles (GEPhysicalModel.cpp)
+// ---- the C ABI: the C++ fills the table over GEModel* handles (GEModel.cpp)
 
 /// The callback table over `GEModel*` handles (`const GEModel*` as `*const c_void`).
 #[repr(C)]

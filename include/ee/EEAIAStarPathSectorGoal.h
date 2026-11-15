@@ -20,8 +20,8 @@ public:
     bool IsStepLimit(long inSteps) const { return false; }
     bool IsRevLimit(long inRevs) const { return false; }
     bool IsCheaper(unsigned long inCost, unsigned long inOld) const { return false; }
-    EEAIAStarPathSectorGoal();              // 0x1a9ec
-    virtual ~EEAIAStarPathSectorGoal();     // 0x1b6a8
+    EEAIAStarPathSectorGoal();
+    virtual ~EEAIAStarPathSectorGoal();
     void CollectTiles();                    // 0x1aac4: a new sub-sector id; the storage's open/closed nodes get it
     void CreateSubSector();                 // 0x1ab68: a new EEAIPathSubSector over mTiles
     // 0x1acbf (ret 0xc): whether the fill may take the tile (with its ClassifyTile 0x1ae1d: ee_astar

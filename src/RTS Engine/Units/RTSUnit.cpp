@@ -145,7 +145,6 @@ const UString RTSUnit::sTileX("RTSUnit-TileX");
 const UString RTSUnit::sTileY("RTSUnit-TileY");
 const UString RTSUnit::sSpecificData("RTSUnit-Specific-Data");
 
-// FUNCTION: EXE 0x63d8cc
 // Creates an invalid unit with no id, tile or tile node
 RTSUnit::RTSUnit()
 {
@@ -154,10 +153,6 @@ RTSUnit::RTSUnit()
     this->mIsNodeFreed = true;
 }
 
-// SYNTHETIC: EXE 0x63d8ed
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x63d909
 // Destroys the unit and its tile node (asserts it was invalidated)
 RTSUnit::~RTSUnit()
 {
@@ -167,7 +162,6 @@ RTSUnit::~RTSUnit()
     delete this->mTileNode;
 }
 
-// FUNCTION: EXE 0x63d93f
 // Takes the unit out of its player's unit list and its tile's chain and marks it invalid
 void RTSUnit::Invalidate()
 {
@@ -179,7 +173,6 @@ void RTSUnit::Invalidate()
     this->mIsValid = false;
 }
 
-// FUNCTION: EXE 0x63d977
 // Frees the invalid unit's tile node
 void RTSUnit::FreeNode()
 {
@@ -191,7 +184,6 @@ void RTSUnit::FreeNode()
     this->mIsNodeFreed = true;
 }
 
-// FUNCTION: EXE 0x63d9a8
 // Appends the unit's id and tile to a debug description
 void RTSUnit::Describe(UWideString& ioString)
 {
@@ -200,7 +192,6 @@ void RTSUnit::Describe(UWideString& ioString)
     ioString += theString;
 }
 
-// FUNCTION: EXE 0x63d9f6
 // Appends the unit's id and tile to a multi-line debug description
 void RTSUnit::DescribeLong(UWideString& ioString)
 {
@@ -209,14 +200,12 @@ void RTSUnit::DescribeLong(UWideString& ioString)
     ioString += theString;
 }
 
-// FUNCTION: EXE 0x63da44
 // Returns a hash of the unit's id and tile
 unsigned long RTSUnit::HashValue()
 {
     return static_cast<uint32_t>(((this->mUnitID << 4) + this->mTileY << 4) + this->mTileX);   // a 32-bit hash on every data model
 }
 
-// FUNCTION: EXE 0x63da54
 // Resets the unit as valid, creating a tile node when it is to be linked into tiles
 void RTSUnit::Initialize(long inLinked)
 {
@@ -230,7 +219,6 @@ void RTSUnit::Initialize(long inLinked)
     }
 }
 
-// FUNCTION: EXE 0x63da8e
 // Clears the unit's id, tile, list links, player and flags (off the map)
 void RTSUnit::Reset()
 {
@@ -248,7 +236,6 @@ void RTSUnit::Reset()
     this->mIsNodeFreed = false;
 }
 
-// FUNCTION: EXE 0x63dabb
 // Moves the unit in its player's unit list to after another unit (to the head with NULL)
 void RTSUnit::InsertAfter(RTSUnit* inUnit)
 {
@@ -263,7 +250,6 @@ void RTSUnit::InsertAfter(RTSUnit* inUnit)
     this->mPrevious = inUnit;
 }
 
-// FUNCTION: EXE 0x63dae5
 // Moves the unit in a tile's unit chain to after another unit or to the front after the chain's dummy head
 void RTSUnit::Link(RTSUnit* inUnit)
 {
@@ -290,14 +276,12 @@ void RTSUnit::Link(RTSUnit* inUnit)
     EEUnitStoreLinked(this);   // New (R5b.4): the store's on-the-map flag (ee/EEUnitStore.h)
 }
 
-// FUNCTION: EXE 0x63db49
 // Drops the last reference to the unit
 void RTSUnit::LastDereference()
 {
     UReferenceCounter::Dereference();
 }
 
-// FUNCTION: EXE 0x63db4f
 // Reads the unit's tile, id and flags (the editor selection is cleared); returns the first read error. port (R5b.4,
 // round 26): the body is Rust (ee_units unit_load.rs rts_load)
 long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -307,7 +291,6 @@ long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, F
     return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
 }
 
-// FUNCTION: EXE 0x63dbb7
 // Unlinks the unit from its player's unit list
 void RTSUnit::RemoveFromList()
 {
@@ -321,7 +304,6 @@ void RTSUnit::RemoveFromList()
     this->mPrevious = NULL;
 }
 
-// FUNCTION: EXE 0x63dbda
 // Unlinks the unit from its tile's unit chain
 void RTSUnit::Unlink()
 {
@@ -343,7 +325,6 @@ void RTSUnit::Unlink()
     EEUnitStoreLinked(this);   // New (R5b.4): the store's on-the-map flag (ee/EEUnitStore.h)
 }
 
-// FUNCTION: EXE 0x63dc3a
 // Writes the unit's tile, id and flags (editor selection as false; versions up to 0.6 write id and tile
 // only); returns the first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs rts_save)
 long RTSUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -353,7 +334,6 @@ long RTSUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, F
     return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
 }
 
-// FUNCTION: EXE 0x63dcf3
 // Looks up the unit's tile on the map, marking the unit off the map when there is no tile
 void RTSUnit::UpdateTile(EEMap* inMap)
 {
@@ -369,7 +349,6 @@ void RTSUnit::UpdateTile(EEMap* inMap)
     }
 }
 
-// FUNCTION: EXE 0x63dd46
 // Resets the unit as invalid
 void RTSUnit::Clear()
 {
@@ -377,31 +356,10 @@ void RTSUnit::Clear()
     this->mIsValid = false;
 }
 
-// SYNTHETIC: EXE 0x63d7c0
-// SYNTHETIC: EXE 0x63d7ca
-// SYNTHETIC: EXE 0x63d7db
-// SYNTHETIC: EXE 0x63d7e7
-// SYNTHETIC: EXE 0x63d803
-// SYNTHETIC: EXE 0x63d80d
-// SYNTHETIC: EXE 0x63d81e
-// SYNTHETIC: EXE 0x63d82a
-// SYNTHETIC: EXE 0x63d846
-// SYNTHETIC: EXE 0x63d850
-// SYNTHETIC: EXE 0x63d861
-// SYNTHETIC: EXE 0x63d86d
-// SYNTHETIC: EXE 0x63d889
-// SYNTHETIC: EXE 0x63d893
-// SYNTHETIC: EXE 0x63d8a4
-// SYNTHETIC: EXE 0x63d8b0
-
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
 void RTSUnit::CopyFrom(class RTSUnit *)
 {
 }
 
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUIECSSEFormClose::ProcessEvent)
 long RTSUnit::RepairPointers(unsigned long,unsigned long)
 {
     return 0;

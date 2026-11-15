@@ -54,18 +54,13 @@
 const float kEEFDeepWedgeSpacing = 1.0f;
 const float kEEFDeepWedgeAngle = 0.785398185f;
 
-// FUNCTION: EXE 0x4dd861
 // Creates the deep wedge formation: a 45-degree wedge (type 4) of up to 21 units per wedge
 EEFDeepWedge::EEFDeepWedge()
     : EEFWedge(4, kEEFDeepWedgeSpacing, kEEFDeepWedgeAngle, 0x15)
 {
 }
 
-// SYNTHETIC: EXE 0x4dd88b
-// (the scalar deleting destructor)
-
 // NEAR: the original jumps to EEFWedge's implicit dtor (ICF 0xdd1be); ours expands it inline
-// FUNCTION: EXE 0x4dd8a7
 // Destroys the deep wedge formation
 EEFDeepWedge::~EEFDeepWedge()
 {

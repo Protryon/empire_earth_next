@@ -149,7 +149,6 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007117c0
 // Creates an empty text area with word wrap and selection on, the named TextArea/TextAreaLink fonts
 TextArea::TextArea()
 {
@@ -168,13 +167,9 @@ TextArea::TextArea()
     this->SetPads(5,5,5,5);
     this->Reset(false);
 }
-// FUNCTION: WON 0x00711be0
 // Destroys the text area: the Rust area gives its segments back
 TextArea::~TextArea() { ee_won_text_free(this->mRust); }
 
-// FUNCTION: WON 0x00713c60
-// FUNCTION: WON 0x00713c80
-// FUNCTION: WON 0x00713da0
 // Appends a text segment in the area's text colour (0x00713c60); the overloads below take a colour
 void TextArea::AddSegment(const GUIString& text,bool lineBreak)
 {
@@ -201,7 +196,6 @@ void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBr
     this->AddSegment(seg.get());
 }
 
-// FUNCTION: WON 0x00713ec0
 // Appends text split at CR, LF and CRLF into one line-broken segment per line; the last line breaks
 // only when lineBreak is set
 void TextArea::AddFormatedText(const GUIString& text,bool lineBreak) {
@@ -274,7 +268,6 @@ extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x006f7f70
 // Input filter that accepts only digits, with a leading minus sign allowed at the start of the box
 bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
 {
@@ -291,7 +284,6 @@ bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
     return true;
 }
 
-// FUNCTION: WON 0x006f7fd0
 // Creates an empty input box with the InputBox font, system colours and the I-beam cursor (the Rust box holds the
 // rest: the 500 ms blink, the 100-entry input history, the padding)
 InputBox::InputBox()
@@ -306,7 +298,6 @@ InputBox::InputBox()
     this->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_IBeam));
     this->mInputFilter=NULL;
 }
-// FUNCTION: WON 0x006f8270
 // Destroys the input box: the Rust box goes
 InputBox::~InputBox() { ee_won_input_free(this->mRust); }
 }
@@ -342,7 +333,6 @@ extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x006f9d80
 // Creates an empty, clipped label with the Label font, no wrapping and no background colour (the Rust label holds
 // the colour, the top-left alignment and the zero padding)
 Label::Label()
@@ -354,7 +344,6 @@ Label::Label()
     this->SetComponentFlags(ComponentFlag_Clip,true);
     this->mBackground.SetColor(-1);
 }
-// FUNCTION: WON 0x006f9f50
 // Destroys the label: the Rust label goes
 Label::~Label() { ee_won_label_free(this->mRust); }
 }
@@ -438,14 +427,12 @@ intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     }
 }
 
-// FUNCTION: WON 0x00707060
 // Creates an empty clipping splitter (the Rust splitter holds the split at 50% / 50% and no minimum pane sizes)
 Splitter::Splitter()
 {
     this->mRust=ee_won_split_new(this,ee_won_guicpp_split_call);
     this->SetComponentFlags(ComponentFlag_Clip,true);
 }
-// FUNCTION: WON 0x007071e0
 // Destroys the splitter: the Rust splitter gives its buttons and drag handles back
 Splitter::~Splitter() { ee_won_split_free(this->mRust); }
 }
@@ -480,11 +467,9 @@ extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x00705e10
 // Creates an empty vertical or horizontal scrollbar (the Rust bar holds the line steps 10, the page step 50 and a
 // resizing thumb of at least 10)
 Scrollbar::Scrollbar(bool vertical) { this->mRust=ee_won_bar_new(this,ee_won_guicpp_bar_call,vertical); }
-// FUNCTION: WON 0x00705eb0
 // Destroys the scrollbar: the Rust bar gives the thumb, the track and the arrows back
 Scrollbar::~Scrollbar() { ee_won_bar_free(this->mRust); }
 }
@@ -521,7 +506,6 @@ extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, int
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x00705540
 // Creates a scroller with no scroll area (the Rust scroller; a ScrollbarScroller's bars start without, both
 // conditions Enable)
 Scroller::Scroller() { this->mRust=ee_won_scroller_new(this,ee_won_guicpp_scroller_call); }
@@ -569,7 +553,6 @@ extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x00704df0
 // Creates an empty scroll area with its viewport as its child (the Rust area holds the scroll amounts 10 and every
 // other number 0, no scroller)
 ScrollArea::ScrollArea()
@@ -746,7 +729,6 @@ extern "C" intptr_t ee_won_guicpp_list_call(void* inComp, EeWonGuiOp op, intptr_
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x006fa280
 // Creates an unselected, selectable list item with zero position and size
 ListItem::ListItem()
 {
@@ -754,14 +736,11 @@ ListItem::ListItem()
     this->mSelected=false;
     this->mSelectable=true;
 }
-// FUNCTION: WON 0x006fa2a0
 // Draws nothing
 void ListItem::Paint(Graphics&,ListArea*) {}
-// FUNCTION: WON 0x006fa2b0
 // Orders two items by their addresses (true when this one comes first in memory)
 int ListItem::Compare(const ListItem* other,ListArea*) const { return this<other; }
 
-// FUNCTION: WON 0x006fa570
 // Creates an empty, unsorted list box with the ListArea font, 2-pixel padding and focus (the Rust list holds the
 // default flags: highlighted icons, full-row select, partial lines shown)
 ListArea::ListArea()
@@ -773,7 +752,6 @@ ListArea::ListArea()
     this->SetPads(2,2,2,2);
     this->mSortFunc=NULL;
 }
-// FUNCTION: WON 0x006fa860
 // Destroys the list box, closing an open item tooltip first; the Rust list gives its items back
 ListArea::~ListArea()
 {
@@ -781,14 +759,12 @@ ListArea::~ListArea()
     ee_won_list_free(this->mRust);
 }
 
-// FUNCTION: WON 0x006fa550
 // Returns whether the clicked item is the list box's current selection
 bool ListItemClickedEvent::IsSelectedItem()
 {
     return this->mItem.get()==static_cast<ListArea*>(this->mComponent)->GetSelItem();
 }
 
-// FUNCTION: WON 0x006fd8b0
 // Adds a separator line to the popup menu and resizes the menu to fit (at least 100 pixels wide)
 void PopupMenu::AddSeperator()
 {
@@ -862,7 +838,6 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007033a0
 // Creates a multi-column list area with the given column count and no sort (the Rust list holds the 5-pixel column
 // border, no dynamic column, no width cap and auto grow off; the original reserved room for 11000 items)
 MultiListArea::MultiListArea(int columns)
@@ -870,10 +845,8 @@ MultiListArea::MultiListArea(int columns)
     this->mMulti=ee_won_multi_new(this,ee_won_guicpp_list_call,this->mRust);
     this->SetNumColumns(columns);
 }
-// FUNCTION: WON 0x00703540
 // Destroys the list: the Rust list gives its columns' viewports back (the ListArea base then its rows)
 MultiListArea::~MultiListArea() { ee_won_multi_free(this->mMulti); }
-// FUNCTION: WON 0x00703f60
 // Puts a text cell (the list's font and colour, an optional image) into a row's column; returns the row
 MultiListItem* MultiListArea::SetString(int row,int column,const GUIString& text,Image* image)
 {
@@ -889,7 +862,6 @@ MultiListItem::MultiListItem() { this->mRow=ee_won_mrow_new(this,ee_won_guicpp_m
 // Destroys the row (0x00703db0): the Rust row gives its cells back
 MultiListItem::~MultiListItem() { ee_won_mrow_free(this->mRow); }
 
-// FUNCTION: WON 0x00702a90
 // Creates a clipped list header with sort arrows on, no sort column, attached to a list area
 MultiListHeader::MultiListHeader(MultiListArea* area)
 {
@@ -897,7 +869,6 @@ MultiListHeader::MultiListHeader(MultiListArea* area)
     this->SetComponentFlags(ComponentFlag_Clip,true);
     this->SetMultiListArea(area);
 }
-// FUNCTION: WON 0x00702b50
 // Destroys the header: the Rust header goes (its buttons are the container's children)
 MultiListHeader::~MultiListHeader() { ee_won_mhead_free(this->mHead); }
 // Paints the header's children (the linker folds this body into the identical ScrollAreaViewport::Paint at 0x00705e00)
@@ -905,7 +876,6 @@ void MultiListHeader::Paint(Graphics& graphics) { Container::Paint(graphics); }
 // Returns the child under a point (the linker folds this body into the identical RootContainer::FindChildAt
 // at 0x00704710)
 Component* MultiListHeader::FindChildAt(int x,int y) { return Container::FindChildAt(x,y); }
-// FUNCTION: WON 0x00703050
 // Returns the sort arrow a header button should draw, found through its enclosing header (none without one)
 ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
 {
@@ -942,21 +912,17 @@ extern "C" intptr_t ee_won_guicpp_tnode_call(void* inComp, EeWonGuiOp op, intptr
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007140f0
 // Creates a closed row at indent 0 with no parent and no index (the Rust row)
 TreeItem::TreeItem() { this->mNode=ee_won_tnode_new(this,ee_won_guicpp_tnode_call); }
-// FUNCTION: WON 0x00714170
 // Destroys the row: the Rust row gives its children and its wrapped item back
 TreeItem::~TreeItem() { ee_won_tnode_free(this->mNode); }
 
-// FUNCTION: WON 0x00714ea0
 // Creates an empty tree with an open root row, list flags 0x30 off and 0x200 on, and tree flags 3 (the Rust tree)
 TreeArea::TreeArea()
 {
     this->mTree=ee_won_tree_new(this,ee_won_guicpp_list_call,this->mRust);
     this->TCall(EeWonTreeCall::Init);
 }
-// FUNCTION: WON 0x00714fc0
 // Destroys the tree: the Rust tree gives its root back (and so every row's)
 TreeArea::~TreeArea() { ee_won_tree_free(this->mTree); }
 // Wraps a text item (the tree's colour and font, an optional icon) in a new row under a parent (not identified in
@@ -975,7 +941,6 @@ TreeItem* TreeArea::InsertString(TreeItem* theParent,const GUIString& theStr,Ima
 // ---- the popup menu (menuobj.rs)
 
 namespace WONAPI {
-// FUNCTION: WON 0x006fd150
 // Creates a popup menu with the menu font and colors, a popup background and 4-pixel padding (the Rust menu holds
 // no submenu, the timer at 0 and mouse mode)
 PopupMenu::PopupMenu()
@@ -987,17 +952,14 @@ PopupMenu::PopupMenu()
     this->mTextColor=0x8000000c;
     this->SetBorderPadding(4,4,4,4);
 }
-// FUNCTION: WON 0x006fd340
 // Destroys the menu: the Rust menu gives the submenu's item and the submenu back
 PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
 }
 
 // WrappedText (R6 WON round 38): the Rust object (wrapobj.rs) wraps the text it is handed with the font's measure
 namespace WONAPI {
-// FUNCTION: WON 0x0074a7e0
 WrappedText::WrappedText() : mObj(ee_won_wrap_new()) {}
 WrappedText::WrappedText(const GUIString& theText) : mText(theText), mObj(ee_won_wrap_new()) {}
-// FUNCTION: WON 0x0074a9b0
 // Recomputes the line breaks and the text's width and height for the font and maximum width
 void WrappedText::CalcWrap()
 {
@@ -1006,7 +968,6 @@ void WrappedText::CalcWrap()
     ee_won_wrap_calc(this->mObj, this->mFont.get() != NULL, this->mText.mData->mText, this->mText.length(), sizeof(wchar_t), &m,
                      this->mFont.get() != NULL ? this->mFont->GetHeight() : 0);
 }
-// FUNCTION: WON 0x0074adf0
 // Draws each wrapped line (centred if set) from the given top-left point (wrapobj.rs over guidraw.rs wrapped_text)
 void WrappedText::Paint(Graphics& g, int x, int y)
 {
@@ -1025,7 +986,6 @@ void WrappedText::Paint(Graphics& g, int x, int y)
 
 // The image and rectangle components' paints (R6 WON round 37 draw plans; ImageComponent.cpp folded in, round 38)
 namespace WONAPI {
-// FUNCTION: WON 0x00706d30
 // Draws the image stretched to the component, once at the origin, or tiled over the component clipped to it
 void ImageComponent::Paint(Graphics& g)
 {
@@ -1036,7 +996,6 @@ void ImageComponent::Paint(Graphics& g)
     WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_image_component(anImage!=NULL,this->mStretch,
         this->mTile,anImage ? anImage->mWidth : 0,anImage ? anImage->mHeight : 0,this->Width(),this->Height(),o,n); }),aSlots);
 }
-// FUNCTION: WON 0x00706890
 // Fills the component with the solid colour and draws the outline, each only when set
 void RectangleComponent::Paint(Graphics &g)
 {
@@ -1053,7 +1012,6 @@ RectangleComponent3D::RectangleComponent3D(bool up, int theThickness)
     this->mDarkColor = ColorScheme::GetColorRef(StandardColor_3DShadow);
     this->mSolidColor = -1;
 }
-// FUNCTION: WON 0x00706930
 // Draws a raised or sunken 3D frame of the given thickness over an optional solid fill
 void RectangleComponent3D::Paint(Graphics &g)
 {
@@ -1069,8 +1027,6 @@ static EeWonRawPixels StretchPx(RawImage8* i) { EeWonRawPixels p = {1,i->mImageD
 static EeWonRawPixels StretchPx(RawImage32* i) { EeWonRawPixels p = {2,(uint8_t*)i->mImageData,i->mWidth,i->mHeight,i->mWidth*4}; return p; }
 static void CopyRawImageInfo(RawImage8* dst,RawImage8* src) { dst->mPalette=src->mPalette.get(); dst->mTransparentColor=src->mTransparentColor; }
 static void CopyRawImageInfo(RawImage32* dst,RawImage32* src) { dst->mDoTransparency=src->mDoTransparency; }
-// FUNCTION: WON 0x007529b0
-// FUNCTION: WON 0x007535d0
 // Builds a new image of the filter's size from nine pieces: corners copied, sides and center stretched or tiled
 template <class ImageType> static SmartPtr<ImageType> DoStretchFilter(ImageType* src, StretchImageFilter* f)
 {
@@ -1085,7 +1041,6 @@ template <class ImageType> static SmartPtr<ImageType> DoStretchFilter(ImageType*
     return newImage;
 }
 namespace WONAPI {
-// FUNCTION: WON 0x00749570
 // Returns the nine-piece stretched copy of an 8-bit or 32-bit raw image; NULL for other image types
 SmartPtr<RawImage> StretchImageFilter::Filter(RawImage* theImage)
 {
@@ -1095,7 +1050,6 @@ SmartPtr<RawImage> StretchImageFilter::Filter(RawImage* theImage)
     default: return NULL;
     }
 }
-// FUNCTION: WON 0x00749810
 // Rebuilds the cached native image by running the stretch filter over the source image at the current size
 void StretchImage::CalcImage(DisplayContext* context)
 {
@@ -1107,7 +1061,6 @@ void StretchImage::CalcImage(DisplayContext* context)
     this->mCachedImage = aFilter->Filter(this->mImage.get())->GetNative(context);
     ee_won_stretch_built(this->mObj);
 }
-// FUNCTION: WON 0x007499a0
 // Draws the cached image (rebuilt first if needed); with skip-centre only the four border strips (stretchobj.rs)
 void StretchImage::Paint(Graphics& g)
 {
@@ -1117,7 +1070,6 @@ void StretchImage::Paint(Graphics& g)
     aSlots.mImages[0] = this->mCachedImage.get();
     WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_stretch_paint(this->mObj,this->mWidth,this->mHeight,o,n); }),aSlots);
 }
-// FUNCTION: WON 0x00749cb0
 // Draws the stretch image, then the center image centered on it when it fits (guidraw.rs stretch_center_paint)
 void StretchCenterImage::Paint(Graphics& g)
 {

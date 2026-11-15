@@ -72,7 +72,6 @@ struct UIHotKeyHost {
     }
 };
 
-// FUNCTION: LLE 0x1006e075
 // Creates a hot key with no keys or events, enabled
 UIHotKey::UIHotKey()
     : UIEntity(0)
@@ -80,7 +79,6 @@ UIHotKey::UIHotKey()
     ee_ui_hotkey_init(this, UIHotKeyHost::Op);
 }
 
-// FUNCTION: LLE 0x1006e0b3
 // Copies a hot key onto a form, referencing its events
 UIHotKey::UIHotKey(UIForm* inForm, const UIHotKey& inHotKey)
     : UIEntity(0)
@@ -93,7 +91,6 @@ long UIHotKey::CreateHotKeys(FSFileSpec& inFile) { return ee_ui_hotkey_create_al
 void UIHotKey::DeleteHotKeys() { ee_ui_hotkey_delete_all(UIHotKeyHost::Op); }
 bool UIHotKey::FireEvents() { return this->Call(EeUiHotKeyCall::FireEvents) != 0; }
 
-// FUNCTION: LLE 0x1007713f
 // Builds the hot key's display name, e.g. "Ctrl + Shift + A" (key names without " key")
 void UIHotKey::GetHotKeyName(UWideString& outName)
 {
@@ -110,14 +107,3 @@ void UIHotKey::GetHotKeyName(UWideString& outName)
     ee_ui_hotkey_name(theNames[0], theNames[1], theNames[2], theKey, &theName[0], theName.size());
     outName = (const char*)&theName[0];
 }
-
-// Compiler-generated: the static init chains, and the vector-delete COMDAT (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x10076f27
-// SYNTHETIC: LLE 0x10076f31
-// SYNTHETIC: LLE 0x10076f42
-// SYNTHETIC: LLE 0x10076f4e
-// SYNTHETIC: LLE 0x10076f5f
-// SYNTHETIC: LLE 0x10076f69
-// SYNTHETIC: LLE 0x10076f81
-// SYNTHETIC: LLE 0x10076f8d
-// SYNTHETIC: LLE 0x10077489

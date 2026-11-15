@@ -37,14 +37,14 @@ public:
     virtual void RenderTo(EEScreenCapture* inCapture);         // +0x24 0x109cd4
 
     // the message posts (thread messages 0x503..0x50b; provisional names)
-    void PostInitialiseScene();             // 0x10a862
-    void PostRedrawUI();                    // 0x10a877
+    void PostInitialiseScene();
+    void PostRedrawUI();
     void PostScreenShot(EEScreenCapture* inCapture);   // 0x10a88c (0x505)
     void PostReleaseScene();                // 0x10a8a5: mThread->Post(0x504, 0, 0, true)
-    void PostFadeIn(unsigned long inValue);       // 0x10a8ba
-    void PostFadeOut(unsigned long inValue);      // 0x10a8d3
-    void PostLetterboxIn(unsigned long inValue);  // 0x10a8ec
-    void PostLetterboxOut(unsigned long inValue);  // 0x10a905
+    void PostFadeIn(unsigned long inValue);
+    void PostFadeOut(unsigned long inValue);
+    void PostLetterboxIn(unsigned long inValue);
+    void PostLetterboxOut(unsigned long inValue);
     long PostMessage50AAndWait();           // 0x10a91e: Post(0x50a, 0, 0, true), then waits on +0x6c when it worked
 
     // Members from the ctor 0x10977e: GERectangle's inline ctor (top, left, bottom, right =
@@ -55,7 +55,7 @@ public:
     volatile long mLockMode;                // +0x70 (message 0x502; Virtual0C/1C lock by it)
 };
 
-extern EEGraphics* gGraphics;               // 0x5318f4
+extern EEGraphics* gGraphics;
 
 // the graphics thread's settings the messages change (EERenderObject.cpp's range, 0x10ac30..; cdecl free functions
 // or statics: provisional names)

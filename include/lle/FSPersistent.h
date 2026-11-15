@@ -6,14 +6,14 @@
 
 class LLE_API FSPersistent : public FSRestorable {
 public:
-    FSPersistent(long inTagID) { this->mTagID = inTagID; }                      // 0x4409
+    FSPersistent(long inTagID) { this->mTagID = inTagID; }
     virtual ~FSPersistent() {}                                                  // +0x10 0x441b
     virtual FSPersistent* CreateDefault() const = 0;                            // +0x14 (provisional name)
     virtual long GetTagID() const { return this->mTagID; }                      // +0x18 (folded 0x4380)
     // implicit copy ctor (0x442b)
 
 private:
-    FSPersistent() {}                                                           // 0x4422
+    FSPersistent() {}
 
     long mTagID;                            // +0x04
 };
