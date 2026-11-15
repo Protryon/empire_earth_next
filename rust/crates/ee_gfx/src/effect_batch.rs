@@ -216,7 +216,9 @@ pub fn ground_strip<R: Raster + ?Sized>(
     let (f, t) = (*from, *to);
     let origin = EeGfxTexCoord { u: offset.0, v: offset.1 };
     let extent = EeGfxTexCoord { u: size.0, v: size.1 };
-    add(x, EE_GFX_BATCH_GROUND, alpha_ref, |_| effects::ground_strip(f, t, width, color, origin, extent, alpha, brightness));
+    add(x, EE_GFX_BATCH_GROUND, alpha_ref, |_| {
+        effects::ground_strip(f, t, width, color, origin, extent, alpha, brightness)
+    });
 }
 
 /// The shared plane models: [0] on the ground facing up (0x4e8df4), [1] standing facing -y (0x4e8df8, the 2D

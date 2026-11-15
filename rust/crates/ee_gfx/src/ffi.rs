@@ -14,12 +14,12 @@ use crate::camera::{
 };
 use crate::effect_batch;
 use crate::effects::{EeGfxColor, EeGfxTexCoord};
-use crate::raster::EeGfxRaster;
 use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::models::{self, EeGfxRingModel, EeGfxSelectionModel};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
 use crate::quake::{self, EeGfxQuakeRow};
+use crate::raster::EeGfxRaster;
 use crate::select::{self, EeGfxSelectLines};
 use crate::terrain::{self, EeGfxCloudLayer, EeGfxSkyFrame};
 use crate::units::{

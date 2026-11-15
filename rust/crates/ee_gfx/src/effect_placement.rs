@@ -194,7 +194,11 @@ pub const EE_GFX_TRACK_HORSE: u32 = 2;
 /// # Safety
 /// `host` and `location` are valid; `effect` is a graphic effect the host answers for.
 #[no_mangle]
-pub unsafe extern "C" fn ee_gfx_decal_impact(host: *const EeGfxDecalHost, effect: *mut c_void, location: *const Ge3DPoint) {
+pub unsafe extern "C" fn ee_gfx_decal_impact(
+    host: *const EeGfxDecalHost,
+    effect: *mut c_void,
+    location: *const Ge3DPoint,
+) {
     // SAFETY: the function's contract
     unsafe { impact(&mut &*host, effect, &*location) }
 }
@@ -257,6 +261,11 @@ mod tests {
         }
     }
 
+    /// a graphic effect's handle: its 1-based index
+    fn id(n: usize) -> *mut c_void {
+        n as *mut c_void
+    }
+
     fn log(effects: Vec<EeGfxDecalEffect>) -> Log {
         Log { effects, decals: Vec::new(), placed: Vec::new() }
     }
@@ -264,10 +273,12 @@ mod tests {
     #[test]
     fn sure_holes_spread_round_the_first() {
         let mut h = log(vec![fx(1.0, 3, 0)]);
-        impact(&mut h, 1 as *mut c_void, &Ge3DPoint { x: 10.0, y: 20.0, z: 1.0 });
+        impact(&mut h, id(1), &Ge3DPoint { x: 10.0, y: 20.0, z: 1.0 });
         assert_eq!(h.placed.len(), 3);
         assert_eq!(h.placed[0], (1, Ge3DPoint { x: 10.0, y: 20.0, z: 1.005 }));
-        assert!(h.placed[1..].iter().all(|(_, p)| (p.x - 10.0).abs() <= 1.0 && (p.y - 20.0).abs() <= 1.0 && p.z == 7.005));
+        assert!(h.placed[1..]
+            .iter()
+            .all(|(_, p)| (p.x - 10.0).abs() <= 1.0 && (p.y - 20.0).abs() <= 1.0 && p.z == 7.005));
     }
 
     #[test]
@@ -278,7 +289,7 @@ mod tests {
         r.ambient.age = 0.5;
         h.decals.push(EeGfxEffectRecord::new(3));
         h.decals.push(r);
-        impact(&mut h, 1 as *mut c_void, &Ge3DPoint { x: 10.0, y: 20.0, z: 1.0 });
+        impact(&mut h, id(1), &Ge3DPoint { x: 10.0, y: 20.0, z: 1.0 });
         assert!(h.placed.is_empty());
         assert_eq!(h.decals[1].ambient.age, 0.0);
     }
@@ -286,12 +297,12 @@ mod tests {
     #[test]
     fn a_failed_roll_places_nothing_and_variants_are_picked() {
         let mut h = log(vec![fx(-1.0, 2, 0)]);
-        impact(&mut h, 1 as *mut c_void, &Ge3DPoint::default());
-        track(&mut h, 1 as *mut c_void, &Ge3DPoint::default(), 0, 1.0, 0.0);
+        impact(&mut h, id(1), &Ge3DPoint::default());
+        track(&mut h, id(1), &Ge3DPoint::default(), 0, 1.0, 0.0);
         assert!(h.placed.is_empty());
         let mut h = log(vec![fx(1.0, 1, 3), fx(1.0, 1, 0), fx(1.0, 1, 0), fx(1.0, 1, 0)]);
         for _ in 0..40 {
-            track(&mut h, 1 as *mut c_void, &Ge3DPoint::default(), EE_GFX_TRACK_GIRAFFE, 1.0, 0.0);
+            track(&mut h, id(1), &Ge3DPoint::default(), EE_GFX_TRACK_GIRAFFE, 1.0, 0.0);
         }
         let mut seen: Vec<usize> = h.placed.iter().map(|(e, _)| *e).collect();
         seen.sort_unstable();
