@@ -11,6 +11,7 @@ pub mod draw_model;
 pub mod draw_terrain;
 pub mod filter;
 pub mod movie;
+pub mod movobj;
 pub mod raster;
 pub mod screen;
 pub mod scrobj;
@@ -24,8 +25,6 @@ mod draw_ffi;
 mod ffi;
 #[cfg(not(test))]
 pub mod gx;
-#[cfg(not(test))]
-mod movie_ffi;
 #[cfg(not(test))]
 pub mod rastobj;
 

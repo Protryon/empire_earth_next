@@ -239,3 +239,128 @@ DX7Surface::DX7Surface(GXSurface* inSurface, const GESurfaceDescription& inDescr
     this->mDX7 = ee_dx7sf_new(DX7ObjectHost, static_cast<GESurface*>(this), inSurface,
                               reinterpret_cast<const EeDx7SurfaceDescription*>(&inDescription), inParentScreen);
 }
+
+// --- DX7Movie: whole in Rust (ee_dx7 movobj.rs); the thread entry, pl_mpeg's callbacks, the mixer's pull and the calls
+// on C++ objects ---------------------------------------------------------------------------------------------------
+#include <stdio.h>
+#include <vector>
+#include "pl_mpeg/pl_mpeg.h"
+#include "platform/PlatPath.h"
+#include "dx7/DX7Movie.h"
+
+static unsigned long DX7MoviePlay(void* inMovie) { return ee_dx7mv_play(static_cast<EeDx7Movie*>(inMovie)); }
+static void DX7MovieMix(void* inMovie, float* outFrames, unsigned long inCount) { ee_dx7mv_mix(inMovie, outFrames, inCount); }
+static void DX7MovieAudio(plm_t*, plm_samples_t* inSamples, void* inMovie)
+{
+    ee_dx7mv_samples(static_cast<EeDx7Movie*>(inMovie), inSamples->interleaved, inSamples->count);
+}
+static void DX7MovieVideo(plm_t*, plm_frame_t* inFrame, void* inMovie)
+{
+    static std::vector<unsigned char> sBGRA;   // one movie plays at a time (sMovieCriticalSection)
+    unsigned long theStride = inFrame->width * 4;
+    if (sBGRA.size() < theStride * inFrame->height)
+        sBGRA.resize(theStride * inFrame->height);
+    plm_frame_to_bgra(inFrame, &sBGRA[0], (int)theStride);
+    ee_dx7mv_frame(static_cast<EeDx7Movie*>(inMovie), &sBGRA[0], theStride);
+}
+
+static intptr_t DX7MovieHost(EeDx7MovieOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    GESurface* theSurface = static_cast<GESurface*>(inObj);
+    switch (inOp) {
+    case EeDx7MovieOp::CsNew: {
+        TSCriticalSection* theSection = NULL;
+        long theResult = TSScheduler::CreateCriticalSection(theSection);
+        if (a != 0)
+            ESVERIFY_AT(theResult == keseOK, (unsigned long)a);
+        return (intptr_t)theSection;
+    }
+    case EeDx7MovieOp::CsDelete: TSScheduler::DestroyCriticalSection(static_cast<TSCriticalSection*>(inObj)); return 0;
+    case EeDx7MovieOp::CsEnter: static_cast<TSCriticalSection*>(inObj)->Enter(); return 0;
+    case EeDx7MovieOp::CsLeave: static_cast<TSCriticalSection*>(inObj)->Leave(); return 0;
+    case EeDx7MovieOp::EventNew: {
+        TSEvent* theEvent = NULL;
+        ESVERIFY_AT(TSScheduler::CreateEvent(theEvent, false) == keseOK, (unsigned long)a);
+        return (intptr_t)theEvent;
+    }
+    case EeDx7MovieOp::EventDelete: TSScheduler::DestroyEvent(static_cast<TSEvent*>(inObj)); return 0;
+    case EeDx7MovieOp::EventSet: static_cast<TSEvent*>(inObj)->Set(); return 0;
+    case EeDx7MovieOp::EventClear: static_cast<TSEvent*>(inObj)->Clear(); return 0;
+    case EeDx7MovieOp::EventWait: static_cast<TSEvent*>(inObj)->Wait(INFINITE); return 0;
+    case EeDx7MovieOp::ThreadNew: {
+        TSThread* theThread = NULL;
+        ESVERIFY_AT(TSScheduler::CreateThread(theThread, DX7MoviePlay, inObj) == keseOK, (unsigned long)a);
+        return (intptr_t)theThread;
+    }
+    case EeDx7MovieOp::ThreadDelete: TSScheduler::DestroyThread(static_cast<TSThread*>(inObj)); return 0;
+    case EeDx7MovieOp::ThreadPriority: static_cast<TSThread*>(inObj)->SetPriority((long)a); return 0;
+    case EeDx7MovieOp::MovieReference: static_cast<GEMovie*>(inObj)->Reference(); return 0;
+    case EeDx7MovieOp::MovieDereference: static_cast<GEMovie*>(inObj)->Dereference(); return 0;
+    case EeDx7MovieOp::FileName: {
+        const FSFileSpec& theFile = *static_cast<const FSFileSpec*>(inObj);
+        snprintf(reinterpret_cast<char*>(a), MAX_PATH, "%s%s%s", (const char*)theFile.GetVolume(), (const char*)theFile.GetDirectory(),
+                 (const char*)theFile.GetFile());
+        return 0;
+    }
+    case EeDx7MovieOp::FpGet: return (intptr_t)(a == 0 ? UMGetFloatingPointPrecision() : UMGetFloatingPointRoundingMode());
+    case EeDx7MovieOp::FpSet:
+        if (a == 0)
+            UMSetFloatingPointPrecision((unsigned long)b);
+        else
+            UMSetFloatingPointRoundingMode((unsigned long)b);
+        return 0;
+    case EeDx7MovieOp::Open: {   // the game's path on the native file system (case-insensitive lookup off Windows)
+        char theNative[PLAT_MAX_PATH];
+        const char* thePath = reinterpret_cast<const char*>(a);
+        return (intptr_t)(PlatPathGetAttributes(thePath) != PLAT_ATTR_INVALID && PlatPathToNative(thePath, theNative, sizeof(theNative))
+                              ? plm_create_with_filename(theNative) : NULL);
+    }
+    case EeDx7MovieOp::InstallVideo: plm_set_video_decode_callback(static_cast<plm_t*>(inObj), DX7MovieVideo, reinterpret_cast<void*>(a)); return 0;
+    case EeDx7MovieOp::InstallAudio: {
+        double theLead;
+        memcpy(&theLead, &b, sizeof theLead);
+        plm_set_audio_decode_callback(static_cast<plm_t*>(inObj), DX7MovieAudio, reinterpret_cast<void*>(a));
+        plm_set_audio_lead_time(static_cast<plm_t*>(inObj), theLead);
+        return 0;
+    }
+    case EeDx7MovieOp::MixerRate: return SEMixer::GetActiveMixer() ? (intptr_t)SEMixer::GetActiveMixer()->GetOutputRate() : 0;
+    case EeDx7MovieOp::MixerSource: SEMixer::GetActiveMixer()->SetMovieSource(inObj ? DX7MovieMix : NULL, inObj); return 0;
+    case EeDx7MovieOp::ActiveScreen: return (intptr_t)GERasterizer::GetActiveRasterizer()->GetScreen((unsigned long)a);
+    case EeDx7MovieOp::ActiveTarget: return (intptr_t)GERasterizer::GetActiveRasterizer()->GetSecondarySurface((unsigned long)a);
+    case EeDx7MovieOp::ScreenCreateSurface:
+        return static_cast<GEScreen*>(inObj)->CreateSurface(*reinterpret_cast<GESurfaceDescription*>(a), reinterpret_cast<GESurface**>(b));
+    case EeDx7MovieOp::SurfaceInfo: {
+        const uint32_t theInfo[4] = { (uint32_t)theSurface->GetPixelFormat(), (uint32_t)theSurface->GetPixelDepth(),
+                                      (uint32_t)theSurface->GetWidth(), (uint32_t)theSurface->GetHeight() };
+        memcpy(reinterpret_cast<void*>(a), theInfo, sizeof theInfo);
+        return 0;
+    }
+    case EeDx7MovieOp::SurfaceLock: return theSurface->Lock();
+    case EeDx7MovieOp::SurfaceUnlock: return theSurface->Unlock();
+    case EeDx7MovieOp::SurfaceMemory:
+        reinterpret_cast<uintptr_t*>(a)[0] = (uintptr_t)theSurface->GetMemoryAddress();
+        reinterpret_cast<uintptr_t*>(a)[1] = theSurface->GetBytesPerRow();
+        return 0;
+    case EeDx7MovieOp::SurfaceReference: theSurface->Reference(); return 0;
+    case EeDx7MovieOp::SurfaceDereference: theSurface->Dereference(); return 0;
+    case EeDx7MovieOp::SurfaceCopy: {
+        const float* r = reinterpret_cast<const float*>(b);
+        GERectangle theSource(r[0], r[1], r[2], r[3]), theDestination(r[4], r[5], r[6], r[7]);
+        return theSurface->CopyTo(reinterpret_cast<GESurface*>(a), theSource, theDestination, false);
+    }
+    default: return 0;
+    }
+}
+
+// Creates a movie shown over the whole back buffer and starts its playback thread
+DX7Movie::DX7Movie(const FSFileSpec& inFile, unsigned long inScreen)
+{
+    this->mDX7 = ee_dx7mv_new(DX7MovieHost, static_cast<GEMovie*>(this), &inFile, inScreen, NULL, false);
+}
+
+// Creates a movie drawn into the given rectangle, optionally looping, and starts its playback thread
+DX7Movie::DX7Movie(const FSFileSpec& inFile, unsigned long inScreen, GERectangle inRectangle, bool inLoop)
+{
+    this->mDX7 = ee_dx7mv_new(DX7MovieHost, static_cast<GEMovie*>(this), &inFile, inScreen,
+                              reinterpret_cast<const float*>(&inRectangle), inLoop);
+}
