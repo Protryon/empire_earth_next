@@ -4,6 +4,7 @@
 #ifndef EE_WONAPI_WONAUTHCONTEXT_H
 #define EE_WONAPI_WONAUTHCONTEXT_H
 #include "platform/PlatMessage.h" // PlatSystemMachineId
+#include "rust/ee_won.h"
 
 namespace WONAPI {
 inline const uint8_t* WonBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
