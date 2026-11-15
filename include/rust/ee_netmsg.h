@@ -653,6 +653,18 @@ constexpr static const uint8_t JIT_MANUFACTURING = 173;
 
 constexpr static const uint8_t EXCHANGE_RESOURCES = 174;
 
+/// A game message's payload: the capture builds it (`EEMessage::BuildEEMessage`, an NMIM record)
+constexpr static const uint8_t EE_NETMSG_SWEEP_ITEM_GAME = 1;
+
+/// An engine message's payload: the capture builds it and records it (NMNE)
+constexpr static const uint8_t EE_NETMSG_SWEEP_ITEM_ENGINE = 2;
+
+/// A box selection's NMCU record, whole: the capture commits its bytes
+constexpr static const uint8_t EE_NETMSG_SWEEP_ITEM_COMPRESS = 3;
+
+/// The NMCU record's tag (the capture commits an `EE_NETMSG_SWEEP_ITEM_COMPRESS` item's bytes under it)
+constexpr static const uint32_t EE_NETMSG_SWEEP_NMCU = 1430474062;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -1835,6 +1847,13 @@ void ee_netmsg_execute(EeNetMsgHostFn host,
                        const uint8_t *list,
                        size_t list_len,
                        uint8_t framing);
+
+/// The sweep for the capture: each payload handed to `sink` in order (kind, bytes); no Rust state is borrowed
+/// across the calls (the payloads are made first).
+///
+/// # Safety
+/// `sink` is the capture's C++ function.
+void ee_netmsg_capture_sweep(void (*sink)(uint8_t kind, const uint8_t *data, size_t size));
 
 uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local);
 
