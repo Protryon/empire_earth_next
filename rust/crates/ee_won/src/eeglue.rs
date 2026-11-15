@@ -1197,6 +1197,34 @@ impl EeWonEeGlue {
     }
 }
 
+/// The lobby's timeouts (EELobbyTimeouts.cpp: one global at 0x9659d8, 0x5c bytes, that no code read; its
+/// constructor's defaults, its names inferred): three counts and times, a flag set to 1; its two vectors, its name and
+/// its other fields started empty or 0.
+// no code read the original global either
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct EeLobbyTimeouts {
+    /// +0x00
+    pub l00: i32,
+    /// +0x04
+    pub l04: i32,
+    /// +0x08
+    pub l08: i32,
+    /// +0x1c
+    pub s1c: i16,
+    /// +0x30
+    pub l30: i32,
+    /// +0x44
+    pub b44: bool,
+    /// +0x58
+    pub l58: i32,
+}
+
+/// EELobbyTimeouts' constructor's values (0x69d022).
+#[allow(dead_code)]
+pub(crate) const TIMEOUTS: EeLobbyTimeouts =
+    EeLobbyTimeouts { l00: 3, l04: 2000, l08: 45000, s1c: 1, l30: 0, b44: false, l58: 0 };
+
 /// Sets the glue's host (the C++ calls it once, before any other call).
 #[no_mangle]
 pub extern "C" fn ee_won_eeglue_set_host(host: EeWonEeGlueHostFn) {

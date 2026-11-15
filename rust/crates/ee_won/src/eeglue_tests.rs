@@ -393,3 +393,9 @@ fn leaving_the_lobby_shuts_it_down_and_the_loop_runs_once() {
     GLUE.call(EeWonEeGlueCall::Reset, 0, 0, 0);
     ee_won_eeglue_set_host(None);
 }
+
+#[test]
+fn the_timeouts_are_the_originals_defaults() {
+    assert_eq!((TIMEOUTS.l00, TIMEOUTS.l04, TIMEOUTS.l08, TIMEOUTS.s1c), (3, 2000, 45000, 1));
+    assert_eq!((TIMEOUTS.l30, TIMEOUTS.b44, TIMEOUTS.l58), (0, false, 0));
+}

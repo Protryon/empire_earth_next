@@ -421,5 +421,4 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp
 29ce06 29cfda Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbySound.cpp
-29cfda 29d07a Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyTimeouts.cpp
 f4bf3 f5d94 Empire Earth/Graphics Thread/EEE3DParticle.cpp
