@@ -1105,3 +1105,120 @@ radio %101
 radio %99
 tscreenstate
 form 97 113
+# round 5 of the editor lane: the condition types (EESETSCT*). Every type on the first condition: its controls
+# (group 12) after the change, values set, the name refreshed (RefreshControls), stored by selecting the second
+# condition and loaded back (Store, Hide, Show, Load), the controls and every condition again; then the sub-tab left
+# and entered (Activate)
+tab 4
+trigger 1
+newentry
+newentry
+tscreenstate
+tscreen select 0                   # condition type 2: player attribute
+ctype 2
+form 0 999 12
+cctl player 0 2
+cctl combo 0 23
+cctl combo 1 3
+cctl edit 0 150
+ctl c radio 1
+cctl player 1 3
+cctl combo 2 40
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 3: player research
+ctype 3
+form 0 999 12
+cctl player 0 3
+cctl combo 0 5
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 4: trigger attribute
+ctype 4
+form 0 999 12
+cctl scen 0 1
+ctl c check 0 1
+ctl c check 1 1
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 5: diplomacy
+ctype 5
+form 0 999 12
+cctl player 0 2
+cctl player 1 4
+cctl combo 0 2
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 6: game
+ctype 6
+form 0 999 12
+ctl c check 0 1
+cctl combo 0 1
+ctl c check 1 1
+cctl edit 0 300
+cctl edit 1 100
+ctl c check 2 1
+ctl c slide 0 15
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 7: chat message
+ctype 7
+form 0 999 12
+cctl text 0 hello_there
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 1                   # the second: its type shown, then the first's (Load's type switch)
+ctype 5
+tscreen select 0
+ui c
+conditionstate
+trigger 0
+trigger 1
+ui c
+tscreenstate
+# round 5: the AI attribute's float slider dragged (its UIESliderChange's modifier: 1 / the behaviour's scale)
+tab 4
+trigger 2
+etype 6 5
+ctl e combo 1 2
+ui e
+ctl e slide 2 500
+ui e
+ctl e slide 2 7
+ui e
+ctl e combo 1 60
+ctl e slide 2 3
+ui e
+ctl e combo 1 10
+ctl e slide 2 50
+ui e
+ctl e combo 1 11
+ctl e slide 2 50
+ui e
+ctl e combo 1 12
+ctl e slide 2 50
+ui e
