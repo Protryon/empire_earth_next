@@ -1,6 +1,6 @@
 //! WONGUI's table-shaped resource-config handlers as one table reader (R6 WON round 39).
 //!
-//! A config handler (`MSButtonConfig::Virtual24` and 46 others, ComponentConfig's and WONSkinConfig's among them: the MS controls' configs, the scroll and list
+//! A config handler (`MSButtonConfig::Virtual24` and 48 others, ComponentConfig's, WONSkinConfig's, FontConfig's and ImageConfig's among them: the MS controls' configs, the scroll and list
 //! configs, the skinned WON configs, the simple components') compared the instruction with its keys (guiconf's
 //! tables) and, for the key that matched, read its arguments in order (`ReadInt`, `EnsureComma`, `ReadBool`, ...)
 //! and called one setter or a few. Those reads and calls are the programs here, one per key of each handler, in the
@@ -358,6 +358,15 @@ static PROGRAMS: &[(i32, &[&[Op]])] = &[
         &[STR, VERT, C, COMP, S(12)], &[STR, VERT, C, COMP, S(13)], &[COMP, S(14)], &[COMP, S(15)], &[COMP, S(16)],
         &[COMP, S(17)], &[COMP, S(18)], &[COMP, S(19)], &[S(20)], &[R(Rd::StdCursor), C, IMG, S(21)],
     ]),
+    // FontConfig: SRC SIZE (the recalculation flag first) STYLE (the flag set at each turn, the empty flag's too; Bold
+    // Italic Plain Underline added or removed) SETDEFAULTFONT SETNAMEDFONT; setter 5: the recalculation flag
+    (EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION, &[
+        &[R(Rd::Font), S(0)], &[S(5), I, S(1)],
+        &[S(5), X, R(Rd::Flag), Jz(END), N(EE_WON_CFG_NAMES_FONTCONFIG_VIRTUAL24_FLAG, &[1, 2, 0, 4], Miss::Throw(b"Unknown font style: ")), S(2), J(0)],
+        &[R(Rd::Font), S(3)], &[STR, C, R(Rd::Font), S(4)],
+    ]),
+    // ImageConfig: SRC SIZE
+    (EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION, &[&[IMG, S(0)], &[I, C, I, S(1)]]),
     // StretchCenterImageConfig: STRETCHIMAGE CENTERIMAGE
     (EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION, &[&[IMG, S(0)], &[IMG, S(1)]]),
 ];

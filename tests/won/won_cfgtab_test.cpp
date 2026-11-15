@@ -1,10 +1,10 @@
-// The resource configs' table reader (R6 WON round 39): the 45 pure-table config handlers as they were (their
+// The resource configs' table reader (R6 WON round 39): the 49 table-shaped config handlers as they were (their
 // statements copied verbatim before the port: won_cfgtab_orig.h) against the port (ee_won's cfgtab.rs through the
 // game's own host statements, include/ee/wonapi/WONCfgTable.inl), both over the same stand-in world
 // (won_cfgtab_world.h: reads from a cursor over the value text, traced components, a skin, typed component checks).
 //
 // Inputs: every `Key: value` line of the lobby's resource files the game ships (the data tree's
-// Data/WONLobby Resources, or the directory given as the first argument) on every one of the 45 configs, then
+// Data/WONLobby Resources, or the directory given as the first argument) on every one of the 49 configs, then
 // 5,000 random instructions on every config (a key of the reader's tables or of any table, values built from numbers, booleans, every name of
 // guiconf's name tables with and without +/-, components, images, junk, commas and a token that makes a read throw).
 // For each, the two traces (every read and its value, every call with its arguments, every field write, the base

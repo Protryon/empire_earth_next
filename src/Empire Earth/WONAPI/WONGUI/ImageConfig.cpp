@@ -28,22 +28,6 @@ bool ImageConfig::GetNamedValue(const std::string& inName,int& outValue)
     return true;
 }
 
-// FUNCTION: WON 0x0078b3e0
-// Handles the image configuration keys SRC (loads the image) and SIZE (resizes it); false for other keys
-bool ImageConfig::Virtual24(const std::string& inInstruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
-    if(aKeyIdx==0) this->mImage=this->ReadImage(false);
-    else if(aKeyIdx==1)
-    {
-        int width=this->ReadInt();
-        this->EnsureComma();
-        int height=this->ReadInt();
-        this->mImage->SetSize(width,height);
-    }
-    else return false;
-    return true;
-}
 
 // FUNCTION: WON 0x0078c340
 // Reads a filter spec (SCALEPERCENT, SCALEABS, TINT, CROP, PIXELTRANS) and returns the filtered copy of

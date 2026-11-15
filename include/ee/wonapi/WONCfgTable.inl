@@ -1,4 +1,4 @@
-// The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 47 table-shaped config
+// The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 49 table-shaped config
 // handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ConfigTableHost.cpp (WONAPI) and
 // by tests/won/won_cfgtab_test.cpp (over its stand-ins), so both run these very statements. A read or setter that
 // throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns.
@@ -108,7 +108,8 @@ enum {
     kWScrollCont=EE_WON_CFG_KEYS_WONSCROLLCONTAINERCONFIG_VIRTUAL24_KEY, kScrollArea=EE_WON_CFG_KEYS_SCROLLAREACONFIG_VIRTUAL24_INSTRUCTION,
     kScroller=EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION, kSBScroller=EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION,
     kStretchCenter=EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION,
-    kComponent=EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY, kSkin=EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION
+    kComponent=EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY, kSkin=EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION,
+    kFont=EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION, kImage=EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION
 };
 #define EE_CFG_SET(t,n) case (t)<<8|(n):
 #define EE_CFG(T) static_cast<T*>(a.mConfig)
@@ -362,6 +363,17 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
         SmartPtr<Cursor> aCursor=new ComponentCursor(new ImageComponent(a.m[0].get()));
         Cursor::SetStandardCursor((StandardCursor)i[0],aCursor.get()); break;
     }
+    EE_CFG_SET(kFont,0) EE_CFG(FontConfig)->SetFont(a.f[0].get()); break;
+    EE_CFG_SET(kFont,1) EE_CFG(FontConfig)->mDescriptor.mSize=i[0]; break;
+    EE_CFG_SET(kFont,2)
+        if(i[0]!=0) EE_CFG(FontConfig)->mDescriptor.mStyle|=i[1];
+        else EE_CFG(FontConfig)->mDescriptor.mStyle&=~i[1];
+        break;
+    EE_CFG_SET(kFont,3) WindowManager::GetDefaultWindowManager()->SetDefaultFont(a.f[0].get()); break;
+    EE_CFG_SET(kFont,4) WindowManager::GetDefaultWindowManager()->SetNamedFont(s[0],a.f[0].get()); break;
+    EE_CFG_SET(kFont,5) EE_CFG(FontConfig)->mNeedRecalcFont=true; break;
+    EE_CFG_SET(kImage,0) EE_CFG(ImageConfig)->mImage=a.m[0]; break;
+    EE_CFG_SET(kImage,1) EE_CFG(ImageConfig)->mImage->SetSize(i[0],i[1]); break;
     default: break;
     }
 }
@@ -391,6 +403,8 @@ bool ComponentConfig::Virtual24(const std::string& key)
     return this->RunTable(kComponent,key);
 }
 bool WONSkinConfig::Virtual24(const std::string& key) { return this->RunTable(kSkin,key); }
+bool FontConfig::Virtual24(const std::string& key) { return this->RunTable(kFont,key); }
+bool ImageConfig::Virtual24(const std::string& key) { return this->RunTable(kImage,key); }
 // The handlers: the table, then the base (WONHeaderControlConfig asked its base first; the percent layout and the
 // colour scheme had none).
 #define EE_CFG_V24(T,k,B) bool T::Virtual24(const std::string& key) { return this->RunTable(k,key) || B::Virtual24(key); }

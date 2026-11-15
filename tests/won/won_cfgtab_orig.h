@@ -1,4 +1,4 @@
-// The 47 table-shaped config handlers and their helpers as they were before the port (R6 WON round 39), copied
+// The 49 table-shaped config handlers and their helpers as they were before the port (R6 WON round 39), copied
 // verbatim from 306fae35 by build/r39/gen_orig.py; tests/won/won_cfgtab_test.cpp compiles them over its stand-ins.
 
 // MSComponentConfig.cpp
@@ -1261,4 +1261,52 @@ bool WONSkinConfig::Virtual24(const std::string &theInstruction)
 		return false;
 
 	return true;
+}
+// FontConfig.cpp
+bool FontConfig::Virtual24(const std::string& instruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
+    if(aKeyIdx==0) this->SetFont(this->ReadFont().get());
+    else if(aKeyIdx==1) {
+        this->mNeedRecalcFont=true;
+        this->mDescriptor.mSize=this->ReadInt();
+    } else if(aKeyIdx==2) {
+        while(true) {
+            this->mNeedRecalcFont=true;
+            bool add=true;
+            GUIString flag=this->ReadFlag(&add);
+            if(flag.length()==0) break;
+            int style=0;
+            const int aNameIdx_flag=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_FONTCONFIG_VIRTUAL24_FLAG,flag.mData->mText,flag.mData->mLength,sizeof(wchar_t));
+            if(aNameIdx_flag==0) style=FontStyle_Bold;
+            else if(aNameIdx_flag==1) style=FontStyle_Italic;
+            else if(aNameIdx_flag==2) style=FontStyle_Plain;
+            else if(aNameIdx_flag==3) style=FontStyle_Underline;
+            else throw ConfigObjectException("Unknown font style: "+(std::string)flag);
+            if(add) this->mDescriptor.mStyle|=style;
+            else this->mDescriptor.mStyle&=~style;
+        }
+    } else if(aKeyIdx==3) WindowManager::GetDefaultWindowManager()->SetDefaultFont(this->ReadFont().get());
+    else if(aKeyIdx==4) {
+        GUIString name=this->ReadString(false);
+        this->EnsureComma();
+        SmartPtr<Font> font=this->ReadFont();
+        WindowManager::GetDefaultWindowManager()->SetNamedFont(name,font.get());
+    } else return false;
+    return true;
+}
+// ImageConfig.cpp
+bool ImageConfig::Virtual24(const std::string& inInstruction)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_IMAGECONFIG_VIRTUAL24_ININSTRUCTION,inInstruction.data(),inInstruction.size());
+    if(aKeyIdx==0) this->mImage=this->ReadImage(false);
+    else if(aKeyIdx==1)
+    {
+        int width=this->ReadInt();
+        this->EnsureComma();
+        int height=this->ReadInt();
+        this->mImage->SetSize(width,height);
+    }
+    else return false;
+    return true;
 }

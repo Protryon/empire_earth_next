@@ -239,7 +239,7 @@ fn every_handler_holds_a_program_per_key() {
             }
         }
     }
-    assert_eq!(PROGRAMS.len(), 47);
+    assert_eq!(PROGRAMS.len(), 49);
 }
 
 #[test]
@@ -390,4 +390,19 @@ fn skin_vert_words() {
     let mut h = Script::default();
     go(t, "WINSKIN", &mut h).unwrap();
     assert_eq!(h.log, ["x"]);
+}
+
+#[test]
+fn font_styles_add_and_remove_and_mark_the_font_each_turn() {
+    let t = EE_WON_CFG_KEYS_FONTCONFIG_VIRTUAL24_INSTRUCTION;
+    let mut h = Script { texts: vec!["bold", "UNDERLINE", "plain", ""], ..Default::default() };
+    go(t, "STYLE", &mut h).unwrap();
+    let want = [
+        "x", "a27:5", "x", "rFlag", "p1", "a27:2", "a27:5", "x", "rFlag", "p4", "a27:2", "a27:5", "x", "rFlag", "p0",
+        "a27:2", "a27:5", "x", "rFlag",
+    ];
+    assert_eq!(h.log, want);
+    let mut h = Script { texts: vec!["Huge"], ..Default::default() };
+    assert!(go(t, "STYLE", &mut h).is_err());
+    assert_eq!(h.log.last().unwrap(), "f0:Unknown font style: ");
 }

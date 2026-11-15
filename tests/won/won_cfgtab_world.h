@@ -16,7 +16,7 @@ template<class X> struct SmartPtr {
 };
 struct Obj { int id; Obj(int i) : id(i) {} virtual ~Obj() {} };
 struct Font : Obj { Font(int i) : Obj(i) {} };
-struct Image : Obj { Image(int i) : Obj(i) {} };
+struct Image : Obj { Image(int i) : Obj(i) {} void SetSize(int w, int h); };
 struct StretchImage : Image { StretchImage(int i) : Image(i) {} };
 struct Sound : Obj { Sound(int i) : Obj(i) {} };
 struct Background { int id; Background() : id(-1) {} };
@@ -35,6 +35,7 @@ enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortTyp
 enum HTMLFontSize { HTMLFontSize_Smallest, HTMLFontSize_Small, HTMLFontSize_Medium, HTMLFontSize_Large, HTMLFontSize_Largest };
 enum ImageButtonType { ImageButtonType_Normal, ImageButtonType_Over, ImageButtonType_Down, ImageButtonType_Disabled,
     ImageButtonType_Checked, ImageButtonType_None };
+enum FontStyles { FontStyle_Plain = 0, FontStyle_Bold = 1, FontStyle_Italic = 2, FontStyle_Underline = 4 };
 enum ScrollbarCondition { ScrollbarCondition_Disable = 0, ScrollbarCondition_Enable = 1, ScrollbarCondition_Conditional = 2 };
 
 struct Component;
@@ -132,6 +133,12 @@ struct SkinSlot {
 struct SkinMap {
     std::string n;
     SkinSlot operator[](const GUIString& k) { SkinSlot s; s.n = n + "[" + (std::string)k + "]"; return s; }
+};
+void Image::SetSize(int w, int h) { tr("image#" + P((long long)id) + ".SetSize(" + P((long long)w) + "," + P((long long)h) + ")"); }
+struct WindowManager {
+    static WindowManager* GetDefaultWindowManager() { static WindowManager w; return &w; }
+    void SetDefaultFont(Font* f) { tr("wm.SetDefaultFont(" + P(f) + ")"); }
+    void SetNamedFont(const GUIString& n, Font* f) { tr("wm.SetNamedFont(" + P(n) + "," + P(f) + ")"); }
 };
 struct ColorScheme { void SetStandardColor(int i, DWORD c) { tr("scheme.SetStandardColor(" + P((long long)i) + "," + P((long long)c) + ")"); } };
 struct Skin {
@@ -263,7 +270,7 @@ struct ComponentConfig {
 #define V24 virtual bool Virtual24(const std::string&)
 #define BASE(n) virtual bool Virtual24(const std::string& key) { return Base(#n, key); }
 struct ContainerConfig : ComponentConfig { BASE(ContainerConfig) };
-struct ImageConfig : ComponentConfig { BASE(ImageConfig) };
+struct ImageConfig : ComponentConfig { V24; SmartPtr<Image> mImage = new Image(77); };
 struct ButtonConfig : ComponentConfig { V24; Component* mButton = gComp; void HandleButtonFlags(); void HandleFitText() { tr("HandleFitText"); } };
 struct ScrollAreaConfig : ContainerConfig { V24; Component* mScrollArea = gComp; };
 struct ScrollerConfig : ContainerConfig { V24; Component* mScroller = gComp; };
@@ -311,6 +318,11 @@ struct SplitterConfig : ContainerConfig {
 };
 struct WONFrameComponentConfig : ComponentConfig { V24; Component* mFrameComponent = gComp; };
 struct StretchCenterImageConfig : ImageConfig { V24; Component* mStretchCenterImage = gComp; };
+struct FontDescriptor { Field mSize{NULL, "mDescriptor.mSize"}; int mStyle = 0; };
+struct FontConfig : ComponentConfig {
+    V24; Field mNeedRecalcFont{NULL, "mNeedRecalcFont"}; FontDescriptor mDescriptor;
+    void SetFont(Font* f) { tr("SetFont(" + P(f) + ")"); }
+};
 struct WONSkinConfig : ComponentConfig { V24; bool ReadVert(); void HandleButtonClickSound() { tr("HandleButtonClickSound"); } };
 #undef V24
 #undef BASE
@@ -323,7 +335,7 @@ struct WONSkinConfig : ComponentConfig { V24; bool ReadVert(); void HandleButton
     X(ImageButtonConfig) X(LabelConfig) X(ListAreaConfig) X(InputBoxConfig) X(TextAreaConfig) X(TreeAreaConfig) \
     X(WONSimpleButtonConfig) X(WONButtonConfig) X(SplitterConfig) X(WONScrollbarConfig) X(WONHeaderControlConfig) \
     X(WONListCtrlConfig) X(WONFrameComponentConfig) X(WONComboBoxConfig) X(WONTabCtrlConfig) X(WONScrollContainerConfig) \
-    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig) X(ComponentConfig) X(WONSkinConfig)
+    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig) X(ComponentConfig) X(WONSkinConfig) X(FontConfig) X(ImageConfig)
 static ComponentConfig* MakeConfig(int i)
 {
     int n = 0;
@@ -341,6 +353,8 @@ static std::string RunOne(int i, const std::string& key, const std::string& valu
     c->mText = value;
     try { tr(c->Virtual24(key) ? "=> 1" : "=> 0"); }
     catch (const ConfigObjectException& e) { tr("throws " + e.mText); }
+    if (FontConfig* f = dynamic_cast<FontConfig*>(c)) tr("style " + P((long long)f->mDescriptor.mStyle));
+    if (ImageConfig* m = dynamic_cast<ImageConfig*>(c)) tr("image " + P(m->mImage));
     if (PercentLayoutConfig* p = dynamic_cast<PercentLayoutConfig*>(c)) {
         std::string s = "refs";
         for (Component* r : p->refs) s += " " + P(r);
