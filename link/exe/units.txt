@@ -220,19 +220,8 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 17ccf3 17daa8 Empire Earth/Scenario Editor/EESETSArea.cpp
 17daa8 17e49e Empire Earth/Scenario Editor/EESETSCComboBox.cpp
 17e49e 17ef10 Empire Earth/Scenario Editor/EESETSCondition.cpp
-17ef10 181792 Empire Earth/Scenario Editor/EESETSConditionType.cpp
 181792 182629 Empire Earth/Scenario Editor/EESETSEComboBox.cpp
 182629 182dda Empire Earth/Scenario Editor/EESETSEffect.cpp
-182dda 1843c7 Empire Earth/Scenario Editor/EESETSETAI.cpp
-1843c7 185d31 Empire Earth/Scenario Editor/EESETSETGame.cpp
-185d31 185f75 Empire Earth/Scenario Editor/EESETSETLogObject.cpp
-185f75 185fed Empire Earth/Scenario Editor/EESETSETMaintainObject.cpp
-185fed 186e1f Empire Earth/Scenario Editor/EESETSETMedia.cpp
-186e1f 18849c Empire Earth/Scenario Editor/EESETSETMSDCameraScrollChange.cpp
-18849c 189904 Empire Earth/Scenario Editor/EESETSETObject.cpp
-189904 18c72e Empire Earth/Scenario Editor/EESETSETPlayer.cpp
-18c72e 18e4a4 Empire Earth/Scenario Editor/EESETSETSAAAttributeChange.cpp
-18e4a4 18efb7 Empire Earth/Scenario Editor/EESETSETSetObjectStance.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp
 196ebe 197261 Empire Earth/Scenario Editor/EESETSUICBPlayer.cpp
@@ -359,12 +348,7 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 276442 276631 Empire Earth/User Interface Thread/EEUIPGSLineGraph.cpp
 276631 27a37e Empire Earth/User Interface Thread/EEUserInterface.cpp
 27a37e 27aa0b Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
-27aa0b 27ac2c Empire Earth/Civilization Builder/EEAECloaking.cpp
-27ac2c 27ace1 Empire Earth/Civilization Builder/EEAEEconomy.cpp
-27ace1 27adb0 Empire Earth/Civilization Builder/EEAEHealing.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
-27b911 27bf0a Empire Earth/Civilization Builder/EEAEMoraleFromBuildings.cpp
-27bf0a 27bf4b Empire Earth/Civilization Builder/EEAEMoraleFromMilitaryHeroes.cpp
 27bf4b 27c0f3 Empire Earth/Civilization Builder/EEAreaEffect.cpp
 27c0f3 27c8b9 Empire Earth/Civilization Builder/EEAreaEffectTemplate.cpp
 27c8b9 27c9db Empire Earth/Civilization Builder/EECBCivilizationCreator.cpp
@@ -379,12 +363,6 @@ ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 28d82d 28f0cb Empire Earth/Campaign/EECampaignEditorBehavior.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
-290578 2909a1 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyColorButton.cpp
-290e89 291463 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileDialog.cpp
 291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp
-294d62 296aaa Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInit.cpp
-296aaa 297ee7 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInterface.cpp
-297ee7 299838 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyMisc.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp
 29ce06 29cfda Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbySound.cpp
-29cfda 29d07a Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyTimeouts.cpp

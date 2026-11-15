@@ -34,8 +34,4 @@ void TMGetTimeOfDay(TMTime& outTime)
 
 // FUNCTION: LLE 0x100537ab
 // Starts the time manager: 1 ms timer resolution, performance-counter frequencies, and its shutdown registration
-long TMInitialize()
-{
-    ee_time_initialize();
-    return URegisterShutdown(ee_time_shutdown);
-}
+long TMInitialize() { return ee_time_system_initialize(); }

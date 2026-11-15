@@ -1008,6 +1008,15 @@ pub extern "C" fn ee_ts_dispatch_window_events() {
 pub extern "C" fn ee_ts_initialize() -> c_long {
     SCHEDULER.initialize(&PlatHost)
 }
+/// `TSInitialize`: registers [`ee_ts_shutdown`] with the engine's shutdown list (ee_util), then the calling (main)
+/// thread (`kErrorFailed` when the registration fails, as the original; it never does).
+#[no_mangle]
+pub extern "C" fn ee_ts_system_initialize() -> c_long {
+    if ee_util::ee_util_register_shutdown(ee_ts_shutdown) != 0 {
+        return 9;
+    }
+    ee_ts_initialize()
+}
 /// The Thread System's shutdown (`URegisterShutdown`): destroys the calling thread's object.
 #[no_mangle]
 pub extern "C" fn ee_ts_shutdown(_forced: bool) {

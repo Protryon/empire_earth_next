@@ -390,22 +390,8 @@ EETechTreeEpoch& EETechTreeEpoch::operator=(const EETechTreeEpoch& inOther)
 {
     std::map<long, EETechTreeNode*>::const_iterator theNode;
     this->mData = inOther.mData;
-    this->mEpoch = inOther.mEpoch;
-    this->mObsoleteEpoch = inOther.mObsoleteEpoch;
-    this->mIsResearched = inOther.mIsResearched;
-    this->mIsObsolete = inOther.mIsObsolete;
-    this->mIsAvailable = inOther.mIsAvailable;
-    this->mFirstNodeID = inOther.mFirstNodeID;
-    this->mRequiredSOL = inOther.mRequiredSOL;
-    this->mIsAllowed = inOther.mIsAllowed;
     this->mButton = inOther.mButton;
-    this->mCurrentSOL = inOther.mCurrentSOL;
-    this->mNextEpoch = inOther.mNextEpoch;
-    this->mPrerequisiteFlags = inOther.mPrerequisiteFlags;
-    this->mIsResearched = inOther.mIsResearched;
-    this->mIsObsolete = inOther.mIsObsolete;
-    this->mIsAvailable = inOther.mIsAvailable;
-    this->mIsCountingSOL = false;
+    ee_tech_node_assign(this, &inOther, true);   // the record's fields, counting off (ee_tech nodes.rs assign)
     this->DeleteNodes();
     theNode = inOther.mNodes.begin();
     while (theNode != inOther.mNodes.end()) {

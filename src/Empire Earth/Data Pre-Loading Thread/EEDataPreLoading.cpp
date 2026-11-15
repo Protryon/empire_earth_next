@@ -225,12 +225,11 @@ void EEDataPreLoading::LoadGame(bool inSkipGameMedia, bool inClearWorld)
         else
             gUserInterface->SetLoadingText(IDS_WAITING_FOR_PLAYERS);
         gUserInterface->SetLoadProgress(1.0f);
-        EEMStartLoadingResponse* theResponse;
+        EEMRecord* theResponse;
         if (gCommunications->IsClient())
-            theResponse = new EEMStartLoadingResponse(static_cast<EEClient*>(gCommunications)->GetMySendToSlot(),
-                                                      gWorld.GetCurrentPlayer()->GetPlayerID(), 0);
+            theResponse = new EEMRecord(kMessageStartLoadingResponse, {static_cast<EEClient*>(gCommunications)->GetMySendToSlot(), gWorld.GetCurrentPlayer()->GetPlayerID(), 0});
         else
-            theResponse = new EEMStartLoadingResponse(0xfe, gWorld.GetCurrentPlayer()->GetPlayerID(), 0);
+            theResponse = new EEMRecord(kMessageStartLoadingResponse, {0xfe, gWorld.GetCurrentPlayer()->GetPlayerID(), 0});
         gCommunications->ProcessLocalUserInput(theResponse, kSlotNone);
         if (gCommunications->IsClient())
             (static_cast<EEClient*>(gCommunications))->mHasLoaded = true;

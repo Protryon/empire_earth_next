@@ -38,11 +38,7 @@ extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_
     case Op::RootGrabberRead: {
         BackgroundGrabber* g = (BackgroundGrabber*)a;
         EeWonRootGrab* q = (EeWonRootGrab*)b;
-        q->need = g->NeedDrawBG() ? 1 : 0;
-        q->order = (int)g->mImageOrder;
-        q->x = g->mImageX;
-        q->y = g->mImageY;
-        q->clip.x = g->mClipRect.x; q->clip.y = g->mClipRect.y; q->clip.w = g->mClipRect.width; q->clip.h = g->mClipRect.height;
+        ee_won_grab_read(g->mRust, q);
         q->image = (intptr_t)g->mBGImage.get();
         return 0;
     }

@@ -1,6 +1,6 @@
 // Loopback test of the TCP/IP network plug-in (Rust: rust/crates/ee_net_tcp) on the platform layer's sockets
 // (platform/PlatSocket.h): one process plays host and client over 127.0.0.1 through the engine's protocol
-// (NEProtocol.cpp, its NEServer and NEConnection), with the arguments the network engine passes
+// (NEProtocol, whole in Rust: ee_net ffi_protocol.rs; its servers and connections), with the arguments the network engine passes
 // (NESynchronousServer::Publish: "EEService", port 2 = the datagram game socket; NESynchronousClient::Connect: type
 // 2; ConnectForXfer mode 1):
 //
@@ -36,13 +36,9 @@
 #include "lle/NEProtocol.h"
 #include "rust/ee_net_tcp.h"
 
-// The protocol's constructor and destructor are its friends' (NEInitialize, NEShutdown, the server): the test is
-// the server here (the game's server is not linked)
-class NESynchronousServer {
-public:
-    static NEProtocol* New() { return new NEProtocol(); }
-    static void Delete(NEProtocol* inProtocol) { delete inProtocol; }
-};
+// the protocol (whole in Rust, ee_net ffi_protocol.rs) with the original's members, made and freed as the server
+// did (tests/net/ne_protocol_members.h)
+#include "../../tests/net/ne_protocol_members.h"
 
 // ---- stand-ins for the engine functions the plug-in calls (the test links no other engine unit)
 
@@ -181,7 +177,7 @@ int main()
         gPlatSimPortOffset = atoi(theOffset);
 
     // 1. activate (the protocol's constructor), publish
-    NEProtocol* theProtocol = NESynchronousServer::New();
+    Proto* theProtocol = NESynchronousServer::New();
     REQUIRE(NEProtocol::GetCount() == 1);
     CHECK(ee_tcp_is_valid());
     printf("protocol: %s, type %lu\n", (const char*)theProtocol->GetName(), theProtocol->GetProtocolType());

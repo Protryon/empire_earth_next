@@ -411,11 +411,11 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
                     inUnit->Kill(true, false, false);
                 else {
                     if (inUnit->mContainer == NULL)
-                        inUnit->SetHomeBase(theAirTraffic->mSlots[0].mAirport);
+                        inUnit->SetHomeBase(theAirTraffic->GetSlotAirport(0));
                     else {
                         for (unsigned long i = 0; i < theAirTraffic->GetNumSlots(); i++) {
-                            if (inUnit->mContainer == theAirTraffic->mSlots[i].mAirport)
-                                inUnit->SetHomeBase(theAirTraffic->mSlots[i].mAirport);
+                            if (inUnit->mContainer == theAirTraffic->GetSlotAirport(i))
+                                inUnit->SetHomeBase(theAirTraffic->GetSlotAirport(i));
                         }
                     }
                     theClass->ReturnToAirport(inUnit);

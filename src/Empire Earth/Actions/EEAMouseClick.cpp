@@ -144,14 +144,14 @@ EEMessage* EEAMouseClick::CreateLoadTransportMessage(EEGroup* inGroup, long inKi
             unsigned long theTransportID = theTransport->GetUnitID();
             if (theTransportID == inTargetID && theTransport->mIsBuilt) {
                 if (inGroup->GetNumUnits() > 1)
-                    theMessage = new EEMLoadTransport(theTransportID, -1, 0);
+                    theMessage = new EEMRecord(kMessageLoadTransport, {theTransportID, -1, 0});
             } else {
                 EEUnit* theTarget = static_cast<EEUnit*>(::gWorld.GetUnit(inTargetID));
                 if (theTarget && theTarget->GetClass() == theTransport->GetClass() && inGroup->GetNumUnits() > 1 &&
                     theTarget->mTileNode && theTarget->GetComplexUnit()->mIsBuilt)
-                    theMessage = new EEMLoadTransport(inTargetID, -1, 0);
+                    theMessage = new EEMRecord(kMessageLoadTransport, {inTargetID, -1, 0});
                 else if (theTransport->mIsBuilt)
-                    theMessage = new EEMLoadTransport(theTransportID, inTargetID, 0);
+                    theMessage = new EEMRecord(kMessageLoadTransport, {theTransportID, inTargetID, 0});
             }
         }
     }
@@ -174,9 +174,9 @@ void EEAMouseClick::SelectAtMouse(unsigned long inModifiers)
     EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
     if (theUnit) {
         if (inModifiers & kModifierShift)
-            theMessage = new EEMAlwaysAddUnitToSelectedGroup(theUnit->GetUnitID());
+            theMessage = new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theUnit->GetUnitID()});
         else if (inModifiers & kModifierControl)
-            theMessage = new EEMAddUnitToSelectedGroup(theUnit->GetUnitID());
+            theMessage = new EEMRecord(kMessageAddUnitToSelectedGroup, {theUnit->GetUnitID()});
         else
             theMessage = new EEMRecord(kMessageSelectUnit, {theUnit->GetUnitID()});
         theUnit->Dereference();
@@ -282,7 +282,7 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                     EEUnit* theRallyUnit = theSelected->GetComplexUnit();
                     long theTargetID = theTarget != NULL ? theTarget->GetUnitID() : -1;
                     gCommunications->ProcessLocalUserInput(
-                        new EEMSetRallyGoal(theRallyUnit->GetUnitID(), GE2DPoint(inX, inY), theTargetID, theShift), kSlotNone);
+                        new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(inX, inY), theTargetID, theRallyUnit->GetUnitID(), theShift}), kSlotNone);
                 }
             } else {
                 bool theCanDrop = theGroup->GetUnit(0) != NULL &&
@@ -347,19 +347,19 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                         if ((theWorker != NULL && theWorker->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), false, false)) ||
                             (theOtherWorker != NULL && theOtherWorker->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), false, false))) {
                             if (theOwner != thePlayer)
-                                theMessage = new EEMGatherResource(theTarget->GetUnitID(), theShift);
+                                theMessage = new EEMRecord(kMessageGatherResource, {theTarget->GetUnitID(), theShift});
                             else if (theFlag && theClass->IsLandBuilding() && theTarget->GetHitPoints() < theTarget->GetStats()->GetMaxHitPoints())
-                                theMessage = new EEMRepairUnit(theTarget->GetUnitID(), theShift);
+                                theMessage = new EEMRecord(kMessageRepairUnit, {theTarget->GetUnitID(), theShift});
                             else if (theClass->IsLandBuilding()) {
                                 if (theGroup->GetNumUnits() > 1 && theTarget->GetUnitClass()->GetUnitType() == kUnitTypeFarm)
                                     EEGetFarmDropSites(theTarget->GetComplexUnit(), theFarmers);
                                 if (theFarmers.size() == 1)
                                 {
                                     EEUnit* theFarmer = theFarmers[0];
-                                    theMessage = new EEMSmartFarmers(theFarmer->GetUnitID(), theShift);
+                                    theMessage = new EEMRecord(kMessageSmartFarmers, {theFarmer->GetUnitID(), theShift});
                                 }
                                 else
-                                    theMessage = new EEMGatherResource(theTarget->GetUnitID(), theShift);
+                                    theMessage = new EEMRecord(kMessageGatherResource, {theTarget->GetUnitID(), theShift});
                             }
                         } else if (theOwner != thePlayer && thePlayer->GetEnemy(theOwner->GetPlayerID()) != 0) {
                             if (theTarget->GetResourceType() != kResourceNone && theTarget->GetPlayer()->GetPlayerID() == 0 && theTarget->GetResourceAmount() > 0 &&
@@ -370,29 +370,29 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                                         if (theSelectedClass->GetUnitType() == kUnitTypeAirport ||
                                             (((theSelectedClass->GetCategory() == kUnitCategoryNavalBuilding || theSelectedClass->GetCategory() == kUnitCategorySpaceBuilding) &&
                                               theSelectedClass->GetAirTrafficType() != 0) && theTarget->GetUnitClass()->GetFamily() != kUnitFamilyFish))
-                                            theMessage = new EEMSetRallyGoal(theSelected->GetUnitID(), GE2DPoint(inX, inY), theTarget->GetUnitID(), theShift);
+                                            theMessage = new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(inX, inY), theTarget->GetUnitID(), theSelected->GetUnitID(), theShift});
                                         else
-                                            theMessage = new EEMPathTo(inX, inY, inFacing, !theControl, inIsRotating, theShift, false);
+                                            theMessage = new EEMRecord(kMessagePathTo, {inFacing, inX, inY, !theControl, inIsRotating, theShift, false});
                                     }
                                 } else
-                                    theMessage = new EEMGatherResource(theTarget->GetUnitID(), theShift);
+                                    theMessage = new EEMRecord(kMessageGatherResource, {theTarget->GetUnitID(), theShift});
                             } else if (theTarget->GetHitPoints() > 0)
-                                theMessage = new EEMAttackUnit(theTarget->GetUnitID(), theShift, false);
+                                theMessage = new EEMRecord(kMessageAttackUnit, {theTarget->GetUnitID(), theShift, false});
                             else
-                                theMessage = new EEMPathTo(inX, inY, inFacing, !theControl, inIsRotating, theShift, false);
+                                theMessage = new EEMRecord(kMessagePathTo, {inFacing, inX, inY, !theControl, inIsRotating, theShift, false});
                         } else if (EEGetFirstSelectedUnit(theSelected) && theSelected != NULL && theSelected->GetUnitClass()->GetIsMedic() &&
                                    theTarget->GetHitPoints() > 0 && theSelected->GetTileNode() != NULL && theTarget->GetTileNode() != NULL &&
                                    EECanHeal(theSelected->GetComplexUnit(), theTarget->GetComplexUnit())) {
-                            theMessage = new EEMHealUnit(theTarget->GetUnitID());
+                            theMessage = new EEMRecord(kMessageHealUnit, {theTarget->GetUnitID()});
                         } else if (theOwner == thePlayer) {
                             if (theFlag && theClass->IsLandBuilding() && theTarget->GetHitPoints() < theTarget->GetStats()->mMaxHitPoints)
-                                theMessage = new EEMRepairUnit(theTarget->GetUnitID(), theShift);
+                                theMessage = new EEMRecord(kMessageRepairUnit, {theTarget->GetUnitID(), theShift});
                             else if (theClass->IsDropSite() ||
                                      ((theClass->GetUnitType() == kUnitTypeDock || theClass->GetUnitType() == kUnitTypeNavyYard) && theGroup->CountUnitsOfKind(3) < theCount)) {
                                 if (theClass->GetUnitType() != kUnitTypeGranaryImproved && theClass->GetUnitType() != kUnitTypeGranary)
-                                    theMessage = new EEMDropoffResource(theTarget->GetUnitID());
+                                    theMessage = new EEMRecord(kMessageDropoffResource, {theTarget->GetUnitID()});
                                 else
-                                    theMessage = new EEMSmartFarmers(theTarget->GetUnitID(), theShift);
+                                    theMessage = new EEMRecord(kMessageSmartFarmers, {theTarget->GetUnitID(), theShift});
                             } else {
                                 unsigned long theLoad = 0;
                                 if ((theGroupFlags & kUnitKindHelicopterTransport) == kUnitKindHelicopterTransport)
@@ -408,7 +408,7 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                                 if (theLoad != 0)
                                     theMessage = this->CreateLoadTransportMessage(theGroup, theLoad, theTarget->GetUnitID());
                                 else if (theClass->IsTransport() && theTarget->GetTileNode() != NULL && theTarget->GetComplexUnit()->GetIsBuilt())
-                                    theMessage = new EEMLoadTransport(theTarget->GetUnitID(), -1, 0);
+                                    theMessage = new EEMRecord(kMessageLoadTransport, {theTarget->GetUnitID(), -1, 0});
                                 else if (theClass->GetUnitType() == kUnitTypePathPoint)
                                     theMoveTo = true;
                                 else if (theClass->IsAirBase())
@@ -428,7 +428,7 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                                         x = theTarget->GetTileX() + 0.5f;
                                         y = theTarget->GetTileY() + 0.5f;
                                     }
-                                    theMessage = new EEMPathTo(x, y, inFacing, !theControl, inIsRotating, theShift, false);
+                                    theMessage = new EEMRecord(kMessagePathTo, {inFacing, x, y, !theControl, inIsRotating, theShift, false});
                                 }
                             }
                         } else {
@@ -440,16 +440,16 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                                 x = theTarget->GetTileX() + 0.5f;
                                 y = theTarget->GetTileY() + 0.5f;
                             }
-                            theMessage = new EEMPathTo(x, y, inFacing, !theControl, inIsRotating, theShift, false);
+                            theMessage = new EEMRecord(kMessagePathTo, {inFacing, x, y, !theControl, inIsRotating, theShift, false});
                         }
                     }
                 } else if (inMove)
                     theMoveTo = true;
             }
             if (theMoveTo)
-                theMessage = new EEMPathTo(inX, inY, inFacing, !theControl, inIsRotating, theShift, false);
+                theMessage = new EEMRecord(kMessagePathTo, {inFacing, inX, inY, !theControl, inIsRotating, theShift, false});
         } else if (inMove)
-            theMessage = new EEMPathTo(inX, inY, inFacing, !theControl, inIsRotating, theShift, inForceMove);
+            theMessage = new EEMRecord(kMessagePathTo, {inFacing, inX, inY, !theControl, inIsRotating, theShift, inForceMove});
         EEGraphicEffect* theGraphicEffect;
         if (theTarget != NULL && (theTarget->GetHitPoints() > 0 ||
             (theTarget->GetResourceAmount() != 0 && theTarget->GetUnitClass()->GetCategory() != kUnitCategoryLandCitizen && theTarget->GetUnitClass()->GetCategory() != kUnitCategoryNavalCitizen)))
