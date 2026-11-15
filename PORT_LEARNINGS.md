@@ -23554,3 +23554,86 @@ Round total: net -1,464. The Graphics Engine directory: 10,134 -> 8,752 lines; t
 - **Left in the plug-in**: DX7Rasterizer.cpp (852 lines: the forwarders, the draws' reads of GE objects, the rasterizer's
   host, about 300 address markers), DX7Trampolines.cpp (366: the vertex arrays' shells, the screen, surface and movie
   shells and hosts, the layout pins) and GX.cpp (137: the GX shims the splash screen and `tools/gx_test`/`sdl_test` call).
+
+## R5b.5, eighth round: the trigger effects' bodies in Rust over one world host; the class attribute's arithmetic (ee_scenario effect.rs, effect_ai.rs, task.rs, class_attribute.rs; branch rust-triggers8, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| d7dd7c15 | SMEW, the world after each effect (TEST ONLY), golden from the unmodified C++ | +143 (test code) |
+| 833a4e06 | `EESMEffect::Execute` and its 17 helpers as Rust decisions over `EESMEffectWorld` | +1061 -2047, net -986 |
+| 966540a3 | `EEModifyUnitAttribute`'s arithmetic and `EEChangeUnit`'s amounts in Rust (class_attribute.rs) | +80 -221, net -141 |
+| 01229860 | `ApplyEventAttribute`'s four rescale walks as one helper (C++ only) | +43 -78, net -35 |
+
+Round: -1,162 net for the moves (the TEST ONLY capture +143 aside). EESMEffect.cpp 2,441 -> 1,461 lines.
+
+- **The measure, re-done with the calamities' pattern in mind.** The lane's seventh round called the effect bodies
+  world glue. They are, statement by statement, but each helper is one shape: pick players, objects, areas or units,
+  test them, loop, and make world calls. The calamities lane's lesson (one host switch for every world call, the
+  decisions in Rust) applies even with no subclass to collapse: the decisions, argument checks and loops move, and
+  each world call becomes one `case` of one switch. The saving is smaller than collapsing classes (the host is about
+  800 lines: one line per read, a few per write, the larger statement sequences kept whole), but it is real. The
+  round is under the 1,500 asked (-1,162): what is left in the directory is mostly that host and other world glue
+  (see "What is left").
+- **One world host.** `EeScenarioHost` gained `world(ctx, op, args[6]) -> i64` and `object(ctx, index)` (the object's
+  numbers, copied at once). Units go by id (the object lists hold ids; a unit's value by `EE_SCENARIO_UV_*`), players
+  by index. What the originals kept in locals across players or units (the AI's task, location, strategy and unit
+  ids; the active group, the goal, the load and rejected lists, the calamity technologies; the calamity's `CanCastAt`
+  point; the Task-Area placement's location, transformation, roll and pitch) is the run's context (`EESMEffectRun`,
+  derived from `EESMHostContext`), so what one pass leaves the next starts from, as before. Some of those carries are
+  quirks kept on purpose: Create AI Military Group's target serial, unit id and target player carry over to the next
+  player when nothing is found; the Task-Object rejected list is never cleared within a run; Modify AI Military
+  Target's serial carries over.
+- **Order kept to the statement.** Goal construction and `ClearGoal`/`ClearGoals` keep their original order per site
+  (some sites build the goal first, others clear first: the goal ids are allocated in that order); a gate's second
+  part is locked before its fourth part is fetched; pure reads moved only where nothing in between writes.
+- **The golden first.** SMEW (after every SMEX): the effect's saved bytes, the world's out-of-synch checksum, the
+  units' checksum sum and the AI's (as EE-SIM's `--checksum-trace`), every unit of the five objects an effect names
+  (checksum, owner, hit points, tile, name, command, goal kinds of every queue, flags, behaviour, container, flight
+  time, ammunition, cargo, location matrix), each player's result, visibility, enemies, group counts, civilization
+  points and favourite units, the media texts, messages, pending effects, triggers, time of day, game speed, cinematic
+  and weather flags, camera path. Recorded at seeds 2-7 on the unmodified C++ (all other scenario tags equal to the
+  golden). After the move all 528 digests of the profile (every tag, not only the gated SM tags) were equal, and the
+  capture files byte for byte the same size.
+- **What the six scenarios reach** (SMEX by kind): Create, Freeze, Kill, Remove (898 at seed 4), Task-Object (616 at
+  seed 6), Task-Area, Stance (462), Unit-Attribute (248 at seed 7), Owner, Class-Name, Class-Attribute; Script-Camera,
+  Defeat, Diplomacy, Set-Attribute Level, Fade-In/Out, Visibility On/Off, MiniMap-Flare; trigger states; every media
+  action; Daylight Hour, Day/Night Cycle, Graphic Effect, Start/End Cinematic, Ambient Weather; Modify AI Military
+  Target (462) and Set Favorite Units. **Not reached by any:** Victory, Unfreeze, Face Object, Modify-Tech-Tree,
+  Award-Civ-Points, the Calamity game action, Build Object, Create AI Military Group, Set AI Toggle, Set AI Variable
+  (its table has round 2's golden driver). Their Rust is unit-tested (effect_tests.rs, 19 tests over a logging
+  world) and reviewed against the original line by line; only a campaign played by a person (or a scenario that uses
+  them) reaches them in a game.
+- **Behaviour changes.** None on any path the original survived. Where the original read through a NULL (Set Units
+  Owner, Face Object and Set Units Stance without their object; a flare or camera area that does not exist), the Rust
+  does nothing; a unit whose player index is outside the 16 per-player lists is left out (the original indexed past
+  them).
+- **The class attribute.** `EEModifyUnitAttribute`'s 15 cases were the same arithmetic on different fields: the C++
+  now picks the upgrade's field and the class's base (as `float`, as the percent read it) and `class_value` computes
+  (kinds: int, hit points, flight time, float, armor, velocity, the animal AI flag, camera focus; `UMFloatToLong` as
+  aivar.rs's `lrintf`, C casts as `ftol`). The line of sight's sight walk and the animal AI's herds stay C++.
+  `EEChangeUnit`'s seven "percent, then add/subtract/exactly, then clamp" blocks are `unit_amount`. Reached:
+  Class-Attribute 14 times, Unit-Attribute about 280 (seeds 3-7); equal captures.
+- **EEEvent.** `ApplyEventAttribute`'s hit point and flight time rescales were four copies of one walk (units, then
+  pending units, each with its capture records); one helper now, the EVAT/TCST records unchanged (oracle and
+  calamity captures equal). The remaining event effects are member writes over ee_tech's arithmetic: little left
+  to decide.
+- **For the editor lane:** no field of the records changed and every accessor it uses stays; `EESMEffect` lost its 17
+  helper members (no caller outside EESMEffect.cpp) and `MaintainObject`.
+- **Gates.** Per commit: build `--sim` 0/0; commits 2-4: the scenario profile at seeds 2-7 with all 528
+  digests equal to the unmodified C++'s run (twice: after commit 2, after commits 3-4), oracle 2-3 identical, oracle
+  capture 2-3 PASS (175), the editor gate PASS (6,823 lines), the Rust gate PASS (ee_scenario 128 tests). The
+  calamity capture of commits 3-4 was checked against the golden the merge of `rust` had just extended (two new
+  UUTL lines its exe did not write) and is reported on the merged tree below. Merged with `rust` 42af0588 (no
+  conflict; headers current; `rust_includes.py` changed nothing): build `--sim` 0/0; the test profile 0/0; oracle
+  seeds 2-7 identical to `ref`; captures at seeds 2-3: scenario PASS (24 digests, SMEW among them); oracle, late,
+  space and calamity equal on every tag but UUTL, whose digest (same call counts) differs on both seeds of all four
+  profiles. The rust tip 42af0588 built alone (a scratch worktree) gives the same UUTL digest at oracle seed 2
+  (78796ae363b3a766 against the golden 90e7a9a49f5c3243), so it is `rust`'s own (the unit utilities golden against a
+  later merge), not this round's. The saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) PASS
+  with the expect file's rows; the editor gate PASS (12,723 lines); the Rust gate PASS. Under the harness lock, the legacy scenario run (`game_session.py --exercise ai-game
+  --campaign learning --play-seconds 60`): the Learning campaign's first scenario started from the campaign screens,
+  STOP <windowed session complete> reached, exit 0.
+- **What is left** (docs/progress/r5b5-scenario-manager-and-triggers.md): the host's own larger blocks (the
+  Task-Area placement and take-off-map, the tech add, the AI's task building, the calamity tile walk, the dialogue),
+  `EEChangeUnit`'s random draws and per-attribute writes, `EESMCreateUnit`, the cinematics and `ShowDialogMessage`,
+  `EEEvent`'s media effects, the condition's strings and the area's typed members, `Reset`'s built-ins, `Prepare`.
