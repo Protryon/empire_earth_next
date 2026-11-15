@@ -1,11 +1,11 @@
-// The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 45 pure-table config
+// The table reader's host (R6 WON round 39): the reads, the frame and the setters of the 47 table-shaped config
 // handlers whose programs are ee_won's cfgtab.rs. Included inside a namespace by ConfigTableHost.cpp (WONAPI) and
 // by tests/won/won_cfgtab_test.cpp (over its stand-ins), so both run these very statements. A read or setter that
 // throws is caught and kept; ComponentConfig::RunTable rethrows it after the Rust returns.
 struct CfgTabFrame {
     ComponentConfig* mConfig; std::exception_ptr mError;
     int i[8]; int ni; GUIString s[2]; int ns; SmartPtr<Font> f[1]; int nf; SmartPtr<Image> m[1]; int nm;
-    Component* c[2]; int nc; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr;
+    Component* c[2]; int nc; SmartPtr<Sound> snd; Background bg; SelectionColor sel; WONFrame fr; SmartPtr<Cursor> cur;
 };
 // WONFrameValueConfig's frame value: a stretch image alone (its own borders), or an image and one border or four
 static WONFrame CfgReadFrame(ComponentConfig* config)
@@ -57,6 +57,9 @@ static bool CfgTabRead(void* p,EeWonCfgRead inKind)
             a.c[a.nc++]=area; break;
         }
         case EeWonCfgRead::Frame: a.fr=CfgReadFrame(cfg); break;
+        case EeWonCfgRead::Cursor: a.cur=cfg->ReadCursor(); break;
+        case EeWonCfgRead::Direction: a.i[a.ni++]=cfg->ReadDirection(); break;
+        case EeWonCfgRead::StdCursor: a.i[a.ni++]=cfg->ReadStandardCursor(); break;
         }
         return true;
     } catch(...) { a.mError=std::current_exception(); return false; }
@@ -104,7 +107,8 @@ enum {
     kWCombo=EE_WON_CFG_KEYS_WONCOMBOBOXCONFIG_VIRTUAL24_KEY, kWTabCtrl=EE_WON_CFG_KEYS_WONTABCTRLCONFIG_VIRTUAL24_KEY,
     kWScrollCont=EE_WON_CFG_KEYS_WONSCROLLCONTAINERCONFIG_VIRTUAL24_KEY, kScrollArea=EE_WON_CFG_KEYS_SCROLLAREACONFIG_VIRTUAL24_INSTRUCTION,
     kScroller=EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION, kSBScroller=EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION,
-    kStretchCenter=EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION
+    kStretchCenter=EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION,
+    kComponent=EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY, kSkin=EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION
 };
 #define EE_CFG_SET(t,n) case (t)<<8|(n):
 #define EE_CFG(T) static_cast<T*>(a.mConfig)
@@ -302,6 +306,62 @@ static void CfgTabSet(CfgTabFrame& a,int inSetter)
     EE_CFG_SET(kSBScroller,0) EE_CFG(ScrollbarScrollerConfig)->mScrollbarScroller->SetScrollbarConditions((ScrollbarCondition)i[0],(ScrollbarCondition)i[1]); break;
     EE_CFG_SET(kStretchCenter,0) EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetStretchImage(a.m[0].get()); break;
     EE_CFG_SET(kStretchCenter,1) EE_CFG(StretchCenterImageConfig)->mStretchCenterImage->SetCenterImage(a.m[0].get()); break;
+    EE_CFG_SET(kComponent,2) a.mConfig->mComponent.get()->mControlId=i[0]; break;
+    EE_CFG_SET(kComponent,3) { Component* p=a.mConfig->mComponent.get(); p->SetPos(i[0],p->Top()); break; }
+    EE_CFG_SET(kComponent,4) { Component* p=a.mConfig->mComponent.get(); p->SetPos(p->Left(),i[0]); break; }
+    EE_CFG_SET(kComponent,5) { Component* p=a.mConfig->mComponent.get(); p->SetSize(i[0],p->Height()); break; }
+    EE_CFG_SET(kComponent,6) { Component* p=a.mConfig->mComponent.get(); p->SetSize(p->Width(),i[0]); break; }
+    EE_CFG_SET(kComponent,7) a.mConfig->mComponent->SetPos(i[0],i[1]); break;
+    EE_CFG_SET(kComponent,8) a.mConfig->mComponent->SetSize(i[0],i[1]); break;
+    EE_CFG_SET(kComponent,9) a.mConfig->mComponent->SetTranslucentColor(i[0],a.ni>1?i[1]:4); break;
+    EE_CFG_SET(kComponent,10)
+        a.mConfig->mHasSetWidth=i[0]>0; a.mConfig->mHasSetHeight=i[1]>0;
+        a.mConfig->mComponent->SetSizeAtLeast(i[0],i[1]); break;
+    EE_CFG_SET(kComponent,11) a.mConfig->mComponent->SetDesiredSize(i[0],i[1]); break;
+    EE_CFG_SET(kComponent,12) a.mConfig->mComponent.get()->SetDesiredWidth(i[0]); break;
+    EE_CFG_SET(kComponent,13) a.mConfig->mComponent.get()->SetDesiredHeight(i[0]); break;
+    EE_CFG_SET(kComponent,14) a.mConfig->mComponent->SetPosSize(i[0],i[1],i[2],i[3]); break;
+    EE_CFG_SET(kComponent,15) a.mConfig->mComponent->SetEnabled(i[0]!=0); break;
+    EE_CFG_SET(kComponent,16) a.mConfig->mComponent->SetVisible(i[0]!=0); break;
+    EE_CFG_SET(kComponent,17) if(i[0]!=0) a.mConfig->mComponent->RequestFocus(); break;
+    EE_CFG_SET(kComponent,18) a.mConfig->mComponent->SetDefaultCursor(a.cur); break;
+    EE_CFG_SET(kComponent,19) a.mConfig->mComponent->SetComponentFlags(i[1],i[0]!=0); break;
+    EE_CFG_SET(kComponent,20) Window::GetDefaultWindow()->SetSkipDecodeImages(!(i[0]!=0)); break;
+    EE_CFG_SET(kComponent,21) gShowParseTime=i[0]!=0; break;
+    EE_CFG_SET(kComponent,22) ConfigParser::ResetLineCount(); PerfTimer::GlobalStart(NULL); break;
+    EE_CFG_SET(kComponent,23) PerfTimer::GlobalStop(NULL); gLinesParsed=ConfigParser::GetLineCount(); break;
+    EE_CFG_SET(kComponent,30) a.mConfig->mHasSetWidth=true; break;
+    EE_CFG_SET(kComponent,31) a.mConfig->mHasSetHeight=true; break;
+    EE_CFG_SET(kComponent,32) a.mConfig->mHasSetWidth=a.mConfig->mHasSetHeight=true; break;
+    EE_CFG_SET(kComponent,33) a.mConfig->SetDesiredSizeIfNecessary(); break;
+    EE_CFG_SET(kSkin,1) gSkin->mButtonTypeMap[s[0]]=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
+    EE_CFG_SET(kSkin,2) gSkin->mSimpleButtonTypeMap[s[0]]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
+    EE_CFG_SET(kSkin,3) gSkin->mPushButton=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
+    EE_CFG_SET(kSkin,4) gSkin->mCheckbox=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
+    EE_CFG_SET(kSkin,5)
+        gSkin->mRadioButton=SafeConfigGetComponent<WONButton*>(c[0],"WONButton");
+        gSkin->mRadioButton->SetButtonFlags(8,true); break;
+    EE_CFG_SET(kSkin,6) gSkin->mHeaderButton=SafeConfigGetComponent<WONHeaderButton*>(c[0],"WONHeaderButton"); break;
+    EE_CFG_SET(kSkin,7) gSkin->mTabButton=SafeConfigGetComponent<WONButton*>(c[0],"WONButton"); break;
+    EE_CFG_SET(kSkin,8) gSkin->mArrowButton[i[0]]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
+    EE_CFG_SET(kSkin,9) gSkin->mComboButton=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
+    EE_CFG_SET(kSkin,10) gSkin->mCloseButton=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
+    EE_CFG_SET(kSkin,11) gSkin->mScrollGutter[i[0]?1:0]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
+    EE_CFG_SET(kSkin,12) gSkin->mScrollThumb[i[0]?1:0]=SafeConfigGetComponent<WONSimpleButton*>(c[0],"WONSimpleButton"); break;
+    EE_CFG_SET(kSkin,13) gSkin->mScrollbar[i[0]?1:0]=SafeConfigGetComponent<WONScrollbar*>(c[0],"WONScrollbar"); break;
+    EE_CFG_SET(kSkin,14) gSkin->mScrollContainer=SafeConfigGetComponent<WONScrollContainer*>(c[0],"WONScrollContainer"); break;
+    EE_CFG_SET(kSkin,15) gSkin->mListCtrl=SafeConfigGetComponent<WONListCtrl*>(c[0],"WONListCtrl"); break;
+    EE_CFG_SET(kSkin,16)
+        gSkin->mTabCtrl=SafeConfigGetComponent<WONTabCtrl*>(c[0],"WONTabCtrl");
+        gSkin->mTabCtrl->mSkin=NULL; break;
+    EE_CFG_SET(kSkin,17) gSkin->mComboBox=SafeConfigGetComponent<WONComboBox*>(c[0],"WONComboBox"); break;
+    EE_CFG_SET(kSkin,18) gSkin->mPopupBack=SafeConfigGetComponent<WONFrameComponent*>(c[0],"WONPopupBack"); break;
+    EE_CFG_SET(kSkin,19) gSkin->mDialogBack=SafeConfigGetComponent<WONFrameComponent*>(c[0],"WONDialogBack"); break;
+    EE_CFG_SET(kSkin,20) EE_CFG(WONSkinConfig)->HandleButtonClickSound(); break;
+    EE_CFG_SET(kSkin,21) {
+        SmartPtr<Cursor> aCursor=new ComponentCursor(new ImageComponent(a.m[0].get()));
+        Cursor::SetStandardCursor((StandardCursor)i[0],aCursor.get()); break;
+    }
     default: break;
     }
 }
@@ -322,6 +382,15 @@ bool ComponentConfig::RunTable(int inTable,const std::string& inKey)
     if(aResult==1) std::rethrow_exception(aFrame.mError);
     return aResult==0;
 }
+// ComponentConfig's own instructions: MODIFY and MAPCOMPONENT answer through their handlers, the rest is the table
+bool ComponentConfig::Virtual24(const std::string& key)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if(aKeyIdx==0) return this->HandleModify();
+    if(aKeyIdx==1) return this->HandleMapComponent();
+    return this->RunTable(kComponent,key);
+}
+bool WONSkinConfig::Virtual24(const std::string& key) { return this->RunTable(kSkin,key); }
 // The handlers: the table, then the base (WONHeaderControlConfig asked its base first; the percent layout and the
 // colour scheme had none).
 #define EE_CFG_V24(T,k,B) bool T::Virtual24(const std::string& key) { return this->RunTable(k,key) || B::Virtual24(key); }

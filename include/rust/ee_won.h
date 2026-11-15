@@ -3223,6 +3223,12 @@ enum class EeWonCfgRead : int32_t {
   ScrollArea = 18,
   /// WONFrameValueConfig's frame value (an image, one or four borders).
   Frame = 19,
+  /// `ReadCursor()`.
+  Cursor = 20,
+  /// `ReadDirection()` into the ints.
+  Direction = 21,
+  /// `ReadStandardCursor()` into the ints.
+  StdCursor = 22,
 };
 
 /// A number of the parser.

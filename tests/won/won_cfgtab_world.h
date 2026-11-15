@@ -83,6 +83,11 @@ struct Component {
         mTransparent{this, "mTransparent"} {}
     Component();
     virtual ~Component() {}
+    Field mControlId{this, "mControlId"}, mSkin{this, "mSkin"};
+    int Left() { return 10 + id; }
+    int Top() { return 20 + id; }
+    int Width() { return 30 + id; }
+    int Height() { return 40 + id; }
     int GetRightTextPad() { return 7 + id; }
     Component* GetScrollArea() { return this; }
     void SetScrollRect(Component* c) { tr(P(this) + ".SetScrollRect(" + P(c) + ")"); }
@@ -95,9 +100,49 @@ Component::Component() : Component(sNextComp++) {}
 static std::string PP(const Component* c) { return c ? "c" + P((long long)c->id) : "null"; }
 typedef Component Container; typedef Component Button; typedef Component Scroller; typedef Component MultiListArea;
 typedef Component ScrollArea; typedef Component ListArea; typedef Component InputBox; typedef Component Splitter;
-typedef Component WONButton; typedef Component WONSimpleButton;
+typedef Component WONButton; typedef Component WONSimpleButton; typedef Component WONHeaderButton; typedef Component WONScrollbar;
+typedef Component WONScrollContainer; typedef Component WONListCtrl; typedef Component WONTabCtrl; typedef Component WONComboBox;
+typedef Component WONFrameComponent;
+struct ImageComponent : Component { ImageComponent(Image* i) : Component(5000 + (i ? i->id : 0)) {} };
+enum StandardCursor { StandardCursor_Arrow, StandardCursor_Hand, StandardCursor_IBeam };
+struct Cursor : Obj {
+    Cursor(int i) : Obj(i) {}
+    static void SetStandardCursor(StandardCursor t, Cursor* c) { tr("Cursor::SetStandardCursor(" + P((long long)t) + "," + P((long long)(c ? c->id : -1)) + ")"); }
+};
+struct ComponentCursor : Cursor { ComponentCursor(Component* c) : Cursor(c->id) {} };
+struct Window {
+    static Window* GetDefaultWindow() { static Window w; return &w; }
+    void SetSkipDecodeImages(bool b) { tr("window.SetSkipDecodeImages(" + P(b) + ")"); }
+};
+struct ConfigParser {
+    static void ResetLineCount() { tr("ConfigParser::ResetLineCount"); }
+    static int GetLineCount() { tr("ConfigParser::GetLineCount"); return 42; }
+};
+struct PerfTimer {
+    static void GlobalStart(void*) { tr("PerfTimer::GlobalStart"); }
+    static void GlobalStop(void*) { tr("PerfTimer::GlobalStop"); }
+};
+static Field gShowParseTime{NULL, "gShowParseTime"}, gLinesParsed{NULL, "gLinesParsed"};
+// the skin's template slots: an assignment is traced; -> reaches the component last assigned
+struct SkinSlot {
+    std::string n; Component* v = NULL;
+    SkinSlot& operator=(Component* c) { tr("skin." + n + "=" + P(c)); v = c; return *this; }
+    Component* operator->() { return v; }
+};
+struct SkinMap {
+    std::string n;
+    SkinSlot operator[](const GUIString& k) { SkinSlot s; s.n = n + "[" + (std::string)k + "]"; return s; }
+};
 struct ColorScheme { void SetStandardColor(int i, DWORD c) { tr("scheme.SetStandardColor(" + P((long long)i) + "," + P((long long)c) + ")"); } };
 struct Skin {
+    SkinSlot mPushButton{"mPushButton"}, mCheckbox{"mCheckbox"}, mRadioButton{"mRadioButton"}, mHeaderButton{"mHeaderButton"},
+        mTabButton{"mTabButton"}, mComboButton{"mComboButton"}, mCloseButton{"mCloseButton"},
+        mScrollContainer{"mScrollContainer"}, mListCtrl{"mListCtrl"}, mTabCtrl{"mTabCtrl"}, mComboBox{"mComboBox"},
+        mPopupBack{"mPopupBack"}, mDialogBack{"mDialogBack"};
+    SkinSlot mArrowButton[4] = {{"mArrowButton0"}, {"mArrowButton1"}, {"mArrowButton2"}, {"mArrowButton3"}};
+    SkinSlot mScrollGutter[2] = {{"mScrollGutter0"}, {"mScrollGutter1"}}, mScrollThumb[2] = {{"mScrollThumb0"}, {"mScrollThumb1"}},
+        mScrollbar[2] = {{"mScrollbar0"}, {"mScrollbar1"}};
+    SkinMap mButtonTypeMap{"mButtonTypeMap"}, mSimpleButtonTypeMap{"mSimpleButtonTypeMap"};
     bool CopyButtonType(const GUIString& t, Component* b) { tr("skin.CopyButtonType(" + Args(t, b) + ")"); return t.length() == 0 || t.at(0) != 'x'; }
     bool CopySimpleButtonType(const GUIString& t, Component* b) { tr("skin.CopySimpleButtonType(" + Args(t, b) + ")"); return t.length() == 0 || t.at(0) != 'x'; }
 };
@@ -105,7 +150,8 @@ static Skin sSkin;
 static Skin* gSkin = &sSkin;
 template<class T> T SafeConfigGetComponent(Component* c, const char* name)
 {
-    unsigned bit = !strcmp(name, "Container") ? 1 : !strcmp(name, "Button") ? 2 : !strcmp(name, "Scroller") ? 4 : 8;
+    unsigned bit = !strcmp(name, "Container") ? 1 : !strcmp(name, "Button") ? 2 : !strcmp(name, "Scroller") ? 4
+        : !strcmp(name, "MultiListArea") ? 8 : 1u << (strlen(name) % 4);
     tr(std::string("SafeConfigGetComponent<") + name + ">(" + P(c) + ")");
     if (c == NULL || !(c->mask & bit)) throw ConfigObjectException(std::string("Invalid ") + name);
     return c;
@@ -119,7 +165,15 @@ struct ComponentConfig {
     std::string mText; size_t mPos;
     ComponentConfig() : mPos(0) {}
     virtual ~ComponentConfig() {}
-    virtual bool Virtual24(const std::string& key) { return Base("ComponentConfig", key); }
+    virtual bool Virtual24(const std::string& key);
+    SmartPtr<Component> mComponent = gComp;
+    bool mHasSetWidth = false, mHasSetHeight = false;
+    bool HandleModify() { tr("HandleModify"); return mText.size() % 2 == 0; }
+    bool HandleMapComponent() { tr("HandleMapComponent"); return true; }
+    void SetDesiredSizeIfNecessary() { tr("SetDesiredSizeIfNecessary"); }
+    SmartPtr<Cursor> ReadCursor() { Cursor* c = new Cursor(Hash(Take("ReadCursor"))); tr("ReadCursor " + P(c)); return c; }
+    Direction ReadDirection() { int v = Hash(Take("ReadDirection")) % 4; tr("ReadDirection " + P((long long)v)); return (Direction)v; }
+    StandardCursor ReadStandardCursor() { int v = Hash(Take("ReadStandardCursor")) % 3; tr("ReadStandardCursor " + P((long long)v)); return (StandardCursor)v; }
     bool Base(const char* cls, const std::string& key) { tr(std::string("base ") + cls + " " + key); return key == "BASEKEY"; }
     bool RunTable(int, const std::string&);
     void Skip() { while (mPos < mText.size() && (mText[mPos] == ' ' || mText[mPos] == '\t')) mPos++; }
@@ -257,6 +311,7 @@ struct SplitterConfig : ContainerConfig {
 };
 struct WONFrameComponentConfig : ComponentConfig { V24; Component* mFrameComponent = gComp; };
 struct StretchCenterImageConfig : ImageConfig { V24; Component* mStretchCenterImage = gComp; };
+struct WONSkinConfig : ComponentConfig { V24; bool ReadVert(); void HandleButtonClickSound() { tr("HandleButtonClickSound"); } };
 #undef V24
 #undef BASE
 // The configs by name, for the driver.
@@ -268,7 +323,7 @@ struct StretchCenterImageConfig : ImageConfig { V24; Component* mStretchCenterIm
     X(ImageButtonConfig) X(LabelConfig) X(ListAreaConfig) X(InputBoxConfig) X(TextAreaConfig) X(TreeAreaConfig) \
     X(WONSimpleButtonConfig) X(WONButtonConfig) X(SplitterConfig) X(WONScrollbarConfig) X(WONHeaderControlConfig) \
     X(WONListCtrlConfig) X(WONFrameComponentConfig) X(WONComboBoxConfig) X(WONTabCtrlConfig) X(WONScrollContainerConfig) \
-    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig)
+    X(ScrollAreaConfig) X(ScrollerConfig) X(ScrollbarScrollerConfig) X(StretchCenterImageConfig) X(ComponentConfig) X(WONSkinConfig)
 static ComponentConfig* MakeConfig(int i)
 {
     int n = 0;
@@ -293,6 +348,6 @@ static std::string RunOne(int i, const std::string& key, const std::string& valu
         for (int v : p->params) s += " " + P((long long)v);
         tr(s);
     }
-    tr("pos " + P((long long)c->mPos));
+    tr("pos " + P((long long)c->mPos) + " set " + P(c->mHasSetWidth) + P(c->mHasSetHeight));
     return sTrace;
 }

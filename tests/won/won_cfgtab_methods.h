@@ -16,6 +16,7 @@
     M(InsertString) \
     M(MaxQuadrant) \
     M(RegisterMaxButton) \
+    M(RequestFocus) \
     M(SetAdjustHeightToFitText) \
     M(SetAllowDrag) \
     M(SetAllowSelection) \
@@ -37,11 +38,16 @@
     M(SetColumnHeader) \
     M(SetColumnItem) \
     M(SetColumnWidth) \
+    M(SetComponentFlags) \
     M(SetCorner) \
     M(SetCursorBlinkRate) \
     M(SetDarkColor) \
     M(SetDefaultButton) \
+    M(SetDefaultCursor) \
     M(SetDefaultTextColor) \
+    M(SetDesiredHeight) \
+    M(SetDesiredSize) \
+    M(SetDesiredWidth) \
     M(SetDirection) \
     M(SetDisabledBackground) \
     M(SetDontEndOnEscape) \
@@ -49,6 +55,7 @@
     M(SetDrawFrame) \
     M(SetDrawGrayText) \
     M(SetDynamicSizeColumn) \
+    M(SetEnabled) \
     M(SetEndOnEscape) \
     M(SetFocusPadding) \
     M(SetFocusStyle) \
@@ -89,6 +96,8 @@
     M(SetOutlineColor) \
     M(SetPasswordChar) \
     M(SetPercentages) \
+    M(SetPos) \
+    M(SetPosSize) \
     M(SetResizeThumb) \
     M(SetScaleImage) \
     M(SetScrollArea) \
@@ -98,6 +107,9 @@
     M(SetSelItem) \
     M(SetSelectOnFocus) \
     M(SetShowButtonWhenDisabled) \
+    M(SetSize) \
+    M(SetSizeAtLeast) \
+    M(SetSkipDecodeImages) \
     M(SetSolidColor) \
     M(SetSortColumn) \
     M(SetSortColumnFunc) \
@@ -114,9 +126,11 @@
     M(SetTextFlags) \
     M(SetTextPadding) \
     M(SetThickness) \
+    M(SetTranslucentColor) \
     M(SetTransparent) \
     M(SetVertAlign) \
     M(SetVertical) \
+    M(SetVisible) \
     M(SetWrap) \
     M(SetWrapIndentSize) \
     M(SetWrapText) \

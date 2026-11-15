@@ -32,7 +32,12 @@
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 #include "ee/wonapi/WONLayoutConfigs.h"
 #include "ee/wonapi/EELobbySound.h"
+#include "ee/wonapi/WONLobbyWONSkinConfig.h"
+#include "ee/wonapi/WONPerfTimer.h"
+#include "ee/wonapi/WONLobbyParser.h"
 #include "rust/ee_won.h"
+extern bool gShowParseTime; // ComponentConfigResource.cpp's
+extern int gLinesParsed;
 #define EE_CFG_LAYOUT_GLOBAL
 namespace WONAPI {
 #include "ee/wonapi/WONCfgTable.inl"

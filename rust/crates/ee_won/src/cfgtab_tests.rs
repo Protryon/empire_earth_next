@@ -221,9 +221,9 @@ fn unknown_keys_and_tables() {
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"TEXT").is_some());
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"text").is_none());
     assert!(program(EE_WON_CFG_KEYS_LABELCONFIG_VIRTUAL24_INSTRUCTION, b"MODIFY").is_none());
-    // a key table the reader does not run (the base ComponentConfig's)
-    assert!(program(EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY, b"MODIFY").is_none());
-    assert!(!ee_won_cfg_tab_has(EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY));
+    // a key table the reader does not run (ContainerConfig's)
+    assert!(program(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION, b"ADD").is_none());
+    assert!(!ee_won_cfg_tab_has(EE_WON_CFG_KEYS_CONTAINERCONFIG_VIRTUAL24_THEINSTRUCTION));
     assert!(ee_won_cfg_tab_has(EE_WON_CFG_KEYS_WONBUTTONCONFIG_VIRTUAL24_THEINSTRUCTION));
 }
 
@@ -239,7 +239,7 @@ fn every_handler_holds_a_program_per_key() {
             }
         }
     }
-    assert_eq!(PROGRAMS.len(), 45);
+    assert_eq!(PROGRAMS.len(), 47);
 }
 
 #[test]
@@ -360,4 +360,34 @@ fn every_state_and_flag_value() {
         go(EE_WON_CFG_KEYS_TEXTAREACONFIG_VIRTUAL24_KEY, "TEXTFLAGS", &mut h).unwrap();
         assert_eq!(h.log[3], format!("p{}", 1 << i), "{f}");
     }
+}
+
+#[test]
+fn component_size_flags_before_the_read() {
+    let t = EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY;
+    let mut h = Script { throw_read: Some(1), ..Default::default() };
+    assert!(go(t, "WIDTH", &mut h).is_err());
+    assert_eq!(h.log, ["x", "a15:30", "rInt"]);
+    let mut h = Script::default();
+    go(t, "POSSIZE", &mut h).unwrap();
+    assert_eq!(h.log, ["x", "a15:32", "rInt", "c", "rInt", "c", "rInt", "c", "rInt", "a15:14"]);
+    let mut h = Script { ends: vec![true], ..Default::default() };
+    go(t, "TRANSLUCENTCOLOR", &mut h).unwrap();
+    assert_eq!(h.log, ["x", "rColor", "e", "a15:9"]);
+    let mut h = Script { texts: vec!["grabbg", "alwaysontop", ""], ..Default::default() };
+    go(t, "COMPONENTFLAGS", &mut h).unwrap();
+    assert_eq!(h.log, ["x", "x", "rFlag", "p256", "a15:19", "x", "rFlag", "p4096", "a15:19", "x", "rFlag"]);
+}
+
+#[test]
+fn skin_vert_words() {
+    let t = EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION;
+    for (w, v) in [("vert", "p1"), ("Horz", "p0"), ("", "p0")] {
+        let mut h = Script { texts: vec![w], ..Default::default() };
+        go(t, "SETSCROLLTHUMB", &mut h).unwrap();
+        assert_eq!(h.log, ["x", "rStr", v, "c", "rComp", "a90:12"]);
+    }
+    let mut h = Script::default();
+    go(t, "WINSKIN", &mut h).unwrap();
+    assert_eq!(h.log, ["x"]);
 }

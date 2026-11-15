@@ -1,4 +1,4 @@
-// The 45 pure-table config handlers and their helpers as they were before the port (R6 WON round 39), copied
+// The 47 table-shaped config handlers and their helpers as they were before the port (R6 WON round 39), copied
 // verbatim from 306fae35 by build/r39/gen_orig.py; tests/won/won_cfgtab_test.cpp compiles them over its stand-ins.
 
 // MSComponentConfig.cpp
@@ -1054,4 +1054,211 @@ bool StretchCenterImageConfig::Virtual24(const std::string& instruction)
     else if(aKeyIdx==1) this->mStretchCenterImage->SetCenterImage(this->ReadImage(false).get());
     else return ImageConfig::Virtual24(instruction);
     return true;
+}
+// ComponentConfigResource.cpp
+bool ComponentConfig::Virtual24(const std::string& key)
+{
+    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY,key.data(),key.size());
+    if (aKeyIdx==0) return this->HandleModify();
+    if (aKeyIdx==1) return this->HandleMapComponent();
+    if (aKeyIdx==2) {
+        Component* component=this->mComponent.get();
+        component->mControlId=this->ReadInt();
+    } else if (aKeyIdx==3) {
+        Component* component=this->mComponent.get();
+        int value=this->ReadInt();
+        component->SetPos(value,component->Top());
+    } else if (aKeyIdx==4) {
+        Component* component=this->mComponent.get();
+        int value=this->ReadInt();
+        component->SetPos(component->Left(),value);
+    } else if (aKeyIdx==5) {
+        Component* component=this->mComponent.get();
+        this->mHasSetWidth=true;
+        int value=this->ReadInt();
+        component->SetSize(value,component->Height());
+    } else if (aKeyIdx==6) {
+        Component* component=this->mComponent.get();
+        this->mHasSetHeight=true;
+        int value=this->ReadInt();
+        component->SetSize(component->Width(),value);
+    } else if (aKeyIdx==7) {
+        int x=this->ReadInt(); this->EnsureComma();
+        int y=this->ReadInt();
+        this->mComponent->SetPos(x,y);
+    } else if (aKeyIdx==8) {
+        this->mHasSetWidth=this->mHasSetHeight=true;
+        int width=this->ReadInt(); this->EnsureComma();
+        int height=this->ReadInt();
+        this->mComponent->SetSize(width,height);
+    } else if (aKeyIdx==9) {
+        int color=this->ReadColor();
+        if (this->EndOfString()) this->mComponent->SetTranslucentColor(color,4);
+        else {
+            this->EnsureComma();
+            this->mComponent->SetTranslucentColor(color,this->ReadInt());
+        }
+    } else if (aKeyIdx==10) {
+        this->SetDesiredSizeIfNecessary();
+        int width=this->ReadInt(); this->EnsureComma();
+        int height=this->ReadInt();
+        this->mHasSetWidth=width>0;
+        this->mHasSetHeight=height>0;
+        this->mComponent->SetSizeAtLeast(width,height);
+    } else if (aKeyIdx==11) {
+        int width=this->ReadInt(); this->EnsureComma();
+        int height=this->ReadInt();
+        this->mComponent->SetDesiredSize(width,height);
+    } else if (aKeyIdx==12) {
+        Component* component=this->mComponent.get();
+        int width=this->ReadInt();
+        component->SetDesiredWidth(width);
+    } else if (aKeyIdx==13) {
+        Component* component=this->mComponent.get();
+        int height=this->ReadInt();
+        component->SetDesiredHeight(height);
+    } else if (aKeyIdx==14) {
+        this->mHasSetWidth=this->mHasSetHeight=true;
+        int x=this->ReadInt(); this->EnsureComma();
+        int y=this->ReadInt(); this->EnsureComma();
+        int width=this->ReadInt(); this->EnsureComma();
+        int height=this->ReadInt();
+        this->mComponent->SetPosSize(x,y,width,height);
+    } else if (aKeyIdx==15) {
+        this->mComponent->SetEnabled(this->ReadBool());
+    } else if (aKeyIdx==16) {
+        this->mComponent->SetVisible(this->ReadBool());
+    } else if (aKeyIdx==17) {
+        if (this->ReadBool()) this->mComponent->RequestFocus();
+    } else if (aKeyIdx==18) {
+        this->mComponent->SetDefaultCursor(this->ReadCursor());
+    } else if (aKeyIdx==19) {
+        while (true) {
+            bool add=true;
+            GUIString name=this->ReadFlag(&add);
+            if (name.length()==0) break;
+            int flag;
+            const int aNameIdx_name=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_COMPONENTCONFIG_VIRTUAL24_NAME,name.mData->mText,name.mData->mLength,sizeof(wchar_t));
+            if (aNameIdx_name==0) flag=0x1;
+            else if (aNameIdx_name==1) flag=0x8;
+            else if (aNameIdx_name==2) flag=0x20;
+            else if (aNameIdx_name==3) flag=0x40;
+            else if (aNameIdx_name==4) flag=0x80;
+            else if (aNameIdx_name==5) flag=0x100;
+            else if (aNameIdx_name==6) flag=0x200;
+            else if (aNameIdx_name==7) flag=0x800;
+            else if (aNameIdx_name==8) flag=0x1000;
+            else if (aNameIdx_name==9) flag=0x4000;
+            else if (aNameIdx_name==10) flag=0x2000;
+            else if (aNameIdx_name==11) flag=0x20000;
+            else throw ConfigObjectException("Unknown component flag: "+(std::string)name);
+            this->mComponent->SetComponentFlags(flag,add);
+        }
+    } else if (aKeyIdx==20) {
+        Window* window=Window::GetDefaultWindow();
+        window->SetSkipDecodeImages(!this->ReadBool());
+    } else if (aKeyIdx==21) {
+        gShowParseTime=this->ReadBool();
+    } else if (aKeyIdx==22) {
+        ConfigParser::ResetLineCount();
+        PerfTimer::GlobalStart(NULL);
+    } else if (aKeyIdx==23) {
+        PerfTimer::GlobalStop(NULL);
+        gLinesParsed=ConfigParser::GetLineCount();
+    } else return false;
+    return true;
+}
+// WONSkinConfig.cpp
+bool WONSkinConfig::ReadVert()
+{
+    GUIString text=this->ReadString(false);
+    const int aNameIdx_text=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_WONSKINCONFIG_READVERT_TEXT,text.mData->mText,text.mData->mLength,sizeof(wchar_t));
+    return aNameIdx_text==0;
+}
+// WONSkinConfig.cpp
+bool WONSkinConfig::Virtual24(const std::string &theInstruction)
+{
+	const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION,theInstruction.data(),theInstruction.size());
+	if(aKeyIdx==0)
+	{
+
+	}
+	else if(aKeyIdx==1)
+	{
+		GUIString aName = this->ReadString(false); this->EnsureComma();
+		WONButton* aButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
+		gSkin->mButtonTypeMap[aName] = aButton;
+	}
+	else if(aKeyIdx==2)
+	{
+		GUIString aName = this->ReadString(false); this->EnsureComma();
+		WONSimpleButton* aButton = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
+		gSkin->mSimpleButtonTypeMap[aName] = aButton;
+	}
+	else if(aKeyIdx==3)
+		gSkin->mPushButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
+	else if(aKeyIdx==4)
+		gSkin->mCheckbox = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
+	else if(aKeyIdx==5)
+	{
+		gSkin->mRadioButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
+		gSkin->mRadioButton->SetButtonFlags(8,true);
+	}
+	else if(aKeyIdx==6)
+		gSkin->mHeaderButton = SafeConfigGetComponent<WONHeaderButton*>(this->ReadComponent(),"WONHeaderButton");
+	else if(aKeyIdx==7)
+		gSkin->mTabButton = SafeConfigGetComponent<WONButton*>(this->ReadComponent(),"WONButton");
+	else if(aKeyIdx==8)
+	{
+		Direction aDirection = this->ReadDirection(); this->EnsureComma();
+		gSkin->mArrowButton[aDirection] = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
+
+	}
+	else if(aKeyIdx==9)
+		gSkin->mComboButton = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
+	else if(aKeyIdx==10)
+		gSkin->mCloseButton = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
+	else if(aKeyIdx==11)
+	{
+		bool isVert = this->ReadVert(); this->EnsureComma();
+		gSkin->mScrollGutter[isVert?1:0] = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
+	}
+	else if(aKeyIdx==12)
+	{
+		bool isVert = this->ReadVert(); this->EnsureComma();
+		gSkin->mScrollThumb[isVert?1:0] = SafeConfigGetComponent<WONSimpleButton*>(this->ReadComponent(),"WONSimpleButton");
+	}
+	else if(aKeyIdx==13)
+	{
+		bool isVert = this->ReadVert(); this->EnsureComma();
+		gSkin->mScrollbar[isVert?1:0] = SafeConfigGetComponent<WONScrollbar*>(this->ReadComponent(),"WONScrollbar");
+	}
+	else if(aKeyIdx==14)
+		gSkin->mScrollContainer = SafeConfigGetComponent<WONScrollContainer*>(this->ReadComponent(),"WONScrollContainer");
+	else if(aKeyIdx==15)
+		gSkin->mListCtrl = SafeConfigGetComponent<WONListCtrl*>(this->ReadComponent(),"WONListCtrl");
+	else if(aKeyIdx==16)
+	{
+		gSkin->mTabCtrl = SafeConfigGetComponent<WONTabCtrl*>(this->ReadComponent(),"WONTabCtrl");
+		gSkin->mTabCtrl->mSkin=NULL;
+	}
+	else if(aKeyIdx==17)
+		gSkin->mComboBox = SafeConfigGetComponent<WONComboBox*>(this->ReadComponent(),"WONComboBox");
+	else if(aKeyIdx==18)
+		gSkin->mPopupBack = SafeConfigGetComponent<WONFrameComponent*>(this->ReadComponent(),"WONPopupBack");
+	else if(aKeyIdx==19)
+		gSkin->mDialogBack = SafeConfigGetComponent<WONFrameComponent*>(this->ReadComponent(),"WONDialogBack");
+	else if(aKeyIdx==20)
+		this->HandleButtonClickSound();
+	else if(aKeyIdx==21)
+	{
+		StandardCursor aType = this->ReadStandardCursor(); this->EnsureComma();
+		SmartPtr<Image> anImage = this->ReadImage(false);
+		SmartPtr<Cursor> aCursor = new ComponentCursor(new ImageComponent(anImage.get()));
+		Cursor::SetStandardCursor(aType,aCursor.get());
+	}
+	else
+		return false;
+
+	return true;
 }

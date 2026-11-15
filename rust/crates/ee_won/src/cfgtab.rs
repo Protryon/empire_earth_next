@@ -1,6 +1,6 @@
-//! WONGUI's pure-table resource-config handlers as one table reader (R6 WON round 39).
+//! WONGUI's table-shaped resource-config handlers as one table reader (R6 WON round 39).
 //!
-//! A config handler (`MSButtonConfig::Virtual24` and 44 others: the MS controls' configs, the scroll and list
+//! A config handler (`MSButtonConfig::Virtual24` and 46 others, ComponentConfig's and WONSkinConfig's among them: the MS controls' configs, the scroll and list
 //! configs, the skinned WON configs, the simple components') compared the instruction with its keys (guiconf's
 //! tables) and, for the key that matched, read its arguments in order (`ReadInt`, `EnsureComma`, `ReadBool`, ...)
 //! and called one setter or a few. Those reads and calls are the programs here, one per key of each handler, in the
@@ -64,6 +64,12 @@ pub enum EeWonCfgRead {
     ScrollArea = 18,
     /// WONFrameValueConfig's frame value (an image, one or four borders).
     Frame = 19,
+    /// `ReadCursor()`.
+    Cursor = 20,
+    /// `ReadDirection()` into the ints.
+    Direction = 21,
+    /// `ReadStandardCursor()` into the ints.
+    StdCursor = 22,
 }
 
 /// The host: the C++ config's reads, its frame and its setters. Every callback that can throw catches and keeps
@@ -98,6 +104,8 @@ pub enum Miss {
     Bare(&'static [u8]),
     /// Do nothing more (the entry is handled).
     Skip,
+    /// The value instead.
+    Value(i32),
 }
 
 /// One step of a program.
@@ -162,6 +170,10 @@ const CONDITION: Op = N(
     &[0, 1, 2],
     Miss::Throw(b"Invalid scrollbar condition: "),
 );
+
+/// WONSkinConfig::ReadVert: "Vert" (any case) is 1, any other word 0.
+const VERT: Op = N(EE_WON_CFG_NAMES_WONSKINCONFIG_READVERT_TEXT, &[1], Miss::Value(0));
+const COMPONENT_FLAGS: &[i32] = &[0x1, 0x8, 0x20, 0x40, 0x80, 0x100, 0x200, 0x800, 0x1000, 0x4000, 0x2000, 0x20000];
 
 /// The handlers: (key table, the program of each key in the table's order).
 #[rustfmt::skip]
@@ -325,6 +337,27 @@ static PROGRAMS: &[(i32, &[&[Op]])] = &[
     (EE_WON_CFG_KEYS_SCROLLERCONFIG_VIRTUAL24_INSTRUCTION, &[&[R(Rd::ScrollArea), S(0)]]),
     // ScrollbarScrollerConfig: SCROLLBARCONDITIONS (horizontal, vertical)
     (EE_WON_CFG_KEYS_SCROLLBARSCROLLERCONFIG_VIRTUAL24_INSTRUCTION, &[&[STR, CONDITION, C, STR, CONDITION, S(0)]]),
+    // ComponentConfig::Virtual24 (MODIFY and MAPCOMPONENT answer through their C++ handlers: no program): CONTROLID
+    // LEFT TOP WIDTH HEIGHT (the set-size flags before the read) POS SIZE TRANSLUCENTCOLOR (colour[,level 4])
+    // SIZEATLEAST SETDESIREDSIZE SETDESIREDWIDTH SETDESIREDHEIGHT POSSIZE ENABLE SETVISIBLE REQUESTFOCUS DEFAULTCURSOR
+    // COMPONENTFLAGS DECODEIMAGES SHOWPARSETIME STARTPARSETIMER STOPPARSETIMER; setters 30-33: the width, height and
+    // both set flags, SetDesiredSizeIfNecessary
+    (EE_WON_CFG_KEYS_COMPONENTCONFIG_VIRTUAL24_KEY, &[
+        &[], &[], &[I, S(2)], &[I, S(3)], &[I, S(4)], &[S(30), I, S(5)], &[S(31), I, S(6)], &[I, C, I, S(7)],
+        &[S(32), I, C, I, S(8)], &[COL, Je(4), C, I, S(9)], &[S(33), I, C, I, S(10)], &[I, C, I, S(11)], &[I, S(12)],
+        &[I, S(13)], &[S(32), I, C, I, C, I, C, I, S(14)], &[B, S(15)], &[B, S(16)], &[B, S(17)], &[R(Rd::Cursor), S(18)],
+        &flags(EE_WON_CFG_NAMES_COMPONENTCONFIG_VIRTUAL24_NAME, COMPONENT_FLAGS, b"Unknown component flag: ", 19),
+        &[B, S(20)], &[B, S(21)], &[S(22)], &[S(23)],
+    ]),
+    // WONSkinConfig: WINSKIN (ignored) ADDBUTTONTYPE ADDSIMPLEBUTTONTYPE and the template controls (the typed check
+    // in the setter, right after the read), SETARROWBUTTON (direction), the scroll pieces (Vert or another word),
+    // BUTTONCLICKSOUND (its C++ reads), SETCURSOR (standard cursor, image)
+    (EE_WON_CFG_KEYS_WONSKINCONFIG_VIRTUAL24_THEINSTRUCTION, &[
+        &[], &[STR, C, COMP, S(1)], &[STR, C, COMP, S(2)], &[COMP, S(3)], &[COMP, S(4)], &[COMP, S(5)], &[COMP, S(6)],
+        &[COMP, S(7)], &[R(Rd::Direction), C, COMP, S(8)], &[COMP, S(9)], &[COMP, S(10)], &[STR, VERT, C, COMP, S(11)],
+        &[STR, VERT, C, COMP, S(12)], &[STR, VERT, C, COMP, S(13)], &[COMP, S(14)], &[COMP, S(15)], &[COMP, S(16)],
+        &[COMP, S(17)], &[COMP, S(18)], &[COMP, S(19)], &[S(20)], &[R(Rd::StdCursor), C, IMG, S(21)],
+    ]),
     // StretchCenterImageConfig: STRETCHIMAGE CENTERIMAGE
     (EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION, &[&[IMG, S(0)], &[IMG, S(1)]]),
 ];
@@ -396,6 +429,7 @@ pub fn run(table: i32, prog: &[Op], h: &mut impl CfgHost) -> bool {
                             return false;
                         }
                         Miss::Skip => return true,
+                        Miss::Value(v) => h.push(v),
                     },
                 }
             }
