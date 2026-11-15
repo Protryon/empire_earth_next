@@ -24668,3 +24668,134 @@ Round: -245 net for the moves (the TEST ONLY capture +106 aside), far under the 
   blocks, `EESMCreateUnit`, the cinematics, `EEEvent`'s handlers, the stream and list hosts); the elements' strings and
   lists. The next real saving is the element classes themselves as Rust records with C++ accessors, to be planned with
   the editor lane.
+
+## R6: the game actions, round 1: every action class one EEARust over a Rust record and one host (ee_screens game_actions.rs; branch rust-actions1, 2026-11-15)
+
+A new UI lane: the game's input actions (`src/Empire Earth/Actions`: the `EEAction` subclasses the forms post to the
+UI thread's queue) and the quick save/load pair of `Scenario Editor Actions`.
+
+### Census (at 3114725d)
+
+| Class | Lines (unit + header) | Made by | Reached by |
+|---|---|---|---|
+| `EEAMouseClick` (the right click's order, the plain click, the transport load) | 546 + 30 | the main game form (`mMouseClick`); subclassed by the editor's `EESEAMouseClick` and the trigger tab's `EESETSAMouseClick` | the orders game (`--orders`: gather, repair, move), the box selection's click |
+| `EEALasso` (the box selection's message) | 83 + 21 | the main game form; subclassed by `EESEALasso`, `EESETSALasso` | `--box-select` |
+| `EEABuild` (build, gate, wall) | 110 + 31 (its constructor sat in EEUIFMainGame.cpp, its `Virtual8` in EESEInstructions.cpp) | the main game form | a person |
+| `EEACalamity` (cast, check) | 154 + 43 | the main game form | `--cast` (the calamity lane's fixture command) |
+| `EEACenterCamera` | 131 + 26 | the fixture's scouting, the editor's events | the orders game |
+| `EEAMiniMap` | 197 + 31 | the mini map | a person |
+| `EEAScroll` (the edge scroll) | 152 + 30 | the main game form, the editor form | `--scroll-check`; every frame of a game (`Update`) |
+| `EEAPlayerEvent`, `EEAUserPauseGame`, `EEASaveGame` | 88, 42, 94 + 47 | EEScreens.cpp (hot keys, the save dialog) | a person |
+| `EEAAddChatMessage` | 311 + 25 (the first unit of the link: 146 lines of `$E` chain comments) | EEMessage.cpp (a lobby chat message) | the LAN game when a chat line is sent |
+| `EEABootClientFromCanceledGame`, `EEARemovePlayer`, `EEAServerMigration` | 82, 26, 213 + 60 | EEClient.cpp, EEServer.cpp, EEUserInterface.cpp, the WON forms | the LAN game (a client leaving); a host dropping out: a person |
+| `EEAJoinOrHostAGame` (with `EEIsValidName` and the restart callback) | 256 + 30 | EEWonNet.cpp (the LAN screen: host 4, join 3), EECommandLine.cpp | the LAN game |
+| `EEAResetAllPlayerInfo`, `EEAUpgradeImprovement` | 93, 129 + 57 | the civilization builder, the improvement buttons | a person |
+| `EEAQuickSaveLoad`, `EESEAQuickSaveLoad` | 157, 60 + 47 | the editor form, EE-SIM's editor script, the UI thread's quick load | the editor gate (`quicksave`, `savefile`) |
+| `EEAWonNet` (left: the WON lanes') | 285 + 42 | | |
+
+The action manager (`EEUserInterface`'s queues) is Rust since screens round 18 (`actions.rs`), holding the actions as
+`EEAction*`. EE-SIM builds no game form: the oracle reaches none of these, the editor gate the quick save only.
+
+### The shape
+
+- **One class.** `EEARust : EEAction, EeScreensGaFields` (`include/ee/EEARust.h`). The record is Rust's
+  (`#[repr(C)]`, cbindgen) and its fields keep the original members' names, so the forms that set `mTechnology`,
+  `mIsQueued`, `mCasterID`, `mMode`, `mModifiers`, `mIsLoad`, `mWriteToFile` and the editor host's `mMessage`
+  compile unchanged (screens round 29's pattern). The C++-typed members stay C++ members of the class, read by the
+  host: the mini map's `GE2DPoint mPoint`, the scroll's `GERectangle mEdges` (seven editor and HUD sites assign it)
+  and `TMPoll mPoll`, the strings (the chat text, the join's names, the saved game's file and description, the quick
+  save's name; the migration's and the detected game's scratch), the civilization reset's player list.
+- **The names stay types.** Each original class is a one-line constructor deriving from `EEARust` in the same header
+  (`class EEAMouseClick : public EEARust { public: EEAMouseClick() : EEARust(kEEAMouseClick) {} };`), so every
+  `new EEAX(...)`, every `EEAX*` member and forward declaration and the editor's subclasses compile unchanged: the
+  callers' change is their include line. `Execute` and `SelectInRectangle` are `EEARust`'s virtuals (the editor's
+  click and lasso override them). `EESEAQuickSaveLoad` is a kind (the editor tab's resume is its run's last op).
+- **One host.** `ee_screenscpp_ga(op, record, p, i[8], f[8])` in `Actions/EEARust.cpp` (a port unit in
+  `units.EXTRA_UNITS`): 31 ops, the unit, class, group, player, tile, map, technology, calamity, camera, mini map,
+  scroll, network and editor ones split by a field number in `i[0]`, one line each; `ee_screenscpp_ga_record(type,
+  values, n)` makes an `EEMRecord` from typed values (an integer, a float, a point: `EEMRecordValue`'s conversions).
+  The unit also keeps the COMDATs the deleted units emitted (`EEUnitClass::IsAirBase`, `IsDropSite`, `IsTransport`,
+  `EETile::IsVisibleTo`, `EEGraphicEffect::Get`, `EEGroup::GetFirstUnit`, `EEIsValidName`, the join's restart
+  callback, `gMiniMapTransformation`). Its include block was trimmed greedily (81 of 138 lines, each drop compiled).
+- **Rust owns the decisions** (`game_actions.rs`): the right click's whole tree (the doppelganger view of a target
+  the player cannot see, as one helper where the original had two copies; the tree under citizens moving onto a
+  tile; the gather, repair, smart farmers, attack, heal, drop-off, load, return-to-base and move decisions; the
+  confirmation effect's height), the plain click, the lasso's message by type and modifier, the build's footprint
+  offset, the calamity's cast and check, the camera targets, the mini map's send (`trunc_long`, `um_arctan2`) and
+  centre (`um::floor`, the mesh's side planes through `ee_ge`'s `Ge3DPlane`/`Ge3DLine`, the same functions the C++
+  `GE3DLine`/`GE3DPlane` forward to), the edge scroll's acceleration (the velocity a Rust static shared by the game's
+  and the editor's scroll, as the file statics were), the chat box's scroll to the end, the join per mode, the
+  migration's choice of the new host, the pause, the improvement's raise and lower, the quick save/load, the saved
+  game, the civilization reset, the boot.
+- **Traps.** The calamity class's `GetDefaultTarget` and `CanCastAt` take the world point by non-const reference and
+  may change it, and `Check` hands the changed point on to the next caster's `CanCastAt`: the host writes the point
+  back after each. `gEffectManager->CreateEffect` takes the location by reference too (a host local). The quick save's
+  memory file was a host-written record member, invisible to a replay: the host now answers the new file and Rust
+  keeps it and hands it back to write and to delete. The migration's three scratch strings are members (the original's
+  locals) and must be cleared at the run's start, or a second migration reports the first one's dropped host.
+- The record is copied out around each op and never borrowed across one; no op calls back into an action.
+
+### The golden (build/ga/drv in the round's worktree, not committed)
+
+- `cut.py` cuts the 19 units and their headers at 3114725d into `orig.inc` (namespace O; includes, externs and the
+  COMDATs the fake defines stripped) and the new host into `new_host.inc` (its entries renamed: the driver's logging
+  entries call them). `fake.h` (900 lines) is the world: eight units (six complex, two without a complex unit or a
+  tile node), their classes and stats, two tiles with doppelgangers and unit lists, four human players with tech
+  trees and events, the selected and active groups, the map with its four planes, the camera, the communications
+  classes (client, server, the `static_cast`s and `dynamic_cast`s), the lobby form and its chat box, the editor
+  form, the WON object, sounds, files and saves. Every answer is a function of the world (rolled before each
+  top-level call) and the arguments, so a side that reads more or in another order sees the same world; every effect
+  is a trace token; after each call the action's members and the world's directly written members (the players'
+  slots, the pause flag, the player name and host settings, the lag status, the camera-following flag, the owed
+  ticks) are digested.
+- A case makes the action (its constructor's arguments from the stream), makes 1-6 calls (5-10 in the "rich" world,
+  which favours the deep branches: own units, transports, town halls, farms, two casters, points on the scroll's
+  edges) and releases it. 0 differences: 10,000 mixed cases on each of seeds 2, 5, 6, 7 and 8,000 rich; 3,000-8,000
+  per kind on its own; the click 20,000 plain and 10,000 rich, which reach every message type it sends.
+- `golden_game_actions.txt` (817 cases, 3,892 calls, 36,499 ops and record messages, 1.9 MB) is the new side's host
+  log, replayed by `game_actions_tests::replays_the_golden`: each call's record loaded, the call made, each op and
+  record message checked and answered from the log, the record compared after; the destructor's ops after the last
+  call. Pointers travel by name (`u3`, `t0`, `m12`, `cal`, `rect`, `file`).
+- Mutations. The host (`mutate.py`, the driver rebuilt for each): 28 of 28 caught; the migration's slot write needed
+  the world digest widened first (the trace never showed the players' slots). Rust against the replay
+  (`rmutate.py`): 37 of 40; two of the three (the click's last-resort tile centre, the transport's group-of-one test)
+  are caught by the driver over the library rebuilt with them (`rdmutate.py`); the third, the scroll's
+  non-accelerating branch, is equivalent: `mAccelerate` is set by the constructor and never cleared (dead in the
+  original too).
+- Lessons. (1) A mixed world reaches the click's deep branches too rarely for a golden of this size: biasing part of
+  the cases ("rich") took the replay's score from 30/40 to 37/40. (2) Globals the actions write (the player name, the
+  host settings) must be reset each roll, or the original's and the new run of a case start from each other's
+  leftovers (10 false differences in 6,000 cases). (3) A `break;` left inside a converted `switch` arm cut every mini
+  map case to one call; the golden's missing record lines showed it. (4) One templated driver over 38 classes:
+  dispatch at compile time on a kind trait (`if constexpr`), or every branch is instantiated for every class.
+
+### Count
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 3026b8ba | the 19 classes as `EEARust` kinds, the host, the callers' include switches, 19 units and 19 headers deleted | +1,125 -3,508, net -2,383 |
+
+Rust: `game_actions.rs` 1,956 lines, `game_actions_ffi.rs` 192, tests 158, the replay 317.
+
+### Behaviour
+
+None intended. Unset members of the original are zero now (the record is value-initialised):
+`EEACenterCamera::mUnitID` was left unset by its constructor and by a `SetUnit` on a unit without a complex unit.
+Every action constructs the scroll's poll (10 ms, not started). Dead state dropped: `EEAQuickSaveLoad::mGameState`
+(only stored, by the UI thread's quick load; the store went too) and `mP20` (never set), the join's unused
+`EEGameOptionsPlayer` local and its `gWorldTable` read.
+
+### What runs it, and what only a person reaches
+
+The orders game (the right click's gather, repair, repair-queued and move; the scouting's camera), the box
+selection (the lasso, the plain click), the scroll check and every game frame (the scroll's `Update`), the LAN game
+(the join and host through the LAN screen, modes 4 and 3; a client leaving), the editor gate (the quick save) and the
+calamity fixture's casts. Only a person: the right click's other orders (rally points, attack, heal, the transports,
+air bases, drop-off, smart farmers, the tree under citizens), the mini map's clicks, the build placements, the player
+event key, the pause, the in-game save dialog, a host dropping out (the migration), the editor's civilization reset
+and improvement buttons, the chat line unless a chat message is sent.
+
+### Left
+
+`EEAWonNet` (the WON lanes'); `Scenario Editor Actions/EESEARust.cpp` (912 lines: the paints' and the whole editor
+actions' hosts and the selection host) onto this host's shape; the editor's click and lasso subclasses as kinds.
