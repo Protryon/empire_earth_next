@@ -485,6 +485,7 @@ static std::vector<EECPAIEntry> EECPAIReadManifest()
         theAI.mRandom = false;
         theAI.mSeesAll = false;
         theAI.mFillsGarrison = false;
+        theAI.mClassic = false;
         std::string theProblem;
         for (const auto& f : e.mFields) {
             const JValue& v = f.second;
@@ -513,14 +514,21 @@ static std::vector<EECPAIEntry> EECPAIReadManifest()
                     break;
                 }
                 theAI.mFillsGarrison = v.mBool;
+            } else if (f.first == "classic") {
+                if (v.mKind != JValue::kBool) {
+                    theProblem = "classic must be true or false";
+                    break;
+                }
+                theAI.mClassic = v.mBool;
             } else {
                 EECPEngineLog("%s: unknown key \"%s\" ignored", theWhere.c_str(), f.first.c_str());
             }
         }
         if (theProblem.empty() && !EECPAIIdOK(theAI.mID))
             theProblem = "id '" + theAI.mID + "' must be 1 to 64 of a-z, 0-9 and _";
-        if (theProblem.empty() && (theAI.mID == "classic" || theAI.mID == "random" || theAI.mID == "next"))
-            theProblem = "id '" + theAI.mID + "' is reserved (classic, random, next)";
+        if (theProblem.empty() && (theAI.mID == "classic" || theAI.mID == "classic_cpp" || theAI.mID == "random"
+                                   || theAI.mID == "next"))
+            theProblem = "id '" + theAI.mID + "' is reserved (classic, classic_cpp, random, next)";
         for (const EECPAIEntry& o : theAIs)
             if (theProblem.empty() && o.mID == theAI.mID)
                 theProblem = "id '" + theAI.mID + "' is listed twice";
@@ -552,14 +560,32 @@ const std::vector<EECPAIEntry>& EECPAIManifest()
     return sAIs;
 }
 
+// the manifest's "classic" AI (the first marked): the lobby's Classic plays it, and the C++ classic becomes the choice
+// "Classic (C++)" after the AIs (docs/AI_LUA_UNITS.md §11; stage 5 deletes that choice with the C++ decision code)
+const EECPAIEntry* EECPClassicAI()
+{
+    for (const EECPAIEntry& a : EECPAIManifest())
+        if (a.mClassic)
+            return &a;
+    return NULL;
+}
+
+unsigned long EECPChoiceClassicCpp()
+{
+    return EECPClassicAI() != NULL ? kEECPChoiceFirstAI + (unsigned long)EECPAIManifest().size()
+                                   : (unsigned long)kEECPChoiceClassic;
+}
+
 unsigned long EECPEngineChoiceCount()
 {
-    return kEECPChoiceFirstAI + (unsigned long)EECPAIManifest().size();
+    return kEECPChoiceFirstAI + (unsigned long)EECPAIManifest().size() + (EECPClassicAI() != NULL ? 1 : 0);
 }
 
 const EECPAIEntry* EECPAIByChoice(unsigned long inChoice)
 {
     const std::vector<EECPAIEntry>& theAIs = EECPAIManifest();
+    if (inChoice == kEECPChoiceClassic)
+        return EECPClassicAI();
     if (inChoice < kEECPChoiceFirstAI || inChoice - kEECPChoiceFirstAI >= theAIs.size())
         return NULL;
     return &theAIs[inChoice - kEECPChoiceFirstAI];
@@ -577,6 +603,8 @@ long EECPChoiceByName(const std::string& inName)
 {
     if (inName == "classic")
         return kEECPChoiceClassic;
+    if (inName == "classic_cpp")
+        return (long)EECPChoiceClassicCpp();
     if (inName == "random")
         return kEECPChoiceRandom;
     const std::vector<EECPAIEntry>& theAIs = EECPAIManifest();
@@ -592,6 +620,10 @@ std::string EECPChoiceName(unsigned long inChoice)
 {
     if (inChoice == kEECPChoiceRandom)
         return "random";
+    if (inChoice == kEECPChoiceClassic)
+        return "classic";
+    if (EECPClassicAI() != NULL && inChoice == EECPChoiceClassicCpp())
+        return "classic_cpp";
     const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
     return theAI != NULL ? theAI->mID : "classic";
 }
@@ -706,7 +738,7 @@ bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer)
 std::string EECPEngineName(const EEComputerPlayer* inPlayer)
 {
     if (EECPEngine(inPlayer) != kEECPEngineNext)
-        return "classic";
+        return EECPClassicAI() != NULL ? "classic_cpp" : "classic";
     std::string theAI = EECPEngineAI(inPlayer);
     return theAI.empty() ? "next" : theAI;
 }
@@ -771,6 +803,8 @@ unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inSeed, un
         h ^= h >> 12;
         return thePool[(h >> 7) % (uint32_t)thePool.size()];
     }
+    if (EECPClassicAI() != NULL && inChoice == EECPChoiceClassicCpp())
+        return inChoice;   // the C++ classic
     return EECPAIByChoice(inChoice) != NULL ? inChoice : (unsigned long)kEECPChoiceClassic;
 }
 
