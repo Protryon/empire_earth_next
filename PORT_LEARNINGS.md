@@ -24852,7 +24852,9 @@ post-game summary's status bars and graphs, the game's control classes (`EECBUIL
   background's), and the matching free forgets it. Two `BTreeMap`s ((C++, kind) -> Rust, (Rust, kind) -> C++) under
   one `Mutex`, held only for the lookup: no lock across a call into an object (the calls out re-enter and may make
   or destroy controls). The last manager made is the one a call with no form uses (`gUIManager`; the game makes
-  one). No C++ change was needed for it: every constructor already passed its C++ `this`.
+  one). Every constructor already passed its C++ `this`, except the backgrounds': `UIBackground`'s record is its
+  (protected) base at another address, and `ee_ui_bg_init`'s object is the record itself, so the forms'
+  `UIBackground*` is named by one more call in the constructor (`ee_ui_direct_background(this, this)`).
 - **The calls** (`direct::manager_call`, `form_call`, `control`, `control_call`, `button_call`, `combo_call`,
   `label_call`, `edit_call`, `slider_call`, `group_call`, `background_call`): a C++ pointer in, the same inward
   call (`ee_ui_*_call`, same arguments, a four-float buffer) the C++ forwarder makes; an unknown pointer or a
@@ -24892,7 +24894,14 @@ it was checked in the real game: a scratch shadow mode (`build/sb2/sb2_shadow.rs
 the C++ case and logged whether the direct path found its target with the right kind. The fixture tour: 1,331
 checks (496 SetDisplayMode, 321 check box and 226 radio reads, the settings' writes, the lobby's combo, label and
 trigger ops, the music name), 0 mismatches, 0 missing; reads with non-zero answers 359. The LAN game (host and
-joiner through the lobby): 68 checks, 0 mismatches. Unit tests: `direct_tests.rs` (the registry: put, replace,
+joiner through the lobby): 68 checks, 0 mismatches. **But** the shadow's form ops logged the background lookup as a
+field of an "OK" line (`bg=false`, six times) and I read only the status: the background visibility op did nothing
+on the direct path (the record keyed, not the `UIBackground*`). The merged tree's legacy tour caught it: its menu
+bmpdiff against round 1's run showed a frame left drawn on the settings' audio and interface tabs (166,486 and
+168,216 pixels) and the whole random map setup different (827,510), with the UI state dumps (`*.txt`) identical.
+Fixed in 02abc1ad7; the next legacy tour's menus equal round 1's but the build label. Lesson: a shadow check's log
+must fail on every negative it records, not carry it as a detail; and the pixel comparison catches what the state
+dumps and the fixture tour (`RESULT PASS tour` both times) do not. Unit tests: `direct_tests.rs` (the registry: put, replace,
 forget, unknowns, NULLs; a real Rust form reached by its C++ pointer; the texts), `toolkit_tests.rs` (the game ops
 fall through, unknown controls answer as missing ones, a registered form's music name and keyboard question).
 
@@ -24902,9 +24911,31 @@ fall through, unknown controls answer as missing ones, a registered form's music
 |---|---|---|
 | 15c60c66 | the registry, the direct calls, the screens' toolkit ops before the C++ hop; four virtual ops on `UIControl::HostOp` | +5 |
 | 1267edea | the 51 host cases the direct path answers removed from `EEScreens.cpp`; two include lines | -172 |
+| 02abc1ad7 | the backgrounds found by their C++ pointer (`ee_ui_direct_background`) | +1 |
 
-Net C++ for the round: -167 (`EEScreens.cpp` 3,654 -> 3,482, `UIControl.cpp` +5). Far short of the 1,500 asked:
+Net C++ for the round: -166 (`EEScreens.cpp` 3,654 -> 3,482, `UIControl.cpp` +5, `UIBackground.cpp` +1). Far short of the 1,500 asked:
 the measure shows the toolkit-only calls are about 500 lines of the host, and 330 of those need C++ objects.
+
+### Gates
+
+| Gate | Per commit | Merged with rust (021d136c, then 02abc1ad7) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0/0 (15c60c66, 1267edea) | EE-AOC 909, EE-SIM 910 inputs, 0/0 |
+| oracle | seeds 2-3 identical | seeds 2-7 identical (021d136c); 2-3 after the fix |
+| `tools/sim_editor.py` | PASS 12,723 | PASS 14,049 |
+| `tools/sim_editor.py --civbuilder` | (not merged yet) | PASS 3,913 |
+| Rust gate | tests, clippy, fmt, header (one `ee_gx` GPU timing test failed under load, passed alone) | 3,874 tests pass, clippy, fmt, headers current (`ee_won` `eecolor::golden_replay` failed once in the full run, passed alone three times and in its crate's full run: not this lane's) |
+| test-profile build | | 0/0 |
+| fixture tour | (shadow run) PASS | `RESULT PASS tour`, F3 ok (both before and after the fix) |
+| orders game | | `BOX SELECT PASS`, `ORDERS PASS` (gather, repair, repair-queued, move), `RESULT PASS random-game` |
+| LAN game | (shadow run) PASS | `RESULT PASS lan-game` (PT host 2914, joiner 2912) |
+| legacy tour | | STOP reached, F3 ok; menus against round 1's merged run: see the background fix above; after it, identical but the build label |
+
+The merge of `rust` (c80a1b00, 30 lanes): `EECampaignEditorBehavior.cpp` deleted here, include-trimmed there (kept
+deleted); four include-block conflicts (`EEScreens.cpp`, `EEUIBGenericBackground.cpp`, `EEUIFileComboBox.cpp`,
+`EEUIManager.cpp`: the other side's trims taken, `ee/EEGameOptions.h` put back in the generic background, which
+had it only through the two includes round 1 kept); `PORT_LEARNINGS.md` (rust's, then round 1's and this section);
+the `mod toolkit` comment that git's merge separated from its line. Headers current, nothing to narrow.
 
 ### Behaviour
 

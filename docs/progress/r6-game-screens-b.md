@@ -13,21 +13,24 @@ form manager (`EEUIEScenarioIntroEvents.cpp`), the models of the moved forms and
 events moved (`ee/EEUIManager.h`, `ee/EEControlEventID.h`, `ee/EEFormEventID.h`). WON's events and boxes
 (`EEUIEWonNet*`, `EEUICWonNet*`, `EEWonNetAvailableGameFormManager`) are the WON lanes'.
 
-**Round 1** (branch `rust-screensb1`; PORT_LEARNINGS "R6: game screens B, round 1"): the measure (the scope's
-decisions were Rust already, rounds 13 and 21-28 of the first lane; what was left was host code, the C++ classes the
-toolkit makes, include blocks and dead ids), then three commits: the campaign editor's model whole in Rust
-(`campaign_model.rs`: `EECampaignEditorBehavior.cpp` and its header deleted; golden driver over the original unit,
-35,000 ops identical, 15 of 15 Rust and 11 of 11 host mutations caught), the moved forms' dead ids (444
-enumerators), the include lines eight units compile without (377). The scope's C++ 8,509 -> 7,095 (-1,414: -534,
--504, -376). Only a person reaches the campaign editor; the other two commits change no code.
+**Round 1** (branch `rust-screensb1`; PORT_LEARNINGS "R6: game screens B, round 1"): the campaign editor's model
+whole in Rust (`campaign_model.rs`), the moved forms' dead ids, the include lines eight units compile without. The
+scope's C++ 8,509 -> 7,095 (-1,414).
 
-**Left** (C++ lines at the end of round 1): `EEScreens.cpp` 3,654 (one `case` per toolkit or simulation call, all
-live; it shrinks when the toolkit's controls are reachable from Rust without a C++ hop or the forms' C++ objects go),
-`EEUserInterface.cpp` 1,380 (the thread's hosts and posts; `SetLoadProgress`, `ShowLagStatus`,
-`UpdateIMECompositionString`'s attributes, `ChangeRasterizer`, `ResizeGameScreen` can join `ui_game.rs`),
-`EEUIManager.cpp` 553 (the factories' and the control creation's `new`s), `EEUIFError.cpp` 421 (the form, its two
-button classes, the dialog's host), `EEUIBGenericBackground.cpp` 266 (the frame's host, the campaign map's cell
-loader), `EEUIEScenarioIntroEvents.cpp` 256 (`EEUISCIFormManager`'s file opens), `EEUIPGSLineGraph.cpp` 110 (with
-`UIGraph.cpp` 405 and `UILineGraph.cpp` 143 of the toolkit: one Rust graph object is the next whole move; the
-post-game summary is a person's only), `EEUIFileComboBox.cpp` 85, `ee/EEUIManager.h` 345 (the class, the HUD's and
-WON's ids).
+**Round 2** (branch `rust-screensb2`; PORT_LEARNINGS "R6: game screens B, round 2"): the direct path. Every toolkit
+object the screens call records its C++ object in `ee_ui`'s registry (`direct.rs`: forms, the manager, entity
+groups, backgrounds, control records, buttons, combo boxes, labels, edit boxes, sliders); `ee_screens`' `Form`
+answers the plain toolkit ops in Rust before the C++ hop (`toolkit.rs`), the virtuals through the control record's
+host (`UIControl::HostOp`); the backgrounds are named by their constructor (`ee_ui_direct_background`). 51 host cases (44 ops, 7 text cases) left `EEScreens.cpp` (3,654 -> 3,482 lines). The measure: of the host's
+~580 case labels only ~140 (~500 lines) call the toolkit alone; the rest are game calls. The round took the
+toolkit calls whose target is a whole Rust object.
+
+**Left** (C++ lines at the end of round 2): `EEScreens.cpp` 3,482: the toolkit calls that need a C++ object (about
+330 lines: the list boxes' lines and selections, combo appends, new `EEScreenEvent`s and hot keys, `GEText` colours
+and fonts, bitmaps, the post-game summary's status bars and graphs, the civilization choice's list) and the game
+calls; a small `ee_screenscpp_new_event` would let the event and hot key group (about 60 lines) move next.
+`EEUserInterface.cpp` 1,380 (`SetLoadProgress`, `ShowLagStatus`, `UpdateIMECompositionString`'s attributes,
+`ChangeRasterizer`, `ResizeGameScreen` can join `ui_game.rs`), `EEUIManager.cpp` 553, `EEUIFError.cpp` 421,
+`EEUIBGenericBackground.cpp` 266, `EEUIEScenarioIntroEvents.cpp` 256, `EEUIPGSLineGraph.cpp` 110 (with `UIGraph.cpp`
+405 and `UILineGraph.cpp` 143: one Rust graph object; the post-game summary is a person's only),
+`EEUIFileComboBox.cpp` 85, `ee/EEUIManager.h` 345.
