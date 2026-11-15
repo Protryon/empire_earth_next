@@ -41,18 +41,9 @@
 #include "ee/EEGroupPathRequest.h"
 #include "ee/EEGroupCluster.h"
 
-const UString EEGroup::sNumSelectedUnitsStringID("EEGroup-NumSelectedUnitsStringID");   // 0x963278 (provisional name)
-// SYNTHETIC: EXE 0x605eda   (wrapper)
-// SYNTHETIC: EXE 0x605ee4   (ctor)
-// SYNTHETIC: EXE 0x605ef5   (registrar)
-// SYNTHETIC: EXE 0x605f01   (dtor)
-const UString EEGroup::sUnitIDStringID("EEGroup-UnitIDStringID");   // 0x963260 (provisional name)
-// SYNTHETIC: EXE 0x605f1d   (wrapper)
-// SYNTHETIC: EXE 0x605f27   (ctor)
-// SYNTHETIC: EXE 0x605f38   (registrar)
-// SYNTHETIC: EXE 0x605f44   (dtor)
+const UString EEGroup::sNumSelectedUnitsStringID("EEGroup-NumSelectedUnitsStringID");
+const UString EEGroup::sUnitIDStringID("EEGroup-UnitIDStringID");
 
-// FUNCTION: EXE 0x605f60
 // Creates a group path request holding the path (referenced) and the ids of the units that follow it
 EEGroupPathRequest::EEGroupPathRequest(EEAutoPathRequest* inPath, const std::vector<long>& inUnitIDs, long inArg3)
     : mPath(NULL)
@@ -64,10 +55,6 @@ EEGroupPathRequest::EEGroupPathRequest(EEAutoPathRequest* inPath, const std::vec
     this->mL30 = inArg3;
 }
 
-// SYNTHETIC: EXE 0x605fbb
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x605fd7
 // Destroys the request, releasing its path
 EEGroupPathRequest::~EEGroupPathRequest()
 {
@@ -75,7 +62,6 @@ EEGroupPathRequest::~EEGroupPathRequest()
         this->mPath->Dereference();
 }
 
-// FUNCTION: EXE 0x605ff7
 // Cancels the pending path with the path manager and releases it
 void EEGroupPathRequest::Cancel()
 {
@@ -86,7 +72,6 @@ void EEGroupPathRequest::Cancel()
     this->mPath = NULL;
 }
 
-// FUNCTION: EXE 0x60601b
 // Creates an empty group for a player with the default formation
 EEGroup::EEGroup(EEPlayer* inPlayer)
 {
@@ -95,10 +80,6 @@ EEGroup::EEGroup(EEPlayer* inPlayer)
     this->mKindFlags = 0;
 }
 
-// SYNTHETIC: EXE 0x606086
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x6060a2
 // Destroys the group, cancelling and deleting its path requests and releasing its formation
 EEGroup::~EEGroup()
 {
@@ -111,7 +92,6 @@ EEGroup::~EEGroup()
         this->mFormation->Dereference();
 }
 
-// FUNCTION: EXE 0x606121
 // Copies another group's units, type counts and kind flags, moving the unit references over
 EEGroup& EEGroup::CopyGroup(EEGroup* inGroup)
 {
@@ -126,7 +106,6 @@ EEGroup& EEGroup::CopyGroup(EEGroup* inGroup)
     return *this;
 }
 
-// FUNCTION: EXE 0x606174
 // Adds a unit (referenced) and counts its type and kind flags
 void EEGroup::Add(EEComplexUnit* inUnit)
 {
@@ -141,7 +120,6 @@ void EEGroup::Add(EEComplexUnit* inUnit)
         this->mUnitTypeCounts.insert(std::map<long, long>::value_type(theType, 1));
 }
 
-// FUNCTION: EXE 0x6061ee
 // Returns the rectangle around the group's units that are on the map
 void EEGroup::GetBounds(GERectangle& outBounds)
 {
@@ -166,7 +144,6 @@ void EEGroup::GetBounds(GERectangle& outBounds)
     }
 }
 
-// FUNCTION: EXE 0x606280
 // Cancels and deletes the path request with the given id
 void EEGroup::Remove(long inPathID)
 {
@@ -179,7 +156,6 @@ void EEGroup::Remove(long inPathID)
     delete theRequest;
 }
 
-// FUNCTION: EXE 0x6062cb
 // Returns the terrain flags every unit in the group shares
 EECPASGFlags EEGroup::GetFlags()
 {
@@ -195,7 +171,6 @@ EECPASGFlags EEGroup::GetFlags()
     return theResult;
 }
 
-// FUNCTION: EXE 0x60637e
 // Returns whether the unit is in the group
 bool EEGroup::Contains(EEComplexUnit* inUnit)
 {
@@ -208,7 +183,6 @@ bool EEGroup::Contains(EEComplexUnit* inUnit)
     return it != theEnd;
 }
 
-// FUNCTION: EXE 0x6063a1
 // Replaces the group's units and formation with another group's, keeping only valid units on the map
 void EEGroup::CopyUnits(EEGroup* inGroup)
 {
@@ -223,7 +197,6 @@ void EEGroup::CopyUnits(EEGroup* inGroup)
     }
 }
 
-// FUNCTION: EXE 0x606405
 // Returns the first unit of a category, or NULL
 EEComplexUnit* EEGroup::FindUnitOfCategory(long inCategory)
 {
@@ -237,7 +210,6 @@ EEComplexUnit* EEGroup::FindUnitOfCategory(long inCategory)
     return theResult;
 }
 
-// FUNCTION: EXE 0x60642e
 // Returns the first unit whose class has any of the kind flags, or NULL
 EEComplexUnit* EEGroup::FindUnitWithFlags(unsigned long inFlags)
 {
@@ -255,7 +227,6 @@ EEComplexUnit* EEGroup::FindUnitWithFlags(unsigned long inFlags)
     return theResult;
 }
 
-// FUNCTION: EXE 0x606462
 // Counts the group's units of a category
 long EEGroup::CountUnitsOfKind(long inKind)
 {
@@ -267,14 +238,12 @@ long EEGroup::CountUnitsOfKind(long inKind)
     return theCount;
 }
 
-// FUNCTION: EXE 0x60648c
 // Returns whether a pending path request carries the unit
 bool EEGroup::HasPathRequest(EEComplexUnit* inUnit)
 {
     return this->FindPathRequest(inUnit) != NULL;
 }
 
-// FUNCTION: EXE 0x60649e
 // Returns the pending path request that carries the unit, or NULL
 EEGroupPathRequest* EEGroup::FindPathRequest(EEComplexUnit* inUnit)
 {
@@ -324,7 +293,6 @@ static int32_t EEGroupSaveOperation(void* inContext, int32_t inOp, uint32_t inIn
     return EESavePrimitive(*theContext.mFile, inOp, io);
 }
 
-// FUNCTION: EXE 0x6064f4
 // Reads the formation kind (8 = keep the current one) and appends the unit ids from the saved game;
 // returns the first count or id read error
 long EEGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -333,7 +301,6 @@ long EEGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, F
     return ee_units_group_load(&theContext, &EEGroupSaveOperation);
 }
 
-// FUNCTION: EXE 0x606581
 // Requests one path for a cluster's units; follows it at once if it is already found, else keeps the request
 void EEGroup::RequestPath(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, EEGroupCluster* inCluster)
 {
@@ -380,7 +347,6 @@ inline unsigned short EEAIContinentManager::GetPathAreaIDAt(long inX, long inY)
     return this->GetPathAreaIDAt(EETileLocation(inX, inY));
 }
 
-// FUNCTION: EXE 0x606680
 // Gives each living group unit carried by a found path its waypoints: its formation slot at each step, or
 // the step's centre when the slot lies in another path area; an empty path when none was found
 void EEGroup::MoveAlong(EEGroupPathRequest* inRequest)
@@ -469,7 +435,6 @@ void EEGroup::MoveAlong(EEGroupPathRequest* inRequest)
     }
 }
 
-// FUNCTION: EXE 0x606c41
 // Recomputes the group's kind flags from its units
 void EEGroup::UpdateKindFlags()
 {
@@ -479,7 +444,6 @@ void EEGroup::UpdateKindFlags()
         this->mKindFlags |= this->GetUnit(i)->mUnitClass->mKindFlags;
 }
 
-// FUNCTION: EXE 0x606c73
 // Removes and releases every unit and resets the type counts and kind flags
 void EEGroup::Clear()
 {
@@ -491,7 +455,6 @@ void EEGroup::Clear()
     this->mUnitTypeCounts.clear();
 }
 
-// FUNCTION: EXE 0x606cc9
 // Cancels and deletes the path request with the given id (as Remove)
 void EEGroup::CancelPathRequest(long inPathID)
 {
@@ -504,7 +467,6 @@ void EEGroup::CancelPathRequest(long inPathID)
     delete theRequest;
 }
 
-// FUNCTION: EXE 0x606d15
 // Removes the unit from the group if it is in it
 void EEGroup::RemoveUnit(EEComplexUnit* inUnit)
 {
@@ -516,7 +478,6 @@ void EEGroup::RemoveUnit(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x606d40
 // Removes and releases the unit at an index; recomputes the kind flags when its type's last unit leaves
 void EEGroup::RemoveAt(long inIndex)
 {
@@ -530,7 +491,6 @@ void EEGroup::RemoveAt(long inIndex)
     }
 }
 
-// FUNCTION: EXE 0x606dd9
 // Turns the loaded unit ids back into units, dropping any that no longer exist; returns 0
 long EEGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -546,7 +506,6 @@ long EEGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinor
     return 0;
 }
 
-// FUNCTION: EXE 0x606e61
 // Writes the formation kind (8 = none), unit count and unit ids to the saved game; returns the first error
 long EEGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -554,7 +513,6 @@ long EEGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, F
     return ee_units_group_save(&theContext, &EEGroupSaveOperation);
 }
 
-// FUNCTION: EXE 0x606ef2
 // Sets the group's formation, moving the reference from the old one
 void EEGroup::SetFormation(EEFormation* inFormation)
 {
@@ -570,7 +528,6 @@ void EEGroup::SetFormation(EEFormation* inFormation)
 // U2DRectangle<long>::GetClosestCorner(point) (inline in lle/U2DRectangle.h, exe view; its out-of-line COMDAT
 // 0x208164 follows MakeClusters, the only user)
 
-// FUNCTION: EXE 0x606f1a
 // Splits units into path clusters: land buildings and flyers by continent, the rest by shared terrain
 // flags and distance to a cluster's bounds (squared when asked)
 // NEAR: ours expands the bounds' GetClosestCorner inline; the original calls its COMDAT 0x208164.
@@ -661,7 +618,6 @@ void EEGroup::MakeClusters(std::vector<EEComplexUnit*>& inUnits, std::vector<EEG
     }
 }
 
-// FUNCTION: EXE 0x60754e
 // Moves the units of every path request whose path is found and deletes those requests
 void EEGroup::MoveAlongFoundPaths()
 {
@@ -677,90 +633,3 @@ void EEGroup::MoveAlongFoundPaths()
         }
     }
 }
-
-// TEMPLATE: EXE 0x607510
-// EEGroupCluster::EEGroupCluster (the cluster's inline ctor), emitted by MakeClusters
-
-// TEMPLATE: EXE 0x6075b4
-// map<long, long>::operator= (the type counts; CopyGroup)
-
-// TEMPLATE: EXE 0x6075e8
-// map<long, EEGroupPathRequest*>::~map
-
-// TEMPLATE: EXE 0x607613
-// vector<vector<GE3DPoint> >::push_back (MoveAlong)
-
-// TEMPLATE: EXE 0x60763f
-// map<unsigned short, vector<EEComplexUnit*> >::~map (MakeClusters)
-
-// TEMPLATE: EXE 0x60766a
-// map<unsigned short, vector<EEComplexUnit*> >::insert (MakeClusters)
-
-// TEMPLATE: EXE 0x607724
-// map<unsigned short, vector<...> >::find (MakeClusters; one ICF body for several value types)
-
-// TEMPLATE: EXE 0x607760
-// vector<EEGroupCluster*>::push_back (MakeClusters)
-
-// TEMPLATE: EXE 0x60778c
-// map<long, long>::_Copy (the type counts)
-
-// TEMPLATE: EXE 0x6077ec
-// map<long, EEGroupPathRequest*>::erase(iterator)
-
-// TEMPLATE: EXE 0x60785d
-// vector<vector<GE3DPoint> >::insert(iterator, const T&) (MoveAlong)
-
-// TEMPLATE: EXE 0x6078ad
-// _Ptrit<long>'s copy ctor
-
-// TEMPLATE: EXE 0x6078ba
-// map<unsigned short, ...>'s ctor (MakeClusters; one ICF body for several value types)
-
-// TEMPLATE: EXE 0x6078db
-// map<unsigned short, vector<EEComplexUnit*> >::erase(first, last) (MakeClusters)
-
-// TEMPLATE: EXE 0x60794c
-// map<unsigned short, vector<EEComplexUnit*> >::_Insert (MakeClusters)
-
-// TEMPLATE: EXE 0x607ae0
-// map<long, long>::_Copy(node, parent) (the type counts)
-
-// TEMPLATE: EXE 0x607b65
-// map<long, EEGroupPathRequest*>::_Erase(node)
-
-// TEMPLATE: EXE 0x607b97
-// map<long, ...*>::_Lbound (one ICF body for several pointer value types)
-
-// TEMPLATE: EXE 0x607bc0
-// vector<vector<GE3DPoint> >::insert(iterator, n, const T&) (MoveAlong)
-
-// TEMPLATE: EXE 0x607e74
-// _Tree::erase(first, last) (one ICF body for several map types)
-
-// TEMPLATE: EXE 0x60812a
-// map<unsigned short, vector<EEComplexUnit*> >::_Erase(node) (MakeClusters)
-
-// FUNCTION: EXE 0x608164
-// Returns the rectangle corner closest to a point (U2DRectangle<long>::GetClosestCorner, see above)
-
-// TEMPLATE: EXE 0x608295
-// fill over vector<GE3DPoint> elements (MoveAlong's vector<vector<GE3DPoint> >)
-
-// TEMPLATE: EXE 0x6082b2
-// copy_backward over vector<GE3DPoint> elements (MoveAlong's vector<vector<GE3DPoint> >)
-
-// TEMPLATE: EXE 0x6082de
-// _Construct(pair<const unsigned short, vector<EEComplexUnit*> >) (MakeClusters)
-
-// TEMPLATE: EXE 0x6082fd
-// fill over long elements (vector<long>)
-
-// TEMPLATE: EXE 0x608315
-// pair<unsigned short, vector<EEComplexUnit*> >(const&, const&): MakeClusters builds it; the original refuses it
-// inline (no /Og), ours expands it (inline budget, depth)
-
-// FUNCTION: EXE 0x608334
-// Returns the id of the path area at a tile, 0 if none (EEAIContinentManager::GetPathAreaIDAt, written above)
-// (out of line because MoveAlong's first site goes through the inline (x, y) overload, whose two nested calls
-// (the U2DPoint ctor and this) the inline budget refuses at depth 2, 0x206a03)

@@ -11,7 +11,7 @@
 
 class EECBCivilizationCreator : public EECBEditableCivilization {
 public:
-    EECBCivilizationCreator(EECivilization* inCivilization, bool inIsUnlimited);  // 0x27c8b9
+    EECBCivilizationCreator(EECivilization* inCivilization, bool inIsUnlimited);
     virtual bool Apply() { return true; }           // +0x00 (ICF-folded 0x60b1)
     virtual bool CanChange() { return true; }       // +0x0c (ICF-folded 0x60b1)
     virtual unsigned long GetPointsLeft();                 // +0x10 0x27c8e2

@@ -113,14 +113,12 @@
 #include "rust/ee_units.h"
 #include "ee/EEUnitHost.h"   // EESortFarms
 
-// FUNCTION: EXE 0x4b8cda
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()
 {
     NEMessage::RegisterBuilder(0x41, 0xfd, EEMessage::BuildEEMessage);
 }
 
-// FUNCTION: EXE 0x4b8cf7 (ExecuteSelectionMessage), 0x4b8e86 (ExecuteMessage)
 // The physics' two ways to run a message (the selection id's framing and decisions: ee_netmsg bodies.rs
 // execute_framed, over the host at the end of this file)
 static void EENetMsgExecute(EEMRecord* inMessage, uint8_t inFraming);
@@ -134,7 +132,6 @@ void EEMessage::ExecuteMessage()
     EENetMsgExecute(static_cast<EEMRecord*>(this), 2);
 }
 
-// FUNCTION: EXE 0x4b8f8e
 // Creates the game message object for a received buffer from its type byte (NULL and an assert for an unknown type)
 NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
 {
@@ -178,7 +175,6 @@ inline bool EETileDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit
 #include "ee/EECalamityClass.h"
 #include "ee/EEStringIDs.h"
 
-// FUNCTION: EXE 0x4bca28
 // Gives the sender's selection (and its saved group) a new formation of the requested type
 static void ExecuteChangeFormation(EEMRecord* m)
 {
@@ -191,7 +187,6 @@ static void ExecuteChangeFormation(EEMRecord* m)
     theFormation->Dereference();
 }
 
-// FUNCTION: EXE 0x4bd3f7
 // Applies a player's civilization (name and upgrades) validated by the server, once only when civs are bought;
 // locks the choice for players other than the local one (members: the player, the name string, the upgrades, the name)
 static void ExecuteCivUpgradesPurchased(EEMRecord* m)
@@ -215,7 +210,6 @@ static void ExecuteCivUpgradesPurchased(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4bd4b3
 // Has the server validate a player's requested civilization upgrades (EECBRequestUpgrades)
 static void ExecuteCivUpgradesRequested(EEMRecord* m)
 {
@@ -226,7 +220,6 @@ static void ExecuteCivUpgradesRequested(EEMRecord* m)
 // 0x23cc42 (cdecl): the exchange rate between a resource and the trade resource for inPlayer (provisional name)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);
 
-// FUNCTION: EXE 0x4bfcfd
 // Unloads one cargo unit from a living, enabled transport at once; if that fails, posts the transport class's
 // unload-failed event to its owner
 static void ExecuteImmediateCargoUnload(EEMRecord* m)
@@ -258,9 +251,6 @@ void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
         outPoint.SetZ(inPoint.GetZ());
 }
 
-// TEMPLATE: EXE 0x4c0894
-
-// FUNCTION: EXE 0x4c0936
 // With the flag set, stops the graphics thread and waits for it; otherwise restarts it, switches to the game (or
 // scenario editor) screen and answers the server with a load-main-screen response
 static void ExecuteLoadMainScreen(EEMRecord* m)
@@ -292,9 +282,8 @@ static void ExecuteLoadMainScreen(EEMRecord* m)
 bool gLocalPlayerOut;                      // 0x4e6099 (.bss between this unit's Execute statics 0x4e6098/0x4e609a; ee/EEMessage.h)
 
 #include "ee/EESaveLoad.h"
-long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
+long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 
-// FUNCTION: EXE 0x4c0e83
 // Single-player server load: loads the saved game and logs a response; anything else queues the save with the
 // physics thread; announces it in the chat log and shows the error box if loading failed (members: load, quiet,
 // tick, time, auto-save, the wait id, the file name)
@@ -328,7 +317,6 @@ static void ExecuteLoadOrSaveGame(EEMRecord* m)
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
 // (0x14cbc7 TrimAutoSaves: ee/EESaveLoad.h)
 
-// FUNCTION: EXE 0x4c1052
 // Saves the game under the requested name, rotates the auto-saves for an auto-save, restores the mouse and reports
 // an error box on failure; returns the request's tick
 long EELoadOrSave(EEMRecord* m)
@@ -359,10 +347,6 @@ long EELoadOrSave(EEMRecord* m)
     return m->Get<int32_t>(3);
 }
 
-// FUNCTION: EXE 0x4c1264
-// Packs the load/save response (header, selection id, tick) into a new send buffer
-
-// FUNCTION: EXE 0x4c153d
 // Changes the sender's cheat unit class: unloads the old class's data for every player and preloads the new one
 static void ExecuteLoadUnitData(EEMRecord* m)
 {
@@ -379,7 +363,6 @@ static void ExecuteLoadUnitData(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4c2170
 // After a host migration, moves a player to the new slot; a player left without a slot is announced as dropped and
 // (unless observing) removed from the game as defeated; tells the local client a new host is set
 static void ExecuteMigrationSlotInfo(EEMRecord* m)
@@ -407,7 +390,6 @@ static void ExecuteMigrationSlotInfo(EEMRecord* m)
 
 #include "lle/GE3DLine.h"
 
-// FUNCTION: EXE 0x4c534a
 // Selects the sender's saved group; for the local player resets the command panel, centres the camera on it
 // when asked and plays its selection sound
 static void ExecuteSavedGroupSelect(EEMRecord* m)
@@ -443,7 +425,6 @@ static void ExecuteSavedGroupSelect(EEMRecord* m)
 // decoded ids as its message is built on the UI thread; NULL otherwise
 void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
 
-// FUNCTION: EXE 0x4c5d7f (the EEMSelectUnits constructor)
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
 // compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
 // on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1
@@ -468,7 +449,6 @@ EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, uns
     return theMessage;
 }
 
-// FUNCTION: EXE 0x4c5fd1 (DecompressUnits)
 // Decodes a box selection's compact buffer into unit ids, replacing the list
 void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
 {
@@ -480,7 +460,6 @@ void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
         outUnits.push_back(theIDs[i]);   // the original's long: the 32-bit value, sign-extended on LP64
 }
 
-// FUNCTION: EXE 0x4c63e8
 // Shows a flare at the tile to the sender and each ally, and tells each ally it received one
 static void ExecuteSendFlare(EEMRecord* m)
 {
@@ -497,7 +476,6 @@ static void ExecuteSendFlare(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4c6b85
 // Sets the sender's stance toward a player and posts "<name> changes diplomatic stance to" friendly
 // (stance 0) or hostile to the chat log
 static void ExecuteSetDiplomaticStance(EEMRecord* m)
@@ -527,9 +505,6 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
            && EEDamageFactor(theAttacker, theTarget) > 0.0f;
 }
 
-// FUNCTION: EXE 0x4c74da
-// Packs the water-level message (header, selection id, level byte) into a new send buffer
-
 // EEMSmartFarmers' sort predicate (provisional name): the farther farm first, with +0x34c, then +0x344 ordering
 // the units; `this` is the EETileDistanceLess the distances are taken from.
 struct EEFarmDistanceGreater : public EETileDistanceLess {
@@ -540,7 +515,6 @@ struct EEFarmDistanceGreater : public EETileDistanceLess {
 // NEAR: the original is built without optimization (ebp frame, `this` and every bool test through memory
 // temporaries); `#pragma optimize("g", off)` alone does not reproduce it (59%), so it is not used
 
-// FUNCTION: EXE 0x4c75a6
 // Orders farms for smart farmers: unpaid before paid-for before built farms, the farther farm first in a tier
 bool EEFarmDistanceGreater::operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const
 {
@@ -576,7 +550,6 @@ void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool 
         std::sort(ioFarms.begin(), ioFarms.end(), EETileDistanceLess(EETileCoordinate(inX, inY)));
 }
 
-// FUNCTION: EXE 0x4c7cdc (EEMStartLoading::Execute)
 // Starts loading the game: seeds the random generator, sets the human player count and multiplayer flag (members:
 // the humans, the seed). Not static: the legacy harness's seed pin breaks here and writes the seed into the record
 // (tools/build.py HARNESS_HOOKS, tools/harness/game_session.py).
@@ -594,7 +567,6 @@ void EEStartLoading(EEMRecord* m)
     gUserInterface->PostStartLoading();
 }
 
-// FUNCTION: EXE 0x4c8ae4
 // Queues the improvement for the unit's type if its owner can buy it; otherwise the local owner hears an error
 // click and sees the reason in the chat log
 static void ExecuteImproveUnit(EEMRecord* m)
@@ -613,110 +585,6 @@ static void ExecuteImproveUnit(EEMRecord* m)
         }
     }
 }
-
-// Inline members of other headers whose first user is in this unit (the original's message classes' import ctors,
-// labels and ??_G at 0xba41b..0xbadd0 have no counterpart: every game message is an EEMRecord)
-// SYNTHETIC: EXE 0x4ba41b   ??0EEMSelectUnits@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba47b   ??0EEMAddPatrolPoint@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba4be   ??0EEMAddUnitToSelectedGroup@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba4fd   ??0EEMBuildGate@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba53a   ??0EEMBuildUnit@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba577   ??0EEMBuildWall@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba5be   ??0EEMCameraLocationInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba606   ??0EEMChat@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba64a   ??_GEEMChat@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba684   ??0EEMCivUpgrades@@QAE@XZ
-// SYNTHETIC: EXE 0x4ba6e1   ??_GEEMCivUpgrades@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba6fd   ??1EEMCivUpgrades@@UAE@XZ
-// SYNTHETIC: EXE 0x4ba727   ??_GEEMCivUpgradesPurchased@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba749   ??_GEEMCivUpgradesRequested@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba789   ??0EEMExchangeResources@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba7c2   ??0EEMGameOptions@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba806   ??_GEEMGameOptions@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba83a   ??0EEMFullGameOptions@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba87e   ??0EEMHackANewUnit@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba8cd   ??0EEMInGameChat@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba911   ??_GEEMInGameChat@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba957   ??0EEMLoadOrSaveGame@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba9b9   ??_GEEMLoadOrSaveGame@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4baa2f   ??0EEMFullPlayerInformation@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4baa73   ??0EEMPlayerSlotInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4baabd   ??_GEEMFullGameOptions@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4baaf1   ??0EEMSelectTheseUnits@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bab3d   ??_GEEMSelectTheseUnits@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4bab76   ??0EEMSetAirportCommand@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4babbf   ??0EEMSetRallyGoal@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac1a   ??0EEMSnapToDaylight@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac53   ??0EEMToggleCollisionDetection@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac8c   ??0EEMToggleDayNight@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bacc5   ??0EEMUnselectAllUnits@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bacf8   ??0EEMUpdatePingStat@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bad2b   ??0EEMImproveUnit@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bad5e   ??0EEMZoomInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bad97   ??0EEMSetUnitBehavior@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bb02a   ?ClearGoal@EEActiveGroup@@QAEXXZ
-// SYNTHETIC: EXE 0x4bd11c   ?ProcessEvent@EEUIEProcessTimerExpired@@UAEJPAVUIForm@@PAVUIEntity@@@Z
-// SYNTHETIC: EXE 0x4bdb42   ??0EEAAddChatMessage@@QAE@ABVUWideString@@_N@Z
-// SYNTHETIC: EXE 0x4bdc00   ??_GEEAAddChatMessage@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4c0c9f   $E60
-// SYNTHETIC: EXE 0x4c8007   $E62
-// SYNTHETIC: EXE 0x4c350f   ?AddTribute@EEPlayer@@QAEXJJJ@Z
-// SYNTHETIC: EXE 0x4c8f32   ?push_back@?$vector@EV?$allocator@E@std@@@std@@QAEXABE@Z
-// SYNTHETIC: EXE 0x4c8f5e   ?clear@?$vector@EV?$allocator@E@std@@@std@@QAEXXZ
-// SYNTHETIC: EXE 0x4c8f99   ?push_back@?$vector@PAVEEGroup@@V?$allocator@PAVEEGroup@@@std@@@std@@QAEXABQAVEEGroup@@@Z
-// SYNTHETIC: EXE 0x4c948f   ?find@std@@YA?AV?$_Ptrit@EHPAEAAEPAEAAE@1@V21@0ABE@Z
-// SYNTHETIC: EXE 0x4c8fc5   ??A?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@std@@QAEAAV?$vector@KV?$allocator@K@std@@@1@ABK@Z
-// SYNTHETIC: EXE 0x4c901b   ??1?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@QAE@XZ
-// SYNTHETIC: EXE 0x4ca2d4   ?clear@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAEXXZ
-// SYNTHETIC: EXE 0x4c9072   ?insert@?$vector@EV?$allocator@E@std@@@std@@QAE?AV?$_Ptrit@EHPAEAAEPAEAAE@2@V32@ABE@Z
-// SYNTHETIC: EXE 0x4c90b6   ?insert@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@QAE?AU?$pair@Viterator@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@_N@2@ABU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@2@@Z
-// SYNTHETIC: EXE 0x4c916c   ?erase@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@0@Z
-// SYNTHETIC: EXE 0x4ca54f   ?erase@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAE?AViterator@12@V312@0@Z
-// SYNTHETIC: EXE 0x4ca2e8   ?insert@?$vector@EV?$allocator@E@std@@@std@@QAEXV?$_Ptrit@EHPAEAAEPAEAAE@2@IABE@Z
-// SYNTHETIC: EXE 0x4c91dd   ?_Erase@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z
-// SYNTHETIC: EXE 0x4c9217   ?_Insert@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@2@@Z
-// SYNTHETIC: EXE 0x4ca5c0   ?erase@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAE?AViterator@12@V312@@Z
-// SYNTHETIC: EXE 0x4ca86e   ?_Erase@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z
-// SYNTHETIC: EXE 0x4ca8a0   ?_Inc@const_iterator@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAEXXZ
-// SYNTHETIC: EXE 0x4ca8d8   ?fill@std@@YAXV?$_Ptrit@EHPAEAAEPAEAAE@1@0ABE@Z
-// SYNTHETIC: EXE 0x4ca8ee   ?copy_backward@std@@YA?AV?$_Ptrit@EHPAEAAEPAEAAE@1@V21@00@Z
-// SYNTHETIC: EXE 0x4c9594   ?_Construct@std@@YAXPAU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@1@ABU21@@Z
-
-// EEMBuildUnit::Execute's std::sort over vector<EEComplexUnit*> with EETileDistanceLess (Dinkum 2.33, deferred
-// template COMDATs; the predicate 0xc995c and the second tree 0xc94b0.., from 0xc7739, are open):
-// TEMPLATE: EXE 0x4c93ab
-// TEMPLATE: EXE 0x4c95b1
-// TEMPLATE: EXE 0x4c95e4
-// TEMPLATE: EXE 0x4c96ec
-// TEMPLATE: EXE 0x4c98ab
-// TEMPLATE: EXE 0x4c9a43
-// TEMPLATE: EXE 0x4c9a87
-// TEMPLATE: EXE 0x4c9ad4
-// TEMPLATE: EXE 0x4c9bf4
-// TEMPLATE: EXE 0x4c9eb7
-// TEMPLATE: EXE 0x4c9f14
-// TEMPLATE: EXE 0x4c9fd7
-// TEMPLATE: EXE 0x4ca051
-// TEMPLATE: EXE 0x4ca1ad
-// TEMPLATE: EXE 0x4ca1fc
-// TEMPLATE: EXE 0x4c7486   EEComplexUnit::CanAttackClass
-// TEMPLATE: EXE 0x4c995c   EETileDistanceLess::operator()(EEComplexUnit*, EEComplexUnit*)
-// TEMPLATE: EXE 0x4c9046   vector<EEUnitGoal*>::push_back (EEMSetRallyGoal)
-// TEMPLATE: EXE 0x4c94b0   std::sort<EEComplexUnit*, EEFarmDistanceGreater> (EEMSmartFarmers) and its helpers
-// TEMPLATE: EXE 0x4c972e
-// TEMPLATE: EXE 0x4c9761
-// TEMPLATE: EXE 0x4c9869
-// TEMPLATE: EXE 0x4c9c27
-// TEMPLATE: EXE 0x4c9cd8
-// TEMPLATE: EXE 0x4c9d1c
-// TEMPLATE: EXE 0x4c9d69
-// TEMPLATE: EXE 0x4c9e84
-// TEMPLATE: EXE 0x4c9f47
-// TEMPLATE: EXE 0x4c9fa4
-// TEMPLATE: EXE 0x4ca0c1
-// TEMPLATE: EXE 0x4ca13d
-// TEMPLATE: EXE 0x4ca240
-// TEMPLATE: EXE 0x4ca290
 
 // New (game messages lane, round 5): the record types' Execute bodies are Rust (ee_netmsg bodies.rs): it reads the
 // members, makes the decisions and asks here for each world call (EE_NETMSG_OP_*: an object, a fact, an action); the
@@ -1174,7 +1042,6 @@ void EEMRecord::Execute()
 
 // (moved from EEClient.cpp in game messages round 6, unchanged: the command messages' local markers; EEClient.cpp
 // keeps the client)
-// FUNCTION: EXE 0x4b86cd
 // Shows the local command markers of a group order (move, attack, target, unload) on the goal the units just
 // queued, else on the first unit whose last goal fits
 // NEAR: the original refuses vector::operator[]'s begin()/operator+ in the first loop (more inline pressure than

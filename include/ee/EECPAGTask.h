@@ -12,8 +12,8 @@ class EEPlayer;
 
 class EECPAGTask {
 public:
-    EECPAGTask();                           // 0x4162f
-    EECPAGTask(const EECPAGTask& inTask);   // 0x41686
+    EECPAGTask();
+    EECPAGTask(const EECPAGTask& inTask);
     virtual ~EECPAGTask() { this->ReleaseUnit(); }  // +0x00 (inline: ??_G 0x4165d expands it)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // +0x04 0x416f5
     virtual long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);                // +0x08 0x41791
@@ -21,8 +21,8 @@ public:
 
     long GetPlayerID();                     // 0x416e3 (-1 without a player)
     EEPlayer* GetPlayer() const { return this->mPlayer; }  // inline: the groups load it before the other pushes (0x456b77)
-    void ReleaseUnit();                     // 0x417f5
-    EECPAGTask& operator=(const EECPAGTask& inTask);   // 0x418c9
+    void ReleaseUnit();
+    EECPAGTask& operator=(const EECPAGTask& inTask);
     void SetUnit(EEComplexUnit* inUnit);    // 0x41912 (referenced)
 
     EECPILocation mLocation;                // +0x04

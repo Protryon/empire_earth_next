@@ -16,8 +16,8 @@ public:
     bool IsStepLimit(long inSteps) const { return false; }
     bool IsRevLimit(long inRevs) const { return false; }
     bool IsCheaper(unsigned long inCost, unsigned long inOld) const { return false; }
-    EEAIAStarContinentGoal();               // 0x155c0
-    virtual ~EEAIAStarContinentGoal();      // 0x1593b
+    EEAIAStarContinentGoal();
+    virtual ~EEAIAStarContinentGoal();
     void CollectTiles();                    // 0x15607: the storage's open and closed nodes get the id; mTiles gets them
     void CreateContinent();                 // 0x156b2: a new EEAIContinent of mTiles, registered in mContinents
     bool AcceptTile(unsigned long inX, unsigned long inY, bool inStart);   // 0x1575c (ret 0xc; the machine passes the flag): whether the fill may take the tile

@@ -116,7 +116,6 @@ public:
     }
 };
 
-// FUNCTION: EXE 0x67d187
 // Creates a civilization builder list box (upgrade lines only selectable, points shown, sorted lines)
 EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::vector<UWideString>& inData,
                              GEFont* inFont, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -134,16 +133,11 @@ EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::
     this->ChangeSelectionIndex(0, false, false);
 }
 
-// SYNTHETIC: EXE 0x67d25c
-// (the scalar deleting destructor, emitted with the vtable; slot EECBUIListBox+0x0)
-
-// FUNCTION: EXE 0x67d278
 // Destroys the list box
 EECBUIListBox::~EECBUIListBox()
 {
 }
 
-// FUNCTION: EXE 0x67d284
 // Adds the category header line for an upgrade line when its category has none yet, then sorts
 bool EECBUIListBox::AddCategory(const UWideString& inLine)
 {
@@ -161,7 +155,6 @@ bool EECBUIListBox::AddCategory(const UWideString& inLine)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67d386
 // Adds a line (and its category header if new) and keeps the lines sorted
 void EECBUIListBox::AddLine(const UWideString& inLine)
 {
@@ -170,7 +163,6 @@ void EECBUIListBox::AddLine(const UWideString& inLine)
         this->SortLines();
 }
 
-// FUNCTION: EXE 0x67d3ad
 // Adds each line of the array with its category header
 void EECBUIListBox::AppendStringArray(std::vector<UWideString>& inLines)
 {
@@ -181,7 +173,6 @@ void EECBUIListBox::AppendStringArray(std::vector<UWideString>& inLines)
     }
 }
 
-// FUNCTION: EXE 0x67d3f9
 // Selects a line; in upgrade-only mode a header line passes the selection on to the nearest upgrade line in the
 // direction of travel, and with upgrade selection off the selection is cleared
 void EECBUIListBox::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
@@ -226,7 +217,6 @@ void EECBUIListBox::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent
         this->ResetSelection();
 }
 
-// FUNCTION: EXE 0x67d4dc
 // Rebuilds the list from upgrade ids: one formatted line per upgrade plus one header per category, sorted
 void EECBUIListBox::SetUpgrades(std::vector<EECivUpgrade>& inUpgrades, bool inFlag)
 {
@@ -255,7 +245,6 @@ void EECBUIListBox::SetUpgrades(std::vector<EECivUpgrade>& inUpgrades, bool inFl
     this->ReformatUpgrades(inFlag);
 }
 
-// FUNCTION: EXE 0x67d6ae
 // Snapshots the list for drawing: no highlight on line 0, the header colour and the show-points flag
 long EECBUIListBox::CopyData()
 {
@@ -267,7 +256,6 @@ long EECBUIListBox::CopyData()
     return theResult;
 }
 
-// FUNCTION: EXE 0x67d6f7
 // Deletes a line and removes its category header when no upgrade of that category is left
 void EECBUIListBox::DeleteLine(unsigned long inLine)
 {
@@ -279,7 +267,6 @@ void EECBUIListBox::DeleteLine(unsigned long inLine)
     }
 }
 
-// FUNCTION: EXE 0x67d761
 // Draws a category header line (the special powers category in bold)
 long EECBUIListBox::DrawCategoryLine(const GERectangle& inRectangle, GEText* inText, const UWideString& inLine)
 {
@@ -312,7 +299,6 @@ long EECBUIListBox::DrawCategoryLine(const GERectangle& inRectangle, GEText* inT
     return theResult;
 }
 
-// FUNCTION: EXE 0x67d8c7
 // Draws an upgrade line: value and name on the left (no value for civ powers), its points on the right
 long EECBUIListBox::DrawUpgradeLine(const GERectangle& inRectangle, GEText* inText, const UWideString& inLine)
 {
@@ -348,14 +334,12 @@ long EECBUIListBox::DrawUpgradeLine(const GERectangle& inRectangle, GEText* inTe
     return theResult;
 }
 
-// FUNCTION: EXE 0x67dac2
 // Draws the list box's polygons
 long EECBUIListBox::DrawPolygons()
 {
     return UIListBox<UWideString>::DrawPolygons();
 }
 
-// FUNCTION: EXE 0x67dac8
 // Draws every visible line as an upgrade or category line, then the scroll bar text
 long EECBUIListBox::DrawTextA()
 {
@@ -381,7 +365,6 @@ long EECBUIListBox::DrawTextA()
     return this->DrawScrollBarText();
 }
 
-// FUNCTION: EXE 0x67dbca
 // Reformats every upgrade line with its current cost (buy) or refund (sell) given its place in its category
 void EECBUIListBox::ReformatUpgrades(bool inFlag)
 {
@@ -400,7 +383,6 @@ void EECBUIListBox::ReformatUpgrades(bool inFlag)
     }
 }
 
-// FUNCTION: EXE 0x67dc4b
 // Reads the category of the line at an index
 bool EECBUIListBox::GetCategoryAt(unsigned long inIndex, UWideString& outCategory)
 {
@@ -411,28 +393,24 @@ bool EECBUIListBox::GetCategoryAt(unsigned long inIndex, UWideString& outCategor
     return theResult;
 }
 
-// FUNCTION: EXE 0x67dc95
 // Reads the category of a formatted line
 bool EECBUIListBox::GetCategory(const UWideString& inLine, UWideString& outCategory)
 {
     return EECBUIListBox::GetToken(inLine, kCivTokenCategory, outCategory);
 }
 
-// FUNCTION: EXE 0x67dca8
 // Reads the cost of a formatted line
 bool EECBUIListBox::GetCost(const UWideString& inLine, unsigned long* outCost)
 {
     return EECBUIListBox::GetNumber(inLine, kCivTokenCost, outCost);
 }
 
-// FUNCTION: EXE 0x67dcbb
 // Reads the upgrade name of a formatted line
 bool EECBUIListBox::GetUpgradeName(const UWideString& inLine, UWideString& outName)
 {
     return EECBUIListBox::GetToken(inLine, kCivTokenUpgradeName, outName);
 }
 
-// FUNCTION: EXE 0x67dcce
 // Finds the index of the line for an upgrade id; returns 3 when it is not listed
 long EECBUIListBox::FindUpgrade(EECivUpgrade inUpgrade, unsigned long* outIndex)
 {
@@ -449,7 +427,6 @@ long EECBUIListBox::FindUpgrade(EECivUpgrade inUpgrade, unsigned long* outIndex)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67dd4f
 // Formats an upgrade as a list line: category/name/bonus/id/cost/points/value, the points being its cost to buy
 // or its refund to sell; false for an upgrade without a level
 bool EECBUIListBox::FormatUpgrade(EECivUpgrade inUpgrade, UWideString& outLine, bool inFlag, long inIndex)
@@ -494,19 +471,6 @@ bool EECBUIListBox::FormatUpgrade(EECivUpgrade inUpgrade, UWideString& outLine, 
     return theResult;
 }
 
-// FUNCTION: EXE 0x67df53
-// Destroys one of FormatUpgrade's local static strings at exit (compiler-generated $E92)
-
-// FUNCTION: EXE 0x67df5e
-// Destroys one of FormatUpgrade's local static strings at exit (compiler-generated $E91)
-
-// FUNCTION: EXE 0x67df69
-// Destroys one of FormatUpgrade's local static strings at exit (compiler-generated $E90)
-
-// FUNCTION: EXE 0x67df74
-// Destroys one of FormatUpgrade's local static strings at exit (compiler-generated $E89)
-
-// FUNCTION: EXE 0x67df7f
 // Finds the header line of a category; returns its index when asked
 bool EECBUIListBox::FindCategory(const UWideString& inCategory, unsigned long* outIndex)
 {
@@ -526,7 +490,6 @@ bool EECBUIListBox::FindCategory(const UWideString& inCategory, unsigned long* o
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e056
 // Tells whether the line at an index is an upgrade line, copying it when asked
 bool EECBUIListBox::IsUpgradeAt(unsigned long inIndex, UWideString* outLine)
 {
@@ -540,7 +503,6 @@ bool EECBUIListBox::IsUpgradeAt(unsigned long inIndex, UWideString* outLine)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e0af
 // Tells whether a formatted line is an upgrade line (it has an upgrade id token)
 bool EECBUIListBox::IsUpgradeLine(const UWideString& inLine)
 {
@@ -551,7 +513,6 @@ bool EECBUIListBox::IsUpgradeLine(const UWideString& inLine)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e0e6
 // Reads the bonus of a formatted line
 bool EECBUIListBox::GetBonus(const UWideString& inLine, unsigned long* outBonus)
 {
@@ -560,7 +521,6 @@ bool EECBUIListBox::GetBonus(const UWideString& inLine, unsigned long* outBonus)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e116
 // Reads the id, bonus and cost of the selected upgrade line; returns 3 when line 0 or nothing is selected
 long EECBUIListBox::GetSelectedUpgrade(EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
 {
@@ -578,7 +538,6 @@ long EECBUIListBox::GetSelectedUpgrade(EECivUpgrade* outUpgrade, unsigned long* 
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e19e
 // Copies the line at an index; false past the end
 bool EECBUIListBox::GetLine(unsigned long inIndex, UWideString& outLine) const
 {
@@ -590,7 +549,6 @@ bool EECBUIListBox::GetLine(unsigned long inIndex, UWideString& outLine) const
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e1d4
 // Reads the token at an index of a '/'-separated line
 bool EECBUIListBox::GetToken(const UWideString& inFormattedString, unsigned long inIndex, UWideString& outEntry)
 {
@@ -603,7 +561,6 @@ bool EECBUIListBox::GetToken(const UWideString& inFormattedString, unsigned long
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e23c
 // Reads the token at an index as an unsigned number (0 when the token is missing)
 bool EECBUIListBox::GetNumber(const UWideString& inLine, unsigned long inIndex, unsigned long* outValue)
 {
@@ -616,7 +573,6 @@ bool EECBUIListBox::GetNumber(const UWideString& inLine, unsigned long inIndex, 
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e297
 // Reads the upgrade id of a formatted line
 bool EECBUIListBox::GetUpgrade(const UWideString& inLine, EECivUpgrade* outUpgrade)
 {
@@ -627,7 +583,6 @@ bool EECBUIListBox::GetUpgrade(const UWideString& inLine, EECivUpgrade* outUpgra
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e2bb
 // Fills the list with every upgrade except the excluded ones, in buy mode
 void EECBUIListBox::SetUpgradesExcept(const std::vector<EECivUpgrade>& inExcluded)
 {
@@ -639,7 +594,6 @@ void EECBUIListBox::SetUpgradesExcept(const std::vector<EECivUpgrade>& inExclude
     this->SetUpgrades(theUpgrades, true);
 }
 
-// FUNCTION: EXE 0x67e346
 // Fills the list with the civilization's own upgrades, in sell mode
 void EECBUIListBox::SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrades)
 {
@@ -647,21 +601,18 @@ void EECBUIListBox::SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrade
     this->SetUpgrades(inUpgrades, false);
 }
 
-// FUNCTION: EXE 0x67e378
 // Handles a mouse button release as a plain list box
 long EECBUIListBox::MouseLButtonUp()
 {
     return UIListBox<UWideString>::MouseLButtonUp();
 }
 
-// FUNCTION: EXE 0x67e37e
 // Handles a mouse move as a plain list box
 long EECBUIListBox::MouseMove(const GE2DPoint& inLocation)
 {
     return UIListBox<UWideString>::MouseMove(inLocation);
 }
 
-// FUNCTION: EXE 0x67e38b
 // Removes the first line of the given category (its header); returns whether one was found
 bool EECBUIListBox::RemoveCategory(const UWideString& inCategory)
 {
@@ -679,7 +630,6 @@ bool EECBUIListBox::RemoveCategory(const UWideString& inCategory)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e426
 // Removes the category header of a deleted upgrade line when no upgrade of that category remains
 bool EECBUIListBox::RemoveCategoryIfEmpty(const UWideString& inFormattedString)
 {
@@ -702,14 +652,12 @@ bool EECBUIListBox::RemoveCategoryIfEmpty(const UWideString& inFormattedString)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67e503
 // Clears the selection (selects line 0 without an event)
 void EECBUIListBox::ResetSelection()
 {
     UIListBox<UWideString>::ChangeSelectionIndex(0, false, false);
 }
 
-// FUNCTION: EXE 0x67e50f
 // Sorts the lines (special powers first, then case-insensitively) when sorting is on
 void EECBUIListBox::SortLines()
 {
@@ -717,7 +665,6 @@ void EECBUIListBox::SortLines()
         std::sort(this->mData.begin(), this->mData.end(), EECBLineSorter());
 }
 
-// FUNCTION: EXE 0x67e55a
 // On tabbing in, moves a selection off a header line in upgrade-only mode and redraws
 void EECBUIListBox::TabbedTo()
 {
@@ -725,111 +672,3 @@ void EECBUIListBox::TabbedTo()
         this->ChangeSelectionIndex(0, false, true);
     this->SetDirty(true);
 }
-
-// FUNCTION: EXE 0x67e5a2
-// Looks up or inserts a category in the map (std::map<UWideString,long>::operator[], template COMDAT)
-
-// FUNCTION: EXE 0x67e5dd
-// Moves the upgrades not in the excluded list to the front (std::remove_if, template COMDAT)
-
-// FUNCTION: EXE 0x67e65f
-// Sorts the list lines with the line sorter (std::sort, template COMDAT)
-
-// FUNCTION: EXE 0x67e71a
-// Finds the first excluded upgrade (std::find_if, template COMDAT of remove_if)
-
-// FUNCTION: EXE 0x67e744
-// Copies the upgrades not in the excluded list (std::remove_copy_if, template COMDAT of remove_if)
-
-// FUNCTION: EXE 0x67e77e
-// Insertion-sorts the list lines (std::_Insertion_sort, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67e7a7
-// Introsorts the list lines (std::_Sort, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67e880
-// Insertion-sorts a sorted-prefix range of lines (std::_Unguarded_insertion_sort, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67e8c0
-// Tells whether an upgrade is in the excluded list (the remove_if predicate)
-
-// FUNCTION: EXE 0x67e8e3
-// Insertion-sorts a range of lines (std::_Insertion_sort_1, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67e9ac
-// Orders two list lines: special powers lines first, then case-insensitively (the sort predicate)
-
-// FUNCTION: EXE 0x67eaff
-// Builds a heap of list lines (std::make_heap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67eb3c
-// Sorts a heap of list lines (std::sort_heap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67eb7b
-// Partitions list lines around a pivot (std::_Unguarded_partition, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67eca5
-// Inserts a line into its sorted place (std::_Unguarded_insert, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ecf9
-// Builds a heap of list lines (std::_Make_heap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ed57
-// Pops the top of a heap of list lines (std::pop_heap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ed80
-// Sifts a line down a heap (std::_Adjust_heap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ee26
-// Pops the top of a heap of list lines (std::_Pop_heap_0, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ee95
-// Sifts a line up a heap (std::_Push_heap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ef08
-// Pops the top of a heap of list lines into a slot (std::_Pop_heap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ef57
-// Tells whether the list box takes the keyboard focus by tabbing (inline in the header)
-
-// FUNCTION: EXE 0x67ef5e
-// Returns the distance between two line iterators (_Ptrit::operator-, template COMDAT)
-
-// FUNCTION: EXE 0x67ef6f
-// Swaps two list lines (std::iter_swap, template COMDAT of sort)
-
-// FUNCTION: EXE 0x67ef94
-// Swaps two list lines through a temporary (std::_Iter_swap, template COMDAT of sort)
-
-// SYNTHETIC: EXE 0x67cfdb
-// SYNTHETIC: EXE 0x67cfe5
-// SYNTHETIC: EXE 0x67cff6
-// SYNTHETIC: EXE 0x67d002
-// SYNTHETIC: EXE 0x67d01e
-// SYNTHETIC: EXE 0x67d028
-// SYNTHETIC: EXE 0x67d039
-// SYNTHETIC: EXE 0x67d045
-// SYNTHETIC: EXE 0x67d061
-// SYNTHETIC: EXE 0x67d06b
-// SYNTHETIC: EXE 0x67d07c
-// SYNTHETIC: EXE 0x67d088
-// SYNTHETIC: EXE 0x67d093
-// SYNTHETIC: EXE 0x67d09d
-// SYNTHETIC: EXE 0x67d0ae
-// SYNTHETIC: EXE 0x67d0ba
-// SYNTHETIC: EXE 0x67d0c5
-// SYNTHETIC: EXE 0x67d0cf
-// SYNTHETIC: EXE 0x67d0e8
-// SYNTHETIC: EXE 0x67d0f4
-// SYNTHETIC: EXE 0x67d0f5
-// SYNTHETIC: EXE 0x67d0ff
-// SYNTHETIC: EXE 0x67d118
-// SYNTHETIC: EXE 0x67d124
-// SYNTHETIC: EXE 0x67d125
-// SYNTHETIC: EXE 0x67d12f
-// SYNTHETIC: EXE 0x67d14a
-// SYNTHETIC: EXE 0x67d156
-// SYNTHETIC: EXE 0x67d157
-// SYNTHETIC: EXE 0x67d161
-// SYNTHETIC: EXE 0x67d17a
-// SYNTHETIC: EXE 0x67d186

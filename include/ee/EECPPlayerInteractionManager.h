@@ -15,10 +15,10 @@ class EEComputerPlayer;
 // both call Copy and return this), Copy 0x895a3.
 struct EECPPIMEntry {
     EECPPIMEntry() { this->Clear(); }
-    EECPPIMEntry(const EECPPIMEntry& inEntry);  // 0x89574
-    void Clear();                               // 0x89586
-    EECPPIMEntry& operator=(const EECPPIMEntry& inEntry);   // 0x89574 (ICF)
-    void Copy(const EECPPIMEntry& inEntry);     // 0x895a3
+    EECPPIMEntry(const EECPPIMEntry& inEntry);
+    void Clear();
+    EECPPIMEntry& operator=(const EECPPIMEntry& inEntry);
+    void Copy(const EECPPIMEntry& inEntry);
 
     long mL00;                              // +0x00
     unsigned long mTime;                    // +0x04 gPhysics->mLD0 + 5000 when sent (compared unsigned)
@@ -33,11 +33,11 @@ struct EECPPIMEntry {
 
 class EECPPlayerInteractionManager {
 public:
-    EECPPlayerInteractionManager(EEComputerPlayer* inComputerPlayer);   // 0x895de
-    virtual ~EECPPlayerInteractionManager();                            // 0x89651 (??_G 0x89635)
+    EECPPlayerInteractionManager(EEComputerPlayer* inComputerPlayer);
+    virtual ~EECPPlayerInteractionManager();
     // 0x8966c: a random string of the id's group (gResource string inID + 0..9), at most once per 5 s per id
     bool SendChat(long inStringID, long inType);
-    bool SendChat(long inStringID, long inType, const UWideString& inString);   // 0x8979b
+    bool SendChat(long inStringID, long inType, const UWideString& inString);
 
     std::map<long, EECPPIMEntry> mEntries;  // +0x04
     std::vector<long> mLastIndex;           // +0x10 (resize(8, -1): the last string index per group)

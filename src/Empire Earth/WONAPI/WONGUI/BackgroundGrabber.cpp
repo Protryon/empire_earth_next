@@ -90,7 +90,6 @@ extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t 
     }
 }
 
-// FUNCTION: WON 0x00736000
 // Creates a grabber with no captured background and a half-strength translucent tint (the Rust grabber's state)
 BackgroundGrabber::BackgroundGrabber()
 {

@@ -35,7 +35,7 @@ public:
     long RestoreManagers(unsigned long inMajorVersion, unsigned long inMinorVersion, long inResult);
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x3d677
     // the computer player's overrides (ret N from the bodies) and members (provisional names)
-    EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID);   // 0x2cf7e
+    EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID);
     void Init();                            // 0x2f1c8 (both ctors: the tuning members from the AI globals, the managers)
     virtual void AddResource(long inIndex, long inAmount);  // +0x48 0x2d1a5
     virtual void DetachUnitFromAI(EEComplexUnit* inUnit);  // +0x4c 0x2db35
@@ -75,12 +75,12 @@ public:
     void ChooseFavoriteSpaceType();
     void Regroup();                         // 0x2e2a3 (Attacked when there is no resource center)
     void EnterEpoch(long inEpoch);          // 0x3c9c5 (GetMaxWidth: a new epoch)
-    void UpdateGroups();                    // 0x3f3f1
+    void UpdateGroups();
     void EnableManagers(unsigned long inTime);  // 0x2d334 (Update) (provisional name)
     void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
     void ChooseCivilization();              // 0x3ca49 (Update, unless gGameOptions.mLoadType) (provisional name)
     void FlagGroup();                       // 0x2e6ae (Update at mNextExpansionTime) (provisional name)
-    void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);  // 0x2edff (ret 8) (provisional name)
+    void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);
     virtual void EpochReached(long inEpoch);  // +0xa4 0x3d45d
     virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac 0x3ed48
     virtual void Pay(EETechnology* inTechnology, long inUnitType, float inFraction);   // +0xb4 0x3ed98 (epochs: free)

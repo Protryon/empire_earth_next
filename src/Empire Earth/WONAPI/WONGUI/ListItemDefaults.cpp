@@ -13,7 +13,6 @@
 namespace WONAPI {
 // ListItem's ctor, Virtual04 and Virtual10 live in ListArea.cpp (same object: the ctor must be seen before
 // ListArea's `new ListItem`).
-// FUNCTION: WON 0x0070a800
 // Leaves the item's size unchanged
 void ListItem::CalcDimensions(ListArea*) {}
 // Ignores the viewport (the linker folds this body into the identical one at 0x004ac9c8)

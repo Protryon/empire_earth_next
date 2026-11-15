@@ -13,7 +13,7 @@ class SESMInstanceNode;
 class EEE3DRain : public EEE3DStorm {
 public:
     EEE3DRain(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inGraphicEffect);   // 0xf7394 (kind 0x2a)
-    EEE3DRain();                            // 0xf743d
+    EEE3DRain();
     virtual ~EEE3DRain();                   // +0x00 0xf74a0 (??_G 0xf7421)
     virtual long DrawPass6();               // +0x18 0xf7b55: draws the drops
     virtual void PrepareQueue();            // +0x2c (empty: ICF-folded into 0xe123d)
@@ -23,12 +23,12 @@ public:
     virtual long StartSounds();             // +0x78 0xf8195: starts the loop and the rumbles
     // the sounds (defined in the .cpp after their first users, so called out of line: 0xf7519.. after the dtor,
     // 0xf8337/0xf835e after SetCursor)
-    void StopSound();                       // 0xf7519
-    void StopRumble();                      // 0xf753e
-    void ReleaseSound();                    // 0xf7563
-    void ReleaseRumble();                   // 0xf758d
-    void SetSound(SESMInstanceNode* inSound);   // 0xf8337
-    void SetRumble(SESMInstanceNode* inSound);  // 0xf835e
+    void StopSound();
+    void StopRumble();
+    void ReleaseSound();
+    void ReleaseRumble();
+    void SetSound(SESMInstanceNode* inSound);
+    void SetRumble(SESMInstanceNode* inSound);
 
     SESMInstanceNode* mSound;               // +0xd0 (the loop)
     SESMInstanceNode* mRumble;              // +0xd4

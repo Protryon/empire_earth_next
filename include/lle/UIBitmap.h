@@ -16,7 +16,7 @@ public:
     virtual long DrawPolygons();
     virtual long DrawTextA();
     GEBitmap* GetBitmap() const { return this->mBitmap; }
-    void SetBitmap(GEBitmap* inBitmap)      // 0x1005d3a1
+    void SetBitmap(GEBitmap* inBitmap)
     {
         if (this->mBitmap)
             this->mBitmap->Dereference();

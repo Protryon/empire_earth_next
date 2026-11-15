@@ -56,34 +56,27 @@
 
 // the unit's named float constants (.rdata 0x440da4..0x440dc0, in this order; reloaded at each use; the spawn's,
 // drift's and spin's are ee_gfx effect_storm.rs's) (provisional names)
-static const float kSnowFlakeWidth = 0.054f;        // 0x440dac
-static const float kSnowFlakeHeight = 0.047f;       // 0x440db0
+static const float kSnowFlakeWidth = 0.054f;
+static const float kSnowFlakeHeight = 0.047f;
 static const float kSnowFadeDistance = 1.0f;        // 0x440db4 (flakes closer to the camera fade)
 
-// FUNCTION: EXE 0x4f9b6d
 // Creates a snow storm over the given tiles for a graphic effect, 5 s long, with no flakes yet
 EEE3DSnow::EEE3DSnow(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inGraphicEffect)
     : EEE3DStorm(0x3d, inTiles, inGraphicEffect)
 {
 }
 
-// SYNTHETIC: EXE 0x4f9bf5
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4f9c11
 // Creates an empty snow storm (for loading)
 EEE3DSnow::EEE3DSnow()
     : EEE3DStorm(0x3d)
 {
 }
 
-// FUNCTION: EXE 0x4f9c87
 // Destroys the snow storm (members and base only)
 EEE3DSnow::~EEE3DSnow()
 {
 }
 
-// FUNCTION: EXE 0x4f9ef5
 // Reads fall speed, spawn height, density and duration from the effect; on first use builds the shared snowflake quad
 // model with textures\snowflake
 void EEE3DSnow::Virtual64()
@@ -137,7 +130,6 @@ void EEE3DSnow::Virtual64()
     this->mModel->ComputeBoundingVolumes();
 }
 
-// FUNCTION: EXE 0x4fa404
 // Draws every queued flake as the camera-facing spinning quad, alpha blended and fading within 1 unit of the camera;
 // stops at the first draw error
 long EEE3DSnow::DrawPass6()

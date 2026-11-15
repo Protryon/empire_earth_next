@@ -16,12 +16,12 @@
 // their defaults, saves and index upkeep are Rust's
 class EESMEffect : public EeScenarioEffectFields {
 public:
-    EESMEffect();                           // 0x1bb5a5
-    ~EESMEffect();                          // 0x1bb609
+    EESMEffect();
+    ~EESMEffect();
     void Copy(const EESMEffect& inEffect);  // 0x1bc60f (field-wise; EEScenarioManager 0x1b000d; provisional name)
     void FreezeUnits(bool inFlag);          // 0x1bf7f9: toggles scenario object unit actions (provisional name)
     void SetUnitsOwner();                  // 0x1bcf61 (transfer selected units; void)
-    void SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);  // 0x1bcb1f
+    void SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);
     void SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);  // (+ SMPA)
     void FaceObject(); // original rotation effect, void ret0
     void SetClassName();                   // 0x1bc942: renames selected unit/class upgrades (provisional name)
@@ -35,11 +35,11 @@ public:
     void ScriptCamera();                   // 0x1c07c4: effect execution helper, original this/no args
     void SetAIVariable();                  // 0x1c0cc9: effect execution helper, original this/no args
     void SetFavoriteUnits();               // 0x1c2507, actual same-this/no-arg effect helper
-    void SetAIToggle();                    // 0x1c26da
-    void SetUnitsStance();                 // 0x1c2811
-    void ChangeAttribute();                // 0x1c2b3e
-    void TaskUnitsToObject();              // 0x1c2f55
-    void TaskUnitsToArea();                // 0x1c42d2
+    void SetAIToggle();
+    void SetUnitsStance();
+    void ChangeAttribute();
+    void TaskUnitsToObject();
+    void TaskUnitsToArea();
     void MaintainObject();                  // ICF-folded empty member 0xe123d (Execute's mAIAction 3)
     void Reset();                           // 0x1bb65a (the ctor's tail; assigns "" to the strings, the numbers below)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1bfa67

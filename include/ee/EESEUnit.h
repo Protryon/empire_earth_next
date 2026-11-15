@@ -36,7 +36,7 @@ struct EeScreensSeUnit;
 
 class EESEUnit : public EEUIFSEMainGroup {
 public:
-    EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* inFont, UIComboBox* inPlayers);   // 0x19a93e
+    EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* inFont, UIComboBox* inPlayers);
     virtual ~EESEUnit();                    // +0x00 0x19bb38 (??_G 0x19bb1c)
     virtual void Update();                  // +0x04 0x19bd4a (each frame: the wall/gate ghosts)
     virtual void Leave();                   // +0x08 0x19c07b (leaves the tab)
@@ -46,11 +46,11 @@ public:
     virtual void UpdateKeys();              // +0x28 0x19cada (the keyboard)
 
     void PlaceWall();                       // 0x19bcd5 (mPlaceWall from mBuildWall's ends)
-    void EndWall();                         // 0x19bd2d
-    void PlaceGate();                       // 0x19bfdc
-    void EndGate();                         // 0x19c026
+    void EndWall();
+    void PlaceGate();
+    void EndGate();
     void ReselectUnitType();                // 0x19c05d (re-selects the unit type at the mouse while placing)
-    void ShowCargo(bool inShow);            // 0x19c141
+    void ShowCargo(bool inShow);
     void ShowUnitStatus(EEUnit* inUnit);    // 0x19c1a1 (the upgrade panel shows inUnit)
     long GetLayer();                        // 0x19c221 (0 world, 1 players, 2 neither radio button)
     float GetRotationAngle();               // 0x19c246 (the rotation button's yaw; EESELoadThread Handle402)

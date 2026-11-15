@@ -8,15 +8,15 @@
 namespace WONAPI {
 class PingLogic : public LobbyLogic {
 public:
-    PingLogic(); // 0x7e6490
+    PingLogic();
     virtual ~PingLogic(); // 0x7e6520; explicit: writes its own vtable pointer
-    virtual void InitComponent(ComponentConfig*); // 0x7e65d0
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7e6680
-    void HandlePingRequest(ReadBuffer&, const IPAddr&); // 0x7e66a0
+    virtual void InitComponent(ComponentConfig*);
+    virtual void HandleComponentEvent(ComponentEvent*);
+    void HandlePingRequest(ReadBuffer&, const IPAddr&);
     void HandleUDPRecv(AsyncOp*); // 0x7e6810, UDP receive completion
     void PingGameDone(AsyncOp*); // 0x7e68b0, PingGameOp completion
-    int GetNumPingsToDo(); // 0x7e6b40
-    void PingGame(LobbyGame*, bool, bool); // 0x7e6b50
+    int GetNumPingsToDo();
+    void PingGame(LobbyGame*, bool, bool);
     void KillPings(int); // 0x7e6db0; the argument is unused
     unsigned short mNextRequestId; // 0x40
     std::list<SmartPtr<LobbyGame> > mPending; // 0x44

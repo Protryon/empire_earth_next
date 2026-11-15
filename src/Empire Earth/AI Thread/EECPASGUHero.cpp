@@ -27,7 +27,6 @@
 #include "ee/EECPASGUHero.h"
 
 
-// FUNCTION: EXE 0x406391
 // Creates the hero entry for a unit in the sub-group
 EECPASGUHero::EECPASGUHero(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPASGUProphet(inUnit, inSubGroup)
@@ -35,30 +34,23 @@ EECPASGUHero::EECPASGUHero(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup
     this->mType = kASGUKindHero;
 }
 
-// SYNTHETIC: EXE 0x4063b4
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4063d0
 // Creates an empty hero entry for the sub-group (no unit yet)
 EECPASGUHero::EECPASGUHero(EECPAttackSubGroup* inSubGroup) : EECPASGUProphet(inSubGroup)
 {
     this->mType = kASGUKindHero;
 }
 
-// FUNCTION: EXE 0x4063ef
 // Destroys the hero entry (base members only)
 EECPASGUHero::~EECPASGUHero()
 {
 }
 
-// FUNCTION: EXE 0x4063fa
 // Switches state the prophet way
 void EECPASGUHero::SetState(long inState, unsigned long inTime)
 {
     EECPASGUProphet::SetState(inState, inTime);
 }
 
-// FUNCTION: EXE 0x40640a
 // Returns true if the hero is in danger the base way or should retreat
 bool EECPASGUHero::IsInDanger()
 {
@@ -68,7 +60,6 @@ bool EECPASGUHero::IsInDanger()
     return theResult;
 }
 
-// FUNCTION: EXE 0x40641f
 // Returns true below 25% hit points if a target that can hurt the hero is within 7 tiles, or its squared distance
 // is within twice the target's range (the original compares a squared distance with a plain one)
 bool EECPASGUHero::ShouldRetreat()
@@ -93,7 +84,6 @@ bool EECPASGUHero::ShouldRetreat()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4064fd
 // Tests a condition: has-target uses the prophet test while casting a calamity, else the plain unit test;
 // others go to the prophet class
 bool EECPASGUHero::CheckCondition(long inState, unsigned long inTime)
@@ -113,7 +103,6 @@ bool EECPASGUHero::CheckCondition(long inState, unsigned long inTime)
     return theResult;
 }
 
-// FUNCTION: EXE 0x40653b
 // Updates the hero the prophet way
 void EECPASGUHero::Update(unsigned long inTime)
 {
@@ -121,9 +110,7 @@ void EECPASGUHero::Update(unsigned long inTime)
 }
 
 
-// ICF-FOLDED: EXE 0x407efc
 // Looks for a calamity target the prophet way; failing that, a hero able to attack looks for a plain target
-// (no address of its own: the same body as EECPASGUMechProphet::Retarget, which ICF kept; [sib 31])
 bool EECPASGUHero::Retarget()
 {
     bool theResult = EECPASGUProphet::Retarget();

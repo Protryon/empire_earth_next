@@ -16,10 +16,10 @@ struct EEUCUpgradeFactor {
 
 class EEUCUpgradeTable {
 public:
-    EEUCUpgradeTable();                     // 0xdc6cb
+    EEUCUpgradeTable();
     virtual ~EEUCUpgradeTable() {}          // +0x00 (??_G 0xdc8ca)
     static long Load(FSFileSpec* inFile);   // 0xdc6f0 (records with a negative +0xe0 stay NULL)
-    static void Unload();                   // 0xdc88a
+    static void Unload();
 
     EEUCUpgradeFactor mFactors[16];         // +0x04
     long mMaxLevel;                         // +0x84 (record +0xd8)

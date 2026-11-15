@@ -73,20 +73,17 @@
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
-// FUNCTION: EXE 0x5bb5a5
 // Creates a scenario effect with the default settings (see Reset)
 EESMEffect::EESMEffect()
 {
     this->Reset();
 }
 
-// FUNCTION: EXE 0x5bb609
 // Destroys the effect (members only)
 EESMEffect::~EESMEffect()
 {
 }
 
-// FUNCTION: EXE 0x5bb65a
 // Resets every effect setting to its default: an object Create effect, 20 s duration, empty texts and object list
 // (the numbers: ee_scenario fields.rs effect_defaults)
 void EESMEffect::Reset()
@@ -116,7 +113,6 @@ void EESMEffect::Reset()
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPIntelligence.h"
 
-// FUNCTION: EXE 0x5bb82f
 // Has each chosen computer player raise a military group of the target object's unit kind (random min..max count)
 // for its first town, else the largest continent, aimed at a random enemy
 void EESMEffect::BuildObject()
@@ -211,7 +207,6 @@ void EESMEffect::BuildObject()
     }
 }
 
-// FUNCTION: EXE 0x5bbba1
 // Has each chosen computer player form a military group from the listed objects' units (existing ones join, the rest
 // are requested), aimed at the target area or the target object's unit; an attack or a defence group per mIsAttack
 void EESMEffect::CreateAIMilitaryGroup()
@@ -359,7 +354,6 @@ void EESMEffect::CreateAIMilitaryGroup()
     }
 }
 
-// FUNCTION: EXE 0x5bc333
 // Adds or drops an attack or defend target (the target area's AI area or continent, or the target object's living unit)
 // for each chosen computer player; a new target must pass the combat manager's IsValidTarget
 void EESMEffect::ModifyAIMilitaryTarget()
@@ -421,7 +415,6 @@ void EESMEffect::ModifyAIMilitaryTarget()
     }
 }
 
-// FUNCTION: EXE 0x5bc60f
 // Copies another effect's settings, texts and object list
 void EESMEffect::Copy(const EESMEffect& inEffect)
 {
@@ -437,7 +430,6 @@ void EESMEffect::Copy(const EESMEffect& inEffect)
     this->mObjects = inEffect.mObjects;
 }
 
-// FUNCTION: EXE 0x5bc942
 // Gives the scenario object's living units the effect's new name (with no units, the class upgrade of a picked type
 // for each owner player); then refreshes the main game panel
 void EESMEffect::SetClassName()
@@ -471,23 +463,6 @@ void EESMEffect::SetClassName()
         gUIManager->GetMainGameForm()->mRefreshGroup = true;
 }
 
-// FUNCTION: EXE 0x5bcae9
-// Returns the player's upgrade record for a unit type (EEPlayer::GetUpgrade)
-// Inline EEPlayer::GetUpgrade(long), emitted by SetClassName; existing mUnitClassUpgrades vector at +0x884.
-
-// FUNCTION: EXE 0x5bcaf9
-// Returns the unit class's unit type (EEUnitClass::GetUnitType)
-// Inline EEUnitClass::GetUnitType() const, emitted by SetClassName; mUnitType at +0x1bc.
-
-// FUNCTION: EXE 0x5bcb00
-// Sets the upgrade record's display name (EEUnitClassUpgrade::SetName)
-// Inline EEUnitClassUpgrade::SetName(UWideString), emitted by SetClassName; by-value argument, mName at +0x4c.
-
-// FUNCTION: EXE 0x5bcb1b
-// Returns the unit's upgrade record (EEUnit::GetStats)
-// Inline EEUnit::GetStats(), emitted by SetClassName; mStats at +0x34.
-
-// FUNCTION: EXE 0x5bcb1f
 // Sets, raises or lowers a player value: a resource, the population cap (also queued as a pending effect), difficulty,
 // a scenario variable, a tribute or other statistic or the mining limit; any/all resources recurse per resource
 void EESMEffect::SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount)
@@ -519,7 +494,6 @@ struct EESMUnitPriorityLess {
 // Original no-/Og: frame0x38 and memory-resident inline getter temporaries. The pragma alone
 // makes this natural comparator exact200/200B; normal-Og version is73B (A/B proof).
 #pragma optimize("g", off)
-// FUNCTION: EXE 0x5bce99
 // Orders units for SetUnitsOwner: non-farms before farms, otherwise the higher unit id first
 bool EESMUnitPriorityLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 {
@@ -539,7 +513,6 @@ bool EESMUnitPriorityLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 #pragma optimize("g", on)
 
 
-// FUNCTION: EXE 0x5bcf61
 // Converts the scenario object's living units (farms last, newest first) to a player picked from the new-owner setting
 // for each unit; nature (player 0) is never picked
 void EESMEffect::SetUnitsOwner()
@@ -578,7 +551,6 @@ void EESMEffect::SetUnitsOwner()
 
 void EEChangeUnit(unsigned long, bool, EEUnit*, long, unsigned long, bool, long);
 
-// FUNCTION: EXE 0x5bd099
 // Creates units for the scenario object (a random min..max count per chosen owner) or copies of its existing ones,
 // placed by the object's rules and finished; a newly created set becomes the object's units (the counts, owners and
 // classes: ee_scenario create.rs create_units; each unit EESMCreateUnit below)
@@ -670,7 +642,6 @@ static const float kSMEHourFraction = 1.0f / 24.0f;
 static const float kSMEOneDegree = 0.017453292f;
 static const float kSMEZoomStep = 0.02f;
 
-// FUNCTION: EXE 0x5bd5eb
 // Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
 // media (sound, text, dialogue, chat), a game action (time of day, calamity, graphic effect, cinematic) or an AI action
 void EESMEffect::Execute(bool inIsCinematic)
@@ -1189,7 +1160,6 @@ void EESMEffect::MaintainObject()
 {
 }
 
-// FUNCTION: EXE 0x5bef17
 // Copies a message text, replacing each /#OA, /#PA or /#OC tag and its 4-digit id with an object's attribute value,
 // a player condition's current value or an object's unit count
 void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
@@ -1207,7 +1177,6 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
 }
 
 
-// FUNCTION: EXE 0x5bf5d8
 // Turns the scenario object's idle living units to face mAttributeAmount degrees, at once (mUsesPercent) or with a turn
 // goal; units already within one degree are left alone
 void EESMEffect::FaceObject()
@@ -1241,7 +1210,6 @@ void EESMEffect::FaceObject()
 }
 
 
-// FUNCTION: EXE 0x5bf7f9
 // Freezes the scenario object's living units (stopped, aircraft circle, gates close; disabled, not commandable or
 // deletable) or unfreezes them
 void EESMEffect::FreezeUnits(bool inFlag)
@@ -1284,7 +1252,6 @@ void EESMEffect::FreezeUnits(bool inFlag)
     }
 }
 
-// FUNCTION: EXE 0x5bf9b7
 // Kills (inFlag) or removes the scenario object's living units; off-map units are dropped from their player directly
 void EESMEffect::KillUnits(bool inFlag)
 {
@@ -1305,7 +1272,6 @@ void EESMEffect::KillUnits(bool inFlag)
     }
 }
 
-// FUNCTION: EXE 0x5bfa67
 // Reads the effect from a scenario file, renumbering player actions and unit attributes of older files; returns the
 // first read error (ee_scenario save.rs effect_load)
 long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1317,7 +1283,6 @@ long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_effect_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c0134
 // Writes the effect to a scenario file (civ points from minor version 0x2a, mB193 from 0x14); returns the first write
 // error (ee_scenario save.rs effect_save)
 long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1329,7 +1294,6 @@ long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_effect_save(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c07c4
 // Starts a scripted camera move: along an object's camera-object units, else from the start area or unit to
 // the end area or unit over mIntValue1, at zoom level mIntValue2
 void EESMEffect::ScriptCamera()
@@ -1486,7 +1450,6 @@ void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 
 }   // namespace
 
-// FUNCTION: EXE 0x5c0cc9
 // Sets one AI tuning value (mAIAttribute) on each chosen computer player from mIntValue1/2 and mFloatValue; most
 // building-count settings are also queued as pending effects. The stores are Rust's (ee_scenario aivar.rs: the
 // original's switch as data); the C++ applies them.
@@ -1514,7 +1477,6 @@ void EESMEffect::SetAIVariable()
     }
 }
 
-// FUNCTION: EXE 0x5c2507
 // Sets each chosen computer player's favourite air, land and sea unit types (mObject, mIntValue1, mIntValue2), each
 // only when the class is a moving unit of that kind (air and sea ones must attack)
 void EESMEffect::SetFavoriteUnits()
@@ -1556,7 +1518,6 @@ void EESMEffect::SetFavoriteUnits()
     }
 }
 
-// FUNCTION: EXE 0x5c26da
 // Switches a behaviour of each chosen computer player on or off: active, cheat, attack, defend, build, explore, ignore
 // others or gather
 void EESMEffect::SetAIToggle()
@@ -1601,7 +1562,6 @@ void EESMEffect::SetAIToggle()
 #include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 
-// FUNCTION: EXE 0x5c2811
 // Applies a stance to the scenario object's living units: explore, stop, lock or unlock a gate, patrol their town or a
 // behaviour (scout, stand ground, guard, harass, cautious, aggressive)
 void EESMEffect::SetUnitsStance()
@@ -1707,7 +1667,6 @@ void EESMEffect::SetUnitsStance()
 void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
                 EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode);   // EESMObject.cpp 0x1c8871
 
-// FUNCTION: EXE 0x5c2b3e
 // Changes an attribute of the scenario object's units, or a class attribute for each (unit type, player) it covers;
 // without an object, of the effect's own unit (never as a percentage) or of the player's class upgrade
 void EESMEffect::ChangeAttribute()
@@ -1780,7 +1739,6 @@ void EESMEffect::ChangeAttribute()
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
-// FUNCTION: EXE 0x5c2f55
 // Tasks the scenario object's living units against a second object's units (sources dealt round-robin to targets,
 // grouped per player): calamity, gather, attack, heal, garrison, load, repair, drop off, patrol or move, by mTaskAction
 // mTaskAction > 6 casts calamity mTaskAction - 6; garrison is 5, load 3; a patrol point is unit type 0xdf. The
@@ -2137,7 +2095,6 @@ void EESMEffect::TaskUnitsToObject()
 }
 
 
-// FUNCTION: EXE 0x5c42d2
 // Sends the scenario object's living units to a random tile of the task area (move, patrol, unload or calamity per
 // player); off-map units are placed in the area, and with no area set every unit is taken off the map instead
 // mTaskAction: 0/2 move, 1 patrol, 4 unload, > 6 cast calamity mTaskAction - 6. EESMArea::IsUnset is true for an
@@ -2396,43 +2353,3 @@ void EESMEffect::TaskUnitsToArea()
     }
     gWorld.UpdateActiveUnits();
 }
-
-// TEMPLATE: EXE 0x5c42ce// ?GetComplexUnit@EEUnit@@QBEPAVEEComplexUnit@@XZ (ICF-folded with EECCLeprosy::GetContagionFunctor)
-// TEMPLATE: EXE 0x5c5126
-// ?push_back@?$vector@PAV?$vector@PAVEEUnit@@V?$allocator@PAVEEUnit@@@std@@@std@@V?$allocator@PAV?$vector@PAVEEUnit@@V?$allocator@PAVEEUnit@@@std@@@std@@@2@@std@@QAEXABQAV?$vector@PAVEEUnit@@V?$allocator@PAVEEUnit@@@std@@@2@@Z
-// TEMPLATE: EXE 0x5c5152
-// ?GetNumMessages@EEScenarioManager@@QAEKXZ
-// TEMPLATE: EXE 0x5c516b
-// ?GetPlayer@RTSWorld@@QBEPAVEEPlayer@@K@Z
-// TEMPLATE: EXE 0x5c5176
-// ?sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5233
-// ?_Insertion_sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c525c
-// ?_Sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0HUEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c532f
-// ?_Unguarded_insertion_sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c5360
-// ?_Insertion_sort_1@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c53fd
-// ?make_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5437
-// ?sort_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5478
-// ?_Unguarded_partition@std@@YA?AV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@V21@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c5598
-// ?_Unguarded_insert@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@PAVEEUnit@@UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c55cb
-// ?_Make_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAHPAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c560f
-// ?pop_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5638
-// ?_Adjust_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEEUnit@@UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c56a6
-// ?_Pop_heap_0@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c56f9
-// ?_Push_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEEUnit@@UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5748
-// ?_Pop_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@00PAVEEUnit@@UEESMUnitPriorityLess@@PAH@Z
-// TEMPLATE: EXE 0x5c577c
-// ?GetNewName@EESMEffect@@QBEABVUWideString@@XZ (EESMEffect.h, out of line from SetClassName)

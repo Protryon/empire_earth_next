@@ -11,7 +11,7 @@
 class EEE3DSnow : public EEE3DStorm {
 public:
     EEE3DSnow(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inGraphicEffect);   // 0xf9b6d (kind 0x3d)
-    EEE3DSnow();                            // 0xf9c11
+    EEE3DSnow();
     virtual ~EEE3DSnow();                   // +0x00 0xf9c87 (??_G 0xf9bf5)
     virtual long DrawPass6();               // +0x18 0xfa404: draws the flakes (fading out near the camera)
     virtual void PrepareQueue();            // +0x2c (empty: ICF-folded into 0xe123d)

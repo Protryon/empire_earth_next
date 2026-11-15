@@ -15,7 +15,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x0078f3e0
 // Handles a button config key (FONT, TEXTCOLOR, alignment, TRANSPARENT, ADJUSTHEIGHTTOFITTEXT, WRAP,
 // text padding increments); other keys go to the button config
 bool MSButtonConfig::Virtual24(const std::string& key)
@@ -49,7 +48,6 @@ bool MSButtonConfig::Virtual24(const std::string& key)
     } else return ButtonConfig::Virtual24(key);
     return true;
 }
-// FUNCTION: WON 0x0078f690
 // Handles DIRECTION (Up, Down, Left or Right, any case; other words are ignored); other keys go to the button config
 bool MSArrowButtonConfig::Virtual24(const std::string& key)
 {
@@ -64,7 +62,6 @@ bool MSArrowButtonConfig::Virtual24(const std::string& key)
     } else return ButtonConfig::Virtual24(key);
     return true;
 }
-// FUNCTION: WON 0x0078f7d0
 // Handles LOWERAMOUNT for a tab button; other keys go to the MS button config
 bool MSTabButtonConfig::Virtual24(const std::string& key)
 {
@@ -74,7 +71,6 @@ bool MSTabButtonConfig::Virtual24(const std::string& key)
     else return MSButtonConfig::Virtual24(key);
     return true;
 }
-// FUNCTION: WON 0x0078f8f0
 // Handles FRAMETYPE and UP for a 3D frame; other keys go to the component config
 bool MS3DFrameConfig::Virtual24(const std::string& key)
 {
@@ -91,7 +87,6 @@ bool MS3DFrameConfig::Virtual24(const std::string& key)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x0078f3c0
 // Binds the config to the arrow button it configures
 void MSArrowButtonConfig::SetComponent(Component* component)
 {
@@ -123,7 +118,6 @@ void MSButtonConfig::SetComponent(Component* component)
     ButtonConfig::SetComponent(component);
     this->mMSButton=static_cast<MSButtonBase*>(component);
 }
-// FUNCTION: WON 0x0078f7b0
 // Binds the config to the tab button it configures
 void MSTabButtonConfig::SetComponent(Component* component)
 {
@@ -131,7 +125,3 @@ void MSTabButtonConfig::SetComponent(Component* component)
     this->mMSTabButton=static_cast<MSTabButton*>(component);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0078f3a0
-// (public: __thiscall WONAPI::MSButtonConfig::MSButtonConfig(void)    [??0MSButtonConfig@WONAPI@@QAE@XZ])

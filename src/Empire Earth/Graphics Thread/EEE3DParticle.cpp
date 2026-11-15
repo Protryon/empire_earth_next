@@ -44,18 +44,9 @@
 #include "lle/UMemoryPool.h"
 #include "ee/EEE3DParticle.h"
 
-// SYNTHETIC: EXE 0x4f4bf3
-// SYNTHETIC: EXE 0x4f4bfd
-// SYNTHETIC: EXE 0x4f4c0e
-// SYNTHETIC: EXE 0x4f4c1a
 const UString EEE3DParticle::sData("EEE3DParticle-Data");
-// SYNTHETIC: EXE 0x4f4c36
-// SYNTHETIC: EXE 0x4f4c40
-// SYNTHETIC: EXE 0x4f4c4a
-// SYNTHETIC: EXE 0x4f4c56
 UMemoryPool<EEE3DParticle> EEE3DParticle::sPool;
 
-// FUNCTION: EXE 0x4f4c7b
 // Creates a 3D particle effect of the given kind, cleared and with no references
 EEE3DParticle::EEE3DParticle(long inKind)
     : EEEffect3D(inKind)
@@ -65,7 +56,6 @@ EEE3DParticle::EEE3DParticle(long inKind)
     this->mReferenceCount = 0;
 }
 
-// FUNCTION: EXE 0x4f4cc8
 // Destroys the particle, unloading its graphic object's media
 EEE3DParticle::~EEE3DParticle()
 {
@@ -75,7 +65,6 @@ EEE3DParticle::~EEE3DParticle()
     }
 }
 
-// FUNCTION: EXE 0x4f4cfa
 // Sets the chunk size and chunk limit of the particle memory pool; returns whether it succeeded
 bool EEE3DParticle::SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
 {
@@ -87,7 +76,6 @@ long EEE3DParticle::DrawPass4() { return 0; }
 long EEE3DParticle::DrawPass5() { return 0; }
 void EEE3DParticle::PrepareQueue() {}
 
-// FUNCTION: EXE 0x4f4d0f
 // Updates the particle and queues it in render queue 4 under its effect's texture; returns 7 once expired
 long EEE3DParticle::Queue(EEEffectQueue* inQueues)
 {
@@ -103,7 +91,6 @@ long EEE3DParticle::Queue(EEEffectQueue* inQueues)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f4d77
 // Takes a particle from the pool for a graphic effect, placed at a point at rest, with the effect's duration
 EEE3DParticle* EEE3DParticle::Create(GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect)
 {
@@ -121,7 +108,6 @@ EEE3DParticle* EEE3DParticle::Create(GE3DPoint& inLocation, EEGraphicEffect* inG
     return theParticle;
 }
 
-// FUNCTION: EXE 0x4f4e27
 // Takes a particle from the pool for a graphic effect, placed at the line's start and moving along its direction
 EEE3DParticle* EEE3DParticle::Create(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect)
 {
@@ -140,7 +126,6 @@ EEE3DParticle* EEE3DParticle::Create(GE3DLine& inLine, EEGraphicEffect* inGraphi
     return theParticle;
 }
 
-// FUNCTION: EXE 0x4f4eec
 // Takes a cleared particle from the pool with no graphic effect
 EEE3DParticle* EEE3DParticle::Create()
 {
@@ -152,7 +137,6 @@ EEE3DParticle* EEE3DParticle::Create()
     return theParticle;
 }
 
-// FUNCTION: EXE 0x4f4f18
 // Dumps the particle pool's statistics and frees the pool
 void EEE3DParticle::ReleasePool()
 {
@@ -160,7 +144,6 @@ void EEE3DParticle::ReleasePool()
     EEE3DParticle::sPool.Release();
 }
 
-// FUNCTION: EXE 0x4f4f30
 // Unloads the particle's graphic object media, then releases the base effect's resources
 void EEE3DParticle::ReleaseResources()
 {
@@ -171,7 +154,6 @@ void EEE3DParticle::ReleaseResources()
     EEEffect3D::ReleaseResources();
 }
 
-// FUNCTION: EXE 0x4f4f56
 // Starts the particle: random yaw/pitch/roll unless the effect's int param 1 is set, size from the effect,
 // brightness random in [param 2 - param 3, param 2 + param 3] clamped to 0..1; loads its media
 long EEE3DParticle::SetUp()
@@ -184,7 +166,6 @@ long EEE3DParticle::SetUp()
     return this->mGraphicObject->LoadMedia();
 }
 
-// FUNCTION: EXE 0x4f503c
 // Resets the particle's motion, age, orientation, brightness and timing to zero and drops its graphic object
 void EEE3DParticle::Clear()
 {
@@ -192,7 +173,6 @@ void EEE3DParticle::Clear()
     this->mGraphicObject = NULL;
 }
 
-// FUNCTION: EXE 0x4f50b2
 // Advances the particle by the elapsed game time: drag, gravity, wind drift and rise, bouncing off the terrain when
 // enabled (frozen over an invalid tile); returns 7 once older than the effect's duration
 long EEE3DParticle::Update()
@@ -203,7 +183,6 @@ long EEE3DParticle::Update()
     return ee_gfx_effect_particle_update(this->mRecord, &theTick, &theGround);
 }
 
-// FUNCTION: EXE 0x4f53a3
 // Releases the particle's resources and returns it to the pool
 void EEE3DParticle::LastDereference()
 {
@@ -212,7 +191,6 @@ void EEE3DParticle::LastDereference()
     EEE3DParticle::sPool.Delete(this);
 }
 
-// FUNCTION: EXE 0x4f53bc
 // Reads the particle (velocity, age, orientation, brightness, and from version 0.218 its clock) from a saved game;
 // returns the first read error
 long EEE3DParticle::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -231,7 +209,6 @@ long EEE3DParticle::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f556b
 // Draws the particle model with the effect's colour and growing size, alpha blended and fading with age, or
 // additively lit when the effect's flag 1 is set; restores the model colour, opacity and fog
 long EEE3DParticle::DrawPass6()
@@ -284,7 +261,6 @@ long EEE3DParticle::DrawPass6()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f57fc
 // Writes the particle's velocity, age, orientation, brightness and clock; returns the first write error
 long EEE3DParticle::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -293,7 +269,6 @@ long EEE3DParticle::Save(unsigned long inMajorVersion, unsigned long inMinorVers
     return ee_gfx_effect_save_particle(this->mRecord, &theFile);
 }
 
-// FUNCTION: EXE 0x4f588d
 // Returns 7 once the particle has outlived its duration; otherwise moves its transformation to its new position
 long EEE3DParticle::Step()
 {
@@ -306,14 +281,3 @@ long EEE3DParticle::Step()
     }
     return theResult;
 }
-
-// Naturally emitted UMemoryPool<EEE3DParticle> family and vector deleting destructor.
-// TEMPLATE: EXE 0x4f5912
-// TEMPLATE: EXE 0x4f594c
-// TEMPLATE: EXE 0x4f596e
-// TEMPLATE: EXE 0x4f59db
-// TEMPLATE: EXE 0x4f5a3e
-// TEMPLATE: EXE 0x4f5b2b
-// TEMPLATE: EXE 0x4f5c38
-// SYNTHETIC: EXE 0x4f5cc0
-// TEMPLATE: EXE 0x4f5d21

@@ -43,7 +43,7 @@ struct EEContagionHelperHost {
 class EEContagionHelper : public FSRestorable, public EeContagionHelperFields {
 public:
     EEContagionHelper();                    // 0xb5c89 (EEContagionManager::Load)
-    EEContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity);   // 0xb5ce9
+    EEContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity);
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0xb5feb
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0xb6233
     virtual ~EEContagionHelper();           // +0x10 0xb5d3b (??_G 0xb5ccd)
@@ -55,13 +55,13 @@ public:
     bool AddUnit(EEUnit* inUnit, bool inNotify);   // 0xb5d88: false if it is there already or dead
     // 0xb5ef9: the units within inRadius of inUnit (none while it is inside a container)
     void GetUnitsInArea(float inRadius, EEComplexUnit* inUnit, std::vector<EEComplexUnit*>& outUnits);
-    bool RemoveUnit(EEUnit* inUnit, bool inNotify);   // 0xb60f7
-    std::vector<EEUnit*>::iterator RemoveUnit(std::vector<EEUnit*>::iterator inUnit, bool inNotify);   // 0xb616e
-    void SetCalamity(EECalamity* inCalamity);   // 0xb62c9
-    void SetFunctor(EEContagionFunctor* inFunctor);   // 0xb62d3
+    bool RemoveUnit(EEUnit* inUnit, bool inNotify);
+    std::vector<EEUnit*>::iterator RemoveUnit(std::vector<EEUnit*>::iterator inUnit, bool inNotify);
+    void SetCalamity(EECalamity* inCalamity);
+    void SetFunctor(EEContagionFunctor* inFunctor);
     void SetHelperID(long inHelperID);      // ICF-folded (0x1c1c)
     void SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit);   // 0xb64e8: inNewUnit replaces inOldUnit
-    void Update(float inElapsedTime);       // 0xb6552
+    void Update(float inElapsedTime);
 
     EEUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EEUnit*> mUnits;            // +0x04 (each referenced)

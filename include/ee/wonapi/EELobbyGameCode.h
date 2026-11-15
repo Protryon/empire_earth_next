@@ -48,8 +48,8 @@ class QueueSocket;
 class AsyncOp;
 class EELobbyFileTransfer : public RefCount {
 public:
-    EELobbyFileTransfer();                  // 0x2916b8
-    virtual ~EELobbyFileTransfer();         // 0x29175b
+    EELobbyFileTransfer();
+    virtual ~EELobbyFileTransfer();
 
     EeWonEeXfer* mRust;
     GUIString mName;                        // +0x30 the host's file name (SetFileInfo)
@@ -62,8 +62,8 @@ public:
 // (WONLobby/EELobbyGameHost.cpp) and the eight slot views.
 class EELobbyGame : public LobbyGame {
 public:
-    EELobbyGame();                          // 0x29222b
-    virtual ~EELobbyGame();                 // 0x2922b2
+    EELobbyGame();
+    virtual ~EELobbyGame();
     virtual void PostNetLeaveGameHook();    // +0x18 0x292797 (ICF: +0x1c)
     virtual void NotifyStartGameHook();
     virtual bool TryStartGameHook();        // +0x20 0x292719 (false: everyone is on one team)
@@ -107,11 +107,11 @@ public:
 class EELobbyPlayer : public LobbyPlayer {
 public:
     EELobbyPlayer();                        // 0x299a3f (0x14 bytes)
-    virtual ~EELobbyPlayer();               // 0x299a75
+    virtual ~EELobbyPlayer();
     virtual bool ReadData(ReadBuffer& inBuffer);            // +0x04 0x299a80
     virtual void WriteData(WriteBuffer& outBuffer);         // +0x08 0x299a95
     virtual bool IsTeammate(LobbyPlayer* inOther);          // +0x0c 0x299aa7
-    unsigned char GetTeam();                // 0x299ad1
+    unsigned char GetTeam();
     unsigned char GetSlot() { return this->mSlot; }  // 0x299adf (+0x10)
 
     EELobbyPlayerSlot* mPlayerSlot;         // +0x0c (the slot's view, set by the Rust game)
@@ -125,7 +125,7 @@ public:
 class EELobbyColorButton : public Button {
 public:
     EELobbyColorButton();                   // 0x290578 (0x4c bytes)
-    virtual ~EELobbyColorButton();          // 0x2905ca
+    virtual ~EELobbyColorButton();
     bool SetColor(int inColor);             // 0x2905e8 (0..15)
     int GetColor();                         // mColor (+0x44)
     virtual void Paint(Graphics& inGraphics);                  // +0x18 0x29060b
@@ -137,14 +137,14 @@ public:
 
 class EELobbyColorChooser : public Component {
 public:
-    EELobbyColorChooser();                  // 0x290789
-    virtual ~EELobbyColorChooser();         // 0x2907c2
+    EELobbyColorChooser();
+    virtual ~EELobbyColorChooser();
     virtual void GetDesiredSize(int& outWidth, int& outHeight);   // 0x2908af (120 x 120)
-    virtual void Paint(Graphics& inGraphics);   // 0x2908c1
-    virtual void MouseExit();               // 0x290894
-    virtual void MouseDown(int inA, int inB, int inC);   // 0x29086e
-    virtual void MouseMove(int inX, int inY);   // 0x290801
-    virtual void AddedToParent();           // 0x2907cd
+    virtual void Paint(Graphics& inGraphics);
+    virtual void MouseExit();
+    virtual void MouseDown(int inA, int inB, int inC);
+    virtual void MouseMove(int inX, int inY);
+    virtual void AddedToParent();
 
     EeWonEeColor* mRust;
 };
@@ -195,7 +195,7 @@ public:
 // the lobby's configuration: WONAPI's plus the file transfer port (0xfc bytes; vtable 0x44c610)
 class EELobbyConfig : public LobbyConfig {
 public:
-    EELobbyConfig();                        // 0x294dbe
+    EELobbyConfig();
 
     unsigned short mFileTransferPort;       // +0xf8 "EEFileTransferPort" (8889)
 };
@@ -212,10 +212,10 @@ public:
 }
 
 // the lobby's glue (R6 WONLobby round 6: ee_won eeglue.rs; the entry points are WONLobby/EELobbyGlueHost.cpp's)
-bool EELobbyIsConnectDialogRunning();                       // 0x295d52
-void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected);  // 0x295cab
-void EELobbyCancelConnectDialog();                          // 0x295cc3
-WONAPI::EELobbyFileDialog* EELobbyGetFileDialog();         // 0x295c0b
+bool EELobbyIsConnectDialogRunning();
+void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected);
+void EELobbyCancelConnectDialog();
+WONAPI::EELobbyFileDialog* EELobbyGetFileDialog();
 
 // EELobbyResource.cpp
 WONAPI::ResourceConfigTablePtr EELobbyResource_Init(WONAPI::ResourceConfigTable* inCollection);
@@ -233,27 +233,27 @@ class UWideString;
 // 0x297f2d: a saved game's file length and header checksum (false when it cannot be read)
 bool EELobbyGetSavedGameInfo(const char* inFile, unsigned long& outLength, unsigned long& outChecksum);
 bool EELobbyLoadSavedGame(const char* inFile);              // 0x298005 (checks the room's players against it)
-WONAPI::GUIString EELobbyToGUIString(const UWideString& inText);    // 0x2981ff
+WONAPI::GUIString EELobbyToGUIString(const UWideString& inText);
 void EELobbyFillMapTypeCombo(WONAPI::ComboBox* inCombo);    // 0x29876a (fills the map types)
 unsigned long EELobbyGetNumMapTypes();                      // 0x298824 (jmp EERMGetNumberOfGenerators)
 void EELobbySetDefaultGameOptions(WONAPI::EELobbyGame* inGame);  // 0x2988d8 (the preferences' last game options)
 const WONAPI::GUIString& EELobbyFn2988E9();                 // 0x2988e9 (a function-local static GUIString)
-void EELobbyGetVersion(WONAPI::GUIString& outVersion, unsigned long& outChecksum);    // 0x2989b8
+void EELobbyGetVersion(WONAPI::GUIString& outVersion, unsigned long& outChecksum);
 // the 0x296aaa unit
-void EELobbyClose();                                        // 0x297e51
-bool EELobbyHostGame();                                     // 0x296d1e
+void EELobbyClose();
+bool EELobbyHostGame();
 unsigned short EELobbyGetFileTransferPort();                // 0x295bf5 (EELobbyInit.cpp)
 
 // WONAPI lobby functions the init calls (provisional names)
 namespace WONAPI {
-int LobbyDoDialog(Component* inDialog);     // 0x358e50
+int LobbyDoDialog(Component* inDialog);
 // 0x358f20 (cdecl): a yes/no box
 int LobbyMessageBoxYesNo(const GUIString& inTitle, const GUIString& inText, bool inFlag);
-void LobbyMessageBox(const GUIString& inTitle, const GUIString& inText);   // 0x358eb0
+void LobbyMessageBox(const GUIString& inTitle, const GUIString& inText);
 bool LobbyAddComponentLoader(ResourceConfigTable* inCollection, void (*inFunc)(ComponentConfig* inConfig)); // 0x361fb0 (the init ignores the result)
-void LobbyAddGameOption(const GUIString& inOption, const GUIString& inValue, bool inFlag);   // 0x35e040
-void LobbySetProductName(const std::wstring& inLoginCommunity, const char* inHashFileListStr); // 0x362150
-extern GUIString gEmptyGUIString;           // 0x966244
+void LobbyAddGameOption(const GUIString& inOption, const GUIString& inValue, bool inFlag);
+void LobbySetProductName(const std::wstring& inLoginCommunity, const char* inHashFileListStr);
+extern GUIString gEmptyGUIString;
 }
 
 #endif

@@ -11,7 +11,6 @@
 #include "ee/EECivilization.h"
 #include "ee/EECBCivilizationCreator.h"
 
-// FUNCTION: EXE 0x67c8b9
 // Creates the civilization creator's editable copy of a civilization; an unlimited one starts with 0 points
 EECBCivilizationCreator::EECBCivilizationCreator(EECivilization* inCivilization, bool inIsUnlimited)
     : EECBEditableCivilization(inCivilization, false)
@@ -21,7 +20,6 @@ EECBCivilizationCreator::EECBCivilizationCreator(EECivilization* inCivilization,
         this->mPointsLeft = 0;
 }
 
-// FUNCTION: EXE 0x67c8e2
 // Returns the points left to spend, always 0 in unlimited mode
 unsigned long EECBCivilizationCreator::GetPointsLeft()
 {
@@ -30,7 +28,6 @@ unsigned long EECBCivilizationCreator::GetPointsLeft()
     return EECBEditableCivilization::GetPointsLeft();
 }
 
-// FUNCTION: EXE 0x67c8f0
 // Returns the maximum points; in unlimited mode the points spent so far
 long EECBCivilizationCreator::GetMaxPoints()
 {
@@ -39,7 +36,6 @@ long EECBCivilizationCreator::GetMaxPoints()
     return EECBEditableCivilization::GetMaxPoints();
 }
 
-// FUNCTION: EXE 0x67c8ff
 // Adds an upgrade if its cost is affordable (always in unlimited mode, where the cost counts up as spent)
 bool EECBCivilizationCreator::AddUpgrade(EECivUpgrade inCount)
 {
@@ -59,7 +55,6 @@ bool EECBCivilizationCreator::AddUpgrade(EECivUpgrade inCount)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67c954
 // Removes an upgrade and refunds its cost (unlimited mode: subtracts it from the points spent)
 bool EECBCivilizationCreator::RemoveUpgrade(EECivUpgrade inUpgrade)
 {

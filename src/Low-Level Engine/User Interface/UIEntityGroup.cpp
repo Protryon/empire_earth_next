@@ -68,7 +68,6 @@ extern "C" unsigned long ee_uicpp_group(void* inGroup, int inCall, unsigned long
     }
 }
 
-// FUNCTION: LLE 0x1006e424
 // Disables the group: hides its shown buttons on the current form (tabbing past them) and disables its hotkeys
 // (the loop is Rust: ee_ui entity_group.rs)
 void UIEntityGroup::Disable()
@@ -77,7 +76,6 @@ void UIEntityGroup::Disable()
     ee_ui_group_disable(this);
 }
 
-// FUNCTION: LLE 0x1006e4df
 // Enables the group: redraws its buttons and enables its hotkeys
 void UIEntityGroup::Enable()
 {
@@ -85,7 +83,6 @@ void UIEntityGroup::Enable()
     ee_ui_group_enable(this);
 }
 
-// FUNCTION: LLE 0x1006e520
 // Removes an entity from the group; returns not-found if it is not a member
 long UIEntityGroup::RemoveEntity(UIEntity* inEntity)
 {
@@ -97,32 +94,3 @@ long UIEntityGroup::RemoveEntity(UIEntity* inEntity)
     }
     return theResult;
 }
-
-// Template COMDAT (vector<UIEntity*>::erase)
-// FUNCTION: LLE 0x1006e584
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1006e304
-// SYNTHETIC: LLE 0x1006e30e
-// SYNTHETIC: LLE 0x1006e31e
-// SYNTHETIC: LLE 0x1006e32a
-// SYNTHETIC: LLE 0x1006e334
-// SYNTHETIC: LLE 0x1006e33e
-// SYNTHETIC: LLE 0x1006e34e
-// SYNTHETIC: LLE 0x1006e35a
-// SYNTHETIC: LLE 0x1006e364
-// SYNTHETIC: LLE 0x1006e36e
-// SYNTHETIC: LLE 0x1006e37e
-// SYNTHETIC: LLE 0x1006e38a
-// SYNTHETIC: LLE 0x1006e394
-// SYNTHETIC: LLE 0x1006e39e
-// SYNTHETIC: LLE 0x1006e3ae
-// SYNTHETIC: LLE 0x1006e3ba
-// SYNTHETIC: LLE 0x1006e3c4
-// SYNTHETIC: LLE 0x1006e3ce
-// SYNTHETIC: LLE 0x1006e3de
-// SYNTHETIC: LLE 0x1006e3ea
-// SYNTHETIC: LLE 0x1006e3f4
-// SYNTHETIC: LLE 0x1006e3fe
-// SYNTHETIC: LLE 0x1006e40e
-// SYNTHETIC: LLE 0x1006e41a

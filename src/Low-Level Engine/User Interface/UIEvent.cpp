@@ -81,56 +81,26 @@ extern "C" void ee_uicpp_event_add(int inKind, void* inOwner, unsigned long inEv
 extern "C" long ee_uicpp_event_initialize(void* inEvent) { return UIEventRust::Initialize(inEvent); }
 extern "C" long ee_uicpp_event_uninitialize(void* inEvent) { return UIEventRust::Uninitialize(inEvent); }
 
-// FUNCTION: LLE 0x1006f398
 // Loads the control events from the UI database file and adds each to its control table; returns the read result
 long UIEvent::CreateControlEvents(FSFileSpec& inFile)
 {
     return ee_ui_event_create(&inFile, 0, NULL);
 }
 
-// FUNCTION: LLE 0x1006f42a
 // Loads the form events from the UI database file and adds each to its form; returns the read result
 long UIEvent::CreateFormEvents(FSFileSpec& inFile, UIManager* inManager)
 {
     return ee_ui_event_create(&inFile, 1, inManager);
 }
 
-// FUNCTION: LLE 0x1006f4be
 // Counts one more user of the event, initialising it on the first
 long UIEvent::Initialize()
 {
     return ee_ui_event_initialize(&this->mInitializeCount, this);
 }
 
-// FUNCTION: LLE 0x1006f4d6
 // Counts one user less, uninitialising the event when the last one leaves (also decrements a count already at 0)
 long UIEvent::Uninitialize()
 {
     return ee_ui_event_uninitialize(&this->mInitializeCount, this);
 }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1006f278
-// SYNTHETIC: LLE 0x1006f282
-// SYNTHETIC: LLE 0x1006f292
-// SYNTHETIC: LLE 0x1006f29e
-// SYNTHETIC: LLE 0x1006f2a8
-// SYNTHETIC: LLE 0x1006f2b2
-// SYNTHETIC: LLE 0x1006f2c2
-// SYNTHETIC: LLE 0x1006f2ce
-// SYNTHETIC: LLE 0x1006f2d8
-// SYNTHETIC: LLE 0x1006f2e2
-// SYNTHETIC: LLE 0x1006f2f2
-// SYNTHETIC: LLE 0x1006f2fe
-// SYNTHETIC: LLE 0x1006f308
-// SYNTHETIC: LLE 0x1006f312
-// SYNTHETIC: LLE 0x1006f322
-// SYNTHETIC: LLE 0x1006f32e
-// SYNTHETIC: LLE 0x1006f338
-// SYNTHETIC: LLE 0x1006f342
-// SYNTHETIC: LLE 0x1006f352
-// SYNTHETIC: LLE 0x1006f35e
-// SYNTHETIC: LLE 0x1006f368
-// SYNTHETIC: LLE 0x1006f372
-// SYNTHETIC: LLE 0x1006f382
-// SYNTHETIC: LLE 0x1006f38e

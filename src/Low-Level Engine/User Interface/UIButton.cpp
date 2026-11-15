@@ -106,7 +106,6 @@ struct UIButtonHost {
 typedef EeUiButtonCall C;
 #define EE_UI_BUTTON(c, ...) UIButtonHost::Call(this, C::c, ##__VA_ARGS__)
 
-// FUNCTION: LLE 0x1005e59c
 // Creates a button with normal, focused and pressed bitmaps (pressed defaults to normal) and no text or sounds
 UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
                    GEBitmap* inPressedBitmap, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -117,50 +116,32 @@ UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFoc
     this->mRust = ee_ui_button_new(this, UIButtonHost::Op, inNormalBitmap, inFocusedBitmap, inPressedBitmap);
 }
 
-// FUNCTION: LLE 0x1005e70b
 UIButton::~UIButton() { ee_ui_button_free(this->mRust); }
-// FUNCTION: LLE 0x1005e7bf
 void UIButton::ButtonDown() { EE_UI_BUTTON(ButtonDown); }
-// FUNCTION: LLE 0x1005e832
 void UIButton::ButtonUp() { EE_UI_BUTTON(ButtonUp); }   // Fixed (kept): plays the button-up sound
-// FUNCTION: LLE 0x1005e8b4
 void UIButton::ChangeFont(GEFont* inFont) { EE_UI_BUTTON(ChangeFont, (intptr_t)inFont); }
-// FUNCTION: LLE 0x1005e8dd
 long UIButton::CopyData() { return (long)EE_UI_BUTTON(CopyData); }
-// FUNCTION: LLE 0x1005eb30
 long UIButton::DrawPolygons() { return (long)EE_UI_BUTTON(DrawPolygons); }
-// FUNCTION: LLE 0x1005eb80
 long UIButton::DrawTextA() { return (long)EE_UI_BUTTON(DrawText); }
-// FUNCTION: LLE 0x1005ebcf
 long UIButton::MouseLButtonDown() { return (long)EE_UI_BUTTON(MouseLButtonDown); }
-// FUNCTION: LLE 0x1005ebf8
 long UIButton::MouseLButtonUp() { return (long)EE_UI_BUTTON(MouseLButtonUp); }
-// FUNCTION: LLE 0x1005ec54
 long UIButton::MouseMove(const GE2DPoint& inLocation)
 {
     return (long)UIButtonHost::CallF(this, C::MouseMove, inLocation.GetX(), inLocation.GetY());
 }
-// FUNCTION: LLE 0x1005ece9
 void UIButton::MouseOver() { EE_UI_BUTTON(MouseOver); }
-// FUNCTION: LLE 0x1005ed04
 void UIButton::SetButtonDownSound(const UString& inName) { EE_UI_BUTTON(SetButtonDownSound, (intptr_t)&inName); }
-// FUNCTION: LLE 0x1005ed3f
 void UIButton::SetButtonUpSound(const UString& inName) { EE_UI_BUTTON(SetButtonUpSound, (intptr_t)&inName); }
-// FUNCTION: LLE 0x1005ed7a
 void UIButton::SetLocation(const GE2DPoint& inLocation)
 {
     UIButtonHost::CallF(this, C::SetLocation, inLocation.GetX(), inLocation.GetY());
 }
-// FUNCTION: LLE 0x1005edf1
 void UIButton::SetText(const UWideString& inText, GEFont* inFont)
 {
     EE_UI_BUTTON(SetText, (intptr_t)&inText, (intptr_t)inFont);
 }
-// FUNCTION: LLE 0x1005ee67
 void UIButton::TabbedTo() { EE_UI_BUTTON(TabbedTo); }
-// FUNCTION: LLE 0x1005ee77
 void UIButton::TabbedFrom() { EE_UI_BUTTON(TabbedFrom); }
-// FUNCTION: LLE 0x1005eea6
 long UIButton::UpdateKeyboard() { return (long)EE_UI_BUTTON(UpdateKeyboard); }   // Fixed (kept): a key press on it
 
 // The header's members (the original's inline ones, emitted by UIBlinkingButton.cpp)
@@ -194,29 +175,3 @@ void UIButton::SetTextRectangle(const GERectangle& inRectangle)
 }
 void UIButton::ReplaceNormalBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplaceNormalBitmap, (intptr_t)inBitmap); }
 void UIButton::ReplacePressedBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplacePressedBitmap, (intptr_t)inBitmap); }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1005e47c
-// SYNTHETIC: LLE 0x1005e486
-// SYNTHETIC: LLE 0x1005e496
-// SYNTHETIC: LLE 0x1005e4a2
-// SYNTHETIC: LLE 0x1005e4ac
-// SYNTHETIC: LLE 0x1005e4b6
-// SYNTHETIC: LLE 0x1005e4c6
-// SYNTHETIC: LLE 0x1005e4d2
-// SYNTHETIC: LLE 0x1005e4dc
-// SYNTHETIC: LLE 0x1005e4e6
-// SYNTHETIC: LLE 0x1005e4f6
-// SYNTHETIC: LLE 0x1005e502
-// SYNTHETIC: LLE 0x1005e50c
-// SYNTHETIC: LLE 0x1005e516
-// SYNTHETIC: LLE 0x1005e526
-// SYNTHETIC: LLE 0x1005e532
-// SYNTHETIC: LLE 0x1005e53c
-// SYNTHETIC: LLE 0x1005e546
-// SYNTHETIC: LLE 0x1005e556
-// SYNTHETIC: LLE 0x1005e562
-// SYNTHETIC: LLE 0x1005e56c
-// SYNTHETIC: LLE 0x1005e576
-// SYNTHETIC: LLE 0x1005e586
-// SYNTHETIC: LLE 0x1005e592

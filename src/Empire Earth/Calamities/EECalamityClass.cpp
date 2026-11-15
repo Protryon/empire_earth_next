@@ -44,7 +44,6 @@
 
 static_assert(sizeof(EECalamityData) == sizeof(EeCalamityData), "the db record as ee_tech reads it");
 
-// FUNCTION: EXE 0x4adcd9
 // Creates a calamity class with no numbers, effects, sounds or functor
 EECalamityClass::EECalamityClass()
     : EeCalamityClassFields(), mGraphicEffect1(NULL), mGraphicEffect2(NULL), mGraphicEffect3(NULL),
@@ -52,31 +51,24 @@ EECalamityClass::EECalamityClass()
 {
 }
 
-// FUNCTION: EXE 0x4adceb
 // Returns the power cost of casting the calamity
 long EECalamityClass::GetCost()
 {
     return this->mCost;
 }
 
-// FUNCTION: EXE 0x4adcef
 // Returns -1: no default target
 long EECalamityClass::GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool)
 {
     return -1;
 }
 
-// FUNCTION: EXE 0x4adcf5
 // Returns the unit set the calamity affects
 unsigned long EECalamityClass::GetUnitSet()
 {
     return this->mUnitSet;
 }
 
-// SYNTHETIC: EXE 0x4adcf9
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4add15
 // Destroys the calamity class: its class's releases in its order (effects dereferenced, the functor deleted, the
 // volcano's sample unloaded; ee_tech calamity_class.rs media_step)
 EECalamityClass::~EECalamityClass()
@@ -98,7 +90,6 @@ EECalamityClass::~EECalamityClass()
     }
 }
 
-// FUNCTION: EXE 0x4add1c
 // Reads the calamity data: the common fields (class, lifetime, unit set, cost, range, immunity and
 // cast-by-all-selected flags, name and id), then the class's own: its effects and sounds fetched as it fetched them,
 // its numbers, its contagion functor (ee_tech calamity_class.rs)
@@ -218,7 +209,6 @@ void EECalamityClass::Reset(EECalamity* inCalamity)
                                                                                              theTargetUnit);
 }
 
-// FUNCTION: EXE 0x4add8a
 // Ages the calamity (and its contagion helper, if given); returns 7 once its lifetime is over, else 0
 long EECalamityClass::UpdateTimeAlive(EECalamity* inCalamity, float inElapsedTime, long inHelperID)
 {
@@ -234,7 +224,6 @@ long EECalamityClass::UpdateTimeAlive(EECalamity* inCalamity, float inElapsedTim
     return theAge.done ? 7 : 0;
 }
 
-// FUNCTION: EXE 0x4adde9
 // Updates the calamity's main or secondary sound for the target location with the given falloff; a volume other than
 // -1 replaces the computed one (clamped to 0..1)
 void EECalamityClass::UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff,
@@ -258,7 +247,6 @@ void EECalamityClass::UpdateSound(EECalamity* inCalamity, EESoundObject* inSound
     gSoundManager->SetSoundParameters(theNode, theVolume, thePan, thePitch);
 }
 
-// FUNCTION: EXE 0x4ade97
 // Checks whether the calamity can be cast at the tile with no caster
 long EECalamityClass::CanCast(EEUnit* inTargetUnit, unsigned long inX, unsigned long inY, bool inCheck)
 {
@@ -266,7 +254,6 @@ long EECalamityClass::CanCast(EEUnit* inTargetUnit, unsigned long inX, unsigned 
     return this->CanCastAt(NULL, theLocation, inX, inY, inCheck, inTargetUnit);
 }
 
-// FUNCTION: EXE 0x4adec7
 // Returns 0 if the caster (or nature) is alive with enough power and sees the tile, 2 if immunity blocks it there,
 // else 1; always 1 without the check flag
 long EECalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
@@ -331,7 +318,6 @@ void EECalamityClass::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
     MediaSteps(this, EE_CALAMITY_MEDIA_LOAD, inPlayer, inIsOnDemand);
 }
 
-// ICF-FOLDED: EXE 0x6907a3 (the base's empty body); EECCVolcano::Place 0xb5137
 // The volcano makes units step aside from its site at the tile; nothing for the other classes
 void EECalamityClass::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY)
 {
@@ -341,7 +327,6 @@ void EECalamityClass::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY
     EEStepAsideFromSite(NULL, gUnitClassTable[this->mUnitClassIndex], inUnit->mPlayer, theTile, 1);
 }
 
-// FUNCTION: EXE 0x4b0e20
 // Returns the game variant with the given index
 // Probably inline in the real header (an out-of-line COMDAT right after its first user, EECCEarthquake's Update);
 // defined here, with the earthquake's update parameters (Update above)

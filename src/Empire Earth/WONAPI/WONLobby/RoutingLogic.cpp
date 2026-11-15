@@ -127,7 +127,6 @@ namespace WONAPI {
 
 
 
-// FUNCTION: WON 0x007e7200
 // Looks up the add-friend, admin-action, bad-user, create-room, password and room dialogs from the lobby layout
 void RoutingLogic::InitComponent(ComponentConfig* inConfig)
 {
@@ -140,7 +139,6 @@ void RoutingLogic::InitComponent(ComponentConfig* inConfig)
 }
 
 
-// FUNCTION: WON 0x007e6e80
 // Creates the Internet lobby logic with an empty server list and game list, not idle and not yet a moderator
 RoutingLogic::RoutingLogic()
 {
@@ -154,7 +152,6 @@ RoutingLogic::RoutingLogic()
     this->mLastServerRefresh = 0;
 }
 
-// FUNCTION: WON 0x007e7070
 // Destroys the Internet lobby logic (members only)
 RoutingLogic::~RoutingLogic() {}
 
@@ -166,7 +163,6 @@ public:
     RoutingLogic* mLogic;
 };
 
-// FUNCTION: WON 0x007eaea0
 // Creates a game room on the current or default server for the hosted game and joins it as captain; false on failure
 bool RoutingLogic::HostGame(LobbyGame* inGame)
 {
@@ -190,7 +186,6 @@ bool RoutingLogic::HostGame(LobbyGame* inGame)
     return true;
 }
 
-// FUNCTION: WON 0x007eafd0
 // Joins the room of an Internet game on the current server and attaches its player list; false on failure
 bool RoutingLogic::JoinGame(LobbyGame* inGame)
 {
@@ -204,7 +199,6 @@ bool RoutingLogic::JoinGame(LobbyGame* inGame)
     return true;
 }
 
-// FUNCTION: WON 0x007eeaa0
 // Disconnects the server being connected to (unless it is the current one) and forgets it
 void RoutingLogic::ClearPendingServer()
 {
@@ -213,7 +207,6 @@ void RoutingLogic::ClearPendingServer()
     this->mPendingServer = NULL;
 }
 
-// FUNCTION: WON 0x007e72b0
 // Returns the room flags for a group id: 5 for the joined chat room, 6 for the joined game room, else 0
 int RoutingLogic::GetRoomSpec(unsigned short inGroupId)
 {
@@ -222,7 +215,6 @@ int RoutingLogic::GetRoomSpec(unsigned short inGroupId)
                                     this->mGameGroup.get() != NULL ? (int32_t)this->mGameGroup->GetId() : -1);
 }
 
-// FUNCTION: WON 0x007e72f0
 // Returns the room flags for a group on the current server, or 0 for other servers
 int RoutingLogic::GetRoomSpec(LobbyGroup* inGroup, LobbyServer* inServer)
 {
@@ -231,7 +223,6 @@ int RoutingLogic::GetRoomSpec(LobbyGroup* inGroup, LobbyServer* inServer)
     return 0;
 }
 
-// FUNCTION: WON 0x007e9aa0
 // Returns the player list of the current server, or NULL when not connected
 LobbyClientList* RoutingLogic::GetClientList()
 {
@@ -239,11 +230,9 @@ LobbyClientList* RoutingLogic::GetClientList()
     return NULL;
 }
 
-// FUNCTION: WON 0x007ea290
 // Returns true while connected to a lobby server
 bool RoutingLogic::IsConnected() { return this->mCurrentServer.get() != NULL; }
 
-// FUNCTION: WON 0x007ea2a0
 // Returns the routing connection of the current server, or NULL when not connected
 RoutingConnection* RoutingLogic::GetConnection()
 {
@@ -251,7 +240,6 @@ RoutingConnection* RoutingLogic::GetConnection()
     return this->mCurrentServer->GetConnection().get();
 }
 
-// FUNCTION: WON 0x007ea2b0
 // Returns the joined chat room or game room selected by the room flags, or NULL
 LobbyGroup* RoutingLogic::GetGroup(int inRoomSpec)
 {
@@ -262,14 +250,12 @@ LobbyGroup* RoutingLogic::GetGroup(int inRoomSpec)
     return NULL;
 }
 
-// FUNCTION: WON 0x007ea2d0
 // Returns the lobby server with the given address from the server list
 LobbyServer* RoutingLogic::GetServer(const IPAddr& inAddress)
 {
     return this->mServerList->FindServer(inAddress);
 }
 
-// FUNCTION: WON 0x007ea2e0
 // Returns the current or pending server whose connection an operation ran on, or NULL
 LobbyServer* RoutingLogic::GetServer(RoutingOp* inOp)
 {
@@ -282,7 +268,6 @@ LobbyServer* RoutingLogic::GetServer(RoutingOp* inOp)
     return NULL;
 }
 
-// FUNCTION: WON 0x007ed1c0
 // Picks the server to join: the last used one, else the busiest one for the lobby language, else the busiest overall
 LobbyServer* RoutingLogic::GetDefaultServer()
 {
@@ -305,18 +290,15 @@ LobbyServer* RoutingLogic::GetDefaultServer()
     return anIndex >= 0 ? aList[(size_t)anIndex] : NULL;
 }
 
-// FUNCTION: WON 0x007ed660
 // Returns true while a server connection is in progress
 bool RoutingLogic::IsConnecting() { return this->mPendingServer.get() != NULL; }
 
-// FUNCTION: WON 0x007eeae0
 // Returns the local player's client on the current server, or NULL
 LobbyClient* RoutingLogic::GetMyClient()
 {
     return this->mCurrentServer.get() == NULL ? NULL : this->mCurrentServer->GetMyClient();
 }
 
-// FUNCTION: WON 0x007eeaf0
 // Sends staging data to the captain of the joined game room
 void RoutingLogic::SendToCaptain(const ByteBuffer* inData)
 {
@@ -325,7 +307,6 @@ void RoutingLogic::SendToCaptain(const ByteBuffer* inData)
         aConnection->SendData(inData, 0, this->mGameGroup->GetCaptainId(), NULL);
 }
 
-// FUNCTION: WON 0x007eeb20
 // Sends staging data to everyone in the joined game room
 void RoutingLogic::BroadcastToGame(const ByteBuffer* inData)
 {
@@ -334,7 +315,6 @@ void RoutingLogic::BroadcastToGame(const ByteBuffer* inData)
         aConnection->SendData(inData, 0, this->mGameGroup->GetId(), NULL);
 }
 
-// FUNCTION: WON 0x007eeb50
 // Sends staging data to one player while in a game room
 void RoutingLogic::SendToClient(LobbyClient* inClient, const ByteBuffer* inData)
 {
@@ -343,7 +323,6 @@ void RoutingLogic::SendToClient(LobbyClient* inClient, const ByteBuffer* inData)
         aConnection->SendData(inData, 0, inClient->GetClientId(), NULL);
 }
 
-// FUNCTION: WON 0x007eeb80
 // Publishes the game's summary as a data object on the game room so it appears in other players' game lists
 void RoutingLogic::AdvertiseGame(LobbyGame* inGame)
 {
@@ -355,7 +334,6 @@ void RoutingLogic::AdvertiseGame(LobbyGame* inGame)
                                   gEmptyWideString, aBuffer.ToByteBuffer(true).get(), NULL);
 }
 
-// FUNCTION: WON 0x007eecc0
 // Replaces the game room's summary data object with an empty one
 void RoutingLogic::RemoveGameAdvertisement(LobbyGame*)
 {
@@ -364,7 +342,6 @@ void RoutingLogic::RemoveGameAdvertisement(LobbyGame*)
     aConnection->ReplaceDataObject(this->mGameGroup->GetId(), this->mGameDataType, gEmptyWideString, NULL);
 }
 
-// FUNCTION: WON 0x007eb0c0
 // Removes a player from the game room: a permanent ban, or a one-second ban that acts as a kick
 void RoutingLogic::KickClient(LobbyClient* inClient, bool inBan)
 {
@@ -375,7 +352,6 @@ void RoutingLogic::KickClient(LobbyClient* inClient, bool inBan)
                                gEmptyWideString, inClient->GetClientId(), NULL);
 }
 
-// FUNCTION: WON 0x007eb1b0
 // Sets or clears the game room's closed flag when the game launches or returns to staging
 void RoutingLogic::SetGameInProgress(bool inClose)
 {
@@ -384,7 +360,6 @@ void RoutingLogic::SetGameInProgress(bool inClose)
     aConnection->SetGroupFlags(this->mGameGroup->GetId(), 2, inClose ? 2 : 0, 0, 0, NULL);
 }
 
-// FUNCTION: WON 0x007e7b40
 // Applies a player's new room member flags and notifies the joined room's player list
 void RoutingLogic::MemberFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -400,7 +375,6 @@ void RoutingLogic::MemberFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer
     if (aRoomSpec != 0) LobbyBroadcastEvent(new ClientChangedEvent(aClient, aRoomSpec, 2), true);
 }
 
-// FUNCTION: WON 0x007e7a30
 // Applies a player's new client flags, notifies the lobby and updates a friend's anonymous state
 void RoutingLogic::ClientFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -417,7 +391,6 @@ void RoutingLogic::ClientFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer
     LobbyBroadcastEvent(new FriendChangedEvent(aFriend, 2), true);
 }
 
-// FUNCTION: WON 0x007ebc90
 // Says whether a friend needs a server search: not already searching, not here, other servers, 30 s since the last
 bool RoutingLogic::ShouldLocateFriend(LobbyFriend* inFriend, unsigned long inNow)
 {
@@ -428,7 +401,6 @@ bool RoutingLogic::ShouldLocateFriend(LobbyFriend* inFriend, unsigned long inNow
                                                (uint32_t)inNow, (uint32_t)inFriend->GetLastLocate());
 }
 
-// FUNCTION: WON 0x007ebd10
 // Announces in chat which chat and game rooms a player is in; false when neither is known and not forced
 bool RoutingLogic::AnnounceClientLocation(LobbyClient* inClient, bool inForce,
                                         int inRoomSpec, bool inFindByUserId)
@@ -459,7 +431,6 @@ announce:
     return true;
 }
 
-// FUNCTION: WON 0x007e7940
 // Passes staging data from another player in the joined game room to the staging handler
 void RoutingLogic::PeerData(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -470,7 +441,6 @@ void RoutingLogic::PeerData(RoutingOp* inBaseOp, LobbyServer* inServer)
     LobbyHandleStagingMessage(inOp->GetData().get(), aClient);
 }
 
-// FUNCTION: WON 0x007e8030
 // Adds a player to a room, notifies the joined room's list and the room list, and updates the friend entry
 void RoutingLogic::ClientJoinedGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -488,7 +458,6 @@ void RoutingLogic::ClientJoinedGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
     this->UpdateFriend(aClient);
 }
 
-// FUNCTION: WON 0x007e8160
 // Removes a player from a room, notifies the lists (and the staging screen for the game room), updates the friend
 void RoutingLogic::ClientLeftGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -505,7 +474,6 @@ void RoutingLogic::ClientLeftGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
     LobbyBroadcastEvent(new GroupChangedEvent(aGroup, inServer, 2), true);
     this->UpdateFriend(aClient.get());
 }
-// FUNCTION: WON 0x007e8f80
 // Adds a newly created room to the server's room list and notifies the lobby
 void RoutingLogic::GroupCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -514,7 +482,6 @@ void RoutingLogic::GroupCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
         LobbyBroadcastEvent(new GroupChangedEvent(aGroup, inServer, 0), true);
 }
 
-// FUNCTION: WON 0x007e9040
 // Removes a deleted room from the server's room list and notifies the lobby
 void RoutingLogic::GroupDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -523,7 +490,6 @@ void RoutingLogic::GroupDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
         LobbyBroadcastEvent(new GroupChangedEvent(aGroup.get(), inServer, 1), true);
 }
 
-// FUNCTION: WON 0x007ef0d0
 // Refreshes a friend's location and status from the player's client and notifies the friends list
 void RoutingLogic::UpdateFriend(LobbyClient* inClient)
 {
@@ -534,7 +500,6 @@ void RoutingLogic::UpdateFriend(LobbyClient* inClient)
     LobbyBroadcastEvent(new FriendChangedEvent(aFriend, 2), true);
 }
 
-// FUNCTION: WON 0x007ebf20
 // Announces where a friend is: by room when on the current server, else by the friend's last known location
 void RoutingLogic::AnnounceFriendLocation(LobbyFriend* inFriend, int inRoomSpec)
 {
@@ -546,7 +511,6 @@ void RoutingLogic::AnnounceFriendLocation(LobbyFriend* inFriend, int inRoomSpec)
     LobbyBroadcastEvent(new AnnounceFriendEvent(inFriend, inRoomSpec, 2), true);
 }
 
-// FUNCTION: WON 0x007e7d60
 // Adds a player who joined the server; a friend gets a location update, plus a sound and chat notice when visible
 void RoutingLogic::ClientJoinedServer(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -563,7 +527,6 @@ void RoutingLogic::ClientJoinedServer(RoutingOp* inBaseOp, LobbyServer* inServer
     LobbyBroadcastEvent(new AnnounceFriendEvent(aFriend, 4, 0), true);
 }
 
-// FUNCTION: WON 0x007e7e80
 // Removes a player who left the server; a friend loses its location, with a sound and chat notice when visible
 void RoutingLogic::ClientLeftServer(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -582,7 +545,6 @@ void RoutingLogic::ClientLeftServer(RoutingOp* inBaseOp, LobbyServer* inServer)
     }
 }
 
-// FUNCTION: WON 0x007e9100
 // Marks a game as (un)invited from a player who is not ignored or blocked, plays the sound and shows the invitation
 void RoutingLogic::GroupInvitation(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -600,7 +562,6 @@ void RoutingLogic::GroupInvitation(RoutingOp* inBaseOp, LobbyServer* inServer)
         aClient, anInvited, GUIString(new GUIStringData(inOp->Text(EE_WON_RTT_COMMENT))), false), true);
 }
 
-// FUNCTION: WON 0x007e92d0
 // Shows the captain a player's request to join the hosted game, with the sound, unless the player is ignored/blocked
 void RoutingLogic::GroupJoinAttempt(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -614,7 +575,6 @@ void RoutingLogic::GroupJoinAttempt(RoutingOp* inBaseOp, LobbyServer* inServer)
         GUIString(new GUIStringData(inOp->Text(EE_WON_RTT_COMMENT)))), true);
 }
 
-// FUNCTION: WON 0x007e7640
 // Sets the away flag after five minutes without input and clears it on new input, unless away was set by hand
 void RoutingLogic::Reset()
 {
@@ -636,7 +596,6 @@ void RoutingLogic::Reset()
     }
 }
 
-// FUNCTION: WON 0x007e76c0
 // Shows a received chat line (room, team or whisper) from a player who is not ignored or blocked, with sounds
 void RoutingLogic::PeerChat(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -672,7 +631,6 @@ void RoutingLogic::PeerChat(RoutingOp* inBaseOp, LobbyServer* inServer)
         GUIString(inOp->Text(EE_WON_RTT_TEXT)), aTarget), true);
 }
 
-// FUNCTION: WON 0x007e8770
 // Shows a server alert message from the administrators, with the error sound
 void RoutingLogic::ServerAlert(RoutingOp* inBaseOp, LobbyServer*)
 {
@@ -681,7 +639,6 @@ void RoutingLogic::ServerAlert(RoutingOp* inBaseOp, LobbyServer*)
         GUIString(new GUIStringData(inBaseOp->Text(EE_WON_RTT_TEXT)))), true);
 }
 
-// FUNCTION: WON 0x007e8890
 // Shows the server's shutdown warning with its countdown, with the error sound
 void RoutingLogic::ServerShutdownStarted(RoutingOp* inBaseOp, LobbyServer*)
 {
@@ -690,7 +647,6 @@ void RoutingLogic::ServerShutdownStarted(RoutingOp* inBaseOp, LobbyServer*)
         GUIString(new GUIStringData(inBaseOp->Text(EE_WON_RTT_TEXT)))), true);
 }
 
-// FUNCTION: WON 0x007e89b0
 // Shows that the server shutdown was called off, with the error sound
 void RoutingLogic::ServerShutdownAborted(RoutingOp* inBaseOp, LobbyServer*)
 {
@@ -701,7 +657,6 @@ void RoutingLogic::ServerShutdownAborted(RoutingOp* inBaseOp, LobbyServer*)
 
 inline int ModeratedRoomSpec(int inRoomSpec) { return inRoomSpec | 4; }
 
-// FUNCTION: WON 0x007e8580
 // Tells the local player they were muted or unmuted on the server, in the game room or in the chat room
 void RoutingLogic::YouWereMuted(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -726,7 +681,6 @@ void RoutingLogic::YouWereMuted(RoutingOp* inBaseOp, LobbyServer* inServer)
         GUIString(inOp->Text(EE_WON_RTT_COMMENT))), true);
 }
 
-// FUNCTION: WON 0x007eb1f0
 // Leaves the game room (and the server when not in a chat room) and tells the staging screen
 void RoutingLogic::LeaveGame(LobbyGame*)
 {
@@ -742,7 +696,6 @@ void RoutingLogic::LeaveGame(LobbyGame*)
     LobbyBroadcastEvent(new LeftRoomEvent(6, false, true), true);
 }
 
-// FUNCTION: WON 0x007eeda0
 // Leaves the chat room while a game runs and updates the client flags on the server
 void RoutingLogic::Suspend()
 {
@@ -756,7 +709,6 @@ void RoutingLogic::Suspend()
     aConnection->SetClientFlags(0, 0, ~0UL, 0xfffbffff, NULL);
 }
 
-// FUNCTION: WON 0x007eee90
 // Returns from a game: marks the player anonymous, leaves the game and server, and rejoins the default room
 void RoutingLogic::Resume()
 {
@@ -767,7 +719,6 @@ void RoutingLogic::Resume()
     this->JoinDefaultRoom(true);
 }
 
-// FUNCTION: WON 0x007ee950
 // Disconnects from the current server, stops pings, clears the rooms and game list, and drops a joined game
 void RoutingLogic::LeaveServer()
 {
@@ -788,7 +739,6 @@ void RoutingLogic::LeaveServer()
     }
 }
 
-// FUNCTION: WON 0x007e7c20
 // Records a room's new captain, refreshes both captains in the list and drops the game when its captain left
 void RoutingLogic::GroupCaptainChanged(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -808,7 +758,6 @@ void RoutingLogic::GroupCaptainChanged(RoutingOp* inBaseOp, LobbyServer* inServe
     if (aGroup == this->mGameGroup.get() && anOldCaptain != NULL) LobbyGameDisconnected(true);
 }
 
-// FUNCTION: WON 0x007e8d10
 // Removes a game from the game list when its room's summary is deleted on the current server
 void RoutingLogic::DataObjectDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -821,7 +770,6 @@ void RoutingLogic::DataObjectDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
     }
 }
 
-// FUNCTION: WON 0x007e8ad0
 // Adds or updates a game in the game list from its room's summary, pinging new games; drops unreadable ones
 void RoutingLogic::DataObjectCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -854,7 +802,6 @@ void RoutingLogic::DataObjectCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
 inline bool IsGameRoomSpec(unsigned long inRoomSpec) { return (inRoomSpec >> 1) & 1; }
 inline bool IsChatRoomSpec(unsigned long inRoomSpec) { return inRoomSpec & 1; }
 
-// FUNCTION: WON 0x007e82b0
 // Handles the local player being kicked or banned from the game room, chat room or server and leaves it
 void RoutingLogic::YouWereBanned(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -898,7 +845,6 @@ void RoutingLogic::YouWereBanned(RoutingOp* inBaseOp, LobbyServer* inServer)
     }
 }
 
-// FUNCTION: WON 0x007ed2f0
 // Connects to the default server and joins the last used public chat room, else the busiest one under 50 players
 bool RoutingLogic::JoinDefaultRoom(bool inShowStatus)
 {
@@ -928,7 +874,6 @@ bool RoutingLogic::JoinDefaultRoom(bool inShowStatus)
     return true;
 }
 
-// FUNCTION: WON 0x007ed160
 // Re-pings every unfiltered game in the list while on the Internet screen and refreshes the game list display
 void RoutingLogic::RefreshGameList()
 {
@@ -941,7 +886,6 @@ void RoutingLogic::RefreshGameList()
     LobbyBroadcastLobbyEvent(100058, true);
 }
 
-// FUNCTION: WON 0x007eef10
 // Makes a joined chat or game room current, switching servers and subscribing to game summaries when needed
 void RoutingLogic::JoinedGroup(unsigned short inGroupId, bool inGameGroup)
 {
@@ -971,7 +915,6 @@ void RoutingLogic::JoinedGroup(unsigned short inGroupId, bool inGameGroup)
         aRoomSpec, this->mCurrentServer->GetMyClientId(), aGroup->GetClients().get()), true);
 }
 
-// FUNCTION: WON 0x007e8df0
 // Rebuilds the game list from the server's game summaries, pings them if auto-ping is on, and ends a waiting op
 void RoutingLogic::ReadGameListComplete(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
@@ -996,7 +939,6 @@ void RoutingLogic::ReadGameListComplete(RoutingOp* inBaseOp, LobbyServer* inServ
     if (this->mGameListWaitOp.get() != NULL) this->mGameListWaitOp->Finish(WS_Success);
 }
 
-// FUNCTION: WON 0x007ea630
 // Sends the captain's accept or decline of a player asking to join the hosted game
 void RoutingLogic::AcceptClient(AcceptClientEvent* inEvent)
 {
@@ -1009,7 +951,6 @@ void RoutingLogic::AcceptClient(AcceptClientEvent* inEvent)
                               inEvent->mAccepted, gEmptyWideString, NULL);
 }
 
-// FUNCTION: WON 0x007ec790
 // Removes a friend from the friends list and clears the friend mark on the player if online here
 void RoutingLogic::RemoveFriend(LobbyFriend* inFriend)
 {
@@ -1025,7 +966,6 @@ void RoutingLogic::RemoveFriend(LobbyFriend* inFriend)
     LobbyRemoveFriend(inFriend->GetUserId());
 }
 
-// FUNCTION: WON 0x007ec870
 // Runs a friends-list action: options popup, locate one friend or all, or remove the friend
 void RoutingLogic::FriendAction(FriendActionEvent* inEvent)
 {
@@ -1058,7 +998,6 @@ void RoutingLogic::FriendAction(FriendActionEvent* inEvent)
     }
 }
 
-// FUNCTION: WON 0x007eccc0
 // Picks a Quick Play game: open, skill closest to the wanted one, then lowest ping; pings unknown ones
 LobbyGame* RoutingLogic::SelectGame(int inGameType, unsigned short inPingLimit)
 {
@@ -1087,7 +1026,6 @@ LobbyGame* RoutingLogic::SelectGame(int inGameType, unsigned short inPingLimit)
     else return NULL;
 }
 
-// FUNCTION: WON 0x007ecc30
 // Jumps to a room on the current server: joins its game if the name still matches, else joins the chat room
 void RoutingLogic::JumpToRoom(JumpToRoomEvent* inEvent)
 {
@@ -1104,7 +1042,6 @@ void RoutingLogic::JumpToRoom(JumpToRoomEvent* inEvent)
     }
 }
 
-// FUNCTION: WON 0x007ecf30
 // Runs Quick Play: joins a server, waits for the game list and pings, joins a game or offers to host one
 void RoutingLogic::QuickPlay(QuickPlayEvent* inEvent)
 {
@@ -1138,7 +1075,6 @@ void RoutingLogic::QuickPlay(QuickPlayEvent* inEvent)
     }
 }
 
-// FUNCTION: WON 0x007ea740
 // Runs a player-list action: options, admin actions, friend, ignore, block, invite, away, whisper or locate
 void RoutingLogic::ClientAction(ClientActionEvent* inEvent)
 {
@@ -1223,7 +1159,6 @@ void RoutingLogic::ClientAction(ClientActionEvent* inEvent)
     }
 }
 
-// FUNCTION: WON 0x007ebb40
 // Invites or uninvites a player to the hosted game and shows it in chat; false unless the local player hosts
 bool RoutingLogic::InviteClient(LobbyClient* inClient, bool inInvite,
                                 const GUIString& inComment)
@@ -1241,7 +1176,6 @@ bool RoutingLogic::InviteClient(LobbyClient* inClient, bool inInvite,
     return true;
 }
 
-// FUNCTION: WON 0x007eb350
 // Carries out a typed chat line or slash command: chat, team chat, whisper, away, invite, mute, ban, admin alerts
 void RoutingLogic::ChatInput(Component* inTarget)
 {
@@ -1367,7 +1301,6 @@ void RoutingLogic::ChatInput(Component* inTarget)
     }
 }
 
-// FUNCTION: WON 0x007e7320
 // Handles the server dropping the connection: leaves the rooms and server and tells the player
 void RoutingLogic::ConnectionClosed(AsyncOp* inBaseOp)
 {
@@ -1382,7 +1315,6 @@ void RoutingLogic::ConnectionClosed(AsyncOp* inBaseOp)
     LobbyMessageBox(LOBBY_STRING(RoutingLogic_DisconnectedTitle_String), LOBBY_STRING(RoutingLogic_DisconnectedDetails_String));
 }
 
-// FUNCTION: WON 0x007eac40
 // Asks for a name and password, then creates a chat room on the chosen server and joins it
 void RoutingLogic::CreateRoom(CreateRoomEvent* inEvent)
 {
@@ -1404,7 +1336,6 @@ void RoutingLogic::CreateRoom(CreateRoomEvent* inEvent)
         GetLobbyWindow()->EndDialog(-1, NULL, this->mRoomDialog.get());
 }
 
-// FUNCTION: WON 0x007ec910
 // Connects to a server and joins a chat room there; tells the player when already in that room
 bool RoutingLogic::JoinChatRoom(LobbyServer* inServer, unsigned short inGroupId)
 {
@@ -1421,7 +1352,6 @@ bool RoutingLogic::JoinChatRoom(LobbyServer* inServer, unsigned short inGroupId)
     return true;
 }
 
-// FUNCTION: WON 0x007ec9e0
 // Joins the chat room picked in the room dialog and closes the dialog on success
 void RoutingLogic::JoinRoom(JoinRoomEvent* inEvent)
 {
@@ -1437,7 +1367,6 @@ void RoutingLogic::JoinRoom(JoinRoomEvent* inEvent)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007eca40
 // Connects to a friend's server and joins the chat room the friend is in (or the server's lobby)
 void RoutingLogic::JoinFriendsRoom(JoinFriendsRoomEvent* inEvent)
 {
@@ -1469,7 +1398,6 @@ void RoutingLogic::JoinFriendsRoom(JoinFriendsRoomEvent* inEvent)
 
 
 namespace WONAPI {
-// FUNCTION: WON 0x007ed670
 // Creates a room on a server with a status dialog and returns its id; false on failure
 bool RoutingLogic::CreateGroup(LobbyServer* inServer,
     const GUIString& inName, const GUIString& inPassword,
@@ -1493,7 +1421,6 @@ bool RoutingLogic::CreateGroup(LobbyServer* inServer,
     return false;
 }
 
-// FUNCTION: WON 0x007ed8b0
 // Joins a room on a server, asking for its password (again on a wrong one); false on failure or cancel
 bool RoutingLogic::JoinGroup(LobbyServer* inServer, int inGroupId)
 {
@@ -1544,7 +1471,6 @@ namespace WONAPI {
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007ea490
 // Opens the options popup for a player in the player list
 void RoutingLogic::ShowClientOptions(LobbyClient* inClient,int inRoomSpec)
 {
@@ -1577,7 +1503,6 @@ static void SetModerationTarget(RoutingOp* inOp, LobbyClient* inCurrent, LobbyCl
     inOp->SetNum(EE_WON_RTF_IS_CDKEY, 1);
 }
 
-// FUNCTION: WON 0x007e9440
 // Kicks, bans, mutes, unmutes or warns a player, asking moderators for details in the admin dialog first
 void RoutingLogic::DoAdminAction(int inAction, int inRoomSpec, LobbyClient* inClient)
 {
@@ -1664,7 +1589,6 @@ void RoutingLogic::DoAdminAction(int inAction, int inRoomSpec, LobbyClient* inCl
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007e9ab0
 // Shows the muted or banned players of a room or the server and lifts the restriction on the ones picked
 void RoutingLogic::EditBadUserList(bool inMuted, bool inServerWide, int inRoomSpec)
 {
@@ -1710,7 +1634,6 @@ void RoutingLogic::EditBadUserList(bool inMuted, bool inServerWide, int inRoomSp
 
 namespace WONAPI {
 // The iterator advances after RunOp, not before the completion is created
-// FUNCTION: WON 0x007ebfd0
 // Asks every other server whether a friend is on it, or announces the known location when no search is needed
 void RoutingLogic::LocateFriend(LobbyFriend* inFriend,int inRoomSpec)
 {
@@ -1739,7 +1662,6 @@ void RoutingLogic::LocateFriend(LobbyFriend* inFriend,int inRoomSpec)
 }
 
 // The completion receives an AsyncOp*, not a RoutingOp*
-// FUNCTION: WON 0x007e7460
 // Records the friends one server reported, ends their search after the last reply and refreshes the friends list
 void RoutingLogic::GetUserStatusComplete(AsyncOp* inBaseOp)
 {
@@ -1774,7 +1696,6 @@ void RoutingLogic::GetUserStatusComplete(AsyncOp* inBaseOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007ec4a0
 // Asks every other server about all friends that need a search and refreshes the friends list
 void RoutingLogic::LocateFriends()
 {
@@ -1814,7 +1735,6 @@ void RoutingLogic::LocateFriends()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007edd70
 // Connects and registers with a lobby server, installs the notification handlers and loads its room list
 bool RoutingLogic::ConnectToServer(LobbyServer* inServer, bool inFlag)
 {
@@ -1886,7 +1806,6 @@ bool RoutingLogic::ConnectToServer(LobbyServer* inServer, bool inFlag)
     LobbyBroadcastLobbyEvent(100056, true);
     return true;
 }
-// FUNCTION: WON 0x007ec210
 // Asks for a player name, looks up the account and adds it to the friends list, marking the player if online here
 void RoutingLogic::AddFriend()
 {
@@ -1921,7 +1840,6 @@ void RoutingLogic::AddFriend()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007e9e60
 // Stores a server's room list from a background query; on failure allows the next refresh at once
 void RoutingLogic::QueryServerGroupsDone(AsyncOp* inBaseOp)
 {
@@ -1943,7 +1861,6 @@ void RoutingLogic::QueryServerGroupsDone(AsyncOp* inBaseOp)
     server->SyncGroups(aGroups,false);
     LobbyBroadcastEvent(new ServerChangedEvent(server,2),true);
 }
-// FUNCTION: WON 0x007ed4c0
 // Starts a background room-list query for a server not connected to, at most every 30 seconds
 void RoutingLogic::HandleQueryServerGroups(QueryServerGroupsEvent* event)
 {
@@ -1962,7 +1879,6 @@ void RoutingLogic::HandleQueryServerGroups(QueryServerGroupsEvent* event)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007e9f60
 // Reloads the server list from the directory every 5 minutes (or when empty) and drops stale room lists
 void RoutingLogic::RefreshServerList()
 {
@@ -1992,7 +1908,6 @@ void RoutingLogic::RefreshServerList()
     }
     LobbyBroadcastLobbyEvent(100053,true);
 }
-// FUNCTION: WON 0x007ed430
 // Opens the Internet lobby: refreshes servers, joins the default room or shows the room dialog, plays the sound
 void RoutingLogic::EnterInternetScreen(bool joinDefaultRoom)
 {
@@ -2017,14 +1932,12 @@ void RoutingLogic::EnterInternetScreen(bool joinDefaultRoom)
 
 #include "ee/wonapi/WONLobbyResourceGlobals.h"
 namespace WONAPI {
-// FUNCTION: WON 0x007e9a90
 // Shows the room selection dialog
 void RoutingLogic::DoRoomDialog()
 {
     LobbyDoDialog(this->mRoomDialog.get());
 }
 
-// FUNCTION: WON 0x007ea310
 // Handles the Internet lobby buttons: change room, add friend, anonymous and filter checks, refresh lists
 void RoutingLogic::HandleControlEvent(int controlId)
 {
@@ -2038,7 +1951,6 @@ void RoutingLogic::HandleControlEvent(int controlId)
     }
 }
 
-// FUNCTION: WON 0x007ea3a0
 // Dispatches the Internet lobby's component events (accept, actions, rooms, chat, friends, Quick Play)
 void RoutingLogic::HandleComponentEvent(ComponentEvent* event)
 {
@@ -2056,7 +1968,6 @@ void RoutingLogic::HandleComponentEvent(ComponentEvent* event)
     }
 }
 
-// FUNCTION: WON 0x007eb2f0
 // Sends the anonymous-to-friends setting to the server
 void RoutingLogic::HandleAnonymousModeChange()
 {
@@ -2067,7 +1978,6 @@ void RoutingLogic::HandleAnonymousModeChange()
     connection->SetClientFlags(mask,flags,0,0,NULL);
 }
 
-// FUNCTION: WON 0x007eb320
 // Sends the dirty-word filter setting to the server (flag set when the filter is off)
 void RoutingLogic::HandleDirtyWordFilterChange()
 {
@@ -2080,7 +1990,6 @@ void RoutingLogic::HandleDirtyWordFilterChange()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007ec1e0
 // Returns false with a message box when the friends list already holds 255 entries
 bool RoutingLogic::CanAddFriend()
 {
@@ -2091,7 +2000,6 @@ bool RoutingLogic::CanAddFriend()
     }
     return true;
 }
-// FUNCTION: WON 0x007eeed0
 // Logs out of the Internet lobby: stops auth refresh, resets the room dialog and leaves the server
 void RoutingLogic::Logout()
 {
@@ -2106,7 +2014,6 @@ void RoutingLogic::Logout()
 
 namespace WONAPI {
 
-// FUNCTION: WON 0x007ea570
 // Opens the options popup for a friend in the friends list
 void RoutingLogic::ShowFriendOptions(LobbyFriend* friendInfo,int roomSpecFlags)
 {
@@ -2115,72 +2022,3 @@ void RoutingLogic::ShowFriendOptions(LobbyFriend* friendInfo,int roomSpecFlags)
     LobbyOpenPopup(popup.get(),PopupFlag_StandardPopup,-1,-1);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007e7050
-// (public: virtual void * __thiscall WONAPI::RoutingLogic::`scalar deleting destructor'(unsigned int)    [??_GRoutingLogic@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007e79f0
-// (public: class WONAPI::SmartPtr<class WONAPI::ByteBuffer> __thiscall WONAPI::RoutingPeerDataOp::GetData(void)const     [?GetData@RoutingPeerDataOp@WONA)
-// TEMPLATE: WON 0x007eae90
-// (public: __thiscall WONAPI::PendingServerCleanup::~PendingServerCleanup(void)    [??1PendingServerCleanup@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x007ee8a0
-// (public: virtual void __thiscall RoutingOpCompletion::Run(class WONAPI::AsyncOp *)    [?Run@RoutingOpCompletion@@UAEXPAVAsyncOp@WONAPI@@@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1330
-// (public: __thiscall std::list<struct WONAPI::RoutingBadUser,class std::allocator<struct WONAPI::RoutingBadUser> >::list<struct WONAPI::RoutingBadUser,c)
-// TEMPLATE: WON 0x007f1bb0
-// (public: struct std::pair<class std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::map<unsigned long,unsigned ch)
-// TEMPLATE: WON 0x007f30b0
-// (protected: struct std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::map<unsigned long,unsigned char,struct std)
-// TEMPLATE: WON 0x007f3e50
-// TEMPLATE: WON 0x007f3fd0
-// TEMPLATE: WON 0x007f4150
-// TEMPLATE: WON 0x007f42d0
-// TEMPLATE: WON 0x007f4450
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007e73e0
-// (public: virtual void * __thiscall WONAPI::LeftRoomEvent::`scalar deleting destructor'(unsigned int)    [??_GLeftRoomEvent@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007e7400
-// (public: virtual __thiscall WONAPI::LeftRoomEvent::~LeftRoomEvent(void)    [??1LeftRoomEvent@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007ee8d0
-// (public: virtual void * __thiscall RoutingOpCompletion::`scalar deleting destructor'(unsigned int)    [??_GRoutingOpCompletion@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007ee8f0
-// (public: virtual __thiscall RoutingOpCompletion::~RoutingOpCompletion(void)    [??1RoutingOpCompletion@@UAE@XZ])
-// TEMPLATE: WON 0x007f1490
-// (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::RoutingLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicCompl)
-// TEMPLATE: WON 0x007f1630
-// (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::RoutingLogic>::~LogicCompletion<class WONAPI::RoutingLogic>(void)    [??1?$LogicCompl)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007ece80
-// (public: __thiscall std::multimap<unsigned short,class WONAPI::LobbyGame *,struct std::less<unsigned short>,class std::allocator<struct std::pair<unsig)
-// TEMPLATE: WON 0x007f1360
-// (public: __thiscall std::map<unsigned long,unsigned char,struct std::less<unsigned long>,class std::allocator<struct std::pair<unsigned long const ,uns)
-// TEMPLATE: WON 0x007f1ca0
-// (public: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::_Mapk<unsigned long,unsigned char,struct std::)
-// TEMPLATE: WON 0x007f1d50
-// (protected: void __thiscall std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::_Mapk<unsigned long,unsigned char)
-// TEMPLATE: WON 0x007f1e20
-// (std::_Tree::insert)
-// TEMPLATE: WON 0x007f1ea0
-// (std::_Tree::erase)
-// TEMPLATE: WON 0x007f27f0
-// (protected: struct std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::_Mapk<unsigned long,unsigned char,struct s)
-// TEMPLATE: WON 0x007f2880
-// (public: class std::list<unsigned long,class std::allocator<unsigned long> >::iterator __thiscall std::list<unsigned long,class std::allocator<unsigned)
-// TEMPLATE: WON 0x007f28c0
-// (std::_Tree::erase)
-// TEMPLATE: WON 0x007f2d70
-// (std::_Tree::_Erase)
-// TEMPLATE: WON 0x007f2db0
-// (std::_Tree::_Insert)
-// TEMPLATE: WON 0x006d9f60
-// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,struc)
-// TEMPLATE: WON 0x00769620
-// (protected: struct std::list<unsigned long,class std::allocator<unsigned long> >::_Node * __thiscall std::list<unsigned long,class std::allocator<unsig)
-// TEMPLATE: WON 0x006d99b0
-// (public: struct std::pair<class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_str)

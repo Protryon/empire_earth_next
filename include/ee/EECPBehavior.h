@@ -12,7 +12,7 @@ class FSFileSpec;
 struct EECPBehavior {
     EECPBehavior() { this->mIsSettable = false; }
 
-    static long Load(FSFileSpec* inFile);   // 0xd5f97
+    static long Load(FSFileSpec* inFile);
 
     int32_t mUnused1;                       // +0x00
     int32_t mIndex;                         // +0x04 (the slot; records with index <= 0 are skipped)
@@ -35,7 +35,7 @@ struct EECPBehavior {
 
 static_assert(sizeof(EECPBehavior) == 56, "on-disk record: 56 bytes on every target");
 
-extern EECPBehavior gCPBehaviors[129];      // 0x4e6118
+extern EECPBehavior gCPBehaviors[129];
 
 // Computer player behaviour record ids (db\dbcpbehavior.dat; the gCPBehaviors index = EECPBehavior::mIndex). Names: Language.rc 28000 + id (EESETSETSetAIAttribute::Show 0x58c96c), else the Init member the record fills.
 enum EECPBehaviorID {

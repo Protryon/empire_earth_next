@@ -42,7 +42,6 @@
 #include "lle/UILBString.h"
 #include "lle/UIFileListBox.h"
 
-// FUNCTION: LLE 0x1006fc07
 // Creates an empty file list box with no search path
 UIFileListBox::UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSelect, const GERectangle& inRectangle,
                              UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
@@ -52,7 +51,6 @@ UIFileListBox::UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSele
 {
 }
 
-// FUNCTION: LLE 0x1006fc6e
 // Destroys the file list box, releasing its search path
 UIFileListBox::~UIFileListBox()
 {
@@ -60,7 +58,6 @@ UIFileListBox::~UIFileListBox()
         this->mFilePath->Dereference();
 }
 
-// FUNCTION: LLE 0x1006fc9a
 // Fills the list with every file in the search path that has a valid extension (names without it), appended or sorted
 void UIFileListBox::CreateEntries(unsigned long inSortType)
 {
@@ -99,7 +96,6 @@ void UIFileListBox::CreateEntries(unsigned long inSortType)
     }
 }
 
-// FUNCTION: LLE 0x1006fe5f
 // Deletes the selected file from disk (the listed name plus the first valid extension that finds a file) and removes
 // its line; returns the delete or lookup error
 long UIFileListBox::DeleteSelectedFile()
@@ -130,7 +126,6 @@ long UIFileListBox::DeleteSelectedFile()
     return theResult;
 }
 
-// FUNCTION: LLE 0x1006ff35
 // Sets the search path the file list is built from, holding a reference to it
 void UIFileListBox::SetSearchPaths(FSPath* inPath)
 {
@@ -140,29 +135,3 @@ void UIFileListBox::SetSearchPaths(FSPath* inPath)
     if (this->mFilePath)
         this->mFilePath->Reference();
 }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1006fae7
-// SYNTHETIC: LLE 0x1006faf1
-// SYNTHETIC: LLE 0x1006fb01
-// SYNTHETIC: LLE 0x1006fb0d
-// SYNTHETIC: LLE 0x1006fb17
-// SYNTHETIC: LLE 0x1006fb21
-// SYNTHETIC: LLE 0x1006fb31
-// SYNTHETIC: LLE 0x1006fb3d
-// SYNTHETIC: LLE 0x1006fb47
-// SYNTHETIC: LLE 0x1006fb51
-// SYNTHETIC: LLE 0x1006fb61
-// SYNTHETIC: LLE 0x1006fb6d
-// SYNTHETIC: LLE 0x1006fb77
-// SYNTHETIC: LLE 0x1006fb81
-// SYNTHETIC: LLE 0x1006fb91
-// SYNTHETIC: LLE 0x1006fb9d
-// SYNTHETIC: LLE 0x1006fba7
-// SYNTHETIC: LLE 0x1006fbb1
-// SYNTHETIC: LLE 0x1006fbc1
-// SYNTHETIC: LLE 0x1006fbcd
-// SYNTHETIC: LLE 0x1006fbd7
-// SYNTHETIC: LLE 0x1006fbe1
-// SYNTHETIC: LLE 0x1006fbf1
-// SYNTHETIC: LLE 0x1006fbfd

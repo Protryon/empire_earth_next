@@ -29,7 +29,6 @@ struct LoginControlIds : public ControlIdSet {
 };
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dd100
 // Creates the lobby start-up logic with its own HTTP session
 InitLogic::InitLogic()
 {
@@ -38,13 +37,11 @@ InitLogic::InitLogic()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dd200
 // Destroys the start-up logic (members only)
 InitLogic::~InitLogic() {}
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dd340
 // Looks up the choose-network-adapter dialog from the lobby layout
 void InitLogic::InitComponent(ComponentConfig* inConfig)
 {
@@ -53,7 +50,6 @@ void InitLogic::InitComponent(ComponentConfig* inConfig)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dd370
 // Shows the network adapter dialog and, on OK, uses the chosen adapter's address for the lobby
 void InitLogic::ChooseNetworkAdapter()
 {
@@ -64,7 +60,6 @@ void InitLogic::ChooseNetworkAdapter()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dd3b0
 // Keeps the start-up errors the player has not ignored and broadcasts an init-failed status; true if any remain
 // (the player may ignore them only when they are no-Internet or account-server errors)
 bool InitLogic::SetError(int inError, const GUIString& inDescription)
@@ -81,7 +76,6 @@ bool InitLogic::SetError(int inError, const GUIString& inDescription)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dd570
 // Starts the lobby checks: tests the Internet connection, clears the server lists on a first try, runs DNS
 void InitLogic::Start(bool inRetry)
 {
@@ -108,7 +102,6 @@ void InitLogic::Start(bool inRetry)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dd630
 // Loads settings, binds the UDP port, disables the login buttons, starts or stops lobby music, starts the checks
 void InitLogic::Init()
 {
@@ -137,7 +130,6 @@ void InitLogic::Init()
 
 namespace WONAPI {
 // Any of the four lookups may return NULL; nothing happens then
-// FUNCTION: WON 0x7dd810
 // After a good DNS test, fills the directory, room directory and auth server lists and starts the next queries
 void InitLogic::DNSCompletion(AsyncOp* inOp)
 {
@@ -194,7 +186,6 @@ void InitLogic::DNSCompletion(AsyncOp* inOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dda10
 // Decodes the downloaded advert image and broadcasts it with the advert's link
 void InitLogic::CrossPromotionImageCompletion(AsyncOp* inOp)
 {
@@ -207,7 +198,6 @@ void InitLogic::CrossPromotionImageCompletion(AsyncOp* inOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7ddc00
 // Reads the 'link' and 'image' lines of the advert document and downloads the image
 void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
 {
@@ -239,7 +229,6 @@ void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7ddef0
 // Records the modification times of the saved system and game terms-of-use files
 void InitLogic::LoadTOUTimes()
 {
@@ -253,7 +242,6 @@ void InitLogic::LoadTOUTimes()
 
 namespace WONAPI {
 // Each of the two file writes has its own FileWriterException handler
-// FUNCTION: WON 0x7de090
 // Saves newer system and game terms-of-use documents to disk and re-reads their times
 void InitLogic::HandleTOU(RustServerOp* inOp)
 {
@@ -295,7 +283,6 @@ void InitLogic::HandleTOU(RustServerOp* inOp)
 
 namespace WONAPI {
 // The document event is always broadcast before the document type is looked at
-// FUNCTION: WON 0x7de280
 // Broadcasts a downloaded document, then saves terms of use or parses the advert (clearing an empty advert)
 void InitLogic::HTTPDocumentCompletion(AsyncOp* inOp)
 {
@@ -323,7 +310,6 @@ void InitLogic::HTTPDocumentCompletion(AsyncOp* inOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007de4c0
 // Fills the auth, account, firewall and version server lists from the directory; reports missing ones,
 // else starts the version check and firewall test
 void InitLogic::DirectoryCompletion(AsyncOp* inOp)
@@ -390,7 +376,6 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007de8f0
 // Records the version check result; re-enables the login buttons when the version is usable, else reports it
 void InitLogic::VersionCompletion(AsyncOp* inOp)
 {
@@ -418,7 +403,6 @@ void InitLogic::VersionCompletion(AsyncOp* inOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007deb50
 // Ends the firewall test: no connection means behind a firewall, one from the firewall server means not
 void InitLogic::AcceptCompletion(AsyncOp* inOp)
 {
@@ -446,7 +430,6 @@ void InitLogic::AcceptCompletion(AsyncOp* inOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007ded20
 // Records our public address and waits for the firewall server to connect back; failure means behind a firewall
 void InitLogic::FirewallCompletion(AsyncOp* inOp)
 {
@@ -468,7 +451,6 @@ void InitLogic::FirewallCompletion(AsyncOp* inOp)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7def30
 // Broadcasts the start status and tests DNS on the first directory server
 void InitLogic::StartDNSTest()
 {
@@ -483,7 +465,6 @@ void InitLogic::StartDNSTest()
 
 namespace WONAPI {
 // All three op pointers live until return, as in the original's cleanup order
-// FUNCTION: WON 0x7df0c0
 // Requests the message of the day, terms of use and advert documents for the product and language
 void InitLogic::StartHTTPDocuments()
 {
@@ -506,7 +487,6 @@ void InitLogic::StartHTTPDocuments()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007df410
 // Broadcasts 'querying servers' and asks the directory for the auth, database, firewall and patch servers
 void InitLogic::StartDirectoryQuery()
 {
@@ -524,7 +504,6 @@ void InitLogic::StartDirectoryQuery()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007df6c0
 // Broadcasts 'checking version' and asks the version servers whether this game version is valid
 void InitLogic::StartVersionCheck()
 {
@@ -545,7 +524,6 @@ void InitLogic::StartVersionCheck()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007df880
 // Starts firewall detection on the lobby port and opens a listening socket for the server's connect-back
 void InitLogic::StartFirewallTest()
 {
@@ -572,7 +550,6 @@ void InitLogic::StartFirewallTest()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dfa80
 // Stops waiting for a firewall connect-back and closes its sockets
 void InitLogic::KillFirewallTest()
 {
@@ -587,7 +564,6 @@ void InitLogic::KillFirewallTest()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dfb00
 // Cancels every HTTP download and the firewall test
 void InitLogic::KillHook()
 {
@@ -597,7 +573,6 @@ void InitLogic::KillHook()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dfb20
 // Handles the login screen's Back, Internet and choose-network-adapter buttons
 void InitLogic::HandleControlEvent(int inControlId)
 {
@@ -610,7 +585,6 @@ void InitLogic::HandleControlEvent(int inControlId)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x7dfb50
 // Retries start-up (event 100045), or ignores the current errors and retries (event 100025)
 void InitLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -622,28 +596,3 @@ void InitLogic::HandleComponentEvent(ComponentEvent* inEvent)
     this->Start(true);
 }
 }
-
-// TEMPLATE: WON 0x007f20a0
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007dd1e0
-// (public: virtual void * __thiscall WONAPI::InitLogic::`scalar deleting destructor'(unsigned int)    [??_GInitLogic@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007df3f0
-// (public: __thiscall WONAPI::LogicCompletionBase::LogicCompletionBase(void)    [??0LogicCompletionBase@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x007f36d0
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007dd4a0
-// (public: virtual void * __thiscall WONAPI::LoginInitStatusEvent::`scalar deleting destructor'(unsigned int)    [??_GLoginInitStatusEvent@WONAPI@@UAEPAX)
-// TEMPLATE: WON 0x007dd4c0
-// (public: virtual __thiscall WONAPI::LoginInitStatusEvent::~LoginInitStatusEvent(void)    [??1LoginInitStatusEvent@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007ddb50
-// (public: virtual void * __thiscall WONAPI::SetCrossPromotionEvent::`scalar deleting destructor'(unsigned int)    [??_GSetCrossPromotionEvent@WONAPI@@UA)
-// TEMPLATE: WON 0x007ddb70
-// (public: virtual __thiscall WONAPI::SetCrossPromotionEvent::~SetCrossPromotionEvent(void)    [??1SetCrossPromotionEvent@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1430
-// (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::InitLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicCompleti)
-// TEMPLATE: WON 0x007f1510
-// (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::InitLogic>::~LogicCompletion<class WONAPI::InitLogic>(void)    [??1?$LogicCompletion@)

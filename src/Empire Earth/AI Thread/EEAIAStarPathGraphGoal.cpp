@@ -50,7 +50,6 @@
 #include "ee/EEAIAStarPathGraphGoal.h"
 #include "ee/EEAIAStarMachine.h"
 
-// FUNCTION: EXE 0x41a64b
 // Creates the sub-sector graph path goal with no unit, no modifier and no endpoints
 EEAIAStarPathGraphGoal::EEAIAStarPathGraphGoal()
 {
@@ -59,10 +58,6 @@ EEAIAStarPathGraphGoal::EEAIAStarPathGraphGoal()
     this->Reset();
 }
 
-// SYNTHETIC: EXE 0x41a68c
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x41a6a8
 // Destroys the goal, releasing its unit and its modifier
 EEAIAStarPathGraphGoal::~EEAIAStarPathGraphGoal()
 {
@@ -70,7 +65,6 @@ EEAIAStarPathGraphGoal::~EEAIAStarPathGraphGoal()
     this->ReleaseModifier();
 }
 
-// FUNCTION: EXE 0x41a6c7
 // Marks the search failed when the open lists run dry or the machine's revolution limit is hit before the current
 // node, next to the goal tile, is the start sector
 void EEAIAStarPathGraphGoal::SearchDone(EEAIAStarGraphMachineBase* inMachine)
@@ -97,7 +91,6 @@ void EEAIAStarPathGraphGoal::SearchDone(EEAIAStarGraphMachineBase* inMachine)
     }
 }
 
-// FUNCTION: EXE 0x41a76f
 // Returns true for no node, the target sub-sector, or a neighbour of it at its sector centre when the unit cannot
 // enter the target's kind
 bool EEAIAStarPathGraphGoal::IsGoalNode(EEAIAStarGraphNode* inNode)
@@ -113,7 +106,6 @@ bool EEAIAStarPathGraphGoal::IsGoalNode(EEAIAStarGraphNode* inNode)
     return theResult;
 }
 
-// FUNCTION: EXE 0x41a7d0
 // Fills the goal's passable-terrain flags from the unit's class (no unit: unchanged)
 void EEAIAStarPathGraphGoal::SetFlags(EEComplexUnit* inUnit)
 {
@@ -121,7 +113,6 @@ void EEAIAStarPathGraphGoal::SetFlags(EEComplexUnit* inUnit)
         inUnit->mUnitClass->GetTerrainFlags(inUnit, this->mPathFlags);
 }
 
-// FUNCTION: EXE 0x41a7ec
 // Returns whether the search may enter a sub-sector: its kind is passable (or it is a gate open to the player)
 // and, coming from a linked sub-sector, a passable link joins them
 bool EEAIAStarPathGraphGoal::AcceptNeighbor(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
@@ -134,7 +125,6 @@ bool EEAIAStarPathGraphGoal::AcceptNeighbor(EEAIPathSubSector* inSector, EEAIPat
     return theResult;
 }
 
-// FUNCTION: EXE 0x41a830
 // Returns true when the sub-sector has no links to inFrom or any such link has a passable end
 bool EEAIAStarPathGraphGoal::HasPassableLink(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
@@ -149,7 +139,6 @@ bool EEAIAStarPathGraphGoal::HasPassableLink(EEAIPathSubSector* inSector, EEAIPa
 }
 
 // NEAR: the original copies the sector location as one 8-byte point (EEAIPathSector +0x40 is a U2DPoint<long>?)
-// FUNCTION: EXE 0x41a8c2
 // Loads the unit's terrain flags and caches the target sector's centre; always returns true
 bool EEAIAStarPathGraphGoal::Prepare()
 {
@@ -158,7 +147,6 @@ bool EEAIAStarPathGraphGoal::Prepare()
     return true;
 }
 
-// FUNCTION: EXE 0x41a8e6
 // Resets the goal: releases the unit and modifier, clears both endpoints and the terrain flags
 void EEAIAStarPathGraphGoal::Reset()
 {
@@ -181,7 +169,6 @@ void EEAIAStarPathGraphGoal::ReleaseModifier()
     this->mModifier = NULL;
 }
 
-// FUNCTION: EXE 0x41a91e
 // Replaces the goal's modifier, referencing the new one and pointing it back at this goal
 void EEAIAStarPathGraphGoal::SetModifier(EEAIGraphPathGoalModifierBase* inModifier)
 {
@@ -191,7 +178,6 @@ void EEAIAStarPathGraphGoal::SetModifier(EEAIGraphPathGoalModifierBase* inModifi
     this->mModifier->mGoal = this;
 }
 
-// FUNCTION: EXE 0x41a93a
 // Sets the unit to path for, moving the reference from the old unit to the new one
 void EEAIAStarPathGraphGoal::SetUnit(EEComplexUnit* inUnit)
 {
@@ -254,10 +240,3 @@ void EEAIAStarPathGraphGoal::GetPath(std::vector<EETileCoordinate>& outTiles, st
         }
     } while (theMore);
 }
-
-// Compiler-generated for this unit (first users here): the graph goal base ctor 0x1a961, EEAIPathSubSector::IsNeighbor
-// 0x1a99b, the base's Virtual10 0x1a9be (the kept copy) and ??_G 0x1a9cf.
-// TEMPLATE: EXE 0x41a961
-// TEMPLATE: EXE 0x41a99b
-// TEMPLATE: EXE 0x41a9be
-// TEMPLATE: EXE 0x41a9cf

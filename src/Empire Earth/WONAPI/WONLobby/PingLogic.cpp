@@ -33,7 +33,6 @@ public:
     WONAPI::ByteBufferPtr mReply; // 0x94
 };
 
-// FUNCTION: WON 0x007e5ed0
 // Creates a ping of a game's address with a request id and the summary/details flags to ask for
 PingGameOp::PingGameOp(LobbyGame* inGame, unsigned short inRequestId,
                        unsigned char inFlags)
@@ -45,7 +44,6 @@ PingGameOp::PingGameOp(LobbyGame* inGame, unsigned short inRequestId,
     this->SetDestAddr(this->mGame->GetAddress());
 }
 
-// FUNCTION: WON 0x007e6240
 // Builds the ping request (id, game type, flags), marks no reply yet and sends it
 void PingGameOp::RunHook()
 {
@@ -59,7 +57,6 @@ void PingGameOp::RunHook()
     UDPManagerSendRecvOp::RunHook();
 }
 
-// FUNCTION: WON 0x007e6360
 // Accepts the reply to this request: records the ping time and keeps any summary/details data
 WONStatus PingGameOp::CheckResponse(ReadBuffer& inBuffer)
 {
@@ -83,18 +80,15 @@ UDPManager* LobbyGetUDPManager();
 unsigned short LobbyGetConnectionSpeed(); // most pings in flight at once (0: no limit); callers use the low 16 bits
 void LobbyNotifyPingChange(LobbyGame*); // update game UI/status
 
-// FUNCTION: WON 0x007e6490
 // Creates the ping logic with request ids starting at 0
 PingLogic::PingLogic()
 {
     this->mNextRequestId = 0;
 }
 
-// FUNCTION: WON 0x007e6520
 // Destroys the ping logic (members only)
 PingLogic::~PingLogic() {}
 
-// FUNCTION: WON 0x007e65d0
 // Routes unsolicited UDP packets to the ping request handler
 void PingLogic::InitComponent(ComponentConfig*)
 {
@@ -103,7 +97,6 @@ void PingLogic::InitComponent(ComponentConfig*)
         aManager->SetDefaultCompletion(new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, this));
 }
 
-// FUNCTION: WON 0x007e6680
 // Pings a game when asked by a ping-game event
 void PingLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -113,7 +106,6 @@ void PingLogic::HandleComponentEvent(ComponentEvent* inEvent)
     }
 }
 
-// FUNCTION: WON 0x007e66a0
 // Host: answers a ping for the hosted game type with the requested summary/details (not in progress if barred)
 void PingLogic::HandlePingRequest(ReadBuffer& inBuffer, const IPAddr& inAddress)
 {
@@ -143,7 +135,6 @@ void PingLogic::HandlePingRequest(ReadBuffer& inBuffer, const IPAddr& inAddress)
         aManager->Send(aBuffer.ToByteBuffer(true).get(), inAddress);
 }
 
-// FUNCTION: WON 0x007e6810
 // Dispatches an unsolicited UDP packet; only ping requests are handled
 void PingLogic::HandleUDPRecv(AsyncOp* inOp)
 {
@@ -163,7 +154,6 @@ void PingLogic::HandleUDPRecv(AsyncOp* inOp)
     catch (ReadBufferException&) {}
 }
 
-// FUNCTION: WON 0x007e68b0
 // Retries an unanswered ping up to 3 times, else records the result and starts queued pings up to the limit
 void PingLogic::PingGameDone(AsyncOp* inOp)
 {
@@ -208,14 +198,12 @@ void PingLogic::PingGameDone(AsyncOp* inOp)
     }
 }
 
-// FUNCTION: WON 0x007e6b40
 // Returns the number of queued plus running pings
 int PingLogic::GetNumPingsToDo()
 {
     return this->mPending.size() + this->mTracker.GetNumTrack();
 }
 
-// FUNCTION: WON 0x007e6b50
 // Pings a game (with details on request), or queues it when the connection-speed limit is reached
 void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
 {
@@ -258,7 +246,6 @@ void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
     this->RunTrackedOp(anOp.get(), new LogicCompletion<PingLogic>(&PingLogic::PingGameDone, this), aTimeout);
 }
 
-// FUNCTION: WON 0x007e6db0
 // Cancels every queued and running ping, marking those games as not pinged
 void PingLogic::KillPings(int)
 {
@@ -277,25 +264,3 @@ void PingLogic::KillPings(int)
     this->mTracker.KillAll();
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007e6110
-// (public: virtual __thiscall PingGameOp::~PingGameOp(void)    [??1PingGameOp@@UAE@XZ])
-// TEMPLATE: WON 0x007e6500
-// (public: virtual void * __thiscall WONAPI::PingLogic::`scalar deleting destructor'(unsigned int)    [??_GPingLogic@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007e60f0
-// (public: virtual void * __thiscall PingGameOp::`scalar deleting destructor'(unsigned int)    [??_GPingGameOp@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1470
-// (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::PingLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicCompleti)
-// TEMPLATE: WON 0x007f15d0
-// (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::PingLogic>::~LogicCompletion<class WONAPI::PingLogic>(void)    [??1?$LogicCompletion@)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1b00
-// (public: void __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::LobbyGame>)
-// TEMPLATE: WON 0x007f26a0
-// (protected: void __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::LobbyGa)

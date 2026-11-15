@@ -44,7 +44,6 @@
 #include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
 
-// FUNCTION: LLE 0x1006f60f
 // Creates an empty file combo box (the given entries are ignored) with no search path
 UIFileComboBox::UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData,
                                GEFont* inFont, const GE2DPoint& inLocation, float inWidth,
@@ -57,7 +56,6 @@ UIFileComboBox::UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, 
 {
 }
 
-// FUNCTION: LLE 0x1006f695
 // Destroys the file combo box, releasing its search path
 UIFileComboBox::~UIFileComboBox()
 {
@@ -65,7 +63,6 @@ UIFileComboBox::~UIFileComboBox()
         this->mFilePath->Dereference();
 }
 
-// FUNCTION: LLE 0x1006f6c1
 // Fills the list with every file in the search path that has a valid extension (full names), appended or sorted
 void UIFileComboBox::CreateEntries(unsigned long inSortType)
 {
@@ -104,7 +101,6 @@ void UIFileComboBox::CreateEntries(unsigned long inSortType)
     }
 }
 
-// FUNCTION: LLE 0x1006f848
 // Deletes the selected file from disk (the combo box lists full file names, extension included) and removes its
 // line on success; returns the delete or lookup error
 long UIFileComboBox::DeleteSelectedFile()
@@ -128,7 +124,6 @@ long UIFileComboBox::DeleteSelectedFile()
     return theResult;
 }
 
-// FUNCTION: LLE 0x1006f928
 // Sets the search path the file list is built from, holding a reference to it
 void UIFileComboBox::SetSearchPaths(FSPath* inPath)
 {
@@ -138,35 +133,3 @@ void UIFileComboBox::SetSearchPaths(FSPath* inPath)
     if (this->mFilePath)
         this->mFilePath->Reference();
 }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1006f4ef
-// SYNTHETIC: LLE 0x1006f4f9
-// SYNTHETIC: LLE 0x1006f509
-// SYNTHETIC: LLE 0x1006f515
-// SYNTHETIC: LLE 0x1006f51f
-// SYNTHETIC: LLE 0x1006f529
-// SYNTHETIC: LLE 0x1006f539
-// SYNTHETIC: LLE 0x1006f545
-// SYNTHETIC: LLE 0x1006f54f
-// SYNTHETIC: LLE 0x1006f559
-// SYNTHETIC: LLE 0x1006f569
-// SYNTHETIC: LLE 0x1006f575
-// SYNTHETIC: LLE 0x1006f57f
-// SYNTHETIC: LLE 0x1006f589
-// SYNTHETIC: LLE 0x1006f599
-// SYNTHETIC: LLE 0x1006f5a5
-// SYNTHETIC: LLE 0x1006f5af
-// SYNTHETIC: LLE 0x1006f5b9
-// SYNTHETIC: LLE 0x1006f5c9
-// SYNTHETIC: LLE 0x1006f5d5
-// SYNTHETIC: LLE 0x1006f5df
-// SYNTHETIC: LLE 0x1006f5e9
-// SYNTHETIC: LLE 0x1006f5f9
-// SYNTHETIC: LLE 0x1006f605
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// TEMPLATE: LLE 0x1006f94b
-// TEMPLATE: LLE 0x1006f961
-// TEMPLATE: LLE 0x1006fa30
-// TEMPLATE: LLE 0x1006fa68

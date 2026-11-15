@@ -18,20 +18,16 @@
 #include "rust/ee_won.h"
 using namespace WONAPI;
 namespace WONAPI {
-// FUNCTION: WON 0x7db2a0
 // Looks up the credits and terms-of-use dialogs from the lobby layout
 void AccountLogic::InitComponent(ComponentConfig* inConfig)
 {
     SafeGetComponent(inConfig, this->mCreditsDialog, "CreditsDialog", __FILE__, 43);
     SafeGetComponent(inConfig, this->mTOUDialog, "TOUDialog", __FILE__, 44);
 }
-// FUNCTION: WON 0x7db150
 // Creates the account logic with no terms-of-use prompt pending
 AccountLogic::AccountLogic() { this->mNeedTOU = false; }
-// FUNCTION: WON 0x7db1d0
 // Destroys the account logic (members only)
 AccountLogic::~AccountLogic() {}
-// FUNCTION: WON 0x7db2e0
 // Shows the scrolling credits dialog
 void AccountLogic::ShowCredits()
 {
@@ -40,14 +36,12 @@ void AccountLogic::ShowCredits()
     LobbyDoDialog(this->mCreditsDialog.get());
     this->mCreditsDialog->StopScrolling();
 }
-// FUNCTION: WON 0x7db310
 // Shows the terms-of-use dialog; true if the player accepts
 bool AccountLogic::ShowTOU()
 {
     this->mTOUDialog->Reset();
     return LobbyDoDialog(this->mTOUDialog.get()) == 1;
 }
-// FUNCTION: WON 0x7db330
 // Returns false when this game version is out of date, after offering to quit and update it
 bool AccountLogic::CheckLoginStatus()
 {
@@ -58,7 +52,6 @@ bool AccountLogic::CheckLoginStatus()
     }
     return true;
 }
-// FUNCTION: WON 0x7dc2e0
 // Opens the create-account (terms of use to follow), lost-password or lost-user-name screen if the version is usable
 void AccountLogic::HandleControlEvent(int inControlId)
 {
@@ -77,7 +70,6 @@ void AccountLogic::HandleControlEvent(int inControlId)
         break;
     }
 }
-// FUNCTION: WON 0x7dc340
 // Routes create-account, lost password/user name, login, account query and update events to the handlers
 void AccountLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -95,7 +87,6 @@ void AccountLogic::HandleComponentEvent(ComponentEvent* inEvent)
 
 #include "ee/wonapi/WONLobbyEvents.h"
 namespace WONAPI {
-// FUNCTION: WON 0x007db830
 // Asks the account server to e-mail the password of the given user name, behind a status box
 void AccountLogic::HandleLostPassword(ComponentEvent* inEvent)
 {
@@ -109,7 +100,6 @@ void AccountLogic::HandleLostPassword(ComponentEvent* inEvent)
         ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(aName.data()), aName.size()), account);
     LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_RetrievePasswordTitle_String), LOBBY_STRING(LobbyContainer_RetrievePasswordDetails_String), 0, 0);
 }
-// FUNCTION: WON 0x007db920
 // Asks the account server to e-mail the user names registered to the given address, behind a status box
 void AccountLogic::HandleLostUsername(ComponentEvent* inEvent)
 {
@@ -122,7 +112,6 @@ void AccountLogic::HandleLostUsername(ComponentEvent* inEvent)
         ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(aEmail.data()), aEmail.size()), account);
     LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_RetrieveUsernameTitle_String), LOBBY_STRING(LobbyContainer_RetrieveUsernameDetails_String), 0, 0);
 }
-// FUNCTION: WON 0x007dbee0
 // Fetches our account's e-mail address and newsletter setting and broadcasts them
 void AccountLogic::QueryAccount()
 {
@@ -138,7 +127,6 @@ void AccountLogic::QueryAccount()
                                                   op->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER,1) != 0),true);
 }
 
-// FUNCTION: WON 0x007dc160
 // Sends our account's new e-mail address, password and newsletter setting, behind a status box
 void AccountLogic::HandleUpdateAccount(ComponentEvent* inEvent)
 {
@@ -157,7 +145,6 @@ void AccountLogic::HandleUpdateAccount(ComponentEvent* inEvent)
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/EELobbyGameCode.h" // declares LobbyMessageBox
 namespace WONAPI {
-// FUNCTION: WON 0x007db370
 // Creates an account (after the terms of use when needed); on success saves the user and fills in the login fields
 void AccountLogic::HandleCreateAccount(ComponentEvent* inBaseEvent)
 {
@@ -184,7 +171,6 @@ void AccountLogic::HandleCreateAccount(ComponentEvent* inBaseEvent)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x007dba10
 // Logs in: three modifier keys show the credits, an '@' prefix asks for admin, new users get the terms of use;
 // checks the CD key, then saves the user (password if asked) and enters the Internet screen
 void AccountLogic::HandleLogin(ComponentEvent* inBaseEvent)
@@ -234,21 +220,3 @@ void AccountLogic::HandleLogin(ComponentEvent* inBaseEvent)
     LobbyEnterInternetScreen((keyMod&4)==0);
 }
 }
-
-// SafeGetComponent COMDATs this unit references first (placed after the last logic unit)
-// TEMPLATE: WON 0x007f30d0
-// TEMPLATE: WON 0x007f3250
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007db1b0
-// (public: virtual void * __thiscall WONAPI::AccountLogic::`scalar deleting destructor'(unsigned int)    [??_GAccountLogic@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007db760
-// (public: virtual void * __thiscall WONAPI::SetLoginFieldsEvent::`scalar deleting destructor'(unsigned int)    [??_GSetLoginFieldsEvent@WONAPI@@UAEPAXI@)
-// TEMPLATE: WON 0x007db780
-// (public: virtual __thiscall WONAPI::SetLoginFieldsEvent::~SetLoginFieldsEvent(void)    [??1SetLoginFieldsEvent@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007dc0b0
-// (public: virtual void * __thiscall WONAPI::QueryAccountResultEvent::`scalar deleting destructor'(unsigned int)    [??_GQueryAccountResultEvent@WONAPI@@)
-// TEMPLATE: WON 0x007dc0d0
-// (public: virtual __thiscall WONAPI::QueryAccountResultEvent::~QueryAccountResultEvent(void)    [??1QueryAccountResultEvent@WONAPI@@UAE@XZ])

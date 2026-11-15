@@ -12,7 +12,6 @@
 #include "lle/UIControl.h"
 #include "lle/UIMovie.h"
 
-// FUNCTION: LLE 0x1007ba37
 // Creates a movie control showing the given movie, keeping a reference to it
 UIMovie::UIMovie(unsigned long inId, GEMovie* inMovie, const GERectangle& inRectangle, UIForm* inForm,
                  unsigned long inIndex)
@@ -22,7 +21,6 @@ UIMovie::UIMovie(unsigned long inId, GEMovie* inMovie, const GERectangle& inRect
     this->mMovie->Reference();
 }
 
-// FUNCTION: LLE 0x1007ba6b
 // Destroys the movie control, stopping the movie and releasing it
 UIMovie::~UIMovie()
 {
@@ -31,7 +29,6 @@ UIMovie::~UIMovie()
     this->mMovie = NULL;
 }
 
-// FUNCTION: LLE 0x1007ba9a
 // Snapshots the control for drawing; keeps it dirty while the movie plays
 long UIMovie::CopyData()
 {
@@ -41,14 +38,12 @@ long UIMovie::CopyData()
     return theResult;
 }
 
-// FUNCTION: LLE 0x1007bac2
 // Draws the control frame
 long UIMovie::DrawPolygons()
 {
     return UIControl::DrawPolygons();
 }
 
-// FUNCTION: LLE 0x1007bac7
 // Renders the current movie frame in the text pass, lowering the pending draw count; returns the render result
 long UIMovie::DrawTextA()
 {

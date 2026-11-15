@@ -616,7 +616,7 @@ EEE2DRust::EEE2DRust(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, l
 EEE2DRust::EEE2DRust(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect2D(0, inGraphicEffect, EE2DModel(inKind), inKind, false)
 {
-    static const float kTargetLift = 15.0f;   // 0x440014
+    static const float kTargetLift = 15.0f;
     if (inKind == 0x16) {
         GE3DPoint thePosition;
         GETransformation theTransformation(inUnit->mComplexUnit->mPhysicalModel.GetLocation());
@@ -968,7 +968,6 @@ static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation);
 
 // NEAR: register choice (the original keeps the effect in edi, &mL68 in esi and the ambient in ebx, reloading
 // inLocation; ours gives the variant a parameter slot)
-// FUNCTION: EXE 0x4de374
 // Places up to N shell-hole decals of the unit's class around a point (ambient effects on); stops on a failed roll
 // The first one renews a decal already on that spot instead, unless its scatter roll moves it
 void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
@@ -999,7 +998,6 @@ void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
     }
 }
 
-// FUNCTION: EXE 0x4de4a9
 // Places the unit class's blood-stain decal under the unit if ambient effects and blood are on and its roll passes
 // (moved forward along the heading for giraffes and horses)
 void EEPlaceTrackDecal(EEComplexUnit* inUnit)
@@ -1028,7 +1026,6 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit)
     gEffectManager->CreatePlacedEffect(theLocation, theVariant, NULL);
 }
 
-// FUNCTION: EXE 0x4de5ca
 // Returns the first battlefield decal of the given type within 0.05 tiles of a point, or NULL
 // NEAR: registers only
 static EeGfxEffectAmbient* AmbientFindNear(unsigned long inType, GE3DPoint& inLocation)
@@ -1050,7 +1047,6 @@ static EeGfxEffectAmbient* AmbientFindNear(unsigned long inType, GE3DPoint& inLo
     return NULL;
 }
 
-// FUNCTION: EXE 0x4de66d
 // Rolls the effect's chance (parameter 2); always succeeds when it is 1 or more
 static bool AmbientRollChance(EEGraphicEffect* inEffect)
 {
@@ -1060,7 +1056,6 @@ static bool AmbientRollChance(EEGraphicEffect* inEffect)
     return EEEffect::GetRandom() <= theChance;
 }
 
-// FUNCTION: EXE 0x4de6a1
 // Picks the effect or one of its up to three linked variants, each equally likely
 static EEGraphicEffect* AmbientPickVariant(EEGraphicEffect* inEffect)
 {
@@ -1084,7 +1079,6 @@ static EEGraphicEffect* AmbientPickVariant(EEGraphicEffect* inEffect)
     return inEffect;
 }
 
-// FUNCTION: EXE 0x4de6e9
 // With the effect's scatter chance (parameter 3), moves the point randomly within parameter 4; returns whether it moved
 static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation)
 {
@@ -1095,7 +1089,6 @@ static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation)
     return true;
 }
 
-// FUNCTION: EXE 0x4e1814
 // Scales the rotation part of a transformation by a factor (the translation is kept) (from the deleted
 // EEE2DImpact.cpp, whose range held it)
 void EETagPointList::Scale(GETransformation& ioTransformation, float inScale)

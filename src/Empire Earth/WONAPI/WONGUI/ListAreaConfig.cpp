@@ -15,7 +15,6 @@
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
-// FUNCTION: WON 0x0078d5d0
 // Reads a list sort type (ASCENDING, DESCENDING or NONE); throws on any other name
 ListSortType ListAreaConfig::ReadSortType()
 {
@@ -27,7 +26,6 @@ ListSortType ListAreaConfig::ReadSortType()
     throw ConfigObjectException("Invalid list sort type.");
 }
 
-// FUNCTION: WON 0x0078d790
 // Reads a list of named list flags (each optionally negated) and sets or clears them on the list box;
 // throws on an unknown name
 void ListAreaConfig::ReadListFlags(ComponentConfig* inConfig,ListArea* inArea)
@@ -57,7 +55,6 @@ void ListAreaConfig::ReadListFlags(ComponentConfig* inConfig,ListArea* inArea)
     }
 }
 
-// FUNCTION: WON 0x0078da70
 // Handles the LISTFLAGS, TEXTITEM, FONT, TEXTCOLOR, SELCOLOR and LISTSORTTYPE instructions; others go to
 // the scroll area config
 bool ListAreaConfig::Virtual24(const std::string& inInstruction)

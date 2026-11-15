@@ -118,7 +118,7 @@ struct EEColorGroup {
 class EEGraphicObject : public EEMedia {
 public:
     EEGraphicObject();                      // 0xd7354 (LoadTable 0xd7833 news 0x4f0 bytes)
-    virtual ~EEGraphicObject();             // 0xd7568 (??_G 0xd754c)
+    virtual ~EEGraphicObject();
     // 0xd85ed (vtable 0x43f788 +0x04; +0x08 is UnloadMedia): loads the models, textures and sounds on the first use
     virtual long LoadMedia();
     // 0xd8bb2 (ret 0xc): the tag points and colour groups of model part inPart (LoadMedia passes each loaded part

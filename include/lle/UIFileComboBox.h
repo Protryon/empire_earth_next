@@ -18,7 +18,7 @@ public:
                    const GE2DPoint& inLocation, float inWidth, unsigned long inMaxListBoxHeight, UIForm* inForm,
                    unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness);
     virtual ~UIFileComboBox();
-    void AddValidExtension(const UString& inExtension) { this->mValidExtensions.push_back(inExtension); }  // 0x100668d7
+    void AddValidExtension(const UString& inExtension) { this->mValidExtensions.push_back(inExtension); }
     void CreateEntries(unsigned long inSortType);
     long DeleteSelectedFile();
     FSPath* GetFilePath() const { return this->mFilePath; }  // ICF-folded (0x1006608d)

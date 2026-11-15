@@ -12,8 +12,8 @@
 class EEAutoPathRequest : public UReferenceCounter {
 public:
     EEAutoPathRequest(long inRequestID, long inPlayerID, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                      const EECPASGFlags& inFlags);   // 0xa5c31 (ret 0x14)
-    virtual ~EEAutoPathRequest();           // 0xa5cc6 (??_G 0xa5caa)
+                      const EECPASGFlags& inFlags);
+    virtual ~EEAutoPathRequest();
 
     std::vector<EETileCoordinate> mPath;    // +0x08
     // the walker flags: the ctor copy-constructs them (EECPASGFlags copy ctor: memcpy, mL00 = 0); StartGraphPath

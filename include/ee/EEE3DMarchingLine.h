@@ -13,8 +13,8 @@ class EEGraphicObject;
 
 class EEE3DMarchingLine : public EEEffect3D {
 public:
-    EEE3DMarchingLine(GE3DPoint& inFrom, GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect);   // 0xf359c
-    EEE3DMarchingLine();                    // 0xf3693
+    EEE3DMarchingLine(GE3DPoint& inFrom, GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect);
+    EEE3DMarchingLine();
     virtual ~EEE3DMarchingLine();           // +0x00 0xf3736 (??_G 0xf3580)
     virtual long DrawPass4();               // +0x10 0xf3c68 (the draw: a GELine)
     virtual long DrawPass6();               // +0x18 (`return 0`: ICF-folded into 0xfca98)
@@ -33,8 +33,8 @@ public:
     virtual bool SetTo(const GE3DPoint& inPoint);     // +0x5c 0xf3ebf
 
     void Reset();                           // 0xf3893 (the two timers)
-    void AddRegions(const GE3DPoint& inFrom, const GE3DPoint& inTo);   // 0xf38c3
-    void RemoveRegions();                   // 0xf3c02
+    void AddRegions(const GE3DPoint& inFrom, const GE3DPoint& inTo);
+    void RemoveRegions();
 
     std::vector<U2DPoint<long> > mRegions;  // +0x74 the effect regions it is listed in
     GE3DPoint mFrom;                        // +0x84

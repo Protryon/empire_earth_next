@@ -6,7 +6,7 @@
 
 class EEROEffects : public EERenderObject {
 public:
-    EEROEffects();                          // 0x111d3d
+    EEROEffects();
     virtual ~EEROEffects();                 // +0x10 (??_G 0x111d4f; dtor 0x111d6b)
     virtual void FrameStarting();           // +0x00 0x111d76: EERenderObject::QueueEffects
     virtual void SceneStarting();           // +0x04 0x111d7b: clears the z buffer

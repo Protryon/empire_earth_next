@@ -46,13 +46,8 @@
 #include "ee/EEE3DParticleEmitter.h"
 
 
-// SYNTHETIC: EXE 0x4f5d94
-// SYNTHETIC: EXE 0x4f5d9e
-// SYNTHETIC: EXE 0x4f5daf
-// SYNTHETIC: EXE 0x4f5dbb
 const UString EEE3DParticleEmitter::sData("EEE3DParticleEmitter");
 
-// FUNCTION: EXE 0x4f5dd7
 // Creates a particle emitter for a graphic effect at a fixed point, with no sound
 EEE3DParticleEmitter::EEE3DParticleEmitter(GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(0, inGraphicEffect, inKind)
@@ -68,10 +63,6 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(GE3DPoint& inLocation, EEGraphicEffec
     this->mEmitTime = 0.0f;
 }
 
-// SYNTHETIC: EXE 0x4f5e66
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4f5e82
 // Creates a particle emitter for a graphic effect at the line's start, moving along the line's direction
 EEE3DParticleEmitter::EEE3DParticleEmitter(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(0, inGraphicEffect, inKind)
@@ -87,7 +78,6 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(GE3DLine& inLine, EEGraphicEffect* in
     this->mEmitTime = 0.0f;
 }
 
-// FUNCTION: EXE 0x4f5f23
 // Creates a particle emitter attached to a unit's tag point: at the unit's model location (unless the effect
 // follows the tag point), or at a non-complex unit's tile centre on the ground
 EEE3DParticleEmitter::EEE3DParticleEmitter(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind,
@@ -121,7 +111,6 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(EEUnit* inUnit, EEGraphicEffect* inGr
     this->mEmitTime = 0.0f;
 }
 
-// FUNCTION: EXE 0x4f604d
 // Creates an empty particle emitter of the given kind (for loading), with no sound
 EEE3DParticleEmitter::EEE3DParticleEmitter(long inKind)
     : EEEffect3D(inKind)
@@ -131,14 +120,12 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(long inKind)
     this->mIsFirstStep = true;
 }
 
-// FUNCTION: EXE 0x4f6089
 // Destroys the emitter, stopping its sound
 EEE3DParticleEmitter::~EEE3DParticleEmitter()
 {
     this->StopSound();
 }
 
-// FUNCTION: EXE 0x4f60a6
 // Stops the emitter's sound, if any, and releases it
 void EEE3DParticleEmitter::StopSound()
 {
@@ -148,7 +135,6 @@ void EEE3DParticleEmitter::StopSound()
     }
 }
 
-// FUNCTION: EXE 0x4f60cb
 // Drops the emitter's reference to its sound
 void EEE3DParticleEmitter::ReleaseSound()
 {
@@ -157,7 +143,6 @@ void EEE3DParticleEmitter::ReleaseSound()
     this->mSound = NULL;
 }
 
-// FUNCTION: EXE 0x4f60f5
 // Applies drag, gravity, wind and rise to the emitter's velocity and returns its next position; bounces off
 // the terrain when enabled and returns 7 if that position leaves the map
 long EEE3DParticleEmitter::Move(float inSeconds, GE3DPoint& outPosition)
@@ -171,7 +156,6 @@ long EEE3DParticleEmitter::Move(float inSeconds, GE3DPoint& outPosition)
                                       reinterpret_cast<EeGe3DPoint*>(&outPosition));
 }
 
-// FUNCTION: EXE 0x4f634b
 // Resets the emitter's running time and emit countdown
 long EEE3DParticleEmitter::SetUp()
 {
@@ -180,7 +164,6 @@ long EEE3DParticleEmitter::SetUp()
     return 0;
 }
 
-// FUNCTION: EXE 0x4f635e
 // Reads the emitter's velocity, running time, emit countdown and tag point; returns the first read error
 long EEE3DParticleEmitter::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -189,7 +172,6 @@ long EEE3DParticleEmitter::Load(unsigned long inMajorVersion, unsigned long inMi
     return ee_gfx_effect_load_emitter(this->mRecord, &theFile);
 }
 
-// FUNCTION: EXE 0x4f63b9
 // Writes the emitter's velocity, running time, emit countdown and tag point (ee_gfx effect_state.rs); returns the
 // first write error
 long EEE3DParticleEmitter::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -211,7 +193,6 @@ struct EEEmitterHost {
     }
 };
 
-// FUNCTION: EXE 0x4f6417
 // Moves the emitter with its unit's tag point (or by its own motion), updates its sound and, when the countdown
 // runs out, emits a burst of line particles; returns 7 once the unit dies or the duration ends
 long EEE3DParticleEmitter::Step()
@@ -329,7 +310,6 @@ void EEE3DParticleEmitter::PrepareQueue()
 {
 }
 
-// FUNCTION: EXE 0x4f69bc
 // Replaces the emitter's sound, referencing the new one and releasing the old
 void EEE3DParticleEmitter::SetSound(SESMInstanceNode* inSound)
 {

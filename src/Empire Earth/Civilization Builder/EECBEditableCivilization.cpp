@@ -21,7 +21,6 @@
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBEditableCivilization.h"
 #include "ee/EEStringIDs.h"
-// FUNCTION: EXE 0x67c9db
 // Creates the builder's editable copy of a civilization for a player, starting from its points and name
 EECBEditableCivilization::EECBEditableCivilization(EECivilization* inCivilization, unsigned char inPlayer)
     : mCivilization(inCivilization), mPlayer(inPlayer)
@@ -30,7 +29,6 @@ EECBEditableCivilization::EECBEditableCivilization(EECivilization* inCivilizatio
     this->mName = inCivilization->mName;
 }
 
-// FUNCTION: EXE 0x67ca2b
 // Sends the chosen upgrades and name as a civilization-upgrade message (to the server in multiplayer, run
 // directly otherwise); returns false when nothing was chosen
 bool EECBEditableCivilization::Apply()
@@ -50,7 +48,6 @@ bool EECBEditableCivilization::Apply()
     return theResult;
 }
 
-// FUNCTION: EXE 0x67cab7
 // Returns the cost of an upgrade given how many of its category are already picked
 long EECBEditableCivilization::GetCost(EECivUpgrade inUpgrade)
 {
@@ -59,7 +56,6 @@ long EECBEditableCivilization::GetCost(EECivUpgrade inUpgrade)
     return this->mCivilization->ComputeCost(theFirst, theSecond, this->PickedInCategory(inUpgrade));
 }
 
-// FUNCTION: EXE 0x67caf1
 // Returns the refund for removing an upgrade: its cost with one fewer picked in its category
 long EECBEditableCivilization::GetRefund(EECivUpgrade inUpgrade)
 {
@@ -71,7 +67,6 @@ long EECBEditableCivilization::GetRefund(EECivUpgrade inUpgrade)
     return this->mCivilization->ComputeCost(theFirst, theSecond, theCount);
 }
 
-// FUNCTION: EXE 0x67cb30
 // Resets the edit: default civilization name, the civilization's available points, no upgrades chosen
 void EECBEditableCivilization::ResetToStart()
 {
@@ -82,7 +77,6 @@ void EECBEditableCivilization::ResetToStart()
     this->mUpgrades.clear();
 }
 
-// FUNCTION: EXE 0x67cb83
 // Counts the upgrades of the same category, chosen here and already owned by the civilization
 unsigned long EECBEditableCivilization::PickedInCategory(EECivUpgrade inUpgrade)
 {
@@ -90,7 +84,6 @@ unsigned long EECBEditableCivilization::PickedInCategory(EECivUpgrade inUpgrade)
     return this->mCivilization->CountInCategory(inUpgrade, NULL) + theCount;
 }
 
-// FUNCTION: EXE 0x67cbb0
 // Tells whether the civilization may be edited: unchanged in multiplayer, current player still playing otherwise
 bool EECBEditableCivilization::CanChange()
 {
@@ -104,7 +97,6 @@ bool EECBEditableCivilization::CanChange()
     return theResult;
 }
 
-// FUNCTION: EXE 0x67cbe6
 // Returns the chosen upgrade ids followed by the civilization's purchased ones
 std::vector<EECivUpgrade> EECBEditableCivilization::CopyUpgradeIDs()
 {
@@ -118,7 +110,6 @@ std::vector<EECivUpgrade> EECBEditableCivilization::CopyUpgradeIDs()
     return theResult;
 }
 
-// FUNCTION: EXE 0x67cc4e
 // Tells whether anything was chosen: an upgrade or a changed name
 bool EECBEditableCivilization::HasChoices()
 {
@@ -131,35 +122,30 @@ unsigned long EECBEditableCivilization::GetPointsLeft()
     return this->mPointsLeft;
 }
 
-// FUNCTION: EXE 0x67cc7c
 // Tells whether the civilization is still unchanged
 bool EECBEditableCivilization::GetIsUnchanged()
 {
     return this->mCivilization->GetUnchanged();
 }
 
-// FUNCTION: EXE 0x67cc84
 // Returns the civilization's maximum points
 long EECBEditableCivilization::GetMaxPoints()
 {
     return this->mCivilization->GetMaxPoints();
 }
 
-// FUNCTION: EXE 0x67cc8c
 // Returns the edited civilization name
 UWideString* EECBEditableCivilization::GetName()
 {
     return &this->mName;
 }
 
-// FUNCTION: EXE 0x67cc90
 // Returns the civilization's purchased upgrades
 std::vector<EECivUpgrade>& EECBEditableCivilization::GetCivilizationUpgrades()
 {
     return this->mCivilization->GetPurchasedUpgrades();
 }
 
-// FUNCTION: EXE 0x67cc98
 // Adds an upgrade and spends its cost if enough points are left
 bool EECBEditableCivilization::AddUpgrade(EECivUpgrade inCount)
 {
@@ -175,7 +161,6 @@ bool EECBEditableCivilization::AddUpgrade(EECivUpgrade inCount)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67ccd6
 // Removes a chosen upgrade and refunds its points
 bool EECBEditableCivilization::RemoveUpgrade(EECivUpgrade inUpgrade)
 {
@@ -189,7 +174,6 @@ bool EECBEditableCivilization::RemoveUpgrade(EECivUpgrade inUpgrade)
     return theResult;
 }
 
-// FUNCTION: EXE 0x67cd52
 // Sets the edited civilization name
 void EECBEditableCivilization::SetName(const UWideString& inName)
 {

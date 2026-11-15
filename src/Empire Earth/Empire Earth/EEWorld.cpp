@@ -128,22 +128,22 @@
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
-extern bool gSightUpdatesEnabled;           // 0x4c76ec
+extern bool gSightUpdatesEnabled;
 extern bool& gAmbientSoundEnabled;           // 0x5308de (the ambient sound switch)
-extern bool& gDisplayWeatherEffects;         // 0x5308e6
+extern bool& gDisplayWeatherEffects;
 extern long gHerdUnreadValue;                       // 0x4e5e40 (only use: cleared with `and dword ptr, 0`: an integer)
-extern float gViewportHalfWidth;            // 0x530b5c
-extern float gViewportXCenter;              // 0x530b64
-extern float gViewportYCenter;              // 0x530b68
+extern float gViewportHalfWidth;
+extern float gViewportXCenter;
+extern float gViewportYCenter;
 extern UWideString& gWonPlayerName;          // 0x53077c (the WON player name)
 extern UString gDefaultCampaignUser;        // 0x52a170 ("default"; defined below, its init chain mid-file)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
-void EEStopAllSounds();                     // 0x140ceb
-void EEDumpGraphicObjectTable(FSFileSpec& inFile);  // 0xd7acf
-void EEDumpLeakedUnits(FSFileSpec& inFile);  // 0x1f8e7c
-void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362
-void EEUpdateLandContinents();              // 0x23d76c
-void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);  // 0x24f0e9
+void EEStopAllSounds();
+void EEDumpGraphicObjectTable(FSFileSpec& inFile);
+void EEDumpLeakedUnits(FSFileSpec& inFile);
+void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);
+void EEUpdateLandContinents();
+void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer);
 
 // EEGameState's team count: inline (its refused copy 0x13cff7 sits in this unit's template tail); defined here where
 // EETeam is complete
@@ -152,7 +152,6 @@ inline unsigned long EEGameState::GetNumTeams() const
     return this->mTeams.size();
 }
 
-// FUNCTION: EXE 0x537ba3
 // Creates the game world with default settings (time of day 0.35, cheats and unit improvements allowed), no managers
 // and empty statistics
 EEWorld::EEWorld()
@@ -196,17 +195,12 @@ EEWorld::EEWorld()
 }
 
 // The statistics history's ctor (inline in the real header; its refused copy follows its first user):
-// FUNCTION: EXE 0x537e06
 // Creates an empty statistics history
 EEStatisticsHistory::EEStatisticsHistory()
 {
     this->Reset();
 }
 
-// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
-// TEMPLATE: EXE 0x537e2c
-
-// FUNCTION: EXE 0x537e48
 // Destroys the world, deleting its influence table, ghost units and effect, scenario, environment and calamity managers
 EEWorld::~EEWorld()
 {
@@ -221,14 +215,12 @@ EEWorld::~EEWorld()
     delete this->mCalamityHelper;
 }
 
-// FUNCTION: EXE 0x537f68
 // Appends a ghost unit to the world's ghost list
 void EEWorld::AddGhostUnit(EEGhostUnit* inGhost)
 {
     this->mGhostUnits.push_back(inGhost);
 }
 
-// FUNCTION: EXE 0x537f7b
 // Adds a team of the given players, first merging in every existing team whose players are allied both ways with them
 void EEWorld::AddTeam(const std::vector<unsigned long>& inPlayers)
 {
@@ -262,7 +254,6 @@ void EEWorld::AddTeam(const std::vector<unsigned long>& inPlayers)
     this->mTeams.push_back(theTeam);
 }
 
-// FUNCTION: EXE 0x538185
 // Puts two players on one team, merging in every existing team whose players are allied both ways with both of them
 void EEWorld::AddAlliance(long inPlayer1, long inPlayer2)
 {
@@ -288,7 +279,6 @@ void EEWorld::AddAlliance(long inPlayer1, long inPlayer2)
     this->mTeams.push_back(theTeam);
 }
 
-// FUNCTION: EXE 0x538304
 // Grants each player the wonder power 4 population share bonus when they hold it with no enemy holder or only allies
 // hold it, and takes it away when only enemies hold it (mixed allies and enemies: no change)
 void EEWorld::ApplyShareBonus()
@@ -372,7 +362,6 @@ next:
     }
 }
 
-// FUNCTION: EXE 0x5384dd
 // Sets a player's stance toward another; joins their teams when the alliance becomes mutual, splits them when a mutual
 // alliance ends
 void EEWorld::SetDiplomaticStance(unsigned long inPlayerID, long inOther, long inStance)
@@ -418,7 +407,6 @@ void EEWorld::QueueBornDeactivations()
     }
 }
 
-// FUNCTION: EXE 0x538551
 // Tears down the current game: records the end statistics, unloads media, removes every unit, ghost, effect,
 // calamity and manager, frees the minimap and active unit lists, and returns campaign games to the campaign screen
 void EEWorld::Clear()
@@ -505,7 +493,6 @@ void EEWorld::Clear()
     this->mClearing = false;
 }
 
-// FUNCTION: EXE 0x5388ee
 // Turns every unit's sight back on and refreshes the local player's terrain visibility
 void EEWorld::RestartUnits()
 {
@@ -514,7 +501,6 @@ void EEWorld::RestartUnits()
     this->GetCurrentPlayer()->RefreshTerrainVisibility();
 }
 
-// FUNCTION: EXE 0x538919
 // Replaces a player with a human player copied from it by a save and load, killing the old player's units and moving
 // its alliances, pending units and media over to the copy
 void EEWorld::ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap)
@@ -594,7 +580,6 @@ void EEWorld::ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion,
     theNew->RepairPointers(inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x538e29
 // Resets the unit's collision state, collision tile and collision resolution count
 // (an EEComplexUnit member defined here: ReplacePlayer and the unit change call it; provisional name)
 void EEComplexUnit::ClearCollisionState()
@@ -604,7 +589,6 @@ void EEComplexUnit::ClearCollisionState()
     this->mCollisionResolutionCount = 0.0f;
 }
 
-// FUNCTION: EXE 0x538e5e
 // Rebuilds the teams from diplomacy (one per non-observer player, merged by mutual alliances) and sets Gaia and every
 // player at war with each other
 void EEWorld::RebuildTeams()
@@ -640,7 +624,6 @@ void EEWorld::RebuildTeams()
     this->TeamsChanged();
 }
 
-// FUNCTION: EXE 0x538fe5
 // Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
 void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
 {
@@ -650,7 +633,6 @@ void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
         it->second--;
 }
 
-// FUNCTION: EXE 0x53900d
 // Kills and removes every player's units (pending ones included) and the queued placements, emptying the unit list
 void EEWorld::RemoveAllUnits()
 {
@@ -685,7 +667,6 @@ void EEWorld::RemoveAllUnits()
         this->mClearing = false;
 }
 
-// FUNCTION: EXE 0x5390e8
 // Deletes every ghost unit under the ghost lock
 void EEWorld::ClearGhostUnits()
 {
@@ -698,7 +679,6 @@ void EEWorld::ClearGhostUnits()
     gWorld.mGhostUnitsLock->Leave();
 }
 
-// FUNCTION: EXE 0x53913e
 // Writes a report of all loaded media (players, effects, graphic objects, sounds, buttons, terrain, textures, models)
 // to a file, plus the leaked units and references when inLeaks is set
 void EEWorld::DumpMedia(FSFileSpec& inFile, bool inLeaks)
@@ -722,7 +702,6 @@ void EEWorld::DumpMedia(FSFileSpec& inFile, bool inLeaks)
     }
 }
 
-// FUNCTION: EXE 0x5391f2
 // Takes a player out of the game: marks them out, drops them from their teams, reveals the map to them (except a lost
 // scenario), stamps their end time and ends any cinematic; for the local player it redraws the minimap
 void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
@@ -746,7 +725,6 @@ void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
     }
 }
 
-// FUNCTION: EXE 0x539264
 // Fills the empty player slots after the game state's players with computer players in unused colours and 999,999
 // of each resource (scenario editor), loading their foundation media
 void EEWorld::AddComputerPlayers(EEGameState* inState)
@@ -791,7 +769,6 @@ void EEWorld::AddComputerPlayers(EEGameState* inState)
     }
 }
 
-// FUNCTION: EXE 0x5394b2
 // Moves the world and viewport camera, unless a scenario camera move is running and the move is not forced
 void EEWorld::SetCamera(const GETransformation& inTransformation, bool inForce)
 {
@@ -801,7 +778,6 @@ void EEWorld::SetCamera(const GETransformation& inTransformation, bool inForce)
     }
 }
 
-// FUNCTION: EXE 0x5394e7
 // Adds the world's state and the game's random seed to a sync checksum
 void EEWorld::GetChecksum(ESChecksum& ioChecksum)
 {
@@ -810,14 +786,12 @@ void EEWorld::GetChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum("EEWorld", theSeed);
 }
 
-// FUNCTION: EXE 0x539528
 // Returns the calamity helper's contagion (plague) manager
 EEContagionManager* EEWorld::GetContagionManager()
 {
     return (static_cast<EEPCalamityHelper*>(this->mCalamityHelper))->mContagionManager;
 }
 
-// FUNCTION: EXE 0x539532
 // Returns how many gatherers use a resource unit, starting its count at 0 when it is not tracked yet
 unsigned long EEWorld::GetResourceUsers(EEUnit* inUnit)
 {
@@ -831,14 +805,12 @@ unsigned long EEWorld::GetResourceUsers(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x539589
 // Returns whether a map tile's height is below 0
 bool EEWorld::IsTileBlocked(unsigned long inX, unsigned long inY)
 {
     return this->mMap->GetTile(inX, inY)->GetHeight() < 0.0f;
 }
 
-// FUNCTION: EXE 0x5395cf
 // Converts a screen point to a point on the orthographic view plane (Y = 0) around the viewport centre
 void EEWorld::ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint)
 {
@@ -851,7 +823,6 @@ void EEWorld::ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint)
     outPoint.SetZ(-(thePoint.GetY() * theSize));
 }
 
-// FUNCTION: EXE 0x539670
 // Returns the player (Gaia excluded) in a lobby slot, or NULL
 EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)
 {
@@ -865,7 +836,6 @@ EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5396f3
 // Counts one more gatherer on a resource unit
 void EEWorld::AddResourceUser(EEUnit* inUnit)
 {
@@ -893,7 +863,6 @@ static const float kWorldLoadProgress18 = 0.60000002f;
 static const float kWorldLoadProgress17 = 0.56666666f;
 static const float kWorldLoadProgress16 = 0.53333336f;
 
-// FUNCTION: EXE 0x539749
 // Sets up the world from a game state (map, players, teams, local player, camera, sight, minimap, calamities, music,
 // media), reporting load progress; in multiplayer it finds the local player by name
 void EEWorld::StartGame(EEGameState* inState, bool inLocked)
@@ -1122,7 +1091,6 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     gGameOptions.Fn130272();
 }
 
-// FUNCTION: EXE 0x53a1fb
 // Replaces the world's map, deleting the old one
 void EEWorld::SetMap(EEMap* inMap)
 {
@@ -1130,7 +1098,6 @@ void EEWorld::SetMap(EEMap* inMap)
     this->mMap = inMap;
 }
 
-// FUNCTION: EXE 0x53a219
 // Replaces the effect manager, deleting the old one
 void EEWorld::SetEffectManager(EEEffectManager* inManager)
 {
@@ -1138,7 +1105,6 @@ void EEWorld::SetEffectManager(EEEffectManager* inManager)
     this->mEffectManager = inManager;
 }
 
-// FUNCTION: EXE 0x53a237
 // Replaces the scenario manager, deleting the old one
 void EEWorld::SetScenarioManager(EEScenarioManager* inManager)
 {
@@ -1146,14 +1112,12 @@ void EEWorld::SetScenarioManager(EEScenarioManager* inManager)
     this->mScenarioManager = inManager;
 }
 
-// FUNCTION: EXE 0x53a255
 // Creates the influence table for a map and the world's player count
 void EEWorld::CreateInfluenceTable(EEMap* inMap)
 {
     this->SetInfluenceTable(new EEInfluenceTable(inMap, this->mNumPlayers));
 }
 
-// FUNCTION: EXE 0x53a285
 // Replaces the minimap with a new one for the world's map, viewed by the game state's local player
 void EEWorld::CreateMiniMap(EEGameState* inState)
 {
@@ -1163,7 +1127,6 @@ void EEWorld::CreateMiniMap(EEGameState* inState)
     EEUIMiniMap::Update(gMiniMap);
 }
 
-// FUNCTION: EXE 0x53a312
 // Installs the game state's players: places their pending units, applies tech trees, map restrictions and variant hit
 // points and loads media; for a loaded game it repairs pointers and replaces flagged computer players
 void EEWorld::CreatePlayers(EEGameState* inState)
@@ -1241,7 +1204,6 @@ void EEWorld::CreatePlayers(EEGameState* inState)
     }
 }
 
-// FUNCTION: EXE 0x53a719
 // Loads the shared command confirmation effects and button sounds, once per game
 void EEWorld::LoadMedia()
 {
@@ -1260,7 +1222,6 @@ void EEWorld::LoadMedia()
     this->mMediaLoaded = true;
 }
 
-// FUNCTION: EXE 0x53a7e8
 // Pauses a running single-player game on the server; returns 2 when it is already paused, else 0
 long EEWorld::PauseGame()
 {
@@ -1276,7 +1237,6 @@ long EEWorld::PauseGame()
     return theResult;
 }
 
-// FUNCTION: EXE 0x53a845
 // Builds the post-game statistics: tops up computer players' resources against the best human, scores every player,
 // sorts them by score and fills the records (computer play times scaled from the longest human one)
 void EEWorld::RecordStatistics()
@@ -1555,25 +1515,18 @@ void EEWorld::RecordStatistics()
         this->mStatistics.mIsScenario = false;
 }
 
-// The post-game series copy (out of line: EEPlayerStatistics::GetSeries's by-value result):
-// TEMPLATE: EXE 0x53b64b
-// (compiler-generated ??0EEStatisticsSeries@@QAE@ABU0@@Z; name in analysis/exe/names.txt)
-
-// FUNCTION: EXE 0x53b66c
 // Creates an empty statistics record
 EEStatisticsRecord::EEStatisticsRecord()
 {
     this->Clear();
 }
 
-// FUNCTION: EXE 0x53b6ab
 // Clears the AI continent data for the world's map
 void EEWorld::ClearContinents()
 {
     gContinentManager.Clear(this->mMap);
 }
 
-// FUNCTION: EXE 0x53b6bc
 // Applies the queued unit activations and deactivations to the list of units updated every tick
 void EEWorld::UpdateActiveUnits()
 {
@@ -1617,7 +1570,6 @@ void EEWorld::UpdateActiveUnits()
     this->mDeactivateQueue.clear();
 }
 
-// FUNCTION: EXE 0x53b8e8
 // Queues a unit for activation unless it is NULL, has no id, is a path point or is already queued
 void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
 {
@@ -1630,7 +1582,6 @@ void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x53b965
 // Queues a unit for deactivation unless it is a path point or is already queued
 void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
 {
@@ -1653,7 +1604,6 @@ void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x53b9db
 // Rebuilds the active unit list from the placed units (first parts; units of inactive classes only when dead),
 // dropping the pending activation queues
 void EEWorld::RebuildActiveUnits()
@@ -1691,7 +1641,6 @@ void EEWorld::RebuildActiveUnits()
     }
 }
 
-// FUNCTION: EXE 0x53bba0
 // Resets the world: clears effects and calamities, gives it a fresh calamity helper, removes every unit and drops the
 // scenario and environment managers
 void EEWorld::Reset()
@@ -1707,7 +1656,6 @@ void EEWorld::Reset()
     RTSWorld::Reset();
 }
 
-// FUNCTION: EXE 0x53bc1f
 // Turns every unit's sight off and refreshes the local player's terrain visibility
 void EEWorld::RefreshUnits()
 {
@@ -1716,7 +1664,6 @@ void EEWorld::RefreshUnits()
     this->GetCurrentPlayer()->RefreshTerrainVisibility();
 }
 
-// FUNCTION: EXE 0x53bc4a
 // Takes a disconnected player out: flags them disconnected (unless observing), drops them from their teams, marks them
 // out and frees their slot
 void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
@@ -1729,7 +1676,6 @@ void EEWorld::RemoveDisconnectedPlayer(unsigned long inPlayer)
     thePlayer->mSlot = kSlotNone;
 }
 
-// FUNCTION: EXE 0x53bc81
 // Removes a player from every team, re-adding each team's remaining players as a new team
 void EEWorld::RemovePlayerFromTeams(unsigned long inPlayer)
 {
@@ -1749,7 +1695,6 @@ void EEWorld::RemovePlayerFromTeams(unsigned long inPlayer)
     this->TeamsChanged();
 }
 
-// FUNCTION: EXE 0x53bd9d
 // Undoes the wonder power 4 population share bonus ApplyShareBonus gave or took for every player
 void EEWorld::RemoveShareBonus()
 {
@@ -1831,7 +1776,6 @@ next:
     }
 }
 
-// FUNCTION: EXE 0x53bf76
 // Splits every team holding both players into new teams without each of them
 void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
 {
@@ -1853,7 +1797,6 @@ void EEWorld::BreakAlliance(long inPlayer1, long inPlayer2)
     this->TeamsChanged();
 }
 
-// FUNCTION: EXE 0x53c0cb
 // Lets every player finish loading its units after a saved game was read
 void EEWorld::NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -1863,7 +1806,6 @@ void EEWorld::NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long in
     }
 }
 
-// FUNCTION: EXE 0x53c105
 // Moves a unit to its place in the world's unit list, which is sorted by tile x
 void EEWorld::ResortUnit(RTSUnit* inUnit)
 {
@@ -1903,7 +1845,6 @@ void EEWorld::ResortUnit(RTSUnit* inUnit)
     theComplex->Link(theAt);
 }
 
-// FUNCTION: EXE 0x53c1ad
 // Replaces the calamity helper, deleting the old one unless it is the same object
 void EEWorld::SetCalamityHelper(FSPersistent* inObject)
 {
@@ -1913,14 +1854,12 @@ void EEWorld::SetCalamityHelper(FSPersistent* inObject)
     }
 }
 
-// FUNCTION: EXE 0x53c1d5
 // Moves the camera unless a scenario camera move is running
 void EEWorld::SetCameraTransformation(const GETransformation& inTransformation)
 {
     this->SetCamera(inTransformation, false);
 }
 
-// FUNCTION: EXE 0x53c1e3
 // Replaces the environment (weather) manager, deleting the old one
 void EEWorld::SetEnvironmentManager(EEEnvironmentManager* inManager)
 {
@@ -1928,7 +1867,6 @@ void EEWorld::SetEnvironmentManager(EEEnvironmentManager* inManager)
     this->mEnvironmentManager = inManager;
 }
 
-// FUNCTION: EXE 0x53c201
 // Replaces the influence table, deleting the old one
 void EEWorld::SetInfluenceTable(EEInfluenceTable* inTable)
 {
@@ -1936,7 +1874,6 @@ void EEWorld::SetInfluenceTable(EEInfluenceTable* inTable)
     this->mInfluenceTable = inTable;
 }
 
-// FUNCTION: EXE 0x53c21e
 // Sets the population limit and recomputes every player's share bonus and civilization population bonus
 void EEWorld::SetPopulationLimit(unsigned long inLimit)
 {
@@ -1950,7 +1887,6 @@ void EEWorld::SetPopulationLimit(unsigned long inLimit)
     gWorld.ApplyShareBonus();
 }
 
-// FUNCTION: EXE 0x53c260
 // Sets the player count and recomputes every player's share bonus and civilization population bonus
 void EEWorld::SetNumPlayers(unsigned long inNumPlayers)
 {
@@ -1964,7 +1900,6 @@ void EEWorld::SetNumPlayers(unsigned long inNumPlayers)
     gWorld.ApplyShareBonus();
 }
 
-// FUNCTION: EXE 0x53c2a2
 // Puts a player into observer mode and marks their game options entry as out (type 2)
 void EEWorld::MarkPlayerOut(unsigned long inPlayer)
 {
@@ -1976,7 +1911,6 @@ void EEWorld::MarkPlayerOut(unsigned long inPlayer)
     gWorld.mGameOptions.mPlayers[inPlayer - 1] = thePlayer;
 }
 
-// FUNCTION: EXE 0x53c301
 // Sets the time of day and recomputes the sun and moon light directions
 void EEWorld::SetTimeOfDay(float inTimeOfDay)
 {
@@ -2000,7 +1934,6 @@ void EEWorld::SetTimeOfDay(float inTimeOfDay)
     theTransformation.Apply(theMoon2, this->mMoonDirection);
 }
 
-// FUNCTION: EXE 0x53c445
 // Places the queued units: adds them to their tiles, the minimap, regions and influence table, links them into the
 // x-sorted unit list and finds their contacts
 void EEWorld::PlaceQueuedUnits()
@@ -2063,7 +1996,6 @@ void EEWorld::PlaceQueuedUnits()
     }
 }
 
-// FUNCTION: EXE 0x53c5ad
 // Moves a player to a new lobby slot and name, handing its old slot and name to the slot's previous holder; switches
 // the local view to it when it takes the local slot
 void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused)
@@ -2106,13 +2038,8 @@ void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned ch
 }
 
 // A file-scope global defined mid-file (its init chain sits between MovePlayerToSlot and UnloadMedia; no reader):
-// SYNTHETIC: EXE 0x53c740   (wrapper)
-// SYNTHETIC: EXE 0x53c74a   (ctor)
-// SYNTHETIC: EXE 0x53c75b   (registrar)
-// SYNTHETIC: EXE 0x53c767   (dtor)
 UString gDefaultCampaignUser("default");
 
-// FUNCTION: EXE 0x53c772
 // Unloads the per-player foundation media and the shared effects and button sounds of the game (the light glow's
 // model, never drawn, is gone since R4.4's twenty-first round)
 void EEWorld::UnloadMedia()
@@ -2145,7 +2072,6 @@ void EEWorld::UnloadMedia()
     this->mMediaLoaded = false;
 }
 
-// FUNCTION: EXE 0x53c964
 // Unpauses a running single-player game on the server; always returns 0
 long EEWorld::UnpauseGame()
 {
@@ -2187,7 +2113,6 @@ static bool EEWorldCanRecover(EEPlayer* inPlayer)
     return false;
 }
 
-// FUNCTION: EXE 0x53c9b4
 // Ends the game when decided: applies team victories, defeats players out of units and lets a last team win; returns
 // 2 when someone won, 1 when no human (or only one player) is left, else 0
 long EEWorld::CheckGameOver()
@@ -2275,7 +2200,6 @@ done:
     return theResult;
 }
 
-// FUNCTION: EXE 0x53cdb9
 // Updates the physics timing after the game speed changed
 void EEWorld::GameSpeedChanged()
 {
@@ -2283,14 +2207,12 @@ void EEWorld::GameSpeedChanged()
 }
 
 // EETeam's ctors: COMDATs here after their first users (each news the team's EEVCWonder)
-// FUNCTION: EXE 0x53d013
 // Creates an empty team with a wonder victory condition
 EETeam::EETeam()
 {
     this->mVictoryCondition = new EEVCWonder(this);
 }
 
-// FUNCTION: EXE 0x53d076
 // Creates a team of two players with a wonder victory condition
 EETeam::EETeam(long inPlayer1, long inPlayer2)
 {
@@ -2299,7 +2221,6 @@ EETeam::EETeam(long inPlayer1, long inPlayer2)
     this->mVictoryCondition = new EEVCWonder(this);
 }
 
-// FUNCTION: EXE 0x53d0d3
 // Creates a team of the given players with a wonder victory condition
 EETeam::EETeam(const std::vector<unsigned long>& inPlayers)
 {
@@ -2307,97 +2228,11 @@ EETeam::EETeam(const std::vector<unsigned long>& inPlayers)
     this->mVictoryCondition = new EEVCWonder(this);
 }
 
-// The unit's template COMDATs and refused inline copies (0x13cdc4..0x13e967; names from range pairing):
-// TEMPLATE: EXE 0x53cdc4
-// TEMPLATE: EXE 0x53cdf0
-// TEMPLATE: EXE 0x53ce3e
-// TEMPLATE: EXE 0x53ce79
-// TEMPLATE: EXE 0x53cf3f
-// TEMPLATE: EXE 0x53cfde
-// TEMPLATE: EXE 0x53cff7
-// TEMPLATE: EXE 0x53d194
-// TEMPLATE: EXE 0x53d50b
-// TEMPLATE: EXE 0x53d5fd
-// TEMPLATE: EXE 0x53d6e9
-// TEMPLATE: EXE 0x53d75a
-// TEMPLATE: EXE 0x53dc16
-// TEMPLATE: EXE 0x53dc48
-// TEMPLATE: EXE 0x53dc5a
-// TEMPLATE: EXE 0x53dc94
-// TEMPLATE: EXE 0x53dcfe
-// TEMPLATE: EXE 0x53e056
-// TEMPLATE: EXE 0x53e096
-// TEMPLATE: EXE 0x53e109
-// TEMPLATE: EXE 0x53e14e
-// TEMPLATE: EXE 0x53e195
-// TEMPLATE: EXE 0x53e22a
-// TEMPLATE: EXE 0x53e26e
-// TEMPLATE: EXE 0x53e2ea
-// TEMPLATE: EXE 0x53e316
-// TEMPLATE: EXE 0x53e342
-// TEMPLATE: EXE 0x53e35f
-// TEMPLATE: EXE 0x53e410
-// TEMPLATE: EXE 0x53e42d
-// TEMPLATE: EXE 0x53e558
-
-// TEMPLATE: EXE 0x5388c6
-// TEMPLATE: EXE 0x538e4b
-// TEMPLATE: EXE 0x53cea4
-// TEMPLATE: EXE 0x53cecc
-// TEMPLATE: EXE 0x53cee0
-// TEMPLATE: EXE 0x53cf13
-// TEMPLATE: EXE 0x53cfb2
-// TEMPLATE: EXE 0x53d12a
-// TEMPLATE: EXE 0x53d155
-// TEMPLATE: EXE 0x53d169
-// TEMPLATE: EXE 0x53d3ff
-// TEMPLATE: EXE 0x53d58c
-// TEMPLATE: EXE 0x53d657
-// TEMPLATE: EXE 0x53dccc
-
-// TEMPLATE: EXE 0x53e2a7
-// ?copy@std@@YA?AV?$_Ptrit@VEETeam@@HPAV1@AAV1@PAV1@AAV1@@1@V21@00@Z
-// TEMPLATE: EXE 0x53e831
-// ??0EETeam@@QAE@ABV0@@Z (EETeam.h inline copy ctor)
-// TEMPLATE: EXE 0x53e88c
-// ?_Ufill@?$vector@VEETeam@@V?$allocator@VEETeam@@@std@@@std@@IAEPAVEETeam@@PAV3@IABV3@@Z
-// TEMPLATE: EXE 0x53e8b7
-// ?_Ucopy@?$vector@VEETeam@@V?$allocator@VEETeam@@@std@@@std@@IAEPAVEETeam@@V?$_Ptrit@VEETeam@@HPAV1@AAV1@PAV1@AAV1@@2@0PAV3@@Z
-// TEMPLATE: EXE 0x53e8e3
-// ?fill@std@@YAXV?$_Ptrit@VEETeam@@HPAV1@AAV1@PAV1@AAV1@@1@0ABVEETeam@@@Z
-// TEMPLATE: EXE 0x53e912
-// ?copy_backward@std@@YA?AV?$_Ptrit@VEETeam@@HPAV1@AAV1@PAV1@AAV1@@1@V21@00@Z
-// TEMPLATE: EXE 0x53e955
-// ?_Construct@std@@YAXPAVEETeam@@ABV2@@Z
-
-// RecordStatistics' vector<EEStatisticsRecord> / map<unsigned long, EEStatisticsRecord> COMDATs
-// TEMPLATE: EXE 0x53ce1c
-// TEMPLATE: EXE 0x53d250
-// TEMPLATE: EXE 0x53d44f
-// TEMPLATE: EXE 0x53d577
-// TEMPLATE: EXE 0x53d91c
-// TEMPLATE: EXE 0x53e0da
-// TEMPLATE: EXE 0x53e1e5
-// TEMPLATE: EXE 0x53e213
-// TEMPLATE: EXE 0x53e38b
-// TEMPLATE: EXE 0x53e3bf
-// TEMPLATE: EXE 0x53e3df
-// TEMPLATE: EXE 0x53e43f
-// TEMPLATE: EXE 0x53d3e3
-// TEMPLATE: EXE 0x53d28a
-// TEMPLATE: EXE 0x53d36d
-// TEMPLATE: EXE 0x53e451
-// TEMPLATE: EXE 0x53d059
-
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEWorld::CameraChanged(class GETransformation const &)
 {
 }
 
-// ICF-FOLDED: EXE 0x548024
 // Returns the player's index in the world, -1 if absent
-// (no address of its own: the same body as RTSWorld::GetPlayerIndex, which ICF kept)
 long EEWorld::GetPlayerIndex(EEPlayer* inPlayer)
 {
     long theResult = -1;
@@ -2409,15 +2244,11 @@ long EEWorld::GetPlayerIndex(EEPlayer* inPlayer)
     return theResult;
 }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEWorld::TeamsChanged()
 {
 }
 
-// ICF-FOLDED: EXE 0x54804f
 // Returns the unit with the id (its top byte is the player), 0 if none
-// (no address of its own: the same body as RTSWorld::GetUnit, which ICF kept)
 EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
 {
     return static_cast<EEUnit*>(this->RTSWorld::GetUnit(inUnitID));

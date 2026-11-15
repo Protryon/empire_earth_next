@@ -62,7 +62,6 @@ EEStatisticsSeries EEPlayerStatistics::GetSeries(unsigned long inSeries)
     return theSeries;
 }
 
-// FUNCTION: EXE 0x56d76c
 // Reads the statistics from the saved game: the name, then Rust's (the end time, each series' maximum and points)
 long EEPlayerStatistics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -70,7 +69,6 @@ long EEPlayerStatistics::Load(unsigned long inMajorVersion, unsigned long inMino
     return theResult != 0 ? theResult : ee_units_stats_load(this->mStats, &inFile, &EESaveFilePrimitive, &this->mEndTime);
 }
 
-// FUNCTION: EXE 0x56d86b
 // Writes the statistics to the saved game: the name, then Rust's (the end time, each series)
 long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -78,7 +76,6 @@ long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMino
     return theResult != 0 ? theResult : ee_units_stats_save(this->mStats, &outFile, &EESaveFilePrimitive, this->mEndTime);
 }
 
-// FUNCTION: EXE 0x56d69e
 // Returns the statistics series a dead unit counts in: 14 citizens, 15 heroes, 13 other moving units, 0 none
 long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
 {
@@ -98,7 +95,6 @@ long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
     return theSeries;
 }
 
-// FUNCTION: EXE 0x56dadc
 // Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources
 void EEStatisticsRecord::Clear()
 {
@@ -121,13 +117,11 @@ void EEStatisticsRecord::Clear()
     this->mStatistics.Clear();
 }
 
-// FUNCTION: EXE 0x56db75
 // Destroys the end-of-game record
 EEStatisticsRecord::~EEStatisticsRecord()
 {
 }
 
-// FUNCTION: EXE 0x56db99
 // Clears the game history: times, map size, flags, campaign name and every record
 void EEStatisticsHistory::Reset()
 {
@@ -143,7 +137,6 @@ void EEStatisticsHistory::Reset()
     this->mRecords.clear();
 }
 
-// FUNCTION: EXE 0x56dbc3
 // Destroys the game history
 EEStatisticsHistory::~EEStatisticsHistory()
 {

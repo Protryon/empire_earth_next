@@ -17,20 +17,16 @@
 #include "platform/PlatFile.h"
 #include "platform/PlatMessage.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006e3090
 // Creates an empty, invalid CD key
 CDKey::CDKey() { this->mValid = false; }
-// FUNCTION: WON 0x006e30c0
 // Marks the key invalid
 void CDKey::Invalidate() { this->mValid = false; }
-// FUNCTION: WON 0x006e30d0
 // Sets the product name the key belongs to and invalidates the key
 void CDKey::SetProductString(const std::string& product)
 {
     this->Invalidate();
     this->mProduct = product;
 }
-// FUNCTION: WON 0x006e3220
 // Takes 8 raw key bytes and validates their check byte against a CRC of the product and key
 bool CDKey::CalcKeyFromBuffer(const char* raw)
 {
@@ -39,7 +35,6 @@ bool CDKey::CalcKeyFromBuffer(const char* raw)
                                          this->mProduct.length(), reinterpret_cast<const uint8_t*>(raw));
     return this->mValid;
 }
-// FUNCTION: WON 0x006e3320
 // Returns the machine's id (Windows: the volume serial number of the Windows drive); reports failure when there is none
 DWORD CDKey::GetMachineId(bool* success)
 {
@@ -49,7 +44,6 @@ DWORD CDKey::GetMachineId(bool* success)
         *success = found != 0;
     return serial;
 }
-// FUNCTION: WON 0x006e35a0
 // Builds the Blowfish key from the product name CRCs, optionally prefixed with the machine id
 void CDKey::GetSymmetricKey(Blowfish& key, bool useMachine) const
 {
@@ -60,7 +54,6 @@ void CDKey::GetSymmetricKey(Blowfish& key, bool useMachine) const
                                                this->mProduct.length(), machineId, useMachine && gotId, bytes);
     key.SetKey(bytes, static_cast<int>(length));
 }
-// FUNCTION: WON 0x006e3880
 // Decrypts a stored key with the machine-bound or the old key (trying the other on failure); true when valid
 bool CDKey::InitEncrypted(const void* encrypted, unsigned long length)
 {
@@ -81,7 +74,6 @@ bool CDKey::InitEncrypted(const void* encrypted, unsigned long length)
         this->NotifyUsedOldMethodToDecrypt();
     return this->mValid;
 }
-// FUNCTION: WON 0x006e3ac0
 // Loads and decrypts the product's key from a registry value; false when absent or invalid
 bool CDKey::LoadFromRegistry(long root, const char* path)
 {

@@ -57,10 +57,6 @@ const float kMarchingLineStep = 1.0f;
 
 // 0xf40d8 is U2DPoint<long>::GetLineTiles (lle/U2DPoint.h, exe view): its COMDAT is first emitted here
 
-// SYNTHETIC: EXE 0x4f3580
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4f359c
 // Creates a marching line (waypoint line) between two points, attached to no units
 EEE3DMarchingLine::EEE3DMarchingLine(GE3DPoint& inFrom, GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect)
     : EEEffect3D(0, inGraphicEffect, kEffect3DMarchingLine)
@@ -71,7 +67,6 @@ EEE3DMarchingLine::EEE3DMarchingLine(GE3DPoint& inFrom, GE3DPoint& inTo, EEGraph
     this->mToUnit = NULL;
 }
 
-// FUNCTION: EXE 0x4f3693
 // Creates an empty marching line for loading from a saved game
 EEE3DMarchingLine::EEE3DMarchingLine()
     : EEEffect3D(kEffect3DMarchingLine), mFromUnit(NULL), mToUnit(NULL)
@@ -79,7 +74,6 @@ EEE3DMarchingLine::EEE3DMarchingLine()
     this->Reset();
 }
 
-// FUNCTION: EXE 0x4f3736
 // Destroys the line: leaves its map regions, unloads its graphic and releases both end units
 EEE3DMarchingLine::~EEE3DMarchingLine()
 {
@@ -94,7 +88,6 @@ EEE3DMarchingLine::~EEE3DMarchingLine()
         this->mToUnit->Dereference();
 }
 
-// FUNCTION: EXE 0x4f3793
 // Queues the line in render queue 2, snapshotting its ends (at the end units if any) and the camera position
 long EEE3DMarchingLine::Queue(EEEffectQueue* inQueues)
 {
@@ -116,7 +109,6 @@ long EEE3DMarchingLine::Queue(EEEffectQueue* inQueues)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f3882
 // Leaves the line's map regions, then releases the 3D effect's resources
 void EEE3DMarchingLine::ReleaseResources()
 {
@@ -124,7 +116,6 @@ void EEE3DMarchingLine::ReleaseResources()
     EEEffect3D::ReleaseResources();
 }
 
-// FUNCTION: EXE 0x4f3893
 // Resets the line's time and its mCC value to 0
 void EEE3DMarchingLine::Reset()
 {
@@ -132,7 +123,6 @@ void EEE3DMarchingLine::Reset()
     this->mTime = 0.0f;
 }
 
-// FUNCTION: EXE 0x4f38a4
 // Resets the line and loads its graphic; returns 0
 long EEE3DMarchingLine::SetUp()
 {
@@ -143,7 +133,6 @@ long EEE3DMarchingLine::SetUp()
     return 0;
 }
 
-// FUNCTION: EXE 0x4f38c3
 // Registers the line in each effect region it crosses between two points, except the end regions and its own
 void EEE3DMarchingLine::AddRegions(const GE3DPoint& inFrom, const GE3DPoint& inTo)
 {
@@ -172,7 +161,6 @@ void EEE3DMarchingLine::AddRegions(const GE3DPoint& inFrom, const GE3DPoint& inT
     }
 }
 
-// FUNCTION: EXE 0x4f3b66
 // Reads the base 3D effect, time, mCC and the ids of the end units (relinked later); returns the first error
 long EEE3DMarchingLine::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -205,7 +193,6 @@ long EEE3DMarchingLine::Load(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f3c02
 // Removes the line from every effect region it was registered in and forgets them
 void EEE3DMarchingLine::RemoveRegions()
 {
@@ -221,7 +208,6 @@ void EEE3DMarchingLine::RemoveRegions()
     this->mRegions.clear();
 }
 
-// FUNCTION: EXE 0x4f3c68
 // Draws the line on screen between its projected ends, fading from opaque to 0.3, without fog; returns the draw result
 long EEE3DMarchingLine::DrawPass4()
 {
@@ -264,7 +250,6 @@ void EEE3DMarchingLine::PrepareQueue()
 {
 }
 
-// FUNCTION: EXE 0x4f3e29
 // Moves the line's start to a point and re-registers its map regions
 void EEE3DMarchingLine::MoveToPoint(const GE3DPoint& inLocation)
 {
@@ -273,7 +258,6 @@ void EEE3DMarchingLine::MoveToPoint(const GE3DPoint& inLocation)
     this->AddRegions(inLocation, this->mTo);
 }
 
-// FUNCTION: EXE 0x4f3e52
 // Moves the line's start to a transformation's position and re-registers its map regions
 void EEE3DMarchingLine::MoveToTransformation(const GETransformation& inTransformation)
 {
@@ -283,7 +267,6 @@ void EEE3DMarchingLine::MoveToTransformation(const GETransformation& inTransform
     this->AddRegions(theLocation, this->mTo);
 }
 
-// FUNCTION: EXE 0x4f3e96
 // Sets the start point unless the line starts at a unit; returns whether it was set
 bool EEE3DMarchingLine::SetFrom(const GE3DPoint& inPoint)
 {
@@ -295,7 +278,6 @@ bool EEE3DMarchingLine::SetFrom(const GE3DPoint& inPoint)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f3ebf
 // Sets the end point unless the line ends at a unit; returns whether it was set
 bool EEE3DMarchingLine::SetTo(const GE3DPoint& inPoint)
 {
@@ -307,7 +289,6 @@ bool EEE3DMarchingLine::SetTo(const GE3DPoint& inPoint)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f3ee8
 // After a load, turns the saved unit ids back into units (without referencing them) and reloads the graphic
 long EEE3DMarchingLine::RepairPointers()
 {
@@ -324,7 +305,6 @@ long EEE3DMarchingLine::RepairPointers()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f3f56
 // Writes the base 3D effect, time, mCC and the end units' ids
 long EEE3DMarchingLine::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -357,7 +337,6 @@ long EEE3DMarchingLine::Save(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f4017
 // Swaps a replaced unit for its replacement at either end of the line, moving the references
 void EEE3DMarchingLine::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 {
@@ -374,7 +353,6 @@ void EEE3DMarchingLine::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
     inNewUnit->Reference();
 }
 
-// FUNCTION: EXE 0x4f4068
 // Ages the line; returns 7 (remove) once a set duration is up
 long EEE3DMarchingLine::Step()
 {
@@ -385,9 +363,3 @@ long EEE3DMarchingLine::Step()
         theResult = 7;
     return theResult;
 }
-
-// FUNCTION: EXE 0x4f40ac
-// Appends an effect to a vector<EEEffect*> (a template COMDAT)
-
-// TEMPLATE: EXE 0x4f40d8
-// U2DPoint<long>::GetLineTiles (lle/U2DPoint.h exe view)

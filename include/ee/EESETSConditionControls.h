@@ -21,8 +21,8 @@ extern GEFont* gU531930;                    // 0x531930 (the chat text edit box'
 
 class EESETSConditionControls {
 public:
-    EESETSConditionControls(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x17daa8
-    ~EESETSConditionControls();             // 0x17e3d7
+    EESETSConditionControls(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
+    ~EESETSConditionControls();
 
     UITextLabel* mLabels[5];                // +0x00
     UIEditBox* mEditBoxes[2];               // +0x14

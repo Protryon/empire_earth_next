@@ -44,7 +44,7 @@ public:
 class EEAmbientSoundManager {
 public:
     EEAmbientSoundManager();                // 0x124ee2 (Empire Earth.cpp's chain; stores EEAmbientWorldAnalyzer's vtable)
-    virtual ~EEAmbientSoundManager();       // 0x124f5d
+    virtual ~EEAmbientSoundManager();
     // 0x12572e: stores inEnabled at +0x64 and starts or stops the sounds when it changes (the settings pass the
     // "Ambient Sounds" check box; provisional name)
     void SetEnabled(bool inEnabled);
@@ -60,14 +60,14 @@ public:
     long Load(FSFile& inFile);                                // 0x125012 (the 0x98-byte sound records)
     void UpdateDay(float inTimeOfDay, long inTime);           // 0x1250ae (state 2)
     void UpdateDawn(float inTimeOfDay, long inTime);          // 0x125231 (state 1)
-    float RandomRange(float inLow, float inHigh);             // 0x125267
-    long RandomInteger(long inLow, long inHigh);              // 0x125281
+    float RandomRange(float inLow, float inHigh);
+    long RandomInteger(long inLow, long inHigh);
     void UpdateNight(float inTimeOfDay, long inTime);         // 0x1252c2 (state 4)
     void UpdateDusk(float inTimeOfDay, long inTime);          // 0x1254c8 (state 3)
-    void ClearSounds();                                       // 0x1257f8
-    void UpdateAnimals(float inTimeOfDay, long inTime);       // 0x12580b
-    bool UpdateWater(float inTimeOfDay, long inTime, bool inForce, float inRatio);   // 0x125d0d
-    void UpdateTerrain(float inTimeOfDay, long inTime);       // 0x125fcc
+    void ClearSounds();
+    void UpdateAnimals(float inTimeOfDay, long inTime);
+    bool UpdateWater(float inTimeOfDay, long inTime, bool inForce, float inRatio);
+    void UpdateTerrain(float inTimeOfDay, long inTime);
     // inline (COMDATs 0x12737c, 0x127385 at the end of EEAmbientSoundManager.cpp)
     float Random() { return this->mRandom.Generate(); }
     void CheckState(float inTimeOfDay, long inTime)
@@ -92,6 +92,6 @@ public:
     bool mIsPaused;                         // +0x65
 };
 
-extern EEAmbientSoundManager gAmbientSoundManager;  // 0x52f5d0
+extern EEAmbientSoundManager gAmbientSoundManager;
 
 #endif

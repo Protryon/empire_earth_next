@@ -74,23 +74,17 @@
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EECivPowerIDs.h"
-// FUNCTION: EXE 0x6830d0
 // Creates the civilization powers table, empty
 EECivPowersManager::EECivPowersManager()
 {
     this->mPowers.clear();
 }
 
-// SYNTHETIC: EXE 0x6830fa
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x683116
 // Destroys the civilization powers table
 EECivPowersManager::~EECivPowersManager()
 {
 }
 
-// FUNCTION: EXE 0x683124
 // Reads the civilization power records from the powers file
 long EECivPowersManager::Load(FSFile* inFile)
 {
@@ -110,14 +104,12 @@ long EECivPowersManager::Load(FSFile* inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x6831b3
 // Reads a civilization power's name from the string table
 long EECivPowersManager::GetName(long inID, UWideString& outName)
 {
     return gResource->GetString(inID + IDS_CIV_POWER_BASE, outName);
 }
 
-// FUNCTION: EXE 0x6831d0
 // Copies the record of a power id (powers start at id 0x26); false when the slot is empty or holds another id
 bool EECivPowersManager::GetPower(long inID, EECivPower& outPower)
 {
@@ -131,14 +123,12 @@ bool EECivPowersManager::GetPower(long inID, EECivPower& outPower)
     return theResult;
 }
 
-// FUNCTION: EXE 0x683235
 // Returns the record of a power id without range checks
 EECivPower* EECivPowersManager::GetPowerRecord(long inID)
 {
     return &this->mPowers[inID - 0x26];
 }
 
-// FUNCTION: EXE 0x683248
 // Tells whether the player bought the civilization power
 // (an upgrade whose attribute applies the power: civbuilder.yaml; the original compared the level with the id)
 bool EECivPowersManager::HasPower(EEPlayer* inPlayer, long inID)
@@ -164,7 +154,6 @@ static_assert(kSoundSlavery == 0x422 && kSoundPriestTowerConvert == 0x41c && kSo
               kSoundThunder2 == 0x1ba && kGraphicEffectLightningUnit == 0x15 && kGraphicEffectDustEffect == 0xab &&
               kGraphicEffectDisintegrationAreaEffectIntermediate == 0xec, "EERules.cpp's civ power rows");
 
-// FUNCTION: EXE 0x6832a3
 // Applies a bought civ power to a player: researches its technology, then the power's own effects
 // (flaming/crusader upgrades, media loads, exploration sight pulse, mining limit, camouflage, expansionism settlements)
 // The effects are civpowers.yaml's (C++ primitives the data selects and parameterises; the original's switch on the
@@ -229,43 +218,3 @@ void EECivPowersManager::ApplyPower(EEPlayer* inPlayer, unsigned long inID)
         }
     }
 }
-
-
-// FUNCTION: EXE 0x683609
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683635
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683670
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x6836cd
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683711
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x68374b
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683a33
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683a48
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683a5f
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683a8c
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683ac1
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683ae6
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)
-
-// FUNCTION: EXE 0x683b18
-// Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)

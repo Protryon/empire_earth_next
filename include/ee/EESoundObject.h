@@ -22,12 +22,12 @@ public:
     }
     // inline accessors: the calamity classes pass their values from registers and FP temporaries
     // the unit EESoundObject.cpp (0xda56d..0xda984)
-    EESoundObject();                        // 0xda600
+    EESoundObject();
     virtual ~EESoundObject();               // ??_G 0xda638, dtor 0xda654 (unloads when still counted)
     virtual long LoadMedia();               // EEMedia +0x04 0xda7e6 (counts a use; 9: no such sample)
     virtual long UnloadMedia();             // EEMedia +0x08 0xda92e
     static long LoadTable(FSFile* inFile);  // 0xda680 (db\dbsounds.dat)
-    static void UnloadTable();              // 0xda747
+    static void UnloadTable();
     static void Dump(FSFileSpec& inFile);       // 0xda787 (fprintf to the spec's stream; EEWorld::DumpMedia)
     bool GetLooping() const { return this->mLooping; }
     unsigned long GetSampleID() const { return this->mSampleID; }

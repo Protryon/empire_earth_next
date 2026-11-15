@@ -240,7 +240,6 @@ struct EEPlayerEconScope {
     }
 };
 
-// FUNCTION: EXE 0x561c55
 // Creates an off-map record with no unit, time or reason
 EEWUnitsOffMapInfo::EEWUnitsOffMapInfo()
 {
@@ -249,17 +248,12 @@ EEWUnitsOffMapInfo::EEWUnitsOffMapInfo()
     this->mReason = 0;
 }
 
-// SYNTHETIC: EXE 0x561c6f
-// (the scalar deleting destructor, emitted with the vtable; slot EEWUnitsOffMapInfo+0x0)
-
-// FUNCTION: EXE 0x561c8b
 // Destroys the off-map record, releasing its unit
 EEWUnitsOffMapInfo::~EEWUnitsOffMapInfo()
 {
     this->ReleaseUnit();
 }
 
-// FUNCTION: EXE 0x561c96
 // Reads the off-map unit's ID, location, time and reason from the saved game; returns the first read error
 long EEWUnitsOffMapInfo::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -277,7 +271,6 @@ long EEWUnitsOffMapInfo::Load(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x561ce7
 // Releases the reference to the off-map unit and clears it
 void EEWUnitsOffMapInfo::ReleaseUnit()
 {
@@ -287,7 +280,6 @@ void EEWUnitsOffMapInfo::ReleaseUnit()
     }
 }
 
-// FUNCTION: EXE 0x561cfc
 // Turns the loaded unit ID back into a referenced unit (NULL when it no longer exists); always succeeds
 long EEWUnitsOffMapInfo::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
@@ -300,7 +292,6 @@ long EEWUnitsOffMapInfo::RepairPointers(unsigned long inFirst, unsigned long inS
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x561d22
 // Writes the off-map unit's ID (-1 for none), location, time and reason to the saved game;
 // returns the first write error
 long EEWUnitsOffMapInfo::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -318,7 +309,6 @@ long EEWUnitsOffMapInfo::Save(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x561d84
 // Replaces the off-map unit with a new one, referencing it and releasing the old one
 void EEWUnitsOffMapInfo::SetUnit(RTSUnit* inUnit)
 {
@@ -331,7 +321,6 @@ void EEWUnitsOffMapInfo::SetUnit(RTSUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x561da5
 // Creates a player with a name and ID: resets all state, binds its tech tree to it and creates
 // its wonder and construction-site lists
 EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
@@ -349,13 +338,6 @@ EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
     this->mConstructionSites = new UReferenceContainer<EEComplexUnit*>;
 }
 
-// SYNTHETIC: EXE 0x562010
-// (the scalar deleting destructor, emitted with the vtable; slot EEPlayer+0x0)
-
-// SYNTHETIC: EXE 0x56202c
-// (the scalar deleting destructor, emitted with the vtable; slot UReferenceContainer<EEComplexUnit *>+0x0)
-
-// FUNCTION: EXE 0x562048
 // Creates an unnamed player: resets all state and creates its wonder and construction-site lists
 EEPlayer::EEPlayer()
 {
@@ -369,7 +351,6 @@ EEPlayer::EEPlayer()
     this->mConstructionSites = new UReferenceContainer<EEComplexUnit*>;
 }
 
-// FUNCTION: EXE 0x562297
 // Destroys the player: clears and releases every unit group, its media, tech tree, air traffic, upgrades,
 // towns, herds, off-map records, patrol groups and wonder/construction-site lists
 EEPlayer::~EEPlayer()
@@ -431,7 +412,6 @@ EEPlayer::~EEPlayer()
     ee_units_queued_free(this->mQueued);
 }
 
-// FUNCTION: EXE 0x562677
 // Destroys the civilization (members only)
 EECivilization::~EECivilization()
 {
@@ -537,7 +517,6 @@ static long EEPlayerImprovement(const EEPlayer* inPlayer, uint32_t inWhat, unsig
     return ee_units_player_improvement(EEPlayerRefs(inPlayer), inWhat, inUnitType, inImprovement, inFlag, inFlag2, inFraction, outReason);
 }
 
-// FUNCTION: EXE 0x562694
 // Queues an improvement (front or back) when it can be bought, paying unless told not to (ee_units player.rs)
 void EEPlayer::QueueImprovement(unsigned long inUnitType, unsigned long inImprovement, bool inFront, bool inAlreadyPaid)
 {
@@ -546,7 +525,6 @@ void EEPlayer::QueueImprovement(unsigned long inUnitType, unsigned long inImprov
     theScope.Record(this, 16, 0, {(int32_t)inUnitType, (int32_t)inImprovement, inFront, inAlreadyPaid});
 }
 
-// FUNCTION: EXE 0x562740
 // Records a media item as loaded by the player (ignores NULL)
 void EEPlayer::AddLoadedMedia(EEMedia* inMedia)
 {
@@ -554,7 +532,6 @@ void EEPlayer::AddLoadedMedia(EEMedia* inMedia)
         this->mLoadedMedia.push_back(inMedia);
 }
 
-// FUNCTION: EXE 0x56275a
 // Starts every pending command group running, then adds the pending units as the base player does
 void EEPlayer::AddPendingUnits(bool inKeepID, bool inReleasePending)
 {
@@ -563,7 +540,6 @@ void EEPlayer::AddPendingUnits(bool inKeepID, bool inReleasePending)
     RTSPlayer::AddPendingUnits(inKeepID, inReleasePending);
 }
 
-// FUNCTION: EXE 0x56279f
 // Adds a patrol group to the player, keeping a reference to it
 void EEPlayer::AddPatrolGroup(EEPPatrolGroup* inGroup)
 {
@@ -571,7 +547,6 @@ void EEPlayer::AddPatrolGroup(EEPPatrolGroup* inGroup)
     this->mPatrolGroups.push_back(inGroup);
 }
 
-// FUNCTION: EXE 0x5627b9
 // Starts sharing the player's sight with another player, refreshing its land buildings' sight around the change
 void EEPlayer::AddSightSharer(EEPlayer* inPlayer)
 {
@@ -587,7 +562,6 @@ void EEPlayer::AddSightSharer(EEPlayer* inPlayer)
     }
 }
 
-// FUNCTION: EXE 0x562816
 // Toggles units in the selection: adds built units not yet selected and removes the rest;
 // plays the last added unit's selection sound during local selection
 void EEPlayer::AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs)
@@ -612,7 +586,6 @@ void EEPlayer::AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs)
         EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));
 }
 
-// FUNCTION: EXE 0x5628cb
 // Refunds a fraction of a technology's cost in each resource (ee_units player.rs)
 void EEPlayer::RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
@@ -621,7 +594,6 @@ void EEPlayer::RefundTechnology(EETechnology* inTechnology, long inUnitType, flo
     theScope.Record(this, 8, 0, {EEPlayerNodeID(inTechnology), inUnitType, EEPlayerFloatBits(inFraction)});
 }
 
-// FUNCTION: EXE 0x562915
 // Refunds a fraction of a unit class improvement's cost at its queued level (ee_units player.rs)
 void EEPlayer::RefundImprovement(EEUnitClass* inClass, long inImprovement, float inFraction)
 {
@@ -631,7 +603,6 @@ void EEPlayer::RefundImprovement(EEUnitClass* inClass, long inImprovement, float
     theScope.Record(this, 9, 0, {inClass != NULL ? (int32_t)inClass->mUnitType : -1, inImprovement, EEPlayerFloatBits(inFraction)});
 }
 
-// FUNCTION: EXE 0x5629e4
 // Selects a unit by ID, starting a new selection when adding a unit of a player other than the selected one
 void EEPlayer::AddUnitToSelectedGroup(unsigned long inUnitID, bool inFlag)
 {
@@ -648,7 +619,6 @@ void EEPlayer::AddUnitToSelectedGroup(unsigned long inUnitID, bool inFlag)
     this->SelectUnit(inUnitID, inFlag, theNewGroup);
 }
 
-// FUNCTION: EXE 0x562a5d
 // Adds the built units of a list of IDs to the selection; plays the last added unit's selection
 // sound during local selection
 void EEPlayer::AddUnitsToSelectedGroup(std::vector<long>& inUnitIDs)
@@ -672,7 +642,6 @@ void EEPlayer::AddUnitsToSelectedGroup(std::vector<long>& inUnitIDs)
         EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));
 }
 
-// FUNCTION: EXE 0x562b08
 // Pushes back the start time of every wonder's timer by an amount
 void EEPlayer::DelayWonderTimers(long inAmount)
 {
@@ -680,7 +649,6 @@ void EEPlayer::DelayWonderTimers(long inAmount)
         (*it)->mCloaked += inAmount;
 }
 
-// FUNCTION: EXE 0x562b35
 // Adds one of the player's own units to the repatrol list once, keeping a reference to it
 void EEPlayer::AddUnitToRepatrol(EEComplexUnit* inUnit)
 {
@@ -695,7 +663,6 @@ void EEPlayer::AddUnitToRepatrol(EEComplexUnit* inUnit)
 // (gNumPlayers 0x530e0c, which EECPAttackCommander.cpp and EECPAttackSubGroup.cpp also declare, is
 // gWorld.mNumPlayers, unsigned: `jbe`)
 
-// FUNCTION: EXE 0x562ba8
 // Adds a unit to the player: counts its population, activates it in the world, marks its tech node (researched when
 // built), counts vital units, unlocks the capitol technologies on the first capitol and records statistics
 void EEPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
@@ -738,7 +705,6 @@ void EEPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
         this->mSavedGroups.Reset(theSeries, 1);
 }
 
-// FUNCTION: EXE 0x562dab
 // Records a unit leaving the map with its tile and the current game time
 void EEPlayer::AddOffMapUnit(RTSUnit* inUnit)
 {
@@ -752,7 +718,6 @@ void EEPlayer::AddOffMapUnit(RTSUnit* inUnit)
     this->mUnitsOffMap.push_back(theInfo);
 }
 
-// FUNCTION: EXE 0x562e22
 // Puts an animal into a herd it may join (a new herd if none, its holder's herd or a random one if
 // several); returns false when it is no herd animal or no herd took it
 bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
@@ -797,7 +762,6 @@ bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x563043
 // Adds a unit to the stranded list once, keeping a reference to it
 void EEPlayer::AddStrandedUnit(EEUnit* inUnit)
 {
@@ -808,7 +772,6 @@ void EEPlayer::AddStrandedUnit(EEUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x5630ac
 // Selects a unit into the active group or as the single viewed unit; returns false for a foreign unit
 // while own units are selected
 bool EEPlayer::TrySelectUnit(EEUnit* inUnit, bool inFlag)
@@ -836,7 +799,6 @@ bool EEPlayer::TrySelectUnit(EEUnit* inUnit, bool inFlag)
 
 // Town merge is defined after its existing patrol-goal include below.
 
-// FUNCTION: EXE 0x563605
 // Removes a town ID from the player's town lookup
 void EEPlayer::RemoveTownID(long inID)
 {
@@ -845,7 +807,6 @@ void EEPlayer::RemoveTownID(long inID)
         this->mTownsByID.erase(theIterator);
 }
 
-// FUNCTION: EXE 0x56363e
 // Returns the last unit of the patrol route, or NULL when it is empty
 EEComplexUnit* EEPPatrolGroup::GetLast()
 {
@@ -856,7 +817,6 @@ EEComplexUnit* EEPPatrolGroup::GetLast()
 
 // (0x563659: EEUGPatrol::SetPatrolGroup, defined after ee/EEUGPatrol.h's include below)
 
-// FUNCTION: EXE 0x56367b
 // Detaches a unit from the computer player's control
 void EEPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
 {
@@ -864,7 +824,6 @@ void EEPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
         inUnit->mIsDetachedFromAI = true;
 }
 
-// FUNCTION: EXE 0x56368f
 // Adds a unit to the player's construction sites unless it is already there
 void EEPlayer::AddConstructionSite(EEComplexUnit* inUnit)
 {
@@ -872,7 +831,6 @@ void EEPlayer::AddConstructionSite(EEComplexUnit* inUnit)
         this->mConstructionSites->Add(inUnit);
 }
 
-// FUNCTION: EXE 0x5636cd
 // Records a wonder (starting its timer unless told not to); the first wonder of a type grants its wonder power
 void EEPlayer::AddWonder(EEComplexUnit* inUnit, bool inIsLoading)
 {
@@ -888,7 +846,6 @@ void EEPlayer::AddWonder(EEComplexUnit* inUnit, bool inIsLoading)
         this->mWonderTypeCounts[inUnit->mUnitClass->mUnitType]++;
 }
 
-// FUNCTION: EXE 0x56379e
 // Recounts the population, the vital units that keep the player alive and the vital buildings
 void EEPlayer::RecountPopulation()
 {
@@ -912,7 +869,6 @@ void EEPlayer::RecountPopulation()
     this->mNumVitalBuildings = theOtherCount;
 }
 
-// FUNCTION: EXE 0x56384d
 // Whether an improvement can be bought counting the queue (ee_units player.rs can_buy); else the reason text
 bool EEPlayer::CanBuy(long inUnitType, long inImprovement, UWideString* outText)
 {
@@ -920,7 +876,6 @@ bool EEPlayer::CanBuy(long inUnitType, long inImprovement, UWideString* outText)
     return theScope.Record(this, 10, EEPlayerImprovement(this, 3, inUnitType, inImprovement, false, false, 0.0f, outText) != 0, {inUnitType, inImprovement, outText != NULL}, outText);
 }
 
-// FUNCTION: EXE 0x5639e8
 // Returns whether the player can produce a unit type (cost and wonder limits included); sets the reason
 bool EEPlayer::CanProduceUnitType(long inUnitType, long inArg, UWideString* outReason)
 {
@@ -934,7 +889,6 @@ bool EEPlayer::CanProduceUnitType(long inUnitType, long inArg, UWideString* outR
     return theScope.Record(this, 20, theCaptured, {inUnitType, inArg, outReason != NULL}, outReason);
 }
 
-// FUNCTION: EXE 0x563a25
 // Whether a technology or unit can be produced (ee_units player.rs can_produce); sets the reason text when not
 bool EEPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
 {
@@ -942,7 +896,6 @@ bool EEPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, boo
     return theScope.Record(this, 1, ee_units_player_can_produce(EEPlayerRefs(this), inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason), {inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason != NULL}, outReason);
 }
 
-// FUNCTION: EXE 0x563c6d
 // Whether an improvement is allowed and within the limits, ignoring the queue (ee_units player.rs)
 bool EEPlayer::CanImprove(long inUnitType, long inImprovement, UWideString* outReason)
 {
@@ -950,7 +903,6 @@ bool EEPlayer::CanImprove(long inUnitType, long inImprovement, UWideString* outR
     return theScope.Record(this, 11, EEPlayerImprovement(this, 2, inUnitType, inImprovement) != 0, {inUnitType, inImprovement, outReason != NULL}, outReason);
 }
 
-// FUNCTION: EXE 0x563d1f
 // Whether the player can afford a technology at a cost scale (ee_units player.rs); sets the reason text when not
 bool EEPlayer::CanAffordTechnology(long inTechnology, float inScale, UWideString* outReason)
 {
@@ -959,7 +911,6 @@ bool EEPlayer::CanAffordTechnology(long inTechnology, float inScale, UWideString
 }
 
 
-// FUNCTION: EXE 0x563d6f
 // Does nothing (the base player ignores being targeted by another player)
 // (ICF-kept empty `ret 8`, shared by the slots below; FlareReceived below (slot +0x98) is the same empty body,
 // folded into it: the base player ignores flares)
@@ -977,7 +928,6 @@ void EEPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 // EESETSETFreezeObject, EESETSETObjectCreate +0x8, +0x10; EESETSETPVisibility, EESETSETPCameraFadeOut,
 // EESETSETPCameraFadeIn, EESETSETPlayerVictory +0x8; EEUnit+0x3c, +0x44, +0x68)
 
-// FUNCTION: EXE 0x563d72
 // For a human player whose unit class has its button loaded, releases one button's media
 // and acquires the other's
 void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond)
@@ -993,7 +943,6 @@ void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* i
         inSecond->Acquire();
 }
 
-// FUNCTION: EXE 0x563db9
 // Sets one of a unit class's acknowledgement sounds for the player
 void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
@@ -1004,7 +953,6 @@ void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject
         theStats->SetAcknowledgeSound(inSound, inIndex);
 }
 
-// FUNCTION: EXE 0x563de1
 // Sets a unit class's creation sound for the player
 void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
@@ -1015,7 +963,6 @@ void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* i
         theStats->SetCreationSound(inSound);
 }
 
-// FUNCTION: EXE 0x563e05
 // Sets a unit class's death sound for the player
 void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
@@ -1026,7 +973,6 @@ void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSo
         theStats->SetDeathSound(inSound);
 }
 
-// FUNCTION: EXE 0x563e29
 // Sets a unit class's model for the player
 void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel)
 {
@@ -1037,7 +983,6 @@ void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel)
         theStats->SetModel(inModel);
 }
 
-// FUNCTION: EXE 0x563e4d
 // Sets a unit class's button for the player
 void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton)
 {
@@ -1048,7 +993,6 @@ void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButto
         theStats->SetButton(inButton);
 }
 
-// FUNCTION: EXE 0x563e71
 // Sets one of a unit class's selection sounds for the player
 void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
@@ -1059,7 +1003,6 @@ void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* 
         theStats->SetSelectionSound(inSound, inIndex);
 }
 
-// FUNCTION: EXE 0x563e99
 // Deletes all of the player's herds
 void EEPlayer::DeleteHerds()
 {
@@ -1068,7 +1011,6 @@ void EEPlayer::DeleteHerds()
     this->mHerds.clear();
 }
 
-// FUNCTION: EXE 0x563ee2
 // Deletes all of the player's towns and empties the town lookup
 void EEPlayer::ClearTowns()
 {
@@ -1078,14 +1020,12 @@ void EEPlayer::ClearTowns()
     this->mTownsByID.clear();
 }
 
-// FUNCTION: EXE 0x563f36
 // Drops every queued improvement of a unit type
 void EEPlayer::EraseQueuedImprovements(unsigned long inUnitType)
 {
     ee_units_queued_op(this->mQueued, 0, inUnitType, 0);
 }
 
-// FUNCTION: EXE 0x563f7e
 // Drops the pending command groups, then releases the pending units as the base player does
 void EEPlayer::ReleasePendingUnits()
 {
@@ -1093,7 +1033,6 @@ void EEPlayer::ReleasePendingUnits()
     RTSPlayer::ReleasePendingUnits();
 }
 
-// FUNCTION: EXE 0x563f95
 // Empties a numbered control group and tells the user interface
 void EEPlayer::ClearSavedGroup(long inGroup)
 {
@@ -1102,7 +1041,6 @@ void EEPlayer::ClearSavedGroup(long inGroup)
         gUserInterface->PostRefreshSavedGroup(inGroup + 1);
 }
 
-// FUNCTION: EXE 0x563fbb
 // Releases every unit waiting to repatrol and empties the list
 void EEPlayer::ClearUnitsToRepatrol()
 {
@@ -1113,7 +1051,6 @@ void EEPlayer::ClearUnitsToRepatrol()
     this->mUnitsToRepatrol.clear();
 }
 
-// FUNCTION: EXE 0x564003
 // Handles a finished unit: registers wonders (telling the others when victory is on), counts vital
 // buildings, applies the civ-power sight pulse, and updates area effects, construction sites, towns and walls
 void EEPlayer::UnitCompleted(EEComplexUnit* inUnit)
@@ -1152,14 +1089,12 @@ void EEPlayer::UnitCompleted(EEComplexUnit* inUnit)
         gContinentManager.UpdateWallUnit(inUnit, inUnit->GetUnitClass()->mCategory == kUnitCategoryGate);
 }
 
-// FUNCTION: EXE 0x56419b
 // Moves the improvement queue of one unit type to another
 void EEPlayer::MoveQueuedImprovements(unsigned long inFrom, unsigned long inTo)
 {
     ee_units_queued_op(this->mQueued, 1, inFrom, inTo);
 }
 
-// FUNCTION: EXE 0x564223
 // Returns the number of living heroes and/or heroes in production
 long EEPlayer::GetNumHeroes(bool inFirst, bool inSecond)
 {
@@ -1175,7 +1110,6 @@ long EEPlayer::GetNumHeroes(bool inFirst, bool inSecond)
     return theScope.Record(this, 21, theCaptured, {inFirst, inSecond});
 }
 
-// FUNCTION: EXE 0x564241
 // Clears every goal queue of a complex unit leaving the player
 void EEPlayer::UnitRemoved(RTSUnit* inUnit)
 {
@@ -1186,7 +1120,6 @@ void EEPlayer::UnitRemoved(RTSUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x564287
 // Removes the player's sight from a tile, and its allies' sight when line of sight is shared
 void EEPlayer::RemoveSharedSight(RTSTile* inTile)
 {
@@ -1204,14 +1137,12 @@ void EEPlayer::RemoveSharedSight(RTSTile* inTile)
     }
 }
 
-// FUNCTION: EXE 0x564309
 // Removes the player's and its sight-sharing allies' sight from the tile at a location
 void EEPlayer::RemoveSharedSightAt(const EETileLocation& inLocation)
 {
     this->RemoveSharedSight(gWorld.mMap->GetTileAtLocation(inLocation));
 }
 
-// FUNCTION: EXE 0x564327
 // Removes only the player's own sight from a tile
 void EEPlayer::RemoveOwnSight(RTSTile* inTile)
 {
@@ -1221,14 +1152,12 @@ void EEPlayer::RemoveOwnSight(RTSTile* inTile)
     }
 }
 
-// FUNCTION: EXE 0x56434c
 // Removes only the player's own sight from the tile at a location
 void EEPlayer::RemoveOwnSightAt(const EETileLocation& inLocation)
 {
     this->RemoveOwnSight(gWorld.mMap->GetTileAtLocation(inLocation));
 }
 
-// FUNCTION: EXE 0x56436a
 // Writes the player's per-class media counts and media load warnings to a text file
 void EEPlayer::DumpMedia(FSFileSpec& inFile)
 {
@@ -1243,7 +1172,6 @@ void EEPlayer::DumpMedia(FSFileSpec& inFile)
         fprintf(inFile, "\t\t%s", (const char*)this->mMediaWarnings[j]);
 }
 
-// FUNCTION: EXE 0x56442b
 // Marks the player as having met another player when it first sees a unit of a non-gaia player
 void EEPlayer::NoticeForeignUnit(EEUnit* inUnit)
 {
@@ -1251,7 +1179,6 @@ void EEPlayer::NoticeForeignUnit(EEUnit* inUnit)
         this->mCombatState = 1;
 }
 
-// FUNCTION: EXE 0x564453
 // Puts every herd animal of the player that is in no herd into one
 void EEPlayer::AssignHerds()
 {
@@ -1270,7 +1197,6 @@ void EEPlayer::AssignHerds()
         this->AddUnitToHerd(theUnits[j]);
 }
 
-// FUNCTION: EXE 0x56451a
 // Adds every land building outside the player's towns to a town, then gives each town without
 // a patrol group one
 void EEPlayer::AssignTowns()
@@ -1306,7 +1232,6 @@ void EEPlayer::AssignTowns()
     }
 }
 
-// FUNCTION: EXE 0x5646fc
 // Executes a selection message against the player's network selection, keeping its local
 // active selection and viewed unit
 void EEPlayer::ExecuteSelectionMessage(NEMessage* inMessage)
@@ -1329,7 +1254,6 @@ void EEPlayer::ExecuteSelectionMessage(NEMessage* inMessage)
         theUnit->Dereference();
 }
 
-// FUNCTION: EXE 0x564781
 // Returns the town nearest to a tile, optionally only on the tile's continent; NULL when none
 EEAIArea* EEPlayer::GetNearestArea(const EETileCoordinate& inTile, bool inSameContinent)
 {
@@ -1351,7 +1275,6 @@ EEAIArea* EEPlayer::GetNearestArea(const EETileCoordinate& inTile, bool inSameCo
     return theArea;
 }
 
-// FUNCTION: EXE 0x564820
 // Returns the construction site nearest to a unit within a squared distance of 100, or NULL
 EEUnit* EEPlayer::GetNearestConstructionSite(EEComplexUnit* inUnit)
 {
@@ -1377,7 +1300,6 @@ EEUnit* EEPlayer::GetNearestConstructionSite(EEComplexUnit* inUnit)
 #include "ee/EEGameVariant.h"
 #include "ee/EEUnitUtilities.h"
 
-// FUNCTION: EXE 0x564891
 // Grants a wonder's power by its bonus kind: area conversion, a hit-point bonus for a unit set, the
 // share bonus, sight of enemies, or healing of a unit set
 void EEPlayer::AddWonderPower(EEComplexUnit* inUnit)
@@ -1425,7 +1347,6 @@ void EEPlayer::AddWonderPower(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x564b4f
 // Returns the running, or else pending, command group holding a unit; NULL when none
 EEGroup* EEPlayer::GetActiveGroupOf(EEComplexUnit* inUnit)
 {
@@ -1447,7 +1368,6 @@ EEGroup* EEPlayer::GetActiveGroupOf(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x564bea
 // Returns whether the player can afford to repair a number of a unit's hit points (cost relative to its maximum)
 bool EEPlayer::CanAffordRepair(EEUnit* inUnit, EEUnit* inOther, unsigned long inValue)
 {
@@ -1460,7 +1380,6 @@ bool EEPlayer::CanAffordRepair(EEUnit* inUnit, EEUnit* inOther, unsigned long in
     return theScope.Record(this, 18, theCaptured, {(int32_t)inUnit->mUnitClass->mUnitType, (int32_t)inOther->mUnitClass->mUnitType, (int32_t)inValue});
 }
 
-// FUNCTION: EXE 0x564c4c
 // Adds the player's resources, population and tech tree to the sync checksum
 void EEPlayer::GetChecksum(ESChecksum& ioChecksum)
 {
@@ -1474,7 +1393,6 @@ void EEPlayer::GetChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum(theName, theSum);
 }
 
-// FUNCTION: EXE 0x564cb0
 // Returns the town containing a tile, or else the nearest town and its closest point to the tile
 EETown* EEPlayer::GetNearestTown(const EETileLocation& inTile, EETileLocation& outTile)
 {
@@ -1505,14 +1423,12 @@ EETown* EEPlayer::GetNearestTown(const EETileLocation& inTile, EETileLocation& o
     return theTown;
 }
 
-// FUNCTION: EXE 0x564e0c
 // Returns whether the player still plays: not an observer, or an observer whose game has ended
 bool EEPlayer::IsActive()
 {
     return !this->mObserverMode || this->mGameResult != 0;
 }
 
-// FUNCTION: EXE 0x564e22
 // Returns the town whose area contains a unit's tile, or NULL
 EETown* EEPlayer::GetTownOf(EEUnit* inUnit)
 {
@@ -1528,7 +1444,6 @@ EETown* EEPlayer::GetTownOf(EEUnit* inUnit)
     return theTown;
 }
 
-// FUNCTION: EXE 0x564e78
 // Appends the player's herds of a unit type's animal to a list
 void EEPlayer::GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType)
 {
@@ -1542,7 +1457,6 @@ void EEPlayer::GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType)
     }
 }
 
-// FUNCTION: EXE 0x564ed7
 // A unit type's level in an improvement counting the queued ones; -1 without an upgrade (ee_units player.rs)
 long EEPlayer::GetImprovementLevel(unsigned long inUnitType, long inImprovement) const
 {
@@ -1550,7 +1464,6 @@ long EEPlayer::GetImprovementLevel(unsigned long inUnitType, long inImprovement)
     return theScope.Record(this, 13, EEPlayerImprovement(this, 0, inUnitType, inImprovement), {(int32_t)inUnitType, inImprovement});
 }
 
-// FUNCTION: EXE 0x564f4a
 // A unit type's queued improvements of a kind past the first (ee_units player.rs)
 long EEPlayer::CountQueuedImprovements(unsigned long inUnitType, long inImprovement) const
 {
@@ -1558,7 +1471,6 @@ long EEPlayer::CountQueuedImprovements(unsigned long inUnitType, long inImprovem
     return theScope.Record(this, 14, EEPlayerImprovement(this, 1, inUnitType, inImprovement), {(int32_t)inUnitType, inImprovement});
 }
 
-// FUNCTION: EXE 0x564fac
 // Whether an improvement has reached its limits counting the queue (ee_units player.rs)
 bool EEPlayer::IsImprovementMaxed(unsigned long inUnitType, long inImprovement)
 {
@@ -1566,7 +1478,6 @@ bool EEPlayer::IsImprovementMaxed(unsigned long inUnitType, long inImprovement)
     return theScope.Record(this, 12, EEPlayerImprovement(this, 4, inUnitType, inImprovement) != 0, {(int32_t)inUnitType, inImprovement});
 }
 
-// FUNCTION: EXE 0x5650a3
 // Returns the terrain kinds the player's citizens can cross, as passability flags 1/2/4/8
 long EEPlayer::GetCitizenPassability()
 {
@@ -1586,7 +1497,6 @@ long EEPlayer::GetCitizenPassability()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5650dc
 // Registers every herd of the player as an area with the continent manager under a new serial
 void EEPlayer::RegisterHerds()
 {
@@ -1599,7 +1509,6 @@ void EEPlayer::RegisterHerds()
     }
 }
 
-// FUNCTION: EXE 0x56513d
 // Registers every town of the player as an area with the continent manager under a new serial
 void EEPlayer::RegisterTowns()
 {
@@ -1612,7 +1521,6 @@ void EEPlayer::RegisterTowns()
     }
 }
 
-// FUNCTION: EXE 0x56519e
 // Returns the player's patrol group with an ID, or NULL
 EEPPatrolGroup* EEPlayer::GetPatrolGroup(unsigned long inID)
 {
@@ -1626,7 +1534,6 @@ EEPPatrolGroup* EEPlayer::GetPatrolGroup(unsigned long inID)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5651e0
 // Returns the population, optionally adding the pending units and the units inside category-0x1d containers
 long EEPlayer::GetTotalPopulation(bool inFirst, bool inSecond)
 {
@@ -1649,14 +1556,12 @@ long EEPlayer::GetTotalPopulation(bool inFirst, bool inSecond)
     return theScope.Record(this, 19, theCaptured, {inFirst, inSecond});
 }
 
-// FUNCTION: EXE 0x56528b
 // Returns the player's population limit: the game's limit plus the player's bonuses
 long EEPlayer::GetPopulationLimit(long inArg)
 {
     return this->mPopulationLimitBonus + this->mShareBonus + gWorld.mPlayerPopulationLimit;
 }
 
-// FUNCTION: EXE 0x5652a0
 // Whether one resource covers the cost and the required statistic is reached (ee_units player.rs)
 bool EEPlayer::CanAffordSingleResource(EETechTreeNode* inNode, long inUnitClass, long inCount)
 {
@@ -1664,7 +1569,6 @@ bool EEPlayer::CanAffordSingleResource(EETechTreeNode* inNode, long inUnitClass,
     return theScope.Record(this, 4, ee_units_player_cost(EEPlayerRefs(this), 1, inNode, inUnitClass, inCount, 0.0f, NULL), {EEPlayerNodeID(inNode), inUnitClass, inCount});
 }
 
-// FUNCTION: EXE 0x56542e
 // Whether every resource covers a scaled cost, metallurgy pooling iron and gold (ee_units player.rs)
 bool EEPlayer::CanAffordScaled(EETechTreeNode* inNode, long inUnitClass, float inScale, long inCount)
 {
@@ -1672,7 +1576,6 @@ bool EEPlayer::CanAffordScaled(EETechTreeNode* inNode, long inUnitClass, float i
     return theScope.Record(this, 3, ee_units_player_cost(EEPlayerRefs(this), 0, inNode, inUnitClass, inCount, inScale, NULL), {EEPlayerNodeID(inNode), inUnitClass, EEPlayerFloatBits(inScale), inCount});
 }
 
-// FUNCTION: EXE 0x565561
 // Returns the index of the team holding the player (0 when none)
 unsigned long EEPlayer::GetTeamIndex()
 {
@@ -1688,7 +1591,6 @@ unsigned long EEPlayer::GetTeamIndex()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5655b5
 // Returns the player's town with an ID, or NULL
 EETown* EEPlayer::GetTownByID(long inID)
 {
@@ -1700,7 +1602,6 @@ EETown* EEPlayer::GetTownByID(long inID)
     return theTown;
 }
 
-// FUNCTION: EXE 0x5655f6
 // Returns the off-map record of a unit, or NULL
 EEWUnitsOffMapInfo* EEPlayer::GetOffMapInfo(EEComplexUnit* inUnit)
 {
@@ -1716,7 +1617,6 @@ EEWUnitsOffMapInfo* EEPlayer::GetOffMapInfo(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x565644
 // Returns the timer start time of a wonder by index
 long EEPlayer::GetWonderTime(long inIndex) const
 {
@@ -1724,14 +1624,12 @@ long EEPlayer::GetWonderTime(long inIndex) const
     return theItems[inIndex]->mCloaked;
 }
 
-// FUNCTION: EXE 0x56565f
 // Returns the number of wonders the player holds
 unsigned long EEPlayer::GetNumWonderUnits() const
 {
     return this->mWonders->GetSize();
 }
 
-// FUNCTION: EXE 0x56566a
 // Whether the player can afford a technology in all resources or else from a single one (ee_units player.rs)
 bool EEPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
@@ -1739,7 +1637,6 @@ bool EEPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCou
     return theScope.Record(this, 2, ee_units_player_cost(EEPlayerRefs(this), 2, inTechnology, inUnitType, inCount, 1.0f, NULL), {EEPlayerNodeID(inTechnology), inUnitType, inCount});
 }
 
-// FUNCTION: EXE 0x56569c
 // Adds damage taken from a player to its tally and enters combat when that player is an enemy
 void EEPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
 {
@@ -1755,7 +1652,6 @@ void EEPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
 #include "ee/EEGameSound.h"
 #include "lle/SESoundManager.h"
 
-// FUNCTION: EXE 0x5656d7
 // Under civ power 0x27, periodically makes a free unit (class 0x20 or 0x1e0) at a town center or capitol,
 // playing a sound for the local player and lengthening the interval each time
 void EEPlayer::UpdateFreeUnitPower()
@@ -1789,14 +1685,12 @@ void EEPlayer::UpdateFreeUnitPower()
     this->mFreeUnitInterval++;
 }
 
-// FUNCTION: EXE 0x565808
 // Advances the player to the next epoch
 void EEPlayer::IncrementEpic()
 {
     this->mTechnologies->AdvanceEpoch();
 }
 
-// FUNCTION: EXE 0x565813
 // Resets the player to its starting state: new selection and control groups, upgrades, tech tree and
 // air traffic, zeroed counters and default settings, then loads the player effects
 void EEPlayer::Reset()
@@ -1845,7 +1739,6 @@ void EEPlayer::Reset()
     this->LoadPlayerEffects();
 }
 
-// FUNCTION: EXE 0x565bfe
 // Returns the group's unit at an index
 EEComplexUnit* EEGroup::GetUnit(long inIndex)
 {
@@ -1853,17 +1746,12 @@ EEComplexUnit* EEGroup::GetUnit(long inIndex)
     return theUnits[inIndex];
 }
 
-// FUNCTION: EXE 0x565c0d
 // Returns the number of units in the group
 unsigned long EEGroup::GetNumUnits()
 {
     return this->mUnits.size();
 }
 
-// SYNTHETIC: EXE 0x565c20
-// (the scalar deleting destructor, emitted with the vtable; slot EESelectedGroup+0x0)
-
-// FUNCTION: EXE 0x565c3c
 // Kills every unit of a herd
 void EEPlayer::KillHerdUnits(EEHerd* inHerd, bool inKilled)
 {
@@ -1874,7 +1762,6 @@ void EEPlayer::KillHerdUnits(EEHerd* inHerd, bool inKilled)
     }
 }
 
-// FUNCTION: EXE 0x565c8c
 // Kills every stranded unit, removes it from the player and empties the stranded list
 void EEPlayer::KillStrandedUnits()
 {
@@ -1899,7 +1786,6 @@ struct EEPlayerSaveContext {
 
 static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
 
-// FUNCTION: EXE 0x565cfa
 // Loads the player's state from a saved game (the mirror of Save); returns the read status, some reads' errors ignored.
 // port (R5b.4): the body is Rust (ee_units player_save.rs `load`: the original's four bodies, one per saved-game era,
 // as one sequence with the eras' returns and assertion lines) over the record this class derives from
@@ -2150,7 +2036,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x567bff
 // Loads the class media of every unit class that has media and records those classes for a later unload
 void EEPlayer::LoadAllClassMedia()
 {
@@ -2163,7 +2048,6 @@ void EEPlayer::LoadAllClassMedia()
     }
 }
 
-// FUNCTION: EXE 0x567c5a
 // Loads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::LoadUnitClassButtons(long inUnitClass)
 {
@@ -2174,7 +2058,6 @@ void EEPlayer::LoadUnitClassButtons(long inUnitClass)
         theStats->LoadButtons(this);
 }
 
-// FUNCTION: EXE 0x567c7d
 // Loads the media of one unit class for the player, if the class index is valid
 void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags)
 {
@@ -2232,7 +2115,6 @@ static int32_t EEPlayerUnitOperation(void* inContext, int32_t inOp, uint32_t inI
     return 0;
 }
 
-// FUNCTION: EXE 0x567ca4
 // Reads one unit from a saved game and creates it on the player (ee_units player_save.rs load_unit)
 long EEPlayer::LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -2240,14 +2122,12 @@ long EEPlayer::LoadUnit(unsigned long inMajorVersion, unsigned long inMinorVersi
     return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, false, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
-// FUNCTION: EXE 0x567eda
 // Returns the player's name
 const UWideString& EEPlayer::GetName()
 {
     return this->mName;
 }
 
-// FUNCTION: EXE 0x567ede
 // Returns the player's next complex unit after inUnit (the first one for NULL), or NULL at the end
 EEComplexUnit* EEPlayer::GetNextComplexUnit(EEUnit* inUnit)
 {
@@ -2267,7 +2147,6 @@ EEComplexUnit* EEPlayer::GetNextComplexUnit(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x567f10
 // Plays a unit's acknowledgement sound, at most once per delay for the same selection
 // NEAR (71.9): registers only (the original caches TMGetTime in edi and the delay in ebx)
 void EEPlayer::PlayAcknowledgement(EEComplexUnit* inUnit)
@@ -2282,7 +2161,6 @@ void EEPlayer::PlayAcknowledgement(EEComplexUnit* inUnit)
     EEPlayForLocalPlayer(this, inUnit->GetStats()->GetAcknowledgeSound(-1));
 }
 
-// FUNCTION: EXE 0x567f70
 // Replaces each swapped old unit by its new one in all units, air traffic, the selection, control groups, wonders
 // Called when the physics replaced units (EEPhysics 0x1534d1); a new unit of another player is not added to
 // the groups, and an unbuilt wall becomes a construction site
@@ -2323,7 +2201,6 @@ void EEPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     }
 }
 
-// FUNCTION: EXE 0x5680e4
 // Makes every town of the player recheck whether it is near water
 void EEPlayer::RestartTowns()
 {
@@ -2333,7 +2210,6 @@ void EEPlayer::RestartTowns()
     }
 }
 
-// FUNCTION: EXE 0x568120
 // Reveals a tile to the player and, with shared line of sight, to every ally that shares it too
 void EEPlayer::AddSharedSight(EETile* inTile, long inX, long inY)
 {
@@ -2353,7 +2229,6 @@ void EEPlayer::AddSharedSight(EETile* inTile, long inX, long inY)
     }
 }
 
-// FUNCTION: EXE 0x5681e8
 // Reveals the tile at a map location to the player and its sight-sharing allies
 void EEPlayer::AddSharedSightAt(const EETileLocation& inLocation)
 {
@@ -2361,7 +2236,6 @@ void EEPlayer::AddSharedSightAt(const EETileLocation& inLocation)
     this->AddSharedSight(theTile, inLocation.GetX(), inLocation.GetY());
 }
 
-// FUNCTION: EXE 0x56820e
 // Reveals a tile to the player only (a first sighting adds to statistics series 0x18)
 void EEPlayer::AddOwnSight(EETile* inTile, long inX, long inY)
 {
@@ -2373,7 +2247,6 @@ void EEPlayer::AddOwnSight(EETile* inTile, long inX, long inY)
     gDoppelgangerManager.TileShown(inTile, inX, inY, this);
 }
 
-// FUNCTION: EXE 0x568266
 // Reveals the tile at a map location to the player only
 void EEPlayer::AddOwnSightAt(const EETileLocation& inLocation)
 {
@@ -2381,7 +2254,6 @@ void EEPlayer::AddOwnSightAt(const EETileLocation& inLocation)
     this->AddOwnSight(theTile, inLocation.GetX(), inLocation.GetY());
 }
 
-// FUNCTION: EXE 0x56828c
 // Empties the player: running and control groups, viewed unit, events, towns, herds, off-map units, patrols
 void EEPlayer::Clear()
 {
@@ -2410,7 +2282,6 @@ void EEPlayer::Clear()
     RTSPlayer::Clear();
 }
 
-// FUNCTION: EXE 0x5683da
 // Removes a player from the ally list
 void EEPlayer::RemoveAlly(EEPlayer* inPlayer)
 {
@@ -2422,7 +2293,6 @@ void EEPlayer::RemoveAlly(EEPlayer* inPlayer)
     }
 }
 
-// FUNCTION: EXE 0x56843f
 // Removes a media item from the player's loaded-media list; returns whether it was there
 bool EEPlayer::RemoveLoadedMedia(EEMedia* inMedia)
 {
@@ -2435,7 +2305,6 @@ bool EEPlayer::RemoveLoadedMedia(EEMedia* inMedia)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5684ab
 // Stops sharing the player's building sight with another player, refreshing every land building's sight
 void EEPlayer::RemoveSightSharer(EEPlayer* inPlayer)
 {
@@ -2451,7 +2320,6 @@ void EEPlayer::RemoveSightSharer(EEPlayer* inPlayer)
     }
 }
 
-// FUNCTION: EXE 0x56854e
 // Finishes running groups left without units, then releases and drops every finished group
 void EEPlayer::RemovalsDone()
 {
@@ -2477,7 +2345,6 @@ void EEPlayer::RemovalsDone()
     this->mFinishedGroups.clear();
 }
 
-// FUNCTION: EXE 0x56870e
 // Cancels and refunds a queued improvement (inFlag: never the running one) (ee_units player.rs)
 void EEPlayer::RemoveQueuedImprovement(long inUnitType, long inImprovement, bool inFlag)
 {
@@ -2486,7 +2353,6 @@ void EEPlayer::RemoveQueuedImprovement(long inUnitType, long inImprovement, bool
     theScope.Record(this, 17, 0, {inUnitType, inImprovement, inFlag});
 }
 
-// FUNCTION: EXE 0x568889
 // Removes a patrol group from the player and releases it
 void EEPlayer::RemovePatrolGroup(EEPPatrolGroup* inGroup)
 {
@@ -2495,7 +2361,6 @@ void EEPlayer::RemovePatrolGroup(EEPPatrolGroup* inGroup)
     inGroup->Dereference();
 }
 
-// FUNCTION: EXE 0x5688ed
 // Deselects the unit with the given ID, if it exists
 void EEPlayer::RemoveUnitFromSelectedGroup(long inUnitID)
 {
@@ -2504,7 +2369,6 @@ void EEPlayer::RemoveUnitFromSelectedGroup(long inUnitID)
         this->DeselectUnit(static_cast<EEUnit*>(theUnit));
 }
 
-// FUNCTION: EXE 0x56890e
 // Takes away the power of a lost wonder (conversion, hit-point bonus, shared bonus, enemy sight, healing ...)
 void EEPlayer::RemoveWonderPower(EEComplexUnit* inUnit)
 {
@@ -2550,7 +2414,6 @@ void EEPlayer::RemoveWonderPower(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x568d33
 // Removes an animal from its herds, deleting any herd left with no tiles
 void EEPlayer::RemoveUnitFromHerd(EEComplexUnit* inUnit)
 {
@@ -2569,7 +2432,6 @@ void EEPlayer::RemoveUnitFromHerd(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x568deb
 // Takes a unit being removed off its tile, its region and the influence map
 void EEPlayer::RemovingUnit(RTSUnit* inUnit)
 {
@@ -2582,7 +2444,6 @@ void EEPlayer::RemovingUnit(RTSUnit* inUnit)
         gWorld.mInfluenceTable->RemoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY);
 }
 
-// FUNCTION: EXE 0x568e30
 // Deletes the off-map record of a unit, if it has one
 void EEPlayer::RemoveOffMapUnit(RTSUnit* inUnit)
 {
@@ -2598,7 +2459,6 @@ void EEPlayer::RemoveOffMapUnit(RTSUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x568eb9
 // Removes a unit from the selection, or clears the viewed unit when that is the unit
 void EEPlayer::DeselectUnit(EEUnit* inUnit)
 {
@@ -2611,7 +2471,6 @@ void EEPlayer::DeselectUnit(EEUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x568f03
 // Removes a town building from the towns containing it, deleting any town left with no tiles
 void EEPlayer::RemoveUnitFromTown(EEComplexUnit* inUnit)
 {
@@ -2632,14 +2491,12 @@ void EEPlayer::RemoveUnitFromTown(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x568fdf
 // Removes a unit from the player's construction sites
 void EEPlayer::RemoveConstructionSite(EEComplexUnit* inUnit)
 {
     this->mConstructionSites->Remove(inUnit);
 }
 
-// FUNCTION: EXE 0x568ff2
 // Removes a wonder from the player; when the last of its type goes, its wonder power is taken away
 void EEPlayer::RemoveWonder(EEComplexUnit* inUnit)
 {
@@ -2653,7 +2510,6 @@ void EEPlayer::RemoveWonder(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x5690a5
 // Lets every unit of the player finish loading; returns 0
 long EEPlayer::FinishUnitsLoad(long inMajorVersion, long inMinorVersion)
 {
@@ -2847,7 +2703,6 @@ bool EEPlayer::AdoptTownPatrol(EETown* inTown)
     return false;
 }
 
-// FUNCTION: EXE 0x5690ca
 // Relinks the player after a load: towns, construction sites, wonders, groups, herds, events, queued improvements
 // and off-map units are rebuilt from saved IDs; returns the status of the last step
 // NEAR: inline budget (the original calls begin() out of line for mPatrolGroups[i] and mConstructionSiteIDs[j]), register allocation
@@ -2931,7 +2786,6 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5695e7
 // When a human player reaches a valid epoch, lets every computer player catch up to it
 void EEPlayer::EpochReached(long inEpoch)
 {
@@ -2945,7 +2799,6 @@ void EEPlayer::EpochReached(long inEpoch)
     }
 }
 
-// FUNCTION: EXE 0x56964a
 // Starts the next queued improvement's timer; true when the queue is empty (ee_units player.rs advance)
 bool EEPlayer::AdvanceImprovement(unsigned long inUnitType)
 {
@@ -2953,7 +2806,6 @@ bool EEPlayer::AdvanceImprovement(unsigned long inUnitType)
     return theScope.Record(this, 15, EEPlayerImprovement(this, 7, inUnitType, 0) != 0, {(int32_t)inUnitType});
 }
 
-// FUNCTION: EXE 0x5697b4
 // Resets the player's tech tree to the global one and clears the population bonus and tribute fee
 void EEPlayer::ResetTechTree()
 {
@@ -2968,7 +2820,6 @@ void EEPlayer::ResetTechTree()
 #include "lle/FSMemoryFile.h"
 #include "ee/EESaveGameFiles.h"
 
-// FUNCTION: EXE 0x5697ff
 // Rebuilds the player's tech tree and upgrades from scratch, keeping its state and epoch range, and unloads the
 // unit media its nodes had loaded
 void EEPlayer::ReloadTechTree(bool inFlag)
@@ -2999,7 +2850,6 @@ void EEPlayer::ReloadTechTree(bool inFlag)
         this->UnloadUnitClassMedia(theMedia[j]);
 }
 
-// FUNCTION: EXE 0x569990
 // Recomputes every unit class upgrade and rescales the hit points, flight time and area effects of existing units
 void EEPlayer::RefreshUpgrades()
 {
@@ -3041,7 +2891,6 @@ void EEPlayer::RefreshUpgrades()
     this->mCivilization.AddUpgrades(this->mCivilization.GetPurchasedUpgrades(), this->GetPlayerID(), false);
 }
 
-// FUNCTION: EXE 0x569b26
 // Briefly reveals the area around one unit (by ID) or all units of a type, with the given sight range
 void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
 {
@@ -3070,7 +2919,6 @@ void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
     }
 }
 
-// FUNCTION: EXE 0x569c46
 // Writes the player's state to a saved game; returns the write status (some writes' errors are ignored).
 // port (R5b.4): the body is Rust (ee_units player_save.rs `save`) over the record this class derives from and
 // EEPlayerSaveOperation's parts
@@ -3081,7 +2929,6 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
                                 (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
-// FUNCTION: EXE 0x56a4b5
 // Writes one unit's type, kind and data to a saved game (ee_units player_save.rs save_unit; path points saved as units
 // from 0.254)
 long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -3090,7 +2937,6 @@ long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned 
     return ee_units_player_unit(&theContext, &EEPlayerUnitOperation, true, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
-// FUNCTION: EXE 0x56a53b
 // Selects the unit with the given ID (optionally clearing the selection), playing its sound for own units
 void EEPlayer::SelectUnit(unsigned long inUnitID, bool inArg1, bool inNewGroup)
 {
@@ -3121,7 +2967,6 @@ void EEPlayer::SelectUnit(unsigned long inUnitID, bool inArg1, bool inNewGroup)
     }
 }
 
-// FUNCTION: EXE 0x56a658
 // Replaces the selection with the built units of the given IDs and plays the last one's selection sound
 void EEPlayer::SelectUnits(std::vector<long>& inUnitIDs)
 {
@@ -3146,7 +2991,6 @@ void EEPlayer::SelectUnits(std::vector<long>& inUnitIDs)
         EEPlayForLocalPlayer(this, theLastUnit->mStats->GetSelectionSound(-1));
 }
 
-// FUNCTION: EXE 0x56a70a
 // Moves movable units out of a new building's footprint, onto a waypoint outside it or the nearest free tile
 void EEPlayer::ClearFootprint(EEComplexUnit* inUnit)
 {
@@ -3219,7 +3063,6 @@ void EEPlayer::ClearFootprint(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x56ab1b
 // Sets every resource amount of the player to the same value
 void EEPlayer::SetAllResources(long inValue)
 {
@@ -3227,14 +3070,12 @@ void EEPlayer::SetAllResources(long inValue)
         this->mResourceCaps[i] = inValue;
 }
 
-// FUNCTION: EXE 0x56ab2f
 // Sets the player's civilization points (current and maximum) for an epoch
 void EEPlayer::SetCivilizationPoints(long inEpoch)
 {
     this->mCivilization.SetPointsAndMax(inEpoch);
 }
 
-// FUNCTION: EXE 0x56ab41
 // Changes the player's stance toward another player, forming or breaking the alliance and its shared sight
 void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMap)
 {
@@ -3305,14 +3146,12 @@ void EEPlayer::SetDiplomaticStance(EEPlayer* inOther, long inStance, EEMap* inMa
         gMiniMap->Redraw();
 }
 
-// FUNCTION: EXE 0x56addc
 // Sets the player's current epoch in its tech tree
 void EEPlayer::SetEpoch(long inEpoch)
 {
     this->mTechnologies->SetEpoch(inEpoch);
 }
 
-// FUNCTION: EXE 0x56adee
 // Sets the viewed unit of the selection, moving the reference
 void EEPlayer::SetSelectedViewedUnit(RTSUnit* inUnit)
 {
@@ -3323,7 +3162,6 @@ void EEPlayer::SetSelectedViewedUnit(RTSUnit* inUnit)
         inUnit->Reference();
 }
 
-// FUNCTION: EXE 0x56ae11
 // Sets the viewed unit, moving the reference; with a unit and inFlag the selection is cleared first
 void EEPlayer::UpdateSelection(EEUnit* inUnit, bool inFlag)
 {
@@ -3336,14 +3174,12 @@ void EEPlayer::UpdateSelection(EEUnit* inUnit, bool inFlag)
         inUnit->Reference();
 }
 
-// FUNCTION: EXE 0x56ae52
 // Sets the player's override unit class
 void EEPlayer::SetHackUnitClass(long inUnitClass)
 {
     this->mHackUnitClass = inUnitClass;
 }
 
-// FUNCTION: EXE 0x56ae5f
 // Turns the player's shared line of sight on or off, recomputing all its units' sight and events
 void EEPlayer::SetSharedLOS(bool inFlag, EEMap* inArg)
 {
@@ -3359,7 +3195,6 @@ void EEPlayer::SetSharedLOS(bool inFlag, EEMap* inArg)
     this->mEvents.ShowEvents(this);
 }
 
-// FUNCTION: EXE 0x56aec0
 // Copies the player's visibility of every tile into the terrain mesh
 void EEPlayer::RefreshTerrainVisibility()
 {
@@ -3374,7 +3209,6 @@ void EEPlayer::RefreshTerrainVisibility()
     }
 }
 
-// FUNCTION: EXE 0x56af5c
 // Sets the player's game result; a new victory or defeat of another player is announced in the chat log
 void EEPlayer::SetGameResult(long inState)
 {
@@ -3411,14 +3245,12 @@ SaveState:
     this->mGameResult = inState;
 }
 
-// FUNCTION: EXE 0x56b08a
 // Subtracts an amount from one of the player's resources
 void EEPlayer::TakeResource(long inIndex, long inAmount)
 {
     this->mResourceCaps[inIndex] -= inAmount;
 }
 
-// FUNCTION: EXE 0x56b09e
 // Pays a technology's cost scaled by inFraction (ee_units player.rs pay)
 void EEPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
@@ -3427,7 +3259,6 @@ void EEPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction
     theScope.Record(this, 6, 0, {EEPlayerNodeID(inTechnology), inUnitType, EEPlayerFloatBits(inFraction)});
 }
 
-// FUNCTION: EXE 0x56b3f7
 // Pays a unit class improvement at its queued level (ee_units player.rs pay_improvement)
 void EEPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 {
@@ -3444,7 +3275,6 @@ public:
     virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAreaEffects.MarkDirty(); }
 };
 
-// FUNCTION: EXE 0x56b527
 // Marks the area effects of every unit of the player for recomputation
 void EEPlayer::SuggestRecomputeAllAreaEffects()
 {
@@ -3452,15 +3282,6 @@ void EEPlayer::SuggestRecomputeAllAreaEffects()
     EEForEachUnitOf(this, &theFunctor, false);
 }
 
-// FUNCTION: EXE 0x56b543
-// Marks a complex unit's area effects for recomputation
-// (EEPSuggestRecomputeAllAreaEffects::Apply, inline: emitted after its first user)
-
-// FUNCTION: EXE 0x56b555
-// Destroys a unit functor and optionally frees it
-// (EEPSuggestRecomputeAllAreaEffects's ??_G, ICF-shared by the unit functors; slot EEPSuggestRecomputeAllAreaEffects+0x0; slot EEUUUnitFunctor+0x0; slot EEHitPointUpgrader+0x0; slot ApplyGeneratedEffectsToOthersFunctor+0x0; slot SetAffectedByAreaEffectFunctor+0x0; slot ClearAreaEffectsFunctor+0x0; slot RebuildAreaEffectRegionListFunctor+0x0; slot RemoveRedundantAreaEffectsFunctor+0x0; slot UpdateGeneratedAreaEffectsFunctor+0x0; slot UpdateAffectedByAreaEffectsFunctor+0x0; stores EEUUUnitFunctor vtable
-
-// FUNCTION: EXE 0x56b572
 // Unloads every media item the player loaded and empties the list
 void EEPlayer::UnloadAllMedia()
 {
@@ -3469,7 +3290,6 @@ void EEPlayer::UnloadAllMedia()
     this->mLoadedMedia.clear();
 }
 
-// FUNCTION: EXE 0x56b5b6
 // Unloads the class media of every unit class recorded as loaded and empties the record
 void EEPlayer::UnloadAllClassMedia()
 {
@@ -3478,7 +3298,6 @@ void EEPlayer::UnloadAllClassMedia()
     this->mSoundLoadedClasses.clear();
 }
 
-// FUNCTION: EXE 0x56b5f9
 // Unloads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassButtons(long inUnitClass)
 {
@@ -3489,7 +3308,6 @@ void EEPlayer::UnloadUnitClassButtons(long inUnitClass)
         theStats->UnloadButtons(this);
 }
 
-// FUNCTION: EXE 0x56b61c
 // Unloads the media of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassMedia(long inUnitClass)
 {
@@ -3500,7 +3318,6 @@ void EEPlayer::UnloadUnitClassMedia(long inUnitClass)
         theStats->UnloadMedia(this);
 }
 
-// FUNCTION: EXE 0x56b63f
 // Updates the player's four air traffic controllers
 void EEPlayer::UpdateAirTraffic()
 {
@@ -3508,7 +3325,6 @@ void EEPlayer::UpdateAirTraffic()
         mAirTraffic[i]->Update();
 }
 
-// FUNCTION: EXE 0x56b65a
 // Raises (or with inFlag lowers) a unit class improvement and rescales existing units' power, hit points or sight
 void EEPlayer::ApplyImprovement(long inUnitType, long inImprovement, bool inFlag)
 {
@@ -3582,7 +3398,6 @@ void EEPlayer::ApplyImprovement(long inUnitType, long inImprovement, bool inFlag
     theScope.Record(this, 22, 0, {inUnitType, inImprovement, inFlag});
 }
 
-// FUNCTION: EXE 0x56b88f
 // Registers a unit placed in the game: wonder/teleporter counts, town, herd, sight power, walls
 void EEPlayer::UnitPlaced(EEComplexUnit* inUnit)
 {
@@ -3607,7 +3422,6 @@ void EEPlayer::UnitPlaced(EEComplexUnit* inUnit)
         gContinentManager.UpdateWallUnit(inUnit, false);
 }
 
-// FUNCTION: EXE 0x56b987
 // Unregisters a unit leaving the player: counts, wonders, town, herd, construction site, heroes, capitol, walls/forest
 // EEUnit::DepleteResource passes (this, 0); inArg is not read. Losing the last capitol re-enables the
 // capitol technology and blocks the JIT-manufacturing ones
@@ -3664,7 +3478,6 @@ void EEPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 
-// FUNCTION: EXE 0x56bba4
 // Reattaches a unit to the AI and drops it from its group when it has no further goals or builds
 void EEPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 {
@@ -3674,7 +3487,6 @@ void EEPlayer::UnitGoalDone(EEComplexUnit* inUnit)
         inUnit->mActiveGroup->RemoveUnit(inUnit);
 }
 
-// FUNCTION: EXE 0x56bbf8
 // Returns whether a unit ID is in the list of IDs loaded into discarded units
 bool EEPlayer::HasLoadedUnitID(unsigned long inUnitID)
 {
@@ -3682,7 +3494,6 @@ bool EEPlayer::HasLoadedUnitID(unsigned long inUnitID)
     return theIterator != this->mLoadedUnitIDs.end();
 }
 
-// FUNCTION: EXE 0x56bc55
 // Clears the viewed unit and the selection
 void EEPlayer::UnselectAllUnits()
 {
@@ -3693,11 +3504,6 @@ void EEPlayer::UnselectAllUnits()
 #include "ee/EEUGRust.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
-// FUNCTION: EXE 0x563659
-// Sets the patrol group the patrol goal follows, moving the reference
-// EEUGPatrol's member, emitted in this unit: the patrol goal moved whole to Rust (ee/EEUGRust.h; ee_units patrol.rs)
-
-// FUNCTION: EXE 0x563138
 // Adds a town building to a town: a new one, the only fitting one, or the largest fitting one after merging
 // the others into it (their patrols move over); returns whether it was added
 bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
@@ -3779,7 +3585,6 @@ bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x56bc6e
 // Sends each enabled unit waiting to repatrol to the nearest point of its nearest town's patrol, then clears the list
 void EEPlayer::RestorePatrols()
 {
@@ -3807,7 +3612,6 @@ void EEPlayer::RestorePatrols()
     this->ClearUnitsToRepatrol();
 }
 
-// FUNCTION: EXE 0x56bdfd
 // Gives every town without a patrol group a new one
 void EEPlayer::RefreshTownGroups()
 {
@@ -3898,7 +3702,6 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
     return 0;
 }
 
-// FUNCTION: EXE 0x56be3f
 // Updates the player each tick: validates groups, herds, air traffic, events, improvement timers and wonder healing
 // port (R5b.4): the body is Rust (ee_units player_tick.rs: the herds' and timers' decisions, the heal) over the
 // record this class derives from and EEPlayerTickOperation's parts
@@ -3909,7 +3712,6 @@ void EEPlayer::UpdatePlayer()
     ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this), this);
 }
 
-// FUNCTION: EXE 0x56c1e1
 // Restarts the timers of both players' wonders at the current game time
 void EEPlayer::ResetWonderTimers(EEPlayer* inPlayer)
 {
@@ -3920,7 +3722,6 @@ void EEPlayer::ResetWonderTimers(EEPlayer* inPlayer)
         (*theIterator)->mCloaked = gPhysics->mGameTime;
 }
 
-// FUNCTION: EXE 0x56c249
 // Disallows the technologies a map forbids (by map flag; space units off space maps) and sets the selection hotkey
 void EEPlayer::ApplyMapRestrictions()
 {
@@ -3944,7 +3745,6 @@ void EEPlayer::ApplyMapRestrictions()
                                              NULL, NULL, NULL, 0, false);
 }
 
-// FUNCTION: EXE 0x56c427
 // Recounts the player's living heroes, heroes being researched or queued, and teleporters
 void EEPlayer::RecountHeroesAndTeleporters()
 {
@@ -3978,7 +3778,6 @@ void EEPlayer::RecountHeroesAndTeleporters()
     }
 }
 
-// FUNCTION: EXE 0x56c548
 // With the Camouflage civ power, sets the cloak timer of each idle unit (command 5000)
 void EEPlayer::EnableCamouflagePower()
 {
@@ -3997,7 +3796,6 @@ void EEPlayer::EnableCamouflagePower()
     }
 }
 
-// FUNCTION: EXE 0x56c5f9
 // With the Camouflage civ power, uncloaks every unit and makes it uncloakable, clearing its cloak timers
 void EEPlayer::DisableCamouflagePower()
 {
@@ -4017,7 +3815,6 @@ void EEPlayer::DisableCamouflagePower()
     }
 }
 
-// FUNCTION: EXE 0x56c6a1
 // Sets whether the unit and its following parts can cloak; turning it off also uncloaks them
 void EEComplexUnit::SetCloakableChain(bool inValue)
 {
@@ -4030,7 +3827,6 @@ void EEComplexUnit::SetCloakableChain(bool inValue)
         this->SetCloakedChain(false);
 }
 
-// FUNCTION: EXE 0x56c6db
 // Cloaks or uncloaks the unit and its following parts
 void EEComplexUnit::SetCloakedChain(bool inValue)
 {
@@ -4041,7 +3837,6 @@ void EEComplexUnit::SetCloakedChain(bool inValue)
         this->mNextPart->SetCloakedChain(inValue);
 }
 
-// FUNCTION: EXE 0x56c6fa
 // Records a media warning when a unit class's buttons were not preloaded for the player
 void EEPlayer::CheckButtonsPreloaded(long inUnitClass)
 {
@@ -4054,7 +3849,6 @@ void EEPlayer::CheckButtonsPreloaded(long inUnitClass)
     delete theMessage;
 }
 
-// FUNCTION: EXE 0x56c776
 // Records a media warning when a unit class's media was not preloaded for the player (loads nothing)
 void EEPlayer::LoadUnitClassMedia(long inUnitClass)
 {
@@ -4067,7 +3861,6 @@ void EEPlayer::LoadUnitClassMedia(long inUnitClass)
     delete theMessage;
 }
 
-// FUNCTION: EXE 0x56c7f2
 // Loads the three player graphic effects and adds them to the loaded media
 void EEPlayer::LoadPlayerEffects()
 {
@@ -4081,7 +3874,6 @@ void EEPlayer::LoadPlayerEffects()
     }
 }
 
-// FUNCTION: EXE 0x56c829
 // Unloads the three player graphic effects that are in the loaded media
 void EEPlayer::UnloadPlayerEffects()
 {
@@ -4095,169 +3887,6 @@ void EEPlayer::UnloadPlayerEffects()
     }
 }
 
-// TEMPLATE: EXE 0x56c864
-// (map<long, long>::erase(const long&), instantiated by RemoveWonder: mWonderTypeCounts)
-
-// TEMPLATE: EXE 0x56c8b5
-// (void vector<EEWUnitsOffMapInfo * >::push_back(EEWUnitsOffMapInfo * const &)    [?push_back@?$vector@PAVEEWUnitsOffMapInfo@@V?$allocator@PAVEEWUnitsOff; instantiated here)
-
-// TEMPLATE: EXE 0x56c8e1
-// (void vector<EEMedia * >::push_back(EEMedia * const &)    [?push_back@?$vector@PAVEEMedia@@V?$allocator@PAVEEMedia@@@std@@@std@@QAEXABQAVEEMedia@@@Z]; instantiated here)
-
-// TEMPLATE: EXE 0x56c90d
-
-// TEMPLATE: EXE 0x56c938
-
-// TEMPLATE: EXE 0x56c94c
-// (_Tree<longpair<long constEETechTreeNode *>map<longEETechTreeNode * >::_Kfn0>::iterator _Tree<longpair<long constEETechTreeNode *>map<longEETechTreeNod; instantiated here)
-
-// TEMPLATE: EXE 0x56c986
-// (void vector<EEPPatrolGroup * >::push_back(EEPPatrolGroup * const &)    [?push_back@?$vector@PAVEEPPatrolGroup@@V?$allocator@PAVEEPPatrolGroup@@@std@@@; instantiated here)
-
-// TEMPLATE: EXE 0x56c9b2
-// (pair<longvector<long > > & map<unsigned longpair<longvector<long > >allocator<pair<unsigned long constpair<longvector<long > > > > >::operator[](unsig; instantiated here)
-
-// TEMPLATE: EXE 0x56ca13
-
-// TEMPLATE: EXE 0x56ca3e
-// (_Tree<unsigned longpair<unsigned long constpair<longvector<long > > >map<unsigned longpair<longvector<long > >allocator<pair<unsigned long constpair<l; instantiated here)
-
-// TEMPLATE: EXE 0x56ccf6
-// (_Tree<unsigned longpair<unsigned long constpair<longvector<long > > >map<unsigned longpair<longvector<long > >allocator<pair<unsigned long constpair<l; instantiated here)
-
-// FUNCTION: EXE 0x56cd30
-// Destroys the unit container, releasing every unit it holds
-// (UReferenceContainer<EEComplexUnit*>'s dtor, ee/UReferenceContainer.h: Clear() then mItems.clear(); the
-// EEAreaEffect twin 0x1ffd23 has the same clear call)
-
-// FUNCTION: EXE 0x56cd51
-// Removes a unit from the container, releasing it; returns whether it was there
-// (UReferenceContainer<EEComplexUnit*>::Remove, ee/UReferenceContainer.h)
-
-// TEMPLATE: EXE 0x56cd7f
-// (UReferenceContainer<EEComplexUnit*>::Replace, ee/UReferenceContainer.h; Virtual9C calls it)
-
-// TEMPLATE: EXE 0x56cdb8
-
-// FUNCTION: EXE 0x56ce29
-// Sets the name of a statistics record
-// (EEPlayerStatistics::SetName, inline in ee/EEPlayer.h; emitted here for Reset)
-
-// TEMPLATE: EXE 0x56ce44
-// (pair<_Tree<unsigned longpair<unsigned long constpair<longvector<long > > >map<unsigned longpair<longvector<long > >allocator<pair<unsigned long constp; instantiated here)
-
-// TEMPLATE: EXE 0x56cefa
-
-// TEMPLATE: EXE 0x56cf6b
-// (void _Tree<unsigned longpair<unsigned long constpair<longvector<long > > >map<unsigned longpair<longvector<long > >allocator<pair<unsigned long constp; instantiated here)
-
-// TEMPLATE: EXE 0x56cfad
-// (void UReferenceContainer<EEComplexUnit *>::Clear(void)    [?Clear@?$UReferenceContainer@PAVEEComplexUnit@@@@QAEXXZ]; instantiated here)
-
-// FUNCTION: EXE 0x56cfd0
-// Erases the unit at an iterator, releasing it; returns false at the end
-// (UReferenceContainer<EEComplexUnit*>::Erase, ee/UReferenceContainer.h)
-
-// TEMPLATE: EXE 0x56d009
-// (void _Tree<longpair<long constlong>map<longlong >::_Kfn0>::_Erase(_Tree<longpair<long constlong>map<longlong >::_Kfn0>::_Node *)    [?_Erase@?$_Tree@J; instantiated here)
-
-// TEMPLATE: EXE 0x56d03b
-
-// TEMPLATE: EXE 0x56d077
-
-// TEMPLATE: EXE 0x56d0ac
-// (_Tree<unsigned longpair<unsigned long constpair<longvector<long > > >map<unsigned longpair<longvector<long > >allocator<pair<unsigned long constpair<l; instantiated here)
-
-// TEMPLATE: EXE 0x56d240
-// (_Tree<unsigned longpair<unsigned long constpair<longvector<long > > >map<unsigned longpair<longvector<long > >allocator<pair<unsigned long constpair<l; instantiated here)
-
-// FUNCTION: EXE 0x56d269
-// Deletes every town in a vector and empties it; returns the count
-// (EEDeletePointers<vector<EETown*> >, a template COMDAT defined at the top of this file)
-
-// FUNCTION: EXE 0x56d299
-// Deletes every herd in a vector and empties it; returns the count
-// (EEDeletePointers for mHerds's EEHerd* in the original; see the dtor)
-
-// FUNCTION: EXE 0x56d2c9
-// Deletes every off-map unit record in a vector and empties it; returns the count
-// (EEDeletePointers<vector<EEWUnitsOffMapInfo*> >)
-
-// FUNCTION: EXE 0x56d2f9
-// Releases a reference to each patrol group in a range
-// (std::for_each<_Ptrit<EEPPatrolGroup*>, EEPDereferencer>)
-
-// TEMPLATE: EXE 0x56d317
-// (void __cdecl _Destroy(pair<unsigned long constpair<longvector<long > > > *)    [?_Destroy@std@@YAXPAU?$pair@$$CBKU?$pair@JV?$vector@JV?$allocator@J@st; instantiated here)
-
-// TEMPLATE: EXE 0x56d323
-// (void __cdecl _Construct(pair<unsigned long constpair<longvector<long > > > *pair<unsigned long constpair<longvector<long > > > const &)    [?_Construc; instantiated here)
-
-// SYNTHETIC: EXE 0x561825
-// SYNTHETIC: EXE 0x56182f
-// SYNTHETIC: EXE 0x561840
-// SYNTHETIC: EXE 0x56184c
-// SYNTHETIC: EXE 0x561868
-// SYNTHETIC: EXE 0x561872
-// SYNTHETIC: EXE 0x561883
-// SYNTHETIC: EXE 0x56188f
-// SYNTHETIC: EXE 0x5618ab
-// SYNTHETIC: EXE 0x5618b5
-// SYNTHETIC: EXE 0x5618c6
-// SYNTHETIC: EXE 0x5618d2
-// SYNTHETIC: EXE 0x5618ee
-// SYNTHETIC: EXE 0x5618f8
-// SYNTHETIC: EXE 0x561909
-// SYNTHETIC: EXE 0x561915
-// SYNTHETIC: EXE 0x561931
-// SYNTHETIC: EXE 0x56193b
-// SYNTHETIC: EXE 0x56194c
-// SYNTHETIC: EXE 0x561958
-// SYNTHETIC: EXE 0x561974
-// SYNTHETIC: EXE 0x56197e
-// SYNTHETIC: EXE 0x56198f
-// SYNTHETIC: EXE 0x56199b
-// SYNTHETIC: EXE 0x5619b7
-// SYNTHETIC: EXE 0x5619c1
-// SYNTHETIC: EXE 0x5619d2
-// SYNTHETIC: EXE 0x5619de
-// SYNTHETIC: EXE 0x5619fa
-// SYNTHETIC: EXE 0x561a04
-// SYNTHETIC: EXE 0x561a15
-// SYNTHETIC: EXE 0x561a21
-// SYNTHETIC: EXE 0x561a3d
-// SYNTHETIC: EXE 0x561a47
-// SYNTHETIC: EXE 0x561a58
-// SYNTHETIC: EXE 0x561a64
-// SYNTHETIC: EXE 0x561a80
-// SYNTHETIC: EXE 0x561a8a
-// SYNTHETIC: EXE 0x561a9b
-// SYNTHETIC: EXE 0x561aa7
-// SYNTHETIC: EXE 0x561ac3
-// SYNTHETIC: EXE 0x561acd
-// SYNTHETIC: EXE 0x561ade
-// SYNTHETIC: EXE 0x561aea
-// SYNTHETIC: EXE 0x561b06
-// SYNTHETIC: EXE 0x561b10
-// SYNTHETIC: EXE 0x561b21
-// SYNTHETIC: EXE 0x561b2d
-// SYNTHETIC: EXE 0x561b49
-// SYNTHETIC: EXE 0x561b53
-// SYNTHETIC: EXE 0x561b64
-// SYNTHETIC: EXE 0x561b70
-// SYNTHETIC: EXE 0x561b8c
-// SYNTHETIC: EXE 0x561b96
-// SYNTHETIC: EXE 0x561ba7
-// SYNTHETIC: EXE 0x561bb3
-// SYNTHETIC: EXE 0x561bcf
-// SYNTHETIC: EXE 0x561bd9
-// SYNTHETIC: EXE 0x561bea
-// SYNTHETIC: EXE 0x561bf6
-// SYNTHETIC: EXE 0x561c12
-// SYNTHETIC: EXE 0x561c1c
-// SYNTHETIC: EXE 0x561c2d
-// SYNTHETIC: EXE 0x561c39
-
 // EETechTreeNode 0x1cf989 / 0x1cfcc9 call these through slots +0x88 / +0xcc; both slots hold the shared empty
 // `ret 4` 0x557269 (ICF), so each has an empty body (this also removes two unresolved virtuals)
 void EEPlayer::EpochMediaLoaded(long inEpoch)
@@ -4268,42 +3897,30 @@ void EEPlayer::EpochMediaUnloaded(long inEpoch)
 {
 }
 
-// ICF-FOLDED: EXE 0x69059d
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 bool EEPlayer::AvoidsEnemies(class EEComplexUnit *)
 {
     return false;
 }
 
-// ICF-FOLDED: EXE 0x564223
 // Returns the number of living heroes and/or heroes in production
-// (no address of its own: the same body as EEPlayer::GetNumHeroes, which ICF kept: a call of it)
 long EEPlayer::GetHeroCount(bool inFirst, bool inSecond)
 {
     return this->GetNumHeroes(inFirst, inSecond);
 }
 
-// ICF-FOLDED: EXE 0x4ac9f3
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 bool EEPlayer::IsHuman()
 {
     return false;
 }
 
-// ICF-FOLDED: EXE 0x556dd8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEPlayer::UnitStranded(class EEComplexUnit *)
 {
 }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEPlayer::Virtual60()
 {
 }
 
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEPlayer::WonderStarted(class EEComplexUnit *)
 {
 }

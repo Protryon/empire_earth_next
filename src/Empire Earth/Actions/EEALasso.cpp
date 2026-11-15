@@ -20,7 +20,6 @@
 #include "ee/EEUnit.h"   // EEUnitClassCount
 #include "lle/ISModifierState.h"
 
-// FUNCTION: EXE 0x40289f
 // Destroys the lasso action, releasing the message it has not sent
 EEALasso::~EEALasso()
 {
@@ -28,7 +27,6 @@ EEALasso::~EEALasso()
         this->mMessage->Dereference();
 }
 
-// FUNCTION: EXE 0x4028c4
 // Sends the prepared selection message as local user input and forgets it
 void EEALasso::Virtual4()
 {
@@ -38,7 +36,6 @@ void EEALasso::Virtual4()
     }
 }
 
-// FUNCTION: EXE 0x4028e5
 // Builds the selection message for a lasso rectangle and modifiers (select, add, toggle, patrol group or by type)
 void EEALasso::SelectUnits(const GERectangle& inRectangle, long inFlags, unsigned long inUnitType, long inPatrolGroup)
 {
@@ -66,18 +63,6 @@ void EEALasso::SelectUnits(const GERectangle& inRectangle, long inFlags, unsigne
     gUserInterface->PostAction(this);
 }
 
-// SYNTHETIC: EXE 0x402a02
-// (EEMSelectUnits' scalar deleting destructor: ICF, also its two derived messages'; their first user)
-
-// FUNCTION: EXE 0x402a3b
-// Creates the message that selects a patrol group
-// (EEMSelectPatrolGroup's inline ctor, ee/EEMessage.h)
-
-// SYNTHETIC: EXE 0x402a68
-// (the scalar deleting destructor)
-
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEALasso::Virtual8()
 {
 }

@@ -12,16 +12,16 @@ class LogicCompletionBase;
 // AsyncOpTracker is 0x34 bytes; constructor 0x7e5930, destructor 0x7e5a40.
 class LobbyLogic : public RefCount {
 public:
-    LobbyLogic(); // 0x7e5930
-    virtual ~LobbyLogic(); // 0x7e5a40
+    LobbyLogic();
+    virtual ~LobbyLogic();
     virtual void KillHook(); // slot 0x04: empty, the shared no-argument stub at 0x8142a0
     virtual void InitComponent(ComponentConfig* inConfig); // slot 0x08: empty, the shared one-argument stub at 0x6fa500
     virtual void Reset(); // slot 0x0c: empty, the shared no-argument stub at 0x8142a0
     virtual void HandleControlEvent(int inControlId); // slot 0x10: empty, the shared one-argument stub at 0x6fa500
     virtual void HandleComponentEvent(ComponentEvent* inEvent); // slot 0x14: empty, the shared one-argument stub at 0x6fa500
-    void Kill(); // 0x7e5b00
-    void RunTrackedOp(AsyncOp* inOp, LogicCompletionBase* inCompletion, unsigned long inTimeout); // 0x7e5b20
-    void RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion, unsigned long inTimeout); // 0x7e5ba0
+    void Kill();
+    void RunTrackedOp(AsyncOp* inOp, LogicCompletionBase* inCompletion, unsigned long inTimeout);
+    void RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion, unsigned long inTimeout);
     bool RemoveTrackedOp(AsyncOp* inOp); // 0x7e5c00; LogicCompletion uses it to untrack its operation
     AsyncOpTracker mTracker; // 0x08, 0x34 bytes
     bool mKilled; // 0x3c
@@ -31,12 +31,12 @@ class LobbyLogicMgr {
 public:
     LobbyLogicMgr();
     void AddLogic(LobbyLogic*); // 0x7e5c10; appends to the logic list
-    void Init(ComponentConfig*); // 0x7e5d40
-    void Kill(); // 0x7e5d80
-    void DispatchControlEvent(int); // 0x7e5db0
-    void DispatchComponentEvent(ComponentEvent*); // 0x7e5df0
+    void Init(ComponentConfig*);
+    void Kill();
+    void DispatchControlEvent(int);
+    void DispatchComponentEvent(ComponentEvent*);
     void DispatchTimerEvent(); // 0x7e5e30; calls Reset (slot 0x0c) on every logic
-    void HandleComponentEvent(ComponentEvent*); // 0x7e5e60
+    void HandleComponentEvent(ComponentEvent*);
     typedef std::list<SmartPtr<LobbyLogic> > LogicList;
     LogicList mLogicList; // 0x00 allocator, 0x04 head, 0x08 count
 };
