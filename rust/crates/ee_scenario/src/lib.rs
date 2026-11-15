@@ -24,6 +24,7 @@
 //! - [`player`]: the Set Player Attribute effect as a plan of writes (`EESMEffect::SetPlayerAttribute`).
 //! - [`attribute`]: a unit's value for an object's attribute filter (`EESMObject::GetUnitAttribute`) as a table.
 //! - [`class_attribute`]: a class attribute's new upgrade value (`EEModifyUnitAttribute`'s arithmetic).
+//! - [`unit_change`]: one unit's attribute changed (`EEChangeUnit`: the draws, the clamps, which value changes).
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`tokens`]: a message's tags expanded (`EESMEffect::ExpandTokens`).
 //! - [`lists`]: the manager's element lists as the editor changes them (sort, new, move, delete, duplicate, the
@@ -57,6 +58,7 @@ pub mod task;
 pub mod text;
 pub mod tokens;
 pub mod trigger;
+pub mod unit_change;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the
 /// conversion's "indefinite" value `i32::MIN` for NaN or a value out of range (`as i32` would saturate).

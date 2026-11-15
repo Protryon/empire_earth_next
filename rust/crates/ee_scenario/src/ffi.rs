@@ -761,15 +761,22 @@ pub extern "C" fn ee_scenario_class_value(
     crate::class_attribute::class_value(kind, percent, add, amount, base, current, fcurrent)
 }
 
-/// `EEChangeUnit`'s amount for one unit value (class_attribute.rs `unit_amount`).
+/// `EEChangeUnit(attribute, percent, unit, minimum, maximum, random, mode)` (unit_change.rs) on the host context's
+/// unit.
+///
+/// # Safety
+/// `host` must be a valid host table whose context holds the unit, for the call.
 #[no_mangle]
-pub extern "C" fn ee_scenario_unit_amount(
+pub unsafe extern "C" fn ee_scenario_change_unit(
+    host: *const EeScenarioHost,
+    attribute: c_ulong,
     percent: bool,
+    minimum: c_long,
+    maximum: c_ulong,
+    random: bool,
     mode: c_long,
-    amount: c_long,
-    base: f32,
-    current: c_long,
-    clamp: bool,
-) -> c_long {
-    crate::class_attribute::unit_amount(percent, mode, amount, base, current, clamp)
+) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { host_of(host) };
+    crate::unit_change::change_unit(&mut h, attribute, percent, minimum, maximum, random, mode);
 }

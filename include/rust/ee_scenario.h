@@ -1532,6 +1532,100 @@ constexpr static const int32_t EE_SCENARIO_OPERATOR_AND = 1;
 
 constexpr static const int32_t EE_SCENARIO_OPERATOR_OR = 2;
 
+/// `gPhysics->GetRandom(a, b)` (both inclusive; the physics stream).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CU_RANDOM = 190;
+
+/// The context unit's value `a` (`EE_SCENARIO_CU_*`; floats as their bits).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CU_VALUE = 191;
+
+/// The context unit's value `a` set to `b` (`EE_SCENARIO_CU_*`, the writable ones; the C++ statement of each).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CU_SET = 192;
+
+/// `inUnit != NULL`.
+constexpr static const int64_t EE_SCENARIO_CU_EXISTS = 0;
+
+/// `GetComplexUnit() != NULL`.
+constexpr static const int64_t EE_SCENARIO_CU_COMPLEX = 1;
+
+/// `GetHitPoints()`; set: `SetHitPoints(b)`.
+constexpr static const int64_t EE_SCENARIO_CU_HIT_POINTS = 2;
+
+/// `GetStats()->mMaxHitPoints`.
+constexpr static const int64_t EE_SCENARIO_CU_MAX_HIT_POINTS = 3;
+
+/// `GetUnitClass()->GetCategory()`.
+constexpr static const int64_t EE_SCENARIO_CU_CATEGORY = 4;
+
+/// `GetStats()->mCarryAmount`.
+constexpr static const int64_t EE_SCENARIO_CU_CARRY = 5;
+
+/// `mResourceAmount`; set: `SetResourceAmount(b)`.
+constexpr static const int64_t EE_SCENARIO_CU_RESOURCE_AMOUNT = 6;
+
+/// Whether the complex unit gathers (`mCommand != NULL && mCommand->mType == kActionGatherResource`; 0 without one).
+constexpr static const int64_t EE_SCENARIO_CU_GATHERING = 7;
+
+/// The complex unit's `mResourceType`; set: the unit's `SetResourceType(b)`.
+constexpr static const int64_t EE_SCENARIO_CU_RESOURCE_TYPE = 8;
+
+/// `GetStats()->mFlightTime`.
+constexpr static const int64_t EE_SCENARIO_CU_STATS_FLIGHT_TIME = 9;
+
+/// The complex unit's `mFlightTime`; set: `SetFlightTime(b)`.
+constexpr static const int64_t EE_SCENARIO_CU_FLIGHT_TIME = 10;
+
+/// The class's `mGarrisonCapacity`.
+constexpr static const int64_t EE_SCENARIO_CU_GARRISON_CAPACITY = 11;
+
+/// `mGarrisonCount`; set: `AddGarrison(b, mGarrisonPopulation)` (b the change).
+constexpr static const int64_t EE_SCENARIO_CU_GARRISON = 12;
+
+/// The class's `mAmmunition`.
+constexpr static const int64_t EE_SCENARIO_CU_CLASS_AMMUNITION = 13;
+
+/// `mAmmunition` (unsigned); set: `mAmmunition = b`.
+constexpr static const int64_t EE_SCENARIO_CU_AMMUNITION = 14;
+
+/// The class's `GetScale()` (bits).
+constexpr static const int64_t EE_SCENARIO_CU_CLASS_SCALE = 15;
+
+/// The physical model's `GetScale()` (bits); set: `SetScale(b's float)`.
+constexpr static const int64_t EE_SCENARIO_CU_SCALE = 16;
+
+/// `GetStats()->mReloadTime`.
+constexpr static const int64_t EE_SCENARIO_CU_STATS_RELOAD = 17;
+
+/// `mReloadTimer`; set: `mReloadTimer = b`.
+constexpr static const int64_t EE_SCENARIO_CU_RELOAD_TIMER = 18;
+
+/// `GetStats()->mPower`.
+constexpr static const int64_t EE_SCENARIO_CU_STATS_POWER = 19;
+
+/// `mPower`; set: `mPower = b`.
+constexpr static const int64_t EE_SCENARIO_CU_POWER = 20;
+
+/// The class's `mRottingTime`.
+constexpr static const int64_t EE_SCENARIO_CU_CLASS_ROTTING = 21;
+
+/// `mRottingAwayTime`; set: `mRottingAwayTime = b`.
+constexpr static const int64_t EE_SCENARIO_CU_ROTTING = 22;
+
+/// `mUnitVariables[0]` (and + 1, + 2 for the other two); set: the variable = b.
+constexpr static const int64_t EE_SCENARIO_CU_VARIABLE = 23;
+
+/// Set only: `SetAnimation(mAnimation, mPhysicalModel.GetFrame(), b != 0)`.
+constexpr static const int64_t EE_SCENARIO_CU_PAUSED = 26;
+
+/// Set only: `SetBuilt(b != 0, 1, 1)`.
+constexpr static const int64_t EE_SCENARIO_CU_BUILT = 27;
+
+/// Set only: a full garrison's wait (a load goal over no units queued, `StartAction(kActionWaitForGarrisonCost)`,
+/// its class's `ActionChanged`).
+constexpr static const int64_t EE_SCENARIO_CU_GARRISON_WAIT = 28;
+
+/// Set only: `Kill(0, 0, 0)` (b 0) or, for a resource, `SetResourceAmount(0)`, `UnitTaken`, `KillUnit` (b 1).
+constexpr static const int64_t EE_SCENARIO_CU_KILL = 29;
+
 /// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
 struct EeScenarioTiles;
 
@@ -2188,13 +2282,18 @@ EeScenarioClassValue ee_scenario_class_value(uint32_t kind,
                                              long current,
                                              float fcurrent);
 
-/// `EEChangeUnit`'s amount for one unit value (class_attribute.rs `unit_amount`).
-long ee_scenario_unit_amount(bool percent,
-                             long mode,
-                             long amount,
-                             float base,
-                             long current,
-                             bool clamp);
+/// `EEChangeUnit(attribute, percent, unit, minimum, maximum, random, mode)` (unit_change.rs) on the host context's
+/// unit.
+///
+/// # Safety
+/// `host` must be a valid host table whose context holds the unit, for the call.
+void ee_scenario_change_unit(const EeScenarioHost *host,
+                             unsigned long attribute,
+                             bool percent,
+                             long minimum,
+                             unsigned long maximum,
+                             bool random,
+                             long mode);
 
 /// Appends tile (x, y) to a list the host is filling.
 ///

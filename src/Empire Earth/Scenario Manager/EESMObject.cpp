@@ -540,8 +540,6 @@ static void EEModifyUnitAttributeUncaptured(unsigned long inAttribute, bool inPe
     gWorld.mScenarioManager->AddV134Effect(theEffect);
 }
 
-#include "ee/EEUnitAction.h"
-#include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x5c8f28
 // Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
@@ -561,160 +559,14 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
     }
 }
 
-// EEChangeUnit's body (EEChangeUnit adds the simulation capture's SMCU record)
+// EEChangeUnit's body (EEChangeUnit adds the simulation capture's SMCU record): the draws, the clamps and which value
+// changes are ee_scenario unit_change.rs's, the unit's reads and writes EESMEffect.cpp's EE_SCENARIO_WORLD_CU_*
 static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
                 long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
 {
-    std::vector<unsigned long> theUnused;
-    std::vector<EEComplexUnit*> theUnits;
-    EESMEffect theEffect;
-    EEUnitClass* theClass = inUnit != NULL ? inUnit->GetUnitClass() : NULL;
-    EEComplexUnit* theComplex = inUnit != NULL ? inUnit->GetComplexUnit() : NULL;
-    EEUnitClassUpgrade* theStats = inUnit != NULL ? inUnit->GetStats() : NULL;
-    theEffect.mType = kSMEffectObject;
-    theEffect.mObjectAction = kSMObjectActionUnitAttribute;
-    theEffect.mAttributeUnit = inUnit != NULL ? inUnit->GetUnitID() : (unsigned long)-1;
-    theEffect.mAttributeUnitType = theClass != NULL ? theClass->GetUnitType() : 0;
-    theEffect.mAttributePlayer = inUnit != NULL ? inUnit->GetPlayer()->GetPlayerID() : -1;
-    theEffect.mUsesPercent = false;
-    theEffect.mObject = 0;
-    theEffect.mAttribute = inAttribute;
-    theEffect.mAttributeMode = inMode;
-    long theAmount = inMaximum != 0 ? gPhysics->GetRandom(inMinimum, (long)inMaximum) : inMinimum;
-    if (inRandom) {
-        if (!inPercentage)
-            theAmount = gPhysics->GetRandom(0, inMinimum);
-        else {
-            theAmount = gPhysics->GetRandom(0L, inMinimum + (long)(inMaximum > 100 ? 0 : 100 - inMaximum));
-            if (theAmount >= inMinimum)
-                theAmount += 1 + (inMaximum - inMinimum);
-        }
-    }
-    int theValue = 0;   // the counter changed below: 1 the reload timer, 2 the power, 3 the rotting time (unit store holders)
-    long theBase = 0;
-    switch (inAttribute) {
-    case kSMUnitAttributeHitPoints:
-        if (inUnit != NULL && inUnit->GetHitPoints() > 0) {
-            theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theStats->mMaxHitPoints,
-                                                inUnit->GetHitPoints(), false);
-            if (theAmount < 1) {
-                if (inUnit->GetUnitClass()->GetCategory() == kUnitCategoryResource) {
-                    inUnit->SetResourceAmount(0);
-                    inUnit->GetPlayer()->UnitTaken(inUnit, false);
-                    inUnit->GetPlayer()->KillUnit(inUnit, false);
-                } else
-                    inUnit->Kill(0, 0, 0);
-            } else
-                inUnit->SetHitPoints(theAmount);
-        }
-        break;
-    case kSMUnitAttributeAnyResource: case kSMUnitAttributeStone: case kSMUnitAttributeGold: case kSMUnitAttributeWood: case kSMUnitAttributeFood: case kSMUnitAttributeIron: {
-        theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theStats->mCarryAmount,
-                                            inUnit->mResourceAmount, true);
-        unsigned long theState = 6;
-        if (inAttribute == kSMUnitAttributeAnyResource) {
-            // any resource: a random type unless the unit is gathering, which keeps the type it gathers
-            inUnit->SetResourceAmount(theAmount);
-            if (theComplex == NULL || theComplex->mCommand == NULL || theComplex->mCommand->mType != kActionGatherResource)
-                inUnit->SetResourceType(gPhysics->GetRandom(2L, 6L));
-            break;
-        } else if (inAttribute == kSMUnitAttributeStone) theState = 4;
-        else if (inAttribute == kSMUnitAttributeGold) theState = 5;
-        else if (inAttribute == kSMUnitAttributeWood) theState = 3;
-        else if (inAttribute == kSMUnitAttributeFood) theState = 2;
-        if (theComplex != NULL && theComplex->mCommand != NULL && theComplex->mCommand->mType == kActionGatherResource
-            && theComplex->mResourceType != theState)
-            break;
-        inUnit->SetResourceAmount(theAmount);
-        inUnit->SetResourceType(theState);
-        break;
-    }
-    case kSMUnitAttributeFlightTime:
-        if (theComplex != NULL) {
-            long theTime = inPercentage ? UMFloatToLong((float)theStats->mFlightTime * theAmount * 0.01f)
-                                       : (long)(theAmount / 0.001f + 0.5f);
-            theComplex->SetFlightTime(ee_scenario_unit_amount(false, inMode, theTime, 0.0f, theComplex->mFlightTime, true));
-        }
-        break;
-    case kSMUnitAttributeGarrisonLevel:
-        if (theComplex != NULL && theComplex->GetUnitClass()->mGarrisonCapacity > 0) {
-            theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theClass->mGarrisonCapacity,
-                                                theComplex->mGarrisonCount, true);
-            long theDelta = theAmount - theComplex->mGarrisonCount;
-            if (theComplex->GetUnitClass()->mGarrisonCapacity < theComplex->mGarrisonCount + theDelta)
-                theDelta = theComplex->GetUnitClass()->mGarrisonCapacity - theComplex->mGarrisonCount;
-            theComplex->AddGarrison(theDelta, theComplex->mGarrisonPopulation);
-            if (theComplex->mGarrisonCount == theComplex->GetUnitClass()->mGarrisonCapacity) {
-                EEUnitGoal* theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theComplex, theUnits, false);
-                theComplex->QueueGoal(theGoal, 0);
-                theComplex->StartAction(kActionWaitForGarrisonCost);
-                theComplex->GetUnitClass()->ActionChanged(theComplex);
-            }
-        }
-        break;
-    case kSMUnitAttributeAmmunition:
-        if (theComplex != NULL) {
-            theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)(unsigned long)theClass->mAmmunition,
-                                                (long)theComplex->mAmmunition, true);
-            if (theComplex->mAmmunition != (unsigned long)theAmount)
-                theComplex->mAmmunition = theAmount;
-        }
-        break;
-    case kSMUnitAttributeAnimationIsPaused:
-        if (theComplex != NULL)
-            theComplex->SetAnimation(theComplex->mAnimation, theComplex->mPhysicalModel.GetFrame(), theAmount != 0);
-        break;
-    case kSMUnitAttributeReloadTime:
-        if (theComplex != NULL) {
-            theBase = theStats->mReloadTime;
-            theValue = 1;
-        }
-        break;
-    case kSMUnitAttributeGraphicScale:
-        if (theComplex != NULL) {
-            float theScale = inPercentage ? theClass->GetScale() * theAmount * 0.01f : (float)theAmount;
-            if (inMode == kSMAttributeModeIncrease) theScale = theComplex->mPhysicalModel.GetScale() + theScale;
-            else if (inMode == kSMAttributeModeDecrease) theScale = theComplex->mPhysicalModel.GetScale() - theScale;
-            if (theScale <= 0.0f) theScale = 0.001f;
-            theComplex->mPhysicalModel.SetScale(theScale);
-        }
-        break;
-    case kSMUnitAttributePower:
-        if (theComplex != NULL) {
-            theBase = theStats->mPower;
-            theValue = 2;
-        }
-        break;
-    case kSMUnitAttributeRottingTime:
-        if (theComplex != NULL) {
-            theBase = theClass->mRottingTime;
-            theValue = 3;
-        }
-        break;
-    case kSMUnitAttributeConstructionComplete:
-        if (theComplex != NULL)
-            theComplex->SetBuilt(theAmount != 0, 1, 1);
-        break;
-    case kSMUnitAttributeUnitVariable1: case kSMUnitAttributeUnitVariable2: case kSMUnitAttributeUnitVariable3:
-        if (theComplex != NULL) {
-            long& theCounter = theComplex->mUnitVariables[inAttribute - 17];
-            theCounter = ee_scenario_unit_amount(false, inMode, theAmount, 0.0f, theCounter, true);
-        }
-        break;
-    }
-    if (theValue == 0)
-        return;
-    long theCurrent = theValue == 1 ? theComplex->mReloadTimer
-                    : theValue == 2 ? theComplex->mPower : theComplex->mRottingAwayTime;
-    theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theBase, theCurrent, true);
-    if (theCurrent != theAmount) {
-        if (theValue == 1)
-            theComplex->mReloadTimer = theAmount;
-        else if (theValue == 2)
-            theComplex->mPower = theAmount;
-        else
-            theComplex->mRottingAwayTime = theAmount;
-    }
+    EESMHostContext theContext = {NULL, inUnit};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    ee_scenario_change_unit(&theHost, inAttribute, inPercentage, inMinimum, inMaximum, inRandom, inMode);
 }
 
 // FUNCTION: EXE 0x5c9628

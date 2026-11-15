@@ -1046,12 +1046,87 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     return 0;
 }
 
+// EEChangeUnit's calls on the context's unit (ee_scenario unit_change.rs EE_SCENARIO_WORLD_CU_*): its values (the
+// statements' reads), the draws and each change's statement
+int64_t SMEChangeUnitWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
+{
+    EEUnit* theUnit = inContext->mUnit;
+    if (inOp == EE_SCENARIO_WORLD_CU_RANDOM)
+        return gPhysics->GetRandom((long)a[0], (long)a[1]);
+    EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
+    long* theVariable = a[0] >= EE_SCENARIO_CU_VARIABLE && a[0] < EE_SCENARIO_CU_VARIABLE + 3
+                            ? &theComplex->mUnitVariables[(size_t)(a[0] - EE_SCENARIO_CU_VARIABLE)] : NULL;
+    if (inOp == EE_SCENARIO_WORLD_CU_VALUE) {
+        switch (a[0]) {
+        case EE_SCENARIO_CU_EXISTS: return theUnit != NULL;
+        case EE_SCENARIO_CU_COMPLEX: return theComplex != NULL;
+        case EE_SCENARIO_CU_HIT_POINTS: return theUnit->GetHitPoints();
+        case EE_SCENARIO_CU_MAX_HIT_POINTS: return theUnit->GetStats()->mMaxHitPoints;
+        case EE_SCENARIO_CU_CATEGORY: return theUnit->GetUnitClass()->GetCategory();
+        case EE_SCENARIO_CU_CARRY: return theUnit->GetStats()->mCarryAmount;
+        case EE_SCENARIO_CU_RESOURCE_AMOUNT: return theUnit->mResourceAmount;
+        case EE_SCENARIO_CU_GATHERING: return theComplex->mCommand != NULL && theComplex->mCommand->mType == kActionGatherResource;
+        case EE_SCENARIO_CU_RESOURCE_TYPE: return theComplex->mResourceType;
+        case EE_SCENARIO_CU_STATS_FLIGHT_TIME: return theUnit->GetStats()->mFlightTime;
+        case EE_SCENARIO_CU_FLIGHT_TIME: return theComplex->mFlightTime;
+        case EE_SCENARIO_CU_GARRISON_CAPACITY: return theUnit->GetUnitClass()->mGarrisonCapacity;
+        case EE_SCENARIO_CU_GARRISON: return theComplex->mGarrisonCount;
+        case EE_SCENARIO_CU_CLASS_AMMUNITION: return theUnit->GetUnitClass()->mAmmunition;
+        case EE_SCENARIO_CU_AMMUNITION: return (int64_t)theComplex->mAmmunition;
+        case EE_SCENARIO_CU_CLASS_SCALE: return SMEBits(theUnit->GetUnitClass()->GetScale());
+        case EE_SCENARIO_CU_SCALE: return SMEBits(theComplex->mPhysicalModel.GetScale());
+        case EE_SCENARIO_CU_STATS_RELOAD: return theUnit->GetStats()->mReloadTime;
+        case EE_SCENARIO_CU_RELOAD_TIMER: return theComplex->mReloadTimer;
+        case EE_SCENARIO_CU_STATS_POWER: return theUnit->GetStats()->mPower;
+        case EE_SCENARIO_CU_POWER: return theComplex->mPower;
+        case EE_SCENARIO_CU_CLASS_ROTTING: return theUnit->GetUnitClass()->mRottingTime;
+        case EE_SCENARIO_CU_ROTTING: return theComplex->mRottingAwayTime;
+        }
+        return *theVariable;
+    }
+    switch (a[0]) {
+    case EE_SCENARIO_CU_HIT_POINTS: theUnit->SetHitPoints((long)a[1]); break;
+    case EE_SCENARIO_CU_RESOURCE_AMOUNT: theUnit->SetResourceAmount((long)a[1]); break;
+    case EE_SCENARIO_CU_RESOURCE_TYPE: theUnit->SetResourceType((unsigned long)a[1]); break;
+    case EE_SCENARIO_CU_FLIGHT_TIME: theComplex->SetFlightTime((long)a[1]); break;
+    case EE_SCENARIO_CU_GARRISON: theComplex->AddGarrison((long)a[1], theComplex->mGarrisonPopulation); break;
+    case EE_SCENARIO_CU_AMMUNITION: theComplex->mAmmunition = (unsigned long)a[1]; break;
+    case EE_SCENARIO_CU_SCALE: theComplex->mPhysicalModel.SetScale(SMEFloat(a[1])); break;
+    case EE_SCENARIO_CU_RELOAD_TIMER: theComplex->mReloadTimer = (long)a[1]; break;
+    case EE_SCENARIO_CU_POWER: theComplex->mPower = (long)a[1]; break;
+    case EE_SCENARIO_CU_ROTTING: theComplex->mRottingAwayTime = (long)a[1]; break;
+    case EE_SCENARIO_CU_PAUSED:
+        theComplex->SetAnimation(theComplex->mAnimation, theComplex->mPhysicalModel.GetFrame(), a[1] != 0);
+        break;
+    case EE_SCENARIO_CU_BUILT: theComplex->SetBuilt(a[1] != 0, 1, 1); break;
+    case EE_SCENARIO_CU_GARRISON_WAIT: {
+        std::vector<EEComplexUnit*> theUnits;
+        theComplex->QueueGoal(EEUGRust::NewLoad(kGoalLoadGarrison, theComplex, theUnits, false), 0);
+        SMEAction(theComplex, kActionWaitForGarrisonCost);
+        break;
+    }
+    case EE_SCENARIO_CU_KILL:
+        if (a[1] == 0) {
+            theUnit->Kill(0, 0, 0);
+            break;
+        }
+        theUnit->SetResourceAmount(0);
+        theUnit->GetPlayer()->UnitTaken(theUnit, false);
+        theUnit->GetPlayer()->KillUnit(theUnit, false);
+        break;
+    default: *theVariable = (long)a[1]; break;
+    }
+    return 0;
+}
+
 }   // namespace
 
 // an effect run's world call (ee_scenario effect.rs EE_SCENARIO_WORLD_*): each the original's statement or
 // statement sequence at its place, on the units by id, the players by index
 int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
 {
+    if (inOp >= EE_SCENARIO_WORLD_CU_RANDOM && inOp <= EE_SCENARIO_WORLD_CU_SET)   // EEChangeUnit's (no effect run)
+        return SMEChangeUnitWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
     EESMEffectRun* theRun = static_cast<EESMEffectRun*>(static_cast<EESMHostContext*>(inContext));
     EESMEffect* theEffect = theRun->mEffect;
     EEScenarioManager* theManager = gWorld.mScenarioManager;
