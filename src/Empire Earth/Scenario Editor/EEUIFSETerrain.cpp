@@ -120,7 +120,6 @@ struct EESETerrainNameLess {
     }
 };
 
-// FUNCTION: EXE 0x5aaad4
 // Draws each color set line as a row of colored swatches clipped to the list box, then the list box itself
 long EESEUITerrainColorLB::DrawPolygons()
 {
@@ -148,7 +147,6 @@ long EESEUITerrainColorLB::DrawPolygons()
     return UIListBox<std::vector<GEColor> >::DrawPolygons();
 }
 
-// FUNCTION: EXE 0x5aacf2
 // Copies the list for drawing, moving the preview texture references to the new copy and framing the selection
 long EESEUITerrainTypeLB::CopyData()
 {
@@ -174,7 +172,6 @@ long EESEUITerrainTypeLB::CopyData()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5aade1
 // Draws the list box, each line's 16x16 terrain preview and a frame around the selected line
 long EESEUITerrainTypeLB::DrawPolygons()
 {
@@ -215,7 +212,6 @@ long EESEUITerrainTypeLB::DrawPolygons()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5ab15f
 // Sets the preview texture of a terrain line, releasing the old one and referencing the new one
 void EESEUITerrainTypeLB::SetTexture(GETexture* inTexture, unsigned long inLine)
 {
@@ -226,7 +222,6 @@ void EESEUITerrainTypeLB::SetTexture(GETexture* inTexture, unsigned long inLine)
         this->mData[inLine].mTexture->Reference();
 }
 
-// FUNCTION: EXE 0x5ab1a2
 // Draws the visible terrain names to the right of their previews; returns the last draw result
 long EESEUITerrainTypeLB::DrawTextA()
 {
@@ -251,7 +246,6 @@ long EESEUITerrainTypeLB::DrawTextA()
     return theResult;
 }
 
-// FUNCTION: EXE 0x5ab2ab
 // Checks the paint type button and shows (terrain) or hides (bulldozer) the terrain type, color and preview controls
 // (editor_terrain.rs)
 void EEUIFSETRBPaintType::Check()
@@ -260,7 +254,6 @@ void EEUIFSETRBPaintType::Check()
     ee_screens_setn_check(this->GetForm(), (uint32_t)this->GetId());
 }
 
-// FUNCTION: EXE 0x5ab344
 // Creates the paint action: terrain with the selected type and color (NULL without a type) or bulldozer
 // (editor_terrain.rs)
 EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
@@ -268,7 +261,6 @@ EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
     return static_cast<EESEAPaint*>(ee_screens_setn_paint(this->mTerrain->mRust, static_cast<UIControl*>(this)));
 }
 
-// FUNCTION: EXE 0x5ab4bc
 // Tints the preview bitmap's corners with the selected color set's colors (editor_terrain.rs)
 long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -277,7 +269,6 @@ long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ab6d7
 // Shows the selected terrain's preview, selects its color set and makes it the tab's selected terrain
 // (editor_terrain.rs)
 long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -287,7 +278,6 @@ long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5ab87c
 // Creates the terrain tab: terrain/bulldozer buttons, the name-sorted terrain type list, color set list, paint control
 // and preview bitmap; loads the terrain previews (editor_terrain.rs)
 EEUIFSETerrain::EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes,
@@ -300,7 +290,6 @@ EEUIFSETerrain::EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x5ac48b
 // Creates a paint type radio button 125 wide and as tall as the larger of its font and the radio button image
 EEUIFSETRBPaintType::EEUIFSETRBPaintType(unsigned long inID, const UWideString& inText,
     const GE2DPoint& inLocation, GEFont* inFont, UIForm* inForm, unsigned long inIndex, bool inChecked)
@@ -312,28 +301,24 @@ EEUIFSETRBPaintType::EEUIFSETRBPaintType(unsigned long inID, const UWideString& 
 {
 }
 
-// FUNCTION: EXE 0x5ac5ea
 // Destroys the terrain tab and its controls and releases the terrain previews (editor_terrain.rs)
 EEUIFSETerrain::~EEUIFSETerrain()
 {
     ee_screens_setn_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x5ac675
 // Leaves the tab: asks the load thread to unload the selected terrain and drops every preview texture
 void EEUIFSETerrain::Leave()
 {
     ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_LEAVE, NULL, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x5ac6f9
 // Moves the brush highlight to the mouse while the editor is the current form
 void EEUIFSETerrain::Update()
 {
     ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_UPDATE, NULL, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x5ac727
 // Enters the tab: sets the previews (an ambient-only terrain shows its first unit's button), shows the selected one
 // and asks the load thread to load the selected terrain
 void EEUIFSETerrain::Enter()
@@ -341,7 +326,6 @@ void EEUIFSETerrain::Enter()
     ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_ENTER, NULL, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x5aca71
 // Puts the brush highlight on the map point under the mouse inside the game view, else hides it
 void EEUIFSETerrain::MouseMove(const GE2DPoint& inLocation)
 {
