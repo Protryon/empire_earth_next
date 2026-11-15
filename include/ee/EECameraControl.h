@@ -25,6 +25,7 @@ public:
     void MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration, EEUnit* inUnitB,
                   GE3DPoint inLocationB, bool inFlagB, float inZoom, float inTurnYaw, float inTurnPitch);
     void Update(float inElapsedTime);       // 0x129a34 (EEMLoadMainScreen passes 1.0; provisional name)
+    void UpdateBody(float inElapsedTime);   // port: Update between the capture's two CAMU records (TEST ONLY hook)
     // inline (the grab scroll copies it to a temporary before its GetValue call, 0x1d9a5c)
     float GetZoom() const { return this->mZoom; }
     void ResetZoom();                       // 0x12934f: SetZoom(1.0f)

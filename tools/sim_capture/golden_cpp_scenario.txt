@@ -1,3 +1,4 @@
+seed 2 CAMU 95512 c5ecf8a9b426af21
 seed 2 CBGO 1 bd3c23d2850c3ff0
 seed 2 SMAR 12 d7a9a8f45718f2bc
 seed 2 SMCE 137334 a30d9b9a67fd4e89
@@ -9,6 +10,7 @@ seed 2 SMSV 28 b2311d5d52cee6b9
 seed 2 SMTE 199800 949711f2dd600ac5
 seed 2 SMTK 6 2e66ff3dd5473341
 seed 2 SMUP 3330 1237004413d2b0c8
+seed 3 CAMU 87112 a8acfb4249f7fcef
 seed 3 CBGO 1 5099da0435eb72ed
 seed 3 SMAR 124 0ccfafc637aa73b5
 seed 3 SMCE 69295 92ba39e9d240c38b

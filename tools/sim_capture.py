@@ -74,6 +74,10 @@ and loaded: EFSW one record per case (the creation, the save, the load and repai
 every update of the sweep. Its golden came from the C++ effects of f839d277 (R4.4, fourteenth, sixteenth and nineteenth rounds; the twentieth's
 from the C++ of 2c6cd492, whose 2D kinds but the shockwave and confirmation were the original classes; the
 twenty-first's from the C++ of cddb6963, whose particle, decals, marching icons and light glow were the original classes).
+CAMU is the camera's whole state (ee/EEAppCapture.h: the poses, the view, the target, the followed units' ids, the
+move's numbers, mode and flags, the path's keys, the viewport's clipping distances) at the start and end of every
+EECameraControl::Update (the physics thread's each tick); its golden lines (oracle, scenario) come from the C++ camera
+before it moved (app and world lane, round 1).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from

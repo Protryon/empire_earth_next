@@ -71,6 +71,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "rust/ee_ge.h"
 #include "rust/ee_gfx.h"
+#include "ee/EEAppCapture.h"
 
 // The camera's math is Rust (rust/crates/ee_gfx camera.rs, docs/RUST_PLAN.md R4.4): the pitch, the interpolation, the
 // move's speed, the view, the height clamp, the clipping distances, the edge clip, the scroll direction and clamp,
@@ -850,6 +851,13 @@ static const float kCameraUpdateZoom = -1.1f;
 // Advances the camera each frame: drops followed units that died or went out of sight, steps the move or path and
 // applies the view, clipping distances and orthographic size to the viewport
 void EECameraControl::Update(float inElapsedTime)
+{
+    EEAppCaptureCamera(*this, 0, inElapsedTime);   // CAMU (TEST ONLY)
+    this->UpdateBody(inElapsedTime);
+    EEAppCaptureCamera(*this, 1, inElapsedTime);   // CAMU (TEST ONLY)
+}
+
+void EECameraControl::UpdateBody(float inElapsedTime)
 {
     GE3DPoint thePoint;
     GE3DPoint theNoLocation(-10000.0f, 0.0f, 0.0f);
