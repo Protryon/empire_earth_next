@@ -55,7 +55,6 @@
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
 
-// FUNCTION: EXE 0x4ca90f
 // Creates the game server with the lock-step rates from the game preferences, no vote or load running, and its locks
 EEServer::EEServer(UWideString& inName, unsigned long inNetworkAdapter, unsigned long inCurrentCommunicationsTick, unsigned long inCurrentPhysicsTick, bool inAllowNewConnections,
                    bool inAnnounce)
@@ -85,10 +84,6 @@ EEServer::EEServer(UWideString& inName, unsigned long inNetworkAdapter, unsigned
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mAttemptToRemovePlayerLock) == keseOK, 109);
 }
 
-// SYNTHETIC: EXE 0x4caa6a
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4caa86
 // Destroys the server, stopping its threads and releasing its three locks
 EEServer::~EEServer()
 {
@@ -98,7 +93,6 @@ EEServer::~EEServer()
     TSScheduler::DestroyCriticalSection(this->mAttemptToRemovePlayerLock);
 }
 
-// FUNCTION: EXE 0x4caad8
 // Handles a join request: refuses a wrong version or checksum, a closed game, a name in use or a full game; else
 // gives it a slot, sends it the options and players and starts the saved game or scenario transfer
 void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOptionsPlayer& inPlayer,
@@ -314,13 +308,6 @@ void EEServer::TakeConnectionRequest(NEMRecord* inRequest)
     inRequest->Dereference();
 }
 
-// SYNTHETIC: EXE 0x4cb3cf
-// (EEWonNetGameInfo's implicit ctor, first used by ProcessConnectionRequest)
-
-// SYNTHETIC: EXE 0x4cb3ea
-// (EEWonNetGameInfo's implicit dtor)
-
-// FUNCTION: EXE 0x4cb405
 // Removes a client: in a running game drops its player; the host leaving tells every client the host is gone;
 // in the lobby reopens its slot, tells it why and stands in its load response
 void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsExiting)
@@ -407,10 +394,6 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
     }
 }
 
-// SYNTHETIC: EXE 0x4cb815
-// (EEMStartLoadingResponse's inline ctor, first used by BootPlayer)
-
-// FUNCTION: EXE 0x4cb850
 // Removes a client from its lobby slot (removed-by-host response), forgets its slot and resends the slot's info
 void EEServer::RefuseClient(EEGameOptionsPlayer& inPlayer)
 {
@@ -419,7 +402,6 @@ void EEServer::RefuseClient(EEGameOptionsPlayer& inPlayer)
     this->SendFullPlayerInformation(inPlayer.mSlot, inPlayer);
 }
 
-// FUNCTION: EXE 0x4cb8f6
 // Handles a player's removal on the host: ours shows the booted or out-of-sync box and ends the game, another's
 // is announced in the chat log, unregistered and removed; plays the matching sound
 void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
@@ -471,7 +453,6 @@ void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
     }
 }
 
-// FUNCTION: EXE 0x4cbb17
 // Returns the first world player index below the maximum that holds no player, else 0xff
 unsigned char EEServer::GetFreePlayerSlot()
 {
@@ -489,21 +470,18 @@ unsigned char EEServer::GetFreePlayerSlot()
     return theSlot;
 }
 
-// FUNCTION: EXE 0x4cbb41
 // Returns true when the world has no teams
 bool EEServer::ServerSlot28()
 {
     return (gWorld.mTeams.size() > 0) ? false : true;
 }
 
-// FUNCTION: EXE 0x4cbb65
 // Returns whether a server migration is in progress
 bool EEServer::IsMigrating()
 {
     return this->mIsMigrating;
 }
 
-// FUNCTION: EXE 0x4cbb6c
 // Returns a player's name in a static string (left unchanged when the player is not present)
 const UWideString& EEServer::ServerSlot54(unsigned char inPlayer)
 {
@@ -513,10 +491,6 @@ const UWideString& EEServer::ServerSlot54(unsigned char inPlayer)
     return sName;
 }
 
-// SYNTHETIC: EXE 0x4cbbce
-// (the atexit dtor of ServerSlot54's sName)
-
-// FUNCTION: EXE 0x4cbbd9
 // Returns a world player's network slot, 0xff when the player is not present
 unsigned char EEServer::GetPlayerSendToSlot(unsigned char inPlayer)
 {
@@ -526,7 +500,6 @@ unsigned char EEServer::GetPlayerSendToSlot(unsigned char inPlayer)
     return theSlot;
 }
 
-// FUNCTION: EXE 0x4cbc02
 // Returns the network slot of a lobby slot, 0xff when none
 unsigned char EEServer::GetSendToSlot(unsigned char inPlayer)
 {
@@ -537,7 +510,6 @@ unsigned char EEServer::GetSendToSlot(unsigned char inPlayer)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4cbc35
 // Returns the lobby slot that uses a network slot, 0 when none
 unsigned char EEServer::GetLobbySlot(unsigned char inValue)
 {
@@ -552,7 +524,6 @@ unsigned char EEServer::GetLobbySlot(unsigned char inValue)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4cbc77
 // Handles a system message on the host: ping replies (sent on as quality stats), communications ticks, join
 // requests, disconnections (removes the player), reconnections; load/save and lag messages execute
 void EEServer::ProcessSystemMessage(NEMessage* inMessage)
@@ -651,7 +622,6 @@ void EEServer::ProcessSystemMessage(NEMessage* inMessage)
     }
 }
 
-// FUNCTION: EXE 0x4cbfd0
 // Filters a client message before it is passed on (returns whether to pass it): takes votes, pause and join
 // requests; when the host itself is removed it turns into a client
 bool EEServer::FilterPlayerInput(NEMessage* inMessage)
@@ -712,7 +682,6 @@ bool EEServer::FilterPlayerInput(NEMessage* inMessage)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4cc1f9
 // Stamps the host's local input with the fast-selection number; selection messages take a new number and run at once
 void EEServer::PrepareLocalInput(NEMessage* inMessage)
 {
@@ -751,7 +720,6 @@ void EEServer::PrepareLocalInput(NEMessage* inMessage)
     }
 }
 
-// FUNCTION: EXE 0x4cc2ca
 // Returns whether a world player index holds a player
 bool EEServer::IsPlayerPresent(unsigned char inPlayer)
 {
@@ -761,7 +729,6 @@ bool EEServer::IsPlayerPresent(unsigned char inPlayer)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4cc2e7
 // Plays a warning sound: 1 out of sync, 2 resending
 void EEServer::PlayWarningSound(long inSound)
 {
@@ -783,7 +750,6 @@ void EEServer::PlayWarningSound(long inSound)
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEHumanPlayer.h"
 
-// FUNCTION: EXE 0x4cc34e
 // Handles a lobby message on the host: player info (and the WON game info), transfer status, the game start,
 // a joined player, a player's slot info; the rest execute
 // player info falls through into the game options case (the WON game info follows the slots)
@@ -961,7 +927,6 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
     }
 }
 
-// FUNCTION: EXE 0x4cc937
 // Starts an edict vote, first closing a running one with yes votes for those who have not voted; returns true
 bool EEServer::StartVote(unsigned short inEdict)
 {
@@ -988,7 +953,6 @@ bool EEServer::StartVote(unsigned short inEdict)
     return true;
 }
 
-// FUNCTION: EXE 0x4cc9ce
 // Clears the fast-selection state (no selection executing, id 0, empty table)
 void EEServer::ResetFastSelection()
 {
@@ -999,7 +963,6 @@ void EEServer::ResetFastSelection()
         this->mFastSelection[i] = 0;
 }
 
-// FUNCTION: EXE 0x4cc9f1
 // Restarts the game as the new host: sends the humans' migration slots, announces the new host and restarts
 void EEServer::HandleReconnectWaitTimedOut()
 {
@@ -1021,10 +984,6 @@ void EEServer::HandleReconnectWaitTimedOut()
     this->StartGame();
 }
 
-// SYNTHETIC: EXE 0x4ccb42
-// (EEMGameRestarting's inline ctor)
-
-// FUNCTION: EXE 0x4ccb66
 // Broadcasts the lagging players: in multiplayer as a player bit mask (when it changed or forced), else the count
 void EEServer::ReportLaggers(std::vector<unsigned char>& inSlots, bool inFlag)
 {
@@ -1053,10 +1012,6 @@ void EEServer::ReportLaggers(std::vector<unsigned char>& inSlots, bool inFlag)
     }
 }
 
-// SYNTHETIC: EXE 0x4ccc92
-// (EEMLagStatus's inline ctor)
-
-// FUNCTION: EXE 0x4cccc8
 // Sends every human player's network slot, address and firewall flag, when more than one human is left
 void EEServer::SendPlayerSlotInfo()
 {
@@ -1095,10 +1050,6 @@ void EEServer::SendPlayerSlotInfo()
     }
 }
 
-// SYNTHETIC: EXE 0x4ccee8
-// (EEMPlayerSlotInfo's inline ctor)
-
-// FUNCTION: EXE 0x4ccf3a
 // Sends a file transfer's progress for the lobby slot of the given network slot
 void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, uint32_t& inXferID,
                             unsigned char& inStatusID)
@@ -1108,7 +1059,6 @@ void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentD
                                 kSlotNone);
 }
 
-// FUNCTION: EXE 0x4ccfe7
 // Records a slot's vote on the edict; once all have voted enacts it on a yes majority (ties fail) and resets the vote
 void EEServer::CastVote(unsigned char inIndex, bool inYes, unsigned char inCount)
 {
@@ -1142,10 +1092,6 @@ void EEServer::CastVote(unsigned char inIndex, bool inYes, unsigned char inCount
     this->mNoVotes = this->mVoteEdict = 0;
 }
 
-// SYNTHETIC: EXE 0x4cd0f0
-// (EEMNewEdictEnacted's inline ctor)
-
-// FUNCTION: EXE 0x4cd144
 // Sends a lobby slot's player options to everyone and refreshes the slot's line
 void EEServer::SendFullPlayerInformation(unsigned char inPlayer, EEGameOptionsPlayer& inOptions)
 {
@@ -1164,7 +1110,6 @@ void EEServer::SendFullPlayerInformation(unsigned char inPlayer, EEGameOptionsPl
     gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
 }
 
-// FUNCTION: EXE 0x4cd1dc
 // Sends a human slot's connection quality to everyone
 void EEServer::SendPingStat(unsigned char inPlayer, float inPing)
 {
@@ -1176,10 +1121,6 @@ void EEServer::SendPingStat(unsigned char inPlayer, float inPing)
     gGameOptions.mLock->ReadUnlock();
 }
 
-// SYNTHETIC: EXE 0x4cd262
-// (EEMUpdatePingStat's inline ctor)
-
-// FUNCTION: EXE 0x4cd3e8
 // Posts message 0x12 to the UI thread
 void EEServer::ServerSlot48()
 {
@@ -1188,41 +1129,21 @@ void EEServer::ServerSlot48()
     gUserInterface->mThread->Post(0x12, &theParameter1, &theParameter2, true);
 }
 
-// FUNCTION: EXE 0x4cd411
 // Returns the debug out-of-sync handling preference
 bool EEServer::GetDebugOOSHandling()
 {
     return gGamePreferences.mSettings.mDebugOOSHandling;
 }
 
-// SYNTHETIC: EXE 0x4cd4b3
-// (EEWorldTable::GetLongValue, the inline COMDAT kept here: ProcessConnectionRequest refused it)
-
-// TEMPLATE: EXE 0x4cd296
-// TEMPLATE: EXE 0x4cd2c1
-// TEMPLATE: EXE 0x4cd2ec
-// TEMPLATE: EXE 0x4cd33d
-// TEMPLATE: EXE 0x4cd417
-// TEMPLATE: EXE 0x4cd48a
-// TEMPLATE: EXE 0x4cd4c5
-// TEMPLATE: EXE 0x4cd449
-// TEMPLATE: EXE 0x4cd377
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEServer::BeforeRemovingPlayers()
 {
 }
 
-// ICF-FOLDED: EXE 0x4ac9f3
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 bool EEServer::IsClient()
 {
     return false;
 }
 
-// ICF-FOLDED: EXE 0x418aa9
-// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
 bool EEServer::IsServer()
 {
     return true;

@@ -155,8 +155,8 @@ public:
     virtual ~EEUIFSELBUnitList() {}
     virtual long UpdateKeyboard();          // +0x7c 0x199e81
     virtual void ButtonUp();                // +0xa4 0x199bc9
-    void AddUnitType(long inUnitType);      // 0x199bf2
-    void SetSortMode(long inMode);          // 0x199d49
+    void AddUnitType(long inUnitType);
+    void SetSortMode(long inMode);
 
     std::vector<long> mUnitTypes;           // +0x13c
     long mSortMode;                         // +0x14c 0 name, 1 epoch, 2 layer
@@ -171,7 +171,7 @@ public:
                        unsigned long inIndex, unsigned long inBorderThickness);
     virtual ~EEUIFSELBCargoList() {}
     void AddCargo(EEUnit* inUnit);          // 0x199f74 (sorted by name)
-    void RemoveSelected();                  // 0x19a05f
+    void RemoveSelected();
 
     std::vector<EEUnitHandle<EEUnit> > mCargo;   // +0x13c (the carried units shown; handles since R5a.4, the vector's order kept)
 };
@@ -193,17 +193,17 @@ public:
     EEUIFSEBRotation(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused, GEBitmap* inPressed,
                      const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
                      unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUIFSEBRotation();            // 0x19a4d2 (??_G 0x19a4b6)
+    virtual ~EEUIFSEBRotation();
     virtual long UpdateKeyboard();          // +0x7c 0x19a728
     virtual void ButtonUp();                // +0x8c 0x19a515
     virtual long MouseLButtonDown();        // +0x34 0x19a5ba
     virtual long MouseRButtonDown();        // +0x44 0x19a5ca
     // +0x48 (ICF-folded into EEUIBUpgrade::MouseLButtonUp 0x256949)
     virtual long MouseRButtonUp() { return UIButton::MouseLButtonUp(); }
-    float GetAngle();                       // 0x19a5d7
-    void UpdateBitmaps();                   // 0x19a636
-    void RotateGhosts();                    // 0x19a664
-    void RotateSelection();                 // 0x19a7e5
+    float GetAngle();
+    void UpdateBitmaps();
+    void RotateGhosts();
+    void RotateSelection();
 
     GEBitmap* mBitmaps[4];                  // +0x104 (straight, diagonal) x (normal, pressed), flat
     long mRotation;                         // +0x114 0..7
@@ -215,7 +215,7 @@ class EEUIFSEBRemoveCargo : public UIButton {
 public:
     EEUIFSEBRemoveCargo(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused, GEBitmap* inPressed,
                         const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                        unsigned long inIndex, unsigned long inBorderThickness);   // 0x19a8a2
+                        unsigned long inIndex, unsigned long inBorderThickness);
     virtual ~EEUIFSEBRemoveCargo() {}
     virtual void ButtonUp();                // +0x8c 0x19a880
 };
@@ -232,7 +232,6 @@ static bool EESEUnitNameLess(long inLeft, long inRight);
 static bool EESEUnitEpochLess(long inLeft, long inRight);
 static bool EESEUnitLayerLess(long inLeft, long inRight);
 
-// FUNCTION: EXE 0x599afd
 // Creates the unit tab's unit class list, sorted by name
 EEUIFSELBUnitList::EEUIFSELBUnitList(unsigned long inID, std::vector<UWideString>& inStrings, GEFont* inFont,
                                      bool inAutoSelect, const GE2DPoint& inLocation, unsigned long inWidth,
@@ -245,10 +244,6 @@ EEUIFSELBUnitList::EEUIFSELBUnitList(unsigned long inID, std::vector<UWideString
     this->mCompare = EESEUnitNameLess;
 }
 
-// SYNTHETIC: EXE 0x599b99
-// (EEUIFSELBUnitList's scalar deleting destructor)
-
-// FUNCTION: EXE 0x599bc9
 // Picks the clicked unit class for placement on the map, then fires the list's button-up event
 void EEUIFSELBUnitList::ButtonUp()
 {
@@ -257,7 +252,6 @@ void EEUIFSELBUnitList::ButtonUp()
     this->FireTriggerEvent(kControlTriggerButtonUp);
 }
 
-// FUNCTION: EXE 0x599bf2
 // Inserts a unit class at its sorted place, prefixed with its family or epoch number unless sorted by name
 void EEUIFSELBUnitList::AddUnitType(long inUnitType)
 {
@@ -286,7 +280,6 @@ void EEUIFSELBUnitList::AddUnitType(long inUnitType)
     this->mUnitTypes.insert(this->mUnitTypes.begin() + i, inUnitType);
 }
 
-// FUNCTION: EXE 0x599d49
 // Picks the comparator for later inserts (by epoch, by family, else by name); lines already listed stay
 void EEUIFSELBUnitList::SetSortMode(long inMode)
 {
@@ -306,7 +299,6 @@ void EEUIFSELBUnitList::SetSortMode(long inMode)
     this->mSortMode = inMode;
 }
 
-// FUNCTION: EXE 0x599d88
 // Orders two unit classes by epoch, then by name
 static bool EESEUnitEpochLess(long inLeft, long inRight)
 {
@@ -317,7 +309,6 @@ static bool EESEUnitEpochLess(long inLeft, long inRight)
     return EESEUnitNameLess(inLeft, inRight);
 }
 
-// FUNCTION: EXE 0x599dc4
 // Orders two unit classes by their displayed names
 static bool EESEUnitNameLess(long inLeft, long inRight)
 {
@@ -328,7 +319,6 @@ static bool EESEUnitNameLess(long inLeft, long inRight)
     return theLeft < theRight ? true : false;
 }
 
-// FUNCTION: EXE 0x599e45
 // Orders two unit classes by family, then by name
 static bool EESEUnitLayerLess(long inLeft, long inRight)
 {
@@ -339,7 +329,6 @@ static bool EESEUnitLayerLess(long inLeft, long inRight)
     return EESEUnitNameLess(inLeft, inRight);
 }
 
-// FUNCTION: EXE 0x599e81
 // Handles the list's keys; Enter picks the selected unit class for placement
 long EEUIFSELBUnitList::UpdateKeyboard()
 {
@@ -351,7 +340,6 @@ long EEUIFSELBUnitList::UpdateKeyboard()
     return theResult;
 }
 
-// FUNCTION: EXE 0x599eb9
 // Creates the unit tab's (empty) cargo list
 EEUIFSELBCargoList::EEUIFSELBCargoList(unsigned long inID, std::vector<UWideString>& inStrings, GEFont* inFont,
                                        bool inAutoSelect, const GE2DPoint& inLocation, unsigned long inWidth,
@@ -362,10 +350,6 @@ EEUIFSELBCargoList::EEUIFSELBCargoList(unsigned long inID, std::vector<UWideStri
 {
 }
 
-// SYNTHETIC: EXE 0x599f44
-// (EEUIFSELBCargoList's scalar deleting destructor)
-
-// FUNCTION: EXE 0x599f74
 // Inserts a carried unit into the cargo list, keeping the lines sorted by unit name
 void EEUIFSELBCargoList::AddCargo(EEUnit* inUnit)
 {
@@ -387,7 +371,6 @@ void EEUIFSELBCargoList::AddCargo(EEUnit* inUnit)
     this->InsertLine(theName, theIndex, theTemp2);
 }
 
-// FUNCTION: EXE 0x59a05f
 // Deletes the unit on the selected cargo line from the map (posts a delete-unit action)
 void EEUIFSELBCargoList::RemoveSelected()
 {
@@ -398,7 +381,6 @@ void EEUIFSELBCargoList::RemoveSelected()
     }
 }
 
-// FUNCTION: EXE 0x59a0b1
 // Creates one of the six unit type buttons from its normal and pressed bitmaps
 EEUIFSEBUnitType::EEUIFSEBUnitType(unsigned long inID, GEBitmap* inUp, GEBitmap* inFocused, GEBitmap* inDown,
                                    const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
@@ -415,10 +397,6 @@ EEUIFSEBUnitType::EEUIFSEBUnitType(unsigned long inID, GEBitmap* inUp, GEBitmap*
     this->SetBitmapDrawOffset(GE2DPoint(0.0f, 0.0f));
 }
 
-// SYNTHETIC: EXE 0x59a18b
-// (EEUIFSEBUnitType's scalar deleting destructor)
-
-// FUNCTION: EXE 0x59a1ae
 // Sets the unit palette (land, air, naval, structures, heroes or resources) from the button's id, then checks it
 void EEUIFSEBUnitType::Check()
 {
@@ -446,7 +424,6 @@ void EEUIFSEBUnitType::Check()
 }
 
 // NEAR: differs in the texture coordinate block
-// FUNCTION: EXE 0x59a213
 // Creates the rotation button with its straight and diagonal arrow bitmaps (normal and pressed), at step 0
 EEUIFSEBRotation::EEUIFSEBRotation(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused, GEBitmap* inPressed,
                                    const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
@@ -488,10 +465,6 @@ EEUIFSEBRotation::EEUIFSEBRotation(unsigned long inID, GEBitmap* inNormal, GEBit
     this->SetAlwaysDirty(true);
 }
 
-// SYNTHETIC: EXE 0x59a4b6
-// (EEUIFSEBRotation's scalar deleting destructor)
-
-// FUNCTION: EXE 0x59a4d2
 // Destroys the rotation button, releasing its four arrow bitmaps
 EEUIFSEBRotation::~EEUIFSEBRotation()
 {
@@ -501,7 +474,6 @@ EEUIFSEBRotation::~EEUIFSEBRotation()
     this->mBitmaps[3]->Dereference();
 }
 
-// FUNCTION: EXE 0x59a515
 // Turns the placement one 45-degree step (wrapping 0..7) and rotates the ghosts if any, else the
 // selected units; then turns the arrow bitmaps to match
 void EEUIFSEBRotation::ButtonUp()
@@ -524,7 +496,6 @@ void EEUIFSEBRotation::ButtonUp()
     UIButton::ButtonUp();
 }
 
-// FUNCTION: EXE 0x59a5ba
 // Presses the button so its release turns one step forward
 long EEUIFSEBRotation::MouseLButtonDown()
 {
@@ -532,7 +503,6 @@ long EEUIFSEBRotation::MouseLButtonDown()
     return UIButton::MouseLButtonDown();
 }
 
-// FUNCTION: EXE 0x59a5ca
 // Presses the button (as a left press) so its release turns one step back
 long EEUIFSEBRotation::MouseRButtonDown()
 {
@@ -540,7 +510,6 @@ long EEUIFSEBRotation::MouseRButtonDown()
     return UIButton::MouseLButtonDown();
 }
 
-// FUNCTION: EXE 0x59a5d7
 // Returns the placement yaw in radians: 45 degrees at step 0, 45 degrees less per step (step 1 is 0)
 float EEUIFSEBRotation::GetAngle()
 {
@@ -571,7 +540,6 @@ float EEUIFSEBRotation::GetAngle()
     return theAngle;
 }
 
-// FUNCTION: EXE 0x59a636
 // Shows the straight (even step) or diagonal (odd step) arrow bitmaps
 void EEUIFSEBRotation::UpdateBitmaps()
 {
@@ -580,7 +548,6 @@ void EEUIFSEBRotation::UpdateBitmaps()
     this->SetPressedBitmap(this->mBitmaps[theKind + 1]);
 }
 
-// FUNCTION: EXE 0x59a664
 // Turns every placement ghost whose class can turn to the button's angle
 void EEUIFSEBRotation::RotateGhosts()
 {
@@ -599,7 +566,6 @@ void EEUIFSEBRotation::RotateGhosts()
     gWorld.mGhostUnitsLock->Leave();
 }
 
-// FUNCTION: EXE 0x59a728
 // Lets the comma and period keys turn the placement back and forward like presses of the button
 long EEUIFSEBRotation::UpdateKeyboard()
 {
@@ -625,7 +591,6 @@ long EEUIFSEBRotation::UpdateKeyboard()
     return theResult;
 }
 
-// FUNCTION: EXE 0x59a7e5
 // Turns every selected unit whose class can turn to the button's angle
 void EEUIFSEBRotation::RotateSelection()
 {
@@ -644,7 +609,6 @@ void EEUIFSEBRotation::RotateSelection()
     }
 }
 
-// FUNCTION: EXE 0x59a880
 // Deletes the unit on the cargo list's selected line, then releases the button
 void EEUIFSEBRemoveCargo::ButtonUp()
 {
@@ -652,7 +616,6 @@ void EEUIFSEBRemoveCargo::ButtonUp()
     UIButton::ButtonUp();
 }
 
-// FUNCTION: EXE 0x59a8a2
 // Creates the remove cargo button
 EEUIFSEBRemoveCargo::EEUIFSEBRemoveCargo(unsigned long inID, GEBitmap* inNormal, GEBitmap* inFocused,
     GEBitmap* inPressed, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
@@ -662,14 +625,10 @@ EEUIFSEBRemoveCargo::EEUIFSEBRemoveCargo(unsigned long inID, GEBitmap* inNormal,
 {
 }
 
-// SYNTHETIC: EXE 0x59a91b
-// (EEUIFSEBRemoveCargo's scalar deleting destructor)
-
 // The unit type buttons' cell width: a plain (non-folded) .rdata float in the original (0x444e7c), read by the ctor
 // only (provisional name)
 static const float kSEUButtonWidth = 35.0f;
 
-// FUNCTION: EXE 0x59a93e
 // Builds the unit tab (ee_screens editor_unit.rs: the owner and sort radio buttons, the six unit type buttons, the
 // unit and cargo lists, the remove and rotate buttons, the editor actions, the panel background and the upgrade
 // panel); the shell keeps the rhombus, the build tools and the panel rectangle
@@ -683,35 +642,6 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x59b9b4
-// Creates the action that places the chosen unit (EESEAPlaceUnit ctor, inline; an EESEARust now)
-
-// SYNTHETIC: EXE 0x59b9e4
-// (EESEAPlaceUnit's scalar deleting destructor)
-
-// FUNCTION: EXE 0x59ba16
-// Creates the action that places a gate (EESEAPlaceGate ctor, inline; an EESEARust now)
-
-// SYNTHETIC: EXE 0x59ba46
-// (EESEAPlaceGate's scalar deleting destructor)
-
-// FUNCTION: EXE 0x59ba78
-// Creates the action that places a wall (EESEAPlaceWall ctor, inline; an EESEARust now)
-
-// SYNTHETIC: EXE 0x59baa8
-// (EESEAPlaceWall's scalar deleting destructor)
-
-// FUNCTION: EXE 0x59bada
-// Rebuilds the unit tab's class list after an owner, palette or sort button changed (EEUIFSEESortUnitList;
-// ee_screens editor_events.rs)
-
-// FUNCTION: EXE 0x59baf1
-// Destroys and frees the sort event (EEUIFSEESortUnitList's scalar deleting destructor, with its vtable)
-
-// SYNTHETIC: EXE 0x59bb1c
-// (EESEUnit's scalar deleting destructor)
-
-// FUNCTION: EXE 0x59bb38
 // Destroys the unit tab: deletes its controls, releases its actions, bitmaps and sort event (editor_unit.rs)
 EESEUnit::~EESEUnit()
 {
@@ -1251,16 +1181,3 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     }
     return 0;
 }
-
-// FUNCTION: EXE 0x59cb8b
-// Allocates storage for a list of placed units (vector<EESEAPlacedUnit>::_Buy)
-
-// FUNCTION: EXE 0x59cbc5
-// Creates an idle wall build tool: start and end at (-99, -99), no technology (100000)
-// (EEUIBuildWall ctor, inline in ee/EEUIBuildWall.h; emitted here, its first user)
-
-// SYNTHETIC: EXE 0x59cbff
-// (EESEUIBuildWall's scalar deleting destructor, ICF-shared with EEUIBuildWall's)
-
-// SYNTHETIC: EXE 0x59cc1c
-// (EESEUIBuildGate's scalar deleting destructor, ICF-shared with EEUIBuildGate's)

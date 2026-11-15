@@ -47,8 +47,8 @@ public:
     virtual void PrepareGrid(long inWidth, long inHeight);  // +0x10 0x1c491 (each storage overrides it)
 
     static void FreeNodePool() {}           // 0x1b991 (the Rust storages free their nodes with themselves)
-    bool GetFirstPathTile(long& outX, long& outY);   // 0x1bc2a
-    bool GetNextPathTile(long& outX, long& outY);    // 0x1bcc3
+    bool GetFirstPathTile(long& outX, long& outY);
+    bool GetNextPathTile(long& outX, long& outY);
     void MarkTile(unsigned long inX, unsigned long inY, bool inFlag);   // 0x1c586 (flag 1 or 2, extends the bounds)
 
     // New (port): the storage as the capture and the goals read it outside a search: the current node (0) and the

@@ -18,7 +18,6 @@ using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-// FUNCTION: WON 0x00735cb0
 // Resets the background to no colour, no border, tiled image with offsets, no grab
 void Background::Init()
 {
@@ -37,13 +36,8 @@ Background::Background()
 	this->mColor = (int)0x8000000d;
 }
 
-// FUNCTION: WON 0x00735cd0
-// Creates a default background filled with the system window colour (constructor body above)
-// (??0Background@WONAPI@@QAE@XZ)
-
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-// FUNCTION: WON 0x00735cf0
 // Creates a background that tiles an image
 Background::Background(Image *theImage)
 {
@@ -59,13 +53,8 @@ Background::Background(int theColor, int theBorderColor)
 	this->mBorderColor = theBorderColor;
 }
 
-// FUNCTION: WON 0x00735d80
-// Creates a background with a fill colour and a border colour (constructor body above)
-// (??0Background@WONAPI@@QAE@HH@Z)
-
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-// FUNCTION: WON 0x00735db0
 // Creates a background drawn by a component
 Background::Background(Component *theComponent)
 {
@@ -75,7 +64,6 @@ Background::Background(Component *theComponent)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-// FUNCTION: WON 0x00735e50
 // Sets the fill colour (-1 for none)
 void Background::SetColor(int theColor)
 {
@@ -84,7 +72,6 @@ void Background::SetColor(int theColor)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-// FUNCTION: WON 0x00735e60
 // Paints a rectangle: stretched image alone, or fill, border, tiled image (scrolled by the offsets) and component
 void Background::Paint(Graphics &g, int xpos, int ypos, int width, int height, int xoff, int yoff)
 {

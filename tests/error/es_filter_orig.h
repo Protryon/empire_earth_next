@@ -2,11 +2,10 @@
 // System/Error System.cpp at 810a3eb2, before it moved to rust/crates/ee_error), unchanged, for the golden driver
 // es_filter_golden.cpp, which supplies UString, FSFileSpec, gStartupVolume and gStartupDirectory.
 static std::vector<UString*> gFilters;            // 0x1010f6b8: the lines of Filter.txt (ESFilterDebugOutput)
-static long gFilterMode = 1;                      // 0x100d85d0
-static bool gOutputToDebugger;                    // 0x1010f6db
+static long gFilterMode = 1;
+static bool gOutputToDebugger;
 bool gErrorSystemFiltersInitialized;              // 0x1010f6dc (exported)
 
-// FUNCTION: LLE 0x100016fb
 // Loads Filter.txt once, then returns whether a debug message passes the filters ('!' always passes)
 // Filter.txt lives in the startup directory; "-" / "+" lines set the filter mode, "OutputToDebugger" sets a flag
 // nothing reads.

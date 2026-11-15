@@ -48,7 +48,7 @@ public:
     void DumpStats(bool inToDebugger);
     bool Release();
     long CountUsed();
-    bool AddChunk();                    // LLE 0x1005616f (provisional name)
+    bool AddChunk();
     void GetUsed(std::vector<T*>& outObjects);   // exe 0x600a3b: EEComplexUnit's pool (provisional name)
 
     UMemoryPoolChunk<T>** mChunks;      // proven +0x04: new[mMaxChunks]
@@ -72,7 +72,6 @@ template <class T> UMemoryPool<T>::UMemoryPool()
 {
 }
 
-// LLE 0x10055dee / 0x100561e2
 template <class T> UMemoryPoolChunk<T>::UMemoryPoolChunk(unsigned long inSize)
 {
     this->mSize = inSize;
@@ -176,7 +175,6 @@ template <class T> void UMemoryPool<T>::Delete(T* inObject)
 // an empty inline function taking the argument keeps that store; under /Og it emits nothing. docs/LOST_DEBUG.md.
 inline void UMemoryPoolTraceStub(const char*) {}
 
-// LLE 0x10055baa
 template <class T> void UMemoryPool<T>::DumpStats(bool inToDebugger)
 {
     UWideString theString;
@@ -189,7 +187,6 @@ template <class T> void UMemoryPool<T>::DumpStats(bool inToDebugger)
         UMemoryPoolTraceStub(theString);
 }
 
-// LLE 0x1005616f
 template <class T> bool UMemoryPool<T>::AddChunk()
 {
     bool theResult = false;

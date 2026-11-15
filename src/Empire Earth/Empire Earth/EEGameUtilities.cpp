@@ -77,12 +77,7 @@ static const float kGraphicSoundFalloff = 4.0f;
 // chain at 0x5482e4 (wrapper)
 //   object 0x5319f8  ctor 0x1482ee, registrar 0x148306, atexit dtor 0x148312
 std::vector<EEDisplayRasterizer> gDisplayRasterizers;
-// SYNTHETIC: EXE 0x5482e4   (wrapper)
-// SYNTHETIC: EXE 0x5482ee   (ctor)
-// SYNTHETIC: EXE 0x548306   (registrar)
-// SYNTHETIC: EXE 0x548312   (atexit dtor)
 
-// FUNCTION: EXE 0x54831c
 // Plays a sound when the player is the local player; returns the sound instance, or -1 when nothing played
 unsigned long EEPlayForLocalPlayer(EEPlayer* inPlayer, EESoundObject* inSound)
 {
@@ -92,7 +87,6 @@ unsigned long EEPlayForLocalPlayer(EEPlayer* inPlayer, EESoundObject* inSound)
     return theInstance;
 }
 
-// FUNCTION: EXE 0x548362
 // Shows a load or sync failure message in the main game form; with a checksum, appends the game state's checksum
 // and whether it matches (logging the differences in verbose mode), taking the world's read lock when asked
 void EEReportLoadFailure(const UString& inMessage, bool inLock, ESChecksum* inChecksum)
@@ -133,7 +127,6 @@ void EEReportLoadFailure(const UString& inMessage, bool inLock, ESChecksum* inCh
         gUIManager->GetMainGameForm()->SetErrorString(theText, 0x1c);
 }
 
-// FUNCTION: EXE 0x548514
 // Lists the display devices: every rasterizer that activates, its screens, and their 16-bit (and supported 32-bit)
 // modes of at least 640x480 that fit three buffers in video memory (at least 0x3e8000 bytes assumed)
 void EEEnumerateDisplayDevices()
@@ -190,7 +183,6 @@ void EEEnumerateDisplayDevices()
     }
 }
 
-// FUNCTION: EXE 0x5487a3
 // Starts, restarts or updates the sound of a graphic object's animation frame at a location; returns the
 // referenced sound instance now playing (the given one when nothing changes)
 SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
@@ -247,7 +239,6 @@ SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObjec
     return theResult;
 }
 
-// FUNCTION: EXE 0x548992
 // Maps a world point into camera space, returning it divided by its depth, and the depth
 // inPoint in camera space (outScreen, divided by the depth) and its depth
 void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth)
@@ -266,72 +257,3 @@ void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& out
     outScreen.mZ = theNormalized.mZ * theScale;
     outDepth = theDepth;
 }
-
-
-
-// TEMPLATE: EXE 0x548a29
-// ??0?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@QAE@XZ
-// TEMPLATE: EXE 0x548a3f
-// ?push_back@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QAEXABUEEDisplayMode@@@Z
-// TEMPLATE: EXE 0x548a6b
-// ?push_back@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@QAEXABUEEDisplayScreen@@@Z
-// TEMPLATE: EXE 0x548a97
-// ?push_back@?$vector@UEETileCoordinate@@V?$allocator@UEETileCoordinate@@@std@@@std@@QAEXABUEETileCoordinate@@@Z
-// TEMPLATE: EXE 0x548ac3
-// ?insert@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QAE?AV?$_Ptrit@UEEDisplayMode@@HPAU1@AAU1@PAU1@AAU1@@2@V32@ABUEEDisplayMode@@@Z
-// TEMPLATE: EXE 0x548b1a
-// ?insert@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@QAE?AV?$_Ptrit@UEEDisplayScreen@@HPAU1@AAU1@PAU1@AAU1@@2@V32@ABUEEDisplayScreen@@@Z
-// TEMPLATE: EXE 0x548b74
-// ?insert@?$vector@UEEDisplayRasterizer@@V?$allocator@UEEDisplayRasterizer@@@std@@@std@@QAE?AV?$_Ptrit@UEEDisplayRasterizer@@HPAU1@AAU1@PAU1@AAU1@@2@V32@ABUEEDisplayRasterizer@@@Z
-// TEMPLATE: EXE 0x548bce
-// ?_Tidy@?$vector@UEEDisplayRasterizer@@V?$allocator@UEEDisplayRasterizer@@@std@@@std@@IAEXXZ
-// TEMPLATE: EXE 0x548c06
-// ?insert@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QAEXV?$_Ptrit@UEEDisplayMode@@HPAU1@AAU1@PAU1@AAU1@@2@IABUEEDisplayMode@@@Z
-// TEMPLATE: EXE 0x548ef5
-// ?insert@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@QAEXV?$_Ptrit@UEEDisplayScreen@@HPAU1@AAU1@PAU1@AAU1@@2@IABUEEDisplayScreen@@@Z
-// TEMPLATE: EXE 0x5491d7
-// ??_GEEDisplayScreen@@QAEPAXI@Z
-// TEMPLATE: EXE 0x5491ec
-// ??G?$_Ptrit@VEECPUnitRequirement@@HPAV1@AAV1@PAV1@AAV1@@std@@QBE?AV01@H@Z
-// TEMPLATE: EXE 0x549203
-// ??_GESChecksum@@UAEPAXI@Z
-// TEMPLATE: EXE 0x549229
-// ?insert@?$vector@UEEDisplayRasterizer@@V?$allocator@UEEDisplayRasterizer@@@std@@@std@@QAEXV?$_Ptrit@UEEDisplayRasterizer@@HPAU1@AAU1@PAU1@AAU1@@2@IABUEEDisplayRasterizer@@@Z
-// TEMPLATE: EXE 0x54950b
-// ??_GEEDisplayRasterizer@@QAEPAXI@Z
-// TEMPLATE: EXE 0x549520
-// ??H?$_Ptrit@VEECPUnitRequirement@@HPAV1@AAV1@PAV1@AAV1@@std@@QBE?AV01@H@Z
-// TEMPLATE: EXE 0x549535
-// ??0EEDisplayRasterizer@@QAE@ABU0@@Z (it copies a vector of 0x28-byte EEDisplayScreen: 0x149598; EEDisplayScreen's own is 0x14785b)
-// TEMPLATE: EXE 0x54955d
-// ?_Ufill@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@IAEPAUEEDisplayMode@@PAU3@IABU3@@Z
-// TEMPLATE: EXE 0x549584
-// ??G?$_Ptrit@UEEPGSPlayerReport@@HPAU1@AAU1@PAU1@AAU1@@std@@QBE?AV01@H@Z
-// TEMPLATE: EXE 0x549598
-// ??0?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@QAE@ABV01@@Z
-// TEMPLATE: EXE 0x5495e2
-// ?_Ufill@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@IAEPAUEEDisplayScreen@@PAU3@IABU3@@Z
-// TEMPLATE: EXE 0x54960d
-// ?_Ufill@?$vector@UEEDisplayRasterizer@@V?$allocator@UEEDisplayRasterizer@@@std@@@std@@IAEPAUEEDisplayRasterizer@@PAU3@IABU3@@Z
-// TEMPLATE: EXE 0x549638
-// ?_Ucopy@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@IAEPAUEEDisplayMode@@V?$_Ptrit@UEEDisplayMode@@HPAU1@AAU1@PAU1@AAU1@@2@0PAU3@@Z
-// TEMPLATE: EXE 0x549660
-// ?fill@std@@YAXV?$_Ptrit@UEEDisplayMode@@HPAU1@AAU1@PAU1@AAU1@@1@0ABUEEDisplayMode@@@Z
-// TEMPLATE: EXE 0x54969b
-// ?copy_backward@std@@YA?AV?$_Ptrit@UEEDisplayMode@@HPAU1@AAU1@PAU1@AAU1@@1@V21@00@Z
-// TEMPLATE: EXE 0x5496e6
-// ?_Ucopy@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@IAEPAUEEDisplayScreen@@V?$_Ptrit@UEEDisplayScreen@@HPAU1@AAU1@PAU1@AAU1@@2@0PAU3@@Z
-// TEMPLATE: EXE 0x549712
-// ?fill@std@@YAXV?$_Ptrit@UEEDisplayScreen@@HPAU1@AAU1@PAU1@AAU1@@1@0ABUEEDisplayScreen@@@Z
-// TEMPLATE: EXE 0x54972f
-// ?copy_backward@std@@YA?AV?$_Ptrit@UEEDisplayScreen@@HPAU1@AAU1@PAU1@AAU1@@1@V21@00@Z
-// TEMPLATE: EXE 0x54975b
-// ?_Ucopy@?$vector@UEEDisplayRasterizer@@V?$allocator@UEEDisplayRasterizer@@@std@@@std@@IAEPAUEEDisplayRasterizer@@V?$_Ptrit@UEEDisplayRasterizer@@HPAU1@AAU1@PAU1@AAU1@@2@0PAU3@@Z
-// TEMPLATE: EXE 0x549787
-// ?fill@std@@YAXV?$_Ptrit@UEEDisplayRasterizer@@HPAU1@AAU1@PAU1@AAU1@@1@0ABUEEDisplayRasterizer@@@Z
-// TEMPLATE: EXE 0x5497a4
-// ?copy_backward@std@@YA?AV?$_Ptrit@UEEDisplayRasterizer@@HPAU1@AAU1@PAU1@AAU1@@1@V21@00@Z
-// TEMPLATE: EXE 0x5497d0
-// ?_Construct@std@@YAXPAUEEDisplayScreen@@ABU2@@Z
-// TEMPLATE: EXE 0x5497e2
-// ?_Construct@std@@YAXPAUEEDisplayRasterizer@@ABU2@@Z

@@ -16,10 +16,10 @@ class EECPAttackSubGroup;
 class EECPMilitaryAidPackage;
 
 struct EEAIFOSubGroupFilter {
-    EEAIFOSubGroupFilter(unsigned short inContinent, bool inAllowAdjacent, bool inAllowPackaged);  // 0x2a60a
-    bool operator()(EECPAttackGroup* inGroup);   // 0x2a65d (ret 4)
-    bool operator()(EECPAttackSubGroup* inSubGroup);   // 0x2a66d (ret 4)
-    void SetPackages(std::map<long, EECPMilitaryAidPackage*>& inPackages);   // 0x2a752 (ret 4)
+    EEAIFOSubGroupFilter(unsigned short inContinent, bool inAllowAdjacent, bool inAllowPackaged);
+    bool operator()(EECPAttackGroup* inGroup);
+    bool operator()(EECPAttackSubGroup* inSubGroup);
+    void SetPackages(std::map<long, EECPMilitaryAidPackage*>& inPackages);
 
     std::set<unsigned long> mSubGroupIDs;   // +0x00 (_Init 0x2921cd)
     std::vector<EECPMilitaryAidPackage*> mPackages;   // +0x0c

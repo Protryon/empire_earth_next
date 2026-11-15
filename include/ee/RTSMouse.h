@@ -20,7 +20,7 @@ struct RTSMouseSaveUnder {
 
 class RTSMouse {
 public:
-    RTSMouse();                             // 0x11ab85
+    RTSMouse();
     virtual ~RTSMouse();                    // +0x00 (??_G 0x11acbe)
     virtual long Load(GEScreen* inScreen);        // +0x04 0x11b02b (calls inScreen's GetCurrentMode; EEGraphics passes the game screen; returns the load result)
     virtual long Release();                 // +0x08 0x11b373 (returns 0)
@@ -30,9 +30,9 @@ public:
     long LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface);
     void Update();                          // 0x11b3cc (under mInputLock after ISMouse::RefreshXY; provisional name)
     // drawn by RTSGraphics::Render 0x11a71c in this order (provisional names)
-    void BeginFrame();                      // 0x11b1dd
-    void SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin);  // 0x11acf9
-    void Draw(GESurface* inSurface, const GE2DPoint& inOrigin);       // 0x11b131
+    void BeginFrame();
+    void SaveUnder(GESurface* inSurface, const GE2DPoint& inOrigin);
+    void Draw(GESurface* inSurface, const GE2DPoint& inOrigin);
     long RestoreUnder(GESurface* inSurface, const GE2DPoint& inOrigin, bool inIsWindowed);  // 0x11ae5d (the original returns the CopyTo result, 0 on the first call: re-mangle names.txt 11ae5d with any retype)
     void EndFrame();                        // 0x10a94c: releases +0x74, clears +0xa1, leaves mRenderLock
     // inline: the game settings store the mouse sensitivity value first, then load gMouse (0x1d6c80, 0x1d88eb;

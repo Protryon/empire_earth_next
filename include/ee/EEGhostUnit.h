@@ -30,7 +30,7 @@ public:
     // +0x08 0x2049c0 / +0x0c 0x204a48: the class's type and the player's id (ids between Load and the repair)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    void Reset();                           // 0x204208 (provisional name)
+    void Reset();
     void FillDockSquare();                 // original thiscall, ret0
     void FillRimSquare();                  // original thiscall, ret0
     void FillSquare();                     // original thiscall, ret0
@@ -45,7 +45,7 @@ public:
     // EEUIBuildGate:: Update 0x25627d) (provisional names)
     static void CreateGate(float inRotation, EEUnitClass* inClass, EEPlayer* inPlayer);
     static void PreviewGate(const GE2DPoint& inLocation, long& ioDirection);
-    void SetAnimation(long inIndex);        // 0x204a97 (provisional name)
+    void SetAnimation(long inIndex);
     // inline in the real header (out-of-line COMDAT 0x10cb62, first emitted elsewhere): the player's model of the
     // class (mPlayer->mU884[type]->mModel); declared out of line here (provisional name)
     EEModel* GetModel();

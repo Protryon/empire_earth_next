@@ -23,7 +23,6 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONCRC16.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0075e640
 // Loads the login users and global lobby settings from _wonlobbypersistent.dat
 void LobbyLoadGlobalPrefs()
 {

@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 
-// FUNCTION: WON 0x007177C0
 // Copies another frame's borders and a private duplicate of its image (none when it has no image)
 void WONFrame::Copy(const WONFrame &from)
 {
@@ -28,14 +27,12 @@ void WONFrame::Copy(const WONFrame &from)
 	this->mBottom = from.mBottom;
 }
 
-// FUNCTION: WON 0x007178C0
 // Stretches the frame image to the component's full size when needed and draws it at the top-left corner
 void WONFrame::Paint(Graphics &g, Component *theComponent)
 {
 	this->Paint(g,theComponent,0,0,0,0);
 }
 
-// FUNCTION: WON 0x00717910
 // Stretches the frame image to the component's size less the given paddings and draws it inside them
 void WONFrame::Paint(Graphics &g, Component *theComponent, int lp, int tp, int rp, int bp)
 {
@@ -49,45 +46,33 @@ void WONFrame::Paint(Graphics &g, Component *theComponent, int lp, int tp, int r
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x0071a7c0
 // Sets the frame image and its four border widths
 void WONFrameComponent::SetFrameImageAndBorders(Image* image,int left,int top,int right,int bottom) { this->mFrame.SetImage(image,left,top,right,bottom); }
-// FUNCTION: WON 0x0071a7b0
 // Sets the frame image, keeping the borders
 void WONFrameComponent::SetFrameImage(Image* image) { this->mFrame.SetImage(image); }
-// FUNCTION: WON 0x0071a7f0
 // Sets the frame's four border widths
 void WONFrameComponent::SetFrameBorders(int left,int top,int right,int bottom) { this->mFrame.mLeft=left; this->mFrame.mTop=top; this->mFrame.mRight=right; this->mFrame.mBottom=bottom; }
-// FUNCTION: WON 0x0071a630
 // Sets the frame's left border width
 void WONFrameComponent::SetFrameLeft(int value) { this->mFrame.mLeft=value; }
-// FUNCTION: WON 0x0071a640
 // Sets the frame's top border width
 void WONFrameComponent::SetFrameTop(int value) { this->mFrame.mTop=value; }
-// FUNCTION: WON 0x0071a650
 // Sets the frame's right border width
 void WONFrameComponent::SetFrameRight(int value) { this->mFrame.mRight=value; }
-// FUNCTION: WON 0x0071a660
 // Sets the frame's bottom border width
 void WONFrameComponent::SetFrameBottom(int value) { this->mFrame.mBottom=value; }
 // Returns the frame's left border width (the linker folds this body into the identical one at 0x0071a670)
 int WONFrameComponent::GetFrameLeft() { return this->mFrame.mLeft; }
-// FUNCTION: WON 0x0071a680
 // Returns the frame's top border width
 int WONFrameComponent::GetFrameTop() { return this->mFrame.mTop; }
-// FUNCTION: WON 0x0071a690
 // Returns the frame's right border width
 int WONFrameComponent::GetFrameRight() { return this->mFrame.mRight; }
-// FUNCTION: WON 0x0071a6a0
 // Returns the frame's bottom border width
 int WONFrameComponent::GetFrameBottom() { return this->mFrame.mBottom; }
-// FUNCTION: WON 0x0071a810
 // Paints the component, then its frame image over its full size
 void WONFrameComponent::Paint(Graphics& g) { Component::Paint(g); this->mFrame.Paint(g,this); }
 // The linker folds this body into the identical StretchImage::SetImage at 0x00749ab0
 // Sets the frame image, keeping the borders
 void WONFrame::SetImage(Image* image) { this->mImage=image; }
-// FUNCTION: WON 0x00717730
 // Sets the frame image and its four border widths
 void WONFrame::SetImage(Image* image,int left,int top,int right,int bottom)
 {

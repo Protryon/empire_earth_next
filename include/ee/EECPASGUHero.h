@@ -6,9 +6,9 @@
 
 class EECPASGUHero : public EECPASGUProphet {
 public:
-    EECPASGUHero(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);    // 0x6391
-    EECPASGUHero(EECPAttackSubGroup* inSubGroup);       // 0x63d0
-    virtual ~EECPASGUHero();                // 0x63ef
+    EECPASGUHero(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
+    EECPASGUHero(EECPAttackSubGroup* inSubGroup);
+    virtual ~EECPASGUHero();
     virtual bool Retarget();                // +0x14 0x7efc (ICF: EECPASGUMechProphet's, the kept copy)
     virtual void SetState(long inState, unsigned long inTime);    // +0x28 0x63fa (only EECPASGUProphet's)
     virtual bool IsInDanger();              // +0x30 0x640a (the base's, else Virtual74())

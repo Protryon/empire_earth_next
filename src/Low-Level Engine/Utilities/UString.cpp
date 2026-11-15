@@ -8,7 +8,6 @@
 
 #include "lle/LowLevelEngine.h"
 
-// FUNCTION: LLE 0x10082e38
 // Formats into the string's buffer (grown first when the text does not fit: the original wrote past it), then
 // updates its length; returns vsprintf's result
 long sprintf(UString& outString, const char* inFormat, ...)
@@ -27,13 +26,11 @@ long sprintf(UString& outString, const char* inFormat, ...)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10082f22
 UString::~UString()
 {
     ee_ustring_free(&this->mState);
 }
 
-// FUNCTION: LLE 0x1008342d
 // Reads a length and that many characters from the file; on failure leaves the string empty and returns the error
 long UString::Load(FSFile& inFile)
 {
@@ -49,7 +46,6 @@ long UString::Load(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x100835f2
 // Writes the length and the characters, both counting the terminator, to the file; returns the first error
 long UString::Save(FSFile& inFile) const
 {
@@ -64,7 +60,6 @@ long UString::Save(FSFile& inFile) const
     return theResult;
 }
 
-// FUNCTION: LLE 0x100834bd (NestedTokenize), 0x10083642 (Tokenize)
 // Splits the string at separators into outTokens (ee_ustring_tokenize gives the tokens' first and last bytes)
 bool UString::Tokens(const UString& inSeparators, const UString* inBrackets, std::vector<UString>& outTokens) const
 {

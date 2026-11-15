@@ -113,28 +113,24 @@ struct GERasterizerHost {
     }
 };
 
-// FUNCTION: LLE 0x10023807
 // Creates a rasterizer with its drawing lock and a white-on-black Arial 9 debug text, not yet activated
 GERasterizer::GERasterizer(const UString& inName)
 {
     this->mRust = ee_ge_rast_new(&GERasterizerHost::Call, this, &inName);
 }
 
-// FUNCTION: LLE 0x10023950
 // Destroys the rasterizer, releasing the debug font and text and its drawing lock
 GERasterizer::~GERasterizer()
 {
     ee_ge_rast_destroy(this->mRust);
 }
 
-// FUNCTION: LLE 0x100239b1
 // Activates the rasterizer and makes it the active one on success (no active rasterizer on failure)
 long GERasterizer::Activate()
 {
     return (long)ee_ge_rast_activate(this->mRust);
 }
 
-// FUNCTION: LLE 0x100239d2
 // Adds a render state block for another screen; always succeeds
 long GERasterizer::AddValidScreen(GEScreen* inScreen)
 {
@@ -142,7 +138,6 @@ long GERasterizer::AddValidScreen(GEScreen* inScreen)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10023af3
 // Creates a font bitmap of the font for the given screen (the bitmap registers itself); always succeeds
 long GERasterizer::CreateFontBitmap(GEFont* inFont, unsigned long inScreen)
 {
@@ -150,7 +145,6 @@ long GERasterizer::CreateFontBitmap(GEFont* inFont, unsigned long inScreen)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10023b18
 // Deactivates the rasterizer: deletes every screen's render state and clears the active rasterizer
 long GERasterizer::Deactivate()
 {
@@ -158,7 +152,6 @@ long GERasterizer::Deactivate()
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10023bb2
 // Returns a model's on-screen width in pixels (its scaled bounding diameter projected through the viewport)
 float GERasterizer::GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
                                  float inScale, bool inOrthographic)
@@ -166,14 +159,12 @@ float GERasterizer::GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETra
     return ee_ge_rast_pixel_size(this->mRust, inModel, GERust(*inViewport), GERust(inTransformation), inScale, inOrthographic);
 }
 
-// FUNCTION: LLE 0x10023cde
 // Returns a placed model's on-screen width in pixels, from its location, frame and scale
 float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic)
 {
     return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic);
 }
 
-// FUNCTION: LLE 0x10023e6f
 // Tests a model's bounding box against an orthographic view volume: sets visible/clipped and per-plane clip flags
 void GERasterizer::IsOrthographicModelVisible(GEModel* inModel, GEViewport* inViewport,
                                               GETransformation& inTransformation, bool& outVisible, bool& outClipped)
@@ -182,7 +173,6 @@ void GERasterizer::IsOrthographicModelVisible(GEModel* inModel, GEViewport* inVi
                              &outClipped);
 }
 
-// FUNCTION: LLE 0x10024007
 // Tests a model's bounding sphere against a perspective view volume: sets visible/clipped and per-plane clip flags
 void GERasterizer::IsPerspectiveModelVisible(GEModel* inModel, float inScale, GEViewport* inViewport,
                                              GETransformation& inTransformation, bool& outVisible, bool& outClipped)
@@ -207,14 +197,12 @@ void GERasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScreen
     ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AlphaTestingRefValue, GEFloatBits(inValue));
 }
 
-// FUNCTION: LLE 0x10024397
 // Sets the ambient light colour and recomputes the effective ambient colour (the screen is ignored)
 void GERasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScreen)
 {
     ee_ge_rast_set_ambient_color(this->mRust, reinterpret_cast<const EeGeRastColor*>(&inColor));
 }
 
-// FUNCTION: LLE 0x100243c9
 // Sets the ambient light intensity and recomputes the effective ambient colour (the screen is ignored)
 void GERasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScreen)
 {
@@ -241,7 +229,6 @@ void GERasterizer::SetCulling(unsigned long inState)
     ee_ge_rast_set(this->mRust, EeGeRastVal::Culling, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024451
 // Does nothing (no-texture display mode is not supported by the base rasterizer)
 void GERasterizer::SetDisplayNoTextureMode(bool inState, unsigned long inScreen)
 {
@@ -376,49 +363,6 @@ void GERasterizer::AddRasterizer(GERasterizer* inRasterizer) { ee_ge_rast_list(1
 unsigned long GERasterizer::GetRasterizerCount() { return (unsigned long)(uintptr_t)ee_ge_rast_list(2, NULL, 0); }
 GERasterizer* GERasterizer::GetRasterizer(unsigned long inIndex) { return static_cast<GERasterizer*>(ee_ge_rast_list(3, NULL, inIndex)); }
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x10023655
-// SYNTHETIC: LLE 0x1002365f
-// SYNTHETIC: LLE 0x1002366f
-// SYNTHETIC: LLE 0x1002367b
-// SYNTHETIC: LLE 0x10023685
-// SYNTHETIC: LLE 0x1002368f
-// SYNTHETIC: LLE 0x1002369f
-// SYNTHETIC: LLE 0x100236ab
-// SYNTHETIC: LLE 0x100236b5
-// SYNTHETIC: LLE 0x100236bf
-// SYNTHETIC: LLE 0x100236cf
-// SYNTHETIC: LLE 0x100236db
-// SYNTHETIC: LLE 0x100236e5
-// SYNTHETIC: LLE 0x100236ef
-// SYNTHETIC: LLE 0x100236ff
-// SYNTHETIC: LLE 0x1002370b
-// SYNTHETIC: LLE 0x10023715
-// SYNTHETIC: LLE 0x1002371f
-// SYNTHETIC: LLE 0x1002372f
-// SYNTHETIC: LLE 0x1002373b
-// SYNTHETIC: LLE 0x10023745
-// SYNTHETIC: LLE 0x1002374f
-// SYNTHETIC: LLE 0x1002375f
-// SYNTHETIC: LLE 0x1002376b
-// SYNTHETIC: LLE 0x10023775
-// SYNTHETIC: LLE 0x1002377f
-// SYNTHETIC: LLE 0x10023797
-// SYNTHETIC: LLE 0x100237a3
-// SYNTHETIC: LLE 0x100237be
-// SYNTHETIC: LLE 0x100237c8
-// SYNTHETIC: LLE 0x100237e0
-// SYNTHETIC: LLE 0x100237ec
-// TEMPLATE: LLE 0x10023a0e
-// TEMPLATE: LLE 0x10023aca
-// TEMPLATE: LLE 0x10023b6a
-// TEMPLATE: LLE 0x10024600
-// TEMPLATE: LLE 0x1002462c
-// SYNTHETIC: LLE 0x10024665
-// SYNTHETIC: LLE 0x10024683
-// SYNTHETIC: LLE 0x1002468f
-// SYNTHETIC: LLE 0x1002469b
-//
 // 0x1002398a: GEText's scalar deleting dtor (see ~GERasterizer). A `delete p` compiles to a ??_G call whenever the
 //   dtor body is inline-visible (even when the caller's budget is spent), and to ??1 + ??3 only when it is not;
 //   UIForm.cpp has both shapes for the same field (~UIForm ??1+??3, RelayoutForm ??_G).
@@ -426,12 +370,9 @@ GERasterizer* GERasterizer::GetRasterizer(unsigned long inIndex) { return static
 //   UList<GELODMetaVertex*>/<GELODPolygon*>/<GELODVertex*>::sNodePool (their $D ctors are GEBoundingBox.cpp's
 //   0x10014ed4/0x10014efb/0x10014f22).
 
-// Header-inline/COMDAT members this unit emits (markers at the end)
-// FUNCTION: LLE 0x1002398a
-
 // ---- the engine's start-up and pixel formats (Graphics Engine.cpp, folded in R4.3 part 15)
 
-HINSTANCE__* GEScreen::sInstance;           // 0x1012d948
+HINSTANCE__* GEScreen::sInstance;
 
 // The renderer linked into the game: the T&L DX7 rasterizer (DX7Rasterizer.cpp; the plug-in boundary went in part 14)
 GERasterizer* DX7TnLRasterizer();

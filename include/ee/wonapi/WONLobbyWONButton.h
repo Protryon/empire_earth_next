@@ -11,11 +11,11 @@ public:
     WONButton(); // at 0x00717c70 (0x100 bytes)
     virtual ~WONButton();
     virtual void Virtual08() { this->WCall(EeWonWbCall::SizeChanged); } // SizeChanged (slot 0x08), at 0x00718100
-    virtual void GetDesiredSize(int& w,int& h) { this->WCall(EeWonWbCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } // 0x00718640
+    virtual void GetDesiredSize(int& w,int& h) { this->WCall(EeWonWbCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
     virtual void Paint(Graphics& g) { this->WCall(EeWonWbCall::Paint,(intptr_t)&g); } // slot 0x18, at 0x00719080
-    virtual void SetTextHook(const GUIString& t) { this->WCall(EeWonWbCall::SetTextHook,(intptr_t)&t); } // 0x00718060
+    virtual void SetTextHook(const GUIString& t) { this->WCall(EeWonWbCall::SetTextHook,(intptr_t)&t); }
     virtual const GUIString& GetText(); // getter (+0xb8), at 0x007180e0
-    virtual void GetTextSize(int& w,int& h) { this->WCall(EeWonWbCall::GetTextSize,(intptr_t)&w,(intptr_t)&h); } // 0x00718580
+    virtual void GetTextSize(int& w,int& h) { this->WCall(EeWonWbCall::GetTextSize,(intptr_t)&w,(intptr_t)&h); }
     void AdjustHeightToFitText() { this->WCall(EeWonWbCall::AdjustHeightToFitText); } //3181a0
     void SetAdjustHeightToFitText(bool a) { this->WCall(EeWonWbCall::SetAdjustHeightToFitText,a); } // at 0x00718200
     void SetWrapText(bool w) { this->WCall(EeWonWbCall::SetWrapText,w); } //318220

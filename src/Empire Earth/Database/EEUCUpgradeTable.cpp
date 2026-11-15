@@ -54,7 +54,6 @@ static_assert(sizeof(EEUCUpgradeRecord) == 240, "on-disk record: 240 bytes on ev
 
 std::vector<EEUCUpgradeTable*> EEUCUpgradeTable::sTable;
 
-// FUNCTION: EXE 0x4dc6cb
 // Creates a unit upgrade entry: 16 factors of scale 1 and offset 0, max level 0
 EEUCUpgradeTable::EEUCUpgradeTable()
 {
@@ -65,7 +64,6 @@ EEUCUpgradeTable::EEUCUpgradeTable()
     this->mMaxLevel = 0;
 }
 
-// FUNCTION: EXE 0x4dc6f0
 // Loads the unit upgrade costs and steps from db\dbupgrade.dat (the repair step as a 0/1 flag; factor 13 is never set);
 // returns the last read status
 long EEUCUpgradeTable::Load(FSFileSpec* inFile)
@@ -129,7 +127,6 @@ long EEUCUpgradeTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4dc88a
 // Destroys every unit upgrade entry and empties the table
 void EEUCUpgradeTable::Unload()
 {
@@ -137,11 +134,3 @@ void EEUCUpgradeTable::Unload()
         delete EEUCUpgradeTable::sTable[i];
     EEUCUpgradeTable::sTable.resize(0);
 }
-
-// SYNTHETIC: EXE 0x4dc8ca
-// (the scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x4dc682
-// SYNTHETIC: EXE 0x4dc68c
-// SYNTHETIC: EXE 0x4dc6a4
-// SYNTHETIC: EXE 0x4dc6b0

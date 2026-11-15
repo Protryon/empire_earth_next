@@ -48,7 +48,6 @@ RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp)
     ee_won_hostop_bind_native(inRustOp, RustServerOp::HostCall, this, static_cast<AsyncOp*>(this), this->GetOpObject(),
                               this->mTracker.GetTrackerObject());
 }
-// FUNCTION: WON 0x006ace20
 // Sets the connect, send and receive time limits
 void RustServerOp::SetMaxTimes(int inConnect, int inSend, int inRecv)
 {
@@ -56,7 +55,6 @@ void RustServerOp::SetMaxTimes(int inConnect, int inSend, int inRecv)
     ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_SEND, (DWORD)inSend, NULL);
     ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_RECV, (DWORD)inRecv, NULL);
 }
-// FUNCTION: WON 0x006acee0
 // Copies the time limits of another server op
 void RustServerOp::CopyMaxTimes(const RustServerOp* inSource)
 {
@@ -110,7 +108,6 @@ ConstSmartPtr<AuthPeerData> GetCertOp::GetPeerData() const
 {
     return AuthPeerData::Adopt(reinterpret_cast<EeWonAuthObj*>((intptr_t)ee_won_hostop_num(this->GetRustOp(), EE_WON_GETCERT_PEER_DATA, 0)));
 }
-// FUNCTION: WON 0x006e6a10
 // A peer auth op for an address, auth context, auth type and socket (ee_won peerop.rs)
 PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
                        bool inUseAuth2)
@@ -131,7 +128,6 @@ WONStatus CryptTransform::Crypt(bool inDecrypt, ByteBufferPtr& ioMessage)
         ioMessage = anOut;
     return aStatus;
 }
-// FUNCTION: WON 0x006e8950
 // A server-side peer auth op for an auth context and an accepted socket (ee_won peerop.rs)
 PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket)
     : RustServerOp(ee_won_hostop_peerauth_server())
@@ -381,15 +377,3 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     }
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006accd0
-// (public: virtual void * __thiscall WONAPI::ServerOp::`scalar deleting destructor'(unsigned int)    [??_GServerOp@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006accf0
-// (public: virtual __thiscall WONAPI::ServerOp::~ServerOp(void)    [??1ServerOp@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006ae9f0
-// (public: __thiscall std::_Tree<class WONAPI::SmartPtr<class WONAPI::AsyncOp>,struct std::pair<class WONAPI::SmartPtr<class WONAPI::AsyncOp> const ,clas)

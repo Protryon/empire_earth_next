@@ -288,13 +288,9 @@ struct UIControlsTableHost {
     }
 };
 
-// FUNCTION: LLE 0x100677db
 // Creates an empty control description (a bitmap with no font, files or layout)
 UIControlsTable::UIControlsTable() : mRust(ee_ui_controls_table_new(this, UIControlsTableHost::Op)) {}
 
-// FUNCTION: LLE 0x1006796f (the record constructor): the Rust table's from_record (Create).
-
-// FUNCTION: LLE 0x10067e8d
 // Destroys the control description, releasing its font
 UIControlsTable::~UIControlsTable() { ee_ui_controls_table_free(this->mRust); }
 
@@ -303,7 +299,6 @@ void UIControlsTable::AddEvent(const UIEventData& inEvent)
     ee_ui_controls_table_call(this->mRust, EeUiTableCall::AddEvent, inEvent.mEventID, inEvent.mEventType, NULL);
 }
 
-// FUNCTION: LLE 0x10067ee6
 // Loads every control record from the file and registers each valid one with its form; returns the last read result
 long UIControlsTable::Create(FSFileSpec& inFile, UIManager* inManager)
 {
@@ -331,9 +326,6 @@ long UIControlsTable::MoveControlsHorizontally(long inFormID, long inFirstIndex,
                                        NULL, f);
 }
 
-// FUNCTION: LLE 0x10067fb4 (CreateBitmap, the control): the Rust table's create_bitmap.
-
-// FUNCTION: LLE 0x1006803a
 // Loads a UI texture (clamped, point mip, given alpha) and returns a bitmap stretched over the rectangle, or NULL
 GEBitmap* UIControlsTable::CreateBitmap(UIManager* inManager, const GERectangle& inRectangle,
                                         const UString& inFileName, bool inHasAlpha,
@@ -369,12 +361,6 @@ GEBitmap* UIControlsTable::CreateBitmap(UIManager* inManager, const GERectangle&
     return theBitmap;
 }
 
-// FUNCTION: LLE 0x10068137 (CreateButton): the Rust table's create_button.
-// FUNCTION: LLE 0x100683ca (CreateCheckBox): create_check_box.
-// FUNCTION: LLE 0x100684c1 (CreateComboBox): create_combo_box.
-// FUNCTION: LLE 0x100686eb (CreateFileComboBox): create_file_combo_box.
-
-// FUNCTION: LLE 0x1006885c
 // Lays out the control on the window and creates it by type (user types via the manager), then sets its background
 UIControl* UIControlsTable::CreateControl(UIManager* inManager)
 {
@@ -382,19 +368,12 @@ UIControl* UIControlsTable::CreateControl(UIManager* inManager)
         ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControl, (intptr_t)inManager, 0, NULL));
 }
 
-// FUNCTION: LLE 0x10068b52
 // Attaches the description's trigger events to the form's control, creating each event through the manager
 void UIControlsTable::CreateControlEvent(UIForm* inForm)
 {
     ee_ui_controls_table_call(this->mRust, EeUiTableCall::CreateControlEvent, (intptr_t)inForm, 0, NULL);
 }
 
-// FUNCTION: LLE 0x10068bc4 (CreateEditBox): the Rust table's create_edit_box.
-// FUNCTION: LLE 0x10068d36 (CreateFileListBox): create_file_list_box.
-// FUNCTION: LLE 0x10068e70 (CreateGraph): create_graph.
-// FUNCTION: LLE 0x10068ee3 (CreateListBox): create_list_box.
-
-// FUNCTION: LLE 0x10069000
 // Creates a movie control playing the description's file from the startup folder (looping per a record flag)
 UIControl* UIControlsTable::CreateMovie(UIManager* inManager, GERectangle inRectangle) const
 {
@@ -414,14 +393,6 @@ UIControl* UIControlsTable::CreateMovie(UIManager* inManager, GERectangle inRect
     return theControl;
 }
 
-// FUNCTION: LLE 0x100690f0 (CreateRadioButton): the Rust table's create_radio_button.
-// FUNCTION: LLE 0x1006929e (CreateScrollBar): create_scroll_bar.
-// FUNCTION: LLE 0x100693a9 (CreateScrollingTextLabel): create_scrolling_label.
-// FUNCTION: LLE 0x10069461 (CreateSlider): create_slider.
-// FUNCTION: LLE 0x10069521 (CreateStatusBar): create_status_bar.
-// FUNCTION: LLE 0x10069624 (CreateTextLabel): create_text_label.
-
-// FUNCTION: LLE 0x10069766
 // Deletes every control description and empties the table
 void UIControlsTable::DeleteAll() { ee_ui_controls_tables(EeUiTablesCall::DeleteAll, 0, 0, NULL, NULL); }
 
@@ -430,7 +401,6 @@ UIControlsTable* UIControlsTable::GetUIControlsTable(unsigned long inIndex)
     return reinterpret_cast<UIControlsTable*>(ee_ui_controls_tables(EeUiTablesCall::At, inIndex, 0, NULL, NULL));
 }
 
-// FUNCTION: LLE 0x100697a6
 // Recomputes a created control's rectangle and font for the current window size
 void UIControlsTable::RelayoutControl(UIControl* inControl, UIManager* inManager)
 {
@@ -438,7 +408,6 @@ void UIControlsTable::RelayoutControl(UIControl* inControl, UIManager* inManager
                               NULL);
 }
 
-// FUNCTION: LLE 0x100698ab
 // Picks the description's font: scaled to the control or window height when the record asks, else the table font
 void UIControlsTable::SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow)
 {
@@ -446,7 +415,6 @@ void UIControlsTable::SetupFont(UIManager* inManager, const GERectangle& inRecta
     ee_ui_controls_table_call(this->mRust, EeUiTableCall::SetupFont, (intptr_t)inManager, inScaleToWindow, f);
 }
 
-// FUNCTION: LLE 0x10069a4f
 // Sets text to transparent in the description's text colour
 void UIControlsTable::SetupGEText(GEText* inText) const
 {
@@ -454,7 +422,6 @@ void UIControlsTable::SetupGEText(GEText* inText) const
     inText->SetFgColor(this->GetTextForeground());
 }
 
-// FUNCTION: LLE 0x10069a6c
 // Fills a list with the description's string-table range (empty when the range is unset)
 void UIControlsTable::SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const
 {
@@ -466,124 +433,3 @@ void UIControlsTable::SetupStringArray(UIManager* inManager, std::vector<UWideSt
     for (unsigned long i = 0; i < theCount; i++)
         inManager->GetStringTable()->GetString(this->GetStringTableBegin() + (long)i, outStrings[i]);
 }
-// Header-inline members (UIControlsTable.h, declaration order)
-// FUNCTION: LLE 0x10065f69
-// FUNCTION: LLE 0x10065f78
-// FUNCTION: LLE 0x10065f9c
-// FUNCTION: LLE 0x10065fc0
-// FUNCTION: LLE 0x10065fe4
-// FUNCTION: LLE 0x10065feb
-// FUNCTION: LLE 0x10065ff9
-// FUNCTION: LLE 0x1006600c
-// FUNCTION: LLE 0x1006601f
-// FUNCTION: LLE 0x10066032
-// FUNCTION: LLE 0x10066048
-// FUNCTION: LLE 0x1006605f
-// FUNCTION: LLE 0x10066076
-// FUNCTION: LLE 0x1006608d
-// FUNCTION: LLE 0x10066094
-// FUNCTION: LLE 0x1006609b
-// FUNCTION: LLE 0x100660a2
-// FUNCTION: LLE 0x100660a9
-// FUNCTION: LLE 0x100660b0
-// FUNCTION: LLE 0x100660b7
-// FUNCTION: LLE 0x100660be
-// FUNCTION: LLE 0x100660c5
-// FUNCTION: LLE 0x100660cc
-// FUNCTION: LLE 0x100660d3
-// FUNCTION: LLE 0x100660da
-// FUNCTION: LLE 0x100660e1
-// FUNCTION: LLE 0x100660e8
-// FUNCTION: LLE 0x100660ef
-// FUNCTION: LLE 0x100660f6
-// FUNCTION: LLE 0x100660fd
-// FUNCTION: LLE 0x10066104
-// FUNCTION: LLE 0x1006610b
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x10066153
-// SYNTHETIC: LLE 0x100663e1
-// SYNTHETIC: LLE 0x100666cb
-// SYNTHETIC: LLE 0x1006672c
-// SYNTHETIC: LLE 0x10066736
-// SYNTHETIC: LLE 0x10066746
-// SYNTHETIC: LLE 0x10066752
-// SYNTHETIC: LLE 0x1006675c
-// SYNTHETIC: LLE 0x10066766
-// SYNTHETIC: LLE 0x10066776
-// SYNTHETIC: LLE 0x10066782
-// SYNTHETIC: LLE 0x1006678c
-// SYNTHETIC: LLE 0x10066796
-// SYNTHETIC: LLE 0x100667a6
-// SYNTHETIC: LLE 0x100667b2
-// SYNTHETIC: LLE 0x100667bc
-// SYNTHETIC: LLE 0x100667c6
-// SYNTHETIC: LLE 0x100667d6
-// SYNTHETIC: LLE 0x100667e2
-// SYNTHETIC: LLE 0x100667ec
-// SYNTHETIC: LLE 0x100667f6
-// SYNTHETIC: LLE 0x10066806
-// SYNTHETIC: LLE 0x10066812
-// SYNTHETIC: LLE 0x1006681c
-// SYNTHETIC: LLE 0x10066826
-// SYNTHETIC: LLE 0x10066836
-// SYNTHETIC: LLE 0x10066842
-// SYNTHETIC: LLE 0x1006684c
-// SYNTHETIC: LLE 0x10066864
-// SYNTHETIC: LLE 0x10066876
-// FUNCTION: LLE 0x100668d7
-// SYNTHETIC: LLE 0x100668e9
-// SYNTHETIC: LLE 0x10066922
-// SYNTHETIC: LLE 0x10066955
-// FUNCTION: LLE 0x100669b6
-// SYNTHETIC: LLE 0x100669c8
-// SYNTHETIC: LLE 0x10066a1f
-// SYNTHETIC: LLE 0x10066a6a
-// FUNCTION: LLE 0x10066acb
-// FUNCTION: LLE 0x10066ad2
-// FUNCTION: LLE 0x10066ad9
-// FUNCTION: LLE 0x10066ae0
-// FUNCTION: LLE 0x10066aed
-// FUNCTION: LLE 0x10066aff
-// FUNCTION: LLE 0x10066b0c
-// FUNCTION: LLE 0x10066b19
-// FUNCTION: LLE 0x10066b26
-// FUNCTION: LLE 0x10066b33
-// FUNCTION: LLE 0x10066b40
-// FUNCTION: LLE 0x10066b4d
-// FUNCTION: LLE 0x10066b5a
-// FUNCTION: LLE 0x10066b67
-// SYNTHETIC: LLE 0x10066b74
-// SYNTHETIC: LLE 0x10066d98
-// SYNTHETIC: LLE 0x1006707c
-// SYNTHETIC: LLE 0x100670dd
-// SYNTHETIC: LLE 0x100670f5
-// SYNTHETIC: LLE 0x10067107
-// SYNTHETIC: LLE 0x10067168
-// SYNTHETIC: LLE 0x1006718f
-// SYNTHETIC: LLE 0x100671b0
-// FUNCTION: LLE 0x10067211
-// FUNCTION: LLE 0x10067218
-// FUNCTION: LLE 0x1006721f
-// FUNCTION: LLE 0x1006722c
-// SYNTHETIC: LLE 0x10067239
-// SYNTHETIC: LLE 0x1006730a
-// SYNTHETIC: LLE 0x100673fa
-// FUNCTION: LLE 0x1006745b
-// FUNCTION: LLE 0x10067469
-// FUNCTION: LLE 0x1006747f
-// SYNTHETIC: LLE 0x10067491
-// SYNTHETIC: LLE 0x10067549
-// SYNTHETIC: LLE 0x1006764e
-// FUNCTION: LLE 0x100676af
-// SYNTHETIC: LLE 0x100676bd
-// SYNTHETIC: LLE 0x100676f0
-// SYNTHETIC: LLE 0x1006771d
-// SYNTHETIC: LLE 0x10067792
-// SYNTHETIC: LLE 0x1006779c
-// SYNTHETIC: LLE 0x100677b4
-// SYNTHETIC: LLE 0x100677c0
-// TEMPLATE: LLE 0x10069ad4
-// TEMPLATE: LLE 0x10069b1b
-// TEMPLATE: LLE 0x10069c70
-// TEMPLATE: LLE 0x10069c83

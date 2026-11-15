@@ -14,7 +14,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x00794920
 // Handles VERTICAL, RESIZETHUMB and MINTHUMBSIZE for a scrollbar; else defers to the container parser
 bool ScrollbarConfig::Virtual24(const std::string& instruction)
 {
@@ -26,7 +25,6 @@ bool ScrollbarConfig::Virtual24(const std::string& instruction)
     return true;
 }
 
-// FUNCTION: WON 0x007949c0
 // Returns the scrollbar's THUMB, UPARROW, DOWNARROW or SCROLLRECT control with a new config for it; else defers
 bool ScrollbarConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {

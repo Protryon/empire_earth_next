@@ -12,12 +12,12 @@ class LLE_API TMPoll {
 public:
     TMPoll(unsigned long inTimeDelay, unsigned long inTimeUnit, bool inStart);
     ~TMPoll() {}                                                                    // exported, ICF-folded at 0xc16a; UIHotKey's sPressedPoll registers a guard-only atexit dtor
-    bool GetIsPaused() const { return this->mRunning && this->mPauseRemaining > 0; }  // 0x53819
-    bool GetIsRunning() const { return this->mRunning; }                            // 0x53835
+    bool GetIsPaused() const { return this->mRunning && this->mPauseRemaining > 0; }
+    bool GetIsRunning() const { return this->mRunning; }
     unsigned long GetTimeLeft() const;
-    void SetTimeDelay(unsigned long inTimeDelay) { this->mTimeDelay = inTimeDelay > 0 ? inTimeDelay : 1; }  // 0x53839
+    void SetTimeDelay(unsigned long inTimeDelay) { this->mTimeDelay = inTimeDelay > 0 ? inTimeDelay : 1; }
     void Start();
-    void Stop() { this->mRunning = false; }                                         // 0x5384a
+    void Stop() { this->mRunning = false; }
     void Pause();
     void Resume();
     unsigned long Poll();
@@ -75,13 +75,6 @@ private:
 
 int64_t TMPoll::sCounterFrequency;
 
-// TMPoll.h's inline members, emitted here (first includer):
-// SYNTHETIC: LLE 0x10053819
-// SYNTHETIC: LLE 0x10053835
-// SYNTHETIC: LLE 0x10053839
-// SYNTHETIC: LLE 0x1005384a
-
-// FUNCTION: LLE 0x1005384f
 // Creates a poll that fires every delay (ms, or us for unit 1), using the performance counter when there is one
 TMPoll::TMPoll(unsigned long inTimeDelay, unsigned long inTimeUnit, bool inStart)
 {
@@ -110,7 +103,6 @@ TMPoll::TMPoll(unsigned long inTimeDelay, unsigned long inTimeUnit, bool inStart
         this->Start();
 }
 
-// FUNCTION: LLE 0x100538ff
 // Returns the time left in the current period (0 when stopped)
 unsigned long TMPoll::GetTimeLeft() const
 {
@@ -132,14 +124,12 @@ unsigned long TMPoll::GetTimeLeft() const
     return theScale * theTimeLeft;
 }
 
-// FUNCTION: LLE 0x10053974
 // Pauses the poll, remembering the time already elapsed in the current period
 void TMPoll::Pause()
 {
     this->mPauseRemaining = (uint32_t)(this->mTimeDelay - this->GetTimeLeft());
 }
 
-// FUNCTION: LLE 0x1005398a
 // Returns the whole periods passed since the last poll and advances the start by them (0 if stopped or paused)
 unsigned long TMPoll::Poll()
 {
@@ -165,7 +155,6 @@ unsigned long TMPoll::Poll()
     return theScale * theCount;
 }
 
-// FUNCTION: LLE 0x10053a56
 // Resumes a paused poll: the current period continues from the part that had elapsed when it was paused
 void TMPoll::Resume()
 {
@@ -181,7 +170,6 @@ void TMPoll::Resume()
     this->mPauseRemaining = 0;
 }
 
-// FUNCTION: LLE 0x10053aa2
 // Starts the poll if it is not running, with the period beginning now
 void TMPoll::Start()
 {
@@ -198,10 +186,6 @@ void TMPoll::Start()
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x10053ad3
-
-// FUNCTION: LLE 0x10053ae7
 // Creates a stopped system timer with an interval (ms, or us for unit 1, kept in ms) and no callback or event
 TMTimer::TMTimer(unsigned long inInterval, unsigned long inTimeUnit, bool inRepeating)
 {
@@ -217,14 +201,12 @@ TMTimer::TMTimer(unsigned long inInterval, unsigned long inTimeUnit, bool inRepe
     this->mStartTime = 0;
 }
 
-// FUNCTION: LLE 0x10053b28
 // Destroys the timer, stopping it first
 TMTimer::~TMTimer()
 {
     this->Stop();
 }
 
-// FUNCTION: LLE 0x10053b2d
 // Sets the callback and its parameter; kErrorBusy while the timer runs
 long TMTimer::SetCallback(void (*inCallback)(void*), void* inParameter)
 {
@@ -237,7 +219,6 @@ long TMTimer::SetCallback(void (*inCallback)(void*), void* inParameter)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10053b49
 // Sets the event signalled by an event-type timer; kErrorBusy while the timer runs
 long TMTimer::SetEvent(TSEvent* inEvent)
 {
@@ -249,7 +230,6 @@ long TMTimer::SetEvent(TSEvent* inEvent)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10053b5f
 // Sets the timer interval (ms, or us for unit 1); kErrorBusy while the timer runs
 long TMTimer::SetInterval(unsigned long inInterval, unsigned long inTimeUnit)
 {
@@ -261,7 +241,6 @@ long TMTimer::SetInterval(unsigned long inInterval, unsigned long inTimeUnit)
     return kErrorBusy;
 }
 
-// FUNCTION: LLE 0x10053b8f
 // Sets whether the timer repeats; kErrorBusy while the timer runs
 long TMTimer::SetRepeating(bool inRepeating)
 {
@@ -273,7 +252,6 @@ long TMTimer::SetRepeating(bool inRepeating)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10053ba5
 // Sets the timer type (0 = callback, else event); kErrorBusy while the timer runs
 long TMTimer::SetTimerType(unsigned long inType)
 {
@@ -285,7 +263,6 @@ long TMTimer::SetTimerType(unsigned long inType)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10053bbb
 // Starts the system timer (callback or event, one-shot or periodic); kErrorBusy if running, kErrorNotFound if not
 long TMTimer::Start()
 {
@@ -306,7 +283,6 @@ long TMTimer::Start()
     return theResult;
 }
 
-// FUNCTION: LLE 0x10053c18
 // Stops the timer; kErrorNotFound if it is not running or cannot be killed
 long TMTimer::Stop()
 {
@@ -317,7 +293,6 @@ long TMTimer::Stop()
     return kErrorNotFound;
 }
 
-// FUNCTION: LLE 0x10053c38
 // Stops the timer, returning the time since it last started (the remaining time is always 0)
 long TMTimer::Stop(unsigned long& outElapsed, unsigned long& outRemaining)
 {
@@ -333,7 +308,6 @@ long TMTimer::Stop(unsigned long& outElapsed, unsigned long& outRemaining)
     return kErrorNotFound;
 }
 
-// FUNCTION: LLE 0x10053c77
 // System-timer callback: restarts the elapsed clock (repeating) or marks the timer stopped, then calls the callback
 void TMTimer::TimerCallback(void* inUser)
 {
@@ -356,11 +330,10 @@ static void TMShutdown(bool inForced);
 // Globals in address order (provisional names)
 int64_t gCounterFrequency;                  // 0x12ded8 counter ticks per millisecond
 float gMicrosecondFrequency;                // 0x12dee0 counter ticks per microsecond
-bool gTimeManagerInitialized;               // 0x12dee4
-bool gHasPerformanceCounter;                // 0x12dee5
+bool gTimeManagerInitialized;
+bool gHasPerformanceCounter;
 thread_local long long gTMPinnedTime = -1;  // TEST ONLY (port): EE-SIM's scripted editor (EESimEditor.cpp)
 
-// FUNCTION: LLE 0x10053701
 // Returns the current time in milliseconds (performance counter if present, else the millisecond clock); a time
 // pinned on this thread (EE-SIM's scripted editor) instead of either
 unsigned long TMGetTime()
@@ -374,7 +347,6 @@ unsigned long TMGetTime()
     return PlatTimeMilliseconds();
 }
 
-// FUNCTION: LLE 0x1005373a
 // Returns the current time in microseconds from the performance counter (milliseconds from the millisecond clock
 // without one)
 int64_t TMGetMicroTime()
@@ -384,7 +356,6 @@ int64_t TMGetMicroTime()
     return PlatTimeMilliseconds();
 }
 
-// FUNCTION: LLE 0x1005376c
 // Fills a time-of-day record from the local clock (month counted from 0)
 void TMGetTimeOfDay(TMTime& outTime)
 {
@@ -398,7 +369,6 @@ void TMGetTimeOfDay(TMTime& outTime)
     outTime.mYear = theTime.mYear;
 }
 
-// FUNCTION: LLE 0x100537ab
 // Starts the time manager: 1 ms timer resolution, performance-counter frequencies, and its shutdown registration
 long TMInitialize()
 {
@@ -413,7 +383,6 @@ long TMInitialize()
     return URegisterShutdown(TMShutdown);
 }
 
-// FUNCTION: LLE 0x10053810
 // Shuts the time manager down, restoring the timer resolution
 static void TMShutdown(bool inForced)
 {

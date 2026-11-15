@@ -18,7 +18,7 @@ public:
     virtual long DrawTextA();
     virtual bool GetHelpString(UWideString& outString) const;
     virtual void SetDirty(bool inDirty);
-    void UpdateCost(const UWideString& inText);     // 0x257169
+    void UpdateCost(const UWideString& inText);
 protected:
     virtual void ButtonDown();
     virtual void ButtonUp();

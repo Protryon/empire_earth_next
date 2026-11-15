@@ -82,7 +82,6 @@
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x57e49e
 // Creates the condition sub-screen: shared controls, title label, condition-type combo and the seven condition
 // types, starting on the object condition (editor_subscreens.rs)
 EESETSCondition::EESETSCondition(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -93,10 +92,6 @@ EESETSCondition::EESETSCondition(GEFont* inFont, UIForm* inForm, unsigned long& 
     ioIndex = theIndex;
 }
 
-// SYNTHETIC: EXE 0x57e80b
-// (EESETSCondition's scalar deleting destructor)
-
-// FUNCTION: EXE 0x57e827
 // Destroys the condition sub-screen with its controls and the seven condition types (editor_subscreens.rs)
 EESETSCondition::~EESETSCondition()
 {
@@ -133,24 +128,6 @@ UIComboBox* EESETSCondition::GetTypeComboBox() const
     return static_cast<UIComboBox*>(static_cast<UIControl*>(ee_screens_secd_handle(this->mRust, 1)));
 }
 
-// FUNCTION: EXE 0x57eaab
-// Returns the trigger screen's name edit box text (EESETriggerScreen::GetName)
-// (inline, ee/EESETriggerScreen.h)
-
-// FUNCTION: EXE 0x57ee40
-// Creates the player-attribute condition type (EESETSCTPlayerResource ctor; ee_screens editor_conditions.rs)
-
-// SYNTHETIC: EXE 0x57ee9c
-// (EESETSCTPlayerResource's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57eec8
-// (EESETSCTPlayerResearch's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57eef3
-// (EESETSConditionType's scalar deleting destructor, shared by the vptr-only types)
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESETSCondition::Deactivate()
 {
 }

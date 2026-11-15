@@ -51,12 +51,12 @@ public:
 
 class EEUIFSEMap : public EEUIFSEMainGroup {
 public:
-    EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);   // 0x1a1be6
+    EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);
     virtual ~EEUIFSEMap();                  // +0x00 0x1a3b27 (??_G 0x1a3b0b)
     virtual void Enter();                   // +0x18 0x1a3ebf (re-reads the elevation files)
     virtual void MouseMove(const GE2DPoint& inLocation) {}   // +0x24 (ICF: 0x156dd8)
     void CreateMap();                       // 0x1a3c7d (UIBMap::ButtonUp)
-    void ShowElevationControls(bool inShow);   // 0x1a3dec (provisional name)
+    void ShowElevationControls(bool inShow);
 
     EeScreensSeMap* mRust;                  // the tab (editor_map.rs): its controls and the editor's terrains
 };

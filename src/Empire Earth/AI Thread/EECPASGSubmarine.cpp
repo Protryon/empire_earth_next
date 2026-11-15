@@ -45,22 +45,16 @@
 #include "ee/EECPAAirTargetFilters.h"
 #include "ee/EECPAreaTargetCollector.h"
 
-// FUNCTION: EXE 0x4513b7
 // Creates a submarine attack sub-group for the attack group, not yet able to attack ships
 EECPASGSubmarine::EECPASGSubmarine(EECPAttackGroup* inGroup, long inKind) : EECPASGSea(inGroup, inKind), mCanAttackShips(false)
 {
 }
 
-// SYNTHETIC: EXE 0x4513da
-// (the scalar deleting destructor; 0x1c bytes)
-
-// FUNCTION: EXE 0x4513f6
 // Destroys the submarine sub-group (base members only)
 EECPASGSubmarine::~EECPASGSubmarine()
 {
 }
 
-// FUNCTION: EXE 0x451401
 // Clears the can-attack-ships flag, then shuts down as a naval sub-group
 void EECPASGSubmarine::Shutdown()
 {
@@ -68,7 +62,6 @@ void EECPASGSubmarine::Shutdown()
     EECPASGSea::Shutdown();
 }
 
-// FUNCTION: EXE 0x45140d
 // Sets and returns whether any unit's ammunition does damage against ships
 bool EECPASGSubmarine::UpdateCanAttackShips()
 {
@@ -78,7 +71,6 @@ bool EECPASGSubmarine::UpdateCanAttackShips()
     return this->mCanAttackShips;
 }
 
-// FUNCTION: EXE 0x451479
 // Picks units to split off: the largest group when units sit in several bodies of water, else all kind-0x15
 // units (never all of them), else the first half
 void EECPASGSubmarine::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
@@ -125,7 +117,6 @@ void EECPASGSubmarine::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
         delete theGroup->second;
 }
 
-// FUNCTION: EXE 0x451722
 // Adds every unit in the bounds that passes the submarine target filter (ships only if it can attack them,
 // enemies optional) to the targets
 void EECPASGSubmarine::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies)
@@ -149,7 +140,6 @@ void EECPASGSubmarine::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeE
     }
 }
 
-// FUNCTION: EXE 0x4517f1
 // Refreshes the units, then recomputes whether the group can attack ships
 void EECPASGSubmarine::RefreshUnits()
 {
@@ -158,9 +148,7 @@ void EECPASGSubmarine::RefreshUnits()
 }
 
 
-// ICF-FOLDED: EXE 0x67c0b4
 // Returns false: submarine groups never ask to split
-// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGSubmarine::DecideSplit()
 {
     return false;

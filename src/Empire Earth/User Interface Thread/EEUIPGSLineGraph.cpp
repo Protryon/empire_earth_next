@@ -22,7 +22,6 @@
 #include "rust/ee_screens.h"   // ee_screens_pgs_format_x/_y (ee_screens post_game.rs)
 #include <string>
 
-// FUNCTION: EXE 0x676442
 // Creates the post-game summary's line graph
 EEUIPGSLineGraph::EEUIPGSLineGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
                                    unsigned long inIndex, unsigned long inBorderThickness)
@@ -30,20 +29,11 @@ EEUIPGSLineGraph::EEUIPGSLineGraph(unsigned long inId, const GERectangle& inRect
 {
 }
 
-// FUNCTION: EXE 0x676485
-// Returns one of the stored graphs by index
-// (GetGraphAt, inline in the class: emitted with the vtable after the ctor)
-
-// SYNTHETIC: EXE 0x676496
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIPGSLineGraph+0x0)
-
-// FUNCTION: EXE 0x6764b2
 // Destroys the line graph
 EEUIPGSLineGraph::~EEUIPGSLineGraph()
 {
 }
 
-// FUNCTION: EXE 0x6764e0
 // Adds a statistics series (time, value points) in a colour to one of the stored graphs
 // NEAR (owner-waived): exact only with long point fields, which Load/Save 0x16d76c/0x16d86b rule out (a long local
 // copy and member-wise stores were probed and are further off). The original loads the fields in store order
@@ -59,21 +49,18 @@ void EEUIPGSLineGraph::AddGraphSeries(const std::vector<EEStatisticsPoint>& inPo
     this->mGraphs[inGraph].AddSeries(theSeries);
 }
 
-// FUNCTION: EXE 0x676565
 // Draws the line graph
 long EEUIPGSLineGraph::DrawPolygons()
 {
     return UILineGraph::DrawPolygons();
 }
 
-// FUNCTION: EXE 0x67656b
 // Draws one series of the graph
 long EEUIPGSLineGraph::DrawSeries(const UGraphSeries& inSeries)
 {
     return UILineGraph::DrawSeries(inSeries);
 }
 
-// FUNCTION: EXE 0x676578
 // Formats a y axis value as a rounded integer (ee_screens post_game.rs format_y)
 void EEUIPGSLineGraph::FormatYValues(float inValue, UWideString& outString)
 {
@@ -84,7 +71,6 @@ void EEUIPGSLineGraph::FormatYValues(float inValue, UWideString& outString)
     outString = std::string(theText, theLength).c_str();
 }
 
-// FUNCTION: EXE 0x67659d
 // Formats an x axis value (game time) as minutes:seconds, at least 0:01 (ee_screens post_game.rs format_x)
 void EEUIPGSLineGraph::FormatXValues(float inValue, UWideString& outString)
 {
@@ -96,7 +82,6 @@ void EEUIPGSLineGraph::FormatXValues(float inValue, UWideString& outString)
     outString = std::string(theText, theLength).c_str();
 }
 
-// FUNCTION: EXE 0x6765eb
 // Shows one of the stored graphs
 void EEUIPGSLineGraph::ShowGraph(unsigned long inGraph)
 {
@@ -104,7 +89,6 @@ void EEUIPGSLineGraph::ShowGraph(unsigned long inGraph)
     this->SetDirty(true);
 }
 
-// FUNCTION: EXE 0x676616
 // Stores a graph at an index
 void EEUIPGSLineGraph::SetGraphAt(const UGraph& inGraph, unsigned long inIndex)
 {

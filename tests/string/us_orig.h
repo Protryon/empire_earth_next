@@ -124,11 +124,6 @@ LLE_API long sprintf(UString& outString, const char* inFormat, ...) PLAT_PRINTF_
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// TEMPLATE: LLE 0x100836e3
-// TEMPLATE: LLE 0x1008371e
-// TEMPLATE: LLE 0x10083789
-
 unsigned long UString::sDefaultAllocationLength = 256;
 
 // port (decision D6): the conversion of old Windows-1252 inputs (UString.h)
@@ -157,7 +152,6 @@ void UConvertLoadedText(char*& ioString, unsigned long& ioCapacity)
     ioCapacity = theNeeded + 1;
 }
 
-// FUNCTION: LLE 0x10082c43
 // Returns a new string holding the left string followed by the right one
 UString operator+(const UString& inLeft, const UString& inRight)
 {
@@ -167,7 +161,6 @@ UString operator+(const UString& inLeft, const UString& inRight)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10082c91
 // Returns a new string holding the string followed by the C string
 UString operator+(const UString& inLeft, const char* inRight)
 {
@@ -177,91 +170,78 @@ UString operator+(const UString& inLeft, const char* inRight)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10082ce4
 // Returns whether the two strings are equal (case-sensitive)
 bool operator==(const UString& inLeft, const UString& inRight)
 {
     return strcmp(inLeft.mString, inRight.mString) == 0;
 }
 
-// FUNCTION: LLE 0x10082cff
 // Returns whether the string equals the C string (case-sensitive)
 bool operator==(const UString& inLeft, const char* inRight)
 {
     return strcmp(inLeft.mString, inRight) == 0;
 }
 
-// FUNCTION: LLE 0x10082d17
 // Returns whether the two strings differ (case-sensitive)
 bool operator!=(const UString& inLeft, const UString& inRight)
 {
     return strcmp(inLeft.mString, inRight.mString) != 0;
 }
 
-// FUNCTION: LLE 0x10082d33
 // Returns whether the string differs from the C string (case-sensitive)
 bool operator!=(const UString& inLeft, const char* inRight)
 {
     return strcmp(inLeft.mString, inRight) != 0;
 }
 
-// FUNCTION: LLE 0x10082d4c
 // Returns whether the left string sorts before the right one (strcmp order)
 bool operator<(const UString& inLeft, const UString& inRight)
 {
     return strcmp(inLeft.mString, inRight.mString) < 0;
 }
 
-// FUNCTION: LLE 0x10082d6b
 // Returns whether the string sorts before the C string (strcmp order)
 bool operator<(const UString& inLeft, const char* inRight)
 {
     return strcmp(inLeft.mString, inRight) < 0;
 }
 
-// FUNCTION: LLE 0x10082d87
 // Returns whether the left string sorts before or equal to the right one (strcmp order)
 bool operator<=(const UString& inLeft, const UString& inRight)
 {
     return strcmp(inLeft.mString, inRight.mString) <= 0;
 }
 
-// FUNCTION: LLE 0x10082da6
 // Returns whether the string sorts before or equal to the C string (strcmp order)
 bool operator<=(const UString& inLeft, const char* inRight)
 {
     return strcmp(inLeft.mString, inRight) <= 0;
 }
 
-// FUNCTION: LLE 0x10082dc2
 // Returns whether the left string sorts after the right one (strcmp order)
 bool operator>(const UString& inLeft, const UString& inRight)
 {
     return strcmp(inLeft.mString, inRight.mString) > 0;
 }
 
-// FUNCTION: LLE 0x10082de1
 // Returns whether the string sorts after the C string (strcmp order)
 bool operator>(const UString& inLeft, const char* inRight)
 {
     return strcmp(inLeft.mString, inRight) > 0;
 }
 
-// FUNCTION: LLE 0x10082dfd
 // Returns whether the left string sorts after or equal to the right one (strcmp order)
 bool operator>=(const UString& inLeft, const UString& inRight)
 {
     return strcmp(inLeft.mString, inRight.mString) >= 0;
 }
 
-// FUNCTION: LLE 0x10082e1c
 // Returns whether the string sorts after or equal to the C string (strcmp order)
 bool operator>=(const UString& inLeft, const char* inRight)
 {
     return strcmp(inLeft.mString, inRight) >= 0;
 }
 
-// FUNCTION: LLE 0x10082e38
 // Formats into the string's buffer with no capacity check, then updates its length; returns vsprintf's result
 long sprintf(UString& outString, const char* inFormat, ...)
 {
@@ -272,7 +252,6 @@ long sprintf(UString& outString, const char* inFormat, ...)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10082e65
 // Creates an empty string with the default capacity (256 bytes)
 UString::UString()
 {
@@ -282,7 +261,6 @@ UString::UString()
     this->mString[0] = 0;
 }
 
-// FUNCTION: LLE 0x10082e90
 // Creates a copy of a string with the same capacity
 UString::UString(const UString& inString)
 {
@@ -292,7 +270,6 @@ UString::UString(const UString& inString)
     strcpy(this->mString, inString.mString);
 }
 
-// FUNCTION: LLE 0x10082ec6
 // Creates a string from a C string, sized exactly to fit it
 UString::UString(const char* inString)
 {
@@ -302,7 +279,6 @@ UString::UString(const char* inString)
     strcpy(this->mString, inString);
 }
 
-// FUNCTION: LLE 0x10082efb
 // Creates an empty string with the given capacity in bytes
 UString::UString(unsigned long inCapacity)
 {
@@ -312,14 +288,12 @@ UString::UString(unsigned long inCapacity)
     this->mString[0] = 0;
 }
 
-// FUNCTION: LLE 0x10082f22
 // Destroys the string, freeing its buffer
 UString::~UString()
 {
     delete[] this->mString;
 }
 
-// FUNCTION: LLE 0x10082f32
 // Copies another string, growing the buffer to the source's capacity if that is larger
 UString& UString::operator=(const UString& inString)
 {
@@ -339,7 +313,6 @@ UString& UString::operator=(const UString& inString)
     return *this;
 }
 
-// FUNCTION: LLE 0x10082f94
 // Copies a C string, reallocating to fit when it does not fit the current capacity
 UString& UString::operator=(const char* inString)
 {
@@ -359,7 +332,6 @@ UString& UString::operator=(const char* inString)
     return *this;
 }
 
-// FUNCTION: LLE 0x1008300c
 // Returns the character at an index, or 0 when the index is out of range
 char UString::operator[](int inIndex) const
 {
@@ -368,7 +340,6 @@ char UString::operator[](int inIndex) const
     return 0;
 }
 
-// FUNCTION: LLE 0x10083026
 // Appends a string, truncated to the space left in the buffer (never grows)
 UString& UString::operator+=(const UString& inString)
 {
@@ -384,7 +355,6 @@ UString& UString::operator+=(const UString& inString)
     return *this;
 }
 
-// FUNCTION: LLE 0x10083070
 // Appends a C string, truncated to the space left in the buffer (never grows)
 UString& UString::operator+=(const char* inString)
 {
@@ -400,7 +370,6 @@ UString& UString::operator+=(const char* inString)
     return *this;
 }
 
-// FUNCTION: LLE 0x100830bd
 // Shrinks the buffer to exactly the string's length plus the terminator
 void UString::Compact()
 {
@@ -412,7 +381,6 @@ void UString::Compact()
     this->mString = theString;
 }
 
-// FUNCTION: LLE 0x100830f8
 // Copies inCount characters from inStart of a string to inDestination, optionally reallocating first
 UString& UString::Copy(const UString& inString, unsigned long inStart, unsigned long inCount,
                        unsigned long inDestination, bool inResize)
@@ -439,7 +407,6 @@ UString& UString::Copy(const UString& inString, unsigned long inStart, unsigned 
     return *this;
 }
 
-// FUNCTION: LLE 0x1008319d
 // Copies inCount characters from inStart of a C string to inDestination, optionally reallocating first
 UString& UString::Copy(const char* inString, unsigned long inStart, unsigned long inCount,
                        unsigned long inDestination, bool inResize)
@@ -476,7 +443,6 @@ UString& UString::Copy(const char* inString, unsigned long inStart, unsigned lon
     return *this;
 }
 
-// FUNCTION: LLE 0x1008323e
 // Returns the first position at or after inStart where a string occurs, or the length when not found
 unsigned long UString::Find(const UString& inString, unsigned long inStart) const
 {
@@ -490,7 +456,6 @@ unsigned long UString::Find(const UString& inString, unsigned long inStart) cons
     return theIndex;
 }
 
-// FUNCTION: LLE 0x10083297
 // Returns the first position at or after inStart where a C string occurs, or the length when not found
 unsigned long UString::Find(const char* inString, unsigned long inStart) const
 {
@@ -505,7 +470,6 @@ unsigned long UString::Find(const char* inString, unsigned long inStart) const
     return theIndex;
 }
 
-// FUNCTION: LLE 0x100832f6
 // Returns the last position at or before inStart where a string starts, or the length when not found
 unsigned long UString::FindBackwards(const UString& inString, unsigned long inStart) const
 {
@@ -520,7 +484,6 @@ unsigned long UString::FindBackwards(const UString& inString, unsigned long inSt
     return theIndex;
 }
 
-// FUNCTION: LLE 0x10083343
 // Returns the last position at or before inStart where a C string starts, or the length when not found
 unsigned long UString::FindBackwards(const char* inString, unsigned long inStart) const
 {
@@ -536,14 +499,12 @@ unsigned long UString::FindBackwards(const char* inString, unsigned long inStart
     return theIndex;
 }
 
-// FUNCTION: LLE 0x10083394
 // Returns the bytes Save writes: a 4-byte length plus the characters and terminator
 unsigned long UString::GetBytesUsedToSave() const
 {
     return this->mLength + 5;
 }
 
-// FUNCTION: LLE 0x1008339b
 // Returns inLength characters starting at inStart as a new string
 UString UString::GetSubstring(unsigned long inStart, unsigned long inLength) const
 {
@@ -552,7 +513,6 @@ UString UString::GetSubstring(unsigned long inStart, unsigned long inLength) con
     return theResult;
 }
 
-// FUNCTION: LLE 0x100833e2
 // Returns the characters from inFirst through inLast (inclusive) as a new string
 UString UString::GetIndexedSubstring(unsigned long inFirst, unsigned long inLast) const
 {
@@ -562,7 +522,6 @@ UString UString::GetIndexedSubstring(unsigned long inFirst, unsigned long inLast
     return theResult;
 }
 
-// FUNCTION: LLE 0x1008342d
 // Reads a length and that many characters from the file; on failure leaves the string empty and returns the error
 long UString::Load(FSFile& inFile)
 {
@@ -593,7 +552,6 @@ long UString::Load(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x100834bd
 // Splits the string at separators into outTokens, keeping bracketed parts whole and stripping outer brackets
 bool UString::NestedTokenize(const UString& inSeparators, const UString& inBrackets,
                              std::vector<UString>& outTokens) const
@@ -640,7 +598,6 @@ bool UString::NestedTokenize(const UString& inSeparators, const UString& inBrack
     return true;
 }
 
-// FUNCTION: LLE 0x100835f2
 // Writes the length and the characters, both counting the terminator, to the file; returns the first error
 long UString::Save(FSFile& inFile) const
 {
@@ -655,7 +612,6 @@ long UString::Save(FSFile& inFile) const
     return theResult;
 }
 
-// FUNCTION: LLE 0x10083642
 // Splits the string at any of the separator characters into outTokens, skipping empty tokens; always true
 // The character load is written in each branch (VC6 hoists the common head; the [base+index] order of the merged
 // load is the tell: one load before the if gave [edi+eax]).

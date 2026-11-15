@@ -12,19 +12,6 @@ const UString kEEASaveGameMapSeedKey("EEASaveGame-MapSeed");
 // game and the scenario editor read it; provisional name)
 UWideString gLoadSaveErrorMessage;
 
-// SYNTHETIC: EXE 0x54c6b1
-// SYNTHETIC: EXE 0x54c6bb
-// SYNTHETIC: EXE 0x54c6cc
-// SYNTHETIC: EXE 0x54c6d8
-// SYNTHETIC: EXE 0x54c6e3
-// SYNTHETIC: EXE 0x54c6ed
-// SYNTHETIC: EXE 0x54c6fe
-// SYNTHETIC: EXE 0x54c70a
-// SYNTHETIC: EXE 0x54c715
-// SYNTHETIC: EXE 0x54c71f
-// SYNTHETIC: EXE 0x54c72a
-// SYNTHETIC: EXE 0x54c736
-
 #include <time.h>
 #include <vector>
 #include "lle/FSArchive.h"
@@ -33,7 +20,6 @@ UWideString gLoadSaveErrorMessage;
 #include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
 
-// FUNCTION: EXE 0x54c741
 // Returns a save file's name with its last three characters replaced by "txt", or unchanged when asked to keep it
 UString GetSaveTextName(const UString& inName, bool inKeep)
 {
@@ -147,7 +133,6 @@ void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChe
 
 extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
 
-// FUNCTION: EXE 0x54c7a7
 // Builds the list of chunks a save writes, in chunk order (each chunk new; the game objects are only borrowed)
 void BuildSaveGameChunks(std::vector<FSPersistent*>& outList)
 {
@@ -179,7 +164,6 @@ void BuildSaveGameChunks(std::vector<FSPersistent*>& outList)
     outList.push_back(new EEPCalamityHelper());
 }
 
-// FUNCTION: EXE 0x54ca3d
 // Fills a save header: name, versions, player names, date, chunk tags, scenario media strings and game options
 void FillSaveGameHeader(const UString& inName, EEPSaveGameHeader& outHeader, std::vector<FSPersistent*>& inList)
 {
@@ -213,7 +197,6 @@ void FillSaveGameHeader(const UString& inName, EEPSaveGameHeader& outHeader, std
     outHeader.mNumPlayers = gMaxPlayers;
 }
 
-// FUNCTION: EXE 0x54cbc7
 // Deletes the files matching a pattern in a directory, lowest (FSFileSpec order) first, until at most a given number
 // remain
 long TrimAutoSaves(const UString& inPattern, const UString& inDirectory, unsigned long inMax)
@@ -237,7 +220,6 @@ long TrimAutoSaves(const UString& inPattern, const UString& inDirectory, unsigne
     return 0;
 }
 
-// FUNCTION: EXE 0x54ccfb
 // Writes each listed chunk to a file; on success deletes the chunks and empties the list; returns the first error
 long WriteSaveGameChunks(std::vector<FSPersistent*>& inList, FSFile& inFile)
 {
@@ -259,7 +241,6 @@ long WriteSaveGameChunks(std::vector<FSPersistent*>& inList, FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54ce06
 // Writes a whole saved game (header, then every chunk) to a file; returns the first error
 long WriteSaveGame(const UString& inName, unsigned long inTime, FSFile& inFile, FSFile& inOther)
 {
@@ -274,7 +255,6 @@ long WriteSaveGame(const UString& inName, unsigned long inTime, FSFile& inFile, 
     return theResult;
 }
 
-// FUNCTION: EXE 0x54ce98
 // Finds a save file by name in a directory on the data path; returns the find error
 long EEOpenSaveGameFile(const UString& inName, const UString& inDirectory, FSFileSpec*& outFile)
 {
@@ -282,7 +262,6 @@ long EEOpenSaveGameFile(const UString& inName, const UString& inDirectory, FSFil
     return gDataPath->FindFile(thePath, outFile);
 }
 
-// FUNCTION: EXE 0x54ced5
 // Returns the current date and time as text (asctime), or "Date/time failed."
 UString GetDateText()
 {
@@ -303,7 +282,6 @@ long MuteForSaveLoad(bool inLoading, bool inQuiet);                  // 0x14d195
 long UnmuteAfterSaveLoad(bool inLoading, bool inQuiet);              // 0x14d253 (restores it afterwards)
 long LoadIntoGame(FSFileSpec& inFile, bool inArg, EEGameState& ioState);  // 0x14d2e3 (loads the game under gLoadingSavedGame)
 
-// FUNCTION: EXE 0x54cf33
 // Validates and loads a saved game file with the sound muted (multiplayer reload or into the game state),
 // optionally resuming the graphics after; returns 9 when the file is not a valid save
 long LoadSavedGameFile(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphics)
@@ -322,16 +300,15 @@ long LoadSavedGameFile(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inRes
     return theResult;
 }
 
-long OpenSaveFile(FSFileSpec& outFile, bool inLoading, const UString& inName, const UString& inDirectory);  // 0x14d0e6
+long OpenSaveFile(FSFileSpec& outFile, bool inLoading, const UString& inName, const UString& inDirectory);
 long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime);        // 0x14d34b (writes the game)
-long LoadGameState(EEGameState& ioState, FSFile& inFile);            // 0x14d4fd
-long ReloadSavedGame(FSFile& inFile);                                // 0x14d521
+long LoadGameState(EEGameState& ioState, FSFile& inFile);
+long ReloadSavedGame(FSFile& inFile);
 
 // the volumes MuteForSaveLoad mutes and UnmuteAfterSaveLoad restores (0x531cac, 0x531ca8; provisional names)
 static float sMasterVolume;
 static float sMusicVolume;
 
-// FUNCTION: EXE 0x54cfb1
 // Opens and validates a saved game from a directory and loads it into the game state with the sound muted,
 // optionally resuming the graphics after; returns the first error
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg)
@@ -353,7 +330,6 @@ long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, 
     return theResult;
 }
 
-// FUNCTION: EXE 0x54d066
 // Saves the game to a file in a directory with the sound muted; returns the first error
 // the original reads the physics CT count into a local it never uses (0x14d080; a discarded getter call is elided)
 long SaveGame(const UString& inFileName, unsigned long inTime, bool inFlag, UString inDescription)
@@ -370,7 +346,6 @@ long SaveGame(const UString& inFileName, unsigned long inTime, bool inFlag, UStr
     return theResult;
 }
 
-// FUNCTION: EXE 0x54d0e6
 // Points a file spec at the startup directory plus a subdirectory and name and opens it (recreated first for a save);
 // sets the load/save error message on failure
 long OpenSaveFile(FSFileSpec& outFile, bool inLoading, const UString& inName, const UString& inDirectory)
@@ -398,7 +373,6 @@ long OpenSaveFile(FSFileSpec& outFile, bool inLoading, const UString& inName, co
     return theResult;
 }
 
-// FUNCTION: EXE 0x54d195
 // Mutes the sound and music (keeping their volumes) and waits 642 ms before a save or load; before a save it applies
 // the map's vertex colours, before a host's non-quiet load it shows the splash form
 long MuteForSaveLoad(bool inLoading, bool inQuiet)
@@ -418,7 +392,6 @@ long MuteForSaveLoad(bool inLoading, bool inQuiet)
     return 0;
 }
 
-// FUNCTION: EXE 0x54d253
 // Restores the sound and music volumes after a save or load; after a save it shows the selection areas again, after
 // a host's non-quiet load it opens the main game form and waits for the next render
 long UnmuteAfterSaveLoad(bool inLoading, bool inQuiet)
@@ -434,7 +407,6 @@ long UnmuteAfterSaveLoad(bool inLoading, bool inQuiet)
     return 0;
 }
 
-// FUNCTION: EXE 0x54d2e3
 // Loads a saved game file into a game state, or for a reload into the world, while the saved-game flag is set;
 // sets the "save game invalid" message on failure
 long LoadIntoGame(FSFileSpec& inFile, bool inArg, EEGameState& ioState)
@@ -451,7 +423,6 @@ long LoadIntoGame(FSFileSpec& inFile, bool inArg, EEGameState& ioState)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54d34b
 // Writes the game into memory and then to the file (deleting the old text twin first) and reports "Game saved." or
 // an error message; returns the first error
 long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime)
@@ -488,7 +459,6 @@ long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54d4fd
 // Loads a saved game file into a game state; returns 9 when it failed
 long LoadGameState(EEGameState& ioState, FSFile& inFile)
 {
@@ -496,7 +466,6 @@ long LoadGameState(EEGameState& ioState, FSFile& inFile)
     return theLoader.Load(inFile) == true ? kErrorOK : 9;
 }
 
-// FUNCTION: EXE 0x54d521
 // Loads a saved game file into the global game state and, when it worked, restarts the world from it (scenario
 // editor and multiplayer reload)
 long ReloadSavedGame(FSFile& inFile)
@@ -515,7 +484,6 @@ long ReloadSavedGame(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54d5ac
 // Checks a save's players against the lobby (scenario slots for a multiplayer scenario, else every lobby player must
 // be a saved one and all saved humans present); lists the problems, returns whether there are none
 bool EECheckSavedGameOptions(EEGameOptions& inSaved, EEGameOptions& inCurrent, bool inFlag,
@@ -584,7 +552,6 @@ bool EECheckSavedGameOptions(EEGameOptions& inSaved, EEGameOptions& inCurrent, b
 extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaignProgress.cpp's declaration)
 static bool CheckSaveGameHeader(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, FSFile& inFile);
 
-// FUNCTION: EXE 0x54d946
 // Returns whether a file holds a save game this build can load; on failure sets the error message (the header
 // check's specific text, else the generic "save game invalid")
 bool EEValidateSaveGameFile(FSFile& inFile, UWideString& outErrorMessage)
@@ -616,7 +583,6 @@ bool EEValidateSaveGameFile(FSFile& inFile, UWideString& outErrorMessage)
 
 static long CountChunkTags(std::vector<long>& inTags, long inTag);
 
-// FUNCTION: EXE 0x54da7c
 // Checks a save header's version and chunk tags (each of 1..7, 10 and 11 once, no 0) and that every chunk's size is
 // readable and sane; sets outErrorMessage on failure (it wrote the global message,
 // which only worked because every caller passed it)
@@ -659,7 +625,6 @@ static bool CheckSaveGameHeader(EEPSaveGameHeader& inHeader, UWideString& outErr
     return theResult;
 }
 
-// FUNCTION: EXE 0x54dc54
 // Counts how many tags in a list equal a given tag
 static long CountChunkTags(std::vector<long>& inTags, long inTag)
 {
@@ -669,63 +634,3 @@ static long CountChunkTags(std::vector<long>& inTags, long inTag)
             theCount++;
     return theCount;
 }
-
-// TEMPLATE: EXE 0x54dc77
-// ?erase@?$vector@VFSFileSpec@@V?$allocator@VFSFileSpec@@@std@@@std@@QAE?AV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@2@V32@@Z
-// TEMPLATE: EXE 0x54dceb
-// ?push_back@?$vector@PAVFSPersistent@@V?$allocator@PAVFSPersistent@@@std@@@std@@QAEXABQAVFSPersistent@@@Z
-// TEMPLATE: EXE 0x54dd17
-// ?resize@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@QAEXI@Z
-// TEMPLATE: EXE 0x54e1f6
-// ?find@std@@YA?AV?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@1@V21@0ABVUWideString@@@Z
-// TEMPLATE: EXE 0x54e21f
-// ?copy@std@@YA?AV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@V21@00@Z
-// TEMPLATE: EXE 0x54e30c
-// ??4EESMMediaStrings@@QAEAAV0@ABV0@@Z
-// TEMPLATE: EXE 0x54e35c
-// ?push_back@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@QAEXABVUWideString@@@Z
-// TEMPLATE: EXE 0x54e388
-// ?clear@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@QAEXXZ
-// TEMPLATE: EXE 0x54e3c3
-// ?insert@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@QAE?AV?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@2@V32@ABVUWideString@@@Z
-// TEMPLATE: EXE 0x54e41d
-// ?erase@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@QAE?AV?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@2@V32@0@Z
-// TEMPLATE: EXE 0x54e488
-// ?insert@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@QAEXV?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@2@IABVUWideString@@@Z
-// TEMPLATE: EXE 0x54e764
-// ?_Ufill@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@IAEPAVUWideString@@PAV3@IABV3@@Z
-// TEMPLATE: EXE 0x54e7ac
-// ?copy@std@@YAPAVUWideString@@V?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@1@0PAV2@@Z
-// TEMPLATE: EXE 0x54e7d1
-// ?fill@std@@YAXV?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@1@0ABVUWideString@@@Z
-// TEMPLATE: EXE 0x54e7ef
-// ?copy_backward@std@@YA?AV?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@1@V21@00@Z
-// TEMPLATE: EXE 0x54e81c
-// ?_Construct@std@@YAXPAVUWideString@@ABV2@@Z
-
-// TEMPLATE: EXE 0x54dd6f
-// ?resize@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@QAEXIVFSChunk@@@Z
-// TEMPLATE: EXE 0x54de2c
-// ?erase@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@QAE?AV?$_Ptrit@VFSChunk@@HPAV1@AAV1@PAV1@AAV1@@2@V32@0@Z
-// TEMPLATE: EXE 0x54ded0
-// ?insert@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@QAEXV?$_Ptrit@VFSChunk@@HPAV1@AAV1@PAV1@AAV1@@2@IABVFSChunk@@@Z
-// TEMPLATE: EXE 0x54e1a8
-// ?_Ufill@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@IAEPAVFSChunk@@PAV3@IABV3@@Z
-// TEMPLATE: EXE 0x54e249
-// ?copy@std@@YAPAVFSChunk@@V?$_Ptrit@VFSChunk@@HPAV1@AAV1@PAV1@AAV1@@1@0PAV2@@Z
-// TEMPLATE: EXE 0x54e26e
-// ?_Ucopy@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@IAEPAVFSChunk@@V?$_Ptrit@VFSChunk@@HPAV1@AAV1@PAV1@AAV1@@2@0PAV3@@Z
-// TEMPLATE: EXE 0x54e2a4
-// ?fill@std@@YAXV?$_Ptrit@VFSChunk@@HPAV1@AAV1@PAV1@AAV1@@1@0ABVFSChunk@@@Z
-// TEMPLATE: EXE 0x54e2c2
-// ?copy_backward@std@@YA?AV?$_Ptrit@VFSChunk@@HPAV1@AAV1@PAV1@AAV1@@1@V21@00@Z
-// TEMPLATE: EXE 0x54e2ef
-// ?_Construct@std@@YAXPAVFSChunk@@ABV2@@Z
-// TEMPLATE: EXE 0x54e795
-// ??G?$_Ptrit@VUWideString@@HPAV1@AAV1@PAV1@AAV1@@std@@QBE?AV01@H@Z
-// TEMPLATE: EXE 0x54dd34
-// ?clear@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@QAEXXZ
-// TEMPLATE: EXE 0x54de97
-// ?_Tidy@?$vector@VFSChunk@@V?$allocator@VFSChunk@@@std@@@std@@IAEXXZ
-// TEMPLATE: EXE 0x54e1d9
-// ??_GFSChunk@@UAEPAXI@Z

@@ -20,16 +20,16 @@ class LLE_API UIRadioButton : public UIButton {
 public:
     UIRadioButton(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inIsPushButton,
-                  bool inIsChecked, bool inScaleBitmap);   // 0x1007bbff
+                  bool inIsChecked, bool inScaleBitmap);
     // the dtor (0x1005fc41) deleted the label and released the other state's bitmaps: the Rust button's release does
     virtual void Check();                   // slot 0x94
     virtual long CopyData();
     virtual long DrawPolygons();
     virtual long DrawTextA();
-    bool GetIsChecked() const;              // 0x1005fc81
-    UITextLabel* GetTextLabel() const;      // 0x100633db (ICF)
+    bool GetIsChecked() const;
+    UITextLabel* GetTextLabel() const;
     virtual bool GetTabable() const;        // 0x1005fc88: not a push button
-    virtual unsigned long GetType() const { return kControlTypeRadioButton; }  // 0x1005fc94
+    virtual unsigned long GetType() const { return kControlTypeRadioButton; }
     void SetDownCheckedBitmap(GEBitmap* inBitmap);
     void SetDownUncheckedBitmap(GEBitmap* inBitmap);
     virtual void SetLocation(const GE2DPoint& inLocation);
@@ -40,8 +40,8 @@ protected:
     virtual void ButtonUp();                // 0x1005fc98: the virtual Check, then UIButton's
     virtual long MouseLButtonDown();
     virtual long MouseLButtonUp();
-    virtual void TabbedTo() { UIButton::TabbedTo(); }     // 0x1005fcac
-    virtual void TabbedFrom() { UIButton::TabbedFrom(); } // 0x1005fcb1
+    virtual void TabbedTo() { UIButton::TabbedTo(); }
+    virtual void TabbedFrom() { UIButton::TabbedFrom(); }
     virtual void UnCheck();                 // slot 0x98
     // the original's members (+0x104 mOtherNormalBitmap, +0x108 mOtherPressedBitmap, +0x10c mTextLabel, +0x110
     // mIsChecked, +0x111 mHasText, +0x112 mIsPushButton, +0x113 mScaleBitmap; sizeof 0x114) and the private

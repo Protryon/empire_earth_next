@@ -15,7 +15,7 @@ class EEUnit;
 
 class EEContagionManager : public FSRestorable {
 public:
-    EEContagionManager();                   // 0xb6723
+    EEContagionManager();
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0xb6940
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0xb6abe
     virtual ~EEContagionManager();          // +0x10 0xb677a (??_G 0xb675e)
@@ -26,7 +26,7 @@ public:
 
     // 0xb6795: the new helper's id (the plague passes its target unit, the area effects 0)
     long CreateContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity, EEUnit* inTargetUnit);
-    bool DestroyContagionHelper(long inHelperID);                // 0xb67f9
+    bool DestroyContagionHelper(long inHelperID);
     // 0xb68c3: inCalamities[inIndex], 0 past the end
     EECalamity* GetCalamity(std::vector<EECalamity*>& inCalamities, unsigned long inIndex);
     EEContagionHelper* GetContagionHelper(long inHelperID);      // 0xb691d: 0 if none

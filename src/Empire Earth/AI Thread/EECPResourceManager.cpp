@@ -65,10 +65,6 @@
 #include "ee/EECPExperimentTimers.h"
 
 const UString EECPResourceManager::sData("EECPResourceManager-Data");
-// SYNTHETIC: EXE 0x48e702   (wrapper)
-// SYNTHETIC: EXE 0x48e70c   (ctor)
-// SYNTHETIC: EXE 0x48e71d   (registrar)
-// SYNTHETIC: EXE 0x48e729   (dtor)
 
 // The forests by the distance of their closest hull point from a tile (RefreshResources's sort; built without /Og like the
 // other units' sort predicates) (provisional name)
@@ -107,7 +103,6 @@ struct EECPRMUnitWithin : public EETileDistanceLess {
     float mDistance;
 };
 
-// FUNCTION: EXE 0x48e745
 // Orders two forests by the squared distance of their closest hull point from the center tile; false if
 // either forest is gone
 // Built without /Og (rule 4 evidence: memory-resident locals, `leave`); exact with the pragma, the hash-fitted
@@ -135,7 +130,6 @@ bool EECPRMForestDistanceLess::operator()(unsigned short inFirst, unsigned short
 }
 #pragma optimize("g", on)
 
-// FUNCTION: EXE 0x48e85b
 // Orders two units by the squared distance of their tiles from the center tile, nearer first
 // Built without /Og (rule 4 evidence: memory-resident locals, `leave`); exact with the pragma, the hash-fitted
 // local names and the undone-inline DistanceSquared below (r37_load; the r37_cp lane found the operator() shape)
@@ -151,7 +145,6 @@ bool EECPRMUnitDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit* i
 }
 #pragma optimize("g", on)
 
-// FUNCTION: EXE 0x48e8f1
 // Creates the resource manager of a civilization manager, with no needs, no wanted gatherers and no timers set
 EECPResourceManager::EECPResourceManager(EECPCivilizationManager* inManager)
     : mManager(inManager)
@@ -171,10 +164,6 @@ EECPResourceManager::EECPResourceManager(EECPCivilizationManager* inManager)
     this->mNextResourceCheckTime = 0;
 }
 
-// SYNTHETIC: EXE 0x48e9cc
-// (EECPResourceManager's scalar deleting destructor)
-
-// FUNCTION: EXE 0x48e9e8
 // Destroys the manager, releasing every gatherer, mine and fish it holds
 EECPResourceManager::~EECPResourceManager()
 {
@@ -196,7 +185,6 @@ EECPResourceManager::~EECPResourceManager()
     this->mFish.clear();
 }
 
-// FUNCTION: EXE 0x48eb29
 // Drops the units that are not idle, then sends each idle one to gold, else iron, else stone, else wood
 void EECPResourceManager::AssignIdleGatherers(std::deque<EEComplexUnit*>& ioUnits)
 {
@@ -236,7 +224,6 @@ void EECPResourceManager::AssignIdleGatherers(std::deque<EEComplexUnit*>& ioUnit
     }
 }
 
-// FUNCTION: EXE 0x48ec34
 // Drops the boats that are not idle, then sends each idle one to fish near its nearest dock
 void EECPResourceManager::AssignIdleBoats(std::deque<EEComplexUnit*>& ioUnits)
 {
@@ -258,7 +245,6 @@ void EECPResourceManager::AssignIdleBoats(std::deque<EEComplexUnit*>& ioUnits)
     }
 }
 
-// FUNCTION: EXE 0x48ecfd
 // Takes a transport from the combat personnel to ferry stranded gatherers to a resource; without one, requests a
 // transport when fewer than 4 exist and none is requested or in production
 void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEUnit* inResource)
@@ -298,7 +284,6 @@ void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEU
         theUnitManager->RequestUnits(theClass, 1, 0, 0);
 }
 
-// FUNCTION: EXE 0x48ee67
 // Adds a unit to a resource's gatherer list (referencing it) unless it is already there
 void EECPResourceManager::AddGatherer(EEComplexUnit* inUnit, long inResource)
 {
@@ -399,7 +384,6 @@ static void EECPRMShedCrowds(EECPResourceManager* inManager)
 }
 
 // NEAR: block order and register choice (the resource loop: the original tests 2, 3, then >3 and lays the bodies out in reverse)
-// FUNCTION: EXE 0x48eecf
 // Sends idle citizens and boats to food, wood, stone, gold and iron up to each resource's wanted gatherer
 // count, requesting fishing boats and ferries as needed; the rest go to AssignIdleGatherers/AssignIdleBoats
 // the next engine (docs/AI_RESEARCH.md §8.36, the owner: "the first thing I do is build a settlement"): the citizens the
@@ -752,7 +736,6 @@ void EECPResourceManager::AssignGatherers()
         this->AssignIdleBoats(theBoats);
 }
 
-// FUNCTION: EXE 0x48fca6
 // Removes a lost citizen from the gatherer lists and, unless it was garrisoned, adds a citizen's cost to the needs
 void EECPResourceManager::CitizenLost(EEComplexUnit* inUnit)
 {
@@ -763,7 +746,6 @@ void EECPResourceManager::CitizenLost(EEComplexUnit* inUnit)
         this->AddCosts(theNode, 1);
 }
 
-// FUNCTION: EXE 0x48fd15
 // Moves a unit to the idle gatherer list unless it has buildings queued
 void EECPResourceManager::AddIdleGatherer(EEComplexUnit* inUnit)
 {
@@ -832,7 +814,6 @@ static bool EECPRMPatchSite(EECPResourceManager* inManager, EEUnit* inPatch, EET
     return false;
 }
 
-// FUNCTION: EXE 0x48fd38
 // Orders a gatherer far from its drop site to build a settlement near its resource when allowed and no other
 // settlement or town center is queued or near; returns true if it did
 bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
@@ -933,7 +914,6 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x49007f
 // Removes a unit from every resource's gatherer list, dropping each reference
 void EECPResourceManager::RemoveGatherer(EEComplexUnit* inUnit)
 {
@@ -946,7 +926,6 @@ void EECPResourceManager::RemoveGatherer(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x490105
 // Lowers the need for a resource by an amount (no change for 0)
 void EECPResourceManager::Spend(long inResource, unsigned long inAmount)
 {
@@ -954,7 +933,6 @@ void EECPResourceManager::Spend(long inResource, unsigned long inAmount)
         this->mNeeds[inResource] -= inAmount;
 }
 
-// FUNCTION: EXE 0x490122
 // Moves every idle citizen with no buildings queued back to the idle gatherer list
 void EECPResourceManager::RequeueIdleGatherers()
 {
@@ -970,7 +948,6 @@ void EECPResourceManager::RequeueIdleGatherers()
     }
 }
 
-// FUNCTION: EXE 0x490195
 // Rebuilds the forest list (nearest to the town center first) and the lists of huntable animals (sorted by
 // distance) and fish from nature's units
 void EECPResourceManager::RefreshResources()
@@ -1014,7 +991,6 @@ void EECPResourceManager::RefreshResources()
         std::sort(this->mMines.begin(), this->mMines.end(), EECPRMUnitDistanceLess(theCenter));
 }
 
-// FUNCTION: EXE 0x490406
 // Adds a tech tree node's scaled cost, times a count, to the needs for food through iron
 void EECPResourceManager::AddCosts(EETechTreeNode* inNode, long inCount)
 {
@@ -1027,7 +1003,6 @@ void EECPResourceManager::AddCosts(EETechTreeNode* inNode, long inCount)
     }
 }
 
-// FUNCTION: EXE 0x490458
 // Collects up to a count of live, unthreatened animals on the town's continent within near or far range of a
 // town center
 void EECPResourceManager::FindMines(unsigned long inCount, bool inNear, std::vector<EEComplexUnit*>& outUnits)
@@ -1081,7 +1056,6 @@ void EECPResourceManager::FindMines(unsigned long inCount, bool inNear, std::vec
     }
 }
 
-// FUNCTION: EXE 0x490602
 // Returns the first forage bush of a resource center that is reachable, not crowded, unthreatened and in range
 // of the town center; bushes not visible are skipped
 EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EEComplexUnit* inUnit)
@@ -1172,7 +1146,6 @@ static bool EECPRMFishInDanger(EECPResourceManager* inManager, EEUnit* inFish)
 // the 30-second danger zones had already forgotten)
 static const long kNextFishWarshipRange = 12;
 
-// FUNCTION: EXE 0x490819
 // Returns the nearest fish to a unit that is not crowded, preferring fish more than 8 tiles from every own dock
 EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
 {
@@ -1208,7 +1181,6 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4909d7
 // Collects up to a count of the player's farms that are not yet built
 void EECPResourceManager::GetUnfinishedFarms(long inMax, std::vector<EEComplexUnit*>& outUnits)
 {
@@ -1229,7 +1201,6 @@ void EECPResourceManager::GetUnfinishedFarms(long inMax, std::vector<EEComplexUn
     }
 }
 
-// FUNCTION: EXE 0x490a63
 // Collects up to a count of the player's built farms that nobody works
 void EECPResourceManager::GetIdleFarms(long inMax, std::vector<EEComplexUnit*>& outUnits)
 {
@@ -1248,7 +1219,6 @@ void EECPResourceManager::GetIdleFarms(long inMax, std::vector<EEComplexUnit*>& 
     }
 }
 
-// FUNCTION: EXE 0x490af3
 // Returns a tree in the nearest reachable forest to the town center (single-tree forests only for fewer than 8
 // gatherers); NULL without a town center
 EEUnit* EECPResourceManager::FindForestTarget(long inCount, EEComplexUnit* inUnit)
@@ -1366,7 +1336,6 @@ EEUnit* EECPNextWoodTarget(EEComputerPlayer* inPlayer, long inCount, EEComplexUn
     return EECPRMNextWoodTarget(inPlayer->mCivilizationManager->mResourceManager, inCount, inUnit);
 }
 
-// FUNCTION: EXE 0x490cb5
 // Returns a resource unit of a type from the resource centers (forwards or backwards) that is visible, not
 // crowded, unthreatened, away from other players' areas and reachable from the unit
 // economy.forage_patches: FindResourceTarget's first pass takes only the mines within the claim range (the playtest AI
@@ -1466,7 +1435,6 @@ EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* 
     return theResult;
 }
 
-// FUNCTION: EXE 0x490ec6
 // Returns the player's dock nearest to a unit, or NULL
 EEUnit* EECPResourceManager::FindNearestDock(EEComplexUnit* inUnit)
 {
@@ -1480,7 +1448,6 @@ EEUnit* EECPResourceManager::FindNearestDock(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x490f72
 // Returns the player's settlement, town center or capitol nearest to a unit, or NULL
 EEComplexUnit* EECPResourceManager::FindNearestTownCenter(EEComplexUnit* inUnit)
 {
@@ -1497,7 +1464,6 @@ EEComplexUnit* EECPResourceManager::FindNearestTownCenter(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x491037
 // Raises the need for a resource by an amount (no change for 0)
 void EECPResourceManager::Earn(long inResource, unsigned long inAmount)
 {
@@ -1505,7 +1471,6 @@ void EECPResourceManager::Earn(long inResource, unsigned long inAmount)
         this->mNeeds[inResource] += inAmount;
 }
 
-// FUNCTION: EXE 0x491054
 // Reads the drop site classes, needs, wanted gatherers, flags and timers from the saved game; returns the first
 // read error
 long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1657,21 +1622,18 @@ void EECPOutOfWorldGatherers(std::vector<EEComplexUnit*>& ioUnits)
     }
 }
 
-// FUNCTION: EXE 0x4911ea
 // Returns whether the build manager has a settlement queued (the argument is unused)
 bool EECPResourceManager::IsSettlementQueued(long inArg)
 {
     return this->mManager->mBuildManager->IsQueued(0x2b);
 }
 
-// FUNCTION: EXE 0x4911fd
 // Rebuilds the forest, animal and fish lists
 void EECPResourceManager::Refresh()
 {
     this->RefreshResources();
 }
 
-// FUNCTION: EXE 0x491202
 // Moves swapped citizens between the gatherer lists, but tests the OLD unit's owner before adding the new one
 void EECPResourceManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
 {
@@ -1696,7 +1658,6 @@ void EECPResourceManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
 }
 
 
-// FUNCTION: EXE 0x4912be
 // Sends a unit on the same land mass to gather a resource (new or retargeted gather goal) and files it under
 // that resource
 void EECPResourceManager::SendToGather(EEComplexUnit* inUnit, EEUnit* inResource, EEUnit* inStorage)
@@ -1740,7 +1701,6 @@ void EECPResourceManager::SendToGather(EEComplexUnit* inUnit, EEUnit* inResource
     this->AddGatherer(inUnit, inResource->GetResourceType());
 }
 
-// FUNCTION: EXE 0x491430
 // Clears the per-resource flags and the wanted gatherer counts
 void EECPResourceManager::Reset()
 {
@@ -1750,7 +1710,6 @@ void EECPResourceManager::Reset()
     }
 }
 
-// FUNCTION: EXE 0x49144d
 // Refiles the citizens with a gather goal after loading and turns the saved relative timers absolute; returns 0
 long EECPResourceManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -1775,7 +1734,6 @@ long EECPResourceManager::Restore(unsigned long inMajorVersion, unsigned long in
     return 0;
 }
 
-// FUNCTION: EXE 0x49152a
 // Writes the drop site classes, needs, wanted gatherers, flags and timers (relative to now) to the saved game;
 // returns the first write error
 long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1863,7 +1821,6 @@ long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMin
 
 // NEAR: the 0x92230 assign shape is a guess from the decompiler outline; the original returns true on every
 // path (0x49195e)
-// FUNCTION: EXE 0x4916e6
 // Loads as many gatherers as fit on a transport and ships them to a resource to gather it; returns false
 // when the transport cannot unload there
 bool EECPResourceManager::FerryGatherers(std::vector<EEComplexUnit*>& inUnits, EEComplexUnit* inTransport, EEUnit* inResource)
@@ -1904,7 +1861,6 @@ bool EECPResourceManager::FerryGatherers(std::vector<EEComplexUnit*>& inUnits, E
 }
 
 // The container tile is copied by value before forwarding the coordinates (original 449-byte body).
-// FUNCTION: EXE 0x491965
 // Handles an idle transport: idles its loading citizens and unloads its cargo at the rendezvous, or re-queues a
 // detached transport's unload
 void EECPResourceManager::TransportIdle(EEComplexUnit* inUnit)
@@ -1950,7 +1906,6 @@ void EECPResourceManager::TransportIdle(EEComplexUnit* inUnit)
         }
     }
 }
-// FUNCTION: EXE 0x491b26
 // Removes a tech tree node's scaled cost, times a count, from the needs for food through iron
 void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
 {
@@ -2679,7 +2634,6 @@ static bool EECPRMSplitByDemand(EECPResourceManager* inManager)
     return theChanged;
 }
 
-// FUNCTION: EXE 0x491b78
 // Splits the gatherers over the resources by their needs, capped by the resource units available; returns true
 // if any wanted count changed
 bool EECPResourceManager::UpdateWantedGatherers()
@@ -3243,7 +3197,6 @@ static void EECPRMFleeRaids(EECPResourceManager* inManager)
         EE_CP_TRACE(thePlayer, "flee", "n=%lu zones=%lu", theFled, (unsigned long)theZones.size());
 }
 
-// FUNCTION: EXE 0x491d34
 // Periodically recomputes the wanted gatherers, reassigns gatherers and prunes depleted animals and fish;
 // initialises the drop site classes and timers on the first call
 void EECPResourceManager::Update(unsigned long inTime)
@@ -3367,57 +3320,3 @@ inline long EECPRMUnitDistanceLess::DistanceSquared(const EETileCoordinate& inTi
     theDY *= theDY;
     return theDX + theDY;
 }
-
-
-// The sort/find_if COMDATs (0x91f11..0x9350f; paired by build/scratch_r12-ai-3c/mtg.py, best effort)
-// TEMPLATE: EXE 0x491f11
-// TEMPLATE: EXE 0x491f24
-// TEMPLATE: EXE 0x492008
-// TEMPLATE: EXE 0x4920ec
-// TEMPLATE: EXE 0x4921d0
-// TEMPLATE: EXE 0x4921f7
-// TEMPLATE: EXE 0x492230
-// TEMPLATE: EXE 0x49225d
-// TEMPLATE: EXE 0x492290
-// TEMPLATE: EXE 0x492398
-// TEMPLATE: EXE 0x4923dc
-// TEMPLATE: EXE 0x49240f
-// TEMPLATE: EXE 0x492517
-// TEMPLATE: EXE 0x492559
-// TEMPLATE: EXE 0x49258c
-// TEMPLATE: EXE 0x492694
-// TEMPLATE: EXE 0x4926d6
-// TEMPLATE: EXE 0x492742
-// TEMPLATE: EXE 0x4927f6
-// TEMPLATE: EXE 0x49283a
-// TEMPLATE: EXE 0x492886
-// TEMPLATE: EXE 0x4929b6
-// TEMPLATE: EXE 0x4929f1
-// TEMPLATE: EXE 0x492aa2
-// TEMPLATE: EXE 0x492ae6
-// TEMPLATE: EXE 0x492b33
-// TEMPLATE: EXE 0x492c53
-// TEMPLATE: EXE 0x492c86
-// TEMPLATE: EXE 0x492d37
-// TEMPLATE: EXE 0x492d7b
-// TEMPLATE: EXE 0x492dc8
-// TEMPLATE: EXE 0x492ee8
-// TEMPLATE: EXE 0x492f46
-// TEMPLATE: EXE 0x492f79
-// TEMPLATE: EXE 0x492fd6
-// TEMPLATE: EXE 0x493009
-// TEMPLATE: EXE 0x493066
-// TEMPLATE: EXE 0x493099
-// TEMPLATE: EXE 0x49311c
-// TEMPLATE: EXE 0x49318e
-// TEMPLATE: EXE 0x493208
-// TEMPLATE: EXE 0x493278
-// TEMPLATE: EXE 0x4932f2
-// TEMPLATE: EXE 0x493362
-// TEMPLATE: EXE 0x4933b9
-// TEMPLATE: EXE 0x4933ff
-// TEMPLATE: EXE 0x49344e
-// TEMPLATE: EXE 0x493492
-// TEMPLATE: EXE 0x4934d6
-// TEMPLATE: EXE 0x4934fd
-// TEMPLATE: EXE 0x493502

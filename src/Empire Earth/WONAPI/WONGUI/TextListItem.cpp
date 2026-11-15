@@ -10,7 +10,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
-// FUNCTION: WON 0x6fa2c0
 // Sizes the item from its text and optional image, taking the list's font and text colour when unset
 void TextListItem::CalcDimensions(ListArea* inList)
 {
@@ -20,13 +19,11 @@ void TextListItem::CalcDimensions(ListArea* inList)
     ee_won_gui_text_item_size(this->mFont->GetStringWidth(this->mText),this->mFont->GetHeight(),i!=NULL,i?i->mWidth:0,
                               i?i->mHeight:0,false,&this->mWidth,&this->mHeight);
 }
-// FUNCTION: WON 0x006fa360
 // Orders two text items by their text, ignoring case
 int TextListItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
     return this->mText.CompareNoCase(static_cast<const TextListItem*>(inOther)->mText);
 }
-// FUNCTION: WON 0x6fa380
 // Paints the item's image and vertically centred text, with the selection background behind a
 // selected item
 void TextListItem::Paint(Graphics& inGraphics,ListArea* inList)
