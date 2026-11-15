@@ -1797,7 +1797,7 @@ EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY)
     ::gWorld.FlushQueuedPlacements();
     theType = theUnit->mUnitClass->mUnitType;
     if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary)
-        gCommunications->ProcessLocalUserInput(new EEMReplantFarms(theUnit->mUnitID), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReplantFarms, {theUnit->mUnitID}), kSlotNone);
     return theUnit;
 }
 

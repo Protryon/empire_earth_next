@@ -258,7 +258,7 @@ extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t 
     case EE_SCREENS_UH_OP_SEND_PLACE: {
         long theType = inA;
         gCommunications->ProcessLocalUserInput(
-            new EEMHackANewUnit(theType, GE2DPoint(ioPoint[0], ioPoint[1]), (unsigned char)inB), kSlotNone);
+            new EEMRecord(kMessageHackANewUnit, {theType, GE2DPoint(ioPoint[0], ioPoint[1]), (unsigned char)inB}), kSlotNone);
         return 0;
     }
     case EE_SCREENS_UH_OP_SEND_LOAD:

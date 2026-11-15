@@ -271,7 +271,7 @@ int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t 
     case EE_SCREENS_PT_OP_COMPLEX_FIELD:
         return (int64_t)(EEComplexUnit*)inPortrait->mUnit->mComplexUnit;
     case EE_SCREENS_PT_OP_REMOVE_TECHNOLOGY:
-        theMessage = new EEMRemoveTechnology(theUnit->GetUnitID(), (long)inB, true);
+        theMessage = new EEMRecord(kMessageRemoveTechnology, {theUnit->GetUnitID(), (long)inB, true, false});
         break;
     case EE_SCREENS_PT_OP_REMOVE_IMPROVEMENT:
         theMessage = new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), (long)inB});

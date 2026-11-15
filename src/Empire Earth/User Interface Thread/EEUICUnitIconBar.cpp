@@ -182,7 +182,7 @@ int64_t EEUICUnitIconBar::HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t
         theMessage = new EEMRecord(kMessageSelectUnit, {(long)inA});
         break;
     case EE_SCREENS_IB_OP_UNLOAD:
-        theMessage = new EEMImmediateCargoUnload((long)inA, (long)inB, false);
+        theMessage = new EEMRecord(kMessageImmediateCargoUnload, {(long)inA, (long)inB, false});
         break;
     case EE_SCREENS_IB_OP_SCRAMBLE:
         theMessage = new EEMRecord(kMessageScrambleAircraft, {(long)(int32_t)inB, (long)(inB >> 32), (long)inA});

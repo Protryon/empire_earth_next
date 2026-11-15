@@ -317,7 +317,7 @@ void EECPWallManager::BuildWall(U2DPoint<long>& inFrom, U2DPoint<long>& inTo, lo
     if (!(this->mPlayer->mActiveGroup->GetNumUnits() > 0))
         return;
     this->mBuildingPlannedWall = inBuildingPlannedWall;
-    EEMBuildWall* theMessage = new EEMBuildWall(theStart, theEnd, theTechnology, this->mPlayer->mPlayerID);
+    EEMRecord* theMessage = new EEMRecord(kMessageBuildWall, {theStart, theEnd, theTechnology, this->mPlayer->mPlayerID});
     theMessage->Execute();
     theMessage->Dereference();
     this->mPlayer->UnselectAllUnits();
@@ -432,7 +432,7 @@ void EECPWallManager::AddGates(EEComplexUnit* inUnit)
                     this->mGateTile = theSorted[theIndex];
                     theLocation.SetX((float)theSorted[theIndex].GetX());
                     theLocation.SetY((float)theSorted[theIndex].GetY());
-                    EEMBuildGate* theMessage = new EEMBuildGate(theLocation, theTechnology, theSide, this->GetPlayer()->GetPlayerID());
+                    EEMRecord* theMessage = new EEMRecord(kMessageBuildGate, {theLocation, theTechnology, theSide, this->GetPlayer()->GetPlayerID()});
                     theMessage->Execute();
                     theMessage->Dereference();
                 } else {
