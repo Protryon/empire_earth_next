@@ -839,8 +839,13 @@ int main(int argc, char** argv)
         sSeed = aStepSeed;
         // the world: the game's options and slots, the two options structs
         std::vector<Setup> aSetup;
+        // (the epochs, options 4 and 5, near the sixteenth now and then: its name is the details' exception)
         for (int o = 0; o < 16; o++)
-            if (R(2)) aSetup.push_back(Setup{0, 0, o, R(4) == 0 ? (intptr_t)R(1300) : (intptr_t)R(4)});
+            if (R(2)) {
+                intptr_t v = R(4) == 0 ? (intptr_t)R(1300) : (intptr_t)R(4);
+                if ((o == 4 || o == 5) && R(3) == 0) v = 13 + R(3);
+                aSetup.push_back(Setup{0, 0, o, v});
+            }
         for (int i = 0; i < 8; i++) {
             if (R(3) == 0) aSetup.push_back(Setup{2, i, 0, 0x7200 + (intptr_t)R(3)});
             static const unsigned kRange[6] = {6, 6, 17, 6, 2, 120};
