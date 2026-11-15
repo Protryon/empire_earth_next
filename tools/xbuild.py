@@ -728,7 +728,7 @@ WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # ServerOp.cpp and what it names) are set here
 WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   *[WON_SRC / "WONServer" / f for f in ("ServerOp.cpp", "ServerContext.cpp")],
-                                  *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp")],
+                                  *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp", "RegKey.cpp")],
                                   *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                                   WON_SRC / "WONMisc" / "HTTPEngine.cpp",
                                   WON_SRC / "WONAuth" / "AuthContext.cpp",

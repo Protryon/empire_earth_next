@@ -140,6 +140,8 @@ static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
     case EeWonCoreObject::RouteOp: return static_cast<RoutingOp*>(static_cast<AsyncOp*>(anObject))->mRust;
     case EeWonCoreObject::RouteConn:
         return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(anObject))->GetRouteObject();
+    case EeWonCoreObject::AuthCtx: return const_cast<EeWonAuthCtx*>(static_cast<AuthContext*>(anObject)->Core());
+    case EeWonCoreObject::HostOp: return static_cast<RustServerOp*>(static_cast<AsyncOp*>(anObject))->GetRustOp();
     }
     return NULL;
 }

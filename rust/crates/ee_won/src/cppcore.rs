@@ -69,6 +69,10 @@ pub enum EeWonCoreObject {
     RouteOp = 8,
     /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
     RouteConn = 9,
+    /// an `AuthContext*`'s [`EeWonAuthCtx`](crate::authobj::EeWonAuthCtx)
+    AuthCtx = 10,
+    /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
+    HostOp = 11,
 }
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -211,7 +215,7 @@ fn socket_op(o: *mut c_void) -> *const EeWonSocketOp {
     object_of(o, EeWonCoreObject::SocketOp) as *const EeWonSocketOp
 }
 
-fn ref_add(o: *mut c_void) {
+pub(crate) fn ref_add(o: *mut c_void) {
     if !o.is_null() {
         if let Some(h) = core().and_then(|c| c.ref_add) {
             // SAFETY: the table's contract: a live object
@@ -238,13 +242,13 @@ pub(crate) fn hold(o: *mut c_void) -> Hold {
     Hold(Some(HeldRef::new(o, c.and_then(|c| c.ref_add), c.and_then(|c| c.ref_release))))
 }
 impl Hold {
-    fn get(&self) -> *mut c_void {
+    pub(crate) fn get(&self) -> *mut c_void {
         self.0.as_ref().map_or(null_mut(), HeldRef::get)
     }
 }
 
 /// A C++ completion running `call` (null without a table).
-fn completion(call: impl Fn(*mut c_void) + Send + Sync + 'static) -> *mut c_void {
+pub(crate) fn completion(call: impl Fn(*mut c_void) + Send + Sync + 'static) -> *mut c_void {
     EeWonCompletion::make_with(core().and_then(|c| c.new_completion), call)
 }
 
@@ -279,16 +283,16 @@ pub(crate) unsafe extern "C" fn n_ref_add(o: *mut c_void) {
 pub(crate) unsafe extern "C" fn n_ref_release(o: *mut c_void) {
     ref_release(o)
 }
-unsafe extern "C" fn n_completion_call(c: *mut c_void, o: *mut c_void) {
+pub(crate) unsafe extern "C" fn n_completion_call(c: *mut c_void, o: *mut c_void) {
     if let Some(h) = core().and_then(|c| c.completion_call) {
         // SAFETY: the table's contract: a live completion and op
         unsafe { h(c, o) };
     }
 }
-unsafe extern "C" fn n_op_status(o: *mut c_void) -> c_long {
+pub(crate) unsafe extern "C" fn n_op_status(o: *mut c_void) -> c_long {
     op(o).map_or(WS_NONE, EeWonAsyncOp::status) as c_long
 }
-unsafe extern "C" fn n_op_killed(o: *mut c_void) -> bool {
+pub(crate) unsafe extern "C" fn n_op_killed(o: *mut c_void) -> bool {
     op(o).is_some_and(EeWonAsyncOp::killed)
 }
 unsafe extern "C" fn n_op_timeout(o: *mut c_void) -> u32 {
@@ -326,12 +330,12 @@ pub(crate) unsafe extern "C" fn n_op_kill(o: *mut c_void) {
         x.kill(true);
     }
 }
-unsafe extern "C" fn n_op_finish(o: *mut c_void, s: c_long) {
+pub(crate) unsafe extern "C" fn n_op_finish(o: *mut c_void, s: c_long) {
     if let Some(x) = op(o) {
         x.finish(s as Status);
     }
 }
-unsafe extern "C" fn n_op_force_finish(o: *mut c_void, s: c_long) {
+pub(crate) unsafe extern "C" fn n_op_force_finish(o: *mut c_void, s: c_long) {
     if let Some(x) = op(o) {
         x.force_finish(s as Status);
     }

@@ -8,6 +8,7 @@ pub mod admin;
 pub mod adminop;
 pub mod asyncop;
 pub mod auth;
+pub mod authcpp;
 pub mod authctx;
 pub mod authflow;
 pub mod authlogin;
