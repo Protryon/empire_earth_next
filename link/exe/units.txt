@@ -369,7 +369,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 2830d0 283b2e Empire Earth/Civilization Builder/EECivPowersManager.cpp
 283b2e 28befc Empire Earth/Random Map/EERandomMap.cpp
 28befc 28d82d Empire Earth/Campaign/EECampaign.cpp
-28d82d 28f0cb Empire Earth/Campaign/EECampaignEditorBehavior.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
 291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp

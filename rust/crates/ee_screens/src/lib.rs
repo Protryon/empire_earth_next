@@ -25,6 +25,8 @@
 //!   C++ host).
 //! - [`campaign_editor`]: the campaign editor's events whole (form 24: its events and its questions' answers over
 //!   the C++ host and the editor's C++ model).
+//! - [`campaign_model`]: the campaign editor's model whole (the original's `EECampaignEditorBehavior`) over the
+//!   edited campaign and the files.
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
 //! - [`civ_builder`]: the civilization builder's events whole (its form's and dialogs' control events, the form's
 //!   open and close events, over the C++ builder helpers).
@@ -118,6 +120,9 @@ mod camera_ffi;
 pub mod campaign_editor;
 #[cfg(not(test))]
 mod campaign_editor_ffi;
+pub mod campaign_model;
+#[cfg(not(test))]
+mod campaign_model_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;

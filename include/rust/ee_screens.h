@@ -256,6 +256,49 @@ constexpr static const uint32_t EE_SCREENS_CE_ASK_EDITOR = 3;
 
 constexpr static const uint32_t EE_SCREENS_CE_ASK_DELETE = 4;
 
+/// The host's calls (`EE_SCREENS_CEM_*`): the edited campaign's fields and files, the strings, the disk.
+constexpr static const uint32_t EE_SCREENS_CEM_STRING = 0;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SET_FIELD = 1;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SET_SCENARIOS = 2;
+
+constexpr static const uint32_t EE_SCREENS_CEM_LOAD = 3;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SAVE = 4;
+
+constexpr static const uint32_t EE_SCREENS_CEM_LIST = 5;
+
+constexpr static const uint32_t EE_SCREENS_CEM_DELETE = 6;
+
+constexpr static const uint32_t EE_SCREENS_CEM_RESET_BEGIN = 7;
+
+constexpr static const uint32_t EE_SCREENS_CEM_LIST_FILES = 8;
+
+constexpr static const uint32_t EE_SCREENS_CEM_BUILT_IN = 9;
+
+constexpr static const uint32_t EE_SCREENS_CEM_CHECK = 10;
+
+constexpr static const uint32_t EE_SCREENS_CEM_RESET_END = 11;
+
+/// The host's texts (`ee_screenscpp_ce_campaign_text`).
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_FIELD = 0;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_SCENARIOS = 1;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_KEPT = 2;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_LINES = 3;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_FILES = 4;
+
+constexpr static const uint32_t EE_SCREENS_CEM_TEXT_EXTENSION = 5;
+
+/// [`EE_SCREENS_CEM_LIST_FILES`]' and [`EE_SCREENS_CEM_TEXT_EXTENSION`]'s directories.
+constexpr static const uint32_t EE_SCREENS_CEM_CAMPAIGNS = 0;
+
+constexpr static const uint32_t EE_SCREENS_CEM_SCENARIOS = 1;
+
 /// The chat form's open and close events and its mouse press outside (`EECreateFormEvent`).
 constexpr static const uint32_t EE_SCREENS_CH_OPEN = 4609;
 
@@ -8486,6 +8529,30 @@ void ee_screens_camera_grab_reset(uint32_t form);
 
 /// The campaign editor's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_campaign_editor_event_for(unsigned long id);
+
+extern uint32_t ee_screenscpp_ce_campaign(uint32_t op,
+                                          uint32_t a,
+                                          const uint8_t *text,
+                                          size_t length);
+
+extern size_t ee_screenscpp_ce_campaign_text(uint32_t which,
+                                             uint32_t arg,
+                                             uint8_t *out,
+                                             size_t capacity);
+
+/// The model's ops for a caller without the events (the golden driver): `kind` 0 a call (`which` the op, `a` its
+/// argument), 1 a text (written to `out` up to `capacity`; its length), 2 a put; `usize::MAX` for an op it does
+/// not own.
+///
+/// # Safety
+/// `text` holds `length` bytes, `out` `capacity`.
+size_t ee_screens_campaign_model(uint32_t kind,
+                                 uint32_t which,
+                                 uint32_t a,
+                                 const uint8_t *text_in,
+                                 size_t length,
+                                 uint8_t *out,
+                                 size_t capacity);
 
 /// `EEUIECLEFormManager::AddEntry`.
 void ee_screens_chat_log_add(const EeScreensChatLogHead *head,
