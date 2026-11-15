@@ -203,11 +203,11 @@ void ChatCtrl::HandleAnnounceClientLocation(AnnounceClientLocationEvent* inEvent
     GUIString aFormat(GetEmptyGUIStringData());
     bool hasRoom=inEvent->mRoom.length()!=0;
     bool hasServer=inEvent->mServer.length()!=0;
-    if(initialClient->IsAnonymous()) aFormat=::ChatCtrl_ClientIsAnonymous_String;
-    else if(hasRoom && hasServer) aFormat=::ChatCtrl_ClientInGameAndChat_String;
-    else if(hasServer) aFormat=::ChatCtrl_ClientInChat_String;
-    else if(hasRoom) aFormat=::ChatCtrl_ClientInGame_String;
-    else aFormat=::ChatCtrl_ClientNotOnServer_String;
+    if(initialClient->IsAnonymous()) aFormat=LOBBY_STRING(ChatCtrl_ClientIsAnonymous_String);
+    else if(hasRoom && hasServer) aFormat=LOBBY_STRING(ChatCtrl_ClientInGameAndChat_String);
+    else if(hasServer) aFormat=LOBBY_STRING(ChatCtrl_ClientInChat_String);
+    else if(hasRoom) aFormat=LOBBY_STRING(ChatCtrl_ClientInGame_String);
+    else aFormat=LOBBY_STRING(ChatCtrl_ClientNotOnServer_String);
     this->AddFormattedText(aFormat,NULL,0,aLinks,3,true);
 }
 
@@ -219,12 +219,12 @@ void ChatCtrl::HandleAnnounceFriend(AnnounceFriendEvent* inEvent)
     LobbyFriend* aFriend=inEvent->mFriend.get();
     if(inEvent->IsAdd()) {
         SmartPtr<ChatLink> aLink=new ChatLink(aFriend,this->mChatOutput->mFont.get(),this->mUserColor);
-        this->AddLinkLine(::ChatCtrl_FriendJoined_String,aLink.get(),true);
+        this->AddLinkLine(LOBBY_STRING(ChatCtrl_FriendJoined_String),aLink.get(),true);
         return;
     }
     if(inEvent->IsDelete()) {
         SmartPtr<ChatLink> aLink=new ChatLink(aFriend,this->mChatOutput->mFont.get(),this->mUserColor);
-        this->AddLinkLine(::ChatCtrl_FriendLeft_String,aLink.get(),true);
+        this->AddLinkLine(LOBBY_STRING(ChatCtrl_FriendLeft_String),aLink.get(),true);
         return;
     }
     if(inEvent->mHandled || !this->IsRootVisible()) return;
@@ -237,12 +237,12 @@ void ChatCtrl::HandleAnnounceFriend(AnnounceFriendEvent* inEvent)
     if(hasLocation) aLocationLink=new ChatLink(aFriend,aLocation,aAddress,this->mChatOutput->mFont.get(),this->mUserColor);
     TextSegmentBase* aLinks[2]={aFriendLink.get(),aLocationLink.get()};
     GUIString aFormat(GetEmptyGUIStringData());
-    if(!hasLocation) aFormat=::ChatCtrl_FriendIsNotOnline_String;
+    if(!hasLocation) aFormat=LOBBY_STRING(ChatCtrl_FriendIsNotOnline_String);
     else if((aFriend->GetFlags()&1)!=0) {
-        if((aFriend->GetFlags()&2)!=0) aFormat=::ChatCtrl_FriendIsInGameStaging_String;
-        else aFormat=::ChatCtrl_FriendIsChatting_String;
-    } else if((aFriend->GetFlags()&2)!=0) aFormat=::ChatCtrl_FriendIsPlaying_String;
-    else aFormat=::ChatCtrl_FriendIsOn_String;
+        if((aFriend->GetFlags()&2)!=0) aFormat=LOBBY_STRING(ChatCtrl_FriendIsInGameStaging_String);
+        else aFormat=LOBBY_STRING(ChatCtrl_FriendIsChatting_String);
+    } else if((aFriend->GetFlags()&2)!=0) aFormat=LOBBY_STRING(ChatCtrl_FriendIsPlaying_String);
+    else aFormat=LOBBY_STRING(ChatCtrl_FriendIsOn_String);
     this->AddFormattedText(aFormat,NULL,0,aLinks,2,true);
 }
 
@@ -286,8 +286,8 @@ void ChatCtrl::HandleTextLinkActivated(TextLinkActivatedEvent* inEvent)
 void ChatCtrl::HandlePlayerTeamChanged(PlayerTeamChangedEvent* inEvent)
 {
     if(!this->IsTeamRoom()) return;
-    if(inEvent->IsAdd()) this->AddLinkLine(::ChatCtrl_TeamMemberJoined_String,this->MakeClientLink(inEvent->mClient.get()).get(),true);
-    else if(inEvent->IsDelete()) this->AddLinkLine(::ChatCtrl_TeamMemberLeft_String,this->MakeClientLink(inEvent->mClient.get()).get(),true);
+    if(inEvent->IsAdd()) this->AddLinkLine(LOBBY_STRING(ChatCtrl_TeamMemberJoined_String),this->MakeClientLink(inEvent->mClient.get()).get(),true);
+    else if(inEvent->IsDelete()) this->AddLinkLine(LOBBY_STRING(ChatCtrl_TeamMemberLeft_String),this->MakeClientLink(inEvent->mClient.get()).get(),true);
 }
 // The original calls the event's flag tests again at each use (no cached results).
 // FUNCTION: WON 0x007b85b0
@@ -313,19 +313,19 @@ void ChatCtrl::HandleRecvChat(RecvChatEvent* inEvent)
     }
     const GUIString* aText=&inEvent->mText;
     GUIString aFormat(GetEmptyGUIStringData());
-    if(inEvent->IsEmote()) aFormat=crossRoom?::ChatCtrl_TeamEmote_String : ::ChatCtrl_Emote_String;
+    if(inEvent->IsEmote()) aFormat=crossRoom?LOBBY_STRING(ChatCtrl_TeamEmote_String) : LOBBY_STRING(ChatCtrl_Emote_String);
     else if(inEvent->IsWhisper() && inEvent->mTarget.get()!=NULL) {
         if(inEvent->mSender->GetClientId()==this->mClientId)
-            if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=::ChatCtrl_YouWhisperToYourself_String;
-            else aFormat=::ChatCtrl_YouWhisper_String;
-        else aFormat=::ChatCtrl_SomeoneWhispersToYou_String;
+            if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=LOBBY_STRING(ChatCtrl_YouWhisperToYourself_String);
+            else aFormat=LOBBY_STRING(ChatCtrl_YouWhisper_String);
+        else aFormat=LOBBY_STRING(ChatCtrl_SomeoneWhispersToYou_String);
     } else if(inEvent->IsWarning() && inEvent->mTarget.get()!=NULL) {
         if(inEvent->mSender->GetClientId()==this->mClientId)
-            if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=::ChatCtrl_YouWarnYourself_String;
-            else aFormat=::ChatCtrl_YouWarnSomeone_String;
-        else if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=::ChatCtrl_SomeoneWarnsYou_String;
-        else aFormat=::ChatCtrl_SomeoneWarnsSomeone_String;
-    } else aFormat=crossRoom?::ChatCtrl_TeamChat_String : ::ChatCtrl_NormalChat_String;
+            if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=LOBBY_STRING(ChatCtrl_YouWarnYourself_String);
+            else aFormat=LOBBY_STRING(ChatCtrl_YouWarnSomeone_String);
+        else if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=LOBBY_STRING(ChatCtrl_SomeoneWarnsYou_String);
+        else aFormat=LOBBY_STRING(ChatCtrl_SomeoneWarnsSomeone_String);
+    } else aFormat=crossRoom?LOBBY_STRING(ChatCtrl_TeamChat_String) : LOBBY_STRING(ChatCtrl_NormalChat_String);
     if(aFormat.length()!=0) this->AddFormattedText(aFormat,&aText,1,aLinks,count,true);
 }
 // FUNCTION: WON 0x007b88f0
@@ -337,7 +337,7 @@ void ChatCtrl::HandleJoinedRoom(JoinedRoomEvent* inEvent)
     this->mClientId=inEvent->mClientId;
     this->mRoomName=inEvent->mGroupName;
     this->mSendButton->SetEnabled(true);
-    this->AddTextLine(::ChatCtrl_EnteringRoom_String,inEvent->mGroupName,true);
+    this->AddTextLine(LOBBY_STRING(ChatCtrl_EnteringRoom_String),inEvent->mGroupName,true);
     this->mChatOutput->LineBreak(10);
 }
 // FUNCTION: WON 0x007b89a0
@@ -350,8 +350,8 @@ void ChatCtrl::HandleLeftRoom(LeftRoomEvent* inEvent)
     this->mSendButton->SetEnabled(false);
     if(!inEvent->mFlag)
         return;
-    if(inEvent->mForced) this->AddTextLine(::ChatCtrl_Disconnected_String,this->mRoomName,true);
-    else this->AddTextLine(::ChatCtrl_LeavingRoom_String,this->mRoomName,true);
+    if(inEvent->mForced) this->AddTextLine(LOBBY_STRING(ChatCtrl_Disconnected_String),this->mRoomName,true);
+    else this->AddTextLine(LOBBY_STRING(ChatCtrl_LeavingRoom_String),this->mRoomName,true);
     this->mChatOutput->LineBreak(10);
 }
 // FUNCTION: WON 0x007b8bd0
@@ -403,7 +403,7 @@ void ChatCtrl::HandleAlert(AlertEvent* inEvent)
     const GUIString* aText=&aTextRef;
     switch(inEvent->GetValue()) {
     case 0:
-        aFormat=::ChatCtrl_ServerAlert_String;
+        aFormat=LOBBY_STRING(ChatCtrl_ServerAlert_String);
         break;
     case 1: {
         unsigned long value=0;
@@ -414,14 +414,14 @@ void ChatCtrl::HandleAlert(AlertEvent* inEvent)
             GUIString number(text);
             const GUIString* arg=&number;
             this->AddFormattedText(aFormat,&arg,1,NULL,0,true);
-            aFormat=::ChatCtrl_AlertComment_String;
+            aFormat=LOBBY_STRING(ChatCtrl_AlertComment_String);
         }
         break;
     }
     default:
-        aFormat=::ChatCtrl_ServerShutdownAborted_String;
+        aFormat=LOBBY_STRING(ChatCtrl_ServerShutdownAborted_String);
         this->AddFormattedText(aFormat,NULL,0,NULL,0,true);
-        aFormat=::ChatCtrl_AlertComment_String;
+        aFormat=LOBBY_STRING(ChatCtrl_AlertComment_String);
         break;
     }
     if(!aTextRef.empty()) this->AddFormattedText(aFormat,&aText,1,NULL,0,true);
@@ -475,15 +475,15 @@ void ChatCtrl::HandleGroupJoinAttempt(GroupJoinAttemptEvent* inEvent)
 {
     if((this->mRoomSpecFlags&inEvent->mKind)!=inEvent->mKind || this->IsTeamRoom()) return;
     SmartPtr<ChatLink> aClient=this->MakeClientLink(inEvent->mClient.get());
-    SmartPtr<ChatLink> aAccept=new ChatLink(1,inEvent->mClient.get(),::ChatCtrl_Accept_String,
+    SmartPtr<ChatLink> aAccept=new ChatLink(1,inEvent->mClient.get(),LOBBY_STRING(ChatCtrl_Accept_String),
         this->mChatOutput->mLinkFont.get(),this->mMessageColor);
-    SmartPtr<ChatLink> aDecline=new ChatLink(2,inEvent->mClient.get(),::ChatCtrl_Reject_String,
+    SmartPtr<ChatLink> aDecline=new ChatLink(2,inEvent->mClient.get(),LOBBY_STRING(ChatCtrl_Reject_String),
         this->mChatOutput->mLinkFont.get(),this->mMessageColor);
     aAccept->mPrevious=aDecline.get();
     aDecline->mNext=aAccept.get();
     const GUIString* aText=&inEvent->mComment;
     TextSegmentBase* aLinks[3]={aClient.get(),aAccept.get(),aDecline.get()};
-    GUIString aFormat(inEvent->mComment.length()==0?::ChatCtrl_SomeoneAsksToJoin_String : ::ChatCtrl_SomeoneAsksToJoinExpl_String);
+    GUIString aFormat(inEvent->mComment.length()==0?LOBBY_STRING(ChatCtrl_SomeoneAsksToJoin_String) : LOBBY_STRING(ChatCtrl_SomeoneAsksToJoinExpl_String));
     this->AddFormattedText(aFormat,&aText,1,aLinks,3,true);
 }
 
@@ -494,13 +494,13 @@ void ChatCtrl::ShowParserError(ChatCommandParser* inParser)
 {
     GUIString error(GetEmptyGUIStringData());
     switch(inParser->GetError()) {
-    case 3:error=LobbyFormatString(::RoutingLogic_ClientNotFound_String,inParser->GetTargetName());break;
-    case 4:error=LobbyFormatString(::RoutingLogic_ClientAmbiguous_String,inParser->GetTargetName());break;
-    case 1:error=::RoutingLogic_InvalidCommand_String;break;
-    case 2:error=::RoutingLogic_RequireName_String;break;
-    case 7:error=::RoutingLogic_BadTimeSpec_String;break;
+    case 3:error=LobbyFormatString(LOBBY_STRING(RoutingLogic_ClientNotFound_String),inParser->GetTargetName());break;
+    case 4:error=LobbyFormatString(LOBBY_STRING(RoutingLogic_ClientAmbiguous_String),inParser->GetTargetName());break;
+    case 1:error=LOBBY_STRING(RoutingLogic_InvalidCommand_String);break;
+    case 2:error=LOBBY_STRING(RoutingLogic_RequireName_String);break;
+    case 7:error=LOBBY_STRING(RoutingLogic_BadTimeSpec_String);break;
     }
-    if(error.length()==0) error=::RoutingLogic_Error_String;
+    if(error.length()==0) error=LOBBY_STRING(RoutingLogic_Error_String);
     this->mChatOutput->AddSegment(error,this->mErrorColor,true);
 }
 // The number string dies before the comment is printed; the format string lives across both
@@ -517,15 +517,15 @@ void ChatCtrl::HandleClientModerated(ClientModeratedEvent* inEvent)
         switch(inEvent->mModerationKind) {
         case 0:format=::LobbyResource_GetString((LobbyResourceId)(LobbySplitDuration(inEvent->mDuration,true,&value)+0x64));break;
         case 2:format=::LobbyResource_GetString((LobbyResourceId)(LobbySplitDuration(inEvent->mDuration,true,&value)+0x74));break;
-        case 3:format=::ChatCtrl_YouWereUnmuted_String;break;
-        default:format=::ChatCtrl_YouWereKicked_String;break;
+        case 3:format=LOBBY_STRING(ChatCtrl_YouWereUnmuted_String);break;
+        default:format=LOBBY_STRING(ChatCtrl_YouWereKicked_String);break;
         }
     } else {
         switch(inEvent->mModerationKind) {
         case 0:format=::LobbyResource_GetString((LobbyResourceId)(LobbySplitDuration(inEvent->mDuration,true,&value)+0x6c));break;
         case 2:format=::LobbyResource_GetString((LobbyResourceId)(LobbySplitDuration(inEvent->mDuration,true,&value)+0x7c));break;
-        case 3:format=::ChatCtrl_SomeoneWasUnmuted_String;break;
-        default:format=::ChatCtrl_SomeoneWasKicked_String;break;
+        case 3:format=LOBBY_STRING(ChatCtrl_SomeoneWasUnmuted_String);break;
+        default:format=LOBBY_STRING(ChatCtrl_SomeoneWasKicked_String);break;
         }
     }
     if(value==0) {
@@ -541,7 +541,7 @@ void ChatCtrl::HandleClientModerated(ClientModeratedEvent* inEvent)
     const GUIString& aComment=inEvent->mComment;
     if(aComment.length()!=0) {
         const GUIString* text=&aComment;
-        format=::ChatCtrl_ModeratorComment_String;
+        format=LOBBY_STRING(ChatCtrl_ModeratorComment_String);
         this->AddFormattedText(format,&text,1,NULL,0,true);
     }
 }
@@ -593,7 +593,7 @@ void ChatCtrl::SendInput()
                     names.append(client->GetName());
                 }
             }
-            this->AddTextLine(::ChatCtrl_TeamMembers_String,names,true);
+            this->AddTextLine(LOBBY_STRING(ChatCtrl_TeamMembers_String),names,true);
         }
         return;
     }
@@ -605,7 +605,7 @@ void ChatCtrl::SendInput()
                 if(names.length()!=0) names.append(GUIString(", "));
                 names.append(LobbyGetIgnoredNameAt(i));
             }
-            this->AddTextLine(::ChatCtrl_IgnoreList_String,names,true);
+            this->AddTextLine(LOBBY_STRING(ChatCtrl_IgnoreList_String),names,true);
         }
         return;
     }

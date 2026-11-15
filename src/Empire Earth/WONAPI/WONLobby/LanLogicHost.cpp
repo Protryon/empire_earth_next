@@ -206,7 +206,7 @@ bool LanLogic::RefreshCertificate()
     AuthContext* auth = GetLobbyAuthContext();
     if (!auth) return false;
     if (!LobbyIsCDKeyValid()) {
-        LobbyMessageBox(::AccountLogic_InvalidCDKeyTitle_String, ::AccountLogic_InvalidCDKeyDetails_String);
+        LobbyMessageBox(LOBBY_STRING(AccountLogic_InvalidCDKeyTitle_String), LOBBY_STRING(AccountLogic_InvalidCDKeyDetails_String));
         return false;
     }
     if (!auth->IsExpired(120)) {
@@ -216,7 +216,7 @@ bool LanLogic::RefreshCertificate()
     auth->SetUserName(std::wstring(gEmptyWideString));
     auth->SetPassword(std::wstring(gEmptyWideString));
     SmartPtr<GetCertOp> op = new GetCertOp(auth);
-    LobbyRunOpWithStatus(op.get(), ::LobbyContainer_LoginTitle_String, ::LobbyContainer_LoginDetails_String, 1, 0);
+    LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_LoginTitle_String), LOBBY_STRING(LobbyContainer_LoginDetails_String), 1, 0);
     if (op->GetStatus() == WS_Success) {
         auth->SetDoAutoRefresh(true);
         return true;
@@ -285,7 +285,7 @@ void LanLogic::AddDirectConnect()
     anAddress.SetWithDefaultPortNoDNS(this->mDirectConnectDialog->GetAddress(), aDefaultPort);
     if (!anAddress.IsValid()) {
         SmartPtr<DNSTestOp> anOp = new DNSTestOp(this->mDirectConnectDialog->GetAddress());
-        LobbyRunOpWithStatus(anOp.get(), ::LANLogic_CheckingAddressTitle_String, ::LANLogic_CheckingAddressDetails_String, 1, 0);
+        LobbyRunOpWithStatus(anOp.get(), LOBBY_STRING(LANLogic_CheckingAddressTitle_String), LOBBY_STRING(LANLogic_CheckingAddressDetails_String), 1, 0);
         if (!anOp->Succeeded())
             return;
         anAddress = anOp->GetHostAddr();
@@ -434,7 +434,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::ClientIsIgnored: return cl->IsIgnored();
     case EeWonLobbyOp::LanWhisperReceived: {
         if (LobbyGetChatSoundEffects())
-            LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
+            LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_WhisperRecv_Sound).get());
         ChatCommandParser* aParser = LobbyGetChatCommandParser();
         if (aParser != NULL)
             aParser->SetInput(cl->GetName());
@@ -500,7 +500,7 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
     case EeWonLobbyOp::ParserCommand: return parser->GetCommand();
     case EeWonLobbyOp::ParserTextTake: Take(inB, LanUtf16(parser->GetText())); return 0;
     case EeWonLobbyOp::LanChatCommandError:
-        LobbySendEventTo(new ChatCommandErrorEvent(::RoutingLogic_InvalidCommand_String), static_cast<Component*>(inA));
+        LobbySendEventTo(new ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_InvalidCommand_String)), static_cast<Component*>(inA));
         return 0;
     case EeWonLobbyOp::LanClearLanGames:
         l->mLanGames->Clear();
@@ -541,12 +541,12 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         l->mListenSocket = new LobbyLanSocket;
         WONStatus aStatus = l->mListenSocket->Fn2B0D90(LobbyGetLobbyPort(), 0);
         if (aStatus != 0) {
-            LobbyDoErrorDialog(::LANLogic_SocketBindError_String, aStatus);
+            LobbyDoErrorDialog(LOBBY_STRING(LANLogic_SocketBindError_String), aStatus);
             return 0;
         }
         aStatus = l->mListenSocket->Listen(1000);
         if (aStatus != 0) {
-            LobbyDoErrorDialog(::LANLogic_SocketListenError_String, aStatus);
+            LobbyDoErrorDialog(LOBBY_STRING(LANLogic_SocketListenError_String), aStatus);
             return 0;
         }
         l->mListenSocket->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleAccept, l));
@@ -638,14 +638,14 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
             connect = new PeerAuthOp(g->GetAddress(), auth.get(), AUTH_TYPE_PERSISTENT, l->mServerSocket.get(), true);
         } else
             connect = new ConnectOp(g->GetAddress(), l->mServerSocket.get());
-        LobbyRunOpWithStatus(connect.get(), ::LANLogic_ConnectToGameTitle_String, ::LANLogic_ConnectToGameDetails_String, 1, 0);
+        LobbyRunOpWithStatus(connect.get(), LOBBY_STRING(LANLogic_ConnectToGameTitle_String), LOBBY_STRING(LANLogic_ConnectToGameDetails_String), 1, 0);
         return connect->GetStatus() == WS_Success;
     }
     case EeWonLobbyOp::LanNameTake: Take(inB, LanUtf16(LobbyGetLanName())); return 0;
     case EeWonLobbyOp::LanJoinPasswordTake: Take(inB, LanUtf16(l->mJoinPassword)); return 0;
     case EeWonLobbyOp::LanRecvReplyTake: {
         SmartPtr<RecvMsgOp> reply = new RecvMsgOp(l->mServerSocket.get());
-        LobbyRunOpWithStatus(reply.get(), ::LANLogic_RegisterTitle_String, ::LANLogic_RegisterDetails_String, 1, 0);
+        LobbyRunOpWithStatus(reply.get(), LOBBY_STRING(LANLogic_RegisterTitle_String), LOBBY_STRING(LANLogic_RegisterDetails_String), 1, 0);
         if (reply->GetStatus() != WS_Success) return -1;
         const ByteBuffer* aMsg = reply->GetMsg().get();
         if (aMsg == NULL) return 0;

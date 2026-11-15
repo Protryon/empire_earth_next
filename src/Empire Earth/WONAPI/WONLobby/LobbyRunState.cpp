@@ -7,6 +7,7 @@
 #include <set>
 #include <vector>
 #include "lle/LowLevelEngine.h"
+#include "rust/ee_won.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
@@ -57,8 +58,8 @@ void LobbySuspend()
 {
     if(gLobbyData.get()==NULL) return;
     gLobbyData->mSuspended=true;
-    ::LobbyGlobal_LobbyMusic_Sound->Stop();
-    ::LobbyGlobal_SierraLogon_Sound->Stop();
+    LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Stop();
+    LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop();
     if(LobbyGetNumPingsToDo()>0) {
         LobbyKillPings(1);
         LobbyBroadcastLobbyEvent(100059,true);
@@ -71,7 +72,7 @@ void LobbyResume()
 {
     if(gLobbyData.get()==NULL) return;
     gLobbyData->mSuspended=false;
-    if(LobbyGetLobbyMusic()) ::LobbyGlobal_LobbyMusic_Sound->Resume();
+    if(LobbyGetLobbyMusic()) LOBBY_SOUND(LobbyGlobal_LobbyMusic_Sound)->Resume();
     LobbyNetResume();
 }
 }
