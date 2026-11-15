@@ -3680,7 +3680,7 @@ extern "C" uint64_t ee_units_uu_host_world(int32_t inWhich, uint64_t inA, uint64
     }
     case 7: {   // EEClearUnderBuilding's unit
         EEUnitClass* theClass = theUnit->mUnitClass;
-        if (dynamic_cast<EEUCAmbient*>(theClass) == NULL || theClass->mUnitType == kUnitTypePathPoint || !theClass->mIsDeletable)
+        if (EEUnitClassOfKind<EE_CLASS_KIND_AMBIENT>(theClass) == NULL || theClass->mUnitType == kUnitTypePathPoint || !theClass->mIsDeletable)
             return 0;
         if (theUnit->mResourceAmount != 0)
             theUnit->mResourceAmount = 0;

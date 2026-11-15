@@ -144,15 +144,11 @@ dde43 dde94 Empire Earth/Formations/EEFShallowWedge.cpp
 dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
-ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
-ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
 f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
 f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
-f9871 f9b6d Empire Earth/Graphics Thread/EEE3DSmokeGenerator.cpp
 f9b6d fb088 Empire Earth/Graphics Thread/EEE3DSnow.cpp
 fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
-101fce 10251d Empire Earth/Graphics Thread/EEEDamagedEffect.cpp
 10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
 10428c 1050fb Empire Earth/Graphics Thread/EEEffect2D.cpp
 1050fb 1054ec Empire Earth/Graphics Thread/EEEffect3D.cpp
