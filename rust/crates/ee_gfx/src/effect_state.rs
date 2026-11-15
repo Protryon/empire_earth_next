@@ -271,6 +271,8 @@ pub struct EeGfxEffectRecord {
     pub glow: crate::effect_glow::EeGfxEffectGlow,
     /// the farm's (`effect_farm.rs`)
     pub farm: crate::effect_farm::EeGfxEffectFarm,
+    /// the earthquake's (`effect_quake.rs`)
+    pub quake: crate::effect_quake::EeGfxEffectQuake,
 }
 
 /// The identity (`GETransformation()`).
@@ -320,6 +322,7 @@ impl EeGfxEffectRecord {
             marching: crate::effect_icons::EeGfxEffectMarching::default(),
             glow: crate::effect_glow::EeGfxEffectGlow::default(),
             farm: crate::effect_farm::EeGfxEffectFarm::default(),
+            quake: crate::effect_quake::EeGfxEffectQuake::default(),
         }
     }
 

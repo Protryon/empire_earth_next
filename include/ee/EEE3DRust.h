@@ -12,8 +12,9 @@
 // 0xee1b4..0xee5c0), 0x3b the multi-effect (EEE3DMultiEffect, 0xf4247..0xf43c7), 0x34 the energy wall
 // (EEE3DEnergyWall, 0xed606..0xee1b4), 0x35 the damage vent (EEE3DDamageVent, 0xea9e2..0xebbba), 2 the icon
 // (EEE3DIcon, 0xf2046..0xf2d93), 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600), 0x40 the tracer beam
-// (EEE3DTracerBeam, 0xfc382..0xfd330), 0x20 the volcano (EEE3DVolcano, 0xfe553..0x101c34) and 0x29 the farm
-// (EEE3DFarm, 0xee5c0..0xf1327), all deleted.
+// (EEE3DTracerBeam, 0xfc382..0xfd330), 0x20 the volcano (EEE3DVolcano, 0xfe553..0x101c34), 0x29 the farm
+// (EEE3DFarm, 0xee5c0..0xf1327), 0x1a the earthquake (EEE3DEarthquake, 0xec6e4..0xed606) and the smoke generators
+// 0x2b, 0x2c (the damage smoke) and 0x1e (the destruction smoke) (EEE3DSmokeGenerator, 0xf9871..0xf9b6d), all deleted.
 // Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -31,7 +32,7 @@ public:
     EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     // a shot on inTo from inFrom's weapon point (the tracers, the shells); the tracer beam from inFrom to inTo
     EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind);
-    // from one point to another (the linear projectile)
+    // from one point to another (the linear projectile, the earthquake)
     EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind);
     // along a line (the multi-effect)
     EEE3DRust(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind);

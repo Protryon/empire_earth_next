@@ -6,7 +6,8 @@
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
 // EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp, EEE3DDamageVent.cpp,
-// EEE3DIcon.cpp, EEE3DGoal.cpp, EEE3DTracerBeam.cpp, EEE3DVolcano.cpp and EEE3DFarm.cpp (effect_farm.rs).
+// EEE3DIcon.cpp, EEE3DGoal.cpp, EEE3DTracerBeam.cpp, EEE3DVolcano.cpp, EEE3DFarm.cpp (effect_farm.rs) and
+// EEE3DEarthquake.cpp (effect_quake.rs) and EEE3DSmokeGenerator.cpp (effect_smoke.rs).
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -121,6 +122,9 @@ struct Ask {
     void* mArg;               // a constructor's unit (Create), point (CreateAt) or line (CreateLine)
     EETagPointList* mVentFrom;   // the damage vent's tag point lists, read once a step by VentLists
     EETagPointList* mVentTo;
+    EETagPointList* mSmokeTags;  // the damage smoke's tag points, read once a step by SmokeUnit for SmokeTagPoint
+    unsigned long mSmokeFrame;
+    GETransformation mSmokeLocation;
     static EEE3DRust* E(void* inAsk) { return static_cast<Ask*>(inAsk)->mEffect; }
     static EeGe3DPoint UnitPosition(void* inAsk)
     {
@@ -735,6 +739,57 @@ struct Ask {
     {
         E(inAsk)->mUnit->mComplexUnit->SetScaledModel(static_cast<GEModel*>(inModel));
     }
+    // the smoke generators' (EEE3DSmokeGenerator::Step, 0xf9a1b): the unit's place and command; the damage smoke's
+    // (0xea75c) whole unit: its health and its tag points of kind 0 at its frame in its scaled location
+    static EeGfxSmokeUnit SmokeUnit(void* inAsk)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        EEE3DRust* theEffect = theAsk->mEffect;
+        EeGfxSmokeUnit theFacts = {};
+        if (theEffect->mKind == 0x2c) {
+            EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
+            theAsk->mSmokeLocation = theUnit->mPhysicalModel.GetLocation();
+            theAsk->mSmokeTags = theEffect->mUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 0);
+            theAsk->mSmokeFrame = theUnit->mPhysicalModel.GetFrame();
+            // Scale only a list that exists (a model without type-0 tag points has none).
+            if (theAsk->mSmokeTags)
+                EETagPointList::Scale(theAsk->mSmokeLocation, theUnit->mPhysicalModel.GetScale());
+            const GETransformation& theUnitLocation = theUnit->mPhysicalModel.GetLocation();
+            theFacts.has_unit = true;
+            theFacts.position = EeGe3DPoint{theUnitLocation.GetX(), theUnitLocation.GetY(), theUnitLocation.GetZ()};
+            theFacts.command = theUnit->mCommand ? (int32_t)theUnit->mCommand->mType : 0;
+            theFacts.hit_points = (int32_t)theEffect->mUnit->mHitPoints;
+            theFacts.max_hit_points = (int32_t)theEffect->mUnit->mStats->mMaxHitPoints;
+            theFacts.has_tag_points = theAsk->mSmokeTags != NULL;
+            theFacts.tag_point_count = theAsk->mSmokeTags ? (uint32_t)theAsk->mSmokeTags->mPoints.size() : 0;
+        } else if (theEffect->mUnit) {
+            GE3DPoint theLocation;
+            theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
+            theFacts.has_unit = true;
+            theFacts.position = EeGe3DPoint{theLocation.mX, theLocation.mY, theLocation.mZ};
+            theFacts.command = (int32_t)theEffect->mUnit->mComplexUnit->GetCommandType();
+        }
+        return theFacts;
+    }
+    static EeGe3DPoint SmokeTagPoint(void* inAsk, uint32_t inIndex)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        GE3DPoint thePoint;
+        theAsk->mSmokeTags->mPoints[inIndex]->GetPoint(theAsk->mSmokeFrame, theAsk->mSmokeLocation, thePoint);
+        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
+    }
+    static int32_t SmokePlace(void* inAsk, const EeGe3DPoint* inPoint)
+    {
+        GE3DPoint thePoint(inPoint->x, inPoint->y, inPoint->z);
+        return (int32_t)gEffectManager->CreatePlacedEffect(thePoint, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
+    }
+    // the earthquake's (EEE3DEarthquake, 0xec6e4..0xed606): the ground under a point
+    static EeGe3DPoint GroundPoint(void*, const EeGe3DPoint* inPoint)
+    {
+        GE3DPoint theGround(inPoint->x, inPoint->y, inPoint->z);
+        gWorld.mMap->GetGroundPoint(theGround, theGround);
+        return EeGe3DPoint{theGround.mX, theGround.mY, theGround.mZ};
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -821,7 +876,8 @@ EEE3DRust::EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEff
     this->Call(EeGfxEffect3DOp::Create);
 }
 
-// the linear projectile (0x25): from inFrom to inTo (EEE3DLinearProjectile, 0xf2dd6)
+// the linear projectile (0x25): from inFrom to inTo (EEE3DLinearProjectile, 0xf2dd6); the earthquake (0x1a): a crack
+// from inFrom towards inTo (EEE3DEarthquake, 0xec727)
 EEE3DRust::EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(0, inGraphicEffect, inKind)
 {
@@ -865,6 +921,9 @@ EEE3DRust::~EEE3DRust()
         if (theFarm.crops_copy)
             static_cast<GEModel*>(theFarm.crops_copy)->Dereference();
     }
+    // the earthquake's model (EEE3DEarthquake's destructor, 0xec88f: not null-checked there)
+    if (this->mKind == 0x1a && this->mRecord->quake.model)
+        static_cast<GEModel*>(this->mRecord->quake.model)->Dereference();
 }
 
 // the facts of an effect's graphic effect (inEffect), unit (inUnit) and the tick the Rust effects read (EEE3DRust's and
@@ -937,7 +996,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::TracerEnds, Ask::TracerImpact, Ask::TracerHit, Ask::TracerSavedTarget,
                                  Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel, Ask::FarmUnit,
                                  Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant, Ask::FarmLoops,
-                                 Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity, Ask::SetScaledModel};
+                                 Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity, Ask::SetScaledModel,
+                                 Ask::GroundPoint, Ask::SmokeUnit, Ask::SmokeTagPoint, Ask::SmokePlace};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);

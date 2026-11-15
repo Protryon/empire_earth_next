@@ -72,6 +72,9 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_FIRE = 5;
 
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_MUZZLE_BLAST = 20;
 
+/// `kEffect3DEarthquake`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_EARTHQUAKE = 26;
+
 /// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
 
@@ -1161,6 +1164,25 @@ struct EeGfxEffectFarm {
   bool draw_shown;
 };
 
+/// The crack's state.
+struct EeGfxEffectQuake {
+  /// `mModel` ("earthquake model"), referenced
+  EeGfxModel model;
+  /// `mDistance`: the front's distance from the start (saved)
+  float distance;
+  /// `mSpeed`: the length over the duration
+  float speed;
+  /// `mLength` (saved)
+  float length;
+  /// `mSegmentCount`: the length rounded up (saved)
+  uint32_t segment_count;
+  /// `mHoldTime` (saved; 15000 once fully grown)
+  float hold_time;
+  /// `mGrowing`, `mClosing` (saved)
+  bool growing;
+  bool closing;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -1230,6 +1252,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectGlow glow;
   /// the farm's (`effect_farm.rs`)
   EeGfxEffectFarm farm;
+  /// the earthquake's (`effect_quake.rs`)
+  EeGfxEffectQuake quake;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1619,6 +1643,20 @@ struct EeGfxFarmTerrain {
   float (*mesh_z)(void *context, float x, float y);
 };
 
+/// What a smoke generator's tick reads of its unit (`smoke_unit`).
+struct EeGfxSmokeUnit {
+  bool has_unit;
+  /// the unit's physical model's position
+  EeGe3DPoint position;
+  /// the damage smoke's: its command's `mType` (0 without one); the others': `GetCommandType()`
+  int32_t command;
+  /// the damage smoke's: the unit's hit points and its stats' maximum, its tag points of kind 0
+  int32_t hit_points;
+  int32_t max_hit_points;
+  bool has_tag_points;
+  uint32_t tag_point_count;
+};
+
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
@@ -1770,6 +1808,14 @@ struct EeGfxEffect3DHost {
   float (*farm_opacity)(void *context, float opacity);
   /// `SetScaledModel(model)` of the farm unit
   void (*set_scaled_model)(void *context, EeGfxModel model);
+  /// the point on the ground under `point` (`gWorld.mMap->GetGroundPoint`; the earthquake's)
+  EeGe3DPoint (*ground_point)(void *context, const EeGe3DPoint *point);
+  /// a smoke generator's unit (the damage smoke's tag points of kind 0 read for the step's `smoke_tag_point`)
+  EeGfxSmokeUnit (*smoke_unit)(void *context);
+  /// the damage smoke's tag point `index` at its unit's frame in its scaled location (after `smoke_unit`)
+  EeGe3DPoint (*smoke_tag_point)(void *context, uint32_t index);
+  /// the linked effect 1 placed at `point`; the placement's result
+  int32_t (*smoke_place)(void *context, const EeGe3DPoint *point);
 };
 
 /// One vertex of a built mesh: `set` names the values a builder wrote.

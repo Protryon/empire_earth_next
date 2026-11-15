@@ -27,7 +27,9 @@ use crate::effect_orbit::{
     load_orbit, orbit, save_orbit, EeGfxAnimation, EeGfxOrbital, EE_GFX_EFFECT_KIND_DISEASE,
     EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE, EE_GFX_EFFECT_KIND_VIRUS,
 };
+use crate::effect_quake::{quake, quake_file, EE_GFX_EFFECT_KIND_EARTHQUAKE};
 use crate::effect_shot::{is_shot, load_shot, save_shot, shot};
+use crate::effect_smoke::{is_smoke, smoke, EeGfxSmokeUnit};
 use crate::effect_state::{
     identity, load_aged, save_aged, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EffectFile,
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_SCREEN_FLASH, EE_GFX_EFFECT_KIND_TELEPORT,
@@ -286,6 +288,14 @@ pub struct EeGfxEffect3DHost {
     pub farm_opacity: extern "C" fn(context: *mut c_void, opacity: f32) -> f32,
     /// `SetScaledModel(model)` of the farm unit
     pub set_scaled_model: extern "C" fn(context: *mut c_void, model: EeGfxModel),
+    /// the point on the ground under `point` (`gWorld.mMap->GetGroundPoint`; the earthquake's)
+    pub ground_point: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint) -> Ge3DPoint,
+    /// a smoke generator's unit (the damage smoke's tag points of kind 0 read for the step's `smoke_tag_point`)
+    pub smoke_unit: extern "C" fn(context: *mut c_void) -> EeGfxSmokeUnit,
+    /// the damage smoke's tag point `index` at its unit's frame in its scaled location (after `smoke_unit`)
+    pub smoke_tag_point: extern "C" fn(context: *mut c_void, index: u32) -> Ge3DPoint,
+    /// the linked effect 1 placed at `point`; the placement's result
+    pub smoke_place: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint) -> i32,
 }
 
 /// The world as the effects ask it.
@@ -456,6 +466,18 @@ pub trait Effect3DHost {
         opacity
     }
     fn set_scaled_model(&mut self, _model: EeGfxModel) {}
+    fn ground_point(&mut self, point: &Ge3DPoint) -> Ge3DPoint {
+        *point
+    }
+    fn smoke_unit(&mut self) -> EeGfxSmokeUnit {
+        EeGfxSmokeUnit::default()
+    }
+    fn smoke_tag_point(&mut self, _index: u32) -> Ge3DPoint {
+        Ge3DPoint::default()
+    }
+    fn smoke_place(&mut self, _point: &Ge3DPoint) -> i32 {
+        0
+    }
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -665,6 +687,18 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn set_scaled_model(&mut self, model: EeGfxModel) {
         (self.set_scaled_model)(self.context, model)
     }
+    fn ground_point(&mut self, point: &Ge3DPoint) -> Ge3DPoint {
+        (self.ground_point)(self.context, point)
+    }
+    fn smoke_unit(&mut self) -> EeGfxSmokeUnit {
+        (self.smoke_unit)(self.context)
+    }
+    fn smoke_tag_point(&mut self, index: u32) -> Ge3DPoint {
+        (self.smoke_tag_point)(self.context, index)
+    }
+    fn smoke_place(&mut self, point: &Ge3DPoint) -> i32 {
+        (self.smoke_place)(self.context, point)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -700,6 +734,8 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_TRACER_BEAM => unsafe { tracer(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_VOLCANO => unsafe { volcano(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_FARM => unsafe { farm_effect(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_EARTHQUAKE => unsafe { quake(op, r, g, h, x) },
+        k if is_smoke(k) => unsafe { smoke(op, r, g, h) },
         _ => 0,
     }
 }
@@ -813,6 +849,16 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
         EE_GFX_EFFECT_KIND_VOLCANO => volcano_file(load, r, f, h),
         // the base's result is ignored
         EE_GFX_EFFECT_KIND_FARM => farm_file(load, r, f, h),
+        // the base's result is ignored
+        EE_GFX_EFFECT_KIND_EARTHQUAKE => quake_file(load, r, f, h),
+        // the base's result is ignored
+        k if is_smoke(k) => {
+            if load {
+                crate::effect_state::load_smoke(r, f)
+            } else {
+                crate::effect_state::save_smoke(r, f)
+            }
+        }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();
