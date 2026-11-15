@@ -764,17 +764,17 @@ WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
-# rust/crates/ee_won/src/golden_userstatus.txt, recorded over the C++ class); its units (won_ops_test's and the op's)
-WON_TESTS["won_userstatus_test"] = [*WON_TESTS["won_ops_test"], WON_SRC / "WONRouting" / "RoutingGetUserStatusOp.cpp"]
+# rust/crates/ee_won/src/golden_userstatus.txt, recorded over the C++ class); its units are won_ops_test's (the op
+# is header-only since net round 26)
+WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # RustServerOp's host calls that need no C++ object (the clock, the CRT's random numbers, an address, the op's file,
 # the files it measures, the web proxy file) through the op's own call path (golden:
 # rust/crates/ee_won/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units (won_ops_test's,
 # ServerOp.cpp and what it names) are set here
 WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   *[WON_SRC / "WONServer" / f for f in ("ServerOp.cpp", "ServerContext.cpp")],
-                                  *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp")],
+                                  *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp", "RegKey.cpp")],
                                   *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
-                                  WON_SRC / "WONMisc" / "HTTPEngine.cpp",
                                   WON_SRC / "WONAuth" / "AuthContext.cpp",
                                   *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
@@ -803,6 +803,11 @@ WON_TESTS["won_hostsock_test"] = WON_TESTS["won_serverop_test"]
 # HostCall, AsyncOp.cpp and AsyncOpWithTracker.cpp before they moved into Rust in net round 24); the same units as
 # won_serverop_test
 WON_TESTS["won_opcore_test"] = WON_TESTS["won_serverop_test"]
+# HTTPSession and HTTPConnection over real sockets on 127.0.0.1 with a server stand-in: a get on a new connection,
+# the socket reused, a new one after the server closed, a kill of queued gets (golden:
+# rust/crates/ee_won/src/golden_httpsession.txt, recorded over HTTPEngine.cpp before its hooks moved into Rust in
+# net round 26: httpcpp.rs); the same units as won_serverop_test
+WON_TESTS["won_httpsession_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

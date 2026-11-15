@@ -24855,3 +24855,90 @@ are GEBitmap.cpp, GEModel.cpp, GERasterizer.cpp, GETexture.cpp and GEValues.cpp.
 - **What only the game exercises**: the texts, fonts and windows exist only in a running game (EE-SIM draws no UI);
   materials are made by every model load (the store gate covers them). The tour is the texts' and windows' gate.
 - **Gates on the tree merged with `rust`** (c80a1b00, local `rust`): `build.py --sim` and `--test-profile windowed-software` 0/0 (878/879 inputs); sim oracle seeds 2-7 identical; captures at seeds 2-3: oracle 179 and late 180 digests equal (4 without a golden each), effects 6 equal; store gate PASS (25,140 lines, before the merge); Rust gate PASS (3,876 tests; after a clippy and rustfmt fix to smallobj.rs, 26af197f, rerun with the relink and oracle seeds 2-3). Per commit: build 0/0 and oracle seeds 2-3 identical for each, the Rust gate after the first (its one failure, `ee_gx`'s `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`, a timing test under load, passed alone), the effects capture after the fold. Harness: the tour `RESULT PASS tour` (83.6% lit, render checks ok); the legacy tour `STOP <windowed session complete> reached`, F3 input check ok; the orders game `ORDERS PASS` (gather, repair, repair-queued, move) with the edge scroll check failing as it does on this machine (0.041); the LAN game `RESULT PASS lan-game`. Against round 15's merged tour (same seed): the settings tabs and single player equal; the main menu and closed settings 168 pixels (the animated corner); the random map setup 598 pixels, all in a 42 x 40 box that is the game's mouse pointer at another position; the game views differ run to run as before; the HUD by eye as before (the orders game's captures: the resource bar's texts, the age label, the mini map).
+
+## R6: WON's Internet code, round 26 (the routing classes, AuthContext, CDKey and the HTTP engine onto the core)
+
+Branch `rust-won-net26`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 25.
+Round 25's one C++ core table made per-class hook tables cheap to delete; this round moved the remaining classes'
+hooks onto it and made the classes header-only.
+
+- **The measure first** (`build/wn26/measure.py`, round 25's): ServerOp.cpp's RustServerOp host (396), the routing
+  classes (RoutingConnection 557 with its 14 hooks and 40 request helpers, RoutingOp 282, SmartRoutingConnection
+  173, RoutingGetUserStatusOp 85, RoutingDetectFirewallOp 50), AuthContext 546 with CDKey 215, HTTPEngine 260,
+  IPAddr 254, WONCommon's utilities. ServerOp.cpp stays: eleven test drivers define RustServerOp's constructor,
+  destructor and hooks as stand-ins (won_routeops_test, won_servconn_test, ...), so its members cannot go inline
+  without rewriting those drivers. IPAddr stays: the class is in ee/EEWonNet.h, which 322 game units include (its
+  forwarders inline there would put ee_won.h in all of them).
+- **Routing (routecpp.rs).** RoutingConnection's hooks are answered on the Rust objects: an op's on its
+  `EeWonAsyncOp`, its type and `HandleReply` on its `EeWonRouteOp` (a new object kind of the core), the server
+  connection's hooks on its `EeWonServerConn`. The C++ is asked only for a new `RoutingOp` (a
+  `RoutingDetectFirewallOp` for its type) and the two virtuals a derived connection overrides
+  (`RoutingOpCompleteHook`, `GetUnsolicitedDerivedOp`: the drivers override the first and set
+  `mAllDerivedOpsAreUnsolicited`). The 40 request helpers are one C ABI call, `ee_won_routeconn_request(conn, kind,
+  values)`: the values in the helper's parameter order, a plan per kind in Rust (the op type, each value's member,
+  the members set besides: a ban by client id sets `BY_WON_ID` 0, by CD key `IS_CDKEY` 1; `SetClientFlags` cuts its
+  mask to 16 bits; an alert to nobody sends nothing). The Rust routing op knows its connection (`EeWonRouteOp`'s
+  second field, borrowed: the C++ op holds the reference), so `SendRequest`'s base (the message after the
+  connection's length field, queued as a `SendMsgOp`, the op added to the list) and `CheckLeaveGroup`'s leave are
+  Rust's. The smart connection's chat input sends its request from Rust (`ee_won_smart_handle_input`; the action's
+  UTF-32 units become UTF-16 as `WideAppendUtf16LE` made them).
+- **A clash only a driver showed**: the header's request builder was first called `RouteRequest`, a name
+  won_routemsg_test's glue already used in `WONAPI` (it is `RoutingRequestValues` now). Build every driver that
+  includes a header before committing a new name in it.
+- **AuthContext and CDKey (authcpp.rs, WONAuthContext.h).** The flow's hooks (`AuthContextFlow`) are Rust's: the
+  refresh timer's and the certificate op's `ParamCompletion`s are `EeWonCompletion`s holding the context (for their
+  life, and for a call as the by-value parameters did). The certificate op is made by a maker AuthContext.cpp hands
+  to `ee_won_authctx_new_core`, not by the core table: the core is AsyncOp.cpp, linked by drivers that do not link
+  ServerOp.cpp, and a `new GetCertOp` there left them with an unresolved symbol. The classes moved from
+  ee/EEWonNet.h (forward declarations now) into ee/wonapi/WONAuthContext.h, included at the end of WONRouting.h, so
+  their forwarders can call ee_won without the game's 322 EEWonNet.h users including it; every unit using them
+  reaches WONRouting.h already but two game units reading the user's name (`EEUIEWonNetArena*Events.cpp`: one
+  include each). AuthContext.cpp keeps what needs the platform layer or the WON directory (Init, the exe's hash
+  file, the CD key's registry and file storage); the op base's drivers link RegKey.cpp for the latter.
+- **cbindgen**: a parameter `Option<Alias>` where the alias is a function pointer type made the header splitter
+  fail with "cannot name the header item `template<typename T = void>`" (cbindgen emitted an `Option` template);
+  write the function type in the parameter.
+- **HTTP engine (httpcpp.rs).** HTTPEngineHooks are Rust's: the locks on the C++ object's platform mutex (a core
+  object kind returning an `HTTPConnection`'s or `HTTPSession`'s `CriticalSection` mutex by `dynamic_cast`), the get
+  op's members on its `EeWonHostOp`, the connection's completion an `EeWonCompletion` holding it, the clock
+  `SystemTime` seconds. The C++ is asked only for a new `HTTPConnection`. The forwarders taking a `RustServerOp*`
+  are defined after that class in WONRouting.h.
+- **PerfTimer (perftimer.rs)**: the globals and the nesting rule in Rust on the platform counter; WONPerfTimer.h
+  forwards.
+- **Goldens.** Routing: `golden_routeops.txt` gained a case (a create op killed before its join status: the status
+  leaves the group it made), recorded over the unmodified units in a worktree at cf70ed3c (`build/wn26/orig`), three
+  runs the same; the rest of the golden unchanged. HTTP: a new driver, `won_httpsession_test` (a session over real
+  sockets on 127.0.0.1 with a server stand-in on the test's thread, interleaving its waits with the core's pumps:
+  a get on a new connection, the socket reused, a new one after the server closed, a 404 with no body left waiting,
+  two queued gets killed), recorded over the unmodified HTTPEngine.cpp, five runs the same, 36 lines. Auth: the
+  existing goldens over AuthContext.cpp (`golden_authhost.txt`, `golden_authsession.txt`, `golden_opcore.txt`).
+- **Mutations.** Routing (8, three drivers): join flags swapped, the by-WON flag lost, no AddOp, the chat's CD key
+  ban naming the client, a derived op never recognized, a cut read ignored are caught; the create's leave was not
+  until the new case (then 195 lines fail); the helper's local hold across the run is not observable (the queue
+  holds the op). Auth (4): the refresh timer without the caller's reference (a crash) and the certificate callback swapped are
+  caught; the call's by-value hold on the context is not observable (the completion holds it for its life), and
+  the certificate op's peer data lost is not caught: only a successful certificate reaches it, which needs an auth
+  server (gone with WON) or a stand-in signing certificates, which no driver has. HTTP (5): the close flag kept, the receive-only mode lost, the connection's callback skipped and the completion handed back without its reference (a crash) are caught; the socket handed back unconnected is not (no case asks for the socket of a get whose socket closed while it was idle).
+- **Behaviour.** None on defined paths. A null object where the C++ dereferenced one gets the defaults (a routing op
+  without a connection sends nothing instead of crashing).
+- **Reach.** Only the Internet lobby reaches the routing connection, the auth context's flow and the HTTP engine
+  (the WON servers are gone); the LAN game reaches the core and, through its lobby, `CDKey` and `AuthContext`'s
+  constructor. PerfTimer: the WON GUI's config loading.
+- **Net C++**: f43dbfaf (routing) +359/-1,041, 89f3a126 (AuthContext, CDKey) +390/-875, 60255070 (HTTP engine)
+  +39/-277, 24d945fe (PerfTimer) +15/-142: src+include +803/-2,335, net -1,532. Units deleted: RoutingConnection,
+  RoutingGetUserStatusOp, RoutingDetectFirewallOp, CDKey, AuthContextKeys, AuthOneTimeData, PeerAuthClientAPI,
+  HTTPEngine, PerfTimer (9).
+
+### Gates
+
+| Gate | per commit | Merged with rust (9667badc, rust 3114725d) |
+|---|---|---|
+| `build.py -j 3 --sim` | each commit 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | each commit seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | f43dbfaf: clippy failed (type complexity, chunks), fixed before the commit; then PASS but ee_fs's `golden_spec_replays` once under load (passes alone) | PASS |
+| `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
+| `xbuild.py wontest` | the programs linking the changed units, each commit: exit 0 | all 123 programs exit 0 |
+| `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=3434 joiner=3430` |
+
+The merge of rust needed nothing: no conflict; `rust_build.py header` current; `rust_includes.py` added `rust/ee_won.h` to
+WONAuthContext.h (it had it only through WONRouting.h).
