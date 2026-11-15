@@ -1726,8 +1726,7 @@ void EEGraphicsShutdown(bool inShutdown)
 // SYNTHETIC: EXE 0x544278
 // (the scalar deleting destructor, emitted with the vtable; )
 
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEMiniMap.h"
 
 class GELODPolygon;
@@ -1749,10 +1748,9 @@ void EEReleaseGamePools(bool inShutdown)
 }
 
 // FUNCTION: EXE 0x5442e0
-// Releases the attack target, tile unit list and doppelganger pools
+// Releases the tile unit list and doppelganger pools (the attack target pool went with the attack sub groups, stage 5)
 void EEReleaseUnitPools()
 {
-    EECPAttackSubGroup::ReleaseTargetPool();
     EETile::ReleaseUnitListPool();
     gDoppelgangerManager.Release();
 }

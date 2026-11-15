@@ -9,9 +9,6 @@
 struct EEPUnitSwap;                         // (ee/EEPhysics.h)
 class EECPCombatManager;                    // ee/EECPCombatManager.h
 class EECPCivilizationManager;              // ee/EECPCivilizationManager.h
-class EECPPlayerInteractionManager;         // ee/EECPPlayerInteractionManager.h
-class EECPDiplomacyManager;                 // ee/EECPDiplomacyManager.h
-class EECPExplorationManager;               // ee/EECPExplorationManager.h
 class EECPResourceCenter;                   // ee/EECPCivilizationManager.h
 class EEAIFOUnitSelectionScreener;          // ee/EECPUnitSelector.h
 class EEAIFOUnitsToKillScoringBase;         // ee/EEAIFOUnitsToKillScoringBase.h
@@ -194,12 +191,7 @@ public:
     EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
     EECPCivilizationManager* GetCivilizationManager() const { return this->mCivilizationManager; }
     EECPCivilizationManager* mCivilizationManager;   // +0xbc4 (EECPUnitSelector 0x97a34: its +0x3c build manager) (provisional name)
-    EECPDiplomacyManager* GetDiplomacyManager() const { return this->mDiplomacyManager; }
-    EECPDiplomacyManager* mDiplomacyManager;   // +0xbc8 (new 8: Init 0x2f1c8; deleted in the dtor) (provisional name)
-    EECPExplorationManager* GetExplorationManager() const { return this->mExplorationManager; }
-    EECPExplorationManager* mExplorationManager;   // +0xbcc (new 0x30: Init; Load calls its +0x08) (provisional name)
-    EECPPlayerInteractionManager* GetInteractionManager() const { return this->mInteractionManager; }
-    EECPPlayerInteractionManager* mInteractionManager;   // +0xbd0 (new 0x2c; EECPCombatManager 0x472f39 calls SendChat on it) (provisional name)
+    // (+0xbc8..+0xbd0: the diplomacy, exploration and player interaction managers, deleted in stage 5)
     unsigned long mLBD4;   // (unsigned: Load)
     unsigned long GetDifficulty() const { return this->mDifficulty; }
     unsigned long mDifficulty;                       // +0xbd8 0 or 2 (GetResearchFrequencyModifier; CheckBuildingCounts picks +0xe14/+0xe24/+0xe1c by it) (provisional name; unsigned: Load)

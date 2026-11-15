@@ -65,8 +65,7 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEPathManager.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
@@ -87,10 +86,6 @@
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackCommander.h"
-#include "ee/EECPAttackSubGroupUnit.h"
-#include "ee/EECPASGUProphetCalamityAnalyzerBase.h"
-#include "ee/EECPASGUProphet.h"
 
 // Existing cdecl helper defined in EEWheel.cpp; original 0x23cd32 fills a real GE2DPoint.
 bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint);
@@ -2828,14 +2823,7 @@ void EEComplexUnit::DropUnsuitedGoals(unsigned long inIndex)
 void EEComplexUnit::FleeAfterCalamity(long inArg)
 {
     if (this->mPlayer->mComputerPlayer != NULL) {
-        EECPAttackSubGroup* theGroup = this->mPlayer->mComputerPlayer->mCombatManager->mAttackCommander->FindHolder(this);
-        if (theGroup != NULL) {
-            EECPASGUProphet* theProphet = dynamic_cast<EECPASGUProphet*>(theGroup->FindUnit(this));
-            if (theProphet != NULL) {
-                theProphet->MoveAwayFromCast();
-                return;
-            }
-        }
+        // (the original's AI prophet in an attack sub group stepped away from the cast; stage 5 deleted the groups)
         this->StartAction(kActionIdle);
     } else {
         if ((unsigned char)inArg != 0)

@@ -38,7 +38,6 @@
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackCommander.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGBuildRepair.h"

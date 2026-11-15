@@ -45,12 +45,7 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEArtificialIntelligence.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAGTask.h"
 #include "ee/EECPUnitRequirement.h"
-#include "ee/EECPCombatStrategy.h"
-#include "ee/EECPUnitSelector.h"
-#include "ee/EECPPersonnel.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPResourceManager.h"
@@ -58,7 +53,6 @@
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
-#include "ee/EEAIFOSubGroupFilter.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
@@ -770,7 +764,7 @@ void EECPUnitManager::DropObsoleteRequests(long inEpoch)
             long theID = gUnitClassTable[theClass] != NULL ? gUnitClassTable[theClass]->mTechnology : 100000;
             if (theTree->Get(theID)->mObsoleteEpoch < inEpoch) {
                 it = theRequests.erase(it, it + 1);
-                this->mPlayer->mCombatManager->mPersonnel->ReleaseOfType(theClass, theCount);
+                (void)theCount;   // (the original's personnel released that many requested units)
             } else
                 ++it;
         }

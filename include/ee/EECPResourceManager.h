@@ -24,7 +24,6 @@ public:
     // the gatherer queues (provisional names)
     void AssignIdleGatherers(std::deque<EEComplexUnit*>& ioUnits);  // 0x8eb29 (ret 4)
     void AssignIdleBoats(std::deque<EEComplexUnit*>& ioUnits);  // 0x8ec34 (ret 4)
-    void RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEUnit* inResource);  // 0x8ecfd (ret 8): a transport for inUnits
     void AddGatherer(EEComplexUnit* inUnit, long inResource);   // 0x8ee67 (ret 8): referenced, once per queue
     void AssignGatherers();                 // 0x8eecf (Update's main pass, every 10 s)
     void CitizenLost(EEComplexUnit* inUnit);  // 0x8fca6 (ret 4)
@@ -53,7 +52,6 @@ public:
     void Reset();                           // 0x91430
     long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x9144d
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x9152a
-    bool FerryGatherers(std::vector<EEComplexUnit*>& inUnits, EEComplexUnit* inTransport, EEUnit* inResource);  // 0x916e6 (ret 0xc)
     void TransportIdle(EEComplexUnit* inUnit);  // 0x91965 (ret 4; EEComputerPlayer 0x3f072)
     void RemoveCosts(EETechTreeNode* inNode, long inCount);  // 0x91b26 (ret 8; EECPBuildManager 0x6b07d, EECPUnitManager 0x93acc): AddCosts's Spend twin
     bool UpdateWantedGatherers();           // 0x91b78: the wanted gatherers per resource; true if one changed

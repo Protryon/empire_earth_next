@@ -41,7 +41,6 @@
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackCommander.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECPLua.h"
@@ -228,10 +227,6 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
         EECPTraceScope theScope("civ");
         theCivilization->RepairBuildings();
         theState->mNextRepairTime = inTime + 31000;
-    }
-    if (inPlayer->mCombatManager != NULL) {
-        EECPTraceScope theScope("combat");
-        inPlayer->mCombatManager->mAttackCommander->Update(inTime);
     }
     {
         EECPTraceScope theScope("next");

@@ -28,6 +28,7 @@
 #include "lle/U2DPolygon.h"
 #include "lle/USingleton.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
@@ -46,14 +47,8 @@
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPWallManager.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPDiplomacyManager.h"
-#include "ee/EECPPlayerInteractionManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPUnitManager.h"
-#include "ee/EECPUnitSelector.h"
-#include "ee/EECPExplorationManager.h"
-#include "ee/EECPPersonnel.h"
-#include "ee/EECPDefenseCommander.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include <EEAIFunctionObjects.h>
@@ -63,7 +58,6 @@
 #include "ee/EETeam.h"
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIPathArea.h"
 #include "ee/EEUnitGoal.h"
@@ -198,11 +192,8 @@ EEComputerPlayer::~EEComputerPlayer()
             this->mUnitsToKill[i]->Dereference();
     }
     this->mUnitsToKill.clear();
-    delete this->GetExplorationManager();
-    delete this->GetDiplomacyManager();
     delete this->GetCombatManager();
     delete this->GetCivilizationManager();
-    delete this->GetInteractionManager();
     DeleteVectorContents(this->mResourceCenters);
     EECPNextDeleteState(this);
     EECPUnitsDelete(this);
@@ -268,7 +259,6 @@ void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
 {
     if (inUnit->mIsDetachedFromAI != true)
         inUnit->mIsDetachedFromAI = true;
-    this->mCombatManager->UnitRemoved(inUnit);
     if (inUnit->mAIState != 290008)
         inUnit->mAIState = 290008;
 }
@@ -321,7 +311,6 @@ bool EEComputerPlayer::CanProduce(long inTechnology, long inUnitClass, long inCo
 // Tells the combat manager and then the player about a target player notice
 void EEComputerPlayer::NoticeTargetPlayer(EEPlayer* inPlayer, bool inFlag)
 {
-    this->mCombatManager->TargetPlayerNotice(inPlayer, inFlag);
     EEPlayer::NoticeTargetPlayer(inPlayer, inFlag);
 }
 
@@ -1337,11 +1326,8 @@ void EEComputerPlayer::Init()
     this->mReplaceOnLoad = false;
     this->mRegroupPending = false;
     this->mAttackStarted = false;
-    this->mExplorationManager = new EECPExplorationManager(this);
     this->mCivilizationManager = new EECPCivilizationManager(this);
     this->mCombatManager = new EECPCombatManager(this);
-    this->mInteractionManager = new EECPPlayerInteractionManager(this);
-    this->mDiplomacyManager = new EECPDiplomacyManager(this);
 }
 
 // FUNCTION: EXE 0x42fd50
@@ -1369,9 +1355,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        // the exploration manager's result no longer replaces an earlier error
-        if (theResult == kErrorOK && inMinorVersion >= 0x20)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -1733,8 +1716,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -2116,8 +2097,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -2507,8 +2486,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -2908,8 +2885,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -3317,8 +3292,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -3728,8 +3701,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -4143,8 +4114,6 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
         if (theResult == kErrorOK)
@@ -4585,6 +4554,8 @@ void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
     EEPlayer::EpochMediaLoaded(inEpoch);
 }
 
+static void EECPRetireObsoleteUnits(EEComputerPlayer* inPlayer);   // (below)
+
 // FUNCTION: EXE 0x43c9c5
 // Enters an epoch: researches its kind-7 technologies, re-picks the favourite land, sea, air and space types and,
 // outside saved-game loading, retires obsolete units and tells the combat manager
@@ -4600,8 +4571,7 @@ void EEComputerPlayer::EnterEpoch(long inEpoch)
     this->ChooseFavoriteAirType();
     this->ChooseFavoriteSpaceType();
     if (!gLoadingSavedGame) {
-        this->mCombatManager->mPersonnel->RetireObsoleteUnits();
-        this->mCombatManager->EpochReached(inEpoch);
+        EECPRetireObsoleteUnits(this);
     }
 }
 
@@ -4689,16 +4659,14 @@ void EEComputerPlayer::RefreshResourceCenters()
         this->UpdateGroups();
     if (this->mResourceCenters.size() == 0)
         this->Regroup();
-    this->mCombatManager->Refresh();
     this->mCivilizationManager->mResourceManager->Refresh();
     this->RefreshTownGroups();
 }
 
 // FUNCTION: EXE 0x43cec9
-// Lets the combat personnel draft the units it deferred
+// Let the combat personnel draft the units it deferred (stage 5: no personnel; the Lua AIs take their units)
 void EEComputerPlayer::RefreshTownGroups()
 {
-    this->mCombatManager->mPersonnel->DraftDeferred();
 }
 
 // FUNCTION: EXE 0x43ced7
@@ -4708,7 +4676,6 @@ void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
     if (this->mUnitsState != NULL)
         EECPUnitsOnSwapped(this, ioSwaps);   // the held set and the script's ids follow the new units
-    this->mCombatManager->UnitsSwapped(ioSwaps);
     this->mCivilizationManager->UnitsSwapped(ioSwaps);
     for (std::vector<EEPUnitSwap>::iterator it = ioSwaps.begin(); it != ioSwaps.end(); it++) {
         EEComplexUnit* theUnit = it->mNew;
@@ -4717,7 +4684,6 @@ void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
                 this->mResourceCenters[i]->AdoptDropSite(theUnit);
         }
     }
-    this->mExplorationManager->UnitsSwapped(ioSwaps);
     EEPlayer::UnitsSwapped(ioSwaps);
 }
 
@@ -4730,8 +4696,6 @@ void EEComputerPlayer::Clear()
     DeleteVectorContents(this->mResourceCenters);
     this->mIsStarted = false;
     this->mCivilizationManager->Reset();
-    delete this->mExplorationManager;
-    this->mExplorationManager = new EECPExplorationManager(this);
     delete this->mCombatManager;
     this->mCombatManager = new EECPCombatManager(this);
 }
@@ -4742,10 +4706,6 @@ void EEComputerPlayer::Clear()
 long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = EEPlayer::RepairPointers(inMajorVersion, inMinorVersion);
-    if (theResult == kErrorOK)
-        theResult = this->mCombatManager->Restore(inMajorVersion, inMinorVersion);
-    if (theResult == kErrorOK)
-        theResult = this->mExplorationManager->Restore(inMajorVersion, inMinorVersion);
     if (theResult == kErrorOK)
         theResult = this->mCivilizationManager->Restore(inMajorVersion, inMinorVersion);
     if (theResult == kErrorOK) {
@@ -4789,8 +4749,6 @@ long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned lon
             this->mFavoriteSpaceType = 730;
     }
     this->mSeed = this->mPlayerID % 10;
-    if (this->mInteractionManager != NULL)
-        this->mInteractionManager->mIndexSeed = this->mSeed;
     for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (theUnit->GetTileX() != -10000 && theUnit->GetComplexUnit() != NULL && theUnit->mTile != NULL
             && theUnit->mTile->mTerrainType == kTerrainCliff && theUnit->GetUnitClass()->mUnitType != kUnitTypePathPoint
@@ -4848,6 +4806,59 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
     theGoal->SetOwner(theItem.mUnit);
     this->RefreshGoals();
     this->RefreshActiveGoal();
+}
+
+// From the Atomic - WW1 epoch on, kills the player's living obsolete units of 17 unit types that no human player can
+// see (EE_AI_CHEATS retire; extracted from the deleted EECPPersonnel::RetireObsoleteUnits 0x48707b, stage 5)
+static void EECPRetireObsoleteUnits(EEComputerPlayer* inPlayer)
+{
+    std::vector<EEPlayer*> thePlayers;
+    std::vector<EEComplexUnit*> theUnits;
+    long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
+    long i;
+    if (!EECPCheatOn(inPlayer, kAICheatRetire) || theEpoch < kTechEpochAtomicWW1)
+        return;
+    for (i = (long)gWorld.mNumPlayers - 1; i > 0; i--) {
+        if (gWorld.mPlayers[i] != NULL && gWorld.mPlayers[i]->IsHuman())
+            thePlayers.push_back(gWorld.GetPlayer(i));
+    }
+    if (thePlayers.size() == 0)
+        return;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
+        if (theComplexUnit == NULL || theComplexUnit->GetTechTreeNode() == NULL
+            || !theComplexUnit->GetTechTreeNode()->GetIsObsolete())
+            continue;
+        switch (theComplexUnit->mUnitClass->mUnitType) {
+        case kUnitTypeArch06CavalryArcher:
+        case kUnitTypeGunSpear04StoneThrower:
+        case kUnitTypeArch05CrossBow:
+        case kUnitTypeArch06LongBow:
+        case kUnitTypeInf04Phalanx:
+        case kUnitTypeArcheryRange:
+        case kUnitTypeStable:
+        case kUnitTypeInf05Pilum:
+        case kUnitTypeGunSiege06Trebuchet:
+        case kUnitTypeGunSiege09SerpentineCannon:
+        case kUnitTypeCav06Knight:
+        case kUnitTypeGunCannon09BronzeCannon:
+        case kUnitTypeGunSpear06Balistae:
+        case kUnitTypeS09RoyalGalleon:
+        case kUnitTypeCav07CarabineersGun:
+        case kUnitTypeCav09ImperialCuirassierSword:
+        case kUnitTypeInf08Halberdier: {
+            // retired only when no human player sees it (was: when any one human does not)
+            bool theFound = theComplexUnit->mHitPoints > 0;
+            for (i = (long)thePlayers.size() - 1; i >= 0 && theFound; i--)
+                theFound = !EEIsSeenBy(theComplexUnit, thePlayers[i], true);
+            if (theFound)
+                theUnits.push_back(theComplexUnit);
+            break;
+        }
+        }
+    }
+    for (i = (long)theUnits.size() - 1; i >= 0; i--)
+        theUnits[i]->Kill(true, false, false);
 }
 
 // FUNCTION: EXE 0x43d45d
@@ -4920,8 +4931,6 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
         theResult = this->mCombatManager->Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == kErrorOK)
         theResult = this->mCivilizationManager->Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == kErrorOK && inMinorVersion >= 0x20)
-        theResult = this->mExplorationManager->Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mLBD4);
     if (theResult == kErrorOK)
@@ -5411,8 +5420,6 @@ void EEComputerPlayer::UnitStranded(EEComplexUnit* inUnit)
 {
     inUnit->Reference();
     this->mUnitsToKill.push_back(inUnit);
-    if (inUnit->mIsCitizen)
-        this->mCombatManager->NoteThreat(inUnit, true);
 }
 
 // FUNCTION: EXE 0x43ed81
@@ -5495,7 +5502,6 @@ void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
         EECPUnitsOnPlaced(this, inUnit);
     if (this->mActive) {
         this->mCivilizationManager->UnitAdded(inUnit);
-        this->mCombatManager->UnitAdded(inUnit);
     }
 }
 
@@ -5516,10 +5522,6 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
         EECPNextEventAdd(this, kNextEventUnitLost, theUnit->mUnitClass->mUnitType, 1);   // the next engine's view
     if (this->mActive)
         this->mCivilizationManager->UnitLost(theUnit, inSwapped);
-    if (this->mCombatManager != NULL)
-        this->mCombatManager->UnitRemoved(theUnit);
-    if (this->mExplorationManager != NULL && theUnit->mComplexUnit != NULL)
-        this->mExplorationManager->UnitRemoved(theUnit->mComplexUnit, inSwapped);
     if (theUnit->mUnitClass->IsLandBuilding()) {
         unsigned long i, n;
         for (i = 0, n = this->mResourceCenters.size(); i < n; i++)
@@ -5550,7 +5552,6 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
     }
     if (inUnit->GetIsDetachedFromAI() && theGoals <= 1 && !EECPNextHoldsUnit(this, inUnit)) {   // (a next group keeps its units)
         inUnit->mIsDetachedFromAI = false;
-        this->GetCombatManager()->UnitAdded(inUnit);
     }
     long theCategory = inUnit->GetClass()->GetCategory();
     if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
@@ -5604,18 +5605,12 @@ void EEComputerPlayer::Update(unsigned long inTime)
     if (!this->mObserverMode && this->mFirstUnit != NULL) {
         EECPTraceScope theNext("next");
         EECPNextUpdate(this, inTime);
-    } else if (this->mCombatManager != NULL)
-        this->mCombatManager->DeleteGroups();
-    if (this->mUnitsToKill.size() != 0) {
-        bool theSaved = this->mCombatManager->mTracksThreats;
-        this->mCombatManager->mTracksThreats = false;
-        for (long i = this->mUnitsToKill.size() - 1; i >= 0; i--) {
-            this->mUnitsToKill[i]->Kill(true, false, false);
-            this->mUnitsToKill[i]->Dereference();
-        }
-        this->mUnitsToKill.clear();
-        this->mCombatManager->mTracksThreats = theSaved;
     }
+    for (long i = this->mUnitsToKill.size() - 1; i >= 0; i--) {
+        this->mUnitsToKill[i]->Kill(true, false, false);
+        this->mUnitsToKill[i]->Dereference();
+    }
+    this->mUnitsToKill.clear();
 }
 
 // FUNCTION: EXE 0x43f3f1

@@ -45,8 +45,7 @@
 
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 
 // FUNCTION: EXE 0x42be88
 // Creates an empty path sub-sector with no sector, ids 0, kind none and no owner

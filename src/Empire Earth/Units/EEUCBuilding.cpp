@@ -22,6 +22,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -48,7 +49,6 @@
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGExplore.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEGraphicObject.h"

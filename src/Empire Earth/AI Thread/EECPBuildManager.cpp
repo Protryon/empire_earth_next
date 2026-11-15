@@ -26,6 +26,7 @@
 #include "lle/U2DPolygon.h"
 #include "lle/USingleton.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -57,7 +58,6 @@
 #include "ee/EECPWallManager.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPUnitManager.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNextUnits.h"

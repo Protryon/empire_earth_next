@@ -28,6 +28,7 @@
 #include "lle/U2DPolygon.h"
 #include "lle/USingleton.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
@@ -39,25 +40,16 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPIntelligence.h"
-#include "ee/EECPAGTask.h"
-#include "ee/EECPAttackSubGroup.h"
-#include "ee/EECPAttackGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EECPUnitRequirement.h"
-#include "ee/EECPCombatStrategy.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPUnitManager.h"
-#include "ee/EECPUnitSelector.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
-#include "ee/EECPMilitaryAidPackage.h"
-#include "ee/EEAIFOSubGroupFilter.h"
 #include <EEAIFunctionObjects.h>
 #include "ee/EEUnitSetManager.h"
 
-#include "ee/EECPExplorationManager.h"
 
 // The aircraft carrier gatherer's slots: the unit's first members (range start 0x29f57).
 // FUNCTION: EXE 0x429f57
@@ -292,133 +284,12 @@ bool EECPUGatherCitizenUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<E
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a486
-// Records one available unit under its unit class, starting the class's count at 1 or incrementing it
-void EEAIFOPAvailablePersonnelGatherer::AddUnit(const std::pair<long, EEUnit*>& inUnit)
-{
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator = this->mClasses.find(inUnit.first);
-    if (theIterator != this->mClasses.end())
-        theIterator->second.first++;
-    else
-        this->mClasses.insert(std::make_pair(inUnit.first, std::make_pair(1L, inUnit.second->mUnitClass)));
-}
-
-// FUNCTION: EXE 0x42a4d9
-// Takes one available unit of the class (dropping the class at 0); returns the class, or 0 when none is
-long EEAIFOPAvailablePersonnelGatherer::TakeUnitClass(long inUnitClass)
-{
-    long theResult = 0;
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator = this->mClasses.find(inUnitClass);
-    if (theIterator != this->mClasses.end()) {
-        theResult = theIterator->first;
-        theIterator->second.first--;
-        if (theIterator->second.first <= 0)
-            this->mClasses.erase(theIterator);
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x42a51e
-// Takes one available unit of the first class in the unit category; returns that class, or 0 when none matches
-long EEAIFOPAvailablePersonnelGatherer::TakeByCategory(long inCategory)
-{
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator;
-    long theResult = 0;
-    for (theIterator = this->mClasses.begin(); theIterator != this->mClasses.end(); ++theIterator) {
-        if (theIterator->second.second == 0 || theIterator->second.second->mCategory != inCategory)
-            continue;
-        theResult = theIterator->first;
-        theIterator->second.first--;
-        if (theIterator->second.first <= 0)
-            this->mClasses.erase(theIterator);
-        break;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x42a57e
-// Takes one available unit of the first class of the AI kind; returns that class, or 0 when none matches
-long EEAIFOPAvailablePersonnelGatherer::TakeByKind(long inKind)
-{
-    std::map<long, std::pair<long, EEUnitClass*> >::iterator theIterator;
-    long theResult = 0;
-    for (theIterator = this->mClasses.begin(); theIterator != this->mClasses.end(); ++theIterator) {
-        if (theIterator->second.second == 0 || theIterator->second.second->mAIKind != inKind)
-            continue;
-        theResult = theIterator->first;
-        theIterator->second.first--;
-        if (theIterator->second.first <= 0)
-            this->mClasses.erase(theIterator);
-        break;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x42a5de
 // Orders unit class ids by epoch, latest first
 bool EEAIFOUnitClassGreater::operator()(const long& inA, const long& inB)
 {
     bool theResult = gUnitClassTable[inA]->mEpoch > gUnitClassTable[inB]->mEpoch;
     return theResult;
-}
-
-// FUNCTION: EXE 0x42a60a
-// Creates a sub group filter for a continent (0: any), allowing adjacent continents and packaged groups as asked
-EEAIFOSubGroupFilter::EEAIFOSubGroupFilter(unsigned short inContinent, bool inAllowAdjacent, bool inAllowPackaged)
-{
-    this->mAllowAdjacent = inAllowAdjacent;
-    this->mContinent = inContinent;
-    this->mAllowPackaged = inAllowPackaged;
-}
-
-// FUNCTION: EXE 0x42a65d
-// Returns whether an attack group has no continent
-bool EEAIFOSubGroupFilter::operator()(EECPAttackGroup* inGroup)
-{
-    return inGroup->mContinentID == 0;
-}
-
-// FUNCTION: EXE 0x42a66d
-// Accepts a non-empty sub group that is idle or defending, of an accepted kind, on (or next to) the continent,
-// and not in an aid package unless packaged groups are allowed
-bool EEAIFOSubGroupFilter::operator()(EECPAttackSubGroup* inGroup)
-{
-    bool theSkip = inGroup->GetNumUnits() <= 0 ||
-        (inGroup->mTask.mIsActive && ((inGroup->mTask.mMode != kAGModeDefense && inGroup->mTask.mMode != kAGModeNone) ||
-         inGroup->mTask.mType == kAGTaskTerritory || inGroup->VirtualBC()));
-    bool result;
-    if (theSkip)
-        result = false;
-    else {
-        result = this->mKinds.find(inGroup->GetKind()) != this->mKinds.end();
-        if (result && this->mContinent != 0) {
-            unsigned short id = inGroup->GetMainContinent();
-            result = this->mContinent == id;
-            if (!result && this->mAllowAdjacent)
-                result = gContinentManager.mTileFlags[this->mContinent * gContinentManager.mFlagsWidth + id];
-        }
-        if (result == true && !this->mAllowPackaged)
-            result = this->mSubGroupIDs.find(inGroup->GetID()) == this->mSubGroupIDs.end();
-    }
-    return result;
-}
-
-// FUNCTION: EXE 0x42a752
-// Replaces the filter's aid packages with the map's non-null packages and collects their sub group ids
-void EEAIFOSubGroupFilter::SetPackages(std::map<long, EECPMilitaryAidPackage*>& inPackages)
-{
-    this->mPackages.clear();
-    this->mSubGroupIDs.clear();
-    std::map<long, EECPMilitaryAidPackage*>::iterator theIterator;
-    EECPMilitaryAidPackage* thePackage;
-    for (theIterator = inPackages.begin(); theIterator != inPackages.end(); ++theIterator) {
-        thePackage = theIterator->second;
-        if (thePackage == NULL)
-            continue;
-        this->mPackages.push_back(thePackage);
-        for (long i = thePackage->GetNumUnits() - 1; i >= 0; i--)
-            this->mSubGroupIDs.insert(thePackage->mSubGroupIDs[i]);
-    }
 }
 
 // FUNCTION: EXE 0x42a7d2
@@ -663,103 +534,6 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
         }
     }
     return theResult;
-}
-
-// FUNCTION: EXE 0x42afdf
-// Accepts a buildable non-citizen class from the last two epochs that costs 1 population, can explore, heals
-// nothing and is no support, siege, building, hero or carrier kind
-bool EEAIFOAcceptableComputerPlayerExplorerUnitScreener::Screen(EEUnitClass* inClass)
-{
-    bool theResult = EEAIFOCurrentlyBuildableUnitScreener::Screen(inClass);
-    if (theResult) {
-        if (inClass->mCategory == kUnitCategoryLandCitizen || inClass->mCategory == kUnitCategoryNavalCitizen ||
-            inClass->mEpoch < this->mPlayer->GetTechTree()->mCurrentEpoch - 1 || inClass->GetPopulationCost() > 1 ||
-            inClass->FindAction(kActionFindUnexploredArea) == NULL)
-            theResult = false;
-        else {
-            theResult = !inClass->mHasCalamityPowers && inClass->mHealThreshold == 0.0f && !inClass->mIsMedic;
-            theResult &= inClass->mUnitType != 0x2f4;
-            if (theResult == true) {
-                switch (inClass->mAIKind) {
-                case kAIKindAntiTank:
-                case kAIKindSpecial:
-                case kAIKindFieldWeapon:
-                case kAIKindAntiAir:
-                case kAIKindBomber:
-                case kAIKindAircraftCarrier:
-                case kAIKindArtillery:
-                case kAIKindSiege:
-                case kAIKindFortification:
-                case kAIKindBuilding:
-                case kAIKindHero:
-                case kAIKindSpaceCarrier:
-                    theResult = false;
-                    break;
-                }
-            }
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x42b0ba
-// Orders EECPIntelligence's GetTargets list: higher score first, building-19 targets ahead; a building-19 and a
-// other target pair orders the building first (struct in ee/EECPIntelligence.h)
-bool EECPITargetScoreGreater::operator()(const std::pair<EEComplexUnit*, long>& inFirst,
-                                         const std::pair<EEComplexUnit*, long>& inSecond)
-{
-    long theFirstCategory = inFirst.first->GetUnitClass()->mCategory;
-    bool theResult;
-    if (inSecond.first->GetUnitClass()->mCategory != kUnitCategoryBuilding19)
-        theResult = theFirstCategory == kUnitCategoryBuilding19 || inFirst.second > inSecond.second;
-    else
-        theResult = theFirstCategory == kUnitCategoryBuilding19 && inFirst.second > inSecond.second;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x42b100
-// Creates a strike-location scorer for a sub group starting from the given tile
-EEAIFOBestRegionToAttack::EEAIFOBestRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile)
-    : mSubGroup(inSubGroup)
-{
-    this->mTile = inTile;
-}
-
-// FUNCTION: EXE 0x42b129
-// Creates the land strike-location scorer for a sub group starting from the given tile
-EEAIFOBestInfluenceRegionToAttack::EEAIFOBestInfluenceRegionToAttack(EECPAttackSubGroup* inSubGroup,
-    const EETileLocation& inTile)
-    : EEAIFOBestRegionToAttack(inSubGroup, inTile)
-{
-}
-
-// FUNCTION: EXE 0x42b145
-// Scores every location 0
-float EEAIFOBestInfluenceRegionToAttack::operator()(const EECPILocation& inLocation)
-{
-    return 0.0f;
-}
-
-// (folded by ICF into 0x42b145) Scores every air strike location 0
-float EEAIFOBestInfluenceRegionToAirStrike::operator()(const EECPILocation& inLocation)
-{
-    return 0.0f;
-}
-
-// FUNCTION: EXE 0x42b14e
-// Creates the air strike scorer; a positive chance sets the strike count to chance * 10 (at least 1), else 1
-// strike at chance 0
-EEAIFOBestInfluenceRegionToAirStrike::EEAIFOBestInfluenceRegionToAirStrike(EECPAttackSubGroup* inSubGroup,
-    const EETileLocation& inTile, float inChance)
-    : EEAIFOBestRegionToAttack(inSubGroup, inTile), mChance(0.0f)
-{
-    this->mCount = 1;
-    if (!(inChance > 0.0f))
-        return;
-    this->mCount = (long)(inChance * 10.0f);
-    if (this->mCount == 0)
-        this->mCount = 1;
-    this->mChance = inChance;
 }
 
 // SYNTHETIC: EXE 0x42b1a4

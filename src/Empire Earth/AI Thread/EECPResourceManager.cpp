@@ -26,6 +26,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -56,10 +57,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPUnitSelector.h"
-#include "ee/EECPPersonnel.h"
 #include "ee/EEWheel.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
@@ -257,46 +255,6 @@ void EECPResourceManager::AssignIdleBoats(std::deque<EEComplexUnit*>& ioUnits)
         if (theResource != NULL)
             this->SendToGather(*it, theResource, NULL);
     }
-}
-
-// FUNCTION: EXE 0x48ecfd
-// Takes a transport from the combat personnel to ferry stranded gatherers to a resource; without one, requests a
-// transport when fewer than 4 exist and none is requested or in production
-void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEUnit* inResource)
-{
-    std::vector<long> theClasses;
-    std::vector<long> theIDs;
-    EEComputerPlayer* thePlayer = this->GetManager()->GetPlayer();
-    EECPUnitManager* theUnitManager = this->GetManager()->GetUnitManager();
-    EECPCombatManager* theCombatManager = thePlayer->GetCombatManager();
-    long theClass = this->GetManager()->ChooseTransportClass();
-    bool theFailed = true;
-    if (theClass == 0)
-        return;
-    std::deque<EEComplexUnit*>* theUnits = theUnitManager->GetUnits(theClass);
-    theClasses.push_back(theClass);
-    EECPPersonnelRequest* theRequest = theCombatManager->GetPersonnel()->NewContinentRequest(theClasses, theIDs, 0);
-    if (theRequest->GetNumFilled() == 1) {
-        EEComplexUnit* theUnit = theRequest->mUnits.back().mUnit;
-        if (theUnit->GetAIState() != 0x46cd7)
-            theUnit->mAIState = 0x46cd7;
-        theRequest->PopSlot();
-        thePlayer->DetachUnitFromAI(theUnit);
-        theFailed = false;
-        if (this->FerryGatherers(inUnits, theUnit, inResource))
-            thePlayer->SetNextIslandExpansionTime();
-        else {
-            if (theUnit->GetIsDetachedFromAI())
-                theUnit->mIsDetachedFromAI = false;
-            theCombatManager->UnitAdded(theUnit);
-        }
-    } else
-        theRequest->Cancel();
-    theCombatManager->GetPersonnel()->ReleaseRequest(theRequest->GetID());
-    theRequest->Dereference();
-    if (theFailed && (theUnits == NULL || theUnits->size() < 4) && !theUnitManager->IsRequested(theClass)
-        && !theUnitManager->IsInProduction(theClass))
-        theUnitManager->RequestUnits(theClass, 1, 0, 0);
 }
 
 // FUNCTION: EXE 0x48ee67
@@ -709,22 +667,8 @@ void EECPResourceManager::AssignGatherers()
                                 }
                             }
                         }
-                        if ((theWanted > 0 || thePlayer->IsIslandExpansionDue()) && theAcross) {
-                            EEUnit* theFar = this->FindResourceTarget(theResource, NULL, true);
-                            if (theFar != NULL) {
-                                while (theIdle.size() > 0) {
-                                    theUnit = theIdle.front();
-                                    theIdle.pop_front();
-                                    if (gContinentManager.AreConnectedFromIDs(theTownContinent, gContinentManager.GetContinentID(theUnit),
-                                            this->mManager->mPlayer->GetCitizenPassability())
-                                        && !gContinentManager.AreConnected(gContinentManager.GetContinentAt(theFar),
-                                            gContinentManager.GetContinentAt(theUnit), this->mManager->mPlayer->GetCitizenPassability()))
-                                        theStranded.push_back(theUnit);
-                                }
-                                if (theStranded.size() != 0)
-                                    this->RequestFerry(theStranded, theFar);
-                            }
-                        }
+                        // (the original ferried gatherers to another island with a transport from its combat
+                        // personnel here; the Lua AIs ferry their own: classic_lua ferry.lua)
                     }
                     break;
                 }
@@ -1570,48 +1514,6 @@ long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMin
         }
     }
     return theResult;
-}
-
-// NEAR: the 0x92230 assign shape is a guess from the decompiler outline; the original returns true on every
-// path (0x49195e)
-// FUNCTION: EXE 0x4916e6
-// Loads as many gatherers as fit on a transport and ships them to a resource to gather it; returns false
-// when the transport cannot unload there
-bool EECPResourceManager::FerryGatherers(std::vector<EEComplexUnit*>& inUnits, EEComplexUnit* inTransport, EEUnit* inResource)
-{
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EETileCoordinate> theTiles;
-    long theX = inResource->GetTileX();
-    long theY = inResource->GetTileY();
-    EEUGUnloadTransport* theUnload = new EEUGUnloadTransport(inTransport, theX, theY, true);
-    if (theUnload != NULL) {
-        if (theUnload->CanUnloadAtDestination()) {
-            inTransport->ClearGoalQueue(0);
-            inTransport->SetGoal(theUnload, 0, 0);
-            long theCount = inTransport->GetUnitClass()->mTransportCapacity / inUnits[0]->GetUnitClass()->mWeight;
-            std::vector<EEComplexUnit*>::iterator theEnd = theCount > inUnits.size() ? inUnits.end() : inUnits.begin() + theCount;
-            theUnits.assign(inUnits.begin(), theEnd);
-            EEUGLoadTransport* theLoad = new EEUGLoadTransport(inTransport, theUnits, true);
-            inTransport->SetGoal(theLoad, 1, 0);
-            inTransport->StartAction(kActionPrepareToMove);
-            inTransport->GetUnitClass()->ActionChanged(inTransport);
-            EEUnitGoal* theGather = new EEUGGather(inResource, NULL, true);
-            unsigned long i, n;
-            for (i = 0, n = theUnits.size(); i < n; i++) {
-                theUnits[i]->ClearGoalQueue(0);
-                theUnits[i]->SetGoal(theGather->Clone(), 0, 0);
-                theUnits[i]->SetGoal(theLoad->Clone(), 1, 0);
-                theUnits[i]->StartAction(kActionPrepareToMove);
-                theUnits[i]->GetUnitClass()->ActionChanged(theUnits[i]);
-            }
-            if (theGather != NULL)
-                delete theGather;
-        } else {
-            delete theUnload;
-            return false;   // cannot unload there: RequestFerry's failure branch runs (was true)
-        }
-    }
-    return true;
 }
 
 // The container tile is copied by value before forwarding the coordinates (original 449-byte body).
