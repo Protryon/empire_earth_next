@@ -509,6 +509,12 @@ WON_TESTS = {
     # Component wholly in Rust (compobj.rs) against the original statements over a traced world of components,
     # windows, events and grabbers (golden: rust/crates/ee_won/src/golden_compobj.txt)
     "won_compobj_test": [],
+    # WrappedText as a Rust object (wrapobj.rs) against the original statements over stand-in texts and fonts
+    # (golden: rust/crates/ee_won/src/golden_wrapobj.txt)
+    "won_wrapobj_test": [],
+    # StretchImage's settings as a Rust object (stretchobj.rs) against the original statements over stand-in images
+    # (golden: rust/crates/ee_won/src/golden_stretchobj.txt)
+    "won_stretchobj_test": [],
     # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
     # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
     "won_compaint_test": [],

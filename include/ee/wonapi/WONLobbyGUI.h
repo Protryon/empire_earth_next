@@ -591,32 +591,26 @@ private:
 };
 
 enum MouseButton { MouseButton_Left=0,MouseButton_Middle=1,MouseButton_Right=2 };
-// WrappedText (0x30 bytes); the fields at +0x08/+0x0c come first.
+// WrappedText (R6 WON round 38): the breaks, size, maximum width and the wrap and centre settings are the Rust
+// object's (rust/crates/ee_won/src/wrapobj.rs); the C++ keeps the text and the font and rewraps through it.
 class WrappedText : public RefCount {
 public:
     GUIString mText; //08
     SmartPtr<Font> mFont; //0c
+    EeWonWrapText* mObj;
 protected:
-    struct BreakInfo {
-        unsigned short mBreakPos,mNextStartPos,mWidth;
-        BreakInfo(int p,int n,int w) : mBreakPos((unsigned short)p),mNextStartPos((unsigned short)n),mWidth((unsigned short)w) {}
-    };
-    typedef std::list<BreakInfo> BreakList;
-    BreakList mBreakList; //14..1f
-    int mWidth,mHeight,mMaxWidth; //20,24,28
-    bool mWrap,mIsCentered; // at +0x2c, +0x2d; the class is 0x30 bytes
-    void Init(); //34a7c0
     void CalcWrap(); //34a9b0
 public:
     WrappedText(); //34a7e0
     WrappedText(const GUIString&); // (not identified in the original exe)
-    void SetText(const GUIString&); //34acc0
-    void SetWrap(bool); //34ad20
-    void SetCentered(bool); //34ad40
-    void SetFont(Font*); //34ad50
-    void SetMaxWidth(int); //34adb0
+    virtual ~WrappedText() { ee_won_wrap_free(this->mObj); }
+    void SetText(const GUIString& t) { this->mText=t; this->CalcWrap(); } //34acc0
+    void SetWrap(bool w) { if(ee_won_wrap_set_wrap(this->mObj,w)) this->CalcWrap(); } //34ad20
+    void SetCentered(bool c) { ee_won_wrap_set_centered(this->mObj,c); } //34ad40
+    void SetFont(Font* f) { this->mFont=f; this->CalcWrap(); } //34ad50
+    void SetMaxWidth(int w) { if(ee_won_wrap_set_max_width(this->mObj,w)) this->CalcWrap(); } //34adb0
     void Paint(Graphics&,int,int); //34adf0
-    int GetWidth() { return this->mWidth; }
+    int GetWidth() { return ee_won_wrap_width(this->mObj); }
     const GUIString& GetText() { return this->mText; } // inline; returns the text at +0x08
     int GetHeight(); // inline, defined after Font below
 };
@@ -903,12 +897,12 @@ public:
 // Constructor and destructor are out of line.
 class ImageComponent : public Component {
 public:
-    ImageComponent(Image* = NULL,bool = false); // 0x306b10
+    ImageComponent(Image* i = NULL,bool t = false); // 0x306b10 (inline, after Image)
     // Implicit virtual destructor: releases the image at +0x30, then Component's cleanup
-    virtual void GetDesiredSize(int&, int&);  // 306cf0
-    virtual void Paint(Graphics&);          // 306d30
-    virtual void SetImageAndTile(Image*, bool);  // 306c80, ret8
-    virtual void SetImage(Image*);           // 306c10, ret4
+    virtual void GetDesiredSize(int& w, int& h); // 306cf0 (inline, after Image)
+    virtual void Paint(Graphics&);          // 306d30 (guidraw.rs image_component_paint; GuiHost.cpp)
+    virtual void SetImageAndTile(Image* i, bool t); // 306c80 (inline, after Image)
+    virtual void SetImage(Image* i); // 306c10 (inline, after Image)
     void SetTile(bool doTile) { this->mTile = doTile; }
     void SetStretch(bool doStretch) { this->mStretch = doStretch; }
     bool GetTile() { return this->mTile; }
@@ -2289,7 +2283,7 @@ public:
     bool mNeedRecalcFont; // at +0x94; +0x95..0x97 padding; the class is 0x98 bytes
     // Implicit destructor; 0x38a250 has no own vptr store.
 };
-inline int WrappedText::GetHeight() { return this->mHeight==0 ? this->mFont->GetHeight() : this->mHeight; }
+inline int WrappedText::GetHeight() { int h=ee_won_wrap_height(this->mObj); return h==0 ? this->mFont->GetHeight() : h; }
 class Image : public RefCount {
 public:
     void DrawEntire(DisplayContext*,int,int); // 0x3285a0: draws the whole image
@@ -2303,6 +2297,12 @@ public:
     unsigned short mWidth;                  // +08
     unsigned short mHeight;                 // +0a
 };
+// ImageComponent's image setters (the component sized to a non-null image) and its desired size (the image's, or
+// 10 x 10 without one)
+inline ImageComponent::ImageComponent(Image* i,bool t) { this->SetImageAndTile(i,t); this->mStretch=false; }
+inline void ImageComponent::GetDesiredSize(int& w,int& h) { if(this->mImage.get()!=NULL) { w=this->mImage->mWidth; h=this->mImage->mHeight; } else w=h=10; }
+inline void ImageComponent::SetImageAndTile(Image* i,bool t) { this->mImage=i; this->mTile=t; if(i!=NULL) this->SetSize(i->mWidth,i->mHeight); }
+inline void ImageComponent::SetImage(Image* i) { this->mImage=i; if(i!=NULL) this->SetSize(i->mWidth,i->mHeight); }
 // NativeMask (0x0c bytes): constructor 0x3288b0, RTTI 0x4d6e80.
 class NativeMask : public RefCount {
 public:

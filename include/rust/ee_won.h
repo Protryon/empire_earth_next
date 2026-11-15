@@ -6006,6 +6006,18 @@ enum class EeWonStagingCall : uint32_t {
   NotifyPingChange,
 };
 
+/// A setting (`ee_won_stretch_get`).
+enum class EeWonStretchField : uint32_t {
+  Left = 1,
+  Top,
+  Right,
+  Bottom,
+  TileHorz,
+  TileVert,
+  SkipCenter,
+  NeedRecalc,
+};
+
 /// A surface's field (`ee_won_surface_get`).
 enum class EeWonSurfaceField : uint32_t {
   /// `GetSurfaceFormat()`.
@@ -7759,6 +7771,9 @@ struct EeWonSplitter;
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
 
+/// The Rust StretchImage.
+struct EeWonStretchImg;
+
 /// The Rust surface.
 struct EeWonSurface;
 
@@ -7809,6 +7824,9 @@ struct EeWonWm;
 
 /// The Rust WONButton.
 struct EeWonWonButton;
+
+/// The Rust WrappedText (the original's members but the text and font).
+struct EeWonWrapText;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -18042,6 +18060,79 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  const int32_t *b,
                                  size_t b_count);
 
+/// A new StretchImage's settings (the constructor's borders).
+EeWonStretchImg *ee_won_stretch_new(int32_t left, int32_t top, int32_t right, int32_t bottom);
+
+/// `Duplicate()`'s settings for the copy.
+///
+/// # Safety
+/// `o` is live.
+EeWonStretchImg *ee_won_stretch_duplicate(const EeWonStretchImg *o);
+
+/// # Safety
+/// `o` is null or from `ee_won_stretch_new` / `ee_won_stretch_duplicate`, not freed before.
+void ee_won_stretch_free(EeWonStretchImg *o);
+
+/// `SetSize(width, height)` against the image's size: true when the C++ must store the new size.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_stretch_set_size(EeWonStretchImg *o,
+                             int32_t cur_w,
+                             int32_t cur_h,
+                             int32_t w,
+                             int32_t h);
+
+/// `SetBorders(left, top, right, bottom)` (the cache not marked, as the original's).
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_borders(EeWonStretchImg *o,
+                                int32_t left,
+                                int32_t top,
+                                int32_t right,
+                                int32_t bottom);
+
+/// `SetTile(horz, vert)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_tile(EeWonStretchImg *o, bool horz, bool vert);
+
+/// `SetSkipCenter(skip)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_set_skip(EeWonStretchImg *o, bool skip);
+
+/// The cache built (`CalcImage`'s end).
+///
+/// # Safety
+/// `o` is live.
+void ee_won_stretch_built(EeWonStretchImg *o);
+
+/// `CopyAttributes(from)`'s settings.
+///
+/// # Safety
+/// `o` and `from` are live.
+void ee_won_stretch_copy(EeWonStretchImg *o, const EeWonStretchImg *from);
+
+/// A setting.
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_stretch_get(const EeWonStretchImg *o, EeWonStretchField f);
+
+/// `Paint`'s plan at the image's size: the first `cap` operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` is live; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_stretch_paint(const EeWonStretchImg *o,
+                            int32_t width,
+                            int32_t height,
+                            EeWonDrawOp *out,
+                            size_t cap);
+
 /// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
 EeWonSurface *ee_won_surface_new(int32_t format);
 
@@ -18844,6 +18935,75 @@ void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
 /// # Safety
 /// Both buttons are live and distinct (`Duplicate` copies onto a new button).
 void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
+
+/// A new WrappedText's state (`Init()`).
+EeWonWrapText *ee_won_wrap_new();
+
+/// # Safety
+/// `o` is null or from `ee_won_wrap_new`, not freed before.
+void ee_won_wrap_free(EeWonWrapText *o);
+
+/// `CalcWrap()`: `text` holds `len` units of `wchar_size` bytes (or is NULL with 0), `m` measures them in the font.
+///
+/// # Safety
+/// `o` is live; `text` and `m` as described.
+void ee_won_wrap_calc(EeWonWrapText *o,
+                      bool has_font,
+                      const void *text,
+                      int32_t len,
+                      uint32_t wchar_size,
+                      const EeWonTextMeasure *m,
+                      int32_t font_height);
+
+/// `SetWrap(wrap)`: true when the C++ must rewrap.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_wrap_set_wrap(EeWonWrapText *o, bool wrap);
+
+/// `SetMaxWidth(width)`: true when the C++ must rewrap.
+///
+/// # Safety
+/// `o` is live.
+bool ee_won_wrap_set_max_width(EeWonWrapText *o, int32_t width);
+
+/// `SetCentered(centered)`.
+///
+/// # Safety
+/// `o` is live.
+void ee_won_wrap_set_centered(EeWonWrapText *o, bool centered);
+
+/// `mWidth`.
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_wrap_width(const EeWonWrapText *o);
+
+/// `mHeight` (the C++ `GetHeight` answers the font's height when it is 0).
+///
+/// # Safety
+/// `o` is live.
+int32_t ee_won_wrap_height(const EeWonWrapText *o);
+
+/// The break list (`mBreakList`): the first `cap` into `out`, their count returned.
+///
+/// # Safety
+/// `o` is live; `out` has room for `cap` breaks (or is NULL).
+size_t ee_won_wrap_breaks(const EeWonWrapText *o, EeWonLineBreak *out, size_t cap);
+
+/// `Paint`'s plan for a text of `length` units in a font `font_height` high at (`x`, `y`): the first `cap`
+/// operations into `out`, their count returned.
+///
+/// # Safety
+/// `o` and `m` are live; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_wrap_paint(const EeWonWrapText *o,
+                         int32_t length,
+                         int32_t font_height,
+                         int32_t x,
+                         int32_t y,
+                         const EeWonTextMeasure *m,
+                         EeWonDrawOp *out,
+                         size_t cap);
 
 }  // extern "C"
 
