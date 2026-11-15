@@ -33,6 +33,8 @@ M.SCOUT_GRID = 8
 M.MAX_COUNT = 100
 M.LEASH_MARGIN = 6     -- [attack.c] the leash: a known defence's range + this (avoid_towers_margin) ...
 M.LEASH_SCAN = 45      -- ... among the defences known this near the group's centre
+M.FOCUS_HITS = 3       -- g.focus (lib.tactics FOCUS): a target's fire is short while it is under its hp / this ...
+M.FOCUS_PULL = 4       -- ... and such a target is preferred by this many tiles
 M.committed = {}       -- unit ids the script has committed elsewhere this step: the groups give them no order
 
 local function d2(x1, y1, x2, y2)
@@ -457,6 +459,7 @@ local function fight(g, recs, cands)
         end
     end
     local taken = {}
+    local fire = {}   -- [lib.tactics FOCUS] the attack the group's members aim at each target this step
     local hurts = {}
     for _, u in ipairs(recs) do
       if M.committed[u.id] then
@@ -510,7 +513,20 @@ local function fight(g, recs, cands)
                     skip = not h
                 end
                 if not skip and (ranged or (c.kind ~= "ship" and c.kind ~= "boat")) then
-                    local s = c.p * 10000 + isqrt(d2(u.x, u.y, c.u.x, c.u.y)) * 10 + (taken[c.u.id] or 0)
+                    local s = c.p * 10000 + isqrt(d2(u.x, u.y, c.u.x, c.u.y)) * 10
+                    if g.focus then
+                        -- [lib.tactics FOCUS] a target the group already fires at, while that fire is short of
+                        -- FOCUS_HITS x its hit points, first (FOCUS_PULL tiles' worth); then the most hurt
+                        local f = fire[c.u.id] or 0
+                        if f > 0 and f * M.FOCUS_HITS < (c.u.hp or 0) then
+                            s = s - M.FOCUS_PULL * 10
+                        elseif f > 0 then
+                            s = s + (taken[c.u.id] or 0)
+                        end
+                        s = s + (c.u.hp or 0) * 20 // math.max(c.u.hp_max or 1, 1)
+                    else
+                        s = s + (taken[c.u.id] or 0)
+                    end
                     if bs == nil or s < bs then
                         best, bs = c, s
                     end
@@ -520,6 +536,7 @@ local function fight(g, recs, cands)
         end
         if keep ~= nil then
             taken[keep.u.id] = (taken[keep.u.id] or 0) + 15
+            fire[keep.u.id] = (fire[keep.u.id] or 0) + (u.attack or 0)
             if g.aims[u.id] ~= keep.u.id or u.action ~= "attack" then
                 by_target[keep.u.id] = by_target[keep.u.id] or {}
                 local list = by_target[keep.u.id]
