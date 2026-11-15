@@ -394,6 +394,8 @@ impl Slot {
 pub struct EeWonEeGame {
     game: *mut c_void,
     host: EeWonEeGameHostFn,
+    /// the model's ops answered by its Rust objects (modelobj.rs; the game's), not the host
+    model: Cell<bool>,
     /// `mFiles`: the details' player names (`GUIStringData`s, a reference each)
     files: RefCell<Vec<isize>>,
     /// `mFileTransfer`
@@ -413,6 +415,7 @@ impl EeWonEeGame {
         let g = Self {
             game,
             host,
+            model: Cell::new(false),
             files: RefCell::new(Vec::new()),
             transfer: Cell::new(0),
             has_file: Cell::new(false),
@@ -429,6 +432,11 @@ impl EeWonEeGame {
     }
 
     fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+        if self.model.get() {
+            if let Some(r) = crate::modelobj::eegame_op(op, self.game as isize, a, b) {
+                return r;
+            }
+        }
         match self.host {
             // SAFETY: the host is the C++ game's (or a test's), called with the game it was given
             Some(f) => unsafe { f(self.game, op, a, b, c, d) },
@@ -1496,6 +1504,14 @@ impl EeWonEeGame {
 use EeWonEeGameOp as Op;
 
 /// A new lobby game for the C++ `game` (EELobbyGame's constructor).
+/// As `ee_won_eegame_new`, with the model's ops answered by its Rust objects (the game's).
+#[no_mangle]
+pub extern "C" fn ee_won_eegame_new_model(game: *mut c_void, host: EeWonEeGameHostFn) -> *mut EeWonEeGame {
+    let g = EeWonEeGame::new(game, host);
+    g.model.set(true);
+    Box::into_raw(Box::new(g))
+}
+
 #[no_mangle]
 pub extern "C" fn ee_won_eegame_new(game: *mut c_void, host: EeWonEeGameHostFn) -> *mut EeWonEeGame {
     Box::into_raw(Box::new(EeWonEeGame::new(game, host)))

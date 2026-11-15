@@ -220,7 +220,6 @@
 3989f0 398b14 WONGUI/WONPredefinedComponents.cpp
 398e30 398f6e WONGUI/WONListPredefinedComponents.cpp
 398f90 39a1a0 WONGUI/WONSkinConfig.cpp
-3a51a0 3aa9d9 WONLobby/LobbyModel.cpp
 3aea90 3b1b38 WONConfig/ConfigObject.cpp
 3b1b40 3b48be WONConfig/ConfigValue.cpp
 3b1d20 3b3d43 WONConfig/ConfigParser.cpp
