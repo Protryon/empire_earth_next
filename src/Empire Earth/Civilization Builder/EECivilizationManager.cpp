@@ -100,18 +100,10 @@ static_assert(sizeof(EECivilizationCategoryEntry) == sizeof(EeTechCivCategory) &
 // chain at 0x6813f4 (wrapper)
 //   object 0x9654d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 const UString kCivKey(".civ");
-// SYNTHETIC: EXE 0x6813f4   (wrapper)
-// SYNTHETIC: EXE 0x6813fe   (ctor)
-// SYNTHETIC: EXE 0x68140f   (registrar)
-// SYNTHETIC: EXE 0x68141b   (dtor)
 
 // chain at 0x681426 (wrapper)
 //   object 0x9654c0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 const UString kCivilizationsKey("Civilizations");
-// SYNTHETIC: EXE 0x681426   (wrapper)
-// SYNTHETIC: EXE 0x681430   (ctor)
-// SYNTHETIC: EXE 0x681441   (registrar)
-// SYNTHETIC: EXE 0x68144d   (dtor)
 
 // A db table's whole bytes (the loads read them as their records; a memory file reads nothing past its end)
 static long EECivReadAll(FSFile* inFile, std::vector<unsigned char>& outBytes)
@@ -128,19 +120,16 @@ static long EECivReadAll(FSFile* inFile, std::vector<unsigned char>& outBytes)
     return theResult;
 }
 
-// FUNCTION: EXE 0x681458
 // Creates the civilization manager (the tables are Rust's: it binds the game's rules for them)
 EECivilizationManager::EECivilizationManager()
 {
     ee_tech_civ_bind_rules(EEGetRules().RustRules());
 }
 
-// FUNCTION: EXE 0x6814c4
 EECivilizationManager::~EECivilizationManager()
 {
 }
 
-// FUNCTION: EXE 0x681514
 // Reads the categories, then appends the civ powers' category (civbuilder.yaml's powers_category)
 long EECivilizationManager::Load(FSFile* inFile)
 {
@@ -150,7 +139,6 @@ long EECivilizationManager::Load(FSFile* inFile)
     return ee_tech_civ_load(theBytes.data(), theBytes.size(), EERuleLong(EEGetRules().mCivBuilder.mPowersCost));
 }
 
-// FUNCTION: EXE 0x681672
 // Reads the premade civilizations, sorted by index, and their eras
 long EECivilizationManager::LoadPremadeCivilizations(FSFile* inFile)
 {
@@ -192,7 +180,6 @@ void EECivilizationManager::GetCivilizationsOfType(std::vector<EECivilizationEnt
             outCivs.push_back(this->GetCivilization(i));
 }
 
-// FUNCTION: EXE 0x68199b
 // Fills a list box with one header per era and a line per premade civilization of that era
 void EECivilizationManager::FillCivilizationList(EECBUIListBox* inList)
 {
@@ -488,7 +475,6 @@ static void EECivHostCall(void* inCtx, const EeTechCivCall* c, EeTechCivReply* r
     }
 }
 
-// FUNCTION: EXE 0x681e4d
 // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
 bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
 {
@@ -501,17 +487,14 @@ bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
 
 // ------------------------------------------------------------------------------------------------ the powers
 
-// FUNCTION: EXE 0x6830d0
 EECivPowersManager::EECivPowersManager()
 {
 }
 
-// FUNCTION: EXE 0x683116
 EECivPowersManager::~EECivPowersManager()
 {
 }
 
-// FUNCTION: EXE 0x683124
 // Reads the civilization power records (appended)
 long EECivPowersManager::Load(FSFile* inFile)
 {
@@ -521,7 +504,6 @@ long EECivPowersManager::Load(FSFile* inFile)
     return ee_tech_civ_load_powers(theBytes.data(), theBytes.size());
 }
 
-// FUNCTION: EXE 0x6831b3
 // Reads a civilization power's name from the string table
 long EECivPowersManager::GetName(long inID, UWideString& outName)
 {

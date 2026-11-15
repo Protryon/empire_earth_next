@@ -74,31 +74,31 @@ public:
     // The rest of the class (names by thread message or rva; argument types inferred from `ret N`, byte pushes
     // (movzx -> bool) and what the body builds).
     void PostScreenShot(long inX, bool inFlag1, bool inFlag2);  // 0x279139 (new 0x10-byte block {inX, 0, 0, inFlag2})
-    void PostUpdateBackgroundMedia();       // 0x279174
-    void PostShowEpochName();               // 0x279189
+    void PostUpdateBackgroundMedia();
+    void PostShowEpochName();
     void PostDialogMessage(const EESMDialogMessage& inMessage);  // 0x27919e (posts a new copy, 0x40 bytes)
-    void PostSelectEditorTab(long inX, long inY);  // 0x2791d3
-    void PostDisplayChanged(bool inFlag);   // 0x279203
-    void PostCancelGame();                  // 0x27921e
+    void PostSelectEditorTab(long inX, long inY);
+    void PostDisplayChanged(bool inFlag);
+    void PostCancelGame();
     void PostLoadGameFailed(bool inFlag);   // 0x279233 (inFlag as the second message parameter)
-    void PostHostMigrated();                // 0x2792ae
+    void PostHostMigrated();
     void PostLoadSavedGame(const FSFileSpec& inSpec);  // 0x2792ed (new FSFileSpec(inSpec))
     void PostPlayMovie(const FSFileSpec& inSpec, UReferenceCounter* inObject);   // 0x27934c (references inObject)
     void PostMovieDone(UReferenceCounter* inObject);   // 0x279396 (references inObject)
-    void PostHideMessages();                // 0x2793b7
+    void PostHideMessages();
     void PostErrorClosed(UIForm* inForm, EEUIFErrorCallbackData* inData);  // 0x279438 (EEUIFError::Close)
     long PostDisplayCivBuilder();           // 0x27947d (returns Post's result: 0x65ff56 returns it)
-    void PostChangeRasterizer(long inX, long inY);  // 0x2794ab
+    void PostChangeRasterizer(long inX, long inY);
     // 0x2794c6: new EEChatLogEntry {inColor, inName, inText, mType = inType, mTime = inTime}, thread message 0x418
     long AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inTime, unsigned long inType);
     // 0x279536: AddChatLogEntry(GEColor(1, 1, 1), UWideString(" > "), inText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 3, 2); inY unused
     long AddChatLogEntry(const UWideString& inText, long inY);
-    void PostLobbyUpdatePlayer(long inX, long inY);  // 0x2795a6
-    void PostLobbyUpdateGameOptions();      // 0x2795c1
-    void PostLobbyShowTransferProgress(long inX, long inY);  // 0x279615
-    void PostLobbyUpdateForm();             // 0x279630
-    void PostRefreshSavedGroup(long inX);   // 0x279645
+    void PostLobbyUpdatePlayer(long inX, long inY);
+    void PostLobbyUpdateGameOptions();
+    void PostLobbyShowTransferProgress(long inX, long inY);
+    void PostLobbyUpdateForm();
+    void PostRefreshSavedGroup(long inX);
     // 0x27965e: clamps inFraction to [0, 1], percent = TMFloatToLong-style * 100; in multiplayer sends
     // EEMLoadPercent(mLocalPlayer, percent) every 5%, then thread message 0x40a (percent)
     void SetLoadProgress(float inFraction);
@@ -131,12 +131,12 @@ public:
     void PauseGraphics();                   // 0x277e63 (waits for the graphics thread's +0x56 flag)
     void ProcessActions();                  // 0x277f21 (runs the queued actions: ee_screens actions.rs)
     // the input method's composition (PLAT_EVENT_TEXT_EDITING) and result (PLAT_EVENT_TEXT while composing)
-    void UpdateIMECompositionString(const char* inText, long inCursor, long inLength);  // 0x2780d3
-    void AddIMEResultString(const char* inText);  // 0x2781da
+    void UpdateIMECompositionString(const char* inText, long inCursor, long inLength);
+    void AddIMEResultString(const char* inText);
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
     void OpenIMECompositionString();        // 0x278fc0 (WM_IME_STARTCOMPOSITION)
     void ShowLagStatus(unsigned long inPlayer, bool inLagging);  // 0x27977c (message 0x442; the caller passes (unsigned short))
-    void ResumeGraphics();                  // 0x2798a3
+    void ResumeGraphics();
     void ShowLoadingText(long inStringID);  // 0x279fbc (message 0x40b)
 
     TSThread* mThread;                      // +0x40 the constructing thread; every Post* goes to it

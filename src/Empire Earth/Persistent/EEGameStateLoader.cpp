@@ -98,14 +98,12 @@ void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChe
 // 0x531a40: set while Load reads a scenario (GetIsLoadingScenario's byte; provisional name)
 static bool sLoadingScenario;
 
-// FUNCTION: EXE 0x54a009
 // Creates a loader that restores a saved game into the given game state
 EEGameStateLoader::EEGameStateLoader(EEGameState* inState)
 {
     this->mState = inState;
 }
 
-// FUNCTION: EXE 0x54a014
 // Returns whether a file name ends in the scenario extension (case-insensitive)
 bool EEIsScenarioFile(const UString& inFile)
 {
@@ -122,14 +120,12 @@ bool EEIsScenarioFile(const UString& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54a09e
 // Returns whether a scenario file is being loaded right now
 bool GetIsLoadingScenario()
 {
     return sLoadingScenario;
 }
 
-// FUNCTION: EXE 0x54a0a4
 // Reads every saved chunk in tag order into the game state (checksum, seed, effects, camera, map, players, world, ...)
 // while advancing the load progress bar; returns 3 for an unknown tag or a chunk of the wrong type
 long EEGameStateLoader::RestorePersistents(std::vector<long>& inTags, FSFile& inFile)
@@ -261,7 +257,6 @@ long EEGameStateLoader::RestorePersistents(std::vector<long>& inTags, FSFile& in
     return theResult;
 }
 
-// FUNCTION: EXE 0x54a3eb
 // Loads a saved game or scenario file into memory and restores the game state from it; returns whether it worked
 bool EEGameStateLoader::Load(FSFile& inFile)
 {
@@ -279,7 +274,6 @@ bool EEGameStateLoader::Load(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54a4ef
 // Restores the game state from a saved header and its chunks; on failure reports "Load game file is corrupt."
 // and clears the state; returns whether it worked
 bool EEGameStateLoader::LoadGame(FSFile& inHeaderFile, FSFile& inFile)
@@ -312,7 +306,6 @@ bool EEGameStateLoader::LoadGame(FSFile& inHeaderFile, FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54a61f
 // Reads one chunk (by tag) out of a saved game file without loading the rest; returns the read error
 long EELoadPersistent(const UString& inFile, long inTagID, FSPersistent*& outPersistent)
 {
@@ -346,7 +339,6 @@ long EELoadPersistent(const UString& inFile, long inTagID, FSPersistent*& outPer
     return theResult;
 }
 
-// FUNCTION: EXE 0x54a765
 // Reads the next chunk of a saved game and creates its persistent object; returns the read error
 long EEGameStateLoader::ReadPersistent(FSFile& inFile, FSPersistent*& outPersistent)
 {
@@ -358,7 +350,6 @@ long EEGameStateLoader::ReadPersistent(FSFile& inFile, FSPersistent*& outPersist
     return theResult;
 }
 
-// FUNCTION: EXE 0x54a7ab
 // Moves the loaded players into the game state (extra players beyond the slot count become closed loaded players)
 // and, when hosting, gives the server slot to the local player; returns the player helper's error
 long EEGameStateLoader::RestorePlayers(EEPPlayerHelper* inHelper)
@@ -406,7 +397,6 @@ long EEGameStateLoader::RestorePlayers(EEPPlayerHelper* inHelper)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54a9ac
 // Centres the camera on the middle of the map, if there is one
 void EEGameState::SetDefaultMapCenter()
 {
@@ -417,7 +407,6 @@ void EEGameState::SetDefaultMapCenter()
     this->mMapCenter = GE3DPoint(theCenter, theCenter, 0.0f);
 }
 
-// FUNCTION: EXE 0x54a9e8
 // Replaces the game state's effect manager, deleting the old one
 void EEGameState::SetEffectManager(EEEffectManager* inManager)
 {
@@ -425,7 +414,6 @@ void EEGameState::SetEffectManager(EEEffectManager* inManager)
     this->mEffectManager = inManager;
 }
 
-// FUNCTION: EXE 0x54aa06
 // Replaces the game state's map, deleting the old one
 void EEGameState::SetMap(EEMap* inMap)
 {
@@ -433,7 +421,6 @@ void EEGameState::SetMap(EEMap* inMap)
     this->mMap = inMap;
 }
 
-// FUNCTION: EXE 0x54aa24
 // Replaces the game state's scenario manager, deleting the old one
 void EEGameState::SetScenarioManager(EEScenarioManager* inManager)
 {
@@ -442,12 +429,3 @@ void EEGameState::SetScenarioManager(EEScenarioManager* inManager)
 }
 
 // TODO 0x54aa42 (360 bytes, vector<EETeam>::operator=: no user found in this unit yet)
-
-
-// TODO 0x54abaa (25 bytes: an implicit operator= of a class with a vector<pointer> at +4; owner unknown)
-// TODO 0x54abc3 (22 bytes: the size of a vector of 0x18-byte elements at +4; owner unknown)
-// TEMPLATE: EXE 0x54abd9
-// ?push_back@?$vector@PAVFSRestorable@@V?$allocator@PAVFSRestorable@@@std@@@std@@QAEXABQAVFSRestorable@@@Z
-// TEMPLATE: EXE 0x54ac05
-// ??G?$_Ptrit@PAVEEPlayer@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@std@@QBE?AV01@H@Z
-// TODO 0x54ac19 (28 bytes: EETeam's scalar deleting dtor COMDAT)

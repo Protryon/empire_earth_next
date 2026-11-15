@@ -38,7 +38,6 @@ const UString EECalamity::mEffectGenerationStringID("EffectGenerationStringID");
 
 // (the 21 keys' init chains 0x4acb75..0x4ad0f4: registrar, ctor, atexit registrar, guarded dtor each)
 
-// FUNCTION: EXE 0x4ad0f4
 // Creates an active calamity of the class for the caster (referenced) and loads the class's media for the caster's
 // player (nature without a caster)
 EECalamity::EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit)
@@ -54,10 +53,6 @@ EECalamity::EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit)
     this->mClass->LoadMedia(inCasterUnit != NULL ? inCasterUnit->mPlayer : ::gWorld.mPlayers[0], true);
 }
 
-// SYNTHETIC: EXE 0x4ad191
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4ad1ad
 // Creates an empty calamity with no class, target or caster (for loading)
 EECalamity::EECalamity()
     : mEffectGeneration(6), mTilePlaceHolder1(0, 0)
@@ -69,7 +64,6 @@ EECalamity::EECalamity()
     this->Reset();
 }
 
-// FUNCTION: EXE 0x4ad218
 // Destroys the calamity: stops its sounds, unloads its class's media unless it has a caster id but no caster unit,
 // and releases its units
 EECalamity::~EECalamity()
@@ -81,7 +75,6 @@ EECalamity::~EECalamity()
     this->Reset();
 }
 
-// FUNCTION: EXE 0x4ad267
 // Stops the calamity's main sound and releases it
 void EECalamity::StopSound()
 {
@@ -91,7 +84,6 @@ void EECalamity::StopSound()
     }
 }
 
-// FUNCTION: EXE 0x4ad289
 // Releases the calamity's main sound without stopping it
 void EECalamity::ReleaseSound()
 {
@@ -100,7 +92,6 @@ void EECalamity::ReleaseSound()
     this->mSound = NULL;
 }
 
-// ICF-FOLDED: EXE 0x4dfd80
 // Stops the calamity's secondary sound and releases it (folded with EEE2DFire::StopSound in the original, whose
 // mSound sat at the same offset)
 void EECalamity::StopSecondarySound()
@@ -111,7 +102,6 @@ void EECalamity::StopSecondarySound()
     }
 }
 
-// FUNCTION: EXE 0x4ad2ad
 // Releases the calamity's secondary sound without stopping it
 void EECalamity::ReleaseSecondarySound()
 {
@@ -120,7 +110,6 @@ void EECalamity::ReleaseSecondarySound()
     this->mSecondarySound = NULL;
 }
 
-// FUNCTION: EXE 0x4ad2d1
 // Clears the calamity: no class, target or caster (both released), sounds released, the effect generations and
 // handle zeroed; every timer, flag and placeholder as a new calamity's (ee_tech calamity_record.rs reset)
 void EECalamity::Reset()
@@ -142,7 +131,6 @@ void EECalamity::Reset()
     ee_calamity_record_reset(this);
 }
 
-// FUNCTION: EXE 0x4ad377
 // Writes the calamity's state to the out-of-sync dump
 void EECalamity::DumpOutOfSynch(FILE* inFile)
 {
@@ -171,13 +159,11 @@ void EECalamity::DumpOutOfSynch(FILE* inFile)
             this->mTimeElapsedSinceLastUpdate);
 }
 
-// ICF-FOLDED: EXE 0x557269
 // (empty: folded into a shared empty function)
 void EECalamity::Virtual18(unsigned long)
 {
 }
 
-// FUNCTION: EXE 0x4ad50f
 // Returns a sync checksum: the sum of the calamity's float bit patterns, ids, placeholders and flags (ee_tech
 // calamity_record.rs checksum)
 long EECalamity::GetOutOfSynchChecksum()
@@ -186,7 +172,6 @@ long EECalamity::GetOutOfSynchChecksum()
                                        this->mTargetLocation.GetZ(), this->mTilePlaceHolder1.mX, this->mTilePlaceHolder1.mY);
 }
 
-// FUNCTION: EXE 0x4ad5bb
 // Returns how many whole discrete update periods have elapsed and keeps the remainder
 unsigned long EECalamity::GetDiscreteUpdates()
 {
@@ -196,7 +181,6 @@ unsigned long EECalamity::GetDiscreteUpdates()
     return theDiscrete.updates;
 }
 
-// FUNCTION: EXE 0x4ad5fc
 // Returns the target unit through the argument (NULL if none) and whether there is one
 bool EECalamity::GetTargetUnit(EEUnit*& outUnit)
 {
@@ -275,7 +259,6 @@ long EECalamityIoCall(void* inContext, uint32_t inOp, void* ioValue)
 
 }   // namespace
 
-// FUNCTION: EXE 0x4ad618
 // Reads the calamity from a saved game (the class by id; target and caster only as ids); returns the first read error
 // (ee_tech calamity_record.rs load)
 long EECalamity::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -285,7 +268,6 @@ long EECalamity::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_calamity_record_load(this, theFfi);
 }
 
-// FUNCTION: EXE 0x4ad85e
 // Writes the calamity to the saved game (target and caster as ids, -1 if none); returns the first write error
 // (ee_tech calamity_record.rs save)
 long EECalamity::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -295,7 +277,6 @@ long EECalamity::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_calamity_record_save(this, theFfi);
 }
 
-// FUNCTION: EXE 0x4adaa3
 // Plays the calamity's sound through its class
 void EECalamity::PlaySound()
 {
@@ -303,7 +284,6 @@ void EECalamity::PlaySound()
         this->mClass->PlaySound(this);
 }
 
-// FUNCTION: EXE 0x4adab3
 // Sets the caster unit, moving the reference and the originating unit id to it (-1 when cleared)
 void EECalamity::SetCasterUnit(EEUnit* inUnit)
 {
@@ -318,7 +298,6 @@ void EECalamity::SetCasterUnit(EEUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x4adae7
 // Stops the current main sound and keeps a referenced new one
 void EECalamity::SetSound(SESMInstanceNode* inSound)
 {
@@ -328,7 +307,6 @@ void EECalamity::SetSound(SESMInstanceNode* inSound)
         inSound->Reference();
 }
 
-// FUNCTION: EXE 0x4adb01
 // Stops the current secondary sound and keeps a referenced new one
 void EECalamity::SetSecondarySound(SESMInstanceNode* inSound)
 {
@@ -338,7 +316,6 @@ void EECalamity::SetSecondarySound(SESMInstanceNode* inSound)
         inSound->Reference();
 }
 
-// FUNCTION: EXE 0x4adb1b
 // Sets the target unit, moving the reference and the target id to it, and whether the calamity has a target unit
 void EECalamity::SetTargetUnit(EEUnit* inUnit)
 {
@@ -356,9 +333,4 @@ void EECalamity::SetTargetUnit(EEUnit* inUnit)
     else
         this->mHasTargetUnit = false;
 }
-
-// Compiler-generated for this unit (template COMDATs; names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x4adb65
-// TEMPLATE: EXE 0x4adb9f
-// TEMPLATE: EXE 0x4adc3d
 

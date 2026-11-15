@@ -21,21 +21,18 @@ const UString GERectangle::sTopID("GERectangle-Top");
 const UString GERectangle::sRightID("GERectangle-Right");
 const UString GERectangle::sBottomID("GERectangle-Bottom");
 
-// FUNCTION: LLE 0x100247ab
 // Clips the rectangle to another one; returns false and leaves it unchanged when they do not overlap
 bool GERectangle::And(const GERectangle& inRectangle)
 {
     return ee_ge_rect_and_in_place(GERust(*this), GERust(inRectangle));
 }
 
-// FUNCTION: LLE 0x10024826
 // Writes the overlap of two rectangles to outRectangle; returns false (output untouched) when they do not overlap
 bool GERectangle::And(const GERectangle& inRectangle, GERectangle& outRectangle) const
 {
     return ee_ge_rect_and(GERust(*this), GERust(inRectangle), GERust(outRectangle));
 }
 
-// FUNCTION: LLE 0x100248ba
 // Reads the left, top, right and bottom edges from a file; returns the first read error (or not-open)
 long GERectangle::Load(FSFile& inFile)
 {
@@ -43,41 +40,9 @@ long GERectangle::Load(FSFile& inFile)
     return GERustFields(inFile, theFields, 4, inFile.GetIsOpen(), false, false);
 }
 
-// FUNCTION: LLE 0x10024a82
 // Writes the left, top, right and bottom edges to a file; returns the first write error (or not-open)
 long GERectangle::Save(FSFile& inFile) const
 {
     const float* theFields[] = {&this->mLeft, &this->mTop, &this->mRight, &this->mBottom};
     return GERustFields(inFile, theFields, 4, inFile.GetIsOpen(), true, false);
 }
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x10024790
-// TEMPLATE: LLE 0x10024e0b
-// TEMPLATE: LLE 0x10024e3c
-// TEMPLATE: LLE 0x10024e6a
-
-// Compiler-generated, continued:
-// SYNTHETIC: LLE 0x100246b1
-// SYNTHETIC: LLE 0x100246cd
-// SYNTHETIC: LLE 0x100246f2
-// SYNTHETIC: LLE 0x1002470e
-// SYNTHETIC: LLE 0x10024733
-// SYNTHETIC: LLE 0x1002474f
-// SYNTHETIC: LLE 0x10024774
-// SYNTHETIC: LLE 0x10024784
-
-// Compiler-generated, continued:
-// SYNTHETIC: LLE 0x100246a7
-// SYNTHETIC: LLE 0x100246c1
-// SYNTHETIC: LLE 0x100246e8
-// SYNTHETIC: LLE 0x10024702
-// SYNTHETIC: LLE 0x10024729
-// SYNTHETIC: LLE 0x10024743
-// SYNTHETIC: LLE 0x1002476a
-
-// Compiler-generated, continued:
-// TEMPLATE: LLE 0x10024ad4
-// TEMPLATE: LLE 0x10024b00
-// TEMPLATE: LLE 0x10024b50
-// TEMPLATE: LLE 0x10024ddf

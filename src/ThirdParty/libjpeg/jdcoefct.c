@@ -75,9 +75,7 @@ METHODDEF(int) decompress_smooth_data
 #endif
 
 
-// FUNCTION: JPEG 0x1008bcfc
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80dfc0
 start_iMCU_row (j_decompress_ptr cinfo)
 /* Reset within-iMCU-row counters for a new row (input side) */
 {
@@ -105,9 +103,7 @@ start_iMCU_row (j_decompress_ptr cinfo)
  * Initialize for an input processing pass.
  */
 
-// FUNCTION: JPEG 0x1008bce9
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80dfa0
 start_input_pass (j_decompress_ptr cinfo)
 {
   cinfo->input_iMCU_row = 0;
@@ -119,9 +115,7 @@ start_input_pass (j_decompress_ptr cinfo)
  * Initialize for an output processing pass.
  */
 
-// FUNCTION: JPEG 0x1008bd3f
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80e020
 start_output_pass (j_decompress_ptr cinfo)
 {
 #ifdef BLOCK_SMOOTHING_SUPPORTED
@@ -149,9 +143,7 @@ start_output_pass (j_decompress_ptr cinfo)
  * which we index according to the component's SOF position.
  */
 
-// FUNCTION: JPEG 0x1008bd7c
 METHODDEF(int)
-// FUNCTION: EXEIMG 0x80e070
 decompress_onepass (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 {
   my_coef_ptr coef = (my_coef_ptr) cinfo->coef;
@@ -232,9 +224,7 @@ decompress_onepass (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
  * Dummy consume-input routine for single-pass operation.
  */
 
-// FUNCTION: JPEG 0x1008bf57
 METHODDEF(int)
-// FUNCTION: EXEIMG 0x80e2c0
 dummy_consume_data (j_decompress_ptr cinfo)
 {
   return JPEG_SUSPENDED;	/* Always indicate nothing was done */
@@ -250,9 +240,7 @@ dummy_consume_data (j_decompress_ptr cinfo)
  * Return value is JPEG_ROW_COMPLETED, JPEG_SCAN_COMPLETED, or JPEG_SUSPENDED.
  */
 
-// FUNCTION: JPEG 0x1008bf5a
 METHODDEF(int)
-// FUNCTION: EXEIMG 0x80e2d0
 consume_data (j_decompress_ptr cinfo)
 {
   my_coef_ptr coef = (my_coef_ptr) cinfo->coef;
@@ -323,9 +311,7 @@ consume_data (j_decompress_ptr cinfo)
  * NB: output_buf contains a plane for each component in image.
  */
 
-// FUNCTION: JPEG 0x1008c10f
 METHODDEF(int)
-// FUNCTION: EXEIMG 0x80e4f0
 decompress_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 {
   my_coef_ptr coef = (my_coef_ptr) cinfo->coef;
@@ -415,9 +401,7 @@ decompress_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
  * more accurately than they really are.
  */
 
-// FUNCTION: JPEG 0x1008c27b
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x80e6a0
 smoothing_ok (j_decompress_ptr cinfo)
 {
   my_coef_ptr coef = (my_coef_ptr) cinfo->coef;
@@ -473,9 +457,7 @@ smoothing_ok (j_decompress_ptr cinfo)
  * Variant of decompress_data for use when doing block smoothing.
  */
 
-// FUNCTION: JPEG 0x1008c363
 METHODDEF(int)
-// FUNCTION: EXEIMG 0x80e7c0
 decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 {
   my_coef_ptr coef = (my_coef_ptr) cinfo->coef;
@@ -690,9 +672,7 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
  * Initialize coefficient buffer controller.
  */
 
-// FUNCTION: JPEG 0x1008bbf1
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x80de90
 jinit_d_coef_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
 {
   my_coef_ptr coef;

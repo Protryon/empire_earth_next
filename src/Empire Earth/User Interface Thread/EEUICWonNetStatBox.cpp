@@ -58,7 +58,6 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUICWonNetStatBox.h"
 
-// FUNCTION: EXE 0x65e2f8
 // Creates the WON statistics list
 // (the base gets mStats before mStats is constructed: the original pushes this+0x138)
 EEUICWonNetStatBox::EEUICWonNetStatBox(unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
@@ -71,17 +70,12 @@ EEUICWonNetStatBox::EEUICWonNetStatBox(unsigned long inID, GEFont* inFont, const
     this->mText = new GEText(inFont);
 }
 
-// SYNTHETIC: EXE 0x65e3af
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x65e3cb
 // Destroys the statistics list and its text
 EEUICWonNetStatBox::~EEUICWonNetStatBox()
 {
     delete this->mText;
 }
 
-// FUNCTION: EXE 0x65e3f9
 // Snapshots the list for drawing (no selection highlight with fewer than two lines)
 long EEUICWonNetStatBox::CopyData()
 {
@@ -91,7 +85,6 @@ long EEUICWonNetStatBox::CopyData()
     return theResult;
 }
 
-// FUNCTION: EXE 0x65e413
 // Draws each statistics row in blue: name, the counts, three percentages of games and the average game time
 // (divides by the game count)
 long EEUICWonNetStatBox::DrawTextA()
@@ -204,7 +197,6 @@ long EEUICWonNetStatBox::DrawTextA()
     return theResult;
 }
 
-// FUNCTION: EXE 0x65eca2
 // Fills the list with placeholder statistics: one "Joe Mamma II" line repeated for every visible row
 // (the name and numbers are the developers' placeholders)
 void EEUICWonNetStatBox::Refresh()
@@ -223,131 +215,3 @@ void EEUICWonNetStatBox::Refresh()
     for (unsigned long i = 0; i < this->GetNumberLinesDisplayed(); i++)
         this->AppendLine(theStat);
 }
-
-// FUNCTION: EXE 0x65ed50
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::UIListBox<EEUICWNSBStat>
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65efca
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::~UIListBox<EEUICWNSBStat>
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f05e
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::AppendLine
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f084
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::AppendStringArray
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f0d9
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::CopyData
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f335
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::DeleteAllEntries
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f366
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::DeleteLine
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f3f4
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::DrawTextA
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f406
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::ButtonDown
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f4bd
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::ButtonUp
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f4c9
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::GetNumLines
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f4e5
-// Template code for the statistics list: UIListBox<EEUICWNSBStat>::`scalar deleting destructor'
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f501
-// Template code for the statistics list: EEUICWNSBStat::operator=
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f547
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::operator=
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f6d0
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::size
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f6e6
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::resize
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f703
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::push_back
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f72f
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::erase
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f7a3
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::clear
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f7de
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::_Tidy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f817
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::resize
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f8d4
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::insert
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f92b
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::erase
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65f995
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::insert
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fc6e
-// Template code for the statistics list: EEUICWNSBStat::EEUICWNSBStat
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fcb4
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::_Ufill
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fcdf
-// Template code for the statistics list: std::copy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fd08
-// Template code for the statistics list: std::copy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fd2c
-// Template code for the statistics list: std::vector<EEUICWNSBStat,A>::_Ucopy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fd58
-// Template code for the statistics list: std::fill
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fd75
-// Template code for the statistics list: std::copy_backward
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65fda1
-// Template code for the statistics list: std::_Construct
-// (template COMDAT)

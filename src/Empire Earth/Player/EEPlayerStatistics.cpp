@@ -37,14 +37,9 @@
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
-// SYNTHETIC: EXE 0x56d346
-// SYNTHETIC: EXE 0x56d350
-// SYNTHETIC: EXE 0x56d361
-// SYNTHETIC: EXE 0x56d36d
 // the class key
 const UString EEPlayerStatistics::sKey("EEPlayerStatistics-");
 
-// FUNCTION: EXE 0x56d389
 // Copies a statistics point (time and value)
 EEStatisticsPoint& EEStatisticsPoint::operator=(const EEStatisticsPoint& inPoint)
 {
@@ -53,7 +48,6 @@ EEStatisticsPoint& EEStatisticsPoint::operator=(const EEStatisticsPoint& inPoint
     return *this;
 }
 
-// FUNCTION: EXE 0x56d39c
 // Copies a statistics series: its maximum, history flag and points
 EEStatisticsSeries& EEStatisticsSeries::operator=(const EEStatisticsSeries& inSeries)
 {
@@ -66,7 +60,6 @@ EEStatisticsSeries& EEStatisticsSeries::operator=(const EEStatisticsSeries& inSe
     return *this;
 }
 
-// FUNCTION: EXE 0x56d409
 // Copies a player's statistics: name, end time and all 31 series
 EEPlayerStatistics& EEPlayerStatistics::operator=(const EEPlayerStatistics& inStatistics)
 {
@@ -78,20 +71,17 @@ EEPlayerStatistics& EEPlayerStatistics::operator=(const EEPlayerStatistics& inSt
     return *this;
 }
 
-// FUNCTION: EXE 0x56d453
 // Creates empty player statistics
 EEPlayerStatistics::EEPlayerStatistics()
 {
     this->Clear();
 }
 
-// FUNCTION: EXE 0x56d498
 // Destroys the player statistics
 EEPlayerStatistics::~EEPlayerStatistics()
 {
 }
 
-// FUNCTION: EXE 0x56d4c6
 // Lowers a series by an amount, unless that would take it below zero
 void EEPlayerStatistics::Lower(long inSeries, long inAmount)
 {
@@ -101,7 +91,6 @@ void EEPlayerStatistics::Lower(long inSeries, long inAmount)
         this->Set(inSeries, thePoint.mValue - inAmount);
 }
 
-// FUNCTION: EXE 0x56d507
 // Raises a series by an amount
 void EEPlayerStatistics::Reset(long inSeries, long inAmount)
 {
@@ -110,7 +99,6 @@ void EEPlayerStatistics::Reset(long inSeries, long inAmount)
     this->Set(inSeries, thePoint.mValue + inAmount);
 }
 
-// FUNCTION: EXE 0x56d545
 // Records a new value of a series at the current game time (replacing the last point unless the series keeps
 // history); skipped while loading a saved game and, in the scenario editor, for most series
 void EEPlayerStatistics::Set(long inIndex, long inValue)
@@ -131,14 +119,12 @@ void EEPlayerStatistics::Set(long inIndex, long inValue)
     this->mSeries[inIndex].mPoints.push_back(thePoint);
 }
 
-// FUNCTION: EXE 0x56d5fd
 // Returns the highest value a series reached
 unsigned long EEPlayerStatistics::GetValue(unsigned long inSeries)
 {
     return this->mSeries[inSeries].mMaxValue;
 }
 
-// FUNCTION: EXE 0x56d60b
 // Returns a series' latest value (0 when empty)
 unsigned long EEPlayerStatistics::GetLastValue(unsigned long inSeries)
 {
@@ -148,7 +134,6 @@ unsigned long EEPlayerStatistics::GetLastValue(unsigned long inSeries)
     return theValue;
 }
 
-// FUNCTION: EXE 0x56d63a
 // Counts how often a series went up between consecutive points
 unsigned long EEPlayerStatistics::CountIncreases(unsigned long inSeries)
 {
@@ -161,7 +146,6 @@ unsigned long EEPlayerStatistics::CountIncreases(unsigned long inSeries)
     return theCount;
 }
 
-// FUNCTION: EXE 0x56d69e
 // Returns the statistics series a dead unit counts in: 14 citizens, 15 heroes, 13 other moving units, 0 none
 long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
 {
@@ -181,7 +165,6 @@ long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
     return theSeries;
 }
 
-// FUNCTION: EXE 0x56d718
 // Clears the statistics; series 12..16 keep their history
 void EEPlayerStatistics::Clear()
 {
@@ -196,7 +179,6 @@ void EEPlayerStatistics::Clear()
     this->mSeries[12].mKeepHistory = true;
 }
 
-// FUNCTION: EXE 0x56d76c
 // Reads the statistics from the saved game: name, end time, each series' maximum and points (the saved
 // history flag is read and dropped)
 long EEPlayerStatistics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -227,7 +209,6 @@ long EEPlayerStatistics::Load(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x56d86b
 // Writes the statistics to the saved game: name, end time, each series' maximum, history flag and points
 long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -255,7 +236,6 @@ long EEPlayerStatistics::Save(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x56d95a
 // Removes repeated and zero points from the epoch series (12), keeping its changes
 // a point is kept when its value is non-zero and differs from the next one's (the last one when it differs from the
 // kept series' last value)
@@ -291,7 +271,6 @@ void EEPlayerStatistics::CompactEpochHistory()
     }
 }
 
-// FUNCTION: EXE 0x56dadc
 // Clears a player's end-of-game record: white, not local or human, no slot, zero scores and resources
 void EEStatisticsRecord::Clear()
 {
@@ -314,13 +293,11 @@ void EEStatisticsRecord::Clear()
     this->mStatistics.Clear();
 }
 
-// FUNCTION: EXE 0x56db75
 // Destroys the end-of-game record
 EEStatisticsRecord::~EEStatisticsRecord()
 {
 }
 
-// FUNCTION: EXE 0x56db99
 // Clears the game history: times, map size, flags, campaign name and every record
 void EEStatisticsHistory::Reset()
 {
@@ -336,23 +313,7 @@ void EEStatisticsHistory::Reset()
     this->mRecords.clear();
 }
 
-// FUNCTION: EXE 0x56dbc3
 // Destroys the game history
 EEStatisticsHistory::~EEStatisticsHistory()
 {
 }
-
-// TEMPLATE: EXE 0x56dbd8
-// TEMPLATE: EXE 0x56dc04
-// TEMPLATE: EXE 0x56dc38
-// TEMPLATE: EXE 0x56dc88
-// TEMPLATE: EXE 0x56dce9
-// TEMPLATE: EXE 0x56dd12
-// TEMPLATE: EXE 0x56dd33
-// TEMPLATE: EXE 0x56dd6e
-// TEMPLATE: EXE 0x56de19
-// TEMPLATE: EXE 0x56de5d
-// TEMPLATE: EXE 0x56de98
-// TEMPLATE: EXE 0x56e135
-// TEMPLATE: EXE 0x56e159
-// TEMPLATE: EXE 0x56e176

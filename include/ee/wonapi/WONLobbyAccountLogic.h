@@ -14,33 +14,33 @@ class HTTPSession;
 // the host's ops reach (the dialogs, the HTTP session, the firewall test's socket, op and address, the advert's link).
 class AccountLogic : public LobbyLogic {
 public:
-    AccountLogic(); // 0x7db150
-    virtual ~AccountLogic(); // 0x7db1d0
-    virtual void InitComponent(ComponentConfig* inConfig); // 0x7db2a0
-    virtual void HandleControlEvent(int inControlId); // 0x7dc2e0
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // 0x7dc340
+    AccountLogic();
+    virtual ~AccountLogic();
+    virtual void InitComponent(ComponentConfig* inConfig);
+    virtual void HandleControlEvent(int inControlId);
+    virtual void HandleComponentEvent(ComponentEvent* inEvent);
     EeWonLogic* mRust; // mLastUserName (0x40), mNeedTOU (0x50)
     SmartPtr<CreditsDialog> mCreditsDialog; // 0x54
     SmartPtr<TOUDialog> mTOUDialog; // 0x58
 };
 class InitLogic : public LobbyLogic {
 public:
-    InitLogic(); // 0x7dd100
-    virtual ~InitLogic(); // 0x7dd200
-    virtual void KillHook() { this->Call(EeWonLogicCall::InitKillHook); } // 0x7dfb00
-    virtual void InitComponent(ComponentConfig* inConfig); // 0x7dd340
-    virtual void HandleControlEvent(int inControlId); // 0x7dfb20
-    virtual void HandleComponentEvent(ComponentEvent* inEvent) { this->Call(EeWonLogicCall::InitEvent, inEvent->mType); } // 0x7dfb50
-    void Init() { this->Call(EeWonLogicCall::InitInit); } // 0x7dd630
-    void KillFirewallTest() { this->Call(EeWonLogicCall::InitKillFirewall); } // 0x7dfa80
+    InitLogic();
+    virtual ~InitLogic();
+    virtual void KillHook() { this->Call(EeWonLogicCall::InitKillHook); }
+    virtual void InitComponent(ComponentConfig* inConfig);
+    virtual void HandleControlEvent(int inControlId);
+    virtual void HandleComponentEvent(ComponentEvent* inEvent) { this->Call(EeWonLogicCall::InitEvent, inEvent->mType); }
+    void Init() { this->Call(EeWonLogicCall::InitInit); }
+    void KillFirewallTest() { this->Call(EeWonLogicCall::InitKillFirewall); }
     // the completions (Rust's)
-    void DNSCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitDns, (intptr_t)inOp); } // 0x7dd810
-    void HTTPDocumentCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitDocument, (intptr_t)inOp); } // 0x7de280
-    void CrossPromotionImageCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitPromotionImage, (intptr_t)inOp); } // 0x7dda10
-    void DirectoryCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitDirectory, (intptr_t)inOp); } // 0x7de4c0
-    void VersionCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitVersion, (intptr_t)inOp); } // 0x7de8f0
-    void AcceptCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitAccept, (intptr_t)inOp); } // 0x7deb50
-    void FirewallCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitFirewall, (intptr_t)inOp); } // 0x7ded20
+    void DNSCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitDns, (intptr_t)inOp); }
+    void HTTPDocumentCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitDocument, (intptr_t)inOp); }
+    void CrossPromotionImageCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitPromotionImage, (intptr_t)inOp); }
+    void DirectoryCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitDirectory, (intptr_t)inOp); }
+    void VersionCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitVersion, (intptr_t)inOp); }
+    void AcceptCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitAccept, (intptr_t)inOp); }
+    void FirewallCompletion(AsyncOp* inOp) { this->Call(EeWonLogicCall::InitFirewall, (intptr_t)inOp); }
     intptr_t Call(EeWonLogicCall inCall, intptr_t inA = 0) { return ee_won_logic_call(this->mRust, inCall, inA, 0, 0); }
     EeWonLogic* mRust; // mErrors (0x88), mIgnoredErrors (0x8c)
     SmartPtr<HTTPSession> mHTTPSession; // 0x40

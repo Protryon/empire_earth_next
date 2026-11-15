@@ -100,7 +100,6 @@ extern "C" intptr_t ee_won_guicpp_combo_call(void* inComp, EeWonGuiOp op, intptr
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x006f3970
 // Creates a combo box that takes focus and passes input to its children (the Rust combo box: the list hidden, a
 // 200 x 150 list box)
 ComboBox::ComboBox()
@@ -109,10 +108,8 @@ ComboBox::ComboBox()
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
     this->SetOnlyChildInput(true); // byte at +0x7c
 }
-// FUNCTION: WON 0x006f3a50
 // Destroys the combo box, first detaching it from its list box's listeners (the Rust combo box)
 ComboBox::~ComboBox() { ee_won_combo_free(this->mCombo); }
-// FUNCTION: WON 0x006f3e70
 // Sets the popup list box and attaches the list area to it if it is not already its scroll area
 void ComboBox::SetListBox(Scroller* inListBox)
 {

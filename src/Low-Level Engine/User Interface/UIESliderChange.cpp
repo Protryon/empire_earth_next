@@ -17,7 +17,6 @@
 #include "lle/UIEvent.h"
 #include "lle/UIESliderChange.h"
 
-// FUNCTION: LLE 0x1006e8cf
 // Shows the slider's value (times the modifier, plus the offset) in the label, or the text mapped to that value
 long UIESliderChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -30,34 +29,3 @@ long UIESliderChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     this->mLabel->SetText(theText, true);
     return kErrorOK;
 }
-
-// Header-inline members (emitted first, declaration order), then the implicit copy members and ??_E
-// SYNTHETIC: LLE 0x1006e6de
-// SYNTHETIC: LLE 0x1006e727
-// SYNTHETIC: LLE 0x1006e744
-// SYNTHETIC: LLE 0x1006e79e
-// SYNTHETIC: LLE 0x1006e7a8
-// FUNCTION: LLE 0x1006e7b2
-// FUNCTION: LLE 0x1006e813
-// SYNTHETIC: LLE 0x1006e84c
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// TEMPLATE: LLE 0x1006e966
-// TEMPLATE: LLE 0x1006e9b1
-// TEMPLATE: LLE 0x1006e9dc
-// TEMPLATE: LLE 0x1006ea10
-// TEMPLATE: LLE 0x1006eac9
-// TEMPLATE: LLE 0x1006eb06
-// TEMPLATE: LLE 0x1006eb77
-// TEMPLATE: LLE 0x1006ebd7
-// TEMPLATE: LLE 0x1006ec0c
-// TEMPLATE: LLE 0x1006eda0
-// TEMPLATE: LLE 0x1006f056
-// TEMPLATE: LLE 0x1006f0d9
-// TEMPLATE: LLE 0x1006f113
-// TEMPLATE: LLE 0x1006f13f
-// TEMPLATE: LLE 0x1006f181
-// TEMPLATE: LLE 0x1006f1c5
-// TEMPLATE: LLE 0x1006f206
-// TEMPLATE: LLE 0x1006f23e
-// TEMPLATE: LLE 0x1006f25b

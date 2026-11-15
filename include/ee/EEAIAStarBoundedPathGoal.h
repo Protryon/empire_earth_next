@@ -14,12 +14,12 @@ class EEAIBoundedPathGoalModifierBase;
 
 class EEAIAStarBoundedPathGoal : public EEAIAStarGoalBase<EEAIAStarBoundedStorage, EEMap>, public EEAIAStarPathfindingGoalBase {
 public:
-    EEAIAStarBoundedPathGoal();             // 0xe9a1
-    virtual ~EEAIAStarBoundedPathGoal();    // 0xea01 (??_G 0xe9e5)
-    void Reset();                           // 0xea26
+    EEAIAStarBoundedPathGoal();
+    virtual ~EEAIAStarBoundedPathGoal();
+    void Reset();
     virtual void ReleaseModifier();         // second base +0x04 0xea54 (both modifiers)
     virtual void SearchDone(EEAIAStarMachineBase* inMachine); // +0x08 0xea7b (the machine)
-    bool IsGoalNode(EEAIAStarNode* inNode); // 0xeb14
+    bool IsGoalNode(EEAIAStarNode* inNode);
     bool IsStepLimit(long inSteps) const { return false; }   // Expand 0xaaf4c tests only the rev limit
     // +0x14 0xed71 / +0x18 0xecf0 / +0x1c 0xec0e / +0x20 0xec7d (VC6 lists an overload set in reverse order)
     virtual void GetPoints(std::vector<GE3DPoint>& outPath);

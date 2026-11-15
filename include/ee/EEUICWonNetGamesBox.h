@@ -20,7 +20,7 @@ public:
     // (resource strings 0x8020..0x8022) and their widths
     EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
                         unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUICWonNetGamesBox();         // 0x25b63a (??_G 0x25b61e)
+    virtual ~EEUICWonNetGamesBox();
     virtual long CopyData();                // +0x14 0x25b68e
     virtual long DrawPolygons();            // +0x18 0x25b6b0 (the base's)
     virtual long DrawTextA();               // +0x1c 0x25b6b5 (six columns; full or empty games greyed)

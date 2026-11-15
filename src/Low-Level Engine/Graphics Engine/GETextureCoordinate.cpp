@@ -11,7 +11,6 @@
 #include "lle/GETextureCoordinate.h"
 #include "GERustIO.h"
 
-// FUNCTION: LLE 0x10033b1f
 // Reads the U and V coordinates from an open file; on failure rewinds to where it started
 long GETextureCoordinate::Load(FSFileSpec& inFile)
 {
@@ -19,7 +18,6 @@ long GETextureCoordinate::Load(FSFileSpec& inFile)
     return GERustFields(inFile, theFields, 2, inFile.GetIsOpen(), false, true);
 }
 
-// FUNCTION: LLE 0x10033b87
 // Writes the U and V coordinates to an open file; on failure rewinds to where it started
 long GETextureCoordinate::Save(FSFileSpec& inFile)
 {

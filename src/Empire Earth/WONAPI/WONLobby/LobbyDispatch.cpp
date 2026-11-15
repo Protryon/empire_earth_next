@@ -17,7 +17,6 @@
 namespace WONAPI {
 // LobbyLogicEventHook (0x7590e0, cdecl) receives the event while the caller still holds it
 void LobbyLogicEventHook(ComponentEvent*);
-// FUNCTION: WON 0x00759120
 // Broadcasts a plain lobby event of the given type to the lobby screens
 void LobbyBroadcastLobbyEvent(int type,bool broadcast)
 {
@@ -25,7 +24,6 @@ void LobbyBroadcastLobbyEvent(int type,bool broadcast)
     SmartPtr<LobbyEvent> event = new LobbyEvent(type);
     gLobbyData->mLobbyContainer->FireBroadcastEvent(event.get(),broadcast);
 }
-// FUNCTION: WON 0x00759260
 // Sends an event straight to one component, from the lobby container by default
 void LobbySendEventTo(ComponentEvent* event,Component* target)
 {
@@ -37,7 +35,6 @@ void LobbySendEventTo(ComponentEvent* event,Component* target)
         target->HandleComponentEvent(event);
     }
 }
-// FUNCTION: WON 0x00759300
 // Hands an event to the lobby logic, from the lobby container by default
 void LobbyDispatchEvent(ComponentEvent* event)
 {
@@ -48,7 +45,6 @@ void LobbyDispatchEvent(ComponentEvent* event)
         LobbyLogicEventHook(event);
     }
 }
-// FUNCTION: WON 0x00761020
 // Shows the login screen and tells it that it was opened
 void LobbyShowLoginScreen()
 {
@@ -67,13 +63,3 @@ void LobbyBroadcastEvent(ComponentEvent* event,bool sendNow)
     if(gLobbyData.get()!=NULL) gLobbyData->mLobbyContainer->FireBroadcastEvent(event,sendNow);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00759100
-// (void __cdecl WONAPI::LobbyFn359100(class WONAPI::ComponentEvent *,bool)    [?LobbyBroadcastEvent@WONAPI@@YAXPAVComponentEvent@1@_N@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007591e0
-// (public: virtual void * __thiscall WONAPI::LobbyEvent::`scalar deleting destructor'(unsigned int)    [??_GLobbyEvent@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x00759200
-// (public: virtual __thiscall WONAPI::LobbyEvent::~LobbyEvent(void)    [??1LobbyEvent@WONAPI@@UAE@XZ])

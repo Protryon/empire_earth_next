@@ -19,7 +19,6 @@ using namespace WONAPI;
 // the original's globals (0x5663f4..0x566a9c) and its id table (0x566944..), one slot per row
 LobbyResourceSlot gLobbyResources[EE_WON_LOBBYRES_COUNT];
 
-// FUNCTION: WON 0x00777670
 // Registers the lobby's resource loader and control ids on the given (or a new) resource table and returns it
 ResourceConfigTablePtr LobbyResource_Init(ResourceConfigTable* theTable)
 {
@@ -54,15 +53,12 @@ ResourceConfigTablePtr LobbyResource_Init(ResourceConfigTable* theTable)
 }
 
 // The string and background getters fold to one body, the pointer and value getters to another.
-// FUNCTION: WON 0x00777f40
 // Returns the lobby string resource with the given id
 const GUIString& LobbyResource_GetString(LobbyResourceId id) { return gLobbyResources[id].mString; }
-// FUNCTION: WON 0x00777f50
 // Returns the lobby image resource with the given id (the original's served sounds, fonts, colours and ints too)
 Image* LobbyResource_GetImage(LobbyResourceId id) { return gLobbyResources[id].mImage.get(); }
 Sound* LobbyResource_GetSound(LobbyResourceId id) { return gLobbyResources[id].mSound.get(); }
 
-// FUNCTION: WON 0x00777f60
 // Loads every lobby string, image and sound from its section of the resource table (ee_won's rows in order: a
 // section is looked up again where it changes, as the original's statements did)
 void LobbyResource_SafeGlueResources(ResourceConfigTable* theTable)
@@ -83,7 +79,6 @@ void LobbyResource_SafeGlueResources(ResourceConfigTable* theTable)
     }
 }
 
-// FUNCTION: WON 0x0077fb50
 // Releases every lobby image and sound and empties every lobby string (ee_won's rows in order)
 void LobbyResource_UnloadResources()
 {
@@ -96,6 +91,3 @@ void LobbyResource_UnloadResources()
         }
     }
 }
-
-// TEMPLATE: WON 0x00781810
-// (GUIString::erase)

@@ -11,16 +11,16 @@
 
 class EECampaignEditorBehavior {
 public:
-    EECampaignEditorBehavior();             // 0x28d82d
-    virtual ~EECampaignEditorBehavior();    // 0x28d8a1
+    EECampaignEditorBehavior();
+    virtual ~EECampaignEditorBehavior();
 
-    bool AddScenario(const UWideString& inScenario);              // 0x28d8d6
-    bool MoveScenario(const UWideString& inScenario, long inDelta);   // 0x28d98b
-    long New();                             // 0x28dadc
-    bool Delete(const UWideString& inName, UWideString& outError);    // 0x28dbfc
+    bool AddScenario(const UWideString& inScenario);
+    bool MoveScenario(const UWideString& inScenario, long inDelta);
+    long New();
+    bool Delete(const UWideString& inName, UWideString& outError);
     void GetScenarios(std::vector<UWideString>& outScenarios);    // 0x28dd83 (+0xb4)
     void GetAvailableScenarios(std::vector<UWideString>& outScenarios);   // 0x28dd96 (+0xc4)
-    bool GetIsUnlocked();                   // 0x28dda9
+    bool GetIsUnlocked();
     const UWideString& GetPassword() const { return this->mPassword; }
     bool GetPasswordEntered() const { return this->mPasswordEntered; }
     const UWideString& GetBackgroundImage();  // 0x28de0c (campaign +0x38)
@@ -30,18 +30,18 @@ public:
     UWideString GetAuthorName();            // 0x28de4b (campaign +0x24)
     UWideString GetDescription();           // 0x28de65 (campaign +0x4c)
     UWideString GetName();                  // 0x28de7f (campaign +0x60)
-    bool GetScenarioList(std::vector<UWideString>& outScenarios, UWideString& outError);   // 0x28de99
-    bool Reset();                           // 0x28deb0
-    bool RemoveScenario(const UWideString& inScenario);           // 0x28e655
-    bool Save(UWideString& outError);       // 0x28e736
-    bool Load(const UWideString& inName, UWideString& outError);  // 0x28e77a
-    void SetAuthorEmail(const UWideString& inText);  // 0x28e7f7
-    void SetAuthorName(const UWideString& inText);  // 0x28e806
-    void SetBackgroundImage(const UWideString& inText);  // 0x28e815
-    void SetDescription(const UWideString& inText); // 0x28e824
-    void SetName(const UWideString& inText);        // 0x28e833
+    bool GetScenarioList(std::vector<UWideString>& outScenarios, UWideString& outError);
+    bool Reset();
+    bool RemoveScenario(const UWideString& inScenario);
+    bool Save(UWideString& outError);
+    bool Load(const UWideString& inName, UWideString& outError);
+    void SetAuthorEmail(const UWideString& inText);
+    void SetAuthorName(const UWideString& inText);
+    void SetBackgroundImage(const UWideString& inText);
+    void SetDescription(const UWideString& inText);
+    void SetName(const UWideString& inText);
     void SetPassword(const UWideString& inPassword);    // 0x28e842 (+0xd4; sets mPasswordEntered)
-    void SetRequiredCiv(const UWideString& inText);     // 0x28e860
+    void SetRequiredCiv(const UWideString& inText);
     // Save's checks, defined after the setters (provisional names)
     bool ValidateName(UWideString& outError);       // 0x28e86f (the campaign name is not empty, else string 0x1bd0)
     bool Validate(UWideString& outError);           // 0x28e8c7 (the three checks)

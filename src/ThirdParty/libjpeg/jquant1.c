@@ -182,9 +182,7 @@ typedef my_cquantizer * my_cquantize_ptr;
  */
 
 
-// FUNCTION: JPEG 0x10090653
 LOCAL(int)
-// FUNCTION: EXEIMG 0x8136d0
 select_ncolors (j_decompress_ptr cinfo, int Ncolors[])
 /* Determine allocation of desired colors to components, */
 /* and fill in Ncolors[] array to indicate choice. */
@@ -243,9 +241,7 @@ select_ncolors (j_decompress_ptr cinfo, int Ncolors[])
 }
 
 
-// FUNCTION: JPEG 0x1009072a
 LOCAL(int)
-// FUNCTION: EXEIMG 0x8137c0
 output_value (j_decompress_ptr cinfo, int ci, int j, int maxj)
 /* Return j'th output value, where j will range from 0 to maxj */
 /* The output values must fall in 0..MAXJSAMPLE in increasing order */
@@ -259,9 +255,7 @@ output_value (j_decompress_ptr cinfo, int ci, int j, int maxj)
 }
 
 
-// FUNCTION: JPEG 0x10090877
 LOCAL(int)
-// FUNCTION: EXEIMG 0x813920
 largest_input_value (j_decompress_ptr cinfo, int ci, int j, int maxj)
 /* Return largest input value that should map to j'th output value */
 /* Must have largest(j=0) >= 0, and largest(j=maxj) >= MAXJSAMPLE */
@@ -275,9 +269,7 @@ largest_input_value (j_decompress_ptr cinfo, int ci, int j, int maxj)
  * Create the colormap.
  */
 
-// FUNCTION: JPEG 0x10090531
 LOCAL(void)
-// FUNCTION: EXEIMG 0x813570
 create_colormap (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -337,9 +329,7 @@ create_colormap (j_decompress_ptr cinfo)
  * Create the color index table.
  */
 
-// FUNCTION: JPEG 0x10090745
 LOCAL(void)
-// FUNCTION: EXEIMG 0x8137e0
 create_colorindex (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -402,9 +392,7 @@ create_colorindex (j_decompress_ptr cinfo)
  * distinct output values.
  */
 
-// FUNCTION: JPEG 0x100909f9
 LOCAL(ODITHER_MATRIX_PTR)
-// FUNCTION: EXEIMG 0x813ad0
 make_odither_array (j_decompress_ptr cinfo, int ncolors)
 {
   ODITHER_MATRIX_PTR odither;
@@ -440,9 +428,7 @@ make_odither_array (j_decompress_ptr cinfo, int ncolors)
  * share a dither table.
  */
 
-// FUNCTION: JPEG 0x1009099a
 LOCAL(void)
-// FUNCTION: EXEIMG 0x813a70
 create_odither_tables (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -469,9 +455,7 @@ create_odither_tables (j_decompress_ptr cinfo)
  * Map some rows of pixels to the output colormapped representation.
  */
 
-// FUNCTION: JPEG 0x10090a5c
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x813b40
 color_quantize (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 		JSAMPARRAY output_buf, int num_rows)
 /* General case, no dithering */
@@ -499,9 +483,7 @@ color_quantize (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 }
 
 
-// FUNCTION: JPEG 0x10090ae7
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x813c00
 color_quantize3 (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 		 JSAMPARRAY output_buf, int num_rows)
 /* Fast path for out_color_components==3, no dithering */
@@ -529,9 +511,7 @@ color_quantize3 (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 }
 
 
-// FUNCTION: JPEG 0x10090b76
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x813cc0
 quantize_ord_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 		     JSAMPARRAY output_buf, int num_rows)
 /* General case, with ordered dithering */
@@ -581,9 +561,7 @@ quantize_ord_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 }
 
 
-// FUNCTION: JPEG 0x10090c61
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x813df0
 quantize3_ord_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 		      JSAMPARRAY output_buf, int num_rows)
 /* Fast path for out_color_components==3, with ordered dithering */
@@ -628,9 +606,7 @@ quantize3_ord_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 }
 
 
-// FUNCTION: JPEG 0x10090d62
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x813f20
 quantize_fs_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
 		    JSAMPARRAY output_buf, int num_rows)
 /* General case, with Floyd-Steinberg dithering */
@@ -742,9 +718,7 @@ quantize_fs_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
  * Allocate workspace for Floyd-Steinberg errors.
  */
 
-// FUNCTION: JPEG 0x10090892
 LOCAL(void)
-// FUNCTION: EXEIMG 0x813940
 alloc_fs_workspace (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -763,9 +737,7 @@ alloc_fs_workspace (j_decompress_ptr cinfo)
  * Initialize for one-pass color quantization.
  */
 
-// FUNCTION: JPEG 0x100908ce
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x813980
 start_pass_1_quant (j_decompress_ptr cinfo, boolean is_pre_scan)
 {
   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
@@ -834,9 +806,7 @@ finish_pass_1_quant (j_decompress_ptr cinfo)
  * Shouldn't get to this module!
  */
 
-// FUNCTION: JPEG 0x10090ee6
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x8140f0
 new_color_map_1_quant (j_decompress_ptr cinfo)
 {
   ERREXIT(cinfo, JERR_MODE_CHANGE);
@@ -847,9 +817,7 @@ new_color_map_1_quant (j_decompress_ptr cinfo)
  * Module initialization routine for 1-pass color quantization.
  */
 
-// FUNCTION: JPEG 0x100904a6
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x8134d0
 jinit_1pass_quantizer (j_decompress_ptr cinfo)
 {
   my_cquantize_ptr cquantize;

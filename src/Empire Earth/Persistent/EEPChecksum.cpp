@@ -15,21 +15,18 @@ const UString EEPChecksum::sNumChecksums("EEPChecksum-NumChecksums");
 const UString EEPChecksum::sChecksum("EEPChecksum-Checksum");
 const UString EEPChecksum::sVerboseMode("EEPChecksum-VerboseMode");
 
-// FUNCTION: EXE 0x549d05
 // Creates an empty saved checksum chunk, verbose or not
 EEPChecksum::EEPChecksum(bool inVerbose)
     : ESChecksum(inVerbose), FSPersistent(kPersistentChecksum)
 {
 }
 
-// FUNCTION: EXE 0x549d3c
 // Creates an empty verbose saved checksum chunk (persistent factory)
 FSPersistent* EEPChecksum::CreateDefault() const
 {
     return new EEPChecksum(true);
 }
 
-// FUNCTION: EXE 0x549d5f
 // Adds the chunk's total checksum to a running checksum as "EEPChecksum"
 void EEPChecksum::GetChecksum(ESChecksum& ioChecksum) const
 {
@@ -37,7 +34,6 @@ void EEPChecksum::GetChecksum(ESChecksum& ioChecksum) const
     ioChecksum.AddChecksum("EEPChecksum", theChecksum);
 }
 
-// FUNCTION: EXE 0x549d9b
 // Reads the verbose flag and the described checksum entries from a saved game; returns the first read error
 long EEPChecksum::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -64,7 +60,6 @@ long EEPChecksum::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     return theResult;
 }
 
-// FUNCTION: EXE 0x549e5c
 // Writes the verbose flag and the described checksum entries to a save; returns the first write error
 long EEPChecksum::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -85,20 +80,3 @@ long EEPChecksum::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     }
     return theResult;
 }
-
-// FUNCTION: EXE 0x549fdc
-// Destroys the saved checksum chunk
-// the inline destructor (ee/EEPChecksum.h), after its first user
-
-// SYNTHETIC: EXE 0x549c3c
-// SYNTHETIC: EXE 0x549c46
-// SYNTHETIC: EXE 0x549c57
-// SYNTHETIC: EXE 0x549c63
-// SYNTHETIC: EXE 0x549c7f
-// SYNTHETIC: EXE 0x549c89
-// SYNTHETIC: EXE 0x549c9a
-// SYNTHETIC: EXE 0x549ca6
-// SYNTHETIC: EXE 0x549cc2
-// SYNTHETIC: EXE 0x549ccc
-// SYNTHETIC: EXE 0x549cdd
-// SYNTHETIC: EXE 0x549ce9
