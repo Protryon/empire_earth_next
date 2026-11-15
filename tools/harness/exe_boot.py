@@ -120,14 +120,16 @@ OPEN_DATA = ROOT / "build" / "open_data"
 
 def data_tree(kind):
     """The unified data tree the runs stage (tools/open_data.py: both installs' data.ssa and loose data in one Data
-    folder; the game needs neither an archive nor the original game). kind "open": db text, glTF, PNG
-    (build/open_data/tree, or the tree EE_HARNESS_OPEN_DATA names when that is a directory); "binary": the same files
-    unconverted (build/open_data/tree-binary). Built once when missing."""
+    folder; the game needs neither an archive nor the original game): db text, glTF, PNG (build/open_data/tree, or
+    the tree EE_HARNESS_OPEN_DATA names when that is a directory). Built once when missing. kind: "open", the only
+    one (the game reads only the text db tables: there is no binary tree)."""
+    if kind != "open":
+        raise ValueError(f"data tree {kind!r}: the only tree is 'open' (the game reads only the text db tables)")
     env = os.environ.get("EE_HARNESS_OPEN_DATA")
-    if kind == "open" and env and env not in ("1", "yes") and pathlib.Path(env).is_dir():
+    if env and env not in ("1", "yes") and pathlib.Path(env).is_dir():
         tree = pathlib.Path(env)
     else:
-        tree = OPEN_DATA / ("tree" if kind == "open" else "tree-binary")
+        tree = OPEN_DATA / "tree"
     stale = False
     if (tree / "open_data.json").exists() and tree.parent == OPEN_DATA:   # our own trees: rebuilt when stale
         sys.path.insert(0, str(ROOT / "tools"))
@@ -139,8 +141,6 @@ def data_tree(kind):
     if stale or not (tree / "open_data.json").exists():
         print(f"data: building {tree} (tools/open_data.py build)", flush=True)
         cmd = [sys.executable, "-I", str(ROOT / "tools" / "open_data.py"), "build", str(tree), "--force"]
-        if kind == "binary":
-            cmd.append("--binary")
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode:
             raise RuntimeError(f"open_data build failed:\n{r.stdout}{r.stderr}")
@@ -230,8 +230,7 @@ def stage(name, build, data=True, silent_audio=True):
         rdp_modes.build_proxy(d)
         print('display: RDP mode-list proxy staged (DDRDP.dll)', flush=True)
     if data:
-        text_db, open_assets = os.environ.get("EE_HARNESS_TEXT_DB"), os.environ.get("EE_HARNESS_OPEN_ASSETS")
-        kind = "open" if os.environ.get("EE_HARNESS_OPEN_DATA") or (text_db and open_assets) else "binary"
+        kind = "open"
         c = data_tree(kind)
         stage_tree(c, d)
         if kind == "open" and c.parent != OPEN_DATA:
@@ -244,25 +243,6 @@ def stage(name, build, data=True, silent_audio=True):
             print(f"data: Data/ai and Data/db from the checkout's data/ai and data/db", flush=True)
         print(f"data: the unified {kind} data tree {c} ({json.loads((c / 'open_data.json').read_text())['files']} files)",
               flush=True)
-        if kind == "open":
-            text_db = open_assets = None   # already in the tree
-        if text_db:
-            # TEST: the db tables as text (tools/eedata, clean mode) in the staged copy's Data\db; the game prefers
-            # them over data.ssa
-            r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "eedata" / "eedata.py"), "install", str(d)],
-                               capture_output=True, text=True)
-            if r.returncode:
-                raise RuntimeError(f"eedata install failed:\n{r.stdout}{r.stderr}")
-            print(f"data: db text tables installed ({len(list((d / 'Data' / 'db').glob('*.*')))} files)", flush=True)
-        if open_assets:
-            # TEST: every model as glTF and every texture as PNG (tools/eemodel) in the staged copy's Data\Models and
-            # Data\Textures; the game prefers them over the .cem/.sst/.tga
-            r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "eemodel" / "eemodel.py"), "install", str(d)],
-                               capture_output=True, text=True)
-            if r.returncode:
-                raise RuntimeError(f"eemodel install failed:\n{r.stdout}{r.stderr}")
-            print(f"data: open models/textures installed ({r.stdout.strip().splitlines()[-1] if r.stdout.strip() else ''})",
-                  flush=True)
     return d
 
 

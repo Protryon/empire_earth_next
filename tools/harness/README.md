@@ -62,10 +62,11 @@ Requirements: the two game installs (Art of Conquest and the original Empire Ear
 built with it), pip `pefile capstone`.
 
 **Data and settings.** Every run stages the unified data tree of `tools/open_data.py` (built from the installs into
-`build/open_data/` the first time; hard links, the folders the game writes into are copied): by default the binary
-tree (`tree-binary`: the .dat/.cem/.sst/.tga as shipped, loose), with `EE_HARNESS_OPEN_DATA=1` (or
-`EE_HARNESS_TEXT_DB=1 EE_HARNESS_OPEN_ASSETS=1`) the open one (`tree`: db text, glTF, PNG; `EE_HARNESS_OPEN_DATA=DIR`
-names another tree). No data.ssa and no original install is staged. The game's settings are a fresh `config.yaml` in
+`build/open_data/` the first time; hard links, the folders the game writes into are copied): the open tree
+(`build/open_data/tree`: db text, glTF, PNG; `EE_HARNESS_OPEN_DATA=DIR` names another tree, whose stage then gets the
+checkout's `data/db` and `data/ai`). There is no binary tree: the game reads only the text db tables. A tree's
+`Data/db` and `Data/ai` are refreshed from the checkout's `data/db` and `data/ai` when they changed (`open_data.py
+sync`). No data.ssa and no original install is staged. The game's settings are a fresh `config.yaml` in
 the stage per run, holding the run's pins (`audio.music.enabled=true`, `--pt-rate`; `config_yaml.py`); the file the game leaves is kept as
 `build/boot/<stage>.session.config.yaml`. The game uses no registry: `exe_boot.c` stops a run on any registry write.
 

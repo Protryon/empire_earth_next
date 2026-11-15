@@ -62,7 +62,7 @@ def copy_data(data, out):
     made = out / "open_data.json"
     info = json.loads(made.read_text(encoding="utf-8")) if made.exists() else {}
     if info.get("binary"):
-        print("data: a --binary tree (db tables, models and textures in their binary forms)")
+        sys.exit("data: a --binary tree: the game reads only the text db tables now (python -I tools/open_data.py build)")
     return info
 
 

@@ -388,7 +388,7 @@ def main():
     ap.add_argument("--normal-priority", action="store_true",
                     help="run the games at normal priority (default: below normal, so that a windowed game or the "
                          "gates keep their CPU while a bench runs; the game's results do not depend on it)")
-    ap.add_argument("--data", default="binary")
+    ap.add_argument("--data", default="open")
     ap.add_argument("--exe", type=pathlib.Path, default=sim.DEFAULT_EXE)
     ap.add_argument("--sim-arg", action="append", default=[])
     ap.add_argument("--ai-scripts", type=pathlib.Path, help="EE_AI_SCRIPTS for every run (made absolute): the next "

@@ -1,13 +1,12 @@
 """open_data: the game's data as one loose Data tree (open formats where they exist) and the bundle a playthrough needs.
 
-  python -I tools/open_data.py build OUT [--game DIR] [--base DIR] [--binary] [--force]
+  python -I tools/open_data.py build OUT [--game DIR] [--base DIR] [--force]
         OUT/Data: every file of both data.ssa archives and of both installs' loose Data, merged in the game's search
         order; models as glTF (tools/eemodel), textures as PNG (tools/eemodel); Data/db and Data/ai copied from the
         repository's data/db (the tables as text and the rules documents, committed) and data/ai (the computer
         players' scripts): the retail db folder is not used; OUT/Users (the install's), OUT/WONLobby.cfg,
-        OUT/zzWONVersion.cfg, OUT/open_data.json (what was built).
-        --binary: the same tree with the binary forms (.dat, .cem, .sst/.tga) unconverted (a test variant; its
-        Data/db is the retail .dat files).
+        OUT/zzWONVersion.cfg, OUT/open_data.json (what was built). (The game reads only the text db tables: there
+        is no binary tree any more.)
   python -I tools/open_data.py pack OUT.zip [--part all|media|db] [--tree DIR] [--game DIR] [--base DIR]
         the bundle: the open tree (built into build/open_data/tree unless --tree names one), fonts/ (Liberation, with
         its LICENSE and AUTHORS) and README.txt. OUT must be under build/ or outside the repository.
@@ -18,19 +17,16 @@
                  documents and the computer players' scripts, the tweakables; small), for a game without a checkout
         The third part, Data/Textures-4x, comes from tools/upscale.
   python -I tools/open_data.py sync TREE      (also: ai TREE)
-        refresh a built tree's Data/ai and (not on a --binary tree) Data/db from the repository's data/ai and data/db
+        refresh a built tree's Data/ai and Data/db from the repository's data/ai and data/db
         in place (a copy; seconds, no rebuild) and record their hashes in its open_data.json ("ai", "db"). A build
         copies them too; the harness and tools/sim.py never run a tree whose recorded hashes differ.
   python -I tools/open_data.py db-regen [OUT] [--game DIR] [--base DIR]
         convert the retail db tables (the same data path as a build) to text with tools/eedata, plus epochs.yaml and
         the rules documents (rules.py), into OUT (default: the repository's data/db, replacing its tables). The
         committed data/db is that conversion; eedata.py check reports every difference between the two.
-  python -I tools/open_data.py ids TREE
-        write a binary tree's Data/db/dbobjects.ids and dbtechtree.ids (the row ids the text tables would carry, from
-        its .dat files; the computer players' scripts name classes and techs by them). A --binary build writes them.
   python -I tools/open_data.py check DIR
         counts per folder of a tree or bundle and the rules it must keep (no data.ssa, no dxm, no binary file that has
-        an open replacement)
+        an open replacement, only text tables in Data/db)
 
 The merge follows the original game's data path (EEShowSinglePlayerScreen; tools/eemodel/sources.py): this install's
 Data folder, the original game's Data folder, this install's data.ssa, the original game's data.ssa. The first place
@@ -67,12 +63,12 @@ DB_TEXT = ROOT / 'data' / 'db'      # the db tables as text and the rules docume
 
 
 def converters_hash():
-    """A hash of the code that decides a tree's content (this tool, eedata, eemodel): a tree built by other code is
-    stale (e.g. the db text format changed) and the harness rebuilds it."""
+    """A hash of the code that decides a tree's content (this tool and eemodel, the media's converters): a tree built
+    by other code is stale and the harness rebuilds it. tools/eedata is not in it: the tree's Data/db is the
+    repository's data/db (db_hash; a converter change comes with a db-regen of data/db, eedata.py check (d))."""
     import hashlib
     h = hashlib.sha256()
-    for p in sorted([pathlib.Path(__file__).resolve(), *(ROOT / 'tools' / 'eedata').glob('*.py'),
-                     *(ROOT / 'tools' / 'eedata').glob('*.json'), *(ROOT / 'tools' / 'eemodel').glob('*.py')]):
+    for p in sorted([pathlib.Path(__file__).resolve(), *(ROOT / 'tools' / 'eemodel').glob('*.py')]):
         h.update(p.name.encode() + b'\0' + p.read_bytes().replace(b'\r\n', b'\n'))
     return h.hexdigest()[:16]
 
@@ -134,7 +130,7 @@ def db_hash():
 
 def refresh_db(tree):
     """Data/db of a tree replaced by the repository's data/db (unlinked first, like refresh_scripts), its hash
-    recorded in open_data.json -> the hash. Not for a --binary tree (its Data/db is the retail .dat files)."""
+    recorded in open_data.json -> the hash."""
     tree = pathlib.Path(tree)
     target = tree / 'Data' / 'db'
     if not db_files():
@@ -160,13 +156,10 @@ def _record(tree, key, value):
 
 def tree_stale(tree):
     """What of a built tree's Data/ai and Data/db differs from the repository (by the hashes its open_data.json
-    records) -> e.g. ['ai', 'db']; [] when current. A --binary tree's Data/db is retail: only its Data/ai counts."""
+    records) -> e.g. ['ai', 'db']; [] when current."""
     meta = pathlib.Path(tree) / 'open_data.json'
     report = json.loads(meta.read_text()) if meta.exists() else {}
-    out = [] if report.get('ai') == scripts_hash() else ['ai']
-    if not report.get('binary') and report.get('db') != db_hash():
-        out.append('db')
-    return out
+    return [k for k, h in (('ai', scripts_hash()), ('db', db_hash())) if report.get(k) != h]
 
 
 def sync_fetched(root):
@@ -319,29 +312,6 @@ def spell(name, dirs):
     return dirs['\\'.join(parts[:-1]).lower()] + '\\' + parts[-1]
 
 
-ID_TABLES = ('dbobjects', 'dbtechtree')   # the tables whose row ids the game reads from a binary tree (EEDbRowIds)
-
-
-def write_row_ids(tree):
-    """A binary tree's Data/db/<table>.ids for ID_TABLES: `key id` lines, the ids tools/eedata gives the rows when it
-    converts the tables (ids.generate), so the next engine's scripts name the same classes and techs on both trees
-    (docs/AI_RESEARCH.md 8.36). -> {table: rows}"""
-    import ids as idsmod
-    import tables
-    spec = db_tables()
-    db = pathlib.Path(tree) / 'Data' / 'db'
-    dbs = {t: (db / f'{t}.dat').read_bytes() for t in ID_TABLES}
-    generated = idsmod.generate(tables.parse_all(dbs, spec), spec)
-    out = {}
-    for t in ID_TABLES:
-        rows = sorted(generated[t].items())
-        head = f'# {t}: the row ids of the .dat (tools/open_data.py ids; key id)'
-        text = '\n'.join([head] + [f'{k} {v}' for k, v in rows]) + '\n'
-        (db / f'{t}.ids').write_bytes(text.encode('ascii'))
-        out[t] = len(rows)
-    return out
-
-
 def db_tables():
     spec = json.loads((ROOT / 'tools' / 'eedata' / 'specs.json').read_text(encoding='utf-8'))
     return spec
@@ -370,42 +340,39 @@ def cmd_build(a, out=None):
             else:
                 winner[low] = p
     spelled = canonical_dirs(plcs)
-    if 'db' in spelled:   # the converted tables go to Data/db: the copied ones (dbrandommap.dat, ...) must join them
-        spelled = {k: 'db' + v[2:] if k == 'db' or k.startswith('db\\') else v for k, v in spelled.items()}
     data = out / 'Data'
     data.mkdir(parents=True)
-    report = dict(made=time.strftime('%Y-%m-%d %H:%M:%S'), binary=bool(a.binary), converters=converters_hash(),
+    report = dict(made=time.strftime('%Y-%m-%d %H:%M:%S'), converters=converters_hash(),
                   sources=[dict(place=p.label, files=len(p.names), tags=dict(p.tags)) for p in plcs],
                   shadowed={f'{k[1]} under {k[0]}': v for k, v in sorted(clashes.items())})
     converted = set()   # lower names replaced by an open form
-    if not a.binary:
-        # Data/db: the repository's data/db (the committed text tables; db-regen converts retail), none of the
-        # retail db folder (its .dat tables, the original converter's logs, a stray "copy of dbgamevariant.dat")
-        converted |= {low for low in winner if low.startswith('db\\')}
-        # models -> glTF, textures -> PNG (tools/eemodel export: the same data path, resolved as the game does)
-        import eemodel
-        ns = argparse.Namespace(game=a.game, base=a.base, names=None)
-        log = []
-        real_print = print
+    # Data/db: the repository's data/db (the committed text tables; db-regen converts retail), none of the retail db
+    # folder (its .dat tables, the original converter's logs, a stray "copy of dbgamevariant.dat")
+    converted |= {low for low in winner if low.startswith('db\\')}
+    # models -> glTF, textures -> PNG (tools/eemodel export: the same data path, resolved as the game does)
+    import eemodel
+    ns = argparse.Namespace(game=a.game, base=a.base, names=None)
+    log = []
+    real_print = print
 
-        def capture(*args, **kw):
-            log.append(' '.join(str(x) for x in args))
-            real_print(*args, **kw)
-        eemodel.print = capture
-        eemodel.cmd_export(ns, out=data)
-        eemodel.print = real_print
-        skipped = [ln for ln in log if ln.startswith('skipped ')]
-        report['models_skipped'] = skipped
-        models = {p.stem.lower() for p in (data / 'Models').glob('*.gltf')}
-        pngs = {p.stem.split('@')[0].lower() for p in (data / 'Textures').glob('*.png')}
-        for low in winner:
-            stem = low.rsplit('\\', 1)[-1].rsplit('.', 1)[0]
-            if low.startswith('models\\') and low.endswith('.cem') and '\\' not in low[7:] and stem in models:
-                converted.add(low)
-            if low.startswith('textures\\') and low.endswith(('.tga', '.sst')) and '\\' not in low[9:] and stem in pngs:
-                converted.add(low)
-        report['models_gltf'] = len(models)
-        report['textures_png'] = len(pngs)
+    def capture(*args, **kw):
+        log.append(' '.join(str(x) for x in args))
+        real_print(*args, **kw)
+    eemodel.print = capture
+    eemodel.cmd_export(ns, out=data)
+    eemodel.print = real_print
+    skipped = [ln for ln in log if ln.startswith('skipped ')]
+    report['models_skipped'] = skipped
+    models = {p.stem.lower() for p in (data / 'Models').glob('*.gltf')}
+    pngs = {p.stem.split('@')[0].lower() for p in (data / 'Textures').glob('*.png')}
+    for low in winner:
+        stem = low.rsplit('\\', 1)[-1].rsplit('.', 1)[0]
+        if low.startswith('models\\') and low.endswith('.cem') and '\\' not in low[7:] and stem in models:
+            converted.add(low)
+        if low.startswith('textures\\') and low.endswith(('.tga', '.sst')) and '\\' not in low[9:] and stem in pngs:
+            converted.add(low)
+    report['models_gltf'] = len(models)
+    report['textures_png'] = len(pngs)
     copied = collections.Counter()
     for low, p in sorted(winner.items()):
         if low in converted:
@@ -421,10 +388,7 @@ def cmd_build(a, out=None):
         if not any(e.name.lower() == d.lower() for e in data.iterdir() if e.is_dir()):
             (data / d).mkdir()
     report['ai'] = refresh_scripts(out)   # the next engine's scripts (the repository's, not retail data)
-    if not a.binary:
-        report['db'] = refresh_db(out)    # the tables (the repository's text, not converted here)
-    if a.binary:
-        report['ids'] = write_row_ids(out)   # the scripts' names for the .dat rows (EEDbRowIds)
+    report['db'] = refresh_db(out)        # the tables (the repository's text, not converted here)
     report['copied'] = dict(sorted(copied.items()))
     game = dirs[0]
     if (game / 'Users').is_dir():
@@ -516,8 +480,8 @@ def check_tree(root):
                 problems.append(f'{rel}: a .cem next to its glTF')
             if p.suffix.lower() in ('.sst', '.tga') and sib('.png').exists() and low[:2] == ['data', 'textures']:
                 problems.append(f'{rel}: a texture next to its PNG')
-            if p.suffix.lower() == '.dat' and (sib('.csv').exists() or sib('.yaml').exists()):
-                problems.append(f'{rel}: a db table next to its text')
+            if low[:2] == ['data', 'db'] and p.suffix.lower() not in ('.csv', '.yaml'):
+                problems.append(f'{rel}: not a text table (Data/db holds only the text tables)')
             del stem
     return problems
 
@@ -559,8 +523,8 @@ def cmd_pack(a):
         tree = pathlib.Path(a.tree)
     else:
         tree = TREE
-        if not (tree / 'open_data.json').exists() or json.loads((tree / 'open_data.json').read_text())['binary']:
-            a.force, a.binary = True, False
+        if not (tree / 'open_data.json').exists() or json.loads((tree / 'open_data.json').read_text()).get('binary'):
+            a.force = True
             cmd_build(a, out=tree)
     sync(tree)   # Data/db and Data/ai: the repository's data/db and data/ai, as committed
     problems = check_tree(tree)
@@ -605,7 +569,6 @@ def main():
         p.add_argument('--game')
         p.add_argument('--base')
         if name == 'build':
-            p.add_argument('--binary', action='store_true')
             p.add_argument('--force', action='store_true')
         else:
             p.add_argument('--tree')
@@ -620,8 +583,6 @@ def main():
     p.add_argument('out', nargs='?')
     p.add_argument('--game')
     p.add_argument('--base')
-    p = sub.add_parser('ids')
-    p.add_argument('tree')
     a = ap.parse_args()
     if a.cmd == 'build':
         cmd_build(a)
@@ -634,11 +595,6 @@ def main():
         return 0
     if a.cmd == 'db-regen':
         return cmd_db_regen(a)
-    if a.cmd == 'ids':
-        if not (pathlib.Path(a.tree) / 'Data' / 'db' / 'dbobjects.dat').is_file():
-            sys.exit(f'{a.tree}: no Data/db/dbobjects.dat (a binary tree)')
-        print(f'{a.tree}: {write_row_ids(a.tree)}')
-        return 0
     return {'pack': cmd_pack, 'check': cmd_check}[a.cmd](a)
 
 
