@@ -24724,8 +24724,8 @@ FindBoardingLocation 2546; seed 3 107, 69, 48, 1685, 29, 482, 970. FindGathering
 game). About 1.5 GB of captures for the two seeds, 5 minutes each. Its golden was recorded on the round-33 head (the
 transports' bodies already Rust, proven equal by unit tests and the saveload games). **UUTL of seed 3 differs from run
 to run** (three runs, three digests, the same record count): the AI thread's calls of the noted unit utilities fall
-in different physics ticks under load. Read a lone transport UUTL mismatch like TCST and EVAT; every other tag of the
-profile was equal in all three runs.
+in different physics ticks under load. Its golden lists no seed 3 UUTL, and no TNMT (timing's by design, as in the other
+profiles; the first golden listed it and a later run differed); every other tag was equal in all four runs.
 
 **The citizens' notes (UCBD kinds 40-45).** FindWoodSite, FindResourceOfKind, FindStorage, FindGatherPoint (inside
 the others: never outermost in a game) and HasGatherPoint, with their inputs and outputs (FindStorage's resource amount
