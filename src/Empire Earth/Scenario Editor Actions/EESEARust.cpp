@@ -877,7 +877,7 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
         static_cast<EEMessage*>(inUnit)->Dereference();
         return 0;
     case EE_SCREENS_SEU_MESSAGE_UNIT_TYPE:
-        return (uintptr_t)(intptr_t)static_cast<EEMSelectUnits*>(inUnit)->mL30;
+        return (uintptr_t)(intptr_t)static_cast<EEMRecord*>(inUnit)->Get<int32_t>(4);   // the unit type (off the wire)
     case EE_SCREENS_SEU_PICK_AT_MOUSE:
         return (uintptr_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
     case EE_SCREENS_SEU_UNIT_RELEASE:
@@ -893,8 +893,11 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
     case EE_SCREENS_SEU_POST:
         gUserInterface->PostAction(static_cast<EEAction*>(inUnit));
         return 0;
-    case EE_SCREENS_SEU_MESSAGE_RECTANGLE:
-        return (uintptr_t)&static_cast<EEMSelectUnits*>(inUnit)->mRectangle;
+    case EE_SCREENS_SEU_MESSAGE_RECTANGLE: {   // the box selection's rectangle (member 3, off the wire; this thread's copy)
+        static GERectangle sRectangle;
+        sRectangle = static_cast<EEMRecord*>(inUnit)->Get<GERectangle>(3);
+        return (uintptr_t)&sRectangle;
+    }
     }
     return 0;
 }

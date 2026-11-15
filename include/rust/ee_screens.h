@@ -567,6 +567,317 @@ constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_LOAD = 134;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_LABEL = 135;
 
+/// The tokens of a line.
+constexpr static const size_t TOKEN_CATEGORY = 0;
+
+constexpr static const size_t TOKEN_NAME = 1;
+
+constexpr static const size_t TOKEN_BONUS = 2;
+
+constexpr static const size_t TOKEN_UPGRADE = 3;
+
+constexpr static const size_t TOKEN_COST = 4;
+
+constexpr static const size_t TOKEN_POINTS = 5;
+
+constexpr static const size_t TOKEN_VALUE = 6;
+
+/// (a form) -> 1 when it exists.
+constexpr static const uint32_t EE_SCREENS_CBW_FORM_EXISTS = 1;
+
+/// (a form, b control) -> 0 and the edit box's first line, 3 without the form or the edit box.
+constexpr static const uint32_t EE_SCREENS_CBW_EDIT_TEXT = 2;
+
+/// (a form, b control, text) the edit box's text -> 0, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_SET_EDIT_TEXT = 3;
+
+/// (a form, b control) the edit box's `SelectText`, then the form's tab stop on it.
+constexpr static const uint32_t EE_SCREENS_CBW_EDIT_SELECT = 4;
+
+/// (a form, b control) -> 0 and the text label's first line, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_LABEL_TEXT = 5;
+
+/// (a form, b control, text) the text label's text -> 0, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_SET_LABEL_TEXT = 6;
+
+/// (a form, b control, c number) the text label's `SetText(long)` -> 0, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_SET_LABEL_NUMBER = 7;
+
+/// (a form, b control, c mode) the control's display mode (by id; the original assumed the control).
+constexpr static const uint32_t EE_SCREENS_CBW_DISPLAY = 8;
+
+/// (a form) `gUIManager->Push` -> its result, 3 without the form.
+constexpr static const uint32_t EE_SCREENS_CBW_PUSH = 9;
+
+/// `gUserInterface->CloseForm(NULL)` -> its result.
+constexpr static const uint32_t EE_SCREENS_CBW_CLOSE_FORM = 10;
+
+/// (a form) -> 1 when the current form is that form (`GetCurrentForm() == GetFormByID(a)`).
+constexpr static const uint32_t EE_SCREENS_CBW_CURRENT_IS = 11;
+
+/// (a form, b control) the civilization files listed in the file list box (`Users\default\Civilizations\*.civ`).
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_LIST_FILL = 12;
+
+/// (a form, b control; or p a form) -> -1 without the file list, else its `GetCurrentSelection` result and the
+/// index.
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_SELECTION = 13;
+
+/// (a form, b control, c line; or p a form) -> the file list's line.
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_LINE = 14;
+
+/// (a form, b control) -> the file list's `DeleteSelectedFile` result.
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_DELETE = 15;
+
+/// (p a form, a form id) -> 1 when `p` is that form.
+constexpr static const uint32_t EE_SCREENS_CBW_IS_FORM = 16;
+
+/// (a form, b control) -> the control as an `EECBUIListBox*`, 0 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_LIST = 17;
+
+/// (a form, b open event, c close event) the form's open and close events (`EEScreenEvent`s of those codes).
+constexpr static const uint32_t EE_SCREENS_CBW_FORM_EVENTS = 18;
+
+/// (p a form) -> its id.
+constexpr static const uint32_t EE_SCREENS_CBW_FORM_ID = 19;
+
+/// (a form, b control index, c mode) the control's display mode (by index).
+constexpr static const uint32_t EE_SCREENS_CBW_DISPLAY_INDEX = 20;
+
+/// -> `GetNumLines()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_COUNT = 30;
+
+/// (a line) -> the line.
+constexpr static const uint32_t EE_SCREENS_CBW_L_LINE = 31;
+
+/// (a line, text) the line replaced.
+constexpr static const uint32_t EE_SCREENS_CBW_L_SET_LINE = 32;
+
+/// (text) `UIListBox::AppendLine`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_APPEND = 33;
+
+/// (a line) `UIListBox::DeleteLine`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DELETE = 34;
+
+/// `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DELETE_ALL = 35;
+
+/// (a line, b fire, c scroll) `UIListBox::ChangeSelectionIndex`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_SELECT = 36;
+
+/// -> `GetCurrentSelection`'s result and the index.
+constexpr static const uint32_t EE_SCREENS_CBW_L_CURRENT = 37;
+
+/// -> `GetAutoSelect()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_AUTO = 38;
+
+/// -> `GetHasSelection()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_HAS = 39;
+
+/// -> `GetSelectionIndex()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_INDEX = 40;
+
+/// `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DIRTY = 41;
+
+/// (a flag) -> the list's flag: [`EE_SCREENS_CBW_FLAG_UPGRADES_ONLY`] ...
+constexpr static const uint32_t EE_SCREENS_CBW_L_FLAG = 42;
+
+/// (a flag, b value) the list's flag set.
+constexpr static const uint32_t EE_SCREENS_CBW_L_SET_FLAG = 43;
+
+/// `UIControl::DrawTextA()`, then -> `GetDrawCount()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DRAW_BEGIN = 44;
+
+/// (a line) -> the drawn copy's line (`mCopyLineArray`).
+constexpr static const uint32_t EE_SCREENS_CBW_L_COPY_LINE = 45;
+
+/// (a line, b flags [`EE_SCREENS_CBW_DRAW_RIGHT`] | [`EE_SCREENS_CBW_DRAW_BOLD`], c colour, text) the text drawn in
+/// the line's rectangle -> `DrawClippedText`'s result.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DRAW = 46;
+
+/// -> `DrawScrollBarText()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DRAW_END = 47;
+
+/// The list's flags: upgrade lines only selectable (`mSelectUpgradesOnly`), points shown (`mShowPoints`), lines
+/// sorted (`mSortLines`), the points shown as of the last `CopyData` (`mCopiedShowPoints`).
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_UPGRADES_ONLY = 0;
+
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_SHOW_POINTS = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_SORT = 2;
+
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_COPIED_POINTS = 3;
+
+/// A line's text right aligned at the rectangle's top right (else left at its top left); in bold.
+constexpr static const int64_t EE_SCREENS_CBW_DRAW_RIGHT = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_DRAW_BOLD = 2;
+
+/// The colours: the header colour as of the last `CopyData` (`mC148`), black, dark blue (0, 0, 0.39).
+constexpr static const int64_t EE_SCREENS_CBW_COLOUR_HEADER = 0;
+
+constexpr static const int64_t EE_SCREENS_CBW_COLOUR_BLACK = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_COLOUR_DARK_BLUE = 2;
+
+/// (a string id) -> `gResource->GetString`'s result and the text.
+constexpr static const uint32_t EE_SCREENS_CBW_STRING = 60;
+
+/// (a the value's f32 bits) -> the value as `IDS_FORMAT_PERCENT_6_2G` prints it.
+constexpr static const uint32_t EE_SCREENS_CBW_PERCENT = 61;
+
+/// (text a file name) -> 1 when a premade civilization's file has that name (`PlatStrICmp`), with the message
+/// (`IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED` with the name).
+constexpr static const uint32_t EE_SCREENS_CBW_RESERVED = 62;
+
+/// (a upgrade) -> `gCivilizationManager.LookupLevel` found, then its value's and bonus' f32 bits.
+constexpr static const uint32_t EE_SCREENS_CBW_LOOKUP_LEVEL = 63;
+
+/// (a upgrade) -> `gCivilizationManager.GetExtraCost`.
+constexpr static const uint32_t EE_SCREENS_CBW_EXTRA_COST = 64;
+
+/// (a category) -> `GetCategoryNameID` found, then the id.
+constexpr static const uint32_t EE_SCREENS_CBW_CATEGORY_NAME_ID = 65;
+
+/// (a level) -> `EECivilizationManager::LevelNameID`.
+constexpr static const uint32_t EE_SCREENS_CBW_LEVEL_NAME_ID = 66;
+
+/// (a level) -> `EECivilizationManager::IsPowerLevel`.
+constexpr static const uint32_t EE_SCREENS_CBW_IS_POWER_LEVEL = 67;
+
+/// -> every upgrade (`gCivilizationManager.GetUpgrades()`).
+constexpr static const uint32_t EE_SCREENS_CBW_ALL_UPGRADES = 68;
+
+/// (a upgrade) -> `UpgradeKey` found, and the key.
+constexpr static const uint32_t EE_SCREENS_CBW_UPGRADE_KEY = 69;
+
+/// (text) -> the text as a quoted YAML scalar (`EEDataText::QuoteText`).
+constexpr static const uint32_t EE_SCREENS_CBW_QUOTE = 70;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_BASE_COST = 80;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_EXTRA_COST = 81;
+
+/// (a base, b step, c count) -> `ComputeCost`.
+constexpr static const uint32_t EE_SCREENS_CBW_C_COMPUTE = 82;
+
+/// (a upgrade) -> `CountInCategory(a, NULL)`.
+constexpr static const uint32_t EE_SCREENS_CBW_C_COUNT = 83;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_AVAILABLE = 84;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_UNCHANGED = 85;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_MAX = 86;
+
+/// -> its purchased upgrades.
+constexpr static const uint32_t EE_SCREENS_CBW_C_PURCHASED = 87;
+
+/// -> its name.
+constexpr static const uint32_t EE_SCREENS_CBW_C_NAME = 88;
+
+/// (a player, b the name's length, text the name then the upgrades as little-endian u32s) the request
+/// (`EEMCivUpgradesRequested`: to the server in a multiplayer session, else executed at once).
+constexpr static const uint32_t EE_SCREENS_CBW_REQUEST = 89;
+
+constexpr static const uint32_t EE_SCREENS_CBW_MULTIPLAYER = 100;
+
+/// -> the current player's `mGameResult`.
+constexpr static const uint32_t EE_SCREENS_CBW_GAME_RESULT = 101;
+
+/// -> `gWorld.PauseGame()`.
+constexpr static const uint32_t EE_SCREENS_CBW_PAUSE = 102;
+
+constexpr static const uint32_t EE_SCREENS_CBW_UNPAUSE = 103;
+
+/// -> the current player's civilization (an `EECivilization*`), 0 without a current player.
+constexpr static const uint32_t EE_SCREENS_CBW_PLAYER_CIV = 104;
+
+/// -> `gWorld.mCurrentPlayer`.
+constexpr static const uint32_t EE_SCREENS_CBW_PLAYER_ID = 105;
+
+/// (a 0 chosen, 1 locked) -> the current player's flag.
+constexpr static const uint32_t EE_SCREENS_CBW_PLAYER_FLAG = 106;
+
+/// (a 0 chosen, 1 locked, b value).
+constexpr static const uint32_t EE_SCREENS_CBW_SET_PLAYER_FLAG = 107;
+
+constexpr static const uint32_t EE_SCREENS_CBW_FREE_CAMERA = 108;
+
+/// -> `gWorld.mGameOptions.CanBuyCivilization()`.
+constexpr static const uint32_t EE_SCREENS_CBW_CAN_BUY = 109;
+
+/// -> `GetCampaignMapName` found, and the name.
+constexpr static const uint32_t EE_SCREENS_CBW_CAMPAIGN_NAME = 110;
+
+/// -> `gAllowCustomCivs`.
+constexpr static const uint32_t EE_SCREENS_CBW_CUSTOM_CIVS = 111;
+
+/// (a 0 "sounds\button1.wav", 1 "sounds\button2.wav") -> `gSoundManager->Load(name, 0, 1)`.
+constexpr static const uint32_t EE_SCREENS_CBW_SOUND_LOAD = 120;
+
+constexpr static const uint32_t EE_SCREENS_CBW_SOUND_UNLOAD = 121;
+
+/// (a sound) `Play(a, 1, 0, 1, false, NULL)`.
+constexpr static const uint32_t EE_SCREENS_CBW_SOUND_PLAY = 122;
+
+/// (text) `DisplayMessage(text, 1, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_CBW_MESSAGE = 130;
+
+/// (text, a the answer [`EE_SCREENS_CBW_ANSWER_WRITE`] ..., p its data) `DisplayQuestion` with Yes that answer.
+constexpr static const uint32_t EE_SCREENS_CBW_QUESTION = 131;
+
+/// The Yes answers: the file written (over the existing one), the selected file deleted, the changes accepted.
+constexpr static const int64_t EE_SCREENS_CBW_ANSWER_WRITE = 0;
+
+constexpr static const int64_t EE_SCREENS_CBW_ANSWER_DELETE = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_ANSWER_ACCEPT = 2;
+
+/// (a) the main game form's `mIsButtonBlinking`.
+constexpr static const uint32_t EE_SCREENS_CBW_BLINK_FLAG = 140;
+
+/// (a 0 the builder button (form 11 by id, control 5), 1 the large alert (`mMainGameForm`'s control 234)) -> 1 when
+/// it is there.
+constexpr static const uint32_t EE_SCREENS_CBW_MAIN_BUTTON = 141;
+
+/// (a button, b blinking) its `SetIsBlinking`.
+constexpr static const uint32_t EE_SCREENS_CBW_MAIN_BLINK = 142;
+
+/// (a button, b mode) its display mode.
+constexpr static const uint32_t EE_SCREENS_CBW_MAIN_DISPLAY = 143;
+
+/// (text a directory) its volume the startup volume, its directory.
+constexpr static const uint32_t EE_SCREENS_CBW_F_DIRECTORY = 150;
+
+/// (text) its file name.
+constexpr static const uint32_t EE_SCREENS_CBW_F_NAME = 151;
+
+/// (a 0 read, 1 write) -> `Open`'s result.
+constexpr static const uint32_t EE_SCREENS_CBW_F_OPEN = 152;
+
+constexpr static const uint32_t EE_SCREENS_CBW_F_CLOSE = 153;
+
+constexpr static const uint32_t EE_SCREENS_CBW_F_DELETE = 154;
+
+constexpr static const uint32_t EE_SCREENS_CBW_F_CREATE = 155;
+
+/// (text) -> `Write`'s result.
+constexpr static const uint32_t EE_SCREENS_CBW_F_WRITE = 156;
+
+/// -> its file name.
+constexpr static const uint32_t EE_SCREENS_CBW_F_FILE = 157;
+
+/// -> `gStartupDirectory`.
+constexpr static const uint32_t EE_SCREENS_CBW_STARTUP_DIRECTORY = 158;
+
+/// (text the saved file's name) the players using it (1 ..) reset (`EEAResetAllPlayerInfo`) -> how many.
+constexpr static const uint32_t EE_SCREENS_CBW_RELOAD_PLAYERS = 159;
+
+/// (text a civilization file's name) -> `EELoadCivilization` from the game's directory, else (into the same name
+/// and upgrades) the user's: the result, the name and the upgrades.
+constexpr static const uint32_t EE_SCREENS_CBW_LOAD_CIVILIZATION = 160;
+
 /// A command button that is always available.
 constexpr static const uint32_t EE_SCREENS_BUTTON_ALWAYS = 0;
 
@@ -5918,6 +6229,244 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// `GetIsMouseCaptured()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CAPTURED = 152;
+
+/// `gMouse->mPointer = a`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_POINTER = 153;
+
+/// `SetUIState(a)` (b 0), or the placement's virtual `Cancel()` (b 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_UI_STATE = 154;
+
+/// The mouse buttons' states as `EE_SCREENS_MF_BTN_*` bits.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_BUTTONS = 155;
+
+/// The shift key's `GetValue()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_SHIFT = 156;
+
+/// Whether the view rectangle contains io.f[0..2]: `gViewport`'s (a 0) or the rasterizer's viewport of
+/// `gScreenIndex` (a 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_VIEW = 157;
+
+/// `EEPointUnitOrTile(io.f[0..2], tile, point, true)` (a 0: the point, from (0, 0, 0), into io.f[0..3]) or
+/// `EEPointUnitOrTileXY` (a 1: the tile, from (-10000, -10000), into io.n): found. The tile is held.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_POINT = 158;
+
+/// The held tile's `IsSeenBy(the current player)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_TILE_SEEN = 159;
+
+/// `gUnitPicker.PickUnit(io.f[0..2], 0)`, held: whether a unit was picked.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PICK = 160;
+
+/// The picked unit's `EE_SCREENS_MF_UNIT_*` a.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_UNIT = 161;
+
+/// `EEDamageFactor(a, b)` into io.f[0].
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_DAMAGE = 162;
+
+/// a 0: `EEGetFirstSelectedUnit(first)`, held: bit 0 its answer, bit 1 the unit non-null; a 1: the selected group's
+/// `GetFirstUnit()`, held: non-null.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_FIRST = 163;
+
+/// The held first unit's `EE_SCREENS_MF_FIRST_*` a (io.f[0..3] the point of `EE_SCREENS_MF_FIRST_IN_RANGE`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_FIRST_FIELD = 164;
+
+/// `EECanConvert(the selected group's unit a, the picked unit's complex unit, in range = b)`: bit 0 its answer, bit
+/// 1 in range.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CAN_CONVERT = 165;
+
+/// Sends the message `EE_SCREENS_MF_SEND_*` a (`ProcessLocalUserInput`) with b and io.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_SEND = 166;
+
+/// `EEOrderAtCursor(io.f[0..2], unit)`: the unit none (a 0), the picked one (1), its complex unit (2).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_ORDER_AT = 167;
+
+/// The current player's `mEvents.AddEvent((io.n[0], io.n[1]), 2, player, a, false)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_EVENT = 168;
+
+/// `EEMakeCalamityEffect(io.f[0..3], the picked unit)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CALAMITY_EFFECT = 169;
+
+/// `EEPreviewPlacement(GetMouseLocation())`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PREVIEW = 170;
+
+/// a -1: `gWorld.GetNumGhostUnits()`; else the ghost a's `EE_SCREENS_MF_GHOST_*` b.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GHOST = 171;
+
+/// `mBuild->mIsQueued = a`, then `mBuild->Build(io.f[0..2])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_BUILD = 172;
+
+/// `mCalamity->Check(io.f[0..2])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CALAMITY_CHECK = 173;
+
+/// `IsInGameView(io.f[0..2])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_IN_GAME_VIEW = 174;
+
+/// `GetEntityGroup(a)->GetIsEnabled()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_ENTITY_ENABLED = 175;
+
+/// `SetEntityGroup(a)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_SET_ENTITY_GROUP = 176;
+
+/// The camera: a 0 `ClearUnitA()` and `ClearUnitB()`, a 1 `Follow(NULL, false, 1, 0, 0)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_CAMERA = 177;
+
+/// The unit hack's `Fn157269(io.f[0..2])` (a 0) or `PlaceUnit(io.f[0..2])` (a 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_HACK = 178;
+
+/// `StartSelection(io.f[0..2])` of the select-units control (a 0) or `StartCommand` of the command-units one (a 1).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_START = 179;
+
+/// The placement's `Build()` (a 0, the wall) or `Build(io.f[0..2], b)` (a 1, the gate): virtual (the scenario
+/// editor's placements build their own way).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_BUILD_WALL = 180;
+
+/// The gate placement's `ClearGhostUnits()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GATE_CLEAR = 181;
+
+/// `EEGhostUnit::CreateGate(0, the gate's mUnitClass, gWorld.GetPlayer(the gate's mPlayer))`, then
+/// `PreviewGate(io.f[0..2], io.n[0])` (the direction back in io.n[0]).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_GATE_PREVIEW = 182;
+
+/// The form's `mBuildWall.Update(GetMouseLocation())` (a 0) or `mBuildGate.Update` (a 1): virtual, each back in
+/// [`wall_update`] / [`gate_update`] over a call of its own.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MD_PLACEMENT = 183;
+
+/// The mouse buttons (`EE_SCREENS_MF_OP_MD_BUTTONS`): left just pressed, held, just released; the right's.
+constexpr static const int64_t EE_SCREENS_MF_BTN_L_PRESSED = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_L_HELD = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_L_RELEASED = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_R_PRESSED = 8;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_R_HELD = 16;
+
+constexpr static const int64_t EE_SCREENS_MF_BTN_R_RELEASED = 32;
+
+/// The picked unit's reads (`EE_SCREENS_MF_OP_MD_UNIT`): `mUnitID`; another player's unit, the current player's
+/// enemy, seen (`EEIsSeenBy(unit, player, true)`); its class's `mFamily`, `CanBeAttacked()`, `mIsWall`; its tile;
+/// its complex unit non-null, `mIsBuilt`, garrison capacity, room (capacity != `mGarrisonCount`); whether the first
+/// unit's wonder set holds that type; whether the first unit's complex unit has the complex unit's player.
+constexpr static const int64_t EE_SCREENS_MF_UNIT_ID = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_HOSTILE_SEEN = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_FAMILY = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_CAN_BE_ATTACKED = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_IS_WALL = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_TILE_X = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_TILE_Y = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_HAS_COMPLEX = 7;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_COMPLEX_BUILT = 8;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_COMPLEX_CAPACITY = 9;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_COMPLEX_ROOM = 10;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_IN_WONDER_SET = 11;
+
+constexpr static const int64_t EE_SCREENS_MF_UNIT_SAME_PLAYER = 12;
+
+/// The first unit's reads (`EE_SCREENS_MF_OP_MD_FIRST_FIELD`): `mHitPoints > 0`; its complex unit non-null; its
+/// complex unit's `DistanceSquared3D(io.f) >= UMSquare(its class's mMinRange)`; its class's `mCanSetRallyPoint`;
+/// `mUnitID == mCalamity->mCasterID`.
+constexpr static const int64_t EE_SCREENS_MF_FIRST_ALIVE = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_HAS_COMPLEX = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_IN_RANGE = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_CAN_RALLY = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_FIRST_IS_CASTER = 4;
+
+/// The ghost units' reads (`EE_SCREENS_MF_OP_MD_GHOST`): `mCanPlace`, its class's unit type, `mTileX`, `mTileY`.
+constexpr static const int64_t EE_SCREENS_MF_GHOST_CAN_PLACE = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_GHOST_TYPE = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_GHOST_TILE_X = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_GHOST_TILE_Y = 3;
+
+/// The messages (`EE_SCREENS_MF_OP_MD_SEND`): the airport command b at io.f[0..2] on the target io.n[0], queued
+/// io.n[1]; attack ground at io.f[0..2]; load the first unit's complex unit into the picked unit; unload the first
+/// unit at io.n; heal the picked unit's complex unit; attack (convert) it, queued b; the first unit's rally goal at
+/// io.f[0..2] on the target io.n[0], queued io.n[1]; a flare at io.n.
+constexpr static const int64_t EE_SCREENS_MF_SEND_AIRPORT = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_ATTACK_GROUND = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_LOAD_GARRISON = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_UNLOAD = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_HEAL = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_CONVERT = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_RALLY = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_SEND_FLARE = 7;
+
+/// The modes in the form's table order (main_form.rs' mouse tests: `mMouseTests[state]` holds one).
+constexpr static const int64_t EE_SCREENS_MF_MODE_NORMAL = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_BOMBER_RALLY = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_FIGHTER_RALLY = 2;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_ATOMIC_BOMBER_RALLY = 3;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_BUILD = 4;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_RALLY = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_UNLOAD = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_GARRISON = 7;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_CALAMITY = 8;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_WALL = 9;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_GATE = 10;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_ATOMIC_BOMBER_RALLY = 11;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_BOMBER_RALLY = 12;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_FIGHTER_RALLY = 13;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_TIMED_RALLY = 14;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_CAMERA = 15;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_HEAL = 16;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_NONE = 17;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_FLARE = 18;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_ATTACK_GROUND = 19;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_PARATROOPER_RALLY = 20;
+
+constexpr static const int64_t EE_SCREENS_MF_MODE_CONVERT = 21;
+
+/// `kUnitTypeFarm`, `kUnitTypeRoboticFarm` (the build mode's farms may overlap when several are placed).
+constexpr static const int64_t EE_SCREENS_MF_TYPE_FARM = 42;
+
+constexpr static const int64_t EE_SCREENS_MF_TYPE_ROBOTIC_FARM = 826;
+
 /// The flare's colour (`EeScreensMiniMapCopy::flare_color`): none set, `sFlareColor` (red), `sFlareBlinkColor`.
 constexpr static const uint8_t EE_SCREENS_MM_COLOR_NONE = 0;
 
@@ -8599,6 +9148,9 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 /// in the button texture, its control group, whether it is a full view and whether it paints with the brush.
 struct EditorTab;
 
+/// An op's outputs: a text and values.
+struct EeScreensCbOut;
+
 /// The area sub-screen (opaque to C++).
 struct EeScreensSeArea;
 
@@ -8820,6 +9372,28 @@ struct EeScreensLobbyOptionsRecord {
   bool lock_speed;
   bool cheat_codes;
   bool victory;
+};
+
+/// `EEUIBuildWall`'s members from `mState` on (the class's vptr before them): placing (0 no start, 1 dragging),
+/// the tile centres, the wall's technology and player.
+struct EeScreensBuildWallFields {
+  uint32_t state;
+  EeScreensPoint start;
+  EeScreensPoint end;
+  int32_t technology;
+  int32_t player;
+};
+
+/// `EEUIBuildGate`'s members from `mUnitClass` on: the gate's class, the tile of the last build, the technology,
+/// the highlighted walls' type, the gate's direction, the player.
+struct EeScreensBuildGateFields {
+  void *unit_class;
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t technology;
+  int32_t wall_type;
+  int32_t direction;
+  int32_t player;
 };
 
 /// `CopyData`'s record: what the C++ read (in), what it applies (out).
@@ -9263,6 +9837,81 @@ long ee_screens_chat_log_load(void *file);
 
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
+
+/// An op's text appended (the host's answer).
+void ee_screens_cb_out_text(EeScreensCbOut *out, const uint8_t *text, size_t length);
+
+/// An op's value appended (the host's answer).
+void ee_screens_cb_out_value(EeScreensCbOut *out, int64_t value);
+
+/// `CivBuilderEditCivilization`.
+long ee_screens_cb_edit_civilization();
+
+/// `CivBuilderCreateCivilization(civ, reload)` (`civ` an `EECivilization*`).
+long ee_screens_cb_create_civilization(void *civ, bool reload);
+
+/// `EEProcessTimerExpired`.
+long ee_screens_cb_timer_expired();
+
+/// `EESetCivBuilderButtonBlinking`.
+long ee_screens_cb_set_blinking(bool blinking);
+
+/// `CivBuilderSaveCivilization(name, overwrite)` (UTF-8 bytes).
+long ee_screens_cb_save_civilization(const uint8_t *name, size_t length, bool overwrite);
+
+/// `CivBuilderEditCurrentCivilization`: the current player's civilization edited.
+void ee_screens_cb_edit_current();
+
+/// The edited civilization deleted (`delete gEditableCivilization`).
+void ee_screens_cb_free_civilization();
+
+/// A question's Yes (`EE_SCREENS_CBW_ANSWER_*`) with its form.
+void ee_screens_cb_answer(int64_t which, void *form);
+
+/// TEST ONLY (the builder's gate, `EESimCivBuilder.cpp`): the edited civilization: 0 its kind (0 none, 1 an edit,
+/// 2 a creator, 3 an unlimited creator), 1 its points left, 2 its maximum, 3 `mPointsLeft`, 4 its player, 5 whether
+/// it has choices, 6 whether it can change, 7 its picked upgrades' count, 8 picked upgrade `index`, 9 its upgrade ids'
+/// count, 10 id `index`.
+int64_t ee_screens_cb_civilization_query(uint32_t what,
+                                         uint32_t index);
+
+/// TEST ONLY: the edited civilization's name into `out` (`capacity` bytes) -> its length.
+size_t ee_screens_cb_civilization_name(uint8_t *out, size_t capacity);
+
+/// TEST ONLY: the last saved civilization file's name (`gLastCivilizationFile`) into `out` -> its length.
+size_t ee_screens_cb_last_file(uint8_t *out,
+                               size_t capacity);
+
+/// `AddLine`.
+void ee_screens_cbl_add_line(void *list, const uint8_t *text, size_t length);
+
+/// `ChangeSelectionIndex`.
+void ee_screens_cbl_change_selection(void *list, uint32_t index, bool fire, bool scroll);
+
+/// `DeleteLine`.
+void ee_screens_cbl_delete_line(void *list, uint32_t index);
+
+/// `DrawTextA` -> its result.
+long ee_screens_cbl_draw_text(void *list);
+
+/// `TabbedTo`.
+void ee_screens_cbl_tabbed_to(void *list);
+
+/// `GetSelectedUpgrade` -> 0 and the upgrade, bonus and cost (each written as the original wrote them), or the
+/// error.
+long ee_screens_cbl_selected_upgrade(void *list,
+                                     uint32_t *upgrade,
+                                     uint32_t *bonus,
+                                     uint32_t *cost);
+
+/// `SetUpgradesExcept`.
+void ee_screens_cbl_set_upgrades_except(void *list, const uint32_t *excluded, size_t count);
+
+/// `SetCivilizationUpgrades`.
+void ee_screens_cbl_set_civilization_upgrades(void *list, const uint32_t *ids, size_t count);
+
+/// `ReformatUpgrades`.
+void ee_screens_cbl_reformat(void *list, bool buy);
 
 /// The targeting mode of command `button`: false when it starts none.
 bool ee_screens_command_mode(unsigned long button, EeScreensCommandMode *out);
@@ -10116,6 +10765,31 @@ void ee_screens_main_form_start(void *call,
 int64_t ee_screens_main_form_member(void *call,
                                     uint32_t which,
                                     int64_t a);
+
+/// `EEUIFMainGame::UpdateMouse`'s mode: the mode `mode` (`EE_SCREENS_MF_MODE_*`) at the mouse (x, y); the mode's
+/// answer.
+int64_t ee_screens_main_form_mouse(void *call,
+                                   int64_t mode,
+                                   float x,
+                                   float y);
+
+/// `EEUIBuildWall::Update(x, y)` over the host's call record (its placement held) and the wall's members.
+///
+/// # Safety
+/// `call` is the host's call record; `wall` the placement's live members.
+void ee_screens_wall_update(void *call,
+                            EeScreensBuildWallFields *wall,
+                            float x,
+                            float y);
+
+/// `EEUIBuildGate::Update(x, y)` over the host's call record (its placement held) and the gate's members.
+///
+/// # Safety
+/// `call` is the host's call record; `gate` the placement's live members.
+void ee_screens_gate_update(void *call,
+                            EeScreensBuildGateFields *gate,
+                            float x,
+                            float y);
 
 /// `EEUIFMGMainGroup`'s member `which` (`EE_SCREENS_MGR_DO_*`) on the group with the unit `unit` (an `EEUnit*`) and
 /// `b` (a command button's button | its control << 32): `GetSelectedUnit`'s unit, `WantsRefresh`'s answer, else 0.

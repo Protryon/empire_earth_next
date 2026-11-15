@@ -244,6 +244,9 @@ long EESETestSaveTriggersOnly(UIForm* inForm);   // EEUIFScenarioEditor.cpp (TES
 #include "ee/EESELoadThread.h"
 #include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_time.h"
+#include <vector>
+// the civilization builder's steps (TEST ONLY; EESimCivBuilder.cpp): false for an unknown one
+bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::string>& outLines);
 
 // TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_time)
 
@@ -1507,7 +1510,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                                         : w[1] == "add" ? kMessageAddUnitsToSelectedGroup
                                                         : kMessageAddAndRemoveUnitsFromSelectedGroup;
                 EESEALasso* a = new EESEALasso;
-                a->mMessage = new EEMSelectUnits(GERectangle(F(2), F(3), F(4), F(5)), L(6), theType);
+                a->mMessage = EENewSelectUnits(GERectangle(F(2), F(3), F(4), F(5)), L(6), theType);
                 gUserInterface->PostAction(a);
                 a->Dereference();
             };
@@ -2107,6 +2110,11 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "trigreport")   // trigreport [setup]: the trigger-only save's report (TriggerReport)
             theCode = [=, &theOutput] { TriggerReport(w.size() > 1 && w[1] == "setup", theOutput); };
+        else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)
+            theCode = [=, &theOutput] {
+                if (!EESimCivBuilderStep(w, theOutput))
+                    theOutput.push_back("  cb: unknown " + (w.size() > 1 ? w[1] : std::string()));
+            };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
                 gPhysics->FlushWorld();

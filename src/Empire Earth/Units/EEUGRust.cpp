@@ -916,8 +916,8 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             if (ioArgs->i[4] == 0)
                 theClass->FindRendezvousTiles(&theUnits, theComplex, &theTiles[0], &theTiles[1]);
-            else
-                theClass->TransportFindRendezvousTiles(&theUnits, theComplex, &theTiles[0], &theTiles[1]);
+            else   // the transport base's rendezvous: its own tile for both
+                theTiles[0] = theTiles[1] = U2DPoint<long>(theComplex->GetTileX(), theComplex->GetTileY());
             TilesOut(ioArgs, theTiles, 2);
             return 0;
         }

@@ -108,48 +108,15 @@ EEScenarioManager::EEScenarioManager()
 // SYNTHETIC: EXE 0x5afb95
 // (the scalar deleting destructor, emitted with the vtable; slot EEScenarioManager+0x10)
 
+static void EESMResetLists(EEScenarioManager* inManager);
+
 // FUNCTION: EXE 0x5afbb1
 // Empties the scenario back to its defaults (an Always True condition, a Do Nothing effect, a None object, the
 // Off Map and Previous Location areas); zeroes the clocks and ID counters, clears the timed and pending effects
 void EEScenarioManager::Reset()
 {
-    UWideString theName;
-
     ee_scenario_manager_reset(this, this->mTimedEffects);   // the numbers, the timed effects (manager.rs reset)
-    DeleteVectorContents(this->mTriggers);
-    DeleteVectorContents(this->mConditions);
-    EESMCondition* theCondition = new EESMCondition;
-    gResource->GetString(IDS_ALWAYS_TRUE, theName);
-    theCondition->mName = theName;
-    theCondition->mType = kSMConditionAlwaysTrue;
-    this->mConditions.push_back(theCondition);
-
-    DeleteVectorContents(this->mEffects);
-    EESMEffect* theEffect = new EESMEffect;
-    gResource->GetString(IDS_DO_NOTHING, theName);
-    theEffect->mName = theName;
-    theEffect->mType = kSMEffectNone;
-    this->mEffects.push_back(theEffect);
-
-    DeleteVectorContents(this->mObjects);
-    EESMObject* theObject = new EESMObject;
-    gResource->GetString(IDS_NONE, theName);
-    theObject->SetName(theName);
-    this->mObjects.push_back(theObject);
-
-    DeleteVectorContents(this->mAreas);
-    this->mAreas.clear();
-    EESMArea* theArea = new EESMArea;
-    gResource->GetString(IDS_OFF_MAP, theName);
-    theArea->mName = theName;
-    theArea->SetAnchor(U2DPoint<long>(-10000, -10000));
-    this->mAreas.push_back(theArea);
-    theArea = new EESMArea;
-    gResource->GetString(IDS_PREVIOUS_LOCATION, theName);
-    theArea->mName = theName;
-    theArea->SetAnchor(U2DPoint<long>(-1, -1));
-    this->mAreas.push_back(theArea);
-
+    EESMResetLists(this);   // the lists and their built-ins (lists.rs reset)
     this->mPendingEffects.clear();
 }
 
@@ -206,6 +173,14 @@ FSPersistent* EEScenarioManager::CreateDefault() const
     return new EEScenarioManager;
 }
 
+// the dialog messages of a cinematic (inCinematic) or the others dropped, the last first
+static void EESMDropMessages(std::vector<EESMDialogMessage>& ioMessages, bool inCinematic)
+{
+    for (long j = (long)ioMessages.size() - 1; j >= 0; j--)
+        if (ioMessages[j].mIsCinematic == inCinematic)
+            ioMessages.erase(ioMessages.begin() + j);
+}
+
 // FUNCTION: EXE 0x5b1ae4
 // Ends a cinematic: delays the other timed effects and trigger timers by its length + 3 s, drops its unrun effects
 // and dialog messages, delays the wonder timers and restores the camera saved by StartCinematic
@@ -225,12 +200,7 @@ void EEScenarioManager::EndCinematic()
             this->GetTrigger(t)->mConditionStartTime = this->GetTrigger(t)->mConditionStartTime + (long)theElapsed + 3000;
     }
     gUserInterface->PostHideMessages();
-    if (this->mMessages.size() > 0) {
-        for (long j = this->mMessages.size() - 1; j >= 0; j--) {
-            if (this->mMessages[j].mIsCinematic == true)
-                this->mMessages.erase(this->mMessages.begin() + j);
-        }
-    }
+    EESMDropMessages(this->mMessages, true);
     for (i = 0; i < gWorld.mNumPlayers; i++) {
         if (gWorld.GetPlayer(i) != NULL)
             gWorld.GetPlayer(i)->DelayWonderTimers((long)theElapsed);
@@ -297,12 +267,7 @@ void EEScenarioManager::StartCinematic()
         gWorld.GetPlayer(i)->mSelectedGroup->CopySelection(gWorld.GetPlayer(i)->mActiveGroup);
     }
     gUserInterface->PostHideMessages();
-    if (this->mMessages.size() > 0) {
-        for (long j = this->mMessages.size() - 1; j >= 0; j--) {
-            if (!this->mMessages[j].mIsCinematic)
-                this->mMessages.erase(this->mMessages.begin() + j);
-        }
-    }
+    EESMDropMessages(this->mMessages, false);
     gGraphics->PostLetterboxIn(3000);
 }
 
@@ -315,6 +280,27 @@ int64_t RoundFloatBits(float inValue)
     return theBits;
 }
 
+// ShowDialogMessage's message inIndex shown and erased: the one-shot sounds stopped for a voiced one, posted, the
+// camera moved to its unit (turned to face it at scroll speed 0)
+void RoundShowMessage(EEScenarioManager* inManager, size_t inIndex)
+{
+    EESMDialogMessage& theMessage = inManager->mMessages[inIndex];
+    if (theMessage.mSound.GetLength() > 0)
+        gSoundManager->StopAllOneShotSounds();
+    gUserInterface->PostDialogMessage(theMessage);
+    EEUnit* theUnit = gWorld.GetUnit(theMessage.mUnitID);
+    if (theUnit != NULL && theMessage.mScrollSpeed >= 0) {
+        gWorld.mCameraControl.ClearUnitA();
+        gWorld.mCameraControl.ClearUnitB();
+        GE3DPoint theOffset(-10000.0f, 0.0f, 0.0f);
+        gWorld.mCameraControl.SetMode(0);
+        bool theFaces = theMessage.mScrollSpeed == 0;
+        gWorld.mCameraControl.MoveTo(theUnit, theOffset, true, (float)theMessage.mScrollSpeed, theFaces ? theUnit : NULL,
+                                     theOffset, false, 0.1f, theFaces ? 3.1415927f : 0.0f, 0.0f);
+    }
+    inManager->mMessages.erase(inManager->mMessages.begin() + inIndex);
+}
+
 // Update's world (ee_scenario round.rs): each operation the original's statement at its place
 int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float inTime)
 {
@@ -323,7 +309,13 @@ int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float 
     case EE_SCENARIO_ROUND_GAME_SPEED: return RoundFloatBits(gWorld.mGameSpeed);
     case EE_SCENARIO_ROUND_TICK_SECONDS: return RoundFloatBits(gPhysics->GetTickSeconds());
     case EE_SCENARIO_ROUND_MESSAGE_COUNT: return (int64_t)theManager->mMessages.size();
-    case EE_SCENARIO_ROUND_SHOW_DIALOG: theManager->ShowDialogMessage(); return 0;
+    case EE_SCENARIO_ROUND_DIALOG_PAUSED: return gCommunications == NULL || gCommunications->GetIsGamePaused();
+    case EE_SCENARIO_ROUND_MESSAGE_CINEMATIC: return theManager->mMessages[(size_t)inA].mIsCinematic;
+    case EE_SCENARIO_ROUND_SHOW_MESSAGE: RoundShowMessage(theManager, (size_t)inA); return 0;
+    case EE_SCENARIO_ROUND_HIDE_MESSAGES:
+        gUserInterface->PostHideMessages();
+        gSoundManager->StopAllOneShotSounds();
+        return 0;
     case EE_SCENARIO_ROUND_HUMAN_PLAYING: {
         bool theHumanPlaying = false;
         for (long i = 0; i < (long)gWorld.mNumPlayers; i++) {
@@ -391,47 +383,22 @@ void EEScenarioManager::ApplyPendingEffects()
     this->mB234 = false;
 }
 
+static void EESMPrepareMedia(EEScenarioManager* inManager);
+
 // FUNCTION: EXE 0x5b28c0
 // Unloads the unit class media loaded before, then preloads the media of each unit class a Create Object effect
-// makes for one fixed player (objects not selected on the map)
+// makes for one fixed player (objects not selected on the map; which: ee_scenario lists.rs prepare_media)
 void EEScenarioManager::Prepare()
 {
-    std::vector<long> thePlayers;
-    unsigned long i;
-    if (this->mUnitClassMedia.size() > 0) {
-        for (i = 0; i < this->mUnitClassMedia.size(); i++) {
-            EEPlayer* thePlayer = gWorld.GetPlayer(this->mUnitClassMedia[i].mPlayer);
-            EEUnitClassUpgrade* theUpgrade = thePlayer->GetUpgrade(this->mUnitClassMedia[i].mUnitClass);
-            theUpgrade->UnloadMedia(thePlayer);
-            EEDebugTrace("Scenario:: Unloading Media for %S for player %d", theUpgrade->GetUnitClass()->GetName(),
-                         this->mUnitClassMedia[i].mPlayer);
-        }
+    for (unsigned long i = 0; i < this->mUnitClassMedia.size(); i++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(this->mUnitClassMedia[i].mPlayer);
+        EEUnitClassUpgrade* theUpgrade = thePlayer->GetUpgrade(this->mUnitClassMedia[i].mUnitClass);
+        theUpgrade->UnloadMedia(thePlayer);
+        EEDebugTrace("Scenario:: Unloading Media for %S for player %d", theUpgrade->GetUnitClass()->GetName(),
+                     this->mUnitClassMedia[i].mPlayer);
     }
     this->mUnitClassMedia.clear();
-    for (unsigned long theTrigger = 0; theTrigger < this->mTriggers.size(); theTrigger++) {
-        EESMTrigger* theSMTrigger = this->mTriggers[theTrigger];
-        for (unsigned long theWrapper = 0; theWrapper < theSMTrigger->mEffects.size(); theWrapper++) {
-            EESMEffect* theEffect = this->mEffects[theSMTrigger->GetEffect(theWrapper)->mEffectIndex];
-            if (theEffect->GetType() != kSMEffectObject || theEffect->mObjectAction != kSMObjectActionCreate)
-                continue;
-            EESMObject* theObject = this->mObjects[theEffect->mObject];
-            if (theObject->GetIsSelectOnMap())
-                continue;
-            this->ChoosePlayer(theObject->GetOwner(), &thePlayers, false);
-            if (thePlayers.size() == 1) {
-                long thePlayerNumber = thePlayers[0];
-                long theUnitClass = theObject->GetClass();
-                if (theUnitClass != 0 && gUnitClassTable[theUnitClass] != NULL) {
-                    EEPlayer* thePlayer = gWorld.GetPlayer(thePlayerNumber);
-                    thePlayer->mUnitClassUpgrades[theUnitClass]->LoadMedia(thePlayer, 0x7f);
-                    EESMUnitClassMedia theMedia;
-                    theMedia.mPlayer = thePlayerNumber;
-                    theMedia.mUnitClass = theUnitClass;
-                    this->mUnitClassMedia.push_back(theMedia);
-                }
-            }
-        }
-    }
+    EESMPrepareMedia(this);
 }
 
 // FUNCTION: EXE 0x5b31e8
@@ -542,52 +509,12 @@ void EEScenarioManager::SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag)
 
 // FUNCTION: EXE 0x5b481a
 // Shows the next queued dialog message (in a cinematic the next cinematic one), stopping one-shot sounds for a
-// voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused
+// voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused (ee_scenario
+// round.rs show_dialog)
 void EEScenarioManager::ShowDialogMessage()
 {
-    this->mIsShowingDialog = false;
-    if (gCommunications == NULL || gCommunications->GetIsGamePaused())
-        return;
-    if (this->mMessages.size() > 0) {
-        long theIndex;
-        if (gWorld.mInCinematic) {
-            theIndex = -1;
-            for (unsigned long i = 0; i < this->mMessages.size(); i++) {
-                if (this->mMessages[i].mIsCinematic) {
-                    theIndex = i;
-                    break;
-                }
-            }
-        } else
-            theIndex = 0;
-        if (theIndex != -1) {
-            if (this->GetDialogMessage(theIndex).mSound.GetLength() > 0)
-                gSoundManager->StopAllOneShotSounds();
-            gUserInterface->PostDialogMessage(this->mMessages[theIndex]);
-            EEUnit* theUnit = gWorld.GetUnit(this->mMessages[theIndex].mUnitID);
-            if (theUnit != NULL && this->mMessages[theIndex].mScrollSpeed >= 0) {
-                gWorld.mCameraControl.ClearUnitA();
-                gWorld.mCameraControl.ClearUnitB();
-                GE3DPoint theOffset(-10000.0f, 0.0f, 0.0f);
-                gWorld.mCameraControl.SetMode(0);
-                float theAngle;
-                if (this->mMessages[theIndex].mScrollSpeed == 0)
-                    theAngle = 3.1415927f;
-                else
-                    theAngle = 0.0f;
-                EESMDialogMessage& theMessage = this->mMessages[theIndex];
-                EESMDialogMessage& theOther = this->mMessages[theIndex];
-                gWorld.mCameraControl.MoveTo(theUnit, theOffset, true, (float)theOther.mScrollSpeed,
-                                               theMessage.mScrollSpeed == 0 ? theUnit : NULL, theOffset, false, 0.1f,
-                                               theAngle, 0.0f);
-            }
-            this->mMessages.erase(this->mMessages.begin() + theIndex);
-            this->mIsShowingDialog = true;
-            return;
-        }
-    }
-    gUserInterface->PostHideMessages();
-    gSoundManager->StopAllOneShotSounds();
+    EeScenarioRoundHost theHost = {this, this, this->mTimedEffects, RoundOp};
+    ee_scenario_show_dialog(&theHost);
 }
 
 // FUNCTION: EXE 0x5b4d1a
@@ -603,32 +530,16 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
 }
 
 // FUNCTION: EXE 0x5b5173
-// Moves the camera one zoom-scaled step towards the scenario's start location; stops moving once it is there
+// Moves the camera one zoom-scaled step towards the scenario's start location; stops moving once it is there (the
+// step: ee_scenario round.rs camera_step)
 void EEScenarioManager::MoveCameraToStart()
 {
     GE3DPoint theLocation = gWorld.mLine.GetStart();
-    if (theLocation.GetX() == this->mStartX && theLocation.GetY() == this->mStartY) {
-        this->mIsMovingCamera = false;
+    float theFocus[2] = {theLocation.GetX(), theLocation.GetY()};
+    if (!ee_scenario_camera_step(this, &theFocus, (gWorld.mCameraControl.mZoom + 0.5f) * gSideScrollSpeed))
         return;
-    }
-    float theStep = (gWorld.mCameraControl.mZoom + 0.5f) * gSideScrollSpeed;
-    float theDX = theLocation.GetX() - this->mStartX;
-    float theAbsDX = UMAbs(theDX);
-    float theDY = theLocation.GetY() - this->mStartY;
-    float theAbsDY = UMAbs(theDY);
-    float theTotal = theAbsDY + theAbsDX;
-    float theStepX = theAbsDX * theStep / theTotal;
-    float theStepY = theAbsDY * theStep / theTotal;
-    if (theStepX > UMAbs(theDX))
-        theStepX = UMAbs(theDX);
-    if (theLocation.GetX() > this->mStartX)
-        theStepX = -theStepX;
-    if (theStepY > UMAbs(theDY))
-        theStepY = UMAbs(theDY);
-    if (theLocation.GetY() > this->mStartY)
-        theStepY = -theStepY;
-    theLocation.SetX(theLocation.GetX() + theStepX);
-    theLocation.SetY(theLocation.GetY() + theStepY);
+    theLocation.SetX(theFocus[0]);
+    theLocation.SetY(theFocus[1]);
     gWorld.mCameraControl.SetLocation(theLocation, false, true);
 }
 
@@ -1116,9 +1027,24 @@ void* EESMListOp(void* inContext, uint32_t inOp, uint32_t inList, uintptr_t inIn
         return (void*)(uintptr_t)(inList ? theTrigger->mEffects.size() : theTrigger->mConditions.size());
     case EE_SCENARIO_LIST_OP_ENTRY:
         return inList ? (void*)&theTrigger->mEffects[inIndex]->mEffectIndex : (void*)&theTrigger->mConditions[inIndex]->mValue;
-    case EE_SCENARIO_LIST_OP_RESOURCE:
-        gResource->GetString(inIndex ? IDS_EXISTS : IDS_COPY, theContext->mText);
+    case EE_SCENARIO_LIST_OP_RESOURCE: {
+        static const unsigned long kStrings[] = {IDS_COPY, IDS_EXISTS, IDS_ALWAYS_TRUE, IDS_DO_NOTHING, IDS_NONE,
+                                                 IDS_OFF_MAP, IDS_PREVIOUS_LOCATION};   // EE_SCENARIO_STRING_*
+        gResource->GetString(kStrings[inIndex], theContext->mText);
         return (void*)(const char*)theContext->mText;
+    }
+    case EE_SCENARIO_LIST_OP_MEDIA: {
+        EEPlayer* thePlayer = gWorld.GetPlayer(inList);
+        thePlayer->mUnitClassUpgrades[inIndex]->LoadMedia(thePlayer, 0x7f);
+        EESMUnitClassMedia theMedia;
+        theMedia.mPlayer = (long)inList;
+        theMedia.mUnitClass = (long)inIndex;
+        m->mUnitClassMedia.push_back(theMedia);
+        return NULL;
+    }
+    case EE_SCENARIO_LIST_OP_ANCHOR:
+        static_cast<EESMArea*>(inElement)->SetAnchor(U2DPoint<long>((long)(int32_t)inList, (long)(intptr_t)inIndex));
+        return NULL;
     case EE_SCENARIO_LIST_OP_OUT_NAME: theContext->mNames->push_back(UWideString(inText)); return NULL;
     }
     switch (inList) {
@@ -1141,6 +1067,22 @@ struct EESMLists {
     }
 };
 }   // namespace
+
+// Reset's lists and built-ins (ee_scenario lists.rs reset)
+static void EESMResetLists(EEScenarioManager* inManager)
+{
+    EESMLists theLists(inManager);
+    ee_scenario_list_reset(&theLists.mHost);
+}
+
+// Prepare's media (ee_scenario lists.rs prepare_media: the player choices through the scenario host)
+static void EESMPrepareMedia(EEScenarioManager* inManager)
+{
+    EESMLists theLists(inManager);
+    EESMHostContext theContext = {NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    ee_scenario_prepare_media(&theLists.mHost, &theHost);
+}
 
 // The editor's Sort, New, MoveUp/MoveDown, Delete and Duplicate of a list (EE_SCENARIO_LIST_*: 0x1b00c1..0x1b0674,
 // 0x1b074c..0x1b0b65, 0x1b0beb..0x1b0e71 and 0x1b3e75..0x1b4017, 0x1b0ec6..0x1b10ed, 0x1b120d..0x1b1978)

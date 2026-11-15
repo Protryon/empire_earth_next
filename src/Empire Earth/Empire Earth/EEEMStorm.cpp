@@ -65,7 +65,8 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffect.h"
 #include "ee/EEEffect3D.h"
-#include "ee/EEE3DStorm.h"
+#include "rust/ee_gfx.h"
+#include "ee/EEE3DRust.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
@@ -313,10 +314,10 @@ void EEEMStorm::Begin()
     else if (this->mType == kStormSnow || this->mType == kStormBlizzard)
         theEffect = EEGraphicEffect::Get(kGraphicEffectSnow);
     gEffectManager->CreateWeatherEffect(theVisited, theEffect, &theHandle);
-    this->mStorm = dynamic_cast<EEE3DStorm*>(gEffectManager->GetEffect(theHandle));
+    this->mStorm = dynamic_cast<EEE3DRust*>(gEffectManager->GetEffect(theHandle));
     this->mStorm->Reference();
     this->mStorm->GetBounds(this->mArea);
-    this->mStorm->mIsSustained = true;
+    this->mStorm->mRecord->storm.sustained = true;
     theShaper->Dereference();
     this->RequestRoute();
 }
@@ -427,7 +428,7 @@ long EEEMStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
     this->mGoal.Load(inFile);
     this->mArea.Load(inFile);
     theResult = inFile.Read(theHandle.mValue);
-    this->mStorm = reinterpret_cast<EEE3DStorm*>(theHandle.mValue);
+    this->mStorm = reinterpret_cast<EEE3DRust*>(theHandle.mValue);
     if (theResult == kErrorOK && (theResult = inFile.Read(this->mTargetIntensity)) == 0
         && (theResult = inFile.Read(this->mIntensity)) == 0 && (theResult = inFile.Read(this->mStep)) == 0
         && (theResult = inFile.Read(this->mType)) == 0 && (theResult = inFile.Read(this->mState)) == 0
@@ -443,7 +444,7 @@ long EEEMStorm::Restore()
     long theResult = 0;
     EEEffectHandle theHandle;
     theHandle.mValue = USavedID(this->mStorm);
-    this->mStorm = dynamic_cast<EEE3DStorm*>(gEffectManager->GetEffect(theHandle));
+    this->mStorm = dynamic_cast<EEE3DRust*>(gEffectManager->GetEffect(theHandle));
     if (this->mStorm != NULL)
         this->mStorm->Reference();
     else {
@@ -451,7 +452,7 @@ long EEEMStorm::Restore()
         theResult = 9;
     }
     if (this->mPath.size() == 0 && this->mStorm != NULL)
-        this->mStorm->mIsSustained = false;
+        this->mStorm->mRecord->storm.sustained = false;
     this->mName = EEEMStorm::GetTypeName(this->mType);
     if (this->mState == 2)
         this->mState = 8;
@@ -529,7 +530,7 @@ void EEEMStorm::SetIntensity(float inIntensity)
 {
     this->mIntensity = inIntensity;
     if (this->mStorm != NULL)
-        this->mStorm->mIntensity = inIntensity;
+        this->mStorm->mRecord->storm.intensity = inIntensity;
 }
 
 // FUNCTION: EXE 0x52e9bd
@@ -555,8 +556,8 @@ void EEEMStorm::Release()
     }
     if (this->mStorm == NULL)
         return;
-    this->mStorm->mIsSustained = false;
-    this->mStorm->mElapsedTime = this->mStorm->mDuration;
+    this->mStorm->mRecord->storm.sustained = false;
+    this->mStorm->mRecord->storm.elapsed = this->mStorm->mRecord->storm.duration;
     this->mStorm->Release();
     this->mStorm = NULL;
 }
@@ -622,7 +623,7 @@ void EEEMStorm::Step(unsigned long inTime)
         break;
     case 6:
         theIntensity = 0.0f;
-        this->mStorm->mElapsedTime = this->mStorm->mDuration;
+        this->mStorm->mRecord->storm.elapsed = this->mStorm->mRecord->storm.duration;
         break;
     case 7:
         if (this->mNextMoveTime <= inTime)

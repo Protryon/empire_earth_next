@@ -213,6 +213,22 @@ def input_check(g):
     return dict(key='F3', paused=states, ok=ok)
 
 
+def chat_check(g):
+    """A chat log line (the fixture's chat command: AddChatLogEntry, as a game message adds one) shown by the game
+    form's chat lines (EEUICChatLine); its capture is evidence only."""
+    seq = g.command(f'chat {GAME} 0 0')
+    g.wait(lambda s: s['command'] >= seq, 'the chat command', 30)
+    time.sleep(1)
+    capture = None
+    try:
+        fixture_driver.capture_frame(g, 'chat')
+        capture = 'chat'   # (the frame is saved under the run's directory by its name)
+    except RuntimeError as error:
+        g.note(f'CAPTURE chat skipped: {error}')
+    g.note('CHAT LINE shown (the fixture chat command)')
+    return dict(seq=seq, capture=capture)
+
+
 def tour(g, a, summary):
     results = summary['milestones']
     if a.exercise == 'tour':
@@ -246,6 +262,8 @@ def tour(g, a, summary):
         milestone(g, results, 'play', GAME, check=True, minimap=a.play_seconds >= 10, differ='gameplay')
         if a.input_check:
             summary['input'] = input_check(g)
+        if a.exercise == 'tour':
+            summary['chat'] = chat_check(g)
     if a.box_select:
         summary['box_select'] = fixture_driver.box_select(g, GAME)
         g.note(f'BOX SELECT PASS: {len(summary["box_select"]["steps"])} steps (add grew the group: '
