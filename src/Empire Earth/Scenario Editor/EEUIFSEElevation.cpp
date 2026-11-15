@@ -156,12 +156,18 @@ extern "C" int32_t ee_screenscpp_seel(uint32_t inOp, void* const* p, int32_t* i,
         long theY;
         EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]));
         GE2DPoint theLocation(f[0], f[1]);
-        if (gViewport.GetViewRectangle().Contains(theLocation)) {
+        if (!gViewport.GetViewRectangle().Contains(theLocation))
+            theEditor->GetBrushGroup()->mIsHighlightShown = false;
+        else if (i[0] == EE_SCREENS_SEEL_HIGHLIGHT_POINT) {   // the terrain tab's: the map point, centred by i1
+            GE3DPoint thePoint;
+            EEPointUnitOrTile(theLocation, theTile, thePoint, false);
+            theEditor->GetBrushGroup()->mIsHighlightShown = true;
+            theEditor->GetBrushGroup()->SetHighlight(thePoint.GetX(), thePoint.GetY(), i[1] != 0);
+        } else {
             EEPointUnitOrTileXY(theLocation, theTile, theX, theY, false);
             theEditor->GetBrushGroup()->mIsHighlightShown = true;
             theEditor->GetBrushGroup()->SetHighlight((float)theX, (float)theY, false);
-        } else
-            theEditor->GetBrushGroup()->mIsHighlightShown = false;
+        }
         return 0;
     }
     }

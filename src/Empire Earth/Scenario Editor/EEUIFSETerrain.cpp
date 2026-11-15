@@ -97,6 +97,15 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEStringIDs.h"
+#include "rust/ee_screens.h"
+
+extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
+// a text transparent and yellow (the tab's labels)
+static void SetnYellow(GEText* inText)
+{
+    inText->SetIsTransparent(true);
+    inText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
+}
 // The terrain name order (0x1aee71): compares the localized terrain names without case. It has no state and
 // returns via ret 8 (provisional name).
 struct EESETerrainNameLess {
@@ -243,252 +252,52 @@ long EESEUITerrainTypeLB::DrawTextA()
 
 // FUNCTION: EXE 0x5ab2ab
 // Checks the paint type button and shows (terrain) or hides (bulldozer) the terrain type, color and preview controls
+// (editor_terrain.rs)
 void EEUIFSETRBPaintType::Check()
 {
     UIRadioButton::Check();
-    switch (this->GetId()) {
-    case kSETerrainTerrainButton:
-        this->GetForm()->GetControlById(kSETerrainTerrainTypeLabel)->SetDisplayMode(kDisplayModeShown);
-        this->GetForm()->GetControlById(kSETerrainTerrainType)->SetDisplayMode(kDisplayModeShown);
-        this->GetForm()->GetControlById(kSETerrainTerrainColorTypeLabel)->SetDisplayMode(kDisplayModeShown);
-        this->GetForm()->GetControlById(kSETerrainTerrainColorType)->SetDisplayMode(kDisplayModeShown);
-        this->GetForm()->GetControlById(kSETerrainBitmap)->SetDisplayMode(kDisplayModeShown);
-        break;
-    case kSETerrainMountainsButton:
-        this->GetForm()->GetControlById(kSETerrainTerrainTypeLabel)->SetDisplayMode(kDisplayModeHidden);
-        this->GetForm()->GetControlById(kSETerrainTerrainType)->SetDisplayMode(kDisplayModeHidden);
-        this->GetForm()->GetControlById(kSETerrainTerrainColorTypeLabel)->SetDisplayMode(kDisplayModeHidden);
-        this->GetForm()->GetControlById(kSETerrainTerrainColorType)->SetDisplayMode(kDisplayModeHidden);
-        this->GetForm()->GetControlById(kSETerrainBitmap)->SetDisplayMode(kDisplayModeHidden);
-        break;
-    }
+    ee_screens_setn_check(this->GetForm(), (uint32_t)this->GetId());
 }
 
 // FUNCTION: EXE 0x5ab344
-// Creates the paint action: terrain with the selected type and color (NULL without a type) or bulldozer;
-// without a color selection it indexes the color list with the terrain's color type id
+// Creates the paint action: terrain with the selected type and color (NULL without a type) or bulldozer
+// (editor_terrain.rs)
 EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
 {
-    UIRadioButton* theTerrainButton = static_cast<UIRadioButton*>(this->GetForm()->GetControlById(kSETerrainTerrainButton));
-    if (theTerrainButton->GetIsChecked()) {
-        EESEUITerrainTypeLB* theTypeList = static_cast<EESEUITerrainTypeLB*>(this->GetForm()->GetControlById(kSETerrainTerrainType));
-        EESEUITerrainColorLB* theColorList = static_cast<EESEUITerrainColorLB*>(this->GetForm()->GetControlById(kSETerrainTerrainColorType));
-        unsigned long theType;
-        unsigned long theColor;
-        if (theTypeList->GetCurrentSelection(theType) == 0) {
-            if (theColorList->GetCurrentSelection(theColor) != 0)
-                theColor = this->mTerrain->mTerrains[theType]->mColorType;
-            this->mIsCentered = true;
-            // The color type id used as a list position can lie past the filtered color list: an element
-            // past the end counts as color id 0 instead of being read from beyond the vector.
-            long theColorID = 0;
-            if (theColor < this->mTerrain->mColorTypes.size())
-                theColorID = this->mTerrain->mColorTypes[theColor]->mID;
-            return new EESEAPaintRust(kSEAPaintTerrain, this->mTerrain->mTerrains[theType]->mID, theColorID);
-        }
-    } else {
-        this->mIsCentered = false;
-        return new EESEAPaintRust(kSEAPaintBulldozer);
-    }
-    return NULL;
+    return static_cast<EESEAPaint*>(ee_screens_setn_paint(this->mTerrain->mRust, static_cast<UIControl*>(this)));
 }
 
-// FUNCTION: EXE 0x5ab460
-// (EESEAPaintMoutains' inline ctor, out of line: its first user 0x1ab344 refused it; an EESEAPaintRust)
-
-// FUNCTION: EXE 0x5ab48a
-// (EESEAPaintMoutains' scalar deleting destructor: likewise)
-
 // FUNCTION: EXE 0x5ab4bc
-// Tints the preview bitmap's corners with the first, one-third, two-thirds and last colors of the selected color set
+// Tints the preview bitmap's corners with the selected color set's colors (editor_terrain.rs)
 long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIBitmap* theBitmap = static_cast<UIBitmap*>(inForm->GetControlById(kSETerrainBitmap));
-    EESEUITerrainColorLB* theList = static_cast<EESEUITerrainColorLB*>(inEntity);
-    unsigned long theSelection;
-    if (theList->GetCurrentSelection(theSelection) != 0)
-        return kErrorOK;
-    if (theList->GetData(theSelection).size() > 0) {
-        GEBitmap* theColors = theBitmap->GetBitmap();
-        unsigned long theThird = theList->GetData(theSelection).size() > 2 ?
-            (theList->GetData(theSelection).size() - 2) / 3 : 0;
-        theColors->SetColorPerVertex(theList->GetData(theSelection)[0],
-            theList->GetData(theSelection)[theThird],
-            theList->GetData(theSelection)[theList->GetData(theSelection).size() - theThird - 1],
-            theList->GetData(theSelection)[theList->GetData(theSelection).size() - 1]);
-        theBitmap->SetDirty(true);
-    }
+    ee_screens_setn_call(this->mTerrain->mRust, EE_SCREENS_SETN_COLOR_CHANGE,
+                         static_cast<UIControl*>(static_cast<EESEUITerrainColorLB*>(inEntity)), 0.0f, 0.0f);
     return kErrorOK;
 }
 
 // FUNCTION: EXE 0x5ab6d7
 // Shows the selected terrain's preview, selects its color set and makes it the tab's selected terrain
+// (editor_terrain.rs)
 long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    GERectangle theSource;
-    EESEUITerrainColorLB* theColors = static_cast<EESEUITerrainColorLB*>(inForm->GetControlById(kSETerrainTerrainColorType));
-    UIBitmap* theBitmap = static_cast<UIBitmap*>(inForm->GetControlById(kSETerrainBitmap));
-    EESEUITerrainTypeLB* theTypes = static_cast<EESEUITerrainTypeLB*>(inEntity);
-    unsigned long theSelection;
-    if (theTypes->GetCurrentSelection(theSelection) == 0) {
-        GEBitmap* theImage = theBitmap->GetBitmap();
-        if (theTypes->GetData(theSelection).mTexture != 0) {
-            theImage->SetTexture(theTypes->GetData(theSelection).mTexture, theTypes->GetScreenIndex());
-            theSource = GERectangle(0.0f, 0.0f, (float)theTypes->GetData(theSelection).mTexture->GetWidth(),
-                                    (float)theTypes->GetData(theSelection).mTexture->GetHeight());
-            theImage->ComputeStretchedCoordsAndScale(theBitmap->GetRectangle(), theBitmap->GetRectangle(),
-                                                    theSource, theTypes->GetScreenIndex());
-            theColors->ChangeSelectionIndex(theTypes->GetData(theSelection).mColorSet, false, true);
-            theColors->FireTriggerEvent(kControlTriggerSelectionChanged);
-            theBitmap->SetDirty(true);
-        }
-        this->mTerrain->SelectTerrain(theSelection);
-    }
+    ee_screens_setn_call(this->mTerrain->mRust, EE_SCREENS_SETN_TYPE_CHANGE,
+                         static_cast<UIControl*>(static_cast<EESEUITerrainTypeLB*>(inEntity)), 0.0f, 0.0f);
     return kErrorOK;
 }
 
 // FUNCTION: EXE 0x5ab87c
 // Creates the terrain tab: terrain/bulldozer buttons, the name-sorted terrain type list, color set list, paint control
-// and preview bitmap; loads the terrain previews
+// and preview bitmap; loads the terrain previews (editor_terrain.rs)
 EEUIFSETerrain::EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes,
                                unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
 {
-    std::vector<EESEUITTData> theTypes;
-    std::vector<std::vector<GEColor> > theColors;
-    // The original also constructs/destroys an empty vector<UWideString> here.
-    std::vector<UWideString> theUnusedStrings;
-    UWideString theText;
-    GE2DPoint theLocation;
-    unsigned long i;
-    for (i = 0; i < EETerrainTypeTable::GetCount(); i++) {
-        if (EETerrainTypeTable::Get(i) != NULL && EETerrainTypeTable::Get(i)->mIsInEditor) {
-            EETerrainTypeTable* theType = EETerrainTypeTable::Get(i);
-            this->mColorTypes.push_back(theType);
-        }
-    }
-    for (i = 0; i < EETerrainTable::GetNumTables(); i++) {
-        if (EETerrainTable::Get(i) != NULL && EETerrainTable::Get(i)->mIsInEditor) {
-            EETerrainTable* theTerrain = EETerrainTable::Get(i);
-            this->mTerrains.push_back(theTerrain);
-        }
-    }
-    std::sort(this->mTerrains.begin(), this->mTerrains.end(), EESETerrainNameLess());
-    this->mSelectedTerrain = 0;
-    theLocation.SetXY(115.0f, 621.0f);
-    gResource->GetString(IDS_SE_TERRAIN, theText);
-    this->mTerrainButton = new EEUIFSETRBPaintType(kSETerrainTerrainButton, theText, theLocation, inFont, inForm, ioIndex, true);
-    this->mTerrainButton->GetTextLabel()->SetBgOpacity(0.4f);
-    ioIndex++;
-    GEText* theGEText = this->mTerrainButton->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theLocation.SetX(115.0f);
-    theLocation.SetY(this->mTerrainButton->GetRectangle().GetBottom() + 5.0f);
-    gResource->GetString(IDS_BULLDOZER, theText);
-    this->mMountainsButton = new EEUIFSETRBPaintType(kSETerrainMountainsButton, theText, theLocation, inFont, inForm, ioIndex, false);
-    this->mMountainsButton->GetTextLabel()->SetBgOpacity(0.4f);
-    ioIndex++;
-    theGEText = this->mMountainsButton->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    inForm->AddControl(this->mMountainsButton, 3);
-    theLocation.SetXY(250.0f, 621.0f);
-    gResource->GetString(IDS_TERRAIN_TYPE, theText);
-    this->mTerrainTypeLabel = new UITextLabel(theText, inFont, kSETerrainTerrainTypeLabel,
-        GERectangle(theLocation, 200.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mTerrainTypeLabel->SetBgOpacity(0.4f);
-    ioIndex++;
-    this->mTerrainTypeLabel->SetAlignment(kTextAlignCenter);
-    this->mTerrainTypeLabel->GetGEText()->SetIsTransparent(true);
-    this->mTerrainTypeLabel->GetGEText()->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    inForm->AddControl(this->mTerrainTypeLabel, 3);
-    theLocation.SetX(455.0f);
-    gResource->GetString(IDS_TERRAIN_COLOR, theText);
-    this->mTerrainColorTypeLabel = new UITextLabel(theText, inFont, kSETerrainTerrainColorTypeLabel,
-        GERectangle(theLocation, 120.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mTerrainColorTypeLabel->SetBgOpacity(0.4f);
-    ioIndex++;
-    this->mTerrainColorTypeLabel->SetAlignment(kTextAlignCenter);
-    this->mTerrainColorTypeLabel->GetGEText()->SetIsTransparent(true);
-    this->mTerrainColorTypeLabel->GetGEText()->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    inForm->AddControl(this->mTerrainColorTypeLabel, 3);
-    theTypes.resize(this->mTerrains.size());
-    for (i = 0; i < this->mTerrains.size(); i++) {
-        gResource->GetString(this->mTerrains[i]->mNameID, theText);
-        theTypes[i].mName = theText;
-        theTypes[i].mTexture = NULL;
-        if (EETerrainTypeTable::Get(this->mTerrains[i]->mColorType) == NULL)
-            continue;
-        for (long j = 0; j < (long)this->mColorTypes.size(); j++) {
-            if (this->mColorTypes[j] == EETerrainTypeTable::Get(this->mTerrains[i]->mColorType)) {
-                theTypes[i].mColorSet = j;
-                break;
-            }
-        }
-    }
-    theLocation.SetXY(this->mTerrainTypeLabel->GetRectangle().GetLeft(),
-                       this->mTerrainTypeLabel->GetRectangle().GetBottom() + 5.0f);
-    this->mTerrainType = new EESEUITerrainTypeLB(kSETerrainTerrainType, gU531934, theTypes,
-        GERectangle(theLocation, (float)this->mTerrainTypeLabel->GetWidth(), 85.0f), inForm, ioIndex, 2);
-    if (!this->mTerrainType)
-        ESVerify("C:\\EEX\\Empire Earth\\Scenario Editor\\EEUIFSETerrain.cpp", 0x356, "this->mTerrainType");
-    UIEvent* theEvent = new EEUIETerrainTypeChange(this);
-    this->mTerrainType->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
-    theEvent->Dereference();
-    ioIndex++;
-    this->mTerrainType->mText->SetIsTransparent(true);
-    this->mTerrainType->mText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    this->mTerrainType->GetSelectedBackground()->SetOpacity(0.0f);
-    this->mTerrainType->SetBgOpacity(0.4f);
-    inForm->AddControl(this->mTerrainType, 3);
-    theLocation.SetX(this->mTerrainColorTypeLabel->GetRectangle().GetLeft());
-    theLocation.SetY(this->mTerrainColorTypeLabel->GetRectangle().GetBottom() + 5.0f);
-    theColors.resize(this->mColorTypes.size());
-    for (i = 0; i < this->mColorTypes.size(); i++) {
-        for (long color = this->mColorTypes[i]->mFirstColor; color <= this->mColorTypes[i]->mLastColor; color++)
-            theColors[i].push_back(EETerrainColorTable::Get(color)->mColor);
-    }
-    this->mTerrainColorType = new EESEUITerrainColorLB(kSETerrainTerrainColorType, theColors, 16, false,
-        GERectangle(theLocation, (float)this->mTerrainColorTypeLabel->GetWidth(), 85.0f), inForm, ioIndex, 2);
-    if (!this->mTerrainColorType)
-        ESVerify("C:\\EEX\\Empire Earth\\Scenario Editor\\EEUIFSETerrain.cpp", 900, "this->mTerrainColorType");
-    theEvent = new EEUIETerrainColorChange;
-    this->mTerrainColorType->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
-    theEvent->Dereference();
-    this->mTerrainColorType->ChangeSelectionIndex(this->mTerrainType->Begin()[0].mColorSet, false, true);
-    ioIndex++;
-    this->mTerrainColorType->GetSelectedBackground()->SetOpacity(0.0f);
-    this->mTerrainColorType->SetBgOpacity(0.4f);
-    inForm->AddControl(this->mTerrainColorType, 3);
-    theLocation.SetXY(0.0f, 0.0f);
-    this->mPaint = new EEUIFSETerrainPaint(inScroll, inBrushes, 205, theLocation, 1024, 606, inForm, ioIndex, this);
-    ioIndex++;
-    inForm->AddControl(this->mPaint, 3);
-    inForm->AddControl(this->mTerrainButton, 3);
-    theLocation.SetX(this->mTerrainColorType->GetRectangle().GetRight() + 10.0f);
-    theLocation.SetY(this->mTerrainColorType->GetRectangle().GetHeight() * 0.5f + this->mTerrainColorType->GetRectangle().GetTop() - 32.0f);
-    GEBitmap* theBitmap = new GEBitmap;
-    this->mBitmap = new UIBitmap(kSETerrainBitmap, theBitmap, GERectangle(theLocation, 64.0f, 64.0f), inForm, ioIndex);
-    theBitmap->Dereference();
-    ioIndex++;
-    inForm->AddControl(this->mBitmap, 3);
-    EELoadTerrainPreviews();
+    gSeplScreenFont = inFont;
+    uint32_t theIndex = (uint32_t)ioIndex;
+    this->mRust = NULL;
+    this->mRust = ee_screens_setn_new(this, inForm, inScroll, inBrushes, &theIndex);
+    ioIndex = theIndex;
 }
-
-// FUNCTION: EXE 0x5ac31d
-// Copies the color set list for drawing (EESEUITerrainColorLB::CopyData, inline, emitted with the vtable)
-
-// FUNCTION: EXE 0x5ac32e
-// Destroys and frees the terrain color set list (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5ac350
-// Creates the terrain type list box (inline ctor, out of line: EEUIFSETerrain's ctor refused it)
-
-// FUNCTION: EXE 0x5ac3f1
-// Destroys and frees the terrain type list box (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5ac40d
-// Destroys the terrain type list box (inline dtor, out of line)
 
 // FUNCTION: EXE 0x5ac48b
 // Creates a paint type radio button 125 wide and as tall as the larger of its font and the radio button image
@@ -502,60 +311,25 @@ EEUIFSETRBPaintType::EEUIFSETRBPaintType(unsigned long inID, const UWideString& 
 {
 }
 
-// SYNTHETIC: EXE 0x5ac516
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFSETRBPaintType+0x0, stores EEUIFSETRBPaintType vtable)
-
-// SYNTHETIC: EXE 0x5ac539
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFSETerrainPaint+0x0, stores EEUIFSETerrainPaint vtable)
-
-// FUNCTION: EXE 0x5ac55b
-// Destroys and frees the terrain color change event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x5ac586
-// Destroys and frees the terrain type change event (scalar deleting destructor, emitted with its vtable)
-
-// SYNTHETIC: EXE 0x5ac5b1
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFSETerrain+0x0)
-
-// SYNTHETIC: EXE 0x5ac5cd
-// (the scalar deleting destructor, emitted with the vtable; slot UIBitmap+0x0)
-
 // FUNCTION: EXE 0x5ac5ea
-// Destroys the terrain tab and its controls and releases the terrain previews
+// Destroys the terrain tab and its controls and releases the terrain previews (editor_terrain.rs)
 EEUIFSETerrain::~EEUIFSETerrain()
 {
-    delete this->mTerrainButton;
-    delete this->mMountainsButton;
-    delete this->mTerrainType;
-    delete this->mTerrainTypeLabel;
-    delete this->mPaint;
-    delete this->mTerrainColorType;
-    delete this->mTerrainColorTypeLabel;
-    delete this->mBitmap;
-    EEReleaseTerrainPreviews();
+    ee_screens_setn_free(this->mRust);
 }
 
 // FUNCTION: EXE 0x5ac675
 // Leaves the tab: asks the load thread to unload the selected terrain and drops every preview texture
 void EEUIFSETerrain::Leave()
 {
-    EESEUITerrainTypeLB* theList = static_cast<EESEUITerrainTypeLB*>(this->mTerrainType->GetForm()->GetControlById(kSETerrainTerrainType));
-    unsigned long theSelection;
-    if (theList->GetCurrentSelection(theSelection) == 0 && theSelection < this->mTerrains.size()) {
-        EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mTerrainType->GetForm());
-        theEditor->GetLoadThread()->Post409(reinterpret_cast<void*>(this->mTerrains[theSelection]->mID));
-    }
-    for (theSelection = 0; theSelection < this->mTerrains.size(); theSelection++)
-        this->mTerrainType->SetTexture(NULL, theSelection);
+    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_LEAVE, NULL, 0.0f, 0.0f);
 }
 
 // FUNCTION: EXE 0x5ac6f9
 // Moves the brush highlight to the mouse while the editor is the current form
 void EEUIFSETerrain::Update()
 {
-    UIForm* theForm = this->mTerrainType->GetForm();
-    if (theForm == theForm->GetManager()->GetCurrentForm())
-        this->MouseMove(gMouse->mPosition);
+    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_UPDATE, NULL, 0.0f, 0.0f);
 }
 
 // FUNCTION: EXE 0x5ac727
@@ -563,299 +337,216 @@ void EEUIFSETerrain::Update()
 // and asks the load thread to load the selected terrain
 void EEUIFSETerrain::Enter()
 {
-    GERectangle theSource;
-    unsigned long i;
-    for (i = 0; i < this->mTerrains.size(); i++) {
-        if ((this->mTerrains[i])->mUnitClasses.size() != 0 && (this->mTerrains[i])->mIsAmbientsOnly) {
-            if ((this->mTerrains[i])->mUnitClasses.size() > 0 &&
-                gUnitClassTable[(this->mTerrains[i])->mUnitClasses[0]])
-                this->mTerrainType->SetTexture(gUnitClassTable[(this->mTerrains[i])->mUnitClasses[0]]->mButton->mTexture, i);
-        } else
-            this->mTerrainType->SetTexture((this->mTerrains[i])->mPreviewTexture, i);
-    }
-    if (this->mTerrainType->GetCurrentSelection(i) == kErrorOK) {
-        GEBitmap* theBitmap = this->mBitmap->GetBitmap();
-        if (this->mTerrainType->GetData(i).mTexture != NULL) {
-            theBitmap->SetTexture(this->mTerrainType->GetData(i).mTexture, this->mTerrainType->GetScreenIndex());
-            unsigned long theHeight = (*(this->mTerrainType->Begin() + i)).mTexture->GetHeight();
-            unsigned long theWidth = (*(this->mTerrainType->Begin() + i)).mTexture->GetWidth();
-            theSource = GERectangle(0.0f, 0.0f, (float)theWidth, (float)theHeight);
-            const GERectangle& theDestination = this->mBitmap->GetRectangle();
-            theBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource,
-                                                    this->mTerrainType->GetScreenIndex());
-            this->mTerrainColorType->FireTriggerEvent(kControlTriggerSelectionChanged);
-        }
-    }
-    EESEUITerrainTypeLB* theList = static_cast<EESEUITerrainTypeLB*>(this->mTerrainType->GetForm()->GetControlById(kSETerrainTerrainType));
-    if (theList->GetCurrentSelection(i) == kErrorOK && i < this->mTerrains.size()) {
-        EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(this->mTerrainType->GetForm());
-        theForm->GetLoadThread()->Post408(reinterpret_cast<void*>(this->mTerrains[i]->mID));
-        this->mSelectedTerrain = i;
-    } else
-        this->mSelectedTerrain = -1;
-}
-
-// FUNCTION: EXE 0x5aca00
-// Selects a terrain, asking the load thread to unload the previous one and load the new one (none if out of range)
-void EEUIFSETerrain::SelectTerrain(unsigned long inSelection)
-{
-    EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(this->mTerrainColorTypeLabel->GetForm());
-    if (this->mSelectedTerrain < this->mTerrains.size())
-        theForm->GetLoadThread()->Post409(reinterpret_cast<void*>(this->mTerrains[this->mSelectedTerrain]->mID));
-    if (inSelection < this->mTerrains.size()) {
-        this->mSelectedTerrain = inSelection;
-        theForm->GetLoadThread()->Post408(reinterpret_cast<void*>(this->mTerrains[inSelection]->mID));
-    } else
-        this->mSelectedTerrain = -1;
+    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_ENTER, NULL, 0.0f, 0.0f);
 }
 
 // FUNCTION: EXE 0x5aca71
 // Puts the brush highlight on the map point under the mouse inside the game view, else hides it
 void EEUIFSETerrain::MouseMove(const GE2DPoint& inLocation)
 {
-    GE3DPoint thePoint;
-    EETile* theTile;
-    EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(this->mTerrainTypeLabel->GetForm());
-    if (gViewport.GetViewRectangle().Contains(inLocation)) {
-        EEPointUnitOrTile(inLocation, theTile, thePoint, false);
-        theForm->GetBrushGroup()->mIsHighlightShown = true;
-        theForm->GetBrushGroup()->SetHighlight(thePoint.GetX(), thePoint.GetY(), !this->mMountainsButton->GetIsChecked());
-    } else {
-        theForm->GetBrushGroup()->mIsHighlightShown = false;
-    }
+    ee_screens_setn_call(this->mRust, EE_SCREENS_SETN_MOUSE_MOVE, NULL, inLocation.GetX(), inLocation.GetY());
 }
 
-// the editor gate's (EESimEditor.cpp: terrainstate): a listed terrain's and colour type's table id
-long EEUIFSETerrain::GetTerrainID(unsigned long inIndex) const { return this->mTerrains[inIndex]->mID; }
-long EEUIFSETerrain::GetColorTypeID(unsigned long inIndex) const { return this->mColorTypes[inIndex]->mID; }
-
-// FUNCTION: EXE 0x5acafa
-// Appends a terrain type to the tab's color type list (vector<EETerrainTypeTable*>::push_back)
-
-// FUNCTION: EXE 0x5acb26
-// Creates a color set list box (UIListBox<vector<GEColor> > ctor)
-
-// FUNCTION: EXE 0x5acda0
-// Destroys a color set list box (UIListBox<vector<GEColor> > dtor)
-
-// FUNCTION: EXE 0x5ace34
-// Appends a color set line and updates the scroll bar (UIListBox<vector<GEColor> >::AppendLine)
-
-// FUNCTION: EXE 0x5ace5a
-// Appends several color set lines (UIListBox<vector<GEColor> >::AppendStringArray)
-
-// FUNCTION: EXE 0x5acea6
-// Copies the color set lines and layout for drawing (UIListBox<vector<GEColor> >::CopyData)
-
-// FUNCTION: EXE 0x5ad0fd
-// Removes every color set line (UIListBox<vector<GEColor> >::DeleteAllEntries)
-
-// FUNCTION: EXE 0x5ad12e
-// Removes one color set line (UIListBox<vector<GEColor> >::DeleteLine)
-
-// FUNCTION: EXE 0x5ad1bc
-// Gets the selected color set line; fails when empty or unselected (UIListBox<vector<GEColor> >::GetCurrentSelection)
-
-// FUNCTION: EXE 0x5ad1f2
-// Moves the list box (UIListBox<vector<GEColor> >::SetLocation, ICF-shared by the editor and WON list boxes)
-
-// FUNCTION: EXE 0x5ad327
-// Handles the list box keys (UIListBox<vector<GEColor> >::UpdateKeyboard, ICF-shared by the list boxes)
-
-// FUNCTION: EXE 0x5ad428
-// Returns the number of color set lines (UIListBox<vector<GEColor> >::GetNumLines)
-
-// FUNCTION: EXE 0x5ad441
-// Handles a left click on the list box (UIListBox<vector<GEColor> >::MouseLButtonDown, ICF-shared)
-
-// FUNCTION: EXE 0x5ad4dc
-// Handles a double click on the list box (UIListBox<vector<GEColor> >::MouseLButtonDoublePressed, ICF-shared)
-
-// FUNCTION: EXE 0x5ad5a8
-// Handles mouse moves over the list box (UIListBox<vector<GEColor> >::MouseMove, ICF-shared)
-
-// FUNCTION: EXE 0x5ad67e
-// Returns 0 (EEUIFSETerrainPaint::MouseRButtonDown: one ICF-folded body shared by many empty virtuals)
-
-// FUNCTION: EXE 0x5ad681
-// Handles the End key in the list box (UIListBox<vector<GEColor> >::ProcessEnd, ICF-shared)
-
-// FUNCTION: EXE 0x5ad6d7
-// Creates a terrain type list box (UIListBox<EESEUITTData> ctor)
-
-// FUNCTION: EXE 0x5ad951
-// Destroys a terrain type list box (UIListBox<EESEUITTData> dtor)
-
-// FUNCTION: EXE 0x5ad9e5
-// Appends a terrain line and updates the scroll bar (UIListBox<EESEUITTData>::AppendLine)
-
-// FUNCTION: EXE 0x5ada0b
-// Appends several terrain lines (UIListBox<EESEUITTData>::AppendStringArray)
-
-// FUNCTION: EXE 0x5ada60
-// Copies the terrain lines and layout for drawing (UIListBox<EESEUITTData>::CopyData)
-
-// FUNCTION: EXE 0x5adcd9
-// Removes every terrain line (UIListBox<EESEUITTData>::DeleteAllEntries)
-
-// FUNCTION: EXE 0x5add0a
-// Removes one terrain line (UIListBox<EESEUITTData>::DeleteLine)
-
-// FUNCTION: EXE 0x5add98
-// Gets the selected terrain line; fails when empty or unselected (UIListBox<EESEUITTData>::GetCurrentSelection)
-
-// FUNCTION: EXE 0x5addd5
-// Scrolls the list box by a wheel turn; returns 9 without a scroll bar (UIListBox<vector<GEColor> >::MouseWheelTurned)
-
-// FUNCTION: EXE 0x5addf3
-// Returns the number of terrain lines (UIListBox<EESEUITTData>::GetNumLines)
-
-// FUNCTION: EXE 0x5ade0f
-// Handles the Down key in the list box (UIListBox<vector<GEColor> >::ProcessDown, ICF-shared)
-
-// FUNCTION: EXE 0x5ade79
-// Takes the focus when tabbed to (UIListBox<vector<GEColor> >::TabbedTo, ICF-shared)
-
-// FUNCTION: EXE 0x5ade81
-// Resizes the terrain line array, filling with empty lines (vector<EESEUITTData>::resize)
-
-// SYNTHETIC: EXE 0x5adeaa
-// (the scalar deleting destructor, emitted with the vtable; slot UIListBox<std::vector<GEColor,std::allocator<GEColor> > >+0x0)
-
-// SYNTHETIC: EXE 0x5adec6
-// (the scalar deleting destructor, emitted with the vtable; slot UIListBox<EESEUITTData>+0x0)
-
-// TEMPLATE: EXE 0x5adee2
-// ?CheckScrollBar@?$UIListBox@V?$vector@VGEColor@@V?$allocator@VGEColor@@@std@@@std@@@@IAEXXZ (ICF-shared with the other UIListBox instantiations)
-
-// FUNCTION: EXE 0x5ae0a7
-// Assigns a color set array (vector<vector<GEColor> >::operator=)
-
-// FUNCTION: EXE 0x5ae1f9
-// Appends a color set (vector<vector<GEColor> >::push_back)
-
-// FUNCTION: EXE 0x5ae225
-// Erases color sets (vector<vector<GEColor> >::erase)
-
-// FUNCTION: EXE 0x5ae298
-// Empties a color set array (vector<vector<GEColor> >::clear)
-
-// FUNCTION: EXE 0x5ae2d3
-// Assigns a terrain line array (vector<EESEUITTData>::operator=)
-
-// FUNCTION: EXE 0x5ae45c
-// Copies a terrain line: name, preview texture and color set (EESEUITTData::operator=)
-
-// FUNCTION: EXE 0x5ae47e
-// Resizes the terrain line array, filling with a given line (vector<EESEUITTData>::resize)
-
-// FUNCTION: EXE 0x5ae53b
-// Returns a terrain line by index (vector<EESEUITTData>::operator[], ICF-shared with vector<EEWorldTableEntry>)
-
-// FUNCTION: EXE 0x5ae54a
-// Appends a terrain line (vector<EESEUITTData>::push_back)
-
-// FUNCTION: EXE 0x5ae576
-// Erases terrain lines (vector<EESEUITTData>::erase)
-
-// FUNCTION: EXE 0x5ae5ea
-// Empties the terrain line array (vector<EESEUITTData>::clear)
-
-// FUNCTION: EXE 0x5ae625
-// Destroys the terrain lines and frees their storage (vector<EESEUITTData>::_Tidy)
-
-// FUNCTION: EXE 0x5ae65e
-// Inserts a color set (vector<vector<GEColor> >::insert)
-
-// FUNCTION: EXE 0x5ae6ae
-// Inserts a terrain line (vector<EESEUITTData>::insert)
-
-// FUNCTION: EXE 0x5ae705
-// Inserts copies of a terrain line (vector<EESEUITTData>::insert)
-
-// FUNCTION: EXE 0x5ae9ec
-// Erases terrain lines (vector<EESEUITTData>::erase)
-
-// FUNCTION: EXE 0x5aea56
-// Fills raw storage with copies of a terrain line (vector<EESEUITTData>::_Ufill)
-
-// FUNCTION: EXE 0x5aea7d
-// Sorts the editor's terrains by localized name (std::sort with EESETerrainNameLess)
-
-// FUNCTION: EXE 0x5aeb3a
-// Copies a range of color sets (std::copy for vector<GEColor>)
-
-// FUNCTION: EXE 0x5aeb63
-// Copies terrain lines into raw storage (vector<EESEUITTData>::_Ucopy)
-
-// FUNCTION: EXE 0x5aeb8b
-// Copies a range of terrain lines (std::copy for EESEUITTData)
-
-// FUNCTION: EXE 0x5aebc4
-// Fills a range with a terrain line (std::fill for EESEUITTData)
-
-// FUNCTION: EXE 0x5aebf5
-// Copies a range of terrain lines backwards (std::copy_backward for EESEUITTData)
-
-// FUNCTION: EXE 0x5aec2e
-// Copies a range of terrain lines (std::copy for EESEUITTData)
-
-// FUNCTION: EXE 0x5aec64
-// Constructs a terrain line copy in place (std::_Construct for EESEUITTData)
-
-// SYNTHETIC: EXE 0x5aec8a
-// (the scalar deleting destructor, emitted with the vtable; name ??_GEEPGSPlayerReport@@QAEPAXI@Z, slot UWideString+0x0)
-
-// FUNCTION: EXE 0x5aeca7
-// Insertion-sorts a terrain range by name (std::_Insertion_sort, EESETerrainNameLess)
-
-// FUNCTION: EXE 0x5aecd0
-// Sorts a terrain range by name, falling back to a heap sort (std::_Sort, EESETerrainNameLess)
-
-// FUNCTION: EXE 0x5aeda3
-// Insertion-sorts a terrain range without bounds checks (std::_Unguarded_insertion_sort)
-
-// FUNCTION: EXE 0x5aedd4
-// Insertion-sorts a terrain range by name (std::_Insertion_sort_1, EESETerrainNameLess)
-
-// FUNCTION: EXE 0x5aee71
-// Returns whether the first terrain's localized name sorts before the second's, ignoring case
-
-// FUNCTION: EXE 0x5aeede
-// Advances a pointer iterator by one element (std::_Ptrit::operator++, ICF-shared)
-
-// FUNCTION: EXE 0x5aeee4
-// Builds a heap of terrains by name (std::make_heap, EESETerrainNameLess)
-
-// FUNCTION: EXE 0x5aef1e
-// Sorts a terrain heap by name (std::sort_heap, EESETerrainNameLess)
-
-// FUNCTION: EXE 0x5aef5f
-// Partitions a terrain range around a median name (std::_Unguarded_partition)
-
-// FUNCTION: EXE 0x5af07f
-// Inserts a terrain into its sorted place without bounds checks (std::_Unguarded_insert)
-
-// FUNCTION: EXE 0x5af0b2
-// Builds a heap of terrains by name (std::_Make_heap)
-
-// FUNCTION: EXE 0x5af0f6
-// Moves the first terrain of a heap to its end (std::pop_heap)
-
-// FUNCTION: EXE 0x5af11f
-// Sifts a terrain down the heap (std::_Adjust_heap)
-
-// FUNCTION: EXE 0x5af18d
-// Pops the top of a terrain heap (std::_Pop_heap_0)
-
-// FUNCTION: EXE 0x5af1e0
-// Sifts a terrain up the heap (std::_Push_heap)
-
-// FUNCTION: EXE 0x5af22f
-// Pops the top of a terrain heap (std::_Pop_heap)
-
-// SYNTHETIC: EXE 0x5af263
-// (the scalar deleting destructor, emitted with the vtable; )
-
-// SYNTHETIC: EXE 0x5af28c
-// (the scalar deleting destructor, emitted with the vtable; slot UIScrollBar+0x0)
+// the editor gate's (EESimEditor.cpp: terrainstate)
+unsigned long EEUIFSETerrain::GetSelectedTerrain() const
+{
+    return (unsigned long)(uint32_t)ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_SELECTED, 0);
+}
+unsigned long EEUIFSETerrain::GetTerrainCount() const
+{
+    return (unsigned long)ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_TERRAIN_COUNT, 0);
+}
+long EEUIFSETerrain::GetTerrainID(unsigned long inIndex) const
+{
+    return ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_TERRAIN_ID, (uint32_t)inIndex);
+}
+unsigned long EEUIFSETerrain::GetColorTypeCount() const
+{
+    return (unsigned long)ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_COLOR_COUNT, 0);
+}
+long EEUIFSETerrain::GetColorTypeID(unsigned long inIndex) const
+{
+    return ee_screens_setn_get(this->mRust, EE_SCREENS_SETN_GET_COLOR_ID, (uint32_t)inIndex);
+}
+
+// ---- the tab's host (editor_terrain.rs: the ops from 1000)
+
+static_assert(IDS_SE_TERRAIN == 20508 && IDS_BULLDOZER == 20510 && IDS_TERRAIN_TYPE == 20511 &&
+                  IDS_TERRAIN_COLOR == 20542 && kSETerrainTerrainButton == 0xc8 && kSETerrainBitmap == 0xc9 &&
+                  kSETerrainMountainsButton == 0xca && kSETerrainTerrainTypeLabel == 0xcb &&
+                  kSETerrainTerrainType == 0xcc && kSETerrainTerrainColorTypeLabel == 0xce &&
+                  kSETerrainTerrainColorType == 0xcf,
+              "editor_terrain.rs's ids");
+
+extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    void** theOut = static_cast<void**>(p[0]);
+    UIForm* theForm = static_cast<UIForm*>(p[1]);
+    void* const* q = static_cast<void* const*>(p[2]);
+    UIControl* c = static_cast<UIControl*>(p[0]);
+    EESEUITerrainTypeLB* theTypes = static_cast<EESEUITerrainTypeLB*>(c);
+    EESEUITerrainColorLB* theColors = static_cast<EESEUITerrainColorLB*>(c);
+    unsigned long s;
+    switch (inOp) {
+    case EE_SCREENS_SETN_OP_TABLES: {
+        unsigned long theCount = 0;
+        if (i[0] == 0) {
+            for (unsigned long k = 0; k < EETerrainTypeTable::GetCount(); k++) {
+                if (EETerrainTypeTable::Get(k) == NULL || !EETerrainTypeTable::Get(k)->mIsInEditor)
+                    continue;
+                if (theOut != NULL && theCount < (unsigned long)i[1])
+                    theOut[theCount] = EETerrainTypeTable::Get(k);
+                theCount++;
+            }
+            return (int32_t)theCount;
+        }
+        std::vector<EETerrainTable*> theTerrains;
+        for (unsigned long k = 0; k < EETerrainTable::GetNumTables(); k++)
+            if (EETerrainTable::Get(k) != NULL && EETerrainTable::Get(k)->mIsInEditor)
+                theTerrains.push_back(EETerrainTable::Get(k));
+        if (theOut == NULL)
+            return (int32_t)theTerrains.size();
+        std::sort(theTerrains.begin(), theTerrains.end(), EESETerrainNameLess());
+        for (unsigned long k = 0; k < theTerrains.size() && k < (unsigned long)i[1]; k++)
+            theOut[k] = theTerrains[k];
+        return (int32_t)theTerrains.size();
+    }
+    case EE_SCREENS_SETN_OP_TERRAIN: {
+        EETerrainTable* t = static_cast<EETerrainTable*>(p[0]);
+        i[0] = (int32_t)t->mID;
+        i[1] = (int32_t)t->mColorType;
+        i[2] = t->mIsAmbientsOnly ? 1 : 0;
+        i[3] = (int32_t)t->mUnitClasses.size();
+        if (p[1] != NULL)
+            *static_cast<GETexture**>(p[1]) = t->mPreviewTexture;
+        return t->mUnitClasses.size() != 0 ? (int32_t)t->mUnitClasses[0] : -1;
+    }
+    case EE_SCREENS_SETN_OP_COLOR_TYPE: return (int32_t)static_cast<EETerrainTypeTable*>(p[0])->mID;
+    case EE_SCREENS_SETN_OP_TYPE_TABLE: *theOut = EETerrainTypeTable::Get(i[0]); return 0;
+    case EE_SCREENS_SETN_OP_RADIO: {
+        UWideString theText;
+        gResource->GetString(i[1], theText);
+        EEUIFSETRBPaintType* t = new EEUIFSETRBPaintType((unsigned long)i[0], theText, GE2DPoint(f[0], f[1]),
+                                                         gSeplScreenFont, theForm, (unsigned long)i[2], i[3] != 0);
+        t->GetTextLabel()->SetBgOpacity(0.4f);
+        SetnYellow(t->GetTextLabel()->GetGEText());
+        *theOut = static_cast<UIControl*>(t);
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_TYPE_LIST: {
+        EETerrainTable* const* theTerrains = static_cast<EETerrainTable* const*>(q[1]);
+        std::vector<EESEUITTData> theLines((size_t)i[0]);
+        for (long k = 0; k < i[0]; k++) {
+            gResource->GetString(theTerrains[k]->mNameID, theLines[k].mName);
+            theLines[k].mColorSet = static_cast<const int32_t*>(q[2])[k];
+        }
+        EESEUITerrainTypeLB* t = new EESEUITerrainTypeLB(kSETerrainTerrainType, gU531934, theLines,
+                                                         GERectangle(GE2DPoint(f[0], f[1]), f[2], 85.0f), theForm,
+                                                         (unsigned long)i[1], 2);
+        UIEvent* theEvent = new EEUIETerrainTypeChange(static_cast<EEUIFSETerrain*>(q[0]));
+        t->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+        theEvent->Dereference();
+        SetnYellow(t->mText);
+        t->GetSelectedBackground()->SetOpacity(0.0f);
+        t->SetBgOpacity(0.4f);
+        theForm->AddControl(t, 3);
+        *theOut = static_cast<UIControl*>(t);
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_COLOR_LIST: {
+        EETerrainTypeTable* const* theTypeTables = static_cast<EETerrainTypeTable* const*>(q[1]);
+        std::vector<std::vector<GEColor> > theLines((size_t)i[0]);
+        for (long k = 0; k < i[0]; k++)
+            for (long color = theTypeTables[k]->mFirstColor; color <= theTypeTables[k]->mLastColor; color++)
+                theLines[k].push_back(EETerrainColorTable::Get(color)->mColor);
+        EESEUITerrainColorLB* t = new EESEUITerrainColorLB(kSETerrainTerrainColorType, theLines, 16, false,
+                                                           GERectangle(GE2DPoint(f[0], f[1]), f[2], 85.0f), theForm,
+                                                           (unsigned long)i[1], 2);
+        UIEvent* theEvent = new EEUIETerrainColorChange(static_cast<EEUIFSETerrain*>(q[0]));
+        t->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+        theEvent->Dereference();
+        t->ChangeSelectionIndex((unsigned long)i[2], false, true);
+        t->GetSelectedBackground()->SetOpacity(0.0f);
+        t->SetBgOpacity(0.4f);
+        theForm->AddControl(t, 3);
+        *theOut = static_cast<UIControl*>(t);
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_PAINT: {
+        EEUIFSETerrainPaint* t = new EEUIFSETerrainPaint(static_cast<EEAScroll*>(q[0]),
+                                                         static_cast<EEUIFSEBrushGroup*>(q[1]), 205, GE2DPoint(0.0f, 0.0f),
+                                                         1024, 606, theForm, (unsigned long)i[0],
+                                                         static_cast<EEUIFSETerrain*>(q[2]));
+        theForm->AddControl(t, 3);
+        *theOut = static_cast<UIControl*>(t);
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_BITMAP: {
+        GEBitmap* theBitmap = new GEBitmap;
+        UIBitmap* t = new UIBitmap(kSETerrainBitmap, theBitmap, GERectangle(GE2DPoint(f[0], f[1]), 64.0f, 64.0f),
+                                   theForm, (unsigned long)i[0]);
+        theBitmap->Dereference();
+        theForm->AddControl(t, 3);
+        *theOut = static_cast<UIControl*>(t);
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_PREVIEWS:
+        if (i[0])
+            EELoadTerrainPreviews();
+        else
+            EEReleaseTerrainPreviews();
+        return 0;
+    case EE_SCREENS_SETN_OP_ADD: theForm->AddControl(c, (unsigned long)i[0]); return 0;
+    case EE_SCREENS_SETN_OP_SELECTION:
+        if ((i[0] ? theColors->GetCurrentSelection(s) : theTypes->GetCurrentSelection(s)) != kErrorOK)
+            return -1;
+        return (int32_t)s;
+    case EE_SCREENS_SETN_OP_SET_TEXTURE: theTypes->SetTexture(static_cast<GETexture*>(p[1]), (unsigned long)i[0]); return 0;
+    case EE_SCREENS_SETN_OP_CLASS_BUTTON:
+        if (gUnitClassTable[i[0]] == NULL)
+            return 0;
+        *theOut = gUnitClassTable[i[0]]->mButton->mTexture;
+        return 1;
+    case EE_SCREENS_SETN_OP_LINE_TEXTURE: return theTypes->GetData((unsigned long)i[0]).mTexture != NULL;
+    case EE_SCREENS_SETN_OP_SHOW_PREVIEW: {
+        UIBitmap* theBitmap = static_cast<UIBitmap*>(static_cast<UIControl*>(p[1]));
+        GETexture* theTexture = theTypes->GetData((unsigned long)i[0]).mTexture;
+        theBitmap->GetBitmap()->SetTexture(theTexture, theTypes->GetScreenIndex());
+        GERectangle theSource(0.0f, 0.0f, (float)theTexture->GetWidth(), (float)theTexture->GetHeight());
+        theBitmap->GetBitmap()->ComputeStretchedCoordsAndScale(theBitmap->GetRectangle(), theBitmap->GetRectangle(),
+                                                               theSource, theTypes->GetScreenIndex());
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_COLOR_SELECT: theColors->ChangeSelectionIndex((unsigned long)i[0], false, true); return 0;
+    case EE_SCREENS_SETN_OP_FIRE: c->FireTriggerEvent(kControlTriggerSelectionChanged); return 0;
+    case EE_SCREENS_SETN_OP_DIRTY: static_cast<UIBitmap*>(c)->SetDirty(true); return 0;
+    case EE_SCREENS_SETN_OP_COLOR_COUNT: return (int32_t)theColors->GetData((unsigned long)i[0]).size();
+    case EE_SCREENS_SETN_OP_TINT: {
+        const std::vector<GEColor>& d = theColors->GetData((unsigned long)i[0]);
+        static_cast<UIBitmap*>(static_cast<UIControl*>(p[1]))->GetBitmap()->SetColorPerVertex(d[0], d[i[1]], d[i[2]], d[i[3]]);
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_POST: {
+        EESELoadThread* theThread = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetLoadThread();
+        void* theTerrain = reinterpret_cast<void*>((intptr_t)i[1]);
+        if (i[0] == 0x408)
+            theThread->Post408(theTerrain);
+        else
+            theThread->Post409(theTerrain);
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_PAINT_ACTION: {
+        EEUIFSEPaint* thePaint = static_cast<EEUIFSEPaint*>(c);
+        if (i[3] >= 0)
+            thePaint->mIsCentered = i[3] != 0;
+        EESEAPaint* theAction = NULL;
+        if (i[0] == 0)
+            theAction = new EESEAPaintRust(kSEAPaintTerrain, i[1], i[2]);
+        else if (i[0] == 1)
+            theAction = new EESEAPaintRust(kSEAPaintBulldozer);
+        *static_cast<void**>(p[1]) = theAction;
+        return 0;
+    }
+    }
+    return 0;
+}

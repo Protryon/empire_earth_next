@@ -100,8 +100,11 @@ public:
 // the colour list's selection event (RTTI EEUIETerrainColorChange > UIEvent; vtable 0x445b10; ??_G 0x1ac55b)
 class EEUIETerrainColorChange : public UIEvent {
 public:
+    EEUIETerrainColorChange(EEUIFSETerrain* inTerrain) : mTerrain(inTerrain) {}
     virtual ~EEUIETerrainColorChange() {}   // user-declared (??_G 0x1ac55b stores this vtable first)
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x1ab4bc
+
+    EEUIFSETerrain* mTerrain;               // the tab (editor_terrain.rs reads the preview through it)
 };
 
 // the type list's selection event (RTTI EEUIETerrainTypeChange > UIEvent; vtable 0x445be4, sizeof 0x10; ??_G 0x1ac586)
@@ -124,12 +127,10 @@ public:
     virtual void Check();                   // +0x94 0x1ab2ab (shows the terrain controls for 200, hides them for 202)
 };
 
-// RTTI 0x445bfc, base EEUIFSEMainGroup; actual factory19ef5a alloc0x48.
-// All fields proven by ctor1ab87c and destructor1ac5ea. No padding/fake kind.
-class EETerrainTable;
-class EETerrainTypeTable;
-class UIBitmap;
+struct EeScreensSeTerrain;
 
+// whole in Rust (ee_screens editor_terrain.rs): the class holds its object (the in-editor terrains and colour types,
+// the controls ids 0xc8 .. 0xcf and 205, the selected terrain)
 class EEUIFSETerrain : public EEUIFSEMainGroup {
 public:
     EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long& ioIndex,
@@ -139,25 +140,14 @@ public:
     virtual void Leave();                   // 1ac675
     virtual void Enter();                   // 1ac727
     virtual void MouseMove(const GE2DPoint& inLocation); // 1aca71
-    void SelectTerrain(unsigned long inSelection); // 1aca00, actual type-change event caller
     // the editor gate's (EESimEditor.cpp: terrainstate)
-    unsigned long GetSelectedTerrain() const { return this->mSelectedTerrain; }
-    unsigned long GetTerrainCount() const { return (unsigned long)this->mTerrains.size(); }
+    unsigned long GetSelectedTerrain() const;
+    unsigned long GetTerrainCount() const;
     long GetTerrainID(unsigned long inIndex) const;
-    unsigned long GetColorTypeCount() const { return (unsigned long)this->mColorTypes.size(); }
+    unsigned long GetColorTypeCount() const;
     long GetColorTypeID(unsigned long inIndex) const;
 
-    std::vector<EETerrainTable*> mTerrains;  // +04
-    std::vector<EETerrainTypeTable*> mColorTypes;  // +14
-    EEUIFSETRBPaintType* mTerrainButton;    // +24, id200
-    EEUIFSETRBPaintType* mMountainsButton;  // +28, id202
-    EEUIFSETerrainPaint* mPaint;            // +2c
-    UITextLabel* mTerrainTypeLabel;         // +30
-    UITextLabel* mTerrainColorTypeLabel;    // +34
-    EESEUITerrainTypeLB* mTerrainType;       // +38 (original assertion)
-    EESEUITerrainColorLB* mTerrainColorType;// +3c (original assertion)
-    UIBitmap* mBitmap;                     // +40
-    unsigned long mSelectedTerrain;        // +44
+    EeScreensSeTerrain* mRust;
 };
 
 #endif
