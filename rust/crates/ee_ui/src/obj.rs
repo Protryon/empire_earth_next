@@ -875,6 +875,19 @@ pub enum EeUiOp {
     BgtFileRead = 599,
     /// The file's `Close()`.
     BgtFileClose = 600,
+
+    // ---- the movie control (R6 ui round 21, mediaobj.rs): on movie a
+    /// Movie `a`'s `Reference()`.
+    MovieReference = 610,
+    /// Movie `a`'s `Stop()`.
+    MovieStop = 611,
+    /// Movie `a`'s `Dereference()`.
+    MovieRelease = 612,
+    /// *Pure*: movie `a`'s `GetIsPlaying()`.
+    MoviePlaying = 613,
+    /// Movie `a`'s `RenderFrame()` -> its result.
+    MovieRender = 614,
+
 }
 
 impl EeUiOp {
@@ -1008,6 +1021,7 @@ impl EeUiOp {
                 | BgtTextureDepth
                 | BgtEntryAlpha
                 | BgtEntryFormId
+                | MoviePlaying
         )
     }
 

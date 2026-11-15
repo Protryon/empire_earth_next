@@ -86,7 +86,6 @@
 78251 785cd User Interface/UILBString.cpp
 785cd 78a70 User Interface/UILineGraph.cpp
 78c81 7ba37 User Interface/UIManager.cpp
-7ba37 7badf User Interface/UIMovie.cpp
 7badf 7c38e User Interface/UIRadioButton.cpp
 7c38e 7c901 User Interface/UIScalableButton.cpp
 7c901 7d013 User Interface/UIScrollBar.cpp

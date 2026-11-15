@@ -915,6 +915,16 @@ enum class EeUiOp : uint32_t {
   BgtFileRead = 599,
   /// The file's `Close()`.
   BgtFileClose = 600,
+  /// Movie `a`'s `Reference()`.
+  MovieReference = 610,
+  /// Movie `a`'s `Stop()`.
+  MovieStop = 611,
+  /// Movie `a`'s `Dereference()`.
+  MovieRelease = 612,
+  /// *Pure*: movie `a`'s `GetIsPlaying()`.
+  MoviePlaying = 613,
+  /// Movie `a`'s `RenderFrame()` -> its result.
+  MovieRender = 614,
 };
 
 /// The inward calls (each C++ class's methods forward here with their own call).
@@ -1820,6 +1830,36 @@ enum class EeUiManagerCall : uint32_t {
   UiLock = 61,
 };
 
+/// UIBitmap's inward calls.
+enum class EeUiBitmapCall : uint32_t {
+  /// The constructor's part after `UIControl`'s: the bitmap `a` (referenced when not NULL), no copy.
+  Init = 1,
+  /// The destructor: the bitmap and its copy released.
+  Release = 2,
+  /// `CopyData()` -> the base's result.
+  CopyData = 3,
+  /// `DrawPolygons()` -> the last draw's result.
+  DrawPolygons = 4,
+  /// `DrawTextA()` -> the base's result.
+  DrawText = 5,
+  /// `SetBitmap(a)`: the old one released, `a` referenced (the original's: never NULL), the control dirty.
+  SetBitmap = 6,
+};
+
+/// UIMovie's inward calls.
+enum class EeUiMovieCall : uint32_t {
+  /// The constructor's part after `UIControl`'s: the movie `a`, referenced.
+  Init = 1,
+  /// The destructor: the movie stopped and released.
+  Release = 2,
+  /// `CopyData()` -> the base's result; the control stays dirty while the movie plays.
+  CopyData = 3,
+  /// `DrawPolygons()` -> the base's result.
+  DrawPolygons = 4,
+  /// `DrawTextA()`: the base's, then the movie's frame -> the render's result.
+  DrawText = 5,
+};
+
 /// The inward calls (the C++ shim's methods).
 enum class EeUiScrollBarCall : uint32_t {
   /// `CopyData()` -> the slider's result.
@@ -2381,6 +2421,26 @@ struct EeUiHotKeyFields {
   unsigned long mKeyCount;
   bool mEnabled;
   bool mAlwaysFire;
+};
+
+/// `UIBitmap`'s members (`include/lle/UIBitmap.h`), the C++ class's private base.
+struct EeUiBitmapFields {
+  /// The host of the calls out (its object is the record).
+  EeUiHostFn mBitmapHost;
+  /// The control's top left as of the last `CopyData` (x, y).
+  float mLocation[2];
+  /// The bitmap (`GEBitmap*`, referenced; NULL for none).
+  void *mBitmap;
+  /// The bitmap as of the last `CopyData` (referenced), drawn.
+  void *mCopiedBitmap;
+};
+
+/// `UIMovie`'s members (`include/lle/UIMovie.h`), the C++ class's private base.
+struct EeUiMovieFields {
+  /// The host of the calls out (its object is the record).
+  EeUiHostFn mMovieHost;
+  /// The movie (`GEMovie*`, referenced).
+  void *mMovie;
 };
 
 /// `GE2DPoint`: x, y.
@@ -3011,6 +3071,21 @@ ptrdiff_t ee_ui_manager_call(const EeUiManager *manager,
 
 /// `UIManager::GetMouseWheelScrollAmount`'s step from the wheel's normalized value.
 long ee_ui_manager_wheel_scroll_amount(long value);
+
+/// One of UIBitmap's methods ([`EeUiBitmapCall`]); `host` is read by `Init` only.
+///
+/// # Safety
+/// As [`bitmap_call`].
+ptrdiff_t ee_ui_bitmap_call(EeUiBitmapFields *rec,
+                            EeUiHostFn host,
+                            EeUiBitmapCall call,
+                            ptrdiff_t a);
+
+/// One of UIMovie's methods ([`EeUiMovieCall`]); `host` is read by `Init` only.
+///
+/// # Safety
+/// As [`movie_call`].
+ptrdiff_t ee_ui_movie_call(EeUiMovieFields *rec, EeUiHostFn host, EeUiMovieCall call, ptrdiff_t a);
 
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.

@@ -42,6 +42,7 @@ pub mod listobj;
 pub mod manager;
 pub mod manager_media;
 pub mod managerobj;
+pub mod mediaobj;
 pub mod mouse;
 pub mod obj;
 pub mod rect;
