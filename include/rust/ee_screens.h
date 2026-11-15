@@ -6953,10 +6953,12 @@ constexpr static const uint32_t EE_SCREENS_SB_OP_WORLD_LONG = 23;
 /// The string a into the chat log (`gResource->GetString`, `gUserInterface->AddChatLogEntry(..., 0)`).
 constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_STRING = 24;
 
-/// `EECanAffordTrade(a)`.
+/// Whether the current player can make the market trade of the button a (the original's `EECanAffordTrade`: the
+/// adapter's, [`form_op`]).
 constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_AFFORD_TRADE = 25;
 
-/// `EEDecodeTradeButton(a, ...)`: -1 when it fails (b 0), else (or b 1) the resource * 2 + the sell flag.
+/// The market button a decoded ([`decode_trade`], the original's `EEDecodeTradeButton`): -1 when it is none (b 0),
+/// else (or b 1) the resource * 2 + the sell flag.
 constexpr static const uint32_t EE_SCREENS_SB_OP_DECODE_TRADE = 26;
 
 /// `UIControl::ShiftKeyPressed()`.

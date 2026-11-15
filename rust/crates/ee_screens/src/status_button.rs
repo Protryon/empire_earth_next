@@ -73,9 +73,11 @@ pub const EE_SCREENS_SB_OP_GAME_CLOCK: u32 = 22;
 pub const EE_SCREENS_SB_OP_WORLD_LONG: u32 = 23;
 /// The string a into the chat log (`gResource->GetString`, `gUserInterface->AddChatLogEntry(..., 0)`).
 pub const EE_SCREENS_SB_OP_CHAT_STRING: u32 = 24;
-/// `EECanAffordTrade(a)`.
+/// Whether the current player can make the market trade of the button a (the original's `EECanAffordTrade`: the
+/// adapter's, [`form_op`]).
 pub const EE_SCREENS_SB_OP_CAN_AFFORD_TRADE: u32 = 25;
-/// `EEDecodeTradeButton(a, ...)`: -1 when it fails (b 0), else (or b 1) the resource * 2 + the sell flag.
+/// The market button a decoded ([`decode_trade`], the original's `EEDecodeTradeButton`): -1 when it is none (b 0),
+/// else (or b 1) the resource * 2 + the sell flag.
 pub const EE_SCREENS_SB_OP_DECODE_TRADE: u32 = 26;
 /// `UIControl::ShiftKeyPressed()`.
 pub const EE_SCREENS_SB_OP_SHIFT: u32 = 27;
