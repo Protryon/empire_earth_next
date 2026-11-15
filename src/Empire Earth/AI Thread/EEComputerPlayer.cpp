@@ -5971,12 +5971,9 @@ void EEComputerPlayer::Update(unsigned long inTime)
     UWideString theUnused2;
     EECPTraceScope theScope("cp");
     if (!this->mIsStarted) {
-        // port: the next engine's script loads first (ee/EECPEngine.h), so a seat whose AI cannot run plays the
-        // classic engine from its first decision instead of standing idle
-        if (!this->mObserverMode && EECPEngine(this) == kEECPEngineNext && !EECPNextPrepare(this)) {
-            this->mEngine = kEECPEngineClassic;
-            EECPNextDeleteState(this);
-        }
+        // port: the seat's script loads first (ee/EECPEngine.h); a seat whose AI cannot run stands idle (logged)
+        if (!this->mObserverMode)
+            EECPNextPrepare(this);
         if (EECPCheatOn(this, kAICheatReveal))
             gWorld.mMap->ExploreUnseen(this);
         EE_CP_TRACE(this, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld demand=%d exp=%s engine=%s%s%s",

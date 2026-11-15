@@ -526,9 +526,9 @@ static std::vector<EECPAIEntry> EECPAIReadManifest()
         }
         if (theProblem.empty() && !EECPAIIdOK(theAI.mID))
             theProblem = "id '" + theAI.mID + "' must be 1 to 64 of a-z, 0-9 and _";
-        if (theProblem.empty() && (theAI.mID == "classic" || theAI.mID == "classic_cpp" || theAI.mID == "random"
-                                   || theAI.mID == "next"))
-            theProblem = "id '" + theAI.mID + "' is reserved (classic, classic_cpp, random, next)";
+        if (theProblem.empty() && (theAI.mID == "classic" || theAI.mID == "random" || theAI.mID == "next"
+                                   || theAI.mID == "none"))
+            theProblem = "id '" + theAI.mID + "' is reserved (classic, random, next, none)";
         for (const EECPAIEntry& o : theAIs)
             if (theProblem.empty() && o.mID == theAI.mID)
                 theProblem = "id '" + theAI.mID + "' is listed twice";
@@ -560,8 +560,7 @@ const std::vector<EECPAIEntry>& EECPAIManifest()
     return sAIs;
 }
 
-// the manifest's "classic" AI (the first marked): the lobby's Classic plays it, and the C++ classic becomes the choice
-// "Classic (C++)" after the AIs (docs/AI_LUA_UNITS.md §11; stage 5 deletes that choice with the C++ decision code)
+// the manifest's "classic" AI (the first marked): the lobby's Classic plays it (docs/AI_LUA_UNITS.md §11)
 const EECPAIEntry* EECPClassicAI()
 {
     for (const EECPAIEntry& a : EECPAIManifest())
@@ -570,15 +569,9 @@ const EECPAIEntry* EECPClassicAI()
     return NULL;
 }
 
-unsigned long EECPChoiceClassicCpp()
-{
-    return EECPClassicAI() != NULL ? kEECPChoiceFirstAI + (unsigned long)EECPAIManifest().size()
-                                   : (unsigned long)kEECPChoiceClassic;
-}
-
 unsigned long EECPEngineChoiceCount()
 {
-    return kEECPChoiceFirstAI + (unsigned long)EECPAIManifest().size() + (EECPClassicAI() != NULL ? 1 : 0);
+    return kEECPChoiceFirstAI + (unsigned long)EECPAIManifest().size();
 }
 
 const EECPAIEntry* EECPAIByChoice(unsigned long inChoice)
@@ -603,8 +596,6 @@ long EECPChoiceByName(const std::string& inName)
 {
     if (inName == "classic")
         return kEECPChoiceClassic;
-    if (inName == "classic_cpp")
-        return (long)EECPChoiceClassicCpp();
     if (inName == "random")
         return kEECPChoiceRandom;
     const std::vector<EECPAIEntry>& theAIs = EECPAIManifest();
@@ -622,8 +613,6 @@ std::string EECPChoiceName(unsigned long inChoice)
         return "random";
     if (inChoice == kEECPChoiceClassic)
         return "classic";
-    if (EECPClassicAI() != NULL && inChoice == EECPChoiceClassicCpp())
-        return "classic_cpp";
     const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
     return theAI != NULL ? theAI->mID : "classic";
 }
@@ -737,21 +726,16 @@ bool EECPEngineFillsGarrison(const EEComputerPlayer* inPlayer)
 
 std::string EECPEngineName(const EEComputerPlayer* inPlayer)
 {
-    if (EECPEngine(inPlayer) != kEECPEngineNext)
-        return EECPClassicAI() != NULL ? "classic_cpp" : "classic";
     std::string theAI = EECPEngineAI(inPlayer);
-    return theAI.empty() ? "next" : theAI;
+    return theAI.empty() ? "none" : theAI;
 }
 
 void EECPEngineSet(EEComputerPlayer* inPlayer, unsigned long inChoice)
 {
+    // no AI (a manifest without a "classic" AI): the seat stands idle (EECPNextPrepare logs it)
     const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
-    if (theAI == NULL) {
-        inPlayer->mEngine = kEECPEngineClassic;
-        return;
-    }
     inPlayer->mEngine = kEECPEngineNext;
-    EECPNextGetState(inPlayer)->mAI = theAI->mID;
+    EECPNextGetState(inPlayer)->mAI = theAI != NULL ? theAI->mID : std::string("none");
 }
 
 // EE_AI_ENGINE (TEST ONLY): the choices in turn by player id from player 1 (empty: unset)
@@ -803,8 +787,6 @@ unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inSeed, un
         h ^= h >> 12;
         return thePool[(h >> 7) % (uint32_t)thePool.size()];
     }
-    if (EECPClassicAI() != NULL && inChoice == EECPChoiceClassicCpp())
-        return inChoice;   // the C++ classic
     return EECPAIByChoice(inChoice) != NULL ? inChoice : (unsigned long)kEECPChoiceClassic;
 }
 

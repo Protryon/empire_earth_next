@@ -505,9 +505,9 @@ public:
     bool mRegroupPending;
     bool GetAttackStarted() const { return this->mAttackStarted; }
     bool mAttackStarted;
-    // port: the engine (ee/EECPEngine.h: kEECPEngineClassic or kEECPEngineNext; EEGameState::Create sets it from
-    // the lobby, EEPPlayerHelper saves it), in the padding
-    unsigned char mEngine = 0;
+    // port: the engine (ee/EECPEngine.h: always kEECPEngineNext since the C++ classic's decisions were deleted, stage
+    // 5; EEGameState::Create sets the AI from the lobby, EEPPlayerHelper saves it), in the padding
+    unsigned char mEngine = 1;
     char _gapF57[0xf58 - 0xf57];
     struct EECPNextState* mNextState;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
     struct EECPUnitsState* mUnitsState;     // new: the per-unit Lua interface's state (ee/EECPNextUnits.h; NULL until used)

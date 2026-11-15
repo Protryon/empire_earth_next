@@ -1,11 +1,11 @@
 // The new computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; docs/AI_LUA_AUDIT.md). New in this port
 // (no original address).
 //
-// A computer player runs one of two engines. "classic" is the original's managers. "next" keeps the managers'
+// Every computer player runs this engine (the original's decisions were deleted in stage 5). It keeps the managers'
 // executors (gatherer assignment, the build queue runner and placement, the production runner, the research runner,
 // the attack group state machines) and the reflexes (militia, flee, naval flee, repairs, builder upkeep), and takes
-// every decision from a strategy through the verbs below. The strategy reads only the view (EECPNextView): integers,
-// fog-honest. Stage S1's strategy is the C++ test opening in EECPNextTest.cpp; stage S2 puts Lua behind the same verbs.
+// every decision from a Lua strategy through the verbs below. The strategy reads only the view (EECPNextView):
+// integers, fog-honest.
 //
 // Every verb returns an EECPNextResult (done, queued or refused with a reason) and writes one trace line
 // (EE_AI_TRACE, manager "next"): `next.order verb=build cls=... near=town result=refused reason=no_site`.
@@ -402,13 +402,6 @@ const char* EECPNextGroupStateName(long inState);  // "forming", "moving", "figh
 // The per-player state of the next engine (EEComputerPlayer::mNextState; created on its first tick, or by a loaded
 // game: EECPNextLoadState). Saved with the computer player from save version 0.252 (EECPNextSaveState).
 
-struct EECPNextTestMemory {     // the C++ test opening's memory (EECPNextTest.cpp)
-    long mLastClaim;            // game ms of the last claim pass
-    long mDefended;             // 1: the defend group was sent
-    long mAttacked;             // 1: the attack group was sent
-    long mStep;
-};
-
 // one order's result, for the script's next view (view.results)
 struct EECPNextOrderResult {
     std::string mVerb;
@@ -483,7 +476,6 @@ struct EECPNextState {
     unsigned long mLastSeen[64];
     long mSeenTownX[64], mSeenTownY[64];
     std::vector<EECPNextEvent> mEvents;     // since the last step
-    EECPNextTestMemory mTest;
     // the army (EECPNextArmy.cpp; saved from the state block's version 2)
     std::vector<EECPNextGroup> mGroups;
     long mNextGroup;                        // the next group's id
@@ -503,9 +495,9 @@ struct EECPNextState {
     // the strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2)
     EECPLuaState* mLua;                     // the script's Lua state (NULL until the first step)
     std::string mAI;                        // the AI's id (ee/EECPEngine.h: its manifest entry; saved from 0.253)
-    std::string mScript;                   // the module it runs ("c++": the C++ test opening, TEST ONLY); "" not chosen
+    std::string mScript;                    // the module it runs; "" not chosen
     bool mStarted;                          // init ran (a new game) or the memory came back (a loaded game)
-    bool mFailed;                           // the script did not load: the seat issues no orders
+    bool mFailed;                           // no AI, or the script did not load: the seat stands idle
     bool mRestore;                          // a loaded game: mRestoreBytes go back into the state at the first step
     std::string mRestoreBytes;              // the saved memory bytes (EECPLuaState::SaveMemory)
     std::vector<EECPNextOrderResult> mResults;   // the last step's orders' results (the next view's results)
@@ -524,14 +516,11 @@ void EECPNextEventAdd(const EEComputerPlayer* inPlayer, long inKind, long inType
 long EECPNextFoodPreference(const EEComputerPlayer* inPlayer);
 long EECPNextClaimRangeOf(const EEComputerPlayer* inPlayer);
 
-// the test strategy's step (EECPNextTest.cpp)
-void EECPNextTestStep(EEComputerPlayer* inPlayer, const EECPNextView& inView);
-
 // ---------------------------------------------------------------------------------------------------------------
 // The strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2 "S2 gate as built"): the seat's AI's Lua script
 // (its entry in the AI manifest Data/ai/ais.json, ee/EECPEngine.h; Data/ai/<name>.lua) gets the view as a table and returns its orders, which the
 // verbs above carry out; their results are in the next step's view. TEST ONLY: EE_AI_NEXT_SCRIPT names the script per
-// player (a comma list by player id from player 1, as EE_AI_ENGINE); "c++" there runs the C++ test opening.
+// player (a comma list by player id from player 1, as EE_AI_ENGINE).
 void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView);
 // a class or a tech by its data id (dbobjects / dbtechtree "id"; "dbobjects_<n>" when the data has no ids) -> -1: none
 long EECPNextClassByName(const std::string& inName);

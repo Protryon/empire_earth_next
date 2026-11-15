@@ -96,7 +96,6 @@ EECPNextState::EECPNextState()
     for (long i = 0; i < 64; i++)
         this->mSeenTownX[i] = this->mSeenTownY[i] = this->mArmyX[i] = this->mArmyY[i] = -1;
     memset(this->mSeenCitizens, 0, sizeof(this->mSeenCitizens));
-    memset(&this->mTest, 0, sizeof(this->mTest));
 }
 
 EECPNextState::~EECPNextState()
@@ -282,6 +281,6 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
         }
         EE_CP_TRACE(inPlayer, "next.sites", "claimed=%ld%s", theCount, theSites);
     }
-    EECPNextStrategyStep(inPlayer, theView);   // the script (or TEST ONLY the C++ test opening)
+    EECPNextStrategyStep(inPlayer, theView);   // the script
     EECPTraceStats(inPlayer, inTime);
 }
