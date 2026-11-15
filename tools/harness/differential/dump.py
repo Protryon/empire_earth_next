@@ -8,8 +8,8 @@ full snapshots at X-1 and X, list the differing objects/fields and map each fiel
 Runs (A = original, B = full link) go in parallel as game_session --instance 29/30, each with
 --diff-full-at X-1,X --diff-stop-after X --diff-snapshot-every 0; outputs in build/scratch_round39/hash/dump_<L>/.
 AI objects (computer players, ai_layout.py) are diffed by object path and their members join the writer index.
-Writers: every `mName =`/`op=`/`++`/`--` of the member in src/**/*.cpp, with the enclosing `// FUNCTION: EXE 0x..`
-marker and that function's round-38 score (build/base_r38_exe_all.json): non-exact writers first.
+Writers: every `mName =`/`op=`/`++`/`--` of the member in src/**/*.cpp, with the enclosing function's definition line
+(the sources no longer carry the original's address markers: tools/strip_markers.py).
 """
 import argparse, json, pathlib, re, subprocess, sys
 
@@ -18,8 +18,6 @@ ROOT = HERE.parents[2]
 sys.path.insert(0, str(HERE))
 import compare as C
 import layout as L
-
-SCORES = ROOT / 'build/base_r38_exe_all.json'
 
 
 def setters(names):
@@ -36,7 +34,7 @@ def setters(names):
 
 
 def writer_index(names):
-    """{member: [(file, line, va, function text)]} for writes of the given member names in src/: direct stores
+    """{member: [(file, line, function text)]} for writes of the given member names in src/: direct stores
     (`m =`, `op=`, `++`, `--`) and calls of inline header setters that store it. Matching is by member NAME, so
     same-named members of other classes are included."""
     want = {n for n in names if n}
@@ -47,36 +45,26 @@ def writer_index(names):
     pat = re.compile(r'\b(%s)\b\s*(\[[^\]]*\]\s*)?(?:[-+*/|&^]|<<|>>)?=(?!=)|(?:\+\+|--)\s*(?:\w+(?:->|\.))*(%s)\b|\b(%s)\s*(?:\+\+|--)'
                      % (alt, alt, alt))
     spat = re.compile(r'(?:->|\.|\b)(%s)\s*\(' % '|'.join(map(re.escape, sets))) if sets else None
-    marker = re.compile(r'//\s*FUNCTION:\s*EXE\s+(0x[0-9a-fA-F]+)')
+    # a function definition starts at column 0: a declarator with a parameter list, not ending a declaration
+    definition = re.compile(r'^[A-Za-z_~][^;]*\(')
     out = {n: [] for n in want}
     for f in sorted((ROOT / 'src').rglob('*.cpp')):
-        va, sig = None, ''
+        sig = ''
         lines = f.read_text(encoding='latin-1').splitlines()
         for i, l in enumerate(lines):
-            m = marker.search(l)
-            if m:
-                va = m.group(1).lower()
-                sig = next((x.strip() for x in lines[i + 1:i + 12] if x.strip() and not x.strip().startswith('//')), '')
-                continue
+            if definition.match(l) and not l.rstrip().endswith(';'):
+                sig = l.strip()
             code = l.split('//')[0]
             if 'Read(' in code:
                 continue
             for m in pat.finditer(code):
                 n = m.group(1) or m.group(3) or m.group(4)
                 if n in out:
-                    out[n].append((str(f.relative_to(ROOT)), i + 1, va, sig))
+                    out[n].append((str(f.relative_to(ROOT)), i + 1, sig))
             if spat:
                 for m in spat.finditer(code):
-                    out[sets[m.group(1)]].append((str(f.relative_to(ROOT)), i + 1, va, sig + '  [via ' + m.group(1) + ']'))
+                    out[sets[m.group(1)]].append((str(f.relative_to(ROOT)), i + 1, sig + '  [via ' + m.group(1) + ']'))
     return out
-
-
-def scores():
-    try:
-        data = json.loads(SCORES.read_text(encoding='utf-8'))
-    except OSError:
-        return {}
-    return {va: tuple(v) for unit in data.values() for va, v in unit.items()}
 
 
 def base_name(field):
@@ -116,7 +104,6 @@ def report(a_stream, b_stream, pt, out_json=None):
                     if name != 'class (RTTI)':
                         fields.add(ai_member(name))
     idx = writer_index(fields)
-    sc = scores()
     res['writers'] = {}
     for p, d in res['snapshots'].items():
         print('\n== PT %d: physics %s, players differing %d, units differing %d (%d sim), only A %s, only B %s' % (
@@ -127,20 +114,16 @@ def report(a_stream, b_stream, pt, out_json=None):
                 print('   %-30s [%s] %s | %s' % (f[0], f[2], f[3], f[4]))
         if d.get('ai'):
             C.print_ai(d['ai'], indent=' ')
-    print('\n== writers of the differing members (src/, non-exact first; scores round 38)')
+    print('\n== writers of the differing members (src/)')
     for name in sorted(fields):
-        rows = []
-        for file, line, va, sig in idx.get(name, []):
-            st = sc.get(va, ('?', None)) if va else ('no marker', None)
-            rows.append(dict(file=file, line=line, va=va, function=sig, status=st[0], score=st[1]))
-        rows.sort(key=lambda r: (r['status'] == 'exact', r['score'] or 0))
+        rows = [dict(file=file, line=line, function=sig) for file, line, sig in idx.get(name, [])]
         res['writers'][name] = rows
         funcs = {}
         for r in rows:   # one line per writing function, with its source lines
-            funcs.setdefault((r['va'], r['file']), [r, []])[1].append(r['line'])
+            funcs.setdefault((r['function'], r['file']), [r, []])[1].append(r['line'])
         print(' %s: %d write sites in %d functions' % (name, len(rows), len(funcs)))
-        for (va, file), (r, ls) in list(funcs.items())[:15]:
-            print('   %-6s %6s %s  %s:%s  %s' % (r['status'], r['score'], va, file, ','.join(map(str, ls)), r['function'][:60]))
+        for (_, file), (r, ls) in list(funcs.items())[:15]:
+            print('   %s:%s  %s' % (file, ','.join(map(str, ls)), r['function'][:80]))
     if out_json:
         pathlib.Path(out_json).write_text(json.dumps(res, indent=1, default=str))
     return res
