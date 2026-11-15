@@ -24753,6 +24753,7 @@ single-player grant through the game's accept); a keyed .civ file's error box; t
 | editor gate | PASS 12,723 | PASS 14,049 (rust's editor lane grew it) |
 | `rust_build.py gate` | PASS (3,732 tests) | PASS (3,880 tests) |
 | sim_bench AI game (seed 2, Small Hard 2 AI) | | rc 0, time-cap |
+| tour (harness lock, the merged test profile) | | `RESULT FAIL tour`: both render checks ok, the F3 input check paused 0 -> 0 -> 0 (run while the captures and saveload loaded the machine); a rerun waited 50 minutes for the lock behind other lanes and was stopped: **the lead's tour must recheck it** (no change of this round reaches input or the pause) |
 
 The merge of rust (8b274186): EECivPowersManager.cpp modify/delete (rust only trimmed its includes: stays deleted);
 EECBCivilizationFiles.cpp (rust's game messages lane made the grant an `EEMRecord(kMessageCivUpgradesPurchased, ...)`:
