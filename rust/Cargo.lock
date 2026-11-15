@@ -362,14 +362,17 @@ version = "0.1.0"
 dependencies = [
  "ee_ge",
  "ee_random",
+ "ee_ustring",
 ]
 
 [[package]]
 name = "ee_rmap_gatelib"
 version = "0.1.0"
 dependencies = [
+ "ee_fs",
  "ee_ge",
  "ee_rmap",
+ "ee_ts",
 ]
 
 [[package]]

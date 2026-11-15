@@ -114,12 +114,24 @@ struct Sha256 {
     }
 };
 
+static FILE* gTrace;   // EE_RMAP_TRACE=<file>: every dumped value, one per line (to find a differing field)
 struct Digest {
     Sha256 mSha;
-    void U32(uint32_t v) { mSha.Update(&v, 4); }
+    void U32(uint32_t v)
+    {
+        if (gTrace)
+            fprintf(gTrace, "%08x\n", v);
+        mSha.Update(&v, 4);
+    }
     void I32(long v) { U32((uint32_t)v); }
     void F32(float v) { U32(*(uint32_t*)&v); }
-    void Bool(bool v) { uint8_t b = v ? 1 : 0; mSha.Update(&b, 1); }
+    void Bool(bool v)
+    {
+        uint8_t b = v ? 1 : 0;
+        if (gTrace)
+            fprintf(gTrace, "b%d\n", b);
+        mSha.Update(&b, 1);
+    }
     void Point(const GE2DPoint& p) { F32(p.mX); F32(p.mY); }
     void String(const UString& s)
     {
@@ -225,7 +237,10 @@ static void DumpMap(EERandomMap& m, Digest& d)
         d.F32(f.mPosition.mX);
         d.F32(f.mPosition.mY);
         d.I32(f.mUnitType);
-        d.I32(f.mIndex);
+        // mIndex is set for herds only: the C++ reader left a script feature's uninitialized (stack bytes; the Rust
+        // reader writes 0), and nothing reads it there
+        if (f.mIsHerd)
+            d.I32(f.mIndex);
         d.Bool(f.mIsWorldUnit);
         d.Bool(f.mInRing);
         d.Bool(f.mIsHerd);
@@ -554,6 +569,7 @@ static const char* const kModeNames[3] = {"ffa", "teams", "forced"};
 static const unsigned long kSeeds[] = {1, 2, 3, 1000, 12345, 2147483647};
 
 static float gScale;
+static bool gScriptOnly;   // --script-only: one digest after SetRandomMapValues (and the dump's grids and teams)
 static NamedTables gTables;
 static std::string gScriptDirectoryText;
 
@@ -791,6 +807,13 @@ static bool RunOne(const RunKey& inKey, const std::string& inVolume, const std::
         m.mShallowsElevation = -0.5f;
     }
     theStage("script");
+    if (gScriptOnly) {   // the .rmv reader's own gate: the map as the script left it
+        fprintf(inOut, "%s|%d|%ld|%s|%lu %s\n", inKey.mScript.c_str(), inKey.mSizeIndex, inKey.mPlayers,
+                kModeNames[inKey.mMode], inKey.mSeed, HexDigest(m).c_str());
+        fflush(inOut);
+        delete theMap;
+        return true;
+    }
 
     if ((m.mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) {
         m.mNumTerrainBands = (unsigned long)(m.mTerrainRegions[m.mTerrainRegions.size() - 1].mTo + 1) / 100;
@@ -1084,6 +1107,8 @@ int main(int argc, char** argv)
         std::string a = argv[i];
         if (a == "--stages")
             theStages = true;
+        else if (a == "--script-only")
+            gScriptOnly = true;
         else if (a == "--shard" && i + 2 < argc) {
             theShard = atoi(argv[++i]);
             theShards = atoi(argv[++i]);
@@ -1093,7 +1118,7 @@ int main(int argc, char** argv)
             theData = a;
     }
     if (theData.empty()) {
-        fprintf(stderr, "usage: rmap_dump <data tree> [--stages] [--shard K N] [--only key]\n");
+        fprintf(stderr, "usage: rmap_dump <data tree> [--stages | --script-only] [--shard K N] [--only key]\n");
         return 2;
     }
     if (theData.back() != '\\' && theData.back() != '/')
@@ -1101,6 +1126,8 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < theData.size(); i++)
         if (theData[i] == '/')
             theData[i] = '\\';
+    if (getenv("EE_RMAP_TRACE"))
+        gTrace = fopen(getenv("EE_RMAP_TRACE"), "w");
     gScale = 2.0f;   // RTSMap's mF1955F4 (world units per elevation step) is set by EEMap; only SmoothHeights reads it
 
     if (!ReadUnits(theData + "Data\\db\\dbobjects.yaml", gTables.mUnits) ||
