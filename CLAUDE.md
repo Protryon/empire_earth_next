@@ -125,8 +125,9 @@ Before merging or pushing any code change, all of these are required:
 3. `bash tools/gates.sh` (about 40 minutes, test profile; logs in `build/gates/`):
    - a tour on the binary tree and on the open tree: menus, settings tour, input check, 120 s of play. Pass:
      `STOP <windowed session complete> reached`;
-   - a seeded 2-AI Hard Small game to the time cap on both trees. Pass: outcome `time-cap` at PT ~13,700-14,500 with
-     both AI players alive (e.g. units `[0, 56, 39]`). Unit counts vary a little between runs.
+   - a seeded 2-AI Hard Small game to the time cap on both trees, played by the lobby's Classic (classic_lua since
+     stage 4). Pass: outcome `time-cap` with both AI players alive (e.g. PT ~12,000-12,600, units `[5, 28, 27]`).
+     PT and unit counts vary between runs and with machine load.
 
 - Harness self test, no game, about 1 minute: `python -I tools/harness/selftest/selftest.py`. Run it after any
   change under `tools/harness/`.
