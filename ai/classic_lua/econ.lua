@@ -124,8 +124,12 @@ function M.gather_capacity_now(view, memory, which, untapped)
                 for _, id in ipairs(c.u) do
                     -- (the classic counts a centre's units with mHitPoints > 0: a resource's hit points fall from 1
                     -- when it is first gathered from, so only the untapped ones count; the record's `untapped`)
+                    -- New (AI_RESEARCH 8.87): not the sites with an enemy near (FindResourceTarget sends no one
+                    -- there): on a small map half the claimed gold lay by the enemy's town, the wanted gold was twice
+                    -- what could be placed, and the rest of the citizens went to wood
                     local u = R.unit(id)
-                    if u ~= nil and u.kind ~= nil and (not untapped or u.untapped ~= false) then
+                    if u ~= nil and u.kind ~= nil and (not untapped or u.untapped ~= false)
+                        and not R.enemy_near(u.x, u.y) then
                         sites[u.kind] = sites[u.kind] + 1
                     end
                 end
