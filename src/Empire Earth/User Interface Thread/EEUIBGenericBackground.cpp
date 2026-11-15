@@ -10,7 +10,6 @@
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
 #include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
@@ -18,46 +17,13 @@
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
-#include "ee/EEMessage.h"
-#include "ee/EECommunications.h"
-#include "lle/UResourceFile.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "lle/UIScrollBar.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIEditBox.h"
 #include "ee/EmpireEarth.h"
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIBGenericBackground.h"
 #include "lle/FSPath.h"
-#include "lle/UITextureBackground.h"
 #include "lle/UIBFull.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
@@ -178,8 +144,8 @@ extern "C" void ee_screenscpp_frame_piece(void* inBackground, const EeScreensFra
 void EEUIBGenericBackground::Open()
 {
     UIBackground::Open();
-    this->mScaleX = (float)gGameWindow->GetWidth() / (float)this->mForm->GetDesignedWidth();
-    this->mScaleY = (float)gGameWindow->GetHeight() / (float)this->mForm->GetDesignedHeight();
+    this->mScaleX = (float)gGameWindow->GetWidth() / (float)this->GetForm()->GetDesignedWidth();
+    this->mScaleY = (float)gGameWindow->GetHeight() / (float)this->GetForm()->GetDesignedHeight();
 }
 
 // FUNCTION: EXE 0x6556d9
@@ -263,8 +229,8 @@ long EEUIBMapBackground::LoadBackground()
         theTextureDescription.mPixelDepth = gGamePreferences.mSettings.mGameBitDepth;
         theTextureDescription.mSurfaceVolatility = theCellDescription.mSurfaceVolatility;
         theTextureDescription.mIsTransparencyEnabled = theCellDescription.mIsTransparencyEnabled;
-        this->mTextureDescription = theTextureDescription;
-        this->mTextureRectangle = GERectangle(0.0f, 0.0f, (float)(theWidth - 1), (float)(theHeight - 1));
+        this->SetTextureDescription(theTextureDescription);
+        this->SetTextureRectangle(GERectangle(0.0f, 0.0f, (float)(theWidth - 1), (float)(theHeight - 1)));
         unsigned long theX = 0;
         for (unsigned long theColumn = 0; theColumn < theColumns; theColumn++, theX += 256) {
             unsigned long theY = 0;

@@ -222,6 +222,9 @@ impl<'a> Replay<'a> {
         let (ta, tb) = unsafe {
             match op {
                 EeUiOp::StringNew | EeUiOp::FormMusicStart | EeUiOp::MgrSoundLoad => (fnv(a), b),
+                // the file lists' lines and file names (R6 ui round 21); their copies' buffers as 0
+                EeUiOp::FlAppend | EeUiOp::FlInsertSorted | EeUiOp::FlDeleteFile => (fnv(a), b),
+                EeUiOp::FlNameCopy | EeUiOp::FlLineCopy => (a, 0),
                 // the manager's translated key: its one character (R6 ui round 17)
                 EeUiOp::MgrTranslatedKey => (a, *(b as *const u8) as isize),
                 EeUiOp::TextSetBytes => (a, fnv(b)),
@@ -251,7 +254,37 @@ impl<'a> Replay<'a> {
         // a combo box's typed key (R6 ui round 15)
         // SAFETY: that action passes NUL-terminated bytes
         let tc = if op == EeUiOp::ComboAct && a == 13 { unsafe { fnv(c) } } else { c };
-        self.expect(&format!("op {} {ta} {tb} {tc} {d} {}", op as u32, hex4(&inb)));
+        // the backgrounds' texture loads (R6 ui round 20): the name as its hash, the description as its digest
+        // SAFETY: that op passes NUL-terminated bytes and a description
+        let (ta, tb) = if op == EeUiOp::BgTextureLoad {
+            unsafe { (fnv(a), crate::bgobj::description_digest(&*(b as *const crate::bgobj::EeUiTextureDescription))) }
+        } else {
+            (ta, tb)
+        };
+        // the background table's (R6 ui round 20): a new entry's record as its digest and its name as its hash, the
+        // description as its digest, the file read's buffer as 0
+        // SAFETY: those ops pass a record and NUL-terminated bytes, a description
+        let (ta, tb, tc) = unsafe {
+            match op {
+                EeUiOp::BgtNew => {
+                    (crate::bgtableobj::entry_digest(&*(a as *const crate::bgtableobj::EeUiBgTableFields)), fnv(b), tc)
+                }
+                EeUiOp::BgtMake => {
+                    (ta, tb, crate::bgobj::description_digest(&*(c as *const crate::bgobj::EeUiTextureDescription)))
+                }
+                EeUiOp::BgtFileRead => (ta, 0, tc),
+                _ => (ta, tb, tc),
+            }
+        };
+        // a wide op's other eight floats follow its four
+        let wide = if op.is_wide() {
+            // SAFETY: wide ops pass twelve floats
+            let w = unsafe { core::slice::from_raw_parts(f.add(4), 8) };
+            format!(" {} {}", hex4(&[w[0], w[1], w[2], w[3]]), hex4(&[w[4], w[5], w[6], w[7]]))
+        } else {
+            String::new()
+        };
+        self.expect(&format!("op {} {ta} {tb} {tc} {d} {}{wide}", op as u32, hex4(&inb)));
         loop {
             let l = self.next();
             let w: Vec<&str> = l.split(' ').collect();
@@ -276,11 +309,21 @@ impl<'a> Replay<'a> {
     /// A `call` or `do` line's call, checked against its `ret` line.
     unsafe fn call(&self, w: &[&str]) {
         let call: u32 = w[1].parse().unwrap();
-        let mut buf = floats(&w[4..]);
+        // a call with twelve floats (round 20's backgrounds) answers with twelve
+        let mut buf = [0.0f32; 12];
+        let n = (w.len() - 4).min(12);
+        for (i, x) in w[4..4 + n].iter().enumerate() {
+            buf[i] = f32::from_bits(u32::from_str_radix(x, 16).expect("hex float"));
+        }
         // SAFETY: the target is the live Rust object the test made
         let r = unsafe { (self.dispatch)(self.target.get(), call, int(w[2]), int(w[3]), buf.as_mut_ptr()) };
         self.raise();
-        self.expect(&format!("ret {r} {}", hex4(&buf)));
+        let mut out = format!("ret {r} {}", hex4(&[buf[0], buf[1], buf[2], buf[3]]));
+        if n > 4 {
+            out +=
+                &format!(" {} {}", hex4(&[buf[4], buf[5], buf[6], buf[7]]), hex4(&[buf[8], buf[9], buf[10], buf[11]]));
+        }
+        self.expect(&out);
     }
 
     /// Runs the whole golden: `other` handles the class's own lines (`new`, `free`) and says whether it did.

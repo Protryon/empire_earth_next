@@ -229,10 +229,14 @@ static void OrigWriteEncryptedString(FileWriter& writer, const std::wstring& inT
     writer.WriteBytes(e.data(), e.length());
 }
 
-static void OrigLoadGlobalPrefs(Prefs& p, const char* inFile)
+// (inMemory: the file's bytes read from memory by the same FileReader, for the cut files the disk need not see)
+static void OrigLoadGlobalPrefs(Prefs& p, const char* inFile, const std::string* inMemory = NULL)
 {
     FileReader aReader;
-    if (!aReader.Open(inFile)) return;
+    if (inMemory != NULL)
+        aReader.Open(inMemory->data(), (unsigned long)inMemory->length());
+    else if (!aReader.Open(inFile))
+        return;
     p.mUsers.clear();
     p.mNetworkAdapter = 0;
     try {
@@ -303,7 +307,7 @@ static void OrigReadLanPrefs(Prefs& p, FileReader& reader)
     p.mLanBroadcastPort = reader.ReadShort();
 }
 
-static void OrigLoadUserPrefs(Prefs& p, const char* inFile)
+static void OrigLoadUserPrefs(Prefs& p, const char* inFile, const std::string* inMemory = NULL)
 {
     p.RestoreDefaults();
     p.mReconnectInfoMap.clear();
@@ -315,7 +319,9 @@ static void OrigLoadUserPrefs(Prefs& p, const char* inFile)
     bool haveGameOptions = false;
     int i;
     FileReader reader;
-    if (!reader.Open(inFile)) {
+    if (inMemory != NULL)
+        reader.Open(inMemory->data(), (unsigned long)inMemory->length());
+    else if (!reader.Open(inFile)) {
         p.mGameOptions = p.mDefaultGameOptions;
         return;
     }
@@ -558,10 +564,13 @@ struct GlobalLoad {
     }
 };
 
-static void PortLoadGlobalPrefs(Prefs& p, const char* inFile)
+static void PortLoadGlobalPrefs(Prefs& p, const char* inFile, const std::string* inMemory = NULL)
 {
     std::string aBytes;
-    if (!ReadWhole(inFile, aBytes)) return;
+    if (inMemory != NULL)
+        aBytes = *inMemory;
+    else if (!ReadWhole(inFile, aBytes))
+        return;
     p.mUsers.clear();
     p.mNetworkAdapter = 0;
     GlobalLoad aLoad = {&p, NULL};
@@ -696,7 +705,7 @@ struct UserLoad {
     }
 };
 
-static void PortLoadUserPrefs(Prefs& p, const char* inFile)
+static void PortLoadUserPrefs(Prefs& p, const char* inFile, const std::string* inMemory = NULL)
 {
     p.RestoreDefaults();
     p.mReconnectInfoMap.clear();
@@ -706,7 +715,9 @@ static void PortLoadUserPrefs(Prefs& p, const char* inFile)
     p.mDirectConnectMap.clear();
     p.mGameOptions.clear();
     std::string aBytes;
-    if (!ReadWhole(inFile, aBytes)) {
+    if (inMemory != NULL)
+        aBytes = *inMemory;
+    else if (!ReadWhole(inFile, aBytes)) {
         p.mGameOptions = p.mDefaultGameOptions;
         return;
     }
@@ -1064,6 +1075,12 @@ static void ScalarObject()
     }
 }
 
+// Whether a cut file goes through the disk (WriteFile, then both loads open it) or both loads read its bytes from
+// memory. Every cut through the disk made about 100,000 file opens: with the virus scanner looking at each file a new,
+// unsigned exe writes, 3-50 ms each on this machine, 20 minutes or more (the hang of batch 35's wontest). The disk keeps
+// every 16th cut and the whole and over-long files.
+static bool CutOnDisk(size_t inCut, size_t inWhole) { return inCut % 16 == 0 || inCut >= inWhole; }
+
 int main()
 {
     const char* kOrig = "won_persist_orig.dat";
@@ -1084,10 +1101,11 @@ int main()
                 for (int aCase = 0; aCase < 2; aCase++) {
                     std::string aBytes = (aCase ? aWrong : aWant).substr(0, n);
                     if (n > aWant.length()) aBytes += '\x01';
-                    WriteFile(kCut, aBytes);
+                    const bool aDisk = CutOnDisk(n, aWant.length());
+                    if (aDisk) WriteFile(kCut, aBytes);
                     Prefs x = Sample(aVariant ^ 6), y = Sample(aVariant ^ 6);
-                    OrigLoadGlobalPrefs(x, kCut);
-                    PortLoadGlobalPrefs(y, kCut);
+                    OrigLoadGlobalPrefs(x, kCut, aDisk ? NULL : &aBytes);
+                    PortLoadGlobalPrefs(y, kCut, aDisk ? NULL : &aBytes);
                     CHECK(x == y);
                     if (!(x == y) && sFailures < 40) printf("  global variant %d cut %d case %d\n", aVariant, (int)n, aCase);
                     if (n == aWant.length() && aCase == 0) {
@@ -1113,10 +1131,11 @@ int main()
                 for (int aCase = 0; aCase < 3; aCase++) {
                     std::string aBytes = (aCase == 1 ? aWrong : aCase == 2 ? aOdd : aWant).substr(0, n);
                     if (n > aWant.length()) aBytes += '\x01';
-                    WriteFile(kCut, aBytes);
+                    const bool aDisk = CutOnDisk(n, aWant.length());
+                    if (aDisk) WriteFile(kCut, aBytes);
                     Prefs x = Sample(aVariant ^ 8), y = Sample(aVariant ^ 8);
-                    OrigLoadUserPrefs(x, kCut);
-                    PortLoadUserPrefs(y, kCut);
+                    OrigLoadUserPrefs(x, kCut, aDisk ? NULL : &aBytes);
+                    PortLoadUserPrefs(y, kCut, aDisk ? NULL : &aBytes);
                     CHECK(x == y);
                     if (!(x == y) && sFailures < 40) printf("  user variant %d cut %d case %d\n", aVariant, (int)n, aCase);
                 }

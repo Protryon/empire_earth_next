@@ -35,8 +35,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EEUCTransport.h"
-#include "ee/EEUCAirplane.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEAreaUtilities.h"
@@ -58,7 +57,6 @@
 #include "ee/EEEvent.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEUCBuilding.h"
 #include "lle/GERhombus.h"
 #include "lle/UIControl.h"
 #include "lle/UIForm.h"
@@ -69,9 +67,6 @@
 #include "lle/GETexture.h"
 #include "lle/GERasterizer.h"
 #include "lle/UIManager.h"
-#include "ee/EEUCGate.h"
-#include "ee/EEUCBasicCitizen.h"
-#include "ee/EEUCNavalCitizen.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEGraphicEffect.h"
@@ -148,7 +143,7 @@ void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
     std::vector<EEUnit*> theRejected;
     bool theResult = false;
-    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
+    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
     EEUnit* theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
     if (theResource == NULL)
         theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
@@ -313,7 +308,7 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     U2DPoint<long> theTarget;
     GE2DPoint theCenter;
     EEUnit* theFound = NULL;
-    EEUCBasicCitizen* theCitizen = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
+    EEUnitClass* theCitizen = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
     if (inUnit->mResourceAmount > 0 && inUnit->mResourceType != inResource->mResourceType)
         inUnit->mResourceAmount = 0;
     if (inResource->mResourceType == kResourceWood && !EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(inResource), theLocation)) {
@@ -402,7 +397,7 @@ bool EEGatherHasRoom(EEComplexUnit* inUnit, EEUnit* inResource)
 // with a gather point
 bool EEGatherAccessible(EEComplexUnit* inUnit, EEUnit* inResource)
 {
-    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
+    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
     if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen) {
         if (inResource != NULL && inResource->mTile->mTerrainType != kTerrainDeepWater
             && gContinentManager.InSameContinent(inUnit, inResource))
@@ -809,10 +804,10 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_CARGO_CATEGORY:
         return theComplex->mCargo[0]->mUnitClass->mCategory;
     case EE_UNITS_GOAL_HOST_TRANSPORT_KIND:
-        return (EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass()) != NULL ? 1 : 0)
-            | (EEUnitClassCast<EEUCAirplane>(theComplex->GetUnitClass()) != NULL ? 2 : 0);
+        return (EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass()) != NULL ? 1 : 0)
+            | (EEUnitClassOfKind<EE_CLASS_KIND_AIRPLANE>(theComplex->GetUnitClass()) != NULL ? 2 : 0);
     case EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT: {
-            EEUCTransport* theTransport = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass());
+            EEUnitClass* theTransport = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             if (theTransport != NULL)
                 return theTransport->CanUnloadAt(theComplex, (long)ioArgs->i[0], (long)ioArgs->i[1]);
             return EEIsTileFree(theComplex, (long)ioArgs->i[0], (long)ioArgs->i[1]);
@@ -820,11 +815,11 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_FIND_UNLOAD_TILES: {
             U2DPoint<long> theTiles[4];
             TilesIn(ioArgs, theTiles, 4);
-            EEUCTransport* theTransport = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass());
+            EEUnitClass* theTransport = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             if (theTransport != NULL)
                 theTransport->FindUnloadTiles(theComplex, &theTiles[0], &theTiles[1], &theTiles[2], &theTiles[3]);
             else
-                EEUnitClassCast<EEUCAirplane>(theComplex->GetUnitClass())
+                EEUnitClassOfKind<EE_CLASS_KIND_AIRPLANE>(theComplex->GetUnitClass())
                     ->FindUnloadTiles(theComplex, &theTiles[0], &theTiles[1], &theTiles[2], &theTiles[3]);
             TilesOut(ioArgs, theTiles, 4);
             return 0;
@@ -832,7 +827,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_CAN_UNLOAD_NEAR: {
             U2DPoint<long> theTiles[3];
             TilesIn(ioArgs, theTiles, 3);
-            bool theResult = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass())
+            bool theResult = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass())
                                  ->CanUnloadNear(theComplex, theComplex->GetCargo(0), &theTiles[0], &theTiles[1],
                                                  &theTiles[2]);
             TilesOut(ioArgs, theTiles, 3);
@@ -844,7 +839,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         theComplex->mUnitClass->FireShot(theComplex);
         return 0;
     case EE_UNITS_GOAL_HOST_UNLOAD_AT:
-        EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass())
+        EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass())
             ->UnloadAt(theComplex, (long)ioArgs->i[0], (long)ioArgs->i[1]);
         return 0;
     case EE_UNITS_GOAL_HOST_UNLOAD_SOUND:
@@ -892,13 +887,13 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                                    &theBlocker, &theX, &theY);
         }
     case EE_UNITS_GOAL_HOST_CAN_LOAD: {
-            EEUCTransport* theTransport = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass());
+            EEUnitClass* theTransport = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             return theTransport != NULL && theTransport->CanLoad(theComplex, ObjectOf<EEComplexUnit>(inB));
         }
     case EE_UNITS_GOAL_HOST_BOARDING: {
             EEComplexUnit* theContainer = ObjectOf<EEComplexUnit>(inB);
             GE3DPoint theOut(ioArgs->f[3], ioArgs->f[4], ioArgs->f[5]);
-            EEUnitClassCast<EEUCTransport>(theContainer->GetUnitClass())
+            EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theContainer->GetUnitClass())
                 ->FindBoardingLocation(theComplex, theContainer, thePoint, theOut);
             ioArgs->f[3] = theOut.GetX();
             ioArgs->f[4] = theOut.GetY();
@@ -918,11 +913,11 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 theUnits.push_back(ObjectOf<EEComplexUnit>(ioArgs->list[k]));
             U2DPoint<long> theTiles[2];
             TilesIn(ioArgs, theTiles, 2);
-            EEUCTransport* theClass = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass());
+            EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theComplex->GetUnitClass());
             if (ioArgs->i[4] == 0)
                 theClass->FindRendezvousTiles(&theUnits, theComplex, &theTiles[0], &theTiles[1]);
-            else
-                theClass->EEUCTransport::FindRendezvousTiles(&theUnits, theComplex, &theTiles[0], &theTiles[1]);
+            else   // the transport base's rendezvous: its own tile for both
+                theTiles[0] = theTiles[1] = U2DPoint<long>(theComplex->GetTileX(), theComplex->GetTileY());
             TilesOut(ioArgs, theTiles, 2);
             return 0;
         }
@@ -1129,7 +1124,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         EEGatherNearBuilding(theComplex, ObjectOf<EEComplexUnit>(inB));
         return 0;
     case EE_UNITS_GOAL_HOST_GATE_SIDE_PART:
-        return EEUnitClassCast<EEUCGate>(theComplex->mUnitClass)->IsSidePart(theComplex);
+        return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass)->IsSidePart(theComplex);
     case EE_UNITS_GOAL_HOST_BUILD_EVENT: {
             EEPlayer* thePlayer = ObjectOf<EEPlayer>(inA);
             EEUnit* theTarget = ObjectOf<EEUnit>(inB);
@@ -1243,11 +1238,11 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             std::vector<EEUnit*> thePassed;
             for (size_t k = 0; k < ioArgs->list_len; k++)
                 thePassed.push_back(ObjectOf<EEUnit>(ioArgs->list[k]));
-            return Handle(static_cast<EEUCBasicCitizen*>(theComplex->mUnitClass)
+            return Handle(theComplex->mUnitClass
                               ->FindNextResource(theComplex, ObjectOf<EEUnit>(inB), (long)ioArgs->i[0], &thePassed));
         }
     case EE_UNITS_GOAL_HOST_FIND_STORAGE:
-        return Handle(static_cast<EEUCBasicCitizen*>(theComplex->mUnitClass)->FindStorage(theComplex, ioArgs->i[0] != 0));
+        return Handle(theComplex->mUnitClass->FindStorage(theComplex, ioArgs->i[0] != 0));
     case EE_UNITS_GOAL_HOST_FREE_TILE: {
             bool theFound = EEFindNextFreeTile(theComplex, ObjectOf<EEComplexUnit>(inB), thePoint);
             PointOut(ioArgs, thePoint);
@@ -1271,7 +1266,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 if (!theFree)
                     return -1;
             }
-            EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(theComplex->GetUnitClass());
+            EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(theComplex->GetUnitClass());
             return Handle(theClass->FindStorage(theComplex, (theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionFindNewStorage));
         }
     case EE_UNITS_GOAL_HOST_GATHER_SPOT: {
@@ -1391,7 +1386,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_FIND_FISH: {
             std::vector<EEUnit*> theRejected;
             EEUnit* theFish = ObjectOf<EEUnit>(inB);
-            return Handle(EEUnitClassCast<EEUCNavalCitizen>(theComplex->GetUnitClass())->FindResourceOfKind(theComplex, theFish, theFish,
+            return Handle(EEUnitClassOfKind<EE_CLASS_KIND_NAVAL_CITIZEN>(theComplex->GetUnitClass())->FindResourceOfKind(theComplex, theFish, theFish,
                 UMFloatToLong(theComplex->GetLineOfSight() * 5.0f), theFish->GetResourceType(), &theRejected, true));
         }
     // the location goal's

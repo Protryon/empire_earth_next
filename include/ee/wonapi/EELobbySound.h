@@ -6,6 +6,7 @@
 #ifndef EE_WONAPI_EELOBBYSOUND_H
 #define EE_WONAPI_EELOBBYSOUND_H
 
+struct EeWonEeSound;
 namespace WONAPI {
 
 // what a sound is made from (Sound's ctor copies mSoundFlags to +0x08 and mPath to +0x0c; the decoder loads mPath)
@@ -49,17 +50,22 @@ public:
     virtual SoundPtr Decode(const SoundDescriptor& inDescriptor) = 0;   // +0x04
 };
 
-// the lobby music: "playing" it turns the game's music volume up, stopping it turns it down
+// the lobby music: "playing" it turns the game's music volume up, stopping it turns it down (R6 WONLobby round 7:
+// the hooks are ee_won's eesound.rs objects; the host is EELobbyGlueHost.cpp)
 class EELobbyMusic : public Sound {
 public:
     EELobbyMusic(const SoundDescriptor& inDescriptor);    // 0x29ce06
+    virtual ~EELobbyMusic();
 
     virtual void PlayHook();                // +0x04 0x29ce46
     virtual void StopHook();                // +0x08 0x29ce61
     virtual void ResumeHook();              // +0x0c 0x29ce78 (plays again)
+
+    EeWonEeSound* mRust;
 };
 
-// a lobby sound effect: a sample of the engine's sound manager
+// a lobby sound effect: a sample of the engine's sound manager (the sample and the playing instance are the Rust
+// object's)
 class EELobbySound : public Sound {
 public:
     EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID);    // 0x29ce7d
@@ -68,8 +74,7 @@ public:
     virtual void PlayHook();                // +0x04 0x29ceeb
     virtual void StopHook();                // +0x08 0x29cf1c
 
-    unsigned long mSampleID;                // +0x20
-    unsigned long mInstanceID;              // +0x24 (-1: not playing)
+    EeWonEeSound* mRust;
 };
 
 // the lobby's sound decoder (ctor and ??_G in the lobby init unit, 0x2972c6 / 0x297dc5)

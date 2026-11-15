@@ -66,6 +66,12 @@ pub struct EeGfxEffectStorm {
     pub loaded: u32,
     /// the rain's `mRumbleDelay`: ms to the next thunder (saved)
     pub rumble_delay: f32,
+    /// `mModel`: the drop or flake model the set-up builds (`GEModel*`; the C++ dereferences it with the effect)
+    pub model: *mut std::ffi::c_void,
+    /// the rain's `mSoundID`, `mRumbleID1`, `mRumbleID2`: the graphic effect's int params 1-3 (sound object ids)
+    pub sounds: [u32; 3],
+    /// the drops `Queue` copied for this frame's draw (owned: made by the first queue, freed with the record)
+    pub draws: *mut EeGfxStormDraws,
 }
 
 impl Default for EeGfxEffectStorm {
@@ -85,6 +91,9 @@ impl Default for EeGfxEffectStorm {
             count: 0,
             loaded: 0,
             rumble_delay: 0.0,
+            model: std::ptr::null_mut(),
+            sounds: [0; 3],
+            draws: std::ptr::null_mut(),
         }
     }
 }
@@ -117,6 +126,13 @@ pub struct EeGfxStormDraw {
     pub position: Ge3DPoint,
     pub angle: f32,
     pub water: bool,
+}
+
+/// The drops to draw this frame (`mDraws`): written by `Queue` under the world's lock, read by the draw pass, apart
+/// from the drops the simulation steps.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct EeGfxStormDraws {
+    pub draws: Vec<EeGfxStormDraw>,
 }
 
 /// The world a storm reads and calls into.

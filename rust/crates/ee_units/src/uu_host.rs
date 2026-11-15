@@ -10,6 +10,7 @@ use ee_ge::types::GeTransformation;
 
 use crate::uu::{EeUnitsUuClass, EeUnitsUuUnit, UuHost};
 use crate::uu_tiles::Tile;
+use crate::uu_world::UuWorld;
 
 extern "C" {
     fn ee_units_uu_host_map() -> u64;
@@ -31,7 +32,6 @@ extern "C" {
     fn ee_units_uu_host_surrounding_tiles(target: u64, virtual_call: u8, out: *mut [i32; 2], capacity: u32) -> u32;
     fn ee_units_uu_host_container_continent(container: u64, unit: u64) -> u64;
     fn ee_units_uu_host_continent(which: i32, a: u64, b: u64, c: u64) -> u64;
-    fn ee_units_uu_host_line_blocked(x1: i32, y1: i32, x2: i32, y2: i32) -> u8;
     fn ee_units_uu_host_tile_line(
         x1: i32,
         y1: i32,
@@ -68,7 +68,46 @@ extern "C" {
     fn ee_units_uu_host_center_offset(complex: u64, io: *mut f32);
     fn ee_units_uu_host_tiles_test(which: i32, tiles: *const [i32; 2], count: u32, kind: i32) -> u8;
     fn ee_units_uu_host_spot(which: i32, unit: u64, x: i32, y: i32, out: *mut f32) -> i32;
+    fn ee_units_uu_host_world(which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64;
+    fn ee_units_uu_host_world_f(which: i32, a: u64, b: u64, f: f32) -> f32;
+    fn ee_units_uu_host_units_near(center: *const f32, radius: f32, out: *mut u64, capacity: u32) -> u32;
+    fn ee_units_uu_host_region_units(x: i32, y: i32, out: *mut u64, capacity: u32) -> u32;
+    fn ee_units_uu_host_find_path(
+        unit: u64,
+        from: *const i32,
+        to: *const i32,
+        bounds: *const i32,
+        limit: u32,
+        walls: u8,
+        first: *mut i32,
+    ) -> u8;
 }
+
+/// `ee_units_uu_host_world`'s questions and writes (one C++ switch).
+const WORLD_GROUP_LEN: i32 = 0;
+const WORLD_GROUP_UNIT: i32 = 1;
+const WORLD_ADD_BUILD_TARGET: i32 = 2;
+const WORLD_RESTART_IDLE: i32 = 3;
+const WORLD_CAN_PRODUCE: i32 = 4;
+const WORLD_MAKE_WALL_PIECE: i32 = 5;
+const WORLD_TILE_UNIT: i32 = 6;
+const WORLD_CLEAR_AMBIENT: i32 = 7;
+const WORLD_REGIONS_FOOTPRINT: i32 = 8;
+const WORLD_LOADING: i32 = 9;
+const WORLD_STEP_ASIDE: i32 = 10;
+const WORLD_CAN_TAKE: i32 = 11;
+const WORLD_LAST_RESOURCE: i32 = 12;
+const WORLD_DEPOSIT_EFFECT: i32 = 13;
+const WORLD_ADD_RESOURCE: i32 = 14;
+const WORLD_STATISTIC: i32 = 15;
+const WORLD_MAP_SIZE: i32 = 16;
+const WORLD_EDITOR_TRANSPORT: i32 = 17;
+/// `ee_units_uu_host_world_f`'s.
+const WORLD_F_LINE_OF_SIGHT: i32 = 0;
+const WORLD_F_GATHER_REACH: i32 = 1;
+const WORLD_F_WALL_RISE: i32 = 2;
+const WORLD_F_DISTANCE_TO_UNIT: i32 = 3;
+const WORLD_F_DEPOSIT_FACTOR: i32 = 4;
 
 /// `ee_units_uu_host_continent`'s questions (one C++ switch).
 const CONTINENT_ID: i32 = 0;
@@ -230,8 +269,7 @@ impl UuHost for Game {
         unsafe { ee_units_uu_host_continent(CONTINENT_LINK, u64::from(row), u64::from(column), 0) != 0 }
     }
     fn line_blocked(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) -> bool {
-        // SAFETY: a C++ read of the map
-        unsafe { ee_units_uu_host_line_blocked(x1, y1, x2, y2) != 0 }
+        crate::uu_world::line_blocked(self, x1, y1, x2, y2).0
     }
     fn tile_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, ends: bool, thin: bool) -> Vec<Tile> {
         // one call (the C++ leaf writes its CBTL record each time): the room of the line's most tiles, two a step
@@ -418,6 +456,120 @@ impl UuHost for Game {
         // SAFETY: a live gate piece; six floats
         unsafe { ee_units_uu_host_spot(3, gate, 0, 0, out.as_mut_ptr().cast()) };
         out
+    }
+}
+
+fn world(which: i32, a: u64, b: u64, c: u64, x: i32, y: i32, f: f32) -> u64 {
+    // SAFETY: the objects are live ones the C++ gave (each question's own contract in the C++ switch)
+    unsafe { ee_units_uu_host_world(which, a, b, c, x, y, f) }
+}
+
+fn world_f(which: i32, a: u64, b: u64, f: f32) -> f32 {
+    // SAFETY: as `world`
+    unsafe { ee_units_uu_host_world_f(which, a, b, f) }
+}
+
+impl UuWorld for Game {
+    fn line_of_sight(&mut self, complex: u64) -> f32 {
+        world_f(WORLD_F_LINE_OF_SIGHT, complex, 0, 0.0)
+    }
+    fn units_near(&mut self, center: [f32; 3], radius: f32) -> Vec<u64> {
+        // SAFETY: three floats; the buffer holds `capacity` units
+        read_list(|p, n| unsafe { ee_units_uu_host_units_near(center.as_ptr(), radius, p, n) })
+    }
+    fn gather_reach(&mut self, distance: f32, unit: u64, target: u64) -> bool {
+        world_f(WORLD_F_GATHER_REACH, unit, target, distance) != 0.0
+    }
+    fn tile_unit(&mut self, tile: u64, unit: u64, add: bool) {
+        world(WORLD_TILE_UNIT, tile, unit, 0, i32::from(add), 0, 0.0);
+    }
+    fn clear_ambient(&mut self, unit: u64) {
+        world(WORLD_CLEAR_AMBIENT, unit, 0, 0, 0, 0, 0.0);
+    }
+    fn regions_footprint(&mut self, x: i32, y: i32, size: i32, complex: u64, add: bool) {
+        world(WORLD_REGIONS_FOOTPRINT, complex, u64::from(add), size as u32 as u64, x, y, 0.0);
+    }
+    fn loading_saved_game(&mut self) -> bool {
+        world(WORLD_LOADING, 0, 0, 0, 0, 0, 0.0) != 0
+    }
+    fn step_aside(&mut self, complex: u64, player: u64, class: u64, x: i32, y: i32, force: bool) {
+        world(WORLD_STEP_ASIDE, complex, player, class, x, y, if force { 1.0 } else { 0.0 });
+    }
+    fn group_len(&mut self, group: u64) -> i32 {
+        world(WORLD_GROUP_LEN, group, 0, 0, 0, 0, 0.0) as i32
+    }
+    fn group_unit(&mut self, group: u64, i: i32) -> u64 {
+        world(WORLD_GROUP_UNIT, group, 0, 0, i, 0, 0.0)
+    }
+    fn add_build_target(&mut self, unit: u64, piece: u64) {
+        world(WORLD_ADD_BUILD_TARGET, unit, piece, 0, 0, 0, 0.0);
+    }
+    fn restart_idle(&mut self, unit: u64) {
+        world(WORLD_RESTART_IDLE, unit, 0, 0, 0, 0, 0.0);
+    }
+    fn can_produce(&mut self, player: u64, class: u64) -> bool {
+        world(WORLD_CAN_PRODUCE, player, class, 0, 0, 0, 0.0) != 0
+    }
+    fn make_wall_piece(&mut self, class: u64, player: u64, x: i32, y: i32, corner: i32, foundation: bool) -> u64 {
+        world(WORLD_MAKE_WALL_PIECE, class, player, corner as u32 as u64, x, y, if foundation { 1.0 } else { 0.0 })
+    }
+    fn wall_rise(&mut self, wall: u64) -> f32 {
+        world_f(WORLD_F_WALL_RISE, wall, 0, 0.0)
+    }
+    fn map_size(&mut self) -> i32 {
+        world(WORLD_MAP_SIZE, 0, 0, 0, 0, 0, 0.0) as i32
+    }
+    fn find_path(
+        &mut self,
+        unit: u64,
+        from: Tile,
+        to: Tile,
+        bounds: [i32; 4],
+        limit: u32,
+        walls: bool,
+    ) -> Option<Tile> {
+        let mut first = [0; 2];
+        // SAFETY: a live unit; two, two and four ints; two out
+        let found = unsafe {
+            ee_units_uu_host_find_path(
+                unit,
+                from.as_ptr(),
+                to.as_ptr(),
+                bounds.as_ptr(),
+                limit,
+                u8::from(walls),
+                first.as_mut_ptr(),
+            )
+        };
+        (found != 0).then_some(first)
+    }
+    fn can_take(&mut self, container: u64, unit: u64, kind: u32) {
+        world(WORLD_CAN_TAKE, container, unit, 0, kind as i32, 0, 0.0);
+    }
+    fn deposit_factor(&mut self) -> f32 {
+        world_f(WORLD_F_DEPOSIT_FACTOR, 0, 0, 0.0)
+    }
+    fn last_resource(&mut self, unit: u64) -> u64 {
+        world(WORLD_LAST_RESOURCE, unit, 0, 0, 0, 0, 0.0)
+    }
+    fn distance_squared_to_unit(&mut self, complex: u64, other: u64) -> f32 {
+        world_f(WORLD_F_DISTANCE_TO_UNIT, complex, other, 0.0)
+    }
+    fn deposit_effect(&mut self, unit: u64) {
+        world(WORLD_DEPOSIT_EFFECT, unit, 0, 0, 0, 0, 0.0);
+    }
+    fn add_resource(&mut self, container: u64, unit: u64, amount: i32, carried: i32, near: bool, bonus: f32) {
+        world(WORLD_ADD_RESOURCE, container, unit, u64::from(near), amount, carried, bonus);
+    }
+    fn statistic(&mut self, container: u64, series: i32, amount: i32) {
+        world(WORLD_STATISTIC, container, 0, 0, series, amount, 0.0);
+    }
+    fn editor_transport_takes(&mut self, player: u64, unit_type: i32) -> bool {
+        world(WORLD_EDITOR_TRANSPORT, player, 0, 0, unit_type, 0, 0.0) != 0
+    }
+    fn region_units(&mut self, x: i32, y: i32) -> Vec<u64> {
+        // SAFETY: the buffer holds `capacity` units
+        read_list(|p, n| unsafe { ee_units_uu_host_region_units(x, y, p, n) })
     }
 }
 

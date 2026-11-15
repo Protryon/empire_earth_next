@@ -23030,3 +23030,1224 @@ All 54 keyword handlers already take their keyword lists from Rust (guiconf.rs `
   - Image.cpp (ProgramImage::Draw, RawImage1's layout);
   - the decoders;
   - the hosts.
+## The unit utilities, round 2: the units' frames, the footprints, the walls, the line's walls, the sound and the deposit in Rust (ee_units uu_world.rs; branch rust-unitutil2, 2026-11-14)
+
+- **Capture first, writes as events.** UUTL gained 35 kinds (51..86) for the functions this round moves and their
+  neighbours (the unit replacement, conversion and tile update stay C++, noted for the next round). A body that writes
+  to the world (a build target, a builder starting over, a unit stepping aside, the deposited amount) records each
+  write as an event of the thread's outermost recording note (`UUEvent` through a thread-local `sUUCurrent`), so the
+  Rust body's host writes the same event at the same point; a body that changes tile lists notes the units on its
+  footprint after the call (`OutFoot`). The kinds' table grew to 128 (EE-UU-COUNT prints them all). Recorded on the
+  unmodified bodies (oracle, late, space, calamity at seeds 2-3; oracle seeds 2-3 identical with the notes), in its
+  own commit before the move.
+- **Coverage (EE-UU-COUNT, the eight capture games).** Reached as outermost calls: the unit's tiles, the gather reach
+  (1.7 million calls in the first 40,000 ticks of an oracle game), the footprint and region registration, the step aside, the wall builders and the wall plan
+  (late and space only, a few calls), the tiles' wall tops, the line test (space only), the sound parameters (EE-SIM
+  computes them: 100k a game), the deposit. Not reached (unit tests and review only): the submarines' depth, the
+  selection bounds, the facing radius, the angle from north, the footprint's visibility (a mouse click), the
+  escape point, the path length, the Doppler pitch, the scenario editor's placement.
+- **The host.** Two multiplexed C++ functions (`ee_units_uu_host_world`: handles, ints and the writes;
+  `ee_units_uu_host_world_f`: the floats) carry the 22 questions, with three list readers (the units near a point,
+  a unit region's units, a path's first tile). The sound and Doppler bodies are pure: the C++ forwarder gathers the
+  camera's view (`EeUnitsUuSoundView`) and Rust does the arithmetic. The round-1 host's `EEIsLineBlocked` call is a
+  Rust call now.
+- **C++ quirks kept.** `EEIsLineBlocked` sets its last x at every test of its loop (a comma in the `for` condition),
+  so a free line reports its last tile; `EEIsTileTopAbove` writes the wall found (NULL too) on every call;
+  `EEDepositLoad`'s garrison levels mix `long` and `unsigned long` (the third level is an unsigned difference turned
+  float); `EEIsEditorSpacingClear` keeps the last unit's answer; `EEClearUnderBuilding` reads each tile's list as it
+  stands (the Rust snapshot equals the C++ walk because a killed unit's node outlives the walk); `EEPlanWall` reads
+  the tile's raised corners for `EEShapeWall`, which never used them (dropped: a pure read).
+- **Guards where the C++ had undefined behaviour** (no gate game reaches them): an unplaced submarine (no tiles: the
+  C++ read before its vector), an empty wall or builder group (the C++ read past the pieces or looped forever), a
+  NULL unit in a tile's list.
+- **Deleted with no caller left:** `EEHasZeroCount`, `EEGetSeabedUnder`, `EEGetUnitAngle` and `EEUUAngleLess`,
+  `EEGetEnemiesAround`, `EEClearUnderBuilding`, `EEIsEditorSpacingClear`, the sound falloff globals
+  (`gF564520`, `gF56451C`, `gF564518`) and the blank runs round 1 left.
+- **The merge with rust moved the UUTL digests, not the game.** rust's R5b.4 round 31 retired the Original* group
+  command rechecks that ran beside the Rust bodies over the dry host; they called `EEGetFarmDropSites`,
+  `EEFindFreeFarm`, `EEGetFootprintTiles` and `EECanPlaceUnitOnTile` a second time, so those four kinds' outermost
+  calls halve (EE-UU-COUNT: no other kind's count changes) and every UUTL digest with them, while oracle seeds 2-7
+  stay identical and every other tag of the four captures equals its golden. The UUTL lines were re-recorded on the
+  merged tree in their own commit (a second capture run of oracle and calamity gave the same digests). A lane that
+  retires a caller of a noted utility should expect this: EE-UU-COUNT names the kinds.
+- **Gates (the move's commit):** build `--sim` 0/0; oracle seeds 2-3 identical; the captures at seeds 2-3 equal to
+  every golden, UUTL among them (oracle 173 digests, late 174, space 175, calamity 191); 14 new Rust unit tests.
+- **Final gates (merged with rust 42af0588):** build `--sim` 0/0; test-profile build 0/0; oracle seeds 2-7 identical;
+  the four captures at seeds 2-3 equal to every golden but UUTL (re-recorded from them), then a second run of
+  oracle (177 digests) and calamity (195) PASS; the saveload matrix (`--settings all --seeds
+  2-3 --at 1000,1900 --expect`) PASS; the Rust gate PASS (3,643 tests); a sim_bench game (seed 5, Small, Hard, 2 AI)
+  to the time cap with both computers alive (populations 39 and 45); under the harness lock the tour (`RESULT PASS
+  tour`, render and F3 checks ok) and an orders game (`ORDERS PASS`: gather, repair, queued repair, move;
+  `RESULT PASS random-game`). C++ of the round: net -741 (the capture +73, the move -814); the file 4,725 -> 3,996
+  lines.
+
+## R5b.4, thirty-second round: the 36 EEUC* unit classes collapsed into one EEUnitClass keyed by its kind (EEUnitClassKinds.cpp; branch rust-r5b4-core32, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| e2a5c961 | the 36 `EEUC*` classes collapsed into `EEUnitClass`: dispatchers by kind, the bodies by family, the factory a table, the casts kind tests | +8221 -11586, net -3365 |
+| a55ff386 | the temple runs the basic priest's bodies (its ICF-identical copies gone) | +12 -213, net -201 |
+| 612a5f46 | `EEUnitClass`'s 29 effects walked as one array (dtor, `LoadClassMedia`, `UnloadClassMedia`) | +17 -174, net -157 |
+| 235e1115 | `EEComplexUnit::UpdateHidden`'s four tile walks as one loop (tour only) | +7 -53, net -46 |
+| 0da01600 | (merge) `rust` 42af0588: EEMessage.cpp (the gate lock's cast), EEFOFindNewTargetNearOldTarget.cpp (the unit utilities' Rust bodies taken; two new sites converted: a gate cast, a base `GetSurroundingTiles` call) | |
+
+The round's C++: net about -3,770, all of it removed code (no retired test scaffolding this round): 72 files gone
+(36 `EEUC*.cpp`, 36 `ee/EEUC*.h`), eight new (`EEUnitClassKinds.cpp`, six family units, `ee/EEUnitClassKinds.h`).
+
+**The measure.** 36 subclasses of `EEUnitClass`, 10,045 lines of source and 1,255 of headers. None had a member of its
+own (every one 0x32c bytes, the base's size): only overrides of the base's 46 virtuals and of 15 virtuals the
+families added (the transports' rendezvous, unload, boarding and room tests, the buildings' release and sunk tests,
+the shots' impact tests, the land unit's paratroop plane), plus non-virtual helpers. About 330 override
+declarations: `Update` 26, `EvaluateCondition` 24, `UnitCreated` 22, `ActionChanged` 19, `UpdateEffects` 18,
+`AddToTile`/`RemoveFromTile` 13 each; 98 bodies marked ICF-FOLDED, the same source as another class's (the original's
+linker had folded them); since rounds 12-14 every `Update` and `ActionChanged` was already a one-line Rust call. Casts:
+61 sites (`dynamic_cast<EEUCGate*>` 18, `<EEUCTransport*>` 12, the rest one or two each; `EEUnitClassCast<>` from round
+1 already read the kind table). The class a record became is a pure function of its category (`CreateUnitClasses`'
+switch), and `class_kinds_of` (kinds.rs) gives each category its class's bit and its ancestors'. So the
+calamities' pattern holds, and fully: one class, no bases kept.
+
+- **Dispatch.** Each virtual of `EEUnitClass` (they are plain members now; only the destructor stays virtual) is a
+  dispatcher in EEUnitClassKinds.cpp that reads `EEUnitClassKinds(this)` and tests the kinds from the deepest class up,
+  exactly as the vtable resolved an override: a kind's own bit matches the class and its descendants, so the first
+  match is the nearest class with a body of its own. Entries whose body equals their parent's resolution are dropped;
+  equal bodies share one test. Generated from the headers' override sets, then read.
+- **Names.** An override of `V` in `EEUCX` is `EEUnitClass::XV` (`HelicopterGetHeightAt`); the base body `BaseV` where a
+  dispatcher needs it (14), or the dispatcher's default when it was one statement (22: the empty and constant ones).
+  Unique non-virtual helpers keep their names (`FindStorage`, `GetNextFlightState`); the two pairs of homonyms got the
+  class prefix (`AirAnimalReturnToAirport`/`LandableReturnToAirport`). Qualified calls in the bodies
+  (`EEUCBuilding::UnitCreated`, `EEUnitClass::EvaluateCondition`) became the resolved member (`BuildingUnitCreated`,
+  `BaseEvaluateCondition`), the static resolution they had. Outside callers that called a base body qualified
+  (EECombatGoals.cpp, EEFOFindNewTargetNearOldTarget.cpp) call `Base*`.
+- **Dedupe.** The ICF copies were compared after the renames (whitespace and comments out): 100 bodies are aliases of
+  another (forwarders to a base or sibling, identical copies), 88 one-statement overrides live inside the
+  dispatchers (the Rust update/action calls, the constants, the ripple tests). The temple's priest half (its own copy
+  of the basic priest's conversion, trigger, media and tower-effect bodies, because `EEUCBuildingPriest` derived from
+  the building) differed only in accessor spelling and went in its own commit; its update copy stays (the basic
+  priest's update is a Rust sequence the temple does not run, and USST would see a new sequence).
+- **The factory** is a table of each category's physics model (`kCategoryPhysicsModels`: -1 for the ambient and
+  resource classes, which are not complex).
+- **Casts** are `EEUnitClassOfKind<EE_CLASS_KIND_GATE>(c)` (NULL-safe, returns the class) and `EEUnitClassIsKind<>`
+  (ee/EEUnitKind.h); the headers' free functions are ee/EEUnitClassKinds.h, which every former includer of an
+  `EEUC*` header includes instead.
+- **One-line changes in other lanes' files:** AI (EEAIAStarBoundedPathGoalModifiers.cpp, also the gate's
+  `IsSidePart`/`IsMiddlePart` definitions, now `EEUnitClass::`; EEAIPathSubSector, EECPASGLand, EECPAttackSubGroupUnit,
+  EECPBuildManager, EECPCivilizationManager, EECPNextUnits, EECPResourceManager), game messages (EEMessage.cpp,
+  EEMessageCapture.cpp), unit utilities (EEFOFindNewTargetNearOldTarget.cpp), scenario (EESMEffect.cpp,
+  EESEARust.cpp, EESimEditor.cpp), graphics (EEE3DRust.cpp, EERenderObject.cpp), physics (EEPhysicsModel.cpp), random
+  map (EERandomMap.cpp), UI (EEUIFMGStatusButton.cpp), EESim.cpp, EEGameOptions.cpp, EEGameUtilities.cpp: includes and
+  casts only. The classic AI's behaviour is unchanged (oracle identical).
+- **Behaviour:** none seen. Virtual calls from inside the base constructor would now reach a kind's body; the
+  constructor and destructor make none.
+- **Small list.** The class's 29 effect pointers are contiguous (+0x64..+0xd4, a static_assert checks it): the
+  destructor's, `LoadClassMedia`'s and `UnloadClassMedia`'s 87 tests are three loops in the same order.
+  `UpdateHidden`'s four tile walks are one loop over the offsets (tour only: the hidden flags are drawn, not
+  simulated; the tour passed). `SightOn`/`SightOff` were left: their walks differ by the sight call and the shared
+  case, a loop would not shrink them much.
+- **Tour only:** every dispatcher body that draws or plays (the ripples, trails, conversion and tower effects, the
+  sounds' doppler, the media loads) runs in EE-SIM without output; the tour and the orders game passed.
+- **Gates.** Commit 1: build `--sim` 0/0; oracle seeds 2-3 identical; captures at seeds 2-3: oracle (171 digests),
+  late (172), space (173), calamity (189), units (193) PASS. Commits 2-4 (one build): build `--sim` 0/0, oracle seeds
+  2-3 identical. Merged with `rust` 42af0588 (headers current; nothing to narrow): build `--sim` 0/0 and the test
+  profile 0/0; oracle seeds 2-7 identical to `ref`; the captures at seeds 2-3 equal to every golden except UUTL, whose
+  digest differs in every profile and seed with the same call counts, and differs identically on `rust` 42af0588 built
+  unmodified (oracle seed 2: `78796ae3...` against the golden's `90e7a9a4...`): a break on `rust` after the unit
+  utilities' merge, not this round's (for the lead: one of msg4, calamities3, ge13, editor5 changed a noted
+  utility's inputs or outputs); the scenario (22 digests) and units (193)
+  captures PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`)
+  PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium
+  1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (3,629 tests, clippy, rustfmt, headers; a first
+  run failed ee_input's keyboard-and-mouse FFI test under load, which passed alone and in the rerun); a sim_bench game
+  (seed 5, Small, Hard, 2 AI) to the time cap with both computers alive (populations 39 and 45); under the harness
+  lock the tour (`fixture_game.py --exercise tour --input-check --play-seconds 120`) `RESULT PASS tour` and the orders
+  game (`--exercise random-game --orders`) `RESULT PASS random-game`.
+- **For the next round.** The bodies are now one class's members grouped by family, so a family can move to Rust as
+  a whole over one host: the transports' tile searches (EEUnitClassTransports.cpp, ~1,200 lines of tile walks over
+  the continent table), the landable's flight states and runway approaches (~1,100), the gate's parts and the
+  buildings' release and placement (~1,800). The dispatchers themselves (740 lines) can become one Rust table of
+  kind -> body once the bodies are Rust.
+
+## R6: WON's Internet code, round 25 (one C++ core table; the socket layer and the op machinery header-only)
+
+Branch `rust-won-net25`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 24.
+Rounds 23 and 24 freed hooks, not classes (about 200 lines each), so this round planned whole units.
+
+- **The measure first** (`build/wn25/measure.py`, as the WONGUI lane's round 36): every remaining Internet unit's
+  lines split into hook-table lines (C++ answering a Rust object), forwarders, other code and comments, and the step
+  that would delete it. Everything under WONSocket and the op machinery was already a shim: the state and steps were
+  Rust's since rounds 13-16, what was left were per-class hook tables and one-line forwarders. Steps by lines freed:
+  the socket and socket op classes header-only (809 lines in 7 units), QueueSocket + UDPManager (649 in 3), the
+  machinery (AsyncOp's tracker, mode, socket thread: 168 in 4); ServerConnection's table (48 hook lines) after them.
+  WONConfig (1,021, the lobby's configs too), WONCommon's utilities and the routing/server ops stay (7,785 lines).
+- **One core table instead of a table per class** (`cppcore.rs` `EeWonCoreHooks`, AsyncOp.cpp's `WonCore()`): what
+  the Rust objects still need the C++ for, once for the library: references (`RefCount`'s count and virtual
+  destructor), a C++ completion's `Complete`, a C++ object's Rust object (`object_of(ptr, kind)`: an op's
+  `EeWonAsyncOp`, a socket op's, a socket's, a queue's, a UDP manager's and ops', a server connection's), the virtual
+  `Start` / `Continue` / `Duplicate` / socket hooks / transforms / message check, the `new`s of the C++ classes, the
+  socket thread's add, the target file, the progress chunk, `Accept`. Every per-class hook (the queue socket's 25, the
+  UDP manager's 21 and ops' 17, the timer's 2, the container's 7, the socket thread's 7, the socket op base's 19, the
+  socket's 6, the server connection's 17 of 19) is answered in Rust over it: an op's call on its `EeWonAsyncOp`, a
+  socket's on its `EeWonAsyncSocket`; the Rust objects keep their internal hook structs (so their unit tests keep
+  their stand-ins) and get static native tables (`NATIVE_QUEUE`, `NATIVE_UDP`, ...). The table is bound by the first
+  object made with it (a global pointer: the adapters are plain C functions).
+- **Completions the C++ classes made are `EeWonCompletion`s** (round 24's `RustCompletion`): `ParamCompletion` over
+  the static callbacks, `QueueOpFastCompletion`, the close timer's and keep-alive's. A body holds what the original's
+  by-value `AsyncOpPtr` and `SmartPtr<RefCount>` parameters held for the call (an extra reference on the op and the
+  target), so the counts a callback sees are the original's: a mutation dropping the op's hold fails 14 golden lines.
+  The fast completion's original is found in a Rust registry (the C++ completion -> its original, the entry gone
+  with the body) instead of by `dynamic_cast`.
+- **The golden first** (`won_core_test`, over the unmodified QueueSocket.cpp, UDPManager.cpp, SocketThread.cpp and
+  AsyncOp.cpp): the queue's, the UDP manager's, the timer's, the container's and the socket thread's references and
+  lifetimes over real sockets on 127.0.0.1, every line with the objects' counts, the driver's objects logging their
+  destruction, the core single-threaded (`SetDoSocketAndTimerThreads(false)`: no count depends on another thread),
+  waits on completions. 174 lines, five runs the same. **Mutations**: a body without its op hold (14 lines fail), the
+  manager not held (73), the close timer's callback dropped (129) are caught; a fast completion losing its original
+  was not: no case reached it (socket ops are queued, so a fast op is still pending after its run and becomes the
+  queue's op). The case (an op run at once, finished in its own run) was added and its lines recorded over the
+  original units in a worktree at the golden commit (`git worktree add build/wn25/orig 67e13ee9`), the rest of the
+  golden unchanged.
+- **Header-only shims.** The classes stay the callers' types (the lobby subclasses `BlockingSocket`, `SocketOp`,
+  `UDPManagerSendRecvOp`), their forwarders inline in WONRouting.h with the original addresses in the comments.
+  AsyncOp.cpp is the one unit left: the ops' table, the core table, `QueueCloseOp`, the calls that need the platform
+  layer (`Bind`, `SendTo`, `RecvFrom`, `Accept`, the waits, the Winsock numbering asserts) or WONAPICore
+  (`SocketOp::CleanupHook`, the socket thread's add), and the thread's SEH body. Deleted: QueueSocket.cpp,
+  UDPManager.cpp, UDPManagerDefaults.cpp, AsyncOpMode.cpp, AsyncOpTracker.cpp, AsyncOpWithTracker.cpp,
+  SocketThread.cpp, SocketRunHooks.cpp, SocketOps.cpp, AsyncSocket.cpp, AsyncSocketDefaults.cpp,
+  AsyncSocketInternet.cpp, BlockingSocket.cpp, SocketOpsAccessors.cpp, ServerConnectionDefaults.cpp (15 units).
+  The static callbacks and internal members nothing outside called (`QueueSocket::StaticOpCallback`, the UDP ops'
+  `RecvCallback` / `SendRequest` / `QueueRecv`, `ServerConnection`'s `Static*Callback`) are gone.
+- **Met on the way.** A `CompletionBase*` cannot be `static_cast` to `RefCount*` in the header where `CompletionBase`
+  is still incomplete (`static_cast<void*>`, the same address). The Bash tool's quoted heredoc turned `\\x05` into a
+  raw byte in a Python-written C++ string (three NULs in the driver): write such scripts with the Write tool.
+- **Behaviour.** None on defined paths: every call answers what the C++ hook answered on the same object. An object
+  without its Rust object (a null) gets the hooks' defaults instead of a C++ null dereference.
+- **Reach.** The queue socket, the UDP manager and the socket ops are the LAN lobby's too (its sockets, the ping),
+  so the LAN game exercises them; the server connection only the Internet path.
+- **Net C++**: commits 16b52540 (QueueSocket, UDPManager) +194/-720, c9e7ae18 (machinery) +80/-300, ee198a26 (sockets
+  and socket ops) +358/-879, 01f344f5 (ServerConnection) +46/-150: src+include +673/-2,044, net -1,371. Not done
+  this round: the crypt transform as a Rust transform variant (about -25: the session's `Crypt` needs the message's
+  `ByteBufferPtr` read and replaced from Rust), RoutingConnection's 14 hooks (about -30 on the core),
+  ServerConnectionConnectOp (25 lines, a C++ `AsyncOp` the lobby makes), TitleConfig (on ConfigObject, the lobby's).
+
+### Gates
+
+| Gate | per commit | Merged with rust (72833f4c) |
+|---|---|---|
+| `build.py -j 3 --sim` | 16b52540: 0 / 0; ee198a26 (with c9e7ae18): 0 / 0; 01f344f5: with the merge | 0 / 0 |
+| oracle against the main checkout's `ref` | 16b52540 and ee198a26: seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | 16b52540: rustfmt failed (formatting), fixed before the commit; clippy and tests PASS | PASS |
+| `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
+| `xbuild.py wontest` | each commit: won_core_test and the programs linking the changed units (sockobj, asyncop, ops, socket, servconn, routeops, smartroute, userstatus, hostsock, opcore, authsession): exit 0 | all 112 programs exit 0 |
+| `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=3432 joiner=3435` |
+
+The merge of rust needed nothing: no conflict, `rust_build.py header` current, `rust_includes.py` changed nothing.
+
+## R4.4, twenty-second round: the raster table's model entries; EEROGroundShadows's draws, the farm, the earthquake and the smoke generators whole in Rust on EEE3DRust, the damage controller on EEE2DRust (ee_gfx shadows.rs, effect_farm.rs, effect_quake.rs, effect_smoke.rs; branch rust-gfx28, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 13,291 lines at the round's start; 12,692 after the
+table, the shadows and the farm (-599); 12,192 after the earthquake and the smoke generators (-500); 12,076 after the
+damage controller (-116). Deleted: `EEE3DFarm`, `EEE3DEarthquake`, `EEE3DSmokeGenerator`, `EEEDamagedEffect` (`.cpp`
+and `.h`); `EEROGroundShadows.cpp` keeps its constructor, `FrameStarting`, the list hand-over and the effects' queue-0
+pass. The round's C++ diff over `src` and `include/ee`: +445 -1,845 (net -1,400; the aim was 1,500).
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| e5ed3ea0 | the raster table's model entries; the ground shadows' draws; the farm on `EEE3DRust` | -599 |
+| c1f55eab | the earthquake and the smoke generators on `EEE3DRust` | -500 |
+| 55c4c760 | merge of `rust` (fffdedf4) | |
+| ebb2a467 | the damage controller on `EEE2DRust` | -116 |
+
+- **The table's model entries.** Round 20's item at last: `create_model` / `create_sub_model` (the model manager's,
+  with the arguments every caller passed alike fixed in the C++), `model_reference` / `model_dereference`,
+  `sub_model`, `store_mesh` (a built mesh's set values into vertex array 0 and polygon array 0: `EEEffectMesh::Store`
+  became the free `EEStoreMesh` both use), `material_ranges` (material 0's polygon and vertex ranges from 0),
+  `bounding_radius`, `copy_vertices` (points, optionally normals), `texture_wrap`, and two state reads
+  (`get_alpha_ref`, `get_blending`). The new entries that are more than one call are named static functions in
+  `EERenderObject.cpp` (the driver cuts them by name); the tests' log rasterizer keeps real per-model arrays (its
+  handles are 1-based indices into them).
+  - Only the final state of a model's arrays matters (the setters write arrays, nothing else): the farm's placeholder
+    copies, which the original wrote triple by triple into polygon 0, are one mesh whose polygon 0 holds the last
+    triple; the earthquake's interleaved point and texture-coordinate writes are one `store_mesh` of coordinates plus
+    `set_vertex_point`s.
+- **The ground shadows.** `shadows.rs` makes the StaticShadow quad (a static `AtomicPtr`, released by
+  `ReleaseShadowModel`), sets the scene's state and draws the placed objects' and the units' shadows. The C++ copies
+  the frame's two multimaps into arrays (texture, location, scale, opacity; a unit's transformation, its source's
+  shadow model and texture, its class's scale) and leaves out the units the original skipped first (submerged, no
+  shadow scale), so it reads nothing the original did not; the space test asks the C++ for a tile's water info (-1
+  off the mesh). `min(1.0f, fade)` is the macro's `1 < fade ? 1 : fade`.
+- **The farm.** The record's `farm` (the area and centre as the volcano's `EeGfxVolcanoArea`, the three model
+  handles, the sway, the flags, the queue's draw facts); `effect_farm.rs` builds the draw copies, the ground with its
+  placeholder sub-model and the crops, places them, picks the variant from the first drop site and sways the crop
+  tops in the step (the shared circle a `Mutex`ed static built by the first farm to step, as `sCircle`). `EEE3DRust`
+  gains `ElevationChanged` (the C++ rectangle test, then the new op `Rebuild`: place, set up, crops if built; the free
+  camera's queue uses it too), the farm's `IsTileVisible` (its tiles while it lives, else the current player's
+  doppelganger) and its empty `ReplaceUnit`.
+  - **Trap (an empty override):** `EEE3DFarm::ReplaceUnit` is empty (ICF-folded into 0x163d6f); the generic
+    `EEE3DRust::ReplaceUnit` calls `EEEffect::ReplaceUnit` and would have rebound a farm's unit. List every virtual a
+    deleted class overrides, the empty ones too.
+  - **Trap (queue result):** the farm's queue answers 10 for any base failure, not the base's code.
+- **The earthquake.** The record's `quake`; the two-point constructor's points arrive in `shot.path.start` and
+  `shot.location` (the linear projectile's constructor); `effect_quake.rs` builds and reshapes the strip over the
+  ground (the host's `ground_point`, `GetGroundPoint`) with `quake.rs`'s rows. The speed (`length / duration`) is set
+  in `Repair` instead of `Load`: the file ops get no graphic-effect facts, `RepairPointers` always follows a load and
+  nothing reads the speed between.
+- **The smoke generators.** Their set-up, tick and files were already Rust; `effect_smoke.rs` is the class: the point
+  constructor's placing, the queue's 10, and the tick's facts from the graphic effect and the host's `smoke_unit`
+  (the damage smoke's tag points read once a step into the call's `Ask`, as the vent's). The destruction smoke's
+  factory is three lines in `EEEffectManager.cpp`.
+- **The damage controller** (0x3e) is an `EEE2DRust` kind: its Rust arm answers the queue's 10 and nothing else; its
+  tick facts and children (`EEE2DRust::Step` for 0x3e) and its files (the `Load`/`Save` special cases) stay the
+  C++'s calls of the existing `ee_gfx_effect_damaged_step` / `_load_damaged` / `_save_damaged`. The fire functor
+  (`EEContagionManager.cpp` after the merge of `rust`: calamities round 2 moved it there) sets
+  `mRecord->damaged.finished`.
+- **Golden driver** (`build/gx28/drv`: `make_r22.py COMMIT|WORKTREE OUT`, `run.sh`): a new self-contained stub world
+  (models with real arrays: points, normals, coordinates, colours, opacities, polygons; every model's digest after
+  each operation; material, draw and state calls logged in order). The original classes are cut from ad3d3af9 and
+  linked with the current library (they use only the record's transformation and radius and `farm.rs`'s and
+  `quake.rs`'s FFI, unchanged); the new side is `EEE3DRust`'s constructors, virtuals and farm/earthquake answers cut
+  from the worktree with a driver-made host and table (the new entries cut by name). 300 effects on seed 1 (2,515
+  lines) and 3,000 on seed 2 (26,569 lines: 988 earthquakes, 1,028 farms, 983 shadow scenes), identical.
+  - **Trap (driver):** a static array of effects initialised from temporaries copied `EEEffect3D`'s reference members
+    (into the record) from temporaries that then freed their records: both sides crashed at the next shadow pass. An
+    effect whose members reference its own record must never be copied.
+  - **Trap (driver):** the originals' constructors leave state to `SetUp`, `Load` or `RepairPointers` (the farm's
+    phase, sway, row length, rebuild and BB4 flags; the crack's model and hold time); the driver zeroes them as the
+    record does, and the original crack's destructor dereferenced a model a failed load or repair never made (not
+    deleted there).
+  - A read past a vertex array (the sway over the placeholder sub-model of a farm whose crops were never rebuilt)
+    returns one fixed point in the stub, so both sides read the same value; in the game both read past it alike.
+- **Behaviour changes:** a crop variant (`mCloaked`) outside 0..4 picks the first crop frame (the original read past
+  its table); the earthquake's speed is set in `Repair`; its destructor tests its model. None reaches a gate game.
+- **Gates.** per commit, `build.py --sim` 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS (18 digests, the pre-round C++ golden), the Rust gate PASS (3,387 and 3,394 tests; clippy, rustfmt, header). The merge of `rust` fffdedf4 (55c4c760) conflicted only in PORT_LEARNINGS.md (both sides' new sections kept); `rust_build.py header` and `rust_includes.py` changed nothing; the calamities round had moved the fire functor into `EEContagionManager.cpp`, where the damage controller's switch went. On the result (ebb2a467): both builds 0/0 (`--sim` and the test profile), the Rust gate PASS (3,484 tests; clippy, rustfmt, header), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 171 digests, late 172, calamity 189; 4, 4 and 3 without a golden) and effects at seeds 2-7 (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), the tour (`fixture_game.py --exercise tour --play-seconds 60 --seed 7 --zoom-captures 100 40 20`, under the harness lock) `RESULT PASS tour` and the orders game `RESULT PASS random-game` (gather, repair, queued repair, move; patrol and attack-ground skipped: no button, no unit).
+- **The frames** (`build/gx28/frames.sh`: the tour with `--seed 7 --zoom-captures 100 40 20`, the pre-round test exe
+  of round 21's merge against this round's): both tours `RESULT PASS tour`, no GX errors in either; at each zoom (100, 40, 20) and in the gameplay frame the same scene (the start's town centre and its citizens): the citizens' shadows (soft ellipses under their feet) and the town centre's ground shadow have the same shapes and places (crops at zoom 40 compared by eye); about two thirds of the pixels differ, nine in ten of those by under 16 levels (the time of day's light and the cloud layer at another moment of the run) and the large differences only where citizens stood in other poses; the main menu differs in 166 pixels (the version text). No farm, earthquake or smoke was in view.
+- **Only a tour or a person reaches:** the ground shadows (every unit's and placed object's shadow: the frames
+  above), the farm's draw (fields of crops: the AI's farms, rarely near the tour's camera), the earthquake's crack (a
+  calamity), the smoke generators' puffs (their state is EE-SIM's and the effects capture's; the puffs are other
+  effects).
+- **Not moved:** the decal placement helpers (simulation-side C++; their callers are the physics models' and the
+  units'), the storms (their interface is `EEEMStorm`'s), the marching line, particle emitter and 3D particle.
+
+## R6: the backgrounds, UIHotKey and UIBackgroundTable whole in Rust (ee_ui bgobj.rs, hotkeyobj.rs, bgtableobj.rs; branch rust-r6-ui20, 2026-11-14)
+
+Round 20 of the toolkit lane, aimed at 1,500 net C++ lines by finishing whole classes.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 394351aa | the backgrounds whole in Rust (`bgobj.rs`): nine classes, seven units and three headers fewer | -724 |
+| dc4d3d4f | `UIHotKey` whole in Rust (`hotkeyobj.rs`) | -192 |
+| c8fa8ef6 | `UIBackgroundTable` whole in Rust with `UIManager::CreateBackgrounds` (`bgtableobj.rs`) | -114 |
+| (docs) | progress file, this section | (docs) |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 12,128 -> 11,095 at the base (fffdedf4) and after the three code commits. Net C++ for the round is -1,030, short of the 1,500 asked: the largest pieces left are the classes the lane rules give to other lanes (`UIGraph`, the game screens) and the base ops of round 19 (see What is left).
+
+- **The backgrounds** (`bgobj.rs`). Nine classes: `UIBackground`, `UITextureBackground`, `UIBitmapBackground`,
+  `UITiledBackground` and its three subclasses, `UIBFull`, and the root class `UIFullBackground`. Their members are one
+  record, `EeUiBackgroundFields` (every class's fields under their C++ names, a kind-free union of them: the tiling,
+  the bitmap, the tile grid, the designed size), the C++ classes' **protected** base: the game's subclasses
+  (`EEUIBGenericBackground`, `EEUIBMapBackground`) read `mRectangle` and `mTextureFileName` in place; three reads
+  became accessors (`GetForm()` for `mForm`, now `void*`; `SetTextureDescription`, `SetTextureRectangle` for the map
+  background's writes). Each C++ member forwards its own call (`EeUiBgCall`), so a qualified call
+  (`UIBFull::DrawBackground` from the map background) stays that class's. The calls out (`EeUiOp` 540..562) go to
+  `UIBackgroundHost::Op`, whose object is the record (one host for the `UIBackground` tree and the root
+  `UIFullBackground`): the form's questions (pure: window size, exclusive coordinates, current form, rectangle, fade),
+  its locks and redraws, the four virtuals (`LoadBackground`, `UnloadBackground`, `DrawStrectchedBackground`,
+  `DrawTiledBackground`; the game overrides them), the bitmaps (`new`, release, texture, stretch, place, opacity, draw)
+  and the texture load with its seven stage modes. Ops with two or three rectangles pass twelve floats
+  (`EeUiOp::is_wide`; the replay traces all twelve). The texture file name is copied into the record (Rust bytes);
+  the C++ `UString` stays for `GetTextureFileName` and the map background.
+- **Three classes deleted.** `UILRTiledBackground`, `UITBTiledBackground` and `UIStretchedTiledBackground` only chose
+  `DrawBackground`'s tiling; they are `UITiledBackground`'s constructor argument (`UITiling`, with the stretched
+  counts) and the record's `mTiling`. Their units and headers went, and with every forwarder in `UIBackground.cpp`
+  so did `UIBitmapBackground.cpp`, `UITiledBackground.cpp`, `UIBFull.cpp` and `UIFullBackground.cpp`
+  (`link/lle/units.txt`: seven units fewer). `background_ffi.rs` deleted.
+- **UIHotKey** (`hotkeyobj.rs`): the members are `EeUiHotKeyFields`, the class's private base (`UIForm.cpp`, a
+  friend, reads them in place; its temporary hot key now calls `SetKey`, the same two steps); the constructors (default
+  and copy onto a form), the destructor, the event setters, `SetKey`, `SetModifier`, the key count and `FireEvents`
+  are Rust over round 5's and 9's `hotkey.rs`, calling out through `UIHotKeyHost::Op` (`EeUiOp` 570..582: the
+  keyboard's entities and their state as pure ops, the events' calls, `new`/`delete`). The shared table is a Rust
+  list (`GetHotKey`/`GetHotKeyCount` forward); `CreateHotKeys` is round 9's loop over it. `GetHotKeyName` stays a C++
+  walk of the keys' names (the name is round 9's Rust). `hotkey_ffi.rs` keeps only the name.
+- **UIBackgroundTable with CreateBackgrounds** (`bgtableobj.rs`): the members are `EeUiBgTableFields`, the class's private base (the inline getters read it
+  in place: `GetLayout`, `GetTextureRect`, `GetColor` answer the record's `EeUiLayout`, `EeUiRect`, `EeUiColor` as
+  the C++ types; the texture file stays a `UString`); the static array is a Rust list of entries (`GetArraySize`,
+  `GetUIBackgroundTable` forward); `Create` is round 7's loop over a host whose object is the file (open, count, read,
+  close are ops now, so the golden traces the file); `DeleteAll` and `UIManager::CreateBackgrounds` (the texture
+  description, the entries without a form skipped, one `BgtMake` per entry: the type's class or the manager's
+  user-defined background) run in Rust. `EeUiOp` 590..600. The record copy and the events' file reading in
+  `background_table_ffi.rs` went with it (the events stay there).
+- **Behaviour.** None changed. The table's `DeleteAll`/`DeleteHotKeys` take the list before deleting (the C++
+  deleted in place, then cleared): the deletions and their order are the same.
+- **The goldens** (`build/ui20/*_driver.cpp` over round 19's `world.h`, with wide ops and per-driver trace hooks).
+  Each driver's `orig` is the units at fffdedf4 transcribed over the world's ops (their round-5..9 Rust plans
+  from the base library, the C++ callbacks in the driver), `cur` the Rust object; 20,000 sequences (seed 7) and 2,000
+  (seed 1) each, orig = cur:
+
+  | Golden | seed 7 lines (sha256) | Mutations caught | Replayed by cargo |
+  |---|---|---|---|
+  | backgrounds (`bg_driver.cpp`, 7 kinds) | 6,014,146 (792a511a...) | 16 of 16 | 25 sequences, 6,719 lines |
+  | hot keys (`hk_driver.cpp`, A and its copy B) | 6,814,550 (ab4c394d...) | 12 of 12 | 12 sequences, 4,265 lines |
+  | background table (`bgt_driver.cpp`) | 1,888,542 (1c2f7411...) | 8 of 8 | 40 sequences, 3,772 lines |
+
+  The backgrounds' mutations (sequences failing of 2,000): Open's screen inclusive 426; Close loads 1,277; an empty
+  name loads 364; Unload without the texture test 1,149; the stretch placed at the source 1,521; `UIBFull` without the
+  fade 198; the tiling plan over the rectangle 254; the stretched counts swapped 90; `DrawTiledBackground`'s columns
+  swapped 215; the grid keeps the old tiles 248; `UIBFull::SetBitmapTexture`'s column and row swapped (the run aborts
+  on a tile out of its grid); `UIBFull`'s unload untested 226; `UIFullBackground`'s unload keeps the tiles 252; the
+  full-screen draw scaled by the height twice 70; no lock around `SetBitmapTexture` 1,360; `Relayout` exclusive 830.
+  The hot keys': the constructor disabled 1,089; the copy's event order 157; the copy keeps the other's form 820; the
+  copy's key count 365; `SetKey` without the count 542; the third modifier uncounted 1,104; `SetEvent`'s slots 2 and 3
+  swapped 1,276; a modifier's value not asked 281; the key's state from its address (the world has no answer: the run
+  stops); any value pressed 259; every entity in the key's slot 1,801; the destructor keeps an event 1,290. The table's:
+  the depth kept at 16 434; alpha always 609; an entry without a form made 384; the form by a wrong id 603;
+  `DeleteAll` keeps the list (the world is asked about deleted entries: the run stops); the name without its end 1,692;
+  the priority not the record's 1,443; `Create` one entry too many 1,342.
+- **Lessons.**
+  - A whole object whose subclasses only choose a strategy needs no C++ subclass: the choice is a record field and the
+    constructor's argument, and the units go.
+  - A world call that answers through an out parameter (the keyboard's `GetEntity`) is two pure ops (the entity, the
+    result) when the answer is a function of the arguments: the record write stays Rust's and the replay needs no
+    write hook.
+  - An inverted rectangle's tile plan wraps to billions of rows: a world that calls the base back must cap the loop
+    (the override answers instead), or the driver hangs.
+- **What runs it.** Every form's backgrounds and every hot key: EE-SIM makes no form (the oracle unchanged); the editor
+  gate makes the editor's forms. **Only the tour shows** the backgrounds drawn (tiles, the full-screen grids, the
+  campaign map's `UIBFull`) and hot keys firing.
+- **Gates.** Per code commit: `build.py -j 3 --sim` 0/0, the oracle seeds 2-3 identical, the editor gate PASS (6,823
+  lines), `ee_ui`'s tests and clippy (206 tests at the third commit). The bgtable commit's first build failed (the
+  unit lacked `GERhombus`'s header for `UIControl.h`; the gates that followed it ran on the previous exe and were
+  discarded), fixed and rebuilt before the commit. On the result merged with `rust` (32a71514; no conflict, the
+  toolkit untouched by the merged rounds; `rust_build.py header` rewrote `ee_units.h` and `ee_won.h`, which `rust`
+  had committed stale: b7766e4b; `rust_includes.py` nothing to narrow): build `--sim` 0/0, the oracle seeds 2-7
+  identical, the editor gate PASS (11,673 lines), the Rust gate PASS, the test-profile build 0/0. Harness (one lock per
+  session): the fixture tour `RESULT PASS tour` (no GX errors), the orders game `ORDERS PASS` (gather, repair,
+  repair-queued, move; patrol and attack-ground skipped by the driver) and `RESULT PASS random-game`, the legacy tour
+  (`game_session.py --exercise tour --input-check --play-seconds 120`) `STOP <windowed session complete> reached`,
+  `INPUT CHECK F3 paused False -> True -> False: ok`, physics ticks 118 -> 422 over the 120 s. EE-SIM makes no form,
+  so the sim_capture profiles were not run.
+- **What is left.** The whole objects' base ops (`UIObjHost::Base`) answered from the record in Rust: about 50 C++
+  lines, but every whole object's golden answers those ops as pure world values and would be re-recorded with a
+  record-consistent world (the lead's first item; not done this round, the three classes above came first);
+  `UIIMECandidate` (its strings, texts and rhombi; about 100 lines); `UIBitmap`, `UIMovie` (GE call sequences);
+  `UILBString` and `UIListBox<T>`'s lines; `UIFileListBox`/`UIFileComboBox` (the directory search); `UIEvent`,
+  `UIEntityGroup`; the game's eight direct `UIControl` subclasses and `UIGraph`/`UILineGraph` (screens lane).
+
+## R6 WONLobby, round 7: the lobby's resources by name, the status texts, the saved game's transfer and the EE lobby's sounds (ee_won resource.rs, statusstr.rs, eexfer.rs, eesound.rs; branch rust-wonlobby7, 2026-11-14)
+
+Round 6's list named EELobbyFileTransfer, EELobbySound and the logics. Measuring the lobby's units for the round's
+1,500-line target found the biggest one first: WONLobbyResource.cpp (3,420 lines) and its header (986), whose rows
+were Rust since round 1 but whose 469 globals, their externs, an unused id enum, the id table, the name-matched slot
+table and 2,400 lines of the globals' init chain markers were not. The round took that, then WONStatusString.cpp
+(the switch from a status to its resource string), then the round's item 1 (the transfer and the sounds). The logics
+(LanLogic's and StagingLogic's hosts, AccountLogic, InitLogic, PingLogic, RoutingLogic) were measured and left.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 35e15601 | the 469 resource globals as one slot array over ee_won's rows (`EeWonLobbyRes`) | -4,242 (67,431 -> 63,189) |
+| d8817d77 | GetWONStatusString's switch as `statusstr.rs` | -366 (63,189 -> 62,823) |
+| 284c3423 | EELobbyFileTransfer, SendFileOp, EELobbyMusic and EELobbySound as `eexfer.rs` / `eesound.rs` objects; two units deleted | -333 (62,823 -> 62,490) |
+| 89b92e40 | (after the merge of rust) WONLobbyResourceGlobals.h includes `rust/ee_won.h`, as `rust_includes.py` asked | +1 |
+
+Round total: WON C++ 67,431 -> 62,490 (-4,941) before the merge of rust; two units deleted (EELobbyFileTransfer.cpp,
+EELobbySound.cpp), none added.
+
+### The resources by name
+
+- `EeWonLobbyRes` (resource.rs) names the table's 469 rows in order (`#[allow(non_camel_case_types)]`: the variants
+  are the original globals' names, `LobbyGlobal_Cancel_String` ...); `EE_WON_LOBBYRES_COUNT` is the array's size and
+  `ee_won_lobbyres_kind` exports the enum (cbindgen emits an enum only when a function or the export list names it).
+  A unit test checks each variant's Debug name against its row's name, so the enum and the rows cannot drift.
+- The C++ keeps one slot per row, `LobbyResourceSlot gLobbyResources[EE_WON_LOBBYRES_COUNT]` (a `GUIString`, a
+  `SmartPtr<Image>`, a `SmartPtr<Sound>`; a row uses the member of its kind), read through `LOBBY_STRING(name)`,
+  `LOBBY_IMAGE(name)`, `LOBBY_SOUND(name)`: `gLobbyResources[(int)EeWonLobbyRes::name].mX`. The 482 uses in 23 lobby
+  units were rewritten by a script (code only, not comments); a unit using the macros includes `rust/ee_won.h`
+  (WONLobbyResourceGlobals.h does not: 288 units include it through WONLobbyResource.h, and ee_won's header changes
+  with every WON lane's FFI).
+- Before the move a script checked that the externs, the `_Id` enum, the definitions, the id table (`gResources`), the
+  slot table and the Rust rows list the same 469 names in the same order: `LobbyResource_GetString(id)` and
+  `GetImage(id)` index the slots by the same ids (ChatCtrl's duration texts, ServerListCtrl's icons). The getters of
+  fonts, backgrounds, colours and ints (one shared body each in the original) had no caller and are gone.
+- Load and unload walk the rows as before; the slot is the row's index (no name compare at each load any more).
+
+### The status texts
+
+`GetWONStatusString`'s switch (284 labels, 83 groups) is `statusstr.rs`, generated from the C++ switch with the
+labels as WONStatus.h's values (a group's names in its comment; clippy's `manual_range_patterns` allowed: the labels
+stay one by one). `ee_won_status_lobby_text` (named so: `ee_won_status_text` is ffi_net.rs's status name) gives the
+row and whether it is a general text; the C++ formats a general one with `WONStatusToString` as before.
+
+### The saved game's transfer and the sounds
+
+- **EELobbyFileTransfer** is a `RefCount` shell over an `eexfer.rs` object: the path, the local file's size and
+  checksum, the host file's, the listening socket and the clients' sockets (a reference each; the clients in pointer
+  order, `std::set<SmartPtr<AsyncSocket>>`'s), the progress time, every method and the four completion callbacks. The
+  shell keeps the host's file name (a `GUIString` the lobby game reads) and address (an `IPAddr` the download's
+  `ConnectOp` takes). The lobby game's Rust object still reaches it through its `Transfer*` ops (eegame's golden did
+  not change); those cases call the transfer's Rust object.
+- **The completions stay LobbyCompletion's**: the original's `LobbyCompletion<EELobbyFileTransfer>` runs its callback
+  on the window thread (posting it when completed elsewhere) and holds the transfer. Round 24's `RustCompletion`
+  runs on the completing thread, so the host has a `LobbyCompletionBase` subclass (`EELobbyTransferCompletion`: the
+  transfer held, `Run` calls the Rust callback) instead.
+- **SendFileOp** is a `SocketOp` shell (its `Start`, `Continue`, `CleanupHook` forward) over an `EeWonEeXferSend`: the
+  path, the open file, the 0x2000-byte chunk and its read position (the original's `ReadBuffer`), the send loop.
+- **CloseClients walks a copy**: the original killed each client while iterating the set; a kill whose close
+  completion ran at once would have erased from the set under the iterator. Completions on the window thread are run
+  at once when the kill is made there, so the Rust walks a copy of the set and then gives back the references of
+  those still in it.
+- **EELobbyMusic, EELobbySound** keep their classes (WONGUI's `Sound` base); the music's volume and the effect's sample
+  and playing instance are `eesound.rs` objects, the decoder's load `ee_won_eesound_load` (-1: no sound manager). The
+  host is EELobbyGlueHost.cpp (an exe unit: the game's UI and sound managers).
+- EELobbySound.cpp and EELobbyFileTransfer.cpp are deleted (their lines in link/exe/units.txt with them).
+
+### Goldens, mutations, replays
+
+| Golden | Sequences | Trace lines | Replayed by cargo | First run |
+|---|---|---|---|---|
+| `won_statusstr_test` (new) | every status in -200,000..200,000 and both ends (400,003) | - | (exhaustive; the unit test checks samples) | identical |
+| `won_eexfer_test` (new; the transfer, the send op, both sounds and the decoder's load) | 50,000 | 1,426,574 | `golden_eexfer.txt` (61 sequences) | identical |
+
+The resources' move has no golden of its own: the load and unload run the same rows in the same order (round 1's
+`golden_resource.txt` still replays them), and `the_enum_names_the_rows` ties each enum variant to its row by name.
+`won_eexfer_test` counts references per object and prints the counts at a sequence's end (the original's `SmartPtr`
+temporaries take and give back references the Rust does not take); a socket's kill re-enters the close callback half of
+the time. Its first host answered the clock with any of 5,000 milliseconds, and the mutation "progress at exactly 1000
+ms" changed nothing; the clock now answers in steps of 500 ms.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| status: one label's general flag flipped, one label dropped | 2 statuses of 400,003 (both) |
+| transfer: progress reported at exactly 1000 ms | 271 of 50,000 |
+| transfer: Stop does not kill the listening socket | 5,316 |
+| transfer: a failed accept kept | 25,236 |
+| transfer: a download without a valid host | 4,092 |
+| send: a timed-out send ends without asking the time left | 7,046 |
+| transfer: a client already held referenced again | 925 |
+| sound: an effect stopped when not playing | 6,082 |
+| sound: an effect's resume plays | 8,399 |
+
+Unit tests: resource +1 (the enum names the rows), statusstr 1, eexfer 4 (the replay; Serve's stop and failed bind;
+the file-here rule; the send loop's chunks), eesound 3.
+
+### Gates
+
+| Gate | 35e15601 + d8817d77 (built together) | 284c3423 | final tree (merged with rust e5758718, + 89b92e40, the chat test) |
+|---|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (35e15601 compiled alone: `--compile-only`, 974 units) | 0 / 0 | 0 / 0 |
+| Rust gate | tests and clippy PASS after clippy's `manual_range_patterns` was allowed in statusstr.rs; rustfmt fixed in d8817d77 (amended) | tests, clippy PASS; rustfmt (statusstr.rs) fixed | PASS (3,638 tests) |
+| oracle | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| lobby wontest | won_statusstr_test exit 0 | won_eexfer_test, won_statusstr_test, won_eegame_test, won_eeglue_test exit 0 | 17 programs: 16 exit 0 (eexfer, statusstr, eeglue, eecolor, eedlg, lobbyctl, eegame, lobbydlg, dlglogic, lobbyscr, credits, lobbypopup, lanobj, stagingobj, lanlogic, chat after its fix); won_persist_test hangs with no output, and so does the main checkout's own build of it (19:41, before this branch merged): not this round's |
+| `--test-profile windowed-software` | | | 0 unresolved, 0 duplicates |
+| `tools/harness/lan_game.py` (harness lock) | | | RESULT PASS lan-game (PT host 3353, joiner 3347) |
+
+The merge of rust (e5758718) had no conflict and no new use of a resource global by name (a script checked every
+code line of src, include and tests/won). `rust_build.py header` was current; `rust_includes.py` added
+`rust/ee_won.h` to WONLobbyResourceGlobals.h (its macros name `EeWonLobbyRes`), committed as 89b92e40: the 288 units
+that include WONLobbyResource.h now see ee_won's header. won_chat_test links ChatCommandParser.cpp and defined the
+chat command globals itself; it defines the slot array now. WON C++ on the merged tree: 61,025 (rust alone: 65,965).
+
+### Behaviour changes
+
+- None on defined paths. The transfer's `CloseClients` walks a copy of its clients (above); a socket's references are
+  taken once per holder, not for the original's `SmartPtr` temporaries (the counts at each call's end are the same:
+  the golden compares them).
+- `GetWONStatusString` of a status outside `int32_t` (WONStatus is a `long`, 64 bits on Linux and macOS) is truncated
+  to 32 bits before the switch; every WON status is in range.
+
+### What only a person reaches
+
+The saved game's transfer runs only when a LAN or Internet game room loads a saved game (the host serves it, a client
+without the file downloads it): `lan_game.py` starts a random map, so it does not reach it. The lobby's sounds (the
+music's volume, the effects) are reached by every lobby session, the LAN game's too; whether they are heard needs a
+person. The status texts are shown by the Internet screens' failures and the LAN direct connect's status box.
+
+### What is left
+
+The logics, measured: LanLogicHost.cpp (666) and LobbyLogicHost.cpp (359) are the C++ halves of round 20's Rust
+objects (195 ops; what is left are calls on C++ objects: they shrink as the dialogs, sockets and model move);
+AccountLogic.cpp (253) and InitLogic.cpp (649) are Internet only, each method a run of C++ calls on ops, dialogs and
+server lists (InitLogic's decisions already flow.rs); PingLogic.cpp (301; the LAN game's pings) is the next
+whole-unit candidate (its queue, retries and reply parse), then AccountLogic; RoutingLogic.cpp (2,186) last.
+
+## R4.3, fourteenth part: DX7Screen, DX7Surface and DX7Movie whole in Rust; the Draw units folded, the renderer plug-in boundary collapsed (ee_dx7 scrobj.rs, surfobj.rs, movobj.rs; branch rust-ge14, 2026-11-14)
+
+The round took the measure of round 13 at its word (address markers stay while a file exists, so only whole files and
+whole bodies cut lines) and deleted files: every unit of the DX7 plug-in but DX7Rasterizer.cpp, DX7Trampolines.cpp and
+GX.cpp is gone.
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| cf65e7e2 | DX7Screen and DX7Surface whole in Rust; DX7Screen.cpp, DX7Surface.cpp deleted | +166 -758, net -592 |
+| 195070d8 | the three Draw units folded into DX7Rasterizer.cpp and deleted | +295 -703, net -408 |
+| c5c0b6c9 | the renderer plug-in boundary collapsed; DX7HRTnLDisplay.cpp deleted | +25 -259, net -234 |
+| 49d35af9 | DX7Movie whole in Rust; DX7Movie.cpp deleted | +138 -368, net -230 |
+
+Round total: net -1,464. The Graphics Engine directory: 10,134 -> 8,752 lines; the DX7 plug-in's units 2,694 -> 1,355
+(DX7Rasterizer.cpp, DX7Trampolines.cpp, GX.cpp), its headers 506 -> 425.
+
+- **The screen** (`EeDx7Screen`): the modes (a `Vec` the `GetMode`/`GetCurrentMode` references point into), the desktop
+  rectangle (a `GERectangle` in memory: bottom, left, right, top), the name (a C++ `UString*` the host makes and frees),
+  the device, the monitor, the current mode and the seven flags; the statics `sScreens`, `sScreensCaptured` and
+  `sFirstCaptureWasAttachedToDesktop` are Rust statics. The constructor is two calls (`ee_dx7sc_new`, then
+  `ee_dx7sc_start` once the C++ holds the object: the probe creates surfaces and a window through the host). The object
+  implements round 9's `ScreenHost` itself (`ScreenRef`, a raw pointer re-read per call), so `screen.rs`'s algorithms
+  run unchanged; the probe's `Capture`/`Release` call the object's own methods (they were the class's virtuals).
+  `CreateAWindow` stays C++ (the platform window calls; the probe reaches it through the host).
+- **The surface** (`EeDx7Surface`): the description (the `GetSurfaceDescription` reference and the getters point into
+  it), the attached surfaces, the transparency colour (white: `GEColor()` is 1, 1, 1 — the golden caught a first draft
+  that started black), the GX surface, the parent, the lock's memory and pitch, the lock flags. The logical size stays
+  in the `GESurface` base (the shell passes it to `ee_dx7sf_logical_size`; the host's `SurfaceMetrics` reads it for
+  another surface). The bilinear copies call `ee_ge::pixel` directly: `filter_ffi.rs` and the `ee_dx7cpp_unpack_*`
+  trampolines are gone. `screen_ffi.rs` and `surface_ffi.rs` are gone.
+- **One host for both** (`EeDx7ObjOp`, 12 operations, DX7Trampolines.cpp): the name, `new DX7Surface`, a surface's object
+  (`static_cast<DX7Surface*>(s)->mDX7`), references, a surface's size and metrics, the probe window, the platform window,
+  the window events. The shells' getters are one-line inlines in the headers.
+- **The Draw units** held only the draws' forwarders, the `ee_dx7cpp_*` reads of GE objects the Rust draws ask for and the
+  text draw's job; they moved to DX7Rasterizer.cpp unchanged (the renderer lane's interfaces are untouched).
+- **The plug-in boundary**: the T&L renderer was linked into the game and found through the PIM table as a 'rast' module.
+  `GEInitialize` now takes `DX7TnLRasterizer()` (DX7Rasterizer.cpp) and adds it when it activates and finds a screen
+  (the plug-in's `PIMIsValid`: activate, count the screens, deactivate, in that order); `RasterizerWrapper`, the module
+  walk and the plug-in's entry table are gone; PIMModule's table keeps the mixer and the random maps. The harness's
+  mangled names (`DX7Rasterizer::ShowScene`, `ActivateScreen`) are unchanged.
+- **The movie** (`EeDx7Movie`): three threads reach it (the game: render, stop, the getters; the playback thread: the play
+  loop and pl_mpeg's callbacks; the mixer's device thread: the sound pull). The original's `volatile bool`s are
+  `AtomicBool`s; the frame buffer and rectangles are used under `mFrameAccess` and the ring under `mSoundAccess` as the
+  original did (`UnsafeCell`s, never a reference across a host call). The thread's parameter, pl_mpeg's user data and the
+  mixer's context are the Rust object (the C++ `mDX7` is written after the constructor returns, when the thread may
+  already run). The playback thread copies the host and the stopped event before its dereference (the original read the
+  movie after it, a use after free when the game had already let the movie go). pl_mpeg's queries and the clock are
+  called from Rust (`MovieSys`; the decode callbacks need `plm_frame_t` and stay C++); `GEPackBGRXRow`'s row loop is Rust
+  (`pack_bgrx_row`; RTSGraphics still uses the C++ inline). The host has 32 operations (`EeDx7MovieOp`).
+- **The goldens** (scratch, `build/ge14/gsc` and `build/ge14/gmv`: `build.py orig|cur|mut`, the fakes, the drivers,
+  `mutate.py`): the base commit's units and headers (unmodified, with the base's ee_dx7/ee_ge from a `git archive`) or the
+  worktree's shells (DX7Trampolines.cpp's parts), with the real GX.cpp, over traced fakes.
+  - Screens and surfaces: every `gx_*` the objects reach (random display modes always including the probe's 800 x 600 x
+    16, caps, display mode, cooperative levels, surface creation with pixel buffers, attachments, blits, flips and locks
+    answering still-drawing, lost, busy or failed, colour keys, render scales, Direct3D and devices, texture formats), the
+    platform window, the cursor, window events, a reference counter that registers every surface (serials, a traced
+    deletion). Sequences of up to three screens, captures and releases on two windows, surfaces of every type (flip
+    chains, mip chains, Z buffers with both preference orders), attach/detach, clears, copies, bilinear copies (the target's
+    pixels hashed), flips, locks, text locks, transparency, logical sizes, mode changes, windows; each step followed by
+    every screen's and surface's state through the getters. 20,000 sequences identical (sha256 of the digests
+    bbcad3db...). A first run differed on one sequence: a bilinear copy from a zero-width mip level reads outside the
+    surface in both (the driver now skips empty surfaces). 22 of 24 mutations caught; the two that change nothing touch
+    state no getter reads (the lock flag, a destroyed surface's text lock).
+  - The movie: the thread system (sections, events, a thread the driver runs when it chooses), pl_mpeg (random sizes,
+    streams, sample rates and ends; each decode calls the video and audio callbacks and may render, pull the mixer or stop
+    a looping movie, as the game and the device thread would), the mixer, the active rasterizer's screen and target, the
+    surfaces (the frame buffer's pixels hashed), the clock, the floating-point modes. 20,000 sequences identical (sha256
+    aad4a44e...); 14 of 15 mutations caught, plus a hang ("finished never set": the play loop never ends); the one that
+    changes nothing sets the source rectangle after a failed frame buffer (nothing reads it).
+
+  | Mutation of the Rust (2,000 sequences) | Sequences that change |
+  |---|---|
+  | transparency starts black | 1,970 |
+  | back buffers released | 978 |
+  | attach takes no reference | 2,000 (crash) |
+  | detach keeps the reference | 1,737 |
+  | clear ignores the logical scale | 7 |
+  | copy uses the source metrics for the target | 12 |
+  | filter always 16-bit | 53 |
+  | filter reports the target unlock | 1,993 |
+  | allocated size skips attachments | 1,255 |
+  | lock forgets the pitch | 672 |
+  | unlock always clears | 0 (no getter reads the lock flag) |
+  | transparency key with alpha 0 | 232 |
+  | explicit logical size ignored | 106 |
+  | logical shift ignored | 179 |
+  | text unlock on destroy skipped | 0 (the surface is gone) |
+  | screen list keeps deleted screens | 2,000 |
+  | capture state not written back | 2,000 |
+  | release keeps full screen | 1,995 |
+  | set mode never records | 50 |
+  | desktop width and height swapped | 1,989 |
+  | no 32-bit probe | 2,000 |
+  | filter caps swapped | 791 |
+  | capture always windowed | 1,992 |
+  | device not released | 2,000 |
+  | movie: no reference taken / stopped not cleared / not just started / priority 1 | 2,000 each |
+  | movie: rectangle ignored | 237 |
+  | movie: source set on failure | 0 (no reader) |
+  | movie: source rows swapped | 2,000 (crash) |
+  | movie: ready never set / frame ready not signalled | 818 each |
+  | movie: 1-5-5-5 rows as 5-6-5 | 208 |
+  | movie: frame buffer not released | 1,018 |
+  | movie: copy without a reference | 462 |
+  | movie: stop does not wait | 704 |
+  | movie: events destroyed in the other order | 2,000 |
+  | movie: finished never set | hang |
+
+- **Cargo**: the three objects are generic over `Gx`/`Host` (screen, surface) and `MovieSys` (movie), their FFI in a
+  `cfg(not(test))` module: `scrobj_tests.rs` (11 tests over the recorder and a test host of boxed surfaces with reference
+  counts) and `movobj_tests.rs` (7: the constructor's order, a missing file, a whole playback, the render, the frame
+  packing per format, the sound under its section). And a cargo replay of the screen and surface driver
+  (`scrobj_replay.rs`, commit 8d950830): its sequences over the Rust objects with its fakes ported (a `Gx` that answers
+  and traces as the driver's `gx_*` under GX.cpp and `RawGx` did, the shells' host operations, the numbering reference
+  counter, the platform window); sequences 1..300 give the C++ driver's digests over the unmodified units
+  (`golden_scrobj.txt`). Two things had to change in the scratch driver first: every random draw in its own statement
+  (C++ leaves the order of function arguments and `|` operands unspecified: clang-cl's order is not a contract a port can
+  copy), and the floats printed as bits (`%g` against Rust's shortest form). The replay's first digest differed although
+  every trace line matched: the driver's FNV basis had lost its last digit (1469598103934665603); the replay uses the
+  driver's constant. The screen tests take one lock (the screen list and the capture statics are process-wide) and reset
+  the capture statics. The movie driver is not replayed (its thread system and pl_mpeg fakes are C++).
+- **Behaviour changes** (undefined paths only): the probe's mode read past the modes when no 800 x 600 x 16 mode exists
+  reads zeros (the original read past the vector); a screen's or surface's index past its vectors panics (the original
+  indexed past them); a surface's memory address and pitch, and a screen's current mode, start zero (unset in the
+  original); the playback thread no longer reads the movie after its dereference.
+- **What runs it**: EE-SIM makes no rasterizer and plays no movie; the screens, surfaces and the plug-in collapse run only in
+  the game. Under the harness lock, on the branch before the merge: the tour (`fixture_game.py --exercise tour
+  --play-seconds 60 --seed 2 --zoom-captures 50 100`) `RESULT PASS tour` (view 83.2% lit), its captures compared with the
+  pre-round exe's run of the same command: the random map setup, single player and the four settings tabs 0 differing
+  pixels, the main menu and the closed settings 209 (the animated corner), the game views equal by eye (terrain, town
+  center, units, HUD text, mini map; the pixels differ as round 13's did); the legacy debugger tour (`game_session.py
+  --exercise tour --input-check --play-seconds 120`) `STOP <windowed session complete> reached`, its menus against the
+  lead's latest legacy run: single player and the windowed frame 0 differing pixels, the main menu 486 (the corner); the
+  LAN game `RESULT PASS lan-game` (PT host 2,933, joiner 2,952). Movies are exercised by no harness run (the goldens and
+  the unit tests only): the lead should watch an intro movie once.
+- **Gates.** Each code commit: build `--sim` 0/0 (EE-AOC 1,019, 1,015, 1,015 and 1,014 inputs), the oracle on seeds 2-3
+  identical, the Rust gate PASS. The merge of `rust` (42af0588, 86 commits, round 13 among them) was automatic: no
+  conflict, the generated headers current after `rust_build.py header`, `rust_includes.py` changed nothing. On the merged
+  tree: both builds 0/0 (EE-AOC 986 inputs), the oracle identical on seeds 2-7, the Rust gate PASS (again after the replay
+  commit), the captures at seeds 2-3: effects PASS (6 digests), oracle and late FAIL on UUTL alone (`seed 2 UUTL 27224`,
+  `seed 3 UUTL 33490`/`33548`): the rust head's own EE-SIM (the lead's build of 42af0588) gives the same two oracle
+  digests, so the unit utilities' UUTL golden does not match the merged `rust` as it is, independently of this round
+  (for the lead); the tour `RESULT PASS tour` (render checks ok, 83.5% lit; the views and menus checked by eye) and the
+  random game with orders and the scroll check `RESULT PASS random-game` (gather, repair, repair queued and move done,
+  patrol and attack-ground skipped; `SCROLL CHECK PASS`, the edge scroll included this time).
+- **Left in the plug-in**: DX7Rasterizer.cpp (852 lines: the forwarders, the draws' reads of GE objects, the rasterizer's
+  host, about 300 address markers), DX7Trampolines.cpp (366: the vertex arrays' shells, the screen, surface and movie
+  shells and hosts, the layout pins) and GX.cpp (137: the GX shims the splash screen and `tools/gx_test`/`sdl_test` call).
+
+## R5b.4, thirty-third round: the transports', the flying kinds' and the gate's bodies of EEUnitClass in Rust (ee_units cls_transport.rs, cls_air.rs, cls_building.rs, cls_host.rs; branch rust-r5b4-core33, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 8ec8f28d | the UCBD record of the class bodies (TEST ONLY), golden from the unmodified C++ in the oracle, late, space, calamity and units profiles | +1120 -856, net +264 (TEST ONLY; ~600 of the lines are the bodies' re-indent inside their noting lambdas) |
+| bc0fa7ee | the scenario profile's UCBD golden (seeds 2-7, TEST ONLY) | tools only |
+| ba4c3aa8 | the transports' tile searches and the flying kinds' heights, flight plans, arrivals and trigger answers in Rust over one host | +222 -1754, net -1532 |
+| 6b0e83a3 | the buildings' facings and the gate's piece turns, tiles, level test and opening tests in Rust | +37 -303, net -266 |
+
+The round's C++: net about -1,534 (the moves -1,798, the UCBD scaffolding +264).
+
+**The record first (UCBD).** No tag pinned the family bodies, so round 33 began with a TEST ONLY record on the
+unmodified code: `EEUCNote` (ee/EEUnitClassKinds.h, the UUTL pattern) folds the outermost noted call of a thread
+(kind, inputs, outputs: units as ids, classes as unit types, floats as bits, tile lists and paths whole) into the
+physics tick's FNV-1a 64. Noted at the dispatchers (CanCarry, CanUnloadAt, FindGatheringTile, FindRendezvousTiles,
+FindUnloadTiles, FilterLoadable, FindBoardingLocation, HasRoom, GetHeightAt, HasArrived, GetSurroundingTiles,
+SelectUnitToRelease) and at the members the hosts call (CanLoad, CanUnloadNear, the flight state, the carrier and
+runway approaches and take-offs, the bomb and goal tests, the facings, the gate helpers); `EE-UCBD-COUNT` lines on
+stderr give the coverage. The notes stay at the C++ entries after the move, so the record compares the Rust bodies
+with the C++ goldens. EvaluateCondition needed no note: USST kind 2 pins every trigger's answer.
+
+**Coverage (UCBD counts, seeds 2-3).** Heights (GetHeightAt), arrivals, the flight state, the runway and carrier
+approaches and take-offs, the bomb test, the facings, the gate's turn, fit, level and opening tests: units, space,
+late (and the scenario profile for the facings and the gate tests). The transports' searches are NOT reached by
+any capture profile: FilterLoadable runs (units, scenario: 45-180 calls), CanCarry only inside it; CanUnloadAt,
+FindRendezvousTiles, FindUnloadTiles, CanLoad, CanUnloadNear, the shore and landing searches are 0 in all six
+profiles (no gate game loads a transport: the AI's transports run in the saveload matrix's island maps). They are
+covered by unit tests over a mock world (17 tests, each a C++ body worked by hand) and the saveload matrix games;
+the dock facing and the gate's part walk are not reached either.
+
+**The host.** One C++ switch (`ee_units_cls_host`, EEUnitClassTransports.cpp, 38 operations) for what the unit
+utilities' world reads (`uu_host::Game`: tiles, terrain, mesh, continents, unit records, tile lines) do not give:
+the continent manager's shore lists and adjacency, the noted leaves (`EEGetBlockingUnits`, `EEGetTilesInRadius`,
+`EEGetTilesNearPoint` keep their UUTL records, `EEGetTileLine` its CBTL), path lengths, a cargo's trial location,
+the members the bodies call (AddWaypointAt, PathToward, FlyToGoal, IsBombOnTarget, IsAwayFromGoal: their notes
+stay), the goals' targets. Lists come back through `ee_units_cls_push`; vectors cross as the unit utilities'
+`tiles_of`/`units_of`. Each family has its own small trait (`TrHost`, `AirHost`/`FlightHost`/`ConditionHost`,
+`BuildingHost`), so the tests mock only what a family asks.
+
+**What moved.**
+- Transports (cls_transport.rs): the gathering, meeting, rendezvous (base, land, helicopter, naval/space), unload
+  (fortress, naval/space search), landing and shore searches, `CanCarry`/`CanUnloadAt` of every transport kind
+  with their dispatch, `ContinentsConnect`, `CanLoad`, `CanUnloadNear`, `FilterLoadable`, the naval transport's
+  arrival. The naval and space transports' identical copies (FindUnloadTiles, CanUnloadAt) are one body each.
+- Flying kinds (cls_air.rs): the seven `GetHeightAt` bodies as one walk with three clamps; `GetNextFlightState`;
+  `ApproachRunway`/`TakeOffFromRunway` (the eight direction wrappers became `runway_direction`); the landable's
+  and the air animal's `HasArrived` and `EvaluateCondition` (None: the common unit class answers).
+- Buildings (cls_building.rs): `EEGetFacingQuarter`, the navy yard's and the dock's facings with their terrain run,
+  `EETurnGatePart`'s table, `EEGetWallGateTiles`, `EEAreTilesLevel`, `AreEnemiesNear`, `IsPasserNear`.
+- Left C++ (world calls with no decision, a move would not shrink them): the carrier approaches and take-off
+  (tag points), the bomb test, ReleaseUnit and SelectUnitToRelease (goal queues), the gate's replacement and
+  build, the boarding location, the unit-created bodies.
+
+**Behaviour.** None seen (oracle seeds 2-7 identical, every golden equal but UUTL). Two crash paths of the original
+became defined: `CanUnloadNear` with no transport for a land transport class (it read the null transport's tile;
+now the first cargo tile; no caller passes it) and `GetNavyYardFacing` with a quarter outside the side table (read
+past it; the quarter is always one of the four).
+
+**Gates.** Commit 1: the UCBD goldens recorded on its build (the other tags equal to their goldens but UUTL, stale on rust 42af0588). Commits ba4c3aa8 and 6b0e83a3: build `--sim` 0/0 each, oracle seeds 2-3 identical each; the captures at seeds 2-3 of oracle, late, space, calamity and units on the moved tree: every digest (UCBD, UUTL and the ungated tags included) equal to the unmodified build's. Merged with `rust` 3114725d (the goldens rust's with the UCBD lines; PORT_LEARNINGS and RUST_PLAN rust's; headers regenerated, nothing to narrow): build `--sim` 0/0, the test profile 0/0; oracle seeds 2-7 identical to `ref`; the captures at seeds 2-3 PASS in all six profiles (oracle 179 digests, late 180, space 181, calamity 197, scenario 24, units 195; the re-recorded UUTL now equal); the saveload matrix PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (3,735 tests, clippy, rustfmt, headers); a sim_bench game (seed 5, Small, Hard, 2 AI) to the time cap with both computers alive (populations 39 and 45); under the harness lock the tour (`--exercise tour --input-check --play-seconds 120`) `RESULT PASS tour` and the orders game (`--exercise random-game --orders`) `RESULT PASS random-game`.
+
+**For the next round.** The kinds' dispatchers (EEUnitClassKinds.cpp) now call Rust for every transport and flying
+body: the kind-to-body table can be Rust once the remaining C++ bodies (citizens, priests, shots) are. Coverage of
+the transports' searches needs a capture profile with transport landings (an islands map with the AI's naval
+invasions).
+
+## R5b.4 game messages, round 5: the last eight classes as records, the Execute bodies and the dispatch in Rust over one host (ee_netmsg records.rs, bodies.rs; branch rust-msg5, 2026-11-14)
+
+The game messages lane's fifth round: every game message type is an `EEMRecord` now, and its `Execute` body is Rust
+(the dispatch, the reads, the decisions) over one C++ host of world calls.
+
+| Commit | What | C++ (src + include/ee) |
+|---|---|---|
+| 1bec3ac5 | the last eight classes as records: a list and a blob kind, members off the wire, the wait id and response rules | +250 -561, net **-311** |
+| 782551b9 | the Execute bodies, the dispatch and the physics' two framings in Rust (bodies.rs) over EEMessage.cpp's host | +520 -1849, net **-1329** |
+| 1bb6bb05 | the capture's sweep shapes from the Rust layouts; ee/EEMessageExecute.h folded into rust/ee_netmsg.h | +46 -207, net **-161** |
+| bc3192ef | merge of `rust` (42af0588, 94 commits): EELobbyInterface.cpp deleted there, its start sender (now in EELobbyGlueHost.cpp) converted to the record; headers current | |
+
+The round: net **-1,801** (EEMessage.cpp 2,907 -> 1,407 lines, ee/EEMessage.h 280 -> 150, EEMessageCapture.cpp
+897 -> 756; ee/EEMessageExecute.h gone).
+
+- **Lists, blobs, members off the wire.** `EEMRecord::mList` holds a type's one list (records of a size: the unit
+  ids' int32, the civilization upgrades) or its blob (the box selection's compressed buffer); the slots give it to the
+  codec as `EENetMsgRecords` and the blob slot did; the import copies them from where the codec found them (no room
+  is handed to the Rust). A sender passes a `std::vector<T>` in the initializer: each element's low bytes are one
+  record (the fixture's and the icon bar's `long` ids become the wire's int32, as the old constructor's loop did).
+  A record type may have members that never travel (`RecordType::locals`, after the wire's in the record): the box
+  selection's rectangle and unit type, which the scenario editor's lasso reads back (EESEARust.cpp: `Get<int32_t>(4)`,
+  and a copy of `Get<GERectangle>(3)` it hands ee_screens). The box selection's ids are decoded where they are
+  needed (Execute, the capture, the fixture's hook) instead of at import: the same bytes, the same ids.
+- **Rules by type.** `EEMRecord::GetSendToAllAndWaitMessageID`/`Set...` and `IsResponse` read the type's rule
+  (`ee_netmsg_record_rules`): Load or Save keeps its wait id in member 6 and is answered by 0x9a whose member 1 equals
+  its tick (member 3), as `NEMRecord`'s rules (the engine lane's).
+- **The legacy harness's seed pin.** It broke at `?Execute@EEMStartLoading@@UEAAXXZ` and wrote `[this+0x14]`; the
+  start's body is `void EEStartLoading(EEMRecord* m)` (not static: build.py's HARNESS_HOOKS keeps it out of line in the
+  test profile) and the seed is member 2 at record byte 1: game_session.py writes `layout.field('EEMRecord',
+  'mRecord') + 1` (layout.py's new `field`: a class with no VC6 counterpart).
+- **The bodies (bodies.rs).** `EEMRecord::Execute` and the physics' `ExecuteSelectionMessage`/`ExecuteMessage` call
+  `ee_netmsg_execute(host, message, type, slot, selection id, record, list, framing)`. The Rust works on a copy of the
+  64-byte record and of the list (no Rust reference lives across the host's calls back into C++) and writes the record
+  back only when a body changed it (Path To's moved point, the cheat unit's class, Load Percent's cap): a C++ body
+  that writes its record (the start's seed) is never overwritten. Each world call is one host operation
+  (`EE_NETMSG_OP_*`: the sender, a player, a group's units, a unit's or a player's or the world's fact by selector,
+  a unit's/player's/world's action by selector, a lobby option, a chat line by text index, a sound by index); the
+  host is one switch in EEMessage.cpp (`EENetMsgHost`, the world's actions in `EENetMsgWorldAct`). The bodies keep
+  the original's call order and reads (a loop that re-read `GetNumUnits()` each step still does: `each_unit`'s
+  `recount`), and the conversions the C++ made: `(long)` of a float stays C++ where the C++ consumed it (Build
+  Gate's tile) and is `c_long` (the 32-bit `cvttss2si` on Windows, 64-bit on LP64) where the Rust does (Build Unit's
+  tile for the units lane); member values cross as the old member type (a u32 assigned to a `long` member converts in
+  the C++ as the assignment did).
+- **The framing.** `execute_framed`: a selection takes the fast-selection lock, marks the world as executing the
+  local selection on a client for the local sender, runs the body, copies into the local selected group when its id
+  is current, records the sender's selection id, leaves the lock, clears the sender's JIT flag; a command runs when
+  its id is the sender's last one, else undoes the sender's selection. The three decisions and the bodies' six are
+  recorded by the capture's NMDC through the host (`EE_NETMSG_OP_DECISION`: the same kinds and values).
+- **The unit orders.** The 23 orders that were one call into ee_units (`ee_units_path_to`, ...) are `Order` values
+  the host runs. A first build declared the ee_units functions in an `extern "C"` block: the game linked (one static
+  library), but `cargo test -p ee_rust` did not (the rlibs link separately, ee_netmsg's references came after ee_units'
+  objects were passed over). The orders now go through a function `ee_rust_init` registers
+  (`ee_netmsg::bodies::register_unit_orders`, `#[cfg(not(test))]`, as the combat goals' registration): ee_netmsg
+  cannot depend on ee_units, whose host imports C++. cbindgen also emitted the extern block's functions
+  (`cbindgen:ignore` on the module was needed while it existed).
+- **The loading tallies.** Load Main Screen Response's and Start Loading Response's function statics (the slots that
+  answered, the count) are Rust statics; the locks are released before each host call.
+- **What stays C++ (13 bodies, `kNetMsgBodies`).** The civilization upgrades (purchased, requested), the immediate cargo
+  unload, the improvement, the main screen (the graphics thread's pause), the load or save request, the cheat class's
+  data, the migration slot, the saved group's selection (the screens), the flare, the diplomatic stance, the start
+  (the seed pin), the formation: world and string work with nothing to decide, where a host op per call would be
+  longer than the body.
+- **The capture's sweep shapes.** The NMSW rows (type, kind, prefix, suffix) and the NMNE rows (fixed bytes,
+  strings, inputs) were hand tables of the codec layouts; they are `ee_netmsg_sweep_shape` and
+  `ee_netmsg_engine_sweep_shape` now, each tested against the old table (the unit id list's unused prefix was 9, the
+  layout's 5), with the game types' order kept as a byte list (the old classes' order) and the engine's as type order.
+- **Behaviour changes.** None in a game's simulation (the oracle, the Lua AI's traces and the captures identical at
+  every commit). The box selection's ids are decoded from a zeroed 256-byte copy of the blob (the old member buffer
+  was not cleared for a short import: only malformed payloads differ). `ExecuteMessage`'s unused `GetMessageLabel()`
+  call is gone. The disband's cash register is looked up after the loop (a lookup).
+- **What runs it.** The oracle and captures run the AI's orders, the civ timer, the replant, the statistics, the shift
+  mode, the selection framing of every AI message; the Lua AI (`--engine next`) builds its orders on the stack and
+  runs them through `Execute`. Only the LAN game runs the lobby's options and slots, the loading tallies, the chat and
+  the start on the wire; the fixture's orders and box selection exercise the UI's senders. Not reached by any gate:
+  the edicts, End Cinematic, the cheat unit, the scenario editor's lasso, the civilization builder, the collision
+  debug messages, the playback messages, host migration.
+- **Gates.** Each code commit: build `--sim` 0/0, the Rust gate PASS (commit 2's first try failed to link `cargo test -p
+  ee_rust`: the extern block above; fixed before the commit), the oracle identical on seeds 2-3, EE-SIM with the Lua AI
+  (`--engine next`) identical to the unmodified build (rust fffdedf4's EE-SIM) on seeds 2-3, the oracle capture at
+  seeds 2-3 PASS (171 digests equal to golden_cpp.txt, NMIM/NMEX/NMSW/NMDC/NMNE/NMCU among them; no re-recording).
+  The harness self test passed after the harness edits (commit 1). After the merge of `rust` (42af0588): build
+  `--sim` 0/0 and the test-profile build 0/0; the oracle identical on seeds 2-7; the captures at seeds 2-3 (oracle,
+  late, space, calamity) equal to the goldens but UUTL in each profile: a rust head 42af0588 built alone (a scratch
+  worktree) gives the same UUTL digests (oracle seed 2 78796ae3.., seed 3 6171a40b..): the UUTL goldens are stale on
+  `rust` (rust-unitutil2's 6a4dcc01 re-records them after core31's merge), not this branch's. The saveload matrix
+  `--expect` PASS (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4,
+  space 1/4, calamity 4/4, next 0/4); nettest: five of the six programs equal (msgmgr 20,000 sequences, queues 1,500, client 1,500, tune
+  20,000, server 1,500, 0 differing); ne_protocol_test does not compile on `rust` itself (it still defines
+  `TSScheduler::CreateEvent`/`DestroyEvent`, inline in TSScheduler.h since ed678d8a). The Rust gate after the merge: one ee_won lib test failed under the
+  load of the captures (684 of 685), `cargo test -p ee_won --lib` alone passed 685/685. Under the harness lock:
+  `lan_game.py` RESULT PASS lan-game (PT host 3136, joiner 3137); the Lua AI game (`--lobby 276=Boom --lobby
+  277=Boom`, Small/Hard/32x/PT 40/seed 2) RESULT PASS ai-game outcome time-cap, alive_computers [2, 3], units
+  [5, 33, 33]; the tour RESULT PASS (render checks ok, F3 input check ok); `--exercise random-game --box-select
+  --orders` RESULT PASS (box select 4 steps match; orders gather, repair, repair-queued, move; patrol and attack
+  ground skipped by the map); the legacy tour (`game_session.py --exercise tour --seed 2`) STOP <windowed session
+  complete> reached, the seed pin armed at `?EEStartLoading@@YAXPEAVEEMRecord@@@Z` [rcx+0x21] and written (old 30471,
+  new 2).
+
+## R6 WONLobby, round 8: PingLogic, AccountLogic and InitLogic as Rust objects (ee_won logics.rs; branch rust-wonlobby8, 2026-11-14)
+
+The round's list: measure first, then PingLogic, AccountLogic, InitLogic, then the logic hosts as their objects move,
+EELobbyGlueHost.cpp's sequences, RoutingLogic if it fits.
+
+### The measure
+
+WONLobby before the round: 18,049 lines of units (`src/Empire Earth/WONAPI/WONLobby`) and 8,626 of headers named
+`WONLobby*` / `EELobby*` (most of the largest, WONLobbyGUI.h's 2,868, are WONGUI's classes: the WONGUI lane's). No
+mechanical pile like round 7's resource globals is left:
+
+- the address markers (`// FUNCTION:`, `// TEMPLATE:` and their mangled-name lines: 937 + 460 + about 460 in the
+  lane's units and WON's headers) stay while a file exists (the rule of R4.3 round 13);
+- a token count over src, include, tests and rust found no unused class and a dozen unused declarations (three
+  setters of LobbyPersistentData, which the persist fix lane has open; left);
+- RoutingLogic.cpp had 80 blank lines where earlier rounds took methods out (removed); InitLogic.cpp's 26
+  `} namespace WONAPI {` splits went with its rewrite.
+
+So the lines are in the classes, and a class moved this way (an op per run of C++ calls) frees only what was
+decision: PingLogic, AccountLogic and InitLogic, the round's item 1, freed 476 lines together. LanLogicHost.cpp and
+LobbyLogicHost.cpp are already only the C++ halves of round 20's ops; EELobbyGlueHost.cpp's window and network
+sequences (EELobbyOpen, Show, Hide, HostGame, JoinGame, StartHostedGame, Close) are the game's calls on its window,
+platform layer, network engine and UI, with no decision between them to move; RoutingLogic (2,107 lines, 91 methods,
+Internet only) is a round of its own. The round stops short of 1,500 lines for that reason.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 5357db6b | PingLogic with PingGameOp, AccountLogic and InitLogic as Rust objects (`logics.rs`) | -476 (61,025 -> 60,549) |
+| 8d82ec27 | RoutingLogic.cpp: the 80 blank lines left by earlier moves | -80 (60,549 -> 60,469) |
+
+Round total: WON C++ 61,025 -> 60,469 (-556) before the merge of rust; no unit deleted (the three keep their shells,
+original addresses and hosts), none added.
+
+### The three logics
+
+- **One object type, three kinds** (`EeWonLogic`, `ee_won_logic_new(kind, shell, host)`): each kind's members (the
+  ping queue and next request id; the last user name and the terms-of-use prompt; the start-up errors and the ignored
+  ones) and one call enum (`EeWonLogicCall`). One op enum (`EeWonLogicOp`, 120 ops) and one host signature; each
+  unit has its own host (`PingLogicHost`, `AccountHost`, `InitHost`) answering its kind's ops.
+- **The shells** keep what the ops reach: LobbyLogic's tracker and completions (`LogicCompletion<T>` needs the
+  member functions: the completions are one-line forwarders in the headers), the dialogs' `SmartPtr`s, InitLogic's
+  HTTP session, firewall socket, accept op and address and the advert's link (`std::string`), PingGameOp's game.
+  The controls' ids map to 1..3 in the shell (as LanLogic's do); events pass their type.
+- **PingGameOp** stays a `UDPManagerSendRecvOp` (the tracker's `dynamic_cast` in KillPings finds it) over an
+  `EeWonPingOp` record: the request id, the ping, the flags, the retries, the reply's bytes. `CheckResponse` reads the
+  C++ `ReadBuffer`'s Rust state (`EeWonReadBuffer`) in place; a read past the end returns `EE_WON_LOGIC_THREW` and
+  the shell throws `ReadBufferException` as the original did. The reply's summary and details are read by the game's
+  `LobbyGame::ReadSummary` over a `ReadBuffer` made from the Rust reader's state and written back (one position
+  across both reads, as the original's one buffer).
+- **The original's request id rule**: `ReadShort` (signed) was compared with the unsigned member, so a reply never
+  matches a request id from 0x8000 (after 32,768 pings in a session). Kept, with a unit test.
+- **Account names** cross as `wchar_t`s widened per platform (`wide_compare_no_case`'s rule, the C++
+  `WStringCompareNoCase`'s); the '@' strip is an op on the event and the name is read again.
+- **Texts**: InitLogic's descriptions are `GUIString`s the ops make and free (`TextNew`, `TextAppendRes`,
+  `TextStatus` ...), named by `EeWonLobbyRes` rows (round 7's slots), so the missing-servers list is built by Rust's
+  decisions; the init status event takes a title row and a text or a row.
+
+### Goldens, mutations, replays
+
+| Golden | Sequences | Trace lines | Replayed by cargo | First run |
+|---|---|---|---|---|
+| `won_logics_test` (new; the three logics and the ping op over the original statements) | 60,000 | 3,087,506 | `golden_logics.txt` (68 sequences) | identical |
+
+The test copies the three units' statements from the C++ before the port with every call on a C++ object replaced
+by its op; one scripted host answers both sides. A tracked op's completion re-enters PingGameDone a quarter of the
+time and a tracker kill half of the time; references are counted per object and compared at a sequence's end.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| ping: the reply's id compared unsigned | first missed (the logic's ids count from 0); the generator now also makes ping ops of any id: 27 |
+| ping: two retries, not three | 28 |
+| ping: a connection speed of 0 queues too | 1,799 |
+| ping: the answer's flags `& 1` | 38 |
+| account: the last user name compared with case | 34 |
+| account: '@' not stripped | 1,461 |
+| init: the comma before every missing list | 2,303 |
+| init: a retry clears the server lists | 13,126 |
+| init: a connection from the firewall server means behind it | 1,217 |
+
+Unit tests: logics 3 (the reply's type and id, the id rule, the replay).
+
+### Gates
+
+| Gate | 5357db6b + 8d82ec27 (built together) | final tree (merged with rust c9b6d980) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (991/992 inputs) | 0 / 0 (943/944 inputs) |
+| Rust gate | tests PASS; clippy's `collapsible_match` (two match guards) and rustfmt fixed before the commit | PASS (3,676 tests) on the rerun; the first run stopped at `ee_input` (STATUS_HEAP_CORRUPTION, a crate from the merge, not this lane's), which passed three runs alone and in the rerun |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| lobby wontest | won_logics_test exit 0 | 19 programs exit 0: logics, flow, eexfer, statusstr, eeglue, eecolor, eedlg, lobbyctl, eegame, lobbydlg, dlglogic, lobbyscr, credits, lobbypopup, lanobj, stagingobj, lanlogic, chat, persist (no longer hangs after rust-persistfix) |
+| `--test-profile windowed-software` | | 0 unresolved, 0 duplicates |
+| `tools/harness/lan_game.py` (harness lock) | | RESULT PASS lan-game (PT host 2845, joiner 2835) |
+
+The merge of rust (17 commits) conflicted only in PORT_LEARNINGS.md (both sides appended sections: kept both).
+`rust_build.py header` was current; `rust_includes.py` changed nothing.
+
+### Behaviour changes
+
+- None on defined paths. Consecutive appends to the ping answer's buffer are one append (the same bytes); a reply
+  buffer's `SmartPtr` locals are given back at an op's end rather than the method's (no destruction is visible:
+  the tracker or the status box holds the op). The DNS completion's remember-host address lives inside its op.
+- A `LobbyGame::ReadSummary` or `ReadDetails` that threw would have unwound through the Rust frame: neither throws
+  (both catch `ReadBufferException` themselves).
+
+### What only a person reaches
+
+PingLogic runs in every LAN game list (the LAN screen pings each game it lists; the host answers): `lan_game.py`
+reaches it. AccountLogic and InitLogic are the Internet lobby's (login, accounts, the start-up checks against WON's
+servers, which are gone): no gate reaches them; the golden is their only check.
+
+### What is left
+
+LanLogicHost.cpp (666) and LobbyLogicHost.cpp (359), as their ops' objects move; RoutingLogic.cpp (2,107) as a round
+of its own; EELobbyGlueHost.cpp's game-side sequences stay the game's.
+
+## R4.4, twenty-third round: the weather storms, the 3D particle, the particle emitter and the marching line whole in Rust on EEE3DRust; the raster table's texture load and screen line (ee_gfx effect_weather.rs, effect_particles.rs; branch rust-gfx29, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 12,076 lines at the round's start; 11,483 after the
+storms (-593); 10,697 after the particle, the emitter and the marching line (-786). Deleted: `EEE3DStorm`,
+`EEE3DRain`, `EEE3DSnow`, `EEE3DParticle`, `EEE3DParticleEmitter`, `EEE3DMarchingLine` (`.cpp` and `.h`). The round's
+C++ diff over `src` and `include/ee`: +530 -2,152 (net -1,622).
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| 866b099b | the rain and the snow on `EEE3DRust`; the table's `load_texture` | -593 |
+| fe7102ea | the 3D particle, the emitter and the marching line on `EEE3DRust`; the table's `screen_line` | -786 |
+| d6d133b1 | merge of `rust` (42af0588) | |
+
+- **The storms** (`effect_weather.rs`). Their tiles, drops, move, set-up, step and files were already
+  `effect_storm.rs`'s; the class is now Rust too: the tiles constructor's centre (and the rain's first thunder), the
+  settings (`Virtual64`: the graphic effect's params 1-3 and duration, the rain's sound ids from its int params), the
+  drop and flake models built on the first set-up through the table, the queue's copy of the drops, both draws, the
+  files. The rain's sounds stay C++ (`rain_media`, `rain_sounds`: the loop at the start or after a load, the thunder
+  the Rust timer picked, both levels from the camera's distance); the storm map host is the old `EEStormHostOps`,
+  nested in `EeGfxEffect3DHost` as `storm`. `EEEMStorm` keeps calling `Move`, `GetBounds`, `GetCenterPoint` and
+  `GetTileCount`, now `EEE3DRust`'s, and writes the record's `storm` fields (one-line switches in its file).
+  - **Trap (threads):** the drops a step moves live in the record's lists, which `on_storm` takes out of the record
+    for the call; the draw pass runs outside the world's lock, concurrently with the step. The frame's copy
+    (`mDraws`) therefore is its own record-owned box (`storm.draws`), written by the queue (under the lock) and read
+    by the draw, never inside the lists.
+- **The table's texture load** (`load_texture`, `EeGfxTextureLoad`): a `GETextureDescription` and the seven stage
+  settings, with an optional `Reference`. The effects' common load is `EeGfxTextureLoad::effect(addressing)`. The
+  render objects' media (units, terrain) can use it next.
+- **The 3D particle** (`effect_particles.rs`). Set-up, move, tick and files were already Rust; the constructors (at a
+  point, along a line: the C++ puts the start in `aged.location` and the direction in the velocity), the queue's move,
+  the pass-6 draw (growing and fading, or additive lit by the fog factor), the step's placing and the load's position
+  and duration (the new host answer `effect_duration`; Load gets no facts) moved. The `UMemoryPool` is gone: each
+  particle is a `new EEE3DRust` (`Empire Earth.cpp`'s `SetPoolSize`/`ReleasePool` lines removed). `EEE3DRust`
+  overrides `ReleaseResources` (the particle's graphic object unloaded there, as the original).
+- **The emitter.** Its step is Rust over one host answer, `emitter_unit` (the unit's death and hit points and, when it
+  follows a complex unit's tag point, that point, the scaled location and the turret part's result: the original's
+  code moved verbatim); its own move, end conditions, sound (`emitter_sound`: `PlayAnimationSound`) and bursts
+  (`emitter_line`). The unit constructor's placing is the host's `emitter_place`; the manager sets the tag point.
+  `mIsFirstStep` became the record's `stepped`.
+- **The marching line.** The record's `march` (its ends, the draw ends, `mCC`, the time); its queue (the base effect's
+  `EEEffect::Queue`, not the 3D one's: `effect_queue`), draw (the new table entry `screen_line`: a `GELine` between two
+  screen points with its opacity per vertex), step and files are Rust; its end units (saved as ids, resolved by
+  `RepairPointers`, never set in a game), effect regions (`AddRegions`, `RemoveRegions`, the `MoveTo` overrides),
+  `SetFrom`/`SetTo` and `ReplaceUnit` stay C++ on `EEE3DRust`. `EEGraphicalGoalManager` casts to `EEE3DRust`.
+- **Golden drivers** (`build/gx29/drv`): `make_r23s.py` (storms) and `make_r23p.py` (particles), each `COMMIT|WORKTREE
+  OUT`: the original classes of 1cdeaaa9 against `EEE3DRust`'s pieces cut from the worktree, over a stub world (models
+  with real arrays, texture loads, sounds, draws, lines, files). Storms: 400 on seed 1 (7,120 lines) and 1,500 on seed
+  2 (27,081 lines), identical. Particles: 400 on seed 1 (3,632 lines) and 3,000 on seed 2 (26,460 lines: 983
+  particles, 1,047 emitters, 970 marching lines), identical. The emitter on a complex unit is the effects capture's.
+  - **Trap (driver):** print every model only from the current effect on (the storm driver's first form dumped every
+    model ever made on every line: 2.3 GB at 2,000 storms).
+  - **Trap (driver):** the original particle and marching line crash when drawn or set up without their graphic
+    object (released, or a graphic effect without one): the game never does it; the driver ends an effect after its
+    `ReleaseResources` and always sets particles up.
+  - **Trap (driver):** the original marching line's point and load constructors leave `mCC`, `mTime` and
+    `mGraphicObject` unset until `SetUp`; the driver zeroes them, as the record does (and pointers printed with `%p`
+    differ between the two executables: print an identity instead).
+- **Behaviour changes:** an unset-up marching line saves 0 for `mCC` and its time (the original saved whatever the
+  memory held) and its destructor unloads no stray graphic object; the queue's copy of the camera position (read by
+  nothing) is gone; particles have no pool limit (the pool held 5,120). None reaches a gate game.
+- **Gates.** per commit, `build.py --sim` 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS (18 digests), the calamity capture at seeds 2-3 PASS after the storms (189 digests), the Rust gate's tests PASS (3,491 and 3,499) with clippy and rustfmt clean after a format and a test fix. The merge of `rust` 42af0588 (d6d133b1) conflicted in PORT_LEARNINGS.md (both sides' sections kept) and `link/exe/units.txt` (both sides' removals kept); `rust_build.py header` and `rust_includes.py` changed nothing. On the result: both builds 0/0 (`--sim` and the test profile), the Rust gate: clippy, rustfmt and header PASS, 3,661 tests pass and one fails under load, `ee_fs`'s `golden_spec_replays` (a real directory's rmdir; it passes alone), the sim oracle identical on seeds 2-7, the effects capture at seeds 2-7 PASS (18 digests), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), the tour `RESULT PASS tour` and the orders game `RESULT PASS random-game`. The oracle, late and calamity captures at seeds 2-3 FAIL on the UUTL records only (the unit utilities lane's new record: same record counts, other digests, e.g. oracle seed 2 UUTL 27224 78796ae363b3a766 against the golden's 90e7a9a49f5c3243); `rust` 42af0588 built alone gives the same digest at seed 2, so it is `rust`'s, not this round's (every other record of those profiles equals its golden).
+- **The frames.** `build/gx29/frames.sh` (the tour with `--seed 7 --zoom-captures 100 40 20`, the pre-round test exe of round 22's merge against this round's merged one): both `RESULT PASS tour`, no GX errors in either; the menus and settings tabs equal but for 219 pixels of the main menu (the version text); at each zoom and in the gameplay frame the same scene (the start's town centre and citizens), about two thirds of the pixels differ, nine in ten of those by under 16 levels (the time of day's light and the clouds at another moment: compared by eye at zoom 40) and the large differences where citizens stood in other poses and the goal icon's frame. No storm, particle or marching line was in view.
+- **Only a tour or a person reaches:** the rain's and the snow's drops (a storm in view: weather events, the calamity
+  games, rarely in the tour), the rain's sounds, the particles' draws (the emitters' smoke and sparks), the marching
+  line (a waypoint line: a person's queued orders and the scenario goals).
+- **Not moved:** the render objects' passes (`EEROUnits`, `EEROTerrain`: their media can use `load_texture` now), the
+  capture's world walks (`EERenderObject.cpp`), the decal placement helpers.
+
+## R6: UIBitmap, UIMovie, UIEvent, UIEntityGroup and the file lists whole in Rust (ee_ui mediaobj.rs, eventobj.rs, groupobj.rs, filelistobj.rs; branch rust-r6-ui21, 2026-11-14)
+
+Round 21 of the toolkit lane, aimed at 1,500 net C++ lines with whole classes from the round's list.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 1799fe4e | `UIBitmap` and `UIMovie` whole in Rust (`mediaobj.rs`); `UIMovie.cpp` gone | -83 |
+| 8c0caf7a | `UIEvent` and `UIEntityGroup` whole in Rust (`eventobj.rs`, `groupobj.rs`); `UIEvent.cpp`, `UIEntityGroup.cpp` gone | -177 |
+| 682e92d0 | `UIFileListBox` and `UIFileComboBox` whole in Rust (`filelistobj.rs`); `UIFileComboBox.cpp` gone | -151 |
+| 9a5d776d | `UIFileListBox.h` includes `rust/ee_ui.h` itself (`rust_includes.py` after the merge) | +1 |
+| (docs) | progress file, this section | (docs) |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 11,101 -> 10,690. Net C++ for the round is -411, well short of the 1,500 asked: the classes on the list were small (their logic was already Rust since rounds 7-9; what went was their C++ shells, units and the SYNTHETIC address lists), and the two larger ones left (`UIIMECandidate`, `UILBString`) were not started (see What is left).
+
+- **UIBitmap and UIMovie** (`mediaobj.rs`). The members are `EeUiBitmapFields` (the location, the bitmap, its copy) and
+  `EeUiMovieFields` (the movie), the classes' private bases; the host is passed with each call (the record keeps it
+  after `Init`), so no C++ constructor reaches a Rust allocation. The bitmap's calls out are the shared
+  `UIObjHost::Base`/`Media` ops; the movie's are `EeUiOp` 610..614 (`MoviePlaying` pure). Both classes' forwarders and
+  the one host struct (`UIMediaHost`) live in `UIBitmap.cpp`; copies are deleted (`= delete`): no caller copied them.
+- **UIEvent** (`eventobj.rs`). The count is `EeUiEventFields`, the private base, so the inline constructor and
+  `GetIsInitialized` (read by game events) stay in place. `UIEvent::HostOp` (a private static member, in
+  `UIManager.cpp` beside `LoadDatabase`, its caller) answers the virtuals on the record (630, 631), the events file
+  (the background table's file ops 597..600, the same answers) and the owners (632 the control table or form by id,
+  633 the owner's `AddEvent`). The database file's `ee_uicpp_file_*` moved to `UIHotKey.cpp` (the hot keys' reader
+  still calls them directly).
+- **UIEntityGroup** (`groupobj.rs`). A Rust object (`Vec` of entities, the disable count) held by pointer; the inline
+  constructor makes it with `UIEntityGroup::HostOp` (a private static, in `UIForm.cpp`, the friend that adds and
+  removes entities). The ops are on an entity (640..649; the five questions pure); an index past the end answers
+  NULL (the original read past the vector).
+- **The file lists** (`filelistobj.rs`). One object for both classes (`full_names` the combo box's); the host is a
+  template over the class (`UIFileListHost::Op<T>`), the list box's own `InsertLine`/`GetData` or the combo box's
+  list's. The directory search's two `FSFileSpec` locals are a C++ pair the Rust makes and frees around the loop
+  (`FlSearchNew`/`FlSearchDelete`, in the locals' order); names and lines come back by length then copy into a Rust
+  buffer (`mem` lines in the trace, the buffer address traced as 0); lines and file names go out as NUL-terminated
+  bytes traced as their FNV-1a hash (`replay.rs`). `FlDeleteFile` folds the lookup, the delete and the file's
+  `delete` into one op (found in `f[0]`): the original deleted the line before deleting the `FSFileSpec`, an order
+  nothing observes.
+- **Behaviour.** None changed on a defined path. A file name shorter than its four-byte extension matched nothing
+  in practice but was compared from before the name (`strlen - 4` wrapped); the Rust matches no extension. The
+  directory count is asked on every loop turn, as the original did.
+- **The goldens** (`build/ui21/*_driver.cpp` over round 20's `world.h`, the pure ops now a per-driver list). The
+  bitmap and file-list drivers' `orig` transcribe the units at a2454c26 over the world's ops; the event and group
+  drivers' `orig` call the base library's round-7/8 loops (`lib_orig.lib`) with the units' C++ callbacks in the
+  driver. 20,000 sequences (seed 7) and 2,000 (seed 1) each, orig = cur:
+
+  | Golden | seed 7 lines (sha256) | Mutations caught | Replayed by cargo |
+  |---|---|---|---|
+  | bitmap and movie (`bm_driver.cpp`) | 2,465,333 (78f151d3...) | 9 of 9 | 40 sequences, 5,608 lines |
+  | events (`ev_driver.cpp`) | 3,951,201 (379b63b5...) | 6 of 6 | 30 sequences, 6,266 lines |
+  | entity group (`grp_driver.cpp`) | 3,796,324 (e609f7bc...) | 7 of 7 | 30 sequences, 5,798 lines |
+  | file lists (`fl_driver.cpp`) | 1,487,562 (99fdc499...) | 9 of 10 | 40 sequences, 2,975 lines |
+
+  Mutations (sequences failing of 2,000): bitmap `Init` unreferenced 932; `Release` keeps the copy 1,185; the copied
+  location from the bottom 1,825; the old copy not released 1,073; `DrawPolygons` the base's result 999; `SetBitmap`
+  not dirty 1,131; the movie dirty when stopped 692; no stop 704; `DrawTextA` the base's result 671. Events:
+  `Initialize`'s virtual swapped 52; the count's bits from `f[1]` 2,000; the owner's kind always 0 1,568; id and
+  type swapped 1,853; no close 1,924; no manager 1,568. Group: `Disable` leaves the count 1,190; `Enable` sets 1 759;
+  `Remove` the last match 50; the hot key enabled on disable 1,381; shown not asked 861; removing a stranger OK
+  1,557; the wrong entity by index 1,126. File lists: the combo box without extensions 307; always appended 238; no
+  rewind 705; directories skipped 515; the extension at the start 298; deleting on after a delete 165; a found file's
+  failed delete taken as done 255; the path unreferenced 1,244; the release forgets the path 1,088; the tenth ("a
+  file not found counts as found") is equivalent: a failed lookup's result is not OK, so the line is kept either way.
+- **Lessons.**
+  - Splitting a batch into one commit per concern after the fact: snapshot the final tree, write each commit's
+    shared files (the op enum, `lib.rs`, the units list) by removing the later blocks, regenerate the header per
+    stage, commit by path; the last stage is the snapshot, so the built and gated tree is the branch head.
+  - A golden world that answers a count from persistent state (the event's count across sequences) reaches the
+    count's zero rarely (154 `InitializeEvent` calls in 20,000 sequences); the mutation that swaps that virtual still
+    failed 52 sequences, but a world that resets per sequence would cover it better.
+  - The editor gate failed once on the final tree (`view ... hidden` after step 80's check box, read before the UI
+    thread applied it) and passed on the rerun with the same exe: a timing race of the gate under load, not this
+    round's change.
+- **What runs it.** EE-SIM makes no form (the oracle unchanged); the editor gate makes the editor's forms, its
+  control and form events (`LoadDatabase`), its entity groups and its file combo box. **Only the tour shows** the
+  bitmap controls drawn, a movie control (the intro/briefing screens), the groups hiding buttons on screen and the
+  file lists filled from disk (load/save and the civilization builder's list).
+- **Gates.** Commit 1: `build.py -j 3 --sim` 0/0, the oracle seeds 2-3 identical, the editor gate PASS (11,673
+  lines), `ee_ui`'s tests and clippy. Commits 2 and 3 were written together and split afterwards (see Lessons): the
+  build, oracle and editor gate ran on commit 3's tree (= the snapshot; the editor gate's one timing failure above),
+  commit 2's tree was not linked on its own. On the result merged with `rust` (ad71341c; one conflict, PORT_LEARNINGS.md's end, both sides kept; `rust_build.py header` current; `rust_includes.py` added `rust/ee_ui.h` to `UIFileListBox.h`, 9a5d776d): build `--sim` 0/0, the oracle seeds 2-7 identical, the editor gate PASS (12,723 lines), the Rust gate PASS, the test-profile build 0/0. Harness (the lock taken per script): the fixture tour `RESULT PASS tour` (no GX errors), the orders game `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver) and `RESULT PASS random-game`, the legacy tour (`game_session.py --exercise tour --input-check --play-seconds 120`) `STOP <windowed session complete> reached`, `INPUT CHECK F3 paused False -> True -> False: ok`, physics ticks 135 -> 457. EE-SIM makes no form, so the sim_capture profiles were not run.
+- **What is left.** `UIIMECandidate` (its strings come from the window procedure's multibyte candidate list through
+  `UWideString::CopyString`'s character count; the walk wants its own golden; about 150 lines); `UILBString` (its two
+  texts, `DrawTextA`, `UpdateTranslatedKey`; about 60 lines; `UILBString.cpp` stays for `UIObjHost::List`);
+  `UIListBox<T>`'s lines; the whole objects' base ops from the record (every golden re-recorded); the game's eight
+  direct `UIControl` subclasses and `UIGraph`/`UILineGraph` (screens lane).
+
+## R6: the game screens, thirtieth round: the main game form's mouse modes and the wall and gate placements' mouse in Rust over the form's own host; the lane's include trim (ee_screens mouse_modes.rs; branch rust-screens30, 2026-11-14)
+
+The editor lane's round 4 showed that one host addressing many classes' parts beats a host per class. The HUD's
+biggest remaining C++ logic was not a control but the main game form's mouse modes: 21 free functions
+(`EEModeNormal` .. `EEModeConvert`, 650 lines in `EEUIFMGStatusButton.cpp`'s range) plus the wall's and gate's
+`Update` (125 lines), all calls on the form and the world. They moved onto the main game form's existing host
+(`ee_screenscpp_main_form`, round 28) instead of a new one: 32 ops added (`EE_SCREENS_MF_OP_MD_*`, one function
+`EEMouseModeOp` the host's `default:` calls) and 8 existing ones reused (two fields, the picked unit's release, the
+ghost lock and clear, the gate wall test, the calamity's cast, the selection count, the wall preview).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| dfeb0403 | the mouse modes and the placements' mouse in Rust (`mouse_modes.rs`, the host's 32 ops) | +295 -867, net -572 |
+| 45a97b37, 7a1cc55e | the UI fixture's `chat` command, the tour's chat check (TEST ONLY; the second commit fixes a quote and the capture's summary entry) | +6 -1 |
+| 093d773b (merge 4a332ed3) | fifteen more units' dead project includes (system headers kept) | -526 |
+| 0b7019a8 | the wall, gate and status button units' includes the modes no longer need | -87 |
+| 7935e67e (merge dbc8aab6) | a second pass after the units' own headers (main game form, UI manager, user interface, main group, generic background, civ powers) | -96 |
+| 0e7f4473 | the merge of `rust` (the modes' message records) | |
+
+Against `rust` (42af0588) the branch is +302 -1576, net -1,274 C++ (src and include/ee); short of the 1,500 asked
+(see Left).
+
+- **The pattern.** `EEUIFMainGame::mMouseTests[22]` (function pointers) became `mMouseModes[22]`, each an
+  `EE_SCREENS_MF_MODE_*` (main_form.rs' table order, so `Construct`'s ops are unchanged); `UpdateMouse` (moved next
+  to the host) calls `ee_screens_main_form_mouse(call, mode, x, y)`. The host's call record gained the first
+  selected unit, the pointed tile and the running placement (`mFirst`, `mTile`, `mWall`, `mGate`); the picked unit
+  was there (`mPicked`). The wall and gate placements keep their virtual `Update`: the scenario editor's subclasses
+  (`EESEUIBuildWall`, `EESEUIBuildGate`) override `Build` and `Cancel` and its unit tab calls `Update` (the first
+  build stopped on it after the slot had been dropped). The wall and gate modes ask the form's placement to update
+  (`EE_SCREENS_MF_OP_MD_PLACEMENT`), and `Update` (defined next to the host) comes back into Rust over a call of its
+  own, with the placement held and its members from `mState` / `mUnitClass` on as a record by address
+  (`EeScreensBuildWallFields`, `EeScreensBuildGateFields`, `static_assert`ed offsets): the classes keep their members
+  for the editor (`EESEUnit`, `EESimEditor` read `mStart`, `mTileX`, `mDirection`...); `Build`, `Cancel`,
+  `Initialize`, `Terminate` and the gate's `ClearGhostUnits` stay C++ and are reached virtually through the held
+  placement. The golden logs each Rust entry (a mode, a wall or a gate update) as a block of its own.
+  The two shift flags (0x5652f0/f1) are Rust thread-locals (the UI thread's). The mouse buttons are one read (6
+  bits): `JustPressed`/`JustUnpressed`/`GetValue` are pure reads of the input entity.
+- **The golden** (`build/sc30/drv`): the 21 modes and the two `Update`s cut from 3dbed1c5 (no namespace: the fake
+  classes take the original member definitions as they are) against the new host function and the Rust, over one
+  fake world whose every answer is a pure function of the call's rolled state (so the two sides may read as often as
+  they like): units with and without complex units, players and enemies, the selection, three ghosts, the gate's wall
+  test, the range edge exactly hit a quarter of the time, the mouse near the last press. Each case 1-30 calls of a
+  random mode (0-22); every effect traced (picks and releases, messages with their typed fields, events, previews,
+  builds, the UI state, the camera, the unit hack, the starts), the pointer, the cursor lock, the current group, the
+  build's queue flag and both records digested after each call. Seeds 2, 3, 4, 7 x 10,000 cases (620,000 calls):
+  0 differences. Host mutations: 29 of 33 caught (the four survivors equivalent: the 3D point's and the tile's initial values, the convert loop's in-range input, the first unit's non-null bit). `golden_mouse_modes.txt` (100 cases, 1,705 calls, 1.1 MB) is the new
+  side's op log, replayed by `mouse_modes::tests::replays_the_golden`; 26 of 31 Rust mutations fail it; of the five it missed, four fail the driver (rebuilt over the mutated library: the fighter rally's damage column once the fake's damage factor read the column whole, the convert's queued shift, the wall preview's y test, the gate's same-tile test) and one is equivalent (the wall's next start is its end, just set to the same centre).
+- **Lessons.** (1) A driver's per-case state must restart per case on both sides: a `static` "last mouse" carried
+  from the other side's previous case gave false differences. (2) After a mutation run, rebuild the clean driver
+  before trusting its numbers: the mutation script restores the source, not the exe. (3) Equivalent mutations here:
+  the 3D point's and the tile's initial values (the real `EEPointUnitOrTile[XY]` always write them), the convert
+  loop's in-range input (it is always false when asked), the first unit's non-null bit (`EEGetFirstSelectedUnit` never
+  answers true with NULL), `Cancel()` for the form's `SetUIState(0)` (the form is the main game form).
+- **Behaviour.** None intended.
+- **What runs it.** Every frame in the game: the normal mode's box selection and right-drag starts (the orders
+  game's box selection and orders), the camera mode. The others only when a person picks a command button: the
+  airport and rally targets, attack ground, building placement (the build mode), flares, garrison, unload, heal,
+  convert, calamities, walls and gates. EE-SIM builds no form: the oracle and the editor gate are unchanged by
+  construction. **Only a person reaches**: every mode but the normal one (no gate places a building through the
+  mouse, rallies, garrisons, unloads, heals, converts, casts or drags a wall).
+- **The chat line in the tour.** The fixture has a `chat` command (`AddChatLogEntry` of a test line, as a game message
+  adds one) and the tour sends it after its play (`chat_check`, a `chat` capture): the chat line's Rust
+  (`chat_line.rs`, round 29) now runs in every tour.
+- **The include trim.** `mininc.py` (now bytes-preserving: the units mix CRLF and LF lines) over the lane's
+  units the round-29 trim had left (EEScreens, the UI manager, the user interface, the error form, the file combo box,
+  the line graph, the generic background, the scenario intro, the campaign form manager and editor model, the civ
+  builder's five units): 526 lines; then the wall, gate and status button units once the modes left (87); then a
+  second pass that also tries the includes after a unit's own header (96). Only quoted includes are dropped: the
+  first pass's system headers (`<algorithm>`, `<string>`, `<set>`...) were put back, as libc++ and libstdc++ include
+  less transitively than MSVC's STL. The POSIX build was not run.
+- **The merge of `rust`.** Its game messages round 4 had turned the modes' message classes into `EEMRecord` records
+  in the very functions this round deleted; the host sends the same records (the rally goal's wire order: point,
+  target, unit, queued) and the golden was rerun against `rust`'s modes (0 differences).
+- **Gates.** Per commit: the mouse modes' commit built `--sim` 0/0 (EE-AOC, EE-SIM), the oracle identical on seeds 2-3,
+  the editor gate PASS (6,823 lines), clippy, rustfmt and the header check clean (the Rust gate's tests stopped once on
+  `ee_gfx` `effect_storm`'s shared random seed under parallel tests: it passes alone); the trims built with it
+  (`--sim` 0/0 after 0b7019a8). On the result merged with `rust` (dbc8aab6, then the harness fix 7a1cc55e): the build
+  `--sim` 0/0, the test profile 0/0, the oracle identical on seeds 2-7, the editor gate PASS (12,723 lines: rust's
+  rounds), the Rust gate PASS (3,633 tests). Harness (the lock, the merged test profile): `--exercise tour
+  --play-seconds 60` `RESULT PASS tour` with the chat line on screen (`chat` capture: "> TEST chat line ..." at the
+  top left), `gx_errors` {}; `--exercise random-game --play-seconds 60 --orders --box-select` `BOX SELECT PASS` (4
+  steps, the add grew the group), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground
+  skipped), `RESULT PASS random-game`, `gx_errors` {}; `tools/harness/lan_game.py` `RESULT PASS lan-game`;
+  `--exercise random-game --play-seconds 30 --scroll-check --zoom-captures 50 100 200`: two runs FAILED (`SCROLL
+  CHECK FAIL edge`: each edge moved the camera one tick, 0.04, and stopped), the third PASSED (left edge 15.9). The
+  one-tick stall is not this round's: the lead's `rust` test exe (19:30) stalled the same way on its left edge (its
+  right edge then moved 10.5), and so did this branch's first commit alone (left stalled, right 24.2); a fresh build of
+  `rust` at 42af0588 passed (left 30.2). The edge scroll's first `EEAScroll::Update` posts one step; the stall means
+  the next updates no longer see the pointer at the edge or are not called (not found; the check passes when either
+  edge moves 0.5). The include trims were checked by code, not only by compiling: each trimmed unit compiled to
+  assembly before and after gives the same code and data (`build/sc30/asmdiff.py`; 19 of 20 units, the civilization
+  files unit's inline assembly does not round-trip through `/FA`). No simulation code changed: no capture profile ran.
+- **Left.** The `UIButton` counterpart of `EEUIRustControl` for the HUD's button subclasses was not built: measured
+  by hand, `EEUIBColor`, `EEUIBSavedGroup` and the status button's own members net about -150 (their lines are
+  calls on C++ objects: bitmaps, textures, sounds, messages), and `EEUIFMGStatusBar` derives from `EEUIBUpgrade`, so
+  it needs a template base. Bigger and cheaper: the status button's host (`ee_screenscpp_status_button`, 230 lines)
+  can ride the main form's host as the modes now do (its sends, the cursor, the UI state, the panels). The portrait
+  and icon bar onto `EEUIRustControl` (~-45, their replay goldens renumbered); the keyboard tests
+  (`EEModeKeyboardCinematic`); the last events (~1.7k).

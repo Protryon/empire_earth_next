@@ -2,7 +2,8 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x10078c81..0x1007ba37: the U2D key init chains, the implicit copy members and ??_E of UIStretchedTiledBackground
-// and UITBTiledBackground (UIManager.cpp is their first includer), the ctor, the dtor and the out-of-line members in
+// and UITBTiledBackground (UIManager.cpp was their first includer; both are UITiledBackground's tilings now), the
+// ctor, the dtor and the out-of-line members in
 // the original's order, then the vector/deque COMDATs. UIMovie.cpp starts at 0x1007ba37.
 #define LLE_UIMANAGER_CPP   // UIManager::sMouseWheel/sMouseLeftHanded are visible here (see UIManager.h)
 #include <windows.h>
@@ -46,15 +47,18 @@
 #include "lle/UIBFull.h"
 #include "lle/UIBitmapBackground.h"
 #include "lle/UITiledBackground.h"
-#include "lle/UILRTiledBackground.h"
-#include "lle/UITBTiledBackground.h"
-#include "lle/UIStretchedTiledBackground.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
 #include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
+
+// the UI database file's calls (UIHotKey.cpp)
+extern "C" void ee_uicpp_file_open(void* inFile);
+extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount);
+extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength);
+extern "C" void ee_uicpp_file_close(void* inFile);
 
 ISEntity* UIManager::sLMouseButton;
 ISEntity* UIManager::sRMouseButton;
@@ -391,68 +395,8 @@ long UIManager::CloseIMECompositionString() { return (long)this->Call(EeUiManage
 long UIManager::CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
 
 // FUNCTION: LLE 0x1007a216
-// Creates every background in the UI background database on its form, by type (others via CreateUserDefinedBackground)
-// tiled backgrounds get the row's ID where every other type gets its background ID
-void UIManager::CreateBackgrounds()
-{
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = 16;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    unsigned long theCount = UIBackgroundTable::GetArraySize();
-    theDescription.mPixelDepth = this->GetUITextureBitDepth();
-    for (unsigned long i = 0; i < theCount; i++) {
-        UIBackgroundTable* theTable = UIBackgroundTable::GetUIBackgroundTable(i);
-        if (!theTable)
-            continue;
-        theDescription.mHasAlpha = theTable->GetHasAlpha();
-        UIForm* theForm = this->GetFormByID(theTable->GetFormID());
-        if (!theForm)
-            continue;   // no such form (GetFormByID used to return a garbage pointer here)
-        switch (theTable->GetBackgroundType()) {
-        case kBackgroundBitmap:
-            new UIBitmapBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                   theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                   theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundTiled:
-            // Fixed: passed the row ID (GetID) where every other case passes the background ID
-            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                  theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundFull:
-            new UIBFull(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                        theTable->GetTextureRect(), theTable->GetLayout(), theForm, theTable->GetDrawPriority(),
-                        theTable->GetNumCols(), theTable->GetNumRows(), theTable->GetVisible());
-            break;
-        case kBackgroundLRTiled:
-            new UILRTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                    theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                    theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundTBTiled:
-            new UITBTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                    theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                    theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundStretchedTiled:
-            new UIStretchedTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                           theTable->GetTextureRect(), theTable->GetTileWidthPercent(),
-                                           theTable->GetTileHeightPercent(), theTable->GetLayout(), theForm,
-                                           theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        default:
-            this->CreateUserDefinedBackground(*theTable);
-            break;
-        }
-    }
-}
+// Creates every background in the UI background database on its form, by type (bgtableobj.rs)
+void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
 
 // FUNCTION: LLE 0x1007a438 (CreateBitmap): the Rust constructor's MgrBitmapCoords and BitmapSetScale.
 
@@ -799,6 +743,50 @@ long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
 // SYNTHETIC: LLE 0x10078e68
 // SYNTHETIC: LLE 0x10078e89
 // SYNTHETIC: LLE 0x1007b8e7
+
+// UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
+// 0x1006f278..0x1006f4ef): Initialize/Uninitialize over the record, the two loaders over the events file. The calls
+// out: the event's virtuals on the record, the file's reads (UIHotKey.cpp's ee_uicpp_file_*) and the owners'
+intptr_t UIEvent::HostOp(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+{
+    UIEvent* theEvent = static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj));
+    UIEventData theData;
+    switch (inOp) {
+    case EeUiOp::EvInitialize: return theEvent->InitializeEvent();
+    case EeUiOp::EvUninitialize: return theEvent->UninitializeEvent();
+    case EeUiOp::BgtFileOpen: ee_uicpp_file_open(inObj); break;
+    case EeUiOp::BgtFileCount: {
+        unsigned long theCount = 0;
+        long theResult = ee_uicpp_file_read_count(inObj, &theCount);
+        uint32_t theBits = (uint32_t)theCount;
+        memcpy(f, &theBits, 4);
+        return theResult;
+    }
+    case EeUiOp::BgtFileRead: return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c);
+    case EeUiOp::BgtFileClose: ee_uicpp_file_close(inObj); break;
+    case EeUiOp::EvOwner:
+        if (a == 0)
+            return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)b);
+        return (intptr_t) reinterpret_cast<UIManager*>(c)->GetFormByID((unsigned long)b);
+    case EeUiOp::EvAdd:
+        theData.mEventID = (unsigned long)c;
+        theData.mEventType = (unsigned long)d;
+        if (a == 0)
+            reinterpret_cast<UIControlsTable*>(b)->AddEvent(theData);
+        else
+            reinterpret_cast<UIForm*>(b)->AddEvent(theData);
+        break;
+    default: break;
+    }
+    return 0;
+}
+long UIEvent::CreateControlEvents(FSFileSpec& inFile) { return ee_ui_event_create(&inFile, UIEvent::HostOp, 0, NULL); }
+long UIEvent::CreateFormEvents(FSFileSpec& inFile, UIManager* inManager)
+{
+    return ee_ui_event_create(&inFile, UIEvent::HostOp, 1, inManager);
+}
+long UIEvent::Initialize() { return ee_ui_event_call(this, UIEvent::HostOp, EeUiEventCall::Initialize); }
+long UIEvent::Uninitialize() { return ee_ui_event_call(this, UIEvent::HostOp, EeUiEventCall::Uninitialize); }
 
 // TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the map
 // (the manager's and forms' state is Rust's: ee_ui managerobj.rs, formobj.rs): the UI lock it try-enters, the form

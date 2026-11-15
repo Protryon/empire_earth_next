@@ -189,7 +189,7 @@
 #include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
 #include "lle/GEQuaternion.h"
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
-#include "ee/EEUCMissile.h"         // the missile sweep's impact tests
+#include "ee/EEUnitClassKinds.h"
 void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
 void EEPhysicsUnitSweep(long inCall);      // the units sweep (Physics Thread/EEPhysicsSweep.cpp)
 #include "ee/EEUGRust.h"
@@ -362,7 +362,7 @@ static void EECombatMissileSweep()
                                   EE_COMBAT_TAG('C', 'B', 'G', 'I'), EE_COMBAT_TAG('C', 'B', 'W', 'I')};
     EESimCaptureRecord::Only(kTags, 4);
     EESimCaptureRecord::Exclusive(true);
-    std::vector<EEUCMissile*> theClasses;
+    std::vector<EEUnitClass*> theClasses;
     std::vector<EEUnitClass*> theLaunchers;
     for (EEUnitClass* theClass : gUnitClassTable) {
         if (theClass == NULL
@@ -374,7 +374,7 @@ static void EECombatMissileSweep()
                 theLauncher = theOther;
                 break;
             }
-        theClasses.push_back(static_cast<EEUCMissile*>(theClass));
+        theClasses.push_back(theClass);
         theLaunchers.push_back(theLauncher);
     }
     std::vector<std::vector<EEComplexUnit*>> theArmed;
@@ -402,7 +402,7 @@ static void EECombatMissileSweep()
             for (size_t k = 0; k < theClasses.size(); k++) {
                 if (theTarget->mHitPoints <= 0 || theTarget->GetTileX() == -10000)
                     break;
-                EEUCMissile* theClass = theClasses[k];
+                EEUnitClass* theClass = theClasses[k];
                 EEUnit* theCreated = theClass->CreateUnit(a->GetTileX(), a->GetTileY(), a->mPlayer->GetPlayerID(), false, a);
                 EEComplexUnit* m = theCreated != NULL ? theCreated->GetComplexUnit() : NULL;
                 if (m == NULL)
@@ -986,8 +986,9 @@ void RequestSaves(long inTime)
 {
     while (sNextSave < sOptions.mSaves.size() && inTime >= sOptions.mSaves[sNextSave].first) {
         std::string theName = SaveName(sNextSave) + (const char*)gSavedGameExtension;
-        NEMessage* theSave = new EEMLoadOrSaveGame(UWideString(theName.c_str()), TMGetTime(), 0, true,
-                                                   gCommunications->GetNumberOfCTsProcessedInPhysics(), 0);
+        UWideString theFile(theName.c_str());   // load, quiet, tick, time, auto-save, the wait id, the name
+        NEMessage* theSave = new EEMRecord(kMessageLoadOrSaveGame, {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(),
+                                                                    TMGetTime(), 0, 0, theFile});
         static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(theSave, 15000, 12);
         theSave->Dereference();
         Note("SAVE %zu requested at game ms %ld PT %lu", sNextSave, inTime, gPhysics->mNumTicksDone);

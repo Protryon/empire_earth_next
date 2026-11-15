@@ -17,7 +17,6 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EECommunications.h"
 #include "ee/EEMessage.h"
-#include "ee/EECivilization.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBEditableCivilization.h"
 #include "ee/EEStringIDs.h"
@@ -38,7 +37,7 @@ bool EECBEditableCivilization::Apply()
     UWideString theName(this->mName);
     bool theResult = false;
     if (this->HasChoices()) {
-        NEMessage* theMessage = new EEMCivUpgradesRequested(this->mPlayer, this->mUpgrades, theName, 0);
+        NEMessage* theMessage = new EEMRecord(kMessageCivUpgradesRequested, {this->mPlayer, 0, this->mUpgrades, theName});
         if (gCommunications->GetIsMultiplayerSession())
             gCommunications->ProcessLocalUserInput(theMessage, kSlotServer);
         else {

@@ -27,7 +27,7 @@
 #include "ee/EEMapDimensions.h"
 #include "ee/EEGlobalConstants.h"
 #include "ee/EEAIKindIDs.h"
-#include "ee/EEMessageExecute.h"
+#include "rust/ee_netmsg.h"   // ee_netmsg_trade_price
 
 // A cdecl helper defined in another unit (also declared in EEUnitUtilities.h)
 float EEJitterHeading(float inAngle, float inMin, float inMax);
@@ -35,7 +35,7 @@ float EEJitterHeading(float inAngle, float inMin, float inMax);
 
 const UString kWheelName("wheel");
 const float kMinimumWheelDistance = 0.1f;   // 0x449ae8
-// the trade price curve's two words (0x449af8, 0x449afc) are ee_netmsg's (ee/EEMessageExecute.h)
+// the trade price curve's two words (0x449af8, 0x449afc) are ee_netmsg's (execute.rs)
 // SYNTHETIC: EXE 0x63c83a   (wrapper)
 // SYNTHETIC: EXE 0x63c844   (ctor)
 // SYNTHETIC: EXE 0x63c855   (registrar)
@@ -175,7 +175,7 @@ long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy)
     case 4: theRate = gWorldTable.GetFloatValue(kWorldTradeRateStoneIron); break;
     case 6: theRate = gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron); break;
     }
-    return (long)ee_netmsg_trade_price(theRate, theTrade, inBuy);   // the price curve (ee/EEMessageExecute.h)
+    return (long)ee_netmsg_trade_price(theRate, theTrade, inBuy);   // the price curve (ee_netmsg execute.rs)
 }
 
 // FUNCTION: EXE 0x63cd32

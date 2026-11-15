@@ -771,6 +771,194 @@ pub enum EeUiOp {
     CtlAddEvent = 532,
     /// The string table's `GetString(b, *(UWideString*)a)`.
     CtlHelpString = 533,
+
+    // ---- the backgrounds (R6 ui round 20, bgobj.rs): on the background's C++ object; a bitmap or texture is its
+    // address; the wide ops (`is_wide`) pass twelve floats
+    /// The form's `AddBackground(this)`.
+    BgAdd = 540,
+    /// *Pure*: the manager's window's `GetWidth()` (a 0) or `GetHeight()` (a 1).
+    BgWindow = 541,
+    /// *Pure*: the form's `GetUseExclusiveCoords()`.
+    BgExclusive = 542,
+    /// *Pure*: whether the form is the manager's current form.
+    BgFormCurrent = 543,
+    /// The form's `LockDrawBackground()` (a 1) or `UnlockDrawBackground()` (a 0).
+    BgLock = 544,
+    /// The form's `RedrawIntersectControls(f)`.
+    BgRedraw = 545,
+    /// The manager's `AddDirtyRectangle(f, the form)`.
+    BgDirty = 546,
+    /// The virtual `LoadBackground()` -> its result.
+    BgVirtLoad = 547,
+    /// The virtual `UnloadBackground()` -> its result.
+    BgVirtUnload = 548,
+    /// *Wide*: the virtual `DrawStrectchedBackground(f[0..4], f[4..8])` -> its result.
+    BgVirtStretched = 549,
+    /// *Wide*: the virtual `DrawTiledBackground(f[0..4], a, b, c, d, f[4], f[5])` -> its result.
+    BgVirtTiled = 550,
+    /// `new GEBitmap` -> the bitmap.
+    BgBitmapNew = 551,
+    /// Bitmap `a`'s `Dereference()`.
+    BgBitmapRelease = 552,
+    /// *Pure*: bitmap `a`'s `GetTexture(the screen)` (NULL 0).
+    BgBitmapTexture = 553,
+    /// Bitmap `a`'s `SetTexture(texture b, the screen)`.
+    BgBitmapSetTexture = 554,
+    /// *Pure*: texture `a`'s `GetWidth()`, its `GetHeight()` in f[0].
+    BgTextureSize = 555,
+    /// The screen's texture manager's `LoadTexture(name a, *(GETextureDescription*)b)` with the backgrounds' stage
+    /// modes (modulate, linear filters, point mip filter, bias -0.75, clamped) -> the texture.
+    BgTextureLoad = 556,
+    /// *Wide*: bitmap `a`'s `ComputeStretchedCoordsAndScale(f[0..4], f[4..8], f[8..12], the screen)`.
+    BgBitmapStretch = 557,
+    /// Bitmap `a`'s `SetLocation(f[0], f[1])`.
+    BgBitmapSetLocation = 558,
+    /// Bitmap `a`'s `SetOpacity(f[0])`.
+    BgBitmapSetOpacity = 559,
+    /// The rasterizer's `Draw(bitmap a, the screen)` -> its result.
+    BgBitmapDraw = 560,
+    /// *Pure*: the form's `GetRectangle()`.
+    BgFormRect = 561,
+    /// *Pure*: the form's `GetFadeOpacity()` in f[0].
+    BgFormFade = 562,
+
+    // ---- the hot keys (R6 ui round 20, hotkeyobj.rs): on the hot key's record (NULL for the table's own calls); an
+    // entity or event is its address
+    /// *Pure*: entity `a`'s `GetValue()`.
+    HkValue = 570,
+    /// *Pure*: entity `a`'s `JustDoublePressed()`.
+    HkDoublePressed = 571,
+    /// *Pure*: entity `a`'s `JustPressed()`.
+    HkJustPressed = 572,
+    /// *Pure*: entity `a`'s `JustUnpressed()`.
+    HkJustUnpressed = 573,
+    /// *Pure*: `gISKeyboard->GetModifierState()`.
+    HkKeyboardState = 574,
+    /// *Pure*: `ISKeyboard::ComputeModifierState(a)`.
+    HkModifierState = 575,
+    /// *Pure*: entity `a`'s `GetIndex()`.
+    HkKeyIndex = 576,
+    /// *Pure*: the entity `gISKeyboard->GetEntity(a, ...)` gives (NULL for a code without a key).
+    HkEntity = 577,
+    /// Event `a`'s `Uninitialize()` (b 0), `Dereference()` (1), `Reference()` (2) or `Initialize()` (3).
+    HkEventCall = 578,
+    /// Event `a`'s `ProcessEvent(the form, this hot key)`.
+    HkProcess = 579,
+    /// `new UIHotKey` -> its record.
+    HkNew = 580,
+    /// `delete` the hot key of record `a`.
+    HkDelete = 581,
+    /// *Pure*: `gISKeyboard->GetEntity(a, ...)`'s result.
+    HkEntityResult = 582,
+
+    // ---- the background table (R6 ui round 20, bgtableobj.rs): on the file (Create) or the manager
+    // (CreateBackgrounds); an entry is its record's address
+    /// `new UIBackgroundTable` with the record at a and the texture file name b -> the entry.
+    BgtNew = 590,
+    /// `delete` entry `a`.
+    BgtDelete = 591,
+    /// *Pure*: the manager's `GetFormByID(a)`.
+    BgtForm = 592,
+    /// *Pure*: the manager's `GetUITextureBitDepth()`.
+    BgtTextureDepth = 593,
+    /// Entry `a`'s background on form `b` with the description at `c` (`CreateBackgrounds`' switch).
+    BgtMake = 594,
+    /// *Pure*: entry `a`'s `GetHasAlpha()`.
+    BgtEntryAlpha = 595,
+    /// *Pure*: entry `a`'s `GetFormID()`.
+    BgtEntryFormId = 596,
+    /// The file's `Open(kFileAccessRead)`.
+    BgtFileOpen = 597,
+    /// The file's count read -> its result, the count's bits in f[0].
+    BgtFileCount = 598,
+    /// The file's read of `c` bytes into `b` -> its result.
+    BgtFileRead = 599,
+    /// The file's `Close()`.
+    BgtFileClose = 600,
+
+    // ---- the movie control (R6 ui round 21, mediaobj.rs): on movie a
+    /// Movie `a`'s `Reference()`.
+    MovieReference = 610,
+    /// Movie `a`'s `Stop()`.
+    MovieStop = 611,
+    /// Movie `a`'s `Dereference()`.
+    MovieRelease = 612,
+    /// *Pure*: movie `a`'s `GetIsPlaying()`.
+    MoviePlaying = 613,
+    /// Movie `a`'s `RenderFrame()` -> its result.
+    MovieRender = 614,
+
+    // ---- the events (R6 ui round 21, eventobj.rs): on the event's record, or on the events file (with the
+    // background table's file ops, 597..600)
+    /// The event's virtual `InitializeEvent()` -> its result.
+    EvInitialize = 630,
+    /// The event's virtual `UninitializeEvent()` -> its result.
+    EvUninitialize = 631,
+    /// The owner `b` of kind `a` (0 `UIControlsTable::GetUIControlsTable(b)`, 1 manager `c`'s `GetFormByID(b)`).
+    EvOwner = 632,
+    /// Owner `b` (of kind `a`)'s `AddEvent` of the event id `c` and type `d`.
+    EvAdd = 633,
+
+    // ---- the entity groups (R6 ui round 21, groupobj.rs): on entity a
+    /// *Pure*: entity `a` is a button (`GetType() == kControlTypeButton`).
+    GrpIsButton = 640,
+    /// *Pure*: control `a`'s display mode is `kDisplayModeShown`.
+    GrpShown = 641,
+    /// *Pure*: control `a`'s form is its manager's current form.
+    GrpOnCurrentForm = 642,
+    /// The manager's `AddDirtyRectangle` of control `a`'s rectangle on its form.
+    GrpAddDirty = 643,
+    /// Control `a`'s `HideControl()`.
+    GrpHide = 644,
+    /// Control `a`'s `SetDirty(true)`.
+    GrpSetDirty = 645,
+    /// *Pure*: control `a`'s form's `GetTabbingOn()`.
+    GrpTabbing = 646,
+    /// *Pure*: control `a`'s form's tab stop is its index.
+    GrpIsTabStop = 647,
+    /// Control `a`'s form's `Tab()`.
+    GrpTab = 648,
+    /// Hot key `a`'s `SetEnabled(b != 0)`.
+    GrpSetEnabled = 649,
+
+    // ---- the file lists (R6 ui round 21, filelistobj.rs): on the list box or combo box
+    /// `DeleteAllEntries()`.
+    FlDeleteAll = 650,
+    /// Path `a`'s `GetDirectoryCount()`.
+    FlDirCount = 651,
+    /// Search `a`: path `b`'s directory `c` into its directory, then the directory's `GetFirstFile` -> its result.
+    FlDirFirst = 652,
+    /// Search `a`'s `GetNextFile` -> its result.
+    FlNext = 653,
+    /// Search `a`'s `GetFirstFile` again (the original's call after each directory; the result unused).
+    FlRewind = 654,
+    /// A new search (the original's `FSFileSpec` locals: the file and the directory) -> it.
+    FlSearchNew = 655,
+    /// `delete` search `a`.
+    FlSearchDelete = 656,
+    /// Search `a`'s file name's length in bytes.
+    FlNameLength = 657,
+    /// Search `a`'s file name copied into `b` (`c` bytes, NUL included).
+    FlNameCopy = 658,
+    /// `AppendLine(a)`: `a` NUL-terminated bytes.
+    FlAppend = 659,
+    /// `InsertLine(a, 0, UWSNoCaseAlphaSort())` (the combo box's list's): `a` NUL-terminated bytes.
+    FlInsertSorted = 660,
+    /// `GetCurrentSelection` -> its result, the selection's bits in `f[0]`.
+    FlSelection = 661,
+    /// Line `a`'s (`GetData(a)`) length in bytes.
+    FlLineLength = 662,
+    /// Line `a` copied into `b` (`c` bytes, NUL included).
+    FlLineCopy = 663,
+    /// Path `b`'s `FindFile(a)` (NUL-terminated bytes) and, when found, the file's `Delete()` (the file then
+    /// deleted) -> the delete's result, else the lookup's; `f[0]`'s bits 1 when found.
+    FlDeleteFile = 664,
+    /// `DeleteLine(a)`.
+    FlDeleteLine = 665,
+    /// Path `a`'s `Reference()`.
+    FlPathReference = 666,
+    /// Path `a`'s `Dereference()`.
+    FlPathRelease = 667,
 }
 
 impl EeUiOp {
@@ -884,7 +1072,38 @@ impl EeUiOp {
                 | CtlCurrentForm
                 | CtlKeyboardCaptured
                 | CtlMouseCaptured
+                | BgWindow
+                | BgExclusive
+                | BgFormCurrent
+                | BgBitmapTexture
+                | BgTextureSize
+                | BgFormRect
+                | BgFormFade
+                | HkValue
+                | HkDoublePressed
+                | HkJustPressed
+                | HkJustUnpressed
+                | HkKeyboardState
+                | HkModifierState
+                | HkKeyIndex
+                | HkEntity
+                | HkEntityResult
+                | BgtForm
+                | BgtTextureDepth
+                | BgtEntryAlpha
+                | BgtEntryFormId
+                | MoviePlaying
+                | GrpIsButton
+                | GrpShown
+                | GrpOnCurrentForm
+                | GrpTabbing
+                | GrpIsTabStop
         )
+    }
+
+    /// Whether the op passes twelve floats (two or three rectangles), all traced.
+    pub fn is_wide(self) -> bool {
+        matches!(self, EeUiOp::BgVirtStretched | EeUiOp::BgVirtTiled | EeUiOp::BgBitmapStretch)
     }
 }
 
@@ -912,6 +1131,15 @@ impl Host {
         match self.f {
             // SAFETY: the host was given with its object; the buffer is four live floats; no borrow of a Rust
             // object's state is live across the call (callers copy their state out first)
+            Some(h) => unsafe { h(self.obj, op, a, b, c, d, f.as_mut_ptr()) },
+            None => 0,
+        }
+    }
+
+    /// A wide op (`EeUiOp::is_wide`): twelve floats.
+    pub fn op_wide(&self, op: EeUiOp, a: isize, b: isize, c: isize, d: isize, f: &mut [f32; 12]) -> isize {
+        match self.f {
+            // SAFETY: as op_f, with twelve live floats
             Some(h) => unsafe { h(self.obj, op, a, b, c, d, f.as_mut_ptr()) },
             None => 0,
         }

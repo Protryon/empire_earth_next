@@ -1434,6 +1434,10 @@ constexpr static const int32_t EE_WON_HTTPGET_ONLY_SEND = 20;
 
 constexpr static const int32_t EE_WON_HTTPGET_ONLY_RECV = 21;
 
+/// `PingGameOp::CheckResponse`'s answer when a read went past the reply's end (the C++ rethrows
+/// `ReadBufferException`).
+constexpr static const int64_t EE_WON_LOGIC_THREW = INT64_MIN;
+
 /// `Graphics::SetPixel(a, b, g.GetStandardColor(c))`: a pixel in a standard colour.
 constexpr static const int32_t EE_WON_DRAW_SYS_PIXEL = 22;
 
@@ -1793,6 +1797,9 @@ constexpr static const int32_t EE_WON_REQOP_USER_ID = 30;
 constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
 
 constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
+
+/// The number of rows (`gLobbyResources`' size).
+constexpr static const size_t EE_WON_LOBBYRES_COUNT = 469;
 
 /// How many op types have a completion slot (`mCompletions[61]`).
 constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
@@ -4303,6 +4310,135 @@ enum class EeWonEeGlueCall : uint32_t {
   Reset,
 };
 
+/// The two kinds.
+enum class EeWonEeSoundKind : uint32_t {
+  Music = 0,
+  Effect = 1,
+};
+
+/// The host's ops.
+enum class EeWonEeSoundOp : uint32_t {
+  /// `gUIManager != NULL` (0 or 1).
+  HasUiManager = 1,
+  /// `gUIManager->SetMusicVolume(gGamePreferences.mSettings.GetMusicVolume())`.
+  MusicVolumeOn,
+  /// `gUIManager->SetMusicVolume(0.0f)`.
+  MusicVolumeOff,
+  /// `gSoundManager != NULL` (0 or 1).
+  HasSoundManager,
+  /// `gSoundManager->Unload(a)`.
+  Unload,
+  /// `gSoundManager->Play(a, 1.0f, 0.0f, 1.0f, false, NULL)`: the instance.
+  Play,
+  /// `gSoundManager->Stop(a, false)`.
+  Stop,
+  /// `gSoundManager->Load(path, 0, 1)` (`a` the descriptor's path, a NUL-terminated `char*`): the sample.
+  Load,
+};
+
+/// The inward calls (the classes' virtuals).
+enum class EeWonEeSoundCall : uint32_t {
+  /// `PlayHook()`.
+  Play = 1,
+  /// `StopHook()`.
+  Stop,
+  /// `ResumeHook()` (the music's; an effect's is the base's empty one).
+  Resume,
+  /// a member: 0 `mSampleID`, 1 `mInstanceID`.
+  Field,
+};
+
+/// The host's ops (`obj` the transfer's shell or the send op's).
+enum class EeWonEeXferOp : uint32_t {
+  /// `EELobbyGetSavedGameInfo(a, *(uint32_t*)b, *(uint32_t*)c)` (`a` a NUL-terminated path).
+  SavedGameInfo = 1,
+  /// `(unsigned long)PlatTimeMilliseconds64()`.
+  Time,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->UpdateTransferProgress(b, c)`.
+  GameProgress,
+  /// `((AsyncOp*)a)->Succeeded()` (0 or 1).
+  Succeeded,
+  /// `static_cast<SocketOp*>(a)->GetSocket()` (no reference).
+  OpSocket,
+  /// `static_cast<AcceptOp*>(a)->GetAcceptedSocket()` (no reference).
+  AcceptedSocket,
+  /// `static_cast<RecvChunkOp*>(a)->GetRecvOp()->GetBytesRead()`.
+  BytesRead,
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `((AsyncSocket*)a)->Kill()`.
+  Kill,
+  /// `new QueueSocket(0)` with a reference added.
+  NewSocket,
+  /// `((QueueSocket*)a)->Fn2B0D90(b, 0)`: the status.
+  Bind,
+  /// `((QueueSocket*)a)->Listen(1000)`: the status.
+  Listen,
+  /// `a->SetRepeatCompletion(completion(OnClientAccepted)); a->SetRepeatOp(new AcceptOp(NULL))`.
+  RepeatAccept,
+  /// `a->SetCloseCompletion(completion(OnClientClosed)); a->QueueOp(new SendFileOp(path b, c bytes), -1);
+  /// a->QueueOp(new CloseOp(NULL), -1)`.
+  QueueSend,
+  /// `this->mHost.IsValid()` (0 or 1).
+  HostValid,
+  /// `a->SetCloseCompletion(completion(OnClientClosed))`; a `RecvBytesOp(0, NULL)` with the completion
+  /// `OnFileReceived`, the file path (`b`, `c` bytes) and the progress completion `OnProgress` every 10000 bytes;
+  /// `a->QueueOp(new ConnectOp(this->mHost), -1); a->QueueOp(op, -1)`.
+  QueueDownload,
+  /// `PlatFOpen(a, "rb")` (`a` a NUL-terminated path): the `FILE*` or 0.
+  Open = 40,
+  /// `fread(b, 1, c, (FILE*)a)`: the count.
+  Read,
+  /// `fclose((FILE*)a)`.
+  Close,
+  /// `GetSocket()->WaitForWrite(TimeLeft())`.
+  WaitForWrite,
+  /// `GetSocket()->Send(a, b, (int*)c)`: the status.
+  Send,
+  /// `TimeLeft()`.
+  TimeLeft,
+};
+
+/// The transfer's inward calls.
+enum class EeWonEeXferCall : uint32_t {
+  /// `SetPath(a, b bytes)`.
+  SetPath = 1,
+  /// `SetFileInfo`'s size `a` and checksum `b` (the shell keeps the name).
+  SetFileInfo,
+  /// `IsFileHere()` (0 or 1).
+  IsFileHere,
+  /// `Serve(a)`: the status.
+  Serve,
+  /// `Stop()`.
+  Stop,
+  /// `CloseClients()`.
+  CloseClients,
+  /// `Download()`.
+  Download,
+  /// the completions' callbacks (`a` the op).
+  OnClientClosed,
+  OnClientAccepted,
+  OnProgress,
+  OnFileReceived,
+  /// a member: 0 `mLocalSize`, 1 `mLocalChecksum`, 2 `mSize`, 3 `mChecksum`, 4 `mLastProgressTime`,
+  /// 5 `mConnection`, 6 the number of clients, 7 `mPath`'s length.
+  Field,
+};
+
+/// The send op's inward calls.
+enum class EeWonEeXferSendCall : uint32_t {
+  /// `Start()`: the status.
+  Start = 1,
+  /// `Continue()`: the status.
+  Continue,
+  /// `CleanupHook()` (the file closed).
+  Cleanup,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -5803,6 +5939,358 @@ enum class EeWonLobbyPopupCall : uint32_t {
   Field,
 };
 
+/// Which logic an object is.
+enum class EeWonLogicKind : uint32_t {
+  Ping = 1,
+  Account,
+  Init,
+};
+
+/// The host's ops. `obj` is the C++ shell (`PingLogic*`, `PingGameOp*`, `AccountLogic*`, `InitLogic*`); `a`..`d`
+/// are pointers or integers as each op says. An op that returns an object "held" gives Rust a reference it gives
+/// back with `Release`.
+enum class EeWonLogicOp : uint32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef = 1,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `(int)((AsyncOp*)a)->GetStatus()`.
+  OpStatus,
+  /// `((AsyncOp*)a)->IsKilled()`.
+  OpKilled,
+  /// `LobbyBroadcastLobbyEvent(a, true)`.
+  BroadcastLobby,
+  /// `LobbyExit(a)`.
+  Exit,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `GetLobbyRoot()`.
+  Root,
+  /// `LobbyBroadcastEvent(new LoginInitStatusEvent(LOBBY_STRING(a), desc, d & 1, d >> 8), true)`; the
+  /// description is `*(GUIString*)b`, or `LOBBY_STRING(c)` when `b` is NULL and `c >= 0`, else empty.
+  InitStatus,
+  /// `LobbyGetUDPManager()`.
+  UdpManager = 20,
+  /// `((UDPManager*)a)->SetDefaultCompletion(new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, obj))`.
+  SetDefaultRecv,
+  /// `static_cast<PingGameEvent*>(a)->mGame.get()`.
+  EventGame,
+  /// `static_cast<PingGameEvent*>(a)->mFlag`.
+  EventFlag,
+  /// `static_cast<UDPManagerRecvOp*>(a)->GetMsg()`: its data (NULL for none), its length in `*(size_t*)b`.
+  RecvMsg,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((LobbyGame*)a)->GetIsHost()`.
+  GameIsHost,
+  /// `((LobbyGame*)a)->GetGameType()`.
+  GameType,
+  /// `((LobbyGame*)a)->IsInProgress()`.
+  GameInProgress,
+  /// `((LobbyGame*)a)->IsPinging()`.
+  GameIsPinging,
+  /// `((LobbyGame*)a)->IsQueryingDetails()`.
+  GameQueryingDetails,
+  /// `((LobbyGame*)a)->SetPing(b)`.
+  GameSetPing,
+  /// `((LobbyGame*)a)->SetPingReplied(true)`.
+  GameSetPingReplied,
+  /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mNoPingInProgress`.
+  NoPingInProgress,
+  /// `GetLobbyConfig() != NULL ? GetLobbyConfig()->mPingCeiling : 5000`.
+  PingCeiling,
+  /// `LobbyGetConnectionSpeed()`.
+  ConnectionSpeed,
+  /// `new WriteBuffer(3, true)` (the reply).
+  ReplyNew,
+  /// `((WriteBuffer*)a)->AppendBytes(b, c)`.
+  BufAppend,
+  /// `((LobbyGame*)a)->WriteSummary(*(WriteBuffer*)b)`.
+  WriteSummary,
+  /// `((LobbyGame*)a)->WriteDetails(*(WriteBuffer*)b)`.
+  WriteDetails,
+  /// `((UDPManager*)a)->Send(((WriteBuffer*)b)->ToByteBuffer(true).get(), ((UDPManagerRecvOp*)c)->GetFromAddr())`.
+  ReplySend,
+  /// `delete (WriteBuffer*)a`.
+  BufFree,
+  /// (obj a `PingGameOp*`) a `WriteBuffer(0, true)` of `b` bytes at `a`, `SetOutgoing(ToByteBuffer(true))`,
+  /// `UDPManagerSendRecvOp::RunHook()`.
+  RequestSend,
+  /// (obj a `PingGameOp*`) `WONTickCount() - GetStartTime()`.
+  Elapsed,
+  /// `static_cast<PingGameOp*>(a)->mGame.get()`.
+  OpGame,
+  /// `static_cast<PingGameOp*>(a)->mRust`.
+  OpRecord,
+  /// `RunTrackedOp((AsyncOp*)a, new LogicCompletion<PingLogic>(&PingLogic::PingGameDone, obj), b)`.
+  RunTracked,
+  /// `((LobbyGame*)a)->ReadSummary(reader over *(EeWonReadBuffer*)b)` (the position written back): 0 or 1.
+  ReadSummary,
+  /// `((LobbyGame*)a)->ReadDetails(reader over *(EeWonReadBuffer*)b)` (the position written back).
+  ReadDetails,
+  /// `LobbyBroadcastEvent(new GameChangedEvent((LobbyGame*)a, 2), true)`.
+  BroadcastGameChanged,
+  /// `LobbyNotifyPingChange((LobbyGame*)a)`.
+  NotifyPing,
+  /// `mTracker.GetNumTrack()`.
+  NumTracked,
+  /// `dynamic_cast<PingGameOp*>(mTracker.GetTrackedOp(a))`'s `mGame.get()`, or NULL.
+  TrackedGame,
+  /// `mTracker.KillAll()`.
+  KillTracked,
+  /// `new PingGameOp((LobbyGame*)a, b, c)` held, then `SetUDPManager((UDPManager*)d)`.
+  NewPingOp,
+  /// `LobbyGetVersionStatus()`.
+  VersionStatus = 60,
+  /// `LobbyDoYesNoDialog(VersionOutOfData title, details, true)`.
+  OutOfDateDialog,
+  /// `mCreditsDialog->ResetScrolling(); StartScrolling(); LobbyDoDialog(it); StopScrolling()`.
+  ShowCredits,
+  /// `mTOUDialog->Reset(); LobbyDoDialog(mTOUDialog)`: the result.
+  ShowTOU,
+  /// `LobbyShowCreateAccount()` (a 1), `LobbyShowLostPassword()` (2), `LobbyShowLostUsername()` (3).
+  ShowScreen,
+  /// `LobbyGetAccountServers()`.
+  AccountServers,
+  /// a `RequestPasswordEmailOp` of `((GetLostPasswordEvent*)a)->mUserName` on `b`, run behind its status box.
+  RequestPasswordEmail,
+  /// a `RequestAccountInfoEmailOp` of `((GetLostUserNameEvent*)a)->mEmail` on `b`, run behind its status box.
+  RequestInfoEmail,
+  /// `RustServerOp::NewGetAccount(a, b)` held, `SetNum(NEWSLETTER, 1)`, run behind its status box.
+  QueryAccount,
+  /// `LobbyBroadcastEvent(new QueryAccountResultEvent(a's e-mail, a's newsletter != 0), true)`.
+  BroadcastAccount,
+  /// `RustServerOp::NewUpdateAccount(a, b, event c's password and e-mail)`, its newsletter, run behind its box.
+  UpdateAccount,
+  /// `RustServerOp::NewCreateAccount(a, event b's fields)` held, run behind its status box.
+  CreateAccount,
+  /// event `a`'s user added, the terms' times set on it, the prefs saved, event 100052, the login fields set.
+  AccountCreated,
+  /// `LobbyGetRootWindow()`.
+  RootWindow,
+  /// `((Window*)a)->GetKeyMod()`.
+  KeyMod,
+  /// `((LoginEvent*)a)->mUserName`'s `wchar_t`s (its length in `*(size_t*)b`).
+  LoginName,
+  /// `event->mUserName = event->mUserName.substr(1)`.
+  LoginStripAt,
+  /// the event's user (`LobbyFindUser`) is unknown or its terms of use are older: 0 or 1.
+  UserNeedsTOU,
+  /// `((AuthContext*)a)->SetUserName(event b's name); SetPassword(event b's password)`.
+  SetCredentials,
+  /// `LobbyDoCDKeyCheck()`.
+  DoCDKeyCheck,
+  /// `LobbyIsCDKeyValid()`.
+  CDKeyValid,
+  /// `LobbyMessageBox(InvalidCDKey title, details)`.
+  InvalidCDKeyBox,
+  /// `((AuthContext*)a)->AddCommunity(L"Admin")` (b != 0) or `RemoveCommunity(L"Admin")`.
+  SetAdmin,
+  /// `new GetCertOp(a)` held, run behind the login status box.
+  GetCert,
+  /// `((AuthContext*)a)->SetDoAutoRefresh(true)`.
+  AutoRefresh,
+  /// the event `a`'s user saved (its password when remembered), its terms' times, the prefs, the current user.
+  LoginSaveUser,
+  /// `LobbyEnterInternetScreen(a != 0)`.
+  EnterInternet,
+  /// `LobbySetVersionStatus(a)`.
+  SetVersionStatus = 100,
+  /// `GetLobbyConfig() != NULL && GetLobbyConfig()->mCheckForInternet`.
+  CheckForInternet,
+  /// `AsyncSocket::HasInternetConnection()`.
+  HasInternet,
+  /// the account, auth, firewall and patch server lists cleared (those that exist).
+  ClearServerLists,
+  /// `LobbyLoadGlobalPrefs(); IPAddr::SetLocalHost(LobbyGetNetworkAdapter(), true)`.
+  LoadPrefs,
+  /// `LoadTOUTimes()`'s statements: the saved terms' files' times into `LobbySetTOUTimes`.
+  LoadTOUTimes,
+  /// `LobbyBindUDPPort()`.
+  BindUdp,
+  /// the login screen's three controls enabled (`b`) or not on root `a`.
+  EnableLogin,
+  /// `LobbyGetLobbyMusic()`.
+  LobbyMusic,
+  /// the lobby music: `SetLooping(true)` (a 0), `Play()` (1), `Stop()` (2).
+  Music,
+  /// the config and the directory, room directory and auth server lists all exist.
+  DnsReady,
+  /// the directory, room directory and auth server lists filled from the config's names.
+  FillDnsServers,
+  /// the room directory list has no address.
+  RoomDirEmpty,
+  /// `LobbyResetRoomDirServers()`.
+  ResetRoomDir,
+  /// the image of `RustServerOp* a` decoded and broadcast with `mCrossPromotion`.
+  PromotionImage,
+  /// `mCrossPromotion` = `b` bytes at `a`.
+  SetPromotionLink,
+  /// an HTTP get of the image URL (`b` bytes at `a`) in the global cache, completing in
+  /// `CrossPromotionImageCompletion`, added to `mHTTPSession`.
+  FetchPromotionImage,
+  /// `LobbyGetTOUTimes` into `*(int32_t*)a` (system) and `*(int32_t*)b` (game).
+  TOUTimes,
+  /// `((RustServerOp*)a)->GetNum(b, c)`.
+  OpNum,
+  /// the terms-of-use document of owner `b` of op `a` written to its file: 1 unless the writer threw.
+  SaveTOU,
+  /// `LobbyBroadcastEvent(new GotHTTPDocumentEvent(a), true)`.
+  BroadcastDocument,
+  /// `((RustServerOp*)a)->GetHttpDocument(b)`'s data; its length in `*(size_t*)c` (`usize::MAX`: no document).
+  DocBytes,
+  /// `LobbyBroadcastEvent(new SetCrossPromotionEvent(NULL, ""), true)`.
+  BroadcastNoPromotion,
+  /// the config and the account, auth, firewall and directory server lists all exist.
+  DirReady,
+  /// `!GetLobbyConfig()->mAuthServers.empty()`.
+  HasAuthConfig,
+  /// the list of target `a` (1 auth, 2 account, 3 firewall, 4 patch), if it exists, adds op `b`'s list `c`.
+  AddDirAddresses,
+  /// the auth (a 1), account (2) or patch (4) server list's number of addresses.
+  ServerCount,
+  /// `LobbyGetDirServers()->NotifyFailed(((RustServerOp*)a)->GetCurAddr())`.
+  DirNotifyFailed,
+  /// `new GUIString(LOBBY_STRING(a))`, or an empty one for `a < 0`.
+  TextNew,
+  /// `((GUIString*)a)->append(LOBBY_STRING(b))`.
+  TextAppendRes,
+  /// `((GUIString*)a)->append(GUIString(", "))`.
+  TextAppendComma,
+  /// `((GUIString*)a)->length()`.
+  TextLength,
+  /// `((GUIString*)a)->append(*(GUIString*)b)`.
+  TextAppendText,
+  /// `delete (GUIString*)a`.
+  TextFree,
+  /// `new GUIString(LobbyFormatString(LOBBY_STRING(a), GetWONStatusString(b)))`.
+  TextStatus,
+  /// the patch server list, if it exists, `NotifyFailed`s op `a`'s current address.
+  VersionNotifyFailed,
+  /// `mAcceptOp.get() == a`.
+  IsAcceptOp,
+  /// `mAcceptOp = NULL`.
+  ClearAcceptOp,
+  /// the accepted socket of `AcceptOp* a` is from `mFirewallAddress`'s host.
+  AcceptedFromFirewall,
+  /// `LobbySetBehindFirewall(a != 0)`.
+  SetBehindFirewall,
+  /// `mAcceptOp = new AcceptOp(((AcceptOp*)a)->GetSocket())`, run with `AcceptCompletion` and the accept timeout.
+  RestartAccept,
+  /// `LobbySetPublicAddress(((DetectFirewallOp*)a)->GetPublicAddr())`.
+  SetPublicAddress,
+  /// `mFirewallSocket.get() != NULL`.
+  HasFirewallSocket,
+  /// `mFirewallAddress` = op `a`'s current address; `mAcceptOp` on `mFirewallSocket`, run; the socket dropped.
+  StartAccept,
+  /// the config exists and names a directory server.
+  DnsTestReady,
+  /// a `DNSTestOp` of the config's first directory server, tracked with `DNSCompletion`.
+  RunDnsTest,
+  /// the message of the day, terms of use and advert documents requested (when the config exists).
+  StartDocuments,
+  /// `LobbyGetDirServers()`.
+  DirServers,
+  /// the multi-directory query of the auth, database, firewall and patch servers on list `a`, tracked.
+  RunDirQuery,
+  /// the patch server list and the config exist.
+  VersionReady,
+  /// the version check op on the patch servers, tracked with `VersionCompletion`.
+  RunVersionCheck,
+  /// `LobbyGetFirewallDetectServers()`.
+  FirewallServers,
+  /// `LobbyResetFirewallTest()`.
+  ResetFirewallTest,
+  /// a `DetectFirewallOp` on list `a` (the lobby port, no listen, no wait), tracked with `FirewallCompletion`.
+  RunFirewallDetect,
+  /// `mFirewallSocket = new AsyncSocket(0)`.
+  FirewallSocketNew,
+  /// `mFirewallSocket->Fn2B0D90(LobbyGetLobbyPort(), 0)`: the status.
+  FirewallBind,
+  /// `mFirewallSocket->Listen(1000)`: the status.
+  FirewallListen,
+  /// `mFirewallSocket = NULL`.
+  FirewallSocketDrop,
+  /// a running `mAcceptOp` killed, its socket closed, the member cleared.
+  KillAcceptOp,
+  /// `mHTTPSession->KillAll()`.
+  KillHttp,
+  /// `LobbyShowInternetScreen()`.
+  ShowInternet,
+  /// `mNetworkAdapterDialog->Reset(); LobbyDoDialog(it)`: the result.
+  AdapterDialog,
+  /// `LobbySetNetworkAdapter(mNetworkAdapterDialog->GetSelectedAddress())`.
+  SetAdapter,
+};
+
+/// The inward calls (each a method of the logic, `a`..`c` its arguments).
+enum class EeWonLogicCall : uint32_t {
+  /// `InitComponent`.
+  PingInit = 1,
+  /// `HandleComponentEvent(a)` of type `b`.
+  PingEvent,
+  /// `HandleUDPRecv(a)`.
+  PingRecv,
+  /// `PingGameDone(a)`.
+  PingDone,
+  /// `GetNumPingsToDo()`.
+  PingNumToDo,
+  /// `PingGame(a, b, c)`.
+  PingGame,
+  /// `KillPings`.
+  PingKill,
+  /// the next request id (a member).
+  PingNextId,
+  /// the number of queued games (a member).
+  PingPending,
+  /// `HandleControlEvent`: 1 show create account, 2 lost password, 3 lost user name.
+  AcctControl = 20,
+  /// `HandleComponentEvent(a)` of type `b`.
+  AcctEvent,
+  /// `ShowCredits()`.
+  AcctCredits,
+  /// `ShowTOU()`: 0 or 1.
+  AcctShowTOU,
+  /// `CheckLoginStatus()`: 0 or 1.
+  AcctCheckLogin,
+  /// `mNeedTOU` (a member).
+  AcctNeedTOU,
+  /// `mLastUserName`'s length (a member).
+  AcctLastNameLength,
+  /// `Init()`.
+  InitInit = 40,
+  /// `Start(a != 0)`.
+  InitStart,
+  /// `KillHook()`.
+  InitKillHook,
+  /// `KillFirewallTest()`.
+  InitKillFirewall,
+  /// `HandleControlEvent`: 1 back, 2 show the Internet screen, 3 choose the network adapter.
+  InitControl,
+  /// `HandleComponentEvent` of type `a`.
+  InitEvent,
+  /// the completions (`a` the op).
+  InitDns,
+  InitDocument,
+  InitPromotionImage,
+  InitDirectory,
+  InitVersion,
+  InitAccept,
+  InitFirewall,
+  /// `mErrors` (a 0) or `mIgnoredErrors` (1) (members).
+  InitField,
+};
+
+/// `PingGameOp`'s virtuals.
+enum class EeWonPingOpCall : uint32_t {
+  /// `RunHook()` (`a` the game).
+  RunHook = 1,
+  /// `CheckResponse(*(EeWonReadBuffer*)a)`: the status, or [`EE_WON_LOGIC_THREW`].
+  CheckResponse,
+  /// a member: 0 the request id, 1 the ping, 2 the flags, 3 the retries, 4 the reply's length (-1: none).
+  Field,
+};
+
 /// The inward calls (`PopupMenu`'s virtuals and methods).
 enum class EeWonMenuCall : uint32_t {
   /// `MouseDown(a, b, c)`.
@@ -6154,11 +6642,522 @@ enum class EeWonPrefsText {
   LastRoomName = 3,
 };
 
+/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
+enum class EeWonCoreObject {
+  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
+  Op = 0,
+  /// a `SocketOp*`'s [`EeWonSocketOp`]
+  SocketOp = 1,
+  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
+  Socket = 2,
+  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
+  Queue = 3,
+  /// a `UDPManager*`'s [`EeWonUdpManager`]
+  UdpManager = 4,
+  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
+  UdpRecv = 5,
+  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
+  UdpSendRecv = 6,
+  /// a `ServerConnection*`'s [`EeWonServerConn`]
+  ServerConn = 7,
+};
+
+/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
+enum class EeWonCoreSocketOp {
+  /// `new CloseOp(socket)`
+  Close = 0,
+  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
+  QueueClose = 1,
+  /// `new RecvBytesFromOp(size, socket)`
+  RecvFrom = 2,
+  /// `new SendBytesToOp(bytes, addr, socket)`
+  SendTo = 3,
+  /// `new RecvMsgOp(socket)`
+  RecvMsg = 4,
+  /// `new SendMsgOp(bytes, socket)`
+  SendMsg = 5,
+};
+
 /// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
 enum class EeWonResKind {
   String = 0,
   Image = 1,
   Sound = 2,
+};
+
+/// The lobby's resources by name, in the table's order: `EeWonLobbyRes::X as usize` is the row of global `X`
+/// (the C++ keeps one slot per row, `gLobbyResources`, read through `LOBBY_STRING(X)` / `LOBBY_IMAGE(X)` /
+/// `LOBBY_SOUND(X)`: the original's 469 named globals and their ids).
+enum class EeWonLobbyRes : uint32_t {
+  LobbyGlobal_Cancel_String = 0,
+  LobbyGlobal_Lan_String,
+  LobbyGlobal_No_String,
+  LobbyGlobal_OK_String,
+  LobbyGlobal_Yes_String,
+  LobbyGlobal_QuickPlay_String,
+  LobbyGlobal_Searching_Image,
+  LobbyGlobal_Firewall_Image,
+  LobbyGlobal_ButtonClick_Sound,
+  LobbyGlobal_LobbyMusic_Sound,
+  LobbyGlobal_AllReady_Sound,
+  LobbyGlobal_AllNotReady_Sound,
+  LobbyGlobal_AskToJoinRecv_Sound,
+  LobbyGlobal_Error_Sound,
+  LobbyGlobal_FriendJoined_Sound,
+  LobbyGlobal_FriendLeft_Sound,
+  LobbyGlobal_InviteRecv_Sound,
+  LobbyGlobal_PlayerJoined_Sound,
+  LobbyGlobal_SierraLogon_Sound,
+  LobbyGlobal_WhisperRecv_Sound,
+  AccountLogic_InvalidCDKeyTitle_String,
+  AccountLogic_InvalidCDKeyDetails_String,
+  AddFriendDialog_StatusTitle_String,
+  AddFriendDialog_StatusDetails_String,
+  AdminActionDialog_Warn_String,
+  AdminActionDialog_Mute_String,
+  AdminActionDialog_UnMute_String,
+  AdminActionDialog_Kick_String,
+  AdminActionDialog_Ban_String,
+  AdminActionDialog_ExplanationOpt_String,
+  AdminActionDialog_ExplanationReq_String,
+  BadUserDialog_OneDay_String,
+  BadUserDialog_OneHour_String,
+  BadUserDialog_OneMinute_String,
+  BadUserDialog_OneSecond_String,
+  BadUserDialog_XDays_String,
+  BadUserDialog_XHours_String,
+  BadUserDialog_XMinutes_String,
+  BadUserDialog_XSeconds_String,
+  BadUserDialog_Infinite_String,
+  ChatCommandLogic_Whisper_String,
+  ChatCommandLogic_Block_String,
+  ChatCommandLogic_Emote_String,
+  ChatCommandLogic_Ignore_String,
+  ChatCommandLogic_Away_String,
+  ChatCommandLogic_Invite_String,
+  ChatCommandLogic_Uninvite_String,
+  ChatCommandLogic_Reply_String,
+  ChatCommandLogic_Clear_String,
+  ChatCommandLogic_Help_String,
+  ChatCommandLogic_ShowTeam_String,
+  ChatCommandLogic_Moderator_String,
+  ChatCommandLogic_ServerMute_String,
+  ChatCommandLogic_ServerBan_String,
+  ChatCommandLogic_Mute_String,
+  ChatCommandLogic_Ban_String,
+  ChatCommandLogic_Unmute_String,
+  ChatCommandLogic_ServerUnmute_String,
+  ChatCommandLogic_Unban_String,
+  ChatCommandLogic_ServerUnban_String,
+  ChatCommandLogic_Alert_String,
+  ChatCommandLogic_Warn_String,
+  ChatCommandLogic_HelpHeader_String,
+  ChatCommandLogic_HelpHelp_String,
+  ChatCommandLogic_ShowTeamHelp_String,
+  ChatCommandLogic_WhisperHelp_String,
+  ChatCommandLogic_BlockHelp_String,
+  ChatCommandLogic_IgnoreHelp_String,
+  ChatCommandLogic_ReplyHelp_String,
+  ChatCommandLogic_EmoteHelp_String,
+  ChatCommandLogic_AwayHelp_String,
+  ChatCommandLogic_ClearHelp_String,
+  ChatCommandLogic_InviteHelp_String,
+  ChatCommandLogic_UninviteHelp_String,
+  ChatCommandLogic_MuteHelp_String,
+  ChatCommandLogic_UnmuteHelp_String,
+  ChatCommandLogic_BanHelp_String,
+  ChatCommandLogic_UnbanHelp_String,
+  ChatCommandLogic_ModeratorHelp_String,
+  ChatCommandLogic_ServerMuteHelp_String,
+  ChatCommandLogic_ServerUnmuteHelp_String,
+  ChatCommandLogic_ServerBanHelp_String,
+  ChatCommandLogic_ServerUnbanHelp_String,
+  ChatCommandLogic_AlertHelp_String,
+  ChatCommandLogic_WarnHelp_String,
+  ChatCtrl_NormalChat_String,
+  ChatCtrl_Emote_String,
+  ChatCtrl_TeamChat_String,
+  ChatCtrl_TeamEmote_String,
+  ChatCtrl_YouWhisperToYourself_String,
+  ChatCtrl_YouWhisper_String,
+  ChatCtrl_SomeoneWhispersToYou_String,
+  ChatCtrl_YouWarnSomeone_String,
+  ChatCtrl_YouWarnYourself_String,
+  ChatCtrl_SomeoneWarnsYou_String,
+  ChatCtrl_SomeoneWarnsSomeone_String,
+  ChatCtrl_EnteringRoom_String,
+  ChatCtrl_LeavingRoom_String,
+  ChatCtrl_Disconnected_String,
+  ChatCtrl_YouWereKicked_String,
+  ChatCtrl_YouWereBannedMinute_String,
+  ChatCtrl_YouWereBannedMinutes_String,
+  ChatCtrl_YouWereBannedHour_String,
+  ChatCtrl_YouWereBannedHours_String,
+  ChatCtrl_YouWereBannedDay_String,
+  ChatCtrl_YouWereBannedDays_String,
+  ChatCtrl_YouWereBannedIndefinitely_String,
+  ChatCtrl_SomeoneWasKicked_String,
+  ChatCtrl_SomeoneWasBannedMinute_String,
+  ChatCtrl_SomeoneWasBannedMinutes_String,
+  ChatCtrl_SomeoneWasBannedHour_String,
+  ChatCtrl_SomeoneWasBannedHours_String,
+  ChatCtrl_SomeoneWasBannedDay_String,
+  ChatCtrl_SomeoneWasBannedDays_String,
+  ChatCtrl_SomeoneWasBannedIndefinitely_String,
+  ChatCtrl_YouWereUnmuted_String,
+  ChatCtrl_YouWereMutedMinute_String,
+  ChatCtrl_YouWereMutedMinutes_String,
+  ChatCtrl_YouWereMutedHour_String,
+  ChatCtrl_YouWereMutedHours_String,
+  ChatCtrl_YouWereMutedDay_String,
+  ChatCtrl_YouWereMutedDays_String,
+  ChatCtrl_YouWereMutedIndefinitely_String,
+  ChatCtrl_SomeoneWasUnmuted_String,
+  ChatCtrl_SomeoneWasMutedMinute_String,
+  ChatCtrl_SomeoneWasMutedMinutes_String,
+  ChatCtrl_SomeoneWasMutedHour_String,
+  ChatCtrl_SomeoneWasMutedHours_String,
+  ChatCtrl_SomeoneWasMutedDay_String,
+  ChatCtrl_SomeoneWasMutedDays_String,
+  ChatCtrl_SomeoneWasMutedIndefinitely_String,
+  ChatCtrl_ModeratorComment_String,
+  ChatCtrl_AlertComment_String,
+  ChatCtrl_ServerAlert_String,
+  ChatCtrl_ServerShutdownStartedMinute_String,
+  ChatCtrl_ServerShutdownStartedMinutes_String,
+  ChatCtrl_ServerShutdownStartedHour_String,
+  ChatCtrl_ServerShutdownStartedHours_String,
+  ChatCtrl_ServerShutdownStartedDay_String,
+  ChatCtrl_ServerShutdownStartedDays_String,
+  ChatCtrl_ServerShutdownAborted_String,
+  ChatCtrl_SomeoneInvitesYou_String,
+  ChatCtrl_SomeoneUninvitesYou_String,
+  ChatCtrl_YouInviteSomeone_String,
+  ChatCtrl_YouUninviteSomeone_String,
+  ChatCtrl_SomeoneInvitesYouExpl_String,
+  ChatCtrl_SomeoneUninvitesYouExpl_String,
+  ChatCtrl_YouInviteSomeoneExpl_String,
+  ChatCtrl_YouUninviteSomeoneExpl_String,
+  ChatCtrl_Accept_String,
+  ChatCtrl_Reject_String,
+  ChatCtrl_SomeoneAsksToJoin_String,
+  ChatCtrl_SomeoneAsksToJoinExpl_String,
+  ChatCtrl_ClientNotOnServer_String,
+  ChatCtrl_ClientInGame_String,
+  ChatCtrl_ClientInChat_String,
+  ChatCtrl_ClientInGameAndChat_String,
+  ChatCtrl_ClientIsAnonymous_String,
+  ChatCtrl_FriendIsChatting_String,
+  ChatCtrl_FriendIsInGameStaging_String,
+  ChatCtrl_FriendIsPlaying_String,
+  ChatCtrl_FriendIsOn_String,
+  ChatCtrl_FriendIsNotOnline_String,
+  ChatCtrl_PlayerKicked_String,
+  ChatCtrl_PlayerBanned_String,
+  ChatCtrl_FriendJoined_String,
+  ChatCtrl_FriendLeft_String,
+  ChatCtrl_TeamMemberJoined_String,
+  ChatCtrl_TeamMemberLeft_String,
+  ChatCtrl_TeamMembers_String,
+  ChatCtrl_IgnoreList_String,
+  ChooseNetworkAdapterDialog_Default_String,
+  ChooseNetworkAdapterDialog_Unknown_String,
+  ClientOptionsCtrl_Whisper_String,
+  ClientOptionsCtrl_Invite_String,
+  ClientOptionsCtrl_Uninvite_String,
+  ClientOptionsCtrl_AddToFriends_String,
+  ClientOptionsCtrl_RemoveFromFriends_String,
+  ClientOptionsCtrl_ClearAFK_String,
+  ClientOptionsCtrl_SetAFK_String,
+  ClientOptionsCtrl_Ignore_String,
+  ClientOptionsCtrl_Unignore_String,
+  ClientOptionsCtrl_Block_String,
+  ClientOptionsCtrl_Unblock_String,
+  ClientOptionsCtrl_Warn_String,
+  ClientOptionsCtrl_Mute_String,
+  ClientOptionsCtrl_UnMute_String,
+  ClientOptionsCtrl_Kick_String,
+  ClientOptionsCtrl_Ban_String,
+  DirectConnectionOptionsCtrl_Connect_String,
+  DirectConnectionOptionsCtrl_Refresh_String,
+  DirectConnectionOptionsCtrl_Remove_String,
+  FriendOptionsCtrl_Locate_String,
+  FriendOptionsCtrl_RefreshList_String,
+  FriendOptionsCtrl_RemoveFromFriends_String,
+  FriendsListCtrl_Unknown_Image,
+  FriendsListCtrl_NotFound_Image,
+  FriendsListCtrl_InChat_Image,
+  FriendsListCtrl_InGame_Image,
+  GameOptionsPopup_Join_String,
+  GameOptionsPopup_Ping_String,
+  GameOptionsPopup_QueryDetails_String,
+  GameOptionsPopup_HideDetails_String,
+  GameOptionsPopup_ShowDetails_String,
+  GameOptionsPopup_Remove_String,
+  GameStagingCtrl_Ready_String,
+  GameStagingCtrl_NotReady_String,
+  GameStagingCtrl_StartGame_String,
+  GameStagingCtrl_LeaveGame_String,
+  GameStagingCtrl_DissolveGame_String,
+  GameStagingLogic_KickedTitle_String,
+  GameStagingLogic_KickedDetails_String,
+  GameStagingLogic_BannedTitle_String,
+  GameStagingLogic_BannedDetails_String,
+  GameStagingLogic_ConnectWarningTitle1_String,
+  GameStagingLogic_ConnectWarningDetails1_String,
+  GameStagingLogic_ConnectWarningTitle2_String,
+  GameStagingLogic_ConnectWarningDetails2_String,
+  GameStagingLogic_ConnectWarningTitle3_String,
+  GameStagingLogic_ConnectWarningDetails3_String,
+  GameStagingLogic_NoPingReplyError_String,
+  GameStagingLogic_GettingGameInfoTitle_String,
+  GameStagingLogic_GettingGameInfoDetails_String,
+  GameStagingLogic_JoinGameErrorTitle_String,
+  GameStagingLogic_VerifyingPingTitle_String,
+  GameStagingLogic_VerifyingPingDetails_String,
+  GameStagingLogic_DissolveGame_String,
+  GameStagingLogic_DissolveGameConfirm_String,
+  GameStagingLogic_LeaveGame_String,
+  GameStagingLogic_LeaveGameConfirm_String,
+  GameStagingLogic_NoQuickPlayGameTitle_String,
+  GameStagingLogic_NoQuickPlayGameDetails_String,
+  GameUserListCtrl_Ban_String,
+  GameUserListCtrl_Kick_String,
+  GameUserListCtrl_Ready_Image,
+  InternetQuickPlay_Welcome_String,
+  InternetQuickPlay_UserWelcome_String,
+  JoinResponse_Joined_String,
+  JoinResponse_ServerFull_String,
+  JoinResponse_InviteOnly_String,
+  JoinResponse_AskToJoin_String,
+  JoinResponse_GameInProgress_String,
+  JoinResponse_InvalidPassword_String,
+  JoinResponse_NotOnLAN_String,
+  JoinResponse_Blocked_String,
+  JoinResponse_Unknown_String,
+  LANLogic_SocketBindError_String,
+  LANLogic_SocketListenError_String,
+  LANLogic_ConnectToGameTitle_String,
+  LANLogic_ConnectToGameDetails_String,
+  LANLogic_CheckingAddressTitle_String,
+  LANLogic_CheckingAddressDetails_String,
+  LANLogic_RegisterTitle_String,
+  LANLogic_RegisterDetails_String,
+  LANLogic_JoinFailure_String,
+  LANLogic_JoinReplyError_String,
+  LANLogic_InvalidSubnet_String,
+  LobbyContainer_InitStart_String,
+  LobbyContainer_InitFailed_String,
+  LobbyContainer_CheckingVersion_String,
+  LobbyContainer_QueryingServers_String,
+  LobbyContainer_NoConnection_String,
+  LobbyContainer_DNSLookupFailed_String,
+  LobbyContainer_DirLookupFailure_String,
+  LobbyContainer_VersionCheckFailure_String,
+  LobbyContainer_InitComplete_String,
+  LobbyContainer_NoServers_String,
+  LobbyContainer_AuthServers_String,
+  LobbyContainer_AccountServers_String,
+  LobbyContainer_VersionServers_String,
+  LobbyContainer_CreateAccountTitle_String,
+  LobbyContainer_CreateAccountDetails_String,
+  LobbyContainer_RetrievePasswordTitle_String,
+  LobbyContainer_RetrievePasswordDetails_String,
+  LobbyContainer_RetrieveUsernameTitle_String,
+  LobbyContainer_RetrieveUsernameDetails_String,
+  LobbyContainer_QueryAccountTitle_String,
+  LobbyContainer_QueryAccountDetails_String,
+  LobbyContainer_UpdateAccountTitle_String,
+  LobbyContainer_UpdateAccountDetails_String,
+  LobbyContainer_LoginTitle_String,
+  LobbyContainer_LoginDetails_String,
+  LobbyContainer_GettingRoomsTitle_String,
+  LobbyContainer_GettingRoomsDetails_String,
+  LobbyContainer_VersionOutOfDataTitle_String,
+  LobbyContainer_VersionOutOfDataDetails_String,
+  LobbyGameStatus_Success_String,
+  LobbyGameStatus_GameFull_String,
+  LobbyGameStatus_GameInProgress_String,
+  LobbyGameStatus_UnpackFailure_String,
+  LobbyGameStatus_NotInvited_String,
+  LobbyGameStatus_CaptainRejectedYou_String,
+  LobbyGameStatus_InvalidPassword_String,
+  LobbyGameStatus_DuplicateName_String,
+  LobbyOptions_DefaultName_String,
+  LobbyOptions_CheckingAddress_String,
+  LobbyOptions_AddressUnavailable_String,
+  RoomCtrl_QueryingServer_String,
+  RoomCtrl_Password_Image,
+  RoomLabelCtrl_LabelPrefix_String,
+  RoomLabelCtrl_LabelServer_String,
+  RoomLabelCtrl_LabelUser_String,
+  RoomLabelCtrl_LabelUsers_String,
+  RoomLabelCtrl_LabelDisconnected_String,
+  RoutingLogic_GetClientListTitle_String,
+  RoutingLogic_GetClientListDetails_String,
+  RoutingLogic_GetGroupListTitle_String,
+  RoutingLogic_GetGroupListDetails_String,
+  RoutingLogic_GameDissolvedTitle_String,
+  RoutingLogic_GameDissolvedDetails_String,
+  RoutingLogic_NoServersTitle_String,
+  RoutingLogic_NoServersDetails_String,
+  RoutingLogic_TooManyFriendsTitle_String,
+  RoutingLogic_TooManyFriendsDetails_String,
+  RoutingLogic_AlreadyJoinedTitle_String,
+  RoutingLogic_AlreadyInGame_String,
+  RoutingLogic_AlreadyInRoom_String,
+  RoutingLogic_JoinGroupTitle_String,
+  RoutingLogic_JoinGroupDetails_String,
+  RoutingLogic_ConnectTitle_String,
+  RoutingLogic_ConnectDetails_String,
+  RoutingLogic_RegisterTitle_String,
+  RoutingLogic_RegisterDetails_String,
+  RoutingLogic_QueryGroupsTitle_String,
+  RoutingLogic_QueryGroupsDetails_String,
+  RoutingLogic_CreateGroupTitle_String,
+  RoutingLogic_CreateGroupDetails_String,
+  RoutingLogic_GetBadUsersTitle_String,
+  RoutingLogic_GetBadUsersDetails_String,
+  RoutingLogic_DisconnectedTitle_String,
+  RoutingLogic_DisconnectedDetails_String,
+  RoutingLogic_AskingCaptainTitle_String,
+  RoutingLogic_AskingCaptainDetails_String,
+  RoutingLogic_CollectingPingsTitle_String,
+  RoutingLogic_CollectingPingsDetails_String,
+  RoutingLogic_GettingGameListTitle_String,
+  RoutingLogic_GettingGameListDetails_String,
+  RoutingLogic_MuteClientTitle_String,
+  RoutingLogic_UnmuteClientTitle_String,
+  RoutingLogic_BanClientTitle_String,
+  RoutingLogic_KickClientTitle_String,
+  RoutingLogic_ModerateDetails_String,
+  RoutingLogic_FriendNotFoundTitle_String,
+  RoutingLogic_FriendNotFoundDetails_String,
+  RoutingLogic_ClientNotFound_String,
+  RoutingLogic_ClientAmbiguous_String,
+  RoutingLogic_InvalidCommand_String,
+  RoutingLogic_RequireName_String,
+  RoutingLogic_BadTimeSpec_String,
+  RoutingLogic_Error_String,
+  RoutingLogic_NotCaptain_String,
+  ServerListCtrl_Pinging_String,
+  ServerListCtrl_PingFailed_String,
+  ServerListCtrl_Querying_String,
+  ServerListCtrl_QueryFailed_String,
+  ServerListCtrl_ListSummary_String,
+  ServerListCtrl_ListPingSummary_String,
+  ServerListCtrl_RefreshList_String,
+  ServerListCtrl_StopRefresh_String,
+  ServerListCtrl_NoFilter_String,
+  ServerListCtrl_AddRemove_String,
+  ServerListCtrl_Add_String,
+  ServerListCtrl_Remove_String,
+  ServerListCtrl_FullFilter_String,
+  ServerListCtrl_NotFullFilter_String,
+  ServerListCtrl_OpenFilter_String,
+  ServerListCtrl_PingFailed_Image,
+  ServerListCtrl_GameExpanded_Image,
+  ServerListCtrl_GameNotExpanded_Image,
+  ServerListCtrl_GameAreInvited_Image,
+  ServerListCtrl_GameNone_Image,
+  ServerListCtrl_GameAskToJoin_Image,
+  ServerListCtrl_GameHasPassword_Image,
+  ServerListCtrl_GameNotInvited_Image,
+  ServerListCtrl_GameInProgress_Image,
+  ServerListCtrl_SkillOpen_Image,
+  ServerListCtrl_SkillNovice_Image,
+  ServerListCtrl_SkillIntermediate_Image,
+  ServerListCtrl_SkillAdvanced_Image,
+  ServerListCtrl_SkillExpert_Image,
+  ServerOptionsCtrl_Connect_String,
+  ServerOptionsCtrl_RefreshServer_String,
+  ServerOptionsCtrl_HideDetails_String,
+  ServerOptionsCtrl_ShowDetails_String,
+  ServerOptionsCtrl_ResfreshList_String,
+  StagingLogic_DisconnectedTitle_String,
+  StagingLogic_DisconnectedDetails_String,
+  StagingLogic_BannedTitle_String,
+  StagingLogic_BannedDetails_String,
+  StagingLogic_KickedTitle_String,
+  StagingLogic_KickedDetails_String,
+  UserListCtrl_Ignore_String,
+  UserListCtrl_Unignore_String,
+  UserListCtrl_Normal_Image,
+  UserListCtrl_Away_Image,
+  UserListCtrl_Admin_Image,
+  UserListCtrl_Moderator_Image,
+  UserListCtrl_Captain_Image,
+  UserListCtrl_Muted_Image,
+  UserListCtrl_Ignored_Image,
+  UserListCtrl_Blocked_Image,
+  WONStatus_Success_String,
+  WONStatus_Killed_String,
+  WONStatus_TimedOut_String,
+  WONStatus_InvalidAddress_String,
+  WONStatus_GeneralFailure_String,
+  WONStatus_AuthFailure_String,
+  WONStatus_FTPFailure_String,
+  WONStatus_HTTPFailure_String,
+  WONStatus_MOTDFailure_String,
+  WONStatus_RoutingFailure_String,
+  WONStatus_GameSpyFailure_String,
+  WONStatus_DirFailure_String,
+  WONStatus_ChatFailure_String,
+  WONStatus_DatabaseFailure_String,
+  WONStatus_NotAllowed_String,
+  WONStatus_NotAuthorized_String,
+  WONStatus_BehindFirewall_String,
+  WONStatus_ExpiredCertificate_String,
+  WONStatus_InvalidCDKey_String,
+  WONStatus_CDKeyBanned_String,
+  WONStatus_CDKeyInUse_String,
+  WONStatus_CRCFailed_String,
+  WONStatus_UserExists_String,
+  WONStatus_UserNotFound_String,
+  WONStatus_BadPassword_String,
+  WONStatus_InvalidUserName_String,
+  WONStatus_BadCommunity_String,
+  WONStatus_NotInCommunity_String,
+  WONStatus_UserSeqInUse_String,
+  WONStatus_BlankNamesNotAllowed_String,
+  WONStatus_CaptainRejectedYou_String,
+  WONStatus_ClientAlreadyBanned_String,
+  WONStatus_ClientAlreadyInGroup_String,
+  WONStatus_ClientAlreadyMuted_String,
+  WONStatus_ClientBanned_String,
+  WONStatus_ClientDoesNotExist_String,
+  WONStatus_ClientNotBanned_String,
+  WONStatus_ClientNotInGroup_String,
+  WONStatus_ClientNotInvited_String,
+  WONStatus_ClientNotMuted_String,
+  WONStatus_ConnectFailure_String,
+  WONStatus_GroupAlreadyClaimed_String,
+  WONStatus_GroupAlreadyExists_String,
+  WONStatus_GroupClosed_String,
+  WONStatus_GroupDeleted_String,
+  WONStatus_GroupDoesNotExist_String,
+  WONStatus_GroupFull_String,
+  WONStatus_GuestNamesReserved_String,
+  WONStatus_InvalidPassword_String,
+  WONStatus_MustBeAdmin_String,
+  WONStatus_MustBeCaptain_String,
+  WONStatus_MustBeCaptainOrModerator_String,
+  WONStatus_MustBeModerator_String,
+  WONStatus_ServerFull_String,
+  WONStatus_GroupNameExceedsMaximum_String,
+  WONStatus_JoinCanceled_String,
+  WONStatus_Throttled_String,
+  WONStatus_KeyNotUsed_String,
+  WONStatus_EMailPasswordDuplication_String,
+  WONStatus_AccountCreateDisabled_String,
+  WONStatus_AgeNotOldEnough_String,
+  WONStatus_ItemHasDependencies_String,
+  WONStatus_OutOfDate_String,
+  WONStatus_OutOfDateNoUpdate_String,
+  WONStatus_ValidNotLatest_String,
+  WONStatus_DataAlreadyExists_String,
+  WONStatus_DBError_String,
+  WONStatus_ConnRefused_String,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -8092,6 +9091,15 @@ struct EeWonEeColor;
 /// The lobby game's Rust half.
 struct EeWonEeGame;
 
+/// One lobby sound.
+struct EeWonEeSound;
+
+/// One transfer.
+struct EeWonEeXfer;
+
+/// One send op: the path, the open file, the chunk and its read position.
+struct EeWonEeXferSend;
+
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
@@ -8157,6 +9165,9 @@ struct EeWonLobbyPopup;
 /// `LobbyPersistentData`'s scalar state and its setters' rules.
 struct EeWonLobbyPrefs;
 
+/// One logic object (its kind's members; the others stay at their defaults).
+struct EeWonLogic;
+
 /// The Rust MultiListHeader.
 struct EeWonMHead;
 
@@ -8182,6 +9193,10 @@ struct EeWonOpTracker;
 
 /// `PeerAuthClient` (`server` false) or `PeerAuthServer`; free with [`ee_won_peerauth_free`].
 struct EeWonPeerAuth;
+
+/// `PingGameOp`'s members: the request id, the ping time (0xffff: no reply yet), the reply's flags (the request's
+/// until a reply), the retries and the reply's bytes after its flags.
+struct EeWonPingOp;
 
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
@@ -8721,6 +9736,16 @@ struct EeWonEeResource {
   const char *name;
   bool new_section;
 };
+
+/// The host: `(object, op, a) -> result` (`object` the C++ sound, or null for the decoder's load).
+using EeWonEeSoundHostFn = ptrdiff_t(*)(void *obj, EeWonEeSoundOp op, ptrdiff_t a);
+
+/// The host: `(object, op, a, b, c) -> result`.
+using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
+                                       EeWonEeXferOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -9632,6 +10657,14 @@ using EeWonLobbyPopupHostFn = ptrdiff_t(*)(void *popup,
                                            ptrdiff_t b,
                                            ptrdiff_t c);
 
+/// The host: `(obj, op, a, b, c, d) -> result`.
+using EeWonLogicHostFn = ptrdiff_t(*)(void *obj,
+                                      EeWonLogicOp op,
+                                      ptrdiff_t a,
+                                      ptrdiff_t b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
 /// One patch as the C++ hands it over.
 struct EeWonPatchRef {
   const uint8_t *from;
@@ -9859,51 +10892,74 @@ struct EeWonPrefsEvent {
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
 
+/// A C++ call on one object.
+using EeWonCoreFn = void(*)(void *object);
+
+/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
+/// object holds no reference yet.
+struct EeWonCoreHooks {
+  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
+  EeWonCoreFn ref_add;
+  EeWonCoreFn ref_release;
+  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
+  void (*completion_call)(void *completion, void *op);
+  /// the object's Rust object of that kind (null for a null object)
+  void *(*object_of)(void *object, EeWonCoreObject kind);
+  /// a socket op's virtual `Duplicate()` (a new op, or null)
+  void *(*socketop_duplicate)(void *op);
+  /// `new AsyncOp`
+  void *(*new_op)();
+  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
+  void *(*new_completion)(EeWonCompletion *body);
+  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
+  void *(*new_socket_op)(EeWonCoreSocketOp kind,
+                         void *socket,
+                         void *bytes,
+                         const EeWonIpAddr *addr,
+                         uint16_t size);
+  /// `new QueueSocket(type)`
+  void *(*new_queue_socket)(int32_t kind);
+  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
+  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
+  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
+  void *udp_response_check;
+  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
+  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
+  /// a `ByteBuffer`'s bytes (its `mBytes`)
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  /// a socket op's virtual `Continue()`
+  long (*socketop_continue)(void *op);
+  /// a socket op's virtual `Start()`
+  long (*socketop_start)(void *op);
+  /// `WONAPICore::AddToSocketThread(op)`
+  EeWonCoreFn socket_thread_add;
+  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
+  /// `fclose`, the modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
+  long (*accept)(void *socket, void **out);
+  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
+  void (*socket_hook)(void *socket, int32_t which);
+  /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
+  long (*transform_call)(void *transform, void *message, bool send);
+  /// `delete transform`
+  EeWonCoreFn transform_free;
+};
+
 /// A C++ call on one object (an op, a completion or the socket).
 using EeWonQueueFn = void(*)(void *object);
-
-/// A C++ call making a new object (its reference not yet taken).
-using EeWonQueueNewFn = void*(*)(void *socket);
-
-/// What the queue object calls back in the C++. One static table serves every queue socket.
-struct EeWonQueueSocketHooks {
-  /// `completion->AddRef()`, `->Release()`, `->Complete(op)`
-  EeWonQueueFn completion_add_ref;
-  EeWonQueueFn completion_release;
-  void (*completion_call)(void *completion, void *op);
-  /// `op->AddRef()`, `->Release()` (any `AsyncOp*`)
-  EeWonQueueFn op_add_ref;
-  EeWonQueueFn op_release;
-  /// `op->GetStatus()`, `->IsKilled()`, `->GetTimeout()`, `->GetCompletion()`
-  long (*op_status)(void *op);
-  bool (*op_killed)(void *op);
-  uint32_t (*op_timeout)(void *op);
-  void *(*op_completion)(void *op);
-  /// `op->SetCompletion(c)`, `->SetTimeout(t)`, `->RunAsync(t)`, `->Kill(true)`, `->ForceFinish(s)`,
-  /// `->SetRunAsyncImmediately(false)`
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_set_timeout)(void *op, uint32_t timeout);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonQueueFn op_kill;
-  void (*op_force_finish)(void *op, long status);
-  /// a socket op's `SetSocket(socket)` and the virtual `Duplicate()` (a new op, or null)
-  void (*op_set_socket)(void *op, void *socket);
-  void *(*op_duplicate)(void *op);
-  /// `dynamic_cast<QueueOpFastCompletion*>(completion)`'s original completion, or null
-  void *(*fast_original)(void *completion);
-  /// new objects: `ParamCompletion(StaticOpCallback, socket)`, `QueueOpFastCompletion(StaticOpCallback,
-  /// socket, original)`, a close timer (`AsyncOp` with `ParamCompletion(StaticCloseTimerCallback, socket)`),
-  /// `QueueCloseOp`, `CloseOp(socket)`
-  EeWonQueueNewFn new_op_completion;
-  void *(*new_fast_completion)(void *socket, void *original);
-  EeWonQueueNewFn new_close_timer;
-  EeWonQueueNewFn new_queue_close_op;
-  EeWonQueueNewFn new_close_op;
-  /// the socket's `Close()`, `IsValid()`, `GetType() == UDP`
-  EeWonQueueFn socket_close;
-  bool (*socket_valid)(void *socket);
-  bool (*socket_datagram)(void *socket);
-};
 
 /// What a LAN socket object calls back: the client's references and its back link (`client->mSocket = socket`).
 struct EeWonLanSocketHooks {
@@ -10102,38 +11158,12 @@ using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
                                            int32_t w,
                                            int32_t h);
 
-/// What the connection object calls back in the C++. One static table serves every connection. Every object is
-/// passed as its `RefCount*`.
-struct EeWonServerConnHooks {
-  /// `object->AddRef()`, `->Release()` (an auth context, an op or a completion)
-  void (*add_ref)(void *object);
-  void (*release)(void *object);
-  /// an op's `GetStatus()`, `IsKilled()`, `Kill(true)`, `SetCompletion(c)`, `RunAsync(t)`, `RunBlock(t)`
-  long (*op_status)(void *op);
-  bool (*op_killed)(void *op);
-  void (*op_kill)(void *op);
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_run_async)(void *op, long timeout);
-  void (*op_run_block)(void *op, uint32_t timeout);
-  /// `completion->Complete(AsyncOpPtr(op))`
-  void (*complete)(void *completion, void *op);
+/// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
+struct EeWonServerConnCpp {
   /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
   void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
-  /// `op->SetCompletion(new ParamCompletion(StaticConnectCallback, conn))`
-  void (*route_connect)(void *conn, void *op);
-  /// `new AsyncOp` with its completion `ParamCompletion(StaticKeepAliveCallback, conn)` (reference not taken)
-  void *(*new_keep_alive)(void *conn);
-  /// `SetRepeatCompletion(new ParamCompletion(StaticMsgCallback, conn))`, then `SetRepeatOp(new RecvMsgOp)`
-  void (*start_messages)(void *conn);
-  /// `SetRepeatCompletion(NULL)`
-  void (*stop_messages)(void *conn);
-  /// `QueueOp(new SendMsgOp(new ByteBuffer(bytes)), -1)`
-  void (*queue_message)(void *conn, const uint8_t *bytes, size_t length);
-  /// the socket's `Close()`, `GetLengthFieldSize()`, and `QueueSocket::CloseHook()`, `QueueSocket::KillHook()`
-  void (*close)(void *conn);
-  uint8_t (*length_field_size)(void *conn);
-  void (*queue_close_hook)(void *conn);
-  void (*queue_kill_hook)(void *conn);
+  /// `conn->MsgCallback(message)` (a `ByteBuffer*`)
+  void (*msg_callback)(void *conn, void *message);
 };
 
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
@@ -10250,87 +11280,6 @@ struct EeWonSmartAction {
   size_t text_len;
 };
 
-/// A C++ call on a socket (`AsyncSocket*`).
-using EeWonAsyncSocketFn = void(*)(void *socket);
-
-/// A transform's `Send` / `Recv` on a message (`MsgTransform*`, `ByteBufferPtr*`): its status.
-using EeWonTransformFn = long(*)(void *transform, void *message);
-
-/// What the socket object calls back in the C++. One static table serves every socket.
-struct EeWonAsyncSocketHooks {
-  /// the virtual `OpenHook`, `CloseHook`, `KillHook`
-  EeWonAsyncSocketFn open_hook;
-  EeWonAsyncSocketFn close_hook;
-  EeWonAsyncSocketFn kill_hook;
-  /// `transform->Send(message)`, `transform->Recv(message)`
-  EeWonTransformFn transform_send;
-  EeWonTransformFn transform_recv;
-  /// `delete transform`
-  void (*transform_free)(void *transform);
-};
-
-/// A C++ call on a socket op (`SocketOp*`).
-using EeWonSocketOpBaseFn = void(*)(void *op);
-
-/// A C++ call on a socket (`AsyncSocket*`).
-using EeWonSocketRefFn = void(*)(void *socket);
-
-/// What the op object calls back in the C++. One static table serves every socket op.
-struct EeWonSocketOpBaseHooks {
-  /// the virtual `Start()` and `Continue()`
-  long (*start)(void *op);
-  long (*continue_op)(void *op);
-  /// `Finish(status)`
-  void (*finish)(void *op, long status);
-  /// `GetMode()`
-  int32_t (*mode)(void *op);
-  /// `WONAPICore::AddToSocketThread(op)`
-  EeWonSocketOpBaseFn add_to_socket_thread;
-  /// `socket->AddRef()`, `socket->Release()`
-  EeWonSocketRefFn socket_add_ref;
-  EeWonSocketRefFn socket_release;
-  /// the socket's Rust object (`socket->mSock`)
-  EeWonAsyncSocket *(*socket_object)(void *socket);
-  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
-  EeWonSocketRefFn ref_add;
-  EeWonSocketRefFn ref_release;
-  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
-  const EeWonByteBuffer *(*bytes_of)(void *buffer);
-  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
-  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
-  /// result's
-  long (*transform)(void *socket, void **message, bool send);
-  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
-  /// modify time (`utime`)
-  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
-  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
-  int32_t (*file_close)(void *file);
-  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
-  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
-  void (*progress)(void *op, void *completion);
-  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
-  long (*accept)(void *socket, void **out);
-};
-
-/// A C++ call on a socket op (`SocketOp*`).
-using EeWonSocketOpFn = void(*)(void *op);
-
-/// What the socket thread calls back in the C++. One static table serves every socket thread.
-struct EeWonSocketOpHooks {
-  /// `op->GetStatus()`
-  long (*status)(void *op);
-  /// the virtual `op->Continue()`
-  long (*continue_op)(void *op);
-  /// `op->Finish(status)`
-  void (*finish)(void *op, long status);
-  /// `op->mInSocketThread = on`
-  void (*set_in_thread)(void *op, bool on);
-  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)`
-  EeWonSocketOpFn add_ref;
-  EeWonSocketOpFn release;
-  EeWonSocketOpFn kill;
-};
-
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
   uint8_t kind;
@@ -10378,6 +11327,13 @@ struct EeWonGameSummary {
   size_t rest;
 };
 
+/// A status's text: the resource string, and whether it is a general text formatted with the status's
+/// description.
+struct EeWonStatusLobbyText {
+  EeWonLobbyRes res;
+  bool general;
+};
+
 /// The constructor's parts (`ee_won_tab_init`): the bottom bar's Rust object, the four containers and the layout
 /// point, as `Component*`s.
 struct EeWonTabParts {
@@ -10394,31 +11350,6 @@ struct EeWonTabParts {
 struct EeWonThreadBody {
   void (*run)(void *context);
   void (*destroy)(void *context);
-  void *context;
-};
-
-/// An op callback: the op (a C++ `AsyncOp*`) and the context given with the table.
-using EeWonOpCall = void(*)(void *context, void *op);
-
-/// The C++ steps the timer thread takes on an op: `due` (it timed out: `Finish(WS_TimedOut)`, then the timer's
-/// reference released) and `purged` (the queue let it go: `Kill(true)`, then the reference released).
-struct EeWonTimerHooks {
-  EeWonOpCall due;
-  EeWonOpCall purged;
-  void *context;
-};
-
-/// The C++ steps the container takes on an op (`AsyncOp*`): references, its status, its run and its completion.
-struct EeWonContainerHooks {
-  EeWonOpCall add_ref;
-  EeWonOpCall release;
-  /// `mStatus==WS_Pending`
-  bool (*is_pending)(void *context, void *op);
-  bool (*completion_pending)(void *context, void *op);
-  EeWonOpCall start_run_async;
-  EeWonOpCall complete;
-  /// `Kill(true)`
-  EeWonOpCall kill;
   void *context;
 };
 
@@ -10453,78 +11384,6 @@ struct EeWonTitleFlags {
   bool save_session_key;
   bool get_key_id;
   bool ascii_account_names;
-};
-
-/// A C++ call on one object.
-using EeWonUdpFn = void(*)(void *object);
-
-/// What the manager calls back in the C++. One static table serves every manager.
-struct EeWonUdpHooks {
-  /// any object's `AddRef()` / `Release()` (`RefCount*`)
-  EeWonUdpFn ref_add;
-  EeWonUdpFn ref_release;
-  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
-  /// `ForceFinish(s)`, `TimeLeft()`
-  long (*op_status)(void *op);
-  void *(*op_completion)(void *op);
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonUdpFn op_kill;
-  void (*op_finish)(void *op, long status);
-  void (*op_force_finish)(void *op, long status);
-  uint32_t (*op_time_left)(void *op);
-  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
-  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  EeWonIpAddr *(*recv_address)(void *op);
-  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
-  void (*recv_set_msg)(void *op, void *bytes);
-  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
-  void *(*new_recv_op)(const EeWonIpAddr *addr);
-  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
-  void *(*socket_new)();
-  EeWonUdpFn socket_kill;
-  void (*socket_set_broadcast)(void *socket, bool on);
-  long (*socket_bind)(void *socket, int32_t port);
-  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
-  /// `SetRepeatOp(new RecvBytesFromOp(size))`
-  void (*socket_repeat)(void *socket, void *manager, int32_t size);
-  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
-  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
-};
-
-/// A C++ call on one object.
-using EeWonUdpOpFn = void(*)(void *object);
-
-/// What the ops call back in the C++. One static table serves every op.
-struct EeWonUdpOpHooks {
-  /// any object's `AddRef()` / `Release()` (`RefCount*`)
-  EeWonUdpOpFn ref_add;
-  EeWonUdpOpFn ref_release;
-  /// an op's `GetMode()`, `GetTimeout()`, `GetStatus()`, `Finish(s)`, `RunAsync(t)`, `Kill(true)`
-  int32_t (*op_mode)(void *op);
-  long (*op_timeout)(void *op);
-  long (*op_status)(void *op);
-  void (*op_finish)(void *op, long status);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonUdpOpFn op_kill;
-  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `new QueueSocket(UDP)` bound to any port (`Fn2B0D90(0, false)`), a reference taken; a socket's `Kill()`
-  void *(*socket_new_bound)();
-  EeWonUdpOpFn socket_kill;
-  /// `QueueRecv`'s op: `QueueOp(new RecvBytesFromOp(1024)` completing to the receive op's `StaticRecvCallback`, `-1)`
-  void (*socket_queue_recv)(void *socket, void *op);
-  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
-  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
-  /// a manager's `QueueOp(op, timeout)` and `Send(bytes, addr)`
-  void (*manager_queue)(void *manager, void *op, uint32_t timeout);
-  void (*manager_send)(void *manager, void *bytes, const EeWonIpAddr *addr);
-  /// the reply wait: `new UDPManagerRecvOp(addr)` completing to the request op's `StaticRecvCallback`, its check the
-  /// request's `StaticCheckResponse`; a reference taken
-  void *(*new_wait)(void *request, const EeWonIpAddr *addr);
-  /// a receive op's Rust object
-  const EeWonUdpRecvOp *(*recv_object)(void *op);
 };
 
 /// One entry, to the C++ copy.
@@ -11916,6 +12775,65 @@ bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
 /// # Safety
 /// `name` is NULL or a NUL-terminated string.
 ptrdiff_t ee_won_eeresource_find(const char *name);
+
+/// A new sound for the C++ object `obj` (an effect of sample `sample`; the music's is unused).
+EeWonEeSound *ee_won_eesound_new(void *obj,
+                                 EeWonEeSoundKind kind,
+                                 EeWonEeSoundHostFn host,
+                                 uint32_t sample);
+
+/// The C++ object's destructor: an effect's sample unloaded, the object freed.
+///
+/// # Safety
+/// `p` came from [`ee_won_eesound_new`] (or is null), not used after.
+void ee_won_eesound_free(EeWonEeSound *p);
+
+/// A virtual of the C++ object.
+///
+/// # Safety
+/// `p` is a live object of [`ee_won_eesound_new`].
+ptrdiff_t ee_won_eesound_call(const EeWonEeSound *p, EeWonEeSoundCall call, ptrdiff_t a);
+
+/// `EELobbySoundDecoder::Decode`'s load: the sample of `path` (a NUL-terminated `char*`), or -1 without a sound
+/// manager (no sound is made then).
+int64_t ee_won_eesound_load(EeWonEeSoundHostFn host,
+                            const uint8_t *path);
+
+/// A new transfer for the C++ shell `obj`.
+EeWonEeXfer *ee_won_eexfer_new(void *obj, EeWonEeXferHostFn host);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_new`] (or is null), not used after.
+void ee_won_eexfer_free(EeWonEeXfer *p);
+
+/// A method of the transfer.
+///
+/// # Safety
+/// `p` is a live transfer; the host's calls may come back into it (a completion run at once).
+ptrdiff_t ee_won_eexfer_call(const EeWonEeXfer *p, EeWonEeXferCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new send op for the C++ shell `obj`, of the file at `path` (`len` bytes).
+///
+/// # Safety
+/// `path` holds `len` readable bytes (or `len` is 0).
+EeWonEeXferSend *ee_won_eexfer_send_new(void *obj,
+                                        EeWonEeXferHostFn host,
+                                        const uint8_t *path,
+                                        size_t len);
+
+/// The send op's destructor (the file is not closed: the op's cleanup does that).
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_send_new`] (or is null), not used after.
+void ee_won_eexfer_send_free(EeWonEeXferSend *p);
+
+/// A virtual of the send op.
+///
+/// # Safety
+/// `p` is a live send op.
+int32_t ee_won_eexfer_send_call(const EeWonEeXferSend *p, EeWonEeXferSendCall call);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
@@ -15913,6 +16831,43 @@ ptrdiff_t ee_won_lobbypopup_call(const EeWonLobbyPopup *p,
                                  ptrdiff_t b,
                                  ptrdiff_t c);
 
+/// A new logic of `kind` for the C++ shell `obj`.
+EeWonLogic *ee_won_logic_new(EeWonLogicKind kind, void *obj, EeWonLogicHostFn host);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_logic_new`] (or is null), not used after.
+void ee_won_logic_free(EeWonLogic *p);
+
+/// A method of the logic.
+///
+/// # Safety
+/// `p` is a live logic; the host's calls may come back into it (a completion run at once).
+ptrdiff_t ee_won_logic_call(const EeWonLogic *p,
+                            EeWonLogicCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new ping op's members for the C++ shell `obj`.
+EeWonPingOp *ee_won_pingop_new(void *obj,
+                               EeWonLogicHostFn host,
+                               uint16_t request_id,
+                               uint8_t flags);
+
+/// The ping op's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_pingop_new`] (or is null), not used after.
+void ee_won_pingop_free(EeWonPingOp *p);
+
+/// A virtual of the ping op.
+///
+/// # Safety
+/// `p` is a live ping op; for `CheckResponse`, `a` is a live reader.
+int64_t ee_won_pingop_call(const EeWonPingOp *p, EeWonPingOpCall call, ptrdiff_t a);
+
 /// A new Rust PopupMenu for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMenu *ee_won_menu_new(void *component,
                            EeWonGuiHostFn host,
@@ -16895,12 +17850,13 @@ void ee_won_lobbyprefs_after_global_save(EeWonLobbyPrefs *p);
 /// `p` is live.
 void ee_won_lobbyprefs_after_user_load(EeWonLobbyPrefs *p);
 
-/// A new queue object for the C++ `socket` (the hooks get it), on the socket's lock `lock`.
+/// A new queue object for the C++ `socket`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `core` is the library's static table; `socket` and `lock` outlive the object.
 EeWonQueueSocket *ee_won_queuesocket_new(void *socket,
-                                         const EeWonQueueSocketHooks *hooks,
+                                         const EeWonCoreHooks *core,
                                          void *lock);
 
 /// Frees the queue object (its references go).
@@ -17244,6 +18200,9 @@ size_t ee_won_resource_count();
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
 
+/// The kind of resource `res` (its row's).
+EeWonResKind ee_won_lobbyres_kind(EeWonLobbyRes res);
+
 /// A new Rust RootContainer for the C++ `component` over its container's Rust object `ct`, its calls out through
 /// `host`.
 ///
@@ -17559,11 +18518,15 @@ ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
                                  ptrdiff_t a,
                                  ptrdiff_t b);
 
-/// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+/// A new connection object for the C++ `conn`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table but the two of `cpp` (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `conn` and `lock` outlive the object.
-EeWonServerConn *ee_won_servconn_new(void *conn, const EeWonServerConnHooks *hooks, void *lock);
+/// `core` and `cpp` are static tables; `conn` and `lock` outlive the object.
+EeWonServerConn *ee_won_servconn_new(void *conn,
+                                     const EeWonCoreHooks *core,
+                                     const EeWonServerConnCpp *cpp,
+                                     void *lock);
 
 /// Frees the connection object (its references go).
 ///
@@ -17959,9 +18922,7 @@ void ee_won_smart_dump(EeWonSmartRoute *r,
 ///
 /// # Safety
 /// `hooks` is a static table; `socket` outlives the object.
-EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
-                                         const EeWonAsyncSocketHooks *hooks,
-                                         int32_t kind);
+EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket, const EeWonCoreHooks *core, int32_t kind);
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
 ///
@@ -18238,7 +19199,7 @@ long ee_won_asyncsocket_recv_line(const EeWonAsyncSocket *s,
 ///
 /// # Safety
 /// `hooks` is a static table; `op` outlives the object.
-EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonSocketOpBaseHooks *hooks);
+EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonCoreHooks *core);
 
 /// Frees the op object (the socket's reference goes).
 ///
@@ -18435,9 +19396,11 @@ void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
 /// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
 void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
 
+/// A socket thread whose calls on its ops are answered in Rust over the library's `core` table (cppcore.rs).
+///
 /// # Safety
-/// `hooks` lives for the program.
-EeWonSocketThread *ee_won_socket_thread_new(const EeWonSocketOpHooks *hooks);
+/// `core` is the library's static table.
+EeWonSocketThread *ee_won_socket_thread_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `t` came from `ee_won_socket_thread_new` (or is null).
@@ -18465,11 +19428,12 @@ void ee_won_socket_thread_purge(const EeWonSocketThread *t);
 /// `t` is valid.
 size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 
-/// `SocketThread::DoOp` (a static of the C++ class).
+/// `SocketThread::DoOp` (a static of the C++ class), its calls answered in Rust over the library's `core` table.
 ///
 /// # Safety
-/// `hooks` is valid; `op` is a live op.
-bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
+/// `core` is the library's static table; `op` is a live op.
+bool ee_won_socket_thread_do_op(const EeWonCoreHooks *core,
+                                void *op);
 
 /// A new Rust Splitter for the C++ `component`, its calls out through `host`.
 EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
@@ -18572,6 +19536,9 @@ ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
                               void *b,
                               ptrdiff_t c,
                               ptrdiff_t d);
+
+/// `GetWONStatusString`'s choice for `status`.
+EeWonStatusLobbyText ee_won_status_lobby_text(int32_t status);
 
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///
@@ -18898,7 +19865,7 @@ void ee_won_thread_wait_for_stop(const EeWonThread *t);
 /// `t` is valid.
 void ee_won_thread_set_priority(const EeWonThread *t, int32_t priority);
 
-EeWonTimerThread *ee_won_timer_thread_new(EeWonTimerHooks hooks);
+EeWonTimerThread *ee_won_timer_thread_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `t` came from `ee_won_timer_thread_new`; its thread does not run any more.
@@ -18940,7 +19907,7 @@ uint32_t ee_won_timer_thread_wait_time(const EeWonTimerThread *t);
 /// `t` is valid.
 size_t ee_won_timer_thread_len(const EeWonTimerThread *t);
 
-EeWonOpContainer *ee_won_container_new(EeWonContainerHooks hooks);
+EeWonOpContainer *ee_won_container_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `c` came from `ee_won_container_new`.
@@ -19062,11 +20029,13 @@ ptrdiff_t ee_won_tnode_call(const EeWonTNode *node,
                             ptrdiff_t b,
                             ptrdiff_t c);
 
-/// A new manager object for the C++ `manager`.
+/// A new manager object for the C++ `manager`; its calls are answered in Rust over the library's `core` table
+/// (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `manager` outlives the object.
-EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+/// `core` is the library's static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager,
+                                       const EeWonCoreHooks *core);
 
 /// Frees the object (its references go).
 ///
@@ -19135,9 +20104,10 @@ void ee_won_udpmanager_recv(const EeWonUdpManager *m,
 /// A receive op's object (`addr` null for any sender).
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table, `addr` null or a live value.
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (the op's calls are answered in Rust over it:
+/// cppcore.rs), `addr` null or a live value.
 EeWonUdpRecvOp *ee_won_udprecvop_new(void *op,
-                                     const EeWonUdpOpHooks *hooks,
+                                     const EeWonCoreHooks *core,
                                      const EeWonIpAddr *addr);
 
 /// Frees the object, its references given back.
@@ -19242,8 +20212,8 @@ void ee_won_udprecvop_run(const EeWonUdpRecvOp *r);
 /// A request op's object.
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table.
-EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonUdpOpHooks *hooks);
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (as the receive op's).
+EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonCoreHooks *core);
 
 /// Frees the object, its references given back.
 ///

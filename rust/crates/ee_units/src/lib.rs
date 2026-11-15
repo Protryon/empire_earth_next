@@ -30,6 +30,10 @@ pub mod atc_save;
 pub mod boarding;
 pub mod build;
 pub mod calamity;
+pub mod cls_air;
+pub mod cls_building;
+pub mod cls_host;
+pub mod cls_transport;
 pub mod commands;
 pub mod explore;
 pub mod ffi;
@@ -89,6 +93,9 @@ pub mod uu_spots;
 #[cfg(test)]
 mod uu_tests;
 pub mod uu_tiles;
+pub mod uu_world;
+#[cfg(test)]
+mod uu_world_tests;
 pub mod world;
 pub mod world_save;
 

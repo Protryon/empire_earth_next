@@ -44,7 +44,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/UReferenceContainer.h"
-#include "ee/EEUCBasicCitizen.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPResourceManager.h"
@@ -840,7 +840,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
     U2DPoint<float> theSpot(0.0f, 0.0f);
     EETileDistanceLess theSite(0, 0);
     EEUGRust* theGoal = EEGatherGoalCast(inUnit->GetLoadGoal());
-    EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
+    EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_BASIC_CITIZEN>(inUnit->GetUnitClass());
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
     long theRadius = thePlayer->mDropOffDistance;
     long theRange = theRadius * theRadius;

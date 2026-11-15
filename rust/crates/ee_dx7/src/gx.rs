@@ -205,6 +205,7 @@ mod sys {
         ) -> c_long;
         pub fn gx_surface_unlock(surface: *mut c_void) -> c_long;
         pub fn gx_surface_set_color_key(surface: *mut c_void, key: *const GxColorKey) -> c_long;
+        pub fn gx_surface_render_scale(surface: *mut c_void) -> f32;
 
         pub fn gx_vertex_buffer_release(buffer: *mut c_void) -> c_ulong;
         pub fn gx_vertex_buffer_lock(buffer: *mut c_void, data: *mut *mut c_void, size: *mut c_ulong) -> c_long;
@@ -276,6 +277,11 @@ impl RawDevice {
             ) as i32
         }
     }
+}
+
+/// `GXSurface::GetRenderScale` (`GX.cpp`): the GPU copy's pixels per logical pixel.
+pub fn surface_render_scale(s: H) -> f32 {
+    unsafe { gx_surface_render_scale(s) }
 }
 
 /// `PlatSleep(0)`.

@@ -11,6 +11,7 @@ use ee_ge::types::{Ge3DPoint, GeTransformation};
 
 use crate::effects::EeGfxColor;
 use crate::lighting::EeGfxLighting;
+use crate::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex};
 
 /// `kZBufferTestOnly`, `kZBufferTestAndWrite` (GERenderState.h).
 pub(crate) const ZBUFFER_TEST_ONLY: u32 = 2;
@@ -32,6 +33,64 @@ pub const EE_GFX_SPRITE_BLENDED: u32 = 2;
 
 /// A model to draw (`GEModel*`), opaque to Rust.
 pub type EeGfxModel = *mut c_void;
+
+/// `kStageOpModulate` (a texture stage's colour and alpha operations).
+pub(crate) const STAGE_OP_MODULATE: u32 = 2;
+/// `kMipFilterPoint`.
+pub(crate) const MIP_FILTER_POINT: u32 = 1;
+/// `kAddressingClamp`.
+pub(crate) const ADDRESSING_CLAMP: u32 = 0;
+
+/// A texture's load (`GETextureDescription`: not 3D-renderable, no transparency) and the stage settings made on it
+/// after (`SetStageAlphaMode`, `SetStageColorMode`, `SetStageMinFilterMode`, `SetStageMagFilterMode`,
+/// `SetStageMipFilterMode`, `SetStageMipMapBias`, `SetStageTextureAddressingMode`, each on every stage: -1).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxTextureLoad {
+    /// `mPixelDepth` (16 or 32)
+    pub pixel_depth: u32,
+    /// `mNumMipLevelsToDrop`
+    pub mip_levels_to_drop: u32,
+    /// `mFrameFormat`
+    pub frame_format: u32,
+    /// `mSurfaceVolatility`
+    pub volatility: u32,
+    /// `mHasAlpha`, `mCreateMIPMaps`
+    pub has_alpha: bool,
+    pub mip_maps: bool,
+    pub alpha_mode: u32,
+    pub color_mode: u32,
+    pub min_filter: u32,
+    pub mag_filter: u32,
+    pub mip_filter: u32,
+    pub mip_bias: f32,
+    pub addressing: u32,
+    /// the texture is referenced once loaded (`Reference`)
+    pub reference: bool,
+}
+
+impl EeGfxTextureLoad {
+    /// The effects' common load: 16 bits, alpha and MIP maps, modulated, bilinear with point MIP filtering biased by -1,
+    /// `addressing` as given.
+    pub fn effect(addressing: u32) -> EeGfxTextureLoad {
+        EeGfxTextureLoad {
+            pixel_depth: 16,
+            mip_levels_to_drop: 0,
+            frame_format: 0,
+            volatility: 1,
+            has_alpha: true,
+            mip_maps: true,
+            alpha_mode: STAGE_OP_MODULATE,
+            color_mode: STAGE_OP_MODULATE,
+            min_filter: 1,
+            mag_filter: 1,
+            mip_filter: MIP_FILTER_POINT,
+            mip_bias: -1.0,
+            addressing,
+            reference: false,
+        }
+    }
+}
 
 /// The C++'s rasterizer calls, each on the current screen.
 #[repr(C)]
@@ -156,6 +215,44 @@ pub struct EeGfxRaster {
         brightness: f32,
         alpha_ref: f32,
     ),
+    /// `GetAlphaTestingRefValue`
+    pub get_alpha_ref: extern "C" fn() -> f32,
+    /// `GetBlending(source, destination)`
+    pub get_blending: extern "C" fn(source: *mut u32, destination: *mut u32),
+    /// `gModelManager->CreateModel(polygons, vertices, 1, 0, 1, sub_models, name, flags)`, its name NUL-terminated
+    /// UTF-8 (not referenced)
+    pub create_model:
+        extern "C" fn(polygons: u32, vertices: u32, sub_models: u32, name: *const u8, flags: u32) -> EeGfxModel,
+    /// `gModelManager->CreateSubModel(polygons, vertices, 1, 0, 1, 0, 0, 0, parent)` (not referenced)
+    pub create_sub_model: extern "C" fn(polygons: u32, vertices: u32, parent: EeGfxModel) -> EeGfxModel,
+    /// `Reference`, `Dereference`
+    pub model_reference: extern "C" fn(model: EeGfxModel),
+    pub model_dereference: extern "C" fn(model: EeGfxModel),
+    /// `GetSubModel(index)`
+    pub sub_model: extern "C" fn(model: EeGfxModel, index: u32) -> EeGfxModel,
+    /// a built mesh's set values into vertex array 0 and polygon array 0 (`EEEffectMesh::Store`)
+    pub store_mesh: extern "C" fn(
+        model: EeGfxModel,
+        vertices: *const EeGfxMeshVertex,
+        vertex_count: usize,
+        triangles: *const EeGfxMeshTriangle,
+        triangle_count: usize,
+    ),
+    /// material 0's ranges: polygons from 0 (`SetPolygonStartingIndex(0, 0)`, `SetPolygonRangeLength(polygons, 0)`),
+    /// vertices from 0 (`SetVertexStartingIndex(0)`, `SetVertexRangeLength(vertices)`)
+    pub material_ranges: extern "C" fn(model: EeGfxModel, polygons: u32, vertices: u32),
+    /// `GetBoundingRadius(0)`
+    pub bounding_radius: extern "C" fn(model: EeGfxModel) -> f32,
+    /// vertex array 0's points (and normals) of `from` copied into `to`'s, over `from`'s size
+    pub copy_vertices: extern "C" fn(from: EeGfxModel, to: EeGfxModel, normals: bool),
+    /// a texture's `SetStageTextureAddressingMode(kAddressingWrap, -1)`
+    pub texture_wrap: extern "C" fn(texture: EeGfxModel),
+    /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
+    /// the reference `load` asks for; the texture (`GETexture*`)
+    pub load_texture: extern "C" fn(name: *const u8, load: *const EeGfxTextureLoad) -> EeGfxModel,
+    /// a `GELine` from (`x0`, `y0`) to (`x1`, `y1`) on the screen, its opacity `opacity0` to `opacity1`
+    /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
+    pub screen_line: extern "C" fn(x0: f32, y0: f32, x1: f32, y1: f32, opacity0: f32, opacity1: f32) -> i32,
 }
 
 /// The rasterizer as the draws call it.
@@ -245,6 +342,20 @@ pub trait Raster {
         brightness: f32,
         alpha_ref: f32,
     );
+    fn get_alpha_ref(&mut self) -> f32;
+    fn get_blending(&mut self) -> (u32, u32);
+    fn create_model(&mut self, polygons: u32, vertices: u32, sub_models: u32, name: &str, flags: u32) -> EeGfxModel;
+    fn create_sub_model(&mut self, polygons: u32, vertices: u32, parent: EeGfxModel) -> EeGfxModel;
+    fn model_reference(&mut self, model: EeGfxModel);
+    fn model_dereference(&mut self, model: EeGfxModel);
+    fn sub_model(&mut self, model: EeGfxModel, index: u32) -> EeGfxModel;
+    fn store_mesh(&mut self, model: EeGfxModel, vertices: &[EeGfxMeshVertex], triangles: &[EeGfxMeshTriangle]);
+    fn material_ranges(&mut self, model: EeGfxModel, polygons: u32, vertices: u32);
+    fn bounding_radius(&mut self, model: EeGfxModel) -> f32;
+    fn copy_vertices(&mut self, from: EeGfxModel, to: EeGfxModel, normals: bool);
+    fn texture_wrap(&mut self, texture: EeGfxModel);
+    fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel;
+    fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32;
 }
 
 impl Raster for &EeGfxRaster {
@@ -436,6 +547,56 @@ impl Raster for &EeGfxRaster {
     ) {
         (self.sprite)(kind, position, color, rotation, size, alpha, brightness, alpha_ref)
     }
+    fn get_alpha_ref(&mut self) -> f32 {
+        (self.get_alpha_ref)()
+    }
+    fn get_blending(&mut self) -> (u32, u32) {
+        let (mut source, mut destination) = (0, 0);
+        (self.get_blending)(&mut source, &mut destination);
+        (source, destination)
+    }
+    fn create_model(&mut self, polygons: u32, vertices: u32, sub_models: u32, name: &str, flags: u32) -> EeGfxModel {
+        let mut bytes = Vec::with_capacity(name.len() + 1);
+        bytes.extend_from_slice(name.as_bytes());
+        bytes.push(0);
+        (self.create_model)(polygons, vertices, sub_models, bytes.as_ptr(), flags)
+    }
+    fn create_sub_model(&mut self, polygons: u32, vertices: u32, parent: EeGfxModel) -> EeGfxModel {
+        (self.create_sub_model)(polygons, vertices, parent)
+    }
+    fn model_reference(&mut self, model: EeGfxModel) {
+        (self.model_reference)(model)
+    }
+    fn model_dereference(&mut self, model: EeGfxModel) {
+        (self.model_dereference)(model)
+    }
+    fn sub_model(&mut self, model: EeGfxModel, index: u32) -> EeGfxModel {
+        (self.sub_model)(model, index)
+    }
+    fn store_mesh(&mut self, model: EeGfxModel, vertices: &[EeGfxMeshVertex], triangles: &[EeGfxMeshTriangle]) {
+        (self.store_mesh)(model, vertices.as_ptr(), vertices.len(), triangles.as_ptr(), triangles.len())
+    }
+    fn material_ranges(&mut self, model: EeGfxModel, polygons: u32, vertices: u32) {
+        (self.material_ranges)(model, polygons, vertices)
+    }
+    fn bounding_radius(&mut self, model: EeGfxModel) -> f32 {
+        (self.bounding_radius)(model)
+    }
+    fn copy_vertices(&mut self, from: EeGfxModel, to: EeGfxModel, normals: bool) {
+        (self.copy_vertices)(from, to, normals)
+    }
+    fn texture_wrap(&mut self, texture: EeGfxModel) {
+        (self.texture_wrap)(texture)
+    }
+    fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel {
+        let mut bytes = Vec::with_capacity(name.len() + 1);
+        bytes.extend_from_slice(name.as_bytes());
+        bytes.push(0);
+        (self.load_texture)(bytes.as_ptr(), load)
+    }
+    fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32 {
+        (self.screen_line)(from.0, from.1, to.0, to.1, opacity0, opacity1)
+    }
 }
 
 /// A rasterizer that logs every call (the tests').
@@ -450,6 +611,41 @@ pub struct LogRaster {
     pub culling: u32,
     /// vertex array 0's points
     pub vertices: Vec<Ge3DPoint>,
+    /// the alpha reference `get_alpha_ref` answers
+    pub alpha_ref: f32,
+    /// the models made (`create_model`, `create_sub_model`): their handles are 1-based indices
+    pub models: Vec<LogModel>,
+}
+
+/// A model the log rasterizer made: its vertex array 0's points, normals and opacities, its triangles, sub-models.
+#[cfg(test)]
+#[derive(Clone, Debug, Default)]
+pub struct LogModel {
+    pub name: String,
+    pub points: Vec<Ge3DPoint>,
+    pub normals: Vec<ee_ge::types::GeVector>,
+    pub opacities: Vec<f32>,
+    pub triangles: Vec<[u32; 3]>,
+    pub subs: Vec<EeGfxModel>,
+}
+
+#[cfg(test)]
+impl LogRaster {
+    /// The model behind a handle `create_model` gave.
+    pub fn model(&mut self, model: EeGfxModel) -> &mut LogModel {
+        &mut self.models[model as usize - 1]
+    }
+    fn make(&mut self, name: &str, polygons: u32, vertices: u32) -> EeGfxModel {
+        self.models.push(LogModel {
+            name: name.into(),
+            points: vec![Ge3DPoint::default(); vertices as usize],
+            normals: vec![ee_ge::types::GeVector::default(); vertices as usize],
+            opacities: vec![1.0; vertices as usize],
+            triangles: vec![[0; 3]; polygons as usize],
+            subs: Vec::new(),
+        });
+        self.models.len() as EeGfxModel
+    }
 }
 
 #[cfg(test)]
@@ -618,14 +814,27 @@ impl Raster for LogRaster {
     fn model_unstretch(&mut self, _model: EeGfxModel) {
         self.calls.push("unstretch".into());
     }
-    fn vertex_count(&mut self, _model: EeGfxModel) -> u32 {
-        self.vertices.len() as u32
+    // a made model's own points; `vertices` for any other (null) model
+    fn vertex_count(&mut self, model: EeGfxModel) -> u32 {
+        if model.is_null() {
+            self.vertices.len() as u32
+        } else {
+            self.model(model).points.len() as u32
+        }
     }
-    fn vertex_point(&mut self, _model: EeGfxModel, index: u32) -> Ge3DPoint {
-        self.vertices[index as usize]
+    fn vertex_point(&mut self, model: EeGfxModel, index: u32) -> Ge3DPoint {
+        if model.is_null() {
+            self.vertices[index as usize]
+        } else {
+            self.model(model).points[index as usize]
+        }
     }
-    fn set_vertex_point(&mut self, _model: EeGfxModel, index: u32, p: &Ge3DPoint) {
-        self.vertices[index as usize] = *p;
+    fn set_vertex_point(&mut self, model: EeGfxModel, index: u32, p: &Ge3DPoint) {
+        if model.is_null() {
+            self.vertices[index as usize] = *p;
+        } else {
+            self.model(model).points[index as usize] = *p;
+        }
         self.calls.push(format!("point {index} {} {} {}", p.x, p.y, p.z));
     }
     fn model_bounds(&mut self, _model: EeGfxModel) {
@@ -649,5 +858,85 @@ impl Raster for LogRaster {
             "sprite {kind} {} {} {} color {} {} {} rotation {rotation} size {size} {alpha} {brightness} {alpha_ref}",
             p.x, p.y, p.z, k.red, k.green, k.blue
         ));
+    }
+    fn get_alpha_ref(&mut self) -> f32 {
+        self.alpha_ref
+    }
+    fn get_blending(&mut self) -> (u32, u32) {
+        (7, 8)
+    }
+    fn create_model(&mut self, polygons: u32, vertices: u32, sub_models: u32, name: &str, flags: u32) -> EeGfxModel {
+        self.calls.push(format!("create {name} {polygons} {vertices} {sub_models} {flags}"));
+        self.make(name, polygons, vertices)
+    }
+    fn create_sub_model(&mut self, polygons: u32, vertices: u32, parent: EeGfxModel) -> EeGfxModel {
+        self.calls.push(format!("create sub {polygons} {vertices} of {}", parent as usize));
+        let sub = self.make("sub", polygons, vertices);
+        let subs = &mut self.model(parent).subs;
+        if subs.is_empty() {
+            subs.push(sub);
+        } else {
+            subs[0] = sub;
+        }
+        sub
+    }
+    fn model_reference(&mut self, model: EeGfxModel) {
+        self.calls.push(format!("reference {}", model as usize));
+    }
+    fn model_dereference(&mut self, model: EeGfxModel) {
+        self.calls.push(format!("dereference {}", model as usize));
+    }
+    fn sub_model(&mut self, model: EeGfxModel, index: u32) -> EeGfxModel {
+        self.model(model).subs[index as usize]
+    }
+    fn store_mesh(&mut self, model: EeGfxModel, vertices: &[EeGfxMeshVertex], triangles: &[EeGfxMeshTriangle]) {
+        self.calls.push(format!("store {} {} {}", model as usize, vertices.len(), triangles.len()));
+        let m = self.model(model);
+        for (i, v) in vertices.iter().enumerate() {
+            if v.set & crate::mesh::EE_GFX_MESH_POINT != 0 {
+                m.points[i] = v.point;
+            }
+            if v.set & crate::mesh::EE_GFX_MESH_NORMAL != 0 {
+                m.normals[i] = v.normal;
+            }
+            if v.set & crate::mesh::EE_GFX_MESH_OPACITY != 0 {
+                m.opacities[i] = v.opacity;
+            }
+        }
+        for (i, t) in triangles.iter().enumerate() {
+            if t.set != 0 {
+                m.triangles[i] = t.v;
+            }
+        }
+    }
+    fn material_ranges(&mut self, model: EeGfxModel, polygons: u32, vertices: u32) {
+        self.calls.push(format!("ranges {} {polygons} {vertices}", model as usize));
+    }
+    fn bounding_radius(&mut self, model: EeGfxModel) -> f32 {
+        self.calls.push(format!("radius {}", model as usize));
+        2.0
+    }
+    fn copy_vertices(&mut self, from: EeGfxModel, to: EeGfxModel, normals: bool) {
+        self.calls.push(format!("copy {} {} {normals}", from as usize, to as usize));
+        let (points, n) = (self.model(from).points.clone(), self.model(from).normals.clone());
+        let t = self.model(to);
+        t.points[..points.len()].copy_from_slice(&points);
+        if normals {
+            t.normals[..n.len()].copy_from_slice(&n);
+        }
+    }
+    fn texture_wrap(&mut self, _texture: EeGfxModel) {
+        self.calls.push("wrap".into());
+    }
+    fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel {
+        self.calls.push(format!(
+            "texture {name} {} {} {} {} {} {}",
+            load.pixel_depth, load.has_alpha, load.min_filter, load.mip_filter, load.addressing, load.reference
+        ));
+        0x7700 as EeGfxModel
+    }
+    fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32 {
+        self.calls.push(format!("line {} {} {} {} {opacity0} {opacity1}", from.0, from.1, to.0, to.1));
+        0
     }
 }

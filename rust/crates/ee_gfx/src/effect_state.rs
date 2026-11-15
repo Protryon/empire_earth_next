@@ -153,6 +153,8 @@ pub struct EeGfxEffectEmitter {
     pub time: f32,
     /// `mEmitTime`: ms to the next burst (saved)
     pub emit_time: f32,
+    /// not `mIsFirstStep`: the emitter has stepped (its first step starts its animation sound afresh)
+    pub stepped: bool,
 }
 
 /// The aged effects' state (water splash, shock wave, screen flash, water ripple, blast wave; the teleport's and the
@@ -269,6 +271,12 @@ pub struct EeGfxEffectRecord {
     pub marching: crate::effect_icons::EeGfxEffectMarching,
     /// the light glow's (`effect_glow.rs`)
     pub glow: crate::effect_glow::EeGfxEffectGlow,
+    /// the farm's (`effect_farm.rs`)
+    pub farm: crate::effect_farm::EeGfxEffectFarm,
+    /// the earthquake's (`effect_quake.rs`)
+    pub quake: crate::effect_quake::EeGfxEffectQuake,
+    /// the marching line's (`effect_particles.rs`)
+    pub march: crate::effect_particles::EeGfxEffectMarch,
 }
 
 /// The identity (`GETransformation()`).
@@ -317,6 +325,9 @@ impl EeGfxEffectRecord {
             sprite: crate::effect_sprite::EeGfxEffectSprite::default(),
             marching: crate::effect_icons::EeGfxEffectMarching::default(),
             glow: crate::effect_glow::EeGfxEffectGlow::default(),
+            farm: crate::effect_farm::EeGfxEffectFarm::default(),
+            quake: crate::effect_quake::EeGfxEffectQuake::default(),
+            march: crate::effect_particles::EeGfxEffectMarch::default(),
         }
     }
 
@@ -1455,6 +1466,10 @@ pub fn save_ambient<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
 }
 
 // ---- the damage controller (EEEDamagedEffect, kind 0x3e)
+
+/// `kEffectDamaged`: the damage controller (on `EEE2DRust`: its virtuals answer here, its tick and files are the C++'s
+/// calls of `ee_gfx_effect_damaged_step`, `ee_gfx_effect_load_damaged` and `ee_gfx_effect_save_damaged`).
+pub const EE_GFX_EFFECT_KIND_DAMAGED: i32 = 0x3e;
 
 /// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
 /// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).

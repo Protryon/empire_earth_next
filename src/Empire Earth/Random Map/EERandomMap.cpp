@@ -63,7 +63,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUCLandCitizen.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEDatabaseTables.h"
@@ -388,7 +388,7 @@ void EERandomMap::PlaceFeatures()
             if (theFeature.mIsHerd || theEntry.mUnitClass >= EEUnitClassCount())
                 continue;
             theClass = gUnitClassTable[theEntry.mUnitClass];
-            if (dynamic_cast<EEUCLandCitizen*>(theClass)) {
+            if (EEUnitClassOfKind<EE_CLASS_KIND_LAND_CITIZEN>(theClass)) {
                 theCitizens++;
                 if (theCitizens > theCitizenLimit)
                     theClass = NULL;

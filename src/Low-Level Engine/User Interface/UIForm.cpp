@@ -67,6 +67,30 @@ static void UIFormPutRect(float* outF, const GERectangle& inRectangle)
     outF[3] = inRectangle.mTop;
 }
 
+// UIEntityGroup is whole in Rust (rust/crates/ee_ui/src/groupobj.rs, R6 ui round 21; the original unit
+// UIEntityGroup.cpp, 0x1006e304..0x1006e5a8): the calls out of Disable/Enable on entity a, a button or a hot key
+intptr_t UIEntityGroup::HostOp(void*, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float*)
+{
+    UIEntity* theEntity = reinterpret_cast<UIEntity*>(a);
+    UIControl* theControl = static_cast<UIControl*>(theEntity);
+    switch (inOp) {
+    case EeUiOp::GrpIsButton: return theEntity->GetType() == kControlTypeButton;
+    case EeUiOp::GrpShown: return theControl->GetDisplayMode() == kDisplayModeShown;
+    case EeUiOp::GrpOnCurrentForm: return theControl->GetForm() == theControl->GetForm()->GetManager()->GetCurrentForm();
+    case EeUiOp::GrpAddDirty:
+        theControl->GetForm()->GetManager()->AddDirtyRectangle(theControl->GetRectangle(), theControl->GetForm());
+        break;
+    case EeUiOp::GrpHide: theControl->HideControl(); break;
+    case EeUiOp::GrpSetDirty: theControl->SetDirty(true); break;
+    case EeUiOp::GrpTabbing: return theControl->GetForm()->GetTabbingOn();
+    case EeUiOp::GrpIsTabStop: return theControl->GetForm()->GetTabStop() == theControl->GetIndex();
+    case EeUiOp::GrpTab: theControl->GetForm()->Tab(); break;
+    case EeUiOp::GrpSetEnabled: static_cast<UIHotKey*>(theEntity)->SetEnabled(b != 0); break;
+    default: break;
+    }
+    return 0;
+}
+
 intptr_t UIForm::Call(EeUiFormCall inCall, intptr_t inA, intptr_t inB, float* ioF) const
 {
     return ee_ui_form_call(this->mRust, inCall, inA, inB, ioF);
@@ -159,8 +183,7 @@ intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intpt
     case EeUiOp::FormHotKeyTemp: {
         UIHotKey* theHotKey = new UIHotKey;
         theHotKey->mForm = theForm;
-        gISKeyboard->GetEntity((unsigned long)a, theHotKey->mKey);
-        theHotKey->CalculateKeyCount();
+        theHotKey->SetKey((unsigned long)a);
         return (intptr_t)theHotKey;
     }
     case EeUiOp::FormHotKeySetModifier: theKey->SetModifier((unsigned long)b, (unsigned char)c); return 0;

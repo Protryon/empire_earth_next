@@ -47,15 +47,7 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
-#include "ee/EEUCLand.h"
-#include "ee/EEUCNaval.h"
-#include "ee/EEUCBasicCitizen.h"
-#include "ee/EEUCBasicPriest.h"
-#include "ee/EEUCLandable.h"
-#include "ee/EEUCAirplane.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCBuildingPriest.h"
-#include "ee/EEUCAirAnimal.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitKind.h"
@@ -332,16 +324,16 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theClass->UpdateAnimal(theUnit);
         break;
     case EE_UNITS_UPD_RESOURCE_UNIT:
-        static_cast<EEUCNaval*>(theClass)->UpdateResourceUnit(theUnit);
+        theClass->UpdateResourceUnit(theUnit);
         break;
     case EE_UNITS_UPD_CONTINUE_PRODUCTION:
         theUnit->ContinueProduction();
         break;
     case EE_UNITS_UPD_UPDATE_CITIZEN:
-        static_cast<EEUCBasicCitizen*>(theClass)->UpdateCitizen(theUnit);
+        theClass->UpdateCitizen(theUnit);
         break;
     case EE_UNITS_UPD_UPDATE_CONVERSION:
-        static_cast<EEUCBasicPriest*>(theClass)->UpdateConversion(theUnit);
+        theClass->BasicPriestUpdateConversion(theUnit);
         break;
     case EE_UNITS_UPD_CLEAR_CONVERSION_START:
         theUnit->mConversionStartTime = 0;
@@ -350,7 +342,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->ReleaseConversionEffect();
         break;
     case EE_UNITS_UPD_HIDE_CONVERSION_EFFECTS:
-        static_cast<EEUCBasicPriest*>(theClass)->HideConversionEffects(theUnit);
+        theClass->BasicPriestHideConversionEffects(theUnit);
         break;
     case EE_UNITS_UPD_RESOURCES_ROTTING:
         theUnit->UpdateResourcesRotting();
@@ -359,7 +351,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->SetFlightTime((long)inA);
         break;
     case EE_UNITS_UPD_NEXT_FLIGHT_STATE:
-        return (int64_t)static_cast<EEUCLandable*>(theClass)->GetNextFlightState(theUnit);
+        return (int64_t)theClass->GetNextFlightState(theUnit);
     case EE_UNITS_UPD_SET_PHYSICS_ORDER:
         theUnit->SetCurrentPhysicsOrder((unsigned long)inA);
         break;
@@ -379,7 +371,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theClass->UpdateBuilding(theUnit);
         break;
     case EE_UNITS_UPD_UPDATE_ARMED:
-        static_cast<EEUCBuilding*>(theClass)->UpdateArmed(theUnit);
+        theClass->UpdateArmed(theUnit);
         break;
     case EE_UNITS_UPD_ADD_RESOURCE:
         theUnit->mPlayer->AddResource((long)inA, (long)inB);
@@ -552,7 +544,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->mGoalState->SetStartTime(gPhysics->mGameTime);
         break;
     case EE_UNITS_ACT_CALL_PARATROOP_PLANE:
-        static_cast<EEUCLand*>(theClass)->CallParatroopPlane(theUnit);
+        theClass->CallParatroopPlane(theUnit);
         break;
     case EE_UNITS_ACT_PLACE_TRACK_DECAL:
         EEPlaceTrackDecal(theUnit);
@@ -577,11 +569,8 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->ReleaseConversionEffect();
         break;
     case EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS:
-        // (the temple is no basic priest: its own copy)
-        if (EEUnitClassCast<EEUCBuildingPriest>(theClass) != NULL)
-            static_cast<EEUCBuildingPriest*>(theClass)->HideConversionEffects(theUnit);
-        else
-            static_cast<EEUCBasicPriest*>(theClass)->HideConversionEffects(theUnit);
+        // (the temple's too: its copy was the basic priest's body)
+        theClass->BasicPriestHideConversionEffects(theUnit);
         break;
     case EE_UNITS_ACT_SET_CONVERSION_START:
         theUnit->mConversionStartTime = gPhysics->mGameTime;
@@ -591,7 +580,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         break;
     // the fourteenth round's
     case EE_UNITS_ACT_FIND_STORAGE_GOAL: {
-        EEUnit* theStorage = static_cast<EEUCBasicCitizen*>(theClass)->FindStorage(theUnit, inA != 0);
+        EEUnit* theStorage = theClass->FindStorage(theUnit, inA != 0);
         if (theStorage != NULL)
             theUnit->SetGoal(EEUGRust::NewGather(NULL, theStorage, false), 0, 0);
         break;
@@ -608,7 +597,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_RETARGET_NEAREST_BUILDING: {
         EEUGRust* theGoal = EEAttackUnitCast(theUnit->GetGoal());
         if (theGoal != NULL && theGoal->GetAttackTarget() != NULL) {
-            EEUnit* theTarget = static_cast<EEUCBuilding*>(theClass)->FindNearestTargetBuilding(theGoal->GetAttackTarget());
+            EEUnit* theTarget = theClass->FindNearestTargetBuilding(theGoal->GetAttackTarget());
             if (theTarget != NULL)
                 theGoal->SetAttackTarget(theTarget);
         }
@@ -624,7 +613,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         break;
     }
     case EE_UNITS_ACT_RELEASE_UNIT:
-        static_cast<EEUCBuilding*>(theClass)->ReleaseUnit(theUnit);
+        theClass->ReleaseUnit(theUnit);
         break;
     case EE_UNITS_ACT_GATE_SOUND: {
         EESoundObject* theSound = EESoundObject::Get(kSoundGate);
@@ -664,7 +653,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->NextWaypoint();
         break;
     case EE_UNITS_ACT_RETURN_TO_AIRPORT:
-        static_cast<EEUCAirAnimal*>(theClass)->ReturnToAirport(theUnit);
+        theClass->AirAnimalReturnToAirport(theUnit);
         break;
     case EE_UNITS_ACT_SET_FLIGHT_TIME_STATS:
         theUnit->SetFlightTime(theUnit->mStats->mFlightTime);
@@ -699,7 +688,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
             EEPlanetSpaceshipHoldingPattern(theClass, theUnit);
         break;
     case EE_UNITS_ACT_FLY_OFF_MAP:
-        static_cast<EEUCAirplane*>(theClass)->FlyOffMap(theUnit);
+        theClass->FlyOffMap(theUnit);
         break;
     case EE_UNITS_ACT_START_ACTION:
         theUnit->StartAction((unsigned long)inA);

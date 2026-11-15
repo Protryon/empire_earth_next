@@ -37,8 +37,7 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEMap.h"
 #include "ee/EEDatabaseTables.h"
@@ -99,7 +98,7 @@ static float ASGUWonderValue(EEComplexUnit* inUnit)
         theResult = 1.0f;
     else if (inUnit->mUnitClass->mIsTower)
         theResult = 0.9f;
-    else if (dynamic_cast<EEUCGate*>(inUnit->mUnitClass) != NULL)
+    else if (EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inUnit->mUnitClass) != NULL)
         theResult = 0.8f;
     else {
         switch (inUnit->mUnitClass->mUnitType) {

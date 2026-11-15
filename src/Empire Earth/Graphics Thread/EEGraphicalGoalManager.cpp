@@ -36,7 +36,6 @@
 #include "ee/EEEffectManager.h"
 #include "rust/ee_gfx.h"
 #include "ee/EEE3DRust.h"
-#include "ee/EEE3DMarchingLine.h"
 #include "ee/EEGraphicalGoal.h"
 #include "ee/EEGraphicalGoalManager.h"
 #include "ee/EEUnitVectorItem.h"
@@ -106,7 +105,7 @@ void EEGraphicalGoal::Update()
         return;
     switch (this->mType) {
     case 0: {
-        EEE3DMarchingLine* theLine = static_cast<EEE3DMarchingLine*>(gEffectManager->GetEffect(this->mEffect));
+        EEE3DRust* theLine = static_cast<EEE3DRust*>(gEffectManager->GetEffect(this->mEffect));
         if (theLine == NULL)
             break;
         theLine->SetFrom(this->mFrom);
