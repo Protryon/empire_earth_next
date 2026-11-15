@@ -930,6 +930,21 @@ function M.step(view, memory)
             end
         end
     end
+    -- (BO.OPT.grow_always, the owner: boom slowed its growth to save for the epochs while the Lua classic blew up its
+    -- economy, 45/84/144/180 citizens at 20/40/60/75 against 33/72/90/95) the citizens are trained out of the income
+    -- at all times up to grow_cap (the pop cap, or BO.GROW_FLOOR's per epoch); the save takes only the food left
+    local grow_cap = nil
+    if ECON.order and BO.OPT.grow_always and citizen ~= nil and (age >= 2 or BO.OPT.grow_pre) then
+        grow_cap = BO.GROW_FLOOR ~= nil and BO.GROW_FLOOR[age] or view.population_cap
+        local planned_now = view.citizens + citizen.in_production + citizen.requested
+        if planned_now < grow_cap and view.population < view.population_cap then
+            local left = math.max(view.stock.food - 2 * citizen.cost.food, 0) // 50 * 50
+            if reserve.food > left then
+                reserve.food = left
+                differs = differs or reserve.food ~= view.reserve.food
+            end
+        end
+    end
     if differs then
         order("reserve", {verb = "reserve", food = reserve.food, wood = reserve.wood, stone = reserve.stone,
                           gold = reserve.gold, iron = reserve.iron})
@@ -1013,6 +1028,9 @@ function M.step(view, memory)
         if soldiers_payable and view.stock.food - reserve.food < 2 * soldier_cost.food + citizen.cost.food then
             cap = math.min(cap, planned)
         end
+    end
+    if grow_cap ~= nil and cap < grow_cap then   -- (BO.OPT.grow_always: past every plan cap, to the pop cap)
+        cap = grow_cap
     end
     -- (ECON.order, lib.raid: memory.raid.priority while the raid force trains) no new citizens are queued then
     local yield = ECON.order and memory.raid ~= nil and memory.raid.priority == true
@@ -1138,6 +1156,11 @@ function M.step(view, memory)
         -- the food places (§8.35): the open patches kept (6 each), the game near the town (HUNT_MAX at most, one
         -- hunter an animal) and, from the Copper Age, the farms
         local hunt_cap = plan.hunt or HUNT_MAX   -- (§8.36: hunting fills what the patches cannot take, see below)
+        -- (BO.OPT.hunt_first: the Lua classic hunted with 16.5 at 20 minutes, boom with 3 beside 14.5 on bushes; a hunter
+        -- gathers about 1.5 times a forager's food) every animal in reach takes its 3 hunters, no cap
+        if ECON.order and BO.OPT.hunt_first then
+            hunt_cap = 99
+        end
         local hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, hunt_cap)
         local farm_places = V.total(V.buildings(view, "b_farm"))
         local food_wanted = want.food
@@ -1247,6 +1270,13 @@ function M.step(view, memory)
                 if (memory.copper_places or {})[r] ~= nil and memory.copper_places[r] < 3 * SITE_PLACES then
                     claim_far[r] = true
                 end
+            end
+            -- (BO.OPT.mines_free, the owner: settlements are cheap; the Lua classic gathered 24 gold and 24 iron at 60
+            -- minutes on about 4 mine units each, boom 13/12 on 2 sites) from the Stone Age the metal is claimed for
+            -- every gatherer the town can put on it, up to MINES_FREE_SITES sites
+            if ECON.order and BO.OPT.mines_free and age >= 2 and (r == "gold" or r == "iron") then
+                most = math.max(most, BO.MINES_FREE_SITES)
+                claim_want = math.max(claim_want, (view.gatherers[r] or 0) + 2 * SITE_PLACES)
             end
             local places, c = claim_sites(view, order, keep, r, false, claim_want, most, range, unsettled_r)
             if ECON.order and (BO.OPT.copper_mines or BO.OPT.stone_mines) then

@@ -69,6 +69,10 @@ M.OPT = {
     overrun_spend = false,  -- (off until benched) a threat OVERRUN_PCT of the army and towers spends the save too
     raid_towers = false,    -- (off until benched) from Stone a tower more per RAID_TOWER_PER raiders of the largest raid
     recover_raids = false,  -- (off until benched) lib.recover's force check counts the raids near the site
+    grow_always = false,    -- (off until benched) citizens trained out of income at all times, up to GROW_FLOOR / pop cap
+    grow_pre = false,       -- (with grow_always) the Prehistoric too
+    hunt_first = false,     -- (off until benched) every animal in reach takes its 3 hunters, no cap of 6
+    mines_free = false,     -- (off until benched) from Stone the metal claimed for every gatherer, MINES_FREE_SITES sites
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -149,6 +153,8 @@ M.OVERRUN_PCT = 200        -- (OPT.overrun_spend) percent of the army's and towe
 M.RAID_TOWER_PER = 6       -- (OPT.raid_towers) raiders a tower
 M.RAID_TOWER_MOST = 16     -- (OPT.raid_towers) towers at most
 M.RAID_TOWER_MS = 600000   -- (OPT.raid_towers) a raid counts this long
+M.GROW_FLOOR = nil          -- (OPT.grow_always) citizens per age (1 Pre, 2 Stone, 3 Copper on) trained past the save; nil: the pop cap
+M.MINES_FREE_SITES = 6      -- (OPT.mines_free) gold and iron sites at most
 M.SAVE_BANK = 300          -- (OPT.save_retarget) a resource is banked past its cost by this much
 M.SAVE_FLOOR = {food = 18, wood = 10, gold = 12, stone = 6}   -- (OPT.save_retarget) the gatherers a donor keeps
 M.PRE_HUNT_MIN = 3         -- (OPT.pre_hunt_patch) the owner's 3-6 hunting
