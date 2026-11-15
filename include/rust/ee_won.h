@@ -2525,6 +2525,12 @@ constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
 /// The last field.
 constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
 
+/// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
+constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
+
+/// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
+constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
+
 /// `GetFilePath`
 constexpr static const int32_t EE_WON_FILE_PATH = 0;
 
@@ -2580,12 +2586,6 @@ constexpr static const int32_t EE_WON_FILE_CREATE_DIRECTORY = 12;
 
 /// `NormalizePath` (0 false, 1 true, 2 where it threw)
 constexpr static const int32_t EE_WON_FILE_NORMALIZE = 13;
-
-/// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
-constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
-
-/// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
-constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
 /// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
 enum class EeWonCoreObject {
@@ -20721,50 +20721,6 @@ ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a
 /// `wm` is live.
 ptrdiff_t ee_won_wm_set_at(const EeWonWm *wm, uint32_t which, size_t i);
 
-/// `WONFile(path)`; `path` NULL for the working directory (`GetWorkingDirectory`: empty when it cannot be read).
-///
-/// # Safety
-/// `path` (when not NULL) holds `length` bytes.
-EeWonFile *ee_won_file_new(const uint8_t *path,
-                           size_t length);
-
-/// A copy (the C++ class's copy constructor).
-///
-/// # Safety
-/// `f` is a live file.
-EeWonFile *ee_won_file_clone(const EeWonFile *f);
-
-/// `*to = *from` (the copy assignment).
-///
-/// # Safety
-/// Both are live files.
-void ee_won_file_assign(EeWonFile *to, const EeWonFile *from);
-
-/// # Safety
-/// `f` is from `ee_won_file_new` / `_clone` (or NULL), not used afterwards.
-void ee_won_file_free(EeWonFile *f);
-
-/// One of the file's texts (`EE_WON_FILE_*`) to the sink, computed and cached as the getter did; 1, or 2 where the
-/// original threw.
-///
-/// # Safety
-/// `f` is a live file, `other` one for `EE_WON_FILE_RELATIVE`; `sink` receives the text during the call.
-int32_t ee_won_file_text(EeWonFile *f,
-                         int32_t which,
-                         const EeWonFile *other,
-                         EeWonByteSink sink,
-                         void *context);
-
-/// One of the file's methods (`EE_WON_FILE_*`): its number result (bools 0/1).
-///
-/// # Safety
-/// `f` is a live file; `data` holds `length` bytes (NULL for none).
-int64_t ee_won_file_op(EeWonFile *f,
-                       int32_t which,
-                       int64_t value,
-                       const uint8_t *data,
-                       size_t length);
-
 /// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
 EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
 
@@ -20835,6 +20791,50 @@ void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
 /// # Safety
 /// Both buttons are live and distinct (`Duplicate` copies onto a new button).
 void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
+
+/// `WONFile(path)`; `path` NULL for the working directory (`GetWorkingDirectory`: empty when it cannot be read).
+///
+/// # Safety
+/// `path` (when not NULL) holds `length` bytes.
+EeWonFile *ee_won_file_new(const uint8_t *path,
+                           size_t length);
+
+/// A copy (the C++ class's copy constructor).
+///
+/// # Safety
+/// `f` is a live file.
+EeWonFile *ee_won_file_clone(const EeWonFile *f);
+
+/// `*to = *from` (the copy assignment).
+///
+/// # Safety
+/// Both are live files.
+void ee_won_file_assign(EeWonFile *to, const EeWonFile *from);
+
+/// # Safety
+/// `f` is from `ee_won_file_new` / `_clone` (or NULL), not used afterwards.
+void ee_won_file_free(EeWonFile *f);
+
+/// One of the file's texts (`EE_WON_FILE_*`) to the sink, computed and cached as the getter did; 1, or 2 where the
+/// original threw.
+///
+/// # Safety
+/// `f` is a live file, `other` one for `EE_WON_FILE_RELATIVE`; `sink` receives the text during the call.
+int32_t ee_won_file_text(EeWonFile *f,
+                         int32_t which,
+                         const EeWonFile *other,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// One of the file's methods (`EE_WON_FILE_*`): its number result (bools 0/1).
+///
+/// # Safety
+/// `f` is a live file; `data` holds `length` bytes (NULL for none).
+int64_t ee_won_file_op(EeWonFile *f,
+                       int32_t which,
+                       int64_t value,
+                       const uint8_t *data,
+                       size_t length);
 
 /// A new WrappedText's state (`Init()`).
 EeWonWrapText *ee_won_wrap_new();
