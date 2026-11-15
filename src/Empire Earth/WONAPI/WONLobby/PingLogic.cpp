@@ -1,5 +1,8 @@
 // Game pings over the lobby UDP manager: timing a game host's reply (optionally with its summary and
-// details), queueing pings beyond the connection-speed limit, and answering pings for the hosted game
+// details), queueing pings beyond the connection-speed limit, and answering pings for the hosted game.
+// PingLogic and PingGameOp are Rust objects (rust/crates/ee_won/src/logics.rs, R6 WONLobby round 8): the queue,
+// the request ids, the retries, the request's and reply's bytes and every decision. This unit keeps the shells
+// (the tracker, the completions, the op's game) and the host's ops: each one the original's calls on a C++ object.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -16,286 +19,172 @@
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyPing.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/ee_won.h"
 using namespace WONAPI;
+
+namespace WONAPI {
+void LobbyNotifyPingChange(LobbyGame*); // update game UI/status
+intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
+}
 
 // One ping of a game host, retried by PingLogic (global namespace in the original's RTTI)
 class PingGameOp : public WONAPI::UDPManagerSendRecvOp {
 public:
-    PingGameOp(WONAPI::LobbyGame*, unsigned short, unsigned char);
-
-    virtual void RunHook();
-    virtual WONAPI::WONStatus CheckResponse(WONAPI::ReadBuffer&);
+    // FUNCTION: WON 0x007e5ed0
+    PingGameOp(WONAPI::LobbyGame* inGame, unsigned short inRequestId, unsigned char inFlags)
+        : mGame(inGame), mRust(ee_won_pingop_new(this, WONAPI::PingLogicHost, inRequestId, inFlags))
+    {
+        this->SetDestAddr(this->mGame->GetAddress());
+    }
+    // TEMPLATE: WON 0x007e6110
+    virtual ~PingGameOp() { ee_won_pingop_free(this->mRust); }
+    // FUNCTION: WON 0x007e6240
+    virtual void RunHook() { ee_won_pingop_call(this->mRust, EeWonPingOpCall::RunHook, (intptr_t)this->mGame.get()); }
+    // FUNCTION: WON 0x007e6360
+    virtual WONAPI::WONStatus CheckResponse(WONAPI::ReadBuffer& inBuffer)
+    {
+        int64_t aStatus = ee_won_pingop_call(this->mRust, EeWonPingOpCall::CheckResponse, (intptr_t)&inBuffer.mState);
+        if (aStatus == EE_WON_LOGIC_THREW)
+            throw WONAPI::ReadBufferException("Attempt to read past end of buffer.");
+        return (WONAPI::WONStatus)aStatus;
+    }
     WONAPI::SmartPtr<WONAPI::LobbyGame> mGame; // 0x88
-    unsigned short mRequestId; // 0x8c
-    unsigned short mPing; // 0x8e, set by RunHook, not by the constructor
-    unsigned char mReplyFlags; // 0x90
-    unsigned short mRetries; // 0x92
-    WONAPI::ByteBufferPtr mReply; // 0x94
+    EeWonPingOp* mRust; // the request id, the ping, the flags, the retries, the reply
 };
 
-// FUNCTION: WON 0x007e5ed0
-// Creates a ping of a game's address with a request id and the summary/details flags to ask for
-PingGameOp::PingGameOp(LobbyGame* inGame, unsigned short inRequestId,
-                       unsigned char inFlags)
-{
-    this->mGame = inGame;
-    this->mRetries = 0;
-    this->mRequestId = inRequestId;
-    this->mReplyFlags = inFlags;
-    this->SetDestAddr(this->mGame->GetAddress());
-}
-
-// FUNCTION: WON 0x007e6240
-// Builds the ping request (id, game type, flags), marks no reply yet and sends it
-void PingGameOp::RunHook()
-{
-    WriteBuffer aBuffer(0, true);
-    aBuffer.AppendByte(7);
-    aBuffer.AppendShort(this->mRequestId);
-    aBuffer.AppendByte(this->mGame->GetGameType());
-    aBuffer.AppendByte(this->mReplyFlags);
-    this->SetOutgoing(aBuffer.ToByteBuffer(true));
-    this->mPing = 0xffff;
-    UDPManagerSendRecvOp::RunHook();
-}
-
-// FUNCTION: WON 0x007e6360
-// Accepts the reply to this request: records the ping time and keeps any summary/details data
-WONStatus PingGameOp::CheckResponse(ReadBuffer& inBuffer)
-{
-    if (inBuffer.ReadByte() != 8)
-        return WS_None; // not a reply to this request
-    if (inBuffer.ReadShort() != this->mRequestId)
-        return WS_None; // the signed ReadShort is compared with the unsigned member
-    unsigned long aStart = this->GetStartTime();
-    this->mPing = WONTickCount() - aStart;
-    this->mReplyFlags = 0;
-    if (!(inBuffer.Available() > 0))
-        return WS_Success;
-    this->mReplyFlags = inBuffer.ReadByte();
-    unsigned long aLength = inBuffer.Available();
-    this->mReply = new ByteBuffer(inBuffer.ReadBytes(aLength), aLength, false);
-    return WS_Success;
-}
-
 namespace WONAPI {
-UDPManager* LobbyGetUDPManager();
-unsigned short LobbyGetConnectionSpeed(); // most pings in flight at once (0: no limit); callers use the low 16 bits
-void LobbyNotifyPingChange(LobbyGame*); // update game UI/status
+// a reader over a Rust reader's state, the position written back
+template <class F> static intptr_t WithReader(intptr_t inState, F inRead)
+{
+    ReadBuffer aReader(NULL, 0);
+    aReader.mState = *reinterpret_cast<EeWonReadBuffer*>(inState);
+    intptr_t aResult = inRead(aReader);
+    *reinterpret_cast<EeWonReadBuffer*>(inState) = aReader.mState;
+    return aResult;
+}
+
+static LobbyGame* G(intptr_t a) { return reinterpret_cast<LobbyGame*>(a); }
+
+intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    typedef EeWonLogicOp O;
+    PingLogic* aLogic = static_cast<PingLogic*>(inObj);
+    LobbyConfig* aConfig;
+    switch (inOp) {
+    case O::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
+    case O::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
+    case O::OpStatus: return (int)reinterpret_cast<AsyncOp*>(a)->GetStatus();
+    case O::OpKilled: return reinterpret_cast<AsyncOp*>(a)->IsKilled();
+    case O::UdpManager: return (intptr_t)LobbyGetUDPManager();
+    case O::SetDefaultRecv:
+        reinterpret_cast<UDPManager*>(a)->SetDefaultCompletion(
+            new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, aLogic));
+        return 0;
+    case O::EventGame: return (intptr_t)reinterpret_cast<PingGameEvent*>(a)->mGame.get();
+    case O::EventFlag: return reinterpret_cast<PingGameEvent*>(a)->mFlag;
+    case O::RecvMsg: {
+        const ByteBuffer* aBuffer = reinterpret_cast<UDPManagerRecvOp*>(a)->GetMsg();
+        *reinterpret_cast<size_t*>(b) = aBuffer != NULL ? aBuffer->length() : 0;
+        return (intptr_t)(aBuffer != NULL ? aBuffer->data() : NULL);
+    }
+    case O::MyGame: return (intptr_t)GetMyLobbyGame();
+    case O::GameIsHost: return G(a)->GetIsHost();
+    case O::GameType: return (intptr_t)G(a)->GetGameType();
+    case O::GameInProgress: return G(a)->IsInProgress();
+    case O::GameIsPinging: return G(a)->IsPinging();
+    case O::GameQueryingDetails: return G(a)->IsQueryingDetails();
+    case O::GameSetPing: G(a)->SetPing((unsigned short)b); return 0;
+    case O::GameSetPingReplied: G(a)->SetPingReplied(true); return 0;
+    case O::NoPingInProgress: aConfig = GetLobbyConfig(); return aConfig != NULL && aConfig->mNoPingInProgress;
+    case O::PingCeiling: aConfig = GetLobbyConfig(); return aConfig != NULL ? (intptr_t)aConfig->mPingCeiling : 5000;
+    case O::ConnectionSpeed: return LobbyGetConnectionSpeed();
+    case O::ReplyNew: return (intptr_t)new WriteBuffer(3, true);
+    case O::BufAppend: reinterpret_cast<WriteBuffer*>(a)->AppendBytes(reinterpret_cast<const void*>(b), (unsigned long)c); return 0;
+    case O::WriteSummary: G(a)->WriteSummary(*reinterpret_cast<WriteBuffer*>(b)); return 0;
+    case O::WriteDetails: G(a)->WriteDetails(*reinterpret_cast<WriteBuffer*>(b)); return 0;
+    case O::ReplySend:
+        reinterpret_cast<UDPManager*>(a)->Send(reinterpret_cast<WriteBuffer*>(b)->ToByteBuffer(true).get(),
+                                               reinterpret_cast<UDPManagerRecvOp*>(c)->GetFromAddr());
+        return 0;
+    case O::BufFree: delete reinterpret_cast<WriteBuffer*>(a); return 0;
+    case O::RequestSend: {
+        PingGameOp* anOp = static_cast<PingGameOp*>(inObj);
+        WriteBuffer aBuffer(0, true);
+        aBuffer.AppendBytes(reinterpret_cast<const void*>(a), (unsigned long)b);
+        anOp->SetOutgoing(aBuffer.ToByteBuffer(true));
+        anOp->UDPManagerSendRecvOp::RunHook();
+        return 0;
+    }
+    case O::Elapsed: {
+        unsigned long aStart = static_cast<PingGameOp*>(inObj)->GetStartTime();
+        return (intptr_t)(unsigned long)(WONTickCount() - aStart);
+    }
+    case O::OpGame: return (intptr_t)static_cast<PingGameOp*>(reinterpret_cast<AsyncOp*>(a))->mGame.get();
+    case O::OpRecord: return (intptr_t)static_cast<PingGameOp*>(reinterpret_cast<AsyncOp*>(a))->mRust;
+    case O::RunTracked:
+        aLogic->RunTrackedOp(reinterpret_cast<AsyncOp*>(a), new LogicCompletion<PingLogic>(&PingLogic::PingGameDone, aLogic),
+                             (unsigned long)b);
+        return 0;
+    case O::ReadSummary: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { return G(a)->ReadSummary(r) ? 1 : 0; });
+    case O::ReadDetails: return WithReader(b, [a](ReadBuffer& r) -> intptr_t { G(a)->ReadDetails(r); return 0; });
+    case O::BroadcastGameChanged: LobbyBroadcastEvent(new GameChangedEvent(G(a), 2), true); return 0;
+    case O::NotifyPing: LobbyNotifyPingChange(G(a)); return 0;
+    case O::NumTracked: return aLogic->mTracker.GetNumTrack();
+    case O::TrackedGame: {
+        PingGameOp* anOp = dynamic_cast<PingGameOp*>(aLogic->mTracker.GetTrackedOp((int)a));
+        return (intptr_t)(anOp != NULL ? anOp->mGame.get() : NULL);
+    }
+    case O::KillTracked: aLogic->mTracker.KillAll(); return 0;
+    case O::NewPingOp: {
+        PingGameOp* anOp = new PingGameOp(G(a), (unsigned short)b, (unsigned char)c);
+        anOp->AddRef();
+        anOp->SetUDPManager(reinterpret_cast<UDPManager*>(d));
+        return (intptr_t)static_cast<AsyncOp*>(anOp);
+    }
+    default: return 0;
+    }
+}
 
 // FUNCTION: WON 0x007e6490
-// Creates the ping logic with request ids starting at 0
-PingLogic::PingLogic()
-{
-    this->mNextRequestId = 0;
-}
+PingLogic::PingLogic() : mRust(ee_won_logic_new(EeWonLogicKind::Ping, this, PingLogicHost)) {}
 
 // FUNCTION: WON 0x007e6520
-// Destroys the ping logic (members only)
-PingLogic::~PingLogic() {}
+PingLogic::~PingLogic() { ee_won_logic_free(this->mRust); }
 
 // FUNCTION: WON 0x007e65d0
-// Routes unsolicited UDP packets to the ping request handler
-void PingLogic::InitComponent(ComponentConfig*)
-{
-    UDPManager* aManager = LobbyGetUDPManager();
-    if (aManager != NULL)
-        aManager->SetDefaultCompletion(new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, this));
-}
+void PingLogic::InitComponent(ComponentConfig*) { this->Call(EeWonLogicCall::PingInit); }
 
 // FUNCTION: WON 0x007e6680
-// Pings a game when asked by a ping-game event
 void PingLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    if (inEvent->mType == LobbyEvent_PingGame) {
-        PingGameEvent* anEvent = static_cast<PingGameEvent*>(inEvent);
-        this->PingGame(anEvent->mGame.get(), anEvent->mFlag, false);
-    }
-}
-
-// FUNCTION: WON 0x007e66a0
-// Host: answers a ping for the hosted game type with the requested summary/details (not in progress if barred)
-void PingLogic::HandlePingRequest(ReadBuffer& inBuffer, const IPAddr& inAddress)
-{
-    LobbyGame* aGame = GetMyLobbyGame();
-    if (aGame == NULL || !aGame->GetIsHost())
-        return;
-    unsigned short anId = inBuffer.ReadShort();
-    unsigned char aKind = inBuffer.ReadByte();
-    if (aGame->GetGameType() != aKind)
-        return;
-    if (aGame->IsInProgress()) {
-        LobbyConfig* aConfig = GetLobbyConfig();
-        if (aConfig != NULL && aConfig->mNoPingInProgress)
-            return;
-    }
-    WriteBuffer aBuffer(3, true);
-    aBuffer.AppendByte(8);
-    aBuffer.AppendShort(anId);
-    unsigned char aFlags = inBuffer.ReadByte() & 3;
-    aBuffer.AppendByte(aFlags);
-    if (aFlags & 1)
-        aGame->WriteSummary(aBuffer);
-    if (aFlags & 2)
-        aGame->WriteDetails(aBuffer);
-    UDPManager* aManager = LobbyGetUDPManager();
-    if (aManager != NULL)
-        aManager->Send(aBuffer.ToByteBuffer(true).get(), inAddress);
+    this->Call(EeWonLogicCall::PingEvent, (intptr_t)inEvent, inEvent->mType);
 }
 
 // FUNCTION: WON 0x007e6810
-// Dispatches an unsolicited UDP packet; only ping requests are handled
-void PingLogic::HandleUDPRecv(AsyncOp* inOp)
-{
-    UDPManagerRecvOp* anOp = static_cast<UDPManagerRecvOp*>(inOp);
-    if (anOp->GetStatus() != WS_Success || anOp->IsKilled())
-        return;
-    const ByteBuffer* aBuffer = anOp->GetMsg();
-    ReadBuffer aReadBuffer(aBuffer != NULL ? aBuffer->data() : NULL,
-                          aBuffer != NULL ? aBuffer->length() : 0);
-    IPAddr anAddr = anOp->GetFromAddr();
-    try {
-        int aType = (char)aReadBuffer.ReadByte();
-        switch (aType) {
-        case 7: this->HandlePingRequest(aReadBuffer, anAddr); break;
-        }
-    }
-    catch (ReadBufferException&) {}
-}
+void PingLogic::HandleUDPRecv(AsyncOp* inOp) { this->Call(EeWonLogicCall::PingRecv, (intptr_t)inOp); }
 
 // FUNCTION: WON 0x007e68b0
-// Retries an unanswered ping up to 3 times, else records the result and starts queued pings up to the limit
-void PingLogic::PingGameDone(AsyncOp* inOp)
-{
-    PingGameOp* anOp = static_cast<PingGameOp*>(inOp);
-    if (anOp->IsKilled())
-        return;
-    unsigned short aPing = anOp->mPing;
-    LobbyGame* aGame = anOp->mGame.get();
-    if (aPing != 0xffff)
-        aGame->SetPingReplied(true);
-    else if (anOp->mRetries < 3) {
-        ++anOp->mRetries;
-        LobbyConfig* aConfig = GetLobbyConfig();
-        unsigned long aTimeout = aConfig != NULL ? aConfig->mPingCeiling : 5000;
-        this->RunTrackedOp(anOp, new LogicCompletion<PingLogic>(&PingLogic::PingGameDone, this), aTimeout);
-        return;
-    }
-    aGame->SetPing(aPing);
-    if (anOp->mReply.get() != NULL) {
-        ReadBuffer aBuffer(anOp->mReply->data(), anOp->mReply->length());
-        unsigned char aFlags = anOp->mReplyFlags;
-        bool aReadOk = true;
-        if (aFlags & 1)
-            aReadOk = aGame->ReadSummary(aBuffer) != 0;
-        if ((aFlags & 2) && aReadOk)
-            aGame->ReadDetails(aBuffer);
-    }
-    LobbyBroadcastEvent(new GameChangedEvent(aGame, 2), true);
-    LobbyNotifyPingChange(aGame);
-    int aMaximum = LobbyGetConnectionSpeed();
-    while (!this->mPending.empty()) {
-        if (static_cast<long>(this->mTracker.GetNumTrack()) >= aMaximum && aMaximum != 0)
-            break;
-        SmartPtr<LobbyGame> aPendingGame = this->mPending.front();
-        this->mPending.pop_front();
-        if (!aPendingGame->IsPinging())
-            continue;
-        if (aPendingGame->IsQueryingDetails())
-            continue;
-        aPendingGame->SetPing(0xfffe);
-        this->PingGame(aPendingGame.get(), false, true);
-    }
-}
+void PingLogic::PingGameDone(AsyncOp* inOp) { this->Call(EeWonLogicCall::PingDone, (intptr_t)inOp); }
 
 // FUNCTION: WON 0x007e6b40
-// Returns the number of queued plus running pings
-int PingLogic::GetNumPingsToDo()
-{
-    return this->mPending.size() + this->mTracker.GetNumTrack();
-}
+int PingLogic::GetNumPingsToDo() { return (int)this->Call(EeWonLogicCall::PingNumToDo); }
 
 // FUNCTION: WON 0x007e6b50
-// Pings a game (with details on request), or queues it when the connection-speed limit is reached
 void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
 {
-    if (inGame == NULL)
-        return;
-    if (inGame->IsInProgress()) {
-        LobbyConfig* aConfig = GetLobbyConfig();
-        if (aConfig != NULL && aConfig->mNoPingInProgress)
-            return;
-    }
-    if (inDetails) {
-        if (inGame->IsQueryingDetails())
-            return;
-    }
-    else if (inGame->IsPinging())
-        return;
-    if (!inForce && !inDetails) {
-        unsigned short aMaximum = LobbyGetConnectionSpeed();
-        if (static_cast<long>(this->mTracker.GetNumTrack()) >= aMaximum && aMaximum > 0) {
-            inGame->SetPing(0xfffd);
-            LobbyNotifyPingChange(inGame);
-            this->mPending.push_back(inGame);
-            return;
-        }
-    }
-    UDPManager* aManager = LobbyGetUDPManager();
-    if (aManager == NULL)
-        return;
-    inGame->SetPing(inDetails ? 0xfffc : 0xfffd);
-    LobbyNotifyPingChange(inGame);
-    unsigned char aFlags = 0;
-    if (inGame->GetGameType() == 3)
-        aFlags = 1;
-    if (inDetails)
-        aFlags |= 2;
-    SmartPtr<PingGameOp> anOp = new PingGameOp(inGame, this->mNextRequestId++, aFlags);
-    anOp->SetUDPManager(aManager);
-    LobbyConfig* aConfig = GetLobbyConfig();
-    unsigned long aTimeout = aConfig != NULL ? aConfig->mPingCeiling : 5000;
-    this->RunTrackedOp(anOp.get(), new LogicCompletion<PingLogic>(&PingLogic::PingGameDone, this), aTimeout);
+    this->Call(EeWonLogicCall::PingGame, (intptr_t)inGame, inDetails, inForce);
 }
 
 // FUNCTION: WON 0x007e6db0
-// Cancels every queued and running ping, marking those games as not pinged
-void PingLogic::KillPings(int)
-{
-    std::list<SmartPtr<LobbyGame> >::iterator aGameItr = this->mPending.begin();
-    while (true) {
-        if (aGameItr == this->mPending.end()) break;
-        (*aGameItr)->SetPing(0xfffe);
-        ++aGameItr;
-    }
-    for (int anIndex = 0; anIndex < this->mTracker.GetNumTrack(); anIndex++) {
-        PingGameOp* anOp = dynamic_cast<PingGameOp*>(this->mTracker.GetTrackedOp(anIndex));
-        if (anOp != NULL)
-            anOp->mGame->SetPing(0xfffe);
-    }
-    this->mPending.clear();
-    this->mTracker.KillAll();
-}
+void PingLogic::KillPings(int) { this->Call(EeWonLogicCall::PingKill); }
 }
 
 // Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007e6110
-// (public: virtual __thiscall PingGameOp::~PingGameOp(void)    [??1PingGameOp@@UAE@XZ])
 // TEMPLATE: WON 0x007e6500
 // (public: virtual void * __thiscall WONAPI::PingLogic::`scalar deleting destructor'(unsigned int)    [??_GPingLogic@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x007e60f0
 // (public: virtual void * __thiscall PingGameOp::`scalar deleting destructor'(unsigned int)    [??_GPingGameOp@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x007f1470
 // (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::PingLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicCompleti)
 // TEMPLATE: WON 0x007f15d0
 // (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::PingLogic>::~LogicCompletion<class WONAPI::PingLogic>(void)    [??1?$LogicCompletion@)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1b00
-// (public: void __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::LobbyGame>)
-// TEMPLATE: WON 0x007f26a0
-// (protected: void __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::LobbyGa)

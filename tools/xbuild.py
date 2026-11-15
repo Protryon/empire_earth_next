@@ -609,6 +609,9 @@ WON_TESTS = {
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
     # rust/crates/ee_won/src/golden_eexfer.txt)
     "won_eexfer_test": [],
+    # PingLogic (with PingGameOp), AccountLogic and InitLogic as Rust objects (golden:
+    # rust/crates/ee_won/src/golden_logics.txt)
+    "won_logics_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
