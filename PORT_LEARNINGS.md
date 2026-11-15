@@ -22552,3 +22552,107 @@ message types (107 factory types and End Cinematic's 0x9d) are records; 8 keep a
   [5, 32, 33]. A first ai-game run failed before the game ("slot 0 human: index 0 outside []": the lobby's
   player-type combos still empty 3 s after they appeared, with a saveload matrix and nettest saturating the machine);
   the rerun passed. Not run: a tour, the orders and box-select exercises, macOS or Linux builds.
+
+## R6: the backgrounds, UIHotKey and UIBackgroundTable whole in Rust (ee_ui bgobj.rs, hotkeyobj.rs, bgtableobj.rs; branch rust-r6-ui20, 2026-11-14)
+
+Round 20 of the toolkit lane, aimed at 1,500 net C++ lines by finishing whole classes.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 394351aa | the backgrounds whole in Rust (`bgobj.rs`): nine classes, seven units and three headers fewer | -724 |
+| dc4d3d4f | `UIHotKey` whole in Rust (`hotkeyobj.rs`) | -192 |
+| c8fa8ef6 | `UIBackgroundTable` whole in Rust with `UIManager::CreateBackgrounds` (`bgtableobj.rs`) | -114 |
+| (docs) | progress file, this section | (docs) |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 12,128 -> 11,095 at the base (fffdedf4) and after the three code commits. Net C++ for the round is -1,030, short of the 1,500 asked: the largest pieces left are the classes the lane rules give to other lanes (`UIGraph`, the game screens) and the base ops of round 19 (see What is left).
+
+- **The backgrounds** (`bgobj.rs`). Nine classes: `UIBackground`, `UITextureBackground`, `UIBitmapBackground`,
+  `UITiledBackground` and its three subclasses, `UIBFull`, and the root class `UIFullBackground`. Their members are one
+  record, `EeUiBackgroundFields` (every class's fields under their C++ names, a kind-free union of them: the tiling,
+  the bitmap, the tile grid, the designed size), the C++ classes' **protected** base: the game's subclasses
+  (`EEUIBGenericBackground`, `EEUIBMapBackground`) read `mRectangle` and `mTextureFileName` in place; three reads
+  became accessors (`GetForm()` for `mForm`, now `void*`; `SetTextureDescription`, `SetTextureRectangle` for the map
+  background's writes). Each C++ member forwards its own call (`EeUiBgCall`), so a qualified call
+  (`UIBFull::DrawBackground` from the map background) stays that class's. The calls out (`EeUiOp` 540..562) go to
+  `UIBackgroundHost::Op`, whose object is the record (one host for the `UIBackground` tree and the root
+  `UIFullBackground`): the form's questions (pure: window size, exclusive coordinates, current form, rectangle, fade),
+  its locks and redraws, the four virtuals (`LoadBackground`, `UnloadBackground`, `DrawStrectchedBackground`,
+  `DrawTiledBackground`; the game overrides them), the bitmaps (`new`, release, texture, stretch, place, opacity, draw)
+  and the texture load with its seven stage modes. Ops with two or three rectangles pass twelve floats
+  (`EeUiOp::is_wide`; the replay traces all twelve). The texture file name is copied into the record (Rust bytes);
+  the C++ `UString` stays for `GetTextureFileName` and the map background.
+- **Three classes deleted.** `UILRTiledBackground`, `UITBTiledBackground` and `UIStretchedTiledBackground` only chose
+  `DrawBackground`'s tiling; they are `UITiledBackground`'s constructor argument (`UITiling`, with the stretched
+  counts) and the record's `mTiling`. Their units and headers went, and with every forwarder in `UIBackground.cpp`
+  so did `UIBitmapBackground.cpp`, `UITiledBackground.cpp`, `UIBFull.cpp` and `UIFullBackground.cpp`
+  (`link/lle/units.txt`: seven units fewer). `background_ffi.rs` deleted.
+- **UIHotKey** (`hotkeyobj.rs`): the members are `EeUiHotKeyFields`, the class's private base (`UIForm.cpp`, a
+  friend, reads them in place; its temporary hot key now calls `SetKey`, the same two steps); the constructors (default
+  and copy onto a form), the destructor, the event setters, `SetKey`, `SetModifier`, the key count and `FireEvents`
+  are Rust over round 5's and 9's `hotkey.rs`, calling out through `UIHotKeyHost::Op` (`EeUiOp` 570..582: the
+  keyboard's entities and their state as pure ops, the events' calls, `new`/`delete`). The shared table is a Rust
+  list (`GetHotKey`/`GetHotKeyCount` forward); `CreateHotKeys` is round 9's loop over it. `GetHotKeyName` stays a C++
+  walk of the keys' names (the name is round 9's Rust). `hotkey_ffi.rs` keeps only the name.
+- **UIBackgroundTable with CreateBackgrounds** (`bgtableobj.rs`): the members are `EeUiBgTableFields`, the class's private base (the inline getters read it
+  in place: `GetLayout`, `GetTextureRect`, `GetColor` answer the record's `EeUiLayout`, `EeUiRect`, `EeUiColor` as
+  the C++ types; the texture file stays a `UString`); the static array is a Rust list of entries (`GetArraySize`,
+  `GetUIBackgroundTable` forward); `Create` is round 7's loop over a host whose object is the file (open, count, read,
+  close are ops now, so the golden traces the file); `DeleteAll` and `UIManager::CreateBackgrounds` (the texture
+  description, the entries without a form skipped, one `BgtMake` per entry: the type's class or the manager's
+  user-defined background) run in Rust. `EeUiOp` 590..600. The record copy and the events' file reading in
+  `background_table_ffi.rs` went with it (the events stay there).
+- **Behaviour.** None changed. The table's `DeleteAll`/`DeleteHotKeys` take the list before deleting (the C++
+  deleted in place, then cleared): the deletions and their order are the same.
+- **The goldens** (`build/ui20/*_driver.cpp` over round 19's `world.h`, with wide ops and per-driver trace hooks).
+  Each driver's `orig` is the units at fffdedf4 transcribed over the world's ops (their round-5..9 Rust plans
+  from the base library, the C++ callbacks in the driver), `cur` the Rust object; 20,000 sequences (seed 7) and 2,000
+  (seed 1) each, orig = cur:
+
+  | Golden | seed 7 lines (sha256) | Mutations caught | Replayed by cargo |
+  |---|---|---|---|
+  | backgrounds (`bg_driver.cpp`, 7 kinds) | 6,014,146 (792a511a...) | 16 of 16 | 25 sequences, 6,719 lines |
+  | hot keys (`hk_driver.cpp`, A and its copy B) | 6,814,550 (ab4c394d...) | 12 of 12 | 12 sequences, 4,265 lines |
+  | background table (`bgt_driver.cpp`) | 1,888,542 (1c2f7411...) | 8 of 8 | 40 sequences, 3,772 lines |
+
+  The backgrounds' mutations (sequences failing of 2,000): Open's screen inclusive 426; Close loads 1,277; an empty
+  name loads 364; Unload without the texture test 1,149; the stretch placed at the source 1,521; `UIBFull` without the
+  fade 198; the tiling plan over the rectangle 254; the stretched counts swapped 90; `DrawTiledBackground`'s columns
+  swapped 215; the grid keeps the old tiles 248; `UIBFull::SetBitmapTexture`'s column and row swapped (the run aborts
+  on a tile out of its grid); `UIBFull`'s unload untested 226; `UIFullBackground`'s unload keeps the tiles 252; the
+  full-screen draw scaled by the height twice 70; no lock around `SetBitmapTexture` 1,360; `Relayout` exclusive 830.
+  The hot keys': the constructor disabled 1,089; the copy's event order 157; the copy keeps the other's form 820; the
+  copy's key count 365; `SetKey` without the count 542; the third modifier uncounted 1,104; `SetEvent`'s slots 2 and 3
+  swapped 1,276; a modifier's value not asked 281; the key's state from its address (the world has no answer: the run
+  stops); any value pressed 259; every entity in the key's slot 1,801; the destructor keeps an event 1,290. The table's:
+  the depth kept at 16 434; alpha always 609; an entry without a form made 384; the form by a wrong id 603;
+  `DeleteAll` keeps the list (the world is asked about deleted entries: the run stops); the name without its end 1,692;
+  the priority not the record's 1,443; `Create` one entry too many 1,342.
+- **Lessons.**
+  - A whole object whose subclasses only choose a strategy needs no C++ subclass: the choice is a record field and the
+    constructor's argument, and the units go.
+  - A world call that answers through an out parameter (the keyboard's `GetEntity`) is two pure ops (the entity, the
+    result) when the answer is a function of the arguments: the record write stays Rust's and the replay needs no
+    write hook.
+  - An inverted rectangle's tile plan wraps to billions of rows: a world that calls the base back must cap the loop
+    (the override answers instead), or the driver hangs.
+- **What runs it.** Every form's backgrounds and every hot key: EE-SIM makes no form (the oracle unchanged); the editor
+  gate makes the editor's forms. **Only the tour shows** the backgrounds drawn (tiles, the full-screen grids, the
+  campaign map's `UIBFull`) and hot keys firing.
+- **Gates.** Per code commit: `build.py -j 3 --sim` 0/0, the oracle seeds 2-3 identical, the editor gate PASS (6,823
+  lines), `ee_ui`'s tests and clippy (206 tests at the third commit). The bgtable commit's first build failed (the
+  unit lacked `GERhombus`'s header for `UIControl.h`; the gates that followed it ran on the previous exe and were
+  discarded), fixed and rebuilt before the commit. On the result merged with `rust` (32a71514; no conflict, the
+  toolkit untouched by the merged rounds; `rust_build.py header` rewrote `ee_units.h` and `ee_won.h`, which `rust`
+  had committed stale: b7766e4b; `rust_includes.py` nothing to narrow): build `--sim` 0/0, the oracle seeds 2-7
+  identical, the editor gate PASS (11,673 lines), the Rust gate PASS, the test-profile build 0/0. Harness (one lock per
+  session): the fixture tour `RESULT PASS tour` (no GX errors), the orders game `ORDERS PASS` (gather, repair,
+  repair-queued, move; patrol and attack-ground skipped by the driver) and `RESULT PASS random-game`, the legacy tour
+  (`game_session.py --exercise tour --input-check --play-seconds 120`) `STOP <windowed session complete> reached`,
+  `INPUT CHECK F3 paused False -> True -> False: ok`, physics ticks 118 -> 422 over the 120 s. EE-SIM makes no form,
+  so the sim_capture profiles were not run.
+- **What is left.** The whole objects' base ops (`UIObjHost::Base`) answered from the record in Rust: about 50 C++
+  lines, but every whole object's golden answers those ops as pure world values and would be re-recorded with a
+  record-consistent world (the lead's first item; not done this round, the three classes above came first);
+  `UIIMECandidate` (its strings, texts and rhombi; about 100 lines); `UIBitmap`, `UIMovie` (GE call sequences);
+  `UILBString` and `UIListBox<T>`'s lines; `UIFileListBox`/`UIFileComboBox` (the directory search); `UIEvent`,
+  `UIEntityGroup`; the game's eight direct `UIControl` subclasses and `UIGraph`/`UILineGraph` (screens lane).
