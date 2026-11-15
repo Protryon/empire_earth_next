@@ -7,6 +7,7 @@
 #include "lle/GERhombus.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
+#include <set>
 #include "lle/UResourceFile.h"
 #include "lle/GEText.h"
 #include "lle/UIListBox.h"

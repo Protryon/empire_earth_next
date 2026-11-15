@@ -41,6 +41,7 @@
 #include "ee/EEServer.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIBSavedGroup.h"
+#include <locale.h>
 #include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EECBUIListBox.h"
@@ -518,7 +519,7 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
     case EE_SCREENS_UM_OP_SERVER_LOAD:
         static_cast<EEServer*>(gCommunications)->StopPing();
         static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-        gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
         break;
     case EE_SCREENS_UM_OP_KEY_PRESSED:
         gISKeyboard->GetEntity(kKeys[inA], theKey);

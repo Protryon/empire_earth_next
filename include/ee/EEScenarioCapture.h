@@ -12,6 +12,12 @@
 //         3 GetTiles): the area's index and settings, the input, the result
 //   SMEX  every EESMEffect::Execute: the effect's id, type and sub-kinds, the cinematic flag, the seeds, the game
 //         result and the timed effects after
+//   SMEW  after every SMEX (the effect's world): the effect's saved bytes' FNV-1a, the world's out-of-synch checksum,
+//         the units' checksum sum and the computer players' (as EE-SIM's --checksum-trace), every unit of the five
+//         objects the effect names (checksum, owner, hit points, tile, name, command, goals, flags, behaviour,
+//         container, flight time, ammunition, cargo, location), each player's result, visibility, enemies, groups'
+//         counts, civilization and favourite units, the media texts, messages, pending effects, triggers, time of
+//         day, game speed, cinematic and weather flags and the camera path
 //   SMUP  each trigger round of EEScenarioManager::Update (every 500 ms): the clocks, the human flag, the triggers'
 //         state and the timed effects after
 //   SMSV  the manager's saved bytes (kind 0: after EEScenarioManager::Load, with its result; kind 1: every 120th
@@ -24,6 +30,9 @@
 //   SMTK  every EESMEffect::ExpandTokens: the text's and the result's FNV-1a, the seeds
 //   SMFP  every EESMObject::FindPlacement (the retry too): the object's index, the unit type, the random flag, the
 //         result and location, the seeds
+//   SMCU  every EEChangeUnit (kind 0) and EEModifyUnitAttribute (kind 1): the arguments, the seeds, the unit's values
+//         after (checksum, hit points, resource, flight time, garrison, ammunition, scale, reload, power, rotting,
+//         flags, variables, command and goal queues) or the player's upgrade after, and the pending effects
 // Off (EE_SIM_CAPTURE unset) each hook is one cached test.
 #ifndef EE_EESCENARIOCAPTURE_H
 #define EE_EESCENARIOCAPTURE_H
@@ -37,6 +46,8 @@ class EESMArea;
 class EESMEffect;
 class EEScenarioManager;
 class EEUnit;
+class EEPlayer;
+class EEUnitClassUpgrade;
 class UWideString;
 
 // the physics random stream's seed (0 without physics)
@@ -63,10 +74,15 @@ void EESMCapturePlayers(long inType, bool inSingle, long inResult, const void* i
 // GetTiles: count and hash)
 void EESMCaptureArea(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY, unsigned long long inHash);
 void EESMCaptureEffect(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed);
+void EESMCaptureEffectWorld(EESMEffect* inEffect);
 void EESMCapturePlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount, unsigned int inSeed);
 void EESMCaptureTokens(const UWideString& inText, const UWideString& outText, unsigned int inSeed);
 void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult, float inX,
                           float inY, unsigned int inSeed);
+// SMCU: kind 0 EEChangeUnit (inArgs: attribute, percent, unit id, minimum, maximum, random, mode), kind 1
+// EEModifyUnitAttribute (attribute, percent, player id, unit type, amount, mode, 0)
+void EESMCaptureUnitChange(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
+                           EEUnitClassUpgrade* inUpgrade, unsigned int inSeed);
 void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying);
 void EESMCaptureSaved(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
                       unsigned long inMinorVersion);

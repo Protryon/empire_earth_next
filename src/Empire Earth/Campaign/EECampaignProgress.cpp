@@ -65,7 +65,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
-#include "ee/EECBEditableCivilization.h"
+#include "ee/EECivilizationBuilder.h"
 #include "ee/EECivilization.h"
 
 // UString globals used before their definitions (gU5656B8/gU5656C8 are defined at the end of this file, gU530B88 in
@@ -363,8 +363,7 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
         theArchive->Close();
         delete theArchive;
     }
-    delete gEditableCivilization;
-    gEditableCivilization = NULL;
+    CivBuilderFreeCivilization();   // the edited civilization deleted (ee_screens civ_whole.rs)
     return theResult;
 }
 

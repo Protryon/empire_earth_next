@@ -820,6 +820,10 @@ pub enum EeWonGuiOp {
     // ---- the background grabber (`grabobj`; the receiver the C++ `BackgroundGrabber*`)
     /// a grabber's call out (`a` an `EeWonGrab`; `b`, `c`, `d` its arguments).
     Grab = 621,
+    // ---- Component (R6 WON round 38: `compobj`; the receiver the op's `b`)
+    /// a component's member, virtual method or service (`a` an `EeWonComp`; `b` the receiver, `c`, `d` its
+    /// arguments).
+    Comp = 622,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).
