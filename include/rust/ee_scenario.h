@@ -202,6 +202,475 @@ constexpr static const uint32_t EE_SCENARIO_CONDITION_CHAT_CONTAINS = 7;
 /// class `gUnitClassTable[b]`, the id kept for the object), 0 for a copy of the object's unit `d` (its class).
 constexpr static const uint32_t EE_SCENARIO_WRITE_CREATE_UNIT = 18;
 
+/// A unit's value (`a` the unit id, `b` an `EE_SCENARIO_UV_*`); the unit must exist except for `EXISTS`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_UNIT = 0;
+
+/// `gWorld.mCurrentPlayer`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CURRENT_PLAYER = 1;
+
+/// `gInCinematic` (the free camera's cinematic flag).
+constexpr static const uint32_t EE_SCENARIO_WORLD_IN_CINEMATIC = 2;
+
+/// `GetPlayer(a)->mObserverMode`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_PLAYER_OBSERVER = 3;
+
+/// `GetPlayer(a)->IsHuman()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_PLAYER_IS_HUMAN = 4;
+
+/// `dynamic_cast<EEComputerPlayer*>(GetPlayer(a)) != NULL`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER = 5;
+
+/// `GetArea(a)`: -1 for none, else bit 0 `IsUnset()`, bit 1 `IsOffMap()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AREA_STATE = 6;
+
+/// `GetArea(a)->GetCenterTile()`, packed (x low, y high).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AREA_CENTER = 7;
+
+/// `GetScenarioObject(a) != NULL ? Evaluate(false) : -1`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_OBJECT_EVALUATE = 8;
+
+/// `!mIsShowingDialog && GetNumMessages() == 0` (the manager's).
+constexpr static const uint32_t EE_SCENARIO_WORLD_DIALOG_IDLE = 9;
+
+/// Unit class `a`'s tests for the favourite units (`EE_SCENARIO_CLASS_*` bits; 0 for no class).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CLASS = 10;
+
+/// `GetScenarioObject(a)->PickUnitType()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_OBJECT_PICK = 11;
+
+/// The map tile (a, b): -1 for none, else its height's bits.
+constexpr static const uint32_t EE_SCENARIO_WORLD_TILE_HEIGHT = 12;
+
+/// `CreateUnits()` (create.rs over its own host).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CREATE_UNITS = 20;
+
+/// Unit a: `Kill(b, false, false)`, then off the map `GetPlayer()->KillUnit(unit, false)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_KILL = 21;
+
+/// Unit a: `ClearGoals(b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CLEAR_GOALS = 22;
+
+/// Unit a: `ClearGoalQueue(b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CLEAR_QUEUE = 23;
+
+/// Unit a: `StartAction(b)`, then its class's `ActionChanged(unit)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_ACTION = 24;
+
+/// Unit a: `SetIsDeletable(b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_DELETABLE = 25;
+
+/// Unit a: `SetDisabled(b, 0)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_DISABLED = 26;
+
+/// Unit a: `SetIsCommandable(b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_COMMANDABLE = 27;
+
+/// `EEConvertUnit(unit a, b, 0)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CONVERT = 28;
+
+/// Unit a: whether its yaw is at least a degree from `b` (an `f32`'s bits).
+constexpr static const uint32_t EE_SCENARIO_WORLD_FACE_TEST = 29;
+
+/// Unit a: turned to yaw `b` at once (transformation, ground).
+constexpr static const uint32_t EE_SCENARIO_WORLD_FACE_SET = 30;
+
+/// Unit a: a turn goal to yaw `b`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_FACE_GOAL = 31;
+
+/// Unit a's stats take the effect's new name.
+constexpr static const uint32_t EE_SCENARIO_WORLD_RENAME_UNIT = 32;
+
+/// Player a's upgrade of class b's unit type takes the effect's new name.
+constexpr static const uint32_t EE_SCENARIO_WORLD_RENAME_CLASS = 33;
+
+/// The main game form's group panel refreshed.
+constexpr static const uint32_t EE_SCENARIO_WORLD_REFRESH_PANEL = 34;
+
+/// Unit a: explores (a new active group).
+constexpr static const uint32_t EE_SCENARIO_WORLD_STANCE_EXPLORE = 35;
+
+/// Unit a (and a gate's second and fourth parts): locked (b 1) or unlocked.
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOCK = 36;
+
+/// Unit a: patrols its nearest town.
+constexpr static const uint32_t EE_SCENARIO_WORLD_STANCE_TOWN_PATROL = 37;
+
+/// Unit a: `mBehavior = EEUnitBehavior::sTable[b]`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_BEHAVIOR = 38;
+
+/// `EEChangeUnit(c, d, unit a (none for -1), e, 0, false, f)`: c the attribute, d the percent flag, e the amount,
+/// f the mode.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CHANGE_UNIT = 39;
+
+/// `EEModifyUnitAttribute(c, d, player a, its upgrade of type b, e, f)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_MODIFY_TARGET = 40;
+
+/// `EEModifyUnitAttribute` with the effect's own player a and unit type b (no player for a < 0; no upgrade for a < 0
+/// or b 0).
+constexpr static const uint32_t EE_SCENARIO_WORLD_MODIFY_RAW = 41;
+
+/// Player a: `SetGameResult(b ? 1 : 2)`, `RemovePlayerFromGame(b, a)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_PLAYER_RESULT = 42;
+
+/// Player a's `mComputerPlayer->SetActive(b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_COMPUTER_SET_ACTIVE = 43;
+
+/// `SetDiplomaticStance(a, b, c)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_STANCE = 44;
+
+/// Player a: `NoticeTargetPlayer(GetPlayer(b), false)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_NOTICE_TARGET = 45;
+
+/// `PostFadeIn(3000)` (a 1) or `PostFadeOut(3000)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_FADE = 46;
+
+/// Player a: the effect's technology added (made available; past the epochs researched, with its media).
+constexpr static const uint32_t EE_SCENARIO_WORLD_TECH_ADD = 47;
+
+/// Player a: the effect's technology made obsolete (its unit class's queued production replaced).
+constexpr static const uint32_t EE_SCENARIO_WORLD_TECH_REMOVE = 48;
+
+/// `AddV134Effect(*this)` (a pending effect).
+constexpr static const uint32_t EE_SCENARIO_WORLD_ADD_PENDING = 49;
+
+/// Player a: `mSeesAll = b`, the mini map redrawn for the current player.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SEES_ALL = 50;
+
+/// Player a: b civilization points, the builder button blinking, the trumpets.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CIV_POINTS = 51;
+
+/// Unit a's tile, or its container's: packed, -1 when the tile is NULL.
+constexpr static const uint32_t EE_SCENARIO_WORLD_FLARE_UNIT_TILE = 52;
+
+/// Player a: a mini map flare at tile (b, c).
+constexpr static const uint32_t EE_SCENARIO_WORLD_FLARE = 53;
+
+/// Trigger a: b 0 `mConditionStartTime`, 1 `mIsOn`, 2 `mHasFired` = c.
+constexpr static const uint32_t EE_SCENARIO_WORLD_TRIGGER_SET = 54;
+
+/// The effect's sound file played once.
+constexpr static const uint32_t EE_SCENARIO_WORLD_PLAY_SOUND = 55;
+
+/// The media text a (hints, instructions, history) cleared (b 1) or extended by the description; trumpets, blinking.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CHANGE_TEXT = 56;
+
+/// The effect's message with its tags expanded, kept for the dialogue or chat.
+constexpr static const uint32_t EE_SCENARIO_WORLD_EXPAND_MESSAGE = 57;
+
+/// The current player's dialogue message (a the cinematic flag) queued.
+constexpr static const uint32_t EE_SCENARIO_WORLD_DIALOGUE = 58;
+
+/// `DisplayMessage` of the run's empty media text (another player's dialogue).
+constexpr static const uint32_t EE_SCENARIO_WORLD_DISPLAY_EMPTY = 59;
+
+/// The chat log's entry for the expanded message over the effect's duration.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CHAT_LOG = 60;
+
+/// A message box with the expanded message.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CHAT_BOX = 61;
+
+/// `SetTimeOfDay(a's f32)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_TIME_OF_DAY = 62;
+
+/// `gPhysics->mTimeOfDayRuns = a`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_TIME_OF_DAY_RUNS = 63;
+
+/// Calamity class `a` kept for the run: whether there is one.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_CLASS = 64;
+
+/// `GetCalamityType(a, type)`: the type, -1 when it answers false.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_TYPE = 65;
+
+/// The kept class's `CanCastAt(NULL, the run's point, a, b, true, unit c or NULL for -1) == 0`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_CAN_CAST = 66;
+
+/// `CreateGlobalCalamity(a, 0, 0)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_GLOBAL = 67;
+
+/// `CreateLocationCalamity(a, -1, b, c, 0)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_LOCATION = 68;
+
+/// `CreateUnitCalamity(a, -1, b, 0)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_UNIT = 69;
+
+/// The units on map tile (b, c), each once a run, that the kept class can cast at: `CreateUnitCalamity(a, ...)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_TILE_UNITS = 70;
+
+/// `EEGraphicEffect::Get(a)` kept and loaded: -1 for none, else `EE_SCENARIO_GFX_*` bits of its kind.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GFX_BEGIN = 71;
+
+/// The kept effect as weather over tiles (a: a pointer to x, y `i32` pairs, b their count).
+constexpr static const uint32_t EE_SCENARIO_WORLD_GFX_WEATHER = 72;
+
+/// The kept effect placed at tile (a, b) (its height; 0 on water).
+constexpr static const uint32_t EE_SCENARIO_WORLD_GFX_PLACED = 73;
+
+/// The kept effect between units a and b.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GFX_BETWEEN = 74;
+
+/// The kept effect on unit a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GFX_UNIT = 75;
+
+/// The kept effect unloaded.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GFX_END = 76;
+
+/// `StartCinematic()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_START_CINEMATIC = 77;
+
+/// `SetGameSpeed(a's f32)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_GAME_SPEED = 78;
+
+/// `EndCinematic()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_END_CINEMATIC = 79;
+
+/// `SetTimedEffectHasRun(this, false)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_TIMED_NOT_RUN = 80;
+
+/// The environment manager's `SetEnabled(a)` (when there is one).
+constexpr static const uint32_t EE_SCENARIO_WORLD_WEATHER = 81;
+
+/// Computer player a's toggle b (`kSMAIToggle*`) set to c.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_TOGGLE = 82;
+
+/// Computer player a's favourite air (b 0), land (1) or sea (2) unit type c.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_FAVORITE = 83;
+
+/// Computer player a: one Set AI Variable store (b: a pointer to an `EeScenarioAiWrite`).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_STORE = 84;
+
+/// A copy of the effect for player value a as a pending effect.
+constexpr static const uint32_t EE_SCENARIO_WORLD_ADD_PENDING_PLAYER = 85;
+
+/// `ResetPath()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_RESET = 86;
+
+/// `mTurnYaw = 0`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_TURN_RESET = 87;
+
+/// `SetMode(3)`, `SetZoom(a's f32)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_ZOOM = 88;
+
+/// A path key at unit a over b ms.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_KEY = 89;
+
+/// `StartPath()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_START = 90;
+
+/// The move's end (a 0) or start (1) point = (b, c, d)'s f32s.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_POINT = 91;
+
+/// `SetMode(3)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_MODE = 92;
+
+/// `MoveTo(end unit a, the end point, c & 1, (float)d, start unit b, the start point, c & 2, e's f32, 0, 0)` (no
+/// unit for -1).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAMERA_MOVE = 93;
+
+/// The unit values of [`EE_SCENARIO_WORLD_UNIT`].
+constexpr static const int64_t EE_SCENARIO_UV_EXISTS = 0;
+
+/// `mComplexUnit != NULL`.
+constexpr static const int64_t EE_SCENARIO_UV_COMPLEX = 1;
+
+constexpr static const int64_t EE_SCENARIO_UV_HIT_POINTS = 2;
+
+/// `GetHitPoints() < GetStats()->mMaxHitPoints`.
+constexpr static const int64_t EE_SCENARIO_UV_DAMAGED = 3;
+
+constexpr static const int64_t EE_SCENARIO_UV_TILE_X = 4;
+
+constexpr static const int64_t EE_SCENARIO_UV_TILE_Y = 5;
+
+/// `mTile != NULL`.
+constexpr static const int64_t EE_SCENARIO_UV_ON_TILE = 6;
+
+/// `mPlayer->mPlayerID`.
+constexpr static const int64_t EE_SCENARIO_UV_PLAYER = 7;
+
+/// `gWorld.GetPlayerIndex(GetPlayer())`.
+constexpr static const int64_t EE_SCENARIO_UV_PLAYER_INDEX = 8;
+
+/// The class's unit type.
+constexpr static const int64_t EE_SCENARIO_UV_TYPE = 9;
+
+/// The class's category.
+constexpr static const int64_t EE_SCENARIO_UV_CATEGORY = 10;
+
+/// The complex unit's `GetCommandType()`.
+constexpr static const int64_t EE_SCENARIO_UV_COMMAND = 11;
+
+constexpr static const int64_t EE_SCENARIO_UV_DISABLED = 12;
+
+constexpr static const int64_t EE_SCENARIO_UV_COMMANDABLE = 13;
+
+/// The class's `mIsDeletable`.
+constexpr static const int64_t EE_SCENARIO_UV_CLASS_DELETABLE = 14;
+
+/// The class's `mIsWall`.
+constexpr static const int64_t EE_SCENARIO_UV_WALL = 15;
+
+/// `GetGoal() != NULL`.
+constexpr static const int64_t EE_SCENARIO_UV_HAS_GOAL = 16;
+
+/// The complex unit's `GetMaxAngularVelocity() > 0`.
+constexpr static const int64_t EE_SCENARIO_UV_TURNS = 17;
+
+/// The class's `GetIsTree()`.
+constexpr static const int64_t EE_SCENARIO_UV_TREE = 18;
+
+/// `GetUnitID()`.
+constexpr static const int64_t EE_SCENARIO_UV_ID = 19;
+
+/// The container's id, -1 for none.
+constexpr static const int64_t EE_SCENARIO_UV_CONTAINER = 20;
+
+/// The container's unit type.
+constexpr static const int64_t EE_SCENARIO_UV_CONTAINER_TYPE = 21;
+
+/// The class's `mDomains & kMovementAir`.
+constexpr static const int64_t EE_SCENARIO_UV_AIR = 22;
+
+/// The class's `IsLandBuilding()`.
+constexpr static const int64_t EE_SCENARIO_UV_LAND_BUILDING = 23;
+
+/// The class's `IsTransport()`.
+constexpr static const int64_t EE_SCENARIO_UV_TRANSPORT = 24;
+
+/// The class's `IsDropSite()`.
+constexpr static const int64_t EE_SCENARIO_UV_DROP_SITE = 25;
+
+/// The class's `mGarrisonCapacity`.
+constexpr static const int64_t EE_SCENARIO_UV_GARRISON = 26;
+
+/// `mIsDetachedFromAI`.
+constexpr static const int64_t EE_SCENARIO_UV_DETACHED = 27;
+
+/// `GetNumCargoUnits()`.
+constexpr static const int64_t EE_SCENARIO_UV_CARGO = 28;
+
+/// [`EE_SCENARIO_WORLD_CLASS`]'s bits.
+constexpr static const int64_t EE_SCENARIO_CLASS_EXISTS = 1;
+
+constexpr static const int64_t EE_SCENARIO_CLASS_PROJECTILE = 8;
+
+constexpr static const int64_t EE_SCENARIO_CLASS_LAND_BUILDING = 16;
+
+/// `GetAttack() > 0`.
+constexpr static const int64_t EE_SCENARIO_CLASS_ATTACKS = 32;
+
+/// `GetMaxVelocity() > 0`.
+constexpr static const int64_t EE_SCENARIO_CLASS_MOVES = 64;
+
+constexpr static const int64_t EE_SCENARIO_CLASS_FLIES_OVER = 128;
+
+/// A category Set Favorite Units never takes as the land unit (the buildings, ships, aircraft, missiles...).
+constexpr static const int64_t EE_SCENARIO_CLASS_NOT_LAND = 256;
+
+/// [`EE_SCENARIO_WORLD_GFX_BEGIN`]'s bits: rain or snow (weather over the tiles).
+constexpr static const int64_t EE_SCENARIO_GFX_WEATHER = 1;
+
+/// Tracers, shells, winter breath or a muzzle blast (between a complex unit and the next unit).
+constexpr static const int64_t EE_SCENARIO_GFX_PAIR = 2;
+
+/// A marching line (between any unit and the next).
+constexpr static const int64_t EE_SCENARIO_GFX_MARCHING = 4;
+
+/// Computer player a's task for Build Object: its first town, else the largest land (or any) continent, an enemy
+/// picked by its intelligence; 0 when it has none of them.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_BUILD_TASK = 100;
+
+/// The effect's object list's count.
+constexpr static const uint32_t EE_SCENARIO_WORLD_EFFECT_OBJECT_COUNT = 101;
+
+/// The effect's object list's entry a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_EFFECT_OBJECT_AT = 102;
+
+/// The strategy `Reset()`, `mKind = a`, `mAddFavorites = b`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_STRATEGY = 103;
+
+/// The requirement's `Clear()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_REQUIREMENT_CLEAR = 104;
+
+/// The strategy's unit count and remaining count 0 (any count).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_ANY_COUNT = 105;
+
+/// The requirement's left and wanted counts = a; with b, the strategy's unit count raised by a (and the remaining
+/// count = it).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_COUNT = 106;
+
+/// The requirement's unit class (a 0) = b, family (1) = b, unit kind (2) = b, or (3) computer player b's favourite
+/// land type as the unit class.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_REQUIREMENT_SET = 107;
+
+/// The requirement already defined and added to the strategy.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_REQUIREMENT_PUSH = 108;
+
+/// Computer player a: `IsValidTask(task, strategy, ids)`, then its attack commander's `CreateGroupFromStrategy`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_CREATE_GROUP = 109;
+
+/// The task's mode = combat.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_TASK_COMBAT = 110;
+
+/// The AI rectangle area of scenario area a (the last in the list): its serial, -1 for none.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_AREA_RECTANGLE = 111;
+
+/// The continent at scenario area a's anchor (when it has one): its serial, -1 for none.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_AREA_CONTINENT = 112;
+
+/// The task's unit = unit a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_TASK_UNIT = 113;
+
+/// The location's serial a and type b, reset to the area, as the task's location.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_LOCATION_AREA = 114;
+
+/// Computer player a's intelligence's `GetRandomEnemy`: the player's id, -1 for none.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_RANDOM_ENEMY = 115;
+
+/// The location's tile = unit a's (or its container's), as the task's location.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_LOCATION_UNIT = 116;
+
+/// The task's player = `GetPlayer(a)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_TASK_PLAYER = 117;
+
+/// The task active, of type a (0 location, 1 territory, 2 unit).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_TASK_TYPE = 118;
+
+/// Whether the task's unit belongs to another player that computer player a is at war with.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_TASK_UNIT_ENEMY = 119;
+
+/// Object a's units appended to the id list.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_IDS_PUSH_OBJECT = 120;
+
+/// The id list's count.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_IDS_COUNT = 121;
+
+/// The id list's entry a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_IDS_AT = 122;
+
+/// The id list's entry a erased.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_IDS_ERASE = 123;
+
+/// Computer player a's combat manager's `IsMilitaryUnit(unit b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_IS_MILITARY = 124;
+
+/// Unit a's `mIsDetachedFromAI = false`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_ATTACH = 125;
+
+/// Computer player a's `IsValidTarget(serial b, unit c, d)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_VALID_TARGET = 126;
+
+/// Computer player a's `AddAttackTask(unit b, serial c)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_ADD_ATTACK = 127;
+
+/// Computer player a's `AddDefendTask(unit b, serial c)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_ADD_DEFEND = 128;
+
+/// Computer player a's `DropAreaTask(serial b, false)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_DROP_AREA = 129;
+
+/// Computer player a's `DropUnitTask(unit b, true)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_DROP_UNIT = 130;
+
 /// The most players a choice can list (`EEScenarioManager::ChoosePlayer`'s out buffer; the world has at most 17).
 constexpr static const size_t EE_SCENARIO_MAX_PLAYERS = 64;
 
@@ -816,6 +1285,144 @@ constexpr static const uint32_t EE_SCENARIO_ENTRIES_CONDITIONS = 0;
 
 constexpr static const uint32_t EE_SCENARIO_ENTRIES_EFFECTS = 1;
 
+/// Unit a: detached from its player's AI, enabled, commandable, deletable as its class.
+constexpr static const uint32_t EE_SCENARIO_WORLD_TASK_PREPARE = 140;
+
+/// A new active group of player a, in its pending groups: the run's group.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_NEW = 141;
+
+/// Unit a joins the group (an idle aircraft refuelled and rearmed first).
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_ADD_TASKED = 142;
+
+/// Unit a's complex unit joins the group.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_ADD = 143;
+
+/// The group's unit count.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_COUNT = 144;
+
+/// The group's unit a's id.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_UNIT = 145;
+
+/// The group's first unit's id, -1 for none.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_FIRST = 146;
+
+/// The group's `KeepMobileUnits()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_KEEP_MOBILE = 147;
+
+/// Whether the group's citizen or fishing boat can gather from unit a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_CAN_GATHER = 148;
+
+/// The group gathers from unit a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_GATHER = 149;
+
+/// The group attacks unit a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_ATTACK = 150;
+
+/// `EECanHeal(unit a, unit b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAN_HEAL = 151;
+
+/// Unit a heals unit b.
+constexpr static const uint32_t EE_SCENARIO_WORLD_HEAL = 152;
+
+/// The load list cleared.
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOAD_CLEAR = 153;
+
+/// Unit a appended to the load list.
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOAD_PUSH = 154;
+
+/// The load list's count.
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOAD_COUNT = 155;
+
+/// The load list's entry a's id.
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOAD_AT = 156;
+
+/// The run's goal: unit b's load goal of kind a (0 garrison, 1 transport) given the load list (1), or a new one
+/// (0: its current goal was one, the list added to it).
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOAD_GOAL = 157;
+
+/// The run's goal's `IsLoadGarrisonValid()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GOAL_VALID = 158;
+
+/// Unit a: `ClearGoals(0)`, the run's goal set, `StartAction(b)`, `ActionChanged`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_GOAL = 159;
+
+/// Unit a: `ClearGoals(0)`, a clone of the run's goal set, `StartAction(b)`, `ActionChanged`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_SET_GOAL_CLONE = 160;
+
+/// The run's goal deleted.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GOAL_DELETE = 161;
+
+/// The load list = the group's units but transport a, filtered by the transport (the refused into the rejected).
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOAD_FILTER = 162;
+
+/// The run's goal's `GetLoadUnitTile()`, packed.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GOAL_LOAD_TILE = 163;
+
+/// The rejected units' count.
+constexpr static const uint32_t EE_SCENARIO_WORLD_REJECTED_COUNT = 164;
+
+/// The group finished, the rejected units its members, moving to tile (a, b).
+constexpr static const uint32_t EE_SCENARIO_WORLD_REJECTED_MOVE = 165;
+
+/// The group's `SpreadAroundTile(a, b)`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_SPREAD = 166;
+
+/// Unit a repairs unit b (`OrderRepair`, idle).
+constexpr static const uint32_t EE_SCENARIO_WORLD_REPAIR = 167;
+
+/// The group drops its resources off at unit a.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_DROPOFF = 168;
+
+/// Player a's acknowledgement of the group's first unit, played for the local player.
+constexpr static const uint32_t EE_SCENARIO_WORLD_ACKNOWLEDGE = 169;
+
+/// The group patrols path point a's patrol group.
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_PATROL_POINT = 170;
+
+/// The group patrols between its first unit's tile and (b, c)'s f32s for player a (d: only when that tile is on the
+/// map).
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_PATROL_TO = 171;
+
+/// Aircraft a in a container: both goal queues cleared, a move to (b, c)'s f32s queued in each (d: normal).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AIR_QUEUE = 172;
+
+/// Unit a: a move to (b, c)'s f32s (d: normal) set, taking off (e 1: only outside a container).
+constexpr static const uint32_t EE_SCENARIO_WORLD_LOCATION_GOAL = 173;
+
+/// The group moves to (a, b)'s f32s (c: normal).
+constexpr static const uint32_t EE_SCENARIO_WORLD_GROUP_MOVE = 174;
+
+/// Player a's available technologies of calamity b, kept for the run (the node ids appended to the run's list).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_NODES = 175;
+
+/// Calamity class a kept for the run: its target kind, -1 for no class.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_TARGET_KIND = 176;
+
+/// The kept class as a unit calamity: `IsValidTarget(unit a, unit b)` (0 when it is none).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_VALID_TARGET = 177;
+
+/// The kept class as a location calamity: `IsValidLocation(unit a, b, c)` (0 when it is none).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAL_VALID_LOCATION = 178;
+
+/// Unit a casts the first kept technology of player d's whose node holds its type at unit b (-1: none) or tile
+/// (c, e).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CAST = 179;
+
+/// Unit a taken off the map (the Task-Area effect with an unset area).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AREA_TAKE_OFF_MAP = 180;
+
+/// Off-map unit a placed in the task area (the object's area check pointed at it for the placement).
+constexpr static const uint32_t EE_SCENARIO_WORLD_AREA_PLACE = 181;
+
+/// Unit a unloads at tile (b, c)'s f32s when it is a loaded transport that can, else moves there.
+constexpr static const uint32_t EE_SCENARIO_WORLD_UNLOAD = 182;
+
+/// `gWorld.UpdateActiveUnits()`.
+constexpr static const uint32_t EE_SCENARIO_WORLD_UPDATE_ACTIVE = 183;
+
+/// The placement's location = (a, b)'s f32s.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AREA_LOCATION = 184;
+
 /// An element's text by slot: an effect's `mDescription`, `mMessage`, `mNewName`; a condition's `mChatText`.
 constexpr static const uint32_t EE_SCENARIO_TEXT_DESCRIPTION = 0;
 
@@ -907,6 +1514,35 @@ struct EeScenarioTiles;
 /// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
 struct EeScenarioTimedQueue;
 
+/// `EESMObject`'s numbers, in the class's order.
+struct EeScenarioObjectFields {
+  unsigned long mOwner;
+  unsigned long mFamily;
+  unsigned long mClass;
+  unsigned long mMinCount;
+  unsigned long mMaxCount;
+  unsigned long mArea;
+  unsigned long mNearMode;
+  unsigned long mNearObject;
+  unsigned long mParent;
+  unsigned long mAttribute;
+  unsigned long mAttributeMin;
+  unsigned long mAttributeMax;
+  unsigned long mVisibleByPlayer;
+  unsigned long mState;
+  unsigned long mSelectedByPlayer;
+  unsigned long mL64;
+  unsigned long mInAreaCheck;
+  unsigned long mNearCheck;
+  unsigned long mHasAttributeCheck;
+  unsigned long mVisibleByCheck;
+  unsigned long mHasStateCheck;
+  unsigned long mSelectedByCheck;
+  bool mIsSelectOnMap;
+  bool mIsDynamic;
+  bool mIsAttributePercent;
+};
+
 /// The C ABI's host: a context and the read callback.
 struct EeScenarioHost {
   void *ctx;
@@ -924,6 +1560,10 @@ struct EeScenarioHost {
   void (*write)(void *ctx, uint32_t op, long player, int64_t b, int64_t c, int64_t d);
   /// [`Host::tiles`]: the C++ fills `list` with [`ee_scenario_tiles_push`].
   void (*tiles)(void *ctx, uint32_t op, int32_t a, int32_t b, int32_t c, EeScenarioTiles *list);
+  /// [`Host::world`] (`args` six values).
+  int64_t (*world)(void *ctx, uint32_t op, const int64_t *args);
+  /// [`Host::object`]: the object's numbers, null for none.
+  const EeScenarioObjectFields *(*object)(void *ctx, int32_t index);
 };
 
 /// `EESMCondition`'s numbers, in the class's order.
@@ -994,35 +1634,6 @@ struct EeScenarioAreaRecord {
   /// `mCenterTile` (in and out: the cache, -10000 while unset)
   int32_t center_x;
   int32_t center_y;
-};
-
-/// `EESMObject`'s numbers, in the class's order.
-struct EeScenarioObjectFields {
-  unsigned long mOwner;
-  unsigned long mFamily;
-  unsigned long mClass;
-  unsigned long mMinCount;
-  unsigned long mMaxCount;
-  unsigned long mArea;
-  unsigned long mNearMode;
-  unsigned long mNearObject;
-  unsigned long mParent;
-  unsigned long mAttribute;
-  unsigned long mAttributeMin;
-  unsigned long mAttributeMax;
-  unsigned long mVisibleByPlayer;
-  unsigned long mState;
-  unsigned long mSelectedByPlayer;
-  unsigned long mL64;
-  unsigned long mInAreaCheck;
-  unsigned long mNearCheck;
-  unsigned long mHasAttributeCheck;
-  unsigned long mVisibleByCheck;
-  unsigned long mHasStateCheck;
-  unsigned long mSelectedByCheck;
-  bool mIsSelectOnMap;
-  bool mIsDynamic;
-  bool mIsAttributePercent;
 };
 
 /// `EESMEffect`'s numbers, in the class's order.
@@ -1528,6 +2139,15 @@ void ee_scenario_area_tiles(const EeScenarioHost *host,
 bool ee_scenario_create_units(const EeScenarioHost *host,
                               int32_t object,
                               const EeScenarioObjectFields *fields);
+
+/// `EESMEffect::Execute`'s body (effect.rs): the effect's numbers `fields` (copied on entry), whether it runs in a
+/// cinematic.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` for a read.
+void ee_scenario_effect_execute(const EeScenarioHost *host,
+                                const EeScenarioEffectFields *fields,
+                                bool cinematic);
 
 /// Appends tile (x, y) to a list the host is filling.
 ///

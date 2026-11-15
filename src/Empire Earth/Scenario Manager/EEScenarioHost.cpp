@@ -311,9 +311,15 @@ EeScenarioStream EESMStreamTable(EESMStream* inStream)
     return theTable;
 }
 
+// an object's numbers (NULL for none)
+static const EeScenarioObjectFields* Object(void*, int32_t inIndex)
+{
+    return gWorld.mScenarioManager->GetScenarioObject((unsigned long)inIndex);
+}
+
 EeScenarioHost EESMHost(EESMHostContext* inContext)
 {
-    EeScenarioHost theHost = {inContext, Read, Players, Write, Tiles};
+    EeScenarioHost theHost = {inContext, Read, Players, Write, Tiles, EESMEffectWorld, Object};
     return theHost;
 }
 

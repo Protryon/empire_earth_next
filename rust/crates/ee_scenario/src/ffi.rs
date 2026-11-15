@@ -9,6 +9,7 @@ use crate::area::{self, EeScenarioAreaRecord};
 use crate::attribute;
 use crate::condition::{self, EeScenarioCondition};
 use crate::create;
+use crate::effect;
 use crate::fields::{
     self, EeScenarioAreaSave, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields,
     EeScenarioTriggerFields,
@@ -38,7 +39,15 @@ unsafe fn host_of(host: *const EeScenarioHost) -> EeScenarioHost {
     // SAFETY: the caller's contract
     unsafe {
         let h = &*host;
-        EeScenarioHost { ctx: h.ctx, read: h.read, players: h.players, write: h.write, tiles: h.tiles }
+        EeScenarioHost {
+            ctx: h.ctx,
+            read: h.read,
+            players: h.players,
+            write: h.write,
+            tiles: h.tiles,
+            world: h.world,
+            object: h.object,
+        }
     }
 }
 
@@ -721,3 +730,20 @@ pub unsafe extern "C" fn ee_scenario_create_units(
     let (mut h, f) = unsafe { (host_of(host), *fields) };
     create::create_units(&mut h, object, &f)
 }
+
+/// `EESMEffect::Execute`'s body (effect.rs): the effect's numbers `fields` (copied on entry), whether it runs in a
+/// cinematic.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_effect_execute(
+    host: *const EeScenarioHost,
+    fields: *const EeScenarioEffectFields,
+    cinematic: bool,
+) {
+    // SAFETY: the caller's contract; the numbers are copied before the first call
+    let (mut h, f) = unsafe { (host_of(host), *fields) };
+    effect::execute(&mut h, &f, cinematic);
+}
+

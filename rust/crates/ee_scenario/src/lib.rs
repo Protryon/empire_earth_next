@@ -28,6 +28,8 @@
 //! - [`lists`]: the manager's element lists as the editor changes them (sort, new, move, delete, duplicate, the
 //!   name lists) and the index upkeep after each change (the `Renumber*` and `Remap*` broadcasts).
 //! - [`text`]: the trigger text file (the editor's export and import of the scenario's translatable texts).
+//! - [`effect`]: a trigger effect's run (`EESMEffect::Execute` and its helpers) over the world's calls by
+//!   operation; [`effect_ai`] the AI's military effects, [`task`] the two task effects.
 //! - [`ffi`]: the C ABI the C++ classes call.
 
 pub mod aivar;
@@ -35,6 +37,8 @@ pub mod area;
 pub mod attribute;
 pub mod condition;
 pub mod create;
+pub mod effect;
+pub mod effect_ai;
 pub mod ffi;
 pub mod fields;
 pub mod host;
@@ -47,6 +51,7 @@ pub mod player;
 pub mod round;
 pub mod save;
 pub mod stream;
+pub mod task;
 pub mod text;
 pub mod tokens;
 pub mod trigger;
