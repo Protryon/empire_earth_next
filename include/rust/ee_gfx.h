@@ -77,12 +77,6 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_EMITTER = 58;
 /// The marching line (`EEE3DMarchingLine`).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_MARCHING_LINE = 45;
 
-/// The track's unit kinds: `track`'s `kind` 1 a giraffe (`kUnitTypeResGiraffe`), 2 a horse (`kUnitTypeResHorse`),
-/// 0 any other.
-constexpr static const uint32_t EE_GFX_TRACK_GIRAFFE = 1;
-
-constexpr static const uint32_t EE_GFX_TRACK_HORSE = 2;
-
 /// `kEffect2DExhaustTrail` .. the kinds of this file.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_EXHAUST_TRAIL = 3;
 
@@ -91,6 +85,12 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_EXPLOSION = 4;
 constexpr static const int32_t EE_GFX_EFFECT_KIND_FIRE = 5;
 
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_MUZZLE_BLAST = 20;
+
+/// The track's unit kinds: `track`'s `kind` 1 a giraffe (`kUnitTypeResGiraffe`), 2 a horse (`kUnitTypeResHorse`),
+/// 0 any other.
+constexpr static const uint32_t EE_GFX_TRACK_GIRAFFE = 1;
+
+constexpr static const uint32_t EE_GFX_TRACK_HORSE = 2;
 
 /// `kEffect3DEarthquake`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_EARTHQUAKE = 26;
