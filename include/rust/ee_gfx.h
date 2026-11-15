@@ -63,6 +63,12 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_DISEASE = 35;
 
 constexpr static const int32_t EE_GFX_EFFECT_KIND_VIRUS = 66;
 
+/// The particle emitter (`EEE3DParticleEmitter`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_EMITTER = 58;
+
+/// The marching line (`EEE3DMarchingLine`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_MARCHING_LINE = 45;
+
 /// `kEffect2DExhaustTrail` .. the kinds of this file.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_EXHAUST_TRAIL = 3;
 
@@ -797,6 +803,8 @@ struct EeGfxEffectEmitter {
   float time;
   /// `mEmitTime`: ms to the next burst (saved)
   float emit_time;
+  /// not `mIsFirstStep`: the emitter has stepped (its first step starts its animation sound afresh)
+  bool stepped;
 };
 
 /// The aged effects' state (water splash, shock wave, screen flash, water ripple, blast wave; the teleport's and the
@@ -1202,6 +1210,19 @@ struct EeGfxEffectQuake {
   bool closing;
 };
 
+/// A marching line's state (`EEE3DMarchingLine`'s plain members).
+struct EeGfxEffectMarch {
+  /// `mFrom`, `mTo`: the ends without units
+  EeGe3DPoint from;
+  EeGe3DPoint to;
+  /// `mDrawFrom`, `mDrawTo`: the ends `Queue` took for the draw (the units' positions, else the points)
+  EeGe3DPoint draw_from;
+  EeGe3DPoint draw_to;
+  /// `mCC` (saved; nothing else reads it) and `mTime` (ms; saved)
+  float cc;
+  float time;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -1273,6 +1294,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectFarm farm;
   /// the earthquake's (`effect_quake.rs`)
   EeGfxEffectQuake quake;
+  /// the marching line's (`effect_particles.rs`)
+  EeGfxEffectMarch march;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1571,6 +1594,10 @@ struct EeGfxGraphicFacts {
   float alpha;
   /// `gWorld.GetGameSpeed()` (the snow's fall)
   float world_speed;
+  /// `mEndsWithUnitOrDuration`, `mEmitPositionSpread`, `mIsEmitFlat` (the particle emitter's)
+  bool ends_with_unit;
+  float emit_spread;
+  bool emit_flat;
 };
 
 /// The beam's unit as its step reads it (`EEE3DCitizenBeam::Step`).
@@ -1676,6 +1703,21 @@ struct EeGfxSmokeUnit {
   int32_t max_hit_points;
   bool has_tag_points;
   uint32_t tag_point_count;
+};
+
+/// What an emitter's step reads of its unit (`EEE3DParticleEmitter::Step`, 0xf6417; `emitter_unit`).
+struct EeGfxEmitterUnit {
+  /// the effect has a unit, a complex one
+  bool has_unit;
+  bool complex;
+  /// the complex unit's command is the dead one (`kActionDead`); the unit's hit points (`GetHitPoints`)
+  bool dead;
+  int32_t hit_points;
+  /// a complex unit followed (the graphic effect's flag 1): the turret part's result, the tag point's location
+  /// at the unit's frame in its scaled location (its position without a tag point list), and that location
+  int32_t follow_result;
+  EeGe3DPoint location;
+  EeGeTransformation transformation;
 };
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -1844,6 +1886,30 @@ struct EeGfxEffect3DHost {
   /// the rain's sounds: the loop started (`start`), the thunder `rumble` (1 or 2: the record's `storm.sounds[rumble]`)
   /// played, then both levels from the camera's distance (`EEE3DRain::StartSounds` after its timer, 0xf8195)
   void (*rain_sounds)(void *context, bool start, int32_t rumble);
+  /// the particles' tick facts at `position` (`EEParticleTick`: the game clock, the wind, the graphic effect's)
+  EeGfxParticleTick (*particle_tick)(void *context, const EeGe3DPoint *position);
+  /// the terrain the particles bounce off (`EEParticleGround`)
+  EeGfxParticleGround (*particle_ground)(void *context);
+  /// the graphic effect's duration (ms; the particle's load)
+  uint32_t (*effect_duration)(void *context);
+  /// the emitter placed on its unit (`EEE3DParticleEmitter`'s unit constructor, 0xf5f23)
+  void (*emitter_place)(void *context);
+  /// the emitter's unit for its step (`EeGfxEmitterUnit`)
+  EeGfxEmitterUnit (*emitter_unit)(void *context);
+  /// the emitter's animation sound at `location` (`first`: its first step)
+  void (*emitter_sound)(void *context, const EeGe3DPoint *location, bool first);
+  /// a line effect of the linked effect 1 from `start` along `direction`; the creation's result
+  int32_t (*emitter_line)(void *context, const EeGe3DPoint *start, const EeGe3DPoint *direction);
+  /// `EEEffect::Queue` (the base effect's, not the 3D one's)
+  int32_t (*effect_queue)(void *context);
+  /// the marching line's graphic object: its graphic effect's, its media loaded
+  void (*march_media)(void *context);
+  /// the marching line's ends for the draw (its end units' positions, else `from` and `to`) into `out` (two)
+  void (*march_ends)(void *context, const EeGe3DPoint *from, const EeGe3DPoint *to, EeGe3DPoint *out);
+  /// a loaded end unit's id (0 the start, 1 the end; resolved by `RepairPointers`)
+  void (*march_set_unit)(void *context, uint32_t which, uint32_t id);
+  /// an end unit's id for a save (-1: none)
+  int32_t (*march_unit_id)(void *context, uint32_t which);
 };
 
 /// One vertex of a built mesh: `set` names the values a builder wrote.
@@ -2043,6 +2109,9 @@ struct EeGfxRaster {
   /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
   /// the reference `load` asks for; the texture (`GETexture*`)
   EeGfxModel (*load_texture)(const uint8_t *name, const EeGfxTextureLoad *load);
+  /// a `GELine` from (`x0`, `y0`) to (`x1`, `y1`) on the screen, its opacity `opacity0` to `opacity1`
+  /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
+  int32_t (*screen_line)(float x0, float y0, float x1, float y1, float opacity0, float opacity1);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it

@@ -250,6 +250,9 @@ pub struct EeGfxRaster {
     /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
     /// the reference `load` asks for; the texture (`GETexture*`)
     pub load_texture: extern "C" fn(name: *const u8, load: *const EeGfxTextureLoad) -> EeGfxModel,
+    /// a `GELine` from (`x0`, `y0`) to (`x1`, `y1`) on the screen, its opacity `opacity0` to `opacity1`
+    /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
+    pub screen_line: extern "C" fn(x0: f32, y0: f32, x1: f32, y1: f32, opacity0: f32, opacity1: f32) -> i32,
 }
 
 /// The rasterizer as the draws call it.
@@ -352,6 +355,7 @@ pub trait Raster {
     fn copy_vertices(&mut self, from: EeGfxModel, to: EeGfxModel, normals: bool);
     fn texture_wrap(&mut self, texture: EeGfxModel);
     fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel;
+    fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32;
 }
 
 impl Raster for &EeGfxRaster {
@@ -589,6 +593,9 @@ impl Raster for &EeGfxRaster {
         bytes.extend_from_slice(name.as_bytes());
         bytes.push(0);
         (self.load_texture)(bytes.as_ptr(), load)
+    }
+    fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32 {
+        (self.screen_line)(from.0, from.1, to.0, to.1, opacity0, opacity1)
     }
 }
 
@@ -927,5 +934,9 @@ impl Raster for LogRaster {
             load.pixel_depth, load.has_alpha, load.min_filter, load.mip_filter, load.addressing, load.reference
         ));
         0x7700 as EeGfxModel
+    }
+    fn screen_line(&mut self, from: (f32, f32), to: (f32, f32), opacity0: f32, opacity1: f32) -> i32 {
+        self.calls.push(format!("line {} {} {} {} {opacity0} {opacity1}", from.0, from.1, to.0, to.1));
+        0
     }
 }

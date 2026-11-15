@@ -16,7 +16,9 @@
 // (EEE3DFarm, 0xee5c0..0xf1327), 0x1a the earthquake (EEE3DEarthquake, 0xec6e4..0xed606) and the smoke generators
 // 0x2b, 0x2c (the damage smoke) and 0x1e (the destruction smoke) (EEE3DSmokeGenerator, 0xf9871..0xf9b6d), 0x2a the
 // rain and 0x3d the snow (EEE3DRain 0xf7394..0xf8ceb, EEE3DSnow 0xf9b6d..0xfb088 and their base EEE3DStorm
-// 0xfb088..0xfb9f6), all deleted. Requires ee/EEEffect3D.h and rust/ee_gfx.h.
+// 0xfb088..0xfb9f6), 0x39 the 3D particle (EEE3DParticle, 0xf4bf3..0xf5d94: no pool any more), 0x3a the particle
+// emitter (EEE3DParticleEmitter, 0xf5d94..0xf69e3) and 0x2d the marching line (EEE3DMarchingLine, 0xf3580..0xf4247),
+// all deleted. Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
 #include <vector>
@@ -36,9 +38,9 @@ public:
     EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     // a shot on inTo from inFrom's weapon point (the tracers, the shells); the tracer beam from inFrom to inTo
     EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind);
-    // from one point to another (the linear projectile, the earthquake)
+    // from one point to another (the linear projectile, the earthquake, the marching line)
     EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind);
-    // along a line (the multi-effect)
+    // along a line (the multi-effect; the 3D particle and the emitter at its start, moving along it)
     EEE3DRust(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind);
     // over a copy of the tiles, centred on them (the rain, the snow: EEE3DStorm 0xfb0c8)
     EEE3DRust(const std::vector<U2DPoint<long> >& inTiles, EEGraphicEffect* inGraphicEffect, long inKind);
@@ -66,6 +68,19 @@ public:
     virtual void ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit);
     // the farm's: rebuilt when the changed terrain rectangle overlaps its field (EEE3DFarm::ElevationChanged, 0xf128a)
     virtual void ElevationChanged(long inLeft, long inBottom, long inRight, long inTop);
+    // the particle's unloads its graphic object (0xf4f30), the marching line's leaves its regions (0xf3882), then the
+    // base's
+    virtual void ReleaseResources();
+    // the marching line's: its regions left, the base's move, its regions along it to its end again (0xf3e52,
+    // 0xf3e29); the others': the base's
+    virtual void MoveToTransformation(const GETransformation& inTransformation);
+    virtual void MoveToPoint(const GE3DPoint& inLocation);
+    // the marching line's ends, set unless the end follows a unit (0xf3e96, 0xf3ebf); its effect regions along it
+    // from inFrom to inTo but its ends' and its own (0xf38c3), left again (0xf3c02)
+    bool SetFrom(const GE3DPoint& inPoint);
+    bool SetTo(const GE3DPoint& inPoint);
+    void AddRegions(const GE3DPoint& inFrom, const GE3DPoint& inTo);
+    void RemoveRegions();
 
     // the weather storms' (EEEMStorm's): their tiles moved one step towards their places around a new centre, the
     // storm recentred there with its bounds and radius (EEE3DStorm::Move, 0xfb252); the tiles' bounds (unchanged
@@ -85,6 +100,9 @@ public:
     SESMInstanceNode* mRumble = NULL;       // the rain's thunder
     EEUnit* mTarget = NULL;                 // the tracer beam's target unit (referenced; -1 from Load to RepairPointers)
     GEModel* mVolcanoModel = NULL;          // the volcano's model (referenced by its build)
+    EEUnit* mFromUnit = NULL;               // the marching line's end units (saved as their ids; none in practice)
+    EEUnit* mToUnit = NULL;
+    std::vector<U2DPoint<long> > mRegions;  // the marching line's effect regions
 };
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)

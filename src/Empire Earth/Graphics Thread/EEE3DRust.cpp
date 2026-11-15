@@ -8,7 +8,8 @@
 // EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp, EEE3DDamageVent.cpp,
 // EEE3DIcon.cpp, EEE3DGoal.cpp, EEE3DTracerBeam.cpp, EEE3DVolcano.cpp, EEE3DFarm.cpp (effect_farm.rs) and
 // EEE3DEarthquake.cpp (effect_quake.rs) and EEE3DSmokeGenerator.cpp (effect_smoke.rs), EEE3DStorm.cpp, EEE3DRain.cpp
-// and EEE3DSnow.cpp (effect_weather.rs).
+// and EEE3DSnow.cpp (effect_weather.rs), EEE3DParticle.cpp, EEE3DParticleEmitter.cpp and EEE3DMarchingLine.cpp
+// (effect_particles.rs).
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -76,6 +77,8 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EESoundObject.h"
+#include "ee/EEUnitAction.h"
+#include "ee/RTSRegionTable.h"
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
@@ -110,9 +113,9 @@ struct EEStormHostOps {
 const EeGfxStormHost kStormHost = {NULL, EEStormHostOps::OnMap, EEStormHostOps::IsWater, EEStormHostOps::GroundZ,
                                    EEStormHostOps::StepToward, EEStormHostOps::Ripple};
 
-// a rain sound replaced by a referenced node (EEE3DRain::SetSound 0xf8337, SetRumble 0xf835e), the node's own
-// reference then dropped (StartSounds)
-void EESetRainSound(SESMInstanceNode*& ioSound, SESMInstanceNode* inSound)
+// a sound replaced by a referenced node (EEE3DRain::SetSound 0xf8337, SetRumble 0xf835e, EEE3DParticleEmitter::SetSound
+// 0xf69bc), the node's own reference then dropped
+void EESetEffectSound(SESMInstanceNode*& ioSound, SESMInstanceNode* inSound)
 {
     if (inSound != ioSound) {
         if (ioSound)
@@ -875,13 +878,136 @@ struct Ask {
         const uint32_t* theIDs = theRain->mRecord->storm.sounds;
         EESoundObject* theSound;
         if (inStart && (theSound = EESoundObject::Get(theIDs[0])) != NULL)
-            EESetRainSound(theRain->mSound, gSoundManager->PlayAndReturnReferencedNode(
+            EESetEffectSound(theRain->mSound, gSoundManager->PlayAndReturnReferencedNode(
                 theSound->GetSampleID(), theSound->GetVolume(), 0.0f, 1.0f, theSound->GetLooping(), "3DRain"));
         if (inRumble != 0 && (theSound = EESoundObject::Get(theIDs[inRumble])) != NULL)
-            EESetRainSound(theRain->mRumble, gSoundManager->PlayAndReturnReferencedNode(
+            EESetEffectSound(theRain->mRumble, gSoundManager->PlayAndReturnReferencedNode(
                 theSound->GetSampleID(), theSound->GetVolume(), 0.0f, 1.0f, theSound->GetLooping(), "3D Rain Rumble"));
         EESetRainSoundLevel(theRain, theRain->mSound, 0.5f);
         EESetRainSoundLevel(theRain, theRain->mRumble, 1.0f);
+    }
+    // the particles' tick and ground (EEE3DParticle::Update 0xf50b2, EEE3DParticleEmitter::Move 0xf60f5), the graphic
+    // effect's duration (EEE3DParticle::Load 0xf53bc)
+    static EeGfxParticleTick ParticleTick(void* inAsk, const EeGe3DPoint* inPosition)
+    {
+        return EEParticleTick(E(inAsk)->mGraphicEffect, *reinterpret_cast<const GE3DPoint*>(inPosition));
+    }
+    static EeGfxParticleGround ParticleGround(void*) { return EEParticleGround(); }
+    static uint32_t EffectDuration(void* inAsk) { return (uint32_t)E(inAsk)->mGraphicEffect->mDuration; }
+    // the emitter on a unit (0xf5f23): at its location unless it follows the tag point; a unit without a complex unit
+    // at its tile's centre on the terrain
+    static void EmitterPlace(void* inAsk)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        EEUnit* theOwner = theEffect->mUnit;
+        GETransformation theTransformation;
+        EEComplexUnit* theUnit = theOwner->GetComplexUnit();
+        if (theUnit) {
+            if (!theEffect->mGraphicEffect->mFlag1)
+                theTransformation = theUnit->mPhysicalModel.GetLocation();
+        } else {
+            GE3DPoint theLocation;
+            float theHalf = theOwner->mUnitClass->mTileSize * 0.5f;
+            theLocation.SetX(theOwner->mTileX + theHalf);
+            theLocation.SetY(theOwner->mTileY + theHalf);
+            if (::gWorld.mMap->mTerrainMesh.GetIsValidTile(theOwner->mTileX, theOwner->mTileY))
+                theLocation.SetZ(::gWorld.mMap->GetHeight(theLocation));
+            else
+                theLocation.SetZ(0.0f);
+            theTransformation.MakeIdentity();
+            theTransformation.SetPosition(theLocation);
+        }
+        theEffect->SetTransformation(theTransformation);
+    }
+    // the emitter's unit for its step (0xf6417): its death and hit points; followed (the graphic effect's flag 1), the
+    // tag point at its frame in its scaled location (turned by its turret part), else its position
+    static EeGfxEmitterUnit EmitterUnit(void* inAsk)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        EEGraphicEffect* theEffectData = theEffect->mGraphicEffect;
+        EeGfxEmitterUnit theFacts = {};
+        if (theEffect->mUnit == NULL)
+            return theFacts;
+        theFacts.has_unit = true;
+        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
+        if (theUnit == NULL) {
+            theFacts.hit_points = (int32_t)theEffect->mUnit->GetHitPoints();
+            return theFacts;
+        }
+        theFacts.complex = true;
+        if (theEffectData->mFlag1) {
+            GE3DPoint theLocation;
+            GETransformation theTransformation(theUnit->mPhysicalModel.GetLocation());
+            GETransformation thePart(false);
+            EEGraphicObject* theGraphic = theEffect->mUnit->GetModel();
+            EETagPointList* theTags = theGraphic->GetTagPoints(theUnit->GetAnimation(), theEffectData->mTagPointKind);
+            uint32_t theTag = theEffect->mRecord->emitter.tag_point;
+            if (theEffectData->mTagPointKind != 0x15 && theTags) {
+                unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+                theTags->Scale(theTransformation, theUnit->mPhysicalModel.GetScale());
+                if (theGraphic->GetNumParts() > 0) {
+                    unsigned long thePartIndex;
+                    thePart.MakeIdentity();
+                    theFacts.follow_result = (int32_t)theGraphic->FindTurretPart(theTags->GetTagPoint(theTag)->mModel, thePartIndex);
+                    if (theFacts.follow_result == 0)
+                        thePart.SetOrientationYPR(theUnit->mTurretAngles[thePartIndex], 0.0f, 0.0f);
+                    theTags->GetTagPoint(theTag)->GetPoint(theFrame, theTransformation, thePart, theLocation);
+                } else
+                    theTags->GetTagPoint(theTag)->GetPoint(theFrame, theTransformation, theLocation);
+            } else
+                theTransformation.GetPosition(theLocation);
+            theFacts.location = EeGe3DPoint{theLocation.mX, theLocation.mY, theLocation.mZ};
+            theFacts.transformation = *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
+        }
+        theFacts.dead = theUnit->GetCommandType() == kActionDead;
+        theFacts.hit_points = (int32_t)theUnit->GetHitPoints();
+        return theFacts;
+    }
+    // the emitter's animation sound at its place (its graphic effect's object, if any)
+    static void EmitterSound(void* inAsk, const EeGe3DPoint* inLocation, bool inFirst)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        EEGraphicObject* theObject = theEffect->mGraphicEffect->mGraphicObject;
+        if (theObject)
+            EESetEffectSound(theEffect->mSound, PlayAnimationSound(*reinterpret_cast<const GE3DPoint*>(inLocation), theObject, 0,
+                                                                   theEffect->mSound, 0, inFirst));
+    }
+    // a line particle of the emitter's burst (CreateLineEffect of the linked effect 1)
+    static int32_t EmitterLine(void* inAsk, const EeGe3DPoint* inStart, const EeGe3DPoint* inDirection)
+    {
+        GE3DLine theLine;
+        theLine.SetStart(*reinterpret_cast<const GE3DPoint*>(inStart));
+        theLine.SetDirection(GEVector(inDirection->x, inDirection->y, inDirection->z));
+        return (int32_t)gEffectManager->CreateLineEffect(theLine, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
+    }
+    // the marching line's: the base effect's queue (not the 3D one's); its graphic effect's object's media; its ends
+    // (the units' positions, else the points); its units' saved ids (as the original, kept as pointers until
+    // RepairPointers) and their ids for a save (-1: none)
+    static int32_t EffectQueue(void* inAsk) { return E(inAsk)->EEEffect::Queue(static_cast<Ask*>(inAsk)->mQueues); }
+    static void MarchMedia(void* inAsk)
+    {
+        E(inAsk)->mGraphicObject = E(inAsk)->mGraphicEffect->mGraphicObject;
+        E(inAsk)->mGraphicObject->LoadMedia();
+    }
+    static void MarchEnds(void* inAsk, const EeGe3DPoint* inFrom, const EeGe3DPoint* inTo, EeGe3DPoint* outEnds)
+    {
+        EEUnit* theUnits[2] = {E(inAsk)->mFromUnit, E(inAsk)->mToUnit};
+        const EeGe3DPoint* thePoints[2] = {inFrom, inTo};
+        for (int i = 0; i < 2; i++) {
+            GE3DPoint thePoint(thePoints[i]->x, thePoints[i]->y, thePoints[i]->z);
+            if (theUnits[i])
+                theUnits[i]->GetPosition(thePoint);
+            outEnds[i] = EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
+        }
+    }
+    static void MarchSetUnit(void* inAsk, uint32_t inWhich, uint32_t inID)
+    {
+        (inWhich == 0 ? E(inAsk)->mFromUnit : E(inAsk)->mToUnit) = reinterpret_cast<EEUnit*>((uintptr_t)inID);
+    }
+    static int32_t MarchUnitID(void* inAsk, uint32_t inWhich)
+    {
+        EEUnit* theUnit = inWhich == 0 ? E(inAsk)->mFromUnit : E(inAsk)->mToUnit;
+        return theUnit ? (int32_t)theUnit->GetUnitID() : -1;
     }
 };
 
@@ -918,6 +1044,13 @@ EEE3DRust::EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffe
 EEE3DRust::EEE3DRust(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(0, inGraphicEffect, inKind)
 {
+    if (inKind == 0x39 || inKind == 0x3a) {   // the 3D particle (0xf4e27), the emitter (0xf5e82)
+        const GE3DPoint& theStart = inLine.GetStart();
+        const GEVector& theDirection = inLine.GetDirection();
+        EeGe3DPoint theVelocity = {theDirection.GetX(), theDirection.GetY(), theDirection.GetZ()};
+        this->mRecord->aged.location = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
+        (inKind == 0x39 ? this->mRecord->particle.velocity : this->mRecord->emitter.velocity) = theVelocity;
+    }
     this->Call(EeGfxEffect3DOp::CreateLine, NULL, NULL, 0, 0, 0, &inLine);
 }
 
@@ -974,6 +1107,11 @@ EEE3DRust::EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEff
 EEE3DRust::EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(0, inGraphicEffect, inKind)
 {
+    if (inKind == 0x2d) {   // the marching line between the points (EEE3DMarchingLine, 0xf359c)
+        this->mRecord->march.from = EeGe3DPoint{inFrom.mX, inFrom.mY, inFrom.mZ};
+        this->mRecord->march.to = EeGe3DPoint{inTo.mX, inTo.mY, inTo.mZ};
+        return;
+    }
     this->mRecord->shot.path.start = EeGe3DPoint{inFrom.mX, inFrom.mY, inFrom.mZ};
     this->mRecord->shot.location = EeGe3DPoint{inTo.mX, inTo.mY, inTo.mZ};
     this->Call(EeGfxEffect3DOp::Create);
@@ -1036,6 +1174,8 @@ U2DPoint<long> EEE3DRust::GetCenterPoint() const
 // additive pass's), releases the tracer beam's target
 EEE3DRust::~EEE3DRust()
 {
+    if (this->mKind == 0x2d)   // the marching line's regions (0xf3736)
+        this->RemoveRegions();
     if (this->mSound) {
         gSoundManager->Stop(this->mSound, false);
         this->mSound->Dereference();
@@ -1065,6 +1205,10 @@ EEE3DRust::~EEE3DRust()
     }
     if (this->mTarget != NULL && this->mTarget != (EEUnit*)-1)
         this->mTarget->Dereference();
+    if (this->mFromUnit)   // the marching line's units (not referenced by a repair: as the original)
+        this->mFromUnit->Dereference();
+    if (this->mToUnit)
+        this->mToUnit->Dereference();
     if (this->mVolcanoModel)   // the original dereferenced it without a test
         this->mVolcanoModel->Dereference();
     if (this->mKind == 0x29) {   // the farm's ground model and draw copies (EEE3DFarm's destructor, 0xee775)
@@ -1129,6 +1273,9 @@ EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
     if (theEffect != NULL) {
         theFacts.time1 = (uint32_t)theEffect->mTime1;
         theFacts.time2 = (int32_t)theEffect->mTime2;
+        theFacts.ends_with_unit = theEffect->mEndsWithUnitOrDuration;
+        theFacts.emit_spread = theEffect->mEmitPositionSpread;
+        theFacts.emit_flat = theEffect->mIsEmitFlat;
     }
     theFacts.world_speed = gWorld.GetGameSpeed();
     return theFacts;
@@ -1154,7 +1301,10 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant, Ask::FarmLoops,
                                  Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity, Ask::SetScaledModel,
                                  Ask::GroundPoint, Ask::SmokeUnit, Ask::SmokeTagPoint, Ask::SmokePlace, kStormHost,
-                                 Ask::RainMedia, Ask::RainSounds};
+                                 Ask::RainMedia, Ask::RainSounds, Ask::ParticleTick, Ask::ParticleGround,
+                                 Ask::EffectDuration, Ask::EmitterPlace, Ask::EmitterUnit, Ask::EmitterSound,
+                                 Ask::EmitterLine, Ask::EffectQueue, Ask::MarchMedia, Ask::MarchEnds, Ask::MarchSetUnit,
+                                 Ask::MarchUnitID};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -1188,7 +1338,102 @@ long EEE3DRust::RepairPointers()
             this->mTarget = NULL;
         return theResult;
     }
+    if (this->mKind == 0x2d && theResult == 0) {   // the marching line's saved unit ids back to units (0xf3ee8)
+        if (USavedID(this->mFromUnit) > 0)
+            this->mFromUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mFromUnit)));
+        if (USavedID(this->mToUnit) > 0)
+            this->mToUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mToUnit)));
+    }
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
+}
+
+void EEE3DRust::ReleaseResources()
+{
+    if (this->mKind == 0x39 && this->mGraphicObject) {
+        this->mGraphicObject->UnloadMedia();
+        this->mGraphicObject = NULL;
+    }
+    if (this->mKind == 0x2d)
+        this->RemoveRegions();
+    EEEffect3D::ReleaseResources();
+}
+
+void EEE3DRust::MoveToTransformation(const GETransformation& inTransformation)
+{
+    if (this->mKind != 0x2d) {
+        EEEffect::MoveToTransformation(inTransformation);
+        return;
+    }
+    GE3DPoint theLocation(inTransformation.GetX(), inTransformation.GetY(), inTransformation.GetZ());
+    this->RemoveRegions();
+    EEEffect::MoveToTransformation(inTransformation);
+    this->AddRegions(theLocation, *reinterpret_cast<const GE3DPoint*>(&this->mRecord->march.to));
+}
+
+void EEE3DRust::MoveToPoint(const GE3DPoint& inLocation)
+{
+    if (this->mKind != 0x2d) {
+        EEEffect::MoveToPoint(inLocation);
+        return;
+    }
+    this->RemoveRegions();
+    EEEffect::MoveToPoint(inLocation);
+    this->AddRegions(inLocation, *reinterpret_cast<const GE3DPoint*>(&this->mRecord->march.to));
+}
+
+bool EEE3DRust::SetFrom(const GE3DPoint& inPoint)
+{
+    if (this->mFromUnit != NULL)
+        return false;
+    this->mRecord->march.from = EeGe3DPoint{inPoint.mX, inPoint.mY, inPoint.mZ};
+    return true;
+}
+
+bool EEE3DRust::SetTo(const GE3DPoint& inPoint)
+{
+    if (this->mToUnit != NULL)
+        return false;
+    this->mRecord->march.to = EeGe3DPoint{inPoint.mX, inPoint.mY, inPoint.mZ};
+    return true;
+}
+
+void EEE3DRust::AddRegions(const GE3DPoint& inFrom, const GE3DPoint& inTo)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    long theFromY = UMFloor(inFrom.GetY());
+    long theFromX = UMFloor(inFrom.GetX());
+    long theToY = UMFloor(inTo.GetY());
+    long theToX = UMFloor(inTo.GetX());
+    U2DPoint<long> theTile(this->mTileX, this->mTileY);
+    RTSRegionTable<EEEffect*>* theTable = ::gWorld.mMap->mEffectRegions;
+    U2DPoint<long> theStart(theFromX / theTable->mRegionSize, theFromY / theTable->mRegionSize);
+    U2DPoint<long> theEnd(theToX / theTable->mRegionSize, theToY / theTable->mRegionSize);
+    theStart.GetLineTiles(theEnd, 1.0f, theTiles);   // the step along the line in tiles (.rdata 0x440994)
+    for (long i = theTiles.size() - 1; i >= 0; i--) {
+        if (theTiles[i] == theStart || theTiles[i] == theEnd || theTiles[i] == theTile)
+            continue;
+        if (std::find(this->mRegions.begin(), this->mRegions.end(), theTiles[i]) != this->mRegions.end())
+            continue;
+        this->mRegions.push_back(theTiles[i]);
+        EEEffect* theEffect = this;
+        std::vector<EEEffect*>* theRegion = theTable->GetRegion(theTiles[i]);
+        if (theRegion)
+            theRegion->push_back(theEffect);
+    }
+}
+
+void EEE3DRust::RemoveRegions()
+{
+    RTSRegionTable<EEEffect*>* theTable;
+    if (::gWorld.mMap && (theTable = ::gWorld.mMap->mEffectRegions) != 0) {
+        for (long i = this->mRegions.size() - 1; i >= 0; i--) {
+            EEEffect* theEffect = this;
+            RTSRegion<EEEffect*>* theRegion = theTable->GetRegion(this->mRegions[i]);
+            if (theRegion)
+                theRegion->Remove(theEffect);
+        }
+    }
+    this->mRegions.clear();
 }
 
 // the base's, then the tracer beam's target unless the effect keeps its unit (EEE3DTracerBeam::ReplaceUnit, 0xfd10f)
@@ -1197,6 +1442,14 @@ void EEE3DRust::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
     if (this->mKind == 0x29)   // the farm's is empty (ICF-folded into 0x163d6f)
         return;
     EEEffect::ReplaceUnit(inOldUnit, inNewUnit);
+    EEUnit** theEnds[2] = {&this->mFromUnit, &this->mToUnit};   // the marching line's ends (0xf4017)
+    for (int i = 0; i < 2; i++) {
+        if (this->mKind == 0x2d && inOldUnit == *theEnds[i]) {
+            (*theEnds[i])->Dereference();
+            *theEnds[i] = inNewUnit;
+            inNewUnit->Reference();
+        }
+    }
     if (this->mKind != 0x40 || this->mTarget != inOldUnit || this->mKeepsUnit)
         return;
     this->mTarget->Dereference();

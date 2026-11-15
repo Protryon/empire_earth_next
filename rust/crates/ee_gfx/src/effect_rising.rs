@@ -27,9 +27,11 @@ use crate::effect_orbit::{
     load_orbit, orbit, save_orbit, EeGfxAnimation, EeGfxOrbital, EE_GFX_EFFECT_KIND_DISEASE,
     EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE, EE_GFX_EFFECT_KIND_VIRUS,
 };
+use crate::effect_particles::{is_particle, particles, particles_file, EeGfxEmitterUnit};
 use crate::effect_quake::{quake, quake_file, EE_GFX_EFFECT_KIND_EARTHQUAKE};
 use crate::effect_shot::{is_shot, load_shot, save_shot, shot};
 use crate::effect_smoke::{is_smoke, smoke, EeGfxSmokeUnit};
+use crate::effect_state::EeGfxParticleTick;
 use crate::effect_state::{
     identity, load_aged, save_aged, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EffectFile,
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_SCREEN_FLASH, EE_GFX_EFFECT_KIND_TELEPORT,
@@ -41,7 +43,7 @@ use crate::effect_volcano::{volcano, volcano_file, EE_GFX_EFFECT_KIND_VOLCANO};
 use crate::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
 use crate::effect_weather::{is_weather, weather, weather_file};
 use crate::effects::EeGfxColor;
-use crate::ffi_effect::EeGfxStormHost;
+use crate::ffi_effect::{EeGfxParticleGround, EeGfxStormHost};
 use crate::ffi_mesh::EeGfxFarmTerrain;
 use crate::lighting::EeGfxLighting;
 use crate::raster::{EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE};
@@ -139,6 +141,10 @@ pub struct EeGfxGraphicFacts {
     pub alpha: f32,
     /// `gWorld.GetGameSpeed()` (the snow's fall)
     pub world_speed: f32,
+    /// `mEndsWithUnitOrDuration`, `mEmitPositionSpread`, `mIsEmitFlat` (the particle emitter's)
+    pub ends_with_unit: bool,
+    pub emit_spread: f32,
+    pub emit_flat: bool,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -307,6 +313,31 @@ pub struct EeGfxEffect3DHost {
     /// the rain's sounds: the loop started (`start`), the thunder `rumble` (1 or 2: the record's `storm.sounds[rumble]`)
     /// played, then both levels from the camera's distance (`EEE3DRain::StartSounds` after its timer, 0xf8195)
     pub rain_sounds: extern "C" fn(context: *mut c_void, start: bool, rumble: i32),
+    /// the particles' tick facts at `position` (`EEParticleTick`: the game clock, the wind, the graphic effect's)
+    pub particle_tick: extern "C" fn(context: *mut c_void, position: *const Ge3DPoint) -> EeGfxParticleTick,
+    /// the terrain the particles bounce off (`EEParticleGround`)
+    pub particle_ground: extern "C" fn(context: *mut c_void) -> EeGfxParticleGround,
+    /// the graphic effect's duration (ms; the particle's load)
+    pub effect_duration: extern "C" fn(context: *mut c_void) -> u32,
+    /// the emitter placed on its unit (`EEE3DParticleEmitter`'s unit constructor, 0xf5f23)
+    pub emitter_place: extern "C" fn(context: *mut c_void),
+    /// the emitter's unit for its step (`EeGfxEmitterUnit`)
+    pub emitter_unit: extern "C" fn(context: *mut c_void) -> EeGfxEmitterUnit,
+    /// the emitter's animation sound at `location` (`first`: its first step)
+    pub emitter_sound: extern "C" fn(context: *mut c_void, location: *const Ge3DPoint, first: bool),
+    /// a line effect of the linked effect 1 from `start` along `direction`; the creation's result
+    pub emitter_line: extern "C" fn(context: *mut c_void, start: *const Ge3DPoint, direction: *const Ge3DPoint) -> i32,
+    /// `EEEffect::Queue` (the base effect's, not the 3D one's)
+    pub effect_queue: extern "C" fn(context: *mut c_void) -> i32,
+    /// the marching line's graphic object: its graphic effect's, its media loaded
+    pub march_media: extern "C" fn(context: *mut c_void),
+    /// the marching line's ends for the draw (its end units' positions, else `from` and `to`) into `out` (two)
+    pub march_ends:
+        extern "C" fn(context: *mut c_void, from: *const Ge3DPoint, to: *const Ge3DPoint, out: *mut Ge3DPoint),
+    /// a loaded end unit's id (0 the start, 1 the end; resolved by `RepairPointers`)
+    pub march_set_unit: extern "C" fn(context: *mut c_void, which: u32, id: u32),
+    /// an end unit's id for a save (-1: none)
+    pub march_unit_id: extern "C" fn(context: *mut c_void, which: u32) -> i32,
 }
 
 /// The world as the effects ask it.
@@ -505,6 +536,35 @@ pub trait Effect3DHost {
     fn storm_ripple(&mut self, _x: f32, _y: f32) {}
     fn rain_media(&mut self) {}
     fn rain_sounds(&mut self, _start: bool, _rumble: i32) {}
+    /// the particles' world (the tests' hosts that make none: the clock at 0, flat ground everywhere)
+    fn particle_tick(&mut self, position: &Ge3DPoint) -> EeGfxParticleTick {
+        EeGfxParticleTick { position: *position, ..Default::default() }
+    }
+    fn particle_ground(&mut self) -> EeGfxParticleGround {
+        crate::ffi_effect::flat_ground()
+    }
+    fn effect_duration(&mut self) -> u32 {
+        0
+    }
+    fn emitter_place(&mut self) {}
+    fn emitter_unit(&mut self) -> EeGfxEmitterUnit {
+        EeGfxEmitterUnit::default()
+    }
+    fn emitter_sound(&mut self, _location: &Ge3DPoint, _first: bool) {}
+    fn emitter_line(&mut self, _start: &Ge3DPoint, _direction: &Ge3DPoint) -> i32 {
+        0
+    }
+    fn effect_queue(&mut self) -> i32 {
+        self.base_queue()
+    }
+    fn march_media(&mut self) {}
+    fn march_ends(&mut self, from: &Ge3DPoint, to: &Ge3DPoint) -> [Ge3DPoint; 2] {
+        [*from, *to]
+    }
+    fn march_set_unit(&mut self, _which: u32, _id: u32) {}
+    fn march_unit_id(&mut self, _which: u32) -> i32 {
+        -1
+    }
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -749,6 +809,44 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn rain_sounds(&mut self, start: bool, rumble: i32) {
         (self.rain_sounds)(self.context, start, rumble)
     }
+    fn particle_tick(&mut self, position: &Ge3DPoint) -> EeGfxParticleTick {
+        (self.particle_tick)(self.context, position)
+    }
+    fn particle_ground(&mut self) -> EeGfxParticleGround {
+        (self.particle_ground)(self.context)
+    }
+    fn effect_duration(&mut self) -> u32 {
+        (self.effect_duration)(self.context)
+    }
+    fn emitter_place(&mut self) {
+        (self.emitter_place)(self.context)
+    }
+    fn emitter_unit(&mut self) -> EeGfxEmitterUnit {
+        (self.emitter_unit)(self.context)
+    }
+    fn emitter_sound(&mut self, location: &Ge3DPoint, first: bool) {
+        (self.emitter_sound)(self.context, location, first)
+    }
+    fn emitter_line(&mut self, start: &Ge3DPoint, direction: &Ge3DPoint) -> i32 {
+        (self.emitter_line)(self.context, start, direction)
+    }
+    fn effect_queue(&mut self) -> i32 {
+        (self.effect_queue)(self.context)
+    }
+    fn march_media(&mut self) {
+        (self.march_media)(self.context)
+    }
+    fn march_ends(&mut self, from: &Ge3DPoint, to: &Ge3DPoint) -> [Ge3DPoint; 2] {
+        let mut out = [Ge3DPoint::default(); 2];
+        (self.march_ends)(self.context, from, to, out.as_mut_ptr());
+        out
+    }
+    fn march_set_unit(&mut self, which: u32, id: u32) {
+        (self.march_set_unit)(self.context, which, id)
+    }
+    fn march_unit_id(&mut self, which: u32) -> i32 {
+        (self.march_unit_id)(self.context, which)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -787,6 +885,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_EARTHQUAKE => unsafe { quake(op, r, g, h, x) },
         k if is_smoke(k) => unsafe { smoke(op, r, g, h) },
         k if is_weather(k) => unsafe { weather(op, r, g, h, x) },
+        k if is_particle(k) => unsafe { particles(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -911,6 +1010,7 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
             }
         }
         k if is_weather(k) => weather_file(load, base, r, f),
+        k if is_particle(k) => particles_file(load, base, r, f, major, minor, h),
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();

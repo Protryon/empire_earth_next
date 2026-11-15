@@ -144,8 +144,6 @@ dde43 dde94 Empire Earth/Formations/EEFShallowWedge.cpp
 dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
-f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
-f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
 10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
 10428c 1050fb Empire Earth/Graphics Thread/EEEffect2D.cpp
 1050fb 1054ec Empire Earth/Graphics Thread/EEEffect3D.cpp
@@ -390,4 +388,3 @@ f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp
 29ce06 29cfda Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbySound.cpp
 29cfda 29d07a Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyTimeouts.cpp
-f4bf3 f5d94 Empire Earth/Graphics Thread/EEE3DParticle.cpp

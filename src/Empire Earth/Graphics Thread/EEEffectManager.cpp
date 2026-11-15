@@ -48,12 +48,9 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEWorld.h"
 #include "ee/EEEffectManager.h"
-#include "ee/EEE3DParticleEmitter.h"
 #include "ee/EEE3DRust.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DRust.h"
-#include "ee/EEE3DMarchingLine.h"
-#include "ee/EEE3DParticle.h"
 #include "ee/EESimCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "lle/FSMemoryFile.h"
@@ -130,8 +127,8 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     EEEffect* theEffect = NULL;
     switch (inKind) {
     case kEffectDamaged: theEffect = new EEE2DRust(0x3e); break;
-    case kEffect3DParticle: theEffect = EEE3DParticle::Create(); break;
-    case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(0x3a); break;
+    case kEffect3DParticle: theEffect = new EEE3DRust(kEffect3DParticle); break;
+    case kEffect3DParticleEmitter: theEffect = new EEE3DRust(kEffect3DParticleEmitter); break;
     case kEffect2DParticle: theEffect = EEE2DRust::NewParticle(); break;
     case kEffect3DDestructionSmoke: theEffect = new EEE3DRust(0x1e); break;
     case kEffect2DVelocityParticle: theEffect = new EEE2DRust(0xc); break;
@@ -170,7 +167,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DAdditivePass: theEffect = new EEE3DRust(0x27); break;
     case kEffect3DNuclearExplosion: theEffect = new EEE3DRust(0x28); break;
     case kEffect3DIcon: theEffect = new EEE3DRust(2); break;
-    case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(); break;
+    case kEffect3DMarchingLine: theEffect = new EEE3DRust(kEffect3DMarchingLine); break;
     case kEffect3DGoal: theEffect = new EEE3DRust(0x3c); break;
     case kEffect3DTeleport: theEffect = new EEE3DRust(0x3f); break;
     case kEffect3DTimeWarp: theEffect = new EEE3DRust(0x44); break;
@@ -276,7 +273,12 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x3f: theEffect = new EEE3DRust(inUnit, inEffect, 0x3f); break;
     case 0x3e: theEffect = new EEE2DRust(inUnit, inEffect, 0x3e); break;
     case 0x3b: theEffect = new EEE3DRust(inUnit, inEffect, 0x3b); break;
-    case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
+    case 0x3a: {   // on the unit's tag point
+        EEE3DRust* theEmitter = new EEE3DRust(inUnit, inEffect, 0x3a);
+        theEmitter->mRecord->emitter.tag_point = (uint32_t)inTagPoint;
+        theEffect = theEmitter;
+        break;
+    }
     case 0x42: theEffect = new EEE3DRust(inUnit, inEffect, 0x42); break;
     case 0x47: theEffect = new EEE3DRust(inUnit, inEffect, 0x47); break;
     case 0x46: theEffect = new EEE3DRust(inUnit, inEffect, 0x46); break;
@@ -359,8 +361,8 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0x2e: theEffect = EEE2DRust::NewParticle(inLocation, inEffect); break;
     case 0x31: theEffect = new EEE2DRust(inLocation, inEffect, 0x31); break;
     case 0x32: theEffect = new EEE2DRust(inLocation, inEffect, 0x32); break;
-    case 0x39: theEffect = EEE3DParticle::Create(inLocation, inEffect); break;
-    case 0x3a: theEffect = new EEE3DParticleEmitter(inLocation, inEffect, 0x3a); break;
+    case 0x39: theEffect = new EEE3DRust(inLocation, inEffect, 0x39); break;
+    case 0x3a: theEffect = new EEE3DRust(inLocation, inEffect, 0x3a); break;
     case 0x3b: theEffect = new EEE3DRust(inLocation, inEffect, 0x3b); break;
     case 0x3c: theEffect = new EEE3DRust(inLocation, inEffect, 0x3c); break;
     }
@@ -396,8 +398,8 @@ long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffe
     switch (inEffect->mKind) {
     case kEffect2DVelocityParticle: theEffect = new EEE2DRust(inLine, inEffect, 0xc); break;
     case kEffect2DParticle: theEffect = EEE2DRust::NewParticle(inLine, inEffect); break;
-    case kEffect3DParticle: theEffect = EEE3DParticle::Create(inLine, inEffect); break;
-    case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(inLine, inEffect, 0x3a); break;
+    case kEffect3DParticle: theEffect = new EEE3DRust(inLine, inEffect, kEffect3DParticle); break;
+    case kEffect3DParticleEmitter: theEffect = new EEE3DRust(inLine, inEffect, kEffect3DParticleEmitter); break;
     case kEffect3DMultiEffect: theEffect = new EEE3DRust(inLine, inEffect, 0x3b); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
@@ -416,7 +418,7 @@ long EEEffectManager::CreateEffectBetween(GE3DPoint& inFrom, GE3DPoint& inTo, EE
     switch (inEffect->mKind) {
     case kEffect3DEarthquake: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x1a); break;
     case kEffect3DLinearProjectile: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x25); break;
-    case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(inFrom, inTo, inEffect); break;
+    case kEffect3DMarchingLine: theEffect = new EEE3DRust(inFrom, inTo, inEffect, kEffect3DMarchingLine); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }

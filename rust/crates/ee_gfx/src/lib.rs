@@ -44,6 +44,7 @@ pub mod effect_manager;
 pub mod effect_multi;
 pub mod effect_nuclear;
 pub mod effect_orbit;
+pub mod effect_particles;
 pub mod effect_parts;
 pub mod effect_quake;
 pub mod effect_rising;

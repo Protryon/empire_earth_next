@@ -421,6 +421,31 @@ pub struct EeGfxParticleGround {
 
 pub(crate) struct Ground<'a>(pub(crate) &'a EeGfxParticleGround);
 
+extern "C" fn flat_valid(_c: *mut c_void, _x: u32, _y: u32) -> bool {
+    true
+}
+extern "C" fn flat_space(_c: *mut c_void, _x: u32, _y: u32) -> bool {
+    false
+}
+extern "C" fn flat_z(_c: *mut c_void, _x: f32, _y: f32) -> f32 {
+    0.0
+}
+extern "C" fn flat_normal(_c: *mut c_void, _x: f32, _y: f32, n: *mut Ge3DPoint) {
+    // SAFETY: the caller's out pointer
+    unsafe { *n = Ge3DPoint { x: 0.0, y: 0.0, z: 1.0 } };
+}
+
+/// Flat ground at height 0 everywhere (the tests' hosts' particle ground).
+pub(crate) fn flat_ground() -> EeGfxParticleGround {
+    EeGfxParticleGround {
+        context: std::ptr::null_mut(),
+        is_valid_tile: flat_valid,
+        is_space_tile: flat_space,
+        mesh_z: flat_z,
+        mesh_normal: flat_normal,
+    }
+}
+
 impl ParticleGround for Ground<'_> {
     fn is_valid_tile(&mut self, x: u32, y: u32) -> bool {
         (self.0.is_valid_tile)(self.0.context, x, y)

@@ -30,6 +30,7 @@
 #include "lle/GEVertexArray.h"
 #include "rust/ee_gfx.h"
 #include "lle/GEPolygonArray.h"
+#include "lle/GELine.h"
 #include "lle/GERasterizer.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
@@ -1925,6 +1926,19 @@ const EeGfxRaster gEERustRaster = {
     EERasterCopyVertices,
     [](void* inTexture) { static_cast<GETexture*>(inTexture)->SetStageTextureAddressingMode(kAddressingWrap, -1); },
     EERasterLoadTexture,
+    // EEE3DMarchingLine::DrawPass4's line (0xf3c68): a GELine between two screen points, its opacity per vertex
+    [](float inX0, float inY0, float inX1, float inY1, float inOpacity0, float inOpacity1) -> int32_t {
+        GELine theLine;
+        GE2DPoint thePoint;
+        thePoint.SetX(inX0);
+        thePoint.SetY(inY0);
+        theLine.SetStartPoint(thePoint);
+        thePoint.SetX(inX1);
+        thePoint.SetY(inY1);
+        theLine.SetEndPoint(thePoint);
+        theLine.SetOpacityPerVertex(inOpacity0, inOpacity1);
+        return gRasterizer->Draw(&theLine, 1, gScreenIndex);
+    },
 };
 
 // FUNCTION: EXE 0x50f60f
