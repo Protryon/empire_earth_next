@@ -32,8 +32,15 @@ const fn rec(class: u32, flags: u8, label: &'static str) -> RecordType {
     RecordType { class, message_type: 0, flags, label }
 }
 
-/// The record types, by codec class (each of these classes is one message type's: `TYPES`).
-pub static RECORD_TYPES: [RecordType; 80] = [
+/// A record type of a class that several message types share (`EEMAddUnitToSelectedGroup`'s toggle and Always
+/// Add), or of a type that is in no `TYPES` row (`EEMEndCinematic`'s 0x9d: the factory builds none).
+const fn rec_type(class: u32, message_type: u8, flags: u8, label: &'static str) -> RecordType {
+    RecordType { class, message_type, flags, label }
+}
+
+/// The record types, by codec class (a `rec` row: the class's one message type in `TYPES`; a `rec_type` row names
+/// its type).
+pub static RECORD_TYPES: [RecordType; 94] = [
     rec(EE_NETMSG_ADD_REMOVE_RESOURCES, PAUSED, "Add Remove Resources\0"),
     rec(EE_NETMSG_ATTACK_PLAYERS, 0, "Attack Players\0"),
     rec(EE_NETMSG_CAMERA_LOCATION_INFO, 0, "Camera Location\0"),
@@ -117,6 +124,21 @@ pub static RECORD_TYPES: [RecordType; 80] = [
     rec(EE_NETMSG_LOCK_UNLOCK, 0, "Lock Unlock\0"),
     rec(EE_NETMSG_REMOVE_TECHNOLOGY, 0, "Remove Technology\0"),
     rec(EE_NETMSG_SMART_FARMERS, 0, "Smart Farmers\0"),
+    // round 4: the out-of-line constructors elsewhere, the other readers' types, the selection toggles
+    rec(EE_NETMSG_CAST_CALAMITY, 0, "Cast Calamity\0"),
+    rec(EE_NETMSG_CIV_TIMER_EXPIRED, 0, "Civ Timer Expired\0"),
+    rec(EE_NETMSG_EDICT_PROPOSAL, 0, "Edict Proposal\0"),
+    rec(EE_NETMSG_EDICT_VOTE, 0, "Edict Vote\0"),
+    rec(EE_NETMSG_EXIT_SHIFT_MODE, 0, "Exit Shift Mode\0"),
+    rec(EE_NETMSG_NEW_EDICT_ENACTED, 0, "New Edict Enabled\0"),
+    rec(EE_NETMSG_PATROL, 0, "Patrol\0"),
+    rec(EE_NETMSG_REPLANT_FARMS, 0, "Replant Farms\0"),
+    rec(EE_NETMSG_REPORT_STATISTICS, 0, "Report Statistics\0"),
+    rec(EE_NETMSG_SELECT_PATROL_GROUP, 0, "Select Patrol Group\0"),
+    rec(EE_NETMSG_START_LOADING_RESPONSE, PAUSED | WHEN_OUT, "Start Loading Response\0"),
+    rec_type(EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP, 0x49, PAUSED | WHEN_OUT, "Add Unit To Selected Group\0"),
+    rec_type(EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP, 0x76, PAUSED | WHEN_OUT, "Always Add Units To Selected Group\0"),
+    rec_type(EE_NETMSG_END_CINEMATIC, 0x9d, 0, "End Cinematic\0"),
 ];
 
 /// The record type of a message type, if it is one: a row naming the type, else the row of the type's class.
@@ -262,14 +284,24 @@ mod tests {
         assert_eq!(h(3), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 12, size: 1 });
         assert_eq!(ee_netmsg_record_class(0x5c), EE_NETMSG_KILL_UNIT);
         assert_eq!(ee_netmsg_record_flags(0x5c), 0);
+        // the two selection toggles share a class, each with its label; End Cinematic is a record no factory row has
+        assert_eq!(ee_netmsg_record_class(0x49), EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP);
+        assert_eq!(ee_netmsg_record_class(0x76), EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP);
+        assert_eq!(ee_netmsg_record_flags(0x76), PAUSED | WHEN_OUT);
+        assert_eq!(ee_netmsg_record_class(0x9d), EE_NETMSG_END_CINEMATIC);
+        assert!(!TYPES.iter().any(|t| t.0 == 0x9d));
+        // EEMStartLoadingResponse (0x5e)
+        assert_eq!(ee_netmsg_record_flags(0x5e), PAUSED | WHEN_OUT);
         // a type with a class of its own, and no type
         assert_eq!(ee_netmsg_record_class(0x4e), u32::MAX); // EEMSelectUnits
-        assert_eq!(ee_netmsg_record_class(0x9d), u32::MAX); // EEMEndCinematic: the factory builds none
         assert_eq!(ee_netmsg_record_flags(0x4e), 0);
         let label = |t| unsafe { std::ffi::CStr::from_ptr(ee_netmsg_record_label(t)) }.to_str().unwrap().to_string();
         assert_eq!(label(0x44), "Pay Tribute");
         assert_eq!(label(0x4d), "Path To");
         assert_eq!(label(0x5c), "Delete Unit");
+        assert_eq!(label(0x49), "Add Unit To Selected Group");
+        assert_eq!(label(0x76), "Always Add Units To Selected Group");
+        assert_eq!(label(0x9d), "End Cinematic");
         assert_eq!(label(0x4e), "");
         let select = TYPES.iter().find(|t| t.1 == EE_NETMSG_SELECT_UNIT).unwrap().0;
         assert_eq!(ee_netmsg_record_flags(select), PAUSED | WHEN_OUT);

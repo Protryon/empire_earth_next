@@ -1189,15 +1189,7 @@ void EEPhysics::ReportStatistics()
         return;
     sReportedFirst = theFirst;
     sReportedSecond = theSecond;
-    gCommunications->ProcessLocalUserInput(new EEMReportStatistics(theFirst, theSecond), kSlotNone);
-}
-
-// FUNCTION: EXE 0x553917
-// Creates a report-statistics message carrying the player's two statistics
-EEMReportStatistics::EEMReportStatistics(long inL10, long inL14)
-    : EEMessage(kMessageReportStatistics, false), mL10(inL10)
-{
-    this->mL14 = inL14;
+    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReportStatistics, {theFirst, theSecond}), kSlotNone);
 }
 
 // FUNCTION: EXE 0x55394b
@@ -1295,16 +1287,16 @@ void EEPhysics::UpdateCivTimer()
         if (gWorld.mGameOptions.CanBuyCivilization()) {
             if (this->mTickWorkCount == 0 && !gWorld.GetCurrentPlayer()->mCivilizationChosen && !gWorld.GetCurrentPlayer()->mObserverMode)
                 EESetCivBuilderButtonBlinking(true);
-            EEMCivTimerExpired* theMessage;
+            EEMRecord* theMessage;
             if (this->mGameTime > EEGetCivTimerLimit()) {
                 this->mCivTimerRuns = false;
-                theMessage = new EEMCivTimerExpired((unsigned char)0);
+                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)0});
             } else if (this->mGameTime > EEGetCivTimerSecondWarning() && !this->mCivTimerSecondWarning) {
                 this->mCivTimerSecondWarning = true;
-                theMessage = new EEMCivTimerExpired((unsigned char)1);
+                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)1});
             } else if (this->mGameTime > EEGetCivTimerFirstWarning() && !this->mCivTimerFirstWarning) {
                 this->mCivTimerFirstWarning = true;
-                theMessage = new EEMCivTimerExpired((unsigned char)1);
+                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)1});
             } else
                 return;
             if (theMessage != NULL)
@@ -1316,14 +1308,6 @@ void EEPhysics::UpdateCivTimer()
         if (gWorld.mGameOptions.CanBuyCivilization() && !gWorld.GetCurrentPlayer()->mCivilizationChosen && !gWorld.GetCurrentPlayer()->mObserverMode)
             EESetCivBuilderButtonBlinking(true);
     }
-}
-
-// FUNCTION: EXE 0x553dd2
-// Creates a civ timer message: a warning (1) or the expiry (0)
-EEMCivTimerExpired::EEMCivTimerExpired(unsigned char inIsWarning)
-    : EEMessage(kMessageCivTimerExpired, false)
-{
-    this->mIsWarning = inIsWarning;
 }
 
 // FUNCTION: EXE 0x553dff
@@ -1372,15 +1356,7 @@ void EEPhysics::CheckShiftMode()
     ISKeyboard* theKeyboard = gISKeyboard;
     ISEntity* theKey;
     if (theKeyboard != NULL && theKeyboard->GetEntity(kKeyShift, theKey) == kErrorOK && theKey->GetValue() == 0)
-        gCommunications->ProcessLocalUserInput(new EEMExitShiftMode(this->mGameTime), kSlotNone);
-}
-
-// FUNCTION: EXE 0x553ff1
-// Creates an exit-shift-mode message stamped with the game time
-EEMExitShiftMode::EEMExitShiftMode(long inGameTime)
-    : EEMessage(kMessageExitShiftMode, false)
-{
-    this->mGameTime = inGameTime;
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExitShiftMode, {this->mGameTime}), kSlotNone);
 }
 
 // FUNCTION: EXE 0x55401e

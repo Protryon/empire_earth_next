@@ -509,7 +509,7 @@ void MessageHook(NEMessage* inMessage, int inPhase)
             break;
         }
         case kOrderPatrol:
-            sOrder.mTarget = static_cast<EEMPatrol*>(inMessage)->mTargetID;
+            sOrder.mTarget = static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1);   // the target
             break;
         case kOrderAttackGround:
             sOrder.mX = static_cast<EEMRecord*>(inMessage)->Get<float>(1);   // x, y

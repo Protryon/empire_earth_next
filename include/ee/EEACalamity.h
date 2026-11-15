@@ -30,7 +30,7 @@ public:
     void SetCalamity(long inTechnology, EECalamityClass* inClass) { this->mTechnology = inTechnology; this->mCalamityClass = inClass; }
     void SetCasterID(long inCasterID);      // 0x1c1c (out of line: the main game form calls it)
 
-    EEMCastCalamity* mMessage;              // +0x0c
+    EEMRecord* mMessage;              // +0x0c
     EECalamityClass* mCalamityClass;        // +0x10
     long mTechnology;                       // +0x14 (0x1b6c: cast on the caster itself)
     long mTargetID;                         // +0x18

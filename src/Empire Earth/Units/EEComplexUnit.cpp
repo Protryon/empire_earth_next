@@ -3596,7 +3596,7 @@ void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButt
                 thePlayer->UnitCompleted(theUnit);
                 long theType = theUnit->mUnitClass->GetUnitType();
                 if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary)
-                    gCommunications->ProcessLocalUserInput(new EEMReplantFarms(theUnit->mUnitID), kSlotNone);
+                    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReplantFarms, {theUnit->mUnitID}), kSlotNone);
             }
             if (inLoadButtons == 1)
                 theUnit->mPlayer->LoadUnitClassButtons(theUnit->mUnitClass->GetUnitType());
@@ -3606,13 +3606,6 @@ void EEComplexUnit::SetBuilt(long inIsBuilt, long inUpdateSight, long inLoadButt
             theUnit->mIsPaidFor = true;
         theUnit = theUnit->mNextPart;
     } while (theUnit);
-}
-
-// FUNCTION: EXE 0x5fe345
-// Creates a replant-farms message for the given granary
-EEMReplantFarms::EEMReplantFarms(long inFarmID)
-    : EEMessage(kMessageReplantFarms, false), mFarmID(inFarmID)
-{
 }
 
 // FUNCTION: EXE 0x5fe372

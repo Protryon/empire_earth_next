@@ -174,9 +174,9 @@ void EEAMouseClick::SelectAtMouse(unsigned long inModifiers)
     EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
     if (theUnit) {
         if (inModifiers & kModifierShift)
-            theMessage = new EEMAlwaysAddUnitToSelectedGroup(theUnit->GetUnitID());
+            theMessage = new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theUnit->GetUnitID()});
         else if (inModifiers & kModifierControl)
-            theMessage = new EEMAddUnitToSelectedGroup(theUnit->GetUnitID());
+            theMessage = new EEMRecord(kMessageAddUnitToSelectedGroup, {theUnit->GetUnitID()});
         else
             theMessage = new EEMRecord(kMessageSelectUnit, {theUnit->GetUnitID()});
         theUnit->Dereference();

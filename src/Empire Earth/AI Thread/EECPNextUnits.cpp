@@ -3427,7 +3427,7 @@ static int LuaReplant(lua_State* L)
     s->mIds2.push_back(theID);
     if (!EECPUnitsWithinLimits(s, 1))
         return EECPUnitsResult(L, kLimit, 0, 0);
-    EEMReplantFarms theMessage(theID);
+    EEMRecord theMessage(kMessageReplantFarms, {theID});
     theMessage.Execute();
     EECPUnitsTraceCmd(me, s, "replant", kOK, 1, theID, 0);
     return EECPUnitsResult(L, kOK, 1, 0);
@@ -3475,7 +3475,7 @@ static int LuaCast(lua_State* L)
         y = theUnit->GetTileY();
     } else
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMCastCalamity theMessage(s->mIds2[0], theTarget, x, y, theTech);
+    EEMRecord theMessage(kMessageCastCalamity, {s->mIds2[0], theTarget, x, y, theTech});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "cast", kOK, (long)s->mIds2.size(), theTech, theTarget);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);

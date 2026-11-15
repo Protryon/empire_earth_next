@@ -565,7 +565,7 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
         gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectUnit, {inA}), kSlotNone);
         break;
     case EE_SCREENS_GAME_HK_ADD_UNIT:
-        gCommunications->ProcessLocalUserInput(new EEMAlwaysAddUnitToSelectedGroup(inA), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {inA}), kSlotNone);
         break;
     case EE_SCREENS_GAME_HK_CENTER: {
         // the camera on the unit, the mini map refreshed, the camera no longer following
@@ -789,7 +789,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         if (inA)
             gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEnterShiftMode, {gPhysics->mGameTime}), kSlotNone);
         else
-            gCommunications->ProcessLocalUserInput(new EEMExitShiftMode(gPhysics->mGameTime), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExitShiftMode, {gPhysics->mGameTime}), kSlotNone);
         break;
     case EE_SCREENS_GAME_MG_AIRPORT_SELECTED: {
         EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;

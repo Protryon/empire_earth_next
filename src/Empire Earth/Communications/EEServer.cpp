@@ -388,7 +388,7 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
                     this->mNumDroppedLoaders++;
                     break;
                 case 1:
-                    theMessage = new EEMStartLoadingResponse(inSlot, 0xff, 0);
+                    theMessage = new EEMRecord(kMessageStartLoadingResponse, {inSlot, 0xff, 0});
                     this->ProcessLocalUserInput(theMessage, kSlotServer);
                     this->mNumDroppedLoaders++;
                     break;
@@ -665,13 +665,13 @@ bool EEServer::FilterPlayerInput(NEMessage* inMessage)
         theResult = false;
         break;
     case kMessageEdictVote: {
-        EEMEdictVote* theVote = static_cast<EEMEdictVote*>(inMessage);
-        this->CastVote(theVote->GetOriginatingSlot(), theVote->mIsYes, theVote->mCount);
+        EEMRecord* theVote = static_cast<EEMRecord*>(inMessage);
+        this->CastVote(theVote->GetOriginatingSlot(), theVote->Get<bool>(2), theVote->Get<unsigned char>(3));   // edict, yes, count
         theResult = false;
         break;
     }
     case kMessageEdictProposal:
-        theResult = this->StartVote(static_cast<EEMEdictProposal*>(inMessage)->GetEdict());
+        theResult = this->StartVote(static_cast<EEMRecord*>(inMessage)->Get<unsigned short>(1));   // the edict
         break;
     case kNetMessageClientRequestPause: {
         UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
@@ -1123,13 +1123,13 @@ void EEServer::CastVote(unsigned char inIndex, bool inYes, unsigned char inCount
     }
     if (this->mNumVotes != this->GetNumberOfPlayers())
         return;
-    EEMNewEdictEnacted* theMessage;
+    EEMRecord* theMessage;
     if ((this->mNoVotes == 0 && this->mYesVotes == 0) || this->mYesVotes == this->mNoVotes)
-        theMessage = new EEMNewEdictEnacted(this->mVoteEdict, this->mYesVotes, this->mNoVotes, false);
+        theMessage = new EEMRecord(kMessageNewEdictEnacted, {this->mVoteEdict, this->mYesVotes, this->mNoVotes, false});
     else if (this->mYesVotes > this->mNoVotes)
-        theMessage = new EEMNewEdictEnacted(this->mVoteEdict, this->mYesVotes, this->mNoVotes, true);
+        theMessage = new EEMRecord(kMessageNewEdictEnacted, {this->mVoteEdict, this->mYesVotes, this->mNoVotes, true});
     else
-        theMessage = new EEMNewEdictEnacted(this->mVoteEdict, this->mYesVotes, this->mNoVotes, false);
+        theMessage = new EEMRecord(kMessageNewEdictEnacted, {this->mVoteEdict, this->mYesVotes, this->mNoVotes, false});
 
     if (theMessage != NULL) {
         theMessage->SetOriginatingSlot(kSlotServer);
