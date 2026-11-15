@@ -42,22 +42,6 @@ class EEEffect;
 // Typedef (provisional name)
 typedef std::map<GETexture*, std::deque<EEEffect*> > EEEffectQueue;
 
-class GEColor;
-// 0x103634 (cdecl, in EEEffect.cpp's range): draws a ground ring of inSize at inCenter with the four corner heights
-// inHeights (EEE3DEnergyWave::DrawPass6; arguments from its pushes) (provisional name; types inferred)
-void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
-              float inBrightness, float inAlphaReference);
-// 0x10317d (cdecl, in EEEffect.cpp's range): adds a camera-facing quad of inSize at inPosition, turned by inRotation,
-// to the 2D batch 0x4e8db8 (colour scaled by inAlpha * inArg6; inAlphaReference keeps the batch's minimum); the 2D
-// effects' Virtual18 (EEE2DFireTrail) (provisional name; types inferred)
-void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
-              float inBrightness, float inAlphaReference);
-// 0x1033f1 / 0x10387b (cdecl, in EEEffect.cpp's range): the same quad as AddGlowSprite, flat on the ground / another batch
-// (EEE2DWaterRipple::DrawPass5, EEE2DSmokePlume::DrawPass6) (provisional names; types inferred)
-void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
-              float inBrightness, float inAlphaReference);
-void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
-              float inBrightness, float inAlphaReference);
 // 0x102f3d (cdecl, in EEEffect.cpp's range): a random value in [inMinimum, inMaximum] (also declared locally by
 // EECPCombatManager.cpp; EEE2DImpact::DrawPass6's random roll) (provisional name)
 float GetEffectRandomFloat(float inMinimum, float inMaximum);

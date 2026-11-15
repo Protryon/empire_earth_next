@@ -58,7 +58,6 @@
 #include "ee/EERenderLists.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEEffect.h"
-#include "ee/EEEffect2D.h"          // gEffect2DModel (the Rust draws' standing plane)
 #include "ee/EEEffectMesh.h"        // the table's store_mesh
 #include "ee/EERenderSnapshot.h"     // gRenderSnapshot (the Rust draws' camera)
 #include "ee/EEUnitPicker.h"
@@ -1469,11 +1468,6 @@ static void ApplyLighting(EeGfxLighting inKind)
     }
 }
 
-// EEEffect.cpp's ground strip (0x103ac8; the energy wall's draw)
-void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, const GEColor& inColor,
-              const GETextureCoordinate& inOrigin, const GETextureCoordinate& inSize, float inAlpha, float inBrightness,
-              float inAlphaReference);
-
 // EEROUnits.cpp's screen point (0x118676; the goal's countdown)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
 
@@ -1583,6 +1577,9 @@ static EeGeTransformation EERasterSubModelOffset(void* inModel, float inScale)
     theSubModel->SetGraphicsPostModelTransform(theTransformation);
     return *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
 }
+// EEEffect.cpp's quad batches' quad and draw
+void EEEffectBatchQuad(uint32_t inWhich, const EeGfxEffectQuad* inQuad, uint32_t inIndex);
+int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture);
 // EEROUnits.cpp's bars, placement lines and labels
 void EEROUnitsBarSet(uint32_t inWhich, const EeGeRectangle* inRect, const EeGfxColor* inColors);
 int32_t EEROUnitsBarDraw(uint32_t inWhich);
@@ -1654,7 +1651,6 @@ const EeGfxRaster gEERustRaster = {
     },
     [](void* inModel, void* inTexture) { static_cast<GEModel*>(inModel)->SetTexture(static_cast<GETexture*>(inTexture), gScreenIndex); },
     []() { return *reinterpret_cast<const EeGeTransformation*>(&gRenderSnapshot.mCamera); },
-    []() -> void* { return gEffect2DModel; },
     [](float inNear, float inFar) {
         gU4E8F08.SetDepthRange(inNear, inFar);
         gRasterizer->SetViewport(gU4E8F08, gScreenIndex);
@@ -1703,28 +1699,10 @@ const EeGfxRaster gEERustRaster = {
             theArray->SetTextureCoordinate(theCoordinate, i);
         }
     },
-    [](const EeGe3DPoint* inCenter, EeGfxColor inColor, float inYaw, float inSize, const float* inHeights, float inBrightness,
-       float inAlphaReference) {
-        float theHeights[4] = {inHeights[0], inHeights[1], inHeights[2], inHeights[3]};
-        AddGroundQuad(GE3DPoint(inCenter->x, inCenter->y, inCenter->z), GEColor(inColor.red, inColor.green, inColor.blue),
-                      inYaw, inSize, theHeights, inBrightness, inAlphaReference);
-    },
     [](void* inTexture, uint32_t inFrame) { static_cast<GETexture*>(inTexture)->SetFrame(inFrame); },
     []() -> float { return gRenderSnapshot.mCameraYaw; },
     []() -> uint32_t { return gRasterizer->GetZBuffer(gScreenIndex); },
     []() -> uint32_t { return gRasterizer->GetZCompare(gScreenIndex); },
-    [](const EeGe3DPoint* inFrom, const EeGe3DPoint* inTo, float inWidth, EeGfxColor inColor, float inOffsetU, float inOffsetV,
-       float inSizeU, float inSizeV, float inAlpha, float inBrightness, float inAlphaReference) {
-        GETextureCoordinate theOffset;
-        theOffset.SetU(inOffsetU);
-        theOffset.SetV(inOffsetV);
-        GETextureCoordinate theSize;
-        theSize.SetU(inSizeU);
-        theSize.SetV(inSizeV);
-        AddGroundStrip(GE3DPoint(inFrom->x, inFrom->y, inFrom->z), GE3DPoint(inTo->x, inTo->y, inTo->z), inWidth,
-                       GEColor(inColor.red, inColor.green, inColor.blue), theOffset, theSize, inAlpha, inBrightness,
-                       inAlphaReference);
-    },
     [](void* inModel, uint32_t inNext, float inFraction) {
         static_cast<GEModel*>(inModel)->SetGraphicsNextFrame(inNext);
         static_cast<GEModel*>(inModel)->SetFractionalFramePosition(inFraction);
@@ -1797,18 +1775,6 @@ const EeGfxRaster gEERustRaster = {
     },
     [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeBoundingVolumes(); },
     [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeModelNormals(); },
-    // the 2D sprites' quads (EEEffect.cpp's AddGlowSprite 0x10317d, AddGroundSprite 0x1033f1, AddBlendedSprite 0x10387b)
-    [](uint32_t inKind, const EeGe3DPoint* inPosition, EeGfxColor inColor, float inRotation, float inSize, float inAlpha,
-       float inBrightness, float inAlphaReference) {
-        GE3DPoint thePosition(inPosition->x, inPosition->y, inPosition->z);
-        GEColor theColor(inColor.red, inColor.green, inColor.blue);
-        if (inKind == EE_GFX_SPRITE_GLOW)
-            AddGlowSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
-        else if (inKind == EE_GFX_SPRITE_GROUND)
-            AddGroundSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
-        else
-            AddBlendedSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
-    },
     // the farm's and the ground shadows' (ee_gfx effect_farm.rs, shadows.rs): the state they keep, their models
     []() -> float { return gRasterizer->GetAlphaTestingRefValue(gScreenIndex); },
     [](uint32_t* outSource, uint32_t* outDestination) {
@@ -1859,7 +1825,7 @@ const EeGfxRaster gEERustRaster = {
         GERFogAttributes theFog;
         gRasterizer->GetFogAttributes(theFog, gScreenIndex);
         return EeGfxFogAttributes{(uint32_t)theFog.mType, {theFog.mColor.mRed, theFog.mColor.mGreen, theFog.mColor.mBlue},
-                                  theFog.mStart, theFog.mEnd};
+                                  theFog.mStart, theFog.mEnd, theFog.mScale};
     },
     [](uint32_t inType) { gRasterizer->SetFogType(inType, gScreenIndex); },
     [](EeGfxColor inColor) { gRasterizer->SetFogColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
@@ -1874,6 +1840,12 @@ const EeGfxRaster gEERustRaster = {
     EEROUnitsScreenLines,
     EEROUnitsLabel,
     [](void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); },
+    // the effects' quad batches (ee_gfx effect_batch.rs; EEEffect.cpp's arrays)
+    []() { return *reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()); },
+    []() -> float { return gRenderSnapshot.mCameraPitch; },
+    [](void* inTexture) { static_cast<GETexture*>(inTexture)->Reference(); },
+    EEEffectBatchQuad,
+    EEEffectBatchDraw,
 };
 
 // FUNCTION: EXE 0x50f60f

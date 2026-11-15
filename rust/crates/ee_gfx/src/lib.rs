@@ -31,6 +31,7 @@ pub mod effect_2d;
 mod effect_2d_mock;
 pub mod effect_additive;
 pub mod effect_aged;
+pub mod effect_batch;
 pub mod effect_beam;
 pub mod effect_confirm;
 pub mod effect_decal;

@@ -537,14 +537,14 @@ GE3DPoint EEMouthPoint(EEUnit* inUnit, const GETransformation& inTransformation)
 GEModel* EE2DModel(long inKind)
 {
     return inKind == 0x12 || inKind == 0x41 || inKind == 0x2f || inKind == 0x22 || inKind == 0x31 || inKind == 0x32
-               ? gU4E8DF4
-               : gEffect2DModel;
+               ? static_cast<GEModel*>(ee_gfx_effect_plane_model(false))
+               : static_cast<GEModel*>(ee_gfx_effect_plane_model(true));
 }
 }
 
 // the command confirmation (0x41) on a unit (EEE3DCommandConfirmation, 0xe9d1e)
 EEE2DRust::EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, unsigned long inGoalIndex, long inKind)
-    : EEEffect2D(inUnit, inGraphicEffect, gU4E8DF4, inKind, false)
+    : EEEffect2D(inUnit, inGraphicEffect, static_cast<GEModel*>(ee_gfx_effect_plane_model(false)), inKind, false)
 {
     this->mRecord->confirm.goal_index = (uint32_t)inGoalIndex;
     this->Call(EeGfxEffect3DOp::Create);
@@ -553,7 +553,7 @@ EEE2DRust::EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, unsigned 
 // at a point (0xe9d91)
 EEE2DRust::EEE2DRust(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect,
                      unsigned long inGoalIndex, long inKind)
-    : EEEffect2D(inUnit, inGraphicEffect, gU4E8DF4, inKind, false)
+    : EEEffect2D(inUnit, inGraphicEffect, static_cast<GEModel*>(ee_gfx_effect_plane_model(false)), inKind, false)
 {
     this->mPosition = inLocation;
     this->mRecord->confirm.goal_index = (uint32_t)inGoalIndex;
@@ -718,7 +718,7 @@ EEE2DRust* EEE2DRust::NewParticle()
     EEE2DRust* theParticle = EEE2DRust::sParticlePool.New();
     if (theParticle->mReferenceCount == 0)
         theParticle->mReferenceCount = 1;
-    theParticle->Reinit(gEffect2DModel, false);
+    theParticle->Reinit(static_cast<GEModel*>(ee_gfx_effect_plane_model(true)), false);
     theParticle->ClearParticle();
     return theParticle;
 }
@@ -729,7 +729,7 @@ EEE2DRust* EEE2DRust::TakeParticle(EEUnit* inUnit, EEGraphicEffect* inGraphicEff
     EEE2DRust* theParticle = EEE2DRust::sParticlePool.New();
     if (theParticle->mReferenceCount == 0)
         theParticle->mReferenceCount = 1;
-    theParticle->Reinit(inUnit, inGraphicEffect, gEffect2DModel, false);
+    theParticle->Reinit(inUnit, inGraphicEffect, static_cast<GEModel*>(ee_gfx_effect_plane_model(true)), false);
     theParticle->ClearParticle();
     return theParticle;
 }

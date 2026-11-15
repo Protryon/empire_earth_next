@@ -21,6 +21,14 @@ constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 /// `kEffect3DAdditivePass`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_ADDITIVE_PASS = 39;
 
+/// The batches `batch_quad` and `batch_draw` name: the camera batch, the ground batch.
+constexpr static const uint32_t EE_GFX_BATCH_CAMERA = 0;
+
+constexpr static const uint32_t EE_GFX_BATCH_GROUND = 1;
+
+/// A batch's vertices (0x200 quads: its polygon array holds two triangles a quad).
+constexpr static const uint32_t EE_GFX_BATCH_VERTICES = 2048;
+
 /// The citizen beam.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
 
@@ -272,6 +280,32 @@ constexpr static const float BAR_FRACTION = 0.75;
 /// The image's side (`textures\Volcano.png`, 19 x 19).
 constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
 
+/// The set-ups, one per C++ function.
+enum class EeGfxLighting : uint32_t {
+  /// `SetSceneFog`
+  SceneFog = 0,
+  /// `SetFogOff`
+  FogOff = 1,
+  /// `SetLightingOff`
+  Off = 2,
+  /// `SetPrelitLighting`
+  Prelit = 3,
+  /// `SetCloudLighting`
+  Cloud = 4,
+  /// `SetWhiteLighting`
+  White = 5,
+  /// `SetTerrainLighting`
+  Terrain = 6,
+  /// `SetMapObjectLighting`
+  MapObject = 7,
+  /// `SetUnitLighting`
+  Unit = 8,
+  /// `RestoreUnitLighting`
+  RestoreUnit = 9,
+  /// `DimUnitLighting`
+  DimUnit = 10,
+};
+
 /// The calls of `EEE3DRust`'s virtuals.
 enum class EeGfxEffect3DOp : uint32_t {
   /// the constructor on a unit (after `EEEffect3D`'s)
@@ -301,32 +335,6 @@ enum class EeGfxEffect3DOp : uint32_t {
   /// the farm's rebuild on its unit (`EEE3DRust::ElevationChanged` after its rectangle test): the area placed again,
   /// set up, the crops built if the farm is
   Rebuild = 16,
-};
-
-/// The set-ups, one per C++ function.
-enum class EeGfxLighting : uint32_t {
-  /// `SetSceneFog`
-  SceneFog = 0,
-  /// `SetFogOff`
-  FogOff = 1,
-  /// `SetLightingOff`
-  Off = 2,
-  /// `SetPrelitLighting`
-  Prelit = 3,
-  /// `SetCloudLighting`
-  Cloud = 4,
-  /// `SetWhiteLighting`
-  White = 5,
-  /// `SetTerrainLighting`
-  Terrain = 6,
-  /// `SetMapObjectLighting`
-  MapObject = 7,
-  /// `SetUnitLighting`
-  Unit = 8,
-  /// `RestoreUnitLighting`
-  RestoreUnit = 9,
-  /// `DimUnitLighting`
-  DimUnit = 10,
 };
 
 /// The goal a state-0 confirmation shows.
@@ -689,12 +697,66 @@ struct EeGfxLabelClip {
   uint32_t font;
 };
 
-/// The rasterizer's fog for `GetEffectFogFactor`: its state (1 linear) and its range.
-struct EeGfxEffectFog {
-  uint32_t state;
+/// A model to draw (`GEModel*`), opaque to Rust.
+using EeGfxModel = void*;
+
+/// One vertex of a built mesh: `set` names the values a builder wrote.
+struct EeGfxMeshVertex {
+  uint32_t set;
+  EeGe3DPoint point;
+  EeGeVector normal;
+  EeGfxTexCoord coord;
+  EeGfxColor color;
+  float opacity;
+};
+
+/// One triangle of a built mesh: `set` is non-zero once a builder wrote its three indices.
+struct EeGfxMeshTriangle {
+  uint32_t set;
+  uint32_t v[3];
+};
+
+/// A texture's load (`GETextureDescription`: not 3D-renderable, no transparency) and the stage settings made on it
+/// after (`SetStageAlphaMode`, `SetStageColorMode`, `SetStageMinFilterMode`, `SetStageMagFilterMode`,
+/// `SetStageMipFilterMode`, `SetStageMipMapBias`, `SetStageTextureAddressingMode`, each on every stage: -1).
+struct EeGfxTextureLoad {
+  /// `mPixelDepth` (16 or 32)
+  uint32_t pixel_depth;
+  /// `mNumMipLevelsToDrop`
+  uint32_t mip_levels_to_drop;
+  /// `mFrameFormat`
+  uint32_t frame_format;
+  /// `mSurfaceVolatility`
+  uint32_t volatility;
+  /// `mHasAlpha`, `mCreateMIPMaps`
+  bool has_alpha;
+  bool mip_maps;
+  uint32_t alpha_mode;
+  uint32_t color_mode;
+  uint32_t min_filter;
+  uint32_t mag_filter;
+  uint32_t mip_filter;
+  float mip_bias;
+  uint32_t addressing;
+  /// the texture is referenced once loaded (`Reference`)
+  bool reference;
+};
+
+/// The rasterizer's fog (`GERFogAttributes`).
+struct EeGfxFogAttributes {
+  uint32_t kind;
+  EeGfxColor color;
   float start;
   float end;
+  /// `mScale` (the linear fade a unit of distance)
   float scale;
+};
+
+/// One screen line of a batch (`screen_lines`): its colour and ends.
+struct EeGfxScreenLine {
+  EeGfxColor color;
+  EeGe2DPoint start;
+  EeGe2DPoint end;
 };
 
 /// One quad of an effect batch: its colour and normal (the same at every corner) and its four corners in the order
@@ -705,6 +767,194 @@ struct EeGfxEffectQuad {
   EeGe3DPoint points[4];
   EeGfxTexCoord coords[4];
   float opacities[4];
+};
+
+/// The C++'s rasterizer calls, each on the current screen.
+struct EeGfxRaster {
+  void (*set_alpha_ref)(float value);
+  uint32_t (*get_fog)();
+  void (*set_fog)(uint32_t state);
+  EeGfxColor (*get_ambient)();
+  void (*set_ambient)(EeGfxColor color);
+  void (*set_zbuffer)(uint32_t mode);
+  void (*set_blending)(uint32_t source, uint32_t destination);
+  void (*set_shading_source)(uint32_t source);
+  void (*set_alpha_testing)(uint32_t state);
+  /// one of the capture's lighting set-ups (`SetWhiteLighting` ...)
+  void (*lighting)(EeGfxLighting kind);
+  /// `GetFogFactor` (it reads the fog's attributes and turns the fog off when it is on)
+  float (*fog_factor)(const EeGe3DPoint *location, uint32_t fog);
+  void (*model_opacity)(EeGfxModel model, float opacity);
+  void (*model_transform)(EeGfxModel model, const EeGeTransformation *transformation);
+  void (*model_scale)(EeGfxModel model, float scale);
+  void (*model_prepare)(EeGfxModel model);
+  /// `Draw(model, screen, opacity, gOrthographicView)`
+  int32_t (*model_draw)(EeGfxModel model, float opacity);
+  /// `GetMaterial(0)->SetTexture(texture, screen)`
+  void (*model_texture)(EeGfxModel model, EeGfxModel texture);
+  /// adds `delta` to the v of every texture coordinate of vertex array 0, keeping the old ones
+  void (*model_scroll_v)(EeGfxModel model, float delta);
+  /// puts back the texture coordinates `model_scroll_v` kept
+  void (*model_restore_v)(EeGfxModel model);
+  /// `GetMaterial(0)->SetColor(color)`
+  void (*model_color)(EeGfxModel model, EeGfxColor color);
+  /// the model's own `SetTexture(texture, screen)` (not its material's)
+  void (*model_own_texture)(EeGfxModel model, EeGfxModel texture);
+  /// the render snapshot's camera transformation (`gRenderSnapshot.mCamera`)
+  EeGeTransformation (*camera)();
+  /// the main viewport's depth range, then the viewport set on the rasterizer (`gU4E8F08`)
+  void (*depth_range)(float near, float far);
+  void (*set_zcompare)(uint32_t mode);
+  /// `GetMaterial(0)->SetOpacity(opacity)`
+  void (*model_material_opacity)(EeGfxModel model, float opacity);
+  /// a copy of `transformation` scaled by `GETransformation::Scale(x, y, z)`, then the model's post-model transform
+  void (*model_transform_scaled)(EeGfxModel model,
+                                 const EeGeTransformation *transformation,
+                                 float x,
+                                 float y,
+                                 float z);
+  /// `SetGraphicsCurrentFrame(frame)`
+  void (*model_frame)(EeGfxModel model, uint32_t frame);
+  /// `SetGraphicsPreModelTransform(transformation)`
+  void (*model_pre_transform)(EeGfxModel model, const EeGeTransformation *transformation);
+  /// adds `delta` to the u of every texture coordinate of vertex array 0, keeping the old ones
+  void (*model_scroll_u)(EeGfxModel model, float delta);
+  /// puts back the texture coordinates `model_scroll_u` kept
+  void (*model_restore_u)(EeGfxModel model);
+  /// `GetCulling()`, `SetCulling(mode)`
+  uint32_t (*get_culling)();
+  void (*set_culling)(uint32_t mode);
+  /// adds `delta` to the v of every texture coordinate of vertex array 0 for good (nothing kept)
+  void (*model_shift_v)(EeGfxModel model, float delta);
+  /// `SetFrame(frame)` of a texture (`GETexture*`)
+  void (*texture_frame)(EeGfxModel texture, uint32_t frame);
+  /// the camera's yaw (`gRenderSnapshot.mCameraYaw`)
+  float (*camera_yaw)();
+  /// `GetZBuffer`, `GetZCompare`
+  uint32_t (*get_zbuffer)();
+  uint32_t (*get_zcompare)();
+  /// `SetGraphicsNextFrame(next)` then `SetFractionalFramePosition(fraction)` (the tween between two frames)
+  void (*model_tween)(EeGfxModel model, uint32_t next, float fraction);
+  /// `GetScreenPoint`: the world point's place on the screen (the camera, then the main viewport)
+  void (*screen_point)(const EeGe3DPoint *point, float *x, float *y);
+  /// a `GEText` in Tahoma 10, transparent and centred at (`x`, `y`) in `color`, its text the NUL-terminated UTF-8
+  /// `text`, drawn by `DrawClippedText` clipped to the viewport's view rectangle on the main game form (the scenario
+  /// editor's under a free camera)
+  void (*draw_text)(float x, float y, const uint8_t *text, EeGfxColor color);
+  /// the tracer beam's stretch (`EEE3DTracerBeam::DrawPass6`, 0xfca9b): vertex array 0's points and texture
+  /// coordinates kept, then y stretched to `length` and x to `width`, u scrolled by `scroll` (`beam.rs`); each
+  /// sub-model's internal y kept and stretched; `ComputeBoundingVolumes`
+  void (*model_stretch)(EeGfxModel model, float length, float width, float scroll);
+  /// puts back the vertices and sub-model ys `model_stretch` kept
+  void (*model_unstretch)(EeGfxModel model);
+  /// vertex array 0's size (`GetVertexArray(0)->GetSize()`)
+  uint32_t (*vertex_count)(EeGfxModel model);
+  /// vertex array 0's point `index` (`GetPoint`)
+  EeGe3DPoint (*vertex_point)(EeGfxModel model, uint32_t index);
+  /// vertex array 0's point `index` set (`SetPoint`)
+  void (*set_vertex_point)(EeGfxModel model, uint32_t index, const EeGe3DPoint *point);
+  /// `ComputeBoundingVolumes`, `ComputeModelNormals`
+  void (*model_bounds)(EeGfxModel model);
+  void (*model_normals)(EeGfxModel model);
+  /// `GetAlphaTestingRefValue`
+  float (*get_alpha_ref)();
+  /// `GetBlending(source, destination)`
+  void (*get_blending)(uint32_t *source, uint32_t *destination);
+  /// `gModelManager->CreateModel(polygons, vertices, 1, 0, 1, sub_models, name, flags)`, its name NUL-terminated
+  /// UTF-8 (not referenced)
+  EeGfxModel (*create_model)(uint32_t polygons,
+                             uint32_t vertices,
+                             uint32_t sub_models,
+                             const uint8_t *name,
+                             uint32_t flags);
+  /// `gModelManager->CreateSubModel(polygons, vertices, 1, 0, 1, 0, 0, 0, parent)` (not referenced)
+  EeGfxModel (*create_sub_model)(uint32_t polygons, uint32_t vertices, EeGfxModel parent);
+  /// `Reference`, `Dereference`
+  void (*model_reference)(EeGfxModel model);
+  void (*model_dereference)(EeGfxModel model);
+  /// `GetSubModel(index)`
+  EeGfxModel (*sub_model)(EeGfxModel model, uint32_t index);
+  /// a built mesh's set values into vertex array 0 and polygon array 0 (`EEEffectMesh::Store`)
+  void (*store_mesh)(EeGfxModel model,
+                     const EeGfxMeshVertex *vertices,
+                     size_t vertex_count,
+                     const EeGfxMeshTriangle *triangles,
+                     size_t triangle_count);
+  /// material 0's ranges: polygons from 0 (`SetPolygonStartingIndex(0, 0)`, `SetPolygonRangeLength(polygons, 0)`),
+  /// vertices from 0 (`SetVertexStartingIndex(0)`, `SetVertexRangeLength(vertices)`)
+  void (*material_ranges)(EeGfxModel model, uint32_t polygons, uint32_t vertices);
+  /// `GetBoundingRadius(0)`
+  float (*bounding_radius)(EeGfxModel model);
+  /// vertex array 0's points (and normals) of `from` copied into `to`'s, over `from`'s size
+  void (*copy_vertices)(EeGfxModel from, EeGfxModel to, bool normals);
+  /// a texture's `SetStageTextureAddressingMode(kAddressingWrap, -1)`
+  void (*texture_wrap)(EeGfxModel texture);
+  /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
+  /// the reference `load` asks for; the texture (`GETexture*`)
+  EeGfxModel (*load_texture)(const uint8_t *name, const EeGfxTextureLoad *load);
+  /// a `GELine` from (`x0`, `y0`) to (`x1`, `y1`) on the screen, its opacity `opacity0` to `opacity1`
+  /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
+  int32_t (*screen_line)(float x0, float y0, float x1, float y1, float opacity0, float opacity1);
+  /// `GetAlphaTesting`
+  uint32_t (*get_alpha_testing)();
+  /// the main viewport's rear clipping distance set to `distance` (`gU4E8F08.SetRearClippingDistance`; not set on the
+  /// rasterizer); the old one
+  float (*rear_clipping)(float distance);
+  /// `DrawSky(model, screen, 1.0f, sorted)`
+  int32_t (*draw_sky)(EeGfxModel model, bool sorted);
+  /// the screen's `Get32BitTextureSupport`
+  bool (*texture_32bit)();
+  /// `GetCanModulateTextureAlpha`
+  bool (*can_modulate_alpha)();
+  /// `SetAmbientIntensity(value)`
+  void (*set_ambient_intensity)(float value);
+  /// `GetFogAttributes`
+  EeGfxFogAttributes (*get_fog_attributes)();
+  /// `SetFogType`, `SetFogColor`, `SetFogRange`
+  void (*set_fog_type)(uint32_t kind);
+  void (*set_fog_color)(EeGfxColor color);
+  void (*set_fog_range)(float start, float end);
+  /// a unit model's frame textures (`EEROUnits::DrawUnitModel`, 0x515cc7): each material past the first takes
+  /// `texture`'s frame by its texture index (frame 0 past the count) and then every sub-model's materials theirs
+  /// (within the count); nothing for a null texture
+  void (*frame_textures)(EeGfxModel model, EeGfxModel texture);
+  /// a graphic object's (`EEGraphicObject*`) `SetGroupColor(color, part)`
+  void (*group_color)(EeGfxModel object, EeGfxColor color, uint32_t part);
+  /// sub-model 0's post-model transform placed at its internal transform's position times `-scale` (a gate's side);
+  /// that transform
+  EeGeTransformation (*sub_model_offset)(EeGfxModel model, float scale);
+  /// the bar rhombus `which` (0 the fill, 1 its back): its rectangle (null: kept) and four vertex colours
+  /// (`SetColorPerVertex`; null: kept)
+  void (*bar_set)(uint32_t which, const EeGeRectangle *rect, const EeGfxColor *colors);
+  /// the bar rhombus `which` drawn (`Draw(rhombus, screen)`)
+  int32_t (*bar_draw)(uint32_t which);
+  /// `count` (at most 64) screen lines in the line texture from u `start_u` to `end_u`, drawn as one batch
+  int32_t (*screen_lines)(const EeGfxScreenLine *lines, uint32_t count, float start_u, float end_u);
+  /// a unit's label (`EEROUnits::DrawLabels`, 0x516692): a transparent centred `GEText` in the labels' font (`font`:
+  /// 0 the default, 1 Tahoma 12, 2 Tahoma 16) and `color`, its text the NUL-terminated UTF-8 `text`, at (`x`, `y`),
+  /// drawn clipped by the targets `label_targets` gives for its height (none under the free camera): the main game
+  /// form's `view` and `strip`, or the scenario editor's `view`
+  void (*label)(const uint8_t *text,
+                float x,
+                float y,
+                EeGfxColor color,
+                uint32_t font,
+                const EeGeRectangle *view,
+                const EeGeRectangle *strip,
+                float bottom);
+  /// a texture's `Dereference` (`GETexture*`)
+  void (*texture_dereference)(EeGfxModel texture);
+  /// the main viewport's camera inverse (`gU4E8F08.GetCameraInverse()`), the render snapshot's camera pitch
+  EeGeTransformation (*camera_inverse)();
+  float (*camera_pitch)();
+  /// a texture's `Reference`
+  void (*texture_reference)(EeGfxModel texture);
+  /// an effect batch's (`effect_batch.rs`: 0 the camera batch, 1 the ground batch) four vertices from `index` on
+  /// (`SetVertex(color, point, normal, coordinate, opacity, index)` each)
+  void (*batch_quad)(uint32_t which, const EeGfxEffectQuad *quad, uint32_t index);
+  /// an effect batch drawn: `count` vertices, `count / 2` polygons of the batches' polygon array, in `texture`
+  /// (`Draw(polygons, n, vertices, count, texture, screen, gOrthographicView)`)
+  int32_t (*batch_draw)(uint32_t which, uint32_t count, EeGfxModel texture);
 };
 
 /// The box's lines (`DrawPolygons`): four shadow lines a pixel down and right, then four white ones, each a start
@@ -1157,9 +1407,6 @@ struct EeGfxEffectGlow {
   /// `mHidden`: the unit is off the visible terrain
   bool hidden;
 };
-
-/// A model to draw (`GEModel*`), opaque to Rust.
-using EeGfxModel = void*;
 
 /// The farm's state.
 struct EeGfxEffectFarm {
@@ -1910,272 +2157,6 @@ struct EeGfxEffect3DHost {
   void (*march_set_unit)(void *context, uint32_t which, uint32_t id);
   /// an end unit's id for a save (-1: none)
   int32_t (*march_unit_id)(void *context, uint32_t which);
-};
-
-/// One vertex of a built mesh: `set` names the values a builder wrote.
-struct EeGfxMeshVertex {
-  uint32_t set;
-  EeGe3DPoint point;
-  EeGeVector normal;
-  EeGfxTexCoord coord;
-  EeGfxColor color;
-  float opacity;
-};
-
-/// One triangle of a built mesh: `set` is non-zero once a builder wrote its three indices.
-struct EeGfxMeshTriangle {
-  uint32_t set;
-  uint32_t v[3];
-};
-
-/// A texture's load (`GETextureDescription`: not 3D-renderable, no transparency) and the stage settings made on it
-/// after (`SetStageAlphaMode`, `SetStageColorMode`, `SetStageMinFilterMode`, `SetStageMagFilterMode`,
-/// `SetStageMipFilterMode`, `SetStageMipMapBias`, `SetStageTextureAddressingMode`, each on every stage: -1).
-struct EeGfxTextureLoad {
-  /// `mPixelDepth` (16 or 32)
-  uint32_t pixel_depth;
-  /// `mNumMipLevelsToDrop`
-  uint32_t mip_levels_to_drop;
-  /// `mFrameFormat`
-  uint32_t frame_format;
-  /// `mSurfaceVolatility`
-  uint32_t volatility;
-  /// `mHasAlpha`, `mCreateMIPMaps`
-  bool has_alpha;
-  bool mip_maps;
-  uint32_t alpha_mode;
-  uint32_t color_mode;
-  uint32_t min_filter;
-  uint32_t mag_filter;
-  uint32_t mip_filter;
-  float mip_bias;
-  uint32_t addressing;
-  /// the texture is referenced once loaded (`Reference`)
-  bool reference;
-};
-
-/// The rasterizer's fog (`GERFogAttributes`).
-struct EeGfxFogAttributes {
-  uint32_t kind;
-  EeGfxColor color;
-  float start;
-  float end;
-};
-
-/// One screen line of a batch (`screen_lines`): its colour and ends.
-struct EeGfxScreenLine {
-  EeGfxColor color;
-  EeGe2DPoint start;
-  EeGe2DPoint end;
-};
-
-/// The C++'s rasterizer calls, each on the current screen.
-struct EeGfxRaster {
-  void (*set_alpha_ref)(float value);
-  uint32_t (*get_fog)();
-  void (*set_fog)(uint32_t state);
-  EeGfxColor (*get_ambient)();
-  void (*set_ambient)(EeGfxColor color);
-  void (*set_zbuffer)(uint32_t mode);
-  void (*set_blending)(uint32_t source, uint32_t destination);
-  void (*set_shading_source)(uint32_t source);
-  void (*set_alpha_testing)(uint32_t state);
-  /// one of the capture's lighting set-ups (`SetWhiteLighting` ...)
-  void (*lighting)(EeGfxLighting kind);
-  /// `GetFogFactor` (it reads the fog's attributes and turns the fog off when it is on)
-  float (*fog_factor)(const EeGe3DPoint *location, uint32_t fog);
-  void (*model_opacity)(EeGfxModel model, float opacity);
-  void (*model_transform)(EeGfxModel model, const EeGeTransformation *transformation);
-  void (*model_scale)(EeGfxModel model, float scale);
-  void (*model_prepare)(EeGfxModel model);
-  /// `Draw(model, screen, opacity, gOrthographicView)`
-  int32_t (*model_draw)(EeGfxModel model, float opacity);
-  /// `GetMaterial(0)->SetTexture(texture, screen)`
-  void (*model_texture)(EeGfxModel model, EeGfxModel texture);
-  /// adds `delta` to the v of every texture coordinate of vertex array 0, keeping the old ones
-  void (*model_scroll_v)(EeGfxModel model, float delta);
-  /// puts back the texture coordinates `model_scroll_v` kept
-  void (*model_restore_v)(EeGfxModel model);
-  /// `GetMaterial(0)->SetColor(color)`
-  void (*model_color)(EeGfxModel model, EeGfxColor color);
-  /// the model's own `SetTexture(texture, screen)` (not its material's)
-  void (*model_own_texture)(EeGfxModel model, EeGfxModel texture);
-  /// the render snapshot's camera transformation (`gRenderSnapshot.mCamera`)
-  EeGeTransformation (*camera)();
-  /// the shared standing plane model (`gEffect2DModel`)
-  EeGfxModel (*standing_plane)();
-  /// the main viewport's depth range, then the viewport set on the rasterizer (`gU4E8F08`)
-  void (*depth_range)(float near, float far);
-  void (*set_zcompare)(uint32_t mode);
-  /// `GetMaterial(0)->SetOpacity(opacity)`
-  void (*model_material_opacity)(EeGfxModel model, float opacity);
-  /// a copy of `transformation` scaled by `GETransformation::Scale(x, y, z)`, then the model's post-model transform
-  void (*model_transform_scaled)(EeGfxModel model,
-                                 const EeGeTransformation *transformation,
-                                 float x,
-                                 float y,
-                                 float z);
-  /// `SetGraphicsCurrentFrame(frame)`
-  void (*model_frame)(EeGfxModel model, uint32_t frame);
-  /// `SetGraphicsPreModelTransform(transformation)`
-  void (*model_pre_transform)(EeGfxModel model, const EeGeTransformation *transformation);
-  /// adds `delta` to the u of every texture coordinate of vertex array 0, keeping the old ones
-  void (*model_scroll_u)(EeGfxModel model, float delta);
-  /// puts back the texture coordinates `model_scroll_u` kept
-  void (*model_restore_u)(EeGfxModel model);
-  /// `GetCulling()`, `SetCulling(mode)`
-  uint32_t (*get_culling)();
-  void (*set_culling)(uint32_t mode);
-  /// adds `delta` to the v of every texture coordinate of vertex array 0 for good (nothing kept)
-  void (*model_shift_v)(EeGfxModel model, float delta);
-  /// `AddGroundQuad(center, color, yaw, size, heights, brightness, alpha reference)` (four heights)
-  void (*ground_quad)(const EeGe3DPoint *center,
-                      EeGfxColor color,
-                      float yaw,
-                      float size,
-                      const float *heights,
-                      float brightness,
-                      float alpha_ref);
-  /// `SetFrame(frame)` of a texture (`GETexture*`)
-  void (*texture_frame)(EeGfxModel texture, uint32_t frame);
-  /// the camera's yaw (`gRenderSnapshot.mCameraYaw`)
-  float (*camera_yaw)();
-  /// `GetZBuffer`, `GetZCompare`
-  uint32_t (*get_zbuffer)();
-  uint32_t (*get_zcompare)();
-  /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
-  void (*ground_strip)(const EeGe3DPoint *from,
-                       const EeGe3DPoint *to,
-                       float width,
-                       EeGfxColor color,
-                       float offset_u,
-                       float offset_v,
-                       float size_u,
-                       float size_v,
-                       float alpha,
-                       float brightness,
-                       float alpha_ref);
-  /// `SetGraphicsNextFrame(next)` then `SetFractionalFramePosition(fraction)` (the tween between two frames)
-  void (*model_tween)(EeGfxModel model, uint32_t next, float fraction);
-  /// `GetScreenPoint`: the world point's place on the screen (the camera, then the main viewport)
-  void (*screen_point)(const EeGe3DPoint *point, float *x, float *y);
-  /// a `GEText` in Tahoma 10, transparent and centred at (`x`, `y`) in `color`, its text the NUL-terminated UTF-8
-  /// `text`, drawn by `DrawClippedText` clipped to the viewport's view rectangle on the main game form (the scenario
-  /// editor's under a free camera)
-  void (*draw_text)(float x, float y, const uint8_t *text, EeGfxColor color);
-  /// the tracer beam's stretch (`EEE3DTracerBeam::DrawPass6`, 0xfca9b): vertex array 0's points and texture
-  /// coordinates kept, then y stretched to `length` and x to `width`, u scrolled by `scroll` (`beam.rs`); each
-  /// sub-model's internal y kept and stretched; `ComputeBoundingVolumes`
-  void (*model_stretch)(EeGfxModel model, float length, float width, float scroll);
-  /// puts back the vertices and sub-model ys `model_stretch` kept
-  void (*model_unstretch)(EeGfxModel model);
-  /// vertex array 0's size (`GetVertexArray(0)->GetSize()`)
-  uint32_t (*vertex_count)(EeGfxModel model);
-  /// vertex array 0's point `index` (`GetPoint`)
-  EeGe3DPoint (*vertex_point)(EeGfxModel model, uint32_t index);
-  /// vertex array 0's point `index` set (`SetPoint`)
-  void (*set_vertex_point)(EeGfxModel model, uint32_t index, const EeGe3DPoint *point);
-  /// `ComputeBoundingVolumes`, `ComputeModelNormals`
-  void (*model_bounds)(EeGfxModel model);
-  void (*model_normals)(EeGfxModel model);
-  /// one effect quad (`EE_GFX_SPRITE_GLOW`, `_GROUND`, `_BLENDED`: `AddGlowSprite`, `AddGroundSprite`,
-  /// `AddBlendedSprite` of `EEEffect.cpp`) at `position` turned by `rotation`
-  void (*sprite)(uint32_t kind,
-                 const EeGe3DPoint *position,
-                 EeGfxColor color,
-                 float rotation,
-                 float size,
-                 float alpha,
-                 float brightness,
-                 float alpha_ref);
-  /// `GetAlphaTestingRefValue`
-  float (*get_alpha_ref)();
-  /// `GetBlending(source, destination)`
-  void (*get_blending)(uint32_t *source, uint32_t *destination);
-  /// `gModelManager->CreateModel(polygons, vertices, 1, 0, 1, sub_models, name, flags)`, its name NUL-terminated
-  /// UTF-8 (not referenced)
-  EeGfxModel (*create_model)(uint32_t polygons,
-                             uint32_t vertices,
-                             uint32_t sub_models,
-                             const uint8_t *name,
-                             uint32_t flags);
-  /// `gModelManager->CreateSubModel(polygons, vertices, 1, 0, 1, 0, 0, 0, parent)` (not referenced)
-  EeGfxModel (*create_sub_model)(uint32_t polygons, uint32_t vertices, EeGfxModel parent);
-  /// `Reference`, `Dereference`
-  void (*model_reference)(EeGfxModel model);
-  void (*model_dereference)(EeGfxModel model);
-  /// `GetSubModel(index)`
-  EeGfxModel (*sub_model)(EeGfxModel model, uint32_t index);
-  /// a built mesh's set values into vertex array 0 and polygon array 0 (`EEEffectMesh::Store`)
-  void (*store_mesh)(EeGfxModel model,
-                     const EeGfxMeshVertex *vertices,
-                     size_t vertex_count,
-                     const EeGfxMeshTriangle *triangles,
-                     size_t triangle_count);
-  /// material 0's ranges: polygons from 0 (`SetPolygonStartingIndex(0, 0)`, `SetPolygonRangeLength(polygons, 0)`),
-  /// vertices from 0 (`SetVertexStartingIndex(0)`, `SetVertexRangeLength(vertices)`)
-  void (*material_ranges)(EeGfxModel model, uint32_t polygons, uint32_t vertices);
-  /// `GetBoundingRadius(0)`
-  float (*bounding_radius)(EeGfxModel model);
-  /// vertex array 0's points (and normals) of `from` copied into `to`'s, over `from`'s size
-  void (*copy_vertices)(EeGfxModel from, EeGfxModel to, bool normals);
-  /// a texture's `SetStageTextureAddressingMode(kAddressingWrap, -1)`
-  void (*texture_wrap)(EeGfxModel texture);
-  /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
-  /// the reference `load` asks for; the texture (`GETexture*`)
-  EeGfxModel (*load_texture)(const uint8_t *name, const EeGfxTextureLoad *load);
-  /// a `GELine` from (`x0`, `y0`) to (`x1`, `y1`) on the screen, its opacity `opacity0` to `opacity1`
-  /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
-  int32_t (*screen_line)(float x0, float y0, float x1, float y1, float opacity0, float opacity1);
-  /// `GetAlphaTesting`
-  uint32_t (*get_alpha_testing)();
-  /// the main viewport's rear clipping distance set to `distance` (`gU4E8F08.SetRearClippingDistance`; not set on the
-  /// rasterizer); the old one
-  float (*rear_clipping)(float distance);
-  /// `DrawSky(model, screen, 1.0f, sorted)`
-  int32_t (*draw_sky)(EeGfxModel model, bool sorted);
-  /// the screen's `Get32BitTextureSupport`
-  bool (*texture_32bit)();
-  /// `GetCanModulateTextureAlpha`
-  bool (*can_modulate_alpha)();
-  /// `SetAmbientIntensity(value)`
-  void (*set_ambient_intensity)(float value);
-  /// `GetFogAttributes`
-  EeGfxFogAttributes (*get_fog_attributes)();
-  /// `SetFogType`, `SetFogColor`, `SetFogRange`
-  void (*set_fog_type)(uint32_t kind);
-  void (*set_fog_color)(EeGfxColor color);
-  void (*set_fog_range)(float start, float end);
-  /// a unit model's frame textures (`EEROUnits::DrawUnitModel`, 0x515cc7): each material past the first takes
-  /// `texture`'s frame by its texture index (frame 0 past the count) and then every sub-model's materials theirs
-  /// (within the count); nothing for a null texture
-  void (*frame_textures)(EeGfxModel model, EeGfxModel texture);
-  /// a graphic object's (`EEGraphicObject*`) `SetGroupColor(color, part)`
-  void (*group_color)(EeGfxModel object, EeGfxColor color, uint32_t part);
-  /// sub-model 0's post-model transform placed at its internal transform's position times `-scale` (a gate's side);
-  /// that transform
-  EeGeTransformation (*sub_model_offset)(EeGfxModel model, float scale);
-  /// the bar rhombus `which` (0 the fill, 1 its back): its rectangle (null: kept) and four vertex colours
-  /// (`SetColorPerVertex`; null: kept)
-  void (*bar_set)(uint32_t which, const EeGeRectangle *rect, const EeGfxColor *colors);
-  /// the bar rhombus `which` drawn (`Draw(rhombus, screen)`)
-  int32_t (*bar_draw)(uint32_t which);
-  /// `count` (at most 64) screen lines in the line texture from u `start_u` to `end_u`, drawn as one batch
-  int32_t (*screen_lines)(const EeGfxScreenLine *lines, uint32_t count, float start_u, float end_u);
-  /// a unit's label (`EEROUnits::DrawLabels`, 0x516692): a transparent centred `GEText` in the labels' font (`font`:
-  /// 0 the default, 1 Tahoma 12, 2 Tahoma 16) and `color`, its text the NUL-terminated UTF-8 `text`, at (`x`, `y`),
-  /// drawn clipped by the targets `label_targets` gives for its height (none under the free camera): the main game
-  /// form's `view` and `strip`, or the scenario editor's `view`
-  void (*label)(const uint8_t *text,
-                float x,
-                float y,
-                EeGfxColor color,
-                uint32_t font,
-                const EeGeRectangle *view,
-                const EeGeRectangle *strip,
-                float bottom);
-  /// a texture's `Dereference` (`GETexture*`)
-  void (*texture_dereference)(EeGfxModel texture);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
@@ -3260,64 +3241,81 @@ void ee_gfx_units_label_point(const EeGeViewport *viewport,
                               uint64_t bars,
                               EeGe2DPoint *out);
 
-/// `GetEffectFogFactor`: the fog's fade at `*point` (`fog.state` 1: linear fog).
+/// `BeginEffectBatches`: both batches empty with `texture` (`GETexture*`, may be null), referenced for each.
 ///
 /// # Safety
-/// The pointers are valid.
-float ee_gfx_effect_fog_factor(const EeGe3DPoint *point,
-                               const EeGfxEffectFog *fog,
-                               const EeGeTransformation *camera_inverse);
+/// `raster` is the C++'s table.
+void ee_gfx_effect_batches_begin(const EeGfxRaster *raster,
+                                 void *texture);
 
-/// `AddGlowSprite`'s quad.
+/// `FlushEffectBatches`: what the ground batch and then the camera batch still hold, drawn.
 ///
 /// # Safety
-/// The pointers are valid.
-EeGfxEffectQuad ee_gfx_effect_glow_sprite(const EeGe3DPoint *position,
-                                          const EeGfxColor *color,
-                                          float rotation,
-                                          float size,
-                                          float alpha,
-                                          float brightness,
-                                          float fog,
-                                          float camera_yaw,
-                                          float camera_pitch);
+/// `raster` is the C++'s table.
+void ee_gfx_effect_batches_flush(const EeGfxRaster *raster);
 
-/// `AddGroundSprite`'s and `AddGroundQuad`'s quad; `opacities` holds the four corners'.
+/// `EndEffectBatches`: the references `begin` took dropped.
 ///
 /// # Safety
-/// The pointers are valid; `opacities` holds four floats.
-EeGfxEffectQuad ee_gfx_effect_ground_sprite(const EeGe3DPoint *position,
-                                            const EeGfxColor *color,
-                                            float rotation,
-                                            float size,
-                                            const float *opacities,
-                                            float brightness);
+/// `raster` is the C++'s table.
+void ee_gfx_effect_batches_end(const EeGfxRaster *raster);
 
-/// `AddBlendedSprite`'s quad.
+/// One effect quad (`AddGlowSprite`, `AddGroundSprite`, `AddBlendedSprite` by `kind`: `EE_GFX_SPRITE_GLOW` ...),
+/// as the raster table's `sprite` adds it (the drivers' entry point).
 ///
 /// # Safety
-/// The pointers are valid.
-EeGfxEffectQuad ee_gfx_effect_blended_sprite(const EeGe3DPoint *position,
-                                             const EeGfxColor *color,
-                                             float rotation,
-                                             float size,
-                                             float alpha,
-                                             float brightness,
-                                             float camera_yaw,
-                                             float camera_pitch);
+/// `raster` is the C++'s table; `position` is valid.
+void ee_gfx_effect_batch_sprite(const EeGfxRaster *raster,
+                                uint32_t kind,
+                                const EeGe3DPoint *position,
+                                EeGfxColor color,
+                                float rotation,
+                                float size,
+                                float alpha,
+                                float brightness,
+                                float alpha_ref);
 
-/// `AddGroundStrip`'s quad.
+/// `AddGroundQuad` (four heights) and `AddGroundStrip`, as the raster's draws add them (the drivers' entry points).
 ///
 /// # Safety
-/// The pointers are valid.
-EeGfxEffectQuad ee_gfx_effect_ground_strip(const EeGe3DPoint *from,
-                                           const EeGe3DPoint *to,
-                                           float height,
-                                           const EeGfxColor *color,
-                                           const EeGfxTexCoord *origin,
-                                           const EeGfxTexCoord *extent,
-                                           float alpha,
-                                           float brightness);
+/// `raster` is the C++'s table; the pointers are valid (`heights` four floats).
+void ee_gfx_effect_batch_ground_quad(const EeGfxRaster *raster,
+                                     const EeGe3DPoint *center,
+                                     EeGfxColor color,
+                                     float yaw,
+                                     float size,
+                                     const float *heights,
+                                     float brightness,
+                                     float alpha_ref);
+
+/// `AddGroundStrip`.
+///
+/// # Safety
+/// `raster` is the C++'s table; the pointers are valid.
+void ee_gfx_effect_batch_ground_strip(const EeGfxRaster *raster,
+                                      const EeGe3DPoint *from,
+                                      const EeGe3DPoint *to,
+                                      float width,
+                                      EeGfxColor color,
+                                      EeGfxTexCoord origin,
+                                      EeGfxTexCoord extent,
+                                      float alpha,
+                                      float brightness,
+                                      float alpha_ref);
+
+/// `CreatePlaneModels`, `ReleasePlaneModels` (the shared plane models).
+///
+/// # Safety
+/// `raster` is the C++'s table.
+void ee_gfx_effect_planes_create(const EeGfxRaster *raster);
+
+/// # Safety
+/// `raster` is the C++'s table.
+void ee_gfx_effect_planes_release(const EeGfxRaster *raster);
+
+/// A shared plane model (`GEModel*`): standing (`gEffect2DModel`, the 2D effects' quad) or on the ground
+/// (`gU4E8DF4`); null before `ee_gfx_effect_planes_create`.
+void *ee_gfx_effect_plane_model(bool standing);
 
 /// `StartSelection`'s drag start: `*location` rounded.
 ///
@@ -3939,12 +3937,6 @@ void ee_gfx_beam_stretch(EeGfxBeamVertex *vertices,
 
 /// `DrawPass6`'s stretch of a sub-model's internal y.
 float ee_gfx_beam_stretch_y(float y, float length);
-
-/// `CreateHorizontalPlaneModel`'s (`standing` false) or `CreateStandingPlaneModel`'s mesh.
-///
-/// # Safety
-/// `vertices` holds 4 writable records and `triangles` 2.
-void ee_gfx_effect_plane(bool standing, EeGfxMeshVertex *vertices, EeGfxMeshTriangle *triangles);
 
 /// A new, empty store (`EEEffectManager`'s constructor).
 EeGfxEffectStore *ee_gfx_effects_new();

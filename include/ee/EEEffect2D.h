@@ -11,10 +11,6 @@
 class GEModel;
 class EEGraphicObject;
 
-// the 2D effects' shared model (0x4e8df8: their ctors pass it to EEEffect2D's) (provisional name)
-extern GEModel* gEffect2DModel;
-// a second shared model (0x4e8df4: EEE2DPulseWave's and EEE2DVortex's ctors pass it) (provisional name)
-extern GEModel* gU4E8DF4;
 
 // The 0x24-byte element of EEEffect2D::mParts: one sprite of the effect (at a tag point of the unit, or the effect's
 // position). Layout from its two inline ctors (COMDATs 0x105089/0x1050b0 at the end of EEEffect2D.cpp), Load/Save
