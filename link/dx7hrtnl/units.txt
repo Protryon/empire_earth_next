@@ -1,4 +1,3 @@
-0105d 01fbe DX7HRTnLDisplay/DX7HRTnLDisplay.cpp
 01fbe 029dc Common/DX7Movie.cpp
 09217 0d144 Common/DX7Rasterizer.cpp
 10512 10512 GX/GX.cpp

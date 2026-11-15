@@ -713,6 +713,16 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
     ee_dx7r_transform_to_camera(this->mDX7, inMesh.GetRust(), &inViewport, inScale, inWaterOnly, inOrthographic);
 }
 
+// ---- the renderer the game links (DX7HRTnLDisplay.cpp's globals; its PIM entry points went with the plug-in boundary)
+static UString gName("Direct3D Hardware TnL");
+static DX7Rasterizer gTnLRasterizer(gName, true);   // the T&L flavour (rastobj.rs)
+
+// The game's rasterizer (GEInitialize adds it when it finds a screen)
+GERasterizer* DX7TnLRasterizer()
+{
+    return &gTnLRasterizer;
+}
+
 // COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head and atexit
 // registrars (GELOD x3, then U2DSparseArray: the unit includes U2DSparseArray.h after GEModel.h):
 // TEMPLATE: DX7HR 0x1000ccf2
