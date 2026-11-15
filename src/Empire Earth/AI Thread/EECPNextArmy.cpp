@@ -210,10 +210,9 @@ static void EECPNextGiveMove(EEComplexUnit* inUnit, long inX, long inY, bool inF
 
 static void EECPNextReleaseUnit(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
 {
+    (void)inPlayer;
     if (inUnit->mIsDetachedFromAI)
         inUnit->mIsDetachedFromAI = false;
-    if (inPlayer->mCombatManager != NULL)
-        inPlayer->mCombatManager->UnitAdded(inUnit);
 }
 
 bool EECPNextHoldsUnit(const EEComputerPlayer* inPlayer, const EEComplexUnit* inUnit)

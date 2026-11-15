@@ -22,6 +22,7 @@
 #include "lle/FSFile.h"
 #include "lle/USingleton.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -41,7 +42,6 @@
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EECPResourceCenter.h"

@@ -40,10 +40,7 @@
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackCommander.h"
-#include "ee/EECPAttackGroup.h"
-#include "ee/EECPAttackSubGroup.h"
-#include "ee/EECPAGTask.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
@@ -260,35 +257,9 @@ bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
     return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mPrehistoricAttacks, "prepeace", "noprepeace");
 }
 
-static long sClaimSteps[64];
-static unsigned long sClaimLast[64];
-
 long EECPClaimRange(const EEComputerPlayer* inPlayer)
 {
-    if (EECPNextEngine(inPlayer))
-        return EECPNextClaimRangeOf(inPlayer);   // the next engine: its claim_range (ee/EECPNext.h)
-    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
-    if (gPhysics->mGameTime < sClaimLast[theID])
-        sClaimSteps[theID] = 0, sClaimLast[theID] = 0;   // a new game (the clock started over)
-    long theRange = kEECPClaimRange + sClaimSteps[theID] * kEECPClaimRangeStep;
-    return theRange < kEECPClaimRangeMax ? theRange : kEECPClaimRangeMax;
-}
-
-void EECPClaimExpand(const EEComputerPlayer* inPlayer)
-{
-    if (EECPNextEngine(inPlayer))
-        return;   // the next engine's strategy sets the range (claim_range)
-    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
-    unsigned long theNow = gPhysics->mGameTime;
-    if (theNow < sClaimLast[theID])
-        sClaimSteps[theID] = 0, sClaimLast[theID] = 0;
-    if (sClaimLast[theID] != 0 && theNow - sClaimLast[theID] < 120000)
-        return;
-    if (EECPClaimRange(inPlayer) >= kEECPClaimRangeMax)
-        return;
-    sClaimSteps[theID]++;
-    sClaimLast[theID] = theNow;
-    EE_CP_TRACE(const_cast<EEComputerPlayer*>(inPlayer), "claim.expand", "range=%ld", EECPClaimRange(inPlayer));
+    return EECPNextClaimRangeOf(inPlayer);   // the strategy's claim_range (ee/EECPNext.h)
 }
 
 bool EECPClaimRangeOn(const EEComputerPlayer* inPlayer)
@@ -458,27 +429,10 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
             }
         }
     }
-    // the classic's sub-group holding it (EECPAttackCommander::FindHolder, read only): its id and mission, its task
-    // (type:mode) and that task's distance; the group's task (type:mode) - which of the classic's groups it served
+    // (the C++ classic's sub-group holding it: always -1 since stage 5 deleted the attack commander; the fields stay
+    // for the trace's readers)
     long theGroup = -1, theMission = -1, theTaskType = -1, theTaskMode = -1, theTaskDistance = -1;
     long theGroupType = -1, theGroupMode = -1;
-    if (inPlayer->mCombatManager != NULL && inPlayer->mCombatManager->mAttackCommander != NULL) {
-        EECPAttackSubGroup* theHolder = inPlayer->mCombatManager->mAttackCommander->FindHolder(inUnit);
-        if (theHolder != NULL) {
-            theGroup = (long)theHolder->mID;
-            theMission = theHolder->mMission;
-            theTaskType = theHolder->mTask.mIsActive ? theHolder->mTask.mType : -1;
-            theTaskMode = theHolder->mTask.mMode;
-            if (theHolder->mTask.mIsActive && theX != -10000) {
-                long theDX = theHolder->mTask.mLocation.mTile.mX - theX, theDY = theHolder->mTask.mLocation.mTile.mY - theY;
-                theTaskDistance = (long)sqrt((double)(theDX * theDX + theDY * theDY));
-            }
-            if (theHolder->mGroup != NULL) {
-                theGroupType = theHolder->mGroup->mTask.mType;
-                theGroupMode = theHolder->mGroup->mTask.mMode;
-            }
-        }
-    }
     EECPTraceScope theScope("cp");
     EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld kgoal=%s:%c sub=%ld:%ld:%ld:%ld:%ld grp=%ld:%ld",
         EECPNextClassName(inUnit->mUnitClass->mUnitType).c_str(), theX, theY, theTown, theGoal, theKillerPlayer,
@@ -817,8 +771,6 @@ unsigned long EECPOutOfSynchChecksum()
                 if (theCiv->mUnitManager != NULL)
                     theSum = theSum * 31 + (unsigned long)theCiv->mUnitManager->mNumWaiting;
             }
-            if (theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL)
-                theSum = theSum * 31 + (unsigned long)theCP->mCombatManager->mAttackCommander->mGroups.size();
         }
         theChecksum += theSum * (thePlayer->mPlayerID + 1);
     }

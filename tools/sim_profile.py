@@ -11,7 +11,7 @@ system DLLs' from their exports. The report (--out, default build/sim/profile/<t
     "game s" progress lines on stderr), e.g. the late game;
   - stacks.txt: the collapsed stacks ("a;b;c count", flamegraph.pl / speedscope input).
 
-  python -I tools/sim_profile.py [--data binary] [--exe EXE] [--hz 250] -- --seed 25 --engine boom,ageofai \
+  python -I tools/sim_profile.py [--data open] [--exe EXE] [--hz 250] -- --seed 25 --engine boom,ageofai \
       --game-seconds 7200 --cheats none --personality balanced --report r.json
 
 Stopping a thread does not change what it computes: the game's results are the same with or without the profiler
@@ -234,7 +234,7 @@ def load_map(map_path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n", 2)[2])
-    ap.add_argument("--data", default="binary")
+    ap.add_argument("--data", default="open")
     ap.add_argument("--slot", default="profile")
     ap.add_argument("--exe", type=pathlib.Path, default=sim.DEFAULT_EXE)
     ap.add_argument("--hz", type=float, default=250)

@@ -539,8 +539,9 @@ extern "C" long SPIMMixAhead()
     return kSPIMOK;
 }
 
-// Starts the channel's sample (from the start once it has played out); kSPIMChannelBusy when already playing,
-// kSPIMNoSample when the channel is empty
+// Starts the channel's sample from its beginning, whatever position was set before (as Miles' AIL_start_sample:
+// the random offset SESoundManager gives a looping sound never took effect in the original); kSPIMChannelBusy when
+// already playing, kSPIMNoSample when the channel is empty
 extern "C" long SPIMPlayChannel(unsigned long inChannel)
 {
     Guard theGuard;
@@ -551,8 +552,7 @@ extern "C" long SPIMPlayChannel(unsigned long inChannel)
         return kSPIMNoSample;
     if (theChannel.mPlaying)
         return kSPIMChannelBusy;
-    if (theChannel.mData && theChannel.mPosition >= theChannel.mData->mFrames)
-        theChannel.mPosition = 0.0;
+    theChannel.mPosition = 0.0;
     theChannel.mPlaying = true;
     return kSPIMOK;
 }

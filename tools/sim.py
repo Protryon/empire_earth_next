@@ -9,24 +9,21 @@ and writes into it (error logs, the folders saved games go to), so every run get
 the read-only files hard-linked (the tree itself is never written), the folders the game writes into copied, as the
 harness stages it (tools/harness/exe_boot.py stage_tree). A stage is kept and reused per slot (build/sim/stage/<slot>).
 
-  python -I tools/sim.py [--data binary|open|DIR] [--slot NAME] [--exe EXE] -- [EE-SIM options]
+  python -I tools/sim.py [--data open|DIR] [--slot NAME] [--exe EXE] -- [EE-SIM options]
   python -I tools/sim.py -- --seed 3 --ai 2 --difficulty Hard --game-seconds 2700 --report r.json --ai-trace --trace t.txt
-  python -I tools/sim.py -- --seed 3 --engine classic,classic_cpp --report r.json
+  python -I tools/sim.py -- --seed 3 --engine classic,boom --report r.json
 
---engine LIST sets the computer seats' engines (classic: the manifest's "classic" AI, classic_lua; classic_cpp: the C++
-classic; random; an AI's id from Data/ai/ais.json such as boom; or next for its first AI; docs/AI_LUA_PLAN.md S0 and
+--engine LIST sets the computer seats' engines (classic: the manifest's "classic" AI, classic_lua; random; an AI's id from Data/ai/ais.json such as boom; or next for its first AI; docs/AI_LUA_PLAN.md S0 and
 3.3) through the lobby's engine boxes: one for every seat, or a comma list by seat (seat 1 is player 2), taken in
 turn.
 
---ai-scripts DIR sets EE_AI_SCRIPTS (absolute): the next engine reads its Lua scripts from DIR before the tree's
-Data/ai (docs/AI_LUA_PLAN.md 3.2), e.g. --ai-scripts ai to play the checkout's scripts on an older tree.
+The stage's Data/ai and Data/db are always this checkout's data/ai and data/db, whatever the tree holds.
+--ai-scripts DIR sets EE_AI_SCRIPTS (absolute): the next engine reads its Lua scripts from DIR before Data/ai
+(docs/AI_LUA_PLAN.md 3.2), e.g. a test folder (tests/ai_units).
 
 --set doc.key=value overrides a rules document (db/<doc>.yaml); a value "[a, b]" replaces a list, e.g.
 --set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" (the original's cheats,
-for every computer player of that difficulty; EE_AI_CHEATS narrows them per player). The binary tree has no rules
-documents (the game plays with the code's defaults, which equal the documents tools/eedata/rules.py writes), so for
-an override the stage gets that document written by rules.py from the same constants (python -I
-tools/eedata/eedata.py check keeps them equal).
+for every computer player of that difficulty; EE_AI_CHEATS narrows them per player).
 """
 import argparse
 import json
@@ -55,24 +52,28 @@ def default_exe():
 DEFAULT_EXE = default_exe()
 BUILD_HINT = "python -I build.py --sim" if sys.platform == "win32" else "python3 -I tools/xbuild.py sim"
 WRITABLE = {"saved games", "scenarios"}   # Data folders the game writes into: copied, not linked (exe_boot.py)
-RULE_DOCS = ("combat", "gameoptions", "civbuilder", "civpowers", "aipersonalities", "epochs")
 
 
 def data_tree(kind):
-    """The data tree: 'binary' (build/open_data/tree-binary), 'open' (build/open_data/tree) or a directory. The main
+    """The data tree: 'open' (build/open_data/tree) or a directory. The main
     checkout's trees are used when this checkout has none (a worktree; they are only read); 'open' is last the
-    released data that tools/fetch_data.py pulls into data/ (a machine without the retail installs)."""
-    if kind not in ("binary", "open"):
+    released media that tools/fetch_data.py unpacks into data/ (build/data-root, this checkout's or the main one's:
+    a machine without the retail installs)."""
+    if kind == "binary":
+        sys.exit("--data binary: there is no binary tree any more (the game reads only the text db tables): --data open")
+    if kind != "open":
         tree = pathlib.Path(kind)
     else:
-        name = "tree-binary" if kind == "binary" else "tree"
+        name = "tree"
         tree = OPEN_DATA / name
         if not (tree / "Data").is_dir():
             main = pathlib.Path(subprocess.run(["git", "-C", str(ROOT), "worktree", "list", "--porcelain"],
                                                capture_output=True, text=True).stdout.split("\n")[0].split(" ", 1)[1])
             tree = main / "build" / "open_data" / name
-            if not (tree / "Data").is_dir() and kind == "open" and (main / "data" / "Data").is_dir():
-                tree = main / "data"
+            if not (tree / "Data").is_dir():
+                sys.path.insert(0, str(ROOT / "tools"))
+                import open_data  # noqa: E402
+                tree = open_data.fetched_root(ROOT) or open_data.fetched_root(main) or tree
     if not (tree / "Data").is_dir():
         sys.exit(f"{tree}: no Data folder (python -I tools/open_data.py build ...; without the retail installs: "
                  f"python -I tools/fetch_data.py, then --data open)")
@@ -81,21 +82,26 @@ def data_tree(kind):
     sys.path.insert(0, str(ROOT / "tools"))
     import open_data  # noqa: E402
     made = json.loads((tree / "open_data.json").read_text()).get("converters") if (tree / "open_data.json").exists() else None
-    if made != open_data.converters_hash():
+    if made is not None and made != open_data.converters_hash():   # (a fetched tree records no converters)
         print(f"sim: warning: {tree} was built by other converter code ({made} != {open_data.converters_hash()}) "
               f"or is being built", file=sys.stderr)
-    ai = json.loads((tree / "open_data.json").read_text()).get("ai") if (tree / "open_data.json").exists() else None
-    if ai != open_data.scripts_hash() and not os.environ.get("EE_AI_SCRIPTS"):
-        print(f"sim: warning: {tree}'s Data/ai is not this checkout's ai/ (python -I tools/open_data.py ai TREE, or "
-              f"--ai-scripts)", file=sys.stderr)
     return tree.resolve()
 
 
+def overlay_hash(tree):
+    """what stage_tree writes over a tree's Data/ai and Data/db: this checkout's data/ai and data/db"""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data  # noqa: E402
+    return f"ai={open_data.scripts_hash()} db={open_data.db_hash()}"
+
+
 def stage_tree(tree, d):
-    """Stage a data tree into d (once per tree): Data's files hard-linked, the written folders, Users and the root
-    files copied."""
+    """Stage a data tree into d (once per tree and checkout data): Data's files hard-linked, the written folders, Users
+    and the root files copied; then Data/ai and Data/db replaced by this checkout's data/ai and data/db (copies), so
+    a run never plays a stale tree's tables or scripts."""
     marker = d / "sim_stage.json"
-    want = dict(tree=str(tree), made=(tree / "open_data.json").read_text() if (tree / "open_data.json").exists() else "")
+    want = dict(tree=str(tree), made=(tree / "open_data.json").read_text() if (tree / "open_data.json").exists() else "",
+                checkout=overlay_hash(tree))
     if marker.exists() and json.loads(marker.read_text()) == want:
         return d
     if d.exists():
@@ -122,50 +128,17 @@ def stage_tree(tree, d):
             os.link(src, dst)
         except OSError:
             shutil.copy(src, dst)
+    import open_data  # noqa: E402  (overlay_hash put tools/ on the path)
+    open_data.refresh_scripts(d)
+    open_data.refresh_db(d)
     marker.write_text(json.dumps(want))
     return d
 
 
-def rule_docs(stage, docs):
-    """Write the rules documents an override needs into the stage's Data/db when the tree has none (tools/eedata
-    rules.py: the code's defaults). A document the tree has is left as it is."""
-    db = stage / "Data" / "db"
-    missing = [n for n in docs if not (db / f"{n}.yaml").exists() or (db / f".sim-{n}").exists()]
-    if not missing:
-        return []
-    sys.path.insert(0, str(ROOT / "tools" / "eedata"))
-    import rules  # noqa: E402
-    spec = json.loads((ROOT / "tools" / "eedata" / "specs.json").read_text())
-    written = []
-    for name in missing:
-        # a document without references to the db tables' ids (aipersonalities, gameoptions) is written without the
-        # tables' text; the others need the open tree
-        try:
-            text = rules.GENERATORS[name](rules._Ids({}), spec) if name in rules.GENERATORS else None
-        except Exception:
-            text = None
-        if text is None:
-            sys.exit(f"--set {name}: the data tree has no db/{name}.yaml and tools/eedata/rules.py cannot write it "
-                     f"without the db tables' text: use --data open")
-        (db / f"{name}.yaml").write_text(text, encoding="utf-8", newline="\n")
-        (db / f".sim-{name}").write_text("written by tools/sim.py\n")
-        written.append(name)
-    return written
-
-
-def prepare(data="binary", slot="default", sets=()):
-    """-> the staged data root for a slot, with the rules documents the overrides name."""
+def prepare(data="open", slot="default", sets=()):
+    """-> the staged data root for a slot."""
     tree = data_tree(data)
-    stage = stage_tree(tree, STAGES / slot)
-    docs = sorted({s.split(".", 1)[0] for s in sets})
-    db = stage / "Data" / "db"
-    for marker in db.glob(".sim-*"):   # a document written for an earlier run's override: gone again
-        name = marker.name[len(".sim-"):]
-        if name not in docs:
-            (db / f"{name}.yaml").unlink(missing_ok=True)
-            marker.unlink()
-    rule_docs(stage, docs)
-    return stage
+    return stage_tree(tree, STAGES / slot)   # (sets: the overrides apply in the game; the documents are all there)
 
 
 def command(exe, stage, args, config=None):
@@ -207,7 +180,7 @@ def main():
         return
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split("\n", 2)[2])
-    ap.add_argument("--data", default="binary", help="binary (default), open, or a tree directory")
+    ap.add_argument("--data", default="open", help="open (default: build/open_data/tree) or a tree directory")
     ap.add_argument("--slot", default="default", help="the stage's name (one per concurrent run)")
     ap.add_argument("--exe", type=pathlib.Path, default=DEFAULT_EXE)
     ap.add_argument("--ai-scripts", type=pathlib.Path, help="EE_AI_SCRIPTS: the next engine's scripts read from this "

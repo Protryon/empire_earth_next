@@ -23,6 +23,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -42,7 +43,6 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EERules.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EESoundObject.h"

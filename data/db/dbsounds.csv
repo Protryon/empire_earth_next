@@ -1,0 +1,876 @@
+#eedata dbsounds
+#format 3
+#rows 1087
+row,id,mSampleName,label,mMaxInstances,mCategory,mLooping,mVolume
+1,sci_fi4,sounds\mechbeeps-8.wav,Sci-fi4,2,3,0,50
+2,metal_bang,sounds\metalbang-8.wav,Metal Bang,3,6,0,50
+3,machine_gun_two_bursts,sounds\heligun1-8.wav,Machine Gun (two bursts),3,6,0,50
+4,sniper_gun,sounds\snipergun-8.wav,Sniper Gun,3,6,0,55
+5,tree_wind,sounds\treewind-8.wav,Tree Wind,1,1,0,40
+6,looping_wind,sounds\wind2-8.wav,Looping Wind,1,1,1,30
+7,bomber_ww2,sounds\Sbomber-8.wav,Bomber WW2,2,4,1,40
+8,flare,sounds\flare-8.wav,Flare,2,3,0,40
+9,cannon_fire_2_shot,sounds\Cannon8-8.wav,Cannon Fire (2 shot),3,6,0,50
+10,big_gun,sounds\Cannon3-8.wav,Big Gun,3,6,0,50
+11,mech_create,sounds\SMech4.wav,Mech Create,2,3,0,50
+12,building_creatin_generic,sounds\BuildCreate2-8.wav,Building Creatin (generic),1,3,0,50
+13,cannon_fire_1_shot,sounds\Cannon7-8.wav,Cannon Fire (1 shot),3,6,0,50
+14,cash_register,sounds\register-8.wav,Cash Register,2,3,0,40
+18,ww_i_propellor,sounds\Spropww1-8.wav,WW I propellor,2,4,1,30
+22,gunshot_re_cock,sounds\rifle4-8.wav,Gunshot(& re-cock),4,6,0,35
+23,mech_move,sounds\Smechwalking1.wav,Mech move,3,3,0,50
+25,sinking_ship,sounds\Sshipsink-8.wav,Sinking Ship,2,5,0,50
+27,sub_move_looping,sounds\submovementSID27.wav,Sub move - Looping,1,4,1,20
+28,trireme_move,sounds\Ssailandoarmove.wav,Trireme move,2,4,1,15
+31,galley,sounds\Spaddleboat.wav,Galley,2,4,1,15
+32,machine_gun_long_burst,sounds\mgun2-8.wav,Machine Gun (long burst),3,6,0,30
+33,torpedo_attack,sounds\STorpedo1.wav,Torpedo attack,2,6,0,50
+34,chopping_wood,sounds\Schop2.wav,Chopping wood,3,2,0,35
+35,mech_footfall,sounds\Smechwalking2-8.wav,Mech footfall,2,4,0,30
+36,tank_engine,sounds\STankmove1b.wav,Tank engine,2,4,1,30
+37,explosion,sounds\explosion5-8.wav,Explosion,2,5,0,50
+39,walk1,sounds\Swalk1.wav,Walk1,3,2,0,0
+40,tank_moving,sounds\Stankmove2b.wav,Tank moving,2,4,1,30
+41,mech_shutdown,sounds\Smechshutdown.wav,Mech shutdown,2,4,0,40
+42,mech_destruct,sounds\explosion2-8.wav,Mech destruct,3,5,0,50
+44,horse_trot,sounds\Snewhorse-8.wav,Horse Trot,3,4,1,20
+45,plane_diving,sounds\Splanecrash.wav,Plane Diving,3,4,0,50
+47,ww_ii_propellor,sounds\Spropww2-8.wav,WW II propellor,2,4,1,35
+49,cannon_fire,sounds\Cannon6-8.wav,Cannon Fire,3,6,0,50
+52,sword_fight1,sounds\Sword1-8.wav,Sword Fight1,2,6,0,22
+53,sword_fight2,sounds\Sword2-8.wav,Sword Fight2,2,6,0,22
+54,sword_fight_3,sounds\Sword3-8.wav,Sword Fight 3,2,6,0,22
+55,fire_1,sounds\runaway.wav,Fire 1,4,1,1,30
+57,boat_move_row,sounds\Spaddleboat.wav,Boat Move (row),2,4,1,15
+65,gunfire_laser,sounds\Laser1-8.wav,Gunfire(laser),3,6,0,25
+70,archerattack,sounds\Sarrow.wav,ArcherAttack,3,3,0,30
+71,building_explode,sounds\buildingblow3-8.wav,Building Explode,2,5,0,60
+72,mortar,sounds\mortar-8.wav,Mortar,4,5,0,40
+74,planecreate,sounds\planecreate-8.wav,PlaneCreate,3,3,0,50
+76,tankcreate,sounds\tankcreate-8.wav,TankCreate,2,3,0,60
+78,ambient_night,sounds\nightambience1b_8.wav,Ambient (night),1,1,1,50
+83,walk2,sounds\Swalk2.wav,walk2,3,2,0,0
+84,catapult_shot,sounds\Scatapultshot-8.wav,Catapult Shot,3,6,0,50
+85,helicopter1_rotor,sounds\Sheli1.wav,Helicopter1(rotor),2,4,1,25
+86,helicopter2_rotor,sounds\Sheli2.wav,Helicopter2(rotor),2,4,1,25
+88,machine_gun_high_cal,sounds\planegun1-8.wav,Machine Gun(High Cal.),3,6,0,50
+95,explosion2,sounds\explosion2-8.wav,Explosion2,2,5,0,50
+96,bomb,sounds\Sbomb.wav,Bomb,3,5,0,20
+100,gun_photon,sounds\Laser3-8.wav,Gun (photon),3,6,0,25
+101,horse_neigh,sounds\Shorsewine-8.wav,Horse Neigh,3,3,0,35
+102,gun_laser,sounds\Laser2-8.wav,Gun (laser),3,6,0,25
+103,gun_laser2,sounds\Laser4-8.wav,Gun(laser2),3,6,0,25
+104,gun_missile,sounds\Smissile1.wav,Gun (missile),4,6,0,25
+105,arrow,sounds\Sarrow2.wav,Arrow,4,6,0,30
+108,catapult_move_2,sounds\Scatamove2-8.wav,Catapult Move 2,2,4,1,23
+109,fire_panning,sounds\fire-8.wav,Fire (panning),2,5,1,20
+111,sword_cav1,sounds\Sword4-8.wav,Sword Cav1,2,6,0,22
+112,jungle_ambient1,sounds\Jungle-8.wav,Jungle Ambient1,1,1,1,50
+117,gun_rifle,sounds\rifle5-8.wav,Gun (rifle),4,6,0,35
+118,catapult_move1,sounds\Scatamove-8.wav,Catapult Move1,2,4,1,20
+121,cannon_big_one,sounds\Cannon5-8.wav,Cannon (big one),3,6,0,50
+125,sword_fight_4,sounds\SSword4b.wav,Sword Fight 4,2,6,0,22
+126,plane_crash,sounds\Sjetcrash.wav,Plane crash,3,3,0,50
+130,rocket_countdown,sounds\Srocket1.wav,Rocket(countdown),3,3,0,50
+131,walk4_shoe,sounds\Swalk4.wav,Walk4 (shoe),3,4,0,0
+133,walk3_shoe,sounds\Swalk3.wav,Walk3 (shoe),3,4,0,0
+134,garrison,sounds\garrison2.wav,Garrison,1,3,0,30
+135,walk5_shoe,sounds\Swalk5.wav,Walk5 (shoe),3,4,0,0
+140,gunshot_deep_slow,sounds\rifle3-8.wav,Gunshot (deep/slow),4,6,0,35
+141,ram_attack,sounds\ramcrashSID141.wav,Ram Attack,3,6,0,40
+144,double_walk,sounds\Swalk6.wav,Double Walk,3,3,0,0
+145,cannon_4times,sounds\multicannon-8.wav,Cannon (4times),3,6,0,50
+148,horse_winny3,sounds\horsewine2SID148.wav,Horse Winny3,3,3,0,50
+149,horse_select,sounds\horsewine3SID149.wav,Horse Select,3,3,0,35
+151,big_gun_deeper,sounds\Cannon4-8.wav,Big Gun (deeper),4,6,0,50
+160,cannon_laser,sounds\lasercannon-8.wav,Cannon (laser),3,6,0,50
+161,hovercraft_move,sounds\Shovermove2-8.wav,Hovercraft (move),1,4,1,20
+162,jet_engine_me262,sounds\jetmoveSID162.wav,Jet engine (ME262),2,4,1,25
+165,elephant_death,sounds\SElephantroar2-8.wav,Elephant (death),3,3,0,40
+166,elephant_walk,sounds\Selephantwalk-8.wav,Elephant (walk),2,4,1,18
+167,elephant_attack,sounds\SElephantroar1-8.wav,Elephant (attack),3,6,0,40
+168,tank_move_hover,sounds\Shovermove3-8.wav,Tank move (hover),2,4,1,30
+169,machine_gun_cock_fire,sounds\mgun3-8.wav,Machine Gun (cock & fire),3,6,0,30
+170,tank_gun_laser,sounds\lasercannon-8.wav,Tank Gun (laser),3,6,0,40
+171,build,sounds\Sbuild2a.wav,Build,3,2,0,20
+172,mining,sounds\Smining3.wav,Mining,3,2,0,18
+175,farm,sounds\Sfarm.wav,Farm,3,2,1,12
+178,tiger_attack,sounds\Stigerroar-8.wav,Tiger (attack),3,6,0,35
+182,hover_move,sounds\Shover1-8.wav,Hover Move,1,4,1,20
+183,move_clock,sounds\spideywalk3-8.wav,Move (clock),3,4,1,35
+184,tiger_death,sounds\Stigerdie-8.wav,Tiger Death,3,3,0,50
+185,hippo_death,sounds\Shippodie-8.wav,Hippo Death,4,3,0,50
+186,hippo_attack,sounds\SHippoattack2.wav,Hippo Attack,3,6,0,35
+201,gunshot_fire_cock,sounds\rifle1-8.wav,Gunshot(fire&cock),4,6,0,35
+203,ship_movement,sounds\Sbattlemove2-8.wav,Ship Movement,3,4,1,18
+206,gunshot_citizen10,sounds\rifle2-8.wav,gunshot(citizen10),4,6,0,35
+213,ostrich_walk,sounds\Sostrichwalk.wav,Ostrich Walk,3,4,1,5
+215,ostrich_death,sounds\Sostrichdie-8.wav,Ostrich death,3,3,0,50
+217,sheep_die,sounds\Sgoatdie-8.wav,Sheep Die,3,3,0,40
+218,sheep_command,sounds\Sgoat-8.wav,Sheep command,1,3,0,40
+219,motor_weak,sounds\Saamove2-8.wav,motor (weak),2,4,1,35
+220,sheep_walk,sounds\Sgoatwalk2.wav,Sheep walk,2,4,1,7
+222,flee,sounds\runaway.wav,Flee,1,3,0,50
+225,nuke_create,sounds\Ssiren2-8.wav,Nuke create,1,3,1,50
+226,nuke_move,sounds\Snukemove-8.wav,Nuke Move,1,4,1,35
+227,flamethrow,sounds\Sflamethrow.wav,Flamethrow,4,6,0,40
+230,eagleattack,sounds\hawk-8.wav,eagleattack,2,3,0,50
+231,eagledie,sounds\Seagledie-8.wav,eagledie,2,3,0,15
+234,tigerwalk,sounds\Stigerwalk2-8.wav,Tigerwalk,2,4,1,6
+235,tankexplode,sounds\explosion1-8.wav,tankexplode,2,3,0,50
+236,forage,sounds\forage2-8.wav,forage,2,3,0,8
+237,earthquake,sounds\earthquake-8.wav,earthquake,2,4,1,50
+238,sword_fight_5,sounds\sword5-8.wav,sword fight 5,2,6,0,22
+239,sword_fight_6,sounds\sword6-8.wav,sword fight 6,2,6,0,22
+240,dpr1_grunt_1,sounds\dpr1grunt1.wav,Dpr1 - Grunt 1,2,3,0,35
+241,dpr1_grunt_2,sounds\dpr1grunt2.wav,Dpr1 - Grunt 2,2,3,0,35
+244,dpr1_grunt_3,sounds\dpr1grunt3.wav,Dpr1 - Grunt 3,2,3,0,35
+245,dpr1_grunt_4,sounds\dpr1grunt42.wav,Dpr1 - Grunt 4,2,3,0,45
+246,dp1_grunt_1,sounds\dp1grunt1.wav,Dp1 - Grunt 1,2,3,0,35
+247,dp1_grunt_2,sounds\dp1grunt2.wav,Dp1 - Grunt 2,2,3,0,35
+248,dp1_grunt_3,sounds\dp1grunt3.wav,Dp1 - Grunt 3,2,3,0,35
+249,dv1_grunt1,sounds\dv1grunt1.wav,Dv1 - Grunt1,2,3,0,35
+250,dp1_grunt_4,sounds\dp1grunt4.wav,Dp1 - Grunt 4,2,3,0,35
+252,dv1_grunt3,sounds\dv1grunt3.wav,Dv1 - Grunt3,2,3,0,35
+253,dv1_grunt4,sounds\dv1grunt4.wav,Dv1 - Grunt4,2,3,0,35
+254,dv1_grunt5,sounds\dv1grunt5.wav,Dv1 - Grunt5,2,3,0,35
+255,dv1_grunt_q1,sounds\dv1gruntq1.wav,Dv1 - Grunt Q1,2,3,0,35
+256,dv1_grunt_q2,sounds\dv1gruntq2.wav,Dv1 - Grunt Q2,2,3,0,35
+258,dv2_grunt1,sounds\dv2grunt1.wav,Dv2 - Grunt1,2,3,0,45
+259,dv0_grunt_scream_1,sounds\dgruntscream1.wav,Dv0 - Grunt Scream 1,2,3,0,35
+261,dv1_argh,sounds\dv1argh.wav,Dv1 - Argh,2,3,0,35
+262,dc1_as_you_wish,sounds\dc1asyouwish.wav,Dc1- As you wish,2,3,0,25
+263,dv1_attack,sounds\dv1attack.wav,Dv1 - Attack,2,3,0,35
+264,dv1_aye_aye,sounds\dv1ayeaye2.wav,Dv1 - Aye Aye,2,3,0,35
+265,dp1_by_the_gods,sounds\dp1bythegods.wav,Dp1 - By the gods,2,3,0,35
+266,dv1_death_to_heathens,sounds\dv1deathtoheathens.wav,Dv1 - Death To Heathens,2,3,0,35
+267,dv1_for_god,sounds\dv1forgod.wav,Dv1 - For God,2,3,0,40
+268,dv1_for_the_king,sounds\dv1fortheking.wav,Dv1 - For The King,2,3,0,40
+269,fv1_ahoy,sounds\fv1ahoy.wav,Fv1 - Ahoy,2,3,0,30
+270,fv1_all_hands_on_deck,sounds\fv1allhands.wav,Fv1 - All hands on deck,2,3,0,30
+271,dp1_halleluiah,sounds\dp1hallelujah.wav,Dp1 - Halleluiah,2,3,0,35
+273,fv1_aye_aye,sounds\fv1ayeaye.wav,Fv1 - Aye aye,2,3,0,30
+274,dv1_move_out,sounds\dv1moveout.wav,Dv1 - Move Out,2,3,0,35
+275,dv1_my_liege,sounds\dv1myliege.wav,Dv1 - My Liege,2,3,0,35
+278,dv1_outstanding,sounds\dv1outstanding.wav,Dv1 - Outstanding,2,3,0,35
+279,dv1_sire,sounds\dv1sire.wav,Dv1 - Sire,2,3,0,35
+280,wv1_to_the_death,sounds\wv1tothedeath.wav,Wv1 - To the death,2,3,0,50
+281,dv1_to_victory,sounds\dv1tovictory.wav,Dv1 - To Victory,2,3,0,35
+282,kv1_hoist_the_sails,sounds\kv1hoistsails.wav,Kv1 - Hoist The Sails,2,3,0,50
+284,dv1_who_kill,sounds\dv1whocankill.wav,Dv1 - Who kill,2,3,0,40
+286,wv1_with_heart,sounds\wv1withheart.wav,Wv1 - With Heart,2,3,0,50
+289,dc1_yes,sounds\dc1yes.wav,Dc1 - Yes,2,3,0,25
+290,dv1_yes_master,sounds\dv1yesmaster.wav,Dv1 - Yes Master,2,3,0,35
+291,dv1_at_your_service,sounds\dv1atyourservice.wav,Dv1 - At Your Service,2,3,0,35
+293,dv1_yes_me_lord,sounds\dv1yeslord.wav,Dv1 - Yes Me Lord,2,3,0,35
+294,dv0_scream1,sounds\dscream1.wav,Dv0 - Scream1,2,3,0,40
+295,dv0_scream2,sounds\dscream2.wav,Dv0 - Scream2,2,3,0,40
+296,dv0_scream3,sounds\dscream3.wav,Dv0 - Scream3,2,3,0,40
+297,dv0_scream4,sounds\dscream4.wav,Dv0 - Scream4,2,3,0,40
+298,dp1_scream_1,sounds\dpscream.wav,Dp1 - Scream 1,2,3,0,35
+303,dv2_assist,sounds\dv2mayiassist.wav,Dv2 - Assist,2,3,0,35
+304,dv2_bell_tolls,sounds\dv2belltolls.wav,Dv2 - Bell Tolls,2,3,0,35
+305,dp2_bless_you,sounds\dp2blessyou.wav,Dp2 - Bless You,2,3,0,35
+306,dc1_certainly,sounds\dc1certainly.wav,Dc1 - Certainly,2,3,0,25
+307,fv1_set_full_sail,sounds\fv1setfullsail.wav,Fv1 - Set full sail,2,3,0,30
+308,dv2_consider_it_done,sounds\dv2consider.wav,Dv2 - Consider it Done,2,3,0,30
+310,fv1_sink_the_land_lubbers,sounds\fv1sink.wav,Fv1 - Sink the land lubbers,2,3,0,30
+311,dv2_heads_will_roll,sounds\dv2headwillroll.wav,Dv2 - Heads will Roll,2,3,0,40
+316,dv2_leave_alive,sounds\dv2leavenoone.wav,Dv2 - Leave alive,2,3,0,35
+318,dp2_my_child,sounds\dp2mychild.wav,Dp2 - My Child,2,3,0,35
+320,dv2_my_pleasure,sounds\dv2mypleasure.wav,Dv2 - My Pleasure,2,3,0,35
+322,fv2_ready_cannons,sounds\fv2readycannons.wav,Fv2 - Ready Cannons,2,3,0,30
+323,dc2_right_away,sounds\dc2rightaway.wav,Dc2 - Right Away,2,3,0,35
+324,dv2_rue_the_day,sounds\dv2ruetheday.wav,Dv2 - Rue the day,2,3,0,35
+325,dp3_serve_you,sounds\dp3serveyou.wav,Dp3 - Serve You,2,3,0,35
+326,kv2_fire_abroadside,sounds\kv2fireabroadside.wav,Kv2 - Fire Abroadside,2,3,0,50
+331,fv2_full_broadside,sounds\fv2fullbroadside.wav,Fv2 - Full Broadside,2,3,0,30
+333,dc2_yeah,sounds\dc2yeah.wav,Dc2 - Yeah,2,3,0,35
+334,wv2_as_you_command,sounds\wv2asyoucommand.wav,Wv2 - As You Command,2,3,0,50
+335,dv3_affirmative,sounds\dv3affirmative.wav,Dv3 - Affirmative,2,3,0,35
+336,dp3_amen,sounds\dp3amen.wav,Dp3 - Amen,2,3,0,35
+337,fv2_lower_anchor,sounds\fv2loweranchor.wav,Fv2 - Lower Anchor,2,3,0,30
+338,dv3_awaiting_orders,sounds\dv3awaiting.wav,Dv3 - Awaiting Orders,2,3,0,35
+339,dv3_on_your_command,sounds\dv3command.wav,Dv3 - On Your Command,2,3,0,35
+340,dv3_can_i_assist,sounds\dv3caniassist.wav,Dv3 - Can I assist,2,3,0,35
+341,dc3_can_i_help,sounds\dc3canihelp.wav,Dc3 - Can I help,2,3,0,25
+342,fv2_orders_captain,sounds\fv2orderscaptain.wav,Fv2 - Orders Captain,2,3,0,30
+343,dv3_done,sounds\dv3done.wav,Dv3 - Done,2,3,0,35
+344,fv2_captain,sounds\fv2captain.wav,Fv2 - Captain,2,3,0,30
+345,dp3_glory,sounds\dp3glory.wav,Dp3 - Glory,2,3,0,35
+347,fv2_set_the_jib,sounds\fv2setjib.wav,Fv2 - Set the jib,2,3,0,30
+348,dv3_lets_go,sounds\dv3letsgo.wav,Dv3 - Let's go,2,3,0,35
+349,button_4,sounds\button4.wav,Button 4,2,3,0,50
+350,dc3_ok,sounds\dc3ok.wav,Dc3 - OK,2,3,0,25
+352,dc3_ready,sounds\dc3ready.wav,Dc3 - Ready,2,3,0,25
+353,dv3_ready_sir,sounds\dv3readysir.wav,Dv3 - Ready Sir,2,3,0,35
+354,dv3_standing_by,sounds\dv3standingby.wav,Dv3 - Standing by,2,3,0,35
+355,dv3_10_4,sounds\dv3ten4.wav,Dv3 - 10-4,2,3,0,45
+356,button_5,sounds\button5.wav,Button 5,2,3,0,50
+363,dv3_yes_commander,sounds\dv3yescommander.wav,Dv3 - Yes Commander,2,3,0,35
+364,dv3_you_got_it,sounds\dv3yougotit.wav,Dv3 - You got it,2,3,0,35
+366,dv3_sir,sounds\dv3sir.wav,Dv3 - Sir,2,3,0,35
+367,dv3_sir_yes_sir,sounds\dv3siryessir.wav,Dv3 - Sir Yes Sir,2,3,0,35
+368,club,sounds\Sclub-8.wav,club,3,6,0,50
+369,spear,sounds\Sspear.wav,spear,3,6,0,50
+370,volcano_rumble,sounds\volcano2-8.wav,Volcano Rumble,1,3,1,30
+371,volcano_shoot,sounds\volblast.wav,Volcano shoot,3,6,0,50
+372,glory,sounds\galory.wav,Glory!!,3,3,0,50
+373,fishing,sounds\Sfish-8.wav,fishing,2,3,0,50
+374,lightning,sounds\Slightning2-8.wav,Lightning,1,3,0,50
+375,rats,sounds\rats-8.wav,Rats,2,3,1,20
+376,flies,sounds\flies-8.wav,Flies,2,3,1,15
+377,rock,sounds\rock-8.wav,Rock,3,3,0,50
+378,marinemgun,sounds\mgun1-8.wav,MarineMgun,4,6,0,30
+379,a7v_mgun,sounds\A7Vcannon-8.wav,A7V Mgun,2,6,0,50
+380,car_engine,sounds\carengine3-8.wav,Car Engine,2,4,1,20
+381,dv3r_10_4,sounds\dv3ten42.wav,Dv3r - 10-4,2,3,0,45
+382,dv3r_awaiting_orders,sounds\dv3awaiting2.wav,Dv3r - Awaiting Orders,2,3,0,35
+383,dv3r_standing_by,sounds\dv3standingby2.wav,Dv3r - Standing By,2,3,0,35
+384,dv3r_affirmative,sounds\dv3affirmative2.wav,Dv3r - Affirmative,2,3,0,35
+385,unit_creation,sounds\unitcreate2-8.wav,Unit Creation,2,3,0,60
+386,generic_building_sound,sounds\BuildCreate2-8.wav,Generic Building Sound,1,3,0,50
+387,transport_load,sounds\Transport-8.wav,Transport Load,1,3,0,60
+388,transport_unload,sounds\Transport-8.wav,Transport Unload,2,3,0,60
+389,cannot_unload,sounds\runaway.wav,Cannot Unload,2,3,0,50
+390,crowd,sounds\crowd-8.wav,Crowd,2,3,1,50
+391,village,sounds\village-8.wav,Village,2,3,1,50
+392,ocean,sounds\ocean1.wav,Ocean,1,3,1,50
+393,mech_footfall2,sounds\mechwalk3-8.wav,Mech Footfall2,2,4,0,30
+394,child_select,sounds\child-8.wav,Child Select,2,3,0,50
+395,child_command,sounds\child2-8.wav,Child Command,2,3,0,50
+396,child_death,sounds\childdeath-8.wav,Child Death,2,3,0,50
+397,under_attack,sounds\dunderattack1.wav,Under Attack,1,3,0,40
+398,dv1_yes_great_one,sounds\dv1yesgreatone.wav,Dv1 - Yes great one,2,3,0,35
+399,dv1_your_orders,sounds\dv1yourorders.wav,Dv1 - Your orders,2,3,0,25
+400,fv3_attention_on_deck,sounds\fv3attentionondeck.wav,Fv3 - Attention on deck,2,3,0,30
+401,kv3_first_officer_here,sounds\kv3firstofficer.wav,kv3 - First officer here,2,3,0,50
+402,dv1_me_lord,sounds\dv1melord.wav,Dv1 - Me lord,2,3,0,35
+403,wv1_ready_my_lord,sounds\wv1readylord.wav,Wv1 - Ready my lord,2,3,0,50
+404,dv1_for_honor,sounds\dv1forhonor.wav,Dv1 - For honor,2,3,0,35
+405,dv1_swordsmen_forward,sounds\dv1swordforward.wav,Dv1 - Swordsmen forward,2,3,0,35
+406,dv2_orderscaptain,sounds\dv2orderscaptain2.wav,Dv2 - orderscaptain,2,3,0,35
+407,dv2_fire_abroadside,sounds\dv2firebroadside2.wav,Dv2 - Fire abroadside,2,3,0,35
+408,dv2_full_broadside,sounds\dv2fullbroadside2.wav,Dv2 - Full broadside,2,3,0,35
+409,fv3_our_course,sounds\fv3ourcourse.wav,Fv3 - Our course,2,3,0,30
+410,fv3_plotting_new_course,sounds\fv3plottingnew.wav,Fv3 - Plotting new course,2,3,0,30
+411,fv3_setting_course,sounds\fv3settingcourse.wav,Fv3 - Setting course,2,3,0,30
+412,dv3_to_battle,sounds\dv3tobattle.wav,Dv3 - to battle,2,3,0,35
+413,fv3_load_the_guns,sounds\fv3loadguns.wav,Fv3 - Load the guns,2,3,0,30
+414,dv1_for_the_throne,sounds\dv1forthethrone.wav,Dv1 - for the throne,2,3,0,35
+415,dv1_archers,sounds\dv1archersforward.wav,Dv1 - Archers,2,3,0,35
+416,fv3_where_to_sir,sounds\fv3wheretosir.wav,Fv3 - Where to sir,2,3,0,30
+427,wind,sounds\wind-8.wav,Wind,1,1,0,50
+428,rooster,sounds\rooster-8.wav,Rooster,1,1,0,50
+429,owl,sounds\owl-8.wav,Owl,1,1,0,50
+430,crows,sounds\crows-8.wav,crows,1,1,0,50
+431,bird,sounds\bird-8.wav,bird,1,1,0,50
+432,bird2,sounds\bird2-8.wav,bird2,1,1,0,50
+434,wolf_growl,sounds\growl-8.wav,wolf growl,3,3,0,50
+435,wolf_death,sounds\wolfdeath-8.wav,wolf death,3,3,0,55
+436,chicken_death,sounds\chicken-8.wav,chicken death,3,3,0,50
+437,giraffe_death,sounds\giraffe-8.wav,Giraffe Death,3,3,0,50
+438,nuke_bomb,sounds\nukebomb-8.wav,Nuke Bomb,2,3,0,100
+439,trumpets,sounds\fanfare-8.wav,Trumpets,1,3,0,70
+440,rain,sounds\rain-8.wav,Rain,1,3,1,15
+441,thunder_storm,sounds\lightning2-8.wav,Thunder Storm,1,3,0,30
+442,thunder_2,sounds\thunder-8.wav,Thunder 2,1,3,0,30
+443,horse_breath,sounds\horsebreath-8.wav,Horse Breath,1,3,0,10
+444,horse_breath_2,sounds\horsebreath2-8.wav,Horse Breath 2,1,3,0,20
+445,dog_bark,sounds\dogbark-8.wav,Dog Bark,2,3,0,30
+447,wolf_howl,sounds\wolfhowl-8.wav,Wolf Howl,1,3,0,25
+448,female_scream,sounds\femscream-8.wav,Female Scream,3,3,0,50
+452,dv0_napoleon_1,sounds\dnapoleon1.wav,Dv0 - Napoleon 1,2,3,0,35
+453,dv0_napoleon_3,sounds\dnapoleon3.wav,Dv0 - Napoleon 3,2,3,0,35
+454,dv0_napoleon_4,sounds\dnapoleon4.wav,Dv0 - Napoleon 4,2,3,0,35
+455,dv0_patton_1,sounds\dpatton1.wav,Dv0 - Patton 1,2,3,0,35
+456,dv0_patton_2,sounds\dpatton2.wav,Dv0 - Patton 2,2,3,0,35
+457,dv0_patton_3,sounds\dpatton3.wav,Dv0 - Patton 3,2,3,0,35
+458,dv0_patton_4,sounds\dpatton4.wav,Dv0 - Patton 4,2,3,0,35
+459,button_3,sounds\button3.wav,Button 3,2,3,0,50
+460,dv3_bridge_here,sounds\dv3bridgehere.wav,Dv3 - Bridge Here,2,3,0,35
+461,fv3_bridge_here,sounds\fv3bridgehere.wav,Fv3 - Bridge Here,2,3,0,30
+462,dv3_officer_here,sounds\dv3firstofficer.wav,Dv3 - Officer Here,2,3,0,35
+463,dv3_our_course,sounds\dv3ourcourse.wav,Dv3 - Our Course,2,3,0,35
+464,dv3_plotting_course,sounds\dv3plottingnew.wav,Dv3 - Plotting Course,2,3,0,35
+466,dv3_set_course,sounds\dv3settingcourse.wav,Dv3 - Set Course,2,3,0,35
+467,dv3_attention_on_deck,sounds\dv3attentionondeck.wav,Dv3 - Attention on deck,2,3,0,35
+468,dv3_where_to_sir,sounds\dv3wheretosir.wav,Dv3 - Where to sir,2,3,0,35
+469,boat_create,sounds\boatbell-8.wav,Boat Create,4,3,0,35
+470,siege_create,sounds\siegecreate-8.wav,Siege Create,4,3,0,65
+471,siege_select,sounds\siegeselect-8.wav,Siege Select,2,3,0,60
+475,dv3r_ready_sir,sounds\dv3readysir2.wav,Dv3r - Ready Sir,2,3,0,35
+477,dv3r_yes_commander,sounds\dv3yescommander2.wav,Dv3r - Yes Commander,2,3,0,30
+478,dv3_of_course_sir,sounds\dv3ofcoursesir.wav,Dv3 - Of Course Sir,2,3,0,35
+479,dv3r_sir_yes_sir,sounds\dv3siryessir2.wav,Dv3r - Sir Yes Sir,2,3,0,35
+480,convert,sounds\priestcreate-8.wav,Convert,2,3,1,30
+481,gate,sounds\gate-8.wav,Gate,2,3,0,65
+482,day_ambience,sounds\dayambient-8.wav,Day Ambience,1,3,1,15
+483,priest_create,sounds\Convert2-8.wav,Priest Create,2,3,0,35
+484,explosion_3,sounds\explosion4-8.wav,Explosion 3,2,5,0,50
+485,air_explosion,sounds\explosion6-8.wav,Air Explosion,2,3,0,50
+486,chopping_wood_2,sounds\woodchop-8.wav,Chopping wood 2,3,2,0,25
+487,mining2,sounds\mining2-8.wav,Mining2,3,2,0,12
+488,build_2,sounds\build-8.wav,Build 2,3,2,0,20
+489,heli_nano,sounds\nanoheli-8.wav,Heli - Nano,2,3,1,20
+490,mech_voice_1,sounds\mechvoice1.wav,Mech Voice 1,2,3,0,50
+491,mech_voice_2,sounds\mechvoice2.wav,Mech Voice 2,2,3,0,65
+492,mech_voice_3,sounds\mechvoice3.wav,Mech Voice 3,2,3,0,50
+493,mech_voice_4,sounds\mechvoice4.wav,Mech Voice 4,2,3,0,50
+494,mech_voice_5,sounds\mechvoice5.wav,Mech Voice 5,2,3,0,50
+495,mech_voice_6,sounds\mechvoice6.wav,Mech Voice 6,2,3,0,50
+496,mech_voice_7,sounds\mechvoice7.wav,Mech Voice 7,2,3,0,50
+497,mech_voice_8,sounds\mechvoice8.wav,Mech Voice 8,2,3,0,50
+498,mech_voice_9,sounds\mechvoice9.wav,Mech Voice 9,2,3,0,50
+499,hurricane,sounds\Churricane.wav,Hurricane,2,3,1,30
+500,tc_create,sounds\buildingselect-8.wav,TC Create,1,3,0,50
+501,dock_create,sounds\Dock-8.wav,Dock Create,1,3,0,50
+502,naval_yard_create,sounds\Naval-8.wav,Naval Yard Create,1,3,0,50
+503,siege_fact_create,sounds\Siege-8.wav,Siege Fact. Create,1,3,0,50
+504,mech_fact_create,sounds\Mech2-8.wav,Mech Fact. Create,1,3,0,60
+505,hospital_create,sounds\Hospital-8.wav,Hospital Create,1,3,0,50
+506,citizen_create,sounds\Citizen-8.wav,Citizen Create,1,3,0,45
+507,stable_create,sounds\Stable-8.wav,Stable Create,1,3,0,60
+508,temple_create,sounds\Temple-8.wav,Temple Create,1,3,0,50
+509,barracks_create,sounds\Barracks2-8.wav,Barracks Create,1,3,0,50
+510,archery_range_create,sounds\Archery-8.wav,Archery Range Create,1,3,0,50
+511,university_create,sounds\University2-8.wav,University Create,1,3,0,50
+512,airport_1,sounds\Airport1.wav,Airport 1,1,3,0,50
+513,whip,sounds\whip-8.wav,Whip,2,3,0,50
+514,tank_fact_create,sounds\Stankcreate.wav,Tank Fact. Create,1,3,0,50
+515,pulse_cannon,sounds\PulseCannon-8.wav,Pulse Cannon,2,3,0,35
+516,teleport,sounds\teleport-8.wav,Teleport,2,3,0,50
+517,resonator,sounds\resonator-8.wav,Resonator,1,3,1,50
+518,shield_battery,sounds\shield2-8.wav,Shield Battery,2,3,0,50
+519,button_1,sounds\button1.wav,Button 1,2,3,0,50
+520,button_2,sounds\button2.wav,Button 2,2,3,0,50
+522,artillery_cannon,sounds\cannon2-8.wav,Artillery cannon,3,6,0,50
+523,rally_point_sound,sounds\rally.wav,Rally point sound,2,3,0,50
+524,dv0_achilles_1,sounds\dachilles1.wav,Dv0 - Achilles 1,2,3,0,35
+525,dv0_achilles_2,sounds\dachilles2.wav,Dv0 - Achilles 2,2,3,0,35
+526,dv0_achilles_3,sounds\dachilles3.wav,Dv0 - Achilles 3,2,3,0,35
+527,dv0_achilles_4,sounds\dachilles4.wav,Dv0 - Achilles 4,2,3,0,35
+528,dv0_alexander_1,sounds\dalexander1.wav,Dv0 - Alexander 1,2,3,0,35
+529,dv0_alexander_2,sounds\dalexander2.wav,Dv0 - Alexander 2,2,3,0,35
+530,dv0_alexander_3,sounds\dalexander3.wav,Dv0 - Alexander 3,2,3,0,35
+531,dv0_alexander_4,sounds\dalexander4.wav,Dv0 - Alexander 4,2,3,0,35
+532,dv0_red_baron_1,sounds\dbaron1.wav,Dv0 - Red Baron 1,2,3,0,35
+533,dv0_red_baron_2,sounds\dbaron2.wav,Dv0 - Red Baron 2,2,3,0,35
+534,dv0_red_baron_3,sounds\dbaron3.wav,Dv0 - Red Baron 3,2,3,0,35
+535,dv0_red_baron_4,sounds\dbaron4.wav,Dv0 - Red Baron 4,2,3,0,35
+536,dv0_red_baron_5,sounds\dbaron5.wav,Dv0 - Red Baron 5,2,3,0,35
+537,dv0_bismarck_1,sounds\dbismarck1.wav,Dv0 - Bismarck 1,2,3,0,35
+538,dv0_bismarck_2,sounds\dbismarck2.wav,Dv0 - Bismarck 2,2,3,0,35
+539,dv0_bismarck_3,sounds\dbismarck3.wav,Dv0 - Bismarck 3,2,3,0,35
+540,dv0_bismarck_4,sounds\dbismarck4.wav,Dv0 - Bismarck 4,2,3,0,35
+541,dv0_black_prince_1,sounds\dblackprince1.wav,Dv0 - Black Prince 1,2,3,0,35
+542,dv0_black_prince_2,sounds\dblackprince2.wav,Dv0 - Black Prince 2,2,3,0,35
+543,dv0_black_prince_3,sounds\dblackprince3.wav,Dv0 - Black Prince 3,2,3,0,35
+544,dv0_black_prince_4,sounds\dblackprince4.wav,Dv0 - Black Prince 4,2,3,0,35
+545,kv0_black_robe_1,sounds\kblackrobe1.wav,Kv0 - Black Robe 1,2,3,0,50
+546,kv0_black_robe_2,sounds\kblackrobe2.wav,Kv0 - Black Robe 2,2,3,0,50
+547,kv0_black_robe_3,sounds\kblackrobe3.wav,Kv0 - Black Robe 3,2,3,0,50
+548,kv0_black_robe_4,sounds\kblackrobe4.wav,Kv0 - Black Robe 4,2,3,0,50
+549,kv0_british_inf_1,sounds\kbritinf1.wav,Kv0 - British Inf. 1,2,3,0,50
+550,kv0_british_inf_2,sounds\kbritinf2.wav,Kv0 - British Inf. 2,2,3,0,50
+551,kv0_british_inf_3,sounds\kbritinf3.wav,Kv0 - British Inf. 3,2,3,0,50
+552,kv0_british_inf_4,sounds\kbritinf4.wav,Kv0 - British Inf. 4,2,3,0,50
+553,dc1_yes_me_lord,sounds\dc1yesmelord.wav,Dc1 - Yes me lord,2,3,0,25
+554,dc2_yes,sounds\dc2yes.wav,Dc2 - Yes,2,3,0,35
+555,dc2_ok,sounds\dc2ok.wav,Dc2 - OK,2,3,0,35
+556,dc3_right_away,sounds\dc3rightaway.wav,Dc3 - Right Away,2,3,0,25
+557,dv0_charlemagne_1,sounds\dcharle1.wav,Dv0 - Charlemagne 1,2,3,0,35
+558,dv0_charlemagne_2,sounds\dcharle2.wav,Dv0 - Charlemagne 2,2,3,0,35
+559,dv0_charlemagne_3,sounds\dcharle3.wav,Dv0 - Charlemagne 3,2,3,0,35
+560,dv0_el_cid_1,sounds\delcid1.wav,Dv0 - El Cid 1,2,3,0,35
+561,dv0_el_cid_2,sounds\delcid2.wav,Dv0 - El Cid 2,2,3,0,35
+562,dv0_el_cid_3,sounds\delcid3.wav,Dv0 - El Cid 3,2,3,0,35
+563,dv0_el_cid_4,sounds\delcid4.wav,Dv0 - El Cid 4,2,3,0,35
+564,dv0_german_inf_1,sounds\dgerinf1.wav,Dv0 - German Inf 1,2,3,0,37
+565,dv0_german_inf_2,sounds\dgerinf2.wav,Dv0 - German Inf 2,2,3,0,37
+566,dv0_german_inf_3,sounds\dgerinf3.wav,Dv0 - German Inf 3,2,3,0,37
+567,dv0_german_inf_4,sounds\dgerinf4.wav,Dv0 - German Inf 4,2,3,0,37
+568,dv0_gilgamesh_1,sounds\dgilga1.wav,Dv0 - Gilgamesh 1,2,3,0,35
+569,dv0_gilgamesh_2,sounds\dgilga2.wav,Dv0 - Gilgamesh 2,2,3,0,35
+570,dv0_gilgamesh_3,sounds\dgilga3.wav,Dv0 - Gilgamesh 3,2,3,0,35
+571,dv0_gilgamesh_4,sounds\dgilga4.wav,Dv0 - Gilgamesh 4,2,3,0,35
+572,dv0_hannibal_1,sounds\dhannibal1.wav,Dv0 - Hannibal 1,2,3,0,35
+573,dv0_hannibal_2,sounds\dhannibal2.wav,Dv0 - Hannibal 2,2,3,0,35
+574,dv0_hannibal_3,sounds\dhannibal3.wav,Dv0 - Hannibal 3,2,3,0,35
+575,dv0_hannibal_4,sounds\dhannibal4.wav,Dv0 - Hannibal 4,2,3,0,35
+576,fv0_hauptmann_1,sounds\fhauptmann1.wav,Fv0 - Hauptmann 1,2,3,0,30
+577,fv0_hauptmann_2,sounds\fhauptmann2.wav,Fv0 - Hauptmann 2,2,3,0,30
+578,fv0_hauptmann_3,sounds\fhauptmann3.wav,Fv0 - Hauptmann 3,2,3,0,30
+579,fv0_hauptmann_4,sounds\fhauptmann4.wav,Fv0 - Hauptmann 4,2,3,0,30
+580,dv0_hector_1,sounds\dhector1.wav,Dv0 - Hector 1,2,3,0,35
+581,dv0_hector_2,sounds\dhector2.wav,Dv0 - Hector 2,2,3,0,35
+582,dv0_hector_3,sounds\dhector3.wav,Dv0 - Hector 3,2,3,0,35
+583,dv0_hector_4,sounds\dhector4.wav,Dv0 - Hector 4,2,3,0,35
+584,dv0_henry_1,sounds\dhenry1.wav,Dv0 - Henry 1,2,3,0,35
+585,dv0_henry_2,sounds\dhenry2.wav,Dv0 - Henry 2,2,3,0,35
+586,dv0_henry_3,sounds\dhenry3.wav,Dv0 - Henry 3,2,3,0,35
+587,dv0_henry_4,sounds\dhenry4.wav,Dv0 - Henry 4,2,3,0,35
+588,wv0_golden_hind_1,sounds\whind1.wav,Wv0 - Golden Hind 1,2,3,0,50
+589,wv0_golden_hind_2,sounds\whind2.wav,Wv0 - Golden Hind 2,2,3,0,50
+590,wv0_golden_hind_3,sounds\whind3.wav,Wv0 - Golden Hind 3,2,3,0,50
+591,wv0_golden_hind_4,sounds\whind4.wav,Wv0 - Golden Hind 4,2,3,0,50
+592,dv0_homer_1,sounds\dhomer1.wav,Dv0 - Homer 1,2,3,0,35
+593,dv0_homer_2,sounds\dhomer2.wav,Dv0 - Homer 2,2,3,0,35
+594,dv0_homer_3,sounds\dhomer3.wav,Dv0 - Homer 3,2,3,0,35
+595,dv0_homer_4,sounds\dhomer4.wav,Dv0 - Homer 4,2,3,0,35
+596,wv0_housecarl_1,sounds\whousecarl1.wav,Wv0 - Housecarl 1,2,3,0,50
+597,wv0_housecarl_2,sounds\whousecarl2.wav,Wv0 - Housecarl 2,2,3,0,50
+598,wv0_housecarl_3,sounds\whousecarl3.wav,Wv0 - Housecarl 3,2,3,0,50
+599,wv0_housecarl_4,sounds\whousecarl4.wav,Wv0 - Housecarl 4,2,3,0,50
+600,dv0_incan_1,sounds\dincan1.wav,Dv0 - Incan 1,2,3,0,35
+601,dv0_incan_2,sounds\dincan2.wav,Dv0 - Incan 2,2,3,0,35
+602,dv0_incan_3,sounds\dincan3.wav,Dv0 - Incan 3,2,3,0,35
+603,dv0_incan_4,sounds\dincan4.wav,Dv0 - Incan 4,2,3,0,35
+604,kv0_jester_1,sounds\kjester1.wav,Kv0 - Jester 1,2,3,0,45
+605,kv0_jester_2,sounds\kjester2.wav,Kv0 - Jester 2,2,3,0,45
+606,kv0_jester_3,sounds\kjester3.wav,Kv0 - Jester 3,2,3,0,45
+607,kv0_jester_4,sounds\kjester4.wav,Kv0 - Jester 4,2,3,0,45
+608,fv0_moorish_cav_1,sounds\fmorcav1.wav,Fv0 - Moorish Cav. 1,2,3,0,35
+609,fv0_moorish_cav_2,sounds\fmorcav2.wav,Fv0 - Moorish Cav. 2,2,3,0,35
+610,fv0_moorish_cav_3,sounds\fmorcav3.wav,Fv0 - Moorish Cav. 3,2,3,0,35
+611,fv0_moorish_cav_4,sounds\fmorcav4.wav,Fv0 - Moorish Cav. 4,2,3,0,35
+612,dv0_napoleon_2,sounds\dnapoleon2.wav,Dv0 - Napoleon 2,2,3,0,35
+613,dv0_oliver_1,sounds\doliver1.wav,Dv0 - Oliver 1,2,3,0,35
+614,dv0_oliver_2,sounds\doliver2.wav,Dv0 - Oliver 2,2,3,0,35
+615,dv0_oliver_3,sounds\doliver3.wav,Dv0 - Oliver 3,2,3,0,35
+616,dv0_oliver_4,sounds\doliver4.wav,Dv0 - Oliver 4,2,3,0,35
+617,dp1_yes_my_liege,sounds\dp1yesmyliege.wav,Dp1 - Yes my liege,2,3,0,35
+618,dp1_help_you,sounds\dp1helpyou.wav,Dp1 - Help you,2,3,0,35
+619,dp2_may_i_help,sounds\dp2mayihelp.wav,Dp2 - May I help,2,3,0,35
+620,dp3_yes,sounds\dp3yes.wav,Dp3 - Yes,2,3,0,35
+621,kv0_persian_cav_1,sounds\kpercav1.wav,Kv0 - Persian Cav. 1,2,3,0,50
+622,kv0_persian_cav_2,sounds\kpercav2.wav,Kv0 - Persian Cav. 2,2,3,0,50
+623,kv0_persian_cav_3,sounds\kpercav3.wav,Kv0 - Persian Cav. 3,2,3,0,50
+624,kv0_persian_cav_4,sounds\kpercav4.wav,Kv0 - Persian Cav. 4,2,3,0,50
+625,dv0_pericles_1,sounds\dpericles1.wav,Dv0 - Pericles 1,2,3,0,35
+626,dv0_pericles_2,sounds\dpericles2.wav,Dv0 - Pericles 2,2,3,0,35
+627,dv0_pericles_3,sounds\dpericles3.wav,Dv0 - Pericles 3,2,3,0,35
+628,dv0_pericles_4,sounds\dpericles4.wav,Dv0 - Pericles 4,2,3,0,35
+629,dv0_pope_1,sounds\dpope1.wav,Dv0 - Pope 1,2,3,0,35
+630,dv0_pope_2,sounds\dpope2.wav,Dv0 - Pope 2,2,3,0,35
+631,dv0_pope_3,sounds\dpope3.wav,Dv0 - Pope 3,2,3,0,35
+632,dv0_pope_4,sounds\dpope4.wav,Dv0 - Pope 4,2,3,0,35
+633,dpr1_yes_sire,sounds\dpr1yessire.wav,Dpr1 - Yes Sire,2,3,0,35
+634,dpr1_forsee,sounds\dpr1forsee.wav,Dpr1 - Forsee,2,3,0,35
+635,dpr1_the_end,sounds\dpr1theend.wav,Dpr1 - The End,2,3,0,35
+636,dpr1_yes,sounds\dpr1yes.wav,Dpr1 - Yes,2,3,0,35
+637,dpr1_deus_walt,sounds\dpr1deuswalt2.wav,Dpr1 - Deus Walt,2,3,0,45
+638,dpr2_be_done,sounds\dpr2bedone.wav,Dpr2 - Be done,2,3,0,35
+639,dpr2_deus_ab,sounds\dpr2deus2.wav,Dpr2 - Deus Ab.,2,3,0,45
+640,dpr2_of_course,sounds\dpr2ofcourse.wav,Dpr2 - Of Course,2,3,0,35
+641,dpr2_yes,sounds\dpr2yes.wav,Dpr2 - Yes,2,3,0,35
+642,dpr2_your_bidding,sounds\dpr2yourbidding.wav,Dpr2 - Your bidding,2,3,0,35
+643,dpr3_can_i_help,sounds\dpr3canihelp.wav,Dpr3 - Can I help,2,3,0,35
+644,dpr3_deus_walt,sounds\dpr3deus2.wav,Dpr3 - Deus Walt,2,3,0,45
+645,dpr3_require,sounds\dpr3require.wav,Dpr3 - Require,2,3,0,35
+646,dpr3_shall_be_done,sounds\dpr3shallbedone.wav,Dpr3 - Shall be done,2,3,0,35
+647,dpr3_very_good,sounds\dpr3verygood.wav,Dpr3 - Very good,2,3,0,35
+648,dv0_richard_1,sounds\drichard1.wav,Dv0 - Richard 1,2,3,0,35
+650,dv0_richard_3,sounds\drichard3.wav,Dv0 - Richard 3,2,3,0,35
+651,dv0_richard_4,sounds\drichard4.wav,Dv0 - Richard 4,2,3,0,35
+656,dv0_sargon_1,sounds\dsargon1.wav,Dv0 - Sargon 1,2,3,0,35
+657,dv0_sargon_2,sounds\dsargon2.wav,Dv0 - Sargon 2,2,3,0,35
+658,dv0_sargon_3,sounds\dsargon3.wav,Dv0 - Sargon 3,2,3,0,35
+659,dv0_sargon_4,sounds\dsargon4.wav,Dv0 - Sargon 4,2,3,0,35
+661,kv0_spanish_cav_1,sounds\kspacav1.wav,Kv0 - Spanish Cav. 1,2,3,0,50
+663,kv0_spanish_cav_3,sounds\kspacav3.wav,Kv0 - Spanish Cav. 3,2,3,0,50
+664,kv0_spanish_cav_4,sounds\kspacav4.wav,Kv0 - Spanish Cav. 4,2,3,0,50
+666,dv1_all_hands_on_deck,sounds\dv1allhands2.wav,Dv1 - All hands on deck,2,3,0,35
+667,dv1_ahoy,sounds\dv1ahoy.wav,Dv1 - Ahoy,2,3,0,35
+668,dv1_man_the_oars,sounds\dv1manoars2.wav,Dv1 - Man the oars,2,3,0,35
+669,dv1_hoist_the_sails,sounds\dv1hoistsail2.wav,Dv1 - Hoist the sails,2,3,0,35
+670,dv1_cavalry_forward,sounds\dv1cavalryforward.wav,Dv1 - Cavalry Forward,2,3,0,35
+671,dv1_ok_my_lord,sounds\dv1okmylord.wav,Dv1 - OK my lord,2,3,0,35
+672,dv1_pikemen_forward,sounds\dv1pikemenforward.wav,Dv1 - Pikemen Forward,2,3,0,35
+673,dv1_sink_the_lubbers,sounds\dv1sink2.wav,Dv1 - Sink the lubbers,2,3,0,35
+674,dv1_where_shall_i_go,sounds\dv1whereigo.wav,Dv1 - Where shall I go,2,3,0,35
+675,dv1_set_full_sail,sounds\dv1setfullsail2.wav,Dv1 - Set full sail,2,3,0,35
+676,dv2_for_the_city,sounds\dv2forthecity.wav,Dv2 - For the city,2,3,0,35
+677,dp2_as_you_wish,sounds\dv2asyouwish.wav,Dp2 - As you wish,2,3,0,35
+679,dv2_captain,sounds\dv2captain.wav,Dv2 - Captain,2,3,0,35
+681,dv2_grunt_2,sounds\dv2grunt2.wav,Dv2 - Grunt 2,2,3,0,35
+682,dv2_grunt_3,sounds\dv2grunt3.wav,Dv2 - Grunt 3,2,3,0,35
+683,dv2_grunt_4,sounds\dv2grunt4.wav,Dv2 - Grunt 4,2,3,0,35
+684,dv2_grunt_5,sounds\dv2grunt5.wav,Dv2 - Grunt 5,2,3,0,30
+685,dv2_grunt_6,sounds\dv2grunt6.wav,Dv2 - Grunt 6,2,3,0,35
+687,dv2_grunt_8,sounds\dv2grunt8.wav,Dv2 - Grunt 8,2,3,0,35
+688,dv2_raise_anchor,sounds\dv2raiseachor2.wav,Dv2 - Raise Anchor,2,3,0,35
+689,dv2_helmsmen,sounds\dv2helmsmen2.wav,Dv2 - Helmsmen,2,3,0,35
+691,dv2_lower_anchor,sounds\dv2lowerachor2.wav,Dv2 - Lower Anchor,2,3,0,35
+692,dv2_your_command,sounds\dv2yourcommand.wav,Dv2 - Your command,2,3,0,45
+693,dv2_ready_the_cannons,sounds\dv2readycannons2.wav,Dv2 - Ready the cannons,2,3,0,35
+695,dv2_serve_you,sounds\dv2serveyou.wav,Dv2 - Serve You,2,3,0,35
+696,wv2_so_be_it,sounds\wv2sobeit.wav,Wv2 - So Be it,2,3,0,50
+697,dv2_set_the_jib,sounds\dv2setjib2.wav,Dv2 - Set the jib,2,3,0,35
+699,dv2_surely,sounds\dv2surely.wav,Dv2 - Surely,2,3,0,35
+700,dv2_thy_will_be_done,sounds\dv2thywill.wav,Dv2 - Thy will be done,2,3,0,35
+701,dv2_ready,sounds\dv2ready.wav,Dv2 - Ready,2,3,0,35
+702,dv3r_on_your_command,sounds\dv3command2.wav,Dv3r - On your command,2,3,0,35
+704,dv3_fallout,sounds\dv3fallout.wav,Dv3 - Fallout,2,3,0,35
+705,dv3r_go_ahead,sounds\dv3goahead2.wav,Dv3r - Go ahead,2,3,0,35
+706,dv3r_lets_go,sounds\dv3letsgo2.wav,Dv3r - Let's go,2,3,0,35
+708,dv3_prepare_to_die,sounds\dv3prepare.wav,Dv3 - Prepare to die,2,3,0,35
+709,dv3r_roger,sounds\dv3roger.wav,Dv3r - Roger,2,3,0,35
+710,dv3r_sir,sounds\dv3sir2.wav,Dv3r - Sir,2,3,0,35
+712,dv3_yes_sir,sounds\dv3yessir.wav,Dv3 - Yes Sir,2,3,0,35
+713,dv3r_yes_sir,sounds\dv3yessir2.wav,Dv3r - Yes Sir,2,3,0,30
+714,dv0_william_1,sounds\dwilliam1.wav,Dv0 - William 1,2,3,0,35
+715,dv0_william_2,sounds\dwilliam2.wav,Dv0 - William 2,2,3,0,35
+716,dv0_william_3,sounds\dwilliam3.wav,Dv0 - William 3,2,3,0,35
+717,dv0_william_4,sounds\dwilliam4.wav,Dv0 - William 4,2,3,0,35
+718,fv0_grigor_1,sounds\fgrigor1.wav,Fv0 - Grigor 1,2,3,0,30
+719,fv0_grigor_2,sounds\fgrigor2.wav,Fv0 - Grigor 2,2,3,0,30
+720,fv0_grigor_3,sounds\fgrigor3.wav,Fv0 - Grigor 3,2,3,0,30
+721,fv0_grigor_4,sounds\fgrigor4.wav,Fv0 - Grigor 4,2,3,0,30
+722,nc1_as_you_wish,sounds\nc1asyouwish.wav,Nc1 - As you wish,2,3,0,35
+723,nc1_certainly,sounds\nc1certainly.wav,Nc1 - Certainly,2,3,0,35
+724,nc1_yes,sounds\nc1yes.wav,Nc1 - Yes,2,3,0,35
+725,nc1_yes_me_lord,sounds\nc1yesmelord.wav,Nc1 - Yes me lord,2,3,0,35
+726,nc2_yes,sounds\nc2yes.wav,Nc2 - Yes,2,3,0,35
+727,nc2_right_away,sounds\nc2rightaway.wav,Nc2 - Right Away,2,3,0,35
+728,nc2_yeah,sounds\nc2yeah.wav,Nc2 - Yeah,2,3,0,35
+729,nc2_ok,sounds\nc2ok.wav,Nc2 - OK,2,3,0,35
+730,nc3_right_away,sounds\nc3rightaway.wav,Nc3 - Right Away,2,3,0,35
+731,nc3_ok,sounds\nc3ok.wav,Nc3 - OK,2,3,0,35
+732,nc3_ready,sounds\nc3ready.wav,Nc3 - Ready,2,3,0,35
+733,nc3_can_i_help,sounds\nc3canihelp.wav,Nc3 - Can I help,2,3,0,35
+734,nv0_elizabeth_1,sounds\nelizabeth1.wav,Nv0 - Elizabeth 1,2,3,0,35
+735,nv0_elizabeth_2,sounds\nelizabeth2.wav,Nv0 - Elizabeth 2,2,3,0,35
+736,nv0_elizabeth_3,sounds\nelizabeth3.wav,Nv0 - Elizabeth 3,2,3,0,35
+737,nv0_elizabeth_4,sounds\nelizabeth4.wav,Nv0 - Elizabeth 4,2,3,0,35
+738,nv1_grunt_1,sounds\ngrunt1.wav,Nv1 - Grunt 1,2,3,0,35
+739,nv1_grunt_2,sounds\ngrunt2.wav,Nv1 - Grunt 2,2,3,0,35
+740,nv0_isabella_1,sounds\nisabella1.wav,Nv0 - Isabella 1,2,3,0,35
+741,nv0_isabella_2,sounds\nisabella2.wav,Nv0 - Isabella 2,2,3,0,35
+742,nv0_isabella_3,sounds\nisabella3.wav,Nv0 - Isabella 3,2,3,0,35
+743,nv0_isabella_4,sounds\nisabella4.wav,Nv0 - Isabella 4,2,3,0,35
+744,nm1_coming,sounds\nm1coming.wav,Nm1 - Coming,2,3,0,35
+745,nm1_can_i_help,sounds\nm1help.wav,Nm1 - Can I help,2,3,0,35
+746,nm1_on_my_way,sounds\nm1onmyway.wav,Nm1 - On my way,2,3,0,35
+747,nm1_can_i_assist,sounds\nm1assist.wav,Nm1 - Can I assist,2,3,0,35
+748,nm2_be_right_there,sounds\nm2rightthere.wav,Nm2 - Be right there,2,3,0,35
+749,nm2_whos_hurt,sounds\nm2hurt.wav,Nm2 - Who's hurt,2,3,0,35
+750,nm2_what_need,sounds\nm2need.wav,Nm2 - What need,2,3,0,35
+751,nm2_im_on_it,sounds\nm2onit.wav,Nm2 - I'm on it,2,3,0,35
+752,nv3_yes_sir,sounds\nv3yessir.wav,Nv3 - Yes Sir,2,3,0,35
+753,nv3_affirmative,sounds\nv3affirmative.wav,Nv3 - Affirmative,2,3,0,35
+754,nv3_awaiting_orders,sounds\nv3awaitingorders.wav,Nv3 - Awaiting Orders,2,3,0,35
+755,nv3_go_ahead,sounds\nv3goahead.wav,Nv3 - Go Ahead,2,3,0,35
+756,nv3_ready_sir,sounds\nv3readysir.wav,Nv3 - Ready Sir,2,3,0,35
+757,nv3_roger,sounds\nv3roger.wav,Nv3 - Roger,2,3,0,35
+758,nv3_sir,sounds\nv3sir.wav,Nv3 - Sir,2,3,0,35
+759,nv3_sir_yes_sir,sounds\nv3siryessir.wav,Nv3 - Sir yes sir,2,3,0,35
+760,nv3_standing_by,sounds\nv3standingby.wav,Nv3 - Standing by,2,3,0,35
+761,nv3_ten_4,sounds\nv3ten4.wav,Nv3 - Ten 4,2,3,0,35
+762,nv3_yes_commander,sounds\nv3yescommander.wav,Nv3 - Yes Commander,2,3,0,35
+763,nv0_scream_1,sounds\nscream1.wav,Nv0 - Scream 1,2,3,0,40
+764,wv1_sink_the_lubbers,sounds\wv1sink.wav,Wv1 - Sink the lubbers,2,3,0,50
+765,wv1_all_hands_on_deck,sounds\wv1allhands.wav,Wv1 - All hands on deck,2,3,0,50
+766,wv1_aye_aye,sounds\wv1ayeaye.wav,Wv1 - Aye Aye,2,3,0,50
+768,kv1_set_full_sail,sounds\kv1setfullsail.wav,Kv1 - Set full sail,2,3,0,50
+769,wv1_ahoy,sounds\wv1ahoy.wav,Wv1 - Ahoy,2,3,0,50
+770,wv2_set_the_jib,sounds\wv2setthejib.wav,Wv2 - Set the jib,2,3,0,50
+771,wv2_fire_abroadside,sounds\wv2fireabroadside.wav,Wv2 - Fire Abroadside,2,3,0,50
+772,kv2_full_broadside,sounds\kv2fullbroadside.wav,Kv2 - Full Broadside,2,3,0,50
+773,wv2_lower_anchor,sounds\wv2loweranchor.wav,Wv2 - Lower anchor,2,3,0,50
+774,wv2_orders_captain,sounds\wv2orderscaptain.wav,Wv2 - Orders Captain,2,3,0,50
+775,wv2_raise_anchor,sounds\wv2raiseanchor.wav,Wv2 - Raise Anchor,2,3,0,50
+776,wv2_captain,sounds\wv2captain.wav,Wv2 - Captain,2,3,0,50
+777,wv3_where_to_sir,sounds\wv3wheretosir.wav,Wv3 - Where to sir,2,3,0,50
+778,wv3_first_officer_here,sounds\wv3firstofficer.wav,Wv3 - First Officer here,2,3,0,50
+779,kv3_our_course_sir,sounds\kv3ourcourse.wav,Kv3 - Our Course sir,2,3,0,50
+780,wv3_plotting_new_course,sounds\wv3plottingnew.wav,Wv3 - Plotting New course,2,3,0,50
+781,wv3_setting_course,sounds\wv3settingcourse.wav,Wv3 - Setting Course,2,3,0,50
+782,wv3_bridge_here,sounds\wv3bridgehere.wav,Wv3 - Bridge Here,2,3,0,50
+783,kv1_aye_aye,sounds\kv1ayeaye.wav,Kv1 - Aye Aye,2,3,0,50
+784,kv1_all_hands_on_deck,sounds\kv1allhands.wav,Kv1 - All hands on deck,2,3,0,50
+785,kv1_ahoy,sounds\kv1ahoy.wav,Kv1 - Ahoy,2,3,0,50
+786,kv2_captain,sounds\kv2captain.wav,Kv2 - Captain,2,3,0,50
+787,kv2_order_captain,sounds\kv2orderscaptain.wav,Kv2 - Order Captain,2,3,0,50
+788,kv3_setting_course,sounds\kv3settingcourse.wav,Kv3 - Setting course,2,3,0,45
+789,kv3_plotting_course,sounds\kv3plottingnew.wav,Kv3 - Plotting course,2,3,0,50
+790,kv3r_by_your_command,sounds\kv3yourcommand2.wav,Kv3r - By your command,2,3,0,45
+791,kv3r_awaiting_orders,sounds\kv3awaitingorders2.wav,Kv3r - Awaiting Orders,2,3,0,45
+792,kv3r_go_ahead,sounds\kv3goahead.wav,Kv3r - Go Ahead,2,3,0,45
+793,kv3r_ready_sir,sounds\kv3readysir2.wav,Kv3r - Ready Sir,2,3,0,45
+794,kv3r_sir,sounds\kv3sir2.wav,Kv3r - Sir,2,3,0,45
+795,kv3r_sir_yes_sir,sounds\kv3siryessir2.wav,Kv3r - Sir Yes Sir,2,3,0,45
+796,kv3r_standing_by,sounds\kv3standingby.wav,Kv3r - Standing By,2,3,0,45
+797,kv3r_ten_4,sounds\kv3ten4.wav,Kv3r - Ten 4,2,3,0,45
+798,kv3r_yes_commander,sounds\kv3yescommander2.wav,Kv3r - Yes commander,2,3,0,45
+799,kv3r_yes_sir,sounds\kv3yessir2.wav,Kv3r - Yes Sir,2,3,0,45
+800,kv3r_affirmative,sounds\kv3affirmative2.wav,Kv3r - Affirmative,2,3,0,45
+801,wv3r_as_you_command,sounds\wv3youcommand.wav,Wv3r - As you command,2,3,0,45
+802,wv3r_ready_sir,sounds\wv3readysir.wav,Wv3r - Ready Sir,2,3,0,45
+803,wv3r_ten_4,sounds\wv3ten4.wav,Wv3r - Ten 4,2,3,0,45
+804,wv3r_awaiting_orders,sounds\wv3awaitingorders.wav,Wv3r - Awaiting Orders,2,3,0,45
+805,fv3r_go_ahead,sounds\fv3goahead.wav,Fv3r - Go Ahead,2,3,0,35
+806,fv3r_roger,sounds\fv3roger.wav,Fv3r - Roger,2,3,0,35
+807,fv3r_ten_4,sounds\fv3ten4.wav,Fv3r - Ten 4,2,3,0,35
+808,fv3r_yes_commander,sounds\fv3yescommander2.wav,Fv3r - Yes Commander,2,3,0,35
+809,wv0_scream_1,sounds\wscream1.wav,Wv0 - Scream 1,2,3,0,50
+810,wv0_scream_2,sounds\wscream2.wav,Wv0 - Scream 2,2,3,0,50
+811,wv0_scream_3,sounds\wscream3.wav,Wv0 - Scream 3,2,3,0,50
+812,kv1_at_your_service,sounds\kv1yourservice.wav,Kv1 - At your service,2,3,0,50
+813,kv1_death_to_heathens,sounds\kv1deathtoheathens.wav,Kv1 - Death to heathens,2,3,0,50
+814,kv1_for_god_and_country,sounds\kv1forgod.wav,Kv1 - For god and country,2,3,0,50
+815,kv1_for_honor,sounds\kv1forhonor.wav,Kv1 - For Honor,2,3,0,50
+816,wv1_for_the_king,sounds\wv1fortheking.wav,Wv1 - For the king,2,3,0,50
+817,kv1_for_the_throne,sounds\kv1forthethrone.wav,Kv1 - For the throne,2,3,0,50
+820,kv1_my_lord,sounds\kv1mylord.wav,Kv1 - My lord,2,3,0,50
+821,kv1_ok_my_lord,sounds\kv1okmylord.wav,Kv1 - OK my lord,2,3,0,50
+822,wv1_attack,sounds\wv1attack.wav,Wv1 - Attack,2,3,0,50
+823,kv1_ready_my_lord,sounds\kv1readylord.wav,Kv1 - Ready my lord,2,3,0,50
+824,wv1_sire,sounds\wv1sire.wav,Wv1 - Sire,2,3,0,50
+826,kv1_to_victory,sounds\kv1tovictory.wav,Kv1 - To Victory,2,3,0,50
+827,kv1_where_should_i_go,sounds\kv1wherego.wav,Kv1 - Where should I go,2,3,0,50
+830,kv1_with_all_my_heart,sounds\kv1withheart.wav,Kv1 - With all my heart,2,3,0,50
+831,kv1_with_my_honor,sounds\kv1withhonor.wav,Kv1 - With my honor,2,3,0,50
+832,kv1_with_my_life,sounds\kv1withmylife.wav,Kv1 - With my life,2,3,0,50
+834,kv1_yes_my_lord,sounds\kv1yesmylord.wav,Kv1 - Yes my lord,2,3,0,50
+835,kv1_your_orders,sounds\kv1yourorders.wav,Kv1 - Your orders,2,3,0,50
+836,breath_1,sounds\breath1.wav,Breath 1,2,3,0,50
+837,breath_2,sounds\breath2.wav,Breath 2,2,3,0,50
+838,growl_1,sounds\growl1-8.wav,Growl 1,2,3,0,50
+839,growl_2,sounds\growl2-8.wav,Growl 2,2,3,0,50
+840,kv2_your_command,sounds\kv2yourcommand.wav,Kv2 - Your command,2,3,0,50
+841,kv2_can_i_assist,sounds\kv2assist.wav,Kv2 - Can I assist,2,3,0,50
+842,kv2_thy_will_be_done,sounds\kv2bedone.wav,Kv2 - Thy will be done,2,3,0,50
+843,wv2_bell_tolls_for_thee,sounds\wv2belltolls.wav,Wv2 - Bell tolls for thee,2,3,0,55
+844,kv2_consider_it_done,sounds\kv2consider.wav,Kv2 - Consider it done,2,3,0,45
+845,kv2_for_the_city,sounds\kv2forthecity.wav,Kv2 - For the city,2,3,0,50
+846,kv2_heads_will_roll,sounds\kv2headswillroll.wav,Kv2 - Heads will roll,2,3,0,50
+847,kv2_for_our_sovereign,sounds\kv2oursovereign.wav,Kv2 - For our sovereign,2,3,0,50
+848,kv2_ready,sounds\kv2ready.wav,Kv2 - Ready,2,3,0,50
+850,kv2_leave_no_one_alive,sounds\kv2alive.wav,Kv2 - Leave no one alive,2,3,0,50
+851,wv2_theyll_rue_the_day,sounds\wv2ruetheday.wav,Wv2 - They'll rue the day,2,3,0,50
+852,kv2_how_may_i_serve_you,sounds\kv2serveyou.wav,Kv2 - How may I serve you,2,3,0,50
+853,kv2_so_be_it,sounds\kv2sobeit.wav,Kv2 - So be it,2,3,0,50
+855,kv2_it_will_be_done,sounds\kv2willbedone.wav,Kv2 - It will be done,2,3,0,50
+856,wv2_your_command,sounds\wv2yourcommand.wav,Wv2 - Your command,2,3,0,50
+857,wv2_serve_you,sounds\wv2serveyou.wav,Wv2 - Serve you,2,3,0,50
+858,kv3_your_command,sounds\kv3yourcommand.wav,Kv3 - Your command,2,3,0,45
+859,kv3_awaiting_orders,sounds\kv3awaitingorders.wav,Kv3 - Awaiting orders,2,3,0,40
+860,kv3_of_course,sounds\kv3ofcourse.wav,Kv3 - Of course,2,3,0,45
+861,kv3_ready_sir,sounds\kv3readysir.wav,Kv3 - Ready sir,2,3,0,45
+862,kv3_sir,sounds\kv3sir.wav,Kv3 - Sir,2,3,0,45
+863,kv3_sir_yes_sir,sounds\kv3siryessir.wav,Kv3 - Sir yes sir,2,3,0,45
+864,kv3_yes_commander,sounds\kv3yescommander.wav,Kv3 - Yes commander,2,3,0,45
+865,kv3_yes_sir,sounds\kv3yessir.wav,Kv3 - Yes sir,2,3,0,45
+866,kv3_can_i_assist,sounds\kv3assist.wav,Kv3 - Can I assist,2,3,0,50
+867,rock_hit_1,sounds\rockhit-8.wav,Rock Hit 1,2,3,0,65
+868,kv1_grunt_1,sounds\kgrunt1.wav,Kv1 - Grunt 1,2,3,0,50
+870,kv1_grunt_3,sounds\kgrunt3.wav,Kv1 - Grunt 3,2,3,0,50
+871,kv1_grunt_4,sounds\kgrunt4.wav,Kv1 - Grunt 4,2,3,0,50
+872,kv1_grunt_5,sounds\kgrunt5.wav,Kv1 - Grunt 5,2,3,0,50
+874,jv3_affirmative,sounds\jv3affirmative.wav,Jv3 - Affirmative,2,3,0,40
+875,jv3r_affirmative,sounds\jv3affirmative2.wav,Jv3r - Affirmative,2,3,0,40
+876,jv3_attention_of_deck,sounds\jv3attentionondeck.wav,Jv3 - Attention of deck,2,3,0,40
+877,jv3r_awaiting_orders,sounds\jv3awaitingorders.wav,Jv3r - Awaiting Orders,2,3,0,40
+878,jv3_bridge_here,sounds\jv3bridgehere.wav,Jv3 - Bridge Here,2,3,0,40
+879,jv3_by_your_command,sounds\jv3byyourcommand.wav,Jv3 - By your command,2,3,0,40
+880,jv3r_by_your_command,sounds\jv3byyourcommand2.wav,Jv3r - By your command,2,3,0,40
+881,jv3_can_i_assist,sounds\jv3caniassist.wav,Jv3 - Can I assist,2,3,0,40
+882,jv3_can_i_help,sounds\jv3canihelp.wav,Jv3 - Can I help,2,3,0,40
+883,jv3_first_officer_here,sounds\jv3firstofficer.wav,Jv3 - First officer here,2,3,0,40
+884,jv3_where_to_sir,sounds\jv3wheretosir.wav,Jv3 - Where to sir,2,3,0,40
+885,jv3_yes_commander,sounds\jv3yescommander.wav,Jv3 - Yes commander,2,3,0,40
+886,jv3r_yes_commander,sounds\jv3yescommander2.wav,Jv3r - Yes commander,2,3,0,40
+887,jv3_sir_yes_sir,sounds\jv3siryessir.wav,Jv3 - Sir yes sir,2,3,0,40
+888,jv3r_standing_by,sounds\jv3standingby.wav,Jv3r - Standing By,2,3,0,40
+889,jv3r_10_4,sounds\jv3ten4.wav,Jv3r - 10-4,2,3,0,40
+890,jv3_underway,sounds\jv3underway.wav,Jv3 - Underway,2,3,0,40
+891,jv3r_ready_sir,sounds\jv3readysir2.wav,Jv3r - Ready Sir,2,3,0,40
+892,jv3r_roger,sounds\jv3roger.wav,Jv3r - Roger,2,3,0,40
+893,jv3_setting_course,sounds\jv3settingcourse.wav,Jv3 - Setting Course,2,3,0,40
+894,jv3_lets_go,sounds\jv3letsgo.wav,Jv3 - Let's go,2,3,0,40
+895,jv3_of_course,sounds\jv3ofcourse.wav,Jv3 - Of course,2,3,0,40
+896,jv3r_of_course,sounds\jv3ofcourse2.wav,Jv3r - Of course,2,3,0,40
+897,jv3_our_course_sir,sounds\jv3ourcoursesir.wav,Jv3 - Our course sir,2,3,0,40
+898,jv3_plotting_course,sounds\jv3plottingcourse.wav,Jv3 - Plotting course,2,3,0,40
+899,jv3_ready_sir,sounds\jv3readysir.wav,Jv3 - Ready sir,2,3,0,40
+904,jv0_scream_1,sounds\jscream1.wav,Jv0 - Scream 1,2,3,0,40
+905,jv0_scream_2,sounds\jscream2.wav,Jv0 - Scream 2,2,3,0,40
+906,jv0_scream_3,sounds\jscream3.wav,Jv0 - Scream 3,2,3,0,40
+907,dv0_richard_2,sounds\drichard2.wav,Dv0 - Richard 2,2,3,0,35
+908,mech_convert,sounds\mechbeep2-8.wav,Mech Convert,2,3,0,50
+909,anti_matter_storm,sounds\antimatter-8.wav,Anti Matter Storm,2,4,1,30
+910,nv3_sir_yes_sir_2,sounds\nv3siryessir2.wav,Nv3 - Sir Yes Sir 2,2,3,0,35
+911,nv3_ready_sir_2,sounds\nv3readysir2.wav,Nv3 - Ready Sir 2,2,3,0,35
+912,nv3_affirmative_2,sounds\nv3affirmative2.wav,Nv3 - Affirmative 2,2,3,0,35
+913,nv3_yes_commander_2,sounds\nv3yescommander2.wav,Nv3 - Yes Commander 2,2,3,0,35
+914,nstone_talas,sounds\ns2talas.wav,Nstone - Talas,2,3,0,35
+915,nstone_pote,sounds\ns2pote.wav,Nstone - Pote,2,3,0,35
+916,nstone_stoma,sounds\ns2stoma.wav,Nstone - Stoma,2,3,0,35
+917,nstone_kalos,sounds\ns2kalos.wav,Nstone - Kalos,2,3,0,35
+918,dstone_tauta,sounds\ds2tauta.wav,Dstone - Tauta,2,3,0,35
+919,dstone_emoige,sounds\ds2emoige.wav,Dstone - Emoige,2,3,0,35
+920,dstone_esto,sounds\ds2esto.wav,Dstone - Esto,2,3,0,35
+921,dstone_humin,sounds\ds2humin.wav,Dstone - Humin,2,3,0,35
+922,dstone_kalos,sounds\ds2kalos.wav,Dstone - Kalos,2,3,0,30
+923,dstone_nai,sounds\ds2nai.wav,Dstone - Nai,2,3,0,45
+924,dstone_pos,sounds\ds2pos.wav,Dstone - Pos,2,3,0,45
+925,dstone_sigenun,sounds\ds2sigenun.wav,Dstone - Sigenun,2,3,0,35
+926,dstone_stoma,sounds\ds2stoma.wav,Dstone - Stoma,2,3,0,35
+927,dstone_sunte,sounds\ds2sunte.wav,Dstone - Sunte,2,3,0,35
+928,dstone_deute,sounds\ds2deute.wav,Dstone - Deute,2,3,0,30
+929,dstone_talas,sounds\ds2talas.wav,Dstone - Talas,2,3,0,35
+930,dstone_tigar,sounds\ds2tigar.wav,Dstone - Tigar,2,3,0,35
+931,dstone_tlemon,sounds\ds2tlemon.wav,Dstone - Tlemon,2,3,0,35
+932,dv0_grigor_ii_1,sounds\dgrigor1.wav,Dv0 - Grigor II 1,2,3,0,45
+933,dv0_grigor_ii_2,sounds\dgrigor2.wav,Dv0 - Grigor II 2,2,3,0,45
+934,dv0_grigor_ii_3,sounds\dgrigor3.wav,Dv0 - Grigor II 3,2,3,0,45
+935,dv0_grigor_ii_4,sounds\dgrigor4.wav,Dv0 - Grigor II 4,2,3,0,45
+936,clock_tick,sounds\clock-8.wav,Clock Tick,1,3,0,50
+937,battlecry,sounds\battlecry-8.wav,Battlecry,2,3,0,50
+938,dv0_grigor_1,sounds\dblackrobe1.wav,Dv0 - Grigor 1,2,3,0,35
+939,dv0_grigor_2,sounds\dblackrobe2.wav,Dv0 - Grigor 2,2,3,0,35
+940,dv0_grigor_3,sounds\dblackrobe3.wav,Dv0 - Grigor 3,2,3,0,35
+941,dv0_grigor_4,sounds\dblackrobe4.wav,Dv0 - Grigor 4,2,3,0,35
+942,incoming_chat_message,sounds\message-8.wav,Incoming Chat Message,1,3,0,50
+943,dv0_chinese_1,sounds\dv0cpike1.wav,Dv0 - Chinese 1,2,3,0,42
+944,dv0_chinese_2,sounds\dv0cpike2.wav,Dv0 - Chinese 2,2,3,0,42
+945,dv0_chinese_3,sounds\dv0cpike3.wav,Dv0 - Chinese 3,2,3,0,42
+946,dv0_chinese_4,sounds\dv0cpike4.wav,Dv0 - Chinese 4,2,3,0,42
+947,dv0_japanese_1,sounds\dv0sam1.wav,Dv0 - Japanese 1,2,3,0,42
+948,dv0_japanese_2,sounds\dv0sam2.wav,Dv0 - Japanese 2,2,3,0,42
+949,dv0_japanese_3,sounds\dv0sam3.wav,Dv0 - Japanese 3,2,3,0,42
+950,dv0_japanese_4,sounds\dv0sam4.wav,Dv0 - Japanese 4,2,3,0,42
+951,dog_select,sounds\bark1.wav,Dog select,2,3,0,45
+952,dog_command,sounds\bark2.wav,Dog command,2,3,0,45
+953,jungle_ambient2,sounds\jungle2-8.wav,Jungle Ambient2,1,1,1,50
+954,dv0_caesar_1,sounds\droman1.wav,Dv0 - Caesar 1,2,3,0,40
+955,dv0_caesar_2,sounds\droman3.wav,Dv0 - Caesar 2,2,3,0,40
+956,dv0_caesar_3,sounds\droman4.wav,Dv0 - Caesar 3,2,3,0,40
+957,computer_attack,sounds\compattack.wav,Computer Attack,2,3,0,50
+958,wonder_clock,sounds\wonderclock.wav,Wonder Clock,2,3,0,50
+959,jv2_right_away,sounds\jv2rightaway.wav,Jv2 - Right Away,2,3,0,40
+960,jv2_my_pleasure,sounds\jv2mypleasure.wav,Jv2 - My Pleasure,2,3,0,40
+961,jv2_may_i_assist,sounds\jv2mayiassist.wav,Jv2 - May I assist,2,3,0,40
+962,hot_key_alarm,sounds\hotkeyalarm.wav,Hot Key Alarm,2,3,0,50
+963,battlecry_female,sounds\battlecry2-8.wav,Battlecry - Female,2,3,0,50
+964,balloon_command,sounds\balloon-8.wav,Balloon Command,2,3,0,25
+967,rv1_will_of_state,sounds\rv1willofstate.wav,Rv1 - will of state,2,3,0,40
+968,rv1_move_along,sounds\rv1movealong.wav,Rv1 -  move along,2,3,0,40
+969,rv2_riot_officer_reporting,sounds\rv2officerreporting.wav,Rv2 -  riot officer reporting,2,3,0,40
+970,ev1_greetings,sounds\ev1greetings.wav,Ev1 - greetings,2,3,0,40
+971,ev1_deliver_your_terms,sounds\ev1deliveryourterms.wav,Ev1 - deliver your terms,2,3,0,40
+972,ev2_yes_my_khan,sounds\ev2yesmykhan.wav,Ev2 - yes my khan?,2,3,0,40
+973,zv1_you_want_me_to_go_where,sounds\zv1youwantmewhere.wav,Zv1 - you want me to go where?,2,3,0,40
+974,zv1_moving_to_position,sounds\zv1movingtoposition.wav,Zv1 - moving to position,2,3,0,40
+975,zv2_aint_i_done_enough_already,sounds\zv2enoughalready.wav,Zv2 - ain't I done enough already,2,3,0,40
+976,zv2_whatja_want_this_time,sounds\zv2whatjawant.wav,Zv2 - what'ja want this time,2,3,0,40
+977,mv1_codes_received,sounds\mv1codesreceived.wav,Mv1 - codes received,2,3,0,80
+978,mv1_countdown,sounds\mv1countdown.wav,Mv1 - countdown,2,3,0,80
+979,missile_base_create,sounds\missilebase-8.wav,missile base create,2,3,0,40
+980,space_vessel_creation_sound,sounds\spacevesselcreate2-8.wav,space vessel creation sound,4,3,0,50
+981,spy_satellite_creation,sounds\spysatellite-8.wav,spy satellite creation,2,3,0,50
+982,priest_tower_creation_sound,sounds\priesttowerv2-8.wav,priest tower creation sound,2,3,0,50
+983,priest_tower_selection_sound,sounds\priesttowerselect-8.wav,priest tower selection sound,2,3,0,50
+984,market_creation_sound,sounds\market-8.wav,market creation sound,2,3,0,50
+985,market_command_sound,sounds\marketcommand-8.wav,market command sound,2,3,0,50
+986,market_select_sound,sounds\market-8.wav,market select sound,2,3,0,50
+987,orbital_space_station_creation,sounds\orbital-8.wav,orbital space station creation,2,3,0,50
+988,planetary_defense_turret,sounds\spaceturret-8.wav,planetary defense turret,4,3,0,50
+989,space_object_explosion,sounds\explosion7-8.wav,space object explosion,3,5,0,50
+990,space_object_explosion2,sounds\explosion8-8.wav,space object explosion2,3,5,0,50
+991,space_dock_create,sounds\spacedockv3-8.wav,space dock create,2,3,0,50
+992,sv1_engage,sounds\sv1engage.wav,Sv1- engage,2,3,0,80
+993,sv1_engines_to_full,sounds\sv1enginestofull.wav,Sv1- engines to full,2,3,0,80
+994,sv1_roger_that,sounds\sv1rogerthat.wav,Sv1- Roger that,2,3,0,80
+995,sv1_lay_in_a_course,sounds\sv1layinacourse.wav,Sv1- lay in a course,2,3,0,80
+996,sv1_affirmative,sounds\sv1affirmative.wav,Sv1- affirmative,2,3,0,80
+997,sv1_ready_to_go,sounds\sv1readytogo.wav,Sv1- ready to go,2,3,0,80
+998,sv1_aye_aye_sir,sounds\sv1ayeayesir.wav,Sv1 - aye aye sir,2,3,0,80
+999,sv1_order_received,sounds\sv1ordersreceived.wav,Sv1 - order received,2,3,0,80
+1000,sv1_all_systems_green,sounds\sv1allsystemsgreen.wav,Sv1- all systems green,2,3,0,80
+1001,sv1_got_it,sounds\sv1gotit.wav,Sv1- got it,2,3,0,80
+1002,sv1_fire_thrusters,sounds\sv1firethrusters.wav,Sv1 - fire thrusters,2,3,0,80
+1003,sv1_scanning_area,sounds\sv1scanningarea.wav,Sv1 - scanning area,2,3,0,80
+1004,sv2_captain_to_the_bridge,sounds\sv2captaintobridge.wav,Sv2 - captain to the bridge,2,3,0,80
+1005,sv2_ready_weapons,sounds\sv2readyweapons.wav,Sv2 - ready weapons,2,3,0,80
+1006,sv2_standing_by,sounds\sv2standingby.wav,Sv2 - Standing by,2,3,0,80
+1007,sv2_general_quarters,sounds\sv2generalquarters.wav,Sv2 - general quarters,2,3,0,80
+1008,sv2_give_me_a_target,sounds\sv2givemetarget.wav,Sv2 - give me a target,2,3,0,80
+1009,sv2_cargo_bays_locked,sounds\sv2cargolocked.wav,Sv2 - cargo bays locked,2,3,0,80
+1010,sv2_ready_flight_deck,sounds\sv2readyflightdeck.wav,Sv2 - ready flight deck,2,3,0,80
+1011,sv2_reporting_in,sounds\sv2reportingin.wav,Sv2 - reporting in,2,3,0,80
+1012,sv2_standing_by_2,sounds\sv2standingby2.wav,Sv2 - standing by,2,3,0,80
+1013,sv2_all_hands_to_stations,sounds\sv2allhands.wav,Sv2 - all hands to stations,2,3,0,80
+1014,sv2_into_the_unkown,sounds\sv2intounknown.wav,Sv2 - into the unkown,2,3,0,80
+1015,sv2_fueled_and_ready,sounds\sv2fueledandready.wav,Sv2 - fueled and ready,2,3,0,80
+1016,pv1_geronimo,sounds\pv1geronimo.wav,Pv1 - geronimo,2,3,0,40
+1017,pv1_here_goes_nothin,sounds\pv1heregoesnothin.wav,Pv1- here goes nothin',2,3,0,40
+1018,pv2_on_your_word,sounds\pv2onyourword.wav,Pv2- on your word,2,3,0,40
+1019,pv2_primed_and_prepped,sounds\pv2primedandpreppedTAKE2.wav,Pv2 - primed and prepped,2,3,0,40
+1020,lv1_lets_give_em_hell,sounds\lv1giveemhell.wav,Lv1 - let's give 'em hell,2,3,0,65
+1021,lv1_with_all_speed,sounds\lv1withallspeed.wav,Lv1 - with all speed,2,3,0,65
+1022,lv2_all_hands_ready,sounds\lv2allhandsready.wav,Lv2 - all hands ready,2,3,0,65
+1023,lv2_ready_to_deploy,sounds\lv2readytodeploy.wav,Lv2 - ready to deploy,2,3,0,65
+1024,lev1_to_illysium,sounds\lev1toillysium.wav,Lev1 - to Illysium,2,3,0,40
+1025,lev1_forward_the_frontier,sounds\lev1forward.wav,"Lev1- forward, the frontier",2,3,0,40
+1026,lev2_at_your_service,sounds\lev2atyourservice.wav,Lev2 - at your service,2,3,0,40
+1027,sbv1_cohort_forward,sounds\sbv1cohortforward.wav,"Sbv1 - cohort, forward",2,3,0,40
+1028,sbv1_protect_the_standard,sounds\sbv1protectstandard.wav,Sbv1 - protect the standard,2,3,0,40
+1029,sbv2_proconsul,sounds\sbv2proconsul.wav,Sbv2 - proconsul,2,3,0,40
+1030,cv1_all_glory,sounds\cv1allglory.wav,Cv1 - all glory,2,3,0,40
+1031,cv1_the_legion_obeys,sounds\cv1thelegionobeys.wav,Cv1 - the legion obeys,2,3,0,40
+1032,cv2_veni_vidi_vici,sounds\cv2vinividivici.wav,"Cv2 - veni, vidi, vici",2,3,0,40
+1033,sasv1_im_on_it,sounds\sasv1Imonit.wav,Sasv1 - I'm on it,2,3,0,40
+1034,sasv1_affirmative,sounds\sasv1affirmative.wav,Sasv1 - Affirmative,2,3,0,40
+1035,sasv2_just_give_the_word,sounds\sasv2justgivetheword.wav,Sasv2 - Just give the word,2,3,0,40
+1036,radv1_msg_received,sounds\radv1msgreceived.wav,Radv1 - Msg received,2,3,0,65
+1037,radv1_roger,sounds\radv1roger.wav,Radv1 - Roger,2,3,0,65
+1038,radv2_over,sounds\radv2over.wav,Radv2 - Over,2,3,0,65
+1039,radv2_i_read_you,sounds\radv2ireadyou.wav,Radv2 - I read you,2,3,0,65
+1040,space_fighter_movement,sounds\sfighter-8.wav,space fighter movement,2,4,1,75
+1041,space_carrier_movement,sounds\scarrier-8.wav,space carrier movement,2,4,1,75
+1042,space_capital_movement,sounds\scapital-8.wav,space capital movement,2,4,1,75
+1043,space_corvette_movement,sounds\scorvette-8.wav,space corvette movement,2,4,1,75
+1044,space_transport_movement,sounds\stransport-8.wav,space transport movement,2,4,1,75
+1045,cnv1_ghost_machine,sounds\cnv1ghost.wav,Cnv1 - ghost machine,2,3,0,50
+1046,cnv1_elimination_matrix,sounds\cnv1elimination.wav,Cnv1 - elimination matrix,2,3,0,50
+1047,cnv2_assassination_software,sounds\cnv2assassination.wav,Cnv2 -  assassination software,2,3,0,50
+1048,cnv2_hai,sounds\cnv2hai.wav,Cnv2 - hai,2,3,0,50
+1049,insurance_collected,sounds\insurance-8.wav,Insurance collected,1,3,0,50
+1050,cloaking_capitol,sounds\breath2.wav,Cloaking Capitol,1,3,0,80
+1051,meteor,sounds\meteor_storm_3.wav,Meteor,3,3,0,80
+1052,priest_tower_convert,sounds\ptower_16.wav,Priest Tower Convert,1,3,0,50
+1053,logic_bomb,sounds\logic_bomb-8.wav,Logic Bomb,2,3,1,75
+1054,watch_awaiting_orders,sounds\watch_awaitingorders.wav,Watch - Awaiting orders,2,3,0,65
+1055,watch_sir_yes_sir,sounds\watch_siryessir.wav,Watch - Sir yes sir,2,3,0,65
+1056,watch_sir,sounds\watch_sir.wav,Watch - Sir,2,3,0,65
+1057,watch_your_command,sounds\watch_yourcommand.wav,Watch - Your command,2,3,0,65
+1058,slavery,sounds\slavery.wav,Slavery,1,3,0,75
+1059,space_citizen_burp_1,sounds\sp_citizen_1.wav,Space Citizen Burp 1,2,3,0,50
+1060,space_citizen_burp_2,sounds\sp_citizen_2.wav,Space Citizen Burp 2,2,3,0,50
+1061,space_citizen_burp_3,sounds\sp_citizen_3.wav,Space Citizen Burp 3,2,3,0,50
+1062,space_citizen_burp_4,sounds\sp_citizen_4.wav,Space Citizen Burp 4,2,3,0,50
+1063,space_citizen_mining_sound,sounds\sp_cit_mining-8.wav,Space Citizen Mining Sound,3,2,0,30
+1065,space_citizen_shooting_sound,sounds\sp_cit_shot-8.wav,Space Citizen Shooting Sound,2,3,0,50
+1066,space_noise_1,sounds\sp_amb_1.wav,Space Noise 1,1,3,0,50
+1067,space_noise_2,sounds\sp_amb_2.wav,Space Noise 2,1,3,0,50
+1068,space_noise_3,sounds\sp_amb_3.wav,Space Noise 3,1,3,0,50
+1069,space_ambient_4,sounds\sp_amb_4_loop.wav,Space Ambient 4,1,1,1,40
+1070,space_ambient_5,sounds\sp_amb_5_loop.wav,Space Ambient 5,1,1,1,40
+1071,ees_mind_control,sounds\ees_mindcontrol-8.wav,EES Mind Control,2,3,0,50
+1072,space_citizen_death,sounds\sp_citizen_death.wav,Space Citizen Death,2,3,0,50
+1073,kv1_ancestors,sounds\kv1asmyancestorswill.wav,Kv1 - ancestors,2,3,0,50
+1074,kv1_my_destiny,sounds\kv1itismydestiny.wav,Kv1 - my destiny,2,3,0,50
+1075,kv2_it_shall_be_so,sounds\kv2itshallbeso.wav,Kv2 - it shall be so,2,3,0,50
+1076,kv2_i_cannot_fail,sounds\kv2icannotfail.wav,Kv2 - I cannot fail,2,3,0,50
+1077,hv1_my_future,sounds\hv1myfuture.wav,Hv1 - my future,2,3,0,50
+1078,hv1_to_the_stars,sounds\hv1tothestars.wav,Hv1 - to the stars,2,3,0,50
+1079,hv2_it_is_done,sounds\hv2itisdone.wav,Hv2 - it is done,2,3,0,50
+1080,hv2_dynasty,sounds\hv2forthedynasty.wav,Hv2 - dynasty,2,3,0,50
+1081,bv1_yes_my_khan,sounds\bv1yesmykhan.wav,Bv1 - yes my khan,2,3,0,50
+1082,bv1_your_will,sounds\bv1yourwill.wav,Bv1 - your will,2,3,0,50
+1083,bv2_as_you_wish,sounds\bv2asyouwish.wav,Bv2 - as you wish,2,3,0,50
+1084,bv2_i_obey,sounds\bv2iobey.wav,Bv2 - I obey,2,3,0,50
+1085,space_citizen_chop,sounds\sp_cit_chop-8.wav,Space Citizen Chop,3,2,0,30
+1086,new_arrow_sound,sounds\flam_arrow-8.wav,New Arrow Sound,3,6,0,40

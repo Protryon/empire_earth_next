@@ -1,0 +1,734 @@
+# dbcivilization: Empire Earth: The Art of Conquest db table (tools/eedata; record layout EECivilizationCategoryEntry, 600 bytes, in tools/eedata/specs.json)
+eedata: dbcivilization
+format: 3
+rows: 29
+records:
+  - row: 1
+    id: civ_general
+    mDatabaseID: 1
+    mIndex: 1
+    label: "Civ - General"
+    mNameID: 31500
+    mCost: 0
+    mUnitSet: civ_general_perplayer_dont_change_ever_cgc
+    levels:
+      - attribute: conversion
+        value: 0.5
+        bonus: 0.099999994
+      - attribute: high_ground
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: population
+        value: 0.14999999
+        bonus: 0.089999996
+  - row: 2
+    id: archers_foot
+    mDatabaseID: 2
+    mIndex: 2
+    label: "Archers - Foot"
+    mNameID: 31501
+    mCost: 4
+    mUnitSet: civ_archer_foot
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.04
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.03
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.08
+  - row: 3
+    id: aircraft_fighters
+    mDatabaseID: 3
+    mIndex: 3
+    label: "Aircraft - Fighters"
+    mNameID: 31502
+    mCost: 2
+    mUnitSet: civ_fighters
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: flight_time
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.01
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.06
+  - row: 4
+    id: civ_bldgs_walls_towers
+    mDatabaseID: 4
+    mIndex: 4
+    label: "Civ - Bldgs, Walls, Towers"
+    mNameID: 31503
+    mCost: 3
+    mUnitSet: civ_buildings_walls_towers
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.5
+        bonus: 0.11
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.04
+      - attribute: cost
+        value: 0.14999999
+        bonus: 0.11
+  - row: 5
+    id: civ_citizens
+    mDatabaseID: 5
+    mIndex: 5
+    label: "Civ - Citizens"
+    mNameID: 31504
+    mCost: 2
+    mUnitSet: civ_citizen_1
+    levels:
+      - attribute: attack
+        value: 0.29999998
+        bonus: 0.01
+      - attribute: hit_points
+        value: 0.29999998
+        bonus: 0.03
+      - attribute: range
+        value: 0.35
+        bonus: 0.02
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.099999994
+        bonus: 0.19999999
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.25
+  - row: 6
+    id: cavalry_sword
+    mDatabaseID: 6
+    mIndex: 6
+    label: "Cavalry - Sword"
+    mNameID: 31505
+    mCost: 3
+    mUnitSet: civ_cavalry_sword
+    levels:
+      - attribute: attack
+        value: 0.25
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.07
+  - row: 7
+    id: x_unused_heroes
+    mDatabaseID: 7
+    mIndex: 7
+    label: "x UNUSED Heroes"
+    mNameID: 31506
+    mCost: 3
+    mUnitSet: civ_hero
+    levels: []
+  - row: 8
+    id: aircraft_bombers
+    mDatabaseID: 21
+    mIndex: 8
+    label: "Aircraft - Bombers"
+    mNameID: 31507
+    mCost: 2
+    mUnitSet: civ_bombers
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.02
+      - attribute: range
+        value: 0.0
+        bonus: 0.02
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: flight_time
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: area_effect
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.01
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.06
+  - row: 9
+    id: aircraft_helicopters
+    mDatabaseID: 9
+    mIndex: 9
+    label: "Aircraft - Helicopters"
+    mNameID: 31508
+    mCost: 2
+    mUnitSet: civ_helicopter
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.01
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.06
+  - row: 10
+    id: infantry_sword
+    mDatabaseID: 10
+    mIndex: 10
+    label: "Infantry - Sword"
+    mNameID: 31510
+    mCost: 3
+    mUnitSet: civ_infantry_sword
+    levels:
+      - attribute: attack
+        value: 0.25
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.07
+  - row: 11
+    id: infantry_ranged
+    mDatabaseID: 11
+    mIndex: 11
+    label: "Infantry - Ranged"
+    mNameID: 31509
+    mCost: 5
+    mUnitSet: civ_infantry_ranged_1
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.049999997
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.06
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.04
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.089999996
+  - row: 12
+    id: mechs_combat
+    mDatabaseID: 12
+    mIndex: 12
+    label: "Mechs - Combat"
+    mNameID: 31511
+    mCost: 4
+    mUnitSet: civ_cyber_regular_1
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.04
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.03
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.089999996
+  - row: 14
+    id: religion_priests
+    mDatabaseID: 14
+    mIndex: 14
+    label: "Religion - Priests"
+    mNameID: 31513
+    mCost: 2
+    mUnitSet: civ_priest
+    levels:
+      - attribute: hit_points
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.04
+  - row: 15
+    id: religion_prophets
+    mDatabaseID: 15
+    mIndex: 15
+    label: "Religion - Prophets"
+    mNameID: 31514
+    mCost: 2
+    mUnitSet: civ_prophet
+    levels:
+      - attribute: hit_points
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.01
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.03
+  - row: 16
+    id: ships_battleships_carriers
+    mDatabaseID: 16
+    mIndex: 16
+    label: "Ships - Battleships, Carriers"
+    mNameID: 31515
+    mCost: 3
+    mUnitSet: civ_ship_battle_carrier_1
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.03
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.07
+  - row: 17
+    id: siege_weapons
+    mDatabaseID: 17
+    mIndex: 17
+    label: "Siege Weapons"
+    mNameID: 31516
+    mCost: 2
+    mUnitSet: civ_siege_weapons_aa_1
+    levels:
+      - attribute: attack
+        value: 0.25
+        bonus: 0.02
+      - attribute: hit_points
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: reload_time
+        value: 0.25
+        bonus: 0.02
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.01
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: speed
+        value: 0.25
+        bonus: 0.02
+      - attribute: area_effect
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.01
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.03
+  - row: 18
+    id: ships_frigates_cruisers
+    mDatabaseID: 18
+    mIndex: 18
+    label: "Ships - Frigates, Cruisers"
+    mNameID: 31517
+    mCost: 3
+    mUnitSet: civ_ship_frig_cruiser_1
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.03
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.07
+  - row: 19
+    id: tanks
+    mDatabaseID: 19
+    mIndex: 19
+    label: "Tanks"
+    mNameID: 31518
+    mCost: 4
+    mUnitSet: civ_tanks
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.04
+      - attribute: armor
+        value: 0.099999994
+        bonus: 0.03
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.03
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.08
+  - row: 20
+    id: mechs_ultra
+    mDatabaseID: 22
+    mIndex: 20
+    label: "Mechs - Ultra"
+    mNameID: 31519
+    mCost: 2
+    mUnitSet: civ_cyber_special_1
+    levels:
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.02
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.01
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.049999997
+  - row: 21
+    id: cavalry_ranged
+    mDatabaseID: 23
+    mIndex: 21
+    label: "Cavalry - Ranged"
+    mNameID: 31512
+    mCost: 4
+    mUnitSet: civ_cavalry_ranged
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.04
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.03
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.08
+  - row: 22
+    id: ships_galleys_transports_subs
+    mDatabaseID: 24
+    mIndex: 22
+    label: "Ships - Galleys, Transports, Subs"
+    mNameID: 31520
+    mCost: 3
+    mUnitSet: civ_ship_galley_sub_1
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.03
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.07
+  - row: 23
+    id: infantry_spear_melee
+    mDatabaseID: 25
+    mIndex: 23
+    label: "Infantry - Spear (Melee)"
+    mNameID: 31521
+    mCost: 3
+    mUnitSet: civ_infantry_spear_melee
+    levels:
+      - attribute: attack
+        value: 0.25
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.07
+  - row: 24
+    id: cavalry_spear_melee
+    mDatabaseID: 26
+    mIndex: 24
+    label: "Cavalry - Spear (Melee)"
+    mNameID: 31522
+    mCost: 3
+    mUnitSet: civ_cavalry_spear
+    levels:
+      - attribute: attack
+        value: 0.25
+        bonus: 0.03
+      - attribute: hit_points
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.03
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.07
+  - row: 25
+    id: field_cannon_at_guns
+    mDatabaseID: 27
+    mIndex: 25
+    label: "Field Cannon & AT Guns"
+    mNameID: 31523
+    mCost: 4
+    mUnitSet: civ_guns_field_cannon_at
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.04
+      - attribute: armor
+        value: 0.19999999
+        bonus: 0.02
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.03
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.08
+  - row: 26
+    id: civ_economy
+    mDatabaseID: 28
+    mIndex: 26
+    label: "Civ - Economy"
+    mNameID: 31524
+    mCost: 6
+    mUnitSet: civ_citizen_1
+    levels:
+      - attribute: gather_stone_gold
+        value: 0.19999999
+        bonus: 0.11
+      - attribute: gather_slot_0
+        value: 0.14999999
+        bonus: 0.13
+      - attribute: gather_slot_2
+        value: 0.14999999
+        bonus: 0.11
+      - attribute: gather_slot_6
+        value: 0.19999999
+        bonus: 0.089999996
+      - attribute: gather_slot_1
+        value: 0.19999999
+        bonus: 0.089999996
+      - attribute: gather_slot_3
+        value: 0.14999999
+        bonus: 0.11
+      - attribute: fishing
+        value: 0.19999999
+        bonus: 0.089999996
+  - row: 27
+    id: spaceships
+    mDatabaseID: 29
+    mIndex: 27
+    label: "Spaceships"
+    mNameID: 5850
+    mCost: 4
+    mUnitSet: civ_spaceships
+    levels:
+      - attribute: attack
+        value: 0.25
+        bonus: 0.04
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.04
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: speed
+        value: 0.25
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.02
+      - attribute: cost
+        value: 0.29999998
+        bonus: 0.08
+  - row: 28
+    id: space_fighters
+    mDatabaseID: 30
+    mIndex: 28
+    label: "Space Fighters"
+    mNameID: 5851
+    mCost: 4
+    mUnitSet: civ_space_fighters
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: hit_points
+        value: 0.25
+        bonus: 0.04
+      - attribute: range
+        value: 0.19999999
+        bonus: 0.049999997
+      - attribute: speed
+        value: 0.19999999
+        bonus: 0.04
+      - attribute: build_time
+        value: 0.29999998
+        bonus: 0.03
+      - attribute: cost
+        value: 0.19999999
+        bonus: 0.08

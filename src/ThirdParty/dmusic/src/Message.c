@@ -91,6 +91,14 @@ static int DmMessage_sort(DmMessage* a, DmMessage* b) {
 		return 1;
 	}
 
+	// (EE patch) At the same time a note's end comes before a note's start, as in the original: a note ending where the
+	// next one on the same key begins must not end the new one. The heap kept no order among equal times, so the
+	// note-off came after the note-on about half the time and cut the new note off (Pawns.sgt's tabla loop on channel
+	// 4, one note a measure: every other measure silent).
+	if (a->type == DmMessage_NOTE && a->note.on != b->note.on) {
+		return a->note.on ? 1 : -1;
+	}
+
 	return 0;
 }
 

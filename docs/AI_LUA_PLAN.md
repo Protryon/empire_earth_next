@@ -6,6 +6,10 @@ A plan for writing the computer player again from scratch, as a second engine be
 
 The original AI stays in the tree and playable. The new one is a swap, chosen per computer seat.
 
+**Status (2026-11-15, stage 5):** the owner had the C++ classic's decision code deleted (AI_RESEARCH §8.89). Every
+computer player runs a Lua AI; the lobby's Classic is classic_lua. What follows is the plan as it was written: its
+"classic engine", EECPNextTest.cpp and the C++ attack commander no longer exist.
+
 Read with:
 - docs/AI_RESEARCH.md: §2 is the original AI, §4 the design options (this is option B), §8 the experiments;
 - docs/MODDING_PLAN.md: its rules on determinism and scripting;
@@ -50,7 +54,7 @@ EEComputerPlayer::Update (1 Hz per computer player, inside the physics tick, on 
 **How long.** Weeks, in stages that each stand on their own (§5). The first playable result is the boom opening
 from the Prehistoric to the Copper Age (stage 3). Until a stage gate passes, the classic engine stays the default.
 
-**Next:** per-unit queries and human-level commands for Lua, with today's verbs moved into `ai/lib`: docs/AI_LUA_UNITS.md.
+**Next:** per-unit queries and human-level commands for Lua, with today's verbs moved into `data/ai/lib`: docs/AI_LUA_UNITS.md.
 
 ## 1. Goals and non-goals
 
@@ -375,7 +379,7 @@ a destructor while Lua can raise. The value tree is pushed inside the protected 
 - RNG reproducibility, pinned to SplitMix64's reference output;
 - sorted iteration;
 - the memory round trip, byte-identical and pinned against hand-written bytes;
-- `require` staying inside `ai/`;
+- `require` staying inside `data/ai`;
 - the value tree round trip;
 - floats refused in the orders and the memory;
 - syntax, runtime and missing-module errors.
@@ -386,7 +390,7 @@ Windows/macOS trace gate.
 ### 3.2 S2 gate as built (2026-11-08)
 
 Code: `src/Empire Earth/AI Thread/EECPNextLua.cpp` (the glue: view to table, orders to verbs, the state's save),
-`ai/test_opening.lua` and `ai/lib/view.lua` (the scripts), `include/ee/EECPNext.h` (`EECPNextStrategyStep`, the
+`data/ai/test_opening.lua` and `data/ai/lib/view.lua` (the scripts), `include/ee/EECPNext.h` (`EECPNextStrategyStep`, the
 state's new fields, the save functions).
 
 **Per computer player.** `EECPNextState::mLua`, created at the next engine's first strategy step:
@@ -429,13 +433,11 @@ keyed `food`, `wood`, `stone`, `gold`, `iron`):
 **Classes and techs are named by their data ids:** dbobjects' `id` (`citizen`, `b_barracks`, `b_settlement`,
 `b_guard_tower_paleo`, `inf01_clubman`, `s02_fishing_boat_stone`) and dbtechtree's `id` for `research`. The id is
 the row's identity in the text tables (DATA_FORMATS §8.6), so a script keeps working when rows move, and a mod
-that adds a row gives its scripts a name for it. A data tree without the tables' text (the binary tree) has no ids:
-every class was then `dbobjects_<row>` (a tech `dbtechtree_<id>`), the form tools/eedata gives a row without a name, and
-boom found no class it knew (AI_RESEARCH §8.36); since 2026-11-09 a binary tree carries `Data/db/dbobjects.ids` and
-`dbtechtree.ids` (`key id` lines, the ids tools/eedata would give the rows; `open_data.py build --binary` writes them,
-`open_data.py ids TREE` adds them to an older tree), read with the .dat (EEDataTextFile.cpp `EEReadIdsFile`).
+that adds a row gives its scripts a name for it. A row without an id is `dbobjects_<row>` (a tech
+`dbtechtree_<id>`), the form tools/eedata gives a row without a name. (The binary tree, whose tables had no ids and
+needed `Data/db/*.ids` files, AI_RESEARCH §8.36, is gone since 2026-11-15: the game reads only the text tables.)
 `EECPNextClassByName` / `EECPNextClassName` (EECPNextLua.cpp) do the lookups, from the ids EEDbFindFile kept when
-it compiled the tables. `ai/lib/view.lua` has the helpers: `resources`, `cost(view, type)`, `buildings(view, type)`,
+it compiled the tables. `data/ai/lib/view.lua` has the helpers: `resources`, `cost(view, type)`, `buildings(view, type)`,
 `total(entry)`, `sum(amounts)`.
 
 **The orders** (maps; a missing optional field takes the default shown; an unknown key, a wrong type, an unknown
@@ -468,7 +470,7 @@ techs when the epoch is reached, for both engines: a computer player's towers be
 enters the epoch, and only the new class can be built from then on (EE-SIM: every next-engine tower is
 `b_guard_tower_copper` in the Copper Age and `b_guard_tower_bronze` in the Bronze Age). A script needs no view field
 for it: the newest tower class in `costs` is the one to build, and counting every class equals counting the current
-one. `ai/lib/view.lua` `tower_upgrade(view, mem)` still orders each upgrade once its epoch is reached (boom, rush and
+one. `data/ai/lib/view.lua` `tower_upgrade(view, mem)` still orders each upgrade once its epoch is reached (boom, rush and
 balanced, before the reserve): `done` with n=0 today, a real research where the upgrade is not free.
 
 **Memory.** `memory` is the same table every step: integers, strings, booleans and nested tables (no floats; §3.1).
@@ -481,12 +483,12 @@ trace and the game log; EE-SIM also prints `SIM next.error p2 t=... ...` to stde
 run (`lua_errors` in results.csv, "N script errors" on the run's line). A script that does not load stays off for
 the game (one error line).
 
-**Where the scripts live.** The repository's `ai/` (new code, not retail data). `tools/open_data.py build` copies it
+**Where the scripts live.** The repository's `data/ai` (new code, not retail data). `tools/open_data.py build` copies it
 into the tree's `Data/ai/`; `open_data.py ai TREE` refreshes only `Data/ai` (seconds) and records the scripts' hash as
 `ai` in `open_data.json`; the harness (`exe_boot.data_tree`) refreshes its own trees when that hash differs (the
 converters' hash leaves the scripts out, so a script change never rebuilds the 4-minute tree); `tools/sim.py` warns.
-`open_data.py pack --part db` ships `Data/ai` with `Data/db`. The installer copies `ais.json`, every `.lua` and a ported AI's notice
-files (`LICENSE`, `UPSTREAM`, `README`, `NOTICE`, `COPYING` under `ai/`: `ai/ageofai/LICENSE` is the GPL-3.0 text,
+The `v*` release packages ship `Data/ai` with `Data/db` (there is no db release since 2026-11-15). The installer copies `ais.json`, every `.lua` and a ported AI's notice
+files (`LICENSE`, `UPSTREAM`, `README`, `NOTICE`, `COPYING` under `data/ai`: `data/ai/ageofai/LICENSE` is the GPL-3.0 text,
 `UPSTREAM` the upstream pin); the scripts' hash in `open_data.json` covers the same files. The game's own AI folder
 hash (`EECPAIFolderHash`, the multiplayer checksum) covers `ais.json` and the scripts only. TEST ONLY: `EE_AI_SCRIPTS=<absolute dir>` (the dir
 stands for `Data\ai`) is read first; `tools/sim.py --ai-scripts DIR` and `tools/sim_bench.py --ai-scripts DIR` set
@@ -510,7 +512,7 @@ and 1807 lines), as expected, since the x86_64 baseline has no FMA instruction t
 where clang fuses `a * b + c` by default; the Windows/macOS trace comparison still has to be run on the Mac.
 
 **Gate** (EE-SIM, Small, Medium, 2 AIs, no cheats, balanced; `--engine next,classic`, 3600 game s, seeds 2 and 3,
-`sim_bench.py --env-vary EE_AI_NEXT_SCRIPT=c++,test_opening --repeat 2 --ai-scripts ai`):
+`sim_bench.py --env-vary EE_AI_NEXT_SCRIPT=c++,test_opening --repeat 2 --ai-scripts data/ai`):
 - **Lua = C++:** the trace of the Lua opening equals the C++ opening's after dropping the `next.script` lines (the only
   lines that name the script): 4432 and 4225 lines identical, with 487 and 334 `next.order` lines (every order, every
   result). p2 asked for the Stone Age at 18.4 and 20.0 minutes and the Copper Age at 41.7 and 51.9 (the advance
@@ -536,8 +538,8 @@ where clang fuses `a * b + c` by default; the Windows/macOS trace comparison sti
 
 ### 3.3 The AI manifest (2026-11-09)
 
-The lobby's per-seat AI choice comes from data: `Data/ai/ais.json` (written in the repository as `ai/ais.json`;
-`tools/open_data.py ai TREE` and every tree build install it with the scripts, and it ships in the db release part
+The lobby's per-seat AI choice comes from data: `Data/ai/ais.json` (written in the repository as `data/ai/ais.json`;
+`tools/open_data.py ai TREE` and every tree build install it with the scripts, and the release packages carry it
 with the rest of `Data/ai`). Code: `include/ee/EECPEngine.h`, `src/Empire Earth/AI Thread/EECPEngine.cpp`.
 
 ```json
@@ -593,7 +595,7 @@ save whose AI the manifest does not list fails to load, with an `EE-AI engine` l
 an engine byte 1 is `boom`; the options' choices 0/1/2 (classic/next/random) become 0/2/1.
 
 **Personalities** no longer name a script: `next_script` is gone from `aipersonalities.yaml` (an older document's
-`next_script` is read and ignored). For now the manifest lists only boom; `ai/rush.lua` and `ai/balanced.lua` stay
+`next_script` is read and ignored). For now the manifest lists only boom; `data/ai/rush.lua` and `data/ai/balanced.lua` stay
 and run through `EE_AI_NEXT_SCRIPT` (TEST ONLY) or once listed.
 
 **EE-SIM and the tools.** `--engine` (and `EE_AI_ENGINE`) take `classic`, `random`, an AI's id, or `next` for the
@@ -637,7 +639,7 @@ Hard should win by playing better first, with modifiers second.
 
 ### 4.1 S3 as built (2026-11-08)
 
-Code: `ai/boom.lua` (the script; `lib/view.lua` unchanged), the personalities `balanced` and `wide` run it
+Code: `data/ai/boom.lua` (the script; `lib/view.lua` unchanged), the personalities `balanced` and `wide` run it
 (`aipersonalities.yaml` `next_script: boom`; rules.py and EERules.cpp); the tactics changes below. Benchmarks in
 AI_RESEARCH.md §8.30.
 
@@ -897,9 +899,9 @@ most units), `lost`, `created`; `free_soldiers`, `free_strength`; per enemy `tow
 `no_target`. Save: the state block is version 2, the army after the Lua memory (groups, spots, towers, result group
 ids); version 1 still loads.
 
-**Scripts.** `ai/lib/army.lua` (generic: groups by role from the results, `pick_enemy` (the largest economy seen),
-the classes a producer makes); `ai/lib/rb_economy.lua` and `ai/lib/rb_army.lua` (the rush and balanced economy and
-army, numbers from a plan table); `ai/rush.lua`; `ai/balanced.lua`. Mapping for now: `aggressive` runs `rush`,
+**Scripts.** `data/ai/lib/army.lua` (generic: groups by role from the results, `pick_enemy` (the largest economy seen),
+the classes a producer makes); `data/ai/lib/rb_economy.lua` and `data/ai/lib/rb_army.lua` (the rush and balanced economy and
+army, numbers from a plan table); `data/ai/rush.lua`; `data/ai/balanced.lua`. Mapping for now: `aggressive` runs `rush`,
 `tall` runs `balanced` (S3 gives `balanced` and `wide` the boom; the final mapping is the owner's). TEST ONLY:
 `EE_AI_NEXT_SCRIPT` also takes `/` between players (sim_bench's `--env-vary` splits on commas).
 - **Economy** (both): citizens two at a time and never held back for the army (soldiers wait while the town is short
@@ -960,7 +962,7 @@ army, numbers from a plan table); `ai/rush.lua`; `ai/balanced.lua`. Mapping for 
 
 **S6, the default.**
 - **When:** the next engine becomes the default when the owner's playtests say so.
-- **Classic stays selectable;** deleting it is the owner's call.
+- **Classic stays selectable;** deleting it is the owner's call. (Done 2026-11-15: stage 5 deleted it, §8.89.)
 
 **S7, documentation and Rust.**
 - **Modding:** the scripting reference in DATA_FORMATS.md and a modding guide.

@@ -75,7 +75,7 @@
 #include "ee/EETeam.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEMessageID.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEGameLog.h"
@@ -418,8 +418,6 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
         return;
     if (inUnit->mIsDetachedFromAI)
         inUnit->mIsDetachedFromAI = false;
-    if (inPlayer->mCombatManager != NULL)
-        inPlayer->mCombatManager->UnitAdded(inUnit);
     long theCategory = inUnit->mUnitClass->mCategory;
     if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen)
         || inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResourceManager == NULL)
@@ -442,7 +440,7 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
     // released without {gather = true}) went onto no list at all, and the engine never moved or counted it again: in
     // a boom game 18 of 33 citizens were on no list, so the food list stayed short, more went hunting (30 on food
     // against 19 wanted) and the mines got nobody. It goes onto its resource's list (hunting: food), else the idle one
-    if (theCategory == kUnitCategoryLandCitizen && EECPNextEngine(inPlayer)) {
+    if (theCategory == kUnitCategoryLandCitizen) {
         EEUGGather* theWork = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
         EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
         long theResource = theWork != NULL && theWork->mResource != NULL ? (long)theWork->mResource->GetResourceType()

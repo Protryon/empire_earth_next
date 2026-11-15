@@ -1,0 +1,33 @@
+#eedata dbrandommap
+#format 3
+#rows 29
+row,id,mID,mGroup,mName,mElevationLow,mElevationHigh,mTerrain[0],mTerrain[1],mTerrain[2],mTerrain[3]
+0,grass_tufts,4,2,Grass Tufts,-2,-1,31,31,31,31
+1,grass_tufts_2,5,2,Grass Tufts,0,20,17,17,17,17
+2,grass,9,1,Grass,0,20,2,2,2,2
+3,grass_2,14,1,Grass,-2,-1,31,31,31,31
+4,grass_tall,46,3,Grass Tall,-2,-1,31,31,31,31
+5,grass_tall_2,47,3,Grass Tall,0,20,64,64,64,64
+6,grass_patches,48,4,Grass Patches,0,20,16,16,16,16
+7,grass_patches_2,49,4,Grass Patches,-2,-1,31,31,31,31
+8,snow,50,5,Snow,-2,-1,31,31,31,31
+9,snow_2,51,5,Snow,0,20,67,67,67,67
+10,snow_tufts,52,6,Snow Tufts,-2,-1,31,31,31,31
+11,snow_tufts_2,53,6,Snow Tufts,0,20,27,27,27,27
+12,snow_grass,54,7,Snow Grass,0,20,68,68,68,68
+13,snow_grass_2,55,7,Snow Grass,-2,-1,31,31,31,31
+14,snow_dirt,56,8,Snow Dirt,-2,-1,31,31,31,31
+15,snow_dirt_2,57,8,Snow Dirt,0,20,69,69,69,69
+16,grass_tufts_3,58,2,Grass Tufts,-10,-3,65,65,65,65
+17,grass_tall_3,59,3,Grass Tall,-10,-3,65,65,65,65
+18,grass_patches_3,60,4,Grass Patches,-10,-3,65,65,65,65
+19,snow_tufts_3,61,6,Snow Tufts,-10,-3,65,65,65,65
+20,snow_grass_3,62,7,Snow Grass,-10,-3,65,65,65,65
+21,snow_dirt_3,63,8,Snow Dirt,-10,-3,65,65,65,65
+22,grass_3,65,1,Grass,-10,-3,26,26,26,26
+23,grass_patches_4,66,4,Grass Patches,-10,-4,65,65,65,65
+24,snow_3,67,5,Snow,-10,-4,26,26,26,26
+25,ice,68,9,Ice,-10,-3,65,65,65,65
+26,ice_2,69,9,Ice,-2,-1,31,31,31,31
+27,ice_3,70,9,Ice,0,20,20,20,20,20
+28,stonework,71,10,StoneWork,-10,20,71,71,71,71

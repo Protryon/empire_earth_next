@@ -1,0 +1,1273 @@
+# dbevents: Empire Earth: The Art of Conquest db table (tools/eedata; record layout EEEventRow, 104 bytes, in tools/eedata/specs.json)
+eedata: dbevents
+format: 3
+rows: 1500
+records:
+  - row: 1
+    id: human_anatomy_researched
+    label: "Human Anatomy Researched"
+    effects: [human_anatomy_researched_1, human_anatomy_researched_2, human_anatomy_researched_3, human_anatomy_researched_4]
+  - row: 2
+    id: genetic_engineering_researched
+    label: "Genetic Engineering Researched"
+    effects: [genetic_engineering_researched_1, genetic_engineering_researched_2, genetic_engineering_researched_3]
+  - row: 3
+    id: ancestor_worship_researched
+    label: "Ancestor Worship Researched"
+    effects: [ancestor_worship_researched_1, ancestor_worship_researched_2]
+  - row: 4
+    id: anesthesia_researched
+    label: "Anesthesia Researched"
+    effects: [anesthesia_researched_1, anesthesia_researched_2]
+  - row: 5
+    id: animal_sacrifice_researched
+    label: "Animal Sacrifice Researched"
+    effects: []
+  - row: 6
+    id: observation_balloon_upgrade_researched
+    label: "Observation Balloon Upgrade Researched"
+    effects: [observation_balloon_upgrade_researched_1, observation_balloon_upgrade_researched_2, observation_balloon_upgrade_researched_3]
+  - row: 7
+    id: oxygen_furnace_researched
+    label: "Oxygen Furnace Researched"
+    effects: [oxygen_furnace_researched_1, oxygen_furnace_researched_2]
+  - row: 8
+    id: self_sufficiency_researched
+    label: "Self Sufficiency Researched"
+    effects: [self_sufficiency_researched_1, self_sufficiency_researched_2]
+  - row: 9
+    id: core_mining_researched
+    label: "Core Mining Researched"
+    effects: [core_mining_researched_1]
+  - row: 10
+    id: mortar08_upgrade_researched
+    label: "Mortar08 Upgrade Researched"
+    effects: [mortar08_upgrade_researched_1, mortar08_upgrade_researched_2, mortar08_upgrade_researched_3]
+  - row: 11
+    id: bazooka_upgrade_researched
+    label: "Bazooka Upgrade Researched"
+    effects: [bazooka_upgrade_researched_1, bazooka_upgrade_researched_2, bazooka_upgrade_researched_3]
+  - row: 16
+    id: bridge
+    label: "Bridge"
+    effects: []
+  - row: 19
+    id: irrigation_researched
+    label: "Irrigation Researched"
+    effects: [irrigation_researched_1, irrigation_researched_2]
+  - row: 20
+    id: capital_building
+    label: "Capital Building"
+    effects: []
+  - row: 21
+    id: coffer_dam_researched
+    label: "Coffer Dam Researched"
+    effects: [coffer_dam_researched_1, coffer_dam_researched_2]
+  - row: 22
+    id: dry_dock_researched
+    label: "Dry Dock Researched"
+    effects: [dry_dock_researched_1, dry_dock_researched_2]
+  - row: 23
+    id: scuba_repairs_researched
+    label: "Scuba Repairs Researched"
+    effects: [scuba_repairs_researched_1]
+  - row: 28
+    id: concrete_researched
+    label: "Concrete Researched"
+    effects: [concrete_researched_1, concrete_researched_2]
+  - row: 35
+    id: enclosure_researched
+    label: "Enclosure Researched"
+    effects: [enclosure_researched_1, enclosure_researched_2]
+  - row: 37
+    id: plague
+    label: "Plague"
+    effects: []
+  - row: 38
+    id: hydroponics_researched
+    label: "Hydroponics Researched"
+    effects: [hydroponics_researched_1, hydroponics_researched_2]
+  - row: 57
+    id: epoch_industrial
+    label: "Epoch Industrial"
+    effects: [epoch_industrial_1, epoch_industrial_2, epoch_industrial_3, epoch_industrial_4, epoch_industrial_5, epoch_industrial_6, epoch_industrial_7, epoch_industrial_8, epoch_industrial_9]
+  - row: 58
+    id: epoch_digital
+    label: "Epoch Digital"
+    effects: [epoch_digital_1, epoch_digital_2, epoch_digital_3, epoch_digital_4, epoch_digital_5, epoch_digital_6, epoch_digital_7, epoch_digital_8, epoch_digital_9, epoch_digital_10, epoch_digital_11, epoch_digital_12, epoch_digital_13, epoch_digital_14, epoch_digital_15, epoch_digital_16, epoch_digital_17, epoch_digital_18, epoch_digital_19, epoch_digital_20, epoch_digital_21, epoch_digital_22, epoch_digital_23, epoch_digital_24, epoch_digital_25, epoch_digital_26, epoch_digital_27, epoch_digital_28, epoch_digital_29, epoch_digital_30, epoch_digital_31, epoch_digital_32, epoch_digital_33]
+  - row: 59
+    id: epoch_dark
+    label: "Epoch Dark"
+    effects: [epoch_dark_1]
+  - row: 60
+    id: epoch_bronze
+    label: "Epoch Bronze"
+    effects: [epoch_bronze_1, epoch_bronze_2, epoch_bronze_3, epoch_bronze_4, epoch_bronze_5, epoch_bronze_6, epoch_bronze_7, epoch_bronze_8, epoch_bronze_9, epoch_bronze_10, epoch_bronze_11, epoch_bronze_12, epoch_bronze_13, epoch_bronze_14, epoch_bronze_15, epoch_bronze_16, epoch_bronze_17, epoch_bronze_18, epoch_bronze_19, epoch_bronze_20, epoch_bronze_21, epoch_bronze_22, epoch_bronze_23, epoch_bronze_24, epoch_bronze_25, epoch_bronze_26, epoch_bronze_27, epoch_bronze_28, epoch_bronze_29, epoch_bronze_30, epoch_bronze_31, epoch_bronze_32, epoch_bronze_33, epoch_bronze_34, epoch_bronze_35, epoch_bronze_36, epoch_bronze_37, epoch_bronze_38, epoch_bronze_39, epoch_bronze_40, epoch_bronze_41, epoch_bronze_42, epoch_bronze_43, epoch_bronze_44, epoch_bronze_45, epoch_bronze_46, epoch_bronze_47, epoch_bronze_48, epoch_bronze_49, epoch_bronze_50, epoch_bronze_51, epoch_bronze_52, epoch_bronze_53, epoch_bronze_54, epoch_bronze_55, epoch_bronze_56, epoch_bronze_57, epoch_bronze_58, epoch_bronze_59]
+  - row: 61
+    id: epoch_imperial
+    label: "Epoch Imperial"
+    effects: [epoch_imperial_1, epoch_imperial_2, epoch_imperial_3, epoch_imperial_4, epoch_imperial_5, epoch_imperial_6, epoch_imperial_7, epoch_imperial_8, epoch_imperial_9, epoch_imperial_10, epoch_imperial_11]
+  - row: 62
+    id: epoch_paleo
+    label: "Epoch Paleo"
+    effects: [epoch_paleo_1]
+  - row: 63
+    id: epoch_renaissance
+    label: "Epoch Renaissance"
+    effects: [epoch_renaissance_1, epoch_renaissance_2, epoch_renaissance_3, epoch_renaissance_4, epoch_renaissance_5, epoch_renaissance_6, epoch_renaissance_7, epoch_renaissance_8, epoch_renaissance_9, epoch_renaissance_10, epoch_renaissance_11, epoch_renaissance_12, epoch_renaissance_13, epoch_renaissance_14, epoch_renaissance_15, epoch_renaissance_16, epoch_renaissance_17, epoch_renaissance_18, epoch_renaissance_19, epoch_renaissance_20, epoch_renaissance_21]
+  - row: 64
+    id: epoch_middle_ages
+    label: "Epoch Middle Ages"
+    effects: [epoch_middle_ages_1, epoch_middle_ages_2, epoch_middle_ages_3, epoch_middle_ages_4, epoch_middle_ages_5, epoch_middle_ages_6, epoch_middle_ages_7, epoch_middle_ages_8, epoch_middle_ages_9, epoch_middle_ages_10, epoch_middle_ages_11, epoch_middle_ages_12, epoch_middle_ages_13, epoch_middle_ages_14, epoch_middle_ages_15, epoch_middle_ages_16, epoch_middle_ages_17, epoch_middle_ages_18, epoch_middle_ages_19, epoch_middle_ages_20, epoch_middle_ages_21, epoch_middle_ages_22, epoch_middle_ages_23, epoch_middle_ages_24, epoch_middle_ages_25, epoch_middle_ages_26, epoch_middle_ages_27, epoch_middle_ages_28, epoch_middle_ages_29, epoch_middle_ages_30, epoch_middle_ages_31, epoch_middle_ages_32, epoch_middle_ages_33, epoch_middle_ages_34, epoch_middle_ages_35, epoch_middle_ages_36, epoch_middle_ages_37, epoch_middle_ages_38, epoch_middle_ages_39, epoch_middle_ages_40]
+  - row: 65
+    id: epoch_atomic_ww1
+    label: "Epoch Atomic - WW1"
+    effects: [epoch_atomic_ww1_1, epoch_atomic_ww1_2, epoch_atomic_ww1_3, epoch_atomic_ww1_4, epoch_atomic_ww1_5, epoch_atomic_ww1_6, epoch_atomic_ww1_7, epoch_atomic_ww1_8, epoch_atomic_ww1_9, epoch_atomic_ww1_10, epoch_atomic_ww1_11, epoch_atomic_ww1_12, epoch_atomic_ww1_13, epoch_atomic_ww1_14, epoch_atomic_ww1_15, epoch_atomic_ww1_16, epoch_atomic_ww1_17, epoch_atomic_ww1_18, epoch_atomic_ww1_19, epoch_atomic_ww1_20, epoch_atomic_ww1_21, epoch_atomic_ww1_22, epoch_atomic_ww1_23, epoch_atomic_ww1_24, epoch_atomic_ww1_25, epoch_atomic_ww1_26, epoch_atomic_ww1_27, epoch_atomic_ww1_28, epoch_atomic_ww1_29, epoch_atomic_ww1_30, epoch_atomic_ww1_31, epoch_atomic_ww1_32, epoch_atomic_ww1_33, epoch_atomic_ww1_34, epoch_atomic_ww1_35, epoch_atomic_ww1_36, epoch_atomic_ww1_37, epoch_atomic_ww1_38, epoch_atomic_ww1_39, epoch_atomic_ww1_40]
+  - row: 66
+    id: epoch_copper
+    label: "Epoch Copper"
+    effects: [epoch_copper_1, epoch_copper_2, epoch_copper_3, epoch_copper_4, epoch_copper_5, epoch_copper_6, epoch_copper_7, epoch_copper_8, epoch_copper_9, epoch_copper_10, epoch_copper_11]
+  - row: 67
+    id: epoch_nano
+    label: "Epoch Nano"
+    effects: [epoch_nano_1, epoch_nano_2, epoch_nano_3, epoch_nano_4, epoch_nano_5, epoch_nano_6, epoch_nano_7, epoch_nano_8, epoch_nano_9, epoch_nano_10, epoch_nano_11, epoch_nano_12, epoch_nano_13, epoch_nano_14, epoch_nano_15, epoch_nano_16, epoch_nano_17, epoch_nano_18]
+  - row: 68
+    id: epoch_stone
+    label: "Epoch Stone"
+    effects: [epoch_stone_1, epoch_stone_2, epoch_stone_3, epoch_stone_4, epoch_stone_5, epoch_stone_6, epoch_stone_7, epoch_stone_8, epoch_stone_9, epoch_stone_10, epoch_stone_11, epoch_stone_12, epoch_stone_13, epoch_stone_14, epoch_stone_15, epoch_stone_16]
+  - row: 69
+    id: excommunication_researched
+    label: "Excommunication Researched"
+    effects: [excommunication_researched_1, excommunication_researched_2, excommunication_researched_3]
+  - row: 70
+    id: explosives_15_steel
+    label: "Explosives (+15% Steel)"
+    effects: [explosives_15_steel_1, explosives_15_steel_2]
+  - row: 76
+    id: bullseye_lantern_researched
+    label: "Bullseye Lantern Researched"
+    effects: [bullseye_lantern_researched_1, bullseye_lantern_researched_2]
+  - row: 87
+    id: gas_lamp_researched
+    label: "Gas Lamp Researched"
+    effects: [bullseye_lantern_researched_1]
+  - row: 102
+    id: commercial_law_researched
+    label: "Commercial Law Researched"
+    effects: [commercial_law_researched_1]
+  - row: 103
+    id: hippocratic_oath_researched
+    label: "Hippocratic Oath Researched"
+    effects: [hippocratic_oath_researched_1, hippocratic_oath_researched_2]
+  - row: 111
+    id: comparative_anatomy_researched
+    label: "Comparative Anatomy Researched"
+    effects: [human_anatomy_researched_1, comparative_anatomy_researched_2, comparative_anatomy_researched_3, human_anatomy_researched_4]
+  - row: 114
+    id: indulgencies_researched
+    label: "Indulgencies Researched"
+    effects: [indulgencies_researched_1, indulgencies_researched_2, indulgencies_researched_3]
+  - row: 116
+    id: inquisition_researched
+    label: "Inquisition Researched"
+    effects: [inquisition_researched_1, inquisition_researched_2, inquisition_researched_3]
+  - row: 125
+    id: sea_king_ii_upgrade_researched
+    label: "Sea King II upgrade researched"
+    effects: [sea_king_ii_upgrade_researched_1, sea_king_ii_upgrade_researched_2, sea_king_ii_upgrade_researched_3]
+  - row: 131
+    id: herbal_medicines_researched
+    label: "Herbal Medicines Researched"
+    effects: [human_anatomy_researched_1, herbal_medicines_researched_2, genetic_engineering_researched_1, human_anatomy_researched_4]
+  - row: 144
+    id: monotheism_researched
+    label: "Monotheism Researched"
+    effects: [monotheism_researched_1, monotheism_researched_2]
+  - row: 147
+    id: mysticism_researched
+    label: "Mysticism Researched"
+    effects: [mysticism_researched_1, mysticism_researched_2]
+  - row: 153
+    id: oil_lamp_researched
+    label: "Oil Lamp Researched"
+    effects: [bullseye_lantern_researched_1, oil_lamp_researched_2]
+  - row: 154
+    id: oracle_researched
+    label: "Oracle Researched"
+    effects: [oracle_researched_1, oracle_researched_2]
+  - row: 160
+    id: pasteurization_researched
+    label: "Pasteurization Researched"
+    effects: [human_anatomy_researched_1, pasteurization_researched_2, genetic_engineering_researched_1, human_anatomy_researched_4]
+  - row: 164
+    id: chemical_pesticides_researched
+    label: "Chemical Pesticides Researched"
+    effects: [chemical_pesticides_researched_1, chemical_pesticides_researched_2]
+  - row: 168
+    id: polytheism_researched
+    label: "Polytheism Researched"
+    effects: [excommunication_researched_1, polytheism_researched_2, excommunication_researched_3]
+  - row: 176
+    id: missionaries_researched
+    label: "Missionaries Researched"
+    effects: [missionaries_researched_1, missionaries_researched_2, missionaries_researched_3]
+  - row: 178
+    id: sunday_school_researched
+    label: "Sunday School Researched"
+    effects: [sunday_school_researched_1]
+  - row: 179
+    id: tarot_researched
+    label: "Tarot Researched"
+    effects: [oracle_researched_1]
+  - row: 185
+    id: religious_tolerance_researched
+    label: "Religious Tolerance Researched"
+    effects: [religious_tolerance_researched_1, religious_tolerance_researched_2, religious_tolerance_researched_3]
+  - row: 199
+    id: steam_engine_researched_15_gold
+    label: "Steam Engine Researched (+15% Gold)"
+    effects: [steam_engine_researched_15_gold_1, steam_engine_researched_15_gold_2]
+  - row: 200
+    id: amalgamation_researched_15_gold
+    label: "Amalgamation Researched (+15% Gold)"
+    effects: [amalgamation_researched_15_gold_1, amalgamation_researched_15_gold_2]
+  - row: 204
+    id: enviromental_law_researched
+    label: "Enviromental Law Researched"
+    effects: [enviromental_law_researched_1, enviromental_law_researched_2, enviromental_law_researched_3]
+  - row: 217
+    id: printing_press_researched
+    label: "Printing Press Researched"
+    effects: [printing_press_researched_1, printing_press_researched_2, printing_press_researched_3]
+  - row: 219
+    id: trigonometry
+    label: "Trigonometry"
+    effects: []
+  - row: 226
+    id: wall2
+    label: "Wall2"
+    effects: []
+  - row: 227
+    id: wall3
+    label: "Wall3"
+    effects: []
+  - row: 229
+    id: wall5
+    label: "Wall5"
+    effects: []
+  - row: 240
+    id: hand_axe_researched_at_tc_15_wood
+    label: "Hand Axe Researched at TC (+15% Wood)"
+    effects: [hand_axe_researched_at_tc_15_wood_1, hand_axe_researched_at_tc_15_wood_2]
+  - row: 241
+    id: iron_saw_researched_15_wood
+    label: "Iron Saw Researched (+15% Wood)"
+    effects: [iron_saw_researched_15_wood_1, iron_saw_researched_15_wood_2]
+  - row: 244
+    id: first_playable_event
+    label: "First Playable Event"
+    effects: [first_playable_event_1]
+  - row: 245
+    id: start_game
+    label: "Start Game"
+    effects: [start_game_1, start_game_2, epoch_stone_4, start_game_4, start_game_5, start_game_6, start_game_7]
+  - row: 266
+    id: building_codes_researched
+    label: "Building Codes Researched"
+    effects: [building_codes_researched_1]
+  - row: 267
+    id: civil_infrastructure
+    label: "Civil Infrastructure"
+    effects: []
+  - row: 268
+    id: breech_loading
+    label: "Breech Loading"
+    effects: []
+  - row: 270
+    id: spyglass
+    label: "Spyglass"
+    effects: []
+  - row: 272
+    id: night_watch
+    label: "Night Watch"
+    effects: []
+  - row: 286
+    id: tc_range_placeholder
+    label: "TC +range Placeholder"
+    effects: []
+  - row: 287
+    id: tc_morale_placeholder
+    label: "TC +morale Placeholder"
+    effects: []
+  - row: 291
+    id: famine
+    label: "Famine"
+    effects: []
+  - row: 292
+    id: fire_calamity
+    label: "Fire Calamity"
+    effects: []
+  - row: 294
+    id: crusades_researched
+    label: "Crusades Researched"
+    effects: [crusades_researched_1, crusades_researched_2]
+  - row: 296
+    id: earthquake
+    label: "Earthquake"
+    effects: []
+  - row: 297
+    id: hurricane
+    label: "Hurricane"
+    effects: []
+  - row: 298
+    id: volcano
+    label: "Volcano"
+    effects: []
+  - row: 301
+    id: maceman_upgrade_researched
+    label: "Maceman Upgrade Researched"
+    effects: [maceman_upgrade_researched_1, maceman_upgrade_researched_2, maceman_upgrade_researched_3, maceman_upgrade_researched_4, maceman_upgrade_researched_5]
+  - row: 303
+    id: shortsword_upgrade_researched
+    label: "ShortSword Upgrade Researched"
+    effects: [shortsword_upgrade_researched_1, shortsword_upgrade_researched_2, shortsword_upgrade_researched_3, shortsword_upgrade_researched_4]
+  - row: 305
+    id: longsword_upgrade_researched
+    label: "LongSword Upgrade Researched"
+    effects: [longsword_upgrade_researched_1, longsword_upgrade_researched_2, longsword_upgrade_researched_3]
+  - row: 307
+    id: phalanx_upgrade_researched
+    label: "Phalanx Upgrade Researched"
+    effects: [phalanx_upgrade_researched_1, phalanx_upgrade_researched_2, phalanx_upgrade_researched_3, phalanx_upgrade_researched_4]
+  - row: 309
+    id: pikeman_upgrade_researched
+    label: "Pikeman Upgrade Researched"
+    effects: [pikeman_upgrade_researched_1, pikeman_upgrade_researched_2, pikeman_upgrade_researched_3, pikeman_upgrade_researched_4]
+  - row: 311
+    id: halberdier_upgrade_researched
+    label: "Halberdier Upgrade Researched"
+    effects: [halberdier_upgrade_researched_1, halberdier_upgrade_researched_2, halberdier_upgrade_researched_3]
+  - row: 313
+    id: musketeer_upgrade_researched
+    label: "Musketeer Upgrade Researched"
+    effects: [musketeer_upgrade_researched_1, musketeer_upgrade_researched_2, musketeer_upgrade_researched_3, musketeer_upgrade_researched_4]
+  - row: 315
+    id: grenadier_upgrade_researched
+    label: "Grenadier Upgrade Researched"
+    effects: [grenadier_upgrade_researched_1, grenadier_upgrade_researched_2, grenadier_upgrade_researched_3, grenadier_upgrade_researched_4]
+  - row: 317
+    id: marine_upgrade_researched
+    label: "Marine Upgrade Researched"
+    effects: [marine_upgrade_researched_1, marine_upgrade_researched_2, marine_upgrade_researched_3, marine_upgrade_researched_4]
+  - row: 319
+    id: sentinel_upgrade_researched
+    label: "Sentinel Upgrade Researched"
+    effects: [sentinel_upgrade_researched_1, sentinel_upgrade_researched_2, sentinel_upgrade_researched_3, sentinel_upgrade_researched_4]
+  - row: 321
+    id: guardian_upgrade_researched
+    label: "Guardian Upgrade Researched"
+    effects: [guardian_upgrade_researched_1, guardian_upgrade_researched_2, guardian_upgrade_researched_3, guardian_upgrade_researched_4]
+  - row: 323
+    id: mortar10_upgrade_researched
+    label: "Mortar10 Upgrade Researched"
+    effects: [mortar10_upgrade_researched_1, mortar10_upgrade_researched_2, mortar10_upgrade_researched_3]
+  - row: 325
+    id: composite_bow_upgrade_research
+    label: "Composite Bow Upgrade Research"
+    effects: [composite_bow_upgrade_research_1, composite_bow_upgrade_research_2, composite_bow_upgrade_research_3, composite_bow_upgrade_research_4]
+  - row: 327
+    id: long_bow_upgrade_researched
+    label: "Long Bow Upgrade Researched"
+    effects: [long_bow_upgrade_researched_1, long_bow_upgrade_researched_2, long_bow_upgrade_researched_3]
+  - row: 329
+    id: pilum_upgrade_researched
+    label: "Pilum Upgrade Researched"
+    effects: [pilum_upgrade_researched_1, pilum_upgrade_researched_2, pilum_upgrade_researched_3]
+  - row: 331
+    id: cavalry_archer_upgrade_researched
+    label: "Cavalry Archer Upgrade Researched"
+    effects: [cavalry_archer_upgrade_researched_1, cavalry_archer_upgrade_researched_2, cavalry_archer_upgrade_researched_3]
+  - row: 333
+    id: fishing_boat_04_upgrade_researched
+    label: "Fishing Boat 04 Upgrade Researched"
+    effects: [fishing_boat_04_upgrade_researched_1, fishing_boat_04_upgrade_researched_2, fishing_boat_04_upgrade_researched_3, fishing_boat_04_upgrade_researched_4]
+  - row: 335
+    id: fishing_boat_10_upgrade_researched
+    label: "Fishing Boat 10 Upgrade Researched"
+    effects: [fishing_boat_10_upgrade_researched_1, fishing_boat_10_upgrade_researched_2, fishing_boat_10_upgrade_researched_3, fishing_boat_10_upgrade_researched_4]
+  - row: 337
+    id: nav_transport_3_upgrade_researched
+    label: "Nav Transport 3 Upgrade Researched"
+    effects: [nav_transport_3_upgrade_researched_1, nav_transport_3_upgrade_researched_2, nav_transport_3_upgrade_researched_3, nav_transport_3_upgrade_researched_4]
+  - row: 339
+    id: nav_transport_5_upgrade_researched
+    label: "Nav Transport 5 Upgrade Researched"
+    effects: [nav_transport_5_upgrade_researched_1, nav_transport_5_upgrade_researched_2, nav_transport_5_upgrade_researched_3, nav_transport_5_upgrade_researched_4]
+  - row: 341
+    id: nav_transport_8_upgrade_researched
+    label: "Nav Transport 8 Upgrade Researched"
+    effects: [nav_transport_8_upgrade_researched_1, nav_transport_8_upgrade_researched_2, nav_transport_8_upgrade_researched_3, nav_transport_8_upgrade_researched_4]
+  - row: 343
+    id: nav_transport_10_upgrade_researched
+    label: "Nav Transport 10 Upgrade Researched"
+    effects: [nav_transport_10_upgrade_researched_1, nav_transport_10_upgrade_researched_2, nav_transport_10_upgrade_researched_3, nav_transport_10_upgrade_researched_4]
+  - row: 345
+    id: nav_transport_11_upgrade_researched
+    label: "Nav Transport 11 Upgrade Researched"
+    effects: [nav_transport_11_upgrade_researched_1, nav_transport_11_upgrade_researched_2, nav_transport_11_upgrade_researched_3]
+  - row: 347
+    id: super_war_raft_upgrade_researched
+    label: "Super War Raft Upgrade Researched"
+    effects: [super_war_raft_upgrade_researched_1, super_war_raft_upgrade_researched_2, super_war_raft_upgrade_researched_3, super_war_raft_upgrade_researched_4]
+  - row: 349
+    id: pentakonter_04_upgrade_researched
+    label: "Pentakonter 04 Upgrade Researched"
+    effects: [pentakonter_04_upgrade_researched_1, pentakonter_04_upgrade_researched_2, pentakonter_04_upgrade_researched_3, pentakonter_04_upgrade_researched_4]
+  - row: 351
+    id: trireme_05_upgrade_researched
+    label: "Trireme 05 Upgrade Researched"
+    effects: [trireme_05_upgrade_researched_1, trireme_05_upgrade_researched_2, trireme_05_upgrade_researched_3, trireme_05_upgrade_researched_4]
+  - row: 353
+    id: decereme_06_upgrade_researched
+    label: "Decereme 06 Upgrade Researched"
+    effects: [decereme_06_upgrade_researched_1, decereme_06_upgrade_researched_2, decereme_06_upgrade_researched_3, decereme_06_upgrade_researched_4]
+  - row: 355
+    id: galleon_07_upgrade_researched
+    label: "Galleon 07 Upgrade Researched"
+    effects: [galleon_07_upgrade_researched_1, galleon_07_upgrade_researched_2, galleon_07_upgrade_researched_3, galleon_07_upgrade_researched_4]
+  - row: 357
+    id: henri_08_upgrade_researched
+    label: "Henri 08 Upgrade Researched"
+    effects: [henri_08_upgrade_researched_1, henri_08_upgrade_researched_2, henri_08_upgrade_researched_3, henri_08_upgrade_researched_4]
+  - row: 359
+    id: victory_09_upgrade_researched
+    label: "Victory 09 Upgrade Researched"
+    effects: [victory_09_upgrade_researched_1, victory_09_upgrade_researched_2, victory_09_upgrade_researched_3, victory_09_upgrade_researched_4]
+  - row: 361
+    id: bismarck_10_upgrade_researched
+    label: "Bismarck 10 Upgrade Researched"
+    effects: [bismarck_10_upgrade_researched_1, bismarck_10_upgrade_researched_2, bismarck_10_upgrade_researched_3, bismarck_10_upgrade_researched_4]
+  - row: 363
+    id: battleship_11_upgrade_researched
+    label: "Battleship 11 Upgrade Researched"
+    effects: [battleship_11_upgrade_researched_1, battleship_11_upgrade_researched_2, battleship_11_upgrade_researched_3]
+  - row: 365
+    id: pentakonter_frig_04_upgrade_researched
+    label: "Pentakonter Frig 04 Upgrade Researched"
+    effects: [pentakonter_frig_04_upgrade_researched_1, pentakonter_frig_04_upgrade_researched_2, pentakonter_frig_04_upgrade_researched_3, pentakonter_frig_04_upgrade_researched_4]
+  - row: 367
+    id: super_pentakonter_firg_05_upgrade_researched
+    label: "Super Pentakonter Firg 05 Upgrade Researched"
+    effects: [super_pentakonter_firg_05_upgrade_researched_1, super_pentakonter_firg_05_upgrade_researched_2, super_pentakonter_firg_05_upgrade_researched_3, super_pentakonter_firg_05_upgrade_researched_4]
+  - row: 369
+    id: galleon_frig_07_upgrade_researched
+    label: "Galleon Frig 07 Upgrade Researched"
+    effects: [galleon_frig_07_upgrade_researched_1, galleon_frig_07_upgrade_researched_2, galleon_frig_07_upgrade_researched_3, galleon_frig_07_upgrade_researched_4]
+  - row: 371
+    id: henri_frig_08_upgrade_researched
+    label: "Henri Frig 08 Upgrade Researched"
+    effects: [henri_frig_08_upgrade_researched_1, henri_frig_08_upgrade_researched_2, henri_frig_08_upgrade_researched_3, henri_frig_08_upgrade_researched_4]
+  - row: 373
+    id: victory_frig_09_upgrade_researched
+    label: "Victory Frig 09 Upgrade Researched"
+    effects: [victory_frig_09_upgrade_researched_1, victory_frig_09_upgrade_researched_2, victory_frig_09_upgrade_researched_3, victory_frig_09_upgrade_researched_4]
+  - row: 379
+    id: warrington_10_upgrade_researched
+    label: "Warrington 10 Upgrade Researched"
+    effects: [warrington_10_upgrade_researched_1, warrington_10_upgrade_researched_2, warrington_10_upgrade_researched_3, warrington_10_upgrade_researched_4]
+  - row: 381
+    id: frigate_11_upgrade_researched
+    label: "Frigate 11 Upgrade Researched"
+    effects: [frigate_11_upgrade_researched_1, frigate_11_upgrade_researched_2, frigate_11_upgrade_researched_3]
+  - row: 383
+    id: pentakonter_melee_04_upgrade_researched
+    label: "Pentakonter Melee 04 Upgrade Researched"
+    effects: [pentakonter_melee_04_upgrade_researched_1, pentakonter_melee_04_upgrade_researched_2, super_pentakonter_firg_05_upgrade_researched_3]
+  - row: 385
+    id: decereme_frig_06_upgrade_researched
+    label: "Decereme Frig 06 Upgrade Researched"
+    effects: [decereme_frig_06_upgrade_researched_1, decereme_frig_06_upgrade_researched_2, decereme_frig_06_upgrade_researched_3, decereme_frig_06_upgrade_researched_4]
+  - row: 387
+    id: decereme_catapult_06_upgrade_researched
+    label: "Decereme Catapult 06 Upgrade Researched"
+    effects: [decereme_catapult_06_upgrade_researched_1, decereme_catapult_06_upgrade_researched_2, decereme_catapult_06_upgrade_researched_3]
+  - row: 389
+    id: cruiser_13_upgrade_researched
+    label: "Cruiser 13 Upgrade Researched"
+    effects: [cruiser_13_upgrade_researched_1, cruiser_13_upgrade_researched_2, cruiser_13_upgrade_researched_3]
+  - row: 391
+    id: uboat_11_upgrade_researched
+    label: "Uboat 11 Upgrade Researched"
+    effects: [uboat_11_upgrade_researched_1, uboat_11_upgrade_researched_2, uboat_11_upgrade_researched_3, uboat_11_upgrade_researched_4]
+  - row: 393
+    id: uboat_12_upgrade_researched
+    label: "Uboat 12 Upgrade Researched"
+    effects: [uboat_12_upgrade_researched_1, uboat_12_upgrade_researched_2, uboat_12_upgrade_researched_3]
+  - row: 395
+    id: aircraft_carrier_11_upgrade_researched
+    label: "Aircraft Carrier 11 Upgrade Researched"
+    effects: [aircraft_carrier_11_upgrade_researched_1, aircraft_carrier_11_upgrade_researched_2, aircraft_carrier_11_upgrade_researched_3]
+  - row: 397
+    id: nuc_sub_11_upgrade_researched
+    label: "Nuc Sub 11 Upgrade Researched"
+    effects: [nuc_sub_11_upgrade_researched_1, nuc_sub_11_upgrade_researched_2, nuc_sub_11_upgrade_researched_3]
+  - row: 399
+    id: cataphract_upgrade_researched
+    label: "Cataphract Upgrade Researched"
+    effects: [cataphract_upgrade_researched_1, cataphract_upgrade_researched_2, cataphract_upgrade_researched_3, cataphract_upgrade_researched_4]
+  - row: 401
+    id: royal_lancer_upgrade_researched
+    label: "Royal Lancer Upgrade Researched"
+    effects: [royal_lancer_upgrade_researched_1, royal_lancer_upgrade_researched_2, royal_lancer_upgrade_researched_3, royal_lancer_upgrade_researched_4]
+  - row: 403
+    id: dragoon_upgrade_researched
+    label: "Dragoon Upgrade Researched"
+    effects: [dragoon_upgrade_researched_1, dragoon_upgrade_researched_2, dragoon_upgrade_researched_3]
+  - row: 405
+    id: knight_upgrade_researched
+    label: "Knight Upgrade Researched"
+    effects: [knight_upgrade_researched_1, knight_upgrade_researched_2, knight_upgrade_researched_3]
+  - row: 407
+    id: imperial_cuirassier_upgrade_researched
+    label: "Imperial Cuirassier Upgrade Researched"
+    effects: [imperial_cuirassier_upgrade_researched_1, imperial_cuirassier_upgrade_researched_2, imperial_cuirassier_upgrade_researched_3]
+  - row: 409
+    id: ballistae_upgrade_researched
+    label: "Ballistae Upgrade Researched"
+    effects: [ballistae_upgrade_researched_1, ballistae_upgrade_researched_2, ballistae_upgrade_researched_3]
+  - row: 411
+    id: at_gun_12_upgrade_researched
+    label: "AT Gun 12 Upgrade Researched"
+    effects: [at_gun_12_upgrade_researched_1, at_gun_12_upgrade_researched_2, at_gun_12_upgrade_researched_3, at_gun_12_upgrade_researched_4]
+  - row: 413
+    id: ram_6_upgrade_researched
+    label: "Ram 6 Upgrade Researched"
+    effects: [ram_6_upgrade_researched_1, ram_6_upgrade_researched_2, ram_6_upgrade_researched_3]
+  - row: 415
+    id: aa_gun_11_upgrade_researched
+    label: "AA Gun 11 Upgrade Researched"
+    effects: []
+  - row: 417
+    id: trebuchet_upgrade_researched
+    label: "Trebuchet Upgrade Researched"
+    effects: [trebuchet_upgrade_researched_1, trebuchet_upgrade_researched_2, trebuchet_upgrade_researched_3]
+  - row: 419
+    id: siege_tower_06_upgrade_researched
+    label: "Siege Tower 06 Upgrade Researched"
+    effects: [siege_tower_06_upgrade_researched_1, siege_tower_06_upgrade_researched_2, siege_tower_06_upgrade_researched_3]
+  - row: 421
+    id: sepentine_upgrade_researched
+    label: "Sepentine Upgrade Researched"
+    effects: [sepentine_upgrade_researched_1, sepentine_upgrade_researched_2, sepentine_upgrade_researched_3, sepentine_upgrade_researched_4]
+  - row: 423
+    id: bronze_cannon_upgrade_researched
+    label: "Bronze Cannon Upgrade Researched"
+    effects: [bronze_cannon_upgrade_researched_1, bronze_cannon_upgrade_researched_2, bronze_cannon_upgrade_researched_3]
+  - row: 427
+    id: artillery_upgrade_researched
+    label: "Artillery Upgrade Researched"
+    effects: [artillery_upgrade_researched_1, artillery_upgrade_researched_2, artillery_upgrade_researched_3, artillery_upgrade_researched_4]
+  - row: 429
+    id: mega_artillery_upgrade_researched
+    label: "Mega Artillery Upgrade Researched"
+    effects: [mega_artillery_upgrade_researched_1, mega_artillery_upgrade_researched_2, mega_artillery_upgrade_researched_3]
+  - row: 431
+    id: epoch_atomic_ww2
+    label: "Epoch Atomic - WW2"
+    effects: [epoch_atomic_ww2_1]
+  - row: 432
+    id: epoch_atomic_modern
+    label: "Epoch Atomic - Modern"
+    effects: []
+  - row: 447
+    id: agincourt_upgrade_researched
+    label: "Agincourt Upgrade Researched"
+    effects: [agincourt_upgrade_researched_1, agincourt_upgrade_researched_2, agincourt_upgrade_researched_3, agincourt_upgrade_researched_4]
+  - row: 449
+    id: sherman_upgrade_researched
+    label: "Sherman Upgrade Researched"
+    effects: [sherman_upgrade_researched_1, sherman_upgrade_researched_2, sherman_upgrade_researched_3, sherman_upgrade_researched_4]
+  - row: 451
+    id: m1_upgrade_researched
+    label: "M1 Upgrade Researched"
+    effects: [m1_upgrade_researched_1, m1_upgrade_researched_2, m1_upgrade_researched_3, m1_upgrade_researched_4]
+  - row: 453
+    id: info_tank_upgrade_researched
+    label: "Info Tank Upgrade Researched"
+    effects: [info_tank_upgrade_researched_1, info_tank_upgrade_researched_2, info_tank_upgrade_researched_3, info_tank_upgrade_researched_4]
+  - row: 455
+    id: panzer_upgrade_researched
+    label: "Panzer Upgrade Researched"
+    effects: [panzer_upgrade_researched_1, panzer_upgrade_researched_2, panzer_upgrade_researched_3, panzer_upgrade_researched_4]
+  - row: 457
+    id: leopard_upgrade_researched
+    label: "Leopard Upgrade Researched"
+    effects: [leopard_upgrade_researched_1, leopard_upgrade_researched_2, leopard_upgrade_researched_3]
+  - row: 459
+    id: nano_tank_upgrade_researched
+    label: "Nano Tank Upgrade Researched"
+    effects: [nano_tank_upgrade_researched_1, nano_tank_upgrade_researched_2, nano_tank_upgrade_researched_3]
+  - row: 461
+    id: aatank_13_upgrade_researched
+    label: "AATank 13 Upgrade Researched"
+    effects: [aatank_13_upgrade_researched_1, aatank_13_upgrade_researched_2, aatank_13_upgrade_researched_3]
+  - row: 480
+    id: single_player_barracks_researched
+    label: "Single Player Barracks Researched"
+    effects: [single_player_barracks_researched_1, single_player_barracks_researched_2, single_player_barracks_researched_3]
+  - row: 481
+    id: spitfire_upgrade_researched
+    label: "Spitfire Upgrade Researched"
+    effects: [spitfire_upgrade_researched_1, spitfire_upgrade_researched_2, spitfire_upgrade_researched_3, spitfire_upgrade_researched_4]
+  - row: 482
+    id: me109_upgrade_researched
+    label: "ME109 Upgrade Researched"
+    effects: [me109_upgrade_researched_1, me109_upgrade_researched_2, me109_upgrade_researched_3, me109_upgrade_researched_4]
+  - row: 483
+    id: me262_upgrade_researched
+    label: "ME262 Upgrade Researched"
+    effects: [me262_upgrade_researched_1, me262_upgrade_researched_2, me262_upgrade_researched_3, me262_upgrade_researched_4]
+  - row: 484
+    id: f15_upgrade_researched
+    label: "F15 Upgrade Researched"
+    effects: [f15_upgrade_researched_1, f15_upgrade_researched_2, f15_upgrade_researched_3, f15_upgrade_researched_4]
+  - row: 485
+    id: stealth_fighter_upgrade_researched
+    label: "Stealth Fighter Upgrade Researched"
+    effects: [stealth_fighter_upgrade_researched_1, stealth_fighter_upgrade_researched_2, stealth_fighter_upgrade_researched_3, stealth_fighter_upgrade_researched_4]
+  - row: 486
+    id: talon_fighter_upgrade_researched
+    label: "Talon Fighter Upgrade Researched"
+    effects: [talon_fighter_upgrade_researched_1, talon_fighter_upgrade_researched_2, talon_fighter_upgrade_researched_3, talon_fighter_upgrade_researched_4]
+  - row: 487
+    id: pheonix_fighter_upgrade_researched
+    label: "Pheonix Fighter Upgrade Researched"
+    effects: [pheonix_fighter_upgrade_researched_1, pheonix_fighter_upgrade_researched_2, pheonix_fighter_upgrade_researched_3]
+  - row: 488
+    id: heinkel_upgrade_researched
+    label: "Heinkel Upgrade Researched"
+    effects: [heinkel_upgrade_researched_1, heinkel_upgrade_researched_2, heinkel_upgrade_researched_3, heinkel_upgrade_researched_4]
+  - row: 491
+    id: helicopter_spectre_upgrade_researched
+    label: "Helicopter Spectre Upgrade Researched"
+    effects: [helicopter_spectre_upgrade_researched_1, helicopter_spectre_upgrade_researched_2, helicopter_spectre_upgrade_researched_3]
+  - row: 492
+    id: helicopter_phantom_upgrade_researched
+    label: "Helicopter Phantom Upgrade Researched"
+    effects: [helicopter_phantom_upgrade_researched_1, helicopter_phantom_upgrade_researched_2, helicopter_phantom_upgrade_researched_3]
+  - row: 493
+    id: replace_grenadier_with_british_infantry
+    label: "Replace Grenadier with British Infantry"
+    effects: [replace_grenadier_with_british_infantry_1, marine_upgrade_researched_3, replace_grenadier_with_british_infantry_3]
+  - row: 494
+    id: garrison_settlement_to_town_center
+    label: "Garrison Settlement to Town center"
+    effects: [garrison_settlement_to_town_center_1]
+  - row: 495
+    id: garrison_town_center_to_capitol
+    label: "Garrison Town Center to Capitol"
+    effects: [garrison_town_center_to_capitol_1]
+  - row: 497
+    id: simple_bowman_upgrade_researched
+    label: "Simple Bowman Upgrade Researched"
+    effects: [simple_bowman_upgrade_researched_1, simple_bowman_upgrade_researched_2, simple_bowman_upgrade_researched_3, simple_bowman_upgrade_researched_4]
+  - row: 499
+    id: hafts_researched_15_stone
+    label: "Hafts Researched (+15% Stone)"
+    effects: [hafts_researched_15_stone_1, hafts_researched_15_stone_2]
+  - row: 500
+    id: metal_working_researched_15_gold
+    label: "Metal Working Researched (+15% Gold)"
+    effects: [metal_working_researched_15_gold_1, metal_working_researched_15_gold_2]
+  - row: 501
+    id: forest_management_researched_15_wood
+    label: "Forest Management Researched (+15% Wood)"
+    effects: [forest_management_researched_15_wood_1, forest_management_researched_15_wood_2]
+  - row: 502
+    id: shaft_mining_researched_15_steel
+    label: "Shaft Mining Researched (+15% Steel)"
+    effects: [shaft_mining_researched_15_steel_1, shaft_mining_researched_15_steel_2]
+  - row: 503
+    id: windlass_researched_15_stone
+    label: "Windlass Researched (+15% Stone)"
+    effects: [windlass_researched_15_stone_1, windlass_researched_15_stone_2]
+  - row: 504
+    id: land_conservation_researched
+    label: "Land Conservation Researched"
+    effects: [land_conservation_researched_1, land_conservation_researched_2, land_conservation_researched_3]
+  - row: 505
+    id: mechanized_logging_researched_15_wood
+    label: "Mechanized Logging Researched (+15% Wood)"
+    effects: [mechanized_logging_researched_15_wood_1]
+  - row: 508
+    id: hammer_drilling_rigs_researched_15_stone
+    label: "Hammer Drilling Rigs Researched (+15% Stone)"
+    effects: [hammer_drilling_rigs_researched_15_stone_1]
+  - row: 509
+    id: hydraulic_mining_researched_15_gold
+    label: "Hydraulic Mining Researched (+15% Gold)"
+    effects: [hydraulic_mining_researched_15_gold_1, hydraulic_mining_researched_15_gold_2]
+  - row: 511
+    id: atom_manipulation_tech_15_gold
+    label: "Atom Manipulation Tech (+15% Gold)"
+    effects: [atom_manipulation_tech_15_gold_1]
+  - row: 513
+    id: sandals_researched
+    label: "Sandals Researched"
+    effects: [sandals_researched_1, sandals_researched_2]
+  - row: 514
+    id: ceremonial_burial_researched
+    label: "Ceremonial Burial Researched"
+    effects: [ceremonial_burial_researched_1, inquisition_researched_2, inquisition_researched_3]
+  - row: 515
+    id: shamanism_researched
+    label: "Shamanism Researched"
+    effects: [shamanism_researched_1, shamanism_researched_2]
+  - row: 516
+    id: mythology_researched
+    label: "Mythology Researched"
+    effects: [indulgencies_researched_1, mythology_researched_2, indulgencies_researched_3]
+  - row: 517
+    id: sainthood_researched
+    label: "Sainthood Researched"
+    effects: [shamanism_researched_1, sainthood_researched_2]
+  - row: 518
+    id: prophecy_researched
+    label: "Prophecy Researched"
+    effects: [mysticism_researched_1, prophecy_researched_2]
+  - row: 519
+    id: astrology_researched
+    label: "Astrology Researched"
+    effects: [shamanism_researched_1]
+  - row: 520
+    id: reformation_researched
+    label: "Reformation Researched"
+    effects: [excommunication_researched_1, reformation_researched_2, excommunication_researched_3]
+  - row: 521
+    id: occultism_researched
+    label: "Occultism Researched"
+    effects: [mysticism_researched_1, occultism_researched_2]
+  - row: 522
+    id: radio_services_researched
+    label: "Radio Services Researched"
+    effects: [indulgencies_researched_1, radio_services_researched_2, indulgencies_researched_3]
+  - row: 523
+    id: televangelism_researched
+    label: "Televangelism Researched"
+    effects: [excommunication_researched_1, excommunication_researched_3]
+  - row: 524
+    id: religious_resurgence_researched
+    label: "Religious Resurgence Researched"
+    effects: [religious_tolerance_researched_1, religious_tolerance_researched_3, religious_resurgence_researched_3]
+  - row: 525
+    id: virtual_services_researched
+    label: "Virtual Services Researched"
+    effects: [virtual_services_researched_1, indulgencies_researched_3]
+  - row: 526
+    id: pharmacy_researched
+    label: "Pharmacy Researched"
+    effects: [pharmacy_researched_1, pharmacy_researched_2]
+  - row: 527
+    id: orthopedics_researched
+    label: "Orthopedics Researched"
+    effects: [pharmacy_researched_1, orthopedics_researched_2]
+  - row: 528
+    id: vitamins_researched
+    label: "Vitamins Researched"
+    effects: [pharmacy_researched_1, vitamins_researched_2]
+  - row: 529
+    id: dna_research_researched
+    label: "DNA Research Researched"
+    effects: [genetic_engineering_researched_1, genetic_engineering_researched_2, dna_research_researched_3, dna_research_researched_4]
+  - row: 530
+    id: cybernetics_researched
+    label: "Cybernetics Researched"
+    effects: [pharmacy_researched_1]
+  - row: 531
+    id: wheeled_drawn_plow_researched
+    label: "Wheeled Drawn Plow Researched"
+    effects: [wheeled_drawn_plow_researched_1, wheeled_drawn_plow_researched_2]
+  - row: 532
+    id: hardened_chisel_researched
+    label: "Hardened Chisel Researched"
+    effects: [hardened_chisel_researched_1, hardened_chisel_researched_2]
+  - row: 533
+    id: fine_flaked_tools_researched
+    label: "Fine Flaked Tools Researched"
+    effects: [fine_flaked_tools_researched_1, fine_flaked_tools_researched_2, fine_flaked_tools_researched_3]
+  - row: 534
+    id: good_hope_upgrade_researched
+    label: "Good Hope Upgrade Researched"
+    effects: [good_hope_upgrade_researched_1, good_hope_upgrade_researched_2, good_hope_upgrade_researched_3, good_hope_upgrade_researched_4]
+  - row: 535
+    id: super_fire_galley_upgrade_researched
+    label: "Super Fire Galley Upgrade Researched"
+    effects: [super_fire_galley_upgrade_researched_1, super_fire_galley_upgrade_researched_2, super_fire_galley_upgrade_researched_3, super_fire_galley_upgrade_researched_4]
+  - row: 536
+    id: fire_trireme_upgrade_researched
+    label: "Fire Trireme Upgrade Researched"
+    effects: [fire_trireme_upgrade_researched_1, fire_trireme_upgrade_researched_2, fire_trireme_upgrade_researched_3, fire_trireme_upgrade_researched_4]
+  - row: 537
+    id: super_fire_trireme_upgrade_researched
+    label: "Super Fire Trireme Upgrade Researched"
+    effects: [super_fire_trireme_upgrade_researched_1, super_fire_trireme_upgrade_researched_2, super_fire_trireme_upgrade_researched_3, super_fire_trireme_upgrade_researched_4]
+  - row: 538
+    id: explosive_galleon_upgrade_researched
+    label: "Explosive Galleon Upgrade Researched"
+    effects: [explosive_galleon_upgrade_researched_1, explosive_galleon_upgrade_researched_2, explosive_galleon_upgrade_researched_3, explosive_galleon_upgrade_researched_4]
+  - row: 539
+    id: super_explosive_galleon_upgrade_researched
+    label: "Super Explosive Galleon Upgrade Researched"
+    effects: [super_explosive_galleon_upgrade_researched_1, super_explosive_galleon_upgrade_researched_2, super_explosive_galleon_upgrade_researched_3, super_explosive_galleon_upgrade_researched_4]
+  - row: 540
+    id: explosive_victory_upgrade_researched
+    label: "Explosive Victory Upgrade Researched"
+    effects: [explosive_victory_upgrade_researched_1, explosive_victory_upgrade_researched_2, explosive_victory_upgrade_researched_3]
+  - row: 541
+    id: falconry_researched
+    label: "Falconry Researched"
+    effects: [falconry_researched_1, falconry_researched_2, falconry_researched_3]
+  - row: 542
+    id: building_hp_50
+    label: "Building HP +50"
+    effects: [concrete_researched_1]
+  - row: 543
+    id: building_los_2
+    label: "Building LOS +2"
+    effects: []
+  - row: 544
+    id: mind_control_researched
+    label: "Mind Control Researched"
+    effects: [mind_control_researched_1, mind_control_researched_2]
+  - row: 545
+    id: sanitation_researched
+    label: "Sanitation Researched"
+    effects: [sanitation_researched_1, sanitation_researched_2]
+  - row: 547
+    id: copper_wall_and_tower_upgrade_researched
+    label: "Copper Wall and Tower Upgrade Researched"
+    effects: [copper_wall_and_tower_upgrade_researched_1, copper_wall_and_tower_upgrade_researched_2, copper_wall_and_tower_upgrade_researched_3, copper_wall_and_tower_upgrade_researched_4, copper_wall_and_tower_upgrade_researched_5, copper_wall_and_tower_upgrade_researched_6, copper_wall_and_tower_upgrade_researched_7]
+  - row: 548
+    id: bronze_wall_and_tower_upgrade_researched
+    label: "Bronze Wall and Tower Upgrade Researched"
+    effects: [bronze_wall_and_tower_upgrade_researched_1, bronze_wall_and_tower_upgrade_researched_2, bronze_wall_and_tower_upgrade_researched_3, bronze_wall_and_tower_upgrade_researched_4, bronze_wall_and_tower_upgrade_researched_5, bronze_wall_and_tower_upgrade_researched_6, bronze_wall_and_tower_upgrade_researched_7, bronze_wall_and_tower_upgrade_researched_8, bronze_wall_and_tower_upgrade_researched_9, bronze_wall_and_tower_upgrade_researched_10, copper_wall_and_tower_upgrade_researched_5]
+  - row: 549
+    id: middle_wall_and_tower_upgrade_researched
+    label: "Middle Wall and Tower Upgrade Researched"
+    effects: [middle_wall_and_tower_upgrade_researched_1, middle_wall_and_tower_upgrade_researched_2, middle_wall_and_tower_upgrade_researched_3, middle_wall_and_tower_upgrade_researched_4, middle_wall_and_tower_upgrade_researched_5, middle_wall_and_tower_upgrade_researched_6, middle_wall_and_tower_upgrade_researched_7, middle_wall_and_tower_upgrade_researched_8, middle_wall_and_tower_upgrade_researched_9, middle_wall_and_tower_upgrade_researched_10, copper_wall_and_tower_upgrade_researched_5, copper_wall_and_tower_upgrade_researched_6, copper_wall_and_tower_upgrade_researched_7]
+  - row: 550
+    id: imperial_wall_and_tower_upgrade_researched
+    label: "Imperial Wall and Tower Upgrade Researched"
+    effects: [imperial_wall_and_tower_upgrade_researched_1, imperial_wall_and_tower_upgrade_researched_2, imperial_wall_and_tower_upgrade_researched_3, imperial_wall_and_tower_upgrade_researched_4, imperial_wall_and_tower_upgrade_researched_5, imperial_wall_and_tower_upgrade_researched_6, imperial_wall_and_tower_upgrade_researched_7, imperial_wall_and_tower_upgrade_researched_8, imperial_wall_and_tower_upgrade_researched_9, imperial_wall_and_tower_upgrade_researched_10, copper_wall_and_tower_upgrade_researched_5, copper_wall_and_tower_upgrade_researched_6, copper_wall_and_tower_upgrade_researched_7]
+  - row: 551
+    id: ww1_wall_and_tower_upgrade_researched
+    label: "WW1 Wall and Tower Upgrade Researched"
+    effects: [ww1_wall_and_tower_upgrade_researched_1, ww1_wall_and_tower_upgrade_researched_2, ww1_wall_and_tower_upgrade_researched_3, ww1_wall_and_tower_upgrade_researched_4, ww1_wall_and_tower_upgrade_researched_5, ww1_wall_and_tower_upgrade_researched_6, ww1_wall_and_tower_upgrade_researched_7, ww1_wall_and_tower_upgrade_researched_8, ww1_wall_and_tower_upgrade_researched_9, ww1_wall_and_tower_upgrade_researched_10, copper_wall_and_tower_upgrade_researched_5, copper_wall_and_tower_upgrade_researched_6, copper_wall_and_tower_upgrade_researched_7]
+  - row: 552
+    id: info_wall_and_tower_upgrade_researched
+    label: "Info Wall and Tower Upgrade Researched"
+    effects: [info_wall_and_tower_upgrade_researched_1, info_wall_and_tower_upgrade_researched_2, info_wall_and_tower_upgrade_researched_3, info_wall_and_tower_upgrade_researched_4, info_wall_and_tower_upgrade_researched_5, info_wall_and_tower_upgrade_researched_6, info_wall_and_tower_upgrade_researched_7, info_wall_and_tower_upgrade_researched_8, info_wall_and_tower_upgrade_researched_9, info_wall_and_tower_upgrade_researched_10, info_wall_and_tower_upgrade_researched_11, info_wall_and_tower_upgrade_researched_12, info_wall_and_tower_upgrade_researched_13, copper_wall_and_tower_upgrade_researched_5]
+  - row: 553
+    id: philosophy_researched
+    label: "Philosophy Researched"
+    effects: [philosophy_researched_1, philosophy_researched_2]
+  - row: 554
+    id: pully_researched
+    label: "Pully Researched"
+    effects: [concrete_researched_1, pully_researched_2]
+  - row: 555
+    id: law_schools_researched
+    label: "Law Schools Researched"
+    effects: [law_schools_researched_1, law_schools_researched_2]
+  - row: 556
+    id: scientific_method_researched
+    label: "Scientific Method Researched"
+    effects: [scientific_method_researched_1, scientific_method_researched_2]
+  - row: 557
+    id: civil_liberty_researched
+    label: "Civil Liberty Researched"
+    effects: [civil_liberty_researched_1, civil_liberty_researched_2]
+  - row: 558
+    id: digital_library_researched
+    label: "Digital Library Researched"
+    effects: [digital_library_researched_1]
+  - row: 559
+    id: quarantine_researched
+    label: "Quarantine Researched"
+    effects: [quarantine_researched_1, quarantine_researched_2]
+  - row: 560
+    id: chemical_drugs_researched
+    label: "Chemical Drugs Researched"
+    effects: [sanitation_researched_1, chemical_drugs_researched_2]
+  - row: 562
+    id: vaccinations_researched
+    label: "Vaccinations Researched"
+    effects: [sanitation_researched_1, vaccinations_researched_2]
+  - row: 563
+    id: mri_researched
+    label: "MRI Researched"
+    effects: [mri_researched_1]
+  - row: 565
+    id: anti_aging_pill_researched
+    label: "Anti Aging Pill Researched"
+    effects: [sanitation_researched_1]
+  - row: 566
+    id: domestication_of_dog_researched
+    label: "Domestication of Dog Researched"
+    effects: [domestication_of_dog_researched_1]
+  - row: 568
+    id: f14_upgrade_researched
+    label: "F14 Upgrade Researched"
+    effects: [f14_upgrade_researched_1, f14_upgrade_researched_2, f14_upgrade_researched_3, f14_upgrade_researched_4]
+  - row: 569
+    id: f_48_upgrade_researched
+    label: "F-48 Upgrade Researched"
+    effects: [f_48_upgrade_researched_1, f_48_upgrade_researched_2, f_48_upgrade_researched_3, f_48_upgrade_researched_4]
+  - row: 570
+    id: f_96_upgrade_researched
+    label: "F-96 Upgrade Researched"
+    effects: [f_96_upgrade_researched_1, f_96_upgrade_researched_2, f_96_upgrade_researched_3]
+  - row: 571
+    id: machine_gun_upgrade_researched
+    label: "Machine Gun Upgrade Researched"
+    effects: []
+  - row: 572
+    id: doughboy_upgrade_researched
+    label: "Doughboy Upgrade Researched"
+    effects: [replace_grenadier_with_british_infantry_1, doughboy_upgrade_researched_2, doughboy_upgrade_researched_3, doughboy_upgrade_researched_4]
+  - row: 574
+    id: proton_missile_upgrade_researched
+    label: "Proton Missile Upgrade Researched"
+    effects: [proton_missile_upgrade_researched_1, proton_missile_upgrade_researched_2, proton_missile_upgrade_researched_3, proton_missile_upgrade_researched_4]
+  - row: 575
+    id: gun10_howitzer_upgrade_researched
+    label: "Gun10 - Howitzer Upgrade Researched"
+    effects: [gun10_howitzer_upgrade_researched_1, gun10_howitzer_upgrade_researched_2, gun10_howitzer_upgrade_researched_3, gun10_howitzer_upgrade_researched_4]
+  - row: 576
+    id: gun13_paladin_upgrade_researched
+    label: "Gun13 - Paladin Upgrade Researched"
+    effects: [gun13_paladin_upgrade_researched_1, gun13_paladin_upgrade_researched_2, gun13_paladin_upgrade_researched_3]
+  - row: 577
+    id: mech_hyperion_ii_upgrade_researched
+    label: "Mech Hyperion II Upgrade Researched"
+    effects: [mech_hyperion_ii_upgrade_researched_1, mech_hyperion_ii_upgrade_researched_2, mech_hyperion_ii_upgrade_researched_3]
+  - row: 578
+    id: mech_apollo_ii_upgrade_researched
+    label: "Mech Apollo II Upgrade Researched"
+    effects: [mech_apollo_ii_upgrade_researched_1, mech_apollo_ii_upgrade_researched_2, mech_apollo_ii_upgrade_researched_3]
+  - row: 579
+    id: mech_cyclops_ii_upgrade_researched
+    label: "Mech Cyclops II Upgrade Researched"
+    effects: [mech_cyclops_ii_upgrade_researched_1, mech_cyclops_ii_upgrade_researched_2, mech_cyclops_ii_upgrade_researched_3]
+  - row: 580
+    id: mech_minotaur_ii_upgrade_researched
+    label: "Mech Minotaur II Upgrade Researched"
+    effects: [mech_minotaur_ii_upgrade_researched_1, mech_minotaur_ii_upgrade_researched_2, mech_minotaur_ii_upgrade_researched_3]
+  - row: 582
+    id: at_gun_10_upgrade_researched
+    label: "AT Gun 10 Upgrade Researched"
+    effects: []
+  - row: 583
+    id: tau_missile_upgrade_researched
+    label: "Tau Missile Upgrade Researched"
+    effects: [tau_missile_upgrade_researched_1, tau_missile_upgrade_researched_2, tau_missile_upgrade_researched_3]
+  - row: 585
+    id: stealth_bomber_upgrade_researched
+    label: "Stealth Bomber Upgrade Researched"
+    effects: [stealth_bomber_upgrade_researched_1, stealth_bomber_upgrade_researched_2, stealth_bomber_upgrade_researched_3, stealth_bomber_upgrade_researched_4]
+  - row: 586
+    id: b_52_upgrade_researched
+    label: "B-52 Upgrade Researched"
+    effects: [b_52_upgrade_researched_1, b_52_upgrade_researched_2, b_52_upgrade_researched_3, b_52_upgrade_researched_4]
+  - row: 587
+    id: titan_bomber_upgrade_researched
+    label: "Titan Bomber Upgrade Researched"
+    effects: [titan_bomber_upgrade_researched_1, titan_bomber_upgrade_researched_2, titan_bomber_upgrade_researched_3]
+  - row: 589
+    id: sharpshooter_upgrade_researched
+    label: "Sharpshooter Upgrade Researched"
+    effects: [sharpshooter_upgrade_researched_1, sharpshooter_upgrade_researched_2, sharpshooter_upgrade_researched_3]
+  - row: 590
+    id: cruiser_10_upgrade_researched
+    label: "Cruiser 10 Upgrade Researched"
+    effects: [cruiser_10_upgrade_researched_1, cruiser_10_upgrade_researched_2, cruiser_10_upgrade_researched_3, cruiser_10_upgrade_researched_4]
+  - row: 591
+    id: alexander_upgrade_researched
+    label: "Alexander Upgrade Researched"
+    effects: [alexander_upgrade_researched_1, alexander_upgrade_researched_2, alexander_upgrade_researched_3, alexander_upgrade_researched_4]
+  - row: 592
+    id: hannibal_upgrade_researched
+    label: "Hannibal Upgrade Researched"
+    effects: [hannibal_upgrade_researched_1, hannibal_upgrade_researched_2, hannibal_upgrade_researched_3, hannibal_upgrade_researched_4]
+  - row: 593
+    id: charlemagne_upgrade_researched
+    label: "Charlemagne Upgrade Researched"
+    effects: [charlemagne_upgrade_researched_1, charlemagne_upgrade_researched_2, charlemagne_upgrade_researched_3, charlemagne_upgrade_researched_4]
+  - row: 594
+    id: julius_caesar_upgrade_researched
+    label: "Julius Caesar Upgrade Researched"
+    effects: [julius_caesar_upgrade_researched_1, julius_caesar_upgrade_researched_2, julius_caesar_upgrade_researched_3, julius_caesar_upgrade_researched_4]
+  - row: 595
+    id: william_upgrade_researched
+    label: "William Upgrade Researched"
+    effects: [william_upgrade_researched_1, william_upgrade_researched_2, william_upgrade_researched_3, william_upgrade_researched_4]
+  - row: 596
+    id: richard_upgrade_researched
+    label: "Richard Upgrade Researched"
+    effects: [richard_upgrade_researched_1, richard_upgrade_researched_2, richard_upgrade_researched_3, richard_upgrade_researched_4]
+  - row: 597
+    id: isabella_upgrade_researched
+    label: "Isabella Upgrade Researched"
+    effects: [isabella_upgrade_researched_1, isabella_upgrade_researched_2, isabella_upgrade_researched_3, isabella_upgrade_researched_4]
+  - row: 598
+    id: henry_upgrade_researched
+    label: "Henry Upgrade Researched"
+    effects: [henry_upgrade_researched_1, henry_upgrade_researched_2, henry_upgrade_researched_3, henry_upgrade_researched_4]
+  - row: 599
+    id: elizabeth_upgrade_researched
+    label: "Elizabeth Upgrade Researched"
+    effects: [elizabeth_upgrade_researched_1, elizabeth_upgrade_researched_2, elizabeth_upgrade_researched_3, elizabeth_upgrade_researched_4]
+  - row: 600
+    id: oliver_cromwell_upgrade_researched
+    label: "Oliver Cromwell Upgrade Researched"
+    effects: [oliver_cromwell_upgrade_researched_1, oliver_cromwell_upgrade_researched_2, oliver_cromwell_upgrade_researched_3, oliver_cromwell_upgrade_researched_4]
+  - row: 601
+    id: bismarck_hero_upgrade_researched
+    label: "Bismarck (Hero) Upgrade Researched"
+    effects: [bismarck_hero_upgrade_researched_1, bismarck_hero_upgrade_researched_2, bismarck_hero_upgrade_researched_3, bismarck_hero_upgrade_researched_4]
+  - row: 602
+    id: napoleon_upgrade_researched
+    label: "Napoleon Upgrade Researched"
+    effects: [napoleon_upgrade_researched_1, napoleon_upgrade_researched_2, napoleon_upgrade_researched_3, napoleon_upgrade_researched_4]
+  - row: 603
+    id: ww1_hero_1_upgrade_researched
+    label: "WW1 Hero 1 Upgrade Researched"
+    effects: [ww1_hero_1_upgrade_researched_1, ww1_hero_1_upgrade_researched_2, ww1_hero_1_upgrade_researched_3, ww1_hero_1_upgrade_researched_4]
+  - row: 604
+    id: ww1_hero_2_upgrade_researched
+    label: "WW1 Hero 2 Upgrade Researched"
+    effects: [ww1_hero_2_upgrade_researched_1, ww1_hero_2_upgrade_researched_2, ww1_hero_2_upgrade_researched_3, ww1_hero_2_upgrade_researched_4]
+  - row: 605
+    id: info_hero_1_upgrade_researched
+    label: "Info Hero 1 Upgrade Researched"
+    effects: [info_hero_1_upgrade_researched_1, info_hero_1_upgrade_researched_2, info_hero_1_upgrade_researched_3, info_hero_1_upgrade_researched_4]
+  - row: 606
+    id: info_hero_2_upgrade_researched
+    label: "Info Hero 2 Upgrade Researched"
+    effects: [info_hero_2_upgrade_researched_1, info_hero_2_upgrade_researched_2, info_hero_2_upgrade_researched_3, info_hero_2_upgrade_researched_4]
+  - row: 607
+    id: nano_hero_1_upgrade_researched
+    label: "Nano Hero 1 Upgrade Researched"
+    effects: [nano_hero_1_upgrade_researched_1, nano_hero_1_upgrade_researched_2, nano_hero_1_upgrade_researched_3, nano_hero_1_upgrade_researched_4]
+  - row: 608
+    id: nano_hero_2_upgrade_researched
+    label: "Nano Hero 2 Upgrade Researched"
+    effects: [nano_hero_2_upgrade_researched_1, nano_hero_2_upgrade_researched_2, nano_hero_2_upgrade_researched_3, nano_hero_2_upgrade_researched_4]
+  - row: 609
+    id: fishing_boat_07_upgrade_researched
+    label: "Fishing Boat 07 Upgrade Researched"
+    effects: [fishing_boat_07_upgrade_researched_1, fishing_boat_07_upgrade_researched_2, fishing_boat_07_upgrade_researched_3, fishing_boat_07_upgrade_researched_4]
+  - row: 610
+    id: fishing_boat_13_upgrade_researched
+    label: "Fishing Boat 13 Upgrade Researched"
+    effects: [fishing_boat_13_upgrade_researched_1, fishing_boat_13_upgrade_researched_2, fishing_boat_13_upgrade_researched_3]
+  - row: 611
+    id: avenger_upgrade_researched
+    label: "Avenger Upgrade Researched"
+    effects: [avenger_upgrade_researched_1, avenger_upgrade_researched_2, avenger_upgrade_researched_3]
+  - row: 612
+    id: wyvern_bomber_upgrade_researched
+    label: "Wyvern Bomber Upgrade Researched"
+    effects: [wyvern_bomber_upgrade_researched_1, wyvern_bomber_upgrade_researched_2, wyvern_bomber_upgrade_researched_3]
+  - row: 613
+    id: pegasus_heli_trans_upgrade_researched
+    label: "Pegasus Heli Trans Upgrade Researched"
+    effects: [pegasus_heli_trans_upgrade_researched_1, pegasus_heli_trans_upgrade_researched_2, pegasus_heli_trans_upgrade_researched_3]
+  - row: 614
+    id: macarthur_upgrade_researched
+    label: "MacArthur Upgrade Researched"
+    effects: [macarthur_upgrade_researched_1, macarthur_upgrade_researched_2, macarthur_upgrade_researched_3, macarthur_upgrade_researched_4]
+  - row: 615
+    id: romell_upgrade_researched
+    label: "Romell Upgrade Researched"
+    effects: [romell_upgrade_researched_1, romell_upgrade_researched_2, romell_upgrade_researched_3, romell_upgrade_researched_4]
+  - row: 616
+    id: ww3_hero_1_upgrade_researched
+    label: "WW3 Hero 1 Upgrade Researched"
+    effects: [ww3_hero_1_upgrade_researched_1, ww3_hero_1_upgrade_researched_2, ww3_hero_1_upgrade_researched_3, ww3_hero_1_upgrade_researched_4]
+  - row: 617
+    id: ww3_hero_2_upgrade_researched
+    label: "WW3 Hero 2 Upgrade Researched"
+    effects: [ww3_hero_2_upgrade_researched_1, ww3_hero_2_upgrade_researched_2, ww3_hero_2_upgrade_researched_3, ww3_hero_2_upgrade_researched_4]
+  - row: 618
+    id: p51_upgrade_researched
+    label: "P51 Upgrade Researched"
+    effects: [p51_upgrade_researched_1, p51_upgrade_researched_2, p51_upgrade_researched_3, p51_upgrade_researched_4]
+  - row: 619
+    id: b17_upgrade_researched
+    label: "B17 Upgrade Researched"
+    effects: [b17_upgrade_researched_1, b17_upgrade_researched_2, b17_upgrade_researched_3, b17_upgrade_researched_4]
+  - row: 620
+    id: a10_upgrade_researched
+    label: "A10 Upgrade Researched"
+    effects: [a10_upgrade_researched_1, a10_upgrade_researched_2, a10_upgrade_researched_3]
+  - row: 621
+    id: garrison_granary_to_improved_granary
+    label: "Garrison Granary to Improved Granary"
+    effects: [garrison_granary_to_improved_granary_1]
+  - row: 622
+    id: medic_atomic_upgrade_researched
+    label: "Medic Atomic Upgrade Researched"
+    effects: [medic_atomic_upgrade_researched_1, medic_atomic_upgrade_researched_2, medic_atomic_upgrade_researched_3, medic_atomic_upgrade_researched_4]
+  - row: 623
+    id: medic_digital_upgrade_researched
+    label: "Medic Digital Upgrade Researched"
+    effects: [medic_digital_upgrade_researched_1, medic_digital_upgrade_researched_2, medic_digital_upgrade_researched_3]
+  - row: 624
+    id: emissaries_researched
+    label: "Emissaries Researched"
+    effects: [emissaries_researched_1, emissaries_researched_2, emissaries_researched_3]
+  - row: 625
+    id: bundeswer_triggered
+    label: "Bundeswer Triggered"
+    effects: [bundeswer_triggered_1]
+  - row: 626
+    id: bundeswer_researched
+    label: "Bundeswer Researched"
+    effects: [bundeswer_researched_1]
+  - row: 627
+    id: flaming_arrows_researched
+    label: "Flaming Arrows Researched"
+    effects: [composite_bow_upgrade_research_2, long_bow_upgrade_researched_2, flaming_arrows_researched_3, flaming_arrows_researched_4, flaming_arrows_researched_5, flaming_arrows_researched_6, flaming_arrows_researched_7, flaming_arrows_researched_8, flaming_arrows_researched_9, flaming_arrows_researched_10, flaming_arrows_researched_11, flaming_arrows_researched_12, flaming_arrows_researched_13, flaming_arrows_researched_14]
+  - row: 628
+    id: epoch_space
+    label: "Epoch Space"
+    effects: [epoch_space_1, epoch_space_2]
+  - row: 629
+    id: pathfinding_civ_power_researched
+    label: "Pathfinding Civ Power Researched"
+    effects: [pathfinding_civ_power_researched_1, pathfinding_civ_power_researched_2]
+  - row: 630
+    id: paratrooper_researched
+    label: "Paratrooper Researched"
+    effects: [paratrooper_researched_1, paratrooper_researched_2]
+  - row: 631
+    id: crusaders_civ_power_researched
+    label: "Crusaders Civ Power Researched"
+    effects: [longsword_upgrade_researched_2, knight_upgrade_researched_2, crusaders_civ_power_researched_3, crusaders_civ_power_researched_4, crusaders_civ_power_researched_5, crusaders_civ_power_researched_6, crusaders_civ_power_researched_7, crusaders_civ_power_researched_8, crusaders_civ_power_researched_9, crusaders_civ_power_researched_10, crusaders_civ_power_researched_11, crusaders_civ_power_researched_12, crusaders_civ_power_researched_13, maceman_upgrade_researched_5, crusaders_civ_power_researched_15, crusaders_civ_power_researched_16, crusaders_civ_power_researched_17, crusaders_civ_power_researched_18]
+  - row: 632
+    id: shortsword_crusaders_upgrade_researched
+    label: "ShortSword (Crusaders) Upgrade Researched"
+    effects: [shortsword_upgrade_researched_2, crusaders_civ_power_researched_3, crusaders_civ_power_researched_5, shortsword_crusaders_upgrade_researched_4, crusaders_civ_power_researched_16]
+  - row: 633
+    id: longsword_crusaders_upgrade_researched
+    label: "LongSword (Crusaders) Upgrade Researched"
+    effects: [crusaders_civ_power_researched_5, longsword_crusaders_upgrade_researched_2, longsword_crusaders_upgrade_researched_3]
+  - row: 634
+    id: simple_bowman_flaming_upgrade_researched
+    label: "Simple Bowman (Flaming) Upgrade Researched"
+    effects: [simple_bowman_upgrade_researched_3, flaming_arrows_researched_5, simple_bowman_flaming_upgrade_researched_3, simple_bowman_flaming_upgrade_researched_4]
+  - row: 635
+    id: composite_bow_flaming_upgrade_researched
+    label: "Composite Bow (Flaming) Upgrade Researched"
+    effects: [flaming_arrows_researched_6, composite_bow_flaming_upgrade_researched_2, composite_bow_flaming_upgrade_researched_3, composite_bow_flaming_upgrade_researched_4]
+  - row: 636
+    id: long_bow_flaming_upgrade_researched
+    label: "Long Bow (Flaming) Upgrade Researched"
+    effects: [long_bow_flaming_upgrade_researched_1, flaming_arrows_researched_9, long_bow_flaming_upgrade_researched_3]
+  - row: 637
+    id: priest_tower_researched
+    label: "Priest Tower Researched"
+    effects: [priest_tower_researched_1]
+  - row: 638
+    id: missile_base_civ_power_research
+    label: "Missile Base Civ Power Research"
+    effects: [missile_base_civ_power_research_1, missile_base_civ_power_research_2]
+  - row: 639
+    id: ess_mind_control_researched
+    label: "ESS Mind Control Researched"
+    effects: [ess_mind_control_researched_1]
+  - row: 640
+    id: conscription_triggered
+    label: "Conscription Triggered"
+    effects: [conscription_triggered_1]
+  - row: 641
+    id: space_wall_and_tower_upgrade_researched
+    label: "Space Wall and Tower Upgrade Researched"
+    effects: [space_wall_and_tower_upgrade_researched_1, space_wall_and_tower_upgrade_researched_2, space_wall_and_tower_upgrade_researched_3, space_wall_and_tower_upgrade_researched_4, space_wall_and_tower_upgrade_researched_5, space_wall_and_tower_upgrade_researched_6, space_wall_and_tower_upgrade_researched_7, space_wall_and_tower_upgrade_researched_8, space_wall_and_tower_upgrade_researched_9, space_wall_and_tower_upgrade_researched_10, space_wall_and_tower_upgrade_researched_11, space_wall_and_tower_upgrade_researched_12, copper_wall_and_tower_upgrade_researched_5, copper_wall_and_tower_upgrade_researched_6, copper_wall_and_tower_upgrade_researched_7]
+  - row: 642
+    id: camouflage_civ_power_researched
+    label: "Camouflage Civ Power Researched"
+    effects: []
+  - row: 643
+    id: cyber_ninja_civ_power_researched
+    label: "Cyber Ninja Civ Power Researched"
+    effects: [cyber_ninja_civ_power_researched_1]
+  - row: 645
+    id: knight_crusaders_upgrade_research
+    label: "Knight (Crusaders) Upgrade Research"
+    effects: [crusaders_civ_power_researched_10, knight_crusaders_upgrade_research_2, knight_crusaders_upgrade_research_3]
+  - row: 646
+    id: sas_explosive_civ_power_researched
+    label: "SAS Explosive Civ Power Researched"
+    effects: [sas_explosive_civ_power_researched_1]
+  - row: 647
+    id: cloaking_civ_power_researched
+    label: "Cloaking Civ Power Researched"
+    effects: [cloaking_civ_power_researched_1, cloaking_civ_power_researched_2, cloaking_civ_power_researched_3]
+  - row: 648
+    id: null_event
+    label: "Null Event"
+    effects: []
+  - row: 649
+    id: conquistadors_civ_power_researched
+    label: "Conquistadors Civ Power Researched"
+    effects: [conquistadors_civ_power_researched_1, conquistadors_civ_power_researched_2, conquistadors_civ_power_researched_3, conquistadors_civ_power_researched_4, conquistadors_civ_power_researched_5, conquistadors_civ_power_researched_6, conquistadors_civ_power_researched_7, conquistadors_civ_power_researched_8]
+  - row: 650
+    id: faith_healing_researched
+    label: "Faith Healing Researched"
+    effects: [religious_tolerance_researched_1]
+  - row: 651
+    id: quantum_theology_researched
+    label: "Quantum Theology Researched"
+    effects: [mysticism_researched_1, quantum_theology_researched_2]
+  - row: 652
+    id: zero_g_engineer_researched
+    label: "Zero G Engineer Researched"
+    effects: [zero_g_engineer_researched_1]
+  - row: 653
+    id: damage_control_researched
+    label: "Damage Control Researched"
+    effects: [damage_control_researched_1]
+  - row: 654
+    id: market_civ_power_researched
+    label: "Market Civ Power Researched"
+    effects: [market_civ_power_researched_1]
+  - row: 657
+    id: watchman_upgrade_researched
+    label: "Watchman Upgrade Researched"
+    effects: [watchman_upgrade_researched_1, watchman_upgrade_researched_2, watchman_upgrade_researched_3]
+  - row: 658
+    id: meteor_storm
+    label: "Meteor Storm"
+    effects: []
+  - row: 659
+    id: planetary_fighter_upgrade_researched
+    label: "Planetary Fighter Upgrade Researched"
+    effects: []
+  - row: 660
+    id: space_hero_upgrade_researched_strategist
+    label: "Space Hero Upgrade Researched - Strategist"
+    effects: [space_hero_upgrade_researched_strategist_1, space_hero_upgrade_researched_strategist_2, space_hero_upgrade_researched_strategist_3]
+  - row: 661
+    id: space_hero_upgrade_researched_warrior
+    label: "Space Hero Upgrade Researched - Warrior"
+    effects: [space_hero_upgrade_researched_warrior_1, space_hero_upgrade_researched_warrior_2, space_hero_upgrade_researched_warrior_3]
+  - row: 662
+    id: robotic_farm_upgrade_research
+    label: "Robotic Farm Upgrade Research"
+    effects: [robotic_farm_upgrade_research_1, robotic_farm_upgrade_research_2, robotic_farm_upgrade_research_3]
+  - row: 663
+    id: nano_citizen_upgrade_research
+    label: "Nano Citizen Upgrade Research"
+    effects: [epoch_nano_5, epoch_nano_6, epoch_nano_7, epoch_nano_8]

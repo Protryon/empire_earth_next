@@ -40,7 +40,7 @@ and in the sound mixer were built and linked but not exercised in a running game
 | local | a visible or audible change on the local machine only (display, interface, audio, error reporting, debug output) |
 | zero-init | a read of uninitialised data, now reading zero |
 
-## Fixes on `fixes` (246)
+## Fixes on `fixes` (247)
 
 | Area | crash/memory | leak | dead code | local | zero-init | Total |
 |---|---|---|---|---|---|---|
@@ -48,10 +48,10 @@ and in the sound mixer were built and linked but not exercised in a running game
 | Units, players, scenarios and economy | 22 | 1 | 6 | 14 | 2 | 45 |
 | Random map generation | 0 | 0 | 1 | 0 | 0 | 1 |
 | Network and multiplayer | 7 | 2 | 3 | 1 | 2 | 15 |
-| Interface, audio, scenario editor and data files | 9 | 17 | 11 | 16 | 1 | 54 |
+| Interface, audio, scenario editor and data files | 9 | 17 | 11 | 17 | 1 | 55 |
 | Engine library and sound mixer | 8 | 5 | 13 | 20 | 1 | 47 |
 | Rendering and graphic effects | 10 | 7 | 9 | 25 | 1 | 52 |
-| **Total** | 71 | 33 | 51 | 79 | 12 | 246 |
+| **Total** | 71 | 33 | 51 | 80 | 12 | 247 |
 
 ### Simulation and AI (32)
 
@@ -166,7 +166,7 @@ and in the sound mixer were built and linked but not exercised in a running game
 | NPIMReceiveFrom (TCP Protocol.dll 0x10002539) | A join packet from an unknown sender while new connections are not allowed returned OK without setting the received size or client index. | Both are set to zero. | zero-init |
 | NPIMSendSingle (TCP Protocol.dll 0x10002aab) | Copied the destination from the remote host's address list at the local adapter's index, reading past the end of a shorter list (NULL entry: crash; later: garbage). | An entry the remote list lacks gives address 0. | zero-init |
 
-### Interface, audio, scenario editor and data files (54)
+### Interface, audio, scenario editor and data files (55)
 
 | Function (original address) | What the original does | What the fix does | Class |
 |---|---|---|---|
@@ -224,6 +224,7 @@ and in the sound mixer were built and linked but not exercised in a running game
 | EEUIBSavedGroup::Refresh (0x65607c) | Tested mHasUnit after SetUnit(NULL) had cleared it, so a saved-group button whose group emptied was never marked dirty and could keep the old portrait. | The flag is read before SetUnit. | local |
 | EECBUIListBox::SetUpgradesExcept (0x67e2bb) | Called std::remove_if without erasing the returned tail, so the vector's leftover last entries (duplicates or already-owned upgrades) were listed too. | The tail is erased. | local |
 | EEUpdateSavedGames (0x52ce0c) | Deleted each original saved game and scenario after its conversion whether it succeeded or failed, losing the file on a failed conversion. | An original is deleted only after a successful conversion. | local |
+| EEMusicManager::DoStart (0x532009) | Set the music volume to 0 before every song, also for one started while a load holds the music muted (no fade-in then). When the load had already put the volume back, the song and every later one stayed silent for the session. | Sets the volume to 0 only when it will fade the song in. | local |
 
 ### Engine library and sound mixer (47)
 

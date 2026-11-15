@@ -49,7 +49,6 @@
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPAttackCommander.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
 

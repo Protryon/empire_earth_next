@@ -224,7 +224,12 @@ void EEMusicManager::DoStart()
         this->mMusic->LoadScore();
         this->mScoreID = this->mMusic->mScoreID;
     case 1: {
-        this->mConductor->SetVolume(0.0f);
+        // Fixed: set the volume to 0 always, also for a song started while a load holds the music muted
+        // (MuteForSaveLoad: silent then, so no fade-in). When the load had put the volume back before this line
+        // ran, the song and every later one stayed at 0 for the session (the scenario editor entered first,
+        // whose default scenario is a load) -> only for a fade-in
+        if (theFade)
+            this->mConductor->SetVolume(0.0f);
         SEScore* theScore = this->mConductor->GetScore(this->mScoreID);
         if (theScore != NULL) {
             theScore->SetRepeatCount(100000);

@@ -7,6 +7,8 @@
 #ifndef EE_EEAIASTARPATHGRAPHGOAL_H
 #define EE_EEAIASTARPATHGRAPHGOAL_H
 
+#include "ee/EECPASGFlags.h"
+
 class EEAIPathSubSector;
 class EEAIAStarGraphMachineBase;
 class EEComplexUnit;

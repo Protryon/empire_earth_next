@@ -45,12 +45,7 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEArtificialIntelligence.h"
-#include "ee/EECPILocation.h"
-#include "ee/EECPAGTask.h"
 #include "ee/EECPUnitRequirement.h"
-#include "ee/EECPCombatStrategy.h"
-#include "ee/EECPUnitSelector.h"
-#include "ee/EECPPersonnel.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPResourceManager.h"
@@ -58,7 +53,6 @@
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
-#include "ee/EEAIFOSubGroupFilter.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
@@ -731,38 +725,18 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
                 theClasses.push_back(theClass);
         }
     }
-    if (theClasses.size() > 0 && EECPNextEngine(this->mPlayer)) {
-        // the next engine: no producer is queued on its own (train() refuses with no_producer first)
+    if (theClasses.size() > 0) {
+        // no producer is queued on its own (train() refuses with no_producer first; the original queued the cheapest)
         EE_CP_TRACE(this->mPlayer, "train.noproducer", "cls=%ld n=%ld", inUnitClass, inCount);
         return;
     }
-    if (theClasses.size() > 0) {
-        std::sort(theClasses.begin(), theClasses.end(), EECPUMCostLess(theTree));
-        for (i = 0; i < theClasses.size(); i++) {
-            theClass = *(theClasses.begin() + i);
-            EETechTreeNode* theOther =
-                theTree->Get(gUnitClassTable[theClass] != NULL ? gUnitClassTable[theClass]->mTechnology : 100000);
-            if (theOther && theOther->GetIsAvailable()) {
-                if (theMap != NULL && ((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) &&
-                    theClass == this->mManager->ChooseTransportClass())
-                    theFront = true;
-                else
-                    theFront = false;
-                if (gUnitClassTable[theClass]->IsLandBuilding())
-                    this->mManager->GetBuildManager()->QueueBuilding(theClass, 0, theFront);
-                else
-                    this->RequestUnits(theClass, 1, 0, 0);
-                theDone = true;
-            }
-        }
-        if (theDone) {
-        add:
-            EE_CP_TRACE(this->mPlayer, "train.request", "cls=%ld n=%ld town=%ld added=0", inUnitClass, inCount, inTownID);
-            this->mManager->GetResourceManager()->AddCosts(theNode, inCount);
-            theRequests.push_back(theRequest);
-            this->mWaitingCounts[inUnitClass] += inCount;
-            this->mNumWaiting += inCount;
-        }
+    if (theDone) {
+    add:
+        EE_CP_TRACE(this->mPlayer, "train.request", "cls=%ld n=%ld town=%ld added=0", inUnitClass, inCount, inTownID);
+        this->mManager->GetResourceManager()->AddCosts(theNode, inCount);
+        theRequests.push_back(theRequest);
+        this->mWaitingCounts[inUnitClass] += inCount;
+        this->mNumWaiting += inCount;
     }
 }
 
@@ -790,7 +764,7 @@ void EECPUnitManager::DropObsoleteRequests(long inEpoch)
             long theID = gUnitClassTable[theClass] != NULL ? gUnitClassTable[theClass]->mTechnology : 100000;
             if (theTree->Get(theID)->mObsoleteEpoch < inEpoch) {
                 it = theRequests.erase(it, it + 1);
-                this->mPlayer->mCombatManager->mPersonnel->ReleaseOfType(theClass, theCount);
+                (void)theCount;   // (the original's personnel released that many requested units)
             } else
                 ++it;
         }
@@ -1010,8 +984,6 @@ void EECPUnitManager::UnitLost(EEUnit* inUnit)
     long theType = inUnit->mUnitClass->mUnitType;
     EETechTree* theTree = this->mPlayer->mTechnologies;
     long theCategory = theUnit != NULL ? theUnit->mUnitClass->mCategory : 9;
-    long theSite;
-    unsigned short theContinent;
     if (this->mUnits.size() > 0 && theUnit != NULL && theCategory != kUnitCategoryProjectile && theCategory != kUnitCategoryBomb && theCategory != kUnitCategoryMissile &&
         theType != kUnitTypePathPoint) {
         std::deque<EEComplexUnit*>* theUnits = this->GetUnits(theUnit->mUnitClass->mUnitType);
@@ -1026,50 +998,19 @@ void EECPUnitManager::UnitLost(EEUnit* inUnit)
     }
     if (UShutdownInProgress() || theUnit == NULL || !theUnit->mUnitClass->IsLandBuilding() || !theUnit->mIsBuilt)
         return;
-    if (EECPNextEngine(this->mPlayer)) {
-        // the next engine: what the lost building was making is not asked for again; the strategy sees it
-        for (unsigned long i = 0; i < theUnit->GetBuildQueueSize(); i++) {
-            long theID = (*(theUnit->mBuildQueue.begin() + i)).mTechnology;
-            EETechTreeNode* theNode = EEIsEpochID(theID) ? NULL : theTree->Get(theID);
-            if (theNode == NULL || !theNode->mData->mMakesUnit)
-                continue;
-            EECPNextEventAdd(this->mPlayer, kNextEventProductionLost, theNode->mData->mUnitClass, 1);
-            if (this->mNumInProduction > 0)
-                this->mNumInProduction--;
-        }
-        if (theUnit->mCurrentResearch != kTechNone && EEIsEpochID(theUnit->mCurrentResearch)) {
-            this->mManager->mAdvancingEpoch = false;
-            EECPNextEventAdd(this->mPlayer, kNextEventAdvanceLost, theUnit->mCurrentResearch, 1);
-        }
-        return;
-    }
-    theSite = theUnit->FindNearestTown() != NULL ? theUnit->FindNearestTown()->mTownID : 0;
-    theContinent = gContinentManager.GetContinentID(theUnit);
+    // what the lost building was making is not asked for again; the strategy sees it
     for (unsigned long i = 0; i < theUnit->GetBuildQueueSize(); i++) {
         long theID = (*(theUnit->mBuildQueue.begin() + i)).mTechnology;
-        if (EEIsEpochID(theID))
+        EETechTreeNode* theNode = EEIsEpochID(theID) ? NULL : theTree->Get(theID);
+        if (theNode == NULL || !theNode->mData->mMakesUnit)
             continue;
-        EETechTreeNode* theNode = theTree->Get(theID);
-        if (!theNode || !theNode->mData->mMakesUnit)
-            continue;
-        theNode = theTree->Get(theID);
-        this->RequestUnits(theNode->mData->mUnitClass, 1, theSite, theContinent);
-        this->mNumInProduction--;
-    }
-    long theID = theUnit->mCurrentResearch;
-    if (theID == kTechNone)
-        return;
-    if (EEIsEpochID(theID)) {
-        this->mManager->mAdvancingEpoch = false;
-        this->mManager->mScheduleEpochAdvance = true;
-        this->mManager->SetNextEpochAdvanceTime(gPhysics->mGameTime, true);
-    } else {
-        EETechTreeNode* theNode = theTree->Get(theID);
-        if (theNode && theNode->mData->mMakesUnit) {
-            theNode = theTree->Get(theID);
-            this->RequestUnits(theNode->mData->mUnitClass, 1, theSite, theContinent);
+        EECPNextEventAdd(this->mPlayer, kNextEventProductionLost, theNode->mData->mUnitClass, 1);
+        if (this->mNumInProduction > 0)
             this->mNumInProduction--;
-        }
+    }
+    if (theUnit->mCurrentResearch != kTechNone && EEIsEpochID(theUnit->mCurrentResearch)) {
+        this->mManager->mAdvancingEpoch = false;
+        EECPNextEventAdd(this->mPlayer, kNextEventAdvanceLost, theUnit->mCurrentResearch, 1);
     }
 }
 
@@ -1078,16 +1019,10 @@ void EECPUnitManager::UnitLost(EEUnit* inUnit)
 // current one while population room remains
 void EECPUnitManager::Update(unsigned long inTime)
 {
-    EEMap* theMap = gWorld.mMap;
     std::deque<EECPUMRequest>::iterator it;
     EETechTree* theTree = this->mPlayer->mTechnologies;
     long theWorker = this->mManager->ChooseTransportClass();
     unsigned long theEpoch = theTree->mCurrentEpoch;
-    bool theSmall;
-    if (theMap != NULL && (theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap)
-        theSmall = true;
-    else
-        theSmall = false;
     bool theDone = false;
     long theRoom = this->mPlayer->GetPopulationLimit(0) - this->mNumInProduction - this->mPlayer->GetTotalPopulation(true, false);
     bool theRequested;
@@ -1095,19 +1030,7 @@ void EECPUnitManager::Update(unsigned long inTime)
         theRequested = true;
     else
         theRequested = false;
-    bool theQueued = this->IsInProduction(0x20) || this->IsInProduction(0x1e0);
-    if (theRoom > 0 && this->mProductionEnabled && !theRequested && !theQueued
-        && !EECPNextEngine(this->mPlayer)) {   // the next engine trains its citizens with train()
-        long theMissing = this->GetWantedCitizens() - this->GetNumWorkers();
-        if (theMissing > 0) {
-            if (!theSmall) {
-                if (theMissing > 9)
-                    theMissing = 10;
-            } else if (theMissing > 4)
-                theMissing = 5;
-            this->RequestUnits(0x20, theMissing, 0, 0);
-        }
-    }
+    // (the original requested the missing citizens here; the strategy trains its citizens with train())
     unsigned long i;
     long theMade;
     for (i = 0; i < EEEpochCount(); i++) {

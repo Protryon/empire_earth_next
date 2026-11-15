@@ -10,4 +10,4 @@ DmArray_IMPLEMENT(DmResolverList, DmResolver, );
 DmArray_IMPLEMENT(DmStyleCache, DmStyle*, DmStyle_release(*itm));
 DmArray_IMPLEMENT(DmDlsCache, DmDls*, DmDls_release(*itm));
 DmArray_IMPLEMENT(DmMessageList, DmMessage, DmMessage_free(itm));
-DmArray_IMPLEMENT(DmSynthFontArray, DmSynthFont, tsf_close(itm->syn));
+DmArray_IMPLEMENT(DmSynthFontArray, DmSynthFont, tsf_close(itm->syn); DmDls_release(itm->dls));   // (EE patch: the font retains its collection)

@@ -661,20 +661,12 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag)
             }
         }
         long j;
-        // port: a script seat (the next engine) gets the order as an event; its C++ combat manager is not run
-        for (j = theEnemies.size() - 1; j >= 0; j--) {
-            if (EECPEngine(theEnemies[j]) == kEECPEngineNext)
-                EECPUnitsOnAttackPlayer(theEnemies[j], (long)thePlayer->mPlayerID, false);
-            else
-                theEnemies[j]->mCombatManager->AttackPlayer(thePlayer);
-        }
+        // port: every computer player's Lua AI gets the order as an event (the original's combat managers took it)
+        for (j = theEnemies.size() - 1; j >= 0; j--)
+            EECPUnitsOnAttackPlayer(theEnemies[j], (long)thePlayer->mPlayerID, false);
         if (inFlag)
-            for (j = theAllies.size() - 1; j >= 0; j--) {
-                if (EECPEngine(theAllies[j]) == kEECPEngineNext)
-                    EECPUnitsOnAttackPlayer(theAllies[j], (long)thePlayer->mPlayerID, true);
-                else
-                    theAllies[j]->mCombatManager->DefendPlayer(thePlayer);
-            }
+            for (j = theAllies.size() - 1; j >= 0; j--)
+                EECPUnitsOnAttackPlayer(theAllies[j], (long)thePlayer->mPlayerID, true);
     }
 }
 
@@ -1191,8 +1183,7 @@ void EEInitializeNetwork()
         theExeName[0] = 0;
     uint32_t theChecksum = EEGetFileChecksum(theFile, theExeName, 0);   // a 32-bit sum on every data model (LP64: the server compares it with the request's)
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
-    theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
-    // the db tables' text forms (EEDbFindFile loads them in place of the .dat); 0 when there are none
+    // the db tables: their text forms (EEDbFindFile; the original summed the *.dat, which the game no longer reads)
     theChecksum += EEGetFileChecksum(theFile, "*.csv", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.yaml", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Unit AI Scripts\\");
@@ -1734,8 +1725,7 @@ void EEGraphicsShutdown(bool inShutdown)
 // SYNTHETIC: EXE 0x544278
 // (the scalar deleting destructor, emitted with the vtable; )
 
-#include "ee/EECPILocation.h"
-#include "ee/EECPAttackSubGroup.h"
+#include "ee/EECPASGFlags.h"
 #include "ee/EEMiniMap.h"
 
 class GELODPolygon;
@@ -1757,10 +1747,9 @@ void EEReleaseGamePools(bool inShutdown)
 }
 
 // FUNCTION: EXE 0x5442e0
-// Releases the attack target, tile unit list and doppelganger pools
+// Releases the tile unit list and doppelganger pools (the attack target pool went with the attack sub groups, stage 5)
 void EEReleaseUnitPools()
 {
-    EECPAttackSubGroup::ReleaseTargetPool();
     EETile::ReleaseUnitListPool();
     gDoppelgangerManager.Release();
 }

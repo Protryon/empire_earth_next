@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -149,6 +150,9 @@
 #include "ee/EEGamePreferences.h"
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECalamityManager.h"
+#include "ee/EECalamityClass.h"
+#include "lle/USingleton.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
@@ -180,6 +184,8 @@ struct Options {
     bool mQuiet = false;
     long mFlareMs = -1;                                  // --flare SECONDS:PLAYER (TEST ONLY): -1 none
     unsigned long mFlarePlayer = 0;
+    long mVolcanoMs = -1;                                // --volcano SECONDS:PLAYER (TEST ONLY): -1 none
+    unsigned long mVolcanoPlayer = 0;
 };
 
 Options sOptions;
@@ -457,6 +463,54 @@ void AfterTick()
         } else
             Note("FLARE: no building of player %lu", sOptions.mFlarePlayer);
     }
+    // --volcano (TEST ONLY): once, a volcano (the calamity class 9, no caster) cast 6 tiles off the player's first
+    // building for that player; then every game second the volcano projectiles (boulders) launched in it
+    {
+        static long sVolcanoCastMs = -1;
+        static long sVolcanoSecond = 0;
+        static unsigned long sVolcanoShots = 0, sVolcanoTotal = 0;
+        static std::vector<unsigned long> sVolcanoSeen;
+        if (sOptions.mVolcanoMs >= 0 && theTime >= sOptions.mVolcanoMs) {
+            sOptions.mVolcanoMs = -1;
+            EEPlayer* theTarget = sOptions.mVolcanoPlayer < theCount ? gWorld.GetPlayer(sOptions.mVolcanoPlayer) : NULL;
+            EEUnit* theSpot = NULL;
+            for (EEUnit* u = theTarget != NULL ? theTarget->mFirstUnit : NULL; u != NULL && theSpot == NULL;
+                 u = static_cast<EEUnit*>(u->mNext))
+                if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
+                    theSpot = u;
+            if (theSpot != NULL) {
+                long theX = theSpot->GetTileX() + 6, theY = theSpot->GetTileY() + 6;
+                bool theCast = USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(
+                    9, 0xffffffffUL, theX, theY, sOptions.mVolcanoPlayer);
+                Note("VOLCANO cast %d at %ld,%ld (player %lu) at game ms %ld", theCast ? 1 : 0, theX, theY,
+                     sOptions.mVolcanoPlayer, theTime);
+                sVolcanoCastMs = theTime;
+                sVolcanoSecond = theTime / 1000;
+            } else
+                Note("VOLCANO: no building of player %lu", sOptions.mVolcanoPlayer);
+        }
+        if (sVolcanoCastMs >= 0) {
+            for (unsigned long i = 0; i < theCount; i++) {
+                EEPlayer* thePlayer = gWorld.GetPlayer(i);
+                for (EEUnit* u = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; u != NULL;
+                     u = static_cast<EEUnit*>(u->mNext))
+                    if (u->mUnitClass->GetUnitType() == kUnitTypeVolcanoProjectile &&
+                        std::find(sVolcanoSeen.begin(), sVolcanoSeen.end(), u->GetUnitID()) == sVolcanoSeen.end()) {
+                        sVolcanoSeen.push_back(u->GetUnitID());
+                        sVolcanoShots++;
+                        sVolcanoTotal++;
+                    }
+            }
+            if (theTime / 1000 > sVolcanoSecond) {
+                Note("VOLCANO s %ld: %lu boulders launched (total %lu)", sVolcanoSecond - sVolcanoCastMs / 1000,
+                     sVolcanoShots, sVolcanoTotal);
+                sVolcanoSecond = theTime / 1000;
+                sVolcanoShots = 0;
+                if (sVolcanoSeen.size() > 100000)
+                    sVolcanoSeen.clear();
+            }
+        }
+    }
     // the end of the run (tools/harness/ai_game.py's rules)
     if (gPhysics->mGameOver) {
         Finish("game-end");
@@ -725,7 +779,7 @@ void SetUpLobby()
         const std::string& theName = theEngines[(size_t)(s - 1) % theEngines.size()];
         long theChoice = EECPChoiceByName(theName);
         if (theChoice < 0) {
-            std::string theKnown = EECPClassicAI() != NULL ? "classic, classic_cpp, random" : "classic, random";
+            std::string theKnown = "classic, random";
             for (const EECPAIEntry& e : EECPAIManifest())
                 theKnown += ", " + e.mID;
             Fail("--engine: '" + theName + "' is no engine (" + theKnown + (EECPAIManifest().empty() ? "" : ", next") + ")");
@@ -982,6 +1036,8 @@ const char* kUsage =
     "  --human-defeat         let the idle human be defeated (default: kept in, the harness's --no-human-defeat)\n"
     "  --flare SECONDS:PLAYER the idle human flares at the player's first building at that game time (TEST ONLY:\n"
     "                         its allies, the computers, answer it as an ally's flare)\n"
+    "  --volcano SECONDS:PLAYER a volcano cast 6 tiles off the player's first building at that game time; logs the\n"
+    "                         boulders launched every game second (TEST ONLY)\n"
     "  --keep-human           keep the idle human at war (default: allied with every computer from the start, so no\n"
     "                         computer attacks it)\n"
     "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
@@ -1202,6 +1258,16 @@ int EESimMain(int argc, char** argv)
             }
             sOptions.mFlareMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
             sOptions.mFlarePlayer = (unsigned long)atol(v.substr(c + 1).c_str());
+        }
+        else if (a == "--volcano") {
+            std::string v = value();
+            size_t c = v.find(':');
+            if (c == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --volcano SECONDS:PLAYER\n");
+                return 64;
+            }
+            sOptions.mVolcanoMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
+            sOptions.mVolcanoPlayer = (unsigned long)atol(v.substr(c + 1).c_str());
         }
         else if (a == "--cheats")
             sOptions.mCheats = value();

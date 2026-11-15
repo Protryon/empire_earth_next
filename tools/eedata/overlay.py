@@ -42,7 +42,14 @@ STRUCT_SOURCES = {
     'UIDbDataEvents': 'src/Low-Level Engine/User Interface/UIEvent.cpp',
     'UIDbDataFonts': 'src/Low-Level Engine/User Interface/UIFontTable.cpp',
     'UIDbDataHotKeys': 'src/Low-Level Engine/User Interface/UIHotKey.cpp',
+    'EERandomMapRecord': 'include/ee/EEDatabaseTables.h',
+    'EETerrainGrayTextureRecord': 'include/ee/EEDatabaseTables.h',
 }
+
+# Tables the game loads but never reads a field of (dbrandommap: EERandomMapTable::Load drops every record) or never
+# opens (dbterraingraytextures): their fields are carried as text all the same, so the retail values stay with the
+# data (a later feature may read them). census.py does not ask these fields for a reader.
+UNREAD_TABLES = {'dbrandommap', 'dbterraingraytextures'}
 
 # Sizes for the two structs whose source states the size in a comment instead of a static_assert
 # (EEUnitClassRecord.h: "EEDbObject::mRecord, 0x7a8 bytes"; UIControlsTable.cpp: "0x35c bytes each").
@@ -65,8 +72,9 @@ VIRTUAL_STRUCTS = {
 #         pair of interleaved lists (A0, B0, A1, B1, ...).
 #   list: name of the trailing u32-counted list (events, techtree) and its element type.
 #   fixed_rows: the row count the loader expects (export warns when the file differs; import writes what it has).
-# dbrandommap.dat (mis-framed by EERandomMapTable::Load: every record is thrown away) and dbterraingraytextures.dat
-# (no AoC code opens it) have no text form: the game reads nothing of them.
+#   retail_header: bytes before the count that only the retail file has (dbrandommap: a u32 10, the group count,
+#         which the original's loader took for the record count and so read ten records four bytes off). A file of
+#         exactly that many bytes more than its records is the retail form; the text compiles without them.
 TABLES = {
     'dbaiunittargeting': dict(struct='EEAIUnitTargetingRecord', container='count', format='csv', fixed_rows=3),
     'dbambientsounds': dict(struct='EEAmbientSoundRecord', container='count', format='csv'),
@@ -111,6 +119,9 @@ TABLES = {
     'dbupgrade': dict(struct='EEUCUpgradeRecord', container='count', format='csv'),
     'dbweapontohit': dict(struct='EEToHitRecord', container='count', format='csv', fixed_rows=6),
     'dbworld': dict(struct='EEWorldTableEntry', container='count', format='csv'),
+    'dbrandommap': dict(struct='EERandomMapRecord', container='count', format='csv', retail_header=4),
+    'dbterraingraytextures': dict(struct='EETerrainGrayTextureRecord', container='lead', format='csv',
+                                  lead=['mTextureName']),
 }
 
 
@@ -349,6 +360,7 @@ ID_NAMES = {
     'dbobjects': ['mName'], 'dbgraphics': ['rowName', 'label'], 'dbsounds': ['label', 'mSampleName'],
     'dbareaeffect': ['mName'], 'dbcliffterrain': ['mName'], 'dbterrain': ['mName'], 'dbuiback': ['mName'],
     'dbunitset': ['mName'], 'dbuifonts': ['mFontName'], 'dbpremadecivs': ['mFileName'],
+    'dbrandommap': ['mName'], 'dbterraingraytextures': ['mName'],
 }
 ID_DEFAULT = ['label']
 # Names that make a better id than the row's own (table -> {key: name}).

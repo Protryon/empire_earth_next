@@ -86,14 +86,13 @@ def main():
     a = ap.parse_args()
     logs = a.log
     if not logs:
-        roots = [a.data] if a.data else [ROOT / "data", ROOT / "build" / "boot" / "windowed_f"]
+        roots = [a.data] if a.data else [ROOT / "build" / "data-root", ROOT / "build" / "boot" / "windowed_f"]
         found = sorted((p for r in roots for p in (r / "Logs").glob("game-*.log")), key=lambda p: p.stat().st_mtime)
         if not found:
             sys.exit("no game log found: pass LOG or --data ROOT")
         logs = [found[-1]]
     out = []
-    colors = color_names([a.data or ROOT / "data", ROOT / "build" / "open_data" / "tree",
-                          ROOT / "build" / "open_data" / "tree-binary"])
+    colors = color_names([a.data or ROOT / "build" / "data-root", ROOT / "build" / "open_data" / "tree"])
     for path in logs:
         head, players, samples, epochs, end, ai_lines, chats = read(path)
         last = max((s[-1][0] for s in samples.values() if s), default=0)
@@ -109,8 +108,8 @@ def main():
             info = players.get(p, {})
             who = info.get("kind", "?")
             if who == "computer":
-                # engine: the AI's id, e.g. boom or classic_lua, or classic_cpp for the C++ classic (ee/EECPEngine.h;
-                # older logs: classic for the C++, next, or none: classic)
+                # engine: the AI's id, e.g. boom or classic_lua, none for a seat without one (ee/EECPEngine.h;
+                # older logs: classic or classic_cpp for the deleted C++ classic, next)
                 who += (f" {info.get('personality', '-')} cheats={info.get('cheats', '-')}"
                         f" engine={info.get('engine', 'classic')}")
             reached = ", ".join(f"e{e} {t / 60000:.1f}m" for e, t in sorted(epochs[p].items())) or "none"

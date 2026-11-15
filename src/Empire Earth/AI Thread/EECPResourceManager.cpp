@@ -26,6 +26,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEAIFOUnitScreeners.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -56,10 +57,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EECPUnitSelector.h"
-#include "ee/EECPPersonnel.h"
 #include "ee/EEWheel.h"
-#include "ee/EECPIntelligence.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
@@ -226,13 +224,12 @@ void EECPResourceManager::AssignIdleGatherers(std::deque<EEComplexUnit*>& ioUnit
             }
         // (the next engine's gather(exact = 2), §8.51: an idle citizen goes to no resource that has its wanted
         // gatherers; it stays idle for the script's builders, not spilled onto wood past the script's count)
-        EECPNextState* theNextState = EECPNextEngine(this->mManager->mPlayer) ? EECPNextGetState(this->mManager->mPlayer) : NULL;
-        bool theExactIdle = theNextState != NULL && theNextState->mExact >= 2;
+        bool theExactIdle = EECPNextGetState(this->mManager->mPlayer)->mExact >= 2;
         EEUnit* theResource = NULL;
         for (long i = 0; i < 4 && theResource == NULL; i++)
             if (!theExactIdle || this->mGatherers[theOrder[i]].size() < this->mWantedGatherers[theOrder[i]])
                 theResource = theOrder[i] != 3 ? this->FindResourceTarget(theOrder[i], *it, false)
-                : EECPNextEngine(this->mManager->mPlayer) ? EECPRMNextWoodTarget(this, 1, *it) : this->FindForestTarget(1, *it);
+                : EECPRMNextWoodTarget(this, 1, *it);
         if (theResource != NULL)
             this->SendToGather(*it, theResource, NULL);
     }
@@ -260,46 +257,6 @@ void EECPResourceManager::AssignIdleBoats(std::deque<EEComplexUnit*>& ioUnits)
     }
 }
 
-// FUNCTION: EXE 0x48ecfd
-// Takes a transport from the combat personnel to ferry stranded gatherers to a resource; without one, requests a
-// transport when fewer than 4 exist and none is requested or in production
-void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEUnit* inResource)
-{
-    std::vector<long> theClasses;
-    std::vector<long> theIDs;
-    EEComputerPlayer* thePlayer = this->GetManager()->GetPlayer();
-    EECPUnitManager* theUnitManager = this->GetManager()->GetUnitManager();
-    EECPCombatManager* theCombatManager = thePlayer->GetCombatManager();
-    long theClass = this->GetManager()->ChooseTransportClass();
-    bool theFailed = true;
-    if (theClass == 0)
-        return;
-    std::deque<EEComplexUnit*>* theUnits = theUnitManager->GetUnits(theClass);
-    theClasses.push_back(theClass);
-    EECPPersonnelRequest* theRequest = theCombatManager->GetPersonnel()->NewContinentRequest(theClasses, theIDs, 0);
-    if (theRequest->GetNumFilled() == 1) {
-        EEComplexUnit* theUnit = theRequest->mUnits.back().mUnit;
-        if (theUnit->GetAIState() != 0x46cd7)
-            theUnit->mAIState = 0x46cd7;
-        theRequest->PopSlot();
-        thePlayer->DetachUnitFromAI(theUnit);
-        theFailed = false;
-        if (this->FerryGatherers(inUnits, theUnit, inResource))
-            thePlayer->SetNextIslandExpansionTime();
-        else {
-            if (theUnit->GetIsDetachedFromAI())
-                theUnit->mIsDetachedFromAI = false;
-            theCombatManager->UnitAdded(theUnit);
-        }
-    } else
-        theRequest->Cancel();
-    theCombatManager->GetPersonnel()->ReleaseRequest(theRequest->GetID());
-    theRequest->Dereference();
-    if (theFailed && (theUnits == NULL || theUnits->size() < 4) && !theUnitManager->IsRequested(theClass)
-        && !theUnitManager->IsInProduction(theClass))
-        theUnitManager->RequestUnits(theClass, 1, 0, 0);
-}
-
 // FUNCTION: EXE 0x48ee67
 // Adds a unit to a resource's gatherer list (referencing it) unless it is already there
 void EECPResourceManager::AddGatherer(EEComplexUnit* inUnit, long inResource)
@@ -319,9 +276,8 @@ void EECPResourceManager::AddGatherer(EEComplexUnit* inUnit, long inResource)
 // (EECPNextHasRoom; docs/AI_RESEARCH.md §8.35: 9 were sent to one patch, waiting)
 static bool EECPRMHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource, unsigned long inLimit)
 {
-    if (EECPNextEngine(inPlayer))
-        return EECPNextHasRoom(inPlayer, inResource);
-    return gWorld.GetResourceUsers(inResource) < inLimit;
+    (void)inLimit;
+    return EECPNextHasRoom(inPlayer, inResource);
 }
 
 // the next engine: a unit of a resource centre's resource with room for one more gatherer (the original takes the
@@ -477,10 +433,9 @@ void EECPResourceManager::AssignGatherers()
             theTownContinent = gContinentManager.GetContinentID(theTown.GetX(), theTown.GetY());
     } else
         theAcross = false;
-    bool theNext = EECPNextEngine(thePlayer);   // the next engine: no boat requests (fish), the food order of gather
+    // (no boat requests: the strategy trains its fishing boats; the food order is gather's)
     this->RebalanceGatherers();   // new
-    if (theNext)
-        EECPRMShedCrowds(this);   // the next engine: no more than a patch or mine holds (§8.35)
+    EECPRMShedCrowds(this);   // the next engine: no more than a patch or mine holds (§8.35)
 
     for (it = this->mGatherers[0].begin(); it != this->mGatherers[0].end(); ++it) {
         theUnit = *it;
@@ -510,7 +465,7 @@ void EECPResourceManager::AssignGatherers()
             } else if (theUnit->mCitizenBuildQueue.size() == 0 && theUnit->GetHitPoints() > 0 && theUnit->GetTileX() != -10000
                        && theUnit->GetTileY() != -10000
                        && (theGoal == NULL || (theGather != NULL && theGather->mWaiting && theUnit->mCurrentPhysicsAction != 0))
-                       && !(theNext && EECPNextExploring(thePlayer, theUnit)))   // (§8.36: kept where it looks)
+                       && !EECPNextExploring(thePlayer, theUnit))   // (§8.36: kept where it looks)
                 theIdle.push_back(theUnit);
         }
     }
@@ -521,11 +476,6 @@ void EECPResourceManager::AssignGatherers()
             if (this->mWantedGatherers[theResource] <= this->mGatherers[theResource].size())
                 continue;
             unsigned long theWanted = this->mWantedGatherers[theResource] - this->mGatherers[theResource].size();
-            if (theResource == 2 && theWanted > 0 && !theNext && EECPRMFishes(this) && theBoats.size() < 8
-                && gPhysics->mGameTime >= this->mNextFishingBoatTime) {
-                EECPRMRequestBoats(this);
-                this->mNextFishingBoatTime = gPhysics->mGameTime + 30000;
-            }
             if (theWanted >= theIdle.size() + theBoats.size())
                 theWanted = theIdle.size() + theBoats.size();
             if (theWanted > 0 || (thePlayer->IsIslandExpansionDue() && (theResource == 4 || theResource == 5 || theResource == 6))) {
@@ -534,11 +484,10 @@ void EECPResourceManager::AssignGatherers()
                     // the experiment "hunt6" (docs/AI_RESEARCH.md §8.29; the owner hunts with 6 beside the patches, the AI
                     // with 1-4): the game near home before the patches while fewer than kHuntFirst hunt
                     // (the next engine's gather(food, n, hunt): all n hunt first)
-                    bool theHuntFirst = theNext ? EECPNextFoodPreference(thePlayer) == kNextPreferHunt
-                        : EECPExperiment(thePlayer, "hunt6");
+                    bool theHuntFirst = EECPNextFoodPreference(thePlayer) == kNextPreferHunt;
                     if (theHuntFirst) {
                         unsigned long theHunters = EECPRMHunters(this);
-                        unsigned long theFirst = theNext ? this->mWantedGatherers[2] : kHuntFirst;
+                        unsigned long theFirst = this->mWantedGatherers[2];
                         if (theHunters < theFirst) {
                             unsigned long theMore = theFirst - theHunters;
                             if (theMore > theWanted)
@@ -665,11 +614,6 @@ void EECPResourceManager::AssignGatherers()
                                                 }
                                             }
                                             if (theWanted > 0 && EECPRMFishes(this)) {
-                                                if (this->mWantedGatherers[theResource] - this->mGatherers[theResource].size() > theBoats.size()
-                                                    && !theNext && theBoats.size() < 8 && gPhysics->mGameTime >= this->mNextFishingBoatTime) {
-                                                    EECPRMRequestBoats(this);
-                                                    this->mNextFishingBoatTime = gPhysics->mGameTime + 30000;
-                                                }
                                                 unsigned long theBoatCount = theBoats.size();
                                                 for (k = 0; k < theBoatCount; k++) {
                                                     theUnit = theBoats.front();
@@ -692,8 +636,7 @@ void EECPResourceManager::AssignGatherers()
                     break;
                 }
                 case 3: {
-                    EEUnit* theTarget = theNext ? EECPRMNextWoodTarget(this, (long)theWanted, theIdle.size() > 0 ? theIdle.front() : NULL)
-                        : this->FindForestTarget(theWanted, theIdle.size() > 0 ? theIdle.front() : NULL);
+                    EEUnit* theTarget = EECPRMNextWoodTarget(this, (long)theWanted, theIdle.size() > 0 ? theIdle.front() : NULL);
                     if (theTarget != NULL) {
                         unsigned long theCount = theWanted < theIdle.size() ? theWanted : theIdle.size();
                         while (theCount > 0 && theIdle.size() > 0) {
@@ -724,28 +667,14 @@ void EECPResourceManager::AssignGatherers()
                                 }
                             }
                         }
-                        if ((theWanted > 0 || thePlayer->IsIslandExpansionDue()) && theAcross) {
-                            EEUnit* theFar = this->FindResourceTarget(theResource, NULL, true);
-                            if (theFar != NULL) {
-                                while (theIdle.size() > 0) {
-                                    theUnit = theIdle.front();
-                                    theIdle.pop_front();
-                                    if (gContinentManager.AreConnectedFromIDs(theTownContinent, gContinentManager.GetContinentID(theUnit),
-                                            this->mManager->mPlayer->GetCitizenPassability())
-                                        && !gContinentManager.AreConnected(gContinentManager.GetContinentAt(theFar),
-                                            gContinentManager.GetContinentAt(theUnit), this->mManager->mPlayer->GetCitizenPassability()))
-                                        theStranded.push_back(theUnit);
-                                }
-                                if (theStranded.size() != 0)
-                                    this->RequestFerry(theStranded, theFar);
-                            }
-                        }
+                        // (the original ferried gatherers to another island with a transport from its combat
+                        // personnel here; the Lua AIs ferry their own: classic_lua ferry.lua)
                     }
                     break;
                 }
             }
         }
-        if (theNext && theIdle.size() > 0)
+        if (theIdle.size() > 0)
             EECPRMHelpBuildDrops(this, theIdle);   // (§8.36: the settlement first, then the gathering there)
         if (theIdle.size() > 0)
             this->AssignIdleGatherers(theIdle);
@@ -839,100 +768,12 @@ static bool EECPRMPatchSite(EECPResourceManager* inManager, EEUnit* inPatch, EET
 // settlement or town center is queued or near; returns true if it did
 bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
 {
-    U2DPoint<float> theSpot(0.0f, 0.0f);
-    EETileDistanceLess theSite(0, 0);
-    EEUGGather* theGoal = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
-    EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
-    EEComputerPlayer* thePlayer = this->mManager->mPlayer;
-    long theRadius = thePlayer->mDropOffDistance;
-    long theRange = theRadius * theRadius;
-    bool theResult = false;
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
+    (void)inUnit;
+    EESelectedGroup* theGroup = this->mManager->mPlayer->mActiveGroup;
     if (theGroup != NULL && theGroup->GetNumUnits() > 0)
         theGroup->Clear();
-    // (the next engine's strategy builds its settlements: build(settlement, site))
-    if (thePlayer->mCanBuild && this->mSettlementsEnabled && !EECPNextEngine(thePlayer)
-        && thePlayer->CanProduceUnitType(kUnitTypeSettlement, 0x20, NULL)) {
-        EEUnit* theResource = theGoal->mResource;
-        EEUnit* theStorage = theGoal->mStorage;
-        // the experiment "foodeco" (docs/AI_RESEARCH.md §8.27; the owner builds on the patch "so citizens move as little
-        // as possible"): a forage patch with no drop site within kPatchDropRange tiles gets a settlement in the rings
-        // round the patch itself (the original waited for the full drop-off distance and searched round the centre)
-        bool thePatch = theResource != NULL && EECPForagePatchesOn(thePlayer) && theResource->mResourceType == kResourceFood
-            && theResource->GetUnitClass()->mFamily != kUnitFamilyAnimal && theResource->GetUnitClass()->mFamily != kUnitFamilyFish
-            && theResource->GetUnitClass()->GetUnitType() != EEGetFarmType(thePlayer);
-        if (thePatch)
-            theRange = kPatchDropRange * kPatchDropRange;
-        if (theResource != NULL
-            && (theStorage == NULL || static_cast<EEComplexUnit*>(theStorage)->DistanceSquaredToUnit(theResource) > (float)theRange)) {
-            theResult = theGoal->FindUnfinishedFarm(inUnit) == NULL;
-            if (theResult) {
-                EEUnit* theNearest = theClass->FindStorage(inUnit, true);
-                if (theNearest != NULL
-                    && static_cast<EEComplexUnit*>(theNearest)->DistanceSquaredToUnit(theResource) <= (float)theRange) {
-                    if (inUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen)
-                        return false;
-                    long theFlags = this->mManager->mPlayer->GetCitizenPassability();
-                    unsigned short theFirst = gContinentManager.GetContinentID(theNearest);
-                    unsigned short theSecond = gContinentManager.GetContinentID(inUnit);
-                    if (gContinentManager.AreConnected(gContinentManager.GetContinentByID(theSecond),
-                                                  gContinentManager.mContinents[theFirst], theFlags))
-                        return false;
-                }
-                theResult = !this->IsSettlementQueued(theResource->mResourceType);
-                if (theResult) {
-                    if (theResource->mResourceType == kResourceWood) {
-                        EEAIForest* theForest = gContinentManager.GetForestAt(theResource);
-                        if (theForest == NULL || theForest->mTiles.Size() < 5)
-                            theResult = false;
-                    }
-                    if (theResult) {
-                        long theKind = theResource->GetUnitClass()->mFamily;
-                        theResult = theKind != kUnitFamilyAnimal;
-                        if (theResult) {
-                            if (theResource->mResourceType != kResourceWood && theKind != kUnitFamilyAnimal) {
-                                EECPResourceCenter* theCenter = thePlayer->GetResourceCenterOf(theResource);
-                                if (thePatch) {
-                                    if (!EECPRMPatchSite(this, theResource, theSite.mCenter))
-                                        return false;
-                                    theRange = theRadius * theRadius;   // the site check below: within the drop-off distance
-                                } else if (theCenter == NULL || !theCenter->FindBuildSite(kUnitTypeSettlement, theSite.mCenter))
-                                    return false;
-                                EETileCoordinate theTile;
-                                theTile.mX = theResource->mTileX;
-                                theTile.mY = theResource->mTileY;
-                                theResult = theSite.DistanceSquared(theTile) <= theRange;
-                            } else {
-                                theResult = theClass->FindWoodSite(inUnit, 0x2b, theSpot);
-                                if (!theResult)
-                                    return theResult;
-                                long theY = UMFloor(theSpot.GetY());
-                                long theX = UMFloor(theSpot.mX);
-                                theSite.mCenter.mX = theX;
-                                theSite.mCenter.mY = theY;
-                                EETileCoordinate theTile;
-                                theTile.mX = theResource->mTileX;
-                                theTile.mY = theResource->mTileY;
-                                theResult = theSite.DistanceSquared(theTile) <= theRange;
-                            }
-                            if (theResult) {
-                                theResult = !this->mManager->mBuildManager->HasTownCenterNear(theSite.mCenter.mX, theSite.mCenter.GetY(),
-                                                                               (float)theRadius * 0.75f);
-                                if (theResult) {
-                                    EEUnit* theTarget = EEMakeBuilding(thePlayer, 0x2b, theSite.mCenter.mX, theSite.mCenter.GetY());
-                                    inUnit->SetGoal(new EEUGBuildRepair(thePlayer, theTarget, false), 1, 0);
-                                    inUnit->StartAction(kActionMoveToRepairSite);
-                                    EE_CP_TRACE(thePlayer, "settlement.order", "resource=%lu x=%ld y=%ld", (unsigned long)theResource->mResourceType, (long)theSite.mCenter.mX, (long)theSite.mCenter.GetY());
-                                    inUnit->GetUnitClass()->ActionChanged(inUnit);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return theResult;
+    // (the strategy builds its settlements: build(settlement, site); the original ordered one here, deleted in stage 5)
+    return false;
 }
 
 // FUNCTION: EXE 0x49007f
@@ -1063,8 +904,7 @@ void EECPResourceManager::FindMines(unsigned long inCount, bool inNear, std::vec
         bool theFree = !this->GetManager()->GetBuildManager()->HasEnemyNear(theMine->GetTileX(), theMine->GetTileY());
         if (!theFree)
             continue;
-        if (EECPNextEngine(this->GetManager()->GetPlayer())) {
-            // the next engine (§8.35, the owner: "hunting really really far away from home"): the game within the
+        {   // §8.35, the owner: "hunting really really far away from home"): the game within the
             // claim range of the town centre (EECPNextHuntReach), not more than kNextHuntersPerAnimal hunters an animal
             long theDX = theMine->GetTileX() - theCenter.GetX(), theDY = theMine->GetTileY() - theCenter.GetY();
             long theReach = EECPNextHuntReach(this->GetManager()->GetPlayer());
@@ -1073,12 +913,6 @@ void EECPResourceManager::FindMines(unsigned long inCount, bool inNear, std::vec
                 outUnits.push_back(this->GetMinesAt(i));
                 theFound++;
             }
-            continue;
-        }
-        EEComplexUnit* theCenterUnit = this->FindNearestTownCenter(theMine);
-        if (theCenterUnit != NULL && theCenterUnit->DistanceSquaredTo(theMine) < (float)theRange) {
-            outUnits.push_back(this->GetMinesAt(i));
-            theFound++;
         }
     }
 }
@@ -1102,17 +936,14 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
         EEUnit* theUnit = theCenterObject->FindResourceUnit(2);
         if (theUnit == NULL || theUnit->GetUnitClass()->GetUnitType() != kUnitTypeResForageBush)
             continue;
-        bool theNextReady = false;
-        if (EECPNextEngine(thePlayer)) {   // a bush of the patch with room (§8.35), else the next patch
-            theUnit = EECPRMUnitWithRoom(thePlayer, theCenterObject, 2);
-            if (theUnit == NULL)
-                continue;
-            // §8.36 (the owner: "require the AI to build a settlement before using a node"): only a patch with a
-            // finished drop site at hand; the strategy builds it first
-            if (!EECPNextUnitDropReady(thePlayer, theUnit))
-                continue;
-            theNextReady = true;
-        }
+        // a bush of the patch with room (§8.35), else the next patch
+        theUnit = EECPRMUnitWithRoom(thePlayer, theCenterObject, 2);
+        if (theUnit == NULL)
+            continue;
+        // §8.36 (the owner: "require the AI to build a settlement before using a node"): only a patch with a
+        // finished drop site at hand; the strategy builds it first
+        if (!EECPNextUnitDropReady(thePlayer, theUnit))
+            continue;
         if (inUnit != NULL) {
             EETileCoordinate theUnitTile;
             theUnitTile.mX = theUnit->GetTileX();
@@ -1131,20 +962,16 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
             if (!gContinentManager.AreConnectedFromIDs(theCenterID, gContinentManager.GetContinentID(theX, theY), theFlags))
                 continue;
         }
-        if (!theNextReady && !static_cast<EETile*>(theUnit->GetRTSTile())->IsVisibleTo(thePlayer))
-            continue;   // skip it (was break: ended the whole search; §8.36: a patch by the player's own finished drop
-                        // site is known: a home patch 7 tiles from the town centre stayed unexplored all game)
+        // (§8.36: a patch by the player's own finished drop site is known, seen or not: a home patch 7 tiles from the
+        // town centre stayed unexplored all game)
         if (!EECPRMHasRoom(thePlayer, theUnit, theLimit))
             continue;
         theTile.mCenter.mX = theUnit->GetTileX();
         theTile.mCenter.mY = theUnit->GetTileY();
         if (theUnit->GetResourceAmount() <= 0 || theUnit->GetRTSTile()->GetTerrainType() == kTerrainDeepWater)
             continue;
-        if (inNeedsDropSite && theCenterObject->mUnit == NULL && !theNextReady)
-            continue;
-        if (EECPNextEngine(thePlayer) ? EECPNextSiteBlocked(thePlayer, theUnit, NULL) > kNextBlockedUnexplored
-                                      : this->mManager->mBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY()))
-            continue;   // (the next engine: its gather safety, as FindResourceTarget)
+        if (EECPNextSiteBlocked(thePlayer, theUnit, NULL) > kNextBlockedUnexplored)
+            continue;   // (its gather safety, as FindResourceTarget)
         // economy.forage_patches: only the patches within the claim range (the playtest AI sent 17 of 27 food gatherers
         // on far trips); their settlements come from EECPRMSettlePatches. TEST ONLY: the experiment "droprule" also
         // skips a patch with no drop site within kEECPPatchDropRange tiles (lost 4-17 in the sim: the patches stood
@@ -1154,10 +981,8 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
                 || (EECPExperiment(thePlayer, "droprule")
                     && !EECPRMFoodDropNear(thePlayer, theUnit->GetTileX(), theUnit->GetTileY(), kEECPPatchDropRange))))
             continue;
-        if (theNextReady || theTile.DistanceSquared(theCenter.mCenter) < theRange) {   // (§8.36: its drop decides)
-            theResult = theUnit;
-            break;
-        }
+        theResult = theUnit;   // (§8.36: its drop decides, not the distance)
+        break;
     }
     return theResult;
 }
@@ -1184,13 +1009,11 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     std::sort(this->mFish.begin(), this->mFish.end(), EECPUnitTileDistanceLess(inUnit->GetTile()));
     EEGetPlayerUnitsOfType(kUnitTypeDock, this->GetManager()->GetPlayer()->GetPlayerID(), theUnits);
     std::vector<long> theWarships;
-    bool theNext = EECPNextEngine(this->GetManager()->GetPlayer());
-    if (theNext)
-        EECPNextSeenWarships(this->GetManager()->GetPlayer(), theWarships);
+    EECPNextSeenWarships(this->GetManager()->GetPlayer(), theWarships);
     unsigned long i;
     for (i = 0; i < this->mFish.size() && theResult == NULL; i++) {
         EEComplexUnit* theUnit = this->mFish[i];
-        if (theNext && EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
+        if (EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
             continue;
         if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit)) {
             if (std::find_if(theUnits.begin(), theUnits.end(), EECPRMUnitWithin(theUnit->GetTile(), 64.0f)) == theUnits.end())
@@ -1202,7 +1025,7 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     unsigned long j;
     for (j = 0; j < this->mFish.size() && theResult == NULL; j++) {
         EEComplexUnit* theUnit = this->mFish[j];
-        if (theNext && EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
+        if (EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
             continue;
         if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit))
             theResult = theUnit;
@@ -1398,60 +1221,29 @@ EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* 
         bool theOK = false;
         if (theCenter != NULL && theCenter->mIsActive) {
             EEUnit* theUnit = theCenter->FindResourceUnit(inResource);
-            if (theUnit != NULL && EECPNextEngine(thePlayer)) {   // a unit with room (§8.35)
+            if (theUnit != NULL) {   // a unit with room (§8.35)
                 EEUnit* theRoom = EECPRMUnitWithRoom(thePlayer, theCenter, (unsigned long)inResource);
                 if (theRoom != NULL)
                     theUnit = theRoom;
             }
             if (theUnit != NULL && (static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer)
-                    || (EECPNextEngine(thePlayer) && EECPNextUnitDropReady(thePlayer, theUnit)))   // (§8.36, as FindFarm)
+                    || EECPNextUnitDropReady(thePlayer, theUnit))   // (§8.36, as FindFarm)
                 && EECPRMHasRoom(thePlayer, theUnit, theLimit)
                 && theUnit->mResourceAmount > 0 && theUnit->mTile->mTerrainType != kTerrainDeepWater) {
                 // the next engine: its gather safety (EECPNextSiteBlocked: seen soldiers, towers in range, a danger
                 // zone, another player's land; a home site only soldiers on it; docs/AI_RESEARCH.md §8.34)
-                bool theNextCheck = EECPNextEngine(thePlayer);
-                if (theNextCheck)   // (§8.36: and a finished drop site at hand, the owner's settlement first)
-                    theOK = EECPNextSiteBlocked(thePlayer, theUnit, NULL) <= kNextBlockedUnexplored
-                        && EECPNextUnitDropReady(thePlayer, theUnit);
-                else
-                    theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
-                if (theOK && !theNextCheck)
-                    theOK = !EECPRMResourceInDanger(this, theUnit->GetTileX(), theUnit->GetTileY());
+                // (§8.36: and a finished drop site at hand, the owner's settlement first)
+                theOK = EECPNextSiteBlocked(thePlayer, theUnit, NULL) <= kNextBlockedUnexplored
+                    && EECPNextUnitDropReady(thePlayer, theUnit);
                 if (theOK && sClaimPass)
                     theOK = EECPRMInClaimRange(this, theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK) {
-                    EEPlayer** thePlayers = gWorld.mPlayers;
-                    for (unsigned long j = 0; j < gWorld.mNumPlayers && theOK && !theNextCheck; j++, thePlayers++) {
-                        EEPlayer* theOther = *thePlayers;
-                        if (theOther == thePlayer || theOther->mEnemies[thePlayer->mPlayerID] != 0)
-                            continue;
-                        EETileCoordinate theUnitTile;
-                        theUnitTile.mX = theUnit->GetTileX();
-                        theUnitTile.mY = theUnit->GetTileY();
-                        EEAIArea* theArea = theOther->GetNearestArea(theUnitTile, true);
-                        if (theArea == NULL)
-                            continue;
-                        U2DPoint<long> theFrom(theUnit->GetTileX(), theUnit->GetTileY());
-                        U2DPoint<long> theClosest = theArea->GetClosestHullPoint(theFrom);
-                        theTile.mCenter.mX = theClosest.mX;
-                        theTile.mCenter.mY = theClosest.mY;
-                        EETileCoordinate theTo;
-                        theTo.mX = theUnit->GetTileX();
-                        theTo.mY = theUnit->GetTileY();
-                        long theDistance = theTile.DistanceSquared(theTo);
-                        if ((float)theDistance > 100.0f)
-                            theOK = true;
-                        else
-                            theOK = false;
-                    }
-                    if (theOK) {
-                        if (inUnit == NULL)
-                            return theUnit;
-                        if (gContinentManager.AreConnected(gContinentManager.GetContinentAt(theUnit),
-                                                      gContinentManager.GetContinentAt(inUnit),
-                                                      this->mManager->mPlayer->GetCitizenPassability()))
-                            return theUnit;
-                    }
+                    if (inUnit == NULL)
+                        return theUnit;
+                    if (gContinentManager.AreConnected(gContinentManager.GetContinentAt(theUnit),
+                                                  gContinentManager.GetContinentAt(inUnit),
+                                                  this->mManager->mPlayer->GetCitizenPassability()))
+                        return theUnit;
                 }
             }
         }
@@ -1724,48 +1516,6 @@ long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
-// NEAR: the 0x92230 assign shape is a guess from the decompiler outline; the original returns true on every
-// path (0x49195e)
-// FUNCTION: EXE 0x4916e6
-// Loads as many gatherers as fit on a transport and ships them to a resource to gather it; returns false
-// when the transport cannot unload there
-bool EECPResourceManager::FerryGatherers(std::vector<EEComplexUnit*>& inUnits, EEComplexUnit* inTransport, EEUnit* inResource)
-{
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EETileCoordinate> theTiles;
-    long theX = inResource->GetTileX();
-    long theY = inResource->GetTileY();
-    EEUGUnloadTransport* theUnload = new EEUGUnloadTransport(inTransport, theX, theY, true);
-    if (theUnload != NULL) {
-        if (theUnload->CanUnloadAtDestination()) {
-            inTransport->ClearGoalQueue(0);
-            inTransport->SetGoal(theUnload, 0, 0);
-            long theCount = inTransport->GetUnitClass()->mTransportCapacity / inUnits[0]->GetUnitClass()->mWeight;
-            std::vector<EEComplexUnit*>::iterator theEnd = theCount > inUnits.size() ? inUnits.end() : inUnits.begin() + theCount;
-            theUnits.assign(inUnits.begin(), theEnd);
-            EEUGLoadTransport* theLoad = new EEUGLoadTransport(inTransport, theUnits, true);
-            inTransport->SetGoal(theLoad, 1, 0);
-            inTransport->StartAction(kActionPrepareToMove);
-            inTransport->GetUnitClass()->ActionChanged(inTransport);
-            EEUnitGoal* theGather = new EEUGGather(inResource, NULL, true);
-            unsigned long i, n;
-            for (i = 0, n = theUnits.size(); i < n; i++) {
-                theUnits[i]->ClearGoalQueue(0);
-                theUnits[i]->SetGoal(theGather->Clone(), 0, 0);
-                theUnits[i]->SetGoal(theLoad->Clone(), 1, 0);
-                theUnits[i]->StartAction(kActionPrepareToMove);
-                theUnits[i]->GetUnitClass()->ActionChanged(theUnits[i]);
-            }
-            if (theGather != NULL)
-                delete theGather;
-        } else {
-            delete theUnload;
-            return false;   // cannot unload there: RequestFerry's failure branch runs (was true)
-        }
-    }
-    return true;
-}
-
 // The container tile is copied by value before forwarding the coordinates (original 449-byte body).
 // FUNCTION: EXE 0x491965
 // Handles an idle transport: idles its loading citizens and unloads its cargo at the rendezvous, or re-queues a
@@ -2001,8 +1751,6 @@ static const unsigned long kPatchesWantedLater = 5;   // ... and from the Stone 
 static bool EECPRMBuildsFields(EECPResourceManager* inManager)
 {
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
-    if (!EECPNextEngine(thePlayer))
-        return true;
     long thePer = EECPNextGetState(thePlayer)->mGranaryFarms;
     if (thePer < 0)
         return true;
@@ -2295,10 +2043,8 @@ static void EECPRMSettlePatches(EECPResourceManager* inManager)
     if (theBest == NULL)
         return;
     EETileCoordinate theSite;
-    if (!EECPRMPatchSite(inManager, theBest, theSite)) {
-        EECPClaimExpand(thePlayer);   // no room by the patch: claim more land
+    if (!EECPRMPatchSite(inManager, theBest, theSite))
         return;
-    }
     sLast[theID] = gPhysics->mGameTime;
     theBuild->QueueBuildingAt(kUnitTypeSettlement, theSite.mX, theSite.mY);
     EE_CP_TRACE(thePlayer, "settlement.patch", "x=%ld y=%ld patch=%ld/%ld distance=%.0f", (long)theSite.mX, (long)theSite.mY,
@@ -2399,13 +2145,7 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
                 theBest->SetActive(true, 0);
                 EE_CP_TRACE(thePlayer, "center.activate", "resource=%ld distance=%.0f patches=%lu", (long)kResourceFood,
                             sqrt((double)theBestDistance), thePatches);
-            } else if (EECPPatchExpandOn(thePlayer) && EECPClaimRangeOn(thePlayer) && thePatches == 0
-                       && thePlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper)
-                // economy.patch_expand (§8.29): before the farms (the Copper Age) the patches are the food; with
-                // no patch worked and none left in the claim range it grows (growing whenever fewer than the wanted
-                // patches were held sent the citizens far out: 14-33 with it against 19-26 without) (the playtest AI had no food gatherer for 45 minutes, 1399 of
-                // the Copper Age's 1584 food, and the claim never grew: only a farm or settlement without room grew it)
-                EECPClaimExpand(thePlayer);
+            }
         }
     }
     if (!EECPClaimNeededOn(thePlayer))
@@ -2669,8 +2409,7 @@ void EECPResourceManager::RebalanceGatherers()
     unsigned long theMaxMoves = (unsigned long)EECPPersonality(this->mManager->mPlayer).mMovesPerCycle;
     for (long r = 2; r < 7 && theMoves < theMaxMoves; r++) {
         // (the next engine's gather(exact = 1), §8.51: the owner's build order counts exactly, no one of slack)
-        EECPNextState* theNextState = EECPNextEngine(this->mManager->mPlayer) ? EECPNextGetState(this->mManager->mPlayer) : NULL;
-        unsigned long theSlack = theNextState != NULL && theNextState->mExact != 0 ? 0 : 1;
+        unsigned long theSlack = EECPNextGetState(this->mManager->mPlayer)->mExact != 0 ? 0 : 1;
         while (theMoves < theMaxMoves && this->mGatherers[r].size() > this->mWantedGatherers[r] + theSlack) {
             EEComplexUnit* theUnit = this->mGatherers[r].back();
             if (theUnit->mIsDisabled || theUnit->mIsDetachedFromAI || theUnit->mCitizenBuildQueue.size() != 0
@@ -3107,8 +2846,7 @@ void EECPResourceManager::Update(unsigned long inTime)
     if (!thePlayer->mCanGather)
         return;
     if (inTime >= this->mNextWantedGatherersTime) {
-        if (this->mNextWantedGatherersTime > 0 && !EECPNextEngine(thePlayer))   // the next engine: gather() sets them
-            this->UpdateWantedGatherers();
+        // (gather() sets the wanted gatherers; the original's UpdateWantedGatherers is gone)
         this->mNextWantedGatherersTime = inTime + 5000;
     }
     EECPRMFleeRaids(this);   // a no-op without danger zones

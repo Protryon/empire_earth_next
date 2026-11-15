@@ -65,7 +65,7 @@ static const unsigned long kNextMaxOrders = 200;     // orders past this many in
 struct EECPNextNames {
     std::map<long, std::string> mNames;
     std::map<std::string, long> mKeys;
-    std::string mPrefix;        // "dbobjects_": the name of a key without an id (a binary tree), as tools/eedata ids.py
+    std::string mPrefix;        // "dbobjects_": the name of a key without an id, as tools/eedata ids.py
 };
 
 static EECPNextNames& EECPNextNamesOf(const char* inTable)
@@ -101,7 +101,7 @@ static long EECPNextKeyOf(EECPNextNames& inNames, const std::string& inName)
     std::map<std::string, long>::iterator it = inNames.mKeys.find(inName);
     if (it != inNames.mKeys.end())
         return it->second;
-    // "<table>_<key>": a row without an id in the data (or the binary tree's names)
+    // "<table>_<key>": a row without an id in the data
     if (inName.size() > inNames.mPrefix.size() && inName.compare(0, inNames.mPrefix.size(), inNames.mPrefix) == 0) {
         long theKey = 0;
         for (size_t i = inNames.mPrefix.size(); i < inName.size(); i++) {
@@ -789,13 +789,14 @@ static void EECPNextShadowStep(EEComputerPlayer* inPlayer, EECPNextState* s, con
     const EECPLuaValue& inOrders);
 
 // the script a seat runs (a new game; a loaded one has its saved script): EE_AI_NEXT_SCRIPT's (TEST ONLY), else its
-// AI's in the manifest (ee/EECPEngine.h) -> "" none
+// AI's in the manifest (ee/EECPEngine.h) -> "" none. A seat given no AI (a scenario's computer player, an old saved
+// game's) plays the manifest's "classic" AI.
 static std::string EECPNextChooseScript(EEComputerPlayer* inPlayer, EECPNextState* inState)
 {
     std::string theScript = EECPNextScriptOverride(inPlayer);
     if (theScript.empty()) {
         if (inState->mAI.empty())
-            inState->mAI = "boom";   // a seat given the next engine without an AI (none of today's paths)
+            inState->mAI = EECPClassicAI() != NULL ? EECPClassicAI()->mID : std::string("none");
         const EECPAIEntry* theAI = EECPAIByID(inState->mAI);
         if (theAI != NULL)
             theScript = theAI->mScript;
@@ -810,21 +811,20 @@ bool EECPNextPrepare(EEComputerPlayer* inPlayer)
     if (theState->mScript.empty()) {
         theState->mScript = EECPNextChooseScript(inPlayer, theState);
         if (theState->mScript.empty()) {
-            EECPEngineLog("p%lu: the AI '%s' is not in Data/ai/ais.json: the seat plays classic", inPlayer->mPlayerID,
+            EECPEngineLog("p%lu: the AI '%s' is not in Data/ai/ais.json: the seat stands idle", inPlayer->mPlayerID,
                           theState->mAI.c_str());
+            theState->mFailed = true;
             return false;
         }
-        if (theState->mScript == "c++")
-            EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
     }
-    if (theState->mScript == "c++" || theState->mLua != NULL || theState->mFailed)
+    if (theState->mLua != NULL || theState->mFailed)
         return true;
     if (!EECPNextOpen(inPlayer, theState)) {
         // the script does not load (a missing module, a syntax or top-level error: the next.error line says which):
-        // the seat plays the classic engine instead of standing idle. Safe here: the first tick, before either
-        // engine has made a decision (EEComputerPlayer::Update's start block runs the same for both)
-        EECPEngineLog("p%lu: the AI '%s' (script %s) did not load: the seat plays classic", inPlayer->mPlayerID,
+        // the seat stands idle (there is no other engine to fall back to since stage 5)
+        EECPEngineLog("p%lu: the AI '%s' (script %s) did not load: the seat stands idle", inPlayer->mPlayerID,
                       theState->mAI.c_str(), theState->mScript.c_str());
+        theState->mFailed = true;
         return false;
     }
     return true;
@@ -840,12 +840,6 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
             EECPNextError(inPlayer, "load", kEECPLuaNoFile, "the AI '" + theState->mAI + "' is not in Data/ai/ais.json");
             return;
         }
-        if (theState->mScript == "c++")
-            EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
-    }
-    if (theState->mScript == "c++") {
-        EECPNextTestStep(inPlayer, inView);
-        return;
     }
     if (theState->mFailed)
         return;
@@ -874,11 +868,11 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save (EEPPlayerHelper, from version 0.252): little-endian int32 fields, strings as a uint32 length and bytes.
-//   "EENS", uint32 version 4 (1: the same without the army block below; 3 adds the gather safety's spots and scan
-//     time; 4 the granary_farms setting, gather(granary_farms = n))
+//   "EENS", uint32 version 5 (1: the same without the army block below; 3 adds the gather safety's spots and scan
+//     time; 4 the granary_farms setting, gather(granary_farms = n); 5 drops the deleted C++ test opening's memory)
 //   the tactics' state: claim range, reserve[5], food preference, land food gatherers, epoch, epoch start, next repair
 //     time, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen army, seen strength,
-//     last seen, seen town x, y; the events (count, then kind, type, count each); the C++ test opening's memory (4)
+//     last seen, seen town x, y; the events (count, then kind, type, count each); (to version 4: 4 fields of the C++ test opening)
 //   the strategy: the script name; started, failed (one byte each); the last step's results (count, then verb, code,
 //     reason, count each); the Lua memory bytes (EECPLuaState::SaveMemory; length 0: no Lua state)
 // Not saved (rebuilt): the Lua state itself (the modules run again from scratch), the view, the class name tables.
@@ -1057,7 +1051,7 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
 {
     outBytes.clear();
     outBytes.append("EENS", 4);
-    EECPNextPut(outBytes, 4);
+    EECPNextPut(outBytes, 5);
     EECPNextPut(outBytes, s->mClaimRange);
     for (long i = 0; i < kNextResources; i++)
         EECPNextPut(outBytes, s->mReserve[i]);
@@ -1085,10 +1079,6 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
         EECPNextPut(outBytes, s->mEvents[k].type);
         EECPNextPut(outBytes, s->mEvents[k].count);
     }
-    EECPNextPut(outBytes, s->mTest.mLastClaim);
-    EECPNextPut(outBytes, s->mTest.mDefended);
-    EECPNextPut(outBytes, s->mTest.mAttacked);
-    EECPNextPut(outBytes, s->mTest.mStep);
     EECPNextPutString(outBytes, s->mScript);
     outBytes += (char)(s->mStarted ? 1 : 0);
     outBytes += (char)(s->mFailed ? 1 : 0);
@@ -1117,7 +1107,7 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     EECPNextGetter g(inBytes);
     g.mOffset = 4;
     long theVersion = g.Get();
-    if (theVersion < 1 || theVersion > 4)
+    if (theVersion < 1 || theVersion > 5)
         return false;
     s->mClaimRange = g.Get();
     for (long i = 0; i < kNextResources; i++)
@@ -1150,10 +1140,8 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         if (k < 256)
             s->mEvents.push_back(theEvent);
     }
-    s->mTest.mLastClaim = g.Get();
-    s->mTest.mDefended = g.Get();
-    s->mTest.mAttacked = g.Get();
-    s->mTest.mStep = g.Get();
+    for (long k = 0; theVersion < 5 && k < 4; k++)
+        g.Get();   // (the deleted C++ test opening's memory)
     s->mScript = g.GetString();
     s->mStarted = g.GetByte();
     s->mFailed = g.GetByte();
@@ -1216,7 +1204,7 @@ static void EECPNextSaveCheck(EEComputerPlayer* inPlayer, EECPNextState* s, cons
     bool theRestored = false;
     delete s->mShadow;
     s->mShadow = NULL;
-    if (theDecoded && theCopy.mRestore && theCopy.mScript != "c++") {
+    if (theDecoded && theCopy.mRestore) {
         EECPLuaConfig theConfig;
         theConfig.mRead = EECPNextReadScript;   // no print: the live state prints
         theConfig.mCheckMemory = true;
