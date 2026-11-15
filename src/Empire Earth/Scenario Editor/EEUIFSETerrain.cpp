@@ -625,6 +625,10 @@ void EEUIFSETerrain::MouseMove(const GE2DPoint& inLocation)
     }
 }
 
+// the editor gate's (EESimEditor.cpp: terrainstate): a listed terrain's and colour type's table id
+long EEUIFSETerrain::GetTerrainID(unsigned long inIndex) const { return this->mTerrains[inIndex]->mID; }
+long EEUIFSETerrain::GetColorTypeID(unsigned long inIndex) const { return this->mColorTypes[inIndex]->mID; }
+
 // FUNCTION: EXE 0x5acafa
 // Appends a terrain type to the tab's color type list (vector<EETerrainTypeTable*>::push_back)
 

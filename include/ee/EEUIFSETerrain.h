@@ -140,6 +140,12 @@ public:
     virtual void Enter();                   // 1ac727
     virtual void MouseMove(const GE2DPoint& inLocation); // 1aca71
     void SelectTerrain(unsigned long inSelection); // 1aca00, actual type-change event caller
+    // the editor gate's (EESimEditor.cpp: terrainstate)
+    unsigned long GetSelectedTerrain() const { return this->mSelectedTerrain; }
+    unsigned long GetTerrainCount() const { return (unsigned long)this->mTerrains.size(); }
+    long GetTerrainID(unsigned long inIndex) const;
+    unsigned long GetColorTypeCount() const { return (unsigned long)this->mColorTypes.size(); }
+    long GetColorTypeID(unsigned long inIndex) const;
 
     std::vector<EETerrainTable*> mTerrains;  // +04
     std::vector<EETerrainTypeTable*> mColorTypes;  // +14
