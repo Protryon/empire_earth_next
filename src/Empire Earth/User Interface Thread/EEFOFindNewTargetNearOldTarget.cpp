@@ -108,13 +108,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
-#include "ee/EEUCAmbient.h"
-#include "ee/EEUCTransport.h"
-#include "ee/EEUCLandable.h"
-#include "ee/EEUCSpaceship.h"
-#include "ee/EEUCAirplane.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEDebugTrace.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EERandomMapClass.h"
@@ -796,9 +790,9 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
             theLink = theLink->mNextPart;
         }
         if (inTarget->mUnitClass->GetCategory() == kUnitCategoryGate) {
-            EEComplexUnit* theFirst = dynamic_cast<EEUCGate*>(inTarget->mUnitClass)->GetLastLinkedCarrier(
+            EEComplexUnit* theFirst = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inTarget->mUnitClass)->GetLastLinkedCarrier(
                 theLink->GetOutermostCarrier());
-            EEComplexUnit* theSecond = dynamic_cast<EEUCGate*>(inTarget->GetUnitClass())->GetLastLinked(
+            EEComplexUnit* theSecond = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inTarget->GetUnitClass())->GetLastLinked(
                 theFirst->GetOutermostCarrier());
             float theDistance = inUnit->DistanceSquaredTo(theFirst);
             theLink = theFirst;
@@ -3443,7 +3437,7 @@ extern "C" uint32_t ee_units_uu_host_surrounding_tiles(uint64_t inTarget, uint8_
     if (inVirtual)
         theTarget->mUnitClass->GetSurroundingTiles(theTarget, theTiles, 1, false);
     else
-        theTarget->mUnitClass->EEUnitClass::GetSurroundingTiles(theTarget, theTiles, 1, false);
+        theTarget->mUnitClass->BaseGetSurroundingTiles(theTarget, theTiles, 1, false);
     return UUPairs(theTiles, outTiles, inCapacity);
 }
 extern "C" uint64_t ee_units_uu_host_container_continent(uint64_t inContainer, uint64_t inUnit)
@@ -3611,7 +3605,7 @@ extern "C" int32_t ee_units_uu_host_spot(int32_t inWhich, uint64_t inUnit, int32
     }
     case 3: {
         EEComplexUnit* theGate = static_cast<EEComplexUnit*>(theUnit);
-        EEUCGate* theClass = dynamic_cast<EEUCGate*>(theGate->mUnitClass);
+        EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theGate->mUnitClass);
         theClass->GetLastLinkedCarrier(theGate->GetOutermostCarrier())->GetPosition(thePoint);
         GE3DPoint theSecond;
         theClass->GetLastLinked(theGate->GetOutermostCarrier())->GetPosition(theSecond);

@@ -22866,6 +22866,7 @@ The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input c
 gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
 (`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
 kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.
+
 ## The unit utilities, round 2: the units' frames, the footprints, the walls, the line's walls, the sound and the deposit in Rust (ee_units uu_world.rs; branch rust-unitutil2, 2026-11-14)
 
 - **Capture first, writes as events.** UUTL gained 35 kinds (51..86) for the functions this round moves and their
@@ -22916,3 +22917,88 @@ kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), t
   tour`, render and F3 checks ok) and an orders game (`ORDERS PASS`: gather, repair, queued repair, move;
   `RESULT PASS random-game`). C++ of the round: net -741 (the capture +73, the move -814); the file 4,725 -> 3,996
   lines.
+
+## R5b.4, thirty-second round: the 36 EEUC* unit classes collapsed into one EEUnitClass keyed by its kind (EEUnitClassKinds.cpp; branch rust-r5b4-core32, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| e2a5c961 | the 36 `EEUC*` classes collapsed into `EEUnitClass`: dispatchers by kind, the bodies by family, the factory a table, the casts kind tests | +8221 -11586, net -3365 |
+| a55ff386 | the temple runs the basic priest's bodies (its ICF-identical copies gone) | +12 -213, net -201 |
+| 612a5f46 | `EEUnitClass`'s 29 effects walked as one array (dtor, `LoadClassMedia`, `UnloadClassMedia`) | +17 -174, net -157 |
+| 235e1115 | `EEComplexUnit::UpdateHidden`'s four tile walks as one loop (tour only) | +7 -53, net -46 |
+| 0da01600 | (merge) `rust` 42af0588: EEMessage.cpp (the gate lock's cast), EEFOFindNewTargetNearOldTarget.cpp (the unit utilities' Rust bodies taken; two new sites converted: a gate cast, a base `GetSurroundingTiles` call) | |
+
+The round's C++: net about -3,770, all of it removed code (no retired test scaffolding this round): 72 files gone
+(36 `EEUC*.cpp`, 36 `ee/EEUC*.h`), eight new (`EEUnitClassKinds.cpp`, six family units, `ee/EEUnitClassKinds.h`).
+
+**The measure.** 36 subclasses of `EEUnitClass`, 10,045 lines of source and 1,255 of headers. None had a member of its
+own (every one 0x32c bytes, the base's size): only overrides of the base's 46 virtuals and of 15 virtuals the
+families added (the transports' rendezvous, unload, boarding and room tests, the buildings' release and sunk tests,
+the shots' impact tests, the land unit's paratroop plane), plus non-virtual helpers. About 330 override
+declarations: `Update` 26, `EvaluateCondition` 24, `UnitCreated` 22, `ActionChanged` 19, `UpdateEffects` 18,
+`AddToTile`/`RemoveFromTile` 13 each; 98 bodies marked ICF-FOLDED, the same source as another class's (the original's
+linker had folded them); since rounds 12-14 every `Update` and `ActionChanged` was already a one-line Rust call. Casts:
+61 sites (`dynamic_cast<EEUCGate*>` 18, `<EEUCTransport*>` 12, the rest one or two each; `EEUnitClassCast<>` from round
+1 already read the kind table). The class a record became is a pure function of its category (`CreateUnitClasses`'
+switch), and `class_kinds_of` (kinds.rs) gives each category its class's bit and its ancestors'. So the
+calamities' pattern holds, and fully: one class, no bases kept.
+
+- **Dispatch.** Each virtual of `EEUnitClass` (they are plain members now; only the destructor stays virtual) is a
+  dispatcher in EEUnitClassKinds.cpp that reads `EEUnitClassKinds(this)` and tests the kinds from the deepest class up,
+  exactly as the vtable resolved an override: a kind's own bit matches the class and its descendants, so the first
+  match is the nearest class with a body of its own. Entries whose body equals their parent's resolution are dropped;
+  equal bodies share one test. Generated from the headers' override sets, then read.
+- **Names.** An override of `V` in `EEUCX` is `EEUnitClass::XV` (`HelicopterGetHeightAt`); the base body `BaseV` where a
+  dispatcher needs it (14), or the dispatcher's default when it was one statement (22: the empty and constant ones).
+  Unique non-virtual helpers keep their names (`FindStorage`, `GetNextFlightState`); the two pairs of homonyms got the
+  class prefix (`AirAnimalReturnToAirport`/`LandableReturnToAirport`). Qualified calls in the bodies
+  (`EEUCBuilding::UnitCreated`, `EEUnitClass::EvaluateCondition`) became the resolved member (`BuildingUnitCreated`,
+  `BaseEvaluateCondition`), the static resolution they had. Outside callers that called a base body qualified
+  (EECombatGoals.cpp, EEFOFindNewTargetNearOldTarget.cpp) call `Base*`.
+- **Dedupe.** The ICF copies were compared after the renames (whitespace and comments out): 100 bodies are aliases of
+  another (forwarders to a base or sibling, identical copies), 88 one-statement overrides live inside the
+  dispatchers (the Rust update/action calls, the constants, the ripple tests). The temple's priest half (its own copy
+  of the basic priest's conversion, trigger, media and tower-effect bodies, because `EEUCBuildingPriest` derived from
+  the building) differed only in accessor spelling and went in its own commit; its update copy stays (the basic
+  priest's update is a Rust sequence the temple does not run, and USST would see a new sequence).
+- **The factory** is a table of each category's physics model (`kCategoryPhysicsModels`: -1 for the ambient and
+  resource classes, which are not complex).
+- **Casts** are `EEUnitClassOfKind<EE_CLASS_KIND_GATE>(c)` (NULL-safe, returns the class) and `EEUnitClassIsKind<>`
+  (ee/EEUnitKind.h); the headers' free functions are ee/EEUnitClassKinds.h, which every former includer of an
+  `EEUC*` header includes instead.
+- **One-line changes in other lanes' files:** AI (EEAIAStarBoundedPathGoalModifiers.cpp, also the gate's
+  `IsSidePart`/`IsMiddlePart` definitions, now `EEUnitClass::`; EEAIPathSubSector, EECPASGLand, EECPAttackSubGroupUnit,
+  EECPBuildManager, EECPCivilizationManager, EECPNextUnits, EECPResourceManager), game messages (EEMessage.cpp,
+  EEMessageCapture.cpp), unit utilities (EEFOFindNewTargetNearOldTarget.cpp), scenario (EESMEffect.cpp,
+  EESEARust.cpp, EESimEditor.cpp), graphics (EEE3DRust.cpp, EERenderObject.cpp), physics (EEPhysicsModel.cpp), random
+  map (EERandomMap.cpp), UI (EEUIFMGStatusButton.cpp), EESim.cpp, EEGameOptions.cpp, EEGameUtilities.cpp: includes and
+  casts only. The classic AI's behaviour is unchanged (oracle identical).
+- **Behaviour:** none seen. Virtual calls from inside the base constructor would now reach a kind's body; the
+  constructor and destructor make none.
+- **Small list.** The class's 29 effect pointers are contiguous (+0x64..+0xd4, a static_assert checks it): the
+  destructor's, `LoadClassMedia`'s and `UnloadClassMedia`'s 87 tests are three loops in the same order.
+  `UpdateHidden`'s four tile walks are one loop over the offsets (tour only: the hidden flags are drawn, not
+  simulated; the tour passed). `SightOn`/`SightOff` were left: their walks differ by the sight call and the shared
+  case, a loop would not shrink them much.
+- **Tour only:** every dispatcher body that draws or plays (the ripples, trails, conversion and tower effects, the
+  sounds' doppler, the media loads) runs in EE-SIM without output; the tour and the orders game passed.
+- **Gates.** Commit 1: build `--sim` 0/0; oracle seeds 2-3 identical; captures at seeds 2-3: oracle (171 digests),
+  late (172), space (173), calamity (189), units (193) PASS. Commits 2-4 (one build): build `--sim` 0/0, oracle seeds
+  2-3 identical. Merged with `rust` 42af0588 (headers current; nothing to narrow): build `--sim` 0/0 and the test
+  profile 0/0; oracle seeds 2-7 identical to `ref`; the captures at seeds 2-3 equal to every golden except UUTL, whose
+  digest differs in every profile and seed with the same call counts, and differs identically on `rust` 42af0588 built
+  unmodified (oracle seed 2: `78796ae3...` against the golden's `90e7a9a4...`): a break on `rust` after the unit
+  utilities' merge, not this round's (for the lead: one of msg4, calamities3, ge13, editor5 changed a noted
+  utility's inputs or outputs); the scenario (22 digests) and units (193)
+  captures PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`)
+  PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium
+  1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (3,629 tests, clippy, rustfmt, headers; a first
+  run failed ee_input's keyboard-and-mouse FFI test under load, which passed alone and in the rerun); a sim_bench game
+  (seed 5, Small, Hard, 2 AI) to the time cap with both computers alive (populations 39 and 45); under the harness
+  lock the tour (`fixture_game.py --exercise tour --input-check --play-seconds 120`) `RESULT PASS tour` and the orders
+  game (`--exercise random-game --orders`) `RESULT PASS random-game`.
+- **For the next round.** The bodies are now one class's members grouped by family, so a family can move to Rust as
+  a whole over one host: the transports' tile searches (EEUnitClassTransports.cpp, ~1,200 lines of tile walks over
+  the continent table), the landable's flight states and runway approaches (~1,100), the gate's parts and the
+  buildings' release and placement (~1,800). The dispatchers themselves (740 lines) can become one Rust table of
+  kind -> body once the bodies are Rust.

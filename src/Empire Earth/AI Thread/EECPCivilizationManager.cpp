@@ -38,8 +38,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEWheel.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPResourceManager.h"
@@ -979,7 +978,7 @@ void EECPCivilizationManager::RepairBuildings()
             continue;
         EEComplexUnit* theRepairer = *theWorker;
         theWorkers.erase(theWorker);
-        EEUCGate* theGate = dynamic_cast<EEUCGate*>(theTarget->GetUnitClass());
+        EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theTarget->GetUnitClass());
         if (theGate != NULL && theTarget->mPreviousPart == NULL && theTarget->mNextPart != NULL) {
             float theDistance = theRepairer->DistanceSquaredTo(theGate->GetLastLinkedCarrier(theTarget));
             if (theRepairer->DistanceSquaredTo(theGate->GetLastLinked(theTarget)) > theDistance)

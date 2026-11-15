@@ -1,13 +1,6 @@
-// C:\EEX\Empire Earth\Units\EEUCLandable.cpp (file name inferred: no __FILE__; the class name).
-// The unit class of the
-// aircraft that land (airplanes, bombers, the animals' and planet ships' bases): 0x213c60..0x216c48 (after
-// EEUCLand.cpp; EEUCLandCitizen.cpp follows). One unit per EEUC* class in alphabetical order. Unit flags: the exe's
-// module set. Its ctor is inline (EEUnitClass.cpp's factory). Order: the landing (ReturnToAirport), the take-off point
-// (RouteDockWaypoint), Virtual24, Virtual2C, the approach (FlyToGoal), the ground height (GetGroundHeight), GetNextFlightPoint, Virtual74,
-// EEComplexUnit::SetInitialContactLocation, Virtual78, the bomb drop (IsBombOnTarget), the carrier approach (ApproachCarrier, TakeOffFromCarrier), the
-// flight state (GetNextFlightState), Virtual88, the runway approaches (ApproachRunway and its four wrappers, TakeOffFromRunway and its four),
-// IsAwayFromGoal, VirtualA0, VirtualE0, VirtualB8, EEComplexUnit::SetOpacityChain. EEUCAirAnimal.cpp's bodies are the twins of
-// several of these (same sizes).
+// EEUnitClassAir.cpp (new, R5b.4 round 32): the aircraft and spaceships' bodies of EEUnitClass, one class keyed by its
+// kind (ee/EEUnitKind.h). Each EEUC* class was a subclass with these bodies as its overrides; they now run
+// behind EEUnitClassKinds.cpp's dispatchers. Each section keeps its old file's notes and addresses.
 #include <windows.h>
 #include <stdio.h>
 #include <math.h>
@@ -46,25 +39,42 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUCTransport.h"
-#include "ee/EEUCLandable.h"
+#include "ee/EEUnitClassKinds.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EEEffectManager.h"
+
+// ---- EEUCLandable.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
+// The unit class of the
+// aircraft that land (airplanes, bombers, the animals' and planet ships' bases): 0x213c60..0x216c48 (after
+// EEUCLand.cpp; EEUCLandCitizen.cpp follows). One unit per EEUC* class in alphabetical order. Unit flags: the exe's
+// module set. Its ctor is inline (EEUnitClass.cpp's factory). Order: the landing (ReturnToAirport), the take-off point
+// (RouteDockWaypoint), Virtual24, Virtual2C, the approach (FlyToGoal), the ground height (GetGroundHeight), GetNextFlightPoint, Virtual74,
+// EEComplexUnit::SetInitialContactLocation, Virtual78, the bomb drop (IsBombOnTarget), the carrier approach (ApproachCarrier, TakeOffFromCarrier), the
+// flight state (GetNextFlightState), Virtual88, the runway approaches (ApproachRunway and its four wrappers, TakeOffFromRunway and its four),
+// IsAwayFromGoal, VirtualA0, VirtualE0, VirtualB8, EEComplexUnit::SetOpacityChain. EEUCAirAnimal.cpp's bodies are the twins of
+// several of these (same sizes).
 
 // 0x447038..0x447050: the unit's named float constants (one .rdata block per unit) (provisional names)
 static const float kLandableNone = -10000.0f;   // 0x447038 (mInitialContactHeading: no landing height)
+
 static const float kLandableCeiling = 12.0f;    // 0x44703c
+
 static const float kLandableAngle = 0.5235988f; // 0x447040 (the approach's 30 degrees)
+
 static const float kLandableAhead = 2.0f;       // 0x447044
+
 static const float kLandableLow = 0.1f;         // 0x447048 (the touch-down height)
 
 // cdecl helpers (EEUCHelicopter.cpp declares the first the same way) (provisional names)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
+
 // 0x24485b: the enemy unit near (inX, inY) within inRange that inUnit can attack (provisional name)
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRange);
 
 // FUNCTION: EXE 0x613c60
 // Takes off from the ground: rolls 3 ahead, climbs 7 ahead to 3/4 cruising height (plus the ground height when the
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
-bool EEUCLandable::ReturnToAirport(EEComplexUnit* inUnit)
+bool EEUnitClass::LandableReturnToAirport(EEComplexUnit* inUnit)
 {
     GE3DPoint thePoint;
     GEOrientation theOrientation;
@@ -116,7 +126,7 @@ void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x613ed2
 // Returns the height to fly at towards a point: its height above the ground, over the highest tile corner ahead
 // (the turning circle while circling, else the line to it), at most 12
-float EEUCLandable::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
+float EEUnitClass::LandableGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
     GE3DPoint thePosition;
     GEVector theStep;
@@ -172,7 +182,7 @@ float EEUCLandable::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocati
 
 // FUNCTION: EXE 0x6141a3
 // Gets the sound parameters, giving a moving plane's sound a Doppler pitch shift against the camera
-void EEUCLandable::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
+void EEUnitClass::LandableGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
 {
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
@@ -183,7 +193,7 @@ void EEUCLandable::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, fl
     GEVector theVelocity(0.0f, theSpeed, 0.0f);
     GEVector theHeading;
     GEVector theToCamera;
-    EEUnitClass::GetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
     if (!(*outVolume > 0.0f) || !(theSpeed > 0.0f))
         return;
     thePosition.SetX(theUnit->mPhysicalModel.GetLocation().GetX());
@@ -217,7 +227,7 @@ void EEUCLandable::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, fl
 // FUNCTION: EXE 0x614402
 // Paths a plane from a point to its goal's location (move, patrol, explore, attack ground, unload, attack unit)
 // at cruising height; an explore goal without a target picks a new area first
-void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
+void EEUnitClass::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
 {
     GE3DPoint theTarget;
     EEUnit* theUnit;
@@ -272,7 +282,7 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x614612
 // Gives the ground height under a point (the closest tile's off the map; 0 under water)
-void EEUCLandable::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
+void EEUnitClass::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
 {
     long theX;
     long theY;
@@ -286,7 +296,7 @@ void EEUCLandable::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
 
 // FUNCTION: EXE 0x6146a9
 // Gets the unit's next waypoint and the climb to it; returns nonzero when there is none
-long EEUCLandable::GetNextFlightPoint(EEComplexUnit* inUnit, GE3DPoint& outTarget, float* outClimb)
+long EEUnitClass::GetNextFlightPoint(EEComplexUnit* inUnit, GE3DPoint& outTarget, float* outClimb)
 {
     GE3DPoint thePosition;
     inUnit->GetPosition(thePosition);
@@ -296,23 +306,13 @@ long EEUCLandable::GetNextFlightPoint(EEComplexUnit* inUnit, GE3DPoint& outTarge
     return theResult;
 }
 
-// FUNCTION: EXE 0x6146f0
-// Handles a plane's new action: taxi, take-off and landing approaches (runway or carrier), landing requests,
-// emergencies, secondary targets, bombing runs, initial contact, and death (falls, rolling at its turn rate)
-void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
-{
-    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs landable), its operations
-    // EEUnitUpdate.cpp's host calls
-    EEUnitClassActionChanged(EE_UNITS_ACTION_LANDABLE, this, inUnit);
-}
-
 // New (R5b.4, the fourteenth round): EEUCLandable::ActionChanged's operations that are more than a call, each the
 // original's statements of its branch (ee_units actions.rs decides which, in which order; EEUnitUpdate.cpp's host
 // calls this with the operation code). inoutAirport: FIND_NEAREST_AIRPORT's result, for SET_HOME_BASE_FOUND.
 int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EEComplexUnit* inUnit, int64_t inA,
                                   EEComplexUnit** inoutAirport)
 {
-    EEUCLandable* theClass = static_cast<EEUCLandable*>(inClass);
+    EEUnitClass* theClass = inClass;
     GE3DPoint theTarget;
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
@@ -418,7 +418,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
                                 inUnit->SetHomeBase(theAirTraffic->GetSlotAirport(i));
                         }
                     }
-                    theClass->ReturnToAirport(inUnit);
+                    theClass->LandableReturnToAirport(inUnit);
                 }
             } else if (inUnit->mUnitClass->mAirTrafficType == 1 || inUnit->mUnitClass->mAirTrafficType == 3) {
                 switch (inUnit->mHomeBase->mFacing) {
@@ -508,9 +508,9 @@ void EEComplexUnit::SetInitialContactLocation(const GE3DPoint& inPoint)
 
 // FUNCTION: EXE 0x615290
 // Sets up a new plane: adds its weight to its air traffic control and starts it on the ground
-void EEUCLandable::UnitCreated(EEComplexUnit* inUnit)
+void EEUnitClass::LandableUnitCreated(EEComplexUnit* inUnit)
 {
-    EEUnitClass::UnitCreated(inUnit);
+    this->BaseUnitCreated(inUnit);
     inUnit->GetPlayer()->mAirTraffic[inUnit->GetUnitClass()->mAirTrafficType - 1]->AddCargoWeight(inUnit);
     inUnit->SetHeight(0.0f);
 }
@@ -518,7 +518,7 @@ void EEUCLandable::UnitCreated(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x6152d0
 // Returns whether a bomb dropped now lands within reach of the attack target along its ballistic arc (reach:
 // half the area effect for the last bomb on a moving target, else 0.25 for the last bomb or none)
-bool EEUCLandable::IsBombOnTarget(EEComplexUnit* inUnit)
+bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
 {
     GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
     EEUnitClassUpgrade* theStats = inUnit->GetStats();
@@ -584,7 +584,7 @@ bool EEUCLandable::IsBombOnTarget(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x61562f
 // Plans a plane's approach to its home carrier's deck (tag point 0): turn, descent and touch-down (inSteep: the
 // full approach whatever the height), or just the deck when braking; makes the deck the move goal
-void EEUCLandable::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
+void EEUnitClass::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
 {
     GEOrientation theOrientation;
     EEComplexUnit* theCarrier = inUnit->mHomeBase;
@@ -657,7 +657,7 @@ void EEUCLandable::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
 // FUNCTION: EXE 0x615a4d
 // Plans a take-off from the home carrier: on take-off, sits at the deck start (tag point 0) and heads for the
 // take-off point; otherwise flies off the deck end (tag point 2) towards the goal
-void EEUCLandable::TakeOffFromCarrier(EEComplexUnit* inUnit)
+void EEUnitClass::TakeOffFromCarrier(EEComplexUnit* inUnit)
 {
     GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
     GE3DPoint theStart;
@@ -714,7 +714,7 @@ void EEUCLandable::TakeOffFromCarrier(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x615ccf
 // Returns 0 (left) or 1 (right) when the next waypoint or goal lies inside the turning circle beside or behind
 // the plane, else 5
-unsigned long EEUCLandable::GetNextFlightState(EEComplexUnit* inUnit)
+unsigned long EEUnitClass::GetNextFlightState(EEComplexUnit* inUnit)
 {
     GE3DPoint theLeft;
     EEUnitGoal* theGoal = inUnit->mGoalState;
@@ -787,7 +787,7 @@ unsigned long EEUCLandable::GetNextFlightState(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x615ed8
 // Returns whether the plane reached its next waypoint (within 0.5); braking onto a runway's last one, whether
 // inValue is at most 0.05
-bool EEUCLandable::HasArrived(EEComplexUnit* inUnit, float inValue)
+bool EEUnitClass::LandableHasArrived(EEComplexUnit* inUnit, float inValue)
 {
     GE3DPoint theTarget;
     unsigned long theCount = inUnit->mWaypoints.size();
@@ -804,7 +804,7 @@ bool EEUCLandable::HasArrived(EEComplexUnit* inUnit, float inValue)
 // FUNCTION: EXE 0x615f7d
 // Plans a land plane's runway approach in a direction: turn onto the line, descent and touch-down at the airport
 // (a navy yard: its pier), then makes the airport the move goal (the queue kept behind an explore goal)
-void EEUCLandable::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
+void EEUnitClass::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
 {
     GE3DPoint theWaypoint;
     EEComplexUnit* theBase = inUnit->mHomeBase;
@@ -886,28 +886,28 @@ void EEUCLandable::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
 
 // FUNCTION: EXE 0x616308
 // Plans the runway approach along +x
-void EEUCLandable::ApproachRunwayPosX(EEComplexUnit* inUnit)
+void EEUnitClass::ApproachRunwayPosX(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, 1, 0);
 }
 
 // FUNCTION: EXE 0x616318
 // Plans the runway approach along +y
-void EEUCLandable::ApproachRunwayPosY(EEComplexUnit* inUnit)
+void EEUnitClass::ApproachRunwayPosY(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, 0, 1);
 }
 
 // FUNCTION: EXE 0x616328
 // Plans the runway approach along -y
-void EEUCLandable::ApproachRunwayNegY(EEComplexUnit* inUnit)
+void EEUnitClass::ApproachRunwayNegY(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, 0, -1);
 }
 
 // FUNCTION: EXE 0x616338
 // Plans the runway approach along -x
-void EEUCLandable::ApproachRunwayNegX(EEComplexUnit* inUnit)
+void EEUnitClass::ApproachRunwayNegX(EEComplexUnit* inUnit)
 {
     this->ApproachRunway(inUnit, -1, 0);
 }
@@ -915,7 +915,7 @@ void EEUCLandable::ApproachRunwayNegX(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x616348
 // Plans a runway take-off in a direction: rolls 3 tiles low, climbs to 3/4 cruising height 7 tiles out, then
 // flies to the goal
-void EEUCLandable::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY)
+void EEUnitClass::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY)
 {
     GE3DPoint theTarget;
     float theX = inUnit->mPhysicalModel.GetLocation().GetX();
@@ -933,35 +933,35 @@ void EEUCLandable::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY
 
 // FUNCTION: EXE 0x616430
 // Plans the runway take-off along +x
-void EEUCLandable::TakeOffFromRunwayPosX(EEComplexUnit* inUnit)
+void EEUnitClass::TakeOffFromRunwayPosX(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, 1, 0);
 }
 
 // FUNCTION: EXE 0x616440
 // Plans the runway take-off along +y
-void EEUCLandable::TakeOffFromRunwayPosY(EEComplexUnit* inUnit)
+void EEUnitClass::TakeOffFromRunwayPosY(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, 0, 1);
 }
 
 // FUNCTION: EXE 0x616450
 // Plans the runway take-off along -y
-void EEUCLandable::TakeOffFromRunwayNegY(EEComplexUnit* inUnit)
+void EEUnitClass::TakeOffFromRunwayNegY(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, 0, -1);
 }
 
 // FUNCTION: EXE 0x616460
 // Plans the runway take-off along -x
-void EEUCLandable::TakeOffFromRunwayNegX(EEComplexUnit* inUnit)
+void EEUnitClass::TakeOffFromRunwayNegX(EEComplexUnit* inUnit)
 {
     this->TakeOffFromRunway(inUnit, -1, 0);
 }
 
 // FUNCTION: EXE 0x616470
 // Returns whether the move goal is more than 1 from the home carrier's deck point (tag point 0): the carrier moved
-bool EEUCLandable::IsAwayFromGoal(EEComplexUnit* inUnit)
+bool EEUnitClass::IsAwayFromGoal(EEComplexUnit* inUnit)
 {
     GETransformation theTransformation(inUnit->mHomeBase->mPhysicalModel.GetLocation());
     EEComplexUnit* theCarrier = inUnit->mHomeBase;
@@ -987,7 +987,7 @@ bool EEUCLandable::IsAwayFromGoal(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x61655a
 // Answers the plane's flight triggers (waypoint on ground, in air, higher, same, lower; bomb in range; fuel alarm;
 // clearance; airport destroyed; secondary target; controller moved; request queued); others the common way
-long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+long EEUnitClass::LandableEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     GE3DPoint theTarget;
     long theResult = 0;
@@ -1048,13 +1048,13 @@ long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
         break;
     }
     default:
-        theResult = EEUnitClass::EvaluateCondition(inUnit, inEvent);
+        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
         break;
     case kTriggerUnitInWeaponRange:
         if (this->mProjectileClass != NULL && this->mProjectileClass->mCategory == kUnitCategoryBomb)
             theFlag = inUnit->mAmmunition < this->mAmmunition || this->IsBombOnTarget(inUnit);
         else
-            theResult = EEUnitClass::EvaluateCondition(inUnit, inEvent);
+            theResult = this->BaseEvaluateCondition(inUnit, inEvent);
         break;
     case kTriggerFlightTimeAlarm:
         theFlag = inUnit->mPhysicalModel.GetLocation().GetZ() != inUnit->mTile->GetHeight() && inUnit->mFlightTime == 0;
@@ -1093,16 +1093,6 @@ long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
     return theResult;
 }
 
-// FUNCTION: EXE 0x616a11
-// Advances a plane each tick: flight time countdown (not in cinematics or for nature), circling side, goal queues,
-// physics, timers, animation and sound, attack frames, rotting, and fading out below ground in space
-void EEUCLandable::Update(EEComplexUnit* inUnit)
-{
-    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
-    // EEUnitUpdate.cpp's host calls
-    EEUnitClassUpdate(EE_UNITS_UPDATE_LANDABLE, this, inUnit);
-}
-
 // FUNCTION: EXE 0x616c22
 // Sets the opacity of a unit and the pieces linked after it (stops at the first already at the value)
 void EEComplexUnit::SetOpacityChain(float inValue)
@@ -1116,41 +1106,591 @@ void EEComplexUnit::SetOpacityChain(float inValue)
     } while (theUnit != NULL);
 }
 
-// ICF-FOLDED: EXE 0x61aaa9
-// Adds the transport to its own tile only
-// (no address of its own: the same body as EEUCSpaceTransport::AddToTile, which ICF kept)
-void EEUCLandable::AddToTile(EEUnit* inUnit)
+// ---- EEUCAirplane.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The airplane's unit
+// class: 0x20b192..0x20b9fc (after EEUCAirAnimal.cpp; EEUCAmbient.cpp follows). Unit flags: the exe's module set. Its
+// ctor is inline (EEUnitClass.cpp's factory). Order: Virtual74 with EEAirTrafficControl::GetNumSlots's COMDAT after
+// it, EEIsTileFree, EECreateCarrierAircraft (the carrier's aircraft), FlyOffMap (off the map edge), VirtualBC, VirtualB8.
+// Virtual74 is EEUCPlanetSpaceship's twin (0x218e34).
+
+// 0x446fcc: "no height" (one .rdata copy per unit: a named const; provisional name)
+static const float kAirplaneNoHeight = -10000.0f;
+
+// New (R5b.4, the fourteenth round): EEUCAirplane::ActionChanged's operations that are more than a call (the original's
+// statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): circling's side (on space maps
+// toward the side it can reach; EE_UNITS_ACT_CIRCLE_SIDE), the holding pattern over its home airport (killed when
+// there is none; EE_UNITS_ACT_HOLDING_PATTERN 0)
+void EEAirplaneCircleSide(EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEMap* theMap = ::gWorld.mMap;
-    EEUnit* theUnit = inUnit->mComplexUnit;
-    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
-    if (theTile != NULL)
-        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+    (void)inClass;
+    if (::gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
+        float theDistance = inUnit->mStats->GetMaxVelocity() / inUnit->mStats->GetMaxAngularVelocity();
+        theDistance = (float)UMCeil(theDistance);
+        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+        float theAngle = UMArcTan2(theTransformation.GetElement(1, 0), theTransformation.GetElement(0, 0));
+        float theLeft = theAngle - 1.5707964f;
+        float theRight = theAngle + 1.5707964f;
+        bool theLeftNear = gContinentManager.CanGetTo(inUnit,
+            (long)(theTransformation.GetX() - UMSin(theLeft) * theDistance),
+            (long)(UMCos(theLeft) * theDistance + theTransformation.GetY()));
+        bool theRightNear = gContinentManager.CanGetTo(inUnit,
+            (long)(theTransformation.GetX() - UMSin(theRight) * theDistance),
+            (long)(UMCos(theRight) * theDistance + theTransformation.GetY()));
+        if (theLeftNear && !theRightNear)
+            inUnit->SetCurrentPhysicsOrder(0);
+        else if (!theLeftNear && theRightNear)
+            inUnit->SetCurrentPhysicsOrder(1);
+        else {
+            theLeftNear = gContinentManager.CanGetTo(inUnit,
+                (long)(theTransformation.GetX() - UMSin(theLeft) * theDistance * 2.0f),
+                (long)(UMCos(theLeft) * theDistance * 2.0f + theTransformation.GetY()));
+            theRightNear = gContinentManager.CanGetTo(inUnit,
+                (long)(theTransformation.GetX() - UMSin(theRight) * theDistance * 2.0f),
+                (long)(UMCos(theRight) * theDistance * 2.0f + theTransformation.GetY()));
+            if (theLeftNear && !theRightNear)
+                inUnit->SetCurrentPhysicsOrder(0);
+            else if (!theLeftNear && theRightNear)
+                inUnit->SetCurrentPhysicsOrder(1);
+            else if (gPhysics->mRandom.Generate() < 0.5f)
+                inUnit->SetCurrentPhysicsOrder(0);
+            else
+                inUnit->SetCurrentPhysicsOrder(1);
+        }
+    } else if (gPhysics->mRandom.Generate() < 0.5f)
+        inUnit->SetCurrentPhysicsOrder(0);
+    else
+        inUnit->SetCurrentPhysicsOrder(1);
 }
 
-// ICF-FOLDED: EXE 0x60afe9
-// Animates the animal like any unit
-// (no address of its own: the same body as EEUCAirAnimal::Animate, which ICF kept)
-long EEUCLandable::Animate(EEComplexUnit* inUnit)
+void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    return EEUnitClass::Animate(inUnit);
+    EEUnitClass* theClass = inClass;
+    GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
+    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
+                          inUnit->mPhysicalModel.GetLocation().GetZ());
+    EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+    if (inUnit->mHomeBase == NULL) {
+        if (theControl->GetNumSlots() > 0)
+            inUnit->SetHomeBase(theControl->GetSlotAirport(0));
+        else
+            inUnit->Kill(true, false, false);
+        if (inUnit->mHomeBase == NULL)
+            return;
+    }
+    inUnit->DropPath();
+    theTarget.SetX(inUnit->mHomeBase->GetTileX() + 1.5f);
+    theTarget.SetY(inUnit->mHomeBase->GetTileY() + 1.5f);
+    theTarget.SetZ(theClass->GetCruiseAltitude());
+    theClass->PathToward(inUnit, thePosition, theTarget, true);
+    if (gPhysics->mRandom.Generate() < 0.5f)
+        inUnit->SetCurrentPhysicsOrder(0);
+    else
+        inUnit->SetCurrentPhysicsOrder(1);
+    inUnit->SetIsCommandable(false);
+    if (inUnit->GetNextWaypointPoint(thePosition) == 0)
+        inUnit->SetHeight(theClass->GetHeightAt(inUnit, thePosition));
 }
 
-// ICF-FOLDED: EXE 0x418aa9
-// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
-bool EEUCLandable::CanAttackMove()
+// TEMPLATE: EXE 0x60b671
+// EEAirTrafficControl::GetNumSlots (inline in ee/EEAirTrafficControl.h)
+
+// FUNCTION: EXE 0x60b687
+// Returns whether a tile is on the map, not cliff, deep water or space, and not on the map edge
+bool EEIsTileFree(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
 {
+    EEMapTile* theTile = ::gWorld.mMap->GetTile(inX, inY);
+    // The terrain and edge checks keep the original short-circuit order.
+    return theTile != NULL && theTile->mTerrainType != kTerrainCliff && theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainSpace &&
+           !::gWorld.mMap->IsEdgeTile(inX, inY);
+}
+
+// FUNCTION: EXE 0x60b6ff
+// Fills a new carrier with aircraft of the best of three fighter techs its player has (else unit class 0x1f)
+void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer)
+{
+    GETransformation theTransformation;
+    long thePlayerID = inPlayer;
+    if (thePlayerID == -1)
+        thePlayerID = inUnit->mPlayer->mPlayerID;
+    EEPlayer* thePlayer = ::gWorld.mPlayers[thePlayerID];
+    long theType;
+    if (thePlayer->mTechnologies->Get(kTechInf15Watchman)->GetIsAvailable() && thePlayer->mTechnologies->Get(kTechInf15Watchman)->mIsAllowed)
+        theType = thePlayer->mTechnologies->Get(kTechInf15Watchman)->mData->mUnitClass;
+    else if (thePlayer->mTechnologies->Get(kTechInf14Guardian)->GetIsAvailable() && thePlayer->mTechnologies->Get(kTechInf14Guardian)->mIsAllowed)
+        theType = thePlayer->mTechnologies->Get(kTechInf14Guardian)->mData->mUnitClass;
+    else if (thePlayer->mTechnologies->Get(kTechInf13Sentinel)->GetIsAvailable() && thePlayer->mTechnologies->Get(kTechInf13Sentinel)->mIsAllowed)
+        theType = thePlayer->mTechnologies->Get(kTechInf13Sentinel)->mData->mUnitClass;
+    else
+        theType = 0x1f;
+    EEUnitClass* theClass = gUnitClassTable[theType];
+    theTransformation.SetX(-10000.0f);
+    theTransformation.SetY(-10000.0f);
+    for (long i = inUnit->GetNumCargoUnits(); i < inUnit->mUnitClass->mTransportCapacity; i++) {
+        EEUnit* theAircraft = theClass->CreateUnitAt(theTransformation, thePlayerID, 0, inUnit);
+        inUnit->LoadCargo(theAircraft->mComplexUnit, 1, 0);
+    }
+}
+
+// FUNCTION: EXE 0x60b824
+// Sends a leaving plane off the map: hands it to player 0, fuels it for 1000 s and flies it out 1000 tiles along
+// its direction from the map origin
+void EEUnitClass::FlyOffMap(EEComplexUnit* inUnit)
+{
+    GE3DPoint thePosition;
+    GEVector theDirection;
+    inUnit->GetPosition(thePosition);
+    theDirection.SetX(thePosition.GetX());
+    theDirection.SetY(thePosition.GetY());
+    theDirection.Normalize();
+    long theX = UMFloor(theDirection.GetX() * 1000.0f);
+    long theY = UMFloor(theDirection.GetY() * 1000.0f);
+    if (::gWorld.mMap->GetTile(theX, theY) != NULL) {
+        theX = -10000;
+        theY = -10000;
+    }
+    EEComplexUnit* theUnit = EEConvertUnit(inUnit, 0, 0);
+    theUnit->SetFlightTime(1000000);
+    EEUGRust* theGoal = EEUGRust::NewLocation(theX + 0.5f, theY + 0.5f, 0.0f, true, true, false, 0.0f, false, false);
+    theUnit->DropPath();
+    this->AddWaypointAt(theUnit, theX + 0.5f, theY + 0.5f, this->GetCruiseAltitude(), true);
+    theUnit->SetGoal(theGoal, 0, 0);
+    theUnit->StartAction(kActionFly);
+    theUnit->mUnitClass->ActionChanged(theUnit);
+}
+
+// ---- EEUCAirAnimal.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The flying animal's
+// unit class: 0x20a279..0x20b192 (after EESelectedGroup.cpp's sort COMDATs; EEUCAirplane.cpp follows). One unit per
+// EEUC* class in alphabetical order (AirAnimal, Airplane, Ambient, BasicCitizen, BasicPriest, Bomb, Building, ...).
+// Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); ReturnToAirport (the landing on an
+// airport, used by Virtual74) comes first, then the slots +0x24, +0x2c, +0x74, +0x78, +0x88, +0xa0, (+0xc0 folded)
+// +0xb8 in source order. Bodies are the EEUCLandable twins' (0x213ed2.., same sizes) with the animal's states.
+
+// 0x446fc0..0x446fc8: the unit's named float constants (one .rdata block per unit)
+static const float kAirAnimalHeight = 12.0f;     // 0x446fc0 (the highest an animal flies)
+
+static const float kAirAnimalAhead = 2.0f;       // 0x446fc4 (the look-ahead beyond the step)
+
+static const float kAirAnimalDoppler = 0.0025f;  // 0x446fc8 (0.05 squared)
+
+// FUNCTION: EXE 0x60a279
+// Lands the animal like a plane: two waypoints ahead (on the ground, then at 3/4 of cruise altitude) and a flight there
+bool EEUnitClass::AirAnimalReturnToAirport(EEComplexUnit* inUnit)
+{
+    GE3DPoint thePoint;
+    GEOrientation theOrientation;
+    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+    if (inUnit == NULL || inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] == 0)
+        return true;
+    inUnit->DropPath();
+    theTransformation.Apply(GE3DPoint(0.0f, 3.0f, 0.0f), thePoint);
+    this->AddWaypointAt(inUnit, thePoint.GetX(), thePoint.GetY(), inUnit->mTile->GetHeight(), true);
+    theTransformation.Apply(GE3DPoint(0.0f, 7.0f, 0.0f), thePoint);
+    float theHeight = this->GetCruiseAltitude() * 0.75f;
+    if (inUnit->mTile->GetHeight() > theHeight)
+        theHeight = inUnit->mTile->GetHeight() + theHeight;
+    this->AddWaypointAt(inUnit, thePoint.GetX(), thePoint.GetY(), theHeight, true);
+    thePoint.SetZ(theHeight);
+    theTransformation.ConvertToOrientation(theOrientation);
+    inUnit->mOrientation = theOrientation;
+    this->FlyToGoal(thePoint, inUnit);
     return true;
 }
 
-// ICF-FOLDED: EXE 0x61aaf5
-// Removes the transport from its own tile only
-// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
-void EEUCLandable::RemoveFromTile(EEUnit* inUnit)
+// FUNCTION: EXE 0x60a3c0
+// Returns the height to fly at toward a point: its height above ground kept over the highest terrain on the way
+// (the circle ahead when circling, else the tile line), capped at 12
+float EEUnitClass::AirAnimalGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
+    GE3DPoint thePosition;
+    GEVector theStep;
+    GEVector theOffset;
+    std::vector<EETileCoordinate> theTiles;
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    thePosition.SetX(theLocation.GetX());
     EEMap* theMap = ::gWorld.mMap;
-    EEUnit* theUnit = inUnit->mComplexUnit;
-    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
-    if (theTile != NULL)
-        theTile->RemoveUnit(theUnit);
+    EEUnitClassUpgrade* theStats = inUnit->mStats;
+    thePosition.SetY(theLocation.GetY());
+    thePosition.SetZ(theLocation.GetZ());
+    float theHeight = inLocation.GetZ();
+    float theBase;
+    EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloor(inLocation.GetX()), UMFloor(inLocation.GetY()));
+    if (theTile != NULL && theTile->GetHeight() >= 0.0f)
+        theBase = theHeight - theTile->GetHeight();
+    else
+        theBase = theHeight;
+    unsigned long theState = inUnit->mCurrentPhysicsOrder;
+    if (theState == 0 || theState == 1) {
+        float theDistance = theStats->GetMaxVelocity() / theStats->GetMaxAngularVelocity();
+        theStep.SetX(theState != 0 ? -theDistance : theDistance);
+        theLocation.Apply(theStep, theOffset);
+        thePosition += theOffset;
+        EEGetTilesNearPoint(thePosition, kAirAnimalAhead + theDistance, theTiles);
+    } else {
+        EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
+                   UMFloor(inLocation.GetY()), (std::vector<U2DPoint<long> >*)&theTiles, 1, 0);
+    }
+    for (std::vector<EETileCoordinate>::iterator theCoordinate = theTiles.begin(); theCoordinate != theTiles.end();
+         theCoordinate++) {
+        unsigned long theX = theCoordinate->mX;
+        unsigned long theY = theCoordinate->mY;
+        if (theMap->GetTile(theX, theY) == NULL)
+            continue;
+        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+    }
+    if (theHeight > kAirAnimalHeight)
+        theHeight = kAirAnimalHeight;
+    return theHeight;
 }
+
+// FUNCTION: EXE 0x60a691
+// Gets the base sound parameters, then Doppler-shifts the pitch of a moving animal by its speed toward the camera
+void EEUnitClass::AirAnimalGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
+                              float* outPitch)
+{
+    EEComplexUnit* theUnit = inUnit->mComplexUnit;
+    GE3DPoint thePosition;
+    GE3DPoint theCamera(::gWorld.mTransformation.GetX(), ::gWorld.mTransformation.GetY(),
+                        ::gWorld.mTransformation.GetZ());
+    float theSpeed = theUnit->mVelocity;
+    GEVector theVelocity(0.0f, theSpeed, 0.0f);
+    GEVector theHeading;
+    GEVector theToCamera;
+    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    if (!(*outVolume > 0.0f) || !(theSpeed > 0.0f))
+        return;
+    thePosition.SetX(theUnit->mPhysicalModel.GetLocation().GetX());
+    thePosition.SetY(theUnit->mPhysicalModel.GetLocation().GetY());
+    thePosition.SetZ(theUnit->mPhysicalModel.GetLocation().GetZ());
+    theToCamera.SetX(theCamera.GetX() - thePosition.GetX());
+    theToCamera.SetY(theCamera.GetY() - thePosition.GetY());
+    theToCamera.SetZ(theCamera.GetZ() - thePosition.GetZ());
+    if (theToCamera.GetX() >= -0.0001f && theToCamera.GetX() <= 0.0001f && theToCamera.GetY() >= -0.0001f &&
+        theToCamera.GetY() <= 0.0001f && theToCamera.GetZ() >= -0.0001f && theToCamera.GetZ() <= 0.0001f) {
+        theToCamera.SetX(0.0f);
+        theToCamera.SetY(0.0f);
+        theToCamera.SetZ(0.0f);
+    } else
+        theToCamera.Normalize();
+    theUnit->mPhysicalModel.GetLocation().Apply(theVelocity, theHeading);
+    thePosition += theHeading;
+    if (theHeading.GetX() >= -0.0001f && theHeading.GetX() <= 0.0001f && theHeading.GetY() >= -0.0001f &&
+        theHeading.GetY() <= 0.0001f && theHeading.GetZ() >= -0.0001f && theHeading.GetZ() <= 0.0001f) {
+        theHeading.SetX(0.0f);
+        theHeading.SetY(0.0f);
+        theHeading.SetZ(0.0f);
+    } else
+        theHeading.Normalize();
+    float theCosine = theHeading.DotProduct(theToCamera);
+    float theRatio = theVelocity.GetY() * 0.05f;
+    float theGamma = (float)sqrt(1.0f - theVelocity.GetY() * theVelocity.GetY() * kAirAnimalDoppler);
+    *outPitch = theGamma / (1.0f - theRatio * ((theRatio + theCosine) / (1.0f - theRatio * theCosine)));
+}
+
+// New (R5b.4, the fourteenth round): EEUCAirAnimal::ActionChanged's operations that are more than a call (the
+// original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): the path to the goal
+// when preparing to move (EE_UNITS_ACT_AIR_ANIMAL_PATH), the dying spin (EE_UNITS_ACT_DEATH_ROLL 0)
+void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUnitClass* theClass = inClass;
+    GE3DPoint theTarget;
+    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
+                          inUnit->mPhysicalModel.GetLocation().GetZ());
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    if (theGoal->mKind == kGoalAttackUnit) {
+        EEUnit* theUnit;
+        EEFindDropLocation(inUnit, &theUnit, &theTarget, NULL);
+        float theRange = inUnit->mStats->mRange;
+        float theRange2 = theRange;
+        if (EEGetHitDistanceSquared(inUnit, theUnit, -10000.0f, -10000.0f) > theRange * theRange2)
+            theGoal->GetDestination(inUnit, theTarget);
+    } else
+        theGoal->GetDestination(inUnit, theTarget);
+    if (theGoal->mKind == kGoalExplore)
+        theTarget.SetZ(theClass->GetCruiseAltitude());
+    theClass->PathToward(inUnit, thePosition, theTarget, true);
+}
+
+void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    inUnit->SetF220(inClass->mPhysicsModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
+    inUnit->mAngularVelocity = GEOrientation(inUnit->mAngularVelocity.GetYaw(), inUnit->mAngularVelocity.GetPitch(), inUnit->mAngularVelocity.GetYaw());
+}
+
+// FUNCTION: EXE 0x60ad1c
+// Sets up a new animal on the ground (height 0)
+void EEUnitClass::AirAnimalUnitCreated(EEComplexUnit* inUnit)
+{
+    this->BaseUnitCreated(inUnit);
+    inUnit->SetHeight(0.0f);
+}
+
+// FUNCTION: EXE 0x60ad46
+// Returns whether the animal reached its next waypoint (within 0.5 tiles), or when braking on its last one, has stopped
+bool EEUnitClass::AirAnimalHasArrived(EEComplexUnit* inUnit, float inValue)
+{
+    GE3DPoint theTarget;
+    unsigned long theCount = inUnit->mWaypoints.size();
+    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
+                          0.0f);
+    inUnit->GetNextWaypointPoint(theTarget);
+    theTarget.SetZ(0.0f);
+    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionBrake && theCount <= 1 && this->mAirTrafficType != 2) {
+        return inValue == 0.0f;
+    }
+    return theTarget.DistanceToSquared(thePosition) <= 0.25f;
+}
+
+// FUNCTION: EXE 0x60ade9
+// Answers the flight triggers (next waypoint lower, level, higher, in the air or on the ground; move prepared; fall
+// finished); other triggers go to the common unit class
+long EEUnitClass::AirAnimalEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+{
+    float theZ = inUnit->mPhysicalModel.GetLocation().GetZ();
+    unsigned long theCount = inUnit->mWaypoints.size();
+    GE3DPoint theTarget;
+    long theResult = 0;
+    bool theFlag = false;
+    float theDelta = 0.0f;
+    float theGround = 0.0f;
+    if (inUnit->GetNextWaypointPoint(theTarget) == 0) {
+        theDelta = theTarget.GetZ() - theZ;
+        long theX;
+        long theY;
+        EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloor(theTarget.GetX()), UMFloor(theTarget.GetY()));
+        if (theTile == NULL)
+            theTile = ::gWorld.mMap->GetClosestTile(&theTarget, &theX, &theY);
+        theGround = theTile->GetHeight();
+        if (theGround < 0.0f)
+            theGround = 0.0f;
+    }
+    switch (inEvent) {
+    case kTriggerWaypointIsLowerElevation:
+        if (inUnit->mUnitClass->mAirTrafficType != 2)
+            theFlag = inUnit->mHasArrived && theCount > 0 && theDelta < 0.0f;
+        else
+            theFlag = theCount > 0;
+        break;
+    case kTriggerWaypointIsSameElevation:
+        if (inUnit->mUnitClass->mAirTrafficType != 2)
+            theFlag = inUnit->mHasArrived && theCount > 0 && theDelta == 0.0f;
+        else
+            theFlag = theCount <= 1;
+        break;
+    case kTriggerWaypointIsHigherElevation:
+        theFlag = inUnit->mHasArrived && theCount > 0 && theDelta > 0.0f;
+        break;
+    case kTriggerWaypointInAir:
+        theFlag = inUnit->mHasArrived && theCount > 0 && theTarget.GetZ() > theGround;
+        break;
+    case kTriggerWaypointOnGround:
+        theFlag = inUnit->mHasArrived && theCount > 0 && theTarget.GetZ() == theGround;
+        break;
+    case kTriggerMovePreparationComplete:
+        theFlag = (long)inUnit->mWaypoints.size() > 0;
+        break;
+    case kTriggerDyingAnimationFinished:
+        theFlag = inUnit->mVelocity == 0.0f;
+        break;
+    default:
+        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
+    }
+    if (theFlag)
+        theResult = 1;
+    return theResult;
+}
+
+// ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
+// spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
+// follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.
+
+// 0x447330: the height a landed spaceship's mInitialContactHeading is reset to (one .rdata copy per unit: a named const)
+static const float kPlanetSpaceshipNoHeight = -10000.0f;
+
+// New (R5b.4, the fourteenth round): EEUCPlanetSpaceship::ActionChanged's holding pattern over its home airport (dies
+// without one; the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HOLDING_PATTERN 1 calls it)
+void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUnitClass* theClass = inClass;
+    GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
+    EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
+                          inUnit->mPhysicalModel.GetLocation().GetZ());
+    if (inUnit->mHomeBase == NULL) {
+        if (theControl->GetNumSlots() > 0)
+            inUnit->SetHomeBase(theControl->GetSlotAirport(0));
+        else
+            inUnit->Kill(true, false, false);
+    }
+    if (inUnit->mHomeBase != NULL) {
+        inUnit->DropPath();
+        theTarget.SetX(inUnit->mHomeBase->mTileX + 1.5f);
+        theTarget.SetY(inUnit->mHomeBase->GetTileY() + 1.5f);
+        theTarget.SetZ(theClass->GetCruiseAltitude());
+        theClass->PathToward(inUnit, thePosition, theTarget, true);
+        inUnit->SetIsCommandable(false);
+        if (inUnit->GetNextWaypointPoint(thePosition) == 0)
+            inUnit->SetHeight(theClass->GetHeightAt(inUnit, thePosition));
+    }
+}
+
+// ---- EEUCHelicopter.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
+// The helicopter's unit
+// class: 0x212a6f..0x212edf (after EEUCGate.cpp; EEUCHelicopterPriest.cpp follows). One unit per EEUC* class in
+// alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x24,
+// +0x74, +0xb8 in source order (the others are ICF-folded into twins).
+
+// 0x447020: the highest a helicopter flies (one .rdata copy per unit: a named const) (provisional name)
+static const float kHelicopterCeiling = 12.0f;
+
+// 0x249560 (cdecl): the point to fly to for the attack on inTarget (EEMap.cpp's range) (provisional name)
+void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outLocation);
+
+// FUNCTION: EXE 0x612a6f
+// Returns the height to fly at towards a point: cruising height above the highest tile corner on the way, at least
+// the point's height, kept between cruising height and 12
+float EEUnitClass::HelicopterGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    EEMap* theMap = ::gWorld.mMap;
+    float theHeight = inLocation.GetZ();
+    float theBase = this->mCruiseAltitude;
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+    EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
+               UMFloor(inLocation.GetY()), &theTiles, 1, 0);
+    for (std::vector<U2DPoint<long> >::iterator it = theTiles.begin(); it != theTiles.end(); it++) {
+        unsigned long theX = it->mX;
+        unsigned long theY = it->mY;
+        if (theMap->GetTile(theX, theY) == NULL)
+            continue;
+        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theBase;
+        if (theZ > theHeight)
+            theHeight = theZ;
+    }
+    if (theHeight >= kHelicopterCeiling)
+        theHeight = kHelicopterCeiling;
+    if (theHeight <= theBase)
+        theHeight = theBase;
+    return theHeight;
+}
+
+// New (R5b.4, the fourteenth round): EEUCHelicopter::ActionChanged's path to the goal when preparing to move (the
+// original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
+void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUnitClass* theClass = inClass;
+    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
+                          inUnit->mPhysicalModel.GetLocation().GetZ());
+    GE3DPoint theTarget;
+    GE3DPoint theEnemy;
+    EEUnit* theUnit;
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    if (theGoal->mKind == kGoalAttackUnit) {
+        EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
+        EEGetAimPoint(inUnit, &theEnemy, &theTarget);
+    } else
+        theGoal->GetDestination(inUnit, theTarget);
+    if (theGoal->mKind == kGoalExplore)
+        theTarget.SetZ(theClass->mCruiseAltitude);
+    EEFindLandingPoint(inUnit, &theTarget);
+    theClass->PathToward(inUnit, thePosition, theTarget, false);
+}
+
+// ---- EEUCSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The spaceship's unit
+// class: 0x21a219..0x21a6e0 (after EEUCSpaceBuilding.cpp; EEUCSpaceTransport.cpp's +0xe4 0x21a6e0 follows). Unit
+// flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x24, +0x2c, +0x74, +0x78,
+// +0xa0, +0xb8 in source order.
+
+// 0x447358: the highest a spaceship flies over the terrain (one .rdata copy per unit: a named const)
+static const float kSpaceshipHeight = 12.0f;
+
+// FUNCTION: EXE 0x61a219
+// Returns the flying height for a location: its z raised to clear every tile corner on the way by the cruise
+// altitude, kept between the cruise altitude and 12
+// The floor clamp is the class's mCruiseAltitude offset (the original keeps it on the FPU after the loop)
+float EEUnitClass::SpaceshipGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    float theHeight = inLocation.GetZ();
+    EEMap* theMap = ::gWorld.mMap;
+    float theOffset = this->mCruiseAltitude;
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+    long theToY = UMFloor(inLocation.GetY());
+    long theToX = UMFloor(inLocation.GetX());
+    long theFromY = UMFloor(thePosition.GetY());
+    long theFromX = UMFloor(thePosition.GetX());
+    EEGetTileLine(theFromX, theFromY, theToX, theToY, &theTiles, 1, 0);
+    for (std::vector<U2DPoint<long> >::iterator theTile = theTiles.begin(); theTile != theTiles.end(); theTile++) {
+        long theX = theTile->GetX();
+        long theY = theTile->GetY();
+        if (theMap->GetTile(theX, theY) == NULL)
+            continue;
+        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theOffset;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theOffset;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theOffset;
+        if (theZ > theHeight)
+            theHeight = theZ;
+        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theOffset;
+        if (theZ > theHeight)
+            theHeight = theZ;
+    }
+    theHeight = min(theHeight, kSpaceshipHeight);
+    theHeight = max(theHeight, theOffset);
+    return theHeight;
+}
+
+// FUNCTION: EXE 0x61a404
+// Returns a sound's volume, pan and pitch, with a doppler shift
+void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
+                              float* outPitch)
+{
+    this->BaseGetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
+}
+
+// FUNCTION: EXE 0x61a59e
+// Answers dying done (always) and move preparation complete (has a path); others to the base class
+long EEUnitClass::SpaceshipEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+{
+    long theResult = 0;
+    bool theFlag = false;
+    switch (inEvent) {
+    case kTriggerDyingAnimationFinished:
+        theFlag = true;
+        break;
+    case kTriggerMovePreparationComplete:
+        theFlag = (long)inUnit->mWaypoints.size() > 0;
+        break;
+    default:
+        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
+        break;
+    }
+    if (theFlag)
+        theResult = 1;
+    return theResult;
+}
+

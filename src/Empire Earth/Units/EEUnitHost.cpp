@@ -55,7 +55,7 @@
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EEUnitKind.h"
-#include "ee/EEUCTransport.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EETechTreeTechID.h"
 #include "lle/SESoundManager.h"
@@ -1760,7 +1760,7 @@ extern "C" size_t ee_units_host_transport_filter(uint32_t inTransport, uint32_t*
     EEComplexUnit* theTransport = ComplexOf(inTransport);
     std::vector<EEComplexUnit*> theUnits = ComplexUnits(ioIDs, inCount);
     std::vector<EEComplexUnit*> theRejected;
-    EEUnitClassCast<EEUCTransport>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
+    EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
     for (size_t i = 0; i < theUnits.size(); i++)
         ioIDs[i] = static_cast<uint32_t>(theUnits[i]->mUnitID);
     for (size_t i = 0; i < theRejected.size(); i++)
