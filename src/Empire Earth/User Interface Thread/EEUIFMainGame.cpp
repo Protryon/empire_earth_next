@@ -30,10 +30,7 @@
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEAreaUtilities.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
-#include "lle/UIScrollBar.h"
-#include "lle/UITextLabel.h"
 #include "lle/UITLScrolling.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
@@ -44,7 +41,6 @@
 #include "ee/EmpireEarth.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
-#include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
@@ -52,7 +48,6 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EETileCoordinate.h"
 #include "lle/NESynchronousServer.h"
 #include "ee/EEServer.h"
 #include "ee/EEUserInterface.h"
@@ -67,9 +62,7 @@
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EELocationCalamityClass.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // EE_SCREENS_MG_*, EE_SCREENS_CAM_*: the main game form's events (main_game.rs, camera.rs)
 #include "ee/EEUICChatLine.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
@@ -81,7 +74,6 @@
 #include "lle/UIFormManager.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEUISCIFormManager.h"
-#include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEStringIDs.h"
 // the keyboard tests (EEUIFMGStatusButton.cpp's range) (provisional names)
 bool EEModeKeyboardCinematic(void* inForm);
@@ -102,7 +94,6 @@ extern float& gMasterVolume;                 // 0x530830 (the master volume Open
 // the information panel's message is the scenario's dialog message (EEUserInterface's message 0x422 hands over an
 // EESMDialogMessage; ShowInformation 0x26533e read it through the 32-bit offsets of a stand-in class, whose fields
 // lined up there and not on x64: the portrait's class was read from the duration, the scroll time from the unit id)
-#include "ee/EESMDialogMessage.h"
 
 // chain at 0x66272b (wrapper)
 //   object 0x8372c0  ctor None  dtor __imp_??1UWideString@@UAE@XZ
@@ -702,8 +693,6 @@ void EEUIFMainGame::SetUIState(long inUIState)
 
 
 
-#include "ee/EEVictoryCondition.h"
-#include "ee/EEVCWonder.h"
 #include "ee/EETeam.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUIEChatLogEvents.h"

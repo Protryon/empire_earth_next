@@ -5,22 +5,10 @@
 #include <mbstring.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "lle/GEColor.h"
-#include "lle/GERhombus.h"
-#include "lle/UIEvent.h"
-#include "lle/UIButton.h"
 #include "ee/EEPlayer.h"
 #include "lle/UResourceFile.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEDatabaseTables.h"
 #include "ee/EECivPowersManager.h"
-#include "ee/EEUnitSetManager.h"
-#include "ee/EEUnitVectorItem.h"
-#include "ee/EEPhysics.h"
-#include "ee/EEUICUnitIconBar.h"
-#include "ee/EEUIFMGStatusBox.h"
-#include "ee/EEUIFMGStatusButton.h"
-#include "ee/EEUIEMGHotKeyStatusButton.h"
 
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
@@ -28,8 +16,6 @@
 #include "ee/EECivilizationManager.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EERules.h"
-#include "ee/EERulesWorld.h"
-#include "ee/EECivPowerIDs.h"
 // FUNCTION: EXE 0x6830d0
 // Creates the civilization powers table, empty
 EECivPowersManager::EECivPowersManager()

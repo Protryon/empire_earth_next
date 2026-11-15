@@ -24,7 +24,6 @@
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIBGenericBackground.h"
 #include "lle/FSPath.h"
-#include "lle/UITextureBackground.h"
 #include "lle/UIBFull.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEGamePreferences.h"
