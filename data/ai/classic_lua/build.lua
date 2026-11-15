@@ -572,6 +572,23 @@ local function water_sites(view, memory)
     end
     return bm.water_sites
 end
+M.water_sites = water_sites
+
+local STALL_MEMORY_MS = 600000
+
+-- a site within 2 tiles of one that stalled twice for the class in the last ten minutes (cancel_stalled; the
+-- foundation's place and the site's tile may differ by its footprint)
+local function stalled_site(view, memory, class, x, y)
+    local stalls = M.state(memory).stalls or {}
+    for _, key in ipairs(ai.keys(stalls)) do
+        local st = stalls[key]
+        if st.class == class and st.n >= 2 and view.time - st.t <= STALL_MEMORY_MS
+                and math.abs(st.x - x) <= 2 and math.abs(st.y - y) <= 2 then
+            return true
+        end
+    end
+    return false
+end
 
 local function find_shore_site(view, memory, class)
     local sites = water_sites(view, memory)
@@ -597,7 +614,10 @@ local function find_shore_site(view, memory, class)
                 break
             end
         end
-        if not near and ai.can_place(class, x, y) and not R.enemy_near(x, y) then
+        -- New (AI_RESEARCH 8.89): not a site that stalled twice (stalled_site). start_building tested only the site
+        -- found, and this search returned the same nearest site every time: a dock between two of the player's own
+        -- towers stalled, was barred ten minutes, then was chosen again, while no other site was looked at
+        if not near and ai.can_place(class, x, y) and not R.enemy_near(x, y) and not stalled_site(view, memory, class, x, y) then
             -- (the classic asks FindBuilderForTile at every site; the port at the first 48 placeable sites, for the
             -- step's budget)
             if M.find_builder(memory, x, y, class) ~= nil then
@@ -653,22 +673,6 @@ end
 -- StartBuilding: a site and a builder; -> whether the request is done
 
 local DROP_WITHOUT_BUILDER = {}
-local STALL_MEMORY_MS = 600000
-
--- a site within 2 tiles of one that stalled twice for the class in the last ten minutes (cancel_stalled; the
--- foundation's place and the site's tile may differ by its footprint)
-local function stalled_site(view, memory, class, x, y)
-    local stalls = M.state(memory).stalls or {}
-    for _, key in ipairs(ai.keys(stalls)) do
-        local st = stalls[key]
-        if st.class == class and st.n >= 2 and view.time - st.t <= STALL_MEMORY_MS
-                and math.abs(st.x - x) <= 2 and math.abs(st.y - y) <= 2 then
-            return true
-        end
-    end
-    return false
-end
-
 local function start_building(view, memory, req)
     local class = req.class
     if (class:find("^b_wall") ~= nil) then

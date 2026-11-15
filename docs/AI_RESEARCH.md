@@ -5795,6 +5795,70 @@ bench 18-6-8, so it was first kept only while an enemy is ahead: the owner's cas
 errors. The owner then chose the whole cost kept always (2026-11-15), the faster epochs over the standard bench's
 result; a choice to reopen later.
 
+### 8.89 The Stone Age dock: fishing on the islands (2026-11-15, EE-SIM)
+
+**The owner:** classic_lua does not fish on island maps and stalls on food; "it should make docks in stone".
+
+**Why it did not fish.** The port sees only what it has explored (the fog DEVIATION); the classic reads the whole
+map's fish at the start:
+- the island rule (`uses_fishing`: 10 fish on an island map) was decided at the first grouping, when almost no water
+  is explored, so it stayed false all game;
+- the coast's boats (§8.26) want fish known within 30 tiles of the town, and nothing explored the water before a
+  dock and a boat existed;
+- the dock came only from the building counts, which the managers' rotation leaves off for long stretches (on
+  Large Islands the first dock at a median 50.6 minutes, 17 minutes after the Stone Age);
+- **a bug:** the shore site search returned the nearest placeable site every time, and start_building's stall test
+  then refused it. A dock site between two of the player's own towers stalled 12 times in one game (barred ten
+  minutes, then chosen again), and no other site was ever tried.
+
+**The changes** (build.lua, econ.lua):
+- find_shore_site skips the sites that stalled twice (stalled_site), so the next site is tried;
+- from the Stone Age, on any map that is not waterless, a dock is queued when the player has none (built or
+  unfinished) and none is queued, once a dock site is known (every 30 s);
+- with a dock built, no fishing boat and no fish known to work, one boat is requested: the scout. An idle boat
+  with no fish to go to explores, as an idle citizen with nothing to gather does. The fish it finds start the
+  coast's boats.
+
+**Tried, not kept: `uses_fishing` decided again as the water is explored** (sticky once true). It turns on the
+original's island rule: one boat at a time and no farms, the C++ classic's 0.8-1.0 boats a seat. With the dock
+(against classic_cpp, 32 seeds, 90 min): Small Islands 16-2-14 against 23-2-7, boats at 90 minutes 3.2 against 12.0,
+food 60-90 min 56 a minute against 115; Large Islands boats 2.4 against 5.9, food 49 against 67. So `uses_fishing`
+stays as the classic decides it; the coast's boats do the island fishing.
+
+**Results** (32 seeds, Hard, 90 minutes, no cheats, balanced; the port's seats). Against classic_cpp, before the C++
+AI's deletion (stage 5 phases 0-2); fishing: the seats with a fishing boat at work within 10 minutes of the Stone Age;
+food: gathered a minute:
+
+| cell | W-L-C | dock (median min) | fishing | boats 60 / 90 min | food 40-60 / 60-90 | Copper (seats, median) |
+|---|---|---|---|---|---|---|
+| Small Islands, before | 22-2-8 | 36.2 | 17 | 8.4 / 10.4 | 114 / 102 | 25, 62.6 |
+| Small Islands, after | 23-2-7 | 34.5 | 27 | 10.0 / 12.0 | 124 / 115 | 29, 62.6 |
+| Large Islands (Medium), before | 19-2-11 | 50.6 | 11 | 2.9 / 4.1 | 100 / 57 | 19, 63.6 |
+| Large Islands (Medium), after | 21-1-10 | 33.0 | 26 | 5.1 / 5.9 | 115 / 67 | 26, 57.8 |
+| the standard bench (Small, land), before | 18-6-8 | 40.9 | 12 | 6.5 / 9.7 | 149 / 138 | 23, 59.4 |
+| the standard bench, after | 19-6-7 | 30.0 | 26 | 9.6 / 7.9 | 177 / 132 | 24, 59.2 |
+
+After the merge of main (classic_cpp gone, lib.tactics pool on), against Age of AI:
+
+| cell | W-L-C | dock | fishing | boats 60 / 90 | food 40-60 / 60-90 | Copper | Bronze |
+|---|---|---|---|---|---|---|---|
+| Small Islands, before | 17-6-9 | 40.5 | 19 | 8.4 / 11.0 | 104 / 100 | 23, 65.8 | 1 |
+| Small Islands, after | 19-4-9 | 36.8 | 31 | 11.6 / 12.9 | 125 / 122 | 25, 63.4 | 5 |
+| Large Islands, before | 14-0-18 | 51.2 | 10 | 3.1 / 4.1 | 103 / 60 | 22, 62.3 | 0 |
+| Large Islands, after | 19-0-13 | 33.0 | 25 | 5.1 / 5.8 | 115 / 72 | 25, 60.7 | 0 |
+| the standard bench, before | 22-2-8 | 33.9 | 18 | 12.7 / 18.5 | 205 / 226 | 30, 56.2 | 19 |
+| the standard bench, after | 26-3-3 | 30.1 | 29 | 16.3 / 20.2 | 232 / 241 | 31, 56.2 | 22 |
+| Continental Medium, before | 14-4-14 | 49.3 | 9 | 4.4 / 12.2 | 152 / 164 | 30, 60.4 | 10 |
+| Continental Medium, after | 19-3-10 | 32.2 | 31 | 9.3 / 12.8 | 205 / 185 | 31, 57.2 | 13 |
+
+The classic_lua mirrors (64 seats): Small Islands fishing 32 -> 54 seats, Copper 38 -> 49, Bronze 5 -> 10, food
+60-90 min 88 -> 99; Large Islands fishing 21 -> 57, Copper 37 -> 49, food 54 -> 64. The Stone Age itself is
+unchanged (the dock comes after it). 0 script errors in every cell; determinism (Small Islands seed 16, 90 min,
+--repeat 2) identical.
+
+**Still open.** On Large Islands the food still falls after minute 60 (64-72 a minute against 105-115 before):
+5-6 boats on the town's coast, the fish within 30 tiles worked out, and on a small island few farms.
+
 ### 8.90 Stage 5: the C++ AI's decision code deleted (2026-11-15, EE-SIM)
 
 **The owner's decision:** every AI is Lua (classic_lua as the lobby's Classic, boom, rush, ageofai, the rb libraries);
@@ -5839,6 +5903,14 @@ split and boat logic behind the Lua verbs). The classic_lua losses did not chang
 games.
 The classic's raids now come only from its Lua attack groups; the pool keeps the army home, so the enemy's economy
 loses less (as §8.86's pool row showed).
+
+### 8.91 The Rush and balanced scripts removed (2026-11-15)
+
+**The owner:** "remove rush AI, it's completely undeveloped". `data/ai/rush.lua` and its manifest entry go, with
+`data/ai/balanced.lua` (not in the manifest, so not playable) and the two libraries only those two used,
+`lib/rb_economy.lua` and `lib/rb_army.lua`. The manifest now lists Boom, Age of AI and Classic (Lua). The S4 results
+(§8.31) stay as history. The `aggressive` personality in `aipersonalities.yaml` is the classic's and stays. The group
+verbs that only Rush used no longer need a Lua port before EECPNextArmy can go.
 
 ### 8.9 Next
 

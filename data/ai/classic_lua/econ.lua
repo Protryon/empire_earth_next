@@ -959,8 +959,55 @@ local function assign_gatherers(view, memory)
             local fish = R.find_fish(memory, dock)
             if fish ~= nil then
                 R.send_to_gather(memory, b.id, fish)
+            elseif b.action == "idle" then
+                -- New (AI_RESEARCH 8.89; DEVIATION, fog): no fish known, the boat explores the water (the scout)
+                ai.explore({b.id})
+                R.touch(b.id)
             end
         end
+    end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- New (AI_RESEARCH 8.89): the Stone Age dock and its scout boat
+
+-- From the Stone Age, on any map with water, a dock when the player has none (built or unfinished) and none is
+-- queued, once a dock site is known; checked every 30 s. The classic's dock comes from the building counts (the
+-- first military buildings, which the managers' rotation leaves off for long stretches) or from the coast's boats
+-- (fish known near the town). DEVIATION (fog): the classic reads the map's fish from the start; the port knows only
+-- what it has explored, and nothing explores the water before a dock and a boat exist.
+-- With a dock built, no fishing boat and none requested or being made, while no fish is known to work (fishes),
+-- one boat is requested: the scout. An idle boat with no fish to go to explores (AssignIdleBoats above), as an
+-- idle citizen with nothing known to gather does (assign_idle_gatherers).
+local DOCK_CHECK_MS = 30000
+
+local function dock_check(view, memory)
+    local rm = R.state(memory)
+    if view.time < (rm.next_dock_check or 0) then
+        return
+    end
+    rm.next_dock_check = view.time + DOCK_CHECK_MS
+    if view.epoch < 1 or memory.t.waterless then
+        return
+    end
+    local tech = U().class_tech(view, C.dock)
+    if tech == nil or tech.obsolete or not tech.available or view.epoch < tech.epoch then
+        return
+    end
+    if #ai.units{type = C.dock} == 0 then
+        if not B().is_queued(memory, C.dock) and #B().water_sites(view, memory) > 0 then
+            B().queue(view, memory, C.dock, false, true)
+            print("classic_lua dock.stone queue")
+        end
+        return
+    end
+    if #ai.units{type = C.dock, built = true} == 0 or fishes(view, memory) then
+        return
+    end
+    local boat = T.fishing_boat_class(view.epoch)
+    if #ai.units{type = boat} == 0 and not U().is_requested(memory, boat) and not U().in_production(view, boat) then
+        U().request(view, memory, boat, 1)
+        print("classic_lua dock.stone scout")
     end
 end
 
@@ -978,6 +1025,7 @@ function M.update(view, memory)
         rm.init = true
     end
     R.spend_income(view, memory)
+    dock_check(view, memory)
     F().step(view, memory)
     settlement_for(view, memory)
     if view.time >= rm.next_wanted then
