@@ -25,11 +25,6 @@
 
 using namespace WONAPI;
 
-extern GUIString gEELobbyGame_StartGameError;          // 0x9658b0 (EELobbyResource.cpp)
-extern GUIString gEELobbyGame_EveryoneOnSameTeam;      // 0x9659ac (EELobbyResource.cpp)
-extern GUIString gEELobbyGameStatus_NotInSavedGame;    // 0x9658cc (EELobbyResource.cpp)
-extern GUIString gEELobbyGameStatus_InvalidVersion;    // 0x96591c (EELobbyResource.cpp)
-extern GUIString gEELobbyGameStatus_CorruptBinaries;   // 0x9659b4 (EELobbyResource.cpp)
 
 typedef EeWonEeGameCall GC;
 
@@ -102,9 +97,9 @@ void EELobbyGame::HandleGameMessageHook(unsigned char inType, ReadBuffer& inBuff
 GUIString EELobbyGame::GetStatusStringHook(short inStatus)
 {
     switch (this->RCall(GC::GetStatusStringHook, inStatus)) {
-    case 1: return gEELobbyGameStatus_NotInSavedGame;
-    case 2: return gEELobbyGameStatus_InvalidVersion;
-    case 3: return gEELobbyGameStatus_CorruptBinaries;
+    case 1: return EE_LOBBY_STRING(gEELobbyGameStatus_NotInSavedGame);
+    case 2: return EE_LOBBY_STRING(gEELobbyGameStatus_InvalidVersion);
+    case 3: return EE_LOBBY_STRING(gEELobbyGameStatus_CorruptBinaries);
     }
     return gEmptyGUIString;
 }
@@ -245,7 +240,9 @@ static intptr_t EELobbyGameHost(void* inGame, EeWonEeGameOp inOp, intptr_t a, in
     case Op::TeamChanged: LobbyBroadcastEvent(new PlayerTeamChangedEvent(aClient, b != 0), true); return 0;
     case Op::LobbyEvent: LobbyBroadcastLobbyEvent((int)a, true); return 0;
     case Op::KickClient: LobbyKickClient(aClient, false); return 0;
-    case Op::SameTeamBox: LobbyMessageBox(gEELobbyGame_StartGameError, gEELobbyGame_EveryoneOnSameTeam); return 0;
+    case Op::SameTeamBox:
+        LobbyMessageBox(EE_LOBBY_STRING(gEELobbyGame_StartGameError), EE_LOBBY_STRING(gEELobbyGame_EveryoneOnSameTeam));
+        return 0;
     case Op::HostGame: return EELobbyHostGame() ? 1 : 0;
     case Op::CancelConnectDialog: EELobbyCancelConnectDialog(); return 0;
     case Op::SetSlotConnected: EELobbySetSlotConnected((unsigned char)a, b != 0); return 0;

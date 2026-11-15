@@ -241,15 +241,9 @@ WONAPI::EELobbyFileDialog* EELobbyGetFileDialog();         // 0x295c0b
 WONAPI::ResourceConfigTablePtr EELobbyResource_Init(WONAPI::ResourceConfigTable* inCollection);
 WONAPI::GUIString& EELobbyResource_GetString(int inID);
 void EELobbyResource_Destroy();
-extern WONAPI::GUIString gEELobbyGameOptionsCtrl_Epoch16;
-extern WONAPI::GUIString gEELobbyGameOptionsCtrl_GameType2;
-extern WONAPI::GUIString gEELobbyGameOptionsCtrl_OptionOn;
-extern WONAPI::GUIString gEELobbyGameOptionsCtrl_OptionOff;
-extern WONAPI::GUIString gEELobbyGameOptionsCtrl_WondersOff;
-extern WONAPI::GUIString gEELobbyPlayerOptionsCtrl_TransferPercent;
-extern WONAPI::GUIString gEELobbyInterface_LoadGameError;
-extern WONAPI::GUIString gEELobbyInterface_ErrorReadingFile;
-extern WONAPI::GUIString gEELobbyInterface_PlayerNotInGame;
+// a lobby string by its original global's name (its row in ee_won eeresource.rs)
+WONAPI::GUIString& EELobbyResource_Named(const char* inName);
+#define EE_LOBBY_STRING(name) EELobbyResource_Named(#name)
 
 // the 0x297ee7 unit
 class EEGameOptions;

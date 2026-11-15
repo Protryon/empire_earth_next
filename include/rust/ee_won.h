@@ -11197,6 +11197,13 @@ size_t ee_won_eeresource_count();
 /// `out` is writable.
 bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
 
+/// The row of a global's name (`EE_LOBBY_STRING`: the lobby's code names a string by its original global), -1 when
+/// the table has none.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+ptrdiff_t ee_won_eeresource_find(const char *name);
+
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
 ///

@@ -428,7 +428,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::LabelSetPercent: {
         char theBuffer[50];
         sprintf(theBuffer, "%d", (int)b);
-        aLabel->SetText(LobbyFormatString(gEELobbyPlayerOptionsCtrl_TransferPercent, theBuffer));
+        aLabel->SetText(LobbyFormatString(EE_LOBBY_STRING(gEELobbyPlayerOptionsCtrl_TransferPercent), theBuffer));
         return 0;
     }
     }

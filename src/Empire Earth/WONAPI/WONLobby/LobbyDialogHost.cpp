@@ -27,10 +27,6 @@
 
 using namespace WONAPI;
 
-extern GUIString gEELobbyConnectDialog_AbortLaunch;    // 0x96598c (EELobbyResource.cpp)
-extern GUIString gEELobbyConnectDialog_LeaveGame;      // 0x965948 (EELobbyResource.cpp)
-extern GUIString gEELobbyFileDialog_DeleteTitle;       // 0x965938 (EELobbyResource.cpp)
-extern GUIString gEELobbyFileDialog_DeleteDetails;     // 0x96599c (EELobbyResource.cpp)
 
 // the EE file dialog's search (EELobbyFileDialog::ListFiles' locals)
 struct EELobbyFind {
@@ -247,8 +243,8 @@ static const GUIString& AdminString(intptr_t inString)
     case EeWonLobbyDlgString::ExplanationReq: return ::AdminActionDialog_ExplanationReq_String;
     case EeWonLobbyDlgString::Ok: return ::LobbyGlobal_OK_String;
     case EeWonLobbyDlgString::Cancel: return ::LobbyGlobal_Cancel_String;
-    case EeWonLobbyDlgString::AbortLaunch: return gEELobbyConnectDialog_AbortLaunch;
-    case EeWonLobbyDlgString::LeaveGame: return gEELobbyConnectDialog_LeaveGame;
+    case EeWonLobbyDlgString::AbortLaunch: return EE_LOBBY_STRING(gEELobbyConnectDialog_AbortLaunch);
+    case EeWonLobbyDlgString::LeaveGame: return EE_LOBBY_STRING(gEELobbyConnectDialog_LeaveGame);
     default: return sEmpty;
     }
 }
@@ -492,7 +488,9 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     }
     case Op::LoadSavedGame: return EELobbyLoadSavedGame(reinterpret_cast<const char*>(a)) ? 1 : 0;
     case Op::Root: return (intptr_t)aDialog->GetRoot();
-    case Op::FileAskDelete: return LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true);
+    case Op::FileAskDelete:
+        return LobbyMessageBoxYesNo(EE_LOBBY_STRING(gEELobbyFileDialog_DeleteTitle),
+                                    EE_LOBBY_STRING(gEELobbyFileDialog_DeleteDetails), true);
     case Op::FileDelete: WONFile(reinterpret_cast<const char*>(a)).Delete(true); return 0;
     case Op::ListRemove: aList->RemoveItem(reinterpret_cast<ListItem*>(b)); return 0;
     case Op::EventDoubleClick: return reinterpret_cast<ListItemClickedEvent*>(a)->mDoubleClick ? 1 : 0;

@@ -463,9 +463,12 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::SaveChecksum: return (intptr_t)aSave->mHeader.mChecksum;
     case Op::SaveOptions: aSave->mOptions = aSave->mHeader.mGameOptions; return (intptr_t)&aSave->mOptions;
     case Op::SaveFree: delete aSave; return 0;
-    case Op::BoxReadError: LobbyMessageBox(gEELobbyInterface_LoadGameError, gEELobbyInterface_ErrorReadingFile); return 0;
+    case Op::BoxReadError:
+        LobbyMessageBox(EE_LOBBY_STRING(gEELobbyInterface_LoadGameError), EE_LOBBY_STRING(gEELobbyInterface_ErrorReadingFile));
+        return 0;
     case Op::BoxNotInGame:
-        LobbyMessageBox(gEELobbyInterface_LoadGameError, LobbyFormatString(gEELobbyInterface_PlayerNotInGame, EELobbyStr(a)));
+        LobbyMessageBox(EE_LOBBY_STRING(gEELobbyInterface_LoadGameError),
+                        LobbyFormatString(EE_LOBBY_STRING(gEELobbyInterface_PlayerNotInGame), EELobbyStr(a)));
         return 0;
     case Op::OptionsField: return OptionsField(*reinterpret_cast<const EEGameOptions*>(a), (EeWonEeGlueField)b);
     case Op::OptionsPlayer:
