@@ -131,7 +131,6 @@ static const unsigned long sPlayerEffects[3] = {271, 274, 275};
 #include "ee/EETechCapture.h"
 #include "ee/EEStatisticsHistory.h"
 #include "ee/EEStatisticsRecord.h"
-#include "ee/EEPPlayerEvent.h"
 #include "platform/PlatThread.h"
 #include <cstring>
 #include <initializer_list>
@@ -188,25 +187,7 @@ static void EEPlayerCaptureState(EEPlayer* inPlayer)
     }
     theStats.Into(theRecord);
     EEPlayerDigest theEvents;
-    EEPPlayerEventList& theList = inPlayer->mEvents;
-    int32_t theCurrent = theList.mCurrent == NULL ? -1 : -2;
-    theEvents.U32((uint32_t)theList.mEvents.size());
-    for (size_t e = 0; e < theList.mEvents.size(); e++) {
-        EEPPlayerEvent* theEvent = theList.mEvents[e];
-        if (theEvent == theList.mCurrent)
-            theCurrent = (int32_t)e;
-        theEvents.U32((uint32_t)theEvent->mSource.GetX());
-        theEvents.U32((uint32_t)theEvent->mSource.GetY());
-        theEvents.U32((uint32_t)theEvent->mLocation.GetX());
-        theEvents.U32((uint32_t)theEvent->mLocation.GetY());
-        theEvents.U32((uint32_t)theEvent->mType);
-        theEvents.F32(theEvent->mTimeRemaining);
-        theEvents.U32((uint32_t)theEvent->mTextID);
-        theEvents.U32(theEvent->mActive ? 1 : 0);
-    }
-    theEvents.U32((uint32_t)theCurrent);
-    theEvents.U32((uint32_t)theList.mNextIndex);
-    theEvents.F32(theList.mPingTimeLeft);
+    theEvents.mHash = ee_units_events_digest(inPlayer->mEvents.mList);
     theEvents.Into(theRecord);
     EEPlayerDigest theQueued;
     theQueued.U32((uint32_t)inPlayer->mQueuedImprovements.size());

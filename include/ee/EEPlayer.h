@@ -38,8 +38,8 @@ struct EEGroupCluster;                      // ee/EEGroupCluster.h
 struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h
 class EEUnitGoal;
 class EEPPatrolGroup;
-class EEPPlayerEvent;
 class SESMInstanceNode;                     // lle/SESMInstanceNode.h (EEPPlayerEventList::mSound)
+class EESoundObject;
 class EEComputerPlayer;
 class EEHumanPlayer;
 class EEUnit;
@@ -67,52 +67,36 @@ class EEMap;
 class UIHotKey;
 template <class T> class U2DPoint;           // AddEvent / GetMouseChild take a U2DPoint<long>
 
-// A player's event list (RTTI EEPPlayerEventList, vtable 0x442b54; ctor 0x16e5b9; sizeof 0x3c; provisional names)
+// A player's event list (RTTI EEPPlayerEventList, vtable 0x442b54): the alerts at a map location (1 under attack, 2 a
+// garrison's message, 3 a flare).
+// port (the player lane, round 1): the events (EEPPlayerEvent's members) and every decision on them are a Rust object
+// (mList: ee_units player_events.rs); the C++ keeps the alert sounds and answers the world's parts (Host)
 class EEPPlayerEventList {
 public:
-    EEPPlayerEventList();                   // 0x16e5b9
-    // 0x16e702 (EEMSendFlare: (tile, 3, the sender, -1, true)) (provisional name)
-    void AddEvent(const U2DPoint<long>& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
-    // 0x16e72e: an event at inTile seen from inFrom (EEUCBasicPriest::UpdateConversion: the conversion, type 1); both points are
-    // passed straight to EEPPlayerEvent's ctor (U2DPoint<long>, was pair<long, int>) (provisional name)
-    void AddPlayerEvent(const U2DPoint<long>& inTile, const U2DPoint<long>& inFrom, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
+    EEPPlayerEventList();                   // the alert sounds loaded
     virtual ~EEPPlayerEventList();
-    // 0x16e94e: the next event (mNextIndex cycles over mEvents; EEAPlayerEvent::Virtual4 0x4352 reads its tile)
-    // (provisional name)
-    EEPPlayerEvent* GetNextEvent();
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x16e9a3, ret12/status
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x16eda4 (EEPlayer::Save; provisional name)
-    long RepairEvents(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x16ed0c (EEPlayer::RepairPointers)
-    void TickEvents(EEPlayer* inPlayer, float inElapsed);  // 0x16ee6d (EEPlayer::UpdatePlayer: gPhysics->mF98; provisional name)
-    void ShowEvents(EEPlayer* inPlayer);    // 0x16e90a (EEPlayer::SetSharedLOS, after the units; provisional name)
-    void HideEvents(EEPlayer* inPlayer);    // 0x16ecb8 (EEPlayer::SetSharedLOS, before; provisional name)
-    void Clear(EEPlayer* inPlayer);         // 0x16e8bc (EEPlayer::Reset, the dtor, 0x16828c; provisional name)
-    // EEPPlayerEventList.cpp's own members (provisional names)
-    void ReleaseSound();                    // 0x16e689: dereferences mSound, clears it
-    // 0x16e6ad: new EEPPlayerEvent, reactivated for inPlayer, pushed at the front
-    EEPPlayerEvent* MakeEvent(const U2DPoint<long>& inTile, const U2DPoint<long>& inFrom, long inType, EEPlayer* inPlayer,
-                                float inDuration, long inTextID);
-    void TrimEvents(EEPlayer* inPlayer);    // 0x16e85c: drops expired events from the back while more than 15
-    void LoadSounds();                      // 0x16ea2a: sounds 0x18d, 0x86, 8, 0x7d0, 0x7d0 (counted uses)
-    void Announce(EEPlayer* inPlayer, EEPPlayerEvent* inEvent);   // 0x16eaa8: the local player's sound + mini-map ping
-    void SetSound(SESMInstanceNode* inSound);   // 0x16ebb1 (referenced)
-    void Ping(EEPPlayerEvent* inEvent);     // 0x16ebcb: the mini-map ping at the event's source
-    void ShowText(EEPPlayerEvent* inEvent); // 0x16ec18: the event's string (mL1C) into the chat log
-    // 0x16ec61: erases and deletes one event (deactivating it first when inDeactivate)
-    void RemoveEvent(std::deque<EEPPlayerEvent*>::iterator inWhere, EEPlayer* inPlayer, bool inDeactivate);
-    void StopPing(EEPlayer* inPlayer);      // 0x16ee0b: the local player's mini-map ping off
-    void UnloadSounds();                    // 0x16ee2c
+    // an event at inTile (EEMSendFlare: (tile, 3, the sender, -1, true)); AddPlayerEvent's with inFrom, the location
+    // whose sight an attack shares (EEUCBasicPriest::UpdateConversion: the conversion, type 1)
+    void AddEvent(const U2DPoint<long>& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
+    void AddPlayerEvent(const U2DPoint<long>& inTile, const U2DPoint<long>& inFrom, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew);
+    bool GetNextEventSource(U2DPoint<long>& outSource);   // the next event's source (EEAPlayerEvent); false without one
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    long RepairEvents(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
+    {
+        this->Call(inPlayer, EE_UNITS_EVENTS_REPAIR, 0.0f);
+        return 0;
+    }
+    void TickEvents(EEPlayer* inPlayer, float inElapsed) { this->Call(inPlayer, EE_UNITS_EVENTS_TICK, inElapsed); }
+    void ShowEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_SHOW_ALL, 0.0f); }   // around a sight change
+    void HideEvents(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_HIDE_ALL, 0.0f); }
+    void Clear(EEPlayer* inPlayer) { this->Call(inPlayer, EE_UNITS_EVENTS_CLEAR, 0.0f); }   // (NULL: no world call)
+    void Call(EEPlayer* inPlayer, uint32_t inWhat, float inElapsed);
+    static int32_t Host(void* inList, void* inPlayer, int32_t inOp, const EeUnitsPlayerEvent* inEvent);
 
-    std::deque<EEPPlayerEvent*> mEvents;    // +0x04 (ee/EEPPlayerEvent.h)
-    float mPingTimeLeft;                    // +0x18 (= 0; the ping time left: 10000, 20000 for type 3)
-    EEPPlayerEvent* mCurrent;               // +0x1c (compared with and set to events: 0x16e81f, 0x16e994)
-    SESMInstanceNode* mSound;               // +0x20 (referenced: 0x16ebb1 inc [+4]; 0x16e689 Dereference)
-    EESoundObject* mGarrisonSound;          // +0x24 (sound 0x86: type 2)
-    EESoundObject* mSound28;                // +0x28 (sound 0x7d0)
-    EESoundObject* mFlareSound;             // +0x2c (sound 8: type 3)
-    EESoundObject* mUnderAttackSound;       // +0x30 (sound 0x18d: type 1)
-    EESoundObject* mSound34;                // +0x34 (sound 0x7d0)
-    unsigned long mNextIndex;               // +0x38 (GetNextEvent: unsigned compare with 15)
+    EeUnitsPlayerEvents* mList;             // the events (Rust)
+    SESMInstanceNode* mSound;               // the alert playing (referenced)
+    EESoundObject* mSounds[5];              // under attack, garrison, flare, 0x7d0 twice (loaded with the list)
 };
 
 // A group of units (RTTI EEGroup > UReferenceCounter; EEGroup.cpp around 0x205ee4)

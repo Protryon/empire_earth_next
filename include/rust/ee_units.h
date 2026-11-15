@@ -897,6 +897,42 @@ constexpr static const int32_t EE_UNITS_PHYSICS_SAVE_RTS_LOAD = 101;
 
 constexpr static const int32_t EE_UNITS_PHYSICS_SAVE_RTS_SAVE = 102;
 
+/// the sight at the event's location on for the player (`AddSharedSightAt`), and the local player's mini-map cell and
+/// terrain tile when it sees the player's sight
+constexpr static const int32_t EE_UNITS_EVENTS_SHOW = 1;
+
+/// the same off (`RemoveSharedSightAt`, `CountCellOff`, `DereferenceTile`)
+constexpr static const int32_t EE_UNITS_EVENTS_HIDE = 2;
+
+/// 1 when the player is the local player
+constexpr static const int32_t EE_UNITS_EVENTS_IS_LOCAL = 3;
+
+/// 1 while the last alert sound plays
+constexpr static const int32_t EE_UNITS_EVENTS_PLAYING = 4;
+
+/// the alert sound of the event's type played (and kept as the one playing)
+constexpr static const int32_t EE_UNITS_EVENTS_SOUND = 5;
+
+/// the mini map pings the event's source
+constexpr static const int32_t EE_UNITS_EVENTS_PING = 6;
+
+/// the event's text into the chat log
+constexpr static const int32_t EE_UNITS_EVENTS_TEXT = 7;
+
+/// the local mini map's ping off
+constexpr static const int32_t EE_UNITS_EVENTS_STOP_PING = 8;
+
+/// The calls on a list: `what` 0 `Clear`, 1 `ShowEvents`, 2 `HideEvents`, 3 `RepairEvents`, 4 `TickEvents(elapsed)`.
+constexpr static const uint32_t EE_UNITS_EVENTS_CLEAR = 0;
+
+constexpr static const uint32_t EE_UNITS_EVENTS_SHOW_ALL = 1;
+
+constexpr static const uint32_t EE_UNITS_EVENTS_HIDE_ALL = 2;
+
+constexpr static const uint32_t EE_UNITS_EVENTS_REPAIR = 3;
+
+constexpr static const uint32_t EE_UNITS_EVENTS_TICK = 4;
+
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_ULONG = 1;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_LONG = 2;
@@ -2670,6 +2706,9 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
 /// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
 struct EeUnitsAtc;
 
+/// The events (`EEPPlayerEventList`'s state).
+struct EeUnitsPlayerEvents;
+
 /// The 31 series (the C++ `mStats`).
 struct EeUnitsPlayerStats;
 
@@ -3602,6 +3641,27 @@ struct EeUnitsPhysicsSaved {
   bool mBE7;
   bool mResourceTimerPending;
 };
+
+/// One event (`EEPPlayerEvent`'s members).
+struct EeUnitsPlayerEvent {
+  /// `mSource` (the tile the event is about: the camera jumps there)
+  long source_x;
+  long source_y;
+  /// `mLocation` (an attack: the attacker's tile, where the sight is shared)
+  long x;
+  long y;
+  /// `mType`
+  long kind;
+  /// `mTimeRemaining` (ms)
+  float time;
+  /// `mTextID` (-1 none)
+  long text;
+  /// `mActive`
+  bool active;
+};
+
+/// The C++ host: `(list, player, op, event) -> the answer`.
+using EeUnitsEventsFn = int32_t(*)(void*, void*, int32_t, const EeUnitsPlayerEvent*);
 
 /// `EEPlayer`'s saved numbers (their C++ names and types).
 struct EeUnitsPlayerSaved {
@@ -5102,6 +5162,61 @@ int32_t ee_units_physics_load(void *ctx,
 /// # Safety
 /// As [`ee_units_physics_load`].
 int32_t ee_units_physics_save(void *ctx, EeUnitsPlayerSaveFn f, EeUnitsPhysicsSaved *rec);
+
+/// A new, empty list.
+EeUnitsPlayerEvents *ee_units_events_new();
+
+/// # Safety
+/// `events` came from [`ee_units_events_new`] (or is null) and is not used after.
+void ee_units_events_free(EeUnitsPlayerEvents *events);
+
+/// `AddPlayerEvent` (see [`EeUnitsPlayerEvents::add`]) with the C++ host on `list` and `player`.
+///
+/// # Safety
+/// `events` is live; `f` handles every operation with `list` and `player`, never calling back into the events.
+void ee_units_events_add(EeUnitsPlayerEvents *events,
+                         void *list,
+                         void *player,
+                         EeUnitsEventsFn f,
+                         long tile_x,
+                         long tile_y,
+                         long from_x,
+                         long from_y,
+                         long kind,
+                         long text,
+                         bool force);
+
+/// The list's calls `EE_UNITS_EVENTS_CLEAR` .. `EE_UNITS_EVENTS_TICK` (`elapsed` the tick's).
+///
+/// # Safety
+/// As [`ee_units_events_add`].
+void ee_units_events_call(EeUnitsPlayerEvents *events,
+                          void *list,
+                          void *player,
+                          EeUnitsEventsFn f,
+                          uint32_t what,
+                          float elapsed);
+
+/// `GetNextEvent`'s source into `out_x`/`out_y`; false without an event.
+///
+/// # Safety
+/// `events`, `out_x` and `out_y` are live.
+bool ee_units_events_next(EeUnitsPlayerEvents *events, long *out_x, long *out_y);
+
+/// `Load` (`save` false) or `Save` (true) of the list through the save's primitives `f` on `ctx`.
+///
+/// # Safety
+/// `events` is live; `f` handles the primitives with `ctx`.
+int32_t ee_units_events_file(EeUnitsPlayerEvents *events,
+                             void *ctx,
+                             EeUnitsPlayerSaveFn f,
+                             bool save_it);
+
+/// TEST ONLY: the capture's digest of the list ([`EeUnitsPlayerEvents::digest`]).
+///
+/// # Safety
+/// `events` is live.
+uint64_t ee_units_events_digest(const EeUnitsPlayerEvents *events);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base) and its C++ parts through `f`.
 ///
