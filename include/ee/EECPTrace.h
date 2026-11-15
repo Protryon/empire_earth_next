@@ -81,13 +81,12 @@ bool EECPPatchExpandOn(const EEComputerPlayer* inPlayer);     // economy.patch_e
 float EECPSafeBonus(const EEComputerPlayer* inPlayer);        // epoch_pressure.safe_bonus
 bool EECPStonePeaceOn(const EEComputerPlayer* inPlayer);      // not military.stone_attacks
 // economy.forage_patches: the land the AI claims and builds its drop sites on, in tiles from its town centre (the
-// owner: "stop claiming land it cannot defend"; docs/AI_RESEARCH.md §8.28): kEECPClaimRange, a step more each time a
-// farm, granary or settlement finds no room ("if no room for stuff like a farm, then expand"), kEECPClaimRangeMax at most
+// owner: "stop claiming land it cannot defend"; docs/AI_RESEARCH.md §8.28): the strategy's claim_range, from
+// kEECPClaimRange to kEECPClaimRangeMax (the scripts' view: claim_range_step, the C++ classic's growth step)
 const long kEECPClaimRange = 25;
 const long kEECPClaimRangeStep = 5;
 const long kEECPClaimRangeMax = 45;
 long EECPClaimRange(const EEComputerPlayer* inPlayer);
-void EECPClaimExpand(const EEComputerPlayer* inPlayer);   // one step (at most one per 2 game minutes)
 // ... and a worked forage patch has a drop site within this many tiles ("every patch should have 0 or 1 tile
 // distance to a settlement")
 const long kEECPPatchDropRange = 3;

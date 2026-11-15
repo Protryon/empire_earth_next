@@ -21,9 +21,6 @@ class EEComplexUnit;
 class EEUnit;
 class EETechTreeNode;
 
-// The engine switch: the seat's engine (ee/EECPEngine.h, stage S0: the lobby, EE-SIM --engine "next,classic" for p2
-// and p3). Every classic-only gate asks this one helper.
-bool EECPNextEngine(const EEComputerPlayer* inPlayer);
 // The next engine's tick (EEComputerPlayer::Update calls it instead of the managers' decisions)
 void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime);
 

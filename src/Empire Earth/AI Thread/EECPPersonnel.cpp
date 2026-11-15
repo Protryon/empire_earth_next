@@ -1058,12 +1058,10 @@ long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorV
 // Asks the unit manager to build one unit of a type for a town and continent
 void EECPPersonnel::RequestProduction(long inUnitClass, long inTownID, unsigned short inContinent)
 {
-    if (EECPNextEngine(this->mPlayer)) {
-        // the next engine: a group takes the units there are; what it lacks is reported, not trained
-        EECPNextEventAdd(this->mPlayer, kNextEventGroupWants, inUnitClass, 1);
-        return;
-    }
-    this->mPlayer->mCivilizationManager->mUnitManager->RequestUnits(inUnitClass, 1, inTownID, inContinent);
+    // a group takes the units there are; what it lacks is reported to the strategy, not trained
+    (void)inTownID;
+    (void)inContinent;
+    EECPNextEventAdd(this->mPlayer, kNextEventGroupWants, inUnitClass, 1);
 }
 
 // FUNCTION: EXE 0x487fc0

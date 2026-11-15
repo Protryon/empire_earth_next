@@ -262,132 +262,6 @@ void EEComputerPlayer::WorkOutPopulation()
     }
 }
 
-// FUNCTION: EXE 0x42d334
-// Chooses which AI managers (epoch, settlements, research, production, building, defense, exploration,
-// combat, morale) run this turn by combat-state priority, up to the enabled-manager limit
-void EEComputerPlayer::EnableManagers(unsigned long inTime)
-{
-    std::vector<long> thePriority;
-    std::vector<long> theOther;
-    unsigned long theAdvanceLimit = this->mManagerEpochAdvanceWait * 1000;
-    unsigned long theWait = 0;
-    unsigned long theAdvanceWait = 0;
-    unsigned long theWaitLimit = this->mManagerAttackWait * 1000;
-    unsigned long theLimit = this->mMaxEnabledManagers + 1;
-    if (this->mNextAttackTime > inTime)
-        theWait = this->mNextAttackTime - inTime;
-    if (this->mCivilizationManager->mNextEpochAdvanceTime > inTime)
-        theAdvanceWait = this->mCivilizationManager->mNextEpochAdvanceTime - inTime;
-
-    this->mCivilizationManager->mEpochAdvanceEnabled = false;
-    this->mCivilizationManager->mResourceManager->mSettlementsEnabled = false;
-    this->mCivilizationManager->mResearchManager->mEnabled = false;
-    this->mCivilizationManager->mUnitManager->mProductionEnabled = false;
-    this->mCivilizationManager->mBuildingCountsEnabled = false;
-    this->mCivilizationManager->mMoraleBuildingsEnabled = false;
-    this->mCombatManager->mDefenseCommander->mEnabled = false;
-    this->mExplorationManager->mEnabled = false;
-    this->mCombatManager->mImprovementsEnabled = false;
-
-    if (this->Fn2EC67()) {
-        thePriority.push_back(0L);
-        thePriority.push_back(1L);
-        thePriority.push_back(2L);
-        thePriority.push_back(3L);
-        thePriority.push_back(4L);
-        thePriority.push_back(5L);
-        thePriority.push_back(6L);
-        thePriority.push_back(7L);
-        thePriority.push_back(8L);
-        thePriority.push_back(9L);
-        theLimit = thePriority.size();
-    } else {
-        switch (this->mCombatState) {
-        case 0:
-            if (theWait > theWaitLimit && this->CanEnableManager(kCPManagerProduction, 2))
-                thePriority.push_back(3);
-            if (this->CanEnableManager(kCPManagerResource, 3))
-                thePriority.push_back(1);
-            if (theAdvanceWait < theAdvanceLimit && theWait > theWaitLimit)
-                thePriority.push_back(0);
-            if ((this->CanEnableManager(kCPManagerDefense, 2) && this->CanEnableManager(kCPManagerDefense, 5) && this->CanEnableManager(kCPManagerDefense, 6)) || this->mBuildingDamaged || this->mCitizenDamaged)
-                thePriority.push_back(6);
-            if (this->CanEnableManager(kCPManagerBuild, 3) && this->CanEnableManager(kCPManagerBuild, 4))
-                thePriority.push_back(4);
-            if (this->CanEnableManager(kCPManagerExploration, 2) && this->CanEnableManager(kCPManagerExploration, 5) && this->CanEnableManager(kCPManagerExploration, 6))
-                thePriority.push_back(7);
-            if (this->CanEnableManager(kCPManagerMoraleBuildings, 3))
-                theOther.push_back(9);
-            if (this->CanEnableManager(kCPManagerResearch, 5))
-                theOther.push_back(2);
-            if (this->CanEnableManager(kCPManagerCombat, 5))
-                theOther.push_back(8);
-            break;
-        case 1:
-            if (theAdvanceWait < theAdvanceLimit && theWait > theWaitLimit)
-                thePriority.push_back(0);
-            if (this->CanEnableManager(kCPManagerResearch, 5))
-                thePriority.push_back(2);
-            if (this->CanEnableManager(kCPManagerResource, 3))
-                thePriority.push_back(1);
-            if (theWait > theWaitLimit && this->CanEnableManager(kCPManagerProduction, 2))
-                thePriority.push_back(3);
-            if (this->CanEnableManager(kCPManagerBuild, 3) && this->CanEnableManager(kCPManagerBuild, 4))
-                thePriority.push_back(4);
-            if (this->CanEnableManager(kCPManagerMoraleBuildings, 3))
-                thePriority.push_back(9);
-            if ((this->CanEnableManager(kCPManagerDefense, 2) && this->CanEnableManager(kCPManagerDefense, 5) && this->CanEnableManager(kCPManagerDefense, 6)) || this->mBuildingDamaged || this->mCitizenDamaged)
-                theOther.push_back(6);
-            if (this->CanEnableManager(kCPManagerExploration, 2) && this->CanEnableManager(kCPManagerExploration, 5) && this->CanEnableManager(kCPManagerExploration, 6))
-                theOther.push_back(7);
-            if (this->CanEnableManager(kCPManagerCombat, 5))
-                theOther.push_back(8);
-            break;
-        case 2:
-            if (this->CanEnableManager(kCPManagerCombat, 5))
-                thePriority.push_back(8);
-            if ((this->CanEnableManager(kCPManagerDefense, 2) && this->CanEnableManager(kCPManagerDefense, 5) && this->CanEnableManager(kCPManagerDefense, 6)) || this->mBuildingDamaged || this->mCitizenDamaged)
-                thePriority.push_back(6);
-            if (this->CanEnableManager(kCPManagerBuild, 3) && this->CanEnableManager(kCPManagerBuild, 4))
-                thePriority.push_back(4);
-            if (theWait > theWaitLimit && this->CanEnableManager(kCPManagerProduction, 2))
-                thePriority.push_back(3);
-            if (this->CanEnableManager(kCPManagerResource, 3))
-                thePriority.push_back(1);
-            if (this->CanEnableManager(kCPManagerMoraleBuildings, 3))
-                thePriority.push_back(9);
-            if (this->CanEnableManager(kCPManagerResearch, 5))
-                theOther.push_back(2);
-            if (theAdvanceWait < theAdvanceLimit && theWait > theWaitLimit)
-                theOther.push_back(0);
-            if (this->CanEnableManager(kCPManagerExploration, 2) && this->CanEnableManager(kCPManagerExploration, 5) && this->CanEnableManager(kCPManagerExploration, 6))
-                theOther.push_back(7);
-            break;
-        }
-        // Preserve the original guard: other requests are discarded when no priority request exists.
-        if (thePriority.size() > 0 && theOther.size() > 0) {
-            EEAIRandomShuffle(theOther.begin(), theOther.end());
-            thePriority.insert(thePriority.end(), theOther.begin(), theOther.end());
-        }
-    }
-
-    for (unsigned long n = 0, theSize = thePriority.size(); n < theSize; n++) {
-        if (n >= theLimit)
-            break;
-        switch (thePriority[n]) {
-        case 0: this->mCivilizationManager->mEpochAdvanceEnabled = true; break;
-        case 1: this->mCivilizationManager->mResourceManager->mSettlementsEnabled = true; break;
-        case 2: this->mCivilizationManager->mResearchManager->mEnabled = true; break;
-        case 3: this->mCivilizationManager->mUnitManager->mProductionEnabled = true; break;
-        case 4: this->mCivilizationManager->mBuildingCountsEnabled = true; break;
-        case 6: this->mCombatManager->mDefenseCommander->mEnabled = true; break;
-        case 7: this->mExplorationManager->mEnabled = true; break;
-        case 8: this->mCombatManager->mImprovementsEnabled = true; break;
-        case 9: this->mCivilizationManager->mMoraleBuildingsEnabled = true; break;
-        }
-    }
-}
-
 // FUNCTION: EXE 0x42db35
 // Detaches a unit from AI control: marks it, removes it from the combat manager and sets its AI state
 void EEComputerPlayer::DetachUnitFromAI(EEComplexUnit* inUnit)
@@ -663,47 +537,6 @@ void EEComputerPlayer::Regroup()
     }
 }
 
-
-// FUNCTION: EXE 0x42e6ae
-// Activates the first inactive resource center whose continent holds no enemy capitol (checked on water maps only)
-void EEComputerPlayer::FlagGroup()
-{
-    std::vector<EEUnit*> theUnits;
-    EETileCoordinate theCenter;
-    theCenter.mX = 0;
-    theCenter.mY = 0;
-    bool theCheck;
-    if (gWorld.mMap != NULL && ((gWorld.mMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (gWorld.mMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap))
-        theCheck = true;
-    else
-        theCheck = false;
-    bool theDone = false;
-    for (unsigned long i = 0, n = this->mResourceCenters.size(); i < n; i++) {
-        if (theDone)
-            break;
-        if (!this->mResourceCenters[i]->mIsActive) {
-            this->mResourceCenters[i]->GetCenter(theCenter);
-            bool theSafe = true;
-            if (theCheck) {
-                for (unsigned long j = 0; j < gWorld.mNumPlayers; j++) {
-                    EEPlayer* thePlayer = gWorld.mPlayers[j];
-                    if (this != thePlayer && thePlayer->mEnemies[this->mPlayerID] != 0) {
-                        EEGetPlayerUnitsOfType(kUnitTypeCapitol, j, theUnits);
-                        for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end() && theSafe; ++it) {
-                            if (gContinentManager.GetContinentID(theCenter.mX, theCenter.mY)
-                                == gContinentManager.GetContinentID(*it))
-                                theSafe = false;
-                        }
-                    }
-                }
-            }
-            if (theSafe) {
-                this->mResourceCenters[i]->SetActive(true, 1);
-                theDone = true;
-            }
-        }
-    }
-}
 
 // FUNCTION: EXE 0x42e851
 // Kills or queues the AI's highest-scoring units until the scorer's population count is met, within the
@@ -1147,10 +980,6 @@ bool EECPBooming(EEComputerPlayer* inPlayer)
         && (long)inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() < theWorkers;
 }
 
-// new: below this many workers citizens are trained whatever the epoch reserve, and nothing else spends a citizen's
-// cost (CanAfford)
-static const unsigned long kCPRecoveryCitizens = 12;
-
 // military.prehistoric_army's answer to a rush (docs/AI_RESEARCH.md §8.26; the owner: "if I scout a rush, I scramble
 // and build up an army as needed"): enemy soldiers within kCPThreatRange tiles of the town centre stronger (hit
 // points x attack) than its own army lift the cap for kCPThreatMs; checked every kCPThreatCheckMs
@@ -1165,27 +994,6 @@ static bool EECPIsSoldier(EEUnit* inUnit)
         return false;
     long theCategory = inUnit->mUnitClass->mCategory;
     return theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandMilitaryHero;
-}
-
-// the player's living land soldiers (EECPUnitManager::CountMilitaryUnits misses the units the combat manager holds)
-static long EECPCountSoldiers(EEComputerPlayer* inPlayer)
-{
-    long theCount = 0;
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (EECPIsSoldier(theUnit))
-            theCount++;
-        // ... and one for each building training a soldier (the playtest AI's cap of 4 let 6 through: the ones
-        // already in training were not counted)
-        else if (theUnit->mComplexUnit != NULL && theUnit->mUnitClass->IsLandBuilding() && inPlayer->mTechnologies != NULL
-                 && inPlayer->mCombatManager != NULL && theUnit->mComplexUnit->mCurrentResearch != 100000) {
-            EETechTreeNode* theNode = inPlayer->mTechnologies->Get(theUnit->mComplexUnit->mCurrentResearch);
-            long theClass = theNode != NULL && theNode->mData->mMakesUnit ? theNode->mData->mUnitClass : -1;
-            if (theClass >= 0 && (unsigned long)theClass < EEUnitClassCount() && gUnitClassTable[theClass] != NULL
-                && inPlayer->mCombatManager->IsMilitaryClass(gUnitClassTable[theClass]))
-                theCount++;
-        }
-    }
-    return theCount;
 }
 
 static bool EECPArmyThreat(EEComputerPlayer* inPlayer)
@@ -1242,139 +1050,12 @@ float EECPPressureBonus(EEComputerPlayer* inPlayer)
     return theBonus;
 }
 
-// the experiment "stonecap" (§8.29): the Prehistoric army cap carried into the Stone Age at kStoneArmy soldiers, lifted
-// by the same threat rule (towers hold the rest)
-static const long kStoneArmy = 10;
-
 // FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
-// New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
-// else that needs one of its resources is affordable only from what is left above it (citizens too: like a player
-// saving for the advance, the AI pauses what competes for the reserved resources while its gatherers fill it).
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
-    if (EECPNextEngine(this))   // the next engine: the plain check and the strategy's reserve (ee/EECPNext.h)
-        return EECPNextCanAfford(this, inTechnology, inUnitType, inCount);
-    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID) && EECPCheatOn(this, kAICheatEpochs))
-        return true;
-    if (!EEPlayer::CanAfford(inTechnology, inUnitType, inCount))
-        return false;
-    if (this->mTechnologies == NULL || EECPCheatOn(this, kAICheatEpochs) || EEIsEpochID(inTechnology->mData->mID))
-        return true;
-    if (inTechnology->mData->mID == kTechCitizen && EECPBooming(this))
-        return true;   // the boom opening: citizens first
-    // new: a player down to its last few workers trains citizens whatever the epoch reserve (the reserve held the
-    // food for the advance, and with no citizens nothing ever filled it: a beaten AI kept two town centres and 580
-    // food for 50 minutes and never trained one; playtest and sim, 2026-11-06)
-    bool theFewWorkers = this->mCivilizationManager != NULL && this->mCivilizationManager->mUnitManager != NULL
-        && this->mCivilizationManager->mUnitManager->GetNumWorkers() < kCPRecoveryCitizens;
-    if (inTechnology->mData->mID == kTechCitizen && theFewWorkers)
-        return true;
-    // military.prehistoric_army (docs/AI_RESEARCH.md §8.26): in the Prehistoric the army is a mobile defence force of
-    // that many, as the owner plays it (sacrificed when the Stone Age units come); the food goes to the economy
-    long thePrehistoricArmy = EECPPrehistoricArmy(this);
-    if (this->mTechnologies->mCurrentEpoch == kTechEpochStone)
-        thePrehistoricArmy = EECPExperiment(this, "stonecap") ? kStoneArmy : 0;
-    if (thePrehistoricArmy > 0 && this->mTechnologies->mCurrentEpoch <= kTechEpochStone
-        && this->mCombatManager != NULL && this->mCivilizationManager != NULL
-        && this->mCivilizationManager->mUnitManager != NULL) {
-        long theClass = inUnitType;   // the class being made (the unit manager passes its request's class)
-        EEUnitClass* theUnitClass = theClass >= 0 && (unsigned long)theClass < EEUnitClassCount() ? gUnitClassTable[theClass] : NULL;
-        if (theUnitClass != NULL && this->mCombatManager->IsMilitaryClass(theUnitClass)
-            && EECPCountSoldiers(this) >= thePrehistoricArmy
-            && !EECPArmyThreat(this))
-            return false;
-    }
-    // ... and nothing else spends the next citizen's cost (soldiers took the last food of a beaten AI's ten
-    // citizens; when those died, 15 food bought none and the town centres stood empty for 40 minutes)
-    if (inTechnology->mData->mID != kTechCitizen && theFewWorkers) {
-        EETechTreeNode* theCitizen = this->mTechnologies->Get(kTechCitizen);
-        for (long i = kResourceFood; theCitizen != NULL && i <= kResourceIron; i++) {
-            long theCost = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inCount;
-            long theKeep = this->ScaleCost(theCitizen->GetCost(i, kUnitTypeCitizen, 1.0f));
-            if (theCost > 0 && theKeep > 0 && this->mResourceCaps[i] - theCost < theKeep)
-                return false;
-        }
-    }
-    if (inTechnology->mData->mID == kTechCitizen && EECPExperiment(this, "payback") && this->mCivilizationManager != NULL) {
-        // the experiment "payback": a citizen pays its food back in about 8 game minutes (6 food a minute), so one
-        // trained earlier than that before the epoch timer is due speeds the advance up instead of holding it back
-        long long theLeft = (long long)this->mCivilizationManager->mNextEpochAdvanceTime - (long long)gPhysics->mGameTime;
-        if (theLeft > 8LL * 60000LL)
-            return true;
-    }
-    // the experiment "goldbank" (§8.29; the Copper Age costs 845 gold, which only the two ranged units compete for): from
-    // the Stone Age the next epoch's whole gold is reserved, asked for or not
-    if (EECPExperiment(this, "goldbank") && this->mTechnologies->mCurrentEpoch >= kTechEpochStone
-        && this->mTechnologies->mCurrentEpoch + 1 < EEEpochCount()) {
-        EETechTreeNode* theNext = this->mTechnologies->Get(this->mTechnologies->mCurrentEpoch + 1);
-        long theCost = this->ScaleCost(inTechnology->GetCost(kResourceGold, inUnitType, 1.0f)) * inCount;
-        long theKeep = theNext != NULL ? this->ScaleCost(theNext->GetCost(kResourceGold, kUnitTypeTownCenter, 1.0f)) : 0;
-        if (theCost > 0 && theKeep > 0 && this->mResourceCaps[kResourceGold] - theCost < theKeep)
-            return false;
-    }
-    long theEpoch = EECPPendingEpoch(this);
-    EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
-    if (theReserved == NULL)
-        return true;
-    const EEAIPersonalityRule& thePersonality = EECPPersonality(this);
-    float theShare = (EECPEpochPressure(this, gPhysics->mGameTime) - thePersonality.mEpochPressureStart)
-        / (thePersonality.mEpochPressureFull - thePersonality.mEpochPressureStart);   // the reserve grows with the pressure
-    if (theShare > 1.0f)
-        theShare = 1.0f;
-    if (theShare <= 0.0f)
-        return true;
-    // the experiment "threatspend" (docs/AI_RESEARCH.md §8.28; the owner scrambles an army on scouting a rush): while
-    // enemy soldiers near the town outmatch its army (EECPArmyThreat), soldiers are not held back by the epoch reserve
-    if (EECPExperiment(this, "threatspend") && this->mCombatManager != NULL && inUnitType >= 0
-        && (unsigned long)inUnitType < EEUnitClassCount() && gUnitClassTable[inUnitType] != NULL
-        && this->mCombatManager->IsMilitaryClass(gUnitClassTable[inUnitType]) && EECPArmyThreat(this))
-        return true;
-    // the experiment "goldfix" (docs/AI_RESEARCH.md §8.27): an advance that cannot be reached reserves nothing. A
-    // resource it needs is short and has no gatherer (a playtest AI had no gold site from minute 34: its Copper
-    // reserve held the food and iron for 70 minutes, and it trained no soldiers)
-    if (EECPClaimNeededOn(this) && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL) {
-        EECPResourceManager* theResources = this->mCivilizationManager->mResourceManager;
-        for (long i = kResourceFood; i <= kResourceIron; i++)
-            if (this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)) > this->mResourceCaps[i]
-                && theResources->mGatherers[i].size() == 0)
-                return true;
-    }
-    for (long i = kResourceFood; i <= kResourceIron; i++) {
-        long theCost = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inCount;
-        long theReserve = UMFloatToLong(theShare * this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)));
-        if (theCost > 0 && theReserve > 0 && this->mResourceCaps[i] - theCost < theReserve)
-            return false;
-    }
-    return true;
-}
-
-// FUNCTION: EXE 0x42f064
-// When another player is in a later epoch, pulls the AI's next epoch advance forward to a random catch-up time
-void EEComputerPlayer::CatchUpEpoch(EEPlayer* inPlayer)
-{
-    if (!EECPCheatOn(this, kAICheatCatchUp))
-        return;
-    unsigned long theNext = this->mCivilizationManager->mNextEpochAdvanceTime;
-    unsigned long theNow = gPhysics->mGameTime;
-    long theMinimum;
-    long theMaximum;
-    if (inPlayer->mTechnologies->mCurrentEpoch == kTechEpochAtomicWW1) {
-        theMinimum = 60000;
-        theMaximum = 120000;
-    } else {
-        theMaximum = this->mEpochCatchUpMax * 60000;
-        theMinimum = this->mEpochCatchUpMin * 60000;
-        if (this->IsDeathmatch())
-            theMaximum = UMFloatToLong(theMaximum * this->mEpochCatchUpDeathmatch);
-        else if (this->mDifficulty == kDifficultyEasy)
-            theMaximum = UMFloatToLong(theMaximum * this->mEpochCatchUpEasy);
-        else if (this->mDifficulty == kDifficultyHard)
-            theMaximum = UMFloatToLong(theMaximum * this->mEpochCatchUpHard);
-    }
-    unsigned long theTime = gPhysics->GetRandom(theMinimum, theMaximum) + theNow;
-    if (inPlayer->mTechnologies->mCurrentEpoch > this->mTechnologies->mCurrentEpoch && (theNext < theNow || theNext > theTime))
-        this->mCivilizationManager->SetNextEpochAdvanceTime(theTime, true);
+    // the plain check and the strategy's reserve (ee/EECPNext.h; the C++ classic's saving rules were deleted in stage 5)
+    return EECPNextCanAfford(this, inTechnology, inUnitType, inCount);
 }
 
 // FUNCTION: EXE 0x42f16d
@@ -4992,13 +4673,9 @@ void EEComputerPlayer::ChooseCivilization()
 // Answers an ally's flare by sending the combat manager to attack at the flared tile (not in observer mode)
 void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 {
-    // port: a script seat (the next engine) gets the flare as an event; its C++ combat manager is not run
-    if (!this->mObserverMode && EECPEngine(this) == kEECPEngineNext) {
-        EECPUnitsOnFlare(this, inFrom != NULL ? (long)inFrom->mPlayerID : 0, inTile.mX, inTile.GetY());
-        return;
-    }
+    // port: the seat's Lua AI gets the flare as an event (the original's combat manager attacked there)
     if (!this->mObserverMode)
-        this->mCombatManager->Attack(inFrom, inTile, true, true, true, true, true, true);
+        EECPUnitsOnFlare(this, inFrom != NULL ? (long)inFrom->mPlayerID : 0, inTile.mX, inTile.GetY());
 }
 
 
@@ -5183,14 +4860,6 @@ void EEComputerPlayer::EpochReached(long inEpoch)
     EEPlayer::EpochReached(inEpoch);
 }
 
-// FUNCTION: EXE 0x43d492
-// Schedules the next manager-enable check mEnableInterval seconds after inTime
-void EEComputerPlayer::SetEnableTime(long inTime)
-{
-    this->mNextEnableTime = UMFloatToLong(this->mEnableInterval * 1000.0f + inTime);
-    this->mIsEnableTimeSet = true;
-}
-
 // FUNCTION: EXE 0x43d4cd
 // Schedules the next attack: a random number of minutes (initial delay before the first, frequency after), scaled
 // by epoch span and difficulty or deathmatch modifier, clamped, added to inTime
@@ -5228,20 +4897,6 @@ void EEComputerPlayer::SetNextAttackTime(unsigned long inTime)
         this->mNextAttackTime = theMinutes * 60000 + inTime;
         this->mAttackStarted = true;
     }
-}
-
-// FUNCTION: EXE 0x43d61a
-// Schedules the next expansion check after the difficulty's expansion timer (seconds) from inTime
-void EEComputerPlayer::SetNextExpansionTime(unsigned long inTime)
-{
-    long theSeconds;
-    if (this->mDifficulty == kDifficultyEasy)
-        theSeconds = this->mExpansionTimerEasy;
-    else if (this->mDifficulty == kDifficultyMedium)
-        theSeconds = this->mExpansionTimerMedium;
-    else
-        theSeconds = this->mExpansionTimerHard;
-    this->mNextExpansionTime = theSeconds * 1000 + inTime;
 }
 
 // FUNCTION: EXE 0x43d652
@@ -5831,28 +5486,6 @@ void EEComputerPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 }
 
 
-// FUNCTION: EXE 0x43eeca
-// Returns whether the stock of a resource reaches the enable threshold of a manager kind (morale buildings
-// use the build threshold)
-bool EEComputerPlayer::CanEnableManager(long inKind, long inResource)
-{
-    long theValue = this->mResourceCaps[inResource];
-    bool theResult = false;
-    switch (inKind) {
-    case kCPManagerCivilization: theResult = theValue >= this->mEnableStockCivilization; break;
-    case kCPManagerResource: theResult = theValue >= this->mEnableStockResource; break;
-    case kCPManagerResearch: theResult = theValue >= this->mEnableStockResearch; break;
-    case kCPManagerProduction: theResult = theValue >= this->mEnableStockProduction; break;
-    case kCPManagerBuild: theResult = theValue >= this->mEnableStockBuild; break;
-    case 5: theResult = theValue >= this->mLE80; break;
-    case kCPManagerDefense: theResult = theValue >= this->mEnableStockDefense; break;
-    case kCPManagerExploration: theResult = theValue >= this->mEnableStockExploration; break;
-    case kCPManagerCombat: theResult = theValue >= this->mEnableStockCombat; break;
-    case kCPManagerMoraleBuildings: theResult = theValue >= this->mEnableStockBuild; break;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x43ef5d
 // Registers a new unit with the player and, while the AI is active, with the civilization and combat managers
 void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
@@ -5936,32 +5569,6 @@ void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
     EEPlayer::EpochMediaUnloaded(inEpoch);
 }
 
-// New (docs/AI_RESEARCH.md §8.13, the owner's military pressure): keeps a standing army of the personality's
-// standing_army per worker (aipersonalities.yaml), up to the original's military share of the pop cap, by requesting
-// the favourite land unit (at most 5 at a time; the requests count as army). The original raised military units
-// only for attack groups and defense build-ups: honest armies stayed at 10-30 while iron piled up to 2,000.
-void EEComputerPlayer::KeepStandingArmy()
-{
-    EECPUnitManager* theUnits = this->mCivilizationManager != NULL ? this->mCivilizationManager->mUnitManager : NULL;
-    if (theUnits == NULL || this->mCombatManager == NULL || this->mFavoriteLandType <= 0 || !this->mCanBuild
-        || EECPBooming(this))
-        return;
-    long theWorkers = (long)theUnits->GetNumWorkers();
-    long theArmy = theUnits->CountMilitaryUnits(false, true);
-    long theTarget = UMFloatToLong(EECPPersonality(this).mStandingArmy * (float)theWorkers);
-    long theRoom = this->mCombatManager->GetUnitsAvailable();
-    long theWanted = theTarget - theArmy;
-    if (theWanted > theRoom)
-        theWanted = theRoom;
-    if (theWanted > 5)
-        theWanted = 5;
-    if (theWanted <= 0)
-        return;
-    EE_CP_TRACE(this, "army.request", "cls=%ld n=%ld army=%ld target=%ld", this->mFavoriteLandType, theWanted, theArmy,
-        theTarget);
-    theUnits->RequestUnits(this->mFavoriteLandType, theWanted, 0, 0);
-}
-
 // FUNCTION: EXE 0x43f175
 // Runs the AI tick: one-time start-up on the first call, then the enable, attack-state, population and
 // expansion timers and the manager updates; finally kills the units queued as stranded
@@ -5981,10 +5588,6 @@ void EEComputerPlayer::Update(unsigned long inTime)
             EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression, EECPDemandSplitOn(this) ? 1 : 0, EECPExperimentNames(this),
             EECPEngineName(this).c_str(), EECPEngineSeesAll(this) ? " sees_all=1" : "",
             EECPEngineFillsGarrison(this) ? " fills_garrison=1" : "");
-        this->EnableManagers(inTime);
-        this->SetEnableTime(inTime);
-        this->SetNextAttackTime(inTime);
-        this->SetNextExpansionTime(inTime);
         this->SetNextIslandExpansionTime();
         if (this->mResourceCenters.size() == 0)
             this->Regroup();
@@ -5994,57 +5597,13 @@ void EEComputerPlayer::Update(unsigned long inTime)
         this->mResourceCaps[kResourceGold] += theBonus;
         this->mResourceCaps[kResourceIron] += theBonus;
         this->mIsStarted = true;
-        if (this->IsDeathmatch() && !EECPNextEngine(this)) {
-            this->mCivilizationManager->CheckBuildingCounts();
-            for (long i = 0; i < 3; i++)
-                this->mCombatManager->mDefenseCommander->BuildUp();
-        }
     }
-    // port: the engine's branch point (ee/EECPEngine.h; docs/AI_LUA_PLAN.md S0). The next engine's tick replaces
-    // the managers' decisions; the classic engine takes the original's path below, unchanged.
-    if (!this->mObserverMode && this->mFirstUnit != NULL && EECPEngine(this) == kEECPEngineNext) {
+    // port: the next engine's tick (ee/EECPEngine.h; docs/AI_LUA_PLAN.md S0): the executors, then the seat's Lua AI.
+    // The original's decision path (the manager enable timer, the attack, expansion and population timers, the
+    // civilization, combat, diplomacy and exploration managers' updates) was deleted in stage 5.
+    if (!this->mObserverMode && this->mFirstUnit != NULL) {
         EECPTraceScope theNext("next");
         EECPNextUpdate(this, inTime);
-    } else if (!this->mObserverMode && this->mFirstUnit != NULL) {
-        if (this->mRegroupPending) {
-            this->UpdateGroups();
-            this->mRegroupPending = false;
-        }
-        if (!this->mIsEnableTimeSet)
-            this->SetEnableTime(inTime);
-        if (this->mCombatState == 2 && this->mNumAttacks == 0 && inTime - this->mLastDamagedTime > 60000) {
-            this->SetCombatState(1);
-            this->mBuildingDamaged = false;
-            this->mCitizenDamaged = false;
-        }
-        if (inTime >= this->mNextEnableTime) {
-            this->EnableManagers(inTime);
-            this->SetEnableTime(inTime);
-        }
-        if (inTime >= this->mNextPopulationTime) {
-            this->WorkOutPopulation();
-            this->mNextPopulationTime = inTime + 60000;
-        }
-        if (inTime >= this->mNextExpansionTime) {
-            this->FlagGroup();
-            this->SetNextExpansionTime(inTime);
-        }
-        {
-            EECPTraceScope theCivilization("civ");
-            this->mCivilizationManager->Update(inTime);
-        }
-        this->mDiplomacyManager->Update(inTime);
-        {
-            EECPTraceScope theCombat("combat");
-            this->mCombatManager->Tick(inTime);
-        }
-        {
-            EECPTraceScope theExploration("explore");
-            this->mExplorationManager->Update(inTime);
-        }
-        if (inTime % 30000 < 1000)   // every 30 game s (each computer player updates once a game second)
-            this->KeepStandingArmy();
-        EECPTraceStats(this, inTime);
     } else if (this->mCombatManager != NULL)
         this->mCombatManager->DeleteGroups();
     if (this->mUnitsToKill.size() != 0) {
@@ -6174,11 +5733,9 @@ bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit)
 // Has the combat manager respond to an enemy wonder being started
 void EEComputerPlayer::WonderStarted(EEComplexUnit* inUnit)
 {
-    // port: a script seat (the next engine) answers from ai.wonders (classic_lua's update_wonders); its C++ combat
-    // manager is not run, and the groups RespondToUnit made there were never updated
-    if (EECPEngine(this) == kEECPEngineNext)
-        return;
-    this->mCombatManager->RespondToUnit(inUnit);
+    // port: the seat's Lua AI answers from ai.wonders (classic_lua's update_wonders; the original's combat manager
+    // responded here)
+    (void)inUnit;
 }
 
 // FUNCTION: EXE 0x43f7cc

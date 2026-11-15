@@ -3246,14 +3246,9 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 // When a human player reaches a valid epoch, lets every computer player catch up to it
 void EEPlayer::EpochReached(long inEpoch)
 {
-    if (!this->IsHuman() || !EEIsEpochID(inEpoch))
-        return;
-    for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
-        EEPlayer* theOther = gWorld.mPlayers[i];
-        EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(theOther);
-        if (thePlayer != NULL)
-            thePlayer->CatchUpEpoch(this);
-    }
+    // port: the original pulled each computer player's epoch timer forward here (EEComputerPlayer::CatchUpEpoch, the
+    // catch-up cheat); the timer went with the C++ classic's decisions (stage 5): a Lua AI reads the epochs itself
+    (void)inEpoch;
 }
 
 // FUNCTION: EXE 0x56964a

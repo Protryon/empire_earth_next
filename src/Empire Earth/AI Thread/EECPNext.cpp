@@ -47,12 +47,6 @@
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
 
-bool EECPNextEngine(const EEComputerPlayer* inPlayer)
-{
-    // the seat's engine (ee/EECPEngine.h: the lobby, EE-SIM --engine, EE_AI_ENGINE)
-    return inPlayer != NULL && EECPEngine(inPlayer) == kEECPEngineNext;
-}
-
 const char* EECPNextCodeName(long inCode)
 {
     switch (inCode) {
