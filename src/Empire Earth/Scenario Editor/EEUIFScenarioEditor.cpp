@@ -305,6 +305,15 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
     return theResult;
 }
 
+// TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
+long EESETestSaveTriggersOnly(UIForm* inForm)
+{
+    UIEvent* theEvent = new EEUIESaveScenarioTriggersOnly;
+    long theResult = theEvent->ProcessEvent(inForm, NULL);
+    theEvent->Dereference();
+    return theResult;
+}
+
 // The mini map's size and the screen height: plain (non-folded) .rdata floats in the original (0x444f88, 0x44507c),
 // read by the ctor only (provisional names)
 static const float kSEMiniMapSize = 169.84f;
