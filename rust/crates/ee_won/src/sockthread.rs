@@ -187,12 +187,16 @@ impl Drop for EeWonSocketThread {
     }
 }
 
+/// A socket thread whose calls on its ops are answered in Rust over the library's `core` table (cppcore.rs).
+///
 /// # Safety
-/// `hooks` lives for the program.
+/// `core` is the library's static table.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_thread_new(hooks: *const EeWonSocketOpHooks) -> *mut EeWonSocketThread {
-    // SAFETY: the caller's contract
-    Box::into_raw(Box::new(EeWonSocketThread::new(unsafe { &*hooks })))
+pub unsafe extern "C" fn ee_won_socket_thread_new(
+    core: *const crate::cppcore::EeWonCoreHooks,
+) -> *mut EeWonSocketThread {
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonSocketThread::new(&crate::cppcore::NATIVE_SOCKET_THREAD)))
 }
 
 /// # Safety
@@ -247,14 +251,17 @@ pub unsafe extern "C" fn ee_won_socket_thread_len(t: *const EeWonSocketThread) -
     unsafe { (*t).len() }
 }
 
-/// `SocketThread::DoOp` (a static of the C++ class).
+/// `SocketThread::DoOp` (a static of the C++ class), its calls answered in Rust over the library's `core` table.
 ///
 /// # Safety
-/// `hooks` is valid; `op` is a live op.
+/// `core` is the library's static table; `op` is a live op.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_thread_do_op(hooks: *const EeWonSocketOpHooks, op: *mut c_void) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { (*hooks).do_op(op as OpHandle) }
+pub unsafe extern "C" fn ee_won_socket_thread_do_op(
+    core: *const crate::cppcore::EeWonCoreHooks,
+    op: *mut c_void,
+) -> bool {
+    crate::cppcore::bind(core);
+    crate::cppcore::NATIVE_SOCKET_THREAD.do_op(op as OpHandle)
 }
 
 #[cfg(test)]

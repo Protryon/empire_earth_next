@@ -382,22 +382,19 @@ WON_TESTS = {
     # the forwarders to ee_won (rust/crates/ee_won)
     "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("CRC16.cpp", "MD5.cpp")],
                         *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")]],
-    "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
-                                                            "AsyncSocketInternet.cpp", "IPAddr.cpp")],
+    "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
-    "won_ops_test": [*[WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
-                                                         "AsyncSocketInternet.cpp", "IPAddr.cpp",
-                                                         "BlockingSocket.cpp", "QueueSocket.cpp", "SocketOps.cpp",
-                                                         "SocketRunHooks.cpp", "SocketOpsAccessors.cpp",
-                                                         "SocketThread.cpp", "UDPManager.cpp",
-                                                         "UDPManagerDefaults.cpp")],
-                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
-                                                          "AsyncOpWithTracker.cpp", "WONDebug.cpp")],
+    "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
+                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
     # the socket classes' events (golden: rust/crates/ee_won/src/golden_sockobj.txt, recorded over the C++ classes)
     "won_sockobj_test": "won_ops_test",
+    # the references and lifetimes of the queue socket, the UDP manager and its ops, the timer, the op container and
+    # the socket thread (golden: rust/crates/ee_won/src/golden_core.txt, recorded over QueueSocket.cpp, UDPManager.cpp,
+    # SocketThread.cpp and AsyncOp.cpp before their hooks were answered in Rust, net round 25)
+    "won_core_test": "won_ops_test",
     # ServerConnection and ServerConnectionConnectOp over 127.0.0.1 with a stand-in peer authentication (golden:
     # rust/crates/ee_won/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
     # and reply dispatch; its units (won_ops_test's, WONServer's ServerConnection, WONRouting's but the smart
@@ -746,8 +743,7 @@ WON_TESTS = {
                                                              "StringParserLists.cpp", "StringUtil.cpp")]],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
-                                  *[WON_SRC / "WONServer" / f for f in ("ServerConnection.cpp",
-                                                                       "ServerConnectionDefaults.cpp")],
+                                  WON_SRC / "WONServer" / "ServerConnection.cpp",
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:

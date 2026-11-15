@@ -38,6 +38,10 @@ template <class T> class CompletionBase;
 
 class AsyncOp;
 class AsyncOpContainer;
+// the library's one table of C++ calls (AsyncOp.cpp): what the Rust objects still need the C++ for (references,
+// virtual calls, the classes' news); every other call of theirs is answered in Rust (ee_won cppcore.rs)
+const EeWonCoreHooks* WonCore();
+const EeWonAsyncOpHooks* AsyncOpHooks(); // the ops' own table (AsyncOp.cpp: the virtual hooks, the core's queue and timer)
 
 // AsyncOp: 0x44 bytes in the original (ctor 29ef80, dtor 29f000, three vtable slots). A Rust object since round 13
 // (rust/crates/ee_won/src/opobj.rs EeWonAsyncOp: the run state, the lock, the completion's reference, the
@@ -46,12 +50,15 @@ class AsyncOpContainer;
 // thread's entry of the op is the Rust timer thread's (thread.rs)
 class AsyncOp : public RefCount {
 public:
-    WONStatus Run(long inMode,unsigned long inTimeout);      //29f500, returns the status
+    // starts the op in the mode with the timeout (async queued or at once, else blocking); returns its status
+    WONStatus Run(long inMode,unsigned long inTimeout)       //29f500
+    { return ee_won_asyncop_run(this->mOp,static_cast<int32_t>(inMode),static_cast<uint32_t>(inTimeout)); }
 
-    AsyncOp();                              // 0x29ef80
-    virtual ~AsyncOp();                     // 0x29f000
-    virtual void RunHook();
-    virtual void CleanupHook();
+    // an idle op: an infinite timeout, async, no container or timer entry
+    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); } // 0x29ef80
+    virtual ~AsyncOp() { ee_won_asyncop_free(this->mOp); } // 0x29f000: the completion and lock go with it
+    virtual void RunHook() {}
+    virtual void CleanupHook() {}
     // (: AsyncOp's own vtable 0x84c834 has these three slots only; SocketOp and RoutingOp each introduce their
     // +0x0c/+0x10/+0x14: SocketOp's +0x14 returns 0, AcceptOp's a new AcceptOp; RoutingOp's +0x14 is GetType)
 
@@ -68,21 +75,31 @@ public:
     uint32_t GetStartTime() const { return ee_won_asyncop_start_time(this->mOp); }
     bool IsRunAsyncImmediately() const { return ee_won_asyncop_run_async_immediately(this->mOp); }
     AsyncOpContainer* GetContainer() const { return static_cast<AsyncOpContainer*>(ee_won_asyncop_container(this->mOp)); }
-    void SetContainer(AsyncOpContainer* inContainer);
-    void SetMode(AsyncRunMode); //29f190, conditional setter (enum argument)
-    void ForceFinish(WONStatus inStatus); //29f2f0, takes the full status
-    void RunAsTimer(unsigned long inTimeout); //29f610, DWORD timeout/ret4
-    void Finish(WONStatus inStatus);   // original29f220: completes pending status under lock
-    void SetTimeout(unsigned long inTimeout); //29f1b0, timeout DWORD at2c/ret4
-    bool RunBlock(unsigned long inTimeout); //29f6e0, 32-byte wrapper
-    void RunAsync(long inTimeout);          // 0x29f6d0
-    void Kill(bool inFlag);                 // 0x29f1e0
-    void SetRunAsyncImmediately(bool inFlag);  // 0x29f1d0
-    void QueueInOpContainer(); //29f200, queues the op in its container
-    void Complete(); //29f3a0
-    void StartRunAsync(); //29f4c0
-    unsigned long TimeLeft();               // 0x29f700
-    DWORD RealTimeLeft();
+    void SetContainer(AsyncOpContainer* inContainer); // NULL: WONAPICore's queue
+    // the mode, unless the op runs (29f190)
+    void SetMode(AsyncRunMode inMode) { ee_won_asyncop_set_mode(this->mOp,static_cast<int32_t>(inMode)); }
+    // finishes even a finished op, unless its completion is pending (29f2f0)
+    void ForceFinish(WONStatus inStatus) { ee_won_asyncop_force_finish(this->mOp,inStatus); }
+    // an idle op as a pure timer firing after the timeout (29f610)
+    void RunAsTimer(unsigned long inTimeout) { ee_won_asyncop_run_as_timer(this->mOp,static_cast<uint32_t>(inTimeout)); }
+    // finishes a running op, its completion queued for async runs (29f220)
+    void Finish(WONStatus inStatus) { ee_won_asyncop_finish(this->mOp,inStatus); }
+    // unless the op runs (29f1b0)
+    void SetTimeout(unsigned long inTimeout) { ee_won_asyncop_set_timeout(this->mOp,static_cast<uint32_t>(inTimeout)); }
+    bool RunBlock(unsigned long inTimeout) { return this->Run(2,inTimeout)==0; } // 29f6e0: whether it succeeded
+    void RunAsync(long inTimeout) { this->Run(1,inTimeout); } // 0x29f6d0
+    // marks the op killed and, when asked, finishes it killed (0x29f1e0)
+    void Kill(bool inFlag) { ee_won_asyncop_kill(this->mOp,inFlag); }
+    // whether an async run starts at once instead of being queued (0x29f1d0)
+    void SetRunAsyncImmediately(bool inFlag) { ee_won_asyncop_set_run_async_immediately(this->mOp,inFlag); }
+    void QueueInOpContainer() { ee_won_asyncop_queue_in_container(this->mOp); } // 29f200, or WONAPICore's queue
+    // a pending completion: the timer entry dropped, the cleanup hook run, the completion called (29f3a0)
+    void Complete() { ee_won_asyncop_complete(this->mOp); }
+    // the hook run and the timeout armed, or a time-out at once for 0 (29f4c0)
+    void StartRunAsync() { ee_won_asyncop_start_run_async(this->mOp); }
+    // the time before the time-out; 0 for async runs or once it passed (0x29f700)
+    unsigned long TimeLeft() { return ee_won_asyncop_time_left(this->mOp); }
+    DWORD RealTimeLeft() { return ee_won_asyncop_real_time_left(this->mOp); }
     // the run mode, start and timeout for the Rust op algorithms (rust/crates/ee_won/src/ops.rs)
     EeWonOpTiming GetTiming() const { return ee_won_asyncop_timing(this->mOp); }
     bool IsAsync() const { return this->GetMode()==1; }
@@ -115,7 +132,7 @@ public:
 // AsyncOp.cpp's hooks. The original unit (AsyncOpContainer.cpp) is deleted.
 class AsyncOpContainer {
 public:
-    AsyncOpContainer();
+    AsyncOpContainer() : mContainer(ee_won_container_new(WonCore())) {} // the ops' calls answered in Rust
     virtual ~AsyncOpContainer() { ee_won_container_free(this->mContainer); }
     void QueueOp(AsyncOp* inOp) { ee_won_container_queue(this->mContainer,inOp); }
     void PurgeOps() { ee_won_container_purge(this->mContainer); }
@@ -126,6 +143,10 @@ private:
     AsyncOpContainer(const AsyncOpContainer&);
     AsyncOpContainer& operator=(const AsyncOpContainer&);
 };
+inline void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
+{
+    ee_won_asyncop_set_container(this->mOp,inContainer,inContainer!=NULL ? inContainer->mContainer : NULL);
+}
 
 class SocketOp;
 class MsgTransform {
@@ -159,69 +180,98 @@ public:
 	static __int64 GetNumMessagesReceived() { return ee_won_netstats_get(5); }
 };
 
+// AsyncSocket.cpp's original addresses: the constructor 2b0340, Duplicate 2b0420, the destructor 2b04a0, the length
+// field 2b0600 / 2b0610, AddMsgTransform 2b0620, the transforms 2b0730 / 2b07e0, GetLastSocketError 2b0890, IsValid
+// 2b08c0, IsConnected 2b08d0, GetDestAddr 2b08e0, GetLocalPort 2b08f0, Start/StopWinsock 2b0940 / 2b0980,
+// HasInternetConnection 2b09a0, GetType 2b0a40, SetBroadcast 2b0a50, Open 2b0a90, Bind 2b0c90, Fn2B0D90, Fn2B0E60,
+// Listen 2b0fc0, Accept 2b1060, WaitForConnect 2b1220, WaitForAccept 2b1350, WaitForWrite 2b1360, WaitForRead 2b1410,
+// Send 2b14c0, Recv 2b15e0, SendTo 2b1700, RecvFrom 2b1840, Disconnect 2b1980, ClosePrv 2b1a10, Close 2b1ad0, Kill
+// 2b1b50; the empty hooks fold into 326b60. The unit is deleted (net round 25): the class is this shim over its Rust
+// object, the calls taking platform addresses are the core unit's (AsyncOp.cpp)
 class AsyncSocket : public RefCount {
 public:
     enum SocketType { TCP, UDP }; //WON SDK type, 32-bit enum
-    SocketType GetType(); //2b0a40, 4-byte nonvirtual function
-    static int TimeLeft(DWORD,DWORD);
-    void RemoveAllMsgTransforms();
-    bool IsOpen();
-    void SetType(SocketType);
-    WONStatus SetNagling(bool);
-    static WONStatus StartWinsock(); //2b0940, cdecl (WON SDK); the user count is Rust's
-    static WONStatus StopWinsock(); //2b0980, cdecl (WON SDK)
-    static bool HasInternetConnection();
-    WONStatus SetBroadcast(bool); //2b0a50, sets the broadcast socket option
-    WONStatus Open();     //2b0a90, creates the socket
-    WONStatus RecvFrom(void*,int,IPAddr*,int*); //2b1840, signed count/output on success
-    void Disconnect(); //2b1980, disconnect
-    WONStatus Bind(const IPAddr&,bool);     //2b0c90, address bind/reuse
-    WONStatus Fn2B0E60(const IPAddr&); //2b0e60, connect
-    WONStatus Accept(SmartPtr<AsyncSocket>&);   //2b1060, owning accepted output reference
-    WONStatus WaitForConnect(unsigned long); //2b1220, waits for the connection
-    void WaitForAccept(unsigned long); //2b1350/13 (WON SDK)
-
-    AsyncSocket(int inType); //2b0340; fresh factory2b0420 new74
-    virtual ~AsyncSocket(); //ordinary2b04a0; scalar deleting2b0480
-    virtual void OpenHook();  //326b60; called on open at 2b0c69, SDK OpenHook
-    virtual void CloseHook(); //326b60; close2b1b1d/kill2b1b9d, SDK CloseHook
-    virtual void KillHook();  //326b60; kill2b1ba4, SDK KillHook
-    virtual AsyncSocket* Duplicate(); //2b0420, factory result consumed2b111c
-    WONStatus Fn2B0D90(unsigned short,bool); // bind to the local host address: (port, allowReuse)
-    WONStatus Listen(int);   //2b0fc0
-    void WaitForWrite(unsigned long); //2b1360
-    WONStatus Send(const void*,int,int*); //2b14c0
-    void Close();    //2b1ad0
-    void Kill();  //2b1b50; separate from the SDK's Kill
-    unsigned short GetLocalPort(); //2b08f0, called at 2cf882; the SDK takes no arguments
-    unsigned char GetLengthFieldSize() const; //2b0610, called at 2b5b10
-    void SetLengthFieldSize(unsigned char); //2b0600, bytearg->50/ret4
-    bool IsConnected(); //2b08d0, byte51 ->AL; SDK IsConnected corroboration
-    IPAddr GetDestAddr(); //2b08e0; a copy taken under the lock (the original returned a reference to the member)
-    void AddMsgTransform(MsgTransform*); //2b0620, owns raw transform pushed into list
-    void WaitForRead(unsigned long); //2b1410, wait-for-read timeout
-    void ClosePrv(); //2b1a10, ClosePrv handle shutdown/close
-    WONStatus GetLastSocketError(); //2b0890, socket WSA status mapping
-    bool IsValid();  //2b08c0, handle20 != PLAT_SOCKET_INVALID
-    WONStatus TransformRecvMsg(ByteBufferPtr&); //recv transforms reverse-list slot08
-    WONStatus TransformSendMsg(ByteBufferPtr&); //send transforms forward-list slot04
-    WONStatus SendTo(const void*,int,const IPAddr&);   //sendto
-    WONStatus Recv(void*,int,int*);     //recv
+    // a closed socket of the type (0 stream, 1 datagram) with a 4-byte length field, counted
+    AsyncSocket(int inType) : mSock(ee_won_asyncsocket_new(static_cast<void*>(this), WonCore(), inType)) {}
+    // closes the socket, deletes every message transform and uncounts it
+    virtual ~AsyncSocket() { ee_won_asyncsocket_free(this->mSock); }
+    virtual void OpenHook() {}
+    virtual void CloseHook() {}
+    virtual void KillHook() {}
+    virtual AsyncSocket* Duplicate() { return new AsyncSocket(this->GetType()); } // a new, unopened one
+    SocketType GetType() { return (SocketType)ee_won_asyncsocket_kind(this->mSock); }
+    static int TimeLeft(DWORD theTotalTime, DWORD theStartTime)
+    { return static_cast<int>(ee_won_real_time_left(theStartTime, theTotalTime)); }
+    void RemoveAllMsgTransforms() { ee_won_asyncsocket_remove_all_transforms(this->mSock); }
+    bool IsOpen() { return ee_won_asyncsocket_is_open(this->mSock); }
+    void SetType(SocketType theType) { ee_won_asyncsocket_set_type(this->mSock, theType); }
+    WONStatus SetNagling(bool on) { return ee_won_asyncsocket_set_nagling(this->mSock, on); }
+    // the socket system started on first use, its users counted (Winsock's numbering), cdecl in the SDK
+    static WONStatus StartWinsock() { return ee_won_socket_start(); }
+    static WONStatus StopWinsock() { return ee_won_socket_stop(); }
+    // an up network adapter with an IPv4 address neither 0.0.0.0 nor loopback (the original asked wininet)
+    static bool HasInternetConnection() { return ee_won_has_internet_connection(); }
+    WONStatus SetBroadcast(bool on) { return ee_won_asyncsocket_set_broadcast(this->mSock, on); }
+    // a fresh non-blocking handle (broadcast for UDP, no linger for TCP), the open hook run
+    WONStatus Open() { return ee_won_asyncsocket_open(this->mSock); }
+    WONStatus RecvFrom(void*,int,IPAddr*,int*); // a signed count; the sender on success
+    // closes a stream socket; dissolves a datagram socket's association
+    void Disconnect() { ee_won_asyncsocket_disconnect(this->mSock); }
+    WONStatus Bind(const IPAddr&,bool); // opened first; address reuse optional
+    // connects: an existing stream connection dropped, opened and bound to the local host if needed
+    WONStatus Fn2B0E60(const IPAddr& inAddress)
+    { return ee_won_asyncsocket_connect_to(this->mSock, inAddress.GetValue(), static_cast<uint32_t>(IPAddr::GetLocalHost())); }
+    WONStatus Accept(SmartPtr<AsyncSocket>&); // a new socket of the same type (the virtual Duplicate), a reference
+    // success, the socket error or WS_TimedOut
+    WONStatus WaitForConnect(unsigned long inWaitTime)
+    { return ee_won_asyncsocket_wait_for_connect(this->mSock, static_cast<uint32_t>(inWaitTime)); }
+    void WaitForAccept(unsigned long inTimeout) { this->WaitForRead(inTimeout); }
+    // binds to the local host address on the port (the SDK's second parameter is bool)
+    WONStatus Fn2B0D90(unsigned short inPort, bool inReuse) { return this->Bind(IPAddr(IPAddr::GetLocalHost(), inPort), inReuse); }
+    WONStatus Listen(int inBacklog) { return ee_won_asyncsocket_listen(this->mSock, inBacklog); }
+    void WaitForWrite(unsigned long); // up to the time (none for 0 or a closed socket)
+    // WS_TimedOut (PartialSendTo for datagrams) on a short send
+    WONStatus Send(const void* inData, int inLength, int* outSent)
+    { return ee_won_asyncsocket_send(this->mSock, inData, inLength, outSent); }
+    // after the socket thread is told and the close hook run
+    void Close() { ee_won_asyncsocket_close(this->mSock); }
+    void Kill() { ee_won_asyncsocket_kill(this->mSock); } // the close and kill hooks; separate from the SDK's Kill
+    unsigned short GetLocalPort() { return ee_won_asyncsocket_local_port(this->mSock); } // or 0
+    unsigned char GetLengthFieldSize() const { return ee_won_asyncsocket_length_field_size(this->mSock); }
+    void SetLengthFieldSize(unsigned char inSize) { ee_won_asyncsocket_set_length_field_size(this->mSock, inSize); }
+    bool IsConnected() { return ee_won_asyncsocket_is_connected(this->mSock); }
+    // a copy taken under the lock (the original returned a reference to the member)
+    IPAddr GetDestAddr() { return IPAddr::FromValue(ee_won_asyncsocket_dest_addr(this->mSock)); }
+    void AddMsgTransform(MsgTransform* inTransform) { ee_won_asyncsocket_add_transform(this->mSock, inTransform); } // owned
+    void WaitForRead(unsigned long);
+    void ClosePrv() { ee_won_asyncsocket_close_handle(this->mSock); } // a hard close if it would block
+    // Winsock's numbering; would-block and in-progress are WS_TimedOut, any other recorded
+    WONStatus GetLastSocketError() { return ee_won_asyncsocket_last_error(this->mSock); }
+    bool IsValid() { return ee_won_asyncsocket_is_valid(this->mSock); }
+    // the transform chain, the received message in reverse order, the outgoing in order; the first failure
+    WONStatus TransformRecvMsg(ByteBufferPtr& inMessage) { return ee_won_asyncsocket_transform_recv(this->mSock, &inMessage); }
+    WONStatus TransformSendMsg(ByteBufferPtr& inMessage) { return ee_won_asyncsocket_transform_send(this->mSock, &inMessage); }
+    WONStatus SendTo(const void*,int,const IPAddr&); // opened first if needed; fails on stream sockets
+    // Shutdown when the peer closed, WS_TimedOut on a short stream read
+    WONStatus Recv(void* outData, int inLength, int* outReceived)
+    { return ee_won_asyncsocket_recv(this->mSock, outData, inLength, outReceived); }
 
     typedef void (*CloseCallback)(AsyncSocket*);
     // the socket's lock (the original's mDataCrit, a recursive mutex the Rust object owns), which the subclasses
     // (QueueSocket, the routing and server connections) take around their own state too: AutoCrit takes it
     PlatMutex* GetDataLock() const { return static_cast<PlatMutex*>(ee_won_asyncsocket_mutex(this->mSock)); }
     void SetDestAddr(const IPAddr& inAddr) { ee_won_asyncsocket_set_dest_addr(this->mSock,inAddr.GetValue()); }
-    void SetThreadCloseCallback(CloseCallback inCallback);
-    WONStatus GetSocketStatus() const; // the last socket error recorded (the original's +0x54)
+    void SetThreadCloseCallback(CloseCallback inCallback)
+    { ee_won_asyncsocket_set_close_callback(this->mSock, reinterpret_cast<void*>(inCallback)); }
+    // the last socket error recorded (the original's +0x54)
+    WONStatus GetSocketStatus() const { return ee_won_asyncsocket_status(this->mSock); }
     EeWonAsyncSocket* GetSocketObject() const { return this->mSock; }
 private:
     AsyncSocket(const AsyncSocket&);
     AsyncSocket& operator=(const AsyncSocket&);
     // A Rust object since round 14 (rust/crates/ee_won/src/sockobj.rs EeWonAsyncSocket): the handle, type, flags,
     // status and times (the original's +0x20..+0x5c), the length field size (+0x50), the message transforms (+0x60,
-    // owned) and the socket thread's close callback (+0x6c), and every step of AsyncSocket.cpp; since round 15 also
+    // owned) and the socket thread's close callback (+0x6c), and every step of the class; since round 15 also
     // the lock (mDataCrit, +0x08) and the destination address (mDestAddr, +0x28)
     EeWonAsyncSocket* mSock;
 };
@@ -236,10 +286,17 @@ public:
     // the op's socket (a reference held)
     AsyncSocket* GetSocket() { return static_cast<AsyncSocket*>(ee_won_socketop_socket(this->mSockOp)); }
     void SetSocket(AsyncSocket* theSocket) { ee_won_socketop_set_socket(this->mSockOp,theSocket); }
-    SocketOp(AsyncSocket* inSocket); // SocketRunHooks.cpp (the original's was inline)
-    virtual ~SocketOp(); // the Rust object (the original's was implicit, 29153d)
-    virtual void RunHook();                 // +0x04 0x2b6070 RunHook
-    virtual void CleanupHook();             // +0x08 0x2b60c0
+    // an op on the socket (a reference held): no socket thread, no waits, the event indices -1
+    SocketOp(AsyncSocket* inSocket) : mSockOp(ee_won_socketop_new(static_cast<void*>(this),WonCore()))
+    {
+        this->SetSocket(inSocket);
+        this->SetRunAsyncImmediately(SocketOp::mRunAsyncImmediatelyDef);
+    }
+    virtual ~SocketOp() { ee_won_socketop_free(this->mSockOp); } // the original's was implicit, 29153d
+    // +0x04 0x2b6070: started (finished InvalidSocket first without a socket); a pending start goes to the socket
+    // thread (async) or is continued and finished (blocking), any other result finishes it
+    virtual void RunHook() { ee_won_socketop_run_hook(this->mSockOp); }
+    virtual void CleanupHook();             // +0x08 0x2b60c0: out of the socket thread (AsyncOp.cpp)
     //: +0x0c starts the operation, +0x10 continues it (SendFileOp 0x2915d2 / 0x291613 return a WONStatus). Since net
     // round 23 the socket op classes' own Start and Continue (ConnectOp, AcceptOp, the send and receive ops,
     // RecvCRMsgOp: one-line forwarders each) are these: the op's Rust object runs its class's step (sockops.rs); a
@@ -257,9 +314,8 @@ public:
     long GetEventIndex(int i) const { return ee_won_socketop_event_index(this->mSockOp,i); }
     void SetEventIndex(int i,long inIndex) { ee_won_socketop_set_event_index(this->mSockOp,i,inIndex); }
     EeWonSocketOp* GetSocketOpObject() const { return this->mSockOp; }
+    static void HookAddToSocketThread(void* inOp); // WONAPICore's friend (AsyncOp.cpp: the core table's)
 private:
-    static void HookAddToSocketThread(void* inOp); // WONAPICore's friend
-    static const EeWonSocketOpBaseHooks kHooks;
     // A Rust object since round 14 (rust/crates/ee_won/src/sockop.rs EeWonSocketOp): the socket thread flag (+0x44),
     // the event indices (+0x48), the socket (+0x54, a reference) and the wait flags (+0x58), and RunHook
     EeWonSocketOp* mSockOp;
@@ -305,28 +361,57 @@ public:
 // 0x2b5d20)
 class RecvBytesOp : public SocketOp {
 public:
-    RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket = NULL); //2b4de0
-    virtual void CleanupHook(); //2b5580
-    virtual AsyncOp* Duplicate(); //2b4f00
-    void SetProgressCompletion(CompletionBase<AsyncOpPtr>*, long inInterval);
-    ByteBufferPtr GetBytes() const; //2b1df0, owning return by value
+    // the number of bytes (0: until the peer closes) into memory (2b4de0)
+    RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
+    {
+        this->SetWaitForEvent(0,true);
+        ee_won_socketop_init_recv(this->GetSocketOpObject(), static_cast<uint32_t>(inLength), false);
+    }
+    // out of the socket thread, the target file closed (2b5580)
+    virtual void CleanupHook()
+    {
+        SocketOp::CleanupHook();
+        ee_won_socketop_close_file(this->GetSocketOpObject(), this->GetStatus());
+    }
+    virtual AsyncOp* Duplicate() //2b4f00: the same length and socket
+    { return new RecvBytesOp(ee_won_socketop_length(this->GetSocketOpObject()),this->GetSocket()); }
+    // the completion called after every interval bytes (2b4f90)
+    void SetProgressCompletion(CompletionBase<AsyncOpPtr>* completion, long interval)
+    {
+        ee_won_socketop_set_progress(this->GetSocketOpObject(), static_cast<void*>(completion), // its RefCount
+                                     static_cast<int32_t>(interval));
+    }
+    ByteBufferPtr GetBytes() const //2b1df0 (folded)
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_received(this->GetSocketOpObject()))); }
     void SetFilePath(const std::string& theFilePath)
     { ee_won_socketop_set_path(this->GetSocketOpObject(),reinterpret_cast<const uint8_t*>(theFilePath.data()),theFilePath.size()); }
     void SetAppendFile(bool theVal) { ee_won_socketop_set_flag(this->GetSocketOpObject(),0,theVal); }
     void SetBinaryFile(bool isBinary) { ee_won_socketop_set_flag(this->GetSocketOpObject(),1,isBinary); }
     void SetFileModifyTime(time_t theTime) { ee_won_socketop_set_modify_time(this->GetSocketOpObject(),static_cast<int64_t>(theTime)); }
     void SetSkipBytes(bool skip) { ee_won_socketop_set_flag(this->GetSocketOpObject(),2,skip); }
-    std::string GetFilePath() const; // a copy (the original returned a reference to the member)
+    std::string GetFilePath() const // a copy (the original returned a reference to the member)
+    {
+        std::string aPath;
+        ee_won_socketop_path(this->GetSocketOpObject(), [](void* inContext, const uint8_t* inBytes, size_t inLength) {
+            static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+        }, &aPath);
+        return aPath;
+    }
     unsigned long GetBytesRead() const { return ee_won_socketop_bytes_read(this->GetSocketOpObject()); }
 protected:
     struct MessageTag {};
-    RecvBytesOp(AsyncSocket* inSocket, MessageTag); // RecvMsgOp's
+    RecvBytesOp(AsyncSocket* inSocket, MessageTag) : SocketOp(inSocket) // RecvMsgOp's: length-prefixed messages
+    {
+        this->SetWaitForEvent(0,true);
+        ee_won_socketop_init_recv(this->GetSocketOpObject(), 0, true);
+    }
 };
 class RecvMsgOp : public RecvBytesOp {
 public:
     RecvMsgOp(AsyncSocket* inSocket = NULL) : RecvBytesOp(inSocket, MessageTag()) {}
-    virtual AsyncOp* Duplicate(); //2ab3d0
-    ByteBufferPtr GetMsg() const; //2ab770, owning return by value
+    virtual AsyncOp* Duplicate() { return new RecvMsgOp(this->GetSocket()); } //2ab3d0
+    ByteBufferPtr GetMsg() const //2ab770
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_message(this->GetSocketOpObject()))); }
 };
 
 // vtable 44ca78, six slots. The line so far (the original's WriteBuffer at 0x5c) and the message (+0x74) are the
@@ -379,35 +464,43 @@ public:
 
 typedef SmartPtr<CompletionBase<AsyncOpPtr> > OpCompletionBasePtr;
 
+// QueueSocket.cpp's original addresses: the constructor 2b3930, Duplicate 2b39d0, the setters 2b3bf0 / 2b3ca0, the
+// close timer 2b3d50 / 2b3ed0 / 2b4010, OpCallback 2b4220, SetRepeatOp 2b4500, RunRepeatOp 2b45b0, QueueOp 2b4740,
+// RunQueueOp 2b48b0, QueueClose 2b4a70, the hooks 2b4c00 / 2b4c10 / 2b4d40. The unit is deleted (net round 25): the
+// class is this shim, its completions (ParamCompletion over the static callbacks, QueueOpFastCompletion, the close
+// timer's) and the calls its object makes are Rust's (ee_won cppcore.rs), QueueCloseOp the core's (AsyncOp.cpp)
 class QueueSocket : public AsyncSocket {
 public:
-    void StartCloseTimer(long inTimeout); //2b3d50, StartCloseTimer
-    void CancelCloseTimer(); //2b3ed0, CancelCloseTimer
-    static void StaticCloseTimerCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam); //owning value callback
-    void CloseTimerCallback(AsyncOp* inTimer); //2b4010
-    static void StaticOpCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam); //owning value callback
-    void OpCallback(SocketOp* inOp); //2b4220
-    void RunRepeatOp(); //2b45b0, RunRepeatOp
-    void RunQueueOp(); //2b48b0, RunQueueOp
-    QueueSocket(int inType); //2b3930; fresh factory2b39d0 newa0
-    virtual ~QueueSocket(); // the Rust object (the original's was implicit, 2b3a60)
-    virtual void OpenHook();  //2b4c00, byte9c=false,ret
-    virtual void CloseHook(); //2b4c10,noargs/void, SDK CloseHook
-    virtual void KillHook();  //2b4d40,noargs/void, SDK KillHook
-    virtual AsyncSocket* Duplicate(); //2b39d0
-    void SetRepeatCompletion(CompletionBase<AsyncOpPtr>*); //2b3bf0 writes7c; repeat completion
-    void SetCloseCompletion(CompletionBase<AsyncOpPtr>*); //2b3ca0 writes80
-    void SetQueueCompletion(CompletionBase<AsyncOpPtr>*);
-    void QueueOpFast(SocketOp*,DWORD inTimeout=0xffffffff);
-    void SetRepeatOp(SocketOp*); //2b4500, repeat op84; never broad AsyncOp*
-    void QueueOp(SocketOp*,long inTimeout);  //2b4740, accesses/rebinds op54
-    void QueueClose(long inTimeout); //2b4a70, distinct from Close() 2b1b50
+    QueueSocket(int inType) : AsyncSocket(inType)
+    { this->mQueue = ee_won_queuesocket_new(static_cast<void*>(this), WonCore(), this->GetDataLock()); }
+    virtual ~QueueSocket() { ee_won_queuesocket_free(this->mQueue); } // the original's was implicit, 2b3a60
+    // the queue's state is the open, close and kill hooks' (the queued-close flag; the ops killed; the completions)
+    virtual void OpenHook() { ee_won_queuesocket_open_hook(this->mQueue); }
+    virtual void CloseHook() { ee_won_queuesocket_close_hook(this->mQueue); }
+    virtual void KillHook() { ee_won_queuesocket_kill_hook(this->mQueue); }
+    virtual AsyncSocket* Duplicate() { return new QueueSocket(this->GetType()); }
+    void StartCloseTimer(long inTimeout) { ee_won_queuesocket_start_close_timer(this->mQueue, inTimeout); }
+    void CancelCloseTimer() { ee_won_queuesocket_cancel_close_timer(this->mQueue); }
+    void RunRepeatOp() { ee_won_queuesocket_run_repeat_op(this->mQueue); }
+    void RunQueueOp() { ee_won_queuesocket_run_queue_op(this->mQueue); }
+    void SetRepeatCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_queuesocket_set_repeat_completion(this->mQueue, inCompletion); }
+    void SetCloseCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_queuesocket_set_close_completion(this->mQueue, inCompletion); }
+    void SetQueueCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_queuesocket_set_queue_completion(this->mQueue, inCompletion); }
+    void QueueOpFast(SocketOp* inOp, DWORD inTimeout=0xffffffff)
+    { ee_won_queuesocket_queue_op_fast(this->mQueue, static_cast<AsyncOp*>(inOp), static_cast<uint32_t>(inTimeout)); }
+    void SetRepeatOp(SocketOp* inOp) { ee_won_queuesocket_set_repeat_op(this->mQueue, static_cast<AsyncOp*>(inOp)); }
+    void QueueOp(SocketOp* inOp, long inTimeout)
+    { ee_won_queuesocket_queue_op(this->mQueue, static_cast<AsyncOp*>(inOp), inTimeout); }
+    void QueueClose(long inTimeout) { ee_won_queuesocket_queue_close(this->mQueue, inTimeout); }
     EeWonQueueSocket* GetQueueObject() const { return this->mQueue; }
 
 private:
     // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonQueueSocket): the default, current, repeat
     // and close completions (+0x74..+0x80), the repeat and queued ops (+0x84, +0x88), the close timer (+0x8c), the
-    // op queue (+0x90) and the queued-close flag (+0x9c), each a reference held, and every step of QueueSocket.cpp
+    // op queue (+0x90) and the queued-close flag (+0x9c), each a reference held, and every step of the class
     EeWonQueueSocket* mQueue;
 };
 
@@ -417,10 +510,10 @@ private:
 // drivers keep the statements: tests/won/won_blocking.h)
 class BlockingSocket : public QueueSocket {
 public:
-    BlockingSocket(int inType); //2b1bd0, just QueueSocket(inType), ownvptr
+    BlockingSocket(int inType) : QueueSocket(inType) {} //2b1bd0: stream or datagram
     // IMPLICIT destructor normal2aad90(375B), no own-vptr; inlines Queue members
     // then calls AsyncSocket::~AsyncSocket 2b04a0. Scalar deleting 2b1bf0.
-    virtual AsyncSocket* Duplicate(); //2aab50, newa0 and forwards type24
+    virtual AsyncSocket* Duplicate() { return new BlockingSocket(this->GetType()); } //2aab50: a new, unopened one
 };
 
 // further socket operations and managers
@@ -429,62 +522,104 @@ public:
 // read position of the original's ReadBuffer +0x5c)
 class SendBytesOp : public SocketOp {
 public:
-    SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL); // SendMsgOp passes NULL
+    SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL) : SocketOp(inSocket) // NULL sends nothing
+    {
+        this->SetWaitForEvent(1,true);
+        ee_won_socketop_init_send(this->GetSocketOpObject(), const_cast<ByteBuffer*>(inData), NULL, false);
+    }
 };
 
-// TD4d41c0, VT44c9a0, total70 (the message +0x6c is the Rust object's)
+// TD4d41c0, VT44c9a0, total70 (the message +0x6c is the Rust object's): through the socket's send transforms
 class SendMsgOp : public SendBytesOp {
 public:
-    SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL);
+    SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL) : SendBytesOp(NULL, inSocket)
+    { ee_won_socketop_init_send(this->GetSocketOpObject(), NULL, const_cast<ByteBuffer*>(inMessage), true); }
 };
 
-// TD4d4040, VT44c948, total88 (the bytes +0x5c and the address +0x60 are the Rust object's)
+// TD4d4040, VT44c948, total88 (the bytes +0x5c and the address +0x60 are the Rust object's): to the address, or on
+// the connection when the socket is connected
 class SendBytesToOp : public SocketOp {
 public:
-    SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, AsyncSocket* inSocket = NULL);
+    SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
+    {
+        this->SetWaitForEvent(1,true);
+        ee_won_socketop_init_send_to(this->GetSocketOpObject(), const_cast<ByteBuffer*>(inData), inAddress.GetValue());
+    }
 };
 
 // TD4d4440, VT44caf4, total90. Original out-of-line constructor2b55a0. A Rust object since round 15 (sockops.rs:
 // the buffer +0x5c, the datagram +0x60, the size +0x64, the sender +0x68)
 class RecvBytesFromOp : public SocketOp {
 public:
-    RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket = NULL);
-    virtual ~RecvBytesFromOp(); //2b56f0
-    virtual void RunHook();   //2b57d0
-    virtual AsyncOp* Duplicate(); //2b5660, fresh allocation of the same class
-    SmartPtr<ByteBuffer> GetBytes() const; //2aa920, owning51B sret/AddRef, field60
-    IPAddr GetAddr() const; // a copy (the original returned a reference to the member)
+    RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket = NULL) : SocketOp(inSocket) // one datagram
+    {
+        this->SetWaitForEvent(0,true);
+        ee_won_socketop_init_recv_from(this->GetSocketOpObject(), inMaxLength);
+    }
+    virtual ~RecvBytesFromOp() {} //2b56f0: the buffer goes with the Rust object
+    // the buffer allocated if needed, the last datagram cleared, then the run (2b57d0)
+    virtual void RunHook()
+    {
+        ee_won_socketop_recv_from_prepare(this->GetSocketOpObject());
+        SocketOp::RunHook();
+    }
+    virtual AsyncOp* Duplicate() //2b5660: the same size and socket
+    {
+        return new RecvBytesFromOp(static_cast<unsigned short>(ee_won_socketop_length(this->GetSocketOpObject())),
+                                   this->GetSocket());
+    }
+    SmartPtr<ByteBuffer> GetBytes() const //2aa920
+    {
+        return const_cast<ByteBuffer*>(static_cast<const ByteBuffer*>(
+            static_cast<RefCount*>(ee_won_socketop_received(this->GetSocketOpObject()))));
+    }
+    IPAddr GetAddr() const { return IPAddr::FromValue(ee_won_socketop_address(this->GetSocketOpObject())); } // a copy
 };
 
 // AoC UDP records: four slots each; the archived UDP header's extra
 // RetransmitHook is a version difference and MUST NOT be inserted here.
+// UDPManager.cpp's original addresses: UDPManagerRecvOp 2b68b0 / 2b6a10, SetMessageVerifier 2b6bf0, CheckMessage
+// 2b6c10, QueueRecv 2b6c30, RecvCallback 2b6d70 / 2b6e60, CleanupHook 2b6f60, RunHook 2b6fb0; UDPManagerSendRecvOp
+// 2b70b0, StaticCheckResponse 2b7250, SendRequest 2b7260, RunHook 2b7470, RecvCallback 2b7550 / 2b75e0, CleanupHook
+// 2b7630; UDPManager 2b76b0, Close 2b78e0, Bind 2b79c0, SetAutoRecv 2b7b40, QueueOp 2b7c50, Send 2b7ec0, CleanOps
+// 2b8000, RecvCallback 2b8230 / 2b8320. The unit is deleted (net round 25): the classes are these shims over their
+// Rust objects (udpmgr.rs, udpops.rs), whose calls back (the ops, sockets, completions) are Rust's (cppcore.rs)
+// but the virtual message checks
+class UDPManager;
 // A Rust object since round 16 (rust/crates/ee_won/src/udpops.rs EeWonUdpRecvOp: the socket +0x44, the manager
 // +0x48, the own-socket flag +0x4c, the address +0x50, the datagram +0x78, the check +0x7c and its context +0x80, and
 // RunHook, CleanupHook, QueueRecv and RecvCallback); the class is a shim the lobby subclasses
-class UDPManager;
 class UDPManagerRecvOp : public AsyncOp {
 public:
-    UDPManagerRecvOp(); //2b68b0, default, 91 bytes
-    UDPManagerRecvOp(const IPAddr&); //2b6a10
-    virtual ~UDPManagerRecvOp(); // the original's was implicit (2b6930)
-    bool HasVerifier();
+    UDPManagerRecvOp() : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), NULL)) {}
+    UDPManagerRecvOp(const IPAddr& inAddress)
+        : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), inAddress.GetValue())) {}
+    virtual ~UDPManagerRecvOp() { ee_won_udprecvop_free(this->mUdp); } // the original's was implicit (2b6930)
+    bool HasVerifier() { return ee_won_udprecvop_verifier(this->mUdp) != NULL; }
     void SetUDPManager(UDPManager* theManager);
-    void SetSocket(QueueSocket* theSocket);
-    IPAddr GetFromAddr() const; // a copy (the original returned a reference to the member)
-    void SetFromAddr(const IPAddr& theAddr);
-    const ByteBuffer* GetMsg() const;
-    void SetMsg(const ByteBuffer* theMsg);
-    QueueSocket* GetSocket() const;
+    void SetSocket(QueueSocket* theSocket) { ee_won_udprecvop_set_socket(this->mUdp, static_cast<RefCount*>(theSocket)); }
+    // a copy (the original returned a reference to the member)
+    IPAddr GetFromAddr() const { return IPAddr::FromValue(ee_won_udprecvop_address(this->mUdp)); }
+    void SetFromAddr(const IPAddr& theAddr) { ee_won_udprecvop_set_address(this->mUdp, theAddr.GetValue()); }
+    const ByteBuffer* GetMsg() const
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_udprecvop_msg(this->mUdp))); }
+    void SetMsg(const ByteBuffer* theMsg)
+    { ee_won_udprecvop_set_msg(this->mUdp, const_cast<RefCount*>(static_cast<const RefCount*>(theMsg))); }
+    QueueSocket* GetSocket() const
+    { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udprecvop_socket(this->mUdp)))); }
     UDPManager* GetUDPManager() const;
     EeWonUdpRecvOp* GetUdpObject() const { return this->mUdp; }
-    virtual void RunHook();   //2b6fb0
-    virtual void CleanupHook(); //2b6f60
-    virtual WONStatus CheckMessage(ReadBuffer&); //2b6c10, new slot 0c
+    virtual void RunHook() { ee_won_udprecvop_run(this->mUdp); }
+    virtual void CleanupHook() { ee_won_udprecvop_cleanup(this->mUdp); }
     typedef WONStatus (*MessageVerifier)(ReadBuffer&, void*);
-    void SetMessageVerifier(MessageVerifier,void*); //2b6bf0
-    void QueueRecv(); //2b6c30
-    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b6d70, owning values
-    void RecvCallback(RecvBytesFromOp*); //2b6e60
+    // whether a datagram answers this op (WS_None = no): the check, or any without one
+    virtual WONStatus CheckMessage(ReadBuffer& inMessage) //2b6c10, new slot 0c
+    {
+        MessageVerifier aVerifier = reinterpret_cast<MessageVerifier>(ee_won_udprecvop_verifier(this->mUdp));
+        return aVerifier ? aVerifier(inMessage, ee_won_udprecvop_verifier_context(this->mUdp)) : 0;
+    }
+    void SetMessageVerifier(MessageVerifier inVerifier, void* inContext)
+    { ee_won_udprecvop_set_verifier(this->mUdp, reinterpret_cast<void*>(inVerifier), inContext); }
 private:
     UDPManagerRecvOp(const UDPManagerRecvOp&);
     UDPManagerRecvOp& operator=(const UDPManagerRecvOp&);
@@ -496,28 +631,34 @@ private:
 // and RunHook, CleanupHook, SendRequest and RecvCallback); the class is a shim the lobby subclasses
 class UDPManagerSendRecvOp : public AsyncOp {
 public:
-    static WONStatus StaticCheckResponse(ReadBuffer&,void*); //2b7250
-    void SendRequest(); //2b7260
-    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b7550, owning values
-    void RecvCallback(AsyncOp*); //2b75e0
-
-    UDPManagerSendRecvOp(); //2b70b0
-    virtual ~UDPManagerSendRecvOp(); // the original's was implicit (2b7140)
+    // the reply wait's check: the request's virtual CheckResponse (cppcore.rs gives a wait this function)
+    static WONStatus StaticCheckResponse(ReadBuffer& inMessage, void* inParam)
+    { return static_cast<UDPManagerSendRecvOp*>(inParam)->CheckResponse(inMessage); }
+    UDPManagerSendRecvOp() : mUdp(ee_won_udpsendrecvop_new(static_cast<RefCount*>(this), WonCore())) {}
+    virtual ~UDPManagerSendRecvOp() { ee_won_udpsendrecvop_free(this->mUdp); } // the original's was implicit (2b7140)
     void SetUDPManager(UDPManager* theManager);
-    void SetMsgTimeout(DWORD theTimeout);
-    void SetNumRetransmits(int theNum);
-    void SetDestAddr(const IPAddr& theAddr);
-    IPAddr GetDestAddr() const; // a copy (the original returned a reference)
-    void SetOutgoing(const ByteBuffer* theMsg); // the request datagram
-    const ByteBuffer* GetOutgoing() const;
-    QueueSocket* GetSocket() const; // the op's own socket (none with a manager)
-    UDPManagerRecvOp* GetRecvOp() const; // the reply wait
-    int GetAttemptCount() const;
-    int GetNumRetransmits() const;
-    unsigned long GetMsgTimeout() const;
-    virtual void RunHook();   //2b7470
-    virtual void CleanupHook(); //2b7630
-    virtual WONStatus CheckResponse(ReadBuffer&); //2ad870, returns status 0 by default (ret4)
+    void SetMsgTimeout(DWORD theTimeout) { ee_won_udpsendrecvop_set_timeout(this->mUdp, static_cast<uint32_t>(theTimeout)); }
+    void SetNumRetransmits(int theNum) { ee_won_udpsendrecvop_set_retry_limit(this->mUdp, theNum); }
+    void SetDestAddr(const IPAddr& theAddr) { ee_won_udpsendrecvop_set_address(this->mUdp, theAddr.GetValue()); }
+    IPAddr GetDestAddr() const { return IPAddr::FromValue(ee_won_udpsendrecvop_address(this->mUdp)); } // a copy
+    // the request datagram
+    void SetOutgoing(const ByteBuffer* theMsg)
+    { ee_won_udpsendrecvop_set_outgoing(this->mUdp, const_cast<RefCount*>(static_cast<const RefCount*>(theMsg))); }
+    const ByteBuffer* GetOutgoing() const
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_udpsendrecvop_outgoing(this->mUdp))); }
+    // the op's own socket (none with a manager)
+    QueueSocket* GetSocket() const
+    { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udpsendrecvop_socket(this->mUdp)))); }
+    // the reply wait
+    UDPManagerRecvOp* GetRecvOp() const
+    { return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(ee_won_udpsendrecvop_recv_op(this->mUdp)))); }
+    int GetAttemptCount() const { return ee_won_udpsendrecvop_attempts(this->mUdp); }
+    int GetNumRetransmits() const { return ee_won_udpsendrecvop_retry_limit(this->mUdp); }
+    unsigned long GetMsgTimeout() const { return ee_won_udpsendrecvop_timeout(this->mUdp); }
+    virtual void RunHook() { ee_won_udpsendrecvop_run(this->mUdp); }
+    virtual void CleanupHook() { ee_won_udpsendrecvop_cleanup(this->mUdp); }
+    virtual WONStatus CheckResponse(ReadBuffer&) { return 0; } //2ad870: any response (folded with others)
+    EeWonUdpSendRecvOp* GetUdpObject() const { return this->mUdp; }
 private:
     UDPManagerSendRecvOp(const UDPManagerSendRecvOp&);
     UDPManagerSendRecvOp& operator=(const UDPManagerSendRecvOp&);
@@ -530,24 +671,34 @@ private:
 // erases 0x2b8160/0x2b81b0 and RecvCallback's dispatch). The original's mAutoRecv (+0x38) was never read: gone
 class UDPManager : public RefCount {
 public:
-    WONStatus Bind(int,bool);     //2b79c0, signed int port as in the SDK
-    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b8230, owning values
-    void RecvCallback(RecvBytesFromOp*); //2b8320, receive callback
-
-    UDPManager(); //2b76b0
-    virtual ~UDPManager(); //2b77b0
-    void SetDefaultCompletion(CompletionBase<AsyncOpPtr>* theCompletion);
-    void Send(const ByteBuffer*, const IPAddr&); //2b7ec0, void/ret8 (provisional name; the SDK has SendBytesTo)
-    void Close(); //2b78e0
-    void SetAutoRecv(bool); //2b7b40
-    void QueueOp(UDPManagerRecvOp*,unsigned long); //2b7c50
-    void CleanOps(); //2b8000
-    QueueSocket* GetSocket() const; // the socket (NULL when unbound)
+    UDPManager() : mManager(ee_won_udpmanager_new(static_cast<void*>(this), WonCore())) {}
+    virtual ~UDPManager() { ee_won_udpmanager_free(this->mManager); } // closes nothing (the original's 2b77b0)
+    // rebinds to a local port (optionally broadcast) and receives datagrams repeatedly
+    WONStatus Bind(int inPort, bool inBroadcast) { return ee_won_udpmanager_bind(this->mManager, inPort, inBroadcast); }
+    void SetDefaultCompletion(CompletionBase<AsyncOpPtr>* theCompletion)
+    { ee_won_udpmanager_set_default_completion(this->mManager, static_cast<RefCount*>(theCompletion)); }
+    void Send(const ByteBuffer* inData, const IPAddr& inAddress) // provisional name (the SDK has SendBytesTo)
+    { ee_won_udpmanager_send(this->mManager, const_cast<RefCount*>(static_cast<const RefCount*>(inData)), inAddress.GetValue()); }
+    void Close() { ee_won_udpmanager_close(this->mManager); }
+    void SetAutoRecv(bool inAutoRecv) { ee_won_udpmanager_set_auto_recv(this->mManager, inAutoRecv); }
+    void QueueOp(UDPManagerRecvOp* inOp, unsigned long inTimeout)
+    { ee_won_udpmanager_queue_op(this->mManager, static_cast<RefCount*>(inOp), static_cast<uint32_t>(inTimeout)); }
+    void CleanOps() { ee_won_udpmanager_clean_ops(this->mManager); }
+    // the socket (NULL when unbound)
+    QueueSocket* GetSocket() const
+    { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udpmanager_socket(this->mManager)))); }
+    EeWonUdpManager* GetManagerObject() const { return this->mManager; }
 private:
     UDPManager(const UDPManager&);
     UDPManager& operator=(const UDPManager&);
     EeWonUdpManager* mManager;
 };
+inline void UDPManagerRecvOp::SetUDPManager(UDPManager* theManager)
+{ ee_won_udprecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+inline UDPManager* UDPManagerRecvOp::GetUDPManager() const
+{ return static_cast<UDPManager*>(static_cast<RefCount*>(ee_won_udprecvop_manager(this->mUdp))); }
+inline void UDPManagerSendRecvOp::SetUDPManager(UDPManager* theManager)
+{ ee_won_udpsendrecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
 
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;
@@ -822,7 +973,6 @@ private:
 // AsyncOpWithTracker's op tracker: a Rust object since round 13 (rust/crates/ee_won/src/opobj.rs EeWonOpTracker: the
 // ops tracked by id, a reference each, in id order, the latest first among equal ids; an op tracked once; its lock).
 // The original's two multimaps (AsyncOpTrackerMaps, AsyncOpTrackerEntry) are gone.
-const EeWonAsyncOpHooks* AsyncOpHooks(); // AsyncOp.cpp's hook table
 class AsyncOpTracker {
 public:
     AsyncOpTracker() : mTracker(ee_won_op_tracker_new(AsyncOpHooks())) {}
@@ -832,9 +982,11 @@ public:
     // the op tracked at inIndex in id order (NULL past the end)
     AsyncOp* GetTrackedOp(int inIndex)
     { return static_cast<AsyncOp*>(ee_won_op_tracker_at(this->mTracker,static_cast<size_t>(inIndex))); }
-    AsyncOp* AddOp(AsyncOp* inOp, unsigned long inId); // original29fc80
-    bool RemoveOp(AsyncOp* inOp);             // original29fe50
-    void KillAll();                          // original29ffa0
+    // tracks an op under the id (refused when tracked already); returns the op (original 29fc80)
+    AsyncOp* AddOp(AsyncOp* inOp, unsigned long inId)
+    { return static_cast<AsyncOp*>(ee_won_op_tracker_add(this->mTracker,inOp,static_cast<uint32_t>(inId))); }
+    bool RemoveOp(AsyncOp* inOp) { return ee_won_op_tracker_remove(this->mTracker,inOp); } // original29fe50
+    void KillAll() { ee_won_op_tracker_kill_all(this->mTracker); } // each op killed, with completion (29ffa0)
     EeWonOpTracker* GetTrackerObject() const { return this->mTracker; }
 private:
     AsyncOpTracker(const AsyncOpTracker&);
@@ -846,9 +998,15 @@ private:
 // original's TrackerCompletion, 16 bytes, and its Callback, 0x2a00d0, are gone)
 class AsyncOpWithTracker : public AsyncOp {
 public:
-    AsyncOp* Track(AsyncOp*,int); //2a0100, protected in the SDK; returns the tracker's AddOp result
-    virtual void CleanupHook();             //slot08 CleanupHook2a0290
-    virtual bool CallbackHook(AsyncOp* inOp,int inParam); //slot0c, bool/ret8
+    // tracks a sub-op under the parameter, its completion back to this op (2a0100, protected in the SDK): while this
+    // op is pending and still tracks it, the sub-op leaves the tracker and CallbackHook runs
+    AsyncOp* Track(AsyncOp* op,int param)
+    {
+        return static_cast<AsyncOp*>(ee_won_asyncop_track(this->GetOpObject(),this->mTracker.GetTrackerObject(),op,
+                                                          op->GetOpObject(),param));
+    }
+    virtual void CleanupHook() { this->mTracker.KillAll(); } //slot08 2a0290
+    virtual bool CallbackHook(AsyncOp*,int) { return false; } //slot0c 2accc0: ignores the sub-op
     AsyncOpTracker mTracker;                //44..78
 };
 
@@ -1147,18 +1305,22 @@ public:
 
 // SocketThread (0x38) / SocketThreadSimple (0x44).
 // Needs Thread (0x1c) / Event (8) from above.
+// SocketThread.cpp's original addresses: SocketThread 2b60d0 / 2b6120 / ThreadFunc 2b6140 / DoOp 2b6160,
+// SocketThreadSimple 2b61a0 / PurgeOps 2b6380 / AddSocketOp 2b64f0 / RemoveSocketOp 2b6660 / Pump 2b6760 / ThreadFunc
+// 2b6890. The unit is deleted (net round 25): the ops' calls are answered in Rust (ee_won cppcore.rs)
 class SocketThread : public Thread {
 public:
-    SocketThread(); //2b60d0
-    virtual ~SocketThread(); //2b6120, explicit own vtable 44cb10
-    virtual void ThreadFunc(); //base slot10,2b6140
+    SocketThread() { this->mSingleThreaded=false; } //2b60d0: on its own thread
+    virtual ~SocketThread() {} //2b6120, explicit own vtable 44cb10
+    virtual void ThreadFunc() { while(!this->IsStopped()) this->Pump(1000); } //base slot10,2b6140
     virtual void AddSocketOp(SocketOp*) {} //new slot1c, 2fa500 (empty)
     virtual void RemoveSocketOp(SocketOp*) {} //20, version-empty2fa500
     virtual void Pump(unsigned long) {} //24, version-empty2fa500
     virtual void PurgeOps() {} //28, version-empty4142a0
     virtual bool NeedThread() {return true;} //2c, true2f30d0
     void SetSingleThreaded(bool value) { this->mSingleThreaded=value; } //inline bool 34 (WON SDK)
-    static bool DoOp(SocketOp*); //2b6160, cdecl, the caller pops (Rust's: ee_won sockthread.rs)
+    // continues a pending op and finishes it unless it still waits; whether it is done (2b6160, cdecl)
+    static bool DoOp(SocketOp* inOp) { return ee_won_socket_thread_do_op(WonCore(),static_cast<AsyncOp*>(inOp)); }
     bool mSingleThreaded; //34; total38 (the original's lock at 1c is SocketThreadSimple's Rust object's)
 };
 // SocketThreadSimple: a Rust object since round 13 (rust/crates/ee_won/src/sockthread.rs EeWonSocketThread: the ops
@@ -1167,13 +1329,18 @@ public:
 // thread is the Thread shim's; ThreadFunc pumps the object, then waits on the thread's signal
 class SocketThreadSimple : public SocketThread {
 public:
-    SocketThreadSimple();
-    virtual ~SocketThreadSimple(); //2b61a0, explicit ownVT44cb44 and PurgeOps
-    virtual void ThreadFunc(); //2b6890
-    virtual void AddSocketOp(SocketOp*); //2b64f0
-    virtual void RemoveSocketOp(SocketOp*); //2b6660
-    virtual void Pump(unsigned long); //2b6760
-    virtual void PurgeOps(); //2b6380
+    SocketThreadSimple() : mOps(ee_won_socket_thread_new(WonCore())) {}
+    virtual ~SocketThreadSimple() { ee_won_socket_thread_free(this->mOps); } //2b61a0: every op still held killed
+    virtual void ThreadFunc() { while(!this->IsStopped()) this->Pump(20); } //2b6890
+    virtual void AddSocketOp(SocketOp* inOp) { ee_won_socket_thread_add(this->mOps,static_cast<AsyncOp*>(inOp)); }
+    virtual void RemoveSocketOp(SocketOp* inOp) { ee_won_socket_thread_remove(this->mOps,static_cast<AsyncOp*>(inOp)); }
+    // every op continued once, the finished dropped, then a wait of up to 20 ms for a signal (2b6760)
+    virtual void Pump(unsigned long inWaitTime)
+    {
+        uint32_t aWait=ee_won_socket_thread_pump(this->mOps,static_cast<uint32_t>(inWaitTime));
+        if(aWait>0) this->WaitForSignal(aWait);
+    }
+    virtual void PurgeOps() { ee_won_socket_thread_purge(this->mOps); } //2b6380: killed and forgotten
 private:
     EeWonSocketThread* mOps; //owned
 };
@@ -1181,25 +1348,43 @@ private:
 // A Rust object since net round 16 (rust/crates/ee_won/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
 // type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
 // +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
+// Since net round 25 its calls back are Rust's (cppcore.rs NATIVE_SERVCONN: the ops, the completions the original's
+// static callbacks were, 2ab160 / 2ab6a0 / 2ab7b0, the messages, the socket) but the peer authentication op's maker
+// and the virtual MsgCallback (ServerConnection.cpp)
 class ServerConnection : public BlockingSocket {
 public:
-    void StartKeepAlive(); //2aaf10
-    static void StaticConnectCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab160
-    static void StaticMsgCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab6a0
-    static void StaticKeepAliveCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab7b0
-    void KeepAliveCallback(AsyncOp*); //2ab840
-    void SendNoOp(); //2ab910
-    ServerConnection(); //2aab10
-    virtual ~ServerConnection(); // the Rust object (the original's was implicit, 2aabe0)
-    virtual void CloseHook(); //CloseHook2abe70
-    virtual void KillHook();  //KillHook2abf50
-    void ConnectCallback(PeerAuthOp*); //ConnectCallback2ab1f0 (virtual in the SDK; nothing overrides it)
-    virtual void MsgCallback(const ByteBuffer*); //MsgCallback2fa500,ret4
-    void SetAuth(AuthContext*, AuthType);  //SetAuth
-    PeerAuthOp* ConnectAsync(const IPAddr&, unsigned long); //2abc40; raw borrowed member result
-    WONStatus ConnectBlock(const IPAddr&,DWORD inTimeout=0xffffffff);
-    void SetKeepAlivePeriod(DWORD);
-    void SetConnectCompletion(CompletionBase<AsyncOpPtr>*); //2abdc0
+    // restarts the keep-alive timer (none for a 0 period) (2aaf10)
+    void StartKeepAlive() { ee_won_servconn_start_keep_alive(this->mConn); }
+    // a no-op message, the timer restarted, when the current keep-alive timer fires (2ab840)
+    void KeepAliveCallback(AsyncOp* inOp) { ee_won_servconn_keep_alive_callback(this->mConn,static_cast<RefCount*>(inOp)); }
+    void SendNoOp() { ee_won_servconn_send_no_op(this->mConn); } // a no-op message queued (2ab910)
+    ServerConnection(); //2aab10: unauthenticated, a 300-second keep-alive
+    virtual ~ServerConnection() { ee_won_servconn_free(this->mConn); } // the original's was implicit, 2aabe0
+    // the keep-alive timer and a pending connect stopped, the message callback dropped, the socket closed (2abe70)
+    virtual void CloseHook() { ee_won_servconn_close_hook(this->mConn); }
+    // the socket killed, the connect completion and auth context dropped (2abf50)
+    virtual void KillHook() { ee_won_servconn_kill_hook(this->mConn); }
+    // the connect's result; on success the messages and the keep-alive start (2ab1f0, virtual in the SDK; nothing
+    // overrides it)
+    void ConnectCallback(PeerAuthOp* inOp)
+    { ee_won_servconn_connect_callback(this->mConn,reinterpret_cast<RefCount*>(inOp)); }
+    virtual void MsgCallback(const ByteBuffer*) {} //MsgCallback2fa500,ret4
+    void SetAuth(AuthContext* inContext, AuthType inType)
+    { ee_won_servconn_set_auth(this->mConn,reinterpret_cast<RefCount*>(inContext),inType); }
+    // the socket closed and an authenticated connect started; the peer authentication op (2abc40, borrowed)
+    PeerAuthOp* ConnectAsync(const IPAddr& address, unsigned long timeout)
+    {
+        return reinterpret_cast<PeerAuthOp*>(static_cast<RefCount*>(
+            ee_won_servconn_connect_async(this->mConn,static_cast<const void*>(&address),(long)timeout)));
+    }
+    // the socket closed, a blocking connect, then the connect callback's report; its status
+    WONStatus ConnectBlock(const IPAddr& theAddr,DWORD theTimeout=0xffffffff)
+    { return ee_won_servconn_connect_block(this->mConn,static_cast<const void*>(&theAddr),theTimeout); }
+    void SetKeepAlivePeriod(DWORD theSeconds) { ee_won_servconn_set_keep_alive_period(this->mConn,theSeconds); }
+    // the completion called when a connect finishes (2abdc0)
+    void SetConnectCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_servconn_set_connect_completion(this->mConn,static_cast<RefCount*>(inCompletion)); }
+    EeWonServerConn* GetConnObject() const { return this->mConn; }
 private:
     ServerConnection(const ServerConnection&);
     ServerConnection& operator=(const ServerConnection&);
