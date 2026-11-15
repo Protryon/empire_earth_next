@@ -23056,6 +23056,7 @@ The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l
   texts, `DrawTextA`, `UpdateTranslatedKey`; about 60 lines; `UILBString.cpp` stays for `UIObjHost::List`);
   `UIListBox<T>`'s lines; the whole objects' base ops from the record (every golden re-recorded); the game's eight
   direct `UIControl` subclasses and `UIGraph`/`UILineGraph` (screens lane).
+
 ## The unit utilities, round 2: the units' frames, the footprints, the walls, the line's walls, the sound and the deposit in Rust (ee_units uu_world.rs; branch rust-unitutil2, 2026-11-14)
 
 - **Capture first, writes as events.** UUTL gained 35 kinds (51..86) for the functions this round moves and their
@@ -23743,3 +23744,148 @@ Round total: net -1,464. The Graphics Engine directory: 10,134 -> 8,752 lines; t
 - **Left in the plug-in**: DX7Rasterizer.cpp (852 lines: the forwarders, the draws' reads of GE objects, the rasterizer's
   host, about 300 address markers), DX7Trampolines.cpp (366: the vertex arrays' shells, the screen, surface and movie
   shells and hosts, the layout pins) and GX.cpp (137: the GX shims the splash screen and `tools/gx_test`/`sdl_test` call).
+
+## R6: game screens B, round 1: the campaign editor's model whole in Rust; the moved forms' dead ids; the host's, dialogs', manager's and thread's include blocks (ee_screens campaign_model.rs; branch rust-screensb1, 2026-11-15)
+
+A second game screens lane. The first (`docs/progress/r6-game-screens-60k-lines-on-the-toolkit.md`) keeps the
+in-game HUD; this one takes the host every moved form goes through (`UI Events/EEScreens.cpp`), the UI thread, the
+UI manager, the message box, the framed background, the post-game line graph, the file combo box, the scenario
+intro's form manager, the models of the moved forms and the ids headers of the forms whose events moved
+(`docs/progress/r6-game-screens-b.md`).
+
+### The measure
+
+| Unit (at 029e7372) | Lines | What is left in it |
+|---|---|---|
+| `UI Events/EEScreens.cpp` | 3,611 | the host: ~1,400 `case`s, each one toolkit or simulation call (none dead: every op code is used by Rust, `build/sb1/deadops.py`) |
+| `User Interface Thread/EEUserInterface.cpp` | 1,425 | the thread's hosts (`ee_screenscpp_ui_game`, `_ui_message`, `_ui_event`), 40 one-line posts, 123 include lines |
+| `EEUIManager.cpp` | 635 | the factories' and the control creation's `new`s (C++ classes), the host of `ui_manager.rs`, 155 include lines |
+| `EEUIFError.cpp` | 455 | the form, its two button classes and the host of `dialog.rs` |
+| `Campaign/EECampaignEditorBehavior.cpp` + header | 620 | **the campaign editor's model: real logic, only `EEScreens.cpp` used it** |
+| `EEUIEScenarioIntroEvents.cpp` | 315 | `EEUISCIFormManager`: file opens over `EEOpenSaveGameFile` |
+| `EEUIBGenericBackground.cpp` | 301 | the background's host for `frame.rs`, the campaign map's cell loader |
+| `EEUIPGSLineGraph.cpp` | 145 | a `UILineGraph` with 31 stored graphs |
+| `EEUIFileComboBox.cpp` | 128 | a `UIComboBox` subclass (the editor's) |
+| `ee/EEUIManager.h`, `EEControlEventID.h`, `EEFormEventID.h` | 874 | the forms' control indices and event ids: most dead since the events moved |
+
+Earlier rounds (13, 21-28) had already moved this scope's decisions to Rust behind hosts; what was left was host
+code (one C++ call per `case`), the C++ classes whose objects the toolkit makes, include blocks and dead ids. The
+gates reach: the tour (the main menu, the settings, the random map's lobby, a game: `EEScreens.cpp`'s menu,
+settings and lobby ops, the thread's messages, the manager's control and background creation, the framed
+backgrounds), the orders game (the thread's actions), the legacy tour's menu bmpdiff (the same menus' pixels), the
+LAN game (the lobby as host and client, WON's screens), the editor gate (EE-SIM: the scenario editor's host ops).
+None opens the campaign editor, the post-game summary or a message box.
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 82d12b87 | the campaign editor's model whole in Rust (`campaign_model.rs`, `campaign_model_ffi.rs`); `EECampaignEditorBehavior.cpp` and its header deleted; its host in `EEScreens.cpp` | +163 -697, net -534 |
+| b43158d6 | the moved forms' dead ids (`ee/EEUIManager.h` 193 control indices, `EEControlEventID.h` 233, `EEFormEventID.h` 18, with the emptied enums' comments) | -504 |
+| d9620222 | the include lines eight units compile without | +1 -377, net -376 |
+
+The scope's C++ (the thirteen files of the table above): 8,509 -> 7,095 (-1,414). Short of the 1,500 asked: only
+one of the scope's classes still had logic of its own (the campaign editor's model); the rest is hosts and `new`s that
+go with the toolkit's C++ classes.
+
+### The campaign editor's model
+
+- **What moved.** All of `EECampaignEditorBehavior` but its `EECampaign` member: the campaigns on disk, the
+  scenarios not in the campaign (sorted), the entered password, the new and edited flags, and `AddScenario`,
+  `MoveScenario` (the original's 1-based position arithmetic), `RemoveScenario`, `New` (the four default texts, the
+  first string error returned), `Delete` (the four characters cut as `InsertString("", n - 4, true)` cut them),
+  `GetIsUnlocked`, `Reset` (the extension stripped by characters through `ee_plat_core`'s `PlatMbsLen`,
+  `PlatMbsNInc`, `PlatMbsLwr`; `std::sort` as byte order, `operator<` being `PlatMbsCmp`), the three validations,
+  `Save` and `Load`; and the host's own state for the editor (the last error, the scenario list's result).
+- **The host** (`ee_screenscpp_ce_campaign`, `_text` in `EEScreens.cpp`): the edited campaign stays C++ (its file
+  format is `EECampaign.cpp`'s, shared with the play campaign flow) as a static of the host; 12 ops (a string, a
+  field set, the scenarios set, load, save, the scenario list, a file delete, Reset's begin, listing, built-in test,
+  archive check and end) and 6 pure reads. Ops that change things never return variable-length text; their results
+  are kept and read back, so a text read can be retried with a bigger buffer without repeating a side effect.
+  Reset's archive check is one op: the original read the archived copy's bytes even after warning once, and its
+  file and path objects live across the loop (`FindFile`'s out parameter is reused, as the original reused it).
+- **One quirk kept.** Reset lists the scenarios into the same `std::set` the campaigns were listed into, so the
+  campaign files come round again in the scenario pass (and can land in the available list when they lack the
+  scenario extension). The host keeps one set across both listings.
+- **How the events reach it.** `campaign_editor.rs` is unchanged: its host (`campaign_editor_ffi.rs`) asks
+  `campaign_model_ffi` first, which answers the model's ops (`EE_SCREENS_GAME_CE_RESET` .. `_LIST_OK`,
+  `_CHANGED`, `EE_SCREENS_TEXT_CE_FIELD`, `_LIST`, `_ERROR`, `_SET_FIELD` .. `_LOAD`), so round 12's golden still
+  replays as recorded. The model is one `Mutex`; no host op re-enters the editor's events.
+- **The golden** (`build/sb1/cem_driver.cpp`): one driver, two builds. Old: the unmodified unit (`build/sb1/orig`)
+  behind the old host's code for the model's ops. New: the new `EEScreens.cpp` and the Rust library through
+  `ee_screens_campaign_model`. Fakes of the campaign (its fields kept; `Load`, `Save`, `ListScenarioFiles` printed
+  with drawn answers), the strings, the file system (`FSFileSpec`, `FSPath`, `FSArchive`, `FSMemoryFile`: each call
+  printed, the answers drawn), the built-in test, the checksum and the message box; each op followed by a dump of
+  the lists, fields, flags, error and directory. Seeds 2-8 x 5,000 ops: identical (431 warnings, 933 checksums, 4,309
+  moves). `campaign_model/golden.txt` is the new side's host log for 450 ops of seed 11 (4 checks after a warning),
+  replayed from a fresh model by `replays_the_golden`. Mutations: 15 of 15 Rust (the replay) and 11 of 11 host (the
+  driver, seeds 2-3) caught; one host mutation could not be placed (its pattern occurs twice).
+- **Traps.** A driver that `#include`s `EEScreens.cpp` crashed at exit: the fakes' `std::map` was destroyed before
+  the unit's static `FSFileSpec`, whose destructor (a fake) used it, and the crash ate the buffered output (it looked
+  like a divergence at line 3,282). `fflush` and `_exit(0)` at the end of `main`. MSYS turns `SC8_DEFINES=/DSB1_NEW`
+  into a path with a space; `-DSB1_NEW` is safe.
+- **Only a person reaches it**: the campaign editor (the editors' sub-menu, form 24). No gate opens it.
+
+### The dead ids and the include blocks
+
+- **Dead ids** (b43158d6). `ee/EEUIManager.h` documents each form's control indices (from `dbuicontrols`), and
+  `EEControlEventID.h`/`EEFormEventID.h` the control-event and form-event ids the C++ factories switched on. The
+  events and factories have been `ee_screens`' since rounds 4-13, with their own constants, so most of these names
+  had no C++ user left: `build/sb1/deadenum.py` drops an enumerator no file of `src` or `include` names outside its
+  header (an enum left empty goes with its comment). Kept whole: the main game form's indices (the HUD lane's), the
+  form ids and the multiplayer form's (WON's). Every enumerator has an explicit value, so the kept ones do not move.
+  After the merge of `rust`, none of the 444 dropped names is used by the merged code.
+- **Include blocks** (d9620222). `build/sb1/mininc2.py`: each unit's `#include`s tried in blocks of eight from the
+  bottom, a block that still compiles (`/Zs`, the exe module's flags) dropped whole, one that does not halved; units
+  in parallel. 377 of 740 lines in eight units (the UI manager 83 of 155, the thread 45 of 123, the host about 44 of
+  155: most of its includes are needed by its ops). Two things to put back by hand: a unit's own `rust/<crate>.h` (it
+  compiled through another header; the rule is a direct include), and a block whose test was interrupted (an editor
+  or virus scanner held `EEScreens.cpp` open, the rewrite failed with `EINVAL` and left a failing block in place: the
+  tool restores nothing on an exception, so compile the unit after any crash of it). The POSIX build did not run.
+
+### Behaviour
+
+None intended. The campaign editor's model is the original's step for step (the driver's 35,000 ops); the other
+two commits change no code.
+
+### Gates
+
+| Gate | Per commit | Merged with rust (c6800630) |
+|---|---|---|
+| `build.py -j 3 --sim` | 82d12b87: 0/0; b43158d6 + d9620222 built together: 0/0 | EE-AOC 924 and EE-SIM 925 inputs, 0 unresolved, 0 duplicates |
+| oracle | seeds 2-3 identical (both trees) | seeds 2-7 identical |
+| `tools/sim_editor.py` | PASS 12,723 (both trees) | PASS 12,723 |
+| `rust_build.py gate` | PASS (3,655 tests; rustfmt fixed once in the replay test) | PASS (3,718 tests) |
+| `build.py --test-profile windowed-software` | | 0 unresolved, 0 duplicates |
+| fixture tour (`--exercise tour --play-seconds 60 --input-check`) | | `RESULT PASS tour`, F3 `paused 0 -> 1 -> 0: ok`, `gx_errors` {} |
+| orders game (`--exercise random-game --play-seconds 60 --orders --box-select`) | | `BOX SELECT PASS` (4 steps), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver), `RESULT PASS random-game` |
+| legacy tour (`game_session.py --exercise tour --input-check --play-seconds 120`) | | `STOP <windowed session complete> reached`, F3 ok, physics ticks 119 -> 437; menus against the worktree's reference (20261115T063114820578Z): single player, the settings' three tabs and the random map setup identical; the main menu and settings-closed differ in 159 pixels at (41..68, 3..12): the build label, whose suffix is the binary's checksum (`gGameVersion`'s `.%04ld`) |
+
+The LAN game was not run: no menu it opens changed (the campaign editor is not on its path).
+
+The merge of `rust` (65 commits): conflicts only between the base (UI toolkit round 21, not yet in `rust`) and
+`rust`, none in this lane's files: PORT_LEARNINGS.md (both sides kept), RUST_PLAN.md's Progress table (`rust`'s),
+the UI toolkit's progress file (round 21's, the newer), `include/rust/ee_units.h` (regenerated: `rust_build.py
+header` current, `rust_includes.py` nothing to narrow) and the four capture goldens' UUTL lines (`rust`'s: the unit
+utilities' round 2 re-recorded them; no simulation code changed here). None of the 444 dropped ids is named by the
+merged code; no crate defines an `EE_SCREENS_CEM_*` twice. No capture profile ran: no simulation code changed.
+
+### What is left
+
+- The host (`EEScreens.cpp`, about 3,150 lines): one `case` per toolkit or simulation call. It shrinks when the
+  toolkit's controls can be reached from Rust without a C++ hop (the toolkit lane's records) or when the forms' C++
+  objects go, not before; its ops are all live (`build/sb1/deadops.py`).
+- `EEUserInterface.cpp`: the thread's hosts and posts; its few remaining decisions (`SetLoadProgress`'s 20%
+  steps, `ShowLagStatus`, `UpdateIMECompositionString`'s attributes, `ChangeRasterizer`, `ResizeGameScreen`) can
+  join `ui_game.rs` (about 60 lines).
+- `EEUIManager.cpp`: the factories' and `CreateUserDefinedControl`'s `new`s (they go when the controls are Rust
+  objects).
+- `EEUISCIFormManager` (the scenario intro's files), `EEUIFError`'s form and buttons, `EEUIPGSLineGraph` with
+  `UIGraph`/`UILineGraph` (about 700 lines over the toolkit; the post-game summary is a person's only), the campaign
+  map background's cell loader (`EEUIBMapBackground::LoadBackground`), `EEUIFileComboBox`.
+
+### The history rewrite
+
+At the lead's request, after the merge: `fix_plan_history.sh rust-screensb1` rewrote the 26 commits `origin/rust`
+lacks, replacing the oversized `docs/RUST_PLAN.md` blobs (the lead's merge script had re-encoded one Progress row on
+each merge) with the clean ones. The branch's tree is unchanged (`git diff` of the merge before and after: empty);
+the lane's commits are 82d12b87, b43158d6, d9620222 and the merge c6800630, which already contains the rewritten
+`rust` (3114725d).
