@@ -21495,3 +21495,88 @@ to exist. Each class unit carried 30-40 lines of includes and comments and a 20-
   point i at the carrier's frame in its location scaled by its stats) and `RouteDockWaypoint` from another. The
   transformation's `Apply`, `ConvertToOrientation` and the point's `DistanceTo` are ee_ge's (the C++ forwards to
   them already), so the bits are the same. EE-PM-COUNT ends with "deck N", the placements.
+
+## Calamities lane, round 3: the eight area-effect classes as one Rust record over a host; the running state's save in Rust; a fixture command that casts calamities (ee_tech area_effect.rs, area_effect_save.rs; branch rust-calamities3, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 64209ed3 | AETP/AEFX capture records (TEST ONLY), golden from the unmodified C++ | +211 (test code) |
+| 7341ef18 | the eight `EEAE*` kinds as one `EEAreaEffect` over `EeAreaEffectFields`, the template over `EeAreaEffectTemplateFields`, their bodies in Rust over the host `EEAEHost` | +403 -1017, net -614 |
+| 566d984e | the running state's record and bytes in Rust (`area_effect_save.rs`) | +63 -110, net -47 |
+| de5622e5 | the fixture's cast command and `fixture_game.py --cast` (TEST ONLY) | +105 -1 (test code) |
+
+The round's C++: net -661 for the moves (-614, -47); the test code adds +316 (the capture +211, the cast command
++105). The area effects went from 2,067 lines (8 units, 9 headers) to 1,617 with the 208-line test capture (4 units,
+5 headers): 5 units and 5 headers fewer. The cluster is smaller than the round size the lead asked for (1,500+): all of
+it moved that could without the units' lists becoming ids.
+
+**The measure.** The area effects (Civilization Builder's `EEAreaEffect`, `EEAreaEffectTemplate`, `EEAEManager` and
+the kinds `EEAECloaking`, `EEAEEconomy(FromUnits)`, `EEAEHealing`, `EEAEMorale`, `EEAEMoraleFromBuildings`,
+`EEAEMoraleFromMilitaryHeroes` and the two inline immunities) were 2,067 lines in 8 units and 9 headers. The kinds
+differed only in a handful of slot bodies (strength, `Modify`, `Covers`, `AppliedTo`/`RemovedFrom`, `Tick`,
+`MarkDirty`/`Recount`, `IsImmunity`) and one class's three members.
+
+- **One class, one record.** `EEAreaEffect` derives from `UReferenceCounter` and `EeAreaEffectFields` (the template's
+  kind, the player, the morale from buildings' cap, count and flag); the slots are plain members (no subclass is
+  left to override them) that call `ee_area_effect_*` with an `EEAEHost`: the effect and the unit the slot was given.
+  `CreateAreaEffect` makes one for any known kind; `EECPResourceCenter`'s two `dynamic_cast<EEAEMoraleFromBuildings*>`
+  are a test of `mKind` (one line each). The template derives from `EeAreaEffectTemplateFields` (its `GEColor` is
+  three floats; nobody read it); `Load`/`Unload` and the unused +0x2c/+0x34 slots lost their `virtual`.
+- **The host.** Twenty ops: the unit set, the tech node's kind, the players' relation (same, allied, at war: one
+  answer, the tests are Rust), built, repairable, the position, a tile's continent, the carrier's planet, hit points
+  and their maximum, the cinematic flag, `SetHitPoints`, the cloak and uncloak steps, the owner's scale, hit points,
+  leadership and garrison bonus, and the morale buildings' count (the two collector predicates stay C++). The Rust
+  keeps each original's order and short-circuits: the base `Covers` reads the scale first (it is an argument), the
+  cloaking's after the position; the healing tests `IsRepairable` before anything; `Recount` rounds the radius before
+  its dirty test; `IsWithin` asks the second continent only when the first is not 0.
+- **Arithmetic kept.** The economy's `GetRate` is the Windows `min(max(0, b), 10)` (`Modify` clamps it again to
+  10, then to 0, as the original's nested conditional did); its strength `(long)(rate * 10)` is `ftol`, the heal
+  `lrintf(level * (elapsed * 0.001))`, the morale `value - lrintf(value * (level / 10.0f))`, the checksum sums the
+  location's bits as `long` (wrapping), the recount's tile `ftol` and its rectangle one larger to the right and bottom
+  unless the location sits in its tile's middle half.
+- **The running state** (port, 0.256): the save's units, own effects and refs are an `EeAreaEffectRunning` built by
+  the C++ walk and written by Rust through the calamities' typed I/O ops (`FSFile`'s own encodings); the load reads
+  one (each partly read unit or ref kept, the reads stopped at the first error, as before) and the after-load fix-up
+  reads it back by index.
+- **Golden first.** AETP (every template as `Init` left it) and AEFX (after each area-effect tick: per unit with own or
+  affecting effects its id, hit points and cloak flags; each own effect's kind, player, location, checksum, strength,
+  radius, scale, immunity, the three modifiers of 1000, the morale count, `Covers` of its own unit; each affecting
+  effect as owner and index; the active list; the running state's save bytes) were recorded from the unmodified C++
+  at seeds 2-3 of the oracle, late, space and calamity profiles (1,350 AEFX, 50 AETP per game).
+- **The cast command** (TEST ONLY, `EETestFixture.cpp`): `"<seq> cast <form> <enum> <offset>"` casts the calamity
+  class of an `EECalamityEnum` as the local player at the camera's focus (a unit kind at the other players' nearest
+  unit, a global kind everywhere), straight into the calamity manager under the world's write lock on a thread of its
+  own (never under the UI lock), and reports "TEST UI cast", then "TEST UI calamity <enum> alive <ms>" each second
+  until it ends. `fixture_game.py --cast a,b,...` (`fixture_driver.cast_calamities`) captures each before and every
+  `--capture-every` seconds; a calamity that is refused or never ages fails the run.
+- **The cast tour** (test profile, `fixture_game.py --exercise random-game --cast ...`, frames read): the earthquake
+  draws its cracks across the ground from the cast point and shakes the camera (the view shifts between frames),
+  lives 70 s; the hurricane's swirl stands on the ground at the cast point and turns, 79 s; the meteor storm's
+  meteors fall with trails, burst into fire and leave craters, killing citizens (27 s); the volcano rises, erupts
+  (smoke column, lava bombs, fires, craters) and destroyed the town centre in the first run ("You have been
+  Defeated!"), after which the physics stopped and a calamity cast later never aged: the driver now fails a calamity
+  that does not age, and the volcano goes last. A calamity cast into unexplored ground is not drawn (run 2's meteor
+  storm 8 tiles east: no meteor on screen, though it lived 29 s). Runs: build/fixture_game/cast1 (earthquake,
+  hurricane, volcano; meteor never aged), cast2 (all four, offset 8), cast3 (meteor and volcano, offset 3).
+- **Coverage.** AEFX at seed 2 saw healing, morale, both immunities, morale from buildings and cloaking (the
+  calamity profile's cloaking calamity) with their modifiers and Covers; the morale from military heroes and the
+  economy from units appear in no profile's game: their strength, level and modifier bodies are unit-tested only.
+- **Tests.** area_effect_tests.rs 9, area_effect_save.rs 3 (ee_tech 110 in all).
+- **Gates.** Commit 1 (on the unmodified code): build `--sim` 0/0, the four profiles' captures at seeds 2-3 PASS
+  with every other tag equal (AETP/AEFX recorded). Commit 2: build `--sim` 0/0; captures at seeds 2-3: oracle (175
+  digests), calamity (193), late (176), space (177) PASS; oracle 2-3 identical. Commit 3: the same four captures PASS
+  (AEFX holds the save bytes), oracle 2-3 identical, the saveload `oracle,calamity` 4/4 each with `--expect` PASS;
+  ee_tech tests 110, clippy and rustfmt clean. Commit 4: the test profile 0/0, the harness self test ALL PASS (a first
+  run under load failed the fixture's zoom key-out check once: 0.9 -> 0.9; passed on the rerun), the cast tours
+  above. Merged with `rust` fffdedf4 (no conflict; headers current, no include to narrow): build `--sim` 0/0; the
+  test profile 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle (175 digests), late (176),
+  space (177), calamity (193), scenario (22) PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4,
+  highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS;
+  the cast tour on the merged test profile (build/fixture_game/castm: earthquake, hurricane, meteor storm, volcano,
+  offset 3) PASS, every calamity drawn, no GX error.
+- **Not moved** (docs/progress/r5b-calamities.md): the contagion helper's unit list as ids (the round's third item:
+  not started), the area effects' owner unit and the units' two lists (C++ pointers), the tick's unit functor
+  passes, `CollectEffects` and `FindEffect` (C++ loops over C++ lists).
+- **Other lanes' files**: `EECPResourceCenter.cpp` (AI Thread): the two `dynamic_cast<EEAEMoraleFromBuildings*>` as
+  kind tests, one line each, and its include; `EETestFixture.cpp` and the harness drivers (the cast command).
