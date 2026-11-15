@@ -5140,6 +5140,36 @@ enum class EeWonPrefsText {
   LastRoomName = 3,
 };
 
+/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
+enum class EeWonCoreObject {
+  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
+  Op = 0,
+  /// a `SocketOp*`'s [`EeWonSocketOp`]
+  SocketOp = 1,
+  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
+  Socket = 2,
+  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
+  Queue = 3,
+  /// a `UDPManager*`'s [`EeWonUdpManager`]
+  UdpManager = 4,
+  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
+  UdpRecv = 5,
+  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
+  UdpSendRecv = 6,
+};
+
+/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
+enum class EeWonCoreSocketOp {
+  /// `new CloseOp(socket)`
+  Close = 0,
+  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
+  QueueClose = 1,
+  /// `new RecvBytesFromOp(size, socket)`
+  RecvFrom = 2,
+  /// `new SendBytesToOp(bytes, addr, socket)`
+  SendTo = 3,
+};
+
 /// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
 enum class EeWonResKind {
   String = 0,
@@ -8331,51 +8361,47 @@ struct EeWonPrefsEvent {
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
 
+/// A C++ call on one object.
+using EeWonCoreFn = void(*)(void *object);
+
+/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
+/// object holds no reference yet.
+struct EeWonCoreHooks {
+  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
+  EeWonCoreFn ref_add;
+  EeWonCoreFn ref_release;
+  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
+  void (*completion_call)(void *completion, void *op);
+  /// the object's Rust object of that kind (null for a null object)
+  void *(*object_of)(void *object, EeWonCoreObject kind);
+  /// a socket op's virtual `Duplicate()` (a new op, or null)
+  void *(*socketop_duplicate)(void *op);
+  /// `new AsyncOp`
+  void *(*new_op)();
+  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
+  void *(*new_completion)(EeWonCompletion *body);
+  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
+  void *(*new_socket_op)(EeWonCoreSocketOp kind,
+                         void *socket,
+                         void *bytes,
+                         const EeWonIpAddr *addr,
+                         uint16_t size);
+  /// `new QueueSocket(type)`
+  void *(*new_queue_socket)(int32_t kind);
+  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
+  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
+  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
+  void *udp_response_check;
+  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
+  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
+  /// a `ByteBuffer`'s bytes (its `mBytes`)
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+};
+
 /// A C++ call on one object (an op, a completion or the socket).
 using EeWonQueueFn = void(*)(void *object);
-
-/// A C++ call making a new object (its reference not yet taken).
-using EeWonQueueNewFn = void*(*)(void *socket);
-
-/// What the queue object calls back in the C++. One static table serves every queue socket.
-struct EeWonQueueSocketHooks {
-  /// `completion->AddRef()`, `->Release()`, `->Complete(op)`
-  EeWonQueueFn completion_add_ref;
-  EeWonQueueFn completion_release;
-  void (*completion_call)(void *completion, void *op);
-  /// `op->AddRef()`, `->Release()` (any `AsyncOp*`)
-  EeWonQueueFn op_add_ref;
-  EeWonQueueFn op_release;
-  /// `op->GetStatus()`, `->IsKilled()`, `->GetTimeout()`, `->GetCompletion()`
-  long (*op_status)(void *op);
-  bool (*op_killed)(void *op);
-  uint32_t (*op_timeout)(void *op);
-  void *(*op_completion)(void *op);
-  /// `op->SetCompletion(c)`, `->SetTimeout(t)`, `->RunAsync(t)`, `->Kill(true)`, `->ForceFinish(s)`,
-  /// `->SetRunAsyncImmediately(false)`
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_set_timeout)(void *op, uint32_t timeout);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonQueueFn op_kill;
-  void (*op_force_finish)(void *op, long status);
-  /// a socket op's `SetSocket(socket)` and the virtual `Duplicate()` (a new op, or null)
-  void (*op_set_socket)(void *op, void *socket);
-  void *(*op_duplicate)(void *op);
-  /// `dynamic_cast<QueueOpFastCompletion*>(completion)`'s original completion, or null
-  void *(*fast_original)(void *completion);
-  /// new objects: `ParamCompletion(StaticOpCallback, socket)`, `QueueOpFastCompletion(StaticOpCallback,
-  /// socket, original)`, a close timer (`AsyncOp` with `ParamCompletion(StaticCloseTimerCallback, socket)`),
-  /// `QueueCloseOp`, `CloseOp(socket)`
-  EeWonQueueNewFn new_op_completion;
-  void *(*new_fast_completion)(void *socket, void *original);
-  EeWonQueueNewFn new_close_timer;
-  EeWonQueueNewFn new_queue_close_op;
-  EeWonQueueNewFn new_close_op;
-  /// the socket's `Close()`, `IsValid()`, `GetType() == UDP`
-  EeWonQueueFn socket_close;
-  bool (*socket_valid)(void *socket);
-  bool (*socket_datagram)(void *socket);
-};
 
 /// What a LAN socket object calls back: the client's references and its back link (`client->mSocket = socket`).
 struct EeWonLanSocketHooks {
@@ -8925,78 +8951,6 @@ struct EeWonTitleFlags {
   bool save_session_key;
   bool get_key_id;
   bool ascii_account_names;
-};
-
-/// A C++ call on one object.
-using EeWonUdpFn = void(*)(void *object);
-
-/// What the manager calls back in the C++. One static table serves every manager.
-struct EeWonUdpHooks {
-  /// any object's `AddRef()` / `Release()` (`RefCount*`)
-  EeWonUdpFn ref_add;
-  EeWonUdpFn ref_release;
-  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
-  /// `ForceFinish(s)`, `TimeLeft()`
-  long (*op_status)(void *op);
-  void *(*op_completion)(void *op);
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonUdpFn op_kill;
-  void (*op_finish)(void *op, long status);
-  void (*op_force_finish)(void *op, long status);
-  uint32_t (*op_time_left)(void *op);
-  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
-  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  EeWonIpAddr *(*recv_address)(void *op);
-  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
-  void (*recv_set_msg)(void *op, void *bytes);
-  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
-  void *(*new_recv_op)(const EeWonIpAddr *addr);
-  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
-  void *(*socket_new)();
-  EeWonUdpFn socket_kill;
-  void (*socket_set_broadcast)(void *socket, bool on);
-  long (*socket_bind)(void *socket, int32_t port);
-  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
-  /// `SetRepeatOp(new RecvBytesFromOp(size))`
-  void (*socket_repeat)(void *socket, void *manager, int32_t size);
-  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
-  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
-};
-
-/// A C++ call on one object.
-using EeWonUdpOpFn = void(*)(void *object);
-
-/// What the ops call back in the C++. One static table serves every op.
-struct EeWonUdpOpHooks {
-  /// any object's `AddRef()` / `Release()` (`RefCount*`)
-  EeWonUdpOpFn ref_add;
-  EeWonUdpOpFn ref_release;
-  /// an op's `GetMode()`, `GetTimeout()`, `GetStatus()`, `Finish(s)`, `RunAsync(t)`, `Kill(true)`
-  int32_t (*op_mode)(void *op);
-  long (*op_timeout)(void *op);
-  long (*op_status)(void *op);
-  void (*op_finish)(void *op, long status);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonUdpOpFn op_kill;
-  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `new QueueSocket(UDP)` bound to any port (`Fn2B0D90(0, false)`), a reference taken; a socket's `Kill()`
-  void *(*socket_new_bound)();
-  EeWonUdpOpFn socket_kill;
-  /// `QueueRecv`'s op: `QueueOp(new RecvBytesFromOp(1024)` completing to the receive op's `StaticRecvCallback`, `-1)`
-  void (*socket_queue_recv)(void *socket, void *op);
-  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
-  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
-  /// a manager's `QueueOp(op, timeout)` and `Send(bytes, addr)`
-  void (*manager_queue)(void *manager, void *op, uint32_t timeout);
-  void (*manager_send)(void *manager, void *bytes, const EeWonIpAddr *addr);
-  /// the reply wait: `new UDPManagerRecvOp(addr)` completing to the request op's `StaticRecvCallback`, its check the
-  /// request's `StaticCheckResponse`; a reference taken
-  void *(*new_wait)(void *request, const EeWonIpAddr *addr);
-  /// a receive op's Rust object
-  const EeWonUdpRecvOp *(*recv_object)(void *op);
 };
 
 /// One entry, to the C++ copy.
@@ -15122,12 +15076,13 @@ void ee_won_lobbyprefs_after_global_save(EeWonLobbyPrefs *p);
 /// `p` is live.
 void ee_won_lobbyprefs_after_user_load(EeWonLobbyPrefs *p);
 
-/// A new queue object for the C++ `socket` (the hooks get it), on the socket's lock `lock`.
+/// A new queue object for the C++ `socket`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `core` is the library's static table; `socket` and `lock` outlive the object.
 EeWonQueueSocket *ee_won_queuesocket_new(void *socket,
-                                         const EeWonQueueSocketHooks *hooks,
+                                         const EeWonCoreHooks *core,
                                          void *lock);
 
 /// Frees the queue object (its references go).
@@ -17113,11 +17068,13 @@ ptrdiff_t ee_won_tnode_call(const EeWonTNode *node,
                             ptrdiff_t b,
                             ptrdiff_t c);
 
-/// A new manager object for the C++ `manager`.
+/// A new manager object for the C++ `manager`; its calls are answered in Rust over the library's `core` table
+/// (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `manager` outlives the object.
-EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+/// `core` is the library's static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager,
+                                       const EeWonCoreHooks *core);
 
 /// Frees the object (its references go).
 ///
@@ -17186,9 +17143,10 @@ void ee_won_udpmanager_recv(const EeWonUdpManager *m,
 /// A receive op's object (`addr` null for any sender).
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table, `addr` null or a live value.
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (the op's calls are answered in Rust over it:
+/// cppcore.rs), `addr` null or a live value.
 EeWonUdpRecvOp *ee_won_udprecvop_new(void *op,
-                                     const EeWonUdpOpHooks *hooks,
+                                     const EeWonCoreHooks *core,
                                      const EeWonIpAddr *addr);
 
 /// Frees the object, its references given back.
@@ -17293,8 +17251,8 @@ void ee_won_udprecvop_run(const EeWonUdpRecvOp *r);
 /// A request op's object.
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table.
-EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonUdpOpHooks *hooks);
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (as the receive op's).
+EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonCoreHooks *core);
 
 /// Frees the object, its references given back.
 ///

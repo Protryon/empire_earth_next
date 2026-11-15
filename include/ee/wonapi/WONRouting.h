@@ -38,6 +38,9 @@ template <class T> class CompletionBase;
 
 class AsyncOp;
 class AsyncOpContainer;
+// the library's one table of C++ calls (AsyncOp.cpp): what the Rust objects still need the C++ for (references,
+// virtual calls, the classes' news); every other call of theirs is answered in Rust (ee_won cppcore.rs)
+const EeWonCoreHooks* WonCore();
 
 // AsyncOp: 0x44 bytes in the original (ctor 29ef80, dtor 29f000, three vtable slots). A Rust object since round 13
 // (rust/crates/ee_won/src/opobj.rs EeWonAsyncOp: the run state, the lock, the completion's reference, the
@@ -379,35 +382,43 @@ public:
 
 typedef SmartPtr<CompletionBase<AsyncOpPtr> > OpCompletionBasePtr;
 
+// QueueSocket.cpp's original addresses: the constructor 2b3930, Duplicate 2b39d0, the setters 2b3bf0 / 2b3ca0, the
+// close timer 2b3d50 / 2b3ed0 / 2b4010, OpCallback 2b4220, SetRepeatOp 2b4500, RunRepeatOp 2b45b0, QueueOp 2b4740,
+// RunQueueOp 2b48b0, QueueClose 2b4a70, the hooks 2b4c00 / 2b4c10 / 2b4d40. The unit is deleted (net round 25): the
+// class is this shim, its completions (ParamCompletion over the static callbacks, QueueOpFastCompletion, the close
+// timer's) and the calls its object makes are Rust's (ee_won cppcore.rs), QueueCloseOp the core's (AsyncOp.cpp)
 class QueueSocket : public AsyncSocket {
 public:
-    void StartCloseTimer(long inTimeout); //2b3d50, StartCloseTimer
-    void CancelCloseTimer(); //2b3ed0, CancelCloseTimer
-    static void StaticCloseTimerCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam); //owning value callback
-    void CloseTimerCallback(AsyncOp* inTimer); //2b4010
-    static void StaticOpCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam); //owning value callback
-    void OpCallback(SocketOp* inOp); //2b4220
-    void RunRepeatOp(); //2b45b0, RunRepeatOp
-    void RunQueueOp(); //2b48b0, RunQueueOp
-    QueueSocket(int inType); //2b3930; fresh factory2b39d0 newa0
-    virtual ~QueueSocket(); // the Rust object (the original's was implicit, 2b3a60)
-    virtual void OpenHook();  //2b4c00, byte9c=false,ret
-    virtual void CloseHook(); //2b4c10,noargs/void, SDK CloseHook
-    virtual void KillHook();  //2b4d40,noargs/void, SDK KillHook
-    virtual AsyncSocket* Duplicate(); //2b39d0
-    void SetRepeatCompletion(CompletionBase<AsyncOpPtr>*); //2b3bf0 writes7c; repeat completion
-    void SetCloseCompletion(CompletionBase<AsyncOpPtr>*); //2b3ca0 writes80
-    void SetQueueCompletion(CompletionBase<AsyncOpPtr>*);
-    void QueueOpFast(SocketOp*,DWORD inTimeout=0xffffffff);
-    void SetRepeatOp(SocketOp*); //2b4500, repeat op84; never broad AsyncOp*
-    void QueueOp(SocketOp*,long inTimeout);  //2b4740, accesses/rebinds op54
-    void QueueClose(long inTimeout); //2b4a70, distinct from Close() 2b1b50
+    QueueSocket(int inType) : AsyncSocket(inType)
+    { this->mQueue = ee_won_queuesocket_new(static_cast<void*>(this), WonCore(), this->GetDataLock()); }
+    virtual ~QueueSocket() { ee_won_queuesocket_free(this->mQueue); } // the original's was implicit, 2b3a60
+    // the queue's state is the open, close and kill hooks' (the queued-close flag; the ops killed; the completions)
+    virtual void OpenHook() { ee_won_queuesocket_open_hook(this->mQueue); }
+    virtual void CloseHook() { ee_won_queuesocket_close_hook(this->mQueue); }
+    virtual void KillHook() { ee_won_queuesocket_kill_hook(this->mQueue); }
+    virtual AsyncSocket* Duplicate() { return new QueueSocket(this->GetType()); }
+    void StartCloseTimer(long inTimeout) { ee_won_queuesocket_start_close_timer(this->mQueue, inTimeout); }
+    void CancelCloseTimer() { ee_won_queuesocket_cancel_close_timer(this->mQueue); }
+    void RunRepeatOp() { ee_won_queuesocket_run_repeat_op(this->mQueue); }
+    void RunQueueOp() { ee_won_queuesocket_run_queue_op(this->mQueue); }
+    void SetRepeatCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_queuesocket_set_repeat_completion(this->mQueue, inCompletion); }
+    void SetCloseCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_queuesocket_set_close_completion(this->mQueue, inCompletion); }
+    void SetQueueCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+    { ee_won_queuesocket_set_queue_completion(this->mQueue, inCompletion); }
+    void QueueOpFast(SocketOp* inOp, DWORD inTimeout=0xffffffff)
+    { ee_won_queuesocket_queue_op_fast(this->mQueue, static_cast<AsyncOp*>(inOp), static_cast<uint32_t>(inTimeout)); }
+    void SetRepeatOp(SocketOp* inOp) { ee_won_queuesocket_set_repeat_op(this->mQueue, static_cast<AsyncOp*>(inOp)); }
+    void QueueOp(SocketOp* inOp, long inTimeout)
+    { ee_won_queuesocket_queue_op(this->mQueue, static_cast<AsyncOp*>(inOp), inTimeout); }
+    void QueueClose(long inTimeout) { ee_won_queuesocket_queue_close(this->mQueue, inTimeout); }
     EeWonQueueSocket* GetQueueObject() const { return this->mQueue; }
 
 private:
     // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonQueueSocket): the default, current, repeat
     // and close completions (+0x74..+0x80), the repeat and queued ops (+0x84, +0x88), the close timer (+0x8c), the
-    // op queue (+0x90) and the queued-close flag (+0x9c), each a reference held, and every step of QueueSocket.cpp
+    // op queue (+0x90) and the queued-close flag (+0x9c), each a reference held, and every step of the class
     EeWonQueueSocket* mQueue;
 };
 
@@ -458,33 +469,48 @@ public:
 
 // AoC UDP records: four slots each; the archived UDP header's extra
 // RetransmitHook is a version difference and MUST NOT be inserted here.
+// UDPManager.cpp's original addresses: UDPManagerRecvOp 2b68b0 / 2b6a10, SetMessageVerifier 2b6bf0, CheckMessage
+// 2b6c10, QueueRecv 2b6c30, RecvCallback 2b6d70 / 2b6e60, CleanupHook 2b6f60, RunHook 2b6fb0; UDPManagerSendRecvOp
+// 2b70b0, StaticCheckResponse 2b7250, SendRequest 2b7260, RunHook 2b7470, RecvCallback 2b7550 / 2b75e0, CleanupHook
+// 2b7630; UDPManager 2b76b0, Close 2b78e0, Bind 2b79c0, SetAutoRecv 2b7b40, QueueOp 2b7c50, Send 2b7ec0, CleanOps
+// 2b8000, RecvCallback 2b8230 / 2b8320. The unit is deleted (net round 25): the classes are these shims over their
+// Rust objects (udpmgr.rs, udpops.rs), whose calls back (the ops, sockets, completions) are Rust's (cppcore.rs)
+// but the virtual message checks
+class UDPManager;
 // A Rust object since round 16 (rust/crates/ee_won/src/udpops.rs EeWonUdpRecvOp: the socket +0x44, the manager
 // +0x48, the own-socket flag +0x4c, the address +0x50, the datagram +0x78, the check +0x7c and its context +0x80, and
 // RunHook, CleanupHook, QueueRecv and RecvCallback); the class is a shim the lobby subclasses
-class UDPManager;
 class UDPManagerRecvOp : public AsyncOp {
 public:
-    UDPManagerRecvOp(); //2b68b0, default, 91 bytes
-    UDPManagerRecvOp(const IPAddr&); //2b6a10
-    virtual ~UDPManagerRecvOp(); // the original's was implicit (2b6930)
-    bool HasVerifier();
+    UDPManagerRecvOp() : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), NULL)) {}
+    UDPManagerRecvOp(const IPAddr& inAddress)
+        : mUdp(ee_won_udprecvop_new(static_cast<RefCount*>(this), WonCore(), inAddress.GetValue())) {}
+    virtual ~UDPManagerRecvOp() { ee_won_udprecvop_free(this->mUdp); } // the original's was implicit (2b6930)
+    bool HasVerifier() { return ee_won_udprecvop_verifier(this->mUdp) != NULL; }
     void SetUDPManager(UDPManager* theManager);
-    void SetSocket(QueueSocket* theSocket);
-    IPAddr GetFromAddr() const; // a copy (the original returned a reference to the member)
-    void SetFromAddr(const IPAddr& theAddr);
-    const ByteBuffer* GetMsg() const;
-    void SetMsg(const ByteBuffer* theMsg);
-    QueueSocket* GetSocket() const;
+    void SetSocket(QueueSocket* theSocket) { ee_won_udprecvop_set_socket(this->mUdp, static_cast<RefCount*>(theSocket)); }
+    // a copy (the original returned a reference to the member)
+    IPAddr GetFromAddr() const { return IPAddr::FromValue(ee_won_udprecvop_address(this->mUdp)); }
+    void SetFromAddr(const IPAddr& theAddr) { ee_won_udprecvop_set_address(this->mUdp, theAddr.GetValue()); }
+    const ByteBuffer* GetMsg() const
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_udprecvop_msg(this->mUdp))); }
+    void SetMsg(const ByteBuffer* theMsg)
+    { ee_won_udprecvop_set_msg(this->mUdp, const_cast<RefCount*>(static_cast<const RefCount*>(theMsg))); }
+    QueueSocket* GetSocket() const
+    { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udprecvop_socket(this->mUdp)))); }
     UDPManager* GetUDPManager() const;
     EeWonUdpRecvOp* GetUdpObject() const { return this->mUdp; }
-    virtual void RunHook();   //2b6fb0
-    virtual void CleanupHook(); //2b6f60
-    virtual WONStatus CheckMessage(ReadBuffer&); //2b6c10, new slot 0c
+    virtual void RunHook() { ee_won_udprecvop_run(this->mUdp); }
+    virtual void CleanupHook() { ee_won_udprecvop_cleanup(this->mUdp); }
     typedef WONStatus (*MessageVerifier)(ReadBuffer&, void*);
-    void SetMessageVerifier(MessageVerifier,void*); //2b6bf0
-    void QueueRecv(); //2b6c30
-    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b6d70, owning values
-    void RecvCallback(RecvBytesFromOp*); //2b6e60
+    // whether a datagram answers this op (WS_None = no): the check, or any without one
+    virtual WONStatus CheckMessage(ReadBuffer& inMessage) //2b6c10, new slot 0c
+    {
+        MessageVerifier aVerifier = reinterpret_cast<MessageVerifier>(ee_won_udprecvop_verifier(this->mUdp));
+        return aVerifier ? aVerifier(inMessage, ee_won_udprecvop_verifier_context(this->mUdp)) : 0;
+    }
+    void SetMessageVerifier(MessageVerifier inVerifier, void* inContext)
+    { ee_won_udprecvop_set_verifier(this->mUdp, reinterpret_cast<void*>(inVerifier), inContext); }
 private:
     UDPManagerRecvOp(const UDPManagerRecvOp&);
     UDPManagerRecvOp& operator=(const UDPManagerRecvOp&);
@@ -496,28 +522,34 @@ private:
 // and RunHook, CleanupHook, SendRequest and RecvCallback); the class is a shim the lobby subclasses
 class UDPManagerSendRecvOp : public AsyncOp {
 public:
-    static WONStatus StaticCheckResponse(ReadBuffer&,void*); //2b7250
-    void SendRequest(); //2b7260
-    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b7550, owning values
-    void RecvCallback(AsyncOp*); //2b75e0
-
-    UDPManagerSendRecvOp(); //2b70b0
-    virtual ~UDPManagerSendRecvOp(); // the original's was implicit (2b7140)
+    // the reply wait's check: the request's virtual CheckResponse (cppcore.rs gives a wait this function)
+    static WONStatus StaticCheckResponse(ReadBuffer& inMessage, void* inParam)
+    { return static_cast<UDPManagerSendRecvOp*>(inParam)->CheckResponse(inMessage); }
+    UDPManagerSendRecvOp() : mUdp(ee_won_udpsendrecvop_new(static_cast<RefCount*>(this), WonCore())) {}
+    virtual ~UDPManagerSendRecvOp() { ee_won_udpsendrecvop_free(this->mUdp); } // the original's was implicit (2b7140)
     void SetUDPManager(UDPManager* theManager);
-    void SetMsgTimeout(DWORD theTimeout);
-    void SetNumRetransmits(int theNum);
-    void SetDestAddr(const IPAddr& theAddr);
-    IPAddr GetDestAddr() const; // a copy (the original returned a reference)
-    void SetOutgoing(const ByteBuffer* theMsg); // the request datagram
-    const ByteBuffer* GetOutgoing() const;
-    QueueSocket* GetSocket() const; // the op's own socket (none with a manager)
-    UDPManagerRecvOp* GetRecvOp() const; // the reply wait
-    int GetAttemptCount() const;
-    int GetNumRetransmits() const;
-    unsigned long GetMsgTimeout() const;
-    virtual void RunHook();   //2b7470
-    virtual void CleanupHook(); //2b7630
-    virtual WONStatus CheckResponse(ReadBuffer&); //2ad870, returns status 0 by default (ret4)
+    void SetMsgTimeout(DWORD theTimeout) { ee_won_udpsendrecvop_set_timeout(this->mUdp, static_cast<uint32_t>(theTimeout)); }
+    void SetNumRetransmits(int theNum) { ee_won_udpsendrecvop_set_retry_limit(this->mUdp, theNum); }
+    void SetDestAddr(const IPAddr& theAddr) { ee_won_udpsendrecvop_set_address(this->mUdp, theAddr.GetValue()); }
+    IPAddr GetDestAddr() const { return IPAddr::FromValue(ee_won_udpsendrecvop_address(this->mUdp)); } // a copy
+    // the request datagram
+    void SetOutgoing(const ByteBuffer* theMsg)
+    { ee_won_udpsendrecvop_set_outgoing(this->mUdp, const_cast<RefCount*>(static_cast<const RefCount*>(theMsg))); }
+    const ByteBuffer* GetOutgoing() const
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_udpsendrecvop_outgoing(this->mUdp))); }
+    // the op's own socket (none with a manager)
+    QueueSocket* GetSocket() const
+    { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udpsendrecvop_socket(this->mUdp)))); }
+    // the reply wait
+    UDPManagerRecvOp* GetRecvOp() const
+    { return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(ee_won_udpsendrecvop_recv_op(this->mUdp)))); }
+    int GetAttemptCount() const { return ee_won_udpsendrecvop_attempts(this->mUdp); }
+    int GetNumRetransmits() const { return ee_won_udpsendrecvop_retry_limit(this->mUdp); }
+    unsigned long GetMsgTimeout() const { return ee_won_udpsendrecvop_timeout(this->mUdp); }
+    virtual void RunHook() { ee_won_udpsendrecvop_run(this->mUdp); }
+    virtual void CleanupHook() { ee_won_udpsendrecvop_cleanup(this->mUdp); }
+    virtual WONStatus CheckResponse(ReadBuffer&) { return 0; } //2ad870: any response (folded with others)
+    EeWonUdpSendRecvOp* GetUdpObject() const { return this->mUdp; }
 private:
     UDPManagerSendRecvOp(const UDPManagerSendRecvOp&);
     UDPManagerSendRecvOp& operator=(const UDPManagerSendRecvOp&);
@@ -530,24 +562,34 @@ private:
 // erases 0x2b8160/0x2b81b0 and RecvCallback's dispatch). The original's mAutoRecv (+0x38) was never read: gone
 class UDPManager : public RefCount {
 public:
-    WONStatus Bind(int,bool);     //2b79c0, signed int port as in the SDK
-    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b8230, owning values
-    void RecvCallback(RecvBytesFromOp*); //2b8320, receive callback
-
-    UDPManager(); //2b76b0
-    virtual ~UDPManager(); //2b77b0
-    void SetDefaultCompletion(CompletionBase<AsyncOpPtr>* theCompletion);
-    void Send(const ByteBuffer*, const IPAddr&); //2b7ec0, void/ret8 (provisional name; the SDK has SendBytesTo)
-    void Close(); //2b78e0
-    void SetAutoRecv(bool); //2b7b40
-    void QueueOp(UDPManagerRecvOp*,unsigned long); //2b7c50
-    void CleanOps(); //2b8000
-    QueueSocket* GetSocket() const; // the socket (NULL when unbound)
+    UDPManager() : mManager(ee_won_udpmanager_new(static_cast<void*>(this), WonCore())) {}
+    virtual ~UDPManager() { ee_won_udpmanager_free(this->mManager); } // closes nothing (the original's 2b77b0)
+    // rebinds to a local port (optionally broadcast) and receives datagrams repeatedly
+    WONStatus Bind(int inPort, bool inBroadcast) { return ee_won_udpmanager_bind(this->mManager, inPort, inBroadcast); }
+    void SetDefaultCompletion(CompletionBase<AsyncOpPtr>* theCompletion)
+    { ee_won_udpmanager_set_default_completion(this->mManager, static_cast<RefCount*>(theCompletion)); }
+    void Send(const ByteBuffer* inData, const IPAddr& inAddress) // provisional name (the SDK has SendBytesTo)
+    { ee_won_udpmanager_send(this->mManager, const_cast<RefCount*>(static_cast<const RefCount*>(inData)), inAddress.GetValue()); }
+    void Close() { ee_won_udpmanager_close(this->mManager); }
+    void SetAutoRecv(bool inAutoRecv) { ee_won_udpmanager_set_auto_recv(this->mManager, inAutoRecv); }
+    void QueueOp(UDPManagerRecvOp* inOp, unsigned long inTimeout)
+    { ee_won_udpmanager_queue_op(this->mManager, static_cast<RefCount*>(inOp), static_cast<uint32_t>(inTimeout)); }
+    void CleanOps() { ee_won_udpmanager_clean_ops(this->mManager); }
+    // the socket (NULL when unbound)
+    QueueSocket* GetSocket() const
+    { return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_udpmanager_socket(this->mManager)))); }
+    EeWonUdpManager* GetManagerObject() const { return this->mManager; }
 private:
     UDPManager(const UDPManager&);
     UDPManager& operator=(const UDPManager&);
     EeWonUdpManager* mManager;
 };
+inline void UDPManagerRecvOp::SetUDPManager(UDPManager* theManager)
+{ ee_won_udprecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+inline UDPManager* UDPManagerRecvOp::GetUDPManager() const
+{ return static_cast<UDPManager*>(static_cast<RefCount*>(ee_won_udprecvop_manager(this->mUdp))); }
+inline void UDPManagerSendRecvOp::SetUDPManager(UDPManager* theManager)
+{ ee_won_udpsendrecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
 
 
 // a completion calling a member of T (RTTI LobbyCompletion<T> > LobbyCompletionBase > CompletionBase<AsyncOpPtr>;

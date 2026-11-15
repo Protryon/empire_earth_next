@@ -57,6 +57,84 @@ static const EeWonAsyncOpHooks kAsyncOpHooks={HookRun,HookCleanup,HookCoreQueue,
                                              HookNewCompletion,HookCallback};
 const EeWonAsyncOpHooks* AsyncOpHooks() { return &kAsyncOpHooks; }
 
+// ---- the library's core table (ee_won cppcore.rs): what the Rust objects' own calls still need the C++ for. The
+// queue socket's queued close: a socket op without a socket whose Continue succeeds (0x5c bytes, RTTI 44caac)
+class QueueCloseOp : public SocketOp {
+public:
+    QueueCloseOp() : SocketOp(NULL) {}
+    virtual WONStatus Continue() { return WS_Success; }
+};
+static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
+{
+    RefCount* anObject=static_cast<RefCount*>(inObject);
+    switch(inKind) {
+    case EeWonCoreObject::Op: return static_cast<AsyncOp*>(anObject)->GetOpObject();
+    case EeWonCoreObject::SocketOp: return static_cast<SocketOp*>(static_cast<AsyncOp*>(anObject))->GetSocketOpObject();
+    case EeWonCoreObject::Socket: return static_cast<AsyncSocket*>(anObject)->GetSocketObject();
+    case EeWonCoreObject::Queue: return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(anObject))->GetQueueObject();
+    case EeWonCoreObject::UdpManager: return static_cast<UDPManager*>(anObject)->GetManagerObject();
+    case EeWonCoreObject::UdpRecv:
+        return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
+    case EeWonCoreObject::UdpSendRecv:
+        return static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
+    }
+    return NULL;
+}
+static void* CoreSocketOpDuplicate(void* inOp)
+{
+    return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Duplicate();
+}
+static void* CoreNewOp() { return static_cast<RefCount*>(new AsyncOp); }
+static void* CoreNewSocketOp(EeWonCoreSocketOp inKind,void* inSocket,void* inBytes,const EeWonIpAddr* inAddr,
+                             uint16_t inSize)
+{
+    AsyncSocket* aSocket=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket));
+    SocketOp* anOp=NULL;
+    switch(inKind) {
+    case EeWonCoreSocketOp::Close: anOp=new CloseOp(aSocket); break;
+    case EeWonCoreSocketOp::QueueClose: anOp=new QueueCloseOp; anOp->SetRunAsyncImmediately(false); break;
+    case EeWonCoreSocketOp::RecvFrom: anOp=new RecvBytesFromOp(inSize,aSocket); break;
+    case EeWonCoreSocketOp::SendTo:
+        anOp=new SendBytesToOp(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),
+                               IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket);
+        break;
+    }
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+}
+static void* CoreNewQueueSocket(int32_t inType) { return static_cast<RefCount*>(new QueueSocket(inType)); }
+static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr)
+{
+    UDPManagerRecvOp* anOp=inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)))
+                                        : new UDPManagerRecvOp;
+    return static_cast<RefCount*>(anOp);
+}
+static long CoreUdpCheck(void* inOp,const uint8_t* inData,size_t inLength,bool* outThrew)
+{
+    *outThrew=false;
+    try {
+        ReadBuffer aMessage(inData,static_cast<unsigned long>(inLength));
+        return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->CheckMessage(aMessage);
+    }
+    catch(ReadBufferException&) {
+        *outThrew=true;
+        return 0;
+    }
+}
+static long CoreBindLocal(void* inSocket,uint16_t inPort,bool inReuse)
+{
+    return static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket))->Fn2B0D90(inPort,inReuse);
+}
+static const EeWonByteBuffer* CoreBytesOf(void* inBuffer)
+{
+    return static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBuffer))->mBytes;
+}
+static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletionCall,CoreObjectOf,
+                                        CoreSocketOpDuplicate,CoreNewOp,HookNewCompletion,CoreNewSocketOp,
+                                        CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
+                                        reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
+                                        CoreBindLocal,CoreBytesOf};
+const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
+
 // FUNCTION: WON 0x0069ef80
 // Creates an idle op with an infinite timeout, async run mode and no container or timer entry
 AsyncOp::AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),&kAsyncOpHooks); }

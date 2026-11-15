@@ -22,10 +22,8 @@
 2b0340 2b1bcc WONSocket/AsyncSocket.cpp
 2b09a0 2b0a27 WONSocket/AsyncSocketInternet.cpp
 2b2350 2b38d3 WONSocket/IPAddr.cpp
-2b3930 2b4dd9 WONSocket/QueueSocket.cpp
 2b6070 2b60b4 WONSocket/SocketRunHooks.cpp
 2b60d0 2b68ac WONSocket/SocketThread.cpp
-2b68b0 2b870a WONSocket/UDPManager.cpp
 2ba050 2bfa0f WONRouting/RoutingConnection.cpp
 2bcd30 2c7d36 WONRouting/RoutingOp.cpp
 2bfb00 2c4165 WONRouting/SmartRoutingConnection.cpp

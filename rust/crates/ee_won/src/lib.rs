@@ -27,6 +27,7 @@ pub mod chatobj;
 pub mod comboobj;
 pub mod config;
 pub mod configobj;
+pub mod cppcore;
 pub mod crc16;
 pub mod ctobj;
 pub mod db;

@@ -382,10 +382,9 @@ WON_TESTS = {
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
     "won_ops_test": [*[WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
                                                          "AsyncSocketInternet.cpp", "IPAddr.cpp",
-                                                         "BlockingSocket.cpp", "QueueSocket.cpp", "SocketOps.cpp",
+                                                         "BlockingSocket.cpp", "SocketOps.cpp",
                                                          "SocketRunHooks.cpp", "SocketOpsAccessors.cpp",
-                                                         "SocketThread.cpp", "UDPManager.cpp",
-                                                         "UDPManagerDefaults.cpp")],
+                                                         "SocketThread.cpp")],
                      *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
                                                           "AsyncOpWithTracker.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
