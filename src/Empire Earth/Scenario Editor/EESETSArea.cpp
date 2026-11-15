@@ -283,6 +283,15 @@ bool EESETSArea::GetCenter(GE2DPoint& outCenter)
     return theResult;
 }
 
+// the screen's state (the editor gate; no original address)
+void EESETSArea::GetState(GERectangle& outRectangle, GE2DPoint& outPoint, unsigned long& outFlags) const
+{
+    outRectangle = this->mRectangle;
+    outPoint = this->mPoint;
+    outFlags = (this->mRectangleMode ? 1 : 0) | (this->mHasRectangle ? 2 : 0) | (this->mHasPoint ? 4 : 0) |
+               (this->mPaintAction != NULL ? 8 : 0);
+}
+
 // FUNCTION: EXE 0x57d3e6
 // Returns the names of the scenario's user areas
 void EESETSArea::GetNames(std::vector<UWideString>& outNames)

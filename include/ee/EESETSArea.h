@@ -38,6 +38,9 @@ public:
     // false if there is none (EESEECenterCameraOnArea)
     bool GetCenter(GE2DPoint& outCenter);
     void SetAreaMode(bool inRectangle);     // 0x17d5c5 (stores +0x34; EESEEAreaCheck passes selection == 0)
+    // the screen's state (the editor gate's areastate): the painted rectangle, the anchor point, the flags 1 rectangle
+    // mode, 2 a rectangle, 4 a point, 8 a rectangle being painted
+    void GetState(GERectangle& outRectangle, GE2DPoint& outPoint, unsigned long& outFlags) const;
 
     GERectangle mRectangle;                 // +0x0c the painted rectangle
     GE2DPoint mPoint;                       // +0x1c the anchor tile
