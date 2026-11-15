@@ -277,7 +277,7 @@ end
 
 -- FindBuildSite(settlement): rings 2 .. the drop-off distance round the centre's middle, with a margin
 local function centre_settlement_site(memory, c)
-    local x, y = ai.find_site(C.settlement, c.x, c.y, {min = 2, max = math.min(30, radius(memory) - 1), margin = true})
+    local x, y = R.find_site(C.settlement, c.x, c.y, {min = 2, max = math.min(30, radius(memory) - 1), margin = true})
     return x, y
 end
 
@@ -291,7 +291,7 @@ local function centre_production_site(view, memory, c, class)
     if cx == nil then
         return nil
     end
-    return ai.find_site(class, cx, cy, {min = 2, max = math.min(30, radius(memory) + 5), far = true, margin = true})
+    return R.find_site(class, cx, cy, {min = 2, max = math.min(30, radius(memory) + 5), far = true, margin = true})
 end
 
 -- the own towers of the epoch's class within a squared distance of a tile (HasTowerNear)
@@ -320,7 +320,7 @@ local function centre_tower_site(view, memory, c, class)
         local u = R.unit(id)
         if u ~= nil and (u.kind == "gold" or u.kind == "iron" or (u.kind == "food" and c.active)) then
             for ring = 2, range - 1 do
-                local x, y = ai.find_site(class, u.x, u.y, {min = ring, max = ring, margin = true})
+                local x, y = R.find_site(class, u.x, u.y, {min = ring, max = ring, margin = true})
                 if x ~= nil and not M.tower_near(view, x, y, spacing * spacing) and not R.enemy_near(x, y) then
                     return x, y
                 end
@@ -372,7 +372,7 @@ local function coast_tower_site(view, memory, class)
     for _, d in ipairs(towns_nearest_first(view)) do
         for _, st in ipairs(ai.water_sites(d.x, d.y, {max = 24})) do
             if not M.tower_near(view, st[1], st[2], reach2) then
-                local x, y = ai.find_site(class, st[1], st[2], {min = 1, max = 2})
+                local x, y = R.find_site(class, st[1], st[2], {min = 1, max = 2})
                 if x ~= nil then
                     return x, y
                 end
@@ -407,7 +407,7 @@ local function gate_tower_site(view, memory, class)
     end)
     for _, g in ipairs(gates) do
         if not M.tower_near(view, g.x, g.y, reach2) then
-            local x, y = ai.find_site(class, g.x, g.y, {min = 3, max = 5})
+            local x, y = R.find_site(class, g.x, g.y, {min = 3, max = 5})
             if x ~= nil then
                 return x, y
             end
@@ -426,7 +426,7 @@ local function choke_tower_site(view, memory, class)
     for _, d in ipairs(towns_nearest_first(view)) do
         local cx, cy = ai.choke_point(d.x, d.y, 1, 0, 1)
         if cx ~= nil and d2(cx, cy, d.x, d.y) < 50 and not M.tower_near(view, cx, cy, 4 * range * range) then
-            local x, y = ai.find_site(class, cx, cy, {min = 0, max = 3})
+            local x, y = R.find_site(class, cx, cy, {min = 0, max = 3})
             if x ~= nil then
                 return x, y
             end
@@ -490,7 +490,7 @@ local function find_granary_site(view, memory)
         nearest_home_first(view, list)
     end
     for _, c in ipairs(list) do
-        local x, y = ai.find_site(C.granary, c.x, c.y, {min = r + 1, max = math.min(30, r + 29), margin = true})
+        local x, y = R.find_site(C.granary, c.x, c.y, {min = r + 1, max = math.min(30, r + 29), margin = true})
         if x ~= nil and (not claim or tx == nil or d2(x, y, tx, ty) <= R.claim_range(memory) * R.claim_range(memory)) then
             return x, y
         end
@@ -521,7 +521,7 @@ local function find_center_site(view, memory, class)
     end
     nearest_home_first(view, list)
     for _, c in ipairs(list) do
-        local x, y = ai.find_site(class, c.x, c.y, {min = 2, max = math.min(30, radius(memory) + 5), margin = true})
+        local x, y = R.find_site(class, c.x, c.y, {min = 2, max = math.min(30, radius(memory) + 5), margin = true})
         if x ~= nil then
             return x, y
         end
@@ -548,7 +548,7 @@ local function find_production_site(view, memory, class)
     -- (the town centre's own centre when no centre has a drop site yet)
     local tx, ty = R.town(view)
     if tx ~= nil then
-        return ai.find_site(class, tx, ty, {min = 2, max = math.min(30, radius(memory) + 5), far = true, margin = true})
+        return R.find_site(class, tx, ty, {min = 2, max = math.min(30, radius(memory) + 5), far = true, margin = true})
     end
     return nil
 end
@@ -615,7 +615,7 @@ end
 -- the house site (EECPResourceCenter::FindBuildSite(house) through QueueMoraleBuilding): next to the centre's drop
 -- site within its morale radius. DEVIATION: the morale effect's area is approximated by 8 tiles round the drop site
 function M.house_site(memory, d)
-    return ai.find_site(C.house, d.x, d.y, {min = d.size // 2 + 2, max = 8, margin = true})
+    return R.find_site(C.house, d.x, d.y, {min = d.size // 2 + 2, max = 8, margin = true})
 end
 
 -- FindSite
@@ -646,7 +646,7 @@ function M.find_site(view, memory, class)
     if tx == nil then
         return nil
     end
-    return ai.find_site(class, tx, ty, {min = 3, max = 20, margin = true})
+    return R.find_site(class, tx, ty, {min = 3, max = 20, margin = true})
 end
 
 -- ---------------------------------------------------------------------------------------------------------------

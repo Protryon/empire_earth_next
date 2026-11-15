@@ -75,6 +75,29 @@ function M.memo(key, fn)
     return v
 end
 
+-- ai.find_site with a budget of FIND_SITE_MAX calls a step (each a ring search of up to 30 tiles): late in a game the
+-- build queue's centre sites tried every centre in one step, and a step passed the 2,000,000-instruction budget at
+-- 96 minutes (find_center_site). Past the budget it finds nothing this step (site_budget_spent: the callers that claim
+-- more land on no site wait), and the queue tries again at its next update
+local FIND_SITE_MAX = 6
+
+function M.find_site(class, x, y, opts)
+    local b = M.memo("find_site_budget", function()
+        return {n = 0}
+    end)
+    if b.n >= FIND_SITE_MAX then
+        b.spent = true
+        return nil
+    end
+    b.n = b.n + 1
+    return ai.find_site(class, x, y, opts)
+end
+
+function M.site_budget_spent()
+    local b = sStep.memo["find_site_budget"]
+    return b ~= nil and b.spent == true
+end
+
 -- the own gatherers sent to a resource (ai.gatherers, once a step; raised as the step sends more)
 function M.gatherers(id)
     local map = M.memo("gatherers", ai.gatherers)
@@ -455,6 +478,9 @@ end
 
 function M.claim_expand(view, memory)
     local rm = M.state(memory)
+    if M.site_budget_spent() then
+        return   -- (no site only because the step's find_site budget was spent)
+    end
     if rm.claim_last ~= 0 and view.time - rm.claim_last < 120000 then
         return
     end
