@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
+#include <map>
 #include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -270,6 +271,14 @@ struct SeetTechNameLess {
     bool operator()(const long& inLeft, const long& inRight) const { return SeetTechName(inLeft) < SeetTechName(inRight); }
 };
 
+}   // namespace
+
+// TEST ONLY: the alignment each label was last given through the host (the editor gate's `align`; the toolkit's label
+// keeps it without a getter)
+std::map<const void*, unsigned long> gSeetAlignments;
+
+namespace {
+
 std::vector<UWideString> sSeetNames;   // EE_SCREENS_SEET_OP_NAMES' kept names
 std::vector<long> sSeetTechs;          // EE_SCREENS_SEET_OP_TECHS' kept technologies
 
@@ -399,7 +408,10 @@ int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& 
         SeetControl(c, a, k)->SetRectangle(GERectangle(GE2DPoint(f[0], f[1]), GE2DPoint(f[2], f[3])));
         return 0;
     case EE_SCREENS_SEET_OP_LOCATION: SeetControl(c, a, k)->SetLocation(GE2DPoint(f[0], f[1])); return 0;
-    case EE_SCREENS_SEET_OP_ALIGN: c->mLabels[k]->SetAlignment((unsigned long)i[2]); return 0;
+    case EE_SCREENS_SEET_OP_ALIGN:
+        c->mLabels[k]->SetAlignment((unsigned long)i[2]);
+        gSeetAlignments[c->mLabels[k]] = (unsigned long)i[2];
+        return 0;
     case EE_SCREENS_SEET_OP_TEXT_STRING:
     case EE_SCREENS_SEET_OP_TEXT:
         if (inOp == EE_SCREENS_SEET_OP_TEXT_STRING)

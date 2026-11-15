@@ -12721,3 +12721,1236 @@ step 1270 ui e
   list1 mode=0 lines=1 '<<NONE>>'
 step 1271 tscreenstate
   tscreen screen=2 storing=0 list 3: '<Effect2_Copy>' '<Set>' 'Named_effect' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1276 tab 4
+step 1277 trigger 4
+step 1278 tscreenstate
+  tscreen screen=4 storing=0 list 0: none s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1279 areastate
+  areascreen flags=1 rect=0,0,0,0 point=0,0 center=none highlight=0 paint=35,36,41,44
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+step 1280 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11d r=329,580,578,599 m=1 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11d r=329,504,578,523 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Rectangular Area' n=3 sel=0 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11d r=329,580,578,599 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1281 tscreen new
+step 1282 tscreen new
+step 1283 tscreen new
+step 1284 tscreenstate
+  tscreen screen=4 storing=0 list 3: '<Area0>' '<Area1>' '<Area2>' selected 2 s0=0+ s1=0+ s2=0+ s3=0+ s4=2+
+step 1285 areastate
+  areascreen flags=1 rect=0,0,0,0 point=0,0 center=none highlight=0 paint=35,36,41,44
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=0 0,0,0,0 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=0 0,0 '<Area1>' ''
+  area 4 mode=0 rect=0 0,0,0,0 anchor=0 0,0 '<Area2>' ''
+step 1286 areaset 2 10 12 20 30
+step 1287 areapoint 3 7 9
+step 1288 areaset 4 5 6 15 16
+step 1289 areapoint 4 8 8
+step 1290 tscreen select 0
+step 1291 areastate
+  areascreen flags=3 rect=10,12,20,30 point=0,0 center=15.000000,21.000000 highlight=1 paint=10,12,20,30
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1292 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11 r=329,580,578,599 m=0 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11 r=329,504,578,523 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Rectangular Area' n=3 sel=0 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11 r=329,580,578,599 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1293 tscreen select 1
+step 1294 areastate
+  areascreen flags=5 rect=0,0,0,0 point=7,9 center=none highlight=0 paint=7,9,7,9
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1295 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11 r=329,580,578,599 m=1 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11 r=329,504,578,523 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Rectangular Area' n=3 sel=0 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11 r=329,580,578,599 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1296 combo 0x898 1                      # point mode
+step 1297 areastate
+  areascreen flags=4 rect=0,0,0,0 point=7,9 center=7.000000,9.000000 highlight=1 paint=7,9,7,9
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1298 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11 r=329,580,578,599 m=0 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11 r=329,504,578,523 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Continent Tile' n=3 sel=1 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11 r=329,580,578,599 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1299 combo 0x898 0                      # rectangle mode
+step 1300 areastate
+  areascreen flags=5 rect=0,0,0,0 point=7,9 center=none highlight=0 paint=7,9,7,9
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1301 tscreen select 2
+step 1302 areastate
+  areascreen flags=7 rect=5,6,15,16 point=8,8 center=10.000000,11.000000 highlight=1 paint=5,6,15,16
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1303 combo 0x898 1
+step 1304 areastate
+  areascreen flags=6 rect=5,6,15,16 point=8,8 center=8.000000,8.000000 highlight=1 paint=8,8,8,8
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1305 fire 0x89a                         # centre the camera on the area
+step 1306 areastate
+  areascreen flags=6 rect=5,6,15,16 point=8,8 center=8.000000,8.000000 highlight=1 paint=8,8,8,8
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1307 check 0x12 1                       # the UI hidden: the mode switch leaves the label and button
+step 1308 combo 0x898 0
+step 1309 areastate
+  areascreen flags=7 rect=5,6,15,16 point=8,8 center=10.000000,11.000000 highlight=1 paint=5,6,15,16
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=0 rect=1 5,6,15,16 anchor=1 8,8 '<Area2>' ''
+step 1310 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11 r=329,580,578,599 m=0 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11 r=329,504,578,523 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Rectangular Area' n=3 sel=0 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11 r=329,580,578,599 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1311 check 0x12 0
+step 1312 combo 0x898 1
+step 1313 edit 0x7db Named_area
+step 1314 edit 0x963 area_text
+step 1315 tscreen select 0                   # the third stored: its name, text, mode and anchor
+step 1316 areastate
+  areascreen flags=3 rect=10,12,20,30 point=0,0 center=15.000000,21.000000 highlight=1 paint=10,12,20,30
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=1 rect=1 5,6,15,16 anchor=1 8,8 'Named_area' 'area_text'
+step 1317 tscreen select 2
+step 1318 areastate
+  areascreen flags=6 rect=5,6,15,16 point=8,8 center=8.000000,8.000000 highlight=1 paint=8,8,8,8
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=1 rect=1 5,6,15,16 anchor=1 8,8 'Named_area' 'area_text'
+step 1319 tscreen dup
+step 1320 tscreenstate
+  tscreen screen=4 storing=0 list 4: '<Area0>' '<Area1>' 'Named_area' '<Named_area_Copy>' selected 3 s0=0+ s1=0+ s2=0+ s3=0+ s4=3+
+step 1321 areastate
+  areascreen flags=6 rect=5,6,15,16 point=8,8 center=8.000000,8.000000 highlight=1 paint=8,8,8,8
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=1 rect=1 5,6,15,16 anchor=1 8,8 'Named_area' 'area_text'
+  area 5 mode=1 rect=1 5,6,15,16 anchor=1 8,8 '<Named_area_Copy>' 'area_text'
+step 1322 tscreen up
+step 1323 tscreen down
+step 1324 tscreen sort
+step 1325 tscreenstate
+  tscreen screen=4 storing=0 list 4: '<Area0>' '<Area1>' '<Named_area_Copy>' 'Named_area' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0+
+step 1326 areastate
+  areascreen flags=3 rect=10,12,20,30 point=0,0 center=15.000000,21.000000 highlight=1 paint=10,12,20,30
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=1 10,12,20,30 anchor=0 0,0 '<Area0>' ''
+  area 3 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 4 mode=1 rect=1 5,6,15,16 anchor=1 8,8 '<Named_area_Copy>' 'area_text'
+  area 5 mode=1 rect=1 5,6,15,16 anchor=1 8,8 'Named_area' 'area_text'
+step 1327 tscreen delete
+step 1328 tscreenstate
+  tscreen screen=4 storing=0 list 3: '<Area1>' '<Named_area_Copy>' 'Named_area' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0+
+step 1329 areastate
+  areascreen flags=5 rect=0,0,0,0 point=7,9 center=none highlight=0 paint=7,9,7,9
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 3 mode=1 rect=1 5,6,15,16 anchor=1 8,8 '<Named_area_Copy>' 'area_text'
+  area 4 mode=1 rect=1 5,6,15,16 anchor=1 8,8 'Named_area' 'area_text'
+step 1330 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11 r=329,580,578,599 m=0 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11 r=329,504,578,523 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Rectangular Area' n=3 sel=0 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11 r=329,580,578,599 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1331 trigger 0
+step 1332 areastate
+  areascreen flags=5 rect=0,0,0,0 point=7,9 center=none highlight=0 paint=7,9,7,9
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 3 mode=1 rect=1 5,6,15,16 anchor=1 8,8 '<Named_area_Copy>' 'area_text'
+  area 4 mode=1 rect=1 5,6,15,16 anchor=1 8,8 'Named_area' 'area_text'
+step 1333 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11d r=329,580,578,599 m=0 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11d r=329,504,578,523 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Rectangular Area' n=3 sel=0 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11d r=329,580,578,599 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1334 trigger 4
+step 1335 areastate
+  areascreen flags=5 rect=0,0,0,0 point=7,9 center=none highlight=0 paint=7,9,7,9
+  area 0 mode=0 rect=0 0,0,0,0 anchor=1 -10000,-10000 'Off Map' ''
+  area 1 mode=0 rect=0 0,0,0,0 anchor=1 -1,-1 'Previous Location' ''
+  area 2 mode=0 rect=0 0,0,0,0 anchor=1 7,9 '<Area1>' ''
+  area 3 mode=1 rect=1 5,6,15,16 anchor=1 8,8 '<Named_area_Copy>' 'area_text'
+  area 4 mode=1 rect=1 5,6,15,16 anchor=1 8,8 'Named_area' 'area_text'
+step 1336 form 0 999 11
+  c264 UITextLabel id=0x89b ix=264 g=11 r=329,580,578,599 m=0 bg=0.4,0,0,0 b=0 h=0 fg=1,0,0 tr=1 fh=16 '' lines=1 'No Area Selected'
+  c265 UIComboBox id=0x898 ix=265 g=11 r=329,504,578,523 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select Rectangular Area' n=3 sel=0 'Select Rectangular Area'|'Select Continent Tile'|'Select Town Tile' e3=EEScreenEvent
+  c266 UIButton id=0x89a ix=266 g=11 r=329,580,578,599 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Center Camera On Area' e8=EEScreenEvent
+step 1341 tab 4
+step 1342 trigger 1
+step 1343 tscreen select 0
+step 1344 ctype 7
+step 1345 cctl text 0 typed_chat
+step 1346 enter 0x915
+step 1347 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Chat="typed chat">' n 7 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat 'typed chat'
+  condition 2 '<Player-Diplomacy Player 1>' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 a b000000 text 'condition_text' chat ''
+  condition 3 'Named_condition' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text 'condition_text' chat ''
+  condition 4 '<<<NONE>> Exists>' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1348 align c
+  align - 0 1 1 -
+step 1349 ctype 5
+step 1350 align c
+  align - 1 1 1 -
+step 1351 ctype 2
+step 1352 align c
+  align - 0 1 1 -
+step 1353 ctype 6
+step 1354 align c
+  align - 1 1 1 -
+step 1355 ctype 5
+step 1356 align c
+  align - 1 1 1 -
+step 1357 trigger 0
+step 1358 trigger 1
+step 1359 align c
+  align - 1 1 1 -
+step 1360 ui c
+  condition controls
+  label0 mode=1 'Diplomacy Condition Details'
+  label1 mode=1 'Diplomacy Towards'
+  label2 mode=1 'is'
+  label3 mode=1 'Player'
+  label4 mode=0 ''
+  slider0 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  check2 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=1 lines=2
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=1
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1361 trigger 2
+step 1362 align e
+  align - - 0 0 - 0 0 - 0 0 - 0 0
+step 1363 tscreen delete
+step 1364 tscreen delete
+step 1365 ui e
+  effect controls
+  label0 mode=1 'Object Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Object'
+  label3 mode=0 'Attribute'
+  label4 mode=0 'Set Int Value 1'
+  label5 mode=0 '0:100'
+  label6 mode=0 '0'
+  label7 mode=0 'Set Int Value 2'
+  label8 mode=0 '0:999'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:100'
+  label12 mode=0 'inf'
+  slider0 mode=0 value=0
+  slider1 mode=0 value=0
+  slider2 mode=0 value=100
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=13
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1366 align e
+  align - - 0 0 - 0 0 - 0 0 - 0 0
+step 1367 tscreen delete
+step 1368 tscreenstate
+  tscreen screen=2 storing=0 list 0: none s0=0+ s1=0+ s2=0- s3=0+ s4=0+
+step 1369 ui e
+  effect controls
+  label0 mode=0 'Object Effect'
+  label1 mode=0 'Action'
+  label2 mode=0 'Object'
+  label3 mode=0 'Attribute'
+  label4 mode=0 'Set Int Value 1'
+  label5 mode=0 '0:100'
+  label6 mode=0 '0'
+  label7 mode=0 'Set Int Value 2'
+  label8 mode=0 '0:999'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:100'
+  label12 mode=0 'inf'
+  slider0 mode=0 value=0
+  slider1 mode=0 value=0
+  slider2 mode=0 value=100
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=0 lines=13
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1370 align e
+  align - - 0 0 - 0 0 - 0 0 - 0 0
+step 1371 effectstate
+  effect 0 'Do Nothing' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 0 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+step 1374 tab 0
+step 1375 form 0 999 1
+  c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
+  c13 UITextLabel id=0x67 ix=13 g=1 r=210,616,284,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Height'
+  c14 UIComboBox id=0x6b ix=14 g=1 r=130,631,204,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c15 UIComboBox id=0x6c ix=15 g=1 r=210,631,284,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c16 UITextLabel id=0x64 ix=16 g=1 r=130,654,283,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Default Terrain'
+  c17 UITextLabel id=0x68 ix=17 g=1 r=130,654,283,664 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Type'
+  c18 UIComboBox id=0x6a ix=18 g=1 r=130,669,283,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Continental' n=12 sel=0 'Continental'|'Highlands'|'Large Islands'|'Mediterranean'|'Plains'|'Planets Earth'
+  c19 UIComboBox id=0x69 ix=19 g=1 r=130,669,283,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Grass' n=63 sel=0 'Grass'|'Grass - Patches'|'Grass - Tufts'|'Rock 2'|'Desert'|'Ice'
+  c20 UIEditBox id=0x70 ix=20 g=1 r=45,680,94,694 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c21 UITextLabel id=0x71 ix=21 g=1 r=45,680,94,694 m=0 bg=0.4,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c22 UIRBMap id=0x6e ix=22 g=1 r=25,616,124,635 m=1 bg=0,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Blank' btn fg=none
+  c23 UIRBMap id=0x6f ix=23 g=1 r=25,636,124,655 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Random' btn fg=none
+  c24 UIRBMap id=0x6d ix=24 g=1 r=25,656,124,675 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Seed' btn fg=none
+  c25 UIBMap id=0x65 ix=25 g=1 r=25,699,284,719 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 'Create Map'
+  c26 UITextLabel id=0x73 ix=26 g=1 r=130,616,283,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Size'
+  c27 UIComboBox id=0x72 ix=27 g=1 r=130,631,283,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' n=6 sel=0 'Tiny'|'Small'|'Medium'|'Large'|'Huge'|'Gigantic'
+  c28 UITextLabel id=0x74 ix=28 g=1 r=299,616,498,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Elevation File'
+  c29 EEUIFileComboBox id=0x75 ix=29 g=1 r=299,631,498,650 m=1 bg=0,0,0,0 b=0 h=11006 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'ridge' e3=EESEERust
+  c30 UITextLabel id=0x7b ix=30 g=1 r=299,656,448,670 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Depth'
+  c31 UIEditBox id=0x7c ix=31 g=1 r=449,656,497,670 m=0 bg=1,0,0,0 b=2 h=11010 fg=1,1,1 tr=1 fh=11 '' lines=1 '4'
+  c32 UITextLabel id=0x7a ix=32 g=1 r=299,671,448,685 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Cutoff'
+  c33 UIEditBox id=0x7d ix=33 g=1 r=449,671,497,685 m=0 bg=1,0,0,0 b=2 h=11007 fg=1,1,1 tr=1 fh=11 '' lines=1 '40'
+  c34 UITextLabel id=0x77 ix=34 g=1 r=299,686,448,700 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Height'
+  c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=0 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
+  c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
+  c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=0 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
+step 1376 radio 0x6f
+step 1377 form 0 999 1
+  c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
+  c13 UITextLabel id=0x67 ix=13 g=1 r=210,616,284,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Height'
+  c14 UIComboBox id=0x6b ix=14 g=1 r=130,631,204,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c15 UIComboBox id=0x6c ix=15 g=1 r=210,631,284,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c16 UITextLabel id=0x64 ix=16 g=1 r=130,654,283,664 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Default Terrain'
+  c17 UITextLabel id=0x68 ix=17 g=1 r=130,654,283,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Type'
+  c18 UIComboBox id=0x6a ix=18 g=1 r=130,669,283,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Continental' n=12 sel=0 'Continental'|'Highlands'|'Large Islands'|'Mediterranean'|'Plains'|'Planets Earth'
+  c19 UIComboBox id=0x69 ix=19 g=1 r=130,669,283,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Grass' n=63 sel=0 'Grass'|'Grass - Patches'|'Grass - Tufts'|'Rock 2'|'Desert'|'Ice'
+  c20 UIEditBox id=0x70 ix=20 g=1 r=45,680,94,694 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c21 UITextLabel id=0x71 ix=21 g=1 r=45,680,94,694 m=1 bg=0.4,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c22 UIRBMap id=0x6e ix=22 g=1 r=25,616,124,635 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Blank' btn fg=none
+  c23 UIRBMap id=0x6f ix=23 g=1 r=25,636,124,655 m=1 bg=0,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Random' btn fg=none
+  c24 UIRBMap id=0x6d ix=24 g=1 r=25,656,124,675 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Seed' btn fg=none
+  c25 UIBMap id=0x65 ix=25 g=1 r=25,699,284,719 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 'Create Map'
+  c26 UITextLabel id=0x73 ix=26 g=1 r=130,616,283,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Size'
+  c27 UIComboBox id=0x72 ix=27 g=1 r=130,631,283,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' n=6 sel=0 'Tiny'|'Small'|'Medium'|'Large'|'Huge'|'Gigantic'
+  c28 UITextLabel id=0x74 ix=28 g=1 r=299,616,498,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Elevation File'
+  c29 EEUIFileComboBox id=0x75 ix=29 g=1 r=299,631,498,650 m=0 bg=0,0,0,0 b=0 h=11006 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'ridge' e3=EESEERust
+  c30 UITextLabel id=0x7b ix=30 g=1 r=299,656,448,670 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Depth'
+  c31 UIEditBox id=0x7c ix=31 g=1 r=449,656,497,670 m=0 bg=1,0,0,0 b=2 h=11010 fg=1,1,1 tr=1 fh=11 '' lines=1 '4'
+  c32 UITextLabel id=0x7a ix=32 g=1 r=299,671,448,685 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Cutoff'
+  c33 UIEditBox id=0x7d ix=33 g=1 r=449,671,497,685 m=0 bg=1,0,0,0 b=2 h=11007 fg=1,1,1 tr=1 fh=11 '' lines=1 '40'
+  c34 UITextLabel id=0x77 ix=34 g=1 r=299,686,448,700 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Height'
+  c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=0 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
+  c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
+  c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=0 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
+step 1378 radio 0x6d
+step 1379 form 0 999 1
+  c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
+  c13 UITextLabel id=0x67 ix=13 g=1 r=210,616,284,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Height'
+  c14 UIComboBox id=0x6b ix=14 g=1 r=130,631,204,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c15 UIComboBox id=0x6c ix=15 g=1 r=210,631,284,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c16 UITextLabel id=0x64 ix=16 g=1 r=130,654,283,664 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Default Terrain'
+  c17 UITextLabel id=0x68 ix=17 g=1 r=130,654,283,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Type'
+  c18 UIComboBox id=0x6a ix=18 g=1 r=130,669,283,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Continental' n=12 sel=0 'Continental'|'Highlands'|'Large Islands'|'Mediterranean'|'Plains'|'Planets Earth'
+  c19 UIComboBox id=0x69 ix=19 g=1 r=130,669,283,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Grass' n=63 sel=0 'Grass'|'Grass - Patches'|'Grass - Tufts'|'Rock 2'|'Desert'|'Ice'
+  c20 UIEditBox id=0x70 ix=20 g=1 r=45,680,94,694 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c21 UITextLabel id=0x71 ix=21 g=1 r=45,680,94,694 m=0 bg=0.4,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c22 UIRBMap id=0x6e ix=22 g=1 r=25,616,124,635 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Blank' btn fg=none
+  c23 UIRBMap id=0x6f ix=23 g=1 r=25,636,124,655 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Random' btn fg=none
+  c24 UIRBMap id=0x6d ix=24 g=1 r=25,656,124,675 m=1 bg=0,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Seed' btn fg=none
+  c25 UIBMap id=0x65 ix=25 g=1 r=25,699,284,719 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 'Create Map'
+  c26 UITextLabel id=0x73 ix=26 g=1 r=130,616,283,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Size'
+  c27 UIComboBox id=0x72 ix=27 g=1 r=130,631,283,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' n=6 sel=0 'Tiny'|'Small'|'Medium'|'Large'|'Huge'|'Gigantic'
+  c28 UITextLabel id=0x74 ix=28 g=1 r=299,616,498,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Elevation File'
+  c29 EEUIFileComboBox id=0x75 ix=29 g=1 r=299,631,498,650 m=0 bg=0,0,0,0 b=0 h=11006 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'ridge' e3=EESEERust
+  c30 UITextLabel id=0x7b ix=30 g=1 r=299,656,448,670 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Depth'
+  c31 UIEditBox id=0x7c ix=31 g=1 r=449,656,497,670 m=0 bg=1,0,0,0 b=2 h=11010 fg=1,1,1 tr=1 fh=11 '' lines=1 '4'
+  c32 UITextLabel id=0x7a ix=32 g=1 r=299,671,448,685 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Cutoff'
+  c33 UIEditBox id=0x7d ix=33 g=1 r=449,671,497,685 m=0 bg=1,0,0,0 b=2 h=11007 fg=1,1,1 tr=1 fh=11 '' lines=1 '40'
+  c34 UITextLabel id=0x77 ix=34 g=1 r=299,686,448,700 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Height'
+  c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=0 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
+  c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
+  c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=0 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
+step 1380 edit 0x70 4321
+step 1381 combo 0x72 0
+step 1382 combo 0x6a 1
+step 1383 buttonup 0x65
+step 1384 seed
+  seed 4321
+step 1385 digest mapseed
+digest mapseed
+  map size=84 tiles=3612 47cc487333060a6d
+  mesh points=3775 270f064c406863a2
+  unit 344 type=554 player=0 tile=26,64 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 472 type=341 player=0 tile=38,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 345 type=554 player=0 tile=42,46 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 473 type=339 player=0 tile=37,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 346 type=554 player=0 tile=49,17 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 474 type=342 player=0 tile=38,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 347 type=292 player=0 tile=11,38 hp=20 sel=0 built=1 cargo=0 at=0x1.7647760000000p+3,0x1.36be620000000p+5,0x1.a20bd40000000p-2 m=4a5b10bd6c50e143
+  unit 475 type=341 player=0 tile=39,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 348 type=292 player=0 tile=13,40 hp=20 sel=0 built=1 cargo=0 at=0x1.adc6aa0000000p+3,0x1.460b680000000p+5,0x1.a20bd60000000p-2 m=83bacdeba3f0062a
+  unit 476 type=342 player=0 tile=37,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 349 type=325 player=0 tile=30,50 hp=12 sel=0 built=1 cargo=0 at=0x1.e6ee500000000p+4,0x1.918d4e0000000p+5,0x1.a20bd80000000p-2 m=8bcd35f7482533e8
+  unit 477 type=339 player=0 tile=37,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 350 type=325 player=0 tile=30,51 hp=12 sel=0 built=1 cargo=0 at=0x1.eba30c0000000p+4,0x1.9aff160000000p+5,0x1.a20bd80000000p-2 m=7cab17d9550c7080
+  unit 478 type=342 player=0 tile=38,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 351 type=291 player=0 tile=66,52 hp=40 sel=0 built=1 cargo=0 at=0x1.0b34c00000000p+6,0x1.a277500000000p+5,0x1.a20be80000000p-2 m=ab6cb3ebd67925f9
+  unit 479 type=341 player=0 tile=37,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 352 type=326 player=0 tile=40,21 hp=12 sel=0 built=1 cargo=0 at=0x1.45a3480000000p+5,0x1.535e460000000p+4,0x1.a3e99c0000000p-2 m=14b7bbaeaaa8f898
+  unit 480 type=342 player=0 tile=36,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 353 type=326 player=0 tile=42,19 hp=12 sel=0 built=1 cargo=0 at=0x1.533f620000000p+5,0x1.3708c00000000p+4,0x1.9ec9820000000p-2 m=3556ab448c7181a2
+  unit 481 type=342 player=0 tile=37,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 354 type=292 player=0 tile=33,55 hp=20 sel=0 built=1 cargo=0 at=0x1.0989aa0000000p+5,0x1.beebd40000000p+5,0x1.a20bd80000000p-2 m=b9825fef9d1bcc01
+  unit 482 type=339 player=0 tile=36,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 355 type=292 player=0 tile=32,58 hp=20 sel=0 built=1 cargo=0 at=0x1.03ce5c0000000p+5,0x1.d4dd100000000p+5,0x1.a20bd60000000p-2 m=800c8a0e096a97e7
+  unit 483 type=341 player=0 tile=36,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 356 type=373 player=0 tile=58,53 hp=12 sel=0 built=1 cargo=0 at=0x1.d2af360000000p+5,0x1.ad31e00000000p+5,0x1.a211240000000p-2 m=31e9ff2648deeab6
+  unit 484 type=342 player=0 tile=38,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 357 type=373 player=0 tile=58,54 hp=12 sel=0 built=1 cargo=0 at=0x1.d3e8cc0000000p+5,0x1.b3e6760000000p+5,0x1.a21f120000000p-2 m=9a259ccb716fb99d
+  unit 485 type=342 player=0 tile=35,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 358 type=292 player=0 tile=47,13 hp=20 sel=0 built=1 cargo=0 at=0x1.7964060000000p+5,0x1.b9b8180000000p+3,0x1.ad67f80000000p-2 m=31de1611a7cb3a57
+  unit 486 type=341 player=0 tile=35,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 359 type=292 player=0 tile=50,12 hp=20 sel=0 built=1 cargo=0 at=0x1.9413da0000000p+5,0x1.9b25e60000000p+3,0x1.a28f3c0000000p-2 m=025e2fc0cdc3a2db
+  unit 487 type=342 player=0 tile=37,13 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 360 type=301 player=0 tile=31,23 hp=30 sel=0 built=1 cargo=0 at=0x1.f880de0000000p+4,0x1.7556340000000p+4,0x1.a20bd40000000p-2 m=9b223c0dd88cc9a6
+  unit 488 type=342 player=0 tile=36,19 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 361 type=301 player=0 tile=33,21 hp=30 sel=0 built=1 cargo=0 at=0x1.0c9cde0000000p+5,0x1.5466720000000p+4,0x1.a20bd40000000p-2 m=9249fe3256246ddc
+  unit 489 type=340 player=0 tile=35,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 362 type=301 player=0 tile=53,38 hp=30 sel=0 built=1 cargo=0 at=0x1.ac1dca0000000p+5,0x1.3323520000000p+5,0x1.a335840000000p-2 m=1f7ba56960c31bd5
+  unit 490 type=340 player=0 tile=36,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 363 type=301 player=0 tile=51,36 hp=30 sel=0 built=1 cargo=0 at=0x1.9e19820000000p+5,0x1.21ad0a0000000p+5,0x1.a20bd60000000p-2 m=3ec48964c34e9d14
+  unit 491 type=341 player=0 tile=36,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 364 type=38 player=0 tile=12,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 492 type=341 player=0 tile=35,19 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 365 type=38 player=0 tile=24,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 493 type=340 player=0 tile=35,20 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 366 type=38 player=0 tile=69,49 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 494 type=342 player=0 tile=38,13 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 367 type=38 player=0 tile=59,26 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 495 type=341 player=0 tile=37,19 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 368 type=38 player=0 tile=43,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 496 type=342 player=0 tile=35,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 369 type=38 player=0 tile=6,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 497 type=340 player=0 tile=35,21 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 370 type=50 player=0 tile=29,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 498 type=339 player=0 tile=36,20 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 371 type=50 player=0 tile=27,61 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 499 type=340 player=0 tile=34,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 372 type=50 player=0 tile=53,47 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 500 type=339 player=0 tile=34,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 373 type=50 player=0 tile=42,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 501 type=339 player=0 tile=33,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 374 type=50 player=0 tile=42,8 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 502 type=341 player=0 tile=33,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 375 type=50 player=0 tile=47,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 503 type=342 player=0 tile=11,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 376 type=50 player=0 tile=20,53 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 504 type=339 player=0 tile=11,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 377 type=50 player=0 tile=24,22 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 505 type=339 player=0 tile=12,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 378 type=50 player=0 tile=46,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 506 type=342 player=0 tile=12,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 379 type=50 player=0 tile=13,50 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 507 type=342 player=0 tile=13,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 380 type=439 player=0 tile=26,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 508 type=340 player=0 tile=12,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 381 type=339 player=0 tile=26,56 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 509 type=341 player=0 tile=11,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 382 type=342 player=0 tile=64,47 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 510 type=340 player=0 tile=13,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 383 type=239 player=0 tile=52,19 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 511 type=341 player=0 tile=14,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 384 type=55 player=0 tile=29,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 512 type=342 player=0 tile=13,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 385 type=55 player=0 tile=27,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 513 type=341 player=0 tile=10,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 386 type=55 player=0 tile=53,54 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 514 type=342 player=0 tile=14,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 387 type=55 player=0 tile=60,22 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 515 type=340 player=0 tile=14,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 388 type=224 player=0 tile=29,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 516 type=342 player=0 tile=15,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 389 type=224 player=0 tile=23,61 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 517 type=342 player=0 tile=15,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 390 type=224 player=0 tile=58,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 518 type=339 player=0 tile=15,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 391 type=224 player=0 tile=47,30 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 519 type=342 player=0 tile=13,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 392 type=224 player=0 tile=24,28 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 520 type=342 player=0 tile=10,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 393 type=224 player=0 tile=49,48 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 521 type=340 player=0 tile=14,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 394 type=224 player=0 tile=11,47 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 522 type=342 player=0 tile=14,46 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 395 type=224 player=0 tile=27,26 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 523 type=340 player=0 tile=16,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 396 type=224 player=0 tile=46,53 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 524 type=340 player=0 tile=15,46 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 397 type=224 player=0 tile=20,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 525 type=339 player=0 tile=16,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 398 type=238 player=0 tile=20,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 526 type=342 player=0 tile=15,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 399 type=239 player=0 tile=21,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 527 type=341 player=0 tile=10,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 400 type=239 player=0 tile=22,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 528 type=339 player=0 tile=10,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 401 type=239 player=0 tile=23,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 529 type=340 player=0 tile=17,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 402 type=239 player=0 tile=24,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 530 type=341 player=0 tile=15,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 403 type=439 player=0 tile=20,57 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 531 type=341 player=0 tile=17,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 404 type=439 player=0 tile=19,57 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 532 type=341 player=0 tile=13,46 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 405 type=238 player=0 tile=19,56 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 533 type=339 player=0 tile=9,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 406 type=439 player=0 tile=18,56 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 534 type=342 player=0 tile=9,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 407 type=239 player=0 tile=18,55 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 535 type=339 player=0 tile=8,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 408 type=282 player=0 tile=17,55 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 536 type=340 player=0 tile=15,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 409 type=238 player=0 tile=17,54 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 537 type=342 player=0 tile=9,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 410 type=239 player=0 tile=16,54 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 538 type=342 player=0 tile=17,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 411 type=439 player=0 tile=16,53 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 539 type=341 player=0 tile=8,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 412 type=282 player=0 tile=17,53 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 540 type=342 player=0 tile=16,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 413 type=439 player=0 tile=17,52 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 541 type=341 player=0 tile=16,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 414 type=439 player=0 tile=16,52 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 542 type=341 player=0 tile=15,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 415 type=239 player=0 tile=15,52 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 543 type=341 player=0 tile=17,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 416 type=282 player=0 tile=15,51 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 544 type=342 player=0 tile=14,47 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 417 type=439 player=0 tile=14,52 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 545 type=341 player=0 tile=16,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 418 type=282 player=0 tile=15,53 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 546 type=342 player=0 tile=16,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 419 type=439 player=0 tile=28,57 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 547 type=340 player=0 tile=16,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 420 type=439 player=0 tile=29,57 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 548 type=340 player=0 tile=16,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 421 type=439 player=0 tile=29,56 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 549 type=342 player=0 tile=17,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 422 type=239 player=0 tile=29,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 550 type=342 player=0 tile=15,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 423 type=439 player=0 tile=28,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 551 type=340 player=0 tile=17,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 424 type=239 player=0 tile=27,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 552 type=340 player=0 tile=15,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 425 type=238 player=0 tile=29,59 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 553 type=342 player=0 tile=14,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 426 type=282 player=0 tile=29,60 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 554 type=342 player=0 tile=15,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 427 type=239 player=0 tile=29,61 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 555 type=339 player=0 tile=8,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 428 type=439 player=0 tile=30,60 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 556 type=342 player=0 tile=8,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 429 type=282 player=0 tile=30,61 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 557 type=340 player=0 tile=32,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 430 type=239 player=0 tile=31,60 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 558 type=341 player=0 tile=31,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 431 type=282 player=0 tile=29,62 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 559 type=341 player=0 tile=31,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 432 type=439 player=0 tile=30,62 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 560 type=342 player=0 tile=31,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 433 type=342 player=0 tile=65,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 561 type=342 player=0 tile=32,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 434 type=341 player=0 tile=65,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 562 type=341 player=0 tile=32,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 435 type=342 player=0 tile=64,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 563 type=340 player=0 tile=32,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 436 type=342 player=0 tile=64,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 564 type=341 player=0 tile=30,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 437 type=340 player=0 tile=64,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 565 type=342 player=0 tile=32,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 438 type=342 player=0 tile=66,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 566 type=340 player=0 tile=33,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 439 type=342 player=0 tile=67,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 567 type=342 player=0 tile=33,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 440 type=341 player=0 tile=67,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 568 type=341 player=0 tile=34,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 441 type=342 player=0 tile=63,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 569 type=342 player=0 tile=33,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 442 type=342 player=0 tile=66,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 570 type=341 player=0 tile=31,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 443 type=340 player=0 tile=63,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 571 type=342 player=0 tile=31,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 444 type=342 player=0 tile=66,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 572 type=339 player=0 tile=34,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 445 type=340 player=0 tile=64,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 573 type=342 player=0 tile=34,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 446 type=341 player=0 tile=65,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 574 type=340 player=0 tile=33,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 447 type=341 player=0 tile=63,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 575 type=341 player=0 tile=34,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 448 type=342 player=0 tile=62,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 576 type=342 player=0 tile=35,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 449 type=341 player=0 tile=63,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 577 type=342 player=0 tile=31,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 450 type=340 player=0 tile=64,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 578 type=340 player=0 tile=32,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 451 type=341 player=0 tile=66,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 579 type=341 player=0 tile=35,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 452 type=340 player=0 tile=65,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 580 type=340 player=0 tile=33,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 453 type=342 player=0 tile=67,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 581 type=339 player=0 tile=32,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 454 type=340 player=0 tile=62,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 582 type=342 player=0 tile=35,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 455 type=341 player=0 tile=68,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 583 type=342 player=0 tile=34,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 456 type=342 player=0 tile=61,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 584 type=342 player=0 tile=35,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 457 type=342 player=0 tile=69,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 585 type=342 player=0 tile=36,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 458 type=342 player=0 tile=62,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 586 type=342 player=0 tile=36,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 459 type=340 player=0 tile=61,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 587 type=341 player=0 tile=34,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 460 type=341 player=0 tile=60,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 588 type=340 player=0 tile=31,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 461 type=342 player=0 tile=69,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 589 type=340 player=0 tile=30,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 462 type=339 player=0 tile=60,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 463 type=341 player=0 tile=61,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 464 type=339 player=0 tile=63,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 465 type=342 player=0 tile=60,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 466 type=342 player=0 tile=69,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 467 type=340 player=0 tile=69,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 468 type=341 player=0 tile=39,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 469 type=340 player=0 tile=39,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 470 type=342 player=0 tile=39,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 471 type=341 player=0 tile=38,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 16777255 type=41 player=1 tile=20,33 hp=5000 sel=0 built=1 cargo=0 at=0x1.5000000000000p+4,0x1.1000000000000p+5,0x1.ac49460000000p-2 m=72ca6ce56a3c1cfc
+  unit 16777256 type=32 player=1 tile=20,32 hp=110 sel=0 built=1 cargo=0 at=0x1.4000000000000p+4,0x1.0400000000000p+5,0x1.a20bd60000000p-2 m=f062e1f8d09518ea
+  unit 16777257 type=480 player=1 tile=20,32 hp=110 sel=0 built=1 cargo=0 at=0x1.4800000000000p+4,0x1.0400000000000p+5,0x1.a20bd60000000p-2 m=ea102a3b967af54e
+  unit 16777258 type=32 player=1 tile=21,32 hp=110 sel=0 built=1 cargo=0 at=0x1.5000000000000p+4,0x1.0400000000000p+5,0x1.a20bd60000000p-2 m=c6f8e51ab98ef002
+  unit 16777259 type=480 player=1 tile=21,32 hp=110 sel=0 built=1 cargo=0 at=0x1.5800000000000p+4,0x1.0400000000000p+5,0x1.a20bd60000000p-2 m=68018e74462e4a46
+  unit 16777260 type=32 player=1 tile=22,32 hp=110 sel=0 built=1 cargo=0 at=0x1.6000000000000p+4,0x1.0400000000000p+5,0x1.a20bd60000000p-2 m=4d2cf8654d24d3fa
+  unit 33554442 type=41 player=2 tile=23,51 hp=5000 sel=0 built=1 cargo=0 at=0x1.8000000000000p+4,0x1.a000000000000p+5,0x1.ac49460000000p-2 m=b1999ea9fac8f10c
+  unit 33554443 type=32 player=2 tile=23,50 hp=110 sel=0 built=1 cargo=0 at=0x1.7000000000000p+4,0x1.9400000000000p+5,0x1.a20bd60000000p-2 m=0c2d3e913c9f6fba
+  unit 33554444 type=480 player=2 tile=23,50 hp=110 sel=0 built=1 cargo=0 at=0x1.7800000000000p+4,0x1.9400000000000p+5,0x1.a20bd60000000p-2 m=92da8108a726f70e
+  unit 33554445 type=32 player=2 tile=24,50 hp=110 sel=0 built=1 cargo=0 at=0x1.8000000000000p+4,0x1.9400000000000p+5,0x1.a20bd60000000p-2 m=70463f0aca805b22
+  unit 33554446 type=480 player=2 tile=24,50 hp=110 sel=0 built=1 cargo=0 at=0x1.8800000000000p+4,0x1.9400000000000p+5,0x1.a20bd60000000p-2 m=684ce3b5224b4bb6
+  unit 33554447 type=32 player=2 tile=25,50 hp=110 sel=0 built=1 cargo=0 at=0x1.9000000000000p+4,0x1.9400000000000p+5,0x1.a20bd60000000p-2 m=a4c3baf850869f8a
+  unit 50331648 type=41 player=3 tile=60,48 hp=5000 sel=0 built=1 cargo=0 at=0x1.e800000000000p+5,0x1.8800000000000p+5,0x1.ac4a200000000p-2 m=09a47e64d5499c29
+  unit 50331649 type=32 player=3 tile=60,47 hp=110 sel=0 built=1 cargo=0 at=0x1.e000000000000p+5,0x1.7c00000000000p+5,0x1.a21bd80000000p-2 m=f88caa087ea2f850
+  unit 50331650 type=480 player=3 tile=60,47 hp=110 sel=0 built=1 cargo=0 at=0x1.e400000000000p+5,0x1.7c00000000000p+5,0x1.a21bd80000000p-2 m=00888cd6eea1f3b6
+  unit 50331651 type=32 player=3 tile=61,47 hp=110 sel=0 built=1 cargo=0 at=0x1.e800000000000p+5,0x1.7c00000000000p+5,0x1.a218860000000p-2 m=07794d72182fbb68
+  unit 50331652 type=480 player=3 tile=61,47 hp=110 sel=0 built=1 cargo=0 at=0x1.ec00000000000p+5,0x1.7c00000000000p+5,0x1.a218860000000p-2 m=4487e96944a25c8a
+  unit 50331653 type=32 player=3 tile=62,47 hp=110 sel=0 built=1 cargo=0 at=0x1.f000000000000p+5,0x1.7c00000000000p+5,0x1.a214dc0000000p-2 m=af09fd78e9ab115f
+  unit 67108864 type=41 player=4 tile=49,21 hp=5000 sel=0 built=1 cargo=0 at=0x1.9000000000000p+5,0x1.6000000000000p+4,0x1.ac49400000000p-2 m=38228ccd6dc21e8b
+  unit 67108865 type=32 player=4 tile=49,20 hp=110 sel=0 built=1 cargo=0 at=0x1.8800000000000p+5,0x1.4800000000000p+4,0x1.a217700000000p-2 m=f27b23038501981d
+  unit 67108866 type=480 player=4 tile=49,20 hp=110 sel=0 built=1 cargo=0 at=0x1.8c00000000000p+5,0x1.4800000000000p+4,0x1.a217700000000p-2 m=aff421748c09f1b7
+  unit 67108867 type=32 player=4 tile=50,20 hp=110 sel=0 built=1 cargo=0 at=0x1.9000000000000p+5,0x1.4800000000000p+4,0x1.a213120000000p-2 m=b076a84725d3bf1e
+  unit 67108868 type=480 player=4 tile=50,20 hp=110 sel=0 built=1 cargo=0 at=0x1.9400000000000p+5,0x1.4800000000000p+4,0x1.a213120000000p-2 m=d66ce22509bd4c4c
+  unit 67108869 type=32 player=4 tile=51,20 hp=110 sel=0 built=1 cargo=0 at=0x1.9800000000000p+5,0x1.4800000000000p+4,0x1.a210060000000p-2 m=24718f5cbe47c4bb
+  units 270 fe48e062c684cb22
+  selection
+  paint area 7,9,7,9
+  chunk 1 result=0 (differs by run)
+  chunk 2 result=0 bytes=20 d8326b6338404e17
+  chunk 4 result=0 bytes=20219 893353733efb8a8e
+  chunk 3 result=0 bytes=28 bcddcfa8d23138b8
+  chunk 6 result=0 bytes=42 0eaa32a17da4eb22
+  chunk 10 result=0 bytes=28 e460b56b445b34d6
+  chunk 12 result=0 (differs by run)
+  chunk 5 result=0 (differs by run)
+  chunk 7 result=0 bytes=14738 cd6a6ad9cdcc87ab
+  chunk 8 result=0 (differs by run)
+  chunk 11 result=0 bytes=28 c68d714d6c92ada7
+step 1386 radio 0x6e
+step 1387 form 0 999 1
+  c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
+  c13 UITextLabel id=0x67 ix=13 g=1 r=210,616,284,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Height'
+  c14 UIComboBox id=0x6b ix=14 g=1 r=130,631,204,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c15 UIComboBox id=0x6c ix=15 g=1 r=210,631,284,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c16 UITextLabel id=0x64 ix=16 g=1 r=130,654,283,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Default Terrain'
+  c17 UITextLabel id=0x68 ix=17 g=1 r=130,654,283,664 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Type'
+  c18 UIComboBox id=0x6a ix=18 g=1 r=130,669,283,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Highlands' n=12 sel=1 'Continental'|'Highlands'|'Large Islands'|'Mediterranean'|'Plains'|'Planets Earth'
+  c19 UIComboBox id=0x69 ix=19 g=1 r=130,669,283,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Grass' n=63 sel=0 'Grass'|'Grass - Patches'|'Grass - Tufts'|'Rock 2'|'Desert'|'Ice'
+  c20 UIEditBox id=0x70 ix=20 g=1 r=45,680,94,694 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '4321'
+  c21 UITextLabel id=0x71 ix=21 g=1 r=45,680,94,694 m=0 bg=0.4,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c22 UIRBMap id=0x6e ix=22 g=1 r=25,616,124,635 m=1 bg=0,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Blank' btn fg=none
+  c23 UIRBMap id=0x6f ix=23 g=1 r=25,636,124,655 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Random' btn fg=none
+  c24 UIRBMap id=0x6d ix=24 g=1 r=25,656,124,675 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Seed' btn fg=none
+  c25 UIBMap id=0x65 ix=25 g=1 r=25,699,284,719 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 'Create Map'
+  c26 UITextLabel id=0x73 ix=26 g=1 r=130,616,283,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Size'
+  c27 UIComboBox id=0x72 ix=27 g=1 r=130,631,283,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' n=6 sel=0 'Tiny'|'Small'|'Medium'|'Large'|'Huge'|'Gigantic'
+  c28 UITextLabel id=0x74 ix=28 g=1 r=299,616,498,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Elevation File'
+  c29 EEUIFileComboBox id=0x75 ix=29 g=1 r=299,631,498,650 m=1 bg=0,0,0,0 b=0 h=11006 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'ridge' e3=EESEERust
+  c30 UITextLabel id=0x7b ix=30 g=1 r=299,656,448,670 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Depth'
+  c31 UIEditBox id=0x7c ix=31 g=1 r=449,656,497,670 m=0 bg=1,0,0,0 b=2 h=11010 fg=1,1,1 tr=1 fh=11 '' lines=1 '4'
+  c32 UITextLabel id=0x7a ix=32 g=1 r=299,671,448,685 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Cutoff'
+  c33 UIEditBox id=0x7d ix=33 g=1 r=449,671,497,685 m=0 bg=1,0,0,0 b=2 h=11007 fg=1,1,1 tr=1 fh=11 '' lines=1 '40'
+  c34 UITextLabel id=0x77 ix=34 g=1 r=299,686,448,700 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Height'
+  c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=0 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
+  c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
+  c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=0 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
+step 1388 combo 0x75 1
+step 1389 form 0 999 1
+  c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
+  c13 UITextLabel id=0x67 ix=13 g=1 r=210,616,284,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Height'
+  c14 UIComboBox id=0x6b ix=14 g=1 r=130,631,204,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c15 UIComboBox id=0x6c ix=15 g=1 r=210,631,284,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '15' n=25 sel=0 '15'|'25'|'50'|'60'|'70'|'75'
+  c16 UITextLabel id=0x64 ix=16 g=1 r=130,654,283,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Default Terrain'
+  c17 UITextLabel id=0x68 ix=17 g=1 r=130,654,283,664 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Type'
+  c18 UIComboBox id=0x6a ix=18 g=1 r=130,669,283,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Highlands' n=12 sel=1 'Continental'|'Highlands'|'Large Islands'|'Mediterranean'|'Plains'|'Planets Earth'
+  c19 UIComboBox id=0x69 ix=19 g=1 r=130,669,283,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Grass' n=63 sel=0 'Grass'|'Grass - Patches'|'Grass - Tufts'|'Rock 2'|'Desert'|'Ice'
+  c20 UIEditBox id=0x70 ix=20 g=1 r=45,680,94,694 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '4321'
+  c21 UITextLabel id=0x71 ix=21 g=1 r=45,680,94,694 m=0 bg=0.4,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '0'
+  c22 UIRBMap id=0x6e ix=22 g=1 r=25,616,124,635 m=1 bg=0,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Blank' btn fg=none
+  c23 UIRBMap id=0x6f ix=23 g=1 r=25,636,124,655 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Random' btn fg=none
+  c24 UIRBMap id=0x6d ix=24 g=1 r=25,656,124,675 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Seed' btn fg=none
+  c25 UIBMap id=0x65 ix=25 g=1 r=25,699,284,719 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 'Create Map'
+  c26 UITextLabel id=0x73 ix=26 g=1 r=130,616,283,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Size'
+  c27 UIComboBox id=0x72 ix=27 g=1 r=130,631,283,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' n=6 sel=0 'Tiny'|'Small'|'Medium'|'Large'|'Huge'|'Gigantic'
+  c28 UITextLabel id=0x74 ix=28 g=1 r=299,616,498,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Elevation File'
+  c29 EEUIFileComboBox id=0x75 ix=29 g=1 r=299,631,498,650 m=1 bg=0,0,0,0 b=0 h=11006 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'ridge' n=2 sel=1 '<NONE>'|'ridge' e3=EESEERust
+  c30 UITextLabel id=0x7b ix=30 g=1 r=299,656,448,670 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Depth'
+  c31 UIEditBox id=0x7c ix=31 g=1 r=449,656,497,670 m=1 bg=1,0,0,0 b=2 h=11010 fg=1,1,1 tr=1 fh=11 '' lines=1 '4'
+  c32 UITextLabel id=0x7a ix=32 g=1 r=299,671,448,685 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Cutoff'
+  c33 UIEditBox id=0x7d ix=33 g=1 r=449,671,497,685 m=1 bg=1,0,0,0 b=2 h=11007 fg=1,1,1 tr=1 fh=11 '' lines=1 '40'
+  c34 UITextLabel id=0x77 ix=34 g=1 r=299,686,448,700 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Height'
+  c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=1 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
+  c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
+  c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=1 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
+step 1390 radio 0x6f
+step 1391 combo 0x75 1
+step 1392 controls 0x7d 0x7c 0x79 0x78 0x6c 0x67
+  0x7d mode=0
+  0x7c mode=0
+  0x79 mode=0
+  0x78 mode=0
+  0x6c mode=0
+  0x67 mode=0 'Map Height'
+step 1393 radio 0x6e
+step 1394 controls 0x7d 0x7c 0x79 0x78 0x6c 0x67
+  0x7d mode=1
+  0x7c mode=1
+  0x79 mode=1
+  0x78 mode=1
+  0x6c mode=0
+  0x67 mode=0 'Map Height'
+step 1395 combo 0x75 0
+step 1396 combo 0x6b 2
+step 1397 combo 0x6c 3
+step 1398 combo 0x69 1
+step 1399 buttonup 0x65
+step 1400 seed
+  seed 841295
+step 1401 digest mapblank
+digest mapblank
+  map size=110 tiles=6110 54115ab45bdb31ab
+  mesh points=6325 632f08509d33a3cd
+  units 0 14650fb0739d0383
+  selection
+  paint area 7,9,7,9
+  chunk 1 result=0 (differs by run)
+  chunk 2 result=0 bytes=20 01290e526060f013
+  chunk 4 result=0 bytes=5965 20f30eedc3764107
+  chunk 3 result=0 bytes=28 3b9832a9bbb9d0f8
+  chunk 6 result=0 bytes=42 0eaa32a17da4eb22
+  chunk 10 result=0 bytes=28 e460b56b445b34d6
+  chunk 12 result=0 (differs by run)
+  chunk 5 result=0 (differs by run)
+  chunk 7 result=0 bytes=10303 5930fd9a4072e050
+  chunk 8 result=0 (differs by run)
+  chunk 11 result=0 bytes=28 c68d714d6c92ada7
+step 1402 radio 0x6f
+step 1403 buttonup 0x65
+step 1404 seed
+  seed 239924
+step 1405 form 0 999 1
+  c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
+  c13 UITextLabel id=0x67 ix=13 g=1 r=210,616,284,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Height'
+  c14 UIComboBox id=0x6b ix=14 g=1 r=130,631,204,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '50' n=25 sel=2 '15'|'25'|'50'|'60'|'70'|'75'
+  c15 UIComboBox id=0x6c ix=15 g=1 r=210,631,284,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '60' n=25 sel=3 '15'|'25'|'50'|'60'|'70'|'75'
+  c16 UITextLabel id=0x64 ix=16 g=1 r=130,654,283,664 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Default Terrain'
+  c17 UITextLabel id=0x68 ix=17 g=1 r=130,654,283,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Type'
+  c18 UIComboBox id=0x6a ix=18 g=1 r=130,669,283,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Highlands' n=12 sel=1 'Continental'|'Highlands'|'Large Islands'|'Mediterranean'|'Plains'|'Planets Earth'
+  c19 UIComboBox id=0x69 ix=19 g=1 r=130,669,283,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Grass - Patches' n=63 sel=1 'Grass'|'Grass - Patches'|'Grass - Tufts'|'Rock 2'|'Desert'|'Ice'
+  c20 UIEditBox id=0x70 ix=20 g=1 r=45,680,94,694 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '4321'
+  c21 UITextLabel id=0x71 ix=21 g=1 r=45,680,94,694 m=1 bg=0.4,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '239924'
+  c22 UIRBMap id=0x6e ix=22 g=1 r=25,616,124,635 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Blank' btn fg=none
+  c23 UIRBMap id=0x6f ix=23 g=1 r=25,636,124,655 m=1 bg=0,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Random' btn fg=none
+  c24 UIRBMap id=0x6d ix=24 g=1 r=25,656,124,675 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Seed' btn fg=none
+  c25 UIBMap id=0x65 ix=25 g=1 r=25,699,284,719 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 'Create Map'
+  c26 UITextLabel id=0x73 ix=26 g=1 r=130,616,283,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Size'
+  c27 UIComboBox id=0x72 ix=27 g=1 r=130,631,283,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' n=6 sel=0 'Tiny'|'Small'|'Medium'|'Large'|'Huge'|'Gigantic'
+  c28 UITextLabel id=0x74 ix=28 g=1 r=299,616,498,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Elevation File'
+  c29 EEUIFileComboBox id=0x75 ix=29 g=1 r=299,631,498,650 m=0 bg=0,0,0,0 b=0 h=11006 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=0 '<NONE>'|'ridge' e3=EESEERust
+  c30 UITextLabel id=0x7b ix=30 g=1 r=299,656,448,670 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Depth'
+  c31 UIEditBox id=0x7c ix=31 g=1 r=449,656,497,670 m=0 bg=1,0,0,0 b=2 h=11010 fg=1,1,1 tr=1 fh=11 '' lines=1 '4'
+  c32 UITextLabel id=0x7a ix=32 g=1 r=299,671,448,685 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Cutoff'
+  c33 UIEditBox id=0x7d ix=33 g=1 r=449,671,497,685 m=0 bg=1,0,0,0 b=2 h=11007 fg=1,1,1 tr=1 fh=11 '' lines=1 '40'
+  c34 UITextLabel id=0x77 ix=34 g=1 r=299,686,448,700 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Height'
+  c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=0 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
+  c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
+  c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=0 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
+step 1406 digest maprandom
+digest maprandom
+  map size=84 tiles=3612 1b4d906689ae3771
+  mesh points=3775 a8bd136407c8eddc
+  unit 590 type=570 player=0 tile=22,33 hp=10 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 846 type=356 player=0 tile=54,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 718 type=356 player=0 tile=56,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 591 type=619 player=0 tile=28,21 hp=101 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 847 type=356 player=0 tile=48,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 719 type=354 player=0 tile=61,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 592 type=554 player=0 tile=29,14 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 848 type=356 player=0 tile=54,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 720 type=354 player=0 tile=55,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 593 type=554 player=0 tile=29,30 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 849 type=356 player=0 tile=50,65 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 721 type=354 player=0 tile=56,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 594 type=620 player=0 tile=30,48 hp=103 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 850 type=356 player=0 tile=53,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 722 type=354 player=0 tile=54,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 595 type=619 player=0 tile=30,49 hp=101 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 851 type=354 player=0 tile=53,65 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 723 type=355 player=0 tile=53,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 596 type=570 player=0 tile=30,70 hp=10 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 852 type=355 player=0 tile=51,65 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 724 type=356 player=0 tile=57,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 597 type=554 player=0 tile=33,23 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 853 type=355 player=0 tile=55,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 725 type=353 player=0 tile=55,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 598 type=554 player=0 tile=34,21 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 854 type=354 player=0 tile=49,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 726 type=354 player=0 tile=62,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 599 type=620 player=0 tile=37,61 hp=103 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 855 type=355 player=0 tile=48,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 727 type=354 player=0 tile=55,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 600 type=570 player=0 tile=39,14 hp=10 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 856 type=355 player=0 tile=47,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 728 type=355 player=0 tile=54,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 601 type=624 player=0 tile=39,46 hp=107 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 857 type=355 player=0 tile=48,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 729 type=355 player=0 tile=54,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 602 type=554 player=0 tile=40,31 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 858 type=355 player=0 tile=51,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 730 type=355 player=0 tile=55,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 603 type=554 player=0 tile=41,31 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 859 type=353 player=0 tile=46,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 731 type=356 player=0 tile=57,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 604 type=570 player=0 tile=41,38 hp=10 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 860 type=356 player=0 tile=45,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 732 type=355 player=0 tile=55,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 605 type=618 player=0 tile=41,46 hp=113 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 861 type=356 player=0 tile=46,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 733 type=356 player=0 tile=54,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 606 type=554 player=0 tile=42,31 hp=100 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 862 type=355 player=0 tile=49,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 734 type=354 player=0 tile=53,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 607 type=622 player=0 tile=43,16 hp=105 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 863 type=355 player=0 tile=47,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 735 type=356 player=0 tile=52,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 608 type=618 player=0 tile=44,52 hp=113 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 864 type=356 player=0 tile=45,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 736 type=355 player=0 tile=62,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 609 type=619 player=0 tile=45,6 hp=101 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 865 type=353 player=0 tile=44,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 737 type=356 player=0 tile=56,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 610 type=623 player=0 tile=48,54 hp=106 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 866 type=356 player=0 tile=46,73 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 738 type=354 player=0 tile=54,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 611 type=621 player=0 tile=51,50 hp=104 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 867 type=355 player=0 tile=48,73 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 739 type=355 player=0 tile=58,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 612 type=618 player=0 tile=52,65 hp=113 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 868 type=356 player=0 tile=46,74 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 740 type=354 player=0 tile=31,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 613 type=620 player=0 tile=53,59 hp=103 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 869 type=355 player=0 tile=47,73 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 741 type=355 player=0 tile=31,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 614 type=622 player=0 tile=61,32 hp=105 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 870 type=356 player=0 tile=45,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 742 type=356 player=0 tile=31,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 615 type=333 player=0 tile=74,43 hp=10 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 871 type=355 player=0 tile=46,75 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 743 type=354 player=0 tile=30,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 616 type=301 player=0 tile=38,30 hp=30 sel=0 built=1 cargo=0 at=0x1.328a1c0000000p+5,0x1.e379840000000p+4,0x1.a20bd80000000p-2 m=7ca6366f4a8f3dd0
+  unit 872 type=356 player=0 tile=45,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 744 type=355 player=0 tile=30,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 617 type=301 player=0 tile=35,32 hp=30 sel=0 built=1 cargo=0 at=0x1.196de80000000p+5,0x1.0656480000000p+5,0x1.a20bbe0000000p-2 m=fef1a1bc27673e81
+  unit 873 type=354 player=0 tile=47,74 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 745 type=355 player=0 tile=29,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 618 type=325 player=0 tile=56,18 hp=12 sel=0 built=1 cargo=0 at=0x1.c3c4e60000000p+5,0x1.277f4e0000000p+4,0x1.a20bd40000000p-2 m=28cdb120465506f0
+  unit 874 type=355 player=0 tile=44,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 746 type=355 player=0 tile=29,65 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 619 type=325 player=0 tile=57,16 hp=12 sel=0 built=1 cargo=0 at=0x1.c9d46e0000000p+5,0x1.044a0a0000000p+4,0x1.a20bd40000000p-2 m=4f417fc6ac6835a8
+  unit 875 type=355 player=0 tile=43,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 747 type=355 player=0 tile=28,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 620 type=325 player=0 tile=69,51 hp=12 sel=0 built=1 cargo=0 at=0x1.1556ac0000000p+6,0x1.9c962a0000000p+5,0x1.a20bd40000000p-2 m=d07d4938b38ac19b
+  unit 876 type=354 player=0 tile=46,61 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 748 type=353 player=0 tile=29,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 621 type=325 player=0 tile=71,51 hp=12 sel=0 built=1 cargo=0 at=0x1.1d38920000000p+6,0x1.9b45000000000p+5,0x1.a20bd60000000p-2 m=e45c08c130eebf4d
+  unit 877 type=354 player=0 tile=46,60 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 749 type=356 player=0 tile=28,65 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 622 type=326 player=0 tile=36,57 hp=12 sel=0 built=1 cargo=0 at=0x1.236b0a0000000p+5,0x1.ce55a40000000p+5,0x1.a20d980000000p-2 m=a1d0e6e95da89e1b
+  unit 878 type=356 player=0 tile=46,59 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 750 type=355 player=0 tile=30,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 623 type=326 player=0 tile=40,57 hp=12 sel=0 built=1 cargo=0 at=0x1.451e000000000p+5,0x1.cba0d00000000p+5,0x1.a20c100000000p-2 m=cd2a0bcc53040445
+  unit 879 type=356 player=0 tile=47,60 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 751 type=356 player=0 tile=41,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 624 type=325 player=0 tile=29,34 hp=12 sel=0 built=1 cargo=0 at=0x1.d255ac0000000p+4,0x1.138a3c0000000p+5,0x1.a1e77c0000000p-2 m=dfd2cc9909f04d43
+  unit 880 type=355 player=0 tile=47,59 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 752 type=355 player=0 tile=41,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 625 type=325 player=0 tile=28,35 hp=12 sel=0 built=1 cargo=0 at=0x1.c994d80000000p+4,0x1.1a5dac0000000p+5,0x1.a1a0640000000p-2 m=472a477f471546be
+  unit 881 type=353 player=0 tile=47,61 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 753 type=355 player=0 tile=40,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 626 type=373 player=0 tile=56,29 hp=12 sel=0 built=1 cargo=0 at=0x1.c1c9fc0000000p+5,0x1.dcfc6e0000000p+4,0x1.a0ba380000000p-2 m=929a8bc70f4ca0bb
+  unit 882 type=355 player=0 tile=47,58 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 754 type=354 player=0 tile=42,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 627 type=373 player=0 tile=54,27 hp=12 sel=0 built=1 cargo=0 at=0x1.b6d7660000000p+5,0x1.b3c3720000000p+4,0x1.a20bd60000000p-2 m=14043ae0bbacd3d2
+  unit 883 type=353 player=0 tile=48,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 755 type=354 player=0 tile=41,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 628 type=301 player=0 tile=69,46 hp=30 sel=0 built=1 cargo=0 at=0x1.175b320000000p+6,0x1.762dbc0000000p+5,0x1.a20bf00000000p-2 m=4fceacf93da25e6c
+  unit 884 type=354 player=0 tile=47,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 756 type=356 player=0 tile=40,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 629 type=301 player=0 tile=68,46 hp=30 sel=0 built=1 cargo=0 at=0x1.10c0900000000p+6,0x1.71baba0000000p+5,0x1.a20be40000000p-2 m=c8dfa362333a17e6
+  unit 885 type=356 player=0 tile=47,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 757 type=353 player=0 tile=42,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 630 type=325 player=0 tile=25,65 hp=12 sel=0 built=1 cargo=0 at=0x1.94d2e40000000p+4,0x1.06abe80000000p+6,0x1.a20b440000000p-2 m=0ff3d7ef656dc85a
+  unit 886 type=353 player=0 tile=49,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 758 type=354 player=0 tile=42,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 631 type=325 player=0 tile=25,64 hp=12 sel=0 built=1 cargo=0 at=0x1.9dfb1c0000000p+4,0x1.00abd80000000p+6,0x1.a209fa0000000p-2 m=48a717bc8db88469
+  unit 887 type=354 player=0 tile=46,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 759 type=355 player=0 tile=43,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 632 type=373 player=0 tile=6,42 hp=12 sel=0 built=1 cargo=0 at=0x1.ac88be0000000p+2,0x1.52b8220000000p+5,0x1.f8fbdc0000000p-1 m=459abfc4050918a5
+  unit 888 type=353 player=0 tile=48,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 760 type=355 player=0 tile=44,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 633 type=373 player=0 tile=7,41 hp=12 sel=0 built=1 cargo=0 at=0x1.e393a20000000p+2,0x1.4c769e0000000p+5,0x1.119ce80000000p+0 m=99a7e84b037ead4c
+  unit 889 type=354 player=0 tile=47,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 761 type=355 player=0 tile=40,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 634 type=326 player=0 tile=32,37 hp=12 sel=0 built=1 cargo=0 at=0x1.023a4e0000000p+5,0x1.2b43f40000000p+5,0x1.a201d40000000p-2 m=82cec394eef6fdca
+  unit 890 type=355 player=0 tile=48,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 762 type=355 player=0 tile=43,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 635 type=326 player=0 tile=30,39 hp=12 sel=0 built=1 cargo=0 at=0x1.e3cd000000000p+4,0x1.3ec6ba0000000p+5,0x1.a1c0100000000p-2 m=167e0bf8fab9d3f3
+  unit 891 type=353 player=0 tile=45,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 763 type=355 player=0 tile=42,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 636 type=38 player=0 tile=37,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 892 type=354 player=0 tile=48,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 764 type=353 player=0 tile=43,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 637 type=38 player=0 tile=44,30 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 893 type=356 player=0 tile=50,41 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 765 type=355 player=0 tile=42,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 638 type=38 player=0 tile=60,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 894 type=355 player=0 tile=49,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 766 type=354 player=0 tile=42,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 639 type=38 player=0 tile=38,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 895 type=355 player=0 tile=49,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 767 type=356 player=0 tile=41,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 640 type=38 player=0 tile=22,53 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 896 type=354 player=0 tile=50,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 768 type=354 player=0 tile=43,72 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 641 type=38 player=0 tile=46,65 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 897 type=354 player=0 tile=49,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 769 type=354 player=0 tile=44,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 642 type=50 player=0 tile=40,26 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 898 type=355 player=0 tile=46,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 770 type=356 player=0 tile=41,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 643 type=50 player=0 tile=57,23 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 899 type=354 player=0 tile=50,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 771 type=356 player=0 tile=45,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 644 type=50 player=0 tile=55,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 900 type=354 player=0 tile=50,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 772 type=355 player=0 tile=44,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 645 type=50 player=0 tile=44,59 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 901 type=353 player=0 tile=45,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 773 type=354 player=0 tile=40,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 646 type=50 player=0 tile=11,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 902 type=353 player=0 tile=46,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 774 type=356 player=0 tile=39,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 647 type=50 player=0 tile=51,46 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 903 type=354 player=0 tile=49,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 775 type=356 player=0 tile=21,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 648 type=50 player=0 tile=56,64 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 904 type=356 player=0 tile=46,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 776 type=354 player=0 tile=22,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 649 type=50 player=0 tile=15,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 905 type=356 player=0 tile=46,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 777 type=355 player=0 tile=22,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 650 type=50 player=0 tile=42,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 906 type=354 player=0 tile=48,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 778 type=356 player=0 tile=21,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 651 type=50 player=0 tile=48,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 907 type=356 player=0 tile=51,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 779 type=355 player=0 tile=20,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 652 type=354 player=0 tile=27,27 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 908 type=354 player=0 tile=44,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 780 type=356 player=0 tile=19,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 653 type=356 player=0 tile=50,25 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 909 type=356 player=0 tile=51,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 781 type=356 player=0 tile=19,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 654 type=356 player=0 tile=58,48 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 910 type=354 player=0 tile=44,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 782 type=356 player=0 tile=21,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 655 type=354 player=0 tile=31,63 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 911 type=355 player=0 tile=50,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 783 type=356 player=0 tile=23,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 656 type=55 player=0 tile=40,23 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 912 type=353 player=0 tile=45,39 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 784 type=355 player=0 tile=20,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 657 type=55 player=0 tile=50,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 913 type=356 player=0 tile=50,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 785 type=356 player=0 tile=21,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 658 type=55 player=0 tile=54,53 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 914 type=354 player=0 tile=43,40 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 786 type=355 player=0 tile=23,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 659 type=55 player=0 tile=31,55 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 915 type=355 player=0 tile=45,38 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 787 type=356 player=0 tile=24,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 660 type=224 player=0 tile=39,20 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 788 type=356 player=0 tile=25,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 661 type=224 player=0 tile=45,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 789 type=356 player=0 tile=24,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 662 type=224 player=0 tile=64,57 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 790 type=355 player=0 tile=25,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 663 type=224 player=0 tile=34,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 791 type=356 player=0 tile=22,30 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 664 type=224 player=0 tile=15,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 792 type=353 player=0 tile=24,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 665 type=224 player=0 tile=49,49 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 793 type=355 player=0 tile=26,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 666 type=224 player=0 tile=51,62 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 794 type=356 player=0 tile=24,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 667 type=224 player=0 tile=25,24 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 795 type=354 player=0 tile=20,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 668 type=224 player=0 tile=36,50 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 796 type=355 player=0 tile=20,30 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 669 type=224 player=0 tile=58,61 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 797 type=356 player=0 tile=25,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 670 type=355 player=0 tile=27,19 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 798 type=353 player=0 tile=25,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 671 type=355 player=0 tile=27,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 799 type=354 player=0 tile=25,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 672 type=355 player=0 tile=28,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 800 type=354 player=0 tile=23,30 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 673 type=354 player=0 tile=26,19 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 801 type=354 player=0 tile=24,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 674 type=356 player=0 tile=26,20 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 802 type=353 player=0 tile=21,30 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 675 type=355 player=0 tile=29,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 803 type=356 player=0 tile=20,29 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 676 type=354 player=0 tile=30,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 804 type=356 player=0 tile=23,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 677 type=356 player=0 tile=28,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 805 type=356 player=0 tile=23,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 678 type=355 player=0 tile=29,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 806 type=354 player=0 tile=19,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 679 type=355 player=0 tile=31,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 807 type=354 player=0 tile=25,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 680 type=354 player=0 tile=32,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 808 type=356 player=0 tile=18,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 681 type=355 player=0 tile=33,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 809 type=356 player=0 tile=18,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 682 type=356 player=0 tile=31,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 810 type=355 player=0 tile=18,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 683 type=356 player=0 tile=32,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 811 type=356 player=0 tile=24,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 684 type=355 player=0 tile=30,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 812 type=356 player=0 tile=23,36 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 685 type=356 player=0 tile=33,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 813 type=356 player=0 tile=22,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 686 type=356 player=0 tile=32,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 814 type=355 player=0 tile=17,33 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 687 type=355 player=0 tile=31,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 815 type=355 player=0 tile=24,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 688 type=356 player=0 tile=33,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 816 type=356 player=0 tile=17,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 689 type=356 player=0 tile=33,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 817 type=355 player=0 tile=23,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 690 type=354 player=0 tile=34,17 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 818 type=356 player=0 tile=16,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 691 type=355 player=0 tile=34,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 819 type=356 player=0 tile=17,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 692 type=354 player=0 tile=31,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 820 type=356 player=0 tile=17,32 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 693 type=354 player=0 tile=33,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 821 type=354 player=0 tile=22,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 694 type=355 player=0 tile=34,18 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 822 type=354 player=0 tile=17,31 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 695 type=355 player=0 tile=30,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 823 type=356 player=0 tile=15,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 696 type=356 player=0 tile=34,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 824 type=356 player=0 tile=19,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 697 type=353 player=0 tile=33,13 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 825 type=355 player=0 tile=21,29 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 698 type=356 player=0 tile=29,16 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 826 type=356 player=0 tile=22,29 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 699 type=356 player=0 tile=32,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 827 type=356 player=0 tile=18,34 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 700 type=354 player=0 tile=31,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 828 type=356 player=0 tile=19,35 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 701 type=353 player=0 tile=35,14 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 829 type=354 player=0 tile=51,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 702 type=355 player=0 tile=34,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 830 type=354 player=0 tile=51,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 703 type=356 player=0 tile=35,13 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 831 type=356 player=0 tile=52,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 704 type=353 player=0 tile=32,15 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 832 type=353 player=0 tile=50,70 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 705 type=356 player=0 tile=57,45 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 833 type=355 player=0 tile=50,69 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 706 type=356 player=0 tile=57,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 834 type=356 player=0 tile=52,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 707 type=353 player=0 tile=57,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 835 type=356 player=0 tile=51,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 708 type=354 player=0 tile=58,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 836 type=356 player=0 tile=50,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 709 type=356 player=0 tile=58,44 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 837 type=355 player=0 tile=50,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 710 type=354 player=0 tile=59,43 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 838 type=355 player=0 tile=53,68 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 711 type=354 player=0 tile=59,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 839 type=354 player=0 tile=53,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 712 type=354 player=0 tile=58,42 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 840 type=354 player=0 tile=52,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 713 type=356 player=0 tile=58,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 841 type=356 player=0 tile=50,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 714 type=356 player=0 tile=59,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 842 type=353 player=0 tile=51,67 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 715 type=356 player=0 tile=60,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 843 type=355 player=0 tile=52,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 716 type=354 player=0 tile=57,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 844 type=356 player=0 tile=49,71 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 717 type=355 player=0 tile=56,37 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 845 type=354 player=0 tile=50,66 hp=1 sel=0 built=0 cargo=0 at=0x0.0000000000000p+0,0x0.0000000000000p+0,0x0.0000000000000p+0 m=14650fb0739d0383
+  unit 16777261 type=41 player=1 tile=30,23 hp=5000 sel=0 built=1 cargo=0 at=0x1.f000000000000p+4,0x1.8000000000000p+4,0x1.ac49460000000p-2 m=ee262026760c4315
+  unit 16777262 type=32 player=1 tile=30,22 hp=110 sel=0 built=1 cargo=0 at=0x1.e000000000000p+4,0x1.6800000000000p+4,0x1.a20bd60000000p-2 m=0247ab3039f95981
+  unit 16777263 type=480 player=1 tile=30,22 hp=110 sel=0 built=1 cargo=0 at=0x1.e800000000000p+4,0x1.6800000000000p+4,0x1.a20bd60000000p-2 m=2797d10d7523cb5d
+  unit 16777264 type=32 player=1 tile=31,22 hp=110 sel=0 built=1 cargo=0 at=0x1.f000000000000p+4,0x1.6800000000000p+4,0x1.a20bd60000000p-2 m=d3a6147c97fdf019
+  unit 16777265 type=480 player=1 tile=31,22 hp=110 sel=0 built=1 cargo=0 at=0x1.f800000000000p+4,0x1.6800000000000p+4,0x1.a20bd60000000p-2 m=61132004b2c1abb5
+  unit 16777266 type=32 player=1 tile=32,22 hp=110 sel=0 built=1 cargo=0 at=0x1.0000000000000p+5,0x1.6800000000000p+4,0x1.a20bd60000000p-2 m=8fde0d7d2be2d484
+  unit 33554448 type=41 player=2 tile=48,21 hp=5000 sel=0 built=1 cargo=0 at=0x1.8800000000000p+5,0x1.6000000000000p+4,0x1.ac47f20000000p-2 m=6dfb1cc9c4dbcf6f
+  unit 33554449 type=32 player=2 tile=48,20 hp=110 sel=0 built=1 cargo=0 at=0x1.8000000000000p+5,0x1.4800000000000p+4,0x1.a209d40000000p-2 m=6b9270c117ce2fee
+  unit 33554450 type=480 player=2 tile=48,20 hp=110 sel=0 built=1 cargo=0 at=0x1.8400000000000p+5,0x1.4800000000000p+4,0x1.a209d40000000p-2 m=a12fb4f71e51d540
+  unit 33554451 type=32 player=2 tile=49,20 hp=110 sel=0 built=1 cargo=0 at=0x1.8800000000000p+5,0x1.4800000000000p+4,0x1.a20a740000000p-2 m=3f50b4c77bea7c99
+  unit 33554452 type=480 player=2 tile=49,20 hp=110 sel=0 built=1 cargo=0 at=0x1.8c00000000000p+5,0x1.4800000000000p+4,0x1.a20a740000000p-2 m=68a40fb099d1c31b
+  unit 33554453 type=32 player=2 tile=50,20 hp=110 sel=0 built=1 cargo=0 at=0x1.9000000000000p+5,0x1.4800000000000p+4,0x1.a20acc0000000p-2 m=16535fad5c2fd7b1
+  unit 50331654 type=41 player=3 tile=61,48 hp=5000 sel=0 built=1 cargo=0 at=0x1.f000000000000p+5,0x1.8800000000000p+5,0x1.ac366c0000000p-2 m=a50d312ef7b6d8a9
+  unit 50331655 type=32 player=3 tile=61,47 hp=110 sel=0 built=1 cargo=0 at=0x1.e800000000000p+5,0x1.7c00000000000p+5,0x1.a1f23a0000000p-2 m=f96c9166cb9fb9dc
+  unit 50331656 type=480 player=3 tile=61,47 hp=110 sel=0 built=1 cargo=0 at=0x1.ec00000000000p+5,0x1.7c00000000000p+5,0x1.a1f23a0000000p-2 m=2e6f8ab17fcf48fa
+  unit 50331657 type=32 player=3 tile=62,47 hp=110 sel=0 built=1 cargo=0 at=0x1.f000000000000p+5,0x1.7c00000000000p+5,0x1.a1fa240000000p-2 m=ba06303ce41a765f
+  unit 50331658 type=480 player=3 tile=62,47 hp=110 sel=0 built=1 cargo=0 at=0x1.f400000000000p+5,0x1.7c00000000000p+5,0x1.a1fa240000000p-2 m=c240a585116dde19
+  unit 50331659 type=32 player=3 tile=63,47 hp=110 sel=0 built=1 cargo=0 at=0x1.f800000000000p+5,0x1.7c00000000000p+5,0x1.a1fe400000000p-2 m=31ff2e2b2f7a9cff
+  unit 67108870 type=41 player=4 tile=34,61 hp=5000 sel=0 built=1 cargo=0 at=0x1.1800000000000p+5,0x1.f000000000000p+5,0x1.ac494a0000000p-2 m=178967eabaece43f
+  unit 67108871 type=32 player=4 tile=34,60 hp=110 sel=0 built=1 cargo=0 at=0x1.1000000000000p+5,0x1.e400000000000p+5,0x1.a20c2a0000000p-2 m=1982f528e15b636c
+  unit 67108872 type=480 player=4 tile=34,60 hp=110 sel=0 built=1 cargo=0 at=0x1.1400000000000p+5,0x1.e400000000000p+5,0x1.a20c2a0000000p-2 m=77676f893948b856
+  unit 67108873 type=32 player=4 tile=35,60 hp=110 sel=0 built=1 cargo=0 at=0x1.1800000000000p+5,0x1.e400000000000p+5,0x1.a20c100000000p-2 m=804c91d3e422fff5
+  unit 67108874 type=480 player=4 tile=35,60 hp=110 sel=0 built=1 cargo=0 at=0x1.1c00000000000p+5,0x1.e400000000000p+5,0x1.a20c100000000p-2 m=e2a3202db7e88b5f
+  unit 67108875 type=32 player=4 tile=36,60 hp=110 sel=0 built=1 cargo=0 at=0x1.2000000000000p+5,0x1.e400000000000p+5,0x1.a20c000000000p-2 m=1f7771b5466b8f31
+  units 350 599848f5f60b8e3d
+  selection
+  paint area 7,9,7,9
+  chunk 1 result=0 (differs by run)
+  chunk 2 result=0 bytes=20 d4bfd175cf34ab6e
+  chunk 4 result=0 bytes=25482 470714dda38d0e64
+  chunk 3 result=0 bytes=28 e92693da60a421e7
+  chunk 6 result=0 bytes=42 0eaa32a17da4eb22
+  chunk 10 result=0 bytes=28 e460b56b445b34d6
+  chunk 12 result=0 (differs by run)
+  chunk 5 result=0 (differs by run)
+  chunk 7 result=0 bytes=13186 c20a1e42a6e81915
+  chunk 8 result=0 (differs by run)
+  chunk 11 result=0 bytes=28 c68d714d6c92ada7
+step 1407 tab 3
+step 1408 tab 0
+step 1409 form 0 999 1
+  c12 UITextLabel id=0x66 ix=12 g=1 r=130,616,204,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Width'
+  c13 UITextLabel id=0x67 ix=13 g=1 r=210,616,284,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Height'
+  c14 UIComboBox id=0x6b ix=14 g=1 r=130,631,204,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '50' n=25 sel=2 '15'|'25'|'50'|'60'|'70'|'75'
+  c15 UIComboBox id=0x6c ix=15 g=1 r=210,631,284,650 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '60' n=25 sel=3 '15'|'25'|'50'|'60'|'70'|'75'
+  c16 UITextLabel id=0x64 ix=16 g=1 r=130,654,283,664 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Default Terrain'
+  c17 UITextLabel id=0x68 ix=17 g=1 r=130,654,283,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Type'
+  c18 UIComboBox id=0x6a ix=18 g=1 r=130,669,283,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Highlands' n=12 sel=1 'Continental'|'Highlands'|'Large Islands'|'Mediterranean'|'Plains'|'Planets Earth'
+  c19 UIComboBox id=0x69 ix=19 g=1 r=130,669,283,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Grass - Patches' n=63 sel=1 'Grass'|'Grass - Patches'|'Grass - Tufts'|'Rock 2'|'Desert'|'Ice'
+  c20 UIEditBox id=0x70 ix=20 g=1 r=45,680,94,694 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '4321'
+  c21 UITextLabel id=0x71 ix=21 g=1 r=45,680,94,694 m=1 bg=0.4,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 '' lines=1 '239924'
+  c22 UIRBMap id=0x6e ix=22 g=1 r=25,616,124,635 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Blank' btn fg=none
+  c23 UIRBMap id=0x6f ix=23 g=1 r=25,636,124,655 m=1 bg=0,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Random' btn fg=none
+  c24 UIRBMap id=0x6d ix=24 g=1 r=25,656,124,675 m=1 bg=0,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Seed' btn fg=none
+  c25 UIBMap id=0x65 ix=25 g=1 r=25,699,284,719 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=11 'Create Map'
+  c26 UITextLabel id=0x73 ix=26 g=1 r=130,616,283,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Map Size'
+  c27 UIComboBox id=0x72 ix=27 g=1 r=130,631,283,650 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' n=6 sel=0 'Tiny'|'Small'|'Medium'|'Large'|'Huge'|'Gigantic'
+  c28 UITextLabel id=0x74 ix=28 g=1 r=299,616,498,626 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Elevation File'
+  c29 EEUIFileComboBox id=0x75 ix=29 g=1 r=299,631,498,650 m=0 bg=0,0,0,0 b=0 h=11006 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'ridge' e3=EESEERust
+  c30 UITextLabel id=0x7b ix=30 g=1 r=299,656,448,670 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Depth'
+  c31 UIEditBox id=0x7c ix=31 g=1 r=449,656,497,670 m=0 bg=1,0,0,0 b=2 h=11010 fg=1,1,1 tr=1 fh=11 '' lines=1 '4'
+  c32 UITextLabel id=0x7a ix=32 g=1 r=299,671,448,685 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Water Cutoff'
+  c33 UIEditBox id=0x7d ix=33 g=1 r=449,671,497,685 m=0 bg=1,0,0,0 b=2 h=11007 fg=1,1,1 tr=1 fh=11 '' lines=1 '40'
+  c34 UITextLabel id=0x77 ix=34 g=1 r=299,686,448,700 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Height'
+  c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=0 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
+  c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
+  c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=0 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
