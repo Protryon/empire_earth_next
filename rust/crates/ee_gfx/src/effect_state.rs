@@ -153,6 +153,8 @@ pub struct EeGfxEffectEmitter {
     pub time: f32,
     /// `mEmitTime`: ms to the next burst (saved)
     pub emit_time: f32,
+    /// not `mIsFirstStep`: the emitter has stepped (its first step starts its animation sound afresh)
+    pub stepped: bool,
 }
 
 /// The aged effects' state (water splash, shock wave, screen flash, water ripple, blast wave; the teleport's and the
@@ -273,6 +275,8 @@ pub struct EeGfxEffectRecord {
     pub farm: crate::effect_farm::EeGfxEffectFarm,
     /// the earthquake's (`effect_quake.rs`)
     pub quake: crate::effect_quake::EeGfxEffectQuake,
+    /// the marching line's (`effect_particles.rs`)
+    pub march: crate::effect_particles::EeGfxEffectMarch,
 }
 
 /// The identity (`GETransformation()`).
@@ -323,6 +327,7 @@ impl EeGfxEffectRecord {
             glow: crate::effect_glow::EeGfxEffectGlow::default(),
             farm: crate::effect_farm::EeGfxEffectFarm::default(),
             quake: crate::effect_quake::EeGfxEffectQuake::default(),
+            march: crate::effect_particles::EeGfxEffectMarch::default(),
         }
     }
 

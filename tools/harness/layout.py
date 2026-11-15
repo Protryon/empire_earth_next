@@ -106,3 +106,8 @@ def use(build_dir):
 def off(cls, vc6_offset):
     """A VC6 offset into cls (as ee's harness writes them), translated for the build in use."""
     return _CURRENT.translate(cls, vc6_offset) if _CURRENT else vc6_offset
+
+
+def field(cls, path):
+    """A member's offset in the build in use (a class with no VC6 counterpart, e.g. EEMRecord)."""
+    return _CURRENT.field(cls, path)

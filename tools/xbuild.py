@@ -505,6 +505,15 @@ WON_TESTS = {
     # BackgroundGrabber as a whole Rust object (grabobj.rs) against the original statements over a traced world
     # (golden: rust/crates/ee_won/src/golden_grabobj.txt)
     "won_grabobj_test": [],
+    # Component wholly in Rust (compobj.rs) against the original statements over a traced world of components,
+    # windows, events and grabbers (golden: rust/crates/ee_won/src/golden_compobj.txt)
+    "won_compobj_test": [],
+    # WrappedText as a Rust object (wrapobj.rs) against the original statements over stand-in texts and fonts
+    # (golden: rust/crates/ee_won/src/golden_wrapobj.txt)
+    "won_wrapobj_test": [],
+    # StretchImage's settings as a Rust object (stretchobj.rs) against the original statements over stand-in images
+    # (golden: rust/crates/ee_won/src/golden_stretchobj.txt)
+    "won_stretchobj_test": [],
     # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
     # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
     "won_compaint_test": [],
@@ -608,6 +617,9 @@ WON_TESTS = {
     # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
     # rust/crates/ee_won/src/golden_eexfer.txt)
     "won_eexfer_test": [],
+    # PingLogic (with PingGameOp), AccountLogic and InitLogic as Rust objects (golden:
+    # rust/crates/ee_won/src/golden_logics.txt)
+    "won_logics_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",

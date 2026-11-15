@@ -10,6 +10,9 @@
 //! tab). A host call can come back into a screen (picking a line of the type combo box runs `ChangeConditionType`):
 //! the screens are used through `&self`, their type a `Cell`.
 
+use crate::editor_controls::{
+    condition_controls, delete_controls, effect_controls, make_controls, CONDITION_DELETE_ORDER, EFFECT_DELETE_ORDER,
+};
 use core::cell::Cell;
 
 use crate::editor_conditions::{ConditionTypes, Cx};
@@ -156,6 +159,7 @@ impl ConditionScreen {
         index: &mut u32,
     ) -> ConditionScreen {
         let controls = at::<H, ()>(h, 0, None, 0).controls_new(form, index);
+        make_controls(s, h, controls, form, index, &condition_controls());
         let (title, type_combo) = make_title_and_combo(
             s,
             form,
@@ -172,6 +176,7 @@ impl ConditionScreen {
 
     /// The destructor: the controls, the type combo box, the title, then the types.
     pub fn destroy<S: SeplHost + ?Sized, H: SeplHost + ?Sized>(&self, s: &mut S, h: &mut H) {
+        delete_controls(s, h, self.controls, &CONDITION_DELETE_ORDER);
         at::<H, ()>(h, self.controls, None, 0).controls_free();
         delete(s, self.type_combo);
         delete(s, self.title);
@@ -341,6 +346,7 @@ impl EffectScreen {
         index: &mut u32,
     ) -> EffectScreen {
         let controls = at::<H, ()>(h, 0, None, 0).controls_new(form, index);
+        make_controls(s, h, controls, form, index, &effect_controls());
         let (title, type_combo) = make_title_and_combo(
             s,
             form,
@@ -357,6 +363,7 @@ impl EffectScreen {
 
     /// The destructor: the controls, the title, the type combo box, then the types (`me`: their handle).
     pub fn destroy<S: SeplHost + ?Sized, H: SeplHost + ?Sized>(&self, s: &mut S, h: &mut H, me: usize) {
+        delete_controls(s, h, self.controls, &EFFECT_DELETE_ORDER);
         at::<H, ()>(h, self.controls, None, me).controls_free();
         delete(s, self.title);
         delete(s, self.type_combo);

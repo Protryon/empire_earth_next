@@ -22,6 +22,13 @@
 #include "lle/FSMemoryFile.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEScenarioCapture.h"
+#include "ee/EEUnit.h"
+#include "ee/EEUnitGoal.h"
+#include "ee/EEUnitVectorItem.h"
+#include "ee/EEUnitBehavior.h"
+#include "ee/EECPTrace.h"
+#include "ee/EECameraControl.h"
+#include "ee/EEEnvironmentManager.h"
 
 namespace {
 
@@ -271,6 +278,7 @@ void EESMCaptureEffect(EESMEffect* inEffect, bool inIsCinematic, unsigned int in
     if (theManager)
         TimedEffects(r, theManager);
     r.Commit();
+    EESMCaptureEffectWorld(inEffect);
 }
 
 namespace {
@@ -282,6 +290,135 @@ unsigned long long FileHash(FSMemoryFile& inFile)
     inFile.GetLength(theLength);
     return Fnv(kFnvStart, inFile.GetData(), theLength);
 }
+
+// a unit of an effect's objects as SMEW reads it: its checksum and the state the effects write
+void EffectUnit(EESimCaptureRecord& ioRecord, unsigned long inID)
+{
+    EEUnit* theUnit = gWorld.GetUnit(inID);
+    ioRecord.U32((unsigned int)inID);
+    ioRecord.U32(theUnit != NULL ? 1u : 0u);
+    if (theUnit == NULL)
+        return;
+    ioRecord.I32((int)theUnit->GetChecksum(3));
+    ioRecord.I32(theUnit->mPlayer != NULL ? (int)theUnit->mPlayer->mPlayerID : -1);
+    ioRecord.I32((int)theUnit->GetHitPoints());
+    ioRecord.I32((int)theUnit->mTileX);
+    ioRecord.I32((int)theUnit->mTileY);
+    ioRecord.U32(theUnit->mTileNode != NULL ? 1u : 0u);
+    U64(ioRecord, TextHash(theUnit->GetStats()->mName));
+    EEComplexUnit* theComplex = theUnit->mComplexUnit;
+    ioRecord.U32(theComplex != NULL ? 1u : 0u);
+    if (theComplex == NULL)
+        return;
+    ioRecord.U32((unsigned int)theComplex->GetCommandType());
+    EEUnitGoal* theGoal = theComplex->GetGoal();
+    ioRecord.I32(theGoal != NULL ? (int)theGoal->mKind : -1);
+    ioRecord.U32((unsigned int)theComplex->mGoalQueues.size());
+    for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
+        ioRecord.U32((unsigned int)theComplex->mGoalQueues[q].mGoals.size());
+        for (size_t g = 0; g < theComplex->mGoalQueues[q].mGoals.size(); g++)
+            ioRecord.I32(theComplex->mGoalQueues[q].mGoals[g] != NULL ? (int)theComplex->mGoalQueues[q].mGoals[g]->mKind : -1);
+    }
+    ioRecord.U32((theComplex->mIsDisabled ? 1u : 0u) | (theComplex->mIsCommandable ? 2u : 0u) |
+                 (theComplex->mIsDeletable ? 4u : 0u) | (theComplex->mIsLocked ? 8u : 0u) |
+                 (theComplex->mIsDetachedFromAI ? 16u : 0u));
+    long theBehavior = -1;
+    for (size_t b = 0; b < EEUnitBehavior::sTable.size(); b++)
+        if (EEUnitBehavior::sTable[b] == theComplex->mBehavior)
+            theBehavior = (long)b;
+    ioRecord.I32((int)theBehavior);
+    ioRecord.I32(theComplex->mContainer != NULL ? (int)theComplex->mContainer->mUnitID : -1);
+    ioRecord.I32((int)theComplex->mFlightTime);
+    ioRecord.I32((int)theComplex->mAmmunition);
+    ioRecord.U32((unsigned int)theComplex->mCargo.size());
+    const GETransformation& theLocation = theComplex->mPhysicalModel.GetLocation();
+    ioRecord.Bytes(&theLocation.mMatrix, sizeof(theLocation.mMatrix));
+}
+
+void EffectObject(EESimCaptureRecord& ioRecord, unsigned long inIndex)
+{
+    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(inIndex);
+    ioRecord.U32(theObject != NULL ? (unsigned int)theObject->mUnits.size() : 0xffffffffu);
+    if (theObject != NULL)
+        for (unsigned long u : theObject->mUnits)
+            EffectUnit(ioRecord, u);
+}
+
+}   // namespace
+
+void EESMCaptureEffectWorld(EESMEffect* inEffect)
+{
+    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    if (theManager == NULL)
+        return;
+    EESimCaptureRecord r(EECaptureTag("SMEW"));
+    r.U32((unsigned int)inEffect->mID);
+    {
+        FSMemoryFile theFile;
+        r.I32((int)inEffect->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile));
+        U64(r, FileHash(theFile));
+    }
+    // the world's out-of-synch sums as EE-SIM's --checksum-trace reads them (reads only)
+    unsigned long theSaved = gPhysics->mLastOutOfSynchChecksum;
+    r.U32((unsigned int)gPhysics->GetOutOfSynchChecksum(false, 0x1 | 0x2 | 0x10 | 0x40 | 0x100));
+    gPhysics->mLastOutOfSynchChecksum = theSaved;
+    unsigned long theUnits = 0;
+    unsigned long theCount = 0;
+    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
+        theUnits += (unsigned long)static_cast<EEUnit*>(theUnit)->GetChecksum(3);
+        theCount++;
+    }
+    r.U32((unsigned int)theCount);
+    r.U32((unsigned int)theUnits);
+    r.U32((unsigned int)EECPOutOfSynchChecksum());
+    // the units of the objects an effect names
+    const unsigned long theObjects[] = {inEffect->mObject, inEffect->mTaskObject, inEffect->mPlaceObject,
+                                        inEffect->mTargetObject, inEffect->mLocationObject};
+    for (unsigned long theIndex : theObjects)
+        EffectObject(r, theIndex);
+    // the players
+    r.U32((unsigned int)gWorld.mNumPlayers);
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        r.U32(thePlayer != NULL ? 1u : 0u);
+        if (thePlayer == NULL)
+            continue;
+        r.U32((unsigned int)thePlayer->mGameResult);
+        r.U32((thePlayer->mSeesAll ? 1u : 0u) | (thePlayer->mObserverMode ? 2u : 0u));
+        for (unsigned long q = 0; q < gWorld.mNumPlayers; q++)
+            r.I32((int)thePlayer->mEnemies[q]);
+        r.U32((unsigned int)thePlayer->mPendingGroups.size());
+        r.U32((unsigned int)thePlayer->mRunningGroups.size());
+        r.U32((unsigned int)thePlayer->mPatrolGroups.size());
+        r.U32((unsigned int)thePlayer->mCivilization.mAvailablePoints);
+        r.U32((unsigned int)thePlayer->mCivilization.mMaxPoints);
+        EEComputerPlayer* theComputer = thePlayer->mComputerPlayer;
+        r.U32(theComputer != NULL ? 1u : 0u);
+        if (theComputer != NULL) {
+            r.U32((unsigned int)theComputer->mFavoriteLandType);
+            r.U32((unsigned int)theComputer->mFavoriteSeaType);
+            r.U32((unsigned int)theComputer->mFavoriteAirType);
+        }
+    }
+    // the manager, the world and the camera
+    U64(r, TextHash(theManager->mMediaStrings.GetSection(0)));
+    U64(r, TextHash(theManager->mMediaStrings.GetSection(3)));
+    U64(r, TextHash(theManager->mMediaStrings.GetSection(2)));
+    r.U32((unsigned int)theManager->mMessages.size());
+    r.U32((unsigned int)theManager->mPendingEffects.size());
+    r.U32((unsigned int)theManager->mTriggers.size());
+    for (EESMTrigger* t : theManager->mTriggers)
+        r.U32(t ? ((t->mIsOn ? 1u : 0u) | (t->mHasFired ? 2u : 0u)) | ((unsigned int)t->mConditionStartTime << 2) : 0xffffffffu);
+    r.F32(gWorld.GetTimeOfDay());
+    r.F32(gWorld.mGameSpeed);
+    r.U32((gPhysics->mTimeOfDayRuns ? 1u : 0u) | (gWorld.mInCinematic ? 2u : 0u) |
+          (gWorld.mEnvironmentManager != NULL && gWorld.mEnvironmentManager->mIsEnabled ? 4u : 0u));
+    r.U32((unsigned int)gWorld.mCameraControl.mKeys.size());
+    r.U32((unsigned int)gWorld.mCameraControl.mPathIndex);
+    r.Commit();
+}
+
+namespace {
 
 // a list's count, the first error and the hash of its elements' Saves
 template<class T> void SavedList(EESimCaptureRecord& ioRecord, const std::vector<T*>& inList, unsigned long inMajor,
@@ -390,5 +527,72 @@ void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool i
     r.F32(inY);
     r.U32(inSeed);
     r.U32(EESMCaptureSeed());
+    r.Commit();
+}
+
+void EESMCaptureUnitChange(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
+                           EEUnitClassUpgrade* inUpgrade, unsigned int inSeed)
+{
+    EESimCaptureRecord r(EECaptureTag("SMCU"));
+    r.I32((int)inKind);
+    for (int i = 0; i < 7; i++)
+        r.I32((int)inArgs[i]);
+    r.U32(inSeed);
+    r.U32(EESMCaptureSeed());
+    if (inKind == 0) {
+        r.U32(inUnit != NULL ? 1u : 0u);
+        if (inUnit != NULL) {
+            r.U32((unsigned int)inUnit->mUnitID);
+            r.I32((int)inUnit->GetChecksum(3));
+            r.I32((int)inUnit->GetHitPoints());
+            r.I32((int)inUnit->mResourceAmount);
+            r.I32((int)inUnit->mResourceType);
+            r.U32(inUnit->mTileNode != NULL ? 1u : 0u);
+            EEComplexUnit* c = inUnit->mComplexUnit;
+            r.U32(c != NULL ? 1u : 0u);
+            if (c != NULL) {
+                r.I32((int)c->mFlightTime);
+                r.I32((int)c->mGarrisonCount);
+                r.U32((unsigned int)c->mAmmunition);
+                r.F32(c->mPhysicalModel.GetScale());
+                r.I32((int)c->mReloadTimer);
+                r.I32((int)c->mPower);
+                r.I32((int)c->mRottingAwayTime);
+                r.U32((c->mIsBuilt ? 1u : 0u) | (c->mIsAnimationPaused ? 2u : 0u));
+                for (size_t v = 0; v < c->mUnitVariables.size(); v++)
+                    r.I32((int)c->mUnitVariables[v]);
+                r.U32((unsigned int)c->GetCommandType());
+                r.U32((unsigned int)c->mGoalQueues.size());
+                for (size_t q = 0; q < c->mGoalQueues.size(); q++)
+                    r.U32((unsigned int)c->mGoalQueues[q].mGoals.size());
+            }
+        }
+    } else {
+        r.I32(inPlayer != NULL ? (int)inPlayer->mPlayerID : -1);
+        r.U32(inUpgrade != NULL ? 1u : 0u);
+        if (inUpgrade != NULL) {
+            for (int i = 0; i < 6; i++)
+                r.F32(inUpgrade->mArmor[i]);
+            r.I32((int)inUpgrade->mReloadTime);
+            r.F32(inUpgrade->mAttack);
+            r.I32((int)inUpgrade->mWorkRate);
+            r.I32((int)inUpgrade->mFlightTime);
+            r.F32(inUpgrade->mLeadership);
+            r.I32((int)inUpgrade->mMaxObjectCarry);
+            r.I32((int)inUpgrade->mRepairRate);
+            r.I32((int)inUpgrade->mMaxHitPoints);
+            r.I32((int)inUpgrade->mCarryAmount);
+            r.I32((int)inUpgrade->mHealingPoints);
+            r.F32(inUpgrade->mRange);
+            r.F32(inUpgrade->mLineOfSight);
+            r.F32(inUpgrade->mMaxVelocity);
+            r.I32((int)inUpgrade->mPower);
+            r.U32(inUpgrade->mIsInitialized ? 1u : 0u);
+            r.F32(inUpgrade->mCameraFocus);
+        }
+    }
+    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    if (theManager != NULL)
+        SavedList(r, theManager->mPendingEffects, kSaveGameMajorVersion, kSaveGameMinorVersion);
     r.Commit();
 }
