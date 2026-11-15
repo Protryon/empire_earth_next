@@ -30,6 +30,9 @@
 //   SMTK  every EESMEffect::ExpandTokens: the text's and the result's FNV-1a, the seeds
 //   SMFP  every EESMObject::FindPlacement (the retry too): the object's index, the unit type, the random flag, the
 //         result and location, the seeds
+//   SMCU  every EEChangeUnit (kind 0) and EEModifyUnitAttribute (kind 1): the arguments, the seeds, the unit's values
+//         after (checksum, hit points, resource, flight time, garrison, ammunition, scale, reload, power, rotting,
+//         flags, variables, command and goal queues) or the player's upgrade after, and the pending effects
 // Off (EE_SIM_CAPTURE unset) each hook is one cached test.
 #ifndef EE_EESCENARIOCAPTURE_H
 #define EE_EESCENARIOCAPTURE_H
@@ -43,6 +46,8 @@ class EESMArea;
 class EESMEffect;
 class EEScenarioManager;
 class EEUnit;
+class EEPlayer;
+class EEUnitClassUpgrade;
 class UWideString;
 
 // the physics random stream's seed (0 without physics)
@@ -74,6 +79,10 @@ void EESMCapturePlayerAttribute(long inPlayer, unsigned long inAttribute, long i
 void EESMCaptureTokens(const UWideString& inText, const UWideString& outText, unsigned int inSeed);
 void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult, float inX,
                           float inY, unsigned int inSeed);
+// SMCU: kind 0 EEChangeUnit (inArgs: attribute, percent, unit id, minimum, maximum, random, mode), kind 1
+// EEModifyUnitAttribute (attribute, percent, player id, unit type, amount, mode, 0)
+void EESMCaptureUnitChange(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
+                           EEUnitClassUpgrade* inUpgrade, unsigned int inSeed);
 void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying);
 void EESMCaptureSaved(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
                       unsigned long inMinorVersion);

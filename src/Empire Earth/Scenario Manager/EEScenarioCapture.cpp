@@ -529,3 +529,70 @@ void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool i
     r.U32(EESMCaptureSeed());
     r.Commit();
 }
+
+void EESMCaptureUnitChange(long inKind, const long* inArgs, EEUnit* inUnit, EEPlayer* inPlayer,
+                           EEUnitClassUpgrade* inUpgrade, unsigned int inSeed)
+{
+    EESimCaptureRecord r(EECaptureTag("SMCU"));
+    r.I32((int)inKind);
+    for (int i = 0; i < 7; i++)
+        r.I32((int)inArgs[i]);
+    r.U32(inSeed);
+    r.U32(EESMCaptureSeed());
+    if (inKind == 0) {
+        r.U32(inUnit != NULL ? 1u : 0u);
+        if (inUnit != NULL) {
+            r.U32((unsigned int)inUnit->mUnitID);
+            r.I32((int)inUnit->GetChecksum(3));
+            r.I32((int)inUnit->GetHitPoints());
+            r.I32((int)inUnit->mResourceAmount);
+            r.I32((int)inUnit->mResourceType);
+            r.U32(inUnit->mTileNode != NULL ? 1u : 0u);
+            EEComplexUnit* c = inUnit->mComplexUnit;
+            r.U32(c != NULL ? 1u : 0u);
+            if (c != NULL) {
+                r.I32((int)c->mFlightTime);
+                r.I32((int)c->mGarrisonCount);
+                r.U32((unsigned int)c->mAmmunition);
+                r.F32(c->mPhysicalModel.GetScale());
+                r.I32((int)c->mReloadTimer);
+                r.I32((int)c->mPower);
+                r.I32((int)c->mRottingAwayTime);
+                r.U32((c->mIsBuilt ? 1u : 0u) | (c->mIsAnimationPaused ? 2u : 0u));
+                for (size_t v = 0; v < c->mUnitVariables.size(); v++)
+                    r.I32((int)c->mUnitVariables[v]);
+                r.U32((unsigned int)c->GetCommandType());
+                r.U32((unsigned int)c->mGoalQueues.size());
+                for (size_t q = 0; q < c->mGoalQueues.size(); q++)
+                    r.U32((unsigned int)c->mGoalQueues[q].mGoals.size());
+            }
+        }
+    } else {
+        r.I32(inPlayer != NULL ? (int)inPlayer->mPlayerID : -1);
+        r.U32(inUpgrade != NULL ? 1u : 0u);
+        if (inUpgrade != NULL) {
+            for (int i = 0; i < 6; i++)
+                r.F32(inUpgrade->mArmor[i]);
+            r.I32((int)inUpgrade->mReloadTime);
+            r.F32(inUpgrade->mAttack);
+            r.I32((int)inUpgrade->mWorkRate);
+            r.I32((int)inUpgrade->mFlightTime);
+            r.F32(inUpgrade->mLeadership);
+            r.I32((int)inUpgrade->mMaxObjectCarry);
+            r.I32((int)inUpgrade->mRepairRate);
+            r.I32((int)inUpgrade->mMaxHitPoints);
+            r.I32((int)inUpgrade->mCarryAmount);
+            r.I32((int)inUpgrade->mHealingPoints);
+            r.F32(inUpgrade->mRange);
+            r.F32(inUpgrade->mLineOfSight);
+            r.F32(inUpgrade->mMaxVelocity);
+            r.I32((int)inUpgrade->mPower);
+            r.U32(inUpgrade->mIsInitialized ? 1u : 0u);
+            r.F32(inUpgrade->mCameraFocus);
+        }
+    }
+    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    if (theManager != NULL)
+        SavedList(r, theManager->mPendingEffects, kSaveGameMajorVersion, kSaveGameMinorVersion);
+    r.Commit();
+}

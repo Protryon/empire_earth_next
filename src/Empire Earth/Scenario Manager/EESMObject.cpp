@@ -416,7 +416,22 @@ long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 // class base changes and is clamped at 0), clamped, and queues the change as a pending effect. The arithmetic is
 // ee_scenario class_attribute.rs's; here the upgrade's field and the class's base by attribute, and the line of
 // sight's and animal AI's world steps.
+static void EEModifyUnitAttributeUncaptured(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
+                EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode);
 void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
+                EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode)
+{
+    unsigned int theSeed = EESimCaptureRecord::Active() ? EESMCaptureSeed() : 0;
+    EEModifyUnitAttributeUncaptured(inAttribute, inPercentage, inPlayer, inUpgrade, inAmount, inMode);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
+        long theArgs[7] = {(long)inAttribute, inPercentage, inPlayer != NULL ? (long)inPlayer->mPlayerID : -1,
+                           inUpgrade != NULL ? (long)inUpgrade->mUnitClass->mUnitType : -1, inAmount, inMode, 0};
+        EESMCaptureUnitChange(1, theArgs, NULL, inPlayer, inUpgrade, theSeed);
+    }
+}
+
+// EEModifyUnitAttribute's body (EEModifyUnitAttribute adds the simulation capture's SMCU record)
+static void EEModifyUnitAttributeUncaptured(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
                 EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode)
 {
     std::vector<EEUnit*> theUnits;
@@ -532,7 +547,22 @@ void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlaye
 // Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
 // rot time, built state, variables) by a fixed, random or percentage amount
 // Original cdecl helper; random range and the percentage flag are independent of add/subtract/assign mode.
+static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
+                long inMinimum, unsigned long inMaximum, bool inRandom, long inMode);
 void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
+                long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
+{
+    unsigned int theSeed = EESimCaptureRecord::Active() ? EESMCaptureSeed() : 0;
+    long theID = inUnit != NULL ? (long)inUnit->mUnitID : -1;   // the unit by id after (a kill may free it)
+    EEChangeUnitUncaptured(inAttribute, inPercentage, inUnit, inMinimum, inMaximum, inRandom, inMode);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
+        long theArgs[7] = {(long)inAttribute, inPercentage, theID, inMinimum, (long)inMaximum, inRandom, inMode};
+        EESMCaptureUnitChange(0, theArgs, theID >= 0 ? gWorld.GetUnit((unsigned long)theID) : NULL, NULL, NULL, theSeed);
+    }
+}
+
+// EEChangeUnit's body (EEChangeUnit adds the simulation capture's SMCU record)
+static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
                 long inMinimum, unsigned long inMaximum, bool inRandom, long inMode)
 {
     std::vector<unsigned long> theUnused;
