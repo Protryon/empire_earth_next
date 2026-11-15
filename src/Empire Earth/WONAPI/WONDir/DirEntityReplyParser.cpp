@@ -81,11 +81,3 @@ void DirEntityReplyParser::TakeEntity(void* inList, const EeWonDirEntity* inEnti
     static_cast<DirEntityList*>(inList)->push_back(DirMakeEntity(inEntity));
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006f1f10
-// (protected: void __thiscall std::list<struct WONAPI::DirDataObject,class std::allocator<struct WONAPI::DirDataObject> >::_Incsize(unsigned int))
-// TEMPLATE: WON 0x006f2680
-// (void __cdecl std::_Construct(struct WONAPI::DirDataObject *,struct WONAPI::DirDataObject const &))
-// TEMPLATE: WON 0x006f2700
-// (void __cdecl std::_Construct(struct WONAPI::DirACL *,struct WONAPI::DirACL const &))

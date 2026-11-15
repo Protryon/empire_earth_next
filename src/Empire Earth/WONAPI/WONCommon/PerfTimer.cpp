@@ -17,7 +17,6 @@ static __int64 MyQueryPerformanceCounter()
 {
     return PlatCounterTicks();
 }
-// FUNCTION: WON 0x006a3850
 // Returns the counter's rate per second (the original measured rdtsc over a 50 ms sleep), cached
 static __int64 MyQueryPerformanceFrequency()
 {
@@ -26,7 +25,6 @@ static __int64 MyQueryPerformanceFrequency()
     aFreq=PlatCounterFrequency();
     return aFreq;
 }
-// FUNCTION: WON 0x006a3820
 // Returns the time counted by the timers in milliseconds (raw ticks when the rate is unknown)
 double PerfTimer::GetCountedTime(const char*)
 {
@@ -34,17 +32,14 @@ double PerfTimer::GetCountedTime(const char*)
     if(frequency==0) return gPerfTotalTime;
     return (double)gPerfTotalTime/frequency*1000.0;
 }
-// FUNCTION: WON 0x006a3900
 // Returns the milliseconds between the last global start and stop
 double PerfTimer::GetElapsedTime(const char*) {return gPerfElapsedTime;}
-// FUNCTION: WON 0x006a3910
 // Returns the counted time as a fraction of the elapsed time, 0 when nothing elapsed
 double PerfTimer::GetPercentTime(const char*)
 {
     if(gPerfElapsedTime==0) return 0;
     return PerfTimer::GetCountedTime()/gPerfElapsedTime;
 }
-// FUNCTION: WON 0x006a3940
 // Starts a global timing run, clearing the counted time and noting the start tick
 void PerfTimer::GlobalStart(const char*)
 {
@@ -54,7 +49,6 @@ void PerfTimer::GlobalStart(const char*)
     gPerfElapsedTime=0;
     gPerfResetTick=PlatCounterTicks();
 }
-// FUNCTION: WON 0x006a3990
 // Ends the global timing run and records its elapsed milliseconds
 void PerfTimer::GlobalStop(const char*)
 {
@@ -121,7 +115,3 @@ void PerfTimer::DumpTimesToStr(std::string &theStr)
 void PerfTimer::DumpTimesToFile(const char *theFileName)
 {
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006a37f0
-// (__int64 __cdecl MyQueryPerformanceCounter(void)    [?MyQueryPerformanceCounter@@YA_JXZ])

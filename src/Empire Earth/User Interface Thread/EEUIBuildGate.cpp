@@ -20,21 +20,18 @@
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType);  // 0x21176e: restores the colour of inPlayer's walls
 void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType);  // 0x211957: highlights them
 
-// FUNCTION: EXE 0x65619b
 // Asks the main game form to build a gate at a location facing a direction
 void EEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
     gUIManager->mMainGameForm->BuildGate(inLocation, inDirection);
 }
 
-// FUNCTION: EXE 0x6561b6
 // Leaves the placement mode (back to the normal interface state)
 void EEUIBuildGate::Cancel()
 {
     gUIManager->mMainGameForm->SetUIState(0);
 }
 
-// FUNCTION: EXE 0x6561c9
 // Restores the player's wall colours and removes the gate ghost
 void EEUIBuildGate::ClearGhostUnits()
 {
@@ -44,7 +41,6 @@ void EEUIBuildGate::ClearGhostUnits()
     gWorld.mGhostUnitsLock->Leave();
 }
 
-// FUNCTION: EXE 0x6561ff
 // Starts gate placement for a player: highlights the walls a gate can go on and loads the gate's media
 void EEUIBuildGate::Initialize(long inPlayer)
 {
@@ -56,7 +52,6 @@ void EEUIBuildGate::Initialize(long inPlayer)
     thePlayer->SetUnitClassMedia(this->mUnitClass->mUnitType, 0x7f);
 }
 
-// FUNCTION: EXE 0x656245
 // Ends gate placement: removes highlights and ghosts, unlocks the cursor and unloads the gate's media
 void EEUIBuildGate::Terminate()
 {
@@ -65,6 +60,3 @@ void EEUIBuildGate::Terminate()
     gUIManager->mMainGameForm->mIsCursorLocked = false;
     thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
 }
-
-// FUNCTION: EXE 0x65627d
-// (Update: EEUIFMainGame.cpp, next to its host; ee_screens mouse_modes.rs gate_update)

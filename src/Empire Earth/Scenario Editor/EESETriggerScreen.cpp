@@ -100,7 +100,6 @@ extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its c
 
 bool gB4C3220 = true;
 
-// FUNCTION: EXE 0x57b0b7
 // Builds the trigger tab (ee_screens editor_tscreen.rs: the entry list, the five sub-tab buttons, new/duplicate/
 // delete, the sort and priority buttons, the debug-id check box, the name and description boxes), then the five
 // sub-screens, then disables their groups
@@ -116,13 +115,6 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_FINISH, 0, 0.0f, 0.0f, NULL);
 }
 
-// SYNTHETIC: EXE 0x57bf58
-// (EESETSShowIDsCheckBox's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57bf7b
-// (EESETriggerScreen's scalar deleting destructor)
-
-// FUNCTION: EXE 0x57bf97
 // Destroys the trigger tab's list, tab buttons, sub-screens, name and description controls and buttons (the
 // original's order: the sub-screens between the tabs and the name box)
 EESETriggerScreen::~EESETriggerScreen()
@@ -201,7 +193,6 @@ long EESETriggerScreen::GetCurrentScreen() const
     return (long)(intptr_t)ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_CURRENT_SCREEN, 0);
 }
 
-// FUNCTION: EXE 0x57c1e5
 // Creates the trigger, condition, effect, object or area sub-screen for a sub-tab index
 EESETSBaseObject* EESETriggerScreen::CreateScreen(unsigned long inType, GEFont* inFont, UIForm* inForm,
                                                   unsigned long& ioIndex)
@@ -418,15 +409,5 @@ extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i,
     return 0;
 }
 
-// SYNTHETIC: EXE 0x57caa5
-// (UILBString's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cac2
-// (UIRadioButton's scalar deleting destructor)
-
 // MISSING 0x57cadf: EEScenarioManager::GetCondition's COMDAT (inline, ee/EEScenarioManager.h); no user written in this
 // unit yet, so it is not emitted here
-
-// FUNCTION: EXE 0x57ccba
-// Sets the hide-UI panel event's full and reduced game view rectangles
-// (inline; ee_screens editor_events.rs: ee_screens_see_hide_ui_views)

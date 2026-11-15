@@ -119,10 +119,6 @@ static EeGfxEdgePlanes EECameraEdgePlanes(const GETerrainMesh& inMesh)
 // whether the height clamp keeps the camera at least 0.4 high (no followed unit, no free camera, no path playing)
 #define EE_CAM_PLAIN (this->mUnitA == NULL && this->mUnitB == NULL && !gFreeCamera && !this->mLocked)
 
-// FUNCTION: EXE 0x527584
-// FUNCTION: EXE 0x52758e
-// FUNCTION: EXE 0x52759f
-// FUNCTION: EXE 0x5275ab
 // Constructs the game version string "2002.8.17.v1.00" and registers its destructor to run at exit
 UWideString gGameVersion("2002.8.17.v1.00");
 
@@ -146,12 +142,9 @@ float gCameraMaxZoom = 2.0f;
 // The pitch limits (0x5275ce..0x527650: -5 and -35 degrees, the free camera's 0 and -35), the rear clipping tilt (25
 // degrees, 0x527624) and range (0x52763c), the move speeds, the orthographic view's constants and the clipping
 // distances are rust/crates/ee_gfx camera.rs's.
-// FUNCTION: EXE 0x5275b6
-// FUNCTION: EXE 0x5275bb
 // Initialises the camera's field of view (30 degrees)
 static float sCameraFieldOfView = kCameraDegreesToRadians * 30.0f;
 
-// FUNCTION: EXE 0x527654
 // Creates the camera controller with no followed unit or target point, mode 0, zoom 0.5 and no path
 EECameraControl::EECameraControl()
 {
@@ -171,16 +164,11 @@ EECameraControl::EECameraControl()
     this->mTurnYaw = 0.0f;
 }
 
-// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
-// TEMPLATE: EXE 0x52779f
-
-// FUNCTION: EXE 0x5277bb
 // Destroys the camera controller (members only)
 EECameraControl::~EECameraControl()
 {
 }
 
-// FUNCTION: EXE 0x5277c9
 // Drops the camera path's keys and unlocks the camera
 void EECameraControl::ResetPath()
 {
@@ -189,7 +177,6 @@ void EECameraControl::ResetPath()
     this->mWaited = 0.0f;
 }
 
-// FUNCTION: EXE 0x5277e5
 // Appends a key to the camera path; returns 0, or 5 while a path plays (camera locked)
 long EECameraControl::AddKey(const EECameraKey& inKey)
 {
@@ -200,8 +187,6 @@ long EECameraControl::AddKey(const EECameraKey& inKey)
     return 5;
 }
 
-// FUNCTION: EXE 0x5279f0
-// FUNCTION: EXE 0x527c09
 // Sets the viewport's front and rear clipping distances from the view rays through the screen's top, centre and bottom
 // (fixed ones in the orthographic view). The original's EECameraRayDistance (0x527c09) built each ray twice, once for
 // the rear and once for the front limit; EEMap::GetScreenLine reads only the viewport, which changes after all six,
@@ -228,17 +213,12 @@ void EECameraControl::SetClippingDistances()
     gViewport.SetRearClippingDistance(theClipping.rear);
 }
 
-// FUNCTION: EXE 0x527db3
 // Copies one camera key into another
 void EECameraControl::CopyKey(const EECameraKey& inKey, EECameraKey& outKey)
 {
     outKey = inKey;
 }
 
-// Compiler-generated: EECameraKey's implicit operator= (two GETransformation imports, then the members):
-// TEMPLATE: EXE 0x527dc3
-
-// FUNCTION: EXE 0x527e5b
 // Moves to the camera path's next key and locks the camera, or ends the path after the last key
 void EECameraControl::NextKey()
 {
@@ -251,7 +231,6 @@ void EECameraControl::NextKey()
     this->ResetPath();
 }
 
-// FUNCTION: EXE 0x527eb1
 // Builds the camera view at a point of the current move from the interpolated offset, turns and focus, kept above
 // ground
 void EECameraControl::BuildView(GETransformation& outTransformation, float inStep)
@@ -270,21 +249,18 @@ void EECameraControl::BuildView(GETransformation& outTransformation, float inSte
                              EECameraGround(theMesh), EE_CAM_T(outTransformation));
 }
 
-// FUNCTION: EXE 0x52802b
 // Returns the camera offset interpolated between the move's start and end
 void EECameraControl::GetOffset(float inStep, GE3DPoint& outPoint)
 {
     ee_gfx_camera_lerp(EE_CAM_P(this->mStartOffset), EE_CAM_P(this->mEndOffset), inStep, EE_CAM_P(outPoint));
 }
 
-// FUNCTION: EXE 0x52806d
 // Returns the view turn interpolated between the move's start and end (quaternion slerp)
 void EECameraControl::SlerpViewTurn(float inStep, GEQuaternion& outQuaternion)
 {
     this->mQ014.Slerp(this->mQ04C, inStep, outQuaternion);
 }
 
-// FUNCTION: EXE 0x528089
 // Returns the interpolated view turn as a transformation
 void EECameraControl::GetViewTurn(float inStep, GETransformation& outTransformation)
 {
@@ -293,14 +269,12 @@ void EECameraControl::GetViewTurn(float inStep, GETransformation& outTransformat
     theQuaternion.ConvertTo(outTransformation);
 }
 
-// FUNCTION: EXE 0x5280cb
 // Returns the offset turn interpolated between the move's start and end (quaternion slerp)
 void EECameraControl::SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion)
 {
     this->mQ024.Slerp(this->mQ05C, inStep, outQuaternion);
 }
 
-// FUNCTION: EXE 0x5280e7
 // Returns the interpolated offset turn as a transformation
 void EECameraControl::GetOffsetTurn(float inStep, GETransformation& outTransformation)
 {
@@ -309,14 +283,12 @@ void EECameraControl::GetOffsetTurn(float inStep, GETransformation& outTransform
     theQuaternion.ConvertTo(outTransformation);
 }
 
-// FUNCTION: EXE 0x528129
 // Returns the camera focus interpolated between the move's start and end
 void EECameraControl::GetLocation(float inStep, GE3DPoint& outLocation)
 {
     ee_gfx_camera_lerp(EE_CAM_P(this->mStartFocus), EE_CAM_P(this->mEndFocus), inStep, EE_CAM_P(outLocation));
 }
 
-// FUNCTION: EXE 0x52816e
 // Returns a scroll line's end clipped to the map edges, at terrain height when the camera is close or the point is
 // below ground, else at the minimum height
 void EECameraControl::GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint)
@@ -329,7 +301,6 @@ void EECameraControl::GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint
                                EECameraGround(theMesh), EE_CAM_P(outPoint));
 }
 
-// FUNCTION: EXE 0x52844f
 // Returns the point the camera focuses on for a unit: its model centre at camera-focus height, else its tile centre
 void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
 {
@@ -350,7 +321,6 @@ void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
     }
 }
 
-// FUNCTION: EXE 0x52851e
 // Returns the camera turn for following a unit (its heading plus the follow turn and zoom pitch), else the current
 // offset turn
 void EECameraControl::GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation)
@@ -369,14 +339,12 @@ void EECameraControl::GetUnitTurn(EEUnit* inUnit, GETransformation& outTransform
         this->mQ05C.ConvertTo(outTransformation);
 }
 
-// FUNCTION: EXE 0x5285ec
 // Returns the camera pitch for a zoom in a camera mode (linear, curved, the world camera's own pitch, or free camera)
 float EECameraControl::GetPitch(float inZoom, long inMode)
 {
     return ee_gfx_camera_pitch(inZoom, (int32_t)inMode, EE_CAM_T(gWorld.mTransformation));
 }
 
-// FUNCTION: EXE 0x5286fa
 // Starts playing the camera path from its first key, dropping followed units (not while a path plays)
 void EECameraControl::StartPath()
 {
@@ -388,7 +356,6 @@ void EECameraControl::StartPath()
     this->NextKey();
 }
 
-// FUNCTION: EXE 0x528722
 // Turns the camera's view turn by yaw and pitch angles as a new move
 void EECameraControl::Revolve(const GE3DPoint& inAngles)
 {
@@ -413,13 +380,11 @@ void EECameraControl::Revolve(const GE3DPoint& inAngles)
     this->GoTo(theKey);
 }
 
-// FUNCTION: EXE 0x52883b
 // Creates a camera key (members only)
 EECameraKey::EECameraKey()
 {
 }
 
-// FUNCTION: EXE 0x52887d
 // Turns the camera's offset turn by yaw and pitch angles as a new move
 void EECameraControl::Rotate(const GE3DPoint& inAngles)
 {
@@ -446,7 +411,6 @@ void EECameraControl::Rotate(const GE3DPoint& inAngles)
 
 static const float kCameraFollowRise = -0.1f;
 
-// FUNCTION: EXE 0x528996
 // Starts a camera move that focuses on a unit or point and faces another unit or point, optionally following them,
 // with a zoom, a duration and a follow turn
 void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration,
@@ -586,7 +550,6 @@ theDone:
     }
 }
 
-// FUNCTION: EXE 0x528ea5
 // Scrolls the camera focus over the ground by a screen delta scaled by the zoom, kept inside the map edges; leaves the
 // free camera mode outside cinematics
 void EECameraControl::Scroll(float inDX, float inDY)
@@ -647,14 +610,12 @@ void EECameraControl::Scroll(float inDX, float inDY)
     this->mStartFocus.SetY(this->mEndFocus.GetY());
 }
 
-// FUNCTION: EXE 0x52934f
 // Resets the camera zoom to 1
 void EECameraControl::ResetZoom()
 {
     this->SetZoom(1.0f);
 }
 
-// FUNCTION: EXE 0x52935b
 // Starts the move from the current pose to a camera key, with its speed from the distances or the followed unit's
 // velocity
 void EECameraControl::GoTo(const EECameraKey& inKey)
@@ -690,7 +651,6 @@ theDone:
     this->mWaited = 0.0f;
 }
 
-// FUNCTION: EXE 0x529547
 // Moves the camera offset to a point as a new move (at once when inFlag), dropping followed units
 void EECameraControl::SetOffset(const GE3DPoint& inPoint, bool inFlag)
 {
@@ -711,7 +671,6 @@ void EECameraControl::SetOffset(const GE3DPoint& inPoint, bool inFlag)
         this->mStartOffset = this->mEndOffset;
 }
 
-// FUNCTION: EXE 0x5295fd
 // Turns the camera view to a transformation as a new move (at once when inFlag), dropping followed units
 void EECameraControl::SetViewTurn(const GETransformation& inTransformation, bool inFlag)
 {
@@ -732,7 +691,6 @@ void EECameraControl::SetViewTurn(const GETransformation& inTransformation, bool
         this->mQ014 = this->mQ04C;
 }
 
-// FUNCTION: EXE 0x5296b6
 // Turns the camera offset to a transformation as a new move (at once when inFlag), dropping followed units
 void EECameraControl::SetOffsetTurn(const GETransformation& inTransformation, bool inFlag)
 {
@@ -753,7 +711,6 @@ void EECameraControl::SetOffsetTurn(const GETransformation& inTransformation, bo
         this->mQ024 = this->mQ05C;
 }
 
-// FUNCTION: EXE 0x52976f
 // Makes the camera's current interpolated pose the start of the next move
 void EECameraControl::KeepPose()
 {
@@ -769,7 +726,6 @@ void EECameraControl::KeepPose()
     this->mStartFocus = thePoint;
 }
 
-// FUNCTION: EXE 0x529844
 // Moves the camera focus to a location (on the terrain when inFollowTerrain) as a new move, at once when inIsImmediate
 void EECameraControl::SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain)
 {
@@ -806,7 +762,6 @@ void EECameraControl::SetLocation(const GE3DPoint& inLocation, bool inIsImmediat
         this->mStartFocus = this->mEndFocus;
 }
 
-// FUNCTION: EXE 0x5299c0
 // Sets the camera mode and reapplies the zoom
 void EECameraControl::SetMode(long inMode)
 {
@@ -814,7 +769,6 @@ void EECameraControl::SetMode(long inMode)
     this->SetZoom(this->mZoom);
 }
 
-// FUNCTION: EXE 0x5299dc
 // Makes the camera jump to its target on the next update, unless a path plays
 void EECameraControl::SetChanged()
 {
@@ -822,7 +776,6 @@ void EECameraControl::SetChanged()
         this->mChanged = true;
 }
 
-// FUNCTION: EXE 0x5299ed
 // Stops following the focused unit, releasing it
 void EECameraControl::ClearUnitA()
 {
@@ -832,7 +785,6 @@ void EECameraControl::ClearUnitA()
     }
 }
 
-// FUNCTION: EXE 0x529a04
 // Stops facing the target unit or point, releasing the unit
 void EECameraControl::ClearUnitB()
 {
@@ -846,7 +798,6 @@ void EECameraControl::ClearUnitB()
 
 static const float kCameraUpdateZoom = -1.1f;
 
-// FUNCTION: EXE 0x529a34
 // Advances the camera each frame: drops followed units that died or went out of sight, steps the move or path and
 // applies the view, clipping distances and orthographic size to the viewport
 void EECameraControl::Update(float inElapsedTime)
@@ -911,7 +862,6 @@ void EECameraControl::Update(float inElapsedTime)
     gB529068 = false;
 }
 
-// FUNCTION: EXE 0x529dfe
 // Starts following a unit (and facing it when inFlag), unless it is a foreign unit the local player cannot see
 void EECameraControl::Follow(EEUnit* inUnit, bool inFlag, float inDuration, float inTurnYaw, float inTurnPitch)
 {
@@ -925,7 +875,6 @@ void EECameraControl::Follow(EEUnit* inUnit, bool inFlag, float inDuration, floa
     this->MoveTo(inUnit, theNoLocation, true, inDuration, inFlag ? inUnit : NULL, theNoLocation, inFlag, this->mZoom, inTurnYaw, inTurnPitch);
 }
 
-// FUNCTION: EXE 0x529eb2
 // Sets the camera zoom and re-aims at the current focus and target over 0.3 s (not while a path plays)
 void EECameraControl::SetZoom(float inZoom)
 {
@@ -938,25 +887,6 @@ void EECameraControl::SetZoom(float inZoom)
              inZoom, this->mTurnYaw, this->mTurnPitch);
 }
 
-// The vector<EECameraKey> COMDATs (push_back, clear, insert, erase, _Buy, insert(P, M, X), the iterator helpers,
-// the copy/fill helpers):
-// TEMPLATE: EXE 0x529f73
-// TEMPLATE: EXE 0x529f9f
-// TEMPLATE: EXE 0x529fda
-// TEMPLATE: EXE 0x52a037
-// TEMPLATE: EXE 0x52a081
-// TEMPLATE: EXE 0x52a0bb
-// TEMPLATE: EXE 0x52a3aa
-// TEMPLATE: EXE 0x52a3bf
-// TEMPLATE: EXE 0x52a426
-// TEMPLATE: EXE 0x52a454
-// TEMPLATE: EXE 0x52a46b
-// TEMPLATE: EXE 0x52a497
-// TEMPLATE: EXE 0x52a4cb
-// TEMPLATE: EXE 0x52a4eb
-// TEMPLATE: EXE 0x52a51c
-
-// FUNCTION: EXE 0x52a52e
 // Returns whether the local player can see a unit
 bool EEIsSeen(EEUnit* inUnit)
 {

@@ -16,7 +16,6 @@
 namespace WONAPI {
 LostPasswordCtrl::LostPasswordCtrl() {}
 // The destructor is implicit. Does not call the base InitComponent
-// FUNCTION: WON 0x007c0400
 // Looks up the user name combo and retrieve button from the layout and listens for broadcasts
 void LostPasswordCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -28,13 +27,11 @@ void LostPasswordCtrl::InitComponent(ComponentInit& inInit)
     this->UpdateRetrieveButton();
     this->SubscribeToBroadcast(1);
 }
-// FUNCTION: WON 0x007c0460
 // Enables the retrieve button once the user name has at least two characters
 void LostPasswordCtrl::UpdateRetrieveButton()
 {
     this->mRetrieveButton->SetEnabled(this->mUserNameCombo->mEdit->GetText().length()>=2);
 }
-// FUNCTION: WON 0x007c0490
 // Fills the user name combo with the saved accounts
 void LostPasswordCtrl::FillUserNames()
 {
@@ -42,7 +39,6 @@ void LostPasswordCtrl::FillUserNames()
     for(size_t i=0;i<LobbyGetUserCount();++i)
         this->mUserNameCombo->AddString(LobbyGetUserNameAt(i),-1);
 }
-// FUNCTION: WON 0x007c0520
 // Updates the button on typing, requests the lost password on retrieve and refills the names on event 100052
 void LostPasswordCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -57,20 +53,3 @@ void LostPasswordCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 }
 }
 // GetLostPasswordEvent's destructor is implicit: 0x7c06c0 (no store of its own vtable 0x853a38), scalar deleting destructor 0x7c06a0
-
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c06c0
-// (public: virtual __thiscall WONAPI::GetLostPasswordEvent::~GetLostPasswordEvent(void)    [??1GetLostPasswordEvent@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c0340
-// (public: virtual void * __thiscall WONAPI::LostPasswordCtrl::`scalar deleting destructor'(unsigned int)    [??_GLostPasswordCtrl@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007c0360
-// (public: virtual __thiscall WONAPI::LostPasswordCtrl::~LostPasswordCtrl(void)    [??1LostPasswordCtrl@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007c06a0
-// (public: virtual void * __thiscall WONAPI::GetLostPasswordEvent::`scalar deleting destructor'(unsigned int)    [??_GGetLostPasswordEvent@WONAPI@@UAEPAX)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c0320
-// (public: __thiscall WONAPI::LostPasswordCtrl::LostPasswordCtrl(void)    [??0LostPasswordCtrl@WONAPI@@QAE@XZ])

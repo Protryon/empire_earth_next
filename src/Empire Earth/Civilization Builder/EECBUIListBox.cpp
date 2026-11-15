@@ -66,7 +66,6 @@ static void EECBPut(EeScreensCbOut* outText, const UWideString& inText)
     ee_screens_cb_out_text(outText, reinterpret_cast<const uint8_t*>((const char*)inText), inText.GetTCHARLength());
 }
 
-// FUNCTION: EXE 0x67d187
 // Creates a civilization builder list box (upgrade lines only selectable, points shown, sorted lines)
 EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::vector<UWideString>& inData,
                              GEFont* inFont, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -84,31 +83,26 @@ EECBUIListBox::EECBUIListBox(UIControlsTable& inTable, unsigned long inId, std::
     this->ChangeSelectionIndex(0, false, false);
 }
 
-// FUNCTION: EXE 0x67d278
 EECBUIListBox::~EECBUIListBox()
 {
 }
 
-// FUNCTION: EXE 0x67d386
 void EECBUIListBox::AddLine(const UWideString& inLine)
 {
     ee_screens_cbl_add_line(this, reinterpret_cast<const uint8_t*>((const char*)inLine), inLine.GetTCHARLength());
 }
 
-// FUNCTION: EXE 0x67d3ad
 void EECBUIListBox::AppendStringArray(std::vector<UWideString>& inLines)
 {
     for (std::vector<UWideString>::iterator theIter = inLines.begin(); theIter != inLines.end(); theIter++)
         this->AddLine(*theIter);
 }
 
-// FUNCTION: EXE 0x67d3f9
 void EECBUIListBox::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo)
 {
     ee_screens_cbl_change_selection(this, (uint32_t)inIndex, inFireEvent, inScrollTo);
 }
 
-// FUNCTION: EXE 0x67d6ae
 // Snapshots the list for drawing: no highlight on line 0, the header colour and the show-points flag
 long EECBUIListBox::CopyData()
 {
@@ -120,25 +114,21 @@ long EECBUIListBox::CopyData()
     return theResult;
 }
 
-// FUNCTION: EXE 0x67d6f7
 void EECBUIListBox::DeleteLine(unsigned long inLine)
 {
     ee_screens_cbl_delete_line(this, (uint32_t)inLine);
 }
 
-// FUNCTION: EXE 0x67dac8
 long EECBUIListBox::DrawTextA()
 {
     return ee_screens_cbl_draw_text(this);
 }
 
-// FUNCTION: EXE 0x67e346
 void EECBUIListBox::SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrades)
 {
     ee_screens_cbl_set_civilization_upgrades(this, inUpgrades.data(), inUpgrades.size());
 }
 
-// FUNCTION: EXE 0x67e55a
 void EECBUIListBox::TabbedTo()
 {
     ee_screens_cbl_tabbed_to(this);

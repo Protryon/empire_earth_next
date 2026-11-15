@@ -8,7 +8,6 @@
 #include "lle/NETimestampedMessage.h"
 #include "lle/NERecordPlayback.h"
 
-// FUNCTION: LLE 0x1004555d
 // Creates a message recorder/player in pass-through mode that hands messages to the given callback
 NERecordPlayback::NERecordPlayback(void (*inCallbackFunction)(NEMessage*, void*), void* inCallbackData)
 {
@@ -28,7 +27,6 @@ NERecordPlayback::NERecordPlayback(void (*inCallbackFunction)(NEMessage*, void*)
     this->mPlaybackMode = kRecordTargetFile;
 }
 
-// FUNCTION: LLE 0x100455b5
 // Destroys the recorder, stopping any recording or playback and closing the record file
 NERecordPlayback::~NERecordPlayback()
 {
@@ -37,7 +35,6 @@ NERecordPlayback::~NERecordPlayback()
         this->mRecordFile->Close();
 }
 
-// FUNCTION: LLE 0x100455cd
 // Returns whether the playback thread has played the whole file and exited
 bool NERecordPlayback::PlaybackComplete()
 {
@@ -45,7 +42,6 @@ bool NERecordPlayback::PlaybackComplete()
     return this->mPlaybackThreadExiting->Wait(0) == kErrorOK;
 }
 
-// FUNCTION: LLE 0x100455fb
 // Playback thread: replays each recorded message at its recorded time (45x slower in slow mode) via the callback
 // until the file ends or quit is signalled; a message pending at quit is never released
 unsigned long NERecordPlayback::PlaybackThreadFunction(void* inArgument)
@@ -139,7 +135,6 @@ unsigned long NERecordPlayback::PlaybackThreadFunction(void* inArgument)
     return 0;
 }
 
-// FUNCTION: LLE 0x10045850
 // Passes a message to the callback; in record mode first writes it with a timestamp to the record file
 // (in playback mode live messages are dropped without being released)
 void NERecordPlayback::Process(NEMessage* inMessage)
@@ -181,7 +176,6 @@ void NERecordPlayback::Process(NEMessage* inMessage)
     }
 }
 
-// FUNCTION: LLE 0x1004594d
 // Stops recording or playback and passes messages straight through
 long NERecordPlayback::PassMode()
 {
@@ -189,7 +183,6 @@ long NERecordPlayback::PassMode()
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10045957
 // Starts recording messages to a file (recreated if it exists), writing the start time first
 long NERecordPlayback::RecordMode(FSFileSpec* inRecordFile)
 {
@@ -205,7 +198,6 @@ long NERecordPlayback::RecordMode(FSFileSpec* inRecordFile)
     return this->mRecordFile->Write(this->mStartTime);
 }
 
-// FUNCTION: LLE 0x100459f7
 // Starts recording to a network address (not implemented: asserts, then only switches mode)
 long NERecordPlayback::RecordMode(UString& inAddress, unsigned long& inPort)
 {
@@ -217,7 +209,6 @@ long NERecordPlayback::RecordMode(UString& inAddress, unsigned long& inPort)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10045a2c
 // Starts playing back a recorded file on a new "CommRecPlay" thread with its quit/slow/normal events
 long NERecordPlayback::PlaybackMode(FSFileSpec* inPlaybackFile)
 {
@@ -235,7 +226,6 @@ long NERecordPlayback::PlaybackMode(FSFileSpec* inPlaybackFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10045b3a
 // Starts playback from a network address (not implemented: asserts, then only switches mode)
 long NERecordPlayback::PlaybackMode(UString& inAddress, unsigned long& inPort)
 {
@@ -246,7 +236,6 @@ long NERecordPlayback::PlaybackMode(UString& inAddress, unsigned long& inPort)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10045b67
 // Switches mode, first stopping the playback thread and closing the playback or record file of the old mode
 void NERecordPlayback::SwitchModes(unsigned char inMode)
 {
@@ -282,9 +271,3 @@ void NERecordPlayback::SwitchModes(unsigned char inMode)
     }
     this->mMode = inMode;
 }
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x10045535
-// SYNTHETIC: LLE 0x10045539
-// SYNTHETIC: LLE 0x10045541
-// SYNTHETIC: LLE 0x10045549

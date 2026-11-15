@@ -41,24 +41,6 @@ static GERectangle sCornerCell(49.0f, 0.0f, 56.0f, 7.0f);          // 0x564538 (
 static GERectangle sSideCell(30.0f, 0.0f, 48.0f, 20.0f);           // 0x564528 (the side ornaments)
 
 
-// SYNTHETIC: EXE 0x654911
-// SYNTHETIC: EXE 0x65491b
-// SYNTHETIC: EXE 0x654940
-// SYNTHETIC: EXE 0x65494c
-// SYNTHETIC: EXE 0x65494d
-// SYNTHETIC: EXE 0x654957
-// SYNTHETIC: EXE 0x65497c
-// SYNTHETIC: EXE 0x654988
-// SYNTHETIC: EXE 0x654989
-// SYNTHETIC: EXE 0x654993
-// SYNTHETIC: EXE 0x6549ba
-// SYNTHETIC: EXE 0x6549c6
-// SYNTHETIC: EXE 0x6549c7
-// SYNTHETIC: EXE 0x6549d1
-// SYNTHETIC: EXE 0x6549f8
-// SYNTHETIC: EXE 0x654a04
-
-// FUNCTION: EXE 0x654a05
 // Creates a tinted form background with optional frame pieces (flags: 1 edges, 2 frame corners, 4 sides)
 EEUIBGenericBackground::EEUIBGenericBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
                                                const GETextureDescription& inDescription,
@@ -75,22 +57,11 @@ EEUIBGenericBackground::EEUIBGenericBackground(unsigned long inBackgroundID, con
     this->mScaleY = inScaleY;
 }
 
-// SYNTHETIC: EXE 0x654aa4
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIBGenericBackground+0x0)
-
-// FUNCTION: EXE 0x654ac0
 // Destroys the form background
 EEUIBGenericBackground::~EEUIBGenericBackground()
 {
 }
 
-// FUNCTION: EXE 0x654acc
-// FUNCTION: EXE 0x654c5d
-// FUNCTION: EXE 0x654e05
-// FUNCTION: EXE 0x654f98
-// FUNCTION: EXE 0x655131
-// FUNCTION: EXE 0x65528a
-// FUNCTION: EXE 0x655463
 // Draws the tinted background inside the side insets, then the frame pieces its flags ask for, each clipped to the
 // redraw rectangle (the original's DrawCorners, DrawEdges, DrawFrameCorners, DrawSides, DrawEdge and DrawCorner:
 // ee_screens frame.rs over the two host calls below)
@@ -139,7 +110,6 @@ extern "C" void ee_screenscpp_frame_piece(void* inBackground, const EeScreensFra
     theManager->GetRasterizer()->Draw(theBitmap, theScreen);
 }
 
-// FUNCTION: EXE 0x655675
 // Opens the background and scales its frame to the window size against the form's designed size
 void EEUIBGenericBackground::Open()
 {
@@ -148,14 +118,12 @@ void EEUIBGenericBackground::Open()
     this->mScaleY = (float)gGameWindow->GetHeight() / (float)this->GetForm()->GetDesignedHeight();
 }
 
-// FUNCTION: EXE 0x6556d9
 // Draws the campaign map background
 long EEUIBMapBackground::DrawBackground(const GERectangle& inRectangle)
 {
     return UIBFull::DrawBackground(inRectangle);
 }
 
-// FUNCTION: EXE 0x6556e6
 // Loads the campaign map image (PNG or JPG; the original's were TGA or JPG) and cuts it into 256x256 textures, one
 // per background cell
 // The image comes from the saved game/scenario resources, else from the startup path

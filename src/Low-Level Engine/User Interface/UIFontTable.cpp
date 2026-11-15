@@ -74,20 +74,17 @@ static intptr_t UIFontTableHost(void* inObject, EeUiOp inOp, intptr_t a, intptr_
     }
 }
 
-// FUNCTION: LLE 0x1007010a
 // Creates an empty font table entry
 UIFontTable::UIFontTable()
 {
 }
 
-// FUNCTION: LLE 0x1007011f
 // Loads the UI font table from the database file: face name, size, quality and style per entry; returns the read result
 long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager)
 {
     return (long)ee_ui_font_tables(EeUiFontsCall::Create, (intptr_t)&inFile, (intptr_t)inManager, 0, 0, UIFontTableHost);
 }
 
-// FUNCTION: LLE 0x1007025f
 // Returns a shared font for a table entry scaled to a pixel height on the screen (NULL for an empty entry)
 GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPixelHeight)
 {
@@ -95,18 +92,15 @@ GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPi
         ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, inIndex, inPixelHeight, 0, 0, UIFontTableHost));
 }
 
-// FUNCTION: LLE 0x100702d2
 // Deletes every font table entry, drops one reference to each shared font and empties both lists
 void UIFontTable::DeleteAll() { ee_ui_font_tables(EeUiFontsCall::DeleteAll, 0, 0, 0, 0, UIFontTableHost); }
 
-// FUNCTION: LLE 0x10070337
 // Returns the shared font for a table entry (NULL for an empty entry: the original read through it)
 GEFont* UIFontTable::GetFont(unsigned long inIndex)
 {
     return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::GetFont, inIndex, 0, 0, 0, UIFontTableHost));
 }
 
-// FUNCTION: LLE 0x1007035a
 // Returns a shared font with the given face, style, quality and size, creating it on first use; adds a reference
 GEFont* UIFontTable::FindOrCreateFont(const UString& inName, unsigned long inStyle, unsigned long inQuality,
                                       unsigned long inSize)
@@ -114,38 +108,3 @@ GEFont* UIFontTable::FindOrCreateFont(const UString& inName, unsigned long inSty
     return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::FindOrCreateFont, (intptr_t)&inName, inStyle,
                                                        inQuality, inSize, UIFontTableHost));
 }
-// vector<GEFont*>::push_back
-// SYNTHETIC: LLE 0x10070403
-// Compiler-generated: the U2D key and static vector init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1006ff58
-// SYNTHETIC: LLE 0x1006ff62
-// SYNTHETIC: LLE 0x1006ff72
-// SYNTHETIC: LLE 0x1006ff7e
-// SYNTHETIC: LLE 0x1006ff88
-// SYNTHETIC: LLE 0x1006ff92
-// SYNTHETIC: LLE 0x1006ffa2
-// SYNTHETIC: LLE 0x1006ffae
-// SYNTHETIC: LLE 0x1006ffb8
-// SYNTHETIC: LLE 0x1006ffc2
-// SYNTHETIC: LLE 0x1006ffd2
-// SYNTHETIC: LLE 0x1006ffde
-// SYNTHETIC: LLE 0x1006ffe8
-// SYNTHETIC: LLE 0x1006fff2
-// SYNTHETIC: LLE 0x10070002
-// SYNTHETIC: LLE 0x1007000e
-// SYNTHETIC: LLE 0x10070018
-// SYNTHETIC: LLE 0x10070022
-// SYNTHETIC: LLE 0x10070032
-// SYNTHETIC: LLE 0x1007003e
-// SYNTHETIC: LLE 0x10070048
-// SYNTHETIC: LLE 0x10070052
-// SYNTHETIC: LLE 0x10070062
-// SYNTHETIC: LLE 0x1007006e
-// SYNTHETIC: LLE 0x10070078
-// SYNTHETIC: LLE 0x10070082
-// SYNTHETIC: LLE 0x1007009a
-// SYNTHETIC: LLE 0x100700a6
-// SYNTHETIC: LLE 0x100700c1
-// SYNTHETIC: LLE 0x100700cb
-// SYNTHETIC: LLE 0x100700e3
-// SYNTHETIC: LLE 0x100700ef

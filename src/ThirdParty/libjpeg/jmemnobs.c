@@ -31,14 +31,12 @@ extern void free JPP((void *ptr));
  * routines malloc() and free().
  */
 
-// FUNCTION: JPEG 0x1008b575
 GLOBAL(void *)
 jpeg_get_small (j_common_ptr cinfo, size_t sizeofobject)
 {
   return (void *) malloc(sizeofobject);
 }
 
-// FUNCTION: JPEG 0x1008b581
 GLOBAL(void)
 jpeg_free_small (j_common_ptr cinfo, void * object, size_t sizeofobject)
 {
@@ -71,7 +69,6 @@ jpeg_free_large (j_common_ptr cinfo, void FAR * object, size_t sizeofobject)
  * Here we always say, "we got all you want bud!"
  */
 
-// FUNCTION: JPEG 0x1008b58d
 GLOBAL(long)
 jpeg_mem_available (j_common_ptr cinfo, long min_bytes_needed,
 		    long max_bytes_needed, long already_allocated)
@@ -86,7 +83,6 @@ jpeg_mem_available (j_common_ptr cinfo, long min_bytes_needed,
  * this should never be called and we can just error out.
  */
 
-// FUNCTION: JPEG 0x1008b592
 GLOBAL(void)
 jpeg_open_backing_store (j_common_ptr cinfo, backing_store_ptr info,
 			 long total_bytes_needed)

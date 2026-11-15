@@ -7,17 +7,12 @@
 
 #include "ee/EECPDiplomacyManager.h"
 
-// FUNCTION: EXE 0x47ed03
 // Creates the computer player's diplomacy manager, remembering its owner
 EECPDiplomacyManager::EECPDiplomacyManager(EEComputerPlayer* inComputerPlayer)
 {
     this->mComputerPlayer = inComputerPlayer;
 }
 
-// SYNTHETIC: EXE 0x47ed15
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x47ed31
 // Destroys the diplomacy manager (nothing to release)
 EECPDiplomacyManager::~EECPDiplomacyManager()
 {

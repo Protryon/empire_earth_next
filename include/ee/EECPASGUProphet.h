@@ -12,9 +12,9 @@ typedef EEUnitGoal EEUGRust;
 
 class EECPASGUProphet : public EECPAttackSubGroupUnit {
 public:
-    EECPASGUProphet(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup); // 0xb2be
-    EECPASGUProphet(EECPAttackSubGroup* inSubGroup);    // 0xb311
-    virtual ~EECPASGUProphet();             // 0xb345
+    EECPASGUProphet(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
+    EECPASGUProphet(EECPAttackSubGroup* inSubGroup);
+    virtual ~EECPASGUProphet();
     virtual bool Retarget();                // +0x14 0xb757
     virtual void Flee();                    // +0x1c 0xba62 (EECPAttackSubGroupUnit::Flee() as a tail jump)
     virtual void SetState(long inState, unsigned long inTime);    // +0x28 0xba67

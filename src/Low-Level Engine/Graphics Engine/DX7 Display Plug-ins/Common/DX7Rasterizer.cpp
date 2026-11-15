@@ -29,36 +29,6 @@
 #include "lle/GERhombus.h"
 #include "lle/GEText.h"
 
-// The U2D key init chains:
-// SYNTHETIC: DX7HR 0x100091aa
-// SYNTHETIC: DX7HR 0x100091b4
-// SYNTHETIC: DX7HR 0x100091c5
-// SYNTHETIC: DX7HR 0x100091d1
-// SYNTHETIC: DX7HR 0x100091dc
-// SYNTHETIC: DX7HR 0x100091e6
-// SYNTHETIC: DX7HR 0x100091f7
-// SYNTHETIC: DX7HR 0x10009203
-// SYNTHETIC: DX7HR 0x1000920e
-// SYNTHETIC: DX7HR 0x10009218
-// SYNTHETIC: DX7HR 0x10009229
-// SYNTHETIC: DX7HR 0x10009235
-// SYNTHETIC: DX7HR 0x10009240
-// SYNTHETIC: DX7HR 0x1000924a
-// SYNTHETIC: DX7HR 0x1000925b
-// SYNTHETIC: DX7HR 0x10009267
-// SYNTHETIC: DX7HR 0x10009272
-// SYNTHETIC: DX7HR 0x1000927c
-// SYNTHETIC: DX7HR 0x1000928d
-// SYNTHETIC: DX7HR 0x10009299
-// SYNTHETIC: DX7HR 0x100092a4
-// SYNTHETIC: DX7HR 0x100092ae
-// SYNTHETIC: DX7HR 0x100092bf
-// SYNTHETIC: DX7HR 0x100092cb
-// SYNTHETIC: DX7HR 0x100092d6
-// SYNTHETIC: DX7HR 0x100092e0
-// SYNTHETIC: DX7HR 0x100092f1
-// SYNTHETIC: DX7HR 0x100092fd
-
 // DX7Rasterizer is whole in Rust (rust/crates/ee_dx7/src/rastobj.rs, R4.3 part 13): the per-screen DX7 records, the
 // debug colour, the light slots and every method below; DX7TnLRasterizer is its T&L flavour. The class keeps its vtable
 // (the game calls it through GERasterizer) and one member, mDX7; the methods forward, and DX7RasterizerHost makes the
@@ -156,7 +126,6 @@ static void DX7Rect(const GERectangle& inRectangle, float outRect[4])
     outRect[3] = inRectangle.GetBottom();
 }
 
-// FUNCTION: DX7HR 0x1000978b
 // Creates the DirectX 7 rasterizer with the given name and a dark blue debug colour (inTnL: the T&L rasterizer)
 DX7Rasterizer::DX7Rasterizer(const UString& inName, bool inTnL)
     : GERasterizer(inName)
@@ -164,18 +133,15 @@ DX7Rasterizer::DX7Rasterizer(const UString& inName, bool inTnL)
     this->mDX7 = ee_dx7r_new(&DX7RasterizerHost::Call, this, this->mRust, inTnL);
 }
 
-// FUNCTION: DX7HR 0x100097bd
 // Destroys the rasterizer (the DX7 records; the base's in the base)
 DX7Rasterizer::~DX7Rasterizer()
 {
     ee_dx7r_destroy(this->mDX7);
 }
 
-// FUNCTION: DX7HR 0x100097d8
 // Enumerates the DirectDraw devices into screens (Ex enumeration on 98/2000) and makes this the active rasterizer
 long DX7Rasterizer::ActivateRasterizer() { return ee_dx7r_activate_rasterizer(this->mDX7); }
 
-// FUNCTION: DX7HR 0x10009876
 // Sets up a screen to render into an offscreen surface of the given size at the desktop depth, retrying with a
 // 16-bit mode if that fails
 long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
@@ -184,7 +150,6 @@ long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureMa
     return ee_dx7r_activate_rendering_surface(this->mDX7, inScreen, inManager, inWindow, inWidth, inHeight);
 }
 
-// FUNCTION: DX7HR 0x10009ab4
 // Sets up a screen's primary, back buffer and optional Z-buffer (flipping chain full screen, offscreen buffer
 // windowed), activates Direct3D on them and forces every render state to its default
 long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
@@ -194,7 +159,6 @@ long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inM
                                    inZBuffer, inZBufferFormat);
 }
 
-// FUNCTION: DX7HR 0x10009fa2
 // Creates the HAL (or T&L) Direct3D device on the back buffer, sets the viewport and fixed render states, the vertex
 // buffer and the card quirks (texture alpha modulation off on small Rage Pro cards, no dirty rectangles on two cards)
 long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
@@ -203,7 +167,6 @@ long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrima
     return ee_dx7r_activate_the_screen(this->mDX7, inScreen, inSecondary);
 }
 
-// FUNCTION: DX7HR 0x1000a581
 // Takes a free light slot (of 8), sets the light into it and enables it; returns 7 when all slots are in use
 long DX7Rasterizer::AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex)
 {
@@ -213,7 +176,6 @@ long DX7Rasterizer::AddLight(GELight& inLight, unsigned long inScreen, unsigned 
     return theResult;
 }
 
-// FUNCTION: DX7HR 0x1000a5ff
 // Adds a screen with a fresh DirectX 7 screen state
 long DX7Rasterizer::AddValidScreen(GEScreen* inScreen)
 {
@@ -221,18 +183,15 @@ long DX7Rasterizer::AddValidScreen(GEScreen* inScreen)
     return kErrorOK;
 }
 
-// FUNCTION: DX7HR 0x1000a64e
 // Sets the render target and begins the scene, waiting while the device is still drawing; 9 when the surface is lost
 long DX7Rasterizer::BeginScene(GESurface* inTarget, unsigned long inScreen) { return ee_dx7r_begin_scene(this->mDX7, inTarget, inScreen); }
 
-// FUNCTION: DX7HR 0x1000a6af
 // Sets the texture and asks the device whether it can draw the current state in one pass
 bool DX7Rasterizer::CanDoCurrentState(GETexture* inTexture, unsigned long inScreen)
 {
     return ee_dx7r_can_do_current_state(this->mDX7, inTexture, inScreen);
 }
 
-// FUNCTION: DX7HR 0x1000a6f7
 // Fills a rectangle of the render target with a colour, waiting while the device is still drawing
 long DX7Rasterizer::Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen)
 {
@@ -241,7 +200,6 @@ long DX7Rasterizer::Clear(const GEColor& inColor, const GERectangle& inRectangle
     return ee_dx7r_clear(this->mDX7, theRect, reinterpret_cast<const EeGeRastColor*>(&inColor), 0.0f, inScreen);
 }
 
-// FUNCTION: DX7HR 0x1000a861
 // Fills a rectangle of the Z-buffer with a depth value, waiting while the device is still drawing
 long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen)
 {
@@ -250,14 +208,12 @@ long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsi
     return ee_dx7r_clear(this->mDX7, theRect, NULL, inZ, inScreen);
 }
 
-// FUNCTION: DX7HR 0x1000a9e5
 // Creates a movie player for a file on the given screen
 GEMovie* DX7Rasterizer::CreateMovie(const FSFileSpec& inFile, unsigned long inScreen)
 {
     return new DX7Movie(inFile, inScreen);
 }
 
-// FUNCTION: DX7HR 0x1000aa07
 // Creates a movie player for a file in a rectangle of the given screen, optionally looping
 GEMovie* DX7Rasterizer::CreateMovie(const FSFileSpec& inFile, unsigned long inScreen, const GERectangle& inRectangle,
                                     bool inLoop)
@@ -265,21 +221,18 @@ GEMovie* DX7Rasterizer::CreateMovie(const FSFileSpec& inFile, unsigned long inSc
     return new DX7Movie(inFile, inScreen, inRectangle, inLoop);
 }
 
-// FUNCTION: DX7HR 0x1000aa3e
 // Creates a polygon array of the given size
 GEPolygonArray* DX7Rasterizer::CreatePolygonArray(unsigned long inCount)
 {
     return new DX7PolygonArray(inCount);
 }
 
-// FUNCTION: DX7HR 0x1000aa5c
 // Does nothing and returns success (textures need no handle here)
 long DX7Rasterizer::CreateTextureHandle(GETexture* inTexture)
 {
     return kErrorOK;
 }
 
-// FUNCTION: DX7HR 0x1000aa61
 // Creates a vertex array of type 0 (standard) or 1 (coloured); null for any other type
 GEVertexArray* DX7Rasterizer::CreateVertexArray(unsigned long inType, unsigned long inCount)
 {
@@ -293,7 +246,6 @@ long DX7Rasterizer::DemoteTexture(GETexture* inTexture)
     return kErrorOK;
 }
 
-// FUNCTION: DX7HR 0x1000ab24
 // Releases every screen's texture, vertex buffer, lights, device and Direct3D, deletes the screens and their states
 long DX7Rasterizer::Deactivate()
 {
@@ -301,17 +253,14 @@ long DX7Rasterizer::Deactivate()
     return kErrorOK;
 }
 
-// FUNCTION: DX7HR 0x1000abbf
 // Does nothing (textures need no handle here)
 void DX7Rasterizer::DestroyTextureHandle(GETexture* inTexture)
 {
 }
 
-// FUNCTION: DX7HR 0x1000abc2
 // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
 long DX7Rasterizer::EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
 
-// FUNCTION: DX7HR 0x1000ac18
 // Returns the free video memory of the screen
 long DX7Rasterizer::GetAvailableVideoMemory(unsigned long inScreen, unsigned long& outBytes)
 {
@@ -322,22 +271,18 @@ long DX7Rasterizer::GetAvailableVideoMemory(unsigned long inScreen, unsigned lon
     return theResult;
 }
 
-// FUNCTION: DX7HR 0x1000ac48
 // Returns whether the screen's card can modulate texture alpha
 bool DX7Rasterizer::GetCanModulateTextureAlpha(unsigned long inScreen) { return ee_dx7r_card_flag(this->mDX7, inScreen, false); }
 
-// FUNCTION: DX7HR 0x1000ac58
 // Returns 0 for any capability
 unsigned long DX7Rasterizer::GetCaps(unsigned long inCap, unsigned long inScreen)
 {
     return 0;
 }
 
-// FUNCTION: DX7HR 0x1000ac5d
 // Returns whether the screen's card supports dirty-rectangle updates
 bool DX7Rasterizer::GetDirtyRectangleSupport(unsigned long inScreen) { return ee_dx7r_card_flag(this->mDX7, inScreen, true); }
 
-// FUNCTION: DX7HR 0x1000ad17
 // Returns the total video memory of the screen
 long DX7Rasterizer::GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes)
 {
@@ -353,11 +298,9 @@ long DX7Rasterizer::PromoteTexture(GETexture* inTexture)
     return kErrorOK;
 }
 
-// FUNCTION: DX7HR 0x1000ae3a
 // Removes all 8 lights
 long DX7Rasterizer::RemoveAllLights(unsigned long inScreen) { return ee_dx7r_remove_all_lights(this->mDX7, inScreen); }
 
-// FUNCTION: DX7HR 0x1000ae5c
 // Disables a light and frees its slot; 9 when the slot was not in use
 long DX7Rasterizer::RemoveLight(unsigned long inIndex, unsigned long inScreen) { return ee_dx7r_remove_light(this->mDX7, inIndex, inScreen); }
 
@@ -402,25 +345,20 @@ void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen) {
 void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ZBuffer, inState, inScreen); }
 void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ZCompare, inState, inScreen); }
 
-// FUNCTION: DX7HR 0x1000bb66
 // Makes a surface the render target (swapping the references) and fits the viewport to its size
 void DX7Rasterizer::SetRenderTarget(GESurface* inTarget, unsigned long inScreen) { ee_dx7r_set_render_target(this->mDX7, inTarget, inScreen); }
 
-// FUNCTION: DX7HR 0x1000bec0
 // Binds a texture to stage 0 with its colour and alpha operations, addressing, filters and mip bias, sending
 // only what changed; null disables texturing; stage 1 is always disabled
 void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_dx7r_set_texture(this->mDX7, inTexture, inScreen); }
 
-// FUNCTION: DX7HR 0x1000c634
 // Sets the viewport rectangle and depth range on the device and marks the 2D/3D transforms for refresh
 void DX7Rasterizer::SetViewport(const GEViewport& inViewport, unsigned long inScreen) { ee_dx7r_set_viewport(this->mDX7, &inViewport, inScreen); }
 
-// FUNCTION: DX7HR 0x1000c99e
 // Shows the frame (flip full screen, blit to the window's client area windowed); every 12 frames updates the
 // frame, polygon and texture-change statistics
 long DX7Rasterizer::ShowScene(unsigned long inScreen) { return ee_dx7r_show_scene(this->mDX7, inScreen); }
 
-// FUNCTION: DX7HR 0x1000cbe5
 // Sends a light (point or directional, colour, attenuation, range) to its slot; 9 when the slot is not in use
 long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen)
 {
@@ -722,131 +660,3 @@ GERasterizer* DX7TnLRasterizer()
 {
     return &gTnLRasterizer;
 }
-
-// COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head and atexit
-// registrars (GELOD x3, then U2DSparseArray: the unit includes U2DSparseArray.h after GEModel.h):
-// TEMPLATE: DX7HR 0x1000ccf2
-// TEMPLATE: DX7HR 0x1000cd1e
-// TEMPLATE: DX7HR 0x1000cd59
-// TEMPLATE: DX7HR 0x1000cd9d
-// TEMPLATE: DX7HR 0x1000d033
-// TEMPLATE: DX7HR 0x1000d047
-// TEMPLATE: DX7HR 0x1000d067
-// TEMPLATE: DX7HR 0x1000d07f
-// SYNTHETIC: DX7HR 0x1000d0a4
-// SYNTHETIC: DX7HR 0x1000d0cc
-// SYNTHETIC: DX7HR 0x1000d0d8
-// SYNTHETIC: DX7HR 0x1000d0e4
-// SYNTHETIC: DX7HR 0x1000d0f0
-
-// DX7HRTnLDisplay.dll (the T&L twin builds this unit unchanged): the same functions at their twin addresses.
-// SYNTHETIC: DX7HRTNL 0x10009217
-// SYNTHETIC: DX7HRTNL 0x10009221
-// SYNTHETIC: DX7HRTNL 0x10009232
-// SYNTHETIC: DX7HRTNL 0x1000923e
-// SYNTHETIC: DX7HRTNL 0x10009249
-// SYNTHETIC: DX7HRTNL 0x10009253
-// SYNTHETIC: DX7HRTNL 0x10009264
-// SYNTHETIC: DX7HRTNL 0x10009270
-// SYNTHETIC: DX7HRTNL 0x1000927b
-// SYNTHETIC: DX7HRTNL 0x10009285
-// SYNTHETIC: DX7HRTNL 0x10009296
-// SYNTHETIC: DX7HRTNL 0x100092a2
-// SYNTHETIC: DX7HRTNL 0x100092ad
-// SYNTHETIC: DX7HRTNL 0x100092b7
-// SYNTHETIC: DX7HRTNL 0x100092c8
-// SYNTHETIC: DX7HRTNL 0x100092d4
-// SYNTHETIC: DX7HRTNL 0x100092df
-// SYNTHETIC: DX7HRTNL 0x100092e9
-// SYNTHETIC: DX7HRTNL 0x100092fa
-// SYNTHETIC: DX7HRTNL 0x10009306
-// SYNTHETIC: DX7HRTNL 0x10009311
-// SYNTHETIC: DX7HRTNL 0x1000931b
-// SYNTHETIC: DX7HRTNL 0x1000932c
-// SYNTHETIC: DX7HRTNL 0x10009338
-// SYNTHETIC: DX7HRTNL 0x10009343
-// SYNTHETIC: DX7HRTNL 0x1000934d
-// SYNTHETIC: DX7HRTNL 0x1000935e
-// SYNTHETIC: DX7HRTNL 0x1000936a
-// FUNCTION: DX7HRTNL 0x10009375
-// FUNCTION: DX7HRTNL 0x100093b8
-// FUNCTION: DX7HRTNL 0x100095af
-// FUNCTION: DX7HRTNL 0x100097f8
-// FUNCTION: DX7HRTNL 0x1000982a
-// FUNCTION: DX7HRTNL 0x10009845
-// FUNCTION: DX7HRTNL 0x100098e3
-// FUNCTION: DX7HRTNL 0x10009b21
-// FUNCTION: DX7HRTNL 0x1000a00f
-// FUNCTION: DX7HRTNL 0x1000a5ee
-// FUNCTION: DX7HRTNL 0x1000a66c
-// FUNCTION: DX7HRTNL 0x1000a6bb
-// FUNCTION: DX7HRTNL 0x1000a71c
-// FUNCTION: DX7HRTNL 0x1000a764
-// FUNCTION: DX7HRTNL 0x1000a8ce
-// FUNCTION: DX7HRTNL 0x1000a9e0
-// FUNCTION: DX7HRTNL 0x1000a9e9
-// FUNCTION: DX7HRTNL 0x1000aa52
-// FUNCTION: DX7HRTNL 0x1000aa74
-// FUNCTION: DX7HRTNL 0x1000aaab
-// FUNCTION: DX7HRTNL 0x1000aac9
-// FUNCTION: DX7HRTNL 0x1000ab0d
-// FUNCTION: DX7HRTNL 0x1000ab8c
-// FUNCTION: DX7HRTNL 0x1000ac2c
-// FUNCTION: DX7HRTNL 0x1000ac2f
-// FUNCTION: DX7HRTNL 0x1000ac85
-// FUNCTION: DX7HRTNL 0x1000acb5
-// FUNCTION: DX7HRTNL 0x1000acc5
-// FUNCTION: DX7HRTNL 0x1000acca
-// FUNCTION: DX7HRTNL 0x1000acda
-// FUNCTION: DX7HRTNL 0x1000ad84
-// FUNCTION: DX7HRTNL 0x1000adb4
-// FUNCTION: DX7HRTNL 0x1000ae23
-// FUNCTION: DX7HRTNL 0x1000aea7
-// FUNCTION: DX7HRTNL 0x1000aec9
-// FUNCTION: DX7HRTNL 0x1000af11
-// FUNCTION: DX7HRTNL 0x1000b0df
-// FUNCTION: DX7HRTNL 0x1000b298
-// FUNCTION: DX7HRTNL 0x1000b2d9
-// FUNCTION: DX7HRTNL 0x1000b367
-// FUNCTION: DX7HRTNL 0x1000b3c8
-// FUNCTION: DX7HRTNL 0x1000b470
-// FUNCTION: DX7HRTNL 0x1000b50a
-// FUNCTION: DX7HRTNL 0x1000b557
-// FUNCTION: DX7HRTNL 0x1000b80a
-// FUNCTION: DX7HRTNL 0x1000b854
-// FUNCTION: DX7HRTNL 0x1000b8b0
-// FUNCTION: DX7HRTNL 0x1000b917
-// FUNCTION: DX7HRTNL 0x1000b928
-// FUNCTION: DX7HRTNL 0x1000b939
-// FUNCTION: DX7HRTNL 0x1000b983
-// FUNCTION: DX7HRTNL 0x1000b9dd
-// FUNCTION: DX7HRTNL 0x1000ba27
-// FUNCTION: DX7HRTNL 0x1000bae5
-// FUNCTION: DX7HRTNL 0x1000bb63
-// FUNCTION: DX7HRTNL 0x1000bb74
-// FUNCTION: DX7HRTNL 0x1000bb89
-// FUNCTION: DX7HRTNL 0x1000bbd3
-// FUNCTION: DX7HRTNL 0x1000bd20
-// FUNCTION: DX7HRTNL 0x1000bd6a
-// FUNCTION: DX7HRTNL 0x1000bee3
-// FUNCTION: DX7HRTNL 0x1000bf2d
-// FUNCTION: DX7HRTNL 0x1000c6a1
-// FUNCTION: DX7HRTNL 0x1000c8a6
-// FUNCTION: DX7HRTNL 0x1000c8b7
-// FUNCTION: DX7HRTNL 0x1000c97d
-// FUNCTION: DX7HRTNL 0x1000ca0b
-// FUNCTION: DX7HRTNL 0x1000cc52
-// FUNCTION: DX7HRTNL 0x1000cd18
-// TEMPLATE: DX7HRTNL 0x1000cd5f
-// TEMPLATE: DX7HRTNL 0x1000cd8b
-// TEMPLATE: DX7HRTNL 0x1000cdc6
-// TEMPLATE: DX7HRTNL 0x1000ce0a
-// TEMPLATE: DX7HRTNL 0x1000d0a0
-// TEMPLATE: DX7HRTNL 0x1000d0b4
-// TEMPLATE: DX7HRTNL 0x1000d0d4
-// SYNTHETIC: DX7HRTNL 0x1000d0ec
-// SYNTHETIC: DX7HRTNL 0x1000d114
-// SYNTHETIC: DX7HRTNL 0x1000d120
-// SYNTHETIC: DX7HRTNL 0x1000d12c
-// SYNTHETIC: DX7HRTNL 0x1000d138
-// FUNCTION: DX7HRTNL 0x1000ac27

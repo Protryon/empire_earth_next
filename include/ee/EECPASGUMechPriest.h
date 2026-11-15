@@ -7,9 +7,9 @@
 
 class EECPASGUMechPriest : public EECPASGUPriest {
 public:
-    EECPASGUMechPriest(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);  // 0x6547
-    EECPASGUMechPriest(EECPAttackSubGroup* inSubGroup); // 0x6586
-    virtual ~EECPASGUMechPriest();          // 0x65a5
+    EECPASGUMechPriest(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
+    EECPASGUMechPriest(EECPAttackSubGroup* inSubGroup);
+    virtual ~EECPASGUMechPriest();
     // +0x6c 0xd21f: only the base's (ICF: EECPASGUSea's, the kept copy)
     virtual void Update(unsigned long inTime);
 };

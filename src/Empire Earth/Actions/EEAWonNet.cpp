@@ -63,10 +63,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEAWonNet.h"
 #include "ee/EEStringIDs.h"
-// SYNTHETIC: EXE 0x4052f3
-// (the scalar deleting destructor)
 
-// FUNCTION: EXE 0x40530f
 // Creates a WON lobby action for a list box line (room or user list)
 EEAWonNet::EEAWonNet(long inType, UIListBox<UWideString>* inList, const UWideString& inText, bool inHasPassword)
 {
@@ -87,7 +84,6 @@ EEAWonNet::EEAWonNet(long inType, UIListBox<UWideString>* inList, const UWideStr
     this->mIsPrivate = false;
 }
 
-// FUNCTION: EXE 0x405418
 // Creates a WON lobby action for a game list line (players, password, private and in-progress flags)
 EEAWonNet::EEAWonNet(long inType, const UWideString& inText, long inHumans, long inPlayers, bool inHasPassword, bool inIsPrivate,
                      bool inIsInProgress)
@@ -109,7 +105,6 @@ EEAWonNet::EEAWonNet(long inType, const UWideString& inText, long inHumans, long
     this->mIsPrivate = inIsPrivate;
 }
 
-// FUNCTION: EXE 0x405523
 // Creates a WON lobby action for a chat line (prefix, text, whether it is ours)
 EEAWonNet::EEAWonNet(long inType, UITextLabel* inChat, const UWideString& inPrefix, const UWideString& inText,
                      bool inIsFromMe)
@@ -130,7 +125,6 @@ EEAWonNet::EEAWonNet(long inType, UITextLabel* inChat, const UWideString& inPref
     this->mIsPrivate = false;
 }
 
-// FUNCTION: EXE 0x405611
 // Destroys the WON lobby action
 EEAWonNet::~EEAWonNet()
 {
@@ -139,7 +133,6 @@ EEAWonNet::~EEAWonNet()
 // NEAR: the original refuses more inlines (UIListBox<UWideString>::GetDisplayLine via the import, the games box's
 // GetDisplayLine 0x5d2d and _Ptrit::operator+ 0x28a137 out of line), so theGames lives at [ebp-8] and the frame is 8
 // bytes larger; source shape otherwise follows the original's block order.
-// FUNCTION: EXE 0x40564a
 // Applies a WON lobby update on the UI thread: room and user lists, games box lines and selection, chat text
 void EEAWonNet::Virtual4()
 {
@@ -261,25 +254,6 @@ void EEAWonNet::Virtual4()
     }
 }
 
-// FUNCTION: EXE 0x405ce1
-// Destroys Virtual4's unused static string at exit
-// (Virtual4's sUnused atexit dtor)
-
-// FUNCTION: EXE 0x405cec
-// Destroys Virtual4's static selected-game string at exit
-// (Virtual4's sSelectedGame atexit dtor)
-
-// FUNCTION: EXE 0x405cf7
-// Returns the games box's current selection
-// (UIListBox<EEUICWNGBLine>::GetCurrentSelection: template member, first user)
-
-// NEAR (missing): inline in our build (see Virtual4)
-// FUNCTION: EXE 0x405d2d
-// Returns the games box's first displayed line
-// (UIListBox<EEUICWNGBLine>::GetDisplayLine: inline, first user)
-
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAWonNet::Virtual8()
 {
 }

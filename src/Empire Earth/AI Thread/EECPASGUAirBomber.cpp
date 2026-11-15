@@ -33,7 +33,6 @@
 #include "ee/EEUGRust.h"
 #include "ee/EECPASGUAirBomber.h"
 
-// FUNCTION: EXE 0x405d47
 // Creates the bomber entry for a unit in the sub-group
 EECPASGUAirBomber::EECPASGUAirBomber(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -41,10 +40,6 @@ EECPASGUAirBomber::EECPASGUAirBomber(EEComplexUnit* inUnit, EECPAttackSubGroup* 
     this->mType = kASGUKindAirBomber;
 }
 
-// SYNTHETIC: EXE 0x405d6a
-// (the scalar deleting destructor; 0x1c bytes)
-
-// FUNCTION: EXE 0x405d86
 // Creates an empty bomber entry for the sub-group (no unit yet)
 EECPASGUAirBomber::EECPASGUAirBomber(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -52,13 +47,11 @@ EECPASGUAirBomber::EECPASGUAirBomber(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindAirBomber;
 }
 
-// FUNCTION: EXE 0x405da5
 // Destroys the bomber entry (base members only)
 EECPASGUAirBomber::~EECPASGUAirBomber()
 {
 }
 
-// FUNCTION: EXE 0x405db0
 // Picks a target: bombers switch unless the current one is alive within 10 tiles; paratrooper planes fly to drop
 // on a land target (the unload goal leaks if it cannot unload there); returns true if it has a target
 // The original calls gContinentManager's inline tile lookup 0x4060b4 out of line
@@ -111,11 +104,6 @@ bool EECPASGUAirBomber::Retarget()
     return this->mTarget != NULL;
 }
 
-// FUNCTION: EXE 0x405f27
-// Returns the squared distance between two units
-// (EEComplexUnit::DistanceSquaredTo, inline in ee/EEUnit.h: its first user is Virtual14)
-
-// FUNCTION: EXE 0x405f58
 // Updates the bomber every second: once out of its carrier or on the map it heads to the task and idles; when
 // idle it attacks if the sub-group has targets, else attacks an enemy task unit or flies to the task location
 void EECPASGUAirBomber::Update(unsigned long inTime)
@@ -150,33 +138,18 @@ void EECPASGUAirBomber::Update(unsigned long inTime)
     this->mNextUpdateTime = inTime + 1000;
 }
 
-// FUNCTION: EXE 0x4060b1
 // Returns true: any target stays valid
 bool EECPASGUAirBomber::IsTargetValid()
 {
     return true;
 }
 
-// FUNCTION: EXE 0x4060b4
-// Returns the continent holding a tile
-// (EEAIContinentManager's inline tile lookup 0x60b4, ee/EEAIContinentManager.h)
-
-// FUNCTION: EXE 0x4060c7
-// Returns the continent at a tile, or NULL off the continent map
-// (EEAIContinentManager::GetContinentAt, inline in ee/EEAIContinentManager.h)
-
-// FUNCTION: EXE 0x4060ef
-// Returns the continent id stored for a tile
-// (EEAIContinentManager::GetContinentID, inline in ee/EEAIContinentManager.h)
-
 // Flee: does nothing for bombers (no address: ICF-folded into the shared `ret` 0x4e123d; vtable 0x439160 +0x1c)
 void EECPASGUAirBomber::Flee()
 {
 }
 
-// ICF-FOLDED: EXE 0x40631c
 // Applies the target preferences the base way
-// (no address of its own: the same body as EECPASGUAirFighter::ApplyPrejudices, which ICF kept; [sib 48])
 void EECPASGUAirBomber::ApplyPrejudices(EECPASTargetUnit* inTarget)
 {
     EECPAttackSubGroupUnit::ApplyPrejudices(inTarget);

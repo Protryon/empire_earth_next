@@ -25,7 +25,6 @@ static std::wstring SmartText(const uint32_t* inUnits, size_t inCount)
         s += static_cast<wchar_t>(inUnits[i]);
     return s;
 }
-// FUNCTION: WON 0x006bfb00
 // Creates the smart routing connection with the ignore file under the WON directory and the default chat commands
 SmartRoutingConnection::SmartRoutingConnection()
 {
@@ -34,7 +33,6 @@ SmartRoutingConnection::SmartRoutingConnection()
 }
 SmartRoutingConnection::~SmartRoutingConnection() { ee_won_smart_free(this->mModel); }
 
-// FUNCTION: WON 0x6c0be0
 // Updates the client, group and member maps from a finished routing op or notification, by op type; a chat,
 // invitation or join attempt from an ignored client loses its completion
 void SmartRoutingConnection::RoutingOpCompleteHook(RoutingOp *theOp)
@@ -96,7 +94,6 @@ void SmartRoutingConnection::StartGroupItr() { AutoCrit aCrit(this->GetDataLock(
 bool SmartRoutingConnection::StartMemberItr(unsigned short id)
 { AutoCrit aCrit(this->GetDataLock()); return ee_won_smart_start(this->mModel, 2, id); }
 
-// FUNCTION: WON 0x6c35a0
 // Finds the client a typed name refers to: exact, unique prefix, ambiguous or not found
 SmartRoutingConnection::MatchResult SmartRoutingConnection::FindClient(const std::wstring& inName, ClientInfo& out,
                                                                        bool& outFound)
@@ -107,27 +104,22 @@ SmartRoutingConnection::MatchResult SmartRoutingConnection::FindClient(const std
     if (outFound) CopyClient(out, r);
     return (MatchResult)result;
 }
-// FUNCTION: WON 0x006c37d0
 // Ignores or unignores a client and saves the ignore list
 void SmartRoutingConnection::IgnoreClient(unsigned short inClientId, bool on)
 { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_ignore(this->mModel, inClientId, on); }
-// FUNCTION: WON 0x006c3970
 // Maps a chat command word (case-insensitive) to a command
 void SmartRoutingConnection::AddCommandString(const std::wstring& inText, InputCommand inCommand)
 { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_add_command(this->mModel, inText.data(), inText.length(), inCommand); }
 void SmartRoutingConnection::ClearCommandStrings()
 { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_clear_commands(this->mModel); }
-// FUNCTION: WON 0x006c40a0
 // Sets whether chat commands accept a unique name prefix or only exact names
 void SmartRoutingConnection::SetAllowPartialNameMatch(bool inAllow)
 { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_set(this->mModel, EeWonSmartNumber::PartialNames, inAllow); }
-// FUNCTION: WON 0x006c40f0
 // Sets whether mute/ban commands apply server-wide
 void SmartRoutingConnection::SetServerWideCommands(bool inOn)
 { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_set(this->mModel, EeWonSmartNumber::ServerWide, inOn); }
 void SmartRoutingConnection::SetDoColonEmote(bool inOn)
 { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_set(this->mModel, EeWonSmartNumber::ColonEmote, inOn); }
-// FUNCTION: WON 0x006c2fc0
 // Sets the path of the ignore list file
 void SmartRoutingConnection::SetProductName(const std::string& inPath)
 {
@@ -159,7 +151,6 @@ bool SmartRoutingConnection::HandleInput(const std::wstring& inInput, int inGrou
     return ok;
 }
 
-// FUNCTION: WON 0x006c4120
 // Forgets this client's id and record, then closes the routing connection
 void SmartRoutingConnection::CloseHook()
 {

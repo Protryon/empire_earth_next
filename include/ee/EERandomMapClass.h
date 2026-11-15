@@ -44,8 +44,8 @@ typedef long (*EERMPIMSetValuesFunction)(EERandomMapData* inMap, const UString& 
 
 class EERandomMap {
 public:
-    EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers);   // 0x283c18
-    virtual ~EERandomMap();                 // 0x284025
+    EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers);
+    virtual ~EERandomMap();
 
     // 0x28655a: up to 11 tries with fresh seeds until the players can reach each other (cdecl)
     static long CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>& inPlayers, unsigned long inPlayer,
@@ -60,23 +60,23 @@ public:
     long Generate();                        // 0x28449e (the PIM steps with the load progress)
     void PlaceFeatures();                   // 0x2849f2 (the units of mFeatures and mWalls)
     void CreateRandomMap(unsigned long inPlayer, unsigned long inGenerator, unsigned long inSeed, EEMap* inMap,
-                         GE3DPoint& outLocation);   // 0x285560
-    void CreateTeams();                     // 0x2856e7
+                         GE3DPoint& outLocation);
+    void CreateTeams();
     void CreateValidMap();                  // 0x285933 ("EERandomMap::CreateValidMap %d valid tiles found")
-    void PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, const GE2DPoint& inEnd, EEPlayer* inPlayer);   // 0x2859e7
-    long FilterHeightMap();                 // 0x285d89
-    void SmoothHeights();                   // 0x285d9f
-    void InitializeValues(unsigned long inSeed);   // 0x286d8d
-    void CreateGrids();                     // 0x2871fa
-    void MarkFeatures();                    // 0x287636
-    void MarkLine(const GE2DPoint& inStart, const GE2DPoint& inEnd);   // 0x287a3f
-    void PlaceTerrainUnit(unsigned long inX, unsigned long inY, EETerrainTable* inTerrain);   // 0x287c18
+    void PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, const GE2DPoint& inEnd, EEPlayer* inPlayer);
+    long FilterHeightMap();
+    void SmoothHeights();
+    void InitializeValues(unsigned long inSeed);
+    void CreateGrids();
+    void MarkFeatures();
+    void MarkLine(const GE2DPoint& inStart, const GE2DPoint& inEnd);
+    void PlaceTerrainUnit(unsigned long inX, unsigned long inY, EETerrainTable* inTerrain);
     void PaintTiles();                      // 0x287d37 ("EERandomMap::PaintTiles Processing completed in ...")
-    void Fn288426();                        // 0x288426
-    long SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long inSeed);   // 0x288742
+    void Fn288426();
+    long SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long inSeed);
     void AddNeighbourHeight(unsigned long inX, unsigned long inY, float& ioSum, long& ioCount, float& ioMinimum,
-                            float& ioMaximum);   // 0x2887bd
-    void Fn288839();                        // 0x288839
+                            float& ioMaximum);
+    void Fn288839();
 
     static FSFileSpec sGeneratorDirectory;  // 0x565588 (guard 0x565580 bit 1)
     static std::vector<EERMGenerator> sRandomMapGenerators;   // 0x565570 (guard bit 2)
@@ -100,18 +100,18 @@ public:
 };
 
 // file-scope helpers of EERandomMap.cpp (cdecl, called with &map->+4; provisional names)
-bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap);   // 0x284701
+bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap);
 
 // other units' functions the random map calls (cdecl; provisional names)
 extern bool& gUsingCarbon;                   // 0x5318e4 (= mU3D8 bit 0x10 while a map is generated)
 class EEComplexUnit;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles);  // 0x2457a3 (the wall's tile line)
-void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles);  // 0x24da0c
-void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>& outCorners, EEMap* inMap);  // 0x24cca5
-void EEShapeWall(EEComplexUnit* inUnit, long inCorner, long inRaisedCorners);      // 0x24e647
+void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles);
+void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>& outCorners, EEMap* inMap);
+void EEShapeWall(EEComplexUnit* inUnit, long inCorner, long inRaisedCorners);
 void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer,
-                    EEMap* inMap);   // 0x243ae1
+                    EEMap* inMap);
 
 // the random map generator list (EERandomMap::sRandomMapGenerators; exe-view free functions, ee/EERandomMapGenerators.h)
 #include "ee/EERandomMapGenerators.h"

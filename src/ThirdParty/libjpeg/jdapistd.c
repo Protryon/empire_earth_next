@@ -34,9 +34,7 @@ LOCAL(boolean) output_pass_setup JPP((j_decompress_ptr cinfo));
  * a suspending data source is used.
  */
 
-// FUNCTION: JPEG 0x1008712e
 GLOBAL(boolean)
-// FUNCTION: EXEIMG 0x805850
 jpeg_start_decompress (j_decompress_ptr cinfo)
 {
   if (cinfo->global_state == DSTATE_READY) {
@@ -93,9 +91,7 @@ jpeg_start_decompress (j_decompress_ptr cinfo)
  *       If suspended, returns FALSE and sets global_state = DSTATE_PRESCAN.
  */
 
-// FUNCTION: JPEG 0x100871f1
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x805930
 output_pass_setup (j_decompress_ptr cinfo)
 {
   if (cinfo->global_state != DSTATE_PRESCAN) {
@@ -152,9 +148,7 @@ output_pass_setup (j_decompress_ptr cinfo)
  * an oversize buffer (max_lines > scanlines remaining) is not an error.
  */
 
-// FUNCTION: JPEG 0x1008729b
 GLOBAL(JDIMENSION)
-// FUNCTION: EXEIMG 0x805a00
 jpeg_read_scanlines (j_decompress_ptr cinfo, JSAMPARRAY scanlines,
 		     JDIMENSION max_lines)
 {

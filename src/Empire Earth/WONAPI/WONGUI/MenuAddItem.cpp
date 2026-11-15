@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006fd480
 // Adds a menu item with text, icon, listener and menu id, resizes the menu to fit and returns the item
 MenuItem* PopupMenu::AddItem(const GUIString& text,NativeImage* icon,ComponentListener* listener,int id)
 {

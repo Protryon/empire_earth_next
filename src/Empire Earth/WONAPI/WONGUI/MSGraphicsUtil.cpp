@@ -24,32 +24,24 @@ static void MsDraw(Graphics& g, EeWonMsPaintKind k, int a, int b, int w, int h, 
     WONMsPaint(g,WONMsPaintOf(k,w,h,(down?EE_WON_MSPAINT_PRESSED:0)|(checked?EE_WON_MSPAINT_CHECKED:0),a,b));
 }
 
-// FUNCTION: WON 0x006fdcd0
 // Draws a two-pixel 3D frame, raised or sunken (down), at the given position
 void LobbyDraw3DFrame(Graphics &g, int x, int y, int width, int height, bool down) { MsDraw(g,EeWonMsPaintKind::Frame3D,x,y,width,height,down); }
-// FUNCTION: WON 0x006fddf0
 // Draws a raised button frame, or a flat shadow-coloured rectangle when down
 void LobbyDrawFrame(Graphics &g, int x, int y, int width, int height, bool down) { MsDraw(g,EeWonMsPaintKind::Frame,x,y,width,height,down); }
-// FUNCTION: WON 0x006fdee0
 // Draws a sunken frame inside a dark outline (the down flag is ignored)
 void MSGraphicsUtil::DrawFrame3(Graphics &g, int x, int y, int width, int height, bool) { MsDraw(g,EeWonMsPaintKind::Frame3,x,y,width,height,false); }
-// FUNCTION: WON 0x006fdfb0
 // Draws a small four-stroke arrow centred in width x height, grey with a highlight when disabled; the x and y
 // offsets are ignored (the original shadowed them by the centre locals)
 void MSGraphicsUtil::DrawArrow(Graphics &g, Direction theDirection, int, int, int width, int height, bool disabled)
 {
     WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Arrow,width,height,disabled?EE_WON_MSPAINT_DISABLED:0,(int)theDirection));
 }
-// FUNCTION: WON 0x006fe250
 // Draws a sunken check box (face colour while pressed, window colour otherwise) with a tick if checked
 void MSGraphicsUtil::DrawCheck(Graphics &g, int x, int y, int width, int height, bool down, bool checked) { MsDraw(g,EeWonMsPaintKind::Check,x,y,width,height,down,checked); }
-// FUNCTION: WON 0x006fe3b0
 // Draws a sunken radio circle (face colour while pressed, window colour otherwise) with a dot if checked
 void MSGraphicsUtil::DrawRadio(Graphics &g, int x, int y, int width, int height, bool down, bool checked) { MsDraw(g,EeWonMsPaintKind::Radio,x,y,width,height,down,checked); }
-// FUNCTION: WON 0x006fe4d0
 // Draws a tab with rounded top corners, highlight on the left and top and shadows on the right
 void MSGraphicsUtil::DrawTab(Graphics &g, int x, int y, int width, int height) { MsDraw(g,EeWonMsPaintKind::Tab,x,y,width,height,false); }
-// FUNCTION: WON 0x006fe5e0
 // Draws the 8 x 8 close X centred in the area, offset by x and y
 void MSGraphicsUtil::DrawCloseX(Graphics &g, int x, int y, int width, int height) { MsDraw(g,EeWonMsPaintKind::CloseX,x,y,width,height,false); }
 }

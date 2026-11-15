@@ -9,8 +9,8 @@
 
 class EESMMediaStrings {
 public:
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x1c5e78
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x1c5ecc
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     // 0x1c5783 (`ret 0x10`; EECampaign::ListScenarioMedia 0x28cc2e: the scenario file, the media file list, the
     // error text, a flag; returns bool; provisional name)
     bool ListMediaFiles(const UWideString& inFile, std::vector<UWideString>& ioFiles, UWideString& outError, bool inFlag);

@@ -18,7 +18,6 @@
 #include "GERustMath.h"
 #include "GERustText.h"
 
-// FUNCTION: LLE 0x10032ae2
 // Measures the text's pixel extent with its font (platform/PlatFont.h: GetTextExtentPoint32's), in chunks of 256
 // characters; the height is the font's cell. The chunked measure is Rust (ee_ge font.rs); the font's absence and its
 // metrics are read here.

@@ -17,7 +17,7 @@ struct EECPDCTownThreat;                    // ee/EECPDefenseCommander.h
 
 class EECPMilitaryAidPackage {
 public:
-    EECPMilitaryAidPackage(EEComputerPlayer* inPlayer);   // 0x84d8d
+    EECPMilitaryAidPackage(EEComputerPlayer* inPlayer);
     virtual ~EECPMilitaryAidPackage() { this->ReleaseSubGroups(); }  // +0x00 (??_G 0x785a1)
 
     void ReleaseSubGroups();                // 0x8572c (the dtor's call; EECPDefenseCommander::FreePackages)
@@ -35,13 +35,13 @@ public:
     unsigned long UpdateState2(EETown* inTown);  // 0x859d7 (ret 4; state 2's update)
     unsigned long Update(unsigned long inTime);    // 0x85163 (ret 4): the next time it wants an update (0: none)
     bool IsFinished();                      // 0x85105: finished
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x851ec
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     // 0x8500e (ret 4, hidden result): the first tile of the target town (mTownID of mTarget), also stored in mLocation
     // ((0, 0) when the town is gone or empty) (provisional name)
     U2DPoint<long> GetLocation();
-    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x856e4
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x85789
-    EECPMilitaryAidPackage& operator=(const EECPMilitaryAidPackage& inOther);   // 0x85a36 (ret 4)
+    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    EECPMilitaryAidPackage& operator=(const EECPMilitaryAidPackage& inOther);
     unsigned long GetNumUnits() const { return this->mSubGroupIDs.size(); }  // inline (ICF-folded into 0x91f11) (provisional name)
 
     std::vector<unsigned long> mSubGroupIDs;  // +0x04 (_Buy(0)) the sub group ids sent

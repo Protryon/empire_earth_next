@@ -19,14 +19,12 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EEGlobalCalamityClass.h"
 
-// ICF-FOLDED: EXE 0x636201
 // (`return 1`)
 long EEGlobalCalamityClass::GetTargetKind()
 {
     return 1;
 }
 
-// ICF-FOLDED: EXE 0x4b202f (EECCLineOfSight::CanCastAt's body, the same for every global class)
 // (`return 0`)
 long EEGlobalCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX,
                                       unsigned long inY, bool inCheck, EEUnit* inTargetUnit)

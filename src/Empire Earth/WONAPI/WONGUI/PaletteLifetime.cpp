@@ -14,7 +14,3 @@ namespace WONAPI {
 // Destroys the palette, freeing its color table (emitted at 0x00709880)
 Palette::~Palette() { delete this->mColors; }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00709880
-// (public: virtual __thiscall WONAPI::Palette::~Palette(void)    [??1Palette@WONAPI@@UAE@XZ])

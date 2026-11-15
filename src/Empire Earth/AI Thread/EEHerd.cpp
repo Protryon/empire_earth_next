@@ -110,10 +110,7 @@ const UString EEHerd::sData("EEHerd-SaveLoadData");
 // 0x4e5e40, right after sData (0x4e5e30 + 0x10) in the original's initialised .data, value 0; its only use clears it
 // (EEWorld.cpp). Owner by placement only (EECalamity's statics start at 0x4e5e48): PROVISIONAL
 long gHerdUnreadValue = 0;
-// SYNTHETIC: EXE 0x4a191a   (wrapper)
-// SYNTHETIC: EXE 0x4a192b   (registrar)
 
-// FUNCTION: EXE 0x4a1953
 // Creates an empty herd with no units, leader, target or path request
 EEHerd::EEHerd()
 {
@@ -123,10 +120,6 @@ EEHerd::EEHerd()
     this->Clear();
 }
 
-// SYNTHETIC: EXE 0x4a19e3
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4a19ff
 // Creates a player's herd of one animal type, with its herd radius, birth timer and a random maximum size
 EEHerd::EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID)
 {
@@ -146,7 +139,6 @@ EEHerd::EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID)
     this->mMaxUnits = gPhysics->GetRandom(this->mAnimal->GetMinHerdSize(), this->mAnimal->GetMaxHerdSize());
 }
 
-// FUNCTION: EXE 0x4a1b1e
 // Destroys the herd, releasing its units, looks, path request, leader and target
 EEHerd::~EEHerd()
 {
@@ -154,7 +146,6 @@ EEHerd::~EEHerd()
 }
 
 // NEAR: EEModel (mStats->mModel) is only forward-declared in ee/EEUnit.h, so its EEMedia base is a cast here
-// FUNCTION: EXE 0x4a1b45
 // Adds an animal (unchecked once the herd has tiles, else if CanTake accepts it) and sets its graze time; rebuilds
 // the area when it is adult or the territory is small; returns whether it was added
 bool EEHerd::AddUnit(EEComplexUnit* inUnit)
@@ -188,7 +179,6 @@ bool EEHerd::AddUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a1d0f
 // Reacts to a hit animal: a predator strikes back at an attacker it can hurt one time in four, otherwise the
 // animal flees; then forgets its last attacker
 void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
@@ -211,7 +201,6 @@ void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
     theAttackerRef = NULL;
 }
 
-// FUNCTION: EXE 0x4a1df7
 // Orders each given animal to attack a target
 void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEComplexUnit*>& inUnits)
 {
@@ -232,7 +221,6 @@ void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEUnitHandle<EEComplexUn
     }
 }
 
-// FUNCTION: EXE 0x4a1e75
 // Returns whether an animal may stand on a tile: walkable terrain, passable units and no other herd member there
 bool EEHerd::CanStandOn(EEComplexUnit* inUnit, const U2DPoint<long>& inTile)
 {
@@ -252,7 +240,6 @@ bool EEHerd::CanStandOn(EEComplexUnit* inUnit, const U2DPoint<long>& inTile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a1efc
 // On a water continent, picks a random moving ship if the target is lost, then sends the herd to circle it or
 // to one of its next waypoints (index may be one past the last); returns whether there is a live moving target
 bool EEHerd::Chase()
@@ -319,7 +306,6 @@ bool EEHerd::Chase()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a2275
 // Queues for every herd animal a walk through all slots of a ring of the given radius around a tile on the
 // herd's continent; returns whether any animal was ordered
 bool EEHerd::MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius)
@@ -357,7 +343,6 @@ bool EEHerd::MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a24d0
 // On a water continent, picks a random fishing boat as target and circles the herd around it; returns whether
 // the herd was ordered
 bool EEHerd::Hunt()
@@ -379,7 +364,6 @@ bool EEHerd::Hunt()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a25b6
 // Resets the herd to empty: releases units, looks, path request, leader and target and zeroes timers and state
 void EEHerd::Clear()
 {
@@ -419,7 +403,6 @@ void EEHerd::Clear()
 }
 
 // NEAR: EEModel (mStats->mModel) is only forward-declared in ee/EEUnit.h, so its EEMedia base is a cast here
-// FUNCTION: EXE 0x4a26b9
 // Makes the animal with the most hit points the leader, giving it the leader look and restoring the old one's
 void EEHerd::PickLeader()
 {
@@ -444,7 +427,6 @@ void EEHerd::PickLeader()
 
 // NEAR: the margin point goes through EETileDistanceLess's copy ctor in the original (0x4d28b, the
 // U2DPoint<long> copy family)
-// FUNCTION: EXE 0x4a2775
 // Rebuilds the herd's area from tiles and, unless loading a saved game with a big territory, widens the
 // territory by a random margin; then picks the leader
 void EEHerd::Create(const std::vector<U2DPoint<long> >& inTiles)
@@ -478,7 +460,6 @@ done:
     this->PickLeader();
 }
 
-// FUNCTION: EXE 0x4a286a
 // Sends a free animal to a random standable tile (graze area, then territory) and sets its next graze time; its
 // young follow to nearby tiles, but those tests and graze-time resets use the parent, not the young
 void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
@@ -548,7 +529,6 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
     }
 }
 
-// FUNCTION: EXE 0x4a2d03
 // Picks the parent for a newborn: rarely (6.5%) one with one or two young, else an adult with no young (or
 // failing that one with young); NULL when the pick has more than two young
 EEComplexUnit* EEHerd::FindMother()
@@ -590,7 +570,6 @@ EEComplexUnit* EEHerd::FindMother()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a302c
 // Collects the herd animals that are not fully grown
 void EEHerd::GetYoungUnits(std::vector<EEComplexUnit*>& outUnits)
 {
@@ -600,7 +579,6 @@ void EEHerd::GetYoungUnits(std::vector<EEComplexUnit*>& outUnits)
     }
 }
 
-// FUNCTION: EXE 0x4a3075
 // Collects the living fishing boats within the herd's continent bounds (on inContinent unless it is 0)
 void EEHerd::GetPrey(unsigned short inContinent, std::vector<EEComplexUnit*>& outUnits)
 {
@@ -611,7 +589,6 @@ void EEHerd::GetPrey(unsigned short inContinent, std::vector<EEComplexUnit*>& ou
         EEGetUnitsInRectangle(theContinent->GetHullBounds(), outUnits, theFilter, false);
 }
 
-// FUNCTION: EXE 0x4a30b6
 // Returns a random tile within the herd's territory rectangle
 U2DPoint<long> EEHerd::GetRandomTile()
 {
@@ -623,7 +600,6 @@ U2DPoint<long> EEHerd::GetRandomTile()
     return thePoint;
 }
 
-// FUNCTION: EXE 0x4a3110
 // Gives a live, enabled, placed animal a goal and starts an action; returns false (goal not taken) otherwise
 bool EEHerd::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurrent, long inAction)
 {
@@ -637,7 +613,6 @@ bool EEHerd::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurr
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a315b
 // Sends the hit animal (or the whole herd) to attack its last attacker, when it can hurt it
 void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
 {
@@ -657,7 +632,6 @@ void EEHerd::AttackBack(EEComplexUnit* inUnit, bool inAll)
 }
 
 // Exact with EEAnimal +0x34 as a float read through GetGrowthStep(), the unit's mGrowth through GetGrowth(), `1.0f < x`
-// FUNCTION: EXE 0x4a31fd
 // Grows a young animal by one growth step and schedules the next; once adult, its parent lets it go
 void EEHerd::GrowUnit(EEComplexUnit* inUnit)
 {
@@ -676,7 +650,6 @@ void EEHerd::GrowUnit(EEComplexUnit* inUnit)
 }
 
 // NEAR: EEPlayer::mHerds is a vector<long> in ee/EEPlayer.h (EEHerd* elements): the herds go through casts here
-// FUNCTION: EXE 0x4a3295
 // Surrounds the animal nearest the leader in the nearest other non-predator herd on the continent; returns
 // whether the herd now has a target
 bool EEHerd::FollowNearestHerd()
@@ -710,7 +683,6 @@ bool EEHerd::FollowNearestHerd()
     return this->mTarget != NULL;
 }
 
-// FUNCTION: EXE 0x4a33bd
 // Updates the herd: grows the young that are due, runs the current state's handler and schedules the next update
 void EEHerd::Update(unsigned long inTime)
 {
@@ -752,7 +724,6 @@ void EEHerd::Update(unsigned long inTime)
     this->mNextUpdateTime = theDelay + inTime;
 }
 
-// FUNCTION: EXE 0x4a349c
 // Returns whether a unit is a placed animal or fish of a known animal type
 bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
 {
@@ -760,7 +731,6 @@ bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
         EEAnimal::Find(inUnit->mUnitClass->mUnitType) && inUnit->mTileX != -10000 && inUnit->mTileY != -10000;
 }
 
-// FUNCTION: EXE 0x4a34dc
 // Reads the herd from a saved game (ids for its animal, player, leader, target and units); returns the first read
 // error
 long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -857,7 +827,6 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a3749
 // Releases every herd animal (detaching those still in this herd) and forgets their looks
 void EEHerd::ClearUnits()
 {
@@ -871,7 +840,6 @@ void EEHerd::ClearUnits()
     this->mMedia.clear();
 }
 
-// FUNCTION: EXE 0x4a37a7
 // Unloads and forgets the look recorded for a unit
 void EEHerd::RemoveUnitMedia(unsigned long inKey)
 {
@@ -882,7 +850,6 @@ void EEHerd::RemoveUnitMedia(unsigned long inKey)
     }
 }
 
-// FUNCTION: EXE 0x4a37e4
 // Drops the herd's reference to its leader
 void EEHerd::ReleaseLeader()
 {
@@ -891,7 +858,6 @@ void EEHerd::ReleaseLeader()
     this->mLeader = NULL;
 }
 
-// FUNCTION: EXE 0x4a37fb
 // Drops the herd's reference to its target
 void EEHerd::ReleaseTarget()
 {
@@ -900,7 +866,6 @@ void EEHerd::ReleaseTarget()
     this->mTarget = NULL;
 }
 
-// FUNCTION: EXE 0x4a3812
 // Removes an animal from the herd (leader, herd link, look), rebuilding the area only once the herd is empty;
 // returns whether it was in the herd
 bool EEHerd::RemoveUnit(EEComplexUnit* inUnit)
@@ -925,7 +890,6 @@ bool EEHerd::RemoveUnit(EEComplexUnit* inUnit)
 }
 
 // NEAR: EEModel (mStats->mModel) is only forward-declared in ee/EEUnit.h, so its EEMedia base is a cast here
-// FUNCTION: EXE 0x4a3967
 // After a load, turns the saved ids back into player, animal, units, leader and target, restores the looks,
 // rebuilds the area and recounts the young; returns 0
 long EEHerd::RepairPointers(long inMajorVersion, long inMinorVersion)
@@ -990,7 +954,6 @@ long EEHerd::RepairPointers(long inMajorVersion, long inMinorVersion)
     return 0;
 }
 
-// FUNCTION: EXE 0x4a3d9c
 // Spawns a newborn held by a chosen parent (when one is found) and schedules the next birth; returns whether born
 bool EEHerd::GiveBirth(unsigned long inTime)
 {
@@ -1011,7 +974,6 @@ bool EEHerd::GiveBirth(unsigned long inTime)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a3e7a
 // Writes the herd to the saved game (ids for its animal, player, leader, target and units); returns the first write
 // error
 long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1096,7 +1058,6 @@ long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a412e
 // Makes herd animals graze at once: all of them, or the first inIndex after an optional shuffle
 void EEHerd::ResetGrazeTimes(long inIndex, bool inShuffle)
 {
@@ -1109,7 +1070,6 @@ void EEHerd::ResetGrazeTimes(long inIndex, bool inShuffle)
         theUnits[i]->SetGrazeTime(0);
 }
 
-// FUNCTION: EXE 0x4a41fb
 // Records the look for a unit, loading it and unloading the one it replaces
 void EEHerd::SetUnitMedia(EEMedia* inMedia, unsigned long inKey)
 {
@@ -1126,7 +1086,6 @@ void EEHerd::SetUnitMedia(EEMedia* inMedia, unsigned long inKey)
     }
 }
 
-// FUNCTION: EXE 0x4a4263
 // Returns whether an animal may join: same player and animal type, room left, and no tiles yet or (inCheckRange)
 // on the herd's continent within the herd radius of its hull
 bool EEHerd::CanTake(EEComplexUnit* inUnit, bool inCheckRange)
@@ -1150,7 +1109,6 @@ bool EEHerd::CanTake(EEComplexUnit* inUnit, bool inCheckRange)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4a4351
 // Places the herd on a ring around a target, sending the nearest animal to each slot, and makes it the target
 void EEHerd::Surround(EEComplexUnit* inTarget)
 {
@@ -1191,7 +1149,6 @@ void EEHerd::Surround(EEComplexUnit* inTarget)
     theFormation->Dereference();
 }
 
-// FUNCTION: EXE 0x4a45b7
 // Chase state: while the target lives and the chase timer runs, re-chases it once it moves 3 tiles;
 // otherwise ends the chase, sends the herd grazing and restarts the timer; returns 1000 ms
 unsigned long EEHerd::UpdateChasing(unsigned long inTime)
@@ -1215,7 +1172,6 @@ unsigned long EEHerd::UpdateChasing(unsigned long inTime)
     return 1000;
 }
 
-// FUNCTION: EXE 0x4a467b
 // Hunt state: while the target lives and the hunt timer runs, re-circles it when it changes tile; otherwise, or
 // when circling fails, ends the hunt (grazing, timer restarted); returns 1000 ms
 unsigned long EEHerd::UpdateHunting(unsigned long inTime)
@@ -1241,14 +1197,12 @@ unsigned long EEHerd::UpdateHunting(unsigned long inTime)
     return 1000;
 }
 
-// FUNCTION: EXE 0x4a4757
 // State 4 handler: does nothing; returns 1000 ms
 unsigned long EEHerd::UpdateIdle(unsigned long inTime)
 {
     return 1000;
 }
 
-// FUNCTION: EXE 0x4a475f
 // Attack state: orders animals without a goal to attack the live target; else sends some grazing, sets the
 // follow timer to the rest interval from now and rests; returns 1000 ms
 unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
@@ -1269,7 +1223,6 @@ unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
     return 1000;
 }
 
-// FUNCTION: EXE 0x4a4854
 // Resting state: grazes idle animals, gives birth when due and may start a chase (animal 0xb), a hunt
 // (animal 0xa) or, for predators, following the nearest herd; returns 1000 ms
 unsigned long EEHerd::UpdateResting(unsigned long inTime)
@@ -1307,7 +1260,6 @@ unsigned long EEHerd::UpdateResting(unsigned long inTime)
     return 1000;
 }
 
-// FUNCTION: EXE 0x4a4aa2
 // Leaving state: sends each animal still on the map to an off-map tile near a random map-edge area; switches
 // to state 0xb once all are off the map; returns 1000 ms
 unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
@@ -1370,7 +1322,6 @@ unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
     return 1000;
 }
 
-// FUNCTION: EXE 0x4a4e76
 // Surround state: follows the target as it moves and attacks once the follow timer expires; rests again when
 // the target is gone; returns 2000 ms
 unsigned long EEHerd::UpdateSurrounding(unsigned long inTime)
@@ -1412,25 +1363,3 @@ U2DPoint<long> EEHerd::GetRandomPoint()
         theResult = EEAIArea::GetRandomPoint();
     return theResult;
 }
-
-// Compiler-generated for this unit (template and inline COMDATs after the last member; names in analysis/exe/names.txt).
-// Not paired yet: 0xa4f48 (vector<EEUnitVectorItem>::operator[], expanded inline here).
-// TEMPLATE: EXE 0x4a4f09
-// TEMPLATE: EXE 0x4a4f34
-// TEMPLATE: EXE 0x4a4f58
-// TEMPLATE: EXE 0x4a4f5f
-// TEMPLATE: EXE 0x4a4f93
-// TEMPLATE: EXE 0x4a5004
-// TEMPLATE: EXE 0x4a5068
-// TEMPLATE: EXE 0x4a509a
-// TEMPLATE: EXE 0x4a5238
-// TEMPLATE: EXE 0x4a526b
-// TEMPLATE: EXE 0x4a52eb
-// TEMPLATE: EXE 0x4a5313
-// TEMPLATE: EXE 0x4a536b
-// TEMPLATE: EXE 0x4a53da
-// TEMPLATE: EXE 0x4a53e8
-// Named COMDATs of this unit (compiled here; names in analysis/exe/names.txt)
-// TEMPLATE: EXE 0x4a1910
-// TEMPLATE: EXE 0x4a1937
-// TEMPLATE: EXE 0x4a53ae

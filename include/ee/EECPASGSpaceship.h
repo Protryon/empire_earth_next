@@ -10,7 +10,7 @@
 
 class EECPASGSpaceship : public EECPAttackSubGroup {
 public:
-    EECPASGSpaceship(EECPAttackGroup* inGroup, long inKind);   // 0x4f0d1
+    EECPASGSpaceship(EECPAttackGroup* inGroup, long inKind);
     virtual ~EECPASGSpaceship();            // +0x00 (0x4f0ed)
     virtual void RequestUnits(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent, long inTownID); // +0x08 0x41976
     virtual void MoveToNearestTown();       // +0x18 0xe123d (`ret`)

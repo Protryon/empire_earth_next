@@ -66,7 +66,6 @@
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
 
-// FUNCTION: EXE 0x597393
 // Creates the trigger screen's unit selection control, with the right button up
 EESEUICTriggerSelectUnits::EESEUICTriggerSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
                                                      EEAMouseClick* inClick, EEALasso* inLasso)
@@ -75,16 +74,11 @@ EESEUICTriggerSelectUnits::EESEUICTriggerSelectUnits(UIForm* inForm, unsigned lo
     this->mRightButton = false;
 }
 
-// SYNTHETIC: EXE 0x5973c1
-// (the scalar deleting destructor, emitted with the vtable; slot EESEUICTriggerSelectUnits+0x0)
-
-// FUNCTION: EXE 0x5973dd
 // Destroys the unit selection control
 EESEUICTriggerSelectUnits::~EESEUICTriggerSelectUnits()
 {
 }
 
-// FUNCTION: EXE 0x5973e8
 // Selects every on-screen unit of the double-clicked unit's type, then ends the click and frees the mouse
 long EESEUICTriggerSelectUnits::MouseLButtonDoublePressed()
 {
@@ -102,7 +96,6 @@ long EESEUICTriggerSelectUnits::MouseLButtonDoublePressed()
     return 0;
 }
 
-// FUNCTION: EXE 0x597491
 // Ends a click or drag: selects units in the dragged box (right button: picks by rectangle) or at the
 // mouse (right button: acts on the spot), then hides the control and frees the mouse
 long EESEUICTriggerSelectUnits::MouseLButtonUp()
@@ -150,7 +143,6 @@ long EESEUICTriggerSelectUnits::MouseLButtonUp()
     return 0;
 }
 
-// FUNCTION: EXE 0x597624
 // Starts a right-button click or drag, handled like a left press
 long EESEUICTriggerSelectUnits::MouseRButtonDown()
 {
@@ -158,7 +150,6 @@ long EESEUICTriggerSelectUnits::MouseRButtonDown()
     return this->MouseLButtonDown();
 }
 
-// FUNCTION: EXE 0x597630
 // Ends a right-button click or drag like a left release; does nothing without a right press
 long EESEUICTriggerSelectUnits::MouseRButtonUp()
 {

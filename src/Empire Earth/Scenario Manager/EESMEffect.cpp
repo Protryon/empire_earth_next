@@ -65,20 +65,17 @@
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
-// FUNCTION: EXE 0x5bb5a5
 // Creates a scenario effect with the default settings (see Reset)
 EESMEffect::EESMEffect()
 {
     this->Reset();
 }
 
-// FUNCTION: EXE 0x5bb609
 // Destroys the effect (members only)
 EESMEffect::~EESMEffect()
 {
 }
 
-// FUNCTION: EXE 0x5bb65a
 // Resets every effect setting to its default: an object Create effect, 20 s duration, empty texts and object list
 // (the numbers: ee_scenario fields.rs effect_defaults)
 void EESMEffect::Reset()
@@ -108,7 +105,6 @@ void EESMEffect::Reset()
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPIntelligence.h"
 
-// FUNCTION: EXE 0x5bc60f
 // Copies another effect's settings, texts and object list
 void EESMEffect::Copy(const EESMEffect& inEffect)
 {
@@ -124,7 +120,6 @@ void EESMEffect::Copy(const EESMEffect& inEffect)
     this->mObjects = inEffect.mObjects;
 }
 
-// FUNCTION: EXE 0x5bcb1f
 // Sets, raises or lowers a player value: a resource, the population cap (also queued as a pending effect), difficulty,
 // a scenario variable, a tribute or other statistic or the mining limit; any/all resources recurse per resource
 void EESMEffect::SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount)
@@ -157,7 +152,6 @@ void EESMEffect::SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAtt
 
 void EEChangeUnit(unsigned long, bool, EEUnit*, long, unsigned long, bool, long);
 
-// FUNCTION: EXE 0x5bd099
 // Creates units for the scenario object (a random min..max count per chosen owner) or copies of its existing ones,
 // placed by the object's rules and finished; a newly created set becomes the object's units (the counts, owners and
 // classes: ee_scenario create.rs create_units; each unit EESMCreateUnit below)
@@ -246,7 +240,6 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // read by one function; the pooled __real copies of the same value are separate (provisional name)
 static const float kSMEOneDegree = 0.017453292f;
 
-// FUNCTION: EXE 0x5bd5eb
 // Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
 // media (sound, text, dialogue, chat), a game action (time of day, calamity, graphic effect, cinematic) or an AI action
 void EESMEffect::Execute(bool inIsCinematic)
@@ -260,7 +253,6 @@ void EESMEffect::Execute(bool inIsCinematic)
     EESMCaptureEffect(this, inIsCinematic, theSeed);
 }
 
-// FUNCTION: EXE 0x5bef17
 // Copies a message text, replacing each /#OA, /#PA or /#OC tag and its 4-digit id with an object's attribute value,
 // a player condition's current value or an object's unit count
 void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
@@ -277,7 +269,6 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
         EESMCaptureTokens(theText, outText, theSeed);   // TEST ONLY: SMTK
 }
 
-// FUNCTION: EXE 0x5bfa67
 // Reads the effect from a scenario file, renumbering player actions and unit attributes of older files; returns the
 // first read error (ee_scenario save.rs effect_load)
 long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -289,7 +280,6 @@ long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_effect_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c0134
 // Writes the effect to a scenario file (civ points from minor version 0x2a, mB193 from 0x14); returns the first write
 // error (ee_scenario save.rs effect_save)
 long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -402,7 +392,6 @@ struct EESMEffectRun : EESMHostContext {
     float mPitch;
 };
 
-// FUNCTION: EXE 0x5bd5eb (the body; Execute adds the simulation capture's SMEX record: ee/EEScenarioCapture.h)
 // Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
 // media (sound, text, dialogue, chat), a game action (time of day, calamity, graphic effect, cinematic) or an AI action
 // (the decisions: ee_scenario effect.rs; each world call EESMEffectWorld below)
@@ -1601,10 +1590,3 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
     }
     return SMEUnitsWorld(theRun, inOp, a);
 }
-
-// TEMPLATE: EXE 0x5c5152
-// ?GetNumMessages@EEScenarioManager@@QAEKXZ
-// TEMPLATE: EXE 0x5c516b
-// ?GetPlayer@RTSWorld@@QBEPAVEEPlayer@@K@Z
-// TEMPLATE: EXE 0x5c577c
-// ?GetNewName@EESMEffect@@QBEABVUWideString@@XZ (EESMEffect.h, out of line from SetClassName)
