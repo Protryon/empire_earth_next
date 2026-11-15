@@ -17,7 +17,8 @@
 //! over the stepped units' list `tick`; the classes' `Update`s as sequences of those leaves and host calls `update`,
 //! their `ActionChanged`s as decisions over the store and host operations `actions`.
 //! The players' diplomacy tables (by player object) are `players`, the player's saved state and its Load/Save
-//! `player_save`, its tick and reset over that record `player_tick`; the turrets' turn `turret`. The goal classes moved whole (one C++ class,
+//! `player_save`, its tick and reset over that record `player_tick`, its
+//! statistics `player_stats`; the turrets' turn `turret`. The goal classes moved whole (one C++ class,
 //! `EEUGRust`, every virtual one call) are `rust_goal` (the dispatch and the host) with `patrol`, `calamity`,
 //! `explore` and `unload`. The unit utilities (EEFOFindNewTargetNearOldTarget.cpp: the tile rings and directions,
 //! the units on tiles, the wall lines, the placement tests) are `uu_tiles` (the pure geometry) and `uu` over its host.
@@ -53,6 +54,7 @@ pub mod patrol_group;
 pub mod physics;
 pub mod physics_save;
 pub mod player_save;
+pub mod player_stats;
 pub mod player_tick;
 pub mod players;
 pub mod pm;

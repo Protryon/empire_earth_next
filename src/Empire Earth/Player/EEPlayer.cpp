@@ -2167,6 +2167,11 @@ int32_t EESavePrimitive(FSFile& theFile, int32_t inOp, EeUnitsPlayerSaveIo* io)
     return -1;
 }
 
+int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    return EESavePrimitive(*static_cast<FSFile*>(inFile), inOp, io);
+}
+
 static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
 {
     EEPlayerSaveContext& theContext = *static_cast<EEPlayerSaveContext*>(inContext);

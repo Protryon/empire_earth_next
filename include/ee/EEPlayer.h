@@ -19,6 +19,8 @@ class FSFile;
 // unsigned short's two, shared by the player's, the physics', the map's and the units' hosts; EEPlayer.cpp); -1 for
 // another operation
 int32_t EESavePrimitive(FSFile& inFile, int32_t inOp, EeUnitsPlayerSaveIo* io);
+// the same as a Rust host callback on an FSFile* context (the statistics', events' and queued improvements' saves)
+int32_t EESaveFilePrimitive(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
 inline bool EESaveIsPrimitive(int32_t inOp)
 {
     return (inOp >= EE_UNITS_PLAYER_SAVE_READ_ULONG && inOp <= EE_UNITS_PLAYER_SAVE_WRITE_BOOL) ||
@@ -542,64 +544,62 @@ public:
 typedef EETechTree EETechnologyTable;
 extern EETechTree gTechTree;                // 0x52fd98 (Empire Earth.cpp: the database's tree)
 
-// One point of a player's statistics series (provisional names; 8 bytes). Not EETileCoordinate (trivial ctor)
-// nor U2DPoint<long> (operator= 0x4d28b copies +0 first): the inline default ctor zeroes both (0x16d4c6 `and [ebp-8],0;
-// and [ebp-4],0`; resize's default argument pushes 0, 0) and operator= 0x16d389 is out of line in
-// EEPlayerStatistics.cpp (before its first user) and copies +4 first. Both unsigned long: Load/Save use FSFile's
-// unsigned long Read/Write (+0x5c/+0x94) for each field; +0 compares unsigned (jb/jae/jbe).
+// One point of a player's statistics series (8 bytes on Windows; the layout of ee_units' EeUnitsStatPoint, which
+// GetSeries copies into)
 struct EEStatisticsPoint {
     EEStatisticsPoint() : mValue(0), mTime(0) {}
-    EEStatisticsPoint& operator=(const EEStatisticsPoint& inPoint);   // 0x16d389
-    unsigned long mValue;                   // +0x00 (Set's inValue; the series' mU10 keeps the maximum)
-    unsigned long mTime;                    // +0x04 (Set: gPhysics->mLD0; the post-game graph's x)
+    unsigned long mValue;                   // +0x00 (Set's value; the series keeps the maximum)
+    unsigned long mTime;                    // +0x04 (the game time: the post-game graph's x)
 };
 
-// One statistics series of a player (provisional name; sizeof 0x18; 31 of them in EEPlayerStatistics): the
-// player-statistics ctor builds each with the vector's `_Buy(0)` and then 0x16dd12 (+0x10 = 0, +0x14 = false).
+// One statistics series of a player, a copy GetSeries makes (the series themselves are Rust's)
 struct EEStatisticsSeries {
-    // inline: the ctor 0x16d453 and CompactEpochHistory's local build the vector (`_Buy(0)`) and call Reset
-    EEStatisticsSeries() { this->Reset(); }
-    EEStatisticsSeries& operator=(const EEStatisticsSeries& inSeries);   // 0x16d39c
-    // inline, refused (COMDAT 0x16dd12 in EEPlayerStatistics.cpp's template tail)
-    void Reset() { this->mPoints.clear(); this->mPoints.resize(1); this->mMaxValue = 0; this->mKeepHistory = false; }
-
-    std::vector<EEStatisticsPoint> mPoints;  // +0x00 the points (Reset leaves one zero point)
-    unsigned long mMaxValue;                // +0x10 the largest value pushed (GetValue)
-    bool mKeepHistory;                      // +0x14 false: Set replaces the last point (pop_back) before push_back
+    EEStatisticsSeries() : mPoints(1), mMaxValue(0), mKeepHistory(false) {}
+    std::vector<EEStatisticsPoint> mPoints;  // the points
+    unsigned long mMaxValue;                // the largest value pushed (GetValue)
+    bool mKeepHistory;                      // false: Set replaces the last point
 };
 
-// What the player holds at +0x4a8: RTTI EEPlayerStatistics (vtable 0x442080; ctor 0x16d453, ??_G 0x13d3e3, dtor
-// 0x16d498, Load 0x16d76c, Save 0x16d86b; sizeof 0x304). Was EEPlayerSavedGroups (renamed to the RTTI name;
-// names.txt 16d507/16d545 edited in place; the old spelling stays as a typedef).
+// What the player holds at +0x4a8: RTTI EEPlayerStatistics (vtable 0x442080). Was EEPlayerSavedGroups (the old
+// spelling stays as a typedef).
+// port (the player lane, round 1): the 31 series are a Rust object (mStats: ee_units player_stats.rs) with every
+// body (Set's point, Reset/Lower, the readers, the copy, CompactEpochHistory, Load/Save); the name and the end time
+// stay C++ members
 class EEPlayerStatistics {
 public:
-    EEPlayerStatistics();                   // 0x16d453
-    virtual ~EEPlayerStatistics();          // +0x00 (??_G 0x13d3e3)
-    static const UString sKey;              // "EEPlayerStatistics-" (chain 0x16d346..0x16d36d, guard 0x531eb0)
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x16d76c
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x08 0x16d86b
-    // 0x16d507: the hot-key group events call it with (0x14, true) before they send their message (provisional name)
-    void Reset(long inSeries, long inAmount);
-    void Lower(long inSeries, long inAmount);      // 0x16d4c6 (EEPlayer::RemoveWonder: the logic bomb's unit leaves; provisional name) // the second argument is added as a dword
-    void Set(long inIndex, long inValue);   // 0x16d545 (EEMReportStatistics::Execute; provisional name)
-    unsigned long GetValue(unsigned long inSeries);       // 0x16d5fd: mSeries[n].mU10 (post-game summary; provisional name)
-    unsigned long GetLastValue(unsigned long inSeries);   // 0x16d60b: the last point's first dword, else 0 (provisional name)
-    unsigned long CountIncreases(unsigned long inSeries); // 0x16d63a: points whose x rises (provisional name)
-    void Clear();                           // 0x16d718 (the name cleared, the series reset; EEPlayer::Reset; provisional name)
-    // 0x16d409: Clear, mU004, mU300, then the 31 series (EEWorld::RecordStatistics; EEStatisticsRecord::operator=
-    // 0x13e451 calls it first)
-    EEPlayerStatistics& operator=(const EEPlayerStatistics& inStatistics);
-    void CompactEpochHistory();             // 0x16d95a (EEWorld::RecordStatistics; provisional name)
-    // inline (COMDAT 0x16ce29 among EEPlayer.cpp's template tail: `ret 0x14`, a UWideString by value; provisional name)
+    EEPlayerStatistics() : mStats(ee_units_stats_new()), mEndTime(0) {}
+    EEPlayerStatistics(const EEPlayerStatistics& inOther) : mName(inOther.mName), mStats(ee_units_stats_new()), mEndTime(inOther.mEndTime)
+    {
+        ee_units_stats_copy(this->mStats, inOther.mStats);
+    }
+    virtual ~EEPlayerStatistics() { ee_units_stats_free(this->mStats); }
+    static const UString sKey;              // "EEPlayerStatistics-"
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    // the series raised (the hot-key group events: (0x14, true)) or lowered by an amount, or set to a value
+    void Reset(long inSeries, long inAmount) { this->Record(1, inSeries, inAmount); }
+    void Lower(long inSeries, long inAmount) { this->Record(2, inSeries, inAmount); }
+    void Set(long inIndex, long inValue) { this->Record(0, inIndex, inValue); }
+    // the series' largest value, last value (0 without one), the points whose next one is larger
+    unsigned long GetValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 0); }
+    unsigned long GetLastValue(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 1); }
+    unsigned long CountIncreases(unsigned long inSeries) { return ee_units_stats_value(this->mStats, inSeries, 2); }
+    void Clear() { this->mName = UWideString(); this->mEndTime = 0; ee_units_stats_clear(this->mStats); }
+    EEPlayerStatistics& operator=(const EEPlayerStatistics& inStatistics)
+    {
+        this->mName = inStatistics.mName;
+        this->mEndTime = inStatistics.mEndTime;
+        ee_units_stats_copy(this->mStats, inStatistics.mStats);
+        return *this;
+    }
+    void CompactEpochHistory() { ee_units_stats_compact(this->mStats); }   // EEWorld::RecordStatistics
     void SetName(UWideString inName) { this->mName = inName; }
-    // inline, by value: the post-game summary copies a whole series (vector copy + both fields) into a temporary,
-    // uses its points and destroys it (0x1e4826, 0x1e4a0b). Defined in ee/EEStatisticsRecord.h: an in-class body
-    // instantiates vector<EEStatisticsPoint>'s copy ctor in every includer (provisional name)
-    EEStatisticsSeries GetSeries(unsigned long inSeries);
+    EEStatisticsSeries GetSeries(unsigned long inSeries);   // a copy (the post-game summary, the scores)
+    void Record(uint32_t inOp, long inSeries, long inValue);   // Set's gate and the game time, then Rust's op
 
-    UWideString mName;                      // +0x004 (saved)
-    EEStatisticsSeries mSeries[31];         // +0x018 (a loop of 31 in the ctor)
-    unsigned long mEndTime;                 // +0x300 (saved)
+    UWideString mName;                      // (saved)
+    EeUnitsPlayerStats* mStats;             // the 31 series (Rust)
+    unsigned long mEndTime;                 // (saved)
 };
 typedef EEPlayerStatistics EEPlayerSavedGroups;
 

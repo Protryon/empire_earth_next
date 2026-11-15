@@ -1051,6 +1051,17 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_COUNT = 66;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_ID = 67;
 
+/// The series of a player's statistics.
+constexpr static const size_t EE_UNITS_STATS_SERIES = 31;
+
+/// `Set`'s gate (the C++ reads the world): bit 0 a shutdown in progress, bit 1 a saved game loading, bit 2 the
+/// scenario editor without the game screen.
+constexpr static const uint32_t EE_UNITS_STATS_SHUTDOWN = 1;
+
+constexpr static const uint32_t EE_UNITS_STATS_LOADING = 2;
+
+constexpr static const uint32_t EE_UNITS_STATS_EDITOR = 4;
+
 /// the viewed units released when only the player holds them, the active, selected, saved and running groups
 /// validated
 constexpr static const int32_t EE_UNITS_PLAYER_TICK_VALIDATE = 1;
@@ -2659,6 +2670,9 @@ constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
 /// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
 struct EeUnitsAtc;
 
+/// The 31 series (the C++ `mStats`).
+struct EeUnitsPlayerStats;
+
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {
   void *ctx;
@@ -3622,6 +3636,12 @@ struct EeUnitsPlayerSaved {
   bool mCivilizationLocked;
   bool mCivilizationChosen;
   bool mCivUpgradesPurchased;
+};
+
+/// One point (`EEStatisticsPoint`: the value, the game time).
+struct EeUnitsStatPoint {
+  unsigned long value;
+  unsigned long time;
 };
 
 /// The host: `(ctx, op, index, io) -> the operation's result`.
@@ -5102,6 +5122,79 @@ int32_t ee_units_player_save(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              uint32_t major,
                              uint32_t minor);
+
+/// A new player's statistics (cleared).
+EeUnitsPlayerStats *ee_units_stats_new();
+
+/// # Safety
+/// `s` came from [`ee_units_stats_new`] (or is null) and is not used after.
+void ee_units_stats_free(EeUnitsPlayerStats *s);
+
+/// `operator=`'s series: `dst` becomes a copy of `src`.
+///
+/// # Safety
+/// Both are live statistics.
+void ee_units_stats_copy(EeUnitsPlayerStats *dst, const EeUnitsPlayerStats *src);
+
+/// `Clear`'s series.
+///
+/// # Safety
+/// `s` is live.
+void ee_units_stats_clear(EeUnitsPlayerStats *s);
+
+/// `Set(series, value)` (`op` 0), `Reset(series, value)` (1: raised by it) or `Lower(series, value)` (2) at `time`
+/// under `flags` (`EE_UNITS_STATS_*`).
+///
+/// # Safety
+/// `s` is live.
+void ee_units_stats_set(EeUnitsPlayerStats *s,
+                        uint32_t op,
+                        long series,
+                        long value,
+                        unsigned long time,
+                        uint32_t flags);
+
+/// A series' number: `what` 0 `GetValue` (its maximum), 1 `GetLastValue`, 2 `CountIncreases`, 3 its points' count,
+/// 4 whether it keeps its history.
+///
+/// # Safety
+/// `s` is live.
+unsigned long ee_units_stats_value(const EeUnitsPlayerStats *s,
+                                   unsigned long series,
+                                   uint32_t what);
+
+/// A series' points (`GetSeries`): up to `cap` copied to `out`; the count copied.
+///
+/// # Safety
+/// `s` is live, `out` holds `cap` points.
+size_t ee_units_stats_points(const EeUnitsPlayerStats *s,
+                             unsigned long series,
+                             EeUnitsStatPoint *out,
+                             size_t cap);
+
+/// `CompactEpochHistory`.
+///
+/// # Safety
+/// `s` is live.
+void ee_units_stats_compact(EeUnitsPlayerStats *s);
+
+/// `Load` after the name (see [`load`]) through `f` on `ctx`.
+///
+/// # Safety
+/// `s` and `end_time` are live; `f` handles the primitives with `ctx`.
+int32_t ee_units_stats_load(EeUnitsPlayerStats *s,
+                            void *ctx,
+                            EeUnitsPlayerSaveFn f,
+                            unsigned long *end_time);
+
+/// `Save` after the name (see [`save`]) through `f` on `ctx`.
+///
+/// # Safety
+/// `s` is live; `f` handles the primitives with `ctx`.
+int32_t ee_units_stats_save(const EeUnitsPlayerStats *s,
+                            void *ctx,
+                            EeUnitsPlayerSaveFn f,
+                            unsigned long end_time);
 
 /// `EEPlayer::UpdatePlayer` (see [`update_player`]).
 ///
