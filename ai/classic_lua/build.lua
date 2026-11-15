@@ -572,6 +572,7 @@ local function water_sites(view, memory)
     end
     return bm.water_sites
 end
+M.water_sites = water_sites
 
 local STALL_MEMORY_MS = 600000
 
