@@ -80,8 +80,8 @@ void CaptureManager()
 {
     EECivilizationManager& m = gCivilizationManager;
     EESimCaptureRecord r(EECaptureTag("CVMG"));
-    r.U32(m.mCategoryCount);
-    for (unsigned long i = 0; i <= m.mCategoryCount; i++) {   // one past: GetCategory's false
+    r.U32(m.GetCategoryCount());
+    for (unsigned long i = 0; i <= m.GetCategoryCount(); i++) {   // one past: GetCategory's false
         EECivilizationCategoryEntry* theEntry = NULL;
         bool theKnown = m.GetCategory(i, &theEntry);
         r.U32(theKnown ? 1 : 0);
@@ -98,15 +98,16 @@ void CaptureManager()
             r.F32(theValue);
             r.F32(theBonus);
         }
-        Text(r, i < m.mCategoryIDs.size() ? m.mCategoryIDs[i].c_str() : "");
+        Text(r, m.GetCategoryID(i).c_str());
     }
     std::vector<EECivilizationEntry> theCivs;
     m.GetCivilizations(theCivs);
     r.U32((unsigned int)theCivs.size());
     for (const EECivilizationEntry& theCiv : theCivs)
         r.Bytes(&theCiv, sizeof(EECivilizationEntry));
-    r.U32((unsigned int)m.mEraNameIDs.size());
-    for (long theEra : m.mEraNameIDs) {
+    r.U32((unsigned int)m.GetEraCount());
+    for (unsigned long e = 0; e < m.GetEraCount(); e++) {
+        long theEra = m.GetEra(e);
         r.I32(theEra);
         std::vector<EECivilizationEntry> theOfType;
         m.GetCivilizationsOfType(theOfType, theEra);
@@ -154,7 +155,7 @@ void CaptureManager()
         r.U32(m.MakeUpgrade(theLevel & 7, theLevel));
     }
     // the powers
-    r.U32((unsigned int)gCivPowersManager.mPowers.size());
+    r.U32((unsigned int)gCivPowersManager.GetNumPowers());
     for (long theID = 0x20; theID <= 0x42; theID++) {
         EECivPower thePower;
         r.U32(gCivPowersManager.GetPower(theID, thePower) ? 1 : 0);

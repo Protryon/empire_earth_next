@@ -3045,7 +3045,7 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
         UWideString theMessage;
         UWideString theName;
         unsigned long theUpgrade = 0;
-        for (unsigned long i = 0x26; i < gCivPowersManager.mPowers.size() + 0x26; i++) {
+        for (unsigned long i = 0x26; i < gCivPowersManager.GetNumPowers() + 0x26; i++) {
             if (gCivPowersManager.HasPower(inUnit->GetPlayer(), i) && !gCivPowersManager.HasPower(thePlayer, i)) {
                 theUpgrade = gCivilizationManager.MakePowerUpgrade(EECivilizationManager::PowerLevel(i));
                 gCivPowersManager.GetName(i, theName);

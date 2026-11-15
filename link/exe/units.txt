@@ -324,7 +324,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
 27fdfe 2813f4 Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp
 2813f4 2830d0 Empire Earth/Civilization Builder/EECivilizationManager.cpp
-2830d0 283b2e Empire Earth/Civilization Builder/EECivPowersManager.cpp
 283b2e 28befc Empire Earth/Random Map/EERandomMap.cpp
 28befc 28d82d Empire Earth/Campaign/EECampaign.cpp
 28d82d 28f0cb Empire Earth/Campaign/EECampaignEditorBehavior.cpp

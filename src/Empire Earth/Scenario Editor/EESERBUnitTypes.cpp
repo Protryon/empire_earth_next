@@ -778,7 +778,7 @@ void SeplCivFill(UIComboBox* inControl)
     gResource->GetString(IDS_NONE, theText);
     inControl->AppendLine(theText);
     for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-        EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
+        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(i);
         gResource->GetString(theEntry.mNameID, theText);
         inControl->AppendLine(theText);
     }
@@ -800,7 +800,7 @@ void SeplCivSelect(UIComboBox* inControl, EEPlayer* inPlayer)
     }
     unsigned long i;
     for (i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-        EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
+        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(i);
         if (UString(theEntry.mFileName) == inPlayer->mCivilizationFile)
             break;
     }
@@ -828,8 +828,8 @@ bool SeplCivApply(UIComboBox* inControl, EEPlayer* inPlayer)
     unsigned long theSelection;
     inControl->GetCurrentSelection(theSelection);
     gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
-    if (theSelection > 0 && theSelection <= gCivilizationManager.mCivilizations.size()) {
-        EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[theSelection - 1];
+    if (theSelection > 0 && theSelection <= gCivilizationManager.GetNumCivilizations()) {
+        EECivilizationEntry theEntry = gCivilizationManager.GetCivilization(theSelection - 1);
         theCivilization = theEntry.mFileName;
     } else
         theCivilization = UString(inControl->GetListBox()->GetData(theSelection));
