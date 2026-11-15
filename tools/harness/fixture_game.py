@@ -34,6 +34,9 @@ fixture_driver.py's, shared with posix_game.py.
                cast command, TEST ONLY: straight into the calamity manager) and captures it every --capture-every
                seconds while it lives (fixture_driver.cast_calamities; "CAST <name>: ..." lines)
   random-game  the tour without the settings
+  editor       the main menu's Editors, the Scenario Editor (its load, the editor form over its default map: the first
+               frame captured and checked), then the exit without saving (the form's destructor) back to a menu
+               (the fixture's clickevent and screenevent commands)
   ai-game      as game_session.py's ai-game: the lobby set up (the human idles in slot 0, N computers), Start, the
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
                (outcome time-cap) or --play-seconds of wall time
@@ -293,6 +296,45 @@ def tour(g, a, summary):
     summary['result'] = 'PASS'
 
 
+# the editor exercise: the menus' screen events (ee_screens menus.rs), the editors' sub-menu, the editor form (no form
+# id: UIForm id -1 as the fixture prints it), the exit question's "exit without saving" (scenario_editor.rs)
+EDITORS_OPEN, EDITORS_SCENARIO_EDITOR, EDITORS = 0x0901, 0x0902, 9
+EDITOR_FORMS = (0xffffffff, 0xffffffffffffffff)
+EXIT_WITHOUT_SAVING = 0x242d
+
+
+def screen_click(g, form, code, then, what, timeout=60):
+    """The fixture's clickevent (the control whose button-up event is the screen event code), then a form of then."""
+    seq = g.command(f'clickevent {form} {code}')
+    st = g.wait(lambda s: s['command'] >= seq and s['form'] in then, what, timeout)
+    if g.verdict(seq) not in (None, 'triggered'):
+        raise RuntimeError(f'{what}: the fixture says {g.verdict(seq)!r}')
+    g.note(f'UI {what}: form {form} screen event {code:#x} -> form {st["form"]}')
+    return st
+
+
+def editor(g, a, summary):
+    results = summary['milestones']
+    screen_click(g, MAIN, EDITORS_OPEN, (EDITORS,), 'the editors menu')
+    milestone(g, results, 'editors-menu', EDITORS)
+    st = screen_click(g, EDITORS, EDITORS_SCENARIO_EDITOR, EDITOR_FORMS, 'the scenario editor', 300)
+    time.sleep(5)   # the editor's own posted work (its tabs' loads)
+    pixels = milestone(g, results, 'editor', st['form'], differ='editors-menu')
+    from session_exercise import check_rendering
+    try:
+        results[-1]['rendering'] = check_rendering(pixels, 'editor', False)
+    except Exception as error:   # evidence: the editor's frame is judged by eye too
+        results[-1]['rendering_error'] = str(error)
+    seq = g.command(f'screenevent {st["form"]} {EXIT_WITHOUT_SAVING}')
+    st = g.wait(lambda s: s['command'] >= seq and s['form'] in (MAIN, EDITORS), 'a menu after the editor', 300)
+    g.note(f'UI the editor closed (exit without saving): form {st["form"]}')
+    time.sleep(3)
+    milestone(g, results, 'editor-closed', st['form'])
+    if g.proc.poll() is not None:
+        raise RuntimeError(f'the game exited ({g.proc.returncode}) after the editor closed')
+    summary['result'] = 'PASS'
+
+
 def ai_game(g, a, summary):
     n = a.ai_players
     g.click(MAIN, 0, SINGLE, 'single player')
@@ -352,6 +394,8 @@ def run(a):
             summary['result'] = 'PASS'
         elif a.exercise in ('tour', 'random-game'):
             tour(g, a, summary)
+        elif a.exercise == 'editor':
+            editor(g, a, summary)
         else:
             ai_game(g, a, summary)
     except Exception as e:
@@ -393,7 +437,7 @@ def main():
     ap.add_argument('--data', help='the unified open data tree to stage (default: build/open_data/tree)')
     ap.add_argument('--tree', choices=['open'], help='(kept for old command lines: open is the only tree)')
     ap.add_argument('--out', default=str(ROOT / 'build' / 'fixture_game' / time.strftime('%Y%m%d-%H%M%S')))
-    ap.add_argument('--exercise', choices=['menu', 'tour', 'random-game', 'ai-game'], default='tour')
+    ap.add_argument('--exercise', choices=['menu', 'tour', 'random-game', 'editor', 'ai-game'], default='tour')
     ap.add_argument('--timeout', type=float, default=1800, help='wall seconds the whole run may take')
     ap.add_argument('--config', action='append', default=[], help='block.key=VALUE in the fresh config.yaml')
     ap.add_argument('--play-seconds', type=float, default=None, help='wall seconds of play after the start')

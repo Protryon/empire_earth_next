@@ -31,7 +31,9 @@
 //     "<seq> wheel <form> <0|1> <n>", n notches of the mouse wheel (0 away from the user, 1 towards) 100 ms apart, or
 //     "<seq> cast <form> <enum> <offset>", a calamity cast by the local player at the camera's focus: see CastRun, or
 //     "<seq> chat <form> 0 0", a line in the chat log as a game message adds one (AddChatLogEntry: the game form's
-//     chat lines show it)),
+//     chat lines show it), or "<seq> clickevent <form> <code>", the first control whose button-up event is the
+//     screen event <code> clicked, or "<seq> screenevent <form> <code>", that screen event on the form as a dialog's
+//     answer posts it (fixture_game.py's editor exercise)),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -157,6 +159,8 @@
 #include "ee/EEUICSelectUnits.h"
 #include "lle/ISModifierState.h"
 #include "rust/ee_gfx.h"   // the drag end the selection control computes
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // ee_screens_event (the editor exercise's exit)
 #include <algorithm>
 #include <atomic>
 #include <mutex>
@@ -1081,6 +1085,23 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
             }
         }).detach();
         theVerdict = "wheeled";
+    } else if (!strcmp(theOp, "clickevent") && a == inFormID) {
+        // the first control whose button-up event is the screen event b, clicked (the editor exercise: the main
+        // menu's Editors, the editors' Scenario Editor)
+        for (unsigned long k = 0; k < inForm->GetControlCount(); k++) {
+            UIControl* theOne = inForm->GetControl(k);
+            EEScreenEvent* theEvent = theOne ? dynamic_cast<EEScreenEvent*>(theOne->GetTriggerEvent(kTriggerEvent)) : NULL;
+            if (theEvent != NULL && theEvent->mEvent == b) {
+                theOne->FireTriggerEvent(kTriggerEvent);
+                theVerdict = "triggered";
+                break;
+            }
+        }
+    } else if (!strcmp(theOp, "screenevent") && a == inFormID) {
+        // the screen event b on the form on top, as a dialog's answer posts it (the editor exercise: the exit
+        // question's "exit without saving")
+        ee_screens_event((uint32_t)b, inForm, NULL);
+        theVerdict = "screen-event";
     } else if (!strcmp(theOp, "chat") && a == inFormID && gUserInterface) {
         gUserInterface->AddChatLogEntry(UWideString("TEST chat line: the chat display (EEUICChatLine)"), 0);
         theVerdict = "chat-added";
