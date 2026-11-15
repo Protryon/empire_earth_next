@@ -240,12 +240,17 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None, cwd=None):
+def run_program(target, exe, args=(), env=None, cwd=None, timeout=None):
+    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure."""
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
-    r = subprocess.run([str(exe), *args], env=env, cwd=cwd)
+    try:
+        r = subprocess.run([str(exe), *args], env=env, cwd=cwd, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print(f"{exe.name}: FAILED, still running after {timeout} s (killed)", flush=True)
+        return 1
     print(f"{exe.name}: exit {r.returncode}")
     return r.returncode
 
@@ -835,12 +840,17 @@ def build_won_test(t, name, units, folder="won"):
     return exe
 
 
+# a WON test program still running after this long has hung: it is killed and fails, so the gate chain goes on
+WON_TEST_TIMEOUT = 20 * 60
+
+
 def cmd_wontest(a):
     t = Target(a.target)
     why = t.can_build()
     if why:
         sys.exit(f"{t.name}: {why}")
     result = 0
+    failed = []
     for name, units in WON_TESTS.items():
         if a.programs and name not in a.programs:
             continue
@@ -854,7 +864,12 @@ def cmd_wontest(a):
             # sharing one would see each other's
             scratch = exe.parent / "run"
             scratch.mkdir(exist_ok=True)
-            result |= run_program(t, exe, cwd=scratch)
+            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT)
+            if code:
+                failed.append(name)
+            result |= code
+    if failed:
+        print(f"wontest: {len(failed)} failed: {' '.join(failed)}")
     return result
 
 
