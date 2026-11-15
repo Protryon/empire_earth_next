@@ -161,6 +161,14 @@ pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
             // SAFETY: the mesh came from `effect_volcano`'s Box and is owned by the record
             drop(unsafe { Box::from_raw(record.volcano.mesh) });
         }
+        if !record.marching.lists.is_null() {
+            // SAFETY: the lists came from `effect_icons`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.marching.lists) });
+        }
+        if !record.glow.spots.is_null() {
+            // SAFETY: the spots came from `effect_glow`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.glow.spots) });
+        }
     }
 }
 
@@ -397,35 +405,6 @@ pub unsafe extern "C" fn ee_gfx_effect_smoke_set_up(
     }
 }
 
-/// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
-/// points into `out`; their count.
-///
-/// # Safety
-/// `out` has room for `capacity` points.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_marching_offsets(
-    kind: i32,
-    count: i32,
-    angle: f32,
-    radius: f32,
-    half_side: f32,
-    out: *mut Ge3DPoint,
-    capacity: usize,
-) -> usize {
-    if out.is_null() || capacity == 0 {
-        return 0;
-    }
-    // SAFETY: the function's contract
-    let out = unsafe { std::slice::from_raw_parts_mut(out, capacity) };
-    effect_state::marching_offsets_into(kind, count, angle, radius, half_side, out)
-}
-
-/// The square icons' bounding radius (`sqrt(2 r r)`).
-#[no_mangle]
-pub extern "C" fn ee_gfx_effect_square_icons_radius(half_side: f32) -> f32 {
-    effect_state::square_radius(half_side)
-}
-
 /// The terrain a bouncing particle asks (`gWorld.mMap->mTerrainMesh`; `context`: unused).
 #[repr(C)]
 pub struct EeGfxParticleGround {
@@ -436,7 +415,7 @@ pub struct EeGfxParticleGround {
     pub mesh_normal: extern "C" fn(context: *mut c_void, x: f32, y: f32, normal: *mut Ge3DPoint),
 }
 
-struct Ground<'a>(&'a EeGfxParticleGround);
+pub(crate) struct Ground<'a>(pub(crate) &'a EeGfxParticleGround);
 
 impl ParticleGround for Ground<'_> {
     fn is_valid_tile(&mut self, x: u32, y: u32) -> bool {
@@ -544,6 +523,55 @@ pub unsafe extern "C" fn ee_gfx_effect_save_particle(r: *const EeGfxEffectRecord
     }
 }
 
+/// The marching icons' offsets (`which` 0) or the frame's copy (1) into `out` (up to `capacity`); their count (the
+/// golden driver's view of the record).
+///
+/// # Safety
+/// `r` is a live record; `out` has room for `capacity` points (null with 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_marching_points(
+    r: *const EeGfxEffectRecord,
+    which: i32,
+    out: *mut Ge3DPoint,
+    capacity: usize,
+) -> usize {
+    // SAFETY: the function's contract
+    unsafe {
+        let l = (*r).marching.lists;
+        if l.is_null() {
+            return 0;
+        }
+        let v = if which == 0 { &(*l).offsets } else { &(*l).shown };
+        for (i, p) in v.iter().take(capacity).enumerate() {
+            *out.add(i) = *p;
+        }
+        v.len()
+    }
+}
+
+/// The light glow's spots into `out` (up to `capacity`); their count (the golden driver's view of the record).
+///
+/// # Safety
+/// `r` is a live record; `out` has room for `capacity` spots (null with 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_glow_spots(
+    r: *const EeGfxEffectRecord,
+    out: *mut crate::effect_glow::EeGfxGlowSpot,
+    capacity: usize,
+) -> usize {
+    // SAFETY: the function's contract
+    unsafe {
+        let l = (*r).glow.spots;
+        if l.is_null() {
+            return 0;
+        }
+        for (i, s) in (*l).list.iter().take(capacity).enumerate() {
+            *out.add(i) = *s;
+        }
+        (*l).list.len()
+    }
+}
+
 /// `EEE2DBattlefieldAmbient`'s constructor at a point (its draws and the terrain's corners).
 ///
 /// # Safety
@@ -559,43 +587,6 @@ pub unsafe extern "C" fn ee_gfx_effect_ambient_new(
     unsafe {
         let (p, a) = (*at, *n);
         on_copy(r, |r| effect_state::ambient_new(r, p, &a, &mut Ground(&*ground)))
-    }
-}
-
-/// `EEE2DBattlefieldAmbient::Step`: 7 when it ends.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_ambient_step(
-    r: *mut EeGfxEffectRecord,
-    tick_seconds: f32,
-    duration: u32,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_state::ambient_step(r, tick_seconds, duration)) }
-}
-
-/// `EEE2DBattlefieldAmbient::Load`'s own reads.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_load_ambient(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_state::load_ambient(r, &mut File(&*file))) }
-}
-
-/// `EEE2DBattlefieldAmbient::Save`'s own writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_save_ambient(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let local = r.read();
-        effect_state::save_ambient(&local, &mut File(&*file))
     }
 }
 

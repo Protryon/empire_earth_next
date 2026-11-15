@@ -21777,3 +21777,93 @@ message manager's NewResponse (it reads the base class's fields).
   misaligned; a misaligned record with id 0 has no NUL inside the stand-in message's data, and the world's
   CreateXferFile reads the name past the data into whatever the heap holds next to each side's message. Run alone
   (`--first`, added this round) or again it is equal. Bounding that print in the world would end it.
+
+## R4.4, twenty-first round: the marching icons, light glow, battlefield decal and pooled 2D particle whole in Rust on EEE2DRust (ee_gfx effect_icons.rs, effect_glow.rs, effect_decal.rs; branch rust-gfx27, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 14,431 lines at the round's start; 14,434 with the sweep
+(+3, TEST ONLY); 13,291 after the four classes (-1,143). Deleted: `EEE2DMarchingIcons`, `EEE2DLightGlow`, `EEE2DParticle`
+(`.cpp` and `.h`) and `EEE2DBattlefieldAmbient.cpp`; `ee/EEE2DBattlefieldAmbient.h` keeps only the two decal placement
+helpers' declarations (the units' files include it). With the headers and the callers the round's C++ diff is +540
+-1,872 (net -1,332).
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| 29bed6dd | the effects sweep's square marching icons (with the circular icons' graphic effects); the golden from the pre-round C++ | +3 (TEST ONLY) |
+| 8a3fc64a | marching icons, light glow, battlefield decal, pooled 2D particle on `EEE2DRust` | -1,143 |
+
+- **The sweep's square icons.** The square marching icons' own graphic effect rows (0xf) fail their media load, so the
+  sweep's square was destroyed before its save (EFSW `made 0`): a new last case makes kind 0xf with the circular icons'
+  rows (`mBorrowed` 0x10). EFSW 124 -> 126, EFST/EFMU 5,456 -> 5,544 a seed. The golden was recorded from cddb6963's
+  C++ plus the case; cddb6963's own EE-SIM, run again, checks PASS against the old golden and its EFSW, EFST and EFMU
+  records are a prefix of the new run's on seeds 2-7 (`build/gx27/prefix.py`). What the sweep still cannot reach in
+  EE-SIM: the icons' visible branch (needs a selected group or ghost units) and the glow's placing (EE-SIM computes no
+  visible terrain): the driver covers both.
+- **Four kinds, one host.** The marching icons (`effect_icons.rs`: the record's new `marching` state with an owned list
+  of offsets and the frame's copy), the light glow (`effect_glow.rs`: the record's new `glow` state with an owned spot
+  list; the tag names scanned in Rust: `sscanf`'s `%f`/`%ld` prefixes, `UString::Find`'s "length when absent"), and in
+  `effect_decal.rs` the battlefield decal (its constructor's terrain walk and tick were already Rust; the record's
+  ambient state gains the queue's age and size) and the 2D particle (its set-up, move, tick and files already Rust).
+  `EeGfxEffect2DHost` grows by sixteen answers: the icons' unit, area effect, pending area effects, selection, owner,
+  ghost units and ground point; the glow's set-up tags and names, placing (the tags, frame and scaled location kept in
+  the call's `Ask2D` for the points), points, visible terrain and rows; the particle's tick and ground. `EEParticleTick`
+  moved to `EEEffect.cpp` (the 3D particle uses it too); the decal placement helpers (`EEPlaceImpactDecal`,
+  `EEPlaceTrackDecal`) moved unchanged into `EEE2DRust.cpp`, their decal lookup reading the record instead of a
+  `dynamic_cast`.
+- **The pool.** `EEE2DRust` is now also the pool's type (`UMemoryPool<EEE2DRust> sParticlePool`): a default constructor
+  (the pool's cleared particle, model 0, no references), `NewParticle` on a unit, at a point, along a line and for
+  loading (the pool's object taken, reinitialised and cleared before its position is computed, as the original),
+  `LastDereference` (kind 0x2e: back to the pool) and `ReleaseResources` (kind 0x2e unloads its graphic). `Empire
+  Earth.cpp` calls `EEE2DRust::SetParticlePoolSize` / `ReleaseParticlePool`.
+  - **Trap (driver):** the original `EEE2DParticle::Create(unit)` takes the pool's object before reading the unit's
+    location; a first version computed the location first and the driver's call order differed on every unit particle.
+- **Trap (overloads):** the light glow's keep-unit flag first went in as a defaulted `bool` on the unit constructor;
+  the confirmation's `new EEE2DRust(inUnit, inEffect, inGoalIndex, 0x41)` with a `long` goal index then bound to
+  `(unit, effect, long kind, bool keeps)`: a kind-0 effect, saved, where a confirmation (never saved) belonged. The
+  driver (its own `Make`) could not see it; the effects capture did (EFMU and EFST at the sweep's tracer beam, whose
+  confirmation the manager makes). Found by printing the store's (handle, kind, save length) from the capture function
+  in both the pre-round and the new EE-SIM (a temporary instrumentation, removed). The flag is now a tag type
+  (`EEE2DRust::KeepsUnit`). Overloading a class that callers construct with integer literals and `long`s: add
+  constructors only with a distinct type, never a defaulted `bool`.
+- **The files.** The icons stop at a failed base save (the original's), the others ignore the base's result; the glow's
+  `RepairPointers` sets it up again after the base's; the particle syncs its position to the drawn one before the base
+  save; a loaded particle's duration comes from its graphic effect through the host's tick.
+- **Golden driver** (`build/gx27/drv`: `make_r21.py COMMIT|WORKTREE OUT`, `run.sh`): a new generator over round 20's
+  stub world (`prefix.cpp`, cut from `make_r20.py`'s generated world up to its `EEEffect2D`) with this round's stubs
+  (area effects, groups, ghost units, ground points, visible terrain, tag names, a `UString`, the pool). The original
+  classes are cut from 29bed6dd and linked with that commit's library and headers, built in a temporary worktree
+  (`build/gx27/pre`, `prelib.sh`: the round's record layout differs, so the old classes cannot link the new library);
+  `EEE2DRust` with its host, pool and Call over the current library. 300 effects on seed 1 (6,691 lines) and 3,000 on
+  seed 2 (70,896 lines: 616 glows, 1,184 marching icons, 622 particles over three entries, 578 decals; 602 icon draws,
+  1,002 glow, 1,353 ground and 957 blended sprites, 1,333 area effect questions, 3,196 tag names), identical.
+  - The driver's view of the Rust-owned lists goes through two small exports (`ee_gfx_effect_marching_points`,
+    `ee_gfx_effect_glow_spots`).
+  - **Trap (driver):** `auto& s = Spots(r)[i]` over a function returning a vector by value dangles at the end of the
+    full expression: the first spot printed garbage on one side only. Bind the vector once.
+  - **Trap (driver):** round 20's stub `EEUnit::GetModel()` went through `mComplexUnit`; the glow asks a unit without
+    one for its model (both sides faulted). A stub must answer every path the original takes, not only the ones the
+    earlier kinds took.
+- **Behaviour changes:** the light glow's shared "light glow" model (two quads built on the first set-up, released at
+  shutdown by `EEWorld::UnloadMedia`) was never drawn: it is gone, with `EEE2DLightGlow::ReleaseModel`'s call in
+  `EEWorld.cpp`. A light tag name's field that does not scan leaves the value at 0 (the colour's at the previous tag's;
+  the original read uninitialised locals and the spot array's garbage); new spots are zeroed (the original's
+  `new[]` left their visibility and position unset until the first placing). The glow's spots are replaced, not
+  leaked, when it is set up again. The marching icons' `mAreaEffectIconCount` (never read) and its walk are gone. The
+  particle pool's statistics name `EEE2DRust`. The driver patches the original's uninitialised reads the same way.
+- **Gates.** Per commit: `build.py --sim` 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS against
+  the pre-round C++ golden (after the overload fix; the first run failed, above), the Rust tests PASS with clippy and
+  rustfmt. On the result merged with `rust` dc913d98 (at d4388fa4; no conflicts; `rust_build.py header` and
+  `rust_includes.py` changed nothing): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (3,377 tests;
+  clippy, rustfmt, header), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 171 digests,
+  late 172, calamity 189; 4, 4 and 3 without a golden) and effects at seeds 2-7 (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as
+  expected), the tour
+  (`fixture_game.py --exercise tour --play-seconds 60`, under the harness lock) `RESULT PASS tour` and the orders game
+  `RESULT PASS random-game` (gather, repair, queued repair, move; patrol and attack-ground skipped: no button, no unit).
+- **Only a tour or a person reaches:** every draw of the four kinds (the driver compares them with the original over a
+  logging rasterizer; no gate game draws): the marching icons' fog-lit ground icons (circles and squares of icons
+  around a building under an area effect: a temple's or a hospital's range, shown while its type is selected or a
+  building is being placed), the light glows (the blinking lights on buildings and vehicles with light tag points), the
+  battlefield decals (shell holes and blood stains on the ground, ambient effects on) and the 2D particles (sparks,
+  debris, bouncing on the ground); the particle pool at game start and shutdown; loading saved games holding any of
+  them.
+- **Not moved:** `EEROGroundShadows` and the farm wait for the raster table's model creation, vertex, polygon and
+  material-range entries (round 20's item 2, not started this round either); the decal placement helpers stay C++.
