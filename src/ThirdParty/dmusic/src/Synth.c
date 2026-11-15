@@ -14,6 +14,7 @@ enum {
 #define DmInt_PAN_CENTER 0.5F
 #define DmInt_VOLUME_MAX 1.0F
 #define DmInt_VOLUME_GM_DEFAULT (100.0F / 127.0F)
+#define DmInt_MAX_VOICES 128   // (EE patch) per collection, allocated once (DmSynth_updateFonts)
 
 // (EE patch) DLS level 1 default connections, as the original's synth applies them: CC7 volume and CC11 expression each
 // attenuate by 40 * log10(value), the concave curve, a gain of value^2 each. TSF's channel volume is a plain linear gain,
@@ -96,6 +97,13 @@ static DmResult DmSynth_updateFonts(DmSynth* slf, DmBand* band) {
 
 			tsf_set_output(new_fnt.syn, TSF_STEREO_INTERLEAVED, (int) slf->rate, 0);
 			tsf_set_volume(new_fnt.syn, slf->volume);
+
+			// (EE patch) The voices are allocated once, here: tsf_note_on never grows (reallocates) the voice array
+			// while a render reads it. When all are busy, TSF takes the one furthest into its release.
+			if (!tsf_set_max_voices(new_fnt.syn, DmInt_MAX_VOICES)) {
+				tsf_close(new_fnt.syn);
+				continue;
+			}
 
 			if (slf->channels_len > 0) {
 				// If we add an element to the font array, we need to adjust the cached fonts for each channel,

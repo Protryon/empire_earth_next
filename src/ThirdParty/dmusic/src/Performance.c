@@ -126,8 +126,6 @@ DmResult DmPerformance_playSegment(DmPerformance* slf, DmSegment* sgt, DmTiming 
 		return DmResult_INVALID_ARGUMENT;
 	}
 
-	uint32_t offset = Dm_getBoundaryOffset(slf, timing);
-
 	DmMessage msg;
 	msg.time = 0;
 	msg.type = DmMessage_SEGMENT;
@@ -135,9 +133,12 @@ DmResult DmPerformance_playSegment(DmPerformance* slf, DmSegment* sgt, DmTiming 
 	msg.segment.loop = 0;
 
 	if (mtx_lock(&slf->lock) != thrd_success) {
+		DmSegment_release(sgt);
 		return DmResult_MUTEX_ERROR;
 	}
 
+	// (EE patch) The boundary is taken from the time under the lock (the render thread advances it)
+	uint32_t offset = Dm_getBoundaryOffset(slf, timing);
 	DmMessageQueue_add(&slf->control_queue, &msg, offset, DmQueueConflict_REPLACE);
 
 	(void) mtx_unlock(&slf->lock);
@@ -985,7 +986,10 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 		DmMessage_free(&msg);
 	}
 
-	(void) mtx_unlock(&slf->lock);
+	// (EE patch) The rest of the block is rendered and the clock advanced with the lock still held: the synthesizer
+	// and the time are also changed from the game's threads (DmPerformance_stop, setVolume, playSegment's fonts).
+	// Upstream rendered the remaining samples unlocked, so a stop's note-ons and releases (and its font creation) ran
+	// while tsf_render read the same voices, and a voice array grown by tsf_note_on was freed under the renderer.
 
 	// Render the remaining samples
 	uint32_t remaining_samples = (uint32_t) (len - sample);
@@ -999,7 +1003,7 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 
 	// (EE patch) The original's synth reverb over the finished stereo mix, in place, on 16-bit samples as the original
 	// runs it (a float mix goes through 16 bits: full scale 1.0 = 32768, clamped as the original's mix is).
-	if ((opts & DmRender_STEREO) && mtx_lock(&slf->lock) == thrd_success) {
+	if (opts & DmRender_STEREO) {
 		if (slf->reverb_on && slf->reverb != NULL) {
 			size_t frames = len / 2;
 			if (opts & DmRender_FLOAT) {
@@ -1020,9 +1024,9 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 				DmReverb_processStereo(slf->reverb, (int16_t*) start, frames);
 			}
 		}
-		(void) mtx_unlock(&slf->lock);
 	}
 
+	(void) mtx_unlock(&slf->lock);
 	return DmResult_SUCCESS;
 }
 
@@ -1053,18 +1057,25 @@ DmPerformance_playTransition(DmPerformance* slf, DmSegment* sgt, DmEmbellishment
 		return DmResult_INVALID_ARGUMENT;
 	}
 
-	// If no segment is currently playing, simply start playing the
-	// new segment without a transition.
-	if (slf->segment == NULL) {
-		return DmPerformance_playSegment(slf, sgt, timing);
-	}
-
 	if (!sgt->downloaded) {
 		return DmResult_INVALID_ARGUMENT;
 	}
 
+	// (EE patch) The playing segment, style, band and chord are read under the lock: the render thread changes them.
+	if (mtx_lock(&slf->lock) != thrd_success) {
+		return DmResult_MUTEX_ERROR;
+	}
+
+	// If no segment is currently playing, simply start playing the
+	// new segment without a transition.
+	if (slf->segment == NULL) {
+		(void) mtx_unlock(&slf->lock);
+		return DmPerformance_playSegment(slf, sgt, timing);
+	}
+
 	DmSegment* transition = NULL;
 	DmResult rv = Dm_composeTransition(slf->style, slf->band, &slf->chord, sgt, embellishment, &transition);
+	(void) mtx_unlock(&slf->lock);
 	if (rv != DmResult_SUCCESS) {
 		return rv;
 	}

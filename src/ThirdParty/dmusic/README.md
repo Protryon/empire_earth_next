@@ -38,3 +38,8 @@ Changes made here (each marked "(EE patch)" at its place in the source):
 - The clock (`Performance.c` `DmPerformance_renderPcm`, `time_carry`): the fraction of a tick is carried from one
   render call to the next. Upstream rounded to whole ticks in every call, so the tempo depended on the size of the
   blocks asked for (at 48 kHz: 10 % slow in 128-frame blocks, 1 to 2.6 % fast in 512-frame ones).
+- Threads (`Performance.c`, `Synth.c`): `DmPerformance_renderPcm` holds the performance's lock for the whole block
+  (upstream rendered the last part of each block unlocked, while `DmPerformance_stop` changes the synthesizer from
+  the game's thread); `playSegment` takes the boundary time and `playTransition` the playing style and band under
+  the lock; each collection's voices are allocated once (`tsf_set_max_voices`, 128), so `tsf_note_on` never
+  reallocates them.
