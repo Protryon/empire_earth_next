@@ -1077,6 +1077,306 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+constexpr static const uint32_t EE_SCREENS_SEET_A_LABEL = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEET_A_CHECK = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEET_A_COMBO = 2;
+
+/// `mEffectComboBoxes` (`EESETSEComboBox`).
+constexpr static const uint32_t EE_SCREENS_SEET_A_ECOMBO = 3;
+
+/// `mScenarioComboBoxes` (`EESETSEScenarioComboBox`).
+constexpr static const uint32_t EE_SCREENS_SEET_A_SCEN = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEET_A_EDIT = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEET_A_EDIT2 = 6;
+
+/// `mTextEditBox` (index 0).
+constexpr static const uint32_t EE_SCREENS_SEET_A_TEXT = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEET_A_RADIO = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEET_A_SLIDER = 9;
+
+/// `mPlayers` (`EESETSUICBPlayer`).
+constexpr static const uint32_t EE_SCREENS_SEET_A_PLAYER = 10;
+
+/// `mListBoxes` (`UILBString`).
+constexpr static const uint32_t EE_SCREENS_SEET_A_LIST = 11;
+
+/// The control's display mode set to i2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_DISPLAY = 1;
+
+/// The control's rectangle -> f0..f3 (left, top, right, bottom) / set to f0..f3.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_RECT = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_RECT = 3;
+
+/// The control moved to (f0, f1).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_LOCATION = 4;
+
+/// The label's alignment set to i2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_ALIGN = 5;
+
+/// The label's or edit box's text set to the string i2 / to the i2 bytes at p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TEXT_STRING = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TEXT = 7;
+
+/// The label's text set to the number i2 (`SetText(long)`), the edit box's (`SetText(unsigned long)`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_NUMBER = 8;
+
+/// The label's, edit box's or effect combo box's first line / the edit box's whole text / the list box's line i2,
+/// into p2 (capacity i3) -> its length.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_GET_TEXT = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_GET_ALL_TEXT = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_LIST_DATA = 11;
+
+/// -> the label's or edit box's first line as an integer (`GetTextAsInt(0)`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TEXT_INT = 12;
+
+/// The control's width changed to i2 (`ChangeWidth`) / -> the edit box's width.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_WIDTH = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_GET_WIDTH = 14;
+
+/// The combo box or list box emptied / given the string i2 / given the i2 bytes at p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_CLEAR = 15;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_APPEND_STRING = 16;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_APPEND = 17;
+
+/// -> the combo box's selection (-1 when `GetCurrentSelection` fails) / set to i2 / -> its list box's line count.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SELECTION = 18;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_SELECTION = 19;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_LINE_COUNT = 21;
+
+/// The control's trigger i2's event held off: referenced and removed, its handle (NULL: none) into p2's first word
+/// / the held event p1 set back and released.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_HOLD = 20;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_RESTORE = 79;
+
+/// The control's trigger i2's event removed / set to the event p1.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_NULL = 22;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_SET = 23;
+
+/// -> whether the check box or radio button is checked / the check box set to i2 / the radio button checked.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_CHECKED = 24;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_CHECKED = 25;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_CHECK = 26;
+
+/// The check box's or radio button's text set to the string i2 in the font i3 (`EE_SCREENS_SEPL_FONT_*`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TEXT_FONT = 27;
+
+/// The check box's, radio button's (its text label's) or list box's text yellow and transparent.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_YELLOW = 28;
+
+/// -> the slider's value / set to i2 / its range set to i2..i3 / its page size to i2 / its range-changed event
+/// fired.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SLIDER = 29;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_SLIDER = 30;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_RANGE = 31;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_PAGE_SIZE = 32;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FIRE_RANGE = 33;
+
+/// The control's help string set to i2 (`SetStringTableID`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_STRING_TABLE = 34;
+
+/// The combo box's or edit box's text font set to `gU531930`.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FONT_530 = 35;
+
+/// -> the player picker's player / set to i2 / its flags set to i2 (`SetFlags`: refilled).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_PLAYER = 36;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_PLAYER = 37;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_PLAYER_FLAGS = 39;
+
+/// The scenario combo box's kind set to i2 (`mMode`, `kSETriggerScreen*`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SCEN_MODE = 40;
+
+/// The combo box given the scenario's names of the kind i2 (`EE_SCENARIO_NAMES_*`) line by line (i3 = 0) or as one
+/// array (`AppendStringArray`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FILL_NAMES = 41;
+
+/// The label i2 and the scenario combo box (the index) refilled with the areas (i3) or the objects:
+/// `FillAreaObjectComboBox` / `FillScenarioComboBox`; the label i2 and the combo box (the index):
+/// `FillPlaceComboBox`.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FILL_AREA_OBJECT = 42;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FILL_SCENARIO = 43;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FILL_PLACE = 44;
+
+/// The list box's and its scroll bar's background opacity set to f0.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_LIST_OPACITY = 45;
+
+/// The i2 bytes at p2 inserted as the list box's line i3 / its line i2 deleted.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_LIST_INSERT = 46;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_LIST_DELETE = 47;
+
+/// The form's control of id i2 given the display mode i3.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FORM_DISPLAY = 48;
+
+/// The slider's range event (a `UIESliderChange`) given the modifier f0.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SLIDER_MODIFIER = 49;
+
+/// An event made (its handle into p2's first word): i0 the kind (`EE_SCREENS_SEET_EV_*`), i1..i3 its arguments.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_NEW = 50;
+
+/// The slider event p1 given the value f0's text: the string i2 (i3 = 1) or the i2 bytes at p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_STRING = 51;
+
+/// The event p1 released.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_RELEASE = 52;
+
+/// The string i2 / the string i2 as a `sprintf` format of the number i3 / the NUL-terminated format p1 of the
+/// float f0 (passed as a double) into p2 (capacity i1) -> the length.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_STRING = 53;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FORMAT_NUMBER = 54;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_FORMAT_FLOAT = 55;
+
+/// The trigger tab's name box set to the i2 bytes at p2 / its name (`GetName`) into p2 (capacity i1).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_NAME_BOX = 56;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_NAME_BOX = 57;
+
+/// The effect p1's text i2 (`EE_SCREENS_SEET_S_*`) into p2 (capacity i1) / set to the i3 bytes at p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EFFECT_TEXT = 58;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_EFFECT_TEXT = 59;
+
+/// The effect p1's objects: -> their count / the object i2 / set to the i2 words at p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_OBJECT_COUNT = 60;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_OBJECT = 61;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_OBJECTS = 62;
+
+/// The scenario's names of the kind i2 kept by the host -> their count / the kept name i2 into p2 (capacity i1).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_NAMES = 63;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_NAME = 64;
+
+/// The scenario object / trigger i2's name into p2 (capacity i1) -> its length, -1 when there is none.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_OBJECT_NAME = 65;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TRIGGER_NAME = 66;
+
+/// -> the calamity class count / whether the class i2 exists (its id into i2, its name into i3).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_CALAMITY_COUNT = 67;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_CALAMITY = 68;
+
+/// -> the graphic effect count / whether the effect i2 exists and is listed for scenarios (id into i2, name i3).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_GRAPHIC_COUNT = 69;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_GRAPHIC = 70;
+
+/// -> the computer player behaviours' count / the behaviour i2's value i3 (`EE_SCREENS_SEET_B_*`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_BEHAVIOR_COUNT = 71;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_BEHAVIOR = 72;
+
+/// -> the unit types' count / the type i2's: -1 not scenario selectable, else its domain (`EE_SCREENS_SEET_D_*`),
+/// its unit type into i2 and its name string into i3.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_UNIT_TYPE_COUNT = 73;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_UNIT_TYPE = 74;
+
+/// -> the unit type i2's name string.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_UNIT_NAME = 75;
+
+/// The editor's technologies kept by the host (the tree's nodes shown in the editor and the epochs, sorted by
+/// name) -> their count / the kept technology i2 / the technology i2's line into p2 (capacity i1).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TECHS = 76;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TECH = 77;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TECH_LINE = 78;
+
+/// The events (`EE_SCREENS_SEET_OP_EVENT_NEW`): a screen event (`EECreateScreenEvent(i1)`), an `EESEERust(i1)`, a
+/// `UIESliderChange(label i1, modifier f0, offset i2)`, an `EESEENewSliderChange(label i1, format i2: 0 "%2.0f",
+/// 1 "%#2.1f", f0, f1)`, an `EESEENewUseObjectArea(label i1, scenario combo box i2, radio i3)`, an
+/// `EESEENewObjects(i1, p1 the effect types, the controls)`.
+constexpr static const int32_t EE_SCREENS_SEET_EV_SCREEN = 1;
+
+constexpr static const int32_t EE_SCREENS_SEET_EV_SEE = 2;
+
+constexpr static const int32_t EE_SCREENS_SEET_EV_SLIDER = 3;
+
+constexpr static const int32_t EE_SCREENS_SEET_EV_SLIDER_FORMAT = 4;
+
+constexpr static const int32_t EE_SCREENS_SEET_EV_USE_OBJECT_AREA = 5;
+
+constexpr static const int32_t EE_SCREENS_SEET_EV_OBJECTS = 6;
+
+/// The effect's texts: its name, new name, message, file name, description.
+constexpr static const int32_t EE_SCREENS_SEET_S_NAME = 0;
+
+constexpr static const int32_t EE_SCREENS_SEET_S_NEW_NAME = 1;
+
+constexpr static const int32_t EE_SCREENS_SEET_S_MESSAGE = 2;
+
+constexpr static const int32_t EE_SCREENS_SEET_S_FILE_NAME = 3;
+
+constexpr static const int32_t EE_SCREENS_SEET_S_DESCRIPTION = 4;
+
+/// A behaviour's values: settable, the first, second and float sliders' minimum and maximum, the float scale.
+constexpr static const int32_t EE_SCREENS_SEET_B_SETTABLE = 0;
+
+constexpr static const int32_t EE_SCREENS_SEET_B_INT1_MIN = 1;
+
+constexpr static const int32_t EE_SCREENS_SEET_B_INT1_MAX = 2;
+
+constexpr static const int32_t EE_SCREENS_SEET_B_INT2_MIN = 3;
+
+constexpr static const int32_t EE_SCREENS_SEET_B_INT2_MAX = 4;
+
+constexpr static const int32_t EE_SCREENS_SEET_B_FLOAT_MIN = 5;
+
+constexpr static const int32_t EE_SCREENS_SEET_B_FLOAT_MAX = 6;
+
+constexpr static const int32_t EE_SCREENS_SEET_B_FLOAT_SCALE = 7;
+
+/// A unit type's domain: air, sea, land.
+constexpr static const int32_t EE_SCREENS_SEET_D_AIR = 0;
+
+constexpr static const int32_t EE_SCREENS_SEET_D_SEA = 1;
+
+constexpr static const int32_t EE_SCREENS_SEET_D_LAND = 2;
+
+/// The type slots (`EESETSEffectType`'s virtuals): ChangeAction, Store, VirtualC (hide), Load, Show, UpdateName.
+constexpr static const uint32_t EE_SCREENS_SEET_CHANGE_ACTION = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEET_STORE = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEET_HIDE = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEET_LOAD = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEET_SHOW = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEET_UPDATE_NAME = 6;
+
 /// `EESEEHideUI`.
 constexpr static const uint32_t EE_SCREENS_SEE_HIDE_UI = 1;
 
@@ -1098,13 +1398,13 @@ constexpr static const uint32_t EE_SCREENS_SEE_CHECK_DISPLAY = 6;
 /// `EESEEUseObjectArea` (its label, combo box and area control: `ee_screens_see_object_area`).
 constexpr static const uint32_t EE_SCREENS_SEE_USE_OBJECT_AREA = 7;
 
-/// `EESETSETCAMGModifyObject` (the military group type, its two lists: `ee_screens_see_objects`).
+/// `EESETSETCAMGModifyObject` (the effect types `EeScreensSeEffects`, the effect controls: `ee_screens_see_objects`).
 constexpr static const uint32_t EE_SCREENS_SEE_CAMG_MODIFY_OBJECT = 8;
 
-/// `EESETSETMSDCameraScrollChange` (the send-dialogue type, the effect's controls: `ee_screens_see_objects`).
+/// `EESETSETMSDCameraScrollChange` (the effect types, the effect's controls: `ee_screens_see_objects`).
 constexpr static const uint32_t EE_SCREENS_SEE_MSD_CAMERA_SCROLL = 9;
 
-/// `EESETSETSAAAttributeChange` (the set-AI-attribute type, the effect's controls: `ee_screens_see_objects`).
+/// `EESETSETSAAAttributeChange` (the effect types, the effect's controls: `ee_screens_see_objects`).
 constexpr static const uint32_t EE_SCREENS_SEE_SAA_ATTRIBUTE = 10;
 
 /// `EESEEUseAreaObject` and `EESEEMoveAreaObject` (one body: ICF folded them): the label 0x96d, the combo box 0x99e,
@@ -1182,18 +1482,19 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_ENTITY_ID = 15;
 /// -> the list box p's selection, -1 for none.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LIST_SELECTION = 16;
 
-/// The military group type p's `AddObject(i0, q, r)` / `RemoveObject(i0, q, r)` (the lists q and r).
+/// The effect types p's military group `AddObject(i0)` / `RemoveObject(i0)` over the effect controls q
+/// (`ee_screens_seet_event`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_CAMG_ADD = 17;
 
 constexpr static const uint32_t EE_SCREENS_SEE_OP_CAMG_REMOVE = 18;
 
-/// The send-dialogue type p's `ShowCameraScrollSpeed(q)` (q the effect's controls).
+/// The effect types p's dialogue `ShowCameraScrollSpeed` over the effect controls q.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_MSD_SHOW = 19;
 
 /// -> the combo box p's selection, -1 for none.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_COMBO_SELECTION = 20;
 
-/// The set-AI-attribute type p's `ShowAttributeRanges(i0, q)` (q the effect's controls).
+/// The effect types p's AI attribute `ShowAttributeRanges(i0)` over the effect controls q.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_SAA_SHOW = 21;
 
 /// The form p's label i0 and scenario combo box i1 refilled with the areas (i2 != 0) or the objects
@@ -7308,6 +7609,9 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 
+/// The effect types (opaque to C++).
+struct EeScreensSeEffects;
+
 /// The object screen (opaque to C++).
 struct EeScreensSeObject;
 
@@ -7773,6 +8077,10 @@ struct EeScreensSeplCtl {
   int32_t extra[4];
 };
 
+/// `kSETSEffectTitleLabel`, `kSETSEffectTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
+/// `DuplicateButton`, `DeleteButton`.
+constexpr static const int32_t EE_SCREENS_SEET_NO_EFFECT_CONTROLS[6] = { 2400, 2401, 2011, 2012, 2006, 2007, };
+
 /// The unit actions the state combo box lists (those with a name), in id order.
 constexpr static const int32_t EE_SCREENS_SEOB_ACTIONS[24] = { 1000, 1002, 1003, 1006, 1008, 1009, 1012, 1013, 1017, 2001, 2004, 2011, 2017, 2021, 4002, 4004, 4012, 4026, 5000, 6001, 6002, 10003, 15000, 15001, };
 
@@ -7922,6 +8230,42 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
+
+/// The effect types' constructors (`EESETSEffect`'s `new`s): their events made. Freed by `ee_screens_seet_free`.
+///
+/// # Safety
+/// `controls` is the effect screen's `EESETSEffectControls`.
+EeScreensSeEffects *ee_screens_seet_new(void *controls);
+
+/// The destructors: the events released, the object freed.
+///
+/// # Safety
+/// `types` comes from `ee_screens_seet_new` (or is NULL) and is not used again.
+void ee_screens_seet_free(EeScreensSeEffects *types, void *controls);
+
+/// The effect type `ty`'s (`kSMEffect*`) slot `slot` (`EE_SCREENS_SEET_CHANGE_ACTION` ...) over the controls and,
+/// for the slots that take one, the effect (`EESMEffect*`) and its numbers (its `EeScenarioEffectFields`).
+///
+/// # Safety
+/// `types` comes from `ee_screens_seet_new` (or is NULL); `fields` is `effect`'s numbers when the slot reads them.
+void ee_screens_seet_call(const EeScreensSeEffects *types,
+                          uint32_t ty,
+                          uint32_t slot,
+                          void *controls,
+                          void *effect,
+                          void *fields);
+
+/// The effect types' events (`EESEERust`, made by `EE_SCREENS_SEET_EV_OBJECTS` with these types and the controls):
+/// 0 the military group's object moved in (`a` 1) or out (`a` 0) of the group (`b`: the list's line), 1 the
+/// dialogue's camera scroll speed shown, 2 the AI attribute's ranges shown (`b`: the attribute combo box's line).
+///
+/// # Safety
+/// `types` comes from `ee_screens_seet_new` (or is NULL); `controls` are the effect screen's.
+void ee_screens_seet_event(const EeScreensSeEffects *types,
+                           void *controls,
+                           uint32_t what,
+                           uint32_t a,
+                           uint32_t b);
 
 /// `EESETSObject`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_seob_free`.
