@@ -143,37 +143,13 @@ bool EEUnitClass::CanAttackMove()
 bool EEUnitClass::CanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2)
 {
     EEUCNote theNote(1); theNote.C(this).U(inUnit1).U(inUnit2);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_LAND_TRANSPORT)
-            return this->LandTransportCanCarry(inUnit1, inUnit2);
-        if (theKinds & (EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_SPACE_TRANSPORT))
-            return this->SpaceTransportCanCarry(inUnit1, inUnit2);
-        if (theKinds & EE_CLASS_KIND_TRANSPORT)
-            return this->TransportCanCarry(inUnit1, inUnit2);
-        return false;
-    }());
+    return theNote.R(ee_units_tr_can_carry(EEObj(this), EEObj(inUnit1), EEObj(inUnit2)));
 }
 
 bool EEUnitClass::CanUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
     EEUCNote theNote(2); theNote.C(this).U(inTransport).I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_FORTRESS)
-            return this->FortressCanUnloadAt(inTransport, inX, inY);
-        if (theKinds & EE_CLASS_KIND_HELICOPTER_TRANSPORT)
-            return this->HelicopterTransportCanUnloadAt(inTransport, inX, inY);
-        if (theKinds & EE_CLASS_KIND_LAND_TRANSPORT)
-            return this->LandTransportCanUnloadAt(inTransport, inX, inY);
-        if (theKinds & EE_CLASS_KIND_NAVAL_TRANSPORT)
-            return this->NavalTransportCanUnloadAt(inTransport, inX, inY);
-        if (theKinds & EE_CLASS_KIND_SPACE_TRANSPORT)
-            return this->SpaceTransportCanUnloadAt(inTransport, inX, inY);
-        if (theKinds & EE_CLASS_KIND_TRANSPORT)
-            return this->TransportCanUnloadAt(inTransport, inX, inY);
-        return false;
-    }());
+    return theNote.R(ee_units_tr_can_unload_at(EEObj(this), EEObj(inTransport), (int32_t)inX, (int32_t)inY));
 }
 
 void EEUnitClass::CargoAdded(EEComplexUnit* inUnit, EEComplexUnit* inCargo, bool inArg)
@@ -254,11 +230,18 @@ EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPla
     return this->BaseCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
+// the landing kinds' triggers (ee_units cls_air.rs): the common unit class answers the others
+static long EELandingCondition(EEUnitClass* inClass, EEComplexUnit* inUnit, unsigned long inEvent, bool inAnimal)
+{
+    long theAnswer = ee_units_cls_landing_condition(EEObj(inClass), EEObj(inUnit), (uint32_t)inEvent, inAnimal);
+    return theAnswer >= 0 ? theAnswer : inClass->BaseEvaluateCondition(inUnit, inEvent);
+}
+
 long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     uint64_t theKinds = EEUnitClassKinds(this);
     if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        return this->AirAnimalEvaluateCondition(inUnit, inEvent);
+        return EELandingCondition(this, inUnit, inEvent, true);
     if (theKinds & EE_CLASS_KIND_FORTRESS)
         return this->FortressEvaluateCondition(inUnit, inEvent);
     if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
@@ -290,7 +273,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
     if (theKinds & EE_CLASS_KIND_BUILDING)
         return this->BuildingEvaluateCondition(inUnit, inEvent);
     if (theKinds & EE_CLASS_KIND_LANDABLE)
-        return this->LandableEvaluateCondition(inUnit, inEvent);
+        return EELandingCondition(this, inUnit, inEvent, false);
     if (theKinds & EE_CLASS_KIND_MISSILE)
         return this->MissileEvaluateCondition(inUnit, inEvent);
     if (theKinds & EE_CLASS_KIND_PROJECTILE)
@@ -305,11 +288,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
 void EEUnitClass::FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected)
 {
     EEUCNote theNote(6); theNote.C(this).Us(*ioUnits).U(inTransport).Us(*outRejected);   // TEST ONLY (UCBD)
-    [&]() {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_TRANSPORT)
-            this->TransportFilterLoadable(ioUnits, inTransport, outRejected);
-    }();
+    ee_units_tr_filter_loadable(EEObj(this), ioUnits, EEObj(inTransport), outRejected);
     theNote.Us(*ioUnits).Us(*outRejected);
 }
 
@@ -329,49 +308,21 @@ bool EEUnitClass::FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inT
 long EEUnitClass::FindGatheringTile(std::vector<EEComplexUnit*>* inUnits, U2DPoint<long> inFrom, U2DPoint<long>* outTile)
 {
     EEUCNote theNote(3); theNote.C(this).Us(*inUnits).T(inFrom);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> long {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_TRANSPORT)
-            return this->TransportFindGatheringTile(inUnits, inFrom, outTile);
-        return 0;
-    }());
+    return theNote.R(ee_units_tr_gathering_tile(EEObj(this), inUnits, (int32_t)inFrom.mX, (int32_t)inFrom.mY, (long(*)[2])outTile));
 }
 
 void EEUnitClass::FindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile)
 {
     EEUCNote theNote(4); theNote.C(this).Us(*inUnits).U(inTransport);   // TEST ONLY (UCBD)
-    [&]() {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_FORTRESS)
-            this->TransportFindRendezvousTiles(inUnits, inTransport, outTransportTile, outUnitTile);
-        else if (theKinds & EE_CLASS_KIND_HELICOPTER_TRANSPORT)
-            this->HelicopterTransportFindRendezvousTiles(inUnits, inTransport, outTransportTile, outUnitTile);
-        else if (theKinds & EE_CLASS_KIND_LAND_TRANSPORT)
-            this->LandTransportFindRendezvousTiles(inUnits, inTransport, outTransportTile, outUnitTile);
-        else if (theKinds & (EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_SPACE_TRANSPORT))
-            this->SpaceTransportFindRendezvousTiles(inUnits, inTransport, outTransportTile, outUnitTile);
-        else if (theKinds & EE_CLASS_KIND_TRANSPORT)
-            this->TransportFindRendezvousTiles(inUnits, inTransport, outTransportTile, outUnitTile);
-    }();
+    ee_units_tr_rendezvous_tiles(EEObj(this), inUnits, EEObj(inTransport), (long(*)[2])outTransportTile, (long(*)[2])outUnitTile);
     theNote.T(*outTransportTile).T(*outUnitTile);
 }
 
 void EEUnitClass::FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile)
 {
     EEUCNote theNote(5); theNote.C(this).U(inTransport).T(*inDestination);   // TEST ONLY (UCBD)
-    [&]() {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_FORTRESS)
-            this->FortressFindUnloadTiles(inTransport, inDestination, outUnloadTile, outFirstCargoTile, outTile);
-        else if (theKinds & EE_CLASS_KIND_AIRPLANE)
-            *outTile = *outFirstCargoTile = *outUnloadTile = *inDestination;
-        else if (theKinds & EE_CLASS_KIND_NAVAL_TRANSPORT)
-            this->NavalTransportFindUnloadTiles(inTransport, inDestination, outUnloadTile, outFirstCargoTile, outTile);
-        else if (theKinds & EE_CLASS_KIND_SPACE_TRANSPORT)
-            this->SpaceTransportFindUnloadTiles(inTransport, inDestination, outUnloadTile, outFirstCargoTile, outTile);
-        else if (theKinds & EE_CLASS_KIND_TRANSPORT)
-            *outTile = *outFirstCargoTile = *outUnloadTile = *inDestination;
-    }();
+    ee_units_tr_unload_tiles(EEObj(this), EEObj(inTransport), (const long(*)[2])inDestination, (long(*)[2])outUnloadTile,
+                             (long(*)[2])outFirstCargoTile, (long(*)[2])outTile);
     theNote.T(*outUnloadTile).T(*outFirstCargoTile).T(*outTile);
 }
 
@@ -395,24 +346,7 @@ void EEUnitClass::GateReplaced(EEUnit* inGate, EEUnit* inUnit)
 float EEUnitClass::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
     EEUCNote theNote(11); theNote.C(this).U(inUnit).P(inLocation);   // TEST ONLY (UCBD)
-    return theNote.RF([&]() -> float {
-        uint64_t theKinds = EEUnitClassKinds(this);
-        if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-            return this->AirAnimalGetHeightAt(inUnit, inLocation);
-        if (theKinds & EE_CLASS_KIND_HELICOPTER_PRIEST)
-            return this->HelicopterPriestGetHeightAt(inUnit, inLocation);
-        if (theKinds & EE_CLASS_KIND_HELICOPTER_TRANSPORT)
-            return this->HelicopterTransportGetHeightAt(inUnit, inLocation);
-        if (theKinds & EE_CLASS_KIND_SPACE_TRANSPORT)
-            return this->SpaceshipVirtual24(inUnit, inLocation);
-        if (theKinds & EE_CLASS_KIND_HELICOPTER)
-            return this->HelicopterGetHeightAt(inUnit, inLocation);
-        if (theKinds & EE_CLASS_KIND_LANDABLE)
-            return this->LandableGetHeightAt(inUnit, inLocation);
-        if (theKinds & EE_CLASS_KIND_SPACESHIP)
-            return this->SpaceshipGetHeightAt(inUnit, inLocation);
-        return inLocation.GetZ();
-    }());
+    return theNote.RF(ee_units_cls_height_at(EEObj(this), EEObj(inUnit), inLocation.mX, inLocation.mY, inLocation.mZ));
 }
 
 long EEUnitClass::GetPopulationCost()
@@ -488,13 +422,13 @@ bool EEUnitClass::HasArrived(EEComplexUnit* inUnit, float inValue)
     return theNote.R([&]() -> bool {
         uint64_t theKinds = EEUnitClassKinds(this);
         if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-            return this->AirAnimalHasArrived(inUnit, inValue);
+            return ee_units_cls_landing_has_arrived(EEObj(this), EEObj(inUnit), inValue, true);
         if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SPACE_BUILDING))
             return this->SpaceBuildingHasArrived(inUnit, inValue);
         if (theKinds & EE_CLASS_KIND_NAVAL_TRANSPORT)
-            return this->NavalTransportHasArrived(inUnit, inValue);
+            return ee_units_tr_naval_has_arrived(EEObj(inUnit), inValue);
         if (theKinds & EE_CLASS_KIND_LANDABLE)
-            return this->LandableHasArrived(inUnit, inValue);
+            return ee_units_cls_landing_has_arrived(EEObj(this), EEObj(inUnit), inValue, false);
         if (theKinds & EE_CLASS_KIND_NAVAL)
             return this->NavalHasArrived(inUnit, inValue);
         if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)

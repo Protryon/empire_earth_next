@@ -3,6 +3,7 @@
 #ifndef EE_EEUNITCLASSKINDS_H
 #define EE_EEUNITCLASSKINDS_H
 
+#include <stdint.h>
 #include <vector>
 
 #include "ee/EEUnit.h"
@@ -46,6 +47,9 @@ void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPo
 // the kinds' helpers EEUnitClassKinds.cpp's dispatchers call (provisional names)
 void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inArg);  // the naval kinds' paths
 EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit);  // a gate's first part (EEUnitClassBuildings.cpp)
+
+// an object's address as the Rust bodies take it (a unit's EEUnit*, which every complex unit's address is; a class)
+inline uint64_t EEObj(const void* inObject) { return (uint64_t)(uintptr_t)inObject; }
 
 // TEST ONLY: the unit class bodies' record (UCBD, R5b.4 round 33). The outermost noted call on its thread (a
 // dispatcher of the transports, the heights, the arrivals and the surrounding tiles; the landable's flight states
