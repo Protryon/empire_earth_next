@@ -5795,6 +5795,51 @@ bench 18-6-8, so it was first kept only while an enemy is ahead: the owner's cas
 errors. The owner then chose the whole cost kept always (2026-11-15), the faster epochs over the standard bench's
 result; a choice to reopen later.
 
+### 8.90 Stage 5: the C++ AI's decision code deleted (2026-11-15, EE-SIM)
+
+**The owner's decision:** every AI is Lua (classic_lua as the lobby's Classic, boom, rush, ageofai, the rb libraries);
+the C++ classic's decision code goes, and would come back only rewritten for lockstep.
+
+**Deleted**, in phases (branch cpp-ai-delete):
+- phase 0: the choice Classic (C++) (`classic_cpp`), EECPNextTest.cpp. A seat whose AI is missing or whose script
+  does not load stands idle with an `EE-AI engine ... stands idle` line; a seat given no AI (a scenario's computer
+  player, an old save's) plays the manifest's "classic" AI.
+- phase 1: EEComputerPlayer's classic tick (EnableManagers, the expansion, attack, population and catch-up timers,
+  KeepStandingArmy, the classic CanAfford rules) and every EECPNextEngine gate, collapsed to the next engine's branch
+  (the managers no longer queue producers, citizens, random research, settlements, fishing boats or claim growth).
+- phase 2: the combat tree (42 units, 54 headers, about 34,200 lines). Kept and extracted: the military class tests
+  (EECPCombatManager), EECPASGFlags/Weights (ee/EECPASGFlags.h, the path finder), the favourite-type screeners
+  (ee/EEAIFOUnitScreeners.h), ten engine helpers (EECPEngineHelpers.cpp), the retire cheat, the wall pather and
+  planner. The scenario effects BuildObject, CreateAIMilitaryGroup and ModifyAIMilitaryTarget are logged no-ops; the
+  resource manager's island ferry is gone (classic_lua ferries its own).
+
+**classic_lua's soldiers.** Its free soldiers were drafted by the C++ attack commander (§8.86: 76% of its soldier
+losses against Age of AI). With the commander gone, classic_lua runs lib.tactics POOL by default: the free land
+soldiers are a Lua defence group at the town (at most 40), the attack groups take from it.
+
+**Bench** (classic_lua seat 2 against Age of AI, Small, Hard, no cheats, 90 minutes; the pre-deletion build against
+the deleted one, the same seeds; W-L-close by the scorecard's rule):
+
+| bench | before | after |
+|---|---|---|
+| seeds 2-33: W-L-close | 25-2-5 | 22-2-8 |
+| Age of AI reached the Bronze Age | 13/32 | 26/32 |
+| Age of AI's citizens lost | 68.4 | 56.1 |
+| classic_lua's citizens / army at 40 min | 72.2 / 6.8 | 73.8 / 21.6 |
+| classic_lua reached the Bronze Age | 19/32 (median 80.4 min) | 19/32 (79.9 min) |
+
+Determinism (seed 2, `--repeat 2`, classic_lua vs boom and rush vs ageofai): identical; 0 script errors.
+
+- phase 3 (first part): the managers' decision methods no caller reached any more (the civilization manager's Update,
+  epoch timer, building counts and garrison choices; about 1,100 lines).
+- phase 4: EEComputerPlayer::Load reads only the current save format (about 2,700 lines).
+
+**Open:** the rest of phase 3 (decision code still reachable from the runners, e.g. the resource manager's classic
+split and boat logic behind the Lua verbs). The classic_lua losses did not change (2 of 32), three wins became close
+games.
+The classic's raids now come only from its Lua attack groups; the pool keeps the army home, so the enemy's economy
+loses less (as §8.86's pool row showed).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
