@@ -1176,8 +1176,8 @@ constexpr static const uint32_t EE_SCENARIO_ROUND_TICK_SECONDS = 1;
 /// `mMessages.size()`.
 constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_COUNT = 2;
 
-/// `ShowDialogMessage()`.
-constexpr static const uint32_t EE_SCENARIO_ROUND_SHOW_DIALOG = 3;
+/// Whether the dialogs wait: no communications, or the game paused (1/0).
+constexpr static const uint32_t EE_SCENARIO_ROUND_DIALOG_PAUSED = 3;
 
 /// Whether a player is human and not an observer (1/0).
 constexpr static const uint32_t EE_SCENARIO_ROUND_HUMAN_PLAYING = 4;
@@ -1211,6 +1211,16 @@ constexpr static const uint32_t EE_SCENARIO_ROUND_LETTERBOX = 13;
 
 /// `ExitCinematic()`.
 constexpr static const uint32_t EE_SCENARIO_ROUND_EXIT_CINEMATIC = 14;
+
+/// `mMessages[a].mIsCinematic` (1/0).
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_CINEMATIC = 15;
+
+/// Dialog message a shown and erased: the one-shot sounds stopped for a voiced one, posted to the interface, the
+/// camera moved to its unit (when it exists and the scroll speed is not negative).
+constexpr static const uint32_t EE_SCENARIO_ROUND_SHOW_MESSAGE = 16;
+
+/// No message to show: the interface's messages hidden, the one-shot sounds stopped.
+constexpr static const uint32_t EE_SCENARIO_ROUND_HIDE_MESSAGES = 17;
 
 /// The trigger interval (ms; `kTriggerInterval`).
 constexpr static const float TRIGGER_INTERVAL = 500.0;
@@ -2216,6 +2226,20 @@ int32_t ee_scenario_manager_save(const EeScenarioStream *stream,
 /// # Safety
 /// `host` must be valid for the call: its `fields` and `queue` the live manager's, reached only between callbacks.
 void ee_scenario_manager_update(const EeScenarioRoundHost *host);
+
+/// `EEScenarioManager::ShowDialogMessage` (round.rs `show_dialog`) over the round's host.
+///
+/// # Safety
+/// As [`ee_scenario_manager_update`].
+void ee_scenario_show_dialog(const EeScenarioRoundHost *host);
+
+/// `EEScenarioManager::MoveCameraToStart`'s step (round.rs `camera_step`): `at` the camera's focus (x, y), moved.
+///
+/// # Safety
+/// `fields` must be the live manager's numbers and `at` two floats, for the call.
+bool ee_scenario_camera_step(EeScenarioManagerFields *fields,
+                             float (*at)[2],
+                             float step);
 
 /// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
 ///

@@ -16,8 +16,8 @@ pub const EE_SCENARIO_ROUND_GAME_SPEED: u32 = 0;
 pub const EE_SCENARIO_ROUND_TICK_SECONDS: u32 = 1;
 /// `mMessages.size()`.
 pub const EE_SCENARIO_ROUND_MESSAGE_COUNT: u32 = 2;
-/// `ShowDialogMessage()`.
-pub const EE_SCENARIO_ROUND_SHOW_DIALOG: u32 = 3;
+/// Whether the dialogs wait: no communications, or the game paused (1/0).
+pub const EE_SCENARIO_ROUND_DIALOG_PAUSED: u32 = 3;
 /// Whether a player is human and not an observer (1/0).
 pub const EE_SCENARIO_ROUND_HUMAN_PLAYING: u32 = 4;
 /// `gWorld.mInCinematic` (1/0).
@@ -40,6 +40,13 @@ pub const EE_SCENARIO_ROUND_CAPTURE: u32 = 12;
 pub const EE_SCENARIO_ROUND_LETTERBOX: u32 = 13;
 /// `ExitCinematic()`.
 pub const EE_SCENARIO_ROUND_EXIT_CINEMATIC: u32 = 14;
+/// `mMessages[a].mIsCinematic` (1/0).
+pub const EE_SCENARIO_ROUND_MESSAGE_CINEMATIC: u32 = 15;
+/// Dialog message a shown and erased: the one-shot sounds stopped for a voiced one, posted to the interface, the
+/// camera moved to its unit (when it exists and the scroll speed is not negative).
+pub const EE_SCENARIO_ROUND_SHOW_MESSAGE: u32 = 16;
+/// No message to show: the interface's messages hidden, the one-shot sounds stopped.
+pub const EE_SCENARIO_ROUND_HIDE_MESSAGES: u32 = 17;
 
 /// The trigger interval (ms; `kTriggerInterval`).
 pub const TRIGGER_INTERVAL: f32 = 500.0;
@@ -63,7 +70,7 @@ pub fn update<H: Round>(h: &mut H) {
     let speed = bits(h.op(EE_SCENARIO_ROUND_GAME_SPEED, 0, 0, 0.0));
     let mut tick = bits(h.op(EE_SCENARIO_ROUND_TICK_SECONDS, 0, 0, 0.0)) * 1000.0;
     if h.op(EE_SCENARIO_ROUND_MESSAGE_COUNT, 0, 0, 0.0) > 0 && !h.fields(|f| f.mIsShowingDialog) {
-        h.op(EE_SCENARIO_ROUND_SHOW_DIALOG, 0, 0, 0.0);
+        show_dialog(h);
     }
     let human = h.op(EE_SCENARIO_ROUND_HUMAN_PLAYING, 0, 0, 0.0) != 0;
     if h.op(EE_SCENARIO_ROUND_IN_CINEMATIC, 0, 0, 0.0) != 0 {
@@ -85,6 +92,29 @@ pub fn update<H: Round>(h: &mut H) {
         h.fields(|f| f.mIsEndingCinematic = false);
         h.op(EE_SCENARIO_ROUND_EXIT_CINEMATIC, 0, 0, 0.0);
     }
+}
+
+/// `EEScenarioManager::ShowDialogMessage`: nothing while the game waits; the next dialog message (in a cinematic the
+/// first cinematic one) shown and `mIsShowingDialog` set, or, with none to show, the messages hidden.
+pub fn show_dialog<H: Round>(h: &mut H) {
+    h.fields(|f| f.mIsShowingDialog = false);
+    if h.op(EE_SCENARIO_ROUND_DIALOG_PAUSED, 0, 0, 0.0) != 0 {
+        return;
+    }
+    let count = h.op(EE_SCENARIO_ROUND_MESSAGE_COUNT, 0, 0, 0.0);
+    if count > 0 {
+        let index = if h.op(EE_SCENARIO_ROUND_IN_CINEMATIC, 0, 0, 0.0) != 0 {
+            (0..count).find(|&i| h.op(EE_SCENARIO_ROUND_MESSAGE_CINEMATIC, i, 0, 0.0) != 0)
+        } else {
+            Some(0)
+        };
+        if let Some(i) = index {
+            h.op(EE_SCENARIO_ROUND_SHOW_MESSAGE, i, 0, 0.0);
+            h.fields(|f| f.mIsShowingDialog = true);
+            return;
+        }
+    }
+    h.op(EE_SCENARIO_ROUND_HIDE_MESSAGES, 0, 0, 0.0);
 }
 
 /// The trigger round: the triggers (their count read once, as a `long`), then the timed effects in order (the list's
@@ -121,6 +151,38 @@ fn round<H: Round>(h: &mut H, human: bool) {
     h.op(EE_SCENARIO_ROUND_CAPTURE, human as i64, 0, 0.0);
 }
 
+/// `EEScenarioManager::MoveCameraToStart`'s step: the camera's focus `at` moved by up to `step` (shared between x and
+/// y by their distances, each step at most its distance) towards the scenario's start; at the start already,
+/// `mIsMovingCamera` cleared and `false` (the focus unmoved).
+pub fn camera_step(m: &mut EeScenarioManagerFields, at: &mut [f32; 2], step: f32) -> bool {
+    if at[0] == m.mStartX && at[1] == m.mStartY {
+        m.mIsMovingCamera = false;
+        return false;
+    }
+    let dx = at[0] - m.mStartX;
+    let abs_dx = dx.abs();
+    let dy = at[1] - m.mStartY;
+    let abs_dy = dy.abs();
+    let total = abs_dy + abs_dx;
+    let mut step_x = abs_dx * step / total;
+    let mut step_y = abs_dy * step / total;
+    if step_x > dx.abs() {
+        step_x = dx.abs();
+    }
+    if at[0] > m.mStartX {
+        step_x = -step_x;
+    }
+    if step_y > dy.abs() {
+        step_y = dy.abs();
+    }
+    if at[1] > m.mStartY {
+        step_y = -step_y;
+    }
+    at[0] += step_x;
+    at[1] += step_y;
+    true
+}
+
 /// The C ABI's round host: the manager's numbers and queue, and the operation callback.
 #[repr(C)]
 pub struct EeScenarioRoundHost {
@@ -148,6 +210,21 @@ impl Round for EeScenarioRoundHost {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_camera_steps_towards_the_start() {
+        let mut m = EeScenarioManagerFields { mStartX: 10.0, mStartY: 20.0, mIsMovingCamera: true, ..Default::default() };
+        let mut at = [13.0f32, 24.0];
+        assert!(camera_step(&mut m, &mut at, 5.0));
+        // 3 + 4 = 7: x by 5 * 3 / 7, y by 5 * 4 / 7, both back towards the start
+        assert_eq!(at, [13.0 - 3.0 * 5.0 / 7.0, 24.0 - 4.0 * 5.0 / 7.0]);
+        let mut at = [11.0f32, 20.0];
+        assert!(camera_step(&mut m, &mut at, 5.0));
+        assert_eq!(at, [10.0, 20.0]);
+        assert!(m.mIsMovingCamera);
+        assert!(!camera_step(&mut m, &mut at, 5.0));
+        assert!(!m.mIsMovingCamera);
+    }
     use crate::manager::EeScenarioTimedEntry;
     use std::os::raw::c_ulong;
 
@@ -158,6 +235,8 @@ mod tests {
         speed: f32,
         tick: f32,
         messages: i64,
+        paused: bool,
+        cinematic_messages: Vec<i64>,
         human: bool,
         cinematic: bool,
         triggers: i64,
@@ -174,6 +253,8 @@ mod tests {
                 speed: 1.0,
                 tick: 0.1,
                 messages: 0,
+                paused: false,
+                cinematic_messages: Vec::new(),
                 human: true,
                 cinematic: false,
                 triggers: 2,
@@ -190,8 +271,14 @@ mod tests {
                 EE_SCENARIO_ROUND_GAME_SPEED => self.speed.to_bits() as i64,
                 EE_SCENARIO_ROUND_TICK_SECONDS => self.tick.to_bits() as i64,
                 EE_SCENARIO_ROUND_MESSAGE_COUNT => self.messages,
-                EE_SCENARIO_ROUND_SHOW_DIALOG => {
-                    self.log.push("dialog".into());
+                EE_SCENARIO_ROUND_DIALOG_PAUSED => self.paused as i64,
+                EE_SCENARIO_ROUND_MESSAGE_CINEMATIC => self.cinematic_messages.contains(&a) as i64,
+                EE_SCENARIO_ROUND_SHOW_MESSAGE => {
+                    self.log.push(format!("dialog {a}"));
+                    0
+                }
+                EE_SCENARIO_ROUND_HIDE_MESSAGES => {
+                    self.log.push("hide".into());
                     0
                 }
                 EE_SCENARIO_ROUND_HUMAN_PLAYING => self.human as i64,
@@ -320,12 +407,32 @@ mod tests {
         m.f.mIsEndingCinematic = true;
         m.letterbox = 0.5;
         update(&mut m);
-        assert_eq!(m.log, ["dialog", "camera"]);
+        assert_eq!(m.log, ["dialog 0", "camera"]);
         assert!(m.f.mIsEndingCinematic);
-        m.f.mIsShowingDialog = true;
+        assert!(m.f.mIsShowingDialog);
         m.letterbox = 1.0;
         update(&mut m);
-        assert_eq!(m.log, ["dialog", "camera", "camera", "exit"]);
+        assert_eq!(m.log, ["dialog 0", "camera", "camera", "exit"]);
         assert!(!m.f.mIsEndingCinematic);
+    }
+
+    #[test]
+    fn a_cinematic_shows_only_its_own_messages() {
+        let mut m = Mock::new();
+        m.messages = 3;
+        m.cinematic = true;
+        m.cinematic_messages = vec![2];
+        show_dialog(&mut m);
+        assert_eq!(m.log, ["dialog 2"]);
+        assert!(m.f.mIsShowingDialog);
+        m.cinematic_messages.clear();
+        show_dialog(&mut m);
+        assert_eq!(m.log, ["dialog 2", "hide"]);
+        assert!(!m.f.mIsShowingDialog);
+        m.paused = true;
+        m.f.mIsShowingDialog = true;
+        show_dialog(&mut m);
+        assert_eq!(m.log.len(), 2);
+        assert!(!m.f.mIsShowingDialog);
     }
 }

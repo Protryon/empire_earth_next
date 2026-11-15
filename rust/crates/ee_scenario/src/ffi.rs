@@ -603,6 +603,29 @@ pub unsafe extern "C" fn ee_scenario_manager_update(host: *const EeScenarioRound
     round::update(&mut h);
 }
 
+/// `EEScenarioManager::ShowDialogMessage` (round.rs `show_dialog`) over the round's host.
+///
+/// # Safety
+/// As [`ee_scenario_manager_update`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_show_dialog(host: *const EeScenarioRoundHost) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe {
+        EeScenarioRoundHost { ctx: (*host).ctx, fields: (*host).fields, queue: (*host).queue, op: (*host).op }
+    };
+    round::show_dialog(&mut h);
+}
+
+/// `EEScenarioManager::MoveCameraToStart`'s step (round.rs `camera_step`): `at` the camera's focus (x, y), moved.
+///
+/// # Safety
+/// `fields` must be the live manager's numbers and `at` two floats, for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_camera_step(fields: *mut EeScenarioManagerFields, at: *mut [f32; 2], step: f32) -> bool {
+    // SAFETY: the caller's contract
+    unsafe { round::camera_step(&mut *fields, &mut *at, step) }
+}
+
 /// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
 ///
 /// # Safety

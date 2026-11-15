@@ -173,6 +173,14 @@ FSPersistent* EEScenarioManager::CreateDefault() const
     return new EEScenarioManager;
 }
 
+// the dialog messages of a cinematic (inCinematic) or the others dropped, the last first
+static void EESMDropMessages(std::vector<EESMDialogMessage>& ioMessages, bool inCinematic)
+{
+    for (long j = (long)ioMessages.size() - 1; j >= 0; j--)
+        if (ioMessages[j].mIsCinematic == inCinematic)
+            ioMessages.erase(ioMessages.begin() + j);
+}
+
 // FUNCTION: EXE 0x5b1ae4
 // Ends a cinematic: delays the other timed effects and trigger timers by its length + 3 s, drops its unrun effects
 // and dialog messages, delays the wonder timers and restores the camera saved by StartCinematic
@@ -192,12 +200,7 @@ void EEScenarioManager::EndCinematic()
             this->GetTrigger(t)->mConditionStartTime = this->GetTrigger(t)->mConditionStartTime + (long)theElapsed + 3000;
     }
     gUserInterface->PostHideMessages();
-    if (this->mMessages.size() > 0) {
-        for (long j = this->mMessages.size() - 1; j >= 0; j--) {
-            if (this->mMessages[j].mIsCinematic == true)
-                this->mMessages.erase(this->mMessages.begin() + j);
-        }
-    }
+    EESMDropMessages(this->mMessages, true);
     for (i = 0; i < gWorld.mNumPlayers; i++) {
         if (gWorld.GetPlayer(i) != NULL)
             gWorld.GetPlayer(i)->DelayWonderTimers((long)theElapsed);
@@ -264,12 +267,7 @@ void EEScenarioManager::StartCinematic()
         gWorld.GetPlayer(i)->mSelectedGroup->CopySelection(gWorld.GetPlayer(i)->mActiveGroup);
     }
     gUserInterface->PostHideMessages();
-    if (this->mMessages.size() > 0) {
-        for (long j = this->mMessages.size() - 1; j >= 0; j--) {
-            if (!this->mMessages[j].mIsCinematic)
-                this->mMessages.erase(this->mMessages.begin() + j);
-        }
-    }
+    EESMDropMessages(this->mMessages, false);
     gGraphics->PostLetterboxIn(3000);
 }
 
@@ -282,6 +280,27 @@ int64_t RoundFloatBits(float inValue)
     return theBits;
 }
 
+// ShowDialogMessage's message inIndex shown and erased: the one-shot sounds stopped for a voiced one, posted, the
+// camera moved to its unit (turned to face it at scroll speed 0)
+void RoundShowMessage(EEScenarioManager* inManager, size_t inIndex)
+{
+    EESMDialogMessage& theMessage = inManager->mMessages[inIndex];
+    if (theMessage.mSound.GetLength() > 0)
+        gSoundManager->StopAllOneShotSounds();
+    gUserInterface->PostDialogMessage(theMessage);
+    EEUnit* theUnit = gWorld.GetUnit(theMessage.mUnitID);
+    if (theUnit != NULL && theMessage.mScrollSpeed >= 0) {
+        gWorld.mCameraControl.ClearUnitA();
+        gWorld.mCameraControl.ClearUnitB();
+        GE3DPoint theOffset(-10000.0f, 0.0f, 0.0f);
+        gWorld.mCameraControl.SetMode(0);
+        bool theFaces = theMessage.mScrollSpeed == 0;
+        gWorld.mCameraControl.MoveTo(theUnit, theOffset, true, (float)theMessage.mScrollSpeed, theFaces ? theUnit : NULL,
+                                     theOffset, false, 0.1f, theFaces ? 3.1415927f : 0.0f, 0.0f);
+    }
+    inManager->mMessages.erase(inManager->mMessages.begin() + inIndex);
+}
+
 // Update's world (ee_scenario round.rs): each operation the original's statement at its place
 int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float inTime)
 {
@@ -290,7 +309,13 @@ int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float 
     case EE_SCENARIO_ROUND_GAME_SPEED: return RoundFloatBits(gWorld.mGameSpeed);
     case EE_SCENARIO_ROUND_TICK_SECONDS: return RoundFloatBits(gPhysics->GetTickSeconds());
     case EE_SCENARIO_ROUND_MESSAGE_COUNT: return (int64_t)theManager->mMessages.size();
-    case EE_SCENARIO_ROUND_SHOW_DIALOG: theManager->ShowDialogMessage(); return 0;
+    case EE_SCENARIO_ROUND_DIALOG_PAUSED: return gCommunications == NULL || gCommunications->GetIsGamePaused();
+    case EE_SCENARIO_ROUND_MESSAGE_CINEMATIC: return theManager->mMessages[(size_t)inA].mIsCinematic;
+    case EE_SCENARIO_ROUND_SHOW_MESSAGE: RoundShowMessage(theManager, (size_t)inA); return 0;
+    case EE_SCENARIO_ROUND_HIDE_MESSAGES:
+        gUserInterface->PostHideMessages();
+        gSoundManager->StopAllOneShotSounds();
+        return 0;
     case EE_SCENARIO_ROUND_HUMAN_PLAYING: {
         bool theHumanPlaying = false;
         for (long i = 0; i < (long)gWorld.mNumPlayers; i++) {
@@ -509,52 +534,12 @@ void EEScenarioManager::SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag)
 
 // FUNCTION: EXE 0x5b481a
 // Shows the next queued dialog message (in a cinematic the next cinematic one), stopping one-shot sounds for a
-// voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused
+// voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused (ee_scenario
+// round.rs show_dialog)
 void EEScenarioManager::ShowDialogMessage()
 {
-    this->mIsShowingDialog = false;
-    if (gCommunications == NULL || gCommunications->GetIsGamePaused())
-        return;
-    if (this->mMessages.size() > 0) {
-        long theIndex;
-        if (gWorld.mInCinematic) {
-            theIndex = -1;
-            for (unsigned long i = 0; i < this->mMessages.size(); i++) {
-                if (this->mMessages[i].mIsCinematic) {
-                    theIndex = i;
-                    break;
-                }
-            }
-        } else
-            theIndex = 0;
-        if (theIndex != -1) {
-            if (this->GetDialogMessage(theIndex).mSound.GetLength() > 0)
-                gSoundManager->StopAllOneShotSounds();
-            gUserInterface->PostDialogMessage(this->mMessages[theIndex]);
-            EEUnit* theUnit = gWorld.GetUnit(this->mMessages[theIndex].mUnitID);
-            if (theUnit != NULL && this->mMessages[theIndex].mScrollSpeed >= 0) {
-                gWorld.mCameraControl.ClearUnitA();
-                gWorld.mCameraControl.ClearUnitB();
-                GE3DPoint theOffset(-10000.0f, 0.0f, 0.0f);
-                gWorld.mCameraControl.SetMode(0);
-                float theAngle;
-                if (this->mMessages[theIndex].mScrollSpeed == 0)
-                    theAngle = 3.1415927f;
-                else
-                    theAngle = 0.0f;
-                EESMDialogMessage& theMessage = this->mMessages[theIndex];
-                EESMDialogMessage& theOther = this->mMessages[theIndex];
-                gWorld.mCameraControl.MoveTo(theUnit, theOffset, true, (float)theOther.mScrollSpeed,
-                                               theMessage.mScrollSpeed == 0 ? theUnit : NULL, theOffset, false, 0.1f,
-                                               theAngle, 0.0f);
-            }
-            this->mMessages.erase(this->mMessages.begin() + theIndex);
-            this->mIsShowingDialog = true;
-            return;
-        }
-    }
-    gUserInterface->PostHideMessages();
-    gSoundManager->StopAllOneShotSounds();
+    EeScenarioRoundHost theHost = {this, this, this->mTimedEffects, RoundOp};
+    ee_scenario_show_dialog(&theHost);
 }
 
 // FUNCTION: EXE 0x5b4d1a
@@ -570,32 +555,16 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
 }
 
 // FUNCTION: EXE 0x5b5173
-// Moves the camera one zoom-scaled step towards the scenario's start location; stops moving once it is there
+// Moves the camera one zoom-scaled step towards the scenario's start location; stops moving once it is there (the
+// step: ee_scenario round.rs camera_step)
 void EEScenarioManager::MoveCameraToStart()
 {
     GE3DPoint theLocation = gWorld.mLine.GetStart();
-    if (theLocation.GetX() == this->mStartX && theLocation.GetY() == this->mStartY) {
-        this->mIsMovingCamera = false;
+    float theFocus[2] = {theLocation.GetX(), theLocation.GetY()};
+    if (!ee_scenario_camera_step(this, &theFocus, (gWorld.mCameraControl.mZoom + 0.5f) * gSideScrollSpeed))
         return;
-    }
-    float theStep = (gWorld.mCameraControl.mZoom + 0.5f) * gSideScrollSpeed;
-    float theDX = theLocation.GetX() - this->mStartX;
-    float theAbsDX = UMAbs(theDX);
-    float theDY = theLocation.GetY() - this->mStartY;
-    float theAbsDY = UMAbs(theDY);
-    float theTotal = theAbsDY + theAbsDX;
-    float theStepX = theAbsDX * theStep / theTotal;
-    float theStepY = theAbsDY * theStep / theTotal;
-    if (theStepX > UMAbs(theDX))
-        theStepX = UMAbs(theDX);
-    if (theLocation.GetX() > this->mStartX)
-        theStepX = -theStepX;
-    if (theStepY > UMAbs(theDY))
-        theStepY = UMAbs(theDY);
-    if (theLocation.GetY() > this->mStartY)
-        theStepY = -theStepY;
-    theLocation.SetX(theLocation.GetX() + theStepX);
-    theLocation.SetY(theLocation.GetY() + theStepY);
+    theLocation.SetX(theFocus[0]);
+    theLocation.SetY(theFocus[1]);
     gWorld.mCameraControl.SetLocation(theLocation, false, true);
 }
 
