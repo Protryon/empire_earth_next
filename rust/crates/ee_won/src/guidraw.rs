@@ -1707,5 +1707,148 @@ pub extern "C" fn ee_won_gui_sel_foreground(background: u32, foreground: u32, mo
     sel_foreground(&EeWonSelColor { background, foreground, mode }, original)
 }
 
+/// ImageComponent::Paint (R6 WON round 37; after Component::Paint), the image in slot 0: nothing without an image;
+/// stretched (its size set to the component's first when it differs), once at the origin, or tiled over the
+/// component inside a clip. The original never left the tiling of an image 0 pixels wide (or high) over a component
+/// with room for it; this tiles nothing then.
+#[allow(clippy::too_many_arguments)]
+pub fn image_component_paint(
+    has: bool,
+    stretch: bool,
+    tile: bool,
+    iw: i32,
+    ih: i32,
+    w: i32,
+    h: i32,
+) -> Vec<EeWonDrawOp> {
+    let mut p = Plan::default();
+    if !has {
+        return p.ops;
+    }
+    if stretch {
+        if iw != w || ih != h {
+            p.image_size(0, w, h);
+        }
+        p.image(0, 0, 0);
+    } else if !tile {
+        p.image(0, 0, 0);
+    } else {
+        p.push_clip(0, 0, w, h);
+        if !((iw <= 0 && w > 0) || (ih <= 0 && h > 0)) {
+            let mut x = 0i32;
+            while x < w {
+                let mut y = 0i32;
+                while y < h {
+                    p.image(0, x, y);
+                    y = match y.checked_add(ih) {
+                        Some(v) => v,
+                        None => break,
+                    };
+                }
+                x = match x.checked_add(iw) {
+                    Some(v) => v,
+                    None => break,
+                };
+            }
+        }
+        p.pop_clip();
+    }
+    p.ops
+}
+
+/// RectangleComponent::Paint (after Component::Paint): the fill and the outline over the component, each only when
+/// its colour is set (not -1).
+pub fn rectangle_paint(solid: i32, outline: i32, w: i32, h: i32) -> Vec<EeWonDrawOp> {
+    let mut p = Plan::default();
+    if solid != -1 {
+        p.color(solid as u32);
+        p.fill(0, 0, w, h);
+    }
+    if outline != -1 {
+        p.color(outline as u32);
+        p.op(EE_WON_DRAW_RECT, &[0, 0, w, h]);
+    }
+    p.ops
+}
+
+/// RectangleComponent3D::Paint: the fill when set (not COLOR_INVALID), then `thickness` frames from the outside in,
+/// the top and left light when up (dark when down), the right and bottom the other colour.
+#[allow(clippy::too_many_arguments)]
+pub fn rectangle_3d_paint(
+    up: bool,
+    thickness: i32,
+    solid: i32,
+    light: i32,
+    dark: i32,
+    w: i32,
+    h: i32,
+) -> Vec<EeWonDrawOp> {
+    let mut p = Plan::default();
+    let (width, height) = (w.wrapping_sub(1), h.wrapping_sub(1));
+    if solid != -1 {
+        p.color(solid as u32);
+        p.fill(0, 0, w, h);
+    }
+    for i in 0..thickness.max(0) {
+        p.color(if up { light } else { dark } as u32);
+        p.line(i, i, width.wrapping_sub(i), i);
+        p.line(i, i, i, height.wrapping_sub(i));
+        p.color(if up { dark } else { light } as u32);
+        p.line(width.wrapping_sub(i), i, width.wrapping_sub(i), height);
+        p.line(i, height.wrapping_sub(i), width, height.wrapping_sub(i));
+    }
+    p.ops
+}
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_gui_draw_image_component(
+    has: bool,
+    stretch: bool,
+    tile: bool,
+    image_width: i32,
+    image_height: i32,
+    width: i32,
+    height: i32,
+    out: *mut EeWonDrawOp,
+    cap: usize,
+) -> usize {
+    deliver(&image_component_paint(has, stretch, tile, image_width, image_height, width, height), out, cap)
+}
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gui_draw_rectangle(
+    solid: i32,
+    outline: i32,
+    width: i32,
+    height: i32,
+    out: *mut EeWonDrawOp,
+    cap: usize,
+) -> usize {
+    deliver(&rectangle_paint(solid, outline, width, height), out, cap)
+}
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_won_gui_draw_rectangle_3d(
+    up: bool,
+    thickness: i32,
+    solid: i32,
+    light: i32,
+    dark: i32,
+    width: i32,
+    height: i32,
+    out: *mut EeWonDrawOp,
+    cap: usize,
+) -> usize {
+    deliver(&rectangle_3d_paint(up, thickness, solid, light, dark, width, height), out, cap)
+}
+
 #[cfg(test)]
 mod tests;

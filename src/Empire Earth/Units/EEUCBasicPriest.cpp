@@ -316,21 +316,10 @@ void EEComplexUnit::UpdateOrbitals()
     }
 }
 
-// TEST ONLY: the original's countdown (0x60e0b2, 0x60e0db) over the value the Rust leaf read: -1 for no write
-static long OriginalCountdown(long inTimer)
-{
-    if (!(inTimer > 0))
-        return -1;
-    long theTime = inTimer - gPhysics->mTickTimeMs;
-    if (theTime < 0)
-        theTime = 0;
-    return theTime;
-}
-
 // FUNCTION: EXE 0x60e0b2
 // Counts the reload timer down by the tick, not below 0
 // New (R5b.4 leaf 6): the countdown is Rust over the unit store (ee_units step.rs step_countdown); the write is the
-// holder's. TEST ONLY: while the capture runs, the original's statements check it (USTM)
+// holder's. TEST ONLY: while the capture runs, USTM records it
 void EEComplexUnit::UpdateReloadTimer()
 {
     long theBefore = this->mReloadTimer;
@@ -340,9 +329,6 @@ void EEComplexUnit::UpdateReloadTimer()
     if (theWritten)
         this->SetReloadTimer((long)theTime);
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
-        long theOriginal = OriginalCountdown(theBefore);
-        if ((theOriginal >= 0) != theWritten || (theWritten && theOriginal != (long)theTime))
-            EEUnitStepDiffers("UpdateReloadTimer", this->mUnitID, theWritten ? (long)theTime : -1, theOriginal);
         uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
                                 (uint32_t)this->mReloadTimer};
         EEUnitStepNote(kUnitStepReload, this->mUnitID, theWords, 4);
@@ -361,9 +347,6 @@ void EEComplexUnit::UpdateTargetSearchTimer()
     if (theWritten)
         this->SetTargetSearchTimer((long)theTime);
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
-        long theOriginal = OriginalCountdown(theBefore);
-        if ((theOriginal >= 0) != theWritten || (theWritten && theOriginal != (long)theTime))
-            EEUnitStepDiffers("UpdateTargetSearchTimer", this->mUnitID, theWritten ? (long)theTime : -1, theOriginal);
         uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
                                 (uint32_t)this->mTargetSearchTimer};
         EEUnitStepNote(kUnitStepTargetSearch, this->mUnitID, theWords, 4);
@@ -388,18 +371,7 @@ void EEComplexUnit::UpdateHealSearchTimer()
                                          theBefore, gPhysics->mTickTime, &theTime);
     if (theWritten)
         this->SetHealSearchTimer(theTime);
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same value
-        float theValue = theBefore;
-        bool theOriginal = false;
-        if (theValue > 0.0f) {
-            theValue -= gPhysics->mTickTime / 1000.0f;
-            if (theValue < 0.0f)
-                theValue = 0.0f;
-            theOriginal = true;
-        }
-        if (theOriginal != theWritten || (theWritten && HealBits(theValue) != HealBits(theTime)))
-            EEUnitStepDiffers("UpdateHealSearchTimer (float bits)", this->mUnitID, theWritten ? (long)HealBits(theTime) : -1,
-                              theOriginal ? (long)HealBits(theValue) : -1);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[4] = {HealBits(theBefore), HealBits(gPhysics->mTickTime), theWritten ? 1u : 0u,
                                 HealBits(this->mHealSearchTimer)};
         EEUnitStepNote(kUnitStepHealSearch, this->mUnitID, theWords, 4);
@@ -409,7 +381,7 @@ void EEComplexUnit::UpdateHealSearchTimer()
 // New (R5b.4 leaf 6): the rotting countdown of the classes' Updates (kActionUnitRotting; 19 inline copies of it were
 // in the classes' Update bodies): the time left minus the tick, not below 0 (Rust over the unit store: ee_units step.rs
 // step_rotting), written through the holder; returns the time (the callers that rot linked parts give them the same).
-// TEST ONLY: while the capture runs, the original's statements check it (USTM)
+// TEST ONLY: while the capture runs, USTM records it
 long EEComplexUnit::UpdateRottingAwayTime()
 {
     long theBefore = this->mRottingAwayTime;
@@ -417,11 +389,6 @@ long EEComplexUnit::UpdateRottingAwayTime()
                                                theBefore, gPhysics->mTickTimeMs);
     this->SetRottingAwayTime(theTime);
     if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
-        long theOriginal = theBefore - gPhysics->mTickTimeMs;
-        if (theOriginal < 0)
-            theOriginal = 0;
-        if (theOriginal != theTime)
-            EEUnitStepDiffers("UpdateRottingAwayTime", this->mUnitID, theTime, theOriginal);
         uint32_t theWords[3] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, (uint32_t)this->mRottingAwayTime};
         EEUnitStepNote(kUnitStepRotting, this->mUnitID, theWords, 3);
     }
@@ -431,7 +398,7 @@ long EEComplexUnit::UpdateRottingAwayTime()
 // New (R5b.4 leaf 6): the resources' rotting of the classes' Updates (kActionResourcesRotting; 3 inline copies: the
 // animals, the fish, the default): the time plus the tick; past 4 s the resource amount loses one per whole 4 s (not
 // below 0) and the time keeps the rest (Rust over the unit store: ee_units step.rs step_resources_rotting). TEST ONLY:
-// while the capture runs, the original's statements check it (USTM)
+// while the capture runs, USTM records it
 void EEComplexUnit::UpdateResourcesRotting()
 {
     long theBefore = this->mRottingAwayTime;
@@ -442,18 +409,7 @@ void EEComplexUnit::UpdateResourcesRotting()
     if (theLost)
         this->SetResourceAmount((long)theAmount);
     this->SetRottingAwayTime((long)theTime);
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same values
-        long theOriginal = theBefore + gPhysics->mTickTimeMs;
-        long theOriginalAmount = -1;
-        if (theOriginal > 4000) {
-            theOriginalAmount = theAmountBefore - theOriginal / 4000;
-            if (theOriginalAmount < 0)
-                theOriginalAmount = 0;
-            theOriginal %= 4000;
-        }
-        if (theOriginal != (long)theTime || (theOriginalAmount >= 0) != theLost
-            || (theLost && theOriginalAmount != (long)theAmount))
-            EEUnitStepDiffers("UpdateResourcesRotting", this->mUnitID, (long)theTime, theOriginal);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[5] = {(uint32_t)theBefore, (uint32_t)theAmountBefore, (uint32_t)gPhysics->mTickTimeMs,
                                 (uint32_t)this->mRottingAwayTime, (uint32_t)this->mResourceAmount};
         EEUnitStepNote(kUnitStepResourcesRotting, this->mUnitID, theWords, 5);

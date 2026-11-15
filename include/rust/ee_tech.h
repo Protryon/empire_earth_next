@@ -7,6 +7,45 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `kAreaEffectHealing` (ee/EEAreaEffectKindIDs.h).
+constexpr static const long EE_AREA_EFFECT_HEALING = 1;
+
+/// `kAreaEffectMorale`.
+constexpr static const long EE_AREA_EFFECT_MORALE = 2;
+
+/// `kAreaEffectCalamityImmunity`.
+constexpr static const long EE_AREA_EFFECT_CALAMITY_IMMUNITY = 3;
+
+/// `kAreaEffectConversionImmunity`.
+constexpr static const long EE_AREA_EFFECT_CONVERSION_IMMUNITY = 4;
+
+/// `kAreaEffectMoraleFromBuildings`.
+constexpr static const long EE_AREA_EFFECT_MORALE_FROM_BUILDINGS = 5;
+
+/// `kAreaEffectMoraleFromMilitaryHeroes`.
+constexpr static const long EE_AREA_EFFECT_MORALE_FROM_MILITARY_HEROES = 6;
+
+/// `kAreaEffectEconomyFromUnits`.
+constexpr static const long EE_AREA_EFFECT_ECONOMY_FROM_UNITS = 7;
+
+/// `kAreaEffectCloaking`.
+constexpr static const long EE_AREA_EFFECT_CLOAKING = 8;
+
+/// `Modify`'s value kinds: damage taken (the morale kinds), a gather amount (the economy), the cloaking strength.
+constexpr static const long EE_AREA_EFFECT_MODIFY_DAMAGE = 1;
+
+constexpr static const long EE_AREA_EFFECT_MODIFY_GATHER = 2;
+
+constexpr static const long EE_AREA_EFFECT_MODIFY_CLOAK = 3;
+
+/// `Relation`'s answer flags: the two ids name the same player object, the first is allied with the second, the
+/// first is at war with the second (`mEnemies[other] != 0`).
+constexpr static const int32_t EE_AREA_EFFECT_SAME = 1;
+
+constexpr static const int32_t EE_AREA_EFFECT_ALLIED = 2;
+
+constexpr static const int32_t EE_AREA_EFFECT_AT_WAR = 4;
+
 /// [`EeCalamityOp::TargetView`]'s flags.
 constexpr static const uint32_t EE_CALAMITY_TARGET_ON_MAP = 1;
 
@@ -422,6 +461,51 @@ constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
 
+/// The host calls. "Target" is the unit the slot was given (the covered, ticked, cloaked unit), "owner" the
+/// effect's own unit.
+enum class EeAreaEffectOp {
+  /// Whether the target's unit type is in unit set `a` (`gUnitSetManager.Contains`).
+  TargetInSet = 0,
+  /// Whether player `a`'s tech tree node of the target's class technology is of kind 4.
+  TargetTechKind4 = 1,
+  /// Players `a` and `b` (ids into the world's table): value the `EE_AREA_EFFECT_SAME/ALLIED/AT_WAR` flags.
+  Relation = 2,
+  /// Whether the target is built.
+  TargetBuilt = 3,
+  /// Whether the target can be healed (`IsRepairable`).
+  TargetRepairable = 4,
+  /// The target's position (x, y of its physical model's location).
+  TargetPosition = 5,
+  /// The continent of tile (`a`, `b`) for the ground paths: value.
+  Continent = 6,
+  /// ok when the target is a space dock or turret carried by a complex unit: value that unit's planet.
+  TargetCarrierPlanet = 7,
+  /// The target's hit points: value.
+  TargetHitPoints = 8,
+  /// The target's maximum hit points: value.
+  TargetMaxHitPoints = 9,
+  /// Whether a cinematic runs (the free camera flag).
+  InCinematic = 10,
+  /// The target's `SetHitPoints(a)`.
+  TargetSetHitPoints = 11,
+  /// The target's `SetCloakableChain(true)` (the cloaking's `AppliedTo`).
+  TargetCloak = 12,
+  /// The cloaking's `RemovedFrom` on the target (the camouflage power's test, the uncloak, the mini map).
+  TargetUncloak = 13,
+  /// ok when the effect has an owner unit: x its area-effect scale.
+  OwnerScale = 14,
+  /// The owner's hit points: value.
+  OwnerHitPoints = 15,
+  /// The owner's leadership: x.
+  OwnerLeadership = 16,
+  /// The owner class's garrison bonus: x.
+  OwnerGarrisonBonus = 17,
+  /// The owner player's living, built morale buildings in rectangle (`a` left, `b` top, `c` right, `d` bottom):
+  /// shape `e` 1 those whose footprint meets it, else those whose tile is within `x` (squared) of tile (`f`, `g`):
+  /// value their count.
+  CountBuildings = 18,
+};
+
 /// Which `CanCastAt` runs (`EeCalamityCast::mode`).
 enum class EeCalamityCastMode : int32_t {
   /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
@@ -806,9 +890,144 @@ enum class EeTechTreeOp : int32_t {
   BuildUnitClassInfo = 14,
 };
 
+/// The running state: the units' effects and the active list.
+struct EeAreaEffectRunning;
+
 /// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
 /// `mSavedSOLs`), applied by `ApplySavedState`.
 struct EeTechTreeSaved;
+
+/// A template's numbers (`EEAreaEffectTemplate`'s members under their C++ names; its graphic effects and media are
+/// C++ members). The color (the original's `GEColor mColor`) is `mColorRed`, `mColorGreen`, `mColorBlue`.
+struct EeAreaEffectTemplateFields {
+  /// The kind (`EE_AREA_EFFECT_*`): which effect `CreateAreaEffect` makes.
+  long mKind;
+  /// The area's shape: 1 a square, 2 a circle.
+  long mShape;
+  /// The players it affects: 1 the owner, 2 its allies, 3 its enemies, 4 everyone.
+  long mMode;
+  /// The radius in tiles, scaled by the owner unit's area-effect scale (0 or less: everywhere).
+  float mRadius;
+  float mColorAlpha;
+  long mID;
+  /// The unit set it covers (`EEUnitSetManager`; 4: no continent test).
+  long mUnitSet;
+  /// The cloaking's strength; the morale from buildings' cap before the variant's bonus.
+  long mMaxLevel;
+  /// The healing's hit points per second, the morale's level.
+  long mLevel;
+  long mL44;
+  long mL48;
+  long mL4C;
+  float mRed;
+  float mGreen;
+  float mBlue;
+  float mAlpha;
+  float mF60;
+  bool mB64;
+  bool mB65;
+  bool mB66;
+  bool mB67;
+  bool mB68;
+  float mColorRed;
+  float mColorGreen;
+  float mColorBlue;
+};
+
+/// One area-effect template record of the area-effect table (`EEAreaEffectData`, ee/EEAreaEffectTemplate.h: 188
+/// bytes, the same layout).
+struct EeAreaEffectData {
+  char mName[104];
+  int32_t mID;
+  int32_t mKind;
+  int32_t mShape;
+  int32_t mGraphicEffect;
+  int32_t mUnitSet;
+  int32_t mMode;
+  int32_t mGraphicEffect18;
+  int32_t mMedia;
+  int32_t mMaxLevel;
+  int32_t mLevel;
+  int32_t mUnusedValue1;
+  int32_t mUnusedValue2;
+  int32_t mUnusedValue3;
+  float mRadius;
+  float mRed;
+  float mGreen;
+  float mBlue;
+  float mAlpha;
+  float mUnusedFloat;
+  bool mUnusedFlag1;
+  bool mUnusedFlag2;
+  bool mUnusedFlag3;
+  bool mUnusedFlag4;
+  bool mUnusedFlag5;
+  uint8_t mPad[3];
+};
+
+/// One host call.
+struct EeAreaEffectCall {
+  EeAreaEffectOp op;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
+  int32_t f;
+  int32_t g;
+  float x;
+};
+
+/// The host's answer.
+struct EeAreaEffectReply {
+  bool ok;
+  int32_t value;
+  float x;
+  float y;
+};
+
+/// The C++ host of an area effect's calls (`EEAreaEffect.cpp`): `call` answers one [`EeAreaEffectCall`] on the C++
+/// objects (the effect and the unit it was given).
+struct EeAreaEffectHostFfi {
+  void *ctx;
+  void (*call)(void *ctx, const EeAreaEffectCall *call, EeAreaEffectReply *reply);
+};
+
+/// An area effect's numbers (`EEAreaEffect` and its kinds' members; its location, template and owner unit are C++
+/// members).
+struct EeAreaEffectFields {
+  /// The template's kind when the effect was made: the original's class.
+  long mKind;
+  /// The owner's player id.
+  long mPlayer;
+  /// The morale from buildings' cap (the template's maximum level plus the game variant's morale bonus).
+  long mMax;
+  /// The morale from buildings' count of buildings.
+  long mCount;
+  /// The morale from buildings' recount flag.
+  bool mDirty;
+};
+
+/// One of a unit's own effects: its location and, for a morale from buildings, its recount flag and count.
+struct EeAreaEffectSavedOwn {
+  float mX;
+  float mY;
+  bool mIsMorale;
+  bool mDirty;
+  long mCount;
+};
+
+/// An effect as its owner unit's id (`-1`: none) and its index in the owner's own list (`-1`: not there).
+struct EeAreaEffectSavedRef {
+  unsigned long mOwner;
+  long mIndex;
+};
+
+/// The C++'s I/O callback: `call(ctx, op, value)`.
+struct EeCalamityIoFfi {
+  void *ctx;
+  long (*call)(void *ctx, uint32_t op, void *value);
+};
 
 /// A calamity class's numbers (`EECalamityClass` derives from it). The base members first, in their order.
 struct EeCalamityClassFields {
@@ -1054,12 +1273,6 @@ struct EeCalamityFields {
   bool mInitialized;
   bool mHasTargetLocation;
   bool mHasTargetUnit;
-};
-
-/// The C++'s I/O callback: `call(ctx, op, value)`.
-struct EeCalamityIoFfi {
-  void *ctx;
-  long (*call)(void *ctx, uint32_t op, void *value);
 };
 
 /// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
@@ -1473,6 +1686,228 @@ constexpr static const uint8_t PREREQUISITE_BITS[4] = { 2, 4, 8, 16, };
 
 extern "C" {
 
+/// [`template_reset`] into `t`.
+///
+/// # Safety
+/// `t` must be valid.
+void ee_area_effect_template_reset(EeAreaEffectTemplateFields *t);
+
+/// [`template_init`] of `t` from the record `d`.
+///
+/// # Safety
+/// `t` and `d` must be valid.
+void ee_area_effect_template_init(EeAreaEffectTemplateFields *t, const EeAreaEffectData *d);
+
+/// [`affects_player`] (or, `reversed`, [`affects_player_reversed`]).
+///
+/// # Safety
+/// `t` and `h` must be valid.
+bool ee_area_effect_affects_player(const EeAreaEffectTemplateFields *t,
+                                   const EeAreaEffectHostFfi *h,
+                                   int32_t player,
+                                   int32_t other,
+                                   bool reversed);
+
+/// [`is_within`].
+///
+/// # Safety
+/// `t` and `h` must be valid.
+bool ee_area_effect_is_within(const EeAreaEffectTemplateFields *t,
+                              const EeAreaEffectHostFfi *h,
+                              float center_x,
+                              float center_y,
+                              float point_x,
+                              float point_y,
+                              float scale,
+                              bool has_target);
+
+/// [`known_kind`].
+bool ee_area_effect_known_kind(long kind);
+
+/// [`init`] into `e`.
+///
+/// # Safety
+/// `e` must be valid.
+void ee_area_effect_init(EeAreaEffectFields *e,
+                         long kind,
+                         long template_max_level,
+                         long morale_bonus);
+
+/// [`same_group`].
+bool ee_area_effect_same_group(long kind, long other);
+
+/// [`scale`].
+///
+/// # Safety
+/// `h` must be valid.
+float ee_area_effect_scale(const EeAreaEffectHostFfi *h);
+
+/// [`radius`].
+///
+/// # Safety
+/// `t` and `h` must be valid.
+float ee_area_effect_radius(const EeAreaEffectTemplateFields *t, const EeAreaEffectHostFfi *h);
+
+/// [`level`].
+///
+/// # Safety
+/// `e`, `t` and `h` must be valid.
+long ee_area_effect_level(const EeAreaEffectFields *e,
+                          const EeAreaEffectTemplateFields *t,
+                          const EeAreaEffectHostFfi *h);
+
+/// [`strength`].
+///
+/// # Safety
+/// `e`, `t` and `h` must be valid.
+long ee_area_effect_strength(const EeAreaEffectFields *e,
+                             const EeAreaEffectTemplateFields *t,
+                             const EeAreaEffectHostFfi *h);
+
+/// [`modify`]: whether the kind modifies `value`, the result in `out` (left alone otherwise).
+///
+/// # Safety
+/// `e`, `t`, `h` and `out` must be valid.
+bool ee_area_effect_modify(const EeAreaEffectFields *e,
+                           const EeAreaEffectTemplateFields *t,
+                           const EeAreaEffectHostFfi *h,
+                           long kind,
+                           long value,
+                           long *out);
+
+/// [`is_immunity`].
+///
+/// # Safety
+/// `e` must be valid.
+bool ee_area_effect_is_immunity(const EeAreaEffectFields *e);
+
+/// [`covers`].
+///
+/// # Safety
+/// `e`, `t` and `h` must be valid.
+bool ee_area_effect_covers(const EeAreaEffectFields *e,
+                           const EeAreaEffectTemplateFields *t,
+                           const EeAreaEffectHostFfi *h,
+                           int32_t player,
+                           int32_t owner,
+                           float point_x,
+                           float point_y);
+
+/// [`applied_to`] (`removed`: [`removed_from`]).
+///
+/// # Safety
+/// `e` and `h` must be valid.
+void ee_area_effect_applied(const EeAreaEffectFields *e,
+                            const EeAreaEffectHostFfi *h,
+                            bool removed);
+
+/// [`mark_dirty`].
+///
+/// # Safety
+/// `e` must be valid.
+void ee_area_effect_mark_dirty(EeAreaEffectFields *e);
+
+/// [`recount`]; `e` in and out.
+///
+/// # Safety
+/// `e`, `t` and `h` must be valid.
+void ee_area_effect_recount(EeAreaEffectFields *e,
+                            const EeAreaEffectTemplateFields *t,
+                            const EeAreaEffectHostFfi *h,
+                            float location_x,
+                            float location_y);
+
+/// [`tick`].
+///
+/// # Safety
+/// `e`, `t` and `h` must be valid.
+void ee_area_effect_tick(const EeAreaEffectFields *e,
+                         const EeAreaEffectTemplateFields *t,
+                         const EeAreaEffectHostFfi *h,
+                         float elapsed);
+
+/// [`checksum`].
+///
+/// # Safety
+/// `e` must be valid.
+long ee_area_effect_checksum(const EeAreaEffectFields *e,
+                             float location_x,
+                             float location_y,
+                             long unit_id);
+
+/// A new, empty running state (the C++ fills it, then saves and frees it).
+EeAreaEffectRunning *ee_area_effect_running_new();
+
+/// Frees a running state (NULL: nothing).
+///
+/// # Safety
+/// `r` is NULL or from [`ee_area_effect_running_new`] / [`ee_area_effect_running_load`], freed once.
+void ee_area_effect_running_free(EeAreaEffectRunning *r);
+
+/// A unit appended (its effects follow).
+///
+/// # Safety
+/// `r` valid.
+void ee_area_effect_running_add_unit(EeAreaEffectRunning *r, unsigned long id);
+
+/// One of the last unit's own effects appended.
+///
+/// # Safety
+/// `r` valid, with a unit.
+void ee_area_effect_running_add_own(EeAreaEffectRunning *r, EeAreaEffectSavedOwn own);
+
+/// An effect acting on the last unit appended (`active`: to the active list instead).
+///
+/// # Safety
+/// `r` valid (with a unit unless `active`).
+void ee_area_effect_running_add_ref(EeAreaEffectRunning *r,
+                                    EeAreaEffectSavedRef reference,
+                                    bool active);
+
+/// [`save`] of `r` over `io`.
+///
+/// # Safety
+/// `r` valid; `io`'s callback valid.
+void ee_area_effect_running_save(const EeAreaEffectRunning *r, EeCalamityIoFfi io);
+
+/// [`load`] over `io`: the result into `*result`, the state read (free it).
+///
+/// # Safety
+/// `result` valid; `io`'s callback valid.
+EeAreaEffectRunning *ee_area_effect_running_load(EeCalamityIoFfi io, long *result);
+
+/// The number of units (`unit` [`usize::MAX`]: of the active list's refs; else the unit's own effects into
+/// `*own` and its affecting refs into `*affecting`, its id returned).
+///
+/// # Safety
+/// `r` valid; `unit` below the count; `own` and `affecting` valid.
+unsigned long ee_area_effect_running_unit(const EeAreaEffectRunning *r,
+                                          size_t unit,
+                                          size_t *own,
+                                          size_t *affecting);
+
+/// The number of units saved (`active`: of the active list's refs).
+///
+/// # Safety
+/// `r` valid.
+size_t ee_area_effect_running_count(const EeAreaEffectRunning *r, bool active);
+
+/// Unit `unit`'s own effect `index`.
+///
+/// # Safety
+/// `r` valid; the indexes in range.
+EeAreaEffectSavedOwn ee_area_effect_running_own(const EeAreaEffectRunning *r,
+                                                size_t unit,
+                                                size_t index);
+
+/// Unit `unit`'s affecting ref `index` (`unit` [`usize::MAX`]: the active list's).
+///
+/// # Safety
+/// `r` valid; the indexes in range.
+EeAreaEffectSavedRef ee_area_effect_running_ref(const EeAreaEffectRunning *r,
+                                                size_t unit,
+                                                size_t index);
+
 /// [`get_mode`].
 uint32_t ee_calamity_class_get_mode(int32_t class_enum, uint32_t slot);
 
@@ -1885,6 +2320,12 @@ bool ee_tech_is_latest_effect(void *ctx,
                               int32_t id,
                               int32_t unit_type,
                               int32_t kind);
+
+/// [`assign`] over the records' pointers (a self-assignment does nothing).
+///
+/// # Safety
+/// Both are live records.
+void ee_tech_node_assign(EeTechNodeFields *dst, const EeTechNodeFields *src, bool epoch);
 
 }  // extern "C"
 

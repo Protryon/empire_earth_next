@@ -123,28 +123,56 @@ NEMRecord::NEMRecord(unsigned char* inData)
 }
 
 // a sender's: the fixed members in record order, then the strings (fewer leave the rest 0 or "")
+static long long NetMsgValue(const NEMRecordValue& inValue) { return inValue.mValue; }
+static long long NetMsgValue(uint32_t inValue) { return inValue; }
+
 NEMRecord::NEMRecord(unsigned char inType, std::initializer_list<NEMRecordValue> inValues,
                      std::initializer_list<const char*> inStrings)
     : NEMessage(inType)
 {
-    EeNetMsgNeType theType = ee_netmsg_ne_type(inType);
+    this->Fill(inValues.begin(), inValues.end(), inStrings.begin(), inStrings.end());
+}
+
+// New (round 7): the Rust server's and client's (their fixed members only)
+NEMRecord::NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount)
+    : NEMessage(inType)
+{
+    this->Fill(inValues, inValues + inCount, (const char* const*)NULL, (const char* const*)NULL);
+}
+
+template <class V>
+void NEMRecord::Fill(const V* inValue, const V* inValuesEnd, const char* const* inString, const char* const* inStringsEnd)
+{
+    EeNetMsgNeType theType = ee_netmsg_ne_type(this->mType);
     ESVERIFY_AT(theType.class_id != 0xffffffffu, __LINE__);
     this->mRecord = new unsigned char[theType.record_size + 1]();
-    const NEMRecordValue* theValue = inValues.begin();
-    const char* const* theString = inStrings.begin();
     for (uint32_t i = 0; i < theType.fields; i++) {
-        EeNetMsgNeField theField = ee_netmsg_ne_field(inType, i);
-        if (theField.kind == EE_NETMSG_NE_FIELD_STRING && theString != inStrings.end()) {
-            this->mStrings[theField.offset] = *theString++;
+        EeNetMsgNeField theField = ee_netmsg_ne_field(this->mType, i);
+        if (theField.kind == EE_NETMSG_NE_FIELD_STRING && inString != inStringsEnd) {
+            this->mStrings[theField.offset] = *inString++;
         } else if ((theField.kind == EE_NETMSG_NE_FIELD_INTEGER || theField.kind == EE_NETMSG_NE_FIELD_BOOL) &&
-                   theValue != inValues.end()) {
-            long long theInteger = (theValue++)->mValue;
+                   inValue != inValuesEnd) {
+            long long theInteger = NetMsgValue(*inValue++);
             if (theField.kind == EE_NETMSG_NE_FIELD_BOOL)
                 theInteger = theInteger != 0;
             memcpy(this->mRecord + theField.offset, &theInteger, theField.size);   // little-endian: the low bytes
         }
     }
-    ESVERIFY_AT(theValue == inValues.end() && theString == inStrings.end(), __LINE__);
+    ESVERIFY_AT(inValue == inValuesEnd && inString == inStringsEnd, __LINE__);
+}
+
+// New (round 7): member inIndex's value for the Rust (its bytes, zero-extended); the players' inputs' count for the
+// inputs; a block's address
+uintptr_t NEMRecord::Value(uint32_t inIndex) const
+{
+    EeNetMsgNeField theField = ee_netmsg_ne_field(this->mType, inIndex);
+    if (theField.kind == EE_NETMSG_NE_FIELD_INPUTS)
+        return this->mPlayerInputs.size();
+    if (theField.size > sizeof(uint64_t))
+        return (uintptr_t)this->Field(inIndex, theField.size);
+    uint64_t theValue = 0;
+    memcpy(&theValue, this->Field(inIndex, theField.size), theField.size);
+    return (uintptr_t)theValue;
 }
 
 // FUNCTION: LLE 0x1003eecf

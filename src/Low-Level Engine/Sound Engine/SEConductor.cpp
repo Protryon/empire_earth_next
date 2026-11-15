@@ -10,19 +10,9 @@
 
 #define RUST reinterpret_cast<EeSoundConductor*>(const_cast<SEConductor*>(this))
 
-unsigned long SEConductor::GetChannelGroupCount() { return ee_sound_conductor_fields(RUST).channel_group_count; }
 unsigned long SEConductor::GetConductorState() const { return ee_sound_conductor_fields(RUST).state; }
-unsigned long SEConductor::GetIntensity() const { return ee_sound_conductor_fields(RUST).intensity; }
-const char* SEConductor::GetMusicFolder() const { return ee_sound_conductor_music_folder(RUST); }
-unsigned long SEConductor::GetReverbState() const { return ee_sound_conductor_fields(RUST).reverb_state; }
 float SEConductor::GetVolume() const { return ee_sound_conductor_fields(RUST).volume; }
-void SEConductor::SetNotificationCallback(unsigned long inEvent, void (*inCallback)(SEConductor&, long))
-{
-    ee_sound_conductor_set_callback(RUST, (uint32_t)inEvent, reinterpret_cast<void*>(inCallback));
-}
-long SEConductor::GetCurrentlyPlayingScore() { return ee_sound_conductor_playing(RUST); }
 SEScore* SEConductor::GetScore(long inID) const { return reinterpret_cast<SEScore*>(ee_sound_conductor_score(RUST, (int32_t)inID)); }
-long SEConductor::GetScoreID(SEScore* inScore) const { return ee_sound_conductor_score_id(RUST, reinterpret_cast<EeSoundScore*>(inScore)); }
 // a name already loaded only bumps its load count; while not running only the name is remembered
 long SEConductor::LoadScore(const UWideString& inName, long& outID)
 {

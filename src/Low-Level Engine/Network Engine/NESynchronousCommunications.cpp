@@ -28,73 +28,16 @@ NESynchronousCommunications::~NESynchronousCommunications()
 }
 
 // The calls out of the lag simulator and the recorder (ee_net lagloss.rs, recplay.rs) that the original units made
-// on the engine: each op is the statement NELagLossSimulator.cpp, NERecordPlayback.cpp or NETimestampedMessage.cpp
-// made (the owner answers Deliver, the callbacks)
-static unsigned long NEQueueLagThread(void* inSimulator)
-{
-    return ee_net_ll_thread(static_cast<const EeNetLagLoss*>(inSimulator));
-}
-
-static unsigned long NEQueuePlaybackThread(void* inRecorder)
-{
-    return ee_net_rp_thread(static_cast<const EeNetRecPlay*>(inRecorder));
-}
-
-// the client's threads (ee_net client.rs): its own lag simulator's and recorder's, its main and receive threads
-static unsigned long NEClientLagThread(void* inSimulator)
-{
-    return ee_net_cl_lag_thread(inSimulator);
-}
-
-static unsigned long NEClientPlaybackThread(void* inRecorder)
-{
-    return ee_net_cl_playback_thread(inRecorder);
-}
-
-static unsigned long NEClientMainThread(void* inClient)
-{
-    return ee_net_cl_main_thread(static_cast<const EeNetClient*>(inClient));
-}
-
-static unsigned long NEClientReceiveThread(void* inClient)
-{
-    return ee_net_cl_receive_thread(static_cast<const EeNetClient*>(inClient));
-}
-
-static unsigned long NEServerPlaybackThread(void* inRecorder)
-{
-    return ee_net_sv_playback_thread(inRecorder);
-}
-
-static unsigned long NEServerMainThread(void* inServer)
-{
-    return ee_net_sv_main_thread(static_cast<const EeNetServer*>(inServer));
-}
-
-static unsigned long NEServerSendThread(void* inServer)
-{
-    return ee_net_sv_send_thread(static_cast<const EeNetServer*>(inServer));
-}
-
-static unsigned long NEServerXferThread(void* inServer)
-{
-    return ee_net_sv_xfer_thread(static_cast<const EeNetServer*>(inServer));
-}
-
+// on the engine and the Rust does not make itself (the clock, the events and the threads are its own: ee_net
+// native.rs): each op is the statement NELagLossSimulator.cpp, NERecordPlayback.cpp or NETimestampedMessage.cpp made
+// (the owner answers Deliver, the callbacks)
 ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
     static const char* const kUnits[] = {"NELagLossSimulator.cpp", "NERecordPlayback.cpp", "NETimestampedMessage.cpp",
                                          "NESynchronousClient.cpp", "NESynchronousServer.cpp"};
-    static unsigned long (*const kThreads[])(void*) = {NEQueueLagThread, NEQueuePlaybackThread, NEClientLagThread,
-                                                       NEClientPlaybackThread, NEClientMainThread, NEClientReceiveThread,
-                                                       NEServerPlaybackThread, NEServerMainThread, NEServerSendThread,
-                                                       NEServerXferThread};
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    TSEvent* theEvent = reinterpret_cast<TSEvent*>(a);
     FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
     switch (inOp) {
-    case EeNetQOp::Time:
-        return (ptrdiff_t)TMGetTime();
     case EeNetQOp::Verify:
         ESVerify(kUnits[a < 5 ? a : 0], (unsigned long)b, "(ee_net)");
         return 0;
@@ -106,32 +49,6 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
             UMSetFloatingPointPrecision(kFPPrecision53);
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
-        return 0;
-    case EeNetQOp::EventNew: {
-        TSEvent* theNew = NULL;
-        if (TSScheduler::CreateEvent(theNew) != keseOK)
-            return 0;
-        return (ptrdiff_t)theNew;
-    }
-    case EeNetQOp::EventFree:
-        TSScheduler::DestroyEvent(theEvent);
-        return 0;
-    case EeNetQOp::EventSet:
-        theEvent->Set();
-        return 0;
-    case EeNetQOp::EventClear:
-        theEvent->Clear();
-        return 0;
-    case EeNetQOp::EventWait:
-        return theEvent->Wait((unsigned long)b);
-    case EeNetQOp::ThreadNew:
-        return TSScheduler::CreateThread(*reinterpret_cast<TSThread**>(c), kThreads[a < 10 ? a : 0],
-                                         reinterpret_cast<void*>(b), 0, false);
-    case EeNetQOp::ThreadName:
-        reinterpret_cast<TSThread*>(a)->SetName(UString(std::string(reinterpret_cast<const char*>(b), c).c_str()));
-        return 0;
-    case EeNetQOp::ThreadFree:
-        TSScheduler::DestroyThread(reinterpret_cast<TSThread*>(a));
         return 0;
     case EeNetQOp::MsgReference:
         theMessage->Reference();
@@ -151,7 +68,7 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
     }
     case EeNetQOp::MsgFromBytes:
         return (ptrdiff_t)NEMessage::ConvertMemoryToMessage(reinterpret_cast<unsigned char*>(a));
-    case EeNetQOp::Deliver:
+    default:   // (Time, the events, the threads: ee_net native.rs; Deliver: the owner's)
         return 0;
     case EeNetQOp::FileCreate:
         return theFile->Create();

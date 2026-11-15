@@ -30,8 +30,7 @@ pub use crate::comms::Comms;
 pub use crate::ffi::{MmCall, MmVia};
 pub use crate::ffi_comms::EeNetCommsField as BaseField;
 pub use crate::ffi_server::{
-    EeNetSvEvent as SvEvent, EeNetSvGet as SvGet, EeNetSvMsgField as MsgField, EeNetSvMsgFlag as MsgFlag,
-    EeNetSvNewMsg as NewMsg, EeNetSvSet as SvSet,
+    EeNetSvEvent as SvEvent, EeNetSvGet as SvGet, EeNetSvMsgFlag as MsgFlag, EeNetSvSet as SvSet,
 };
 
 /// `ESVERIFY_AT`'s unit for this file (QHost::verify)
@@ -71,6 +70,24 @@ pub const MSG_PAUSE_GAME_RESPONSE: u8 = 0x34;
 pub const MSG_UNPAUSE_GAME: u8 = 0x35;
 pub const MSG_UNPAUSE_GAME_RESPONSE: u8 = 0x36;
 pub const MSG_CLIENT_RECONNECTION_REQUEST: u8 = 0x37;
+// the messages the server makes
+pub const MSG_COMMUNICATIONS_TICK: u8 = 0x26;
+pub const MSG_PLAYER_CONNECTION_CHECK: u8 = 0x29;
+pub const MSG_REMOVE_PLAYER: u8 = 0x2b;
+pub const MSG_STOP_GAME: u8 = 0x2f;
+pub const MSG_CLIENT_RECONNECTION_REQUEST_RESPONSE: u8 = 0x38;
+pub const MSG_SERVER_IS_ALIVE: u8 = 0x3a;
+
+// the members the server reads (NEMRecord's numbering: ee_netmsg engine.rs's wire order)
+/// the tick response's last tick processed, its average physics tick time and its players' inputs (their count)
+const TICK_RESPONSE_LAST_CT: u32 = 0;
+const TICK_RESPONSE_PHYSICS_TIME: u32 = 2;
+const TICK_RESPONSE_INPUTS: u32 = 3;
+/// the checksum response's tick and checksum
+const CHECKSUM_RESPONSE_TICK: u32 = 0;
+const CHECKSUM_RESPONSE_CHECKSUM: u32 = 1;
+/// the reconnection request's tick
+const RECONNECTION_REQUEST_CT: u32 = 0;
 
 /// A received packet's buffer (`unsigned char theBuffer[0x200]`)
 const PACKET_SIZE: usize = 0x200;
@@ -116,10 +133,12 @@ pub trait ServerHost: QHost {
     /// `SetForSpecificSlot` (false) or `SetOriginatingSlot` (true)
     fn msg_set_slot(&self, m: Msg, originating: bool, slot: u8);
     fn msg_flag(&self, m: Msg, f: MsgFlag) -> bool;
-    fn msg_get(&self, m: Msg, f: MsgField) -> u32;
-    /// a new message (RemovePlayer: player, booted | out of sync << 1 | exiting << 2; CommunicationsTick: tick,
-    /// PTs | PTs a second << 8 | checksum << 16, out of sync; ReconnectionRequestResponse: error, slot, tick)
-    fn msg_new(&self, kind: NewMsg, a: u32, b: u32, c: u32) -> Msg;
+    /// `GetOriginatingSlot()` (any message)
+    fn msg_slot(&self, m: Msg) -> u8;
+    /// an engine message's member `i` (`NEMRecord`'s numbering): its value, the players' inputs' count for the inputs
+    fn msg_get(&self, m: Msg, i: u32) -> u32;
+    /// a new engine message of a type (`new NEMRecord(type, values)`): its fixed members in record order
+    fn msg_new(&self, message_type: u8, values: &[u32]) -> Msg;
     /// `NEMCommunicationsTickResponse::GetPlayerInput(i, out)`
     fn msg_tick_response_input(&self, m: Msg, i: u32, out: &mut Msg) -> i32;
     /// `NEMCommunicationsTick::AddPlayerInput(input)`
@@ -279,7 +298,8 @@ impl<H: ServerHost> TuneHost for Back<H> {
     }
     fn remove_player_input(&self, slot: u8) {
         let s = self.s();
-        let m = s.host.msg_new(NewMsg::RemovePlayer, slot as u32, 1, 0);
+        // the player; not out of sync, not exiting, booted
+        let m = s.host.msg_new(MSG_REMOVE_PLAYER, &[slot as u32, 0, 0, 1]);
         s.host.process_local_user_input(m, SLOT_NONE);
     }
 }
@@ -710,8 +730,8 @@ impl<H: ServerHost> Server<H> {
         self.send_to_slot.lock().unwrap_or_else(|e| e.into_inner())
     }
     /// A message to all, guaranteed, then given back (the original's `new X; SetOriginatingSlot(server); ...`)
-    fn new_server_message(&self, kind: NewMsg, a: u32) -> Msg {
-        let m = self.host.msg_new(kind, a, 0, 0);
+    fn new_server_message(&self, message_type: u8, values: &[u32]) -> Msg {
+        let m = self.host.msg_new(message_type, values);
         if m != 0 {
             self.host.msg_set_slot(m, true, SLOT_SERVER);
         }
@@ -919,8 +939,8 @@ impl<H: ServerHost> Server<H> {
     /// PauseGame and UnpauseGame: the request queued to every client, its answers awaited
     pub fn pause_game(&self, pause: bool) {
         let _l = self.pause_lock.lock();
-        let kind = if pause { NewMsg::PauseGame } else { NewMsg::UnPauseGame };
-        let m = self.new_server_message(kind, self.current_ct.load(SeqCst));
+        let message_type = if pause { MSG_PAUSE_GAME } else { MSG_UNPAUSE_GAME };
+        let m = self.new_server_message(message_type, &[self.current_ct.load(SeqCst)]);
         if m != 0 {
             self.send_to_all_and_wait(m, 3000, 40);
             self.host.msg_dereference(m);
@@ -930,7 +950,7 @@ impl<H: ServerHost> Server<H> {
     /// ProcessCommunicationsTickResponse: a client's inputs replayed, its response time and answer logged
     fn process_communications_tick_response(&self, m: Msg) {
         let mut i = 0;
-        while i < self.host.msg_get(m, MsgField::NumberOfPlayerInputs) {
+        while i < self.host.msg_get(m, TICK_RESPONSE_INPUTS) {
             let mut input = 0;
             if self.host.msg_tick_response_input(m, i, &mut input) == ERROR_OK {
                 self.host.msg_reference(input);
@@ -939,8 +959,8 @@ impl<H: ServerHost> Server<H> {
             i += 1;
         }
         let slot = self.msg_slot(m);
-        let ct = self.host.msg_get(m, MsgField::LastCtProcessed);
-        let cpu = self.host.msg_get(m, MsgField::AveragePhysicsTickTime);
+        let ct = self.host.msg_get(m, TICK_RESPONSE_LAST_CT);
+        let cpu = self.host.msg_get(m, TICK_RESPONSE_PHYSICS_TIME);
         self.mm().log_response_time(slot, ct, cpu as u16);
         self.mm().log_response(m);
         self.host.msg_dereference(m);
@@ -1022,8 +1042,8 @@ impl<H: ServerHost> Server<H> {
                 self.host.msg_dereference(m);
             }
             MSG_WORLD_DATABASE_CHECKSUM_RESPONSE => {
-                let tick = self.host.msg_get(m, MsgField::ChecksumTick);
-                let checksum = self.host.msg_get(m, MsgField::Checksum);
+                let tick = self.host.msg_get(m, CHECKSUM_RESPONSE_TICK);
+                let checksum = self.host.msg_get(m, CHECKSUM_RESPONSE_CHECKSUM);
                 self.log_checksum_response(tick, checksum, self.msg_slot(m));
                 self.host.msg_dereference(m);
             }
@@ -1037,18 +1057,15 @@ impl<H: ServerHost> Server<H> {
                     && self.game_state.load(SeqCst) == STATE_OPEN
                 {
                     self.mm().register_slot(self.msg_slot(m));
-                    if self.host.msg_get(m, MsgField::ReconnectionCt) < self.lowest_reconnect_ct.load(SeqCst) {
-                        let ct = self.host.msg_get(m, MsgField::ReconnectionCt);
+                    if self.host.msg_get(m, RECONNECTION_REQUEST_CT) < self.lowest_reconnect_ct.load(SeqCst) {
+                        let ct = self.host.msg_get(m, RECONNECTION_REQUEST_CT);
                         self.lowest_reconnect_ct.store(ct, SeqCst);
                         self.restart_ct.store(ct, SeqCst);
                     }
                     let slot = self.msg_slot(m);
-                    let response = self.host.msg_new(
-                        NewMsg::ReconnectionRequestResponse,
-                        0,
-                        self.msg_slot(m) as u32,
-                        self.current_ct.load(SeqCst),
-                    );
+                    // the error, the new send-to slot, the tick
+                    let values = [0, self.msg_slot(m) as u32, self.current_ct.load(SeqCst)];
+                    let response = self.host.msg_new(MSG_CLIENT_RECONNECTION_REQUEST_RESPONSE, &values);
                     self.mm().send_to(response, slot, true);
                     self.host.process_system_message(m);
                     self.host.msg_dereference(m);
@@ -1066,7 +1083,7 @@ impl<H: ServerHost> Server<H> {
     }
 
     fn msg_slot(&self, m: Msg) -> u8 {
-        self.host.msg_get(m, MsgField::OriginatingSlot) as u8
+        self.host.msg_slot(m)
     }
 
     /// RecordPlaybackCallback: the server's own messages to ProcessLocalUserInput2, the clients' to
@@ -1109,8 +1126,8 @@ impl<H: ServerHost> Server<H> {
         if !found {
             return;
         }
-        let flags = was_booted as u32 | (is_oos as u32) << 1 | (game_is_exiting as u32) << 2;
-        let m = self.host.msg_new(NewMsg::RemovePlayer, player as u32, flags, 0);
+        let values = [player as u32, is_oos as u32, game_is_exiting as u32, was_booted as u32];
+        let m = self.host.msg_new(MSG_REMOVE_PLAYER, &values);
         if m != 0 {
             self.host.process_local_user_input(m, SLOT_NONE);
         }
@@ -1127,7 +1144,7 @@ impl<H: ServerHost> Server<H> {
         let _t = self.sct_lock.lock();
         let _s = self.s2aw_lock.lock();
         if !self.is_oos() && tune && !self.tune().tune_server() {
-            let m = self.new_server_message(NewMsg::ServerIsAlive, 0);
+            let m = self.new_server_message(MSG_SERVER_IS_ALIVE, &[]);
             self.mm().send(m, false);
             self.host.msg_dereference(m);
             return;
@@ -1151,7 +1168,7 @@ impl<H: ServerHost> Server<H> {
             if self.ping.load(SeqCst) && self.host.time().wrapping_sub(self.last_ping_time.load(SeqCst)) > 3000 {
                 let now = self.host.time();
                 self.last_ping_time.store(now, SeqCst);
-                let m = self.host.msg_new(NewMsg::PlayerConnectionCheck, now, 0, 0);
+                let m = self.host.msg_new(MSG_PLAYER_CONNECTION_CHECK, &[now]);
                 self.host.process_local_user_input(m, SLOT_NONE);
             }
         } else if !self.is_oos()
@@ -1164,9 +1181,10 @@ impl<H: ServerHost> Server<H> {
             pts = 0;
         }
         let checksum = ((generate_checksum && pts > 0) || self.is_oos()) && self.multiplayer();
-        let flags = pts as u32 | (self.pts_per_second.load(SeqCst) as u32) << 8 | (checksum as u32) << 16;
-        let tick =
-            self.host.msg_new(NewMsg::CommunicationsTick, self.current_ct.load(SeqCst), flags, self.is_oos() as u32);
+        // the tick, its PTs, the PTs a second, the checksum flag, the world dump (out of sync)
+        let rate = self.pts_per_second.load(SeqCst) as u32;
+        let values = [self.current_ct.load(SeqCst), pts as u32, rate, checksum as u32, self.is_oos() as u32];
+        let tick = self.host.msg_new(MSG_COMMUNICATIONS_TICK, &values);
         if tick == 0 {
             return;
         }
@@ -1357,7 +1375,7 @@ impl<H: ServerHost> Server<H> {
                 2 => {
                     self.host.event_clear(events[2]);
                     if wait_state != 2 {
-                        let m = self.host.msg_new(NewMsg::StopGame, 0, 0, 0);
+                        let m = self.host.msg_new(MSG_STOP_GAME, &[]);
                         if m != 0 {
                             self.host.msg_set_slot(m, true, SLOT_SERVER);
                             self.mm().send(m, true);
