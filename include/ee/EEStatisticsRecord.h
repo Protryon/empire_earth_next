@@ -18,7 +18,6 @@ public:
     const UWideString& GetName() const { return this->mName; }  // inline (EEUIEPGSEOpen 0x5e3d6f)
     const GEColor& GetColor() const { return this->mColor; }
     long GetResult() const { return this->mResult; }
-    bool GetIsHuman() const { return this->mIsHuman; }
     UWideString mName;                      // +0x304 (the summary's name label)
     GEColor mColor;                         // +0x318 (the player's colour: bars and graph series)
     long mResult;                           // +0x324 (1 / 2: the victory / defeat banner; 0 ends the report loop)

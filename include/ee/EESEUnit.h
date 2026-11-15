@@ -24,12 +24,15 @@ class EESEUICCommandUnits;
 class EESEAMouseClick;
 class EESEALasso;
 class EESEARust;
-class GEBitmap;
 class GEFont;
 class UIComboBox;
-class UIEvent;
-class UIRadioButton;
-class UITextLabel;
+class UIForm;
+class UILBString;
+
+// Whole in Rust (ee_screens editor_unit.rs: its controls, the palettes, sorts and owners and the class list they
+// fill, the cargo, the placement state, the mouse and keys): the class holds the object and its members forward. The
+// build tools stay by-value C++ members (their Build and Cancel call back PlaceWall, EndWall, PlaceGate, EndGate).
+struct EeScreensSeUnit;
 
 class EESEUnit : public EEUIFSEMainGroup {
 public:
@@ -42,72 +45,40 @@ public:
     virtual void MouseMove(const GE2DPoint& inLocation);      // +0x24 0x19c84b (the mouse over the game view)
     virtual void UpdateKeys();              // +0x28 0x19cada (the keyboard)
 
-    // the player the tab edits: 0 with the world radio button, else the player combo box's selection + 1 (inline;
-    // defined in EESEUnit.cpp, its only user)
-    long GetCurrentPlayer();
     void PlaceWall();                       // 0x19bcd5 (mPlaceWall from mBuildWall's ends)
     void EndWall();                         // 0x19bd2d
     void PlaceGate();                       // 0x19bfdc
     void EndGate();                         // 0x19c026
     void ReselectUnitType();                // 0x19c05d (re-selects the unit type at the mouse while placing)
     void ShowCargo(bool inShow);            // 0x19c141
-    // 0x19c1a1: forwards inUnit to +0xb4's 0x1a551a (EEAUpgradeImprovement::Virtual4 after an editor upgrade)
-    // (provisional name)
-    void ShowUnitStatus(EEUnit* inUnit);
-    long GetLayer();                        // 0x19c221 (0 world, 1 land/2 sea by the two radio buttons)
-    // 0x19c246 (+0xb8's 0x19a5d7: a float by +0x114's case; EESELoadThread Handle402) (provisional name)
-    float GetRotationAngle();
+    void ShowUnitStatus(EEUnit* inUnit);    // 0x19c1a1 (the upgrade panel shows inUnit)
+    long GetLayer();                        // 0x19c221 (0 world, 1 players, 2 neither radio button)
+    float GetRotationAngle();               // 0x19c246 (the rotation button's yaw; EESELoadThread Handle402)
     long GetSortMode();                     // 0x19c251 (0..3 by the three sort radio buttons)
-    long GetUnitTypeMode();                 // 0x19c287 (the unit type buttons' global 0x531ff0)
     void SelectUnitType(const GE2DPoint& inLocation);   // 0x19c37b (the unit list's selection starts placing it)
-    // 0x19c535: refreshes the tab after the selection changed (the lasso/click actions) (provisional name)
-    void UpdateSelection();
+    void UpdateSelection();                 // 0x19c535 (the cargo list after the selection changed)
     void RefreshUnitList();                 // 0x19c64b (the unit classes for the mode, sort and layer)
+
+    // the placement state read from outside the tab (the move and placement actions, the boarding finder, the
+    // render's lasso, the editor gate): the unit under the mouse while placing (-1: none), the selection tool
+    long GetUnitUnderMouse() const;
+    void SetUnitUnderMouse(long inUnit);
+    EEUICSelectUnits* GetSelectUnits() const;
+    // the editor gate's: 1 placing, 2 a wall, 4 a gate, 8 a held gate; the palette, sort and owner last listed
+    long GetPlacingFlags() const;
+    void GetListState(long& outMode, long& outSort, long& outLayer) const;
 
     GERhombus mRhombus;                     // +0x04
     EESEUIBuildWall mBuildWall;             // +0x1c
     EESEUIBuildGate mBuildGate;             // +0x3c
-    GERectangle mPanelRectangle;            // +0x5c (Virtual18: (0, 0)-(224, 605))
-    long mL6C;                              // +0x6c (zeroed by the ctor)
-    long mL70;                              // +0x70
-    long mL74;                              // +0x74
-    long mL78;                              // +0x78
-    long mL7C;                              // +0x7c
-    long mL80;                              // +0x80
-    long mL84;                              // +0x84
-    GEBitmap* mBackground;                  // +0x88 ("textures\scenunit")
-    EEUIFSELBUnitList* mUnitList;           // +0x8c (0x3f1)
-    EEUIFSEBUnitType* mUnitTypeButtons[6];  // +0x90 (0x406..0x40b)
-    UIRadioButton* mAlphaSortButton;        // +0xa8 (0x3ee; the dtor deletes the three one by one)
-    UIRadioButton* mEpochSortButton;        // +0xac (0x3ef)
-    UIRadioButton* mFamilySortButton;       // +0xb0 (0x3f0)
-    EEUIFSEUpgradePanel* mUpgradePanel;     // +0xb4 (new 0x60, ctor 0x1a4e99)
-    EEUIFSEBRotation* mRotation;            // +0xb8 (0x3f5)
-    EEUIFSELBCargoList* mCargoList;         // +0xbc (0x3f2)
-    EEUIFSEBRemoveCargo* mRemoveCargo;      // +0xc0 (0x3f4)
-    UIEvent* mSortEvent;                    // +0xc4 (EEUIFSEESortUnitList)
-    UITextLabel* mSortLabel;                // +0xc8 (0x3ed)
-    UIRadioButton* mWorldButton;            // +0xcc (1000)
-    UIRadioButton* mSeaButton;              // +0xd0 (0x3ea)
-    UITextLabel* mTitleLabel;               // +0xd4 (0x3f3)
-    UIComboBox* mPlayerComboBox;            // +0xd8 (the editor's)
-    GEBitmap* mUnitTypeBitmaps[12];         // +0xdc (normal, pressed) x 6 (flat: the dtor 0x59bb38 loops 12 x 4 bytes)
-    EEUICSelectUnits* mSelectUnits;         // +0x10c (0x3f6)
-    EESEUICCommandUnits* mCommandUnits;     // +0x110 (0x3f7)
-    EESEAMouseClick* mMouseClick;           // +0x114
-    EESEALasso* mLasso;                     // +0x118
-    EESEARust* mPlaceUnit;                  // +0x11c
-    EESEARust* mPlaceGate;                  // +0x120
-    EESEARust* mPlaceWall;                  // +0x124
-    EESEARust* mMoveUnit;                   // +0x128 (the original's EESEAMoveUnit, new 0x20, ctor 0x1a75e0)
-    long mUnitTypeMode;                     // +0x12c (6: none yet)
-    long mSortMode;                         // +0x130 (3)
-    long mLayer;                            // +0x134 (2)
-    long mUnitUnderMouse;                   // +0x138 (-1: the unit id under the mouse)
-    bool mPlacing;                          // +0x13c
-    bool mPlacingWall;                      // +0x13d
-    bool mPlacingGate;                      // +0x13e
-    bool mIsGateHeld;                       // +0x13f
+    GERectangle mPanelRectangle;            // +0x5c (Enter: (0, 0)-(224, 605))
+    UIForm* mForm;                          // the editor form (the panel's background is drawn on it)
+    EeScreensSeUnit* mRust;                 // the tab (editor_unit.rs)
 };
+
+// the shared control maker's unit tab lists (EESERBUnitTypes.cpp SeplMake): inKind 1 the class list
+// (EEUIFSELBUnitList), 2 the cargo list (EEUIFSELBCargoList)
+UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
+                            unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
 #endif

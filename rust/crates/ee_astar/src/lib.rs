@@ -32,9 +32,11 @@
 //! `tools/sim_capture.py`'s A* records: every search of the six oracle games, its goal calls and view answers and its
 //! storage afterwards, digested and compared with the digests of the C++ machine.
 
+pub mod area;
 pub mod area_geom;
 pub mod area_goals;
 pub mod choke;
+pub mod continent;
 pub mod continent_grid;
 pub mod ffi;
 pub mod goals;

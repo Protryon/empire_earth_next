@@ -2,6 +2,8 @@
 // 0x446120). A player's tech tree: 0x1cba2f..0x1cdf25 (the eight key chains and sUnitClassInfo's chain, the ctor ..
 // EEEvent::GetEffect's COMDAT; EETechTreeEpoch.cpp's key chain 0x1cdf25 opens the next unit). Classes in
 // ee/EEPlayer.h. Unit flags: the exe's module set.
+// port (R5b.4, round 29): the tree's walks, its saved game, its checksum and the media table (sUnitClassInfo) are Rust
+// (ee_tech nodes.rs) over the records the classes derive from and EETechHost below.
 
 #include <windows.h>
 #include <algorithm>
@@ -50,48 +52,124 @@ const UString EETechTree::sCurrentEpoch("EETechTree-CurrentEpoch");
 const UString EETechTree::sStartEpoch("EETechTree-StartEpoch");
 const UString EETechTree::sEndEpoch("EETechTree-EndEpoch");
 
-// gTechTree's event effects by unit class (BuildUnitClassInfo 0x1cbe4a fills it; GetUnitClassMediaMask/IsLatestEffect read it). The
-// ctor, copy ctor and dtor are user-declared inline (COMDATs 0x1cd48d/0x1cd503/0x1cd5cf after map::operator[]): the
-// copy ctor default-constructs the vectors and assigns them, the dtor clears them before their own dtors.
-// One vector per effect kind (provisional names).
-struct EETechTreeUnitClassInfo {
-    EETechTreeUnitClassInfo()
-    {
-        this->mTechnology = kTechNone;
+// The walks' host (ee_tech nodes.rs EE_TECH_HOST_*): the tree's containers, the entry points the simulation capture
+// wraps (called here so their records keep their order), the world and the capture's walk records
+int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io)
+{
+    EETechTree* theTree = static_cast<EETechTree*>(inTree);
+    EETechTreeNode* theNode = static_cast<EETechTreeNode*>(io->node.obj);
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(io->unit);
+    int32_t* v = io->v;
+    switch (inOp) {
+    case EE_TECH_HOST_EPOCHS: v[0] = (int32_t)theTree->mEpochs.size(); return 0;
+    case EE_TECH_HOST_EPOCH: io->node = EETechRef(&theTree->mEpochs[v[0]]); return 0;
+    case EE_TECH_HOST_EPOCH_NODES: {
+        std::map<long, EETechTreeNode*>& theNodes = static_cast<EETechTreeEpoch*>(theNode)->mNodes;
+        uint32_t k = 0;
+        for (std::map<long, EETechTreeNode*>::iterator it = theNodes.begin(); it != theNodes.end() && k < io->count; ++it)
+            io->nodes[k++] = EETechRef(it->second);
+        return (int32_t)theNodes.size();
     }
-    EETechTreeUnitClassInfo(const EETechTreeUnitClassInfo& inOther)
-    {
-        this->mModelTechs = inOther.mModelTechs;
-        this->mAcknowledgeSound1Techs = inOther.mAcknowledgeSound1Techs;
-        this->mAcknowledgeSound2Techs = inOther.mAcknowledgeSound2Techs;
-        this->mCreationSoundTechs = inOther.mCreationSoundTechs;
-        this->mDeathSoundTechs = inOther.mDeathSoundTechs;
-        this->mSelectionSound1Techs = inOther.mSelectionSound1Techs;
-        this->mSelectionSound2Techs = inOther.mSelectionSound2Techs;
-        this->mTechnology = inOther.mTechnology;
+    case EE_TECH_HOST_NODE: {
+        EETechTreeNode* theFound = theTree->Get(v[0]);
+        if (theFound == NULL)
+            return 0;
+        io->node = EETechRef(theFound);
+        return 1;
     }
-    ~EETechTreeUnitClassInfo()
-    {
-        this->mModelTechs.clear();
-        this->mAcknowledgeSound1Techs.clear();
-        this->mAcknowledgeSound2Techs.clear();
-        this->mCreationSoundTechs.clear();
-        this->mDeathSoundTechs.clear();
-        this->mSelectionSound1Techs.clear();
-        this->mSelectionSound2Techs.clear();
+    case EE_TECH_HOST_EPOCH_OF: v[0] = (int32_t)EETechTreeEpochOf(v[0]); return 0;
+    case EE_TECH_HOST_EPOCH_COUNT: v[0] = (int32_t)gEpochCount; return 0;
+    case EE_TECH_HOST_RESEARCH_NODE: return (int32_t)theNode->ResearchNode(theUnit);
+    case EE_TECH_HOST_SET_PREREQUISITE: theNode->SetPrerequisite(v[0]); return 0;
+    case EE_TECH_HOST_EPOCH_RESEARCH: return (int32_t)static_cast<EETechTreeEpoch*>(theNode)->Research(v[0], theUnit);
+    case EE_TECH_HOST_ADD_SOL: static_cast<EETechTreeEpoch*>(theNode)->AddSOL(); return 0;
+    case EE_TECH_HOST_UPDATE_AVAILABILITY: static_cast<EETechTreeEpoch*>(theNode)->UpdateAvailability(); return 0;
+    case EE_TECH_HOST_NEEDS_UNIT_MEDIA: return theNode->NeedsUnitMedia() ? 1 : 0;
+    case EE_TECH_HOST_TRIGGER:
+        EEEvent::Trigger(v[0], theTree->mPlayerIndex, v[1], theTree->mPlayer, theUnit);
+        return 0;
+    case EE_TECH_HOST_UPDATE_INTERFACE: theTree->UpdateInterface(v[0] != 0); return 0;
+    case EE_TECH_HOST_ON_RESEARCHED: {
+        // OnResearched 0x1ccdac: the player's epoch hook and statistics series 0x13 (its unit: always NULL)
+        EEPlayer* thePlayer = theTree->GetPlayer();
+        if (thePlayer != NULL) {
+            thePlayer->EpochReached(v[0]);
+            thePlayer->mSavedGroups.Reset(0x13, 1);
+        }
+        return 0;
     }
+    case EE_TECH_HOST_STATISTIC:
+        if (v[0] == 2)
+            theTree->mPlayer->mSavedGroups.Set(v[1], v[2]);
+        else
+            (v[0] == 0 ? theTree->mPlayer : theTree->GetPlayer())->mSavedGroups.Reset(v[1], 1);
+        return 0;
+    case EE_TECH_HOST_UNLOAD_UNIT_MEDIA: theTree->GetPlayer()->UnloadUnitClassMedia(v[0]); return 0;
+    case EE_TECH_HOST_EVENTS_ENABLED: gEventsEnabled = v[0] != 0; return 0;
+    case EE_TECH_HOST_IS_LOCAL: return gWorld.mPlayers[theTree->mPlayerIndex] == gWorld.GetCurrentPlayer() ? 1 : 0;
+    case EE_TECH_HOST_SHOW_EPOCH_NAME:
+        theTree->mEpochNameID = EEEpochTitleID(v[0]);
+        gUserInterface->PostShowEpochName();
+        if (gUIManager->mMainGameForm != NULL)
+            gUIManager->mMainGameForm->mRefreshGroup = true;
+        return 0;
+    case EE_TECH_HOST_ASSERT: ESVERIFY_AT(false, v[0]); return 0;
+    case EE_TECH_HOST_WALK_BEGIN: EETechCaptureWalkBegin(); return 0;
+    case EE_TECH_HOST_WALK_STEP: EETechCaptureWalkStep(v[0], v[1]); return 0;
+    case EE_TECH_HOST_WALK: EETechCaptureWalk(v[0], v[4] ? theTree : NULL, theNode, v[1], v[2], v[3]); return 0;
+    case EE_TECH_HOST_CAPTURE_EPOCHS:
+        if (EESimCaptureRecord::Active()) {   // TEPO (TEST ONLY): SetEpoch 0, ResearchToEpoch 1, SetEpochRange 2
+            EESimCaptureRecord theRecord(EECaptureTag("TEPO"));
+            theRecord.U32((unsigned int)v[0]);
+            theRecord.I32(v[1]);
+            if (v[0] == 2)
+                theRecord.I32(v[2]);
+            EETechCaptureTree(theRecord, theTree);
+            theRecord.Commit();
+        }
+        return 0;
+    case EE_TECH_HOST_CAPTURE_EPOCH_STEP: EETechCaptureEpochStep(v[0], v[1]); return 0;
+    case EE_TECH_HOST_CAPTURE_RESEARCH_TO_EPOCH: EETechCaptureResearchToEpoch(theTree, v[0], v[1] != 0); return 0;
+    case EE_TECH_HOST_EFFECT_COUNT:
+    case EE_TECH_HOST_EFFECT: {
+        EEEvent* theEvent = EEEvent::Get(theNode->mData->mResearchedEvent);
+        if (inOp == EE_TECH_HOST_EFFECT_COUNT)
+            return theEvent != NULL ? (int32_t)theEvent->GetNumEffects() : 0;
+        EEEventEffect* theEffect = EEEvent::GetEventEffect(theEvent->GetEffect(v[0]));
+        v[0] = (int32_t)theEffect->mKind;
+        v[1] = (int32_t)theEffect->mUnitClass;
+        v[2] = (int32_t)theEffect->mTechnology;
+        return 0;
+    }
+    case EE_TECH_HOST_CLASS_TYPE: {
+        EEUnitClass* theClass = v[0] >= 0 && v[0] < (int32_t)EEUnitClassCount() ? gUnitClassTable[v[0]] : NULL;
+        if (theClass == NULL)
+            return 0;
+        v[0] = (int32_t)theClass->mUnitType;
+        return 1;
+    }
+    }
+    return 0;
+}
 
-    std::vector<long> mModelTechs;          // +0x00
-    std::vector<long> mAcknowledgeSound1Techs;  // +0x10
-    std::vector<long> mAcknowledgeSound2Techs;  // +0x20
-    std::vector<long> mCreationSoundTechs;  // +0x30
-    std::vector<long> mDeathSoundTechs;     // +0x40
-    std::vector<long> mSelectionSound1Techs;  // +0x50
-    std::vector<long> mSelectionSound2Techs;  // +0x60
-    long mTechnology;                       // +0x70 the kind-9 effect's technology (100000: none)
+// The saved game's walks: the file's long and bool (EESavePrimitive), the rest EETechHost's
+struct EETechSaveContext {
+    EETechTree* mTree;
+    FSFile* mFile;
 };
 
-static std::map<long, EETechTreeUnitClassInfo> sUnitClassInfo;    // 0x562d40 (unguarded atexit dtor: not a class static)
+static int32_t EETechSaveHost(void* inContext, int32_t inOp, EeTechHostIo* io)
+{
+    EETechSaveContext& theContext = *static_cast<EETechSaveContext*>(inContext);
+    static const int32_t kOps[4] = {EE_UNITS_PLAYER_SAVE_READ_LONG, EE_UNITS_PLAYER_SAVE_READ_BOOL,
+                                    EE_UNITS_PLAYER_SAVE_WRITE_LONG, EE_UNITS_PLAYER_SAVE_WRITE_BOOL};
+    if (inOp < EE_TECH_HOST_READ_LONG || inOp > EE_TECH_HOST_WRITE_BOOL)
+        return EETechHost(theContext.mTree, inOp, io);
+    EeUnitsPlayerSaveIo theIo = {io->v[0], 0.0f, (uint8_t)(io->v[0] != 0 ? 1 : 0)};
+    int32_t theResult = EESavePrimitive(*theContext.mFile, kOps[inOp - EE_TECH_HOST_READ_LONG], &theIo);
+    io->v[0] = inOp == EE_TECH_HOST_READ_BOOL ? theIo.b : (int32_t)theIo.i;
+    return theResult;
+}
 
 // FUNCTION: EXE 0x5cbc87
 // Reads a tech's researched, obsolete and editor-obsoleted flags; false for an unknown tech id
@@ -138,8 +216,15 @@ long EEEpochTitleID(long inEpoch)
 // FUNCTION: EXE 0x5cbcc2
 // Creates an empty tech tree spanning every epoch
 EETechTree::EETechTree()
-    : mPlayer(NULL), mCurrentEpoch(kTechEpochPrehistoric), mStartEpoch(kTechEpochPrehistoric), mEndEpoch(gEpochCount - 1), mMediaID(0), mEpochNameID(IDS_PREHISTORIC_AGE), mIsLoaded(false)
+    : mPlayer(NULL)
 {
+    this->mCurrentEpoch = kTechEpochPrehistoric;
+    this->mStartEpoch = kTechEpochPrehistoric;
+    this->mEndEpoch = gEpochCount - 1;
+    this->mMediaID = 0;
+    this->mEpochNameID = IDS_PREHISTORIC_AGE;
+    this->mIsLoaded = false;
+    this->mSaved = NULL;
     this->mEpochsBeforeWonders = 1;
     this->mEpochs.Resize(gEpochCount);
 }
@@ -148,9 +233,10 @@ EETechTree::EETechTree()
 // (the scalar deleting destructor, emitted with the vtable; slot EETechTree+0x0)
 
 // FUNCTION: EXE 0x5cbd99
-// Destroys the tech tree and its epochs
+// Destroys the tech tree and its epochs (and the saved game's lists, Rust's)
 EETechTree::~EETechTree()
 {
+    ee_tech_tree_fields_free(this);
 }
 
 // FUNCTION: EXE 0x5cbdf0
@@ -180,66 +266,10 @@ long EETechTree::Load(FSFileSpec& inFile)
 
 // FUNCTION: EXE 0x5cbe4a
 // Indexes, per unit type, the techs whose research event changes its model or sounds or upgrades it into
-// another class (the shared table the media-mask queries read)
+// another class (the shared table the media-mask queries read; ee_tech nodes.rs build_unit_class_info)
 void EETechTree::BuildUnitClassInfo()
 {
-    std::vector<long> theIDs;
-    for (long theEpoch = 0; theEpoch < EEEpochCount(); theEpoch++) {
-        theIDs.clear();
-        gTechTree.GetEpochNodeIDs(theEpoch, theIDs);
-        theIDs.push_back(theEpoch);
-        for (unsigned long i = 0; i < theIDs.size(); i++) {
-            EETechTreeNode* theNode = gTechTree.Get(theIDs[i]);
-            if (theNode == NULL || !(theNode->mData->mResearchedEvent > 0))
-                continue;
-            EEEvent* theEvent = EEEvent::Get(theNode->mData->mResearchedEvent);
-            if (theEvent == NULL)
-                continue;
-            for (unsigned long j = 0; j < theEvent->GetNumEffects(); j++) {
-                long theUnitClass = EEEvent::GetEventEffect(theEvent->GetEffect(j))->mUnitClass;
-                EEUnitClass* theClass = (theUnitClass > 0 && theUnitClass < EEUnitClassCount()) ? gUnitClassTable[theUnitClass] : NULL;
-                if (theClass != NULL) {
-                    switch (EEEvent::GetEventEffect(theEvent->GetEffect(j))->mKind) {
-                    case 6:
-                        sUnitClassInfo[theClass->mUnitType].mModelTechs.push_back(theIDs[i]);
-                        break;
-                    case 9: {
-                        EETechTreeNode* theTechnology =
-                            gTechTree.Get(EEEvent::GetEventEffect(theEvent->GetEffect(j))->mTechnology);
-                        if (theTechnology != NULL && gUnitClassTable[theTechnology->mData->mUnitClass] != NULL)
-                            sUnitClassInfo[gUnitClassTable[theTechnology->mData->mUnitClass]->mUnitType].mTechnology =
-                                theIDs[i];
-                        break;
-                    }
-                    case 0xf:
-                        sUnitClassInfo[theClass->mUnitType].mAcknowledgeSound1Techs.push_back(theIDs[i]);
-                        break;
-                    case 0x10:
-                        sUnitClassInfo[theClass->mUnitType].mCreationSoundTechs.push_back(theIDs[i]);
-                        break;
-                    case 0x11:
-                        sUnitClassInfo[theClass->mUnitType].mDeathSoundTechs.push_back(theIDs[i]);
-                        break;
-                    case 0x12:
-                        sUnitClassInfo[theClass->mUnitType].mSelectionSound1Techs.push_back(theIDs[i]);
-                        break;
-                    case 0x14:
-                        sUnitClassInfo[theClass->mUnitType].mAcknowledgeSound2Techs.push_back(theIDs[i]);
-                        break;
-                    case 0x15:
-                        sUnitClassInfo[theClass->mUnitType].mSelectionSound2Techs.push_back(theIDs[i]);
-                        break;
-                    }
-                } else if (EEEvent::GetEventEffect(theEvent->GetEffect(j))->mKind == 9) {
-                    EETechTreeNode* theTechnology =
-                        gTechTree.Get(EEEvent::GetEventEffect(theEvent->GetEffect(j))->mTechnology);
-                    if (theTechnology != NULL && gUnitClassTable[theTechnology->mData->mUnitClass] != NULL)
-                        sUnitClassInfo[gUnitClassTable[theTechnology->mData->mUnitClass]->mUnitType].mTechnology =
-                            theIDs[i];
-                }
-            }
-        }
-    }
+    EETechTreeWalk(&gTechTree, EeTechTreeOp::BuildUnitClassInfo);
 }
 
 // FUNCTION: EXE 0x5cc282
@@ -252,54 +282,11 @@ void EETechTree::UnloadAll()
 }
 
 // FUNCTION: EXE 0x5cc29a
-// Reapplies the saved obsolete techs, then researches the saved researched techs
-void EETechTree::ApplySavedResearch()
-{
-    std::vector<long> theUnused1;
-    std::vector<long> theUnused2;
-    std::vector<long>::iterator theID;
-    for (theID = this->mObsoleteIDs.begin(); theID != this->mObsoleteIDs.end(); theID++) {
-        EETechTreeNode* theNode = this->Get(*theID);
-        if (theNode != NULL)
-            theNode->SetObsolete(true, true);
-    }
-    for (theID = this->mResearchedIDs.begin(); theID != this->mResearchedIDs.end(); theID++) {
-        EETechTreeNode* theNode = this->Get(*theID);
-        if (theNode != NULL) {
-            theNode->mIsAvailable = true;
-            theNode->ResearchNode(NULL);
-        }
-    }
-}
+// Reapplies the saved obsolete techs, then researches the saved researched techs (ee_tech tree_apply_saved_research)
 
 // FUNCTION: EXE 0x5cc330
 // Reapplies the scenario editor's obsoleted techs and clears that flag from default-obsoleted techs not in the list
-void EETechTree::ApplySavedScenEditorObsoleted()
-{
-    std::vector<long> theIDs;
-    std::vector<long> theCleared;
-    this->GetNodeIDs(theIDs);
-    for (long i = theIDs.size() - 1; i >= 0; i--) {
-        EETechTreeNode* theNode = this->Get(theIDs[i]);
-        if (theNode == NULL || theNode->mData->mObsoletedByDefault != true)
-            continue;
-        long theID = theNode->mData->mID;
-        std::vector<long>::iterator theFound;
-        theFound = std::find(this->mScenEditorObsoletedIDs.begin(), this->mScenEditorObsoletedIDs.end(), theID);
-        if (theFound == this->mScenEditorObsoletedIDs.end())
-            theCleared.push_back(theIDs[i]);
-    }
-    for (std::vector<long>::iterator theObsoleted = this->mScenEditorObsoletedIDs.begin(); theObsoleted != this->mScenEditorObsoletedIDs.end(); theObsoleted++) {
-        EETechTreeNode* theNode = this->Get(*theObsoleted);
-        if (theNode != NULL)
-            theNode->SetScenEditorObsoleted(true, true);
-    }
-    for (long j = theCleared.size() - 1; j >= 0; j--) {
-        EETechTreeNode* theNode = this->Get(theCleared[j]);
-        if (theNode != NULL)
-            theNode->SetScenEditorObsoleted(false, true);
-    }
-}
+// (ee_tech tree_apply_saved_editor_obsoleted)
 
 // FUNCTION: EXE 0x5cc4af
 // Collects the ids of every node of every epoch
@@ -320,32 +307,11 @@ void EETechTree::GetEpochNodeIDs(long inEpoch, std::vector<long>& outIDs)
 }
 
 // FUNCTION: EXE 0x5cc4ec
-// Adds a sync checksum of every tech's and epoch's researched/obsolete state, weighted by position
+// Adds a sync checksum of every tech's and epoch's researched/obsolete state, weighted by position (ee_tech
+// tree_checksum)
 void EETechTree::GetChecksum(ESChecksum& ioChecksum)
 {
-    std::vector<long> theIDs;
-    unsigned long theChecksum = 0;
-    bool theCurrentNodeIsObsolete = false;
-    bool theCurrentNodeIsResearched = false;
-    bool theScenEditorObsoleted = false;
-    this->GetNodeIDs(theIDs);
-    for (long i = 0; i < this->mEpochs.size(); i++) {
-        long theID = this->mEpochs[i].mData->mID;
-        theIDs.push_back(theID);
-    }
-    // each id's state (an unknown id keeps the one before, as the C++ loop did); the weighted sum (from the original's
-    // weight 15) is ee_tech's checksum
-    std::vector<EeTechChecksumEntry> theEntries;
-    for (std::vector<long>::iterator theIterator = theIDs.begin(); theIterator != theIDs.end(); theIterator++) {
-        ESVERIFY_AT(this->GetTechIDState(*theIterator, theCurrentNodeIsResearched, theCurrentNodeIsObsolete, theScenEditorObsoleted), 512);
-        EeTechChecksumEntry theEntry{};
-        theEntry.id = (int32_t)*theIterator;
-        theEntry.researched = theCurrentNodeIsResearched;
-        theEntry.obsolete = theCurrentNodeIsObsolete;
-        theEntries.push_back(theEntry);
-    }
-    theChecksum = ee_tech_checksum(theEntries.empty() ? NULL : &theEntries[0], (uint32_t)theEntries.size());
-    ioChecksum.AddChecksum("EETechTree", theChecksum);
+    ioChecksum.AddChecksum("EETechTree", (unsigned long)(uint32_t)EETechTreeWalk(this, EeTechTreeOp::Checksum));
 }
 
 // FUNCTION: EXE 0x5cc5db
@@ -417,44 +383,11 @@ void EETechTree::SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts)
 }
 
 // FUNCTION: EXE 0x5cc9e8
-// Tells whether a tech's model or sound effect for a unit class is the latest one the tree still uses
+// Tells whether a tech's model or sound effect for a unit class is the latest one the tree still uses (ee_tech
+// is_latest_effect over the media table)
 bool EETechTree::IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind)
 {
-    std::vector<long>* theIDs = NULL;
-    bool theResult = true;
-    std::vector<long>::iterator theID;
-    switch (inKind) {
-    case 6:
-        theIDs = &sUnitClassInfo[inUnitClass].mModelTechs;
-        break;
-    case 0xf:
-        theIDs = &sUnitClassInfo[inUnitClass].mAcknowledgeSound1Techs;
-        break;
-    case 0x10:
-        theIDs = &sUnitClassInfo[inUnitClass].mCreationSoundTechs;
-        break;
-    case 0x11:
-        theIDs = &sUnitClassInfo[inUnitClass].mDeathSoundTechs;
-        break;
-    case 0x12:
-        theIDs = &sUnitClassInfo[inUnitClass].mSelectionSound1Techs;
-        break;
-    case 0x14:
-        theIDs = &sUnitClassInfo[inUnitClass].mAcknowledgeSound2Techs;
-        break;
-    case 0x15:
-        theIDs = &sUnitClassInfo[inUnitClass].mSelectionSound2Techs;
-        break;
-    }
-    theID = std::find(theIDs->begin(), theIDs->end(), inID);
-    for (theID++; theID != theIDs->end(); theID++) {
-        EETechTreeNode* theNode = inTree->Get(*theID);
-        if (theNode->mEpoch < inTree->mStartEpoch && !theNode->mScenEditorObsoleted) {
-            theResult = false;
-            break;
-        }
-    }
-    return theResult;
+    return ee_tech_is_latest_effect(inTree, &EETechHost, inTree, (int32_t)inID, (int32_t)inUnitClass, (int32_t)inKind);
 }
 
 // FUNCTION: EXE 0x5ccb1f
@@ -470,14 +403,7 @@ EEPlayer* EETechTree::GetPlayer()
 // Advances to the next epoch unless the end epoch is reached
 void EETechTree::AdvanceEpoch()
 {
-    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
-    // the next epoch and the test are Rust (ee_tech tree.rs advance_epoch)
-    EeTechAdvance theAdvance = ee_tech_advance_epoch((int32_t)this->mCurrentEpoch, (int32_t)this->mEndEpoch);
-    long theEpoch = (long)this->mCurrentEpoch + 1;   // (TNWK, TEST ONLY: the record's epoch)
-    if (theAdvance.advances) {
-        this->SetEpoch(theAdvance.epoch);
-    }
-    EETechCaptureWalk(8, this, NULL, theEpoch, this->mEndEpoch, theAdvance.advances ? 1 : 0);   // TNWK (TEST ONLY)
+    EETechTreeWalk(this, EeTechTreeOp::AdvanceEpoch);
 }
 
 // FUNCTION: EXE 0x5ccb4a
@@ -485,139 +411,48 @@ void EETechTree::AdvanceEpoch()
 // then refreshes the interface
 void EETechTree::ApplySavedState(bool inApplyObsoleted, bool inApplyResearch)
 {
-    if (inApplyObsoleted == true)
-        this->ApplySavedScenEditorObsoleted();
-    this->SetEpochRange(this->mStartEpoch, this->mEndEpoch);
-    if (inApplyResearch)
-        this->ApplySavedResearch();
-    for (std::vector<EETileCoordinate>::iterator theEntry = this->mSavedSOLs.begin(); theEntry != this->mSavedSOLs.end(); theEntry++) {
-        if (theEntry->mX >= 0 && theEntry->mX < this->mEpochs.size())
-            this->mEpochs[theEntry->mX].mCurrentSOL = theEntry->mY;
-    }
-    for (long i = 0; i < this->mEpochs.size(); i++) {
-        this->mEpochs[i].UpdateAvailability();
-        this->mEpochs[i].mIsCountingSOL = true;
-    }
-    this->UpdateInterface(true);
+    EETechTreeWalk(this, EeTechTreeOp::ApplySavedState, inApplyObsoleted ? 1 : 0, inApplyResearch ? 1 : 0);
 }
 
 // FUNCTION: EXE 0x5ccbc9
 // Reads the saved research, obsolete and editor-obsoleted tech ids, the current/start/end epochs and each epoch's
-// state (14 epochs before version 0.0xea); marks every epoch up to the current one researched
+// state (14 epochs before version 0.0xea); marks every epoch up to the current one researched (ee_tech tree_load)
 long EETechTree::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theNumEpochs = 0;
-    long theNumTechIDs = 0;
-    long theTechID;
-    long theEpoch;
-    bool theIsResearched;
-    bool theIsObsolete;
-    bool theScenEditorObsoleted;
-    this->mObsoleteIDs.clear();
-    this->mResearchedIDs.clear();
-    this->mScenEditorObsoletedIDs.clear();
-    this->mSavedSOLs.clear();
-    long theResult = inFile.Read(theNumEpochs);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(this->mEpochsBeforeWonders);
-        if (theResult == kErrorOK) {
-            this->mIsLoaded = true;
-            ESVERIFY_AT(theNumEpochs <= this->mEpochs.size(), 926);
-            theResult = inFile.Read(theNumTechIDs);
-            if (theResult == kErrorOK) {
-                for (long i = 0; i < theNumTechIDs; i++) {
-                    if (inFile.Read(theTechID) != kErrorOK || inFile.Read(theIsResearched) != kErrorOK
-                        || inFile.Read(theIsObsolete) != kErrorOK)
-                        continue;
-                    if (theIsResearched)
-                        this->AddResearchedID(theTechID);
-                    if (theIsObsolete)
-                        this->AddObsoleteID(theTechID);
-                    if (inFile.Read(theScenEditorObsoleted) == kErrorOK && theScenEditorObsoleted == true)
-                        this->AddScenEditorObsoletedID(theTechID);
-                }
-                theResult = inFile.Read(this->mCurrentEpoch);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(this->mStartEpoch);
-                    if (theResult == kErrorOK)
-                        theResult = inFile.Read(this->mEndEpoch);
-                }
-                long theEpochs = theNumEpochs;   // the saved tree's epochs (the original: 15)
-                if (inMajorVersion == 0 && inMinorVersion < 0xea)
-                    theEpochs = 14;
-                for (theEpoch = 0; theEpoch < theEpochs && theEpoch < this->mEpochs.size(); theEpoch++)
-                    this->mEpochs[theEpoch].Load(inMajorVersion, inMinorVersion, inFile);
-                for (theEpoch = this->mCurrentEpoch; theEpoch >= 0; theEpoch--)
-                    this->mResearchedIDs.insert(this->mResearchedIDs.begin(), theEpoch);
-            }
-        }
-    }
-    return theResult;
+    EETechSaveContext theContext = {this, &inFile};
+    return ee_tech_walk_tree(&theContext, &EETechSaveHost, EeTechTreeOp::Load, this, (int32_t)inMajorVersion,
+                             (int32_t)inMinorVersion, NULL);
 }
 
 // FUNCTION: EXE 0x5ccdac
 // Reports a researched tech or epoch to the player (epoch hook, statistics series 0x13) and to the researching
-// unit
-void EETechTree::OnResearched(long inID, EEComplexUnit* inUnit)
-{
-    EEPlayer* thePlayer = this->GetPlayer();
-    if (thePlayer == NULL)
-        return;
-    thePlayer->EpochReached(inID);
-    thePlayer->mSavedGroups.Reset(0x13, 1);
-    if (inUnit != NULL)
-        inUnit->ResearchCompleted(inID);
-}
+// unit (EE_TECH_HOST_ON_RESEARCHED)
 
 // FUNCTION: EXE 0x5ccdea
 // Makes a tech or epoch obsolete in its epoch
 void EETechTree::MakeObsolete(long inID)
 {
-    long theEpoch = EETechTreeEpochOf(inID);
-    if (theEpoch >= kTechEpochPrehistoric && theEpoch < this->mEpochs.size()) {
-        this->mEpochs[theEpoch].MakeObsolete(inID);
-    }
+    EETechTreeWalk(this, EeTechTreeOp::MakeObsolete, inID);
 }
 
 // FUNCTION: EXE 0x5cce23
-// Makes the outdated nodes of every epoch up to the current one obsolete
-void EETechTree::ObsoleteOutdatedNodes()
-{
-    for (long i = 0; i <= this->mCurrentEpoch; i++) {
-        this->mEpochs[i].ObsoleteOutdatedNodes();
-    }
-}
+// Makes the outdated nodes of every epoch up to the current one obsolete (ee_tech tree_obsolete_outdated)
 
 // FUNCTION: EXE 0x5cce4c
 // Sets a prerequisite of a tech in its epoch
 void EETechTree::SetPrerequisite(long inID, long inPrerequisite)
 {
-    long theEpoch = EETechTreeEpochOf(inID);
-    if (theEpoch >= kTechEpochPrehistoric && theEpoch < this->mEpochs.size()) {
-        this->mEpochs[theEpoch].SetPrerequisite(inID, inPrerequisite);
-    }
+    EETechTreeWalk(this, EeTechTreeOp::SetPrerequisite, inID, inPrerequisite);
 }
 
 // FUNCTION: EXE 0x5cce89
-// Remembers a tech id to make obsolete when the saved state is applied
-void EETechTree::AddObsoleteID(long inID)
-{
-    this->mObsoleteIDs.push_back(inID);
-}
+// Remembers a tech id to make obsolete when the saved state is applied (the Rust saved lists)
 
 // FUNCTION: EXE 0x5cce9c
-// Remembers a tech id to research when the saved state is applied
-void EETechTree::AddResearchedID(long inID)
-{
-    this->mResearchedIDs.push_back(inID);
-}
+// Remembers a tech id to research when the saved state is applied (the Rust saved lists)
 
 // FUNCTION: EXE 0x5cceaf
-// Remembers a tech id the scenario editor obsoleted
-void EETechTree::AddScenEditorObsoletedID(long inID)
-{
-    this->mScenEditorObsoletedIDs.push_back(inID);
-}
+// Remembers a tech id the scenario editor obsoleted (the Rust saved lists)
 
 // FUNCTION: EXE 0x5ccec2
 // Researches a tech or epoch; a researched tech that counts toward the next epoch adds to its count, an epoch
@@ -631,226 +466,54 @@ void EETechTree::Research(long inID, EEComplexUnit* inUnit)
         EETechCaptureTree(theRecord, this);
         long theNext = this->mCurrentEpoch + 1;
         theRecord.I32(theNext < this->mEpochs.size() ? this->mEpochs[theNext].mCurrentSOL : -1);
-        this->ResearchUncaptured(inID, inUnit);
+        EETechTreeWalk(this, EeTechTreeOp::Research, inID, 0, inUnit);
         EETechCaptureTree(theRecord, this);
         theRecord.I32(theNext < this->mEpochs.size() ? this->mEpochs[theNext].mCurrentSOL : -1);
         theRecord.Commit();
         return;
     }
-    this->ResearchUncaptured(inID, inUnit);
-}
-
-void EETechTree::ResearchUncaptured(long inID, EEComplexUnit* inUnit)
-{
-    long theEpoch = EETechTreeEpochOf(inID);
-    long theNextEpoch = this->mCurrentEpoch + 1;
-    if (!(theEpoch >= kTechEpochPrehistoric) || !(theEpoch < this->mEpochs.size()))
-        return;
-    long theResult = this->mEpochs[theEpoch].Research(inID, inUnit);
-    long theCounts = -1;   // the node's counts-toward-epoch flag for ee_tech (-1: no node)
-    if ((theResult == 2 || theResult == 0) && !EEIsEpochID(inID)) {
-        EETechTreeNode* theNode = this->Get(inID);
-        if (theNode != NULL)
-            theCounts = theNode->mData->mCountsTowardEpoch ? 1 : 0;
-    }
-    switch (ee_tech_tree_research_after((int32_t)inID, (int32_t)theResult, (int32_t)gEpochCount, (int32_t)theCounts,
-                                        (int32_t)theNextEpoch, (int32_t)this->mEpochs.size())) {
-    case EeTechTreeResearchAfter::EpochStatistics:
-        this->mPlayer->mSavedGroups.Reset(0xc, 1);
-        break;
-    case EeTechTreeResearchAfter::CountTowardNextEpoch:
-        this->mEpochs[theNextEpoch].AddSOL();
-        break;
-    case EeTechTreeResearchAfter::Nothing:
-        break;
-    }
+    EETechTreeWalk(this, EeTechTreeOp::Research, inID, 0, inUnit);
 }
 
 // FUNCTION: EXE 0x5ccf5d
 // Researches every epoch up to the given one (events disabled) and its kind-7 nodes; shows the epoch name to
-// the local player
-void EETechTree::ResearchToEpoch(long inEpoch)
-{
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TEPO"));
-        theRecord.U32(1);
-        theRecord.I32(inEpoch);
-        EETechCaptureTree(theRecord, this);
-        theRecord.Commit();
-    }
-    gEventsEnabled = false;
-    EETechCaptureEpochStep(-1, 0);   // TEST ONLY (ee/EETechCapture.h)
-    // which epochs are unlocked and researched, and in which order, is the Rust tech logic's (ee_tech tree.rs); the
-    // epochs' members and the interface stay here
-    bool theLocal = inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size() &&
-                    gWorld.mPlayers[this->mPlayerIndex] == gWorld.GetCurrentPlayer();
-    std::vector<EeTechEpochStep> theSteps(2 * this->mEpochs.size() + 4);
-    uint32_t theCount = ee_tech_research_to_epoch((int32_t)inEpoch, (int32_t)this->mEpochs.size(), theLocal,
-                                                  theSteps.data(), (uint32_t)theSteps.size());
-    ESVERIFY_AT(theCount <= theSteps.size(), 1);
-    for (uint32_t i = 0; i < theCount && i < theSteps.size(); i++) {
-        long theEpoch = theSteps[i].epoch;
-        switch (theSteps[i].step) {
-        case EeTechEpochStepKind::Unlock:
-            EETechCaptureEpochStep(0, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochs[theEpoch].Unlock();
-            break;
-        case EeTechEpochStepKind::ResearchAll:
-            EETechCaptureEpochStep(1, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochs[theEpoch].ResearchAll(false);
-            break;
-        case EeTechEpochStepKind::ResearchSelf:
-            EETechCaptureEpochStep(2, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochs[theEpoch].ResearchSelf();
-            break;
-        case EeTechEpochStepKind::ResearchKind7:
-            EETechCaptureEpochStep(3, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochs[theEpoch].ResearchKind(7, true);
-            break;
-        case EeTechEpochStepKind::ShowName:
-            EETechCaptureEpochStep(4, theEpoch);   // TEST ONLY (ee/EETechCapture.h)
-            this->mEpochNameID = EEEpochTitleID(this->mEpochs[theEpoch].mData->mID);
-            gUserInterface->PostShowEpochName();
-            if (gUIManager->mMainGameForm != NULL)
-                gUIManager->mMainGameForm->mRefreshGroup = true;
-            break;
-        }
-    }
-    EETechCaptureResearchToEpoch(this, inEpoch, theLocal);   // TEST ONLY (ee/EETechCapture.h)
-    gEventsEnabled = true;
-}
+// the local player (ee_tech tree_research_to_epoch)
 
 // FUNCTION: EXE 0x5cd046
 // Writes the tree to the saved game: the ids of researched, obsolete or editor-obsoleted techs with their flags,
-// the epochs, then each epoch's state; returns the last epoch's write result
+// the epochs, then each epoch's state; returns the last epoch's write result (ee_tech tree_save)
 long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    std::vector<long> theIDs;
-
-    bool theCurrentNodeIsResearched = false;
-    bool theCurrentNodeIsObsolete = false;
-    bool theScenEditorObsoleted = false;
-    long theCurrentTechID = 0;
-    long theNumEpochs = this->mEpochs.size();
-    std::vector<long>::iterator theIterator;
-    long theResult = outFile.Write(theNumEpochs);
-    if (theResult == 0) {
-        theResult = outFile.Write(this->mEpochsBeforeWonders);
-        if (theResult == 0) {
-            this->GetNodeIDs(theIDs);
-            for (long i = 0; i < this->mEpochs.size(); i++) {
-                theCurrentTechID = this->mEpochs[i].mData->mID;
-                theIDs.push_back(theCurrentTechID);
-            }
-            theIterator = theIDs.begin();
-            while (theIterator != theIDs.end()) {
-                ESVERIFY_AT(this->GetTechIDState(*theIterator, theCurrentNodeIsResearched, theCurrentNodeIsObsolete,theScenEditorObsoleted), 1319);
-                if ((!theCurrentNodeIsResearched
-                        || EETechTreeEpochOf(*theIterator)
-                            < this->mStartEpoch)
-                    && !theCurrentNodeIsObsolete && !theScenEditorObsoleted)
-                    theIterator = theIDs.erase(theIterator);
-                else
-                    theIterator++;
-            }
-
-            theResult = outFile.Write((long)theIDs.size());
-            if (theResult == 0) {
-                for (theIterator = theIDs.begin(); theIterator != theIDs.end(); theIterator++) {
-                    if (theResult != 0)
-                        break;
-                    theCurrentTechID = *theIterator;
-                    ESVERIFY_AT(this->GetTechIDState(theCurrentTechID, theCurrentNodeIsResearched, theCurrentNodeIsObsolete, theScenEditorObsoleted), 1342);
-                    theResult = outFile.Write(theCurrentTechID);
-                    if (theResult != 0)
-                        continue;
-                    theResult = outFile.Write(theCurrentNodeIsResearched);
-                    if (theResult != 0)
-                        continue;
-                    theResult = outFile.Write(theCurrentNodeIsObsolete);
-                    if (theResult == 0)
-                        theResult = outFile.Write(theScenEditorObsoleted);
-                }
-                if (theResult == 0) {
-                    theResult = outFile.Write(this->mCurrentEpoch);
-                    if (theResult == 0) {
-                        theResult = outFile.Write(this->mStartEpoch);
-                        if (theResult == 0)
-                            theResult = outFile.Write(this->mEndEpoch);
-                    }
-                }
-            }
-        }
-    }
-
-    for (theCurrentTechID = 0; theCurrentTechID < this->mEpochs.size(); theCurrentTechID++) {
-        theResult = this->mEpochs[theCurrentTechID].Save(inMajorVersion, inMinorVersion, outFile);
-        ESVERIFY_AT(theResult == keseOK, 1381);
-    }
-    return theResult;
+    EETechSaveContext theContext = {this, &outFile};
+    return ee_tech_walk_tree(&theContext, &EETechSaveHost, EeTechTreeOp::Save, this, 0, 0, NULL);
 }
 
 // FUNCTION: EXE 0x5cd2a7
 // Moves the tree forward to an epoch (never back), recording it in statistics series 0xc and researching up to it
 void EETechTree::SetEpoch(long inEpoch)
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TEPO"));
-        theRecord.U32(0);
-        theRecord.I32(inEpoch);
-        EETechCaptureTree(theRecord, this);
-        theRecord.Commit();
-    }
-    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
-    if (!ee_tech_set_epoch_allowed((int32_t)inEpoch, (int32_t)this->mEpochs.size(), (int32_t)this->mCurrentEpoch)) {   // (ee_tech tree.rs)
-        EETechCaptureWalk(7, this, NULL, inEpoch, 0, 0);   // TNWK (TEST ONLY)
-        return;
-    }
-    this->mCurrentEpoch = inEpoch;
-    if (inEpoch != kTechEpochPrehistoric)
-        this->mPlayer->mSavedGroups.Set(0xc, inEpoch);
-    this->ResearchToEpoch(inEpoch);
-    EETechCaptureWalk(7, this, NULL, inEpoch, 0, 1);   // TNWK (TEST ONLY)
+    EETechTreeWalk(this, EeTechTreeOp::SetEpoch, inEpoch);
 }
 
 // FUNCTION: EXE 0x5cd2ed
 // Sets the start and end epochs and researches up to the start
 void EETechTree::SetEpochRange(long inStart, long inEnd)
 {
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
-        EESimCaptureRecord theRecord(EECaptureTag("TEPO"));
-        theRecord.U32(2);
-        theRecord.I32(inStart);
-        theRecord.I32(inEnd);
-        EETechCaptureTree(theRecord, this);
-        theRecord.Commit();
-    }
-    this->mStartEpoch = inStart;
-    this->mEndEpoch = inEnd;
-    this->ResearchToEpoch(inStart);
+    EETechTreeWalk(this, EeTechTreeOp::SetEpochRange, inStart, inEnd);
 }
 
 // FUNCTION: EXE 0x5cd30a
 // Sets the epoch range and the current epoch to its start, without researching
 void EETechTree::ResetEpochRange(long inStart, long inEnd)
 {
-    this->mStartEpoch = inStart;
-    this->mEndEpoch = inEnd;
-    this->mCurrentEpoch = inStart;
-    this->mPlayer->mSavedGroups.Set(0xc, inStart);
+    EETechTreeWalk(this, EeTechTreeOp::ResetEpochRange, inStart, inEnd);
 }
 
 // FUNCTION: EXE 0x5cd33b
 // Makes a node available or unavailable unless it has a research delay
 void EETechTree::SetNodeAvailable(long inID, bool inValue)
 {
-    EETechTreeNode* theNode = this->Get(inID);
-    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
-    long theAction = theNode == NULL ? 0 : theNode->mResearchDelay == 0 ? 1 : 2;   // TNWK (TEST ONLY)
-    if (theNode != NULL && ee_tech_node_availability_settable((int32_t)theNode->mResearchDelay)) {   // (ee_tech tree.rs)
-        theNode->mIsAvailable = inValue;
-    }
-    EETechCaptureWalk(9, this, theNode, inID, inValue ? 1 : 0, theAction);   // TNWK (TEST ONLY)
+    EETechTreeWalk(this, EeTechTreeOp::SetNodeAvailable, inID, inValue ? 1 : 0);
 }
 
 // FUNCTION: EXE 0x5cd358

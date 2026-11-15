@@ -38,6 +38,8 @@ pub mod dir;
 pub mod dirchange;
 pub mod dirops;
 pub mod dlglogic;
+pub mod eegame;
+pub mod eeresource;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;
@@ -80,6 +82,7 @@ pub mod httpcache;
 pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;
+pub mod imgfilter;
 pub mod inputobj;
 /// cbindgen:ignore
 pub mod ipaddr;
@@ -100,6 +103,7 @@ pub mod menuobj;
 pub mod miscops;
 pub mod model;
 pub mod msbtnobj;
+pub mod mspaint;
 pub mod multiobj;
 pub mod multiping;
 /// cbindgen:ignore

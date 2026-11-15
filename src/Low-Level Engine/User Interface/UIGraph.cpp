@@ -205,10 +205,10 @@ UIGraph::~UIGraph()
 // drawing; needs SetFont first (dereferences the texts unchecked)
 long UIGraph::CopyData()
 {
-    this->mGraphRectangle = this->mRectangle;
+    this->mGraphRectangle = this->GetRectangle();
     EeUiGraphTexts theTexts = {this->mLabelGraph, this->mTitleText != NULL, this->mLabelGrid, this->mGridText != NULL,
                                this->mLabelYAxis, this->mYAxisText != NULL, this->mLabelXAxis, this->mXAxisText != NULL};
-    EeUiGraphLayout theLayout = ee_ui_graph_copy_layout(this, UIGraphRect(this->mRectangle), theTexts, this->mMaxX,
+    EeUiGraphLayout theLayout = ee_ui_graph_copy_layout(this, UIGraphRect(this->GetRectangle()), theTexts, this->mMaxX,
                                                         this->mMaxY);
     this->mTitleRectangle = UIGraphRect(theLayout.title);
     this->mYAxisRectangle = UIGraphRect(theLayout.y_axis);
@@ -270,7 +270,7 @@ long UIGraph::DrawTitleText()
 long UIGraph::DrawPolygons()
 {
     GELine theLine;
-    unsigned long theThickness = this->mBorderThickness;
+    unsigned long theThickness = this->GetBorderThickness();
     long theResult = UIControl::DrawPolygons();
     theLine.SetColor(this->mGridColor);
     theLine.SetOpacity(this->mCopiedLineOpacity);
@@ -283,7 +283,7 @@ long UIGraph::DrawPolygons()
 // Draws the title, axis labels and grid values that are switched on
 long UIGraph::DrawTextA()
 {
-    this->mDrawCount--;
+    UIControl::DrawTextA();
     return ee_ui_graph_draw_texts(this, this->mCopiedLabelGraph, this->mCopiedLabelXAxis, this->mCopiedLabelYAxis,
                                   this->mCopiedLabelGrid);
 }

@@ -37,7 +37,6 @@ public:
     }
     void ConvertFrom(const GETransformation& inTransformation);
     void ConvertTo(GETransformation& outTransformation) const;
-    float GetW() const { return this->mW; }
     float GetX() const { return this->mX; }
     float GetY() const { return this->mY; }
     float GetZ() const { return this->mZ; }

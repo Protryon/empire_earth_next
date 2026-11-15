@@ -9,11 +9,14 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
+#include "rust/ee_tech.h"   // EeCalamityClassFields, EeCalamityClassMedia (ee_tech calamity_class.rs)
+
 class EECalamity;
 class EEContagionFunctor;
 class EEPlayer;
 class EESoundObject;
 class EEComplexUnit;
+class EEGraphicEffect;
 class EEUnit;
 class GE3DPoint;
 
@@ -74,26 +77,32 @@ struct EECalamityData {
 
 static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every target");
 
-class EECalamityClass {
+// New (port): the class's effects, sounds and numbers in one place for every class (ee_tech calamity_class.rs). The
+// numbers are the Rust record EeCalamityClassFields the class derives from (the base members, then the union of the
+// twenty subclasses' own). The subclasses are gone (calamities lane, round 2): the manager makes one of the three
+// bases by the kind's target (ee_tech calamity_class.rs target_kind), each per-class virtual below is the base's, run
+// by tables keyed by mClassEnum, and the classes' world steps are the host's (EECalamityUpdate.cpp).
+class EECalamityClass : public EeCalamityClassFields {
 public:
-    EECalamityClass();                      // 0xadcd9
-    virtual ~EECalamityClass();             // +0x00 (0xadd15)
-    virtual bool Start(EECalamity* inCalamity) = 0;          // +0x04
-    virtual void Stop(EECalamity* inCalamity) = 0;           // +0x08
+    EECalamityClass();                      // 0xadcd9 (every number 0, no effect, sound or functor)
+    virtual ~EECalamityClass();             // +0x00 (0xadd15): the class's own releases (its media steps)
+    virtual bool Start(EECalamity* inCalamity);              // +0x04 (Rust: ee/EECalamityUpdate.h)
+    virtual void Stop(EECalamity* inCalamity);               // +0x08
     virtual EEContagionFunctor* GetContagionFunctor();       // +0x0c (base 0x1ad67e: none)
-    virtual long GetCost();                 // +0x10 (0xadceb: mL20)
+    virtual long GetCost();                 // +0x10 (0xadceb: mCost)
     virtual long GetTargetKind() = 0;       // +0x14
     virtual long GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool);  // +0x18 (0xadcef: -1)
-    virtual unsigned long GetUnitSet();     // +0x1c (0xadcf5: mL10)
-    virtual void Initialize(EECalamityData* inData) = 0;     // +0x20 (body 0xadd1c)
-    virtual void Reset(EECalamity* inCalamity) = 0;          // +0x24
-    // +0x28 (0x163d6f: empty): EECalamity's ctor calls it with (the caster's player or player 0, true); the area
-    // effects load their media (the bool goes to EEGraphicEffect::Load)
+    virtual unsigned long GetUnitSet();     // +0x1c (0xadcf5: mUnitSet)
+    virtual void Initialize(EECalamityData* inData);         // +0x20 (body 0xadd1c, then the class's own)
+    virtual void Reset(EECalamity* inCalamity);              // +0x24
+    // +0x28: EECalamity's ctor calls it with (the caster's player or player 0, true); the classes load their effects,
+    // sounds and unit class media (the bool goes to EEGraphicEffect::Load)
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);
-    virtual void PlaySound(EECalamity* inCalamity);   // +0x2c (0x157269: empty; EECalamity::PlaySound calls it)
-    virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);       // (the volcano reads inUnit->mPlayer) +0x30 (0x2907a3: empty)
-    virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x34 (0x157269: empty; ~EECalamity calls it)
-    virtual long Update(EECalamity* inCalamity, float inElapsedTime) = 0;  // +0x38
+    virtual void PlaySound(EECalamity* inCalamity);   // +0x2c (EECalamity::PlaySound calls it)
+    // +0x30 (0x2907a3: empty): the volcano's (0xb5137) makes units step aside from its site
+    virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);
+    virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x34 (~EECalamity calls it)
+    virtual long Update(EECalamity* inCalamity, float inElapsedTime);  // +0x38 (Rust: ee/EECalamityUpdate.h)
     // +0x3c (0xadec7): 1 = refused, 2 = protected by an area effect, 0 = fine (tile (inX, inY), when inCheck)
     virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
                            EEUnit* inTargetUnit);
@@ -113,19 +122,18 @@ public:
     virtual void UpdateSound(EECalamity* inCalamity, EESoundObject* inSound, float inVolume, float inFalloff,
                              bool inPrimary);
 
-    float mLifeTime;                        // +0x04
-    long mClassEnum;                        // +0x08
-    unsigned long mClassFlags;              // +0x0c (0 here; each subclass ctor sets its own bit) (provisional name)
-    unsigned long mUnitSet;                 // +0x10
-    long mNameID;                           // +0x14
-    EECalamityKind mID;                     // +0x18 (an enum: EECalamity::Save writes it as unsigned long and
-                                            // EESETSETGameCalamity::Show 0x184db5 pushes it into a vector<long>, both
-                                            // through a converted temporary)
-    long mRange;                            // +0x1c
-    long mCost;                             // +0x20
-    bool mB24;                              // +0x24
-    bool mIsBlockedByImmunity;              // +0x25 (area effects: functor mode 2 when set, else 3)
-    bool mIsCastByAllSelected;              // +0x26
+    // New (port): what the Rust tables read of the class's effects and sounds (EeCalamityClassMedia)
+    void GetMedia(EeCalamityClassMedia& outMedia);
+
+    // the class's effects (record +0x94..+0xa0), sounds (+0xd4, +0xd8) and contagion functor (owned), each set as
+    // its class's Initialize set it
+    EEGraphicEffect* mGraphicEffect1;
+    EEGraphicEffect* mGraphicEffect2;
+    EEGraphicEffect* mGraphicEffect3;
+    EEGraphicEffect* mGraphicEffect4;
+    EESoundObject* mSound;
+    EESoundObject* mSecondarySound;
+    EEContagionFunctor* mFunctor;
 };
 
 #endif

@@ -130,8 +130,8 @@ EEAIAStarContinentInfo EEAIAStarView::GetContinentAt(long inX, long inY)
 {
     EEAIContinent* theContinent = gContinentManager.GetContinentAt(inX, inY);
     EEAIAStarContinentInfo theInfo;
-    theInfo.mID = theContinent->mID;
-    theInfo.mCategory = theContinent->mCategory;
+    theInfo.mID = theContinent->GetID();
+    theInfo.mCategory = theContinent->GetCategory();
     Note(kViewContinentAt, inX, inY, theInfo.mID, theInfo.mCategory);
     return theInfo;
 }
@@ -154,9 +154,9 @@ EEAIAStarPathAreaInfo EEAIAStarView::GetPathAreaAt(long inX, long inY)
     EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theTile);
     EEAIAStarPathAreaInfo theInfo;
     theInfo.mFound = theArea != NULL;
-    theInfo.mID = theArea ? theArea->mID : 0;
+    theInfo.mID = theArea ? theArea->GetID() : 0;
     theInfo.mContinentID = theArea ? theArea->GetContinentID() : 0;
-    theInfo.mKind = theArea ? theArea->mKind : 0;
+    theInfo.mKind = theArea ? theArea->GetKind() : 0;
     Note(kViewPathAreaAt, inX, inY, theInfo.mFound, theInfo.mID, theInfo.mContinentID);
     Note(kViewPathAreaAt, inX, inY, theInfo.mKind);
     return theInfo;
@@ -167,7 +167,7 @@ EEAIAStarPathAreaInfo EEAIAStarView::GetPathArea(unsigned short inID)
     EEAIPathArea* theArea = gContinentManager.mPathAreas[inID];
     EEAIAStarPathAreaInfo theInfo;
     theInfo.mFound = true;
-    theInfo.mID = theArea->mID;
+    theInfo.mID = theArea->GetID();
     theInfo.mContinentID = theArea->GetContinentID();
     theInfo.mKind = theArea->GetKind();
     Note(kViewPathArea, inID, 0, theInfo.mID, theInfo.mContinentID, theInfo.mKind);

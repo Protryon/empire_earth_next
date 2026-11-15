@@ -72,9 +72,5 @@ inline void GERustPush3D(void* inContext, const EeGe3DPoint* inPoint)
 {
     static_cast<std::vector<GE3DPoint>*>(inContext)->push_back(*reinterpret_cast<const GE3DPoint*>(inPoint));
 }
-inline void GERustPushRectangle(void* inContext, const EeGeRectangle* inRectangle)
-{
-    static_cast<std::vector<GERectangle>*>(inContext)->push_back(*reinterpret_cast<const GERectangle*>(inRectangle));
-}
 
 #endif

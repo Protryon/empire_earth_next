@@ -46,11 +46,11 @@ struct UITextLabelRust {
         case EeUiOp::StringAssign: *reinterpret_cast<UWideString*>(a) = *reinterpret_cast<const UWideString*>(b); break;
         case EeUiOp::TextSetBytes: reinterpret_cast<GEText*>(a)->SetText(UWideString(reinterpret_cast<const char*>(b))); break;
         case EeUiOp::TextFontHeight: return reinterpret_cast<GEText*>(a)->GetFont()->GetHeight();
-        case EeUiOp::DrawCountDecrement: l->mDrawCount--; break;
+        case EeUiOp::DrawCountDecrement: l->UIControl::DrawTextA(); break;
         case EeUiOp::SetBgRectangle: l->SetBgRectangle(UIObjHost::Rect(f)); break;
-        case EeUiOp::RedrawIntersect: l->mForm->RedrawIntersectControls(UIObjHost::Rect(f)); break;
+        case EeUiOp::RedrawIntersect: l->GetForm()->RedrawIntersectControls(UIObjHost::Rect(f)); break;
         case EeUiOp::CreateScrollBar:
-            return (intptr_t) new UIScrollBar(l->mId, GE2DPoint(f[0], f[1]), f[2], 1, l->mForm, l->mIndex,
+            return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(),
                                               l->GetBorderThickness());
         case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
         case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
@@ -98,7 +98,7 @@ UITextLabel::UITextLabel(const UWideString& inText, GEFont* inFont, unsigned lon
                          unsigned long inBorderThickness)
     : UIControl(kControlTypeTextLabel, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mBorderType = 0;
+    this->SetBorderType(0);
     float f[4];
     UIObjHost::PutRect(f, inRectangle);
     this->mRust = ee_ui_label_new(this, UITextLabelRust::Op, f, inFont, inLabelType, inBorderThickness);
@@ -114,10 +114,6 @@ void UITextLabel::DeleteArray() { UITextLabelRust::Call(this, C::DeleteArray); }
 void UITextLabel::DeleteLine(unsigned long inLine) { UITextLabelRust::Call(this, C::DeleteLine, inLine); }
 long UITextLabel::DrawPolygons() { return (long)UITextLabelRust::Call(this, C::DrawPolygons); }
 long UITextLabel::DrawTextA() { return (long)UITextLabelRust::Call(this, C::DrawText); }
-const GERectangle& UITextLabel::GetCopiedTextRectangle() const
-{
-    return UITextLabelRust::RectAt(UITextLabelRust::Call(this, C::CopiedTextRectangle));
-}
 bool UITextLabel::GetFitRectToText() const { return UITextLabelRust::Call(this, C::FitRectToText) != 0; }
 GEText* UITextLabel::GetGEText() const { return reinterpret_cast<GEText*>(UITextLabelRust::Call(this, C::Text)); }
 unsigned long UITextLabel::GetLineCount() const { return (unsigned long)UITextLabelRust::Call(this, C::LineCount); }
@@ -129,17 +125,9 @@ const UIScrollBar* UITextLabel::GetScrollBar() const
 {
     return reinterpret_cast<const UIScrollBar*>(UITextLabelRust::Call(this, C::ScrollBar));
 }
-const GERectangle& UITextLabel::GetScrollBarRectangle() const
-{
-    return UITextLabelRust::RectAt(UITextLabelRust::Call(this, C::ScrollBarRectangle));
-}
 const UWideString& UITextLabel::GetText(unsigned long inLine) const
 {
     return *reinterpret_cast<const UWideString*>(UITextLabelRust::Call(this, C::Line, inLine));
-}
-const GERectangle& UITextLabel::GetTextRectangle() const
-{
-    return UITextLabelRust::RectAt(UITextLabelRust::Call(this, C::TextRectangle));
 }
 long UITextLabel::MouseLButtonDown() { return (long)UITextLabelRust::Call(this, C::MouseLButtonDown); }
 long UITextLabel::MouseLButtonUp() { return (long)UITextLabelRust::Call(this, C::MouseLButtonUp); }

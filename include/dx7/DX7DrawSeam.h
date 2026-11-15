@@ -16,12 +16,8 @@ struct DX7DrawAccess : public DX7Rasterizer {
     using DX7Rasterizer::UnlockVB;
     using GERasterizer::IsOrthographicModelVisible;
     using GERasterizer::IsPerspectiveModelVisible;
-    using GERasterizer::mDrawingAccess;
-    using GERasterizer::mScreenStates;
-    using GERasterizer::mComputedAmbientColor;
-    using GERasterizer::mWaterRipple0;
-    using GERasterizer::mWaterRipple1;
-    using GERasterizer::mWaterRipple2;
+    using GERasterizer::GetDrawingAccess;
+    using GERasterizer::GetScreenState;
 };
 
 // The screen's pinned DX7 state record (DX7Trampolines.cpp pins EeDx7ScreenState to DX7RScreenState).

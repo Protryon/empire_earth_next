@@ -499,7 +499,7 @@ static void Exported(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
     }
 }
 
-static void Inputs(EESimCaptureRecord& ioRecord, NEMPlayerInput* inMessage)
+static void Inputs(EESimCaptureRecord& ioRecord, NEMRecord* inMessage)
 {
     ioRecord.U32((unsigned int)inMessage->mPlayerInputs.size());
     for (size_t i = 0; i < inMessage->mPlayerInputs.size(); i++) {
@@ -513,152 +513,24 @@ static void Inputs(EESimCaptureRecord& ioRecord, NEMPlayerInput* inMessage)
     }
 }
 
-#define EE_FIELD(m) ioRecord.Bytes(&m, sizeof(m))
-// an engine message: its export, then its members as Import filled them
+// an engine message: its export, then its members as Import filled them (NEMRecord's wire members in wire order: a
+// fixed member's bytes, a string, the players' inputs)
 static void EngineMessage(EESimCaptureRecord& ioRecord, NEMessage* inMessage)
 {
     Exported(ioRecord, inMessage);
     ioRecord.U32(inMessage->GetForSpecificSlot());
     ioRecord.U32(inMessage->GetOriginatingSlot());
-    switch (inMessage->GetType()) {
-    case kNetMessageAddPlayer: {
-        NEMAddPlayer* m = static_cast<NEMAddPlayer*>(inMessage);
-        EE_FIELD(m->mPlayerIndex);
-        Wide(ioRecord, m->mPlayerName);
-        break;
-    }
-    case kNetMessageClientConnectionRequest: {
-        NEMClientConnectionRequest* m = static_cast<NEMClientConnectionRequest*>(inMessage);
-        EE_FIELD(m->mIsBehindFirewall);
-        Wide(ioRecord, m->mVersion);
-        Wide(ioRecord, m->mPlayerName);
-        EE_FIELD(m->mBinaryChecksum);
-        break;
-    }
-    case kNetMessageClientConnectionRequestResponse: {
-        NEMClientConnectionRequestResponse* m = static_cast<NEMClientConnectionRequestResponse*>(inMessage);
-        EE_FIELD(m->mError);
-        EE_FIELD(m->mUISlotNumber);
-        EE_FIELD(m->mSendToSlot);
-        EE_FIELD(m->mCurrentCT);
-        Wide(ioRecord, m->mVersion);
-        break;
-    }
-    case kNetMessageClientDisconnectionNotification:
-        EE_FIELD(static_cast<NEMClientDisconnectionNotification*>(inMessage)->mIsExiting);
-        break;
-    case kNetMessageClientDisconnectionNotificationResponse:
-        EE_FIELD(static_cast<NEMClientDisconnectionNotificationResponse*>(inMessage)->mError);
-        break;
-    case kNetMessageClientReconnectionRequest: {
-        NEMClientReconnectionRequest* m = static_cast<NEMClientReconnectionRequest*>(inMessage);
-        EE_FIELD(m->mCurrentCT);
-        EE_FIELD(m->mPlayerNumber);
-        break;
-    }
-    case kNetMessageClientReconnectionRequestResponse: {
-        NEMClientReconnectionRequestResponse* m = static_cast<NEMClientReconnectionRequestResponse*>(inMessage);
-        EE_FIELD(m->mError);
-        EE_FIELD(m->mNewSendToSlot);
-        EE_FIELD(m->mCurrentCT);
-        break;
-    }
-    case kNetMessageCommunicationsTick: {
-        NEMCommunicationsTick* m = static_cast<NEMCommunicationsTick*>(inMessage);
-        EE_FIELD(m->mCurrentCommunicationsTick);
-        EE_FIELD(m->mPhysicsTicksToPerform);
-        EE_FIELD(m->mPhysicsTicksPerSecond);
-        EE_FIELD(m->mGenerateChecksum);
-        EE_FIELD(m->mDumpTheWorld);
-        Inputs(ioRecord, m);
-        break;
-    }
-    case kNetMessageCommunicationsTickResponse: {
-        NEMCommunicationsTickResponse* m = static_cast<NEMCommunicationsTickResponse*>(inMessage);
-        EE_FIELD(m->mLastCommunicationsTickProcessed);
-        EE_FIELD(m->mServersCommunicationTick);
-        EE_FIELD(m->mAveragePhysicsTickTime);
-        Inputs(ioRecord, m);
-        break;
-    }
-    case kNetMessagePauseGame: {
-        NEMPauseGame* m = static_cast<NEMPauseGame*>(inMessage);
-        EE_FIELD(m->mUniqueID);
-        EE_FIELD(m->mSendToAllAndWaitMessageID);
-        break;
-    }
-    case kNetMessageUnPauseGame: {
-        NEMUnPauseGame* m = static_cast<NEMUnPauseGame*>(inMessage);
-        EE_FIELD(m->mUniqueID);
-        EE_FIELD(m->mSendToAllAndWaitMessageID);
-        break;
-    }
-    case kNetMessagePauseGameResponse:
-        EE_FIELD(static_cast<NEMPauseGameResponse*>(inMessage)->mUniqueID);
-        break;
-    case kNetMessageUnPauseGameResponse:
-        EE_FIELD(static_cast<NEMUnPauseGameResponse*>(inMessage)->mUniqueID);
-        break;
-    case kNetMessagePhysicsTick: {   // (mPhysicsTicksPerSecond is not on the wire)
-        NEMPhysicsTick* m = static_cast<NEMPhysicsTick*>(inMessage);
-        EE_FIELD(m->mNumberOfPlayerInputs);
-        EE_FIELD(m->mPhysicsTicksToPerform);
-        EE_FIELD(m->mGenerateChecksum);
-        EE_FIELD(m->mDumpTheWorld);
-        break;
-    }
-    case kNetMessagePlayerConnectionCheck:
-        EE_FIELD(static_cast<NEMPlayerConnectionCheck*>(inMessage)->mPingTimeStart);
-        break;
-    case kNetMessagePlayerConnectionCheckResponse:
-        EE_FIELD(static_cast<NEMPlayerConnectionCheckResponse*>(inMessage)->mPingTimeStart);
-        break;
-    case kNetMessageRemovePlayer: {
-        NEMRemovePlayer* m = static_cast<NEMRemovePlayer*>(inMessage);
-        EE_FIELD(m->mPlayerIndex);
-        EE_FIELD(m->mPlayerIsOOS);
-        EE_FIELD(m->mGameIsExiting);
-        EE_FIELD(m->mWasBooted);
-        break;
-    }
-    case kNetMessageStartGame:
-        EE_FIELD(static_cast<NEMStartGame*>(inMessage)->mOffsetStartTime);
-        break;
-    case kNetMessageStartGameResponse:
-        EE_FIELD(static_cast<NEMStartGameResponse*>(inMessage)->mApplicationTimeAtStart);
-        break;
-    case kNetMessageWorldDatabaseChecksum: {
-        NEMWorldDatabaseChecksum* m = static_cast<NEMWorldDatabaseChecksum*>(inMessage);
-        EE_FIELD(m->mPhysicsTickTrigger);
-        EE_FIELD(m->mDumpWorld);
-        break;
-    }
-    case kNetMessageWorldDatabaseChecksumResponse: {
-        NEMWorldDatabaseChecksumResponse* m = static_cast<NEMWorldDatabaseChecksumResponse*>(inMessage);
-        EE_FIELD(m->mCommunicationsTick);
-        EE_FIELD(m->mWorldDatabaseChecksum);
-        break;
-    }
-    case kNetMessageXferMessage: {
-        NEMXferMessage* m = static_cast<NEMXferMessage*>(inMessage);
-        EE_FIELD(m->mID);
-        EE_FIELD(m->mDataSize);
-        EE_FIELD(m->mData);
-        break;
-    }
-    case kNetMessageXferStatus: {
-        NEMXferStatus* m = static_cast<NEMXferStatus*>(inMessage);
-        EE_FIELD(m->mClientSlot);
-        EE_FIELD(m->mPercentDone);
-        EE_FIELD(m->mXferID);
-        EE_FIELD(m->mStatusID);
-        break;
-    }
-    default:   // the header-only messages
-        break;
+    NEMRecord* m = static_cast<NEMRecord*>(inMessage);
+    for (uint32_t i = 0; i < ee_netmsg_ne_type(m->GetType()).wire_fields; i++) {
+        EeNetMsgNeField theField = ee_netmsg_ne_field(m->GetType(), i);
+        if (theField.kind == EE_NETMSG_NE_FIELD_STRING)
+            Wide(ioRecord, m->GetString(i));
+        else if (theField.kind == EE_NETMSG_NE_FIELD_INPUTS)
+            Inputs(ioRecord, m);
+        else
+            ioRecord.Bytes(m->mRecord + theField.offset, theField.size);
     }
 }
-#undef EE_FIELD
 
 static void BuildEngine(std::vector<unsigned char>& ioData)
 {

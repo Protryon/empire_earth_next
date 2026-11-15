@@ -14,7 +14,12 @@ public:
     // +0x3c 0xb6f6e: EECalamityClass's, then 1 when Virtual4C refuses the location
     virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
                            EEUnit* inTargetUnit);
-    virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY) = 0;  // +0x4c (the last slot)
+    // +0x4c (the last slot): the shared rule with the class's own fields (ee_tech calamity_cast.rs, calamity_class.rs)
+    virtual bool IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY);
+
+    // 0xb4e74 (the volcano's; EEUCBuilding calls it): a random location of a map tile between mMinimumRadius and
+    // mMaximumRadius around inCenter, at the tile's height
+    void GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation);
 };
 
 #endif

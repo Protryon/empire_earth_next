@@ -11,21 +11,13 @@
 #include "lle/FSFile.h"
 #include "lle/GEOrientation.h"
 #include "GERustMath.h"
+#include "GERustIO.h"
 
 // Not in this unit's range (ICF keeps 0x1000dc23).
 long GEOrientation::Load(FSFile& inFile)
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Read(this->mYaw);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mPitch);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mRoll);
-        }
-    } else
-        theResult = kErrorNotOpen;
-    return theResult;
+    const float* theFields[] = {&this->mYaw, &this->mPitch, &this->mRoll};
+    return GERustFields(inFile, theFields, 3, inFile.GetIsOpen(), false, false);
 }
 
 // FUNCTION: LLE 0x10020d20
@@ -39,17 +31,8 @@ void GEOrientation::Normalize()
 // Writes yaw, pitch and roll to a file; kErrorNotOpen when the file is not open
 long GEOrientation::Save(FSFile& inFile)
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Write(this->mYaw);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Write(this->mPitch);
-            if (theResult == kErrorOK)
-                theResult = inFile.Write(this->mRoll);
-        }
-    } else
-        theResult = kErrorNotOpen;
-    return theResult;
+    const float* theFields[] = {&this->mYaw, &this->mPitch, &this->mRoll};
+    return GERustFields(inFile, theFields, 3, inFile.GetIsOpen(), true, false);
 }
 
 // ---- Exported members with no address of their own: ICF-folded into GEVector's ctors (0xc240, 0xd56f), its

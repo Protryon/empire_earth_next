@@ -11,14 +11,6 @@
 class GEFont;
 class GEText;
 
-// Provisional name (not exported; a free inline). UIGraph rounds grid division counts up and uses the result as a
-// float: `fistp r; fild r; fcomp v; jae; inc r`, then `fild r` at every use (a float return: the long UMCeil alone
-// gives `fidiv` and integer loop compares). Wrapping UMCeil or repeating its asm body compiles the same.
-inline float UMCeilFloat(float inValue)
-{
-    return UMCeil(inValue);
-}
-
 class LLE_API UIGraph : public UIControl {
     friend struct UIGraphRust;              // UIGraph.cpp: the Rust layout's and draws' view (ee_ui graph.rs)
     friend struct UILineGraphRust;          // UILineGraph.cpp: the Rust series draws' view
@@ -37,22 +29,11 @@ public:
     virtual const UGraph& GetGraph() const { return this->mGraph; }  // ICF-folded (0x100596b2)
     virtual void FormatYValues(float inValue, UWideString& outString) = 0;  // slot 0x9c
     virtual void FormatXValues(float inValue, UWideString& outString) = 0;  // slot 0xa0
-    const GERectangle& GetGraphRectangle() { return this->mGraphRectangle; }
-    float GetLineOpacity() { return this->mLineOpacity; }
-    const GE2DPoint& GetZoomLocation() { return this->mZoomLocation; }
-    void SetDrawGrid(bool inDrawGrid) { this->mDrawGrid = inDrawGrid; }
     virtual void SetFont(GEFont* inFont);
     void SetFontColor(const GEColor& inColor);
     virtual void SetGraph(const UGraph& inGraph) { this->mGraph = inGraph; }
-    void SetLabelGrid(bool inLabelGrid) { this->mLabelGrid = inLabelGrid; }
     void SetLabelXAxis(bool inLabelXAxis) { this->mLabelXAxis = inLabelXAxis; }
     void SetLabelYAxis(bool inLabelYAxis) { this->mLabelYAxis = inLabelYAxis; }
-    void SetLabelGraph(bool inLabelGraph) { this->mLabelGraph = inLabelGraph; }
-    void SetLineOpacity(float inOpacity) { this->mLineOpacity = inOpacity; }
-    void SetNumberOfGridDivisionsX(unsigned long inDivisions) { this->mNumberOfGridDivisionsX = inDivisions; }
-    void SetNumberOfGridDivisionsY(unsigned long inDivisions) { this->mNumberOfGridDivisionsY = inDivisions; }
-    void SetZoomScale(float inScale) { this->mZoomScale = inScale; }
-    void SetZoomIncrement(float inIncrement) { this->mZoomIncrement = inIncrement; }
     virtual long UpdateMouse(const GE2DPoint& inLocation);       // slot 0xac (hides UIControl::UpdateMouse)
     virtual void ZoomIn(const GE2DPoint& inLocation);
     virtual void ZoomOut();

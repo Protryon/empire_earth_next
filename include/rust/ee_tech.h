@@ -26,6 +26,174 @@ constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
 
 constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
 
+/// [`EeCalamityClassMedia::present`]: effect 1 (effect `i` is this shifted by `i - 1`).
+constexpr static const uint32_t EE_CALAMITY_MEDIA_EFFECT1 = 1;
+
+/// [`EeCalamityClassMedia::present`]: the sound.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_SOUND = 16;
+
+/// [`EeCalamityClassMedia::present`]: the secondary sound.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_SECONDARY_SOUND = 32;
+
+/// How `Initialize` fetched a slot ([`get_mode`]).
+constexpr static const uint32_t EE_CALAMITY_GET_NONE = 0;
+
+/// `Get(id)` whatever the id (`Get(0)` is the table's first entry).
+constexpr static const uint32_t EE_CALAMITY_GET_ALWAYS = 1;
+
+/// `if (id != 0)`.
+constexpr static const uint32_t EE_CALAMITY_GET_NONZERO = 2;
+
+/// `if (id > 0)`.
+constexpr static const uint32_t EE_CALAMITY_GET_POSITIVE = 3;
+
+/// The contagion functor `Initialize` made ([`functor_kind`]).
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_NONE = 0;
+
+/// `EEAreaEffectFunctor(effect 2, effect 3, mDamageFactor, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_AREA = 1;
+
+/// `EEAEExtraDamageFunctor(unit set, mode, mFunctorFlag)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE = 2;
+
+/// `EEAEMindControlFunctor(effect 3, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_MIND_CONTROL = 3;
+
+/// `EEFireFunctor(effect 2, mBurn, mRadius, mChance, mDamage, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_FIRE = 4;
+
+/// `EELeprosyFunctor(mDamage, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_LEPROSY = 5;
+
+/// `EEPlagueFunctor(mRadius, mChance, mDamage, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_PLAGUE = 6;
+
+/// What a class is cast at ([`target_kind`]; its `GetTargetKind`): no class of the kind.
+constexpr static const uint32_t EE_CALAMITY_TARGET_NONE = 0;
+
+/// `EEGlobalCalamityClass` (1): nothing (the cloaking, the line of sight).
+constexpr static const uint32_t EE_CALAMITY_TARGET_GLOBAL = 1;
+
+/// `EELocationCalamityClass` (2): a tile.
+constexpr static const uint32_t EE_CALAMITY_TARGET_LOCATION = 2;
+
+/// `EEUnitCalamityClass` (3): a unit.
+constexpr static const uint32_t EE_CALAMITY_TARGET_UNIT = 3;
+
+/// The step lists of [`media_step`]: `LoadMedia(player, on demand)`.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_LOAD = 0;
+
+/// `UnloadMedia(player)`.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_UNLOAD = 1;
+
+/// The class's destructor.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_DESTROY = 2;
+
+/// A step ([`media_step`]) after the last one.
+constexpr static const uint32_t EE_CALAMITY_STEP_END = 0;
+
+/// Effect 1..4 (`EE_CALAMITY_STEP_EFFECT1 + i - 1`): `Load(on demand)`, `Unload()` or `Dereference()` when it is
+/// set.
+constexpr static const uint32_t EE_CALAMITY_STEP_EFFECT1 = 1;
+
+/// The sound: `LoadMedia()` or `UnloadMedia()` when it is set.
+constexpr static const uint32_t EE_CALAMITY_STEP_SOUND = 5;
+
+/// The secondary sound, as the sound.
+constexpr static const uint32_t EE_CALAMITY_STEP_SECONDARY_SOUND = 6;
+
+/// The unit class `mUnitClassIndex`'s media: loaded when on demand and its media mask set to 0x7f, or unloaded.
+constexpr static const uint32_t EE_CALAMITY_STEP_UNIT_MEDIA = 7;
+
+/// The unit class `mUnitClassIndex`'s buttons: loaded or unloaded.
+constexpr static const uint32_t EE_CALAMITY_STEP_UNIT_BUTTONS = 8;
+
+/// The sound manager's `Unload` of the sound's sample (the volcano's destructor).
+constexpr static const uint32_t EE_CALAMITY_STEP_SAMPLE = 9;
+
+/// `delete mFunctor`.
+constexpr static const uint32_t EE_CALAMITY_STEP_FUNCTOR = 10;
+
+/// `PlaySound(calamity)`: nothing.
+constexpr static const uint32_t EE_CALAMITY_PLAY_NONE = 0;
+
+/// The class's sound as the calamity's referenced main sound, from the start (`SetSound(PlayAndReturnReferencedNode
+/// (sample, volume, 0, 1, looping))`).
+constexpr static const uint32_t EE_CALAMITY_PLAY_NODE = 1;
+
+/// The class's sound once at the target location (`EEComputeSoundParameters` with the calamities' falloff).
+constexpr static const uint32_t EE_CALAMITY_PLAY_AT_TARGET = 2;
+
+/// [`run`]'s `which`: `Start`.
+constexpr static const uint32_t EE_CALAMITY_RUN_START = 0;
+
+/// `Stop`.
+constexpr static const uint32_t EE_CALAMITY_RUN_STOP = 1;
+
+/// `Update`.
+constexpr static const uint32_t EE_CALAMITY_RUN_UPDATE = 2;
+
+/// [`EeCalamityClassRun::sounds`]: the run gets the class's sound.
+constexpr static const uint32_t EE_CALAMITY_RUN_SOUND = 1;
+
+/// [`EeCalamityClassRun::sounds`]: the run gets the class's secondary sound.
+constexpr static const uint32_t EE_CALAMITY_RUN_SECONDARY_SOUND = 2;
+
+/// `FSFile::Read(unsigned long&)` into `*value` (a `c_ulong`; the old value in, the read value out).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_ULONG = 0;
+
+/// `FSFile::Read(long&)` into `*value` (a `c_long`).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_LONG = 1;
+
+/// `FSFile::Read(float&)` into `*value` (an `f32`).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_FLOAT = 2;
+
+/// `FSFile::Read(bool&)` into `*value` (a `bool`).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_BOOL = 3;
+
+/// `FSFile::Write(const unsigned long&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_ULONG = 4;
+
+/// `FSFile::Write(const long&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_LONG = 5;
+
+/// `FSFile::Write(const float&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_FLOAT = 6;
+
+/// `FSFile::Write(const bool&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_BOOL = 7;
+
+/// `mRectangle.Load` / `Save` (`value` unused).
+constexpr static const uint32_t EE_CALAMITY_IO_RECTANGLE = 8;
+
+/// `mTargetLocation.Load` / `Save`.
+constexpr static const uint32_t EE_CALAMITY_IO_TARGET_LOCATION = 9;
+
+/// `mShakeLocation.Load` / `Save`.
+constexpr static const uint32_t EE_CALAMITY_IO_SHAKE_LOCATION = 10;
+
+/// `FSLoadVector` / `FSSaveVector` of `mEffectGeneration`.
+constexpr static const uint32_t EE_CALAMITY_IO_EFFECT_GENERATION = 11;
+
+/// Load: a `long` class id read and the class it names set (`GetCalamityClass(unsigned long)`); save: the class's
+/// `mID` written as an `unsigned long`.
+constexpr static const uint32_t EE_CALAMITY_IO_CLASS = 12;
+
+/// Save: the target unit's id (-1 without one) into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CALAMITY_IO_TARGET_ID = 13;
+
+/// Save: the caster unit's id (-1 without one) into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CALAMITY_IO_CASTER_ID = 14;
+
+/// Load: a `long` read into the remembered tile's x; save: the tile's x written as a `long`.
+constexpr static const uint32_t EE_CALAMITY_IO_TILE_X = 15;
+
+/// The same for its y.
+constexpr static const uint32_t EE_CALAMITY_IO_TILE_Y = 16;
+
+/// `mEffectHandle.mValue` read or written (a `uint32_t` through `FSFile`'s own overload).
+constexpr static const uint32_t EE_CALAMITY_IO_EFFECT_HANDLE = 17;
+
 /// [`EeCalamityParams::flags`]: the morale class counts positive morale (`EECCMorale::mPositive`).
 constexpr static const uint32_t EE_CALAMITY_POSITIVE = 32;
 
@@ -77,6 +245,50 @@ constexpr static const uint32_t EE_CONTAGION_NEW_COMPLEX = 1;
 /// The helper holds it already.
 constexpr static const uint32_t EE_CONTAGION_NEW_HELD = 2;
 
+/// `FSFile::Read(unsigned long&)` into `*value` (a `c_ulong`; the old value in, the read value out).
+constexpr static const uint32_t EE_CONTAGION_IO_READ_ULONG = 0;
+
+/// `FSFile::Read(long&)` into `*value` (a `c_long`).
+constexpr static const uint32_t EE_CONTAGION_IO_READ_LONG = 1;
+
+/// `FSFile::Read(float&)` into `*value` (an `f32`).
+constexpr static const uint32_t EE_CONTAGION_IO_READ_FLOAT = 2;
+
+/// `FSFile::Write(const unsigned long&)` of `*value`.
+constexpr static const uint32_t EE_CONTAGION_IO_WRITE_ULONG = 3;
+
+/// `FSFile::Write(const long&)` of `*value`.
+constexpr static const uint32_t EE_CONTAGION_IO_WRITE_LONG = 4;
+
+/// `FSFile::Write(const float&)` of `*value`.
+constexpr static const uint32_t EE_CONTAGION_IO_WRITE_FLOAT = 5;
+
+/// The helper: `mUnitIDs.push_back(*value)` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_PUSH_UNIT_ID = 6;
+
+/// The helper: `mUnits.size()` into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_UNIT_COUNT = 7;
+
+/// The helper: unit `*value`'s `mUnitID` into `*value` (a `c_ulong`, the index in, the id out).
+constexpr static const uint32_t EE_CONTAGION_IO_UNIT_ID = 8;
+
+/// The manager: delete every helper and clear the calamity indexes.
+constexpr static const uint32_t EE_CONTAGION_IO_CLEAR = 9;
+
+/// The manager: a new helper loaded by its own `Load` (its result ignored) and kept with the calamity index
+/// `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_LOAD_HELPER = 10;
+
+/// The manager: `mHelpers.size()` into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_HELPER_COUNT = 11;
+
+/// The manager: helper `*value`'s calamity index among the active calamities into `*value` (a `c_ulong`, the
+/// index in); the result 0 when it has one, else not 0.
+constexpr static const uint32_t EE_CONTAGION_IO_HELPER_CALAMITY = 12;
+
+/// The manager: helper `*value`'s own `Save` (the index in; its result).
+constexpr static const uint32_t EE_CONTAGION_IO_SAVE_HELPER = 13;
+
 /// [`EeTechUnitView::flags`]: the unit has a complex unit.
 constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
 
@@ -88,6 +300,111 @@ constexpr static const uint32_t EE_TECH_UNIT_ON_TILE = 4;
 
 /// It is carried (`mPreviousPart`).
 constexpr static const uint32_t EE_TECH_UNIT_CARRIED = 8;
+
+/// `mEpochs.size()` -> `v[0]`
+constexpr static const int32_t EE_TECH_HOST_EPOCHS = 1;
+
+/// `mEpochs[v[0]]` -> `node`
+constexpr static const int32_t EE_TECH_HOST_EPOCH = 2;
+
+/// the nodes of the epoch `node` in id order into `nodes` (at most `count`); returns how many it has
+constexpr static const int32_t EE_TECH_HOST_EPOCH_NODES = 3;
+
+/// `Get(v[0])` -> `node`; returns 1 when there is one
+constexpr static const int32_t EE_TECH_HOST_NODE = 4;
+
+/// `EETechTreeEpochOf(v[0])` -> `v[0]`
+constexpr static const int32_t EE_TECH_HOST_EPOCH_OF = 5;
+
+/// `gEpochCount` -> `v[0]`
+constexpr static const int32_t EE_TECH_HOST_EPOCH_COUNT = 6;
+
+/// the virtual `node->ResearchNode(unit)` (a node's or an epoch's, through the capture's wrapper); its result
+constexpr static const int32_t EE_TECH_HOST_RESEARCH_NODE = 10;
+
+/// `node->SetPrerequisite(v[0])` (through the capture's wrapper)
+constexpr static const int32_t EE_TECH_HOST_SET_PREREQUISITE = 11;
+
+/// the epoch `node`'s `Research(v[0], unit)` (through the capture's wrapper); its result
+constexpr static const int32_t EE_TECH_HOST_EPOCH_RESEARCH = 12;
+
+/// the epoch `node`'s `AddSOL()` (through the capture's wrapper)
+constexpr static const int32_t EE_TECH_HOST_ADD_SOL = 13;
+
+/// the epoch `node`'s `UpdateAvailability()` (through the capture's wrapper)
+constexpr static const int32_t EE_TECH_HOST_UPDATE_AVAILABILITY = 14;
+
+/// `node->NeedsUnitMedia()`; returns 1 for true
+constexpr static const int32_t EE_TECH_HOST_NEEDS_UNIT_MEDIA = 16;
+
+/// `EEEvent::Trigger(v[0], mPlayerIndex, v[1], mPlayer, unit)`
+constexpr static const int32_t EE_TECH_HOST_TRIGGER = 20;
+
+/// `UpdateInterface(v[0] != 0)`
+constexpr static const int32_t EE_TECH_HOST_UPDATE_INTERFACE = 21;
+
+/// `OnResearched(v[0], NULL)`
+constexpr static const int32_t EE_TECH_HOST_ON_RESEARCHED = 22;
+
+/// the player's statistics: `v[0]` 0 `mPlayer->mSavedGroups.Reset(v[1], 1)`, 1 `GetPlayer()->...Reset(v[1], 1)`,
+/// 2 `mPlayer->mSavedGroups.Set(v[1], v[2])`
+constexpr static const int32_t EE_TECH_HOST_STATISTIC = 23;
+
+/// `GetPlayer()->UnloadUnitClassMedia(v[0])`
+constexpr static const int32_t EE_TECH_HOST_UNLOAD_UNIT_MEDIA = 24;
+
+/// `gEventsEnabled = v[0] != 0`
+constexpr static const int32_t EE_TECH_HOST_EVENTS_ENABLED = 25;
+
+/// whether the tree is the local player's (`gWorld.mPlayers[mPlayerIndex] == gWorld.GetCurrentPlayer()`)
+constexpr static const int32_t EE_TECH_HOST_IS_LOCAL = 26;
+
+/// the epoch name of the epoch id `v[0]` for the local player: `mEpochNameID`, `PostShowEpochName`, the refresh
+constexpr static const int32_t EE_TECH_HOST_SHOW_EPOCH_NAME = 27;
+
+/// `ESVERIFY_AT(false, v[0])`
+constexpr static const int32_t EE_TECH_HOST_ASSERT = 28;
+
+/// TNWK (TEST ONLY): `EETechCaptureWalkBegin()`
+constexpr static const int32_t EE_TECH_HOST_WALK_BEGIN = 30;
+
+/// TNWK: `EETechCaptureWalkStep(v[0], v[1])`
+constexpr static const int32_t EE_TECH_HOST_WALK_STEP = 31;
+
+/// TNWK: `EETechCaptureWalk(v[0], v[4] ? tree : NULL, node.obj, v[1], v[2], v[3])`
+constexpr static const int32_t EE_TECH_HOST_WALK = 32;
+
+/// TEPO (TEST ONLY): the record of `SetEpoch` (`v[0]` 0), `ResearchToEpoch` (1), `SetEpochRange` (2): `v[1]`, `v[2]`
+constexpr static const int32_t EE_TECH_HOST_CAPTURE_EPOCHS = 33;
+
+/// TRTE (TEST ONLY): `EETechCaptureEpochStep(v[0], v[1])`
+constexpr static const int32_t EE_TECH_HOST_CAPTURE_EPOCH_STEP = 34;
+
+/// TRTE: `EETechCaptureResearchToEpoch(tree, v[0], v[1] != 0)`
+constexpr static const int32_t EE_TECH_HOST_CAPTURE_RESEARCH_TO_EPOCH = 35;
+
+/// the file (the saved game's `long` and `bool`): `v[0]` the old value in, the read value out; the result
+constexpr static const int32_t EE_TECH_HOST_READ_LONG = 50;
+
+constexpr static const int32_t EE_TECH_HOST_READ_BOOL = 51;
+
+constexpr static const int32_t EE_TECH_HOST_WRITE_LONG = 52;
+
+constexpr static const int32_t EE_TECH_HOST_WRITE_BOOL = 53;
+
+/// the effects of the researched event of `node`: their count (0 without an event)
+constexpr static const int32_t EE_TECH_HOST_EFFECT_COUNT = 40;
+
+/// effect `v[0]` of the researched event of `node` -> `v[0]` its kind, `v[1]` its unit class, `v[2]` its technology
+constexpr static const int32_t EE_TECH_HOST_EFFECT = 41;
+
+/// unit class `v[0]`'s unit type -> `v[0]`; returns 1 when the class exists
+constexpr static const int32_t EE_TECH_HOST_CLASS_TYPE = 42;
+
+/// The event hooks the walks fire (`kEventHookTechResearched`, `kEventHookEpochAvailable`, ee/EEEvent.h).
+constexpr static const int32_t EVENT_HOOK_TECH_RESEARCHED = -2001;
+
+constexpr static const int32_t EVENT_HOOK_EPOCH_AVAILABLE = -2002;
 
 /// `kTechNone`: no technology.
 constexpr static const int32_t TECH_NONE = 100000;
@@ -104,6 +421,20 @@ constexpr static const int32_t RESULT_RESEARCHED = 0;
 constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
+
+/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
+enum class EeCalamityCastMode : int32_t {
+  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
+  Base = 0,
+  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
+  Global,
+  /// `EELocationCalamityClass`: the base, then the class's location.
+  Location,
+  /// `EEUnitCalamityClass`: the base, then the class's target.
+  Unit,
+  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
+  SpecialAttack,
+};
 
 /// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
 /// the others to the upgrade of every unit class the effect names.
@@ -188,14 +519,6 @@ enum class EeTechEffectHandler : uint32_t {
   UnitSound,
   /// kind 19: `ConvertEventUnits`
   ConvertUnits,
-};
-
-/// What `EETechTree::Research` does after the epoch's `Research` returned `result`: an epoch id updates statistics
-/// series 0xc, a node that counts toward the next epoch adds to that epoch's counter.
-enum class EeTechTreeResearchAfter : uint32_t {
-  Nothing = 0,
-  EpochStatistics,
-  CountTowardNextEpoch,
 };
 
 /// The host calls (`EeCalamityCall::op`). Each names what the C++ does and what it answers.
@@ -367,34 +690,6 @@ enum class EeCalamityOp : int32_t {
   ClassStep = 80,
 };
 
-/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
-enum class EeCalamityCastMode : int32_t {
-  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
-  Base = 0,
-  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
-  Global,
-  /// `EELocationCalamityClass`: the base, then the class's location.
-  Location,
-  /// `EEUnitCalamityClass`: the base, then the class's target.
-  Unit,
-  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
-  SpecialAttack,
-};
-
-/// One step of `EETechTree::ResearchToEpoch` (`EeTechEpochStep::step`).
-enum class EeTechEpochStepKind : uint32_t {
-  /// `mEpochs[epoch].Unlock()`.
-  Unlock = 0,
-  /// `mEpochs[epoch].ResearchAll(false)`.
-  ResearchAll,
-  /// `mEpochs[epoch].ResearchSelf()`.
-  ResearchSelf,
-  /// `mEpochs[epoch].ResearchKind(7, true)`.
-  ResearchKind7,
-  /// The epoch's name for the local player (`mEpochNameID`, the interface's refresh).
-  ShowName,
-};
-
 /// Which walk of `ApplyEventAttribute` a unit is in (`ee_tech_unit_step`).
 enum class EeTechUnitWalk : uint32_t {
   /// The player's units, for the hit point rescale (built ones only).
@@ -441,170 +736,204 @@ enum class EeContagionOp : int32_t {
   Capture = 16,
 };
 
-/// `EETechTreeEpoch::Unlock`'s step for one of the epoch's nodes.
-enum class EeTechUnlockAction : int32_t {
-  /// An obsolete node is left alone.
-  Nothing = 0,
-  /// `MakeAvailable()`: the node comes with the epoch (`mAvailableWithEpoch`).
-  MakeAvailable = 1,
-  /// `SetPrerequisite(epoch)`: the epoch is one of its prerequisites.
+/// The node operations of [`ee_tech_walk_node`] (`a`, `b`: the C++ arguments).
+enum class EeTechNodeOp : int32_t {
+  /// the virtual `GetIsAvailable` (0/1)
+  IsAvailable = 0,
+  /// the virtual `GetIsObsolete` (0/1)
+  IsObsolete = 1,
+  /// `SetPrerequisite(a)`'s body
   SetPrerequisite = 2,
+  MakeAvailable = 3,
+  /// `ResearchNode(unit)`'s body: its result
+  Research = 4,
+  /// `SetScenEditorObsoleted(a, b)`
+  SetEditorObsoleted = 5,
+  /// `SetObsolete(a, b)`
+  SetObsolete = 6,
+  /// `DependsOn(a)` (0/1)
+  DependsOn = 7,
 };
 
-/// `EETechTreeEpoch::MakeObsolete(id)`'s choice.
-enum class EeTechMakeObsolete : int32_t {
-  /// Another id: the epoch's node with it (if any) is made obsolete.
-  Node = 1,
-  /// The epoch itself, still ahead and not obsolete: obsoleted (its event fires, the interface refreshes).
-  Epoch = 2,
-  /// The epoch itself, obsolete already or reached: nothing.
-  Nothing = 3,
+/// The epoch operations of [`ee_tech_walk_epoch`].
+enum class EeTechEpochOp : int32_t {
+  /// `AddSOL`'s body
+  AddSol = 0,
+  /// `UpdateAvailability`'s body
+  UpdateAvailability = 1,
+  /// `MakeObsolete(a)`
+  MakeObsolete = 2,
+  ObsoleteOutdated = 3,
+  Unlock = 4,
+  ResearchSelf = 5,
+  /// `ResearchAll(b)`
+  ResearchAll = 6,
+  /// `ResearchKind(a, b)`
+  ResearchKind = 7,
+  /// `Research(a, unit)`'s body: its result
+  Research = 8,
 };
 
-/// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
-struct EeTechEffectValues {
-  float value;
-  float offset;
-  float factor;
+/// The tree operations of [`ee_tech_walk_tree`].
+enum class EeTechTreeOp : int32_t {
+  /// `Research(a, unit)`'s body
+  Research = 0,
+  /// `ResearchToEpoch(a)`
+  ResearchToEpoch = 1,
+  /// `SetEpoch(a)`
+  SetEpoch = 2,
+  AdvanceEpoch = 3,
+  /// `SetEpochRange(a, b)`
+  SetEpochRange = 4,
+  /// `ResetEpochRange(a, b)`
+  ResetEpochRange = 5,
+  /// `SetNodeAvailable(a, b)`
+  SetNodeAvailable = 6,
+  /// `MakeObsolete(a)`
+  MakeObsolete = 7,
+  ObsoleteOutdated = 8,
+  /// `SetPrerequisite(a, b)`
+  SetPrerequisite = 9,
+  /// `GetChecksum`'s value
+  Checksum = 10,
+  /// the saved game's `Load(a major, b minor)`: its result
+  Load = 11,
+  /// the saved game's `Save`: its result
+  Save = 12,
+  /// `ApplySavedState(a, b)`
+  ApplySavedState = 13,
+  /// `BuildUnitClassInfo` over this tree (gTechTree)
+  BuildUnitClassInfo = 14,
 };
 
-/// An attribute's operation and slot (the armour or gather time index; 0 otherwise).
-struct EeTechAttribute {
-  EeTechAttributeOp op;
-  int32_t index;
+/// The saved game's lists of a tree (`EETechTree`'s `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`,
+/// `mSavedSOLs`), applied by `ApplySavedState`.
+struct EeTechTreeSaved;
+
+/// A calamity class's numbers (`EECalamityClass` derives from it). The base members first, in their order.
+struct EeCalamityClassFields {
+  float mLifeTime;
+  long mClassEnum;
+  /// Each class's calamity flag bit (set on the units it holds).
+  unsigned long mClassFlags;
+  unsigned long mUnitSet;
+  long mNameID;
+  /// The record's id (`EECalamityKind`).
+  long mID;
+  long mRange;
+  long mCost;
+  bool mB24;
+  bool mIsBlockedByImmunity;
+  bool mIsCastByAllSelected;
+  bool mOverWater;
+  bool mPositive;
+  bool mFunctorFlag;
+  /// The earthquake's, the hurricane's, the leprosy's, the plague's and the fire's damage.
+  long mDamage;
+  /// The earthquake's and the hurricane's tick time.
+  long mTickTime;
+  long mShake;
+  long mCrackCount;
+  long mArea;
+  /// The hurricane's, the volcano's, the meteor storm's and the drop object's unit class.
+  long mUnitClassIndex;
+  /// The time warp's and the teleport's `EEFindPlacement` range.
+  long mPlacementRange;
+  long mDepartTime;
+  long mAwayTime;
+  long mHoldTime;
+  /// The morale's effect duration.
+  long mEffectDuration;
+  /// The area effects' and the leprosy's first effect's duration.
+  unsigned long mEffect1Duration;
+  long mEffect2Time;
+  unsigned long mEffectTime2;
+  unsigned long mEffectTime3;
+  /// The area effects' and the leprosy's radius in tiles (their `mRadius`).
+  unsigned long mRadiusTiles;
+  /// The area effect's damage factor.
+  long mDamageFactor;
+  long mBurn;
+  /// The functors' spread, update or damage time (a local of the classes' `Initialize`).
+  long mSpreadTime;
+  long mL3C;
+  long mL40;
+  long mL48;
+  /// The teleport's share of the caster's hit points (its `mDamageFactor`).
+  float mDamageShare;
+  float mDuration;
+  /// The earthquake's, the hurricane's, the fire's, the meteor storm's (and the plague functor's) radius.
+  float mRadius;
+  float mShakeInterval;
+  float mVolume;
+  float mQuakeVolume;
+  float mMinimumFactor;
+  float mQuakeMinimumFactor;
+  float mSpeed;
+  float mSourceSpeed;
+  float mFalloff;
+  /// The fire's (and the plague functor's) chance.
+  float mChance;
+  float mMaximumRadius;
+  float mMinimumRadius;
+  float mMinimumInterval;
+  float mMaximumInterval;
+  float mSightBonus;
 };
 
-/// A node's (`EETechTreeNode`, or an epoch's) state as the logic reads it.
-struct EeTechNode {
-  int32_t id;
-  /// `mData->mKind` (3: repeatable, 4: a wonder, 5: never researched)
-  int32_t kind;
-  int32_t epoch;
-  int32_t obsolete_epoch;
-  int32_t research_delay;
-  int32_t prerequisites[4];
-  uint8_t prerequisite_flags;
-  bool researched;
-  /// `mIsObsolete` (the flag; [`node_is_obsolete`] adds the obsolete epoch)
-  bool obsolete;
-  bool available;
-  bool editor_obsoleted;
-  bool makes_unit;
-  bool counts_toward_epoch;
-  uint8_t pad;
+/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
+/// `ee/EECalamityClass.h`; 236 bytes on every target).
+struct EeCalamityData {
+  uint8_t mLabel[100];
+  float mFloatParam1;
+  float mFloatParam2;
+  float mQuakeMinimumStrength;
+  float mQuakeStrength;
+  float mUnused1;
+  float mRange;
+  int32_t mUnusedDatabaseID;
+  int32_t mID;
+  int32_t mClassEnum;
+  int32_t mUnusedTargetKind;
+  int32_t mLifeTime;
+  int32_t mUnused2;
+  int32_t mGraphicEffectID1;
+  int32_t mGraphicEffectID2;
+  int32_t mGraphicEffectID3;
+  int32_t mGraphicEffectID4;
+  int32_t mUnused3;
+  int32_t mUnused4;
+  int32_t mUnused5;
+  int32_t mUnitClassIndex;
+  int32_t mIntParam1;
+  int32_t mIntParam2;
+  int32_t mIntParam3;
+  int32_t mIntParam4;
+  int32_t mIntParam5;
+  int32_t mIntParam6;
+  bool mUnused6;
+  bool mBoolParam1;
+  bool mUnused7;
+  bool mUnused8;
+  bool mIsCastByAllSelected;
+  bool mIsBlockedByImmunity;
+  int32_t mSoundID;
+  int32_t mSecondarySoundID;
+  int32_t mCost;
+  uint32_t mUnitSet;
+  int32_t mNameID;
+  bool mUnusedClassFlag;
 };
 
-/// The tree's epochs (`EETechTree`).
-struct EeTechTreeState {
-  int32_t current_epoch;
-  int32_t start_epoch;
-  int32_t end_epoch;
-  int32_t epochs_before_wonders;
-  /// `gEpochCount`: the ids below it are epochs (`EEIsEpochID`)
-  int32_t epoch_count;
-};
-
-/// What `SetPrerequisite` does to a node.
-struct EeTechPrerequisite {
-  /// the node's new prerequisite flags
-  uint8_t flags;
-  /// every prerequisite is met now: the node becomes available (the event hook, statistics series 0x16, the
-  /// interface)
-  bool becomes_available;
-};
-
-/// `EETechTreeNode::ResearchNode`'s decision (before its research delay counts down).
-struct EeTechResearch {
-  /// 0 researched, 2 already researched, 9 not possible
-  int32_t result;
-  /// mark it researched and fire its event (result 0)
-  bool research;
-};
-
-/// What `AddSOL` and `UpdateAvailability` do.
-struct EeTechEpochUpdate {
-  /// the counter after the call
-  int32_t current;
-  /// the epoch was considered at all (within the tree's end epoch, counting / the count reached)
-  bool considered;
-  /// the epoch becomes available (its event hook and the interface)
-  bool becomes_available;
-  uint8_t pad[2];
-};
-
-/// An epoch's research counter (`EETechTreeEpoch`: `mCurrentSOL` toward `mRequiredSOL`).
-struct EeTechEpochCounter {
-  int32_t required;
-  int32_t current;
-  /// `mIsCountingSOL`: off between a saved game's load and its applied state
-  bool counting;
-  bool available;
-  uint8_t pad[2];
-};
-
-/// The inputs of `EETechTreeNode::GetCost`. The C++ reads the world's factors only where the C++ read them (the
-/// unit-making fields only for a node that makes a unit).
-struct EeTechCostInput {
-  /// the node's cost in the resource for the unit class (its per-class table or its own)
-  int32_t cost;
-  float scale;
-  bool makes_unit;
-  /// a wonder's (kind 4) cost grows by `epoch_cost_factor` per epoch after its own (its epoch not 0)
-  bool wonder_epoch_scaled;
-  /// the game variant's cost set contains the unit class
-  bool in_cost_set;
-  /// the player has the unit class's upgrade (its cost scale applies)
-  bool has_upgrade;
-  /// the player's just-in-time manufacturing for a class with a rally point
-  bool jit;
-  uint8_t pad[3];
-  /// the tree's current epoch less the node's
-  int32_t epochs_since;
-  /// `kWorldUnitEpochCostFactor`
-  float epoch_cost_factor;
-  /// the game variant's cost set factor
-  float cost_set_factor;
-  /// the upgrade's cost scale
-  float cost_scale;
-  /// `kWorldJitManufacturingCostFactor` (or its deathmatch value)
-  float jit_factor;
-};
-
-/// One id of `EETechTree::GetChecksum`'s list (the nodes of every epoch, then the epochs).
-struct EeTechChecksumEntry {
-  int32_t id;
-  bool researched;
-  /// `GetIsObsolete()` (the virtual: a node's adds its obsolete epoch)
-  bool obsolete;
-  uint8_t pad[2];
-};
-
-/// The C++ tree for `DependsOn`: writes the four prerequisites of `id`'s node to `out`, false without a node.
-using EeTechPrerequisitesFn = bool(*)(void *ctx, int32_t id, int32_t *out);
-
-/// A node as `SumCosts` reads it (the C++ fills it; false without a node).
-struct EeTechSumNode {
-  int32_t id;
-  int32_t unit_class;
-  int32_t prerequisites[4];
-  bool available;
-  bool researched;
-  uint8_t pad[2];
-};
-
-/// The C++ tree for `SumCosts`.
-struct EeTechSumCostsCallbacks {
-  void *ctx;
-  bool (*node)(void *ctx, int32_t id, EeTechSumNode *out);
-  int32_t (*cost)(void *ctx, int32_t id, int32_t resource, int32_t unit_class);
-  int32_t (*class_technology)(void *ctx, int32_t unit_class);
-};
-
-/// `EECalamityClass::UpdateTimeAlive`'s arithmetic: the new age and whether the lifetime is over (the update's 7).
-struct EeCalamityAge {
-  float time_alive;
-  bool done;
-  uint8_t pad[3];
+/// What the C++ knows of the class's effects and sounds when it asks: which are set
+/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
+/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
+struct EeCalamityClassMedia {
+  uint32_t present;
+  uint32_t duration[4];
+  float size[4];
+  uint32_t time1[4];
+  float quake_damage_factor;
 };
 
 /// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
@@ -656,6 +985,209 @@ struct EeCalamityParams {
   float quake_source_speed;
 };
 
+/// What one of the class's `Start`, `Stop` or `Update` hands its Rust body: the parameters, which of the class's
+/// sounds (`EE_CALAMITY_RUN_*`), and whether it runs at all (the classes whose `Stop` was empty).
+struct EeCalamityClassRun {
+  EeCalamityParams params;
+  uint32_t sounds;
+  bool runs;
+};
+
+/// The calamity's members a class's `Reset(calamity)` reads and sets, in and out, and the target unit's view.
+struct EeCalamityReset {
+  /// In: the calamity has a target unit; its tile (x -10000 off the map) and hit points.
+  bool has_target;
+  long target_tile_x;
+  long target_tile_y;
+  long target_hit_points;
+  /// In and out: the calamity's placeholders and remembered tile.
+  bool bool1;
+  bool bool2;
+  float float1;
+  long int1;
+  long int2;
+  long tile_x;
+  long tile_y;
+  /// Out: `int1` is to be a new contagion helper of the class's functor for the calamity and its target.
+  bool create_helper;
+};
+
+/// One `CanCastAt`, `IsValidLocation` or `IsValidTarget` question.
+struct EeCalamityCast {
+  EeCalamityCastMode mode;
+  int32_t class_enum;
+  uint32_t x;
+  uint32_t y;
+  /// `GetCost()`.
+  int32_t cost;
+  /// The area effects' and the leprosy's radius in tiles (unsigned), the hurricane's `mArea`.
+  uint32_t radius;
+  int32_t area;
+  /// `kTerrainSpace` (the meteor storm's tiles).
+  int32_t space_terrain;
+  bool check;
+  bool has_caster;
+  bool blocked_by_immunity;
+  /// The hurricane only over water (`mOverWater`).
+  bool over_water;
+};
+
+/// An active calamity's plain members (`EECalamity` derives from it).
+struct EeCalamityFields {
+  /// 1.0 after `Reset`.
+  float mEpicenterFactor;
+  float mFloatPlaceHolder1;
+  float mFloatPlaceHolder2;
+  float mHeight;
+  float mTimeAlive;
+  float mDiscreteUpdateTime;
+  float mTimeElapsedSinceLastUpdate;
+  /// The area effect classes keep their contagion helper id here.
+  long mIntPlaceHolder1;
+  long mIntPlaceHolder2;
+  unsigned long mTargetUnitID;
+  /// The caster unit's id.
+  unsigned long mOriginatingUnitID;
+  unsigned long mPlayerNumber;
+  bool mBoolPlaceHolder1;
+  bool mBoolPlaceHolder2;
+  bool mInitialized;
+  bool mHasTargetLocation;
+  bool mHasTargetUnit;
+};
+
+/// The C++'s I/O callback: `call(ctx, op, value)`.
+struct EeCalamityIoFfi {
+  void *ctx;
+  long (*call)(void *ctx, uint32_t op, void *value);
+};
+
+/// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
+/// effects' `mUpdateTime` are `mSpreadTime`, the area effects' unit set `mValue` is `mUnitSet`, the extra damage's
+/// flag `mFlag`). Its effects are C++ members of `EEContagionFunctor`.
+struct EeContagionFunctorFields {
+  /// The functor's kind (`EE_CALAMITY_FUNCTOR_*`).
+  uint32_t mKind;
+  /// The spread radius (the fire's, the plague's).
+  float mRadius;
+  /// The spread chance (the fire's, the plague's).
+  float mChance;
+  /// The fire's burn: hundredths of the unit's maximum hit points burnt at once.
+  long mBurn;
+  /// The damage per discrete update (the area effects': the factor of the unit's attack stat).
+  long mDamage;
+  /// The discrete update time (the fire's and the leprosy's spread time, the plague's damage time, the area
+  /// effects' update time).
+  unsigned long mSpreadTime;
+  /// The unit set it can infect.
+  unsigned long mUnitSet;
+  /// `TakeHit`'s mode: 2 when the class is blocked by immunity, else 3.
+  long mMode;
+  /// The calamity's discrete updates of this helper update (`Update`).
+  unsigned long mUpdates;
+  /// The extra damage's flag: the pulse cannon effect, else the battle cry.
+  bool mFlag;
+};
+
+/// The functor's answers an update reads (all plain getters, read once before it).
+struct EeContagionParams {
+  /// `GetSpreadTime()`.
+  uint32_t spread_time;
+  /// `GetChance()`.
+  float chance;
+  /// `GetRadius()`.
+  float radius;
+  /// `EE_CONTAGION_*` bits.
+  uint32_t flags;
+};
+
+/// What `Apply` does to a unit ([`apply_damage`]): whether it hits and the damage.
+struct EeContagionFunctorHit {
+  /// The unit takes a hit.
+  bool hits;
+  /// Its damage.
+  int32_t damage;
+};
+
+/// A contagion helper's numbers (`EEContagionHelper` derives from it).
+struct EeContagionHelperFields {
+  long mHelperID;
+  float mTimeSinceLastSpread;
+  float mTimeSinceLastUpdate;
+};
+
+/// The C++'s I/O callback: `call(ctx, op, value)`.
+struct EeContagionIoFfi {
+  void *ctx;
+  long (*call)(void *ctx, uint32_t op, void *value);
+};
+
+/// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
+struct EeTechEffectValues {
+  float value;
+  float offset;
+  float factor;
+};
+
+/// An attribute's operation and slot (the armour or gather time index; 0 otherwise).
+struct EeTechAttribute {
+  EeTechAttributeOp op;
+  int32_t index;
+};
+
+/// The inputs of `EETechTreeNode::GetCost`. The C++ reads the world's factors only where the C++ read them (the
+/// unit-making fields only for a node that makes a unit).
+struct EeTechCostInput {
+  /// the node's cost in the resource for the unit class (its per-class table or its own)
+  int32_t cost;
+  float scale;
+  bool makes_unit;
+  /// a wonder's (kind 4) cost grows by `epoch_cost_factor` per epoch after its own (its epoch not 0)
+  bool wonder_epoch_scaled;
+  /// the game variant's cost set contains the unit class
+  bool in_cost_set;
+  /// the player has the unit class's upgrade (its cost scale applies)
+  bool has_upgrade;
+  /// the player's just-in-time manufacturing for a class with a rally point
+  bool jit;
+  uint8_t pad[3];
+  /// the tree's current epoch less the node's
+  int32_t epochs_since;
+  /// `kWorldUnitEpochCostFactor`
+  float epoch_cost_factor;
+  /// the game variant's cost set factor
+  float cost_set_factor;
+  /// the upgrade's cost scale
+  float cost_scale;
+  /// `kWorldJitManufacturingCostFactor` (or its deathmatch value)
+  float jit_factor;
+};
+
+/// A node as `SumCosts` reads it (the C++ fills it; false without a node).
+struct EeTechSumNode {
+  int32_t id;
+  int32_t unit_class;
+  int32_t prerequisites[4];
+  bool available;
+  bool researched;
+  uint8_t pad[2];
+};
+
+/// The C++ tree for `SumCosts`.
+struct EeTechSumCostsCallbacks {
+  void *ctx;
+  bool (*node)(void *ctx, int32_t id, EeTechSumNode *out);
+  int32_t (*cost)(void *ctx, int32_t id, int32_t resource, int32_t unit_class);
+  int32_t (*class_technology)(void *ctx, int32_t unit_class);
+};
+
+/// `EECalamityClass::UpdateTimeAlive`'s arithmetic: the new age and whether the lifetime is over (the update's 7).
+struct EeCalamityAge {
+  float time_alive;
+  bool done;
+  uint8_t pad[3];
+};
+
 /// The calamity's members an update reads and writes (`EECalamity`).
 struct EeCalamityState {
   float time_alive;
@@ -705,32 +1237,6 @@ struct EeCalamityHostFfi {
   void (*call)(void *ctx, EeCalamityState *state, const EeCalamityCall *call, EeCalamityReply *reply);
 };
 
-/// One `CanCastAt`, `IsValidLocation` or `IsValidTarget` question.
-struct EeCalamityCast {
-  EeCalamityCastMode mode;
-  int32_t class_enum;
-  uint32_t x;
-  uint32_t y;
-  /// `GetCost()`.
-  int32_t cost;
-  /// The area effects' and the leprosy's radius in tiles (unsigned), the hurricane's `mArea`.
-  uint32_t radius;
-  int32_t area;
-  /// `kTerrainSpace` (the meteor storm's tiles).
-  int32_t space_terrain;
-  bool check;
-  bool has_caster;
-  bool blocked_by_immunity;
-  /// The hurricane only over water (`mOverWater`).
-  bool over_water;
-};
-
-/// One step of `ResearchToEpoch`, on the epoch at index `epoch`.
-struct EeTechEpochStep {
-  EeTechEpochStepKind step;
-  int32_t epoch;
-};
-
 /// One unit of a rescale walk: whether it is rescaled (`EVHP`), whether the new value is written, and the value.
 struct EeTechUnitStep {
   bool rescaled;
@@ -763,18 +1269,6 @@ struct EeTechConversion {
   bool move_queued;
   /// The new units take their class's behaviour (tech 0x413 or 0x138d).
   bool set_behavior;
-};
-
-/// The functor's answers an update reads (all plain getters, read once before it).
-struct EeContagionParams {
-  /// `GetSpreadTime()`.
-  uint32_t spread_time;
-  /// `GetChance()`.
-  float chance;
-  /// `GetRadius()`.
-  float radius;
-  /// `EE_CONTAGION_*` bits.
-  uint32_t flags;
 };
 
 /// The helper's timers (`mTimeSinceLastSpread`, `mTimeSinceLastUpdate`).
@@ -817,28 +1311,314 @@ struct EeCalamityDiscrete {
   float elapsed;
 };
 
-/// `EETechTreeNode::SetObsolete(value, keep media)`'s decision.
-struct EeTechSetObsolete {
-  /// The node's flag after.
-  bool obsolete;
-  /// It becomes obsolete now: its obsolete event fires and the interface refreshes.
-  bool fires;
-  /// Then its unit media is unloaded if it needs it and has it loaded (`NeedsUnitMedia`, asked only then).
-  bool check_media;
-  uint8_t pad;
+/// `EETechTree`'s plain members (ee/EEPlayer.h: `EETechTree` derives from it).
+struct EeTechTreeFields {
+  long mCurrentEpoch;
+  long mStartEpoch;
+  long mEndEpoch;
+  long mEpochsBeforeWonders;
+  long mMediaID;
+  /// the epoch name the interface shows (a string id)
+  long mEpochNameID;
+  bool mIsLoaded;
+  /// the saved game's lists (null until a load; freed by [`ee_tech_tree_fields_free`])
+  EeTechTreeSaved *mSaved;
 };
 
-/// `EETechTree::AdvanceEpoch` (`tree::advance_epoch`): whether the tree advances, and to which epoch.
-struct EeTechAdvance {
-  bool advances;
-  uint8_t pad[3];
-  int32_t epoch;
+/// A node's and an epoch's plain members (ee/EEPlayer.h: `RTSTechTreeNode` derives from it).
+struct EeTechNodeFields {
+  bool mIsResearched;
+  /// the flag (`GetIsObsolete` adds the obsolete epoch for a node)
+  bool mIsObsolete;
+  bool mIsAvailable;
+  /// 1 the epoch, 2/4/8/0x10 the four prerequisites (never set for an epoch)
+  uint8_t mPrerequisiteFlags;
+  bool mIsAllowed;
+  bool mScenEditorObsoleted;
+  bool mIsUnitMediaLoaded;
+  /// an epoch's: off between a saved game's load and its applied state
+  bool mIsCountingSOL;
+  /// the epoch it belongs to
+  long mEpoch;
+  long mObsoleteEpoch;
+  /// `ResearchNode` counts it down
+  long mResearchDelay;
+  long mRequiredSOL;
+  long mFirstNodeID;
+  long mCurrentSOL;
+  long mNextEpoch;
+  /// the title string (epochs.yaml; 0: 30145 + the epoch)
+  long mTitleID;
 };
+
+/// `RTSTechTreeNodeData`'s plain members (ee/EEPlayer.h), copied from the tech tree file's record.
+struct EeTechNodeDataFields {
+  /// the costs by resource (`Load` zeroes all seven, then copies five)
+  long mCosts[7];
+  long mCostResource;
+  long mRequiredStatistic;
+  /// past the end of the unit classes (`GetUnitClass`)
+  long mDefaultUnitClass;
+  /// a calamity's `EECalamityEnum` (the cast-calamity goal)
+  unsigned long mCalamity;
+  /// 3 repeatable, 4 a wonder, 5 never researched
+  long mKind;
+  /// an epoch's: its position; a node's: from 1000
+  long mID;
+  long mResearchedEvent;
+  long mObsoleteEvent;
+  long mBuildTime;
+  long mPrerequisite1;
+  long mPrerequisite2;
+  long mPrerequisite3;
+  long mPrerequisite4;
+  /// the `gUnitClassTable` index of what it builds
+  long mUnitClass;
+  long mRequiredStatisticValue;
+  long mNameID;
+  long mHotKey;
+  bool mMakesUnit;
+  bool mCountsTowardEpoch;
+  bool mShowInEditor;
+  bool mObsoletedByDefault;
+  bool mAvailableWithEpoch;
+  bool mResearchedWithEpoch;
+};
+
+/// One 0x10c-byte record of the tech tree file (`EETechTreeEpoch::Load` 0x1ce10e and `EETechTreeNode::Load`
+/// 0x1cf370 read it into a local; was ee/EETechTreeRecord.h). Fields by offset, named after the members they fill.
+struct EeTechTreeRecord {
+  /// +0x00 (not read: the name?)
+  uint8_t mLabel[104];
+  int32_t mID;
+  int32_t mEpoch;
+  int32_t mObsoleteEpoch;
+  int32_t mResearchedEvent;
+  int32_t mObsoleteEvent;
+  /// +0x7c the cost of resource 3 (wood)
+  int32_t mCost3;
+  /// +0x80 stone
+  int32_t mCost4;
+  int32_t mUnused1;
+  /// +0x88 gold
+  int32_t mCost5;
+  int32_t mUnused2;
+  /// +0x90 iron
+  int32_t mCost6;
+  /// +0x94 food
+  int32_t mCost2;
+  int32_t mBuildTime;
+  int32_t mPrerequisite1;
+  int32_t mPrerequisite2;
+  int32_t mPrerequisite3;
+  int32_t mPrerequisite4;
+  int32_t mUnitClass;
+  /// +0xb0 `EEButtonObject::Get` -> the node's `mButton`
+  int32_t mButton;
+  uint8_t mMakesUnit;
+  uint8_t mCountsTowardEpoch;
+  uint8_t mUnused3;
+  uint8_t mUnused4;
+  int32_t mNameID;
+  int32_t mKind;
+  int32_t mCostResource;
+  int32_t mRequiredStatistic;
+  int32_t mRequiredStatisticValue;
+  int32_t mCalamity;
+  int32_t mHotKey;
+  /// +0xd4 an epoch's title string (0: 30145 + the epoch)
+  int32_t mTitleID;
+  int32_t mUnused6;
+  int32_t mUnused7;
+  int32_t mUnused8;
+  /// +0xe4 the node's cost factors of its second .. fifth unit class (the others 1.0f)
+  float mFactor1;
+  float mFactor2;
+  float mFactor3;
+  float mFactor4;
+  uint8_t mShowInEditor;
+  uint8_t mObsoletedByDefault;
+  uint8_t mAvailableWithEpoch;
+  uint8_t mResearchedWithEpoch;
+  int32_t mUnused9;
+  int32_t mNextEpoch;
+  int32_t mRequiredSOL;
+  int32_t mFirstNodeID;
+  int32_t mDefaultUnitClass;
+};
+
+/// A node as the host hands it: the C++ object (for the host's calls) and its two records.
+struct EeTechNodeRef {
+  void *obj;
+  EeTechNodeFields *node;
+  EeTechNodeDataFields *data;
+};
+
+/// One host call's values.
+struct EeTechHostIo {
+  EeTechNodeRef node;
+  /// the researching unit (`EEComplexUnit*`, may be null)
+  void *unit;
+  int32_t v[5];
+  /// a buffer of `count` refs (`EPOCH_NODES`)
+  EeTechNodeRef *nodes;
+  uint32_t count;
+};
+
+/// The host: `(ctx, op, io) -> the operation's result`; `ctx` is the tree (`EETechTree*`).
+using EeTechHostFn = int32_t(*)(void*, int32_t, EeTechHostIo*);
 
 /// The bits of the four prerequisites (`kPrerequisitePrerequisite1..4`).
 constexpr static const uint8_t PREREQUISITE_BITS[4] = { 2, 4, 8, 16, };
 
 extern "C" {
+
+/// [`get_mode`].
+uint32_t ee_calamity_class_get_mode(int32_t class_enum, uint32_t slot);
+
+/// [`fetches`].
+bool ee_calamity_class_fetches(uint32_t mode, int32_t id);
+
+/// [`initialize_base`] into `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes, `data` for reads.
+void ee_calamity_class_initialize_base(EeCalamityClassFields *fields, const EeCalamityData *data);
+
+/// [`fill`] into `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes, `data` and `media` for reads.
+void ee_calamity_class_fill(EeCalamityClassFields *fields,
+                            const EeCalamityData *data,
+                            const EeCalamityClassMedia *media);
+
+/// [`functor_kind`].
+uint32_t ee_calamity_class_functor_kind(int32_t class_enum);
+
+/// [`target_kind`].
+uint32_t ee_calamity_class_target_kind(int32_t class_enum);
+
+/// [`media_step`].
+uint32_t ee_calamity_class_media_step(int32_t class_enum, uint32_t list, uint32_t index);
+
+/// [`sound_mode`].
+uint32_t ee_calamity_class_sound_mode(int32_t class_enum);
+
+/// [`run`].
+///
+/// # Safety
+/// `fields` and `media` valid for reads.
+EeCalamityClassRun ee_calamity_class_run(const EeCalamityClassFields *fields,
+                                         const EeCalamityClassMedia *media,
+                                         uint32_t which);
+
+/// [`reset`] over `*state`.
+///
+/// # Safety
+/// `state` valid for reads and writes.
+void ee_calamity_class_reset(int32_t class_enum, EeCalamityReset *state);
+
+/// [`targets_by_functor`].
+bool ee_calamity_class_targets_by_functor(int32_t class_enum);
+
+/// [`cast_fields`] into `*cast`; the unit class it places.
+///
+/// # Safety
+/// `fields` valid for reads, `cast` for reads and writes.
+long ee_calamity_class_cast_fields(const EeCalamityClassFields *fields,
+                                   EeCalamityCast *cast,
+                                   int32_t space_terrain);
+
+/// [`reset`] of `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes.
+void ee_calamity_record_reset(EeCalamityFields *fields);
+
+/// [`checksum`].
+///
+/// # Safety
+/// `fields` valid for reads.
+long ee_calamity_record_checksum(const EeCalamityFields *fields,
+                                 float target_x,
+                                 float target_y,
+                                 float target_z,
+                                 unsigned long tile_x,
+                                 unsigned long tile_y);
+
+/// [`load`] into `*fields` over `io`; the first error.
+///
+/// # Safety
+/// `fields` valid for reads and writes; `io`'s callback valid, not touching `*fields`.
+long ee_calamity_record_load(EeCalamityFields *fields, EeCalamityIoFfi io);
+
+/// [`save`] of `*fields` over `io`; the first error.
+///
+/// # Safety
+/// `fields` valid for reads; `io`'s callback valid.
+long ee_calamity_record_save(const EeCalamityFields *fields, EeCalamityIoFfi io);
+
+/// [`init`] into `*out`.
+///
+/// # Safety
+/// `class` valid for reads, `out` for writes.
+void ee_contagion_functor_init(EeContagionFunctorFields *out,
+                               const EeCalamityClassFields *class_,
+                               uint32_t kind);
+
+/// [`params`].
+///
+/// # Safety
+/// `f` valid for reads.
+EeContagionParams ee_contagion_functor_params(const EeContagionFunctorFields *f,
+                                              bool blocked_by_immunity);
+
+/// [`discrete_time`].
+///
+/// # Safety
+/// `f` valid for reads.
+float ee_contagion_functor_discrete_time(const EeContagionFunctorFields *f);
+
+/// [`apply_damage`].
+///
+/// # Safety
+/// `f` valid for reads.
+EeContagionFunctorHit ee_contagion_functor_apply_damage(const EeContagionFunctorFields *f,
+                                                        int32_t hit_points,
+                                                        float attack);
+
+/// [`helper_load`] into `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes; `io`'s callback valid, not touching `*fields`.
+long ee_contagion_helper_load(EeContagionHelperFields *fields,
+                              unsigned long major,
+                              unsigned long minor,
+                              EeContagionIoFfi io);
+
+/// [`helper_save`] of `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads; `io`'s callback valid.
+long ee_contagion_helper_save(const EeContagionHelperFields *fields, EeContagionIoFfi io);
+
+/// [`helper_checksum`].
+///
+/// # Safety
+/// `fields` valid for reads.
+long ee_contagion_helper_checksum(const EeContagionHelperFields *fields,
+                                  long unit_ids,
+                                  long calamity);
+
+/// [`manager_load`]; the last helper id into `*next_id`.
+///
+/// # Safety
+/// `next_id` valid for writes; `io`'s callback valid, not touching `*next_id`.
+long ee_contagion_manager_load(long *next_id, bool counter, EeContagionIoFfi io);
+
+/// [`manager_save`].
+long ee_contagion_manager_save(long next_id, bool counter, EeContagionIoFfi io);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///
@@ -895,74 +1675,6 @@ EeTechEffectHandler ee_tech_effect_handler(bool known,
                                            uint8_t run_on_load,
                                            bool events_enabled);
 
-/// `EETechTreeNode::GetIsObsolete`.
-///
-/// # Safety
-/// `node` and `tree` must be valid for reads.
-bool ee_tech_node_is_obsolete(const EeTechNode *node, const EeTechTreeState *tree);
-
-/// `EETechTreeNode::GetIsAvailable`.
-///
-/// # Safety
-/// `node` and `tree` must be valid for reads.
-bool ee_tech_node_is_available(const EeTechNode *node, const EeTechTreeState *tree);
-
-/// `EETechTreeEpoch::GetIsAvailable`.
-///
-/// # Safety
-/// `epoch` must be valid for reads.
-bool ee_tech_epoch_is_available(const EeTechNode *epoch);
-
-/// A loaded node's prerequisite flags: the bits of its empty prerequisites.
-uint8_t ee_tech_initial_prerequisite_flags(int32_t p1, int32_t p2, int32_t p3, int32_t p4);
-
-/// `EETechTreeNode::SetPrerequisite`.
-///
-/// # Safety
-/// `node` must be valid for reads.
-EeTechPrerequisite ee_tech_set_prerequisite(const EeTechNode *node,
-                                            int32_t id,
-                                            int32_t epoch_count);
-
-/// `EETechTreeNode::ResearchNode`'s decision.
-///
-/// # Safety
-/// `node` must be valid for reads.
-EeTechResearch ee_tech_research_node(const EeTechNode *node);
-
-/// The research delay after a `ResearchNode`.
-int32_t ee_tech_research_delay_after(int32_t delay);
-
-/// `EETechTreeEpoch::Research` of the epoch itself.
-///
-/// # Safety
-/// `epoch` and `tree` must be valid for reads.
-EeTechResearch ee_tech_research_epoch(const EeTechNode *epoch, const EeTechTreeState *tree);
-
-/// `EETechTreeEpoch::AddSOL`.
-///
-/// # Safety
-/// `counter` and `tree` must be valid for reads.
-EeTechEpochUpdate ee_tech_add_sol(int32_t epoch_id,
-                                  const EeTechEpochCounter *counter,
-                                  const EeTechTreeState *tree);
-
-/// `EETechTreeEpoch::UpdateAvailability`.
-///
-/// # Safety
-/// `counter` and `tree` must be valid for reads.
-EeTechEpochUpdate ee_tech_update_availability(int32_t epoch_id,
-                                              const EeTechEpochCounter *counter,
-                                              const EeTechTreeState *tree);
-
-/// `EETechTree::Research`'s end; `counts_toward_epoch` is -1 without a node, else 0 or 1.
-EeTechTreeResearchAfter ee_tech_tree_research_after(int32_t id,
-                                                    int32_t result,
-                                                    int32_t epoch_count,
-                                                    int32_t counts_toward_epoch,
-                                                    int32_t next_epoch,
-                                                    int32_t epoch_slots);
-
 /// `EETechTreeNode::GetCost`.
 ///
 /// # Safety
@@ -982,25 +1694,6 @@ float ee_tech_epoch_cost_scale(uint32_t epochs_advanced,
 /// # Safety
 /// `costs` must be valid for 7 reads, `factors` for 4, `out` for 7 writes.
 void ee_tech_class_costs(const int32_t *costs, uint32_t k, const float *factors, int32_t *out);
-
-/// `EETechTree::GetChecksum`'s value over `count` entries.
-///
-/// # Safety
-/// `entries` must be valid for `count` reads (or `count` 0).
-uint32_t ee_tech_checksum(const EeTechChecksumEntry *entries, uint32_t count);
-
-/// `EETechTreeNode::DependsOn` of the node `own` with its prerequisites `p1..p4`.
-///
-/// # Safety
-/// `get` must be callable with `ctx` for the call's duration.
-bool ee_tech_depends_on(void *ctx,
-                        EeTechPrerequisitesFn get,
-                        int32_t own,
-                        int32_t p1,
-                        int32_t p2,
-                        int32_t p3,
-                        int32_t p4,
-                        int32_t id);
 
 /// `EETechTree::SumCosts`: adds to the seven `costs`.
 ///
@@ -1058,16 +1751,6 @@ bool ee_calamity_valid_target(const EeCalamityCast *cast, const EeCalamityHostFf
 /// As [`ee_calamity_can_cast_at`].
 bool ee_calamity_valid_location(const EeCalamityCast *cast, const EeCalamityHostFfi *host);
 
-/// `ResearchToEpoch`'s steps (`tree::research_to_epoch_steps`) into `out` (up to `capacity`); the number of steps.
-///
-/// # Safety
-/// `out` must be valid for `capacity` writes.
-uint32_t ee_tech_research_to_epoch(int32_t epoch,
-                                   int32_t count,
-                                   bool local,
-                                   EeTechEpochStep *out,
-                                   uint32_t capacity);
-
 /// One unit of a hit point or flight time rescale walk (`effects::unit_step`).
 ///
 /// # Safety
@@ -1123,37 +1806,6 @@ int32_t ee_contagion_leprosy_damage(int32_t damage, uint32_t updates, int32_t hi
 /// An area effect's damage (`contagion::area_damage`; 0: no hit).
 int32_t ee_contagion_area_damage(int32_t damage, uint32_t updates, float attack);
 
-/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
-///
-/// # Safety
-/// `node` and `tree` must be valid for reads.
-EeTechUnlockAction ee_tech_unlock_action(const EeTechNode *node,
-                                         const EeTechTreeState *tree,
-                                         bool available_with_epoch);
-
-/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
-bool ee_tech_research_all_takes(bool researched_with_epoch, bool all_nodes);
-
-/// `EETechTreeEpoch::ResearchKind`: whether a node is researched (`tree::research_kind_takes`).
-bool ee_tech_research_kind_takes(int32_t node_kind,
-                                 int32_t kind,
-                                 bool epoch_only,
-                                 bool researched_with_epoch);
-
-/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node is past its obsolete epoch (`tree::node_is_outdated`).
-bool ee_tech_node_is_outdated(bool obsolete,
-                              int32_t obsolete_epoch,
-                              int32_t current_epoch);
-
-/// `EETechTreeEpoch::MakeObsolete`'s choice (`tree::epoch_make_obsolete`).
-EeTechMakeObsolete ee_tech_epoch_make_obsolete(int32_t epoch_id,
-                                               int32_t id,
-                                               bool epoch_obsolete,
-                                               int32_t current_epoch);
-
-/// `EETechTreeNode::SetObsolete`'s decision (`tree::set_obsolete`).
-EeTechSetObsolete ee_tech_set_obsolete(bool value, bool keep_media, bool obsolete);
-
 /// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
 bool ee_tech_needs_unit_media(bool has_class,
                               int32_t family,
@@ -1164,13 +1816,75 @@ bool ee_tech_needs_unit_media(bool has_class,
 /// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
 int32_t ee_tech_epoch_build_time(int32_t is_human, int32_t build_time);
 
-/// `EETechTree::SetEpoch`'s test (`tree::set_epoch_allowed`).
-bool ee_tech_set_epoch_allowed(int32_t epoch, int32_t epoch_count, int32_t current_epoch);
+/// Frees a tree record's saved lists (the C++ destructor).
+///
+/// # Safety
+/// `t` is a live record.
+void ee_tech_tree_fields_free(EeTechTreeFields *t);
 
-EeTechAdvance ee_tech_advance_epoch(int32_t current_epoch, int32_t end_epoch);
+/// A node's and an epoch's constructor values.
+///
+/// # Safety
+/// `n` is a writable record.
+void ee_tech_node_fields_init(EeTechNodeFields *n);
 
-/// `EETechTree::SetNodeAvailable`'s test (`tree::node_availability_settable`).
-bool ee_tech_node_availability_settable(int32_t research_delay);
+/// `EETechTreeNode::Load`'s and `EETechTreeEpoch::Load`'s copies from the file's record (`epoch`: the epoch's).
+///
+/// # Safety
+/// The three pointers are live.
+void ee_tech_fill_from_record(EeTechNodeFields *n,
+                              EeTechNodeDataFields *d,
+                              const EeTechTreeRecord *r,
+                              bool epoch);
+
+/// A node's (or an epoch's) operation of the tree `t` (`ctx`); its answer, else 0.
+///
+/// # Safety
+/// `f` is valid with `ctx`; `t` and `n`'s records are live.
+int32_t ee_tech_walk_node(void *ctx,
+                          EeTechHostFn f,
+                          EeTechNodeOp op,
+                          EeTechTreeFields *t,
+                          EeTechNodeRef n,
+                          int32_t a,
+                          bool b,
+                          void *unit);
+
+/// An epoch's operation; `Research`'s result, else 0.
+///
+/// # Safety
+/// As [`ee_tech_walk_node`].
+int32_t ee_tech_walk_epoch(void *ctx,
+                           EeTechHostFn f,
+                           EeTechEpochOp op,
+                           EeTechTreeFields *t,
+                           EeTechNodeRef e,
+                           int32_t a,
+                           bool b,
+                           void *unit);
+
+/// A tree operation; `Checksum`'s value, `Load`'s and `Save`'s result, else 0.
+///
+/// # Safety
+/// As [`ee_tech_walk_node`].
+int32_t ee_tech_walk_tree(void *ctx,
+                          EeTechHostFn f,
+                          EeTechTreeOp op,
+                          EeTechTreeFields *t,
+                          int32_t a,
+                          int32_t b,
+                          void *unit);
+
+/// `EETechTree::IsLatestEffect` for the tree `ctx` (`t` its record).
+///
+/// # Safety
+/// As [`ee_tech_walk_node`].
+bool ee_tech_is_latest_effect(void *ctx,
+                              EeTechHostFn f,
+                              EeTechTreeFields *t,
+                              int32_t id,
+                              int32_t unit_type,
+                              int32_t kind);
 
 }  // extern "C"
 

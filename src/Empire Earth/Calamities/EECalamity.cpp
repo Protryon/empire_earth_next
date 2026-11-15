@@ -32,114 +32,11 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "rust/ee_tech.h"
+#include "lle/FSFile.h"
 
 const UString EECalamity::mEffectGenerationStringID("EffectGenerationStringID");
-const UString EECalamity::mTargetUnitStringID("TargetUnitStringID");
-const UString EECalamity::mClassEnumStringID("ClassEnumStringID");
-const UString EECalamity::mEpicenterFactorStringID("EpicenterFactorStringID");
-const UString EECalamity::mFloatPlaceHolder1StringID("FloatPlaceHolder1StringID");
-const UString EECalamity::mFloatPlaceHolder2StringID("FloatPlaceHolder2StringID");
-const UString EECalamity::mHeightStringID("HeightStringID");
-const UString EECalamity::mIntPlaceHolder1StringID("IntPlaceHolder1StringID");
-const UString EECalamity::mIntPlaceHolder2StringID("IntPlaceHolder2StringID");
-const UString EECalamity::mTimeAliveStringID("TimeAliveStringID");
-const UString EECalamity::mOriginatingUnitIDStringID("OriginatingUnitIDStringID");
-const UString EECalamity::mPlayerNumberStringID("PlayerNumberStringID");
-const UString EECalamity::mDiscreteUpdateTimeStringID("DiscreteUpdateTimeStringID");
-const UString EECalamity::mTimeElapsedSinceLastUpdateStringID("TimeElapsedSinceLastUpdateStringID");
-const UString EECalamity::mBoolPlaceHolder1StringID("BoolPlaceHolder1StringID");
-const UString EECalamity::mBoolPlaceHolder2StringID("BoolPlaceHolder2StringID");
-const UString EECalamity::mInitializedStringID("InitializedStringID");
-const UString EECalamity::mHasTargetLocationStringID("HasTargetLocationStringID");
-const UString EECalamity::mHasTargetUnitStringID("HasTargetUnitStringID");
-const UString EECalamity::mTilePlaceHolder1StringID("TilePlaceHolder1StringID");
-const UString EECalamity::mEffectHandleStringID("EffectHandleStringID");
 
-// the 21 key init chains (registrar, ctor, atexit registrar, guarded dtor each)
-// SYNTHETIC: EXE 0x4acb75   _$E91
-// SYNTHETIC: EXE 0x4acb7f   _$E87
-// SYNTHETIC: EXE 0x4acb90   _$E90
-// SYNTHETIC: EXE 0x4acb9c   _$E88
-// SYNTHETIC: EXE 0x4acbb8   _$E96
-// SYNTHETIC: EXE 0x4acbc2   _$E93
-// SYNTHETIC: EXE 0x4acbd3   _$E95
-// SYNTHETIC: EXE 0x4acbdf   _$E94
-// SYNTHETIC: EXE 0x4acbfb   _$E101
-// SYNTHETIC: EXE 0x4acc05   _$E98
-// SYNTHETIC: EXE 0x4acc16   _$E100
-// SYNTHETIC: EXE 0x4acc22   _$E99
-// SYNTHETIC: EXE 0x4acc3e   _$E106
-// SYNTHETIC: EXE 0x4acc48   _$E103
-// SYNTHETIC: EXE 0x4acc59   _$E105
-// SYNTHETIC: EXE 0x4acc65   _$E104
-// SYNTHETIC: EXE 0x4acc81   _$E111
-// SYNTHETIC: EXE 0x4acc8b   _$E108
-// SYNTHETIC: EXE 0x4acc9c   _$E110
-// SYNTHETIC: EXE 0x4acca8   _$E109
-// SYNTHETIC: EXE 0x4accc4   _$E116
-// SYNTHETIC: EXE 0x4accce   _$E113
-// SYNTHETIC: EXE 0x4accdf   _$E115
-// SYNTHETIC: EXE 0x4acceb   _$E114
-// SYNTHETIC: EXE 0x4acd07   _$E121
-// SYNTHETIC: EXE 0x4acd11   _$E118
-// SYNTHETIC: EXE 0x4acd22   _$E120
-// SYNTHETIC: EXE 0x4acd2e   _$E119
-// SYNTHETIC: EXE 0x4acd4a   _$E126
-// SYNTHETIC: EXE 0x4acd54   _$E123
-// SYNTHETIC: EXE 0x4acd65   _$E125
-// SYNTHETIC: EXE 0x4acd71   _$E124
-// SYNTHETIC: EXE 0x4acd8d   _$E132
-// SYNTHETIC: EXE 0x4acd97   _$E128
-// SYNTHETIC: EXE 0x4acda8   _$E131
-// SYNTHETIC: EXE 0x4acdb4   _$E129
-// SYNTHETIC: EXE 0x4acdd0   _$E137
-// SYNTHETIC: EXE 0x4acdda   _$E134
-// SYNTHETIC: EXE 0x4acdeb   _$E136
-// SYNTHETIC: EXE 0x4acdf7   _$E135
-// SYNTHETIC: EXE 0x4ace13   _$E142
-// SYNTHETIC: EXE 0x4ace1d   _$E139
-// SYNTHETIC: EXE 0x4ace2e   _$E141
-// SYNTHETIC: EXE 0x4ace3a   _$E140
-// SYNTHETIC: EXE 0x4ace56   _$E147
-// SYNTHETIC: EXE 0x4ace60   _$E144
-// SYNTHETIC: EXE 0x4ace71   _$E146
-// SYNTHETIC: EXE 0x4ace7d   _$E145
-// SYNTHETIC: EXE 0x4ace99   _$E152
-// SYNTHETIC: EXE 0x4acea3   _$E149
-// SYNTHETIC: EXE 0x4aceb4   _$E151
-// SYNTHETIC: EXE 0x4acec0   _$E150
-// SYNTHETIC: EXE 0x4acedc   _$E157
-// SYNTHETIC: EXE 0x4acee6   _$E154
-// SYNTHETIC: EXE 0x4acef7   _$E156
-// SYNTHETIC: EXE 0x4acf03   _$E155
-// SYNTHETIC: EXE 0x4acf1f   _$E162
-// SYNTHETIC: EXE 0x4acf29   _$E159
-// SYNTHETIC: EXE 0x4acf3a   _$E161
-// SYNTHETIC: EXE 0x4acf46   _$E160
-// SYNTHETIC: EXE 0x4acf62   _$E167
-// SYNTHETIC: EXE 0x4acf6c   _$E164
-// SYNTHETIC: EXE 0x4acf7d   _$E166
-// SYNTHETIC: EXE 0x4acf89   _$E165
-// SYNTHETIC: EXE 0x4acfa5   _$E173
-// SYNTHETIC: EXE 0x4acfaf   _$E169
-// SYNTHETIC: EXE 0x4acfc0   _$E172
-// SYNTHETIC: EXE 0x4acfcc   _$E170
-// SYNTHETIC: EXE 0x4acfe8   _$E178
-// SYNTHETIC: EXE 0x4acff2   _$E175
-// SYNTHETIC: EXE 0x4ad003   _$E177
-// SYNTHETIC: EXE 0x4ad00f   _$E176
-// SYNTHETIC: EXE 0x4ad02b   _$E183
-// SYNTHETIC: EXE 0x4ad035   _$E180
-// SYNTHETIC: EXE 0x4ad046   _$E182
-// SYNTHETIC: EXE 0x4ad052   _$E181
-// SYNTHETIC: EXE 0x4ad06e   _$E188
-// SYNTHETIC: EXE 0x4ad078   _$E185
-// SYNTHETIC: EXE 0x4ad089   _$E187
-// SYNTHETIC: EXE 0x4ad095   _$E186
-// SYNTHETIC: EXE 0x4ad0b1   _$E193
-// SYNTHETIC: EXE 0x4ad0bb   _$E190
-// SYNTHETIC: EXE 0x4ad0cc   _$E192
-// SYNTHETIC: EXE 0x4ad0d8   _$E191
+// (the 21 keys' init chains 0x4acb75..0x4ad0f4: registrar, ctor, atexit registrar, guarded dtor each)
 
 // FUNCTION: EXE 0x4ad0f4
 // Creates an active calamity of the class for the caster (referenced) and loads the class's media for the caster's
@@ -224,14 +121,11 @@ void EECalamity::ReleaseSecondarySound()
 }
 
 // FUNCTION: EXE 0x4ad2d1
-// Clears the calamity: no class, target or caster (both released), sounds released, every timer, flag and placeholder
-// zeroed
+// Clears the calamity: no class, target or caster (both released), sounds released, the effect generations and
+// handle zeroed; every timer, flag and placeholder as a new calamity's (ee_tech calamity_record.rs reset)
 void EECalamity::Reset()
 {
-    this->mEpicenterFactor = 1.0f;
     this->mClass = NULL;
-    this->mHasTargetLocation = false;
-    this->mHasTargetUnit = false;
     if (this->mTargetUnit != NULL) {
         this->mTargetUnit->Dereference();
         this->mTargetUnit = NULL;
@@ -244,21 +138,8 @@ void EECalamity::Reset()
         *(this->mEffectGeneration.begin() + i) = 0;
     this->ReleaseSound();
     this->ReleaseSecondarySound();
-    this->mOriginatingUnitID = -1;
-    this->mTimeAlive = 0.0f;
-    this->mTargetUnitID = -1;
-    this->mDiscreteUpdateTime = 0.0f;
-    this->mInitialized = false;
     this->mEffectHandle.mValue = 0;
-    this->mIntPlaceHolder1 = 0;
-    this->mTimeElapsedSinceLastUpdate = 0.0f;
-    this->mIntPlaceHolder2 = 0;
-    this->mBoolPlaceHolder1 = false;
-    this->mBoolPlaceHolder2 = false;
-    this->mHeight = 0.0f;
-    this->mPlayerNumber = 0;
-    this->mFloatPlaceHolder1 = 0.0f;
-    this->mFloatPlaceHolder2 = 0.0f;
+    ee_calamity_record_reset(this);
 }
 
 // FUNCTION: EXE 0x4ad377
@@ -297,31 +178,12 @@ void EECalamity::Virtual18(unsigned long)
 }
 
 // FUNCTION: EXE 0x4ad50f
-// Returns a sync checksum: the sum of the calamity's float bit patterns, ids, placeholders and flags
+// Returns a sync checksum: the sum of the calamity's float bit patterns, ids, placeholders and flags (ee_tech
+// calamity_record.rs checksum)
 long EECalamity::GetOutOfSynchChecksum()
 {
-    float theValue;
-    long theChecksum;
-    theValue = this->mTargetLocation.GetX();
-    theChecksum = *reinterpret_cast<int32_t*>(&theValue);
-    theValue = this->mTargetLocation.GetY();
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
-    theValue = this->mTargetLocation.GetZ();
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue) + this->mTilePlaceHolder1.mX + this->mTilePlaceHolder1.mY + this->mIntPlaceHolder1 + this->mIntPlaceHolder2
-                 + this->mTargetUnitID + this->mOriginatingUnitID + this->mPlayerNumber + (this->mBoolPlaceHolder1 == true)
-                 + (this->mBoolPlaceHolder2 == true) + (this->mInitialized == true) + (this->mHasTargetLocation == true)
-                 + (this->mHasTargetUnit == true);
-    theValue = this->mFloatPlaceHolder1;
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
-    theValue = this->mFloatPlaceHolder2;
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
-    theValue = this->mHeight;
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
-    theValue = this->mDiscreteUpdateTime;
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
-    theValue = this->mTimeElapsedSinceLastUpdate;
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
-    return theChecksum;
+    return ee_calamity_record_checksum(this, this->mTargetLocation.GetX(), this->mTargetLocation.GetY(),
+                                       this->mTargetLocation.GetZ(), this->mTilePlaceHolder1.mX, this->mTilePlaceHolder1.mY);
 }
 
 // FUNCTION: EXE 0x4ad5bb
@@ -347,180 +209,90 @@ bool EECalamity::GetTargetUnit(EEUnit*& outUnit)
     return theResult;
 }
 
+namespace {
+
+// New (port): the file and the calamity's C++ members for its Rust Load and Save (ee_tech calamity_record.rs
+// EE_CALAMITY_IO_*): the numbers through the FSFile overload the original called, the members by part
+struct EECalamityIo {
+    EECalamity* mCalamity;
+    FSFile* mFile;
+    bool mLoading;
+};
+
+long EECalamityIoCall(void* inContext, uint32_t inOp, void* ioValue)
+{
+    EECalamityIo& theIo = *static_cast<EECalamityIo*>(inContext);
+    EECalamity* theCalamity = theIo.mCalamity;
+    FSFile& theFile = *theIo.mFile;
+    switch (inOp) {
+    case EE_CALAMITY_IO_READ_ULONG: return theFile.Read(*static_cast<unsigned long*>(ioValue));
+    case EE_CALAMITY_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
+    case EE_CALAMITY_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
+    case EE_CALAMITY_IO_READ_BOOL: return theFile.Read(*static_cast<bool*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
+    case EE_CALAMITY_IO_WRITE_BOOL: return theFile.Write(*static_cast<const bool*>(ioValue));
+    case EE_CALAMITY_IO_RECTANGLE:
+        return theIo.mLoading ? theCalamity->mRectangle.Load(theFile) : theCalamity->mRectangle.Save(theFile);
+    case EE_CALAMITY_IO_TARGET_LOCATION:
+        return theIo.mLoading ? theCalamity->mTargetLocation.Load(theFile) : theCalamity->mTargetLocation.Save(theFile);
+    case EE_CALAMITY_IO_SHAKE_LOCATION:
+        return theIo.mLoading ? theCalamity->mShakeLocation.Load(theFile) : theCalamity->mShakeLocation.Save(theFile);
+    case EE_CALAMITY_IO_EFFECT_GENERATION:
+        if (theIo.mLoading)
+            return FSLoadVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID);
+        return FSSaveVector(theFile, theCalamity->mEffectGeneration, EECalamity::mEffectGenerationStringID);
+    case EE_CALAMITY_IO_CLASS: {
+        if (!theIo.mLoading)
+            return theFile.Write((unsigned long)theCalamity->mClass->mID);
+        long theClassID = 0;
+        long theResult = theFile.Read(theClassID);
+        theCalamity->mClass = EECalamityManager::GetInstance()->GetCalamityClass(theClassID);
+        return theResult;
+    }
+    case EE_CALAMITY_IO_TARGET_ID:
+        *static_cast<unsigned long*>(ioValue) = theCalamity->mTargetUnit != NULL ? theCalamity->mTargetUnit->GetUnitID() : -1;
+        return kErrorOK;
+    case EE_CALAMITY_IO_CASTER_ID:
+        *static_cast<unsigned long*>(ioValue) = theCalamity->mCasterUnit != NULL ? theCalamity->mCasterUnit->GetUnitID() : -1;
+        return kErrorOK;
+    case EE_CALAMITY_IO_TILE_X:
+    case EE_CALAMITY_IO_TILE_Y: {
+        unsigned long& theTile = inOp == EE_CALAMITY_IO_TILE_X ? theCalamity->mTilePlaceHolder1.mX : theCalamity->mTilePlaceHolder1.mY;
+        if (!theIo.mLoading)
+            return theFile.Write((long)theTile);
+        long theValue = 0;
+        long theResult = theFile.Read(theValue);
+        theTile = theValue;
+        return theResult;
+    }
+    case EE_CALAMITY_IO_EFFECT_HANDLE:
+        return theIo.mLoading ? theFile.Read(theCalamity->mEffectHandle.mValue) : theFile.Write(theCalamity->mEffectHandle.mValue);
+    }
+    return kErrorFailed;
+}
+
+}   // namespace
+
 // FUNCTION: EXE 0x4ad618
 // Reads the calamity from a saved game (the class by id; target and caster only as ids); returns the first read error
+// (ee_tech calamity_record.rs load)
 long EECalamity::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    theResult = this->mRectangle.Load(inFile);
-    if (theResult == kErrorOK) {
-        theResult = this->mTargetLocation.Load(inFile);
-        if (theResult == kErrorOK) {
-            theResult = this->mShakeLocation.Load(inFile);
-            if (theResult == kErrorOK) {
-                theResult = FSLoadVector(inFile, this->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(this->mTargetUnitID);
-                    if (theResult == kErrorOK) {
-                        {
-                            long theClassID;
-                            theResult = inFile.Read(theClassID);
-                            this->mClass = EECalamityManager::GetInstance()->GetCalamityClass(theClassID);
-                        }
-                        if (theResult == kErrorOK) {
-                            theResult = inFile.Read(this->mEpicenterFactor);
-                            if (theResult == kErrorOK) {
-                                theResult = inFile.Read(this->mFloatPlaceHolder1);
-                                if (theResult == kErrorOK) {
-                                    theResult = inFile.Read(this->mFloatPlaceHolder2);
-                                    if (theResult == kErrorOK) {
-                                        theResult = inFile.Read(this->mHeight);
-                                        if (theResult == kErrorOK) {
-                                            theResult = inFile.Read(this->mIntPlaceHolder1);
-                                            if (theResult == kErrorOK) {
-                                                theResult = inFile.Read(this->mIntPlaceHolder2);
-                                                if (theResult == kErrorOK) {
-                                                    theResult = inFile.Read(this->mTimeAlive);
-                                                    if (theResult == kErrorOK) {
-                                                        theResult = inFile.Read(this->mOriginatingUnitID);
-                                                        if (theResult == kErrorOK) {
-                                                            theResult = inFile.Read(this->mPlayerNumber);
-                                                            if (theResult == kErrorOK) {
-                                                                theResult = inFile.Read(this->mDiscreteUpdateTime);
-                                                                if (theResult == kErrorOK) {
-                                                                    theResult = inFile.Read(this->mTimeElapsedSinceLastUpdate);
-                                                                    if (theResult == kErrorOK) {
-                                                                        {
-                                                                            long theTileX;
-                                                                            theResult = inFile.Read(theTileX);
-                                                                            this->mTilePlaceHolder1.mX = theTileX;
-                                                                        }
-                                                                        if (theResult == kErrorOK) {
-                                                                            {
-                                                                                long theTileY;
-                                                                                theResult = inFile.Read(theTileY);
-                                                                                this->mTilePlaceHolder1.mY = theTileY;
-                                                                            }
-                                                                            if (theResult == kErrorOK) {
-                                                                                theResult = inFile.Read(this->mEffectHandle.mValue);
-                                                                                if (theResult == kErrorOK) {
-                                                                                    theResult = inFile.Read(this->mBoolPlaceHolder1);
-                                                                                    if (theResult == kErrorOK) {
-                                                                                        theResult = inFile.Read(this->mBoolPlaceHolder2);
-                                                                                        if (theResult == kErrorOK) {
-                                                                                            theResult = inFile.Read(this->mInitialized);
-                                                                                            if (theResult == kErrorOK) {
-                                                                                                theResult = inFile.Read(this->mHasTargetLocation);
-                                                                                                if (theResult == kErrorOK) {
-                                                                                                    theResult = inFile.Read(this->mHasTargetUnit);
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return theResult;
+    EECalamityIo theIo = {this, &inFile, true};
+    EeCalamityIoFfi theFfi = {&theIo, &EECalamityIoCall};
+    return ee_calamity_record_load(this, theFfi);
 }
 
 // FUNCTION: EXE 0x4ad85e
 // Writes the calamity to the saved game (target and caster as ids, -1 if none); returns the first write error
+// (ee_tech calamity_record.rs save)
 long EECalamity::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theUnitID = -1;
-    long theResult = this->mRectangle.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mTargetLocation.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mShakeLocation.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = FSSaveVector(outFile, this->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theUnitID = this->mTargetUnit != NULL ? this->mTargetUnit->GetUnitID() : -1;
-    theResult = outFile.Write(theUnitID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((unsigned long)this->mClass->mID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mEpicenterFactor);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mFloatPlaceHolder1);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mFloatPlaceHolder2);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mHeight);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mIntPlaceHolder1);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mIntPlaceHolder2);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTimeAlive);
-    if (theResult != kErrorOK)
-        return theResult;
-    theUnitID = this->mCasterUnit != NULL ? this->mCasterUnit->GetUnitID() : -1;
-    theResult = outFile.Write(theUnitID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mPlayerNumber);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mDiscreteUpdateTime);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTimeElapsedSinceLastUpdate);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((long)this->mTilePlaceHolder1.mX);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((long)this->mTilePlaceHolder1.mY);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mEffectHandle.mValue);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mBoolPlaceHolder1);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mBoolPlaceHolder2);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mInitialized);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mHasTargetLocation);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mHasTargetUnit);
-    return theResult;
+    EECalamityIo theIo = {this, &outFile, false};
+    EeCalamityIoFfi theFfi = {&theIo, &EECalamityIoCall};
+    return ee_calamity_record_save(this, theFfi);
 }
 
 // FUNCTION: EXE 0x4adaa3

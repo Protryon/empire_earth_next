@@ -420,15 +420,6 @@ void GEBitmap::GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GECo
     ee_ge_bmp_colors(this->mRust, &theOut);
 }
 
-// FUNCTION: LLE 0x1000f3ea
-// Returns the screen positions of the bitmap's four corners in vertex order
-void GEBitmap::GetLocationPerVertex(GE2DPoint& outTopLeft, GE2DPoint& outTopRight, GE2DPoint& outBottomRight,
-                                    GE2DPoint& outBottomLeft) const
-{
-    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
-    ee_ge_bmp_locations(this->mRust, &theOut);
-}
-
 // FUNCTION: LLE 0x1000f4a4
 // Returns the opacities of the bitmap's four corners in vertex order
 void GEBitmap::GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
@@ -446,15 +437,6 @@ void GEBitmap::GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, G
 {
     const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
     ee_ge_bmp_uvs(this->mRust, &theOut);
-}
-
-// FUNCTION: LLE 0x1000f542
-// Returns the depths (Z) of the bitmap's four corners in vertex order
-void GEBitmap::GetZPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
-                             float& outBottomLeft) const
-{
-    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
-    ee_ge_bmp_depths(this->mRust, &theOut);
 }
 
 // FUNCTION: LLE 0x1000f5e4
@@ -548,13 +530,6 @@ void GEBitmap::ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectan
 void GEBitmap::FlipHorizontally()
 {
     ee_ge_bmp_flip(this->mRust, false);
-}
-
-// FUNCTION: LLE 0x1000ff9e
-// Mirrors the bitmap's texture top to bottom (resets the texture coordinates to the full flipped texture)
-void GEBitmap::FlipVertically()
-{
-    ee_ge_bmp_flip(this->mRust, true);
 }
 
 // FUNCTION: LLE 0x10010009

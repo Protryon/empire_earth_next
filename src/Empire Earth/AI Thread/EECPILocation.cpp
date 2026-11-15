@@ -216,7 +216,7 @@ void EECPILocation::Update()
             if (thePlayer == NULL)
                 return;
             for (long i = thePlayer->mTowns.size() - 1; i >= 0; i--) {
-                if (!thePlayer->mTowns[i]->mHull.BoundedContains(this->GetTile()))
+                if (!thePlayer->mTowns[i]->HullContains(this->GetTile()))
                     continue;
                 this->mType = kAIAreaTown;
                 theArea = thePlayer->mTowns[i];
@@ -236,7 +236,7 @@ void EECPILocation::Update()
         }
     }
     if (theArea != NULL)
-        this->mSerial = theArea->mSerial;
+        this->mSerial = theArea->GetSerial();
     else
         this->mType = 0;
 }

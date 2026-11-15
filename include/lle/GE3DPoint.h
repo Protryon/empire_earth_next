@@ -43,7 +43,6 @@ public:
     bool operator!=(const GE3DPoint& inPoint) const { return mX != inPoint.mX || mY != inPoint.mY || mZ != inPoint.mZ; }
     void Add(const GEVector& inVector, GE3DPoint& outPoint) const;
     void Clear();
-    void ComputeVectorTo(const GE3DPoint& inPoint, GEVector& outVector) const;
     float DistanceTo(const GE3DPoint& inPoint) const;
     float DistanceToSquared(const GE3DPoint& inPoint) const;
     GE2DPoint Get2DPoint() const { return GE2DPoint(this->mX, this->mY); }  // inline (InterpolateTo 0xc80e)
@@ -66,7 +65,6 @@ public:
 #else
     void SetXYZ(float inX, float inY, float inZ);
 #endif
-    void Subtract(const GEVector& inVector, GE3DPoint& outPoint) const;
 
     float mX;                               // +0x00
     float mY;                               // +0x04

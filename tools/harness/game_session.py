@@ -160,6 +160,10 @@ def main():
     addresses=dict(communications=int(g['?gCommunications@@3PEAVNESynchronousCommunications@@EA']['va'],16),
                    world=int(g['?gWorld@@3VEEWorld@@A']['va'],16),victory_detail=bool(a.trace_symbol),
                    image_base=linkmap0.base)   # game_state_probe relocates the VAs to the running image
+    try:   # the communications' numbers: EETestFixture.cpp's mirror (their state is Rust's, at no offset)
+        addresses['comms_mirror']=linkmap0.address('gEETestComms')
+    except (KeyError,ValueError):
+        pass
     activate,present=build.renderer_guards()
     harness_extra=('--image-base',f'{linkmap0.base:x}','--audio-entry',located['audio_entry_rva'],'--stack-scan','512',
                    '--renderer-guards',f'{activate:x}',f'{present:x}',*build.static_exe_args())

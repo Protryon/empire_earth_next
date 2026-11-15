@@ -64,7 +64,6 @@ public:
     long Load(FSFile& inFile);
     void MakeIdentity();
     void MakeInverse(GETransformation& outInverse) const;
-    void MakeLookAtTransform(GE3DPoint& inEye, GE3DPoint& inTarget);
     void Normalize();
     void Revolve(const GEOrientation& inOrientation);
     void Revolve(float inYaw, float inPitch, float inRoll);
@@ -109,8 +108,6 @@ public:
     void Translate(const GEVector& inVector);
     void Translate(float inX, float inY, float inZ) { this->mMatrix[0][3] += inX; this->mMatrix[1][3] += inY; this->mMatrix[2][3] += inZ; }
     bool Verify() const;
-    void ZeroOrientation();
-    void ZeroOrientation(GETransformation& outTransformation) const;
 
     float mMatrix[4][4];                    // +0x00
 #ifdef LOWLEVELENGINE_EXPORTS

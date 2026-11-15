@@ -201,8 +201,7 @@ void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 
 void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEPMAirAnimal* theModel = dynamic_cast<EEPMAirAnimal*>(inClass->mPhysicsModel);
-    inUnit->SetF220(theModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
+    inUnit->SetF220(inClass->mPhysicsModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
     inUnit->mAngularVelocity = GEOrientation(inUnit->mAngularVelocity.GetYaw(), inUnit->mAngularVelocity.GetPitch(), inUnit->mAngularVelocity.GetYaw());
 }
 

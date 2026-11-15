@@ -480,13 +480,6 @@ UIEvent* UIManager::CreateFormEvent(unsigned long inEventID)
     return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID));
 }
 
-// FUNCTION: LLE 0x1007a5c2
-// Creates the IME candidate window with the given font
-void UIManager::CreateIMECandidateWindow(GEFont* inFont)
-{
-    this->Call(EeUiManagerCall::CreateCandidateWindow, (intptr_t)inFont);
-}
-
 // FUNCTION: LLE 0x1007a602
 // Draws the snapshotted forms with alpha blending (their text too, unless drawn by GDI) and the candidate window
 long UIManager::DrawPolygons() { return (long)this->Call(EeUiManagerCall::DrawPolygons); }
@@ -536,6 +529,7 @@ UIForm* UIManager::GetStackedForm(unsigned long inIndex) const
 {
     return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::StackedForm, (intptr_t)inIndex));
 }
+TSCriticalSection* UIManager::GetUILock() const { return reinterpret_cast<TSCriticalSection*>(this->Call(EeUiManagerCall::UiLock)); }
 GESurface* UIManager::GetDrawingSurface() const { return this->GetRasterizer()->GetSecondarySurface(this->GetScreen()); }
 unsigned long UIManager::GetNumberOfSurfaces() const
 {
@@ -557,10 +551,6 @@ UResourceFile* UIManager::GetStringTable() const
 unsigned long UIManager::GetUITextureBitDepth() const
 {
     return (unsigned long)this->Call(EeUiManagerCall::TextureBitDepth);
-}
-unsigned long UIManager::GetVisibleFormCount() const
-{
-    return (unsigned long)this->Call(EeUiManagerCall::VisibleFormCount);
 }
 bool UIManager::IsFormOnStack(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormOnStack, (intptr_t)inForm) != 0; }
 bool UIManager::IsFormVisible(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormVisible, (intptr_t)inForm) != 0; }
@@ -809,3 +799,21 @@ long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
 // SYNTHETIC: LLE 0x10078e68
 // SYNTHETIC: LLE 0x10078e89
 // SYNTHETIC: LLE 0x1007b8e7
+
+// TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the map
+// (the manager's and forms' state is Rust's: ee_ui managerobj.rs, formobj.rs): the UI lock it try-enters, the form
+// stack, and a form's id and controls. Kept by the linker for it.
+extern "C" void* EETestUILock(UIManager* inManager) { return inManager->GetUILock(); }
+extern "C" unsigned long EETestUIFormCount(UIManager* inManager) { return inManager->GetFormCount(); }
+extern "C" void* EETestUIForm(UIManager* inManager, unsigned long inIndex) { return inManager->GetStackedForm(inIndex); }
+extern "C" unsigned long EETestUIFormID(UIForm* inForm) { return inForm->GetFormID(); }
+extern "C" unsigned long EETestUIFormControlCount(UIForm* inForm) { return inForm->GetControlCount(); }
+extern "C" void* EETestUIFormControl(UIForm* inForm, unsigned long inIndex) { return inForm->GetControl(inIndex); }
+#if defined(_MSC_VER)
+#pragma comment(linker, "/include:EETestUILock")
+#pragma comment(linker, "/include:EETestUIFormCount")
+#pragma comment(linker, "/include:EETestUIForm")
+#pragma comment(linker, "/include:EETestUIFormID")
+#pragma comment(linker, "/include:EETestUIFormControlCount")
+#pragma comment(linker, "/include:EETestUIFormControl")
+#endif

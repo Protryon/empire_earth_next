@@ -80,12 +80,12 @@ void EEAIAStarHillGoal::CollectTiles()
 void EEAIAStarHillGoal::CreateHill()
 {
     EEAIHill* theHill = new EEAIHill;
-    theHill->mID = this->mNextID;
-    theHill->mContinentID = this->mContinentID;
-    theHill->mAreaType = kAIAreaHill;
+    theHill->SetID(this->mNextID);
+    theHill->SetContinentID(this->mContinentID);
+    theHill->SetAreaType(kAIAreaHill);
     theHill->Create(this->mTiles);
     theHill->UpdateBounds(gWorld.mInfluenceTable);
-    this->mStorage->SetDirtyBounds(theHill->mHull.GetBounds());
+    this->mStorage->SetDirtyBounds(theHill->GetHullBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mHills.insert(std::map<unsigned short, EEAIHill*>::value_type(this->mNextID, theHill));

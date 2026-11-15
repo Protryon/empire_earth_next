@@ -62,37 +62,78 @@ ISEntity* UIControl::sCopyKey;
 ISEntity* UIControl::sPasteKey;
 ISEntity* UIControl::sInsertKey;
 
+// the record's rectangles are read as GERectangle (bottom, left, right, top)
+static_assert(sizeof(EeUiRect) == sizeof(GERectangle), "EeUiRect is GERectangle's layout");
+
+// The record's calls out (ee_ui controlobj.rs): the form's and manager's, the virtuals, the rhombi, the events
+intptr_t UIControl::HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
+{
+    UIControl* c = static_cast<UIControl*>(inControl);
+    UIForm* theForm = c->GetForm();
+    GERhombus* theRhombus = a == 0 ? c->BgRhombus() : c->CopiedBgRhombus();
+    switch (inOp) {
+    case EeUiOp::CtlFormControl: return (intptr_t)theForm->GetControl((unsigned long)a);
+    case EeUiOp::CtlSlotLeftDown: return theForm->GetControl((unsigned long)a)->mLeftButtonDown;
+    case EeUiOp::CtlSlotRightDown: return theForm->GetControl((unsigned long)a)->mRightButtonDown;
+    case EeUiOp::CtlGroupEnabled: return theForm->GetEntityGroupById((unsigned long)a)->GetIsEnabled();
+    case EeUiOp::CtlCurrentForm: return (intptr_t)theForm->GetManager()->GetCurrentForm();
+    case EeUiOp::CtlKeyboardCaptured: return (intptr_t)theForm->GetKeyboardCaptured();
+    case EeUiOp::CtlMouseCaptured: return (intptr_t)theForm->GetMouseCaptured();
+    case EeUiOp::CtlSetKeyboardCaptured: theForm->SetKeyboardCaptured(reinterpret_cast<UIControl*>(a)); break;
+    case EeUiOp::CtlSetMouseCaptured: theForm->SetMouseCaptured(reinterpret_cast<UIControl*>(a)); break;
+    case EeUiOp::CtlHide: c->HideControl(); break;
+    case EeUiOp::CtlAddDirty: theForm->GetManager()->AddDirtyRectangle(UIObjHost::Rect(f), theForm); break;
+    case EeUiOp::CtlTab: theForm->Tab(); break;
+    case EeUiOp::CtlAddEvent: theForm->GetManager()->AddEventToTrigger(reinterpret_cast<UIEvent*>(a), theForm, c); break;
+    case EeUiOp::CtlHelpString:
+        theForm->GetManager()->GetStringTable()->GetString((unsigned long)b, *reinterpret_cast<UWideString*>(a));
+        break;
+    case EeUiOp::TabStop: return theForm->GetTabStop();
+    case EeUiOp::TabbingOn: return theForm->GetTabbingOn();
+    case EeUiOp::FormSurfaces: return theForm->GetManager()->GetNumberOfSurfaces();
+    case EeUiOp::SetDirty: c->SetDirty(a != 0); break;
+    case EeUiOp::FormCtlSetDirty: reinterpret_cast<UIControl*>(a)->SetDirty(b != 0); break;
+    case EeUiOp::VirtSetLocation: c->SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::FormEventCall: {
+        UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
+        if (b == 0)
+            theEvent->Uninitialize();
+        else if (b == 1)
+            theEvent->Dereference();
+        else if (b == 2)
+            theEvent->Reference();
+        else
+            theEvent->Initialize();
+        break;
+    }
+    case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIObjHost::Rect(f)); break;
+    case EeUiOp::RhombusCopy: *c->CopiedBgRhombus() = *c->BgRhombus(); break;
+    case EeUiOp::RhombusSetOpacity: theRhombus->SetOpacity(f[0]); break;
+    case EeUiOp::RhombusSetColor: theRhombus->SetColor(GEColor(f[0], f[1], f[2])); break;
+    default: break;
+    }
+    return 0;
+}
+
+intptr_t UIControl::Call(EeUiControlCall inCall, intptr_t a, intptr_t b, float* f) const
+{
+    return ee_ui_control_call(const_cast<UIControl*>(this), inCall, a, b, f);
+}
+
+typedef EeUiControlCall C;
+
 // FUNCTION: LLE 0x10065076
-// Creates a shown, dirty control with a transparent black background; the first one looks up the shared UI keys
+// Creates a shown, dirty control with a transparent black background (the record's state, ee_ui controlobj.rs); the
+// first one looks up the shared UI keys
 UIControl::UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
                      unsigned long inIndex, unsigned long inBorderThickness)
     : UIEntity(1)
 {
-    this->mBorderOpacity = 1.0f;
-    this->mControlType = inType;
-    this->mCopiedBorderOpacity = 1.0f;
-    this->mId = inId;
-    this->mForm = inForm;
-    this->mIndex = inIndex;
-    this->mDisplayMode = kDisplayModeShown;
-    this->mBorderThickness = inBorderThickness;
-    this->mLeftButtonDown = false;
-    this->mRightButtonDown = false;
-    this->mAlwaysDirty = false;
-    this->mDrawCount = 0;
-    this->mIsDirty = true;
-    this->mBorderType = 0;
-    this->mCopiedBorderType = 0;
-    this->mCopiedHasBgOpacity = false;
-    this->mUnknown9C = false;
-    this->mStringTableID = 0;
-    this->mHotKey = NULL;
-    this->mRectangle = inRectangle;
-    this->mHasBgOpacity = false;
-    this->mBgRhombus.SetColor(GEColor(0.0f, 0.0f, 0.0f));
-    this->mBgRhombus.SetOpacity(0.0f);
-    this->mBgRhombus.SetRectangle(GERectangle(GE2DPoint(this->mRectangle.GetLeft() - 0.5f, this->mRectangle.GetTop() - 0.5f),
-                                        GE2DPoint(this->mRectangle.mRight + 0.5f, this->mRectangle.mBottom + 0.5f)));
+    this->mBgRhombus = new GERhombus;
+    this->mCopiedBgRhombus = new GERhombus;
+    float theRectangle[4];
+    UIObjHost::PutRect(theRectangle, inRectangle);
+    ee_ui_control_init(this, this, UIControl::HostOp, inType, inId, theRectangle, inForm, inIndex, inBorderThickness);
     if (UIControl::sSpaceKey != NULL)
         return;
     gISKeyboard->GetEntity(kKeySpace, UIControl::sSpaceKey);
@@ -122,50 +163,68 @@ UIControl::UIControl(unsigned long inType, unsigned long inId, const GERectangle
 }
 
 // FUNCTION: LLE 0x100653ab
-// Destroys the control, releasing every trigger event it holds
+// Destroys the control: every trigger event released (ee_ui controlobj.rs), then the background rhombi
 UIControl::~UIControl()
 {
-    std::map<unsigned long, UIEvent*>::iterator theIterator;
-    for (theIterator = this->mTriggerEvents.begin(); theIterator != this->mTriggerEvents.end(); theIterator++) {
-        UIEvent* theEvent = theIterator->second;
-        theEvent->Uninitialize();
-        theEvent->Dereference();
-    }
-    this->mTriggerEvents.clear();
+    ee_ui_control_release(this);
+    delete this->BgRhombus();
+    delete this->CopiedBgRhombus();
 }
 
+// The base's logic (ee_ui controlobj.rs)
 // FUNCTION: LLE 0x10065418
-// Gives the control the form's keyboard capture
-void UIControl::CaptureKeyboard()
-{
-    this->mForm->SetKeyboardCaptured(this);
-}
-
+void UIControl::CaptureKeyboard() { this->Call(C::CaptureKeyboard); }
 // FUNCTION: LLE 0x10065422
-// Gives the control the form's mouse capture
-void UIControl::CaptureMouse()
+void UIControl::CaptureMouse() { this->Call(C::CaptureMouse); }
+// FUNCTION: LLE 0x1006542c
+long UIControl::CopyData() { return (long)this->Call(C::CopyData); }
+// FUNCTION: LLE 0x1006586a
+void UIControl::FireTriggerEvent(unsigned long inEvent) { this->Call(C::FireTrigger, inEvent); }
+// FUNCTION: LLE 0x100658ce
+bool UIControl::GetHasMouseCapture() const { return this->Call(C::HasMouseCapture) != 0; }
+// FUNCTION: LLE 0x100658e9
+bool UIControl::GetHelpString(UWideString& outString) const { return this->Call(C::HelpString, (intptr_t)&outString) != 0; }
+// FUNCTION: LLE 0x10065913
+bool UIControl::GetLeftMouseButtonDown() const { return this->Call(C::LeftButtonDown) != 0; }
+// FUNCTION: LLE 0x10065942
+bool UIControl::GetRightMouseButtonDown() const { return this->Call(C::RightButtonDown) != 0; }
+// FUNCTION: LLE 0x10065978
+UIEvent* UIControl::GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(C::TriggerEvent, inEvent); }
+// FUNCTION: LLE 0x10065a0e
+void UIControl::ReleaseCapturedKeyboard() { this->Call(C::ReleaseKeyboard); }
+// FUNCTION: LLE 0x10065a23
+void UIControl::ReleaseCapturedMouse() { this->Call(C::ReleaseMouse); }
+// FUNCTION: LLE 0x10065ab9
+void UIControl::SetDirty(bool inDirty) { this->Call(C::SetDirty, inDirty); }
+// FUNCTION: LLE 0x10065af5
+void UIControl::SetDisplayMode(unsigned long inMode) { this->Call(C::SetDisplayMode, inMode); }
+// FUNCTION: LLE 0x10065d4c
+void UIControl::SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent)
 {
-    this->mForm->SetMouseCaptured(this);
+    this->Call(C::SetTrigger, inEvent, (intptr_t)inTriggerEvent);
 }
 
-// FUNCTION: LLE 0x1006542c
-// Snapshots the background, border and rectangle for drawing and counts the surfaces still to draw
-long UIControl::CopyData()
+// FUNCTION: LLE 0x10065a69
+void UIControl::SetBgRectangle(const GERectangle& inRectangle)
 {
-    if (this->mHasBgOpacity) {
-        this->mCopiedHasBgOpacity = true;
-        this->mCopiedBgRhombus = this->mBgRhombus;
-    } else
-        this->mCopiedHasBgOpacity = false;
-    if (this->mAlwaysDirty)
-        this->SetDirty(true);
-    else
-        UIControl::SetDirty(false);
-    this->mCopiedBorderOpacity = this->mBorderOpacity;
-    this->mCopiedBorderType = this->mBorderType;
-    this->mCopiedDrawRectangle = this->mRectangle;
-    this->mDrawCount = this->mForm->GetManager()->GetNumberOfSurfaces();
-    return kErrorOK;
+    float f[4];
+    UIObjHost::PutRect(f, inRectangle);
+    this->Call(C::SetBgRectangle, 0, 0, f);
+}
+
+// FUNCTION: LLE 0x10065b94
+void UIControl::SetLocation(const GE2DPoint& inLocation)
+{
+    float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
+    this->Call(C::SetLocation, 0, 0, f);
+}
+
+// FUNCTION: LLE 0x10065c7a
+void UIControl::SetRectangle(const GERectangle& inRectangle)
+{
+    float f[4];
+    UIObjHost::PutRect(f, inRectangle);
+    this->Call(C::SetRectangle, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x100654b4
@@ -198,7 +257,7 @@ long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThick
                 theLine.SetColor(thePlan.light ? UIControl::sLightBorder : UIControl::sDarkBorder);
                 theLine.SetStartPoint(GE2DPoint(thePlan.start.x, thePlan.start.y));
                 theLine.SetEndPoint(GE2DPoint(thePlan.end.x, thePlan.end.y));
-                theResult = this->mForm->GetManager()->GetRasterizer()->Draw(&theLine, 1, this->mForm->GetManager()->GetScreen());
+                theResult = this->GetRasterizer()->Draw(&theLine, 1, this->GetScreenIndex());
             }
     }
     return theResult;
@@ -209,8 +268,8 @@ long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThick
 long UIControl::DrawPolygons()
 {
     if (this->mCopiedHasBgOpacity)
-        this->mForm->GetManager()->GetRasterizer()->Draw(&this->mCopiedBgRhombus, this->mForm->GetManager()->GetScreen());
-    return this->DrawBorder(this->mCopiedDrawRectangle, this->mBorderThickness);
+        this->GetRasterizer()->Draw(this->CopiedBgRhombus(), this->GetScreenIndex());
+    return this->DrawBorder(this->GetCopiedDrawRectangle(), this->mBorderThickness);
 }
 
 // FUNCTION: LLE 0x1006580f
@@ -227,98 +286,39 @@ bool UIControl::EndKeyPressed()
     return UIControl::sEndKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumEndKey->GetValue();
 }
 
-// FUNCTION: LLE 0x1006586a
-// Queues the control's trigger event for the given trigger, if one is set
-void UIControl::FireTriggerEvent(unsigned long inEvent)
-{
-    UIEvent* theEvent = this->GetTriggerEvent(inEvent);
-    if (theEvent)
-        this->mForm->GetManager()->AddEventToTrigger(theEvent, this->mForm, this);
-}
-
 // FUNCTION: LLE 0x100658a5
 // Returns the UI manager's drawing surface
 GESurface* UIControl::GetDrawingSurface() const
 {
-    return this->mForm->GetManager()->GetDrawingSurface();
-}
-
-// FUNCTION: LLE 0x100658b3
-// Returns whether the control at this control's form slot holds the keyboard capture
-bool UIControl::GetHasKeyboardCapture() const
-{
-    return this->mForm->GetControl(this->mIndex) == this->mForm->GetKeyboardCaptured();
-}
-
-// FUNCTION: LLE 0x100658ce
-// Returns whether the control at this control's form slot holds the mouse capture
-bool UIControl::GetHasMouseCapture() const
-{
-    return this->mForm->GetControl(this->mIndex) == this->mForm->GetMouseCaptured();
-}
-
-// FUNCTION: LLE 0x100658e9
-// Fetches the control's help string from the string table; false when it has none
-bool UIControl::GetHelpString(UWideString& outString) const
-{
-    bool theResult = false;
-    if (this->mStringTableID > 0) {
-        this->mForm->GetManager()->GetStringTable()->GetString(this->mStringTableID, outString);
-        theResult = true;
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x10065913
-// Returns whether the left mouse button is down on the control at this control's form slot
-bool UIControl::GetLeftMouseButtonDown() const
-{
-    return this->mForm->GetControl(this->mIndex)->mLeftButtonDown;
+    return this->GetForm()->GetManager()->GetDrawingSurface();
 }
 
 // FUNCTION: LLE 0x10065929
 // Returns the form's mouse location
 const GE2DPoint& UIControl::GetMouseLocation() const
 {
-    return this->mForm->GetMouseLocation();
+    return this->GetForm()->GetMouseLocation();
 }
 
 // FUNCTION: LLE 0x10065932
 // Returns the UI manager's rasterizer
 GERasterizer* UIControl::GetRasterizer() const
 {
-    return this->mForm->GetManager()->GetRasterizer();
-}
-
-// FUNCTION: LLE 0x10065942
-// Returns whether the right mouse button is down on the control at this control's form slot
-bool UIControl::GetRightMouseButtonDown() const
-{
-    return this->mForm->GetControl(this->mIndex)->mRightButtonDown;
+    return this->GetForm()->GetManager()->GetRasterizer();
 }
 
 // FUNCTION: LLE 0x10065958
 // Returns the UI manager's screen index
 unsigned long UIControl::GetScreenIndex() const
 {
-    return this->mForm->GetManager()->GetScreen();
+    return this->GetForm()->GetManager()->GetScreen();
 }
 
 // FUNCTION: LLE 0x10065968
 // Returns the UI manager's sound manager
 SESoundManager* UIControl::GetSoundManager() const
 {
-    return this->mForm->GetManager()->GetSoundManager();
-}
-
-// FUNCTION: LLE 0x10065978
-// Returns the trigger event set for the given trigger, or NULL
-UIEvent* UIControl::GetTriggerEvent(unsigned long inEvent)
-{
-    std::map<unsigned long, UIEvent*>::iterator theIterator = this->mTriggerEvents.find(inEvent);
-    if (theIterator != this->mTriggerEvents.end())
-        return theIterator->second;
-    return NULL;
+    return this->GetForm()->GetManager()->GetSoundManager();
 }
 
 // FUNCTION: LLE 0x100659a2
@@ -335,116 +335,11 @@ bool UIControl::LeftKeyPressed()
     return UIControl::sLeftKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumLeftKey->GetValue();
 }
 
-// FUNCTION: LLE 0x10065a0e
-// Releases the form's keyboard capture if this control holds it
-void UIControl::ReleaseCapturedKeyboard()
-{
-    if (this->mForm->GetKeyboardCaptured() == this)
-        this->mForm->SetKeyboardCaptured(NULL);
-}
-
-// FUNCTION: LLE 0x10065a23
-// Releases the form's mouse capture if this control holds it
-void UIControl::ReleaseCapturedMouse()
-{
-    if (this->mForm->GetMouseCaptured() == this)
-        this->mForm->SetMouseCaptured(NULL);
-}
-
 // FUNCTION: LLE 0x10065a33
 // Returns whether Right (or keypad 6 with Num Lock off) is held
 bool UIControl::RightKeyPressed()
 {
     return UIControl::sRightKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumRightKey->GetValue();
-}
-
-// FUNCTION: LLE 0x10065a69
-// Sets the background rectangle, grown by half a pixel on each side
-void UIControl::SetBgRectangle(const GERectangle& inRectangle)
-{
-    this->mBgRhombus.SetRectangle(GERectangle(GE2DPoint(inRectangle.GetLeft() - 0.5f, inRectangle.GetTop() - 0.5f),
-                                        GE2DPoint(inRectangle.GetRight() + 0.5f, inRectangle.GetBottom() + 0.5f)));
-}
-
-// FUNCTION: LLE 0x10065ab9
-// Marks the control dirty (forwarding to the control owning its form slot) or clean
-void UIControl::SetDirty(bool inDirty)
-{
-    if (inDirty) {
-        UIControl* theControl = this->mForm->GetControl(this->mIndex);
-        if (theControl && this != theControl)
-            theControl->SetDirty(true);
-        else
-            this->mIsDirty = true;
-    } else
-        this->mIsDirty = false;
-}
-
-// FUNCTION: LLE 0x10065af5
-// Shows or hides the control; hiding an active control on the current form dirties its area and tabs away from it
-void UIControl::SetDisplayMode(unsigned long inMode)
-{
-    if (this->mDisplayMode != inMode) {
-        this->mDrawCount = 0;
-        if (inMode == kDisplayModeHidden && this->mForm->GetEntityGroupById(this->mId)->GetIsEnabled() &&
-            this->mForm == this->mForm->GetManager()->GetCurrentForm()) {
-            this->HideControl();
-            this->mForm->GetManager()->AddDirtyRectangle(this->mRectangle, this->mForm);
-            if (this->mForm->GetTabbingOn() && this->mForm->GetTabStop() == this->mIndex)
-                this->mForm->Tab();
-        } else if (this->mForm->GetEntityGroupById(this->mId)->GetIsEnabled())
-            this->SetDirty(true);
-    }
-    this->mDisplayMode = inMode;
-}
-
-// FUNCTION: LLE 0x10065b94
-// Moves the control to a new top-left, dirtying its old area when it is shown and enabled
-void UIControl::SetLocation(const GE2DPoint& inLocation)
-{
-    UIControl* theControl = this->mForm->GetControl(this->mIndex);
-    float theDeltaX = inLocation.GetX() - this->mRectangle.GetLeft();
-    float theDeltaY = inLocation.GetY() - this->mRectangle.GetTop();
-    UIEntityGroup* theGroup = this->mForm->GetEntityGroupById(this->mId);
-    if (theControl && theControl == this && theControl->mDisplayMode == kDisplayModeShown && theGroup->GetIsEnabled())
-        this->mForm->GetManager()->AddDirtyRectangle(this->mRectangle, this->mForm);
-    this->mRectangle = GERectangle(this->mRectangle.GetLeft() + theDeltaX, this->mRectangle.GetTop() + theDeltaY,
-                             this->mRectangle.GetRight() + theDeltaX, this->mRectangle.GetBottom() + theDeltaY);
-    this->mBgRhombus.SetRectangle(GERectangle(GE2DPoint(this->mRectangle.GetLeft() - 0.5f, this->mRectangle.GetTop() - 0.5f),
-                                        GE2DPoint(this->mRectangle.GetRight() + 0.5f, this->mRectangle.GetBottom() + 0.5f)));
-    this->SetDirty(true);
-}
-
-// FUNCTION: LLE 0x10065c7a
-// Sets the control's rectangle, dirtying the old area when it is shown and enabled
-void UIControl::SetRectangle(const GERectangle& inRectangle)
-{
-    UIControl* theControl = this->mForm->GetControl(this->mIndex);
-    UIEntityGroup* theGroup = this->mForm->GetEntityGroupById(this->mId);
-    if (theControl && theControl == this && theControl->mDisplayMode == kDisplayModeShown && theGroup->GetIsEnabled())
-        this->mForm->GetManager()->AddDirtyRectangle(theControl->mRectangle, this->mForm);
-    this->mRectangle = inRectangle;
-    this->SetLocation(inRectangle.GetTopLeft());
-    this->mBgRhombus.SetRectangle(GERectangle(GE2DPoint(this->mRectangle.GetLeft() - 0.5f, this->mRectangle.GetTop() - 0.5f),
-                                        GE2DPoint(this->mRectangle.GetRight() + 0.5f, this->mRectangle.GetBottom() + 0.5f)));
-}
-
-// FUNCTION: LLE 0x10065d4c
-// Replaces the event fired for a trigger (NULL just removes it), releasing the old one
-void UIControl::SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent)
-{
-    std::map<unsigned long, UIEvent*>::iterator theIterator = this->mTriggerEvents.find(inEvent);
-    if (theIterator != this->mTriggerEvents.end()) {
-        UIEvent* theEvent = theIterator->second;
-        theEvent->Uninitialize();
-        theEvent->Dereference();
-        this->mTriggerEvents.erase(theIterator);
-    }
-    if (!inTriggerEvent)
-        return;
-    inTriggerEvent->Reference();
-    inTriggerEvent->Initialize();
-    this->mTriggerEvents.insert(std::map<unsigned long, UIEvent*>::value_type(inEvent, inTriggerEvent));
 }
 
 // FUNCTION: LLE 0x10065dbd
@@ -466,7 +361,7 @@ bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* 
     case EeUiOp::BaseDrawText: r = c->UIControl::DrawTextA(); break;
     case EeUiOp::BaseSetLocation: c->UIControl::SetLocation(GE2DPoint(f[0], f[1])); break;
     case EeUiOp::SetDirty: c->SetDirty(a != 0); break;
-    case EeUiOp::Rect: UIObjHost::PutRect(f, c->mRectangle); break;
+    case EeUiOp::Rect: UIObjHost::PutRect(f, c->GetRectangle()); break;
     case EeUiOp::MouseLocation: f[0] = c->GetMouseLocation().GetX(); f[1] = c->GetMouseLocation().GetY(); break;
     case EeUiOp::CaptureMouse: c->CaptureMouse(); break;
     case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); break;
@@ -501,7 +396,7 @@ bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* 
         r = (intptr_t)theBitmaps[a];
         break;
     }
-    case EeUiOp::CopiedDrawRect: UIObjHost::PutRect(f, c->mCopiedDrawRectangle); break;
+    case EeUiOp::CopiedDrawRect: UIObjHost::PutRect(f, c->GetCopiedDrawRectangle()); break;
     case EeUiOp::BaseSetRectangle: c->UIControl::SetRectangle(UIObjHost::Rect(f)); break;
     case EeUiOp::ControlCount: r = c->GetForm()->GetControlCount(); break;
     case EeUiOp::AlwaysDirty: r = c->GetAlwaysDirty(); break;
@@ -564,7 +459,7 @@ bool UIObjHost::Part(UIControl* p, EeUiOp inOp, float* f, intptr_t* outResult)
     case EeUiOp::PartCopyData: r = p->CopyData(); break;
     case EeUiOp::PartDrawPolygons: r = p->DrawPolygons(); break;
     case EeUiOp::PartDrawText: r = p->DrawTextA(); break;
-    case EeUiOp::PartRect: UIObjHost::PutRect(f, p->mRectangle); break;
+    case EeUiOp::PartRect: UIObjHost::PutRect(f, p->GetRectangle()); break;
     case EeUiOp::PartMouseDown: r = p->MouseLButtonDown(); break;
     case EeUiOp::PartMouseUp: r = p->MouseLButtonUp(); break;
     case EeUiOp::PartMouseMove: r = p->MouseMove(GE2DPoint(f[0], f[1])); break;
@@ -680,7 +575,7 @@ bool UIControl::UpKeyPressed()
 // SYNTHETIC: LLE 0x10065059
 // SYNTHETIC: LLE 0x10065065
 
-// map<unsigned long, UIEvent*> COMDATs first emitted here (~_Tree, clear, const_iterator::_Dec)
+// map<unsigned long, UIEvent*> COMDATs first emitted here (~_Tree, clear, const_iterator::_Dec); the map is Rust's now
 // TEMPLATE: LLE 0x10065ee9
 // TEMPLATE: LLE 0x10065f14
 // TEMPLATE: LLE 0x10065f28

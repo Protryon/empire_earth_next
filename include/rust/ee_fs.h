@@ -15,8 +15,6 @@ constexpr static const uint32_t ARCHIVE_RESERVED = 0;
 
 constexpr static const int32_t NOT_SUSPENDED = 2;
 
-constexpr static const int32_t NOT_OPEN = 4;
-
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -788,6 +786,24 @@ long ee_fs_spec_write(const EeFsSpec *s,
 /// # Safety
 /// As [`ee_fs_spec_write`].
 long ee_fs_spec_write_value(const EeFsSpec *s, const uint8_t *data, unsigned long size);
+
+/// `FSGetVolumeAndDirectory`: the path's volume (its first two bytes, or a UNC `\\server` up to the next
+/// backslash) and directory (the rest, with a backslash added) into `out`'s volume and directory.
+///
+/// # Safety
+/// `in_path` is a live `UString` record, `out` a live spec.
+void ee_fs_volume_and_directory(const EeFsString *in_path,
+                                EeFsSpec *out);
+
+/// `FSInitialize`: the startup volume and directory (upper case) from the path, or from the current directory when
+/// the path is empty or not a directory.
+///
+/// # Safety
+/// `in_path` is a live `UString` record; `startup_volume`/`startup_directory` the live `gStartupVolume` and
+/// `gStartupDirectory`.
+void ee_fs_initialize(const EeFsString *in_path,
+                      EeFsString *startup_volume,
+                      EeFsString *startup_directory);
 
 }  // extern "C"
 

@@ -1023,7 +1023,10 @@ void Poll(const std::string& inDirectory)
         fprintf(theState, "\n");
         UIControl* theOver = theForm ? theForm->GetMouseOverControl() : NULL;
         fprintf(theState, "mouseover %ld\n", theOver ? (long)theOver->GetIndex() : -1L);
-        GEWindow* theWindow = theManager->GetRasterizer()->GetWindow(theManager->GetScreen());
+        // no screen while the rasterizer is re-activated (a settings change): no window then
+        GERasterizer* theRasterizer = theManager->GetRasterizer();
+        GEWindow* theWindow = theManager->GetScreen() < theRasterizer->GetScreenCount()
+            ? theRasterizer->GetWindow(theManager->GetScreen()) : NULL;
         if (theWindow)   // the window's size in the game's (logical) pixels: the pointer's coordinates
             fprintf(theState, "window %lu %lu\n", (unsigned long)theWindow->GetWidth(), (unsigned long)theWindow->GetHeight());
         for (unsigned long i = 0; i < theCount && i < 2000; i++) {
@@ -1182,3 +1185,34 @@ void EETestFixtureStart()
         }
     }).detach();
 }
+
+// TEST ONLY: the legacy debugger harness (tools/harness/game_state_probe.py) reads the communications' numbers from
+// this mirror, by its map name: their state is Rust's (ee_net), at no offset of the C++ object. The presentation
+// bridge (tools/harness/presentation_bridge.c) refreshes it before each present through EETestCommsRefresh.
+extern "C" {
+struct EETestComms {
+    int32_t mLastTickReceived;
+    uint32_t mCTsProcessed;
+    uint8_t mPaused;
+    uint8_t mMultiplayer;
+    uint8_t mValid;   // 0: no communications object
+};
+EETestComms gEETestComms;
+void EETestCommsRefresh()
+{
+    NESynchronousCommunications* theCommunications = gCommunications;
+    if (!theCommunications) {
+        gEETestComms.mValid = 0;
+        return;
+    }
+    gEETestComms.mLastTickReceived = (int32_t)theCommunications->GetLastTickReceived();
+    gEETestComms.mCTsProcessed = (uint32_t)theCommunications->GetNumberOfCTsProcessedInPhysics();
+    gEETestComms.mPaused = theCommunications->GetIsGamePaused() ? 1 : 0;
+    gEETestComms.mMultiplayer = theCommunications->GetIsMultiplayerSession() ? 1 : 0;
+    gEETestComms.mValid = 1;
+}
+}
+#if defined(_MSC_VER)
+#pragma comment(linker, "/include:EETestCommsRefresh")
+#pragma comment(linker, "/include:gEETestComms")
+#endif

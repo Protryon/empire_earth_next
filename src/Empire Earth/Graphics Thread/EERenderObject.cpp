@@ -1333,7 +1333,7 @@ void EERenderObject::FillRenderLists()
         } else {
             EESEUnit* theScreen = gUIManager->mScenarioEditorForm != NULL ?
                 gUIManager->mScenarioEditorForm->GetUnitScreen() : NULL;
-            EEUICSelectUnits* theEditorSelection = theScreen != NULL ? theScreen->mSelectUnits : NULL;
+            EEUICSelectUnits* theEditorSelection = theScreen != NULL ? theScreen->GetSelectUnits() : NULL;
             EESEUICTriggerSelectUnits* theTriggerSelection = dynamic_cast<EESEUICTriggerSelectUnits*>(
                 gUIManager->mScenarioEditorForm->GetControlById(kSETSObjectSelectUnits));
             if (theEditorSelection != NULL && theEditorSelection->GetIsDrawn())
@@ -1825,7 +1825,19 @@ const EeGfxRaster gEERustRaster = {
         static_cast<GEModel*>(inModel)->GetVertexArray(0)->SetPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), inIndex);
     },
     [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeBoundingVolumes(); },
-    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeModelNormals(); }
+    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeModelNormals(); },
+    // the 2D sprites' quads (EEEffect.cpp's AddGlowSprite 0x10317d, AddGroundSprite 0x1033f1, AddBlendedSprite 0x10387b)
+    [](uint32_t inKind, const EeGe3DPoint* inPosition, EeGfxColor inColor, float inRotation, float inSize, float inAlpha,
+       float inBrightness, float inAlphaReference) {
+        GE3DPoint thePosition(inPosition->x, inPosition->y, inPosition->z);
+        GEColor theColor(inColor.red, inColor.green, inColor.blue);
+        if (inKind == EE_GFX_SPRITE_GLOW)
+            AddGlowSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
+        else if (inKind == EE_GFX_SPRITE_GROUND)
+            AddGroundSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
+        else
+            AddBlendedSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
+    }
 };
 
 // FUNCTION: EXE 0x50f60f

@@ -19,10 +19,6 @@ public:
     unsigned long GetRightOffsetType() const { return this->mRightOffsetType; }
     float GetTopOffset() const { return this->mTopOffset; }
     unsigned long GetTopOffsetType() const { return this->mTopOffsetType; }
-    void OffsetBottom(long inOffset, unsigned long inType);
-    void OffsetLeft(long inOffset, unsigned long inType);
-    void OffsetTop(long inOffset, unsigned long inType);
-    void OffsetRight(long inOffset, unsigned long inType);
     void SetBottom(unsigned long inType, float inOffset)
     {
         this->mBottomOffset = inOffset;

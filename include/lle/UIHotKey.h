@@ -82,9 +82,6 @@ public:
 #endif
     void GetHotKeyName(UWideString& outName);
     unsigned long GetKeyCount() const { return this->mKeyCount; }
-#ifdef LOWLEVELENGINE_EXPORTS
-    static unsigned long GetPressedPollAmount() { return UIHotKey::sPressedPollAmount; }
-#endif
     void SetAlwaysFire(bool inAlwaysFire) { this->mAlwaysFire = inAlwaysFire; }
     void SetDoublePressedEvent(UIEvent* inEvent);
     void SetEnabled(bool inEnabled) { this->mEnabled = inEnabled; }

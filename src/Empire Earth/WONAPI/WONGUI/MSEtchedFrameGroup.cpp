@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
+#include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
 // FUNCTION: WON 0x00700a60
 // Returns the contained component's size plus a 20-pixel margin and the title height (20 x 20 when empty)
@@ -46,24 +47,7 @@ void MSEtchedFrameGroup::AddContainedComponent(Component* c) { this->mComponent=
 // Paints the etched group frame from the middle of the title down, leaving a gap for the title
 void MSEtchedFrameGroup::Paint(Graphics& g) {
     Container::Paint(g);
-    int dy=this->mLabel->Height()/2;
-    g.Translate(0,dy);
-    int right=this->Width()-1;
-    int bottom=this->Height()-1-dy;
-    int labelLeft=this->mLabel->Left();
-    int labelRight=this->mLabel->Right();
-    g.SetSysColor(StandardColor_3DHilight);
-    g.DrawLine(0,1,labelLeft,1);
-    g.DrawLine(labelRight,1,right,1);
-    g.DrawLine(right,0,right,bottom);
-    g.DrawLine(0,bottom,right,bottom);
-    g.DrawLine(1,1,1,bottom);
-    g.SetSysColor(StandardColor_3DShadow);
-    g.DrawLine(0,0,labelLeft,0);
-    g.DrawLine(labelRight,0,right-1,0);
-    g.DrawLine(right-1,0,right-1,bottom-1);
-    g.DrawLine(0,bottom-1,right-1,bottom-1);
-    g.DrawLine(0,0,0,bottom-1);
-    g.Translate(0,-dy);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::EtchedGroup,this->Width(),this->Height(),0,
+                              this->mLabel->Height(),this->mLabel->Left(),this->mLabel->Right()));
 }
 }

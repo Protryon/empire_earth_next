@@ -181,7 +181,7 @@ void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 inline unsigned short EEAIContinentManager::GetForestIDAt(const EETileLocation& inTile)
 {
     EEAIForest* theForest = this->GetForestAt(inTile);
-    return theForest != NULL ? theForest->mID : 0;
+    return theForest != NULL ? theForest->GetID() : 0;
 }
 
 namespace {
@@ -320,7 +320,7 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
         unsigned short theForestID =
             gContinentManager.GetForestIDAt(U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY()));
         EEAIForest* theForest = gContinentManager.mForests[theForestID];
-        if (theForest != NULL && theForest->mTiles.Size() > 1) {
+        if (theForest != NULL && theForest->GetNumTiles() > 1) {
             theCenter.SetX(inResource->GetTileX());
             theCenter.SetY(inResource->GetTileY());
             EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight(), theUnits);
@@ -692,7 +692,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theComplex);
             if (theArea == NULL)
                 return 0;
-            const U2DRectangle<long>& theBounds = theArea->mHull.GetBounds();
+            const U2DRectangle<long>& theBounds = theArea->GetHullBounds();
             ioArgs->i[0] = theBounds.mTop;
             ioArgs->i[1] = theBounds.mBottom;
             ioArgs->i[2] = theBounds.mLeft;
@@ -758,7 +758,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             theTile.mX = (long)ioArgs->i[0];
             theTile.mY = (long)ioArgs->i[1];
             EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theTile);
-            return theArea != NULL ? theArea->mID : 0;
+            return theArea != NULL ? theArea->GetID() : 0;
         }
     case EE_UNITS_GOAL_HOST_MAP_DIMENSIONS:
         ioArgs->i[0] = gMapWidth;
@@ -1881,13 +1881,6 @@ bool EEUGRust::IsGatherWaiting()
     return theArgs.i[2] != 0;
 }
 
-void EEUGRust::GetGatherDestination(GE3DPoint& outLocation)
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
-    PointIn(theArgs, outLocation);
-}
-
 void EEUGRust::SetGatherResource(EEUnit* inResource)
 {
     Goal(EE_UNITS_GOAL_GATHER_SET_RESOURCE, this, Handle(inResource));
@@ -2037,11 +2030,6 @@ long EEUGRust::GetOutOfSynchChecksum()
 void EEUGRust::GetDebugLine(UWideString& ioText)
 {
     Goal(EE_UNITS_GOAL_DEBUG_LINE, this, 0, 0, NULL, NULL, &ioText);
-}
-
-void EEUGRust::GetDebugText(UWideString& ioText)
-{
-    Goal(EE_UNITS_GOAL_DEBUG_TEXT, this, 0, 0, NULL, NULL, &ioText);
 }
 
 void EEUGRust::GetGoalLocation(GE3DPoint& outLocation)

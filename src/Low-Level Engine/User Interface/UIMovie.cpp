@@ -52,7 +52,7 @@ long UIMovie::DrawPolygons()
 // Renders the current movie frame in the text pass, lowering the pending draw count; returns the render result
 long UIMovie::DrawTextA()
 {
-    this->mDrawCount--;
+    UIControl::DrawTextA();
     long theResult = kErrorOK;
     if (this->mMovie)
         theResult = this->mMovie->RenderFrame();

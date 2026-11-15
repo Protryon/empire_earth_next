@@ -97,201 +97,24 @@
 #include "ee/EESEARust.h"
 #include "rust/ee_screens.h"
 extern char gEmptyString[]; // 0x4e5b98: the shared empty string
+extern GEFont* gSeplScreenFont;   // the screen's font while the tab makes its controls (EESERBUnitTypes.cpp)
 
 bool gB4C3220 = true;
 
-// NEAR: inline budget/x87 (the original calls the imported UIEvent ctor for the first events), frame slots of i/theX/
-// theY, conditional-temp flags of the check box. GEBitmap::GetHeight must be inline in the exe view. No GE2DPoint
-// temporaries: one function-scope point set per control.
 // FUNCTION: EXE 0x57b0b7
-// Builds the trigger tab: entry list, five sub-tab buttons, new/duplicate/delete, sort and priority buttons,
-// debug-id check box, name and description boxes, and the five sub-screens
+// Builds the trigger tab (ee_screens editor_tscreen.rs: the entry list, the five sub-tab buttons, new/duplicate/
+// delete, the sort and priority buttons, the debug-id check box, the name and description boxes), then the five
+// sub-screens, then disables their groups
 EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
 {
-    UWideString theText;
-    UIEvent* theEvent;
-    GEText* theGEText;
-
-    float theX;
-    unsigned long i;
-    float theY;
-    GE2DPoint thePosition;
     this->mR18 = GERectangle(0.0f, 448.0f, 1023.0f, 606.0f);
-    thePosition.SetXY(4.0f, 480.0f);
-    std::vector<UWideString> theTemp1;
-    this->mList = new UILBString(0x7da, theTemp1, gU531930, false, GERectangle(thePosition, 300.0f, 105.0f),
-                           inForm, ioIndex, 3);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_SELECT_ENTRY);
-    this->mList->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
-    theEvent->Dereference();
-    this->mList->SetBgOpacity(0.4f);
-    this->mList->SetScrollBarBgOpacity(0.4f);
-    theGEText = this->mList->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mList->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.0f, 1.0f));
-    inForm->AddControl(this->mList, 14);
-    ioIndex++;
-    for (i = 0; i < 5; i++) {
-        gResource->GetString(IDS_TRIGGER_SCREEN_TAB_FIRST + i, theText);
-        theX = (float)i * 60.0f + 4.0f;
-        this->mTabs[i] = new UIRadioButton(2000 + i, theText, gU531930, GERectangle(theX, 458.0f, theX + 57.0f, 477.0f),
-                                     inForm, ioIndex, 2, true, i == 0, false);
-        this->mTabs[i]->SetUpCheckedBitmap(NULL);
-        this->mTabs[i]->SetDownCheckedBitmap(NULL);
-        this->mTabs[i]->SetDownUncheckedBitmap(NULL);
-        this->mTabs[i]->SetUpUncheckedBitmap(NULL);
-        this->mTabs[i]->GetTextLabel()->SetRectangle(GERectangle(theX + 2.0f, 460.0f, theX + 54.0f, 474.0f));
-        this->mTabs[i]->SetBgOpacity(0.4f);
-        theEvent = EECreateScreenEvent(EE_SCREENS_SE_SHOW_TAB);
-        this->mTabs[i]->SetTriggerEvent(kControlTriggerChecked, theEvent);
-        theEvent->Dereference();
-        theGEText = this->mTabs[i]->GetTextLabel()->GetGEText();
-        theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-        theGEText->SetIsTransparent(true);
-        inForm->AddControl(this->mTabs[i], 14);
-        ioIndex++;
-    }
-    gResource->GetString(IDS_TRIGGER_EDITOR_NEW, theText);
-    thePosition.SetXY(4.0f, 586.0f);
-    this->mNewButton = new UIButton(0x7d5, NULL, NULL, NULL, GERectangle(thePosition, 90.0f, 20.0f), inForm, ioIndex, 2);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_NEW_ENTRY);
-    this->mNewButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    this->mNewButton->SetBgOpacity(0.4f);
-    this->mNewButton->SetText(theText, inFont);
-    theGEText = this->mNewButton->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mNewButton, 14);
-    ioIndex++;
-    gResource->GetString(IDS_DUPLICATE, theText);
-    thePosition.SetXY(104.0f, 586.0f);
-    this->mDuplicateButton = new UIButton(kSETriggerScreenDuplicateButton, NULL, NULL, NULL, GERectangle(thePosition, 90.0f, 20.0f), inForm, ioIndex,
-                             2);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_DUPLICATE_ENTRY);
-    this->mDuplicateButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    this->mDuplicateButton->SetBgOpacity(0.4f);
-    this->mDuplicateButton->SetText(theText, inFont);
-    theGEText = this->mDuplicateButton->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mDuplicateButton, 14);
-    ioIndex++;
-    gResource->GetString(IDS_TRIGGER_EDITOR_DELETE, theText);
-    thePosition.SetXY(204.0f, 586.0f);
-    this->mDeleteButton = new UIButton(kSETriggerScreenDeleteButton, NULL, NULL, NULL, GERectangle(thePosition, 90.0f, 20.0f), inForm, ioIndex,
-                             2);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_DELETE_ENTRY);
-    this->mDeleteButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    this->mDeleteButton->SetBgOpacity(0.4f);
-    this->mDeleteButton->SetText(theText, inFont);
-    theGEText = this->mDeleteButton->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mDeleteButton, 14);
-    ioIndex++;
-    thePosition.SetXY(305.0f, 480.0f);
-    this->mAlphaSortButton = new UIButton(0x7dd, inForm->GetManager()->GetAlphaSortUpBitmap(), NULL,
-                             inForm->GetManager()->GetAlphaSortDownBitmap(),
-                             GERectangle(thePosition, inForm->GetManager()->GetAlphaSortUpBitmap()->GetWidth(),
-                                         inForm->GetManager()->GetAlphaSortUpBitmap()->GetHeight()),
-                             inForm, ioIndex, 0);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_ALPHA_SORT);
-    this->mAlphaSortButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mAlphaSortButton, 14);
-    ioIndex++;
-    theY = this->mAlphaSortButton->GetRectangle().GetBottom() + 1.0f;
-    thePosition.SetXY(305.0f, theY);
-    this->mIncPriorityButton = new UIButton(0x7d8, inForm->GetManager()->GetSBBitmapUpNormal(), NULL,
-                             inForm->GetManager()->GetSBBitmapUpPressed(),
-                             GERectangle(thePosition, inForm->GetManager()->GetSBBitmapUpNormal()->GetWidth(),
-                                         inForm->GetManager()->GetSBBitmapUpNormal()->GetHeight()),
-                             inForm, ioIndex, 0);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_INC_PRIORITY);
-    this->mIncPriorityButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mIncPriorityButton, 14);
-    ioIndex++;
-    theY = this->mIncPriorityButton->GetRectangle().GetBottom() + 1.0f;
-    thePosition.SetXY(305.0f, theY);
-    this->mDecPriorityButton = new UIButton(0x7d9, inForm->GetManager()->GetSBBitmapDownNormal(), NULL,
-                             inForm->GetManager()->GetSBBitmapDownPressed(),
-                             GERectangle(thePosition, inForm->GetManager()->GetSBBitmapDownNormal()->GetWidth(),
-                                         inForm->GetManager()->GetSBBitmapDownNormal()->GetHeight()),
-                             inForm, ioIndex, 0);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_DEC_PRIORITY);
-    this->mDecPriorityButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mDecPriorityButton, 14);
-    ioIndex++;
-    theY = this->mDecPriorityButton->GetRectangle().GetBottom() + 1.0f;
-    thePosition.SetXY(305.0f, theY);
-    this->mShowIDsCheckBox = new EESETSShowIDsCheckBox(0x7de, gEmptyString, gU531930,
-                                            thePosition,
-                                            inForm->GetManager()->GetCheckOn()->GetWidth(),
-                                            inForm->GetManager()->GetCheckOn()->GetHeight(),
-                                            inForm, ioIndex);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_SHOW_DEBUG_IDS);
-    this->mShowIDsCheckBox->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mShowIDsCheckBox, 14);
-    ioIndex++;
-    gResource->GetString(IDS_TRIGGER_EDITOR_NAME, theText);
-    thePosition.SetXY(329.0f, 458.0f);
-    this->mNameLabel = new UITextLabel(theText, inFont, kSETriggerScreenNameLabel, GERectangle(thePosition, 250.0f,
-                                                                     (float)inFont->GetHeight()),
-                                 inForm, 0, ioIndex, 0);
-    this->mNameLabel->SetBgOpacity(0.4f);
-    theGEText = this->mNameLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mNameLabel, 14);
-    ioIndex++;
-    thePosition.SetXY(329.0f, 480.0f);
-    this->mNameEditBox = new UIEditBox(kSETriggerScreenNameEditBox, gU531930, 0x1c, false,
-                                 GERectangle(thePosition, 250.0f, (float)gU531930->GetHeight() + 6.0f), inForm,
-                                 ioIndex, 2, false, false);
-    this->mNameEditBox->SetBgOpacity(0.4f);
-    theGEText = this->mNameEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_SELECT_NAME);
-    this->mNameEditBox->SetTriggerEvent(kControlTriggerEnterPressed, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mNameEditBox, 14);
-    ioIndex++;
-    gResource->GetString(IDS_DESCRIPTION_76A8, theText);
-    thePosition.SetXY(589.0f, 458.0f);
-    this->mTextLabel = new UITextLabel(theText, inFont, 0x962, GERectangle(thePosition, 220.0f,
-                                                                     (float)inFont->GetHeight()),
-                                 inForm, 0, ioIndex, 0);
-    this->mTextLabel->SetBgOpacity(0.4f);
-    theGEText = this->mTextLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mTextLabel->SetDisplayMode(kDisplayModeHidden);
-    inForm->AddControl(this->mTextLabel, 14);
-    ioIndex++;
-    theY = this->mTextLabel->GetRectangle().GetBottom() + 5.0f;
-    thePosition.SetXY(589.0f, theY);
-    this->mTextEditBox = new UIEditBox(0x963, gU531930, 6, false, GERectangle(thePosition, 220.0f, 98.0f), inForm,
-                                 ioIndex, 2, true, false);
-    this->mTextEditBox->SetBgOpacity(0.4f);
-    theGEText = this->mTextEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mTextEditBox->SetDisplayMode(kDisplayModeHidden);
-    inForm->AddControl(this->mTextEditBox, 14);
-    ioIndex++;
-    for (i = 0; i < 5; i++)
+    gSeplScreenFont = inFont;
+    uint32_t theIndex = (uint32_t)ioIndex;
+    this->mRust = ee_screens_sets_new(this, inForm, &theIndex);
+    ioIndex = theIndex;
+    for (unsigned long i = 0; i < 5; i++)
         this->mScreens[i] = this->CreateScreen(i, inFont, inForm, ioIndex);
-    this->HideGroups();
-    this->mCurrentScreen = kSETriggerScreenTrigger;
-    this->mCurrentEntityGroup = kEntityGroupTrigger;
+    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_FINISH, 0, 0.0f, 0.0f, NULL);
 }
 
 // SYNTHETIC: EXE 0x57bf58
@@ -301,93 +124,82 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
 // (EESETriggerScreen's scalar deleting destructor)
 
 // FUNCTION: EXE 0x57bf97
-// Destroys the trigger tab's list, tab buttons, sub-screens, name and description controls and buttons
+// Destroys the trigger tab's list, tab buttons, sub-screens, name and description controls and buttons (the
+// original's order: the sub-screens between the tabs and the name box)
 EESETriggerScreen::~EESETriggerScreen()
 {
-    unsigned long i;
-    delete this->mList;
-    for (i = 0; i < 5; i++)
-        delete this->mTabs[i];
-    for (i = 0; i < 5; i++)
+    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_DESTROY_FIRST, 0, 0.0f, 0.0f, NULL);
+    for (unsigned long i = 0; i < 5; i++)
         delete this->mScreens[i];
-    delete this->mNameEditBox;
-    delete this->mNameLabel;
-    delete this->mTextLabel;      // the description label and edit box were never deleted (leak)
-    delete this->mTextEditBox;
-    delete this->mNewButton;
-    delete this->mDuplicateButton;
-    delete this->mDeleteButton;
-    delete this->mIncPriorityButton;
-    delete this->mDecPriorityButton;
-    delete this->mAlphaSortButton;
-    delete this->mShowIDsCheckBox;
+    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_DESTROY_REST, 0, 0.0f, 0.0f, NULL);
+    ee_screens_sets_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x57c057
-// Sorts the current sub-screen's entries alphabetically and selects the first one (only with a selection)
-void EESETriggerScreen::AlphaSort()
+// The members (editor_tscreen.rs): 0x57c057 AlphaSort, 0x57c0ad SelectEntry, 0x57c130 Leave, 0x57c1d9 Update,
+// 0x57c2ae DecPriority, 0x57c31b DeleteEntry, 0x57c399 Draw, 0x57c411 DuplicateEntry, 0x57c467 ShowTab, 0x57c599
+// StoreEntry, 0x57c5b3 Disable, 0x57c5d9 HideText, 0x582d69 ShowText (ICF-folded), 0x57c5f2 HideAlphaSort, 0x57c5fd
+// ShowSelection, 0x57c6e0 IncPriority, 0x57c743 HideGroups, 0x57c78b Load (ShowSelection), 0x57c790 NewEntry,
+// 0x57c7d0 Enter, 0x57c92e SelectName, 0x57c99f FillList, 0x57ca30 Enable, 0x57ca56 ShowAlphaSort, 0x57ca61 Store
+// (StoreEntry), 0x57ca66 UpdateKeys, 0x57ca79 MouseMove, 0x57ca92 RefreshScreen
+#define EE_SETS_CALL(inWhat) ee_screens_sets_call(this->mRust, (inWhat), 0, 0.0f, 0.0f, NULL)
+void EESETriggerScreen::AlphaSort() { EE_SETS_CALL(EE_SCREENS_SETS_ALPHA_SORT); }
+void EESETriggerScreen::SelectEntry() { EE_SETS_CALL(EE_SCREENS_SETS_SELECT_ENTRY); }
+void EESETriggerScreen::Leave() { EE_SETS_CALL(EE_SCREENS_SETS_LEAVE); }
+void EESETriggerScreen::Update() { EE_SETS_CALL(EE_SCREENS_SETS_UPDATE); }
+void EESETriggerScreen::DecPriority() { EE_SETS_CALL(EE_SCREENS_SETS_DEC_PRIORITY); }
+void EESETriggerScreen::DeleteEntry() { EE_SETS_CALL(EE_SCREENS_SETS_DELETE_ENTRY); }
+void EESETriggerScreen::Draw(const GERectangle& inRectangle)
 {
-    unsigned long theSelection;
-    if (this->mList->GetCurrentSelection(theSelection) != kErrorOK)
-        return;
-    this->StoreEntry();
-    this->mScreens[this->mCurrentScreen]->Sort();
-    this->mScreens[this->mCurrentScreen]->mSelection = 0;
-    this->FillList();
-    this->mList->ChangeSelectionIndex(0, false, true);
-    this->ShowSelection();
+    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_DRAW, 0, 0.0f, 0.0f, const_cast<GERectangle*>(&inRectangle));
 }
-
-// FUNCTION: EXE 0x57c0ad
-// Stores the open entry and loads the list's selected entry (the last one when nothing is selected)
-void EESETriggerScreen::SelectEntry()
+void EESETriggerScreen::DuplicateEntry() { EE_SETS_CALL(EE_SCREENS_SETS_DUPLICATE_ENTRY); }
+void EESETriggerScreen::ShowTab(unsigned long inControlID)
 {
-    unsigned long theSelection;
-    if (this->mList->GetCurrentSelection(theSelection) == kErrorOK) {
-        this->StoreEntry();
-        this->mScreens[this->mCurrentScreen]->mSelection = theSelection;
-        this->FillList();
-        this->mList->ChangeSelectionIndex(theSelection, false, false);
-        this->ShowSelection();
-    } else if (this->mList->GetLineCount() > 0) {
-        theSelection = this->mList->GetLineCount() - 1;
-        this->StoreEntry();
-        this->mScreens[this->mCurrentScreen]->mSelection = theSelection;
-        this->FillList();
-        this->mList->ChangeSelectionIndex(theSelection, false, false);
-        this->ShowSelection();
-    } else {
-        this->mScreens[this->mCurrentScreen]->mSelection = 0;
-        this->mScreens[this->mCurrentScreen]->mHasSelection = false;
-    }
+    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_SHOW_TAB, (uint32_t)inControlID, 0.0f, 0.0f, NULL);
 }
-
-// FUNCTION: EXE 0x57c130
-// Leaves the trigger tab: hides the hide-UI check box, restores the full game view, stores the open entry
-// and deactivates the sub-screen
-void EESETriggerScreen::Leave()
+void EESETriggerScreen::StoreEntry() { EE_SETS_CALL(EE_SCREENS_SETS_STORE_ENTRY); }
+void EESETriggerScreen::Disable() { EE_SETS_CALL(EE_SCREENS_SETS_DISABLE); }
+void EESETriggerScreen::HideText() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_TEXT); }
+void EESETriggerScreen::ShowText() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_TEXT); }
+void EESETriggerScreen::HideAlphaSort() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_ALPHA_SORT); }
+void EESETriggerScreen::ShowSelection() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_SELECTION); }
+void EESETriggerScreen::IncPriority() { EE_SETS_CALL(EE_SCREENS_SETS_INC_PRIORITY); }
+void EESETriggerScreen::HideGroups() { EE_SETS_CALL(EE_SCREENS_SETS_HIDE_GROUPS); }
+void EESETriggerScreen::Load() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_SELECTION); }
+void EESETriggerScreen::NewEntry() { EE_SETS_CALL(EE_SCREENS_SETS_NEW_ENTRY); }
+void EESETriggerScreen::Enter() { EE_SETS_CALL(EE_SCREENS_SETS_ENTER); }
+void EESETriggerScreen::SelectName() { EE_SETS_CALL(EE_SCREENS_SETS_SELECT_NAME); }
+void EESETriggerScreen::FillList() { EE_SETS_CALL(EE_SCREENS_SETS_FILL_LIST); }
+void EESETriggerScreen::Enable() { EE_SETS_CALL(EE_SCREENS_SETS_ENABLE); }
+void EESETriggerScreen::ShowAlphaSort() { EE_SETS_CALL(EE_SCREENS_SETS_SHOW_ALPHA_SORT); }
+void EESETriggerScreen::Store() { EE_SETS_CALL(EE_SCREENS_SETS_STORE_ENTRY); }
+void EESETriggerScreen::UpdateKeys() { EE_SETS_CALL(EE_SCREENS_SETS_UPDATE_KEYS); }
+void EESETriggerScreen::MouseMove(const GE2DPoint& inLocation)
 {
-    GERectangle theRectangle(0.0f, 0.0f, 1024.0f, 606.0f);
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mNewButton->GetForm());
-    theEditor->GetControlById(kScenarioEditorHideUICheckBox)->SetDisplayMode(kDisplayModeHidden);
-    theEditor->SetGameView(theRectangle, false);
-    gB529066 = false;
-    gCameraFollowing = false;
-    gB529068 = false;
-    if (gMiniMap != NULL)
-        gMiniMap->RefreshView();
-    gUIManager->RedrawAll();
-    gUIManager->GetCurrentForm()->SetAllControlsDirty();
-    this->HideGroups();
-    this->StoreEntry();
-    this->mScreens[this->mCurrentScreen]->Deactivate();
+    ee_screens_sets_call(this->mRust, EE_SCREENS_SETS_MOUSE_MOVE, 0, inLocation.GetX(), inLocation.GetY(), NULL);
 }
+void EESETriggerScreen::RefreshScreen() { EE_SETS_CALL(EE_SCREENS_SETS_REFRESH_SCREEN); }
+#undef EE_SETS_CALL
 
-// FUNCTION: EXE 0x57c1d9
-// Updates the current sub-screen
-void EESETriggerScreen::Update()
+UIEditBox* EESETriggerScreen::GetNameEditBox() const
 {
-    this->mScreens[this->mCurrentScreen]->Update();
+    return static_cast<UIEditBox*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_NAME_EDIT, 0));
+}
+UIEditBox* EESETriggerScreen::GetTextEditBox() const
+{
+    return static_cast<UIEditBox*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_TEXT_EDIT, 0));
+}
+UILBString* EESETriggerScreen::GetList() const
+{
+    return static_cast<UILBString*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_LIST, 0));
+}
+UIRadioButton* EESETriggerScreen::GetTab(long inScreen) const
+{
+    return static_cast<UIRadioButton*>(ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_TAB, (uint32_t)inScreen));
+}
+long EESETriggerScreen::GetCurrentScreen() const
+{
+    return (long)(intptr_t)ee_screens_sets_control(this->mRust, EE_SCREENS_SETS_CURRENT_SCREEN, 0);
 }
 
 // FUNCTION: EXE 0x57c1e5
@@ -416,245 +228,81 @@ EESETSBaseObject* EESETriggerScreen::CreateScreen(unsigned long inType, GEFont* 
     return theScreen;
 }
 
-// FUNCTION: EXE 0x57c2ae
-// Moves the selected entry one place down the list and keeps it selected
-void EESETriggerScreen::DecPriority()
+
+// ---- the trigger tab's host (editor_tscreen.rs; EE_SCREENS_SETS_OP_*): its tab and bitmap buttons, the sub-screens,
+// the views, the list
+
+static_assert(EE_SCREENS_SETS_IDS_NEW == IDS_TRIGGER_EDITOR_NEW && EE_SCREENS_SETS_IDS_NEW + 1 == IDS_DUPLICATE &&
+                  EE_SCREENS_SETS_IDS_NEW + 2 == IDS_TRIGGER_EDITOR_DELETE &&
+                  EE_SCREENS_SETS_IDS_NEW + 3 == IDS_TRIGGER_EDITOR_NAME &&
+                  EE_SCREENS_SETS_IDS_DESCRIPTION == IDS_DESCRIPTION_76A8,
+              "the strings");
+static_assert(EE_SCREENS_SETS_TAB_FIRST == kSETriggerTabTrigger && kSETriggerTabArea == kSETriggerTabTrigger + 4 &&
+                  EE_SCREENS_SETS_GROUPS[0] == kEntityGroupTrigger && EE_SCREENS_SETS_GROUPS[1] == kEntityGroupCondition &&
+                  EE_SCREENS_SETS_GROUPS[2] == kEntityGroupEffect && EE_SCREENS_SETS_GROUPS[3] == kEntityGroupObject &&
+                  EE_SCREENS_SETS_GROUPS[4] == kEntityGroupArea,
+              "the sub-tabs");
+
+namespace {
+
+void SetsYellow(GEText* inText)
 {
-    unsigned long theSelection;
-    if (this->mList->GetCurrentSelection(theSelection) != kErrorOK || !(theSelection < this->mList->GetLineCount() - 1))
-        return;
-    this->StoreEntry();
-    this->mScreens[this->mCurrentScreen]->MoveDown();
-    this->mScreens[this->mCurrentScreen]->mSelection = theSelection + 1;
-    this->FillList();
-    this->mList->ChangeSelectionIndex(theSelection + 1, false, true);
-    this->ShowSelection();
+    inText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
+    inText->SetIsTransparent(true);
 }
 
-// FUNCTION: EXE 0x57c31b
-// Deletes the selected entry and selects the entry now in its place (or the last one)
-void EESETriggerScreen::DeleteEntry()
+void SetsEvent(UIControl* inControl, unsigned long inTrigger, uint32_t inCode)
 {
-    unsigned long theSelection;
-    if (this->mList->GetCurrentSelection(theSelection) != kErrorOK)
-        return;
-    this->mScreens[this->mCurrentScreen]->Delete();
-    this->FillList();
-    this->mScreens[this->mCurrentScreen]->mHasSelection = false;
-    if (theSelection < this->mList->GetLineCount())
-        this->mList->ChangeSelectionIndex(theSelection, false, true);
-    else
-        this->mList->ChangeSelectionIndex(this->mList->GetLineCount() - 1, false, true);
-    this->ShowSelection();
+    UIEvent* theEvent = EECreateScreenEvent(inCode);
+    inControl->SetTriggerEvent(inTrigger, theEvent);
+    theEvent->Dereference();
 }
 
-// FUNCTION: EXE 0x57c399
-// Draws the panel background behind the trigger tab unless the editor UI is hidden
-void EESETriggerScreen::Draw(const GERectangle& inRectangle)
+void SetsScreenCall(EESETSBaseObject* inScreen, int32_t inWhat, const float* f)
 {
-    GERectangle theClip;
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
-    if (!theEditor->mWasUIHidden && inRectangle.And(this->mR18, theClip))
-        theEditor->UIForm::DrawBackground(theEditor->mPanelBackground, theClip, GERectangle(0.0f, 0.0f, 256.0f, 256.0f), this->mR18);
-}
-
-// FUNCTION: EXE 0x57c411
-// Duplicates the selected entry and selects the copy at the end of the list
-void EESETriggerScreen::DuplicateEntry()
-{
-    unsigned long theSelection;
-    if (this->mList->GetCurrentSelection(theSelection) != kErrorOK)
-        return;
-    this->StoreEntry();
-    this->mScreens[this->mCurrentScreen]->Duplicate();
-    this->FillList();
-    this->mList->ChangeSelectionIndex(this->mList->GetLineCount() - 1, false, true);
-    this->ShowSelection();
-}
-
-// FUNCTION: EXE 0x57c467
-// Switches to a tab button's sub-screen: stores the open entry, refills the list and reselects the
-// sub-screen's entry (the last one when it is out of range)
-void EESETriggerScreen::ShowTab(unsigned long inControlID)
-{
-    UIForm* theForm = this->mNewButton->GetForm();
-    this->StoreEntry();
-    theForm->GetEntityGroup(this->mCurrentEntityGroup)->Disable();
-    this->GetScreen(this->mCurrentScreen)->Deactivate();
-    this->HideText();
-    switch (inControlID) {
-    case kSETriggerTabTrigger:
-        this->mCurrentEntityGroup = kEntityGroupTrigger;
-        this->mCurrentScreen = kSETriggerScreenTrigger;
-        break;
-    case kSETriggerTabCondition:
-        this->mCurrentEntityGroup = kEntityGroupCondition;
-        this->mCurrentScreen = kSETriggerScreenCondition;
-        break;
-    case kSETriggerTabEffect:
-        this->mCurrentEntityGroup = kEntityGroupEffect;
-        this->mCurrentScreen = kSETriggerScreenEffect;
-        break;
-    case kSETriggerTabObject:
-        this->mCurrentEntityGroup = kEntityGroupObject;
-        this->mCurrentScreen = kSETriggerScreenObject;
-        break;
-    case kSETriggerTabArea:
-        this->mCurrentEntityGroup = kEntityGroupArea;
-        this->mCurrentScreen = kSETriggerScreenArea;
-        break;
+    switch (inWhat) {
+    case EE_SCREENS_SETS_SCREEN_SORT: inScreen->Sort(); break;
+    case EE_SCREENS_SETS_SCREEN_MOVE_DOWN: inScreen->MoveDown(); break;
+    case EE_SCREENS_SETS_SCREEN_DELETE: inScreen->Delete(); break;
+    case EE_SCREENS_SETS_SCREEN_DEACTIVATE: inScreen->Deactivate(); break;
+    case EE_SCREENS_SETS_SCREEN_DUPLICATE: inScreen->Duplicate(); break;
+    case EE_SCREENS_SETS_SCREEN_ACTIVATE: inScreen->Activate(); break;
+    case EE_SCREENS_SETS_SCREEN_STORE: inScreen->Store(); break;
+    case EE_SCREENS_SETS_SCREEN_HIDE: inScreen->Hide(); break;
+    case EE_SCREENS_SETS_SCREEN_LOAD: inScreen->Load(); break;
+    case EE_SCREENS_SETS_SCREEN_MOVE_UP: inScreen->MoveUp(); break;
+    case EE_SCREENS_SETS_SCREEN_NEW: inScreen->New(); break;
+    case EE_SCREENS_SETS_SCREEN_SHOW: inScreen->Show(); break;
+    case EE_SCREENS_SETS_SCREEN_UPDATE: inScreen->Update(); break;
+    case EE_SCREENS_SETS_SCREEN_UPDATE_KEYS: inScreen->UpdateKeys(); break;
+    case EE_SCREENS_SETS_SCREEN_MOUSE_MOVE: inScreen->MouseMove(GE2DPoint(f[0], f[1])); break;
+    case EE_SCREENS_SETS_SCREEN_REFRESH: inScreen->RefreshControls(); break;
     }
-    this->FillList();
-    unsigned long theSelection;
-    if (this->GetScreen(this->mCurrentScreen)->mHasSelection && this->mList->GetLineCount() > (theSelection = this->GetScreen(this->mCurrentScreen)->mSelection))
-        this->mList->ChangeSelectionIndex(this->GetScreen(this->mCurrentScreen)->mSelection, false, true);
-    else if (this->mList->GetLineCount() > 0) {
-        unsigned long theCount = this->mList->GetLineCount();
-        this->GetScreen(this->mCurrentScreen)->mSelection = theCount - 1;
-        this->mList->ChangeSelectionIndex(this->GetScreen(this->mCurrentScreen)->mSelection, false, true);
+}
+
+// Leave's and Enter's views (the hide-UI box, the game view, the camera flags, the mini map, the redraw)
+void SetsView(EEUIFScenarioEditor* inEditor, bool inEnter)
+{
+    UIControl* theHideUI = inEditor->GetControlById(kScenarioEditorHideUICheckBox);
+    if (!inEnter) {
+        GERectangle theRectangle(0.0f, 0.0f, 1024.0f, 606.0f);
+        theHideUI->SetDisplayMode(kDisplayModeHidden);
+        inEditor->SetGameView(theRectangle, false);
     } else {
-        this->GetScreen(this->mCurrentScreen)->mHasSelection = false;
-        this->GetScreen(this->mCurrentScreen)->mSelection = 0;
+        GERectangle theRectangle(0.0f, 0.0f, 1024.0f, 447.0f);
+        GERectangle theEdges(0.0f, 0.0f, 1024.0f, 606.0f);
+        EESetGameViewRectangle(theRectangle);
+        theHideUI->SetDisplayMode(kDisplayModeShown);
+        // the hide-UI event's two views (the original's inline SetRectangles; the event is an EESEERust since it moved)
+        EESEERust* theEvent = static_cast<EESEERust*>(theHideUI->GetTriggerEvent(kControlTriggerChecked));
+        const float theUnchecked[4] = {theEdges.GetLeft(), theEdges.GetTop(), theEdges.GetRight(), theEdges.GetBottom()};
+        const float theChecked[4] = {theRectangle.GetLeft(), theRectangle.GetTop(), theRectangle.GetRight(),
+                                     theRectangle.GetBottom()};
+        ee_screens_see_hide_ui_views(theEvent->mEvent, theUnchecked, theChecked);
+        inEditor->SetGameView(theRectangle, false);
+        static_cast<UICheckBox*>(inEditor->GetControlById(kScenarioEditorHideUICheckBox))->SetChecked(true);
+        inEditor->GetEntityGroupById(14)->Enable();
     }
-    this->GetScreen(this->mCurrentScreen)->Activate();
-    this->ShowSelection();
-    gUIManager->RedrawAll();
-}
-
-// FUNCTION: EXE 0x57c599
-// Writes the controls back into the open entry, if there is one (sets gB4C3220, which ShowSelection clears)
-void EESETriggerScreen::StoreEntry()
-{
-    gB4C3220 = true;
-    if (this->mScreens[this->mCurrentScreen]->mHasSelection)
-        this->mScreens[this->mCurrentScreen]->Store();
-}
-
-// FUNCTION: EXE 0x57c5b3
-// Disables the trigger tab's control group and hides the current sub-screen's controls
-void EESETriggerScreen::Disable()
-{
-    this->mNameEditBox->GetForm()->GetEntityGroup(14)->Disable();
-    this->mScreens[this->mCurrentScreen]->Hide();
-}
-
-// FUNCTION: EXE 0x57c5d9
-// Hides the description label and edit box
-void EESETriggerScreen::HideText()
-{
-    this->mTextEditBox->SetDisplayMode(kDisplayModeHidden);
-    this->mTextLabel->SetDisplayMode(kDisplayModeHidden);
-}
-
-// ICF-FOLDED: EXE 0x582d69
-// Shows the description label and edit box (folded with EESETSEffect::Show in the original: the same two member
-// offsets)
-void EESETriggerScreen::ShowText()
-{
-    this->mTextEditBox->SetDisplayMode(kDisplayModeShown);
-    this->mTextLabel->SetDisplayMode(kDisplayModeShown);
-}
-
-// FUNCTION: EXE 0x57c5f2
-// Hides the alphabetical sort button
-void EESETriggerScreen::HideAlphaSort()
-{
-    this->mAlphaSortButton->SetDisplayMode(kDisplayModeHidden);
-}
-
-// FUNCTION: EXE 0x57c5fd
-// Loads the list's selected entry into the sub-screen and shows the name, duplicate and delete controls;
-// without a selection hides them and the description
-void EESETriggerScreen::ShowSelection()
-{
-    unsigned long theSelection;
-    gB4C3220 = false;
-    this->mShowIDsCheckBox->SetChecked(gWorld.mScenarioManager->mShowDebugIDs);
-    if (this->mList->GetCurrentSelection(theSelection) == kErrorOK) {
-        this->mScreens[this->mCurrentScreen]->mSelection = theSelection;
-        this->mScreens[this->mCurrentScreen]->mHasSelection = true;
-        this->mNameEditBox->GetForm()->GetEntityGroup(this->mCurrentEntityGroup)->Enable();
-        this->mNameEditBox->SetDisplayMode(kDisplayModeShown);
-        this->mNameLabel->SetDisplayMode(kDisplayModeShown);
-        this->mDeleteButton->SetDisplayMode(kDisplayModeShown);
-        this->mDuplicateButton->SetDisplayMode(kDisplayModeShown);
-        this->mScreens[this->mCurrentScreen]->Load();
-    } else {
-        this->mScreens[this->mCurrentScreen]->mHasSelection = false;
-        this->mNameEditBox->GetForm()->GetEntityGroup(this->mCurrentEntityGroup)->Disable();
-        this->mNameEditBox->SetDisplayMode(kDisplayModeHidden);
-        this->mNameLabel->SetDisplayMode(kDisplayModeHidden);
-        this->mDeleteButton->SetDisplayMode(kDisplayModeHidden);
-        this->mDuplicateButton->SetDisplayMode(kDisplayModeHidden);
-        this->HideText();
-    }
-}
-
-// FUNCTION: EXE 0x57c6e0
-// Moves the selected entry one place up the list and keeps it selected
-void EESETriggerScreen::IncPriority()
-{
-    unsigned long theSelection;
-    if (this->mList->GetCurrentSelection(theSelection) != kErrorOK || theSelection <= 0)
-        return;
-    this->StoreEntry();
-    this->mScreens[this->mCurrentScreen]->MoveUp();
-    this->mScreens[this->mCurrentScreen]->mSelection = theSelection - 1;
-    this->FillList();
-    this->mList->ChangeSelectionIndex(theSelection - 1, false, true);
-    this->ShowSelection();
-}
-
-// FUNCTION: EXE 0x57c743
-// Disables the five sub-screens' control groups (9..13)
-void EESETriggerScreen::HideGroups()
-{
-    UIForm* theForm = this->mNewButton->GetForm();
-    theForm->GetEntityGroup(9)->Disable();
-    theForm->GetEntityGroup(10)->Disable();
-    theForm->GetEntityGroup(11)->Disable();
-    theForm->GetEntityGroup(12)->Disable();
-    theForm->GetEntityGroup(13)->Disable();
-}
-
-// FUNCTION: EXE 0x57c78b
-// Loads the list's selected entry into the controls
-void EESETriggerScreen::Load()
-{
-    this->ShowSelection();
-}
-
-// FUNCTION: EXE 0x57c790
-// Stores the open entry, adds a new entry to the current sub-screen and selects it
-void EESETriggerScreen::NewEntry()
-{
-    this->StoreEntry();
-    this->mScreens[this->mCurrentScreen]->New();
-    this->FillList();
-    this->mList->ChangeSelectionIndex(this->mList->GetLineCount() - 1, false, true);
-    this->ShowSelection();
-}
-
-// FUNCTION: EXE 0x57c7d0
-// Enters the trigger tab: shrinks the game view above the panel, shows the hide-UI check box, refills the
-// list, reselects the sub-screen's entry if still valid and activates the sub-screen
-void EESETriggerScreen::Enter()
-{
-    GERectangle theRectangle(0.0f, 0.0f, 1024.0f, 447.0f);
-    GERectangle theEdges(0.0f, 0.0f, 1024.0f, 606.0f);
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mNewButton->GetForm());
-    EESetGameViewRectangle(theRectangle);
-    theEditor->GetControlById(kScenarioEditorHideUICheckBox)->SetDisplayMode(kDisplayModeShown);
-    // the hide-UI event's two views (the original's inline SetRectangles; the event is an EESEERust since it moved)
-    EESEERust* theHideUI = static_cast<EESEERust*>(
-        theEditor->GetControlById(kScenarioEditorHideUICheckBox)->GetTriggerEvent(kControlTriggerChecked));
-    const float theUnchecked[4] = {theEdges.GetLeft(), theEdges.GetTop(), theEdges.GetRight(), theEdges.GetBottom()};
-    const float theChecked[4] = {theRectangle.GetLeft(), theRectangle.GetTop(), theRectangle.GetRight(),
-                                 theRectangle.GetBottom()};
-    ee_screens_see_hide_ui_views(theHideUI->mEvent, theUnchecked, theChecked);
-    theEditor->SetGameView(theRectangle, false);
-    static_cast<UICheckBox*>(theEditor->GetControlById(kScenarioEditorHideUICheckBox))->SetChecked(true);
-    theEditor->GetEntityGroupById(14)->Enable();
     gB529066 = false;
     gCameraFollowing = false;
     gB529068 = false;
@@ -662,94 +310,113 @@ void EESETriggerScreen::Enter()
         gMiniMap->RefreshView();
     gUIManager->RedrawAll();
     gUIManager->GetCurrentForm()->SetAllControlsDirty();
-    theEditor->GetEntityGroup(this->mCurrentEntityGroup)->Enable();
-    this->FillList();
-    if (this->GetScreen(this->mCurrentScreen)->mHasSelection) {
-        unsigned long theSelection = this->GetScreen(this->mCurrentScreen)->mSelection;
-        if (theSelection < this->mList->GetLineCount())
-            this->mList->ChangeSelectionIndex(this->GetScreen(this->mCurrentScreen)->mSelection, false, true);
-        else
-            this->GetScreen(this->mCurrentScreen)->mHasSelection = false;
+}
+
+}   // namespace
+
+// The ops (editor_tscreen.rs; p: three handles, i: four integers, f: four floats)
+extern "C" int32_t ee_screenscpp_sets(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    EESETriggerScreen* theTab = static_cast<EESETriggerScreen*>(p[0]);
+    UIForm* theForm = static_cast<UIForm*>(p[1]);
+    UILBString* theList = static_cast<UILBString*>(p[0]);
+    void** theOut = static_cast<void**>(p[0]);
+    switch (inOp) {
+    case EE_SCREENS_SETS_OP_TAB: {
+        UWideString theText;
+        unsigned long k = (unsigned long)i[1];
+        gResource->GetString(IDS_TRIGGER_SCREEN_TAB_FIRST + k, theText);
+        float theX = (float)k * 60.0f + 4.0f;
+        UIRadioButton* t = new UIRadioButton(2000 + k, theText, gU531930, GERectangle(theX, 458.0f, theX + 57.0f, 477.0f),
+                                             theForm, (unsigned long)i[0], 2, true, k == 0, false);
+        t->SetUpCheckedBitmap(NULL);
+        t->SetDownCheckedBitmap(NULL);
+        t->SetDownUncheckedBitmap(NULL);
+        t->SetUpUncheckedBitmap(NULL);
+        t->GetTextLabel()->SetRectangle(GERectangle(theX + 2.0f, 460.0f, theX + 54.0f, 474.0f));
+        t->SetBgOpacity(0.4f);
+        SetsEvent(t, kControlTriggerChecked, EE_SCREENS_SE_SHOW_TAB);
+        SetsYellow(t->GetTextLabel()->GetGEText());
+        theForm->AddControl(t, 14);
+        *theOut = t;
+        return 0;
     }
-    this->GetScreen(this->mCurrentScreen)->Activate();
-}
-
-// FUNCTION: EXE 0x57c92e
-// Stores the entry after Enter in its name box, refreshes the list and puts the caret at the end of the name
-void EESETriggerScreen::SelectName()
-{
-    UWideString theText;
-    unsigned long theSelection;
-    if (this->mList->GetCurrentSelection(theSelection) != kErrorOK)
-        return;
-    this->StoreEntry();
-    this->ShowSelection();
-    this->FillList();
-    this->mList->ChangeSelectionIndex(theSelection, false, false);
-    this->mNameEditBox->GetAllText(theText);
-    this->mNameEditBox->SetCaretLocation(theText.GetLength(), 0);
-}
-
-// FUNCTION: EXE 0x57c99f
-// Refills the entry list from the current sub-screen; its control group is enabled only when there are entries
-void EESETriggerScreen::FillList()
-{
-    std::vector<UWideString> theNames;
-    this->mList->DeleteAllEntries();
-    this->mScreens[this->mCurrentScreen]->mHasSelection = false;
-    this->mScreens[this->mCurrentScreen]->GetNames(theNames);
-    this->mList->AppendStringArray(theNames);
-    if (this->mList->GetLineCount() > 0) {
-        this->mList->GetForm()->GetEntityGroup(this->mCurrentEntityGroup)->Enable();
-        this->mScreens[this->mCurrentScreen]->mHasSelection = true;
-    } else
-        this->mList->GetForm()->GetEntityGroup(this->mCurrentEntityGroup)->Disable();
-}
-
-// FUNCTION: EXE 0x57ca30
-// Enables the trigger tab's control group and shows the current sub-screen's controls
-void EESETriggerScreen::Enable()
-{
-    this->mNameEditBox->GetForm()->GetEntityGroup(14)->Enable();
-    this->mScreens[this->mCurrentScreen]->Show();
-}
-
-// FUNCTION: EXE 0x57ca56
-// Shows the alphabetical sort button
-void EESETriggerScreen::ShowAlphaSort()
-{
-    this->mAlphaSortButton->SetDisplayMode(kDisplayModeShown);
-}
-
-// FUNCTION: EXE 0x57ca61
-// Writes the controls back into the open entry
-void EESETriggerScreen::Store()
-{
-    this->StoreEntry();
-}
-
-// FUNCTION: EXE 0x57ca66
-// Passes keyboard handling to the current sub-screen when it has a selection
-void EESETriggerScreen::UpdateKeys()
-{
-    if (this->mScreens[this->mCurrentScreen]->mHasSelection)
-        this->mScreens[this->mCurrentScreen]->UpdateKeys();
-}
-
-// FUNCTION: EXE 0x57ca79
-// Passes mouse movement to the current sub-screen when it has a selection
-void EESETriggerScreen::MouseMove(const GE2DPoint& inLocation)
-{
-    if (this->mScreens[this->mCurrentScreen]->mHasSelection)
-        this->mScreens[this->mCurrentScreen]->MouseMove(inLocation);
-}
-
-// FUNCTION: EXE 0x57ca92
-// Refreshes the current sub-screen's controls when it has a selection
-void EESETriggerScreen::RefreshScreen()
-{
-    if (this->mScreens[this->mCurrentScreen]->mHasSelection)
-        this->mScreens[this->mCurrentScreen]->RefreshControls();
+    case EE_SCREENS_SETS_OP_IMAGE_BUTTON: {
+        UIManager* theManager = theForm->GetManager();
+        GEBitmap* theUp = i[1] == 0 ? theManager->GetAlphaSortUpBitmap()
+                        : i[1] == 1 ? theManager->GetSBBitmapUpNormal() : theManager->GetSBBitmapDownNormal();
+        GEBitmap* theDown = i[1] == 0 ? theManager->GetAlphaSortDownBitmap()
+                          : i[1] == 1 ? theManager->GetSBBitmapUpPressed() : theManager->GetSBBitmapDownPressed();
+        UIButton* t = new UIButton(i[1] == 0 ? 0x7dd : 0x7d8 + i[1] - 1, theUp, NULL, theDown,
+                                   GERectangle(GE2DPoint(305.0f, f[0]), theUp->GetWidth(), theUp->GetHeight()), theForm,
+                                   (unsigned long)i[0], 0);
+        SetsEvent(t, kControlTriggerButtonUp, (uint32_t)i[2]);
+        theForm->AddControl(t, 14);
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SETS_OP_SHOW_IDS: {
+        UIManager* theManager = theForm->GetManager();
+        EESETSShowIDsCheckBox* t = new EESETSShowIDsCheckBox(0x7de, gEmptyString, gU531930, GE2DPoint(305.0f, f[0]),
+                                                             theManager->GetCheckOn()->GetWidth(),
+                                                             theManager->GetCheckOn()->GetHeight(), theForm,
+                                                             (unsigned long)i[0]);
+        SetsEvent(t, kControlTriggerButtonUp, EE_SCREENS_SE_SHOW_DEBUG_IDS);
+        theForm->AddControl(t, 14);
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SETS_OP_FONT_HEIGHT: return (int32_t)gU531930->GetHeight();
+    case EE_SCREENS_SETS_OP_SCREEN: SetsScreenCall(theTab->mScreens[i[0]], i[1], f); return 0;
+    case EE_SCREENS_SETS_OP_SELECTION:
+        i[1] = theTab->mScreens[i[0]]->mHasSelection;
+        return (int32_t)theTab->mScreens[i[0]]->mSelection;
+    case EE_SCREENS_SETS_OP_SET_SELECTION:
+        if (i[1] >= 0)
+            theTab->mScreens[i[0]]->mSelection = (unsigned long)i[1];
+        if (i[2] >= 0)
+            theTab->mScreens[i[0]]->mHasSelection = i[2] != 0;
+        return 0;
+    case EE_SCREENS_SETS_OP_NAMES: {
+        std::vector<UWideString> theNames;
+        static_cast<EESETriggerScreen*>(p[1])->mScreens[i[0]]->GetNames(theNames);
+        theList->AppendStringArray(theNames);
+        return 0;
+    }
+    case EE_SCREENS_SETS_OP_VIEW:
+        SetsView(static_cast<EEUIFScenarioEditor*>(static_cast<UIControl*>(p[0])->GetForm()), i[0] != 0);
+        return 0;
+    case EE_SCREENS_SETS_OP_DRAW: {
+        GERectangle theClip;
+        EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+        if (!theEditor->mWasUIHidden && static_cast<const GERectangle*>(p[1])->And(theTab->mR18, theClip))
+            theEditor->UIForm::DrawBackground(theEditor->mPanelBackground, theClip,
+                                              GERectangle(0.0f, 0.0f, 256.0f, 256.0f), theTab->mR18);
+        return 0;
+    }
+    case EE_SCREENS_SETS_OP_DEBUG_IDS: return gWorld.mScenarioManager->mShowDebugIDs ? 1 : 0;
+    case EE_SCREENS_SETS_OP_LIST_SELECTION: {
+        unsigned long theSelection;
+        return theList->GetCurrentSelection(theSelection) == kErrorOK ? (int32_t)theSelection : -1;
+    }
+    case EE_SCREENS_SETS_OP_LIST_COUNT: return (int32_t)theList->GetLineCount();
+    case EE_SCREENS_SETS_OP_LIST_SELECT: theList->ChangeSelectionIndex((unsigned long)i[0], i[1] != 0, i[2] != 0); return 0;
+    case EE_SCREENS_SETS_OP_CARET_END: {
+        UWideString theText;
+        static_cast<UIEditBox*>(p[0])->GetAllText(theText);
+        static_cast<UIEditBox*>(p[0])->SetCaretLocation(theText.GetLength(), 0);
+        return 0;
+    }
+    case EE_SCREENS_SETS_OP_REDRAW: gUIManager->RedrawAll(); return 0;
+    case EE_SCREENS_SETS_OP_STORING: gB4C3220 = i[0] != 0; return 0;
+    case EE_SCREENS_SETS_OP_GROUP:
+        if (i[1])
+            static_cast<UIControl*>(p[0])->GetForm()->GetEntityGroup(i[0])->Enable();
+        else
+            static_cast<UIControl*>(p[0])->GetForm()->GetEntityGroup(i[0])->Disable();
+        return 0;
+    }
+    return 0;
 }
 
 // SYNTHETIC: EXE 0x57caa5

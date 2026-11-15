@@ -1,0 +1,153 @@
+config GameOptionsCtrl
+get Epoch1 -> gEELobbyGameOptionsCtrl_Epoch1
+get Epoch2 -> gEELobbyGameOptionsCtrl_Epoch2
+get Epoch3 -> gEELobbyGameOptionsCtrl_Epoch3
+get Epoch4 -> gEELobbyGameOptionsCtrl_Epoch4
+get Epoch5 -> gEELobbyGameOptionsCtrl_Epoch5
+get Epoch6 -> gEELobbyGameOptionsCtrl_Epoch6
+get Epoch7 -> gEELobbyGameOptionsCtrl_Epoch7
+get Epoch8 -> gEELobbyGameOptionsCtrl_Epoch8
+get Epoch9 -> gEELobbyGameOptionsCtrl_Epoch9
+get Epoch10 -> gEELobbyGameOptionsCtrl_Epoch10
+get Epoch11 -> gEELobbyGameOptionsCtrl_Epoch11
+get Epoch12 -> gEELobbyGameOptionsCtrl_Epoch12
+get Epoch13 -> gEELobbyGameOptionsCtrl_Epoch13
+get Epoch14 -> gEELobbyGameOptionsCtrl_Epoch14
+get Epoch15 -> gEELobbyGameOptionsCtrl_Epoch15
+get Epoch16 -> gEELobbyGameOptionsCtrl_Epoch16
+get GameType1 -> gEELobbyGameOptionsCtrl_GameType1
+get GameType2 -> gEELobbyGameOptionsCtrl_GameType2
+get GameType3 -> gEELobbyGameOptionsCtrl_GameType3
+get MapSize1 -> gEELobbyGameOptionsCtrl_MapSize1
+get MapSize2 -> gEELobbyGameOptionsCtrl_MapSize2
+get MapSize3 -> gEELobbyGameOptionsCtrl_MapSize3
+get MapSize4 -> gEELobbyGameOptionsCtrl_MapSize4
+get MapSize5 -> gEELobbyGameOptionsCtrl_MapSize5
+get MapSize6 -> gEELobbyGameOptionsCtrl_MapSize6
+get Resources1 -> gEELobbyGameOptionsCtrl_Resources1
+get Resources2 -> gEELobbyGameOptionsCtrl_Resources2
+get Resources3 -> gEELobbyGameOptionsCtrl_Resources3
+get Resources4 -> gEELobbyGameOptionsCtrl_Resources4
+get Resources5 -> gEELobbyGameOptionsCtrl_Resources5
+get GameVariant1 -> gEELobbyGameOptionsCtrl_GameVariant1
+get GameVariant2 -> gEELobbyGameOptionsCtrl_GameVariant2
+get Difficulty1 -> gEELobbyGameOptionsCtrl_Difficulty1
+get Difficulty2 -> gEELobbyGameOptionsCtrl_Difficulty2
+get Difficulty3 -> gEELobbyGameOptionsCtrl_Difficulty3
+get GameSpeed1 -> gEELobbyGameOptionsCtrl_GameSpeed1
+get GameSpeed2 -> gEELobbyGameOptionsCtrl_GameSpeed2
+get GameSpeed3 -> gEELobbyGameOptionsCtrl_GameSpeed3
+get GameSpeed4 -> gEELobbyGameOptionsCtrl_GameSpeed4
+get OptionOn -> gEELobbyGameOptionsCtrl_OptionOn
+get OptionOff -> gEELobbyGameOptionsCtrl_OptionOff
+get WondersOff -> gEELobbyGameOptionsCtrl_WondersOff
+get GameType -> gEELobbyGameOptionsCtrl_GameType
+get MapSize -> gEELobbyGameOptionsCtrl_MapSize
+get MapType -> gEELobbyGameOptionsCtrl_MapType
+get Resources -> gEELobbyGameOptionsCtrl_Resources
+get StartingEpoch -> gEELobbyGameOptionsCtrl_StartingEpoch
+get EndingEpoch -> gEELobbyGameOptionsCtrl_EndingEpoch
+get GameUnitLimit -> gEELobbyGameOptionsCtrl_GameUnitLimit
+get GameVariant -> gEELobbyGameOptionsCtrl_GameVariant
+get DifficultyLevel -> gEELobbyGameOptionsCtrl_DifficultyLevel
+get GameSpeed -> gEELobbyGameOptionsCtrl_GameSpeed
+get RevealMap -> gEELobbyGameOptionsCtrl_RevealMap
+get UseCustomCivs -> gEELobbyGameOptionsCtrl_UseCustomCivs
+get LockTeams -> gEELobbyGameOptionsCtrl_LockTeams
+get LockSpeed -> gEELobbyGameOptionsCtrl_LockSpeed
+get VictoryAllowed -> gEELobbyGameOptionsCtrl_VictoryAllowed
+get CampaignInformation -> gEELobbyGameOptionsCtrl_CampaignInformation
+get NumberOfWonders -> gEELobbyGameOptionsCtrl_NumberOfWonders
+config PlayerOptionsCtrl
+get TransferPercent -> gEELobbyPlayerOptionsCtrl_TransferPercent
+config EELobbyConnectDialog
+get LeaveGame -> gEELobbyConnectDialog_LeaveGame
+get AbortLaunch -> gEELobbyConnectDialog_AbortLaunch
+config EELobbyFileDialog
+get DeleteTitle -> gEELobbyFileDialog_DeleteTitle
+get DeleteDetails -> gEELobbyFileDialog_DeleteDetails
+config EELobbyGameStatus
+get NotInSavedGame -> gEELobbyGameStatus_NotInSavedGame
+get InvalidVersion -> gEELobbyGameStatus_InvalidVersion
+get CorruptBinaries -> gEELobbyGameStatus_CorruptBinaries
+config EELobbyInterface
+get LoadGameError -> gEELobbyInterface_LoadGameError
+get ErrorReadingFile -> gEELobbyInterface_ErrorReadingFile
+get PlayerNotInGame -> gEELobbyInterface_PlayerNotInGame
+get Players -> gEELobbyInterface_Players
+config EELobbyGame
+get StartGameError -> gEELobbyGame_StartGameError
+get EveryoneOnSameTeam -> gEELobbyGame_EveryoneOnSameTeam
+erase gEELobbyGameOptionsCtrl_Epoch1
+erase gEELobbyGameOptionsCtrl_Epoch2
+erase gEELobbyGameOptionsCtrl_Epoch3
+erase gEELobbyGameOptionsCtrl_Epoch4
+erase gEELobbyGameOptionsCtrl_Epoch5
+erase gEELobbyGameOptionsCtrl_Epoch6
+erase gEELobbyGameOptionsCtrl_Epoch7
+erase gEELobbyGameOptionsCtrl_Epoch8
+erase gEELobbyGameOptionsCtrl_Epoch9
+erase gEELobbyGameOptionsCtrl_Epoch10
+erase gEELobbyGameOptionsCtrl_Epoch11
+erase gEELobbyGameOptionsCtrl_Epoch12
+erase gEELobbyGameOptionsCtrl_Epoch13
+erase gEELobbyGameOptionsCtrl_Epoch14
+erase gEELobbyGameOptionsCtrl_Epoch15
+erase gEELobbyGameOptionsCtrl_Epoch16
+erase gEELobbyGameOptionsCtrl_GameType1
+erase gEELobbyGameOptionsCtrl_GameType2
+erase gEELobbyGameOptionsCtrl_GameType3
+erase gEELobbyGameOptionsCtrl_MapSize1
+erase gEELobbyGameOptionsCtrl_MapSize2
+erase gEELobbyGameOptionsCtrl_MapSize3
+erase gEELobbyGameOptionsCtrl_MapSize4
+erase gEELobbyGameOptionsCtrl_MapSize5
+erase gEELobbyGameOptionsCtrl_MapSize6
+erase gEELobbyGameOptionsCtrl_Resources1
+erase gEELobbyGameOptionsCtrl_Resources2
+erase gEELobbyGameOptionsCtrl_Resources3
+erase gEELobbyGameOptionsCtrl_Resources4
+erase gEELobbyGameOptionsCtrl_Resources5
+erase gEELobbyGameOptionsCtrl_GameVariant1
+erase gEELobbyGameOptionsCtrl_GameVariant2
+erase gEELobbyGameOptionsCtrl_Difficulty1
+erase gEELobbyGameOptionsCtrl_Difficulty2
+erase gEELobbyGameOptionsCtrl_Difficulty3
+erase gEELobbyGameOptionsCtrl_GameSpeed1
+erase gEELobbyGameOptionsCtrl_GameSpeed2
+erase gEELobbyGameOptionsCtrl_GameSpeed3
+erase gEELobbyGameOptionsCtrl_GameSpeed4
+erase gEELobbyGameOptionsCtrl_OptionOn
+erase gEELobbyGameOptionsCtrl_OptionOff
+erase gEELobbyGameOptionsCtrl_WondersOff
+erase gEELobbyGameOptionsCtrl_GameType
+erase gEELobbyGameOptionsCtrl_MapSize
+erase gEELobbyGameOptionsCtrl_MapType
+erase gEELobbyGameOptionsCtrl_Resources
+erase gEELobbyGameOptionsCtrl_StartingEpoch
+erase gEELobbyGameOptionsCtrl_EndingEpoch
+erase gEELobbyGameOptionsCtrl_GameUnitLimit
+erase gEELobbyGameOptionsCtrl_GameVariant
+erase gEELobbyGameOptionsCtrl_DifficultyLevel
+erase gEELobbyGameOptionsCtrl_GameSpeed
+erase gEELobbyGameOptionsCtrl_RevealMap
+erase gEELobbyGameOptionsCtrl_UseCustomCivs
+erase gEELobbyGameOptionsCtrl_LockTeams
+erase gEELobbyGameOptionsCtrl_LockSpeed
+erase gEELobbyGameOptionsCtrl_VictoryAllowed
+erase gEELobbyGameOptionsCtrl_CampaignInformation
+erase gEELobbyGameOptionsCtrl_NumberOfWonders
+erase gEELobbyPlayerOptionsCtrl_TransferPercent
+erase gEELobbyConnectDialog_LeaveGame
+erase gEELobbyConnectDialog_AbortLaunch
+erase gEELobbyFileDialog_DeleteTitle
+erase gEELobbyFileDialog_DeleteDetails
+erase gEELobbyGameStatus_NotInSavedGame
+erase gEELobbyGameStatus_InvalidVersion
+erase gEELobbyGameStatus_CorruptBinaries
+erase gEELobbyInterface_LoadGameError
+erase gEELobbyInterface_ErrorReadingFile
+erase gEELobbyInterface_PlayerNotInGame
+erase gEELobbyInterface_Players
+erase gEELobbyGame_StartGameError
+erase gEELobbyGame_EveryoneOnSameTeam

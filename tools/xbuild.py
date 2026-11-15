@@ -491,6 +491,12 @@ WON_TESTS = {
     # WONButton as a whole Rust object (wonbtnobj.rs) over a logged world of texts, images and fonts with reference
     # counts (golden: rust/crates/ee_won/src/golden_wonbtnobj.txt)
     "won_wonbtnobj_test": [],
+    # the Windows skin's drawing helpers and MS control paints as Rust plans (mspaint.rs) against the original
+    # statements over a logged Graphics (golden: rust/crates/ee_won/src/golden_mspaint.txt)
+    "won_mspaint_test": [],
+    # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
+    # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
+    "won_imgfilter_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -568,6 +574,10 @@ WON_TESTS = {
     # GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl and GameUserListCtrl as one Rust object (golden:
     # rust/crates/ee_won/src/golden_lobbyctl.txt)
     "won_lobbyctl_test": [],
+    # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won/src/golden_eegame.txt)
+    "won_eegame_test": [],
+    # EELobbyConnectDialog as a lobby dialog kind (golden: rust/crates/ee_won/src/golden_eedlg.txt)
+    "won_eedlg_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -844,6 +854,10 @@ NET_TESTS = {
     # of NEProtocol.cpp, `--print FILE`)
     "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
         "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
+    # the engine messages as their senders and the factory see them (golden: tests/net/golden_message.txt, made over
+    # the original 28 classes)
+    "ne_message_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
+        "Network Engine/NEMessage.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
 }
 
 

@@ -26,7 +26,6 @@ public:
     void Clear();
     U2DPoint<long> ComputeCenterPoint(bool inMustBeInList);
     bool Contains(const U2DPoint<long>& inPoint) const;
-    long CountContainerNodes();
     void Create(const std::vector<U2DPoint<long> >& inPoints);
     U2DPoint<long> GetClosestPoint(const U2DPoint<long>& inPoint);
     void GetOnlyExtremeEdgePoints(std::vector<U2DPoint<long> >& outList);
@@ -42,6 +41,7 @@ public:
     // cleared, when they are not such a list)
     void GetRaw(std::vector<long>& outRaw) const;
     bool SetRaw(const std::vector<long>& inRaw);
+    EeSparseArray* GetHandle() const { return this->mPoints; }   // New (port): for the AI area's record (ee_astar area.rs)
 
 private:
     EeSparseArray* mPoints;                 // the points (ee_sparse_new)

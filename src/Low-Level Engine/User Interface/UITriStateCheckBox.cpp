@@ -87,9 +87,6 @@ void UITriStateCheckBox::SetText(const UWideString& inText, GEFont* inFont)
 }
 // Cycles the check, then releases the button
 void UITriStateCheckBox::ButtonUp() { EE_UI_TRI(TriButtonUp); }
-// FUNCTION: LLE 0x10080be6
-// Advances the check state off -> on -> not -> off
-void UITriStateCheckBox::CycleCheck() { EE_UI_TRI(TriCycle); }
 
 // Header-inline members first emitted here (bodies in lle/UITriStateCheckBox.h)
 // FUNCTION: LLE 0x100805c4

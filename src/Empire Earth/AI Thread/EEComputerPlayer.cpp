@@ -758,7 +758,7 @@ unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
     EEGetSquareRingTiles(inUnit->mTileX, inUnit->mTileY, 1, theTiles);
     for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); it != theTiles.end(); ++it) {
         EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(*it);
-        unsigned short theID = theArea != NULL ? theArea->mID : 0;
+        unsigned short theID = theArea != NULL ? theArea->GetID() : 0;
         if (theID != 0)
             theCounts[theID] = theCounts.insert(std::map<unsigned short, unsigned long>::value_type(theID, 0)).first->second + 1;
     }
@@ -1010,7 +1010,7 @@ void EEComputerPlayer::GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& o
                     unsigned short theID = 0;
                     EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(EETileLocation(theTile.GetX(), theTile.GetY()));
                     if (theArea != NULL)
-                        theID = theArea->mID;
+                        theID = theArea->GetID();
                     if (theID == this->GetObjectRegion(static_cast<EEComplexUnit*>(theUnit))
                         || gContinentManager.AreConnected(gContinentManager.GetContinentAt(theTile),
                             gContinentManager.GetContinentAt(theUnit), this->GetCitizenPassability()))
