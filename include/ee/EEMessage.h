@@ -3,12 +3,11 @@
 // Requires lle/NEMessage.h.
 #ifndef EE_EEMESSAGE_H
 #define EE_EEMESSAGE_H
-#include "ee/EECivUpgrade.h"
-
 #include <stdint.h>   // int32_t/uint32_t: the wire fields' fixed widths
 #include <stddef.h>   // size_t: the codec slots' count
 #include <string.h>   // memcpy: EEMRecord's members
 #include <initializer_list>
+#include <vector>
 #include <type_traits>
 
 #include "lle/U2DPoint.h"                  // EEMSendFlare's inline ctor
@@ -16,6 +15,7 @@
 
 class EEGameOptions;
 class GE2DPoint;
+class GERectangle;
 class GEVector;
 struct EeNetMsgSlot;                       // rust/ee_rust.h (the game messages' codec)
 class EEGameOptionsPlayer;
@@ -39,16 +39,11 @@ public:
     void ExecuteSelectionMessage();                              // 0xb8cf7
     void ExecuteMessage();                                       // 0xb8e86
 
-    // New (game messages lane, round 1): the codec's side of every game message in one place (EEMessage.cpp): a
-    // class gives its codec class (ee_netmsg) and its members as slots in wire order; ExportMessage, ExportSize and
-    // ImportMessage run the codec over them (a class whose members the slots cannot carry overrides them); a game
-    // message answers no request (IsResponse; EEMLoadOrSaveGame's overrides it).
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    size_t CodecSlots(EeNetMsgSlot* outSlots)
-    {
-        uint32_t theClass;
-        return this->GetCodecSlots(outSlots, theClass);
-    }
+    // New (game messages lane, round 1): the codec's side of every game message in one place (EEMessage.cpp): the
+    // message gives its codec class (ee_netmsg) and its members as slots in wire order (round 5: every game message is
+    // an EEMRecord); ExportMessage, ExportSize and ImportMessage run the codec over them; a game message answers no
+    // request unless its type's rule says so (IsResponse: EEMRecord's).
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass) = 0;
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
@@ -69,25 +64,34 @@ inline EEMessage* EEGameMessageCast(NEMessage* inMessage)
 }
 
 // New (game messages lane, round 3): a sender's value for one member of an EEMRecord, converted as the old classes'
-// constructors converted it to the member's type (an integer truncated, a bool as != 0, a float, a point, a vector)
+// constructors converted it to the member's type (an integer truncated, a bool as != 0, a float, a point, a vector;
+// round 5: a list, each element's low bytes as one record: the ids' longs as the wire's int32)
 struct EEMRecordValue {
     template <class T, typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, int>::type = 0>
-    EEMRecordValue(T inValue) : mInteger((long long)inValue), mIsFloat(false), mString(NULL) {}
-    EEMRecordValue(double inValue) : mInteger(0), mIsFloat(true), mString(NULL) { this->mFloats[0] = (float)inValue; }
+    EEMRecordValue(T inValue) : mInteger((long long)inValue), mIsFloat(false), mString(NULL), mList(NULL) {}
+    EEMRecordValue(double inValue) : mInteger(0), mIsFloat(true), mString(NULL), mList(NULL) { this->mFloats[0] = (float)inValue; }
     EEMRecordValue(const GE2DPoint& inPoint);
     EEMRecordValue(const GEVector& inVector);
-    EEMRecordValue(const UWideString& inString) : mInteger(0), mIsFloat(false), mString(&inString) {}   // round 4
+    EEMRecordValue(const UWideString& inString) : mInteger(0), mIsFloat(false), mString(&inString), mList(NULL) {}   // round 4
+    template <class T>
+    EEMRecordValue(const std::vector<T>& inList)
+        : mInteger(0), mIsFloat(false), mString(NULL), mList(inList.empty() ? (const void*)"" : (const void*)&inList[0]),
+          mListCount(inList.size()), mListElement(sizeof(T)) {}
 
     long long mInteger;
     float mFloats[3];
     bool mIsFloat;
     const UWideString* mString;   // a string member's value (the sender's, alive for the constructor's call)
+    const void* mList;            // a list's elements (round 5), mListCount of mListElement bytes
+    size_t mListCount;
+    size_t mListElement;
 };
 
-// New (game messages lane, rounds 3-4): one class carries every game message type but the few that keep a class
-// below (100 types: the census in PORT_LEARNINGS "R5b.4 game messages, round 3" and "round 4"): its codec class's
-// fixed members after the selection id, packed in wire order in mRecord, and its one string (if any) in mString; the
-// layout, flags and label are the Rust's (ee_netmsg records.rs). A sender passes the members in wire order:
+// New (game messages lane, rounds 3-5): one class carries every game message type (108: the census in PORT_LEARNINGS
+// "R5b.4 game messages, round 3" .. "round 5"): its codec class's fixed members after the selection id, packed in
+// wire order in mRecord, then the type's members that are not on the wire (the box selection's rectangle and unit
+// type); its one string (if any) in mString, its one list or blob (if any) in mList; the layout, flags, rules and
+// label are the Rust's (ee_netmsg records.rs). A sender passes the members in wire order:
 // new EEMRecord(kMessageCheatCode, {theCode, theParameter}); Execute runs the type's body (EEMessage.cpp); a reader
 // reads Get<T>(i) (i: the member's wire index, 1 = the first after the selection id) and says which in a comment.
 class EEMRecord : public EEMessage {
@@ -95,7 +99,10 @@ public:
     EEMRecord(unsigned char* inData);   // the factory's: the type at inData[1], then the import
     EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue> inValues = {});
     virtual bool GetCanSendWhilePaused() const;
+    virtual bool GetSendToAllAndWaitMessageID(unsigned long& outID) const;   // the type's wait member (Load or Save)
+    virtual void SetSendToAllAndWaitMessageID(unsigned long inID);
     virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
+    virtual bool IsResponse(NEMessage* inMessage);   // the type's response rule (Load or Save: its tick's response)
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -107,174 +114,37 @@ public:
         return theValue;
     }
     template <class T> void Set(uint32_t inIndex, T inValue) { memcpy(this->Field(inIndex, sizeof(T)), (const void*)&inValue, sizeof(T)); }
+    // the list's records as T (each its record's bytes: sizeof(T) is the record's)
+    template <class T> std::vector<T> GetList() const
+    {
+        std::vector<T> theList(this->mList.size() / sizeof(T));
+        if (!theList.empty())
+            memcpy((void*)&theList[0], &this->mList[0], theList.size() * sizeof(T));
+        return theList;
+    }
     unsigned char* Field(uint32_t inIndex, size_t inSize) const;
-    virtual void ImportMessage(unsigned char* inData);   // the codec, then the string member's text
+    virtual void ImportMessage(unsigned char* inData);   // the codec, then the string's text and the list's records
 
     unsigned char mRecord[64];   // EE_NETMSG_RECORD_BYTES
     UWideString mString;         // the type's string member, if it has one (EE_NETMSG_RECORD_FIELD_STRING)
+    std::vector<unsigned char> mList;   // the type's list's records or blob's bytes (EE_NETMSG_RECORD_FIELD_LIST/BLOB)
 };
 
 // New (game messages lane, round 4): the lobby's two messages that copy a whole object (the old EEMFullGameOptions
 // and EEMFullPlayerInformation constructors), as records
 EEMRecord* EENewFullGameOptions(const EEGameOptions& inOptions);
 EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer);
-
-// ---- every message of EEMessage.cpp (0xb8cda..0xca90f), generated from the Export/Import bodies;
-// field names are provisional (m<type><offset>) unless proven ----
-
-// vtable 0x438cf0; sizeof 0x138; ctor 0xc5d7f (EEMessage.cpp), import ctor 0xba41b; ??_G 0x2a02 (first game unit)
-// The selection travels compressed: mBuffer holds mBufferSize bytes (file-static helpers 0xc5e67 / 0xc5fd1).
-class EEMSelectUnits : public EEMessage {
-public:
-    EEMSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType);
-    EEMSelectUnits(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual ~EEMSelectUnits() {}
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    std::vector<long> mUnitIDs;             // +0x10
-    GERectangle mRectangle;                 // +0x20
-    int32_t mL30;                           // +0x30
-    unsigned char mBuffer[0x100];           // +0x34
-    unsigned char mBufferSize;              // +0x134
-};
-
-// vtable 0x438cbc; sizeof 0x138
-class EEMAddAndRemoveUnitsFromSelectedGroup : public EEMSelectUnits {
-public:
-    EEMAddAndRemoveUnitsFromSelectedGroup(unsigned char* inData) : EEMSelectUnits(inData) {}
-    // inline: EEALasso::SelectUnits 0x28e5 builds it (the base ctor 0xc5d7f with type 0x50, then the vptr)
-    EEMAddAndRemoveUnitsFromSelectedGroup(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
-        : EEMSelectUnits(inRectangle, inUnitType, inType) {}
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x438c88; sizeof 0x138
-class EEMAddUnitsToSelectedGroup : public EEMSelectUnits {
-public:
-    EEMAddUnitsToSelectedGroup(unsigned char* inData) : EEMSelectUnits(inData) {}
-    // inline: EEALasso::SelectUnits 0x28e5 builds it (the base ctor 0xc5d7f with type 0x4f, then the vptr)
-    EEMAddUnitsToSelectedGroup(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
-        : EEMSelectUnits(inRectangle, inUnitType, inType) {}
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x43dfb4; sizeof 0x3c; default ctor 0xba684, dtor 0xba6fd, ??_G 0xba6e1 (all inline, emitted here)
-class EEMCivUpgrades : public EEMessage {
-public:
-    EEMCivUpgrades() { this->mPlayerID = 0; }
-    // inline, out of line after its first user 0x1e6635 (EEUIEPDCSOk; also 0x27ca6f, 0x280abb): mB0D = the type is
-    // 0x7f (Purchased); argument names are provisional
-    EEMCivUpgrades(unsigned char inType, const unsigned char& inPlayer, const std::vector<EECivUpgrade>& inUpgrades,
-                   const UWideString& inName, long inNameString)
-        : EEMessage(inType, inType == kMessageCivUpgradesPurchased), mCivName(inName), mUpgrades(inUpgrades), mNameString(inNameString), mPlayerID(inPlayer) {}
-    // (implicit dtor: 0xba6fd does not store EEMCivUpgrades' vptr)
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void SetName(const UWideString& inName) { this->mCivName = inName; }  // +0x30 (0xba6d1) (provisional name)
-
-    UWideString mCivName;                   // +0x10
-    std::vector<EECivUpgrade> mUpgrades;  // +0x24
-    int32_t mNameString;                    // +0x34
-    unsigned char mPlayerID;                // +0x38
-};
-
-// vtable 0x43dd74; sizeof 0x3c; ??_G 0xba727
-class EEMCivUpgradesPurchased : public EEMCivUpgrades {
-public:
-    EEMCivUpgradesPurchased(unsigned char* inData) { this->ImportMessage(inData); }
-    // EECBRequestUpgrades 0x280ab9: EEMCivUpgrades' ctor 0x1e6635 with kind 0x7f, then the Purchased vptr
-    EEMCivUpgradesPurchased(const unsigned char& inPlayer, const std::vector<EECivUpgrade>& inUpgrades,
-                            const UWideString& inName, long inNameString)
-        : EEMCivUpgrades(kMessageCivUpgradesPurchased, inPlayer, inUpgrades, inName, inNameString) {}
-    virtual ~EEMCivUpgradesPurchased() {}
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x43dd3c; sizeof 0x3c; ??_G 0xba749
-class EEMCivUpgradesRequested : public EEMCivUpgrades {
-public:
-    EEMCivUpgradesRequested(unsigned char* inData) { this->ImportMessage(inData); }
-    // expanded by EEUIEPDCSOk 0x1e64ed and 0x27ca2b around the out-of-line base ctor
-    EEMCivUpgradesRequested(const unsigned char& inPlayer, const std::vector<EECivUpgrade>& inUpgrades,
-                            const UWideString& inName, long inNameString)
-        : EEMCivUpgrades(kMessageCivUpgradesRequested, inPlayer, inUpgrades, inName, inNameString) {}
-    virtual ~EEMCivUpgradesRequested() {}
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x43e0f0; sizeof 0x34; import ctor 0xba957, ??_G 0xba9b9; Get/SetSendToAllAndWaitMessageID inline (0xba9a1/0xba9af)
-class EEMLoadOrSaveGame : public EEMessage {
-public:
-    EEMLoadOrSaveGame(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMLoadOrSaveGame(const UWideString& inS20, unsigned long inTime, unsigned char inIsLoad, bool inIsQuiet,
-                      long inTick, unsigned char inIsAutoSave);  // 0x151de3 (SLE SaveFile)
-    long LoadOrSave();                      // 0xc1052 (EEPhysics::ServeLoadSaveRequests runs each queued one; provisional name)
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual bool GetSendToAllAndWaitMessageID(unsigned long& outID) const { outID = this->mWaitMessageID; return true; }
-    virtual void SetSendToAllAndWaitMessageID(unsigned long inID) { this->mWaitMessageID = inID; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Load or Save"; }
-
-    uint32_t mWaitMessageID;                // +0x10
-    int32_t mTick;                          // +0x14
-    int32_t mTime;                          // +0x18
-    unsigned char mIsLoad;                  // +0x1c
-    bool mIsQuiet;                          // +0x1d
-    unsigned char mIsAutoSave;              // +0x1e
-    UWideString mFileName;                  // +0x20
-};
+// round 5: the box selection (0x4e, 0x4f, 0x50; the old EEMSelectUnits constructor): the local player's units of
+// inUnitType in inRectangle (EEUnitPicker), compressed; and its units decoded (the compressed blob's ids)
+EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType);
+void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnitIDs);
+// round 5: the old EEMLoadOrSaveGame::LoadOrSave (EEPhysics::ServeLoadSaveRequests runs each queued request): saves
+// the game under the request's name; returns its tick
+long EELoadOrSave(EEMRecord* inRequest);
 
 // The lobby slot fields EEMPlayerInformation updates (mField; Execute): 0 type, 1 ping, 2 colour, 3 team,
 // 4 starting citizens, 5 ready; port: 6 a computer slot's engine (ee/EECPEngine.h). The lobby redraws the row with
 // the field as LobbyShowPlayer's flags.
 const long kPlayerInfoEngine = 6;
-
-// vtable 0x43e18c; sizeof 0x20; import ctor 0xbaaf1, ??_G 0xbab3d
-class EEMSelectTheseUnits : public EEMessage {
-public:
-    EEMSelectTheseUnits(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline (out-of-line COMDAT 0x25adcd after its first user EEUICUnitIconBar::MouseLButtonUp; type 0x96)
-    EEMSelectTheseUnits(std::vector<long>& inUnitIDs) : EEMessage(kMessageSelectTheseUnits, true)
-    {
-        for (unsigned long i = 0; i < inUnitIDs.size(); i++)
-            this->mUnitIDs.push_back(inUnitIDs[i]);
-    }
-    virtual ~EEMSelectTheseUnits() {}
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    std::vector<long> mUnitIDs;             // +0x10
-};
-
-// vtable 0x43d278; sizeof 0x18
-class EEMStartLoading : public EEMessage {
-public:
-    EEMStartLoading(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: the lobby's Start 0x1da7dd (rand() first, then the stores)
-    EEMStartLoading(unsigned char inHumans, long inSeed) : EEMessage(kMessageStartLoading, false), mNumHumanPlayers(inHumans), mSeed(inSeed) {}
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Start Loading"; }
-
-    unsigned char mNumHumanPlayers;         // +0x10
-    int32_t mSeed;                          // +0x14
-};
 
 #endif

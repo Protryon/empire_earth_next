@@ -1161,11 +1161,8 @@ public:
     void UnloadAt(EEComplexUnit* inTransport, long inX, long inY);  // (EEUCTransport)
     // The kinds' bodies (the EEUC* classes' members until R5b.4 round 32: EEUnitClassAir, -Buildings,
     // -Transports, -Shots, -People and -Ground.cpp); the overrides' run behind the dispatchers
-    float AirAnimalGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
     void AirAnimalGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void AirAnimalUnitCreated(EEComplexUnit* inUnit);
-    bool AirAnimalHasArrived(EEComplexUnit* inUnit, float inValue);
-    long AirAnimalEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
     bool AirAnimalReturnToAirport(EEComplexUnit* inUnit);
     void FlyOffMap(EEComplexUnit* inUnit);
     void AmbientLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY);
@@ -1204,9 +1201,7 @@ public:
     void PriestVirtualB8(EEComplexUnit* inUnit);
     void FortressUnitCreated(EEComplexUnit* inUnit);
     long FortressEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
-    void FortressFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);
     bool FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo);
-    bool FortressCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
     void FortressUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
     EEComplexUnit* GetSecondPart(EEComplexUnit* inGate);
     EEComplexUnit* GetFourthPart(EEComplexUnit* inGate);
@@ -1217,46 +1212,26 @@ public:
     EEComplexUnit* GetPart(EEComplexUnit* inGate, long inIndex);
     bool AreEnemiesNear(EEComplexUnit* inUnit);
     bool IsPasserNear(EEComplexUnit* inUnit);
-    float HelicopterGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
-    float HelicopterPriestGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
     void HelicopterPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void HelicopterPriestUnitCreated(EEComplexUnit* inUnit);
     long HelicopterPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
-    float HelicopterTransportGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
     void HelicopterTransportUnitCreated(EEComplexUnit* inUnit);
     long HelicopterTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
-    void HelicopterTransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile);
-    bool HelicopterTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
     void LandUnitCreated(EEComplexUnit* inUnit);
     void LandCallParatroopPlane(EEComplexUnit* inUnit);
     void LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void LandTransportBadlyHurt(EEUnit* inUnit);
-    void LandTransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile);
-    bool LandTransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2);
-    bool LandTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
-    float LandableGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
     void LandableGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void LandableUnitCreated(EEComplexUnit* inUnit);
-    bool LandableHasArrived(EEComplexUnit* inUnit, float inValue);
-    long LandableEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
     void FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit);
     unsigned long GetNextFlightState(EEComplexUnit* inUnit);
     bool LandableReturnToAirport(EEComplexUnit* inUnit);
     void GetGroundHeight(GE3DPoint& inPoint, float* outHeight);
-    long GetNextFlightPoint(EEComplexUnit* inUnit, GE3DPoint& outTarget, float* outClimb);
     bool IsBombOnTarget(EEComplexUnit* inUnit);
     void ApproachCarrier(EEComplexUnit* inUnit, bool inSteep);
     void TakeOffFromCarrier(EEComplexUnit* inUnit);
     void ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY);
-    void ApproachRunwayPosX(EEComplexUnit* inUnit);
-    void ApproachRunwayPosY(EEComplexUnit* inUnit);
-    void ApproachRunwayNegY(EEComplexUnit* inUnit);
-    void ApproachRunwayNegX(EEComplexUnit* inUnit);
     void TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY);
-    void TakeOffFromRunwayPosX(EEComplexUnit* inUnit);
-    void TakeOffFromRunwayPosY(EEComplexUnit* inUnit);
-    void TakeOffFromRunwayNegY(EEComplexUnit* inUnit);
-    void TakeOffFromRunwayNegX(EEComplexUnit* inUnit);
     bool IsAwayFromGoal(EEComplexUnit* inUnit);
     EEUnit* MiningBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
     EEUnit* MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
@@ -1282,9 +1257,6 @@ public:
     void NavalPriestAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth);
     EEUnit* NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator);
     long NavalPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
-    bool NavalTransportHasArrived(EEComplexUnit* inUnit, float inValue);
-    void NavalTransportFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);
-    bool NavalTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
     void ProjectileActionChanged(EEComplexUnit* inUnit);
     void ProjectileUnitCreated(EEComplexUnit* inUnit);
     bool ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
@@ -1304,15 +1276,9 @@ public:
     void SpaceTransportAddToTile(EEUnit* inUnit);
     void SpaceTransportRemoveFromTile(EEUnit* inUnit);
     long SpaceTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
-    void SpaceTransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile);
-    void SpaceTransportFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);
-    bool SpaceTransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2);
-    bool SpaceTransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
-    float SpaceshipVirtual24(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
     void SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     void SpaceshipVirtual78(EEComplexUnit* inUnit);
     long SpaceshipVirtualA0(EEComplexUnit* inUnit, unsigned long inEvent);
-    float SpaceshipGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation);
     void SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan, float* outPitch);
     long SpaceshipEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
     void SubmergedNavalGroundLocation(GE3DPoint& ioLocation);
@@ -1325,21 +1291,10 @@ public:
     void TorpedoUpdate(EEComplexUnit* inUnit);
     bool TorpedoCheckGroundImpact(EEComplexUnit* inUnit);
     void TransportUnitCreated(EEComplexUnit* inUnit);
-    long TransportFindGatheringTile(std::vector<EEComplexUnit*>* inUnits, U2DPoint<long> inFrom, U2DPoint<long>* outTile);
-    void TransportFindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile);
-    void GetRingTiles(long inX, long inY, std::vector<U2DPoint<long> >& outTiles);
     bool CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit);
-    float FindBestShoreTile(EEComplexUnit* inTransport, const U2DPoint<long>& inFrom, const U2DPoint<long>& inDestination, const U2DPoint<long>& inTarget, bool inRestrictTerrain, U2DPoint<long>* outTile);
-    bool TransportCanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2);
-    bool TransportCanUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
     bool TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo, GE3DPoint& inLocation, GE3DPoint& outLocation);
-    void TransportFilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected);
     void TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY);
     bool CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCargo, U2DPoint<long>* ioUnloadTile, U2DPoint<long>* ioFirstCargoTile, U2DPoint<long>* inDestination);
-    bool ContinentsConnect(unsigned short inFrom, unsigned short inTo);
-    void FindLandingTile(EEComplexUnit* inTransport, U2DPoint<long>* inUnloadTile, U2DPoint<long>* inTarget, U2DPoint<long>* outTile);
-    void FindMeetingTiles(EEComplexUnit* inTransport, EEComplexUnit* inUnit, U2DPoint<long>* ioTransportTile, U2DPoint<long>* ioUnitTile);
-    void FindShoreTile(EEComplexUnit* inTransport, const EETileCoordinate& inFrom, U2DPoint<long>* inDestination, U2DPoint<long>* inTarget, bool inRestrictTerrain, U2DPoint<long>* outTile);
     bool IsSidePart(EEComplexUnit* inGate);    // the gate's (EEAIAStarBoundedPathGoalModifiers.cpp)
     bool IsMiddlePart(EEComplexUnit* inGate);
     // the base bodies of the dispatched virtuals

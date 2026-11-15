@@ -94,6 +94,14 @@ pub struct EeWonTextMeasure {
 }
 
 impl EeWonTextMeasure {
+    /// `string_width(offset, length)` (0 without a function).
+    pub fn string_width_at(&self, offset: i32, length: i32) -> i32 {
+        self.string(offset, length)
+    }
+    /// `char_width(index)` (0 without a function).
+    pub fn char_width_at(&self, index: i32) -> i32 {
+        self.char(index)
+    }
     fn string(&self, offset: i32, length: i32) -> i32 {
         match self.string_width {
             // SAFETY: the C++ passes a function and its context valid for this call

@@ -15,13 +15,6 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006f5560
-// Sets or clears the given component flags
-void Component::SetComponentFlags(int flags,bool on)
-{
-    if(on) this->mComponentBits|=flags;
-    else this->mComponentBits&=~flags;
-}
 // Creates an arrow button pointing the given way that repeats while held (emitted at 0x006ff0c0)
 MSArrowButton::MSArrowButton(Direction direction)
 {
