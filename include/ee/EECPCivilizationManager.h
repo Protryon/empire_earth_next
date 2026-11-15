@@ -29,6 +29,10 @@ struct EECPUMRequest;                       // ee/EECPUnitManager.h
 
 class EECPCivilizationManager {
 public:
+    bool AdjustUnitCount(long inUnitType, long inDelta);
+    long GetTransportClass(bool inSea, bool inAir, bool inSpace);   // 0x6ff07 (ret 0xc)
+    void ReleaseGarrison();                 // 0x70bf6: releases mGarrison's garrison
+    void ReleaseFortress();                 // 0x70c9d: releases mFortress's garrison
     EECPCivilizationManager(EEComputerPlayer* inPlayer);   // 0x6e917
     virtual ~EECPCivilizationManager();     // +0x00 0x6f0ff (??_G 0x6f0e3)
     // +0x04 0x702d4 (ret 4): replaced units (EEComputerPlayer::Virtual9C's swaps) that are mGarrison/mFortress release
@@ -36,35 +40,20 @@ public:
     virtual void UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps);
 
     // 0x6f18d (ret 8): adds inDelta to the count of inUnitType (and its groups); true if a count changed
-    bool AdjustUnitCount(long inUnitType, long inDelta);
-    void AttemptEpochAdvance(unsigned long inTime);   // 0x6f3bc (named by its ESDebugOut strings)
-    void FillGarrison(EEComplexUnit* inUnit);  // 0x6f4d4: fills inUnit (a fortress) with garrison units, or orders them
-    void CheckBuildingCounts();             // 0x6f7b8 (named by Update's ESDebugOut string)
-    void QueueMoraleBuilding();             // 0x6fb5e
     long ChooseTransportClass();            // 0x6fbe2 (returns GetTransportClass's result: EECPResourceManager 0x8ecfd uses it)
     long GetAntiAirClass();                 // 0x6fd9c: the unit type for the epoch (0x91/0x93/0x300)
     long GetFishingBoatClass();             // 0x6fdd3: likewise (0x6c/0x6d/0xd3)
     long GetGateClass();                    // 0x6fe05: likewise (a switch on the epoch)
     long GetTowerClass();                   // 0x6fe86: likewise
-    long GetTransportClass(bool inSea, bool inAir, bool inSpace);   // 0x6ff07 (ret 0xc)
     long GetWallClass();                    // 0x6ffdc: likewise
-    long GetMaxEpoch();                     // 0x7005a: the highest epoch of the other players (ecx unused)
-    bool IsBehindInEpoch();                 // 0x700a9: GetMaxEpoch() is ahead of ours
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x700cb
     // 0x702b6 (ret 8): inAmount < the player's mResourceCaps[inResource]
-    bool IsBelowResourceCap(long inResource, long inAmount);
     void Reset();                           // 0x7037c: the managers' resets, then the epoch flags
     void RepairBuildings();                 // 0x703b4: sends workers to repair damaged buildings
     long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x70765
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x708e7
-    void SetNextEpochAdvanceTime(unsigned long inTime, bool inActual);   // 0x70b04 (named by its ESDebugOut strings)
-    void ReleaseGarrison();                 // 0x70bf6: releases mGarrison's garrison
-    void ReleaseFortress();                 // 0x70c9d: releases mFortress's garrison
     void UnitAdded(EEComplexUnit* inUnit);  // 0x70d44: a new unit
     void UnitLost(EEComplexUnit* inUnit, bool inSwapped);  // 0x70ed1: a lost unit
-    void Update(unsigned long inTime);      // 0x70f52 (named by its ESDebugOut string)
-    void ChooseGarrison();                  // 0x711ac: picks a town center to garrison (mGarrison)
-    void ChooseFortress();                  // 0x714c2: picks a fortress to garrison (mFortress)
 
     EECPUnitManager* GetUnitManager() { return this->mUnitManager; }  // inline (ChooseResearch loads it before the argument call) (provisional name)
     EECPBuildManager* GetBuildManager() { return this->mBuildManager; }  // inline (provisional name)

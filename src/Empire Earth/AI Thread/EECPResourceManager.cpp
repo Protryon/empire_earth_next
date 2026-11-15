@@ -1274,23 +1274,6 @@ EEUnit* EECPResourceManager::FindNearestDock(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x490f72
-// Returns the player's settlement, town center or capitol nearest to a unit, or NULL
-EEComplexUnit* EECPResourceManager::FindNearestTownCenter(EEComplexUnit* inUnit)
-{
-    std::vector<EEUnit*> theUnits;
-    EEComplexUnit* theResult = NULL;
-    long thePlayerID = this->mManager->mPlayer->mPlayerID;
-    EEGetPlayerUnitsOfType(kUnitTypeSettlement, thePlayerID, theUnits);
-    EEGetPlayerUnitsOfType(kUnitTypeTownCenter, thePlayerID, theUnits);
-    EEGetPlayerUnitsOfType(kUnitTypeCapitol, thePlayerID, theUnits);
-    if (theUnits.size() > 0) {
-        std::sort(theUnits.begin(), theUnits.end(), EECPUnitTileDistanceLess(inUnit->GetTile()));
-        theResult = theUnits[0]->mComplexUnit;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x491037
 // Raises the need for a resource by an amount (no change for 0)
 void EECPResourceManager::Earn(long inResource, unsigned long inAmount)
@@ -2257,115 +2240,6 @@ static bool EECPRMSplitByDemand(EECPResourceManager* inManager)
             theDemand.mTier[2][2], theDemand.mTier[2][3], theDemand.mTier[2][4], theDemand.mTier[2][5], theDemand.mTier[2][6],
             theShortfall[2], theShortfall[3], theShortfall[4], theShortfall[5], theShortfall[6],
             theWanted[2], theWanted[3], theWanted[4], theWanted[5], theWanted[6], theGatherers);
-    return theChanged;
-}
-
-// FUNCTION: EXE 0x491b78
-// Splits the gatherers over the resources by their needs, capped by the resource units available; returns true
-// if any wanted count changed
-bool EECPResourceManager::UpdateWantedGatherers()
-{
-    if (EECPDemandSplitOn(this->mManager->mPlayer))   // economy.demand_split (EE_AI_DEMAND): the demand split above
-        return EECPRMSplitByDemand(this);
-    long theTotal = 0;
-    EEComputerPlayer* thePlayer = this->mManager->mPlayer;
-    unsigned long theLimit = thePlayer->mMiningLimit;
-    long theGatherers = 0;
-    long theLowest = 100000;
-    unsigned long theFound = 0;
-    bool theChanged = false;
-    long i;
-    for (i = 2; i < 7; i++)
-        if (this->mNeeds[i] <= theLowest)
-            theLowest = this->mNeeds[i];
-    if (theLowest < 0)
-        for (i = 2; i < 7; i++)
-            if (this->mNeeds[i] != 0)
-                this->mNeeds[i] -= theLowest;
-    for (i = 2; i < 7; i++) {
-        theGatherers += this->mGatherers[i].size();
-        theTotal += this->mNeeds[i];
-    }
-    theGatherers += this->mGatherers[0].size();
-    if (theGatherers > 0 && theTotal > 0) {
-        for (unsigned long j = 2; j < 7; j++) {
-            long theNeed = this->mNeeds[j];
-            if (theNeed >= 0) {
-                unsigned long theWanted = (unsigned long)UMFloatToLong((float)theNeed / (float)theTotal * (float)theGatherers);
-                if (j == 2) {
-                    if (thePlayer->mTechnologies->mCurrentEpoch > kTechEpochNano) {
-                        theWanted = 0;
-                        theNeed = 0;
-                    }
-                } else if (j != 3) {
-                    theFound = 0;   // this resource's units only (was carried over from the earlier resources)
-                    for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
-                        std::vector<EEUnit*> theUnits = thePlayer->GetResourceCenter(k)->mUnits;
-                        for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++)
-                            if ((*it)->mResourceType == j)
-                                theFound++;
-                    }
-                    if (theFound * theLimit < theWanted)
-                        theWanted = theFound * theLimit;
-                }
-                if (theNeed > 0 && theWanted <= 1)
-                    theWanted = 1;
-                if (theWanted != this->mWantedGatherers[j]) {
-                    this->mWantedGatherers[j] = theWanted;
-                    theChanged = true;
-                }
-            } else {
-                this->mWantedGatherers[j] = 0;
-                if (this->mGatherers[j].size() != 0)
-                    theChanged = true;
-            }
-        }
-    }
-    // new: the stock correction (the personality's economy; see above). A standing army short of its target
-    // (EEComputerPlayer::KeepStandingArmy) raises the floor of what its unit costs by up to the personality's
-    // army_floor of the gatherers, split by the unit's cost (docs/AI_RESEARCH.md §8.15-8.16: the army waited on iron
-    // while food took 70%)
-    const float kArmyFloor = EECPPersonality(thePlayer).mArmyFloor;
-    float theArmyFloor[7] = {0, 0, 0, 0, 0, 0, 0};
-    if (theGatherers > 0 && this->mManager->mUnitManager != NULL) {
-        long theFavorite = thePlayer->mFavoriteLandType;
-        EEUnitClass* theClass = theFavorite > 0 && (unsigned long)theFavorite < EEUnitClassCount() ? gUnitClassTable[theFavorite] : NULL;
-        EETechTreeNode* theNode = theClass != NULL ? thePlayer->mTechnologies->Get(theClass->mTechnology) : NULL;
-        long theTarget = UMFloatToLong(EECPPersonality(thePlayer).mStandingArmy * (float)this->mManager->mUnitManager->GetNumWorkers());
-        long theArmy = this->mManager->mUnitManager->CountMilitaryUnits(false, false);
-        if (theNode != NULL && theTarget > 0 && theArmy < theTarget) {
-            float theShort = 1.0f - (float)theArmy / (float)theTarget;
-            float theCost[7] = {0, 0, 0, 0, 0, 0, 0};
-            float theSum = 0.0f;
-            for (long r = 2; r < 7; r++) {
-                theCost[r] = (float)thePlayer->ScaleCost(theNode->GetCost(r, theFavorite, 1.0f));
-                theSum += theCost[r];
-            }
-            if (theSum > 0.0f)
-                for (long r = 2; r < 7; r++)
-                    theArmyFloor[r] = kArmyFloor * theShort * theCost[r] / theSum;
-        }
-    }
-    if (theGatherers > 0) {
-        for (unsigned long r = 2; r < 7; r++) {
-            unsigned long theWanted = this->mWantedGatherers[r];
-            long theStock = thePlayer->mResourceCaps[r];
-            const EEAIPersonalityRule& theTuning = EECPPersonality(thePlayer);
-            if (theStock > theTuning.mSurplus)
-                theWanted = (unsigned long)UMFloatToLong(theWanted * theTuning.mSurplusCut);
-            else if (theStock < theTuning.mLowStock) {
-                unsigned long theFloor = (unsigned long)UMFloatToLong((theTuning.mFloor[r - 2] + theArmyFloor[r]) * (float)theGatherers);
-                if (r == 2 && thePlayer->mTechnologies->mCurrentEpoch > kTechEpochNano)
-                    theFloor = 0;
-                if (theWanted < theFloor)
-                    theWanted = theFloor;
-            }
-            if (theWanted != this->mWantedGatherers[r]) {
-                this->mWantedGatherers[r] = theWanted;
-                theChanged = true;
-            }
-        }
-    }
     return theChanged;
 }
 

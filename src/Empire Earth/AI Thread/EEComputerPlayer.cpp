@@ -527,46 +527,6 @@ void EEComputerPlayer::Regroup()
 }
 
 
-// FUNCTION: EXE 0x42e851
-// Kills or queues the AI's highest-scoring units until the scorer's population count is met, within the
-// citizen and transport quotas; returns the number of units chosen
-long EEComputerPlayer::ChooseUnitsToKill(EEAIFOUnitsToKillScoringBase& inScorer, bool inKill)
-{
-    std::multimap<long, EEComplexUnit*, std::greater<long> > theScores;
-    long theDone = 0;
-    long theCount = 0;
-    if (inScorer.mCount > 0 && !this->mIgnoreOthers) {
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            if (theComplex != NULL && inScorer.CanKill(theComplex))
-                theScores.insert(std::multimap<long, EEComplexUnit*, std::greater<long> >::value_type(inScorer.GetKillScore(theComplex), theComplex));
-        }
-        for (std::multimap<long, EEComplexUnit*, std::greater<long> >::iterator it = theScores.begin(); it != theScores.end() && theDone < inScorer.mCount;
-             ++it) {
-            if (it->second->mIsCitizen) {
-                if (inScorer.mCitizensToKill <= 0)
-                    continue;
-                inScorer.mCitizensToKill--;
-            } else if (it->second->mUnitClass->IsTransport()) {
-                if (inScorer.mTransportsToKill <= 0)
-                    continue;
-                inScorer.mTransportsToKill--;
-            }
-            if (std::find(this->mUnitsToKill.begin(), this->mUnitsToKill.end(), it->second) == this->mUnitsToKill.end()) {
-                theDone += it->second->mUnitClass->GetPopulationCost();
-                if (inKill)
-                    it->second->Kill(true, false, false);
-                else {
-                    it->second->Reference();
-                    this->mUnitsToKill.push_back(it->second);
-                }
-                theCount++;
-            }
-        }
-    }
-    return theCount;
-}
-
 // FUNCTION: EXE 0x42e9e7
 // Returns the most frequent path area id among the tiles around the unit (0 when none has one)
 unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
@@ -628,20 +588,6 @@ float EEComputerPlayer::GetAttackFrequencyModifier()
         theResult = this->mAttackFrequencyModifierEasy * 0.01f;
     else if (this->mDifficulty == kDifficultyHard)
         theResult = this->mAttackFrequencyModifierHard * 0.01f;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x42eb50
-// Returns the attack group size factor for the AI's difficulty (percent / 100)
-float EEComputerPlayer::GetAttackGroupModifier()
-{
-    float theResult;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mAttackGroupModifierEasy * 0.01f;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mAttackGroupModifierHard * 0.01f;
-    else
-        theResult = this->mAttackGroupModifierMedium * 0.01f;
     return theResult;
 }
 
@@ -711,13 +657,6 @@ bool EEComputerPlayer::IsDeathmatch()
     return theResult;
 }
 
-// FUNCTION: EXE 0x42ec67
-// Returns true when the resource setting is 5 (EnableManagers then runs every manager)
-bool EEComputerPlayer::Fn2EC67()
-{
-    return gWorld.mGameOptions.mResources == 5;
-}
-
 // FUNCTION: EXE 0x42ec74
 // Returns the population cap factor for the AI's difficulty (percent / 100)
 float EEComputerPlayer::GetPopLimitAdjustment()
@@ -729,18 +668,6 @@ float EEComputerPlayer::GetPopLimitAdjustment()
         theResult = this->mPopLimitAdjustmentHard * 0.01f;
     else
         theResult = this->mPopLimitAdjustmentMedium * 0.01f;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x42eca0
-// Returns the research frequency factor for easy or hard difficulty (percent / 100), else 1
-float EEComputerPlayer::GetResearchFrequencyModifier()
-{
-    float theResult = 1.0f;
-    if (this->mDifficulty == kDifficultyEasy)
-        theResult = this->mResearchFrequencyModifierEasy * 0.01f;
-    else if (this->mDifficulty == kDifficultyHard)
-        theResult = this->mResearchFrequencyModifierHard * 0.01f;
     return theResult;
 }
 
@@ -769,36 +696,12 @@ unsigned long EEComputerPlayer::GetIslandExpansionTimer()
     return theResult;
 }
 
-// FUNCTION: EXE 0x42ed2f
-// Returns true when the AI may attack and its next attack time has come
-bool EEComputerPlayer::IsAttackDue(unsigned long inTime)
-{
-    if (EECPExperiment(this, "noattack"))
-        return false;   // the experiment "noattack": an economy race (docs/AI_RESEARCH.md §8.23)
-    return this->mCanAttack && inTime >= this->mNextAttackTime;
-}
-
 // FUNCTION: EXE 0x42ed4b
 // Returns true on an island or planets map once the next island expansion time has come
 bool EEComputerPlayer::IsIslandExpansionDue()
 {
     return gWorld.mMap != NULL && ((gWorld.mMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (gWorld.mMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap)
         && gPhysics->mGameTime >= this->mNextIslandExpansionTime;
-}
-
-// FUNCTION: EXE 0x42ed85
-// Appends the enabled, currently buildable unit types of a category to outTypes; returns its size
-unsigned long EEComputerPlayer::GetBuildableTypes(long inCategory, std::vector<long>& outTypes)
-{
-    EEAIFOCurrentlyBuildableUnitScreener theScreener(this);
-    for (long i = 0; i < EEUnitClassCount(); i++) {
-        EEUnitClass* theClass = gUnitClassTable[i];
-        if (theClass != NULL && theClass->mCategory == inCategory && theClass->mIsEnabled && theScreener.Screen(theClass)) {
-            long theType = theClass->mUnitType;
-            outTypes.push_back(theType);
-        }
-    }
-    return outTypes.size();
 }
 
 // FUNCTION: EXE 0x42edff
@@ -857,26 +760,6 @@ long EEComputerPlayer::GetExtraPopulation(long inUnitClass)
 EECPResourceCenter* EEComputerPlayer::GetResourceCenter(unsigned long inIndex)
 {
     return this->mResourceCenters[inIndex];
-}
-
-// FUNCTION: EXE 0x42ef6e
-// Returns the resource center holding the unit, or NULL
-EECPResourceCenter* EEComputerPlayer::GetResourceCenterOf(EEUnit* inUnit)
-{
-    std::vector<EEUnit*> theUnits;
-    EECPResourceCenter* theResult = NULL;
-    unsigned long i = 0;
-    unsigned long theCount = this->mResourceCenters.size();
-    for (; i < theCount; i++) {
-        EECPResourceCenter* theCenter = this->mResourceCenters[i];
-        theUnits = theCenter->mUnits;
-        std::vector<EEUnit*>::iterator theFound = std::find(theUnits.begin(), theUnits.end(), inUnit);
-        if (theFound != theUnits.end()) {
-            theResult = theCenter;
-            break;
-        }
-    }
-    return theResult;
 }
 
 // New: the epoch advance the research manager has queued and not yet started (kTechNone: none)
