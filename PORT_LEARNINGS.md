@@ -23834,3 +23834,71 @@ servers, which are gone): no gate reaches them; the golden is their only check.
 
 LanLogicHost.cpp (666) and LobbyLogicHost.cpp (359), as their ops' objects move; RoutingLogic.cpp (2,107) as a round
 of its own; EELobbyGlueHost.cpp's game-side sequences stay the game's.
+
+## R4.4, twenty-third round: the weather storms, the 3D particle, the particle emitter and the marching line whole in Rust on EEE3DRust; the raster table's texture load and screen line (ee_gfx effect_weather.rs, effect_particles.rs; branch rust-gfx29, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 12,076 lines at the round's start; 11,483 after the
+storms (-593); 10,697 after the particle, the emitter and the marching line (-786). Deleted: `EEE3DStorm`,
+`EEE3DRain`, `EEE3DSnow`, `EEE3DParticle`, `EEE3DParticleEmitter`, `EEE3DMarchingLine` (`.cpp` and `.h`). The round's
+C++ diff over `src` and `include/ee`: +530 -2,152 (net -1,622).
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| 866b099b | the rain and the snow on `EEE3DRust`; the table's `load_texture` | -593 |
+| fe7102ea | the 3D particle, the emitter and the marching line on `EEE3DRust`; the table's `screen_line` | -786 |
+| d6d133b1 | merge of `rust` (42af0588) | |
+
+- **The storms** (`effect_weather.rs`). Their tiles, drops, move, set-up, step and files were already
+  `effect_storm.rs`'s; the class is now Rust too: the tiles constructor's centre (and the rain's first thunder), the
+  settings (`Virtual64`: the graphic effect's params 1-3 and duration, the rain's sound ids from its int params), the
+  drop and flake models built on the first set-up through the table, the queue's copy of the drops, both draws, the
+  files. The rain's sounds stay C++ (`rain_media`, `rain_sounds`: the loop at the start or after a load, the thunder
+  the Rust timer picked, both levels from the camera's distance); the storm map host is the old `EEStormHostOps`,
+  nested in `EeGfxEffect3DHost` as `storm`. `EEEMStorm` keeps calling `Move`, `GetBounds`, `GetCenterPoint` and
+  `GetTileCount`, now `EEE3DRust`'s, and writes the record's `storm` fields (one-line switches in its file).
+  - **Trap (threads):** the drops a step moves live in the record's lists, which `on_storm` takes out of the record
+    for the call; the draw pass runs outside the world's lock, concurrently with the step. The frame's copy
+    (`mDraws`) therefore is its own record-owned box (`storm.draws`), written by the queue (under the lock) and read
+    by the draw, never inside the lists.
+- **The table's texture load** (`load_texture`, `EeGfxTextureLoad`): a `GETextureDescription` and the seven stage
+  settings, with an optional `Reference`. The effects' common load is `EeGfxTextureLoad::effect(addressing)`. The
+  render objects' media (units, terrain) can use it next.
+- **The 3D particle** (`effect_particles.rs`). Set-up, move, tick and files were already Rust; the constructors (at a
+  point, along a line: the C++ puts the start in `aged.location` and the direction in the velocity), the queue's move,
+  the pass-6 draw (growing and fading, or additive lit by the fog factor), the step's placing and the load's position
+  and duration (the new host answer `effect_duration`; Load gets no facts) moved. The `UMemoryPool` is gone: each
+  particle is a `new EEE3DRust` (`Empire Earth.cpp`'s `SetPoolSize`/`ReleasePool` lines removed). `EEE3DRust`
+  overrides `ReleaseResources` (the particle's graphic object unloaded there, as the original).
+- **The emitter.** Its step is Rust over one host answer, `emitter_unit` (the unit's death and hit points and, when it
+  follows a complex unit's tag point, that point, the scaled location and the turret part's result: the original's
+  code moved verbatim); its own move, end conditions, sound (`emitter_sound`: `PlayAnimationSound`) and bursts
+  (`emitter_line`). The unit constructor's placing is the host's `emitter_place`; the manager sets the tag point.
+  `mIsFirstStep` became the record's `stepped`.
+- **The marching line.** The record's `march` (its ends, the draw ends, `mCC`, the time); its queue (the base effect's
+  `EEEffect::Queue`, not the 3D one's: `effect_queue`), draw (the new table entry `screen_line`: a `GELine` between two
+  screen points with its opacity per vertex), step and files are Rust; its end units (saved as ids, resolved by
+  `RepairPointers`, never set in a game), effect regions (`AddRegions`, `RemoveRegions`, the `MoveTo` overrides),
+  `SetFrom`/`SetTo` and `ReplaceUnit` stay C++ on `EEE3DRust`. `EEGraphicalGoalManager` casts to `EEE3DRust`.
+- **Golden drivers** (`build/gx29/drv`): `make_r23s.py` (storms) and `make_r23p.py` (particles), each `COMMIT|WORKTREE
+  OUT`: the original classes of 1cdeaaa9 against `EEE3DRust`'s pieces cut from the worktree, over a stub world (models
+  with real arrays, texture loads, sounds, draws, lines, files). Storms: 400 on seed 1 (7,120 lines) and 1,500 on seed
+  2 (27,081 lines), identical. Particles: 400 on seed 1 (3,632 lines) and 3,000 on seed 2 (26,460 lines: 983
+  particles, 1,047 emitters, 970 marching lines), identical. The emitter on a complex unit is the effects capture's.
+  - **Trap (driver):** print every model only from the current effect on (the storm driver's first form dumped every
+    model ever made on every line: 2.3 GB at 2,000 storms).
+  - **Trap (driver):** the original particle and marching line crash when drawn or set up without their graphic
+    object (released, or a graphic effect without one): the game never does it; the driver ends an effect after its
+    `ReleaseResources` and always sets particles up.
+  - **Trap (driver):** the original marching line's point and load constructors leave `mCC`, `mTime` and
+    `mGraphicObject` unset until `SetUp`; the driver zeroes them, as the record does (and pointers printed with `%p`
+    differ between the two executables: print an identity instead).
+- **Behaviour changes:** an unset-up marching line saves 0 for `mCC` and its time (the original saved whatever the
+  memory held) and its destructor unloads no stray graphic object; the queue's copy of the camera position (read by
+  nothing) is gone; particles have no pool limit (the pool held 5,120). None reaches a gate game.
+- **Gates.** per commit, `build.py --sim` 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS (18 digests), the calamity capture at seeds 2-3 PASS after the storms (189 digests), the Rust gate's tests PASS (3,491 and 3,499) with clippy and rustfmt clean after a format and a test fix. The merge of `rust` 42af0588 (d6d133b1) conflicted in PORT_LEARNINGS.md (both sides' sections kept) and `link/exe/units.txt` (both sides' removals kept); `rust_build.py header` and `rust_includes.py` changed nothing. On the result: both builds 0/0 (`--sim` and the test profile), the Rust gate: clippy, rustfmt and header PASS, 3,661 tests pass and one fails under load, `ee_fs`'s `golden_spec_replays` (a real directory's rmdir; it passes alone), the sim oracle identical on seeds 2-7, the effects capture at seeds 2-7 PASS (18 digests), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), the tour `RESULT PASS tour` and the orders game `RESULT PASS random-game`. The oracle, late and calamity captures at seeds 2-3 FAIL on the UUTL records only (the unit utilities lane's new record: same record counts, other digests, e.g. oracle seed 2 UUTL 27224 78796ae363b3a766 against the golden's 90e7a9a49f5c3243); `rust` 42af0588 built alone gives the same digest at seed 2, so it is `rust`'s, not this round's (every other record of those profiles equals its golden).
+- **The frames.** `build/gx29/frames.sh` (the tour with `--seed 7 --zoom-captures 100 40 20`, the pre-round test exe of round 22's merge against this round's merged one): both `RESULT PASS tour`, no GX errors in either; the menus and settings tabs equal but for 219 pixels of the main menu (the version text); at each zoom and in the gameplay frame the same scene (the start's town centre and citizens), about two thirds of the pixels differ, nine in ten of those by under 16 levels (the time of day's light and the clouds at another moment: compared by eye at zoom 40) and the large differences where citizens stood in other poses and the goal icon's frame. No storm, particle or marching line was in view.
+- **Only a tour or a person reaches:** the rain's and the snow's drops (a storm in view: weather events, the calamity
+  games, rarely in the tour), the rain's sounds, the particles' draws (the emitters' smoke and sparks), the marching
+  line (a waypoint line: a person's queued orders and the scenario goals).
+- **Not moved:** the render objects' passes (`EEROUnits`, `EEROTerrain`: their media can use `load_texture` now), the
+  capture's world walks (`EERenderObject.cpp`), the decal placement helpers.

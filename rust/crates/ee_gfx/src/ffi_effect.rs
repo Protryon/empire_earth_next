@@ -149,6 +149,10 @@ pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
             // SAFETY: the lists came from `put_storm`'s Box and are owned by the record
             drop(unsafe { Box::from_raw(record.storm.lists) });
         }
+        if !record.storm.draws.is_null() {
+            // SAFETY: the draws came from `effect_weather`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.storm.draws) });
+        }
         if !record.orbit.orbitals.is_null() {
             // SAFETY: the orbitals came from `effect_orbit`'s Box and are owned by the record
             drop(unsafe { Box::from_raw(record.orbit.orbitals) });
@@ -416,6 +420,31 @@ pub struct EeGfxParticleGround {
 }
 
 pub(crate) struct Ground<'a>(pub(crate) &'a EeGfxParticleGround);
+
+extern "C" fn flat_valid(_c: *mut c_void, _x: u32, _y: u32) -> bool {
+    true
+}
+extern "C" fn flat_space(_c: *mut c_void, _x: u32, _y: u32) -> bool {
+    false
+}
+extern "C" fn flat_z(_c: *mut c_void, _x: f32, _y: f32) -> f32 {
+    0.0
+}
+extern "C" fn flat_normal(_c: *mut c_void, _x: f32, _y: f32, n: *mut Ge3DPoint) {
+    // SAFETY: the caller's out pointer
+    unsafe { *n = Ge3DPoint { x: 0.0, y: 0.0, z: 1.0 } };
+}
+
+/// Flat ground at height 0 everywhere (the tests' hosts' particle ground).
+pub(crate) fn flat_ground() -> EeGfxParticleGround {
+    EeGfxParticleGround {
+        context: std::ptr::null_mut(),
+        is_valid_tile: flat_valid,
+        is_space_tile: flat_space,
+        mesh_z: flat_z,
+        mesh_normal: flat_normal,
+    }
+}
 
 impl ParticleGround for Ground<'_> {
     fn is_valid_tile(&mut self, x: u32, y: u32) -> bool {
@@ -824,7 +853,7 @@ pub struct EeGfxStormHost {
     pub ripple: extern "C" fn(context: *mut c_void, x: f32, y: f32),
 }
 
-struct Storm<'a>(&'a EeGfxStormHost);
+pub(crate) struct Storm<'a>(pub(crate) &'a EeGfxStormHost);
 
 impl StormHost for Storm<'_> {
     fn on_map(&mut self, x: i32, y: i32) -> bool {
@@ -850,7 +879,7 @@ impl StormHost for Storm<'_> {
 ///
 /// # Safety
 /// `r` is a live record.
-unsafe fn take_storm(r: *mut EeGfxEffectRecord) -> EeGfxStormLists {
+pub(crate) unsafe fn take_storm(r: *mut EeGfxEffectRecord) -> EeGfxStormLists {
     // SAFETY: the function's contract
     unsafe {
         let p = (*r).storm.lists;
@@ -866,7 +895,7 @@ unsafe fn take_storm(r: *mut EeGfxEffectRecord) -> EeGfxStormLists {
 ///
 /// # Safety
 /// `r` is a live record.
-unsafe fn put_storm(r: *mut EeGfxEffectRecord, lists: EeGfxStormLists) {
+pub(crate) unsafe fn put_storm(r: *mut EeGfxEffectRecord, lists: EeGfxStormLists) {
     // SAFETY: the function's contract
     unsafe {
         let p = (*r).storm.lists;
@@ -882,7 +911,7 @@ unsafe fn put_storm(r: *mut EeGfxEffectRecord, lists: EeGfxStormLists) {
 ///
 /// # Safety
 /// `r` is a live record.
-unsafe fn on_storm<T>(
+pub(crate) unsafe fn on_storm<T>(
     r: *mut EeGfxEffectRecord,
     f: impl FnOnce(&mut EeGfxEffectRecord, &mut EeGfxStormLists) -> T,
 ) -> T {
