@@ -222,6 +222,9 @@ impl<'a> Replay<'a> {
         let (ta, tb) = unsafe {
             match op {
                 EeUiOp::StringNew | EeUiOp::FormMusicStart | EeUiOp::MgrSoundLoad => (fnv(a), b),
+                // the file lists' lines and file names (R6 ui round 21); their copies' buffers as 0
+                EeUiOp::FlAppend | EeUiOp::FlInsertSorted | EeUiOp::FlDeleteFile => (fnv(a), b),
+                EeUiOp::FlNameCopy | EeUiOp::FlLineCopy => (a, 0),
                 // the manager's translated key: its one character (R6 ui round 17)
                 EeUiOp::MgrTranslatedKey => (a, *(b as *const u8) as isize),
                 EeUiOp::TextSetBytes => (a, fnv(b)),

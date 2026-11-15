@@ -8,10 +8,10 @@ class RectangleComponent : public Component {
     int mSolidColor; // offset 0x30
     int mOutlineColor; // offset 0x34
 public:
-    RectangleComponent(); // at 0x00706840
-    void SetSolidColor(int); // at 0x00706870
-    void SetOutlineColor(int); // at 0x00706880
-    virtual void Paint(Graphics&); //original external override
+    RectangleComponent() : mSolidColor(-1),mOutlineColor(-1) {} // at 0x00706840: no fill, no outline
+    void SetSolidColor(int c) { this->mSolidColor=c; } // at 0x00706870
+    void SetOutlineColor(int c) { this->mOutlineColor=c; } // at 0x00706880
+    virtual void Paint(Graphics&); // 0x706890 (guidraw.rs rectangle_paint; GuiHost.cpp)
 };
 class RectangleComponentConfig : public ComponentConfig {
 public:

@@ -41,6 +41,9 @@ void EESMObjectTiles(uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, std::
 
 // a unit's member for GetUnitAttribute (attribute.rs; EESMObject.cpp)
 int64_t EESMUnitField(EEUnit* inUnit, int32_t inField);
+// an effect run's world call (ee_scenario effect.rs EE_SCENARIO_WORLD_*; EESMEffect.cpp): inContext an effect
+// run's context (EESMEffect::Execute's), a[0..5] the arguments
+int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a);
 // the host table over inContext (it must outlive the Rust call)
 EeScenarioHost EESMHost(EESMHostContext* inContext);
 EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea);
