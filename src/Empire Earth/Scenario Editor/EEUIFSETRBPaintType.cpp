@@ -255,7 +255,7 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
         static_cast<EEUIFSEMap*>(p)->ShowElevationControls(i[0] != 0);
         break;
     case EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST:
-        ((EESEUnit*)(static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p)))->mTabGroups[kEditorTabUnits])
+        ((EESEUnit*)(static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p)))->GetTabGroup(kEditorTabUnits))
             ->RefreshUnitList();
         break;
     case EE_SCREENS_SEE_OP_EPOCH_COUNT:

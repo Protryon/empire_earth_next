@@ -235,7 +235,7 @@ void EESEBSelect::Select()
         return;
     }
     unsigned long thePlayer;
-    gUIManager->mScenarioEditorForm->mPlayerComboBox->GetCurrentSelection(thePlayer);
+    gUIManager->mScenarioEditorForm->GetPlayerComboBox()->GetCurrentSelection(thePlayer);
     (new EESEARust(kSEATechTree, NULL, theFirst, theLast, (int32_t)thePlayer + 1, theLeft))->Dereference();
 }
 
@@ -284,19 +284,19 @@ void EESETab::Check()
     const EEUIFScenarioEditor* theEditor = static_cast<const EEUIFScenarioEditor*>(this->GetForm());
     switch (this->GetId()) {
     case 0x170:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenAISettings);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenAISettings);
         break;
     case 0x15d:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenPlayerPage2);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenPlayerPage2);
         break;
     case 0x15a:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenOptions);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenOptions);
         break;
     case 0x12d:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenTechTree);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenTechTree);
         break;
     case 0x12c:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenPlayerPage1);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenPlayerPage1);
         break;
     }
     UIRadioButton::Check();

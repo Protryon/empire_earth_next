@@ -454,7 +454,7 @@ EEUIFSEBRotation::EEUIFSEBRotation(unsigned long inID, GEBitmap* inNormal, GEBit
     : UIButton(inID, inNormal, inFocused, inPressed, GERectangle(inLocation, (float)inWidth, (float)inHeight),
                inForm, inIndex, inBorderThickness)
 {
-    GETexture* theTexture = static_cast<EEUIFScenarioEditor*>(inForm)->mButtonTexture;
+    GETexture* theTexture = static_cast<EEUIFScenarioEditor*>(inForm)->GetButtonTexture();
     float theSize = (float)theTexture->GetWidth();
     unsigned long i;
     long j;
@@ -809,7 +809,7 @@ EESEARust* SeunAction(void* inAction)
 // one unit type button with its normal and pressed bitmaps (the tab's ctor's loop body)
 void SeunTypeButton(void** outMade, EEUIFScenarioEditor* inForm, UIEvent* inEvent, const int32_t* i, const float* f)
 {
-    GETexture* theTexture = inForm->mButtonTexture;
+    GETexture* theTexture = inForm->GetButtonTexture();
     float theSize = (float)theTexture->GetWidth();
     GETextureCoordinate theTopLeft, theTopRight, theBottomLeft, theBottomRight;
     float theYScale = 25.0f / theSize;
@@ -1142,7 +1142,7 @@ extern "C" int32_t ee_screenscpp_seun(uint32_t inOp, void* const* p, int32_t* i,
     }
     case EE_SCREENS_SEUN_OP_POST_GHOST: {
         EEUIFSELBUnitList* theTypes = static_cast<EEUIFSELBUnitList*>(p[1]);
-        SeunEditor(p[0])->mLoadThread->Post402(reinterpret_cast<void*>(theTypes->mUnitTypes[(unsigned long)i[0]]),
+        SeunEditor(p[0])->GetLoadThread()->Post402(reinterpret_cast<void*>(theTypes->mUnitTypes[(unsigned long)i[0]]),
                                                reinterpret_cast<void*>((long)i[1]));
         return 0;
     }

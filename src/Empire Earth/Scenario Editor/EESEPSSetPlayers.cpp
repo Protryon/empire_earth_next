@@ -78,6 +78,6 @@ EESEPSSetPlayers::EESEPSSetPlayers(const GE2DPoint& inPosition, GEFont* inFont, 
 // Copies the first player's settings to every player when released
 void EESEPSSetPlayers::ButtonUp()
 {
-    ((EESEPlayerScreen*)(static_cast<EEUIFScenarioEditor*>(this->GetForm()))->mTabGroups[kEditorTabPlayers])->CopyFirstPlayerToAll();
+    ((EESEPlayerScreen*)(static_cast<EEUIFScenarioEditor*>(this->GetForm()))->GetTabGroup(kEditorTabPlayers))->CopyFirstPlayerToAll();
     UIButton::ButtonUp();
 }

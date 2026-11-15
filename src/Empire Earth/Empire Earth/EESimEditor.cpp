@@ -504,7 +504,7 @@ void Digest(const std::string& inLabel, std::vector<std::string>& outLines)
     for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)
         theSelection += " " + std::to_string(theEditor->GetSelectedUnit(i)->GetUnitID());
     outLines.push_back(theSelection);
-    const GERectangle& theArea = theEditor->mBrushGroup->mRectangle;
+    const GERectangle& theArea = theEditor->GetBrushGroup()->mRectangle;
     char theText[160];
     snprintf(theText, sizeof(theText), "  paint area %g,%g,%g,%g", (double)theArea.GetLeft(), (double)theArea.GetTop(),
              (double)theArea.GetRight(), (double)theArea.GetBottom());
@@ -1213,7 +1213,7 @@ void PlayersDigest(std::vector<std::string>& outLines)
 // (epochs, tech trees, the load text) run after it, so they do not depend on its timing
 void SyncLoadThread()
 {
-    EESELoadThread* theThread = gUIManager->mScenarioEditorForm->mLoadThread;
+    EESELoadThread* theThread = gUIManager->mScenarioEditorForm->GetLoadThread();
     if (theThread->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true) == kErrorOK) {
         theThread->mMessageQueueDone->Wait(kTSWaitInfinite);
         theThread->mMessageQueueDone->Clear();
@@ -1234,22 +1234,35 @@ void FormState(std::vector<std::string>& outLines)
         theUnits += (i == 0 ? "" : ",") + (u == NULL ? std::string("null") : std::to_string(u->GetUnitID()) +
                                                                               (u->mIsEditorSelected ? "" : "!"));
     }
-    const GERectangle& a = e->mR1E0;
-    const GERectangle& b = e->mR1F0;
-    const GERectangle& s = e->mEdgeScroll->mEdges;
+    // the form's slots (editor_form.rs EE_SCREENS_SEFM_*): the saved view and the panel as float bits
+    auto S = [e](uint32_t inSlot) { return e->GetSlot(inSlot); };
+    auto R = [&S](uint32_t inSlot) {
+        float r[4];
+        for (uint32_t k = 0; k < 4; k++) {
+            uint32_t theBits = (uint32_t)S(inSlot + k);
+            memcpy(&r[k], &theBits, 4);
+        }
+        return GERectangle(r[0], r[1], r[2], r[3]);
+    };
+    GERectangle a = R(EE_SCREENS_SEFM_SAVED_VIEW);
+    GERectangle b = R(EE_SCREENS_SEFM_PANEL);
+    const GERectangle& s = e->GetEdgeScroll()->mEdges;
+    UITextLabel* theLoadText = (UITextLabel*)S(EE_SCREENS_SEFM_LOAD_TEXT);
     snprintf(theText, sizeof(theText),
              "  form tab=%ld eg=%ld on=%d cargo=%ld sel=[%s] b=%d%d sw=%d sus=%d hid=%d exit=%d mini=%lu help=%lu "
              "load=%lu hl=%d view=%g,%g,%g,%g panel=%g,%g,%g,%g edges=%g,%g,%g,%g",
-             e->mCurrentTab, e->mCurrentEntityGroup, e->mIsEntityGroupEnabled ? 1 : 0, e->mNumCargoUnits,
-             theUnits.c_str(), e->mB2B1 ? 1 : 0, e->mB2B2 ? 1 : 0, e->mIsSwitching ? 1 : 0, e->mIsSuspended ? 1 : 0,
-             e->mIsUIHidden ? 1 : 0, e->mExitAfterSave ? 1 : 0, e->mMiniMap->GetDisplayMode(),
-             e->mHelpLabel->GetDisplayMode(), e->mLoadTextLabel->GetDisplayMode(),
-             e->mBrushGroup->mIsHighlightShown ? 1 : 0, (double)a.GetLeft(), (double)a.GetTop(), (double)a.GetRight(),
+             (long)S(EE_SCREENS_SEFM_CURRENT_TAB), (long)S(EE_SCREENS_SEFM_ENTITY_GROUP),
+             S(EE_SCREENS_SEFM_ENTITY_GROUP_ENABLED) ? 1 : 0, (long)S(EE_SCREENS_SEFM_NUM_CARGO_UNITS),
+             theUnits.c_str(), S(EE_SCREENS_SEFM_B2B1) ? 1 : 0, S(EE_SCREENS_SEFM_B2B2) ? 1 : 0,
+             S(EE_SCREENS_SEFM_SWITCHING) ? 1 : 0, S(EE_SCREENS_SEFM_SUSPENDED) ? 1 : 0, e->GetIsUIHidden() ? 1 : 0,
+             S(EE_SCREENS_SEFM_EXIT_AFTER_SAVE) ? 1 : 0, ((UIControl*)S(EE_SCREENS_SEFM_MINI_MAP))->GetDisplayMode(),
+             ((UIControl*)S(EE_SCREENS_SEFM_HELP_LABEL))->GetDisplayMode(), theLoadText->GetDisplayMode(),
+             e->GetBrushGroup()->mIsHighlightShown ? 1 : 0, (double)a.GetLeft(), (double)a.GetTop(), (double)a.GetRight(),
              (double)a.GetBottom(), (double)b.GetLeft(), (double)b.GetTop(), (double)b.GetRight(), (double)b.GetBottom(),
              (double)s.GetLeft(), (double)s.GetTop(), (double)s.GetRight(), (double)s.GetBottom());
     std::string theLine = theText;
-    if (e->mLoadTextLabel->GetDisplayMode() == kDisplayModeShown)
-        theLine += LabelText(e->mLoadTextLabel);
+    if (theLoadText->GetDisplayMode() == kDisplayModeShown)
+        theLine += LabelText(theLoadText);
     outLines.push_back(theLine);
     std::string theGroups = "  groups";
     for (unsigned long g = 0; g < e->GetControlGroupCount(); g++)
@@ -1423,7 +1436,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
         std::function<void()> theCode;
         std::string theProblem;
         if (c == "tab")
-            theCode = [=] { gUIManager->mScenarioEditorForm->mTabButtons[L(1)]->CheckDirect(); };
+            theCode = [=] { gUIManager->mScenarioEditorForm->GetTabButton(L(1))->CheckDirect(); };
         else if (c == "blank")
             theCode = [=] { (new EESEARust(kSEABlankMap, NULL, L(1), L(2), L(3)))->Dereference(); };
         else if (c == "random")
@@ -1656,13 +1669,13 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 const GERectangle& r = gViewport.GetViewRectangle();
                 char theText[160];
                 snprintf(theText, sizeof(theText), "  view %g,%g,%g,%g hidden=%d", (double)r.GetLeft(), (double)r.GetTop(),
-                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->mScenarioEditorForm->mIsUIHidden ? 1 : 0);
+                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->mScenarioEditorForm->GetIsUIHidden() ? 1 : 0);
                 theOutput.push_back(theText);
             };
         else if (c == "click")   // click quicksave
             theCode = [=] {
                 EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
-                UIControl* theButton = theEditor->mQuickSaveButton;
+                UIControl* theButton = theEditor->GetQuickSaveButton();
                 theButton->GetTriggerEvent(kControlTriggerButtonUp)->ProcessEvent(theEditor, theButton);
             };
         else if (c == "editorsave")   // the editor's own quick save file (EEQuickSave + the scenario extension)

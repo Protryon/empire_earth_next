@@ -74,12 +74,12 @@ void EEAResetAllPlayerInfo::Virtual4()
         EEPlayer* thePlayer = ::gWorld.mPlayers[this->mPlayers[i]];
         EEApplyCivilizationFile(::gWorld.mPlayers[this->mPlayers[i]]->mCivilizationFile, thePlayer);
         long theCivilization = ::gWorld.mPlayers[this->mPlayers[i]]->GetTechTree()->mStartEpoch;
-        gUIManager->mScenarioEditorForm->mLoadThread->Post406(reinterpret_cast<void*>(this->mPlayers[i]), reinterpret_cast<void*>(theCivilization));
+        gUIManager->mScenarioEditorForm->GetLoadThread()->Post406(reinterpret_cast<void*>(this->mPlayers[i]), reinterpret_cast<void*>(theCivilization));
     }
     for (i = 0; i < this->mPlayers.size(); i++)
-        gUIManager->GetScenarioEditorForm()->mLoadThread->Post403(reinterpret_cast<void*>(this->mPlayers[i]), false);
+        gUIManager->GetScenarioEditorForm()->GetLoadThread()->Post403(reinterpret_cast<void*>(this->mPlayers[i]), false);
     for (i = 0; i < this->mPlayers.size(); i++)
-        gUIManager->GetScenarioEditorForm()->mLoadThread->Post407(
+        gUIManager->GetScenarioEditorForm()->GetLoadThread()->Post407(
             reinterpret_cast<void*>(this->mPlayers[i]), reinterpret_cast<void*>(::gWorld.mPlayers[this->mPlayers[i]]->GetTechTree()->mStartEpoch));
 }
 

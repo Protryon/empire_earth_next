@@ -309,7 +309,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         break;
     }
     case EE_SCREENS_SE_OP_EXIT_AFTER_SAVE:
-        gUIManager->mScenarioEditorForm->mExitAfterSave = true;
+        gUIManager->mScenarioEditorForm->SetExitAfterSave(true);
         break;
     case EE_SCREENS_SE_OP_EDIT_LINES:
         return static_cast<UIEditBox*>(theEntity)->GetLineCount();

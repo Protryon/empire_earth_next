@@ -159,7 +159,7 @@ void EESETSArea::GetNames(std::vector<UWideString>& outNames)
 // (defined in this unit: every caller calls it out of line)
 void EEUIFScenarioEditor::SetPaintArea(const GERectangle& inRectangle)
 {
-    this->mBrushGroup->mRectangle = inRectangle;
+    this->GetBrushGroup()->mRectangle = inRectangle;
 }
 
 // FUNCTION: EXE 0x57d991
@@ -225,7 +225,7 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEAR_OP_HIGHLIGHT: SearEditor()->GetBrushGroup()->SetIsHighlightShown(i[0] != 0); return 0;
     case EE_SCREENS_SEAR_OP_PAINT_AREA: SearEditor()->SetPaintArea(GERectangle(f[0], f[1], f[2], f[3])); return 0;
-    case EE_SCREENS_SEAR_OP_UI_HIDDEN: return SearEditor()->mIsUIHidden;
+    case EE_SCREENS_SEAR_OP_UI_HIDDEN: return SearEditor()->GetIsUIHidden();
     case EE_SCREENS_SEAR_OP_ACTIVATE:
         SearEditor()->GetTriggerScreen()->HideText();
         SearEditor()->GetTriggerScreen()->ShowAlphaSort();
@@ -300,7 +300,7 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEAR_OP_PAINT_BEGIN: {
         *static_cast<EESEARust**>(p[0]) = new EESEARust(kSEAPaintArea, NULL, i[0], i[1]);
         gMouse->SetBounds(gViewport.GetViewRectangle());
-        SearEditor()->mEdgeScroll->mEdges = GERectangle(gViewport.GetViewRectangle().GetLeft(),
+        SearEditor()->GetEdgeScroll()->mEdges = GERectangle(gViewport.GetViewRectangle().GetLeft(),
                                                         gViewport.GetViewRectangle().GetTop(),
                                                         gViewport.GetViewRectangle().GetRight() - 1.0f,
                                                         gViewport.GetViewRectangle().GetBottom() - 1.0f);
@@ -312,7 +312,7 @@ extern "C" int32_t ee_screenscpp_sear(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEAR_OP_PAINT_END: {
         EESEARust* theAction = static_cast<EESEARust*>(p[0]);
         gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
-        SearEditor()->mEdgeScroll->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
+        SearEditor()->GetEdgeScroll()->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
                                                         (float)gGameWindow->GetHeight() - 1.0f);
         int32_t theArea[4];   // left, top, right, bottom
         ee_screens_sew_area(theAction->mAction, theArea);

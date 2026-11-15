@@ -48,7 +48,7 @@ EESETSEComboBox::EESETSEComboBox(unsigned long inId, unsigned long inTextBoxType
 void EESETSEComboBox::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
-    static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabTriggers])->GetScreen(kSETriggerScreenEffect)->RefreshControls();
+    static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabTriggers))->GetScreen(kSETriggerScreenEffect)->RefreshControls();
 }
 
 // SYNTHETIC: EXE 0x5824df

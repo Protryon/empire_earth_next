@@ -369,7 +369,7 @@ int32_t SeobGetText(int32_t* i, void* const* p)
         break;
     }
     case EE_SCREENS_SEOB_TEXT_UNIT_CLASS:
-        gResource->GetString(static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[1]))->mSelectedUnits[i[1]]
+        gResource->GetString(static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[1]))->GetSelectedUnit(i[1])
                                  ->mUnitClass->mNameStringID,
                              theText);
         break;
@@ -552,13 +552,13 @@ extern "C" int32_t ee_screenscpp_seob(uint32_t inOp, void* const* p, int32_t* i,
         theList->DeleteAllEntries();
         unsigned long theCount = theEditor->GetSelectedUnitCount();
         for (unsigned long k = 0; k < theCount; k++) {
-            gResource->GetString(theEditor->mSelectedUnits[k]->mUnitClass->mNameStringID, theName);
+            gResource->GetString(theEditor->GetSelectedUnit(k)->mUnitClass->mNameStringID, theName);
             theList->AppendLine(theName);
         }
         return (int32_t)theCount;
     }
     case EE_SCREENS_SEOB_OP_SELECTED_UNIT_ID:
-        return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->mSelectedUnits[i[0]]->mUnitID;
+        return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnit(i[0])->mUnitID;
     case EE_SCREENS_SEOB_OP_SELECTED_COUNT:
         return (int32_t) static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p[0]))->GetSelectedUnitCount();
     case EE_SCREENS_SEOB_OP_TEXT: {

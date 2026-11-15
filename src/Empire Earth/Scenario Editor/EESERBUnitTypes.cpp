@@ -298,7 +298,7 @@ EESEUIBDiplomacy::EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocati
 // Cuts the diplomacy buttons' normal, focused and pressed bitmaps (allies, enemies) from the editor's button texture
 void EESEUIBDiplomacy::LoadBitmaps(EEUIFScenarioEditor* inEditor)
 {
-    GETexture* theTexture = inEditor->mButtonTexture;
+    GETexture* theTexture = inEditor->GetButtonTexture();
     float theWidth = (float)theTexture->GetWidth();
     float theTop = 230.0f / theWidth;
     float theBottom = 253.0f / theWidth;
@@ -1077,7 +1077,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_WORLD_SET: SeplWorld(i[0], true, i[1]); return 0;
     case EE_SCREENS_SEPL_OP_LOAD_THREAD: {
         // the existing queue API carries the original scalar message words as void*
-        EESELoadThread* theThread = gUIManager->mScenarioEditorForm->mLoadThread;
+        EESELoadThread* theThread = gUIManager->mScenarioEditorForm->GetLoadThread();
         void* thePlayer = reinterpret_cast<void*>((uintptr_t)i[1]);
         void* theEpoch = reinterpret_cast<void*>((intptr_t)gWorld.GetPlayer(i[1])->GetTechTree()->mStartEpoch);
         if (i[0] == 406) theThread->Post406(thePlayer, theEpoch);

@@ -68,7 +68,7 @@ EESETSCComboBox::EESETSCComboBox(unsigned long inId, unsigned long inTextBoxType
 void EESETSCComboBox::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
-    static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabTriggers])->GetScreen(kSETriggerScreenCondition)->RefreshControls();
+    static_cast<EESETriggerScreen*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabTriggers))->GetScreen(kSETriggerScreenCondition)->RefreshControls();
 }
 
 // FUNCTION: EXE 0x57e3d7

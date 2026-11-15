@@ -281,7 +281,7 @@ void EESETSUICBPlayer::ChangeSelection()
 // Places the gate being built in the scenario editor (the location and direction are ignored)
 void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 {
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->PlaceGate();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->PlaceGate();
 }
 
 // FUNCTION: EXE 0x5971c8
@@ -289,7 +289,7 @@ void EESEUIBuildGate::Build(const GE2DPoint& inLocation, long inDirection)
 void EESEUIBuildGate::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->EndGate();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->EndGate();
     thePlayer->UnloadUnitClassMedia(this->mUnitClass->mUnitType);
 }
 
@@ -297,7 +297,7 @@ void EESEUIBuildGate::Cancel()
 // Places the wall being built in the scenario editor
 void EESEUIBuildWall::Build()
 {
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->PlaceWall();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->PlaceWall();
 }
 
 // FUNCTION: EXE 0x59721b
@@ -305,7 +305,7 @@ void EESEUIBuildWall::Build()
 void EESEUIBuildWall::Cancel()
 {
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayer];
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->EndWall();
+    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->EndWall();
     long theTechnology = this->mTechnology;
     thePlayer->UnloadUnitClassMedia(thePlayer->mTechnologies->GetData(theTechnology)->mUnitClass);
 }

@@ -101,7 +101,7 @@ void EEAUpgradeImprovement::Virtual4()
         gUIManager->mScenarioEditorForm->UpdateHelpString();
     } else if (theStats->mImprovement.GetLevel(this->mImprovement) > 1) {
         this->mUnit->GetPlayer()->ApplyImprovement(this->mUnit->GetUnitClass()->GetUnitType(), this->mImprovement, true);
-        static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->ShowUnitStatus(this->mUnit);
+        static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->GetTabGroup(kEditorTabUnits))->ShowUnitStatus(this->mUnit);
         gUIManager->mScenarioEditorForm->UpdateHelpString();
         gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
     } else {

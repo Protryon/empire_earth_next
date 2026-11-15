@@ -1,8 +1,12 @@
 // C:\EEX\Empire Earth\Scenario Editor\EEUIFScenarioEditor.cpp (file name inferred: no __FILE__; RTTI class
-// EEUIFScenarioEditor). The scenario editor's main form, first part: 0x19cc39..0x19e2d2 (the form's own events'
-// handlers, the ctor, the event ??_Gs it emits). The unit continues with the parts once kept as EEUIEGrabScroll.cpp
-// (0x19e2d2) and EEUIEOpenCivBuilder.cpp (0x19eba9): EEUIFScenarioEditor.h places the unit at ~0x19cc39..0x1a0315
-// (one file). After EESEUnit.cpp. Unit flags: the exe module set.
+// EEUIFScenarioEditor). The scenario editor's main form: 0x19cc39..0x1a0315 (its events' handlers, the ctor, the
+// members, then the inline event classes; the parts once kept as EEUIEGrabScroll.cpp 0x19e2d2 and the head of
+// EEUIEOpenCivBuilder.cpp 0x19eba9 are one unit with it). After EESEUnit.cpp. Unit flags: the exe module set.
+//
+// The form whole in Rust (ee_screens editor_form.rs): EEUIFScenarioEditor holds its object (the controls, events,
+// tabs, state and selection as slots) and forwards; the trigger-only save (Ctrl+S, once EEUIESaveScenarioTriggersOnly)
+// is an EESEERust whose report Rust writes over the scenario's records. This unit is the form's host
+// (ee_screenscpp_sefm): the controls only the form makes and the world it reads and posts to.
 #include <windows.h>
 #include "platform/PlatFile.h"
 #include <mbstring.h>
@@ -57,12 +61,10 @@
 #include "lle/UResourceFile.h"
 #include "lle/UISlider.h"
 #include "lle/UICheckBox.h"
-
 #include "lle/UIRadioButton.h"
 #include "lle/UITriStateCheckBox.h"
 #include <vector>
 #include <deque>
-
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
@@ -119,546 +121,123 @@
 #include <stdio.h>
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // EE_SCREENS_MG_*, EE_SCREENS_CAM_*: the main game form's events (main_game.rs, camera.rs)
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EESEARust.h"
+#include "lle/ESChecksum.h"
+#include "lle/FSFile.h"
+#include "lle/FSBasicFile.h"
+#include "lle/FSMemoryFile.h"
+#include "lle/GE2DPoint.h"
+#include "lle/GE3DPlane.h"
+#include "lle/GEOrientation.h"
+#include "lle/GERectangle.h"
+#include "lle/GEVector.h"
+#include "lle/ISEntity.h"
+#include "lle/PIMModule.h"
+#include "lle/SEConductor.h"
+#include "lle/SEMixer.h"
+#include "lle/TSEvent.h"
+#include "lle/TSReadWriteLock.h"
+#include "lle/TSThread.h"
+#include "lle/UILayoutUtility.h"
+#include "lle/UIEntity.h"
+#include "lle/UMFastMath.h"
+#include "lle/URandom.h"
+#include "lle/UString.h"
+#include "lle/UWideString.h"
+#include "lle/UIScrollBar.h"
+#include "lle/UIFullBackground.h"
+#include "ee/EEUIFSEUndo.h"
+#include "ee/EEUIFSERedo.h"
+#include "ee/EESEEditorTab.h"
+#include "ee/EEGamePreferences.h"
+#include "ee/EEUIFSERBBrush.h"
+#include "ee/EESEAChangeLoadText.h"
+#include "ee/EESELoadThread.h"
+#include "ee/EEUIFSEElevation.h"
+#include "ee/RTSGraphics.h"
+#include "ee/EERenderObject.h"
+#include "ee/EEROTerrain.h"
+#include "ee/EEMiniMap.h"
+#include "ee/EEAmbientSoundManager.h"
+#include "ee/EEMusicManager.h"
+#include "ee/EEUIFSEPaint.h"
+#include "ee/EEAQuickSaveLoad.h"
+#include "ee/EEUIFSEMap.h"
+#include "ee/EEUIFSETerrain.h"
+#include "ee/EESEInstructions.h"
+#include "ee/EESEAQuickSaveLoad.h"
+#include <string.h>
+#include "ee/EESMTConditionWrapper.h"
+#include "ee/EESMTEffectWrapper.h"
+#include "ee/EEScenarioIDs.h"
+#include "rust/ee_screens.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
 extern GEFont* gU531934;                    // 0x531934
 extern GEFont* gU531938;                    // 0x531938
-
-// The trigger-only save (Ctrl+S; RTTI EEUIESaveScenarioTriggersOnly > UIEvent, sizeof 0xc, inline ctor; the form's
-// other events are EEScreenEvent codes, ee_screens scenario_editor.rs)
-class EEUIESaveScenarioTriggersOnly : public UIEvent {
-public:
-    virtual ~EEUIESaveScenarioTriggersOnly() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x19ccc0
-};
+extern RTSRenderObject* gU56534C;           // the game's base render object (EERenderObject.cpp)
+extern RTSRenderObject* gU56535C;           // the terrain render object (an EEROTerrain newed in Empire Earth.cpp)
+extern bool gSightUpdatesEnabled;
+extern GEViewport gViewport;
+void EEPostGraphicsAll();                   // EERenderObject.cpp: every render object
+void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (EEGhostUnit.cpp: the ghost at the mouse)
 
 // FUNCTION: EXE 0x59ccc0
-// Saves the scenario triggers to ScenarioTriggers.scn and writes a ScenarioTriggers.txt report of every trigger,
-// the unused effects, conditions, objects and areas and slow looping triggers (Ctrl+S); returns the open result
-long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    FSFileSpec theFile;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    UString thePath(260);
-    theFile.SetVolume(gStartupVolume);
-    theFile.SetDirectory(gStartupDirectory);
-    theFile.SetFile("ScenarioTriggers.scn");
-    theFile.Create();
-    long theResult = theFile.Open(kFileAccessWrite);
-    if (theResult == kErrorOK)
-        theManager->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
-    theFile.Close();
-    thePath = gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt";
-    if (theResult == kErrorOK) {
-        FILE* theText = PlatFOpen(thePath, "w");
-        if (theText) {
-            unsigned long i;
-            for (i = 0; i < theManager->mTriggers.size(); i++) {
-                EESMTrigger* theTrigger = theManager->GetTrigger(i);
-                fprintf(theText, "%s\n", (const char*)theTrigger->mName);
-                if (theTrigger->mText.GetLength() > 0)
-                    fprintf(theText, "Description:\n\"%s\"\n", (const char*)theTrigger->mText);
-                if (!theTrigger->mIsOn)
-                    fprintf(theText, "\tTrigger starts OFF\n");
-                if (theTrigger->mConditionDuration)
-                    fprintf(theText, "\tConditions True for %ld\n", theTrigger->mConditionDuration);
-                if (theTrigger->mIsLooping)
-                    fprintf(theText, "\tLooping\n");
-                fprintf(theText, "\tIf ");
-                unsigned long j; for (j = 0; j < theTrigger->GetConditionCount(); j++) {
-                    EESMTConditionWrapper* theWrapper = theTrigger->GetCondition(j);
-                    if (theWrapper->mIsNot)
-                        fprintf(theText, " NOT");
-                    EESMCondition* theCondition = theManager->GetCondition(theWrapper->mValue);
-                    if (theCondition)
-                        fprintf(theText, " (%s) ", (const char*)theCondition->mName);
-                    else
-                        fprintf(theText, " (BAD CONDITION) ");
-                    if (theWrapper->mOperator == kSMTriggerOperatorAnd)
-                        fprintf(theText, " AND");
-                    else if (theWrapper->mOperator == kSMTriggerOperatorOr)
-                        fprintf(theText, " OR");
-                }
-                fprintf(theText, "\n\tThen ");
-                for (j = 0; j < theTrigger->mEffects.size(); j++) {
-                    EESMTEffectWrapper* theWrapper = theTrigger->GetEffect(j);
-                    if (theWrapper->mDelay)
-                        fprintf(theText, " (Delay %ld sec) ", theWrapper->mDelay);
-                    EESMEffect* theEffect = theManager->GetEffect(theWrapper->mEffectIndex);
-                    if (theEffect)
-                        fprintf(theText, " (%s) ", (const char*)theEffect->mName);
-                    else
-                        fprintf(theText, " (BAD EFFECT) ");
-                    if (theWrapper->mOperator == kSMTriggerOperatorAnd)
-                        fprintf(theText, " AND");
-                    else if (theWrapper->mOperator == kSMTriggerOperatorOr)
-                        fprintf(theText, " OR");
-                }
-                fprintf(theText, "\n\n");
-            }
-
-            for (i = 1; i < theManager->mEffects.size(); i++) {
-                bool theUnused = true;
-                EESMEffect* theEffect = theManager->GetEffect(i);
-                if (theEffect->mType == kSMEffectNone)
-                    theUnused = false;
-                for (unsigned long j = 0; theUnused && j < theManager->GetNumTriggers(); j++) {
-                    EESMTrigger* theTrigger = theManager->GetTrigger(j);
-                    for (unsigned long k = 0; theUnused && k < theTrigger->mEffects.size(); k++) {
-                        if (theTrigger->GetEffect(k)->mEffectIndex == i)
-                            theUnused = false;
-                    }
-                }
-                if (theUnused)
-                    fprintf(theText, "Effect: (%s) is not used in any trigger\n", (const char*)theManager->GetEffect(i)->mName);
-            }
-
-            for (i = 1; i < theManager->GetNumConditions(); i++) {
-                bool theUnused = true;
-                EESMCondition* theCondition = theManager->GetCondition(i);
-                if (theCondition->mType < kSMConditionPlayerAttribute)
-                    theUnused = false;
-                for (unsigned long j = 0; theUnused && j < theManager->mTriggers.size(); j++) {
-                    EESMTrigger* theTrigger = theManager->GetTrigger(j);
-                    for (unsigned long k = 0; theUnused && k < theTrigger->mConditions.size(); k++) {
-                        if (theTrigger->GetCondition(k)->mValue == i)
-                            theUnused = false;
-                    }
-                }
-                if (theUnused)
-                    fprintf(theText, "Condition: (%s) is not used in any trigger\n", (const char*)theManager->GetCondition(i)->mName);
-            }
-
-            for (i = 1; i < theManager->mObjects.size(); i++) {
-                bool theUnused = true;
-                unsigned long j; for (j = 1; theUnused && j < theManager->mEffects.size(); j++) {
-                    EESMEffect* theEffect = theManager->GetEffect(j);
-                    for (unsigned long k = 0; theUnused && k < theEffect->mObjects.size(); k++) {
-                        if (theEffect->mObjects[k] == i)
-                            theUnused = false;
-                    }
-                    if (theUnused && (theEffect->mTargetObject == i || theEffect->mPlaceObject == i ||
-                        theEffect->mTextObject == i || theEffect->mObject == i ||
-                        theEffect->mTaskObject == i || theEffect->mLocationObject == i))
-                        theUnused = false;
-                }
-                for (j = 1; theUnused && j < theManager->mConditions.size(); j++) {
-                    EESMCondition* theCondition = theManager->GetCondition(j);
-                    if (theCondition->mType != kSMConditionObject || theCondition->mObjectIndex != i)
-                        continue;
-                    for (unsigned long k = 0; theUnused && k < theManager->mTriggers.size(); k++) {
-                        EESMTrigger* theTrigger = theManager->GetTrigger(k);
-                        for (unsigned long n = 0; theUnused && n < theTrigger->mConditions.size(); n++) {
-                            if (theTrigger->GetCondition(n)->mValue == j)
-                                theUnused = false;
-                        }
-                    }
-                }
-                for (j = 1; theUnused && j < theManager->mObjects.size(); j++) {
-                    EESMObject* theObject = theManager->GetScenarioObject(j);
-                    if (theObject->mParent == i || theObject->mNearObject == i)
-                        theUnused = false;
-                }
-                if (theUnused)
-                    fprintf(theText, "Object: (%s) is not used in any condition, effect or other object\n", (const char*)theManager->GetScenarioObject(i)->mName);
-            }
-
-            for (i = 2; i < theManager->mAreas.size(); i++) {
-                bool theUnused = true;
-                unsigned long j; for (j = 1; theUnused && j < theManager->GetNumEffects(); j++) {
-                    EESMEffect* theEffect = theManager->GetEffect(j);
-                    if (theEffect->mTargetArea == i || theEffect->mPlaceArea == i ||
-                        theEffect->mTaskArea == i || theEffect->mLocationArea == i)
-                        theUnused = false;
-                }
-                for (j = 1; theUnused && j < theManager->GetNumObjects(); j++) {
-                    if (theManager->GetScenarioObject(j)->mArea == i)
-                        theUnused = false;
-                }
-                if (theUnused)
-                    fprintf(theText, "Area: (%s) is not used in any condition, effect or Object\n", (const char*)theManager->GetArea(i)->mName);
-            }
-
-            for (i = 0; i < theManager->mTriggers.size(); i++) {
-                EESMTrigger* theTrigger = theManager->GetTrigger(i);
-                if (!theTrigger->mIsLooping)
-                    continue;
-                for (unsigned long j = 0; j < theTrigger->mEffects.size(); j++) {
-                    EESMEffect* theEffect = theManager->GetEffect(theTrigger->GetEffect(j)->mEffectIndex);
-                    // A missing effect is listed as BAD EFFECT above; skip it here instead of dereferencing NULL.
-                    if (theEffect == NULL)
-                        continue;
-                    if ((theEffect->mType == kSMEffectObject && (theEffect->mObjectAction == kSMObjectActionClassName || theEffect->mObjectAction == kSMObjectActionClassAttribute)) ||
-                        (theEffect->mType == kSMEffectPlayer && theEffect->mPlayerAction == kSMPlayerActionModifyTechTree))
-                        fprintf(theText, "WARNING: Potential performance issue with looping Trigger (%s) calling effect (%s) which repeatedly sets the objects name, class attribute or player tech\n", (const char*)theTrigger->mName, (const char*)theEffect->mName);
-                }
-            }
-            fclose(theText);
-        }
-    }
-    return theResult;
-}
+// The trigger-only save (Ctrl+S): the scenario's triggers to ScenarioTriggers.scn and a ScenarioTriggers.txt report
+// of every trigger, the unused effects, conditions, objects and areas and the slow looping triggers (RTTI
+// EEUIESaveScenarioTriggersOnly > UIEvent; an EESEERust over editor_form.rs)
 
 // TEST ONLY (tools/sim_editor.py `trigreport`): the trigger-only save as its hot key (Ctrl+S) runs it
 long EESETestSaveTriggersOnly(UIForm* inForm)
 {
-    UIEvent* theEvent = new EEUIESaveScenarioTriggersOnly;
+    UIEvent* theEvent = new EESEERust(EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY);
     long theResult = theEvent->ProcessEvent(inForm, NULL);
     theEvent->Dereference();
     return theResult;
 }
 
-// The mini map's size and the screen height: plain (non-folded) .rdata floats in the original (0x444f88, 0x44507c),
-// read by the ctor only (provisional names)
-static const float kSEMiniMapSize = 169.84f;
-static const float kSEScreenHeight = 768.0f;
-
 // FUNCTION: EXE 0x59d615
 // Creates the editor form (id 1000, 15 control groups): button texture, edge scroll, mini map, player combo box,
 // labels, tab groups, tool bar, hide-UI check box, camera and trigger save/load and debug hot keys; map tab on
+// (editor_form.rs)
 EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     : UIForm(1000, 0xf, inManager, -1, true)
 {
     UWideString theText;
-    UIHotKey theHotKey;
-    GETextureDescription theDescription;
-    GEText* theGEText;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    unsigned long theIndex = 0;
     this->SetRectangle(GERectangle(0.0f, 0.0f, 1023.0f, 767.0f));
-    this->mButtonTexture = gRasterizer->GetTextureManager(this->GetManager()->GetScreen())->LoadTexture("textures\\SE Buttons",
-                                                                                  theDescription);
-    this->mButtonTexture->Reference();
-    this->mEdgeScroll = new EEAScroll;
-    this->mPoll = new TMPoll(500, 0, false);
-    this->mPoll->Start();
-    this->mIsEntityGroupEnabled = false;
-    this->mB2B1 = false;
-    this->mCurrentEntityGroup = 0;
-    this->mB2B2 = false;
-    this->mLoadThread = NULL;
-    this->CreateBackground();
-
-    // the mini map (169.84 square, in the bottom right corner)
-    this->mMiniMap = new EEUIMiniMap(GERectangle(GE2DPoint(1024.0f - kSEMiniMapSize, kSEScreenHeight - kSEMiniMapSize), kSEMiniMapSize,
-                                        kSEMiniMapSize), this,
-                            theIndex, 8, 3);
-    theIndex++;
-    this->AddControl(this->mMiniMap, 0);
-    this->mMiniMap->SetDisplayMode(kDisplayModeHidden);
-
-    // the player combo box
-    this->mPlayerComboBox = new UIComboBox(0x149, 1, std::vector<UWideString>(), gU531938, GERectangle(GE2DPoint(0.0f, 0.0f), 140.0f,
-                           20.0f), 400, this, theIndex, 0, 2);
-    this->mPlayerComboBox->SetTextBoxBgOpacity(0.4f);
-    theGEText = this->mPlayerComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mPlayerComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mPlayerComboBox->SetBgOpacity(1.0f);
-    this->AddControl(this->mPlayerComboBox, 0);
-    this->mPlayerComboBox->SetDisplayMode(kDisplayModeHidden);
-    theIndex++;
-    this->mNewPlayerEvent = EECreateScreenEvent(EE_SCREENS_SE_NEW_PLAYER);
-    this->mPlayerComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, this->mNewPlayerEvent);
-
-    // the top text label
-    this->mLoadTextLabel = new UITextLabel(UWideString(gEmptyString), gU531930, 9,
-                            GERectangle(GE2DPoint(500.0f, 0.0f), 300.0f, (float)gU531930->GetHeight()), this, 0,
-                            theIndex, 0);
-    this->mLoadTextLabel->SetAlignment(kTextAlignRight);
-    this->mLoadTextLabel->SetBgOpacity(0.4f);
-    theGEText = this->mLoadTextLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->AddControl(this->mLoadTextLabel, 0);
-    theIndex++;
-    this->mLoadTextLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mLoadTextLabel->SetAlwaysDirty(true);
-    this->mLoadTextLabel->SetFitRectToText(true);
-
-    // the loading text label
-    this->mHelpLabel = new UITextLabel(UWideString(gEmptyString), gU531934, 0x10, GERectangle(GE2DPoint(0.0f, 0.0f), 400.0f, 400.0f),
-                            this, 1, theIndex, 0);
-    this->mHelpLabel->SetAlignment(kTextAlignLeft);
-    this->mHelpLabel->SetBgOpacity(1.0f);
-    this->mHelpLabel->SetBgColor(GEColor());
-    this->SetUseToolTips(true);
-    this->SetHelpTextTimeDelay(600);
-    theGEText = this->mHelpLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.0f, 0.0f, 0.0f));
-    theGEText->SetIsTransparent(true);
-    this->AddControl(this->mHelpLabel, 0);
-    theIndex++;
-    this->mHelpLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mHelpLabel->SetAlwaysDirty(true);
-    this->mHelpLabel->SetFitRectToText(true);
-
-    this->CreatePanels(theIndex);
-    this->CreateTabButtons(theIndex);
-    this->CreateToolbarButtons(theIndex);
-
-    // the hide-UI check box
-    this->mHideUICheckBox = new UICheckBox(kScenarioEditorHideUICheckBox, UWideString(gEmptyString), gU531934,
-                           GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), this, theIndex, 0, false);
-    this->mHideUICheckBox->SetStringTableID(IDS_HIDE_UI);
-    this->mHideUICheckBox->SetChecked(true);
-    EESEERust* theHideUI = new EESEERust(kSEEHideUI);
-    this->mHideUICheckBox->SetTriggerEvent(kControlTriggerChecked, theHideUI);
-    this->mHideUICheckBox->SetTriggerEvent(kControlTriggerUnchecked, theHideUI);
-    theHideUI->Dereference();
-    this->AddControl(this->mHideUICheckBox, 0);
-    theIndex++;
-    this->mHideUICheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->GetEntityGroup(0)->Enable();
-
-    // the camera
-    this->mWheelZoomEvent = EECreateScreenEvent(EE_SCREENS_CAM_WHEEL_ZOOM);
-    this->SetMouseWheelMoveEvent(this->mWheelZoomEvent);
-    this->mZoomInEvent = EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_IN);
-    theHotKey.SetKey(kKeyRBracket);
-    theHotKey.SetPressedEvent(this->mZoomInEvent);
-    this->AddHotKey(theHotKey, 0);
-    this->mZoomOutEvent = EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_OUT);
-    theHotKey.SetKey(kKeyLBracket);
-    theHotKey.SetPressedEvent(this->mZoomOutEvent);
-    this->AddHotKey(theHotKey, 0);
-    this->mDisableMouseMoveEvent = EECreateScreenEvent(EE_SCREENS_CAM_DISABLE_MOUSE_MOVE);
-    this->mEnableMouseMoveEvent = EECreateScreenEvent(EE_SCREENS_CAM_ENABLE_MOUSE_MOVE);
-    this->mRevolveCameraEvent = EECreateScreenEvent(EE_SCREENS_CAM_REVOLVE);
-    this->mRotateCameraEvent = EECreateScreenEvent(EE_SCREENS_CAM_ROTATE);
-    theHotKey.SetKey(kKeyGrave);
-    theHotKey.SetJustPressedEvent(this->mDisableMouseMoveEvent);
-    theHotKey.SetPressedEvent(this->mRotateCameraEvent);
-    theHotKey.SetJustUnpressedEvent(this->mEnableMouseMoveEvent);
-    this->AddHotKey(theHotKey, 0);
-    UIEvent* theHome = EECreateScreenEvent(EE_SCREENS_SE_HOME_ROTATION);
-    theHotKey.SetKey(kKeyHome);
-    theHotKey.SetJustPressedEvent(theHome);
-    theHotKey.SetPressedEvent(NULL);
-    theHotKey.SetJustUnpressedEvent(NULL);
-    this->AddHotKey(theHotKey, 0);
-    theHome->Dereference();
-
-    // the trigger-only save and load, the grab scroll, the debug hot keys
-    this->AddHotKey(kKeyS, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, new EEUIESaveScenarioTriggersOnly, NULL, 0, false);
-    this->AddHotKey(kKeyL, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_SE_LOAD_TRIGGERS_ONLY), NULL, 0, false);
-    this->mGrabScroll = EECreateGrabScroll(1);
-    this->SetMouseMiddleButtonPressedEvent(this->mGrabScroll);
-    this->SetMouseMiddleButtonUnpressedEvent(this->mGrabScroll);
-    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_TOGGLE_HIDDEN), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_MG_DUMP_MEDIA_EDITOR), NULL, 1, false);
-    this->AddHotKey(kKeyD, kKeyControl, kKeyShift, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_MG_DUMP_MEDIA_EDITOR_ALL), NULL, 1, false);
-    this->mIsSwitching = false;
-    this->mIsSuspended = false;
-    this->mIsUIHidden = false;
-    this->mNumCargoUnits = 0;
-    this->mExitAfterSave = false;
-    this->mTabButtons[kEditorTabMap]->Check();
+    this->mRust = ee_screens_sefm_new(this);
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_BUILD, 0, NULL, NULL);
     this->mC1A0.SetPointsAndMax(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
     gResource->GetString(IDS_SE_MAP_NONE, theText);
     this->SetMusicFileName(theText);
 }
 
-// FUNCTION: EXE 0x59e17a
-// Destroys and frees the mouse wheel zoom event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e1a5
-// Destroys and frees the dump-loaded-media hot key event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e1d0
-// Destroys and frees the show-hidden-units toggle event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e1fb
-// Destroys and frees the zoom hot key event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e226
-// Destroys and frees the disable-mouse-move event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e251
-// Destroys and frees the enable-mouse-move event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e27c
-// Destroys and frees the revolve-camera event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e2a7
-// Destroys and frees the rotate-camera event (scalar deleting destructor, emitted with its vtable)
-
-// ---- 0x19e2d2..0x19eba9 (formerly EEUIEGrabScroll.cpp; one TU with the form) ----
-// The form's events' deleting destructors and the form's own members (once kept as
-// C:\EEX\Empire Earth\Scenario Editor\EEUIEGrabScroll.cpp; file name inferred: no __FILE__). The grab scroll's ctor
-// (0x19e2d2) and dtor (0x19e309) are gone with it: its record is Rust's (ee_screens camera.rs, EECreateGrabScroll).
-#include <windows.h>
-#include "lle/LowLevelEngine.h"
-#include "lle/ESChecksum.h"
-#include "lle/FSFile.h"
-#include "lle/FSBasicFile.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSMemoryFile.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEColor.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GEOrientation.h"
-#include "lle/GERectangle.h"
-#include "lle/GERhombus.h"
-#include "lle/GETransformation.h"
-#include "lle/GEVector.h"
-#include "lle/ISEntity.h"
-#include "lle/PIMModule.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/SEConductor.h"
-#include "lle/SEMixer.h"
-#include "lle/SESample.h"
-#include "lle/TSEvent.h"
-#include "lle/TSReadWriteLock.h"
-#include "lle/TSThread.h"
-#include "lle/TSScheduler.h"
-#include "lle/UILayoutUtility.h"
-#include "lle/UIEntity.h"
-#include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIEvent.h"
-#include "lle/UMFastMath.h"
-#include "lle/URandom.h"
-#include "lle/UString.h"
-#include "lle/UWideString.h"
-#include "ee/EECivilization.h"
-#include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EEUnit.h"
-#include "ee/EESEUnit.h"
-#include "lle/TMPoll.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "lle/GEFont.h"
-#include "lle/GEText.h"
-#include "lle/GELine.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
-#include "lle/UIManager.h"
-#include "lle/UIScrollBar.h"
-#include "lle/UIListBox.h"
-#include "lle/UILBString.h"
-#include "ee/EEAction.h"
-#include "lle/GEBitmap.h"
-#include "lle/UIButton.h"
-#include "lle/UICheckBox.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIComboBox.h"
-#include "lle/UITextLabel.h"
-#include "lle/UIFullBackground.h"
-#include "ee/EEAScroll.h"
-#include "ee/EEUIMiniMap.h"
-#include "ee/EEUIFSEMainButton.h"
-#include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEUIFSEUndo.h"
-#include "ee/EEUIFSERedo.h"
-#include "ee/EESEEditorTab.h"
-#include "ee/EEMouse.h"
-
-void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (EEGhostUnit.cpp: the ghost at the mouse)
-
-// FUNCTION: EXE 0x59e32f
-// Destroys and frees the new-player event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e35a
-// Destroys and frees the home-rotation event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e385
-// Destroys and frees the trigger-only save event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x59e3b0
-// Destroys and frees the trigger-only load event (scalar deleting destructor, emitted with its vtable)
+// FUNCTION: EXE 0x59e17a .. 0x59e2a7, 0x59e32f .. 0x59e3b0
+// The form's events' scalar deleting destructors (the wheel zoom, the media dump, the hidden toggle, the zoom keys,
+// the mouse move keys, the camera's revolve and rotate, the new player, the home rotation, the trigger-only save
+// and load): screen events and EESEERusts now
 
 // SYNTHETIC: EXE 0x59e3db
 // (the scalar deleting destructor, emitted with the vtable; slot EEUIFScenarioEditor+0x0)
 
 // FUNCTION: EXE 0x59e3f7
 // Destroys the editor form, releasing its events, textures and edge scroll and deleting its tabs and controls
+// (editor_form.rs)
 EEUIFScenarioEditor::~EEUIFScenarioEditor()
 {
-    this->mWheelZoomEvent->Dereference();
-    this->mRevolveCameraEvent->Dereference();
-    this->mRotateCameraEvent->Dereference();
-    this->mEnableMouseMoveEvent->Dereference();
-    this->mDisableMouseMoveEvent->Dereference();
-    this->mEdgeScroll->Dereference();
-    this->mNewPlayerEvent->Dereference();
-    this->mPanelBackground->Dereference();
-    for (long i = 0; i < 7; i++) {
-        delete this->mTabButtons[i];
-        delete this->mTabGroups[i];
-    }
-    this->mButtonTexture->Dereference();
-    delete[] this->mTabButtons;
-    delete this->mMiniMap;
-    delete this->mPoll;
-    delete this->mUndoButton;
-    delete this->mRedoButton;
-    delete this->mBrushGroup;
-    delete this->mFullBackground;
-    delete this->mLoadTextLabel;
-    delete this->mLoadButton;
-    delete this->mTestButton;
-    delete this->mSaveButton;
-    delete this->mExitButton;
-    delete this->mQuickSaveButton;
-    delete this->mQuickLoadButton;
-    delete this->mCivBuilderButton;
-    delete this->mHideUICheckBox;
-    delete this->mPlayerComboBox;
-    delete this->mHelpLabel;
-    this->mZoomInEvent->Dereference();
-    this->mZoomOutEvent->Dereference();
-    this->mGrabScroll->Dereference();
-    EEReleaseGrabScroll(1);
+    ee_screens_sefm_free(this->mRust);
 }
 
 // FUNCTION: EXE 0x59e606
 // Adds a unit to the editor selection, showing the cargo panel for a placed carrier and the status of a lone unit
 void EEUIFScenarioEditor::SelectUnit(EEUnit* inUnit)
 {
-    inUnit->Reference();
-    this->mSelectedUnits.push_back(inUnit);
-    inUnit->mIsEditorSelected = true;
-    if (inUnit->mTileNode != NULL &&
-        (inUnit->mComplexUnit->mCargoRoom > 0 || inUnit->mComplexUnit->GetNumCargoUnits() > 0)) {
-        this->mNumCargoUnits++;
-        this->GetUnitScreen()->ShowCargo(true);
-    }
-    if (this->mSelectedUnits.size() == 1)
-        this->GetUnitScreen()->ShowUnitStatus(inUnit);
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_UNIT, 0, inUnit, NULL);
 }
-
-#include "lle/UIFullBackground.h"
-#include "ee/EmpireEarth.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-#include "ee/EEGraphics.h"
-#include "ee/EEMouse.h"
-#include "ee/EEGamePreferences.h"
-#include "GEWindow.h"
-extern RTSRenderObject* gU56534C;
 
 // FUNCTION: EXE 0x59e68a
 // Closes the editor form, restoring the game camera mode, the game render list and the full-window mouse bounds
@@ -667,7 +246,7 @@ void EEUIFScenarioEditor::Close()
     gFreeCamera = false;
     ::gWorld.mCameraControl.SetMode(gGamePreferences.mSettings.mZoomStyle);
     ::gWorld.mCameraControl.SetChanged();
-    this->mFullBackground->UnloadBackground();
+    ((UIFullBackground*)this->GetSlot(EE_SCREENS_SEFM_FULL_BACKGROUND))->UnloadBackground();
     gGraphics->PostClearRenderObjects();
     gGraphics->PostPushRenderObject(gU56534C);
     gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
@@ -675,432 +254,38 @@ void EEUIFScenarioEditor::Close()
     UIForm::Close();
 }
 
-
 // FUNCTION: EXE 0x59e72c
-// Prepares the frame: dirties the game view (unless full view) and mini map, moves the placement ghost,
-// updates the current tab group and the edge scroll (unless full view or a control holds the mouse)
+// Prepares the frame: dirties the game view (unless full view) and mini map, moves the placement ghost, updates the
+// current tab group and the edge scroll (unless full view or a control holds the mouse) (editor_form.rs)
 long EEUIFScenarioEditor::CopyData()
 {
-    GERectangle theRectangle = gViewport.GetViewRectangle();
-    if (!sEditorTabs[this->mCurrentTab].mFullView) {
-        theRectangle.SetRight(theRectangle.GetRight() - 1.0f);
-        theRectangle.SetBottom(theRectangle.GetBottom() - 1.0f);
-        this->GetManager()->AddDirtyRectangle(theRectangle, this);
-    }
-    this->mMiniMap->SetDirty(true);
-    this->mWasUIHidden = this->mIsUIHidden;
-    EEPreviewPlacement(gMouse->mPosition);
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Update();
-    if (!sEditorTabs[this->mCurrentTab].mFullView
-        && (!this->GetIsMouseCaptured() || sEditorTabs[this->mCurrentTab].mGroup == 1 || sEditorTabs[this->mCurrentTab].mGroup == 2))
-        this->mEdgeScroll->Update(gMouse->mPosition);
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_COPY_DATA, 0, NULL, NULL);
     return UIForm::CopyData();
 }
 
-#include "ee/EESEEditorTab.h"
-#include "ee/EEAction.h"
-#include "lle/GEBitmap.h"
-#include "lle/UIButton.h"
-#include "lle/UResourceFile.h"
-#include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEUIFSEUndo.h"
-#include "ee/EEUIFSERedo.h"
-#include "lle/GEText.h"
-#include "lle/GEViewport.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "lle/GEScreen.h"
-#include "lle/GERasterizer.h"
-#include "lle/UIFullBackground.h"
-#include "ee/EmpireEarth.h"
-extern GEFont* gU531930;
-
 // FUNCTION: EXE 0x59e80f
-// Loads the bottom panel texture (scenpart) and the full-screen tab background (Scenfull)
-// NEAR:  at the start makes this bind_only, but LostDebug.h would have to be included before the
-// unit's later headers (that reorders its .rdata$r RTTI COMDATs), so it is not applied. The texture manager goes
-// through a local: the original loads it before the name temporary.
-void EEUIFScenarioEditor::CreateBackground()
-{
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = 16;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = false;
-    theDescription.mCreateMIPMaps = true;
-    GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
-    GEScreen* theScreen = NULL;
-    for (unsigned long i = 0; i < theRasterizer->GetScreenCount(); i++) {
-        if (theRasterizer->GetIsScreenActivated(i)) {
-            theScreen = theRasterizer->GetScreen(i);
-            break;
-        }
-    }
-    GETextureManager* theManager = theScreen->GetTextureManager();
-    GETexture* theTexture = theManager->LoadTexture("textures\\scenpart", theDescription);
-    theTexture->SetFrame(0);
-    theTexture->SetStageAlphaMode(kStageOpTexture, -1);
-    theTexture->SetStageColorMode(kStageOpTexture, -1);
-    theTexture->SetStageMinFilterMode(0, -1);
-    theTexture->SetStageMagFilterMode(0, -1);
-    theTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-    theTexture->SetStageMipMapBias(-1.0f, -1);
-    theTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
-    this->mPanelBackground = new GEBitmap;
-    this->mPanelBackground->SetTexture(theTexture, gScreenIndex);
-    this->mR1F0 = GERectangle(0.0f, 606.0f, 1023.0f, 767.0f);
-    this->mFullBackground = new UIFullBackground("textures\\Scenfull", 4, 3, this, 1024, 768);
-}
+// Loads the bottom panel texture (scenpart) and the full-screen tab background (Scenfull) (CreateBackground: the
+// host's EE_SCREENS_SEFM_OP_BASICS)
 
 // SYNTHETIC: EXE 0x59e9de
 // (the scalar deleting destructor, emitted with the vtable; slot UIFullBackground+0x0)
 
 // FUNCTION: EXE 0x59e9fb
-// Creates the brush group, the undo and redo buttons and the seven tab groups
-void EEUIFScenarioEditor::CreatePanels(unsigned long& ioIndex)
-{
-    UWideString theText;
-    GEText* theGEText;
-    GE2DPoint theLocation(5.0f, 616.0f);
-    this->mBrushGroup = new EEUIFSEBrushGroup(ioIndex, theLocation, this, gU531930);
-    theLocation.SetXY(5.0f, 718.0f);
-    this->mUndoButton = new EEUIFSEUndo(0, 0, 0, 0, theLocation, 65, 25, this, ioIndex);
-    ioIndex++;
-    gResource->GetString(IDS_UNDO, theText);
-    this->mUndoButton->SetText(theText, gU531930);
-    theGEText = this->mUndoButton->GetGEText();
-    theGEText->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-    theGEText->SetIsTransparent(true);
-    theLocation.SetXY(75.0f, 718.0f);
-    this->mRedoButton = new EEUIFSERedo(1, 0, 0, 0, theLocation, 65, 25, this, ioIndex);
-    ioIndex++;
-    gResource->GetString(IDS_REDO, theText);
-    this->mRedoButton->SetText(theText, gU531930);
-    theGEText = this->mRedoButton->GetGEText();
-    theGEText->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-    theGEText->SetIsTransparent(true);
-    this->mTabGroups.resize(7, static_cast<EEUIFSEMainGroup*>(0));
-    for (unsigned long i = 0; i < 7; i++) {
-        long theGroup = sEditorTabs[i].mGroup;
-        this->mTabGroups[theGroup] = this->CreateTabGroup(theGroup, ioIndex);
-    }
-}
-
-// ---- 0x19eba9..0x1a0315 (formerly the head of EEUIEOpenCivBuilder.cpp) ----
-// The tab and tool bar buttons, the form's remaining members and the quick load/save events (once kept as
-// C:\EEX\Empire Earth\Scenario Editor\EEUIEOpenCivBuilder.cpp, EESEEQuickLoad.cpp and EESEEQuickSave.cpp;
-// file names inferred: no __FILE__).
-#include <windows.h>
-#include "lle/LowLevelEngine.h"
-#include "lle/ESChecksum.h"
-#include "lle/FSFile.h"
-#include "lle/FSBasicFile.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSMemoryFile.h"
-#include "lle/GE2DPoint.h"
-#include "lle/GEColor.h"
-#include "lle/GE3DLine.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GE3DPoint.h"
-#include "lle/GEVertexArray.h"
-#include "lle/GEOrientation.h"
-#include "lle/GERectangle.h"
-#include "lle/GERhombus.h"
-#include "lle/GETransformation.h"
-#include "lle/GEVector.h"
-#include "lle/ISEntity.h"
-#include "lle/PIMModule.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/SEConductor.h"
-#include "lle/SEMixer.h"
-#include "lle/SESample.h"
-#include "lle/TSEvent.h"
-#include "lle/TSReadWriteLock.h"
-#include "lle/TSThread.h"
-#include "lle/TSScheduler.h"
-#include "lle/UILayoutUtility.h"
-#include "lle/UIEntity.h"
-#include "lle/UIControl.h"
-#include "lle/UIForm.h"
-#include "lle/UIEvent.h"
-#include "lle/UMFastMath.h"
-#include "lle/URandom.h"
-#include "lle/UString.h"
-#include "lle/UWideString.h"
-#include "lle/GEFont.h"
-#include "lle/GEBitmap.h"
-#include "lle/GEText.h"
-#include "lle/UIButton.h"
-#include "lle/UIRadioButton.h"
-#include "ee/EmpireEarth.h"
-#include "lle/UResourceFile.h"
-#include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EEUIFSERBBrush.h"
-#include <algorithm>
-#include "lle/UITextLabel.h"
-#include "ee/EECivilization.h"
-#include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIFSEMainGroup.h"
-#include "ee/EEUnit.h"
-#include "ee/EESEUnit.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
-#include "lle/GEScreen.h"
-#include "lle/GEViewport.h"
-#include "lle/GERasterizer.h"
-#include "lle/UIManager.h"
-#include "ee/EEUIManager.h"
-#include "ee/EEUIFSEMainButton.h"
-#include "ee/EEAction.h"
-#include "ee/EEUserInterface.h"
-#include "ee/EESEAChangeLoadText.h"
-#include "ee/EESELoadThread.h"
-#include "ee/RTSWorld.h"
-#include "ee/EEWorld.h"
-
-#include "lle/UIEntityGroup.h"
-#include "lle/UISlider.h"
-#include "ee/EEUIFSEElevation.h"
-#include "lle/GELine.h"
-#include "ee/EEUIMiniMap.h"
-#include "ee/RTSGraphics.h"
-#include "ee/EEGraphics.h"
-
-// The render-list API and object (defined in EERenderObject.cpp)
-void EEPostGraphicsAll();
-extern RTSRenderObject* gU56534C;
-
-// The seven editor tabs, original VA 0x8c46d0, stride 0x20 (provisional names).
-// 0x19eba9 reads order/help/normal+pressed cells/flag while constructing the buttons;
-// 0x19ef5a dispatches group numbers; 0x19f615 reads full-view and brush flags.
-// Fundamental fields keep the original static payload (no point-constructor init chain).
-#include "ee/EESEEditorTab.h"
-EESEEditorTab sEditorTabs[7] = {
-    {0, 0, 0x213a,   0.0f, 50.0f,  32.0f, 50.0f,  1, false, false},
-    {1, 1, 0x213b, 128.0f, 50.0f, 160.0f, 50.0f,  2, false, true},
-    {2, 2, 0x213c,  64.0f, 50.0f,  96.0f, 50.0f,  3, false, true},
-    {3, 3, 0x213d,   0.0f, 82.0f,  32.0f, 82.0f,  6, false, false},
-    {4, 4, 0x213e, 192.0f, 50.0f, 224.0f, 50.0f, 14, false, false},
-    {5, 5, 0x1b61,  64.0f, 82.0f,  96.0f, 82.0f,  4, true,  false},
-    {6, 6, 0x2143, 128.0f, 82.0f, 160.0f, 82.0f,  7, true,  false}
-};
-
-// The tool bar buttons (0x4c47b0, right after sEditorTabs; CreateToolbarButtons walks the six of them): the control id, the
-// 32x32 destination, the normal and pressed source corners in mButtonTexture, the help string (provisional names)
-struct EESEToolbarButton {
-    unsigned long mID;
-    unsigned long mX;
-    unsigned long mY;
-    unsigned long mNormalX;
-    unsigned long mNormalY;
-    unsigned long mPressedX;
-    unsigned long mPressedY;
-    unsigned long mHelp;
-};
-EESEToolbarButton sToolbarButtons[6] = {
-    {0xc, 0x287, 0x2e0, 0x80, 0x72, 0xa0, 0x72, 0x2140},
-    {0xd, 0x2aa, 0x2e0, 0x00, 0xc4, 0x20, 0xc4, 0x2141},
-    {0xb, 0x2cd, 0x2e0, 0x40, 0x72, 0x60, 0x72, 0x1b59},
-    {0xa, 0x2f0, 0x2e0, 0x00, 0x72, 0x20, 0x72, 0x1b58},
-    {0xe, 0x313, 0x2e0, 0x40, 0xc4, 0x60, 0xc4, 0x2142},
-    {0xf, 0x336, 0x2e0, 0x80, 0xc4, 0xa0, 0xc4, 0x213f}
-};
-
-
-#include "lle/UIFullBackground.h"
-
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "ee/EERenderObject.h"
-#include "ee/EEROTerrain.h"
-
-#include "lle/UIListBox.h"
-#include "lle/UILBString.h"
-#include "lle/UIEditBox.h"
-#include "lle/UIComboBox.h"
-#include "ee/EESEPlayerScreen.h"
-extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain newed in Empire Earth.cpp)
-
-#include "lle/GELine.h"
-#include "ee/EEUIMiniMap.h"
-#include "ee/EEMiniMap.h"
-#include "lle/TMPoll.h"
-#include "ee/EEAScroll.h"
-#include "ee/EEAmbientSoundManager.h"
-#include "ee/EEMusicManager.h"
-#include "ee/EEScenarioManager.h"
-#include "ee/EESEARust.h"
-#include "lle/GEText.h"
-#include "ee/EEUIFSEPaint.h"
-#include "ee/EEAQuickSaveLoad.h"
-#include "ee/EEUIFSEMap.h"
-#include "ee/EEUIFSETerrain.h"
-#include "lle/UICheckBox.h"
-#include "ee/EESETSBaseObject.h"
-extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
-extern GEFont* gU531938;                    // 0x531938
-#include "ee/EESETriggerScreen.h"
-#include "ee/EESEInstructions.h"
-#include "ee/EESEAQuickSaveLoad.h"
-extern unsigned long& gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
-extern bool gSightUpdatesEnabled;
-extern GEViewport gViewport;
+// Creates the brush group, the undo and redo buttons and the seven tab groups (CreatePanels, editor_form.rs)
 
 // FUNCTION: EXE 0x59eba9
-// Creates the seven tab buttons from sEditorTabs along the bottom and the civilization builder button after them
-void EEUIFScenarioEditor::CreateTabButtons(unsigned long& ioIndex)
-{
-    GERectangle theDestination, theSource;
-    float theX;
-    GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
-    unsigned long i; for (i = 0; i < theRasterizer->GetScreenCount(); i++) {
-        if (theRasterizer->GetIsScreenActivated(i)) {
-            theRasterizer->GetScreen(i);
-            break;
-        }
-    }
-    this->mTabButtons = new EEUIFSEMainButton*[7];
-    for (i = 0; i < 7; i++) {
-        const EESEEditorTab& theTab = sEditorTabs[i];
-        this->mTabButtons[i] = new EEUIFSEMainButton(220 + i, theTab.mFlag, this->mButtonTexture,
-            GE2DPoint(theTab.mNormalX, theTab.mNormalY), GE2DPoint(theTab.mPressedX, theTab.mPressedY),
-            GE2DPoint((float)theTab.mOrder * 44.0f, 735.0f), this, i, ioIndex, i == 0);
-        this->mTabButtons[i]->SetStringTableID(theTab.mHelp);
-        ioIndex++;
-        this->AddControl(this->mTabButtons[i], 0);
-    }
-    this->mCurrentEntityGroup = sEditorTabs[0].mFlag;
-    this->mCurrentTab = this->mTabButtons[kEditorTabMap]->mTab;
-    GEBitmap* theNormal = new GEBitmap;
-    GEBitmap* thePressed = new GEBitmap;
-    theNormal->SetTexture(this->mButtonTexture, this->GetManager()->GetScreen());
-    thePressed->SetTexture(this->mButtonTexture, this->GetManager()->GetScreen());
-    theSource = GERectangle(192.0f, 116.0f, 224.0f, 148.0f);
-    theX = this->mTabButtons[6]->GetRectangle().GetRight() + 12.0f;
-    theDestination.SetTop(735.0f);
-    theDestination.SetLeft(theX);
-    theDestination.SetBottom(735.0f + 32.0f - 1.0f);
-    theDestination.SetRight(theX + 32.0f - 1.0f);
-    theNormal->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetManager()->GetScreen());
-    theSource = GERectangle(224.0f, 116.0f, 256.0f, 148.0f);
-    thePressed->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetManager()->GetScreen());
-    this->mCivBuilderButton = new UIButton(17, theNormal, NULL, thePressed, theDestination, this, ioIndex, 0);
-    theNormal->Dereference();
-    thePressed->Dereference();
-    this->mCivBuilderButton->SetStringTableID(IDS_CIVILIZATION_BUILDER_TOOL);
-    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_OPEN_CIV_BUILDER);
-    this->mCivBuilderButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    this->AddControl(this->mCivBuilderButton, 0);
-    ioIndex++;
-}
+// Creates the seven tab buttons along the bottom and the civilization builder button after them (CreateTabButtons,
+// editor_form.rs over sEditorTabs 0x4c46d0)
 
 // FUNCTION: EXE 0x59ef2f
-// Destroys and frees the open-civilization-builder event (scalar deleting destructor, emitted with its vtable)
+// Destroys and frees the open-civilization-builder event (scalar deleting destructor: a screen event now)
 
 // FUNCTION: EXE 0x59ef5a
-// Creates the panel group of a tab (map, elevation, terrain, units, triggers, players, instructions); NULL otherwise
-EEUIFSEMainGroup* EEUIFScenarioEditor::CreateTabGroup(long inGroup, unsigned long& ioIndex)
-{
-    switch (inGroup) {
-    case kEditorTabMap:
-        return new EEUIFSEMap(ioIndex, this, gU531930);
-    case kEditorTabElevation:
-        return new EEUIFSEElevation(this->mEdgeScroll, this->mBrushGroup, ioIndex, this, gU531930);
-    case kEditorTabTerrain:
-        return new EEUIFSETerrain(this->mEdgeScroll, this->mBrushGroup, ioIndex, this, gU531930);
-    case kEditorTabUnits:
-        return new EESEUnit(ioIndex, this, gU531938, this->mPlayerComboBox);
-    case kEditorTabTriggers:
-        return new EESETriggerScreen(ioIndex, this, gU531938);
-    case kEditorTabPlayers:
-        return new EESEPlayerScreen(ioIndex, this, gU531938, this->mPlayerComboBox);
-    case kEditorTabInstructions:
-        return new EESEInstructions(ioIndex, this, gU531938);
-    }
-    return NULL;
-}
+// Creates the panel group of a tab (CreateTabGroup: the host's EE_SCREENS_SEFM_OP_TAB_GROUP)
 
 // FUNCTION: EXE 0x59f0b1
-// Creates the six tool bar buttons from sToolbarButtons (quick load, quick save, save, load, test, exit) and their
-// events; the two quick buttons share one quick save/load action
-void EEUIFScenarioEditor::CreateToolbarButtons(unsigned long& ioIndex)
-{
-    GERectangle theDestination;
-    GERectangle theSource;
-    unsigned long theScreen = this->GetManager()->GetScreen();
-    EESEAQuickSaveLoad* theQuickSaveLoad = new EESEAQuickSaveLoad(gScenarioExtension);
-    for (long i = 0; i < 6; i++) {
-        const EESEToolbarButton& theButton = sToolbarButtons[i];
-        GEBitmap* theNormal = new GEBitmap;
-        GEBitmap* thePressed = new GEBitmap;
-        theNormal->SetTexture(this->mButtonTexture, theScreen);
-        thePressed->SetTexture(this->mButtonTexture, theScreen);
-        theDestination.SetLeft((float)theButton.mX);
-        theDestination.SetRight((float)(theButton.mX + 31));
-        theDestination.SetTop((float)theButton.mY);
-        theDestination.SetBottom((float)(theButton.mY + 31));
-        theSource.SetLeft((float)theButton.mNormalX);
-        theSource.SetRight((float)(theButton.mNormalX + 32));
-        theSource.SetTop((float)theButton.mNormalY);
-        theSource.SetBottom((float)(theButton.mNormalY + 32));
-        theNormal->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, theScreen);
-        theSource.SetLeft((float)theButton.mPressedX);
-        theSource.SetRight((float)(theButton.mPressedX + 32));
-        theSource.SetTop((float)theButton.mPressedY);
-        theSource.SetBottom((float)(theButton.mPressedY + 32));
-        thePressed->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, theScreen);
-        UIButton* theControl = new UIButton(theButton.mID, theNormal, NULL, thePressed,
-                                            GERectangle(GE2DPoint(theDestination.GetLeft(), theDestination.GetTop()),
-                                                        32.0f, 32.0f),
-                                            this, ioIndex, 0);
-        theControl->SetStringTableID(theButton.mHelp);
-        ioIndex++;
-        this->AddControl(theControl, 0);
-        UIEvent* theEvent;
-        switch (theButton.mID) {
-        case kToolbarButtonLoad:
-            theEvent = EECreateScreenEvent(EE_SCREENS_SE_LOAD_SCENARIO);
-            this->mLoadButton = theControl;
-            break;
-        case kToolbarButtonSave:
-            theEvent = EECreateScreenEvent(EE_SCREENS_SE_SAVE_SCENARIO);
-            this->mSaveButton = theControl;
-            break;
-        case kToolbarButtonQuickLoad:
-            this->mQuickLoadButton = theControl;
-            theEvent = new EESEERust(kSEEQuickLoad, static_cast<EEAction*>(theQuickSaveLoad));
-            break;
-        case kToolbarButtonQuickSave:
-            theEvent = new EESEERust(kSEEQuickSave, static_cast<EEAction*>(theQuickSaveLoad));
-            this->mQuickSaveButton = theControl;
-            break;
-        case kToolbarButtonTest:
-            theEvent = EECreateScreenEvent(EE_SCREENS_SE_TEST_SCENARIO);
-            this->mTestButton = theControl;
-            break;
-        case kToolbarButtonExit:
-            theEvent = EECreateScreenEvent(EE_SCREENS_SE_EXIT_SCENARIO);
-            this->mExitButton = theControl;
-            break;
-        default:
-            theEvent = NULL;
-            break;
-        }
-        theControl->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-        theEvent->Dereference();
-        theNormal->Dereference();
-        thePressed->Dereference();
-    }
-    theQuickSaveLoad->Dereference();
-}
+// Creates the six tool bar buttons and their events; the two quick buttons share one quick save/load action
+// (CreateToolbarButtons, editor_form.rs over sToolbarButtons 0x4c47b0)
 
 // FUNCTION: EXE 0x59f4df
 // Destroys and frees the quick save/load action (scalar deleting destructor, emitted with its vtable)
@@ -1109,16 +294,8 @@ void EEUIFScenarioEditor::CreateToolbarButtons(unsigned long& ioIndex)
 // Draws the full-view background or the bottom panel, then the current tab group; returns the full view's result
 long EEUIFScenarioEditor::DrawBackground(const GERectangle& inRectangle)
 {
-    GERectangle theClip;
-    long theResult = 0;
-    if (sEditorTabs[this->mCurrentTab].mFullView) {
-        theResult = this->mFullBackground->DrawBackground(inRectangle);
-    } else if (inRectangle.And(this->mR1F0, theClip)) {
-        GERectangle theSource(0.0f, 0.0f, 256.0f, 256.0f);
-        UIForm::DrawBackground(this->mPanelBackground, theClip, theSource, this->mR1F0);
-    }
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Draw(inRectangle);
-    return theResult;
+    float theRectangle[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()};
+    return ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DRAW_BACKGROUND, 0, NULL, theRectangle);
 }
 
 // FUNCTION: EXE 0x59f5b3
@@ -1132,373 +309,694 @@ long EEUIFScenarioEditor::DrawPolygons()
 // Leaves the current tab: hides the brush highlight, leaves its group (unless switching), disables its controls
 void EEUIFScenarioEditor::LeaveTab()
 {
-    this->mBrushGroup->mIsHighlightShown = false;
-    if (!this->mIsSwitching)
-        this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Leave();
-    if (this->mIsEntityGroupEnabled) {
-        this->mIsEntityGroupEnabled = false;
-        this->GetEntityGroup(this->mCurrentEntityGroup)->Disable();
-    }
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_LEAVE_TAB, 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59f615
 // Switches to a tab: enters or leaves full view as needed, enables its controls, enters and loads its group
 void EEUIFScenarioEditor::SelectTab(unsigned char inFlag, long inTab)
 {
-    if (sEditorTabs[this->mCurrentTab].mFullView && !sEditorTabs[inTab].mFullView)
-        this->LeaveFullView();
-    else if (!sEditorTabs[this->mCurrentTab].mFullView && sEditorTabs[inTab].mFullView)
-        this->EnterFullView();
-    this->LeaveTab();
-    this->mCurrentTab = inTab;
-    this->GetEntityGroup(inFlag)->Enable();
-    this->mIsEntityGroupEnabled = true;
-    this->mCurrentEntityGroup = inFlag;
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Enter();
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Load();
-    if (sEditorTabs[this->mCurrentTab].mBrush)
-        this->mBrushGroup->mIsHighlightShown = true;
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SELECT_TAB, (int32_t)(inFlag | (inTab << 8)), NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59f6e9
 // Leaves the editor through the load thread, to test the scenario or to quit, back on the map tab; suspends the form
 void EEUIFScenarioEditor::ExitEditor(bool inTestScenario)
 {
-    this->mTabButtons[kEditorTabMap]->CheckDirect();
-    this->mIsSwitching = true;
-    if (inTestScenario) {
-        gWorld.RebuildActiveUnits();
-        if (gUIManager->mInScenarioEditor == true)
-            this->mLoadThread->Post404();
-        else
-            this->mLoadThread->Post405();
-    } else
-        this->mLoadThread->Post401();
-    this->mLoadThread = NULL;
-    this->mIsSwitching = false;
-    this->mIsSuspended = true;
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_EXIT_EDITOR, inTestScenario ? 1 : 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59f757
 // Resumes the editor after a load and reloads the current tab group
 void EEUIFScenarioEditor::ResumeCurrentGroup()
 {
-    this->mIsSuspended = false;
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Load();
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_RESUME_GROUP, 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59f77b
 // Suspends the editor and passes an event to the load thread, which posts it to the user interface
 void EEUIFScenarioEditor::PostLoadEvent(UReferenceCounter* inObject)
 {
-    this->mIsSuspended = true;
-    this->mLoadThread->Post40B(inObject);
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_LOAD_EVENT, 0, inObject, NULL);
 }
 
 // FUNCTION: EXE 0x59f794
 // Opens the editor: editor camera, backgrounds, paused music and ambient sound, editor game view and mini map,
-// enters the current tab; posts the exit action if a save asked to exit afterwards
+// enters the current tab; posts the exit action if a save asked to exit afterwards (editor_form.rs)
 void EEUIFScenarioEditor::Open()
 {
-    GETransformation theTransformation;
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    this->mIsSwitching = true;
-    this->mIsSuspended = false;
-    gWorld.mCameraControl.SetMode(2);
-    gWorld.RefreshUnits();
-    gSightUpdatesEnabled = false;
-    theTransformation.SetOrientationYPR(0.7853981852531433f, -0.6108652353286743f, 0.0f);
-    gWorld.mCameraControl.SetOffsetTurn(theTransformation, false);
-    gWorld.mCameraControl.SetChanged();
-    if (this->mLoadThread == NULL) this->mLoadThread = new EESELoadThread(this, 0);
-    this->mFullBackground->LoadBackground(theDescription);
-    if (sEditorTabs[this->mCurrentTab].mFullView) this->EnterFullView();
-    else this->LeaveFullView();
-    gGraphics->PostFadeIn(0);
-    this->GetPlayerScreen()->Refresh();
-    gMusicManager->Pause();
-    gAmbientSoundManager.StopSounds();
-    gAmbientSoundManager.Pause();
-    this->mEdgeScroll->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
-                                (float)gGameWindow->GetHeight() - 1.0f);
-    gFreeCamera = true;
-    gB529065 = true;
-    this->mR1E0 = gViewport.GetViewRectangle();
-    EESetGameViewRectangle(GERectangle(0.0f, 0.0f, 1024.0f, 606.0f));
-    gB529066 = false;
-    gCameraFollowing = false;
-    gB529068 = false;
-    if (gMiniMap != NULL) gMiniMap->RefreshView();
-    EEUIMiniMap::Update(gMiniMap);
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Enter();
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Load();
-    gWorld.mScenarioManager->mIsMovingCamera = false;
-    gMiniMap->Redraw();
-    UIForm::Open();
-    this->mHelpLabel->SetDisplayMode(kDisplayModeHidden);
-    this->SetHelpTextLabel(this->mHelpLabel);
-    this->mIsSwitching = false;
-    if (this->mExitAfterSave != true)
-        return;
-    EESEARust* theAction = new EESEARust(kSEAExit);
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    this->mExitAfterSave = false;
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_OPEN, 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59fa3b
 // Suspends the editor and passes a loaded object to the load thread to show
 void EEUIFScenarioEditor::PostShowLoadedObject(UReferenceCounter* inObject)
 {
-    this->mIsSuspended = true;
-    this->mLoadThread->Post40C(inObject);
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_POST_SHOW_LOADED, 0, inObject, NULL);
 }
 
 // FUNCTION: EXE 0x59fa54
 // Deselects every selected unit and hides the cargo panel and the unit status
 void EEUIFScenarioEditor::ClearSelection()
 {
-    while (this->mSelectedUnits.size() != 0) {
-        EEUnit* theUnit = this->mSelectedUnits.back();
-        theUnit->mIsEditorSelected = false;
-        theUnit->Dereference();
-        this->mSelectedUnits.pop_back();
-    }
-    this->mNumCargoUnits = 0;
-    this->GetUnitScreen()->ShowCargo(false);
-    this->GetUnitScreen()->ShowUnitStatus(NULL);
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_CLEAR_SELECTION, 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59fab9
 // Removes the first unit from the editor selection, updating the cargo panel and the unit status
 void EEUIFScenarioEditor::DeselectFirstUnit()
 {
-    if (this->mSelectedUnits.size() == 0)
-        return;
-    EEUnit* theUnit = this->mSelectedUnits.front();
-    theUnit->mIsEditorSelected = false;
-    this->mSelectedUnits.erase(this->mSelectedUnits.begin());
-    if (theUnit->mTileNode != NULL &&
-        (theUnit->mComplexUnit->mCargoRoom > 0 || theUnit->mComplexUnit->GetNumCargoUnits() > 0)) {
-        this->mNumCargoUnits--;
-        if (this->mNumCargoUnits == 0)
-            this->GetUnitScreen()->ShowCargo(false);
-    }
-    theUnit->Dereference();
-    this->GetUnitScreen()->ShowUnitStatus(this->GetFirstSelectedUnit());
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_FIRST, 0, NULL, NULL);
 }
-
 
 // FUNCTION: EXE 0x59fb84
 // Removes a unit from the editor selection, updating the cargo panel, and the unit status if it was first
 void EEUIFScenarioEditor::DeselectUnit(EEUnit* inUnit)
 {
-    bool theFirst = false;
-    std::vector<EEUnitHandle<EEUnit> >::iterator theFound;
-    theFound = std::find(this->mSelectedUnits.begin(), this->mSelectedUnits.end(), inUnit);
-    if (theFound == this->mSelectedUnits.end())
-        return;
-    EEUnit* theUnit = *theFound;
-    theUnit->mIsEditorSelected = false;
-    if (theUnit == this->mSelectedUnits[0])
-        theFirst = true;
-    if (theUnit->GetTileNode() != NULL &&
-        (theUnit->GetComplexUnit()->mCargoRoom > 0 || theUnit->GetComplexUnit()->GetNumCargoUnits() > 0)) {
-        this->mNumCargoUnits--;
-        if (this->mNumCargoUnits == 0)
-            this->GetUnitScreen()->ShowCargo(false);
-    }
-    this->mSelectedUnits.erase(theFound);
-    theUnit->Dereference();
-    if (theFirst == true)
-        this->GetUnitScreen()->ShowUnitStatus(this->GetFirstSelectedUnit());
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_DESELECT_UNIT, 0, inUnit, NULL);
 }
-
 
 // FUNCTION: EXE 0x59fc97
 // Makes the current tab group store its settings
 void EEUIFScenarioEditor::RefreshCurrentGroup()
 {
-    this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Store();
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_STORE_GROUP, 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59fcb4
 // Sets the editor's game view rectangle and disables the current tab group while the UI is hidden
 void EEUIFScenarioEditor::SetGameView(const GERectangle& inRectangle, bool inIsUIHidden)
 {
-    EESetGameViewRectangle(inRectangle);
-    this->mIsUIHidden = inIsUIHidden;
-    if (inIsUIHidden == true)
-        this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Disable();
-    else
-        this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->Enable();
+    float theRectangle[4] = {inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom()};
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_GAME_VIEW, inIsUIHidden ? 1 : 0, NULL, theRectangle);
 }
 
 // FUNCTION: EXE 0x59fd09
 // Shows the given loading text in the top label, or hides the label for an empty text
 void EEUIFScenarioEditor::SetLoadText(const UWideString& inText)
 {
-    if (inText.GetLength() > 0) {
-        this->mLoadTextLabel->SetDisplayMode(kDisplayModeShown);
-        this->mLoadTextLabel->SetText(inText);
-    } else
-        this->mLoadTextLabel->SetDisplayMode(kDisplayModeHidden);
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_SET_LOAD_TEXT, inText.GetLength() > 0 ? 1 : 0,
+                         const_cast<UWideString*>(&inText), NULL);
 }
-
 
 // FUNCTION: EXE 0x59fd43
 // Enters full view: resets the game render list to its base object, hides the mini map and redraws all controls
 void EEUIFScenarioEditor::EnterFullView()
 {
-    gGraphics->PostClearRenderObjects();
-    gGraphics->PostPushRenderObject(gU56534C);
-    this->mMiniMap->SetDisplayMode(kDisplayModeHidden);
-    gUIManager->RedrawAll();
-    gUIManager->GetCurrentForm()->SetAllControlsDirty();
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_ENTER_FULL_VIEW, 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59fd91
 // Leaves full view: restores the full game render list, shows the mini map and redraws all controls
 void EEUIFScenarioEditor::LeaveFullView()
 {
-    EEPostGraphicsAll();
-    this->mMiniMap->SetDisplayMode(kDisplayModeShown);
-    gUIManager->RedrawAll();
-    gUIManager->GetCurrentForm()->SetAllControlsDirty();
+    ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_LEAVE_FULL_VIEW, 0, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x59fdc8
 // Handles the editor keys (; quick save, / quick load, T / Shift+T grid mode, 1-8 and Alt+1-8 pick a player),
-// else the tab group's and the form's keys; nothing while suspended
+// else the tab group's and the form's keys; nothing while suspended (editor_form.rs)
 long EEUIFScenarioEditor::UpdateKeyboard()
 {
-    FSFileSpec theUnusedFile;
-    UString theUnusedString;
-    bool theHandled = false;
-    if (this->mIsSuspended)
+    if (ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_KEYBOARD, 0, NULL, NULL) == 0)
         return 0;
-    if (!this->GetIsKeyboardCaptured()) {
-        ISEntity* theKey;
-        gISKeyboard->GetEntity(kKeySemicolon, theKey);
-        if (theKey->JustPressed()) {
-            UIControl* theControl = this->GetControlById(13);
-            if (theControl != NULL) theControl->FireTriggerEvent(kControlTriggerButtonUp);
-            theHandled = true;
-        }
-        gISKeyboard->GetEntity(kKeySlash, theKey);
-        if (theKey->JustPressed()) {
-            UIControl* theControl = this->GetControlById(12);
-            if (theControl != NULL) theControl->FireTriggerEvent(kControlTriggerButtonUp);
-            theHandled = true;
-        }
-        gISKeyboard->GetEntity(kKeyT, theKey);
-        if (theKey->JustPressed()) {
-            gISKeyboard->GetEntity(kKeyShift, theKey);
-            if (theKey->GetValue() != 0)
-                static_cast<EEROTerrain*>(gU56535C)->StepGridMode(true);
-            else
-                static_cast<EEROTerrain*>(gU56535C)->StepGridMode(false);
-            theHandled = true;
-        }
-        if (this->mPlayerComboBox->GetDisplayMode() == kDisplayModeShown) {
-            EESEPlayerScreen* thePlayers = static_cast<EESEPlayerScreen*>(this->mTabGroups[kEditorTabPlayers]);
-            ISEntity* theModifier;
-            unsigned long thePlayer = 0;
-            gISKeyboard->GetEntity(kKeyAlt, theModifier);
-            gISKeyboard->GetEntity(kKey1, theKey);
-            if (theKey->JustPressed()) thePlayer = 1;
-            gISKeyboard->GetEntity(kKey2, theKey);
-            if (theKey->JustPressed()) thePlayer = 2;
-            gISKeyboard->GetEntity(kKey3, theKey);
-            if (theKey->JustPressed()) thePlayer = 3;
-            gISKeyboard->GetEntity(kKey4, theKey);
-            if (theKey->JustPressed()) thePlayer = 4;
-            gISKeyboard->GetEntity(kKey5, theKey);
-            if (theKey->JustPressed()) thePlayer = 5;
-            gISKeyboard->GetEntity(kKey6, theKey);
-            if (theKey->JustPressed()) thePlayer = 6;
-            gISKeyboard->GetEntity(kKey7, theKey);
-            if (theKey->JustPressed()) thePlayer = 7;
-            gISKeyboard->GetEntity(kKey8, theKey);
-            if (theKey->JustPressed()) thePlayer = 8;
-            if (thePlayer > 0) {
-                if (theModifier->GetValue() != 0) thePlayer += 8;
-                if (thePlayer <= thePlayers->GetPlayerCount())
-                    this->mPlayerComboBox->SetCurrentSelection(thePlayer - 1);
-                theHandled = true;
-            }
-        }
-    }
-    if (!theHandled) {
-        if (!this->GetIsKeyboardCaptured())
-            this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->UpdateKeys();
-        return UIForm::UpdateKeyboard();
-    }
-    return 0;
+    return UIForm::UpdateKeyboard();
 }
 
 // FUNCTION: EXE 0x5a0083
 // Passes the mouse to the current tab group unless a control captured it; does nothing while suspended
 long EEUIFScenarioEditor::UpdateMouse()
 {
-    long theResult = 0;
-    if (!this->mIsSuspended) {
-        if (!this->GetIsMouseCaptured())
-            this->mTabGroups[sEditorTabs[this->mCurrentTab].mGroup]->MouseMove(this->GetMouseLocation());
-        theResult = UIForm::UpdateMouse();
-    }
-    return theResult;
+    if (ee_screens_sefm_call(this->mRust, EE_SCREENS_SEFM_UPDATE_MOUSE, 0, NULL, NULL) == 0)
+        return 0;
+    return UIForm::UpdateMouse();
 }
 
-// FUNCTION: EXE 0x5a00c6
-// Creates the quick save/load action (EEAQuickSaveLoad's inline ctor, out of line after its first user
-// CreateToolbarButtons)
+// FUNCTION: EXE 0x5a00c6, 0x5a0102, 0x5a013e
+// The quick save/load action's inline ctor and dtor out of line, and its base's scalar deleting destructor
 
-// FUNCTION: EXE 0x5a0102
-// Destroys the quick save/load action (EEAQuickSaveLoad's inline dtor, out of line: EESEAQuickSaveLoad's ??_G
-// 0x19f4df and its own ??_G call it)
-
-// FUNCTION: EXE 0x5a013e
-// Destroys and frees the base quick save/load action (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x5a015a
-// Creates the hide-UI check box event (EESEEHideUI ctor)
-
-// FUNCTION: EXE 0x5a0196
-// Destroys and frees the hide-UI check box event (scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x5a01c1
-// (the quick load button event's ctor and dtor: ee_screens editor_events.rs, an EESEERust)
-
-// FUNCTION: EXE 0x5a0215
-// (the quick save button event's ctor and dtor: ee_screens editor_events.rs, an EESEERust)
-
-// FUNCTION: EXE 0x5a0269
-// Destroys and frees the load scenario button event
-// (scalar deleting destructor, emitted with its vtable: CreateToolbarButtons news it)
-
-// FUNCTION: EXE 0x5a0294
-// Destroys and frees the save scenario button event
-// (scalar deleting destructor, emitted with its vtable: CreateToolbarButtons news it)
-
-// FUNCTION: EXE 0x5a02bf
-// Destroys and frees the test scenario button event
-// (scalar deleting destructor, emitted with its vtable: CreateToolbarButtons news it)
-
-// FUNCTION: EXE 0x5a02ea
-// Destroys and frees the exit editor button event
-// (scalar deleting destructor, emitted with its vtable: CreateToolbarButtons news it)
+// FUNCTION: EXE 0x5a015a .. 0x5a02ea
+// The hide-UI, quick load and quick save events (EESEERusts) and the load, save, test and exit buttons' screen
+// events: their ctors and scalar deleting destructors
 
 // ICF-FOLDED: EXE 0x4e123d
 // (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void EEUIFScenarioEditor::FnE123D()
 {
+}
+
+// ---- the form's host (editor_form.rs: the ops from 800)
+
+static_assert(EEUIFScenarioEditor::kSlotButtonTexture == EE_SCREENS_SEFM_BUTTON_TEXTURE &&
+                  EEUIFScenarioEditor::kSlotEdgeScroll == EE_SCREENS_SEFM_EDGE_SCROLL &&
+                  EEUIFScenarioEditor::kSlotPanelBackground == EE_SCREENS_SEFM_PANEL_BACKGROUND &&
+                  EEUIFScenarioEditor::kSlotFullBackground == EE_SCREENS_SEFM_FULL_BACKGROUND &&
+                  EEUIFScenarioEditor::kSlotPlayerComboBox == EE_SCREENS_SEFM_PLAYER_COMBO &&
+                  EEUIFScenarioEditor::kSlotBrushGroup == EE_SCREENS_SEFM_BRUSH_GROUP &&
+                  EEUIFScenarioEditor::kSlotGroup == EE_SCREENS_SEFM_GROUP &&
+                  EEUIFScenarioEditor::kSlotTabButton == EE_SCREENS_SEFM_TAB_BUTTON &&
+                  EEUIFScenarioEditor::kSlotQuickSaveButton == EE_SCREENS_SEFM_QUICK_SAVE_BUTTON &&
+                  EEUIFScenarioEditor::kSlotLoadThread == EE_SCREENS_SEFM_LOAD_THREAD &&
+                  EEUIFScenarioEditor::kSlotUIHidden == EE_SCREENS_SEFM_UI_HIDDEN &&
+                  EEUIFScenarioEditor::kSlotWasUIHidden == EE_SCREENS_SEFM_WAS_UI_HIDDEN &&
+                  EEUIFScenarioEditor::kSlotExitAfterSave == EE_SCREENS_SEFM_EXIT_AFTER_SAVE,
+              "editor_form.rs's slots");
+static_assert(kSMConditionObject == 1 && kSMConditionPlayerAttribute == 2 && kSMEffectNone == 0 &&
+                  kSMEffectObject == 1 && kSMEffectPlayer == 2 && kSMObjectActionClassName == 10 &&
+                  kSMObjectActionClassAttribute == 12 && kSMPlayerActionModifyTechTree == 5 &&
+                  kSMTriggerOperatorAnd == 1 && kSMTriggerOperatorOr == 2 && kSEAExit == 3 && kSEEHideUI == 1 &&
+                  kSEEQuickLoad == 3 && kSEEQuickSave == 4 && kToolbarButtonExit == 15 &&
+                  IDS_CIVILIZATION_BUILDER_TOOL == EE_SCREENS_SEFM_IDS_CIVILIZATION_BUILDER_TOOL,
+              "editor_form.rs's numbers");
+
+namespace {
+
+// the keys the form reads or binds (editor_form.rs EE_SCREENS_SEFM_KEY_*)
+const unsigned long sSefmKeys[EE_SCREENS_SEFM_KEY_COUNT] = {
+    kKeySemicolon, kKeySlash, kKeyT, kKeyShift, kKeyAlt, kKey1, kKey2, kKey3, kKey4, kKey5, kKey6, kKey7, kKey8,
+    kKeyRBracket, kKeyLBracket, kKeyGrave, kKeyHome, kKeyS, kKeyL, kKeyTab, kKeyD, kKeyControl, kKeyNone};
+
+GETextureDescription SefmDescription(unsigned long inPixelDepth, bool inHasAlpha)
+{
+    GETextureDescription theDescription;
+    theDescription.mPixelDepth = inPixelDepth;
+    theDescription.mNumMipLevelsToDrop = 0;
+    theDescription.mSurfaceVolatility = 1;
+    theDescription.mFrameFormat = 0;
+    theDescription.mIs3DRenderable = false;
+    theDescription.mIsTransparencyEnabled = false;
+    theDescription.mHasAlpha = inHasAlpha;
+    theDescription.mCreateMIPMaps = true;
+    return theDescription;
+}
+
+void SefmColor(GEText* inText, const GEColor& inColor)
+{
+    inText->SetFgColor(inColor);
+    inText->SetIsTransparent(true);
+}
+
+const GEColor kSefmYellow(0.99607843f, 0.96862745f, 0.1254902f);
+
+// a scenario record's name or description into the caller's buffer: its length
+int32_t SefmText(const UWideString& inText, void* outBuffer, int32_t inCapacity)
+{
+    int32_t theLength = (int32_t)inText.GetTCHARLength();
+    memcpy(outBuffer, (const char*)inText, theLength < inCapacity ? theLength : inCapacity);
+    return theLength;
+}
+
+}   // namespace
+
+extern "C" int32_t ee_screenscpp_sefm(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    return EEUIFScenarioEditor::Host(inOp, p, i, f);
+}
+
+int32_t EEUIFScenarioEditor::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    EEUIFScenarioEditor* theForm = static_cast<EEUIFScenarioEditor*>(p[1]);
+    void** theOut = static_cast<void**>(p[0]);
+    UWideString theText;
+    switch (inOp) {
+    case EE_SCREENS_SEFM_OP_BASICS: {   // the ctor's texture, scroll and poll, then CreateBackground
+        GETextureDescription theDescription = SefmDescription(gTexturePixelDepth, true);
+        GETexture* theTexture = gRasterizer->GetTextureManager(theForm->GetManager()->GetScreen())
+                                    ->LoadTexture("textures\\SE Buttons", theDescription);
+        theTexture->Reference();
+        theOut[0] = theTexture;
+        theOut[1] = new EEAScroll;
+        TMPoll* thePoll = new TMPoll(500, 0, false);
+        thePoll->Start();
+        theOut[2] = thePoll;
+        theDescription = SefmDescription(16, false);
+        GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
+        GEScreen* theScreen = NULL;
+        for (unsigned long k = 0; k < theRasterizer->GetScreenCount(); k++) {
+            if (theRasterizer->GetIsScreenActivated(k)) {
+                theScreen = theRasterizer->GetScreen(k);
+                break;
+            }
+        }
+        GETextureManager* theManager = theScreen->GetTextureManager();
+        theTexture = theManager->LoadTexture("textures\\scenpart", theDescription);
+        theTexture->SetFrame(0);
+        theTexture->SetStageAlphaMode(kStageOpTexture, -1);
+        theTexture->SetStageColorMode(kStageOpTexture, -1);
+        theTexture->SetStageMinFilterMode(0, -1);
+        theTexture->SetStageMagFilterMode(0, -1);
+        theTexture->SetStageMipFilterMode(kMipFilterNone, -1);
+        theTexture->SetStageMipMapBias(-1.0f, -1);
+        theTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
+        GEBitmap* thePanel = new GEBitmap;
+        thePanel->SetTexture(theTexture, gScreenIndex);
+        theOut[3] = thePanel;
+        theOut[4] = new UIFullBackground("textures\\Scenfull", 4, 3, theForm, 1024, 768);
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_MINI_MAP: {
+        EEUIMiniMap* t = new EEUIMiniMap(GERectangle(GE2DPoint(f[0], f[1]), f[2], f[2]), theForm, (unsigned long)i[0], 8, 3);
+        theForm->AddControl(t, 0);
+        t->SetDisplayMode(kDisplayModeHidden);
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_PLAYER_COMBO: {
+        UIComboBox* t = new UIComboBox(0x149, 1, std::vector<UWideString>(), gU531938,
+                                       GERectangle(GE2DPoint(0.0f, 0.0f), 140.0f, 20.0f), 400, theForm,
+                                       (unsigned long)i[0], 0, 2);
+        t->SetTextBoxBgOpacity(0.4f);
+        SefmColor(t->GetGEText(), kSefmYellow);
+        t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
+        t->SetBgOpacity(1.0f);
+        theForm->AddControl(t, 0);
+        t->SetDisplayMode(kDisplayModeHidden);
+        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_NEW_PLAYER);
+        t->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+        *static_cast<void**>(p[2]) = theEvent;
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_LABEL: {
+        UITextLabel* t;
+        if (i[0] == 0) {   // the top text label
+            t = new UITextLabel(UWideString(gEmptyString), gU531930, 9,
+                                GERectangle(GE2DPoint(500.0f, 0.0f), 300.0f, (float)gU531930->GetHeight()), theForm,
+                                0, (unsigned long)i[1], 0);
+            t->SetAlignment(kTextAlignRight);
+            t->SetBgOpacity(0.4f);
+            SefmColor(t->GetGEText(), kSefmYellow);
+        } else {   // the help label, the form's tool tips
+            t = new UITextLabel(UWideString(gEmptyString), gU531934, 0x10,
+                                GERectangle(GE2DPoint(0.0f, 0.0f), 400.0f, 400.0f), theForm, 1, (unsigned long)i[1], 0);
+            t->SetAlignment(kTextAlignLeft);
+            t->SetBgOpacity(1.0f);
+            t->SetBgColor(GEColor());
+            theForm->SetUseToolTips(true);
+            theForm->SetHelpTextTimeDelay(600);
+            SefmColor(t->GetGEText(), GEColor(0.0f, 0.0f, 0.0f));
+        }
+        theForm->AddControl(t, 0);
+        t->SetDisplayMode(kDisplayModeHidden);
+        t->SetAlwaysDirty(true);
+        t->SetFitRectToText(true);
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_BRUSH_GROUP: {
+        unsigned long theIndex = *static_cast<uint32_t*>(p[2]);
+        *theOut = new EEUIFSEBrushGroup(theIndex, GE2DPoint(f[0], f[1]), theForm, gU531930);
+        *static_cast<uint32_t*>(p[2]) = (uint32_t)theIndex;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_UNDO_REDO: {
+        UIButton* t;
+        if (i[0] == 0) {
+            t = new EEUIFSEUndo(0, 0, 0, 0, GE2DPoint(f[0], f[1]), 65, 25, theForm, (unsigned long)i[1]);
+            gResource->GetString(IDS_UNDO, theText);
+        } else {
+            t = new EEUIFSERedo(1, 0, 0, 0, GE2DPoint(f[0], f[1]), 65, 25, theForm, (unsigned long)i[1]);
+            gResource->GetString(IDS_REDO, theText);
+        }
+        t->SetText(theText, gU531930);
+        SefmColor(t->GetGEText(), GEColor(1.0f, 1.0f, 1.0f));
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_TAB_GROUP: {   // CreateTabGroup
+        unsigned long theIndex = *static_cast<uint32_t*>(p[2]);
+        EEUIFSEMainGroup* t = NULL;
+        switch (i[0]) {
+        case kEditorTabMap: t = new EEUIFSEMap(theIndex, theForm, gU531930); break;
+        case kEditorTabElevation:
+            t = new EEUIFSEElevation(theForm->GetEdgeScroll(), theForm->GetBrushGroup(), theIndex, theForm, gU531930);
+            break;
+        case kEditorTabTerrain:
+            t = new EEUIFSETerrain(theForm->GetEdgeScroll(), theForm->GetBrushGroup(), theIndex, theForm, gU531930);
+            break;
+        case kEditorTabUnits: t = new EESEUnit(theIndex, theForm, gU531938, theForm->GetPlayerComboBox()); break;
+        case kEditorTabTriggers: t = new EESETriggerScreen(theIndex, theForm, gU531938); break;
+        case kEditorTabPlayers: t = new EESEPlayerScreen(theIndex, theForm, gU531938, theForm->GetPlayerComboBox()); break;
+        case kEditorTabInstructions: t = new EESEInstructions(theIndex, theForm, gU531938); break;
+        }
+        *static_cast<uint32_t*>(p[2]) = (uint32_t)theIndex;
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_BUTTON: {
+        const EeScreensSefmButton& b = *static_cast<const EeScreensSefmButton*>(p[2]);
+        UIButton* t;
+        if (b.kind == 0) {
+            t = new EEUIFSEMainButton(b.id, (unsigned char)b.flag, theForm->GetButtonTexture(),
+                                      GE2DPoint(b.normal[0], b.normal[1]), GE2DPoint(b.pressed[0], b.pressed[1]),
+                                      GE2DPoint(b.rect[0], b.rect[1]), theForm, b.tab, b.index, b.checked != 0);
+            t->SetStringTableID(b.help);
+            theForm->AddControl(t, 0);
+            *theOut = t;
+            return 0;
+        }
+        unsigned long theScreen = theForm->GetManager()->GetScreen();
+        GERectangle theDestination(b.dest[0], b.dest[1], b.dest[2], b.dest[3]);
+        GEBitmap* theNormal = new GEBitmap;
+        GEBitmap* thePressed = new GEBitmap;
+        theNormal->SetTexture(theForm->GetButtonTexture(), theScreen);
+        thePressed->SetTexture(theForm->GetButtonTexture(), theScreen);
+        theNormal->ComputeStretchedCoordsAndScale(theDestination, theDestination,
+            GERectangle(b.normal[0], b.normal[1], b.normal[0] + 32.0f, b.normal[1] + 32.0f), theScreen);
+        thePressed->ComputeStretchedCoordsAndScale(theDestination, theDestination,
+            GERectangle(b.pressed[0], b.pressed[1], b.pressed[0] + 32.0f, b.pressed[1] + 32.0f), theScreen);
+        t = new UIButton(b.id, theNormal, NULL, thePressed, GERectangle(b.rect[0], b.rect[1], b.rect[2], b.rect[3]),
+                         theForm, b.index, 0);
+        t->SetStringTableID(b.help);
+        theForm->AddControl(t, 0);
+        UIEvent* theEvent = b.object != 0 ? new EESEERust(b.event, (void*)b.object) : EECreateScreenEvent(b.event);
+        t->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
+        theEvent->Dereference();
+        theNormal->Dereference();
+        thePressed->Dereference();
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_QUICK_ACTION:
+        *theOut = static_cast<EEAction*>(new EESEAQuickSaveLoad(gScenarioExtension));
+        return 0;
+    case EE_SCREENS_SEFM_OP_HIDE_UI: {
+        UICheckBox* t = new UICheckBox(kScenarioEditorHideUICheckBox, UWideString(gEmptyString), gU531934,
+                                       GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), theForm,
+                                       (unsigned long)i[0], 0, false);
+        t->SetStringTableID(IDS_HIDE_UI);
+        t->SetChecked(true);
+        EESEERust* theHideUI = new EESEERust(kSEEHideUI);
+        t->SetTriggerEvent(kControlTriggerChecked, theHideUI);
+        t->SetTriggerEvent(kControlTriggerUnchecked, theHideUI);
+        theHideUI->Dereference();
+        theForm->AddControl(t, 0);
+        t->SetDisplayMode(kDisplayModeHidden);
+        *theOut = t;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_GROUP_ENABLE:
+        if (i[1])
+            theForm->GetEntityGroup((unsigned long)i[0])->Enable();
+        else
+            theForm->GetEntityGroup((unsigned long)i[0])->Disable();
+        return 0;
+    case EE_SCREENS_SEFM_OP_SCREEN_EVENT: *theOut = EECreateScreenEvent((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEFM_OP_SEE_EVENT: *theOut = new EESEERust((uint32_t)i[0], p[2]); return 0;
+    case EE_SCREENS_SEFM_OP_MOUSE_EVENT: {
+        UIEvent* theEvent = static_cast<UIEvent*>(p[0]);
+        if (i[0] == 0)
+            theForm->SetMouseWheelMoveEvent(theEvent);
+        else {
+            theForm->SetMouseMiddleButtonPressedEvent(theEvent);
+            theForm->SetMouseMiddleButtonUnpressedEvent(theEvent);
+        }
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_HOT_KEY: {
+        UIEvent* const* theEvents = static_cast<UIEvent* const*>(p[0]);
+        UIHotKey theHotKey;
+        theHotKey.SetKey(sSefmKeys[i[0]]);
+        theHotKey.SetJustPressedEvent(theEvents[0]);
+        theHotKey.SetPressedEvent(theEvents[1]);
+        theHotKey.SetJustUnpressedEvent(theEvents[2]);
+        theForm->AddHotKey(theHotKey, 0);
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_ADD_HOT_KEY: {
+        UIEvent* theEvents[4] = {NULL, NULL, NULL, NULL};
+        theEvents[i[3] & 3] = static_cast<UIEvent*>(p[0]);
+        theForm->AddHotKey(sSefmKeys[i[0]], sSefmKeys[i[1]], sSefmKeys[i[2]], kKeyNone, theEvents[0], theEvents[1],
+                           theEvents[2], theEvents[3], (unsigned long)(i[3] >> 4), false);
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_GRAB_SCROLL: *theOut = EECreateGrabScroll(1); return 0;
+    case EE_SCREENS_SEFM_OP_RELEASE_GRAB_SCROLL: EEReleaseGrabScroll(1); return 0;
+    case EE_SCREENS_SEFM_OP_TAB_CHECK:
+        if (i[0])
+            static_cast<EEUIFSEMainButton*>(p[0])->CheckDirect();
+        else
+            static_cast<EEUIFSEMainButton*>(p[0])->Check();
+        return 0;
+    case EE_SCREENS_SEFM_OP_DEREFERENCE:
+        switch (i[0]) {
+        case 0: static_cast<UIEvent*>(p[0])->Dereference(); break;
+        case 1: static_cast<GETexture*>(p[0])->Dereference(); break;
+        case 2: static_cast<GEBitmap*>(p[0])->Dereference(); break;
+        case 3: static_cast<EEAction*>(p[0])->Dereference(); break;
+        case 4: static_cast<EEAScroll*>(p[0])->Dereference(); break;
+        }
+        return 0;
+    case EE_SCREENS_SEFM_OP_DELETE:
+        switch (i[0]) {
+        case 0: delete static_cast<UIControl*>(p[0]); break;
+        case 1: delete static_cast<EEUIFSEMainGroup*>(p[0]); break;
+        case 2: delete static_cast<TMPoll*>(p[0]); break;
+        case 3: delete static_cast<EEUIFSEBrushGroup*>(p[0]); break;
+        case 4: delete static_cast<UIFullBackground*>(p[0]); break;
+        }
+        return 0;
+    case EE_SCREENS_SEFM_OP_GROUP_CALL: {
+        EEUIFSEMainGroup* g = static_cast<EEUIFSEMainGroup*>(p[0]);
+        switch (i[0]) {
+        case EE_SCREENS_SEFM_GROUP_UPDATE: g->Update(); break;
+        case EE_SCREENS_SEFM_GROUP_LEAVE: g->Leave(); break;
+        case EE_SCREENS_SEFM_GROUP_DRAW: g->Draw(GERectangle(f[0], f[1], f[2], f[3])); break;
+        case EE_SCREENS_SEFM_GROUP_DISABLE: g->Disable(); break;
+        case EE_SCREENS_SEFM_GROUP_LOAD: g->Load(); break;
+        case EE_SCREENS_SEFM_GROUP_ENTER: g->Enter(); break;
+        case EE_SCREENS_SEFM_GROUP_STORE: g->Store(); break;
+        case EE_SCREENS_SEFM_GROUP_ENABLE: g->Enable(); break;
+        case EE_SCREENS_SEFM_GROUP_MOUSE_MOVE: g->MouseMove(GE2DPoint(f[0], f[1])); break;
+        case EE_SCREENS_SEFM_GROUP_UPDATE_KEYS: g->UpdateKeys(); break;
+        }
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_RENDER_LIST:
+        if (i[0]) {
+            gGraphics->PostClearRenderObjects();
+            gGraphics->PostPushRenderObject(gU56534C);
+        } else
+            EEPostGraphicsAll();
+        return 0;
+    case EE_SCREENS_SEFM_OP_REDRAW_ALL:
+        gUIManager->RedrawAll();
+        gUIManager->GetCurrentForm()->SetAllControlsDirty();
+        return 0;
+    case EE_SCREENS_SEFM_OP_HIGHLIGHT: static_cast<EEUIFSEBrushGroup*>(p[0])->mIsHighlightShown = i[0] != 0; return 0;
+    case EE_SCREENS_SEFM_OP_RESOLVE: {
+        EEUnit* theUnit;
+        EEUnitHandleResolve((uint32_t)i[0], theUnit);
+        *theOut = theUnit;
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_UNIT_ID: return (int32_t)EEUnitHandle<EEUnit>(static_cast<EEUnit*>(p[0])).GetSavedID();
+    case EE_SCREENS_SEFM_OP_UNIT_SELECT: {
+        EEUnit* theUnit = static_cast<EEUnit*>(p[0]);
+        if (theUnit == NULL)
+            return 0;
+        theUnit->mIsEditorSelected = i[0] != 0;
+        if (i[1] > 0)
+            theUnit->Reference();
+        else if (i[1] < 0)
+            theUnit->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_UNIT_CARGO: {
+        EEUnit* theUnit = static_cast<EEUnit*>(p[0]);
+        return theUnit->GetTileNode() != NULL && (theUnit->GetComplexUnit()->mCargoRoom > 0 ||
+                                                  theUnit->GetComplexUnit()->GetNumCargoUnits() > 0);
+    }
+    case EE_SCREENS_SEFM_OP_SHOW_CARGO: static_cast<EESEUnit*>(p[0])->ShowCargo(i[0] != 0); return 0;
+    case EE_SCREENS_SEFM_OP_SHOW_STATUS: static_cast<EESEUnit*>(p[0])->ShowUnitStatus(static_cast<EEUnit*>(p[1])); return 0;
+    case EE_SCREENS_SEFM_OP_GAME_VIEW: EESetGameViewRectangle(GERectangle(f[0], f[1], f[2], f[3])); return 0;
+    case EE_SCREENS_SEFM_OP_LOAD_THREAD: {
+        EESELoadThread* theThread = static_cast<EESELoadThread*>(p[1]);
+        switch (i[0]) {
+        case 0: *theOut = new EESELoadThread(static_cast<EEUIFScenarioEditor*>(p[2]), 0); break;
+        case EE_SCREENS_SEFM_POST_401: theThread->Post401(); break;
+        case EE_SCREENS_SEFM_POST_404: theThread->Post404(); break;
+        case EE_SCREENS_SEFM_POST_405: theThread->Post405(); break;
+        case EE_SCREENS_SEFM_POST_40B: theThread->Post40B(static_cast<UReferenceCounter*>(p[2])); break;
+        case EE_SCREENS_SEFM_POST_40C: theThread->Post40C(static_cast<UReferenceCounter*>(p[2])); break;
+        }
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_TEST_PREPARE:
+        gWorld.RebuildActiveUnits();
+        return gUIManager->mInScenarioEditor == true;
+    case EE_SCREENS_SEFM_OP_OPEN_CAMERA: {
+        GETransformation theTransformation;
+        gWorld.mCameraControl.SetMode(2);
+        gWorld.RefreshUnits();
+        gSightUpdatesEnabled = false;
+        theTransformation.SetOrientationYPR(0.7853981852531433f, -0.6108652353286743f, 0.0f);
+        gWorld.mCameraControl.SetOffsetTurn(theTransformation, false);
+        gWorld.mCameraControl.SetChanged();
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_LOAD_BACKGROUND:
+        static_cast<UIFullBackground*>(p[0])->LoadBackground(SefmDescription(gTexturePixelDepth, true));
+        return 0;
+    case EE_SCREENS_SEFM_OP_OPEN_WORLD: {
+        gGraphics->PostFadeIn(0);
+        static_cast<EESEPlayerScreen*>(p[0])->Refresh();
+        gMusicManager->Pause();
+        gAmbientSoundManager.StopSounds();
+        gAmbientSoundManager.Pause();
+        static_cast<EEAScroll*>(p[1])->mEdges =
+            GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f, (float)gGameWindow->GetHeight() - 1.0f);
+        gFreeCamera = true;
+        gB529065 = true;
+        const GERectangle& theView = gViewport.GetViewRectangle();
+        f[0] = theView.GetLeft();
+        f[1] = theView.GetTop();
+        f[2] = theView.GetRight();
+        f[3] = theView.GetBottom();
+        EESetGameViewRectangle(GERectangle(0.0f, 0.0f, 1024.0f, 606.0f));
+        gB529066 = false;
+        gCameraFollowing = false;
+        gB529068 = false;
+        if (gMiniMap != NULL) gMiniMap->RefreshView();
+        EEUIMiniMap::Update(gMiniMap);
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_OPEN_FORM:
+        gWorld.mScenarioManager->mIsMovingCamera = false;
+        gMiniMap->Redraw();
+        theForm->UIForm::Open();
+        return 0;
+    case EE_SCREENS_SEFM_OP_HELP_LABEL: theForm->SetHelpTextLabel(static_cast<UITextLabel*>(p[0])); return 0;
+    case EE_SCREENS_SEFM_OP_POST_EXIT: {
+        EESEARust* theAction = new EESEARust(kSEAExit);
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_COPY_WORLD:
+        if (i[0] == 2) {
+            EEPreviewPlacement(gMouse->mPosition);
+            return 0;
+        }
+        if (i[0] == 1) {
+            GERectangle theRectangle = gViewport.GetViewRectangle();
+            theRectangle.SetRight(theRectangle.GetRight() - 1.0f);
+            theRectangle.SetBottom(theRectangle.GetBottom() - 1.0f);
+            theForm->GetManager()->AddDirtyRectangle(theRectangle, theForm);
+        }
+        static_cast<UIControl*>(p[0])->SetDirty(true);
+        return 0;
+    case EE_SCREENS_SEFM_OP_CAPTURED: return i[0] ? theForm->GetIsKeyboardCaptured() : theForm->GetIsMouseCaptured();
+    case EE_SCREENS_SEFM_OP_EDGE_SCROLL: static_cast<EEAScroll*>(p[0])->Update(gMouse->mPosition); return 0;
+    case EE_SCREENS_SEFM_OP_DRAW_FULL:
+        return (int32_t) static_cast<UIFullBackground*>(p[0])->DrawBackground(GERectangle(f[0], f[1], f[2], f[3]));
+    case EE_SCREENS_SEFM_OP_DRAW_PANEL: {
+        const float* r = static_cast<const float*>(p[2]);
+        theForm->UIForm::DrawBackground(static_cast<GEBitmap*>(p[0]), GERectangle(f[0], f[1], f[2], f[3]),
+                                        GERectangle(0.0f, 0.0f, 256.0f, 256.0f), GERectangle(r[0], r[1], r[2], r[3]));
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_KEY: {
+        ISEntity* theKey;
+        gISKeyboard->GetEntity(sSefmKeys[i[0]], theKey);
+        return (theKey->JustPressed() ? 1 : 0) | (theKey->GetValue() != 0 ? 2 : 0);
+    }
+    case EE_SCREENS_SEFM_OP_FIRE: {
+        UIControl* theControl = theForm->GetControlById((unsigned long)i[0]);
+        if (theControl != NULL) theControl->FireTriggerEvent(kControlTriggerButtonUp);
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_GRID: static_cast<EEROTerrain*>(gU56535C)->StepGridMode(i[0] != 0); return 0;
+    case EE_SCREENS_SEFM_OP_PLAYER_COUNT: return (int32_t) static_cast<EESEPlayerScreen*>(p[0])->GetPlayerCount();
+    case EE_SCREENS_SEFM_OP_COMBO_SELECT: static_cast<UIComboBox*>(p[0])->SetCurrentSelection((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEFM_OP_LABEL_TEXT: static_cast<UITextLabel*>(p[0])->SetText(*static_cast<const UWideString*>(p[1])); return 0;
+    case EE_SCREENS_SEFM_OP_MOUSE: {
+        const GE2DPoint& theMouse = theForm->GetMouseLocation();
+        f[0] = theMouse.GetX();
+        f[1] = theMouse.GetY();
+        return 0;
+    }
+    }
+    // the trigger-only save's records (the scenario manager's lists)
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    unsigned long k = (unsigned long)i[1];
+    switch (inOp) {
+    case EE_SCREENS_SEFM_OP_SM_COUNT:
+        switch (i[0]) {
+        case EE_SCREENS_SEFM_LIST_TRIGGERS: return (int32_t)m->mTriggers.size();
+        case EE_SCREENS_SEFM_LIST_CONDITIONS: return (int32_t)m->mConditions.size();
+        case EE_SCREENS_SEFM_LIST_EFFECTS: return (int32_t)m->mEffects.size();
+        case EE_SCREENS_SEFM_LIST_OBJECTS: return (int32_t)m->mObjects.size();
+        }
+        return (int32_t)m->mAreas.size();
+    case EE_SCREENS_SEFM_OP_SM_RECORD:
+        switch (i[0]) {
+        case EE_SCREENS_SEFM_LIST_TRIGGERS:
+            *theOut = k < m->mTriggers.size() ? static_cast<EeScenarioTriggerFields*>(m->GetTrigger(k)) : NULL;
+            return 0;
+        case EE_SCREENS_SEFM_LIST_CONDITIONS: *theOut = static_cast<EeScenarioConditionFields*>(m->GetCondition(k)); return 0;
+        case EE_SCREENS_SEFM_LIST_EFFECTS: *theOut = static_cast<EeScenarioEffectFields*>(m->GetEffect(k)); return 0;
+        case EE_SCREENS_SEFM_LIST_OBJECTS: *theOut = static_cast<EeScenarioObjectFields*>(m->GetScenarioObject(k)); return 0;
+        }
+        *theOut = NULL;
+        return 0;
+    case EE_SCREENS_SEFM_OP_SM_TEXT:
+        switch (i[0]) {
+        case EE_SCREENS_SEFM_LIST_TRIGGERS:
+            if (k >= m->mTriggers.size()) return -1;
+            return SefmText(i[2] ? m->GetTrigger(k)->mText : m->GetTrigger(k)->mName, p[0], i[3]);
+        case EE_SCREENS_SEFM_LIST_CONDITIONS:
+            return m->GetCondition(k) == NULL ? -1 : SefmText(m->GetCondition(k)->mName, p[0], i[3]);
+        case EE_SCREENS_SEFM_LIST_EFFECTS: return m->GetEffect(k) == NULL ? -1 : SefmText(m->GetEffect(k)->mName, p[0], i[3]);
+        case EE_SCREENS_SEFM_LIST_OBJECTS:
+            return m->GetScenarioObject(k) == NULL ? -1 : SefmText(m->GetScenarioObject(k)->mName, p[0], i[3]);
+        }
+        return m->GetArea(k) == NULL ? -1 : SefmText(m->GetArea(k)->mName, p[0], i[3]);
+    case EE_SCREENS_SEFM_OP_SM_VEC_LEN:
+        if (i[0] == EE_SCREENS_SEFM_VEC_OBJECTS)
+            return m->GetEffect(k) == NULL ? 0 : (int32_t)m->GetEffect(k)->mObjects.size();
+        if (k >= m->mTriggers.size()) return 0;
+        return (int32_t)(i[0] == EE_SCREENS_SEFM_VEC_CONDITIONS ? m->GetTrigger(k)->mConditions.size()
+                                                                 : m->GetTrigger(k)->mEffects.size());
+    case EE_SCREENS_SEFM_OP_SM_VEC_AT: {
+        unsigned long n = (unsigned long)i[2];
+        if (i[0] == EE_SCREENS_SEFM_VEC_OBJECTS) {
+            i[0] = (int32_t)m->GetEffect(k)->mObjects[n];
+        } else if (i[0] == EE_SCREENS_SEFM_VEC_CONDITIONS) {
+            EESMTConditionWrapper* w = m->GetTrigger(k)->GetCondition(n);
+            i[0] = w->mIsNot ? 1 : 0;
+            i[1] = (int32_t)w->mValue;
+            i[2] = (int32_t)w->mOperator;
+        } else {
+            EESMTEffectWrapper* w = m->GetTrigger(k)->GetEffect(n);
+            i[0] = (int32_t)w->mDelay;
+            i[1] = (int32_t)w->mEffectIndex;
+            i[2] = (int32_t)w->mOperator;
+        }
+        return 0;
+    }
+    case EE_SCREENS_SEFM_OP_REPORT_SAVE: {
+        FSFileSpec theFile;
+        theFile.SetVolume(gStartupVolume);
+        theFile.SetDirectory(gStartupDirectory);
+        theFile.SetFile("ScenarioTriggers.scn");
+        theFile.Create();
+        long theResult = theFile.Open(kFileAccessWrite);
+        if (theResult == kErrorOK)
+            m->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
+        theFile.Close();
+        return (int32_t)theResult;
+    }
+    case EE_SCREENS_SEFM_OP_REPORT_WRITE: {
+        UString thePath(260);
+        thePath = gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt";
+        FILE* theText = PlatFOpen(thePath, "w");
+        if (theText) {
+            fwrite(p[0], 1, (size_t)i[0], theText);
+            fclose(theText);
+        }
+        return 0;
+    }
+    }
+    return 0;
 }

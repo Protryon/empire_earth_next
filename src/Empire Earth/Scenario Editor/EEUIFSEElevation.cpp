@@ -278,8 +278,8 @@ void EEUIFSEElevation::MouseMove(const GE2DPoint& inLocation)
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mStrengthTitle->GetForm());
     if (gViewport.GetViewRectangle().Contains(inLocation)) {
         EEPointUnitOrTileXY(inLocation, theTile, theX, theY, false);
-        theEditor->mBrushGroup->mIsHighlightShown = true;
-        theEditor->mBrushGroup->SetHighlight((float)theX, (float)theY, false);
+        theEditor->GetBrushGroup()->mIsHighlightShown = true;
+        theEditor->GetBrushGroup()->SetHighlight((float)theX, (float)theY, false);
     } else
-        theEditor->mBrushGroup->mIsHighlightShown = false;
+        theEditor->GetBrushGroup()->mIsHighlightShown = false;
 }
