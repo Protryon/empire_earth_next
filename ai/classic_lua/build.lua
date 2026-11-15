@@ -683,7 +683,7 @@ local function start_building(view, memory, req)
         x, y, fid = M.find_site(view, memory, class)
     end
     if x == nil then
-        -- New (AI_RESEARCH 8.87): a farm request with no farm foundation left is done. Its foundation was built by
+        -- New (AI_RESEARCH 8.88): a farm request with no farm foundation left is done. Its foundation was built by
         -- the gatherers (AssignBuilders) before the queue reached it, and the request waited for one forever: the
         -- building counts queue the next granary (whose foundations are the next farms) only while no farm is queued,
         -- so a town stood at its first granary's 3 farms from the Copper Age on (the C++ classic keeps the request)

@@ -100,7 +100,7 @@ end
 
 -- a site search over a list of centres that the step's find_site budget can cut short: fn(entry) -> x, y or nil.
 -- Where the budget ran out, the next step's search goes on from that entry (memory: rm.scan[key]); a search that ends
--- (a site, or none in the whole list) starts from the list's first entry the next time. New (AI_RESEARCH 8.87): the
+-- (a site, or none in the whole list) starts from the list's first entry the next time. New (AI_RESEARCH 8.88): the
 -- granary search tried the same first centres every step and never reached the one with room
 function M.scan_sites(memory, key, list, fn)
     local rm = M.state(memory)

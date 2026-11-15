@@ -79,7 +79,7 @@ end
 -- Copper Age from minute 5 (2-46 on land, where the C++, under the port's first explorer, mostly ran without it)
 local SAFE_BONUS = false
 
--- New (AI_RESEARCH 8.87): an enemy a whole epoch ahead makes the advance due now (the catchup cheat's rule, without
+-- New (AI_RESEARCH 8.88): an enemy a whole epoch ahead makes the advance due now (the catchup cheat's rule, without
 -- the cheat: the advance still pays its full cost). The owner reached the Bronze Age at 99 minutes; the port, at the
 -- Copper Age since 71, waited for its epoch timer and stood in the Copper Age to the end
 local CATCH_UP = true
