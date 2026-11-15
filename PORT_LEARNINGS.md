@@ -25715,3 +25715,102 @@ The terrain tab (857; its lists draw textures, its sort a `std::sort` of localiz
 tech list box (595), the load thread (385), the brush group (`EEUIEOpenCivBuilder.cpp`), the events' host, the unit
 tab's small control classes, the hosts (EESERBUnitTypes.cpp, EESEUnit.cpp, EESETSEffect.cpp, EESETSObject.cpp,
 EEUIFScenarioEditor.cpp: about 600 lines of world calls).
+
+## R6: the civilization builder, round 2: the civilization manager, the powers, their simulation and the civilization files in Rust (ee_tech civ.rs, civ_apply.rs, civ_file.rs; branch rust-civbuilder2, 2026-11-15)
+
+### What moved
+
+- **civ.rs**: `EECivilizationManager` and `EECivPowersManager` whole. The tables live in one `RwLock` (written only by
+  the database's loads, before a game thread runs): the categories (dbcivilization's 600-byte records with an
+  index), their levels (the record's 60 or civbuilder.yaml's category text, any number) and ids, the special powers'
+  category the load appends (a level per attribute that applies a power: the power's bonus, `powers_level_value`;
+  its cost is `EERuleLong(powers_cost)`, which the C++ resolves and passes), the premade civilizations (sorted by
+  index, the distinct eras in order) and dbcivpowers' records. Every query: levels, extra costs, the category count
+  of a list, `GetUpgrades`, keys both ways, the legacy ids, `LevelNameID`/`IsPowerLevel`/`PowerLevel`,
+  `MatchesPremadeCivilization`'s checksum, `GetPower`, `GetPowerRecord`, `HasPower`. The C++ records stay the types
+  callers use; they are layout twins of `EeTechCivCategory`/`EeTechCivEntry`/`EeTechCivPower` (sizes asserted on
+  both sides), so `GetCategory` and `GetPowerRecord` return the Rust record in place, as the original's vectors did.
+- **civ_apply.rs**: `ApplyUpgrade` (the category's unit set walked as `EEUnitSet::ForEach` does: types 1.. it
+  holds), `EECBProcessUpgrade::Execute` (the game variant's factor on level 2), `ApplyUpgradeLevel` (civbuilder.yaml's
+  applies; a power attribute applies only its power; a line-of-sight attribute takes the units' sight off around
+  it; the categories' only/except filters), `EECBUpgradeArmor`, `ApplyPower` (civpowers.yaml's effects). The world is
+  one host callback (`EECivHostCall`, EECivilizationManager.cpp, 21 ops).
+- **civ_file.rs**: `EELoadCivilization`'s bytes (the keyed text through `ee_data::ffi::civ_read`, now a Rust function
+  `ee_data_civ_read` wraps; the legacy binary form), `EEApplyCivilizationFile` and `EECBRequestUpgrades` over a host
+  (`EECivFileCall`, EECBCivilizationFiles.cpp, 12 ops). The C++ keeps the file finding (`gDataPath->FindFile`, the
+  shared file spec 0x565518), the player's `EECivilization` calls, the strings and the messages.
+- **Deleted**: EECivPowersManager.cpp (271; its forwarders and `GetName` folded into EECivilizationManager.cpp,
+  link/exe/units.txt's row removed), `EECMPremadeCivSorter`, `EECMUpgradeFunctor`/`EECMGetUpgrades`,
+  `EECBProcessUpgrade`, `EECBApplyStat`, `EECBModeValue`, `EEReadKeyedCivilization`, `sPowersCategory`, the
+  managers' members. Callers that read members switched to accessors (one line each): EESERBUnitTypes.cpp
+  (`GetCivilization(i)`, `GetNumCivilizations()`), EECivilizationBuilder.cpp (`GetCivilization(i)`),
+  EEFOFindNewTargetNearOldTarget.cpp (`GetNumPowers()`). `EERules::RustRules()` (one line in ee/EERules.h).
+
+### The capture (TEST ONLY, recorded on the unmodified C++ first)
+
+ee/EECivCapture.h, EECivCapture.cpp: CVMG (once, at the first ApplyUpgrade: every table and query, the premade files
+loaded and matched), CVAP (every ApplyUpgrade: the player's fields and the set's class upgrades before and after; a
+power level adds the tech tree's nodes, the media count, HasPower of every power), CVLD (every EELoadCivilization),
+CVAF (every EEApplyCivilizationFile with the civilization after). The hooks sit in the C++ entry points that stay
+(the manager's `ApplyUpgrade`, `EELoadCivilization`, `EEApplyCivilizationFile`), so the same records come from the
+Rust bodies. Goldens: seeds 2-3 of the oracle, late, space, calamity and scenario profiles (the oracle's recorded
+twice: identical; CVMG is the same digest in every profile and seed).
+
+### Traps
+
+- **ee_tech cannot depend on ee_units.** ee_units imports C++ functions unconditionally (host.rs, pm_host.rs,
+  uu_host.rs), so any other crate's test binary that links it fails with ~200 unresolved `ee_units_host_*`. The
+  stats therefore cross as a plain view (`EeTechCivStats`, the C++ longs as i64) and are written back one stat at a
+  time by the host, the range and speed through `EEUnitClassUpgrade::SetRange`/`SetMaxVelocity` (ee_units' Rust).
+- **Bare `pub const`s leak into other crates' headers.** `ERROR_OK`/`ERROR_FAILED` in ee_tech made cbindgen move
+  ee_ui's same-named constants into ee_rust_common.h; even `pub(crate)` ones collided. Renamed (`CIV_OK`, ...).
+- **FSMemoryFile reads all or nothing.** A read past the end copies nothing and stays put (`kErrorEndOfFile`), so a
+  too-long legacy name leaves the count to be read where the name was; the Rust reader does the same.
+- **The include block again**: `EESoundObject.h`/`EEGraphicEffect.h` need `ee/EEMedia.h` first (the deleted powers
+  unit had it).
+- **The civ gate once failed** at step 161 (`cb pick 35 3230 0`: the choice form's 'Please wait...' label): three
+  reruns passed unchanged (3,913). A timing artifact of the choice form's load, not the move.
+
+### Behaviour
+
+None intended. Where the original read past a table (an unknown category's set or cost, a gather slot outside the
+seven, a power record past the table) Rust answers none/0 or skips.
+
+### Only a person reaches
+
+Multiplayer's `EECBRequestUpgrades` (the broadcast grant, the refusal's chat line; the civ gate reaches the
+single-player grant through the game's accept); a keyed .civ file's error box; the premade list's drawing.
+
+### Gates
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| b1bfc088 | the CV** capture records (TEST ONLY: ee/EECivCapture.h, EECivCapture.cpp, the hooks) | +362 -3 |
+| e9c8a94e | the CV** goldens of the unmodified C++ | 0 |
+| a1544723 | the manager, the powers, their simulation and the civilization files in Rust | +447 -1,130, net -683 |
+
+| Gate | After the move (a1544723) | Merged with rust (8b274186) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC, EE-SIM 0/0 | EE-AOC, EE-SIM 0/0 |
+| `build.py --test-profile windowed-software` | | EE-AOC 0/0 |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| captures, seeds 2-3 (the CV** goldens gated) | oracle 185, late 186, space 187, calamity 203, scenario 28 digests PASS | oracle 187, late 188, space 189, calamity 205, scenario 33 PASS |
+| saveload matrix `--expect` | | PASS |
+| civ gate (`sim_editor.py --civbuilder`) | PASS 3,913 (one of four runs failed, see the trap) | PASS 3,913 |
+| editor gate | PASS 12,723 | PASS 14,049 (rust's editor lane grew it) |
+| `rust_build.py gate` | PASS (3,732 tests) | PASS (3,880 tests) |
+| sim_bench AI game (seed 2, Small Hard 2 AI) | | rc 0, time-cap |
+| tour (harness lock, the merged test profile) | | `RESULT FAIL tour`: both render checks ok, the F3 input check paused 0 -> 0 -> 0 (run while the captures and saveload loaded the machine); a rerun waited 50 minutes for the lock behind other lanes and was stopped: **the lead's tour must recheck it** (no change of this round reaches input or the pause) |
+
+The merge of rust (8b274186): EECivPowersManager.cpp modify/delete (rust only trimmed its includes: stays deleted);
+EECBCivilizationFiles.cpp (rust's game messages lane made the grant an `EEMRecord(kMessageCivUpgradesPurchased, ...)`:
+taken into the host's grant op). `rust_build.py header` and `rust_includes.py` changed nothing. The history fix
+(fix_plan_history.sh) ran before the round's first commit and again before the merge: no commit of the branch held a
+bloated RUST_PLAN.md (the hashes stayed).
+
+### Left
+
+`EECivilization` (EECivilization.cpp, 372: the player's points, purchases, costs, deferred upgrades; its vectors are
+read by many lanes, so a move keeps them and takes the bodies over a view); `FillCivilizationList` (a UI list: to
+`civ_whole.rs`); the builder host's remaining ops. Net C++ of the round is -683, short of the 1,500 aim: the hosts
+(21 + 12 ops) and the forwarders the callers keep cost back about half of what moved.

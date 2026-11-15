@@ -70,6 +70,8 @@ struct EERules {
     void Dump(std::string& outJson) const;
     // the media of an epoch position (past the list: the last epoch's)
     const EEEpochMedia& Epoch(long inEpoch) const;
+    // the Rust rules the C++ structs snapshot (ee_tech's civilization manager reads them in place)
+    const EeDataRules* RustRules() const { return mRust; }
 
 private:
     void Refresh();                         // the C++ structs from the Rust rules' snapshot
