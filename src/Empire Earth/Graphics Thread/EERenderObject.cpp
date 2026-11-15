@@ -1687,6 +1687,47 @@ static void* EERasterLoadTexture(const uint8_t* inName, const EeGfxTextureLoad* 
     return theTexture;
 }
 
+// a unit model's frame textures (EEROUnits::DrawUnitModel 0x515cc7: past the frame count, frame 0 (0x115e53 jae))
+static void EERasterFrameTextures(void* inModel, void* inTexture)
+{
+    GEModel* theModel = static_cast<GEModel*>(inModel);
+    GETexture* theTexture = static_cast<GETexture*>(inTexture);
+    for (unsigned long theMaterial = 1; theMaterial < theModel->GetMaterialCount(); theMaterial++) {
+        if (theTexture == NULL)
+            continue;
+        GEMaterial* theFirst = theModel->GetMaterial(theMaterial);
+        theFirst->SetTexture(theFirst->GetTextureIndex() < theTexture->GetFrameCount()
+                                 ? theTexture->GetFrameTexture(theFirst->GetTextureIndex())
+                                 : theTexture->GetFrameTexture(0),
+                             gScreenIndex);
+        for (unsigned long theSub = 0; theSub < theModel->GetSubModelCount(); theSub++) {
+            GEModel* theSubModel = theModel->GetSubModel(theSub);
+            for (unsigned long j = 0; j < theSubModel->GetMaterialCount(); j++) {
+                GEMaterial* theOther = theSubModel->GetMaterial(j);
+                if (theOther->GetTextureIndex() < theTexture->GetFrameCount())
+                    theOther->SetTexture(theTexture->GetFrameTexture(theOther->GetTextureIndex()), gScreenIndex);
+            }
+        }
+    }
+}
+// a gate side's sub-model 0 placed against its internal offset (EEROUnits::DrawUnitModel); the transform set
+static EeGeTransformation EERasterSubModelOffset(void* inModel, float inScale)
+{
+    GEModel* theSubModel = static_cast<GEModel*>(inModel)->GetSubModel(0);
+    GETransformation theTransformation = theSubModel->GetGraphicsPostModelTransform();
+    theTransformation.SetPosition(theSubModel->GetInternalTransform(0).GetX() * inScale * -1.0f,
+                                  theSubModel->GetInternalTransform(0).GetY() * inScale * -1.0f,
+                                  theSubModel->GetInternalTransform(0).GetZ() * inScale * -1.0f);
+    theSubModel->SetGraphicsPostModelTransform(theTransformation);
+    return *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
+}
+// EEROUnits.cpp's bars, placement lines and labels
+void EEROUnitsBarSet(uint32_t inWhich, const EeGeRectangle* inRect, const EeGfxColor* inColors);
+int32_t EEROUnitsBarDraw(uint32_t inWhich);
+int32_t EEROUnitsScreenLines(const EeGfxScreenLine* inLines, uint32_t inCount, float inStartU, float inEndU);
+void EEROUnitsLabel(const uint8_t* inText, float inX, float inY, EeGfxColor inColor, uint32_t inFont,
+                    const EeGeRectangle* inView, const EeGeRectangle* inStrip, float inBottom);
+
 // a beam model's vertices' points and texture coordinates (the tracer beam's stretch and its restore)
 static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
 {
@@ -1939,6 +1980,38 @@ const EeGfxRaster gEERustRaster = {
         theLine.SetOpacityPerVertex(inOpacity0, inOpacity1);
         return gRasterizer->Draw(&theLine, 1, gScreenIndex);
     },
+    // the terrain's and the units' render objects (ee_gfx ro_terrain.rs, ro_units.rs)
+    []() -> uint32_t { return gRasterizer->GetAlphaTesting(gScreenIndex); },
+    [](float inDistance) -> float {
+        float theOld = gU4E8F08.GetRearClippingDistance();
+        gU4E8F08.SetRearClippingDistance(inDistance);
+        return theOld;
+    },
+    [](void* inModel, bool inSorted) -> int32_t {
+        return gRasterizer->DrawSky(static_cast<GEModel*>(inModel), gScreenIndex, 1.0f, inSorted);
+    },
+    []() -> bool { return gRasterizer->GetScreen(gScreenIndex)->Get32BitTextureSupport(); },
+    []() -> bool { return gRasterizer->GetCanModulateTextureAlpha(gScreenIndex); },
+    [](float inValue) { gRasterizer->SetAmbientIntensity(inValue, gScreenIndex); },
+    []() {
+        GERFogAttributes theFog;
+        gRasterizer->GetFogAttributes(theFog, gScreenIndex);
+        return EeGfxFogAttributes{(uint32_t)theFog.mType, {theFog.mColor.mRed, theFog.mColor.mGreen, theFog.mColor.mBlue},
+                                  theFog.mStart, theFog.mEnd};
+    },
+    [](uint32_t inType) { gRasterizer->SetFogType(inType, gScreenIndex); },
+    [](EeGfxColor inColor) { gRasterizer->SetFogColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
+    [](float inStart, float inEnd) { gRasterizer->SetFogRange(inStart, inEnd, gScreenIndex); },
+    EERasterFrameTextures,
+    [](void* inObject, EeGfxColor inColor, uint32_t inPart) {
+        static_cast<EEGraphicObject*>(inObject)->SetGroupColor(GEColor(inColor.red, inColor.green, inColor.blue), inPart);
+    },
+    EERasterSubModelOffset,
+    EEROUnitsBarSet,
+    EEROUnitsBarDraw,
+    EEROUnitsScreenLines,
+    EEROUnitsLabel,
+    [](void* inTexture) { static_cast<GETexture*>(inTexture)->Dereference(); },
 };
 
 // FUNCTION: EXE 0x50f60f

@@ -1954,6 +1954,21 @@ struct EeGfxTextureLoad {
   bool reference;
 };
 
+/// The rasterizer's fog (`GERFogAttributes`).
+struct EeGfxFogAttributes {
+  uint32_t kind;
+  EeGfxColor color;
+  float start;
+  float end;
+};
+
+/// One screen line of a batch (`screen_lines`): its colour and ends.
+struct EeGfxScreenLine {
+  EeGfxColor color;
+  EeGe2DPoint start;
+  EeGe2DPoint end;
+};
+
 /// The C++'s rasterizer calls, each on the current screen.
 struct EeGfxRaster {
   void (*set_alpha_ref)(float value);
@@ -2112,6 +2127,55 @@ struct EeGfxRaster {
   /// a `GELine` from (`x0`, `y0`) to (`x1`, `y1`) on the screen, its opacity `opacity0` to `opacity1`
   /// (`SetOpacityPerVertex`), drawn (`Draw(&line, 1, screen)`); the draw's result
   int32_t (*screen_line)(float x0, float y0, float x1, float y1, float opacity0, float opacity1);
+  /// `GetAlphaTesting`
+  uint32_t (*get_alpha_testing)();
+  /// the main viewport's rear clipping distance set to `distance` (`gU4E8F08.SetRearClippingDistance`; not set on the
+  /// rasterizer); the old one
+  float (*rear_clipping)(float distance);
+  /// `DrawSky(model, screen, 1.0f, sorted)`
+  int32_t (*draw_sky)(EeGfxModel model, bool sorted);
+  /// the screen's `Get32BitTextureSupport`
+  bool (*texture_32bit)();
+  /// `GetCanModulateTextureAlpha`
+  bool (*can_modulate_alpha)();
+  /// `SetAmbientIntensity(value)`
+  void (*set_ambient_intensity)(float value);
+  /// `GetFogAttributes`
+  EeGfxFogAttributes (*get_fog_attributes)();
+  /// `SetFogType`, `SetFogColor`, `SetFogRange`
+  void (*set_fog_type)(uint32_t kind);
+  void (*set_fog_color)(EeGfxColor color);
+  void (*set_fog_range)(float start, float end);
+  /// a unit model's frame textures (`EEROUnits::DrawUnitModel`, 0x515cc7): each material past the first takes
+  /// `texture`'s frame by its texture index (frame 0 past the count) and then every sub-model's materials theirs
+  /// (within the count); nothing for a null texture
+  void (*frame_textures)(EeGfxModel model, EeGfxModel texture);
+  /// a graphic object's (`EEGraphicObject*`) `SetGroupColor(color, part)`
+  void (*group_color)(EeGfxModel object, EeGfxColor color, uint32_t part);
+  /// sub-model 0's post-model transform placed at its internal transform's position times `-scale` (a gate's side);
+  /// that transform
+  EeGeTransformation (*sub_model_offset)(EeGfxModel model, float scale);
+  /// the bar rhombus `which` (0 the fill, 1 its back): its rectangle (null: kept) and four vertex colours
+  /// (`SetColorPerVertex`; null: kept)
+  void (*bar_set)(uint32_t which, const EeGeRectangle *rect, const EeGfxColor *colors);
+  /// the bar rhombus `which` drawn (`Draw(rhombus, screen)`)
+  int32_t (*bar_draw)(uint32_t which);
+  /// `count` (at most 64) screen lines in the line texture from u `start_u` to `end_u`, drawn as one batch
+  int32_t (*screen_lines)(const EeGfxScreenLine *lines, uint32_t count, float start_u, float end_u);
+  /// a unit's label (`EEROUnits::DrawLabels`, 0x516692): a transparent centred `GEText` in the labels' font (`font`:
+  /// 0 the default, 1 Tahoma 12, 2 Tahoma 16) and `color`, its text the NUL-terminated UTF-8 `text`, at (`x`, `y`),
+  /// drawn clipped by the targets `label_targets` gives for its height (none under the free camera): the main game
+  /// form's `view` and `strip`, or the scenario editor's `view`
+  void (*label)(const uint8_t *text,
+                float x,
+                float y,
+                EeGfxColor color,
+                uint32_t font,
+                const EeGeRectangle *view,
+                const EeGeRectangle *strip,
+                float bottom);
+  /// a texture's `Dereference` (`GETexture*`)
+  void (*texture_dereference)(EeGfxModel texture);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
@@ -2548,6 +2612,210 @@ struct EeGfxDrawnHost {
   bool (*first_drawn)(void *context);
   bool (*complex_in_view)(void *context);
   bool (*model_in_view)(void *context, float x, float y);
+};
+
+/// The area-effect textures `CreateSkyModel` loads (`gAreaEffectTexture`, `gCircleAreaEffectTexture`).
+struct EeGfxTerrainTextures {
+  EeGfxModel area_effect;
+  EeGfxModel circle_area_effect;
+};
+
+/// The settings the media's loads read (`gTextureMipLevelsToDrop`, `gTrilinearFilter`, `gDrawClouds`).
+struct EeGfxTerrainMedia {
+  uint32_t mip_levels_to_drop;
+  bool trilinear;
+  bool draw_clouds;
+};
+
+/// What the frame changes: the fog colour (`gU4E9220`) and the cloud offset.
+struct EeGfxTerrainFrameOut {
+  EeGfxColor fog;
+  float cloud_offset;
+};
+
+/// The frame's facts for the sky and clouds.
+struct EeGfxTerrainFrame {
+  /// `gRenderEnvironment.mTimeOfDay`
+  float time_of_day;
+  /// the map's `mSize`, `mL195614`
+  int32_t size;
+  int32_t width;
+  /// the terrain mesh's `GetIsSpaceMap`
+  bool space_map;
+  /// `gRenderEnvironment.mCloudOffset`
+  float cloud_offset;
+  EeGfxTerrainMedia media;
+};
+
+/// The scene's facts and the terrain mesh's draws (the C++'s, over the frame's snapshot).
+struct EeGfxTerrainScene {
+  void *context;
+  /// `gRenderSnapshot.mIsSpaceMap`, `gDrawClouds`, `gOrthographicView`
+  bool space_map;
+  bool draw_clouds;
+  bool orthographic;
+  /// `mGridMode != 0`
+  bool grid;
+  /// the grid runs (`gGridRuns.size()`)
+  size_t grid_runs;
+  /// the terrain mesh (`Draw(mesh, screen, gOrthographicView)`)
+  void (*draw_terrain)(void *context);
+  /// the editor brush's highlight (at `opacity`, when shown) and the map's coloured rectangles
+  void (*draw_highlights)(void *context, float opacity);
+  /// `DrawTerrainGrid`
+  void (*draw_grid)(void *context);
+  /// `DrawGridLines` over the grid runs in the area-effect texture
+  void (*draw_grid_lines)(void *context);
+  /// the frame's textured 3D lines (`Draw3DLine`)
+  void (*draw_lines)(void *context);
+  /// the effects of render queue 2, batched per texture (`DrawPass4`)
+  void (*draw_effects)(void *context);
+};
+
+/// One render unit (`EERenderUnit`) with what its passes read from its graphic objects and class.
+struct EeGfxRenderUnit {
+  /// `mTransformation`
+  EeGeTransformation transformation;
+  /// `mPlayerColor`, `mTintColor`
+  EeGfxColor player_color;
+  EeGfxColor tint_color;
+  /// `mSource` (`EEGraphicObject*`), its model and texture of `mAnimation`, that model's centre, its bar tag,
+  /// `mIsDrawn`, `mAlphaReference` and `mOpacity`
+  EeGfxModel object;
+  EeGfxModel model;
+  EeGfxModel texture;
+  EeGe3DPoint center;
+  EeGe3DPoint bar;
+  bool drawn;
+  float alpha_ref;
+  float object_opacity;
+  /// `mSource2` (null: none), its `mModel`, `mTexture`, `mIsDrawn`
+  EeGfxModel object2;
+  EeGfxModel model2;
+  EeGfxModel texture2;
+  bool drawn2;
+  /// `mHealthBars`
+  const float *health_bars;
+  size_t health_bar_count;
+  /// `mTurretAngles` with `mTurretModels`, `mOrbitalAngles` with `mOrbitalModels`, `mWheelAngles` with `mWheelModels`
+  const float *turret_angles;
+  const EeGfxModel *turret_models;
+  size_t turret_count;
+  const float *orbital_angles;
+  const EeGfxModel *orbital_models;
+  size_t orbital_count;
+  const float *wheel_angles;
+  const EeGfxModel *wheel_models;
+  size_t wheel_count;
+  /// `mName` (NUL-terminated UTF-8)
+  const uint8_t *name;
+  float scale;
+  float selection_size;
+  float opacity;
+  float health;
+  float fraction;
+  float sub_model_offset_scale;
+  float fog_scale;
+  /// `mInfo->GetInnerCollisionSphere()`
+  float inner_collision_sphere;
+  int32_t category;
+  int32_t command_type;
+  int32_t animation;
+  uint32_t current_frame;
+  uint32_t next_frame;
+  uint32_t area_effect_strength;
+  /// `mInfo->mDomains & kMovementAir`
+  bool air;
+  /// `mUnitClassIndex == kUnitTypeWaypoint`
+  bool waypoint;
+  bool fogged;
+  bool tinted;
+  bool has_sub_model_offset;
+  bool second_full_opacity;
+};
+
+/// One placed map object (`EERenderShadow`) with its graphic object's model, texture, bar tag, alpha reference and
+/// opacity.
+struct EeGfxRenderObject {
+  EeGe3DPoint location;
+  EeGfxModel model;
+  EeGfxModel texture;
+  EeGe3DPoint bar;
+  float alpha_ref;
+  float object_opacity;
+  float model_scale;
+  float selection_size;
+  float health;
+  float opacity;
+  float fraction;
+  uint32_t current_frame;
+  uint32_t next_frame;
+  bool fogged;
+};
+
+/// A building being placed (`EERenderUnitRecord`).
+struct EeGfxGhostRecord {
+  EeGfxRenderUnit unit;
+  /// `mHeights[x][y]`, `mCells[x][y]`
+  float heights[12][12];
+  uint8_t cells[12][12];
+  int32_t tile_x;
+  int32_t tile_y;
+  /// `mUnit.mGridSize`, `mUnit.mCanPlace`, `mUnit.mInfo->IsLandBuilding()`
+  int32_t grid_size;
+  bool can_place;
+  bool land_building;
+};
+
+/// The frame's lists (indices into `units` and `objects`) and settings.
+struct EeGfxUnitsScene {
+  void *context;
+  /// the main viewport (`gU4E8F08`): read at each use, the passes change its depth range
+  const EeGeViewport *viewport;
+  /// `gOrthographicView`, `gRenderSnapshot.mInCinematic`, `gShowCollisionSpheres`, `gInterpolateFrames`,
+  /// `gModelDetail`, `gFreeCamera`, `gUnitPanelActive`
+  bool orthographic;
+  bool cinematic;
+  bool collision_spheres;
+  bool interpolate_frames;
+  int32_t model_detail;
+  bool free_camera;
+  bool panel_active;
+  /// `gU4E9330` (the lines' texture phase), `gRenderEnvironment.mCameraYaw`
+  float grid_phase;
+  float camera_yaw;
+  /// the game window's size
+  uint32_t window_width;
+  uint32_t window_height;
+  /// `mRenderUnits[0..mRenderUnitCount]`, `mRenderShadows[0..mRenderShadowCount]`
+  const EeGfxRenderUnit *units;
+  size_t unit_count;
+  const EeGfxRenderObject *objects;
+  size_t object_count;
+  /// `mUnits0`, `mUnits1`, `mSelectedUnits`, `mShadows0`, `mShadows1`, `mSelectedObjects` in their order
+  const uint32_t *units0;
+  size_t units0_count;
+  const uint32_t *units1;
+  size_t units1_count;
+  const uint32_t *selected_units;
+  size_t selected_unit_count;
+  const uint32_t *objects0;
+  size_t objects0_count;
+  const uint32_t *objects1;
+  size_t objects1_count;
+  const uint32_t *selected_objects;
+  size_t selected_object_count;
+  /// `mSelectedUnit`, `mSelectedObject` (-1: none)
+  int32_t selected_unit;
+  int32_t selected_object;
+  /// `mGhostRecords`
+  const EeGfxGhostRecord *ghosts;
+  size_t ghost_count;
+  /// the unit with the debug label (`gU529044`; -1: none) and that label (`gU529030`)
+  int32_t debug_unit;
+  const uint8_t *debug_text;
+  /// the effects of render queue 3, batched per texture (`DrawPass5`)
+  void (*draw_effects)(void *context);
 };
 
 /// One placed object's shadow (`EERenderLists::mShadows2`: its texture key and `EERenderShadow`).
@@ -3824,6 +4092,63 @@ EeGfxColor ee_gfx_capture_waypoint_tint(int32_t carrier_id);
 
 /// `FillRenderLists`' music intensity.
 uint32_t ee_gfx_capture_music_intensity(uint32_t current, float fighting, float count);
+
+/// `EEROTerrain::CreateSkyModel`.
+///
+/// # Safety
+/// `raster` and `media` are readable and the raster's functions valid.
+EeGfxTerrainTextures ee_gfx_ro_terrain_create(const EeGfxRaster *raster,
+                                              const EeGfxTerrainMedia *media);
+
+/// `EEROTerrain::ReleaseSkyModels`.
+///
+/// # Safety
+/// `raster` is readable and its functions valid.
+void ee_gfx_ro_terrain_release(const EeGfxRaster *raster);
+
+/// `EEROTerrain::FrameStarting`'s sky and clouds.
+///
+/// # Safety
+/// `raster` and `frame` are readable and the raster's functions valid; the sky model was made.
+EeGfxTerrainFrameOut ee_gfx_ro_terrain_frame(const EeGfxRaster *raster,
+                                             const EeGfxTerrainFrame *frame_facts);
+
+/// `EEROTerrain::RenderScene`.
+///
+/// # Safety
+/// `raster` and `scene` are readable and their functions valid.
+void ee_gfx_ro_terrain_render(const EeGfxRaster *raster, const EeGfxTerrainScene *scene);
+
+/// `EEROUnits::LoadMedia`'s textures and models.
+///
+/// # Safety
+/// `raster` is readable and its functions valid.
+void ee_gfx_ro_units_load(const EeGfxRaster *raster, int32_t detail);
+
+/// `EEROUnits::ReleaseMedia`'s textures and models.
+///
+/// # Safety
+/// `raster` is readable and its functions valid.
+void ee_gfx_ro_units_release(const EeGfxRaster *raster);
+
+/// A command confirmation texture (0 unit, 1 path, 2 click).
+EeGfxModel ee_gfx_ro_units_command_texture(uint32_t index);
+
+/// The placement lines' texture.
+EeGfxModel ee_gfx_ro_units_line_texture();
+
+/// `EEROUnits::RenderScene`.
+///
+/// # Safety
+/// `raster` and `scene` are readable, their functions valid and the scene's arrays hold their counts.
+void ee_gfx_ro_units_render(const EeGfxRaster *raster,
+                            const EeGfxUnitsScene *scene);
+
+/// `EEROUnits::DrawLabels`.
+///
+/// # Safety
+/// As `ee_gfx_ro_units_render`.
+void ee_gfx_ro_units_labels(const EeGfxRaster *raster, const EeGfxUnitsScene *scene);
 
 /// `EEROGroundShadows::CreateShadowModel`.
 ///
