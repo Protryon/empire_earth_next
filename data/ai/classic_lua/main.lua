@@ -22,7 +22,7 @@ local EXPLORE = require("classic_lua.explore")
 local TAC = require("lib.tactics")
 local C = T.C
 
--- stage 5 (AI_RESEARCH §8.89): the C++ attack commander that drafted the free soldiers into its continent groups is
+-- stage 5 (AI_RESEARCH §8.90): the C++ attack commander that drafted the free soldiers into its continent groups is
 -- deleted, so the script holds them itself: lib.tactics POOL, a defence group at the town (army.lua pool_step)
 TAC.configure({pool = true})
 

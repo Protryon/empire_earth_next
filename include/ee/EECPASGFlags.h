@@ -1,5 +1,5 @@
 // The path walker's flags and the path-cost weights, from the deleted attack sub group (ee/EECPAttackSubGroup.h until
-// stage 5, docs/AI_RESEARCH.md §8.89): the path finder (EEAutoPathRequest, EEAIAStarPathGraphGoal,
+// stage 5, docs/AI_RESEARCH.md §8.90): the path finder (EEAutoPathRequest, EEAIAStarPathGraphGoal,
 // EEAIPathSubSector, the goal modifiers) still takes them.
 #ifndef EE_EECPASGFLAGS_H
 #define EE_EECPASGFLAGS_H
