@@ -21576,6 +21576,11 @@ message manager's NewResponse (it reads the base class's fields).
   equal alone (3 runs), in 1250-1369 and in a second full run of 1,500: see the flake below), tcptest pass, and
   `lan_game.py` (under the harness lock, on the merged test exe) RESULT PASS lan-game PT host=3023 joiner=3018 (CTs
   within 1 at every 5 s sample, 206/206 at 60 s), no fault in either game.log.
+- **The second merge of rust** (5d112c08: rust had merged round 6 and 87 more commits; PORT_LEARNINGS only):
+  build `--sim` 0/0, the test-profile build 0/0, oracle seeds 2-7 identical, capture oracle seeds 2-3 PASS (171),
+  the Rust gate PASS, ne_protocol_test and ne_message_test equal, client 300 and server 100 sequences 0 differing,
+  tcptest pass (a first run failed with WSAEADDRINUSE while another lane's harness game held its ports; run
+  again under the harness lock), `lan_game.py` RESULT PASS lan-game PT host=4188 joiner=4194 (CT 210/211 at 60 s).
 - **Behaviour changes.** None intended. The protocol's counters are Rust atomics (the original's were unlocked
   `unsigned long`s); the queue host's ThreadName passes the name as a C string as the UString did.
 - **A client golden flake** (the test's, not the client's): sequence 1330 differed once in a full run, in
