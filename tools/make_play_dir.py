@@ -8,7 +8,8 @@ OUT gets:
   - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --exe for another);
   - the game data: Data (one loose tree: db tables as text, models as glTF, textures as PNG, the rest as shipped),
     Users, WONLobby.cfg and zzWONVersion.cfg, from --data: a tree made by `tools/open_data.py build` or the bundle
-    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing).
+    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing);
+    Data/db and Data/ai always from this checkout's data/db and data/ai.
     --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases, or the
     folder tools/fetch_data.py unzipped them into. No
     data.ssa and nothing of the original Empire Earth's install is needed or referenced;
@@ -153,13 +154,18 @@ def main():
     for data in datas:
         print(f"game data from {data}", flush=True)
         info = copy_data(data, out) or info
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data   # the exe's own tables and scripts: this checkout's, whatever the data brought (a release lags)
+    open_data.refresh_scripts(out)
+    open_data.refresh_db(out)
+    print("Data/db and Data/ai from this checkout's data/db and data/ai", flush=True)
     if a.posix_exe:
         posix_files(exe, out)
     else:
         shutil.copy2(exe, out / "EE-AOC.exe")
     count = movies(out, a.movies)
     (out / "play.json").write_bytes((json.dumps(dict(
-        exe=str(exe), data=[str(d) for d in datas], data_binary=bool(info.get("binary")), movies=count,
+        exe=str(exe), data=[str(d) for d in datas], movies=count,
         made=time.strftime("%Y-%m-%d %H:%M:%S")), indent=2) + "\n").encode())
     print(f"ready in {time.time() - t0:.0f} s: run {out / ('run.sh' if a.posix_exe else 'EE-AOC.exe')}")
 
