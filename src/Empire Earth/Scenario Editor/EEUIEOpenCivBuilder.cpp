@@ -155,75 +155,27 @@ extern GEFont* gU531938;                    // 0x531938
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESEInstructions.h"
 #include "ee/EESEAQuickSaveLoad.h"
-extern unsigned long& gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
-extern bool gSightUpdatesEnabled;
-extern GEViewport gViewport;
+#include "rust/ee_screens.h"
+
+extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 
 // FUNCTION: EXE 0x5a0315
 // Builds the brush size group (title and tiny to huge radio buttons, tiny checked) on the terrain and elevation tabs
+// (editor_brush.rs)
 EEUIFSEBrushGroup::EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inLocation,
                                    UIForm* inForm, GEFont* inFont)
 {
-    GE2DPoint theLocation = inLocation;
-    UWideString theText;
-    GEText* theGEText;
     this->mIsHighlightShown = false;
-    gResource->GetString(IDS_BRUSH_SIZE, theText);
-    this->mTitle = new UITextLabel(theText, inFont, 7,
-        GERectangle(theLocation, 100.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    ioIndex++;
-    theGEText = this->mTitle->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    this->mTitle->SetAlignment(kTextAlignCenter);
-    this->mTitle->SetBgOpacity(0.4f);
-    inForm->AddControl(this->mTitle, 2);
-    inForm->AddControl(this->mTitle, 3);
-    theLocation.SetY(this->mTitle->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_TINY, theText);
-    this->mButtons[0] = new EEUIFSERBBrush(this, 0, 2, theText, inFont, theLocation, inForm, ioIndex, true);
-    ioIndex++;
-    theGEText = this->mButtons[0]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theLocation.SetY(this->mButtons[0]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_SMALL, theText);
-    this->mButtons[1] = new EEUIFSERBBrush(this, 1, 3, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[1]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[1], 2);
-    inForm->AddControl(this->mButtons[1], 3);
-    theLocation.SetY(this->mButtons[1]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_MEDIUM, theText);
-    this->mButtons[2] = new EEUIFSERBBrush(this, 2, 4, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[2]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[2], 2);
-    inForm->AddControl(this->mButtons[2], 3);
-    theLocation.SetY(this->mButtons[2]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_LARGE, theText);
-    this->mButtons[3] = new EEUIFSERBBrush(this, 3, 5, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[3]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[3], 2);
-    inForm->AddControl(this->mButtons[3], 3);
-    theLocation.SetY(this->mButtons[3]->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_SE_HUGE, theText);
-    this->mButtons[4] = new EEUIFSERBBrush(this, 4, 6, theText, inFont, theLocation, inForm, ioIndex, false);
-    ioIndex++;
-    theGEText = this->mButtons[4]->GetTextLabel()->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    inForm->AddControl(this->mButtons[4], 2);
-    inForm->AddControl(this->mButtons[4], 3);
-    inForm->AddControl(this->mButtons[0], 2);
-    inForm->AddControl(this->mButtons[0], 3);
+    GEFont* theScreenFont = gSeplScreenFont;
+    gSeplScreenFont = inFont;
+    uint32_t theIndex = (uint32_t)ioIndex;
+    size_t theControls[6];
+    ee_screens_sebr_build(this, inForm, inLocation.GetX(), inLocation.GetY(), &theIndex, theControls);
+    gSeplScreenFont = theScreenFont;
+    ioIndex = theIndex;
+    this->mTitle = static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(theControls[0]));
+    for (unsigned long i = 0; i < 5; i++)
+        this->mButtons[i] = static_cast<EEUIFSERBBrush*>(reinterpret_cast<UIControl*>(theControls[i + 1]));
     this->mBrushSize = this->mButtons[0]->mBrushSize;
     this->mIsCentered = false;
 }
@@ -239,22 +191,14 @@ EEUIFSEBrushGroup::~EEUIFSEBrushGroup()
 
 // FUNCTION: EXE 0x5a0778
 // Sets the highlighted brush square around a map position, one tile larger to the top left when centered
+// (editor_brush.rs)
 void EEUIFSEBrushGroup::SetHighlight(float inX, float inY, bool inIsCentered)
 {
-    if (!inIsCentered) {
-        this->mRectangle.SetLeft((float)(long)(inX - this->mBrushSize));
-        this->mRectangle.SetTop((float)(long)(inY - this->mBrushSize));
-        this->mRectangle.SetRight((float)(long)(inX + this->mBrushSize));
-        this->mRectangle.SetBottom((float)(long)(inY + this->mBrushSize));
-        this->mIsCentered = false;
-    } else {
-        inX += 0.5f;
-        inY += 0.5f;
-        this->mRectangle.SetLeft((float)(long)(inX - this->mBrushSize - 1.0f));
-        this->mRectangle.SetTop((float)(long)(inY - this->mBrushSize - 1.0f));
-        this->mRectangle.SetRight((float)(long)(inX + this->mBrushSize));
-        this->mRectangle.SetBottom((float)(long)(inY + this->mBrushSize));
-        this->mIsCentered = true;
-    }
+    float r[4];
+    ee_screens_sebr_highlight(inX, inY, (uint32_t)this->mBrushSize, inIsCentered, r);
+    this->mRectangle.SetLeft(r[0]);
+    this->mRectangle.SetTop(r[1]);
+    this->mRectangle.SetRight(r[2]);
+    this->mRectangle.SetBottom(r[3]);
+    this->mIsCentered = inIsCentered;
 }
-

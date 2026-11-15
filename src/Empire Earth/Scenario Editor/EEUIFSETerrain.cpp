@@ -96,11 +96,12 @@
 #include "ee/EEMouse.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUIFSEBrushGroup.h"
+#include "ee/EEUIFSERBBrush.h"
 #include "ee/EEStringIDs.h"
 #include "rust/ee_screens.h"
 
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
-// a text transparent and yellow (the tab's labels)
+// a text transparent and yellow (the tab's and the brush group's labels)
 static void SetnYellow(GEText* inText)
 {
     inText->SetIsTransparent(true);
@@ -375,7 +376,8 @@ static_assert(IDS_SE_TERRAIN == 20508 && IDS_BULLDOZER == 20510 && IDS_TERRAIN_T
                   IDS_TERRAIN_COLOR == 20542 && kSETerrainTerrainButton == 0xc8 && kSETerrainBitmap == 0xc9 &&
                   kSETerrainMountainsButton == 0xca && kSETerrainTerrainTypeLabel == 0xcb &&
                   kSETerrainTerrainType == 0xcc && kSETerrainTerrainColorTypeLabel == 0xce &&
-                  kSETerrainTerrainColorType == 0xcf,
+                  kSETerrainTerrainColorType == 0xcf && IDS_BRUSH_SIZE == 20500 && IDS_SE_TINY == 20501 &&
+                  IDS_SE_HUGE == 20505,
               "editor_terrain.rs's ids");
 
 extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i, float* f)
@@ -545,6 +547,16 @@ extern "C" int32_t ee_screenscpp_setn(uint32_t inOp, void* const* p, int32_t* i,
         else if (i[0] == 1)
             theAction = new EESEAPaintRust(kSEAPaintBulldozer);
         *static_cast<void**>(p[1]) = theAction;
+        return 0;
+    }
+    case EE_SCREENS_SETN_OP_BRUSH: {   // the brush group's (editor_brush.rs)
+        UWideString theText;
+        gResource->GetString(i[2], theText);
+        EEUIFSERBBrush* t = new EEUIFSERBBrush(static_cast<EEUIFSEBrushGroup*>(p[2]), i[0], (unsigned long)i[1], theText,
+                                               gSeplScreenFont, GE2DPoint(f[0], f[1]), theForm, (unsigned long)i[3],
+                                               i[0] == 0);
+        SetnYellow(t->GetTextLabel()->GetGEText());
+        *theOut = static_cast<UIControl*>(t);
         return 0;
     }
     }
