@@ -54,6 +54,7 @@ const float kChecksumScale = -1000.0f;      // 0x441cf4 (ComputeChecksum)
 const float kSlopeScale = -0.76923078f;     // 0x441cf8 (GetTerrainPitch / GetTerrainRoll)
 const float kCliffNormalTolerance = 0.075f; // 0x441cfc (UpdateCliffs)
 
+// FUNCTION: EXE 0x51b844
 // Creates an empty map on the default terrain
 EEMap::EEMap()
     : RTSMap(kMapTileSize), FSPersistent(kPersistentMap), mRandom(1)
@@ -62,6 +63,10 @@ EEMap::EEMap()
     this->Initialize();
 }
 
+// SYNTHETIC: EXE 0x51b8bd
+// (the scalar deleting destructor, emitted with the vtable; slot EEMap+0x10)
+
+// FUNCTION: EXE 0x51b8d9
 // Creates a map of the given size and player count, filled with the given terrain
 EEMap::EEMap(long inWidth, long inHeight, unsigned long inPlayerCount, long inTerrain)
     : RTSMap(kMapTileSize), FSPersistent(kPersistentMap), mRandom(1)
@@ -72,6 +77,7 @@ EEMap::EEMap(long inWidth, long inHeight, unsigned long inPlayerCount, long inTe
     this->mU19565C = gFirstCliffTerrain;
 }
 
+// FUNCTION: EXE 0x51b971
 // Destroys the map: frees its region tables, tiles and visibility words and unloads its terrain textures
 EEMap::~EEMap()
 {
@@ -89,6 +95,7 @@ EEMap::~EEMap()
     }
 }
 
+// FUNCTION: EXE 0x51baa0
 // Hands out the next reserved tile at the given height, with its slice of the visibility words
 EEMapTile* EEMap::CreateTile(float inHeight)
 {
@@ -100,6 +107,7 @@ EEMapTile* EEMap::CreateTile(float inHeight)
     return theTile;
 }
 
+// FUNCTION: EXE 0x51bae6
 // Allocates the given number of tiles and cleared visibility words (two players per word), dropping old ones
 void EEMap::ReserveTiles(unsigned long inCount)
 {
@@ -117,6 +125,10 @@ void EEMap::ReserveTiles(unsigned long inCount)
     this->mTileArrayCount = inCount;
 }
 
+// SYNTHETIC: EXE 0x51bba9
+// (EETile's vector deleting destructor: Virtual1C's delete[])
+
+// FUNCTION: EXE 0x51bc03
 // Resizes every tile's visibility words for a new player count, keeping the existing visibility
 void EEMap::SetPlayerCount(unsigned long inPlayerCount)
 {
@@ -143,6 +155,7 @@ void EEMap::SetPlayerCount(unsigned long inPlayerCount)
     this->mU19561C = inPlayerCount;
 }
 
+// FUNCTION: EXE 0x51bd55
 // Drops a unit placed on the map onto the ground at its current position (camera objects excluded)
 void EEMap::PlaceUnitOnGround(EEUnit* inUnit)
 {
@@ -154,6 +167,7 @@ void EEMap::PlaceUnitOnGround(EEUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x51bdaa
 // Refreshes the terrain type of the four tiles around a vertex, then gives the vertex the water colour set
 // when below sea level, else its terrain's colour set
 void EEMap::UpdateWater(long inX, long inY)
@@ -193,6 +207,7 @@ void EEMap::UpdateWater(long inX, long inY)
     }
 }
 
+// FUNCTION: EXE 0x51bf4a
 // Builds a new map of the given size: fresh unit and effect region tables, every tile on the base terrain
 // (the original assigned the terrain mesh to itself here, a no-op; the mesh is a Rust object now and is not copied)
 void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
@@ -219,12 +234,14 @@ void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
     }
 }
 
+// FUNCTION: EXE 0x51c0e6
 // Creates an empty map for loading
 FSPersistent* EEMap::CreateDefault() const
 {
     return new EEMap;
 }
 
+// FUNCTION: EXE 0x51c13f
 // Takes a player's own or shared sight away from the mesh-flagged tiles within a radius; if the local
 // player sees through it, updates the mini map and terrain visibility counts too
 // NEAR: the original calls the tile vector's begin() and _Ptrit::operator+ out of line for each theTiles[i]
@@ -261,6 +278,7 @@ void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius
     }
 }
 
+// FUNCTION: EXE 0x51c3ca
 // Sums the tile and corner-height checksums of the next 64 x 64 window and advances the window;
 // past the right edge the cursor moves to the start of the next band
 long EEMap::ComputeChecksum()
@@ -291,12 +309,14 @@ long EEMap::ComputeChecksum()
     return theChecksum;
 }
 
+// FUNCTION: EXE 0x51c531
 // Adds the map's base checksum (the RTSMap part)
 void EEMap::GetChecksum(ESChecksum& ioChecksum) const
 {
     RTSMap::GetChecksum(ioChecksum);
 }
 
+// FUNCTION: EXE 0x51c53d
 // Returns the tile under a screen point and its coordinates (in orthographic view, where the ray meets z 0)
 EETile* EEMap::GetTileAt(const GE2DPoint& inPoint, long& outX, long& outY)
 {
@@ -313,6 +333,7 @@ EETile* EEMap::GetTileAt(const GE2DPoint& inPoint, long& outX, long& outY)
     return this->GetTile(outX, outY);
 }
 
+// FUNCTION: EXE 0x51c5fb
 // Gives the ground point at a tile's centre; returns false when there is no such tile
 bool EEMap::GetTileLocation(long inX, long inY, GE3DPoint& outLocation)
 {
@@ -325,6 +346,7 @@ bool EEMap::GetTileLocation(long inX, long inY, GE3DPoint& outLocation)
     return false;
 }
 
+// FUNCTION: EXE 0x51c665
 // Builds the 3D line through a screen point from the near to the far clipping plane
 void EEMap::GetScreenLine(const GE2DPoint& inPoint, GE3DLine& outLine)
 {
@@ -344,6 +366,7 @@ void EEMap::GetScreenLine(const GE2DPoint& inPoint, GE3DLine& outLine)
     outLine.Define(theNear, theFar);
 }
 
+// FUNCTION: EXE 0x51c75a
 // Returns the ground's pitch under a location, from the ground heights 0.65 ahead of and behind it
 float EEMap::GetTerrainPitch(const GETransformation& inLocation)
 {
@@ -363,6 +386,7 @@ float EEMap::GetTerrainPitch(const GETransformation& inLocation)
     return UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
 }
 
+// FUNCTION: EXE 0x51c847
 // Returns the ground's roll under a location, from the ground heights 0.65 to either side of it
 float EEMap::GetTerrainRoll(const GETransformation& inLocation)
 {
@@ -382,6 +406,7 @@ float EEMap::GetTerrainRoll(const GETransformation& inLocation)
     return UMArcCos((theFrontGround.GetZ() - theBackGround.GetZ()) * kSlopeScale) - 1.5707964f;
 }
 
+// FUNCTION: EXE 0x51c934
 // Returns the tile hit by the ray through a screen point, optionally stopping at the water surface
 EETile* EEMap::PickScreenTile(const GE2DPoint& inPoint, long& outX, long& outY, bool inHitWaterSurface)
 {
@@ -390,6 +415,7 @@ EETile* EEMap::PickScreenTile(const GE2DPoint& inPoint, long& outX, long& outY, 
     return this->GetTileOnLine(theLine, outX, outY, inHitWaterSurface);
 }
 
+// FUNCTION: EXE 0x51c96d
 // Returns the tile and the 3D point hit by the ray through a screen point, optionally at the water surface
 EETile* EEMap::GetLocationAt(const GE2DPoint& inPoint, GE3DPoint& outLocation, bool inHitWaterSurface)
 {
@@ -398,6 +424,7 @@ EETile* EEMap::GetLocationAt(const GE2DPoint& inPoint, GE3DPoint& outLocation, b
     return this->GetLocationOnLine(theLine, outLocation, inHitWaterSurface);
 }
 
+// FUNCTION: EXE 0x51c9a3
 // Resets the map to empty: no tiles or region tables, seeds its random generator, registers terrain sets
 void EEMap::Initialize()
 {
@@ -415,6 +442,7 @@ void EEMap::Initialize()
     EETerrainTable::Get(this->mTerrainMesh.GetGlobalWaterSetID())->Load(this->mTerrainMesh);
 }
 
+// FUNCTION: EXE 0x51ca0d
 // Reads the map, its base terrain, characteristics and cliff terrain from the saved game and re-types every
 // tile (cliffs and unknown terrain become the base terrain; saves up to 0.203 have no space tiles)
 long EEMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -504,6 +532,7 @@ int32_t EEMapSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUn
     return EESavePrimitive(theFile, inOp, io);
 }
 
+// FUNCTION: EXE 0x51ceb0
 // Reads the next tile from the saved game (saves up to 0.46 also carry its terrain); returns the tile
 EEMapTile* EEMap::LoadTile(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile, long inX,
                             long inY)
@@ -526,6 +555,7 @@ EEMapTile* EEMap::LoadTile(unsigned long inMajorVersion, unsigned long inMinorVe
     return theTile;
 }
 
+// FUNCTION: EXE 0x51cf60
 // Writes every tile's state to the out-of-sync dump file
 void EEMap::DumpOutOfSynch(FILE* inFile)
 {
@@ -543,6 +573,7 @@ void EEMap::DumpOutOfSynch(FILE* inFile)
     }
 }
 
+// FUNCTION: EXE 0x51d006
 // Gives a player own or shared sight of the mesh-flagged tiles within a radius; if the local player sees
 // through it, updates the mini map and terrain visibility counts too
 // NEAR: the original calls the tile vector's begin() and _Ptrit::operator+ out of line for each theTiles[i]
@@ -579,6 +610,7 @@ void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, b
     }
 }
 
+// FUNCTION: EXE 0x51d2a2
 // Paints a rectangle of tiles with a terrain, then recolours its vertices with the given colour type
 void EEMap::PaintTerrainRect(long inLeft, long inRight, long inTop, long inBottom, long inTerrain, long inCliff)
 {
@@ -596,6 +628,7 @@ void EEMap::PaintTerrainRect(long inLeft, long inRight, long inTop, long inBotto
     this->SetCliffColorSets(inLeft, inRight, inTop, inBottom, inCliff);
 }
 
+// FUNCTION: EXE 0x51d34b
 // Sets a tile's terrain type and paints it and its lower-left neighbours' textures with the terrain
 void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
 {
@@ -617,6 +650,7 @@ void EEMap::PaintTerrain(long inX, long inY, long inTerrain)
     }
 }
 
+// FUNCTION: EXE 0x51d433
 // Gives the vertices of a tile rectangle that are not under water a colour type's colour set
 void EEMap::SetCliffColorSets(long inLeft, long inRight, long inTop, long inBottom, long inCliff)
 {
@@ -657,6 +691,7 @@ void EEMap::SetCliffColorSets(long inLeft, long inRight, long inTop, long inBott
     }
 }
 
+// FUNCTION: EXE 0x51d5e8
 // Marks steep tiles in a rectangle as cliffs, texturing them from the cliff terrain by slope direction,
 // then makes tiles with three or more cliff neighbours cliffs too
 void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
@@ -752,6 +787,7 @@ void EEMap::UpdateCliffs(long inLeft, long inRight, long inBottom, long inTop)
     }
 }
 
+// FUNCTION: EXE 0x51dbf1
 // Turns cliff tiles in a rectangle that are no longer steep back into the map's base terrain
 void EEMap::RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsigned long inBottom, unsigned long inTop)
 {
@@ -791,6 +827,7 @@ void EEMap::RemoveFlatCliffs(unsigned long inLeft, unsigned long inRight, unsign
     }
 }
 
+// FUNCTION: EXE 0x51dd95
 // Registers every terrain's texture set and every terrain type's colour set with the terrain mesh, then
 // the water state and the colour table
 void EEMap::RegisterTerrainSets()
@@ -833,6 +870,7 @@ void EEMap::RegisterTerrainSets()
     theMesh.SetColorTable(theColors);
 }
 
+// FUNCTION: EXE 0x51df3f
 // Writes the map, its base terrain, characteristics and cliff terrain to the saved game; returns the first error
 long EEMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -841,6 +879,7 @@ long EEMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSF
                              static_cast<EeUnitsMapFields*>(this));
 }
 
+// FUNCTION: EXE 0x51df99
 // Switches the map to another cliff terrain and re-runs cliff detection over the whole map
 void EEMap::SetCliffTexture(long inCliffTexture)
 {
@@ -854,6 +893,7 @@ void EEMap::SetCliffTexture(long inCliffTexture)
     this->UpdateCliffs(0, this->mSize, 0, this->mSize);
 }
 
+// FUNCTION: EXE 0x51dfb7
 // Sets a tile's texture set, loading the new terrain's textures and optionally unloading the old one's
 void EEMap::SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload)
 {
@@ -863,6 +903,19 @@ void EEMap::SetTileTerrain(long inX, long inY, long inTextureSet, bool inUnload)
     this->mTerrainMesh.SetTextureSet(inX, inY, EETerrainTable::Get(inTextureSet)->mTextureSetID);
 }
 
+// TEMPLATE: EXE 0x51e032
+// (vector<GEColor>::push_back; the inline and template COMDATs close the unit)
+
+// TEMPLATE: EXE 0x51e05e
+// (RTSRegionTable<EEComplexUnit*>::RTSRegionTable)
+
+// SYNTHETIC: EXE 0x51e0fe
+// (RTSRegionTable<EEComplexUnit*>'s scalar deleting destructor)
+
+// TEMPLATE: EXE 0x51e11a
+// (RTSRegionTable<EEComplexUnit*>::~RTSRegionTable)
+
+// FUNCTION: EXE 0x51e12f
 // Returns the number of tiles: the square map minus its two cut-off corner triangles
 unsigned long EEMap::GetTileCount()
 {
@@ -873,6 +926,55 @@ unsigned long EEMap::GetTileCount()
                                     + (long)((theWidth + 1) * theWidth * 0.5f));
 }
 
+// SYNTHETIC: EXE 0x51e18a
+// (FSPersistent-base thunk of GetChecksum)
+// SYNTHETIC: EXE 0x51e195
+// (FSPersistent-base thunk of Load)
+// SYNTHETIC: EXE 0x51e1a0
+// (FSPersistent-base thunk of Save)
+// SYNTHETIC: EXE 0x51e1ab
+// (FSPersistent-base thunk of the scalar deleting destructor)
+
+// SYNTHETIC: EXE 0x51e1b6
+// (EEEffectsTable's scalar deleting destructor)
+
+// FUNCTION: EXE 0x51e1d8
+// Returns the number of cliff terrains
+// (EETerrainTable::GetNumCliffTerrains, inline in ee/EEDatabaseTables.h: its out-of-line copy)
+
+// FUNCTION: EXE 0x51e1f0
+// Returns the number of terrain colours
+// (EETerrainColorTable::GetCount, inline in ee/EETerrainColorTable.h: its out-of-line copy)
+
+// FUNCTION: EXE 0x51e208
+// Returns a terrain colour by index
+// (EETerrainColorTable::Get, inline in ee/EETerrainColorTable.h: its out-of-line copy)
+
+// FUNCTION: EXE 0x51e22b
+// Returns a terrain type by index
+// (EETerrainTypeTable::Get, inline in ee/EEDatabaseTables.h: its out-of-line copy)
+
+// FUNCTION: EXE 0x51e24e
+// Returns the number of terrain types
+// (EETerrainTypeTable::GetCount, inline in ee/EEDatabaseTables.h: its out-of-line copy)
+
+// FUNCTION: EXE 0x51e266
+// Creates an empty tile
+// (EETile::EETile, inline in ee/EEMap.h: its out-of-line copy, first called by Virtual1C's new[])
+
+// TEMPLATE: EXE 0x51e290
+// (RTSRegionTable<EEEffect*>::~RTSRegionTable)
+
+// TEMPLATE: EXE 0x51e2a5
+// (vector<EECliffTerrainTable*>::operator[], ICF-folded with vector<long>'s)
+
+// SYNTHETIC: EXE 0x51e2b2
+// (RTSRegionTable<EEEffect*>'s scalar deleting destructor)
+
+// TEMPLATE: EXE 0x51e2ce
+// (RTSRegionTable<EEEffect*>::RTSRegionTable)
+
+// FUNCTION: EXE 0x51c10d
 // Returns whether the other player is this player or neither of the two is at war with the other
 // (out of line after its first user here)
 bool EEPlayer::IsAlliedWith(EEPlayer* inPlayer)

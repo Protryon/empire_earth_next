@@ -84,84 +84,101 @@ static void RestoreLoadedContacts()
     }
 }
 
+// FUNCTION: EXE 0x5f1f19
 // Creates an empty complex doppelganger with no model, hit points or tile
 EEComplexDoppelganger::EEComplexDoppelganger()
 {
     this->Reset();
 }
 
+// TEMPLATE: EXE 0x5f1f3b
+// (std::exception::what, emitted with the <stdexcept> vtables of the vector _Xlen paths)
+
+// FUNCTION: EXE 0x5f1f3f
 // Returns the remembered unit's animation state
 long EEComplexDoppelganger::GetAnimation()
 {
     return this->mAnimation;
 }
 
+// FUNCTION: EXE 0x5f1f43
 // Returns itself: this doppelganger is a complex one
 EEComplexDoppelganger* EEComplexDoppelganger::GetComplexDoppelganger()
 {
     return this;
 }
 
+// FUNCTION: EXE 0x5f1f46
 // Returns whether the remembered unit was fully built (the top bit of the packed hit points)
 bool EEComplexDoppelganger::IsBuilt()
 {
     return (this->mPackedHitPoints & 0x80000000) > 0;
 }
 
+// FUNCTION: EXE 0x5f1f57
 // Returns the remembered animation frame
 long EEComplexDoppelganger::GetFrame()
 {
     return this->mFrame;
 }
 
+// FUNCTION: EXE 0x5f1f5b
 // Returns the remembered model
 EEModel* EEComplexDoppelganger::GetModel()
 {
     return this->mModel;
 }
 
+// FUNCTION: EXE 0x5f1f5f
 // Returns whether the remembered unit was a building foundation
 bool EEComplexDoppelganger::IsFoundation()
 {
     return this->mIsFoundation;
 }
 
+// FUNCTION: EXE 0x5f1f63
 // Copies the remembered position and orientation into the caller's transformation
 void EEComplexDoppelganger::GetTransformation(GETransformation& outTransformation)
 {
     outTransformation = this->mTransformation;
 }
 
+// FUNCTION: EXE 0x5f1f74
 // Returns the remembered scale
 float EEComplexDoppelganger::GetScale()
 {
     return this->mScale;
 }
 
+// FUNCTION: EXE 0x5f1f78
 // Returns the remembered hit points (a resource's amount) without the built bit
 long EEComplexDoppelganger::GetHitPoints()
 {
     return this->mPackedHitPoints & 0x7fffffff;
 }
 
+// FUNCTION: EXE 0x5f1f81
 // Returns the tile X the unit was seen on
 long EEComplexDoppelganger::GetTileX()
 {
     return this->mTileX;
 }
 
+// FUNCTION: EXE 0x5f1f85
 // Returns the tile Y the unit was seen on
 long EEComplexDoppelganger::GetTileY()
 {
     return this->mTileY;
 }
 
+// FUNCTION: EXE 0x5f1f89
 // Destroys the complex doppelganger, releasing its unit and model media
 EEComplexDoppelganger::~EEComplexDoppelganger()
 {
     this->Clear();
 }
 
+// FUNCTION: EXE 0x5f1fa0
 // Forgets the model, hit points, frame, animation, scale and tile (-10000, off the map) without releasing anything
 void EEComplexDoppelganger::Reset()
 {
@@ -175,6 +192,7 @@ void EEComplexDoppelganger::Reset()
     this->mIsFoundation = false;
 }
 
+// FUNCTION: EXE 0x5f1fc2
 // Releases the remembered unit and the model's media, then resets
 void EEComplexDoppelganger::Clear()
 {
@@ -184,6 +202,7 @@ void EEComplexDoppelganger::Clear()
     this->Reset();
 }
 
+// FUNCTION: EXE 0x5f1fdf
 // Remembers what a viewing player sees of a unit: model, frame, animation, hit points (a resource's amount),
 // built flag, position and scale (a unit with no complex part stands built at its tile centre), then loads the media
 void EEComplexDoppelganger::Initialize(EEUnit* inUnit, EEPlayer* inPlayer, RTSTile* inTile)
@@ -226,6 +245,7 @@ void EEComplexDoppelganger::Initialize(EEUnit* inUnit, EEPlayer* inPlayer, RTSTi
     this->mModel->LoadMedia();
 }
 
+// FUNCTION: EXE 0x5f212e
 // Copies another complex doppelganger's remembered view for a new viewing player
 void EEComplexDoppelganger::Initialize(EEDoppelganger* inOther, EEPlayer* inPlayer, RTSTile* inTile)
 {
@@ -242,6 +262,7 @@ void EEComplexDoppelganger::Initialize(EEDoppelganger* inOther, EEPlayer* inPlay
     this->mIsFoundation = theOther->mIsFoundation;
 }
 
+// FUNCTION: EXE 0x5f21a3
 // Reads the transformation, model index, hit points, frame, animation, scale and tile after the base data (the
 // foundation flag only from minor version 0xe6 on); returns the first read error
 long EEComplexDoppelganger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -306,6 +327,7 @@ long EEComplexDoppelganger::Load(unsigned long inMajorVersion, unsigned long inM
     return inFile.Read(this->mIsFoundation);
 }
 
+// FUNCTION: EXE 0x5f230c
 // Turns the loaded model index back into its media (clamping the frame) and puts the doppelganger on its tile; frees
 // it if the unit or model is gone; returns 0
 long EEComplexDoppelganger::RepairPointers(unsigned long inFirst, unsigned long inSecond)
@@ -325,6 +347,7 @@ long EEComplexDoppelganger::RepairPointers(unsigned long inFirst, unsigned long 
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x5f2392
 // Writes the transformation, model index, hit points, frame, animation, scale, tile and foundation flag after the base
 // data; returns the first write error
 long EEComplexDoppelganger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -555,6 +578,7 @@ static int32_t EEComplexUnitLoadSection(EEUnitSaveContext& inContext, uint32_t i
     return theResult;
 }
 
+// FUNCTION: EXE 0x5f2452
 // Reads the complex unit's state from the saved game, keeping units and groups as ids for RepairPointers and queueing
 // its pending path; fields newer than the file get defaults; returns the read status. port (R5b.4, round 26): the
 // body is Rust (ee_units unit_load.rs, with RTSUnit's and EEUnit's parts) over the records this class derives from,
@@ -570,6 +594,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
 }
 
 // Load stores the saved fractions as floats in the longs.
+// FUNCTION: EXE 0x5f3395
 // Turns the saved hit point, flight, garrison and power fractions back into amounts (at least 1 if nonzero; port,
 // R5b.4 round 27: ee_units unit_load.rs finish_fractions over the record); marks an old save's (<= 200) unbuilt land
 // building at 1 hit point as a foundation, reloading its media
@@ -588,6 +613,7 @@ long EEComplexUnit::FinishLoad(long inMajorVersion, long inMinorVersion)
     return EEUnit::FinishLoad(inMajorVersion, inMinorVersion);
 }
 
+// FUNCTION: EXE 0x5f353f
 // Turns the loaded ids back into units, groups, research and behaviour, dropping the missing ones; strands a unit whose
 // transport or owner vanished and clears goal queues that fail to repair; returns the last status
 long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -867,6 +893,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
 }
 
 // RepairPointers's helper, out of line in this unit.
+// FUNCTION: EXE 0x5f414d
 // Shows the model of the unit's current animation state at the given frame
 void EEComplexUnit::SetAnimationFrame(unsigned long inFrame)
 {
@@ -875,6 +902,7 @@ void EEComplexUnit::SetAnimationFrame(unsigned long inFrame)
     this->mPhysicalModel.SetFrame(inFrame);
 }
 
+// FUNCTION: EXE 0x5f417e
 // Writes the complex unit's state to the saved game, units and groups as ids and hit points, flight time, garrison
 // and power as fractions of their maximum; returns the write status.
 // port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs, with RTSUnit's and EEUnit's parts) over the records
@@ -1209,6 +1237,48 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
     }
 }
 
+// TEMPLATE: EXE 0x5f5180
+// std::vector<EETileCoordinate>::operator=
+
+// TEMPLATE: EXE 0x5f52a4
+// std::vector<EETileCoordinate>::push_back
+
+// TEMPLATE: EXE 0x5f52d0
+// std::deque<EEComplexUnitWaypoint>::push_back
+
+// TEMPLATE: EXE 0x5f5364
+// UReferenceContainer<EEAreaEffect*>::Clear
+
+// TEMPLATE: EXE 0x5f5388
+// std::vector<long>::end
+
+// TEMPLATE: EXE 0x5f5394
+// std::deque<EEComplexUnitWaypoint>::iterator::operator*
+
+// TEMPLATE: EXE 0x5f53c8
+// U2DPoint<float>::Load (mU0DC)
+
+// TEMPLATE: EXE 0x5f53fc
+// U2DPoint<float>::Save
+
+// (0x5f5430 EEUnitBehavior::Get: our RepairPointers/ResetEEComplexUnit still expand it inline; no marker yet)
+// TEMPLATE: EXE 0x5f543e
+// std::vector<EEPathManagerPending>::push_back (Load's gPathManager.mPending.push_back)
+
+// TEMPLATE: EXE 0x5f546a
+// std::vector<EEPathManagerPending>::insert(iterator, const T&)
+
+// TEMPLATE: EXE 0x5f54c4
+// std::vector<EEPathManagerPending>::insert(iterator, size_type, const T&)
+
+// TEMPLATE: EXE 0x5f5784
+// std::vector<EEPathManagerPending>::_Ufill: NOT emitted by our compile (our insert(n) expands it; Dinkum _Ufill inline budget, depth)
+
+// TEMPLATE: EXE 0x5f57ab
+// std::vector<EEPathManagerPending>::_Ucopy
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
 bool EEComplexDoppelganger::IsComplex()
 {
     return true;

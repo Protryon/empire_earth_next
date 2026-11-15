@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbySkinListControls.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00715b20
 // Returns a new list control from the skin template with a skinned header, a multi-column list area and scrollbars
 WONListCtrl* WONSkin::GetListCtrl()
 {

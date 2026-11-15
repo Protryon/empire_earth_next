@@ -15,12 +15,17 @@
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPAGOrder.h"
 
+// FUNCTION: EXE 0x4412b1
 // Creates an inactive attack group order of no type, with no sub groups and no unit
 EECPAGOrder::EECPAGOrder()
     : mSubGroup(NULL), mOtherSubGroup(NULL), mUnitID(-1), mL28(0), mType(kAGOrderNone), mSplitKind(0), mState(0), mIsActive(false)
 {
 }
 
+// SYNTHETIC: EXE 0x4412e1
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4412fd
 // Creates a copy of an order, taking its own references on both sub groups
 EECPAGOrder::EECPAGOrder(const EECPAGOrder& inOrder)
 {
@@ -37,6 +42,7 @@ EECPAGOrder::EECPAGOrder(const EECPAGOrder& inOrder)
     this->SetOtherSubGroup(inOrder.mOtherSubGroup);
 }
 
+// FUNCTION: EXE 0x441369
 // Destroys the order, releasing its references on both sub groups
 EECPAGOrder::~EECPAGOrder()
 {
@@ -44,6 +50,10 @@ EECPAGOrder::~EECPAGOrder()
     this->ReleaseOtherSubGroup();
 }
 
+// SYNTHETIC: EXE 0x441387
+// (EECPILocation's scalar deleting destructor, inline in ee/EECPILocation.h; this unit uses its vtable first)
+
+// FUNCTION: EXE 0x4413a4
 // Reads the order from a saved game (sub groups as ids until Restore); returns the first read error
 long EECPAGOrder::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -72,6 +82,7 @@ long EECPAGOrder::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     return theResult;
 }
 
+// FUNCTION: EXE 0x44144b
 // Releases the reference on the second sub group and clears it
 void EECPAGOrder::ReleaseOtherSubGroup()
 {
@@ -80,6 +91,7 @@ void EECPAGOrder::ReleaseOtherSubGroup()
     this->mOtherSubGroup = NULL;
 }
 
+// FUNCTION: EXE 0x441461
 // Releases the reference on the order's sub group and clears it
 void EECPAGOrder::ReleaseSubGroup()
 {
@@ -88,6 +100,7 @@ void EECPAGOrder::ReleaseSubGroup()
     this->mSubGroup = NULL;
 }
 
+// FUNCTION: EXE 0x441477
 // Turns the loaded sub group ids back into the attack group's sub groups and references them; returns OK
 long EECPAGOrder::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion, EECPAttackGroup* inGroup)
 {
@@ -108,6 +121,7 @@ long EECPAGOrder::Restore(unsigned long inMajorVersion, unsigned long inMinorVer
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x4414c6
 // Writes the order to the saved game (sub groups by id, 0 for none); returns the first write error
 long EECPAGOrder::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -133,6 +147,7 @@ long EECPAGOrder::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     return theResult;
 }
 
+// FUNCTION: EXE 0x44159a
 // Sets the order's second sub group, moving the reference from the old one
 void EECPAGOrder::SetOtherSubGroup(EECPAttackSubGroup* inSubGroup)
 {
@@ -144,6 +159,7 @@ void EECPAGOrder::SetOtherSubGroup(EECPAttackSubGroup* inSubGroup)
         this->mOtherSubGroup->Reference();
 }
 
+// FUNCTION: EXE 0x4415bb
 // Sets the order's sub group, moving the reference from the old one
 void EECPAGOrder::SetSubGroup(EECPAttackSubGroup* inSubGroup)
 {
@@ -155,6 +171,7 @@ void EECPAGOrder::SetSubGroup(EECPAttackSubGroup* inSubGroup)
         this->mSubGroup->Reference();
 }
 
+// FUNCTION: EXE 0x4415dc
 // Copies another order, moving the sub group references to its sub groups
 EECPAGOrder& EECPAGOrder::operator=(const EECPAGOrder& inOrder)
 {

@@ -71,16 +71,22 @@
 #include "ee/EECPPersonnel.h"
 #include "ee/EETown.h"
 
+// FUNCTION: EXE 0x44dc37
 // Creates a naval attack sub-group belonging to the given attack group
 EECPASGSea::EECPASGSea(EECPAttackGroup* inGroup, long inKind) : EECPAttackSubGroup(inGroup, inKind)
 {
 }
 
+// SYNTHETIC: EXE 0x44dc53
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x44dc6f
 // Destroys the naval sub-group (base members only)
 EECPASGSea::~EECPASGSea()
 {
 }
 
+// FUNCTION: EXE 0x44dc7a
 // Counts the sub-group's units that are submarines
 long EECPASGSea::CountSubmarines()
 {
@@ -93,6 +99,7 @@ long EECPASGSea::CountSubmarines()
     return theCount;
 }
 
+// FUNCTION: EXE 0x44dcbc
 // Takes the requested units as the base does; if they sit in more than one body of water, orders the attack group
 // to split the sub-group; then refreshes the units and returns the base's result
 bool EECPASGSea::TakeRequestedUnits()
@@ -116,6 +123,7 @@ bool EECPASGSea::TakeRequestedUnits()
     return theResult;
 }
 
+// FUNCTION: EXE 0x44dd9f
 // Rebuilds the formation with 2-tile spacing and no forced moves and places it at the location, facing the
 // heading from the sub-group's position
 void EECPASGSea::PlaceFormation(const EECPILocation& inLocation)
@@ -130,6 +138,7 @@ void EECPASGSea::PlaceFormation(const EECPILocation& inLocation)
     this->mFormation->Place(inLocation, theDistance);
 }
 
+// FUNCTION: EXE 0x44de1f
 // Collects the units in the bounds that pass the naval target filter (enemies optional): walls become siege
 // targets; towers, gates and kind-4 tech-tree buildings are both normal and siege targets
 void EECPASGSea::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies)
@@ -164,6 +173,7 @@ void EECPASGSea::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies
     }
 }
 
+// FUNCTION: EXE 0x44df9a
 // Returns true if the sub-group is empty or its first unit lies in the same body of water as the location
 bool EECPASGSea::CanReach(const EECPILocation* inLocation)
 {
@@ -175,12 +185,14 @@ bool EECPASGSea::CanReach(const EECPILocation* inLocation)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44dfe6
 // Checks whether the sub-group is at the location the base way and discards the answer
 void EECPASGSea::IsAtLocation(const EECPILocation& inLocation)
 {
     EECPAttackSubGroup::IsAt(inLocation);
 }
 
+// FUNCTION: EXE 0x44dff2
 // Returns true if the sub-group is in the location's path sub-sector or within 8 tiles of it; else, in a neighbour
 // sector, once all units settle, or within 30 tiles when the target sector's terrain kind is not allowed
 bool EECPASGSea::IsAt(const EECPILocation& inLocation)
@@ -206,6 +218,7 @@ bool EECPASGSea::IsAt(const EECPILocation& inLocation)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44e0b1
 // Returns the path sub-sector holding the location's tile
 EEAIPathSubSector* EECPILocation::GetPathSubSector() const
 {
@@ -214,6 +227,7 @@ EEAIPathSubSector* EECPILocation::GetPathSubSector() const
     return gContinentManager.GetPathSubSectorAt(theX, theY);
 }
 
+// FUNCTION: EXE 0x44e0c4
 // Returns true if the sub-group mixes submarines with other ships
 bool EECPASGSea::DecideSplit()
 {
@@ -223,6 +237,7 @@ bool EECPASGSea::DecideSplit()
     return false;
 }
 
+// FUNCTION: EXE 0x44e0ea
 // Returns true if the task is active; a location task must also lie on a water continent
 bool EECPASGSea::IsTaskActive(const EECPAGTask& inTask)
 {
@@ -238,18 +253,21 @@ bool EECPASGSea::IsTaskActive(const EECPAGTask& inTask)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44e125
 // Loads the sub-group from a saved game (base data only); returns the base's error code
 long EECPASGSea::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     return EECPAttackSubGroup::Load(inMajorVersion, inMinorVersion, inFile);
 }
 
+// FUNCTION: EXE 0x44e139
 // Sets the destination the base way
 void EECPASGSea::SetDestination(const EECPILocation& inLocation)
 {
     EECPAttackSubGroup::SetDestination(inLocation);
 }
 
+// FUNCTION: EXE 0x44e145
 // Requests a sea route between two tiles from the path manager, walls and gates allowed, with the sea route planner
 void EECPASGSea::RequestPath(void* inFrom, void* inTo)
 {
@@ -269,6 +287,7 @@ void EECPASGSea::RequestPath(void* inFrom, void* inTo)
     theModifier->Dereference();
 }
 
+// FUNCTION: EXE 0x44e203
 // Tests a condition: has-location-task is true for an active location, type-10 or wonder-defence task; others go
 // to the base
 bool EECPASGSea::TestCondition(long inState, long inTime)
@@ -284,6 +303,7 @@ bool EECPASGSea::TestCondition(long inState, long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44e240
 // Returns true while the task location still has influence for the task's player
 bool EECPASGSea::IsTerritoryTaskValid(long inTime)
 {
@@ -291,6 +311,7 @@ bool EECPASGSea::IsTerritoryTaskValid(long inTime)
     return theTable->GetTileValue(this->mTask.GetPlayerID(), this->mTask.mLocation.mTile) ? true : false;
 }
 
+// FUNCTION: EXE 0x44e26a
 // Re-checks the task at random 5-35 s intervals: a location attack stays valid while enemies have influence within
 // 2 regions, a wonder defence while the wonder lives; defence or modeless tasks lapse with a 65% chance
 bool EECPASGSea::IsLocationTaskValid(long inTime)
@@ -337,6 +358,7 @@ bool EECPASGSea::IsLocationTaskValid(long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x44e42f
 // Returns true while the task unit lives and either the task is a wonder task or the next follow time has passed
 bool EECPASGSea::IsUnitTaskValid(long inTime)
 {
@@ -351,6 +373,18 @@ bool EECPASGSea::IsUnitTaskValid(long inTime)
     return theResult;
 }
 
+// TEMPLATE: EXE 0x44e45d
+// TEMPLATE: EXE 0x44e488
+// TEMPLATE: EXE 0x44e4f9
+// (the multimap<long, EECPAttackSubGroupUnit*> dtor and erase; this build emits them for Update's copy
+// at the end of the unit, evidence that the original unit held that body too)
+
+// FUNCTION: EXE 0x44e52b
+// Collects the units in the bounds that pass the naval target filter, dropping duplicates when a multi-tile
+// unit was accepted and uniqueness was asked for; returns the count
+// EECollectASGTargets<EECPASeaTargetFilter> (ee/EECPAreaTargetCollector.h), emitted by CollectTargets above
+
+// FUNCTION: EXE 0x44e6d4
 // Returns the path sub-sector holding the tile
 EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(const EETileLocation& inTile)
 {
@@ -359,19 +393,25 @@ EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(const EETileLocation
     return this->GetPathSubSectorAt(theX, theY);
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
 // Returns false
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPASGSea::IsAwayFromTowns()
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4e123d
 // Does nothing for naval sub-groups
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPASGSea::MoveToNearestTown()
 {
 }
 
+// ICF-FOLDED: EXE 0x44f603
 // Switches state: idle gets a new task, split asks to split, move heads for the task, hold/move-to-task/follow run
 // their handlers; other states go to the base class
+// (no address of its own: the same body as EECPASGSpaceship::SetState, which ICF kept; [sib 6])
 void EECPASGSea::SetState(long inState, long inTime)
 {
     unsigned long theOldState = this->mState;
@@ -410,8 +450,10 @@ void EECPASGSea::SetState(long inState, long inTime)
     }
 }
 
+// ICF-FOLDED: EXE 0x44f70e
 // Runs the state machine each tick: scans or drops targets, updates units, then moves between the idle, wait,
 // gather, split, attack, hold, follow, return and hold-territory states as their conditions change
+// (no address of its own: the same body as EECPASGSpaceship::Update, which ICF kept; [sib 36])
 void EECPASGSea::Update(long inTime)
 {
     if (this->mNextScanTime <= inTime && this->mUnits.size() > 0)
@@ -538,20 +580,26 @@ void EECPASGSea::Update(long inTime)
     this->mNextUpdateTime = inTime;
 }
 
+// ICF-FOLDED: EXE 0x44f114
 // Finds the sub-group's position the base way
+// (no address of its own: the same body as EECPASGSeaTransport::FindPosition, which ICF kept; [sib 49])
 bool EECPASGSea::FindPosition(EETileLocation& outTile, bool inArg2, bool inForce)
 {
     return EECPAttackSubGroup::FindPosition(outTile, inArg2, inForce);
 }
 
+// ICF-FOLDED: EXE 0x44f128
 // Returns the number of normal plus siege targets
+// (no address of its own: the same body as EECPASGSeaTransport::GetNumTargets, which ICF kept; [sib 54])
 long EECPASGSea::GetNumTargets()
 {
     return this->mTargets.size() + this->mSiegeTargets.size();
 }
 
+// ICF-FOLDED: EXE 0x451479
 // Picks units to split off: the largest group when units sit in several bodies of water, else all kind-0x15
 // units (never all of them), else the first half
+// (no address of its own: the same body as EECPASGSubmarine::PickSplitUnits, which ICF kept; [sib 59])
 void EECPASGSea::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
 {
     std::multimap<long, EECPAttackSubGroupUnit*> theRanked;
@@ -596,8 +644,10 @@ void EECPASGSea::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
         delete theGroup->second;
 }
 
+// ICF-FOLDED: EXE 0x441976
 // Replaces the sub-group's personnel request with a town request (at the town's centre) or a continent request
 // for the given classes; during a wonder race the request expires after 300 s
+// (no address of its own: the same body as EECPASGAir::RequestUnits, which ICF kept)
 void EECPASGSea::RequestUnits(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent, long inTownID)
 {
     if (this->mRequest != NULL) {
@@ -617,7 +667,9 @@ void EECPASGSea::RequestUnits(std::vector<long>& inClasses, std::vector<long>& i
         this->mRequest->mDeadline = gPhysics->mGameTime + 300000;
 }
 
+// ICF-FOLDED: EXE 0x44dfe6
 // Tests whether the sub-group is at the location (the result is dropped)
+// (no address of its own: the same body as EECPASGSea::IsAtLocation, which ICF kept)
 void EECPASGSpaceship::IsAtLocation(const EECPILocation& inLocation)
 {
     EECPAttackSubGroup::IsAt(inLocation);

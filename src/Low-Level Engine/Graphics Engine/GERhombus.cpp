@@ -30,6 +30,7 @@
 #include "lle/GERhombus.h"
 #include "GERustMath.h"
 
+// FUNCTION: LLE 0x10024fc0
 // Creates a quad of four white, opaque, camera-facing vertices from the active rasterizer, unrotated
 GERhombus::GERhombus()
 {
@@ -57,6 +58,7 @@ GERhombus::GERhombus()
     this->ComputeRotation();
 }
 
+// FUNCTION: LLE 0x10025106
 // Recomputes the quad's corner vertices from its rectangle, rotated about the centre by its rotation angle
 // (the corners are Rust: ee_ge bitmap.rs)
 void GERhombus::ComputeRotation()
@@ -73,3 +75,29 @@ void GERhombus::ComputeRotation()
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
+
+// Compiler-generated, continued:
+// SYNTHETIC: LLE 0x10024ea0
+// SYNTHETIC: LLE 0x10024eaa
+// SYNTHETIC: LLE 0x10024eba
+// SYNTHETIC: LLE 0x10024ec6
+// SYNTHETIC: LLE 0x10024ed0
+// SYNTHETIC: LLE 0x10024eda
+// SYNTHETIC: LLE 0x10024eea
+// SYNTHETIC: LLE 0x10024ef6
+// SYNTHETIC: LLE 0x10024f00
+// SYNTHETIC: LLE 0x10024f0a
+// SYNTHETIC: LLE 0x10024f1a
+// SYNTHETIC: LLE 0x10024f26
+// SYNTHETIC: LLE 0x10024f30
+// SYNTHETIC: LLE 0x10024f3a
+// SYNTHETIC: LLE 0x10024f4a
+// SYNTHETIC: LLE 0x10024f56
+// SYNTHETIC: LLE 0x10024f60
+// SYNTHETIC: LLE 0x10024f6a
+// SYNTHETIC: LLE 0x10024f7a
+// SYNTHETIC: LLE 0x10024f86
+// SYNTHETIC: LLE 0x10024f90
+// SYNTHETIC: LLE 0x10024f9a
+// SYNTHETIC: LLE 0x10024faa
+// SYNTHETIC: LLE 0x10024fb6

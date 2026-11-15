@@ -67,11 +67,11 @@ static_assert(sizeof(EEGameVariantData) == 276, "on-disk record: 276 bytes on ev
 // Layout gap-free; names are provisional unless a reader names them.
 class EEGameVariant {
 public:
-    EEGameVariant();
+    EEGameVariant();                        // 0xd6910
     virtual ~EEGameVariant();               // +0x00 0xd6935 (??_G 0xd6919)
-    static EEGameVariant* GetGameVariant(long inIndex);
-    static long Load(FSFileSpec* inFile);
-    static void Unload();
+    static EEGameVariant* GetGameVariant(long inIndex);   // 0xb0e20
+    static long Load(FSFileSpec* inFile);   // 0xd693c (provisional names)
+    static void Unload();                   // 0xd6b34
     float GetFactor(long inUnitType);       // 0xd6b74: the float of the first (set, factor) pair whose set holds it
     // inline: the earthquake's Update loads it as an FP value before its fimul (provisional name)
     float GetEarthquakeDamageFactor() const { return this->mEarthquakeDamageFactor; }

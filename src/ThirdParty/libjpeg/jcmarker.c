@@ -104,6 +104,7 @@ typedef my_marker_writer * my_marker_ptr;
  * points where markers will be written.
  */
 
+// FUNCTION: JPEG 0x1008ad28
 LOCAL(void)
 emit_byte (j_compress_ptr cinfo, int val)
 /* Emit a byte */
@@ -118,6 +119,7 @@ emit_byte (j_compress_ptr cinfo, int val)
 }
 
 
+// FUNCTION: JPEG 0x1008ad09
 LOCAL(void)
 emit_marker (j_compress_ptr cinfo, JPEG_MARKER mark)
 /* Emit a marker code */
@@ -127,6 +129,7 @@ emit_marker (j_compress_ptr cinfo, JPEG_MARKER mark)
 }
 
 
+// FUNCTION: JPEG 0x1008ad59
 LOCAL(void)
 emit_2bytes (j_compress_ptr cinfo, int value)
 /* Emit a 2-byte integer; these are always MSB first in JPEG files */
@@ -140,6 +143,7 @@ emit_2bytes (j_compress_ptr cinfo, int value)
  * Routines to write specific marker types.
  */
 
+// FUNCTION: JPEG 0x1008afb7
 LOCAL(int)
 emit_dqt (j_compress_ptr cinfo, int index)
 /* Emit a DQT marker */
@@ -180,6 +184,7 @@ emit_dqt (j_compress_ptr cinfo, int index)
 }
 
 
+// FUNCTION: JPEG 0x1008b1ef
 LOCAL(void)
 emit_dht (j_compress_ptr cinfo, int index, boolean is_ac)
 /* Emit a DHT marker */
@@ -261,6 +266,7 @@ emit_dac (j_compress_ptr cinfo)
 }
 
 
+// FUNCTION: JPEG 0x1008b2b4
 LOCAL(void)
 emit_dri (j_compress_ptr cinfo)
 /* Emit a DRI marker */
@@ -273,6 +279,7 @@ emit_dri (j_compress_ptr cinfo)
 }
 
 
+// FUNCTION: JPEG 0x1008b084
 LOCAL(void)
 emit_sof (j_compress_ptr cinfo, JPEG_MARKER code)
 /* Emit a SOF marker */
@@ -304,6 +311,7 @@ emit_sof (j_compress_ptr cinfo, JPEG_MARKER code)
 }
 
 
+// FUNCTION: JPEG 0x1008b2dd
 LOCAL(void)
 emit_sos (j_compress_ptr cinfo)
 /* Emit a SOS marker */
@@ -345,6 +353,7 @@ emit_sos (j_compress_ptr cinfo)
 }
 
 
+// FUNCTION: JPEG 0x1008add1
 LOCAL(void)
 emit_jfif_app0 (j_compress_ptr cinfo)
 /* Emit a JFIF-compliant APP0 marker */
@@ -380,6 +389,7 @@ emit_jfif_app0 (j_compress_ptr cinfo)
 }
 
 
+// FUNCTION: JPEG 0x1008ae6f
 LOCAL(void)
 emit_adobe_app14 (j_compress_ptr cinfo)
 /* Emit an Adobe APP14 marker */
@@ -434,6 +444,7 @@ emit_adobe_app14 (j_compress_ptr cinfo)
  * Counting the parameter bytes properly is the caller's responsibility.
  */
 
+// FUNCTION: JPEG 0x1008acce
 METHODDEF(void)
 write_marker_header (j_compress_ptr cinfo, int marker, unsigned int datalen)
 /* Emit an arbitrary marker header */
@@ -446,6 +457,7 @@ write_marker_header (j_compress_ptr cinfo, int marker, unsigned int datalen)
   emit_2bytes(cinfo, (int) (datalen + 2));	/* total length */
 }
 
+// FUNCTION: JPEG 0x1008ad81
 METHODDEF(void)
 write_marker_byte (j_compress_ptr cinfo, int val)
 /* Emit one byte of marker parameters following write_marker_header */
@@ -465,6 +477,7 @@ write_marker_byte (j_compress_ptr cinfo, int val)
  * jpeg_start_compress returns.
  */
 
+// FUNCTION: JPEG 0x1008ad91
 METHODDEF(void)
 write_file_header (j_compress_ptr cinfo)
 {
@@ -490,6 +503,7 @@ write_file_header (j_compress_ptr cinfo)
  * try to error-check the quant table numbers as soon as they see the SOF.
  */
 
+// FUNCTION: JPEG 0x1008aeed
 METHODDEF(void)
 write_frame_header (j_compress_ptr cinfo)
 {
@@ -547,6 +561,7 @@ write_frame_header (j_compress_ptr cinfo)
  * Compressed data will be written following the SOS.
  */
 
+// FUNCTION: JPEG 0x1008b12b
 METHODDEF(void)
 write_scan_header (j_compress_ptr cinfo)
 {
@@ -598,6 +613,7 @@ write_scan_header (j_compress_ptr cinfo)
  * Write datastream trailer.
  */
 
+// FUNCTION: JPEG 0x1008b3b2
 METHODDEF(void)
 write_file_trailer (j_compress_ptr cinfo)
 {
@@ -612,6 +628,7 @@ write_file_trailer (j_compress_ptr cinfo)
  * emitted.  Note that all tables will be marked sent_table = TRUE at exit.
  */
 
+// FUNCTION: JPEG 0x1008b3c3
 METHODDEF(void)
 write_tables_only (j_compress_ptr cinfo)
 {
@@ -641,6 +658,7 @@ write_tables_only (j_compress_ptr cinfo)
  * Initialize the marker writer module.
  */
 
+// FUNCTION: JPEG 0x1008ac80
 GLOBAL(void)
 jinit_marker_writer (j_compress_ptr cinfo)
 {

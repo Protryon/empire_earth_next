@@ -36,10 +36,10 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPAttackFormation.h"
 
-static const float kAFHalf = 0.5f;
+static const float kAFHalf = 0.5f;          // 0x43bc20
 // 1.5f (0x43bc70) is the pooled __real literal, read by ~19 units (not a unit-local const)
 // 1.25f (0x43bc74) is the pooled __real literal, read by ~6 units (not a unit-local const)
-static const float kAFInvTwoPi = 0.15915494f;
+static const float kAFInvTwoPi = 0.15915494f;   // 0x43bc78
 
 // the sort predicate of Virtual3C: longer range first, then fewer hit points (COMDAT 0x53f36) (provisional name)
 struct EECPAFRangeGreater {
@@ -58,6 +58,7 @@ struct EECPAFRangeGreater {
 
 typedef std::pair<long, EECPAttackSubGroupUnit*> EECPAFTypedUnit;
 
+// FUNCTION: EXE 0x4529e7
 // Creates an empty formation for a sub-group, holding a reference to it
 EECPAttackFormation::EECPAttackFormation(EECPAttackSubGroup* inSubGroup)
     : mNoForcedMove(false)
@@ -67,6 +68,10 @@ EECPAttackFormation::EECPAttackFormation(EECPAttackSubGroup* inSubGroup)
         inSubGroup->Reference();
 }
 
+// SYNTHETIC: EXE 0x452a1a
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x452a36
 // Destroys the formation, deleting its rows and releasing its sub-group
 EECPAttackFormation::~EECPAttackFormation()
 {
@@ -75,6 +80,7 @@ EECPAttackFormation::~EECPAttackFormation()
         this->mSubGroup->Dereference();
 }
 
+// FUNCTION: EXE 0x452a5b
 // Sorts units into support (priests, kind 0x1b, any damaged important unit: integer hit-point ratio), fast,
 // kind-6 ranged, ranged and melee sets; a lone fast unit joins the melee set, a lone kind-6 unit the ranged set
 void EECPAttackFormation::Analyze(EECPAttackFormationUnitAnalysis& outAnalysis)
@@ -119,6 +125,7 @@ void EECPAttackFormation::Analyze(EECPAttackFormationUnitAnalysis& outAnalysis)
     }
 }
 
+// FUNCTION: EXE 0x452cfa
 // Returns the row width for a unit set: 5 above 11 units, 4 above 9, else 3
 long EECPAttackFormation::GetColumnWidth(EECPAFUnitsByType& inUnits)
 {
@@ -132,6 +139,7 @@ long EECPAttackFormation::GetColumnWidth(EECPAFUnitsByType& inUnits)
     return theWidth;
 }
 
+// FUNCTION: EXE 0x452d1c
 // Rebuilds the formation: deletes the rows, sorts the units and arranges new rows
 void EECPAttackFormation::Build()
 {
@@ -141,12 +149,25 @@ void EECPAttackFormation::Build()
     this->Arrange(theAnalysis);
 }
 
+// FUNCTION: EXE 0x452d55
+// Creates an empty unit analysis (all unit sets empty)
+// EECPAttackFormationUnitAnalysis::EECPAttackFormationUnitAnalysis (inline, ee/EECPAttackFormation.h)
+
+// FUNCTION: EXE 0x452dc6
+// Destroys the unit analysis and its unit sets
+// EECPAttackFormationUnitAnalysis::~EECPAttackFormationUnitAnalysis (inline, ee/EECPAttackFormation.h)
+
+// SYNTHETIC: EXE 0x452df9
+// (EECPAttackFormationUnitAnalysis's scalar deleting destructor)
+
+// FUNCTION: EXE 0x452e15
 // Arranges the rows the default way
 void EECPAttackFormation::Arrange(EECPAttackFormationUnitAnalysis& inAnalysis)
 {
     this->ArrangeDefault(inAnalysis);
 }
 
+// FUNCTION: EXE 0x452e21
 // Arranges rows: kind-6 ranged units in front, melee behind them, fast units in a random flank shape, then
 // ranged units by range (wider rows above 6 of them)
 void EECPAttackFormation::Virtual20(EECPAttackFormationUnitAnalysis& inAnalysis)
@@ -174,6 +195,7 @@ void EECPAttackFormation::Virtual20(EECPAttackFormationUnitAnalysis& inAnalysis)
     this->MakeNodesByRange(inAnalysis.mRangedUnits, theNode, 0, theL60, theType, 6, 1.5f, true, true);
 }
 
+// FUNCTION: EXE 0x452efe
 // Arranges two blocks: kind-6 units join the ranged set and fast units the melee set; melee rows first, then
 // ranged rows in a random shape at double spacing
 void EECPAttackFormation::Virtual24(EECPAttackFormationUnitAnalysis& inAnalysis)
@@ -195,6 +217,7 @@ void EECPAttackFormation::Virtual24(EECPAttackFormationUnitAnalysis& inAnalysis)
     }
 }
 
+// FUNCTION: EXE 0x452fec
 // Arranges rows: melee first, fast units as one flank row on the first row, then kind-6 and ranged rows in a
 // random shape
 void EECPAttackFormation::Virtual28(EECPAttackFormationUnitAnalysis& inAnalysis)
@@ -216,6 +239,7 @@ void EECPAttackFormation::Virtual28(EECPAttackFormationUnitAnalysis& inAnalysis)
     }
 }
 
+// FUNCTION: EXE 0x4530d0
 // Arranges up to three single rows one behind another: support units, ranged units, then all other units, each
 // deeper than the last; the same random flag goes to each row
 void EECPAttackFormation::ArrangeDefault(EECPAttackFormationUnitAnalysis& inAnalysis)
@@ -243,6 +267,7 @@ void EECPAttackFormation::ArrangeDefault(EECPAttackFormationUnitAnalysis& inAnal
         this->MakeNode(theUnits, theNode, 0, 4, 7, 0, theDepth, false, theFlag);
 }
 
+// FUNCTION: EXE 0x453244
 // Re-keys a by-range unit set by unit type and makes one row of it
 EECPAttackFormationNode* EECPAttackFormation::MakeNodeByRange(EECPAFUnitsByRange& inUnits,
     EECPAttackFormationNode* inPrevious, unsigned long inFlags, long inL60, long inType, long inWidth, float inSpacing,
@@ -257,6 +282,7 @@ EECPAttackFormationNode* EECPAttackFormation::MakeNodeByRange(EECPAFUnitsByRange
     return this->MakeNode(theUnits, inPrevious, inFlags, inL60, inType, inWidth, inSpacing, inArg8, inArg9);
 }
 
+// FUNCTION: EXE 0x4532e9
 // Makes one row of all the units (the width argument is unused), sorted longest range first; sets its depth from
 // the largest collision radius and returns it (NULL for no units)
 EECPAttackFormationNode* EECPAttackFormation::MakeNode(EECPAFUnitsByType& inUnits,
@@ -312,6 +338,7 @@ EECPAttackFormationNode* EECPAttackFormation::MakeNode(EECPAFUnitsByType& inUnit
     return theNode;
 }
 
+// FUNCTION: EXE 0x453569
 // Re-keys a by-range unit set by unit type and makes rows of it
 EECPAttackFormationNode* EECPAttackFormation::MakeNodesByRange(EECPAFUnitsByRange& inUnits,
     EECPAttackFormationNode* inPrevious, unsigned long inFlags, long inL60, long inType, long inWidth, float inSpacing,
@@ -326,6 +353,7 @@ EECPAttackFormationNode* EECPAttackFormation::MakeNodesByRange(EECPAFUnitsByRang
     return this->MakeNodes(theUnits, inPrevious, inFlags, inL60, inType, inWidth, inSpacing, inArg8, inArg9);
 }
 
+// FUNCTION: EXE 0x45360e
 // Splits a unit set into rows of the given width (or the column width when 0), interleaving small and large
 // units when asked; chains each row to the previous one and returns the last row (NULL for no units)
 EECPAttackFormationNode* EECPAttackFormation::MakeNodes(EECPAFUnitsByType& inUnits,
@@ -419,6 +447,7 @@ EECPAttackFormationNode* EECPAttackFormation::MakeNodes(EECPAFUnitsByType& inUni
     return theNode;
 }
 
+// FUNCTION: EXE 0x4539f7
 // Places every row at the target tile's centre, lets the formation shift it, then creates it (units get their
 // move orders)
 void EECPAttackFormation::Place(const EECPILocation& inLocation, float inArg2)
@@ -432,6 +461,7 @@ void EECPAttackFormation::Place(const EECPILocation& inLocation, float inArg2)
     }
 }
 
+// FUNCTION: EXE 0x453a85
 // Deletes every row and empties the row list
 void EECPAttackFormation::DeleteNodes()
 {
@@ -440,11 +470,87 @@ void EECPAttackFormation::DeleteNodes()
     this->mNodes.clear();
 }
 
+// TEMPLATE: EXE 0x453ac5
+// (multimap<long, EECPAttackSubGroupUnit*>::clear)
+
+// TEMPLATE: EXE 0x453ad9
+// (multimap<float, EECPAttackSubGroupUnit*>'s ~_Tree)
+
+// TEMPLATE: EXE 0x453b04
+// (vector<EECPAttackFormationNode*>::push_back)
+
 // (ICF, named elsewhere) 0x453b30
 // (vector<EECPAFTypedUnit>::back; ICF-shared)
+
+// TEMPLATE: EXE 0x453b37
+// (vector<EECPAFTypedUnit>::push_back)
+
+// TEMPLATE: EXE 0x453b63
+// (vector<EECPAFTypedUnit>::pop_back)
+
+// TEMPLATE: EXE 0x453b97
+// (multimap<float, EECPAttackSubGroupUnit*>::erase(F, L))
 
 // (ICF, named elsewhere) 0x453c08
 // (vector<EECPAFTypedUnit>::insert(P, X); ICF-shared)
 
+// TEMPLATE: EXE 0x453c58
+// (multimap<float, EECPAttackSubGroupUnit*>::_Erase)
+
+// TEMPLATE: EXE 0x453c8a
+// (std::sort with EECPAFRangeGreater)
+
 // (ICF, named elsewhere) 0x453d47
 // (std::copy over EECPAFTypedUnit; ICF-shared)
+
+// TEMPLATE: EXE 0x453d6c
+// (std::_Insertion_sort)
+
+// TEMPLATE: EXE 0x453d95
+// (std::_Sort)
+
+// TEMPLATE: EXE 0x453e68
+// (std::_Unguarded_insertion_sort)
+
+// TEMPLATE: EXE 0x453e99
+// (std::_Insertion_sort_1)
+
+// FUNCTION: EXE 0x453f36
+// Orders units longest range first, then fewer hit points first
+// EECPAFRangeGreater::operator() (inline, above)
+
+// TEMPLATE: EXE 0x453f85
+// (std::make_heap)
+
+// TEMPLATE: EXE 0x453fbf
+// (std::sort_heap)
+
+// TEMPLATE: EXE 0x454000
+// (std::_Unguarded_partition)
+
+// TEMPLATE: EXE 0x454120
+// (std::_Unguarded_insert)
+
+// TEMPLATE: EXE 0x454153
+// (std::_Make_heap)
+
+// TEMPLATE: EXE 0x454197
+// (std::pop_heap)
+
+// TEMPLATE: EXE 0x4541c0
+// (std::_Adjust_heap)
+
+// TEMPLATE: EXE 0x45422e
+// (std::_Pop_heap_0)
+
+// TEMPLATE: EXE 0x454281
+// (std::_Push_heap)
+
+// TEMPLATE: EXE 0x4542d0
+// (std::_Pop_heap)
+
+
+// More COMDATs of this unit, each checked against the original
+// TEMPLATE: EXE 0x453d47
+// TEMPLATE: EXE 0x453b30
+// TEMPLATE: EXE 0x453c08

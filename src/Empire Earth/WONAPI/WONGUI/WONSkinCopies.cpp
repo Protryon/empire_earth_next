@@ -12,6 +12,7 @@
 
 using namespace WONAPI;
 
+// FUNCTION: WON 0x00715c90
 // Copies the attributes of the named skin button type (case-insensitive) to a button; false if not found
 bool WONSkin::CopyButtonType(const GUIString& type,WONButton* copyTo)
 {
@@ -22,6 +23,7 @@ bool WONSkin::CopyButtonType(const GUIString& type,WONButton* copyTo)
     return true;
 }
 
+// FUNCTION: WON 0x00715d00
 // Copies the attributes of the named simple button type (case-insensitive) to a button; false if not found
 bool WONSkin::CopySimpleButtonType(const GUIString& type,WONSimpleButton* copyTo)
 {

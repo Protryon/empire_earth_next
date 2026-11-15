@@ -28,8 +28,10 @@ public:
     ConfigDefineScope(ConfigParser& parser):mParser(parser) {this->mParser.PushDefineStack();}
     ~ConfigDefineScope() {this->mParser.PopDefineStack();}
 };
+// FUNCTION: WON 0x007aea90
 // Creates an empty config group with no parent
 ConfigObject::ConfigObject() { this->Rewind(); this->mParent=NULL; }
+// FUNCTION: WON 0x007aec60
 // Drops the children, optionally the names, resets every key to its default and clears group pointers
 void ConfigObject::Reset(bool resetName)
 {
@@ -48,6 +50,7 @@ void ConfigObject::Reset(bool resetName)
         ++j;
     }
 }
+// FUNCTION: WON 0x007aedf0
 // Appends the key's value as text, marked "[DEF]" when it is still the default; always true
 bool ConfigObject::QueryValue(KeyValMap::const_iterator itr,std::string& outValue)
 {
@@ -56,6 +59,7 @@ bool ConfigObject::QueryValue(KeyValMap::const_iterator itr,std::string& outValu
     if(value->mIsDefault) outValue+="  [DEF]";
     return true;
 }
+// FUNCTION: WON 0x007aefd0
 // Appends the named key's value as text; returns false for an unknown key
 bool ConfigObject::GetKeyValue(const std::string& key,std::string& outValue)
 {
@@ -64,6 +68,7 @@ bool ConfigObject::GetKeyValue(const std::string& key,std::string& outValue)
         return this->QueryValue(itr,outValue);
     return false;
 }
+// FUNCTION: WON 0x007af040
 // Appends one "key: value" line per registered key
 void ConfigObject::GetAllKeyValues(std::string& outValues)
 {
@@ -78,6 +83,7 @@ void ConfigObject::GetAllKeyValues(std::string& outValues)
         ++itr;
     }
 }
+// FUNCTION: WON 0x007af280
 // Parses a new value for the named key; returns 0 on success, 2 on a parse error, 1 for an unknown key
 int ConfigObject::SetKeyValue(const std::string& key,StringParser& parser)
 {
@@ -92,16 +98,20 @@ int ConfigObject::SetKeyValue(const std::string& key,StringParser& parser)
     }
     return 1;
 }
+// FUNCTION: WON 0x007af310
 // Drops every child group
 void ConfigObject::Clear() {this->mChildList.clear();this->Rewind();}
+// FUNCTION: WON 0x007af370
 // Restarts the child iteration
 void ConfigObject::Rewind() {this->mChildItr=this->mChildList.begin();}
+// FUNCTION: WON 0x007af390
 // Appends a child group and makes this group its parent
 void ConfigObject::AddChild(ConfigObject* child)
 {
     child->mParent=this;
     this->mChildList.push_back(child);
 }
+// FUNCTION: WON 0x007af4c0
 // Reads a group header "[name] [: base] {"; sets a parse error unless it ends in '{'
 bool ConfigObject::ReadGroupStart(ConfigParser& parser,std::string& name,std::string& inherited)
 {
@@ -134,6 +144,7 @@ bool ConfigObject::ReadGroupStart(ConfigParser& parser,std::string& name,std::st
 // The default parse hooks share one always-true function in the original (0x7099f0)
 bool ConfigObject::PreParse(ConfigParser*) {return true;}
 bool ConfigObject::PostParse(ConfigParser*) {return true;}
+// FUNCTION: WON 0x007af7a0
 // Opens the config file (if given), resets the group and parses its whole contents; returns success
 bool ConfigObject::ParseTopLevel(ConfigParser& parser,const char* filePath)
 {
@@ -147,6 +158,7 @@ bool ConfigObject::ParseTopLevel(ConfigParser& parser,const char* filePath)
     this->Reset(true);
     return this->ParseGroup(parser,false,false,true,true);
 }
+// FUNCTION: WON 0x007afa60
 // Parses key values and child groups up to the closing brace (or the end), skipping unknown ones with a warning
 bool ConfigObject::ParseGroup(ConfigParser& parser,bool checkBraces,bool skip,bool prePost,bool readStart)
 {
@@ -195,12 +207,14 @@ bool ConfigObject::ParseGroup(ConfigParser& parser,bool checkBraces,bool skip,bo
     }
     return parser.mAbortReason.empty();
 }
+// FUNCTION: WON 0x007b0000
 // Reads past a group without applying it
 bool ConfigObject::SkipGroup(ConfigParser& parser,bool checkBraces,bool readStart)
 {
     SmartPtr<ConfigObject> child=new ConfigObject;
     return child->ParseGroup(parser,checkBraces,true,false,readStart);
 }
+// FUNCTION: WON 0x007b06f0
 // Parses a group into the given child in its own define scope and optionally adds it as a child
 bool ConfigObject::ParseChild(ConfigParser& parser,ConfigObject* child,bool addChild,bool readStart)
 {
@@ -211,6 +225,7 @@ bool ConfigObject::ParseChild(ConfigParser& parser,ConfigObject* child,bool addC
     if(addChild) this->AddChild(child);
     return true;
 }
+// FUNCTION: WON 0x007b07a0
 // Parses a registered child group (new from its factory or the fixed object) and stores or adds it
 bool ConfigObject::HandleChildGroup(ConfigParser& parser,KeyGroupMap::iterator& itr)
 {
@@ -226,6 +241,7 @@ bool ConfigObject::HandleChildGroup(ConfigParser& parser,KeyGroupMap::iterator& 
     else if(group.mObject.get()==NULL) this->AddChild(child.get());
     return true;
 }
+// FUNCTION: WON 0x007b1120
 // Parses a value for a registered key, warning when it fails; always true
 bool ConfigObject::HandleKeyVal(ConfigParser& parser,StringParser& value,KeyValMap::iterator& itr)
 {
@@ -234,12 +250,14 @@ bool ConfigObject::HandleKeyVal(ConfigParser& parser,StringParser& value,KeyValM
     if(!config->ReadValue(value)) parser.AddWarning("Failed to parse value for key: "+itr->first);
     return true;
 }
+// FUNCTION: WON 0x007b18e0
 // Registers a value under a key name; an existing registration is kept
 void ConfigObject::RegisterKeyValue(const char* key,ConfigValueBase* value)
 {
     if(!this->mKeyMap.insert(KeyValMap::value_type(std::string(key),value)).second) {
     }
 }
+// FUNCTION: WON 0x007b00b0
 // Parses another config file (relative to this one) into this group; a missing required file is an error
 bool ConfigObject::IncludeFile(ConfigParser& parser,const std::string& path,bool required)
 {
@@ -256,6 +274,7 @@ bool ConfigObject::IncludeFile(ConfigParser& parser,const std::string& path,bool
     } else if(required) {parser.SetError("File not found: "+file,false);return false;}
     return true;
 }
+// FUNCTION: WON 0x007b03c0
 // Parses a group recorded by GROUPDEFINE into this group, restoring the parser position afterwards
 bool ConfigObject::IncludeGroup(ConfigParser& parser,const std::string& name,bool required)
 {
@@ -273,6 +292,7 @@ bool ConfigObject::IncludeGroup(ConfigParser& parser,const std::string& name,boo
     return result;
 }
 
+// FUNCTION: WON 0x007b0910
 // Handles GROUPDEFINE, IFDEFINED/IFNOTDEFINED ... else blocks and registered child groups; false when unknown
 bool ConfigObject::HandleInstruction(ConfigParser* parser,const std::string& instruction)
 {
@@ -310,6 +330,7 @@ bool ConfigObject::HandleInstruction(ConfigParser* parser,const std::string& ins
     if(itr!=this->mKeyGroupMap.end()) return this->HandleChildGroup(*parser,itr);
     else return false;
 }
+// FUNCTION: WON 0x007b11d0
 // Handles DEFINE/REDEFINE, INCLUDEGROUP, INCLUDEFILE and registered keys; false for an unknown key
 bool ConfigObject::HandleValueInstruction(ConfigParser* parser,const std::string& instruction,StringParser& value)
 {
@@ -409,3 +430,23 @@ void ConfigObject::RegisterKeyGroup(const char* theKey, ConfigObject* theGroup)
     }
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007aeb80
+// (public: virtual void * __thiscall WONAPI::ConfigObject::`scalar deleting destructor'(unsigned int)    [??_GConfigObject@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007afa50
+// (public: __thiscall WONAPI::ConfigDefineScope::~ConfigDefineScope(void)    [??1ConfigDefineScope@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x007b0660
+// (public: __thiscall WONAPI::ConfigParserState::~ConfigParserState(void)    [??1ConfigParserState@WONAPI@@QAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007aeba0
+// (public: __thiscall std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct WONAPI::ConfigObjectEntry,s)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007b5ca0
+// (protected: struct std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic)
+// TEMPLATE: WON 0x007b4f00
+// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_)
+// TEMPLATE: WON 0x007b6b00
+// (void __cdecl std::_Construct(struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WON)

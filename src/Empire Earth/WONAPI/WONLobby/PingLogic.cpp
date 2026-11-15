@@ -30,13 +30,17 @@ intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, i
 // One ping of a game host, retried by PingLogic (global namespace in the original's RTTI)
 class PingGameOp : public WONAPI::UDPManagerSendRecvOp {
 public:
+    // FUNCTION: WON 0x007e5ed0
     PingGameOp(WONAPI::LobbyGame* inGame, unsigned short inRequestId, unsigned char inFlags)
         : mGame(inGame), mRust(ee_won_pingop_new(this, WONAPI::PingLogicHost, inRequestId, inFlags))
     {
         this->SetDestAddr(this->mGame->GetAddress());
     }
+    // TEMPLATE: WON 0x007e6110
     virtual ~PingGameOp() { ee_won_pingop_free(this->mRust); }
+    // FUNCTION: WON 0x007e6240
     virtual void RunHook() { ee_won_pingop_call(this->mRust, EeWonPingOpCall::RunHook, (intptr_t)this->mGame.get()); }
+    // FUNCTION: WON 0x007e6360
     virtual WONAPI::WONStatus CheckResponse(WONAPI::ReadBuffer& inBuffer)
     {
         int64_t aStatus = ee_won_pingop_call(this->mRust, EeWonPingOpCall::CheckResponse, (intptr_t)&inBuffer.mState);
@@ -141,27 +145,46 @@ intptr_t PingLogicHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b, i
     }
 }
 
+// FUNCTION: WON 0x007e6490
 PingLogic::PingLogic() : mRust(ee_won_logic_new(EeWonLogicKind::Ping, this, PingLogicHost)) {}
 
+// FUNCTION: WON 0x007e6520
 PingLogic::~PingLogic() { ee_won_logic_free(this->mRust); }
 
+// FUNCTION: WON 0x007e65d0
 void PingLogic::InitComponent(ComponentConfig*) { this->Call(EeWonLogicCall::PingInit); }
 
+// FUNCTION: WON 0x007e6680
 void PingLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
     this->Call(EeWonLogicCall::PingEvent, (intptr_t)inEvent, inEvent->mType);
 }
 
+// FUNCTION: WON 0x007e6810
 void PingLogic::HandleUDPRecv(AsyncOp* inOp) { this->Call(EeWonLogicCall::PingRecv, (intptr_t)inOp); }
 
+// FUNCTION: WON 0x007e68b0
 void PingLogic::PingGameDone(AsyncOp* inOp) { this->Call(EeWonLogicCall::PingDone, (intptr_t)inOp); }
 
+// FUNCTION: WON 0x007e6b40
 int PingLogic::GetNumPingsToDo() { return (int)this->Call(EeWonLogicCall::PingNumToDo); }
 
+// FUNCTION: WON 0x007e6b50
 void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
 {
     this->Call(EeWonLogicCall::PingGame, (intptr_t)inGame, inDetails, inForce);
 }
 
+// FUNCTION: WON 0x007e6db0
 void PingLogic::KillPings(int) { this->Call(EeWonLogicCall::PingKill); }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007e6500
+// (public: virtual void * __thiscall WONAPI::PingLogic::`scalar deleting destructor'(unsigned int)    [??_GPingLogic@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007e60f0
+// (public: virtual void * __thiscall PingGameOp::`scalar deleting destructor'(unsigned int)    [??_GPingGameOp@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007f1470
+// (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::PingLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicCompleti)
+// TEMPLATE: WON 0x007f15d0
+// (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::PingLogic>::~LogicCompletion<class WONAPI::PingLogic>(void)    [??1?$LogicCompletion@)

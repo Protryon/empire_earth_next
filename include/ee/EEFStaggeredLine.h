@@ -6,8 +6,8 @@
 
 class EEFStaggeredLine : public EEFLine {
 public:
-    EEFStaggeredLine();
-    virtual ~EEFStaggeredLine();
+    EEFStaggeredLine();                 // 0xddee7
+    virtual ~EEFStaggeredLine();         // 0xddf2f (??_G 0xddf13)
 };
 
 #endif

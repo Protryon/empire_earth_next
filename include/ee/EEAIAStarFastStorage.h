@@ -10,8 +10,8 @@
 
 class EEAIAStarFastStorage : public EEAIAStarStorage {
 public:
-    explicit EEAIAStarFastStorage(EeAStarStorageKind inKind);
-    virtual ~EEAIAStarFastStorage();
+    explicit EEAIAStarFastStorage(EeAStarStorageKind inKind);   // 0x15c36
+    virtual ~EEAIAStarFastStorage();        // 0x15c68
     // +0x10 0x15d1c: sizes the node arrays for an inWidth x inHeight search, then clears them
     virtual void PrepareGrid(long inWidth, long inHeight);
 };

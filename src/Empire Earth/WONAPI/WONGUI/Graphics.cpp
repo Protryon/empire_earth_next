@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 using namespace WONAPI;
+// FUNCTION: WON 0x00726ad0
 // Creates a graphics context with no translation and no colour scheme
 Graphics::Graphics()
 {
@@ -17,6 +18,7 @@ Graphics::Graphics()
 	this->mColorScheme = NULL;
 }
 
+// FUNCTION: WON 0x00726b90
 // Destroys the graphics context, detaching it first
 Graphics::~Graphics()
 {
@@ -27,6 +29,7 @@ void Graphics::Detach()
 {
 }
 
+// FUNCTION: WON 0x00726c70
 // Attaches the graphics context to a display context and links the display context back to it
 void Graphics::Attach(DisplayContext *theContext)
 {
@@ -35,6 +38,7 @@ void Graphics::Attach(DisplayContext *theContext)
 	this->mDisplayContext->mGraphics = this;
 }
 
+// FUNCTION: WON 0x00726ce0
 // Sets the drawing colour, resolving colour-scheme references (0x80000000 + 0..16) through the
 // scheme; calls the colour hook only when the colour changes
 void Graphics::SetColor(DWORD theColor)
@@ -57,6 +61,7 @@ void Graphics::SetColor(DWORD theColor)
 	}
 }
 
+// FUNCTION: WON 0x00726d20
 // Returns a colour-scheme colour, or 0 without a scheme
 DWORD Graphics::GetStandardColor(int theColorRef)
 {
@@ -66,6 +71,7 @@ DWORD Graphics::GetStandardColor(int theColorRef)
 		return 0;
 }
 
+// FUNCTION: WON 0x00726d40
 // Sets the drawing colour to a colour-scheme colour; does nothing without a scheme
 void Graphics::SetSysColor(int theColorRef)
 {
@@ -73,6 +79,7 @@ void Graphics::SetSysColor(int theColorRef)
 		this->SetColor(this->mColorScheme->GetStandardColor(theColorRef));
 }
 
+// FUNCTION: WON 0x00726d60
 // Moves the drawing origin by the given offset
 void Graphics::Translate(int dx, int dy)
 {
@@ -80,6 +87,7 @@ void Graphics::Translate(int dx, int dy)
 	this->mTransY += dy;
 }
 
+// FUNCTION: WON 0x00726d80
 // Applies the drawing origin to a point
 void Graphics::DoTranslate(int &x, int &y)
 {
@@ -87,6 +95,7 @@ void Graphics::DoTranslate(int &x, int &y)
 	y+=this->mTransY;
 }
 
+// FUNCTION: WON 0x00726da0
 // Sets one pixel at a point relative to the drawing origin
 void Graphics::SetPixel(int x, int y, DWORD color)
 {
@@ -94,6 +103,7 @@ void Graphics::SetPixel(int x, int y, DWORD color)
     this->SetPixelHook(x,y,color);
 }
 
+// FUNCTION: WON 0x00726dd0
 // Draws a whole image at a point relative to the drawing origin
 void Graphics::DrawImage(Image *theImage, int x, int y)
 {
@@ -101,6 +111,7 @@ void Graphics::DrawImage(Image *theImage, int x, int y)
 	theImage->DrawEntire(this->mDisplayContext.get(),x,y);
 }
 
+// FUNCTION: WON 0x00726e00
 // Draws part of an image at a point relative to the drawing origin
 void Graphics::DrawImage(Image *theImage, int x, int y, int left, int top, int width, int height)
 {
@@ -108,6 +119,7 @@ void Graphics::DrawImage(Image *theImage, int x, int y, int left, int top, int w
 	theImage->Draw(this->mDisplayContext.get(), x, y, left, top, width, height);
 }
 
+// FUNCTION: WON 0x00726e50
 // Draws a line between two points relative to the drawing origin
 void Graphics::DrawLine(int x1, int y1, int x2, int y2)
 {
@@ -118,6 +130,7 @@ void Graphics::DrawLine(int x1, int y1, int x2, int y2)
 	this->DrawLineHook(x1,y1,x2,y2);	
 }
 
+// FUNCTION: WON 0x00726ea0
 // Draws a rectangle outline relative to the drawing origin
 void Graphics::DrawRect(int x, int y, int width, int height)
 {
@@ -125,6 +138,7 @@ void Graphics::DrawRect(int x, int y, int width, int height)
 	this->DrawRectHook(x,y,width,height);
 }
 
+// FUNCTION: WON 0x00726ee0
 // Fills a rectangle relative to the drawing origin
 void Graphics::FillRect(int x, int y, int width, int height)
 {
@@ -132,6 +146,7 @@ void Graphics::FillRect(int x, int y, int width, int height)
 	this->FillRectHook(x,y,width,height);
 }
 
+// FUNCTION: WON 0x00726f20
 // Fills a rectangle blended by the given amount, relative to the drawing origin
 void Graphics::FillRectBlend(int x, int y, int width, int height, int theBlendAmount)
 {
@@ -139,6 +154,7 @@ void Graphics::FillRectBlend(int x, int y, int width, int height, int theBlendAm
 	this->FillRectBlendHook(x,y,width,height,theBlendAmount);
 }
 
+// FUNCTION: WON 0x00726f60
 // Draws a dotted rectangle outline relative to the drawing origin
 void Graphics::DrawDottedRect(int x, int y, int width, int height)
 {
@@ -146,6 +162,7 @@ void Graphics::DrawDottedRect(int x, int y, int width, int height)
 	this->DrawDottedRectHook(x,y,width,height);
 }
 
+// FUNCTION: WON 0x00726fa0
 // Draws an ellipse outline relative to the drawing origin
 void Graphics::DrawEllipse(int x, int y, int width, int height)
 {
@@ -153,6 +170,7 @@ void Graphics::DrawEllipse(int x, int y, int width, int height)
 	this->DrawEllipseHook(x,y,width,height);
 }
 
+// FUNCTION: WON 0x00726fe0
 // Fills an ellipse relative to the drawing origin
 void Graphics::FillEllipse(int x, int y, int width, int height)
 {
@@ -160,6 +178,7 @@ void Graphics::FillEllipse(int x, int y, int width, int height)
 	this->FillEllipseHook(x,y,width,height);
 }
 
+// FUNCTION: WON 0x00727020
 // Draws an arc relative to the drawing origin
 void Graphics::DrawArc(int x, int y, int width, int height, int startAngle, int arcAngle)
 {
@@ -167,6 +186,7 @@ void Graphics::DrawArc(int x, int y, int width, int height, int startAngle, int 
 	this->DrawArcHook(x,y,width,height,startAngle,arcAngle);
 }
 
+// FUNCTION: WON 0x00727060
 // Selects a font into the display context when it differs from the current one
 void Graphics::SetFont(Font *theFont)
 {
@@ -177,6 +197,7 @@ void Graphics::SetFont(Font *theFont)
 	}
 }
 
+// FUNCTION: WON 0x007270c0
 // Draws a whole string at a point relative to the drawing origin
 void Graphics::DrawString(const GUIString &theStr, int x, int y)
 {
@@ -184,6 +205,7 @@ void Graphics::DrawString(const GUIString &theStr, int x, int y)
 	this->mFont->DrawString(this->mDisplayContext.get(),theStr,0,theStr.length(),x, y);
 }
 
+// FUNCTION: WON 0x00727100
 // Draws part of a string at a point relative to the drawing origin
 void Graphics::DrawString(const GUIString &theStr, unsigned short theOffset, unsigned short theLength, int x, int y)
 {
@@ -191,6 +213,7 @@ void Graphics::DrawString(const GUIString &theStr, unsigned short theOffset, uns
 	this->mFont->DrawString(this->mDisplayContext.get(),theStr,theOffset,theLength,x, y);
 }
 
+// FUNCTION: WON 0x00727140
 // Recomputes the clip area as the intersection of every rectangle on the clip stack; with an empty
 // stack clipping is off
 void Graphics::PerformClip()
@@ -215,6 +238,7 @@ void Graphics::PerformClip()
 	this->mClipRect = aRect;
 }
 
+// FUNCTION: WON 0x00727200
 // Pushes a clip rectangle (relative to the drawing origin) and narrows the clip area to it
 void Graphics::PushClipRect(int x, int y, int width, int height)
 {
@@ -224,6 +248,7 @@ void Graphics::PushClipRect(int x, int y, int width, int height)
 	this->PerformClip();
 }
 
+// FUNCTION: WON 0x007272b0
 // Pops the last clip rectangle, if any, and recomputes the clip area
 void Graphics::PopClipRect()
 {
@@ -234,6 +259,7 @@ void Graphics::PopClipRect()
 
 }
 
+// FUNCTION: WON 0x00727300
 // Draws a rectangle outline as four lines, the far edges at x+width and y+height
 void Graphics::DrawRectHook(int x, int y, int width, int height)
 {
@@ -243,6 +269,7 @@ void Graphics::DrawRectHook(int x, int y, int width, int height)
 	this->DrawLineHook(x,y+height,x,y);
 }
 
+// FUNCTION: WON 0x00727360
 // Draws a rectangle outline with every other pixel set in the current colour
 void Graphics::DrawDottedRectHook(int x, int y, int width, int height)
 {
@@ -261,9 +288,24 @@ void Graphics::DrawDottedRectHook(int x, int y, int width, int height)
 	}
 }
 
+// FUNCTION: WON 0x007273f0
 // Fills a rectangle with one horizontal line per row
 void Graphics::FillRectHook(int x, int y, int width, int height)
 {
 	for(int i=0; i<height; i++)
 		this->DrawLineHook(x,y+i,x+width,y+i);
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00726b70
+// (public: virtual void * __thiscall WONAPI::Graphics::`scalar deleting destructor'(unsigned int)    [??_GGraphics@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00726b50
+// (public: virtual unsigned long __thiscall WONAPI::Graphics::GetPixelHook(int,int))
+// TEMPLATE: WON 0x00727430
+// (public: virtual void __thiscall WONAPI::Graphics::FillRectBlendHook(int,int,int,int,int))
+// TEMPLATE: WON 0x00727450
+// (public: virtual void __thiscall WONAPI::Graphics::DrawArcHook(int,int,int,int,int,int))
+// TEMPLATE: WON 0x00731910
+// (protected: void __thiscall std::list<class WONAPI::WONRectangle,class std::allocator<class WONAPI::WONRectangle> >::_Incsize(unsigned int))

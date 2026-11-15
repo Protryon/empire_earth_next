@@ -20,7 +20,7 @@ class GEVector;
 struct EeNetMsgSlot;                       // rust/ee_rust.h (the game messages' codec)
 class EEGameOptionsPlayer;
 
-extern bool gLocalPlayerOut;
+extern bool gLocalPlayerOut;                 // 0x4e6099 (provisional name)
 
 class EEMessage : public NEMessage {
 public:
@@ -33,11 +33,11 @@ public:
     virtual bool GetIsAvailableToSend() const { return !gLocalPlayerOut || this->mCanSendWhenOut; }
 
     static NEMessage* BuildEEMessage(unsigned char* inMemory);   // the factory 0xb8f8e (sConstructors[0x41..0xfd])
-    static void RegisterKnownMessages();
+    static void RegisterKnownMessages();                         // 0xb8cda
     // the physics loop's two ways to execute a message (0x1537ba/0x1537e3; provisional names): types 0x82,
     // 0x84, 0x96 record their selection id (mU0C) per player, the rest execute only when it is the current one
-    void ExecuteSelectionMessage();
-    void ExecuteMessage();
+    void ExecuteSelectionMessage();                              // 0xb8cf7
+    void ExecuteMessage();                                       // 0xb8e86
 
     // New (game messages lane, round 1): the codec's side of every game message in one place (EEMessage.cpp): the
     // message gives its codec class (ee_netmsg) and its members as slots in wire order (round 5: every game message is

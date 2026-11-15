@@ -86,7 +86,7 @@ public:
 template <class S, class G, class M>
 class EEAIAStarMachine : public EEAIAStarMachineBase, public S {
 public:
-    EEAIAStarMachine(long inType, M* inMap);
+    EEAIAStarMachine(long inType, M* inMap);   // 0xa977e / 0xa996d
     virtual ~EEAIAStarMachine();            // ??_G 0xa9ad1 / 0xa9b6b
     virtual void Reset();                   // +0x04 0xa97c8 / 0xa99ba
     virtual long GetMaxRevs() { return this->mGoal.mMaxRevs; }  // +0x08 0xa982d
@@ -123,7 +123,7 @@ public:
 template <class S, class G, class M>
 class EEAIAStarGraphMachine : public EEAIAStarGraphMachineBase, public S {
 public:
-    EEAIAStarGraphMachine(long inType, long inNodeCount);
+    EEAIAStarGraphMachine(long inType, long inNodeCount);  // 0xa9894
     virtual ~EEAIAStarGraphMachine();       // ??_G 0xa9b1e
     virtual void Reset();                   // +0x04 (ICF 0x25cc3)
     virtual long GetMaxRevs() { return this->mGoal.mMaxRevs; }  // +0x08 0xa98e0
@@ -201,7 +201,7 @@ void EEAIAStarMachine<S, G, M>::GetPath(std::vector<U2DPoint<long> >& outPath, s
 }
 
 template <class S, class G, class M>
-void EEAIAStarGraphMachine<S, G, M>::GetPath(std::vector<long>& outPath)
+void EEAIAStarGraphMachine<S, G, M>::GetPath(std::vector<long>& outPath)    // 0xa98ca
 {
     this->mGoal.GetPath(outPath);
 }

@@ -54,6 +54,7 @@
 // 0x241a6a (cdecl): the launch angle from inOwner at inLocation for the ammunition (provisional name)
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);
 
+// FUNCTION: EXE 0x619143
 // Returns whether a projectile hit the ground (bombs, low launches, after 1 s of flight): attacks the ground there
 // unless it came down on its target building or wall, and leaves a shell hole on land
 bool EEUnitClass::ProjectileCheckGroundImpact(EEComplexUnit* inUnit)
@@ -86,6 +87,7 @@ bool EEUnitClass::ProjectileCheckGroundImpact(EEComplexUnit* inUnit)
     return true;
 }
 
+// FUNCTION: EXE 0x6192d0
 // Returns whether a bomb, or a projectile after 1 s of flight, hit water it cannot cross; if so, it attacks the ground
 bool EEUnitClass::ProjectileCheckWaterImpact(EEComplexUnit* inUnit)
 {
@@ -105,6 +107,7 @@ bool EEUnitClass::ProjectileCheckWaterImpact(EEComplexUnit* inUnit)
     return theOut.result != 0;
 }
 
+// FUNCTION: EXE 0x619388
 // Handles the projectile's new action: on a hit plays its effects and sound, drops a parachute's cargo or fires, may
 // set a target on fire (flaming arrows), dies and leaves remains; retargets a dead target's tile or its container
 void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
@@ -117,6 +120,7 @@ void EEUnitClass::ProjectileActionChanged(EEComplexUnit* inUnit)
         EECombatCaptureShot(EE_COMBAT_SO_PROJECTILE_ACTION, inUnit, theBefore);
 }
 
+// FUNCTION: EXE 0x6197d3
 // Sets up a new projectile: records its start point, sets it to full speed and starts it advancing
 void EEUnitClass::ProjectileUnitCreated(EEComplexUnit* inUnit)
 {
@@ -129,6 +133,7 @@ void EEUnitClass::ProjectileUnitCreated(EEComplexUnit* inUnit)
     this->ActionChanged(inUnit);
 }
 
+// FUNCTION: EXE 0x619850
 // Launches the projectile toward a location at the ballistic pitch for its launcher's stats; returns whether one exists
 bool EEUnitClass::ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
@@ -152,6 +157,7 @@ bool EEUnitClass::ProjectileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPo
     return theResult;
 }
 
+// FUNCTION: EXE 0x619ae9
 // Updates a living projectile's trail (when moving) and ripples when the effect detail allows them
 void EEUnitClass::ProjectileUpdateEffects(EEComplexUnit* inUnit)
 {
@@ -163,6 +169,7 @@ void EEUnitClass::ProjectileUpdateEffects(EEComplexUnit* inUnit)
         this->UpdateRipples(inUnit);
 }
 
+// FUNCTION: EXE 0x619b4a
 // Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
 void EEUnitClass::ProjectileUpdate(EEComplexUnit* inUnit)
 {
@@ -437,6 +444,7 @@ void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inU
 // is inline (EEUnitClass.cpp's factory). Order: VirtualAC (the drop), VirtualB8 with its function-static colour's
 // empty atexit dtor, then EEUnitClass::LaunchStoredMissile (the carrier drops its first bomb; EEUnitClass::FireShot calls it).
 
+// FUNCTION: EXE 0x60e2cb
 // Drops the bomb from its carrier: aims it along the carrier's heading, pitched down by the launcher's tilt (0 to
 // -90 degrees), with the launch speed's horizontal part; always returns true
 bool EEUnitClass::BombLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
@@ -466,6 +474,7 @@ bool EEUnitClass::BombLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& i
     return true;
 }
 
+// FUNCTION: EXE 0x60e446
 // Flies the bomb; an SAS explosive (unit type 0x305) makes its target blink red every half second while it attacks
 void EEUnitClass::BombUpdate(EEComplexUnit* inUnit)
 {
@@ -485,6 +494,10 @@ void EEUnitClass::BombUpdate(EEComplexUnit* inUnit)
     this->ProjectileUpdate(inUnit);
 }
 
+// SYNTHETIC: EXE 0x60e50b
+// (sColor's empty atexit destructor)
+
+// FUNCTION: EXE 0x60e50c
 // Has a carrier drop its first cargo unit (a bomb) at its target and set it moving
 void EEUnitClass::LaunchStoredMissile(EEComplexUnit* inUnit)
 {
@@ -512,6 +525,7 @@ void EEUnitClass::LaunchStoredMissile(EEComplexUnit* inUnit)
 // recover narrower pointer specificity; this declaration records the minimum proven contract.
 bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget);
 
+// FUNCTION: EXE 0x617337
 // Returns whether the missile hit the ground after its flight time (0.3 higher over its target): sets it down there
 // and, for an attack-ground goal, leaves a shell hole and returns true (never for a missile base's missiles)
 bool EEUnitClass::MissileCheckGroundImpact(EEComplexUnit* inUnit)
@@ -547,6 +561,7 @@ bool EEUnitClass::MissileCheckGroundImpact(EEComplexUnit* inUnit)
     return theOut.result != 0;
 }
 
+// FUNCTION: EXE 0x6174fb
 // Returns whether a unit stands on one of the target's tiles (every part of a multi-part target, its whole footprint)
 bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
 {
@@ -582,6 +597,7 @@ bool EEIsOnTargetTiles(EEUnit* inUnit, EEUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x6175cb
 // Returns whether the missile hit water (z 0 or below on terrain it cannot cross); if so, it attacks the ground there
 bool EEUnitClass::MissileCheckWaterImpact(EEComplexUnit* inUnit)
 {
@@ -673,6 +689,7 @@ EeCombatImpactOut EECombatImpact(EEUnitClass* inClass, EEComplexUnit* inUnit, Ee
     return theOut;
 }
 
+// FUNCTION: EXE 0x61765d
 // Handles the missile's new action: on a hit plays the splash or death effect and sound, fires its shot and dies
 // (attack-unit goals, ICBM ground strikes); switches to attack ground; on retarget follows the target's container
 void EEUnitClass::MissileActionChanged(EEComplexUnit* inUnit)
@@ -685,6 +702,7 @@ void EEUnitClass::MissileActionChanged(EEComplexUnit* inUnit)
         EECombatCaptureShot(EE_COMBAT_SO_MISSILE_ACTION, inUnit, theBefore);
 }
 
+// FUNCTION: EXE 0x617916
 // Sets up a new missile: records its start point and stops it; all but the ICBM start the flight animation and advance
 void EEUnitClass::MissileUnitCreated(EEComplexUnit* inUnit)
 {
@@ -699,6 +717,7 @@ void EEUnitClass::MissileUnitCreated(EEComplexUnit* inUnit)
     this->ActionChanged(inUnit);
 }
 
+// FUNCTION: EXE 0x61799b
 // Launches the missile: tilts it to its launcher's launch pitch and starts the launch delay and a 300 s lifetime; true
 bool EEUnitClass::MissileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
 {
@@ -716,6 +735,7 @@ bool EEUnitClass::MissileLaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint
     return true;
 }
 
+// FUNCTION: EXE 0x617a37
 // Answers the missile triggers: hit unit (attacks it; also true when its lifetime ran out), ground and water impact,
 // rotted or dying done (always with an attack-unit goal), target dead or in a container, new target
 long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -724,6 +744,7 @@ long EEUnitClass::MissileEvaluateCondition(EEComplexUnit* inUnit, unsigned long 
     return EECombatCondition(EE_COMBAT_GOAL_MISSILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
 }
 
+// FUNCTION: EXE 0x617bb2
 // Steps the missile's physics, effects and sound, and counts down its rotting time, launch delay and lifetime
 void EEUnitClass::MissileUpdate(EEComplexUnit* inUnit)
 {
@@ -739,6 +760,7 @@ void EEUnitClass::MissileUpdate(EEComplexUnit* inUnit)
 // 0x21b163..0x21b27a (after EEUCSubmergedNaval.cpp; EEUCTransport.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline; +0xe4 is ICF-folded (0x29059d: false).
 
+// FUNCTION: EXE 0x61b163
 // When the torpedo has reached ground at or above sea level, gives it an attack-ground goal there and returns
 // true
 bool EEUnitClass::TorpedoCheckGroundImpact(EEComplexUnit* inUnit)
@@ -757,6 +779,7 @@ bool EEUnitClass::TorpedoCheckGroundImpact(EEComplexUnit* inUnit)
     return theOut.result != 0;
 }
 
+// FUNCTION: EXE 0x61b232
 // Flies the torpedo as a missile and keeps it from rising above the water plane (height 0)
 void EEUnitClass::TorpedoUpdate(EEComplexUnit* inUnit)
 {

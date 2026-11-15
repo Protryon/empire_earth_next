@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONLobbySkinTab.h"
 #include "ee/wonapi/WONLobbyWONInputBox.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00715d70
 // Creates the Windows-look skin: template buttons, arrows, scrollbars, frames and backgrounds drawn as MS images
 // (the tab button's checked image replaces its normal one: both go to state 0 without the checked flag)
 WONMSSkin::WONMSSkin()
@@ -125,3 +126,23 @@ WONMSSkin::WONMSSkin()
 	this->mListCtrl->CopyAttributes(this->mScrollContainer.get());
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00717100
+// (public: virtual __thiscall WONAPI::WONMSSkin::~WONMSSkin(void)    [??1WONMSSkin@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x0071bc10
+// (public: __thiscall std::map<class WONAPI::GUIString,class WONAPI::SmartPtr<class WONAPI::WONButton>,struct WONAPI::GUIStringLessNoCase,class std::allo)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007170e0
+// (public: virtual void * __thiscall WONAPI::WONMSSkin::`scalar deleting destructor'(unsigned int)    [??_GWONMSSkin@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00725040
+// (public: void * __thiscall std::pair<class WONAPI::GUIString const ,class WONAPI::SmartPtr<class WONAPI::WONButton> >::`scalar deleting destructor'(uns)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00722a50
+// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::SmartPtr<class WONAPI::WONButton> >,str)
+// TEMPLATE: WON 0x00722f70
+// (protected: void __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::SmartPtr<class WONAPI::WON)

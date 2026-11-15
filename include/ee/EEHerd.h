@@ -27,7 +27,7 @@ class EEHerd : public EEAIArea {
 public:
     static const UString sData;             // "EEHerd-SaveLoadData" (guarded chain 0xa191a)
 
-    EEHerd();
+    EEHerd();                               // 0xa1953
     // 0xa19ff (ret 0xc): +0xac, +0xbc (the animal index: EEAnimal::Get), +0xf6 (a word) from the arguments
     EEHerd(EEPlayer* inPlayer, long inAnimal, unsigned short inID);
     virtual ~EEHerd();                      // +0x00 0xa1b1e (??_G 0xa19e3)
@@ -37,36 +37,36 @@ public:
     // +0x20: EETown's body (ICF-folded into EETown::GetRandomPoint 0xac203): a random hull point on the map
     virtual U2DPoint<long> GetRandomPoint();
 
-    bool AddUnit(EEComplexUnit* inUnit);
+    bool AddUnit(EEComplexUnit* inUnit);    // 0xa1b45 (ret 4)
     void HandleUnitHit(EEComplexUnit* inUnit);  // 0xa1d0f (ret 4): the unit was attacked (+0x1dc): flee or fight back
     void Attack(EEUnit* inTarget, const std::vector<EEComplexUnit*>& inUnits);   // 0xa1df7 (ret 8): one attack goal per unit
     void Attack(EEUnit* inTarget, const std::vector<EEUnitHandle<EEComplexUnit> >& inUnits);   // the same over mUnits (R5a.4)
     bool CanStandOn(EEComplexUnit* inUnit, const U2DPoint<long>& inTile);  // 0xa1e75 (ret 8): may inUnit stand on inTile
     bool Chase();                           // 0xa1efc: pick a moving target on the continent and circle it
     bool MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius);   // 0xa2275 (ret 8): circle the herd round inTile
-    bool Hunt();
-    void Clear();
+    bool Hunt();                            // 0xa24d0
+    void Clear();                           // 0xa25b6
     void PickLeader();                      // 0xa26b9: the leader is the unit with the most hit points
     void Graze(EEComplexUnit* inUnit, unsigned long inTime);    // 0xa286a (ret 8): graze: move inUnit and its young
     EEComplexUnit* FindMother();            // 0xa2d03: the parent for a new young one
     void GetYoungUnits(std::vector<EEComplexUnit*>& outUnits);  // 0xa302c (ret 4): the units whose +0x240 is below 1.0
-    void GetPrey(unsigned short inContinent, std::vector<EEComplexUnit*>& outUnits);
+    void GetPrey(unsigned short inContinent, std::vector<EEComplexUnit*>& outUnits);  // 0xa3075 (ret 8)
     U2DPoint<long> GetRandomTile();         // 0xa30b6 (ret 4, hidden result): a random point of mBounds2
-    bool GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurrent, long inAction);
-    void AttackBack(EEComplexUnit* inUnit, bool inAll);
+    bool GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurrent, long inAction);  // 0xa3110 (ret 0x10)
+    void AttackBack(EEComplexUnit* inUnit, bool inAll);  // 0xa315b (ret 8)
     void GrowUnit(EEComplexUnit* inUnit);   // 0xa31fd (ret 4): a young one grows
     bool FollowNearestHerd();               // 0xa3295: attack the nearest other herd
     void Update(unsigned long inTime);      // 0xa33bd (ret 4): the per-state update
-    static bool IsAnimalOnMap(EEUnit* inUnit);
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    void ClearUnits();
-    void RemoveUnitMedia(unsigned long inKey);
-    void ReleaseLeader();
-    void ReleaseTarget();
-    bool RemoveUnit(EEComplexUnit* inUnit);
-    long RepairPointers(long, long);
+    static bool IsAnimalOnMap(EEUnit* inUnit);  // 0xa349c (cdecl)
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0xa34dc (ret 0xc)
+    void ClearUnits();                      // 0xa3749
+    void RemoveUnitMedia(unsigned long inKey);      // 0xa37a7 (ret 4)
+    void ReleaseLeader();                   // 0xa37e4
+    void ReleaseTarget();                   // 0xa37fb
+    bool RemoveUnit(EEComplexUnit* inUnit);   // 0xa3812 (ret 4)
+    long RepairPointers(long, long);        // 0xa3967 (ret 8)
     bool GiveBirth(unsigned long inTime);   // 0xa3d9c (ret 4): a young one is born
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0xa3e7a (ret 0xc)
     void ResetGrazeTimes(long inIndex, bool inShuffle);  // 0xa412e (ret 8): the units' +0x314 timers cleared
     void SetUnitMedia(EEMedia* inMedia, unsigned long inKey);  // 0xa41fb (ret 8): attaches inMedia to unit id inKey
     bool CanTake(EEComplexUnit* inUnit, bool inCheckRange);  // 0xa4263 (ret 8): may inUnit join

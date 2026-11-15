@@ -55,8 +55,8 @@ private:
     intptr_t Call(EeUiHotKeyCall inCall, intptr_t a = 0, intptr_t b = 0) { return ee_ui_hotkey_call(this, inCall, a, b); }
 
 #ifdef LOWLEVELENGINE_EXPORTS
-    static TMPoll sPressedPoll;
-    static unsigned long sPressedPollAmount;
+    static TMPoll sPressedPoll;                     // 0x1012e7d8
+    static unsigned long sPressedPollAmount;        // 0x1012e808
 #endif
 };
 

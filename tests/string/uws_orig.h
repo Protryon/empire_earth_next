@@ -126,6 +126,7 @@ LLE_API long sprintf(UWideString& outString, const char* inFormat, ...) PLAT_PRI
 
 unsigned long UWideString::sDefaultAllocationLength = 256;
 
+// FUNCTION: LLE 0x100838f7
 // Returns a new multibyte string holding the left string followed by the right one
 UWideString operator+(const UWideString& inLeft, const UWideString& inRight)
 {
@@ -135,6 +136,7 @@ UWideString operator+(const UWideString& inLeft, const UWideString& inRight)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10083945
 // Returns a new multibyte string holding the string followed by the C string
 UWideString operator+(const UWideString& inLeft, const char* inRight)
 {
@@ -144,78 +146,91 @@ UWideString operator+(const UWideString& inLeft, const char* inRight)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10083998
 // Returns whether the two strings are equal (multibyte compare)
 bool operator==(const UWideString& inLeft, const UWideString& inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) == 0;
 }
 
+// FUNCTION: LLE 0x100839b6
 // Returns whether the string equals the C string (multibyte compare)
 bool operator==(const UWideString& inLeft, const char* inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) == 0;
 }
 
+// FUNCTION: LLE 0x100839d0
 // Returns whether the two strings differ (multibyte compare)
 bool operator!=(const UWideString& inLeft, const UWideString& inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) != 0;
 }
 
+// FUNCTION: LLE 0x100839ef
 // Returns whether the string differs from the C string (multibyte compare)
 bool operator!=(const UWideString& inLeft, const char* inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) != 0;
 }
 
+// FUNCTION: LLE 0x10083a0a
 // Returns whether the left string sorts before the right one (multibyte compare)
 bool operator<(const UWideString& inLeft, const UWideString& inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) < 0;
 }
 
+// FUNCTION: LLE 0x10083a2c
 // Returns whether the string sorts before the C string (multibyte compare)
 bool operator<(const UWideString& inLeft, const char* inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) < 0;
 }
 
+// FUNCTION: LLE 0x10083a4a
 // Returns whether the left string sorts before or equal to the right one (multibyte compare)
 bool operator<=(const UWideString& inLeft, const UWideString& inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) <= 0;
 }
 
+// FUNCTION: LLE 0x10083a6c
 // Returns whether the string sorts before or equal to the C string (multibyte compare)
 bool operator<=(const UWideString& inLeft, const char* inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) <= 0;
 }
 
+// FUNCTION: LLE 0x10083a8a
 // Returns whether the left string sorts after the right one (multibyte compare)
 bool operator>(const UWideString& inLeft, const UWideString& inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) > 0;
 }
 
+// FUNCTION: LLE 0x10083aac
 // Returns whether the string sorts after the C string (multibyte compare)
 bool operator>(const UWideString& inLeft, const char* inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) > 0;
 }
 
+// FUNCTION: LLE 0x10083aca
 // Returns whether the left string sorts after or equal to the right one (multibyte compare)
 bool operator>=(const UWideString& inLeft, const UWideString& inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) >= 0;
 }
 
+// FUNCTION: LLE 0x10083aec
 // Returns whether the string sorts after or equal to the C string (multibyte compare)
 bool operator>=(const UWideString& inLeft, const char* inRight)
 {
     return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) >= 0;
 }
 
+// FUNCTION: LLE 0x10083b0a
 // Formats into the string's buffer with no capacity check, then updates its character and byte lengths
 long sprintf(UWideString& outString, const char* inFormat, ...)
 {
@@ -227,6 +242,7 @@ long sprintf(UWideString& outString, const char* inFormat, ...)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10083b46
 // Creates an empty multibyte string with the default capacity (256 bytes)
 UWideString::UWideString()
 {
@@ -237,6 +253,7 @@ UWideString::UWideString()
     strcpy(this->mString, "");
 }
 
+// FUNCTION: LLE 0x10083b7b
 // Creates a copy of a multibyte string with the same capacity
 UWideString::UWideString(const UWideString& inString)
 {
@@ -247,6 +264,7 @@ UWideString::UWideString(const UWideString& inString)
     strcpy(this->mString, inString.mString);
 }
 
+// FUNCTION: LLE 0x10083bb7
 // Creates a multibyte string from a C string, with room for two bytes per character
 UWideString::UWideString(const char* inString)
 {
@@ -262,6 +280,7 @@ UWideString::UWideString(const char* inString)
     strcpy(this->mString, inString);
 }
 
+// FUNCTION: LLE 0x10083bfe
 // Creates an empty multibyte string with room for inLength characters of two bytes each
 UWideString::UWideString(unsigned long inLength)
 {
@@ -272,12 +291,14 @@ UWideString::UWideString(unsigned long inLength)
     strcpy(this->mString, "");
 }
 
+// FUNCTION: LLE 0x10083c38
 // Destroys the multibyte string, freeing its buffer
 UWideString::~UWideString()
 {
     delete[] this->mString;
 }
 
+// FUNCTION: LLE 0x10083c48
 // Copies another string, growing to its capacity or shrinking to whole 256-byte blocks when much smaller
 UWideString& UWideString::operator=(const UWideString& inString)
 {
@@ -312,6 +333,7 @@ UWideString& UWideString::operator=(const UWideString& inString)
     return *this;
 }
 
+// FUNCTION: LLE 0x10083cf5
 // Copies a C string, growing to fit it or shrinking to whole 256-byte blocks when much smaller
 UWideString& UWideString::operator=(const char* inString)
 {
@@ -336,6 +358,7 @@ UWideString& UWideString::operator=(const char* inString)
     return *this;
 }
 
+// FUNCTION: LLE 0x10083d99
 // Copies the first inCount characters of a string, resizing the buffer as operator= does
 void UWideString::CopyString(const UWideString& inString, unsigned long inCount)
 {
@@ -366,6 +389,7 @@ void UWideString::CopyString(const UWideString& inString, unsigned long inCount)
     this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
+// FUNCTION: LLE 0x10083e59
 // Copies the first inCount characters of a C string, resizing the buffer to fit them
 void UWideString::CopyString(const char* inString, unsigned long inCount)
 {
@@ -391,6 +415,7 @@ void UWideString::CopyString(const char* inString, unsigned long inCount)
     this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
+// FUNCTION: LLE 0x10083f0f
 // Returns the first byte of the character at an index, or 0 when the index is out of range
 char UWideString::operator[](int inIndex) const
 {
@@ -399,6 +424,7 @@ char UWideString::operator[](int inIndex) const
     return 0;
 }
 
+// FUNCTION: LLE 0x10083f32
 // Appends a string, reallocating to the combined size when it does not fit (tested against free space + 2)
 UWideString& UWideString::operator+=(const UWideString& inString)
 {
@@ -422,6 +448,7 @@ UWideString& UWideString::operator+=(const UWideString& inString)
     return *this;
 }
 
+// FUNCTION: LLE 0x10084003
 // Appends a C string, reallocating to the combined size when it does not fit (tested against free space + 2)
 UWideString& UWideString::operator+=(const char* inString)
 {
@@ -444,6 +471,7 @@ UWideString& UWideString::operator+=(const char* inString)
     return *this;
 }
 
+// FUNCTION: LLE 0x100840be
 // Writes a 4-byte size, the bytes and a 2-byte zero terminator to outData
 void UWideString::Export(unsigned char* outData) const
 {
@@ -455,6 +483,7 @@ void UWideString::Export(unsigned char* outData) const
     memcpy(outData + theLength + 4, &theTerminator, 2);
 }
 
+// FUNCTION: LLE 0x10084112
 // Returns the first character position at or after inStart where a string occurs, or the length when not found
 unsigned long UWideString::Find(const UWideString& inString, unsigned long inStart) const
 {
@@ -474,6 +503,7 @@ unsigned long UWideString::Find(const UWideString& inString, unsigned long inSta
     return theResult;
 }
 
+// FUNCTION: LLE 0x10084197
 // Returns the first character position at or after inStart where a C string occurs, or the length if not found
 unsigned long UWideString::Find(const char* inString, unsigned long inStart) const
 {
@@ -493,12 +523,14 @@ unsigned long UWideString::Find(const char* inString, unsigned long inStart) con
     return theResult;
 }
 
+// FUNCTION: LLE 0x10084217
 // Returns the bytes Save writes: a 4-byte size plus the bytes and terminator
 unsigned long UWideString::GetBytesUsedToSave() const
 {
     return PlatMbsNBCnt(MB((const char*)*this), this->GetLength()) + 5;
 }
 
+// FUNCTION: LLE 0x1008422b
 // Adds a checksum of the characters (weighted by position, times the length) named after the text
 void UWideString::GetChecksum(ESChecksum& ioChecksum)
 {
@@ -511,12 +543,14 @@ void UWideString::GetChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum(theName, theChecksum);
 }
 
+// FUNCTION: LLE 0x10084296
 // Returns the bytes Export writes: a 4-byte size, the bytes and a 2-byte terminator
 unsigned long UWideString::GetExportSize() const
 {
     return strlen(this->mString) + 6;
 }
 
+// FUNCTION: LLE 0x100842a3
 // Returns the characters from inFirst through inLast (inclusive) as a new string
 UWideString UWideString::GetIndexedSubstring(unsigned long inFirst, unsigned long inLast) const
 {
@@ -527,6 +561,7 @@ UWideString UWideString::GetIndexedSubstring(unsigned long inFirst, unsigned lon
     return theResult;
 }
 
+// FUNCTION: LLE 0x10084305
 // Reads a size-prefixed string from inData, growing the buffer if needed; returns the bytes consumed
 unsigned long UWideString::Import(unsigned char* inData)
 {
@@ -542,6 +577,7 @@ unsigned long UWideString::Import(unsigned char* inData)
     return theSize + 4;
 }
 
+// FUNCTION: LLE 0x1008436b
 // Inserts a string at a character position (inReplace drops the old tail); when it does not fit, the new
 // buffer gets the needed size
 void UWideString::InsertString(const UWideString& inString, unsigned long inPosition, bool inReplace)
@@ -573,6 +609,7 @@ void UWideString::InsertString(const UWideString& inString, unsigned long inPosi
     this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
+// FUNCTION: LLE 0x10084498
 // Inserts a C string at a character position (inReplace drops the old tail); when it does not fit, the new
 // buffer gets the needed size
 void UWideString::InsertString(const char* inString, unsigned long inPosition, bool inReplace)
@@ -602,6 +639,7 @@ void UWideString::InsertString(const char* inString, unsigned long inPosition, b
     this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
+// FUNCTION: LLE 0x100845b5
 // Reads a size and that many bytes from the file; on failure leaves the string empty and returns the error
 long UWideString::Load(FSFile& inFile)
 {
@@ -633,6 +671,7 @@ long UWideString::Load(FSFile& inFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10084670
 // Writes the byte size and the bytes, both counting the terminator, to the file; returns the first error
 long UWideString::Save(FSFile& inFile) const
 {
@@ -647,6 +686,7 @@ long UWideString::Save(FSFile& inFile) const
     return theResult;
 }
 
+// FUNCTION: LLE 0x100846cb
 // Splits the string at any of the separator characters into outTokens, skipping empty tokens; always true
 bool UWideString::Tokenize(const UWideString& inSeparators, std::vector<UWideString>& outTokens) const
 {

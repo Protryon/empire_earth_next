@@ -37,18 +37,18 @@ public:
     float GetParam6() const { return this->mParam6; }
     float GetParam7() const { return this->mParam7; }  // inline (EEE2DParticle::DrawPass6 loads the colour as values)
     // the unit EEGraphicEffect.cpp (0xd6bed..0xd72c1); the ctor copies a database record
-    EEGraphicEffect(struct EEGraphicEffectRecord* inRecord);
+    EEGraphicEffect(struct EEGraphicEffectRecord* inRecord);   // 0xd6ceb
     virtual ~EEGraphicEffect();             // ??_G 0xd6e5d (EEMedia's adjusting thunk 0xd726c), dtor 0xd6e79
     virtual long LoadMedia();               // EEMedia +0x04 0xd72a9
     virtual long UnloadMedia();             // EEMedia +0x08 0xd72b6
     static long LoadTable(FSFile* inFile);  // 0xd6e9e (db\dbgfxeffects.dat)
     static void DumpIDs(FSFileSpec& inFile);    // 0xd6fe6 (fprintf to the spec's stream; EEWorld::DumpMedia)
-    static void UnloadTable();
+    static void UnloadTable();              // 0xd7048
     EEMedia* GetMedia();                    // 0xd7074 (the graphic object, or a random one of this effect's kind)
-    static void SortMediaByKind();
+    static void SortMediaByKind();          // 0xd70b7
     void RecordNotPreloaded();              // 0xd723c (records the effect's id once)
     void Load(bool inIsOnDemand);           // 0xd7100 (counts a use at +0x80) (provisional name)
-    void Unload();
+    void Unload();                          // 0xd71ac (provisional name)
 
     // members (the ctor 0xd6ceb's stores, a database record copied field by field; types by width only,
     // provisional names; sizeof 0x90)

@@ -17,8 +17,8 @@ struct EEAIAStarHillTile {
 
 class EEAIAStarHillStorage : public EEAIAStarTerrainStorage {
 public:
-    EEAIAStarHillStorage();
-    virtual ~EEAIAStarHillStorage();
+    EEAIAStarHillStorage();                 // 0x171b5
+    virtual ~EEAIAStarHillStorage();        // 0x171e7
     // +0x10 0x17239: sizes the tile arrays for an inWidth x inHeight search (a same-size call only clears the part the
     // last search touched, grown by one tile)
     virtual void PrepareGrid(long inWidth, long inHeight);

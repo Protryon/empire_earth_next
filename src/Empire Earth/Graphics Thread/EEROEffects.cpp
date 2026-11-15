@@ -26,22 +26,29 @@
 extern GEViewport gU4E8F08;                 // 0x4e8f08 (EERenderObject.cpp; the render viewport)
 
 
+// FUNCTION: EXE 0x511d3d
 // Creates the effects' render object
 EEROEffects::EEROEffects()
 {
 }
 
+// SYNTHETIC: EXE 0x511d4f
+// (the scalar deleting destructor, emitted with the vtable; slot EEROEffects+0x10)
+
+// FUNCTION: EXE 0x511d6b
 // Destroys the effects' render object
 EEROEffects::~EEROEffects()
 {
 }
 
+// FUNCTION: EXE 0x511d76
 // Sorts the visible effects into the render queues for this frame
 void EEROEffects::FrameStarting()
 {
     this->QueueEffects();
 }
 
+// FUNCTION: EXE 0x511d7b
 // Clears the z buffer of the game view before the effects draw
 void EEROEffects::SceneStarting()
 {

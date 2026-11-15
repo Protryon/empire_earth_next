@@ -28,6 +28,7 @@ static_assert(sizeof(EEStartingResourcesRecord) == 132, "on-disk record: 132 byt
 
 std::vector<EEStartingResources*> EEStartingResources::sTable;
 
+// FUNCTION: EXE 0x4da9cd
 // Creates a starting-resources preset with every amount zero
 EEStartingResources::EEStartingResources()
 {
@@ -35,11 +36,16 @@ EEStartingResources::EEStartingResources()
         this->mAmounts[i] = 0;
 }
 
+// SYNTHETIC: EXE 0x4da9e2
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4da9fe
 // Destroys the starting-resources preset (nothing to release)
 EEStartingResources::~EEStartingResources()
 {
 }
 
+// FUNCTION: EXE 0x4daa05
 // Loads the starting-resource presets (food, wood, stone, gold, iron, name) from db\dbStartingResources.dat; returns
 // the last read status
 long EEStartingResources::Load(FSFileSpec* inFile)
@@ -72,6 +78,7 @@ long EEStartingResources::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4daae6
 // Destroys every starting-resources preset and empties the table
 void EEStartingResources::Unload()
 {
@@ -82,6 +89,9 @@ void EEStartingResources::Unload()
     EEStartingResources::sTable.clear();
 }
 
+// TEMPLATE: EXE 0x4dab26
+// std::vector<EEStartingResources*>::push_back
+
 // The tag-point helpers (EETagPointList / EETagPoint, ee/EEGraphicObject.h), defined in this unit's range: included
 // after the table's code so the init chain above keeps its numbering
 #include <map>
@@ -90,6 +100,7 @@ void EEStartingResources::Unload()
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
 
+// FUNCTION: EXE 0x4dab52
 // Releases every tag point's model reference, frees the points and empties the list
 void EETagPointList::Clear()
 {
@@ -104,6 +115,7 @@ void EETagPointList::Clear()
     this->mPoints.clear();
 }
 
+// FUNCTION: EXE 0x4dab97
 // Computes the tag point's position at a frame, carried through its model and every parent model's transform
 void EETagPoint::GetOffset(unsigned long inFrame, GE3DPoint& outPoint)
 {
@@ -116,6 +128,7 @@ void EETagPoint::GetOffset(unsigned long inFrame, GE3DPoint& outPoint)
     outPoint = thePoint;
 }
 
+// FUNCTION: EXE 0x4dac22
 // Computes the tag point's position at a frame with a part transform applied first, then the model chain
 void EETagPoint::GetOffset(unsigned long inFrame, const GETransformation& inPart, GE3DPoint& outPoint)
 {
@@ -131,6 +144,7 @@ void EETagPoint::GetOffset(unsigned long inFrame, const GETransformation& inPart
     outPoint = thePoint;
 }
 
+// FUNCTION: EXE 0x4daccd
 // Computes the tag point's world position at a frame: through the model chain, then the given transformation
 void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation, GE3DPoint& outPoint)
 {
@@ -143,6 +157,7 @@ void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTrans
     inTransformation.Apply(thePoint, outPoint);
 }
 
+// FUNCTION: EXE 0x4dad54
 // Computes the tag point's world position at a frame: a part transform, the model chain, then the given transformation
 void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTransformation,
                           const GETransformation& inPart, GE3DPoint& outPoint)
@@ -158,3 +173,8 @@ void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTrans
     }
     inTransformation.Apply(thePoint, outPoint);
 }
+
+// SYNTHETIC: EXE 0x4da984
+// SYNTHETIC: EXE 0x4da98e
+// SYNTHETIC: EXE 0x4da9a6
+// SYNTHETIC: EXE 0x4da9b2

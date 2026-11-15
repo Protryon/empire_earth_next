@@ -10,6 +10,7 @@
 #include "lle/UILBString.h"
 #include "ee/EEUIFMGErrorLog.h"
 
+// FUNCTION: EXE 0x667ad9
 // Creates the in-game error log list box: transparent text, no selection highlight
 EEUIFMGErrorLog::EEUIFMGErrorLog(const GERectangle& inRectangle, UIForm* inForm, GEFont* inFont,
                                  std::vector<UWideString>& inData, unsigned long inIndex, unsigned long inId)
@@ -21,6 +22,10 @@ EEUIFMGErrorLog::EEUIFMGErrorLog(const GERectangle& inRectangle, UIForm* inForm,
     this->GetSelectedBackground()->SetOpacity(0.0f);
 }
 
+// SYNTHETIC: EXE 0x667b33
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMGErrorLog+0x0)
+
+// FUNCTION: EXE 0x667b56
 // Handles a click in the error log, releasing the mouse unless the scroll bar holds it
 long EEUIFMGErrorLog::MouseLButtonDown()
 {

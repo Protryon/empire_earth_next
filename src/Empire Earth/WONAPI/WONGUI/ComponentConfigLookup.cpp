@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
+// FUNCTION: WON 0x0078ab30
 // Throws a configuration error naming the missing component and the source file and line that wanted it
 void ComponentConfigMissing(const std::string& name,const char* file,int line)
 {
@@ -19,6 +20,7 @@ void ComponentConfigMissing(const std::string& name,const char* file,int line)
     throw ConfigObjectException(message);
 }
 
+// FUNCTION: WON 0x0078aa60
 // Returns the component configured under the name, or NULL when there is none
 Component* ComponentConfigGet(ComponentConfig* config,const char* name)
 {

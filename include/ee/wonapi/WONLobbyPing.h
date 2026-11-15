@@ -9,14 +9,14 @@
 namespace WONAPI {
 class PingLogic : public LobbyLogic {
 public:
-    PingLogic();
-    virtual ~PingLogic();
-    virtual void InitComponent(ComponentConfig*);
-    virtual void HandleComponentEvent(ComponentEvent*);
+    PingLogic(); // 0x7e6490
+    virtual ~PingLogic(); // 0x7e6520
+    virtual void InitComponent(ComponentConfig*); // 0x7e65d0
+    virtual void HandleComponentEvent(ComponentEvent*); // 0x7e6680
     void HandleUDPRecv(AsyncOp*); // 0x7e6810, UDP receive completion
     void PingGameDone(AsyncOp*); // 0x7e68b0, PingGameOp completion
-    int GetNumPingsToDo();
-    void PingGame(LobbyGame*, bool, bool);
+    int GetNumPingsToDo(); // 0x7e6b40
+    void PingGame(LobbyGame*, bool, bool); // 0x7e6b50
     void KillPings(int); // 0x7e6db0; the argument is unused
     intptr_t Call(EeWonLogicCall inCall, intptr_t inA = 0, intptr_t inB = 0, intptr_t inC = 0)
     { return ee_won_logic_call(this->mRust, inCall, inA, inB, inC); }

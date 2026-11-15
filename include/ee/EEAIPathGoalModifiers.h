@@ -17,11 +17,11 @@ class EECPAttackSubGroup;
 // bounded search ends at the first node within mUnit's range of the goal
 class EEAIBPGModifierEnemyIsAttackableByUnit : public EEAIBoundedPathGoalModifierBase {
 public:
-    EEAIBPGModifierEnemyIsAttackableByUnit(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
-    virtual ~EEAIBPGModifierEnemyIsAttackableByUnit();
-    virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY);
-    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal);
-    virtual bool CheckNode(EEAIAStarNode* inNode);
+    EEAIBPGModifierEnemyIsAttackableByUnit(EEComplexUnit* inUnit, EEComplexUnit* inTarget);   // 0xfbe4
+    virtual ~EEAIBPGModifierEnemyIsAttackableByUnit();      // 0xfc3e (??_G 0xfbc8)
+    virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY);     // 0xfcdf
+    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal);    // 0xfce5
+    virtual bool CheckNode(EEAIAStarNode* inNode);           // 0xfc6e
 
     std::vector<EETileCoordinate> mTiles;   // +0x10 (only built and freed here)
     EEComplexUnit* mUnit;                   // +0x20 (referenced; the walker)
@@ -34,14 +34,14 @@ class EEAIBPGModifierWallsDoNotBlock : public EEAIBoundedPathGoalModifierBase {
 public:
     EEAIBPGModifierWallsDoNotBlock();       // 0xfdab (out of line)
     virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY);     // (ICF 0x10814)
-    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal);
+    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal);    // 0xfdc3
 };
 
 // RTTI EEAIGPGModiferUseInfluenceCostsBase (vtable 0x439c38: ??_G 0x10b5a, 0x10b48, 0x10b4e, 0xfec1; sizeof 0x50)
 class EEAIGPGModiferUseInfluenceCostsBase : public EEAIGraphPathGoalModifierBase {
 public:
     EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID, unsigned long inEnemyID,
-                                        const EECPASGWeights& inWeights);
+                                        const EECPASGWeights& inWeights);   // 0xfe55
     EEAIGPGModiferUseInfluenceCostsBase(unsigned long inPlayerID, unsigned long inEnemyID);   // 0xfe8f (weights 0)
     // +0x0c 0xfec1: 1 + the influence at inTo's region: inPlayerID's enemies' (inEnemies), else mEnemyID's
     virtual unsigned long GetInfluenceCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo, bool inEnemies);
@@ -54,8 +54,8 @@ public:
 // RTTI EEAIGPModifierEnemyAvoidance (vtable 0x439c5c: +0x04 0xff52, +0x08 ICF 0x10aa1; sizeof 0x50)
 class EEAIGPModifierEnemyAvoidance : public EEAIGPGModiferUseInfluenceCostsBase {
 public:
-    EEAIGPModifierEnemyAvoidance(unsigned long inPlayerID);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
+    EEAIGPModifierEnemyAvoidance(unsigned long inPlayerID);  // 0xff38
+    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);     // 0xff52
     virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);    // (ICF 0x10aa1)
 };
 
@@ -65,7 +65,7 @@ public:
 // (provisional name)
 class EEAIGPGModifierComputerPlayerWallPlanner : public EEAIGPGModiferUseInfluenceCostsBase {
 public:
-    EEAIGPGModifierComputerPlayerWallPlanner(unsigned long inPlayerID, long inEnemyID);
+    EEAIGPGModifierComputerPlayerWallPlanner(unsigned long inPlayerID, long inEnemyID);  // 0x10639
     virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);     // +0x04 0x10799
     virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);    // +0x08 0x107cb
     // +0x10 0x10655: whether a tile of inSector holds no live gate, or one inPlayerID may not pass (provisional name)
@@ -77,9 +77,9 @@ class EEAIGPGModifierLandAttackSubGroupRoutePlanner : public EEAIGPGModiferUseIn
 public:
     EEAIGPGModifierLandAttackSubGroupRoutePlanner(EECPAttackSubGroup* inSubGroup, unsigned short inContinent1,
                                                   unsigned short inContinent2, bool inAnyContinent,
-                                                  const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
+                                                  const EECPASGWeights& inWeights);   // 0x1001a
+    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);     // 0x10074
+    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);    // 0x10465
 
     EECPAttackSubGroup* mSubGroup;          // +0x50
     unsigned short mContinent1;             // +0x54
@@ -104,7 +104,7 @@ public:
 class EEAIGPGModifierSeaRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
 public:
     EEAIGPGModifierSeaRoutePlanner(unsigned long inPlayerID, EECPAttackSubGroup* inSubGroup,
-                                   const EECPASGWeights& inWeights);
+                                   const EECPASGWeights& inWeights);   // 0x108d6
     virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
     virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
 
@@ -114,7 +114,7 @@ public:
 class EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
 public:
     EEAIGPGModifierHelicopterAttackSubGroupRoutePlanner(EECPAttackSubGroup* inSubGroup,
-                                                        const EECPASGWeights& inWeights);
+                                                        const EECPASGWeights& inWeights);   // 0x10909
     virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
     virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
 
@@ -124,8 +124,8 @@ public:
 class EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
 public:
     EEAIGPGModifierAirplaneAttackSubGroupRoutePlanner(EECPAttackSubGroup* inSubGroup,
-                                                      const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
+                                                      const EECPASGWeights& inWeights);   // 0x10947
+    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);     // 0x10985
     virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
 
     EECPAttackSubGroup* mSubGroup;          // +0x50
@@ -134,9 +134,9 @@ public:
 class EEAIGPGModifierSpaceRoutePlanner : public EEAIGPGModiferUseInfluenceCostsBase {
 public:
     EEAIGPGModifierSpaceRoutePlanner(unsigned long inPlayerID, EECPAttackSubGroup* inSubGroup,
-                                     const EECPASGWeights& inWeights);
-    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);
-    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
+                                     const EECPASGWeights& inWeights);   // 0x109ed
+    virtual long GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo);     // 0x10a20
+    virtual bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);    // 0x10aa1
 
     EECPAttackSubGroup* mSubGroup;          // +0x50
 };

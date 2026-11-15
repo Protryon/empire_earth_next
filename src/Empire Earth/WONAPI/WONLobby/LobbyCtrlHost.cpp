@@ -31,8 +31,10 @@ bool LobbyIAmReady();
 
 // ---- the player row (GameUserListCtrl's list; the original's GameUserListCtrl.cpp)
 
+// FUNCTION: WON 0x007bcad0
 // Creates a game player list entry for a client
 GameUserListItem::GameUserListItem(LobbyClient* inClient) : mClient(inClient) {}
+// FUNCTION: WON 0x007bcdb0
 // Sizes the entry to the list font's height, or the icon's if taller
 void GameUserListItem::CalcDimensions(ListArea* inArea)
 {
@@ -40,6 +42,7 @@ void GameUserListItem::CalcDimensions(ListArea* inArea)
     this->mHeight=this->mFont->GetHeight();
     if(this->mImage.get()!=NULL && this->mImage->mHeight>this->mHeight) this->mHeight=this->mImage->mHeight;
 }
+// FUNCTION: WON 0x007bce10
 // Orders the game captain first, then players by name ignoring case
 int GameUserListItem::Compare(const ListItem* inOther,ListArea*) const
 {
@@ -50,6 +53,7 @@ int GameUserListItem::Compare(const ListItem* inOther,ListArea*) const
     return this->mClient->GetName().CompareNoCase(other->mClient->GetName());
 }
 // The ready mark is centered by the status icon's height, not its own (as in the original)
+// FUNCTION: WON 0x007bce60
 // Draws one column of the entry: selection background, status icon, ready mark, name or ping bars
 void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
 {
@@ -433,6 +437,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
 
 // ---- the config readers (GameBrowserCtrl.cpp's and GameUserListCtrl.cpp's)
 
+// FUNCTION: WON 0x00765460
 // Creates a config for a browser tab in the layout file
 ComponentConfig* GameBrowserCtrlConfig::CfgFactory()
 {
@@ -441,6 +446,7 @@ ComponentConfig* GameBrowserCtrlConfig::CfgFactory()
 
 // The instruction keys and the flag and value names these readers compare are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
+// FUNCTION: WON 0x007bc450
 // Reads the HOMELOCATION layout key, resolving a file URL to the resource file path
 bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction)
 {
@@ -460,12 +466,14 @@ bool GameBrowserCtrlConfig::Virtual24(const std::string& instruction)
     return true;
 }
 
+// FUNCTION: WON 0x007654c0
 // Creates the layout reader for a game player list
 ComponentConfig* GameUserListCtrlConfig::CfgFactory()
 {
     return new GameUserListCtrlConfig;
 }
 
+// FUNCTION: WON 0x007bda70
 // Accepts (and ignores) the CTRLLINKID layout key; passes other keys to the container's reader
 bool GameUserListCtrlConfig::Virtual24(const std::string& instruction)
 {

@@ -65,6 +65,7 @@ static EeUnitsPgArgs PGArgs(const void* inUnit = NULL, float inX = 0.0f, float i
     return theArgs;
 }
 
+// FUNCTION: EXE 0x56066d
 // Creates an empty, open patrol group with the next patrol group id
 EEPPatrolGroup::EEPPatrolGroup()
 {
@@ -73,30 +74,35 @@ EEPPatrolGroup::EEPPatrolGroup()
     this->mIsTownPatrol = false;
 }
 
+// FUNCTION: EXE 0x5606cc
 // Destroys the patrol group, detaching and killing every patrol point unit
 EEPPatrolGroup::~EEPPatrolGroup()
 {
     PGRun(EE_UNITS_PG_OP_DESTROY, this, PGArgs());
 }
 
+// FUNCTION: EXE 0x560727
 // Adds a patrol point at the end at ground height; a point on the first point's tile closes the loop instead
 void EEPPatrolGroup::AddPoint(const GE2DPoint& inPoint, unsigned long inPlayerID)
 {
     PGRun(EE_UNITS_PG_OP_ADD_POINT, this, PGArgs(NULL, inPoint.GetX(), inPoint.GetY(), 0.0f, (int32_t)inPlayerID));
 }
 
+// FUNCTION: EXE 0x5607c8
 // Creates a patrol point at the given spot after the last one
 void EEPPatrolGroup::AppendPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID)
 {
     PGRun(EE_UNITS_PG_OP_APPEND, this, PGArgs(NULL, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), (int32_t)inPlayerID));
 }
 
+// FUNCTION: EXE 0x5607f4
 // Returns the patrol point nearest to the tile (the first of equals), or NULL when there are none
 EEComplexUnit* EEPPatrolGroup::GetNearest(long inTileX, long inTileY)
 {
     return PGUnit(PGRun(EE_UNITS_PG_OP_NEAREST, this, PGArgs(NULL, 0.0f, 0.0f, 0.0f, (int32_t)inTileX, (int32_t)inTileY)));
 }
 
+// FUNCTION: EXE 0x56085d
 // Returns the patrol point after the given one (the first for NULL); wraps to the first in a loop or a
 // one-point patrol, else NULL at the end
 EEComplexUnit* EEPPatrolGroup::GetNext(EEComplexUnit* inUnit)
@@ -104,12 +110,14 @@ EEComplexUnit* EEPPatrolGroup::GetNext(EEComplexUnit* inUnit)
     return PGUnit(PGRun(EE_UNITS_PG_OP_NEXT, this, PGArgs(inUnit)));
 }
 
+// FUNCTION: EXE 0x5608db
 // Returns the index of the patrol point, or of the point nearest to the unit's tile when it is not one
 unsigned long EEPPatrolGroup::IndexOf(EEComplexUnit* inUnit)
 {
     return (unsigned long)PGRun(EE_UNITS_PG_OP_INDEX_OF, this, PGArgs(inUnit));
 }
 
+// FUNCTION: EXE 0x56098a
 // Returns the patrol point before the given one (the first for NULL); wraps to the last in a loop, else
 // NULL at the start
 EEComplexUnit* EEPPatrolGroup::GetPrevious(EEComplexUnit* inUnit)
@@ -117,12 +125,14 @@ EEComplexUnit* EEPPatrolGroup::GetPrevious(EEComplexUnit* inUnit)
     return PGUnit(PGRun(EE_UNITS_PG_OP_PREVIOUS, this, PGArgs(inUnit)));
 }
 
+// FUNCTION: EXE 0x5609e4
 // Creates a patrol point at a map position (at ground height) after the given point
 void EEPPatrolGroup::InsertPatrolPointAt(const GE2DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inUnit)
 {
     PGRun(EE_UNITS_PG_OP_INSERT_AT, this, PGArgs(inUnit, inPoint.GetX(), inPoint.GetY(), 0.0f, (int32_t)inPlayerID));
 }
 
+// FUNCTION: EXE 0x560a58
 // Creates a path point unit for the player at the spot and inserts it after the given point (at the end
 // for NULL)
 void EEPPatrolGroup::InsertPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inAfter)
@@ -130,6 +140,7 @@ void EEPPatrolGroup::InsertPatrolPoint(const GE3DPoint& inPoint, unsigned long i
     PGRun(EE_UNITS_PG_OP_INSERT, this, PGArgs(inAfter, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), (int32_t)inPlayerID));
 }
 
+// FUNCTION: EXE 0x560ade
 // Reads the group's id, its patrol point unit ids (as placeholders for RepairPointers) and the loop flag
 // from the saved game; returns the first read error
 long EEPPatrolGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
@@ -139,12 +150,14 @@ long EEPPatrolGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     return (long)(int32_t)(uint32_t)PGRun(EE_UNITS_PG_OP_LOAD, this, theArgs);
 }
 
+// FUNCTION: EXE 0x560b72
 // Removes a patrol point; the player drops the group once it has none left
 void EEPPatrolGroup::RemoveUnit(EEComplexUnit* inUnit)
 {
     PGRun(EE_UNITS_PG_OP_REMOVE, this, PGArgs(inUnit));
 }
 
+// FUNCTION: EXE 0x560bf2
 // Turns the loaded unit ids back into patrol point units, claiming those that point at another group;
 // returns 3 at the first id with no unit
 long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -152,12 +165,14 @@ long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long 
     return (long)(int32_t)(uint32_t)PGRun(EE_UNITS_PG_OP_REPAIR, this, PGArgs());
 }
 
+// FUNCTION: EXE 0x560cdc
 // Restarts patrol group ids at 0
 void EEPPatrolGroup::ResetIDs()
 {
     PGRun(EE_UNITS_PG_OP_RESET_IDS, NULL, PGArgs());
 }
 
+// FUNCTION: EXE 0x560ce4
 // Writes the group's id, its patrol point unit ids and the loop flag to the saved game; returns the first
 // write error
 long EEPPatrolGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
@@ -167,12 +182,14 @@ long EEPPatrolGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     return (long)(int32_t)(uint32_t)PGRun(EE_UNITS_PG_OP_SAVE, this, theArgs);
 }
 
+// FUNCTION: EXE 0x560d70
 // Selects the patrol points for the player, stopping at the first that cannot be selected
 void EEPPatrolGroup::Select(EEPlayer* inPlayer, bool inFlag)
 {
     PGRun(EE_UNITS_PG_OP_SELECT, this, PGArgs(inPlayer, 0.0f, 0.0f, 0.0f, inFlag ? 1 : 0));
 }
 
+// FUNCTION: EXE 0x560da9
 // Replaces the patrol route with the given tiles: kills points on no listed tile, adds missing ones and
 // orders the points as listed, as a closed loop
 void EEPPatrolGroup::SetPatrolPoints(std::vector<U2DPoint<long> > inPoints, unsigned long inPlayerID)

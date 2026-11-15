@@ -23,10 +23,22 @@
 // (bits 1/2/4) for the three atexit destructors. .bss layout is reverse definition order.
 // chain at 0x4d6bed: sEffects 0x4e8420 (allocator byte, _Buy(0)), atexit dtor 0x4d6c1b (_Tidy)
 std::vector<EEGraphicEffect*> EEGraphicEffect::sEffects;
+// SYNTHETIC: EXE 0x4d6bed   (wrapper)
+// SYNTHETIC: EXE 0x4d6bf7   (ctor)
+// SYNTHETIC: EXE 0x4d6c0f   (registrar)
+// SYNTHETIC: EXE 0x4d6c1b   (dtor)
 // chain at 0x4d6c36: 0x4e7f98, the media of each kind (0x48 kinds; provisional name)
 std::vector<EEMedia*> EEGraphicEffect::sMediaByKind[0x48];
+// SYNTHETIC: EXE 0x4d6c36   (wrapper)
+// SYNTHETIC: EXE 0x4d6c40   (ctor)
+// SYNTHETIC: EXE 0x4d6c64   (registrar)
+// SYNTHETIC: EXE 0x4d6c70   (dtor)
 // chain at 0x4d6c9a: 0x4e7f88, the effect ids (provisional name)
 std::set<unsigned long> EEGraphicEffect::sIDs;
+// SYNTHETIC: EXE 0x4d6c9a   (wrapper)
+// SYNTHETIC: EXE 0x4d6ca4   (ctor)
+// SYNTHETIC: EXE 0x4d6cc4   (registrar)
+// SYNTHETIC: EXE 0x4d6cd0   (dtor)
 extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEAnimal.cpp)
 
 // One record of db\dbgfxeffects.dat (0xe8 bytes, read whole). Layout inferred (only the fields the ctor copies).
@@ -71,6 +83,7 @@ struct EEGraphicEffectRecord {
 };
 static_assert(sizeof(EEGraphicEffectRecord) == 232, "on-disk record: 232 bytes on every target");
 
+// FUNCTION: EXE 0x4d6ceb
 // Creates a graphic effect from its table record; linked effects stay table indices until LoadTable links them
 EEGraphicEffect::EEGraphicEffect(EEGraphicEffectRecord* inRecord)
 {
@@ -112,11 +125,16 @@ EEGraphicEffect::EEGraphicEffect(EEGraphicEffectRecord* inRecord)
     this->mNumLoads = 0;
 }
 
+// Compiler-generated: the ??_G of the virtual dtor (calls it out of line; EEMedia's thunk 0xd726c adjusts this):
+// TEMPLATE: EXE 0x4d6e5d
+
+// FUNCTION: EXE 0x4d6e79
 // Destroys the graphic effect (nothing of its own to free)
 EEGraphicEffect::~EEGraphicEffect()
 {
 }
 
+// FUNCTION: EXE 0x4d6e9e
 // Reads the graphic effect table from the file and links each effect's three follow-on effects by index;
 // returns the last read result
 long EEGraphicEffect::LoadTable(FSFile* inFile)
@@ -157,6 +175,7 @@ long EEGraphicEffect::LoadTable(FSFile* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d6fe6
 // Writes to the file every graphic effect that was used without being preloaded
 void EEGraphicEffect::DumpIDs(FSFileSpec& inFile)
 {
@@ -167,6 +186,7 @@ void EEGraphicEffect::DumpIDs(FSFileSpec& inFile)
                 EEGraphicEffect::sEffects[*theIterator]->mID);
 }
 
+// FUNCTION: EXE 0x4d7048
 // Releases every graphic effect in the table and empties it
 void EEGraphicEffect::UnloadTable()
 {
@@ -177,6 +197,7 @@ void EEGraphicEffect::UnloadTable()
     EEGraphicEffect::sEffects.clear();
 }
 
+// FUNCTION: EXE 0x4d7074
 // Returns the effect's graphic, or a random graphic of its kind when it has none of its own
 EEMedia* EEGraphicEffect::GetMedia()
 {
@@ -187,6 +208,7 @@ EEMedia* EEGraphicEffect::GetMedia()
     return static_cast<EEMedia*>(this->mGraphicObject);
 }
 
+// FUNCTION: EXE 0x4d70b7
 // Files every loaded graphic object under its kind (kinds below 0x48) for kind-only effects
 void EEGraphicEffect::SortMediaByKind()
 {
@@ -199,6 +221,7 @@ void EEGraphicEffect::SortMediaByKind()
     }
 }
 
+// FUNCTION: EXE 0x4d7100
 // Loads the effect's graphic (or every graphic of its kind) and its linked effects; on demand, records it as
 // not preloaded
 void EEGraphicEffect::Load(bool inIsOnDemand)
@@ -225,6 +248,7 @@ void EEGraphicEffect::Load(bool inIsOnDemand)
     }
 }
 
+// FUNCTION: EXE 0x4d71ac
 // Unloads the effect's graphic (or every graphic of its kind) and its linked effects
 void EEGraphicEffect::Unload()
 {
@@ -248,6 +272,7 @@ void EEGraphicEffect::Unload()
     }
 }
 
+// FUNCTION: EXE 0x4d723c
 // Records the effect's id for the dump when its graphic has not been loaded yet
 void EEGraphicEffect::RecordNotPreloaded()
 {
@@ -257,12 +282,20 @@ void EEGraphicEffect::RecordNotPreloaded()
     }
 }
 
+// SYNTHETIC: EXE 0x4d726c
+// (EEMedia::~EEMedia's adjusting thunk into 0x4d6e5d: this - 8)
+
+// SYNTHETIC: EXE 0x4d7274
+// (EEMedia's ??_G, inline)
+
+// FUNCTION: EXE 0x4d7291
 // Returns the number of entries in the media table
 unsigned long EEMedia::GetCount()
 {
     return gMediaTable.size();
 }
 
+// FUNCTION: EXE 0x4d72a9
 // Loads the effect as preloaded media; always returns 0
 long EEGraphicEffect::LoadMedia()
 {
@@ -270,6 +303,7 @@ long EEGraphicEffect::LoadMedia()
     return 0;
 }
 
+// FUNCTION: EXE 0x4d72b6
 // Unloads the effect's media; always returns 0
 long EEGraphicEffect::UnloadMedia()
 {

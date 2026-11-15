@@ -46,6 +46,7 @@ struct EEButtonRecord {
 };
 static_assert(sizeof(EEButtonRecord) == 224, "on-disk record: 224 bytes on every target");
 
+// FUNCTION: EXE 0x4d5498
 // Creates a button image entry with no texture and no references
 EEButtonObject::EEButtonObject()
     : mTexture(NULL), mCellU(0.0f), mCellV(0.0f), mMediaCount(0)
@@ -53,6 +54,10 @@ EEButtonObject::EEButtonObject()
     this->mIsLoading = false;
 }
 
+// SYNTHETIC: EXE 0x4d54c3
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4d54df
 // Destroys the button image entry, releasing its texture
 EEButtonObject::~EEButtonObject()
 {
@@ -60,6 +65,7 @@ EEButtonObject::~EEButtonObject()
         this->mTexture->Dereference();
 }
 
+// FUNCTION: EXE 0x4d5500
 // Loads the button image entries (file name, cell row and column, id, hot key, position) from db\dbButtons.dat;
 // stops at the first read error and returns it
 long EEButtonObject::Load(FSFileSpec* inFile)
@@ -90,6 +96,7 @@ long EEButtonObject::Load(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d55f1
 // Destroys every button image entry and empties the table
 void EEButtonObject::Unload()
 {
@@ -98,6 +105,7 @@ void EEButtonObject::Unload()
     EEButtonObject::sTable.resize(0);
 }
 
+// FUNCTION: EXE 0x4d5631
 // Writes each button image with a non-zero reference count to a media dump file
 void EEButtonObject::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
@@ -108,6 +116,7 @@ void EEButtonObject::DumpAllLoadedMedia(FSFileSpec& inFile)
                     EEButtonObject::sTable[i]->mMediaCount);
 }
 
+// FUNCTION: EXE 0x4d5690
 // Adds a reference to the button image, loading its texture on the first one (later callers wait for that load);
 // returns the load error
 long EEButtonObject::Acquire()
@@ -137,6 +146,7 @@ long EEButtonObject::Acquire()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d572e
 // Loads the button's texture (a mip level dropped at 800 pixels wide or less, alpha for ids below 50) and computes
 // its cell's texture offset; returns 3 when the texture is missing
 long EEButtonObject::LoadTexture()
@@ -168,6 +178,7 @@ long EEButtonObject::LoadTexture()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d584e
 // Shows the button's cell, inset by one texel, on a bitmap scaled to a rectangle (a 40-texel cell on textures 256 or
 // more wide, else the whole texture); a button without a texture is skipped
 void EEButtonObject::SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen)
@@ -209,6 +220,7 @@ void EEButtonObject::SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRect
                          (inRectangle.GetHeight() + 1.0f) / theTextureHeight);
 }
 
+// FUNCTION: EXE 0x4d5a2e
 // Shows the pressed button's cell (no texel inset) on a bitmap scaled to a rectangle; as SetFaceBitmap without the
 // texture test
 // NEAR: the original converts (theHeight << theDrop) through fild qword + fdivp; ours fuses it into fidiv
@@ -247,6 +259,7 @@ void EEButtonObject::SetPressedBitmap(GEBitmap* inBitmap, const GERectangle& inR
                          (inRectangle.GetHeight() + 1.0f) / theTextureHeight);
 }
 
+// FUNCTION: EXE 0x4d5bdf
 // Drops a reference to the button image once any load has finished, releasing its texture with the last one; returns 0
 long EEButtonObject::Release()
 {
@@ -264,6 +277,7 @@ long EEButtonObject::Release()
     return 0;
 }
 
+// FUNCTION: EXE 0x4d5c31
 // Reloads the textures of every referenced button image (a mip level dropped at 800 pixels wide or less, as on the
 // first load); returns the first error
 long EEButtonObject::Reload()
@@ -294,14 +308,25 @@ long EEButtonObject::Reload()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d5cfe
 // Loads the button image for a user (media interface): adds a reference
 long EEButtonObject::LoadMedia()
 {
     return this->Acquire();
 }
 
+// FUNCTION: EXE 0x4d5d03
 // Unloads the button image for a user (media interface): drops a reference
 long EEButtonObject::UnloadMedia()
 {
     return this->Release();
 }
+
+// SYNTHETIC: EXE 0x4d5405
+// SYNTHETIC: EXE 0x4d540f
+// SYNTHETIC: EXE 0x4d5427
+// SYNTHETIC: EXE 0x4d5433
+// SYNTHETIC: EXE 0x4d544e
+// SYNTHETIC: EXE 0x4d5458
+// SYNTHETIC: EXE 0x4d547e
+// SYNTHETIC: EXE 0x4d548a

@@ -16,6 +16,7 @@ namespace WONAPI {
 CreateAccountCtrl::CreateAccountCtrl() {}
 // The implicit destructor (0x7ba320) releases the fourteen control pointers in reverse order, then
 // the Container base
+// FUNCTION: WON 0x007ba4f0
 // Looks up the account fields, their error labels and the create button from the layout, then validates
 void CreateAccountCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -39,12 +40,14 @@ void CreateAccountCtrl::InitComponent(ComponentInit& inInit)
     this->UpdateCreateButton();
 }
 // Does not use the dialog itself
+// FUNCTION: WON 0x007ba680
 // Shows or hides an error label and returns whether it is shown
 bool CreateAccountCtrl::ShowErrorLabel(bool inVisible,Label* inLabel)
 {
     inLabel->SetVisible(inVisible);
     return inVisible;
 }
+// FUNCTION: WON 0x007ba6a0
 // Returns whether an e-mail address has an @ after its first character and a dot with text after it
 bool LobbyIsValidEmail(const std::string& inEmail)
 {
@@ -58,6 +61,7 @@ bool LobbyIsValidEmail(const std::string& inEmail)
     return false;
 }
 // All three fields are read before any of them is checked
+// FUNCTION: WON 0x007ba790
 // Returns whether month 1-12, day 1-31 and year 1890-1999 were entered (no per-month day check)
 bool CreateAccountCtrl::IsValidBirthDate(InputBox* inMonth,InputBox* inDay,InputBox* inYear)
 {
@@ -67,6 +71,7 @@ bool CreateAccountCtrl::IsValidBirthDate(InputBox* inMonth,InputBox* inDay,Input
     if(month<=0||day<=0||year<=1889||month>12||day>31||year>1999) return false; return true;
 }
 // Every check runs (and updates its label) even after one has failed
+// FUNCTION: WON 0x007ba800
 // Shows an error label for each invalid field and enables the create button only when all are valid
 void CreateAccountCtrl::UpdateCreateButton()
 {
@@ -89,6 +94,7 @@ void CreateAccountCtrl::UpdateCreateButton()
     if(this->ShowErrorLabel(!this->IsValidBirthDate(this->mMonthInput.get(),this->mDayInput.get(),this->mYearInput.get()),this->mBirthdateDesc.get())) invalid=true;
     this->mCreateButton->SetEnabled(!invalid);
 }
+// FUNCTION: WON 0x007ba990
 // Revalidates on typing; on the create button sends a create-account request with the entered details
 void CreateAccountCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -108,3 +114,24 @@ void CreateAccountCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 }
 // CreateAccountEvent's destructor (0x7bac50) and deleting destructor (0x7bac30) are emitted here;
 // the function after them (0x7bad40) is a ServerDetailsItem factory from another file
+
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007bac10
+// (public: __thiscall WONAPI::LobbyEvent::LobbyEvent(int)    [??0LobbyEvent@WONAPI@@QAE@H@Z])
+// TEMPLATE: WON 0x007bac50
+// (public: virtual __thiscall WONAPI::CreateAccountEvent::~CreateAccountEvent(void)    [??1CreateAccountEvent@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007ba300
+// (public: virtual void * __thiscall WONAPI::CreateAccountCtrl::`scalar deleting destructor'(unsigned int)    [??_GCreateAccountCtrl@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007bac30
+// (public: virtual void * __thiscall WONAPI::CreateAccountEvent::`scalar deleting destructor'(unsigned int)    [??_GCreateAccountEvent@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007ba320
+// (public: virtual __thiscall WONAPI::CreateAccountCtrl::~CreateAccountCtrl(void)    [??1CreateAccountCtrl@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007ba290
+// (public: __thiscall WONAPI::CreateAccountCtrl::CreateAccountCtrl(void)    [??0CreateAccountCtrl@WONAPI@@QAE@XZ])

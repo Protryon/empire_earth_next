@@ -77,6 +77,7 @@ public:
         }
         return NULL;
     }
+    // 0x60b4
     EEAIContinent* GetContinentAt(const EETileCoordinate& inTile) const {
         long theY = inTile.mY;
         long theX = inTile.mX;
@@ -88,15 +89,15 @@ public:
     void AddChokePoint(EEAIChokePoint* inChokePoint);      // 0x1f1b8: mChokePoints[+0x78] = it; its continent's 0x26d84; AddArea
     void AddRectangleArea(EEAIRectangleArea* inArea);// 0x1f3a0: dynamic_cast<EEAIRectangleArea*>; mRectangleAreas[+0x8a] = it
     void Reset();                           // 0x1f503: clears every container and counter (not the grids)
-    void DeleteChokePoints();
+    void DeleteChokePoints();               // 0x1f5cb
     void DeleteContinents();                // 0x1f5dd (also mL134/mUnitUnderMouse/mPlayerID = 0)
-    void DeleteForests();
-    void DeleteHills();
-    void DeletePathAreas();
+    void DeleteForests();                   // 0x1f600
+    void DeleteHills();                     // 0x1f60b
+    void DeletePathAreas();                 // 0x1f619
     void DeletePathSectors();               // 0x1f624 (also the sub-sector ids and mRegionInformation.Reset())
-    void DeleteRectangleAreas();
+    void DeleteRectangleAreas();            // 0x1f651
     void AllocateTileValues();              // 0x1f813: mTileValues = new long[mHeight * mWidth], zeroed
-    void ClearChecksum();
+    void ClearChecksum();                   // 0x1f863
     EEAIContinent* GetContinentAt(EEUnit* inUnit);         // 0x22658 (its tile, bounds-checked, then 0x60c7)
     unsigned short FindContinentID(long inX, long inY) const;    // 0x22680: FindContinent(inX, inY)->+0x11c, 0 if none
     // 0x21fff: inUnit can reach tile (inX, inY) (EEComplexUnit::IsOnOtherContinent for class flag 1) (provisional name)
@@ -112,11 +113,11 @@ public:
     unsigned short GetPathAreaIDAt(long inX, long inY);   // inline in EEGroup.cpp (Virtual38: refuses the ctor and the 0x208334 call)
     // 0x2311c (ret 0xc): whether tile (inX, inY) belongs to inID (EEAIContinent::GetShoreNextTo) (provisional name)
     bool IsNextToArea(long inX, long inY, unsigned short inID);
-    EEAIPathSector* GetPathSector(EEUnit* inUnit);
+    EEAIPathSector* GetPathSector(EEUnit* inUnit);         // 0x22bd7
     EEAIPathSector* GetPathSector(const EETileCoordinate& inTile) const;   // 0x22bf8: 0 off the map
     // 0x236b5 takes the map (`ret 4`; it passes it to 0x1f8ae and 0x2033f): EEUserInterface calls
     // Clear(gWorld.mMap); the no-argument declaration above has no users
-    void Clear(EEMap* inMap);
+    void Clear(EEMap* inMap);               // 0x236b5
     void BuildRegions(EEMap* inMap);        // 0x24a24 (after Clear; resets mClearing; provisional name)
     bool RemoveArea(EEAIArea* inArea);      // 0x24f70: erases inArea's serial from mAreas; true if it was there
     void RemoveSectorTiles(EEAIPathSector* inSector);      // 0x24fb5: erases its id (+0x48) from mSectorTiles
@@ -155,27 +156,27 @@ public:
     // the tile
     EEAIChokePoint* GetChokePointAt(const EETileLocation& inTile);    // 0x221e2 (continent +0x11a must be 1)
     EEAIChokePoint* GetChokePointAt(EEUnit* inUnit);    // 0x221c1: at inUnit's tile (+0x1c, +0x20)
-    EEAIForest* GetForestAt(const EETileLocation& inTile);
+    EEAIForest* GetForestAt(const EETileLocation& inTile);            // 0x2275b
     // the EEUnit overloads build an EETileLocation from the unit's tile (+0x1c, +0x20)
-    EEAIForest* GetForestAt(EEUnit* inUnit);
+    EEAIForest* GetForestAt(EEUnit* inUnit);                          // 0x2273a
     // inline: the forest id at inTile, 0 if none (COMDAT 0x225272; defined in its only user EEUGGather.cpp, where
     // EEAIForest is complete) (provisional name)
     unsigned short GetForestIDAt(const EETileLocation& inTile);
-    EEAIPathArea* GetPathAreaAt(EEUnit* inUnit);
-    EEAIPathSubSector* GetPathSubSectorAt(EEUnit* inUnit);
+    EEAIPathArea* GetPathAreaAt(EEUnit* inUnit);                      // 0x22ab8
+    EEAIPathSubSector* GetPathSubSectorAt(EEUnit* inUnit);            // 0x22c51
     // inline (COMDAT 0xabb3f after its first user EEPathManager::RequestUnitPaths): the path sub sector of id inID
     // Provisional name
     EEAIPathSubSector* GetPathSubSector(unsigned short inID) { return this->mPathSubSectors[inID]; }
     unsigned short GetPathSubSectorID(EEUnit* inUnit);                // 0x22cd7 (0 off the grid)
-    EEAIPathSubSector* FindPathSubSector(long inX, long inY);
+    EEAIPathSubSector* FindPathSubSector(long inX, long inY);         // 0x22c65 (provisional name)
     unsigned short FindPathSubSectorID(long inX, long inY);           // 0x22cff: FindPathSubSector's id (+0x50), 0 if none
-    bool InSameContinent(EEUnit* inFirst, EEUnit* inSecond);
+    bool InSameContinent(EEUnit* inFirst, EEUnit* inSecond);          // 0x21f13 (provisional name)
     bool CanGetToUnit(EEUnit* inUnit, EEUnit* inTarget);              // 0x21fe7: CanGetTo(inUnit, inTarget's tile)
     long GetTileFlag(long inX, long inY);                             // 0x21f5a: the map tile's +0x14 (0 off the map; movsx: a long)
     long GetResourceWeight(long inX, long inY);                       // 0x1f65f: 10 per unit of class +0x268 == 3 on the tile
     // 0x22635 (const-shaped: lea; mov): the tiles of continent inID (provisional name)
     void GetContinentTiles(unsigned short inID, std::vector<U2DPoint<long> >& outTiles) const;
-    EEAIHill* GetHillAt(const EETileLocation& inTile);
+    EEAIHill* GetHillAt(const EETileLocation& inTile);                // 0x227d0
     // 0x22eb4: the last of mRectangleAreas whose 0xc6fd(inTile) holds (argument type inferred)
     EEAIRectangleArea* GetRectangleAreaAt(const EETileLocation& inTile);
     // 0x273c9 (ret 8): id = 0x273f1(inX, inY); id ? mPathSubSectors[id] : 0 (the 0x60c7 shape over +0x5c)
@@ -183,7 +184,7 @@ public:
     bool Rebuild();                         // 0x245a5 (EEPathManager::UpdateRegions: false = not done yet; provisional name)
     // 0x4e6d4 (ret 4; EECPASGSea.cpp's range): GetPathSubSectorAt(inTile's x, y) (provisional name)
     EEAIPathSubSector* GetPathSubSectorAt(const EETileLocation& inTile);
-    unsigned short GetPathSubSectorID(long inX, long inY);
+    unsigned short GetPathSubSectorID(long inX, long inY);  // 0x273f1
     // 0x21e22: outIDs cleared, then the ids listed for inID (EETown::UpdateNearWater 0xabfda; provisional name)
     void GetConnectedIDs(std::vector<unsigned short>& outIDs, unsigned short inID);
     // 0x22255 (ret 0xc): the choke points of continent inID into outChokePoints (cleared first when inClear)
@@ -195,20 +196,20 @@ public:
     // inline (COMDAT 0x88ce9 after its first user EECPPersonnel::DraftUnit) (provisional name)
     unsigned long GetNumContinents() { return this->mContinents.size(); }
     // (EEAIContinentManager.cpp; provisional names)
-    void AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles);
-    void GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas);
+    void AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles);       // 0x1f1f3 (ret 4)
+    void GetPathAreas(EEMap* inMap, EEAIPathArea**& ioAreas);         // 0x1f45a (ret 8)
     void LinkSubSectors(std::vector<EEAIPathSubSector*>** inSubSectors, EEAIPathSubSector* inSubSector,
         const unsigned short* inID, bool inAdd, const std::pair<EEAIPathSubSector*, EEAIPathSubSector*>& inLink);   // 0x1f6b1 (ret 0x14; this unused)
-    void Build(EEMap* inMap);
-    void CreateContinents(EEMap* inMap);
+    void Build(EEMap* inMap);               // 0x1f86b (ret 4)
+    void CreateContinents(EEMap* inMap);    // 0x1f8ae (ret 4)
     void CreateContinentGrid(EEAIAStarMachine<EEAIAStarContinentStorage, EEAIAStarContinentGoal, EEMap>& inMachine,
         EEMap* inMap);                      // 0x1fa5c (ret 8; Rust: ee_astar continent_grid.rs; AddShoreTile 0x1f3e0 and AddTileValue 0x24fea are part of it)
-    void PruneChokePoints();
+    void PruneChokePoints();                // 0x24b31
     void NumberContinentChains(EEMap* inMap, unsigned long inKind);   // 0x201f7 (ret 8; inMap not read)
-    void CreateHills(EEMap* inMap);
-    void CreatePathAreaKind(EEMap* inMap, long inKind);
-    void CreatePathAreas(EEMap* inMap);
-    void CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStorage* inStorage);
+    void CreateHills(EEMap* inMap);         // 0x2033f (ret 4)
+    void CreatePathAreaKind(EEMap* inMap, long inKind);               // 0x204ea (ret 8)
+    void CreatePathAreas(EEMap* inMap);     // 0x208cc (ret 4)
+    void CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStorage* inStorage);   // 0x20b48 (ret 8)
     void LinkSubSectorGrid(EEAIAStarMachine<EEAIAStarPathSectorStorage, EEAIAStarPathSectorGoal, EEMap>& inMachine, EEMap* inMap);   // 0x20ee1 (ret 8; inMap unused; the walk in Rust: ee_astar sub_sector_links.rs)
     void ApplySubSectorLinks(EeSubSectorLinks* inLinks);   // new (port): the walk's LinkSubSectors calls, then frees it
     // inline (COMDAT 0x27604 in this unit's range; defined inline in EEAIContinentManager.cpp): mPathSectors[its id]
@@ -216,22 +217,22 @@ public:
     void CreateScenarioAreas(EEMap* inMap); // 0x2124c (ret 4; inMap unused)
     void RelinkSubSectors(std::map<unsigned short, std::vector<EETileCoordinate> >& inSectors,
         std::vector<EEAIPathSubSector*>& inSubSectors);   // 0x215dc (ret 8; the walk in Rust: ee_astar sub_sector_links.rs)
-    unsigned short GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind);
-    bool HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const;
-    bool InSameArea(const std::vector<EETileCoordinate>& inTiles, long inKind);
+    unsigned short GetAdjacentAreaID(long inKind, const EETileLocation& inTile, long inAreaKind);   // 0x21a18 (ret 0xc)
+    bool HasShoreTile(const std::vector<U2DPoint<long> >& inTiles) const;   // 0x21ee2 (ret 4)
+    bool InSameArea(const std::vector<EETileCoordinate>& inTiles, long inKind);   // 0x21f97 (ret 8)
     void GetAdjacentContinents(unsigned short inFirst, unsigned short inSecond, std::vector<unsigned short>& outIDs,
-        EEAIFOContinentScreenContinentsShareAdjacentID* inScreen);
-    void GetContinentCenter(unsigned short inID, U2DPoint<long>& outPoint);
-    bool AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond);
-    EEAIArea* GetRandomArea(long inKind, URandom& inRandom, unsigned short inContinent);
-    unsigned short GetUnitContinentID(EEUnit* inUnit);
-    bool GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID);
-    bool AllNeighborsOfKind(unsigned short inID, unsigned char inKind);
+        EEAIFOContinentScreenContinentsShareAdjacentID* inScreen);   // 0x22443 (ret 0x10)
+    void GetContinentCenter(unsigned short inID, U2DPoint<long>& outPoint);   // 0x2260b (ret 8)
+    bool AreConnectedForUnit(EEUnit* inUnit, EEAIContinent* inFirst, EEAIContinent* inSecond);  // 0x22848 (ret 0xc)
+    EEAIArea* GetRandomArea(long inKind, URandom& inRandom, unsigned short inContinent);   // 0x22d1b (ret 0xc)
+    unsigned short GetUnitContinentID(EEUnit* inUnit);   // 0x22f15 (ret 4)
+    bool GetTilesNextTo(long inX, long inY, std::vector<U2DPoint<long> >& outTiles, unsigned short inID);   // 0x22f5f (ret 0x10)
+    bool AllNeighborsOfKind(unsigned short inID, unsigned char inKind);   // 0x2315c (ret 8)
     void UpdateTileValues(bool inWater);    // 0x231d7 (ret 4; Rust: ee_astar tile_values.rs)
     void RepairPathArea(const U2DPoint<long>& inTile);  // 0x2372b (ret 4): the path areas after inTile changed kind (provisional name)
-    void RemoveSubSectors(EEAIPathSector* inSector);
-    void RemoveForestTile(EEUnit* inUnit);
-    void UpdateWallUnit(EEComplexUnit* inUnit, bool inNow);
+    void RemoveSubSectors(EEAIPathSector* inSector);   // 0x24dcf (ret 4)
+    void RemoveForestTile(EEUnit* inUnit);  // 0x25325 (ret 4)
+    void UpdateWallUnit(EEComplexUnit* inUnit, bool inNow);   // 0x25606 (ret 8)
     // inline (COMDATs in this unit's range; defined inline in EEAIContinentManager.cpp)
     bool IsShoreTile(long inX, long inY) const;   // 0x26fed: binary_search of (inX, inY) in mShoreTiles
     EEAIPathSector* GetPathSectorByID(unsigned short inID) const;     // 0x273b9: mPathSectors[inID]
@@ -291,7 +292,7 @@ public:
     bool mClearing;                         // +0x14c (Clear sets it, 0x24a24 resets it, 0x25606 tests it)
 };
 
-extern EEAIContinentManager gContinentManager;
+extern EEAIContinentManager gContinentManager;   // 0x530bf0 (provisional name)
 
 // (cdecl; provisional names)
 long EEAIGetTileKind(const EETileLocation& inTile);     // 0x1ed2c (EEAIContinentManager.cpp; the caller 0x2380c)

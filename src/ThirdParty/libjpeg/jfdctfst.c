@@ -110,6 +110,7 @@
  * Perform the forward DCT on one block of samples.
  */
 
+// FUNCTION: JPEG 0x100963fb
 GLOBAL(void)
 jpeg_fdct_ifast (DCTELEM * data)
 {

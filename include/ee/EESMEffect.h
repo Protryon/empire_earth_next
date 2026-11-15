@@ -16,10 +16,10 @@
 // their defaults, saves and index upkeep are Rust's
 class EESMEffect : public EeScenarioEffectFields {
 public:
-    EESMEffect();
-    ~EESMEffect();
+    EESMEffect();                           // 0x1bb5a5
+    ~EESMEffect();                          // 0x1bb609
     void Copy(const EESMEffect& inEffect);  // 0x1bc60f (field-wise; EEScenarioManager 0x1b000d; provisional name)
-    void SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);
+    void SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);  // 0x1bcb1f
     void SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);  // (+ SMPA)
     // 0x1bd5eb (6.4 KB: the effect's execution, its 17 helpers' bodies with it: ee_scenario effect.rs, effect_ai.rs,
     // task.rs over EESMEffectWorld; provisional name)

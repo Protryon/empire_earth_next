@@ -68,6 +68,7 @@ struct UISliderHost {
 };
 typedef EeUiSliderCall C;
 
+// FUNCTION: LLE 0x1007d259
 // Creates a horizontal (style 0) or vertical slider with a square thumb, an empty range and no page size
 UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
                    unsigned long inIndex, unsigned long inBorderThickness)

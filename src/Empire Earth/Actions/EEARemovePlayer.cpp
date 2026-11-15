@@ -11,6 +11,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEARemovePlayer.h"
 
+// FUNCTION: EXE 0x404413
 // Has the server boot the action's player from the game
 void EEARemovePlayer::Virtual4()
 {
@@ -18,6 +19,7 @@ void EEARemovePlayer::Virtual4()
         static_cast<NESynchronousServer*>(gCommunications)->BootPlayer(this->mPlayer, this->mB0D, this->mIsExiting);
 }
 
+// ICF-FOLDED: EXE 0x5720c6
 // (empty: folded into the shared empty slot; vtable 0x43e42c +0x08 points there)
 void EEARemovePlayer::Virtual8()
 {

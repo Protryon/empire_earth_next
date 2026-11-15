@@ -38,6 +38,7 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPASTargetUnit.h"
 
+// FUNCTION: EXE 0x451952
 // Drops the target unit, releasing its reference and clearing its id
 void EECPASTargetUnit::Clear()
 {
@@ -47,6 +48,7 @@ void EECPASTargetUnit::Clear()
     this->mUnitID = 0;
 }
 
+// FUNCTION: EXE 0x45196b
 // Makes a unit the target, holding a reference to it and recording its id (NULL clears)
 void EECPASTargetUnit::SetUnit(EEComplexUnit* inUnit)
 {

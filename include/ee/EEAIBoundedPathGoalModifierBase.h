@@ -28,7 +28,7 @@ public:
 // line; both slots ICF-shared: +0x04 0x10b8a GetStepCost(false, ..), +0x08 0x10baa IsPassable(0, mBoundedGoal, ..))
 class EEAIBPGModifierSpace : public EEAIBoundedPathGoalModifierBase {
 public:
-    EEAIBPGModifierSpace(EEAIAStarBoundedPathGoal* inGoal);
+    EEAIBPGModifierSpace(EEAIAStarBoundedPathGoal* inGoal);       // 0xfb98
     virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
     {
         return this->GetStepCost(false, inFromX, inFromY, inX, inY, inParentX, inParentY);
@@ -41,7 +41,7 @@ public:
 
 class EEAIBPGModifierSea : public EEAIBoundedPathGoalModifierBase {
 public:
-    EEAIBPGModifierSea(EEAIAStarBoundedPathGoal* inGoal);
+    EEAIBPGModifierSea(EEAIAStarBoundedPathGoal* inGoal);         // 0xfbb0
     virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY)
     {
         return this->GetStepCost(false, inFromX, inFromY, inX, inY, inParentX, inParentY);
@@ -55,8 +55,8 @@ public:
 class EEAIGPGModifierComputerPlayerWallPather : public EEAIBoundedPathGoalModifierBase {
 public:
     EEAIGPGModifierComputerPlayerWallPather() {}   // inline (new 0x10, EECPWallManager::PlanWall 0x9d9e9)
-    virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY);
-    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal);
+    virtual long GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY);     // 0x10814
+    virtual bool CanEnter(EETile* inTile, long inX, long inY, bool inGoal);    // 0x1083c
 };
 
 #endif

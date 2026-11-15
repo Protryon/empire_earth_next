@@ -64,7 +64,16 @@
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPBuildManager::sData("EECPBuildManager-Data");
+// SYNTHETIC: EXE 0x466af0   (wrapper)
+// SYNTHETIC: EXE 0x466afa   (ctor)
+// SYNTHETIC: EXE 0x466b0b   (registrar)
+// SYNTHETIC: EXE 0x466b17   (dtor)
 
+// TEMPLATE: EXE 0x466b33
+// EETileDistanceLess::operator()(const EETileCoordinate&, const EETileCoordinate&): the header's inline body, out of
+// line and built without /Og (the sorts 0x6cf9e.. call it; EECPWallManager/EEUGBuildRepair copies ICF-fold here)
+
+// FUNCTION: EXE 0x466b6d
 // Orders two (continent, town) pairs by the distance of the continent's centre from the reference tile
 // Built without /Og (frame locals, `this` spilled to [ebp-0x3c]); the -4 -> -0x20 bool copy is the inline (tile, tile)
 // operator's own result. NEAR: #pragma optimize("g", off) alone gives 45 (frame 0x20 vs 0x3c), not exact: removed
@@ -82,6 +91,7 @@ bool EETileDistanceLess::operator()(const std::pair<EEAIContinent*, EETown*>& in
     return (*this)(theFirst, theSecond);
 }
 
+// FUNCTION: EXE 0x466be7
 // Orders two choke points by the distance of their centre from the reference tile
 // Built without /Og, as 0x466b6d
 bool EETileDistanceLess::operator()(EEAIChokePoint* inFirst, EEAIChokePoint* inSecond) const
@@ -97,6 +107,7 @@ bool EETileDistanceLess::operator()(EEAIChokePoint* inFirst, EEAIChokePoint* inS
     return (*this)(theFirst, theSecond);
 }
 
+// FUNCTION: EXE 0x466c5d
 // Creates the build manager for a civilization manager's player, with empty queues and no town centre tile
 EECPBuildManager::EECPBuildManager(EECPCivilizationManager* inManager)
     : mManager(inManager)
@@ -109,11 +120,13 @@ EECPBuildManager::EECPBuildManager(EECPCivilizationManager* inManager)
     this->mSiteTilesCollected = false;
 }
 
+// FUNCTION: EXE 0x466d17
 // Destroys the build manager (members only)
 EECPBuildManager::~EECPBuildManager()
 {
 }
 
+// FUNCTION: EXE 0x466d50
 // Tells whether the player has a unit of the given type within the squared distance of a tile
 bool EECPBuildManager::HasUnitNear(long inUnitType, long inX, long inY, float inDistance)
 {
@@ -124,6 +137,7 @@ bool EECPBuildManager::HasUnitNear(long inUnitType, long inX, long inY, float in
     return theIt != theUnits.end();
 }
 
+// FUNCTION: EXE 0x466de3
 // Tells whether one of the player's anti-air buildings covers a tile (within its range)
 // NEAR (69): the two mF9C reads and the product order; temporary vs named predicate
 bool EECPBuildManager::HasAntiAirNear(long inX, long inY)
@@ -138,6 +152,7 @@ bool EECPBuildManager::HasAntiAirNear(long inX, long inY)
     return theIt != theUnits.end();
 }
 
+// FUNCTION: EXE 0x466ee8
 // Tells whether one of the player's settlements, town centres or capitols is within the distance of a tile
 // NEAR (99.5): the predicate temporary's r*r store comes before mCenter.mY here, after it in the original (header
 // ctor probes in build/a: body assignment, const-reference x/y: no change)
@@ -160,6 +175,7 @@ bool EECPBuildManager::HasTownCenterNear(long inX, long inY, float inDistance)
     return theIt != theUnits.end();
 }
 
+// FUNCTION: EXE 0x467122
 // Tells whether one of the player's gates is within the radius of a tile
 bool EECPBuildManager::HasGateNear(long inX, long inY, float inRadius)
 {
@@ -171,6 +187,7 @@ bool EECPBuildManager::HasGateNear(long inX, long inY, float inRadius)
     return theIt != theUnits.end();
 }
 
+// FUNCTION: EXE 0x4671c2
 // Tells whether one of the player's towers is within a tile's squared distance (inRadius is used as squared)
 bool EECPBuildManager::HasTowerNear(long inX, long inY, float inRadius)
 {
@@ -182,6 +199,7 @@ bool EECPBuildManager::HasTowerNear(long inX, long inY, float inRadius)
     return theIt != theUnits.end();
 }
 
+// FUNCTION: EXE 0x46725e
 // Tells whether one of the player's walls is within a tile's squared distance (inRadius is used as squared)
 bool EECPBuildManager::HasWallNear(long inX, long inY, float inRadius)
 {
@@ -193,6 +211,7 @@ bool EECPBuildManager::HasWallNear(long inX, long inY, float inRadius)
     return theIt != theUnits.end();
 }
 
+// FUNCTION: EXE 0x4672fa
 // Tells whether a building class is waiting in any epoch's build queue
 bool EECPBuildManager::IsQueued(long inUnitClass)
 {
@@ -213,6 +232,7 @@ static inline long EECPBMQueueIndex(long inTechTreeID)
     return EETechTreeEpochOf(inTechTreeID);
 }
 
+// FUNCTION: EXE 0x467356
 // Replaces a lost builder of an unfinished building: orders another citizen to build it, or puts the
 // building back at the front of its queue when none is free
 void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
@@ -259,6 +279,7 @@ void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x4674c4
 // Starts a queued building: walls go to the wall manager; else finds a site and builder and orders the
 // build; returns whether the request is done (also for classes that may be skipped when no builder exists)
 // NEAR (92): the tile local types (P1/P5)
@@ -387,6 +408,7 @@ struct EECPBMQueuedTarget {
     EEUnit* mTarget;                        // +0x00
 };
 
+// FUNCTION: EXE 0x4677c6
 // Makes sure every unfinished building has a builder: idles a citizen that only has it queued, else orders
 // the best free citizen to build it
 // GetLoadGoal() (+0x1ec) and a named iterator for both find_if results give the original's code
@@ -455,6 +477,7 @@ void EECPBuildManager::AssignBuilders()
     }
 }
 
+// FUNCTION: EXE 0x4679d7
 // Cancels every stalled build: requeues it in front (without its site), destroys the foundation, refunds its cost and sends
 // the builder back to the town centre (or idles it)
 // NEAR (60): the original refuses the request's U2DPoint copy ctor (0x44d28b) and loads the player's vptr first
@@ -509,6 +532,7 @@ void EECPBuildManager::CancelStalledBuilds()
 
 
 
+// FUNCTION: EXE 0x467b87
 // Collects candidate dock tiles (kind 2: water) or space dock tiles (kind 4: space) on the largest such area
 // next to the town centre's continent, nearest the town first; then marks the site tiles collected
 void EECPBuildManager::CollectSiteTiles(char inKind)
@@ -548,6 +572,7 @@ void EECPBuildManager::CollectSiteTiles(char inKind)
     this->mSiteTilesCollected = true;
 }
 
+// FUNCTION: EXE 0x467e10
 // Tells whether armed enemy units stand near a tile (influence regions around it, one tile on small island
 // or planet maps), ignoring idle searchers (timer above 60 s)
 bool EECPBuildManager::HasEnemyNear(long inX, long inY)
@@ -601,6 +626,7 @@ bool EECPBuildManager::HasEnemyNear(long inX, long inY)
     return theCount > 0;
 }
 
+// FUNCTION: EXE 0x467f97
 // Finds an airport site with room for 4 (else 3) runway pieces facing away from the town centre, rings 5..99
 // around it, reachable and with no enemies near
 bool EECPBuildManager::FindAirportSite(EETileCoordinate& outTile)
@@ -657,6 +683,7 @@ bool EECPBuildManager::FindAirportSite(EETileCoordinate& outTile)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x4681b3
 // Finds an anti-air site around a building (FindAntiAirSiteAround its tile and size)
 bool EECPBuildManager::FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile)
 {
@@ -665,6 +692,7 @@ bool EECPBuildManager::FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& out
     return this->FindAntiAirSiteAround(theTile, theSize, outTile);
 }
 
+// FUNCTION: EXE 0x4681e3
 // Finds an anti-air site in square rings growing out from a tile up to the anti-air range, on the tile's
 // continent
 bool EECPBuildManager::FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile)
@@ -716,6 +744,7 @@ struct EECPBMClusterGreater {
         { return inFirst.second > inSecond.second; }
 };
 
+// FUNCTION: EXE 0x46832b
 // Finds an anti-air site: by a capitol not yet covered, then by a wonder, then in the biggest clusters of
 // the player's buildings
 bool EECPBuildManager::FindAntiAirSite(EETileCoordinate& outTile)
@@ -848,6 +877,7 @@ struct EECPBMCenterLess {
     long mPlayerID;                         // +0x04
 };
 
+// FUNCTION: EXE 0x46865a
 // Finds a site at a resource centre: a settlement at an unclaimed one, else a temple, university or hospital
 // at a claimed one, preferring centres whose units stand in fewer matching area effects
 bool EECPBuildManager::FindCenterSite(long inUnitClass, EETileCoordinate& outTile)
@@ -916,6 +946,7 @@ bool EECPBuildManager::FindCenterSite(long inUnitClass, EETileCoordinate& outTil
     return theResult;
 }
 
+// FUNCTION: EXE 0x468862
 // Finds a granary site just beyond a resource centre's drop-off distance with room for farms around it
 bool EECPBuildManager::FindGranarySite(EETileCoordinate& outTile)
 {
@@ -971,6 +1002,7 @@ bool EECPBuildManager::FindGranarySite(EETileCoordinate& outTile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4689d0
 // Finds a site for a production building at the active resource centres, round robin from the last used one
 // Common found result and loop exit preserve the original 117-byte body.
 bool EECPBuildManager::FindProductionSite(long inUnitClass, EETileCoordinate& outTile)
@@ -990,6 +1022,7 @@ bool EECPBuildManager::FindProductionSite(long inUnitClass, EETileCoordinate& ou
     return false;
 }
 
+// FUNCTION: EXE 0x468a45
 // Finds a dock or navy yard site among the water site tiles away from existing ones; sites without a
 // builder are skipped
 bool EECPBuildManager::FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
@@ -1023,6 +1056,7 @@ bool EECPBuildManager::FindShoreSite(long inUnitClass, long inSize, EETileCoordi
     return theResult;
 }
 
+// FUNCTION: EXE 0x468c90
 // Finds a space dock, turret or station site among space tiles away from units of its class; sites
 // without a builder are skipped
 // Class 0x302 searches the shore tiles of the town continents (nearest first) on planet maps, else the town continent's
@@ -1109,6 +1143,7 @@ bool EECPBuildManager::FindSpaceSite(long inUnitClass, long inSize, EETileCoordi
     return theResult;
 }
 
+// FUNCTION: EXE 0x469245
 // Finds a tower site: along town continent shores on island maps, then at a resource centre, then near an
 // open gate, then at a choke point near a town not yet guarded by that class
 bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile)
@@ -1286,6 +1321,7 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
     return theResult;
 }
 
+// FUNCTION: EXE 0x469d6c
 // Finds a wonder site with a margin of inSize in rings around the town centre (only once a wall gate exists)
 // NEAR (38): the outTile store through EETileCoordinate(theTiles[i].GetX() + h, h + theTiles[i].GetY()) scores 62.5
 // but the equivalence check calls it DIFF (the mX read through the out-of-line operator+ return)
@@ -1320,6 +1356,7 @@ bool EECPBuildManager::FindWonderSite(long inUnitClass, unsigned long inSize, EE
     return theResult;
 }
 
+// FUNCTION: EXE 0x469ee0
 // Finds a spot for another building of a unit's class in rings 3..1 around a random town centre that has
 // none of that class within squared distance 16
 bool EECPBuildManager::FindSpotNearTownCenter(EEUnit* inUnit, EETileCoordinate& outTile)
@@ -1361,6 +1398,7 @@ bool EECPBuildManager::FindSpotNearTownCenter(EEUnit* inUnit, EETileCoordinate& 
     return theResult;
 }
 
+// FUNCTION: EXE 0x46a228
 // Finds a building site for a class by its kind (wonder, granary, dock, centre, airport, tower, production,
 // anti-air, space) or, for farms, an unbuilt farm foundation; returns whether one was found
 // NEAR (55): the switch layout, which depends on the tile parameter: the shared declaration takes a long*
@@ -1441,6 +1479,7 @@ bool EECPBuildManager::FindSite(long inUnitClass, EETileCoordinate& theTile)
 
 
 
+// FUNCTION: EXE 0x46a473
 // Finds a spot for another building of a unit's class in ring 4 around a random dock (space dock for space
 // buildings) that has none of that class within squared distance 25
 bool EECPBuildManager::FindSpotNearDock(EEUnit* inUnit, EETileCoordinate& outTile)
@@ -1479,6 +1518,7 @@ bool EECPBuildManager::FindSpotNearDock(EEUnit* inUnit, EETileCoordinate& outTil
     return theResult;
 }
 
+// FUNCTION: EXE 0x46a73b
 // Reads the build queues, town centre tile and next update time from a saved game (older saves lack
 // the last queue or the time); returns the first read error
 long EECPBuildManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1512,6 +1552,7 @@ long EECPBuildManager::Load(unsigned long inMajorVersion, unsigned long inMinorV
     return theResult;
 }
 
+// FUNCTION: EXE 0x46a833
 // Tells whether a square of inSize at a tile lies within the distance of the far end of an airport runway
 bool EECPBuildManager::IsNearAirportEnd(long inX, long inY, long inSize, float inDistance)
 {
@@ -1557,6 +1598,7 @@ bool EECPBuildManager::IsNearAirportEnd(long inX, long inY, long inSize, float i
     return theResult;
 }
 
+// FUNCTION: EXE 0x46a989
 // Tells whether any queue of a later epoch than the current one holds requests
 bool EECPBuildManager::HasLaterEpochRequests()
 {
@@ -1569,6 +1611,7 @@ bool EECPBuildManager::HasLaterEpochRequests()
     return theFound;
 }
 
+// FUNCTION: EXE 0x46a9c1
 // Queues a building class in its epoch's queue (appended, or once only and not while one is unfinished,
 // at the front or back) and reserves its cost
 // NEAR (85.5): bools (byte tests) and make_pair (the three pair ctors 0x46c5f3 out of line one level down, the
@@ -1631,6 +1674,7 @@ void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, b
     this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
 }
 
+// FUNCTION: EXE 0x46ab26
 // Queues a building class at a given tile in its epoch's queue and reserves its cost
 void EECPBuildManager::QueueBuildingAt(long inUnitClass, long inX, long inY)
 {
@@ -1644,6 +1688,7 @@ void EECPBuildManager::QueueBuildingAt(long inUnitClass, long inX, long inY)
     this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
 }
 
+// FUNCTION: EXE 0x46abb5
 // Handles an unfinished building left without builders: orders a citizen to repair it, else (not for town
 // centres) destroys it, refunds its cost and queues it again
 // (the repair goes to the citizen FindBuilderForTile returns, not to inUnit; an earlier draft had it reversed)
@@ -1669,6 +1714,7 @@ void EECPBuildManager::BuildingAbandoned(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x46acb8
 // Forgets every queued request's site, the town centre tile and the update time
 void EECPBuildManager::Reset()
 {
@@ -1681,6 +1727,7 @@ void EECPBuildManager::Reset()
     this->mNextUpdateTime = 0;
 }
 
+// FUNCTION: EXE 0x46ad23
 // Removes requests from the queues before an epoch whose building is obsolete by then
 // (mQueues[i] re-indexed at each use, no reference local)
 void EECPBuildManager::DropObsoleteRequests(long inEpoch)
@@ -1699,6 +1746,7 @@ void EECPBuildManager::DropObsoleteRequests(long inEpoch)
     }
 }
 
+// FUNCTION: EXE 0x46add5
 // Recollects the dock and space dock site tiles after loading and rebases the update time; returns 0
 long EECPBuildManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -1710,6 +1758,7 @@ long EECPBuildManager::Restore(unsigned long inMajorVersion, unsigned long inMin
     return 0;
 }
 
+// FUNCTION: EXE 0x46ae17
 // Writes the build queues, town centre tile and time to the next update to the saved game; returns the
 // first write error
 // NEAR (91): loop/test order
@@ -1735,12 +1784,14 @@ long EECPBuildManager::Save(unsigned long inMajorVersion, unsigned long inMinorV
     return theResult;
 }
 
+// FUNCTION: EXE 0x46aef3
 // Records a unit's tile as the town centre tile
 // SetXY: VC6 evaluates the arguments right to left (mTileY first)
 void EECPBuildManager::SetTownCenter(EEUnit* inUnit)
 {
     this->mTownCenterTile.SetXY(inUnit->mTileX, inUnit->mTileY);
 }
+// FUNCTION: EXE 0x46af0d
 // Every 3 seconds starts the first buildable request of each epoch up to the current one (rotating ones
 // not yet producible, dropping obsolete ones), cancels stalled builds and every 2 minutes reassigns builders
 // Explicit zero request and staged tech-node lookup preserve the original 443-byte body.
@@ -1795,6 +1846,7 @@ void EECPBuildManager::Update(unsigned long inTime)
     this->mNextUpdateTime = inTime + 3000;
 }
 // (static: only CanBuildAt calls it; emitted before it) (provisional name)
+// FUNCTION: EXE 0x46b0c8
 // Tells whether a unit class cannot stand on a tile (off the map or wrong terrain)
 static bool EECPBMCannotStandOn(const EETileLocation& inTile, EEUnitClass* inClass)
 {
@@ -1812,6 +1864,7 @@ struct EECPBMOnContinent {
     unsigned short mContinent;              // +0x00
 };
 
+// FUNCTION: EXE 0x46b0fb
 // Tells whether a class can be built at a tile: free ground on the right (or reachable) continent, no enemies;
 // strictly also no choke point, hill, bush, runway end, town centre, gate near and walkable ground around it
 // inMargin adds a one-tile margin; the reachability test (civ power 0x30) starts at (inX, inY); site classes need
@@ -1943,6 +1996,7 @@ bool EECPBuildManager::CanBuildAt(unsigned short inContinent, long inUnitClass, 
     return theResult;
 }
 
+// FUNCTION: EXE 0x46b6b2
 // Tells whether a class is built on a shore or space site (dock, navy yard, space dock and two space classes)
 bool EECPIsSiteClass(long inUnitClass)
 {
@@ -1956,3 +2010,124 @@ bool EECPUnitWithinDistance::operator()(EEUnit* inUnit) const
     U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
     return (float)theTile.DistanceToSquared(this->mCenter) <= this->mDistanceSquared;
 }
+
+// The deque/vector/heap/sort COMDATs (named through call sites)
+// TEMPLATE: EXE 0x466cfb
+// TEMPLATE: EXE 0x468849
+// TEMPLATE: EXE 0x46b6dc
+// TEMPLATE: EXE 0x46b76c
+// TEMPLATE: EXE 0x46b798
+// TEMPLATE: EXE 0x46b82b
+// TEMPLATE: EXE 0x46b857
+// TEMPLATE: EXE 0x46b883
+// TEMPLATE: EXE 0x46b92c
+// TEMPLATE: EXE 0x46ba3a
+// TEMPLATE: EXE 0x46ba94
+// TEMPLATE: EXE 0x46bd85
+// TEMPLATE: EXE 0x46bdbe
+// TEMPLATE: EXE 0x46bde5
+// TEMPLATE: EXE 0x46be1f
+// TEMPLATE: EXE 0x46be46
+// TEMPLATE: EXE 0x46be8e
+// TEMPLATE: EXE 0x46bf74
+// TEMPLATE: EXE 0x46c027
+// TEMPLATE: EXE 0x46c065
+// TEMPLATE: EXE 0x46c120
+// TEMPLATE: EXE 0x46c1e6
+// TEMPLATE: EXE 0x46c2cc
+// TEMPLATE: EXE 0x46c3b0
+// TEMPLATE: EXE 0x46c494
+// TEMPLATE: EXE 0x46c4bb
+// TEMPLATE: EXE 0x46c4e7
+// TEMPLATE: EXE 0x46c536
+// TEMPLATE: EXE 0x46c5ce
+// TEMPLATE: EXE 0x46c5f3
+// TEMPLATE: EXE 0x46c62b
+// TEMPLATE: EXE 0x46c65e
+// TEMPLATE: EXE 0x46c76b
+// TEMPLATE: EXE 0x46c7fa
+// TEMPLATE: EXE 0x46c854
+// TEMPLATE: EXE 0x46c87d
+// TEMPLATE: EXE 0x46c956
+// TEMPLATE: EXE 0x46c993
+// TEMPLATE: EXE 0x46c9c0
+// TEMPLATE: EXE 0x46ca9c
+// TEMPLATE: EXE 0x46cad0
+// TEMPLATE: EXE 0x46cb03
+// TEMPLATE: EXE 0x46cc10
+// TEMPLATE: EXE 0x46cc55
+// TEMPLATE: EXE 0x46cc88
+// TEMPLATE: EXE 0x46cd90
+// TEMPLATE: EXE 0x46cdc3
+// TEMPLATE: EXE 0x46cecb
+// TEMPLATE: EXE 0x46cf0d
+// TEMPLATE: EXE 0x46cf51
+// TEMPLATE: EXE 0x46cf9e
+// TEMPLATE: EXE 0x46d0b5
+// TEMPLATE: EXE 0x46d1cd
+// TEMPLATE: EXE 0x46d21a
+// TEMPLATE: EXE 0x46d2d1
+// TEMPLATE: EXE 0x46d30e
+// TEMPLATE: EXE 0x46d34d
+// TEMPLATE: EXE 0x46d446
+// TEMPLATE: EXE 0x46d470
+// TEMPLATE: EXE 0x46d510
+// TEMPLATE: EXE 0x46d62f
+// TEMPLATE: EXE 0x46d66c
+// TEMPLATE: EXE 0x46d6b0
+// TEMPLATE: EXE 0x46d7d0
+// TEMPLATE: EXE 0x46d803
+// TEMPLATE: EXE 0x46d8c1
+// TEMPLATE: EXE 0x46d905
+// TEMPLATE: EXE 0x46d952
+// TEMPLATE: EXE 0x46da69
+// TEMPLATE: EXE 0x46daa5
+// TEMPLATE: EXE 0x46dae9
+// TEMPLATE: EXE 0x46db36
+// TEMPLATE: EXE 0x46db69
+// TEMPLATE: EXE 0x46dc1a
+// TEMPLATE: EXE 0x46dc5e
+// TEMPLATE: EXE 0x46dcab
+// TEMPLATE: EXE 0x46ddcb
+// TEMPLATE: EXE 0x46ddfe
+// TEMPLATE: EXE 0x46deaa
+// TEMPLATE: EXE 0x46ded6
+// TEMPLATE: EXE 0x46df09
+// TEMPLATE: EXE 0x46df70
+// TEMPLATE: EXE 0x46df99
+// TEMPLATE: EXE 0x46dfbe
+// TEMPLATE: EXE 0x46e005
+// TEMPLATE: EXE 0x46e032
+// TEMPLATE: EXE 0x46e092
+// TEMPLATE: EXE 0x46e0c5
+// TEMPLATE: EXE 0x46e122
+// TEMPLATE: EXE 0x46e155
+// TEMPLATE: EXE 0x46e1b2
+// TEMPLATE: EXE 0x46e1e5
+// TEMPLATE: EXE 0x46e26d
+// TEMPLATE: EXE 0x46e2ce
+// TEMPLATE: EXE 0x46e2fc
+// TEMPLATE: EXE 0x46e36d
+// TEMPLATE: EXE 0x46e3c3
+// TEMPLATE: EXE 0x46e457
+// TEMPLATE: EXE 0x46e4d0
+// TEMPLATE: EXE 0x46e540
+// TEMPLATE: EXE 0x46e5ba
+// TEMPLATE: EXE 0x46e683
+// TEMPLATE: EXE 0x46e6ca
+// TEMPLATE: EXE 0x46e719
+// TEMPLATE: EXE 0x46e750
+// TEMPLATE: EXE 0x46e7b0
+// TEMPLATE: EXE 0x46e7fd
+// TEMPLATE: EXE 0x46e841
+// TEMPLATE: EXE 0x46e890
+
+// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
+// against the original by name)
+// TEMPLATE: EXE 0x46a20e
+
+// Template and inline COMDATs this unit already emits (identified by name)
+// TEMPLATE: EXE 0x46bace
+// TEMPLATE: EXE 0x46c585
+// TEMPLATE: EXE 0x46c5a2
+// TEMPLATE: EXE 0x46e62a

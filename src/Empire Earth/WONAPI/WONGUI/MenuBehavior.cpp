@@ -18,6 +18,7 @@
 #include "ee/wonapi/WONLobbyPopupEvent.h"
 
 namespace WONAPI {
+// FUNCTION: WON 0x006fcee0
 // Measures the menu item as text plus room for the icon and submenu arrow (32 wider, 4 taller)
 void MenuItem::CalcDimensions(ListArea* area)
 {
@@ -25,6 +26,7 @@ void MenuItem::CalcDimensions(ListArea* area)
     ee_won_gui_menu_item_size(&this->mWidth,&this->mHeight);
 }
 
+// FUNCTION: WON 0x006fcf10
 // Draws the menu item: icon, selection highlight with an icon box, text (embossed grey when disabled)
 // and a submenu arrow; the box's bottom edge runs to x = height-1, not to the box width
 void MenuItem::Paint(Graphics& g,ListArea* area)

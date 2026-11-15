@@ -36,6 +36,7 @@ bool ResourceConfig_AddToMap(const char* typeName,StringParser& value,Map& value
     }
     return false;
 }
+// FUNCTION: WON 0x007923d0
 // Defines a named color resource from the config line
 bool ResourceConfig::HandleColor(StringParser& value)
 {
@@ -46,6 +47,7 @@ bool ResourceConfig::HandleColor(StringParser& value)
     return true;
 }
 
+// FUNCTION: WON 0x00792410
 // Defines a named font resource from the config line
 bool ResourceConfig::HandleFont(StringParser& value)
 {
@@ -56,6 +58,7 @@ bool ResourceConfig::HandleFont(StringParser& value)
     return true;
 }
 
+// FUNCTION: WON 0x00792820
 // Defines a named sound resource from the config line
 bool ResourceConfig::HandleSound(StringParser& value)
 {
@@ -66,6 +69,7 @@ bool ResourceConfig::HandleSound(StringParser& value)
     return true;
 }
 
+// FUNCTION: WON 0x00792ac0
 // Defines a named text string resource from the config line
 bool ResourceConfig::HandleString(StringParser& value)
 {
@@ -78,6 +82,7 @@ bool ResourceConfig::HandleString(StringParser& value)
     return true;
 }
 
+// FUNCTION: WON 0x00792d90
 // Defines a named image resource from the config line
 bool ResourceConfig::HandleImage(StringParser& value)
 {
@@ -88,6 +93,7 @@ bool ResourceConfig::HandleImage(StringParser& value)
     return true;
 }
 
+// FUNCTION: WON 0x00793020
 // Defines a named background resource from the config line
 bool ResourceConfig::HandleBackground(StringParser& value)
 {
@@ -99,3 +105,54 @@ bool ResourceConfig::HandleBackground(StringParser& value)
 }
 
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007932d0
+// (public: __thiscall WONAPI::Background::Background(class WONAPI::Background const &)    [??0Background@WONAPI@@QAE@ABV01@@Z])
+// TEMPLATE: WON 0x007a3200
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct std::pair<class WON)
+// TEMPLATE: WON 0x007a4c50
+// (public: void __thiscall std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std:)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a36a0
+// (public: struct std::pair<class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<cla)
+// TEMPLATE: WON 0x007a4600
+// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a21e0
+// (bool __cdecl WONAPI::ResourceConfig_AddToMap(char const *,class WONAPI::StringParser &,class WONAPI::ResourceConfig::ResMap<unsigned long> &,int,unsig)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a2f40
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct std::pair<class WON)
+// TEMPLATE: WON 0x007a2fd0
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct std::pair<class WON)
+// TEMPLATE: WON 0x007a3060
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct std::pair<class WON)
+// TEMPLATE: WON 0x007a30f0
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct std::pair<class WON)
+// TEMPLATE: WON 0x007a4300
+// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a33a0
+// (public: struct std::pair<class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<cla)
+// TEMPLATE: WON 0x007a3a00
+// TEMPLATE: WON 0x007a4d10
+// TEMPLATE: WON 0x007a34a0
+// TEMPLATE: WON 0x007a3d00
+// TEMPLATE: WON 0x007a4d90
+// TEMPLATE: WON 0x007a35a0
+// TEMPLATE: WON 0x007a4000
+// TEMPLATE: WON 0x007a4e10
+// TEMPLATE: WON 0x007a3850
+// TEMPLATE: WON 0x007a4900
+// TEMPLATE: WON 0x007a50c0
+// TEMPLATE: WON 0x007a4e90
+// TEMPLATE: WON 0x007a5000
+// TEMPLATE: WON 0x007a37a0
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct std::pair<class WON)
+// TEMPLATE: WON 0x007a3950
+// (public: __thiscall std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct std::pair<class WON)

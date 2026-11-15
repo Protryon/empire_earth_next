@@ -34,13 +34,13 @@ class UIEvent;
 class UIIMECandidate;
 
 // The UI database file names (exported globals; defined in Utilities, 0x1012ec10..)
-LLE_API extern UString gDbUIHotKeyFileName;
-LLE_API extern UString gDbUIFontsFileName;
-LLE_API extern UString gDbUIFormEventsFileName;
-LLE_API extern UString gDbUIControlEventsFileName;
-LLE_API extern UString gDbUIFormsFileName;
-LLE_API extern UString gDbUIControlsFileName;
-LLE_API extern UString gDbUIBackgroundFileName;
+LLE_API extern UString gDbUIHotKeyFileName;          // 0x1012ec10
+LLE_API extern UString gDbUIFontsFileName;           // 0x1012ec20
+LLE_API extern UString gDbUIFormEventsFileName;      // 0x1012ec30
+LLE_API extern UString gDbUIControlEventsFileName;   // 0x1012ec40
+LLE_API extern UString gDbUIFormsFileName;           // 0x1012ec50
+LLE_API extern UString gDbUIControlsFileName;        // 0x1012ec60
+LLE_API extern UString gDbUIBackgroundFileName;      // 0x1012ec70
 
 // winspool.h maps AddForm to AddFormA; the export is ?AddForm@UIManager@@
 #ifdef AddForm
@@ -177,14 +177,14 @@ private:
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number); the exe
     // imports both
-    static ISEntity* sLMouseButton;
-    static ISEntity* sRMouseButton;
+    static ISEntity* sLMouseButton;         // 0x1012e9a8
+    static ISEntity* sRMouseButton;         // 0x1012e9ac
 #endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
     // Inferred: visible to its users only (shown to UIControl.cpp it renumbers that unit's $E chains)
-    static ISEntity* sMouseWheel;
-    static bool sMouseLeftHanded;
+    static ISEntity* sMouseWheel;           // 0x1012e9b0
+    static bool sMouseLeftHanded;           // 0x1012e9b4
 #endif
 #endif
 };

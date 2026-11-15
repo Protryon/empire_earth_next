@@ -39,10 +39,13 @@ public:
 namespace WONAPI {
 // The column paint, compare and filter callbacks below take the owning ServerListCtrl as third
 // argument; most of them ignore it
+// FUNCTION: WON 0x007c4c80
 // Creates a selectable game list row with no game
 ServerDetailsItem::ServerDetailsItem() { this->mSelectable=true; }
+// FUNCTION: WON 0x007c4d10
 // Destroys the game list row (members only)
 ServerDetailsItem::~ServerDetailsItem() {}
+// FUNCTION: WON 0x007c4da0
 // Attaches a game to the row; for direct-connect games also caches its host:port text
 void ServerDetailsItem::SetGame(LobbyGame* inGame)
 {
@@ -52,6 +55,7 @@ void ServerDetailsItem::SetGame(LobbyGame* inGame)
         this->mIPAddrStr=this->mGame->GetAddress().GetHostAndPortString(true);
     }
 }
+// FUNCTION: WON 0x007c5800
 // Picks the row's status icon: in progress, invite-only (invited/host or not), ask to join, password or open
 void ServerDetailsItem::CalcIcon()
 {
@@ -66,18 +70,23 @@ void ServerDetailsItem::CalcIcon()
     else if(this->mGame->GetHasPassword()) this->mIconId=0x174;
     else this->mIconId=0x172;
 }
+// FUNCTION: WON 0x007c5080
 // Orders two rows by status icon
 int ServerDetailsItem::CompareIcon(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
 { return a->mIconId-b->mIconId; }
+// FUNCTION: WON 0x007c50a0
 // Orders two rows by the games' skill level
 int ServerDetailsItem::CompareSkill(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
 { return a->mGame->GetSkill()-b->mGame->GetSkill(); }
+// FUNCTION: WON 0x007c50c0
 // Orders two rows by game name, ignoring case
 int ServerDetailsItem::CompareGameName(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
 { return a->mGame->GetName().CompareNoCase(b->mGame->GetName()); }
+// FUNCTION: WON 0x007c50e0
 // Orders two rows by the games' network address
 int ServerDetailsItem::CompareAddress(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
 { return a->mGame->GetAddress().StringCompare(b->mGame->GetAddress()); }
+// FUNCTION: WON 0x007c5100
 // Orders two rows by player count, then the game with more player slots first
 int ServerDetailsItem::CompareNumPlayers(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
 {
@@ -85,14 +94,17 @@ int ServerDetailsItem::CompareNumPlayers(const ServerDetailsItem* a,const Server
     if(result==0) result=b->mGame->GetMaxPlayers()-a->mGame->GetMaxPlayers();
     return result;
 }
+// FUNCTION: WON 0x007c5130
 // Orders two rows by ping time
 int ServerDetailsItem::ComparePing(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
 { return a->mGame->GetPing()-b->mGame->GetPing(); }
+// FUNCTION: WON 0x007c51e0
 // Returns true for a digit or a sign character
 bool ServerDetailsItem::IsStartOfNumber(char c)
 {
     return ((static_cast<unsigned int>(static_cast<int>(c))<256 && isdigit(c)) || c=='-' || c=='+') ? 1 : 0;
 }
+// FUNCTION: WON 0x007c5220
 // Parses a numeric filter (<n, <=n, >n, >=n, =n or n, space-separated) into bounds; false if nothing parsed
 bool ServerDetailsItem::ParseIntFilter(const GUIString& inFilter,int& outLower,int& outUpper)
 {
@@ -121,6 +133,7 @@ bool ServerDetailsItem::ParseIntFilter(const GUIString& inFilter,int& outLower,i
     }
     return aParsed;
 }
+// FUNCTION: WON 0x007c5460
 // Removes games whose skill level is outside the typed numeric filter
 void ServerDetailsItem::FilterSkill(const GUIString& inFilter,ServerDetailsList& ioList,ServerListCtrl*)
 {
@@ -133,6 +146,7 @@ void ServerDetailsItem::FilterSkill(const GUIString& inFilter,ServerDetailsList&
         else ++it;
     }
 }
+// FUNCTION: WON 0x007c54f0
 // Removes games whose name does not contain the filter text (case-insensitive)
 void ServerDetailsItem::FilterGameName(const GUIString& inFilter,ServerDetailsList& ioList,ServerListCtrl*)
 {
@@ -142,6 +156,7 @@ void ServerDetailsItem::FilterGameName(const GUIString& inFilter,ServerDetailsLi
         else ioList.erase(it++);
     }
 }
+// FUNCTION: WON 0x007c5560
 // Removes games whose address text does not contain the filter text (case-insensitive)
 void ServerDetailsItem::FilterAddress(const GUIString& inFilter,ServerDetailsList& ioList,ServerListCtrl*)
 {
@@ -151,6 +166,7 @@ void ServerDetailsItem::FilterAddress(const GUIString& inFilter,ServerDetailsLis
         else ioList.erase(it++);
     }
 }
+// FUNCTION: WON 0x007c5750
 // Removes games whose ping rating (10 - ping/100) is outside the typed numeric filter
 void ServerDetailsItem::FilterPing(const GUIString& inFilter,ServerDetailsList& ioList,ServerListCtrl*)
 {
@@ -164,6 +180,7 @@ void ServerDetailsItem::FilterPing(const GUIString& inFilter,ServerDetailsList& 
     }
 }
 // The summary height is a byte: each store truncates it
+// FUNCTION: WON 0x007c4f00
 // Sizes the row: summary line from the font or expand image, plus the details area when expanded
 void ServerDetailsItem::CalcDimensions(ListArea* inList)
 {
@@ -181,11 +198,13 @@ void ServerDetailsItem::CalcDimensions(ListArea* inList)
     if(aHeight<aFont->GetHeight()) aHeight=aFont->GetHeight();
     this->mHeight+=aHeight;
 }
+// FUNCTION: WON 0x007c4f80
 // Returns true for a click on the summary line right of the first (expand) column
 bool ServerDetailsItem::CanSelect(ListArea* inList,int x,int y)
 {
     return (this->mSelectable && x>static_cast<MultiListArea*>(inList)->GetColumnWidth(0) && y<=this->mSummaryHeight) ? 1 : 0;
 }
+// FUNCTION: WON 0x007c4fc0
 // Toggles the game's details on a left click in the expand column; asks for a details query when opened
 void ServerDetailsItem::MouseDown(ListArea* inList,int x,int y,int inButton)
 {
@@ -198,11 +217,13 @@ void ServerDetailsItem::MouseDown(ListArea* inList,int x,int y,int inButton)
         inList->DeliverEvent(new PingGameEvent(this->mGame.get(),true),true);
 }
 // The vertical centring divides as int and truncates toward zero
+// FUNCTION: WON 0x007c58b0
 // Draws an image at column offset x, centred vertically in the row's summary line
 static void DrawServerImage(Graphics& g,Image* inImage,ServerDetailsItem* inItem,int x)
 {
     g.DrawImage(inImage,x,(inItem->mSummaryHeight-inImage->mHeight)/2);
 }
+// FUNCTION: WON 0x007c5860
 // Paints the expand/collapse arrow and the game's status icon
 void ServerDetailsItem::PaintIcon(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
@@ -212,23 +233,27 @@ void ServerDetailsItem::PaintIcon(Graphics& g,ServerDetailsItem* inItem,ServerLi
         DrawServerImage(g,LOBBY_IMAGE(ServerListCtrl_GameNotExpanded_Image).get(),inItem,15);
     DrawServerImage(g,::LobbyResource_GetImage((LobbyResourceId)(inItem->mIconId)),inItem,0);
 }
+// FUNCTION: WON 0x007c58e0
 // Paints the skill level image for skill levels 0 to 4
 void ServerDetailsItem::PaintSkill(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
     unsigned char aSkill=static_cast<unsigned char>(inItem->mGame->GetSkill());
     if(aSkill<5) DrawServerImage(g,::LobbyResource_GetImage((LobbyResourceId)(aSkill+0x177)),inItem,0);
 }
+// FUNCTION: WON 0x007c5920
 // Paints the game name in the list's bold font
 void ServerDetailsItem::PaintGameName(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl* inCtrl)
 {
     g.SetFont(inCtrl->mBoldFont.get());
     g.DrawString(inItem->mGame->GetName(),5,0);
 }
+// FUNCTION: WON 0x007c5950
 // Paints the game's address text
 void ServerDetailsItem::PaintAddress(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
     g.DrawString(inItem->mIPAddrStr,0,0);
 }
+// FUNCTION: WON 0x007c55c0
 // Removes games outside the player-count filter and its full / not full / open words; full plus not full empties
 void ServerDetailsItem::FilterNumPlayers(const GUIString& inFilter,ServerDetailsList& ioList,ServerListCtrl*)
 {
@@ -255,6 +280,7 @@ void ServerDetailsItem::FilterNumPlayers(const GUIString& inFilter,ServerDetails
         else ++it;
     }
 }
+// FUNCTION: WON 0x007c5970
 // Paints the player count as players/max (or players alone without a max), centred in the column
 void ServerDetailsItem::PaintNumPlayers(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl* inCtrl)
 {
@@ -266,6 +292,7 @@ void ServerDetailsItem::PaintNumPlayers(Graphics& g,ServerDetailsItem* inItem,Se
     int aTextWidth=g.mFont->GetStringWidth(aText);
     g.DrawString(aText,(aWidth-aTextWidth)/2,0);
 }
+// FUNCTION: WON 0x007c5ac0
 // Paints one column of the row, or for the whole row the selection and the details (querying/failed text)
 void ServerDetailsItem::Paint(Graphics& g,ListArea* inList)
 {
@@ -300,6 +327,7 @@ void ServerDetailsItem::Paint(Graphics& g,ListArea* inList)
     ServerListCtrl::ColumnInfo::PaintFunc aPaint=aCtrl->mColumnInfo[aColumn].mPaintFunc;
     if(aPaint!=NULL) aPaint(g,this,aCtrl);
 }
+// FUNCTION: WON 0x007c5150
 // Sorts by the current sort column, then the previous one, then by item address
 int ServerDetailsItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
@@ -323,11 +351,13 @@ int ServerDetailsItem::Compare(const ListItem* inOther,ListArea* inList) const
     }
     return static_cast<const ListItem*>(this)-inOther;
 }
+// FUNCTION: WON 0x007c5a90
 // Paints the game's ping bars
 void ServerDetailsItem::PaintPing(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
     DrawLobbyPing(&g,inItem->mGame->GetPing(),inItem->mSummaryHeight,0,0);
 }
+// FUNCTION: WON 0x007c6340
 // Adds a column's default filter strings to the persistent filter options
 void ServerListCtrl::AddDefaultFilters(const GUIString& inColumn,const GUIString& inStrings,bool inAddIfExists)
 {
@@ -335,8 +365,11 @@ void ServerListCtrl::AddDefaultFilters(const GUIString& inColumn,const GUIString
 }
 
 ServerListCtrl::ColumnMap ServerListCtrl::mColumnMap;
+// FUNCTION: WON 0x007c5ef0
 // Destroys a column description (members only)
 ServerListCtrl::ColumnInfo::~ColumnInfo() {}
+// FUNCTION: WON 0x007cc4b0
+// FUNCTION: WON 0x007c5f80
 // Creates a column description with no callbacks, shown for every game type
 ServerListCtrl::ColumnInfo::ColumnInfo()
 {
@@ -352,8 +385,10 @@ ServerListCtrl::ServerListCtrl()
     this->mFilterTimeAccum=0;
     this->mNeedFilter=false;
 }
+// FUNCTION: WON 0x007c5d30
 // Destroys the game list control (members only)
 ServerListCtrl::~ServerListCtrl() {}
+// FUNCTION: WON 0x007c6a70
 // Removes games that are already in progress
 void ServerListCtrl::FilterInProgressGames(ServerDetailsList& ioList)
 {
@@ -363,6 +398,7 @@ void ServerListCtrl::FilterInProgressGames(ServerDetailsList& ioList)
         else ++it;
     }
 }
+// FUNCTION: WON 0x007c6ad0
 // Applies every column's non-empty filter, then hides games in progress (except direct connect) unless shown
 void ServerListCtrl::DoFilter(ServerDetailsList& ioList)
 {
@@ -375,6 +411,7 @@ void ServerListCtrl::DoFilter(ServerDetailsList& ioList)
     }
     if(this->mGameType!=3 && !LobbyGetShowGamesInProgress()) this->FilterInProgressGames(ioList);
 }
+// FUNCTION: WON 0x007c6be0
 // Returns true when one game row passes the current filters
 bool ServerListCtrl::FitsFilter(ServerDetailsItem* inItem)
 {
@@ -383,6 +420,7 @@ bool ServerListCtrl::FitsFilter(ServerDetailsItem* inItem)
     this->DoFilter(aList);
     return !aList.empty();
 }
+// FUNCTION: WON 0x007c6d00
 // Enables Join when the selected game can be joined and Remove when a game is selected
 void ServerListCtrl::UpdateJoinButton()
 {
@@ -392,12 +430,14 @@ void ServerListCtrl::UpdateJoinButton()
     this->mJoinButton->SetEnabled(aEnabled);
     if(this->mRemoveButton.get()!=NULL) this->mRemoveButton->SetEnabled(aGame!=NULL);
 }
+// FUNCTION: WON 0x007c7580
 // Returns the selected game, or NULL
 LobbyGame* ServerListCtrl::GetSelGame()
 {
     ServerDetailsItem* aSelected=static_cast<ServerDetailsItem*>(this->mList->GetSelItem());
     return aSelected==NULL?NULL:aSelected->mGame.get();
 }
+// FUNCTION: WON 0x007c6ff0
 // Refills the list with the given rows, keeping the selected game selected; updates buttons and summary
 void ServerListCtrl::AddEntries(const ServerDetailsList& inList)
 {
@@ -420,6 +460,7 @@ void ServerListCtrl::AddEntries(const ServerDetailsList& inList)
     this->UpdateSummaryLabel();
 }
 // Overrides Container's bool TimerEvent (vtable +0x44)
+// FUNCTION: WON 0x007c66d0
 // Refilters the list once a filter edit has rested 100-500 ms (longer for long lists); stops the timer then
 bool ServerListCtrl::TimerEvent(int inDelta)
 {
@@ -435,6 +476,7 @@ bool ServerListCtrl::TimerEvent(int inDelta)
     if(!this->mNeedFilter) this->mTimerFlags&=~2;
     return Container::TimerEvent(inDelta);
 }
+// FUNCTION: WON 0x007c7220
 // Refilters every known game into the list
 void ServerListCtrl::AddFilteredEntries_All(bool inPreserve)
 {
@@ -446,6 +488,7 @@ void ServerListCtrl::AddFilteredEntries_All(bool inPreserve)
     }
     this->AddFilteredEntries(inPreserve,aList);
 }
+// FUNCTION: WON 0x007c73c0
 // Refilters the games currently shown in the list
 void ServerListCtrl::AddFilteredEntries_List(bool inPreserve)
 {
@@ -454,6 +497,7 @@ void ServerListCtrl::AddFilteredEntries_List(bool inPreserve)
     for(int i=0;i<aCount;++i) aList.push_back(static_cast<ServerDetailsItem*>(this->mList->GetItem(i)));
     this->AddFilteredEntries(inPreserve,aList);
 }
+// FUNCTION: WON 0x007c7090
 // Filters the rows into the list; optionally keeps the scroll position on the first visible row still shown
 void ServerListCtrl::AddFilteredEntries(bool inPreserve,ServerDetailsList& ioList)
 {
@@ -490,12 +534,14 @@ void ServerListCtrl::AddFilteredEntries(bool inPreserve,ServerDetailsList& ioLis
     }
 }
 
+// FUNCTION: WON 0x007c8340
 // Sets the number of columns
 void ServerListCtrl::SetNumColumns(int inCount)
 {
     this->mNumColumns=inCount;
     this->mColumnInfo.resize(inCount);
 }
+// FUNCTION: WON 0x007c80c0
 // Stops pinging and refilters the shown games while pings are pending; false otherwise
 bool ServerListCtrl::HandleRefreshButton()
 {
@@ -507,6 +553,7 @@ bool ServerListCtrl::HandleRefreshButton()
     }
     return false;
 }
+// FUNCTION: WON 0x007c7a50
 // Sends game action 7 on a right click, or joins the game on a double left click in a joinable row
 void ServerListCtrl::HandleListItemClicked(ListItemClickedEvent* inEvent)
 {
@@ -518,6 +565,7 @@ void ServerListCtrl::HandleListItemClicked(ListItemClickedEvent* inEvent)
     else if(inEvent->mDoubleClick && inEvent->mButton==0 && inEvent->mX>=this->mList->GetColumnWidth(0) && aGame->CanJoin())
         this->DeliverEvent(new JoinGameEvent(aGame),false);
 }
+// FUNCTION: WON 0x007c75a0
 // Adds, removes or refreshes a game of this list's type, applying the filters; updates buttons and summary
 void ServerListCtrl::HandleGameChanged(GameChangedEvent* inEvent)
 {
@@ -559,6 +607,7 @@ void ServerListCtrl::HandleGameChanged(GameChangedEvent* inEvent)
     this->UpdateJoinButton();
     this->UpdateSummaryLabel();
 }
+// FUNCTION: WON 0x007c7870
 // Rebuilds the rows from a full game list of this list's type and refills the list
 void ServerListCtrl::HandleSyncGameList(SyncGameListEvent* inEvent)
 {
@@ -575,6 +624,7 @@ void ServerListCtrl::HandleSyncGameList(SyncGameListEvent* inEvent)
     }
     this->AddFilteredEntries_All(false);
 }
+// FUNCTION: WON 0x007c6d50
 // Shows the pending ping count with a Stop button, or shown/total games with a Refresh button
 void ServerListCtrl::UpdateSummaryLabel()
 {
@@ -595,6 +645,7 @@ void ServerListCtrl::UpdateSummaryLabel()
         this->mRefreshButton->SetText(LOBBY_STRING(ServerListCtrl_RefreshList_String),true);
     }
 }
+// FUNCTION: WON 0x007c6740
 // Fills each column's filter combo: no filter, the add/remove row, then the saved filter values
 void ServerListCtrl::LoadFilterCombos()
 {
@@ -611,6 +662,7 @@ void ServerListCtrl::LoadFilterCombos()
     }
 }
 extern int gServerFilterItemPos;
+// FUNCTION: WON 0x007c7b30
 // Starts the refilter timer and relabels the filter row as Add or Remove for the typed text
 void ServerListCtrl::HandleComboTextChanged(Component* inComponent)
 {
@@ -652,6 +704,7 @@ void ServerListCtrl::HandleComboTextChanged(Component* inComponent)
     aFilter->mText=aLabel;
     aCombo->UpdateItem(aFilter);
 }
+// FUNCTION: WON 0x007c7dd0
 // Handles a filter combo pick: clears the filter, or adds/removes the typed value in the saved filters
 void ServerListCtrl::HandleComboSelChanged(ComboSelChangedEvent* inEvent)
 {
@@ -690,6 +743,7 @@ void ServerListCtrl::HandleComboSelChanged(ComboSelChangedEvent* inEvent)
         aCombo->mEdit->SelectRange(-1,0);
     }
 }
+// FUNCTION: WON 0x007c80f0
 // Dispatches button, list, filter combo and game list events to the list's handlers
 void ServerListCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -717,6 +771,7 @@ void ServerListCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     }
     Component::HandleComponentEvent(inEvent);
 }
+// FUNCTION: WON 0x007c6360
 // Finds the list, buttons and summary label in the layout, then updates them and joins the broadcast
 void ServerListCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -732,6 +787,7 @@ void ServerListCtrl::InitComponent(ComponentInit& inInit)
     this->UpdateSummaryLabel();
     this->SubscribeToBroadcast(1);
 }
+// FUNCTION: WON 0x007c5ff0
 // Returns the shared column description for a column name, creating it if needed
 ServerListCtrl::ColumnInfo* ServerListCtrl::GetColumnInfo(const GUIString& inName)
 {
@@ -739,6 +795,7 @@ ServerListCtrl::ColumnInfo* ServerListCtrl::GetColumnInfo(const GUIString& inNam
     aColumn.mColumnName=inName;
     return &aColumn;
 }
+// FUNCTION: WON 0x007c6050
 // Registers the Icon, Skill, GameName, Address (direct only) and Ping (not LAN) column callbacks
 void ServerListCtrl::InitColumnMap()
 {
@@ -774,12 +831,14 @@ void ServerListCtrl::InitColumnMap()
 namespace WONAPI {
 class MultiListHeader;
 // ServerListCtrlConfig is declared in WONLobbyControlConfig.h
+// FUNCTION: WON 0x007c8380
 // Attaches the config to its game list control
 void ServerListCtrlConfig::SetComponent(Component* inComponent)
 {
     ContainerConfig::SetComponent(inComponent);
     this->mServerList=static_cast<ServerListCtrl*>(inComponent);
 }
+// FUNCTION: WON 0x007c83a0
 // Answers NUMCOLUMNS with the list's column count, else asks the base config
 bool ServerListCtrlConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
@@ -787,6 +846,7 @@ bool ServerListCtrlConfig::GetNamedValue(const std::string& inName,int& outValue
     if(aKeyIdx==0) { outValue=this->mServerList->mColumnInfo.size();return true; }
     return ComponentConfig::GetNamedValue(inName,outValue);
 }
+// FUNCTION: WON 0x007c8c30
 // Handles the LISTID, ADDCOLUMN, DEFAULTFILTER, NUMCOLUMNS and SETCOLUMNFILTERTYPE layout instructions
 bool ServerListCtrlConfig::Virtual24(const std::string& inInstruction)
 {
@@ -825,6 +885,7 @@ bool ServerListCtrlConfig::Virtual24(const std::string& inInstruction)
     else return false;
     return true;
 }
+// FUNCTION: WON 0x007c8410
 // Adds a defined column (header component, width, filter combo) if it applies to the list's game type
 void ServerListCtrlConfig::HandleAddColumn()
 {
@@ -881,6 +942,7 @@ void ServerListCtrlConfig::HandleAddColumn()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x00765640
 // Creates a game list layout config
 ComponentConfig* ServerListCtrlConfig::CfgFactory()
 {
@@ -889,6 +951,7 @@ ComponentConfig* ServerListCtrlConfig::CfgFactory()
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x007c8360
 // Creates the layout config with no header and no columns
 ServerListCtrlConfig::ServerListCtrlConfig()
 {
@@ -902,3 +965,101 @@ namespace WONAPI {
 ServerDetailsItem::ItemFactoryFunc ServerDetailsItem::mItemFactoryFunc = ServerDetailsItem::DefaultItemFactory;
 int gServerFilterItemPos = 1;
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007bad40
+// (protected: static class WONAPI::ServerDetailsItem * __cdecl WONAPI::ServerDetailsItem::DefaultItemFactory(void)    [?DefaultItemFactory@ServerDetailsI)
+// TEMPLATE: WON 0x007c4cf0
+// (public: virtual void * __thiscall WONAPI::ServerDetailsItem::`scalar deleting destructor'(unsigned int)    [??_GServerDetailsItem@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007c5c10
+// (public: __thiscall WONAPI::ServerListCtrl::ServerListCtrl(void)    [??0ServerListCtrl@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x007c5d10
+// (public: virtual void * __thiscall WONAPI::ServerListCtrl::`scalar deleting destructor'(unsigned int)    [??_GServerListCtrl@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007c68f0
+// (public: __thiscall WONAPI::TextListItem::TextListItem(class WONAPI::GUIString const &,class WONAPI::Font *)    [??0TextListItem@WONAPI@@QAE@ABVGUIStri)
+// TEMPLATE: WON 0x007c6970
+// (public: virtual __thiscall FilterListItem::~FilterListItem(void)    [??1FilterListItem@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007cb7c0
+// (public: __thiscall std::vector<struct WONAPI::ServerListCtrl::ColumnInfo,class std::allocator<struct WONAPI::ServerListCtrl::ColumnInfo> >::~vector<st)
+// TEMPLATE: WON 0x007cc1d0
+// (public: class std::_Ptrit<struct WONAPI::ServerListCtrl::ColumnInfo,int,struct WONAPI::ServerListCtrl::ColumnInfo *,struct WONAPI::ServerListCtrl::Col)
+// TEMPLATE: WON 0x007cc1f0
+// (public: class std::_Ptrit<struct WONAPI::ServerListCtrl::ColumnInfo,int,struct WONAPI::ServerListCtrl::ColumnInfo *,struct WONAPI::ServerListCtrl::Col)
+// TEMPLATE: WON 0x007cc400
+// (public: __thiscall std::pair<class WONAPI::SmartPtr<class WONAPI::LobbyGame> const ,class WONAPI::SmartPtr<class WONAPI::ServerDetailsItem> >::pair<cl)
+// TEMPLATE: WON 0x007ccf60
+// (protected: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInfo>,struct )
+// TEMPLATE: WON 0x007cd840
+// (public: void __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInfo>,)
+// TEMPLATE: WON 0x007ce4d0
+// (protected: struct WONAPI::ServerListCtrl::ColumnInfo * __thiscall std::vector<struct WONAPI::ServerListCtrl::ColumnInfo,class std::allocator<struct WO)
+// TEMPLATE: WON 0x007ce510
+// (void __cdecl std::fill(class std::_Ptrit<struct WONAPI::ServerListCtrl::ColumnInfo,int,struct WONAPI::ServerListCtrl::ColumnInfo *,struct WONAPI::Serv)
+// TEMPLATE: WON 0x007ce5d0
+// (class std::_Ptrit<struct WONAPI::ServerListCtrl::ColumnInfo,int,struct WONAPI::ServerListCtrl::ColumnInfo *,struct WONAPI::ServerListCtrl::ColumnInfo )
+// TEMPLATE: WON 0x007ce6a0
+// (struct WONAPI::ServerListCtrl::ColumnInfo * __cdecl std::copy(class std::_Ptrit<struct WONAPI::ServerListCtrl::ColumnInfo,int,struct WONAPI::ServerLis)
+// TEMPLATE: WON 0x007ce770
+// (void __cdecl std::_Construct(struct std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInfo> *,struct std::pair<class WONAP)
+// TEMPLATE: WON 0x007ce7f0
+// (void __cdecl std::_Construct(struct WONAPI::ServerListCtrl::ColumnInfo *,struct WONAPI::ServerListCtrl::ColumnInfo const &)    [?_Construct@std@@YAXPA)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007cbfc0
+// (public: __thiscall std::pair<class WONAPI::SmartPtr<class WONAPI::LobbyGame> const ,class WONAPI::SmartPtr<class WONAPI::ServerDetailsItem> >::~pair<c)
+// TEMPLATE: WON 0x007cd260
+// (protected: void __thiscall std::_Tree<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,struct std::pair<class WONAPI::SmartPtr<class WONAPI::LobbyGame>)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c6950
+// (public: virtual void * __thiscall FilterListItem::`scalar deleting destructor'(unsigned int)    [??_GFilterListItem@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007cb9d0
+// (public: class std::_Tree<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,struct std::pair<class WONAPI::SmartPtr<class WONAPI::LobbyGame> const ,class)
+// TEMPLATE: WON 0x007cc210
+// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInfo>,struct std)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007cb810
+// (public: void __thiscall std::vector<struct WONAPI::ServerListCtrl::ColumnInfo,class std::allocator<struct WONAPI::ServerListCtrl::ColumnInfo> >::resiz)
+// TEMPLATE: WON 0x007cb840
+// (public: struct WONAPI::ServerListCtrl::ColumnInfo & __thiscall std::map<class WONAPI::GUIString,struct WONAPI::ServerListCtrl::ColumnInfo,struct WONAP)
+// TEMPLATE: WON 0x007cbef0
+// (public: __thiscall std::list<class WONAPI::ServerDetailsItem *,class std::allocator<class WONAPI::ServerDetailsItem *> >::~list<class WONAPI::ServerDe)
+// TEMPLATE: WON 0x007cc040
+// (public: void __thiscall std::vector<struct WONAPI::ServerListCtrl::ColumnInfo,class std::allocator<struct WONAPI::ServerListCtrl::ColumnInfo> >::resiz)
+// TEMPLATE: WON 0x007cc160
+// (public: class std::_Ptrit<struct WONAPI::ServerListCtrl::ColumnInfo,int,struct WONAPI::ServerListCtrl::ColumnInfo *,struct WONAPI::ServerListCtrl::Col)
+// TEMPLATE: WON 0x007cc260
+// (public: struct std::pair<class std::_Tree<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,struct std::pair<class WONAPI::SmartPtr<class WONAPI::LobbyG)
+// TEMPLATE: WON 0x007cc450
+// (public: void __thiscall std::list<struct std::pair<class WONAPI::ListItem *,int>,class std::allocator<struct std::pair<class WONAPI::ListItem *,int> >)
+// TEMPLATE: WON 0x007cc520
+// (public: void __thiscall std::vector<struct WONAPI::ServerListCtrl::ColumnInfo,class std::allocator<struct WONAPI::ServerListCtrl::ColumnInfo> >::inser)
+// TEMPLATE: WON 0x007cc9a0
+// (public: class std::_Ptrit<struct WONAPI::ServerListCtrl::ColumnInfo,int,struct WONAPI::ServerListCtrl::ColumnInfo *,struct WONAPI::ServerListCtrl::Col)
+// TEMPLATE: WON 0x007cca20
+// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInfo>,struct std)
+// TEMPLATE: WON 0x007ccf20
+// (protected: void __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInf)
+// TEMPLATE: WON 0x007cd2a0
+// (protected: class std::_Tree<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,struct std::pair<class WONAPI::SmartPtr<class WONAPI::LobbyGame> const ,cl)
+// TEMPLATE: WON 0x007cd5a0
+// (protected: void __thiscall std::list<class WONAPI::ServerDetailsItem *,class std::allocator<class WONAPI::ServerDetailsItem *> >::_Incsize(unsigned in)
+// TEMPLATE: WON 0x007cd6f0
+// (protected: void __thiscall std::list<struct std::pair<class WONAPI::ListItem *,int>,class std::allocator<struct std::pair<class WONAPI::ListItem *,int)
+// TEMPLATE: WON 0x007ce850
+// (public: void * __thiscall std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInfo>::`scalar deleting destructor'(unsigned i)
+
+// Dynamic initializer and exit handler of mColumnMap:
+// TEMPLATE: WON 0x007c4b70
+// TEMPLATE: WON 0x007c4b80
+// TEMPLATE: WON 0x007c4b90
+// TEMPLATE: WON 0x007c4ba0
+// TEMPLATE: WON 0x007cbf50
+// (public: __thiscall std::pair<class WONAPI::GUIString const ,struct WONAPI::ServerListCtrl::ColumnInfo>::~pair<class WONAPI::GUIString const ,struct WO)
+// TEMPLATE: WON 0x007c4bc0
+// (public: __thiscall std::map<class WONAPI::GUIString,struct WONAPI::ServerListCtrl::ColumnInfo,struct WONAPI::GUIStringLessNoCase,class std::allocator<)
+// TEMPLATE: WON 0x007cc350
+// (public: class std::_Tree<class WONAPI::SmartPtr<class WONAPI::LobbyGame>,struct std::pair<class WONAPI::SmartPtr<class WONAPI::LobbyGame> const ,class)

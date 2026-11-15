@@ -22,7 +22,7 @@ public:
     // at inLocation of (inWidth - 1) x (inHeight - 1), ...), then the two texts
     EEUICWonNetRoomsBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
                         unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
-    virtual ~EEUICWonNetRoomsBox();
+    virtual ~EEUICWonNetRoomsBox();         // 0x25cfef (??_G 0x25cfd3)
     virtual long CopyData();                // +0x14 0x25d023 (the base's, then mCopiedText = *mText)
     virtual long DrawTextA();               // +0x1c 0x25d045 (four columns per visible line)
     // sizeof 0x13c (its `new`); the ctor 0x25cead news both texts (GEText(font), 0x50 bytes each; the second one's

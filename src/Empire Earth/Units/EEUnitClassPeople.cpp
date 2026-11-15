@@ -83,6 +83,7 @@ void EEGetRingCorners(long inArg1, long inX, long inY, long inSizeX, long inSize
 // 0x24697b: the tiles of a footprint (inSizeX by inSizeY at (inX, inY)) (provisional name; arguments inferred)
 void EEGetSquareRing(long inX, long inY, long inSizeX, long inSizeY, std::vector<U2DPoint<long> >& outTiles);
 
+// FUNCTION: EXE 0x60be58
 // Searches rings 2..9 around the citizen for a tile on its continent where a unit of the given type fits; returns
 // whether one was found
 bool EEUnitClass::FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<float>& outLocation)
@@ -113,6 +114,7 @@ bool EEUnitClass::FindWoodSite(EEComplexUnit* inUnit, long inUnitType, U2DPoint<
     return theFound;
 }
 
+// FUNCTION: EXE 0x60bf63
 // Returns whether a unit matches the wanted resource: any for kind 1, else the same sort as inResource (farm, animal
 // or fish, forage bush) or the wanted resource type; animals only when inFarms
 bool EEIsResourceOfKind(EEUnit* inUnit, EEUnit* inResource, unsigned long inKind, bool inFarms)
@@ -138,6 +140,7 @@ bool EEIsResourceOfKind(EEUnit* inUnit, EEUnit* inResource, unsigned long inKind
            && (inFarms || inUnit->mUnitClass->mFamily != kUnitFamilyAnimal);
 }
 
+// FUNCTION: EXE 0x60c026
 // Returns the nearest gatherable resource of a kind within inRange rings of a centre unit, not in ioUnits (tiles
 // shuffled per ring; another path area costs 400; a dead animal wins at once; boats look for naval resources)
 EEUnit* EEUnitClass::FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter, EEUnit* inResource, long inRange,
@@ -233,6 +236,9 @@ EEUnit* EEUnitClass::FindResourceOfKind(EEComplexUnit* inUnit, EEUnit* inCenter,
     return theResult;
 }
 
+// TEMPLATE: EXE 0x60c607
+// The squared distance from the unit's position to inPoint, y difference first (out of line, 7 callers)
+// FUNCTION: EXE 0x60c631
 // Finds the next resource of a kind within five times the citizen's sight: around its gather goal's resource first,
 // then around the citizen
 EEUnit* EEUnitClass::FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource, unsigned long inKind,
@@ -256,6 +262,7 @@ EEUnit* EEUnitClass::FindNextResource(EEComplexUnit* inUnit, EEUnit* inResource,
 // (provisional name)
 static const float kCitizenFarmRange = 20.0f;
 
+// FUNCTION: EXE 0x60c6b3
 // Returns where the citizen drops its load: its goal's storage, else a farm's nearest drop site within 20, else the
 // owner's nearest built drop site that takes the load (docks and navy yards for boats)
 EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
@@ -323,6 +330,7 @@ EEUnit* EEUnitClass::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
     return theResult;
 }
 
+// FUNCTION: EXE 0x60c932
 // Finds where the citizen gathers or builds at a footprint: the free tile nearest it (a farm's own tiles when farming,
 // corners when needed, not on a wall piece of the type being built), else the footprint's corner; z from the map
 void EEUnitClass::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY, long inSizeX,
@@ -407,6 +415,7 @@ void EEUnitClass::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX, unsi
     }
 }
 
+// FUNCTION: EXE 0x60ccb8
 // Researches a tech on a unit (idling it unless only goal kinds 1, 2, 7, 10 are queued); if that kills the unit,
 // plays the epoch's lightning or disintegration effects and thunder at its position
 // (EETechTree::Research for inUnit)
@@ -461,6 +470,7 @@ void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect)
     theSound->Play(theVolume, thePan, thePitch);
 }
 
+// FUNCTION: EXE 0x60d10e
 // Answers the citizen triggers: starts the next queued build, build queue empty, smart task not assigned (true when
 // it has a goal), goal is repair; gather and build triggers go to the active goal (2 when not the main goal)
 long EEUnitClass::BasicCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -531,6 +541,7 @@ long EEUnitClass::BasicCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned 
     return theResult;
 }
 
+// FUNCTION: EXE 0x60d2dc
 // Returns whether a tile holds a unit that blocks a citizen (not a farm, robotic farm, path point, ambient or
 // foundation)
 bool EEUnitClass::IsTileHeld(EEMapTile* inTile)
@@ -551,6 +562,7 @@ bool EEUnitClass::IsTileHeld(EEMapTile* inTile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x60d361
 // Runs the work timer (working the gather or repair goal when it expires), then finishes a due unit research
 // (instant build: at once); a kind-3 tech tied to the Bundeswehr power goes through EEPlayUnitEffect
 void EEUnitClass::UpdateCitizen(EEComplexUnit* inUnit)
@@ -614,6 +626,7 @@ done:
     }
 }
 
+// FUNCTION: EXE 0x60d4f4
 // Returns whether the citizen has a gather point beside a resource (not just the resource's own corner tile)
 bool EEUnitClass::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
 {
@@ -630,6 +643,7 @@ bool EEUnitClass::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
 // alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); VirtualB8,
 // then EEComplexUnit::ContinueProduction after its first user.
 
+// FUNCTION: EXE 0x616d2d
 // Starts the next production when nothing is being produced and the build queue is not empty
 void EEComplexUnit::ContinueProduction()
 {
@@ -643,6 +657,7 @@ void EEComplexUnit::ContinueProduction()
 // EEUCNaval/EEUCNavalBuilding/EEUCNavalTransport), +0x0c, +0x30 (ICF-shared), +0x74, +0xa0, +0xb8. The ctor is
 // inline (EEUnitClass.cpp's factory). Unit flags: the exe's module set.
 
+// FUNCTION: EXE 0x618490
 // Returns the tile under a location along the camera line, at sea level
 void EEUnitClass::NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
@@ -655,6 +670,7 @@ void EEUnitClass::NavalCitizenLocationToTile(const GE3DPoint& inLocation, long& 
     outY = UMFloor(thePoint.GetY());
 }
 
+// FUNCTION: EXE 0x618539
 // Thins the boat's path to every n-th point and both ends when inSmooth is set (n: inner collision sphere, min 1)
 void EEUnitClass::NavalCitizenAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
 {
@@ -673,6 +689,7 @@ void EEUnitClass::NavalCitizenAdjustPath(EEComplexUnit* inUnit, std::vector<GE3D
     ioPath = thePath;
 }
 
+// FUNCTION: EXE 0x618605
 // Creates a fishing boat on a tile at sea level
 EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -683,6 +700,7 @@ EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, b
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
+// FUNCTION: EXE 0x618664
 // Answers dying done: true once the boat's transformed bounding box lies wholly below the water line
 long EEUnitClass::NavalCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
@@ -723,10 +741,11 @@ long EEUnitClass::NavalCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned 
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFactor);
 
-static const float kBasicPriestNoHeight = -10000.0f;
+static const float kBasicPriestNoHeight = -10000.0f;   // 0x446fe0 (provisional name)
 
 static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversion sound's distance factor)
 
+// FUNCTION: EXE 0x60d571
 // Returns the faith a conversion by a unit costs: the world table's entry 46, at most the unit's own power (0 if none)
 long EEGetConversionCost(EEComplexUnit* inUnit)
 {
@@ -735,6 +754,7 @@ long EEGetConversionCost(EEComplexUnit* inUnit)
     return EECombatConversionCost(theIn);
 }
 
+// FUNCTION: EXE 0x60d59f
 // Works a conversion with enough faith: stops at an ally or own unit, shows the effects and warns the target's owner,
 // then after the minimum time tries once a second (resistance, owner factor, rate) and converts on success
 void EEUnitClass::BasicPriestUpdateConversion(EEComplexUnit* inUnit)
@@ -787,6 +807,7 @@ void EEUnitClass::BasicPriestUpdateConversion(EEComplexUnit* inUnit)
         inUnit->SetWorkTimer(theTime);
 }
 
+// FUNCTION: EXE 0x60d7f2
 // Converts the target to the priest's player (with area conversion, also every convertible visible unit nearby),
 // spends the faith and plays the converted unit's creation sound for the two players involved
 void EEUnitClass::BasicPriestConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
@@ -824,6 +845,7 @@ void EEUnitClass::BasicPriestConvertTarget(EEComplexUnit* inUnit, EEComplexUnit*
         gSoundManager->Play(theSound->mSampleID, 1.0f, 0.0f, 1.0f, false, NULL);
 }
 
+// FUNCTION: EXE 0x60da86
 // Returns whether a priest can convert a target now (enemy, resistance, faith, priests and buildings rules, the
 // temple's range); outFlag is set when the target is shielded
 // (new: the decision is ee_combat's can_convert over a record of pure reads, gathered here; the damage table is
@@ -873,6 +895,7 @@ bool EECanConvert(EEComplexUnit* inPriest, EEComplexUnit* inTarget, bool& outFla
     return theOut.result != 0;
 }
 
+// FUNCTION: EXE 0x60dd0a
 // Loads the conversion indicator effect and the class's media
 void EEUnitClass::BasicPriestLoadMedia(EEPlayer* inPlayer)
 {
@@ -880,6 +903,7 @@ void EEUnitClass::BasicPriestLoadMedia(EEPlayer* inPlayer)
     this->BaseLoadMedia(inPlayer);
 }
 
+// FUNCTION: EXE 0x60dd2d
 // Answers the conversion triggers (attacker convertible, enough faith, goal still valid, goal is or is not a
 // conversion, target converted); the faith check uses the attacker's conversion cost
 long EEUnitClass::BasicPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -936,6 +960,7 @@ long EEUnitClass::BasicPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned l
     return theResult;
 }
 
+// FUNCTION: EXE 0x60dee4
 // Unloads the conversion indicator effect and the class's media
 void EEUnitClass::BasicPriestUnloadMedia(EEPlayer* inPlayer)
 {
@@ -943,6 +968,7 @@ void EEUnitClass::BasicPriestUnloadMedia(EEPlayer* inPlayer)
     this->BaseUnloadMedia(inPlayer);
 }
 
+// FUNCTION: EXE 0x60e086
 // Updates each of the unit's orbitals
 void EEComplexUnit::UpdateOrbitals()
 {
@@ -953,6 +979,7 @@ void EEComplexUnit::UpdateOrbitals()
     }
 }
 
+// FUNCTION: EXE 0x60e0b2
 // Counts the reload timer down by the tick, not below 0
 // New (R5b.4 leaf 6): the countdown is Rust over the unit store (ee_units step.rs step_countdown); the write is the
 // holder's. TEST ONLY: while the capture runs, USTM records it
@@ -971,6 +998,7 @@ void EEComplexUnit::UpdateReloadTimer()
     }
 }
 
+// FUNCTION: EXE 0x60e0db
 // Counts the target search timer down by the tick, not below 0
 // New (R5b.4 leaf 6): Rust over the unit store, as UpdateReloadTimer
 void EEComplexUnit::UpdateTargetSearchTimer()
@@ -988,6 +1016,7 @@ void EEComplexUnit::UpdateTargetSearchTimer()
     }
 }
 
+// FUNCTION: EXE 0x60e104
 // Counts the heal search timer (seconds) down by the tick, not below 0
 static uint32_t HealBits(float inValue)
 {
@@ -1050,6 +1079,7 @@ void EEComplexUnit::UpdateResourcesRotting()
     }
 }
 
+// FUNCTION: EXE 0x60e14c
 // Turns the unit's turrets when its model has parts
 void EEComplexUnit::UpdateTurrets()
 {
@@ -1057,6 +1087,7 @@ void EEComplexUnit::UpdateTurrets()
         this->mUnitClass->TurnTurrets(this);
 }
 
+// FUNCTION: EXE 0x60e16a
 // For a temple not already showing them, starts the tower swirl and smoke effects and plays the tower convert sound
 void EEUnitClass::BasicPriestShowConversionEffects(EEComplexUnit* inUnit)
 {
@@ -1077,6 +1108,7 @@ void EEUnitClass::BasicPriestShowConversionEffects(EEComplexUnit* inUnit)
     gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, false, NULL);
 }
 
+// FUNCTION: EXE 0x60e274
 // For a temple, destroys the tower swirl and smoke effects
 void EEUnitClass::BasicPriestHideConversionEffects(EEComplexUnit* inUnit)
 {
@@ -1102,6 +1134,16 @@ void EEUnitClass::BasicPriestHideConversionEffects(EEComplexUnit* inUnit)
 // NavalCitizen). Unit flags: the exe's module set. Its ctor is followed by EEUnitClass's inline +0x24/+0x68/+0x6c
 // (every unit class's vtable points at these copies), then its own slots. vtable 0x447060.
 
+// TEMPLATE: EXE 0x616d77
+// EEUnitClass::GetHeightAt (inline in ee/EEUnit.h)
+
+// TEMPLATE: EXE 0x616d81
+// EEUnitClass::Virtual68 (inline in ee/EEUnit.h)
+
+// TEMPLATE: EXE 0x616d8d
+// EEUCLandPriest::Virtual6C (inline in ee/EEUCLandPriest.h)
+
+// FUNCTION: EXE 0x616d94
 // Gets the sound parameters the common way; silent when the priest is not seen
 void EEUnitClass::LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                                float* outPitch)
@@ -1117,6 +1159,10 @@ void EEUnitClass::LandPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* in
 // Unit flags: the exe's module set. Its ctor is out of line (vtable 0x44724c), followed by the ??_G every priest class
 // shares (EEUCBasicPriest's inline dtor), then its own slots +0x0c, +0x34, +0xa0.
 
+// SYNTHETIC: EXE 0x61882c
+// EEUCNavalPriest::`scalar deleting destructor' (EEUCBasicPriest's inline dtor; ICF: every priest class)
+
+// FUNCTION: EXE 0x61884e
 // Thins the priest ship's path to every n-th point and both ends when inSmooth is set (n: its inner collision sphere)
 void EEUnitClass::NavalPriestAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
 {
@@ -1137,6 +1183,7 @@ void EEUnitClass::NavalPriestAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DP
     ioPath = thePath;
 }
 
+// FUNCTION: EXE 0x618909
 // Creates a priest ship at a placement on the water plane (z 0)
 EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                       EEUnit* inCreator)
@@ -1147,6 +1194,7 @@ EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation,
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
+// FUNCTION: EXE 0x618942
 // Answers dying done: true once the ship's transformed bounding box lies wholly below the water line
 long EEUnitClass::NavalPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
@@ -1186,6 +1234,7 @@ long EEUnitClass::NavalPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned l
 // (provisional name)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
 
+// FUNCTION: EXE 0x6130b3
 // Gets the sound parameters with a Doppler pitch; silent while the helicopter is on the map but not seen
 void EEUnitClass::HelicopterPriestGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                                      float* outPitch)
@@ -1223,6 +1272,7 @@ void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
     theClass->PathToward(inUnit, thePosition, theTarget, false);
 }
 
+// FUNCTION: EXE 0x6132c0
 // Sets up a new priest helicopter as a priest, then lifts it to its flying height
 void EEUnitClass::HelicopterPriestUnitCreated(EEComplexUnit* inUnit)
 {
@@ -1238,6 +1288,7 @@ void EEUnitClass::HelicopterPriestUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetHeight(theZ);
 }
 
+// FUNCTION: EXE 0x613344
 // Answers the dying-finished (below its tile's height) and move-prepared (has waypoints) triggers; others the
 // priest's way
 long EEUnitClass::HelicopterPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)

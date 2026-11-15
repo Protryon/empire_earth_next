@@ -92,6 +92,7 @@ struct EECPIUnitIDLess {
     bool operator()(EEUnit* inFirst, EEUnit* inSecond) const { return inFirst->GetUnitID() < inSecond->GetUnitID(); }
 };
 
+// FUNCTION: EXE 0x480c69
 // Creates the intelligence file one player keeps on another player, empty and due for an update
 EECPIntelligencePlayerFile::EECPIntelligencePlayerFile(EEPlayer* inOwner, EEPlayer* inPlayer)
     : mOwner(inOwner)
@@ -104,12 +105,17 @@ EECPIntelligencePlayerFile::EECPIntelligencePlayerFile(EEPlayer* inOwner, EEPlay
     this->Reset();
 }
 
+// SYNTHETIC: EXE 0x480cd5
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x480cf1
 // Destroys the file, deleting its armies
 EECPIntelligencePlayerFile::~EECPIntelligencePlayerFile()
 {
     this->DeleteArmies();
 }
 
+// FUNCTION: EXE 0x480d19
 // Adds a mobile land combat unit to the army it is near, starts a new army if none, or merges all near armies
 // into one (picked by comparing tile counts against strengths) and adds it there
 void EECPIntelligencePlayerFile::AddToArmies(EEComplexUnit* inUnit)
@@ -159,6 +165,7 @@ void EECPIntelligencePlayerFile::AddToArmies(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x480f9b
 // Every 30 s (or when forced) recounts the player's living units by family, type and domain, their bounds,
 // attack, gathered resources, wonder-victory progress and weighted strength; rebuilds armies if asked
 void EECPIntelligencePlayerFile::Update(EEComputerPlayer* inPlayer, bool inForce, bool inArmies)
@@ -243,12 +250,17 @@ void EECPIntelligencePlayerFile::Update(EEComputerPlayer* inPlayer, bool inForce
         this->mArmies[a]->EEAIArea::UpdateHull();
 }
 
+// SYNTHETIC: EXE 0x48141b
+// (EEAIFOIntelligenceAIFamilyAndUnitTypeSorter's scalar deleting destructor)
+
+// FUNCTION: EXE 0x481438
 // Deletes every army in the file
 void EECPIntelligencePlayerFile::DeleteArmies()
 {
     DeleteVectorContents(this->mArmies);
 }
 
+// FUNCTION: EXE 0x481443
 // Clears all counts, strengths, bounds, family and type lists and resource tallies, and deletes the armies
 void EECPIntelligencePlayerFile::Reset()
 {
@@ -275,6 +287,7 @@ void EECPIntelligencePlayerFile::Reset()
         this->mResources[i] = 0;
 }
 
+// FUNCTION: EXE 0x4814bd
 // Returns the value times 2.5
 // The const 0x43c074; callers EECPASGAir 0x441dbd and EECPAttackSubGroup::TakeRequestedUnits (provisional name)
 float EECPIntelligencePlayerFile::GetScanRange(float inValue)
@@ -282,6 +295,7 @@ float EECPIntelligencePlayerFile::GetScanRange(float inValue)
     return inValue * 2.5f;
 }
 
+// FUNCTION: EXE 0x4814ca
 // Returns how many of the player's units belong to the AI family (0 if none)
 long EECPIntelligencePlayerFile::GetFamilyCount(long inFamily)
 {
@@ -296,6 +310,7 @@ long EECPIntelligencePlayerFile::GetFamilyCount(long inFamily)
     return theResult;
 }
 
+// FUNCTION: EXE 0x481500
 // Lists the player's living units on the map that can move on water (or land) terrain, optionally only those
 // on the given continent
 void EECPIntelligencePlayerFile::GetUnits(std::vector<EEComplexUnit*>& outUnits, unsigned short inContinent, bool inWater)
@@ -315,6 +330,7 @@ void EECPIntelligencePlayerFile::GetUnits(std::vector<EEComplexUnit*>& outUnits,
     }
 }
 
+// FUNCTION: EXE 0x4815bc
 // Lists the player's living units on the map, optionally only those on the given continent
 void EECPIntelligencePlayerFile::GetAllUnits(unsigned short inContinent, std::vector<EEComplexUnit*>& outUnits)
 {
@@ -331,6 +347,7 @@ void EECPIntelligencePlayerFile::GetAllUnits(unsigned short inContinent, std::ve
     }
 }
 
+// FUNCTION: EXE 0x481654
 // Lists attack locations against the player: one building (or, with none, one unit) per influence region,
 // best first by enemy influence, plus the town value on our continent when the towns are on different ones
 void EECPIntelligencePlayerFile::GetTargets(std::vector<EECPILocation>& outLocations, long inArg)
@@ -386,6 +403,7 @@ void EECPIntelligencePlayerFile::GetTargets(std::vector<EECPILocation>& outLocat
     }
 }
 
+// FUNCTION: EXE 0x4819c0
 // Sums the player's influence over the region holding the tile and the regions within the radius around it
 long EECPIntelligencePlayerFile::GetInfluence(long inX, long inY, long inRadius)
 {
@@ -402,6 +420,7 @@ long EECPIntelligencePlayerFile::GetInfluence(long inX, long inY, long inRadius)
     return theSum;
 }
 
+// FUNCTION: EXE 0x481aaa
 // Counts the unit under its AI family, adding the family if new
 void EECPIntelligencePlayerFile::AddFamily(EEUnit* inUnit)
 {
@@ -418,6 +437,7 @@ void EECPIntelligencePlayerFile::AddFamily(EEUnit* inUnit)
     this->mFamilies.push_back(theEntry);
 }
 
+// FUNCTION: EXE 0x481b0e
 // Counts the unit under its unit type; a combat-capable non-citizen also adds its influence to the air, sea,
 // space or land strength and count
 void EECPIntelligencePlayerFile::AddUnitType(EEUnit* inUnit)
@@ -457,6 +477,7 @@ void EECPIntelligencePlayerFile::AddUnitType(EEUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x481c42
 // Counts a unit: its family, then citizens as gatherers, non-wall buildings as buildings, and military
 // families by unit type
 void EECPIntelligencePlayerFile::AddUnitClass(EEUnit* inUnit)
@@ -487,12 +508,17 @@ void EECPIntelligencePlayerFile::AddUnitClass(EEUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x481cd0
 // Creates the computer player's intelligence with no player files
 EECPIntelligence::EECPIntelligence(EEComputerPlayer* inPlayer)
 {
     this->mPlayer = inPlayer;
 }
 
+// SYNTHETIC: EXE 0x481cfc
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x481d18
 // Destroys the intelligence, deleting every player file
 EECPIntelligence::~EECPIntelligence()
 {
@@ -501,6 +527,7 @@ EECPIntelligence::~EECPIntelligence()
         delete theIt->second;
 }
 
+// FUNCTION: EXE 0x481d60
 // Returns the file on the player, creating and updating one if there is none
 EECPIntelligencePlayerFile* EECPIntelligence::GetFile(EEPlayer* inPlayer)
 {
@@ -510,6 +537,7 @@ EECPIntelligencePlayerFile* EECPIntelligence::GetFile(EEPlayer* inPlayer)
     return this->UpdateFile(this->mPlayer, inPlayer);
 }
 
+// FUNCTION: EXE 0x481da1
 // Finds or creates the file on the player, updates it if due (without armies) and returns it
 EECPIntelligencePlayerFile* EECPIntelligence::UpdateFile(EEComputerPlayer* inOwner, EEPlayer* inPlayer)
 {
@@ -524,6 +552,7 @@ EECPIntelligencePlayerFile* EECPIntelligence::UpdateFile(EEComputerPlayer* inOwn
     return theFile;
 }
 
+// FUNCTION: EXE 0x481e30
 // Returns a random player the given player is at war with, or player 0 (nature) if there is none
 EEPlayer* EECPIntelligence::GetRandomEnemy(EEPlayer* inPlayer)
 {
@@ -544,6 +573,7 @@ EEPlayer* EECPIntelligence::GetRandomEnemy(EEPlayer* inPlayer)
 
 // The out-of-line members that sit among the COMDATs (inline in the real headers).
 
+// FUNCTION: EXE 0x482b30
 // Returns the player's most valuable town, or NULL; never sets outArg
 EETown* EEPlayer::GetLargestTown(bool* outArg)
 {
@@ -557,6 +587,7 @@ EETown* EEPlayer::GetLargestTown(bool* outArg)
     return theTown;
 }
 
+// FUNCTION: EXE 0x483977
 // Orders unit-type counts: by family, the family later in the file's family list first; within a family,
 // the smaller count first
 bool EEAIFOIntelligenceAIFamilyAndUnitTypeSorter::operator()(const EECPIUnitTypeCount& inFirst,
@@ -583,6 +614,7 @@ bool EEAIFOIntelligenceAIFamilyAndUnitTypeSorter::operator()(const EECPIUnitType
     return theResult;
 }
 
+// FUNCTION: EXE 0x483491
 // Returns true if both units stand in the same influence region
 bool EECPITargetRegionEqual::operator()(const std::pair<EEComplexUnit*, long>& inFirst,
                                         const std::pair<EEComplexUnit*, long>& inSecond)
@@ -600,6 +632,7 @@ bool EECPITargetRegionEqual::operator()(const std::pair<EEComplexUnit*, long>& i
     return theFirst == theSecond;
 }
 
+// FUNCTION: EXE 0x483e53
 // Orders two units by the influence region they stand in
 bool EECPITargetRegionLess::operator()(const std::pair<EEComplexUnit*, long>& inFirst,
                                        const std::pair<EEComplexUnit*, long>& inSecond)
@@ -626,6 +659,135 @@ bool EECPITargetRegionLess::operator()(const std::pair<EEComplexUnit*, long>& in
 //
 //
 //
+
+// The map/vector/sort COMDATs, paired with the original by template matching (0x82a43: the sort of the
+// gatherers' resources)
+// TEMPLATE: EXE 0x481ee2
+// TEMPLATE: EXE 0x481f0e
+// TEMPLATE: EXE 0x481f3a
+// TEMPLATE: EXE 0x481f75
+// TEMPLATE: EXE 0x481fa1
+// TEMPLATE: EXE 0x481fdc
+// TEMPLATE: EXE 0x482007
+// TEMPLATE: EXE 0x4820bd
+// TEMPLATE: EXE 0x4820f7
+// TEMPLATE: EXE 0x482123
+// TEMPLATE: EXE 0x48217d
+// TEMPLATE: EXE 0x4821c1
+// TEMPLATE: EXE 0x482211
+// TEMPLATE: EXE 0x482255
+// TEMPLATE: EXE 0x4822c6
+// TEMPLATE: EXE 0x482597
+// TEMPLATE: EXE 0x482834
+// TEMPLATE: EXE 0x482866
+// TEMPLATE: EXE 0x482926
+// TEMPLATE: EXE 0x482a1d
+// TEMPLATE: EXE 0x482a32
+// TEMPLATE: EXE 0x482b00
+// TEMPLATE: EXE 0x482b7a
+// TEMPLATE: EXE 0x482c3a
+// TEMPLATE: EXE 0x482ca6
+// TEMPLATE: EXE 0x482db4
+// TEMPLATE: EXE 0x482e62
+// TEMPLATE: EXE 0x482e8d
+// TEMPLATE: EXE 0x482eaf
+// TEMPLATE: EXE 0x482ef6
+// TEMPLATE: EXE 0x482f0d
+// TEMPLATE: EXE 0x482f36
+// TEMPLATE: EXE 0x483057
+// TEMPLATE: EXE 0x48306a
+// TEMPLATE: EXE 0x48306d
+// TEMPLATE: EXE 0x4830a0
+// TEMPLATE: EXE 0x4831ac
+// (?_Unguarded_insertion_sort@std@@YAXV?$_Ptrit@UEECPIUnitTypeCount@@HPAU1@AAU1@PAU1@AAU1@@1@0VEEAIFOIntelligenceAIFamilyAndUnitTypeSorter@@PAUEECPIUnitTypeCount@@@Z)
+
+// TEMPLATE: EXE 0x4832f0
+// TEMPLATE: EXE 0x483320
+// TEMPLATE: EXE 0x483349
+// TEMPLATE: EXE 0x483421
+// TEMPLATE: EXE 0x483455
+// TEMPLATE: EXE 0x4834e8
+// TEMPLATE: EXE 0x483537
+// TEMPLATE: EXE 0x483560
+// TEMPLATE: EXE 0x483638
+// TEMPLATE: EXE 0x48371f
+// TEMPLATE: EXE 0x483759
+// TEMPLATE: EXE 0x48379a
+// TEMPLATE: EXE 0x483878
+// TEMPLATE: EXE 0x4839e8
+// TEMPLATE: EXE 0x483a2f
+// TEMPLATE: EXE 0x483a7b
+// (?_Unguarded_partition@std@@YA?AV?$_Ptrit@UEECPIUnitTypeCount@@HPAU1@AAU1@PAU1@AAU1@@1@V21@0VEEAIFOIntelligenceAIFamilyAndUnitTypeSorter@@PAUEECPIUnitTypeCount@@@Z)
+
+// TEMPLATE: EXE 0x483d61
+// TEMPLATE: EXE 0x483da1
+// TEMPLATE: EXE 0x483eb1
+// TEMPLATE: EXE 0x483eeb
+// TEMPLATE: EXE 0x483f2c
+// TEMPLATE: EXE 0x484043
+// TEMPLATE: EXE 0x48407f
+// TEMPLATE: EXE 0x4840c1
+// TEMPLATE: EXE 0x484173
+// TEMPLATE: EXE 0x4841ad
+// TEMPLATE: EXE 0x4841ee
+// TEMPLATE: EXE 0x484305
+// TEMPLATE: EXE 0x4843a5
+// TEMPLATE: EXE 0x4843ce
+// TEMPLATE: EXE 0x484469
+// TEMPLATE: EXE 0x48449c
+// TEMPLATE: EXE 0x4844c1
+// TEMPLATE: EXE 0x484505
+// TEMPLATE: EXE 0x48452e
+// TEMPLATE: EXE 0x484579
+// TEMPLATE: EXE 0x4845a2
+// TEMPLATE: EXE 0x4845e5
+// TEMPLATE: EXE 0x484630
+// TEMPLATE: EXE 0x48474b
+// TEMPLATE: EXE 0x4848d1
+// TEMPLATE: EXE 0x484959
+// TEMPLATE: EXE 0x4849af
+// TEMPLATE: EXE 0x484a37
+// TEMPLATE: EXE 0x484a8d
+// TEMPLATE: EXE 0x484c02
+// TEMPLATE: EXE 0x484c41
+// TEMPLATE: EXE 0x484ca1
+// TEMPLATE: EXE 0x484cde
+// TEMPLATE: EXE 0x484d3e
+
+// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was
+// compared against the original by name)
+// TEMPLATE: EXE 0x481a71
+// TEMPLATE: EXE 0x482d89
+// TEMPLATE: EXE 0x48366c
+// TEMPLATE: EXE 0x4838a7
+// TEMPLATE: EXE 0x4843f3
+// TEMPLATE: EXE 0x484820
+// TEMPLATE: EXE 0x4848a2
+
+// Template and inline COMDATs this unit already emits (compared by name)
+// TEMPLATE: EXE 0x482a43
+// TEMPLATE: EXE 0x48321d
+// TEMPLATE: EXE 0x483be8
+// TEMPLATE: EXE 0x483c22
+// TEMPLATE: EXE 0x483c63
+// TEMPLATE: EXE 0x484d7b
+// COMDATs named after EECPIUnitTypeCount/EECPIFamilyCount's copy members
+// TEMPLATE: EXE 0x482dd9
+// TEMPLATE: EXE 0x482e0a
+// TEMPLATE: EXE 0x482e32
+// TEMPLATE: EXE 0x482ed9
+// TEMPLATE: EXE 0x48300e
+// TEMPLATE: EXE 0x483204
+// TEMPLATE: EXE 0x483ba0
+// TEMPLATE: EXE 0x484341
+// TEMPLATE: EXE 0x484659
+// TEMPLATE: EXE 0x4846d4
+// TEMPLATE: EXE 0x48476c
+// TEMPLATE: EXE 0x484ad8
+// TEMPLATE: EXE 0x484b2e
+// TEMPLATE: EXE 0x484ba6
+// TEMPLATE: EXE 0x482d66
+// TEMPLATE: EXE 0x484b20
 
 // port (save 0.271, ee/EESaveGameFiles.h EESaveHasIntelligence): the files as they are. The original never saved them:
 // a loaded player made each file again from the world at its first use, where the running game's file held what it

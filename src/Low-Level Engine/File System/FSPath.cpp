@@ -23,11 +23,13 @@ static void NameSink(void* inContext, const char* inName)
     static_cast<std::set<UString>*>(inContext)->insert(UString(inName));
 }
 
+// FUNCTION: LLE 0x1000a843
 // Creates an empty search path
 FSPath::FSPath()
 {
 }
 
+// FUNCTION: LLE 0x1000a8da
 // Creates a copy of a search path, adding (and reopening) each of its archives and directories in order
 FSPath::FSPath(const FSPath& inPath)
 {
@@ -38,11 +40,13 @@ FSPath::FSPath(const FSPath& inPath)
         this->AddDirectory(inPath.mDirectories[i], true);
 }
 
+// FUNCTION: LLE 0x1000a984
 // Destroys the search path (members only)
 FSPath::~FSPath()
 {
 }
 
+// FUNCTION: LLE 0x1000a9a5
 // Replaces the path's archives and directories with copies of another path's, in order
 FSPath& FSPath::operator=(const FSPath& inPath)
 {
@@ -56,6 +60,7 @@ FSPath& FSPath::operator=(const FSPath& inPath)
     return *this;
 }
 
+// FUNCTION: LLE 0x1000aa30
 // Adds an archive (appended, else first): closes every archive, adds the new one, then reopens them all
 void FSPath::AddArchive(const FSArchive& inArchive, bool inAppend)
 {
@@ -77,6 +82,7 @@ void FSPath::AddArchive(const FSArchive& inArchive, bool inAppend)
         this->mArchives[i].Open();
 }
 
+// FUNCTION: LLE 0x1000ab27
 // Adds a directory to the path, appended or in front
 void FSPath::AddDirectory(const FSFileSpec& inDirectory, bool inAppend)
 {
@@ -88,6 +94,7 @@ void FSPath::AddDirectory(const FSFileSpec& inDirectory, bool inAppend)
         this->mDirectories.push_back(inDirectory);
 }
 
+// FUNCTION: LLE 0x1000ab85
 // Returns whether the named file is on the path (kErrorOK), discarding the found file
 long FSPath::FindFile(const UString& inName)
 {
@@ -98,6 +105,7 @@ long FSPath::FindFile(const UString& inName)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000abcb
 // Returns whether the named file (wide name) is on the path (kErrorOK), discarding the found file
 long FSPath::FindFile(const UWideString& inName)
 {
@@ -108,6 +116,7 @@ long FSPath::FindFile(const UWideString& inName)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000ac15
 // Finds the named file on the path; returns it as a new file spec the caller deletes
 long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile)
 {
@@ -115,6 +124,7 @@ long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile)
     return this->FindFile(inName, outFile, theDirectory);
 }
 
+// FUNCTION: LLE 0x1000ac48
 // Finds a file in the directories, then the archives (Rust's search): returns a new file spec (an FSMemoryFile from
 // an archive) and, in outDirectory, the found file itself or the archive file it came from
 long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& outDirectory)
@@ -139,12 +149,14 @@ long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& o
     return theResult;
 }
 
+// FUNCTION: LLE 0x1000ad7a
 // Returns the archive at an index (unchecked)
 const FSArchive& FSPath::GetArchive(unsigned long inIndex) const
 {
     return this->mArchives[inIndex];
 }
 
+// FUNCTION: LLE 0x1000ad89
 // Copies the archive at an index to outArchive; kErrorBeyondEnd past the last one
 long FSPath::GetArchive(unsigned long inIndex, FSArchive& outArchive) const
 {
@@ -155,6 +167,7 @@ long FSPath::GetArchive(unsigned long inIndex, FSArchive& outArchive) const
     return kErrorBeyondEnd;
 }
 
+// FUNCTION: LLE 0x1000adc1
 // Copies the directory at an index to outDirectory; kErrorBeyondEnd past the last one
 long FSPath::GetDirectory(unsigned long inIndex, FSFileSpec& outDirectory) const
 {
@@ -165,6 +178,7 @@ long FSPath::GetDirectory(unsigned long inIndex, FSFileSpec& outDirectory) const
     return kErrorBeyondEnd;
 }
 
+// FUNCTION: LLE 0x1000adfa
 // Sets outArchived to whether the named file comes from an archive rather than a directory; returns whether the
 // file was found
 bool FSPath::GetFileArchiveStatus(const UString& inName, bool& outArchived)
@@ -182,6 +196,7 @@ bool FSPath::GetFileArchiveStatus(const UString& inName, bool& outArchived)
     return true;
 }
 
+// FUNCTION: LLE 0x1000aea1
 // Wide-name form of GetFileArchiveStatus
 bool FSPath::GetFileArchiveStatus(const UWideString& inName, bool& outArchived)
 {
@@ -189,6 +204,7 @@ bool FSPath::GetFileArchiveStatus(const UWideString& inName, bool& outArchived)
     return this->GetFileArchiveStatus(theName, outArchived);
 }
 
+// FUNCTION: LLE 0x1000aed9
 // Collects the names of the files matching a pattern from every archive and directory (relative to the directory,
 // Rust's walk); returns the last search's result, which is the end-of-search code when the path has directories
 long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
@@ -201,6 +217,7 @@ long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
                                        NameSink, &outFiles, PathText(&gStartupVolume), PathText(&gStartupDirectory));
 }
 
+// FUNCTION: LLE 0x1000b0cd
 // Closes and removes the archive at an index; kErrorBeyondEnd past the last one
 long FSPath::RemoveArchive(unsigned long inIndex)
 {
@@ -212,6 +229,7 @@ long FSPath::RemoveArchive(unsigned long inIndex)
     return kErrorBeyondEnd;
 }
 
+// FUNCTION: LLE 0x1000b136
 // Removes the directory at an index; kErrorBeyondEnd past the last one
 long FSPath::RemoveDirectory(unsigned long inIndex)
 {

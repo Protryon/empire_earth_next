@@ -21,6 +21,7 @@ public:
     SmartPtr<LobbyCompletionBase> mCompletion; //10
     AsyncOpPtr mOp; //14
 };
+// FUNCTION: WON 0x00757d70
 // Runs the completion at once on the window thread, else posts it there as a window event
 void LobbyCompletionBase::Complete(AsyncOpPtr theParam)
 {
@@ -33,6 +34,7 @@ void LobbyCompletionBase::Complete(AsyncOpPtr theParam)
             aManager->PostEvent(new LobbyCompletionEvent(this, theParam.get()), true);
     }
 }
+// FUNCTION: WON 0x00757e70
 // Runs the posted completion for its operation on the window thread
 void LobbyCompletionEvent::Deliver()
 {
@@ -40,3 +42,13 @@ void LobbyCompletionEvent::Deliver()
 }
 // The implicit destructor (0x757ea0) releases mOp, then mCompletion, then the WindowEventBase part
 }
+
+
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00757ea0
+// (public: virtual __thiscall WONAPI::LobbyCompletionEvent::~LobbyCompletionEvent(void)    [??1LobbyCompletionEvent@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00757e80
+// (public: virtual void * __thiscall WONAPI::LobbyCompletionEvent::`scalar deleting destructor'(unsigned int)    [??_GLobbyCompletionEvent@WONAPI@@UAEPAX)

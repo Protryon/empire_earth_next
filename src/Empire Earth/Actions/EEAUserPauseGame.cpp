@@ -17,6 +17,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
 
+// FUNCTION: EXE 0x405280
 // Toggles the server's user pause and tells the UI, once physics has processed a command turn
 void EEAUserPauseGame::Virtual4()
 {
@@ -34,6 +35,8 @@ void EEAUserPauseGame::Virtual4()
     }
 }
 
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAUserPauseGame::Virtual8()
 {
 }

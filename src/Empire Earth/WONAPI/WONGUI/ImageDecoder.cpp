@@ -22,7 +22,13 @@ ImageDecoder::ImageDecoder()
     this->mFileReader=NULL;
 }
 ImageDecoder::~ImageDecoder() {}
+// FUNCTION: WON 0x00747910
+// (??_GImageDecoder@WONAPI@@UAEPAXI@Z)
 
+// FUNCTION: WON 0x00747930
+// (??1ImageDecoder@WONAPI@@UAE@XZ)
+
+// FUNCTION: WON 0x00747940
 // Decodes a raw image and converts it to a native image for the display context; NULL on failure
 SmartPtr<NativeImage> ImageDecoder::DoDecode(DisplayContext* context)
 {
@@ -60,7 +66,22 @@ bool ImageDecoder::GetImageAttributes(const char* path,ImageAttributes& attribut
     FileReader reader(path);
     return this->GetImageAttributes(reader,attributes);
 }
+// FUNCTION: WON 0x007479f0
+// (?Decode@ImageDecoder@WONAPI@@QAE?AV?$SmartPtr@VNativeImage@WONAPI@@@2@PAVDisplayContext@2@PBD@Z)
 
+// FUNCTION: WON 0x00747a70
+// (?Decode@ImageDecoder@WONAPI@@QAE?AV?$SmartPtr@VNativeImage@WONAPI@@@2@PAVDisplayContext@2@AAVFileReader@2@@Z)
+
+// FUNCTION: WON 0x00747ab0
+// (?DecodeRaw@ImageDecoder@WONAPI@@QAE?AV?$SmartPtr@VRawImage@WONAPI@@@2@PBD@Z)
+
+// FUNCTION: WON 0x00747b30
+// (?DecodeRaw@ImageDecoder@WONAPI@@QAE?AV?$SmartPtr@VRawImage@WONAPI@@@2@AAVFileReader@2@@Z)
+
+// FUNCTION: WON 0x00747b70
+// (?GetImageAttributes@ImageDecoder@WONAPI@@QAE_NPBDAAVImageAttributes@2@@Z)
+
+// FUNCTION: WON 0x00747be0
 // Reads the image attributes (size) from an open file reader; false if the reader is empty or a read
 // error is thrown
 bool ImageDecoder::GetImageAttributes(FileReader& reader,ImageAttributes& attributes)
@@ -72,7 +93,16 @@ bool ImageDecoder::GetImageAttributes(FileReader& reader,ImageAttributes& attrib
     return false;
 }
 MultiImageDecoder::MultiImageDecoder() {}
+// FUNCTION: WON 0x00747c50
+// (??0MultiImageDecoder@WONAPI@@QAE@XZ)
 
+// FUNCTION: WON 0x00747d20
+// (??_GMultiImageDecoder@WONAPI@@UAEPAXI@Z)
+
+// FUNCTION: WON 0x00747d40
+// (??1?$set@PAVImageDecoder@WONAPI@@U?$less@PAVImageDecoder@WONAPI@@@std@@V?$allocator@PAVImageDecoder@WONAPI@@@4@@std@@QAE@XZ)
+
+// FUNCTION: WON 0x00747eb0
 // Destroys the multi-decoder, deleting every registered decoder
 MultiImageDecoder::~MultiImageDecoder()
 {
@@ -83,6 +113,7 @@ MultiImageDecoder::~MultiImageDecoder()
         ++i;
     }
 }
+// FUNCTION: WON 0x00748080
 // Registers a decoder for a file extension, replacing any earlier decoder for that extension
 void MultiImageDecoder::AddDecoder(ImageDecoder* decoder,const char* extension)
 {
@@ -90,30 +121,35 @@ void MultiImageDecoder::AddDecoder(ImageDecoder* decoder,const char* extension)
     this->mDecoderSet.insert(decoder);
     this->mDecoderMap[extension]=decoder;
 }
+// FUNCTION: WON 0x00748270
 // Selects the decoder by the path's file extension
 void MultiImageDecoder::SetFileName(const char* path)
 {
     WONFile file(path);
     this->SetCurExtension(file.GetFileExtension().c_str());
 }
+// FUNCTION: WON 0x00748450
 // Decodes the file at the path into a native image with the decoder for its extension
 SmartPtr<NativeImage> MultiImageDecoder::Decode(DisplayContext* context,const char* path)
 {
     this->SetFileName(path);
     return ImageDecoder::Decode(context,path);
 }
+// FUNCTION: WON 0x00748490
 // Decodes the file at the path into a raw image with the decoder for its extension
 SmartPtr<RawImage> MultiImageDecoder::DecodeRaw(const char* path)
 {
     this->SetFileName(path);
     return ImageDecoder::DecodeRaw(path);
 }
+// FUNCTION: WON 0x007484c0
 // Reads the attributes of the file at the path with the decoder for its extension
 bool MultiImageDecoder::GetImageAttributes(const char* path,ImageAttributes& attributes)
 {
     this->SetFileName(path);
     return ImageDecoder::GetImageAttributes(path,attributes);
 }
+// FUNCTION: WON 0x007484e0
 // Decodes the current reader into a native image with the current extension's decoder (the SDK kept the
 // decoder's animation; the port has none); NULL when no decoder handles the extension
 SmartPtr<NativeImage> MultiImageDecoder::DoDecode(DisplayContext* context)
@@ -124,6 +160,7 @@ SmartPtr<NativeImage> MultiImageDecoder::DoDecode(DisplayContext* context)
     SmartPtr<NativeImage> image=decoder->Decode(context,*this->mFileReader);
     return image;
 }
+// FUNCTION: WON 0x00748670
 // Decodes the current reader into a raw image with the current extension's decoder; NULL when no decoder
 // handles the extension
 SmartPtr<RawImage> MultiImageDecoder::DoDecodeRaw()
@@ -134,6 +171,7 @@ SmartPtr<RawImage> MultiImageDecoder::DoDecodeRaw()
     SmartPtr<RawImage> image=decoder->DecodeRaw(*this->mFileReader);
     return image;
 }
+// FUNCTION: WON 0x007487f0
 // Reads the current reader's image attributes with the current extension's decoder; false if none
 bool MultiImageDecoder::DoGetAttrib(ImageAttributes& attributes)
 {
@@ -142,6 +180,7 @@ bool MultiImageDecoder::DoGetAttrib(ImageAttributes& attributes)
     ImageDecoder* aDecoder=i->second;
     return aDecoder->GetImageAttributes(*this->mFileReader,attributes);
 }
+// FUNCTION: WON 0x007488e0
 // Creates a copy of the multi-decoder with a duplicate of every per-extension decoder
 ImageDecoder* MultiImageDecoder::Duplicate()
 {
@@ -157,3 +196,36 @@ ImageDecoder* MultiImageDecoder::Duplicate()
     return decoder;
 }
 }
+
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00747900
+// (public: __thiscall WONAPI::ImageDecoder::ImageDecoder(void))
+// TEMPLATE: WON 0x00747df0
+// (public: __thiscall std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class WONAPI::ImageDecoder *,struc)
+// TEMPLATE: WON 0x007478f0
+// (public: __thiscall WONAPI::ImageAttributes::ImageAttributes(void))
+// TEMPLATE: WON 0x0074b670
+// (protected: class std::_Tree<class WONAPI::ImageDecoder *,class WONAPI::ImageDecoder *,struct std::_Setk<class WONAPI::ImageDecoder *,struct std::less<)
+// TEMPLATE: WON 0x0074b970
+// (public: struct std::pair<class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<cla)
+// TEMPLATE: WON 0x0074ba70
+// (public: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_str)
+// TEMPLATE: WON 0x0074bb20
+// (protected: void __thiscall std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class s)
+// TEMPLATE: WON 0x0074cfb0
+// (public: class std::_Tree<class WONAPI::ImageDecoder *,class WONAPI::ImageDecoder *,struct std::_Setk<class WONAPI::ImageDecoder *,struct std::less<cla)
+// TEMPLATE: WON 0x0074d460
+// (protected: void __thiscall std::_Tree<class WONAPI::ImageDecoder *,class WONAPI::ImageDecoder *,struct std::_Setk<class WONAPI::ImageDecoder *,struct )
+// TEMPLATE: WON 0x0074d9a0
+// (protected: struct std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic)
+// TEMPLATE: WON 0x0074da30
+// (protected: void __thiscall std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class s)
+// TEMPLATE: WON 0x0074da70
+// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_)
+// TEMPLATE: WON 0x00751f80
+// (protected: struct std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic)
+// TEMPLATE: WON 0x0074d4c0
+// (public: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_str)
+// TEMPLATE: WON 0x00754c60
+// (void __cdecl std::_Construct(struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WON)

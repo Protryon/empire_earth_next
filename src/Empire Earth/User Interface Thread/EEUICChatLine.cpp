@@ -14,6 +14,7 @@
 #include "lle/User Interface.h"
 #include "ee/EEUICChatLine.h"
 
+// FUNCTION: EXE 0x657223
 // Creates a chat display line from its controls table entry: bold name and message texts, a hidden timer
 EEUICChatLine::EEUICChatLine(const GERectangle& inRectangle, UIControlsTable& inTable, UIForm* inForm)
     : EEUIRustControl(inTable.GetID(), inRectangle, inForm, inTable.GetFormIndex(), inTable.GetBorderThickness()),
@@ -36,6 +37,14 @@ EEUICChatLine::EEUICChatLine(const GERectangle& inRectangle, UIControlsTable& in
     this->mTimer->Stop();
 }
 
+// FUNCTION: EXE 0x65744c
+// Ignores mouse moves over the chat line
+// (inline in the class)
+
+// SYNTHETIC: EXE 0x657451
+// (the scalar deleting destructor, emitted with the vtable; slot EEUICChatLine+0x0)
+
+// FUNCTION: EXE 0x65746d
 // Destroys the chat line, its texts and its timer
 EEUICChatLine::~EEUICChatLine()
 {
@@ -46,6 +55,7 @@ EEUICChatLine::~EEUICChatLine()
     delete this->mTimer;
 }
 
+// FUNCTION: EXE 0x6574d5
 // Shows another chat line's name, message, colour and remaining time on this line
 unsigned long EEUICChatLine::Copy(const EEUICChatLine& inLine)
 {
@@ -53,6 +63,10 @@ unsigned long EEUICChatLine::Copy(const EEUICChatLine& inLine)
     return this->Display(inLine.mName->GetFgColor(), inLine.mName->GetText(), inLine.mMessage->GetText(), theTime);
 }
 
+// FUNCTION: EXE 0x65750e
+// FUNCTION: EXE 0x6576f5
+// FUNCTION: EXE 0x65781b
+// FUNCTION: EXE 0x65782c
 // CopyData, Display, DrawPolygons, DrawTextA: ee_screens chat_line.rs over the texts' and timer's ops below
 int64_t EEUICChatLine::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {

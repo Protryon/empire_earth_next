@@ -29,6 +29,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
+// FUNCTION: EXE 0x4b70cc
 // Creates a calamity of the class on the target unit for the caster, located at the target's tile corner, and resets
 // it for its start
 EECalamity* EEUnitCalamityClass::CreateCalamity(EEUnit* inTargetUnit, EEUnit* inCasterUnit)
@@ -40,6 +41,7 @@ EECalamity* EEUnitCalamityClass::CreateCalamity(EEUnit* inTargetUnit, EEUnit* in
     return theCalamity;
 }
 
+// FUNCTION: EXE 0x4b712a
 // Returns the id of the unit under the mouse, -1 if none
 long EEUnitCalamityClass::GetDefaultTarget(GE3DPoint&, unsigned long, unsigned long, bool)
 {
@@ -52,6 +54,7 @@ long EEUnitCalamityClass::GetDefaultTarget(GE3DPoint&, unsigned long, unsigned l
     return theUnitID;
 }
 
+// FUNCTION: EXE 0x4b7157 (and EECCSpecialAttack's override 0xb32da)
 // Checks the base cast rules (the special attack counting status 2 as allowed), then refuses (1) unless the target
 // unit exists and is a valid target
 long EEUnitCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX,
@@ -65,6 +68,7 @@ long EEUnitCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation
                              EECalamityCanCastAt(this, theMode, inUnit, inX, inY, inCheck, inTargetUnit));
 }
 
+// ICF-FOLDED: EXE 0x63c6cd
 // (`return 3`)
 long EEUnitCalamityClass::GetTargetKind()
 {

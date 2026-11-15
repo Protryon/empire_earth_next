@@ -46,9 +46,9 @@ public:
     unsigned long GetLineCount() const;
     unsigned long GetNumberLinesDisplayed() const;
     const UIScrollBar* GetScrollBar() const;   // NULL while it is marked removed
-    virtual bool GetTabable() const { return false; }
+    virtual bool GetTabable() const { return false; }                // 0x1005efa4 (ICF)
     const UWideString& GetText(unsigned long inLine) const;
-    long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
+    long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }  // 0x1005f584
     virtual long MouseWheelTurned(long inDelta);
     virtual void RecomputeDisplayRange();   // slot 0x8c
     bool ScrollBarExists() const;
@@ -59,7 +59,8 @@ public:
     void SetStartingDisplayLine(unsigned long inLine);
     void SetScrollBarBgOpacity(float inOpacity);
     void SetScrollBarBgColor(const GEColor& inColor);
-    void SetText(const UWideString& inText) { this->SetText(inText, true); }
+    void SetText(const UWideString& inText) { this->SetText(inText, true); }  // 0x1005f617
+    // 0x1005f625
     void SetText(long inValue)
     {
         char theBuffer[50];
@@ -67,7 +68,7 @@ public:
         UWideString theText(theBuffer);
         this->SetText(theText, true);
     }
-    virtual long UpdateKeyboard() { return kErrorFailed; }
+    virtual long UpdateKeyboard() { return kErrorFailed; }   // 0x10004652 (ICF)
 protected:
     virtual void CheckScrollBar();          // slot 0x90
     virtual long MouseLButtonDown();

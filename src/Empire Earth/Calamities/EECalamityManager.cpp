@@ -32,11 +32,19 @@
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
 #include "ee/EECalamityCapture.h"
+// FUNCTION: EXE 0x4adf97
 // Creates the calamity manager with no classes or active calamities
 EECalamityManager::EECalamityManager()
 {
 }
 
+// SYNTHETIC: EXE 0x4adfcd
+// (the scalar deleting destructor, emitted with the vtable)
+
+// SYNTHETIC: EXE 0x4adfe9
+// (the implicit destructor: no vptr store of its own; emitted after its first user, the ??_G)
+
+// FUNCTION: EXE 0x4ae00b
 // Stops and deletes every active calamity (asserts that all were deleted)
 void EECalamityManager::DestroyCalamities()
 {
@@ -65,6 +73,7 @@ EECalamityClass* NewCalamityClass(long inClassEnum)
 
 }   // namespace
 
+// FUNCTION: EXE 0x4ae070
 // Reads the calamity class records from the file and creates and initializes the class each one names (NULL for
 // unknown kinds); returns the record-count read result
 long EECalamityManager::LoadCalamityClasses(FSFileSpec* inFile)
@@ -90,6 +99,7 @@ long EECalamityManager::LoadCalamityClasses(FSFileSpec* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4ae526
 // Starts a global calamity of the class for the caster unit and player; false if the class or caster does not exist
 bool EECalamityManager::CreateGlobalCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID,
                                              unsigned long inPlayerNumber)
@@ -110,6 +120,10 @@ bool EECalamityManager::CreateGlobalCalamity(unsigned long inClassEnum, unsigned
     return theResult;
 }
 
+// EEGlobalCalamityClass::CreateCalamity (inline, refused here; first emitted after its only caller):
+// TEMPLATE: EXE 0x4ae578
+
+// FUNCTION: EXE 0x4ae5ac
 // Starts a location calamity at the centre of the tile for the caster (or none, id -1) and player; false if the class,
 // tile or caster does not exist
 bool EECalamityManager::CreateLocationCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID,
@@ -136,6 +150,7 @@ bool EECalamityManager::CreateLocationCalamity(unsigned long inClassEnum, unsign
     return theResult;
 }
 
+// FUNCTION: EXE 0x4ae66b
 // Starts a unit calamity on the target unit for the caster (or none, id -1) and player; false if the class, target or
 // caster does not exist
 bool EECalamityManager::CreateUnitCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID,
@@ -158,6 +173,7 @@ bool EECalamityManager::CreateUnitCalamity(unsigned long inClassEnum, unsigned l
     return theResult;
 }
 
+// FUNCTION: EXE 0x4ae6df
 // Writes every active calamity to the out-of-sync dump
 void EECalamityManager::DumpOutOfSynch(FILE* inFile)
 {
@@ -167,12 +183,14 @@ void EECalamityManager::DumpOutOfSynch(FILE* inFile)
         (*theIterator)->DumpOutOfSynch(inFile);
 }
 
+// FUNCTION: EXE 0x4ae711
 // Returns the list of active calamities
 void EECalamityManager::GetCalamities(std::vector<EECalamity*>*& outCalamities)
 {
     outCalamities = &this->mCalamities;
 }
 
+// FUNCTION: EXE 0x4ae71d
 // Returns the calamity class of the given kind, NULL if out of range
 EECalamityClass* EECalamityManager::GetCalamityClass(const EECalamityEnum& inClassEnum) const
 {
@@ -182,6 +200,7 @@ EECalamityClass* EECalamityManager::GetCalamityClass(const EECalamityEnum& inCla
     return theClass;
 }
 
+// FUNCTION: EXE 0x4ae749
 // Finds the calamity's index among the active calamities; false if it is not active
 bool EECalamityManager::GetCalamityIndex(EECalamity* inCalamity, long& outIndex)
 {
@@ -197,6 +216,7 @@ bool EECalamityManager::GetCalamityIndex(EECalamity* inCalamity, long& outIndex)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4ae774
 // Returns the calamity class of the given kind, NULL if out of range
 EECalamityClass* EECalamityManager::GetCalamityClass(unsigned long inClassEnum) const
 {
@@ -206,6 +226,7 @@ EECalamityClass* EECalamityManager::GetCalamityClass(unsigned long inClassEnum) 
     return theClass;
 }
 
+// FUNCTION: EXE 0x4ae79a
 // Finds the class's index among the calamity classes; false if it is not there
 bool EECalamityManager::GetCalamityClassIndex(EECalamityClass* inClass, long& outIndex)
 {
@@ -221,6 +242,7 @@ bool EECalamityManager::GetCalamityClassIndex(EECalamityClass* inClass, long& ou
     return theResult;
 }
 
+// FUNCTION: EXE 0x4ae7c5
 // Returns the class's target kind (global, location or unit); false if the class does not exist
 bool EECalamityManager::GetCalamityType(EECalamityEnum inClassEnum, long& outType)
 {
@@ -233,6 +255,7 @@ bool EECalamityManager::GetCalamityType(EECalamityEnum inClassEnum, long& outTyp
     return theResult;
 }
 
+// FUNCTION: EXE 0x4ae7eb
 // Returns the sum of the active calamities' sync checksums
 long EECalamityManager::GetOutOfSynchChecksum()
 {
@@ -243,6 +266,7 @@ long EECalamityManager::GetOutOfSynchChecksum()
     return theChecksum;
 }
 
+// FUNCTION: EXE 0x4ae80e
 // Tells whether a calamity of the given kind is active
 bool EECalamityManager::IsCalamityActive(long inClassEnum)
 {
@@ -253,6 +277,7 @@ bool EECalamityManager::IsCalamityActive(long inClassEnum)
     return false;
 }
 
+// FUNCTION: EXE 0x4ae834
 // Loads the media of the calamity class of the given kind for the player
 void EECalamityManager::LoadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum)
 {
@@ -263,6 +288,7 @@ void EECalamityManager::LoadMedia(EEPlayer* inPlayer, const EECalamityEnum& inCl
         theClass->LoadMedia(inPlayer, false);
 }
 
+// FUNCTION: EXE 0x4ae869
 // Replaces the active calamities with the loaded ones; saves before 0.30 drop kinds 7, 8 and 10 (not deleted)
 void EECalamityManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion,
                                 std::vector<EECalamity*>& inCalamities)
@@ -278,6 +304,7 @@ void EECalamityManager::Restore(unsigned long inMajorVersion, unsigned long inMi
         }
 }
 
+// FUNCTION: EXE 0x4ae8bc
 // Starts the calamity and keeps it active if it started; one that fails to start is deleted
 void EECalamityManager::AddCalamity(EECalamity* inCalamity)
 {
@@ -297,6 +324,7 @@ void EECalamityManager::AddCalamity(EECalamity* inCalamity)
         delete inCalamity;  // releases its caster/target references and the media its ctor loaded
 }
 
+// FUNCTION: EXE 0x4ae8e1
 // Stops and deletes the active calamity; returns the iterator to the next one
 std::vector<EECalamity*>::iterator EECalamityManager::DestroyCalamity(std::vector<EECalamity*>::iterator inCalamity)
 {
@@ -305,6 +333,7 @@ std::vector<EECalamity*>::iterator EECalamityManager::DestroyCalamity(std::vecto
     return this->mCalamities.erase(inCalamity);
 }
 
+// FUNCTION: EXE 0x4ae921
 // Destroys the active calamities and deletes every calamity class (asserts that all were deleted)
 void EECalamityManager::DestroyCalamityClasses(bool inShutdown)
 {
@@ -314,6 +343,7 @@ void EECalamityManager::DestroyCalamityClasses(bool inShutdown)
     ESVERIFY_AT(theNumCalamityClassesDeleted == theNumCalamityClasses, 690);
 }
 
+// FUNCTION: EXE 0x4ae966
 // Unloads the media of the calamity class of the given kind for the player
 void EECalamityManager::UnloadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum)
 {
@@ -324,6 +354,7 @@ void EECalamityManager::UnloadMedia(EEPlayer* inPlayer, const EECalamityEnum& in
         theClass->UnloadMedia(inPlayer);
 }
 
+// FUNCTION: EXE 0x4ae999
 // Clears every player's earthquake-shaken flag, updates each active calamity and destroys those that report 7 (done)
 void EECalamityManager::Update(float inElapsedTime)
 {
@@ -352,6 +383,7 @@ void EECalamityManager::Update(float inElapsedTime)
     }
 }
 
+// FUNCTION: EXE 0x4aeb83
 // Creates a unit of the class at the transformation for the player (-1: the calamity's player); NULL if the class
 // does not exist
 // cdecl; the hurricane and volcano calamities call it (provisional name). It sits after the unit's template COMDATs
@@ -368,3 +400,11 @@ EEUnit* EECreateCalamityUnit(EECalamity* inCalamity, long inUnitClass, GETransfo
         theUnit = theClass->CreateUnitAt(inTransformation, thePlayerNumber, 0, NULL);
     return theUnit;
 }
+
+// Compiler-generated for this unit (template COMDATs, in the original's order):
+// TEMPLATE: EXE 0x4aea04
+// TEMPLATE: EXE 0x4aea30
+// TEMPLATE: EXE 0x4aea54
+// TEMPLATE: EXE 0x4aea85
+// TEMPLATE: EXE 0x4aeaec
+// TEMPLATE: EXE 0x4aeb53

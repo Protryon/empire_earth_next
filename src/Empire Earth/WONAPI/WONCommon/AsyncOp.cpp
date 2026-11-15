@@ -337,6 +337,32 @@ const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
 }
 
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x0069efe0
+// (public: virtual void * __thiscall WONAPI::AsyncOp::`scalar deleting destructor'(unsigned int)    [??_GAsyncOp@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x0069f070
+// (public: __thiscall WONAPI::CriticalSection::~CriticalSection(void)    [??1CriticalSection@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x0069f2c0
+// (public: __thiscall WONAPI::AutoCrit::~AutoCrit(void)    [??1AutoCrit@WONAPI@@QAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a8770
+// (public: class WONAPI::CompletionBase<class WONAPI::SmartPtr<class WONAPI::AsyncOp> > * __thiscall WONAPI::SmartPtr<class WONAPI::CompletionBase<class )
+// TEMPLATE: WON 0x006a8910
+// (public: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct std::_Mmapk<unsign)
+// TEMPLATE: WON 0x006a8e00
+// (public: virtual __thiscall std::out_of_range::~out_of_range(void))
+// TEMPLATE: WON 0x006a8f10
+// (public: struct std::pair<class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct s)
+// TEMPLATE: WON 0x006a9490
+// (protected: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct std::_Mmapk<uns)
+// TEMPLATE: WON 0x006a9790
+// (public: virtual __thiscall std::length_error::~length_error(void))
+// TEMPLATE: WON 0x006aa210
+// (void __cdecl std::_Construct(struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> > *,struct std::pair<unsigned long co)
+// TEMPLATE: WON 0x00769eb0
+// (protected: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::AsyncOp> >,struct std::_Mmapk<uns)
+
 // ---- the C++ side of the Rust thread, timer thread and op container (ee_won thread.rs): their calls into the
 // objects they hold (Thread.cpp, TimerThread.cpp and AsyncOpContainer.cpp are deleted)
 namespace WONAPI {

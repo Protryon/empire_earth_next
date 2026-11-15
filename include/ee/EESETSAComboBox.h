@@ -12,7 +12,7 @@ class EESETSAComboBox : public UIComboBox {
 public:
     EESETSAComboBox(unsigned long inID, unsigned long inTextBoxType, const std::vector<UWideString>& inStrings, GEFont* inFont,
                     const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inMaxListBoxHeight, UIForm* inForm,
-                    unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness);
+                    unsigned long inIndex, unsigned long inMaxChars, unsigned long inBorderThickness);  // 0x191840
 protected:
     virtual void ChangeSelection();         // +0x8c 0x1918b8
 };

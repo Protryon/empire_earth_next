@@ -15,6 +15,7 @@
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
+// FUNCTION: WON 0x0078cd60
 // Handles the input box configuration keys (text, password char, selection, max chars, char width, backgrounds,
 // icon, colours, select-on-focus, history size, cursor blink rate); passes other keys to the base configuration
 bool InputBoxConfig::Virtual24(const std::string& inInstruction)

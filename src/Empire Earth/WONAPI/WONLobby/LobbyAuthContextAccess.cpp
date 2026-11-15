@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
 namespace WONAPI {
+// FUNCTION: WON 0x0075b490
 // Returns the login context; with CRC checks on, first gives it the files to hash for the community (once)
 AuthContext* GetLobbyAuthContext()
 {

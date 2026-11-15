@@ -26,11 +26,13 @@ UResourceFile::UResourceFile(HINSTANCE inModule)
     this->mLanguage = theLanguage != 0 ? theLanguage : UGetOSLanguage();
 }
 
+// FUNCTION: LLE 0x1008280b
 // Destroys the resource file (the module is the game's own: mOwnsModule is always false)
 UResourceFile::~UResourceFile()
 {
 }
 
+// FUNCTION: LLE 0x10082821
 // Looks a string up by id (up to 4500 bytes, as LoadStringA's buffer); native error when it is missing
 long UResourceFile::GetString(long inID, UWideString& outString)
 {

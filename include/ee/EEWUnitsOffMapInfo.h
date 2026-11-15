@@ -12,14 +12,14 @@ class RTSUnit;
 
 class EEWUnitsOffMapInfo {
 public:
-    EEWUnitsOffMapInfo();
+    EEWUnitsOffMapInfo();                   // 0x161c55
     virtual ~EEWUnitsOffMapInfo();          // +0x00 0x161c8b (??_G 0x161c6f)
 
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    void ReleaseUnit();
-    long RepairPointers(unsigned long inFirst, unsigned long inSecond);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    void SetUnit(RTSUnit* inUnit);
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x161c96
+    void ReleaseUnit();                     // 0x161ce7
+    long RepairPointers(unsigned long inFirst, unsigned long inSecond);   // 0x161cfc
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x161d22
+    void SetUnit(RTSUnit* inUnit);          // 0x161d84
 
     EETileLocation mLocation;               // +0x04 (saved)
     RTSUnit* mUnit;                         // +0x0c (a reference; its id while loading)

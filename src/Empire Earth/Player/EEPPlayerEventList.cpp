@@ -34,6 +34,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
 
+// FUNCTION: EXE 0x56e5b9
 // Creates an empty player event list and loads its alert sounds
 EEPPlayerEventList::EEPPlayerEventList()
     : mPingTimeLeft(0.0f)
@@ -49,6 +50,10 @@ EEPPlayerEventList::EEPPlayerEventList()
     this->LoadSounds();
 }
 
+// SYNTHETIC: EXE 0x56e606
+// (the scalar deleting destructor, emitted with the vtable; slot EEPPlayerEventList+0x0)
+
+// FUNCTION: EXE 0x56e622
 // Destroys the event list: deletes every event, unloads the alert sounds and releases the playing one
 EEPPlayerEventList::~EEPPlayerEventList()
 {
@@ -59,6 +64,7 @@ EEPPlayerEventList::~EEPPlayerEventList()
     this->ReleaseSound();
 }
 
+// FUNCTION: EXE 0x56e689
 // Releases the alert sound instance playing
 void EEPPlayerEventList::ReleaseSound()
 {
@@ -67,6 +73,7 @@ void EEPPlayerEventList::ReleaseSound()
     this->mSound = NULL;
 }
 
+// FUNCTION: EXE 0x56e6ad
 // Creates an event, activates it for the player and puts it at the front of the list
 EEPPlayerEvent* EEPPlayerEventList::MakeEvent(const EETileLocation& inTile, const EETileLocation& inFrom, long inType,
                                                 EEPlayer* inPlayer, float inDuration, long inTextID)
@@ -77,6 +84,7 @@ EEPPlayerEvent* EEPPlayerEventList::MakeEvent(const EETileLocation& inTile, cons
     return theEvent;
 }
 
+// FUNCTION: EXE 0x56e702
 // Adds a player event at a location without a source location
 void EEPPlayerEventList::AddEvent(const EETileLocation& inTile, long inType, EEPlayer* inPlayer, long inTextID, bool inForceNew)
 {
@@ -84,6 +92,7 @@ void EEPPlayerEventList::AddEvent(const EETileLocation& inTile, long inType, EEP
     this->AddPlayerEvent(inTile, theNone, inType, inPlayer, inTextID, inForceNew);
 }
 
+// FUNCTION: EXE 0x56e72e
 // Adds a player event; an event of the same type within ~10 tiles is replaced only once it has expired, otherwise
 // the new one is kept silently; a new alert plays its sound and pings the mini map
 void EEPPlayerEventList::AddPlayerEvent(const EETileLocation& inTile, const EETileLocation& inFrom, long inType,
@@ -121,6 +130,7 @@ void EEPPlayerEventList::AddPlayerEvent(const EETileLocation& inTile, const EETi
     this->Announce(inPlayer, theEvent);
 }
 
+// FUNCTION: EXE 0x56e85c
 // Removes expired events from the end of the list while it holds more than 15
 void EEPPlayerEventList::TrimEvents(EEPlayer* inPlayer)
 {
@@ -138,6 +148,7 @@ void EEPPlayerEventList::TrimEvents(EEPlayer* inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x56e8bc
 // Removes and deactivates every event
 void EEPPlayerEventList::Clear(EEPlayer* inPlayer)
 {
@@ -150,6 +161,7 @@ void EEPPlayerEventList::Clear(EEPlayer* inPlayer)
     this->mCurrent = NULL;
 }
 
+// FUNCTION: EXE 0x56e90a
 // Activates every event for the player
 void EEPPlayerEventList::ShowEvents(EEPlayer* inPlayer)
 {
@@ -159,6 +171,7 @@ void EEPPlayerEventList::ShowEvents(EEPlayer* inPlayer)
         (*it)->Activate(inPlayer);
 }
 
+// FUNCTION: EXE 0x56e94e
 // Returns the event to jump to next: the current one first, then the next of the 15 latest in turn
 EEPPlayerEvent* EEPPlayerEventList::GetNextEvent()
 {
@@ -178,6 +191,7 @@ EEPPlayerEvent* EEPPlayerEventList::GetNextEvent()
     return theEvent;
 }
 
+// FUNCTION: EXE 0x56e9a3
 // Reads the player's events from the saved game
 long EEPPlayerEventList::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -194,6 +208,7 @@ long EEPPlayerEventList::Load(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
+// FUNCTION: EXE 0x56ea2a
 // Loads the under-attack, garrison and flare alert sounds (and sound 0x7d0 twice)
 void EEPPlayerEventList::LoadSounds()
 {
@@ -214,6 +229,7 @@ void EEPPlayerEventList::LoadSounds()
         this->mSound34->LoadMedia();
 }
 
+// FUNCTION: EXE 0x56eaa8
 // For the local player, plays an event's alert sound unless one is playing, then pings the mini map (attack,
 // flare) or shows the event's text in the chat log (garrison)
 void EEPPlayerEventList::Announce(EEPlayer* inPlayer, EEPPlayerEvent* inEvent)
@@ -251,6 +267,7 @@ void EEPPlayerEventList::Announce(EEPlayer* inPlayer, EEPPlayerEvent* inEvent)
     }
 }
 
+// FUNCTION: EXE 0x56ebb1
 // Remembers the alert sound instance now playing, releasing the previous one
 void EEPPlayerEventList::SetSound(SESMInstanceNode* inSound)
 {
@@ -260,6 +277,7 @@ void EEPPlayerEventList::SetSound(SESMInstanceNode* inSound)
         inSound->Reference();
 }
 
+// FUNCTION: EXE 0x56ebcb
 // Pings an event's source on the mini map for 10 s (20 s for a flare)
 void EEPPlayerEventList::Ping(EEPPlayerEvent* inEvent)
 {
@@ -274,6 +292,7 @@ void EEPPlayerEventList::Ping(EEPPlayerEvent* inEvent)
     this->mPingTimeLeft = theTime;
 }
 
+// FUNCTION: EXE 0x56ec18
 // Shows the event's text, if any, in the chat log
 void EEPPlayerEventList::ShowText(EEPPlayerEvent* inEvent)
 {
@@ -284,6 +303,7 @@ void EEPPlayerEventList::ShowText(EEPPlayerEvent* inEvent)
     }
 }
 
+// FUNCTION: EXE 0x56ec61
 // Removes an event from the list and deletes it, deactivating it first when asked
 void EEPPlayerEventList::RemoveEvent(std::deque<EEPPlayerEvent*>::iterator inWhere, EEPlayer* inPlayer, bool inDeactivate)
 {
@@ -294,6 +314,7 @@ void EEPPlayerEventList::RemoveEvent(std::deque<EEPPlayerEvent*>::iterator inWhe
     delete theEvent;
 }
 
+// FUNCTION: EXE 0x56ecb8
 // Deactivates every active event for the player
 void EEPPlayerEventList::HideEvents(EEPlayer* inPlayer)
 {
@@ -305,6 +326,7 @@ void EEPPlayerEventList::HideEvents(EEPlayer* inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x56ed0c
 // Repairs the events' pointers after a load and reactivates the active ones; returns the first error
 long EEPPlayerEventList::RepairEvents(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -317,6 +339,7 @@ long EEPPlayerEventList::RepairEvents(EEPlayer* inPlayer, unsigned long inMajorV
     return theResult;
 }
 
+// FUNCTION: EXE 0x56eda4
 // Writes the player's events to the saved game; returns the first write error
 long EEPPlayerEventList::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -328,6 +351,7 @@ long EEPPlayerEventList::Save(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
+// FUNCTION: EXE 0x56ee0b
 // Stops the mini map ping when the player is the local player
 void EEPPlayerEventList::StopPing(EEPlayer* inPlayer)
 {
@@ -335,6 +359,7 @@ void EEPPlayerEventList::StopPing(EEPlayer* inPlayer)
         gMiniMap->mB12185 = false;
 }
 
+// FUNCTION: EXE 0x56ee2c
 // Unloads the alert sounds
 void EEPPlayerEventList::UnloadSounds()
 {
@@ -350,6 +375,7 @@ void EEPPlayerEventList::UnloadSounds()
         this->mSound34->UnloadMedia();
 }
 
+// FUNCTION: EXE 0x56ee6d
 // Counts down the mini map ping and every event, then trims expired events
 void EEPPlayerEventList::TickEvents(EEPlayer* inPlayer, float inElapsed)
 {
@@ -362,3 +388,7 @@ void EEPPlayerEventList::TickEvents(EEPlayer* inPlayer, float inElapsed)
     }
     this->TrimEvents(inPlayer);
 }
+
+// FUNCTION: EXE 0x56eee4
+// Returns the last event of the list (std::deque::back)
+// (template COMDAT; emitted by TrimEvents/Clear)

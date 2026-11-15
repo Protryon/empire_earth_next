@@ -7,16 +7,19 @@ MD5::MD5()
 {
 	ee_won_md5_reset(&this->mState);
 }
+// FUNCTION: WON 0x006a26c0
 // Resets the digest to the MD5 initial state with no bytes counted
 void MD5::Reset()
 {
 	ee_won_md5_reset(&this->mState);
 }
+// FUNCTION: WON 0x006a26f0
 // Adds the given bytes to the digest
 void MD5::Update(const void *theBuf, unsigned long len)
 {
 	ee_won_md5_update(&this->mState,static_cast<const uint8_t*>(theBuf),len);
 }
+// FUNCTION: WON 0x006a27d0
 // Pads the data, writes the 16-byte digest and resets
 void MD5::Digest(unsigned char digest[16])
 {

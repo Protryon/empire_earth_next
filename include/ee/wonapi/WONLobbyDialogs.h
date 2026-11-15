@@ -83,8 +83,8 @@ public:
 // Credits (its two buttons, the scrolling text it holds and places, AddLine's widening).
 class ScrollingTextComponent : public Component {
 public:
-    ScrollingTextComponent();
-    virtual ~ScrollingTextComponent();
+    ScrollingTextComponent(); // 0x7f6de0
+    virtual ~ScrollingTextComponent(); // 0x7f6e90
     virtual void Paint(Graphics& inGraphics) { this->SCall(EeWonScrollTextCall::Paint, (intptr_t)&inGraphics); }
     virtual bool TimerEvent(int inDelta) { return this->SCall(EeWonScrollTextCall::Timer, inDelta) != 0; }
     void Start() { this->SCall(EeWonScrollTextCall::Start); }
@@ -217,7 +217,7 @@ class CreditsDialogConfig : public DialogConfig {
 public:
     static ComponentConfig* CfgFactory() { return new CreditsDialogConfig; } // inline as in the SDK (0x765260)
     virtual bool Virtual24(const std::string& inInstruction); // 0x7f7780; handles the ADDLINE instruction
-    virtual void SetComponent(Component* inComponent);
+    virtual void SetComponent(Component* inComponent); // 0x78f100
     CreditsDialog* mCredits; // 0x9c, not owned
 };
 

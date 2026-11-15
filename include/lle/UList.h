@@ -25,7 +25,7 @@ public:
     UList() : mHead(NULL), mCount(0) {}
     ~UList() { this->Clear(); }
 
-    void InsertAfter(UListNode<T>* inPrevious, const T& inData);
+    void InsertAfter(UListNode<T>* inPrevious, const T& inData);   // LLE 0x10055aa3 (provisional names)
     void Remove(UListNode<T>* inNode);
     void Clear();
     void AddHead(const T& inData);              // LLE 0x1001e135 (GELOD lists; provisional name, gemodel)

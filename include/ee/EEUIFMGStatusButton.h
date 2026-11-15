@@ -15,7 +15,7 @@ class EEUIFMGStatusButton : public UIButton {
 public:
     // 0x26de97 (ret 0xc; the user-defined control factory)
     EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable);
-    virtual ~EEUIFMGStatusButton();
+    virtual ~EEUIFMGStatusButton();         // 0x26e225 (??_G 0x26e209)
     virtual void ButtonUp();                // +0x8c 0x26e274
     void ReleaseButton();                   // 0x26e71d (the main group hides every button, then calls it)
     virtual long CopyData();                // +0x14 0x26e734

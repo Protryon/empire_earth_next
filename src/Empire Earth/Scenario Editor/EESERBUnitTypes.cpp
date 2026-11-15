@@ -153,6 +153,7 @@ GEBitmap* EESEUIBDiplomacy::sPressedBitmaps[2];
 extern FSPath* gCivilizationDataPath;
 extern UString gSECivilizationExtension;
 
+// FUNCTION: EXE 0x573218
 // Creates one of the tech tree page's unit-type radio buttons (Units, Buildings, Heroes, Technologies)
 EESERBUnitTypes::EESERBUnitTypes(unsigned long inID, const UWideString& inText, GEFont* inFont,
                                  const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight,
@@ -163,6 +164,10 @@ EESERBUnitTypes::EESERBUnitTypes(unsigned long inID, const UWideString& inText, 
 {
 }
 
+// SYNTHETIC: EXE 0x573295
+// (the scalar deleting destructor, emitted with the vtable; slot EESERBUnitTypes+0x0, stores EESERBUnitTypes vtable)
+
+// FUNCTION: EXE 0x5732b8
 // Checks the unit-type button and refills the tech tree page's two tech lists for that type
 void EESERBUnitTypes::Check()
 {
@@ -170,6 +175,7 @@ void EESERBUnitTypes::Check()
     gUIManager->mScenarioEditorForm->GetPlayerScreen()->FillTechLists();
 }
 
+// FUNCTION: EXE 0x5732d7
 // Applies a new max-players choice: sets the player tab's player count to the selection + 2, then selects it
 void EESECBMaxPlayer::ChangeSelection()
 {
@@ -194,6 +200,7 @@ GEFont* gSeplScreenFont;
 UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
                             unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
+// FUNCTION: EXE 0x573313
 // Creates the player tab: player page, tech tree page and game options page controls (editor_players.rs)
 EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont,
                                    UIComboBox* inPlayerSelection)
@@ -204,6 +211,7 @@ EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFon
     ioIndex = theIndex;
 }
 
+// FUNCTION: EXE 0x5733bf
 // Destroys the player tab, deleting every control it created (editor_players.rs)
 EESEPlayerScreen::~EESEPlayerScreen()
 {
@@ -215,6 +223,7 @@ void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
     ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)inCount, 0);
 }
 
+// FUNCTION: EXE 0x5737a3
 // Performs the action: sets gMaxPlayers to the new player count
 void EESEAChangeWorldPlayerCount::Virtual4()
 {
@@ -257,6 +266,7 @@ UIComboBox* EESEPlayerScreen::GetRowEpochs(unsigned long inRow, bool inEnd)
         this->mRust, (uint32_t)inRow, inEnd ? EE_SCREENS_SEPL_ROW_END_EPOCH : EE_SCREENS_SEPL_ROW_START_EPOCH));
 }
 
+// FUNCTION: EXE 0x575001
 // Creates the max-players combo box, 20 pixels high
 EESECBMaxPlayer::EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType,
                                  const std::vector<UWideString>& inStrings, GEFont* inFont,
@@ -268,6 +278,10 @@ EESECBMaxPlayer::EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType
 {
 }
 
+// SYNTHETIC: EXE 0x575079
+// (the scalar deleting destructor, emitted with the vtable; slot EESECBMaxPlayer+0x0, stores EESECBMaxPlayer vtable)
+
+// FUNCTION: EXE 0x576818
 // Creates a 23x23 diplomacy grid button, starting as enemies (state 1)
 EESEUIBDiplomacy::EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocation, UIForm* inForm,
                                    unsigned long inIndex, unsigned long inBorderThickness)
@@ -277,6 +291,10 @@ EESEUIBDiplomacy::EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocati
     this->mState = kButtonStateFocused;
 }
 
+// SYNTHETIC: EXE 0x576883
+// (the scalar deleting destructor, emitted with the vtable; slot EESEUIBDiplomacy+0x0, stores EESEUIBDiplomacy vtable)
+
+// FUNCTION: EXE 0x5768a6
 // Cuts the diplomacy buttons' normal, focused and pressed bitmaps (allies, enemies) from the editor's button texture
 void EESEUIBDiplomacy::LoadBitmaps(EEUIFScenarioEditor* inEditor)
 {
@@ -320,6 +338,7 @@ void EESEUIBDiplomacy::LoadBitmaps(EEUIFScenarioEditor* inEditor)
 }
 
 
+// FUNCTION: EXE 0x576b18
 // Releases the diplomacy buttons' shared bitmaps
 void EESEUIBDiplomacy::ReleaseBitmaps()
 {
@@ -330,6 +349,7 @@ void EESEUIBDiplomacy::ReleaseBitmaps()
     }
 }
 
+// FUNCTION: EXE 0x576b49
 // Shows the bitmaps and help text (players currently allies / enemies) of the button's state
 void EESEUIBDiplomacy::UpdateBitmaps()
 {
@@ -346,6 +366,7 @@ void EESEUIBDiplomacy::UpdateBitmaps()
     }
 }
 
+// FUNCTION: EXE 0x576baf
 // Toggles the button between allies and enemies, updating its bitmaps and the form's help text
 void EESEUIBDiplomacy::ButtonUp()
 {

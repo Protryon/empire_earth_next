@@ -157,6 +157,7 @@ static bool EERMIsCliff(const std::vector<std::vector<unsigned long> >& inTiles,
 // the generator list's string ids: the terrain named "Space" (0x5655f0; provisional name)
 unsigned long gSpaceTerrain;
 
+// FUNCTION: EXE 0x683c18
 // Creates a random map for a generator PIM, the game options and the players, binding the generator's entry points
 EERandomMap::EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vector<EEPlayer*>* inPlayers)
     : mGamePlayers(inPlayers), mOptions(inOptions)
@@ -175,23 +176,36 @@ EERandomMap::EERandomMap(PIMModule* inModule, EEGameOptions* inOptions, std::vec
     this->mSetRandomMapValues = (EERMPIMSetValuesFunction)inModule->GetEntry("EERMPIMSetRandomMapValues");
 }
 
+// SYNTHETIC: EXE 0x683dea
+// (the scalar deleting destructor, emitted with the vtable)
+
+// SYNTHETIC: EXE 0x683e06
+// (EERandomMapData's implicit default constructor, out of line after its first user)
+
+// FUNCTION: EXE 0x684025
 // Destroys the random map (members only)
 EERandomMap::~EERandomMap()
 {
 }
 
+// SYNTHETIC: EXE 0x684033
+// (EERandomMapData's implicit destructor)
+
+// FUNCTION: EXE 0x68443b
 // Returns whether a cell of a byte grid (the valid tiles) lies inside the grid and is set
 static bool EERMIsCellSet(const std::vector<std::vector<unsigned char> >& inGrid, unsigned long inX, unsigned long inY)
 {
     return inX < inGrid.size() && inY < inGrid.size() && inGrid[inX][inY] != 0;
 }
 
+// FUNCTION: EXE 0x684477
 // Returns whether a grid cell has no land value (its low 15 bits are clear)
 static bool EERMIsTileFree(const std::vector<std::vector<unsigned long> >& inTiles, unsigned long inX, unsigned long inY)
 {
     return (inTiles[inX][inY] & 0x7fff) == 0;
 }
 
+// FUNCTION: EXE 0x684149
 // On space maps fills empty cells (a disc on Earth and Mars maps, else cells with 5+ land neighbours), then lists the
 // empty valid map cells as the water points
 void EERandomMap::Fn284149()
@@ -243,6 +257,7 @@ void EERandomMap::Fn284149()
     }
 }
 
+// FUNCTION: EXE 0x68449e
 // Runs the generator's steps in order (positions, land and water, heights, terrain, resources, trees, features) with
 // load progress; returns the first step error, or 9 when the players end up cut off
 long EERandomMap::Generate()
@@ -308,6 +323,7 @@ long EERandomMap::Generate()
     return 0;
 }
 
+// FUNCTION: EXE 0x684701
 // Checks that every player's start area is dry, non-space land and that no two players stand closer than
 // kRMMinimumPlayerDistance
 bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap)
@@ -342,6 +358,7 @@ bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap)
     return theResult;
 }
 
+// FUNCTION: EXE 0x6849f2
 // Places each player's start units (citizens up to the player's limit, ring units on random free tiles) and walls,
 // then the herds as nature units; resource units paint their resource terrain under them
 void EERandomMap::PlaceFeatures()
@@ -490,6 +507,7 @@ void EERandomMap::PlaceFeatures()
     }
 }
 
+// FUNCTION: EXE 0x685560
 // Sets up and generates the map from a generator and seed, and returns the player's start point (the centre for 0)
 void EERandomMap::CreateRandomMap(unsigned long inPlayer, unsigned long inGenerator, unsigned long inSeed,
                                   EEMap* inMap, GE3DPoint& outLocation)
@@ -509,6 +527,7 @@ void EERandomMap::CreateRandomMap(unsigned long inPlayer, unsigned long inGenera
     ESDebugOut("EERandomMap::CreateRandomMap processing completed in %6.2f s\n", (TMGetTime() - theStart) * 0.001f);
 }
 
+// FUNCTION: EXE 0x6856e7
 // Groups the players into teams: each player not yet placed starts a team with the later players it is not at war with
 void EERandomMap::CreateTeams()
 {
@@ -538,6 +557,7 @@ void EERandomMap::CreateTeams()
     }
 }
 
+// FUNCTION: EXE 0x685907
 // Adds a player to the team, with an unset position
 void EERMTeam::AddPlayer(long inPlayer)
 {
@@ -545,6 +565,7 @@ void EERMTeam::AddPlayer(long inPlayer)
     this->mPositions.push_back(GE2DPoint());
 }
 
+// FUNCTION: EXE 0x685933
 // Marks which grid points are valid terrain-mesh points, logging the count
 void EERandomMap::CreateValidMap()
 {
@@ -560,6 +581,7 @@ void EERandomMap::CreateValidMap()
     ESDebugOut("EERandomMap::CreateValidMap %ld valid tiles found\n", theCount);
 }
 
+// FUNCTION: EXE 0x6859e7
 // Builds a player's wall along a line: drops cliff and edge tiles, places shaped pieces on free dry tiles and joins
 // the player's fortifications already on the line
 void EERandomMap::PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, const GE2DPoint& inEnd,
@@ -626,6 +648,7 @@ void EERandomMap::PlaceWall(EEUnitClass* inClass, const GE2DPoint& inStart, cons
     EEMakeWallJunctions(theUnits, thePlaced, inPlayer, this->mMap);
 }
 
+// FUNCTION: EXE 0x685d89
 // Runs the generator's height-map filter when the script asks for it; returns its result
 long EERandomMap::FilterHeightMap()
 {
@@ -635,6 +658,7 @@ long EERandomMap::FilterHeightMap()
     return theResult;
 }
 
+// FUNCTION: EXE 0x685d9f
 // Smooths each height toward its neighbours' mean and keeps edge (space maps: empty) cells at sea level, then
 // raises the low corners of tiles straddling the sea level
 void EERandomMap::SmoothHeights()
@@ -719,6 +743,7 @@ void EERandomMap::SmoothHeights()
     }
 }
 
+// FUNCTION: EXE 0x68655a
 // Finds the named generator's PIM and generates the map, retrying with a new seed (11 tries at most) until the players
 // are connected; returns the PIM search status
 long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer*>& inPlayers, unsigned long inPlayer,
@@ -760,18 +785,21 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
     return theResult;
 }
 
+// FUNCTION: EXE 0x686714
 // Returns the number of random-map generators
 unsigned long EERMGetNumberOfGenerators()
 {
     return EERandomMap::sRandomMapGenerators.size();
 }
 
+// FUNCTION: EXE 0x68672f
 // Returns a generator's display name by index
 const UWideString& EERMGetGeneratorDisplayName(unsigned long inIndex)
 {
     return EERandomMap::sRandomMapGenerators[inIndex].mDisplayName;
 }
 
+// FUNCTION: EXE 0x686741
 // Returns the display name of the generator with the given name, or the name itself when none matches
 const UWideString& EERMGetGeneratorDisplayName(const UWideString& inName)
 {
@@ -784,12 +812,14 @@ const UWideString& EERMGetGeneratorDisplayName(const UWideString& inName)
     return inName;
 }
 
+// FUNCTION: EXE 0x6867a8
 // Returns a generator's name by index
 const UWideString& EERMGetGeneratorName(unsigned long inIndex)
 {
     return EERandomMap::sRandomMapGenerators[inIndex].mName;
 }
 
+// FUNCTION: EXE 0x6867b6
 // Finds a generator by name and returns its index; returns 3 when there is none
 long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex)
 {
@@ -804,6 +834,7 @@ long EERMFindGenerator(const UWideString& inName, unsigned long& outIndex)
     return theResult;
 }
 
+// FUNCTION: EXE 0x686804
 // Lists the random-map generators: each .rmv script naming an installed rmap PIM, with its string-table display name,
 // sorted; asserts that both exist
 long EERandomMap::Initialize(const FSFileSpec& inDirectory)
@@ -874,6 +905,13 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
     return 0;
 }
 
+// SYNTHETIC: EXE 0x686d4f
+// (EERMGenerator's implicit default constructor)
+
+// SYNTHETIC: EXE 0x686d6e
+// (EERMGenerator's implicit destructor)
+
+// FUNCTION: EXE 0x686d8d
 // Fills the generator state from the game: seeds, map dimensions and size class, players, start epoch, and the unit,
 // terrain and cliff names (spaces removed) the scripts refer to
 void EERandomMap::InitializeValues(unsigned long inSeed)
@@ -962,6 +1000,7 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
     }
 }
 
+// FUNCTION: EXE 0x6871fa
 // Sizes the generator grids to the power of two above the map (64 to 1024), resets them to the initial elevation and
 // sets up the player, neutral and moon rings
 void EERandomMap::CreateGrids()
@@ -1026,6 +1065,7 @@ void EERandomMap::CreateGrids()
     this->mData.mMoonRing.mMinRadius = (this->mData.mHalfMapSize - this->mData.mRing.mMaxRadius) * 0.5f + this->mData.mRing.mMaxRadius;
 }
 
+// FUNCTION: EXE 0x687636
 // Claims the grid cells of every player's start units and walls, and of every cliff tile
 void EERandomMap::MarkFeatures()
 {
@@ -1065,6 +1105,7 @@ void EERandomMap::MarkFeatures()
     }
 }
 
+// FUNCTION: EXE 0x687a3f
 // Marks a wall line's tiles as land and claimed on the grid
 void EERandomMap::MarkLine(const GE2DPoint& inStart, const GE2DPoint& inEnd)
 {
@@ -1097,6 +1138,7 @@ void EERandomMap::MarkLine(const GE2DPoint& inStart, const GE2DPoint& inEnd)
     }
 }
 
+// FUNCTION: EXE 0x687c18
 // May place one of the terrain's ambient units (by its chance) on an unclaimed tile away from the edge, owned by nature
 void EERandomMap::PlaceTerrainUnit(unsigned long inX, unsigned long inY, EETerrainTable* inTerrain)
 {
@@ -1112,6 +1154,7 @@ void EERandomMap::PlaceTerrainUnit(unsigned long inX, unsigned long inY, EETerra
     }
 }
 
+// FUNCTION: EXE 0x687d37
 // Paints every land tile, then every water tile, with the terrain its fractal value (plus cliff, Mars or band offset)
 // selects by elevation, and may add that terrain's ambient unit
 void EERandomMap::PaintTiles()
@@ -1196,12 +1239,14 @@ void EERandomMap::PaintTiles()
     ESDebugOut("EERandomMap::PaintTiles Processing completed in %6.2f s\n", (TMGetTime() - theStart) * 0.001f);
 }
 
+// FUNCTION: EXE 0x688401
 // Returns whether a grid cell is a cliff (value 0x8000 or more)
 static bool EERMIsCliff(const std::vector<std::vector<unsigned long> >& inTiles, unsigned long inX, unsigned long inY)
 {
     return inTiles[inX][inY] >= 0x8000;
 }
 
+// FUNCTION: EXE 0x688426
 // Creates the generator's resource objects (stone, gold, trees, food, animals, kind 5, iron) as nature units and paints
 // their resource terrain under them
 void EERandomMap::Fn288426()
@@ -1267,6 +1312,7 @@ void EERandomMap::Fn288426()
     TMGetTime();
 }
 
+// FUNCTION: EXE 0x688742
 // Prepares a generation: fills the state, applies the generator script's values, then builds the grids, valid map and
 // teams; returns the script status
 long EERandomMap::SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long inSeed)
@@ -1284,6 +1330,7 @@ long EERandomMap::SetUp(unsigned long inGenerator, EEMap* inMap, unsigned long i
     return theResult;
 }
 
+// FUNCTION: EXE 0x6887bd
 // Adds a valid grid cell's height to a running sum, count, minimum and maximum (cells outside the grid are skipped)
 void EERandomMap::AddNeighbourHeight(unsigned long inX, unsigned long inY, float& ioSum, long& ioCount,
                                      float& ioMinimum, float& ioMaximum)
@@ -1304,6 +1351,7 @@ void EERandomMap::AddNeighbourHeight(unsigned long inX, unsigned long inY, float
     }
 }
 
+// FUNCTION: EXE 0x688839
 // Applies the height grid to the terrain mesh (clamped, shallow dips flattened, empty space-map cells painted Space),
 // then sets water, normals, tile heights and shorelines
 void EERandomMap::Fn288839()
@@ -1361,6 +1409,7 @@ void EERandomMap::Fn288839()
     }
 }
 
+// FUNCTION: EXE 0x688bd4
 // Drops the registered random-map generators (at Empire Earth.cpp's shutdown); returns 0
 // (cdecl; provisional name)
 long EEClearRandomMapGenerators()
@@ -1368,3 +1417,161 @@ long EEClearRandomMapGenerators()
     EERandomMap::sRandomMapGenerators.clear();
     return 0;
 }
+
+// TEMPLATE: EXE 0x68bccb
+// (EERMGetElevation, defined above; its COMDAT follows the unit's code)
+
+// TEMPLATE: EXE 0x68bd18
+// (EERMIsAreaFree)
+
+// TEMPLATE: EXE 0x68bdbe
+// (EERMIsNearEdge)
+
+// TEMPLATE: EXE 0x68be87
+// (EERMClaimArea)
+
+// SYNTHETIC: EXE 0x683b2e
+// SYNTHETIC: EXE 0x683b38
+// SYNTHETIC: EXE 0x683b49
+// SYNTHETIC: EXE 0x683b55
+// SYNTHETIC: EXE 0x683b60
+// SYNTHETIC: EXE 0x683b6a
+// SYNTHETIC: EXE 0x683b7b
+// SYNTHETIC: EXE 0x683b87
+// SYNTHETIC: EXE 0x683b92
+// SYNTHETIC: EXE 0x683b9c
+// SYNTHETIC: EXE 0x683ba7
+// SYNTHETIC: EXE 0x683bb3
+// SYNTHETIC: EXE 0x683bcf
+// SYNTHETIC: EXE 0x683bd9
+// SYNTHETIC: EXE 0x683bf1
+// SYNTHETIC: EXE 0x683bfd
+
+// the template COMDATs (0x288bd4..0x28befc)
+// TEMPLATE: EXE 0x688be1
+// TEMPLATE: EXE 0x688c16
+// TEMPLATE: EXE 0x688c67
+// TEMPLATE: EXE 0x688c8d
+// TEMPLATE: EXE 0x688cb9
+// TEMPLATE: EXE 0x688cd5
+// TEMPLATE: EXE 0x688d80
+// TEMPLATE: EXE 0x688e48
+// TEMPLATE: EXE 0x688efb
+// TEMPLATE: EXE 0x688ff8
+// TEMPLATE: EXE 0x6890dd
+// TEMPLATE: EXE 0x689114
+// TEMPLATE: EXE 0x68914c
+// TEMPLATE: EXE 0x68915e
+// TEMPLATE: EXE 0x6891b8
+// TEMPLATE: EXE 0x6891f1
+// TEMPLATE: EXE 0x6892ac
+// TEMPLATE: EXE 0x6892fc
+// TEMPLATE: EXE 0x689335
+// TEMPLATE: EXE 0x6893c7
+// TEMPLATE: EXE 0x689431
+// TEMPLATE: EXE 0x68946a
+// TEMPLATE: EXE 0x6894ae
+// TEMPLATE: EXE 0x6894e7
+// TEMPLATE: EXE 0x6895ac
+// TEMPLATE: EXE 0x689603
+// TEMPLATE: EXE 0x68966c
+// TEMPLATE: EXE 0x6896a3
+// TEMPLATE: EXE 0x6896db
+// TEMPLATE: EXE 0x6896ed
+// TEMPLATE: EXE 0x689756
+// TEMPLATE: EXE 0x689ab7
+// TEMPLATE: EXE 0x689da0
+// TEMPLATE: EXE 0x68a0b9
+// TEMPLATE: EXE 0x68a0cd
+// TEMPLATE: EXE 0x68a137
+// TEMPLATE: EXE 0x68a749
+// TEMPLATE: EXE 0x68aa22
+// TEMPLATE: EXE 0x68aa52
+// TEMPLATE: EXE 0x68aa7d
+// TEMPLATE: EXE 0x68aad0
+// TEMPLATE: EXE 0x68abdf
+// TEMPLATE: EXE 0x68ac0a
+// TEMPLATE: EXE 0x68ac1e
+// TEMPLATE: EXE 0x68ad2c
+// TEMPLATE: EXE 0x68ad50
+// TEMPLATE: EXE 0x68ad7c
+// TEMPLATE: EXE 0x68ad99
+// TEMPLATE: EXE 0x68adc5
+// TEMPLATE: EXE 0x68ade9
+// TEMPLATE: EXE 0x68ae0e
+// TEMPLATE: EXE 0x68ae2b
+// TEMPLATE: EXE 0x68ae53
+// TEMPLATE: EXE 0x68ae84
+// TEMPLATE: EXE 0x68aee9
+// TEMPLATE: EXE 0x68af20
+// TEMPLATE: EXE 0x68af6b
+// TEMPLATE: EXE 0x68afb1
+// TEMPLATE: EXE 0x68b0ab
+// TEMPLATE: EXE 0x68b0d7
+// TEMPLATE: EXE 0x68b0f4
+// TEMPLATE: EXE 0x68b120
+// TEMPLATE: EXE 0x68b136
+// TEMPLATE: EXE 0x68b14c
+// TEMPLATE: EXE 0x68b15e
+// TEMPLATE: EXE 0x68b16f
+// TEMPLATE: EXE 0x68b1eb
+// TEMPLATE: EXE 0x68b21b
+// TEMPLATE: EXE 0x68b237
+// TEMPLATE: EXE 0x68b390
+// TEMPLATE: EXE 0x68b5dc
+// TEMPLATE: EXE 0x68b6f4
+// TEMPLATE: EXE 0x68b733
+// TEMPLATE: EXE 0x68b7fc
+// TEMPLATE: EXE 0x68b802
+// TEMPLATE: EXE 0x68b87e
+// TEMPLATE: EXE 0x68b9af
+// TEMPLATE: EXE 0x68ba0f
+// TEMPLATE: EXE 0x68ba95
+// TEMPLATE: EXE 0x68baba
+// TEMPLATE: EXE 0x68bb5d
+// TEMPLATE: EXE 0x68bbcb
+// TEMPLATE: EXE 0x68bbfd
+// TEMPLATE: EXE 0x68bc6e
+// TEMPLATE: EXE 0x68bcba
+// TEMPLATE: EXE 0x68beea
+// TEMPLATE: EXE 0x68aaf7
+// TEMPLATE: EXE 0x688c2c
+// TEMPLATE: EXE 0x6890ce
+// TEMPLATE: EXE 0x68936d
+// TEMPLATE: EXE 0x6894f9
+// TEMPLATE: EXE 0x68a149
+// TEMPLATE: EXE 0x68a42c
+// TEMPLATE: EXE 0x68ab30
+// TEMPLATE: EXE 0x68ab6a
+// TEMPLATE: EXE 0x68ab95
+// TEMPLATE: EXE 0x68ac47
+// TEMPLATE: EXE 0x68afe7
+// TEMPLATE: EXE 0x68b012
+// TEMPLATE: EXE 0x68b03e
+// TEMPLATE: EXE 0x68b05b
+// TEMPLATE: EXE 0x68b087
+// TEMPLATE: EXE 0x68b195
+// TEMPLATE: EXE 0x68b1a7
+// TEMPLATE: EXE 0x68b474
+// TEMPLATE: EXE 0x68909a
+// TEMPLATE: EXE 0x689a73
+// TEMPLATE: EXE 0x68aac1
+// more template COMDATs this unit compiles
+// TEMPLATE: EXE 0x688cfc
+// TEMPLATE: EXE 0x688d28
+// TEMPLATE: EXE 0x688d54
+// TEMPLATE: EXE 0x688dbb
+// TEMPLATE: EXE 0x688de1
+// TEMPLATE: EXE 0x688e0d
+// TEMPLATE: EXE 0x688f45
+// TEMPLATE: EXE 0x689a0a
+// TEMPLATE: EXE 0x68a6e0
+// TEMPLATE: EXE 0x68b1c7
+// TEMPLATE: EXE 0x68b1d9
+// TEMPLATE: EXE 0x68b5f2
+// TEMPLATE: EXE 0x68b61b
+// TEMPLATE: EXE 0x68b83f
+// TEMPLATE: EXE 0x68ba6c
+// TEMPLATE: EXE 0x68a05a
+// TEMPLATE: EXE 0x68ab05
+// TEMPLATE: EXE 0x68aebd

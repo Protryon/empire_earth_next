@@ -17,8 +17,8 @@ class EEUnitClass;
 
 // cdecl helpers EEMBuildUnit::Execute 0xbbcc4 calls with the message's (long) x/y (provisional names; types
 // inferred; units per the map: EEHitPointUpgrader.cpp / EEFOFindNewTargetNearOldTarget.cpp)
-bool EECanPlaceOnTile(EEPlayer* inPlayer, long inUnitType, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner);
-EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY);
+bool EECanPlaceOnTile(EEPlayer* inPlayer, long inUnitType, long inX, long inY, bool inSkipPlayerChecks, long inIgnoreOwner);  // 0x24f1f8
+EEUnit* EEMakeBuilding(EEPlayer* inPlayer, long inUnitType, long inX, long inY);  // 0x244c83
 // cdecl helpers the heal goal calls (provisional names; types inferred)
 bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inArg);   // 0x2479eb (EEUGAttackUnit passes its EEUnit* target)
 // 0x242542 (EEActiveGroup::SpreadAroundUnit: a unit whose class IsPriest holds and the target's complex unit)
@@ -32,13 +32,13 @@ long EEGetConversionCost(EEComplexUnit* inUnit);
 // 0x20da86 (EEUCBasicPriest.cpp; EEActiveGroup::Plan: whether inUnit can convert inTarget now, outFlag: shielded)
 // (provisional name)
 bool EECanConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget, bool& outFlag);
-bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget);
+bool EECanHeal(EEUnit* inUnit, EEComplexUnit* inTarget);    // 0x246bf2
 // the build/repair goal's helpers (provisional names; types inferred)
-EEComplexUnit* EEGetAttackPart(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
+EEComplexUnit* EEGetAttackPart(EEComplexUnit* inUnit, EEComplexUnit* inTarget);  // 0x246f93
 bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
 // 0x24cbd7 (cdecl): the tile next to inTile in direction inDirection (1..8) (provisional name)
 void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoordinate& outTile);  // 0x24734c (can inUnit work on inTarget)
-bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation);
+bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation);  // 0x24899b
 bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation);  // 0x248709 (EEUGGather::GetDestination with the resource; provisional name)
 // 0x24b8ac (cdecl; a path distance from inUnit to ioTile, 10000 when none: EEUGGather::EvaluateCondition 0x1f4b; the
 // body writes ioTile; the definition's types, one prototype) (provisional name)
@@ -51,10 +51,10 @@ bool EEGetFarmDropSites(EEComplexUnit* inUnit, std::vector<EEUnit*>& outUnits);
 EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioCount);  // bool: `cmp byte [ebp+0xc]`
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit);
 // EEUGAttackUnit.cpp's cdecl callees (provisional names; types inferred; the first is named by its assert)
-bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass);
+bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass);   // 0x247848
 void EEGetLeadPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation);  // 0x24181a (moving targets)
-void EEGetFiringPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation);
-bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile);
+void EEGetFiringPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation);  // 0x241e49
+bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile);  // 0x242575
 // 0x23f32a (cdecl; EECPAttackSubGroupUnit::ChooseTarget's: a tile to attack inTarget) (provisional name)
 bool EEHasPathToTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile, bool inUseClosestTile, long inMaxSteps);  // bool: `cmp byte [ebp+0x14]`
 // 0x24680c / 0x24240d (cdecl; EECPAttackSubGroupUnit::Flee's: a search window around inUnit; the heading from
@@ -63,12 +63,12 @@ template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
 bool EEGetAreaEffectBounds(long inArg1, EEComplexUnit* inUnit, EEAIAStarBounds* outBounds);
 float EEGetHeadingBetween(GE3DPoint* inFrom, GE3DPoint* inTo);
-bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget);
-bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);
-bool EEIsEnemyWithinRange(EEComplexUnit* inUnit);
+bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x24722d
+bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** outArg3, long* outArg4, long* outArg5);  // 0x24df23
+bool EEIsEnemyWithinRange(EEComplexUnit* inUnit);  // 0x2454eb
 // EEUGGather's helpers (cdecl; signatures from their call sites in EEUGGather.cpp) (provisional name)
 bool EEIsWithinReach(EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x24745d (inUnit at inTarget: the gather goal's arrival)
-bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget);
+bool EEIsWithinReachOf(const GE3DPoint& inLocation, EEComplexUnit* inUnit, EEUnit* inTarget);  // 0x2475a0
 void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles);  // 0x24c6fc (the tiles around inUnit)
 // 0x8282 (cdecl, hidden result): a tile picked from inTiles by inArg (EECPAttackSubGroup::Virtual28) (provisional name)
 inline U2DPoint<long> EEComputeTileCenterPoint(std::vector<EETileCoordinate>& inTiles, long inMustBeInList)
@@ -82,7 +82,7 @@ void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> 
 long EEGetResourceIndex(EEUnit* inResource);
 void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles);
 bool EEFindPlaceOnTile(EEComplexUnit* inUnit, EEUnitClass* inClass, long inX, long inY, long inSize, long inToX, long inToY,
-                long inSquare, GE3DPoint* outLocation);
+                long inSquare, GE3DPoint* outLocation);  // 0x240ddb
 long EEGetAttackFrameSet(EEComplexUnit* inUnit);
 bool EEIsCloakedEnemyOf(EEUnit* inUnit, EEPlayer* inPlayer);  // 0x2478f7 (EEUnit::Fn229D73 with the current player; provisional name) // 0x23c9d9 (EEWheel.cpp: the unit's attack frame set, 0/8/0xb)
 
@@ -156,7 +156,7 @@ struct EETileDistanceLess {
     // ClearArea 0xb4899, EEMBuildUnit::Execute 0xbbe73 build it in place at esp)
     ~EETileDistanceLess() {}
     EETileDistanceLess(const EETileCoordinate& inCenter) : mCenter(inCenter) {}
-    long DistanceSquared(const EETileCoordinate& inTile) const;
+    long DistanceSquared(const EETileCoordinate& inTile) const;   // 0x8a3f
     long DistanceSquared(EEUnit* inUnit) const;   // inline: the unit's tile (0x21e104 expands it twice) (provisional name)
     bool operator()(const EETileCoordinate& inFirst, const EETileCoordinate& inSecond) const
         { return this->DistanceSquared(inFirst) < this->DistanceSquared(inSecond); }

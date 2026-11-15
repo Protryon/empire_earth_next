@@ -38,7 +38,7 @@ public:
 
 class EECPAttackFormationNode {
 public:
-    EECPAttackFormationNode();
+    EECPAttackFormationNode();              // 0x54304
     virtual ~EECPAttackFormationNode();     // +0x00 (??_G 0x5439f, dtor 0x543bb)
     // 0x543db: an EEFormation of mType for mUnits at mPosition, each unit sent to its slot (EEUGLocation) (provisional
     // name)
@@ -66,7 +66,7 @@ public:
 
 class EECPAttackFormation {
 public:
-    EECPAttackFormation(EECPAttackSubGroup* inSubGroup);
+    EECPAttackFormation(EECPAttackSubGroup* inSubGroup);   // 0x529e7 (ret 4)
     virtual ~EECPAttackFormation();         // +0x00 (??_G 0x52a1a, dtor 0x52a36)
     virtual void Analyze(EECPAttackFormationUnitAnalysis& outAnalysis);    // +0x04 0x52a5b: the sub group's units sorted
     virtual void Build();                   // +0x08 0x52d1c: Virtual10, Virtual04, Virtual1C

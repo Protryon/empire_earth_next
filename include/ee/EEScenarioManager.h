@@ -37,7 +37,7 @@ extern bool gScenarioSimDialogs;
 // EeScenarioManagerFields (ee_scenario manager.rs), with the members' names and C++ types
 class EEScenarioManager : public FSPersistent, public EeScenarioManagerFields {   // RTTI base; vtable 0x445fd8, sizeof 0x23c
 public:
-    EEScenarioManager();
+    EEScenarioManager();                    // 0x1afa90
     // FSPersistent's slots (vtable 0x445fd8; EEPTPRestorable<EEScenarioManager> in Empire Earth.cpp needs the class
     // concrete)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x1b404a
@@ -59,7 +59,7 @@ public:
     void MoveCameraToStart();               // 0x1b5173 (Update, while mIsMovingCamera; `ret`)
     // the trigger text import (EESEIAImport 0x170439; provisional name; `ret 0xc`; ee_scenario text.rs with
     // ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers 0x1b463b, 0x1b46bf, 0x1b4796)
-    long ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate);
+    long ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate);   // 0x1b3ae9
     // 0x1b33d7 / 0x1b396b: fill outNames with the scenario's area / object names (EESEEvents' combo helper;
     // provisional names)
     // inline (COMDAT 0x17cadf, emitted by EESETriggerScreen.cpp): condition inIndex, 0 past the end
@@ -91,7 +91,7 @@ public:
     void* DuplicateEntry(unsigned long inList, unsigned long inIndex);
     void GetNames(unsigned long inWhich, std::vector<UWideString>& outNames);
     void ObjectChanged(EESMObject* inObject, bool inParent, long inValue);   // EESMObject::SetName, SetParent
-    void AddMessage(const EESMDialogMessage& inMessage);
+    void AddMessage(const EESMDialogMessage& inMessage);    // 0x1afffb
     void AddV134Effect(const EESMEffect& inEffect);   // 0x1b000d (not while mB234)
     void AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic);  // 0x1b005b (EESMTrigger 0x1c9c84)
     // 0x1b260a: a scenario player choice (0 nature, 1/3 humans, 2/4 computers, 5/6 random, 7.. player n - 6) as one

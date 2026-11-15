@@ -43,6 +43,7 @@ extern GEViewport gViewport;
 // .rdata 0x446dc0: the four facing yaws (docks, robotic farm pieces) (provisional name)
 static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964f};
 
+// FUNCTION: EXE 0x60360e
 // Creates a placement ghost of a unit class for a player, loading the class media unless told not to
 EEGhostUnit::EEGhostUnit(long inUnitClass, EEPlayer* inPlayer, bool inNoMedia)
 {
@@ -57,6 +58,10 @@ EEGhostUnit::EEGhostUnit(long inUnitClass, EEPlayer* inPlayer, bool inNoMedia)
     this->mNoMedia = inNoMedia;
 }
 
+// SYNTHETIC: EXE 0x60368b
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x6036a7
 // Destroys the ghost, unloading its class media (queued unless in free camera or shutting down)
 EEGhostUnit::~EEGhostUnit()
 {
@@ -69,6 +74,7 @@ EEGhostUnit::~EEGhostUnit()
     }
 }
 
+// FUNCTION: EXE 0x60370a
 // Fills a space building's footprint and heights: placeable when its space dock site is open or every
 // inner cell is, with 2+ land rim tiles; then turns it to the space dock yaw or the dock facing
 void EEGhostUnit::FillDockSquare()
@@ -141,6 +147,7 @@ void EEGhostUnit::FillDockSquare()
         this->mTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
 }
 
+// FUNCTION: EXE 0x603a8c
 // Fills a dock's footprint and heights: placeable when every inner cell is and at least 3 rim tiles are land
 void EEGhostUnit::FillRimSquare()
 {
@@ -180,6 +187,7 @@ void EEGhostUnit::FillRimSquare()
     this->mCanPlace = theValid && theBorder >= 3;
 }
 
+// FUNCTION: EXE 0x603cb1
 // Marks a mining building's whole footprint placeable when a unit of its overlap set stands on tile (x-1, y-1)
 void EEGhostUnit::UpdateFootprint()
 {
@@ -204,6 +212,7 @@ void EEGhostUnit::UpdateFootprint()
             this->mFootprint[i - theLeft - 1][j - theBottom - 1] = this->mCanPlace;
 }
 
+// FUNCTION: EXE 0x603dd6
 // Fills the ghost's footprint and heights and whether it can be placed; mining, dock, space, volcano have variants
 void EEGhostUnit::FillSquare()
 {
@@ -257,6 +266,7 @@ void EEGhostUnit::FillSquare()
     }
 }
 
+// FUNCTION: EXE 0x603fdb
 // Fills a volcano's footprint and heights: each cell unblocked, off the map edge and free of area effect 3
 void EEGhostUnit::FillVolcanoSquare()
 {
@@ -306,6 +316,7 @@ void EEGhostUnit::FillVolcanoSquare()
     this->mCanPlace = theValid;
 }
 
+// FUNCTION: EXE 0x604208
 // Resets the ghost to an empty, unplaceable one at the origin with animation 7
 void EEGhostUnit::Reset()
 {
@@ -324,6 +335,7 @@ void EEGhostUnit::Reset()
     memset(this->mHeights, 0, sizeof(this->mHeights));
 }
 
+// FUNCTION: EXE 0x604278
 // Replaces the placement ghosts with a unit's ghost, plus 3 runway ghosts for an airport (0x42) and the
 // farm ghosts around a granary unless it is being moved
 void EEGhostUnit::Create(const GE2DPoint& inLocation, long inUnitType, EEPlayer* inPlayer, float inRotation,
@@ -367,6 +379,7 @@ void EEGhostUnit::Create(const GE2DPoint& inLocation, long inUnitType, EEPlayer*
     ::gWorld.mGhostUnitsLock->Leave();
 }
 
+// FUNCTION: EXE 0x6044d4
 // Replaces the placement ghosts with a gate's three parts (left, middle, right), each turned as its part
 void EEGhostUnit::CreateGate(float inRotation, EEUnitClass* inClass, EEPlayer* inPlayer)
 {
@@ -396,6 +409,7 @@ void EEGhostUnit::CreateGate(float inRotation, EEUnitClass* inClass, EEPlayer* i
     gWorld.mGhostUnitsLock->Leave();
 }
 
+// FUNCTION: EXE 0x6046fc
 // Replaces the placement ghosts with one wall ghost per planned tile, shaped by its corner and set on the ground
 // (free function; whether it was static is not known) (provisional name)
 void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>& inCorners,
@@ -435,6 +449,7 @@ void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>
     gWorld.mGhostUnitsLock->Leave();
 }
 
+// FUNCTION: EXE 0x6048f4
 // Adds the ghost's player number and unit class name to the sync checksum
 void EEGhostUnit::AddChecksum(ESChecksum& ioChecksum)
 {
@@ -445,6 +460,7 @@ void EEGhostUnit::AddChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum(theText, 1);
 }
 
+// FUNCTION: EXE 0x60496b
 // Returns the half-width of the footprint square around the ghost's tile (1 for a one-tile unit)
 float EEGhostUnit::GetFootprintOffset()
 {
@@ -461,6 +477,7 @@ float EEGhostUnit::GetFootprintOffset()
     return theOffset;
 }
 
+// FUNCTION: EXE 0x6049c0
 // Reads the unit class and player ids from the saved game; returns the first read error
 long EEGhostUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -474,6 +491,7 @@ long EEGhostUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     return theResult;
 }
 
+// FUNCTION: EXE 0x6049fc
 // Moves a farm ghost to the slot tile in the given direction from its tile
 void EEGhostUnit::SetFarmSlotTile(EEGhostUnit* inGhost, long inDirection)
 {
@@ -486,6 +504,7 @@ void EEGhostUnit::SetFarmSlotTile(EEGhostUnit* inGhost, long inDirection)
     inGhost->mTileY = theNext.mY;
 }
 
+// FUNCTION: EXE 0x604a48
 // Writes the unit type and player id to the saved game; returns the first write error
 long EEGhostUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -496,6 +515,7 @@ long EEGhostUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     return theResult;
 }
 
+// FUNCTION: EXE 0x604a97
 // Sets the ghost's animation and its frame to that animation's first
 void EEGhostUnit::SetAnimation(long inIndex)
 {
@@ -503,6 +523,7 @@ void EEGhostUnit::SetAnimation(long inIndex)
     this->mAnimation = inIndex;
 }
 
+// FUNCTION: EXE 0x604aba
 // Moves the placement ghosts under the cursor and rechecks where each can be placed; an airport turns
 // to its facing quarter with its runways behind it, farm ghosts take their slots
 void EEPreviewPlacement(const GE2DPoint& inLocation)
@@ -587,6 +608,7 @@ void EEPreviewPlacement(const GE2DPoint& inLocation)
     gWorld.mGhostUnitsLock->Leave();
 }
 
+// FUNCTION: EXE 0x604f02
 // Moves the gate ghost's three parts onto the wall tiles under the cursor; placeable only over a marked
 // wall piece, whose gate direction it takes
 void EEGhostUnit::PreviewGate(const GE2DPoint& inLocation, long& ioDirection)

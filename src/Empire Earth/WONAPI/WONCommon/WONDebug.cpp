@@ -19,6 +19,7 @@
 using namespace WONAPI;
 static std::string gStackFileName;
 
+// FUNCTION: WON 0x006a6dc0
 // Returns the name of the stack dump file (empty: no dump)
 const std::string& WONDebug::GetStackFileName()
 {
@@ -81,6 +82,7 @@ static bool GetWinDebugFunc(HMODULE theModule, const char *theName, T &theFunc)
 	return theFunc!=NULL;
 }
 
+// FUNCTION: WON 0x006a71b0
 // Loads DbgHelp.dll and looks up the stack-walk and symbol functions; returns false when any is missing
 static bool TryLoadWinDebugFunctions()
 {
@@ -133,12 +135,14 @@ struct MY_SYMBOL_INFO
 	CHAR    szSymbol[SYMBOL_NAME_LEN];
 };
 
+// FUNCTION: WON 0x006a72f0
 // Stack-walk callback: forwards to SymFunctionTableAccess
 static LPVOID __stdcall FunctionTableAccess(HANDLE hProcess, DWORD64 dwPCAddress)
 {
 	return gSymFunctionTableAccessFunc(hProcess, dwPCAddress);
 }
 
+// FUNCTION: WON 0x006a7310
 // Stack-walk callback: returns the module base of an address, loading the module's symbols when unknown
 static DWORD64 __stdcall GetModuleBase(HANDLE hProcess, DWORD64 dwReturnAddress)
 {
@@ -177,6 +181,7 @@ static DWORD64 __stdcall GetModuleBase(HANDLE hProcess, DWORD64 dwReturnAddress)
 	return 0;
 }
 
+// FUNCTION: WON 0x006a73d0
 // Fills in the module name and undecorated symbol (+ offset) for a code address; always TRUE
 static BOOL ResolveSymbol(HANDLE hProcess, DWORD64 dwAddress,
 	MY_SYMBOL_INFO &siSymbol)
@@ -288,6 +293,7 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x006a6df0
 // Appends a timestamped stack trace of the faulting (or current) thread to the stack dump file
 static void MyDumpStack(LPEXCEPTION_POINTERS pInfo)
 {
@@ -405,6 +411,7 @@ static void MyDumpStack(LPEXCEPTION_POINTERS pInfo)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+// FUNCTION: WON 0x006a6de0
 // Exception filter: dumps the stack to the dump file and continues the search
 int WONDebug::DumpStackToFile(void *theInfo)
 {
@@ -418,3 +425,25 @@ int WONDebug::DumpStackToFile(void *)
 	return 0;
 }
 #endif
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a75a0
+// (public: virtual __thiscall CTraceClipboardData::~CTraceClipboardData(void)    [??1CTraceClipboardData@@UAE@XZ])
+// TEMPLATE: WON 0x006a75d0
+// (public: virtual void * __thiscall CTraceClipboardData::`scalar deleting destructor'(unsigned int)    [??_GCTraceClipboardData@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a7190
+// (bool __cdecl LoadWinDebugFunctions(void)    [?LoadWinDebugFunctions@@YA_NXZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006a6dd0
+// (public: __thiscall `bool __cdecl TryLoadWinDebugFunctions(void)'::`2'::AutoUnloadLibrary::~AutoUnloadLibrary(void))
+// TEMPLATE: WON 0x006a6d30
+// (_$E47)
+// TEMPLATE: WON 0x006a6d40
+// (_$E44)
+// TEMPLATE: WON 0x006a6d60
+// (_$E46)
+// TEMPLATE: WON 0x006a6d70
+// (_$E45)

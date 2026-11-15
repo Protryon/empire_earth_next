@@ -36,6 +36,7 @@
 typedef EeUiButtonCall C;
 #define EE_UI_SCALABLE(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)
 
+// FUNCTION: LLE 0x1007c4ae
 // Creates a scalable button from source rectangles for its normal, focused, pressed and text parts
 UIScalableButton::UIScalableButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
                                    GEBitmap* inPressedBitmap, const GERectangle& inNormalRectangle,
@@ -51,9 +52,39 @@ UIScalableButton::UIScalableButton(unsigned long inId, GEBitmap* inNormalBitmap,
     this->SetTextRectangle(inTextRectangle);
 }
 
+// FUNCTION: LLE 0x1007c609
 // Picks the source rectangle for the button state (focused falls back to normal without a focus bitmap), then snapshots
 long UIScalableButton::CopyData() { return (long)EE_UI_SCALABLE(ScalableCopyData); }
+// FUNCTION: LLE 0x1007c65b
 // Draws the button as a left cap, a right cap and a stretched middle cut from its bitmap; returns the last draw result
 long UIScalableButton::DrawPolygons() { return (long)EE_UI_SCALABLE(ScalableDrawPolygons); }
+// FUNCTION: LLE 0x1007c8f5
 // Moves the button (plain button behaviour)
 void UIScalableButton::SetLocation(const GE2DPoint& inLocation) { UIButton::SetLocation(inLocation); }
+
+// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// SYNTHETIC: LLE 0x1007c5e7
+// SYNTHETIC: LLE 0x1007c38e
+// SYNTHETIC: LLE 0x1007c398
+// SYNTHETIC: LLE 0x1007c3a8
+// SYNTHETIC: LLE 0x1007c3b4
+// SYNTHETIC: LLE 0x1007c3be
+// SYNTHETIC: LLE 0x1007c3c8
+// SYNTHETIC: LLE 0x1007c3d8
+// SYNTHETIC: LLE 0x1007c3e4
+// SYNTHETIC: LLE 0x1007c3ee
+// SYNTHETIC: LLE 0x1007c3f8
+// SYNTHETIC: LLE 0x1007c408
+// SYNTHETIC: LLE 0x1007c414
+// SYNTHETIC: LLE 0x1007c41e
+// SYNTHETIC: LLE 0x1007c428
+// SYNTHETIC: LLE 0x1007c438
+// SYNTHETIC: LLE 0x1007c444
+// SYNTHETIC: LLE 0x1007c44e
+// SYNTHETIC: LLE 0x1007c458
+// SYNTHETIC: LLE 0x1007c468
+// SYNTHETIC: LLE 0x1007c474
+// SYNTHETIC: LLE 0x1007c47e
+// SYNTHETIC: LLE 0x1007c488
+// SYNTHETIC: LLE 0x1007c498
+// SYNTHETIC: LLE 0x1007c4a4

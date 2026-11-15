@@ -30,6 +30,6 @@ long EEAIGetUnitTypeWeight(long inUnitType);
 // +0x24c levels and the complex unit's +0x2a8), 0 if none (EECPUnitManager 0x948e6; provisional name)
 EEUnit* EEAIFindUpgradableUnit(long inUnitType, EEPlayer* inPlayer);
 
-extern EEArtificialIntelligence* gArtificialIntelligence;
+extern EEArtificialIntelligence* gArtificialIntelligence;   // 0x5319d0
 
 #endif

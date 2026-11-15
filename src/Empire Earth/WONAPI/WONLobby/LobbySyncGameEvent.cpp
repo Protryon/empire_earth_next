@@ -15,9 +15,15 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
 namespace WONAPI {
+// FUNCTION: WON 0x0075b0f0
 // Creates the notice that the whole game list was rebuilt, holding the list
 SyncGameListEvent::SyncGameListEvent(LobbyGameList* games)
     : LobbyEvent(LobbyEvent_SyncGameList),mGames(games) {}
+// FUNCTION: WON 0x0075b160
 // Destroys the notice, releasing the game list
 SyncGameListEvent::~SyncGameListEvent() {}
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x0075b140
+// (public: virtual void * __thiscall WONAPI::SyncGameListEvent::`scalar deleting destructor'(unsigned int)    [??_GSyncGameListEvent@WONAPI@@UAEPAXI@Z])

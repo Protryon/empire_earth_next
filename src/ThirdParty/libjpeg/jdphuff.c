@@ -88,7 +88,9 @@ METHODDEF(boolean) decode_mcu_AC_refine JPP((j_decompress_ptr cinfo,
  * Initialize for a Huffman-compressed scan.
  */
 
+// FUNCTION: JPEG 0x1008d327
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x80f9f0
 start_pass_phuff_decoder (j_decompress_ptr cinfo)
 {
   phuff_entropy_ptr entropy = (phuff_entropy_ptr) cinfo->entropy;
@@ -224,7 +226,9 @@ static const int extend_offset[16] = /* entry n is (-1 << n) + 1 */
  * Returns FALSE if must suspend.
  */
 
+// FUNCTION: JPEG 0x1008d761
 LOCAL(boolean)
+// FUNCTION: EXEIMG 0x80fea0
 process_restart (j_decompress_ptr cinfo)
 {
   phuff_entropy_ptr entropy = (phuff_entropy_ptr) cinfo->entropy;
@@ -282,7 +286,9 @@ process_restart (j_decompress_ptr cinfo)
  * or first pass of successive approximation).
  */
 
+// FUNCTION: JPEG 0x1008d56b
 METHODDEF(boolean)
+// FUNCTION: EXEIMG 0x80fc70
 decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 {   
   phuff_entropy_ptr entropy = (phuff_entropy_ptr) cinfo->entropy;
@@ -353,7 +359,9 @@ decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  * or first pass of successive approximation).
  */
 
+// FUNCTION: JPEG 0x1008d7ce
 METHODDEF(boolean)
+// FUNCTION: EXEIMG 0x80ff30
 decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 {   
   phuff_entropy_ptr entropy = (phuff_entropy_ptr) cinfo->entropy;
@@ -438,7 +446,9 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  * is not very clear on the point.
  */
 
+// FUNCTION: JPEG 0x1008d9ec
 METHODDEF(boolean)
+// FUNCTION: EXEIMG 0x810190
 decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 {   
   phuff_entropy_ptr entropy = (phuff_entropy_ptr) cinfo->entropy;
@@ -487,7 +497,9 @@ decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  * MCU decoding for AC successive approximation refinement scan.
  */
 
+// FUNCTION: JPEG 0x1008dabe
 METHODDEF(boolean)
+// FUNCTION: EXEIMG 0x810290
 decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 {   
   phuff_entropy_ptr entropy = (phuff_entropy_ptr) cinfo->entropy;
@@ -637,7 +649,9 @@ undoit:
  * Module initialization routine for progressive Huffman entropy decoding.
  */
 
+// FUNCTION: JPEG 0x1008d2c6
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x80f980
 jinit_phuff_decoder (j_decompress_ptr cinfo)
 {
   phuff_entropy_ptr entropy;

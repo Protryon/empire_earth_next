@@ -62,7 +62,12 @@ static const UString kData("EECPILocation-Data");
 // yet when it restored the tasks) and dropped a town task whose location names player 0 (two of the original's
 // tasks leave mPlayer 0: EECPAttackGroup's continent task, EECPDefenseCommander's aid task)
 bool gLoadKeepsLocations = false;
+// SYNTHETIC: EXE 0x480816   (wrapper)
+// SYNTHETIC: EXE 0x480820   (ctor)
+// SYNTHETIC: EXE 0x480831   (registrar)
+// SYNTHETIC: EXE 0x48083d   (dtor)
 
+// FUNCTION: EXE 0x480848
 // Creates a location at the given tile, with no area, type or player
 EECPILocation::EECPILocation(const EETileLocation& inTile)
 {
@@ -70,12 +75,14 @@ EECPILocation::EECPILocation(const EETileLocation& inTile)
     this->mTile = inTile;
 }
 
+// FUNCTION: EXE 0x480873
 // Creates an empty location at tile (0, 0)
 EECPILocation::EECPILocation()
 {
     this->Clear();
 }
 
+// FUNCTION: EXE 0x48088d
 // Creates a copy of a location (area serial, type, tile and player)
 EECPILocation::EECPILocation(const EECPILocation& inLocation)
 {
@@ -85,6 +92,7 @@ EECPILocation::EECPILocation(const EECPILocation& inLocation)
     this->mPlayer = inLocation.mPlayer;
 }
 
+// FUNCTION: EXE 0x4808c2
 // Returns true if the location's tile is on the map; otherwise moves it to a random point of its area (if any)
 // and returns whether that point is on the map
 bool EECPILocation::IsValid()
@@ -100,6 +108,7 @@ bool EECPILocation::IsValid()
     return theResult;
 }
 
+// FUNCTION: EXE 0x480926
 // Returns true if the two locations' tiles are the same or touch (8-neighbourhood)
 bool EECPILocation::IsAdjacent(const EECPILocation& inLocation) const
 {
@@ -116,6 +125,7 @@ bool EECPILocation::IsAdjacent(const EECPILocation& inLocation) const
     return false;
 }
 
+// FUNCTION: EXE 0x480951
 // Returns true if both locations lie in path sub-sectors and these are the same or neighbours
 bool EECPILocation::IsConnected(const EECPILocation& inLocation) const
 {
@@ -126,6 +136,7 @@ bool EECPILocation::IsConnected(const EECPILocation& inLocation) const
     return false;
 }
 
+// FUNCTION: EXE 0x480984
 // Reads the tile, area serial, type and player from a saved game; returns the first read error
 long EECPILocation::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -139,6 +150,7 @@ long EECPILocation::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
+// FUNCTION: EXE 0x4809c7
 // Moves the location to a random point of its area, if it has one
 void EECPILocation::MoveIntoArea()
 {
@@ -147,6 +159,7 @@ void EECPILocation::MoveIntoArea()
         this->mTile = theArea->GetRandomPoint();
 }
 
+// FUNCTION: EXE 0x480a01
 // Re-derives the location's area after a load; always succeeds
 long EECPILocation::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -154,6 +167,7 @@ long EECPILocation::Restore(unsigned long inMajorVersion, unsigned long inMinorV
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x480a0b
 // Writes the tile, area serial, type and player to the saved game; returns the first write error
 long EECPILocation::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -167,6 +181,7 @@ long EECPILocation::Save(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
+// FUNCTION: EXE 0x480a57
 // Re-finds the area of the location's type at its tile (continent, choke point, forest, hill, rectangle, the
 // player's town) and stores its serial; armies are left alone; with no area found the type becomes none
 void EECPILocation::Update()
@@ -226,6 +241,7 @@ void EECPILocation::Update()
         this->mType = 0;
 }
 
+// FUNCTION: EXE 0x480be4
 // Clears the location and puts it at the unit's tile (if a unit is given)
 void EECPILocation::SetUnit(EEUnit* inUnit)
 {
@@ -234,6 +250,7 @@ void EECPILocation::SetUnit(EEUnit* inUnit)
         this->mTile.SetXY(inUnit->GetTileX(), inUnit->GetTileY());
 }
 
+// FUNCTION: EXE 0x480c04
 // Moves the location to tile (0, 0), then to a random point of its area if it has one
 void EECPILocation::ResetToArea()
 {
@@ -245,6 +262,7 @@ void EECPILocation::ResetToArea()
         this->mTile = theArea->GetRandomPoint();
 }
 
+// FUNCTION: EXE 0x480c42
 // Copies another location (area serial, type, tile and player)
 EECPILocation& EECPILocation::operator=(const EECPILocation& inLocation)
 {

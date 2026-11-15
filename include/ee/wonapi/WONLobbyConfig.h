@@ -22,15 +22,15 @@ private:
     ConfigParser(const ConfigParser&);
     ConfigParser& operator=(const ConfigParser&);
 public:
-    ConfigParser();
+    ConfigParser(); // 0x7b1d20
     // the process-wide line count (0x966b54) is ee_won's (rust/crates/ee_won/src/config.rs)
     static void ResetLineCount() { ee_won_config_reset_line_count(); }
     static int GetLineCount() { return ee_won_config_line_count(); }
     virtual ~ConfigParser(); // 0x7b1e10 (closes the file; the only virtual)
-    bool ReadToken(std::string&, bool inToEndLine=false, bool inSkip=false);
-    bool ReadToken(std::wstring&, bool inToEndLine=false, bool inSkip=false);
+    bool ReadToken(std::string&, bool inToEndLine=false, bool inSkip=false); // 0x7b3d70
+    bool ReadToken(std::wstring&, bool inToEndLine=false, bool inSkip=false); // 0x7b3d50
     void SetParent(ConfigParser*);
-    void SetError(const std::string&, bool);
+    void SetError(const std::string&, bool); // 0x7b1fb0
     void AddWarning(const std::string&);
     void CopyWarnings(ConfigParser&);
     const std::string& GetAbortReason();
@@ -95,16 +95,16 @@ public:
     bool SetValue(const std::string&, unsigned long);
     bool SetValue(const std::string&, const void*, unsigned long);
     bool DeleteValue(const std::string&);
-    RegKey(int inRoot, const std::string& inPath, bool inCreate, bool inNonvolatile);
-    virtual ~RegKey();
-    virtual bool DeleteSubKey(const std::string& inKey);
+    RegKey(int inRoot, const std::string& inPath, bool inCreate, bool inNonvolatile); // 0x6a4260
+    virtual ~RegKey();                      // 0x6a42e0
+    virtual bool DeleteSubKey(const std::string& inKey); // 0x6a4830
     virtual bool DeleteSubKey(RegKey& inKey); // 0x6a4870 (unused overload; qualifiers inferred)
-    int QueryDWORD(const std::string& inName, DWORD& outValue);
-    bool OpenNewKey(int inRoot, const std::string& inPath, bool inCreate, bool inNonvolatile);
-    void CloseKey();
+    int QueryDWORD(const std::string& inName, DWORD& outValue); // 0x6a4680
+    bool OpenNewKey(int inRoot, const std::string& inPath, bool inCreate, bool inNonvolatile); // 0x6a4440
+    void CloseKey(); // 0x6a4370
     // the named value's text -> whether it exists (0x6a4390 read it into a buffer)
     bool GetToBuf(const std::string& inName, std::string& outText) const;
-    int QueryBinary(const std::string& inName, ConstSmartPtr<ByteBuffer>& outValue);
+    int QueryBinary(const std::string& inName, ConstSmartPtr<ByteBuffer>& outValue); // 0x6a46e0
     bool IsOpen() const { return this->mIsOpen; }
     const std::string& GetLeafName(void) const { return this->mPath; }
     std::string mBlock;                     // the config.yaml block (was the HKEY)
@@ -124,11 +124,11 @@ enum LobbyStatus : int; enum LobbyRunMode : int; // (values only by number); Lob
 // This revision has no BigFileList after mInitError (later SDKs add one).
 class WONLobbyPrv : public RefCount {
 public:
-    WONLobbyPrv();
+    WONLobbyPrv(); // 0x7628c0
     virtual ~WONLobbyPrv(); // 0x7630a0 (scalar deleting destructor 0x763080)
-    bool Init(ResourceConfigTable*,void (*)(ComponentConfig*));
-    void InitAuth(const std::wstring&,const char* = NULL);
-    void Destroy();
+    bool Init(ResourceConfigTable*,void (*)(ComponentConfig*)); // 0x765ac0
+    void InitAuth(const std::wstring&,const char* = NULL); // 0x766010
+    void Destroy(); // 0x7660f0
     SmartPtr<LobbyPersistentData> mPersistentData; // 0x08
     SmartPtr<LobbyConfig> mConfig; // 0x0c
     SmartPtr<LobbyContainer> mLobbyContainer; // 0x10
@@ -175,6 +175,6 @@ extern SmartPtr<WONLobbyPrv> gLobbyData;     // 0x96630c (an intrusive SmartPtr)
 extern bool gLobbyUseLocalIP;                // 0x96634d; a config key writes it, nothing reads it
 void StringToUpperCaseInPlace(std::string&); // 0x6a69a0 (StringUtil.cpp)
 std::string WStringToString(const std::wstring&); // 0x6a6280 (StringUtil.cpp)
-std::wstring StringToWString(const std::string& inString);
+std::wstring StringToWString(const std::string& inString); // 0x6a6130
 }
 #endif

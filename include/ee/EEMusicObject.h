@@ -10,13 +10,13 @@ struct EEMusicRecord;
 
 class EEMusicObject : public UReferenceCounter, public EEMedia {
 public:
-    EEMusicObject(EEMusicRecord* inRecord);
+    EEMusicObject(EEMusicRecord* inRecord);         // 0xd9e0c
     virtual ~EEMusicObject();                       // ??_G 0xd9f1c (EEMedia's thunk 0xda3a6), dtor 0xd9f38
     virtual long LoadMedia();                       // EEMedia +0x04 0xda3ae
     virtual long UnloadMedia();                     // EEMedia +0x08 0xda3b6
     static long ReadNewMusic(EEMusicRecord* outRecord);   // 0xd9c6b (Data\Music\New Music.txt)
-    static long LoadTable(FSFile* inFile);
-    static void ClearAll();
+    static long LoadTable(FSFile* inFile);          // 0xd9f6c
+    static void ClearAll();                         // 0xda0b9
     static EEMusicObject* GetRandom(long inEpoch);  // 0xda116 (a random song of the epoch's list)
     long LoadScore();                       // 0xda251 (loads the score into gConductor once)
     long UnloadScore();                     // 0xda315 (5: try again)

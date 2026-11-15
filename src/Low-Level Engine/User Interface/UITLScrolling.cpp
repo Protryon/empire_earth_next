@@ -31,6 +31,7 @@ struct UITLScrollingRust {
     }
 };
 
+// FUNCTION: LLE 0x1007fd7d
 // Creates a scrolling text label with scroll, start and end timers and a text area inset by the border; not scrolling
 UITLScrolling::UITLScrolling(const UWideString& inText, GEFont* inFont, unsigned long inId,
                              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,

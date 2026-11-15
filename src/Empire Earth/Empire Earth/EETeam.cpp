@@ -13,6 +13,7 @@
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
 
+// FUNCTION: EXE 0x536b6d
 // Adds every player of another team to this team
 void EETeam::Merge(const EETeam& inTeam)
 {
@@ -20,6 +21,7 @@ void EETeam::Merge(const EETeam& inTeam)
         this->AddPlayer(inTeam.mPlayers[i]);
 }
 
+// FUNCTION: EXE 0x536ba1
 // Adds a player to the team unless already a member
 void EETeam::AddPlayer(unsigned long inPlayer)
 {
@@ -27,6 +29,7 @@ void EETeam::AddPlayer(unsigned long inPlayer)
         this->mPlayers.push_back(inPlayer);
 }
 
+// FUNCTION: EXE 0x536bfc
 // Returns a copy of the team's players without the given player
 void EETeam::RemovePlayer(long inPlayer, std::vector<unsigned long>& outPlayers)
 {
@@ -36,6 +39,7 @@ void EETeam::RemovePlayer(long inPlayer, std::vector<unsigned long>& outPlayers)
         outPlayers.erase(it);
 }
 
+// FUNCTION: EXE 0x536c64
 // Returns whether both players belong to the team
 bool EETeam::Contains(long inPlayer1, long inPlayer2)
 {
@@ -59,6 +63,7 @@ bool EETeam::Contains(long inPlayer1, long inPlayer2)
     return theFound;
 }
 
+// FUNCTION: EXE 0x536ca3
 // Reads the team's players and its victory condition from a saved game; returns the first read error
 long EETeam::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -78,6 +83,7 @@ long EETeam::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return this->mVictoryCondition->Load(inMajorVersion, inMinorVersion, inFile);
 }
 
+// FUNCTION: EXE 0x536d03
 // Writes the team's players to a saved game; returns the first write error
 long EETeam::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -90,12 +96,15 @@ long EETeam::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     return theResult;
 }
 
+// FUNCTION: EXE 0x536d5e
 // Returns the team's victory state from its victory condition
 long EETeam::GetVictoryState()
 {
     return this->mVictoryCondition->GetVictoryState();
 }
 
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EETeam::GetChecksum(class ESChecksum &) const
 {
 }

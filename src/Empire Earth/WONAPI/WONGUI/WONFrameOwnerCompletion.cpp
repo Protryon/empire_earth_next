@@ -54,3 +54,19 @@ WONFrame::WONFrame(StretchImage* image)
     this->mBottom=image->GetBottom();
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00717550
+// (public: __thiscall WONAPI::WONFrame::WONFrame(class WONAPI::StretchImage *)    [??0WONFrame@WONAPI@@QAE@PAVStretchImage@1@@Z])
+// TEMPLATE: WON 0x007175f0
+// (public: __thiscall WONAPI::WONFrame::WONFrame(class WONAPI::Image *,int)    [??0WONFrame@WONAPI@@QAE@PAVImage@1@H@Z])
+// TEMPLATE: WON 0x00717690
+// (public: __thiscall WONAPI::WONFrame::WONFrame(class WONAPI::Image *,int,int,int,int)    [??0WONFrame@WONAPI@@QAE@PAVImage@1@HHHH@Z])
+// TEMPLATE: WON 0x007177a0
+// (public: class WONAPI::WONFrame & __thiscall WONAPI::WONFrame::operator=(class WONAPI::WONFrame const &)    [??4WONFrame@WONAPI@@QAEAAV01@ABV01@@Z])
+// TEMPLATE: WON 0x0071a5b0
+// (public: __thiscall WONAPI::WONFrameComponent::WONFrameComponent(class WONAPI::Image *,int,int,int,int)    [??0WONFrameComponent@WONAPI@@QAE@PAVImage@1)
+// TEMPLATE: WON 0x0071a6b0
+// (public: virtual void * __thiscall WONAPI::WONFrameComponent::`scalar deleting destructor'(unsigned int)    [??_GWONFrameComponent@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x0071a6d0
+// (public: virtual __thiscall WONAPI::WONFrameComponent::~WONFrameComponent(void)    [??1WONFrameComponent@WONAPI@@UAE@XZ])

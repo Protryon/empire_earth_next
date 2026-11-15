@@ -13,10 +13,12 @@ using namespace WONAPI;
 int MSCheckbox::mCheckboxWidth=13;
 int MSCheckbox::mCheckboxHeight=13;
 MSCheckbox::CheckboxPainterFunc MSCheckbox::CheckboxPainter=MSCheckbox::DefaultCheckboxPainterFunc;
+// FUNCTION: WON 0x6ff430
 // Paints the default check box square, pressed and checked as the button's flags say
 void MSCheckbox::DefaultCheckboxPainterFunc(Graphics& g,MSCheckbox* button) {
     MSGraphicsUtil::DrawCheck(g,0,0,MSCheckbox::mCheckboxWidth,MSCheckbox::mCheckboxHeight,button->IsPressed(),button->IsChecked());
 }
+// FUNCTION: WON 0x6ff470
 // Paints the check box: face, the box aligned vertically and drawn by the painter function, then the text (the Rust
 // button's box paint, msbtnobj.rs)
 void MSCheckbox::Paint(Graphics& g) {

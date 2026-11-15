@@ -131,6 +131,7 @@ static void EEPathCaptureBounds(EESimCaptureRecord& ioRecord, const EEAIAStarBou
 
 
 // NEAR: the original copies the (uninitialised) allocator byte of its fifth argument
+// FUNCTION: EXE 0x4a5c31
 // Creates a player's graph path request between two tiles with the given sub-group flags, not yet done
 EEAutoPathRequest::EEAutoPathRequest(long inRequestID, long inPlayerID, const EETileCoordinate& inFrom,
                                      const EETileCoordinate& inTo, const EECPASGFlags& inFlags)
@@ -142,6 +143,10 @@ EEAutoPathRequest::EEAutoPathRequest(long inRequestID, long inPlayerID, const EE
     this->mRequestID = inRequestID;
 }
 
+// SYNTHETIC: EXE 0x4a5caa
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4a5cc6
 // Destroys the path request (members only)
 EEAutoPathRequest::~EEAutoPathRequest()
 {
@@ -169,7 +174,7 @@ public:
     void SetUnit(EEComplexUnit* inUnit);
     void ReleaseRequest();
     void SetRequest(EEAutoPathRequest* inRequest);
-    void Clear();
+    void Clear();                           // 0xab37c
 
     long mL04;                              // +0x04
     EETileCoordinate mTile;                 // +0x08 (the goal)
@@ -200,6 +205,7 @@ void EEPathManagerNode::SetUnit(EEComplexUnit* inUnit)
         inUnit->Reference();
 }
 
+// FUNCTION: EXE 0x4a5ce0
 // Drops the node's reference to its path request
 void EEPathManagerNode::ReleaseRequest()
 {
@@ -209,6 +215,7 @@ void EEPathManagerNode::ReleaseRequest()
     }
 }
 
+// FUNCTION: EXE 0x4a5cf6
 // Makes the node hold (and reference) the given path request, releasing the previous one
 void EEPathManagerNode::SetRequest(EEAutoPathRequest* inRequest)
 {
@@ -219,6 +226,142 @@ void EEPathManagerNode::SetRequest(EEAutoPathRequest* inRequest)
     }
 }
 
+// TEMPLATE: EXE 0x4a962b
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a977e
+// (??0?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@QAE@JPAVEEMap@@@Z)
+
+// TEMPLATE: EXE 0x4a97c8
+// (?Reset@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEXXZ)
+
+// TEMPLATE: EXE 0x4a9826
+// (?GetRevLimit@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEJXZ)
+
+// TEMPLATE: EXE 0x4a982d
+// (?GetMaxRevs@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEJXZ)
+
+// TEMPLATE: EXE 0x4a9834
+// (?SetMaxRevs@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEXJ@Z)
+
+// TEMPLATE: EXE 0x4a9841
+// (?SetGoal@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEXJJ@Z)
+
+// TEMPLATE: EXE 0x4a9852
+// (?SetGoal@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEXABUEETileCoordinate@@@Z)
+
+// TEMPLATE: EXE 0x4a9864
+// (?SetRevLimit@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEXJ@Z)
+
+// TEMPLATE: EXE 0x4a9871
+// (?SetStart@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEXJJ@Z)
+
+// TEMPLATE: EXE 0x4a9882
+// (?SetStart@?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEXABUEETileCoordinate@@@Z)
+
+// TEMPLATE: EXE 0x4a98d9
+// (?GetRevLimit@?$EEAIAStarGraphMachine@VEEAIAStarGraphStorage@@VEEAIAStarPathGraphGoal@@VEEAIPathSubSector@@@@UAEJXZ)
+
+// TEMPLATE: EXE 0x4a98e0
+// (?GetMaxRevs@?$EEAIAStarGraphMachine@VEEAIAStarGraphStorage@@VEEAIAStarPathGraphGoal@@VEEAIPathSubSector@@@@UAEJXZ)
+
+// TEMPLATE: EXE 0x4a98e7
+// (?SetMaxRevs@?$EEAIAStarGraphMachine@VEEAIAStarGraphStorage@@VEEAIAStarPathGraphGoal@@VEEAIPathSubSector@@@@UAEXJ@Z)
+
+// TEMPLATE: EXE 0x4a98f4
+// (?SetRevLimit@?$EEAIAStarGraphMachine@VEEAIAStarGraphStorage@@VEEAIAStarPathGraphGoal@@VEEAIPathSubSector@@@@UAEXJ@Z)
+
+// TEMPLATE: EXE 0x4a992c
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a99ba
+// (?Reset@?$EEAIAStarMachine@VEEAIAStarBoundedStorage@@VEEAIAStarBoundedPathGoal@@VEEMap@@@@UAEXXZ)
+
+// TEMPLATE: EXE 0x4a9a37
+// (?GetRevLimit@?$EEAIAStarMachine@VEEAIAStarBoundedStorage@@VEEAIAStarBoundedPathGoal@@VEEMap@@@@UAEJXZ)
+
+// TEMPLATE: EXE 0x4a9a6b
+// (?SetRevLimit@?$EEAIAStarMachine@VEEAIAStarBoundedStorage@@VEEAIAStarBoundedPathGoal@@VEEMap@@@@UAEXJ@Z)
+
+// TEMPLATE: EXE 0x4a9a8e
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a9aa5
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a9ad1
+// (??_G?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAEPAXI@Z)
+
+// TEMPLATE: EXE 0x4a9aed
+// (??1?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@UAE@XZ)
+
+// TEMPLATE: EXE 0x4a9b1e
+// (??_G?$EEAIAStarGraphMachine@VEEAIAStarGraphStorage@@VEEAIAStarPathGraphGoal@@VEEAIPathSubSector@@@@UAEPAXI@Z)
+
+// TEMPLATE: EXE 0x4a9b3a
+// (??1?$EEAIAStarGraphMachine@VEEAIAStarGraphStorage@@VEEAIAStarPathGraphGoal@@VEEAIPathSubSector@@@@UAE@XZ)
+
+// TEMPLATE: EXE 0x4a9b6b
+// (??_G?$EEAIAStarMachine@VEEAIAStarBoundedStorage@@VEEAIAStarBoundedPathGoal@@VEEMap@@@@UAEPAXI@Z)
+
+// TEMPLATE: EXE 0x4a9b87
+// (??1?$EEAIAStarMachine@VEEAIAStarBoundedStorage@@VEEAIAStarBoundedPathGoal@@VEEMap@@@@UAE@XZ)
+
+// TEMPLATE: EXE 0x4a9c59
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a9cca
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a9e5e
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a9eea
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4a9f1c
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa1ff
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa63b
+// (?Virtual04@EEAIPathGoalModifierSea@@UAEJJJJJJJ@Z)
+
+// TEMPLATE: EXE 0x4aa65b
+// (?Virtual08@EEAIPathGoalModifierSea@@UAE_NPAVEETile@@JJ_N@Z)
+
+// TEMPLATE: EXE 0x4aa678
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa691
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa6e6
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa73b
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa7d3
+// (??0?$pair@UEEPathHistoryEntry@@H@std@@QAE@ABUEEPathHistoryEntry@@ABH@Z; PruneHistory's pair)
+
+// TEMPLATE: EXE 0x4aa7fb
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa817
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4aa82d
+// (??_EEEPathManagerNode@@UAEPAXI@Z)
+
+// TEMPLATE: EXE 0x4ab30d
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// TEMPLATE: EXE 0x4ab32c
+// (the node ctor, inline in the class above)
+
+// TEMPLATE: EXE 0x4ab37c
 // Empties the node for reuse: releases its unit and request, forgets its machines and goal tile, zeroes its passes
 void EEPathManagerNode::Clear()
 {
@@ -235,6 +378,7 @@ void EEPathManagerNode::Clear()
     this->mTile.mY = 0;
 }
 
+// TEMPLATE: EXE 0x4ab3aa
 // Moves a tile that is off the map onto the map tile closest to its center
 inline void EEPathManager::ClampTile(EEMap* inMap, EETileCoordinate& ioTile)
 {
@@ -280,6 +424,7 @@ public:
 
 // The bounded goal's sea/space modifiers EEAIBPGModifierSea/Space: ee/EEAIBoundedPathGoalModifierBase.h
 
+// FUNCTION: EXE 0x4a5d10
 // Creates the path manager with no bounded machine, nothing queued and region updates off
 EEPathManager::EEPathManager()
     : mNextHistoryPruneTime(0), mNextRegionPruneTime(0), mLCC(0), mNextRequestID(0), mNextRegionTime(0), mIsUpdatingRegions(false)
@@ -288,12 +433,17 @@ EEPathManager::EEPathManager()
     this->mLC8 = 5;
 }
 
+// SYNTHETIC: EXE 0x4a5e00
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4a5e1c
 // Destroys the path manager, freeing every machine, queued search, region map and the node pools
 EEPathManager::~EEPathManager()
 {
     this->Clear();
 }
 
+// FUNCTION: EXE 0x4a5e7b
 // Records that a unit asked for a path to a tile, stamped with the game time (newest first)
 void EEPathManager::AddHistory(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
 {
@@ -306,6 +456,7 @@ void EEPathManager::AddHistory(EEComplexUnit* inUnit, const EETileCoordinate& in
     this->mHistory.push_front(theEntry);  // newest first: 0xa95ae is deque::push_front (_Myoff ? _Myoff : _Mapsize * 256, then --)
 }
 
+// FUNCTION: EXE 0x4a5eba
 // Deletes every spare path and graph machine
 void EEPathManager::FreeMachines()
 {
@@ -323,6 +474,7 @@ void EEPathManager::FreeMachines()
     }
 }
 
+// FUNCTION: EXE 0x4a5f39
 // Drops every queued tile and graph search, returning their machines and nodes
 void EEPathManager::FreePaths()
 {
@@ -340,6 +492,7 @@ void EEPathManager::FreePaths()
     }
 }
 
+// FUNCTION: EXE 0x4a5fc4
 // Deletes every unit's region map (its repeated goal tile counts)
 void EEPathManager::FreeRegions()
 {
@@ -349,6 +502,7 @@ void EEPathManager::FreeRegions()
     this->mRegions.clear();
 }
 
+// FUNCTION: EXE 0x4a6010
 // Sets a graph search's step budget to the distance times 250/75/90/110 (by distance band); at most 40 per tile when
 // the goal sector's kind is not allowed, 3 when a computer citizen's newest request within 4 s was the same tile
 void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoordinate& inFrom,
@@ -379,6 +533,7 @@ void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoor
     inMachine->SetMaxRevs(ee_path_graph_revs((int32_t)theDistance, theAllowed, theRepeated));
 }
 
+// FUNCTION: EXE 0x4a6157
 // Sets a tile search's step budget to the distance times 375 (up to 15 tiles), 140 or 145 (over 80); at most 40
 // per tile when a unit that is not amphibious goes to another continent
 void EEPathManager::SetPathRevs(EEPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
@@ -396,6 +551,7 @@ void EEPathManager::SetPathRevs(EEPathMachine* inMachine, EEComplexUnit* inUnit,
     inMachine->SetMaxRevs(ee_path_path_revs((int32_t)theDistance, theAmphibious, theFromContinent == theToContinent));
 }
 
+// FUNCTION: EXE 0x4a61f2
 // Makes sure the bounded path machine exists for the map, recreating it (with corner checks) for another map
 void EEPathManager::PrepareBoundedMachine(EEMap* inMap)
 {
@@ -409,6 +565,7 @@ void EEPathManager::PrepareBoundedMachine(EEMap* inMap)
     this->mBoundedMachine->mCheckCorners = true;
 }
 
+// FUNCTION: EXE 0x4a6251
 // Finishes the unit's queued graph search at once (no step limit), applies its result and drops it
 void EEPathManager::CancelAutoPath(EEComplexUnit* inUnit)
 {
@@ -428,6 +585,7 @@ void EEPathManager::CancelAutoPath(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x4a62ce
 // Finishes the queued graph search of a path request at once, applies its result and drops it
 void EEPathManager::CompleteAutoPath(EEAutoPathRequest* inRequest)
 {
@@ -447,6 +605,7 @@ void EEPathManager::CompleteAutoPath(EEAutoPathRequest* inRequest)
     }
 }
 
+// FUNCTION: EXE 0x4a634b
 // Finishes the unit's queued searches at once: its graph search, then its tile search, whose path it takes
 void EEPathManager::CompletePath(EEComplexUnit* inUnit)
 {
@@ -461,6 +620,7 @@ void EEPathManager::CompletePath(EEComplexUnit* inUnit)
     this->CancelPaths(inUnit, true);
 }
 
+// FUNCTION: EXE 0x4a639b
 // Writes the path sub sectors and the queued tile and graph searches to an out-of-synch dump
 void EEPathManager::DumpOutOfSynch(FILE* inFile)
 {
@@ -517,6 +677,7 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
     }
 }
 
+// FUNCTION: EXE 0x4a6687
 // Returns a graph machine of the given type: a spare one sized for the current sub sector count (spares of another
 // size are deleted), else a new one
 EEGraphPathMachine* EEPathManager::NewGraphMachine(long inType)
@@ -537,6 +698,7 @@ EEGraphPathMachine* EEPathManager::NewGraphMachine(long inType)
     return theMachine;
 }
 
+// FUNCTION: EXE 0x4a6724
 // Returns a tile path machine for the map (a spare one built for the same map, else a new one), with a sea or
 // space modifier for the types 2 and 0x10
 EEPathMachine* EEPathManager::NewPathMachine(long inType, EEMap* inMap)
@@ -566,6 +728,7 @@ done:
     return theMachine;
 }
 
+// FUNCTION: EXE 0x4a6819
 // Returns an empty node from the pool
 EEPathManagerNode* EEPathManager::NewNode()
 {
@@ -574,6 +737,7 @@ EEPathManagerNode* EEPathManager::NewNode()
     return theNode;
 }
 
+// FUNCTION: EXE 0x4a682f
 // Returns whether a graph search is queued for the unit
 bool EEPathManager::HasAutoPath(EEComplexUnit* inUnit)
 {
@@ -589,6 +753,7 @@ bool EEPathManager::HasAutoPath(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4a687d
 // Returns false while a tile search is queued for the unit (true for no unit)
 bool EEPathManager::IsPathDone(EEComplexUnit* inUnit)
 {
@@ -605,6 +770,7 @@ bool EEPathManager::IsPathDone(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4a68cf
 // Gets the goal tile of the unit's queued tile search; returns false when one is queued, true (tile 0,0) if not
 bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
 {
@@ -623,6 +789,7 @@ bool EEPathManager::GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4a6948
 // Creates a player's graph path request with the next request id and starts its search; returns the request
 EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EETileCoordinate& inFrom,
                                               const EETileCoordinate& inTo, EECPASGFlags* inFlags, long inType,
@@ -636,6 +803,7 @@ EEAutoPathRequest* EEPathManager::RequestPath(unsigned long inPlayerID, const EE
     return theRequest;
 }
 
+// FUNCTION: EXE 0x4a69b0
 // Starts a graph path search for a unit; returns whether the search still runs (queued)
 bool EEPathManager::RequestGroupPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
                                      long inPlayerID, long inType, long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs)
@@ -646,6 +814,7 @@ bool EEPathManager::RequestGroupPath(EEComplexUnit* inUnit, const EETileCoordina
 }
 
 // NEAR: the request's flags go to the goal through EECPASGFlags::operator= (out of line 0xaa1da in the original)
+// FUNCTION: EXE 0x4a69e2
 // Starts a sub sector graph search between two tiles (moved onto the map) for a unit or a request: queued while it
 // runs (*outStarted true), else applied and freed at once; always returns false
 bool EEPathManager::StartGraphPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
@@ -708,6 +877,7 @@ bool EEPathManager::StartGraphPath(EEComplexUnit* inUnit, const EETileCoordinate
     return false;
 }
 
+// FUNCTION: EXE 0x4a6bfd
 // Runs a bounded tile search (at most 200 steps; a window around inFrom when inBounds is empty) and returns its
 // path (and the visited tiles when asked)
 void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo,
@@ -789,6 +959,7 @@ set:
 }
 
 // NEAR: the location goal's tile goes through __ftol here.
+// FUNCTION: EXE 0x4a6e88
 // Requests a unit's path: a graph search when asked; otherwise records the request, tries a short bounded search
 // and, unless that settles it, starts a tile search (queued while it runs); nothing for a -10000 start
 void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
@@ -868,6 +1039,7 @@ void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinat
     }
 }
 
+// FUNCTION: EXE 0x4a7170
 // Returns the unit's queued tile search node, or NULL
 EEPathManagerNode* EEPathManager::FindPath(EEComplexUnit* inUnit)
 {
@@ -885,6 +1057,7 @@ EEPathManagerNode* EEPathManager::FindPath(EEComplexUnit* inUnit)
 }
 
 // The window grows from the unclamped inFrom; inArg8 is not read; *outReached is the result; the machine is prepared twice.
+// FUNCTION: EXE 0x4a71c9
 // Runs a bounded search within inMargin tiles of inFrom and, when it reaches inTo, appends the path (start first);
 // returns whether it reached inTo
 bool EEPathManager::FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
@@ -940,6 +1113,7 @@ start:
 }
 
 // Called by EEUnitClass 0x636b69 (cdecl, the third argument 0)
+// FUNCTION: EXE 0x4a7414
 // When one of the unit's waypoints, last first, lies on a tile of ioPath, appends the waypoints after it to ioPath
 // (inArg3 unused)
 void EEPathManager::MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EEComplexUnitWaypoint>& inWaypoints,
@@ -957,6 +1131,7 @@ void EEPathManager::MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EE
 }
 
 // The y test floors the comparison's result, not the coordinate (the original's parenthesis).
+// FUNCTION: EXE 0x4a75f4
 // Cuts the new path from its last point on the unit's tile on (the part already walked) and drops the unit's path;
 // returns whether it cut
 bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath)
@@ -989,6 +1164,7 @@ bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPa
     return theResult;
 }
 
+// FUNCTION: EXE 0x4a777f
 // Unless TrimPath cuts the path, appends the unit's last waypoint (when the path does not end on its tile) and its
 // other waypoints, last first, then drops the unit's path
 void EEPathManager::AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath)
@@ -1029,6 +1205,7 @@ void EEPathManager::AppendWaypoints(EEComplexUnit* inUnit, std::vector<GE3DPoint
         inUnit->DropPath();
 }
 
+// FUNCTION: EXE 0x4a78c1
 // Runs a short bounded search toward ioTo (a few steps, more with the queue length and distance), gives the unit
 // its result and sets ioTo to the tile reached; returns the goal's took-nearest flag
 bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
@@ -1093,6 +1270,7 @@ bool EEPathManager::TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inTyp
     return theResult;
 }
 
+// FUNCTION: EXE 0x4a7b03
 // Applies a graph path: a unit gets a location goal per sub sector on the way (or inserted before a pending attack),
 // a request the sub sectors' tiles and summed distance; returns whether it reached the goal's sub sector
 bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, EEGraphPathMachine* inMachine)
@@ -1174,6 +1352,7 @@ done:
     return inMachine->mGoal.GetTo()->GetID() == inMachine->GetSector();
 }
 
+// FUNCTION: EXE 0x4a7e6c
 // Applies a finished graph search and, when the unit now has an auto waypoint goal, drops its path and requests a
 // tile path to it; returns whether the goal sub sector was reached
 bool EEPathManager::FinishGraphPath(EEPathManagerNode* inNode)
@@ -1224,6 +1403,7 @@ static long EEPathDetourJoinCount(const std::vector<GE3DPoint>& inPath, const st
 // NEAR: the original builds the unit's tile through the (const long&, const long&) pair ctor 0xaa817 and tests the
 // distance through the out-of-line U2DPoint<long>::DistanceToSquared 0x8a3f (its locals are EETileCoordinates here,
 // the type RunBoundedPath and the machines take).
+// FUNCTION: EXE 0x4a7f4a
 // Gives the unit a failed or blocked path: the points found so far, joined through a short bounded detour (50 revs
 // inside 26 tiles) onto its waypoints when one of the last ten points is reached, else with the waypoints appended
 void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
@@ -1329,6 +1509,7 @@ done:
 
 // NEAR: the original computes mPending.begin() + i three times through the out-of-line _Ptrit::operator+ 0x1ba01a
 // (two results unused) and keeps i * 12 in a frame slot
+// FUNCTION: EXE 0x4a8582
 // Requests the pending unit paths again (the world's StartGame after a map change), last first; then none is pending
 void EEPathManager::RequestPendingPaths(EEMap* inMap)
 {
@@ -1351,6 +1532,7 @@ void EEPathManager::RequestPendingPaths(EEMap* inMap)
     this->mPending.clear();
 }
 
+// FUNCTION: EXE 0x4a86cb
 // Applies a finished tile search: as a failed path unless its goal accepted the nearest tile and did not take it,
 // else as a found path
 void EEPathManager::FinishPath(EEPathManagerNode* inNode)
@@ -1372,6 +1554,7 @@ void EEPathManager::FinishPath(EEPathManagerNode* inNode)
 }
 
 // (the vector clear() 0x688c2c between the flag and SnapLastWaypoint is the unit's mBoundedPathTiles)
+// FUNCTION: EXE 0x4a870d
 // Gives the unit the found path, marks its path done, clears its bounded path tiles and snaps its last waypoint
 void EEPathManager::FinishFoundPath(EEPathManagerNode* inNode)
 {
@@ -1389,6 +1572,7 @@ void EEPathManager::FinishFoundPath(EEPathManagerNode* inNode)
     theUnit->SnapLastWaypoint();
 }
 
+// FUNCTION: EXE 0x4a8778
 // Frees the bounded machine, the queued searches, spare machines, region maps and history, and resets the node pool
 // and the timers
 void EEPathManager::Reset()
@@ -1413,6 +1597,7 @@ void EEPathManager::Reset()
     this->mNextRegionTime = 0;
 }
 
+// FUNCTION: EXE 0x4a8808
 // Keeps a graph machine as a spare (up to 25; its modifier and unit released), else deletes it
 void EEPathManager::ReleaseGraphMachine(EEGraphPathMachine* inMachine)
 {
@@ -1427,6 +1612,7 @@ void EEPathManager::ReleaseGraphMachine(EEGraphPathMachine* inMachine)
     }
 }
 
+// FUNCTION: EXE 0x4a8861
 // Keeps a tile path machine as a spare (up to 35; its modifier and unit released), else deletes it
 void EEPathManager::ReleasePathMachine(EEPathMachine* inMachine)
 {
@@ -1442,6 +1628,7 @@ void EEPathManager::ReleasePathMachine(EEPathMachine* inMachine)
     }
 }
 
+// FUNCTION: EXE 0x4a88c3
 // Releases the node's unit and returns the node to the pool (its request stays referenced until reuse)
 void EEPathManager::ReleaseNode(EEPathManagerNode* inNode)
 {
@@ -1449,6 +1636,7 @@ void EEPathManager::ReleaseNode(EEPathManagerNode* inNode)
     this->mNodePool.Delete(inNode);
 }
 
+// FUNCTION: EXE 0x4a88df
 // Drops the unit's queued graph search, if any, returning its machine and node
 void EEPathManager::CancelAutoPaths(EEComplexUnit* inUnit)
 {
@@ -1464,6 +1652,7 @@ void EEPathManager::CancelAutoPaths(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x4a896b
 // Drops the queued graph search of a path request, if any, returning its machine and node
 void EEPathManager::CancelAutoPathRequest(UReferenceCounter* inRequest)
 {
@@ -1479,6 +1668,7 @@ void EEPathManager::CancelAutoPathRequest(UReferenceCounter* inRequest)
     }
 }
 
+// FUNCTION: EXE 0x4a89f7
 // Drops the unit's queued tile search (and its graph search when inAutoPaths)
 void EEPathManager::CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths)
 {
@@ -1497,6 +1687,7 @@ void EEPathManager::CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths)
     }
 }
 
+// FUNCTION: EXE 0x4a8a8e
 // When due and no graph search is queued, rebuilds the continent regions: retried in 0.1 s until it completes, then
 // region updates stop
 void EEPathManager::UpdateRegions()
@@ -1510,6 +1701,7 @@ void EEPathManager::UpdateRegions()
     this->mIsUpdatingRegions = false;
 }
 
+// FUNCTION: EXE 0x4a8adb
 // Frees the bounded machine, the queued searches, spare machines, region maps, history and every node pool
 void EEPathManager::Clear()
 {
@@ -1528,6 +1720,7 @@ void EEPathManager::Clear()
     EEAIAStarStorage::FreeNodePool();
 }
 
+// FUNCTION: EXE 0x4a8b40
 // Turns region rebuilds on or off; turning them on schedules the next one now or 10 s (times the game speed) ahead
 void EEPathManager::SetRegionUpdates(bool inOn, bool inNow)
 {
@@ -1545,6 +1738,7 @@ void EEPathManager::SetRegionUpdates(bool inOn, bool inNow)
     this->mIsUpdatingRegions = inOn;
 }
 
+// FUNCTION: EXE 0x4a8ba4
 // Runs the bounded machine between two tiles for a unit with a step budget, accepting the nearest tile; returns
 // whether the search did not fail
 bool EEPathManager::RunBoundedPath(EEBoundedPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
@@ -1560,6 +1754,7 @@ bool EEPathManager::RunBoundedPath(EEBoundedPathMachine* inMachine, EEComplexUni
     return !theGoal.mSearchFailed;
 }
 
+// FUNCTION: EXE 0x4a8bf4
 // When inDetour starts on the point inCount from inPath's end, fills outPath with inPath up to that point, then
 // inDetour; returns whether it joined them
 bool EEPathManager::JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPoint>& inDetour,
@@ -2557,6 +2752,7 @@ long EEPathManager::LoadGraphSearches(FSFile& inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4a8db8
 // Advances the queued graph and tile searches and the region rebuild, when there are any
 void EEPathManager::Update()
 {
@@ -2568,6 +2764,7 @@ void EEPathManager::Update()
         this->UpdateRegions();
 }
 
+// FUNCTION: EXE 0x4a8de8
 // Runs the queued graph searches in turn until 32 steps are spent: finished ones are applied and freed, running
 // ones get one more step per pass (up to 32) and go to the back
 void EEPathManager::UpdateAutoPaths()
@@ -2597,6 +2794,7 @@ void EEPathManager::UpdateAutoPaths()
 }
 
 // Called every 10 s (UpdatePaths)
+// FUNCTION: EXE 0x4a8ea1
 // Counts the path requests of the last 5.5 s per unit and goal tile and adds a tile asked for more than once to
 // its unit's region map (an existing entry counts up by one); then clears the history (no counting while loading)
 void EEPathManager::PruneHistory()
@@ -2649,6 +2847,7 @@ void EEPathManager::PruneHistory()
 }
 
 // Called every 30 s (UpdatePaths)
+// FUNCTION: EXE 0x4a9266
 // Cancels the paths of each unit whose region map holds a tile counted 8 or more and tells its player the unit is
 // stranded, after freeing every region map (nothing while loading a saved game)
 void EEPathManager::PruneRegions()
@@ -2677,6 +2876,7 @@ void EEPathManager::PruneRegions()
     }
 }
 
+// FUNCTION: EXE 0x4a9367
 // Runs the queued tile searches in turn until 32 steps are spent (finished ones applied and freed), then prunes
 // the history every 10 s and the region maps every 30 s
 void EEPathManager::UpdatePaths()
@@ -2716,6 +2916,80 @@ void EEPathManager::UpdatePaths()
     this->mNextRegionPruneTime = theTime + 30000;
 }
 
+// Compiler-generated for this unit (template COMDATs after the last member, in address order; names in
+// analysis/exe/names.txt): the instantiations this unit emits.
+// TEMPLATE: EXE 0x4a9472
+// TEMPLATE: EXE 0x4a952e
+// TEMPLATE: EXE 0x4a9535
+// TEMPLATE: EXE 0x4a956f
+// TEMPLATE: EXE 0x4a959a
+// TEMPLATE: EXE 0x4a95ae
+// TEMPLATE: EXE 0x4a9894
+// TEMPLATE: EXE 0x4a9901
+// TEMPLATE: EXE 0x4a996d
+// TEMPLATE: EXE 0x4a9bbb
+// TEMPLATE: EXE 0x4a9c2c
+// TEMPLATE: EXE 0x4a9eb8
+// TEMPLATE: EXE 0x4aa22a
+// TEMPLATE: EXE 0x4aa28d
+// TEMPLATE: EXE 0x4aa2f0
+// TEMPLATE: EXE 0x4aa3d8
+// TEMPLATE: EXE 0x4aa8a2
+// Named COMDATs of this unit (compiled here; names in analysis/exe/names.txt)
+// TEMPLATE: EXE 0x4a96d4
+// TEMPLATE: EXE 0x4a96fd
+// TEMPLATE: EXE 0x4aa74d
+// TEMPLATE: EXE 0x4abb27
+// (??_E?$EEAIAStarMachine@VEEAIAStarStorage@@VEEAIAStarPathfindingGoal@@VEEMap@@@@WCA@AEPAXI@Z)
+
+// TEMPLATE: EXE 0x4abb2f
+// (??_E?$EEAIAStarMachine@VEEAIAStarBoundedStorage@@VEEAIAStarBoundedPathGoal@@VEEMap@@@@WCA@AEPAXI@Z)
+
+// TEMPLATE: EXE 0x4abb37
+// (??_E?$EEAIAStarGraphMachine@VEEAIAStarGraphStorage@@VEEAIAStarPathGraphGoal@@VEEAIPathSubSector@@@@WCI@AEPAXI@Z)
+
+// TEMPLATE: EXE 0x4abb62
+// (??_G?$UMemoryPool@VEEPathManagerNode@@@@UAEPAXI@Z)
+
+// TEMPLATE: EXE 0x4abb84
+
+// The A* machines' steps (ee/EEAIAStarMachineSteps.h, ee/EEAIAStarMachine.h) for the path machine
+// (EEAIAStarStorage/EEAIAStarPathfindingGoal), the bounded one and the path graph machine.
+// TEMPLATE: EXE 0x4a97e2
+// TEMPLATE: EXE 0x4a97f5
+// TEMPLATE: EXE 0x4a9804
+// TEMPLATE: EXE 0x4a9813
+// TEMPLATE: EXE 0x4a98ca
+// TEMPLATE: EXE 0x4a99d7
+// TEMPLATE: EXE 0x4a99f1
+// TEMPLATE: EXE 0x4a9a07
+// TEMPLATE: EXE 0x4a9a1d
+// TEMPLATE: EXE 0x4a9a3e
+// TEMPLATE: EXE 0x4a9a54
+// TEMPLATE: EXE 0x4a9a78
+// TEMPLATE: EXE 0x4aaf29
+// TEMPLATE: EXE 0x4ab29e
+// TEMPLATE: EXE 0x4aa4e5
+// TEMPLATE: EXE 0x4aa562
+// TEMPLATE: EXE 0x4aa5b8
+// TEMPLATE: EXE 0x4aa915
+// TEMPLATE: EXE 0x4aa98d
+// TEMPLATE: EXE 0x4aacf0
+// TEMPLATE: EXE 0x4aad6c
+// TEMPLATE: EXE 0x4aae9b
+// TEMPLATE: EXE 0x4aaf4c
+// TEMPLATE: EXE 0x4ab407
+// TEMPLATE: EXE 0x4ab504
+// TEMPLATE: EXE 0x4ab5e6
+// TEMPLATE: EXE 0x4ab659
+// TEMPLATE: EXE 0x4ab6c1
+// TEMPLATE: EXE 0x4ab7e3
+// TEMPLATE: EXE 0x4ab8f7
+// TEMPLATE: EXE 0x4ab9dc
+// TEMPLATE: EXE 0x4aba52
+// TEMPLATE: EXE 0x4aba99
+// TEMPLATE: EXE 0x4abae0
+
 // The path graph machine's goal hooks (ee/EEAIAStarPathGraphGoal.h). GetGoalID and the node tile are read inline
 // (0xaacf0, 0xab6c1).
 inline unsigned short EEAIAStarPathGraphGoal::GetGoalID() const
@@ -2728,12 +3002,14 @@ inline U2DPoint<long> EEAIPathSubSector::GetGraphLocation() const
     return U2DPoint<long>(this->mSector->mCenter.mX, this->mSector->mCenter.mY);
 }
 
+// FUNCTION: EXE 0x4ab2bd
 // Returns the Manhattan distance between two tiles times 10 (ICF-folded with EEAIAStarPathfindingGoalBase's)
 long EEAIAStarPathGraphGoal::Estimate(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo) const
 {
     return (UMAbs(inFrom.GetX() - inTo.GetX()) + UMAbs(inFrom.GetY() - inTo.GetY())) * 10;
 }
 
+// FUNCTION: EXE 0x4ab2e5
 // Returns whether the search may enter a sub sector from another, asking the modifier when there is one
 bool EEAIAStarPathGraphGoal::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom)
 {
@@ -2742,6 +3018,7 @@ bool EEAIAStarPathGraphGoal::CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSe
     return this->mModifier->CanEnter(inSector, inFrom);
 }
 
+// FUNCTION: EXE 0x4ab7bb
 // Returns the cost of a step into a sub sector: the modifier's when there is one, else the default cost
 long EEAIAStarPathGraphGoal::GetStepCost(EEAIAStarGraphNode* inParent, EEAIPathSubSector* inTo)
 {

@@ -26,45 +26,45 @@ class Image;
 // the shared, reference-counted text of a GUIString (0x10 bytes: `new` in 0x328450; ctor 0x327840 from a wide string)
 class GUIStringData : public RefCount {
 public:
-    explicit GUIStringData(unsigned short inCapacity);
-    virtual ~GUIStringData();
+    explicit GUIStringData(unsigned short inCapacity); // 0x3274e0
+    virtual ~GUIStringData();               // 0x327980
     GUIStringData(const wchar_t* inText);  // 0x327840 (WONAPI)
     GUIStringData(const char* inText);     // 0x3277e0 (WONAPI)
     GUIStringData(const char*,unsigned short); // bounded constructor (not identified in the original exe)
     GUIStringData(const wchar_t*,unsigned short); // bounded constructor (not identified in the original exe)
-    GUIStringData(const std::string& inText);
-    GUIStringData(const std::wstring& inText);
-    GUIStringData(const GUIStringData& theCopy);
-    GUIStringData(const GUIStringData* inOther, unsigned short inStart, unsigned short inLength);
+    GUIStringData(const std::string& inText);      // 0x3278a0
+    GUIStringData(const std::wstring& inText);     // 0x327910
+    GUIStringData(const GUIStringData& theCopy);   // 0x327600
+    GUIStringData(const GUIStringData* inOther, unsigned short inStart, unsigned short inLength); // 0x3276f0
     void Init(); // at 0x007274b0
     void AssignStr(const char*,int); //327a20 unsigned-byte widening
     void AssignWStr(const wchar_t*,int); //327ac0
     void assign(const GUIStringData*,unsigned short,unsigned short); //327c10
-    void resize(int inLength, bool inGrow) { this->Reserve(inLength,inGrow); this->mLength=inLength; this->mText[this->mLength]=0; }
+    void resize(int inLength, bool inGrow) { this->Reserve(inLength,inGrow); this->mLength=inLength; this->mText[this->mLength]=0; } // 0x30a1d0
     void Fill(int,unsigned short,unsigned short); // at 0x00727b60
-    int ToInt(unsigned short inStart) const;
+    int ToInt(unsigned short inStart) const; // 0x3281e0
     int find(int inChar, int inStart) const; // 0x328280; -1 if absent
-    int find(const GUIStringData* inText, int inStart) const;
-    int findNoCase(const GUIStringData* inText, int inStart) const;
+    int find(const GUIStringData* inText, int inStart) const; // 0x3282c0
+    int findNoCase(const GUIStringData* inText, int inStart) const; // 0x328340
     int rFind(int,int) const; // reverse character search, at 0x00728410
     int rFind(const GUIStringData*,int) const; // reverse substring search
     int findOneOf(const GUIStringData*,int) const;
     void erase(int,int);
     void insert(int,const GUIStringData*);
     int setAt(int,int);
-    void toUpper();
+    void toUpper();                        // 0x3279d0
     void toLowerCase(); // Latin-1 lower-casing
-    int Compare(const GUIStringData* inOther) const;
+    int Compare(const GUIStringData* inOther) const;    // 0x327fa0
     int compare(const char* theStr, int theOffset) const; // case-sensitive compare with narrow text, at 0x007280f0
     void append(int inChar) { this->resize(this->mLength + 1, true); this->mText[this->mLength - 1] = (wchar_t)inChar; } // inline (as used at 0x007022d0)
     // inline in the WON library (ChatCommandParser::AddHelpEntry 0x757800); the exe's lobby glue had an out-of-line
     // copy (0x292419) doing the same: Reserve, length, terminator, copy
     void append(const GUIStringData* inText, unsigned short inStart, unsigned short inLength)
     { int theLength = this->mLength; this->resize(theLength + inLength, true); memcpy(this->mText + theLength, inText->mText + inStart, inLength * sizeof(wchar_t)); }
-    int CompareNoCase(const GUIStringData* inOther) const;
-    int CompareNoCase(const char* inText, int inOffset) const;
+    int CompareNoCase(const GUIStringData* inOther) const;  // 0x328030
+    int CompareNoCase(const char* inText, int inOffset) const; // 0x328150
     std::string GetString() const;          // 0x327d90 (WONAPI, /GX): narrowed
-    std::wstring GetWString() const;
+    std::wstring GetWString() const;        // 0x327f30
 
     wchar_t* mText;                         // +0x08
     unsigned short mLength;                 // +0x0c
@@ -123,8 +123,8 @@ public:
     bool empty() const { return this->mData->mLength==0; }
     int operator[](int inPos) const { return this->mData->mText[inPos]; }
     unsigned short at(int inPos) const { return this->mData->mText[inPos]; }
-    GUIString substr(unsigned short inStart, unsigned short inLength) const;
-    GUIString substr(unsigned short inStart) const;
+    GUIString substr(unsigned short inStart, unsigned short inLength) const; // 0x2f8b90
+    GUIString substr(unsigned short inStart) const; // 0x339c80
     int find(int inChar, int inStart) const { return this->mData->find(inChar, inStart); }
     int find(const GUIString& inText, int inStart) const { return this->mData->find(inText.mData.get(), inStart); }
     int findNoCase(const GUIString& inText, int inStart) const { return this->mData->findNoCase(inText.mData.get(), inStart); }
@@ -282,11 +282,11 @@ public:
     static WONFile GetWorkingDirectory();
     bool SetWorkingDirectory();
     static const char PATH_SEP;
-    void Reset();
-    void CalcFileInfo();
-    void CalcFileDirectory();
-    void CalcFullPath();
-    void CalcFileExtension();
+    void Reset();                          // 0x2a76c0
+    void CalcFileInfo();                   // 0x2a79f0
+    void CalcFileDirectory();              // 0x2a7a60
+    void CalcFullPath();                   // 0x2a7c30
+    void CalcFileExtension();              // 0x2a7d80
     bool SetReadOnly(bool inReadOnly);      // file attributes
     bool Exists();
     bool IsDir();
@@ -295,11 +295,11 @@ public:
     const std::string& GetFileDirectory();
     const std::string& GetFileExtension();
     const std::string& GetFullPath();
-    void SetFilePath(const std::string& inPath);
+    void SetFilePath(const std::string& inPath); // 0x2a7840
     const std::string& GetFileName();       // 0x2a7ff0 (+0x20, parsed on first use)
-    long GetModifyTime();
+    long GetModifyTime();                   // 0x2a8070
     unsigned long GetSize();                // 0x2a8050 (+0x60, read on first use; inferred)
-    bool Delete(bool inFlag);
+    bool Delete(bool inFlag);               // 0x2a7960
 
     std::string mPath;                      // +0x00
     std::string mFileDirectory;             // +0x10

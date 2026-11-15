@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00781860
 // Creates a button config (base members only)
 ButtonConfig::ButtonConfig()
 {

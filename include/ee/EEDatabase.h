@@ -15,12 +15,12 @@ class FSFileSpec;
 // (vptr, +4 = 0), ??_G 0xd6042, dtor 0xd605e (vptr, then a tail jump to Clear). Member names are provisional.
 class EEDatabase {
 public:
-    EEDatabase();
+    EEDatabase();                           // 0xd6035
     virtual ~EEDatabase();                  // +0x00 (??_G 0xd6042; dtor 0xd605e)
     void Clear();                           // 0xd6179: deletes every object (slot 0 ??_G(1)), then the vector
     long Load(FSFileSpec* inFile);          // 0xd60ae: a count, then one EEDbObject per record
     EEDbObject* GetEntry(unsigned long inIndex);    // 0xd6069 (NULL past the end; provisional name)
-    unsigned long GetCount();
+    unsigned long GetCount();               // 0xd6094 (provisional name)
 
     std::vector<EEDbObject*>* mObjects;     // +0x04
 };

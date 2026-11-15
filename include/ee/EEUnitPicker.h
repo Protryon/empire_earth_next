@@ -40,9 +40,9 @@ struct EEUnitPickerHit {
 
 class EEUnitPicker {                        // RTTI, vtable 0x441c48 (one slot)
 public:
-    EEUnitPicker(unsigned long inCapacity);
+    EEUnitPicker(unsigned long inCapacity); // 0x118cf8
     virtual ~EEUnitPicker();                // +0x00 (??_G 0x118dbb; dtor 0x118e35)
-    bool Contains(EEUnit* inUnit);
+    bool Contains(EEUnit* inUnit);          // 0x118e74 (provisional name)
     // 0x119540: the unit under inPoint (referenced; 0 if none) (provisional name). The caller holds the world's lock
     EEUnit* PickUnit(const GE2DPoint& inPoint, long inPreferResources);
     // port (R5a.3): PickUnit without the reference, for the frame's capture (the world's lock is held throughout)
@@ -78,6 +78,6 @@ private:
 #endif
 };
 
-extern EEUnitPicker gUnitPicker;
+extern EEUnitPicker gUnitPicker;            // 0x528d78
 
 #endif

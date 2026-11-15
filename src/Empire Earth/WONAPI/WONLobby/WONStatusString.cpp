@@ -18,6 +18,7 @@ const char* WONStatusToString(WONStatus);
 }
 using namespace WONAPI;
 
+// FUNCTION: WON 0x00766a60
 // Formats a failure message with the status's internal description filled in
 static GUIString GeneralStatusError(const GUIString& text,WONStatus status)
 {
@@ -25,6 +26,7 @@ static GUIString GeneralStatusError(const GUIString& text,WONStatus status)
     return LobbyFormatString(text,GUIString(new GUIStringData(description)));
 }
 namespace WONAPI {
+// FUNCTION: WON 0x00766170
 // Returns the player-facing message for a WON status: a specific text for account, login and server errors,
 // else a generic HTTP, MOTD, routing, GameSpy or general failure text with the status description (the choice is
 // ee_won's statusstr.rs, the original's switch)

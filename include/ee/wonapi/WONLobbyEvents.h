@@ -10,23 +10,23 @@ class LobbyGameList;
 // RTTI 0x851af0; LobbyEvent is 0x20 bytes, the change kind is at 0x20, 0x24 bytes in all.
 class LobbyChangeEvent : public LobbyEvent {
 public:
-    LobbyChangeEvent(int inType, int inChangeKind);
-    bool IsAdd();
-    bool IsDelete();
+    LobbyChangeEvent(int inType, int inChangeKind); // 0x7593a0
+    bool IsAdd();                                // 0x759450
+    bool IsDelete();                             // 0x759460
     bool IsModify();                             // 0x759470; kind 2
     int mChangeKind;
 };
 class AcceptClientEvent : public LobbyEvent {
 public:
     virtual ~AcceptClientEvent(); // explicit: writes its own vtable pointer
-    AcceptClientEvent(LobbyClient* inClient, bool inAccepted);
+    AcceptClientEvent(LobbyClient* inClient, bool inAccepted); // 0x759480
     SmartPtr<LobbyClient> mClient; // 0x20
     bool mAccepted; // 0x24
 };
 class AlertEvent : public LobbyEvent {
 public:
     virtual ~AlertEvent(); // explicit: writes its own vtable pointer
-    AlertEvent(int inKind, int inValue, int inSeverity, const GUIString& inText);
+    AlertEvent(int inKind, int inValue, int inSeverity, const GUIString& inText); // 0x759580
     int GetKind() const { return this->mKind; }
     int GetValue() const { return this->mValue; }
     int GetSeverity() const { return this->mSeverity; }
@@ -40,7 +40,7 @@ class AnnounceClientLocationEvent : public LobbyEvent {
 public:
     virtual ~AnnounceClientLocationEvent(); // explicit: writes its own vtable pointer
     AnnounceClientLocationEvent(LobbyClient* inClient, const GUIString& inServer,
-        const GUIString& inRoom, int inRoomId);
+        const GUIString& inRoom, int inRoomId); // 0x759710
     SmartPtr<LobbyClient> mClient; // 0x20
     GUIString mServer; // 0x24
     GUIString mRoom; // 0x28
@@ -50,7 +50,7 @@ public:
 class AnnounceFriendEvent : public LobbyChangeEvent {
 public:
     virtual ~AnnounceFriendEvent(); // explicit: writes its own vtable pointer
-    AnnounceFriendEvent(LobbyFriend* inFriend, int inLocation, int inChangeKind);
+    AnnounceFriendEvent(LobbyFriend* inFriend, int inLocation, int inChangeKind); // 0x759890
     SmartPtr<LobbyFriend> mFriend; // 0x24
     int mLocation; // 0x28
     bool mHandled; // 0x2c
@@ -58,7 +58,7 @@ public:
 class FriendActionEvent : public LobbyEvent {
 public:
     virtual ~FriendActionEvent(); // explicit: writes its own vtable pointer
-    FriendActionEvent(int inAction, LobbyFriend* inFriend, int inValue);
+    FriendActionEvent(int inAction, LobbyFriend* inFriend, int inValue); // 0x759ea0
     int mAction; // 0x20
     SmartPtr<LobbyFriend> mFriend; // 0x24
     int mValue; // 0x28
@@ -66,63 +66,63 @@ public:
 class FriendChangedEvent : public LobbyChangeEvent {
 public:
     virtual ~FriendChangedEvent(); // explicit: writes its own vtable pointer
-    FriendChangedEvent(LobbyFriend* inFriend, int inChangeKind);
+    FriendChangedEvent(LobbyFriend* inFriend, int inChangeKind); // 0x759fa0
     SmartPtr<LobbyFriend> mFriend; // 0x24
 };
 class GameActionEvent : public LobbyEvent {
 public:
     virtual ~GameActionEvent(); // explicit: writes its own vtable pointer
-    GameActionEvent(int inAction, LobbyGame* inGame);
+    GameActionEvent(int inAction, LobbyGame* inGame); // 0x75a0a0
     int mAction; // 0x20
     SmartPtr<LobbyGame> mGame; // 0x24
 };
 class GameChangedEvent : public LobbyChangeEvent {
 public:
     virtual ~GameChangedEvent(); // explicit: writes its own vtable pointer
-    GameChangedEvent(LobbyGame* inGame, int inChangeKind);
+    GameChangedEvent(LobbyGame* inGame, int inChangeKind); // 0x75a1a0
     SmartPtr<LobbyGame> mGame; // 0x24
 };
 class JoinFriendsRoomEvent : public LobbyEvent {
 public:
     virtual ~JoinFriendsRoomEvent(); // explicit: writes its own vtable pointer
-    JoinFriendsRoomEvent(LobbyFriend* inFriend);
+    JoinFriendsRoomEvent(LobbyFriend* inFriend); // 0x75a7b0
     SmartPtr<LobbyFriend> mFriend; // 0x20
 };
 class JoinGameEvent : public LobbyEvent {
 public:
     virtual ~JoinGameEvent(); // explicit: writes its own vtable pointer
-    JoinGameEvent(LobbyGame* inGame);
+    JoinGameEvent(LobbyGame* inGame); // 0x75a8b0
     SmartPtr<LobbyGame> mGame; // 0x20
 };
 class PingGameEvent : public LobbyEvent {
 public:
     virtual ~PingGameEvent(); // explicit: writes its own vtable pointer
-    PingGameEvent(LobbyGame* inGame, bool inFlag);
+    PingGameEvent(LobbyGame* inGame, bool inFlag); // 0x75ab30
     SmartPtr<LobbyGame> mGame; // 0x20
     bool mFlag; // 0x24
 };
 class PlayerChangedEvent : public LobbyChangeEvent {
 public:
     virtual ~PlayerChangedEvent(); // explicit: writes its own vtable pointer
-    PlayerChangedEvent(LobbyClient* inClient, int inChangeKind);
+    PlayerChangedEvent(LobbyClient* inClient, int inChangeKind); // 0x75ac30
     SmartPtr<LobbyClient> mClient; // 0x24
 };
 class PlayerTeamChangedEvent : public LobbyChangeEvent {
 public:
     virtual ~PlayerTeamChangedEvent(); // explicit: writes its own vtable pointer
-    PlayerTeamChangedEvent(LobbyClient* inClient, int inChangeKind);
+    PlayerTeamChangedEvent(LobbyClient* inClient, int inChangeKind); // 0x75ad30
     SmartPtr<LobbyClient> mClient; // 0x24
 };
 class ServerChangedEvent : public LobbyChangeEvent {
 public:
     virtual ~ServerChangedEvent(); // explicit: writes its own vtable pointer
-    ServerChangedEvent(LobbyServer* inServer, int inChangeKind);
+    ServerChangedEvent(LobbyServer* inServer, int inChangeKind); // 0x75aff0
     SmartPtr<LobbyServer> mServer; // 0x24
 };
 class ClientActionEvent : public LobbyEvent {
 public:
     virtual ~ClientActionEvent(); // explicit: writes its own vtable pointer
-    ClientActionEvent(int inAction, const int& inRoomSpec, LobbyClient* inClient);
+    ClientActionEvent(int inAction, const int& inRoomSpec, LobbyClient* inClient); // 0x759a90
     int GetAction() const { return this->mAction; }
     int GetRoomSpec() const { return this->mRoomSpec; }
     LobbyClient* GetClient() const { return this->mClient.get(); }
@@ -144,35 +144,35 @@ class ClientChangedEvent : public LobbyChangeEvent {
 public:
     int GetRoomSpec() const { return this->mRoomSpec; }
     virtual ~ClientChangedEvent(); // explicit: writes its own vtable pointer
-    ClientChangedEvent(LobbyClient* inClient, const int& inRoomSpec, int inChangeKind);
+    ClientChangedEvent(LobbyClient* inClient, const int& inRoomSpec, int inChangeKind); // 0x759b90
     SmartPtr<LobbyClient> mClient; int mRoomSpec; // 0x24, 0x28
 };
 class ClientModeratedEvent : public LobbyEvent {
 public:
     virtual ~ClientModeratedEvent(); // explicit: writes its own vtable pointer
     ClientModeratedEvent(LobbyClient* inClient, int inRoomSpec, const GUIString& inRoomName,
-        int inModerationKind, unsigned long inDuration, bool inFlag, const GUIString& inComment);
+        int inModerationKind, unsigned long inDuration, bool inFlag, const GUIString& inComment); // 0x759c90
     SmartPtr<LobbyClient> mClient; int mRoomSpec; GUIString mRoomName;
     int mModerationKind; unsigned long mDuration; bool mFlag; GUIString mComment; // 0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38
 };
 class GroupChangedEvent : public LobbyChangeEvent {
 public:
     virtual ~GroupChangedEvent(); // explicit: writes its own vtable pointer
-    GroupChangedEvent(LobbyGroup* inGroup, LobbyServer* inServer, int inChangeKind);
+    GroupChangedEvent(LobbyGroup* inGroup, LobbyServer* inServer, int inChangeKind); // 0x75a3a0
     SmartPtr<LobbyServer> mServer; SmartPtr<LobbyGroup> mGroup; // 0x24, 0x28
 };
 class GroupInvitationEvent : public LobbyEvent {
 public:
     virtual ~GroupInvitationEvent(); // explicit: writes its own vtable pointer
     GroupInvitationEvent(int inKind, const GUIString& inGameName, unsigned short inGameId,
-        LobbyClient* inClient, bool inInvite, const GUIString& inComment, bool inFlag);
+        LobbyClient* inClient, bool inInvite, const GUIString& inComment, bool inFlag); // 0x75a4e0
     int mKind; GUIString mGameName; unsigned short mGameId; SmartPtr<LobbyClient> mClient;
     bool mInvite; bool mFlag; GUIString mComment; // 0x20, 0x24, 0x28, 0x2c, 0x30, 0x31, 0x34
 };
 class GroupJoinAttemptEvent : public LobbyEvent {
 public:
     virtual ~GroupJoinAttemptEvent(); // explicit: writes its own vtable pointer
-    GroupJoinAttemptEvent(int inKind, LobbyClient* inClient, const GUIString& inComment);
+    GroupJoinAttemptEvent(int inKind, LobbyClient* inClient, const GUIString& inComment); // 0x75a670
     int mKind; SmartPtr<LobbyClient> mClient; GUIString mComment; // 0x20, 0x24, 0x28
 };
 class JoinedRoomEvent : public LobbyEvent {
@@ -180,7 +180,7 @@ public:
     int GetRoomSpec() const { return this->mRoomSpec; }
     virtual ~JoinedRoomEvent(); // explicit: writes its own vtable pointer
     JoinedRoomEvent(const GUIString& inServerName, const GUIString& inGroupName,
-        const int& inRoomSpec, unsigned short inClientId, LobbyClientList* inClients);
+        const int& inRoomSpec, unsigned short inClientId, LobbyClientList* inClients); // 0x75a9b0
     SmartPtr<LobbyClientList> mClients; GUIString mServerName; GUIString mGroupName;
     unsigned short mClientId; int mRoomSpec; // 0x20, 0x24, 0x28, 0x2c, 0x30
 };
@@ -188,7 +188,7 @@ class RecvChatEvent : public LobbyEvent {
 public:
     virtual ~RecvChatEvent(); // explicit: writes its own vtable pointer
     RecvChatEvent(const int& inRoomSpec, unsigned long inFlags, LobbyClient* inSender,
-        const GUIString& inText, LobbyClient* inTarget);
+        const GUIString& inText, LobbyClient* inTarget); // 0x75ae30
     bool IsWhisper(); bool IsEmote(); bool IsWarning(); bool IsTeam();
     SmartPtr<LobbyClient> mSender; SmartPtr<LobbyClient> mTarget; int mRoomSpec;
     unsigned long mFlags; GUIString mText; // 0x20, 0x24, 0x28, 0x2c, 0x30
@@ -295,7 +295,7 @@ public:
 };
 class SyncGameListEvent : public LobbyEvent {
 public:
-    SyncGameListEvent(LobbyGameList* inGames);
+    SyncGameListEvent(LobbyGameList* inGames); // 0x75b0f0
     virtual ~SyncGameListEvent(); // 0x75b160; explicit: writes its own vtable pointer
     SmartPtr<LobbyGameList> mGames; // 0x20; 0x24 bytes
 };

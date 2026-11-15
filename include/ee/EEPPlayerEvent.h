@@ -13,18 +13,18 @@ class FSFile;
 class EEPPlayerEvent {
 public:
     EEPPlayerEvent(const EETileLocation& inSource, const EETileLocation& inLocation, long inType,
-                   float inTimeRemaining, long inTextID);
+                   float inTimeRemaining, long inTextID);                                       // 0x16e1a2
     virtual ~EEPPlayerEvent();                                                                  // +0x00 0x16e212
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x16e326
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond) { return kErrorOK; }   // +0x08 (ICF 0x27cf38)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x16e487
 
-    void Reset();
-    void Deactivate(EEPlayer* inPlayer);
+    void Reset();                                           // 0x16e219
+    void Deactivate(EEPlayer* inPlayer);                    // 0x16e23c
     static float GetDuration(long inType);                  // 0x16e2fd (5000 for type 2, else 15000)
-    void Reactivate(EEPlayer* inPlayer);
-    void Activate(EEPlayer* inPlayer);
-    void Update(EEPlayer* inPlayer, float inElapsedTime);
+    void Reactivate(EEPlayer* inPlayer);                    // 0x16e316
+    void Activate(EEPlayer* inPlayer);                      // 0x16e3c3
+    void Update(EEPlayer* inPlayer, float inElapsedTime);   // 0x16e53a
 
     EETileLocation mSource;                 // +0x04 (saved)
     EETileLocation mLocation;               // +0x0c the tile (saved)

@@ -173,14 +173,18 @@ static intptr_t AccountHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t
     }
 }
 
+// FUNCTION: WON 0x7db150
 AccountLogic::AccountLogic() : mRust(ee_won_logic_new(EeWonLogicKind::Account, this, AccountHost)) {}
+// FUNCTION: WON 0x7db1d0
 AccountLogic::~AccountLogic() { ee_won_logic_free(this->mRust); }
+// FUNCTION: WON 0x7db2a0
 // Looks up the credits and terms-of-use dialogs from the lobby layout
 void AccountLogic::InitComponent(ComponentConfig* inConfig)
 {
     SafeGetComponent(inConfig, this->mCreditsDialog, "CreditsDialog", __FILE__, 43);
     SafeGetComponent(inConfig, this->mTOUDialog, "TOUDialog", __FILE__, 44);
 }
+// FUNCTION: WON 0x7dc2e0
 // Opens the create-account (terms of use to follow), lost-password or lost-user-name screen if the version is usable
 void AccountLogic::HandleControlEvent(int inControlId)
 {
@@ -188,9 +192,28 @@ void AccountLogic::HandleControlEvent(int inControlId)
                : inControlId == ID_ShowLostUserName ? 3 : 0;
     if (aWhich != 0) ee_won_logic_call(this->mRust, EeWonLogicCall::AcctControl, aWhich, 0, 0);
 }
+// FUNCTION: WON 0x7dc340
 // Routes create-account, lost password/user name, login, account query and update events to the handlers
 void AccountLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
     ee_won_logic_call(this->mRust, EeWonLogicCall::AcctEvent, (intptr_t)inEvent, inEvent->mType, 0);
 }
 }
+
+// SafeGetComponent COMDATs this unit references first (placed after the last logic unit)
+// TEMPLATE: WON 0x007f30d0
+// TEMPLATE: WON 0x007f3250
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007db1b0
+// (public: virtual void * __thiscall WONAPI::AccountLogic::`scalar deleting destructor'(unsigned int)    [??_GAccountLogic@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007db760
+// (public: virtual void * __thiscall WONAPI::SetLoginFieldsEvent::`scalar deleting destructor'(unsigned int)    [??_GSetLoginFieldsEvent@WONAPI@@UAEPAXI@)
+// TEMPLATE: WON 0x007db780
+// (public: virtual __thiscall WONAPI::SetLoginFieldsEvent::~SetLoginFieldsEvent(void)    [??1SetLoginFieldsEvent@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x007dc0b0
+// (public: virtual void * __thiscall WONAPI::QueryAccountResultEvent::`scalar deleting destructor'(unsigned int)    [??_GQueryAccountResultEvent@WONAPI@@)
+// TEMPLATE: WON 0x007dc0d0
+// (public: virtual __thiscall WONAPI::QueryAccountResultEvent::~QueryAccountResultEvent(void)    [??1QueryAccountResultEvent@WONAPI@@UAE@XZ])

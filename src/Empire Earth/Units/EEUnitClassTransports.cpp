@@ -69,6 +69,9 @@ bool EEUnitClass::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
     return theNote.R(ee_units_tr_can_load(EEObj(this), EEObj(inTransport), EEObj(inUnit)));
 }
 
+// TEMPLATE: EXE 0x61b819
+// EEComplexUnit::DistanceSquaredToTile (inline in ee/EEUnit.h; COMDAT after its first user CanLoad)
+
 bool EEUnitClass::CanUnloadNear(EEComplexUnit* inTransport, EEComplexUnit* inCargo,
                              U2DPoint<long>* ioUnloadTile, U2DPoint<long>* ioFirstCargoTile,
                              U2DPoint<long>* inDestination)
@@ -269,6 +272,7 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     return 0;
 }
 
+// FUNCTION: EXE 0x61ba6f
 // Returns the squared 3D distance from the unit to a point
 float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
 {
@@ -278,6 +282,7 @@ float EEComplexUnit::DistanceSquared3D(const GE3DPoint& inPoint)
     return theDX * theDX + theDY * theDY + theDZ * theDZ;
 }
 
+// FUNCTION: EXE 0x61c610
 // Finds where cargo leaves the transport: a tile around it for a unit that cannot move, else a free placement
 // near the location (water allowed for non-land units); returns whether one was found
 bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EEComplexUnit* inCargo,
@@ -308,6 +313,7 @@ bool EEUnitClass::TransportFindBoardingLocation(EEComplexUnit* inTransport, EECo
     return theResult;
 }
 
+// FUNCTION: EXE 0x61c7d1
 // Sets up a new transport as any unit, then gives it its class's resource type and amount
 void EEUnitClass::TransportUnitCreated(EEComplexUnit* inUnit)
 {
@@ -317,6 +323,7 @@ void EEUnitClass::TransportUnitCreated(EEComplexUnit* inUnit)
         inUnit->SetResourceAmount(this->mResourceAmount);
 }
 
+// FUNCTION: EXE 0x61c8f7
 // Unloads the transport's cargo at a tile (siege towers with the tower flag set)
 void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
@@ -334,6 +341,7 @@ void EEUnitClass::TransportUnloadAt(EEComplexUnit* inTransport, long inX, long i
 // the exe's module set. Its ctor is inline (vtable 0x448930); the slots +0xe4, +0xf4, +0xf8, +0x8c, +0xb8 in address
 // order. +0x8c and +0xf4 are also EEUCFortress's (ICF).
 
+// FUNCTION: EXE 0x616fea
 // Unloads all cargo at once when the transport is badly hurt
 void EEUnitClass::LandTransportBadlyHurt(EEUnit* inUnit)
 {
@@ -376,6 +384,7 @@ void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit
     theClass->PathToward(inUnit, thePosition, theTarget, false);
 }
 
+// FUNCTION: EXE 0x613774
 // Sets up a new transport helicopter as a transport, then lifts it to its flying height
 void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
 {
@@ -391,6 +400,7 @@ void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetHeight(theZ);
 }
 
+// FUNCTION: EXE 0x6137f8
 // Answers the dying-finished (below its tile's height) and move-prepared (has waypoints) triggers; others the
 // common way
 long EEUnitClass::HelicopterTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
@@ -429,6 +439,7 @@ long EEUnitClass::HelicopterTransportEvaluateCondition(EEComplexUnit* inUnit, un
 // +0x2c, +0xf4, +0xf8, EEUCTransport::ContinentsConnect, +0x78, +0x84, +0x98, +0xa0 in address order; +0x24/+0x2c/+0x78/+0xa0
 // call the spaceship's bodies (helpers ICF-folded into EEUCSpaceship.cpp's slots).
 
+// FUNCTION: EXE 0x61aa74
 // Sets up a new space transport at its flying height, with the class's resource type and amount
 void EEUnitClass::SpaceTransportUnitCreated(EEComplexUnit* inUnit)
 {
@@ -438,6 +449,7 @@ void EEUnitClass::SpaceTransportUnitCreated(EEComplexUnit* inUnit)
         inUnit->SetResourceAmount(this->mResourceAmount);
 }
 
+// FUNCTION: EXE 0x61aaa9
 // Adds the transport to its own tile only
 void EEUnitClass::SpaceTransportAddToTile(EEUnit* inUnit)
 {
@@ -448,6 +460,7 @@ void EEUnitClass::SpaceTransportAddToTile(EEUnit* inUnit)
         theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
 }
 
+// FUNCTION: EXE 0x61aaf5
 // Removes the transport from its own tile only
 void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
 {
@@ -458,6 +471,7 @@ void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
         theTile->RemoveUnit(theUnit);
 }
 
+// FUNCTION: EXE 0x61ab3b
 // Answers dying done (always) and move preparation complete (has a path) as a spaceship; others to the base class
 long EEUnitClass::SpaceTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
@@ -510,6 +524,7 @@ long EEUnitClass::SpaceshipVirtualA0(EEComplexUnit* inUnit, unsigned long inEven
 // 0x4c8fa4 (.data, a word): the faith a teleporter spends per full unload (provisional name)
 unsigned short gFortressUnloadCost = 100;
 
+// FUNCTION: EXE 0x6101f8
 // Returns whether the player's population has room for the unit's cost
 bool EEUnitClass::FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
@@ -519,6 +534,7 @@ bool EEUnitClass::FortressHasRoom(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
     return theResult;
 }
 
+// FUNCTION: EXE 0x61030a
 // Sets up a new fortress as built, with a 1 s regeneration timer
 void EEUnitClass::FortressUnitCreated(EEComplexUnit* inUnit)
 {
@@ -527,6 +543,7 @@ void EEUnitClass::FortressUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetRegenerationTimer(1000);
 }
 
+// FUNCTION: EXE 0x610357
 // Answers the fall-finished trigger once it has sunk below -2; other triggers go to the common unit class
 long EEUnitClass::FortressEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
@@ -543,6 +560,7 @@ long EEUnitClass::FortressEvaluateCondition(EEComplexUnit* inUnit, unsigned long
     return theResult;
 }
 
+// FUNCTION: EXE 0x610391
 // Unloads at a tile; a teleporter needs 100 faith and spends it in proportion to the cargo unloaded, else warns
 // its owner (event 0x274e)
 void EEUnitClass::FortressUnloadAt(EEComplexUnit* inTransport, long inX, long inY)

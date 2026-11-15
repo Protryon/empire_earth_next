@@ -10,7 +10,7 @@ class GETexture;
 
 class EEROTerrain : public EERenderObject {
 public:
-    EEROTerrain();
+    EEROTerrain();                          // 0x1125fb
     virtual ~EEROTerrain();                 // +0x10 dtor 0x11262d (??_G 0x112611)
     virtual void FrameStarting();           // +0x00 0x112638
     virtual void SceneStarting();           // +0x04 0xe123d trivial: ret (ICF)
@@ -21,7 +21,7 @@ public:
     void StepGridMode(bool inBackwards);    // 0x1138a6: mGridMode cycles 0..0x11 (provisional name)
 
     static void CreateSkyModel();           // 0x112e7f (the sky, clouds, stars and the area-effect textures)
-    static void ReleaseSkyModels();
+    static void ReleaseSkyModels();         // 0x1138d2
 
     long mGridMode;                         // +0x04 (= 0 in the ctor; non-zero: Virtual08 draws the terrain grid) (provisional name)
 };

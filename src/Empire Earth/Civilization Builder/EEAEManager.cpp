@@ -52,14 +52,14 @@
 // ICF-shared with EEPSuggestRecomputeAllAreaEffects's 0x16b555)
 class ApplyGeneratedEffectsToOthersFunctor : public EEUUUnitFunctor {   // vtable 0x44bb50
 public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->ApplyAreaEffects(); }
+    virtual void Apply(EEComplexUnit* inUnit) { inUnit->ApplyAreaEffects(); }  // 0x27b6bf
 };
 
 class SetAffectedByAreaEffectFunctor : public EEUUUnitFunctor {         // vtable 0x44bb60
 public:
     SetAffectedByAreaEffectFunctor(EEAreaEffect* inEffect, unsigned long inPlayer, const GE2DPoint& inLocation)
         : mEffect(inEffect), mPlayer(inPlayer), mLocation(inLocation) {}
-    virtual void Apply(EEComplexUnit* inUnit);
+    virtual void Apply(EEComplexUnit* inUnit);       // 0x27b015
 
     EEAreaEffect* mEffect;                  // +0x04
     unsigned long mPlayer;                  // +0x08
@@ -68,26 +68,26 @@ public:
 
 class ClearAreaEffectsFunctor : public EEUUUnitFunctor {                // vtable 0x44bb70
 public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->RemoveAffectingAreaEffects(); }
+    virtual void Apply(EEComplexUnit* inUnit) { inUnit->RemoveAffectingAreaEffects(); }  // 0x27b6b3
 };
 
 class RebuildAreaEffectRegionListFunctor : public EEUUUnitFunctor {     // vtable 0x44bd28
 public:
-    RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects);
-    virtual void Apply(EEComplexUnit* inUnit);
+    RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects);   // 0x27b593
+    virtual void Apply(EEComplexUnit* inUnit);       // 0x27b70c
 
     UReferenceContainer<EEAreaEffect*>* mEffects;   // +0x04
 };
 
 class RemoveRedundantAreaEffectsFunctor : public EEUUUnitFunctor {      // vtable 0x44bd38
 public:
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.KeepStrongest(); }
+    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.KeepStrongest(); }  // 0x27b6e0
 };
 
 class UpdateGeneratedAreaEffectsFunctor : public EEUUUnitFunctor {      // vtable 0x44bd48
 public:
     UpdateGeneratedAreaEffectsFunctor(float inElapsed) : mElapsed(inElapsed) {}
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->UpdateAreaEffects((unsigned long)this->mElapsed); }
+    virtual void Apply(EEComplexUnit* inUnit) { inUnit->UpdateAreaEffects((unsigned long)this->mElapsed); }  // 0x27b6cb
 
     float mElapsed;                         // +0x04
 };
@@ -95,7 +95,7 @@ public:
 class UpdateAffectedByAreaEffectsFunctor : public EEUUUnitFunctor {     // vtable 0x44bd58
 public:
     UpdateAffectedByAreaEffectsFunctor(float inElapsed) : mElapsed(inElapsed) {}
-    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.Tick(inUnit, this->mElapsed); }
+    virtual void Apply(EEComplexUnit* inUnit) { inUnit->mAffectingAreaEffects.Tick(inUnit, this->mElapsed); }    // 0x27b6f2
 
     float mElapsed;                         // +0x04
 };
@@ -105,17 +105,23 @@ struct EEAEAliveUnit {
     bool operator()(EEComplexUnit* inUnit) const { return inUnit->mHitPoints > 0; }
 };
 
+// FUNCTION: EXE 0x67adb0
 // Creates the area-effect manager with no templates or effects
 EEAEManager::EEAEManager()
 {
 }
 
+// SYNTHETIC: EXE 0x67ade7
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x67ae03
 // Destroys the manager, releasing every template and effect
 EEAEManager::~EEAEManager()
 {
     this->Clear();
 }
 
+// FUNCTION: EXE 0x67ae23
 // Lets every unit apply the area effects it generates to the units around it
 void EEAEManager::ApplyGeneratedAreaEffects()
 {
@@ -123,6 +129,7 @@ void EEAEManager::ApplyGeneratedAreaEffects()
     EEForEachPlayersUnit(&theFunctor);
 }
 
+// FUNCTION: EXE 0x67ae3a
 // Adds the list's effects to every living unit they cover around a location (a radius-0 effect: to every
 // unit of every player); a healing effect skips its own unit and shows on the units it covers
 void EEAEManager::CollectEffects(float inRadius, GE2DPoint& inLocation, unsigned long inPlayerID,
@@ -164,6 +171,7 @@ void EEAEManager::CollectEffects(float inRadius, GE2DPoint& inLocation, unsigned
     }
 }
 
+// FUNCTION: EXE 0x67b015
 // Adds the effect to a covered unit's affecting effects and applies it
 void SetAffectedByAreaEffectFunctor::Apply(EEComplexUnit* inUnit)
 {
@@ -173,6 +181,7 @@ void SetAffectedByAreaEffectFunctor::Apply(EEComplexUnit* inUnit)
     }
 }
 
+// FUNCTION: EXE 0x67b04d
 // Clears the affecting area effects of every unit
 void EEAEManager::ClearAreaEffects()
 {
@@ -180,6 +189,7 @@ void EEAEManager::ClearAreaEffects()
     EEForEachPlayersUnit(&theFunctor);
 }
 
+// FUNCTION: EXE 0x67b064
 // Empties the list of active area effects
 void EEAEManager::ClearEffects()
 {
@@ -188,6 +198,7 @@ void EEAEManager::ClearEffects()
     theEffects.mItems.clear();
 }
 
+// FUNCTION: EXE 0x67b079
 // Reads the area-effect templates from the area-effect file (an empty slot for records with id 0); returns 3
 // when a template fails to initialize
 long EEAEManager::Load(FSFile* inFile)
@@ -218,6 +229,7 @@ long EEAEManager::Load(FSFile* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x67b16e
 // Creates the area effect of the template at an index (its kind's: healing, morale, calamity and conversion immunity,
 // morale from buildings, from military heroes, economy from units, cloaking) for a unit; NULL for an unknown kind
 EEAreaEffect* EEAEManager::CreateAreaEffect(unsigned long inIndex, EEComplexUnit* inUnit)
@@ -235,6 +247,7 @@ EEAreaEffect* EEAEManager::CreateAreaEffect(unsigned long inIndex, EEComplexUnit
     return theEffect;
 }
 
+// FUNCTION: EXE 0x67b3d2
 // Finds an active effect of a kind covering a point that affects the player (immunities only, by the
 // reversed player test, in immunity mode), skipping protected units' effects and those in the exclusion list
 EEAreaEffect* EEAEManager::FindEffect(long inKind, float inX, float inY, unsigned long inPlayer, bool inMode,
@@ -269,12 +282,14 @@ EEAreaEffect* EEAEManager::FindEffect(long inKind, float inX, float inY, unsigne
     return NULL;
 }
 
+// FUNCTION: EXE 0x67b480
 // Tells whether a point lies in the effect's scaled area around its location
 bool EEAreaEffect::IsInRange(const GE2DPoint& inPoint)
 {
     return this->mTemplate->IsWithin(inPoint, this->mLocation, this->GetScale(), NULL);
 }
 
+// FUNCTION: EXE 0x67b4a2
 // Tells whether any active effect of the kind covers the point for the player
 bool EEAEManager::HasEffect(long inKind, float inX, float inY, unsigned long inPlayer, bool inMode,
                            EEUnitAreaEffectList* inList)
@@ -282,30 +297,35 @@ bool EEAEManager::HasEffect(long inKind, float inX, float inY, unsigned long inP
     return this->FindEffect(inKind, inX, inY, inPlayer, inMode, inList) != NULL;
 }
 
+// FUNCTION: EXE 0x67b4ce
 // Tells whether an effect of the kind covers a tile for the player
 bool EEAEManager::EffectAtTile(long inKind, long inX, long inY, long inPlayer, bool inMode)
 {
     return this->HasEffect(inKind, (float)inX, (float)inY, inPlayer, inMode, NULL);
 }
 
+// FUNCTION: EXE 0x67b4f3
 // Tells whether an effect of the kind covers a tile and affects the player
 bool EEAEManager::HasAreaEffect(long inKind, long inX, long inY, long inPlayer)
 {
     return this->EffectAtTile(inKind, inX, inY, inPlayer, false);
 }
 
+// FUNCTION: EXE 0x67b50d
 // Tells whether an immunity effect of the kind covers a tile against the player
 bool EEAEManager::HasAreaEffect2(long inKind, long inX, long inY, long inPlayer)
 {
     return this->EffectAtTile(inKind, inX, inY, inPlayer, true);
 }
 
+// FUNCTION: EXE 0x67b527
 // Returns the effect of the kind that covers a tile and affects the player, or NULL
 EEAreaEffect* EEAEManager::FindEffectAtTile(long inKind, long inX, long inY, unsigned long inPlayer)
 {
     return this->FindEffect(inKind, (float)inX, (float)inY, inPlayer, false, NULL);
 }
 
+// FUNCTION: EXE 0x67b54b
 // Loads the media of the template at an index, if any
 void EEAEManager::LoadTemplateMedia(unsigned long inIndex)
 {
@@ -316,6 +336,7 @@ void EEAEManager::LoadTemplateMedia(unsigned long inIndex)
         theTemplate->Load(false);
 }
 
+// FUNCTION: EXE 0x67b576
 // Rebuilds the list of active area effects from every built unit's own effects
 void EEAEManager::RebuildAreaEffectRegionList()
 {
@@ -323,6 +344,7 @@ void EEAEManager::RebuildAreaEffectRegionList()
     EEForEachPlayersUnit(&theFunctor);
 }
 
+// FUNCTION: EXE 0x67b593
 // Starts a rebuild of the active effect list by emptying it
 RebuildAreaEffectRegionListFunctor::RebuildAreaEffectRegionListFunctor(UReferenceContainer<EEAreaEffect*>* inEffects)
 {
@@ -331,6 +353,7 @@ RebuildAreaEffectRegionListFunctor::RebuildAreaEffectRegionListFunctor(UReferenc
     inEffects->mItems.clear();
 }
 
+// FUNCTION: EXE 0x67b5ba
 // Keeps only each unit's strongest affecting effect of each kind
 void EEAEManager::RemoveRedundantAreaEffects()
 {
@@ -338,6 +361,7 @@ void EEAEManager::RemoveRedundantAreaEffects()
     EEForEachPlayersUnit(&theFunctor);
 }
 
+// FUNCTION: EXE 0x67b5d1
 // Releases every template and empties the active effect list
 void EEAEManager::Clear()
 {
@@ -352,6 +376,7 @@ void EEAEManager::Clear()
     theEffects.mItems.clear();
 }
 
+// FUNCTION: EXE 0x67b60b
 // Unloads the media of the template at an index, if any
 void EEAEManager::UnloadTemplateMedia(unsigned long inIndex)
 {
@@ -362,6 +387,7 @@ void EEAEManager::UnloadTemplateMedia(unsigned long inIndex)
         theTemplate->Unload();
 }
 
+// FUNCTION: EXE 0x67b634
 // Runs one area-effect tick: clear, apply, keep the strongest, update generators, rebuild the list, tick effects
 void EEAEManager::Tick(float inElapsed)
 {
@@ -374,6 +400,7 @@ void EEAEManager::Tick(float inElapsed)
     EEAECaptureTick(inElapsed);   // TEST ONLY: AEFX (ee/EEAECapture.h)
 }
 
+// FUNCTION: EXE 0x67b673
 // Updates the area effects every unit generates for the elapsed time
 void EEAEManager::UpdateGeneratedAreaEffects(float inElapsed)
 {
@@ -381,6 +408,7 @@ void EEAEManager::UpdateGeneratedAreaEffects(float inElapsed)
     EEForEachPlayersUnit(&theFunctor);
 }
 
+// FUNCTION: EXE 0x67b693
 // Ticks every unit's affecting area effects for the elapsed time
 void EEAEManager::UpdateAffectedByAreaEffects(float inElapsed)
 {
@@ -388,6 +416,7 @@ void EEAEManager::UpdateAffectedByAreaEffects(float inElapsed)
     EEForEachPlayersUnit(&theFunctor);
 }
 
+// FUNCTION: EXE 0x67b70c
 // Adds a built unit's own area effects to the active effect list
 void RebuildAreaEffectRegionListFunctor::Apply(EEComplexUnit* inUnit)
 {
@@ -539,3 +568,12 @@ long EEAELoadRunningState(FSFile& inFile)
         });
     return theResult;
 }
+
+// Inline slots and template COMDATs emitted in this unit's range (first-reference order)
+// TEMPLATE: EXE 0x67b6b3
+// TEMPLATE: EXE 0x67b6bf
+// TEMPLATE: EXE 0x67b6cb
+// TEMPLATE: EXE 0x67b6e0
+// TEMPLATE: EXE 0x67b6f2
+// TEMPLATE: EXE 0x67b751
+// TEMPLATE: EXE 0x67b77d

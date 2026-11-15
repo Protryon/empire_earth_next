@@ -70,7 +70,7 @@ public:
     int StringCompare(const IPAddr&) const; //2b3260, numeric host then host-order port
     IPAddr();                               // WONAPI
     IPAddr(const std::string& inHostAndPort); //target2b2440, complete85B native ctor + pinned SDK
-    std::string GetHostString(bool inFlag) const;
+    std::string GetHostString(bool inFlag) const;   // 0x2b2fc0
     unsigned short GetPort() const; //2b31c0, host byte order
     long GetHost() const;  //2b2fb0, ntohl host IPv4, nominal GetHost
     bool SetWithDefaultPort(const std::string&,unsigned short); //2b2d50, DNS default-port dispatch
@@ -81,8 +81,8 @@ public:
     static bool SetLocalHost(long, bool); //2b37a0, cdecl host +validation flag
     bool operator==(const IPAddr&) const; //2b3220, six network-byte equality
     bool operator!=(const IPAddr&) const; //2b3240
-    void SetPort(unsigned short inPort);
-    bool IsValid() const;
+    void SetPort(unsigned short inPort);    // 0x2b2f90
+    bool IsValid() const;                   // 0x2b31d0
     const char* GetSixByte() const;         // 0x2b29c0: the value's sockaddr port/IP bytes
     void SetSixByte(const void* inAddress); // 0x2b29d0: consumes six bytes, clears host and sets validity
     bool operator<(const IPAddr& inOther) const; // 0x2b31f0: six network-order port/IP bytes
@@ -461,59 +461,60 @@ public:
     void SelectServer(const std::wstring& inName, WONAPI::IPAddr inAddress);
     // 0xce9e1: hosts a game; stores inName in gHostedGameName (0x530790)
     void HostGame(const char* inName, const char* inPassword);
-    void JoinGame(const char* inName, const char* inPassword);
-    void JoinRoom(const char* inRoom, const char* inPassword);
+    void JoinGame(const char* inName, const char* inPassword);   // 0xcede5
+    void JoinRoom(const char* inRoom, const char* inPassword);   // 0xcf570
     void LeaveRoom();                       // 0xcffd8 (jmp 0xcf99b; the game room's Back)
     // (the lobby's Start/Cancel; provisional names, by address)
-    void GetGameInfo(EEWonNetGameInfo& outInfo);
-    void SetGameInfo(EEWonNetGameInfo& inInfo);
-    void ClearGameList();
-    bool RejoinRoom(bool inFlag);
+    void GetGameInfo(EEWonNetGameInfo& outInfo);        // 0xcffb5
+    void SetGameInfo(EEWonNetGameInfo& inInfo);         // 0xd104d
+    void ClearGameList();                               // 0xcffd3
+    bool RejoinRoom(bool inFlag);                       // 0xcf3f4
     void PlayerJoined();                                // 0xe123d (an empty body, ICF-folded; EEClient 0xb80ef)
     void RefreshGameList(UIControl* inGamesBox);   // 0xcfc91 (once per request: +0x18b; needs the routing server +0x0c)
     void UpdateGameList();                  // 0xcfa56 (refills the games box of form 0x20)
     // 0xd0001: changes the account's password (the update-account form's Submit)
     void UpdateAccount(const UWideString& inName, const UWideString& inPassword, bool inFlag);
-    void OpenUpdateAccount();
-    void SendChat(const UWideString& inText);
+    void OpenUpdateAccount();               // 0xd01c3
+    void SendChat(const UWideString& inText);   // 0xd0a14
     // 0xd1104: refills the room list form's rooms box and its two labels (controls 6, 16, 14)
     void UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel16, UITextLabel* inLabel14);
 
     // (EEWonNet.cpp; provisional names, by behaviour)
-    wchar_t* A2W(wchar_t* outString, const char* inString, int inLength);
-    void ListGamesCallback(WONAPI::AsyncOp* inOp);
-    void ListRoomCallback(WONAPI::AsyncOp* inOp);
-    void CloseCallback(WONAPI::AsyncOp* inOp);
-    void TempCallback(WONAPI::AsyncOp* inOp);
-    void ConnectCallback(WONAPI::AsyncOp* inOp);
-    void ChatRoomListCallback(WONAPI::AsyncOp* inOp);
-    void JoinGameDataCallback(WONAPI::AsyncOp* inOp);
-    void CreateGameCallback(WONAPI::AsyncOp* inOp);
-    void CreateGame();
-    void UpdateGameObject();
-    void ExportGameInfo(EEWonNetGameInfo& inInfo, unsigned char*& outData, unsigned long& outSize);
-    void ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& outInfo);
-    void Disconnect();
-    void LeaveGroups();
-    void ClearGames();
-    void JoinGroupCallback(WONAPI::AsyncOp* inOp);
-    void JoinGameObjectsCallback(WONAPI::AsyncOp* inOp);
-    void JoinRoomCallback(WONAPI::AsyncOp* inOp);
-    void ClientListCallback(WONAPI::AsyncOp* inOp);
-    void MembersCallback(WONAPI::AsyncOp* inOp);
-    void UpdateAccountCallback(WONAPI::AsyncOp* inOp);
-    void GetAccountCallback(WONAPI::AsyncOp* inOp);
-    void OnChat(WONAPI::AsyncOp* inOp);
-    void OnDataObjectChanged(WONAPI::AsyncOp* inOp);
-    void OnDataObjectCreated(WONAPI::AsyncOp* inOp);
-    void OnDataObjectDeleted(WONAPI::AsyncOp* inOp);
-    void OnDataObjectModified(WONAPI::AsyncOp* inOp);
-    void OnGroupMaxPlayersChanged(WONAPI::AsyncOp* inOp);
-    void RegisterCallback(WONAPI::AsyncOp* inOp);
-    void SendChatCallback(WONAPI::AsyncOp* inOp);
-    std::wstring ToWString(const char* inString);
+    wchar_t* A2W(wchar_t* outString, const char* inString, int inLength);     // 0xcd794
+    void ListGamesCallback(WONAPI::AsyncOp* inOp);                          // 0xcd8e6
+    void ListRoomCallback(WONAPI::AsyncOp* inOp);                           // 0xcda04
+    void CloseCallback(WONAPI::AsyncOp* inOp);                              // 0xcdcbb
+    void TempCallback(WONAPI::AsyncOp* inOp);                               // 0xcdd2c
+    void ConnectCallback(WONAPI::AsyncOp* inOp);                            // 0xce0c2
+    void ChatRoomListCallback(WONAPI::AsyncOp* inOp);                       // 0xce244
+    void JoinGameDataCallback(WONAPI::AsyncOp* inOp);                       // 0xce421
+    void CreateGameCallback(WONAPI::AsyncOp* inOp);                         // 0xce695
+    void CreateGame();                                                        // 0xce99e
+    void UpdateGameObject();                                                  // 0xceb2d
+    void ExportGameInfo(EEWonNetGameInfo& inInfo, unsigned char*& outData, unsigned long& outSize);   // 0xcebbd
+    void ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& outInfo);                   // 0xcece1
+    void Disconnect();                                                        // 0xcf952
+    void LeaveGroups();                                                       // 0xcf99b
+    void ClearGames();                                                        // 0xcf9fe
+    void JoinGroupCallback(WONAPI::AsyncOp* inOp);                          // 0xcf02c
+    void JoinGameObjectsCallback(WONAPI::AsyncOp* inOp);                    // 0xcf1fc
+    void JoinRoomCallback(WONAPI::AsyncOp* inOp);                           // 0xcf7ec
+    void ClientListCallback(WONAPI::AsyncOp* inOp);                         // 0xcfce5
+    void MembersCallback(WONAPI::AsyncOp* inOp);                            // 0xcfd42
+    void UpdateAccountCallback(WONAPI::AsyncOp* inOp);                      // 0xd0141
+    void GetAccountCallback(WONAPI::AsyncOp* inOp);                         // 0xd02ba
+    void OnChat(WONAPI::AsyncOp* inOp);                                     // 0xd040c
+    void OnDataObjectChanged(WONAPI::AsyncOp* inOp);                        // 0xd0612
+    void OnDataObjectCreated(WONAPI::AsyncOp* inOp);                        // 0xd062b
+    void OnDataObjectDeleted(WONAPI::AsyncOp* inOp);                        // 0xd0714
+    void OnDataObjectModified(WONAPI::AsyncOp* inOp);                       // 0xd07c2
+    void OnGroupMaxPlayersChanged(WONAPI::AsyncOp* inOp);                   // 0xd08ab
+    void RegisterCallback(WONAPI::AsyncOp* inOp);                           // 0xd0929
+    void SendChatCallback(WONAPI::AsyncOp* inOp);                           // 0xd09f9
+    std::wstring ToWString(const char* inString);                             // 0xd0f8c
     // 0xd146d: out of line in EEWonNet.cpp (ToString calls it)
     char* W2A(char* outString, int inSize, const wchar_t* inString, int inLength);
+    // 0xd14a9 (inline)
     std::string ToString(const std::wstring& inString)
     {
         int theSize = inString.length() * 4 + 1;   // UTF-8 (decision D6): up to four bytes a character
@@ -592,7 +593,7 @@ public:
     bool mB18E;
 };
 
-extern EEWonNet* gWonNet;
+extern EEWonNet* gWonNet;                   // 0x5319cc
 extern UWideString& gHostedGameName;         // 0x530790 (HostGame stores the name; the game room screen shows it)
 
 // 0x27c3 (first unit; provisional name): the user/game name is acceptable

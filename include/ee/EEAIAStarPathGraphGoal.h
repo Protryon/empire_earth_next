@@ -14,8 +14,8 @@ struct EEAIAStarGraphNode;
 
 class EEAIAStarPathGraphGoal : public EEAIAStarGraphGoalBase<EEAIAStarGraphStorage> {
 public:
-    EEAIAStarPathGraphGoal();
-    virtual ~EEAIAStarPathGraphGoal();
+    EEAIAStarPathGraphGoal();               // 0x1a64b
+    virtual ~EEAIAStarPathGraphGoal();      // 0x1a6a8 (??_G 0x1a68c)
     virtual void ReleaseModifier();         // +0x14 (ICF 0x65d0c)
     // +0x18 0x1a6c7: the search is over (no open node, the goal reached, or the revs used up); inMachine is the
     // EEAIAStarGraphMachineBase running it
@@ -27,14 +27,14 @@ public:
     bool CanEnter(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);   // 0xab2e5 (mModifier's +0x08, else AcceptNeighbor)
     long GetStepCost(EEAIAStarGraphNode* inParent, EEAIPathSubSector* inTo);   // 0xab7bb (mModifier's +0x04, else 0x10799)
     long GetDefaultStepCost(EEAIAStarGraphNode* inParent, EEAIPathSubSector* inTo);   // (ICF 0x10799)
-    bool IsGoalNode(EEAIAStarGraphNode* inNode);
+    bool IsGoalNode(EEAIAStarGraphNode* inNode);   // 0x1a76f
     void SetFlags(EEComplexUnit* inUnit);   // 0x1a7d0 (the unit class's Virtual28 fills mPathFlags)
-    bool AcceptNeighbor(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
-    bool HasPassableLink(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);
+    bool AcceptNeighbor(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);   // 0x1a7ec
+    bool HasPassableLink(EEAIPathSubSector* inSector, EEAIPathSubSector* inFrom);  // 0x1a830
     virtual bool Prepare();                 // +0x0c 0x1a8c2
-    void Reset();
+    void Reset();                           // 0x1a8e6
     virtual void SetModifier(EEAIGraphPathGoalModifierBase* inModifier);   // +0x1c 0x1a91e
-    void SetUnit(EEComplexUnit* inUnit);
+    void SetUnit(EEComplexUnit* inUnit);    // 0x1a93a
     void GetPath(std::vector<long>& outPath);   // (ICF 0x15e50)
     void GetPath(std::vector<U2DPoint<long> >& outTiles, std::vector<long>& outIndices);   // (ICF 0x15ebc)
 

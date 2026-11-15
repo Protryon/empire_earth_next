@@ -63,6 +63,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEAUpgradeImprovement.h"
 
+// FUNCTION: EXE 0x40505b
 // Creates the improvement action for a unit (holding a reference) and posts it
 EEAUpgradeImprovement::EEAUpgradeImprovement(EEUnit* inUnit, long inImprovement, bool inRaise, bool inIsInGame)
     : mUnit(inUnit)
@@ -74,12 +75,17 @@ EEAUpgradeImprovement::EEAUpgradeImprovement(EEUnit* inUnit, long inImprovement,
     gUserInterface->PostAction(this);
 }
 
+// SYNTHETIC: EXE 0x4050a0
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4050bc
 // Destroys the improvement action, releasing its unit
 EEAUpgradeImprovement::~EEAUpgradeImprovement()
 {
     this->mUnit->Dereference();
 }
 
+// FUNCTION: EXE 0x4050dc
 // Raises or lowers a unit's improvement: by message in a game, directly in the scenario editor (refreshing its screen)
 void EEAUpgradeImprovement::Virtual4()
 {
@@ -104,6 +110,20 @@ void EEAUpgradeImprovement::Virtual4()
     gUserInterface->UpdateJITManufacturing();
 }
 
+// FUNCTION: EXE 0x40524d
+// Returns the improve-unit message's label
+// (EEMImproveUnit::GetMessageLabel, inline in ee/EEMessage.h)
+
+// FUNCTION: EXE 0x405253
+// Returns the scenario editor's unit screen
+// (EEUIFScenarioEditor::GetUnitScreen, inline in ee/EEUIFScenarioEditor.h)
+
+// FUNCTION: EXE 0x40525d
+// Returns the sound object at an index
+// (EESoundObject::Get, inline in ee/EESoundObject.h)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAUpgradeImprovement::Virtual8()
 {
 }

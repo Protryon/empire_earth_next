@@ -17,6 +17,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x7f7780
 // Reads an ADDLINE layout key (text, optional colour) into the credits; passes other keys to the dialog config
 bool CreditsDialogConfig::Virtual24(const std::string& inInstruction)
 {
@@ -70,11 +71,13 @@ static intptr_t ScrollTextHost(void* inComp, EeWonScrollTextOp inOp, intptr_t a,
     return 0;
 }
 
+// FUNCTION: WON 0x007f6de0
 // Creates an empty clipped scrolling text box that scrolls one pixel every 60 ms
 ScrollingTextComponent::ScrollingTextComponent() : mScroll(ee_won_scrolltext_new(this, ScrollTextHost))
 {
     this->SetComponentFlags(ComponentFlag_Clip,true);
 }
+// FUNCTION: WON 0x007f6e90
 // Destroys the scrolling text box: its lines front to back, then the component
 ScrollingTextComponent::~ScrollingTextComponent() { ee_won_scrolltext_free(this->mScroll); }
 }

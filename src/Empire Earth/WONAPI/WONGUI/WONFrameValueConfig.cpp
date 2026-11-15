@@ -15,6 +15,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 using namespace WONAPI;
+// FUNCTION: WON 0x007980a0
 // Reads a frame value: a stretch image alone (its own borders), or an image plus one border width or four
 static WONFrame ReadFrame(ComponentConfig* config)
 {
@@ -36,6 +37,7 @@ WONFrame::WONFrame(const WONFrame& from)
 {
     this->Copy(from);
 }
+// FUNCTION: WON 0x00797f70
 // Handles the WON combo box skin keys DRAWFRAME, BUTTONINFRAME and FRAME; passes other keys to the combo box config
 bool WONComboBoxConfig::Virtual24(const std::string& key)
 {
@@ -46,6 +48,7 @@ bool WONComboBoxConfig::Virtual24(const std::string& key)
     else return ComboBoxConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x007981f0
 // Handles the WON tab control skin keys TRANSPARENT, ADDSTANDARDTAB (name, container) and FRAME; passes other keys on
 bool WONTabCtrlConfig::Virtual24(const std::string& key)
 {
@@ -59,6 +62,7 @@ bool WONTabCtrlConfig::Virtual24(const std::string& key)
     else return TabCtrlConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x007987e0
 // Handles DRAWFRAME (false clears the frame, true does nothing), TRANSPARENT, FRAME and CORNER; passes other keys on
 bool WONScrollContainerConfig::Virtual24(const std::string& key)
 {

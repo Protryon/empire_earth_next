@@ -57,7 +57,7 @@ public:
     GETextureManager* GetTextureManager() const { return this->mTextureManager; }
     void SetTextureManager(GETextureManager* inManager) { this->mTextureManager = inManager; }
 protected:
-    GEScreen() {}
+    GEScreen() {}                           // 0xe311
     virtual ~GEScreen() {}                  // 0xe31a, slot 0x4c
     static HINSTANCE__* GetInstance() { return GEScreen::sInstance; }
 

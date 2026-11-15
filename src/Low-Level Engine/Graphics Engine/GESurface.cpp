@@ -42,12 +42,14 @@ static void GEPutWord(int inWord, FILE* inStream)
     fwrite(&theWord, 4, 1, inStream);
 }
 
+// FUNCTION: LLE 0x1002534b
 // Always fails: loading BMP files is not supported
 long GESurface::LoadBMP(FSFileSpec& inFile)
 {
     return kErrorFailed;
 }
 
+// FUNCTION: LLE 0x10025351
 // Saves the surface as a bottom-up 24-bit BMP
 // NEAR: register/slot choice (the original keeps theHeight in ebx from the biHeight store to the row start, ours
 // theBytesPerRow); declaration orders and pointer-expression shapes tried
@@ -123,6 +125,7 @@ long GESurface::SaveAsBMP(FSFileSpec& inFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x100255ff
 // Reads a JPEG file's width, height and bit depth (closing the file afterwards)
 long GESurface::GetJPGFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
                                      unsigned long& outDepth)
@@ -149,6 +152,7 @@ long GESurface::GetJPGFileAttributes(FSFileSpec& inFile, unsigned long& outWidth
     return theResult;
 }
 
+// FUNCTION: LLE 0x100256b8
 // Reads a JPG2 file's size from its colour image and reports 32 bits (colour plus alpha)
 long GESurface::GetJPG2FileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
                                       unsigned long& outDepth)
@@ -158,6 +162,7 @@ long GESurface::GetJPG2FileAttributes(FSFileSpec& inFile, unsigned long& outWidt
     return theResult;
 }
 
+// FUNCTION: LLE 0x100256da
 // Decodes a JPEG into the surface (opaque), from the file's current position; reopens a file that was open
 long GESurface::LoadJPG(FSFileSpec& inFile)
 {
@@ -225,6 +230,7 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1002599d
 // Decodes a JPG2 into the surface: the colour image, then the alpha image merged into each pixel's alpha
 long GESurface::LoadJPG2(FSFileSpec& inFile)
 {
@@ -311,6 +317,7 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x10025e6f
 // Encodes the surface as a quality-80 JPEG, appending at the position of a file that was already open
 long GESurface::SaveAsJPG(FSFileSpec& inFile)
 {
@@ -392,6 +399,7 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
     return theResult;
 }
 
+// FUNCTION: LLE 0x1002619b
 // Encodes the surface as JPG2 (colour JPEG plus alpha JPEG) and patches the two offsets into its header
 long GESurface::SaveAsJPG2(FSFileSpec& inFile)
 {
@@ -619,6 +627,7 @@ long GESurface::LoadPNG(FSFileSpec& inFile)
     return this->Unlock();
 }
 
+// FUNCTION: LLE 0x10026eed
 // Reads an image file's width, height and depth by file type (BMP, JPG, JPG2, PNG); fails for other types (TGA: no
 // longer read)
 long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
@@ -637,6 +646,7 @@ long GESurface::GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType,
     return kErrorFailed;
 }
 
+// FUNCTION: LLE 0x10026f56
 // Loads an image file into the surface by file type (BMP, JPG, JPG2, PNG); fails for other types (TGA: no longer
 // read, D9)
 long GESurface::Load(FSFileSpec& inFile, unsigned char inType)
@@ -654,6 +664,7 @@ long GESurface::Load(FSFileSpec& inFile, unsigned char inType)
     return kErrorFailed;
 }
 
+// FUNCTION: LLE 0x10026f9a
 // Saves the surface as an image file of the given type (BMP, JPG, JPG2); fails for other types (TGA: no longer
 // written)
 long GESurface::Save(FSFileSpec& inFile, unsigned char inType)

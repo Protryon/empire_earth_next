@@ -83,6 +83,7 @@ const UWideString kEECampaignProgressNumScenariosCompletedKey("NumScenariosCompl
 const UWideString kEECampaignProgressNumCivPointsAvailableKey("NumCivPointsAvailable");
 const UWideString kEECampaignProgressScenarioNameKey("ScenarioName");
 
+// FUNCTION: EXE 0x68f462
 // Creates empty campaign progress: no completed scenarios
 EECampaignProgress::EECampaignProgress()
 {
@@ -92,11 +93,13 @@ EECampaignProgress::EECampaignProgress()
     this->mNumScenariosCompleted = 0;
 }
 
+// FUNCTION: EXE 0x68f4b9
 // Destroys the campaign progress
 EECampaignProgress::~EECampaignProgress()
 {
 }
 
+// FUNCTION: EXE 0x68f4d5
 // Builds a saved-civilization key "<campaign>.<scenario>.<checksum>"
 void EECampaignProgress::MakeKey(UWideString& outKey, const UWideString& inCampaign, const UWideString& inScenario,
                                  unsigned long inChecksum)
@@ -104,6 +107,7 @@ void EECampaignProgress::MakeKey(UWideString& outKey, const UWideString& inCampa
     sprintf(outKey, "%s.%s.%ld", (const char*)inCampaign, (const char*)inScenario, inChecksum);
 }
 
+// FUNCTION: EXE 0x68f4fc
 // Returns a copy of the completed scenario names
 void EECampaignProgress::GetCompletedScenarios(std::vector<UWideString>& outScenarios)
 {
@@ -118,6 +122,7 @@ extern char gEmptyString[];
 // Original cdecl scenario-civilization loader (EEAResetAllPlayerInfo, 0x2806e7).
 long EEApplyCivilizationFile(UString& inName, EEPlayer* inPlayer);
 
+// FUNCTION: EXE 0x68f56d
 // Before a scenario of a user campaign, loads the player's progress and gives the current player the civilization
 // saved after the previous scenario, plus the civ points then available; returns the first error
 long EECampaignProgress::RestoreCivilization(const UWideString& inUser, const UWideString& inCampaign,
@@ -206,6 +211,7 @@ long EECampaignProgress::RestoreCivilization(const UWideString& inUser, const UW
     return theResult;
 }
 
+// FUNCTION: EXE 0x68fb05
 // Reads a player's progress archive for a campaign: completed scenarios, their civ points and saved civilizations
 // (optionally extracted to the user's folder); clears the progress on error; a missing archive is no error
 long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCampaign,
@@ -280,6 +286,7 @@ long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCa
     return theResult;
 }
 
+// FUNCTION: EXE 0x68ffed
 // Records a won scenario: saves the current civilization, then rewrites the player's progress archive with every
 // completed scenario, its civ points and civilization file; returns the first error
 long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign,
@@ -360,7 +367,32 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
     return theResult;
 }
 
+// SYNTHETIC: EXE 0x68f39a
+// SYNTHETIC: EXE 0x68f3a4
+// SYNTHETIC: EXE 0x68f3b5
+// SYNTHETIC: EXE 0x68f3c1
+// SYNTHETIC: EXE 0x68f3cc
+// SYNTHETIC: EXE 0x68f3d6
+// SYNTHETIC: EXE 0x68f3e7
+// SYNTHETIC: EXE 0x68f3f3
+// SYNTHETIC: EXE 0x68f3fe
+// SYNTHETIC: EXE 0x68f408
+// SYNTHETIC: EXE 0x68f419
+// SYNTHETIC: EXE 0x68f425
+// SYNTHETIC: EXE 0x68f430
+// SYNTHETIC: EXE 0x68f43a
+// SYNTHETIC: EXE 0x68f44b
+// SYNTHETIC: EXE 0x68f457
+
 // The campaign civilizations' file name parts (their init chains 0x690514/0x690546 close the unit, so they are
 // defined after its last function)
 UString gU5656C8(".civ");
 UString gU5656B8("Civilizations");
+// SYNTHETIC: EXE 0x690514
+// SYNTHETIC: EXE 0x69051e
+// SYNTHETIC: EXE 0x69052f
+// SYNTHETIC: EXE 0x69053b
+// SYNTHETIC: EXE 0x690546
+// SYNTHETIC: EXE 0x690550
+// SYNTHETIC: EXE 0x690561
+// SYNTHETIC: EXE 0x69056d

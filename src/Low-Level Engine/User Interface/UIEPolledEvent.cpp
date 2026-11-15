@@ -10,6 +10,7 @@
 #include "lle/UIEvent.h"
 #include "lle/UIEPolledEvent.h"
 
+// FUNCTION: LLE 0x1006e64b
 // Creates an event that runs at most once per interval, starting its timer
 UIEPolledEvent::UIEPolledEvent(unsigned long inInterval)
 {
@@ -17,6 +18,7 @@ UIEPolledEvent::UIEPolledEvent(unsigned long inInterval)
     this->mPoll->Start();
 }
 
+// FUNCTION: LLE 0x1006e68e
 // Stops and deletes the event's timer
 UIEPolledEvent::~UIEPolledEvent()
 {
@@ -25,6 +27,7 @@ UIEPolledEvent::~UIEPolledEvent()
         delete this->mPoll;
 }
 
+// FUNCTION: LLE 0x1006e6b4
 // Runs the polled event when its interval has elapsed; OK otherwise
 long UIEPolledEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -33,3 +36,8 @@ long UIEPolledEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theResult = this->ProcessPolledEvent(inForm, inEntity);
     return theResult;
 }
+
+// Implicit copy members and ??_E (emitted first)
+// FUNCTION: LLE 0x1006e5a8
+// FUNCTION: LLE 0x1006e5d5
+// SYNTHETIC: LLE 0x1006e5f0

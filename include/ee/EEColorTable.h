@@ -14,8 +14,8 @@ class EEColorTable {
 public:
     EEColorTable() {}                       // 0xd5f1c (out of line: four GEColor default ctors)
     virtual ~EEColorTable() {}              // +0x00 (??_G 0xd5f61)
-    static long Load(FSFileSpec* inFile);
-    static void Unload();
+    static long Load(FSFileSpec* inFile);   // 0xd5d91
+    static void Unload();                   // 0xd5e88
     static unsigned long FindIndex(const GEColor& inColor);   // 0xd5ec8 (0 when not found)
 
     GEColor mColor;                         // +0x04 (record +0x6c)

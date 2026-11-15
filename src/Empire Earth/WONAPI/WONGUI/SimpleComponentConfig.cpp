@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySimpleConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00794ba0
 // Reads a rectangle's SOLIDCOLOR and OUTLINECOLOR keys; other keys go to the base component config
 bool RectangleComponentConfig::Virtual24(const std::string& key)
 {
@@ -21,6 +22,7 @@ bool RectangleComponentConfig::Virtual24(const std::string& key)
     else return ComponentConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x00794c10
 // Reads a 3D rectangle's SOLIDCOLOR, LIGHTCOLOR, DARKCOLOR, UP and THICKNESS keys; other keys go to the base config
 bool RectangleComponent3DConfig::Virtual24(const std::string& key)
 {
@@ -33,6 +35,7 @@ bool RectangleComponent3DConfig::Virtual24(const std::string& key)
     else return ComponentConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x00794cf0
 // Reads an image component's IMAGE, TILE and STRETCH keys; other keys go to the base component config
 bool ImageComponentConfig::Virtual24(const std::string& key)
 {
@@ -43,6 +46,7 @@ bool ImageComponentConfig::Virtual24(const std::string& key)
     else return ComponentConfig::Virtual24(key);
     return true;
 }
+// FUNCTION: WON 0x00794e50
 // Reads a screen container's ADDSCREEN and SHOWSCREEN keys; other keys go to the container config
 bool ScreenContainerConfig::Virtual24(const std::string& key)
 {
@@ -77,6 +81,7 @@ void ImageComponentConfig::SetComponent(Component *theComponent)
 	this->mImageComponent = static_cast<ImageComponent*>(theComponent);
 }
 
+// FUNCTION: WON 0x00794e30
 // Binds the config to its screen container (calls the component-level binder, so the container pointer stays unset)
 void ScreenContainerConfig::SetComponent(Component *theComponent)
 {
@@ -84,24 +89,28 @@ void ScreenContainerConfig::SetComponent(Component *theComponent)
 	this->mScreenContainer = static_cast<ScreenContainer*>(theComponent);
 }
 
+// FUNCTION: WON 0x0079b030
 // Creates a new rectangle component
 Component* RectangleComponentConfig::CompFactory()
 {
     return new RectangleComponent;
 }
 
+// FUNCTION: WON 0x0079b0e0
 // Creates a new 3D rectangle component
 Component* RectangleComponent3DConfig::CompFactory()
 {
     return new RectangleComponent3D;
 }
 
+// FUNCTION: WON 0x0079b190
 // Creates a new image component
 Component* ImageComponentConfig::CompFactory()
 {
     return new ImageComponent;
 }
 
+// FUNCTION: WON 0x0079b2f0
 // Creates a new screen container
 Component* ScreenContainerConfig::CompFactory()
 {

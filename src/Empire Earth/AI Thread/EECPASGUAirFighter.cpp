@@ -20,6 +20,7 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPASGUAirFighter.h"
 
+// FUNCTION: EXE 0x40619b
 // Creates the fighter entry for a unit in the sub-group
 EECPASGUAirFighter::EECPASGUAirFighter(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -27,17 +28,23 @@ EECPASGUAirFighter::EECPASGUAirFighter(EEComplexUnit* inUnit, EECPAttackSubGroup
     this->mType = kASGUKindAirFighter;
 }
 
+// SYNTHETIC: EXE 0x4061be
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4061da
 // Creates an empty fighter entry for the sub-group (no unit yet; the kind is left unset, unlike the other ctor)
 EECPASGUAirFighter::EECPASGUAirFighter(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
 {
 }
 
+// FUNCTION: EXE 0x4061f2
 // Destroys the fighter entry (base members only)
 EECPASGUAirFighter::~EECPASGUAirFighter()
 {
 }
 
+// FUNCTION: EXE 0x4061fd
 // Updates the fighter every second: off the map it waits as contained, then heads to the task and idles; when
 // idle it attacks if the sub-group has targets, else flies to the task location
 void EECPASGUAirFighter::Update(unsigned long inTime)
@@ -68,6 +75,7 @@ void EECPASGUAirFighter::Update(unsigned long inTime)
     this->mNextUpdateTime = inTime + 1000;
 }
 
+// FUNCTION: EXE 0x40631c
 // Applies the target preferences the base way
 void EECPASGUAirFighter::ApplyPrejudices(EECPASTargetUnit* inTarget)
 {

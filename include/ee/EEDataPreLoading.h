@@ -25,18 +25,18 @@ struct EEDataPreLoadingMessage {
 class EEDataPreLoading {
 public:
     void Shutdown();                        // COMDAT 0x1444ac: mThread->Post(0x401), mThreadDone->Wait (inline: defined in Empire Earth.cpp, its only user)
-    EEDataPreLoading(long inThreadPriority);
+    EEDataPreLoading(long inThreadPriority);                // 0xd3ff4
     virtual ~EEDataPreLoading();                            // +0x00 0xd4121 (??_G 0xd4105)
 
     static unsigned long Main(void* inThis);                // 0xd4176 (the thread function)
-    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
-    void LoadUnitClassMedia(EEPlayer* inPlayer, EEUnitClass* inClass, bool inLoad);
-    void LoadTechnologyMedia(EEPlayer* inPlayer, EETechTreeNode* inNode, bool inLoad);
+    void HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);   // 0xd4231
+    void LoadUnitClassMedia(EEPlayer* inPlayer, EEUnitClass* inClass, bool inLoad);       // 0xd4332
+    void LoadTechnologyMedia(EEPlayer* inPlayer, EETechTreeNode* inNode, bool inLoad);    // 0xd4376
     void LoadGame(bool inSkipGameMedia, bool inClearWorld);  // 0xd439f (message 0x402)
     static void LoadGameErrorDone(UIForm* inForm);          // 0xd4613 (LoadGame's error box callback)
     void StartQueueing();                                   // 0xd4621 (message 0x407)
     void FlushQueue();                                      // 0xd4626 (message 0x408)
-    void QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);
+    void QueueMessage(unsigned long inMessage, void* inParameter1, void* inParameter2);   // 0xd465f
     void PostLoadGame(bool inSkipGameMedia, bool inClearWorld);  // 0xd46a9 (0x402)
     void PostLoadTechnology(long inPlayer, long inTechnology);    // 0xd46d2 (0x40a)
     void PostLoadUnitClass(long inPlayer, long inUnitClass);      // 0xd46ed (0x404)

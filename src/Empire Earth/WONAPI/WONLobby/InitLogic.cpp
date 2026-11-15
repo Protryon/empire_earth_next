@@ -286,20 +286,24 @@ static intptr_t InitHost(void* inObj, EeWonLogicOp inOp, intptr_t a, intptr_t b,
     }
 }
 
+// FUNCTION: WON 0x7dd100
 // Creates the lobby start-up logic with its own HTTP session
 InitLogic::InitLogic() : mRust(ee_won_logic_new(EeWonLogicKind::Init, this, InitHost))
 {
     this->mHTTPSession = new HTTPSession;
 }
 
+// FUNCTION: WON 0x7dd200
 InitLogic::~InitLogic() { ee_won_logic_free(this->mRust); }
 
+// FUNCTION: WON 0x7dd340
 // Looks up the choose-network-adapter dialog from the lobby layout
 void InitLogic::InitComponent(ComponentConfig* inConfig)
 {
     SafeGetComponent(inConfig, this->mNetworkAdapterDialog, "ChooseNetworkAdapterDialog", __FILE__, 49);
 }
 
+// FUNCTION: WON 0x7dfb20
 // Handles the login screen's Back, Internet and choose-network-adapter buttons
 void InitLogic::HandleControlEvent(int inControlId)
 {
@@ -308,3 +312,23 @@ void InitLogic::HandleControlEvent(int inControlId)
     if (aWhich != 0) this->Call(EeWonLogicCall::InitControl, aWhich);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007f20a0
+// TEMPLATE: WON 0x007dd1e0
+// (public: virtual void * __thiscall WONAPI::InitLogic::`scalar deleting destructor'(unsigned int)    [??_GInitLogic@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007df3f0
+// (public: __thiscall WONAPI::LogicCompletionBase::LogicCompletionBase(void)    [??0LogicCompletionBase@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x007f36d0
+// TEMPLATE: WON 0x007dd4a0
+// (public: virtual void * __thiscall WONAPI::LoginInitStatusEvent::`scalar deleting destructor'(unsigned int)    [??_GLoginInitStatusEvent@WONAPI@@UAEPAX)
+// TEMPLATE: WON 0x007dd4c0
+// (public: virtual __thiscall WONAPI::LoginInitStatusEvent::~LoginInitStatusEvent(void)    [??1LoginInitStatusEvent@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x007ddb50
+// (public: virtual void * __thiscall WONAPI::SetCrossPromotionEvent::`scalar deleting destructor'(unsigned int)    [??_GSetCrossPromotionEvent@WONAPI@@UA)
+// TEMPLATE: WON 0x007ddb70
+// (public: virtual __thiscall WONAPI::SetCrossPromotionEvent::~SetCrossPromotionEvent(void)    [??1SetCrossPromotionEvent@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x007f1430
+// (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::InitLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicCompleti)
+// TEMPLATE: WON 0x007f1510
+// (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::InitLogic>::~LogicCompletion<class WONAPI::InitLogic>(void)    [??1?$LogicCompletion@)

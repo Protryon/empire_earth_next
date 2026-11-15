@@ -19,37 +19,37 @@ public:
 };
 
 // The db file names (EEDbObject.cpp, in definition order; Empire Earth.cpp reads them). Names are provisional.
-extern const UString kDbMusicFile;
-extern const UString kDbObjectsFile;
-extern const UString kDbGraphicsFile;
-extern const UString kDbSoundsFile;
-extern const UString kDbButtonsFile;
-extern const UString kDbTechTreeFile;
-extern const UString kDbEffectsFile;
-extern const UString kDbEventsFile;
-extern const UString kDbFamilyFile;
-extern const UString kDbColorTableFile;
-extern const UString kDbAIUnitTargetingFile;
-extern const UString kDbTerrainFile;
-extern const UString kDbTerrainColorFile;
-extern const UString kDbTerrainTypeFile;
-extern const UString kDbWorldFile;
-extern const UString kDbCivilizationFile;
-extern const UString kDbGfxEffectsFile;
-extern const UString kDbWeaponToHitFile;
-extern const UString kDbCalamityFile;
-extern const UString kDbUnitSetFile;
-extern const UString kDbAreaEffectFile;
-extern const UString kDbFontsFile;
-extern const UString kDbUpgradeFile;
-extern const UString kDbCPBehaviorFile;
-extern const UString kDbAmbientSoundsFile;
-extern const UString kDbAnimalsFile;
-extern const UString kDbUnitBehaviorFile;
-extern const UString kDbStartingResourcesFile;
-extern const UString kDbGameVariantFile;
-extern const UString kDbPremadeCivsFile;
-extern const UString kDbCliffTerrainFile;
-extern const UString kDbCivPowersFile;
+extern const UString kDbMusicFile;              // 0x8e7f60
+extern const UString kDbObjectsFile;            // 0x8e7f50
+extern const UString kDbGraphicsFile;           // 0x8e7f40
+extern const UString kDbSoundsFile;             // 0x8e7f30
+extern const UString kDbButtonsFile;            // 0x8e7f20
+extern const UString kDbTechTreeFile;           // 0x8e7f10
+extern const UString kDbEffectsFile;            // 0x8e7f00
+extern const UString kDbEventsFile;             // 0x8e7ef0
+extern const UString kDbFamilyFile;             // 0x8e7ee0
+extern const UString kDbColorTableFile;         // 0x8e7ed0
+extern const UString kDbAIUnitTargetingFile;    // 0x8e7ec0
+extern const UString kDbTerrainFile;            // 0x8e7eb0
+extern const UString kDbTerrainColorFile;       // 0x8e7ea0
+extern const UString kDbTerrainTypeFile;        // 0x8e7e90
+extern const UString kDbWorldFile;              // 0x8e7e80
+extern const UString kDbCivilizationFile;       // 0x8e7e60
+extern const UString kDbGfxEffectsFile;         // 0x8e7e50
+extern const UString kDbWeaponToHitFile;        // 0x8e7e30
+extern const UString kDbCalamityFile;           // 0x8e7e20
+extern const UString kDbUnitSetFile;            // 0x8e7e10
+extern const UString kDbAreaEffectFile;         // 0x8e7e00
+extern const UString kDbFontsFile;              // 0x8e7df0
+extern const UString kDbUpgradeFile;            // 0x8e7de0
+extern const UString kDbCPBehaviorFile;         // 0x8e7dd0
+extern const UString kDbAmbientSoundsFile;      // 0x8e7dc0
+extern const UString kDbAnimalsFile;            // 0x8e7db0
+extern const UString kDbUnitBehaviorFile;       // 0x8e7da0
+extern const UString kDbStartingResourcesFile;  // 0x8e7d90
+extern const UString kDbGameVariantFile;        // 0x8e7d80
+extern const UString kDbPremadeCivsFile;        // 0x8e7d70
+extern const UString kDbCliffTerrainFile;       // 0x8e7d60
+extern const UString kDbCivPowersFile;          // 0x8e7d50
 
 #endif

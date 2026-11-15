@@ -304,6 +304,7 @@ intptr_t UIManager::HostOp(void* inManager, EeUiOp inOp, intptr_t a, intptr_t b,
     return 0;
 }
 
+// FUNCTION: LLE 0x10078ee4
 // Creates the UI manager: its locks, the UIControls texture and the check box, radio, sort and scroll-bar
 // bitmaps cut from it; looks up the shared mouse buttons and wheel on first use; no music playing
 UIManager::UIManager(GERasterizer* inRasterizer, SESoundManager* inSoundManager, unsigned long inNumberOfSurfaces,
@@ -321,6 +322,7 @@ UIManager::UIManager(GERasterizer* inRasterizer, SESoundManager* inSoundManager,
     }
 }
 
+// FUNCTION: LLE 0x10079a18
 // Destroys the UI manager: stops the music, frees the locks, texture, bitmaps, forms, hot keys, IME window and database
 UIManager::~UIManager()
 {
@@ -329,6 +331,10 @@ UIManager::~UIManager()
     this->RemoveDatabase();
 }
 
+// FUNCTION: LLE 0x10079be5 (AddClippedForms), 0x10079e1f (AddToVisibleForms), 0x1007af90 (RemoveClippedForms): Rust
+// (ee_ui manager.rs, inside Pop, SwapForm and Push).
+
+// FUNCTION: LLE 0x10079f7f
 // Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
 void UIManager::AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm)
 {
@@ -337,6 +343,7 @@ void UIManager::AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm
     this->Call(EeUiManagerCall::AddDirtyRectangle, (intptr_t)inForm, 0, 0, f);
 }
 
+// FUNCTION: LLE 0x10059fdb
 // Queues an event (referenced) to run on the next update for a form and entity
 void UIManager::AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* inEntity)
 {
@@ -345,12 +352,14 @@ void UIManager::AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* in
 
 void UIManager::AddForm(UIForm* inForm) { this->Call(EeUiManagerCall::AppendForm, (intptr_t)inForm); }
 
+// FUNCTION: LLE 0x1007a03d
 // Passes an IME result string to the top form, under the UI lock
 void UIManager::AddIMEResultString(const UWideString& inString)
 {
     this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString);
 }
 
+// FUNCTION: LLE 0x1007a074
 // Updates the IME candidate list of the focused IME-enabled control: hides the window for a style-2 list of at
 // most one candidate, else shows it at the control; returns OK
 long UIManager::ChangeIMECandidateWindow(const UIIMECandidateList& inList)
@@ -359,6 +368,7 @@ long UIManager::ChangeIMECandidateWindow(const UIIMECandidateList& inList)
                             (intptr_t)inList.mCount);
 }
 
+// FUNCTION: LLE 0x1007a102
 // Passes the IME composition string, attributes and cursor to the top form under the UI lock; returns its result
 long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                            unsigned long inCursor)
@@ -372,18 +382,25 @@ void UIManager::ChangeRasterizer(GERasterizer* inRasterizer)
     this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer);
 }
 
+// FUNCTION: LLE 0x1007a149
 // Closes the IME candidate window; returns OK
 long UIManager::CloseIMECandidateWindow() { return (long)this->Call(EeUiManagerCall::CloseCandidateWindow); }
 
+// FUNCTION: LLE 0x1007a162
 // Tells the top form the IME composition string closed, under the UI lock; returns its result
 long UIManager::CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
 
+// FUNCTION: LLE 0x1007a19b
 // Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
 long UIManager::CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
 
+// FUNCTION: LLE 0x1007a216
 // Creates every background in the UI background database on its form, by type (bgtableobj.rs)
 void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
 
+// FUNCTION: LLE 0x1007a438 (CreateBitmap): the Rust constructor's MgrBitmapCoords and BitmapSetScale.
+
+// FUNCTION: LLE 0x1007a48e
 // Creates a copy of a bitmap's texture region scaled to fill a control rectangle (20-pixel source)
 GEBitmap* UIManager::CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle)
 {
@@ -392,6 +409,7 @@ GEBitmap* UIManager::CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERe
     return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::ScaledBitmap, (intptr_t)inBitmap, 0, 0, f));
 }
 
+// FUNCTION: LLE 0x1007a559
 // Asks each registered control-event factory in turn for a form's event; returns the first one made, or NULL
 UIEvent* UIManager::CreateControlEvent(UIForm* inForm, unsigned long inEventID)
 {
@@ -399,15 +417,18 @@ UIEvent* UIManager::CreateControlEvent(UIForm* inForm, unsigned long inEventID)
         this->Call(EeUiManagerCall::CreateControlEvent, (intptr_t)inForm, (intptr_t)inEventID));
 }
 
+// FUNCTION: LLE 0x1007a58f
 // Asks each registered form-event factory in turn for an event; returns the first one made, or NULL
 UIEvent* UIManager::CreateFormEvent(unsigned long inEventID)
 {
     return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID));
 }
 
+// FUNCTION: LLE 0x1007a602
 // Draws the snapshotted forms with alpha blending (their text too, unless drawn by GDI) and the candidate window
 long UIManager::DrawPolygons() { return (long)this->Call(EeUiManagerCall::DrawPolygons); }
 
+// FUNCTION: LLE 0x1007a6be
 // Draws the GDI text of the snapshotted forms and the candidate window, under the draw lock
 long UIManager::DrawTextA() { return (long)this->Call(EeUiManagerCall::DrawText); }
 
@@ -493,6 +514,7 @@ void UIManager::SetFont(unsigned long inIndex, GEFont* inFont)
 }
 void UIManager::SetNumberOfFonts(unsigned long inCount) { this->Call(EeUiManagerCall::SetNumberOfFonts, (intptr_t)inCount); }
 
+// FUNCTION: LLE 0x1007a72d
 // Returns the form with the given ID (NULL: none)
 UIForm* UIManager::GetFormByID(unsigned long inID) const
 {
@@ -500,12 +522,14 @@ UIForm* UIManager::GetFormByID(unsigned long inID) const
     return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::FormById, (intptr_t)inID));
 }
 
+// FUNCTION: LLE 0x1007a766
 // Returns the mouse wheel's scroll step: -1 when rolled forward, 1 when rolled back, 0 when still
 long UIManager::GetMouseWheelScrollAmount()
 {
     return ee_ui_manager_wheel_scroll_amount(UIManager::sMouseWheel->GetNormalizedValue());
 }
 
+// FUNCTION: LLE 0x1007a78a
 // Loads the UI database (fonts, forms, backgrounds, controls, control and form events, hot keys) from a directory
 void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory)
 {
@@ -559,42 +583,56 @@ void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory)
     delete theDbFile;
 }
 
+// FUNCTION: LLE 0x1007ab03 (LoadTexture): UIManagerLoadTexture above (the Rust constructor's MgrTextureLoad).
+
+// FUNCTION: LLE 0x1007abb9
 // Opens the IME candidate window over the client area for the focused IME-enabled control; returns OK
 long UIManager::OpenIMECandidateWindow() { return (long)this->Call(EeUiManagerCall::OpenCandidateWindow); }
 
+// FUNCTION: LLE 0x1007ac9b
 // Tells the top form an IME composition string opened, under the UI lock; returns its result
 long UIManager::OpenIMECompositionString() { return (long)this->Call(EeUiManagerCall::OpenComposition); }
 
+// FUNCTION: LLE 0x1007acd4
 // Closes the top form, re-shows the forms it covered, redraws its area and activates the form below; returns OK
 long UIManager::Pop() { return (long)this->Call(EeUiManagerCall::Pop); }
 
+// FUNCTION: LLE 0x1007adbe
 // Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
 long UIManager::PopTo(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::PopTo, (intptr_t)inForm); }
 
+// FUNCTION: LLE 0x1007ae53
 // Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
 long UIManager::Push(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::Push, (intptr_t)inForm); }
 
+// FUNCTION: LLE 0x1007af47
 // Marks every visible form and all its controls dirty
 void UIManager::RedrawAll() { this->Call(EeUiManagerCall::RedrawAll); }
 
+// FUNCTION: LLE 0x1007b147
 // Rebuilds each visible form's clip rectangles from the visible forms above it
 void UIManager::ResetClippedForms() { this->Call(EeUiManagerCall::ResetClippedForms); }
 
+// FUNCTION: LLE 0x1007b1a2
 // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
 void UIManager::RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
 
+// FUNCTION: LLE 0x1007b254
 // Runs and releases the queued events of one form; the other forms' events stay queued in order
 void UIManager::ProcessAllEventsForForm(UIForm* inForm)
 {
     this->Call(EeUiManagerCall::ProcessAllEventsForForm, (intptr_t)inForm);
 }
 
+// FUNCTION: LLE 0x1007b2ec
 // Stops the playing music and releases its instance
 void UIManager::RemoveAndStopSoundInstance() { this->Call(EeUiManagerCall::RemoveAndStopSoundInstance); }
 
+// FUNCTION: LLE 0x1007b310
 // Releases the music instance
 void UIManager::RemoveSoundInstance() { this->Call(EeUiManagerCall::RemoveSoundInstance); }
 
+// FUNCTION: LLE 0x1007b338
 // Deletes the UI database tables (controls, backgrounds, fonts)
 void UIManager::RemoveDatabase()
 {
@@ -603,15 +641,18 @@ void UIManager::RemoveDatabase()
     UIFontTable::DeleteAll();
 }
 
+// FUNCTION: LLE 0x1007b347
 // Replaces the music instance, moving the reference to the new one
 void UIManager::SetSoundInstance(SESMInstanceNode* inInstance)
 {
     this->Call(EeUiManagerCall::SetSoundInstance, (intptr_t)inInstance);
 }
 
+// FUNCTION: LLE 0x1007b36e
 // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK
 long UIManager::SwapForm(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::SwapForm, (intptr_t)inForm); }
 
+// FUNCTION: LLE 0x1007b511
 // Swaps the left and right mouse buttons when the left-handed setting changes
 void UIManager::SetMouseLeftHanded(bool inLeftHanded)
 {
@@ -623,6 +664,7 @@ void UIManager::SetMouseLeftHanded(bool inLeftHanded)
     UIManager::sMouseLeftHanded = inLeftHanded;
 }
 
+// FUNCTION: LLE 0x1007b53a
 // Sets the music volume; stops the music at 0 and restarts the last track (or the intro) when raised from 0
 void UIManager::SetMusicVolume(float inVolume)
 {
@@ -630,18 +672,22 @@ void UIManager::SetMusicVolume(float inVolume)
     this->Call(EeUiManagerCall::SetMusicVolume, 0, 0, 0, f);
 }
 
+// FUNCTION: LLE 0x1007b616
 // Loads and starts a music track unless it is the current one (names compared lower-cased)
 void UIManager::StartMusic(const UWideString& inFileName)
 {
     this->Call(EeUiManagerCall::StartMusic, (intptr_t)(const char*)inFileName);
 }
 
+// FUNCTION: LLE 0x1007b743
 // Stops the music and unloads the track
 void UIManager::StopMusic() { this->Call(EeUiManagerCall::StopMusic); }
 
+// FUNCTION: LLE 0x1007b786
 // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
 long UIManager::UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
 
+// FUNCTION: LLE 0x1007b7f4
 // Passes the mouse location and buttons to the top form when the mouse changed, it is captured, or an update is forced
 long UIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 {
@@ -649,18 +695,54 @@ long UIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
     return (long)this->Call(EeUiManagerCall::UpdateMouse, 0, 0, 0, f);
 }
 
+// FUNCTION: LLE 0x1007b864
 // Passes a translated character to the top form unless its repeat count is 16 or more; returns its result
 long UIManager::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
     return (long)this->Call(EeUiManagerCall::UpdateTranslatedKey, (intptr_t)inKey, (intptr_t)inRepeat);
 }
 
+// FUNCTION: LLE 0x1007b8f1
 // Runs one UI update: keyboard, mouse, queued events, then any pending music stop or start; returns the mouse result
 long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
 {
     float f[4] = {inMouseLocation.GetX(), inMouseLocation.GetY(), 0.0f, 0.0f};
     return (long)this->Call(EeUiManagerCall::UpdateUi, 0, 0, 0, f);
 }
+
+// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// TEMPLATE: LLE 0x1007ba04
+// TEMPLATE: LLE 0x1007ba0b
+// SYNTHETIC: LLE 0x10078c81
+// SYNTHETIC: LLE 0x10078c8b
+// SYNTHETIC: LLE 0x10078c9b
+// SYNTHETIC: LLE 0x10078ca7
+// SYNTHETIC: LLE 0x10078cb1
+// SYNTHETIC: LLE 0x10078cbb
+// SYNTHETIC: LLE 0x10078ccb
+// SYNTHETIC: LLE 0x10078cd7
+// SYNTHETIC: LLE 0x10078ce1
+// SYNTHETIC: LLE 0x10078ceb
+// SYNTHETIC: LLE 0x10078cfb
+// SYNTHETIC: LLE 0x10078d07
+// SYNTHETIC: LLE 0x10078d11
+// SYNTHETIC: LLE 0x10078d1b
+// SYNTHETIC: LLE 0x10078d2b
+// SYNTHETIC: LLE 0x10078d37
+// SYNTHETIC: LLE 0x10078d41
+// SYNTHETIC: LLE 0x10078d4b
+// SYNTHETIC: LLE 0x10078d5b
+// SYNTHETIC: LLE 0x10078d67
+// SYNTHETIC: LLE 0x10078d71
+// SYNTHETIC: LLE 0x10078d7b
+// SYNTHETIC: LLE 0x10078d8b
+// SYNTHETIC: LLE 0x10078d97
+// SYNTHETIC: LLE 0x10078da1
+// SYNTHETIC: LLE 0x10078dda
+// SYNTHETIC: LLE 0x10078e07
+// SYNTHETIC: LLE 0x10078e68
+// SYNTHETIC: LLE 0x10078e89
+// SYNTHETIC: LLE 0x1007b8e7
 
 // UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
 // 0x1006f278..0x1006f4ef): Initialize/Uninitialize over the record, the two loaders over the events file. The calls

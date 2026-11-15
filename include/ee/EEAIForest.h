@@ -10,9 +10,9 @@ public:
     // index); +0x68..+0x80 not decoded
     // (EEAIAStarPathAreaGoal::CreateAreas 0x17510): ctor 0x29bcd (out of line), UpdateResourceKind
     // +0x6c/+0x70/+0x74 the resource tile counts by kind 1/3/2 (provisional names)
-    EEAIForest();
+    EEAIForest();                           // 0x29bcd
     virtual ~EEAIForest() {}                // ??_G 0x29f35 (stores its own vptr: user-declared)
-    bool RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount);
+    bool RegrowTrees(const U2DPoint<long>& inTile, long inRadius, long inCount);  // 0x29c01
     void UpdateResourceKind();              // 0x29d69 (after the counts are set)
     // +0x28 0x29e17: EEAIArea's, then the removed tile's resource kind (EEAIHasResourceUnit) leaves its count
     virtual bool RemoveTile(const U2DPoint<long>& inPoint);

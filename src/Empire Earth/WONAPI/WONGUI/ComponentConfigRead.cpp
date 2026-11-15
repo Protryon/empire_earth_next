@@ -36,6 +36,7 @@ static bool ConfigExprInt(void* inHost, int32_t* outValue)
     }
 }
 
+// FUNCTION: WON 0x00782db0
 // Skips whitespace and returns whether the value string is used up
 bool ComponentConfig::EndOfString()
 {
@@ -43,6 +44,7 @@ bool ComponentConfig::EndOfString()
     return this->mStringParser->EndOfString();
 }
 
+// FUNCTION: WON 0x00782dd0
 // Skips whitespace and one comma, if there is one
 void ComponentConfig::SkipComma()
 {
@@ -51,6 +53,7 @@ void ComponentConfig::SkipComma()
         this->mStringParser->IncrementPos(1);
 }
 
+// FUNCTION: WON 0x00782e00
 // Consumes the next comma; throws a configuration error when it is missing
 void ComponentConfig::EnsureComma()
 {
@@ -58,6 +61,7 @@ void ComponentConfig::EnsureComma()
         throw ConfigObjectException("Expecting ','");
 }
 
+// FUNCTION: WON 0x00783560
 // Evaluates an integer expression with parentheses, + - * / (left to right, usual precedence) and named
 // values; throws on a missing ')' or division by zero
 int ComponentConfig::ParseExpression(int inLevel)
@@ -74,12 +78,14 @@ int ComponentConfig::ParseExpression(int inLevel)
     }
 }
 
+// FUNCTION: WON 0x007837e0
 // Reads an integer expression from the value string
 int ComponentConfig::ReadInt()
 {
     return this->ParseExpression(0);
 }
 
+// FUNCTION: WON 0x007837f0
 // Reads a bool; throws a configuration error when there is none
 bool ComponentConfig::ReadBool()
 {
@@ -89,6 +95,7 @@ bool ComponentConfig::ReadBool()
     throw ConfigObjectException("Expecting bool");
 }
 
+// FUNCTION: WON 0x00783930
 // Reads one (wide) character after whitespace; throws when the string is used up
 int ComponentConfig::ReadChar()
 {
@@ -100,6 +107,7 @@ int ComponentConfig::ReadChar()
     return value;
 }
 
+// FUNCTION: WON 0x00783a90
 // Reads a flag name with an optional + or - prefix, reporting on/off through outOn when a prefix is given
 GUIString ComponentConfig::ReadFlag(bool* outOn)
 {
@@ -118,6 +126,7 @@ GUIString ComponentConfig::ReadFlag(bool* outOn)
     return this->ReadString(true);
 }
 
+// FUNCTION: WON 0x00783b00
 // Reads a string as written, optionally stopping at whitespace
 GUIString ComponentConfig::ReadRawString(bool inStopAtWhitespace)
 {
@@ -126,6 +135,7 @@ GUIString ComponentConfig::ReadRawString(bool inStopAtWhitespace)
     return GUIString(value);
 }
 
+// FUNCTION: WON 0x007856f0
 // Reads a direction (Left, Right, Up, Down; any case); throws on anything else
 Direction ComponentConfig::ReadDirection()
 {
@@ -138,6 +148,7 @@ Direction ComponentConfig::ReadDirection()
     throw ConfigObjectException("Bad Direction");
 }
 
+// FUNCTION: WON 0x00785950
 // Reads a horizontal alignment (Left, Center, Right; any case); throws on anything else
 HorzAlign ComponentConfig::ReadHorzAlign()
 {
@@ -149,6 +160,7 @@ HorzAlign ComponentConfig::ReadHorzAlign()
     throw ConfigObjectException("Bad HorzAlign");
 }
 
+// FUNCTION: WON 0x00785b10
 // Reads a vertical alignment (Top, Center, Bottom; any case); throws on anything else
 VertAlign ComponentConfig::ReadVertAlign()
 {
@@ -162,6 +174,7 @@ VertAlign ComponentConfig::ReadVertAlign()
 
 inline int safe_isspace(unsigned long ch) { return ch<256?isspace(ch):0; }
 inline int safe_isalnum(unsigned long ch) { return ch<256?isalnum(ch):0; }
+// FUNCTION: WON 0x00782f40
 // Reads an integer operand: a number, @ID_name (control id; the ID must be upper case), @name (int resource),
 // or a named value or MAX/MIN call of this or a dotted configuration; throws when unknown
 int ComponentConfig::GetIntValue()
@@ -223,6 +236,7 @@ int ComponentConfig::GetIntValue()
     throw ConfigObjectException("Invalid named value: "+key);
 }
 
+// FUNCTION: WON 0x00784210
 // Returns the named int resource from the current resource section or the nearest parent configuration;
 // throws when none has it
 int ComponentConfig::GetIntResource(const std::string& inKey)
@@ -235,6 +249,7 @@ int ComponentConfig::GetIntResource(const std::string& inKey)
     throw ConfigObjectException("Int resource not found: "+inKey);
 }
 
+// FUNCTION: WON 0x00787390
 // Returns the component's LEFT, RIGHT, TOP, BOTTOM, WIDTH or HEIGHT; false for any other name
 bool ComponentConfig::GetNamedValue(const std::string& inName,int& outValue)
 {
@@ -249,6 +264,7 @@ bool ComponentConfig::GetNamedValue(const std::string& inName,int& outValue)
     return true;
 }
 
+// FUNCTION: WON 0x00787490
 // Evaluates MAX or MIN over the parameters, both starting from 0 (so MIN is never above 0); false for any
 // other name
 bool ComponentConfig::CallNamedFunction(const std::string& inName,const std::vector<int>& inParams,int& outValue)
@@ -274,3 +290,19 @@ bool ComponentConfig::CallNamedFunction(const std::string& inName,const std::vec
 }
 
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a1540
+// (public: class std::_Ptrit<int,int,int *,int &,int *,int &> __thiscall std::_Ptrit<int,int,int *,int &,int *,int &>::operator+(int)const     [??H?$_Ptr)
+// TEMPLATE: WON 0x007a1bc0
+// (protected: void __thiscall std::vector<int,class std::allocator<int> >::_Xlen(void)const     [?_Xlen@?$vector@HV?$allocator@H@std@@@std@@IBEXXZ])
+// TEMPLATE: WON 0x007a2ce0
+// (void __cdecl std::fill(class std::_Ptrit<int,int,int *,int &,int *,int &>,class std::_Ptrit<int,int,int *,int &,int *,int &>,int const &)    [?fill@st)
+// TEMPLATE: WON 0x007a1230
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00754b50
+// (protected: int * __thiscall std::vector<int,class std::allocator<int> >::_Ucopy(class std::_Ptrit<int,int,int *,int &,int *,int &>,class std::_Ptrit<i)
+// TEMPLATE: WON 0x00754b80
+// (class std::_Ptrit<int,int,int *,int &,int *,int &> __cdecl std::copy_backward(class std::_Ptrit<int,int,int *,int &,int *,int &>,class std::_Ptrit<int)
+// TEMPLATE: WON 0x0079c980

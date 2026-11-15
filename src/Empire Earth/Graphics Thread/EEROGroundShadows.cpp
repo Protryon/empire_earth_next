@@ -50,16 +50,22 @@
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
 extern const EeGfxRaster gEERustRaster;
 
+// FUNCTION: EXE 0x511dae
 // Creates the ground shadows' render object
 EEROGroundShadows::EEROGroundShadows()
 {
 }
 
+// SYNTHETIC: EXE 0x511dc0
+// (the scalar deleting destructor, emitted with the vtable; slot EEROGroundShadows+0x10)
+
+// FUNCTION: EXE 0x511ddc
 // Destroys the ground shadows' render object
 EEROGroundShadows::~EEROGroundShadows()
 {
 }
 
+// FUNCTION: EXE 0x511de7
 // Prepares the frame and fills the render lists of shadows and units
 void EEROGroundShadows::FrameStarting()
 {
@@ -67,6 +73,7 @@ void EEROGroundShadows::FrameStarting()
     this->FillRenderLists();
 }
 
+// FUNCTION: EXE 0x511df8
 // Creates the shared shadow quad model (StaticShadow): a unit square in the ground plane (ee_gfx shadows.rs)
 void EEROGroundShadows::CreateShadowModel()
 {
@@ -98,6 +105,7 @@ void ShadowEffects(void*)
 }
 }
 
+// FUNCTION: EXE 0x51207f
 // Draws the static shadows and unit shadows (when ground shadows are on), then the effects' ground pass
 // (queue 0) per texture, alpha-blended with z test only (ee_gfx shadows.rs over the frame's lists; the units that
 // cast no shadow, submerged or without a shadow scale, are left out here)
@@ -136,16 +144,21 @@ void EEROGroundShadows::RenderScene()
     ee_gfx_ground_shadows_render(&gEERustRaster, &theScene);
 }
 
+// FUNCTION: EXE 0x512513
 // Releases the shared shadow quad model (ee_gfx shadows.rs)
 void EEROGroundShadows::ReleaseShadowModel()
 {
     ee_gfx_ground_shadows_release(&gEERustRaster);
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROGroundShadows::FrameDone()
 {
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROGroundShadows::SceneStarting()
 {
 }

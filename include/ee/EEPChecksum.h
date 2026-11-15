@@ -9,7 +9,7 @@
 
 class EEPChecksum : public ESChecksum, public FSPersistent {
 public:
-    EEPChecksum(bool inVerbose);
+    EEPChecksum(bool inVerbose);                                                // 0x149d05
     virtual ~EEPChecksum() {}                                                   // 0x149fdc (??_G 0x149fc0; the
                                                                                 // FSPersistent slot's adjustor 0x149fb8)
     virtual void GetChecksum(ESChecksum& ioChecksum) const;                     // FSPersistent +0x00 0x149d5f

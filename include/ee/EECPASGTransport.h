@@ -12,7 +12,7 @@ class EECPILocation;
 
 class EECPASGTransport {
 public:
-    EECPASGTransport();
+    EECPASGTransport();                     // 0x51805
     virtual ~EECPASGTransport();            // +0x00 (??_G 0x51819; dtor 0x51835: the vptr store only)
     // +0x04 _purecall (EECPASGAirTransport 0x44188: returns a count kept in ebx)
     virtual long CountCargo() = 0;

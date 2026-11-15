@@ -27,6 +27,7 @@ static const char* sPointerFiles[14] = {
     "Textures\\Attack Ground Pointer.png",
 };
 
+// FUNCTION: EXE 0x50a9b0
 // Creates the game's mouse with none of its 14 extra pointer images loaded
 EEMouse::EEMouse()
 {
@@ -34,6 +35,7 @@ EEMouse::EEMouse()
         this->mExtraPointerSurfaces[i] = NULL;
 }
 
+// FUNCTION: EXE 0x50a9d1
 // Returns the image of a mouse pointer: the game's extra pointers for 10..23, else the engine's
 GESurface* EEMouse::GetPointerSurface(unsigned long inIndex)
 {
@@ -42,6 +44,7 @@ GESurface* EEMouse::GetPointerSurface(unsigned long inIndex)
     return RTSMouse::GetPointerSurface(inIndex);
 }
 
+// FUNCTION: EXE 0x50a9f1
 // Loads the 14 extra pointer images (convert, transport, calamity, rally, heal, patrol, garrison, flare,
 // attack ground...), then the engine's pointers; returns the first load error
 long EEMouse::Load(GEScreen* inScreen)
@@ -54,6 +57,7 @@ long EEMouse::Load(GEScreen* inScreen)
     return theResult;
 }
 
+// FUNCTION: EXE 0x50aa38
 // Releases the extra pointer images, then the engine's; returns the engine's result
 long EEMouse::Release()
 {
@@ -65,3 +69,6 @@ long EEMouse::Release()
     }
     return RTSMouse::Release();
 }
+
+// SYNTHETIC: EXE 0x50aa66
+// (the scalar deleting destructor, with EEMouse's inline dtor)

@@ -13,7 +13,7 @@ class UIForm;
 
 class EEUIFSEBrushGroup {
 public:
-    EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inPosition, UIForm* inForm, GEFont* inFont);
+    EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inPosition, UIForm* inForm, GEFont* inFont);   // 0x1a0315
     ~EEUIFSEBrushGroup();                   // 0x1a074a, five owned buttons plus title
     // 0x1a0778: the brush outline at tile (inX, inY) (EEUIFSEElevation::MouseMove) (provisional name)
     void SetHighlight(float inX, float inY, bool inIsCentered);

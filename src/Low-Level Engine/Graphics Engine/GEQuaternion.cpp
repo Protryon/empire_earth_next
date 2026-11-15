@@ -17,18 +17,21 @@
 #include "lle/UMFastMath.h"
 #include "GERustMath.h"
 
+// FUNCTION: LLE 0x10023219
 // Sets the quaternion from a transformation's rotation (vector part negated), then normalises it
 void GEQuaternion::ConvertFrom(const GETransformation& inTransformation)
 {
     ee_ge_quat_from(GERust(inTransformation), GERust(*this));
 }
 
+// FUNCTION: LLE 0x100233b7
 // Writes the quaternion's rotation into a transformation (no translation), then normalises the matrix
 void GEQuaternion::ConvertTo(GETransformation& outTransformation) const
 {
     ee_ge_quat_to(GERust(*this), GERust(outTransformation));
 }
 
+// FUNCTION: LLE 0x100234ca
 // Scales the quaternion to unit length
 // NEAR: the inline UMFastMath::Sqrt gives the fstp st(4) parameter shape (plain sqrt is further off); the second
 // push ecx of the double argument area is scheduled one load earlier than the original
@@ -37,6 +40,7 @@ void GEQuaternion::Normalize()
     ee_ge_quat_normalize(GERust(*this));
 }
 
+// FUNCTION: LLE 0x10023526
 // Interpolates between this quaternion and a target along the shorter arc (linear when they are nearly equal)
 void GEQuaternion::Slerp(const GEQuaternion& inTarget, float inT, GEQuaternion& outQuaternion) const
 {

@@ -39,16 +39,20 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
 
 // ---- StagingLogic's shell
 
+// FUNCTION: WON 0x007ef160
 StagingLogic::StagingLogic() : mRust(ee_won_staging_new(this, ee_won_lobbycpp_call)) {}
 
+// FUNCTION: WON 0x007ef1b0
 StagingLogic::~StagingLogic() { ee_won_staging_free(this->mRust); }
 
+// FUNCTION: WON 0x007ef290
 // Looks up the create-game dialog from the lobby layout
 void StagingLogic::InitComponent(ComponentConfig* inConfig)
 {
     SafeGetComponent(inConfig, this->mCreateGameDialog, "CreateGameDialog", "StagingLogic.cpp", 41);
 }
 
+// FUNCTION: WON 0x007efe50
 // The host, leave, logout and start/ready buttons
 void StagingLogic::HandleControlEvent(int inControlId)
 {
@@ -57,6 +61,7 @@ void StagingLogic::HandleControlEvent(int inControlId)
     if (aWhich != 0) this->Call(EeWonStagingCall::Control, NULL, NULL, aWhich);
 }
 
+// FUNCTION: WON 0x007efeb0
 void StagingLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
     this->Call(EeWonStagingCall::ComponentEvent, inEvent, NULL, inEvent->mType);
@@ -69,6 +74,7 @@ void StagingLogic::CallMessage(EeWonStagingCall inCall, const ByteBuffer* inMess
                         inMessage != NULL ? (intptr_t)inMessage->length() : 0);
 }
 
+// FUNCTION: WON 0x007efb50
 // The room message from the buffer's position (ee_won reads its type and fixed fields)
 void StagingLogic::HandleMessage(ReadBuffer& inBuffer, LobbyClient* inClient)
 {
@@ -78,6 +84,7 @@ void StagingLogic::HandleMessage(ReadBuffer& inBuffer, LobbyClient* inClient)
                         (intptr_t)(inBuffer.length() - aStart));
 }
 
+// FUNCTION: WON 0x007efd20
 void StagingLogic::HandleMessageBuffer(const ByteBuffer* inMessage, LobbyClient* inClient)
 {
     if (inMessage != NULL) {

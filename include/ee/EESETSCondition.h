@@ -16,7 +16,7 @@ class GEFont;
 
 class EESETSCondition : public EESETSBaseObject {
 public:
-    EESETSCondition(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
+    EESETSCondition(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x17e49e
     virtual ~EESETSCondition();             // +0x00 0x17e827
     virtual void Sort();                    // +0x04 0x17e91d
     virtual void MoveDown();                // +0x0c 0x17e928

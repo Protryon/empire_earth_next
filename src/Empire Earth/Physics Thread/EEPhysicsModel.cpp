@@ -63,6 +63,7 @@ long gUnitAIWaitScale = 4000;               // 0x4c2374 (EEUnitAI 0x22eca0's wai
 unsigned long gCollisionDetectionUnit = 2000;   // 0x4c2378 (EmpireEarth.h; EEWorld resets it to 2000)
 unsigned long gCollisionPeriod = 1;         // 0x4c237c (EEPhysics.cpp's collision period; provisional name)
 
+// FUNCTION: EXE 0x5543b7
 // Creates the twelve physics model singletons (land to spaceship) and reads world table entry 79's float
 void EEInitPhysicsModels()
 {
@@ -71,6 +72,7 @@ void EEInitPhysicsModels()
     gPhysicsModelsF = gWorldTable.GetFloatValue(kWorldTrampleMinDistanceSquared);
 }
 
+// FUNCTION: EXE 0x5550ba
 // Destroys the twelve physics model singletons
 void EEFreePhysicsModels()
 {
@@ -81,6 +83,7 @@ void EEFreePhysicsModels()
     }
 }
 
+// FUNCTION: EXE 0x55463e
 // Returns the unit's top turn rate (its active group's when it is in one)
 float EEComplexUnit::GetMaxAngularVelocity()
 {
@@ -89,6 +92,7 @@ float EEComplexUnit::GetMaxAngularVelocity()
     return this->mStats->GetMaxAngularVelocity();
 }
 
+// FUNCTION: EXE 0x55465b
 // Returns the unit's turn acceleration (its active group's when it is in one)
 float EEComplexUnit::GetAngularAcceleration()
 {
@@ -97,6 +101,7 @@ float EEComplexUnit::GetAngularAcceleration()
     return this->mStats->mAngularAcceleration;
 }
 
+// FUNCTION: EXE 0x554c95
 // Returns the unit's acceleration (its active group's when it is in one)
 float EEComplexUnit::GetAcceleration()
 {
@@ -105,6 +110,7 @@ float EEComplexUnit::GetAcceleration()
     return this->mStats->GetAcceleration();
 }
 
+// FUNCTION: EXE 0x554e7b
 // Returns the inverse of the unit's acceleration (its active group's when it is in one)
 float EEComplexUnit::GetInverseAcceleration()
 {
@@ -113,6 +119,7 @@ float EEComplexUnit::GetInverseAcceleration()
     return this->mStats->mInverseAcceleration;
 }
 
+// FUNCTION: EXE 0x554f39
 // Returns the inverse of the unit's turn acceleration (its active group's when it is in one)
 float EEComplexUnit::GetInverseAngularAcceleration()
 {
@@ -122,6 +129,7 @@ float EEComplexUnit::GetInverseAngularAcceleration()
 }
 
 // NEAR: register choice only (ecx vs eax for the class pointer)
+// FUNCTION: EXE 0x556681
 // Returns whether the unit swims: it has a swim animation, stands on deep water and cruises above the ground
 bool EEComplexUnit::IsSwimming()
 {
@@ -130,6 +138,7 @@ bool EEComplexUnit::IsSwimming()
             > ::gWorld.mMap->mTerrainMesh.GetMeshZ(this->mPhysicalModel.GetLocation().GetX(), this->mPhysicalModel.GetLocation().GetY());
 }
 
+// FUNCTION: EXE 0x5566e5
 // Returns whether the unit can move on terrain kind 1 and its model has more than one frame of animation 2
 bool EEComplexUnit::HasSwimAnimation()
 {
@@ -240,6 +249,7 @@ static void PMStepNote(EEPhysicsModel* inModel, EEComplexUnit* inUnit, unsigned 
     sPMStepCalls++;
 }
 
+// FUNCTION: EXE 0x556897
 // Runs the step for the unit's physics action (0..5), then the after-step work (not after action 2, nor for
 // a dead unit in another action): Rust (ee_units pm.rs step)
 void EEPhysicsModel::Step(EEComplexUnit* inUnit)
@@ -264,6 +274,7 @@ float EEPhysicsModel::ComputeRoll(EEComplexUnit* inUnit, float inValue)
 // combat lane's CBPJ, CBPS, CBMA, CBMH)
 
 // NEAR: frame/float slot order; the original calls vector<long>::operator[] out of line (0x11e2a5) for the first lookup
+// FUNCTION: EXE 0x55d015
 // Places the launched projectile on its ballistic arc from the launch point for its flight time so far,
 // nose along the arc; a meteor flies straight at its top speed, without gravity (new: the arc and the placement are
 // ee_combat's arc and projectile_launch)
@@ -304,6 +315,7 @@ static void PMProjectileStep0(EEComplexUnit* inUnit)
 }
 
 // NEAR: frame layout (the original keeps the step in the dead inUnit slot; 0x94 vs our 0xa0)
+// FUNCTION: EXE 0x55d259
 // Moves the projectile one tick along its heading and pulls its nose down by its class's gravity; only
 // while it is at or below height 0 and above the ground point (new: ee_combat's projectile_step)
 // Class gravity +0x13c; the height-0 test is the original's (bytes 0x55d2e4: `fcomp 0.0`, `ja` returns)
@@ -334,6 +346,7 @@ static void PMProjectileStep2(EEComplexUnit* inUnit)
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
 }
 
+// FUNCTION: EXE 0x55b041
 // Speeds the missile up along its heading (capped at its top speed) and moves it by one tick (new: ee_combat's
 // missile_accelerate)
 static void PMMissileAccelerate(EEComplexUnit* inUnit)
@@ -355,6 +368,7 @@ static void PMMissileAccelerate(EEComplexUnit* inUnit)
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
 }
 
+// FUNCTION: EXE 0x55b103
 // Turns the missile toward its drop target by at most its turn rate per tick, slows it the further it
 // points off target (down to 1/4 of top speed) and moves it by one tick (new: ee_combat's missile_home; the drop
 // target stays here)
@@ -384,6 +398,7 @@ static void PMMissileHome(EEComplexUnit* inUnit)
     EEUpdateUnitTile(&theNew, inUnit, &theTileX, &theTileY);
 }
 
+// FUNCTION: EXE 0x55aff0
 // Records the missile's position as its contact point, then flies it straight on while its boost time
 // lasts, else homes it on its target
 static void PMMissileStep0(EEComplexUnit* inUnit)

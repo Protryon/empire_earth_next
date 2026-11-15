@@ -18,6 +18,7 @@
 #include "lle/GERhombus.h"
 #include "lle/UIDualButton.h"
 
+// FUNCTION: LLE 0x10069cc7
 // Creates a button that also reacts to the right mouse button
 UIDualButton::UIDualButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
                            GEBitmap* inPressedBitmap, const GERectangle& inRectangle, UIForm* inForm,
@@ -27,17 +28,20 @@ UIDualButton::UIDualButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitma
 {
 }
 
+// FUNCTION: LLE 0x10069cf7
 // Destroys the dual button (members only)
 UIDualButton::~UIDualButton()
 {
 }
 
+// FUNCTION: LLE 0x10069d02
 // Presses the button on a right click, capturing the mouse and firing the right-button-down trigger
 long UIDualButton::MouseRButtonDown()
 {
     return (long)ee_ui_button_call(this->mRust, EeUiButtonCall::DualMouseRButtonDown, 0, 0, NULL);
 }
 
+// FUNCTION: LLE 0x10069d24
 // Releases the mouse; a right release over the button pops it up and fires the right-button-up trigger
 long UIDualButton::MouseRButtonUp()
 {

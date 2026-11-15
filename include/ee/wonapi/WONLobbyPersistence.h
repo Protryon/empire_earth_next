@@ -21,36 +21,36 @@ namespace WONAPI {
 class FileReader {
 public:
     bool IsOpen() { return this->mCore.file!=NULL || this->mCore.buffer!=NULL; }
-    FileReader();
-    FileReader(const char* inPath);
+    FileReader(); // 0x6a0d00
+    FileReader(const char* inPath); // 0x6a0d10
     FileReader(const void* theMemDataP, unsigned long theMemDataLen);
     bool OpenText(const char* inPath); // 0x6a0d80 (fopen "r"; provisional name)
-    void Open(const void* inData, unsigned long inLength);
-    unsigned long pos();
-    unsigned long length();
+    void Open(const void* inData, unsigned long inLength); // 0x6a0dc0
+    unsigned long pos(); // 0x6a0e20
+    unsigned long length(); // 0x6a0e40
     unsigned long Available() { return this->length()-this->pos(); }
-    void SetPos(unsigned long inPos);
-    int ReadMaxBytes(void* outData, int inMaxBytes);
-    int TryReadByte();
-    void SkipBytes(unsigned long inLength);
-    void ReadIntoMemory();
-    int ReadLength(int inFieldSize);
-    void ReadRawString(std::string& outString, int inNumChars);
-    void ReadString(std::string& outString, unsigned char inFieldSize);
+    void SetPos(unsigned long inPos); // 0x6a0e90
+    int ReadMaxBytes(void* outData, int inMaxBytes); // 0x6a12d0
+    int TryReadByte(); // 0x6a1780
+    void SkipBytes(unsigned long inLength); // 0x6a17c0
+    void ReadIntoMemory(); // 0x6a1ac0
+    int ReadLength(int inFieldSize); // 0x6a1b80
+    void ReadRawString(std::string& outString, int inNumChars); // 0x6a1bc0
+    void ReadString(std::string& outString, unsigned char inFieldSize); // 0x6a1d90
     void ReadRawWString(std::wstring& theWStr,int theNumChars);
     void ReadWString(std::wstring& theWStr,unsigned char theLengthFieldSize=2);
-    void Rewind();
-    bool EndOfFile();
+    void Rewind(); // 0x6a1dc0
+    bool EndOfFile(); // 0x6a1de0
 private:
     void Init(); // 0x6a0ce0 (zeroes the six fields)
     void Check(int inStatus); // throws FileReaderException for a failed status
 public:
-    ~FileReader();
-    bool Open(const char* inPath);
-    void Close();
-    void ReadBytes(void* outData, unsigned long inLength);
-    unsigned char ReadByte();
-    unsigned short ReadShort();
+    ~FileReader(); // 0x6a0d30
+    bool Open(const char* inPath); // 0x6a0d40
+    void Close(); // 0x6a0de0
+    void ReadBytes(void* outData, unsigned long inLength); // 0x6a1460
+    unsigned char ReadByte(); // 0x6a1b20
+    unsigned short ReadShort(); // 0x6a1b40
     int32_t ReadLong(); // 0x6a1b60 (32-bit on every OS)
     // the file (0x00), the memory source (0x04; freed when owned), length (0x08), position (0x0c), owned (0x10)
     // and memory mode (0x11: set by the memory Open at 0x6a0dd6 and by length(), cleared by the file Open)
@@ -67,20 +67,20 @@ struct AutoFile {
 };
 class FileWriter {
 public:
-    FileWriter();
-    unsigned long pos();
-    void SetPos(unsigned long inPos);
-    void WriteLength(unsigned long inLength, unsigned char inFieldSize);
-    void WriteRawString(const std::string& inString);
-    void WriteString(const std::string& inString, unsigned char inFieldSize);
+    FileWriter(); // 0x6a1e10
+    unsigned long pos(); // 0x6a2080
+    void SetPos(unsigned long inPos); // 0x6a20a0
+    void WriteLength(unsigned long inLength, unsigned char inFieldSize); // 0x6a2620
+    void WriteRawString(const std::string& inString); // 0x6a2660
+    void WriteString(const std::string& inString, unsigned char inFieldSize); // 0x6a2680
     void WriteRawWString(const std::wstring& theWStr);
     void WriteWString(const std::wstring& theWStr,unsigned char theLengthFieldSize=2);
-    ~FileWriter();
+    ~FileWriter(); // 0x6a1e20
     bool Open(const char* inPath, bool inOpenIfReadOnly); // 0x6a1e30 (retries after clearing read-only)
-    void Close();
-    void WriteBytes(const void* inData, unsigned long inLength);
-    void WriteByte(unsigned char inValue);
-    void WriteShort(unsigned short inValue);
+    void Close(); // 0x6a2060
+    void WriteBytes(const void* inData, unsigned long inLength); // 0x6a2400
+    void WriteByte(unsigned char inValue); // 0x6a25f0
+    void WriteShort(unsigned short inValue); // 0x6a2600
     void WriteLong(int32_t inValue); // 0x6a2610 (32-bit on every OS)
     EeWonFileWriter mCore; // the file (0x00)
 private:
@@ -187,7 +187,7 @@ GUIString LobbyGetLanName(); // 0x75d640 (0x68, or the empty string)
 size_t LobbyGetLanNameCount(); // the recent LAN names (0x75d660's map)
 GUIString LobbyGetLanNameAt(size_t inPos);
 void LobbyRemoveLanName(); // 0x75d770 (case-insensitive compare 0x728030)
-void LobbyResetFilters();
+void LobbyResetFilters(); // 0x75df00
 size_t LobbyGetDirectConnectCount(); // the saved direct connects (0x75d8e0's map), by address
 IPAddr LobbyGetDirectConnectAddressAt(size_t inPos);
 GUIString LobbyGetDirectConnectNameAt(size_t inPos);
@@ -199,8 +199,8 @@ void LobbySetCurrentUser(LobbyUserInfo* inUser); // 0x75cf90 (then reads the use
 class LobbyOptionSet {
 public:
     LobbyOptionSet() : mValues(EeWonLobbyKeyKind::InOrder, EeWonLobbyMapHooks()) {}
-    void Add(const GUIString& inValue);
-    bool Erase(const GUIString& inValue);
+    void Add(const GUIString& inValue); // 0x75baa0
+    bool Erase(const GUIString& inValue); // 0x75bc20
     void clear(); // as the SDK's ServerListFilterSet::clear
     size_t size() const { return this->mValues.size(); }
     bool empty() const { return this->mValues.empty(); }
@@ -220,20 +220,20 @@ class LobbyPersistentData : public RefCount {
 public:
     LobbyPersistentData(); // 0x75bcb0 (the original left mCurrentUserId unset before the reset; 0 here)
     ~LobbyPersistentData(); // the original's was implicit (0x75c2c0); frees the scalar state's object
-    std::string GetUserFileName(long inUserId);
-    long FindUnusedUserId();
+    std::string GetUserFileName(long inUserId); // 0x75e6e0 (provisional name)
+    long FindUnusedUserId();                  // 0x75e770 (provisional name)
     void PruneUsers(); // 0x75eb30 (drops the oldest users)
     // the files' layouts are ee_won's (persist.rs); the password's encryption stays here
     GUIString DecryptString(const uint8_t* inData, size_t inLength); // 0x75f190's decryption
     ByteBufferPtr EncryptString(const GUIString& inText); // 0x75f530's encryption (NULL when it fails)
     GUIString GetDefaultLanName(); // 0x75c520 (uses a CRC)
-    void RestoreDefaults();
-    void LoadGlobalPrefs();
-    void SaveGlobalPrefs();
-    void LoadUserPrefs();
-    void SaveUserPrefs();
+    void RestoreDefaults(); // 0x75c720
+    void LoadGlobalPrefs(); // 0x75f7b0
+    void SaveGlobalPrefs(); // 0x75faf0
+    void LoadUserPrefs(); // 0x75fc70
+    void SaveUserPrefs(); // 0x760770
     void PruneLanNames(); // 0x75e7e0 (keeps the 50 most recent LAN names)
-    void SelectRecentLanName();
+    void SelectRecentLanName(); // 0x75ea40
 
     // the members behind accessors (round 16; the Lobby* functions read them through these). The scalar state is a
     // Rust object (rust/crates/ee_won/src/prefsobj.rs EeWonLobbyPrefs: the current user, the flags, the connection
@@ -295,7 +295,7 @@ private:
     LobbyUserInfoMap mUsers;                   // 0x80
     LobbyReconnectInfoMap mReconnectInfoMap;   // 0x8c (LobbyReconnectInfo's two fields as the entry's numbers)
     Blowfish mEncryptKey;                      // 0x98..0x114c (0x10b4 bytes)
-    LobbyLanNameInfoMap mLanNameInfoMap;
+    LobbyLanNameInfoMap mLanNameInfoMap;       // 0x114c
     LobbyDirectConnectMap mDirectConnectMap;   // 0x1158 (0x1164 bytes in all)
 
 };

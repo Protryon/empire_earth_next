@@ -52,12 +52,12 @@ EEUnit* EECreateCalamityUnit(EECalamity* inCalamity, long inUnitClass, GETransfo
 
 class EECalamityManager : public USingleton<EECalamityManager> {
 public:
-    EECalamityManager();
+    EECalamityManager();                    // 0xadf97
     // +0x00: the implicit virtual destructor (0xadfe9, after the ??_G 0xadfcd)
     virtual void DumpOutOfSynch(FILE* inFile);   // +0x04 0xae6df
     virtual long GetOutOfSynchChecksum();   // +0x08 0xae7eb
 
-    void DestroyCalamities();
+    void DestroyCalamities();               // 0xae00b
     long LoadCalamityClasses(FSFileSpec* inFile);   // 0xae070 (db\dbcalamity.dat; EEWorld 0x141d95)
     // 0xae526/0xae5ac/0xae66b: a new calamity of class inClassEnum (false if the class or a unit is missing)
     bool CreateGlobalCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID, unsigned long inPlayerNumber);
@@ -65,22 +65,22 @@ public:
                                 unsigned long inPlayerNumber);
     bool CreateUnitCalamity(unsigned long inClassEnum, unsigned long inCasterUnitID, unsigned long inTargetUnitID,
                             unsigned long inPlayerNumber);
-    void GetCalamities(std::vector<EECalamity*>*& outCalamities);
+    void GetCalamities(std::vector<EECalamity*>*& outCalamities);   // 0xae711
     EECalamityClass* GetCalamityClass(const EECalamityEnum& inClassEnum) const;   // 0xae71d: 0 past the end
-    bool GetCalamityIndex(EECalamity* inCalamity, long& outIndex);
+    bool GetCalamityIndex(EECalamity* inCalamity, long& outIndex);  // 0xae749
     EECalamityClass* GetCalamityClass(unsigned long inClassEnum) const;   // 0xae774: 0 past the end
     unsigned long GetCalamityClassCount() const { return this->mCalamityClasses.size(); }  // inline (out-of-line COMDAT 0x138e4b, 33 callers; EESETSETGameCalamity::Virtual14; provisional name)
-    bool GetCalamityClassIndex(EECalamityClass* inClass, long& outIndex);
+    bool GetCalamityClassIndex(EECalamityClass* inClass, long& outIndex);   // 0xae79a
     bool GetCalamityType(EECalamityEnum inClassEnum, long& outType);  // 0xae7c5 (the class's Virtual14)
-    bool IsCalamityActive(long inClassEnum);
+    bool IsCalamityActive(long inClassEnum);   // 0xae80e
     void LoadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum);   // 0xae834 (the class's Virtual28)
     // 0xae869: takes over loaded calamities (games older than 0.30 drop their plagues, leprosy and fire)
     void Restore(unsigned long inMajorVersion, unsigned long inMinorVersion, std::vector<EECalamity*>& inCalamities);
     void AddCalamity(EECalamity* inCalamity);   // 0xae8bc (kept only if its class starts it)
-    std::vector<EECalamity*>::iterator DestroyCalamity(std::vector<EECalamity*>::iterator inCalamity);
-    void DestroyCalamityClasses(bool inShutdown);
+    std::vector<EECalamity*>::iterator DestroyCalamity(std::vector<EECalamity*>::iterator inCalamity);   // 0xae8e1
+    void DestroyCalamityClasses(bool inShutdown);  // 0xae921
     void UnloadMedia(EEPlayer* inPlayer, const EECalamityEnum& inClassEnum);   // 0xae966 (the class's Virtual34)
-    void Update(float inElapsedTime);
+    void Update(float inElapsedTime);       // 0xae999
 
     // the class of inClassEnum as a T (dynamic_cast; false if it is not one); COMDATs 0xaea85 (global), 0xaeaec
     // (location), 0x66a89 (unit)

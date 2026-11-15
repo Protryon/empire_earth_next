@@ -7,7 +7,7 @@
 
 class EEROUnits : public EERenderObject {
 public:
-    EEROUnits();
+    EEROUnits();                            // 0x1144e8
     virtual ~EEROUnits();                   // +0x10 dtor 0x114516 (??_G 0x1144fa)
     virtual void FrameStarting();           // +0x00 0x114521: EERenderObject::Fn10EABE
     virtual void SceneStarting();           // +0x04 0xe123d trivial: ret (ICF)
@@ -15,7 +15,7 @@ public:
     virtual void FrameDone();               // +0x0c 0x11852f
 
     static void LoadMedia();                // 0x116a97 (0x13fccb calls it; asserts) (provisional name)
-    static void ReleaseMedia();
+    static void ReleaseMedia();             // 0x1185b5 (provisional name)
 
 private:
     // the passes (thiscall; Virtual08 passes `this`; provisional names)

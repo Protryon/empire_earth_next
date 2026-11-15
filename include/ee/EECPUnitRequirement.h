@@ -9,11 +9,11 @@
 
 class EECPUnitRequirement {
 public:
-    EECPUnitRequirement();
-    EECPUnitRequirement(const EECPUnitRequirement& inOther);
+    EECPUnitRequirement();                  // 0x51d19
+    EECPUnitRequirement(const EECPUnitRequirement& inOther);   // 0x528b1
     virtual ~EECPUnitRequirement() {}       // +0x00 (??_G 0x51d71)
-    EECPUnitRequirement& operator=(const EECPUnitRequirement& inOther);
-    void Clear();
+    EECPUnitRequirement& operator=(const EECPUnitRequirement& inOther);   // 0x5296a
+    void Clear();                           // 0x51d49
 
     long mL04;                              // +0x04 (-1)
     long mL08;                              // +0x08 (-1)

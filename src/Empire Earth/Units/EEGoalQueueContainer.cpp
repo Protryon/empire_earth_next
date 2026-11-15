@@ -29,6 +29,10 @@
 #include "ee/EECalamityManager.h"
 
 const UString EEUnitVectorItem::sData("EEGoalQueueContainer-Data");
+// SYNTHETIC: EXE 0x60560c   (wrapper)
+// SYNTHETIC: EXE 0x605616   (ctor)
+// SYNTHETIC: EXE 0x605627   (registrar)
+// SYNTHETIC: EXE 0x605633   (dtor)
 
 // New (R5b.4, the sixteenth round): the host of the queues' record and per-tick update in Rust (ee_units goals.rs):
 // typed FSFile reads and writes, the goals' own Save and CreateGoal + Load, the container's fields; the update's
@@ -135,6 +139,7 @@ void EEGoalQueueHostOf(EEGoalQueueIO& inIO, EeGoalQueueHost& outHost)
     outHost.refresh = QueueRefresh;
 }
 
+// FUNCTION: EXE 0x60564f
 // Creates an empty goal queue for a unit, with its timer stopped
 EEUnitVectorItem::EEUnitVectorItem(EEComplexUnit* inUnit)
 {
@@ -142,6 +147,10 @@ EEUnitVectorItem::EEUnitVectorItem(EEComplexUnit* inUnit)
     this->ResetTimer();
 }
 
+// SYNTHETIC: EXE 0x605681
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x60569d
 // Creates a copy of another queue: clones its goals for the same unit and copies the timer
 EEUnitVectorItem::EEUnitVectorItem(const EEUnitVectorItem& inItem)
 {
@@ -158,6 +167,7 @@ EEUnitVectorItem::EEUnitVectorItem(const EEUnitVectorItem& inItem)
     EEGoalQueueReport(this);   // New (R5b.4, the sixteenth round): the mirror's timer
 }
 
+// FUNCTION: EXE 0x605768
 // Destroys the queue, deleting its goals
 EEUnitVectorItem::~EEUnitVectorItem()
 {
@@ -165,6 +175,10 @@ EEUnitVectorItem::~EEUnitVectorItem()
     EEGoalQueueDropped(this);   // New (R5b.4, the fifteenth round): out of the Rust mirror (ee/EEUnitStore.h)
 }
 
+// FUNCTION: EXE 0x605780
+// Empties the queue once its timer has run out
+
+// FUNCTION: EXE 0x6057a7
 // Tells each goal it left the queue, deletes them all and stops the timer
 void EEUnitVectorItem::Clear()
 {
@@ -174,12 +188,14 @@ void EEUnitVectorItem::Clear()
     this->ResetTimer();
 }
 
+// FUNCTION: EXE 0x6057fa
 // Returns whether the unit's player is queuing orders (shift mode)
 bool EEUnitVectorItem::IsShiftMode()
 {
     return this->mUnit->mPlayer->mShiftMode;
 }
 
+// FUNCTION: EXE 0x605807
 // Returns the game time left on the queue's timer, 0 if it is not running
 unsigned long EEUnitVectorItem::GetTimeLeft()
 {
@@ -189,6 +205,7 @@ unsigned long EEUnitVectorItem::GetTimeLeft()
     return theResult;
 }
 
+// FUNCTION: EXE 0x605821
 // Adds time to the queue's timer, starting it now if it is not running
 void EEUnitVectorItem::AddTime(long inTime)
 {
@@ -200,6 +217,7 @@ void EEUnitVectorItem::AddTime(long inTime)
     EEGoalQueueReport(this);   // New (R5b.4, the sixteenth round): the mirror's timer (ee/EEUnitStore.h)
 }
 
+// FUNCTION: EXE 0x605843
 // Inserts a goal at a position (appending past the end) and makes the unit its owner
 void EEUnitVectorItem::Insert(unsigned long inIndex, EEUnitGoal* inGoal)
 {
@@ -210,6 +228,7 @@ void EEUnitVectorItem::Insert(unsigned long inIndex, EEUnitGoal* inGoal)
     inGoal->SetOwner(this->mUnit);
 }
 
+// FUNCTION: EXE 0x60588b
 // Replaces the goals with those read from the saved game (kind, then data; a goal that fails is deleted)
 // and reads the timer; returns the first read error
 long EEUnitVectorItem::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -222,6 +241,7 @@ long EEUnitVectorItem::Load(unsigned long inMajorVersion, unsigned long inMinorV
     return ee_units_goal_queue_load(&theHost);
 }
 
+// FUNCTION: EXE 0x605960
 // Removes and deletes the last goal
 void EEUnitVectorItem::PopBack()
 {
@@ -230,6 +250,7 @@ void EEUnitVectorItem::PopBack()
     this->mGoals.pop_back();
 }
 
+// FUNCTION: EXE 0x605999
 // Removes and deletes the first goal
 void EEUnitVectorItem::PopFront()
 {
@@ -238,6 +259,7 @@ void EEUnitVectorItem::PopFront()
     this->mGoals.pop_front();
 }
 
+// FUNCTION: EXE 0x6059ea
 // Writes the goals (kind, then data) and the timer to the saved game; returns the first write error
 long EEUnitVectorItem::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -249,6 +271,7 @@ long EEUnitVectorItem::Save(unsigned long inMajorVersion, unsigned long inMinorV
     return ee_units_goal_queue_save(reinterpret_cast<uintptr_t>(this), &theHost);
 }
 
+// FUNCTION: EXE 0x605aad
 // Stops and zeroes the queue's timer
 void EEUnitVectorItem::ResetTimer()
 {
@@ -258,6 +281,7 @@ void EEUnitVectorItem::ResetTimer()
     EEGoalQueueReport(this);   // New (R5b.4, the sixteenth round): the mirror's timer
 }
 
+// FUNCTION: EXE 0x605ab9
 // Copies another queue: clones its goals for the same unit and copies the timer (self-assignment does nothing)
 EEUnitVectorItem& EEUnitVectorItem::operator=(const EEUnitVectorItem& inItem)
 {
@@ -276,3 +300,15 @@ EEUnitVectorItem& EEUnitVectorItem::operator=(const EEUnitVectorItem& inItem)
     }
     return *this;
 }
+
+// TEMPLATE: EXE 0x605b7b
+// deque<EEUnitGoal*>::resize(n, x)
+
+// TEMPLATE: EXE 0x605bc0
+// deque<EEUnitGoal*>::iterator::operator-(difference_type)
+
+// TEMPLATE: EXE 0x605bd5
+// deque<EEUnitGoal*>::insert(iterator, size_type, const T&) (NEAR: Dinkum instruction scheduling differs)
+
+// TEMPLATE: EXE 0x605e8c
+// DeleteVectorContents<std::deque<EEUnitGoal*> > (ee/EECalamityManager.h), first used by Clear

@@ -57,7 +57,7 @@ public:
     GEModel* GetParentModel() const { return (GEModel*)ee_ge_mod_get(this->mRust, EeGeModVal::Parent); }
     GEPolygonArray* GetPolygonArray(unsigned long inLOD) { return this->GetPolygonArrays()[inLOD]; }
     unsigned long GetPolygonCount() const { return this->Val(EeGeModVal::PolygonCount); }
-    unsigned long GetPolygonCount(unsigned long inLOD) const;
+    unsigned long GetPolygonCount(unsigned long inLOD) const;   // 0x1001fab0
     GEVertexArray* GetVertexArray(unsigned long inFrame) { return this->GetVertexArrays()[inFrame]; }
     GEModel* GetSubModel(unsigned long inIndex) const { return this->GetSubModels()[inIndex]; }
     unsigned long GetSubModelCount() const { return this->Val(EeGeModVal::SubModelCount); }
@@ -87,37 +87,37 @@ public:
 
     // vtable 0x10097adc: slot 0 the deleting dtor, slot 1 Load (0x1001c3b4, 'GEModel Load.cpp': the .cem reader,
     // retired under D9; GEModelManager::LoadModel stores a glTF's model with StoreLoaded)
-    void ComputeBoundingVolumes();
+    void ComputeBoundingVolumes();          // 0x1001f69a
     // (ComputeLODReduction 0x1001ce5b, 'GEModel LOD.cpp', and the vertex cache optimiser of 'GEModel Caching.cpp'
     // (ComputeOptimalDataOrdering 0x10017523, ComputeVertexCacheEfficiency 0x10017580,
     // ComputeMemoryLocalityEfficiency 0x100173ba) had no caller in the game, the tools or the data path: deleted)
-    void ComputeModelNormals();
+    void ComputeModelNormals();             // 0x1001f80c
     // Hides UReferenceCounter::Dereference: GEPhysicalModel calls this one, GEModelManager calls the base explicitly
     // (0x10004370) when it drops its own reference.
-    void Dereference();
-    void PrepareTransforms();
+    void Dereference();                     // 0x1001fa84
+    void PrepareTransforms();               // 0x1001fb1d
     // (Save 0x1001e4e8 and SaveData 0x1001eb5a wrote .cem files: retired under D9)
-    void SetFractionalFramePosition(float inPosition);
-    void SetGraphicsCurrentFrame(unsigned long inFrame);
-    void SetGraphicsNextFrame(unsigned long inFrame);
-    void SetTexture(GETexture* inTexture, unsigned long inIndex);
-    unsigned long SizeOf();
-    void SortTagPoints();
-    bool Verify() const;
+    void SetFractionalFramePosition(float inPosition);   // 0x1002009b
+    void SetGraphicsCurrentFrame(unsigned long inFrame);   // 0x100200d7
+    void SetGraphicsNextFrame(unsigned long inFrame);   // 0x1002012f
+    void SetTexture(GETexture* inTexture, unsigned long inIndex);   // 0x100201b4
+    unsigned long SizeOf();                 // 0x10020213
+    void SortTagPoints();                   // 0x10020338
+    bool Verify() const;                    // 0x10020495
     GEModel(const GEModel&) = delete;
     GEModel& operator=(const GEModel&) = delete;
 protected:
-    GEModel(GEModelManager* inManager);
+    GEModel(GEModelManager* inManager);                                   // 0x1001ecbf
     GEModel(unsigned long inA, unsigned long inB, unsigned long inC, unsigned long inD, unsigned long inE,
-            unsigned long inF, const UString& inName, unsigned long inG, GEModelManager* inManager);
-    virtual ~GEModel();
+            unsigned long inF, const UString& inName, unsigned long inG, GEModelManager* inManager);   // 0x1001edb9
+    virtual ~GEModel();                     // 0x1001eed6
 private:
     // (SetParentModel, RemoveModelScale 0x1001fc00, ComputeBoundingBoxes 0x1001f544 and AllocateInternalData
     // 0x1001f080 are the Rust object's)
     // Stores a model decoded by Rust (a glTF: ee_of_gltf_to_model) as the original's .cem chunk readers stored it
     // ('GEModel Load.cpp')
     long StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures);
-    void SetSubModel(GEModel* inModel, unsigned long inIndex);
+    void SetSubModel(GEModel* inModel, unsigned long inIndex);   // 0x10020166
     // what the friends read (the store gate's digest), as accessors
     unsigned long GetVertexCount() const { return this->Val(EeGeModVal::VertexCount); }
     unsigned long GetSharedFrameCount() const { return this->Val(EeGeModVal::SharedFrameCount); }

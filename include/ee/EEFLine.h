@@ -6,9 +6,9 @@
 
 class EEFLine : public EEFormation {
 public:
-    EEFLine(long inType, float inSpacing, float inDepth, long inCount, long inRows);
-    virtual ~EEFLine();
-    virtual void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);
+    EEFLine(long inType, float inSpacing, float inDepth, long inCount, long inRows);   // 0xdd8b2
+    virtual ~EEFLine();                     // 0xdd982 (??_G 0xdd966)
+    virtual void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);   // 0xdd9a3
 
     float* mOffsets;                        // +0x60 (new float[mCount]: 0, then -x/+x pairs)
     float mSpacing;                         // +0x64

@@ -65,7 +65,9 @@ typedef my_upsampler * my_upsample_ptr;
  * Initialize for an upsampling pass.
  */
 
+// FUNCTION: JPEG 0x1008e509
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x810f10
 start_pass_upsample (j_decompress_ptr cinfo)
 {
   my_upsample_ptr upsample = (my_upsample_ptr) cinfo->upsample;
@@ -85,7 +87,9 @@ start_pass_upsample (j_decompress_ptr cinfo)
  * color conversion a row at a time.
  */
 
+// FUNCTION: JPEG 0x1008e523
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x810f30
 sep_upsample (j_decompress_ptr cinfo,
 	      JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
 	      JDIMENSION in_row_groups_avail,
@@ -153,7 +157,9 @@ sep_upsample (j_decompress_ptr cinfo,
  * "consumed" until we are done color converting and emitting it.
  */
 
+// FUNCTION: JPEG 0x1008e5f0
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811030
 fullsize_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 		   JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
 {
@@ -166,7 +172,9 @@ fullsize_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * These components will not be referenced by color conversion.
  */
 
+// FUNCTION: JPEG 0x1008e5fb
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811040
 noop_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 	       JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
 {
@@ -185,7 +193,9 @@ noop_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * you would be well advised to improve this code.
  */
 
+// FUNCTION: JPEG 0x1008e603
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811050
 int_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 	      JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
 {
@@ -229,7 +239,9 @@ int_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * It's still a box filter.
  */
 
+// FUNCTION: JPEG 0x1008e6ee
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811170
 h2v1_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 	       JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
 {
@@ -257,7 +269,9 @@ h2v1_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * It's still a box filter.
  */
 
+// FUNCTION: JPEG 0x1008e745
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x8111d0
 h2v2_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 	       JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
 {
@@ -300,7 +314,9 @@ h2v2_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * alternate pixel locations (a simple ordered dither pattern).
  */
 
+// FUNCTION: JPEG 0x1008e7b7
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811260
 h2v1_fancy_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 		     JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
 {
@@ -341,7 +357,9 @@ h2v1_fancy_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * context from the main buffer controller (see initialization code).
  */
 
+// FUNCTION: JPEG 0x1008e85b
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x811330
 h2v2_fancy_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 		     JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
 {
@@ -395,7 +413,9 @@ h2v2_fancy_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
  * Module initialization routine for upsampling.
  */
 
+// FUNCTION: JPEG 0x1008e33a
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x810d10
 jinit_upsampler (j_decompress_ptr cinfo)
 {
   my_upsample_ptr upsample;

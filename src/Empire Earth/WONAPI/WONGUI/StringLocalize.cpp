@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONStringLocalize.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00749f10
 // Returns the string with each <sN> tag replaced by substitution N (missing ones dropped); << gives a literal <
 GUIString StringLocalize::GetStr(const GUIString &theStr, const GUIString **subs, int numSubs)
 {

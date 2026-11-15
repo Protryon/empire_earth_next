@@ -75,6 +75,7 @@ struct EECPAITargetNearest {
 // 0x40c6cd (cdecl; only EECPASGUProphet::ReleaseAnalyzers calls it) (provisional name)
 long DeleteAnalyzers(std::vector<EECPASGUProphetCalamityAnalyzerBase*>& inAnalyzers);
 
+// FUNCTION: EXE 0x40908a
 // Creates a target screen for a prophet's analyzer, optionally restricted to the analyzer's unit set
 EECPASGUPCTargetIsUnitSetScreenBase::EECPASGUPCTargetIsUnitSetScreenBase(
     EECPASGUProphet* inProphet, EECPASGUProphetCalamityAnalyzerBase* inAnalyzer, bool inUseUnitSet)
@@ -82,6 +83,7 @@ EECPASGUPCTargetIsUnitSetScreenBase::EECPASGUPCTargetIsUnitSetScreenBase(
 {
 }
 
+// FUNCTION: EXE 0x4090aa
 // Accepts a target whose unit type is in the analyzer's unit set (any target when not restricted or without a set)
 bool EECPASGUPCTargetIsUnitSetScreenBase::Passes(EECPASTargetUnit* inTarget)
 {
@@ -94,6 +96,7 @@ bool EECPASGUPCTargetIsUnitSetScreenBase::Passes(EECPASTargetUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4090d4
 // Creates a calamity analyzer for one of the prophet's calamity technologies: looks up the calamity class, its
 // target unit set and power cost; no score, target or exclusion yet
 EECPASGUProphetCalamityAnalyzerBase::EECPASGUProphetCalamityAnalyzerBase(EECPASGUProphet* inProphet, long inTechID)
@@ -114,6 +117,7 @@ EECPASGUProphetCalamityAnalyzerBase::EECPASGUProphetCalamityAnalyzerBase(EECPASG
     this->mIsExcluded = false;
 }
 
+// FUNCTION: EXE 0x409162
 // Scales a value by the prophet's power over the calamity's cost, clamped to 0.25..2 (unchanged for a free calamity)
 float EECPASGUProphetCalamityAnalyzerBase::ScaleByPower(float inValue)
 {
@@ -127,12 +131,14 @@ float EECPASGUProphetCalamityAnalyzerBase::ScaleByPower(float inValue)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4091b5
 // Tells whether the prophet has enough power to cast the calamity
 bool EECPASGUProphetCalamityAnalyzerBase::CanAfford()
 {
     return this->mProphet->mUnit->mPower >= this->mCost;
 }
 
+// FUNCTION: EXE 0x4091cc
 // Releases the held target unit and clears the score, exclusion and target tile
 void EECPASGUProphetCalamityAnalyzerBase::Reset()
 {
@@ -146,6 +152,7 @@ void EECPASGUProphetCalamityAnalyzerBase::Reset()
     this->mL30 = 0;
 }
 
+// FUNCTION: EXE 0x4091ef
 // Returns the unit-set target nearest to the prophet, or NULL when there is none (stores nothing)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerBase::PickTarget()
 {
@@ -159,6 +166,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerBase::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4092a2
 // Fills a list with the sub group's targets that pass a screen, last target first
 void EECPASGUProphetCalamityAnalyzerBase::Gather(std::vector<EECPASTargetUnit*>& outTargets,
                                                  EECPASGUPCTargetIsUnitSetScreenBase* inScreen)
@@ -171,6 +179,7 @@ void EECPASGUProphetCalamityAnalyzerBase::Gather(std::vector<EECPASTargetUnit*>&
     }
 }
 
+// FUNCTION: EXE 0x409303
 // Releases the analyzer's reference to its target unit
 void EECPASGUProphetCalamityAnalyzerBase::ReleaseUnit()
 {
@@ -179,6 +188,7 @@ void EECPASGUProphetCalamityAnalyzerBase::ReleaseUnit()
     this->mUnit = NULL;
 }
 
+// FUNCTION: EXE 0x409318
 // Multiplies the score by 1.75 when the prophet stands at a choke point; when asked, aims the volcano at the targets'
 // centre inside it (or a random point of it), score 0 when neither is castable; outFound tells whether it aimed
 float EECPASGUProphetCalamityAnalyzerVolcano::ApplyChokePointBonus(float inScore, bool inUseTargets, bool& outFound)
@@ -220,6 +230,7 @@ float EECPASGUProphetCalamityAnalyzerVolcano::ApplyChokePointBonus(float inScore
     return theResult;
 }
 
+// FUNCTION: EXE 0x409518
 // Scrambles the building unit-set targets at random and picks the last castable one; stores its tile and unit
 // (NULL when none)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerVolcano::PickTarget()
@@ -247,6 +258,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerVolcano::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x409661
 // Accepts a land building target, when restricted only if its unit type is in the analyzer's unit set
 bool EECPASGUPCTargetIsUnitSetScreenOnlyBuildings::Passes(EECPASTargetUnit* inTarget)
 {
@@ -256,6 +268,7 @@ bool EECPASGUPCTargetIsUnitSetScreenOnlyBuildings::Passes(EECPASTargetUnit* inTa
     return theResult;
 }
 
+// FUNCTION: EXE 0x40969b
 // Holds a unit as the analyzer's target, moving the unit reference from the old one
 void EECPASGUProphetCalamityAnalyzerBase::SetUnit(EEComplexUnit* inUnit)
 {
@@ -268,6 +281,7 @@ void EECPASGUProphetCalamityAnalyzerBase::SetUnit(EEComplexUnit* inUnit)
         inUnit->Reference();
 }
 
+// FUNCTION: EXE 0x4096c2
 // Tells whether a volcano is worth considering: with enough targets or in danger, needs more than 8 targets, building
 // targets, the prophet at a choke point, or the last target inside one of its owner's towns
 bool EECPASGUProphetCalamityAnalyzerVolcano::IsApplicable()
@@ -289,6 +303,7 @@ bool EECPASGUProphetCalamityAnalyzerVolcano::IsApplicable()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40975e
 // Rates casting a volcano: random 0.45..0.95 times (aggression + 0.65), own-town penalty, choke point bonus; 0
 // without a castable target; stores and returns the score
 float EECPASGUProphetCalamityAnalyzerVolcano::Evaluate()
@@ -307,6 +322,7 @@ float EECPASGUProphetCalamityAnalyzerVolcano::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x409802
 // Multiplies the score by 0.25 when the prophet stands in one of its own player's towns
 float EECPASGUProphetCalamityAnalyzerVolcano::ApplyWeakTownPenalty(float inScore)
 {
@@ -316,6 +332,7 @@ float EECPASGUProphetCalamityAnalyzerVolcano::ApplyWeakTownPenalty(float inScore
     return theResult;
 }
 
+// FUNCTION: EXE 0x409831
 // Multiplies the score by 1.35 when the first building target lies in a town and none of its owner's towns is
 // worth more
 float EECPASGUProphetCalamityAnalyzerEarthquake::ApplyLargestTownBonus(float inScore)
@@ -343,6 +360,10 @@ float EECPASGUProphetCalamityAnalyzerEarthquake::ApplyLargestTownBonus(float inS
     return theResult;
 }
 
+// FUNCTION: EXE 0x4098f0
+// EEPlayer::GetNumTowns (ee/EEPlayer.h inline; its COMDAT is emitted here, after its first out-of-line user above)
+
+// FUNCTION: EXE 0x409909
 // Picks a castable target: a wonder first (sorted nearest first, tried from the farthest), else the building on
 // the buildings' centre tile, else the last castable building; stores its tile and unit
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerEarthquake::PickTarget()
@@ -413,6 +434,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerEarthquake::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x409d18
 // Accepts a wonder target, when restricted only if its unit type is in the analyzer's unit set
 bool EECPASGUPCTargetIsUnitSetScreenOnlyWonders::Passes(EECPASTargetUnit* inTarget)
 {
@@ -423,12 +445,14 @@ bool EECPASGUPCTargetIsUnitSetScreenOnlyWonders::Passes(EECPASTargetUnit* inTarg
     return theResult;
 }
 
+// FUNCTION: EXE 0x409d5e
 // Returns the owner's tech tree node of the technology that makes the unit's class
 EETechTreeNode* EEUnit::GetTechTreeNode()
 {
     return this->GetPlayer()->GetTechTree()->Get(this->GetUnitClass()->GetTechnology());
 }
 
+// FUNCTION: EXE 0x409d77
 // Rates casting an earthquake: random 0.35..0.7, own-town penalty, largest-town bonus, x1.45 with wonder targets; 0
 // without a castable target; stores and returns the score
 float EECPASGUProphetCalamityAnalyzerEarthquake::Evaluate()
@@ -444,6 +468,7 @@ float EECPASGUProphetCalamityAnalyzerEarthquake::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x409e07
 // Picks a castable target: splash units first, then any unit-set target, each list priority-sorted and tried from
 // the back; stores its tile and unit (NULL when none)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerFire::PickTarget()
@@ -489,6 +514,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerFire::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40a0ba
 // Rates casting a fire: random 0.75..0.95, own-town penalty, splash bonus; 0 without a castable target; stores and
 // returns the score
 float EECPASGUProphetCalamityAnalyzerFire::Evaluate()
@@ -501,6 +527,7 @@ float EECPASGUProphetCalamityAnalyzerFire::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40a131
 // Raises the score 75% per nearby target of the unit-set target with the most targets near it
 float EECPASGUProphetCalamityAnalyzerFire::ApplySplashBonus(float inScore)
 {
@@ -519,6 +546,7 @@ float EECPASGUProphetCalamityAnalyzerFire::ApplySplashBonus(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40a1d9
 // Picks a castable target: splash units first, then ranged units, each list priority-sorted and tried from the
 // back; stores its tile and unit (NULL when none)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerPlague::PickTarget()
@@ -568,6 +596,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerPlague::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40a4a0
 // Accepts a ranged target (range above 1), when restricted only if its unit type is in the analyzer's unit set
 bool EECPASGUPCTargetIsUnitSetScreenRangedUnits::Passes(EECPASTargetUnit* inTarget)
 {
@@ -580,6 +609,7 @@ bool EECPASGUPCTargetIsUnitSetScreenRangedUnits::Passes(EECPASTargetUnit* inTarg
     return theResult;
 }
 
+// FUNCTION: EXE 0x40a4e4
 // Rates casting a plague: random factor, own-town penalty, citizen and splash bonuses; 0 without a castable target;
 // stores and returns the score
 float EECPASGUProphetCalamityAnalyzerPlague::Evaluate()
@@ -592,6 +622,7 @@ float EECPASGUProphetCalamityAnalyzerPlague::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40a554
 // Multiplies the score by 0.02 when the prophet stands in one of its own player's towns
 float EECPASGUProphetCalamityAnalyzerPlague::ApplyStrongTownPenalty(float inScore)
 {
@@ -601,12 +632,14 @@ float EECPASGUProphetCalamityAnalyzerPlague::ApplyStrongTownPenalty(float inScor
     return theResult;
 }
 
+// FUNCTION: EXE 0x40a583
 // Multiplies the score by a random 0.45..0.9
 float EECPASGUProphetCalamityAnalyzerPlague::ApplyRandomFactor(float inScore)
 {
     return gPhysics->GetRandom(0.45f, 0.9f) * inScore;
 }
 
+// FUNCTION: EXE 0x40a5a9
 // Raises the score 5.5% per land or naval citizen among the sub group's targets
 float EECPASGUProphetCalamityAnalyzerPlague::ApplyCitizenBonus(float inScore)
 {
@@ -623,6 +656,7 @@ float EECPASGUProphetCalamityAnalyzerPlague::ApplyCitizenBonus(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40a61a
 // Raises the score 15% per nearby target of the unit-set target with the most targets near it
 float EECPASGUProphetCalamityAnalyzerPlague::ApplySplashBonus(float inScore)
 {
@@ -641,6 +675,7 @@ float EECPASGUProphetCalamityAnalyzerPlague::ApplySplashBonus(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40a74c
 // Picks a castable target: splash units first, then ranged units, each list priority-sorted and tried from the
 // back; stores its tile and unit (NULL when none)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerFamine::PickTarget()
@@ -688,6 +723,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerFamine::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40aa09
 // Rates casting a famine: random 0.45..0.9, own-town penalty, citizen and splash bonuses; 0 without a castable
 // target; stores and returns the score
 float EECPASGUProphetCalamityAnalyzerFamine::Evaluate()
@@ -700,6 +736,7 @@ float EECPASGUProphetCalamityAnalyzerFamine::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40aa8b
 // Multiplies the score by 0.05 when the prophet stands in one of its own player's towns
 float EECPASGUProphetCalamityAnalyzerBase::ApplyTownPenalty(float inScore)
 {
@@ -709,6 +746,7 @@ float EECPASGUProphetCalamityAnalyzerBase::ApplyTownPenalty(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40aaba
 // Raises the score 3.5% per land or naval citizen among the sub group's targets
 float EECPASGUProphetCalamityAnalyzerFamine::ApplyCitizenBonus(float inScore)
 {
@@ -725,6 +763,7 @@ float EECPASGUProphetCalamityAnalyzerFamine::ApplyCitizenBonus(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40ab2b
 // Raises the score 25% per nearby target of the unit-set target with the most targets near it
 float EECPASGUProphetCalamityAnalyzerFamine::ApplySplashBonus(float inScore)
 {
@@ -743,6 +782,7 @@ float EECPASGUProphetCalamityAnalyzerFamine::ApplySplashBonus(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40abd3
 // With ship targets in the sub group, adds every unit-set target's raw experience to the score (unscaled)
 float EECPASGUProphetCalamityAnalyzerHurricane::AddTargetVeterancy(float inScore)
 {
@@ -756,6 +796,7 @@ float EECPASGUProphetCalamityAnalyzerHurricane::AddTargetVeterancy(float inScore
     return theScore;
 }
 
+// FUNCTION: EXE 0x40ac63
 // Picks a castable unit-set target: the one on the targets' centre tile, else the last castable one; stores its
 // tile and unit (NULL when none)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerHurricane::PickTarget()
@@ -803,6 +844,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerHurricane::PickTarget()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40af05
 // Rates casting a hurricane: random 0.6..1, ship factor, plus target experience; 0 without a castable target;
 // stores and returns the score
 float EECPASGUProphetCalamityAnalyzerHurricane::Evaluate()
@@ -815,6 +857,7 @@ float EECPASGUProphetCalamityAnalyzerHurricane::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40af78
 // Multiplies the score by 0.28 per ship target when the sub group has ship targets
 float EECPASGUProphetCalamityAnalyzerHurricane::ApplyShipFactor(float inScore)
 {
@@ -825,6 +868,7 @@ float EECPASGUProphetCalamityAnalyzerHurricane::ApplyShipFactor(float inScore)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40afb5
 // Scores the unit-set targets and picks the best; stores its tile and unit, returns its score (0 and NULL when
 // none scores)
 float EECPASGUProphetCalamityAnalyzerNegativeMorale::PickBest(EEComplexUnit*& outUnit)
@@ -851,6 +895,7 @@ float EECPASGUProphetCalamityAnalyzerNegativeMorale::PickBest(EEComplexUnit*& ou
     return theResult;
 }
 
+// FUNCTION: EXE 0x40b0d0
 // Rates the calamity: random 0.45..1 times 0.45 plus the best target's score; below 0.12 releases the target and
 // excludes the analyzer; stores and returns the score
 float EECPASGUProphetCalamityAnalyzerNegativeMorale::Evaluate()
@@ -873,6 +918,7 @@ float EECPASGUProphetCalamityAnalyzerNegativeMorale::Evaluate()
     return theScore;
 }
 
+// FUNCTION: EXE 0x40b169
 // Scores a castable enemy: experience, special, naval building or calamity units, the sub group's main AI kind,
 // being targeted by the prophet or an important unit, and attack strength (0 when not castable)
 float EECPASGUProphetCalamityAnalyzerNegativeMorale::ScoreTarget(EEComplexUnit* inUnit)
@@ -910,6 +956,7 @@ float EECPASGUProphetCalamityAnalyzerNegativeMorale::ScoreTarget(EEComplexUnit* 
     return theScore;
 }
 
+// FUNCTION: EXE 0x40b2be
 // Creates a prophet sub group unit for a unit, with no calamity analyzers yet
 EECPASGUProphet::EECPASGUProphet(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -917,6 +964,10 @@ EECPASGUProphet::EECPASGUProphet(EEComplexUnit* inUnit, EECPAttackSubGroup* inSu
     this->mType = kASGUKindProphet;
 }
 
+// SYNTHETIC: EXE 0x40b2f5
+// (the scalar deleting destructor; 0x1c bytes)
+
+// FUNCTION: EXE 0x40b311
 // Creates an empty prophet sub group unit (no unit yet; used when loading)
 EECPASGUProphet::EECPASGUProphet(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -924,18 +975,21 @@ EECPASGUProphet::EECPASGUProphet(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindProphet;
 }
 
+// FUNCTION: EXE 0x40b345
 // Destroys the prophet sub group unit, deleting its calamity analyzers
 EECPASGUProphet::~EECPASGUProphet()
 {
     this->ReleaseAnalyzers();
 }
 
+// FUNCTION: EXE 0x40b367
 // Deletes every calamity analyzer and empties the list; returns how many were deleted
 long EECPASGUProphet::ReleaseAnalyzers()
 {
     return DeleteAnalyzers(this->mAnalyzers);
 }
 
+// FUNCTION: EXE 0x40b375
 // Creates the analyzer for a calamity type (fire, volcano, plague, hurricane, earthquake; leprosy uses the famine
 // one; drop object, logic bomb, conscription and time warp the negative morale one); NULL for others
 EECPASGUProphetCalamityAnalyzerBase* EECPASGUProphet::CreateAnalyzer(long inTechID, unsigned long inType)
@@ -962,6 +1016,7 @@ EECPASGUProphetCalamityAnalyzerBase* EECPASGUProphet::CreateAnalyzer(long inTech
     return NULL;
 }
 
+// FUNCTION: EXE 0x40b4c4
 // Tells whether an earthquake is worth considering: enough targets or the prophet in danger, and building targets
 bool EECPASGUProphetCalamityAnalyzerEarthquake::IsApplicable()
 {
@@ -982,6 +1037,7 @@ bool EECPASGUProphetCalamityAnalyzerFire::IsApplicable()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40b513
 // Tells whether a famine is worth considering: enough targets or the prophet in danger, and plague targets
 bool EECPASGUProphetCalamityAnalyzerFamine::IsApplicable()
 {
@@ -1002,6 +1058,7 @@ bool EECPASGUProphetCalamityAnalyzerPlague::IsApplicable()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40b562
 // Tells whether a hurricane is worth considering: enough targets or the prophet in danger, and ship targets
 bool EECPASGUProphetCalamityAnalyzerHurricane::IsApplicable()
 {
@@ -1012,6 +1069,7 @@ bool EECPASGUProphetCalamityAnalyzerHurricane::IsApplicable()
     return theResult;
 }
 
+// FUNCTION: EXE 0x40b5b1
 // Returns the best target found by PickBest (NULL when none scores)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerShieldBattery::PickTarget()
 {
@@ -1020,6 +1078,7 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerShieldBattery::PickTarget()
     return theUnit;
 }
 
+// FUNCTION: EXE 0x40b5c9
 // Tells whether the calamity is worth considering: at least 2 targets, no fewer targets than units, or the prophet
 // in danger
 bool EECPASGUProphetCalamityAnalyzerNegativeMorale::IsApplicable()
@@ -1030,6 +1089,7 @@ bool EECPASGUProphetCalamityAnalyzerNegativeMorale::IsApplicable()
     return false;
 }
 
+// FUNCTION: EXE 0x40b605
 // Fills the analyzer list with one analyzer per calamity technology the prophet's class researches
 void EECPASGUProphet::MakeAnalyzers()
 {
@@ -1050,6 +1110,7 @@ void EECPASGUProphet::MakeAnalyzers()
     }
 }
 
+// FUNCTION: EXE 0x40b68c
 // Tells whether a calamity cast goal (the given one, else the unit's loaded goal) can still be cast at its location
 // and target
 bool EECPASGUProphet::CanStillCast(EEUGRust* inGoal)
@@ -1077,6 +1138,7 @@ bool EECPASGUProphet::CanStillCast(EEUGRust* inGoal)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40b757
 // Evaluates the affordable, applicable analyzers; unless the current cast stays good (same calamity and tile, or
 // scored within 2.59x of the best), orders a cast of the best one; returns whether it did
 bool EECPASGUProphet::Retarget()
@@ -1145,12 +1207,14 @@ bool EECPASGUProphet::Retarget()
     return theChanged;
 }
 
+// FUNCTION: EXE 0x40ba62
 // Flees like any sub group unit
 void EECPASGUProphet::Flee()
 {
     EECPAttackSubGroupUnit::Flee();
 }
 
+// FUNCTION: EXE 0x40ba67
 // Sets the state; entering attack re-plans the calamity cast and schedules the next re-plan 10-20 s later, other
 // states go through the base
 void EECPASGUProphet::SetState(long inState, unsigned long inTime)
@@ -1164,6 +1228,7 @@ void EECPASGUProphet::SetState(long inState, unsigned long inTime)
     }
 }
 
+// FUNCTION: EXE 0x40baab
 // While the prophet is casting a calamity, orders it to a random point ahead (the goal is deleted if refused)
 void EECPASGUProphet::MoveAwayFromCast()
 {
@@ -1176,6 +1241,7 @@ void EECPASGUProphet::MoveAwayFromCast()
         delete theGoal;
 }
 
+// FUNCTION: EXE 0x40bb49
 // Answers "has target" with whether the current calamity can still be cast; other conditions go to the base
 bool EECPASGUProphet::CheckCondition(long inState, unsigned long inTime)
 {
@@ -1186,6 +1252,7 @@ bool EECPASGUProphet::CheckCondition(long inState, unsigned long inTime)
     return EECPAttackSubGroupUnit::CheckCondition(inState, inTime);
 }
 
+// FUNCTION: EXE 0x40bb69
 // Runs the prophet's states: attack idles without targets, re-chooses when it cannot cast or is in danger, retreats
 // or re-plans when due; retreat idles or re-chooses; contained when off the map; others use the base
 void EECPASGUProphet::Update(unsigned long inTime)
@@ -1233,6 +1300,7 @@ void EECPASGUProphet::Update(unsigned long inTime)
     }
 }
 
+// FUNCTION: EXE 0x40bcc1
 // Tells whether the prophet can attack a target: some analyzer's unit set holds its type, else the base test
 bool EECPASGUProphet::CanAttack(EECPASTargetUnit* inTarget)
 {
@@ -1247,6 +1315,7 @@ bool EECPASGUProphet::CanAttack(EECPASTargetUnit* inTarget)
     return theResult;
 }
 
+// FUNCTION: EXE 0x40bd2b
 // Tells whether to retreat: no usable calamity and a threat within 6 tiles or twice its range (squared); yes if it
 // cannot hit back, else only when weak and the last attacker on it out-matches it
 bool EECPASGUProphet::ShouldRetreat()
@@ -1311,12 +1380,46 @@ CheckHealth:
     return theResult;
 }
 
+// FUNCTION: EXE 0x40c079
+// Appends an analyzer to the prophet's analyzer list (std::vector push_back)
+
+// FUNCTION: EXE 0x40c0a5
+// Appends a target to a list of attack targets (std::vector push_back)
+
+// FUNCTION: EXE 0x40c0d1
+// Destroys a ranked analyzer multimap (score to analyzer, highest first), freeing every node
+
+// FUNCTION: EXE 0x40c0fc
+// Erases a range of entries from a ranked analyzer multimap; returns the iterator after them (std::_Tree erase)
+
+// FUNCTION: EXE 0x40c16d
+// Erases one entry from a short-keyed pointer map, returning the next iterator; throws out_of_range for end()
+// (std::_Tree erase, a body shared through ICF)
+
+// FUNCTION: EXE 0x40c41b
+// Frees a subtree of a ranked analyzer multimap, node by node (std::_Tree _Erase)
+
+// FUNCTION: EXE 0x40c44d
+// Returns the calamity manager, creating it on first use (USingleton<EECalamityManager>::GetInstance)
+
+// FUNCTION: EXE 0x40c473
+// Looks up a calamity class by index (EECalamityManager::GetCalamityClass); returns false, leaving the output
+// unset, when the index is out of range, and false with NULL when the entry is no calamity class
+
+// FUNCTION: EXE 0x40c4d7
+// Sorts targets nearest to a centre tile first (std::sort with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40c5bb
 // Returns the map tile at a tile location
 EETile* EEMap::GetTileAtLocation(const EETileLocation& inLocation)
 {
     return this->GetTile(inLocation.GetX(), inLocation.GetY());
 }
 
+// FUNCTION: EXE 0x40c5e9
+// Sorts targets by attack priority (std::sort with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40c6cd
 // Deletes every analyzer in a list and empties it; returns how many were deleted
 long DeleteAnalyzers(std::vector<EECPASGUProphetCalamityAnalyzerBase*>& inAnalyzers)
 {
@@ -1329,18 +1432,118 @@ long DeleteAnalyzers(std::vector<EECPASGUProphetCalamityAnalyzerBase*>& inAnalyz
     return theCount;
 }
 
+// FUNCTION: EXE 0x40c6fd
+// Tells whether a tile lies in the area: inside its hull and in its tile set (EEAIArea::Contains)
+
+// FUNCTION: EXE 0x40c721
+// Insertion-sorts targets nearest first (std::_Insertion_sort with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40c754
+// Sorts targets nearest first by partitioning, falling back to a heap sort (std::_Sort, EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40c85c
+// Insertion-sorts a range without a lower bound check (std::_Unguarded_insertion_sort, EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40c89e
+// Insertion-sorts targets by attack priority (std::_Insertion_sort with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40c8d1
+// Sorts targets by priority by partitioning, falling back to a heap sort (std::_Sort, EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40c9d9
+// Insertion-sorts a range of targets (std::_Insertion_sort_1 with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40ca8a
+// Builds a heap of targets (std::make_heap with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40cace
+// Sorts a heap of targets (std::sort_heap with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40cb1b
+// Partitions targets around a median of three (std::_Unguarded_partition with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40cc3b
+// Moves one target back to its sorted place (std::_Unguarded_insert with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40cc6e
+// Insertion-sorts a range of targets (std::_Insertion_sort_1 with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40cd1f
+// Builds a heap of targets (std::make_heap with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40cd63
+// Sorts a heap of targets (std::sort_heap with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40cdb0
+// Builds a heap of targets bottom up (std::_Make_heap with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40ce0d
+// Moves the top target of a heap to its end (std::pop_heap with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40ce40
+// Builds a heap of targets bottom up (std::_Make_heap with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40ce9d
+// Moves the top target of a heap to its end (std::pop_heap with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40ced0
+// Sifts a target down a heap from a hole (std::_Adjust_heap with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40cf4a
+// Pops the top target of a heap (std::_Pop_heap_0 with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40cfba
+// Pops the top target of a heap (std::_Pop_heap_0 with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40d02a
+// Sifts a target up a heap (std::_Push_heap with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40d079
+// Moves a heap's top target to a slot and re-heaps the rest (std::_Pop_heap with EECPAITargetNearest)
+
+// FUNCTION: EXE 0x40d0bd
+// Sifts a target up a heap (std::_Push_heap with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40d10c
+// Moves a heap's top target to a slot and re-heaps the rest (std::_Pop_heap with EECPAITargetPriority)
+
+// FUNCTION: EXE 0x40d150
+// Returns the unit set at an index, or NULL when the index is out of range (EEUnitSetManager::GetSet)
+
+// FUNCTION: EXE 0x40d16e
+// Tells whether a point lies in the convex hull: inside its bounding rectangle, then the hull test
+// (U2DConvexHull<long>::BoundedContains)
+
+// FUNCTION: EXE 0x40d190
+// Tells whether a point lies in the rectangle, edges included (U2DRectangle<long>::Contains)
+
+// Template and inline COMDATs this unit already emits (identified by name)
+// TEMPLATE: EXE 0x408282
+// TEMPLATE: EXE 0x408a21
+// TEMPLATE: EXE 0x408a38
+// TEMPLATE: EXE 0x408a5c
+// TEMPLATE: EXE 0x408b07
+// TEMPLATE: EXE 0x408d98
+// TEMPLATE: EXE 0x408dc7
+
+// ICF-FOLDED: EXE 0x418aa9
 // Tells whether the analyzer applies: always true by default
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
 bool EECPASGUProphetCalamityAnalyzerBase::IsApplicable()
 {
     return true;
 }
 
+// ICF-FOLDED: EXE 0x4e123d
 // Does nothing by default
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPASGUProphetCalamityAnalyzerBase::Virtual1C()
 {
 }
 
+// ICF-FOLDED: EXE 0x40b5b1
 // Returns the best negative-morale target found by PickBest (NULL when none scores)
+// (no address of its own: the same body as EECPASGUProphetCalamityAnalyzerShieldBattery::PickTarget, which ICF kept)
 EEComplexUnit* EECPASGUProphetCalamityAnalyzerNegativeMorale::PickTarget()
 {
     EEComplexUnit* theUnit = NULL;

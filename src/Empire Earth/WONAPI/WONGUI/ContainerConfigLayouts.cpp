@@ -17,6 +17,7 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x00788e20
 // Reads a component list into a layout that gives them the same width and/or height
 bool ContainerConfig::HandleSameSizeLayout(bool sameWidth, bool sameHeight)
 {	
@@ -35,6 +36,7 @@ bool ContainerConfig::HandleSameSizeLayout(bool sameWidth, bool sameHeight)
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
+// FUNCTION: WON 0x00788f30
 // Reads a reference component and a component list into a layout that centres them on it
 bool ContainerConfig::HandleCenterLayout(bool horz, bool vert)
 {
@@ -50,6 +52,7 @@ bool ContainerConfig::HandleCenterLayout(bool horz, bool vert)
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
+// FUNCTION: WON 0x00789080
 // Reads a component, a padding and a component list into a clear-right layout
 bool ContainerConfig::HandleClearRightLayout()
 {
@@ -70,6 +73,7 @@ bool ContainerConfig::HandleClearRightLayout()
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
+// FUNCTION: WON 0x00789280
 // Reads a bounding component, two paddings and a component list into a layout that spaces them evenly
 bool ContainerConfig::HandleSpaceEvenlyLayout(bool horz)
 {
@@ -91,6 +95,7 @@ bool ContainerConfig::HandleSpaceEvenlyLayout(bool horz)
 	this->mContainer->AddChildLayout(aLayout.get(),this->mCurLayoutId);
 	return true;
 }
+// FUNCTION: WON 0x007894b0
 // Reads a no-overlap layout (target, sides, reference, paddings, more components); it is added
 // under the default layout id, not the current one
 bool ContainerConfig::HandleNoOverlapLayout()
@@ -132,6 +137,7 @@ bool ContainerConfig::HandleNoOverlapLayout()
 
 	return true;
 }
+// FUNCTION: WON 0x00789860
 // Reads a size-at-least layout (target, paddings, components); it is added under the default layout id
 bool ContainerConfig::HandleSizeAtLeastLayout()
 {
@@ -149,3 +155,31 @@ bool ContainerConfig::HandleSizeAtLeastLayout()
 	return true;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00789200
+// (public: virtual __thiscall WONAPI::CenterLayout::~CenterLayout(void)    [??1CenterLayout@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007891e0
+// (public: virtual void * __thiscall WONAPI::CenterLayout::`scalar deleting destructor'(unsigned int)    [??_GCenterLayout@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00789410
+// (public: virtual void * __thiscall WONAPI::SpaceEvenlyLayout::`scalar deleting destructor'(unsigned int)    [??_GSpaceEvenlyLayout@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007897c0
+// (public: virtual void * __thiscall WONAPI::NoOverlapLayout::`scalar deleting destructor'(unsigned int)    [??_GNoOverlapLayout@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x007899d0
+// (public: virtual void * __thiscall WONAPI::SizeAtLeastLayout::`scalar deleting destructor'(unsigned int)    [??_GSizeAtLeastLayout@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00789430
+// (public: virtual __thiscall WONAPI::SpaceEvenlyLayout::~SpaceEvenlyLayout(void)    [??1SpaceEvenlyLayout@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x007897e0
+// (public: virtual __thiscall WONAPI::NoOverlapLayout::~NoOverlapLayout(void)    [??1NoOverlapLayout@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x007899f0
+// (public: virtual __thiscall WONAPI::SizeAtLeastLayout::~SizeAtLeastLayout(void)    [??1SizeAtLeastLayout@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007a2cc0
+// (void __cdecl std::_Construct(class WONAPI::Component * *,class WONAPI::Component * const &)    [?_Construct@std@@YAXPAPAVComponent@WONAPI@@ABQAV23@@Z])

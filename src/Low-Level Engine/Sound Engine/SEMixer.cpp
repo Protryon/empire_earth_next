@@ -14,6 +14,7 @@
 SEMixer* SEMixer::GetActiveMixer() { return reinterpret_cast<SEMixer*>(ee_sound_mixer_active()); }
 SEConductor& SEMixer::GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(RUST)); }
 unsigned long SEMixer::GetCount() { return ee_sound_mixer_count(); }
+// FUNCTION: LLE 0x1004ede9
 // the registered mixer with the given index; kErrorBeyondEnd past the last
 long SEMixer::GetMixer(unsigned long inIndex, SEMixer*& outMixer)
 {
@@ -25,6 +26,7 @@ bool SEMixer::ProcessMessage(unsigned long inMessage, void* inParameter1, void* 
 {
     return ee_sound_mixer_process_message(RUST, inMessage, inParameter1, inParameter2);
 }
+// FUNCTION: LLE 0x1004ee15
 // the given mixer active (NULL: none), the current one's music stopped and the mixer deactivated first
 long SEMixer::UseMixer(SEMixer* inMixer) { return ee_sound_mixer_use(reinterpret_cast<EeSoundMixer*>(inMixer)); }
 unsigned long SEMixer::GetOutputRate() const { return ee_sound_mixer_output_rate(RUST); }

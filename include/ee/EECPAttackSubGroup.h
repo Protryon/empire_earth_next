@@ -43,7 +43,7 @@ template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 // (provisional name)
 struct EECPASGUnitCounts {
     EECPASGUnitCounts() { this->Clear(); }
-    void Clear();
+    void Clear();                           // 0x5ad6e
     // 0x5ac9c (ret 8; the second argument unread): counts inUnit by its class's flags (+0x2d0) and kinds
     void Add(EEComplexUnit* inUnit, long inArg2);
 
@@ -82,7 +82,7 @@ struct EECPASGFlags {
         this->mPlayerID = inOther.mPlayerID;
         return *this;
     }
-    void And(const EECPASGFlags& inOther);
+    void And(const EECPASGFlags& inOther);  // 0x4c2c8
 
     long mPlayerID;                         // +0x00
     bool mFlags[17];                        // +0x04

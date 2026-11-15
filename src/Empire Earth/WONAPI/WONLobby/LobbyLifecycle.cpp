@@ -20,6 +20,7 @@ SmartPtr<Dialog> gLobbyFailureDialog;
 bool gLobbyInitFailed;
 void LobbyInstallEventHooks(); // defined in another unit
 
+// FUNCTION: WON 0x00761fb0
 // Creates and initializes the lobby; on failure keeps its error text, drops it and returns false
 bool LobbyAddComponentLoader(ResourceConfigTable* table,void (*initFunc)(ComponentConfig*))
 {
@@ -48,3 +49,21 @@ void LobbySetProductName(const std::wstring& inLoginCommunity,const char* inHash
     if(gLobbyData.get()!=NULL) gLobbyData->InitAuth(inLoginCommunity,inHashFileListStr);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00762150
+// (void __cdecl WONAPI::LobbySetProductName(class std::basic_string<unsigned short,struct std::char_traits<unsigned short>,class std::allocator<unsigned )
+
+// Dynamic initializers and exit handlers of the globals above:
+// TEMPLATE: WON 0x00761ef0
+// TEMPLATE: WON 0x00761f00
+// TEMPLATE: WON 0x00761f10
+// TEMPLATE: WON 0x00761f20
+// TEMPLATE: WON 0x00761f30
+// TEMPLATE: WON 0x00761f40
+// TEMPLATE: WON 0x00761f50
+// TEMPLATE: WON 0x00761f60
+// TEMPLATE: WON 0x00761f70
+// TEMPLATE: WON 0x00761f80
+// TEMPLATE: WON 0x00761f90
+// TEMPLATE: WON 0x00761fa0

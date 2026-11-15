@@ -10,6 +10,7 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPASGUAircraftCarrier.h"
 
+// FUNCTION: EXE 0x406132
 // Creates the aircraft carrier entry for a unit in the sub-group
 EECPASGUAircraftCarrier::EECPASGUAircraftCarrier(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -17,6 +18,10 @@ EECPASGUAircraftCarrier::EECPASGUAircraftCarrier(EEComplexUnit* inUnit, EECPAtta
     this->mType = kASGUKindAircraftCarrier;
 }
 
+// SYNTHETIC: EXE 0x406155
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x406171
 // Creates an empty aircraft carrier entry for the sub-group (no unit yet)
 EECPASGUAircraftCarrier::EECPASGUAircraftCarrier(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -24,6 +29,7 @@ EECPASGUAircraftCarrier::EECPASGUAircraftCarrier(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindAircraftCarrier;
 }
 
+// FUNCTION: EXE 0x406190
 // Destroys the aircraft carrier entry (base members only)
 EECPASGUAircraftCarrier::~EECPASGUAircraftCarrier()
 {

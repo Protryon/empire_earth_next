@@ -114,7 +114,7 @@ public:
         this->mTop = min(this->mTop, inPoint.GetY());
         this->mBottom = max(this->mBottom, inPoint.GetY());
     }
-    long Load(FSFile& inFile)
+    long Load(FSFile& inFile)               // 0x1003057d
     {
         long theResult;
         if (inFile.GetIsOpen()) {
@@ -131,7 +131,7 @@ public:
             theResult = 4;
         return theResult;
     }
-    long Save(FSFile& inFile) const
+    long Save(FSFile& inFile) const         // 0x100305cf
     {
         long theResult;
         if (inFile.GetIsOpen()) {

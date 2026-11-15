@@ -70,6 +70,7 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
     }
 }
 
+// FUNCTION: WON 0x006fe6e0
 // Creates a button base with unwrapped centred text in the MSButton font and 2-pixel padding (the Rust button holds
 // the colours, alignments, focus style and pads)
 MSButtonBase::MSButtonBase() {
@@ -78,5 +79,10 @@ MSButtonBase::MSButtonBase() {
     this->mText->SetWrap(false);
     this->mText->SetFont(this->GetNamedFont("MSButton"));
 }
+// FUNCTION: WON 0x006fe910
 // Destroys the button base: the Rust button goes
 MSButtonBase::~MSButtonBase() { ee_won_msbtn_free(this->mMsb); }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006fe860
+// (public: virtual void * __thiscall WONAPI::MSButtonBase::`scalar deleting destructor'(unsigned int)    [??_GMSButtonBase@WONAPI@@UAEPAXI@Z])

@@ -18,9 +18,11 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
+// FUNCTION: WON 0x007c32b0
 // Creates the room label showing the server name, for no room kind yet
 RoomLabelCtrl::RoomLabelCtrl() : mRoomSpecFlags(0),mUserCt(0) { this->mShowServer=true; }
 // No explicit destructor: the original's (0x7c33a0) only destroys the members and the base
+// FUNCTION: WON 0x007c3480
 // Finds the text label in the layout, fills it and listens to lobby broadcasts
 void RoomLabelCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -31,6 +33,7 @@ void RoomLabelCtrl::InitComponent(ComponentInit& inInit)
     this->CalcLabel();
     this->SubscribeToBroadcast(1);
 }
+// FUNCTION: WON 0x007c34c0
 // Builds the label text: disconnected, or prefix, server and room name with the user count
 void RoomLabelCtrl::CalcLabel()
 {
@@ -53,6 +56,7 @@ void RoomLabelCtrl::CalcLabel()
     this->mLabel->SetText(LobbyFormatString3(aFormat,this->mPrefix,this->mServer,aCount),true);
 }
 
+// FUNCTION: WON 0x007c3720
 // Tracks joining and leaving rooms of its kind and players coming and going, relabelling each time
 void RoomLabelCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -99,6 +103,7 @@ void RoomLabelCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 
 
 namespace WONAPI {
+// FUNCTION: WON 0x007c3930
 // Reads the PREFIX, GROUPTYPE (CHAT or GAME), SHOWUSERCOUNT and SHOWSERVER layout keys
 bool RoomLabelCtrlConfig::Virtual24(const std::string& inKey)
 {
@@ -136,9 +141,18 @@ void RoomLabelCtrlConfig::SetComponent(Component* inComponent)
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x007655e0
 // Creates a config for a room label in the layout file
 ComponentConfig* RoomLabelCtrlConfig::CfgFactory()
 {
     return new RoomLabelCtrlConfig;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c33a0
+// (public: virtual __thiscall WONAPI::RoomLabelCtrl::~RoomLabelCtrl(void)    [??1RoomLabelCtrl@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007c3380
+// (public: virtual void * __thiscall WONAPI::RoomLabelCtrl::`scalar deleting destructor'(unsigned int)    [??_GRoomLabelCtrl@WONAPI@@UAEPAXI@Z])

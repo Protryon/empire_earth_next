@@ -22,26 +22,26 @@ struct EECPRMHistoryEntry {
 
 class EECPResearchManager {
 public:
-    EECPResearchManager(EECPCivilizationManager* inManager);
-    virtual ~EECPResearchManager();
+    EECPResearchManager(EECPCivilizationManager* inManager);   // 0x8a007
+    virtual ~EECPResearchManager();                             // 0x8a0b8 (??_G 0x8a09c)
 
     void ChooseResearch();                  // 0x8a0f0: a candidate whose event gives a 0x20/0x1e0 effect, else a shuffled one the unit manager has units for
     void BuildCandidates();                 // 0x8a447: the ids of epochs <= mEpoch not yet researched
-    bool CanAfford(EETechTreeNode* inNode, long& outTotal);
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    bool HasLaterEpochIDs();
-    void ResearchUnitClass(long inUnitClass);
-    void Research(long inID);
+    bool CanAfford(EETechTreeNode* inNode, long& outTotal);  // 0x8a4bf
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x8a5c5
+    bool HasLaterEpochIDs();                // 0x8a73f
+    void ResearchUnitClass(long inUnitClass);   // 0x8a77a
+    void Research(long inID);               // 0x8a79f
     void ResearchCheapest(unsigned long inCount);  // 0x8a91e: researches/builds the inCount cheapest affordable ids (sorted {cost, id})
-    void ReplaceUnaffordable();
-    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);
-    bool TryResearch(long inID);
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    void ReplaceUnaffordable();             // 0x8ade8
+    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x8ae93
+    bool TryResearch(long inID);            // 0x8aeaa
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x8b0df
     void SetNextRandomResearchTime(unsigned long inTime);   // 0x8b1fb (named by its ESDebugOut string)
-    void EpochReached(long inEpoch);
-    bool IsWanted(long inID);
+    void EpochReached(long inEpoch);        // 0x8b24e
+    bool IsWanted(long inID);               // 0x8b288
     void Update(unsigned long inTime);      // 0x8b34b (named by its ESDebugOut string)
-    void AddHistory(long inID);
+    void AddHistory(long inID);             // 0x8b467
 
     static const UString sData;             // "EECPResearchManager-Data" (guarded chain 0x89fc4)
 

@@ -75,10 +75,12 @@ LobbyLanSocket::LobbyLanSocket() : BlockingSocket(0)
     this->SetLengthFieldSize(2);
 }
 LobbyLanSocket::~LobbyLanSocket() { ee_won_lansocket_free(this->mLan); }
+// FUNCTION: WON 0x007dfb90
 void LobbyLanSocket::SetClient(LobbyLanClient* inClient) { ee_won_lansocket_set_client(this->mLan, inClient); }
 
 // ---- LanLogic's shell
 
+// FUNCTION: WON 0x007dfc00
 // Creates the LAN logic with an empty client list and empty LAN and direct-connect game lists
 LanLogic::LanLogic() : mJoinPassword(GetEmptyGUIStringData()), mRust(ee_won_lan_new(this, ee_won_lobbycpp_call))
 {
@@ -87,8 +89,10 @@ LanLogic::LanLogic() : mJoinPassword(GetEmptyGUIStringData()), mRust(ee_won_lan_
     this->mDirectGames = new LobbyGameList(3);
 }
 
+// FUNCTION: WON 0x007dfef0
 LanLogic::~LanLogic() { ee_won_lan_free(this->mRust); }
 
+// FUNCTION: WON 0x007e00a0
 // Looks up the direct-connect, LAN name, LAN port and password dialogs from the lobby layout
 void LanLogic::InitComponent(ComponentConfig* inConfig)
 {
@@ -98,6 +102,7 @@ void LanLogic::InitComponent(ComponentConfig* inConfig)
     SafeGetComponent(inConfig, this->mPasswordDialog, "PasswordDialog", "LanLogic.cpp", 108);
 }
 
+// FUNCTION: WON 0x007e2760
 // The LAN name, LAN port, refresh game list and show LAN screen commands
 void LanLogic::HandleControlEvent(int inControlId)
 {
@@ -106,6 +111,7 @@ void LanLogic::HandleControlEvent(int inControlId)
     if (aWhich != 0) this->Call(EeWonLanCall::Control, NULL, NULL, aWhich);
 }
 
+// FUNCTION: WON 0x007e27c0
 void LanLogic::HandleComponentEvent(ComponentEvent* inEvent)
 {
     this->Call(EeWonLanCall::ComponentEvent, inEvent, NULL, inEvent->mType);
@@ -118,9 +124,11 @@ void LanLogic::CallMessage(EeWonLanCall inCall, const ByteBuffer* inMessage, Lob
                     inMessage != NULL ? (intptr_t)inMessage->length() : 0);
 }
 
+// FUNCTION: WON 0x007e5900
 // Leaves the current game when the lobby resumes
 void LanLogic::Resume() { LobbyLeaveGame(0); }
 
+// FUNCTION: WON 0x007e1600
 // Host: accepts a peer-authenticated socket whose certificate has the lobby's community, else closes it
 void LanLogic::HandlePeerAuthDone(AsyncOp* inOp)
 {
@@ -140,6 +148,7 @@ void LanLogic::HandlePeerAuthDone(AsyncOp* inOp)
     this->AddPendingSocket(socket);
 }
 
+// FUNCTION: WON 0x007e13b0
 // Host: starts receiving messages on an accepted socket and keeps it in the socket set
 void LanLogic::AddPendingSocket(LobbyLanSocket* inSocket)
 {
@@ -150,6 +159,7 @@ void LanLogic::AddPendingSocket(LobbyLanSocket* inSocket)
     this->mPendingSockets.insert(inSocket);
 }
 
+// FUNCTION: WON 0x007e0620
 // Starts (creating if needed) the 2-minute network timer
 void LanLogic::StartNetworkTimer()
 {
@@ -160,6 +170,7 @@ void LanLogic::StartNetworkTimer()
     this->mNetworkTimer->RunAsTimer(120000);
 }
 
+// FUNCTION: WON 0x007e53a0
 // Starts (creating if needed) the 15-second discovery timer
 void LanLogic::StartDiscoveryTimer()
 {
@@ -170,6 +181,7 @@ void LanLogic::StartDiscoveryTimer()
     this->mDiscoveryTimer->RunAsTimer(15000);
 }
 
+// FUNCTION: WON 0x007e5810
 // Clears the LAN games and closes the discovery timer and socket
 void LanLogic::StopDiscovery()
 {
@@ -187,6 +199,7 @@ void LanLogic::StopDiscovery()
     }
 }
 
+// FUNCTION: WON 0x007e35a0
 // Gets a fresh login certificate (anonymous) unless the current one is valid; false on bad CD key or failure
 bool LanLogic::RefreshCertificate()
 {
@@ -211,6 +224,7 @@ bool LanLogic::RefreshCertificate()
     return false;
 }
 
+// FUNCTION: WON 0x007e4cb0
 // Adds or updates a LAN game from its summary; an unreadable one is removed but reported as modified
 void LanLogic::HandleGameSummary(unsigned short inPort, ReadBuffer& inBuffer, const IPAddr& inAddress)
 {
@@ -228,6 +242,7 @@ void LanLogic::HandleGameSummary(unsigned short inPort, ReadBuffer& inBuffer, co
         LobbyBroadcastEvent(new GameChangedEvent(aGame, anOutcome.event), true);
 }
 
+// FUNCTION: WON 0x007e4ec0
 // Marks a known LAN game as just seen
 void LanLogic::HandleGameKeepAlive(unsigned short inPort, const IPAddr& inAddress)
 {
@@ -242,6 +257,7 @@ void LanLogic::HandleGameKeepAlive(unsigned short inPort, const IPAddr& inAddres
     aGame->SetLastSeenTime(time(NULL));
 }
 
+// FUNCTION: WON 0x007e5050
 // Removes a LAN game its host announced as gone
 void LanLogic::HandleGameRemoved(unsigned short inPort, const IPAddr& inAddress)
 {
@@ -255,6 +271,7 @@ void LanLogic::HandleGameRemoved(unsigned short inPort, const IPAddr& inAddress)
         LobbyBroadcastEvent(new GameChangedEvent(aGame.get(), 1), true);
 }
 
+// FUNCTION: WON 0x007e28d0
 // HandleChangeDirectConnect's add: asks for an address (resolving DNS) and adds or renames a saved game
 void LanLogic::AddDirectConnect()
 {

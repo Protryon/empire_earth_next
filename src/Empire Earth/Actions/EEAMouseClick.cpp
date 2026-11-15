@@ -86,12 +86,17 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEAMouseClick.h"
 
+// FUNCTION: EXE 0x402fb0
 // Creates the mouse-click action with no message
 EEAMouseClick::EEAMouseClick()
     : mMessage(NULL)
 {
 }
 
+// SYNTHETIC: EXE 0x402fc8
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x402fe4
 // Destroys the mouse-click action, releasing the message it has not sent
 EEAMouseClick::~EEAMouseClick()
 {
@@ -99,6 +104,7 @@ EEAMouseClick::~EEAMouseClick()
         this->mMessage->Dereference();
 }
 
+// FUNCTION: EXE 0x403009
 // Sends the built click message as local user input (resetting the player's saved group 0x15) and forgets it
 void EEAMouseClick::Virtual4()
 {
@@ -109,6 +115,7 @@ void EEAMouseClick::Virtual4()
     this->mMessage = NULL;
 }
 
+// FUNCTION: EXE 0x403046
 // Builds the message that loads a group into a transport of the clicked kind; NULL without a group
 EEMessage* EEAMouseClick::CreateLoadTransportMessage(EEGroup* inGroup, long inKind, unsigned long inTargetID)
 {
@@ -151,6 +158,15 @@ EEMessage* EEAMouseClick::CreateLoadTransportMessage(EEGroup* inGroup, long inKi
     return theMessage;
 }
 
+// FUNCTION: EXE 0x403192
+// Creates the message that loads units into a transport
+// (EEMLoadTransport's inline ctor, first user)
+
+// FUNCTION: EXE 0x4031cd
+// Returns the load-transport message's label
+// (EEMLoadTransport::GetMessageLabel: inline, with the vtable)
+
+// FUNCTION: EXE 0x4031d3
 // Builds the selection message for a plain click: select, add or toggle the unit under the mouse, or unselect all
 void EEAMouseClick::SelectAtMouse(unsigned long inModifiers)
 {
@@ -175,6 +191,23 @@ void EEAMouseClick::SelectAtMouse(unsigned long inModifiers)
     }
 }
 
+// FUNCTION: EXE 0x4032a6
+// Creates a base message with a type and the current player
+// (EEMessage's inline ctor, refused in SelectAtMouse)
+
+// FUNCTION: EXE 0x4032d2
+// Creates the message that adds a unit to the selected group
+// (EEMAddUnitToSelectedGroup's inline ctor)
+
+// FUNCTION: EXE 0x4032ff
+// Creates the message that selects a single unit
+// (EEMSelectUnit's inline ctor)
+
+// FUNCTION: EXE 0x40332c
+// Creates the message that unselects every unit
+// (EEMUnselectAllUnits's inline ctor)
+
+// FUNCTION: EXE 0x403350
 // Builds the order for a right click at a world point for the selected group (move, attack, gather, load, repair ...)
 void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inModifiers,
                              bool inIsRotating, float inFacing, bool inForceMove)
@@ -445,6 +478,15 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
     }
 }
 
+// FUNCTION: EXE 0x4041cf
+// Creates the message that drops off carried resources at a building
+// (EEMDropoffResource's inline ctor, first user Virtual0C)
+
+// FUNCTION: EXE 0x4041fc
+// Creates the message that heals a unit
+// (EEMHealUnit's inline ctor, first user Virtual0C)
+
+// FUNCTION: EXE 0x404229
 // Returns whether the unit class is a building that handles aircraft (an air base or carrier)
 // (EEUnitClass::IsAirBase: an out-of-line COMDAT after its first user Virtual0C) the aircraft carrier test
 bool EEUnitClass::IsAirBase()
@@ -452,6 +494,7 @@ bool EEUnitClass::IsAirBase()
     return this->mAirTrafficType != 0 && (this->mCategory == kUnitCategoryBuilding || this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySpaceBuilding);
 }
 
+// FUNCTION: EXE 0x404249
 // Returns whether units can drop resources off at the unit class
 // (an EEUnitClass predicate, out of line after its first user Virtual0C)
 bool EEUnitClass::IsDropSite()
@@ -460,6 +503,7 @@ bool EEUnitClass::IsDropSite()
            this->IsLandBuilding() && this->mUnitType != kUnitTypeFarm && this->mUnitType != kUnitTypeDock && this->mUnitType != kUnitTypeNavyYard && this->mResourceType > kResourceNone && this->mResourceType < 7;
 }
 
+// FUNCTION: EXE 0x404292
 // Returns whether the unit class is a land, helicopter or naval transport
 // (EEUnitClass::IsTransport: out of line after its first user Virtual0C) the transport categories
 bool EEUnitClass::IsTransport()
@@ -467,6 +511,11 @@ bool EEUnitClass::IsTransport()
     return this->mCategory == kUnitCategoryLandTransport || this->mCategory == kUnitCategoryHelicopterTransport || this->mCategory == kUnitCategoryNavalTransport || this->mCategory == kUnitCategorySpaceTransport || this->mCategory == kUnitCategoryFortress;
 }
 
+// FUNCTION: EXE 0x4042b8
+// Looks up a key in a long-to-pointer map
+// (a map<long, long*> lookup accessor: inline, first user Virtual0C)
+
+// FUNCTION: EXE 0x4042e2
 // Returns whether the tile is visible to a player (or the player sees everything)
 // (EETile::IsVisibleTo: out of line after its first user Virtual0C) the player's visibility count byte, or the
 // world made visible to it
@@ -476,6 +525,11 @@ bool EETile::IsVisibleTo(EEPlayer* inPlayer)
            inPlayer->mSeesAll;
 }
 
+// FUNCTION: EXE 0x40431c
+// Returns the tile's number of doppelganger units
+// (EETile::GetNumDoppelgangers: inline, first user Virtual0C)
+
+// FUNCTION: EXE 0x40432f
 // Returns the graphic effect at an index, or NULL past the end of the table
 // (EEGraphicEffect::Get: out of line after its first user Virtual0C) 0 past the end of the table
 EEGraphicEffect* EEGraphicEffect::Get(unsigned long inIndex)
@@ -485,6 +539,8 @@ EEGraphicEffect* EEGraphicEffect::Get(unsigned long inIndex)
     return NULL;
 }
 
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAMouseClick::Virtual8()
 {
 }

@@ -13,12 +13,12 @@ class FSFileSpec;
 
 class EEAnimal {
 public:
-    EEAnimal();
+    EEAnimal();                             // 0xd4958
     virtual ~EEAnimal();                    // +0x00 0xd49f6 (??_G 0xd49da)
-    void ClearSounds();
-    static long Load(FSFileSpec* inFile);
-    static void Unload();
-    EEUnitClass* GetUnitClass();
+    void ClearSounds();                     // 0xd4a22
+    static long Load(FSFileSpec* inFile);   // 0xd4a5d
+    static void Unload();                   // 0xd52b4
+    EEUnitClass* GetUnitClass();            // 0xd52f6
     static EEAnimal* Find(long inUnitType); // 0xd5301 (the last record of that unit type)
     // inline (out of line COMDAT 0xa53da after its first user EEHerd.cpp: cdecl, sTable[inIndex]) (provisional name)
     static EEAnimal* Get(long inIndex) { return EEAnimal::sTable[inIndex]; }

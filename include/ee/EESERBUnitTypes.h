@@ -18,7 +18,7 @@ class EESERBUnitTypes : public UIRadioButton {
 public:
     EESERBUnitTypes(unsigned long inID, const UWideString& inText, GEFont* inFont, const GE2DPoint& inLocation,
                     unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex,
-                    unsigned long inBorderThickness, bool inIsPushButton, bool inIsChecked);
+                    unsigned long inBorderThickness, bool inIsPushButton, bool inIsChecked);   // 0x173218
     virtual ~EESERBUnitTypes() {}
     virtual void Check();                   // +0x94 0x1732b8
 };
@@ -31,7 +31,7 @@ public:
     EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType, const std::vector<UWideString>& inStrings,
                     GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth,
                     unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex, unsigned long inMaxChars,
-                    unsigned long inBorderThickness);
+                    unsigned long inBorderThickness);   // 0x175001
     virtual ~EESECBMaxPlayer() {}
 protected:
     virtual void ChangeSelection();         // +0x8c 0x1732d7
@@ -54,19 +54,19 @@ public:
 class EESEUIBDiplomacy : public UIButton {
 public:
     EESEUIBDiplomacy(unsigned long inID, const GE2DPoint& inLocation, UIForm* inForm, unsigned long inIndex,
-                     unsigned long inBorderThickness);
+                     unsigned long inBorderThickness);   // 0x176818
     virtual ~EESEUIBDiplomacy() {}
-    static void LoadBitmaps(EEUIFScenarioEditor* inEditor);
-    static void ReleaseBitmaps();
-    void UpdateBitmaps();
+    static void LoadBitmaps(EEUIFScenarioEditor* inEditor);   // 0x1768a6 (provisional name)
+    static void ReleaseBitmaps();           // 0x176b18
+    void UpdateBitmaps();                   // 0x176b49
 protected:
     virtual void ButtonUp();                // +0x8c 0x176baf
 public:
     unsigned long mState;                   // +0x104
 
-    static GEBitmap* sNormalBitmaps[2];
-    static GEBitmap* sFocusedBitmaps[2];
-    static GEBitmap* sPressedBitmaps[2];
+    static GEBitmap* sNormalBitmaps[2];     // 0x531fc0
+    static GEBitmap* sFocusedBitmaps[2];    // 0x531fc8
+    static GEBitmap* sPressedBitmaps[2];    // 0x531fd0
 };
 
 // (EESEEChangeStartEpoch, the start epoch combo box's event, is an EESEERust: ee/EESEARust.h, editor_events.rs)

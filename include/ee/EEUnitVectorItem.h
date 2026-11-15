@@ -73,10 +73,10 @@ private:
 // users are renamed).
 class EEUnitVectorItem {
 public:
-    EEUnitVectorItem(EEComplexUnit* inUnit);
+    EEUnitVectorItem(EEComplexUnit* inUnit);   // 0x20564f
     EEUnitVectorItem(const EEUnitVectorItem& inItem);   // 0x20569d (copies every goal through its Virtual10)
     virtual ~EEUnitVectorItem();            // +0x00 0x205768 (??_G 0x205681)
-    EEUnitVectorItem& operator=(const EEUnitVectorItem& inItem);
+    EEUnitVectorItem& operator=(const EEUnitVectorItem& inItem);   // 0x205ab9
     void Clear();                           // 0x2057a7: every goal's Virtual68, then deletes them (provisional name)
     bool IsShiftMode();                     // 0x2057fa: the unit's player's mShiftMode (provisional name)
     unsigned long GetTimeLeft();            // 0x205807 (0 when not started) (provisional name)
@@ -84,11 +84,11 @@ public:
     // EEMScrambleAircraft 1000)
     void AddTime(long inTime);
     void Insert(unsigned long inIndex, EEUnitGoal* inGoal);   // 0x205843 (at the end past the size) (provisional name)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
-    void PopBack();
-    void PopFront();
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    void ResetTimer();
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x20588b
+    void PopBack();                         // 0x205960 (provisional name)
+    void PopFront();                        // 0x205999 (provisional name)
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x2059ea
+    void ResetTimer();                      // 0x205aad (provisional name)
     EEUnitGoal* GetFront();                 // 0x1f8a26: mGoals.front() (out of line; EEUICUnitIconBar 0x25ad15) (provisional name)
     EEUnitGoal* GetGoalAt(unsigned long inIndex);  // 0x10815e: mGoals[inIndex] (out of line; EEComplexUnit::ClearGoalQueue) (provisional name)
     // 0x1ed61b: mGoals.push_back(inGoal), then inGoal->Virtual3C(mUnit) (defined in EEActiveGroup.cpp right after its

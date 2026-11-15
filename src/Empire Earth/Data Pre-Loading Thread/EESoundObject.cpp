@@ -21,7 +21,7 @@
 #include "EEDatabase.h"
 #include "ee/EESoundObject.h"
 
-std::vector<EESoundObject*> gSoundObjects;
+std::vector<EESoundObject*> gSoundObjects;        // 0x4e8678
 
 // One record of db\dbsounds.dat (0x84 bytes, read whole). Layout inferred (only the fields LoadTable copies).
 struct EESoundRecord {
@@ -37,6 +37,7 @@ struct EESoundRecord {
 };
 static_assert(sizeof(EESoundRecord) == 132, "on-disk record: 132 bytes on every target");
 
+// FUNCTION: EXE 0x4da600
 // Creates an empty, unloaded sound with no sample
 EESoundObject::EESoundObject()
 {
@@ -50,6 +51,10 @@ EESoundObject::EESoundObject()
     this->mIsLoading = false;
 }
 
+// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
+// TEMPLATE: EXE 0x4da638
+
+// FUNCTION: EXE 0x4da654
 // Destroys the sound, unloading its sample if it is loaded
 EESoundObject::~EESoundObject()
 {
@@ -59,6 +64,7 @@ EESoundObject::~EESoundObject()
     }
 }
 
+// FUNCTION: EXE 0x4da680
 // Reads the sound table (name, instance limit, category, looping, volume percent); returns the last read result
 long EESoundObject::LoadTable(FSFile* inFile)
 {
@@ -86,6 +92,7 @@ long EESoundObject::LoadTable(FSFile* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4da747
 // Deletes every sound of the table and empties it
 void EESoundObject::UnloadTable()
 {
@@ -94,6 +101,7 @@ void EESoundObject::UnloadTable()
     gSoundObjects.resize(0, NULL);
 }
 
+// FUNCTION: EXE 0x4da787
 // Writes to the file each sound that is still loaded, with its name and use count
 void EESoundObject::Dump(FSFileSpec& inFile)
 {
@@ -105,6 +113,7 @@ void EESoundObject::Dump(FSFileSpec& inFile)
     }
 }
 
+// FUNCTION: EXE 0x4da7e6
 // Loads the sound's sample on first use (counting later uses, which wait for the load); returns 9 on failure
 long EESoundObject::LoadMedia()
 {
@@ -133,6 +142,7 @@ long EESoundObject::LoadMedia()
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x4b62d3
 // Sets the sound's volume (folded with EEContagionHelper::SetFunctor in the original: the store to +0x14; a float
 // argument and a pointer argument are passed in different registers on x64)
 void EESoundObject::SetVolume(float inVolume)
@@ -140,12 +150,14 @@ void EESoundObject::SetVolume(float inVolume)
     this->mVolume = inVolume;
 }
 
+// FUNCTION: EXE 0x4da891
 // Plays the sound once at full volume, centred, normal pitch
 void EESoundObject::Play()
 {
     this->Play(1.0f, 0.0f, 1.0f);
 }
 
+// FUNCTION: EXE 0x4da8a9
 // Loads the sample and plays it once as a one-shot at the given volume, pan and pitch; returns 9 on failure
 long EESoundObject::Play(float inVolume, float inPan, float inPitch)
 {
@@ -168,6 +180,7 @@ long EESoundObject::Play(float inVolume, float inPan, float inPitch)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4da92e
 // Counts one use down; on the last use unloads the sample. Returns 0
 long EESoundObject::UnloadMedia()
 {
@@ -184,3 +197,13 @@ long EESoundObject::UnloadMedia()
     sDatabaseLock.mLock->Leave();
     return 0;
 }
+
+// The init chains (the scheduler critical section, then gSoundObjects: its dtor is guarded in the original):
+// SYNTHETIC: EXE 0x4da56d
+// SYNTHETIC: EXE 0x4da577
+// SYNTHETIC: EXE 0x4da58f
+// SYNTHETIC: EXE 0x4da59b
+// SYNTHETIC: EXE 0x4da5b6
+// SYNTHETIC: EXE 0x4da5c0
+// SYNTHETIC: EXE 0x4da5e6
+// SYNTHETIC: EXE 0x4da5f2

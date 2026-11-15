@@ -6,7 +6,7 @@
 
 class EEROGroundShadows : public EERenderObject {
 public:
-    EEROGroundShadows();
+    EEROGroundShadows();                    // 0x111dae
     virtual ~EEROGroundShadows();           // +0x10 (??_G 0x111dc0; dtor 0x111ddc)
     virtual void FrameStarting();           // +0x00 0x111de7: Fn10C036, then EERenderObject::Fn10EABE
     virtual void SceneStarting();           // +0x04 (empty, ICF-shared 0xe123d)
@@ -14,7 +14,7 @@ public:
     virtual void FrameDone();               // +0x0c (empty, ICF-shared 0xe123d)
 
     static void CreateShadowModel();        // 0x111df8: the static "StaticShadow" quad (0x529098) (provisional name)
-    static void ReleaseShadowModel();
+    static void ReleaseShadowModel();       // 0x112513 (provisional name)
     // DrawShadows (0x1121c8), DrawUnitShadows (0x1122bb) and the space-tile test (0x11246b): ee_gfx shadows.rs
 };
 

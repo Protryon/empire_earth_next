@@ -17,6 +17,7 @@
 // the segments it names.
 namespace WONAPI {
 static inline void AppendRange(GUIString& text,const GUIString& f,int s,int l) { text.append(f,(unsigned short)s,(unsigned short)l); }
+// FUNCTION: WON 0x0074a1c0
 // Appends format text to a text area, expanding <n> line breaks, <cN>/<fN> colour and font changes and
 // <sN>/<lN> inserted strings and segments (1-based indices; "<<" is a literal '<')
 void LobbyAppendFormattedText(TextArea* area,const GUIString& format,

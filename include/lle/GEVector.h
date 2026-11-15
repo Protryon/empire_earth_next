@@ -82,11 +82,11 @@ public:
 private:
     struct QuantizedVectorArray;
 
-    static const UString sVectorXStringID;
-    static const UString sVectorYStringID;
-    static const UString sVectorZStringID;
-    static const UString sQuantizedVectorIndexStringID;
-    static QuantizedVectorArray sQuantizedVectorArray;
+    static const UString sVectorXStringID;              // 0x1012d888
+    static const UString sVectorYStringID;              // 0x1012d870
+    static const UString sVectorZStringID;              // 0x1012d860
+    static const UString sQuantizedVectorIndexStringID; // 0x1012d850
+    static QuantizedVectorArray sQuantizedVectorArray;  // 0x1010ff70
 #endif
 };
 

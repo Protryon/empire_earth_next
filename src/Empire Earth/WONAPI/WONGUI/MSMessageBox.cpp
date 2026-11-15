@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyMSMessageBox.h"
 namespace WONAPI {
 static RawBuffer gMessageBoxEmptyBuffer;
+// FUNCTION: WON 0x007016f0
 // Creates a message box: a centred wrapped label (the title when there is no message) and up to three
 // same-size buttons ("Ok" by default, at least 80 wide) centred below it; Escape ends with the last button's id
 MSMessageBox::MSMessageBox(const GUIString& title,const GUIString& message,
@@ -86,6 +87,7 @@ MSMessageBox::MSMessageBox(const GUIString& title,const GUIString& message,
 
 // Showing the message box in its own window
 namespace WONAPI {
+// FUNCTION: WON 0x00701fd0
 // Shows a modal message box over the parent window and returns the id (1-3) of the button pressed
 int MSMessageBox::Msg(Window* parent,const GUIString& title,const GUIString& message,
     const GUIString& button1,const GUIString& button2,const GUIString& button3)
@@ -93,6 +95,7 @@ int MSMessageBox::Msg(Window* parent,const GUIString& title,const GUIString& mes
     SmartPtr<MSMessageBox> box=new MSMessageBox(title,message,button1,button2,button3);
     return box->DoDialog(parent);
 }
+// FUNCTION: WON 0x00702090
 // Creates the dialog window (style 0x59) titled and sized for the box, puts the box in it and focuses
 // the first button
 SmartPtr<Window> MSMessageBox::PrepareWindow(Window* parent)
@@ -106,6 +109,7 @@ SmartPtr<Window> MSMessageBox::PrepareWindow(Window* parent)
     this->mButton1->RequestFocus();
     return window.get();
 }
+// FUNCTION: WON 0x007021b0
 // Runs the box as a modal dialog in its own window, closes the window and returns the result
 int MSMessageBox::DoDialog(Window* parent)
 {
@@ -115,3 +119,33 @@ int MSMessageBox::DoDialog(Window* parent)
     return result;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00700630
+// (public: virtual __thiscall WONAPI::MSDialog::~MSDialog(void)    [??1MSDialog@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x00701d20
+// (public: __thiscall WONAPI::ChildLayoutInstructionBase::ChildLayoutInstructionBase(void)    [??0ChildLayoutInstructionBase@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x00701d60
+// (public: virtual __thiscall WONAPI::CenterLayout::~CenterLayout(void)    [??1CenterLayout@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x00701ea0
+// (public: virtual __thiscall WONAPI::MSMessageBox::~MSMessageBox(void)    [??1MSMessageBox@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x0071b310
+// (public: void __thiscall std::list<class WONAPI::Component *,class std::allocator<class WONAPI::Component *> >::push_back(class WONAPI::Component * con)
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00701d40
+// (public: virtual void * __thiscall WONAPI::CenterLayout::`scalar deleting destructor'(unsigned int)    [??_GCenterLayout@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x00701de0
+// (public: virtual void * __thiscall WONAPI::SameSizeLayout::`scalar deleting destructor'(unsigned int)    [??_GSameSizeLayout@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00701e80
+// (public: virtual void * __thiscall WONAPI::MSMessageBox::`scalar deleting destructor'(unsigned int)    [??_GMSMessageBox@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00701e00
+// (public: virtual __thiscall WONAPI::SameSizeLayout::~SameSizeLayout(void))
+// SYNTHETIC: WON 0x702240
+// SYNTHETIC: WON 0x702250
+// SYNTHETIC: WON 0x702270
+// SYNTHETIC: WON 0x702280

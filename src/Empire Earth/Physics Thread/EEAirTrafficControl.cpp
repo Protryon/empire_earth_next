@@ -24,6 +24,10 @@
 #include "ee/EEUnitKind.h"
 
 const UString EEAirTrafficControl::sData("EEAirTrafficControl Data");
+// SYNTHETIC: EXE 0x54e839   (wrapper)
+// SYNTHETIC: EXE 0x54e843   (ctor)
+// SYNTHETIC: EXE 0x54e854   (registrar)
+// SYNTHETIC: EXE 0x54e860   (dtor)
 
 // port (R5b.4, round 30): the class is Rust's whole (ee_units atc.rs: the bodies in their order over this host;
 // atc_save.rs: Load and Save). The host is the units' reads and the world calls; the Rust state is borrowed anew
@@ -85,48 +89,68 @@ int64_t EEAirTrafficControl::Call(int32_t inCall, EEComplexUnit* inUnit, EECompl
     return ee_units_atc_call(this->mRust, NULL, &EEATCHost, inCall, inUnit, inOther, inValue);
 }
 
+// FUNCTION: EXE 0x54e87c
 // Creates the player's air traffic control with no airports and no air cargo capacity
 EEAirTrafficControl::EEAirTrafficControl(EEPlayer* inPlayer)
     : mPlayer(inPlayer), mRust(ee_units_atc_new())
 {
 }
 
+// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
+// TEMPLATE: EXE 0x54e8b7
+
+// FUNCTION: EXE 0x54e8d3
 // Destroys the air traffic control, releasing every queued plane and every airport
 EEAirTrafficControl::~EEAirTrafficControl()
 {
     ee_units_atc_free(this->mRust, NULL, &EEATCHost);
 }
 
+// FUNCTION: EXE 0x54e9a8
 void EEAirTrafficControl::AddCargoWeight(EEComplexUnit* inUnit) { this->Call(EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT, inUnit); }
 
+// FUNCTION: EXE 0x54e9bb
 void EEAirTrafficControl::AddAirport(EEComplexUnit* inAirport) { this->Call(EE_UNITS_ATC_CALL_ADD_AIRPORT, inAirport); }
 
+// FUNCTION: EXE 0x54ea34
 long EEAirTrafficControl::QueueRequest(EEComplexUnit* inAirport, EEComplexUnit* inUnit, long inKind)
 {
     return (long)this->Call(EE_UNITS_ATC_CALL_QUEUE_REQUEST, inAirport, inUnit, inKind);
 }
 
+// FUNCTION: EXE 0x54eaf7
 long EEAirTrafficControl::GetFreeCargoWeight(EEComplexUnit* inAirport)
 {
     return (long)this->Call(EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT, inAirport);
 }
 
+// FUNCTION: EXE 0x54eb2c (GetRoom: ee_units atc.rs room)
+
+// FUNCTION: EXE 0x54ec8c
 bool EEAirTrafficControl::RemoveFromTakeoffQueues(EEComplexUnit* inUnit)
 {
     return this->Call(EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES, inUnit) != 0;
 }
 
+// FUNCTION: EXE 0x54ed30
 bool EEAirTrafficControl::ClearAirportQueue(EEComplexUnit* inAirport, long inKind)
 {
     return this->Call(EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE, inAirport, NULL, inKind) != 0;
 }
 
+// FUNCTION: EXE 0x54eed0 (RemoveFromEntry: atc.rs remove_from_entry)
+// FUNCTION: EXE 0x54f033 (DropDeadPlanes: atc.rs drop_dead_planes)
+
+// FUNCTION: EXE 0x54f15d
 // Writes the air cargo totals and every airport's landing and takeoff queues to the out-of-sync dump
 void EEAirTrafficControl::Dump(FILE* inFile)
 {
     ee_units_atc_call(this->mRust, inFile, &EEATCHost, EE_UNITS_ATC_CALL_DUMP, NULL, NULL, 0);
 }
 
+// FUNCTION: EXE 0x54f32f (GetCandidates: atc.rs candidates)
+
+// FUNCTION: EXE 0x54f455
 // Returns the squared distance in tiles between the two units (atc.rs tile_distance_squared for the air traffic)
 float EEUnit::GetTileDistanceSquared(EEUnit* inOther)
 {
@@ -135,17 +159,23 @@ float EEUnit::GetTileDistanceSquared(EEUnit* inOther)
     return (float)(theDeltaX * theDeltaX + theDeltaY * theDeltaY);
 }
 
+// FUNCTION: EXE 0x54f47d
 long EEAirTrafficControl::GetChecksum() { return (long)this->Call(EE_UNITS_ATC_CALL_CHECKSUM, NULL); }
 
+// FUNCTION: EXE 0x54f5fa
 unsigned long EEAirTrafficControl::GetQueueLength(EEComplexUnit* inAirport)
 {
     return (unsigned long)this->Call(EE_UNITS_ATC_CALL_QUEUE_LENGTH, inAirport);
 }
 
+// FUNCTION: EXE 0x54f61c
 long EEAirTrafficControl::GetQueuePosition(EEComplexUnit* inUnit, long inWhich)
 {
     return (long)this->Call(EE_UNITS_ATC_CALL_QUEUE_POSITION, inUnit, NULL, inWhich);
 }
+
+// FUNCTION: EXE 0x54f6d8 (IsLandingDone: the plane's container, in atc.rs update_landings)
+// FUNCTION: EXE 0x54f6e9 (IsTakeOffDone: atc.rs is_takeoff_done)
 
 // The file's primitives for Load and Save (EESavePrimitive) and a unit's id for Save
 static int32_t EEATCFile(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
@@ -158,12 +188,14 @@ static unsigned long EEATCUnitID(void* inUnit)
     return static_cast<EEComplexUnit*>(inUnit)->GetUnitID();
 }
 
+// FUNCTION: EXE 0x54f75c
 // Reads the airports, their queued planes (as unit ids) and the air cargo totals; returns the first read error
 long EEAirTrafficControl::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
     return ee_units_atc_load(this->mRust, inFile, &EEATCFile);
 }
 
+// FUNCTION: EXE 0x54f88d
 // Hands replaced aircraft's cargo weight and queue entries to their replacements
 void EEAirTrafficControl::ReplaceUnits(std::vector<EEPUnitSwap>& inSwaps)
 {
@@ -176,31 +208,40 @@ void EEAirTrafficControl::ReplaceUnits(std::vector<EEPUnitSwap>& inSwaps)
     ee_units_atc_replace_units(this->mRust, NULL, &EEATCHost, theOld.data(), theNew.data(), theOld.size());
 }
 
+// FUNCTION: EXE 0x54fa2b (SendPlanesAway: atc.rs send_planes_away)
+
+// FUNCTION: EXE 0x54fc39
 void EEAirTrafficControl::RemoveCargoWeight(EEComplexUnit* inUnit) { this->Call(EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT, inUnit); }
 
+// FUNCTION: EXE 0x54fc4c
 void EEAirTrafficControl::RemoveAirport(EEComplexUnit* inAirport) { this->Call(EE_UNITS_ATC_CALL_REMOVE_AIRPORT, inAirport); }
 
+// FUNCTION: EXE 0x54fcc1
 void EEAirTrafficControl::RemovePlane(EEComplexUnit* inAirport, EEComplexUnit* inUnit)
 {
     this->Call(EE_UNITS_ATC_CALL_REMOVE_PLANE, inAirport, inUnit);
 }
 
+// FUNCTION: EXE 0x54fcf4
 long EEAirTrafficControl::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     return (long)this->Call(EE_UNITS_ATC_CALL_REPAIR_POINTERS, NULL);
 }
 
+// FUNCTION: EXE 0x54fead
 // Writes the airports, their queued planes (unit id and request) and the air cargo totals; returns the first error
 long EEAirTrafficControl::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
     return ee_units_atc_save(this->mRust, inFile, &EEATCFile, &EEATCUnitID);
 }
 
+// FUNCTION: EXE 0x55014c
 EEComplexUnit* EEAirTrafficControl::FindNearestAirport(EEComplexUnit* inUnit)
 {
     return reinterpret_cast<EEComplexUnit*>((intptr_t)this->Call(EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT, inUnit));
 }
 
+// FUNCTION: EXE 0x5501d4
 void EEAirTrafficControl::Update() { this->Call(EE_UNITS_ATC_CALL_UPDATE, NULL); }
 
 // The original's BlocksTakeoffs (ICF-folded into 0x4bb118), UpdateLandings 0x550277 and UpdateTakeoffs 0x550487:

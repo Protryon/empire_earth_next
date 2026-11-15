@@ -23,7 +23,7 @@ public:
         { this->mTextureCoordinates[inVertex] = inCoordinate; }
     void SetVertex(unsigned long inIndex, unsigned long inVertex) { this->mVertices[inVertex] = inIndex; }
 private:
-    GEPolygon(unsigned long inIndex)
+    GEPolygon(unsigned long inIndex)        // 0x11053
     {
         this->mMaterial = NULL;
         this->mOpacities[0] = 1.0f;

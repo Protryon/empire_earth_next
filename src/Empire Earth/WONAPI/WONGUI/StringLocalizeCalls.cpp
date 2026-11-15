@@ -14,18 +14,21 @@
 #include "ee/wonapi/WONStringLocalize.h"
 namespace WONAPI {
 // The SDK's StringLocalize::GetStr overloads for one to three substitutions, as global functions
+// FUNCTION: WON 0x0074a100
 // Returns the format string with <s1> replaced by the given string
 GUIString LobbyFormatString(const GUIString& format,const GUIString& first)
 {
     const GUIString* subs[]={&first};
     return StringLocalize::GetStr(format,subs,1);
 }
+// FUNCTION: WON 0x0074a130
 // Returns the format string with <s1> and <s2> replaced by the given strings
 GUIString LobbyFormatString2(const GUIString& format,const GUIString& first,const GUIString& second)
 {
     const GUIString* subs[]={&first,&second};
     return StringLocalize::GetStr(format,subs,2);
 }
+// FUNCTION: WON 0x0074a170
 // Returns the format string with <s1>, <s2> and <s3> replaced by the given strings
 GUIString LobbyFormatString3(const GUIString& format,const GUIString& first,const GUIString& second,const GUIString& third)
 {

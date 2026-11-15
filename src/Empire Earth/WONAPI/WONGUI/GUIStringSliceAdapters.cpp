@@ -10,11 +10,13 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 namespace WONAPI {
+// FUNCTION: WON 0x006f8b90
 // Returns a new string with count characters from offset
 GUIString GUIString::substr(unsigned short offset,unsigned short count) const
 {
     return GUIString(new GUIStringData(this->mData.get(),offset,count));
 }
+// FUNCTION: WON 0x00739c80
 // Returns a new string with the characters from offset to the end
 GUIString GUIString::substr(unsigned short offset) const
 {

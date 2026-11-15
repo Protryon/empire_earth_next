@@ -72,6 +72,7 @@ extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t
 }
 
 namespace WONAPI {
+// FUNCTION: WON 0x006f3070
 // Creates a button that takes focus (the Rust button: no flags, not pressed)
 Button::Button()
 {
@@ -81,36 +82,59 @@ Button::Button()
 // Destroys the button (the Rust button; the click sound is a member)
 Button::~Button() { ee_won_btn_free(this->mBtn); }
 
+// FUNCTION: WON 0x006f30d0
 // Lets an activation fire its event (always true here)
 bool Button::HandleActivate() { return true; }
 
 void Button::SetTextHook(const GUIString&) {}
+// FUNCTION: WON 0x006f31c0
 // Makes a button the dialog's default button and the current default
 void Button::SetDialogDefaultButton(Button* b)
 {
     ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDialogDefault,(intptr_t)static_cast<Component*>(b));
 }
+// FUNCTION: WON 0x006f3230
 // Clears the dialog's default button if it is this one, and drops it as the current default
 void Button::UnSetDialogDefaultButton(Button* b)
 {
     ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDialogDefault,(intptr_t)static_cast<Component*>(b));
 }
+// FUNCTION: WON 0x006f3280
 // Makes a button the current default (the one Enter presses), repainting the old and the new one
 void Button::SetDefaultButton(Button* b)
 {
     ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDefault,(intptr_t)static_cast<Component*>(b));
 }
+// FUNCTION: WON 0x006f3300
 // Falls back to the dialog's default button as the current default (the original ignores the argument)
 void Button::UnSetDefaultButton(Button* b)
 {
     ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDefault,(intptr_t)static_cast<Component*>(b));
 }
+// FUNCTION: WON 0x006f3310
 // Copies another button's flags and click sound
 void Button::CopyAttributes(Button* from)
 {
     this->BCall(EeWonBtnCall::CopyAttributes,(intptr_t)from->mBtn);
     this->mClickSound=from->mClickSound;
 }
+// FUNCTION: WON 0x006f3910
 // Sets the sound played when the button is pressed
 void Button::SetClickSound(Sound* sound) { this->mClickSound=sound; }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006f30e0
+// (public: virtual void * __thiscall WONAPI::Button::`scalar deleting destructor'(unsigned int)    [??_GButton@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006f3100
+// (public: virtual __thiscall WONAPI::Button::~Button(void)    [??1Button@WONAPI@@UAE@XZ])
+// SYNTHETIC: WON 0x6f2fd0
+// SYNTHETIC: WON 0x6f2fe0
+// SYNTHETIC: WON 0x6f2ff0
+// SYNTHETIC: WON 0x6f3000
+// SYNTHETIC: WON 0x6f3020
+// SYNTHETIC: WON 0x6f3030
+// SYNTHETIC: WON 0x6f3040
+// SYNTHETIC: WON 0x6f3050

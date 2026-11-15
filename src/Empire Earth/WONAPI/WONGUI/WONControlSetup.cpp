@@ -23,3 +23,23 @@ WONComboBox::WONComboBox()
     this->mListArea->SetListFlags(2,true);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00703520
+// (public: virtual void * __thiscall WONAPI::MultiListArea::`scalar deleting destructor'(unsigned int)    [??_GMultiListArea@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x0070be20
+// (public: __thiscall WONAPI::WONFrame::~WONFrame(void)    [??1WONFrame@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x00719800
+// (public: __thiscall WONAPI::WONComboBox::WONComboBox(void)    [??0WONComboBox@WONAPI@@QAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007033a0
+// (public: __thiscall WONAPI::MultiListArea::MultiListArea(int)    [??0MultiListArea@WONAPI@@QAE@H@Z])
+// TEMPLATE: WON 0x00703540
+// (public: virtual __thiscall WONAPI::MultiListArea::~MultiListArea(void)    [??1MultiListArea@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00719970
+// (public: virtual __thiscall WONAPI::WONComboBox::~WONComboBox(void))
+// TEMPLATE: WON 0x00719950
+// (public: virtual void * __thiscall WONAPI::WONComboBox::`scalar deleting destructor'(unsigned int))

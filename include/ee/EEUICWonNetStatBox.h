@@ -25,7 +25,7 @@ class EEUICWonNetStatBox : public UIListBox<EEUICWNSBStat> {
 public:
     EEUICWonNetStatBox(unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex, unsigned long inBorder); // original25e2f8/274b38 ret32, no body credit
     // 0x25e2f8 (ret 0x20): UIListBox's ctor 0x25ed50, mStats' allocator byte, then vptr 0x44a470, mRowHeight, mText
-    virtual ~EEUICWonNetStatBox();
+    virtual ~EEUICWonNetStatBox();          // 0x25e3cb (??_G 0x25e3af)
     virtual long CopyData();                // +0x14 0x25e3f9 (the base's; clears mCopiedHasSelection under two lines)
     virtual long DrawTextA();               // +0x1c 0x25e413 (twelve columns per copied line)
     virtual void Refresh();                 // +0xbc 0x25eca2 (the stats form's open event; provisional name)

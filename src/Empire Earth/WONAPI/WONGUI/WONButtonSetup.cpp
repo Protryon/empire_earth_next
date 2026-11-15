@@ -15,6 +15,7 @@
 #include "rust/ee_won.h"
 extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 namespace WONAPI {
+// FUNCTION: WON 0x00717c70
 // Creates a skinned button (the Rust button holds 8/4 text padding, centred text, scaled images, grey disabled text
 // and a focus rectangle) that wants focus
 WONButton::WONButton()
@@ -24,3 +25,7 @@ WONButton::WONButton()
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00717df0
+// (public: virtual void * __thiscall WONAPI::WONButton::`scalar deleting destructor'(unsigned int))

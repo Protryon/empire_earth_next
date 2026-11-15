@@ -55,6 +55,7 @@
  * Perform the forward DCT on one block of samples.
  */
 
+// FUNCTION: JPEG 0x100965d9
 GLOBAL(void)
 jpeg_fdct_float (FAST_FLOAT * data)
 {

@@ -49,6 +49,8 @@ struct EEGraphicsU8E8EB4 {
     bool mB00;
 };
 EEGraphicsU8E8EB4 gU8E8EB4;
+// SYNTHETIC: EXE 0x50972b   (wrapper)
+// SYNTHETIC: EXE 0x509730   (ctor)
 
 // chain at 0x509738: three deques (ICF-shared ~deque 0x2003a4) and a bool; implicit dtor 0x509762; nothing else
 // reads it (provisional type and names; the deque element types are unknown: any POD gives the same code)
@@ -61,7 +63,13 @@ struct EEGraphicsQueues {
     bool mB40;
 };
 EEGraphicsQueues gGraphicsQueues;
+// SYNTHETIC: EXE 0x509738   (wrapper)
+// SYNTHETIC: EXE 0x509742   (ctor)
+// SYNTHETIC: EXE 0x50974c   (registrar)
+// SYNTHETIC: EXE 0x509758   (dtor)
+// FUNCTION: EXE 0x509762
 
+// FUNCTION: EXE 0x50977e
 // Creates the game's graphics thread object for a screen (full screen as the screen is), with the frame lock
 // mode 0 and the message-queue-done event
 EEGraphics::EEGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMouse* inMouse, UIManager* inUIManager,
@@ -73,6 +81,10 @@ EEGraphics::EEGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTSMo
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 78);
 }
 
+// SYNTHETIC: EXE 0x509803
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x50981f
 // Destroys the graphics object, releasing the scene and the message-queue-done event
 EEGraphics::~EEGraphics()
 {
@@ -80,6 +92,7 @@ EEGraphics::~EEGraphics()
     TSScheduler::DestroyEvent(this->mMessageQueueDone);
 }
 
+// FUNCTION: EXE 0x509840
 // Starts a frame: redraws the whole UI when needed, then copies the frame data under the world lock (read
 // lock and UI lock for modes 0/1, write lock for 2/3; modes 1/3 keep the lock until FrameDone)
 void EEGraphics::FrameStarting()
@@ -111,6 +124,7 @@ void EEGraphics::FrameStarting()
     }
 }
 
+// FUNCTION: EXE 0x509902
 // Handles the game's graphics messages (fades, letterbox, scene init/release, UI redraw, screenshot, lock mode,
 // queue-done signal); passes others to RTSGraphics
 void EEGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
@@ -158,6 +172,7 @@ void EEGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void
     }
 }
 
+// FUNCTION: EXE 0x5099dc
 // Restores lost surfaces, then hides the mouse pointer, redraws the UI (and posts two more redraws), reloads
 // the mouse cursor and shows the pointer again if it was shown; returns the restore result
 long EEGraphics::RestoreSurfaces()
@@ -184,18 +199,21 @@ long EEGraphics::RestoreSurfaces()
     return theResult;
 }
 
+// FUNCTION: EXE 0x509ada
 // Starts the scene (RTSGraphics' behaviour)
 void EEGraphics::SceneStarting()
 {
     RTSGraphics::SceneStarting();
 }
 
+// FUNCTION: EXE 0x509adf
 // Renders the scene (RTSGraphics' behaviour)
 void EEGraphics::RenderScene()
 {
     RTSGraphics::RenderScene();
 }
 
+// FUNCTION: EXE 0x509ae4
 // Finishes the frame and releases the lock kept since FrameStarting (lock modes 1 and 3)
 void EEGraphics::FrameDone()
 {
@@ -208,6 +226,7 @@ void EEGraphics::FrameDone()
     }
 }
 
+// FUNCTION: EXE 0x509b22
 // Renders a capture into the first free file EE###.bmp (or .jpg), or EEPostGame-M-D-Y-###.jpg for the
 // post-game map, then signals the capture done
 void EEGraphics::SaveScreenShot(EEScreenCapture* inCapture)
@@ -240,21 +259,22 @@ void EEGraphics::SaveScreenShot(EEScreenCapture* inCapture)
     inCapture->mCaptureComplete->Set();
 }
 
+// FUNCTION: EXE 0x509cd4
 // Renders a capture: the current view, or the whole map top-down tile by tile into a new surface of the asked
 // width (zooming out until a tile fits the window), restoring the camera afterwards
 // RenderTo's constants: unit-local .rdata (0x4412ac.. before the vtable, 0x4412e8.. after it), not __real pool
 // literals (provisional names)
 static const float kCaptureLeft = 0.0f;     // 0x4412ac (the free camera's capture rectangle, scaled by 0.64)
-static const float kCaptureRight = 1600.0f;
-static const float kCaptureTop = 35.0f;
-static const float kCaptureBottom = 1085.0f;
-static const double kMinusOne = -1.0;
+static const float kCaptureRight = 1600.0f; // 0x4412b0
+static const float kCaptureTop = 35.0f;     // 0x4412b4
+static const float kCaptureBottom = 1085.0f;   // 0x4412b8
+static const double kMinusOne = -1.0;       // 0x4412e8
 static const double kEpsilon = 0.001f;      // 0x4412f0 (a float value widened)
-static const double kMinusHalf = -0.5;
-static const double kHalf = 0.5;
+static const double kMinusHalf = -0.5;      // 0x4412f8
+static const double kHalf = 0.5;            // 0x441300
 static const double kTileFactor = 0.70710677f;   // 0x441308 (a float value widened)
-static const double kOne = 1.0;
-static const float kCaptureScale = 0.64f;
+static const double kOne = 1.0;             // 0x441310
+static const float kCaptureScale = 0.64f;   // 0x441318
 void EEGraphics::RenderTo(EEScreenCapture* inCapture)
 {
     EEMap* theMap = gWorld.mMap;
@@ -464,54 +484,63 @@ void EEGraphics::RenderTo(EEScreenCapture* inCapture)
     gWorld.mLock->ReadUnlock();
 }
 
+// FUNCTION: EXE 0x50a862
 // Posts the initialise-scene message (0x503) to the graphics thread
 void EEGraphics::PostInitialiseScene()
 {
     this->mThread->Post(0x503, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x50a877
 // Posts the redraw-UI message (0x50b) to the graphics thread
 void EEGraphics::PostRedrawUI()
 {
     this->mThread->Post(0x50b, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x50a88c
 // Posts a screenshot request (0x505) for a capture to the graphics thread
 void EEGraphics::PostScreenShot(EEScreenCapture* inCapture)
 {
     this->mThread->Post(0x505, inCapture, NULL, true);
 }
 
+// FUNCTION: EXE 0x50a8a5
 // Posts the release-scene message (0x504) to the graphics thread
 void EEGraphics::PostReleaseScene()
 {
     this->mThread->Post(0x504, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x50a8ba
 // Posts a light fade-in (0x506) of the given duration to the graphics thread
 void EEGraphics::PostFadeIn(unsigned long inValue)
 {
     this->mThread->Post(0x506, reinterpret_cast<void*>(inValue), NULL, true);
 }
 
+// FUNCTION: EXE 0x50a8d3
 // Posts a light fade-out (0x507) of the given duration to the graphics thread
 void EEGraphics::PostFadeOut(unsigned long inValue)
 {
     this->mThread->Post(0x507, reinterpret_cast<void*>(inValue), NULL, true);
 }
 
+// FUNCTION: EXE 0x50a8ec
 // Posts a letterbox-in (0x508) of the given duration to the graphics thread
 void EEGraphics::PostLetterboxIn(unsigned long inValue)
 {
     this->mThread->Post(0x508, reinterpret_cast<void*>(inValue), NULL, true);
 }
 
+// FUNCTION: EXE 0x50a905
 // Posts a letterbox-out (0x509) of the given duration to the graphics thread
 void EEGraphics::PostLetterboxOut(unsigned long inValue)
 {
     this->mThread->Post(0x509, reinterpret_cast<void*>(inValue), NULL, true);
 }
 
+// FUNCTION: EXE 0x50a91e
 // Posts the queue-done message (0x50a) and waits until the graphics thread has handled every earlier
 // message; returns the post result
 long EEGraphics::PostMessage50AAndWait()
@@ -522,6 +551,7 @@ long EEGraphics::PostMessage50AAndWait()
     return theResult;
 }
 
+// FUNCTION: EXE 0x50a94c
 // Ends the mouse cursor's frame, releasing its surface and the render lock
 void RTSMouse::EndFrame()
 {
@@ -530,3 +560,6 @@ void RTSMouse::EndFrame()
     this->mInFrame = false;
     this->mRenderLock->Leave();
 }
+
+// FUNCTION: EXE 0x50a96e
+// Creates the three empty queues of gGraphicsQueues with the flag cleared (EEGraphicsQueues' ctor)

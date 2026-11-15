@@ -72,6 +72,7 @@ public:
         this->mTownID = 0;
         this->mUnitType = 0;
     }
+// TEMPLATE: EXE 0x485a97
 // Counts a pending unit request of the wanted unit type and keeps its town and continent (the last match wins)
     // (emitted with the vtable just before this unit's first function 0x85ace)
     virtual bool CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)   // +0x04 0x85a97
@@ -89,7 +90,7 @@ public:
     }
     virtual bool CountUnit(EEComplexUnit* inUnit) { return false; }   // +0x08
     virtual bool CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits) { return false; }   // +0x0c
-    void Clear();
+    void Clear();                           // 0x8600d
 
     unsigned short mContinent;              // +0x10
     long mTownID;                           // +0x14
@@ -102,6 +103,7 @@ static bool EECPMayDraft(EEUnitClass* inClass);   // 0x86fc1 (defined after its 
 
 // The personnel requests (EECPPersonnelRequest): 0x85ace..0x868b8
 
+// FUNCTION: EXE 0x485ace
 // Creates an empty personnel request with the given id for the personnel manager, with no deadline
 EECPPersonnelRequest::EECPPersonnelRequest(EECPPersonnel* inPersonnel, long inID)
 {
@@ -115,12 +117,17 @@ EECPPersonnelRequest::EECPPersonnelRequest(EECPPersonnel* inPersonnel, long inID
     this->mID = inID;
 }
 
+// SYNTHETIC: EXE 0x485b29
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x485b45
 // Destroys the request, releasing its references to the assigned units
 EECPPersonnelRequest::~EECPPersonnelRequest()
 {
     this->Clear();
 }
 
+// FUNCTION: EXE 0x485b64
 // Assigns a unit to the slot waiting for its id, else to a free slot of its type; returns whether a slot took it
 bool EECPPersonnelRequest::TryAssign(EEComplexUnit* inUnit)
 {
@@ -156,6 +163,7 @@ bool EECPPersonnelRequest::TryAssign(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x485d51
 // Empties the request and hands its living units back to the personnel manager as new units
 void EECPPersonnelRequest::ReleaseAll()
 {
@@ -177,6 +185,7 @@ void EECPPersonnelRequest::ReleaseAll()
     }
 }
 
+// FUNCTION: EXE 0x485e94
 // Drops the request's unfilled type slots and cancels one production order for each (at the request's town and
 // continent, else where one of that type is pending); then counts the request as full
 void EECPPersonnelRequest::Cancel()
@@ -199,6 +208,7 @@ void EECPPersonnelRequest::Cancel()
     this->mFill = 1.0f;
 }
 
+// FUNCTION: EXE 0x48600d
 // Resets the gatherer's counts, town, continent and unit type
 void EECPUGatherUnitsOfTypeAndTownAndContinent::Clear()
 {
@@ -209,6 +219,7 @@ void EECPUGatherUnitsOfTypeAndTownAndContinent::Clear()
     this->mUnitType = 0;
 }
 
+// FUNCTION: EXE 0x486020
 // Drops up to inCount unfilled slots of a unit type; returns how many were dropped
 long EECPPersonnelRequest::ReleaseOfType(long inClass, long inCount)
 {
@@ -225,6 +236,7 @@ long EECPPersonnelRequest::ReleaseOfType(long inClass, long inCount)
     return theRemoved;
 }
 
+// FUNCTION: EXE 0x4860c0
 // Recomputes and returns the request's filled fraction (0 when it has no slots)
 float EECPPersonnelRequest::UpdateFill()
 {
@@ -232,6 +244,7 @@ float EECPPersonnelRequest::UpdateFill()
     return this->mFill;
 }
 
+// FUNCTION: EXE 0x4860fa
 // Releases every assigned unit and empties the request's slots
 void EECPPersonnelRequest::Clear()
 {
@@ -241,6 +254,7 @@ void EECPPersonnelRequest::Clear()
     this->mUnits.clear();
 }
 
+// FUNCTION: EXE 0x486144
 // Returns the population cost of the request's slots (the assigned unit's class, else the requested class)
 long EECPPersonnelRequest::GetPopulation()
 {
@@ -257,6 +271,7 @@ long EECPPersonnelRequest::GetPopulation()
     return theTotal;
 }
 
+// FUNCTION: EXE 0x48619f
 // Returns the request's town id, first set to the player's town nearest the request's tile when it has one
 long EECPPersonnelRequest::GetTownID()
 {
@@ -270,6 +285,7 @@ long EECPPersonnelRequest::GetTownID()
     return this->mTownID;
 }
 
+// FUNCTION: EXE 0x4861de
 // Resets the request to one slot per requested unit type and one per named unit id, with a new id and start time
 void EECPPersonnelRequest::Setup(long inID, std::vector<long>& inClasses, std::vector<long>& inUnitIDs)
 {
@@ -300,6 +316,7 @@ void EECPPersonnelRequest::Setup(long inID, std::vector<long>& inClasses, std::v
         this->mFill = (float)this->mNumFilled / (float)this->mUnits.size();
 }
 
+// FUNCTION: EXE 0x4862c9
 // Reads the request's slots (unit ids, resolved by Restore) and settings from a saved game; saves before version
 // 0.222 have no deadline; returns the first read error
 long EECPPersonnelRequest::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -370,6 +387,7 @@ long EECPPersonnelRequest::Load(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
+// FUNCTION: EXE 0x48655c
 // Removes the request's last slot, releasing its unit (a draftable unit also leaves its area groups)
 void EECPPersonnelRequest::PopSlot()
 {
@@ -382,6 +400,7 @@ void EECPPersonnelRequest::PopSlot()
     this->mUnits.pop_back();
 }
 
+// FUNCTION: EXE 0x4865a2
 // Removes a unit's slot from the request and updates the fill (1 when no slots remain); returns whether it was there
 bool EECPPersonnelRequest::Remove(EEComplexUnit* inUnit)
 {
@@ -402,6 +421,7 @@ bool EECPPersonnelRequest::Remove(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x486624
 // After loading, turns saved unit ids into units, keeping only military units and military type slots; recounts the
 // fill and town and gives saves before version 0.222 a deadline 600000 ms after the start; returns 0
 long EECPPersonnelRequest::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -441,6 +461,7 @@ long EECPPersonnelRequest::Restore(unsigned long inMajorVersion, unsigned long i
     return 0;
 }
 
+// FUNCTION: EXE 0x486742
 // Writes the request's slots (unit ids) and settings to the saved game; returns the first write error
 long EECPPersonnelRequest::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -464,6 +485,7 @@ long EECPPersonnelRequest::Save(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
+// FUNCTION: EXE 0x486878
 // Puts a new unit into the slot of an old one (the slot takes the new unit's type); returns whether it was found
 bool EECPPersonnelRequest::Replace(EEComplexUnit* inOld, EEComplexUnit* inNew)
 {
@@ -481,18 +503,24 @@ bool EECPPersonnelRequest::Replace(EEComplexUnit* inOld, EEComplexUnit* inNew)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4868b8
 // Creates the computer player's personnel manager, with no units or requests
 EECPPersonnel::EECPPersonnel(EEComputerPlayer* inPlayer)
     : mPlayer(inPlayer), mNextID(0), mNextUpdateTime(0), mDrafting(false)
 {
 }
 
+// SYNTHETIC: EXE 0x486915
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x486931
 // Destroys the personnel manager, releasing every free unit and request it holds
 EECPPersonnel::~EECPPersonnel()
 {
     this->ClearAll();
 }
 
+// FUNCTION: EXE 0x486959
 // Hands a draftable unit to the attack commander and returns whether it was taken; when that is not possible now
 // (player inactive, no game screen or continents, kept by combat, observer, drafting already) keeps its id for later
 bool EECPPersonnel::DraftUnit(EEComplexUnit* inUnit)
@@ -516,6 +544,7 @@ bool EECPPersonnel::DraftUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x486a54
 // On the game screen, retries drafting each deferred unit still owned by the player, under AI control and in no
 // attack group; then forgets them all
 void EECPPersonnel::DraftDeferred()
@@ -533,12 +562,14 @@ void EECPPersonnel::DraftDeferred()
     this->mDeferredUnits.clear();
 }
 
+// FUNCTION: EXE 0x486aee
 // Submits a new request: fills it from the free units at once
 void EECPPersonnel::SubmitRequest(EECPPersonnelRequest* inRequest)
 {
     this->FillRequest(inRequest);
 }
 
+// FUNCTION: EXE 0x486afa
 // Drops up to inCount unfilled slots of a unit type across the requests, in request id order
 void EECPPersonnel::ReleaseOfType(long inUnitClass, long inCount)
 {
@@ -549,6 +580,7 @@ void EECPPersonnel::ReleaseOfType(long inUnitClass, long inCount)
         theCount -= it->second->ReleaseOfType(inUnitClass, theCount);
 }
 
+// FUNCTION: EXE 0x486b40
 // Fills a request's empty slots: named units from the free pool or other requests (dropping slots of vanished units),
 // type slots from free units of that type, else by ordering one built at the request's town and continent
 void EECPPersonnel::FillRequest(EECPPersonnelRequest* inRequest)
@@ -605,6 +637,7 @@ void EECPPersonnel::FillRequest(EECPPersonnelRequest* inRequest)
     inRequest->UpdateFill();
 }
 
+// FUNCTION: EXE 0x486e3c
 // Ends the request with the given id, returning its living units to the free pool
 void EECPPersonnel::ReleaseRequest(long inID)
 {
@@ -618,6 +651,7 @@ void EECPPersonnel::ReleaseRequest(long inID)
 }
 
 
+// FUNCTION: EXE 0x486e81
 // Periodic upkeep: culls units for the military, cancels the unfilled part of overdue requests (ending empty ones),
 // unloads free units carrying cargo (dropping those then detached from the AI); next update in 30 s
 void EECPPersonnel::Update(unsigned long inTime)
@@ -657,6 +691,10 @@ void EECPPersonnel::Update(unsigned long inTime)
     this->mNextUpdateTime = inTime + 30000;
 }
 
+// FUNCTION: EXE 0x486fae
+// Returns the number of slots in a request (out-of-line copy of the inline GetNumSlots in ee/EECPPersonnel.h)
+
+// FUNCTION: EXE 0x486fc1
 // Returns whether units of a class may be drafted for attack: no transports, naval or space buildings,
 // or anti-missile batteries
 // (static: emitted after its first user DraftUnit)
@@ -672,6 +710,7 @@ static bool EECPMayDraft(EEUnitClass* inClass)
     return theResult;
 }
 
+// FUNCTION: EXE 0x486ffb
 // Creates a referenced empty request with the next request id (not yet registered)
 EECPPersonnelRequest* EECPPersonnel::NewRequest()
 {
@@ -680,6 +719,7 @@ EECPPersonnelRequest* EECPPersonnel::NewRequest()
     return theRequest;
 }
 
+// FUNCTION: EXE 0x487025
 // Offers a unit to each request that is not yet full, in id order; returns whether one took it
 bool EECPPersonnel::OfferUnit(EEComplexUnit* inUnit)
 {
@@ -696,6 +736,7 @@ bool EECPPersonnel::OfferUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x48707b
 // From the Atomic - WW1 epoch on, kills the player's living obsolete units of 17 unit types that no human
 // player can see
 void EECPPersonnel::RetireObsoleteUnits()
@@ -750,6 +791,7 @@ void EECPPersonnel::RetireObsoleteUnits()
         theUnits[i]->Kill(true, false, false);
 }
 
+// FUNCTION: EXE 0x487275
 // Reads the free units (as saved ids, resolved by Restore), the requests, the next request id and the deferred
 // unit ids from a saved game; returns the first read error
 long EECPPersonnel::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -794,6 +836,7 @@ long EECPPersonnel::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
+// FUNCTION: EXE 0x4873f5
 // Has the player kill units to free population for the military: the citizen surplus, plus 5 more citizens (or
 // the units over the cap) when the population is at its limit and transports are short
 void EECPPersonnel::KillUnitsForMilitary()
@@ -817,6 +860,7 @@ void EECPPersonnel::KillUnitsForMilitary()
         this->mPlayer->ChooseUnitsToKill(theScorer, false);
 }
 
+// FUNCTION: EXE 0x4874db
 // Creates, fills and registers a request for unit types and named units on a continent, due in 600000 ms; the
 // named units leave attack duty first
 EECPPersonnelRequest* EECPPersonnel::NewContinentRequest(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent)
@@ -837,6 +881,7 @@ EECPPersonnelRequest* EECPPersonnel::NewContinentRequest(std::vector<long>& inCl
     return theRequest;
 }
 
+// FUNCTION: EXE 0x4875ab
 // Creates, fills and registers a request for unit types and named units at a town (and its centre tile), due in
 // 600000 ms; the named units leave attack duty first
 EECPPersonnelRequest* EECPPersonnel::NewTownRequest(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inTownID,
@@ -859,6 +904,7 @@ EECPPersonnelRequest* EECPPersonnel::NewTownRequest(std::vector<long>& inClasses
     return theRequest;
 }
 
+// FUNCTION: EXE 0x487687
 // Follows units replaced by others: rekeys free military units and request slots to the new unit, and takes in
 // military units newly gained from another player unless combat claims them
 void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
@@ -931,6 +977,7 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     }
 }
 
+// FUNCTION: EXE 0x487c5b
 // Releases every free unit and request and empties both
 void EECPPersonnel::ClearAll()
 {
@@ -944,6 +991,7 @@ void EECPPersonnel::ClearAll()
     this->mRequests.clear();
 }
 
+// FUNCTION: EXE 0x487ccd
 // Removes a unit from every request; returns whether any held it
 bool EECPPersonnel::RemoveFromRequests(EEComplexUnit* inUnit)
 {
@@ -955,6 +1003,7 @@ bool EECPPersonnel::RemoveFromRequests(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x487d12
 // After loading, resolves the free units' saved ids (dropping missing and duplicate units), restores each request
 // and removes units held by more than one request; returns the first request error
 long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -1004,6 +1053,7 @@ long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorV
     return theResult;
 }
 
+// FUNCTION: EXE 0x487f9e
 // Asks the unit manager to build one unit of a type for a town and continent
 void EECPPersonnel::RequestProduction(long inUnitClass, long inTownID, unsigned short inContinent)
 {
@@ -1015,6 +1065,7 @@ void EECPPersonnel::RequestProduction(long inUnitClass, long inTownID, unsigned 
     this->mPlayer->mCivilizationManager->mUnitManager->RequestUnits(inUnitClass, 1, inTownID, inContinent);
 }
 
+// FUNCTION: EXE 0x487fc0
 // Takes back a unit (a loaded transport unloads first): offers it to the requests, else keeps it free, then tries
 // to draft it; does nothing while loading, clearing the world or observing
 void EECPPersonnel::ReturnUnit(EEUnit* inUnit)
@@ -1033,6 +1084,7 @@ void EECPPersonnel::ReturnUnit(EEUnit* inUnit)
     this->DraftUnit(theUnit);
 }
 
+// FUNCTION: EXE 0x488057
 // Writes the free units (type, id), the requests, the next request id and the deferred unit ids to the saved
 // game; returns the first write error
 // each block runs only while every earlier write succeeded (the original returns at the first failure)
@@ -1076,6 +1128,7 @@ long EECPPersonnel::Save(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
+// FUNCTION: EXE 0x4881cc
 // Takes in a new unit: offers it to the requests, else keeps it free, then tries to draft it; if not drafted, sends
 // a naval or space building next to a dock and an anti-missile battery next to a town centre
 void EECPPersonnel::AddNewUnit(EEComplexUnit* inUnit)
@@ -1112,6 +1165,7 @@ void EECPPersonnel::AddNewUnit(EEComplexUnit* inUnit)
     inUnit->mUnitClass->ActionChanged(inUnit);
 }
 
+// FUNCTION: EXE 0x488337
 // Removes a unit from the free pool, else from the requests; a draftable unit found leaves its area groups;
 // returns whether it was found
 bool EECPPersonnel::RemoveUnit(EEComplexUnit* inUnit)
@@ -1140,6 +1194,7 @@ bool EECPPersonnel::RemoveUnit(EEComplexUnit* inUnit)
     return theFound;
 }
 
+// FUNCTION: EXE 0x488403
 // Sends a loaded transport with no other goal to unload: air transports at a random point of a random land
 // continent, sea/space ones on a shore of a neighbouring land continent, up to 21 tries; then detaches it from the AI
 void EECPPersonnel::UnloadTransport(EEComplexUnit* inUnit)
@@ -1214,3 +1269,40 @@ void EECPPersonnel::UnloadTransport(EEComplexUnit* inUnit)
     } else if (theGoal != NULL)
         delete theGoal;
 }
+
+// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
+// against the original by name)
+// TEMPLATE: EXE 0x488750
+// TEMPLATE: EXE 0x48877b
+// TEMPLATE: EXE 0x4887b6
+// TEMPLATE: EXE 0x4887c6
+// TEMPLATE: EXE 0x4887f2
+// TEMPLATE: EXE 0x488826
+// TEMPLATE: EXE 0x488887
+// TEMPLATE: EXE 0x4888ed
+// TEMPLATE: EXE 0x488901
+// TEMPLATE: EXE 0x4889e2
+// TEMPLATE: EXE 0x4889f6
+// TEMPLATE: EXE 0x488a67
+// TEMPLATE: EXE 0x488b12
+// TEMPLATE: EXE 0x488b62
+// TEMPLATE: EXE 0x488c78
+// TEMPLATE: EXE 0x488ce9
+// TEMPLATE: EXE 0x488d2e
+// TEMPLATE: EXE 0x489034
+// TEMPLATE: EXE 0x48909e
+// TEMPLATE: EXE 0x489273
+// TEMPLATE: EXE 0x48948b
+// TEMPLATE: EXE 0x4894c1
+
+// Template and inline COMDATs this unit already emits (compared by name)
+// TEMPLATE: EXE 0x4888c2
+// TEMPLATE: EXE 0x48892c
+// TEMPLATE: EXE 0x488ba6
+// TEMPLATE: EXE 0x488bdf
+// TEMPLATE: EXE 0x488cfc
+// TEMPLATE: EXE 0x488fd9
+// TEMPLATE: EXE 0x489066
+// TEMPLATE: EXE 0x4894f2
+// TEMPLATE: EXE 0x48951a
+// TEMPLATE: EXE 0x489551

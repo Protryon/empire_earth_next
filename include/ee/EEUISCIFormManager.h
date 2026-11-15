@@ -14,9 +14,9 @@ public:
     EEUISCIFormManager() { this->Clear(); }  // inline (Get: UIFormManager's vptr, the media strings, then Clear)
     virtual ~EEUISCIFormManager() { this->DeleteObjects(); }  // inline (the ??_G 0x1e83cb expands it)
 
-    void Clear();
+    void Clear();                           // 0x1e71cc
     void DeleteObjects();                   // 0x1e7205: deletes the four files (the post-game Open calls it)
-    static EEUISCIFormManager* Get();
+    static EEUISCIFormManager* Get();       // 0x1e7270
     UWideString GetBriefing();              // 0x1e72cf (mMediaStrings.mInstructions)
     bool OpenMap();                         // 0x1e72e4 (mMapFile + ".jpg", else ".png", in "Scenarios\")
     bool OpenMovie();                       // 0x1e73bd (mMovieFile + ".bik" in "Movies\")
@@ -24,10 +24,10 @@ public:
     bool OpenSound();                       // 0x1e74dc (mSoundFile + ".mp3" in "Sounds\")
     UWideString GetHistory();               // 0x1e7563 (mHistory)
     UWideString GetHints();                 // 0x1e7578 (mW14)
-    bool GetMap(FSFileSpec& outSpec);
-    bool GetMovie(FSFileSpec& outSpec);
-    bool GetScenario(FSFileSpec& outSpec);
-    bool GetSound(FSFileSpec& outSpec);
+    bool GetMap(FSFileSpec& outSpec);       // 0x1e758d
+    bool GetMovie(FSFileSpec& outSpec);     // 0x1e75b5
+    bool GetScenario(FSFileSpec& outSpec);  // 0x1e75dd
+    bool GetSound(FSFileSpec& outSpec);     // 0x1e7605
     bool HasMedia();                        // 0x1e762d (0x27a56f)
     void SetBlinking(bool inBlinking);      // 0x1e766a (the main game form's info button; 0x1be512, 0x26615a)
     // 0x1d2ae5 (out of line COMDAT; the SCL/SPL load events call it): owns the opened scenario file

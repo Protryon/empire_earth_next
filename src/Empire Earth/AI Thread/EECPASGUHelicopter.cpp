@@ -10,6 +10,7 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPASGUHelicopter.h"
 
+// FUNCTION: EXE 0x406328
 // Creates the helicopter entry for a unit in the sub-group
 EECPASGUHelicopter::EECPASGUHelicopter(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -17,6 +18,10 @@ EECPASGUHelicopter::EECPASGUHelicopter(EEComplexUnit* inUnit, EECPAttackSubGroup
     this->mType = kASGUKindHelicopter;
 }
 
+// SYNTHETIC: EXE 0x40634b
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x406367
 // Creates an empty helicopter entry for the sub-group (no unit yet)
 EECPASGUHelicopter::EECPASGUHelicopter(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -24,6 +29,7 @@ EECPASGUHelicopter::EECPASGUHelicopter(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindHelicopter;
 }
 
+// FUNCTION: EXE 0x406386
 // Destroys the helicopter entry (base members only)
 EECPASGUHelicopter::~EECPASGUHelicopter()
 {

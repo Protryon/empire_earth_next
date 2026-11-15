@@ -8,16 +8,16 @@
 
 class EEPSaveGameHeader : public FSRestorable {
 public:
-    EEPSaveGameHeader();
+    EEPSaveGameHeader();                                                        // 0x14b8f4
     virtual void GetChecksum(ESChecksum& ioChecksum) const;                     // +0x00 (empty: ICF-folded 0x157269)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x14b993
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x14bb9a
 
-    long LoadHeader(FSFile& inFile);
-    long LoadBody(FSFile& inFile);
-    long LoadFromFile(FSFile& inFile);
-    long SaveHeader(FSFile& outFile);
-    long SaveBody(FSFile& outFile);
+    long LoadHeader(FSFile& inFile);                                            // 0x14b9b2
+    long LoadBody(FSFile& inFile);                                              // 0x14ba08
+    long LoadFromFile(FSFile& inFile);                                          // 0x14bb26
+    long SaveHeader(FSFile& outFile);                                           // 0x14bbb9
+    long SaveBody(FSFile& outFile);                                             // 0x14bc02
 
     static const UString sMajorVersion;     // "EEPSaveGameHeader-MajorVersion" (guard bit 1)
     static const UString sMinorVersion;     // bit 2

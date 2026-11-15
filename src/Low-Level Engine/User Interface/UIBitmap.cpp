@@ -67,6 +67,7 @@ struct UIMediaHost {
     }
 };
 
+// FUNCTION: LLE 0x1005d5ed
 // Creates a bitmap control showing the given bitmap (referenced)
 UIBitmap::UIBitmap(unsigned long inId, GEBitmap* inBitmap, const GERectangle& inRectangle, UIForm* inForm,
                    unsigned long inIndex)
@@ -81,6 +82,7 @@ long UIBitmap::DrawPolygons() { return (long)UIMediaHost::Call(this, EeUiBitmapC
 long UIBitmap::DrawTextA() { return (long)UIMediaHost::Call(this, EeUiBitmapCall::DrawText); }
 void UIBitmap::SetBitmap(GEBitmap* inBitmap) { UIMediaHost::Call(this, EeUiBitmapCall::SetBitmap, (intptr_t)inBitmap); }
 
+// FUNCTION: LLE 0x1007ba37
 // Creates a movie control showing the given movie, keeping a reference to it
 UIMovie::UIMovie(unsigned long inId, GEMovie* inMovie, const GERectangle& inRectangle, UIForm* inForm,
                  unsigned long inIndex)

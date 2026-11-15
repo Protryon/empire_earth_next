@@ -85,7 +85,9 @@ typedef union {
  * a matching multiplier table.
  */
 
+// FUNCTION: JPEG 0x1008decc
 METHODDEF(void)
+// FUNCTION: EXEIMG 0x810760
 start_pass (j_decompress_ptr cinfo)
 {
   my_idct_ptr idct = (my_idct_ptr) cinfo->idct;
@@ -243,7 +245,9 @@ start_pass (j_decompress_ptr cinfo)
  * Initialize IDCT manager.
  */
 
+// FUNCTION: JPEG 0x1008de57
 GLOBAL(void)
+// FUNCTION: EXEIMG 0x8106e0
 jinit_inverse_dct (j_decompress_ptr cinfo)
 {
   my_idct_ptr idct;

@@ -8,11 +8,11 @@
 
 class EETerrainColorTable {
 public:
-    EETerrainColorTable();
+    EETerrainColorTable();                                      // 0xdaeac
     virtual ~EETerrainColorTable() {}                           // ??_G 0xdb14c (stores the vptr)
 
-    static long Load();
-    static void Unload();
+    static long Load();                                         // 0xdaec4
+    static void Unload();                                       // 0xdb0e7
 
     GEColor mColor;                                             // +0x04 (the ctor's three fld1 are GEColor's
                                                                 // inline default ctor: the vptr store follows)

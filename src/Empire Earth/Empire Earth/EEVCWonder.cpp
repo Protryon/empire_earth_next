@@ -34,6 +34,7 @@ struct EEVCWonderEntry {
     }
 };
 
+// FUNCTION: EXE 0x5372a6
 // Returns whether the team's players together own as many wonders as the game needs to win (never when none)
 bool EEVictoryCondition::HasEnoughWonders()
 {
@@ -48,6 +49,7 @@ bool EEVictoryCondition::HasEnoughWonders()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5372f9
 // Returns the player whose wonder completes the team's winning count and the seconds left of the wonder
 // countdown (NULL and 0 when the team lacks the wonders)
 EEPlayer* EEVictoryCondition::GetWonderCountdown(unsigned long& outValue)
@@ -79,6 +81,7 @@ EEPlayer* EEVictoryCondition::GetWonderCountdown(unsigned long& outValue)
     return theWinner;
 }
 
+// FUNCTION: EXE 0x53744b
 // Reads and discards the wonder list of old saved games (before version 0.225); returns the first read error
 long EEVCWonder::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -95,6 +98,7 @@ long EEVCWonder::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return theResult;
 }
 
+// FUNCTION: EXE 0x5374c1
 // Returns 1 (won) when the team's wonder countdown has run out, outside cinematics; else 0
 long EEVCWonder::GetVictoryState()
 {
@@ -106,3 +110,39 @@ long EEVCWonder::GetVictoryState()
     }
     return theState;
 }
+
+// TEMPLATE: EXE 0x5374eb
+// ?push_back@?$vector@UEEVCWonderEntry@@V?$allocator@UEEVCWonderEntry@@@std@@@std@@QAEXABUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x537517
+// ?sort@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0@Z
+// TEMPLATE: EXE 0x5375c5
+// ?_Insertion_sort@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0@Z
+// TEMPLATE: EXE 0x5375ea
+// ?_Sort@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0H@Z
+// TEMPLATE: EXE 0x5376ae
+// ?_Unguarded_insertion_sort@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0PAUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x5376df
+// ?_Insertion_sort_1@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0PAUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x537787
+// ?make_heap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0@Z
+// TEMPLATE: EXE 0x5377be
+// ?sort_heap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0@Z
+// TEMPLATE: EXE 0x5377f1
+// ?_Unguarded_partition@std@@YA?AV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@V21@0PAUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x53790c
+// ?_Unguarded_insert@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@UEEVCWonderEntry@@@Z
+
+// TEMPLATE: EXE 0x537942
+// ?_Make_heap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0PAHPAUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x53798a
+// ?pop_heap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0@Z
+// TEMPLATE: EXE 0x5379af
+// ?_Adjust_heap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@HHUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x537a38
+// ?_Pop_heap_0@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0PAUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x537a8c
+// ?_Iter_swap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@0PAUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x537aad
+// ?_Push_heap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@HHUEEVCWonderEntry@@@Z
+// TEMPLATE: EXE 0x537b05
+// ?_Pop_heap@std@@YAXV?$_Ptrit@UEEVCWonderEntry@@HPAU1@AAU1@PAU1@AAU1@@1@00UEEVCWonderEntry@@PAH@Z

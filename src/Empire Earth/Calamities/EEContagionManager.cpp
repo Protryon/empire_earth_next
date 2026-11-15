@@ -57,6 +57,7 @@ EEContagionFunctor::EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind
     }
 }
 
+// FUNCTION: EXE 0x4b6c2f (the fire's; the others' destructors were empty)
 // Destroys the functor, releasing the fire's burning effect
 EEContagionFunctor::~EEContagionFunctor()
 {
@@ -64,18 +65,21 @@ EEContagionFunctor::~EEContagionFunctor()
         this->mEffect->Dereference();
 }
 
+// FUNCTION: EXE 0x4b6c4d
 // Accepts a unit type in the functor's unit set (every functor's CanInfectType, by ICF)
 bool EEContagionFunctor::CanInfectType(long inCategory, long inUnitType)
 {
     return gUnitSetManager.Contains(inUnitType, this->mUnitSet);
 }
 
+// FUNCTION: EXE 0x4b66f8
 // Tells whether the functor can infect the unit's category and type
 bool EEContagionFunctor::CanInfect(EEUnit* inUnit)
 {
     return this->CanInfectType(inUnit->mUnitClass->GetCategory(), inUnit->mUnitClass->GetUnitType());
 }
 
+// FUNCTION: EXE 0x4b6c7c (the fire's; the leprosy's 0xb6eae, the plague's and the area effects' 0xb6ff2)
 // Counts the whole discrete update periods elapsed on the calamity for this update's damage
 void EEContagionFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
 {
@@ -84,6 +88,8 @@ void EEContagionFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
     this->mUpdates = inCalamity->GetDiscreteUpdates();
 }
 
+// FUNCTION: EXE 0x4b6d2c (the fire's), 0xb6e87 (the leprosy's), 0xb706c (the plague's), 0xaca13 (the area effect's),
+// 0xac81c (the extra damage's), 0xac8e1 (the mind control's)
 void EEContagionFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
     EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
@@ -152,6 +158,8 @@ void EEContagionFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
     }
 }
 
+// FUNCTION: EXE 0x4b6dec (the fire's), 0xb70a9 (the plague's), 0xac881 (the extra damage's), 0xac918 (the mind
+// control's); the leprosy's and the area effect's were the base's empty one (no record)
 void EEContagionFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
 {
     if (this->mKind == EE_CALAMITY_FUNCTOR_LEPROSY || this->mKind == EE_CALAMITY_FUNCTOR_AREA)
@@ -203,6 +211,8 @@ void EEContagionFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
     }
 }
 
+// FUNCTION: EXE 0x4b6cad (the fire's), 0xb6edf (the leprosy's), 0xb7023 (the plague's), 0xacad4 (the area
+// effect's); the extra damage's and the mind control's were empty (0xac98e)
 // Damages the unit per elapsed period (ee_tech contagion_functor.rs apply_damage): the fire and the plague keep it
 // from being deleted (the fire before, unless it is carried; the plague after), the area effect shows its hit effect
 void EEContagionFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity)
@@ -223,7 +233,9 @@ void EEContagionFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* 
         theComplexUnit->SetIsDeletable(false);
 }
 
+// FUNCTION: EXE 0x4acb52
 // Returns whether a unit type is in the given unit set (false for an unused set)
+// ?Contains@EEUnitSetManager@@QAE_NJK@Z
 // (declared out of line in ee/EEUnitSetManager.h; the original's COMDAT sat in EEAreaEffectFunctor.cpp, after its
 // first user)
 bool EEUnitSetManager::Contains(long inUnitType, unsigned long inSet)
@@ -233,17 +245,23 @@ bool EEUnitSetManager::Contains(long inUnitType, unsigned long inSet)
     return false;
 }
 
+// FUNCTION: EXE 0x4b6723
 // Creates the contagion manager with no helpers
 EEContagionManager::EEContagionManager()
 {
     this->mNextHelperID = 0;
 }
 
+// SYNTHETIC: EXE 0x4b675e
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x4b677a
 // Destroys the contagion manager (members only; the helpers are not deleted)
 EEContagionManager::~EEContagionManager()
 {
 }
 
+// FUNCTION: EXE 0x4b6795
 // Creates a helper for the calamity with the next id, infecting the target unit if given; returns the id
 long EEContagionManager::CreateContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity,
                                                EEUnit* inTargetUnit)
@@ -259,6 +277,7 @@ long EEContagionManager::CreateContagionHelper(EEContagionFunctor* inFunctor, EE
     return theHelperID;
 }
 
+// FUNCTION: EXE 0x4b67f9
 // Deletes the helper with the id; does nothing while a loaded game awaits its pointers; always returns true
 bool EEContagionManager::DestroyContagionHelper(long inHelperID)
 {
@@ -276,6 +295,7 @@ bool EEContagionManager::DestroyContagionHelper(long inHelperID)
     return true;
 }
 
+// FUNCTION: EXE 0x4b6851
 // Writes every helper and the next helper id to the out-of-sync dump
 void EEContagionManager::DumpOutOfSynch(FILE* inFile)
 {
@@ -288,6 +308,7 @@ void EEContagionManager::DumpOutOfSynch(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEContagionManager-Unique Number is %ld\n", this->mNextHelperID);
 }
 
+// FUNCTION: EXE 0x4b68c3
 // Returns the calamity at the index in the list, NULL if out of range
 EECalamity* EEContagionManager::GetCalamity(std::vector<EECalamity*>& inCalamities, unsigned long inIndex)
 {
@@ -297,6 +318,7 @@ EECalamity* EEContagionManager::GetCalamity(std::vector<EECalamity*>& inCalamiti
     return theCalamity;
 }
 
+// FUNCTION: EXE 0x4b68e8
 // Returns the sum of the helpers' sync checksums plus the last helper id
 long EEContagionManager::GetOutOfSynchChecksum()
 {
@@ -308,6 +330,7 @@ long EEContagionManager::GetOutOfSynchChecksum()
     return this->mNextHelperID + theChecksum;
 }
 
+// FUNCTION: EXE 0x4b691d
 // Returns the helper with the id, NULL if none
 EEContagionHelper* EEContagionManager::GetContagionHelper(long inHelperID)
 {
@@ -321,6 +344,7 @@ EEContagionHelper* EEContagionManager::GetContagionHelper(long inHelperID)
     return theHelper;
 }
 
+// FUNCTION: EXE 0x4b6940
 // Deletes the helpers and reads them from a saved game with their calamity indexes; returns the first read error
 // (a helper's own load result is ignored). Port (0.273, ee/EESaveGameFiles.h EESaveHasContagionCounter): the running
 // game's last helper id, which RestorePointers goes on from; an older save goes on from its highest helper's id as
@@ -333,6 +357,7 @@ long EEContagionManager::Load(unsigned long inMajorVersion, unsigned long inMino
                                      theFfi);
 }
 
+// FUNCTION: EXE 0x4b69ef
 // Reconnects each loaded helper to its calamity and functor and its units, deletes helpers without a calamity, and
 // resumes ids after the highest
 long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
@@ -360,6 +385,7 @@ long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x4b6abe
 // Writes each helper with its calamity's index to the saved game; returns 9 if a calamity is not active, else the
 // first write error; the last helper id from 0.273 on (ee_tech contagion_save.rs manager_save)
 long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -370,6 +396,7 @@ long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMino
                                      theFfi);
 }
 
+// FUNCTION: EXE 0x4b6b4f
 // Replaces the old unit by the new one in every helper
 void EEContagionManager::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 {
@@ -377,4 +404,8 @@ void EEContagionManager::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
          ++theIterator)
         (*theIterator)->SwapUnit(inOldUnit, inNewUnit);
 }
+
+// Compiler-generated for this unit (template COMDATs, in the original's order):
+// TEMPLATE: EXE 0x4b6b74
+// TEMPLATE: EXE 0x4b6ba0
 

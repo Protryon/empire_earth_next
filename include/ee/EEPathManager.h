@@ -62,8 +62,8 @@ struct EEPathHistoryEntry : public U2DPoint<long> {
 
 class EEPathManager {
 public:
-    EEPathManager();
-    virtual ~EEPathManager();
+    EEPathManager();                    // 0xa5d10
+    virtual ~EEPathManager();           // 0xa5e1c
     void CancelAutoPathRequest(UReferenceCounter* inRequest);  // 0xa896b (ret 4; EEHerd::Clear passes its path request; provisional name)
     void DumpOutOfSynch(FILE* inFile);   // FILE*: 0xa639b (ret 4; EEPhysics's out-of-synch dump) (provisional name)
     void DumpSim(FILE* inFile);         // TEST ONLY (EE-SIM's state dumps): the searches in progress, pending requests, timers
@@ -101,21 +101,21 @@ public:
                   EEAIPathGoalModifierBase* inModifier, std::vector<U2DPoint<long> >* outVisited);   // 0x12e2c9 passes &local (the storm's tile list)
 
     // the members (provisional names; addresses are the bodies)
-    void AddHistory(EEComplexUnit* inUnit, const EETileCoordinate& inTile);
+    void AddHistory(EEComplexUnit* inUnit, const EETileCoordinate& inTile);    // 0xa5e7b
     void FreeMachines();                // 0xa5eba (the spare machine queues)
     void FreePaths();                   // 0xa5f39 (both queues in progress)
-    void FreeRegions();
-    void SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoordinate& inFrom, const EETileCoordinate& inTo);
+    void FreeRegions();                 // 0xa5fc4
+    void SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoordinate& inFrom, const EETileCoordinate& inTo);  // 0xa6010
     void SetPathRevs(EEPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
-                     const EETileCoordinate& inTo);
-    void PrepareBoundedMachine(EEMap* inMap);
-    void CancelAutoPath(EEComplexUnit* inUnit);
-    EEGraphPathMachine* NewGraphMachine(long inType);
-    EEPathMachine* NewPathMachine(long inType, EEMap* inMap);
-    EEPathManagerNode* NewNode();
-    bool HasAutoPath(EEComplexUnit* inUnit);
-    bool IsPathDone(EEComplexUnit* inUnit);
-    bool GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile);
+                     const EETileCoordinate& inTo);     // 0xa6157
+    void PrepareBoundedMachine(EEMap* inMap);           // 0xa61f2
+    void CancelAutoPath(EEComplexUnit* inUnit);         // 0xa6251
+    EEGraphPathMachine* NewGraphMachine(long inType);   // 0xa6687
+    EEPathMachine* NewPathMachine(long inType, EEMap* inMap);   // 0xa6724
+    EEPathManagerNode* NewNode();       // 0xa6819
+    bool HasAutoPath(EEComplexUnit* inUnit);            // 0xa682f
+    bool IsPathDone(EEComplexUnit* inUnit);             // 0xa687d
+    bool GetPathGoal(EEComplexUnit* inUnit, U2DPoint<long>& outTile);   // 0xa68cf
     bool RequestGroupPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
                           long inPlayerID, long inType, long inRevs, EEAIGraphPathGoalModifierBase* inModifier, bool inUnlimitedRevs);  // 0xa69b0 (inArg8 pushed raw: bool)
     bool StartGraphPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
@@ -125,8 +125,8 @@ public:
     bool TryShortPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
                       EETileCoordinate& ioTo);
     void RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinate& inFrom, const EETileCoordinate& inTo,
-                         bool inUnlimitedRevs, long inRevs, bool inUseGraph, EEAIGraphPathGoalModifierBase* inModifier, bool inArg8);
-    EEPathManagerNode* FindPath(EEComplexUnit* inUnit);
+                         bool inUnlimitedRevs, long inRevs, bool inUseGraph, EEAIGraphPathGoalModifierBase* inModifier, bool inArg8);  // 0xa6e88
+    EEPathManagerNode* FindPath(EEComplexUnit* inUnit);  // 0xa7170
     // 0xa71c9: a path through the bounded machine (inMargin tiles around the start); true when it reaches inTo
     bool FindBoundedPath(EEComplexUnit* inUnit, EEMap* inMap, long inType, const EETileCoordinate& inFrom,
                          const EETileCoordinate& inTo, std::vector<GE3DPoint>& outPath, long inMargin,
@@ -142,25 +142,25 @@ public:
     // name)
     bool JoinPaths(std::vector<GE3DPoint>& inPath, std::vector<GE3DPoint>& inDetour, std::vector<GE3DPoint>* outPath,
                    long inCount);
-    bool RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, EEGraphPathMachine* inMachine);
-    void SetRegionUpdates(bool inOn, bool inNow);
+    bool RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* inRequest, EEGraphPathMachine* inMachine);   // 0xa7b03
+    void SetRegionUpdates(bool inOn, bool inNow);       // 0xa8b40
     bool RunBoundedPath(EEBoundedPathMachine* inMachine, EEComplexUnit* inUnit, const EETileCoordinate& inFrom,
-                        const EETileCoordinate& inTo, long inRevs);
-    void FinishPath(EEPathManagerNode* inNode);
-    bool FinishGraphPath(EEPathManagerNode* inNode);
-    void FinishFailedPath(EEPathManagerNode* inNode);
-    void FinishFoundPath(EEPathManagerNode* inNode);
+                        const EETileCoordinate& inTo, long inRevs);   // 0xa8ba4
+    void FinishPath(EEPathManagerNode* inNode);         // 0xa86cb
+    bool FinishGraphPath(EEPathManagerNode* inNode);    // 0xa7e6c
+    void FinishFailedPath(EEPathManagerNode* inNode);   // 0xa7f4a
+    void FinishFoundPath(EEPathManagerNode* inNode);    // 0xa870d
     void PruneHistory();                // 0xa8ea1 (every 10 s)
     void PruneRegions();                // 0xa9266 (every 30 s)
-    void ReleasePathMachine(EEPathMachine* inMachine);
-    void ReleaseGraphMachine(EEGraphPathMachine* inMachine);
-    void ReleaseNode(EEPathManagerNode* inNode);
-    void CancelAutoPaths(EEComplexUnit* inUnit);
-    void CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths);
-    void UpdateRegions();
-    void Clear();
-    void UpdateAutoPaths();
-    void UpdatePaths();
+    void ReleasePathMachine(EEPathMachine* inMachine);  // 0xa8861
+    void ReleaseGraphMachine(EEGraphPathMachine* inMachine);  // 0xa8808
+    void ReleaseNode(EEPathManagerNode* inNode);        // 0xa88c3
+    void CancelAutoPaths(EEComplexUnit* inUnit);        // 0xa88df
+    void CancelPaths(EEComplexUnit* inUnit, bool inAutoPaths);   // 0xa89f7
+    void UpdateRegions();               // 0xa8a8e
+    void Clear();                       // 0xa8adb
+    void UpdateAutoPaths();             // 0xa8de8
+    void UpdatePaths();                 // 0xa9367
     // 0xab3aa: a tile off the map is moved onto it (an inline member: its COMDAT is with the templates)
     void ClampTile(EEMap* inMap, EETileCoordinate& ioTile);
 
@@ -185,6 +185,6 @@ public:
     bool mIsUpdatingRegions;                            // +0xd8
 };
 
-extern EEPathManager gPathManager;
+extern EEPathManager gPathManager;      // 0x52fcb8
 
 #endif

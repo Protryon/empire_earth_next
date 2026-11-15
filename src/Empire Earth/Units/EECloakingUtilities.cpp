@@ -38,10 +38,13 @@ unsigned short EECountTilesAround(long inX, long inY, bool inAny);  // 0x23d4ba 
 // unit's dynamic initializer: the two are not compile-time constants)
 static float kCloakedFullOpacity = 1.0f;
 static float kCloakedOpacity = 0.6f;
+// SYNTHETIC: EXE 0x63ceca   (the init-chain wrapper: jmp to the initializer)
+// SYNTHETIC: EXE 0x63cecf   (the dynamic initializer of kCloakedOpacityRange)
 static float kCloakedOpacityRange = kCloakedFullOpacity - kCloakedOpacity;
 // the wall pieces' yaws (0x446dc0, one object shared with EEGhostUnit.cpp/EEUCBuilding.cpp/EEUnitClass.cpp; EEGetSpaceDockYaw)
 static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964f};
 
+// FUNCTION: EXE 0x63cee2
 // Returns whether a unit is drawn translucent and sets its opacity: the rotting fade, or its cloak opacity (dimmed and
 // clamped for an enemy viewer); a translucent unit that is not cloaked is left as it is
 bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity)
@@ -75,6 +78,7 @@ bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity)
     return theResult;
 }
 
+// FUNCTION: EXE 0x63d008
 // Returns a space dock's yaw from which of the 2 x 2 tiles at (inX, inY) are space (one or two space tiles), else the
 // yaw of EEGetDockFacing
 float EEGetSpaceDockYaw(long inX, long inY, long inSize)
@@ -146,6 +150,7 @@ float EEGetSpaceDockYaw(long inX, long inY, long inSize)
     return theYaw;
 }
 
+// FUNCTION: EXE 0x63d1f1
 // Returns whether a space dock (unit type 0x2d8) fits at (inX, inY): its inner 2 x 2 tiles placeable, its border on the
 // map with at least two land tiles, and its inner land/space mix fitting a dock
 bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer)
@@ -226,6 +231,7 @@ bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer)
     return theOK;
 }
 
+// FUNCTION: EXE 0x63d4ba
 // Counts the 3 x 3 tiles around (inX, inY) that are land (inAny) or space (otherwise); 0 when the centre is off the map
 unsigned short EECountTilesAround(long inX, long inY, bool inAny)
 {
@@ -248,6 +254,7 @@ unsigned short EECountTilesAround(long inX, long inY, bool inAny)
     return theCount;
 }
 
+// FUNCTION: EXE 0x63d570
 // Attaches the cloaking graphic effect (0x11c) to the unit and keeps its handle in the complex unit's mCloaked
 void EEAddCloakEffect(EEUnit* inUnit)
 {
@@ -256,6 +263,7 @@ void EEAddCloakEffect(EEUnit* inUnit)
         EEUnitCast<EEComplexUnit>(inUnit)->mCloaked = theHandle.mValue;
 }
 
+// FUNCTION: EXE 0x63d5c3
 // Destroys the unit's cloaking effect, if it has one, and clears its handle
 void EERemoveCloakEffect(EEUnit* inUnit)
 {
@@ -268,6 +276,7 @@ void EERemoveCloakEffect(EEUnit* inUnit)
     theUnit->mCloaked = 0;
 }
 
+// FUNCTION: EXE 0x63d5fb
 // Returns the planet (land continent) under a unit or nearest it within 6 tiles; 1 on a non-space map, 0 when none
 unsigned short EEGetLandContinentOf(EEComplexUnit* inUnit)
 {
@@ -303,6 +312,7 @@ unsigned short EEGetLandContinentOf(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x63d76c
 // Sets the planet of every complex air unit, space dock, space turret and orbital space station on the map
 // (cdecl; called by EEWorld.cpp and EEUserInterface.cpp)
 void EEUpdateLandContinents()

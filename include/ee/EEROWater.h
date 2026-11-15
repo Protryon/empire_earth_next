@@ -7,7 +7,7 @@
 
 class EEROWater : public EERenderObject {
 public:
-    EEROWater();
+    EEROWater();                            // 0x118aa2
     virtual ~EEROWater();                   // +0x10 (??_G 0x118ab4; dtor 0x118ad0)
     virtual void FrameStarting();           // +0x00 0x118adb: the terrain mesh's water animation
     virtual void SceneStarting();           // +0x04 (empty, ICF-shared 0xe123d)

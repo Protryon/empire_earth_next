@@ -6,10 +6,10 @@
 
 class EEFWedge : public EEFormation {
 public:
-    EEFWedge(long inType, float inSpacing, float inAngle, unsigned long inCount);
+    EEFWedge(long inType, float inSpacing, float inAngle, unsigned long inCount);   // 0xddf3a
     // out of line (ICF-folded into ~EEFCircle 0xdd1be; ~EEFDeepWedge 0xdd8a7 / ~EEFShallowWedge 0xdde89 jump to it)
     virtual ~EEFWedge();
-    virtual void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);
+    virtual void Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots);   // 0xde019
 
     // GEVectors: Place passes &+0x60 / &+0x6c straight to GETransformation::Apply, the ctor zeroes them through the
     // exe-view GEVector() (six fldz stores)

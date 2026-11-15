@@ -10,6 +10,7 @@
 #include "lle/GEColor.h"
 #include "GERustIO.h"
 
+// FUNCTION: LLE 0x10015151
 // Reads the colour's red, green and blue from the file; returns the first read error
 long GEColor::Load(FSFile& inFile)
 {
@@ -17,6 +18,7 @@ long GEColor::Load(FSFile& inFile)
     return GERustFields(inFile, theFields, 3, -1, false, false);
 }
 
+// FUNCTION: LLE 0x10015184
 // Writes the colour's red, green and blue to the file; returns the first write error
 long GEColor::Save(FSFile& inFile)
 {

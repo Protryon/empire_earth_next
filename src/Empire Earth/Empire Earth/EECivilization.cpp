@@ -27,7 +27,32 @@ const UString EECivilization::sAvailablePoints("EECivilization-AvailablePoints")
 const UString EECivilization::sMaxPoints("EECivilization-MaxPoints");
 const UString EECivilization::sCivBuilderLastVisited("EECivilization-CivBuilderLastVisited");
 const UString EECivilization::sIsDefaultCiv("EECivilization-IsDefaultCiv");
+// SYNTHETIC: EXE 0x52c3eb
+// SYNTHETIC: EXE 0x52c3f5
+// SYNTHETIC: EXE 0x52c406
+// SYNTHETIC: EXE 0x52c412
+// SYNTHETIC: EXE 0x52c42e
+// SYNTHETIC: EXE 0x52c438
+// SYNTHETIC: EXE 0x52c449
+// SYNTHETIC: EXE 0x52c455
+// SYNTHETIC: EXE 0x52c471
+// SYNTHETIC: EXE 0x52c47b
+// SYNTHETIC: EXE 0x52c48c
+// SYNTHETIC: EXE 0x52c498
+// SYNTHETIC: EXE 0x52c4b4
+// SYNTHETIC: EXE 0x52c4be
+// SYNTHETIC: EXE 0x52c4cf
+// SYNTHETIC: EXE 0x52c4db
+// SYNTHETIC: EXE 0x52c4f7
+// SYNTHETIC: EXE 0x52c501
+// SYNTHETIC: EXE 0x52c512
+// SYNTHETIC: EXE 0x52c51e
+// SYNTHETIC: EXE 0x52c53a
+// SYNTHETIC: EXE 0x52c544
+// SYNTHETIC: EXE 0x52c555
+// SYNTHETIC: EXE 0x52c561
 
+// FUNCTION: EXE 0x52c57d
 // Creates an unnamed civilization with no points or upgrades, marked unchanged
 EECivilization::EECivilization()
 {
@@ -39,12 +64,14 @@ EECivilization::EECivilization()
     this->mDeferredUpgrades.clear();
 }
 
+// FUNCTION: EXE 0x52c5d9
 // Returns an upgrade's cost: the base cost plus the step for each upgrade already bought in its category
 long EECivilization::ComputeCost(long inBase, long inStep, long inCount)
 {
     return inBase + inStep * inCount;
 }
 
+// FUNCTION: EXE 0x52c5e9
 // Returns whether the civilization can afford an upgrade (always, when custom civilizations are off) and its cost
 bool EECivilization::CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList)
 {
@@ -59,6 +86,7 @@ bool EECivilization::CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, s
     return theResult;
 }
 
+// FUNCTION: EXE 0x52c648
 // Returns whether the civilization can afford every upgrade in a list, bought one after another
 bool EECivilization::CanAffordAll(std::vector<EECivUpgrade>& inUpgrades)
 {
@@ -76,6 +104,7 @@ bool EECivilization::CanAffordAll(std::vector<EECivUpgrade>& inUpgrades)
     return theResult;
 }
 
+// FUNCTION: EXE 0x52c6bc
 // Returns an upgrade's base cost (its level value times 100), or 0 when unknown
 long EECivilization::GetBaseCost(EECivUpgrade inUpgrade)
 {
@@ -88,18 +117,21 @@ long EECivilization::GetBaseCost(EECivUpgrade inUpgrade)
     return theResult;
 }
 
+// FUNCTION: EXE 0x52c6fa
 // Returns whether no points were ever added
 bool EECivilization::GetNoPointsAdded()
 {
     return this->mNoPointsAdded;
 }
 
+// FUNCTION: EXE 0x52c6fe
 // Returns the extra cost per upgrade already bought in an upgrade's category
 long EECivilization::GetExtraCost(EECivUpgrade inUpgrade)
 {
     return gCivilizationManager.GetExtraCost(inUpgrade);
 }
 
+// FUNCTION: EXE 0x52c70f
 // Counts the upgrades of an upgrade's category in a list (by default the purchased upgrades)
 long EECivilization::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
 {
@@ -109,30 +141,35 @@ long EECivilization::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUp
     return gCivilizationManager.CountInCategory(inUpgrade, theList);
 }
 
+// FUNCTION: EXE 0x52c72c
 // Returns whether the civilization is unchanged
 bool EECivilization::GetUnchanged()
 {
     return this->mUnchanged;
 }
 
+// FUNCTION: EXE 0x52c730
 // Returns the points left to spend
 long EECivilization::GetAvailablePoints()
 {
     return this->mAvailablePoints;
 }
 
+// FUNCTION: EXE 0x52c734
 // Returns the maximum points
 long EECivilization::GetMaxPoints()
 {
     return this->mMaxPoints;
 }
 
+// FUNCTION: EXE 0x52c738
 // Returns the purchased upgrades
 std::vector<EECivUpgrade>& EECivilization::GetPurchasedUpgrades()
 {
     return this->mPurchasedUpgrades;
 }
 
+// FUNCTION: EXE 0x52c73b
 // Adds points to both the available and the maximum points
 void EECivilization::AddPoints(long inAmount)
 {
@@ -141,6 +178,7 @@ void EECivilization::AddPoints(long inAmount)
     this->mNoPointsAdded = false;
 }
 
+// FUNCTION: EXE 0x52c74c
 // Loads the purchased upgrades, points, flags and name from a saved game (old versions: a narrow name); returns
 // the first read error
 long EECivilization::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -181,6 +219,7 @@ long EECivilization::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     return theResult;
 }
 
+// FUNCTION: EXE 0x52c847
 // Applies an upgrade to a player, first paying for it and recording it when buying; returns whether it applied
 bool EECivilization::Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase)
 {
@@ -198,6 +237,7 @@ bool EECivilization::Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase)
     return theResult;
 }
 
+// FUNCTION: EXE 0x52c898
 // Applies a list of upgrades to a player, stopping at the first that fails
 void EECivilization::AddUpgrades(std::vector<EECivUpgrade>& inUpgrades, long inPlayer, bool inFlag)
 {
@@ -206,6 +246,7 @@ void EECivilization::AddUpgrades(std::vector<EECivUpgrade>& inUpgrades, long inP
         theResult = this->Buy(*i, inPlayer, inFlag);
 }
 
+// FUNCTION: EXE 0x52c8ce
 // Applies the purchased upgrades with attribute index 21 to the world (player 0)
 void EECivilization::ApplyLevel21ToWorld()
 {
@@ -223,6 +264,7 @@ void EECivilization::ApplyLevel21ToWorld()
     }
 }
 
+// FUNCTION: EXE 0x52c916
 // Reapplies the purchased upgrades to a player after loading, deferring those with attribute index 21; returns 13
 // when one fails
 long EECivilization::Reapply(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -250,6 +292,7 @@ long EECivilization::Reapply(EEPlayer* inPlayer, unsigned long inMajorVersion, u
     return theResult;
 }
 
+// FUNCTION: EXE 0x52c9a1
 // Applies the deferred upgrades to a player and forgets them; returns 13 when one fails
 long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -271,6 +314,7 @@ long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVers
     return theResult;
 }
 
+// FUNCTION: EXE 0x52c9ee
 // Writes the purchased upgrades, points, flags and name to the saved game; returns the first error
 long EECivilization::Save(FSFile& outFile)
 {
@@ -304,12 +348,14 @@ long EECivilization::Save(FSFile& outFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x52ca99
 // Sets the points left to spend
 void EECivilization::SetPoints(long inPoints)
 {
     this->mAvailablePoints = inPoints;
 }
 
+// FUNCTION: EXE 0x52caa3
 // Sets both the available and the maximum points
 void EECivilization::SetPointsAndMax(long inEpoch)
 {
@@ -317,6 +363,7 @@ void EECivilization::SetPointsAndMax(long inEpoch)
     this->mAvailablePoints = inEpoch;
 }
 
+// FUNCTION: EXE 0x52cab0
 // Renames the civilization and marks it changed
 void EECivilization::SetName(const UWideString& inName)
 {

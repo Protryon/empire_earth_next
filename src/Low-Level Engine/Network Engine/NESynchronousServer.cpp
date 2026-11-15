@@ -12,6 +12,7 @@
 #include "rust/ee_net.h"
 #include "platform/PlatSim.h"
 
+// FUNCTION: LLE 0x10047400
 // Creates the game server on protocol 0 and publishes it as "EEService"; on failure stops with no threads/events
 NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned long inDefaultSendInterval, unsigned char inPTsPerCT,
                                          unsigned long inMaxPhysicsTicksPerSecond, unsigned long inMinPhysicsTicksPerSecond, float inPhysicsTickCostFactor, unsigned long inMaxSendInterval,
@@ -44,6 +45,7 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
                                 NESynchronousServer::QueueHost, &theArgs, this->mComms);
 }
 
+// FUNCTION: LLE 0x10047c65
 // Destroys the server: frees events, threads, locks and the recorder, then closes the published server
 NESynchronousServer::~NESynchronousServer()
 {
@@ -113,21 +115,26 @@ unsigned char NESynchronousServer::GetRecordPlaybackMode() const { return ee_net
 void NESynchronousServer::SimCommunicationsTick() { ee_net_sv_sim_communications_tick(this->mRust); }
 bool NESynchronousServer::SimGameRunning() const { return ee_net_sv_sim_game_running(this->mRust); }
 
+// FUNCTION: LLE 0x10047e73
 void NESynchronousServer::AbortXfer(unsigned long inXferID) { ee_net_sv_abort_xfer(this->mRust, (uint32_t)inXferID); }
 
+// FUNCTION: LLE 0x10048011
 // Sends a message to every present player's slot; stops at the first send error and returns it
 long NESynchronousServer::BroadcastMessage(NEMessage* inMessage) { return ee_net_sv_broadcast_message(this->mRust, inMessage); }
 
+// FUNCTION: LLE 0x10048093
 unsigned long NESynchronousServer::GetMessageManagerCurrentMessageNumber()
 {
     return ee_net_sv_message_manager_current_number(this->mRust);
 }
 
+// FUNCTION: LLE 0x100480a0
 unsigned char NESynchronousServer::GetSendToSlotForPlayer(unsigned char inPlayer)
 {
     return ee_net_sv_send_to_slot_for_player(this->mRust, inPlayer);
 }
 
+// FUNCTION: LLE 0x10048139
 // Collects world checksums per tick; once every human has answered, marks the out-of-sync slots
 void NESynchronousServer::LogChecksumResponse(NEMRecord* inMessage)
 {
@@ -136,56 +143,71 @@ void NESynchronousServer::LogChecksumResponse(NEMRecord* inMessage)
                                     inMessage->GetOriginatingSlot());
 }
 
+// FUNCTION: LLE 0x10048472
 long NESynchronousServer::LogResponse(NEMessage* inMessage)
 {
     ee_net_sv_log_response(this->mRust, inMessage);
     return kErrorOK;
 }
 
+// FUNCTION: LLE 0x10048484
 void NESynchronousServer::PauseGame() { ee_net_sv_pause_game(this->mRust, true); }
 
+// FUNCTION: LLE 0x1004976e
 void NESynchronousServer::UnpauseGame() { ee_net_sv_pause_game(this->mRust, false); }
 
+// FUNCTION: LLE 0x1004855d
 long NESynchronousServer::ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
 {
     return ee_net_sv_process_local_user_input(this->mRust, inMessage, inPlayer);
 }
 
+// FUNCTION: LLE 0x100488df
 void NESynchronousServer::RegisterSlot(unsigned char inSlot) { ee_net_sv_register_slot(this->mRust, inSlot); }
 
+// FUNCTION: LLE 0x10048983
 void NESynchronousServer::RemovePlayerFromGameInProgress(unsigned char inSlot, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
 {
     ee_net_sv_remove_player_from_game_in_progress(this->mRust, inSlot, inWasBooted, inPlayerIsOOS, inGameIsExiting);
 }
 
+// FUNCTION: LLE 0x10048a4a
 long NESynchronousServer::SearchForGame(bool inStart) { return ee_net_sv_search_for_game(this->mRust, inStart); }
 
+// FUNCTION: LLE 0x10048e31
 long NESynchronousServer::SendMessageTo(unsigned char inSlot, NEMessage* inMessage, bool inGuaranteed)
 {
     return (long)ee_net_sv_send_message_to(this->mRust, inSlot, inMessage, inGuaranteed);
 }
 
+// FUNCTION: LLE 0x10048e4b
 long NESynchronousServer::SendMessageToAll(NEMessage* inMessage, bool inGuaranteed)
 {
     return (long)ee_net_sv_send_message_to_all(this->mRust, inMessage, inGuaranteed);
 }
 
+// FUNCTION: LLE 0x10048e61
 unsigned long NESynchronousServer::SendToAllAndWait(NEMessage* inMessage, unsigned long inTimeout, unsigned long inRetries)
 {
     return (unsigned long)ee_net_sv_send_to_all_and_wait(this->mRust, inMessage, (uint32_t)inTimeout, (uint32_t)inRetries);
 }
 
+// FUNCTION: LLE 0x10048eb4
 void NESynchronousServer::SetMessageManagerLowestCTs(unsigned long inCT)
 {
     ee_net_sv_set_message_manager_lowest_cts(this->mRust, (uint32_t)inCT);
 }
 
+// FUNCTION: LLE 0x10048ed9
 void NESynchronousServer::StartThreads() { ee_net_sv_start_threads(this->mRust); }
 
+// FUNCTION: LLE 0x10049028
 void NESynchronousServer::StopThreads() { ee_net_sv_stop_threads(this->mRust); }
 
+// FUNCTION: LLE 0x10049753
 void NESynchronousServer::UnregisterSlot(unsigned char inSlot) { ee_net_sv_unregister_slot(this->mRust, inSlot); }
 
+// FUNCTION: LLE 0x100497c8
 long NESynchronousServer::XferFileToClient(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot,
                                            unsigned long& outXferID, bool inP5)
 {

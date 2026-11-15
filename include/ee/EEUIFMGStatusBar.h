@@ -20,7 +20,7 @@ public:
     EEUIFMGStatusBar(unsigned long inId, unsigned long inIndex, UILayoutUtility* inLayout, unsigned long inScreenWidth,
                      unsigned long inScreenHeight, const GERectangle& inRectangle, UIForm* inForm, bool inScenarioEditor,
                      bool inEnabled, bool inArg10);
-    virtual ~EEUIFMGStatusBar();
+    virtual ~EEUIFMGStatusBar();            // 0x269808 (??_G 0x2697cf)
     virtual long CopyData();                // +0x14 0x269896
     virtual long DrawPolygons();            // +0x18 0x26993f
     virtual long DrawTextA();               // +0x1c 0x26997f

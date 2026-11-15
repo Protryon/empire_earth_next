@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x0078f980
 // Returns the group's title label and a label config for the name LABEL; other names go to the
 // container config
 bool MSEtchedFrameGroupConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)

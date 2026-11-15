@@ -8,9 +8,9 @@
 
 class EECPASGUPriest : public EECPAttackSubGroupUnit {
 public:
-    EECPASGUPriest(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
-    EECPASGUPriest(EECPAttackSubGroup* inSubGroup);
-    virtual ~EECPASGUPriest();
+    EECPASGUPriest(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);  // 0x8de3
+    EECPASGUPriest(EECPAttackSubGroup* inSubGroup);     // 0x8e22
+    virtual ~EECPASGUPriest();              // 0x8e41
     // +0x10 0x8e6f: the base's choice, kept only when 0x242542(mUnit, its unit) holds
     virtual EECPASTargetUnit* ChooseTarget(bool inTakeFirst, EETileCoordinate& outTile);
     virtual bool Retarget();                // +0x14 0x8ea0

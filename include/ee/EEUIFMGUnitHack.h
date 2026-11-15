@@ -14,9 +14,9 @@ struct EeScreensUnitHack;
 class EEUIFMGUnitHack {
 public:
     EEUIFMGUnitHack(EEUIFMainGame* inForm);     // 0x2628e5 (the sorted class names)
-    ~EEUIFMGUnitHack();
+    ~EEUIFMGUnitHack();                         // 0x262a91
     void PlaceUnit(const GE2DPoint& inTile);    // 0x262aa5 (EEMHackANewUnit for the selected player)
-    void FillComboBox();
+    void FillComboBox();                        // 0x262c6f
     void LoadUnitData();                        // 0x262cdc (EEMLoadUnitData for the selected class)
     void Update(const GE2DPoint& inLocation);   // 0x262d66 (the left mouse button over the game view)
     void Fn157269(const GE2DPoint& inTile) {}   // (ICF-folded into 0x157269: an empty body; provisional name)

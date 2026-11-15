@@ -29,16 +29,22 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEAreaUtilities.h"
 
+// FUNCTION: EXE 0x601fd9
 // Creates the manager with empty simple and complex doppelganger pools
 EEDoppelgangerManager::EEDoppelgangerManager()
 {
 }
 
+// SYNTHETIC: EXE 0x601ff6
+// (the scalar deleting destructor, emitted with the vtable)
+
+// FUNCTION: EXE 0x602012
 // Destroys the manager (the pools free themselves)
 EEDoppelgangerManager::~EEDoppelgangerManager()
 {
 }
 
+// FUNCTION: EXE 0x602039
 // Logs the stats of both doppelganger pools and frees them
 void EEDoppelgangerManager::Release()
 {
@@ -48,6 +54,7 @@ void EEDoppelgangerManager::Release()
     this->mComplexPool.Release();
 }
 
+// FUNCTION: EXE 0x602066
 // Reads one doppelganger from the saved game into a new pooled one and queues it for pointer repair;
 // skips an old-format record (minor version < 0xbd), returning NULL
 EEDoppelganger* EEDoppelgangerManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -96,6 +103,7 @@ EEDoppelganger* EEDoppelgangerManager::Load(unsigned long inMajorVersion, unsign
     return theDoppelganger;
 }
 
+// FUNCTION: EXE 0x6021bc
 // Clears a doppelganger and returns it to its pool
 void EEDoppelgangerManager::Free(EEDoppelganger* inDoppelganger)
 {
@@ -108,6 +116,7 @@ void EEDoppelgangerManager::Free(EEDoppelganger* inDoppelganger)
     }
 }
 
+// FUNCTION: EXE 0x602222
 // Returns whether a tile holds the given player's doppelganger of a unit
 bool EEDoppelgangerManager::HasDoppelganger(const EETile* inTile, EEUnit* inUnit, long inPlayer)
 {
@@ -125,6 +134,7 @@ bool EEDoppelgangerManager::HasDoppelganger(const EETile* inTile, EEUnit* inUnit
     return theFound;
 }
 
+// FUNCTION: EXE 0x602285
 // Returns whether a tile holds any player's doppelganger of a unit
 bool EEDoppelgangerManager::HasDoppelganger(const EETile* inTile, EEUnit* inUnit)
 {
@@ -138,6 +148,7 @@ bool EEDoppelgangerManager::HasDoppelganger(const EETile* inTile, EEUnit* inUnit
     return theFound;
 }
 
+// FUNCTION: EXE 0x6022c4
 // Returns the given player's doppelganger of a unit on a tile, or NULL
 EEDoppelganger* EEDoppelgangerManager::GetDoppelganger(const EETile* inTile, EEUnit* inUnit, long inPlayer)
 {
@@ -153,6 +164,7 @@ EEDoppelganger* EEDoppelgangerManager::GetDoppelganger(const EETile* inTile, EEU
     return theResult;
 }
 
+// FUNCTION: EXE 0x602318
 // Puts a doppelganger on every tile of its unit's square, for an airport also on the 3 runway squares ahead
 void EEDoppelgangerManager::AddToTiles(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIncludeRunways)
 {
@@ -190,6 +202,7 @@ void EEDoppelgangerManager::AddToTiles(EEDoppelganger* inDoppelganger, long inX,
     }
 }
 
+// FUNCTION: EXE 0x60248b
 // As a tile drops out of a player's sight, leaves him doppelgangers of the resources, ambients, fish and
 // built land buildings there (foundations only his own) that are wholly out of sight; all parts of a complex one
 void EEDoppelgangerManager::TileHidden(RTSTile* inTile, EEPlayer* inPlayer)
@@ -238,6 +251,7 @@ void EEDoppelgangerManager::TileHidden(RTSTile* inTile, EEPlayer* inPlayer)
     } while (theNode != NULL);
 }
 
+// FUNCTION: EXE 0x60266e
 // Returns whether every tile under the unit (all parts of a complex one) is out of the player's sight;
 // false for a cloaked unit or one whose tech tree node is of kind 4
 bool EEDoppelgangerManager::IsOutOfSight(EEUnit* inUnit, EEPlayer* inPlayer)
@@ -274,6 +288,7 @@ bool EEDoppelgangerManager::IsOutOfSight(EEUnit* inUnit, EEPlayer* inPlayer)
     return theResult;
 }
 
+// FUNCTION: EXE 0x6027a3
 // Remembers a resource, ambient, fish or building its own player cannot see (when he keeps a visibility
 // map): clears his doppelgangers on its tile and adds a new one there and on the minimap
 void EEDoppelgangerManager::AddForUnseenUnit(EEComplexUnit* inUnit)
@@ -300,6 +315,7 @@ void EEDoppelgangerManager::AddForUnseenUnit(EEComplexUnit* inUnit)
     this->AddToTiles(theDoppelganger, inUnit->mTileX, inUnit->mTileY, theIsWall);
 }
 
+// FUNCTION: EXE 0x6028d6
 // Takes a new doppelganger from the complex or the simple pool
 EEDoppelganger* EEDoppelgangerManager::NewDoppelganger(bool inComplex)
 {
@@ -308,6 +324,7 @@ EEDoppelganger* EEDoppelgangerManager::NewDoppelganger(bool inComplex)
     return this->mComplexPool.New();
 }
 
+// FUNCTION: EXE 0x6028f2
 // As a tile comes into a player's sight, removes his doppelgangers on it from the map and minimap and frees them
 void EEDoppelgangerManager::TileShown(EETile* inTile, long inX, long inY, EEPlayer* inPlayer)
 {
@@ -334,6 +351,7 @@ void EEDoppelgangerManager::TileShown(EETile* inTile, long inX, long inY, EEPlay
     }
 }
 
+// FUNCTION: EXE 0x6029ba
 // Removes and frees every doppelganger a player sees or owns the unit of, over the whole map
 void EEDoppelgangerManager::UnregisterPlayer(EEPlayer* inPlayer)
 {
@@ -365,6 +383,7 @@ void EEDoppelgangerManager::UnregisterPlayer(EEPlayer* inPlayer)
     }
 }
 
+// FUNCTION: EXE 0x602afd
 // Takes a doppelganger off every tile of its unit's square, for an airport also off the 3 runway squares
 void EEDoppelgangerManager::RemoveFromTiles(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIncludeRunways)
 {
@@ -402,18 +421,84 @@ void EEDoppelgangerManager::RemoveFromTiles(EEDoppelganger* inDoppelganger, long
     }
 }
 
+// FUNCTION: EXE 0x602c70
 // Sets the simple doppelganger pool's chunk size and chunk limit; returns whether it succeeded
 bool EEDoppelgangerManager::SetPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
 {
     return this->mPool.SetSize(inChunkSize, inMaxChunks, 1);
 }
 
+// FUNCTION: EXE 0x602c85
 // Sets the complex doppelganger pool's chunk size and chunk limit; returns whether it succeeded
 bool EEDoppelgangerManager::SetComplexPoolSize(unsigned long inChunkSize, unsigned long inMaxChunks)
 {
     return this->mComplexPool.SetSize(inChunkSize, inMaxChunks, 1);
 }
 
+// TEMPLATE: EXE 0x602c9a
+// UMemoryPool<EEDoppelganger>::UMemoryPool
+
+// TEMPLATE: EXE 0x602cd4
+// UMemoryPool<EEComplexDoppelganger>::UMemoryPool
+
+// TEMPLATE: EXE 0x602d0e
+// UMemoryPool<EEDoppelganger>::`scalar deleting destructor'
+
+// TEMPLATE: EXE 0x602d30
+// UMemoryPool<EEComplexDoppelganger>::`scalar deleting destructor'
+
+// TEMPLATE: EXE 0x602d52
+// UMemoryPool<EEDoppelganger>::Release (the <EEComplexDoppelganger> copy is ICF-folded into it)
+
+// TEMPLATE: EXE 0x602db6
+// UMemoryPool<EEDoppelganger>::Delete
+
+// TEMPLATE: EXE 0x602e10
+// UMemoryPool<EEDoppelganger>::DumpStats
+
+// TEMPLATE: EXE 0x602e73
+// UMemoryPool<EEDoppelganger>::New
+
+// TEMPLATE: EXE 0x602f55
+// UMemoryPool<EEDoppelganger>::SetSize
+
+// TEMPLATE: EXE 0x603062
+// UMemoryPool<EEComplexDoppelganger>::Delete
+
+// TEMPLATE: EXE 0x6030c6
+// UMemoryPool<EEComplexDoppelganger>::DumpStats
+
+// TEMPLATE: EXE 0x603129
+// UMemoryPool<EEComplexDoppelganger>::New
+
+// TEMPLATE: EXE 0x60320b
+// UMemoryPool<EEComplexDoppelganger>::SetSize
+
+// TEMPLATE: EXE 0x603318
+// UMemoryPoolChunk<EEDoppelganger>::UMemoryPoolChunk
+
+// TEMPLATE: EXE 0x603398
+// UMemoryPoolChunk<EEComplexDoppelganger>::UMemoryPoolChunk
+
+// TEMPLATE: EXE 0x603418
+// UMemoryPoolChunk<EEDoppelganger>::~UMemoryPoolChunk (<EEComplexDoppelganger>'s ICF-folded into it)
+
+// TEMPLATE: EXE 0x603433
+// EEDoppelganger::`vector deleting destructor'
+
+// TEMPLATE: EXE 0x60348e
+// EEComplexDoppelganger::`vector deleting destructor'
+
+// TEMPLATE: EXE 0x6034e9
+// UMemoryPool<EEDoppelganger>::AddChunk
+
+// TEMPLATE: EXE 0x60355c
+// UMemoryPool<EEComplexDoppelganger>::AddChunk
+
+// TEMPLATE: EXE 0x6035cf
+// an inline tile member (the player's visibility byte; first used by TileHidden; not written)
+
+// FUNCTION: EXE 0x6035ef
 // Returns whether a terrain kind is land (not deep or shallow water, cliff or space)
 // Kinds 1, 9, 10, 12 are not land. An ordinary function at the end of this unit, called from EEGhostUnit.cpp
 // and EECloakingUtilities.cpp 0x23d2f9 (provisional name)

@@ -14,6 +14,7 @@
 
 std::vector<EERandomMapTable*> EERandomMapTable::sTable;
 
+// FUNCTION: EXE 0x4da407
 // Creates a random-map table entry with every value zero
 EERandomMapTable::EERandomMapTable()
     : mL04(0), mL08(0), mF0C(0.0f), mF10(0.0f), mF14(0.0f), mL54(0), mL58(0), mL5C(0)
@@ -35,6 +36,11 @@ EERandomMapTable::EERandomMapTable()
     this->mF50 = 0.0f;
 }
 
+// FUNCTION: EXE 0x4da47b
+// (Load: read db\dbrandommap.dat, one empty entry per record with the record's contents dropped. Removed: nothing reads
+// the table, the file has no text form and the game reads no binary db file; RUST_PLAN D9)
+
+// FUNCTION: EXE 0x4da510
 // Destroys every random-map table entry and empties the table
 void EERandomMapTable::Unload()
 {
@@ -42,3 +48,11 @@ void EERandomMapTable::Unload()
         delete EERandomMapTable::sTable[i];
     EERandomMapTable::sTable.resize(0);
 }
+
+// SYNTHETIC: EXE 0x4da550
+// (the scalar deleting destructor)
+
+// SYNTHETIC: EXE 0x4da3be
+// SYNTHETIC: EXE 0x4da3c8
+// SYNTHETIC: EXE 0x4da3e0
+// SYNTHETIC: EXE 0x4da3ec

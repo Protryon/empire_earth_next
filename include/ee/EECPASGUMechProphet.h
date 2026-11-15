@@ -6,9 +6,9 @@
 
 class EECPASGUMechProphet : public EECPASGUProphet {
 public:
-    EECPASGUMechProphet(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
-    EECPASGUMechProphet(EECPAttackSubGroup* inSubGroup);
-    virtual ~EECPASGUMechProphet();
+    EECPASGUMechProphet(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup); // 0x7c45
+    EECPASGUMechProphet(EECPAttackSubGroup* inSubGroup);    // 0x7c84
+    virtual ~EECPASGUMechProphet();         // 0x7ca3
     virtual bool Retarget();                // +0x14 0x7efc (ICF: EECPASGUHero's)
     virtual void SetState(long inState, unsigned long inTime);    // +0x28 0x7f2d
     virtual bool CheckCondition(long inState, unsigned long inTime);  // +0x50 0x7f41

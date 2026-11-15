@@ -18,6 +18,7 @@ namespace WONAPI {
 extern SmartPtr<Dialog> gLobbyFailureDialog;
 extern GUIString gLobbyInitError;
 extern bool gLobbyInitFailed;
+// FUNCTION: WON 0x00762250
 // Returns the lobby container; after a failed start builds once and returns a dialog showing the error and Ok
 Container* LobbyGetContainer()
 {
@@ -55,3 +56,7 @@ Container* LobbyGetContainer()
     return NULL;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00766b30
+// (public: __thiscall std::list<class WONAPI::Component *,class std::allocator<class WONAPI::Component *> >::list<class WONAPI::Component *,class std::al)

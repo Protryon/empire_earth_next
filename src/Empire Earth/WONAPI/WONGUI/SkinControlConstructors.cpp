@@ -35,3 +35,29 @@ WONTabCtrl::WONTabCtrl(WONSkin* skin)
     this->mIsTransparent=false;
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x007191a0
+// (public: __thiscall WONAPI::WONHeaderButton::WONHeaderButton(void)    [??0WONHeaderButton@WONAPI@@QAE@XZ])
+// TEMPLATE: WON 0x00719540
+// (public: __thiscall WONAPI::WONScrollbar::WONScrollbar(bool)    [??0WONScrollbar@WONAPI@@QAE@_N@Z])
+// TEMPLATE: WON 0x0071a830
+// (public: __thiscall WONAPI::WONTabCtrl::WONTabCtrl(class WONAPI::WONSkin *)    [??0WONTabCtrl@WONAPI@@QAE@PAVWONSkin@1@@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00719220
+// (public: virtual void * __thiscall WONAPI::WONHeaderButton::`scalar deleting destructor'(unsigned int)    [??_GWONHeaderButton@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x0071a8f0
+// (public: virtual void * __thiscall WONAPI::WONTabCtrl::`scalar deleting destructor'(unsigned int)    [??_GWONTabCtrl@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00719240
+// (public: virtual __thiscall WONAPI::WONHeaderButton::~WONHeaderButton(void))
+// TEMPLATE: WON 0x0071a910
+// (public: virtual __thiscall WONAPI::WONTabCtrl::~WONTabCtrl(void))
+// TEMPLATE: WON 0x00722a10
+// (protected: void __thiscall std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::WrappedTex)
+// TEMPLATE: WON 0x00717e10
+// (public: __thiscall WONAPI::WONButton::ButtonState::~ButtonState(void))
+// TEMPLATE: WON 0x00717f50
+// (public: virtual __thiscall WONAPI::WONButton::~WONButton(void))

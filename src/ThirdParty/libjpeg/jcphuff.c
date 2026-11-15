@@ -102,6 +102,7 @@ METHODDEF(void) finish_pass_gather_phuff JPP((j_compress_ptr cinfo));
  * Initialize for a Huffman-compressed scan using progressive JPEG.
  */
 
+// FUNCTION: JPEG 0x10092375
 METHODDEF(void)
 start_pass_phuff (j_compress_ptr cinfo, boolean gather_statistics)
 {  
@@ -201,6 +202,7 @@ start_pass_phuff (j_compress_ptr cinfo, boolean gather_statistics)
 	    dump_buffer(entropy); }
 
 
+// FUNCTION: JPEG 0x100926b9
 LOCAL(void)
 dump_buffer (phuff_entropy_ptr entropy)
 /* Empty the output buffer; we do not support suspension in this module. */
@@ -224,6 +226,7 @@ dump_buffer (phuff_entropy_ptr entropy)
  */
 
 INLINE
+// FUNCTION: JPEG 0x1009260d
 LOCAL(void)
 emit_bits (phuff_entropy_ptr entropy, unsigned int code, int size)
 /* Emit some bits, unless we are in gather mode */
@@ -263,6 +266,7 @@ emit_bits (phuff_entropy_ptr entropy, unsigned int code, int size)
 }
 
 
+// FUNCTION: JPEG 0x100927b0
 LOCAL(void)
 flush_bits (phuff_entropy_ptr entropy)
 {
@@ -277,6 +281,7 @@ flush_bits (phuff_entropy_ptr entropy)
  */
 
 INLINE
+// FUNCTION: JPEG 0x100926f1
 LOCAL(void)
 emit_symbol (phuff_entropy_ptr entropy, int tbl_no, int symbol)
 {
@@ -293,6 +298,7 @@ emit_symbol (phuff_entropy_ptr entropy, int tbl_no, int symbol)
  * Emit bits from a correction bit buffer.
  */
 
+// FUNCTION: JPEG 0x1009283b
 LOCAL(void)
 emit_buffered_bits (phuff_entropy_ptr entropy, char * bufstart,
 		    unsigned int nbits)
@@ -312,6 +318,7 @@ emit_buffered_bits (phuff_entropy_ptr entropy, char * bufstart,
  * Emit any pending EOBRUN symbol.
  */
 
+// FUNCTION: JPEG 0x100927cc
 LOCAL(void)
 emit_eobrun (phuff_entropy_ptr entropy)
 {
@@ -343,6 +350,7 @@ emit_eobrun (phuff_entropy_ptr entropy)
  * Emit a restart marker & resynchronize predictions.
  */
 
+// FUNCTION: JPEG 0x10092732
 LOCAL(void)
 emit_restart (phuff_entropy_ptr entropy, int restart_num)
 {
@@ -373,6 +381,7 @@ emit_restart (phuff_entropy_ptr entropy, int restart_num)
  * or first pass of successive approximation).
  */
 
+// FUNCTION: JPEG 0x100924de
 METHODDEF(boolean)
 encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 {
@@ -460,6 +469,7 @@ encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  * or first pass of successive approximation).
  */
 
+// FUNCTION: JPEG 0x1009286b
 METHODDEF(boolean)
 encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 {
@@ -567,6 +577,7 @@ encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  * is not very clear on the point.
  */
 
+// FUNCTION: JPEG 0x100929fc
 METHODDEF(boolean)
 encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 {
@@ -614,6 +625,7 @@ encode_mcu_DC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  * MCU encoding for AC successive approximation refinement scan.
  */
 
+// FUNCTION: JPEG 0x10092ab3
 METHODDEF(boolean)
 encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 {
@@ -742,6 +754,7 @@ encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
  * Finish up at the end of a Huffman-compressed progressive scan.
  */
 
+// FUNCTION: JPEG 0x10092c96
 METHODDEF(void)
 finish_pass_phuff (j_compress_ptr cinfo)
 {   
@@ -763,6 +776,7 @@ finish_pass_phuff (j_compress_ptr cinfo)
  * Finish up a statistics-gathering pass and create the new Huffman tables.
  */
 
+// FUNCTION: JPEG 0x10092cd5
 METHODDEF(void)
 finish_pass_gather_phuff (j_compress_ptr cinfo)
 {
@@ -810,6 +824,7 @@ finish_pass_gather_phuff (j_compress_ptr cinfo)
  * Module initialization routine for progressive Huffman entropy encoding.
  */
 
+// FUNCTION: JPEG 0x1009233f
 GLOBAL(void)
 jinit_phuff_encoder (j_compress_ptr cinfo)
 {

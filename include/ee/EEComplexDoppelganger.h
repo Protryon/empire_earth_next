@@ -10,7 +10,7 @@
 
 class EEComplexDoppelganger : public EEDoppelganger {
 public:
-    EEComplexDoppelganger();
+    EEComplexDoppelganger();                // 0x1f1f19
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x1f21a3
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond);   // +0x08 0x1f230c
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x1f2392

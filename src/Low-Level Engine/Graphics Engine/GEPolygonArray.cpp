@@ -8,11 +8,13 @@
 #include "lle/LowLevelEngineCore.h"
 #include "lle/GEPolygonArray.h"
 
+// FUNCTION: LLE 0x10023209
 // Creates the polygon array base (nothing to set up)
 GEPolygonArray::GEPolygonArray()
 {
 }
 
+// FUNCTION: LLE 0x10023212
 // Destroys the polygon array base (nothing to free)
 GEPolygonArray::~GEPolygonArray()
 {

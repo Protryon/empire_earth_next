@@ -11,7 +11,7 @@
 
 class EECPASGHelicopter : public EECPASGLand {
 public:
-    EECPASGHelicopter(EECPAttackGroup* inGroup, long inKind);
+    EECPASGHelicopter(EECPAttackGroup* inGroup, long inKind);   // 0x4597f
     virtual ~EECPASGHelicopter();           // +0x00 (0x4599b)
     // +0x1c 0x459c2
     virtual void AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTarget, EETileCoordinate* inTile);

@@ -42,8 +42,9 @@
 #include "ee/EECPAttackFormation.h"
 #include "ee/EEAIKindIDs.h"
 
-static const float kAFNQuarters = 4.0f;
+static const float kAFNQuarters = 4.0f;     // 0x43bc80
 
+// FUNCTION: EXE 0x454304
 // Creates an empty formation row: no formation, no units, spacing 1, not placed
 EECPAttackFormationNode::EECPAttackFormationNode()
     : mFormation(NULL), mType(0), mSpacing(1.0f), mPrevious(NULL), mL60(0), mFlags(0), mF70(0.0f), mIndex(0), mIsPlaced(false)
@@ -52,6 +53,10 @@ EECPAttackFormationNode::EECPAttackFormationNode()
     this->mDepth = 0.0f;
 }
 
+// SYNTHETIC: EXE 0x45439f
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4543bb
 // Destroys the row, releasing its formation
 EECPAttackFormationNode::~EECPAttackFormationNode()
 {
@@ -59,6 +64,7 @@ EECPAttackFormationNode::~EECPAttackFormationNode()
         this->mFormation->Dereference();
 }
 
+// FUNCTION: EXE 0x4543db
 // Builds the row's formation of its type around its position, orders each unit to its slot (on water also
 // setting a rank 0-3 from the slot order), grows the row's bounds over the slots and marks the row placed
 void EECPAttackFormationNode::Create(EECPAttackFormation* inFormation)
@@ -110,3 +116,6 @@ void EECPAttackFormationNode::Create(EECPAttackFormation* inFormation)
     }
     this->mIsPlaced = true;
 }
+
+// TEMPLATE: EXE 0x4546dc
+// U2DRectangle<float>::Extend (inline, lle/U2DRectangle.h)

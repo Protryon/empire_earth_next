@@ -43,12 +43,14 @@
 #include "ee/EEAIContinentManager.h"
 
 
+// FUNCTION: EXE 0x42bb72
 // Creates the path-sector grid geometry with every size 0
 EEAIPathSectorRegionInformation::EEAIPathSectorRegionInformation()
 {
     this->Reset();
 }
 
+// FUNCTION: EXE 0x42bb84
 // Clears the sector grid's counts, sector size and sector area to 0
 void EEAIPathSectorRegionInformation::Reset()
 {
@@ -58,6 +60,7 @@ void EEAIPathSectorRegionInformation::Reset()
     this->mSectorArea = 0;
 }
 
+// FUNCTION: EXE 0x42bb93
 // Sizes the sector grid for a map: square sectors of the given size, enough per side to cover the map
 void EEAIPathSectorRegionInformation::Init(EEMap* inMap, long inSectorSize)
 {

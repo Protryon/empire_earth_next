@@ -23,8 +23,8 @@
 #include "ee/EERules.h"
 
 std::vector<std::vector<EEMusicObject*>> EEMusicObject::sSongs;      // 0x4e8568 (per epoch)
-std::vector<std::vector<EEMusicObject*>> EEMusicObject::sShuffled;
-URandomIntegers gMusicRandom;
+std::vector<std::vector<EEMusicObject*>> EEMusicObject::sShuffled;   // 0x4e8470
+URandomIntegers gMusicRandom;                     // 0x4e8460
 
 // One record of db\dbmusic.dat (0xc4 bytes, read whole; also what ReadNewMusic fills). Layout inferred.
 struct EEMusicRecord {
@@ -42,6 +42,7 @@ struct EEMusicRecord {
 };
 static_assert(sizeof(EEMusicRecord) == 196, "on-disk record: 196 bytes on every target");
 
+// FUNCTION: EXE 0x4d9c6b
 // Reads a song override from Data\Music\New Music.txt (file name, four reverb values; every epoch on);
 // returns 0 when the file was read
 long EEMusicObject::ReadNewMusic(EEMusicRecord* outRecord)
@@ -83,6 +84,7 @@ long EEMusicObject::ReadNewMusic(EEMusicRecord* outRecord)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4d9e0c
 // Creates an unloaded song from its record (name + ".sgt", reverb, epochs; the space epoch copies nano's flag)
 EEMusicObject::EEMusicObject(EEMusicRecord* inRecord)
 {
@@ -112,11 +114,16 @@ EEMusicObject::EEMusicObject(EEMusicRecord* inRecord)
     this->mIsLoading = false;
 }
 
+// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
+// TEMPLATE: EXE 0x4d9f1c
+
+// FUNCTION: EXE 0x4d9f38
 // Destroys the song (nothing of its own to free)
 EEMusicObject::~EEMusicObject()
 {
 }
 
+// FUNCTION: EXE 0x4d9f6c
 // Files every song of the music table under the epochs it plays in; a New Music.txt override replaces
 // the table with that one song. Returns the last read result
 // The epochs and their songs are the rules' (epochs.yaml music, EERules.cpp); without epochs.yaml they are the
@@ -166,6 +173,7 @@ long EEMusicObject::LoadTable(FSFile* inFile)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4da0b9
 // Releases every song and empties all epoch song lists and shuffled lists
 void EEMusicObject::ClearAll()
 {
@@ -178,6 +186,7 @@ void EEMusicObject::ClearAll()
     }
 }
 
+// FUNCTION: EXE 0x4da116
 // Returns the next song of the epoch's shuffled order, reshuffling when it runs out; NULL if the epoch has none
 EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
 {
@@ -203,6 +212,7 @@ EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
     return theResult;
 }
 
+// FUNCTION: EXE 0x4da251
 // Loads the song's score on first use (counting later uses, which wait for the load); returns the load result
 long EEMusicObject::LoadScore()
 {
@@ -235,6 +245,7 @@ long EEMusicObject::LoadScore()
     return theResult;
 }
 
+// FUNCTION: EXE 0x4da315
 // Counts one use down; on the last use unloads the score unless the conductor reports it busy (5)
 long EEMusicObject::UnloadScore()
 {
@@ -258,6 +269,10 @@ long EEMusicObject::UnloadScore()
 
 // (0x4da37a: vector<EEMusicObject*>::push_back, ICF-shared)
 
+// SYNTHETIC: EXE 0x4da3a6
+// (EEMedia's vector deleting dtor thunk)
+
+// FUNCTION: EXE 0x4da3ae
 // Loads the song's score (media interface)
 // EEMedia's slots: `this` arrives as the EEMedia part (add ecx, -8), then a tail jump
 long EEMusicObject::LoadMedia()
@@ -265,8 +280,28 @@ long EEMusicObject::LoadMedia()
     return this->LoadScore();
 }
 
+// FUNCTION: EXE 0x4da3b6
 // Unloads the song's score (media interface)
 long EEMusicObject::UnloadMedia()
 {
     return this->UnloadScore();
 }
+
+// TEMPLATE: EXE 0x4da37a
+// (std::vector<EEMusicObject*>::push_back, a template COMDAT emitted by this unit)
+
+// The init chains (gMusicSongs, gMusicShuffled: guarded dtors in the original; gMusicRandom; EEDatabase.h's lock):
+// SYNTHETIC: EXE 0x4d9b2b
+// SYNTHETIC: EXE 0x4d9b35
+// SYNTHETIC: EXE 0x4d9b59
+// SYNTHETIC: EXE 0x4d9b65
+// SYNTHETIC: EXE 0x4d9b8f
+// SYNTHETIC: EXE 0x4d9b99
+// SYNTHETIC: EXE 0x4d9bbd
+// SYNTHETIC: EXE 0x4d9bc9
+// SYNTHETIC: EXE 0x4d9bf3
+// SYNTHETIC: EXE 0x4d9bf8
+// SYNTHETIC: EXE 0x4d9c21
+// SYNTHETIC: EXE 0x4d9c2b
+// SYNTHETIC: EXE 0x4d9c51
+// SYNTHETIC: EXE 0x4d9c5d

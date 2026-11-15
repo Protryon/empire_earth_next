@@ -57,6 +57,7 @@
 #include "ee/EEFormationRust.h"
 
 
+// FUNCTION: EXE 0x4dd8b2
 // Creates a line formation of inCount columns, precomputing the column offsets alternating out from the
 // centre; inDepth shifts alternate rows and an empty row follows every inRows rows
 EEFLine::EEFLine(long inType, float inSpacing, float inDepth, long inCount, long inRows)
@@ -67,12 +68,17 @@ EEFLine::EEFLine(long inType, float inSpacing, float inDepth, long inCount, long
     ee_formation_line_offsets(inSpacing, inCount, this->mOffsets);   // the geometry is Rust (ee_formations)
 }
 
+// SYNTHETIC: EXE 0x4dd966
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4dd982
 // Destroys the line formation, freeing its column offsets
 EEFLine::~EEFLine()
 {
     delete[] this->mOffsets;
 }
 
+// FUNCTION: EXE 0x4dd9a3
 // Places the units row by row behind the formation centre, spaced by their largest collision radius,
 // all facing the formation heading
 void EEFLine::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots)
@@ -94,3 +100,10 @@ void EEFLine::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormatio
         EEFormationCaptureEnd(theRecord, inUnits, outSlots, 0);
     }
 }
+
+// TEMPLATE: EXE 0x4ddb77
+// (compiler-generated; name in analysis/exe/names.txt)
+
+// Template COMDATs of this unit (vector<EEFormationSlot>; names in analysis/exe/names.txt):
+// TEMPLATE: EXE 0x4ddbb2
+// TEMPLATE: EXE 0x4ddbfc

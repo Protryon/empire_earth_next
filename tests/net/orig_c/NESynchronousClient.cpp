@@ -11,6 +11,7 @@
 #include "lle/NESynchronousClient.h"
 #include "rust/ee_net.h"
 
+// FUNCTION: LLE 0x1004607d
 // Creates the game client on protocol 0 with its thread events, locks, lag/loss simulator and pass-through recorder
 NESynchronousClient::NESynchronousClient()
 {
@@ -56,6 +57,7 @@ NESynchronousClient::NESynchronousClient()
     this->mReceiveThreadCanGoEvent->Set();
 }
 
+// FUNCTION: LLE 0x10046401
 // Destroys the client: releases the last tick response, stops game search and frees threads, events and locks
 NESynchronousClient::~NESynchronousClient()
 {
@@ -82,6 +84,7 @@ NESynchronousClient::~NESynchronousClient()
     TSScheduler::DestroyCriticalSection(this->mOutgoingMessagesLock);
 }
 
+// FUNCTION: LLE 0x10046513
 // Connects to the game server at an address on port 2 with the client's connect timeout
 long NESynchronousClient::Connect(const UString& inName, const UString& inHost, const UWideString& inAddress)
 {
@@ -89,6 +92,7 @@ long NESynchronousClient::Connect(const UString& inName, const UString& inHost, 
                               this->GetConnectTimeout());
 }
 
+// FUNCTION: LLE 0x10046540
 // Opens the file-transfer connection when connected; always returns not-open, whatever the outcome
 long NESynchronousClient::ConnectForXfer()
 {
@@ -97,6 +101,7 @@ long NESynchronousClient::ConnectForXfer()
     return kErrorNotOpen;
 }
 
+// FUNCTION: LLE 0x10046562
 // Closes the game and file-transfer connections; returns the close result, or already-exists if not connected
 long NESynchronousClient::Disconnect()
 {
@@ -109,6 +114,7 @@ long NESynchronousClient::Disconnect()
     return theResult;
 }
 
+// FUNCTION: LLE 0x1004658b
 // Closes the file-transfer connection; returns the close result, or already-exists if there was none
 long NESynchronousClient::DisconnectFromXfer()
 {
@@ -120,6 +126,7 @@ long NESynchronousClient::DisconnectFromXfer()
     return theResult;
 }
 
+// FUNCTION: LLE 0x100465a7
 // Returns the name, host and address of a game found on the network
 long NESynchronousClient::GetDetectedGame(unsigned long inIndex, UString& outName, UString& outHost,
                                           UWideString& outAddress)
@@ -127,6 +134,7 @@ long NESynchronousClient::GetDetectedGame(unsigned long inIndex, UString& outNam
     return this->mProtocol->GetDetectedGame(inIndex, outName, outHost, outAddress);
 }
 
+// FUNCTION: LLE 0x100465c3
 // Lag simulator callback for received messages: passes them on to the recorder
 void NESynchronousClient::LagReceiveLossCallback(NEMessage* inMessage, void* inThisPointer)
 {
@@ -135,6 +143,7 @@ void NESynchronousClient::LagReceiveLossCallback(NEMessage* inMessage, void* inT
     ee_net_rp_process(theClient->mRecordPlayback, inMessage);
 }
 
+// FUNCTION: LLE 0x100465f4
 // Lag simulator callback for sent messages: sends them on the connection unless a recording is playing back
 long NESynchronousClient::LagSendLossCallback(NEMessage* inMessage, void* inThisPointer)
 {
@@ -158,6 +167,7 @@ long NESynchronousClient::LagSendLossCallback(NEMessage* inMessage, void* inThis
     return theResult;
 }
 
+// FUNCTION: LLE 0x10046690
 // Client main thread: hands incoming messages to the lag simulator, and retries or fails the connect request
 // on timeout (5 s between retries, 10 s after the start)
 unsigned long NESynchronousClient::Main(void* inClientObject)
@@ -227,18 +237,21 @@ unsigned long NESynchronousClient::Main(void* inClientObject)
     }
 }
 
+// FUNCTION: LLE 0x1004687f
 // Sends a local player's input as guaranteed (queued for the next tick response)
 long NESynchronousClient::ProcessGuaranteedLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
 {
     return this->ProcessUserInputMessage(inMessage, inPlayer, true);
 }
 
+// FUNCTION: LLE 0x10046891
 // Sends a local player's input immediately
 long NESynchronousClient::ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
 {
     return this->ProcessUserInputMessage(inMessage, inPlayer, false);
 }
 
+// FUNCTION: LLE 0x100468a3
 // Throttles player input to 10 per second, then sends or queues it if allowed while paused or playing back
 // (dropped inputs are released; returns 7 when dropped)
 long NESynchronousClient::ProcessUserInputMessage(NEMessage* inMessage, unsigned char inPlayer, bool inGuaranteed)
@@ -278,6 +291,7 @@ long NESynchronousClient::ProcessUserInputMessage(NEMessage* inMessage, unsigned
     return theResult;
 }
 
+// FUNCTION: LLE 0x100469b6
 // Answers a server tick: runs it and replies with the queued inputs, or repeats the reply for an old tick
 void NESynchronousClient::ProcessCommunicationsTickMessage(NEMCommunicationsTick* inMessage)
 {
@@ -316,6 +330,7 @@ void NESynchronousClient::ProcessCommunicationsTickMessage(NEMCommunicationsTick
     inMessage->Dereference();
 }
 
+// FUNCTION: LLE 0x10046b08
 // Handles a server message: start/stop game, ticks, connect/reconnect replies (send slot), pause and unpause
 void NESynchronousClient::ProcessMessage(NEMessage* inMessage)
 {
@@ -379,6 +394,7 @@ void NESynchronousClient::ProcessMessage(NEMessage* inMessage)
     }
 }
 
+// FUNCTION: LLE 0x10046cdf
 // Client receive thread: reads game packets and file transfers, reports a lost connection after 75 s silence
 // (warning every 10 s before)
 unsigned long NESynchronousClient::Receive(void* inClientObject)
@@ -545,6 +561,7 @@ unsigned long NESynchronousClient::Receive(void* inClientObject)
     return 0;
 }
 
+// FUNCTION: LLE 0x10047136
 // Recorder callback: processes a message, skipping send-to-all-and-wait messages for ticks already seen
 void NESynchronousClient::RecordPlaybackCallback(NEMessage* inMessage, void* inThisPointer)
 {
@@ -560,6 +577,7 @@ void NESynchronousClient::RecordPlaybackCallback(NEMessage* inMessage, void* inT
         inMessage->Dereference();
 }
 
+// FUNCTION: LLE 0x10047195
 // Starts or stops searching the network for "EEService" games
 long NESynchronousClient::SearchForGame(bool inStart)
 {
@@ -568,6 +586,7 @@ long NESynchronousClient::SearchForGame(bool inStart)
     return this->mProtocol->SearchForGame(theHost, theName, inStart);
 }
 
+// FUNCTION: LLE 0x100471e5
 // Sends a message through the lag/loss simulator
 long NESynchronousClient::SendAMessage(NEMessage* inMessage)
 {
@@ -606,6 +625,7 @@ ptrdiff_t NESynchronousClient::QueueHost(void* inClient, EeNetQOp inOp, size_t a
     return 0;
 }
 
+// FUNCTION: LLE 0x100471f7
 // Starts the client's main ("CommMain") and receive ("CommRecv") threads at time-critical priority
 void NESynchronousClient::StartThreads()
 {
@@ -619,6 +639,7 @@ void NESynchronousClient::StartThreads()
     this->mReceiveThread->SetName(UString("CommRecv"));
 }
 
+// FUNCTION: LLE 0x100472cf
 // Stops the receive and main threads and waits for both to finish
 void NESynchronousClient::StopThreads()
 {
@@ -627,3 +648,22 @@ void NESynchronousClient::StopThreads()
     this->mMainThreadExitEvent->Set();
     this->mMainThreadFinishedEvent->Wait(kTSWaitInfinite);
 }
+
+// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// SYNTHETIC: LLE 0x10040223
+// SYNTHETIC: LLE 0x10045c00
+// SYNTHETIC: LLE 0x10045c55
+// SYNTHETIC: LLE 0x10045c59
+// SYNTHETIC: LLE 0x10045c5f
+// SYNTHETIC: LLE 0x10045c66
+// SYNTHETIC: LLE 0x10045c6d
+// SYNTHETIC: LLE 0x10045c9f
+// SYNTHETIC: LLE 0x10045cc4
+// SYNTHETIC: LLE 0x10045ccf
+// SYNTHETIC: LLE 0x10045cdc
+// SYNTHETIC: LLE 0x10045ceb
+// SYNTHETIC: LLE 0x10045cf8
+// SYNTHETIC: LLE 0x10045d05
+// SYNTHETIC: LLE 0x10045d1c
+// SYNTHETIC: LLE 0x10045e9f
+// SYNTHETIC: LLE 0x1004601c

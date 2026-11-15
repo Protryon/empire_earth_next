@@ -47,6 +47,12 @@
 // 0x4e6058: default-constructed (its init chain 0xb71b5 opens the unit; use inferred, provisional name)
 UWideString gU4E6058;
 
+// SYNTHETIC: EXE 0x4b71b5
+// SYNTHETIC: EXE 0x4b71bf
+// SYNTHETIC: EXE 0x4b71ca
+// SYNTHETIC: EXE 0x4b71d6
+
+// FUNCTION: EXE 0x4b71e1
 // Creates the game client: no lobby slot yet, server migration allowed, fast selection reset, its lock created
 EEClient::EEClient()
 {
@@ -62,6 +68,9 @@ EEClient::EEClient()
     this->ResetFastSelection();
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mFastSelectionLock) == keseOK, 67);
 }
+
+// SYNTHETIC: EXE 0x4b725c
+// (the scalar deleting destructor, emitted with the vtable)
 
 // (included here, below the ctor: placed so that the ctor's ESVERIFY keeps line 67)
 #include <list>
@@ -92,6 +101,7 @@ EEClient::EEClient()
 extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManager.h, which needs the UI form headers)
 void EELobbyPostConnectStatus(bool inConnected);  // 0x295ce3 (EELobbyInit.cpp; provisional name)
 
+// FUNCTION: EXE 0x4b7278
 // Destroys the client, stopping its threads and releasing the fast-selection lock
 EEClient::~EEClient()
 {
@@ -99,6 +109,7 @@ EEClient::~EEClient()
     TSScheduler::DestroyCriticalSection(this->mFastSelectionLock);
 }
 
+// FUNCTION: EXE 0x4b729e
 // Boots this client from the canceled game when the host's slot (0) has become open, else refreshes the slot's line
 void EEClient::HandleSlotUpdate(unsigned char inSlot, EEGameOptionsPlayer& inPlayer)
 {
@@ -110,12 +121,14 @@ void EEClient::HandleSlotUpdate(unsigned char inSlot, EEGameOptionsPlayer& inPla
         gUserInterface->PostLobbyUpdatePlayer(inSlot, 8);
 }
 
+// FUNCTION: EXE 0x4b7300
 // Returns whether connection timeouts are ignored (set once this client is booted)
 bool EEClient::IgnoreConnectionTimeout()
 {
     return this->mIgnoreConnectionTimeout;
 }
 
+// FUNCTION: EXE 0x4b7307
 // Reports a connection state: 0 could not connect (back to the game list), 1 connecting, 4 connecting with retries
 void EEClient::SetConnectionState(long inState)
 {
@@ -151,6 +164,7 @@ void EEClient::SetConnectionState(long inState)
     }
 }
 
+// FUNCTION: EXE 0x4b743b
 // Creates the local file for an incoming transfer in the directory of its extension (saved game, scenario, campaign)
 // Returns NULL for a short name, an unknown extension or a file of the same size already there
 // NEAR: SetFile takes the implicit UString from (const char*)inName, built in place; the original calls
@@ -209,6 +223,13 @@ FSFile* EEClient::CreateXferFile(const UWideString& inName, unsigned long inSize
     return theFile;
 }
 
+// SYNTHETIC: EXE 0x4b76c0
+// (EEPSaveGameHeader's implicit dtor, out of line after its first user)
+
+// SYNTHETIC: EXE 0x4b7705
+// (FSFileSpec's ??_G: the exe's copy of the dllimport class's vtable)
+
+// FUNCTION: EXE 0x4b7722
 // Handles a player's removal: the host's starts the server migration, ours shows the booted or out-of-sync
 // box and cancels the game, anyone else's is announced in the chat log and removed; plays the matching sound
 void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
@@ -265,30 +286,35 @@ void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
     }
 }
 
+// FUNCTION: EXE 0x4b7992
 // Cancels the game (the callback of the booted message box)
 void CancelGameCallback(void* inData)
 {
     gUserInterface->PostCancelGame();
 }
 
+// FUNCTION: EXE 0x4b799d
 // Returns whether a server migration is in progress
 bool EEClient::IsPlaybackRecordingSession()
 {
     return this->mIsMigrating;
 }
 
+// FUNCTION: EXE 0x4b79a4
 // Returns the connect timeout, kept in the global at 0x5308a0
 unsigned long EEClient::GetConnectTimeout()
 {
     return gNetworkAdapter;
 }
 
+// FUNCTION: EXE 0x4b79aa
 // Returns the client's lobby slot (0xff until the server accepts it)
 unsigned char EEClient::GetClientSlot()
 {
     return this->mUISlotNumber;
 }
 
+// FUNCTION: EXE 0x4b79b1
 // Handles a server message: connection responses (lobby or an error box), reconnection, communications ticks whose
 // player inputs go to the physics queue (or the lobby before the game); load/save and lag messages execute at once
 // NEAR: the dead reads of mNumberOfCTsProcessedInPhysics are kept through dead locals (as EEServer 0x4cbc77)
@@ -424,6 +450,7 @@ void EEClient::HandleMessage(NEMessage* inMessage)
     }
 }
 
+// FUNCTION: EXE 0x4b7ed4
 // Stamps the local player's input with the fast-selection number; selection messages take a new number and run at once
 void EEClient::HandleUserInput(NEMessage* inMessage)
 {
@@ -462,6 +489,7 @@ void EEClient::HandleUserInput(NEMessage* inMessage)
     }
 }
 
+// FUNCTION: EXE 0x4b7fa5
 // Handles the lost server: in a game starts the server migration (if allowed); after loading cancels the game;
 // in the lobby goes back to the game list
 void EEClient::HandleConnectionLost()
@@ -494,6 +522,7 @@ void EEClient::HandleConnectionLost()
     }
 }
 
+// FUNCTION: EXE 0x4b80ef
 // Handles a lobby message: player and slot info, transfer progress, the game start, a connection check (answered),
 // a joined player; game options and player info from others and the rest execute
 // NEAR: frame layout (this spilled, the 0x2d loop in memory), the 0x29 response ctor called out of line (the
@@ -601,6 +630,7 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
     }
 }
 
+// FUNCTION: EXE 0x4b8418
 // Clears the fast-selection state (no selection executing, id 0, empty table)
 void EEClient::ResetFastSelection()
 {
@@ -611,6 +641,7 @@ void EEClient::ResetFastSelection()
         this->mFastSelection[i] = 0;
 }
 
+// FUNCTION: EXE 0x4b843b
 // Starts the game: stops the graphics, starts the physics loop, opens the main game UI, drops humans without a slot
 unsigned long EEClient::HandleStartGame(unsigned long inParameter)
 {
@@ -641,6 +672,7 @@ unsigned long EEClient::HandleStartGame(unsigned long inParameter)
     return 0;
 }
 
+// FUNCTION: EXE 0x4b8599
 // Shows the server migration's countdown in the chat log (host not responding, %d seconds)
 void EEClient::HandleConnectionTimeoutWarning(unsigned long inRemaining)
 {
@@ -654,6 +686,10 @@ void EEClient::HandleConnectionTimeoutWarning(unsigned long inRemaining)
     gUserInterface->AddChatLogEntry(theText, 1);
 }
 
+// SYNTHETIC: EXE 0x4b869e
+// (EESMMediaStrings' implicit dtor)
+
+// FUNCTION: EXE 0x4b86cd
 // Shows the local command markers of a group order (move, attack, target, unload) on the goal the units just
 // queued, else on the first unit whose last goal fits
 // NEAR: the original refuses vector::operator[]'s begin()/operator+ in the first loop (more inline pressure than
@@ -797,15 +833,21 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
     }
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEClient::HandleStopGame()
 {
 }
 
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
 bool EEClient::IsClient()
 {
     return true;
 }
 
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 bool EEClient::IsServer()
 {
     return false;

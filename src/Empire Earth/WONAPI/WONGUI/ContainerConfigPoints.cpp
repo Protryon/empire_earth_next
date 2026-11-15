@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00789a70
 // Creates a named layout point for each name in a comma-separated list, registers its config and adds it
 // to the container
 bool ContainerConfig::HandleNewLayoutPoint()

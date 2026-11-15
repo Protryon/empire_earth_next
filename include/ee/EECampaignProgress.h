@@ -12,7 +12,7 @@
 class EECampaignProgress {
 public:
     EECampaignProgress();                   // 0x28f462 (three vector() ctors, clear()s, mL30 = 0)
-    ~EECampaignProgress();
+    ~EECampaignProgress();                  // 0x28f4b9
     // 0x28f4fc: outScenarios.clear(), resize to the completed count, then copies from the last element down
     void GetCompletedScenarios(std::vector<UWideString>& outScenarios);
     // 0x28f56d (EEWorld::StartGame: (UWideString("default"), campaign, scenario, checksum); provisional name)

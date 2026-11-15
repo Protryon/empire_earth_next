@@ -38,6 +38,45 @@
 #include "GERustMath.h"
 #include "GERustText.h"
 
+// Compiler-generated for this unit (names in analysis/lle/names.txt):
+// TEMPLATE: LLE 0x10016206
+// TEMPLATE: LLE 0x10016230
+// TEMPLATE: LLE 0x100162e4
+// TEMPLATE: LLE 0x100162f6
+// TEMPLATE: LLE 0x100165c5
+// TEMPLATE: LLE 0x1001660f
+// TEMPLATE: LLE 0x1001663c
+// TEMPLATE: LLE 0x10016650
+// TEMPLATE: LLE 0x1001666d
+// TEMPLATE: LLE 0x10016699
+// TEMPLATE: LLE 0x100166bd
+
+// Compiler-generated, continued:
+// SYNTHETIC: LLE 0x100152e4
+// SYNTHETIC: LLE 0x100152ee
+// SYNTHETIC: LLE 0x100152fe
+// SYNTHETIC: LLE 0x1001530a
+// SYNTHETIC: LLE 0x10015314
+// SYNTHETIC: LLE 0x1001531e
+// SYNTHETIC: LLE 0x1001532e
+// SYNTHETIC: LLE 0x1001533a
+// SYNTHETIC: LLE 0x10015344
+// SYNTHETIC: LLE 0x1001534e
+// SYNTHETIC: LLE 0x1001535e
+// SYNTHETIC: LLE 0x1001536a
+// SYNTHETIC: LLE 0x10015374
+// SYNTHETIC: LLE 0x1001537e
+// SYNTHETIC: LLE 0x1001538e
+// SYNTHETIC: LLE 0x1001539a
+// SYNTHETIC: LLE 0x100153a4
+// SYNTHETIC: LLE 0x100153ae
+// SYNTHETIC: LLE 0x100153be
+// SYNTHETIC: LLE 0x100153ca
+// SYNTHETIC: LLE 0x100153d4
+// SYNTHETIC: LLE 0x100153de
+// SYNTHETIC: LLE 0x100153ee
+// SYNTHETIC: LLE 0x100153fa
+
 // ---- GEFontBitmap.
 //
 // port (R4.3, tenth part): the font bitmap is a whole Rust object (ee_ge fbobj.rs): the constructor's glyph rendering,
@@ -210,12 +249,14 @@ intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t 
     }
 }
 
+// FUNCTION: LLE 0x10015404
 // Always returns true (any font matches)
 bool GEFontBitmap::operator==(GEFont* inFont)
 {
     return true;
 }
 
+// FUNCTION: LLE 0x10015409
 // Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (Rust: ee_ge fbobj.rs)
 GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
 {
@@ -223,18 +264,21 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
     this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen);
 }
 
+// FUNCTION: LLE 0x100159ac
 // Destroys the glyph bitmap, releasing its drawing bitmap
 GEFontBitmap::~GEFontBitmap()
 {
     ee_ge_fb_destroy(this->mRust);
 }
 
+// FUNCTION: LLE 0x10015b99
 // Draws the text glyph by glyph at its location in its colour; returns the last draw's result (Rust: ee_ge fbobj.rs)
 long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
 {
     return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen);
 }
 
+// FUNCTION: LLE 0x10015dcd
 // Draws the text glyph by glyph clipped to a rectangle (Rust: ee_ge fbobj.rs)
 long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer,
                         unsigned long inScreen)

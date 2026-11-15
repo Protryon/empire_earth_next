@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x006ff820
 // Creates an opaque scrollbar with arrow buttons from the factory (up/down or left/right, at least
 // 15 x 15 when sizeless), a thumb from the thumb factory and a scroll area button
 MSScrollbar::MSScrollbar(bool vertical) : Scrollbar(vertical)
@@ -32,6 +33,7 @@ MSScrollbar::MSScrollbar(bool vertical) : Scrollbar(vertical)
     this->SetScrollRect(new Button);
     this->SetSize(this->GetUpArrow()->Width(),this->GetUpArrow()->Height());
 }
+// FUNCTION: WON 0x006ffeb0
 // Creates a scroll container around the scroll area with Windows-style scrollbars, no header and both
 // frames on
 MSScrollContainer::MSScrollContainer(ScrollArea* scrollArea)
@@ -44,11 +46,13 @@ MSScrollContainer::MSScrollContainer(ScrollArea* scrollArea)
     this->mDrawFrame=true;
     this->mTransparent=false;
 }
+// FUNCTION: WON 0x006ffa60
 // Sets whether the scrollbar paints its background
 void MSScrollbar::SetTransparent(bool transparent)
 {
     this->mIsTransparent=transparent;
 }
+// FUNCTION: WON 0x00700250
 // Turns the 3D frame on or off and refreshes the container when it changes
 void MSScrollContainer::SetDraw3DFrame(bool on)
 {
@@ -56,6 +60,7 @@ void MSScrollContainer::SetDraw3DFrame(bool on)
     this->mDraw3DFrame=on;
     this->Virtual08();
 }
+// FUNCTION: WON 0x00700270
 // Turns the frame on or off and refreshes the container when it changes
 void MSScrollContainer::SetDrawFrame(bool on)
 {
@@ -76,3 +81,27 @@ MSArrowButtonFactory MSScrollbar::ArrowButtonFactory=DefaultMSArrowButtonFactory
 MSScrollbar::ThumbFactoryFunc MSScrollbar::ThumbFactory=MSScrollbar::DefaultThumbFactory;
 MSArrowButtonFactory MSComboBox::ArrowButtonFactory=DefaultMSArrowButtonFactory;
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006fccb0
+// (public: static class WONAPI::SmartPtr<class WONAPI::Component> __cdecl WONAPI::MSScrollbar::DefaultThumbFactory(bool)    [?DefaultThumbFactory@MSScrol)
+// TEMPLATE: WON 0x006fdc40
+// (class WONAPI::SmartPtr<class WONAPI::Button> __cdecl WONAPI::DefaultMSArrowButtonFactory(enum WONAPI::Direction)    [?DefaultMSArrowButtonFactory@WONA)
+// TEMPLATE: WON 0x006ffa50
+// (public: virtual __thiscall WONAPI::MSScrollbar::~MSScrollbar(void)    [??1MSScrollbar@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x007001e0
+// (public: virtual __thiscall WONAPI::Scroller::~Scroller(void)    [??1Scroller@WONAPI@@UAE@XZ])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00700040
+// (public: virtual void * __thiscall WONAPI::MSScrollContainer::`scalar deleting destructor'(unsigned int)    [??_GMSScrollContainer@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00700060
+// (public: virtual __thiscall WONAPI::ScrollbarScroller::~ScrollbarScroller(void)    [??1ScrollbarScroller@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x00719560
+// (public: virtual void * __thiscall WONAPI::MSScrollbar::`scalar deleting destructor'(unsigned int)    [??_GMSScrollbar@WONAPI@@UAEPAXI@Z])
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x00700120
+// (public: virtual __thiscall WONAPI::MSScrollContainer::~MSScrollContainer(void)    [??1MSScrollContainer@WONAPI@@UAE@XZ])

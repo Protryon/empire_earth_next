@@ -71,6 +71,7 @@ static const EeWonRouteConnHooks kHooks = {HookAddRef, HookRelease, HookOpKill, 
     HookOpType, HookOpDerived, HookHandleReply, HookOpEnd, HookOpComplete, HookCompleteHook, HookNewUnsolicited,
     HookServerCloseHook, HookServerKillHook};
 
+// FUNCTION: WON 0x006ba050
 // Creates a routing connection with 2-byte length fields that treats every derived-server message as unsolicited
 RoutingConnection::RoutingConnection()
 {
@@ -79,12 +80,15 @@ RoutingConnection::RoutingConnection()
     this->mRoute = ee_won_routeconn_new(static_cast<void*>(this), &kHooks, static_cast<void*>(this->GetDataLock()));
 }
 
+// FUNCTION: WON 0x006ba4b0
 // Destroys the routing connection, releasing its pending ops and completions
 RoutingConnection::~RoutingConnection() { ee_won_routeconn_free(this->mRoute); }
 
+// FUNCTION: WON 0x006bcb20
 // Kills every pending routing op and empties the list, then closes the server connection
 void RoutingConnection::CloseHook() { ee_won_routeconn_close_hook(this->mRoute); }
 
+// FUNCTION: WON 0x006bcbb0
 // Drops the default and per-op-type completions, then kills the server connection
 void RoutingConnection::KillHook() { ee_won_routeconn_kill_hook(this->mRoute); }
 
@@ -98,6 +102,7 @@ void RoutingConnection::SetDefaultOpCompletion(CompletionBase<AsyncOpPtr>* inCom
     ee_won_routeconn_set_completion(this->mRoute, -1, static_cast<RefCount*>(inCompletion));
 }
 
+// FUNCTION: WON 0x006ba630
 // Adds an op (with its completion resolved: its own, its type's, else the default one) to the list waiting for replies
 void RoutingConnection::AddOp(RoutingOp* inOp) { ee_won_routeconn_add_op(this->mRoute, Out(inOp)); }
 
@@ -139,6 +144,7 @@ static RoutingOp* DataOp(RoutingConnection* inConn, RoutingOpType inType, unsign
     return op;
 }
 
+// FUNCTION: WON 0x006bd430
 // Starts an async request to create a group with the given name, password, size and flags
 void RoutingConnection::CreateGroup(unsigned short inGroupId, const std::wstring& inName, const std::wstring& inPassword,
     unsigned short inMaxPlayers, unsigned long inGroupFlags, unsigned char inJoinFlags, unsigned long inAsyncFlags,
@@ -155,6 +161,7 @@ void RoutingConnection::CreateGroup(unsigned short inGroupId, const std::wstring
     Run(op);
 }
 
+// FUNCTION: WON 0x006bd580
 // Starts an async request to join a group with a password, comment and join/member flags
 void RoutingConnection::JoinGroup(unsigned short inGroupId, const std::wstring& inPassword, const std::wstring& inComment,
     unsigned char inJoinFlags, unsigned char inMemberFlags, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -168,12 +175,14 @@ void RoutingConnection::JoinGroup(unsigned short inGroupId, const std::wstring& 
     Run(op);
 }
 
+// FUNCTION: WON 0x006bf590
 // Starts an async request to ban or unban a client (by client id) in a group for some seconds
 void RoutingConnection::BanClient(unsigned short inGroupId, bool inOn, unsigned long inSeconds,
     const std::wstring& inExplanation, unsigned short inClientId, CompletionBase<AsyncOpPtr>* inCompletion)
 {
     Moderate(this, RoutingOp_BanClient, inGroupId, inOn, inSeconds, inExplanation, 0, inClientId, inCompletion);
 }
+// FUNCTION: WON 0x006bf6b0
 // Starts an async request to ban or unban a user by WON id in a group for some seconds
 void RoutingConnection::BanClientByWONId(unsigned short inGroupId, bool inOn, unsigned long inSeconds,
     const std::wstring& inExplanation, unsigned long inWONId, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -186,12 +195,14 @@ void RoutingConnection::BanClientByCDKeyId(unsigned short inGroupId, bool inOn, 
 {
     Moderate(this, RoutingOp_BanClient, inGroupId, inOn, inSeconds, inExplanation, 2, inCDKeyId, inCompletion);
 }
+// FUNCTION: WON 0x006bf7d0
 // Starts an async request to mute or unmute a client (by client id) in a group for some seconds
 void RoutingConnection::MuteClient(unsigned short inGroupId, bool inOn, unsigned long inSeconds,
     const std::wstring& inExplanation, unsigned short inClientId, CompletionBase<AsyncOpPtr>* inCompletion)
 {
     Moderate(this, RoutingOp_MuteClient, inGroupId, inOn, inSeconds, inExplanation, 0, inClientId, inCompletion);
 }
+// FUNCTION: WON 0x006bf8f0
 // Starts an async request to mute or unmute a user by WON id in a group for some seconds
 void RoutingConnection::MuteClientByWONId(unsigned short inGroupId, bool inOn, unsigned long inSeconds,
     const std::wstring& inExplanation, unsigned long inWONId, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -205,6 +216,7 @@ void RoutingConnection::MuteClientByCDKeyId(unsigned short inGroupId, bool inOn,
     Moderate(this, RoutingOp_MuteClient, inGroupId, inOn, inSeconds, inExplanation, 2, inCDKeyId, inCompletion);
 }
 
+// FUNCTION: WON 0x006bcc30
 // Starts an async request to register this client with the routing server under a name and password
 void RoutingConnection::Register(const std::wstring& inName, const std::wstring& inPassword, unsigned long inReconnectId,
     unsigned long inAsyncFlags, unsigned long inRegisterFlags, unsigned long inClientFlags,
@@ -219,6 +231,7 @@ void RoutingConnection::Register(const std::wstring& inName, const std::wstring&
     op->SetNum(EE_WON_RTF_CLIENT_FLAGS, inClientFlags);
     Run(op);
 }
+// FUNCTION: WON 0x006bcd40
 // Starts an async request for the routing server's client list
 void RoutingConnection::GetClientList(CompletionBase<AsyncOpPtr>* inCompletion)
 {
@@ -231,6 +244,7 @@ void RoutingConnection::GetClientListEx(CompletionBase<AsyncOpPtr>* inCompletion
     op->SetNum(EE_WON_RTF_IS_EX, 1);
     Run(op);
 }
+// FUNCTION: WON 0x006bcf90
 // Starts an async request for the group list with the given field flags
 void RoutingConnection::GetGroupList(unsigned char inFlags, CompletionBase<AsyncOpPtr>* inCompletion)
 {
@@ -238,6 +252,7 @@ void RoutingConnection::GetGroupList(unsigned char inFlags, CompletionBase<Async
     op->SetNum(EE_WON_RTF_FLAGS16, inFlags);
     Run(op);
 }
+// FUNCTION: WON 0x006bd1e0
 // Starts an async request for the members of a group
 void RoutingConnection::GetMembersOfGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion)
 {
@@ -245,6 +260,7 @@ void RoutingConnection::GetMembersOfGroup(unsigned short inId, CompletionBase<As
     op->SetNum(EE_WON_RTF_GROUP_ID, inId);
     Run(op);
 }
+// FUNCTION: WON 0x006bd850
 // Starts an async request to leave a group
 void RoutingConnection::LeaveGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion)
 {
@@ -252,6 +268,7 @@ void RoutingConnection::LeaveGroup(unsigned short inId, CompletionBase<AsyncOpPt
     op->SetNum(EE_WON_RTF_GROUP_ID, inId);
     Run(op);
 }
+// FUNCTION: WON 0x006bd6b0
 // Starts an async request to cancel a pending group join (optionally leaving if already joined)
 void RoutingConnection::CancelJoinGroup(unsigned short inId, bool inLeave, CompletionBase<AsyncOpPtr>* inCompletion)
 {
@@ -260,6 +277,7 @@ void RoutingConnection::CancelJoinGroup(unsigned short inId, bool inLeave, Compl
     op->SetNum(EE_WON_RTF_ON, inLeave);
     Run(op);
 }
+// FUNCTION: WON 0x006bd9f0 (accept), 0x006bdb00 (invite)
 // Starts an async answer accepting or rejecting a client's attempt to join a group; an invitation likewise
 static void ClientAnswer(RoutingConnection* inConn, RoutingOpType inType, unsigned short inGroup, unsigned short inClient,
                          bool inOn, const std::wstring& inExplanation, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -281,6 +299,7 @@ void RoutingConnection::InviteClient(unsigned short inGroup, unsigned short inCl
 {
     ClientAnswer(this, RoutingOp_InviteClient, inGroup, inClient, inOn, inExplanation, inCompletion);
 }
+// FUNCTION: WON 0x006bdc10
 // Starts an async request to change a group's flags and async flags under masks
 void RoutingConnection::SetGroupFlags(unsigned short inId, unsigned long inMask, unsigned long inFlags,
     unsigned long inAsyncMask, unsigned long inAsyncFlags, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -293,6 +312,7 @@ void RoutingConnection::SetGroupFlags(unsigned short inId, unsigned long inMask,
     op->SetNum(EE_WON_RTF_ASYNC_FLAGS, inAsyncFlags);
     Run(op);
 }
+// FUNCTION: WON 0x006bddd0
 // Starts an async request to broadcast a server alert text
 void RoutingConnection::SendServerAlert(const std::wstring& inText, CompletionBase<AsyncOpPtr>* inCompletion)
 {
@@ -310,6 +330,7 @@ void RoutingConnection::SendServerAlertWithRecipientList(const std::wstring& inT
     op->SetRecipients(inRecipients);
     Run(op);
 }
+// FUNCTION: WON 0x006be010
 // Starts an async request for a server shutdown in the given seconds, with an alert text
 void RoutingConnection::StartServerShutdown(const std::wstring& inText, unsigned long inSeconds,
     CompletionBase<AsyncOpPtr>* inCompletion)
@@ -319,11 +340,13 @@ void RoutingConnection::StartServerShutdown(const std::wstring& inText, unsigned
     op->SetNum(EE_WON_RTF_TIME, inSeconds);
     Run(op);
 }
+// FUNCTION: WON 0x006be200
 // Starts an async request to abort a pending server shutdown
 void RoutingConnection::AbortServerShutdown(CompletionBase<AsyncOpPtr>* inCompletion)
 {
     Run(NewOp(this, RoutingOp_AbortServerShutdown, inCompletion));
 }
+// FUNCTION: WON 0x006be390
 // Starts an async request to change this client's flags under masks (the client mask is cut to 16 bits)
 void RoutingConnection::SetClientFlags(unsigned long inMask, unsigned long inFlags, unsigned long inAsyncMask,
     unsigned long inAsyncFlags, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -335,6 +358,7 @@ void RoutingConnection::SetClientFlags(unsigned long inMask, unsigned long inFla
     op->SetNum(EE_WON_RTF_ASYNC_MSG_FLAGS, inAsyncFlags);
     Run(op);
 }
+// FUNCTION: WON 0x006be540
 // Sends a chat message to a single recipient
 void RoutingConnection::SendChat(const std::wstring& inText, unsigned long inFlags, unsigned short inRecipient,
     CompletionBase<AsyncOpPtr>* inCompletion)
@@ -343,6 +367,7 @@ void RoutingConnection::SendChat(const std::wstring& inText, unsigned long inFla
     aRecipients.push_back(inRecipient);
     this->SendChatTo(inText, (unsigned short)inFlags, aRecipients, inCompletion);
 }
+// FUNCTION: WON 0x006be6a0
 // Starts an async chat message to a list of recipients
 void RoutingConnection::SendChatTo(const std::wstring& inText, unsigned short inFlags,
     const std::list<unsigned short>& inRecipients, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -353,6 +378,7 @@ void RoutingConnection::SendChatTo(const std::wstring& inText, unsigned short in
     op->SetRecipients(inRecipients);
     Run(op);
 }
+// FUNCTION: WON 0x006be910
 // Sends a data block to a single recipient
 void RoutingConnection::SendData(const ByteBuffer* inData, unsigned char inFlags, unsigned short inRecipient,
     CompletionBase<AsyncOpPtr>* inCompletion)
@@ -361,6 +387,7 @@ void RoutingConnection::SendData(const ByteBuffer* inData, unsigned char inFlags
     aRecipients.push_back(inRecipient);
     this->SendData(inData, inFlags, aRecipients, inCompletion);
 }
+// FUNCTION: WON 0x006bea70
 // Starts an async send of a data block to a list of recipients
 void RoutingConnection::SendData(const ByteBuffer* inData, unsigned char inFlags,
     const std::list<unsigned short>& inRecipients, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -371,6 +398,7 @@ void RoutingConnection::SendData(const ByteBuffer* inData, unsigned char inFlags
     op->SetRecipients(inRecipients);
     Run(op);
 }
+// FUNCTION: WON 0x006bf3f0
 // Starts an async request to turn moderator mode on or off
 void RoutingConnection::BecomeModerator(bool inOn, CompletionBase<AsyncOpPtr>* inCompletion)
 {
@@ -379,6 +407,7 @@ void RoutingConnection::BecomeModerator(bool inOn, CompletionBase<AsyncOpPtr>* i
     Run(op);
 }
 
+// FUNCTION: WON 0x006becd0
 // Starts an async request to create a data object (link id, type, name, data)
 void RoutingConnection::CreateDataObject(unsigned char inFlags, unsigned short inLink, const std::string& inType,
     const std::wstring& inName, const ByteBuffer* inData, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -389,6 +418,7 @@ void RoutingConnection::CreateDataObject(unsigned char inFlags, unsigned short i
     op->SetData(inData);
     Run(op);
 }
+// FUNCTION: WON 0x006bee30
 // Starts an async request to delete a data object by link id, type and name
 void RoutingConnection::ReplaceDataObject(unsigned short inLink, const std::string& inType, const std::wstring& inName,
     CompletionBase<AsyncOpPtr>* inCompletion)
@@ -397,6 +427,7 @@ void RoutingConnection::ReplaceDataObject(unsigned short inLink, const std::stri
     op->SetText(EE_WON_RTT_NAME, inName);
     Run(op);
 }
+// FUNCTION: WON 0x006bef50
 // Starts an async request to insert or replace data at an offset in a data object
 void RoutingConnection::ModifyDataObject(unsigned short inLink, const std::string& inType, const std::wstring& inName,
     unsigned short inOffset, bool inInsert, const ByteBuffer* inData, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -408,6 +439,7 @@ void RoutingConnection::ModifyDataObject(unsigned short inLink, const std::strin
     op->SetData(inData);
     Run(op);
 }
+// FUNCTION: WON 0x006bf0c0 (read), 0x006bf1d0 (subscribe)
 // Starts an async read of the data objects of a type under a link id (and a subscription to their changes)
 static void ReadData(RoutingConnection* inConn, bool inSubscribe, unsigned short inLink, const std::string& inType,
                      unsigned long inFlags, CompletionBase<AsyncOpPtr>* inCompletion)
@@ -432,6 +464,7 @@ void RoutingConnection::GetClientCDKeyIdList(CompletionBase<AsyncOpPtr>* inCompl
 {
     ReadData(this, inSubscribe, 0xffff, "_KeyId", 0, inCompletion);
 }
+// FUNCTION: WON 0x006bf2e0
 // Starts an async request to stop updates for the data objects of a type
 void RoutingConnection::UnsubscribeDataObject(unsigned short inLink, const std::string& inType, unsigned long inFlags,
     CompletionBase<AsyncOpPtr>* inCompletion)
@@ -490,6 +523,7 @@ void RoutingConnection::GetBadUserList(RoutingBadUserListType inListType, unsign
     Run(op);
 }
 
+// FUNCTION: WON 0x006bc6c0
 // Returns a new derived-server op for an unsolicited message when all derived ops count as unsolicited, else NULL
 SmartPtr<RoutingOp> RoutingConnection::GetUnsolicitedDerivedOp(unsigned char)
 {
@@ -497,9 +531,26 @@ SmartPtr<RoutingOp> RoutingConnection::GetUnsolicitedDerivedOp(unsigned char)
     return NULL;
 }
 
+// FUNCTION: WON 0x006bc850
 // Dispatches an incoming routing message to the first pending or unsolicited op that accepts it and completes that op
 void RoutingConnection::MsgCallback(const ByteBuffer* inData)
 {
     ee_won_routeconn_msg_callback(this->mRoute, reinterpret_cast<const uint8_t*>(inData->data()), inData->length());
 }
 }
+
+// Compiler-generated and header-inline functions this unit emits:
+// TEMPLATE: WON 0x006ba3f0
+// (public: virtual __thiscall WONAPI::RoutingGroupInfo::~RoutingGroupInfo(void)    [??1RoutingGroupInfo@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x006ba490
+// (protected: virtual void * __thiscall WONAPI::RoutingConnection::`scalar deleting destructor'(unsigned int)    [??_GRoutingConnection@WONAPI@@MAEPAXI@Z)
+// TEMPLATE: WON 0x006ba280
+// (public: virtual void * __thiscall WONAPI::RoutingMemberInfo::`scalar deleting destructor'(unsigned int)    [??_GRoutingMemberInfo@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x006ba2a0
+// (public: virtual __thiscall WONAPI::RoutingMemberInfo::~RoutingMemberInfo(void)    [??1RoutingMemberInfo@WONAPI@@UAE@XZ])
+// TEMPLATE: WON 0x006ba3d0
+// (public: virtual void * __thiscall WONAPI::RoutingGroupInfo::`scalar deleting destructor'(unsigned int)    [??_GRoutingGroupInfo@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x006ba1a0
+// (public: virtual void * __thiscall WONAPI::RoutingClientInfo::`scalar deleting destructor'(unsigned int)    [??_GRoutingClientInfo@WONAPI@@UAEPAXI@Z])
+// TEMPLATE: WON 0x006ba1c0
+// (public: virtual __thiscall WONAPI::RoutingClientInfo::~RoutingClientInfo(void)    [??1RoutingClientInfo@WONAPI@@UAE@XZ])

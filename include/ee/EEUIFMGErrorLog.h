@@ -9,7 +9,7 @@
 class EEUIFMGErrorLog : public UILBString {
 public:
     EEUIFMGErrorLog(const GERectangle& inRectangle, UIForm* inForm, GEFont* inFont, std::vector<UWideString>& inData,
-                    unsigned long inIndex, unsigned long inId);
+                    unsigned long inIndex, unsigned long inId);   // 0x267ad9
 #ifdef __clang__
     // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
     // forward to them (clang build only; remove once the parameters themselves are const).

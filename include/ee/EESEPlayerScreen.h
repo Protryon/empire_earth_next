@@ -21,7 +21,7 @@ public:
     virtual void Store();     //175d7e
     // Actual vtable+24 points157269, independently disassembled ret4.
     virtual void MouseMove(const GE2DPoint& inLocation) {}
-    void Refresh();
+    void Refresh();                         // 0x175a3e
     // 0x175a1f: the max-players combo box's list selection + 2 (EESETSCondition::Activate)
     unsigned long GetPlayerCount();
     // 0x173653: the player rows and diplomacy grid for inCount players, the player combo refilled, an

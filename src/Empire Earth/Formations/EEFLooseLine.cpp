@@ -54,12 +54,17 @@
 const float kEEFLooseLineSpacing = 2.0f;
 const float kEEFLooseLineDepth = 0.0f;
 
+// FUNCTION: EXE 0x4ddc73
 // Creates the loose line formation (type 2, rows of 5 at double spacing, a gap row after every 5)
 EEFLooseLine::EEFLooseLine()
     : EEFLine(2, kEEFLooseLineSpacing, kEEFLooseLineDepth, 5, 5)
 {
 }
 
+// SYNTHETIC: EXE 0x4ddc9f
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x4ddcbb
 // Destroys the loose line formation
 EEFLooseLine::~EEFLooseLine()
 {

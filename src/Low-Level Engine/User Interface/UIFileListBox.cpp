@@ -128,6 +128,7 @@ struct UIFileListHost {
     }
 };
 
+// FUNCTION: LLE 0x1006fc07
 // Creates an empty file list box with no search path
 UIFileListBox::UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSelect, const GERectangle& inRectangle,
                              UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
@@ -153,6 +154,7 @@ void UIFileListBox::SetSearchPaths(FSPath* inPath)
     ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath);
 }
 
+// FUNCTION: LLE 0x1006f60f
 // Creates an empty file combo box (the given entries are ignored) with no search path
 UIFileComboBox::UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData,
                                GEFont* inFont, const GE2DPoint& inLocation, float inWidth,

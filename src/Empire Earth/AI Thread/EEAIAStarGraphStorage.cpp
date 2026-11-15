@@ -27,11 +27,13 @@ EEAIAStarGraphNode::EEAIAStarGraphNode(const EeAStarGraphNodeView& inView)
 {
 }
 
+// FUNCTION: EXE 0x416070
 // The shared free node pool is gone: each Rust storage frees its nodes with itself (EEPathManager::Shutdown calls it)
 void EEAIAStarGraphStorage::FreeNodePool()
 {
 }
 
+// FUNCTION: EXE 0x4160b7
 // Creates an empty graph node storage with no lists or tables and 27 hash buckets
 EEAIAStarGraphStorage::EEAIAStarGraphStorage()
     : mHookHasCurrent(false), mHookHasOpen(false), mCore(ee_astar_graph_new(EeAStarGraphKind::Hashed)), mCount(0)
@@ -44,6 +46,10 @@ EEAIAStarGraphStorage::EEAIAStarGraphStorage(EeAStarGraphKind inKind)
 {
 }
 
+// SYNTHETIC: EXE 0x4160f0
+// (the scalar deleting destructor)
+
+// FUNCTION: EXE 0x41610c
 // Destroys the storage and its nodes
 EEAIAStarGraphStorage::~EEAIAStarGraphStorage()
 {
@@ -51,12 +57,14 @@ EEAIAStarGraphStorage::~EEAIAStarGraphStorage()
     this->mCore = NULL;
 }
 
+// FUNCTION: EXE 0x416221
 // Returns all nodes to the free pool and forgets the found path
 void EEAIAStarGraphStorage::ResetNodes()
 {
     ee_astar_graph_reset_nodes(this->mCore);
 }
 
+// FUNCTION: EXE 0x416258
 // Starts walking the found path and returns its first node's tile and index; false (zeros) without a path
 bool EEAIAStarGraphStorage::GetFirstPathNode(EETileCoordinate& outTile, long& outIndex)
 {
@@ -70,6 +78,7 @@ bool EEAIAStarGraphStorage::GetFirstPathNode(EETileCoordinate& outTile, long& ou
     return theResult;
 }
 
+// FUNCTION: EXE 0x41634f
 // Returns the next path node's tile and index and steps to its parent; false (zeros) at the end
 bool EEAIAStarGraphStorage::GetNextPathNode(EETileCoordinate& outTile, long& outIndex)
 {
@@ -83,6 +92,7 @@ bool EEAIAStarGraphStorage::GetNextPathNode(EETileCoordinate& outTile, long& out
     return theResult;
 }
 
+// FUNCTION: EXE 0x416514
 // Prepares the storage for a graph of inCount nodes: clears the arrays (the virtual slot) and nodes and allocates
 // empty hash tables; returns true
 bool EEAIAStarGraphStorage::Init(long inCount)
@@ -94,6 +104,7 @@ bool EEAIAStarGraphStorage::Init(long inCount)
     return true;
 }
 
+// FUNCTION: EXE 0x416af6
 // Sizes the flag and node arrays to inCount (reallocating when the count changed) and clears both
 void EEAIAStarGraphStorage::PrepareArrays(long inCount)
 {

@@ -110,6 +110,7 @@ struct EESETerrainNameLess {
     }
 };
 
+// FUNCTION: EXE 0x5aaad4
 // Draws each color set line as a row of colored swatches clipped to the list box, then the list box itself
 long EESEUITerrainColorLB::DrawPolygons()
 {
@@ -137,6 +138,7 @@ long EESEUITerrainColorLB::DrawPolygons()
     return UIListBox<std::vector<GEColor> >::DrawPolygons();
 }
 
+// FUNCTION: EXE 0x5aacf2
 // Copies the list for drawing, moving the preview texture references to the new copy and framing the selection
 long EESEUITerrainTypeLB::CopyData()
 {
@@ -162,6 +164,7 @@ long EESEUITerrainTypeLB::CopyData()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5aade1
 // Draws the list box, each line's 16x16 terrain preview and a frame around the selected line
 long EESEUITerrainTypeLB::DrawPolygons()
 {
@@ -202,6 +205,7 @@ long EESEUITerrainTypeLB::DrawPolygons()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5ab15f
 // Sets the preview texture of a terrain line, releasing the old one and referencing the new one
 void EESEUITerrainTypeLB::SetTexture(GETexture* inTexture, unsigned long inLine)
 {
@@ -212,6 +216,7 @@ void EESEUITerrainTypeLB::SetTexture(GETexture* inTexture, unsigned long inLine)
         this->mData[inLine].mTexture->Reference();
 }
 
+// FUNCTION: EXE 0x5ab1a2
 // Draws the visible terrain names to the right of their previews; returns the last draw result
 long EESEUITerrainTypeLB::DrawTextA()
 {
@@ -236,6 +241,7 @@ long EESEUITerrainTypeLB::DrawTextA()
     return theResult;
 }
 
+// FUNCTION: EXE 0x5ab2ab
 // Checks the paint type button and shows (terrain) or hides (bulldozer) the terrain type, color and preview controls
 void EEUIFSETRBPaintType::Check()
 {
@@ -258,6 +264,7 @@ void EEUIFSETRBPaintType::Check()
     }
 }
 
+// FUNCTION: EXE 0x5ab344
 // Creates the paint action: terrain with the selected type and color (NULL without a type) or bulldozer;
 // without a color selection it indexes the color list with the terrain's color type id
 EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
@@ -286,6 +293,13 @@ EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
     return NULL;
 }
 
+// FUNCTION: EXE 0x5ab460
+// (EESEAPaintMoutains' inline ctor, out of line: its first user 0x1ab344 refused it; an EESEAPaintRust)
+
+// FUNCTION: EXE 0x5ab48a
+// (EESEAPaintMoutains' scalar deleting destructor: likewise)
+
+// FUNCTION: EXE 0x5ab4bc
 // Tints the preview bitmap's corners with the first, one-third, two-thirds and last colors of the selected color set
 long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -307,6 +321,7 @@ long EEUIETerrainColorChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x5ab6d7
 // Shows the selected terrain's preview, selects its color set and makes it the tab's selected terrain
 long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -332,6 +347,7 @@ long EEUIETerrainTypeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
+// FUNCTION: EXE 0x5ab87c
 // Creates the terrain tab: terrain/bulldozer buttons, the name-sorted terrain type list, color set list, paint control
 // and preview bitmap; loads the terrain previews
 EEUIFSETerrain::EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes,
@@ -459,6 +475,22 @@ EEUIFSETerrain::EEUIFSETerrain(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes
     EELoadTerrainPreviews();
 }
 
+// FUNCTION: EXE 0x5ac31d
+// Copies the color set list for drawing (EESEUITerrainColorLB::CopyData, inline, emitted with the vtable)
+
+// FUNCTION: EXE 0x5ac32e
+// Destroys and frees the terrain color set list (scalar deleting destructor)
+
+// FUNCTION: EXE 0x5ac350
+// Creates the terrain type list box (inline ctor, out of line: EEUIFSETerrain's ctor refused it)
+
+// FUNCTION: EXE 0x5ac3f1
+// Destroys and frees the terrain type list box (scalar deleting destructor)
+
+// FUNCTION: EXE 0x5ac40d
+// Destroys the terrain type list box (inline dtor, out of line)
+
+// FUNCTION: EXE 0x5ac48b
 // Creates a paint type radio button 125 wide and as tall as the larger of its font and the radio button image
 EEUIFSETRBPaintType::EEUIFSETRBPaintType(unsigned long inID, const UWideString& inText,
     const GE2DPoint& inLocation, GEFont* inFont, UIForm* inForm, unsigned long inIndex, bool inChecked)
@@ -470,6 +502,25 @@ EEUIFSETRBPaintType::EEUIFSETRBPaintType(unsigned long inID, const UWideString& 
 {
 }
 
+// SYNTHETIC: EXE 0x5ac516
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFSETRBPaintType+0x0, stores EEUIFSETRBPaintType vtable)
+
+// SYNTHETIC: EXE 0x5ac539
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFSETerrainPaint+0x0, stores EEUIFSETerrainPaint vtable)
+
+// FUNCTION: EXE 0x5ac55b
+// Destroys and frees the terrain color change event (scalar deleting destructor, emitted with its vtable)
+
+// FUNCTION: EXE 0x5ac586
+// Destroys and frees the terrain type change event (scalar deleting destructor, emitted with its vtable)
+
+// SYNTHETIC: EXE 0x5ac5b1
+// (the scalar deleting destructor, emitted with the vtable; slot EEUIFSETerrain+0x0)
+
+// SYNTHETIC: EXE 0x5ac5cd
+// (the scalar deleting destructor, emitted with the vtable; slot UIBitmap+0x0)
+
+// FUNCTION: EXE 0x5ac5ea
 // Destroys the terrain tab and its controls and releases the terrain previews
 EEUIFSETerrain::~EEUIFSETerrain()
 {
@@ -484,6 +535,7 @@ EEUIFSETerrain::~EEUIFSETerrain()
     EEReleaseTerrainPreviews();
 }
 
+// FUNCTION: EXE 0x5ac675
 // Leaves the tab: asks the load thread to unload the selected terrain and drops every preview texture
 void EEUIFSETerrain::Leave()
 {
@@ -497,6 +549,7 @@ void EEUIFSETerrain::Leave()
         this->mTerrainType->SetTexture(NULL, theSelection);
 }
 
+// FUNCTION: EXE 0x5ac6f9
 // Moves the brush highlight to the mouse while the editor is the current form
 void EEUIFSETerrain::Update()
 {
@@ -505,6 +558,7 @@ void EEUIFSETerrain::Update()
         this->MouseMove(gMouse->mPosition);
 }
 
+// FUNCTION: EXE 0x5ac727
 // Enters the tab: sets the previews (an ambient-only terrain shows its first unit's button), shows the selected one
 // and asks the load thread to load the selected terrain
 void EEUIFSETerrain::Enter()
@@ -541,6 +595,7 @@ void EEUIFSETerrain::Enter()
         this->mSelectedTerrain = -1;
 }
 
+// FUNCTION: EXE 0x5aca00
 // Selects a terrain, asking the load thread to unload the previous one and load the new one (none if out of range)
 void EEUIFSETerrain::SelectTerrain(unsigned long inSelection)
 {
@@ -554,6 +609,7 @@ void EEUIFSETerrain::SelectTerrain(unsigned long inSelection)
         this->mSelectedTerrain = -1;
 }
 
+// FUNCTION: EXE 0x5aca71
 // Puts the brush highlight on the map point under the mouse inside the game view, else hides it
 void EEUIFSETerrain::MouseMove(const GE2DPoint& inLocation)
 {
@@ -568,3 +624,234 @@ void EEUIFSETerrain::MouseMove(const GE2DPoint& inLocation)
         theForm->mBrushGroup->mIsHighlightShown = false;
     }
 }
+
+// FUNCTION: EXE 0x5acafa
+// Appends a terrain type to the tab's color type list (vector<EETerrainTypeTable*>::push_back)
+
+// FUNCTION: EXE 0x5acb26
+// Creates a color set list box (UIListBox<vector<GEColor> > ctor)
+
+// FUNCTION: EXE 0x5acda0
+// Destroys a color set list box (UIListBox<vector<GEColor> > dtor)
+
+// FUNCTION: EXE 0x5ace34
+// Appends a color set line and updates the scroll bar (UIListBox<vector<GEColor> >::AppendLine)
+
+// FUNCTION: EXE 0x5ace5a
+// Appends several color set lines (UIListBox<vector<GEColor> >::AppendStringArray)
+
+// FUNCTION: EXE 0x5acea6
+// Copies the color set lines and layout for drawing (UIListBox<vector<GEColor> >::CopyData)
+
+// FUNCTION: EXE 0x5ad0fd
+// Removes every color set line (UIListBox<vector<GEColor> >::DeleteAllEntries)
+
+// FUNCTION: EXE 0x5ad12e
+// Removes one color set line (UIListBox<vector<GEColor> >::DeleteLine)
+
+// FUNCTION: EXE 0x5ad1bc
+// Gets the selected color set line; fails when empty or unselected (UIListBox<vector<GEColor> >::GetCurrentSelection)
+
+// FUNCTION: EXE 0x5ad1f2
+// Moves the list box (UIListBox<vector<GEColor> >::SetLocation, ICF-shared by the editor and WON list boxes)
+
+// FUNCTION: EXE 0x5ad327
+// Handles the list box keys (UIListBox<vector<GEColor> >::UpdateKeyboard, ICF-shared by the list boxes)
+
+// FUNCTION: EXE 0x5ad428
+// Returns the number of color set lines (UIListBox<vector<GEColor> >::GetNumLines)
+
+// FUNCTION: EXE 0x5ad441
+// Handles a left click on the list box (UIListBox<vector<GEColor> >::MouseLButtonDown, ICF-shared)
+
+// FUNCTION: EXE 0x5ad4dc
+// Handles a double click on the list box (UIListBox<vector<GEColor> >::MouseLButtonDoublePressed, ICF-shared)
+
+// FUNCTION: EXE 0x5ad5a8
+// Handles mouse moves over the list box (UIListBox<vector<GEColor> >::MouseMove, ICF-shared)
+
+// FUNCTION: EXE 0x5ad67e
+// Returns 0 (EEUIFSETerrainPaint::MouseRButtonDown: one ICF-folded body shared by many empty virtuals)
+
+// FUNCTION: EXE 0x5ad681
+// Handles the End key in the list box (UIListBox<vector<GEColor> >::ProcessEnd, ICF-shared)
+
+// FUNCTION: EXE 0x5ad6d7
+// Creates a terrain type list box (UIListBox<EESEUITTData> ctor)
+
+// FUNCTION: EXE 0x5ad951
+// Destroys a terrain type list box (UIListBox<EESEUITTData> dtor)
+
+// FUNCTION: EXE 0x5ad9e5
+// Appends a terrain line and updates the scroll bar (UIListBox<EESEUITTData>::AppendLine)
+
+// FUNCTION: EXE 0x5ada0b
+// Appends several terrain lines (UIListBox<EESEUITTData>::AppendStringArray)
+
+// FUNCTION: EXE 0x5ada60
+// Copies the terrain lines and layout for drawing (UIListBox<EESEUITTData>::CopyData)
+
+// FUNCTION: EXE 0x5adcd9
+// Removes every terrain line (UIListBox<EESEUITTData>::DeleteAllEntries)
+
+// FUNCTION: EXE 0x5add0a
+// Removes one terrain line (UIListBox<EESEUITTData>::DeleteLine)
+
+// FUNCTION: EXE 0x5add98
+// Gets the selected terrain line; fails when empty or unselected (UIListBox<EESEUITTData>::GetCurrentSelection)
+
+// FUNCTION: EXE 0x5addd5
+// Scrolls the list box by a wheel turn; returns 9 without a scroll bar (UIListBox<vector<GEColor> >::MouseWheelTurned)
+
+// FUNCTION: EXE 0x5addf3
+// Returns the number of terrain lines (UIListBox<EESEUITTData>::GetNumLines)
+
+// FUNCTION: EXE 0x5ade0f
+// Handles the Down key in the list box (UIListBox<vector<GEColor> >::ProcessDown, ICF-shared)
+
+// FUNCTION: EXE 0x5ade79
+// Takes the focus when tabbed to (UIListBox<vector<GEColor> >::TabbedTo, ICF-shared)
+
+// FUNCTION: EXE 0x5ade81
+// Resizes the terrain line array, filling with empty lines (vector<EESEUITTData>::resize)
+
+// SYNTHETIC: EXE 0x5adeaa
+// (the scalar deleting destructor, emitted with the vtable; slot UIListBox<std::vector<GEColor,std::allocator<GEColor> > >+0x0)
+
+// SYNTHETIC: EXE 0x5adec6
+// (the scalar deleting destructor, emitted with the vtable; slot UIListBox<EESEUITTData>+0x0)
+
+// TEMPLATE: EXE 0x5adee2
+// ?CheckScrollBar@?$UIListBox@V?$vector@VGEColor@@V?$allocator@VGEColor@@@std@@@std@@@@IAEXXZ (ICF-shared with the other UIListBox instantiations)
+
+// FUNCTION: EXE 0x5ae0a7
+// Assigns a color set array (vector<vector<GEColor> >::operator=)
+
+// FUNCTION: EXE 0x5ae1f9
+// Appends a color set (vector<vector<GEColor> >::push_back)
+
+// FUNCTION: EXE 0x5ae225
+// Erases color sets (vector<vector<GEColor> >::erase)
+
+// FUNCTION: EXE 0x5ae298
+// Empties a color set array (vector<vector<GEColor> >::clear)
+
+// FUNCTION: EXE 0x5ae2d3
+// Assigns a terrain line array (vector<EESEUITTData>::operator=)
+
+// FUNCTION: EXE 0x5ae45c
+// Copies a terrain line: name, preview texture and color set (EESEUITTData::operator=)
+
+// FUNCTION: EXE 0x5ae47e
+// Resizes the terrain line array, filling with a given line (vector<EESEUITTData>::resize)
+
+// FUNCTION: EXE 0x5ae53b
+// Returns a terrain line by index (vector<EESEUITTData>::operator[], ICF-shared with vector<EEWorldTableEntry>)
+
+// FUNCTION: EXE 0x5ae54a
+// Appends a terrain line (vector<EESEUITTData>::push_back)
+
+// FUNCTION: EXE 0x5ae576
+// Erases terrain lines (vector<EESEUITTData>::erase)
+
+// FUNCTION: EXE 0x5ae5ea
+// Empties the terrain line array (vector<EESEUITTData>::clear)
+
+// FUNCTION: EXE 0x5ae625
+// Destroys the terrain lines and frees their storage (vector<EESEUITTData>::_Tidy)
+
+// FUNCTION: EXE 0x5ae65e
+// Inserts a color set (vector<vector<GEColor> >::insert)
+
+// FUNCTION: EXE 0x5ae6ae
+// Inserts a terrain line (vector<EESEUITTData>::insert)
+
+// FUNCTION: EXE 0x5ae705
+// Inserts copies of a terrain line (vector<EESEUITTData>::insert)
+
+// FUNCTION: EXE 0x5ae9ec
+// Erases terrain lines (vector<EESEUITTData>::erase)
+
+// FUNCTION: EXE 0x5aea56
+// Fills raw storage with copies of a terrain line (vector<EESEUITTData>::_Ufill)
+
+// FUNCTION: EXE 0x5aea7d
+// Sorts the editor's terrains by localized name (std::sort with EESETerrainNameLess)
+
+// FUNCTION: EXE 0x5aeb3a
+// Copies a range of color sets (std::copy for vector<GEColor>)
+
+// FUNCTION: EXE 0x5aeb63
+// Copies terrain lines into raw storage (vector<EESEUITTData>::_Ucopy)
+
+// FUNCTION: EXE 0x5aeb8b
+// Copies a range of terrain lines (std::copy for EESEUITTData)
+
+// FUNCTION: EXE 0x5aebc4
+// Fills a range with a terrain line (std::fill for EESEUITTData)
+
+// FUNCTION: EXE 0x5aebf5
+// Copies a range of terrain lines backwards (std::copy_backward for EESEUITTData)
+
+// FUNCTION: EXE 0x5aec2e
+// Copies a range of terrain lines (std::copy for EESEUITTData)
+
+// FUNCTION: EXE 0x5aec64
+// Constructs a terrain line copy in place (std::_Construct for EESEUITTData)
+
+// SYNTHETIC: EXE 0x5aec8a
+// (the scalar deleting destructor, emitted with the vtable; name ??_GEEPGSPlayerReport@@QAEPAXI@Z, slot UWideString+0x0)
+
+// FUNCTION: EXE 0x5aeca7
+// Insertion-sorts a terrain range by name (std::_Insertion_sort, EESETerrainNameLess)
+
+// FUNCTION: EXE 0x5aecd0
+// Sorts a terrain range by name, falling back to a heap sort (std::_Sort, EESETerrainNameLess)
+
+// FUNCTION: EXE 0x5aeda3
+// Insertion-sorts a terrain range without bounds checks (std::_Unguarded_insertion_sort)
+
+// FUNCTION: EXE 0x5aedd4
+// Insertion-sorts a terrain range by name (std::_Insertion_sort_1, EESETerrainNameLess)
+
+// FUNCTION: EXE 0x5aee71
+// Returns whether the first terrain's localized name sorts before the second's, ignoring case
+
+// FUNCTION: EXE 0x5aeede
+// Advances a pointer iterator by one element (std::_Ptrit::operator++, ICF-shared)
+
+// FUNCTION: EXE 0x5aeee4
+// Builds a heap of terrains by name (std::make_heap, EESETerrainNameLess)
+
+// FUNCTION: EXE 0x5aef1e
+// Sorts a terrain heap by name (std::sort_heap, EESETerrainNameLess)
+
+// FUNCTION: EXE 0x5aef5f
+// Partitions a terrain range around a median name (std::_Unguarded_partition)
+
+// FUNCTION: EXE 0x5af07f
+// Inserts a terrain into its sorted place without bounds checks (std::_Unguarded_insert)
+
+// FUNCTION: EXE 0x5af0b2
+// Builds a heap of terrains by name (std::_Make_heap)
+
+// FUNCTION: EXE 0x5af0f6
+// Moves the first terrain of a heap to its end (std::pop_heap)
+
+// FUNCTION: EXE 0x5af11f
+// Sifts a terrain down the heap (std::_Adjust_heap)
+
+// FUNCTION: EXE 0x5af18d
+// Pops the top of a terrain heap (std::_Pop_heap_0)
+
+// FUNCTION: EXE 0x5af1e0
+// Sifts a terrain up the heap (std::_Push_heap)
+
+// FUNCTION: EXE 0x5af22f
+// Pops the top of a terrain heap (std::_Pop_heap)
+
+// SYNTHETIC: EXE 0x5af263
+// (the scalar deleting destructor, emitted with the vtable; )
+
+// SYNTHETIC: EXE 0x5af28c
+// (the scalar deleting destructor, emitted with the vtable; slot UIScrollBar+0x0)

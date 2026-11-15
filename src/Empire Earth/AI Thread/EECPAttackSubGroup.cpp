@@ -88,24 +88,29 @@ EECPAttackSubGroupUnit* EECPCreateSubGroupUnitOfKind(EEComplexUnit* inUnit, EECP
 // it is defined here. The dtor guard suggests a class static data member whose owner is not decoded; the file-scope
 // form is inferred (provisional name)
 UMemoryPool<EECPASTargetUnit> EECPAttackSubGroup::sTargetPool;
+// SYNTHETIC: EXE 0x45ac57
+// SYNTHETIC: EXE 0x45ac61
+// SYNTHETIC: EXE 0x45ac6b
+// SYNTHETIC: EXE 0x45ac77
 // Declared as in EECPAttackCommander.cpp and EECPAttackSubGroupUnit.cpp; the global is bound at 0x530e0c
 extern long& gNumPlayers;
 
 // 0x43bf0c (.rdata; both neighbours are this unit's constants): declared extern in ee/EEGlobalConstants.h
 const float kHeightEpsilon = 0.01f;
-static const float kASGRollLow = 0.42f;
+static const float kASGRollLow = 0.42f;     // 0x43bf14
 // 0x43bf10 is the pooled `/ 10.0f` literal (6 readers; RollAggression 0x45cb74)
-static const float kASGNear = 1.8f;
-static const float kFastUnitVelocity = 13.0f;
-static const float kASGRandomChance = 0.65f;
-static const float kASGUnitStep = 0.15f;
-static const float kASGRandomLow = 0.15f;
-static const float kASGRandomHigh = 1.0f;
-static const float kASGRandomChance58 = 0.5f;
-static const float kASGUnitStep58 = 0.15f;
-static const float kASGRandomLow58 = 0.15f;
-static const float kASGRandomHigh58 = 1.0f;
+static const float kASGNear = 1.8f;         // 0x43bf18
+static const float kFastUnitVelocity = 13.0f;  // 0x43bd10
+static const float kASGRandomChance = 0.65f;    // 0x43bd00
+static const float kASGUnitStep = 0.15f;    // 0x43bd04
+static const float kASGRandomLow = 0.15f;   // 0x43bd08
+static const float kASGRandomHigh = 1.0f;   // 0x43bd0c
+static const float kASGRandomChance58 = 0.5f;   // 0x43bcf0
+static const float kASGUnitStep58 = 0.15f;  // 0x43bcf4
+static const float kASGRandomLow58 = 0.15f; // 0x43bcf8
+static const float kASGRandomHigh58 = 1.0f; // 0x43bcfc
 
+// FUNCTION: EXE 0x45ac9c
 // Counts a unit into the tallies by kind (aircraft, bombers, ships, submarines, space units, buildings, wonders,
 // citizens, cyborgs, plague targets), adds its attack and notes any calamity on it
 void EECPASGUnitCounts::Add(EEComplexUnit* inUnit, long inArg2)
@@ -149,6 +154,7 @@ void EECPASGUnitCounts::Add(EEComplexUnit* inUnit, long inArg2)
         this->mHasCalamity = true;
 }
 
+// FUNCTION: EXE 0x45ad6e
 // Resets every tally, the total attack and the calamity flag
 void EECPASGUnitCounts::Clear()
 {
@@ -167,6 +173,7 @@ void EECPASGUnitCounts::Clear()
     this->mNumSpaceUnits = 0;
 }
 
+// FUNCTION: EXE 0x45ad99
 // Copies a path point's tile and path sector kind
 // out of line (the deque/vector fill and copy_backward helpers 0x6239a/0x623c6/0x623e3 and EECPASGLand call it)
 EECPASGPathPoint& EECPASGPathPoint::operator=(const EECPASGPathPoint& inPoint)
@@ -176,6 +183,7 @@ EECPASGPathPoint& EECPASGPathPoint::operator=(const EECPASGPathPoint& inPoint)
     return *this;
 }
 
+// FUNCTION: EXE 0x45adb2
 // Creates an idle sub-group of the attack group: new ID from the combat manager, aggression 0.5, scan range 13,
 // the group's task player (unless loading a saved game) and a new formation
 EECPAttackSubGroup::EECPAttackSubGroup(EECPAttackGroup* inGroup, long inKind)
@@ -215,11 +223,13 @@ EECPAttackSubGroup::EECPAttackSubGroup(EECPAttackGroup* inGroup, long inKind)
     this->mFormation = new EECPAttackFormation(this);
 }
 
+// FUNCTION: EXE 0x45aff8
 // Destroys the sub-group (members only)
 EECPAttackSubGroup::~EECPAttackSubGroup()
 {
 }
 
+// FUNCTION: EXE 0x45b075
 // Adds a unit not yet in the sub-group, re-ranks and sends it to the group (or the retreat waypoint); a carried
 // aircraft or spaceship goes to the task location or a free spot near its carrier; then refreshes the units
 void EECPAttackSubGroup::AddUnit(EEComplexUnit* inUnit)
@@ -271,6 +281,7 @@ void EECPAttackSubGroup::AddUnit(EEComplexUnit* inUnit)
     this->RefreshUnits();
 }
 
+// FUNCTION: EXE 0x45b2c4
 // Replaces the personnel request with a town request (at the town's centre) or a continent request for the classes;
 // in a wonder race it expires after 300 s; refreshes the units when there are any
 void EECPAttackSubGroup::RequestUnits(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent,
@@ -295,6 +306,7 @@ void EECPAttackSubGroup::RequestUnits(std::vector<long>& inClasses, std::vector<
         this->RefreshUnits();
 }
 
+// FUNCTION: EXE 0x45b397
 // Sizes the shared target pool (chunk size and maximum chunk count)
 // cdecl; EECPCombatManager's ctor calls it with 0x200, 0x19 (provisional name)
 void SetAttackTargetPoolSize(long inChunkSize, long inMaxChunks)
@@ -302,6 +314,7 @@ void SetAttackTargetPoolSize(long inChunkSize, long inMaxChunks)
     EECPAttackSubGroup::sTargetPool.SetSize(inChunkSize, inMaxChunks, 1);
 }
 
+// FUNCTION: EXE 0x45b3ac
 // Recounts the target tallies over the current targets
 void EECPAttackSubGroup::CountTargets()
 {
@@ -310,12 +323,14 @@ void EECPAttackSubGroup::CountTargets()
         this->mCounts.Add(this->mTargets[i]->mUnit, 1);
 }
 
+// FUNCTION: EXE 0x45b3f1
 // Returns true when the sub-group has units, has no request, or its request is completely filled
 bool EECPAttackSubGroup::IsRequestFilled()
 {
     return this->mUnits.size() > 0 || this->mRequest == NULL || this->mRequest->mFill == 1.0f;
 }
 
+// FUNCTION: EXE 0x45b421
 // Returns true once every unit is in the rally point's path sector, idle or near its path's end (under 11
 // waypoints), or once the gather deadline has passed
 bool EECPAttackSubGroup::HasGathered()
@@ -333,6 +348,7 @@ bool EECPAttackSubGroup::HasGathered()
     return false;
 }
 
+// FUNCTION: EXE 0x45b4d7
 // Takes a new task (task player from the attack group if unset; an inactive task becomes a return to the rally point),
 // sets or rolls the aggression, and goes idle when it has units and is not in transit
 void EECPAttackSubGroup::SetTask(const EECPAGTask& inTask)
@@ -355,6 +371,7 @@ void EECPAttackSubGroup::SetTask(const EECPAGTask& inTask)
         this->SetState(kASGStateIdle, gPhysics->mGameTime);
 }
 
+// FUNCTION: EXE 0x45b5a5
 // Sends the sub-group back to the task location unless it is already next to it
 void EECPAttackSubGroup::ReturnToTask(long inTime)
 {
@@ -364,6 +381,7 @@ void EECPAttackSubGroup::ReturnToTask(long inTime)
         this->SetDestination(this->mTask.mLocation);
 }
 
+// FUNCTION: EXE 0x45b5e6
 // Orders a unit to attack the target (or its carrier); crusaders may convert, and flaming archers, fanatics and
 // capital ships may use their special attack; then queues a move to the given tile unless it is (0,0)
 void EECPAttackSubGroup::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTarget, EETileCoordinate* inTile)
@@ -426,6 +444,7 @@ void EECPAttackSubGroup::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUni
         delete theMove;
 }
 
+// FUNCTION: EXE 0x45b96d
 // Returns true for the four crusader unit types (short sword, long sword, bronze spear cavalry, knight)
 // An EEUnitClass member (Virtual1C calls it with ecx = the unit's class); its body follows its first user here.
 bool EEUnitClass::IsCrusader()
@@ -433,6 +452,7 @@ bool EEUnitClass::IsCrusader()
     return this->mUnitType == kUnitTypeInf04ShortSwordCrusader || this->mUnitType == kUnitTypeInf06LongSwordCrusader || this->mUnitType == kUnitTypeCav04BronzeSpearCavalryCrusader || this->mUnitType == kUnitTypeCav06KnightCrusader;
 }
 
+// FUNCTION: EXE 0x45b996
 // Sends the sub-group to a random point of the nearest town not containing it (the allies loop asks the own player
 // again); with no usable town, drops the task and heads for a random point of its continent
 void EECPAttackSubGroup::MoveToNearestTown()
@@ -476,12 +496,14 @@ void EECPAttackSubGroup::MoveToNearestTown()
         this->SetDestination(EECPILocation(theContinent->GetRandomPoint()));
 }
 
+// FUNCTION: EXE 0x45bbc5
 // Releases the given unit's target
 void EECPAttackSubGroup::DropTargetOf(EECPAttackSubGroupUnit* inUnit)
 {
     inUnit->ReleaseTarget();
 }
 
+// FUNCTION: EXE 0x45bbd1
 // Sets the out-of-fight flag on the sub-group and on every living unit
 void EECPAttackSubGroup::SetOutOfFight(bool inIsOutOfFight)
 {
@@ -493,6 +515,7 @@ void EECPAttackSubGroup::SetOutOfFight(bool inIsOutOfFight)
     }
 }
 
+// FUNCTION: EXE 0x45bc18
 // Returns a central tile of the units' tiles (carriers stand in for carried units, off-map units skipped), or (0,0)
 EETileLocation EECPAttackSubGroup::ComputeCenterPoint(long inMustBeInList)
 {
@@ -511,6 +534,7 @@ EETileLocation EECPAttackSubGroup::ComputeCenterPoint(long inMustBeInList)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45bcd0
 // Moves the task location to a random point of its area and re-checks the task in 6-35 s; returns whether it moved
 bool EECPAttackSubGroup::RandomizeTaskLocation()
 {
@@ -530,6 +554,7 @@ bool EECPAttackSubGroup::RandomizeTaskLocation()
     return true;
 }
 
+// FUNCTION: EXE 0x45bd63
 // Deletes the formation, cancels the path request, releases units and targets and gives back the personnel request
 void EECPAttackSubGroup::Shutdown()
 {
@@ -549,6 +574,7 @@ void EECPAttackSubGroup::Shutdown()
     this->mRequest = NULL;
 }
 
+// FUNCTION: EXE 0x45bdeb
 // Returns every target and siege target to the pool and empties both lists
 void EECPAttackSubGroup::ClearTargets()
 {
@@ -561,6 +587,7 @@ void EECPAttackSubGroup::ClearTargets()
     this->mSiegeTargets.clear();
 }
 
+// FUNCTION: EXE 0x45be5a
 // Cancels the path request if it is still running and drops it
 void EECPAttackSubGroup::CancelPath()
 {
@@ -572,6 +599,7 @@ void EECPAttackSubGroup::CancelPath()
     this->mPathRequest = NULL;
 }
 
+// FUNCTION: EXE 0x45be8d
 // Returns the gate route weight: the share of units not air or in unit sets 0x60/0x61 (0 if one is in set 0x62);
 // unless on a wonder or attack-location task, minus 0.15 per other unit (min 0.01) or, with none, 35% a random 0.15-1.0
 float EECPAttackSubGroup::GetGateWeight()
@@ -609,6 +637,7 @@ float EECPAttackSubGroup::GetGateWeight()
     }
     return theResult;
 }
+// FUNCTION: EXE 0x45c0d7
 // Finds the group's position: the unit tile nearest the centre of the units' area (cached 5 s unless forced); falls
 // back to the rally point and returns false when no unit has a position
 bool EECPAttackSubGroup::FindPosition(EETileLocation& outTile, bool inArg2, bool inForce)
@@ -723,6 +752,7 @@ struct EECPASGUnitValueGreater {
     bool operator()(EECPAttackSubGroupUnit* inA, EECPAttackSubGroupUnit* inB) const { return inA->mImportance > inB->mImportance; }
 };
 
+// FUNCTION: EXE 0x45c5e2
 // Sorts the units by importance, marks the top quarter important, checks whether any unit's ammo can hit the shore
 // (ammo table row 0x2c) and recomputes the group stats
 void EECPAttackSubGroup::RankUnits()
@@ -744,6 +774,7 @@ void EECPAttackSubGroup::RankUnits()
     this->mStats.Compute(this->mUnits);
 }
 
+// FUNCTION: EXE 0x45c774
 // Returns the share of units that are in danger
 float EECPAttackSubGroup::GetDangerRatio(long inArg1)
 {
@@ -758,6 +789,7 @@ float EECPAttackSubGroup::GetDangerRatio(long inArg1)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45c7e9
 // Fills a location with the group's position, or clears it when only the rally point fallback was found
 void EECPAttackSubGroup::GetLocation(EECPILocation& outLocation)
 {
@@ -768,6 +800,7 @@ void EECPAttackSubGroup::GetLocation(EECPILocation& outLocation)
         outLocation.mTile = theTile;
 }
 
+// FUNCTION: EXE 0x45c829
 // Records whether any unit does area damage, from a researchable area-effect technology (kind 5) or its stats
 void EECPAttackSubGroup::UpdateAreaEffect()
 {
@@ -790,6 +823,7 @@ void EECPAttackSubGroup::UpdateAreaEffect()
     }
 }
 
+// FUNCTION: EXE 0x45c925
 // Rebuilds the move mask from the units' terrain flags (the intersection over all units) and stamps
 // the player ID
 void EECPAttackSubGroup::BuildMoveMask()
@@ -803,6 +837,7 @@ void EECPAttackSubGroup::BuildMoveMask()
     this->mFlags.mPlayerID = this->mPlayer->GetPlayerID();
 }
 
+// FUNCTION: EXE 0x45c991
 // Moves the rally point to the group's position (or the first unit's or its carrier's tile) and sends every active
 // unit there; returns false when the sub-group has no units
 bool EECPAttackSubGroup::RegroupHere()
@@ -843,6 +878,7 @@ bool EECPAttackSubGroup::RegroupHere()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45cb74
 // Rolls a new aggression: 42% 0.8-1.0, 25% 0.1-0.2, else 0.1-0.9 (in tenths, at most 1.0); returns it
 float EECPAttackSubGroup::RollAggression()
 {
@@ -860,6 +896,7 @@ float EECPAttackSubGroup::RollAggression()
     return this->mAggression;
 }
 
+// FUNCTION: EXE 0x45cc2d
 // Fills the route cost weights: all zero except weight 4, which is the aggression
 void EECPAttackSubGroup::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeights)
 {
@@ -867,6 +904,7 @@ void EECPAttackSubGroup::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& 
     outWeights.mValues[4] = this->GetAggression();
 }
 
+// FUNCTION: EXE 0x45cc4c
 // Returns the wall route weight: the share of units not air or in unit set 0x60; unless on a wonder or
 // attack-location task, minus 0.15 per other unit (min 0.01) or, with none, 50% a random 0.15-1.0
 float EECPAttackSubGroup::GetWallWeight()
@@ -894,18 +932,21 @@ float EECPAttackSubGroup::GetWallWeight()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45cdb1
 // Returns the number of targets
 long EECPAttackSubGroup::GetNumTargets()
 {
     return this->mTargets.size();
 }
 
+// FUNCTION: EXE 0x45cdc4
 // Returns the rally point tile (the allies flag is ignored)
 EETileLocation EECPAttackSubGroup::GetRallyPoint(bool inIncludeAllies)
 {
     return this->mRallyPoint.mTile;
 }
 
+// FUNCTION: EXE 0x45cddf
 // Counts the units that are not done
 long EECPAttackSubGroup::CountFightingUnits()
 {
@@ -917,6 +958,7 @@ long EECPAttackSubGroup::CountFightingUnits()
     return theCount;
 }
 
+// FUNCTION: EXE 0x45ce19
 // Moves the given units into another sub-group that copies this one's task, rally point, timers and settings; counts
 // a split (unless kind 7), re-ranks both and resets both split kinds; returns true when there were units
 bool EECPAttackSubGroup::SplitInto(EECPAttackSubGroup* inOther, std::vector<EEComplexUnit*>& inUnits)
@@ -974,6 +1016,7 @@ bool EECPAttackSubGroup::SplitInto(EECPAttackSubGroup* inOther, std::vector<EECo
     return theResult;
 }
 
+// FUNCTION: EXE 0x45d0e3
 // Cancels the personnel request and hands every unit back: to the attack commander when the group is bound to a
 // continent and the unit is not a transport, else to personnel
 void EECPAttackSubGroup::Disband()
@@ -1004,6 +1047,7 @@ void EECPAttackSubGroup::Disband()
     }
 }
 
+// FUNCTION: EXE 0x45d08f
 // Takes a target record for the unit from the shared pool, with no attackers or nearby targets counted
 EECPASTargetUnit* EECPAttackSubGroup::NewTarget(EEComplexUnit* inUnit)
 {
@@ -1014,6 +1058,7 @@ EECPASTargetUnit* EECPAttackSubGroup::NewTarget(EEComplexUnit* inUnit)
     return theTarget;
 }
 
+// FUNCTION: EXE 0x45d0b3
 // Clears a target record and returns it to the shared pool
 void EECPAttackSubGroup::ReleaseTarget(EECPASTargetUnit* inTarget)
 {
@@ -1021,6 +1066,7 @@ void EECPAttackSubGroup::ReleaseTarget(EECPASTargetUnit* inTarget)
     EECPAttackSubGroup::sTargetPool.Delete(inTarget);
 }
 
+// FUNCTION: EXE 0x45d0cb
 // Dumps the target pool's statistics and frees the pool
 void EECPAttackSubGroup::ReleaseTargetPool()
 {
@@ -1028,6 +1074,7 @@ void EECPAttackSubGroup::ReleaseTargetPool()
     EECPAttackSubGroup::sTargetPool.Release();
 }
 
+// FUNCTION: EXE 0x45d349
 // Returns the tile distance between this sub-group's position and another's (0 for none, itself or the same tile)
 float EECPAttackSubGroup::DistanceTo(EECPAttackSubGroup* inOther)
 {
@@ -1043,6 +1090,7 @@ float EECPAttackSubGroup::DistanceTo(EECPAttackSubGroup* inOther)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45d3b3
 // Returns the squared tile distance between this sub-group's position and another's (0 for none, itself or the same
 // tile)
 float EECPAttackSubGroup::DistanceSquaredTo(EECPAttackSubGroup* inOther)
@@ -1059,6 +1107,7 @@ float EECPAttackSubGroup::DistanceSquaredTo(EECPAttackSubGroup* inOther)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45d41d
 // With two or more units, buckets them by continent (carried units by their carrier's, or skipped) into new vectors;
 // returns the number of continents
 long EECPAttackSubGroup::GroupUnitsByContinent(std::map<unsigned short, std::vector<EECPAttackSubGroupUnit*>*>& outUnits, bool inSkipCarried)
@@ -1085,6 +1134,7 @@ long EECPAttackSubGroup::GroupUnitsByContinent(std::map<unsigned short, std::vec
     }
     return outUnits.size();
 }
+// FUNCTION: EXE 0x45d5a2
 // With two or more units, buckets them by their footprint area of the given kind (carriers for carried units, or
 // skipped) into new vectors; returns the number of areas
 long EECPAttackSubGroup::GroupUnitsByWaterArea(std::map<unsigned short, std::vector<EECPAttackSubGroupUnit*>*>& outUnits, long inKind, bool inSkipCarried)
@@ -1112,6 +1162,7 @@ long EECPAttackSubGroup::GroupUnitsByWaterArea(std::map<unsigned short, std::vec
     return outUnits.size();
 }
 
+// FUNCTION: EXE 0x45d725
 // Queues a split order for the sub-group with its attack group, plus an order to set it idle when asked
 void EECPAttackSubGroup::RequestSplit(bool inResetState)
 {
@@ -1128,6 +1179,7 @@ void EECPAttackSubGroup::RequestSplit(bool inResetState)
     this->mGroup->mOrders.push_back(theOrder);
 }
 
+// FUNCTION: EXE 0x45d790
 // Sends the sub-group to the task location when forced or more than 10 tiles away; always returns true
 bool EECPAttackSubGroup::MoveToTask(bool inForce)
 {
@@ -1138,6 +1190,7 @@ bool EECPAttackSubGroup::MoveToTask(bool inForce)
     return true;
 }
 
+// FUNCTION: EXE 0x45d7de
 // Requests an automatic path with the group's move mask for its player and counts the update for this tick
 EEAutoPathRequest* EECPAttackSubGroup::NewPathRequest(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, long inRevs,
                                                  EEAIGraphPathGoalModifierBase* inModifier)
@@ -1148,6 +1201,7 @@ EEAutoPathRequest* EECPAttackSubGroup::NewPathRequest(const EETileCoordinate& in
     return theRequest;
 }
 
+// FUNCTION: EXE 0x45d829
 // Returns true when the given unit is in the sub-group
 bool EECPAttackSubGroup::HasUnit(EEComplexUnit* inUnit)
 {
@@ -1161,6 +1215,7 @@ bool EECPAttackSubGroup::HasUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45d865
 // Adds the sub-group to the list once per record of the given unit; returns the list's size
 long EECPAttackSubGroup::ListIfHasUnit(EEComplexUnit* inUnit, std::vector<EECPAttackSubGroup*>& outGroups)
 {
@@ -1171,6 +1226,7 @@ long EECPAttackSubGroup::ListIfHasUnit(EEComplexUnit* inUnit, std::vector<EECPAt
     return outGroups.size();
 }
 
+// FUNCTION: EXE 0x45d8c3
 // Builds the formation and places it at the location, facing along the heading from the group's position to it
 void EECPAttackSubGroup::PlaceFormation(const EECPILocation& inLocation)
 {
@@ -1182,6 +1238,7 @@ void EECPAttackSubGroup::PlaceFormation(const EECPILocation& inLocation)
     this->mFormation->Place(inLocation, theDistance);
 }
 
+// FUNCTION: EXE 0x45d92f
 // Moves every unit the personnel request delivered into the sub-group, regroups, releases the request and refreshes;
 // keeps the largest scan range; returns RegroupHere's result
 bool EECPAttackSubGroup::TakeRequestedUnits()
@@ -1223,6 +1280,7 @@ bool EECPAttackSubGroup::TakeRequestedUnits()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45da23
 // Rebuilds the target lists around the group's area (scan range, at most 20 tiles), counts them and assigns
 // attackers; schedules the next scan by state, player count and target count
 void EECPAttackSubGroup::ScanTargets(bool inTime)
@@ -1284,6 +1342,7 @@ struct EECPASGUnitPriorityGreater {
     }
 };
 
+// FUNCTION: EXE 0x45db99
 // Picks units to split off by split kind: a speed-ranked fraction (4; always 0 or 0.5: integer tenths), the most
 // aggressive of half (2), the first continent's (7), a random cluster (9), else the first half
 void EECPAttackSubGroup::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
@@ -1356,6 +1415,7 @@ void EECPAttackSubGroup::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
     }
 }
 
+// FUNCTION: EXE 0x45e01b
 // Returns the sub-group's record for the given unit, or NULL
 EECPAttackSubGroupUnit* EECPAttackSubGroup::FindUnit(EEComplexUnit* inUnit)
 {
@@ -1368,6 +1428,7 @@ EECPAttackSubGroupUnit* EECPAttackSubGroup::FindUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e05b
 // Returns true when the task player keeps a visibility map and sees none of the units
 bool EECPAttackSubGroup::IsUnseenByTaskPlayer()
 {
@@ -1385,6 +1446,7 @@ bool EECPAttackSubGroup::IsUnseenByTaskPlayer()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e0c4
 // Returns the centre tile of the given units' selection bounds, or (0,0) for an empty list
 void EECPAttackSubGroup::GetUnitsCenter(EETileLocation& outTile, std::vector<EECPAttackSubGroupUnit*>& inUnits)
 {
@@ -1405,6 +1467,7 @@ void EECPAttackSubGroup::GetUnitsCenter(EETileLocation& outTile, std::vector<EEC
     }
 }
 
+// FUNCTION: EXE 0x45e1b6
 // Returns the continent holding the most units (carriers stand in for carried units), or 0
 unsigned short EECPAttackSubGroup::GetMainContinent()
 {
@@ -1437,6 +1500,7 @@ unsigned short EECPAttackSubGroup::GetMainContinent()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e2c8
 // Appends every living unit that is not done to the list
 void EECPAttackSubGroup::CollectUnits(std::vector<EEComplexUnit*>& outUnits)
 {
@@ -1446,6 +1510,7 @@ void EECPAttackSubGroup::CollectUnits(std::vector<EEComplexUnit*>& outUnits)
     }
 }
 
+// FUNCTION: EXE 0x45e328
 // Returns the intelligence file on the task's player
 EECPIntelligencePlayerFile* EECPAttackSubGroup::GetTargetPlayerFile()
 {
@@ -1453,6 +1518,7 @@ EECPIntelligencePlayerFile* EECPAttackSubGroup::GetTargetPlayerFile()
     return this->mPlayer->mCombatManager->GetIntelligence()->GetFile(thePlayer);
 }
 
+// FUNCTION: EXE 0x45e354
 // Returns true when every unit is near its path's end (under 3 waypoints when fast, 7 otherwise), idle, or waiting
 // on an obstacle or a collision
 bool EECPAttackSubGroup::AreAllUnitsSettled()
@@ -1474,12 +1540,14 @@ bool EECPAttackSubGroup::AreAllUnitsSettled()
     return theCount == this->mUnits.size() ? true : false;
 }
 
+// FUNCTION: EXE 0x45e424
 // Returns true when there are no targets
 bool EECPAttackSubGroup::HasNoTargets()
 {
     return this->GetNumTargets() ? false : true;
 }
 
+// FUNCTION: EXE 0x45e430
 // Returns whether the group is at the location: same path sub-sector or within 8 tiles, or a neighbouring
 // sub-sector once all units have settled; false when it has no position
 bool EECPAttackSubGroup::IsAt(const EECPILocation& inLocation)
@@ -1498,6 +1566,7 @@ bool EECPAttackSubGroup::IsAt(const EECPILocation& inLocation)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e4c9
 // Returns true: every location counts as reachable
 bool EECPAttackSubGroup::CanReach(const EECPILocation* inLocation)
 {
@@ -1505,6 +1574,7 @@ bool EECPAttackSubGroup::CanReach(const EECPILocation* inLocation)
     return true;
 }
 
+// FUNCTION: EXE 0x45e4d7
 // Returns whether the given unit is in the sub-group and marked important
 bool EECPAttackSubGroup::IsImportantUnit(EEComplexUnit* inUnit)
 {
@@ -1518,6 +1588,7 @@ bool EECPAttackSubGroup::IsImportantUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e513
 // Returns the group's position tile
 EETileLocation EECPAttackSubGroup::GetPosition()
 {
@@ -1526,6 +1597,7 @@ EETileLocation EECPAttackSubGroup::GetPosition()
     return theTile;
 }
 
+// FUNCTION: EXE 0x45e53e
 // Returns the total transport weight of the units
 long EECPAttackSubGroup::GetCargoSize()
 {
@@ -1535,6 +1607,7 @@ long EECPAttackSubGroup::GetCargoSize()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e576
 // Returns the squared distance left to the task over the squared rally-to-task distance (0 when they coincide)
 float EECPAttackSubGroup::GetDistanceLeftRatio()
 {
@@ -1548,6 +1621,7 @@ float EECPAttackSubGroup::GetDistanceLeftRatio()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e5dd
 // Returns true when the task's unit is over 10 tiles from the units' centre, or, for a combat task without a unit,
 // when the task re-check time has passed
 bool EECPAttackSubGroup::ShouldRefreshTask()
@@ -1565,6 +1639,7 @@ bool EECPAttackSubGroup::ShouldRefreshTask()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e656
 // Lists the given fraction of the units ordered by top speed, fastest or slowest first
 void EECPAttackSubGroup::PickByUpgrade(std::vector<EECPAttackSubGroupUnit*>& outUnits, bool inFastestFirst, float inFraction)
 {
@@ -1590,6 +1665,7 @@ void EECPAttackSubGroup::PickByUpgrade(std::vector<EECPAttackSubGroupUnit*>& out
     }
 }
 
+// FUNCTION: EXE 0x45e7f9
 // Gives a living, placed, enabled unit the goal and starts the action, counting the update; returns false otherwise
 bool EECPAttackSubGroup::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurrent, long inAction)
 {
@@ -1604,6 +1680,7 @@ bool EECPAttackSubGroup::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, boo
     return theResult;
 }
 
+// FUNCTION: EXE 0x45e852
 // Sets every unit's AI state
 void EECPAttackSubGroup::SetUnitsState(long inAIState)
 {
@@ -1614,6 +1691,7 @@ void EECPAttackSubGroup::SetUnitsState(long inAIState)
     }
 }
 
+// FUNCTION: EXE 0x45e890
 // Queues an order for the attack group to remove the sub-group
 void EECPAttackSubGroup::RequestRemoval()
 {
@@ -1625,6 +1703,7 @@ void EECPAttackSubGroup::RequestRemoval()
 }
 
 
+// FUNCTION: EXE 0x45e8d2
 // Decides whether a never-split group of 3+ units splits: with clusters kind 9 (35%, 65% above easy), else 10%
 // (35%) for kind 7, 2, 4 or 3; queues the split and an idle order; returns true when it splits
 bool EECPAttackSubGroup::DecideSplit()
@@ -1690,6 +1769,7 @@ bool EECPAttackSubGroup::DecideSplit()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45eb96
 // Returns the sub-group unit that the given unit's attack goal targets, or NULL
 EECPAttackSubGroupUnit* EECPAttackSubGroup::FindUnitTargetedBy(EEComplexUnit* inUnit)
 {
@@ -1707,6 +1787,7 @@ EECPAttackSubGroupUnit* EECPAttackSubGroup::FindUnitTargetedBy(EEComplexUnit* in
     return theResult;
 }
 
+// FUNCTION: EXE 0x45ebf9
 // Reads the units (each created by its saved kind), path, area, waypoint, rally point, task, request ID, timers,
 // state and flags from the saved game; returns the first read error
 long EECPAttackSubGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1802,6 +1883,7 @@ long EECPAttackSubGroup::Load(unsigned long inMajorVersion, unsigned long inMino
     }
     return theResult;
 }
+// FUNCTION: EXE 0x45ef56
 // Moves the formation to the next waypoint (the task location if unset, the rally point if off the map, then the
 // closest valid tile)
 void EECPAttackSubGroup::MoveToDestination()
@@ -1827,6 +1909,7 @@ void EECPAttackSubGroup::MoveToDestination()
     theLocation.mTile.mY = (long)thePoint.GetY();
     this->PlaceFormation(theLocation);
 }
+// FUNCTION: EXE 0x45f06b
 // Drops every target no unit can attack (back to the pool); returns true when any target has an attacker
 bool EECPAttackSubGroup::AssignTargets()
 {
@@ -1849,6 +1932,7 @@ bool EECPAttackSubGroup::AssignTargets()
     return theResult;
 }
 
+// FUNCTION: EXE 0x45f14a
 // Sets the next waypoint and moves the formation there
 void EECPAttackSubGroup::SetDestination(const EECPILocation& inLocation)
 {
@@ -1856,6 +1940,7 @@ void EECPAttackSubGroup::SetDestination(const EECPILocation& inLocation)
     this->MoveToDestination();
 }
 
+// FUNCTION: EXE 0x45f16a
 // Sends one unit to the location's tile (its area's when the tile is off the map); does nothing without a unit
 void EECPAttackSubGroup::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation& inLocation, bool inFlag)
 {
@@ -1872,6 +1957,7 @@ void EECPAttackSubGroup::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPIL
         delete theGoal;
 }
 
+// FUNCTION: EXE 0x45f233
 // Updates the task location from its area when it has one
 void EECPAttackSubGroup::RefreshTaskLocation()
 {
@@ -1883,6 +1969,7 @@ void EECPAttackSubGroup::RefreshTaskLocation()
     this->mTask.mLocation = theLocation;
 }
 
+// FUNCTION: EXE 0x45f272
 // Turns the finished path into sub-sector waypoints (skipping the start on the main continent unless it is a wall),
 // prunes them, aims at the first one (or the task) and drops the request
 void EECPAttackSubGroup::ApplyPathResult()
@@ -1913,6 +2000,7 @@ void EECPAttackSubGroup::ApplyPathResult()
     this->CancelPath();
 }
 
+// FUNCTION: EXE 0x45f3ca
 // Regroups when the rally point is off the map (not while loading), then re-ranks the units and recomputes area
 // effect, move mask, prejudices and common move flags
 void EECPAttackSubGroup::RefreshUnits()
@@ -1926,6 +2014,7 @@ void EECPAttackSubGroup::RefreshUnits()
     this->UpdateCommonMoveFlags();
 }
 
+// FUNCTION: EXE 0x45f423
 // Removes the unit with the given ID (AI state reset, two unit fields cleared, target released) and refreshes;
 // returns true when found
 bool EECPAttackSubGroup::RemoveUnitByID(long inUnitID)
@@ -1951,6 +2040,7 @@ bool EECPAttackSubGroup::RemoveUnitByID(long inUnitID)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x45f536
 // Removes each listed unit (AI state reset, target released) and refreshes once if any was removed
 void EECPAttackSubGroup::RemoveUnits(std::vector<EEComplexUnit*>& inUnits)
 {
@@ -1980,6 +2070,7 @@ void EECPAttackSubGroup::RemoveUnits(std::vector<EEComplexUnit*>& inUnits)
     if (theFound && this->mUnits.size() > 0)
         this->RefreshUnits();
 }
+// FUNCTION: EXE 0x45f622
 // Restores the units after loading (dropping non-military ones; a failing unit is retried forever), the waypoints,
 // task and personnel request; sets a 10 s gather deadline when missing
 long EECPAttackSubGroup::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -2032,6 +2123,7 @@ long EECPAttackSubGroup::Restore(unsigned long inMajorVersion, unsigned long inM
     return theResult;
 }
 
+// FUNCTION: EXE 0x45f82b
 // Returns the personnel request with the given ID, or NULL
 // EECPPersonnel's member, out of line right after its first user (perhaps inline in the real header)
 EECPPersonnelRequest* EECPPersonnel::GetRequest(long inID)
@@ -2040,6 +2132,7 @@ EECPPersonnelRequest* EECPPersonnel::GetRequest(long inID)
     return theIt != this->mRequests.end() ? (*theIt).second : 0;
 }
 
+// FUNCTION: EXE 0x45f855
 // With an active task, sets the +0x1bc timer 30-90 s ahead and heads for the task location
 void EECPAttackSubGroup::Virtual18C(long inTime)
 {
@@ -2049,6 +2142,7 @@ void EECPAttackSubGroup::Virtual18C(long inTime)
     }
 }
 
+// FUNCTION: EXE 0x45f895
 // Writes the units (kind and data), path, area, waypoint, rally point, task, request ID (-1 if none), timers, state
 // and flags; returns the first write error
 long EECPAttackSubGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -2308,6 +2402,7 @@ long EECPAttackSubGroup::LoadRunningState(FSFile& inFile, bool inGraphSearches)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x45fbcf
 // Sends every active unit to the rally point (the first town's centre when unset) and makes it the task location
 void EECPAttackSubGroup::ReturnToRallyPoint()
 {
@@ -2334,6 +2429,7 @@ void EECPAttackSubGroup::ReturnToRallyPoint()
     this->mTask.mLocation = this->mRallyPoint;
 }
 
+// FUNCTION: EXE 0x45fd38
 // Replaces the path with a copy of the given one
 void EECPAttackSubGroup::SetPath(const std::vector<EECPASGPathPoint>& inPath)
 {
@@ -2342,6 +2438,7 @@ void EECPAttackSubGroup::SetPath(const std::vector<EECPASGPathPoint>& inPath)
         this->mPath.push_back(inPath[i]);
 }
 
+// FUNCTION: EXE 0x45fd81
 // Lists the terrain kinds every unit can cross: forest (4) and cliff (3)
 void EECPAttackSubGroup::UpdateCommonMoveFlags()
 {
@@ -2363,6 +2460,7 @@ void EECPAttackSubGroup::UpdateCommonMoveFlags()
     if (theCount3 == this->mUnits.size())
         this->mCommonMoveFlags.push_back(3);
 }
+// FUNCTION: EXE 0x45fe93
 // For an active territory task with no path pending, returns true when within 8 tiles (or approaching), the tile is
 // in the task player's influence and on the group's main continent
 bool EECPAttackSubGroup::HasReachedTerritory(long inTime)
@@ -2391,6 +2489,7 @@ bool EECPAttackSubGroup::HasReachedTerritory(long inTime)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x45ff6c
 // Returns true when the group has targets but is more than 6 tiles outside the own and allied towns; only below hard,
 // before the attack started, not in deathmatch and not on a wonder or attack-location task
 bool EECPAttackSubGroup::IsAwayFromTowns()
@@ -2421,6 +2520,7 @@ bool EECPAttackSubGroup::IsAwayFromTowns()
     }
     return theResult;
 }
+// FUNCTION: EXE 0x460140
 // For an active location task with no fight or path pending, returns true when within 8 tiles (or approaching) and
 // not already holding at the task
 bool EECPAttackSubGroup::HasReachedLocation(long inTime)
@@ -2442,6 +2542,7 @@ bool EECPAttackSubGroup::HasReachedLocation(long inTime)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x4601e3
 // For an active unit task with no path pending, returns true when the task unit is 8 tiles or more from the task
 // location
 bool EECPAttackSubGroup::HasTaskUnitMoved(long inTime)
@@ -2458,6 +2559,7 @@ bool EECPAttackSubGroup::HasTaskUnitMoved(long inTime)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x46025e
 // With an active task, returns true when the task lies in another path sub-sector than the group or is connected to
 // the group's location
 bool EECPAttackSubGroup::Virtual120()
@@ -2474,6 +2576,7 @@ bool EECPAttackSubGroup::Virtual120()
     }
     return theResult;
 }
+// FUNCTION: EXE 0x4602b9
 // Sends the group back to the task location unless next to it, re-checking the task in 10-120 s
 void EECPAttackSubGroup::HoldAtTask(unsigned long inTime)
 {
@@ -2484,6 +2587,7 @@ void EECPAttackSubGroup::HoldAtTask(unsigned long inTime)
         this->mNextTaskCheckTime = gPhysics->GetRandom(10000L, 120000L) + inTime;
     }
 }
+// FUNCTION: EXE 0x460318
 // Enters a state and runs its entry action (remove, gather, ask for a task, split, retreat, move, follow, hold, return,
 // reposition), then sets every unit's AI state to it; an unknown state resets the units to 300000
 void EECPAttackSubGroup::SetState(long inState, long inTime)
@@ -2544,6 +2648,7 @@ void EECPAttackSubGroup::SetState(long inState, long inTime)
     }
     this->SetUnitsState(inState);
 }
+// FUNCTION: EXE 0x4604cf
 // Evaluates a state-machine condition (request filled, gathered, task valid, at rally point, targets, units, split,
 // away from towns, night, unseen, at task, ...); unknown conditions are false
 bool EECPAttackSubGroup::TestCondition(long inState, long inTime)
@@ -2617,6 +2722,7 @@ bool EECPAttackSubGroup::TestCondition(long inState, long inTime)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x46072e
 // Counts, for every target, the other targets within squared distance 1.8
 void EECPAttackSubGroup::CountTargetNeighbors()
 {
@@ -2632,18 +2738,21 @@ void EECPAttackSubGroup::CountTargetNeighbors()
     }
 }
 
+// FUNCTION: EXE 0x4607d0
 // Schedules the next update 2 s ahead
 void EECPAttackSubGroup::Update(long inTime)
 {
     this->mNextUpdateTime = inTime + 2000;
 }
 
+// FUNCTION: EXE 0x4607e2
 // Returns whether the given task is active
 bool EECPAttackSubGroup::IsTaskActive(const EECPAGTask& inTask)
 {
     return inTask.mIsActive;
 }
 
+// FUNCTION: EXE 0x4607ec
 // Returns every unit to personnel (releasing its target) and empties the sub-group
 void EECPAttackSubGroup::ReleaseUnits()
 {
@@ -2658,6 +2767,7 @@ void EECPAttackSubGroup::ReleaseUnits()
     }
     this->mUnits.clear();
 }
+// FUNCTION: EXE 0x46087f
 // Moves the task location to the task unit (or its carrier) and heads there; follows again in 15-70 s
 void EECPAttackSubGroup::FollowTaskUnit(long inTime)
 {
@@ -2684,6 +2794,7 @@ void EECPAttackSubGroup::FollowTaskUnit(long inTime)
         this->SetDestination(this->mTask.mLocation);
 }
 
+// FUNCTION: EXE 0x4609dd
 // Points the record of a unit at a new unit; returns true when found
 bool EECPAttackSubGroup::ReplaceUnit(EEComplexUnit* inUnit, EEComplexUnit* inNewUnit)
 {
@@ -2698,6 +2809,7 @@ bool EECPAttackSubGroup::ReplaceUnit(EEComplexUnit* inUnit, EEComplexUnit* inNew
     return theResult;
 }
 
+// FUNCTION: EXE 0x460a27
 // Checks arrival for the task type and enters the matching state (hold at task, hold territory, follow unit, return);
 // returns true on arrival
 bool EECPAttackSubGroup::CheckTaskArrival(long inTime)
@@ -2745,6 +2857,7 @@ bool EECPAttackSubGroup::CheckTaskArrival(long inTime)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x460b67
 // Removes the unit by its ID and refreshes the units a second time; returns true when found
 bool EECPAttackSubGroup::RemoveUnit(EEComplexUnit* inUnit)
 {
@@ -2757,6 +2870,7 @@ bool EECPAttackSubGroup::RemoveUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// FUNCTION: EXE 0x460ba9
 // Drops targets and siege targets that are no longer living enemies on the map, or that the player cannot see
 // (cloaked targets, or any below hard difficulty)
 void EECPAttackSubGroup::DropLostTargets(long inTime)
@@ -2804,6 +2918,7 @@ void EECPAttackSubGroup::DropLostTargets(long inTime)
     }
 }
 
+// FUNCTION: EXE 0x460d85
 // Updates every living unit not out of the fight whose update time has come
 void EECPAttackSubGroup::UpdateUnits(long inTime)
 {
@@ -2813,6 +2928,7 @@ void EECPAttackSubGroup::UpdateUnits(long inTime)
             theUnit->Update(inTime);
     }
 }
+// FUNCTION: EXE 0x460dd4
 // Validates the active task by its type and deactivates it when invalid; returns whether it is still active
 bool EECPAttackSubGroup::CheckTask(long inTime)
 {
@@ -2845,6 +2961,7 @@ bool EECPAttackSubGroup::CheckTask(long inTime)
     }
     return theResult;
 }
+// FUNCTION: EXE 0x460e65
 // Checks a territory task (task player's influence at or, with no buildings known, near the tile): false once the
 // group is there without targets, else true unless every unit is counted in the stats' +0x24 tally
 bool EECPAttackSubGroup::IsTerritoryTaskValid(long inTime)
@@ -2917,6 +3034,7 @@ bool EECPAttackSubGroup::IsTerritoryTaskValid(long inTime)
         theResult = true;
     return theResult;
 }
+// FUNCTION: EXE 0x46111a
 // Checks a location task once the group is there and the re-check time passed: attack-location needs enemy influence
 // nearby, defend-wonder a living wonder, defence tasks end 50% of the time; re-checks in 10-120 s
 bool EECPAttackSubGroup::IsLocationTaskValid(long inTime)
@@ -2969,12 +3087,91 @@ bool EECPAttackSubGroup::IsLocationTaskValid(long inTime)
     return theResult;
 }
 
+// FUNCTION: EXE 0x46131a
 // Sets the +0x1b4 timer 3-22 s ahead
 void EECPAttackSubGroup::Virtual1D8(unsigned long inTime)
 {
     this->mU1B4 = gPhysics->GetRandom(3000L, 22000L) + inTime;
 }
 
+// Template / inline COMDATs of the unit (named in names.txt; first-reference order).
+// TEMPLATE: EXE 0x45afdc
+// TEMPLATE: EXE 0x4613db
+// TEMPLATE: EXE 0x461421
+// TEMPLATE: EXE 0x46154d
+// TEMPLATE: EXE 0x4617b6
+// TEMPLATE: EXE 0x461a5c
+// TEMPLATE: EXE 0x461e97
+// TEMPLATE: EXE 0x461efa
+// TEMPLATE: EXE 0x461f5d
+// TEMPLATE: EXE 0x462052
+// TEMPLATE: EXE 0x46240f
+// TEMPLATE: EXE 0x462492
+// TEMPLATE: EXE 0x4624f8
+// TEMPLATE: EXE 0x461340
+// TEMPLATE: EXE 0x461406
+// TEMPLATE: EXE 0x4614c0
+// TEMPLATE: EXE 0x4614eb
+// TEMPLATE: EXE 0x4614ff
+// TEMPLATE: EXE 0x461647
+// TEMPLATE: EXE 0x4616b8
+// TEMPLATE: EXE 0x461712
+// TEMPLATE: EXE 0x461767
+// TEMPLATE: EXE 0x461acd
+// TEMPLATE: EXE 0x461aff
+// TEMPLATE: EXE 0x46215f
+// TEMPLATE: EXE 0x4621c6
+// TEMPLATE: EXE 0x462340
+// TEMPLATE: EXE 0x46256b
+// TEMPLATE: EXE 0x462594
+// TEMPLATE: EXE 0x462667
+// TEMPLATE: EXE 0x4627c5
+// TEMPLATE: EXE 0x462856
+// TEMPLATE: EXE 0x462890
+// TEMPLATE: EXE 0x4628d1
+// TEMPLATE: EXE 0x4629cf
+
+// Priority sort family emitted by ComputeLoadDistance; typed comparator identities audited from its call graph.
+// TEMPLATE: EXE 0x462283
+// TEMPLATE: EXE 0x462698
+// TEMPLATE: EXE 0x4626c1
+// TEMPLATE: EXE 0x462794
+// TEMPLATE: EXE 0x4629f8
+// TEMPLATE: EXE 0x462a92
+// TEMPLATE: EXE 0x462acc
+// TEMPLATE: EXE 0x462b0d
+// TEMPLATE: EXE 0x462c22
+// TEMPLATE: EXE 0x462cb9
+// TEMPLATE: EXE 0x462cfd
+// TEMPLATE: EXE 0x462dde
+// TEMPLATE: EXE 0x462e46
+// TEMPLATE: EXE 0x462f56
+
+// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
+// against the original by name)
+// TEMPLATE: EXE 0x461b2a
+// TEMPLATE: EXE 0x462c4c
+// TEMPLATE: EXE 0x462c90
+// TEMPLATE: EXE 0x462f0c
+
+// Compiled COMDATs (the deque<EECPASGPathPoint> helpers call the out-of-line operator=)
+// TEMPLATE: EXE 0x461393
+// TEMPLATE: EXE 0x461591
+// TEMPLATE: EXE 0x461602
+// TEMPLATE: EXE 0x461784
+// TEMPLATE: EXE 0x4617eb
+// TEMPLATE: EXE 0x461de8
+// TEMPLATE: EXE 0x461dfb
+// TEMPLATE: EXE 0x46237d
+// TEMPLATE: EXE 0x46239a
+// TEMPLATE: EXE 0x4623c6
+// TEMPLATE: EXE 0x4623e3
+// TEMPLATE: EXE 0x462d26
+// TEMPLATE: EXE 0x462d8b
+// TEMPLATE: EXE 0x462e99
+// TEMPLATE: EXE 0x462ed8
+
+// FUNCTION: EXE 0x45e407
 // Returns the unit's top speed: its active group's value when it is in one, else its stats'
 // Out of line after its first user here
 float EEComplexUnit::GetMaxVelocity()
@@ -2983,77 +3180,112 @@ float EEComplexUnit::GetMaxVelocity()
         return this->mActiveGroup->GetMaxVelocity(this);
     return this->mStats->mMaxVelocity;
 }
+// The targets pool (sTargetPool) COMDATs
+// TEMPLATE: EXE 0x4613a1
+// TEMPLATE: EXE 0x46152b
 
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret 4` body the vtable slot points at)
 void EECPAttackSubGroup::Virtual118(long)
 {
 }
 
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret 4` body the vtable slot points at)
 void EECPAttackSubGroup::Virtual138(long)
 {
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPAttackSubGroup::RequestPathToTask()
 {
 }
 
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPAttackSubGroup::PrunePath()
 {
 }
 
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EECPAttackSubGroup::AssignPrejudices()
 {
 }
 
+// ICF-FOLDED: EXE 0x4bb118
+// (no address of its own: folded into the shared `xor al, al; ret 4` body the vtable slot points at)
 bool EECPAttackSubGroup::Virtual1A0(long)
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4bb118
+// (no address of its own: folded into the shared `xor al, al; ret 4` body the vtable slot points at)
 bool EECPAttackSubGroup::Virtual1AC(long)
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4bb118
+// (no address of its own: folded into the shared `xor al, al; ret 4` body the vtable slot points at)
 bool EECPAttackSubGroup::Virtual1B4(long)
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4b3257
+// (no address of its own: folded into the shared `mov al, 1; ret 4` body the vtable slot points at)
 bool EECPAttackSubGroup::Virtual1C8(long)
 {
     return true;
 }
 
+// ICF-FOLDED: EXE 0x4bb118
+// (no address of its own: folded into the shared `xor al, al; ret 4` body the vtable slot points at)
 bool EECPAttackSubGroup::Virtual1D0(long)
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPAttackSubGroup::Virtual9C()
 {
     return false;
 }
 
+// ICF-FOLDED: EXE 0x4ac7e2
+// (no address of its own: folded into the shared `fld 0.0; ret` body the vtable slot points at)
 float EECPAttackSubGroup::GetGuardChokepointPercentage()
 {
     return 0.0f;
 }
 
+// ICF-FOLDED: EXE 0x4ac7e2
+// (no address of its own: folded into the shared `fld 0.0; ret` body the vtable slot points at)
 float EECPAttackSubGroup::GetGuardHighGroundPercentage()
 {
     return 0.0f;
 }
 
+// ICF-FOLDED: EXE 0x4ac7e2
+// (no address of its own: folded into the shared `fld 0.0; ret` body the vtable slot points at)
 float EECPAttackSubGroup::GetGuardContinentPercentage()
 {
     return 0.0f;
 }
 
+// ICF-FOLDED: EXE 0x4ac7e2
+// (no address of its own: folded into the shared `fld 0.0; ret` body the vtable slot points at)
 float EECPAttackSubGroup::GetGuardTownPercentage()
 {
     return 0.0f;
 }
 
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor al, al; ret` body the vtable slot points at)
 bool EECPAttackSubGroup::VirtualBC()
 {
     return false;

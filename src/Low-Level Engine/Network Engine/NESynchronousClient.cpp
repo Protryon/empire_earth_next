@@ -11,17 +11,20 @@
 #include "lle/NESynchronousClient.h"
 #include "rust/ee_net.h"
 
+// FUNCTION: LLE 0x1004607d
 NESynchronousClient::NESynchronousClient()
 {
     // the client calls the protocol itself (ee_net ffi_protocol.rs)
     this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost, this->mComms, true);
 }
 
+// FUNCTION: LLE 0x10046401
 NESynchronousClient::~NESynchronousClient()
 {
     ee_net_cl_free(this->mRust);
 }
 
+// FUNCTION: LLE 0x10046513
 long NESynchronousClient::Connect(const UString& inName, const UString& inHost, const UWideString& inAddress)
 {
     const char* theAddress = inAddress;
@@ -31,11 +34,13 @@ long NESynchronousClient::Connect(const UString& inName, const UString& inHost, 
     return ee_net_cl_connect(this->mRust, &theStrings);
 }
 
+// FUNCTION: LLE 0x10046562
 long NESynchronousClient::Disconnect()
 {
     return ee_net_cl_disconnect(this->mRust);
 }
 
+// FUNCTION: LLE 0x100465a7
 long NESynchronousClient::GetDetectedGame(unsigned long inIndex, UString& outName, UString& outHost,
                                           UWideString& outAddress)
 {
@@ -44,26 +49,31 @@ long NESynchronousClient::GetDetectedGame(unsigned long inIndex, UString& outNam
     return ee_net_cl_detected_game(this->mRust, (uint32_t)inIndex, &theSinks);
 }
 
+// FUNCTION: LLE 0x1004687f
 long NESynchronousClient::ProcessGuaranteedLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
 {
     return ee_net_cl_process_user_input(this->mRust, inMessage, inPlayer, true);
 }
 
+// FUNCTION: LLE 0x10046891
 long NESynchronousClient::ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
 {
     return ee_net_cl_process_user_input(this->mRust, inMessage, inPlayer, false);
 }
 
+// FUNCTION: LLE 0x10047195
 long NESynchronousClient::SearchForGame(bool inStart)
 {
     return ee_net_cl_search_for_game(this->mRust, inStart);
 }
 
+// FUNCTION: LLE 0x100471f7
 void NESynchronousClient::StartThreads()
 {
     ee_net_cl_start_threads(this->mRust);
 }
 
+// FUNCTION: LLE 0x100472cf
 void NESynchronousClient::StopThreads()
 {
     ee_net_cl_stop_threads(this->mRust);

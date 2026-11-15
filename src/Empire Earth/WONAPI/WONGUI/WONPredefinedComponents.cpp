@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
+// FUNCTION: WON 0x007989f0
 // Returns the HORZSCROLLBAR or VERTSCROLLBAR child with a new WON scrollbar config; asks the base config otherwise
 bool WONScrollContainerConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {

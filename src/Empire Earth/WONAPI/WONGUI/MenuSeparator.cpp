@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyComponentListItem.h"
 namespace WONAPI {
+// FUNCTION: WON 0x00700720
 // Draws an etched horizontal line (shadow over highlight) across the middle of the separator
 void MSSeperator::Paint(Graphics& g)
 {
@@ -26,6 +27,7 @@ void MSSeperator::Paint(Graphics& g)
     g.DrawLine(0,y,this->Width()-1,y);
 }
 
+// FUNCTION: WON 0x006fa510
 // Draws the item's component, first stretching it to the list's paint width when the item is sizable
 void ComponentListItem::Paint(Graphics& g,ListArea* area)
 {
