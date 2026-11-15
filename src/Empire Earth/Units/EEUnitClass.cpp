@@ -254,68 +254,18 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
 // SYNTHETIC: EXE 0x6305d2
 // (the scalar deleting destructor, emitted with the vtable; slot EEUnitClass+0x0)
 
+// the class's effects as GetEffects' array (the members are contiguous: 29 pointers from mAttachedEffect)
+static const long kUnitClassEffectCount = 29;
+static_assert(offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect)
+                  == (kUnitClassEffectCount - 1) * sizeof(EEGraphicEffect*), "the class's effects are one array");
+
 // FUNCTION: EXE 0x6305ee
 // Destroys the unit class, releasing its graphic effects and its projectile, scaffolding, death and remains classes
 EEUnitClass::~EEUnitClass()
 {
-    if (this->mAttachedEffect != NULL)
-        this->mAttachedEffect->Dereference();
-    if (this->mDeathEffect != NULL)
-        this->mDeathEffect->Dereference();
-    if (this->mDamageEffect != NULL)
-        this->mDamageEffect->Dereference();
-    if (this->mHealEffect != NULL)
-        this->mHealEffect->Dereference();
-    if (this->mFireTrailEffect != NULL)
-        this->mFireTrailEffect->Dereference();
-    if (this->mTrailEffect != NULL)
-        this->mTrailEffect->Dereference();
-    if (this->mMuzzleFlashEffect != NULL)
-        this->mMuzzleFlashEffect->Dereference();
-    if (this->mRippleEffect != NULL)
-        this->mRippleEffect->Dereference();
-    if (this->mSplashEffect != NULL)
-        this->mSplashEffect->Dereference();
-    if (this->mImpactSparksEffect != NULL)
-        this->mImpactSparksEffect->Dereference();
-    if (this->mImpactBloodEffect != NULL)
-        this->mImpactBloodEffect->Dereference();
-    if (this->mEffect090 != NULL)
-        this->mEffect090->Dereference();
-    if (this->mCreationEffect != NULL)
-        this->mCreationEffect->Dereference();
-    if (this->mEffect098 != NULL)
-        this->mEffect098->Dereference();
-    if (this->mEffect09C != NULL)
-        this->mEffect09C->Dereference();
-    if (this->mEffect0A0 != NULL)
-        this->mEffect0A0->Dereference();
-    if (this->mEffect0A4 != NULL)
-        this->mEffect0A4->Dereference();
-    if (this->mEffect0A8 != NULL)
-        this->mEffect0A8->Dereference();
-    if (this->mSpecialAttackEffect != NULL)
-        this->mSpecialAttackEffect->Dereference();
-    if (this->mEffect0B0 != NULL)
-        this->mEffect0B0->Dereference();
-    if (this->mShotEffect != NULL)
-        this->mShotEffect->Dereference();
-    if (this->mLeprosyEffect != NULL)
-        this->mLeprosyEffect->Dereference();
-    if (this->mPlagueEffect != NULL)
-        this->mPlagueEffect->Dereference();
-    if (this->mPulseCannonEffect != NULL)
-        this->mPulseCannonEffect->Dereference();
-    if (this->mMoraleEffect != NULL)
-        this->mMoraleEffect->Dereference();
-    if (this->mBattleCryEffect != NULL)
-        this->mBattleCryEffect->Dereference();
-    if (this->mShellHoleEffect != NULL)
-        this->mShellHoleEffect->Dereference();
-    if (this->mEffect0D0 != NULL)
-        this->mEffect0D0->Dereference();
-    if (this->mBloodStainEffect != NULL)
-        this->mBloodStainEffect->Dereference();
+    for (long i = 0; i < kUnitClassEffectCount; i++)   // the 29 effects, in their order (+0x64..+0xd4)
+        if (this->GetEffects()[i] != NULL)
+            this->GetEffects()[i]->Dereference();
     this->mAIScript = NULL;
     if (this->mProjectileClass != NULL) {
         this->mProjectileClass->Dereference();
@@ -1924,64 +1874,9 @@ void EEUnitClass::BaseLoadMedia(EEPlayer* inPlayer)
         inPlayer->SetUnitClassMedia(this->mDeathSpawnClass->mUnitType, 0x7f);
     if (this->mRemainsClass != NULL)
         inPlayer->SetUnitClassMedia(this->mRemainsClass->mUnitType, 0x7f);
-    if (this->mAttachedEffect != NULL)
-        this->mAttachedEffect->Load(false);
-    if (this->mDeathEffect != NULL)
-        this->mDeathEffect->Load(false);
-    if (this->mDamageEffect != NULL)
-        this->mDamageEffect->Load(false);
-    if (this->mHealEffect != NULL)
-        this->mHealEffect->Load(false);
-    if (this->mFireTrailEffect != NULL)
-        this->mFireTrailEffect->Load(false);
-    if (this->mTrailEffect != NULL)
-        this->mTrailEffect->Load(false);
-    if (this->mMuzzleFlashEffect != NULL)
-        this->mMuzzleFlashEffect->Load(false);
-    if (this->mRippleEffect != NULL)
-        this->mRippleEffect->Load(false);
-    if (this->mSplashEffect != NULL)
-        this->mSplashEffect->Load(false);
-    if (this->mImpactSparksEffect != NULL)
-        this->mImpactSparksEffect->Load(false);
-    if (this->mImpactBloodEffect != NULL)
-        this->mImpactBloodEffect->Load(false);
-    if (this->mEffect090 != NULL)
-        this->mEffect090->Load(false);
-    if (this->mCreationEffect != NULL)
-        this->mCreationEffect->Load(false);
-    if (this->mEffect098 != NULL)
-        this->mEffect098->Load(false);
-    if (this->mEffect09C != NULL)
-        this->mEffect09C->Load(false);
-    if (this->mEffect0A0 != NULL)
-        this->mEffect0A0->Load(false);
-    if (this->mEffect0A4 != NULL)
-        this->mEffect0A4->Load(false);
-    if (this->mEffect0A8 != NULL)
-        this->mEffect0A8->Load(false);
-    if (this->mSpecialAttackEffect != NULL)
-        this->mSpecialAttackEffect->Load(false);
-    if (this->mEffect0B0 != NULL)
-        this->mEffect0B0->Load(false);
-    if (this->mShotEffect != NULL)
-        this->mShotEffect->Load(false);
-    if (this->mLeprosyEffect != NULL)
-        this->mLeprosyEffect->Load(false);
-    if (this->mPlagueEffect != NULL)
-        this->mPlagueEffect->Load(false);
-    if (this->mPulseCannonEffect != NULL)
-        this->mPulseCannonEffect->Load(false);
-    if (this->mMoraleEffect != NULL)
-        this->mMoraleEffect->Load(false);
-    if (this->mBattleCryEffect != NULL)
-        this->mBattleCryEffect->Load(false);
-    if (this->mShellHoleEffect != NULL)
-        this->mShellHoleEffect->Load(false);
-    if (this->mEffect0D0 != NULL)
-        this->mEffect0D0->Load(false);
-    if (this->mBloodStainEffect != NULL)
-        this->mBloodStainEffect->Load(false);
+    for (long i = 0; i < kUnitClassEffectCount; i++)   // the 29 effects, in their order (+0x64..+0xd4)
+        if (this->GetEffects()[i] != NULL)
+            this->GetEffects()[i]->Load(false);
     this->mIsMediaLoaded = true;
 }
 
@@ -2869,64 +2764,9 @@ void EEUnitClass::BaseUnloadMedia(EEPlayer* inPlayer)
         inPlayer->UnloadUnitClassMedia(this->mDeathSpawnClass->mUnitType);
     if (this->mRemainsClass != NULL)
         inPlayer->UnloadUnitClassMedia(this->mRemainsClass->mUnitType);
-    if (this->mAttachedEffect != NULL)
-        this->mAttachedEffect->Unload();
-    if (this->mDeathEffect != NULL)
-        this->mDeathEffect->Unload();
-    if (this->mDamageEffect != NULL)
-        this->mDamageEffect->Unload();
-    if (this->mHealEffect != NULL)
-        this->mHealEffect->Unload();
-    if (this->mFireTrailEffect != NULL)
-        this->mFireTrailEffect->Unload();
-    if (this->mTrailEffect != NULL)
-        this->mTrailEffect->Unload();
-    if (this->mMuzzleFlashEffect != NULL)
-        this->mMuzzleFlashEffect->Unload();
-    if (this->mRippleEffect != NULL)
-        this->mRippleEffect->Unload();
-    if (this->mSplashEffect != NULL)
-        this->mSplashEffect->Unload();
-    if (this->mImpactSparksEffect != NULL)
-        this->mImpactSparksEffect->Unload();
-    if (this->mImpactBloodEffect != NULL)
-        this->mImpactBloodEffect->Unload();
-    if (this->mEffect090 != NULL)
-        this->mEffect090->Unload();
-    if (this->mCreationEffect != NULL)
-        this->mCreationEffect->Unload();
-    if (this->mEffect098 != NULL)
-        this->mEffect098->Unload();
-    if (this->mEffect09C != NULL)
-        this->mEffect09C->Unload();
-    if (this->mEffect0A0 != NULL)
-        this->mEffect0A0->Unload();
-    if (this->mEffect0A4 != NULL)
-        this->mEffect0A4->Unload();
-    if (this->mEffect0A8 != NULL)
-        this->mEffect0A8->Unload();
-    if (this->mSpecialAttackEffect != NULL)
-        this->mSpecialAttackEffect->Unload();
-    if (this->mEffect0B0 != NULL)
-        this->mEffect0B0->Unload();
-    if (this->mShotEffect != NULL)
-        this->mShotEffect->Unload();
-    if (this->mLeprosyEffect != NULL)
-        this->mLeprosyEffect->Unload();
-    if (this->mPlagueEffect != NULL)
-        this->mPlagueEffect->Unload();
-    if (this->mPulseCannonEffect != NULL)
-        this->mPulseCannonEffect->Unload();
-    if (this->mMoraleEffect != NULL)
-        this->mMoraleEffect->Unload();
-    if (this->mBattleCryEffect != NULL)
-        this->mBattleCryEffect->Unload();
-    if (this->mShellHoleEffect != NULL)
-        this->mShellHoleEffect->Unload();
-    if (this->mEffect0D0 != NULL)
-        this->mEffect0D0->Unload();
-    if (this->mBloodStainEffect != NULL)
-        this->mBloodStainEffect->Unload();
+    for (long i = 0; i < kUnitClassEffectCount; i++)   // the 29 effects, in their order (+0x64..+0xd4)
+        if (this->GetEffects()[i] != NULL)
+            this->GetEffects()[i]->Unload();
     this->mIsMediaLoaded = false;
 }
 

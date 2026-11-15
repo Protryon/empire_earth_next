@@ -1376,6 +1376,9 @@ public:
     // (provisional names)
     EEComplexUnit* GetLastLinked(EEComplexUnit* inUnit);
     EEComplexUnit* GetLastLinkedCarrier(EEComplexUnit* inUnit);
+    // the 29 graphic effects (+0x64..+0xd4, mAttachedEffect to mBloodStainEffect) as one array, in member order: the
+    // dtor's, LoadClassMedia's and UnloadClassMedia's walks (EEUnitClass.cpp checks the layout)
+    EEGraphicEffect** GetEffects() { return &this->mAttachedEffect; }
 
     // Layout (no gaps; sizeof 0x32c: every subclass EEUC* is 0x32c): the ctor 0x22f317
     // (EEUnitClass(bool, record, ...): it copies a database record field by field) and the dtor 0x2305ee. Types by
