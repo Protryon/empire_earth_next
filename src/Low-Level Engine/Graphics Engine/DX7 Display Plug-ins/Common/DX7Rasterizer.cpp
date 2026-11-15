@@ -65,9 +65,9 @@ struct DX7RasterizerHost {
         switch (inOp) {
         case EeDx7RastOp::ScreenNew:
             return (intptr_t) static_cast<GEScreen*>(new DX7Screen(NULL, static_cast<GXDirectDraw*>(inObj),
-                                                                   reinterpret_cast<const char*>(a), (b & 1) != 0, (b & 2) != 0));
+                                                                   UString(reinterpret_cast<const char*>(a)), (b & 1) != 0, (b & 2) != 0));
         case EeDx7RastOp::ScreenDelete: delete static_cast<DX7Screen*>(theScreen); return 0;
-        case EeDx7RastOp::ScreenDirectDraw: return (intptr_t) static_cast<DX7Screen*>(theScreen)->mDirectDraw;
+        case EeDx7RastOp::ScreenDirectDraw: return (intptr_t)(GXDirectDraw*)*static_cast<DX7Screen*>(theScreen);
         case EeDx7RastOp::ScreenIsFullScreen: return theScreen->GetIsFullScreen();
         case EeDx7RastOp::ScreenCurrentMode: *reinterpret_cast<GEVideoMode*>(a) = theScreen->GetCurrentMode(); return 0;
         case EeDx7RastOp::ScreenModeCount: return (intptr_t)theScreen->GetModeCount();
