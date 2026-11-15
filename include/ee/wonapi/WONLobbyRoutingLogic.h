@@ -45,10 +45,10 @@ public:
     // the completions' targets (LogicCompletion<RoutingLogic>)
     void QueryServerGroupsDone(AsyncOp*); // 0x7e9e60; group query completion
     void GetUserStatusComplete(AsyncOp*); // 0x7e7460; user status query completion
-    void ConnectionClosed(AsyncOp* inBaseOp); // 0x7e7320
-    virtual void Logout();    // 0x7eeed0
-    virtual void HandleControlEvent(int); // 0x7ea310
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7ea3a0
+    void ConnectionClosed(AsyncOp* inBaseOp);
+    virtual void Logout();
+    virtual void HandleControlEvent(int);
+    virtual void HandleComponentEvent(ComponentEvent*);
     EeWonRouteLogic* mRust; // owned
     std::string mGameDataType; // 0x44, "G" from the constructor
     SmartPtr<LobbyServerList> mServerList; // 0x54

@@ -82,7 +82,6 @@ static void ModelAppendUnits(void* inContext, const uint16_t* inUnits, size_t in
 
 // ---- the routing server's and the directory's records
 
-// FUNCTION: WON 0x7a5350
 // Copies the client's name, flags, ids and CD key id from the routing server's client info
 void LobbyClient::ReadRoutingInfo(RoutingClientInfo* inInfo)
 {
@@ -100,7 +99,6 @@ template <class Map> static void SyncArgs(const Map& inMap, std::vector<uint16_t
     }
 }
 
-// FUNCTION: WON 0x7a5820
 // Merges the routing server's client map into the list: drops gone clients, adds new ones, refreshes the rest
 void LobbyClientList::SyncClients(const RoutingClientMap& inMap)
 {
@@ -110,7 +108,6 @@ void LobbyClientList::SyncClients(const RoutingClientMap& inMap)
     this->M(LobbyMC::ListSync, anIds.empty() ? 0 : (intptr_t)&anIds[0], anInfos.empty() ? 0 : (intptr_t)&anInfos[0], anIds.size());
 }
 
-// FUNCTION: WON 0x7a9ad0
 // Merges the routing server's client map into the server's clients and refreshes who is ignored
 void LobbyServer::SyncClients(const RoutingClientMap& inMap)
 {
@@ -120,7 +117,6 @@ void LobbyServer::SyncClients(const RoutingClientMap& inMap)
     this->M(LobbyMC::ServerSyncClients, anIds.empty() ? 0 : (intptr_t)&anIds[0], anInfos.empty() ? 0 : (intptr_t)&anInfos[0], anIds.size());
 }
 
-// FUNCTION: WON 0x7a9be0
 // Merges the routing server's room map into the server's rooms and recounts the people in them
 void LobbyServer::SyncGroups(const RoutingGroupMap& inGroups, bool inUpdateClients)
 {
@@ -131,7 +127,6 @@ void LobbyServer::SyncGroups(const RoutingGroupMap& inGroups, bool inUpdateClien
             (intptr_t)((uint64_t)anIds.size() | (uint64_t)inUpdateClients << 32));
 }
 
-// FUNCTION: WON 0x7a8c30
 // Copies a room's id, name, member count, flags, captain and capacity from the routing server; fills members
 void LobbyGroup::ReadRoutingInfo(RoutingGroupInfo* inInfo, LobbyClientList* inClients)
 {
@@ -142,7 +137,6 @@ void LobbyGroup::ReadRoutingInfo(RoutingGroupInfo* inInfo, LobbyClientList* inCl
     if (inClients != NULL) this->SetMembers(inInfo->mMembers, inClients);
 }
 
-// FUNCTION: WON 0x7a8d50
 // Rebuilds the member list from the routing server, setting each member's flags, captaincy and room
 void LobbyGroup::SetMembers(const RoutingMemberMap& inMembers, LobbyClientList* inClients)
 {
@@ -156,7 +150,6 @@ void LobbyGroup::SetMembers(const RoutingMemberMap& inMembers, LobbyClientList* 
     this->M(LobbyMC::GroupSetMembers, anIds.empty() ? 0 : (intptr_t)&anIds[0], aFlags.empty() ? 0 : (intptr_t)&aFlags[0], anIds.size());
 }
 
-// FUNCTION: WON 0x007a9700
 // Reads the server's name, address, population (_C) and address names (_L) from its directory entry
 void LobbyServer::ReadDirEntity(DirEntity* inEntity)
 {
@@ -185,7 +178,6 @@ void LobbyServer::ReadDirEntity(DirEntity* inEntity)
     }
 }
 
-// FUNCTION: WON 0x7aa670
 // Adds the directory's servers by address and refreshes the listing of each one not connected
 void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
 {
@@ -199,7 +191,6 @@ void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
 
 // ---- the game's buffers
 
-// FUNCTION: WON 0x7a6ed0
 // Writes the game's listing summary (address or product id, name, skill, join flags, players, slots)
 void LobbyGame::WriteSummary(WriteBuffer& outBuffer)
 {
@@ -227,7 +218,6 @@ void LobbyGame::WriteSummary(WriteBuffer& outBuffer)
     this->WriteSummaryHook(outBuffer);
 }
 
-// FUNCTION: WON 0x7a7000
 // Reads a game's listing summary; false for another product or a short buffer
 // (a short summary keeps the fields read before the cut, as the original assigned them while reading)
 bool LobbyGame::ReadSummary(ReadBuffer& inBuffer)
@@ -249,7 +239,6 @@ bool LobbyGame::ReadSummary(ReadBuffer& inBuffer)
     catch (ReadBufferException&) { return false; }
 }
 
-// FUNCTION: WON 0x7a7250
 // Reads the game code's detailed game description and marks the details as received
 bool LobbyGame::ReadDetails(ReadBuffer& inBuffer)
 {
@@ -263,7 +252,6 @@ bool LobbyGame::ReadDetails(ReadBuffer& inBuffer)
     catch (ReadBufferException&) { return false; }
 }
 
-// FUNCTION: WON 0x7a7200
 // Reads the game's listing summary from a byte buffer; false without one
 bool LobbyGame::ReadSummaryBuffer(const ByteBuffer* inData)
 {
@@ -272,7 +260,6 @@ bool LobbyGame::ReadSummaryBuffer(const ByteBuffer* inData)
     return this->ReadSummary(buffer);
 }
 
-// FUNCTION: WON 0x7a72c0
 // Builds the join request for the game: message 1, the local ping and the game code's data
 ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest()
 {
@@ -288,7 +275,6 @@ ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinRequest()
     return buffer.ToByteBuffer(true);
 }
 
-// FUNCTION: WON 0x7a7570
 // Admits or refuses a join request; on success writes the player count and every player into the reply
 short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,WriteBuffer& outBuffer)
 {
@@ -331,7 +317,6 @@ short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,Wr
     return 0;
 }
 
-// FUNCTION: WON 0x7a7830
 // Handles a join request and builds the reply: message 2, the join status and the players
 ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinReply(ReadBuffer& inBuffer,LobbyClient* inClient)
 {
@@ -342,7 +327,6 @@ ConstSmartPtr<ByteBuffer> LobbyGame::GetJoinReply(ReadBuffer& inBuffer,LobbyClie
     return buffer.ToByteBuffer(true);
 }
 
-// FUNCTION: WON 0x7a78e0
 // Reads the host's join reply: on success creates every listed player; returns the join status
 short LobbyGame::HandleJoinReply(ReadBuffer& inBuffer)
 {
@@ -363,7 +347,6 @@ short LobbyGame::HandleJoinReply(ReadBuffer& inBuffer)
     return result;
 }
 
-// FUNCTION: WON 0x007a7a90
 // Returns the text for a join status: the lobby's strings, the game code's text, or the number
 GUIString LobbyGame::GetStatusString(short status)
 {
@@ -384,7 +367,6 @@ GUIString LobbyGame::GetStatusString(short status)
     return GUIString(new GUIStringData(buffer));
 }
 
-// FUNCTION: WON 0x007a6c00
 // Creates a game of the given type through the installed game factory
 LobbyGame* LobbyGame::CreateGame(LobbyGameType inType)
 {
@@ -393,7 +375,6 @@ LobbyGame* LobbyGame::CreateGame(LobbyGameType inType)
     return game;
 }
 
-// FUNCTION: WON 0x7a90f0
 // Reads the player's ping, ready state and game data; false on a short buffer
 bool LobbyPlayer::ReadFromBuffer(ReadBuffer& inBuffer)
 {
@@ -407,7 +388,6 @@ bool LobbyPlayer::ReadFromBuffer(ReadBuffer& inBuffer)
     }
 }
 
-// FUNCTION: WON 0x7a9170
 // Writes the player's ping, ready state and game data
 void LobbyPlayer::WriteToBuffer(WriteBuffer& outBuffer)
 {

@@ -46,8 +46,8 @@ public:
     virtual bool ReadData(ReadBuffer& inBuffer) { return true; } // returns true (shared body at 0x387ff0)
     virtual void WriteData(WriteBuffer& outBuffer) {} // empty (shared body at 0x30a800)
     virtual bool IsTeammate(LobbyPlayer* inOther) { return false; } // 0x3a90d0: the base player has no teams
-    bool ReadFromBuffer(ReadBuffer& inBuffer); // 0x3a90f0
-    void WriteToBuffer(WriteBuffer& outBuffer); // 0x3a9170
+    bool ReadFromBuffer(ReadBuffer& inBuffer);
+    void WriteToBuffer(WriteBuffer& outBuffer);
     bool IsSameTeam(LobbyPlayer* inOther) { return this->M(LobbyMC::PlayerIsSameTeam, (intptr_t)inOther) != 0; }
 protected:
     typedef LobbyPlayer* (*LobbyPlayerFactory)();

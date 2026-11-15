@@ -504,7 +504,6 @@ static intptr_t Call(RoutingLogic* inLogic, EeWonRouteLogicCall inCall, intptr_t
     return ee_won_routelogic_call(inLogic->mRust, inCall, a, b);
 }
 
-// FUNCTION: WON 0x007e7200
 // Looks up the add-friend, admin-action, bad-user, create-room, password and room dialogs from the lobby layout
 void RoutingLogic::InitComponent(ComponentConfig* inConfig)
 {
@@ -516,7 +515,6 @@ void RoutingLogic::InitComponent(ComponentConfig* inConfig)
     SafeGetComponent(inConfig, this->mRoomDialog, "RoomDialog", __FILE__, 130);
 }
 
-// FUNCTION: WON 0x007e6e80
 // Creates the Internet lobby logic with an empty server list and game list (the Rust object: not idle, not yet a
 // moderator, no server)
 RoutingLogic::RoutingLogic() : mRust(ee_won_routelogic_new_model(this, RoutingHost))
@@ -526,7 +524,6 @@ RoutingLogic::RoutingLogic() : mRust(ee_won_routelogic_new_model(this, RoutingHo
     this->mGameDataType = "G";
 }
 
-// FUNCTION: WON 0x007e7070
 // Destroys the Internet lobby logic (the Rust object gives back the servers and rooms it holds)
 RoutingLogic::~RoutingLogic() { ee_won_routelogic_free(this->mRust); }
 
@@ -558,7 +555,6 @@ void RoutingLogic::GetUserStatusComplete(AsyncOp* inOp) { Call(this, EeWonRouteL
 void RoutingLogic::QueryServerGroupsDone(AsyncOp* inOp) { Call(this, EeWonRouteLogicCall::GroupsDone, (intptr_t)inOp); }
 void RoutingLogic::ConnectionClosed(AsyncOp* inOp) { Call(this, EeWonRouteLogicCall::ConnectionClosed, (intptr_t)inOp); }
 
-// FUNCTION: WON 0x007ea310
 // Handles the Internet lobby buttons: change room, add friend, anonymous and filter checks, refresh lists
 void RoutingLogic::HandleControlEvent(int controlId)
 {
@@ -568,83 +564,12 @@ void RoutingLogic::HandleControlEvent(int controlId)
     if (aWhich != 0) Call(this, EeWonRouteLogicCall::Control, aWhich);
 }
 
-// FUNCTION: WON 0x007ea3a0
 // Dispatches the Internet lobby's component events (accept, actions, rooms, chat, friends, Quick Play)
 void RoutingLogic::HandleComponentEvent(ComponentEvent* event)
 {
     Call(this, EeWonRouteLogicCall::Event, (intptr_t)event, event->mType);
 }
 
-// FUNCTION: WON 0x007eeed0
 // Logs out of the Internet lobby: stops auth refresh, resets the room dialog and leaves the server
 void RoutingLogic::Logout() { Call(this, EeWonRouteLogicCall::Logout); }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007e7050
-// (public: virtual void * __thiscall WONAPI::RoutingLogic::`scalar deleting destructor'(unsigned int)    [??_GRoutingLogic@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007e79f0
-// (public: class WONAPI::SmartPtr<class WONAPI::ByteBuffer> __thiscall WONAPI::RoutingPeerDataOp::GetData(void)const     [?GetData@RoutingPeerDataOp@WONA)
-// TEMPLATE: WON 0x007eae90
-// (public: __thiscall WONAPI::PendingServerCleanup::~PendingServerCleanup(void)    [??1PendingServerCleanup@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x007ee8a0
-// (public: virtual void __thiscall RoutingOpCompletion::Run(class WONAPI::AsyncOp *)    [?Run@RoutingOpCompletion@@UAEXPAVAsyncOp@WONAPI@@@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1330
-// (public: __thiscall std::list<struct WONAPI::RoutingBadUser,class std::allocator<struct WONAPI::RoutingBadUser> >::list<struct WONAPI::RoutingBadUser,c)
-// TEMPLATE: WON 0x007f1bb0
-// (public: struct std::pair<class std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::map<unsigned long,unsigned ch)
-// TEMPLATE: WON 0x007f30b0
-// (protected: struct std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::map<unsigned long,unsigned char,struct std)
-// TEMPLATE: WON 0x007f3e50
-// TEMPLATE: WON 0x007f3fd0
-// TEMPLATE: WON 0x007f4150
-// TEMPLATE: WON 0x007f42d0
-// TEMPLATE: WON 0x007f4450
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007e73e0
-// (public: virtual void * __thiscall WONAPI::LeftRoomEvent::`scalar deleting destructor'(unsigned int)    [??_GLeftRoomEvent@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007e7400
-// (public: virtual __thiscall WONAPI::LeftRoomEvent::~LeftRoomEvent(void)    [??1LeftRoomEvent@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007ee8d0
-// (public: virtual void * __thiscall RoutingOpCompletion::`scalar deleting destructor'(unsigned int)    [??_GRoutingOpCompletion@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007ee8f0
-// (public: virtual __thiscall RoutingOpCompletion::~RoutingOpCompletion(void)    [??1RoutingOpCompletion@@UAE@XZ])
-// TEMPLATE: WON 0x007f1490
-// (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::RoutingLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicCompl)
-// TEMPLATE: WON 0x007f1630
-// (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::RoutingLogic>::~LogicCompletion<class WONAPI::RoutingLogic>(void)    [??1?$LogicCompl)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007ece80
-// (public: __thiscall std::multimap<unsigned short,class WONAPI::LobbyGame *,struct std::less<unsigned short>,class std::allocator<struct std::pair<unsig)
-// TEMPLATE: WON 0x007f1360
-// (public: __thiscall std::map<unsigned long,unsigned char,struct std::less<unsigned long>,class std::allocator<struct std::pair<unsigned long const ,uns)
-// TEMPLATE: WON 0x007f1ca0
-// (public: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::_Mapk<unsigned long,unsigned char,struct std::)
-// TEMPLATE: WON 0x007f1d50
-// (protected: void __thiscall std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::_Mapk<unsigned long,unsigned char)
-// TEMPLATE: WON 0x007f1e20
-// (std::_Tree::insert)
-// TEMPLATE: WON 0x007f1ea0
-// (std::_Tree::erase)
-// TEMPLATE: WON 0x007f27f0
-// (protected: struct std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::_Mapk<unsigned long,unsigned char,struct s)
-// TEMPLATE: WON 0x007f2880
-// (public: class std::list<unsigned long,class std::allocator<unsigned long> >::iterator __thiscall std::list<unsigned long,class std::allocator<unsigned)
-// TEMPLATE: WON 0x007f28c0
-// (std::_Tree::erase)
-// TEMPLATE: WON 0x007f2d70
-// (std::_Tree::_Erase)
-// TEMPLATE: WON 0x007f2db0
-// (std::_Tree::_Insert)
-// TEMPLATE: WON 0x006d9f60
-// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,struc)
-// TEMPLATE: WON 0x00769620
-// (protected: struct std::list<unsigned long,class std::allocator<unsigned long> >::_Node * __thiscall std::list<unsigned long,class std::allocator<unsig)
-// TEMPLATE: WON 0x006d99b0
-// (public: struct std::pair<class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::basic_string<char,struc)
