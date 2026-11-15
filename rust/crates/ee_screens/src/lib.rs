@@ -145,6 +145,9 @@ mod diplomacy_ffi;
 pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
+pub mod editor_area;
+#[cfg(not(test))]
+mod editor_area_ffi;
 pub mod editor_conditions;
 pub mod editor_controls;
 pub mod editor_effects;
@@ -157,6 +160,9 @@ pub mod editor_effects_player;
 #[cfg(test)]
 mod editor_effects_tests;
 pub mod editor_events;
+pub mod editor_map;
+#[cfg(not(test))]
+mod editor_map_ffi;
 pub mod editor_object;
 #[cfg(not(test))]
 mod editor_object_ffi;

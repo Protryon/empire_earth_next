@@ -1077,6 +1077,104 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+/// `EeScreensSeplCtl::flags`: the text red (and transparent); a combo box's list's selected line left in its
+/// default colour (not set blue).
+constexpr static const uint32_t EE_SCREENS_SEPL_FG_RED = 256;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_NO_SELECT_COLOR = 512;
+
+/// The areas' list operation i0 (`EE_SCREENS_SEOB_SM_*`) on the area i1 (the selection + 2).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_LIST = 600;
+
+/// The user areas' names into the `std::vector<UWideString>` p0.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_NAMES = 601;
+
+/// The editor's paint area highlighted (i0 = 1) or not / set to (f0, f1, f2, f3) (`SetPaintArea`).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_HIGHLIGHT = 602;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_AREA = 603;
+
+/// -> whether the editor's UI is hidden.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_UI_HIDDEN = 604;
+
+/// The trigger tab's text box hidden and alphabetic sort shown (`Activate`) / its text box shown (`Load`).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_ACTIVATE = 605;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_SHOW_TEXT = 606;
+
+/// The area i0: -> whether there is one; its rectangle into f, its anchor into i1, i2, its flags into i3 (1 a
+/// rectangle, 2 an anchor) and its select mode into the combo box p0 (`Load`'s reads, the name and text boxes set
+/// from it).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_LOAD = 607;
+
+/// The area i0's name and text from the trigger tab's boxes, its select mode from the combo box p0 (`Store`'s
+/// first lines) / its rectangle set to f (`EESMArea::SetRectangle`) / its anchor to (i1, i2) (`SetAnchor`).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_STORE = 608;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_SET_RECT = 609;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_SET_ANCHOR = 610;
+
+/// The rectangle f's centre (`GERectangle::GetCenter`) -> into f0, f1.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_CENTER = 611;
+
+/// -> whether the point (f0, f1) (the mouse's with i0 = 1) is in the game view.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_IN_VIEW = 612;
+
+/// The tile under the point (f0, f1) (the mouse's with i0 = 1) -> whether the map picks one (`PickScreenTile`),
+/// its x, y into i1, i2; / the ground point under it (`GetTileAt`, the screen line solved at the tile's height)
+/// -> its x, y truncated into i1, i2.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PICK = 613;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_GROUND = 614;
+
+/// -> the left mouse button: 1 held (value above 0), 2 just pressed, 4 just released.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_LBUTTON = 615;
+
+/// The paint action (`EESEARust` over `EESEAPaintArea`) begun at the tile (i0, i1) -> its handle into p0; the
+/// mouse kept in the game view and the edge scroll's edges set to it.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_BEGIN = 616;
+
+/// The paint action p0's corner dragged to the tile (i0, i1).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_CORNER = 617;
+
+/// The paint action p0 ended: the mouse and the edge scroll given the window back, its rectangle into f, the
+/// action released.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_END = 618;
+
+/// The paint action p0 released (the destructor's).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_RELEASE = 619;
+
+/// The screen's slots (`ee_screens_sear_call`, with the selection): `Sort`, `Update`, `MoveDown`, `Delete`,
+/// `Deactivate`, `Duplicate`, `Activate`, `Store`, `Hide`, `Load`, `MoveUp`, `New`, `Show`; `SetAreaMode(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_SEAR_SORT = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_UPDATE = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_MOVE_DOWN = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_DELETE = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_DEACTIVATE = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_DUPLICATE = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_ACTIVATE = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_STORE = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_HIDE = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_LOAD = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_MOVE_UP = 11;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_NEW = 12;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_SHOW = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_SET_MODE = 14;
+
 /// `EESETSEffectControls::mEditBox48` (the effect controls' fourth edit box; index 0).
 constexpr static const uint32_t EE_SCREENS_SEET_A_EDIT48 = 12;
 
@@ -1595,6 +1693,86 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
 
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
+
+/// `EeScreensSeplCtl::flags`: the text white (and transparent) rather than yellow.
+constexpr static const uint32_t EE_SCREENS_SEPL_FG_WHITE = 64;
+
+/// A combo box's lines (`extra[1]`): the lines pushed before it (`EE_SCREENS_SEPL_OP_LINE_PUSH`), taken.
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_LINES_PENDING = 3;
+
+/// The control p0's help string set to i0 (`SetStringTableID`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_HELP = 65;
+
+/// The edit box p0's text set to the i0 bytes at p1.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EDIT_BYTES = 66;
+
+/// A line (i0 as `EE_SCREENS_SEPL_TEXT_*`, i1 the string, i2 the number) pushed for the next combo box made with
+/// `EE_SCREENS_SEPL_COMBO_LINES_PENDING`.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LINE_PUSH = 67;
+
+/// -> the terrain tables' count (`EETerrainTable::GetNumTables`) / whether table i0 is one of the editor's (not
+/// NULL, `mIsInEditor`), its id into i1 and its name string into i2.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_TERRAIN_COUNT = 500;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_TERRAIN = 501;
+
+/// The random map generators' display names / the rules' map sizes' names pushed as the next combo box's lines.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_LINES_GENERATORS = 502;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_LINES_MAP_SIZES = 503;
+
+/// -> the kind radio buttons' height: the form p1's manager's radio bitmap's, at least the screen font's.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_RADIO_HEIGHT = 504;
+
+/// A kind radio button (`UIRBMap`) made on the form p1: id i0, the string i1, the index i2, checked i3, at
+/// (f0, f1), f2 high; its label's opacity 0.4 and text yellow; group 1 -> its handle into p0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_MAKE_RADIO = 505;
+
+/// The create button (`UIBMap`, id 0x65, 260 wide, the font's height + 10 high, over the tab p2) made on the form
+/// p1 at the index i2, at (f0, f1); opacity 1; group 1 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_MAKE_BUTTON = 506;
+
+/// The create button p0's text ("Create Map" in the screen font, white).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_BUTTON_TEXT = 507;
+
+/// The elevation file box (`EEUIFileComboBox` over `data\Scenarios\Elevation Maps\*.dat`, id 0x75, 200 wide, its
+/// selection's `EESEERust` map type event over the tab p2, its help string) made on the form p1 at the index i2, at
+/// (f0, f1); group 1 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_MAKE_FILE_COMBO = 508;
+
+/// The text label's rectangle (left, top, right, bottom into f) of the combo box p0 (i0 = 0) or the radio button
+/// p0 (i0 = 1).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_LABEL_RECT = 509;
+
+/// -> the combo box p0's label's first line as `atoi` reads it.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_COMBO_ATOI = 510;
+
+/// The blank map action (width i0, height i1, terrain id i2) / the random map action (size i0, style i1) made.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_BLANK_MAP = 511;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_RANDOM_MAP = 512;
+
+/// -> a new seed (`URandomIntegers` seeded with the time, 0..1000000) given to the user interface / the user
+/// interface's seed set to i0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_SEED_DRAW = 513;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_SEED_SET = 514;
+
+/// The form p0's control i0 (`GetControlById`) -> into p1.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_CONTROL = 515;
+
+/// The control p0's selection event processed (with no form).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_PROCESS_SELECTION = 516;
+
+/// The file combo box p0's entries made again (`CreateEntries`).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_FILE_ENTRIES = 517;
+
+/// The tab's members (`ee_screens_semp_call`): `Enter`, `CreateMap`, `ShowElevationControls(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_SEMP_ENTER = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_CREATE_MAP = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_SHOW_ELEVATION = 3;
 
 /// The selection tool: p0 -> three handles (the click, the lasso, the `EESEUICTriggerSelectUnits` made at the
 /// index i0 on the form p2, added to group 0).
@@ -7712,11 +7890,17 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 
+/// The area sub-screen (opaque to C++).
+struct EeScreensSeArea;
+
 /// The condition screen (opaque to C++).
 struct EeScreensSeConditionScreen;
 
 /// The effect screen (opaque to C++).
 struct EeScreensSeEffectScreen;
+
+/// The map tab (opaque to C++).
+struct EeScreensSeMap;
 
 /// The object screen (opaque to C++).
 struct EeScreensSeObject;
@@ -8187,6 +8371,9 @@ struct EeScreensSeplCtl {
   float bg2;
   uint32_t groups;
   int32_t extra[4];
+  /// a combo box's list's height and its text's characters (400 and 0 unless set)
+  int32_t list_height;
+  int32_t max_chars;
 };
 
 /// `kSETSConditionTitleLabel`, `kSETSConditionTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
@@ -8196,6 +8383,9 @@ constexpr static const int32_t EE_SCREENS_SECT_ALWAYS_TRUE_CONTROLS[6] = { 2300,
 /// `kSETSEffectTitleLabel`, `kSETSEffectTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
 /// `DuplicateButton`, `DeleteButton`.
 constexpr static const int32_t EE_SCREENS_SEET_NO_EFFECT_CONTROLS[6] = { 2400, 2401, 2011, 2012, 2006, 2007, };
+
+/// The map sizes the width and height combo boxes offer (0x4c4f40).
+constexpr static const int32_t MAP_SIZES[25] = { 15, 25, 50, 60, 70, 75, 80, 90, 100, 125, 130, 135, 140, 145, 150, 155, 160, 165, 175, 200, 225, 250, 300, 350, 400, };
 
 /// The unit actions the state combo box lists (those with a name), in id order.
 constexpr static const int32_t EE_SCREENS_SEOB_ACTIONS[24] = { 1000, 1002, 1003, 1006, 1008, 1009, 1012, 1013, 1017, 2001, 2004, 2011, 2017, 2021, 4002, 4004, 4012, 4026, 5000, 6001, 6002, 10003, 15000, 15001, };
@@ -8347,6 +8537,56 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
 
+/// `EESETSArea`'s constructor: its controls made on `form` from the control index `*index` (advanced). Freed by
+/// `ee_screens_sear_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeArea *ee_screens_sear_new(void *form,
+                                     uint32_t *index);
+
+/// The destructor: the controls deleted, a paint action released, the object freed.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL) and is not used again.
+void ee_screens_sear_free(EeScreensSeArea *screen);
+
+/// The slot `what` (`EE_SCREENS_SEAR_SORT` ...) with the sub-screen's selection `sel` and the argument `a`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL).
+void ee_screens_sear_call(const EeScreensSeArea *screen,
+                          uint32_t what,
+                          int32_t sel,
+                          int32_t a);
+
+/// `MouseMove` at (`x`, `y`).
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL).
+void ee_screens_sear_mouse_move(const EeScreensSeArea *screen, float x, float y);
+
+/// `GetCenter`: whether there is one; it into `out[0..2]`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL); `out` holds two floats.
+bool ee_screens_sear_center(const EeScreensSeArea *screen, float *out);
+
+/// The state the editor gate reads: the painted rectangle into `rect[0..4]`, the anchor point into `point[0..2]`
+/// -> the flags (1 rectangle mode, 2 a rectangle, 4 a point, 8 a rectangle being painted).
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL); `rect` holds four floats, `point` two.
+uint32_t ee_screens_sear_state(const EeScreensSeArea *screen,
+                               float *rect,
+                               float *point);
+
+/// `GetNames`: the user areas' names into the `std::vector<UWideString>` `names`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL); `names` is a `std::vector<UWideString>`.
+void ee_screens_sear_names(const EeScreensSeArea *screen, void *names);
+
 /// The effect types' events (`EESEERust`, made by `EE_SCREENS_SEET_EV_OBJECTS` with these types and the controls):
 /// 0 the military group's object moved in (`a` 1) or out (`a` 0) of the group (`b`: the list's line), 1 the
 /// dialogue's camera scroll speed shown, 2 the AI attribute's ranges shown (`b`: the attribute combo box's line).
@@ -8358,6 +8598,35 @@ void ee_screens_seet_event(const EeScreensSeEffects *types,
                            uint32_t what,
                            uint32_t a,
                            uint32_t b);
+
+/// `EEUIFSEMap`'s constructor: every control made on `form` from the control index `*index` (advanced); `shell` is
+/// the C++ `EEUIFSEMap` (the create button's and the elevation file event's). Freed by `ee_screens_semp_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeMap *ee_screens_semp_new(void *shell,
+                                    void *form,
+                                    uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_semp_new` (or is NULL) and is not used again.
+void ee_screens_semp_free(EeScreensSeMap *tab);
+
+/// One of the tab's members (`EE_SCREENS_SEMP_ENTER` ...) with its argument `a`.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_semp_new` (or is NULL).
+void ee_screens_semp_call(const EeScreensSeMap *tab, uint32_t what, int32_t a);
+
+/// A kind radio button's `Check` after the radio button's own (`id`: 0x6e blank, 0x6f random, 0x6d seeded) or its
+/// `HideControls` (`id` 0), over the controls of `form` by id.
+///
+/// # Safety
+/// `form` is the editor form.
+void ee_screens_semp_kind(void *form,
+                          uint32_t id);
 
 /// `EESETSObject`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_seob_free`.
