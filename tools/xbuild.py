@@ -506,6 +506,9 @@ WON_TESTS = {
     # BackgroundGrabber as a whole Rust object (grabobj.rs) against the original statements over a traced world
     # (golden: rust/crates/ee_won/src/golden_grabobj.txt)
     "won_grabobj_test": [],
+    # Component wholly in Rust (compobj.rs) against the original statements over a traced world of components,
+    # windows, events and grabbers (golden: rust/crates/ee_won/src/golden_compobj.txt)
+    "won_compobj_test": [],
     # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
     # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
     "won_compaint_test": [],

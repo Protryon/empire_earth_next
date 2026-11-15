@@ -220,101 +220,103 @@ public:
     int height;                             // +0x0c
 };
 
+// Component (R6 WON round 38): every method is Rust (rust/crates/ee_won/src/compobj.rs), the C++ keeping the members
+// and the vtable; the empty defaults stay inline. The fonts are the root window's (ComponentLifetime.cpp).
+extern "C" intptr_t ee_won_guicpp_comp_call(void*,EeWonGuiOp,intptr_t,intptr_t,intptr_t,intptr_t);
 class Component : public RefCount {
 public:
     Component();                            // 0x2f49e0 (WONAPI)
     virtual ~Component();                   // 0x2f4a70 (WONAPI)
-    virtual void PositionChanged();
-    virtual void Virtual08();
-    virtual void GetDesiredSize(int& outWidth, int& outHeight);  // (EELobbyColorChooser 0x2908af: 120 x 120)
-    virtual bool NeedsPaint();
-    virtual void PrePaint(Graphics& inGraphics);
-    virtual void Paint(Graphics& inGraphics);                  // +0x18 (0x2f5020)
+    virtual void PositionChanged() {}
+    virtual void Virtual08() { this->KCall(EeWonCompCall::SizeChanged); } // 0x2f4e50
+    virtual void GetDesiredSize(int& w, int& h) { this->KCall(EeWonCompCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } // 0x2f4e70
+    virtual bool NeedsPaint() { return this->KCall(EeWonCompCall::NeedsPaint)!=0; } // 0x2f4f60
+    virtual void PrePaint(Graphics& g) { this->KCall(EeWonCompCall::PrePaint,(intptr_t)&g); } // 0x2f4ff0
+    virtual void Paint(Graphics& g) { this->KCall(EeWonCompCall::Paint,(intptr_t)&g); } // +0x18 (0x2f5020)
     virtual void InitComponent(ComponentInit& inInit) {} // empty inline (the vtable slot holds the shared ret 4 at 0x156dd8)
-    virtual bool HitTest(int inX, int inY);
-    virtual void MouseEnter(int inA, int inB);                 // +0x24 (0x2f4cc0)
-    virtual void MouseExit();                                  // +0x28 (0x2f4ce0: the mouse left?)
+    virtual bool HitTest(int x, int y) { return this->KCall(EeWonCompCall::HitTest,x,y)!=0; } // 0x2f5050
+    virtual void MouseEnter(int x, int y) { this->KCall(EeWonCompCall::MouseEnter,x,y); } // +0x24 (0x2f4cc0)
+    virtual void MouseExit() { this->KCall(EeWonCompCall::MouseExit); } // +0x28 (0x2f4ce0)
     virtual void MouseDown(int,int,int) {} // empty inline (the vtable slot holds the shared 3-byte body at 0x3a6880)
     virtual void MouseUp(int inX, int inY, int inButton) {}    // +0x30 0x2907a3 (emitted with EELobbyColorChooser)
     virtual void MouseMove(int inX, int inY) {}                // +0x34 (the mouse moved); empty inline
-    virtual void MouseDrag(int inX, int inY);
+    virtual void MouseDrag(int, int) {}
     virtual bool MouseWheel(int inAmount) { return false; }    // +0x3c 0x29059d
-    virtual void MouseHover(unsigned long inDelta);
-    virtual bool TimerEvent(int inDelta);
-    virtual void GotFocus();
-    virtual void LostFocus();
+    virtual void MouseHover(unsigned long d) { this->KCall(EeWonCompCall::MouseHover,(intptr_t)d); } // 0x2f4d10
+    virtual bool TimerEvent(int) { return true; }
+    virtual void GotFocus() { this->KCall(EeWonCompCall::GotFocus); } // 0x2f58d0
+    virtual void LostFocus() { this->KCall(EeWonCompCall::LostFocus); } // 0x2f58e0
     virtual bool KeyChar(int inKey) { return false; }          // +0x50 (ICF: 0x29059d)
     virtual bool KeyDown(int inKey) { return false; }          // +0x54 (ICF: 0x29059d)
     virtual bool KeyUp(int inKey) { return false; }            // +0x58 (ICF: 0x29059d)
-    virtual bool CanClose();
-    virtual void InvalidateRect(WONRectangle& ioRect);
-    virtual void Invalidate();                                 // +0x64 (after a visible change; provisional name)
-    virtual void MarkInvalid();
-    virtual void AddedToParent();                              // +0x6c (0x2f5160: when the popup opens?)
-    virtual void ClearGrabBG();
-    virtual void EnabledChanged(bool inFlag);
-    virtual void SetCursor(Cursor* inCursor);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);    // +0x7c (0x2f5550)
-    virtual void HandleBroadcastEvent(ComponentEvent* inEvent);
-    virtual void NotifyRootVisibility(bool inFlag);
-    virtual bool TabFocus(bool inForward, bool inInit);
-    virtual void EnableControlsById(const ControlIdSet& inIds, bool inEnabled);
-    virtual void SetEnabled(bool inEnabled);                   // +0x90 (0x2f5610: clears/sets flag 0x80 of +0x20)
-    virtual void SetVisible(bool inVisible);                   // +0x94 (0x2f55b0)
-    virtual Component* GetMouseChild();
+    virtual bool CanClose() { return true; }
+    virtual void InvalidateRect(WONRectangle& r) { this->KCall(EeWonCompCall::InvalidateRect,(intptr_t)&r); } // 0x2f50e0
+    virtual void Invalidate() { this->KCall(EeWonCompCall::Invalidate); } // +0x64 (0x2f5110)
+    virtual void MarkInvalid() { this->KCall(EeWonCompCall::MarkInvalid); } // 0x2f51f0
+    virtual void AddedToParent() { this->KCall(EeWonCompCall::AddedToParent); } // +0x6c (0x2f5160)
+    virtual void ClearGrabBG() { this->KCall(EeWonCompCall::ClearGrabBG); } // 0x2f51d0
+    virtual void EnabledChanged(bool) {}
+    virtual void SetCursor(Cursor* c) { this->KCall(EeWonCompCall::SetCursor,(intptr_t)c); } // 0x2f4c40
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->KCall(EeWonCompCall::HandleEvent,(intptr_t)e); } // +0x7c (0x2f5550)
+    virtual void HandleBroadcastEvent(ComponentEvent* e) { this->KCall(EeWonCompCall::HandleBroadcast,(intptr_t)e); } // 0x2f52c0
+    virtual void NotifyRootVisibility(bool v) { this->KCall(EeWonCompCall::NotifyRootVisibility,v); } // 0x2f5590
+    virtual bool TabFocus(bool f, bool i) { return this->KCall(EeWonCompCall::TabFocus,f,i)!=0; } // 0x2f5850
+    virtual void EnableControlsById(const ControlIdSet& ids, bool e) { this->KCall(EeWonCompCall::EnableControlsById,(intptr_t)&ids,e); } // 0x2f5660
+    virtual void SetEnabled(bool e) { this->KCall(EeWonCompCall::SetEnabled,e); } // +0x90 (0x2f5610)
+    virtual void SetVisible(bool v) { this->KCall(EeWonCompCall::SetVisible,v); } // +0x94 (0x2f55b0)
+    virtual Component* GetMouseChild() { return NULL; }
     virtual int GetMinWidth() { return 0; } // returns 0 (shared body at 0x1ad67e)
     virtual int GetMinHeight() { return 0; } // returns 0 (shared body at 0x1ad67e)
     virtual int GetMaxWidth() { return 0xffff; }               // +0xa4 0x2905a2
     virtual int GetMaxHeight() { return 0xffff; }              // +0xa8 (ICF: 0x2905a2)
 
-    void SetColorScheme(ColorScheme* inScheme); // 0x2f59a0, owns ComponentExtra+4
-    ColorScheme* GetOwnColorScheme(); // 0x2f5960, the component's own scheme
-    ColorScheme* GetColorScheme(); // 0x2f5970, own or inherited scheme
-    void SetPos(int inX, int inY);            // 0x2f4b70
-    void SetSize(int inWidth, int inHeight);  // 0x2f4b90
-    void SetSizeAtLeast(int inMinWidth, int inMinHeight); // 0x2f4bc0
-    void SetPosSize(int inX, int inY, int inWidth, int inHeight); // 0x2f4bf0
-    void Fn2F4EE0(int inPadding);            // 0x2f4ee0
-    void FireBroadcastEvent(ComponentEvent* inEvent, bool inFlag); // 0x2f52a0
-    void BroadcastEventDown(ComponentEvent* inEvent); // 0x2f52d0, broadcasts down to the children
-    void DeliverEvent(ComponentEvent* inEvent, bool inSendNow); // 0x2f53f0
-    SmartPtr<Font> GetFont(const FontDescriptor&); // 0x2f5a00: returns the font through a hidden result pointer (ret 8)
-    Font* GetFontMod(Font* inFont, int inStyle, int inOptionalSize); // 0x2f5a30
+    void SetColorScheme(ColorScheme* s) { this->KCall(EeWonCompCall::SetColorScheme,(intptr_t)s); } // 0x2f59a0
+    ColorScheme* GetOwnColorScheme() { return (ColorScheme*)this->KCall(EeWonCompCall::OwnColorScheme); } // 0x2f5960
+    ColorScheme* GetColorScheme() { return (ColorScheme*)this->KCall(EeWonCompCall::ColorScheme); } // 0x2f5970
+    void SetPos(int x, int y) { this->KCall(EeWonCompCall::SetPos,x,y); } // 0x2f4b70
+    void SetSize(int w, int h) { this->KCall(EeWonCompCall::SetSize,w,h); } // 0x2f4b90
+    void SetSizeAtLeast(int w, int h) { this->KCall(EeWonCompCall::SetSizeAtLeast,w,h); } // 0x2f4bc0
+    void SetPosSize(int x, int y, int w, int h) { int s[2]={w,h}; this->KCall(EeWonCompCall::SetPosSize,x,y,(intptr_t)s); } // 0x2f4bf0
+    void FireBroadcastEvent(ComponentEvent* e, bool n) { this->KCall(EeWonCompCall::FireBroadcast,(intptr_t)e,n); } // 0x2f52a0
+    void BroadcastEventDown(ComponentEvent* e) { this->KCall(EeWonCompCall::BroadcastDown,(intptr_t)e); } // 0x2f52d0
+    void DeliverEvent(ComponentEvent* e, bool n) { this->KCall(EeWonCompCall::Deliver,(intptr_t)e,n); } // 0x2f53f0
+    SmartPtr<Font> GetFont(const FontDescriptor&); // 0x2f5a00: the root window's font
+    Font* GetFontMod(Font* f, int s, int z) { return (Font*)this->KCall(EeWonCompCall::FontMod,(intptr_t)f,s,z); } // 0x2f5a30
     Font* GetDefaultFont();                  // 0x2f5b20
     Font* GetNamedFont(const std::string&); // 0x2f5b30: looks the font up in the window manager
     Font* GetDefaultFontMod(int inStyle, int inSize);  // 0x2f5b50
-    void AddListener(ComponentListener* inListener);           // 0x2f4b10
-    void SetDesiredSize(int inA, int inB);  // 0x2f4e90 (on a new popup: 0, 0)
+    void AddListener(ComponentListener* l) { this->KCall(EeWonCompCall::AddListener,(intptr_t)l); } // 0x2f4b10
+    void SetDesiredSize(int w, int h) { this->KCall(EeWonCompCall::SetDesiredSize,w,h); } // 0x2f4e90
     void Fn2F5380(int inType, int inParam) { this->FireEvent(inType, inParam != 0); } // 0x2f5380: FireEvent's older name
-    void FireEvent(int,bool=false); // 0x2f5380
-    bool IsRootVisible();                   // 0x2f5600: visible all the way up to the root (flag bit 18)
-    void LocalToRoot(int& ioX, int& ioY);   // 0x2f56d0 (to the root's coordinates?)
-    void BubbleEvent(ComponentEvent* inEvent); // 0x2f54e0: passes the event up to the parents
-    Component* GetNextSibling(bool,bool=false); // 0x2f5230: sibling traversal
-    bool WantFocus(); // 0x2f5810: can take the focus
-    void RootToChild(int&,int&); // 0x2f5720
-    void GetMousePos(int&,int&); // 0x2f5770
-    int GetKeyMod(); // 0x2f57a0
-    bool CheckDoubleClick(int); // 0x2f57b0
-    bool Contains(int,int); // 0x2f5080: point-in-bounds test in parent coordinates
-    bool Intersects(Component*); // 0x2f50c0: rectangle intersection test
-    Cursor* GetDefaultCursor(); // 0x2f4b00: default cursor getter
-    BackgroundGrabber* GetGrabBG(); // 0x2f4af0, from the extra data at +0x10
+    void FireEvent(int t, bool n=false) { this->KCall(EeWonCompCall::FireEvent,t,n); } // 0x2f5380
+    bool IsRootVisible() { return this->KCall(EeWonCompCall::IsRootVisible)!=0; } // 0x2f5600 (flag bit 18)
+    void LocalToRoot(int& x, int& y) { this->KCall(EeWonCompCall::LocalToRoot,(intptr_t)&x,(intptr_t)&y); } // 0x2f56d0
+    void BubbleEvent(ComponentEvent* e) { this->KCall(EeWonCompCall::Bubble,(intptr_t)e); } // 0x2f54e0
+    Component* GetNextSibling(bool f,bool w=false) { return (Component*)this->KCall(EeWonCompCall::NextSibling,f,w); } // 0x2f5230
+    bool WantFocus() { return this->KCall(EeWonCompCall::WantFocus)!=0; } // 0x2f5810
+    void RootToChild(int& x,int& y) { this->KCall(EeWonCompCall::RootToChild,(intptr_t)&x,(intptr_t)&y); } // 0x2f5720
+    void GetMousePos(int& x,int& y) { this->KCall(EeWonCompCall::MousePos,(intptr_t)&x,(intptr_t)&y); } // 0x2f5770
+    int GetKeyMod() { return (int)this->KCall(EeWonCompCall::KeyMod); } // 0x2f57a0
+    bool CheckDoubleClick(int b) { return this->KCall(EeWonCompCall::DoubleClick,b)!=0; } // 0x2f57b0
+    bool Contains(int x,int y) { return this->KCall(EeWonCompCall::Contains,x,y)!=0; } // 0x2f5080: in parent coordinates
+    bool Intersects(Component* c) { return this->KCall(EeWonCompCall::Intersects,(intptr_t)c)!=0; } // 0x2f50c0
+    Cursor* GetDefaultCursor() { return (Cursor*)this->KCall(EeWonCompCall::DefaultCursor); } // 0x2f4b00
+    BackgroundGrabber* GetGrabBG() { return (BackgroundGrabber*)this->KCall(EeWonCompCall::GrabBG); } // 0x2f4af0
     void AllocateExtraStuff(); // 0x2f4ac0
-    bool CheckGrabBG(); // 0x2f4db0: decides whether to grab the background
-    void EnsureOnTopOf(Component*); // 0x2f4c20: forwards to the parent (0x2f6f60)
-    void SetDefaultCursor(Cursor*); // 0x2f4c60: sets the component's own default cursor (not the virtual at +0x78)
-    void SetDesiredHeight(int); // 0x2f4f20
-    void SetDesiredWidth(int=0); // 0x2f4ee0
-    void SetTranslucentColor(int,int=4); // 0x2f4fb0
-    void SetComponentFlags(int,bool); // 0x2f5560
+    bool CheckGrabBG() { return this->KCall(EeWonCompCall::CheckGrabBG)!=0; } // 0x2f4db0
+    void EnsureOnTopOf(Component* c) { this->KCall(EeWonCompCall::EnsureOnTopOf,(intptr_t)c); } // 0x2f4c20
+    void SetDefaultCursor(Cursor* c) { this->KCall(EeWonCompCall::SetDefaultCursor,(intptr_t)c); } // 0x2f4c60
+    void SetDesiredHeight(int p) { this->KCall(EeWonCompCall::SetDesiredHeight,p); } // 0x2f4f20
+    void SetDesiredWidth(int p=0) { this->KCall(EeWonCompCall::SetDesiredWidth,p); } // 0x2f4ee0
+    void SetTranslucentColor(int c,int l=4) { this->KCall(EeWonCompCall::SetTranslucentColor,c,l); } // 0x2f4fb0
+    void SetComponentFlags(int f,bool on) { this->KCall(EeWonCompCall::SetFlags,f,on); } // 0x2f5560
     void SetWantGrabBG(bool inGrab) { this->SetComponentFlags(0x100,inGrab); }
-    void SubscribeToBroadcast(bool); // 0x2f5360 (nonvirtual)
-    void RequestTimer(bool); // 0x2f57d0
-    void RequestFocus();                    // 0x2f5890
-    Window* GetRoot();               // 0x2f5920, legacy nominal name; true SDKGetWindow
-    RootContainer* GetRootContainer(); // 0x2f58f0: walks up the parents and dynamic_casts to RootContainer
-    Window* GetRootWindow();         // 0x2f5940 (root Window or default Window)
+    void SubscribeToBroadcast(bool on) { this->KCall(EeWonCompCall::Subscribe,on); } // 0x2f5360
+    void RequestTimer(bool on) { this->KCall(EeWonCompCall::RequestTimer,on); } // 0x2f57d0
+    void RequestFocus() { this->KCall(EeWonCompCall::RequestFocus); } // 0x2f5890
+    Window* GetRoot() { return (Window*)this->KCall(EeWonCompCall::Root); } // 0x2f5920, legacy nominal name; true SDKGetWindow
+    RootContainer* GetRootContainer() { return (RootContainer*)this->KCall(EeWonCompCall::RootContainer); } // 0x2f58f0
+    Window* GetRootWindow() { return (Window*)this->KCall(EeWonCompCall::RootWindow); } // 0x2f5940
     bool ComponentFlagSet(int flags) { return this->mComponentBits & flags ? true : false; }
     bool IsVisible() { return !this->ComponentFlagSet(1); }
     bool HasFocus() { return this->ComponentFlagSet(0x10); }
@@ -339,6 +341,9 @@ public:
     char mInvalidState; //29
     char mTimerFlags; //2a
     ComponentExtra* mExtraStuff; // at +0x2c, owned (allocated on demand)
+private:
+    friend intptr_t ee_won_guicpp_comp_call(void*,EeWonGuiOp,intptr_t,intptr_t,intptr_t,intptr_t);
+    intptr_t KCall(EeWonCompCall k,intptr_t a=0,intptr_t b=0,intptr_t c=0) { return ee_won_comp_call(this,ee_won_guicpp_comp_call,k,a,b,c); }
 };
 
 // SDK function template; the LayoutPoint* instance is at 0x3a1da0.
@@ -1938,7 +1943,7 @@ public:
     bool IsMouseDown(MouseButton);
     void ShowNativeCursor(bool); // 0x32afc0, wrapper
     void CheckSetCursor(bool); // 0x32afd0
-    bool CheckDoubleClick(MouseButton); // 0x32b110; the button index is not range-checked (reads at +0x38)
+    bool CheckDoubleClick(MouseButton b) { return this->WCall(EeWonWinCall::CheckDoubleClick,(intptr_t)b)!=0; } // 0x32b110
     void HandleMouseExit(); //32b120
     void HandleKeyEvent(KeyEvent*); //32b170
     void HandleMouseDown(MouseEvent*); //32b1c0

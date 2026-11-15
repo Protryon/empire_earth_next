@@ -41,11 +41,6 @@
 2f3070 2f3962 WONGUI/Button.cpp
 2f3a50 2f4888 WONGUI/ComboBox.cpp
 2f4890 2f4aeb WONGUI/ComponentLifetime.cpp
-2f49e0 2f5711 WONGUI/Component.cpp
-2f4af0 2f5b6c WONGUI/ComponentResourceAdapters.cpp
-2f4c20 2f52cd WONGUI/ComponentDefaultHooks.cpp
-2f4cc0 2f5b11 WONGUI/ComponentTraversal.cpp
-2f4e70 32b11b WONGUI/ComponentApiCompletion.cpp
 2f5560 3010e0 WONGUI/MSControlConstructors.cpp
 2f6100 2f62a1 WONGUI/ComponentLayoutAdapters.cpp
 2f6140 2f620f WONGUI/ChildLayoutRegistration.cpp
