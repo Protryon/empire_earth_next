@@ -45,10 +45,12 @@ a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stand
   - `--incremental` keeps objects newer than their `.cpp`; it does not track headers, so after a header change do a full build.
   - Don't relink the exe while a game runs from it. For a compile check meanwhile, set
     `EE_XBUILD_OUT=$PWD/build/xbuild-check`.
-- Data: the repository's `data/` (gitignored) holds the latest release of each data part, unzipped into one folder
-  by `python3 -I tools/fetch_data.py` (it skips the parts already current; `--without textures-4x` leaves the 1.3 GB
-  part out). Rerun it when a data release changes the format. Run with
-  `EE_DATA_ROOT=$PWD/data build/xbuild/macos-arm64/game/ee-aoc`.
+- Data: `python3 -I tools/fetch_data.py` unzips the latest media releases into `build/data` (it skips the parts
+  already current; `--without textures-4x` leaves the 1.3 GB part out) and copies the checkout's `data/db` and
+  `data/ai` in as `Data/db` and `Data/ai`. Rerun it when a media release changes; `posix_game.py` and
+  `play_posix.py` refresh `Data/db` and `Data/ai` from the checkout themselves. Run with
+  `EE_DATA_ROOT=$PWD/build/data build/xbuild/macos-arm64/game/ee-aoc`. (An old download in `data/Data` is ignored
+  by git and can be deleted.)
 - Live tests: `tools/harness/posix_game.py --exercise menu|random-game|ai-game`. Evidence goes to `build/posix_game/<time>/`:
   `game.log`, `summary.json`, `samples.json`, window captures. Useful options:
   - `--exe` (e.g. the ASan build), `--play-seconds`, `--max-game-seconds`;
@@ -83,16 +85,23 @@ The game reads one loose `Data` folder next to the exe:
 - db tables as text (CSV/YAML, with an `id` on every row);
 - the rules documents in `Data/db`: `combat.yaml`, `gameoptions.yaml`, `civbuilder.yaml`, `civpowers.yaml`,
   `aipersonalities.yaml`, `epochs.yaml`;
+- the computer players' Lua scripts and their manifest `ais.json` in `Data/ai`;
 - models as glTF, textures as PNG.
+
+`Data/db` and `Data/ai` are in git: the repository's `data/db` is the game's `Data/db` (text only) and `data/ai` is
+`Data/ai`. Edit them there. The rest of `Data` (the media) is built from the retail installs or fetched from the
+releases.
 
 There is no `data.ssa` and no registry. Settings live in `config.yaml` next to the exe (`EE_CONFIG` overrides it).
 
 ```
 python -I tools/open_data.py build build/open_data/tree [--force]  # from the two installs (read only), ~4 min
+python -I tools/open_data.py sync build/open_data/tree             # Data/db, Data/ai from data/db, data/ai (seconds)
+python -I tools/open_data.py db-regen                              # data/db converted again from retail
 python -I tools/open_data.py build build/open_data/tree-binary --binary   # same tree, binary forms unconverted
 python -I tools/open_data.py pack build/ee_open_media-<sha>.zip --part media   # release part: all but Data/db
-python -I tools/open_data.py pack build/ee_open_db-<sha>.zip --part db         # release part: Data/db (the tweakables)
-python -I tools/fetch_data.py [OUT] [--without textures-4x]      # pull the release parts into one folder (data/)
+python -I tools/open_data.py pack build/ee_open_db-<sha>.zip --part db         # release part: data/db, data/ai
+python -I tools/fetch_data.py [OUT] [--without textures-4x]      # media releases + the checkout's db (build/data)
 python -I tools/open_data.py check build/open_data/tree
 python -I tools/make_play_dir.py C:\EE-play [--data TREE|ZIP|DIR ...] [--movies DIR]   # exe + data + movies
 ```
@@ -102,18 +111,24 @@ The db converter is `tools/eedata/eedata.py`. Run `-h` for the full list.
   - a text -> db -> text round trip of every table;
   - every value the game reads equals retail;
   - record sizes;
-  - generated specs and headers current.
+  - generated specs and headers current;
+  - the committed `data/db` equals a fresh conversion of retail, file for file (every difference is listed).
 - `cppgate`: the game's C++ text compiler over every table, plus content-dump parity.
 - `specs` / `cppgen`: regenerate `specs.json` and the generated C++ headers (e.g. `include/ee/EEWorldConstants.h`).
 - `extra TEXTDIR OUT [--units N --effects --epoch --options --civ --rules-demo]`: test content past the old caps.
-- `export` / `import` / `install`: binary <-> text conversion.
+- `export` / `import` / `install`: binary <-> text conversion (`open_data.py db-regen` writes `data/db`).
 - `doc epochs TEXTDIR`: a readable epochs table.
 
 The rules documents are written by `tools/eedata/rules.py` from the same constants as the C++ defaults
 (`src/Empire Earth/Database/EERules.cpp`). After changing a rule default on either side, rerun `check` and `cppgate`.
 
-`open_data.json` in a tree records a hash of the converter code. The harness rebuilds a tree whose converter code
-changed, so a format change never runs against a stale tree.
+After a converter or format change: `open_data.py db-regen`, then commit `data/db` with the change (`check` fails
+until they agree).
+
+`open_data.json` in a tree records a hash of the converter code and of `data/db` and `data/ai`. The harness rebuilds
+a tree whose converter code changed, and refreshes `Data/db` and `Data/ai` in place when `data/db` or `data/ai`
+changed (`open_data.py sync`); `tools/sim.py` copies the checkout's `data/db` and `data/ai` into every stage. No run
+plays a stale tree.
 
 ## Gates
 
@@ -137,16 +152,23 @@ Before merging or pushing any code change, all of these are required:
 
 ## Data and release rules
 
-- Never commit retail game data or bulk derivatives of it. The `.gitignore` covers `build/` and `toolchain/`.
-- Data bundles go only to **GitHub Releases** of this repository (no git, no LFS). Create them with
+- Never commit retail game data or bulk derivatives of it, with one exception: `data/db`, the db tables converted
+  to text and the rules documents (the owner's decision, 2026-11-15), and `data/ai` (our scripts). Never media
+  (models, textures, sounds, music, fonts, the 4x textures), retail binaries (`.dat`, `.ssa`, `.cem`, ...), logs or
+  campaigns, in `data/` or anywhere else. `data/db` holds only `.csv` and `.yaml` (`check` fails otherwise). The
+  `.gitignore` covers `build/`, `toolchain/` and everything under `data/` but `data/db` and `data/ai`.
+- Media bundles go only to **GitHub Releases** of this repository (no git, no LFS). Create them with
   `gh release create ... -R Protryon/empire_earth_next --target main` (always `-R`: with the upstream remote present,
   gh may pick the wrong repository).
-- The data ships in three parts that unzip into one folder, each its own release (`tools/fetch_data.py` pulls them):
+- The data ships in three parts that unzip into one folder, each its own release (`tools/fetch_data.py` pulls the
+  media parts and copies the checkout's `data/db` and `data/ai`; `--db release` pulls the db part instead):
   - `open-media-<sha>`: `ee_open_media-<sha>.zip` (`pack --part media`: models, original textures, sounds, fonts);
   - `open-textures-4x-<sha>`: `ee_textures_4x-<sha>.zip` (`Data/Textures-4x`, tools/upscale);
-  - `open-db-<sha>`: `ee_open_db-<sha>.zip` (`pack --part db`: `Data/db` and `open_data.json`).
-- Republish the db part whenever the tables, rules documents or db converters change; the media part only when
-  the models, textures or other converters change; the 4x part when tools/upscale's output changes.
+  - `open-db-<sha>`: `ee_open_db-<sha>.zip` (`pack --part db`: `data/db` and `data/ai` as `Data/db` and `Data/ai`,
+    and `open_data.json`), for a game without a checkout (a play folder, a binary release).
+- Changes to the tables, rules documents and scripts are commits to `data/db` and `data/ai`; the db part is
+  republished only for players without a checkout. Republish the media part only when the models, textures or
+  other converters change; the 4x part when tools/upscale's output changes.
 - The original game's campaigns stay out of the bundle.
 
 ## Git

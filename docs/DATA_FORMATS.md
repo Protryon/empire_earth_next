@@ -104,9 +104,13 @@ Not loaded although they are present or referenced:
   same files.
 * **The computer players' scripts** (port, docs/AI_LUA_PLAN.md §3.2): `Data\ai\*.lua` (and `Data\ai\lib\*.lua`),
   the next engine's Lua strategies, which `require("a.b")` finds as `Data\ai\a\b.lua`. They are not retail data:
-  the repository's `ai/` folder holds them, `tools/open_data.py build` copies them into a tree (`open_data.py ai
-  TREE` refreshes just them and records their hash as `ai` in `open_data.json`), and they ship in the db release
-  part. They are read through `PlatFOpen` from the data root, not through `gDataPath`, and are not in the
+  the repository's `data/ai` folder holds them, `tools/open_data.py build` copies them into a tree (`open_data.py sync
+  TREE` refreshes them and Data\db and records their hashes as `ai` and `db` in `open_data.json`), and they ship in
+  the db release part.
+* **The db tables in git** (2026-11-15): the repository's `data/db` is `Data\db`: the 39 tables as text, epochs.yaml
+  and the five rules documents (section 8), text only. `tools/open_data.py build` copies it into a tree instead of
+  converting the retail tables; `open_data.py db-regen` converts retail again into it; `eedata.py check` (d) lists
+  every difference between the two. They are read through `PlatFOpen` from the data root, not through `gDataPath`, and are not in the
   multiplayer checksum: peers need the same scripts (the lockstep would diverge otherwise). TEST ONLY:
   `EE_AI_SCRIPTS=<absolute dir>` is read before `Data\ai`.
 * **Texture packs** (port): an optional `Data\Textures-4x\` next to `Data\Textures\` holds upscaled textures with

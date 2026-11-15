@@ -1905,7 +1905,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   walk the site's footprint tiles and dereference `GetTile(x, y)`, which is NULL for a tile off the map. A granary
   the Age of AI port placed through the human's build message (`ai.build`, placement by `EECanPlaceOnTile`) at an
   island's edge had such a footprint (Small Islands seed 11 at 49 min, deterministic: `python -I
-  tools/sim_bench.py --name x --seeds 11 --data open --ai-scripts ai --engine ageofai,classic --maps "Small
+  tools/sim_bench.py --name x --seeds 11 --data open --ai-scripts data/ai --engine ageofai,classic --maps "Small
   Islands" --game-seconds 5400`; `EE-SIM FAULT c0000005` in the run's err.txt, the frames resolved against the
   .map). A human's build order runs the same code. The three functions skip a NULL tile now (and `EEStepAsideFromSite`
   a unit that is not valid, has no tile or no stats; `BeginRepair` clears no footprint for a site not placed yet).
@@ -1971,7 +1971,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   `EECPUnitsReadFilter` reads the `type` field with `EECPUnitsClassArg`, which turns a table into "unknown": the filter
   then matches nothing. Boom's first second-town-centre rule counted its town centres as 0 that way and filled one
   settlement after another (5 citizens each) every 20 s.
-  `ai/ageofai/econ.lua` (`ai.units{type = TOWN_TYPES, built = true}`) has the same pattern and finds no town.
+  `data/ai/ageofai/econ.lua` (`ai.units{type = TOWN_TYPES, built = true}`) has the same pattern and finds no town.
   Fixed since: the filters take a list of names (AI_LUA_UNITS §11, `tests/ai_units/types.lua`).
 - **A town centre filled from a settlement uses its citizens up.** `ai.garrison(ids, settlement)` with the
   settlement's garrison capacity (5) makes it a town centre. Releasing the citizens right after the order (as the
@@ -2009,7 +2009,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   were not counted), and a second raid nearby called the first raid's militia off at its own odds; the militia now
   counts the citizens already fighting the raid nearest them.
 
-## The classic computer player in Lua (2026-11-10, ai/classic_lua/ORIGIN, docs/AI_RESEARCH.md §8.39)
+## The classic computer player in Lua (2026-11-10, data/ai/classic_lua/ORIGIN, docs/AI_RESEARCH.md §8.39)
 
 - **A script's gatherers are invisible to `ai.resource`'s `workers`.** `EECPNextAssigned` counts the classic resource
   manager's gatherer lists, and `AddGatherer` keeps every unit a script holds off them: the port's finder saw 0
@@ -2038,7 +2038,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Editing a script that a running bench reads, or the shell script that runs it, spoils the bench.** `--ai-scripts
   ai` reads the checkout's scripts at each game's start, so an edit mid-bench mixes versions; and bash reads a script
   as it runs, so rewriting the bench's own shell script made the old shell run garbage once sim_bench returned (it
-  truncated the log). Benches here run from a copy of `ai/` taken at the start (`build/aisnap/<name>`).
+  truncated the log). Benches here run from a copy of `data/ai` taken at the start (`build/aisnap/<name>`).
 - **lib.groups drops an empty group in its step, so a sub-group waiting for Personnel's units vanished.** The
   classic's sub-group lives through WaitForUnits with no units and open request slots; a lib.groups group with no
   units is deleted ("group gone") on the next G.step. army.lua parks the empty waiting groups out of the table for
@@ -2125,3 +2125,21 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   the reload is done. The same run: 23 boulders in 50 s (one per reload, about 2.2 s).
 - **Lesson**: before making an original dead branch live, check what the state machine around it already does; the
   original's behaviour is the one the data was tuned for.
+
+## The db tables in git (2026-11-15)
+
+- **Change**: the converted tables and the rules documents are committed as `data/db` (the game's `Data/db`) and
+  the scripts moved from `ai/` to `data/ai` (`Data/ai`); a tree copies both (`open_data.py build`, `sync`), and
+  `eedata.py check` (d) compares `data/db` with a fresh conversion of retail, file by file.
+- **Two tables had no text form**: dbrandommap.dat and dbterraingraytextures.dat were copied as binaries, with
+  three retail leftovers in the same folder (`copy of dbgamevariant.dat`, the original converter's
+  `converteroutput.log` and `converterverification.log`, 0.5 MB; nothing reads them, now left out). Both tables
+  got text forms. dbrandommap's retail file starts with a u32 group count (10) before the record count (29); the
+  original loader read the group count as the record count and so ten records four bytes off, all thrown away. The
+  text compiles without the extra word (overlay `retail_header`), so the loader reads the 29 records in step; the
+  Python side recognises the retail form by its length (8 + 29 x 132 bytes).
+- **Tables nothing reads**: the census rule (every field the text carries has a reader) would leave such a table's
+  text empty and lose the retail values; `overlay.UNREAD_TABLES` exempts the two.
+- **Data folder**: `tools/fetch_data.py` used to unpack into `data/`, which now holds tracked files (and a media
+  release replacing the folder would have deleted them). It unpacks into `build/data` now and copies the checkout's
+  `data/db` and `data/ai` in; the .gitignore ignores everything else under `data/`.

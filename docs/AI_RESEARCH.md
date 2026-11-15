@@ -494,7 +494,7 @@ in this document.
 
 **Goal:** change and vary the AI without recompiling. **Size:** medium.
 
-1. **Move the literals into data** (`ai/*.yaml` through the eedata pipeline, MODDING_PLAN §3). The literals are
+1. **Move the literals into data** (`data/ai/*.yaml` through the eedata pipeline, MODDING_PLAN §3). The literals are
    inventoried in MODDING_PLAN §G:
    - epoch→unit tables (anti-air, fishing boat, gates, towers; `EECPCivilizationManager.cpp:543-660`);
    - the 19 building kinds and the building quotas (:90-146, :413-463);
@@ -1494,7 +1494,7 @@ path limit fail as no-report (long `+` experiment lists).
 
 ### 8.30 The boom script (S3, 2026-11-08, EE-SIM)
 
-The next engine's boom personality as a Lua script (`ai/boom.lua`; docs/AI_LUA_PLAN.md §4.1 has the plan as built).
+The next engine's boom personality as a Lua script (`data/ai/boom.lua`; docs/AI_LUA_PLAN.md §4.1 has the plan as built).
 EE-SIM, Small, Medium, 2 AIs, no cheats, 2 hours, the boom against the classic engine (`balanced`), both seats
 (`--engine next,classic` and `classic,next`), `--score mixed` where noted. Epoch times are the reports' `epoch_ms`.
 
@@ -1565,7 +1565,7 @@ The owner's playtest is still to come.
 ### 8.31 The army and the rush and balanced scripts (S4, 2026-11-08, EE-SIM)
 
 The next engine's army (docs/AI_LUA_PLAN.md §5 "S4 as built": groups that hold named soldiers, attack, raid,
-defend, retreat, regroup, disband, scout) and two scripts: `ai/rush.lua` (aggressive) and `ai/balanced.lua` (tall for
+defend, retreat, regroup, disband, scout) and two scripts: `data/ai/rush.lua` (aggressive) and `data/ai/balanced.lua` (tall for
 now). Every bench: EE-SIM, Small, Medium, 2 AIs and the idle human, no cheats, 2 hours, seeds 26-49 in both seat
 orders (48 games a matchup), `--score mixed`; "defeated" is a side with no citizens and no army at the end. The
 classic engine's traces are unchanged (seeds 2-5, 1800 s, `ai_trace.py compare`: 1842, 1822, 1746 and 1807 lines
@@ -1583,7 +1583,7 @@ the combo's 0 lines", before any game code) and are left out.
 | balanced vs rush | **26** - 11, 11 close | balanced 3, rush 2 |
 
 **Round 2** (main's S3 merged: the boom script with a scout and a defend guard, its army allowed to grow further, the
-fog bypass reverted; the pure boom is now `ai/boom.lua`):
+fog bypass reverted; the pure boom is now `data/ai/boom.lua`):
 
 | Matchup (48 games) | Wins (mixed) | Defeated | Army at 20/30/40 min (script) |
 |---|---|---|---|
@@ -1634,7 +1634,7 @@ vs boom 3 - 5, 8 close (was 4 - 8, 4 close). The cap trades soldiers for the epo
 the boom.
 
 **The gate** (AI_LUA_PLAN §5 S4):
-- **Rush beats a pure boom: not met** against `ai/boom.lua` (round 3: 12 - 19, 17 close; it was met against the S2
+- **Rush beats a pure boom: not met** against `data/ai/boom.lua` (round 3: 12 - 19, 17 close; it was met against the S2
   test opening in round 1, 24 - 6, 18 close). It never defeats the boom (0-4 booms defeated in 48).
 - **A boom beats a failed rush: met.** The rush falls back in 45 of the 48 games (44 in round 2); in those the boom
   wins 18 - 10, 17 close (round 2: 17 - 10, 17 close); in the 3 where the rush held on it won 2 - 1.
@@ -1906,7 +1906,7 @@ identical; a boom game run twice: 5283 lines identical):
   soldiers seen on it now (a raid, which the defence answers): never `tower`, `danger` or `area`. In seed 26 the
   home sites are food d4 and d8, stone d4, gold d7 and d14, iron d4 and d7. The playtest's iron:12 (d35) was not a
   home site. Its home iron was at d9 and d15, and both left the view in the first 5 minutes.
-- **Boom** (ai/boom.lua, claims only): the home sites come first in `sites_of`. A mineral the plan wants with no
+- **Boom** (data/ai/boom.lua, claims only): the home sites come first in `sites_of`. A mineral the plan wants with no
   open site kept contests the nearest site that only soldiers block: it is kept and claimed, and an escort (a
   `defend` group of 2-6 from the home guard, radius 8) holds it. The escort is disbanded when the site opens or the
   town is threatened. Such a resource counts as `no_site` for the reserve (§8.33). There were 11 escorts in the 16
@@ -2168,8 +2168,8 @@ its settlements while the citizens it cannot take go to wood.
 
 ### 8.37 The Age of AI port, first bench (2026-11-09, EE-SIM)
 
-`ai/ageofai/` is a Lua port of Grille's *Empire Earth: Age of AI* (GPL-3.0, with the author's permission;
-`ai/ageofai/UPSTREAM` pins upstream commit 0ac6495 and maps each upstream file to its module). What it keeps are the
+`data/ai/ageofai/` is a Lua port of Grille's *Empire Earth: Age of AI* (GPL-3.0, with the author's permission;
+`data/ai/ageofai/UPSTREAM` pins upstream commit 0ac6495 and maps each upstream file to its module). What it keeps are the
 decisions: the budget (an epoch reserve; a military account fed by 30% of the start stock and 40% of the income, 65%
 from the Copper Age, with the hoard above reserve + 3000 / 200 free for the army), the worker targets by shortfall
 over the measured rate per gatherer (food's shortfall counts the citizens' own food, wood the buildings', the
@@ -2209,7 +2209,7 @@ times the force by 40 minutes), raids at the outposts are answered and the force
 of upstream's late game (farms, the army's growth from the income share) shows in 45 minutes.
 
 **The opening tuned** (seeds 2-17, one seat order, 16 games a pair; the deviations are marked in
-`ai/ageofai/settings.lua`):
+`data/ai/ageofai/settings.lua`):
 - *Variant 2*, the owner's opening as upstream's playtester's (`early_army`: no soldiers in the first epoch, the
   towers and the militia hold the town, the home guard from the Stone Age; the saving from 34 citizens instead of
   40; 60% of the workers on food before farms, up to 24): against boom the Stone Age at 23.1 +- 0.7 (boom 22.7), but
@@ -2233,7 +2233,7 @@ lies past these 45 minutes; a longer bench (90 minutes, the Copper and Bronze Ag
 navy, towns and siege still to port.
 
 **The tactics, the navy and the longer benches (2026-11-09, the second checkpoint).** Ported since the first bench
-(`ai/ageofai/tactics.lua`, `navy.lua`, `ai/lib/navy.lua`; UPSTREAM's map): the siege controller, the settlement
+(`data/ai/ageofai/tactics.lua`, `navy.lua`, `data/ai/lib/navy.lua`; UPSTREAM's map): the siege controller, the settlement
 upgrades (spare citizens only: a first draft on an island put the idle workforce into the settlements), counter-fire
 in the micro step, and the navy (a sea scout over `ai.unexplored{sea = true}`, transports and a warship from the
 account, the landing at the weakest beach when the force at home beats it by 1.4, the landed group on lib.groups).
@@ -2516,7 +2516,7 @@ its own worktree, smoked (two runs of seeds 2 and 5, identical traces, no script
 - the leftovers -> `packing.lua` (tight_build = 1 as upstream's ini has it), the bunkers' reserve and shelf,
   forces.c's walk-and-fight record, citizens_home part 2; spoils.c and early_militia are engine behaviour here
   (the defeat rule removes a player with nothing left; the militia reflex always runs).
-`ai/ageofai/UPSTREAM` says PORTED / PARTLY (what is missing) / ENGINE / NOT STARTED per file: nothing is NOT STARTED
+`data/ai/ageofai/UPSTREAM` says PORTED / PARTLY (what is missing) / ENGINE / NOT STARTED per file: nothing is NOT STARTED
 any more; the PARTLY lines list what the interface does not carry yet (AI_LUA_UNITS §11 "Not built yet"). The merged
 whole: seeds 2 and 5 twice at 90 minutes and Small Islands seed 11 twice identical, no script errors (merged2 in
 build/sim/bench). One open engine item: a Small Islands seed-11 pair diverged once in the units hash at 65 minutes
@@ -2699,8 +2699,8 @@ against the waves.
 ### 8.39 The classic computer player in Lua, first checkpoint (2026-11-10, EE-SIM)
 
 The classic AI (the C++ managers of `src/Empire Earth/AI Thread/`, with this repository's changes behind the
-personality switches) ported to the per-unit Lua interface as a baseline and a moddable start: `ai/classic_lua/`,
-manifest id `classic_lua` ("Classic (Lua)", not random). `ai/classic_lua/ORIGIN` maps every C++ file to its module
+personality switches) ported to the per-unit Lua interface as a baseline and a moddable start: `data/ai/classic_lua/`,
+manifest id `classic_lua` ("Classic (Lua)", not random). `data/ai/classic_lua/ORIGIN` maps every C++ file to its module
 (PORTED / PARTLY / ENGINE / NOT STARTED) with the deviations and the interface gaps. Both personalities run from the
 rules data: `ai.tuning()` returns what EEComputerPlayer::Init and EECPPersonality give the C++ seat (the difficulty,
 the cheats, the personality with EE_AI_PERSONALITY, every dbcpbehavior value).
@@ -2726,7 +2726,7 @@ sentinel); the engine's reflexes skip a script's units (militia.lua); a per-step
 bounded; the fog at the start (the C++ classic's forest finder reads the whole map: the port's idle citizens explore
 until something is known); a centre of the town centre alone (Regroup's), without which no tower or temple had a site.
 
-**The bench** (EE-SIM, Small, Hard, 2 AIs, seeds 2-17, 90 minutes, `--data open`, the scripts from a copy of `ai/`;
+**The bench** (EE-SIM, Small, Hard, 2 AIs, seeds 2-17, 90 minutes, `--data open`, the scripts from a copy of `data/ai`;
 `balanced` with no cheats; `classic` with the retail Hard cheats on both seats: `--set
 "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" --cheats
 none/all/all`). Epochs: reached / median minute; citizens/army at 10/20/30/40 minutes; citizens lost by 20 minutes
@@ -2771,7 +2771,7 @@ classic, 32 players).
 
 ### 8.40 The classic computer player in Lua, the army (2026-11-10, EE-SIM)
 
-The second stage of §8.39: `ai/classic_lua/army.lua` replaces the first army stage with the classic's army.
+The second stage of §8.39: `data/ai/classic_lua/army.lua` replaces the first army stage with the classic's army.
 - The attack (EECPCombatManager::Update on the attack timer: the target player, CreateGroup).
 - The attack groups: the unit selector's group size, held, counter and favourite units; Personnel's per-class
   request slots with their 600 s deadline; the sub-groups' wait for units, gathering at the rally point, and the
@@ -2830,7 +2830,7 @@ personality's early citizens, then the special units, ChooseUnitsToKill and the 
 The owner's brief: boom's raid answer, militia and Stone Age guard in Lua on the per-unit interface (AI_LUA_UNITS
 §3, §11), with the improved classic's rules (`balanced`) and the research's (STRATEGY_RESEARCH §4), as library
 modules other AIs can use. Built:
-- `ai/lib/defence.lua`: the raid answer and the militia in the micro step, with the engine's militia and danger-zone
+- `data/ai/lib/defence.lua`: the raid answer and the militia in the micro step, with the engine's militia and danger-zone
   reflexes off (`ai.reflex{militia = false, danger = false}`).
   - Raiders are clustered once a game second (one `ai.seen`). A cluster is a raid when it is stronger than boom's
     THREAT_MIN, or when one of its units has hit an own unit in the last 15 s.
@@ -2842,7 +2842,7 @@ modules other AIs can use. Built:
     in reach count; at most 4 citizens join a raider. It breaks off below half those odds.
   - Warships are raids too: the citizens run from them, and none is sent back to a shore under fire.
   - Builders repair the towers hit (2 a tower, 3 towers at once).
-- `ai/lib/guard.lua`: the home guard, as a manual lib.groups group.
+- `data/ai/lib/guard.lua`: the home guard, as a manual lib.groups group.
   - Its post is under the own tower nearest the citizens' centre.
   - It fights the raids in the claim range at 0.8 x with the towers in reach, and always under a tower. It does not
     chase past that zone.
@@ -2852,7 +2852,7 @@ modules other AIs can use. Built:
   - With no raid on, at most half of it hunts the enemy citizens in its zone that are out of their towers' reach.
   - The training follows a mix by the raiders seen (ai.memory). With nothing seen: 2/3 spearmen, 1/3 slingers.
     Spearmen go against shock infantry and cavalry, slingers against spearmen, clubmen against ranged units.
-- `ai/boom.lua`: the plan's `army_per` / `army_floor` (balanced's standing army: a quarter of the citizens, at least
+- `data/ai/boom.lua`: the plan's `army_per` / `army_floor` (balanced's standing army: a quarter of the citizens, at least
   10) in the Stone and Copper plans; the micro step; the calls.
 
 **The bench.**
@@ -3121,12 +3121,12 @@ ChooseUnitsToKill, the special units, the guard posts and the navy; walls last (
 
 ### 8.43 Boom's economy: the second town centre, the stock correction, the saving ramp (2026-11-10, EE-SIM)
 
-The improved classic AI's economy rules (`balanced` in aipersonalities.yaml, §8.10-8.29) tried in `ai/boom.lua`, each
+The improved classic AI's economy rules (`balanced` in aipersonalities.yaml, §8.10-8.29) tried in `data/ai/boom.lua`, each
 behind a switch of its `ECON` table, the logic in new library modules: `lib.econ_units` (orders on single citizens),
 `lib.demand` (the split's stock correction, the saving ramp), `lib.econ_stats` (the bench metrics: the `econ` trace
 line each minute with the idle town-centre seconds, the patches with more than 6 gatherers sent, the town centres).
 
-Bench: EE-SIM, Small, Hard, 2 AIs and the idle human, no cheats, 90 minutes, `--ai-scripts` (a copy of `ai/` with
+Bench: EE-SIM, Small, Hard, 2 AIs and the idle human, no cheats, 90 minutes, `--ai-scripts` (a copy of `data/ai` with
 `rush` registered and the baseline as `boom0`), the worktree's open tree, 16 games a row (seeds 2-17 unless noted;
 a row with fewer seats lost runs to the lobby's "slot 0 human" start fault). Boom is seat p2. "Result" is the mixed
 score (§8.29) against the other seat.
@@ -3945,7 +3945,7 @@ pace rarely holds the soldiers back.
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
 (switches over boom; 32 seeds 2-33, Small, Hard, 120 min, improved classic `cl` and Age of AI `aoa`) were then
-superseded by the owner's exact build order (memory boom-build-order.md), now `ai/lib/build_order.lua` behind
+superseded by the owner's exact build order (memory boom-build-order.md), now `data/ai/lib/build_order.lua` behind
 `ECON.order` (off by default until it beats the baseline).
 
 **Round 1 and 2 (switches, all off):** what holds the epochs back. Against the improved classic the mines stay half
@@ -3966,7 +3966,7 @@ fields: boom-defence's rs0), the Prehistoric wood bank while saving, a dock and 
 barracks and a range, gold and iron reserved only while saving (the raid's spearmen), the Copper save at
 `stone_developed`, 3 granaries in Copper, the town centre's gathering techs epoch by epoch (hafts, hand axe,
 fine-flaked tools, metal working, hardened chisel, falconry, saw, amalgamation, shaft mining, ...), and the settlements
-placed in Lua (`ai/lib/place.lua`: the tile touching the resource units, gap 0, `ai.can_place`, built with `ai.build`
+placed in Lua (`data/ai/lib/place.lua`: the tile touching the resource units, gap 0, `ai.can_place`, built with `ai.build`
 at that tile; the C++ near=site placement is unchanged for the other scripts).
 
 The acceptance check (`order_check.py`, the boom-econ scratchpad): per phase the true gatherer counts (the engine's
@@ -4009,7 +4009,7 @@ earlier second one); the losses against the improved classic (boom-defence's o4b
 before Copper was paid; O8's food reach did not yet move it).
 
 **Later rounds (2026-11-12), to the playtest entry `boom_order`.** The order went to the owner's playtest as its own AI,
-`boom_order` ("Boom (owner order)", `ai/boom_order.lua` through `boom.configure`; the default `boom` keeps the order
+`boom_order` ("Boom (owner order)", `data/ai/boom_order.lua` through `boom.configure`; the default `boom` keeps the order
 off). What changed on the way, each benched on 32 seeds against the improved classic and Age of AI:
 
 - **The settlements touch from the start** (the owner's rule; lib.place's builders now 3 from within 20 tiles, which
@@ -4123,8 +4123,8 @@ boat_wood holds every Stone settlement until 10 boats, the settlement's stone ru
 lib.place's 5-minute wait), and a wild animal on the tile had the same spot re-placed each minute (`blocked_skip`).
 Next: claim and settle them from the advance, near home only, then the pool and exact = 2 on top.
 
-**boom_order is the default boom (2026-11-13, the owner).** ai/ais.json's `boom` entry (random) now runs
-`ai/boom_order.lua`, the owner-order configuration (`boom.configure`), with its description; the `boom_order` entry
+**boom_order is the default boom (2026-11-13, the owner).** data/ai/ais.json's `boom` entry (random) now runs
+`data/ai/boom_order.lua`, the owner-order configuration (`boom.configure`), with its description; the `boom_order` entry
 ("Boom (owner order)") is gone and the old default configuration is retired. boom.lua's own defaults are unchanged
 (every option off), so `boom` plays exactly what `boom_order` played: identical game samples on 3 seeds (2-4, 40
 minutes against the improved classic, the same exe). Benches name the engine `boom` from here on.
@@ -4601,9 +4601,9 @@ There are 5 bans a bench. Each one ends a stream of hunters going to one herd. K
 
 ### 8.62 The classic computer player in Lua: where it stands (2026-11-12)
 
-The port (`ai/classic_lua`, manifest `classic_lua`) plays the C++ classic's decisions through the per-unit Lua
+The port (`data/ai/classic_lua`, manifest `classic_lua`) plays the C++ classic's decisions through the per-unit Lua
 interface. It reads the same data and personality, and keeps the C++'s thresholds and timings. Sections §8.39-§8.61
-record each stage. `ai/classic_lua/ORIGIN` maps every C++ file to its module, with what is ported, what stays in the
+record each stage. `data/ai/classic_lua/ORIGIN` maps every C++ file to its module, with what is ported, what stays in the
 engine and what is not started.
 
 **Parity.**
@@ -4626,7 +4626,7 @@ engine and what is not started.
     epochs, extra, popband, catchup, retire]"`: Hard keeps none in the data now. Without it, `--cheats all` turns
     nothing on.)
 
-**The cheat capabilities** (manifest entries in ai/ais.json, declared only by classic_lua, shown in its trace start
+**The cheat capabilities** (manifest entries in data/ai/ais.json, declared only by classic_lua, shown in its trace start
 line, AI_LUA_UNITS §11):
 - `sees_all`, the classic's information cheat. With it, `ai.enemy_near` is HasEnemyNear (every armed unit, seen or
   not), `ai.enemy_force` gives the militia's odds, and `ai.player_file` gives the C++'s intelligence files.
@@ -4756,7 +4756,7 @@ port still wins 6-0 with 2 close (66.8 citizens at 40 minutes against 40.5). Tha
 ### 8.64 Porting everything, 2a: the ferries (2026-11-12, EE-SIM)
 
 The classic's ferries (EECPResourceManager::RequestFerry / FerryGatherers / TransportIdle, IsIslandExpansionDue,
-ChooseTransportClass's sea transports) are now `ai/classic_lua/ferry.lua`. On an island or planets map a mineral can
+ChooseTransportClass's sea transports) are now `data/ai/classic_lua/ferry.lua`. On an island or planets map a mineral can
 be wanted, or the island expansion due (its timer: island_expansion_timer minutes, started again after each ferry).
 When the resource's first target lies on land the town's idle citizens cannot walk to, a free transport takes as
 many as it holds to it. The crossing is lib.navy's landing: board, sail, unload. Ashore, the citizens are sent to
@@ -4856,7 +4856,7 @@ DEVIATION: the gate's and the choke point's site is the first placeable tile (ai
 Towers built: on Small Islands (16 seeds, 90 minutes) 168 for the port against the C++'s 158. On land the port
 builds more of them, as before this change (364 against 193 in 32 games). Balanced 32 seeds: 12-15, 5 close.
 
-**The walls** (EECPWallManager): `ai/classic_lua/walls.lua`, on two new generic helpers:
+**The walls** (EECPWallManager): `data/ai/classic_lua/walls.lua`, on two new generic helpers:
 - `ai.wall_line`: a wall line's tiles;
 - `ai.wall_stretches`: the planner's look at one line, whether a building blocks it and its open stretches between
   forests, cliffs and water, with their levelness. Both are in AI_LUA_UNITS §11.
@@ -5671,7 +5671,7 @@ Lua army's groups own only what they took (ai.take detaches a unit from the C++ 
 tasks also pick random forest, hill and choke points of the continent. So a Lua tactic on the Lua groups reaches only
 a quarter of the classic's fighting.
 
-**The port: `ai/lib/tactics.lua`** (Age of AI's attribution in the header), every option off by default;
+**The port: `data/ai/lib/tactics.lua`** (Age of AI's attribution in the header), every option off by default;
 `classic_lua.main.configure{tactics = {...}}` turns them on for a variant (a test variant is an ais.json entry whose
 script is `return require("classic_lua.main").configure{tactics = {judge = true}}`). With none on, a test game's sim
 hash equals main's. Options: `judge` (out under 100% of the known enemy twice running: home), `go` (an attack whose
