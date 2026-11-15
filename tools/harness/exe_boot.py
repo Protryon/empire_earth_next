@@ -145,7 +145,7 @@ def data_tree(kind):
         if r.returncode:
             raise RuntimeError(f"open_data build failed:\n{r.stdout}{r.stderr}")
     elif tree.parent == OPEN_DATA:
-        # the next engine's scripts (the repository's ai/): a changed script refreshes Data/ai, no rebuild
+        # the next engine's scripts (the repository's data/ai): a changed script refreshes Data/ai, no rebuild
         sys.path.insert(0, str(ROOT / "tools"))
         import open_data
         if json.loads((tree / "open_data.json").read_text()).get("ai") != open_data.scripts_hash():

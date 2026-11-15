@@ -16,7 +16,7 @@ results.json and results.csv (one row per run and player). With --repeat 2 the r
 --env NAME=VALUE sets an environment variable for every run; each --env-vary NAME=V1,V2,... adds a dimension, e.g.
 --env-vary EE_AI_DEMAND=1/0,0/1 plays a per-player switch from both seats (the per-player sets of ee/EECPTrace.h).
 tools/ai_scorecard.py scores the result (wins, time to each epoch, economy and army over time).
---ai-scripts DIR plays the next engine's Lua scripts from DIR (EE_AI_SCRIPTS, e.g. ai: the checkout's); each run's
+--ai-scripts DIR plays the next engine's Lua scripts from DIR (EE_AI_SCRIPTS, e.g. data/ai: the checkout's); each run's
 script errors (EE-SIM's "SIM next.error" lines) are counted in lua_errors.
 --sim-arg passes an option to EE-SIM.exe as it is (e.g. --sim-arg=--lobby --sim-arg=181=#0).
 The games run below normal priority (Windows: BELOW_NORMAL_PRIORITY_CLASS; POSIX: nice 10), so that the windowed

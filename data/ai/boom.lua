@@ -397,7 +397,7 @@ local function release_unkept(view, order, keep)
     end
 end
 
--- a variant's settings before the game starts (ai/boom_order.lua; each seat has its own Lua state, so a variant's
+-- a variant's settings before the game starts (data/ai/boom_order.lua; each seat has its own Lua state, so a variant's
 -- module changes only its own seat): econ = ECON switches, plan = PLAN fields from the Stone Age on, defence =
 -- lib.defence options, order = lib.build_order's BO.OPT
 function M.configure(o)
@@ -897,7 +897,7 @@ function M.step(view, memory)
             end
             memory.res_floor[r] = (kept and not scramble) and want or 0
         end
-        -- (§8.43, Age of AI's epoch account, ai/ageofai/econ.lua after upstream econ.c by Grille and the Age of AI
+        -- (§8.43, Age of AI's epoch account, data/ai/ageofai/econ.lua after upstream econ.c by Grille and the Age of AI
         -- contributors, GPL-3.0): from the plan's account_epoch on, the reserve is an account that takes
         -- plan.epoch_share percent of what is gathered (the remainder carried, PORT_LEARNINGS), up to the advance's
         -- cost; the rest of the income is free for the army and the citizens. Upstream's army took 65% from farms on

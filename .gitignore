@@ -2,4 +2,8 @@ build/
 toolchain/
 __pycache__/
 *.pyc
-data/
+# data/: the game's Data folder as far as it is ours (data/db: the tables and the rules documents, data/ai: the
+# computer players' scripts). Anything else under it (an old tools/fetch_data.py download) stays out.
+/data/*
+!/data/db/
+!/data/ai/

@@ -39,4 +39,4 @@ python3 -I tools/open_data.py ai data
 mkdir -p build/sim
 python3 -I tools/sim.py --data open --slot smoke -- --seed 2 --game-seconds 300 --report build/sim/smoke.json
 python3 -c 'import json; r = json.load(open("build/sim/smoke.json")); print("smoke:", r["outcome"], r["game_ms"] // 1000, "game s")'
-echo "ready: python3 -I tools/sim_bench.py --name NAME --data open --ai-scripts ai --seeds 2-33 --jobs $(nproc)"
+echo "ready: python3 -I tools/sim_bench.py --name NAME --data open --ai-scripts data/ai --seeds 2-33 --jobs $(nproc)"

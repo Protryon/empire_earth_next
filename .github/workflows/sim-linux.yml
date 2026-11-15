@@ -80,7 +80,7 @@ jobs:
 
       - name: Simulations (each seed twice)
         run: |
-          python -I tools/sim_bench.py --name ci --data open --ai-scripts ai --seeds "$SEEDS" --repeat 2 \
+          python -I tools/sim_bench.py --name ci --data open --ai-scripts data/ai --seeds "$SEEDS" --repeat 2 \
             --jobs 2 --game-seconds "$GAME_SECONDS" --difficulty Medium
 
       - uses: actions/upload-artifact@v4

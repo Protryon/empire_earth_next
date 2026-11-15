@@ -1,7 +1,7 @@
 -- Combat tactics for any script's lib.groups army, adapted from Grille's "Empire Earth: Age of AI"
 -- (https://github.com/Grille/Empire-Earth-Age-of-AI; GPL-3.0, Copyright (C) 2025-2026 Grille and the Age of AI
--- contributors; used with the author's permission, see ai/ageofai/LICENSE and ai/ageofai/UPSTREAM). The sources are
--- the port's ai/ageofai/army.lua (armies.c: the force's judgement), tactics.lua (counterfire.c; attack.c siege_tick)
+-- contributors; used with the author's permission, see data/ai/ageofai/LICENSE and data/ai/ageofai/UPSTREAM). The sources are
+-- the port's data/ai/ageofai/army.lua (armies.c: the force's judgement), tactics.lua (counterfire.c; attack.c siege_tick)
 -- and attack.lua (attack.c: the leash, the siege's firing position). require("lib.tactics"). AI_RESEARCH §8.86 has
 -- the measurements.
 --

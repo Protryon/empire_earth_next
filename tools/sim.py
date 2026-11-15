@@ -19,7 +19,7 @@ classic; random; an AI's id from Data/ai/ais.json such as boom; or next for its 
 turn.
 
 --ai-scripts DIR sets EE_AI_SCRIPTS (absolute): the next engine reads its Lua scripts from DIR before the tree's
-Data/ai (docs/AI_LUA_PLAN.md 3.2), e.g. --ai-scripts ai to play the checkout's scripts on an older tree.
+Data/ai (docs/AI_LUA_PLAN.md 3.2), e.g. --ai-scripts data/ai to play the checkout's scripts on an older tree.
 
 --set doc.key=value overrides a rules document (db/<doc>.yaml); a value "[a, b]" replaces a list, e.g.
 --set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" (the original's cheats,
@@ -86,7 +86,7 @@ def data_tree(kind):
               f"or is being built", file=sys.stderr)
     ai = json.loads((tree / "open_data.json").read_text()).get("ai") if (tree / "open_data.json").exists() else None
     if ai != open_data.scripts_hash() and not os.environ.get("EE_AI_SCRIPTS"):
-        print(f"sim: warning: {tree}'s Data/ai is not this checkout's ai/ (python -I tools/open_data.py ai TREE, or "
+        print(f"sim: warning: {tree}'s Data/ai is not this checkout's data/ai (python -I tools/open_data.py ai TREE, or "
               f"--ai-scripts)", file=sys.stderr)
     return tree.resolve()
 

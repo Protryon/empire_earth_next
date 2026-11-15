@@ -15,7 +15,7 @@
                  scripts, the tweakables (small; republished whenever the data format or a script changes)
         The third part, Data/Textures-4x, comes from tools/upscale.
   python -I tools/open_data.py ai TREE
-        refresh a built tree's Data/ai from the repository's ai/ (the AI manifest ais.json and the next engine's Lua
+        refresh a built tree's Data/ai from the repository's data/ai (the AI manifest ais.json and the next engine's Lua
         scripts; seconds, no rebuild) and record their hash in its open_data.json ("ai"). A build copies them too.
   python -I tools/open_data.py ids TREE
         write a binary tree's Data/db/dbobjects.ids and dbtechtree.ids (the row ids the text tables would carry, from
@@ -54,7 +54,7 @@ import sources   # noqa: E402  (tools/eemodel: the game's data path)
 import ssa       # noqa: E402
 
 TREE = ROOT / 'build' / 'open_data' / 'tree'
-AI_SCRIPTS = ROOT / 'ai'   # the next engine's Lua scripts (docs/AI_LUA_PLAN.md 3.2): written here, not retail data
+AI_SCRIPTS = ROOT / 'data' / 'ai'   # the next engine's Lua scripts (docs/AI_LUA_PLAN.md 3.2): written here, not retail data
 
 
 def converters_hash():
@@ -72,8 +72,8 @@ AI_NOTICES = ('LICENSE', 'UPSTREAM', 'README', 'NOTICE', 'COPYING')   # a ported
 
 
 def ai_files():
-    """The repository's ai/ files a data tree gets: the AI manifest ais.json (the lobby's AIs, ee/EECPEngine.h), every
-    Lua script, and the notice files a ported AI ships (ai/ageofai/LICENSE, UPSTREAM: the GPL-3.0 text and the
+    """The repository's data/ai files a data tree gets: the AI manifest ais.json (the lobby's AIs, ee/EECPEngine.h), every
+    Lua script, and the notice files a ported AI ships (data/ai/ageofai/LICENSE, UPSTREAM: the GPL-3.0 text and the
     upstream pin). The game's own AI folder hash (EECPAIFolderHash, the multiplayer checksum) covers ais.json and the
     scripts only; the notices change no behaviour."""
     notices = [p for p in AI_SCRIPTS.rglob('*') if p.is_file() and p.name.split('.')[0].upper() in AI_NOTICES]
@@ -82,7 +82,7 @@ def ai_files():
 
 
 def scripts_hash():
-    """A hash of the repository's ai/ files (paths and contents): a tree whose open_data.json records another one
+    """A hash of the repository's data/ai files (paths and contents): a tree whose open_data.json records another one
     has stale scripts (refresh_scripts copies them in seconds; the converters' hash leaves them out)."""
     import hashlib
     h = hashlib.sha256()
@@ -92,7 +92,7 @@ def scripts_hash():
 
 
 def refresh_scripts(tree):
-    """Data/ai of a tree replaced by the repository's ai/ (ais.json, *.lua, the notices), its hash recorded in open_data.json -> the hash.
+    """Data/ai of a tree replaced by the repository's data/ai (ais.json, *.lua, the notices), its hash recorded in open_data.json -> the hash.
     The old files are unlinked first, so a staged copy's hard links into another tree are never written through."""
     tree = pathlib.Path(tree)
     target = tree / 'Data' / 'ai'
