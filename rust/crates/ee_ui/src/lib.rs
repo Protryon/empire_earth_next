@@ -24,6 +24,8 @@ pub mod edit_keys;
 pub mod editobj;
 pub mod entity_group;
 pub mod event;
+pub mod eventobj;
+pub mod filelistobj;
 pub mod find_key;
 pub mod font;
 pub mod fonttableobj;
@@ -31,6 +33,7 @@ pub mod form;
 pub mod form_state;
 pub mod formobj;
 pub mod graph;
+pub mod groupobj;
 pub mod hotkey;
 pub mod hotkeyobj;
 pub mod ime;
@@ -42,6 +45,7 @@ pub mod listobj;
 pub mod manager;
 pub mod manager_media;
 pub mod managerobj;
+pub mod mediaobj;
 pub mod mouse;
 pub mod obj;
 pub mod rect;
@@ -57,13 +61,6 @@ pub mod text;
 pub mod variantobj;
 pub mod wrap;
 
-// imports the C++ database files and the events' owners (UIEvent.cpp), absent from a test binary
-#[cfg(not(test))]
-mod background_table_ffi;
-// imports the C++ entity groups' entities and the string list's lines (UIEntityGroup.cpp, UILBString.cpp), absent
-// from a test binary
-#[cfg(not(test))]
-mod group_ffi;
 // imports the C++ graphs' texts, lines and draws (UIGraph.cpp, UILineGraph.cpp), absent from a test binary
 #[cfg(not(test))]
 mod graph_ffi;
@@ -78,6 +75,9 @@ mod layout_ffi;
 // imports the C++ controls' and form's mouse calls (UIControl.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod mouse_ffi;
+// imports the C++ string list's lines (UILBString.cpp), absent from a test binary
+#[cfg(not(test))]
+mod string_list_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
 // imports the C++ text measuring (UITextLabel.cpp)
 

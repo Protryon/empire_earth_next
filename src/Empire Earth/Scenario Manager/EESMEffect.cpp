@@ -29,14 +29,10 @@
 #include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEAIRandom.h"
-#include "ee/EEDebugTrace.h"
 #include "lle/SESoundManager.h"
-#include "lle/FSFileSpec.h"
 #include "GEWindow.h"
 #include "ee/EECameraControl.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEMouse.h"
 #include "ee/EEUserInterface.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
@@ -65,10 +61,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEGameSound.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "ee/EECommunications.h"
-#include "ee/EECPBehavior.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
@@ -116,311 +108,6 @@ void EESMEffect::Reset()
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPIntelligence.h"
 
-// FUNCTION: EXE 0x5bb82f
-// Has each chosen computer player raise a military group of the target object's unit kind (random min..max count)
-// for its first town, else the largest continent, aimed at a random enemy
-void EESMEffect::BuildObject()
-{
-    std::vector<long> theUnitIDs;
-    std::vector<long> thePlayers;
-    EECPCombatStrategy theStrategy;
-    EECPUnitRequirement theRequirement;
-    EECPILocation theLocation;
-    EECPAGTask theTask;
-    EEAIContinent* theContinent = NULL;
-    EETown* theTown = NULL;
-    bool theAnyCount = false;
-    if (gWorld.mScenarioManager != NULL) {
-        gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-        for (long i = (long)thePlayers.size() - 1; i >= 0; --i) {
-            EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(gWorld.GetPlayer(*(thePlayers.begin() + i)));
-            if (thePlayer == NULL)
-                continue;
-            // per player: no town, continent or "any count" carried over from the previous player
-            theTown = NULL;
-            theContinent = NULL;
-            theAnyCount = false;
-            if (thePlayer->mTowns.size() != 0)
-                theTown = thePlayer->mTowns[0];
-            if (theTown == NULL) {
-                theContinent = gContinentManager.GetContinentByID((unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand));
-                if (theContinent == NULL) {
-                    theContinent = gContinentManager.GetContinentByID((unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone));
-                    if (theContinent == NULL)
-                        continue;
-                }
-            }
-            EECPCombatManager* theCombat = thePlayer->mCombatManager;
-            if (theTown != NULL) {
-                theLocation.mSerial = theTown->GetSerial();
-                theLocation.mType = kAIAreaTown;
-            } else {
-                theLocation.mSerial = theContinent->GetSerial();
-                theLocation.mType = kAIAreaContinent;
-            }
-            theLocation.ResetToArea();
-            theTask.mLocation = theLocation;
-            EEPlayer* theTarget = theCombat->mIntelligence->GetRandomEnemy(thePlayer);
-            theTask.mPlayer = theTarget != NULL ? gWorld.GetPlayer(theTarget->mPlayerID) : gWorld.GetPlayer(0);
-            theTask.mType = kAGTaskLocation;
-            theTask.mIsActive = true;
-            theStrategy.Reset();
-            theStrategy.mKind = 1;
-            theStrategy.mAddFavorites = false;
-            theRequirement.Clear();
-            EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mTargetObject);
-            if (theObject == NULL)
-                continue;
-            if (theObject->GetMinCount() == 0 && theObject->GetMaxCount() == 0) {
-                theAnyCount = true;
-                theStrategy.mNumUnits = 0;
-                theStrategy.mNumRemaining = 0;
-            } else {
-                unsigned long theLow = min(theObject->GetMinCount(), theObject->GetMaxCount());
-                unsigned long theHigh = max(theObject->GetMinCount(), theObject->GetMaxCount());
-                long theCount = gPhysics->GetRandom((long)theLow, (long)theHigh);
-                theRequirement.mNumLeft = theCount;
-                theRequirement.mNumWanted = theCount;
-                if (!theAnyCount) {
-                    theStrategy.mNumUnits += theCount;
-                    theStrategy.mNumRemaining = theStrategy.mNumUnits;
-                }
-            }
-            bool theAddRequirement = true;
-            if (theObject->mFamily == 0) {
-                EEUnitClass* theClass = gUnitClassTable[theObject->mClass];
-                if (theClass != NULL && theClass->mIsScenarioSelectable)
-                    theRequirement.mUnitClass = theObject->mClass;
-                else
-                    theAddRequirement = false;
-            } else if (theObject->mFamily < 0x10)
-                theRequirement.mUnitClass = thePlayer->mFavoriteLandType;
-            else if (theObject->mFamily < 0x4b)
-                theRequirement.mFamily = theObject->mFamily - 0xf;
-            else if (theObject->mFamily <= 0x74)
-                theRequirement.mUnitKind = theObject->mFamily - 0x4a;
-            else
-                theAddRequirement = false;
-            if (theAddRequirement) {
-                theRequirement.mKind = kRequirementAlreadyDefined;
-                theStrategy.mRequirements.push_back(theRequirement);
-            }
-            if (theCombat->IsValidTask(theTask, theStrategy, theUnitIDs))
-                theCombat->mAttackCommander->CreateGroupFromStrategy(theTask, theStrategy, theUnitIDs);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x5bbba1
-// Has each chosen computer player form a military group from the listed objects' units (existing ones join, the rest
-// are requested), aimed at the target area or the target object's unit; an attack or a defence group per mIsAttack
-void EESMEffect::CreateAIMilitaryGroup()
-{
-    std::vector<long> theUnitIDs;
-    std::vector<long> thePlayers;
-    EECPCombatStrategy theStrategy;
-    EECPUnitRequirement theRequirement;
-    EECPILocation theLocation;
-    EECPAGTask theTask;
-    EEPlayer* theTargetPlayer = NULL;
-    unsigned long theAreaSerial = 0;
-    unsigned long theUnitID = 0;
-    long theTotalUnits = 0;
-    bool theAnyCount = false;
-    bool theContinentArea = false;
-    if (gWorld.mScenarioManager != NULL) {
-        gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-        for (long i = (long)thePlayers.size() - 1; i >= 0; --i) {
-            EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(gWorld.GetPlayer(thePlayers[i]));
-            if (thePlayer == NULL)
-                continue;
-            EECPCombatManager* theCombat = thePlayer->mCombatManager;
-            theAnyCount = false;
-            theTask.mMode = kAGModeCombat;
-            if (this->mUsesTargetArea) {
-                EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mTargetArea);
-                if (theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
-                    for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
-                        EEAIRectangleArea* theRectangle = gContinentManager.mRectangleAreas[j];
-                        if (theRectangle != NULL && theRectangle->GetScenarioAreaID() == theArea->mID) {
-                            theAreaSerial = theRectangle->GetSerial();
-                            break;
-                        }
-                    }
-                    if (theAreaSerial == 0 && theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
-                        EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
-                        if (theContinent != NULL) {
-                            theAreaSerial = theContinent->GetSerial();
-                            theContinentArea = true;
-                        }
-                    }
-                }
-            }
-            if (!this->mUsesTargetArea) {
-                EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mTargetObject);
-                if (theObject != NULL && theObject->mUnits.size() != 0) {
-                    theUnitID = *theObject->mUnits.begin();
-                    for (long k = (long)theObject->mUnits.size() - 1; k >= 0; --k) {
-                        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[k]));
-                        if (theUnit != NULL && theUnit->GetHitPoints() > 0) {
-                            theUnitID = theUnit->GetUnitID();
-                            theTask.SetUnit(theUnit);
-                        }
-                    }
-                }
-            }
-            if (theAreaSerial != 0) {
-                theLocation.mSerial = theAreaSerial;
-                theLocation.mType = theContinentArea ? 1 : 8;
-                theLocation.ResetToArea();
-                theTask.mLocation = theLocation;
-                theTargetPlayer = theCombat->mIntelligence->GetRandomEnemy(thePlayer);
-            } else if (theUnitID != 0) {
-                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theUnitID));
-                if (theUnit != NULL) {
-                    theTargetPlayer = theUnit->mPlayer;
-                    if (theUnit->mContainer != NULL)
-                        theLocation.mTile = EETileLocation(theUnit->mContainer->GetTileX(), theUnit->mContainer->GetTileY());
-                    else
-                        theLocation.mTile = EETileLocation(theUnit->GetTileX(), theUnit->GetTileY());
-                    theTask.mLocation = theLocation;
-                } else
-                    theTargetPlayer = theCombat->mIntelligence->GetRandomEnemy(thePlayer);
-            }
-            theTask.mPlayer = theTargetPlayer != NULL && theTargetPlayer != thePlayer
-                           ? gWorld.GetPlayer(theTargetPlayer->mPlayerID) : gWorld.GetPlayer(0);
-            theTask.mIsActive = true;
-            theTask.mType = kAGTaskLocation;
-            if (this->mIsAttack && theUnitID == 0)
-                theTask.mType = kAGTaskTerritory;
-            else if (this->mIsAttack && theTask.mUnit != NULL && theTask.mUnit->mPlayer != thePlayer
-                     && thePlayer->mEnemies[theTask.mUnit->mPlayer->mPlayerID] != 0)
-                theTask.mType = kAGTaskUnit;
-            theStrategy.Reset();
-            theStrategy.mKind = 5 - (this->mIsAttack != false);
-            theStrategy.mAddFavorites = this->mUsesFavorites;
-            for (long n = (long)this->mObjects.size() - 1; n >= 0; --n) {
-                theRequirement.Clear();
-                EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObjects[n]);
-                if (theObject == NULL)
-                    continue;
-                if (theObject->Evaluate(false) && theObject->mUnits.size() != 0) {
-                    theTotalUnits += theObject->mUnits.size();
-                    for (unsigned long u = 0; u < theObject->mUnits.size(); u++)
-                        theUnitIDs.push_back(theObject->mUnits[u]);
-                    continue;
-                }
-                if (theObject->mMinCount == 0 && theObject->mMaxCount == 0) {
-                    theAnyCount = true;
-                    theStrategy.mNumUnits = 0;
-                    theStrategy.mNumRemaining = 0;
-                } else {
-                    unsigned long theLow = min(theObject->mMinCount, theObject->mMaxCount);
-                    unsigned long theHigh = max(theObject->mMinCount, theObject->mMaxCount);
-                    long theCount = gPhysics->GetRandom((long)theLow, (long)theHigh);
-                    theRequirement.mNumLeft = theCount;
-                    theRequirement.mNumWanted = theCount;
-                    if (!theAnyCount) {
-                        theStrategy.mNumUnits += theCount;
-                        theStrategy.mNumRemaining = theStrategy.mNumUnits;
-                    }
-                }
-                bool theAddRequirement = true;
-                if (theObject->mFamily == 0) {
-                    EEUnitClass* theClass = gUnitClassTable[theObject->mClass];
-                    if (theClass != NULL && theClass->mIsScenarioSelectable)
-                        theRequirement.mUnitClass = theObject->mClass;
-                    else
-                        theAddRequirement = false;
-                } else if (theObject->mFamily < 0x10)
-                    theRequirement.mUnitClass = thePlayer->mFavoriteLandType;
-                else if (theObject->mFamily < 0x4b)
-                    theRequirement.mFamily = theObject->mFamily - 0xf;
-                else if (theObject->mFamily <= 0x74)
-                    theRequirement.mUnitKind = theObject->mFamily - 0x4a;
-                else
-                    theAddRequirement = false;
-                if (theAddRequirement) {
-                    theRequirement.mKind = kRequirementAlreadyDefined;
-                    theStrategy.mRequirements.push_back(theRequirement);
-                }
-            }
-            for (long v = (long)theUnitIDs.size() - 1; v >= 0; --v) {
-                EEUnit* theUnit = gWorld.GetUnit(theUnitIDs[v]);
-                if (theUnit == NULL || theUnit->mComplexUnit == NULL || theUnit->mPlayer != thePlayer
-                    || theUnit->GetHitPoints() < 1 || !theCombat->IsMilitaryUnit(theUnit->mComplexUnit))
-                    theUnitIDs.erase(theUnitIDs.begin() + v);
-                else if (theUnit->mComplexUnit->mIsDetachedFromAI)
-                    theUnit->mComplexUnit->mIsDetachedFromAI = false;
-            }
-            if (theCombat->IsValidTask(theTask, theStrategy, theUnitIDs))
-                theCombat->mAttackCommander->CreateGroupFromStrategy(theTask, theStrategy, theUnitIDs);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x5bc333
-// Adds or drops an attack or defend target (the target area's AI area or continent, or the target object's living unit)
-// for each chosen computer player; a new target must pass the combat manager's IsValidTarget
-void EESMEffect::ModifyAIMilitaryTarget()
-{
-    std::vector<unsigned long> theUnused;
-    std::vector<long> thePlayers;
-    unsigned long theSerial = 0;
-    if (gWorld.mScenarioManager == NULL)
-        return;
-    gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-    for (long i = (long)thePlayers.size() - 1; i >= 0; --i) {
-        EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(gWorld.GetPlayer(thePlayers[i]));
-        if (thePlayer == NULL)
-            continue;
-        EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mTargetArea);
-        EECPCombatManager* theCombat = thePlayer->mCombatManager;
-        if (theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
-            for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
-                if (gContinentManager.mRectangleAreas[j] != NULL
-                    && (gContinentManager.mRectangleAreas[j])->GetScenarioAreaID() == theArea->mID) {
-                    theSerial = (gContinentManager.mRectangleAreas[j])->GetSerial();
-                    break;
-                }
-            }
-            if (theSerial == 0 && theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
-                EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
-                if (theContinent != NULL)
-                    theSerial = theContinent->GetSerial();
-            }
-        }
-        unsigned long theUnitID = (unsigned long)-1;
-        EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mTargetObject);
-        if (theObject != NULL && theObject->mUnits.size() > 0) {
-            theUnitID = *theObject->mUnits.begin();
-            for (long k = (long)theObject->mUnits.size() - 1; k >= 0; --k) {
-                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[k]));
-                if (theUnit != NULL && theUnit->GetHitPoints() > 0)
-                    theUnitID = theUnit->GetUnitID();
-            }
-        }
-        if (this->mIsAddTarget && !theCombat->IsValidTarget(theSerial, theUnitID, this->GetIsAttack()))
-            continue;
-        if (this->mIsAttack) {
-            if (this->mIsAddTarget)
-                theCombat->AddAttackTask(theUnitID, theSerial);
-            else if (UIsNone32(theUnitID))
-                theCombat->DropAreaTask(theSerial, false);
-            else
-                theCombat->DropUnitTask(theUnitID, true);
-        } else {
-            if (!this->mIsAddTarget) {
-                if (UIsNone32(theUnitID))
-                    theCombat->DropAreaTask(theSerial, false);
-                else
-                    theCombat->DropUnitTask(theUnitID, true);
-            } else
-                theCombat->AddDefendTask(theUnitID, theSerial);
-        }
-    }
-}
-
 // FUNCTION: EXE 0x5bc60f
 // Copies another effect's settings, texts and object list
 void EESMEffect::Copy(const EESMEffect& inEffect)
@@ -436,56 +123,6 @@ void EESMEffect::Copy(const EESMEffect& inEffect)
     *static_cast<EeScenarioEffectFields*>(this) = inEffect;   // every number
     this->mObjects = inEffect.mObjects;
 }
-
-// FUNCTION: EXE 0x5bc942
-// Gives the scenario object's living units the effect's new name (with no units, the class upgrade of a picked type
-// for each owner player); then refreshes the main game panel
-void EESMEffect::SetClassName()
-{
-    std::vector<long> thePlayers;
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    if (theObject == NULL)
-        return;
-    if (theObject->GetIsSelectOnMap() || theObject->GetInAreaCheck() != 0 || theObject->GetHasAttributeCheck() != 0
-        || theObject->GetNearCheck() != 0 || theObject->GetSelectedByCheck() != 0 || theObject->GetHasStateCheck() != 0
-        || theObject->GetVisibleByCheck() != 0 || theObject->GetParent() != 0)
-        theObject->Evaluate(0);
-    unsigned long theNumUnits = theObject->mUnits.size();
-    if (theNumUnits > 0) {
-        for (unsigned long i = 0; i < theNumUnits; ++i) {
-            EEUnit* theUnit = gWorld.GetUnit(theObject->GetUnitAt(i));
-            if (theUnit != NULL && theUnit->GetHitPoints() > 0)
-                theUnit->GetStats()->SetName(this->GetNewName());
-        }
-    } else {
-        gWorld.mScenarioManager->ChoosePlayer(theObject->mOwner, &thePlayers, true);
-        for (unsigned long i = 0; i < thePlayers.size(); ++i) {
-            long theUnitClass = theObject->PickUnitType();
-            if (theUnitClass >= 0) {
-                EEUnitClass* theClass = gUnitClassTable[theUnitClass];
-                gWorld.GetPlayer(thePlayers[i])->GetUpgrade(theClass->GetUnitType())->SetName(this->GetNewName());
-            }
-        }
-    }
-    if (gUIManager->GetMainGameForm() != NULL)
-        gUIManager->GetMainGameForm()->mRefreshGroup = true;
-}
-
-// FUNCTION: EXE 0x5bcae9
-// Returns the player's upgrade record for a unit type (EEPlayer::GetUpgrade)
-// Inline EEPlayer::GetUpgrade(long), emitted by SetClassName; existing mUnitClassUpgrades vector at +0x884.
-
-// FUNCTION: EXE 0x5bcaf9
-// Returns the unit class's unit type (EEUnitClass::GetUnitType)
-// Inline EEUnitClass::GetUnitType() const, emitted by SetClassName; mUnitType at +0x1bc.
-
-// FUNCTION: EXE 0x5bcb00
-// Sets the upgrade record's display name (EEUnitClassUpgrade::SetName)
-// Inline EEUnitClassUpgrade::SetName(UWideString), emitted by SetClassName; by-value argument, mName at +0x4c.
-
-// FUNCTION: EXE 0x5bcb1b
-// Returns the unit's upgrade record (EEUnit::GetStats)
-// Inline EEUnit::GetStats(), emitted by SetClassName; mStats at +0x34.
 
 // FUNCTION: EXE 0x5bcb1f
 // Sets, raises or lowers a player value: a resource, the population cap (also queued as a pending effect), difficulty,
@@ -511,68 +148,10 @@ void EESMEffect::SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAtt
     ee_scenario_set_player_attribute(&theHost, inPlayer, inAttribute, inMode, inAmount);
 }
 
-
-struct EESMUnitPriorityLess {
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
-};
-
-// Original no-/Og: frame0x38 and memory-resident inline getter temporaries. The pragma alone
-// makes this natural comparator exact200/200B; normal-Og version is73B (A/B proof).
-#pragma optimize("g", off)
-// FUNCTION: EXE 0x5bce99
-// Orders units for SetUnitsOwner: non-farms before farms, otherwise the higher unit id first
-bool EESMUnitPriorityLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
-{
-    bool theResult;
-    if (inFirst->GetUnitClass()->GetUnitType() == kUnitTypeFarm && inSecond->GetUnitClass()->GetUnitType() == kUnitTypeFarm)
-        theResult = inFirst->GetUnitID() > inSecond->GetUnitID();
-    else if (inFirst->GetUnitClass()->GetUnitType() == kUnitTypeFarm)
-        theResult = false;
-    else if (inSecond->GetUnitClass()->GetUnitType() == kUnitTypeFarm)
-        theResult = true;
-    else
-        theResult = inFirst->GetUnitID() > inSecond->GetUnitID();
-    return theResult;
-}
-
-
-#pragma optimize("g", on)
-
-
-// FUNCTION: EXE 0x5bcf61
-// Converts the scenario object's living units (farms last, newest first) to a player picked from the new-owner setting
-// for each unit; nature (player 0) is never picked
-void EESMEffect::SetUnitsOwner()
-{
-    std::vector<EEUnit*> theUnits;
-    EEUnit* theUnit = NULL;
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    theObject->Evaluate(0);
-    unsigned long theCount = theObject->mUnits.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        theUnit = gWorld.GetUnit(theObject->mUnits[i]);
-        if (theUnit != NULL && theUnit->GetHitPoints() > 0)
-            theUnits.push_back(theUnit);
-    }
-    std::sort(theUnits.begin(), theUnits.end(), EESMUnitPriorityLess());
-    theCount = theUnits.size();
-    for (unsigned long j = 0; j < theCount; j++) {
-        theUnit = theUnits[j];
-        if (theUnit == NULL || !(theUnit->GetHitPoints() > 0))
-            continue;
-        long thePlayer = gWorld.mScenarioManager->ChoosePlayer(this->mNewOwner, NULL, true);
-        if (thePlayer != -1 && thePlayer != 0)
-            EEConvertUnit(static_cast<EEComplexUnit*>(theUnit), thePlayer, 0);
-    }
-}
-
-
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
-#include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EERandomMapClass.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 
@@ -652,7 +231,6 @@ void EESMCreateUnit(EESMHostContext* inContext, long inPlayerID, long inUnitType
         gSoundManager->Play(theSound->mSampleID,theSound->mVolume,0.0f,1.0f,false,NULL);
 }
 
-
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEEnvironmentManager.h"
@@ -664,11 +242,9 @@ void EESMCreateUnit(EESMHostContext* inContext, long inPlayerID, long inUnitType
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
-// Plain (non-folded) .rdata floats of this unit in the original (0x44608c, 0x446090, 0x446098), each read by one
-// function; the pooled __real copies of the same values are separate (provisional names)
-static const float kSMEHourFraction = 1.0f / 24.0f;
+// A plain (non-folded) .rdata float of this unit in the original (0x446090; 0x44608c and 0x446098 are effect.rs's),
+// read by one function; the pooled __real copies of the same value are separate (provisional name)
 static const float kSMEOneDegree = 0.017453292f;
-static const float kSMEZoomStep = 0.02f;
 
 // FUNCTION: EXE 0x5bd5eb
 // Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
@@ -682,511 +258,6 @@ void EESMEffect::Execute(bool inIsCinematic)
     unsigned int theSeed = EESMCaptureSeed();
     this->ExecuteUncaptured(inIsCinematic);
     EESMCaptureEffect(this, inIsCinematic, theSeed);
-}
-
-// Execute's body (Execute adds the simulation capture's SMEX record: ee/EEScenarioCapture.h)
-void EESMEffect::ExecuteUncaptured(bool inIsCinematic)
-{
-    unsigned long theSample;
-    std::vector<EEUnit*> theUnits;
-    EESMDialogMessage theMessage;
-    GE3DPoint thePoint;
-    U2DPoint<long> theTile;
-    GEColor theColor;
-    FSFileSpec theSpec;
-    UString theString1;
-    UString theString2;
-    UString thePath;
-    UWideString theMediaText;
-    UWideString theName;
-    UWideString theText;
-    std::vector<U2DPoint<long> > theTiles;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    EESMObject* theUnitObject = theManager->GetScenarioObject(this->mPlaceObject);
-    EESMObject* theObject = theManager->GetScenarioObject(this->mObject);
-    long theType = 0;
-    EESMArea* theArea = theManager->GetArea(this->mPlaceArea);
-    std::vector<long> thePlayers;
-    std::vector<long> theOthers;
-    unsigned long i;
-    switch (this->mType) {
-    case kSMEffectObject:
-        switch (this->mObjectAction) {
-        case kSMObjectActionCreate:
-            this->CreateUnits();
-            break;
-        case kSMObjectActionFreeze:
-            this->FreezeUnits(true);
-            break;
-        case kSMObjectActionUnfreeze:
-            this->FreezeUnits(false);
-            break;
-        case kSMObjectActionKill:
-            this->KillUnits(true);
-            break;
-        case kSMObjectActionRemove:
-            this->KillUnits(false);
-            break;
-        case kSMObjectActionTaskObject:
-            this->TaskUnitsToObject();
-            break;
-        case kSMObjectActionTaskArea:
-            this->TaskUnitsToArea();
-            break;
-        case kSMObjectActionStance:
-            this->SetUnitsStance();
-            break;
-        case kSMObjectActionOwner:
-            this->SetUnitsOwner();
-            break;
-        case kSMObjectActionUnitAttribute:
-        case kSMObjectActionClassAttribute:
-            this->ChangeAttribute();
-            break;
-        case kSMObjectActionClassName:
-            this->SetClassName();
-            break;
-        case kSMObjectActionFaceObject:
-            this->FaceObject();
-            break;
-        }
-        break;
-    case kSMEffectPlayer:
-        theManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-        for (i = 0; i < thePlayers.size(); i++) {
-            switch (this->mPlayerAction) {
-            case kSMPlayerActionScriptCamera:
-                if (gWorld.mCurrentPlayer == thePlayers[i])
-                    this->ScriptCamera();
-                break;
-            case kSMPlayerActionVictory:
-            case kSMPlayerActionDefeat:
-                if (thePlayers[i] != 0 && gWorld.GetPlayer(thePlayers[i]) != NULL) {
-                    if (!gWorld.GetPlayer(thePlayers[i])->mObserverMode) {
-                        gWorld.GetPlayer(thePlayers[i])->SetGameResult(this->GetPlayerAction() == kSMPlayerActionVictory ? 1 : 2);
-                        gWorld.RemovePlayerFromGame(this->mPlayerAction == kSMPlayerActionVictory, thePlayers[i]);
-                    }
-                    if (gWorld.GetPlayer(thePlayers[i])->mComputerPlayer != NULL)
-                        gWorld.GetPlayer(thePlayers[i])->mComputerPlayer->SetActive(false);
-                }
-                break;
-            case kSMPlayerActionDiplomacy: {
-                EEPlayer* thePlayer = gWorld.GetPlayer(thePlayers[i]);
-                if (thePlayer != NULL) {
-                    theManager->ChoosePlayer(this->mDiplomacyPlayer, &theOthers, true);
-                    for (unsigned long j = 0; j < theOthers.size(); j++) {
-                        if (theOthers[j] == thePlayers[i])
-                            continue;
-                        gWorld.SetDiplomaticStance(thePlayer->mPlayerID, theOthers[j], this->mDiplomacy);
-                        if (this->mDiplomacy != 1)
-                            thePlayer->NoticeTargetPlayer(gWorld.GetPlayer(theOthers[j]), false);
-                    }
-                }
-                break;
-            }
-            case kSMPlayerActionFadeIn:
-                if (thePlayers[i] == gWorld.mCurrentPlayer)
-                    gGraphics->PostFadeIn(3000);
-                break;
-            case kSMPlayerActionFadeOut:
-                if (gInCinematic && thePlayers[i] == gWorld.mCurrentPlayer)
-                    gGraphics->PostFadeOut(3000);
-                break;
-            case kSMPlayerActionSetAttributeLevel:
-                this->SetPlayerAttribute(thePlayers[i], this->mPlayerAttribute, this->mPlayerAttributeMode, this->mPlayerAttributeAmount);
-                break;
-            case kSMPlayerActionModifyTechTree: {
-                EEPlayer* thePlayer = gWorld.GetPlayer(thePlayers[i]);
-                if (thePlayer != NULL) {
-                    if (this->mIsAddTechnology) {
-                        if (this->mTechnology < EEEpochCount()) {
-                            if (thePlayer->GetTechTree()->mEndEpoch < this->mTechnology)
-                                thePlayer->GetTechTree()->ResetEpochRange(thePlayer->GetTechTree()->mStartEpoch, this->mTechnology);
-                            thePlayer->GetTechTree()->Get(this->mTechnology)->MakeAvailable();
-                        } else {
-                            EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
-                            theNode->MakeAvailable();
-                            theNode->mEpoch = 0;
-                            theNode->mObsoleteEpoch = EEEpochCount();
-                            theNode->SetScenEditorObsoleted(false, false);
-                            theNode->SetObsolete(false, false);
-                            if (theNode->NeedsUnitMedia() == true && !theNode->mIsUnitMediaLoaded) {
-                                thePlayer->SetUnitClassMedia(theNode->mData->mUnitClass, 0x7f);
-                                theNode->mIsUnitMediaLoaded = true;
-                            }
-                            if (theNode->mData->mKind == 4)
-                                thePlayer->GetTechTree()->mEpochsBeforeWonders = 0;
-                            thePlayer->GetTechTree()->Research(this->mTechnology, NULL);
-                        }
-                    } else {
-                        if (thePlayer->GetTechTree()->Get(this->mTechnology)->mData->mMakesUnit) {
-                            EEUnitClass* theClass = gUnitClassTable[thePlayer->GetTechTree()->Get(this->mTechnology)->mData->mUnitClass];
-                            if (theClass != NULL)
-                                EEReplaceQueuedTechnology(thePlayer, theClass, 100000);
-                        }
-                        thePlayer->GetTechTree()->MakeObsolete(this->mTechnology);
-                    }
-                    theManager->AddV134Effect(*this);
-                }
-                break;
-            }
-            case kSMPlayerActionVisibilityOn: {
-                EEPlayer* thePlayer = gWorld.GetPlayer(thePlayers[i]);
-                if (thePlayer != NULL) {
-                    thePlayer->mSeesAll = true;
-                    if (thePlayer == gWorld.GetPlayer(gWorld.mCurrentPlayer))
-                        gMiniMap->Redraw();
-                }
-                break;
-            }
-            case kSMPlayerActionVisibilityOff: {
-                EEPlayer* thePlayer = gWorld.GetPlayer(thePlayers[i]);
-                if (thePlayer != NULL) {
-                    thePlayer->mSeesAll = false;
-                    if (thePlayer == gWorld.GetPlayer(gWorld.mCurrentPlayer))
-                        gMiniMap->Redraw();
-                }
-                break;
-            }
-            case kSMPlayerActionAwardCivPoints: {
-                EEPlayer* thePlayer = gWorld.GetPlayer(thePlayers[i]);
-                if (thePlayer != NULL) {
-                    thePlayer->mCivilization.AddPoints(this->mCivPoints);
-                    EESetCivBuilderButtonBlinking(true);
-                    EESoundObject* theSound = EESoundObject::Get(kSoundTrumpets);
-                    if (theSound != NULL)
-                        theSound->Play();
-                }
-                break;
-            }
-            case kSMPlayerActionMiniMapFlare: {
-                EEPlayer* thePlayer = gWorld.GetPlayer(thePlayers[i]);
-                if (thePlayer != NULL) {
-                    RTSTile* theMapTile;
-                    if (this->mUsesLocationArea) {
-                        EESMArea* theEventArea = theManager->GetArea(this->mLocationArea);
-                        if (theEventArea->IsOffMap() || theEventArea->IsUnset())
-                            break;
-                        theTile = theEventArea->GetCenterTile();
-                        theMapTile = gWorld.mMap->GetTile(theTile.GetX(), theTile.GetY());
-                    } else {
-                        EESMObject* theEventObject = theManager->GetScenarioObject(this->mLocationObject);
-                        theEventObject->Evaluate(false);
-                        EEUnit* theUnit = NULL;
-                        // own index: i is the loop over the chosen players
-                        for (unsigned long theIndex = 0; theUnit == NULL && theIndex < theEventObject->GetUnitCount(); theIndex++)
-                            theUnit = gWorld.GetUnit(theEventObject->mUnits[theIndex]);
-                        if (theUnit == NULL)
-                            break;
-                        if (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mContainer == NULL) {
-                            theTile.mX = theUnit->mTileX;
-                            theTile.mY = theUnit->mTileY;
-                            theMapTile = theUnit->mTile;
-                        } else {
-                            theTile.mX = theUnit->mComplexUnit->mContainer->mTileX;
-                            theTile.mY = theUnit->mComplexUnit->mContainer->mTileY;
-                            theMapTile = theUnit->mComplexUnit->mContainer->mTile;
-                        }
-                    }
-                    if (theMapTile != NULL)
-                        thePlayer->mEvents.AddEvent(theTile, 3, thePlayer, -1, true);
-                }
-                break;
-            }
-            }
-        }
-        break;
-    case kSMEffectTrigger: {
-        EESMTrigger* theTrigger = theManager->GetTrigger(this->mTrigger);
-        switch (this->mTriggerState) {
-        case kSMTriggerStateOn:
-            theTrigger->mConditionStartTime = 0;
-            theTrigger->mIsOn = true;
-            break;
-        case kSMTriggerStateOff:
-            theTrigger->mIsOn = false;
-            break;
-        case kSMTriggerStateFired:
-            theTrigger->mHasFired = true;
-            break;
-        case kSMTriggerStateNotFired:
-            theTrigger->mHasFired = false;
-            break;
-        }
-        break;
-    }
-    case kSMEffectMedia:
-        switch (this->mMediaAction) {
-        case kSMMediaActionPlaySound: {
-            if (gWorld.mGameOptions.mCampaignName.GetLength() > 0 && gWorld.mGameOptions.mCampaignChecksum > 0)
-                thePath = gU52A280;
-            else
-                thePath = gEmptyString;
-            unsigned long theInstance;
-            EELoadSound("Sounds\\" + thePath + UString(this->mFileName), 0x31, theSample, theInstance, 0);
-            if (!UIsNone32(theInstance))
-                gSoundManager->RegisterOneShotSound(theSample, theInstance);
-            break;
-        }
-        case kSMMediaActionChangeText: {
-            EEUISCIFormManager* theForm = EEUISCIFormManager::Get();
-            theMediaText = "\n";
-            theMediaText += this->mDescription;
-            switch (this->mTextObject) {
-            case kSMMediaTextHints:
-                if (this->mIsClearText == true)
-                    theManager->mMediaStrings.mHints = UWideString(gEmptyString);
-                else
-                    theManager->mMediaStrings.mHints = theManager->mMediaStrings.mHints + theMediaText;
-                break;
-            case kSMMediaTextInstructions:
-                if (this->mIsClearText == true)
-                    theManager->mMediaStrings.mInstructions = UWideString(gEmptyString);
-                else
-                    theManager->mMediaStrings.mInstructions = theManager->mMediaStrings.mInstructions + theMediaText;
-                break;
-            case kSMMediaTextHistory:
-                if (this->mIsClearText == true)
-                    theManager->mMediaStrings.mHistory = UWideString(gEmptyString);
-                else
-                    theManager->mMediaStrings.mHistory = theManager->mMediaStrings.mHistory + theMediaText;
-                break;
-            }
-            EESoundObject* theSound = EESoundObject::Get(kSoundTrumpets);
-            if (theSound != NULL)
-                theSound->Play();
-            theForm->SetBlinking(true);
-            break;
-        }
-        case kSMMediaActionSendDialogue:
-            this->ExpandTokens(this->mMessage, theText);
-            theManager->ChoosePlayer(this->mMessagePlayer, &thePlayers, true);
-            for (i = 0; i < thePlayers.size(); i++) {
-                if (thePlayers[i] == gWorld.mCurrentPlayer) {
-                    theMessage.mText = theName;
-                    theMessage.mText += theText;
-                    theMessage.mDuration = this->mDuration * 1000;
-                    theMessage.mIsCinematic = inIsCinematic;
-                    theObject->Evaluate(false);
-                    if (theObject->mUnits.size() > 0 && gWorld.GetUnit(theObject->mUnits[0]) != NULL) {
-                        EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[0]);
-                        if (theUnit != NULL) {
-                            theMessage.mUnitType = theUnit->mUnitClass->mUnitType;
-                            theMessage.mScrollSpeed = this->mIntValue1;
-                            theMessage.mUnitID = theUnit->mUnitID;
-                        }
-                    } else
-                        theMessage.mUnitType = 0;
-                    if (gWorld.mGameOptions.mCampaignName.GetLength() > 0 && gWorld.mGameOptions.mCampaignChecksum > 0)
-                        thePath = gU52A280;
-                    else
-                        thePath = gEmptyString;
-                    theMessage.mSound = (const char*)(thePath + (const char*)this->mFileName);
-                    gWorld.mScenarioManager->AddMessage(theMessage);
-                } else
-                    gUIManager->DisplayMessage(theMediaText, 1, NULL, NULL, true);
-            }
-            break;
-        case kSMMediaActionSendChatMessage:
-            this->ExpandTokens(this->mMessage, theText);
-            theManager->ChoosePlayer(this->mMessagePlayer, &thePlayers, true);
-            for (i = 0; i < thePlayers.size(); i++) {
-                if (thePlayers[i] != gWorld.mCurrentPlayer)
-                    continue;
-                if (this->mDuration > 0)
-                    gUserInterface->AddChatLogEntry(theColor, theName, theText, this->mDuration * 1000, 1);
-                else {
-                    // A chat message without a duration is shown in a message box: with its text (the box showed
-                    // theMediaText, which only the Change Text action fills, so it was empty).
-                    UWideString theChat = theName;
-                    theChat += theText;
-                    gUIManager->DisplayMessage(theChat, 1, NULL, NULL, true);
-                }
-            }
-            break;
-        }
-        break;
-    case kSMEffectGame:
-        switch (this->mGameAction) {
-        case kSMGameActionDaylightHour:
-            gWorld.SetTimeOfDay((float)((this->mDaylightHour + 18) % 24) * kSMEHourFraction);
-            break;
-        case kSMGameActionDayPerNightCycleTime:
-            if (this->mCycleTime > 0)
-                gPhysics->mTimeOfDayRuns = true;
-            else
-                gPhysics->mTimeOfDayRuns = false;
-            break;
-        case kSMGameActionCalamity: {
-            unsigned long theClassEnum = this->mPlacedEffect;
-            if (theClassEnum == 0)
-                theClassEnum = gPhysics->GetRandom(1L, 0x21L);
-            EECalamityClass* theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(
-                (EECalamityEnum)theClassEnum);
-            if (theClass == NULL)
-                break;
-            if (!USingleton<EECalamityManager>::GetInstance()->GetCalamityType((EECalamityEnum)theClassEnum, theType))
-                break;
-            switch (theType) {
-            case 1:
-                if (theClass->CanCastAt(NULL, thePoint, 0, 0, true, NULL) == 0)
-                    USingleton<EECalamityManager>::GetInstance()->CreateGlobalCalamity(theClassEnum, 0, 0);
-                break;
-            case 2:
-                if (this->mUsesPlaceArea && theArea != NULL) {
-                    if (!theArea->IsUnset() && !theArea->IsOffMap()) {
-                        theArea->GetTiles(theTiles);
-                        EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-                        if (theTiles.size() > 0
-                            && theClass->CanCastAt(NULL, thePoint, theTiles[0].GetX(), theTiles[0].GetY(), true, NULL) == 0)
-                            USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(theClassEnum, -1,
-                                theTiles[0].GetX(), theTiles[0].GetY(), 0);
-                    }
-                } else if (!this->mUsesPlaceArea && theUnitObject != NULL && theUnitObject->Evaluate(false)) {
-                    for (i = 0; i < theUnitObject->mUnits.size(); i++) {
-                        EEUnit* theUnit = gWorld.GetUnit(theUnitObject->GetUnitAt(i));
-                        if (theUnit != NULL
-                            && theClass->CanCastAt(NULL, thePoint, theUnit->mTileX, theUnit->mTileY, true, theUnit) == 0)
-                            USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity(theClassEnum, -1,
-                                theUnit->mTileX, theUnit->mTileY, 0);
-                    }
-                }
-                break;
-            case 3:
-                if (theUnitObject != NULL && !this->mUsesPlaceArea && theUnitObject->Evaluate(false)) {
-                    for (i = 0; i < theUnitObject->mUnits.size(); i++) {
-                        EEUnit* theUnit = gWorld.GetUnit(theUnitObject->mUnits[i]);
-                        if (theUnit != NULL
-                            && theClass->CanCastAt(NULL, thePoint, theUnit->mTileX, theUnit->mTileY, true, theUnit) == 0)
-                            USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity(theClassEnum, -1,
-                                theUnitObject->mUnits[i], 0);
-                    }
-                }
-                if (this->mUsesPlaceArea && theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
-                    theUnits.clear();
-                    theArea->GetTiles(theTiles);
-                    for (i = 0; i < theTiles.size(); i++) {
-                        EEMapTile* theMapTile = gWorld.mMap->GetTile(theTiles[i].GetX(), theTiles[i].GetY());
-                        if (theMapTile == NULL)
-                            continue;
-                        for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                            EEUnit* theUnit = theNode->mUnit;
-                            if (theUnit == NULL || std::find(theUnits.begin(), theUnits.end(), theUnit) != theUnits.end()
-                                || theClass->CanCastAt(NULL, thePoint, theUnit->mTileX, theUnit->mTileY, true, theUnit) != 0)
-                                continue;
-                            USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity(theClassEnum, -1,
-                                theUnit->GetUnitID(), 0);
-                            theUnits.push_back(theUnit);
-                        }
-                    }
-                }
-                break;
-            }
-            break;
-        }
-        case kSMGameActionGraphicEffect: {
-            EEGraphicEffect* theEffect = EEGraphicEffect::Get(this->mPlacedEffect);
-            theType = this->mUsesPlaceArea ? 2 : 3;
-            if (theEffect == NULL)
-                break;
-            theEffect->Load(false);
-            switch (theType) {
-            case 2:
-                if (this->mUsesPlaceArea && theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
-                    theArea->GetTiles(theTiles);
-                    if (theEffect->mKind == kEffect3DRain || theEffect->mKind == kEffect3DSnow)
-                        gEffectManager->CreateWeatherEffect(theTiles, theEffect, NULL);
-                    else {
-                        EEAIRandomShuffle(theTiles.begin(), theTiles.end());
-                        if (theTiles.size() > 0 && gWorld.mMap->GetTile(theTiles[0].GetX(), theTiles[0].GetY()) != NULL) {
-                            thePoint.mX = (float)theTiles[0].GetX() + 0.5f;
-                            thePoint.mY = (float)theTiles[0].GetY() + 0.5f;
-                            thePoint.mZ = gWorld.mMap->GetTile(theTiles[0].GetX(), theTiles[0].GetY())->GetHeight();
-                            long theTerrain = gWorld.mMap->GetTile(theTiles[0].GetX(), theTiles[0].GetY())->mTerrainType;
-                            if (theTerrain == kTerrainDeepWater || theTerrain == kTerrainShallowWater)
-                                thePoint.mZ = 0.0f;
-                            gEffectManager->CreatePlacedEffect(thePoint, theEffect, NULL);
-                        }
-                    }
-                }
-                break;
-            case 3:
-                if (theUnitObject != NULL && !this->mUsesPlaceArea && theUnitObject->Evaluate(false)) {
-                    for (i = 0; i < theUnitObject->mUnits.size(); i++) {
-                        EEUnit* theUnit = gWorld.GetUnit(theUnitObject->mUnits[i]);
-                        if (theUnit == NULL)
-                            continue;
-                        if ((theEffect->mKind == kEffect3DTracers || theEffect->mKind == kEffect3DShells || theEffect->mKind == kEffect2DWinterBreath
-                             || theEffect->mKind == kEffect2DSmokeMuzzleBlast)
-                            && theUnit->mComplexUnit != NULL && i + 1 < theUnitObject->mUnits.size()
-                            && gWorld.GetUnit(theUnitObject->mUnits[i + 1]) != NULL)
-                            gEffectManager->CreateEffectBetweenUnits(theUnit, gWorld.GetUnit(theUnitObject->mUnits[i + 1]),
-                                                                     theEffect, NULL);
-                        else if (theEffect->mKind == kEffect3DMarchingLine && i + 1 < theUnitObject->mUnits.size()
-                                 && gWorld.GetUnit(theUnitObject->mUnits[i + 1]) != NULL)
-                            gEffectManager->CreateEffectBetweenUnits(theUnit, gWorld.GetUnit(theUnitObject->mUnits[i + 1]),
-                                                                     theEffect, NULL);
-                        else
-                            gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, false, 0, 0);
-                    }
-                }
-                break;
-            }
-            theEffect->Unload();
-            break;
-        }
-        case kSMGameActionStartCinematicMode: {
-            theManager->StartCinematic();
-            // the original rounds x * 0.1f and then adds 0.1f (fmul; fadd); the one-expression form is
-            // refactored by VC6 into (x + 1.0f) * 0.1f, one rounding fewer
-            float theSpeed = (float)this->mDaylightHour * 0.1f;
-            theSpeed += 0.1f;
-            gWorld.SetGameSpeed(theSpeed);
-            break;
-        }
-        case kSMGameActionEndCinematicMode:
-            if (!theManager->mIsShowingDialog && theManager->GetNumMessages() == 0)
-                theManager->EndCinematic();
-            else
-                theManager->SetTimedEffectHasRun(this, false);
-            break;
-        case kSMGameActionAmbientWeather:
-            if (gWorld.mEnvironmentManager != NULL)
-                gWorld.mEnvironmentManager->SetEnabled(this->mIsOn);
-            break;
-        }
-        break;
-    case kSMEffectAI:
-        switch (this->mAIAction) {
-        case kSMAIActionModifyAIMilitaryTarget:
-            this->ModifyAIMilitaryTarget();
-            break;
-        case kSMAIActionCreateAIMilitaryGroup:
-            this->CreateAIMilitaryGroup();
-            break;
-        case kSMAIActionBuildObject:
-            this->BuildObject();
-            break;
-        case kSMAIActionMaintainObject:
-            this->MaintainObject();
-            break;
-        case kSMAIActionSetAIToggle:
-            this->SetAIToggle();
-            break;
-        case kSMAIActionSetAIVariable:
-            this->SetAIVariable();
-            break;
-        case kSMAIActionSetFavoriteUnits:
-            this->SetFavoriteUnits();
-            break;
-        }
-        break;
-    }
-}
-
-// Does nothing (MaintainObject; empty: ICF-folded into 0xe123d with the other empty members)
-void EESMEffect::MaintainObject()
-{
 }
 
 // FUNCTION: EXE 0x5bef17
@@ -1204,105 +275,6 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
     ee_scenario_text_free(theResult);
     if (theCapture)
         EESMCaptureTokens(theText, outText, theSeed);   // TEST ONLY: SMTK
-}
-
-
-// FUNCTION: EXE 0x5bf5d8
-// Turns the scenario object's idle living units to face mAttributeAmount degrees, at once (mUsesPercent) or with a turn
-// goal; units already within one degree are left alone
-void EESMEffect::FaceObject()
-{
-    EESMObject* theObject = gWorld.GetScenarioManager()->GetScenarioObject(this->mObject);
-    theObject->Evaluate(0);
-    unsigned long theCount = theObject->mUnits.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[i]));
-        if (theUnit == NULL || !(theUnit->GetHitPoints() > 0) ||
-            (theUnit->GetGoal() != NULL && theUnit->GetCommandType() != kActionIdle) || !(theUnit->GetMaxAngularVelocity() > 0.0f))
-            continue;
-        GETransformation theLocation(false);
-        theLocation = theUnit->mPhysicalModel.GetLocation();
-        float theYaw = this->mAttributeAmount * 0.017453292f;
-        if (!(UMAbs(theYaw - UMArcTan2(theLocation.GetElement(1, 0), theLocation.GetElement(0, 0))) >= kSMEOneDegree))
-            continue;
-        if (this->mUsesPercent) {
-            theLocation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-            theUnit->SetTransformation(theLocation, true);
-            GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-            theUnit->PlaceOnGround(thePosition);
-        } else {
-            theUnit->ClearGoals(0);
-            theUnit->SetGoal(EEUGRust::NewLocation(&GE3DPoint(theUnit->mPhysicalModel.GetLocation()),
-                true, true, true, theYaw, false, false), 0, 0);
-            theUnit->StartAction(kActionPrepareToMove);
-            theUnit->GetUnitClass()->ActionChanged(theUnit);
-        }
-    }
-}
-
-
-// FUNCTION: EXE 0x5bf7f9
-// Freezes the scenario object's living units (stopped, aircraft circle, gates close; disabled, not commandable or
-// deletable) or unfreezes them
-void EESMEffect::FreezeUnits(bool inFlag)
-{
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    unsigned long theObjectIndex = this->mObject;
-    if (!(theObjectIndex < theManager->GetNumObjects()))
-        return;
-    EESMObject* theObject = theManager->mObjects[theObjectIndex];
-    if (theObject == NULL)
-        return;
-    if (!theObject->mIsSelectOnMap && (theObject->mIsDynamic == true || theObject->mUnits.size() == 0))
-        theObject->Evaluate(0);
-    unsigned long theNumUnits = theObject->mUnits.size();
-    for (unsigned long i = 0; i < theNumUnits; ++i) {
-        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theObject->mUnits[i]));
-        if (theUnit == NULL || !(theUnit->GetHitPoints() > 0))
-            continue;
-        if (inFlag == true) {
-            theUnit->ClearGoals(0);
-            EEUnitClass* theClass = theUnit->GetUnitClass();
-            if ((theClass->GetCategory() == kUnitCategoryAirplane || theClass->GetCategory() == kUnitCategoryPlanetSpaceship)
-                && theUnit->GetCommandType() != kActionIdle) {
-                theUnit->StartAction(kActionCircle);
-                theUnit->GetUnitClass()->ActionChanged(theUnit);
-            } else if (theClass->GetCategory() == kUnitCategoryGate) {
-                EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theClass);
-                theUnit->StartAction(kActionClosing);
-                theUnit->GetUnitClass()->ActionChanged(theUnit);
-            } else if (!theClass->mIsWall) {
-                theUnit->StartAction(kActionIdle);
-                theUnit->GetUnitClass()->ActionChanged(theUnit);
-            }
-            theUnit->SetIsDeletable(false);
-        } else {
-            theUnit->SetIsDeletable(theUnit->GetUnitClass()->mIsDeletable);
-        }
-        theUnit->SetDisabled(inFlag, 0);
-        theUnit->SetIsCommandable(!inFlag);
-    }
-}
-
-// FUNCTION: EXE 0x5bf9b7
-// Kills (inFlag) or removes the scenario object's living units; off-map units are dropped from their player directly
-void EESMEffect::KillUnits(bool inFlag)
-{
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    EESMObject* theObject = theManager->GetScenarioObject(this->mObject);
-    if (theObject == NULL)
-        return;
-    if (!theObject->mIsSelectOnMap && (theObject->mIsDynamic == true || theObject->mUnits.size() == 0))
-        theObject->Evaluate(0);
-    unsigned long theNumUnits = theObject->mUnits.size();
-    for (unsigned long i = 0; i < theNumUnits; ++i) {
-        EEUnit* theUnit = gWorld.GetUnit(theObject->GetUnitAt(i));
-        if (theUnit == NULL || !(theUnit->GetHitPoints() > 0))
-            continue;
-        theUnit->Kill(inFlag, false, false);
-        if (theUnit->mTileNode == NULL)
-            theUnit->GetPlayer()->KillUnit(theUnit, false);
-    }
 }
 
 // FUNCTION: EXE 0x5bfa67
@@ -1329,108 +301,8 @@ long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_effect_save(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c07c4
-// Starts a scripted camera move: along an object's camera-object units, else from the start area or unit to
-// the end area or unit over mIntValue1, at zoom level mIntValue2
-void EESMEffect::ScriptCamera()
-{
-    U2DPoint<long> theTile;
-    std::vector<unsigned long> theUnits;
-    EESMObject* theStartObject = gWorld.mScenarioManager->GetScenarioObject(this->mTargetObject);
-    EESMObject* theEndObject = gWorld.mScenarioManager->GetScenarioObject(this->mLocationObject);
-    EESMArea* theStartArea = gWorld.mScenarioManager->GetArea(this->mTargetArea);
-    EESMArea* theEndArea = gWorld.mScenarioManager->GetArea(this->mLocationArea);
-    EEUnit* theEndUnit = NULL;
-    EEUnit* theStartUnit = NULL;
-    GE3DPoint theEndPoint(-10000.0f,0.0f,0.0f);
-    GE3DPoint theStartPoint(-10000.0f,0.0f,0.0f);
-    long theDuration = this->mIntValue1;
-    long theZoom = this->mIntValue2;
-    bool theStartIsArea = this->mUsesTargetArea;
-    bool theEndFlag = this->mIsAttack;
-    bool theStartFlag = this->mUsesFavorites;
-    EECameraControl& theCamera = gWorld.mCameraControl;
-    theCamera.ResetPath();
-    if (!theStartIsArea && theStartObject != NULL && this->mTargetObject != 0 && !this->mUsesLocationArea
-        && theEndObject != NULL && this->mLocationObject != 0 && this->mLocationObject == this->mTargetObject) {
-        bool theAllCameraPoints = true;
-        theEndObject->Evaluate(false);
-        theEndObject->GetUnits(theUnits);
-        for (unsigned long i = 0; i < theUnits.size(); ++i) {
-            EEUnit* theUnit = gWorld.GetUnit(theUnits[i]);
-            if (theUnit == NULL || theUnit->mUnitClass->mUnitType != kUnitTypeCameraObject)
-                theAllCameraPoints = false;
-        }
-        if (theAllCameraPoints) {
-            theCamera.mTurnYaw = 0.0f;
-            if (theZoom != 0) {
-                float theLevel = (float)(theZoom - 1) * kSMEZoomStep - 1.0f;
-                theCamera.SetMode(3);
-                theCamera.SetZoom(theLevel > 0.0f ? theLevel : 0.0f);
-            }
-            for (unsigned long j = 0; j < theUnits.size(); ++j) {
-                long theStepDuration = theUnits.size() == 1 || j != 0 ? theDuration : 0;
-                // These camera APIs consume the original base-unit pointer, including its optional complex-unit link.
-                EEUnit* theUnit = gWorld.GetUnit(theUnits[j]);
-                EECameraKey theKey;
-                theKey.mOffset = theCamera.GetEndOffset();
-                theCamera.GetUnitPoint(theUnit,theKey.mFocus);
-                theCamera.GetUnitTurn(theUnit,theKey.mT40);
-                theKey.mWait = 0.0f;
-                theKey.mChanged = theStepDuration == 0;
-                theKey.mRate = theStepDuration == 0 ? 0.0f : 1.0f / (float)theStepDuration;
-                theCamera.AddKey(theKey);
-            }
-            theCamera.StartPath();
-            return;
-        }
-    }
-    if (this->mUsesLocationArea) {
-        if (!theEndArea->IsUnset() && !theEndArea->IsOffMap()) {
-            theTile = theEndArea->GetCenterTile();
-            EEMapTile* theMapTile = gWorld.mMap->GetTile(theTile.mX,theTile.mY);
-            if (theMapTile != NULL) {
-                theEndPoint.mX = (float)theTile.mX + 0.5f;
-                theEndPoint.mY = (float)theTile.mY + 0.5f;
-                theEndPoint.mZ = theMapTile->mHeight;
-            }
-        }
-    } else if (theEndObject != NULL && this->mLocationObject != 0) {
-        theEndObject->Evaluate(false);
-        if (theEndObject->mUnits.size() != 0)
-            theEndUnit = gWorld.GetUnit(*(theEndObject->mUnits.begin()));
-    }
-    if (!theStartIsArea) {
-        if (theStartObject != NULL && this->mTargetObject != 0) {
-            theStartObject->Evaluate(false);
-            if (theStartObject->mUnits.size() != 0)
-                theStartUnit = gWorld.GetUnit(*(theStartObject->mUnits.begin()));
-        }
-    } else if (!theStartArea->IsUnset() && !theStartArea->IsOffMap()) {
-        theTile = theStartArea->GetCenterTile();
-        EEMapTile* theMapTile = gWorld.mMap->GetTile(theTile.mX,theTile.mY);
-        if (theMapTile != NULL) {
-            theStartPoint.mX = (float)theTile.mX + 0.5f;
-            theStartPoint.mY = (float)theTile.mY + 0.5f;
-            theStartPoint.mZ = theMapTile->mHeight;
-        }
-    }
-    float theLevel;
-    if (theZoom == 0)
-        theLevel = -1.1f;
-    else {
-        --theZoom;
-        theLevel = (float)theZoom * kSMEZoomStep - 1.0f;
-        theCamera.SetMode(3);
-    }
-    theCamera.MoveTo(theEndUnit,theEndPoint,theEndFlag,(float)theDuration,
-                        theStartUnit,theStartPoint,theStartFlag,theLevel,0.0f,0.0f);
-}
-
-
 #include "ee/EECPCivilizationManager.h"
 
-#include "ee/EEUnitClassIDs.h"
 #include "ee/EESMAIFields.h"
 
 namespace {
@@ -1486,953 +358,1253 @@ void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 
 }   // namespace
 
-// FUNCTION: EXE 0x5c0cc9
-// Sets one AI tuning value (mAIAttribute) on each chosen computer player from mIntValue1/2 and mFloatValue; most
-// building-count settings are also queued as pending effects. The stores are Rust's (ee_scenario aivar.rs: the
-// original's switch as data); the C++ applies them.
-void EESMEffect::SetAIVariable()
-{
-    std::vector<long> thePlayers;
-    EESMEffect theEffect;
-    EeScenarioAiWrite theWrites[EE_SCENARIO_AI_MAX_WRITES];
-    size_t theCount = 0;
-    bool theDeferred = ee_scenario_ai_variable(this, theWrites, &theCount);
-    gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-    for (unsigned long i = 0; i < thePlayers.size(); ++i) {
-        EEPlayer* theBasePlayer = gWorld.GetPlayer(thePlayers[i]);
-        if (theBasePlayer == NULL || theBasePlayer->IsHuman())
-            continue;
-        // Original dispatch uses the computer-player-only tuning and manager members after its player-kind test.
-        EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(theBasePlayer);
-        for (size_t w = 0; w < theCount; w++)
-            EESMStoreAI(thePlayer, theWrites[w]);
-        if (!theDeferred)
-            continue;
-        theEffect.Copy(*this);
-        theEffect.mPlayer = thePlayer->mPlayerID + 6;
-        gWorld.mScenarioManager->AddV134Effect(theEffect);
-    }
-}
-
-// FUNCTION: EXE 0x5c2507
-// Sets each chosen computer player's favourite air, land and sea unit types (mObject, mIntValue1, mIntValue2), each
-// only when the class is a moving unit of that kind (air and sea ones must attack)
-void EESMEffect::SetFavoriteUnits()
-{
-    std::vector<long> thePlayers;
-    gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-    for (unsigned long i = 0; i < thePlayers.size(); i++) {
-        EEPlayer* theBasePlayer = gWorld.GetPlayer(thePlayers[i]);
-        if (theBasePlayer == NULL || theBasePlayer->IsHuman())
-            continue;
-        EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(theBasePlayer);
-        EEUnitClass* theClass = gUnitClassTable[this->mObject];
-        if (theClass != NULL && (theClass->GetDomains() & kMovementAir) && !theClass->GetIsProjectile() && !theClass->IsLandBuilding()
-            && theClass->GetAttack() > 0 && theClass->GetMaxVelocity() > 0.0f) {
-            thePlayer->SetFavoriteAirType(this->mObject);
-        }
-        theClass = gUnitClassTable[this->mIntValue1];
-        if (theClass != NULL && !(theClass->GetDomains() & kMovementSea) && (!(theClass->GetDomains() & kMovementAir) || theClass->FliesOver())
-            && !theClass->GetIsProjectile() && !theClass->IsLandBuilding() && theClass->GetMaxVelocity() > 0.0f) {
-            switch (theClass->GetCategory()) {
-            case kUnitCategoryAmbient: case kUnitCategoryResource: case kUnitCategoryBuilding: case kUnitCategoryAirplane: case kUnitCategoryNaval:
-            case kUnitCategoryProjectile: case kUnitCategorySubmergedNaval: case kUnitCategoryBomb: case kUnitCategoryMissile:
-            case kUnitCategoryNavalPriest:
-            case kUnitCategoryHelicopterTransport: case kUnitCategoryNavalTransport: case kUnitCategoryBuilding19: case kUnitCategoryTorpedo: case kUnitCategoryNavalBuilding: case kUnitCategoryNavalCitizen:
-            case kUnitCategoryMiningBuilding: case kUnitCategoryGate:
-            case kUnitCategorySpaceship: case kUnitCategorySpaceBuilding: case kUnitCategorySpaceTransport: case kUnitCategoryPlanetSpaceship:
-                break;
-            default:
-                thePlayer->SetFavoriteLandType(this->mIntValue1);
-                break;
-            }
-        }
-        long theType = this->GetIntValue2();
-        theClass = gUnitClassTable[theType];
-        if (theClass != NULL && (theClass->GetDomains() & kMovementSea) && !theClass->GetIsProjectile() && theClass->GetMaxVelocity() > 0.0f
-            && theClass->GetAttack() > 0) {
-            thePlayer->SetFavoriteSeaType(theType);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x5c26da
-// Switches a behaviour of each chosen computer player on or off: active, cheat, attack, defend, build, explore, ignore
-// others or gather
-void EESMEffect::SetAIToggle()
-{
-    std::vector<long> thePlayers;
-    gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
-    for (unsigned long i = 0; i < thePlayers.size(); i++) {
-        EEPlayer* theBasePlayer = gWorld.GetPlayer(thePlayers[i]);
-        if (theBasePlayer == NULL || theBasePlayer->IsHuman())
-            continue;
-        EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(theBasePlayer);
-        switch (this->mAIToggle) {
-        case kSMAIToggleActive:
-            thePlayer->SetActive(this->mIsOn);
-            break;
-        case kSMAIToggleCheat:
-            thePlayer->SetIsCheating(this->mIsOn);
-            break;
-        case kSMAIToggleAttack:
-            thePlayer->SetCanAttack(this->mIsOn);
-            break;
-        case kSMAIToggleDefend:
-            thePlayer->SetCanDefend(this->mIsOn);
-            break;
-        case kSMAIToggleBuildPerRepair:
-            thePlayer->SetCanBuild(this->mIsOn);
-            break;
-        case kSMAIToggleExplore:
-            thePlayer->SetCanExplore(this->mIsOn);
-            break;
-        case kSMAIToggleIgnore:
-            thePlayer->SetIgnoreOthers(this->mIsOn);
-            break;
-        case kSMAIToggleGather:
-            thePlayer->SetCanGather(this->mIsOn);
-            break;
-        }
-    }
-}
-
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 
-// FUNCTION: EXE 0x5c2811
-// Applies a stance to the scenario object's living units: explore, stop, lock or unlock a gate, patrol their town or a
-// behaviour (scout, stand ground, guard, harass, cautious, aggressive)
-void EESMEffect::SetUnitsStance()
-{
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    if (theObject == NULL)
-        return;
-    theObject->Evaluate(false);
-    unsigned long theCount = theObject->mUnits.size();
-    if (theCount == 0)
-        return;
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEUnit* theBaseUnit = gWorld.GetUnit(*(theObject->mUnits.begin() + i));
-        EEComplexUnit* theUnit = theBaseUnit != NULL ? theBaseUnit->mComplexUnit : NULL;
-        if (theUnit == NULL || theUnit->mHitPoints <= 0)
-            continue;
-        switch (this->mStance) {
-        case kSMStanceExplore:
-        {
-            EEPlayer* thePlayer = theUnit->mPlayer;
-            EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-            theGroup->AddMember(theUnit, true);
-            thePlayer->mPendingGroups.push_back(theGroup);
-            theGroup->KeepMobileUnits();
-            theGroup->ClearGoal();
-            theGroup->SetGoal(EEUGRust::NewExplore(true), false);
-            theGroup->mAction = kActionFindUnexploredArea;
-            theGroup->Plan();
-            break;
-        }
-        case kSMStanceIdle:
-            theUnit->ClearGoalQueue(0);
-            theUnit->StartAction(theUnit->GetUnitClass()->mCategory == kUnitCategoryAirplane || theUnit->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship
-                                 ? 0x3f0 : 0x1388);
-            theUnit->GetUnitClass()->ActionChanged(theUnit);
-            break;
-        case kSMStanceLocked:
-        {
-            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass());
-            if (theUnit->mIsLocked != true)
-                theUnit->mIsLocked = true;
-            // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
-            EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
-            if (thePart != NULL && thePart->mIsLocked != true)
-                thePart->mIsLocked = true;
-            thePart = theGate->GetFourthPart(theUnit);
-            if (thePart != NULL && thePart->mIsLocked != true)
-                thePart->mIsLocked = true;
-            break;
-        }
-        case kSMStanceUnlocked:
-        {
-            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass());
-            if (theUnit->mIsLocked)
-                theUnit->mIsLocked = false;
-            // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
-            EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
-            if (thePart != NULL && thePart->mIsLocked)
-                thePart->mIsLocked = false;
-            thePart = theGate->GetFourthPart(theUnit);
-            if (thePart != NULL && thePart->mIsLocked)
-                thePart->mIsLocked = false;
-            break;
-        }
-        case kSMStanceTownPatrol:
-        {
-            EETown* theTown = theUnit->FindNearestTown();
-            if (theTown == NULL)
-                break;
-            EEPPatrolGroup* thePatrolGroup = theTown->mPatrolGroup;
-            if (thePatrolGroup == NULL)
-                break;
-            EEComplexUnit* theTarget = thePatrolGroup->GetNearest(theUnit->GetTileX(), theUnit->GetTileY());
-            if (theTarget == NULL)
-                break;
-            EEActiveGroup* theGroup = new EEActiveGroup(theUnit->mPlayer);
-            theGroup->AddMember(theUnit, true);
-            theUnit->mPlayer->mPendingGroups.push_back(theGroup);
-            theGroup->KeepMobileUnits();
-            EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrolGroup, theTarget, true);
-            theGroup->ClearGoal();
-            theGroup->SetGoal(theGoal, false);
-            theGroup->mAction = kActionMoveToNextPatrolPoint;
-            theGroup->Plan();
-            break;
-        }
-        case kSMStanceScout:
-        case kSMStanceStandGround:
-        case kSMStanceGuard:
-        case kSMStanceHarass:
-        case kSMStanceCautious:
-        case kSMStanceAggressive:
-        {
-            EEUnitBehavior* theBehavior = EEUnitBehavior::sTable[this->mStance - 5];
-            if (theUnit->mBehavior != theBehavior)
-                theUnit->mBehavior = theBehavior;
-            break;
-        }
-        }
-    }
-}
+#include "ee/EEHerd.h"
 
-void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
-                EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode);   // EESMObject.cpp 0x1c8871
-
-// FUNCTION: EXE 0x5c2b3e
-// Changes an attribute of the scenario object's units, or a class attribute for each (unit type, player) it covers;
-// without an object, of the effect's own unit (never as a percentage) or of the player's class upgrade
-void EESMEffect::ChangeAttribute()
-{
-    std::vector<long> thePlayers;
-    std::vector<U2DPoint<long> > theTargets;
-    U2DPoint<long> theTarget;
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    if (theObject != NULL && UIsNone32(this->mAttributeUnit) && this->mAttributeUnitType == 0) {
-        if (this->mAttribute < kSMUnitAttributeShockArmorPlus) {
-            theObject->Evaluate(false);
-            unsigned long theCount = theObject->mUnits.size();
-            if (theCount == 0)
-                return;
-            for (unsigned long i = 0; i < theCount; i++) {
-                EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[i]);
-                if (theUnit != NULL && (!theObject->GetIsSelectOnMap() || theUnit->GetHitPoints() > 0 || theUnit->GetUnitClass()->GetIsTree())
-                    && this->mAttribute < kSMUnitAttributeShockArmorPlus) {
-                    EEChangeUnit(this->mAttribute, this->mUsesPercent, theUnit, this->mAttributeAmount, 0, false, this->mAttributeMode);
-                }
-            }
-        } else {
-            if (!theObject->GetIsSelectOnMap() && theObject->GetInAreaCheck() == 0 && theObject->GetHasAttributeCheck() == 0 && theObject->GetNearCheck() == 0
-                && theObject->GetSelectedByCheck() == 0 && theObject->GetHasStateCheck() == 0 && theObject->GetVisibleByCheck() == 0 && theObject->GetParent() == 0) {
-                gWorld.mScenarioManager->ChoosePlayer(theObject->GetOwner(), &thePlayers, true);
-                for (unsigned long i = 0; i < thePlayers.size(); i++) {
-                    long theType = theObject->PickUnitType();
-                    if (theType < 0)
-                        continue;
-                    theTarget.SetX(theType);
-                    theTarget.SetY(thePlayers[i]);
-                    if (std::find(theTargets.begin(), theTargets.end(), theTarget) == theTargets.end())
-                        theTargets.push_back(theTarget);
-                }
-            } else {
-                theObject->Evaluate(false);
-                unsigned long theCount = theObject->mUnits.size();
-                for (unsigned long i = 0; i < theCount; i++) {
-                    EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[i]);
-                    if (theUnit == NULL || theUnit->GetHitPoints() <= 0)
-                        continue;
-                    theTarget.SetX(theUnit->GetUnitClass()->GetUnitType());
-                    theTarget.SetY(theUnit->GetPlayer()->GetPlayerID());
-                    if (std::find(theTargets.begin(), theTargets.end(), theTarget) == theTargets.end())
-                        theTargets.push_back(theTarget);
-                }
-            }
-            for (unsigned long j = 0; j < theTargets.size(); j++) {
-                EEPlayer* thePlayer = gWorld.GetPlayer(theTargets[j].GetY());
-                EEModifyUnitAttribute(this->mAttribute, this->mUsesPercent, thePlayer, thePlayer->GetUpgrade(theTargets[j].GetX()), this->mAttributeAmount, this->mAttributeMode);
-            }
-        }
-    } else if (this->mAttribute >= kSMUnitAttributeShockArmorPlus) {
-        EEUnitClassUpgrade* theUpgrade = this->mAttributePlayer >= 0 && this->mAttributeUnitType != 0 ? gWorld.GetPlayer(this->mAttributePlayer)->GetUpgrade(this->mAttributeUnitType) : NULL;
-        EEPlayer* thePlayer = this->mAttributePlayer >= 0 ? gWorld.GetPlayer(this->mAttributePlayer) : NULL;
-        EEModifyUnitAttribute(this->mAttribute, this->mUsesPercent, thePlayer, theUpgrade, this->mAttributeAmount, this->mAttributeMode);
-    } else {
-        EEUnit* theUnit = !UIsNone32(this->mAttributeUnit) ? gWorld.GetUnit(this->mAttributeUnit) : NULL;
-        EEChangeUnit(this->mAttribute, this->mUsesPercent, theUnit, this->mAttributeAmount, 0, false, this->mAttributeMode);
-    }
-}
-
-#include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitCalamityClass.h"
-#include "ee/EEUGRust.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
-// FUNCTION: EXE 0x5c2f55
-// Tasks the scenario object's living units against a second object's units (sources dealt round-robin to targets,
-// grouped per player): calamity, gather, attack, heal, garrison, load, repair, drop off, patrol or move, by mTaskAction
-// mTaskAction > 6 casts calamity mTaskAction - 6; garrison is 5, load 3; a patrol point is unit type 0xdf. The
-// original tested the address of EEUnit::GetComplexUnit instead of calling it, twice, so neither NULL guard worked;
-// both now call it.
-void EESMEffect::TaskUnitsToObject()
+// what one effect's run keeps between its world calls (ee_scenario effect.rs, effect_ai.rs, task.rs): the
+// calamity point and class, the units a calamity found in an area, the graphic effect, the expanded message, the
+// camera move's points, the AI's location, task, strategy, requirement and unit ids, the task effects' group, goal,
+// load and rejected lists, calamity technologies, and the placement's location, transformation, roll and pitch
+// (each as the original's local, so what one player's or unit's pass leaves the next starts from)
+struct EESMEffectRun : EESMHostContext {
+    explicit EESMEffectRun(EESMEffect* inEffect) : EESMHostContext(), mCalamity(NULL), mGraphic(NULL), mGroup(NULL),
+        mGoal(NULL), mRoll(0.0f), mPitch(0.0f) { this->mEffect = inEffect; }
+    GE3DPoint mPoint;
+    EECalamityClass* mCalamity;
+    std::vector<EEUnit*> mSeen;
+    EEGraphicEffect* mGraphic;
+    UWideString mText;
+    GE3DPoint mEnd;
+    GE3DPoint mStart;
+    EECPILocation mLocation;
+    EECPAGTask mTask;
+    EECPCombatStrategy mStrategy;
+    EECPUnitRequirement mRequirement;
+    std::vector<long> mUnitIDs;
+    EEActiveGroup* mGroup;
+    EEUGRust* mGoal;
+    std::vector<EEComplexUnit*> mLoad;
+    std::vector<EEComplexUnit*> mRejected;
+    std::vector<long> mNodeIDs;
+    std::vector<long> mCalamities;
+    GE2DPoint mPlace;
+    GETransformation mTransformation;
+    float mRoll;
+    float mPitch;
+};
+
+// FUNCTION: EXE 0x5bd5eb (the body; Execute adds the simulation capture's SMEX record: ee/EEScenarioCapture.h)
+// Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
+// media (sound, text, dialogue, chat), a game action (time of day, calamity, graphic effect, cinematic) or an AI action
+// (the decisions: ee_scenario effect.rs; each world call EESMEffectWorld below)
+void EESMEffect::ExecuteUncaptured(bool inIsCinematic)
 {
-    GE3DLine theLine;
-    std::vector<EEUnit*> theUnits[16];
-    std::vector<std::vector<EEUnit*>*> theBuckets;
-    std::vector<EEUnit*> theSources;
-    std::vector<EEUnit*> theTargets;
-    std::vector<EEComplexUnit*> theLoadUnits;
-    std::vector<EEComplexUnit*> theRejected;
-    std::vector<long> theNodeIDs;
-    std::vector<long> theCalamities;
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    EESMObject* theTargetObject = gWorld.mScenarioManager->GetScenarioObject(this->mTaskObject);
-    if (theObject == NULL || theTargetObject == NULL)
+    EESMEffectRun theRun(this);
+    EeScenarioHost theHost = EESMHost(&theRun);
+    ee_scenario_effect_execute(&theHost, this, inIsCinematic);
+}
+
+namespace {
+
+EEUnit* SMEUnit(int64_t inID) { return gWorld.GetUnit((unsigned long)inID); }
+EEUnit* SMEUnitOrNull(int64_t inID) { return inID < 0 ? NULL : gWorld.GetUnit((unsigned long)inID); }
+EEComplexUnit* SMEComplex(int64_t inID) { return gWorld.GetUnit((unsigned long)inID)->mComplexUnit; }
+EEPlayer* SMEPlayer(int64_t inIndex) { return gWorld.GetPlayer((unsigned long)inIndex); }
+EEComputerPlayer* SMEComputer(int64_t inIndex) { return dynamic_cast<EEComputerPlayer*>(SMEPlayer(inIndex)); }
+float SMEFloat(int64_t inBits)
+{
+    uint32_t theBits = (uint32_t)inBits;
+    float theValue;
+    memcpy(&theValue, &theBits, 4);
+    return theValue;
+}
+int64_t SMEBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+int64_t SMEPack(long inX, long inY) { return (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32); }
+int64_t SMEID(EEUnit* inUnit) { return inUnit != NULL ? (int64_t)(uint32_t)inUnit->mUnitID : -1; }
+
+// the campaign's sound folder ("" outside a campaign)
+UString SMESoundPath()
+{
+    UString thePath;
+    if (gWorld.mGameOptions.mCampaignName.GetLength() > 0 && gWorld.mGameOptions.mCampaignChecksum > 0)
+        thePath = gU52A280;
+    else
+        thePath = gEmptyString;
+    return thePath;
+}
+
+void SMEPlayTrumpets()
+{
+    EESoundObject* theSound = EESoundObject::Get(kSoundTrumpets);
+    if (theSound != NULL)
+        theSound->Play();
+}
+
+// unit inUnit: StartAction(inAction) and its class's ActionChanged (every order of the effects ends so)
+void SMEAction(EEComplexUnit* inUnit, long inAction)
+{
+    inUnit->StartAction(inAction);
+    inUnit->GetUnitClass()->ActionChanged(inUnit);
+}
+
+// the group's goal and action, then its plan
+void SMEGroupGoal(EEActiveGroup* inGroup, EEUGRust* inGoal, long inAction)
+{
+    inGroup->SetGoal(inGoal, false);
+    inGroup->mAction = inAction;
+    inGroup->Plan();
+}
+
+// a categories Set Favorite Units never takes as the land unit
+bool SMENotLand(long inCategory)
+{
+    switch (inCategory) {
+    case kUnitCategoryAmbient: case kUnitCategoryResource: case kUnitCategoryBuilding: case kUnitCategoryAirplane: case kUnitCategoryNaval:
+    case kUnitCategoryProjectile: case kUnitCategorySubmergedNaval: case kUnitCategoryBomb: case kUnitCategoryMissile:
+    case kUnitCategoryNavalPriest:
+    case kUnitCategoryHelicopterTransport: case kUnitCategoryNavalTransport: case kUnitCategoryBuilding19: case kUnitCategoryTorpedo: case kUnitCategoryNavalBuilding: case kUnitCategoryNavalCitizen:
+    case kUnitCategoryMiningBuilding: case kUnitCategoryGate:
+    case kUnitCategorySpaceship: case kUnitCategorySpaceBuilding: case kUnitCategorySpaceTransport: case kUnitCategoryPlanetSpaceship:
+        return true;
+    }
+    return false;
+}
+
+// a unit's value for the effects (EE_SCENARIO_UV_*)
+int64_t SMEUnitValue(int64_t inID, int64_t inField)
+{
+    EEUnit* theUnit = SMEUnit(inID);
+    if (inField == EE_SCENARIO_UV_EXISTS)
+        return theUnit != NULL;
+    EEComplexUnit* theComplex = theUnit->mComplexUnit;
+    EEUnitClass* theClass = theUnit->GetUnitClass();
+    switch (inField) {
+    case EE_SCENARIO_UV_COMPLEX: return theComplex != NULL;
+    case EE_SCENARIO_UV_HIT_POINTS: return theUnit->GetHitPoints();
+    case EE_SCENARIO_UV_DAMAGED: return theUnit->GetHitPoints() < theUnit->GetStats()->mMaxHitPoints;
+    case EE_SCENARIO_UV_TILE_X: return theUnit->GetTileX();
+    case EE_SCENARIO_UV_TILE_Y: return theUnit->GetTileY();
+    case EE_SCENARIO_UV_ON_TILE: return theUnit->mTile != NULL;
+    case EE_SCENARIO_UV_PLAYER: return theUnit->mPlayer != NULL ? (int64_t)theUnit->mPlayer->mPlayerID : -1;
+    case EE_SCENARIO_UV_PLAYER_INDEX: return gWorld.GetPlayerIndex(theUnit->GetPlayer());
+    case EE_SCENARIO_UV_TYPE: return theClass->GetUnitType();
+    case EE_SCENARIO_UV_CATEGORY: return theClass->GetCategory();
+    case EE_SCENARIO_UV_COMMAND: return theComplex->GetCommandType();
+    case EE_SCENARIO_UV_DISABLED: return theComplex->mIsDisabled;
+    case EE_SCENARIO_UV_COMMANDABLE: return theComplex->mIsCommandable;
+    case EE_SCENARIO_UV_CLASS_DELETABLE: return theClass->mIsDeletable;
+    case EE_SCENARIO_UV_WALL: return theClass->mIsWall;
+    case EE_SCENARIO_UV_HAS_GOAL: return theComplex->GetGoal() != NULL;
+    case EE_SCENARIO_UV_TURNS: return theComplex->GetMaxAngularVelocity() > 0.0f;
+    case EE_SCENARIO_UV_TREE: return theClass->GetIsTree();
+    case EE_SCENARIO_UV_ID: return (int64_t)(uint32_t)theUnit->GetUnitID();
+    case EE_SCENARIO_UV_CONTAINER: return SMEID(theComplex->mContainer);
+    case EE_SCENARIO_UV_CONTAINER_TYPE: return theComplex->mContainer->GetUnitClass()->GetUnitType();
+    case EE_SCENARIO_UV_AIR: return (theClass->mDomains & kMovementAir) != 0;
+    case EE_SCENARIO_UV_LAND_BUILDING: return theClass->IsLandBuilding();
+    case EE_SCENARIO_UV_TRANSPORT: return theClass->IsTransport();
+    case EE_SCENARIO_UV_DROP_SITE: return theClass->IsDropSite();
+    case EE_SCENARIO_UV_GARRISON: return theClass->mGarrisonCapacity;
+    case EE_SCENARIO_UV_DETACHED: return theComplex->mIsDetachedFromAI;
+    case EE_SCENARIO_UV_CARGO: return theComplex->GetNumCargoUnits();
+    }
+    return 0;
+}
+
+// unit class inClass's tests for Set Favorite Units (EE_SCENARIO_CLASS_*)
+int64_t SMEClassValue(int64_t inClass)
+{
+    EEUnitClass* theClass = inClass >= 0 && (unsigned long)inClass < EEUnitClassCount() ? gUnitClassTable[inClass] : NULL;
+    if (theClass == NULL)
+        return 0;
+    return EE_SCENARIO_CLASS_EXISTS | ((theClass->GetDomains() & kMovementAir) ? EE_SCENARIO_CLASS_AIR : 0)
+         | ((theClass->GetDomains() & kMovementSea) ? EE_SCENARIO_CLASS_SEA : 0)
+         | (theClass->GetIsProjectile() ? EE_SCENARIO_CLASS_PROJECTILE : 0)
+         | (theClass->IsLandBuilding() ? EE_SCENARIO_CLASS_LAND_BUILDING : 0)
+         | (theClass->GetAttack() > 0 ? EE_SCENARIO_CLASS_ATTACKS : 0)
+         | (theClass->GetMaxVelocity() > 0.0f ? EE_SCENARIO_CLASS_MOVES : 0)
+         | (theClass->FliesOver() ? EE_SCENARIO_CLASS_FLIES_OVER : 0)
+         | (SMENotLand(theClass->GetCategory()) ? EE_SCENARIO_CLASS_NOT_LAND : 0);
+}
+
+// Modify-Tech-Tree's add for player inPlayer: an epoch's node made available (the range raised), any other node
+// researched past the epochs, its unit media loaded
+void SMETechAdd(EESMEffect* inEffect, EEPlayer* thePlayer)
+{
+    if (inEffect->mTechnology < EEEpochCount()) {
+        if (thePlayer->GetTechTree()->mEndEpoch < inEffect->mTechnology)
+            thePlayer->GetTechTree()->ResetEpochRange(thePlayer->GetTechTree()->mStartEpoch, inEffect->mTechnology);
+        thePlayer->GetTechTree()->Get(inEffect->mTechnology)->MakeAvailable();
         return;
-    theObject->Evaluate(false);
-    theTargetObject->Evaluate(false);
-    unsigned long theCount = theObject->mUnits.size();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[i]);
-        EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
-        if (theUnit == NULL || theComplex == NULL || theUnit->GetHitPoints() <= 0)
-            continue;
-        if (theComplex->GetCommandType() == kActionResourcesRotting || theComplex->GetCommandType() == kActionUnitRotting
-            || theComplex->GetCommandType() == kActionDead || theComplex->GetCommandType() == kActionResourcesDepleting)
-            continue;
-        if (theUnit->mTile == NULL
-            && (theComplex->mContainer == NULL || theComplex->mContainer->GetUnitClass()->GetUnitType() != kUnitTypeAirport))
-            continue;
-        if (!theComplex->mIsDisabled && !theComplex->mIsCommandable)
-            continue;
-        theUnit->GetPlayer()->DetachUnitFromAI(theUnit->GetComplexUnit());
+    }
+    EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(inEffect->mTechnology);
+    theNode->MakeAvailable();
+    theNode->mEpoch = 0;
+    theNode->mObsoleteEpoch = EEEpochCount();
+    theNode->SetScenEditorObsoleted(false, false);
+    theNode->SetObsolete(false, false);
+    if (theNode->NeedsUnitMedia() == true && !theNode->mIsUnitMediaLoaded) {
+        thePlayer->SetUnitClassMedia(theNode->mData->mUnitClass, 0x7f);
+        theNode->mIsUnitMediaLoaded = true;
+    }
+    if (theNode->mData->mKind == 4)
+        thePlayer->GetTechTree()->mEpochsBeforeWonders = 0;
+    thePlayer->GetTechTree()->Research(inEffect->mTechnology, NULL);
+}
+
+// Task-Area with an unset area: unit inUnit taken off the map (its 2D position kept, out of its airport, out of the
+// selection)
+void SMETakeOffMap(EESMEffectRun* inRun, EEUnit* theUnit)
+{
+    EEComplexUnit* theComplex = theUnit->GetComplexUnit();
+    GETransformation& theTransformation = inRun->mTransformation;
+    if (!theComplex->GetUnitClass()->IsLandBuilding()) {
+        if (theComplex->GetUnitClass()->IsLandBuilding()) {
+            for (EEComplexUnit* theLinked = theComplex; theLinked != NULL; theLinked = theLinked->mNextPart)
+                theLinked->Set2DPosition(U2DPoint<float>((float)theLinked->GetTileX(), (float)theLinked->GetTileY()));
+        } else {
+            theTransformation = theComplex->mPhysicalModel.GetLocation();
+            theComplex->Set2DPosition(U2DPoint<float>(theTransformation.GetX(), theTransformation.GetY()));
+        }
+        if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
+            theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->RemoveAirport(theComplex);
+        if (theComplex->GetPlayer() == gWorld.GetCurrentPlayer() && theComplex->GetPlayer()->mActiveGroup->Contains(theComplex))
+            gUserInterface->PostMessage424Once();
+        theComplex->TakeOffMap();
+        EEWUnitsOffMapInfo* theInfo = theComplex->GetPlayer()->GetOffMapInfo(theComplex);
+        if (theInfo != NULL)
+            theInfo->mReason = 2;
+    } else {
+        theTransformation = theComplex->mPhysicalModel.GetLocation();
+        theComplex->mLastMapPosition = GE3DPoint(theTransformation);
+        theComplex->Set2DPosition(U2DPoint<float>(theTransformation.GetX(), theTransformation.GetY()));
+    }
+    if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
+        theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->RemoveAirport(theComplex);
+    if (theComplex->GetPlayer() == gWorld.GetCurrentPlayer() && theComplex->GetPlayer()->mActiveGroup->Contains(theComplex))
+        gUserInterface->PostMessage424Once();
+}
+
+// Task-Area: off-map unit theUnit placed in the task area (the object's area check pointed at it for FindPlacement),
+// on the ground at the location's tile, turned with the terrain, idle or circling
+void SMEPlaceInArea(EESMEffectRun* inRun, EEUnit* theUnit)
+{
+    EESMEffect* theEffect = inRun->mEffect;
+    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(theEffect->mObject);
+    EESMArea* theArea = gWorld.mScenarioManager->GetArea(theEffect->mTaskArea);
+    EEComplexUnit* theComplex = theUnit->GetComplexUnit();
+    GE2DPoint& theLocation = inRun->mPlace;
+    GETransformation& theTransformation = inRun->mTransformation;
+    unsigned long theSaved68 = theObject->GetInAreaCheck();
+    unsigned long theSaved3C = theObject->GetArea();
+    unsigned long theSaved6C = theObject->GetNearCheck();
+    theObject->mInAreaCheck = 1;
+    theObject->mArea = theEffect->mTaskArea;
+    theObject->mNearCheck = 0;
+    if (theArea->IsOffMap() || theObject->FindPlacement(theUnit->GetUnitClass()->GetUnitType(), theLocation, true)) {
+        theTransformation = theComplex->mPhysicalModel.GetLocation();
+        if (theArea->IsOffMap()) {
+            theTransformation.SetX(theComplex->mU0DC.GetX());
+            theTransformation.SetY(theComplex->mU0DC.GetY());
+        } else if (theLocation.GetX() != -10000.0f) {
+            theTransformation.SetX(theLocation.GetX() + 0.5f);
+            theTransformation.SetY(theLocation.GetY() + 0.5f);
+            long theX = (long)theLocation.GetX();
+            EETile* theTile = gWorld.mMap->GetTile(theX, (long)theLocation.GetY());
+            if (theTile != NULL) {
+                if (!(theUnit->GetUnitClass()->mDomains & kMovementAir))
+                    theTransformation.mMatrix[2][3] = theTile->GetHeight();
+                else if (theComplex->mPhysicalModel.GetLocation().GetZ() < theTile->GetHeight())
+                    theTransformation.mMatrix[2][3] = theUnit->GetUnitClass()->GetCruiseAltitude();
+            }
+        } else {
+            theTransformation.SetX(-10000.0f);
+            theTransformation.SetY(-10000.0f);
+        }
+        if (theTransformation.GetX() != -10000.0f) {
+            GETransformation theGround(false);
+            theGround.MakeIdentity();
+            theGround.SetPosition(GE3DPoint(theTransformation));
+            if (theUnit->GetUnitClass()->mPitchesWithTerrain)
+                inRun->mPitch = gWorld.mMap->GetTerrainPitch(theGround);
+            if (theUnit->GetUnitClass()->mRollsWithTerrain)
+                inRun->mRoll = gWorld.mMap->GetTerrainRoll(theGround);
+            theTransformation.SetOrientationYPR(UMArcTan2(theComplex->mPhysicalModel.GetLocation().mMatrix[1][0],
+                                                          theComplex->mPhysicalModel.GetLocation().mMatrix[0][0]),
+                                                inRun->mPitch, inRun->mRoll);
+            if (theComplex->mContainer == NULL)
+                theComplex->SetTransformation(theTransformation, true);
+            else
+                theComplex->mContainer->UnloadCargoByID(theComplex->mUnitID, theTransformation);
+            long theSize = theUnit->GetUnitClass()->GetTileSize();
+            if (theSize > 1) {
+                float theOffset = theSize * 0.5f;
+                theTransformation.SetX(theTransformation.GetX() + theOffset);
+                theTransformation.SetY(theTransformation.GetY() + theOffset);
+                theComplex->mPhysicalModel.SetLocation(theTransformation);
+            }
+            if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
+                theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->AddAirport(theComplex);
+            if ((theUnit->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theUnit->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
+                && (theUnit->GetComplexUnit()->mFlightTime != 0 || theUnit->GetComplexUnit()->mHomeBase != NULL))
+                theComplex->StartAction(kActionCircle);
+            else
+                theComplex->StartAction(kActionIdle);
+            theUnit->GetUnitClass()->ActionChanged(theComplex);
+        }
+    }
+    theObject->mInAreaCheck = theSaved68;
+    theObject->mArea = theSaved3C;
+    theObject->mNearCheck = theSaved6C;
+}
+
+// the AI's and the task effects' calls (effect_ai.rs, task.rs)
+int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
+{
+    EESMEffect* theEffect = inRun->mEffect;
+    EEActiveGroup* theGroup = inRun->mGroup;
+    switch (inOp) {
+    case EE_SCENARIO_WORLD_AI_TOWN: {
+        EEComputerPlayer* thePlayer = SMEComputer(a[0]);
+        EETown* theTown = thePlayer->mTowns.size() != 0 ? thePlayer->mTowns[0] : NULL;
+        return theTown != NULL ? (int64_t)(uint32_t)theTown->GetSerial() : -1;
+    }
+    case EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT: {
+        EEAIContinent* theContinent = gContinentManager.GetContinentByID(
+            (unsigned short)gContinentManager.GetLargestContinent((long)a[0]));
+        return theContinent != NULL ? (int64_t)(uint32_t)theContinent->GetSerial() : -1;
+    }
+    case EE_SCENARIO_WORLD_EFFECT_OBJECT_COUNT: return (int64_t)theEffect->mObjects.size();
+    case EE_SCENARIO_WORLD_EFFECT_OBJECT_AT: return (int64_t)(uint32_t)theEffect->mObjects[(size_t)a[0]];
+    case EE_SCENARIO_WORLD_AI_STRATEGY:
+        inRun->mStrategy.Reset();
+        inRun->mStrategy.mKind = (long)a[0];
+        inRun->mStrategy.mAddFavorites = a[1] != 0;
+        return 0;
+    case EE_SCENARIO_WORLD_AI_REQUIREMENT_CLEAR: inRun->mRequirement.Clear(); return 0;
+    case EE_SCENARIO_WORLD_AI_ANY_COUNT:
+        inRun->mStrategy.mNumUnits = 0;
+        inRun->mStrategy.mNumRemaining = 0;
+        return 0;
+    case EE_SCENARIO_WORLD_AI_COUNT:
+        inRun->mRequirement.mNumLeft = (long)a[0];
+        inRun->mRequirement.mNumWanted = (long)a[0];
+        if (a[1] != 0) {
+            inRun->mStrategy.mNumUnits += (long)a[0];
+            inRun->mStrategy.mNumRemaining = inRun->mStrategy.mNumUnits;
+        }
+        return 0;
+    case EE_SCENARIO_WORLD_AI_REQUIREMENT_SET:
+        switch (a[0]) {
+        case 0: inRun->mRequirement.mUnitClass = (long)a[1]; break;
+        case 1: inRun->mRequirement.mFamily = (long)a[1]; break;
+        case 2: inRun->mRequirement.mUnitKind = (long)a[1]; break;
+        case 3: inRun->mRequirement.mUnitClass = SMEComputer(a[1])->mFavoriteLandType; break;
+        }
+        return 0;
+    case EE_SCENARIO_WORLD_AI_REQUIREMENT_PUSH:
+        inRun->mRequirement.mKind = kRequirementAlreadyDefined;
+        inRun->mStrategy.mRequirements.push_back(inRun->mRequirement);
+        return 0;
+    case EE_SCENARIO_WORLD_AI_CREATE_GROUP: {
+        EECPCombatManager* theCombat = SMEComputer(a[0])->mCombatManager;
+        if (theCombat->IsValidTask(inRun->mTask, inRun->mStrategy, inRun->mUnitIDs))
+            theCombat->mAttackCommander->CreateGroupFromStrategy(inRun->mTask, inRun->mStrategy, inRun->mUnitIDs);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_AI_TASK_COMBAT: inRun->mTask.mMode = kAGModeCombat; return 0;
+    case EE_SCENARIO_WORLD_AI_AREA_RECTANGLE: {
+        EESMArea* theArea = gWorld.mScenarioManager->GetArea((unsigned long)a[0]);
+        for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
+            EEAIRectangleArea* theRectangle = gContinentManager.mRectangleAreas[j];
+            if (theRectangle != NULL && theRectangle->GetScenarioAreaID() == theArea->mID)
+                return (int64_t)(uint32_t)theRectangle->GetSerial();
+        }
+        return -1;
+    }
+    case EE_SCENARIO_WORLD_AI_AREA_CONTINENT: {
+        EESMArea* theArea = gWorld.mScenarioManager->GetArea((unsigned long)a[0]);
+        if (theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
+            EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
+            if (theContinent != NULL)
+                return (int64_t)(uint32_t)theContinent->GetSerial();
+        }
+        return -1;
+    }
+    case EE_SCENARIO_WORLD_AI_TASK_UNIT: inRun->mTask.SetUnit(EEUnitCast<EEComplexUnit>(SMEUnit(a[0]))); return 0;
+    case EE_SCENARIO_WORLD_AI_LOCATION_AREA:
+        inRun->mLocation.mSerial = (unsigned long)a[0];
+        inRun->mLocation.mType = (long)a[1];
+        inRun->mLocation.ResetToArea();
+        inRun->mTask.mLocation = inRun->mLocation;
+        return 0;
+    case EE_SCENARIO_WORLD_AI_RANDOM_ENEMY: {
+        EEComputerPlayer* thePlayer = SMEComputer(a[0]);
+        EEPlayer* theEnemy = thePlayer->mCombatManager->mIntelligence->GetRandomEnemy(thePlayer);
+        return theEnemy != NULL ? (int64_t)theEnemy->mPlayerID : -1;
+    }
+    case EE_SCENARIO_WORLD_AI_LOCATION_UNIT: {
+        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(SMEUnit(a[0]));
+        if (theUnit->mContainer != NULL)
+            inRun->mLocation.mTile = EETileLocation(theUnit->mContainer->GetTileX(), theUnit->mContainer->GetTileY());
+        else
+            inRun->mLocation.mTile = EETileLocation(theUnit->GetTileX(), theUnit->GetTileY());
+        inRun->mTask.mLocation = inRun->mLocation;
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_AI_TASK_PLAYER: inRun->mTask.mPlayer = SMEPlayer(a[0]); return 0;
+    case EE_SCENARIO_WORLD_AI_TASK_TYPE:
+        inRun->mTask.mIsActive = true;
+        inRun->mTask.mType = a[0] == 0 ? kAGTaskLocation : a[0] == 1 ? kAGTaskTerritory : kAGTaskUnit;
+        return 0;
+    case EE_SCENARIO_WORLD_AI_TASK_UNIT_ENEMY: {
+        EEPlayer* thePlayer = SMEPlayer(a[0]);
+        EEComplexUnit* theUnit = inRun->mTask.mUnit;
+        return theUnit != NULL && theUnit->mPlayer != thePlayer && thePlayer->mEnemies[theUnit->mPlayer->mPlayerID] != 0;
+    }
+    case EE_SCENARIO_WORLD_AI_IDS_PUSH_OBJECT: {
+        EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject((unsigned long)a[0]);
+        for (unsigned long u = 0; u < theObject->mUnits.size(); u++)
+            inRun->mUnitIDs.push_back(theObject->mUnits[u]);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_AI_IDS_COUNT: return (int64_t)inRun->mUnitIDs.size();
+    case EE_SCENARIO_WORLD_AI_IDS_AT: return (int64_t)(uint32_t)inRun->mUnitIDs[(size_t)a[0]];
+    case EE_SCENARIO_WORLD_AI_IDS_ERASE: inRun->mUnitIDs.erase(inRun->mUnitIDs.begin() + (size_t)a[0]); return 0;
+    case EE_SCENARIO_WORLD_AI_IS_MILITARY: return SMEComputer(a[0])->mCombatManager->IsMilitaryUnit(SMEComplex(a[1]));
+    case EE_SCENARIO_WORLD_AI_ATTACH: SMEComplex(a[0])->mIsDetachedFromAI = false; return 0;
+    case EE_SCENARIO_WORLD_AI_VALID_TARGET:
+        return SMEComputer(a[0])->mCombatManager->IsValidTarget((unsigned long)a[1], (unsigned long)a[2], a[3] != 0);
+    case EE_SCENARIO_WORLD_AI_ADD_ATTACK: SMEComputer(a[0])->mCombatManager->AddAttackTask((unsigned long)a[1], (unsigned long)a[2]); return 0;
+    case EE_SCENARIO_WORLD_AI_ADD_DEFEND: SMEComputer(a[0])->mCombatManager->AddDefendTask((unsigned long)a[1], (unsigned long)a[2]); return 0;
+    case EE_SCENARIO_WORLD_AI_DROP_AREA: SMEComputer(a[0])->mCombatManager->DropAreaTask((unsigned long)a[1], false); return 0;
+    case EE_SCENARIO_WORLD_AI_DROP_UNIT: SMEComputer(a[0])->mCombatManager->DropUnitTask((unsigned long)a[1], true); return 0;
+
+    case EE_SCENARIO_WORLD_TASK_PREPARE: {
+        EEUnit* theUnit = SMEUnit(a[0]);
+        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
+        theUnit->GetPlayer()->DetachUnitFromAI(theComplex);
         theComplex->SetDisabled(false, 0);
         theComplex->SetIsCommandable(true);
         theComplex->SetIsDeletable(theComplex->GetUnitClass()->mIsDeletable);
-        theSources.push_back(theUnit);
+        return 0;
     }
-    unsigned long theNumSources = theSources.size();
-    unsigned long theNumTargets = theTargetObject->mUnits.size();
-    for (unsigned long j = 0; j < theNumTargets; j++) {
-        EEUnit* theUnit = gWorld.GetUnit(theTargetObject->mUnits[j]);
-        if (theUnit != NULL)
-            theTargets.push_back(theUnit);
+    case EE_SCENARIO_WORLD_GROUP_NEW: {
+        EEPlayer* thePlayer = SMEPlayer(a[0]);
+        inRun->mGroup = new EEActiveGroup(thePlayer);
+        thePlayer->mPendingGroups.push_back(inRun->mGroup);
+        return 0;
     }
-    if (theNumSources == 0 || theTargets.size() <= 0)
-        return;
-    unsigned long theNumPairs = theNumSources > theTargets.size() ? theTargets.size() : theNumSources;
-    for (unsigned long k = 0; k < theNumPairs; k++) {
-        std::vector<EEUnit*>* theBucket = new std::vector<EEUnit*>;
-        theBuckets.push_back(theBucket);
-    }
-    for (unsigned long s = 0; s < theNumSources; s++)
-        (theBuckets[s % theNumPairs])->push_back(theSources[s]);
-    for (unsigned long t = 0; t < theNumPairs; t++) {
-        EEUnit* theTarget = theTargets[t];
-        if (theTarget->GetTileX() == -10000 || theTarget->GetTileY() == -10000)
-            continue;
-        for (long c = 0; c < 16; c++)
-            theUnits[c].clear();
-        for (unsigned long b = 0; b < (theBuckets[t])->size(); b++) {
-            EEUnit* theUnit = *((theBuckets[t])->begin() + b);
-            theUnits[gWorld.GetPlayerIndex(theUnit->GetPlayer())].push_back(theUnit);
+    case EE_SCENARIO_WORLD_GROUP_ADD_TASKED: {
+        EEComplexUnit* theComplex = SMEUnit(a[0])->GetComplexUnit();
+        if (theComplex->GetComplexUnit() != NULL && (theComplex->GetUnitClass()->mDomains & kMovementAir)
+            && theComplex->GetCommandType() == kActionIdle) {
+            theComplex->GetComplexUnit()->SetFlightTime(theComplex->GetStats()->mFlightTime);
+            theComplex->GetComplexUnit()->SetAmmunition(theComplex->GetUnitClass()->mAmmunition);
         }
-        for (unsigned long p = 0; p < 16; p++) {
-            if (theUnits[p].size() <= 0)
-                continue;
-            EEPlayer* thePlayer = gWorld.GetPlayer(p);
-            if (this->mTaskAction > kSMTaskActionCalamityBase) {
-                theCalamities.clear();
-                thePlayer->GetTechTree()->GetNodeIDs(theNodeIDs);
-                for (unsigned long n = 0; n < theNodeIDs.size(); n++) {
-                    EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theNodeIDs[n]);
-                    if (theNode->mData->mCalamity == this->mTaskAction - 6 && theNode->GetIsAvailable())
-                        theCalamities.push_back(theNodeIDs[n]);
-                }
-            }
-            EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-            thePlayer->mPendingGroups.push_back(theGroup);
-            unsigned long theNumUnits = theUnits[p].size();
-            for (unsigned long u = 0; u < theNumUnits; u++) {
-                EEComplexUnit* theComplex = theUnits[p][u]->GetComplexUnit();
-                if (theComplex->GetComplexUnit() != NULL && (theComplex->GetUnitClass()->mDomains & kMovementAir)
-                    && theComplex->GetCommandType() == kActionIdle) {
-                    theComplex->GetComplexUnit()->SetFlightTime(theComplex->GetStats()->mFlightTime);
-                    theComplex->GetComplexUnit()->SetAmmunition(theComplex->GetUnitClass()->mAmmunition);
-                }
-                theGroup->AddMember(theComplex, true);
-            }
-            EEPlayer* theTargetPlayer = theTarget->GetPlayer();
-            EEUnitClass* theTargetClass = theTarget->GetUnitClass();
-            EEComplexUnit* theGatherer = theGroup->FindUnitWithFlags(kUnitKindCitizen);
-            EEComplexUnit* theCarrier = theGroup->FindUnitWithFlags(kUnitKindNavalCitizen);
-            bool theDone = false;
-            if (this->mTaskAction == kSMTaskActionAttackMove || this->mTaskAction == kSMTaskActionPatrol)
-                goto move;
-            if (this->mTaskAction > kSMTaskActionCalamityBase) {
-                EECalamityEnum theEnum = (EECalamityEnum)(this->mTaskAction - 6);
-                EECalamityClass* theClass = EECalamityManager::GetInstance()->GetCalamityClass(theEnum);
-                if (theClass == NULL || theClass->GetTargetKind() != 3)
-                    continue;
-                EEUnitCalamityClass* theUnitClass = dynamic_cast<EEUnitCalamityClass*>(theClass);
-                for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                    EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                    if (theUnitClass == NULL || !theUnitClass->IsValidTarget(theUnit, theTarget))
-                        continue;
-                    for (unsigned long n = 0; n < theCalamities.size(); n++) {
-                        if (thePlayer->GetTechTree()->Get(theCalamities[n])
-                                ->Contains(theUnit->GetUnitClass()->GetUnitType())) {
-                            EEUGRust* theGoal = EEUGRust::NewCastCalamity(theUnit, theTarget, -10000, -10000,
-                                                                         theCalamities[n], true);
-                            theUnit->ClearGoals(0);
-                            theUnit->SetGoal(theGoal, 0, 0);
-                            theUnit->StartAction(kActionPrepareToMove);
-                            theUnit->GetUnitClass()->ActionChanged(theUnit);
-                            break;
-                        }
-                    }
-                }
-                continue;
-            }
-            if ((theGatherer != NULL
-                 && theGatherer->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), true, false))
-                || (theCarrier != NULL
-                    && theCarrier->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), true, false))) {
-                theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
-                theGroup->ClearGoal();
-                theGroup->SetGoal(EEUGRust::NewGather(theTarget, NULL, true), false);
-                theGroup->mAction = kActionGatherResource;
-                theGroup->Plan();
-                continue;
-            }
-            if (theTargetPlayer != thePlayer && thePlayer->mEnemies[theTargetPlayer->mPlayerID] != 0
-                && theGroup->GetFirstUnit() != NULL && theGroup->GetFirstUnit()->GetUnitClass()->GetCategory() != kUnitCategoryNavalCitizen) {
-                if (this->mTaskAction != kSMTaskActionNormal)
-                    goto move;
-                theGroup->SpreadAroundUnit(theTarget, theTarget->GetTileX(), theTarget->GetTileY());
-                theGroup->ClearGoal();
-                theGroup->SetGoal(EEUGRust::NewAttackUnit(theGroup->GetFirstUnit(), theTarget, true, false), false);
-                theGroup->mAction = kActionAttackEnemyUnit;
-                theGroup->Plan();
-                continue;
-            }
-            if (theTarget->GetComplexUnit() != NULL && theGroup->GetFirstUnit() != NULL && theTarget->GetComplexUnit() != NULL
-                && EECanHeal(theGroup->GetFirstUnit(), theTarget->GetComplexUnit())) {
-                for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                    EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                    if (EECanHeal(theUnit, theTarget->GetComplexUnit())) {
-                        EEUGRust* theGoal = EEUGRust::NewHealUnit(theTarget->GetComplexUnit(), true);
-                        theUnit->ClearGoalQueue(0);
-                        theUnit->SetGoal(theGoal, 0, 0);
-                        theUnit->StartAction(kActionTurnToFaceHealee);
-                        theUnit->GetUnitClass()->ActionChanged(theUnit);
-                    }
-                }
-                continue;
-            }
-            if (theTargetPlayer != thePlayer)
-                goto move;
-            if (this->mTaskAction == kSMTaskActionGarrison && theTarget->GetComplexUnit() != NULL && theTarget->GetUnitClass()->mGarrisonCapacity > 0) {
-                EEComplexUnit* theBuilding = theTarget->GetComplexUnit();
-                theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
-                theLoadUnits.clear();
-                for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                    EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                    theLoadUnits.push_back(theUnit);
-                }
-                EEUnitGoal* theCurrent = theBuilding->GetGoal();
-                if (theLoadUnits.size() <= 0)
-                    continue;
-                bool theDelete = false;
-                EEUGRust* theGoal;
-                if (theCurrent != NULL && theCurrent->mKind == kGoalLoadGarrison) {
-                    theGoal = EELoadGarrisonGoalCast(theCurrent);
-                    theGoal->AddLoadUnits(theLoadUnits);
-                } else {
-                    theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theBuilding, theLoadUnits, true);
-                    if (theGoal->IsLoadGarrisonValid()) {
-                        theBuilding->ClearGoals(0);
-                        theBuilding->SetGoal(theGoal, 0, 0);
-                        theBuilding->StartAction(kActionPrepareToMove);
-                        theBuilding->GetUnitClass()->ActionChanged(theBuilding);
-                    } else
-                        theDelete = true;
-                }
-                if (theGoal->IsLoadGarrisonValid()) {
-                    for (unsigned long n = 0; n < theLoadUnits.size(); n++) {
-                        EEComplexUnit* theUnit = theLoadUnits[n];
-                        theUnit->ClearGoals(0);
-                        theUnit->SetGoal(theGoal->Clone(), 0, 0);
-                        theUnit->StartAction(kActionPrepareToMove);
-                        theUnit->GetUnitClass()->ActionChanged(theUnit);
-                        theDelete = false;
-                    }
-                }
-                if (theDelete && theGoal != NULL)
-                    delete theGoal;
-                continue;
-            }
-            EEComplexUnit* theTransport;
-            if (this->mTaskAction == kSMTaskActionLoad && (theTransport = theTarget->GetComplexUnit()) != NULL) {
-                if (!theTarget->GetUnitClass()->IsTransport())
-                    goto move;
-                theLoadUnits.clear();
-                for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                    EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                    if (theUnit != theTarget)
-                        theLoadUnits.push_back(theUnit);
-                }
-                EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTarget->GetUnitClass())->FilterLoadable(&theLoadUnits, theTransport,
-                                                                                &theRejected);
-                U2DPoint<long> theDestination;
-                if (theLoadUnits.size() > 0) {
-                    theDone = true;
-                    EEUnitGoal* theCurrent = theTransport->GetGoal();
-                    EEUGRust* theGoal;
-                    if (theCurrent != NULL && theCurrent->mKind == kGoalLoadTransport) {
-                        theGoal = EELoadTransportGoalCast(theCurrent);
-                        theGoal->AddLoadUnits(theLoadUnits);
-                    } else {
-                        theGoal = EEUGRust::NewLoad(kGoalLoadTransport, theTransport, theLoadUnits, true);
-                        theTransport->ClearGoals(0);
-                        theTransport->SetGoal(theGoal, 0, 0);
-                        theTransport->StartAction(kActionPrepareToMove);
-                        theTransport->GetUnitClass()->ActionChanged(theTransport);
-                    }
-                    theDestination = theGoal->GetLoadUnitTile();
-                    for (unsigned long n = 0; n < theLoadUnits.size(); n++) {
-                        EEComplexUnit* theUnit = theLoadUnits[n];
-                        theUnit->ClearGoals(0);
-                        theUnit->SetGoal(theGoal->Clone(), 0, 0);
-                        theUnit->StartAction(kActionPrepareToMove);
-                        theUnit->GetUnitClass()->ActionChanged(theUnit);
-                    }
-                } else
-                    theDestination.SetXY(theTransport->GetTileX(), theTransport->GetTileY());
-                if (theRejected.size() > 0) {
-                    theGroup->Finish();
-                    for (unsigned long n = 0; n < theRejected.size(); n++)
-                        theGroup->AddMember(theRejected[n], true);
-                    theGroup->KeepMobileUnits();
-                    theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theDestination.GetX(),
-                                                                 (float)theDestination.GetY()),
-                                                       true, true, false, 0.0f, false, 0),
-                                      false);
-                    theGroup->mAction = kActionPrepareToMove;
-                    theGroup->Plan();
-                }
-                if (theDone)
-                    continue;
-                goto move;
-            }
-            if (theTargetClass->IsLandBuilding() && theTarget->GetHitPoints() < theTarget->GetStats()->mMaxHitPoints) {
-                theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
-                unsigned long theNum = theGroup->GetNumUnits();
-                for (unsigned long u = 0; u < theNum; u++) {
-                    EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                    theUnit->OrderRepair(theTarget);
-                    theUnit->StartAction(kActionIdle);
-                    theUnit->GetUnitClass()->ActionChanged(theUnit);
-                }
-            } else if (theTargetClass->IsDropSite() || theTargetClass->GetUnitType() == kUnitTypeDock
-                       || theTargetClass->GetUnitType() == kUnitTypeNavyYard) {
-                theDone = true;
-                theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
-                theGroup->ClearGoal();
-                theGroup->SetGoal(EEUGRust::NewGather(NULL, theTarget->GetComplexUnit(), true), false);
-                theGroup->mAction = kActionDropoffResource;
-                theGroup->Plan();
-                if (theGroup->GetNumUnits() == 0)
-                    continue;
-                EEPlayForLocalPlayer(thePlayer, theGroup->GetFirstUnit()->GetStats()->GetAcknowledgeSound(-1));
-                if (theDone)
-                    continue;
-                goto move;
-            } else if (theTargetClass->GetUnitType() == kUnitTypePathPoint) {
-                theGroup->KeepMobileUnits();
-                EEPPatrolGroup* thePatrolGroup = theTarget->GetComplexUnit()->mPatrolGroup;
-                EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrolGroup, theTarget->GetComplexUnit(), true);
-                theGroup->ClearGoal();
-                theGroup->SetGoal(theGoal, false);
-                theGroup->mAction = kActionMoveToNextPatrolPoint;
-                theGroup->Plan();
-            } else
-                goto move;
-            if (theGroup->GetFirstUnit() != NULL)
-                EEPlayForLocalPlayer(thePlayer, theGroup->GetFirstUnit()->GetStats()->GetAcknowledgeSound(-1));
-            continue;
-        move:
-            if (theTarget->mTile == NULL)
-                continue;
-            {
-                GE2DPoint thePoint((float)theTarget->GetTileX(), (float)theTarget->GetTileY());
-                theGroup->KeepMobileUnits();
-                EEComplexUnit* theFirst = theGroup->GetFirstUnit();
-                if (theFirst == NULL)
-                    continue;
-                switch (this->mTaskAction) {
-                case kSMTaskActionPatrol: {
-                    EEUGRust* theGoal = EEUGRust::NewPatrol(true);
-                    if (theFirst != NULL) {
-                        theGoal->GetPatrolGroup()->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), p);
-                        theGoal->GetPatrolGroup()->AddPoint(thePoint, p);
-                        theFirst->GetPlayer()->AddPatrolGroup(theGoal->GetPatrolGroup());
-                    }
-                    theGroup->ClearGoal();
-                    theGroup->SetGoal(theGoal, false);
-                    theGroup->mAction = kActionMoveToNextPatrolPoint;
-                    theGroup->Plan();
-                    break;
-                }
-                case kSMTaskActionNormal:
-                case kSMTaskActionAttackMove:
-                case kSMTaskActionLoad:
-                case kSMTaskActionUnload:
-                case kSMTaskActionGarrison:
-                    if ((theFirst->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theFirst->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
-                        && (theFirst->GetComplexUnit() == NULL
-                            || theFirst->GetComplexUnit()->GetCommandType() == kActionIdle)) {
-                        for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                            EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                            if (theUnit->mContainer != NULL) {
-                                theUnit->ClearGoalQueue(0);
-                                theUnit->ClearGoalQueue(1);
-                                theUnit->QueueGoal(EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), 0);
-                                theUnit->QueueGoal(EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), 1);
-                                theUnit->mGoalQueues[1].AddTime(1);
-                            } else if (theUnit->mTile != NULL) {
-                                EEUGRust* theGoal =
-                                    EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0);
-                                theUnit->ClearGoals(0);
-                                theUnit->SetGoal(theGoal, 0, 0);
-                                theUnit->StartAction(kActionTakeoff);
-                                theUnit->GetUnitClass()->ActionChanged(theUnit);
-                            }
-                        }
-                    } else {
-                        theGroup->ClearGoal();
-                        theGroup->SetGoal(EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0),
-                                          false);
-                        theGroup->mAction = kActionPrepareToMove;
-                        theGroup->Plan();
-                    }
-                    break;
-                }
-            }
-        }
+        theGroup->AddMember(theComplex, true);
+        return 0;
     }
-    DeleteVectorContents(theBuckets);
+    case EE_SCENARIO_WORLD_GROUP_ADD: theGroup->AddMember(SMEUnit(a[0])->mComplexUnit, true); return 0;
+    case EE_SCENARIO_WORLD_GROUP_COUNT: return (int64_t)theGroup->GetNumUnits();
+    case EE_SCENARIO_WORLD_GROUP_UNIT: return SMEID(theGroup->GetUnit((unsigned long)a[0]));
+    case EE_SCENARIO_WORLD_GROUP_FIRST: return SMEID(theGroup->GetFirstUnit());
+    case EE_SCENARIO_WORLD_GROUP_KEEP_MOBILE: theGroup->KeepMobileUnits(); return 0;
+    case EE_SCENARIO_WORLD_GROUP_CAN_GATHER: {
+        EEUnit* theTarget = SMEUnit(a[0]);
+        EEComplexUnit* theGatherer = theGroup->FindUnitWithFlags(kUnitKindCitizen);
+        EEComplexUnit* theCarrier = theGroup->FindUnitWithFlags(kUnitKindNavalCitizen);
+        return (theGatherer != NULL && theGatherer->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), true, false))
+            || (theCarrier != NULL && theCarrier->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), true, false));
+    }
+    case EE_SCENARIO_WORLD_GROUP_GATHER: {
+        EEUnit* theTarget = SMEUnit(a[0]);
+        theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, EEUGRust::NewGather(theTarget, NULL, true), kActionGatherResource);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GROUP_ATTACK: {
+        EEUnit* theTarget = SMEUnit(a[0]);
+        theGroup->SpreadAroundUnit(theTarget, theTarget->GetTileX(), theTarget->GetTileY());
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, EEUGRust::NewAttackUnit(theGroup->GetFirstUnit(), theTarget, true, false),
+                     kActionAttackEnemyUnit);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CAN_HEAL: return EECanHeal(SMEComplex(a[0]), SMEComplex(a[1]));
+    case EE_SCENARIO_WORLD_HEAL: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        EEUGRust* theGoal = EEUGRust::NewHealUnit(SMEComplex(a[1]), true);
+        theUnit->ClearGoalQueue(0);
+        theUnit->SetGoal(theGoal, 0, 0);
+        SMEAction(theUnit, kActionTurnToFaceHealee);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_LOAD_CLEAR: inRun->mLoad.clear(); return 0;
+    case EE_SCENARIO_WORLD_LOAD_PUSH: inRun->mLoad.push_back(SMEComplex(a[0])); return 0;
+    case EE_SCENARIO_WORLD_LOAD_COUNT: return (int64_t)inRun->mLoad.size();
+    case EE_SCENARIO_WORLD_LOAD_AT: return SMEID(inRun->mLoad[(size_t)a[0]]);
+    case EE_SCENARIO_WORLD_LOAD_GOAL: {
+        EEComplexUnit* theUnit = SMEComplex(a[1]);
+        EEUnitGoal* theCurrent = theUnit->GetGoal();
+        long theKind = a[0] == 0 ? kGoalLoadGarrison : kGoalLoadTransport;
+        if (theCurrent != NULL && theCurrent->mKind == theKind) {
+            inRun->mGoal = a[0] == 0 ? EELoadGarrisonGoalCast(theCurrent) : EELoadTransportGoalCast(theCurrent);
+            inRun->mGoal->AddLoadUnits(inRun->mLoad);
+            return 0;
+        }
+        inRun->mGoal = EEUGRust::NewLoad(theKind, theUnit, inRun->mLoad, true);
+        return 1;
+    }
+    case EE_SCENARIO_WORLD_GOAL_VALID: return inRun->mGoal->IsLoadGarrisonValid();
+    case EE_SCENARIO_WORLD_SET_GOAL:
+    case EE_SCENARIO_WORLD_SET_GOAL_CLONE: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        theUnit->ClearGoals(0);
+        theUnit->SetGoal(inOp == EE_SCENARIO_WORLD_SET_GOAL ? inRun->mGoal : inRun->mGoal->Clone(), 0, 0);
+        SMEAction(theUnit, (long)a[1]);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GOAL_DELETE: delete inRun->mGoal; return 0;
+    case EE_SCENARIO_WORLD_LOAD_FILTER: {
+        EEUnit* theTarget = SMEUnit(a[0]);
+        inRun->mLoad.clear();
+        for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
+            EEComplexUnit* theUnit = theGroup->GetUnit(u);
+            if (theUnit != theTarget)
+                inRun->mLoad.push_back(theUnit);
+        }
+        EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTarget->GetUnitClass())->FilterLoadable(&inRun->mLoad, theTarget->GetComplexUnit(),
+                                                                                &inRun->mRejected);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GOAL_LOAD_TILE: {
+        U2DPoint<long> theTile = inRun->mGoal->GetLoadUnitTile();
+        return SMEPack(theTile.GetX(), theTile.GetY());
+    }
+    case EE_SCENARIO_WORLD_REJECTED_COUNT: return (int64_t)inRun->mRejected.size();
+    case EE_SCENARIO_WORLD_REJECTED_MOVE:
+        theGroup->Finish();
+        for (unsigned long n = 0; n < inRun->mRejected.size(); n++)
+            theGroup->AddMember(inRun->mRejected[n], true);
+        theGroup->KeepMobileUnits();
+        SMEGroupGoal(theGroup, EEUGRust::NewLocation(GE2DPoint((float)(long)a[0], (float)(long)a[1]), true, true, false, 0.0f, false, 0),
+                     kActionPrepareToMove);
+        return 0;
+    case EE_SCENARIO_WORLD_GROUP_SPREAD: theGroup->SpreadAroundTile((long)a[0], (long)a[1]); return 0;
+    case EE_SCENARIO_WORLD_REPAIR: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        theUnit->OrderRepair(SMEUnit(a[1]));
+        SMEAction(theUnit, kActionIdle);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GROUP_DROPOFF: {
+        EEUnit* theTarget = SMEUnit(a[0]);
+        theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, EEUGRust::NewGather(NULL, theTarget->GetComplexUnit(), true), kActionDropoffResource);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_ACKNOWLEDGE:
+        if (theGroup->GetFirstUnit() != NULL)
+            EEPlayForLocalPlayer(SMEPlayer(a[0]), theGroup->GetFirstUnit()->GetStats()->GetAcknowledgeSound(-1));
+        return 0;
+    case EE_SCENARIO_WORLD_GROUP_PATROL_POINT: {
+        EEComplexUnit* thePoint = SMEUnit(a[0])->GetComplexUnit();
+        theGroup->KeepMobileUnits();
+        EEUGRust* theGoal = EEUGRust::NewPatrol(thePoint->mPatrolGroup, thePoint, true);
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, theGoal, kActionMoveToNextPatrolPoint);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GROUP_PATROL_TO: {
+        EEUGRust* theGoal = EEUGRust::NewPatrol(true);
+        EEComplexUnit* theFirst = theGroup->GetFirstUnit();
+        if (theFirst != NULL && (a[3] == 0 || (theFirst->GetTileX() != -10000 && theFirst->GetTileY() != -10000))) {
+            theGoal->GetPatrolGroup()->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), (unsigned long)a[0]);
+            theGoal->GetPatrolGroup()->AddPoint(GE2DPoint(SMEFloat(a[1]), SMEFloat(a[2])), (unsigned long)a[0]);
+            theFirst->GetPlayer()->AddPatrolGroup(theGoal->GetPatrolGroup());
+        }
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, theGoal, kActionMoveToNextPatrolPoint);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_AIR_QUEUE: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        GE2DPoint thePoint(SMEFloat(a[1]), SMEFloat(a[2]));
+        theUnit->ClearGoalQueue(0);
+        theUnit->ClearGoalQueue(1);
+        theUnit->QueueGoal(EEUGRust::NewLocation(thePoint, true, a[3] != 0, false, 0.0f, false, 0), 0);
+        theUnit->QueueGoal(EEUGRust::NewLocation(thePoint, true, a[3] != 0, false, 0.0f, false, 0), 1);
+        theUnit->mGoalQueues[1].AddTime(1);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_LOCATION_GOAL: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(SMEFloat(a[1]), SMEFloat(a[2])), true, a[3] != 0, false, 0.0f, false, 0);
+        theUnit->ClearGoals(0);
+        theUnit->SetGoal(theGoal, 0, 0);
+        if (a[4] == 0 || theUnit->mContainer == NULL)
+            SMEAction(theUnit, kActionTakeoff);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GROUP_MOVE:
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, EEUGRust::NewLocation(GE2DPoint(SMEFloat(a[0]), SMEFloat(a[1])), true, a[2] != 0, false, 0.0f, false, 0),
+                     kActionPrepareToMove);
+        return 0;
+    case EE_SCENARIO_WORLD_CAL_NODES: {
+        EEPlayer* thePlayer = SMEPlayer(a[0]);
+        inRun->mCalamities.clear();
+        thePlayer->GetTechTree()->GetNodeIDs(inRun->mNodeIDs);
+        for (unsigned long n = 0; n < inRun->mNodeIDs.size(); n++) {
+            EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(inRun->mNodeIDs[n]);
+            if (theNode->mData->mCalamity == (unsigned long)a[1] && theNode->GetIsAvailable())
+                inRun->mCalamities.push_back(inRun->mNodeIDs[n]);
+        }
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CAL_TARGET_KIND:
+        inRun->mCalamity = EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)a[0]);
+        return inRun->mCalamity != NULL ? (int64_t)inRun->mCalamity->GetTargetKind() : -1;
+    case EE_SCENARIO_WORLD_CAL_VALID_TARGET: {
+        EEUnitCalamityClass* theClass = dynamic_cast<EEUnitCalamityClass*>(inRun->mCalamity);
+        return theClass != NULL && theClass->IsValidTarget(SMEComplex(a[0]), SMEUnit(a[1]));
+    }
+    case EE_SCENARIO_WORLD_CAL_VALID_LOCATION: {
+        EELocationCalamityClass* theClass = dynamic_cast<EELocationCalamityClass*>(inRun->mCalamity);
+        return theClass != NULL && theClass->IsValidLocation(SMEComplex(a[0]), (long)a[1], (long)a[2]);
+    }
+    case EE_SCENARIO_WORLD_CAST: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        EEPlayer* thePlayer = SMEPlayer(a[3]);
+        for (unsigned long n = 0; n < inRun->mCalamities.size(); n++) {
+            if (!thePlayer->GetTechTree()->Get(inRun->mCalamities[n])->Contains(theUnit->GetUnitClass()->GetUnitType()))
+                continue;
+            EEUGRust* theGoal = EEUGRust::NewCastCalamity(theUnit, SMEUnitOrNull(a[1]), (long)a[2], (long)a[4],
+                                                          inRun->mCalamities[n], true);
+            theUnit->ClearGoals(0);
+            theUnit->SetGoal(theGoal, 0, 0);
+            SMEAction(theUnit, kActionPrepareToMove);
+            break;
+        }
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_AREA_TAKE_OFF_MAP: SMETakeOffMap(inRun, SMEUnit(a[0])); return 0;
+    case EE_SCENARIO_WORLD_AREA_PLACE: SMEPlaceInArea(inRun, SMEUnit(a[0])); return 0;
+    case EE_SCENARIO_WORLD_UNLOAD: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        GE2DPoint theTarget(SMEFloat(a[1]), SMEFloat(a[2]));
+        EEUGRust* theGoal = EEUGRust::NewUnloadTransport(theUnit, (long)theTarget.GetX(), (long)theTarget.GetY(), true);
+        if (theUnit->GetUnitClass()->IsTransport() && theUnit->GetNumCargoUnits() > 0 && theGoal->CanUnloadAtDestination()) {
+            theUnit->ClearGoals(0);
+            theUnit->SetGoal(theGoal, 0, 0);
+        } else {
+            delete theGoal;
+            theUnit->ClearGoals(0);
+            theUnit->SetGoal(EEUGRust::NewLocation(theTarget.GetX(), theTarget.GetY(), 0.0f, true, true, false, 0.0f, false, 0), 0, 0);
+        }
+        SMEAction(theUnit, kActionPrepareToMove);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_UPDATE_ACTIVE: gWorld.UpdateActiveUnits(); return 0;
+    case EE_SCENARIO_WORLD_AREA_LOCATION:
+        inRun->mPlace.SetX(SMEFloat(a[0]));
+        inRun->mPlace.SetY(SMEFloat(a[1]));
+        return 0;
+    }
+    return 0;
 }
 
+// a class attribute's upgrade field by attribute from Reload Time+ (armor apart): a long's or a float's
+typedef EEUnitClassUpgrade SMEU;
+const struct { long SMEU::* mLong; float SMEU::* mFloat; } kSMEClassFields[] = {
+    {&SMEU::mReloadTime, NULL}, {NULL, &SMEU::mAttack}, {&SMEU::mWorkRate, NULL}, {&SMEU::mFlightTime, NULL},
+    {NULL, &SMEU::mLeadership}, {&SMEU::mMaxObjectCarry, NULL}, {&SMEU::mRepairRate, NULL}, {&SMEU::mMaxHitPoints, NULL},
+    {&SMEU::mCarryAmount, NULL}, {&SMEU::mHealingPoints, NULL}, {NULL, &SMEU::mRange}, {NULL, &SMEU::mLineOfSight},
+    {NULL, &SMEU::mMaxVelocity}, {&SMEU::mPower, NULL}, {NULL, NULL}, {NULL, &SMEU::mCameraFocus}};
 
-// FUNCTION: EXE 0x5c42d2
-// Sends the scenario object's living units to a random tile of the task area (move, patrol, unload or calamity per
-// player); off-map units are placed in the area, and with no area set every unit is taken off the map instead
-// mTaskAction: 0/2 move, 1 patrol, 4 unload, > 6 cast calamity mTaskAction - 6. EESMArea::IsUnset is true for an
-// area with no anchor. The original tested the address of EEUnit::GetComplexUnit instead of calling it, so the
-// NULL guard never worked; it now calls it.
-void EESMEffect::TaskUnitsToArea()
+// EEModifyUnitAttribute's calls on player a[0]'s upgrade of unit type a[1] (class_attribute.rs
+// EE_SCENARIO_WORLD_CA_*), attribute a[2]: its value, its class's base, its change, the pending effect
+int64_t SMEClassAttributeWorld(uint32_t inOp, const int64_t* a)
 {
-    std::vector<long> theNodeIDs;
-    std::vector<long> theCalamities;
-    std::vector<U2DPoint<long> > theTiles;
-    GE2DPoint theTarget;
-    GE2DPoint theLocation;
-    GETransformation theTransformation;
-    std::vector<EEUnit*> theUnits[16];
-    EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mTaskArea);
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    float theRoll = 0.0f;
-    float thePitch = 0.0f;
-    if (theObject != NULL && theArea != NULL) {
-        bool theUnset = theArea->IsUnset();
-        if (!theUnset && !theArea->IsOffMap()) {
-            theArea->GetTiles(theTiles);
-            // An area with no tiles (e.g. anchored to a unit that is gone) has no destination
-            if (theTiles.empty())
-                return;
-            long theIndex = gPhysics->GetRandom(0L, (long)theTiles.size() - 1);
-            theLocation.SetX((float)(theTiles[theIndex]).GetX());
-            theLocation.SetY((float)(theTiles[theIndex]).GetY());
-            theTarget = theLocation;
-            gWorld.mMap->GetTile((long)theTarget.GetX(), (long)theTarget.GetY());
-        }
-        theObject->Evaluate(false);
-        unsigned long theCount = theObject->mUnits.size();
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEUnit* theUnit = gWorld.GetUnit(theObject->GetUnitAt(i));
-            EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
-            if (theUnit == NULL || theComplex == NULL || theUnit->GetHitPoints() <= 0)
-                continue;
-            if (theComplex->GetCommandType() == kActionResourcesRotting || theComplex->GetCommandType() == kActionUnitRotting
-                || theComplex->GetCommandType() == kActionDead || theComplex->GetCommandType() == kActionResourcesDepleting)
-                continue;
-            if (!theComplex->mIsDisabled && !theComplex->mIsCommandable)
-                continue;
-            theUnit->GetPlayer()->DetachUnitFromAI(theComplex);
-            theComplex->SetDisabled(false, 0);
-            theComplex->SetIsCommandable(true);
-            theComplex->SetIsDeletable(theComplex->GetUnitClass()->mIsDeletable);
-            if (theUnset) {
-                if (!theComplex->GetUnitClass()->IsLandBuilding()) {
-                    if (theComplex->GetUnitClass()->IsLandBuilding()) {
-                        for (EEComplexUnit* theLinked = theComplex; theLinked != NULL; theLinked = theLinked->mNextPart)
-                            theLinked->Set2DPosition(U2DPoint<float>((float)theLinked->GetTileX(), (float)theLinked->GetTileY()));
-                    } else {
-                        theTransformation = theComplex->mPhysicalModel.GetLocation();
-                        theComplex->Set2DPosition(U2DPoint<float>(theTransformation.GetX(), theTransformation.GetY()));
-                    }
-                    if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
-                        theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->RemoveAirport(theComplex);
-                    if (theComplex->GetPlayer() == gWorld.GetCurrentPlayer()
-                        && theComplex->GetPlayer()->mActiveGroup->Contains(theComplex))
-                        gUserInterface->PostMessage424Once();
-                    theComplex->TakeOffMap();
-                    EEWUnitsOffMapInfo* theInfo = theComplex->GetPlayer()->GetOffMapInfo(theComplex);
-                    if (theInfo != NULL)
-                        theInfo->mReason = 2;
-                } else {
-                    theTransformation = theComplex->mPhysicalModel.GetLocation();
-                    theComplex->mLastMapPosition = GE3DPoint(theTransformation);
-                    theComplex->Set2DPosition(U2DPoint<float>(theTransformation.GetX(), theTransformation.GetY()));
-                }
-                if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
-                    theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->RemoveAirport(theComplex);
-                if (theComplex->GetPlayer() == gWorld.GetCurrentPlayer()
-                    && theComplex->GetPlayer()->mActiveGroup->Contains(theComplex))
-                    gUserInterface->PostMessage424Once();
-            } else if ((theUnit->GetTileX() != -10000 && theUnit->GetTileY() != -10000)
-                       || ((theUnit->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theUnit->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
-                           && theComplex->mContainer != NULL)) {
-                theUnits[gWorld.GetPlayerIndex(theUnit->GetPlayer())].push_back(theUnit);
-            } else {
-                unsigned long theSaved68 = theObject->GetInAreaCheck();
-                unsigned long theSaved3C = theObject->GetArea();
-                unsigned long theSaved6C = theObject->GetNearCheck();
-                theObject->mInAreaCheck = 1;
-                theObject->mArea = this->mTaskArea;
-                theObject->mNearCheck = 0;
-                if (theArea->IsOffMap()
-                    || theObject->FindPlacement(theUnit->GetUnitClass()->GetUnitType(), theLocation, true)) {
-                    theTransformation = theComplex->mPhysicalModel.GetLocation();
-                    if (theArea->IsOffMap()) {
-                        theTransformation.SetX(theComplex->mU0DC.GetX());
-                        theTransformation.SetY(theComplex->mU0DC.GetY());
-                    } else if (theLocation.GetX() != -10000.0f) {
-                        theTransformation.SetX(theLocation.GetX() + 0.5f);
-                        theTransformation.SetY(theLocation.GetY() + 0.5f);
-                        long theX = (long)theLocation.GetX();
-                        EETile* theTile = gWorld.mMap->GetTile(theX, (long)theLocation.GetY());
-                        if (theTile != NULL) {
-                            if (!(theUnit->GetUnitClass()->mDomains & kMovementAir))
-                                theTransformation.mMatrix[2][3] = theTile->GetHeight();
-                            else if (theComplex->mPhysicalModel.GetLocation().GetZ() < theTile->GetHeight())
-                                theTransformation.mMatrix[2][3] = theUnit->GetUnitClass()->GetCruiseAltitude();
-                        }
-                    } else {
-                        theTransformation.SetX(-10000.0f);
-                        theTransformation.SetY(-10000.0f);
-                    }
-                    if (theTransformation.GetX() != -10000.0f) {
-                        GETransformation theGround(false);
-                        theGround.MakeIdentity();
-                        theGround.SetPosition(GE3DPoint(theTransformation));
-                        if (theUnit->GetUnitClass()->mPitchesWithTerrain)
-                            thePitch = gWorld.mMap->GetTerrainPitch(theGround);
-                        if (theUnit->GetUnitClass()->mRollsWithTerrain)
-                            theRoll = gWorld.mMap->GetTerrainRoll(theGround);
-                        theTransformation.SetOrientationYPR(
-                            UMArcTan2(theComplex->mPhysicalModel.GetLocation().mMatrix[1][0],
-                                      theComplex->mPhysicalModel.GetLocation().mMatrix[0][0]),
-                            thePitch, theRoll);
-                        if (theComplex->mContainer == NULL)
-                            theComplex->SetTransformation(theTransformation, true);
-                        else
-                            theComplex->mContainer->UnloadCargoByID(theComplex->mUnitID, theTransformation);
-                        long theSize = theUnit->GetUnitClass()->GetTileSize();
-                        if (theSize > 1) {
-                            float theOffset = theSize * 0.5f;
-                            theTransformation.SetX(theTransformation.GetX() + theOffset);
-                            theTransformation.SetY(theTransformation.GetY() + theOffset);
-                            theComplex->mPhysicalModel.SetLocation(theTransformation);
-                        }
-                        if (theUnit->GetUnitClass()->mAirTrafficType != 0 && theComplex->GetUnitClass()->IsAirBase())
-                            theComplex->GetPlayer()->mAirTraffic[theUnit->GetUnitClass()->mAirTrafficType - 1]->AddAirport(theComplex);
-                        if ((theUnit->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theUnit->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
-                            && (theUnit->GetComplexUnit()->mFlightTime != 0 || theUnit->GetComplexUnit()->mHomeBase != NULL))
-                            theComplex->StartAction(kActionCircle);
-                        else
-                            theComplex->StartAction(kActionIdle);
-                        theUnit->GetUnitClass()->ActionChanged(theComplex);
-                    }
-                }
-                theObject->mInAreaCheck = theSaved68;
-                theObject->mArea = theSaved3C;
-                theObject->mNearCheck = theSaved6C;
-            }
-        }
-        for (long p = 0; p < 16 && !theUnset && !theArea->IsOffMap(); p++) {
-            if (theUnits[p].size() <= 0)
-                continue;
-            EEPlayer* thePlayer = gWorld.GetPlayer(p);
-            if (this->mTaskAction > kSMTaskActionCalamityBase) {
-                theCalamities.clear();
-                thePlayer->GetTechTree()->GetNodeIDs(theNodeIDs);
-                for (unsigned long n = 0; n < theNodeIDs.size(); n++) {
-                    EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theNodeIDs[n]);
-                    if (theNode->mData->mCalamity == this->mTaskAction - 6 && theNode->GetIsAvailable())
-                        theCalamities.push_back(theNodeIDs[n]);
-                }
-            }
-            EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-            thePlayer->mPendingGroups.push_back(theGroup);
-            unsigned long theNumUnits = theUnits[p].size();
-            for (unsigned long u = 0; u < theNumUnits; u++)
-                theGroup->AddMember(theUnits[p][u]->mComplexUnit, true);
-            theGroup->KeepMobileUnits();
-            if (theGroup->GetNumUnits() == 0)
-                continue;
-            EEComplexUnit* theFirst = theGroup->GetFirstUnit();
-            switch (this->mTaskAction) {
-            case kSMTaskActionNormal:
-            case kSMTaskActionAttackMove: {
-                if ((theFirst->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theFirst->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
-                    && (theFirst->GetComplexUnit() == NULL || theFirst->GetComplexUnit()->GetCommandType() == kActionIdle)) {
-                    for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                        EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                        EEUGRust* theGoal = EEUGRust::NewLocation(theTarget, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0);
-                        theUnit->ClearGoals(0);
-                        theUnit->SetGoal(theGoal, 0, 0);
-                        if (theUnit->mContainer == NULL) {
-                            theUnit->StartAction(kActionTakeoff);
-                            theUnit->GetUnitClass()->ActionChanged(theUnit);
-                        }
-                    }
-                } else {
-                    theGroup->ClearGoal();
-                    theGroup->SetGoal(EEUGRust::NewLocation(theTarget, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), false);
-                    theGroup->mAction = kActionPrepareToMove;
-                    theGroup->Plan();
-                }
-                break;
-            }
-            case kSMTaskActionPatrol: {
-                EEUGRust* theGoal = EEUGRust::NewPatrol(true);
-                if (theFirst != NULL && theFirst->GetTileX() != -10000 && theFirst->GetTileY() != -10000) {
-                    theGoal->GetPatrolGroup()->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), p);
-                    theGoal->GetPatrolGroup()->AddPoint(theTarget, p);
-                    theFirst->GetPlayer()->AddPatrolGroup(theGoal->GetPatrolGroup());
-                }
-                theGroup->ClearGoal();
-                theGroup->SetGoal(theGoal, false);
-                theGroup->mAction = kActionMoveToNextPatrolPoint;
-                theGroup->Plan();
-                break;
-            }
-            case kSMTaskActionUnload: {
-                for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                    EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                    EEUGRust* theGoal =
-                        EEUGRust::NewUnloadTransport(theUnit, (long)theTarget.GetX(), (long)theTarget.GetY(), true);
-                    if (theUnit->GetUnitClass()->IsTransport() && theUnit->GetNumCargoUnits() > 0
-                        && theGoal->CanUnloadAtDestination()) {
-                        theUnit->ClearGoals(0);
-                        theUnit->SetGoal(theGoal, 0, 0);
-                    } else {
-                        delete theGoal;
-                        theUnit->ClearGoals(0);
-                        theUnit->SetGoal(EEUGRust::NewLocation(theTarget.GetX(), theTarget.GetY(), 0.0f, true, true, false,
-                                                          0.0f, false, 0),
-                                         0, 0);
-                    }
-                    theUnit->StartAction(kActionPrepareToMove);
-                    theUnit->GetUnitClass()->ActionChanged(theUnit);
-                }
-                break;
-            }
-            default:
-                if (this->mTaskAction > kSMTaskActionCalamityBase) {
-                    EECalamityEnum theEnum = (EECalamityEnum)(this->mTaskAction - 6);
-                    EECalamityClass* theClass = EECalamityManager::GetInstance()->GetCalamityClass(theEnum);
-                    if (theClass == NULL || theClass->GetTargetKind() != 2)
-                        break;
-                    EELocationCalamityClass* theLocationClass = dynamic_cast<EELocationCalamityClass*>(theClass);
-                    if (theLocationClass == NULL)
-                        break;
-                    for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
-                        EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                        if (!theLocationClass->IsValidLocation(theUnit, (long)theTarget.GetX(), (long)theTarget.GetY()))
-                            continue;
-                        for (unsigned long n = 0; n < theCalamities.size(); n++) {
-                            if (!thePlayer->GetTechTree()->Get(theCalamities[n])
-                                    ->Contains(theUnit->GetUnitClass()->GetUnitType()))
-                                continue;
-                            EEUGRust* theGoal =
-                                EEUGRust::NewCastCalamity(theUnit, NULL, (long)theTarget.GetX(),
-                                                          (long)theTarget.GetY(), theCalamities[n], true);
-                            theUnit->ClearGoals(0);
-                            theUnit->SetGoal(theGoal, 0, 0);
-                            theUnit->StartAction(kActionPrepareToMove);
-                            theUnit->GetUnitClass()->ActionChanged(theUnit);
-                            break;
-                        }
-                    }
-                }
-                break;
-            }
-        }
+    EEPlayer* thePlayer = a[0] >= 0 ? SMEPlayer(a[0]) : NULL;
+    EEUnitClassUpgrade* theUpgrade = thePlayer != NULL && a[1] >= 0 ? thePlayer->GetUpgrade((long)a[1]) : NULL;
+    if (inOp == EE_SCENARIO_WORLD_CA_UPGRADE)
+        return theUpgrade != NULL;
+    if (inOp == EE_SCENARIO_WORLD_CA_CAPTURE) {   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
+        long theArgs[7] = {(long)(uint32_t)a[2], (long)(a[2] >> 32), thePlayer != NULL ? (long)thePlayer->mPlayerID : -1,
+                           theUpgrade != NULL ? (long)theUpgrade->mUnitClass->mUnitType : -1, (long)a[3], (long)a[4], 0};
+        EESMCaptureUnitChange(1, theArgs, NULL, thePlayer, theUpgrade, (unsigned int)a[5]);
+        return 0;
     }
-    gWorld.UpdateActiveUnits();
+    if (inOp == EE_SCENARIO_WORLD_CA_PENDING) {
+        EESMEffect theEffect;
+        theEffect.mAttributeUnit = (unsigned long)-1;
+        theEffect.mType = kSMEffectObject;
+        theEffect.mObjectAction = kSMObjectActionUnitAttribute;
+        theEffect.mAttributeUnitType = theUpgrade->mUnitClass->GetUnitType();
+        theEffect.mAttributePlayer = thePlayer->GetPlayerID();
+        theEffect.mObject = 0;
+        theEffect.mAttribute = (unsigned long)a[2];
+        theEffect.mUsesPercent = a[3] != 0;
+        theEffect.mAttributeAmount = (unsigned long)a[4];
+        theEffect.mAttributeMode = (unsigned long)a[5];
+        gWorld.mScenarioManager->AddV134Effect(theEffect);
+        return 0;
+    }
+    EEUnitClass* theClass = theUpgrade->mUnitClass;
+    long theArmor = (long)a[2] - kSMUnitAttributeShockArmorPlus;   // 0..5 an armor
+    bool theIsArmor = theArmor >= 0 && theArmor < 6;
+    long SMEU::* theLong = theIsArmor ? NULL : kSMEClassFields[a[2] - kSMUnitAttributeReloadTimePlus].mLong;
+    float SMEU::* theFloat = theIsArmor ? NULL : kSMEClassFields[a[2] - kSMUnitAttributeReloadTimePlus].mFloat;
+    if (inOp == EE_SCENARIO_WORLD_CA_VALUE)
+        return theIsArmor ? SMEBits(theUpgrade->mArmor[theArmor]) : theLong != NULL ? (int64_t)(theUpgrade->*theLong)
+             : theFloat != NULL ? SMEBits(theUpgrade->*theFloat) : (int64_t)theUpgrade->mIsInitialized;
+    if (inOp == EE_SCENARIO_WORLD_CA_BASE) {
+        switch (a[2]) {
+        case kSMUnitAttributeReloadTimePlus: return SMEBits((float)theClass->mReloadTime);
+        case kSMUnitAttributeAttackPlus: return SMEBits((float)theClass->mAttack);
+        case kSMUnitAttributeWorkRatePlus: return SMEBits((float)theClass->mWorkRate);
+        case kSMUnitAttributeFlightTimePlus: return SMEBits((float)theClass->mFlightTime);
+        case kSMUnitAttributeLeadershipPlus: return SMEBits((float)theClass->mLeadership);
+        case kSMUnitAttributeMaxObjectsCarriedPlus: return SMEBits((float)theClass->mMaxObjectCarry);
+        case kSMUnitAttributeRepairPlus: return SMEBits((float)theClass->mRepairRate);
+        case kSMUnitAttributeHitPointsPlus: return SMEBits((float)theClass->mHitPoints);
+        case kSMUnitAttributeCarryAmountPlus: return SMEBits((float)theClass->mCarryAmount);
+        case kSMUnitAttributeContainerHealingHPPerSecPlus: return SMEBits((float)theClass->mHealingPoints);
+        case kSMUnitAttributeRangePlus: return SMEBits(theClass->GetRange());
+        case kSMUnitAttributeLineOfSightPlus: return SMEBits(theClass->GetLineOfSight());
+        case kSMUnitAttributeMaxVelocityPlus: return SMEBits(theClass->GetMaxVelocity());
+        case kSMUnitAttributePowerPlus: return SMEBits((float)theClass->mPower);
+        }
+        return SMEBits((float)theClass->mArmor[theArmor]);
+    }
+    switch (a[2]) {   // EE_SCENARIO_WORLD_CA_SET
+    case kSMUnitAttributeRangePlus: theUpgrade->SetRange(SMEFloat(a[3])); break;
+    case kSMUnitAttributeMaxVelocityPlus: theUpgrade->SetMaxVelocity(SMEFloat(a[3])); break;
+    case kSMUnitAttributeLineOfSightPlus: {
+        // the sight leaves the map before the change and comes back after it
+        std::vector<EEUnit*> theUnits;
+        for (EEUnit* theNode = thePlayer->mFirstUnit; theNode != NULL; theNode = static_cast<EEUnit*>(theNode->mNext)) {
+            if (theNode->mComplexUnit != NULL && theNode->mUnitClass == theClass) {
+                theNode->mComplexUnit->SightOffHere();
+                theUnits.push_back(theNode);
+            }
+        }
+        theUpgrade->mLineOfSight = SMEFloat(a[3]);
+        for (unsigned long i = 0; i < theUnits.size(); i++)
+            theUnits[i]->SightOnHere();
+        break;
+    }
+    case kSMUnitAttributeAnimalAIActivePlus: {
+        std::vector<EEHerd*> theHerds;
+        theUpgrade->mIsInitialized = a[3] != 0;
+        thePlayer->GetHerdsOfType(theHerds, theClass->mUnitType);
+        for (long j = (long)theHerds.size() - 1; j >= 0; --j)
+            theHerds[j]->mIsActive = theUpgrade->mIsInitialized;
+        break;
+    }
+    default:
+        if (theIsArmor)
+            theUpgrade->mArmor[theArmor] = SMEFloat(a[3]);
+        else if (theLong != NULL)
+            theUpgrade->*theLong = (long)a[3];
+        else
+            theUpgrade->*theFloat = SMEFloat(a[3]);
+        break;
+    }
+    return 0;
 }
 
-// TEMPLATE: EXE 0x5c42ce// ?GetComplexUnit@EEUnit@@QBEPAVEEComplexUnit@@XZ (ICF-folded with EECCLeprosy::GetContagionFunctor)
-// TEMPLATE: EXE 0x5c5126
-// ?push_back@?$vector@PAV?$vector@PAVEEUnit@@V?$allocator@PAVEEUnit@@@std@@@std@@V?$allocator@PAV?$vector@PAVEEUnit@@V?$allocator@PAVEEUnit@@@std@@@std@@@2@@std@@QAEXABQAV?$vector@PAVEEUnit@@V?$allocator@PAVEEUnit@@@std@@@2@@Z
+// EEChangeUnit's calls on the context's unit (ee_scenario unit_change.rs EE_SCENARIO_WORLD_CU_*): its values (the
+// statements' reads), the draws and each change's statement
+int64_t SMEChangeUnitWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
+{
+    EEUnit* theUnit = inContext->mUnit;
+    if (inOp == EE_SCENARIO_WORLD_CU_RANDOM)
+        return gPhysics->GetRandom((long)a[0], (long)a[1]);
+    EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
+    long* theVariable = a[0] >= EE_SCENARIO_CU_VARIABLE && a[0] < EE_SCENARIO_CU_VARIABLE + 3
+                            ? &theComplex->mUnitVariables[(size_t)(a[0] - EE_SCENARIO_CU_VARIABLE)] : NULL;
+    if (inOp == EE_SCENARIO_WORLD_CU_VALUE) {
+        switch (a[0]) {
+        case EE_SCENARIO_CU_EXISTS: return theUnit != NULL;
+        case EE_SCENARIO_CU_COMPLEX: return theComplex != NULL;
+        case EE_SCENARIO_CU_HIT_POINTS: return theUnit->GetHitPoints();
+        case EE_SCENARIO_CU_MAX_HIT_POINTS: return theUnit->GetStats()->mMaxHitPoints;
+        case EE_SCENARIO_CU_CATEGORY: return theUnit->GetUnitClass()->GetCategory();
+        case EE_SCENARIO_CU_CARRY: return theUnit->GetStats()->mCarryAmount;
+        case EE_SCENARIO_CU_RESOURCE_AMOUNT: return theUnit->mResourceAmount;
+        case EE_SCENARIO_CU_GATHERING: return theComplex->mCommand != NULL && theComplex->mCommand->mType == kActionGatherResource;
+        case EE_SCENARIO_CU_RESOURCE_TYPE: return theComplex->mResourceType;
+        case EE_SCENARIO_CU_STATS_FLIGHT_TIME: return theUnit->GetStats()->mFlightTime;
+        case EE_SCENARIO_CU_FLIGHT_TIME: return theComplex->mFlightTime;
+        case EE_SCENARIO_CU_GARRISON_CAPACITY: return theUnit->GetUnitClass()->mGarrisonCapacity;
+        case EE_SCENARIO_CU_GARRISON: return theComplex->mGarrisonCount;
+        case EE_SCENARIO_CU_CLASS_AMMUNITION: return theUnit->GetUnitClass()->mAmmunition;
+        case EE_SCENARIO_CU_AMMUNITION: return (int64_t)theComplex->mAmmunition;
+        case EE_SCENARIO_CU_CLASS_SCALE: return SMEBits(theUnit->GetUnitClass()->GetScale());
+        case EE_SCENARIO_CU_SCALE: return SMEBits(theComplex->mPhysicalModel.GetScale());
+        case EE_SCENARIO_CU_STATS_RELOAD: return theUnit->GetStats()->mReloadTime;
+        case EE_SCENARIO_CU_RELOAD_TIMER: return theComplex->mReloadTimer;
+        case EE_SCENARIO_CU_STATS_POWER: return theUnit->GetStats()->mPower;
+        case EE_SCENARIO_CU_POWER: return theComplex->mPower;
+        case EE_SCENARIO_CU_CLASS_ROTTING: return theUnit->GetUnitClass()->mRottingTime;
+        case EE_SCENARIO_CU_ROTTING: return theComplex->mRottingAwayTime;
+        }
+        return *theVariable;
+    }
+    switch (a[0]) {
+    case EE_SCENARIO_CU_HIT_POINTS: theUnit->SetHitPoints((long)a[1]); break;
+    case EE_SCENARIO_CU_RESOURCE_AMOUNT: theUnit->SetResourceAmount((long)a[1]); break;
+    case EE_SCENARIO_CU_RESOURCE_TYPE: theUnit->SetResourceType((unsigned long)a[1]); break;
+    case EE_SCENARIO_CU_FLIGHT_TIME: theComplex->SetFlightTime((long)a[1]); break;
+    case EE_SCENARIO_CU_GARRISON: theComplex->AddGarrison((long)a[1], theComplex->mGarrisonPopulation); break;
+    case EE_SCENARIO_CU_AMMUNITION: theComplex->mAmmunition = (unsigned long)a[1]; break;
+    case EE_SCENARIO_CU_SCALE: theComplex->mPhysicalModel.SetScale(SMEFloat(a[1])); break;
+    case EE_SCENARIO_CU_RELOAD_TIMER: theComplex->mReloadTimer = (long)a[1]; break;
+    case EE_SCENARIO_CU_POWER: theComplex->mPower = (long)a[1]; break;
+    case EE_SCENARIO_CU_ROTTING: theComplex->mRottingAwayTime = (long)a[1]; break;
+    case EE_SCENARIO_CU_PAUSED:
+        theComplex->SetAnimation(theComplex->mAnimation, theComplex->mPhysicalModel.GetFrame(), a[1] != 0);
+        break;
+    case EE_SCENARIO_CU_BUILT: theComplex->SetBuilt(a[1] != 0, 1, 1); break;
+    case EE_SCENARIO_CU_GARRISON_WAIT: {
+        std::vector<EEComplexUnit*> theUnits;
+        theComplex->QueueGoal(EEUGRust::NewLoad(kGoalLoadGarrison, theComplex, theUnits, false), 0);
+        SMEAction(theComplex, kActionWaitForGarrisonCost);
+        break;
+    }
+    case EE_SCENARIO_CU_KILL:
+        if (a[1] == 0) {
+            theUnit->Kill(0, 0, 0);
+            break;
+        }
+        theUnit->SetResourceAmount(0);
+        theUnit->GetPlayer()->UnitTaken(theUnit, false);
+        theUnit->GetPlayer()->KillUnit(theUnit, false);
+        break;
+    default: *theVariable = (long)a[1]; break;
+    }
+    return 0;
+}
+
+}   // namespace
+
+// an effect run's world call (ee_scenario effect.rs EE_SCENARIO_WORLD_*): each the original's statement or
+// statement sequence at its place, on the units by id, the players by index
+int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
+{
+    if (inOp >= EE_SCENARIO_WORLD_CU_RANDOM && inOp <= EE_SCENARIO_WORLD_CU_SET)   // EEChangeUnit's (no effect run)
+        return SMEChangeUnitWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
+    if (inOp >= EE_SCENARIO_WORLD_CA_UPGRADE && inOp <= EE_SCENARIO_WORLD_CA_CAPTURE)   // EEModifyUnitAttribute's
+        return SMEClassAttributeWorld(inOp, a);
+    EESMEffectRun* theRun = static_cast<EESMEffectRun*>(static_cast<EESMHostContext*>(inContext));
+    EESMEffect* theEffect = theRun->mEffect;
+    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    EECameraControl& theCamera = gWorld.mCameraControl;
+    switch (inOp) {
+    case EE_SCENARIO_WORLD_UNIT: return SMEUnitValue(a[0], a[1]);
+    case EE_SCENARIO_WORLD_CURRENT_PLAYER: return gWorld.mCurrentPlayer;
+    case EE_SCENARIO_WORLD_IN_CINEMATIC: return gInCinematic;
+    case EE_SCENARIO_WORLD_PLAYER_OBSERVER: return SMEPlayer(a[0])->mObserverMode;
+    case EE_SCENARIO_WORLD_PLAYER_IS_HUMAN: return SMEPlayer(a[0])->IsHuman();
+    case EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER: return SMEComputer(a[0]) != NULL;
+    case EE_SCENARIO_WORLD_AREA_STATE: {
+        EESMArea* theArea = theManager->GetArea((unsigned long)a[0]);
+        return theArea == NULL ? -1 : (theArea->IsUnset() ? 1 : 0) | (theArea->IsOffMap() ? 2 : 0);
+    }
+    case EE_SCENARIO_WORLD_AREA_CENTER: {
+        U2DPoint<long> theTile = theManager->GetArea((unsigned long)a[0])->GetCenterTile();
+        return SMEPack(theTile.GetX(), theTile.GetY());
+    }
+    case EE_SCENARIO_WORLD_OBJECT_EVALUATE: {
+        EESMObject* theObject = theManager->GetScenarioObject((unsigned long)a[0]);
+        return theObject == NULL ? -1 : theObject->Evaluate(false);
+    }
+    case EE_SCENARIO_WORLD_DIALOG_IDLE: return !theManager->mIsShowingDialog && theManager->GetNumMessages() == 0;
+    case EE_SCENARIO_WORLD_CLASS: return SMEClassValue(a[0]);
+    case EE_SCENARIO_WORLD_OBJECT_PICK: return theManager->GetScenarioObject((unsigned long)a[0])->PickUnitType();
+    case EE_SCENARIO_WORLD_TILE_HEIGHT: {
+        EEMapTile* theTile = gWorld.mMap->GetTile((long)a[0], (long)a[1]);
+        return theTile != NULL ? SMEBits(theTile->mHeight) : -1;
+    }
+
+    case EE_SCENARIO_WORLD_CREATE_UNITS: theEffect->CreateUnits(); return 0;
+    case EE_SCENARIO_WORLD_KILL: {
+        EEUnit* theUnit = SMEUnit(a[0]);
+        theUnit->Kill(a[1] != 0, false, false);
+        if (theUnit->mTileNode == NULL)
+            theUnit->GetPlayer()->KillUnit(theUnit, false);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CLEAR_GOALS: SMEComplex(a[0])->ClearGoals((unsigned long)a[1]); return 0;
+    case EE_SCENARIO_WORLD_CLEAR_QUEUE: SMEComplex(a[0])->ClearGoalQueue((unsigned long)a[1]); return 0;
+    case EE_SCENARIO_WORLD_ACTION: SMEAction(SMEComplex(a[0]), (long)a[1]); return 0;
+    case EE_SCENARIO_WORLD_SET_DELETABLE: SMEComplex(a[0])->SetIsDeletable(a[1] != 0); return 0;
+    case EE_SCENARIO_WORLD_SET_DISABLED: SMEComplex(a[0])->SetDisabled(a[1] != 0, 0); return 0;
+    case EE_SCENARIO_WORLD_SET_COMMANDABLE: SMEComplex(a[0])->SetIsCommandable(a[1] != 0); return 0;
+    case EE_SCENARIO_WORLD_CONVERT: EEConvertUnit(static_cast<EEComplexUnit*>(SMEUnit(a[0])), (long)a[1], 0); return 0;
+    case EE_SCENARIO_WORLD_FACE_TEST: {
+        GETransformation theLocation(false);
+        theLocation = SMEComplex(a[0])->mPhysicalModel.GetLocation();
+        return UMAbs(SMEFloat(a[1]) - UMArcTan2(theLocation.GetElement(1, 0), theLocation.GetElement(0, 0))) >= kSMEOneDegree;
+    }
+    case EE_SCENARIO_WORLD_FACE_SET: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        GETransformation theLocation(false);
+        theLocation = theUnit->mPhysicalModel.GetLocation();
+        theLocation.SetOrientationYPR(SMEFloat(a[1]), 0.0f, 0.0f);
+        theUnit->SetTransformation(theLocation, true);
+        GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+        theUnit->PlaceOnGround(thePosition);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_FACE_GOAL: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        theUnit->ClearGoals(0);
+        theUnit->SetGoal(EEUGRust::NewLocation(&GE3DPoint(theUnit->mPhysicalModel.GetLocation()), true, true, true,
+                                               SMEFloat(a[1]), false, false), 0, 0);
+        SMEAction(theUnit, kActionPrepareToMove);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_RENAME_UNIT: SMEUnit(a[0])->GetStats()->SetName(theEffect->GetNewName()); return 0;
+    case EE_SCENARIO_WORLD_RENAME_CLASS:
+        SMEPlayer(a[0])->GetUpgrade(gUnitClassTable[a[1]]->GetUnitType())->SetName(theEffect->GetNewName());
+        return 0;
+    case EE_SCENARIO_WORLD_REFRESH_PANEL:
+        if (gUIManager->GetMainGameForm() != NULL)
+            gUIManager->GetMainGameForm()->mRefreshGroup = true;
+        return 0;
+    case EE_SCENARIO_WORLD_STANCE_EXPLORE: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        EEPlayer* thePlayer = theUnit->mPlayer;
+        EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
+        theGroup->AddMember(theUnit, true);
+        thePlayer->mPendingGroups.push_back(theGroup);
+        theGroup->KeepMobileUnits();
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, EEUGRust::NewExplore(true), kActionFindUnexploredArea);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_LOCK: {
+        // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        bool theLocked = a[1] != 0;
+        EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass());
+        if (theUnit->mIsLocked != theLocked)
+            theUnit->mIsLocked = theLocked;
+        EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
+        if (thePart != NULL && thePart->mIsLocked != theLocked)
+            thePart->mIsLocked = theLocked;
+        thePart = theGate->GetFourthPart(theUnit);
+        if (thePart != NULL && thePart->mIsLocked != theLocked)
+            thePart->mIsLocked = theLocked;
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_STANCE_TOWN_PATROL: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        EETown* theTown = theUnit->FindNearestTown();
+        EEPPatrolGroup* thePatrolGroup = theTown != NULL ? theTown->mPatrolGroup : NULL;
+        EEComplexUnit* theTarget = thePatrolGroup != NULL ? thePatrolGroup->GetNearest(theUnit->GetTileX(), theUnit->GetTileY()) : NULL;
+        if (theTarget == NULL)
+            return 0;
+        EEActiveGroup* theGroup = new EEActiveGroup(theUnit->mPlayer);
+        theGroup->AddMember(theUnit, true);
+        theUnit->mPlayer->mPendingGroups.push_back(theGroup);
+        theGroup->KeepMobileUnits();
+        EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrolGroup, theTarget, true);
+        theGroup->ClearGoal();
+        SMEGroupGoal(theGroup, theGoal, kActionMoveToNextPatrolPoint);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_BEHAVIOR: {
+        EEComplexUnit* theUnit = SMEComplex(a[0]);
+        EEUnitBehavior* theBehavior = EEUnitBehavior::sTable[(size_t)a[1]];
+        if (theUnit->mBehavior != theBehavior)
+            theUnit->mBehavior = theBehavior;
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CHANGE_UNIT:
+        EEChangeUnit((unsigned long)a[1], a[2] != 0, SMEUnitOrNull(a[0]), (long)a[3], 0, false, (long)a[4]);
+        return 0;
+
+    case EE_SCENARIO_WORLD_PLAYER_RESULT:
+        SMEPlayer(a[0])->SetGameResult(a[1] != 0 ? 1 : 2);
+        gWorld.RemovePlayerFromGame(a[1] != 0, (unsigned long)a[0]);
+        return 0;
+    case EE_SCENARIO_WORLD_COMPUTER_SET_ACTIVE: SMEPlayer(a[0])->mComputerPlayer->SetActive(a[1] != 0); return 0;
+    case EE_SCENARIO_WORLD_SET_STANCE: gWorld.SetDiplomaticStance((long)a[0], (long)a[1], (unsigned long)a[2]); return 0;
+    case EE_SCENARIO_WORLD_NOTICE_TARGET: SMEPlayer(a[0])->NoticeTargetPlayer(SMEPlayer(a[1]), false); return 0;
+    case EE_SCENARIO_WORLD_FADE:
+        if (a[0] != 0)
+            gGraphics->PostFadeIn(3000);
+        else
+            gGraphics->PostFadeOut(3000);
+        return 0;
+    case EE_SCENARIO_WORLD_TECH_ADD: SMETechAdd(theEffect, SMEPlayer(a[0])); return 0;
+    case EE_SCENARIO_WORLD_TECH_REMOVE: {
+        EEPlayer* thePlayer = SMEPlayer(a[0]);
+        if (thePlayer->GetTechTree()->Get(theEffect->mTechnology)->mData->mMakesUnit) {
+            EEUnitClass* theClass = gUnitClassTable[thePlayer->GetTechTree()->Get(theEffect->mTechnology)->mData->mUnitClass];
+            if (theClass != NULL)
+                EEReplaceQueuedTechnology(thePlayer, theClass, 100000);
+        }
+        thePlayer->GetTechTree()->MakeObsolete(theEffect->mTechnology);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_ADD_PENDING: theManager->AddV134Effect(*theEffect); return 0;
+    case EE_SCENARIO_WORLD_SEES_ALL: {
+        EEPlayer* thePlayer = SMEPlayer(a[0]);
+        thePlayer->mSeesAll = a[1] != 0;
+        if (thePlayer == gWorld.GetPlayer(gWorld.mCurrentPlayer))
+            gMiniMap->Redraw();
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CIV_POINTS:
+        SMEPlayer(a[0])->mCivilization.AddPoints((long)a[1]);
+        EESetCivBuilderButtonBlinking(true);
+        SMEPlayTrumpets();
+        return 0;
+    case EE_SCENARIO_WORLD_FLARE_UNIT_TILE: {
+        EEUnit* theUnit = SMEUnit(a[0]);
+        if (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mContainer == NULL)
+            return theUnit->mTile != NULL ? SMEPack(theUnit->mTileX, theUnit->mTileY) : -1;
+        EEComplexUnit* theContainer = theUnit->mComplexUnit->mContainer;
+        return theContainer->mTile != NULL ? SMEPack(theContainer->mTileX, theContainer->mTileY) : -1;
+    }
+    case EE_SCENARIO_WORLD_FLARE: {
+        EEPlayer* thePlayer = SMEPlayer(a[0]);
+        thePlayer->mEvents.AddEvent(U2DPoint<long>((long)a[1], (long)a[2]), 3, thePlayer, -1, true);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_TRIGGER_SET: {
+        EESMTrigger* theTrigger = theManager->GetTrigger((unsigned long)a[0]);
+        if (a[1] == 0)
+            theTrigger->mConditionStartTime = (unsigned long)a[2];
+        else if (a[1] == 1)
+            theTrigger->mIsOn = a[2] != 0;
+        else
+            theTrigger->mHasFired = a[2] != 0;
+        return 0;
+    }
+
+    case EE_SCENARIO_WORLD_PLAY_SOUND: {
+        unsigned long theSample;
+        unsigned long theInstance;
+        EELoadSound("Sounds\\" + SMESoundPath() + UString(theEffect->mFileName), 0x31, theSample, theInstance, 0);
+        if (!UIsNone32(theInstance))
+            gSoundManager->RegisterOneShotSound(theSample, theInstance);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CHANGE_TEXT: {
+        static const unsigned long kSlots[] = {0, 3, 2};   // hints, instructions, history (GetSection's slots)
+        EEUISCIFormManager* theForm = EEUISCIFormManager::Get();
+        UWideString theMediaText = "\n";
+        theMediaText += theEffect->mDescription;
+        if (a[0] >= 0 && a[0] < 3) {
+            UWideString& theSection = theManager->mMediaStrings.GetSection(kSlots[a[0]]);
+            if (a[1] != 0)
+                theSection = UWideString(gEmptyString);
+            else
+                theSection = theSection + theMediaText;
+        }
+        SMEPlayTrumpets();
+        theForm->SetBlinking(true);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_EXPAND_MESSAGE: theEffect->ExpandTokens(theEffect->mMessage, theRun->mText); return 0;
+    case EE_SCENARIO_WORLD_DIALOGUE: {
+        EESMDialogMessage theMessage;
+        UWideString theName;
+        theMessage.mText = theName;
+        theMessage.mText += theRun->mText;
+        theMessage.mDuration = theEffect->mDuration * 1000;
+        theMessage.mIsCinematic = a[0] != 0;
+        EESMObject* theObject = theManager->GetScenarioObject(theEffect->mObject);
+        theObject->Evaluate(false);
+        if (theObject->mUnits.size() > 0 && gWorld.GetUnit(theObject->mUnits[0]) != NULL) {
+            EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[0]);
+            theMessage.mUnitType = theUnit->mUnitClass->mUnitType;
+            theMessage.mScrollSpeed = theEffect->mIntValue1;
+            theMessage.mUnitID = theUnit->mUnitID;
+        } else
+            theMessage.mUnitType = 0;
+        theMessage.mSound = (const char*)(SMESoundPath() + (const char*)theEffect->mFileName);
+        theManager->AddMessage(theMessage);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_DISPLAY_EMPTY: gUIManager->DisplayMessage(UWideString(), 1, NULL, NULL, true); return 0;
+    case EE_SCENARIO_WORLD_CHAT_LOG: {
+        GEColor theColor;
+        UWideString theName;
+        gUserInterface->AddChatLogEntry(theColor, theName, theRun->mText, theEffect->mDuration * 1000, 1);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CHAT_BOX: {
+        // A chat message without a duration is shown in a message box: with its text (the box showed the media
+        // text, which only the Change Text action fills, so it was empty).
+        UWideString theChat;
+        theChat += theRun->mText;
+        gUIManager->DisplayMessage(theChat, 1, NULL, NULL, true);
+        return 0;
+    }
+
+    case EE_SCENARIO_WORLD_SET_TIME_OF_DAY: gWorld.SetTimeOfDay(SMEFloat(a[0])); return 0;
+    case EE_SCENARIO_WORLD_TIME_OF_DAY_RUNS: gPhysics->mTimeOfDayRuns = a[0] != 0; return 0;
+    case EE_SCENARIO_WORLD_CAL_CLASS:
+        theRun->mCalamity = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)a[0]);
+        return theRun->mCalamity != NULL;
+    case EE_SCENARIO_WORLD_CAL_TYPE: {
+        long theType = 0;
+        return USingleton<EECalamityManager>::GetInstance()->GetCalamityType((EECalamityEnum)a[0], theType) ? theType : -1;
+    }
+    case EE_SCENARIO_WORLD_CAL_CAN_CAST:
+        return theRun->mCalamity->CanCastAt(NULL, theRun->mPoint, (long)a[0], (long)a[1], true, SMEUnitOrNull(a[2])) == 0;
+    case EE_SCENARIO_WORLD_CAL_GLOBAL: USingleton<EECalamityManager>::GetInstance()->CreateGlobalCalamity((unsigned long)a[0], 0, 0); return 0;
+    case EE_SCENARIO_WORLD_CAL_LOCATION:
+        USingleton<EECalamityManager>::GetInstance()->CreateLocationCalamity((unsigned long)a[0], -1, (long)a[1], (long)a[2], 0);
+        return 0;
+    case EE_SCENARIO_WORLD_CAL_UNIT:
+        USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity((unsigned long)a[0], -1, (unsigned long)a[1], 0);
+        return 0;
+    case EE_SCENARIO_WORLD_CAL_TILE_UNITS: {
+        EEMapTile* theMapTile = gWorld.mMap->GetTile((long)a[1], (long)a[2]);
+        if (theMapTile == NULL)
+            return 0;
+        for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
+            EEUnit* theUnit = theNode->mUnit;
+            if (theUnit == NULL || std::find(theRun->mSeen.begin(), theRun->mSeen.end(), theUnit) != theRun->mSeen.end()
+                || theRun->mCalamity->CanCastAt(NULL, theRun->mPoint, theUnit->mTileX, theUnit->mTileY, true, theUnit) != 0)
+                continue;
+            USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity((unsigned long)a[0], -1, theUnit->GetUnitID(), 0);
+            theRun->mSeen.push_back(theUnit);
+        }
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GFX_BEGIN: {
+        theRun->mGraphic = EEGraphicEffect::Get((unsigned long)a[0]);
+        if (theRun->mGraphic == NULL)
+            return -1;
+        theRun->mGraphic->Load(false);
+        long theKind = theRun->mGraphic->mKind;
+        return (theKind == kEffect3DRain || theKind == kEffect3DSnow ? EE_SCENARIO_GFX_WEATHER : 0)
+             | (theKind == kEffect3DTracers || theKind == kEffect3DShells || theKind == kEffect2DWinterBreath
+                || theKind == kEffect2DSmokeMuzzleBlast ? EE_SCENARIO_GFX_PAIR : 0)
+             | (theKind == kEffect3DMarchingLine ? EE_SCENARIO_GFX_MARCHING : 0);
+    }
+    case EE_SCENARIO_WORLD_GFX_WEATHER: {
+        const int32_t* theXY = (const int32_t*)(intptr_t)a[0];
+        std::vector<U2DPoint<long> > theTiles;
+        for (int64_t i = 0; i < a[1]; i++)
+            theTiles.push_back(U2DPoint<long>(theXY[2 * i], theXY[2 * i + 1]));
+        gEffectManager->CreateWeatherEffect(theTiles, theRun->mGraphic, NULL);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GFX_PLACED: {
+        EEMapTile* theTile = gWorld.mMap->GetTile((long)a[0], (long)a[1]);
+        GE3DPoint& thePoint = theRun->mPoint;
+        thePoint.mX = (float)(long)a[0] + 0.5f;
+        thePoint.mY = (float)(long)a[1] + 0.5f;
+        thePoint.mZ = theTile->GetHeight();
+        if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
+            thePoint.mZ = 0.0f;
+        gEffectManager->CreatePlacedEffect(thePoint, theRun->mGraphic, NULL);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_GFX_BETWEEN: gEffectManager->CreateEffectBetweenUnits(SMEUnit(a[0]), SMEUnit(a[1]), theRun->mGraphic, NULL); return 0;
+    case EE_SCENARIO_WORLD_GFX_UNIT: gEffectManager->CreateUnitEffect(SMEUnit(a[0]), theRun->mGraphic, NULL, false, 0, 0); return 0;
+    case EE_SCENARIO_WORLD_GFX_END: theRun->mGraphic->Unload(); return 0;
+    case EE_SCENARIO_WORLD_START_CINEMATIC: theManager->StartCinematic(); return 0;
+    case EE_SCENARIO_WORLD_SET_GAME_SPEED: gWorld.SetGameSpeed(SMEFloat(a[0])); return 0;
+    case EE_SCENARIO_WORLD_END_CINEMATIC: theManager->EndCinematic(); return 0;
+    case EE_SCENARIO_WORLD_TIMED_NOT_RUN: theManager->SetTimedEffectHasRun(theEffect, false); return 0;
+    case EE_SCENARIO_WORLD_WEATHER:
+        if (gWorld.mEnvironmentManager != NULL)
+            gWorld.mEnvironmentManager->SetEnabled(a[0] != 0);
+        return 0;
+
+    case EE_SCENARIO_WORLD_AI_TOGGLE: {
+        typedef void (EEComputerPlayer::*EESMToggle)(bool);
+        static const EESMToggle kToggles[] = {&EEComputerPlayer::SetActive, &EEComputerPlayer::SetIsCheating,
+            &EEComputerPlayer::SetCanAttack, &EEComputerPlayer::SetCanDefend, &EEComputerPlayer::SetCanBuild,
+            &EEComputerPlayer::SetCanExplore, &EEComputerPlayer::SetIgnoreOthers, &EEComputerPlayer::SetCanGather};
+        (static_cast<EEComputerPlayer*>(SMEPlayer(a[0]))->*kToggles[a[1]])(a[2] != 0);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_AI_FAVORITE: {
+        EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(SMEPlayer(a[0]));
+        if (a[1] == 0)
+            thePlayer->SetFavoriteAirType((unsigned long)a[2]);
+        else if (a[1] == 1)
+            thePlayer->SetFavoriteLandType((unsigned long)a[2]);
+        else
+            thePlayer->SetFavoriteSeaType((unsigned long)a[2]);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_AI_STORE:
+        EESMStoreAI(static_cast<EEComputerPlayer*>(SMEPlayer(a[0])), *(const EeScenarioAiWrite*)(intptr_t)a[1]);
+        return 0;
+    case EE_SCENARIO_WORLD_ADD_PENDING_PLAYER: {
+        EESMEffect theCopy;
+        theCopy.Copy(*theEffect);
+        theCopy.mPlayer = (unsigned long)a[0];
+        theManager->AddV134Effect(theCopy);
+        return 0;
+    }
+
+    case EE_SCENARIO_WORLD_CAMERA_RESET: theCamera.ResetPath(); return 0;
+    case EE_SCENARIO_WORLD_CAMERA_TURN_RESET: theCamera.mTurnYaw = 0.0f; return 0;
+    case EE_SCENARIO_WORLD_CAMERA_ZOOM:
+        theCamera.SetMode(3);
+        theCamera.SetZoom(SMEFloat(a[0]));
+        return 0;
+    case EE_SCENARIO_WORLD_CAMERA_KEY: {
+        // These camera APIs consume the original base-unit pointer, including its optional complex-unit link.
+        long theStepDuration = (long)a[1];
+        EEUnit* theUnit = SMEUnit(a[0]);
+        EECameraKey theKey;
+        theKey.mOffset = theCamera.GetEndOffset();
+        theCamera.GetUnitPoint(theUnit, theKey.mFocus);
+        theCamera.GetUnitTurn(theUnit, theKey.mT40);
+        theKey.mWait = 0.0f;
+        theKey.mChanged = theStepDuration == 0;
+        theKey.mRate = theStepDuration == 0 ? 0.0f : 1.0f / (float)theStepDuration;
+        theCamera.AddKey(theKey);
+        return 0;
+    }
+    case EE_SCENARIO_WORLD_CAMERA_START: theCamera.StartPath(); return 0;
+    case EE_SCENARIO_WORLD_CAMERA_POINT:
+        (a[0] != 0 ? theRun->mStart : theRun->mEnd) = GE3DPoint(SMEFloat(a[1]), SMEFloat(a[2]), SMEFloat(a[3]));
+        return 0;
+    case EE_SCENARIO_WORLD_CAMERA_MODE: theCamera.SetMode(3); return 0;
+    case EE_SCENARIO_WORLD_CAMERA_MOVE:
+        theCamera.MoveTo(SMEUnitOrNull(a[0]), theRun->mEnd, (a[2] & 1) != 0, (float)(long)a[3], SMEUnitOrNull(a[1]),
+                         theRun->mStart, (a[2] & 2) != 0, SMEFloat(a[4]), 0.0f, 0.0f);
+        return 0;
+    }
+    return SMEUnitsWorld(theRun, inOp, a);
+}
+
 // TEMPLATE: EXE 0x5c5152
 // ?GetNumMessages@EEScenarioManager@@QAEKXZ
 // TEMPLATE: EXE 0x5c516b
 // ?GetPlayer@RTSWorld@@QBEPAVEEPlayer@@K@Z
-// TEMPLATE: EXE 0x5c5176
-// ?sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5233
-// ?_Insertion_sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c525c
-// ?_Sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0HUEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c532f
-// ?_Unguarded_insertion_sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c5360
-// ?_Insertion_sort_1@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c53fd
-// ?make_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5437
-// ?sort_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5478
-// ?_Unguarded_partition@std@@YA?AV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@V21@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c5598
-// ?_Unguarded_insert@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@PAVEEUnit@@UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c55cb
-// ?_Make_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAHPAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c560f
-// ?pop_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5638
-// ?_Adjust_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEEUnit@@UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c56a6
-// ?_Pop_heap_0@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEESMUnitPriorityLess@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x5c56f9
-// ?_Push_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEEUnit@@UEESMUnitPriorityLess@@@Z
-// TEMPLATE: EXE 0x5c5748
-// ?_Pop_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@00PAVEEUnit@@UEESMUnitPriorityLess@@PAH@Z
 // TEMPLATE: EXE 0x5c577c
 // ?GetNewName@EESMEffect@@QBEABVUWideString@@XZ (EESMEffect.h, out of line from SetClassName)

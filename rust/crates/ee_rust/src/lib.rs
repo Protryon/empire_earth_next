@@ -278,6 +278,55 @@ pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_c
     // the combat goals' bodies behind ee_units' goal dispatch (attack unit, attack ground: ee_combat goal_dispatch.rs)
     #[cfg(not(test))]
     ee_units::rust_goal::register_other_goal_kinds(ee_combat::goal_dispatch::rust_goal);
+    // the game messages' unit orders through the units lane's bodies (ee_netmsg bodies.rs)
+    #[cfg(not(test))]
+    ee_netmsg::bodies::register_unit_orders(unit_order);
+}
+
+/// A game message's unit order (ee_netmsg bodies.rs) by the units lane's body for it (ee_units ffi.rs): the sender (or
+/// the message's player) and its selection (0 for the orders that take none); a path's point as the body moved it, a
+/// hacked unit's class (its bits in `.0`).
+#[cfg(not(test))]
+fn unit_order(player: u64, group: u64, order: ee_netmsg::bodies::Order) -> ee_netmsg::bodies::OrderResult {
+    use ee_netmsg::bodies::Order::*;
+    use ee_units::ffi::*;
+    let (p, g) = (player as *mut std::ffi::c_void, group as *mut std::ffi::c_void);
+    match order {
+        AddPatrolPoint { x, y } => ee_units_add_patrol_point(p, g, x, y),
+        AttackGround { x, y } => ee_units_attack_ground(p, g, x, y),
+        AttackUnit { target, queued, convert } => ee_units_attack_unit(p, g, target, queued, convert),
+        BuildUnit { technology, x, y, queued } => ee_units_build_unit(p, g, technology, x, y, queued),
+        BuildWall { technology, start, end } => ee_units_build_wall(p, g, technology, start.0, start.1, end.0, end.1),
+        CastCalamity { caster, target, x, y, technology } => {
+            ee_units_cast_calamity(p, g, caster, target, x, y, technology)
+        }
+        ClearAirportCommands => ee_units_clear_airport_commands(g),
+        DropoffResource { target } => ee_units_dropoff_resource(p, g, target),
+        Explore => ee_units_explore(p, g),
+        Gather { target, queued } => ee_units_gather(p, g, target, queued),
+        HackNewUnit { unit_type, x, y, player_id } => {
+            return (f32::from_bits(ee_units_hack_new_unit(p, unit_type, x, y, player_id) as u32), 0.0)
+        }
+        HealUnit { target } => ee_units_heal_unit(p, g, target),
+        LoadGarrison { target } => ee_units_load_garrison(p, g, target),
+        LoadTransport { transport, passenger } => ee_units_load_transport(p, g, transport, passenger),
+        PathTo { mut x, mut y, facing, forced, rotating, queued, group_movement } => {
+            // SAFETY: two locals for the call
+            unsafe { ee_units_path_to(p, g, &mut x, &mut y, facing, forced, rotating, queued, group_movement) };
+            return (x, y);
+        }
+        Patrol { target } => ee_units_patrol(p, g, target),
+        Repair { target, queued } => ee_units_repair(p, g, target, queued),
+        Research { building, technology, five } => ee_units_research_technology(p, g, building, technology, five),
+        SetAirportCommand { x, y, command, target, queued } => {
+            ee_units_set_airport_command(p, g, x, y, command, target, queued)
+        }
+        SetRallyGoal { building, x, y, target, queued } => ee_units_set_rally_goal(p, building, x, y, target, queued),
+        SmartFarmers { target } => ee_units_smart_farmers(p, g, target),
+        StopActiveGroup => ee_units_stop_active_group(g),
+        UnloadTransport { x, y } => ee_units_unload_transport(p, g, x, y),
+    }
+    (0.0, 0.0)
 }
 
 // ee_combat's mirrors of ee_units' goal host and block, and the operation numbers it copies

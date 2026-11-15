@@ -12,7 +12,7 @@
 
 class EEEnvironmentManager;
 class FSFile;
-class EEE3DStorm;
+class EEE3DRust;
 class EEAutoPathRequest;
 
 class EEEMStorm {
@@ -51,7 +51,7 @@ public:
     U2DRectangle<long> mArea;               // +0x28 (EEEnvironmentManager::IsInStorm tests Contains)
     U2DPoint<long> mStart;                  // +0x38 (U2DPoint<long>::Load/Save 0x12e60a/0x12e8e1; FindPath's from)
     U2DPoint<long> mGoal;                   // +0x40 (a random town's/area's GetRandomPoint; FindPath's to)
-    EEE3DStorm* mStorm;                     // +0x48 (dynamic_cast of the weather effect, referenced; saved as its +0x1c handle)
+    EEE3DRust* mStorm;                     // +0x48 (dynamic_cast of the weather effect, referenced; saved as its +0x1c handle)
     EEAutoPathRequest* mRequest;            // +0x4c (referenced; gPathManager.CancelAutoPathRequest on cancel)
     EEEnvironmentManager* mManager;         // +0x50
     float mTargetIntensity;                 // +0x54 (= 1; 0x12e9bd clamps it to [0, 2])

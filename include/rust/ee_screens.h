@@ -567,6 +567,317 @@ constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_LOAD = 134;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_LABEL = 135;
 
+/// The tokens of a line.
+constexpr static const size_t TOKEN_CATEGORY = 0;
+
+constexpr static const size_t TOKEN_NAME = 1;
+
+constexpr static const size_t TOKEN_BONUS = 2;
+
+constexpr static const size_t TOKEN_UPGRADE = 3;
+
+constexpr static const size_t TOKEN_COST = 4;
+
+constexpr static const size_t TOKEN_POINTS = 5;
+
+constexpr static const size_t TOKEN_VALUE = 6;
+
+/// (a form) -> 1 when it exists.
+constexpr static const uint32_t EE_SCREENS_CBW_FORM_EXISTS = 1;
+
+/// (a form, b control) -> 0 and the edit box's first line, 3 without the form or the edit box.
+constexpr static const uint32_t EE_SCREENS_CBW_EDIT_TEXT = 2;
+
+/// (a form, b control, text) the edit box's text -> 0, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_SET_EDIT_TEXT = 3;
+
+/// (a form, b control) the edit box's `SelectText`, then the form's tab stop on it.
+constexpr static const uint32_t EE_SCREENS_CBW_EDIT_SELECT = 4;
+
+/// (a form, b control) -> 0 and the text label's first line, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_LABEL_TEXT = 5;
+
+/// (a form, b control, text) the text label's text -> 0, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_SET_LABEL_TEXT = 6;
+
+/// (a form, b control, c number) the text label's `SetText(long)` -> 0, 3 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_SET_LABEL_NUMBER = 7;
+
+/// (a form, b control, c mode) the control's display mode (by id; the original assumed the control).
+constexpr static const uint32_t EE_SCREENS_CBW_DISPLAY = 8;
+
+/// (a form) `gUIManager->Push` -> its result, 3 without the form.
+constexpr static const uint32_t EE_SCREENS_CBW_PUSH = 9;
+
+/// `gUserInterface->CloseForm(NULL)` -> its result.
+constexpr static const uint32_t EE_SCREENS_CBW_CLOSE_FORM = 10;
+
+/// (a form) -> 1 when the current form is that form (`GetCurrentForm() == GetFormByID(a)`).
+constexpr static const uint32_t EE_SCREENS_CBW_CURRENT_IS = 11;
+
+/// (a form, b control) the civilization files listed in the file list box (`Users\default\Civilizations\*.civ`).
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_LIST_FILL = 12;
+
+/// (a form, b control; or p a form) -> -1 without the file list, else its `GetCurrentSelection` result and the
+/// index.
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_SELECTION = 13;
+
+/// (a form, b control, c line; or p a form) -> the file list's line.
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_LINE = 14;
+
+/// (a form, b control) -> the file list's `DeleteSelectedFile` result.
+constexpr static const uint32_t EE_SCREENS_CBW_FILE_DELETE = 15;
+
+/// (p a form, a form id) -> 1 when `p` is that form.
+constexpr static const uint32_t EE_SCREENS_CBW_IS_FORM = 16;
+
+/// (a form, b control) -> the control as an `EECBUIListBox*`, 0 without it.
+constexpr static const uint32_t EE_SCREENS_CBW_LIST = 17;
+
+/// (a form, b open event, c close event) the form's open and close events (`EEScreenEvent`s of those codes).
+constexpr static const uint32_t EE_SCREENS_CBW_FORM_EVENTS = 18;
+
+/// (p a form) -> its id.
+constexpr static const uint32_t EE_SCREENS_CBW_FORM_ID = 19;
+
+/// (a form, b control index, c mode) the control's display mode (by index).
+constexpr static const uint32_t EE_SCREENS_CBW_DISPLAY_INDEX = 20;
+
+/// -> `GetNumLines()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_COUNT = 30;
+
+/// (a line) -> the line.
+constexpr static const uint32_t EE_SCREENS_CBW_L_LINE = 31;
+
+/// (a line, text) the line replaced.
+constexpr static const uint32_t EE_SCREENS_CBW_L_SET_LINE = 32;
+
+/// (text) `UIListBox::AppendLine`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_APPEND = 33;
+
+/// (a line) `UIListBox::DeleteLine`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DELETE = 34;
+
+/// `DeleteAllEntries()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DELETE_ALL = 35;
+
+/// (a line, b fire, c scroll) `UIListBox::ChangeSelectionIndex`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_SELECT = 36;
+
+/// -> `GetCurrentSelection`'s result and the index.
+constexpr static const uint32_t EE_SCREENS_CBW_L_CURRENT = 37;
+
+/// -> `GetAutoSelect()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_AUTO = 38;
+
+/// -> `GetHasSelection()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_HAS = 39;
+
+/// -> `GetSelectionIndex()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_INDEX = 40;
+
+/// `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DIRTY = 41;
+
+/// (a flag) -> the list's flag: [`EE_SCREENS_CBW_FLAG_UPGRADES_ONLY`] ...
+constexpr static const uint32_t EE_SCREENS_CBW_L_FLAG = 42;
+
+/// (a flag, b value) the list's flag set.
+constexpr static const uint32_t EE_SCREENS_CBW_L_SET_FLAG = 43;
+
+/// `UIControl::DrawTextA()`, then -> `GetDrawCount()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DRAW_BEGIN = 44;
+
+/// (a line) -> the drawn copy's line (`mCopyLineArray`).
+constexpr static const uint32_t EE_SCREENS_CBW_L_COPY_LINE = 45;
+
+/// (a line, b flags [`EE_SCREENS_CBW_DRAW_RIGHT`] | [`EE_SCREENS_CBW_DRAW_BOLD`], c colour, text) the text drawn in
+/// the line's rectangle -> `DrawClippedText`'s result.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DRAW = 46;
+
+/// -> `DrawScrollBarText()`.
+constexpr static const uint32_t EE_SCREENS_CBW_L_DRAW_END = 47;
+
+/// The list's flags: upgrade lines only selectable (`mSelectUpgradesOnly`), points shown (`mShowPoints`), lines
+/// sorted (`mSortLines`), the points shown as of the last `CopyData` (`mCopiedShowPoints`).
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_UPGRADES_ONLY = 0;
+
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_SHOW_POINTS = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_SORT = 2;
+
+constexpr static const int64_t EE_SCREENS_CBW_FLAG_COPIED_POINTS = 3;
+
+/// A line's text right aligned at the rectangle's top right (else left at its top left); in bold.
+constexpr static const int64_t EE_SCREENS_CBW_DRAW_RIGHT = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_DRAW_BOLD = 2;
+
+/// The colours: the header colour as of the last `CopyData` (`mC148`), black, dark blue (0, 0, 0.39).
+constexpr static const int64_t EE_SCREENS_CBW_COLOUR_HEADER = 0;
+
+constexpr static const int64_t EE_SCREENS_CBW_COLOUR_BLACK = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_COLOUR_DARK_BLUE = 2;
+
+/// (a string id) -> `gResource->GetString`'s result and the text.
+constexpr static const uint32_t EE_SCREENS_CBW_STRING = 60;
+
+/// (a the value's f32 bits) -> the value as `IDS_FORMAT_PERCENT_6_2G` prints it.
+constexpr static const uint32_t EE_SCREENS_CBW_PERCENT = 61;
+
+/// (text a file name) -> 1 when a premade civilization's file has that name (`PlatStrICmp`), with the message
+/// (`IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED` with the name).
+constexpr static const uint32_t EE_SCREENS_CBW_RESERVED = 62;
+
+/// (a upgrade) -> `gCivilizationManager.LookupLevel` found, then its value's and bonus' f32 bits.
+constexpr static const uint32_t EE_SCREENS_CBW_LOOKUP_LEVEL = 63;
+
+/// (a upgrade) -> `gCivilizationManager.GetExtraCost`.
+constexpr static const uint32_t EE_SCREENS_CBW_EXTRA_COST = 64;
+
+/// (a category) -> `GetCategoryNameID` found, then the id.
+constexpr static const uint32_t EE_SCREENS_CBW_CATEGORY_NAME_ID = 65;
+
+/// (a level) -> `EECivilizationManager::LevelNameID`.
+constexpr static const uint32_t EE_SCREENS_CBW_LEVEL_NAME_ID = 66;
+
+/// (a level) -> `EECivilizationManager::IsPowerLevel`.
+constexpr static const uint32_t EE_SCREENS_CBW_IS_POWER_LEVEL = 67;
+
+/// -> every upgrade (`gCivilizationManager.GetUpgrades()`).
+constexpr static const uint32_t EE_SCREENS_CBW_ALL_UPGRADES = 68;
+
+/// (a upgrade) -> `UpgradeKey` found, and the key.
+constexpr static const uint32_t EE_SCREENS_CBW_UPGRADE_KEY = 69;
+
+/// (text) -> the text as a quoted YAML scalar (`EEDataText::QuoteText`).
+constexpr static const uint32_t EE_SCREENS_CBW_QUOTE = 70;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_BASE_COST = 80;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_EXTRA_COST = 81;
+
+/// (a base, b step, c count) -> `ComputeCost`.
+constexpr static const uint32_t EE_SCREENS_CBW_C_COMPUTE = 82;
+
+/// (a upgrade) -> `CountInCategory(a, NULL)`.
+constexpr static const uint32_t EE_SCREENS_CBW_C_COUNT = 83;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_AVAILABLE = 84;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_UNCHANGED = 85;
+
+constexpr static const uint32_t EE_SCREENS_CBW_C_MAX = 86;
+
+/// -> its purchased upgrades.
+constexpr static const uint32_t EE_SCREENS_CBW_C_PURCHASED = 87;
+
+/// -> its name.
+constexpr static const uint32_t EE_SCREENS_CBW_C_NAME = 88;
+
+/// (a player, b the name's length, text the name then the upgrades as little-endian u32s) the request
+/// (`EEMCivUpgradesRequested`: to the server in a multiplayer session, else executed at once).
+constexpr static const uint32_t EE_SCREENS_CBW_REQUEST = 89;
+
+constexpr static const uint32_t EE_SCREENS_CBW_MULTIPLAYER = 100;
+
+/// -> the current player's `mGameResult`.
+constexpr static const uint32_t EE_SCREENS_CBW_GAME_RESULT = 101;
+
+/// -> `gWorld.PauseGame()`.
+constexpr static const uint32_t EE_SCREENS_CBW_PAUSE = 102;
+
+constexpr static const uint32_t EE_SCREENS_CBW_UNPAUSE = 103;
+
+/// -> the current player's civilization (an `EECivilization*`), 0 without a current player.
+constexpr static const uint32_t EE_SCREENS_CBW_PLAYER_CIV = 104;
+
+/// -> `gWorld.mCurrentPlayer`.
+constexpr static const uint32_t EE_SCREENS_CBW_PLAYER_ID = 105;
+
+/// (a 0 chosen, 1 locked) -> the current player's flag.
+constexpr static const uint32_t EE_SCREENS_CBW_PLAYER_FLAG = 106;
+
+/// (a 0 chosen, 1 locked, b value).
+constexpr static const uint32_t EE_SCREENS_CBW_SET_PLAYER_FLAG = 107;
+
+constexpr static const uint32_t EE_SCREENS_CBW_FREE_CAMERA = 108;
+
+/// -> `gWorld.mGameOptions.CanBuyCivilization()`.
+constexpr static const uint32_t EE_SCREENS_CBW_CAN_BUY = 109;
+
+/// -> `GetCampaignMapName` found, and the name.
+constexpr static const uint32_t EE_SCREENS_CBW_CAMPAIGN_NAME = 110;
+
+/// -> `gAllowCustomCivs`.
+constexpr static const uint32_t EE_SCREENS_CBW_CUSTOM_CIVS = 111;
+
+/// (a 0 "sounds\button1.wav", 1 "sounds\button2.wav") -> `gSoundManager->Load(name, 0, 1)`.
+constexpr static const uint32_t EE_SCREENS_CBW_SOUND_LOAD = 120;
+
+constexpr static const uint32_t EE_SCREENS_CBW_SOUND_UNLOAD = 121;
+
+/// (a sound) `Play(a, 1, 0, 1, false, NULL)`.
+constexpr static const uint32_t EE_SCREENS_CBW_SOUND_PLAY = 122;
+
+/// (text) `DisplayMessage(text, 1, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_CBW_MESSAGE = 130;
+
+/// (text, a the answer [`EE_SCREENS_CBW_ANSWER_WRITE`] ..., p its data) `DisplayQuestion` with Yes that answer.
+constexpr static const uint32_t EE_SCREENS_CBW_QUESTION = 131;
+
+/// The Yes answers: the file written (over the existing one), the selected file deleted, the changes accepted.
+constexpr static const int64_t EE_SCREENS_CBW_ANSWER_WRITE = 0;
+
+constexpr static const int64_t EE_SCREENS_CBW_ANSWER_DELETE = 1;
+
+constexpr static const int64_t EE_SCREENS_CBW_ANSWER_ACCEPT = 2;
+
+/// (a) the main game form's `mIsButtonBlinking`.
+constexpr static const uint32_t EE_SCREENS_CBW_BLINK_FLAG = 140;
+
+/// (a 0 the builder button (form 11 by id, control 5), 1 the large alert (`mMainGameForm`'s control 234)) -> 1 when
+/// it is there.
+constexpr static const uint32_t EE_SCREENS_CBW_MAIN_BUTTON = 141;
+
+/// (a button, b blinking) its `SetIsBlinking`.
+constexpr static const uint32_t EE_SCREENS_CBW_MAIN_BLINK = 142;
+
+/// (a button, b mode) its display mode.
+constexpr static const uint32_t EE_SCREENS_CBW_MAIN_DISPLAY = 143;
+
+/// (text a directory) its volume the startup volume, its directory.
+constexpr static const uint32_t EE_SCREENS_CBW_F_DIRECTORY = 150;
+
+/// (text) its file name.
+constexpr static const uint32_t EE_SCREENS_CBW_F_NAME = 151;
+
+/// (a 0 read, 1 write) -> `Open`'s result.
+constexpr static const uint32_t EE_SCREENS_CBW_F_OPEN = 152;
+
+constexpr static const uint32_t EE_SCREENS_CBW_F_CLOSE = 153;
+
+constexpr static const uint32_t EE_SCREENS_CBW_F_DELETE = 154;
+
+constexpr static const uint32_t EE_SCREENS_CBW_F_CREATE = 155;
+
+/// (text) -> `Write`'s result.
+constexpr static const uint32_t EE_SCREENS_CBW_F_WRITE = 156;
+
+/// -> its file name.
+constexpr static const uint32_t EE_SCREENS_CBW_F_FILE = 157;
+
+/// -> `gStartupDirectory`.
+constexpr static const uint32_t EE_SCREENS_CBW_STARTUP_DIRECTORY = 158;
+
+/// (text the saved file's name) the players using it (1 ..) reset (`EEAResetAllPlayerInfo`) -> how many.
+constexpr static const uint32_t EE_SCREENS_CBW_RELOAD_PLAYERS = 159;
+
+/// (text a civilization file's name) -> `EELoadCivilization` from the game's directory, else (into the same name
+/// and upgrades) the user's: the result, the name and the upgrades.
+constexpr static const uint32_t EE_SCREENS_CBW_LOAD_CIVILIZATION = 160;
+
 /// A command button that is always available.
 constexpr static const uint32_t EE_SCREENS_BUTTON_ALWAYS = 0;
 
@@ -1163,6 +1474,124 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+/// `EeScreensSeplCtl::flags`: the text red (and transparent); a combo box's list's selected line left in its
+/// default colour (not set blue).
+constexpr static const uint32_t EE_SCREENS_SEPL_FG_RED = 256;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_NO_SELECT_COLOR = 512;
+
+/// The areas' list operation i0 (`EE_SCREENS_SEOB_SM_*`) on the area i1 (the selection + 2).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_LIST = 600;
+
+/// The user areas' names into the `std::vector<UWideString>` p0.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_NAMES = 601;
+
+/// The editor's paint area highlighted (i0 = 1) or not / set to (f0, f1, f2, f3) (`SetPaintArea`).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_HIGHLIGHT = 602;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_AREA = 603;
+
+/// -> whether the editor's UI is hidden.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_UI_HIDDEN = 604;
+
+/// The trigger tab's text box hidden and alphabetic sort shown (`Activate`) / its text box shown (`Load`).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_ACTIVATE = 605;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_SHOW_TEXT = 606;
+
+/// The area i0: -> whether there is one; its rectangle into f, its anchor into i1, i2, its flags into i3 (1 a
+/// rectangle, 2 an anchor) and its select mode into the combo box p0 (`Load`'s reads, the name and text boxes set
+/// from it).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_LOAD = 607;
+
+/// The area i0's name and text from the trigger tab's boxes, its select mode from the combo box p0 (`Store`'s
+/// first lines) / its rectangle set to f (`EESMArea::SetRectangle`) / its anchor to (i1, i2) (`SetAnchor`).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_STORE = 608;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_SET_RECT = 609;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_SET_ANCHOR = 610;
+
+/// The rectangle f's centre (`GERectangle::GetCenter`) -> into f0, f1.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_CENTER = 611;
+
+/// -> whether the point (f0, f1) (the mouse's with i0 = 1) is in the game view.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_IN_VIEW = 612;
+
+/// The tile under the point (f0, f1) (the mouse's with i0 = 1) -> whether the map picks one (`PickScreenTile`),
+/// its x, y into i1, i2; / the ground point under it (`GetTileAt`, the screen line solved at the tile's height)
+/// -> its x, y truncated into i1, i2.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PICK = 613;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_GROUND = 614;
+
+/// -> the left mouse button: 1 held (value above 0), 2 just pressed, 4 just released.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_LBUTTON = 615;
+
+/// The paint action (`EESEARust` over `EESEAPaintArea`) begun at the tile (i0, i1) -> its handle into p0; the
+/// mouse kept in the game view and the edge scroll's edges set to it.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_BEGIN = 616;
+
+/// The paint action p0's corner dragged to the tile (i0, i1).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_CORNER = 617;
+
+/// The paint action p0 ended: the mouse and the edge scroll given the window back, its rectangle into f, the
+/// action released.
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_END = 618;
+
+/// The paint action p0 released (the destructor's).
+constexpr static const uint32_t EE_SCREENS_SEAR_OP_PAINT_RELEASE = 619;
+
+/// The screen's slots (`ee_screens_sear_call`, with the selection): `Sort`, `Update`, `MoveDown`, `Delete`,
+/// `Deactivate`, `Duplicate`, `Activate`, `Store`, `Hide`, `Load`, `MoveUp`, `New`, `Show`; `SetAreaMode(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_SEAR_SORT = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_UPDATE = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_MOVE_DOWN = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_DELETE = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_DEACTIVATE = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_DUPLICATE = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_ACTIVATE = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_STORE = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_HIDE = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_LOAD = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_MOVE_UP = 11;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_NEW = 12;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_SHOW = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEAR_SET_MODE = 14;
+
+/// `EESETSEffectControls::mEditBox48` (the effect controls' fourth edit box; index 0).
+constexpr static const uint32_t EE_SCREENS_SEET_A_EDIT48 = 12;
+
+/// The control slot i0, i1 (array, index) of the controls p0: its handle into p2's first word, or (i2 = 1) set to
+/// the handle p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SLOT = 94;
+
+/// The maker's combo box kinds of the two screens (`EeScreensSeplCtl::extra[0]` of an `EE_SCREENS_SEPL_LIST_COMBO`):
+/// `EESETSCComboBox` (its selection renames the condition), `EESETSEComboBox` (the effect's).
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_CONDITION = 5;
+
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_EFFECT = 6;
+
+/// The maker's list kind (`EeScreensSeplCtl::extra[0]` of an `EE_SCREENS_SEPL_UNIT_LIST`): a `UILBString` with the
+/// constructor's flag set and a border of 2 (the effect controls' two lists).
+constexpr static const int32_t EE_SCREENS_SEPL_LIST_EFFECT = 4;
+
+/// `EeScreensSeplCtl::flags`: a slider without a range (only its page size `extra[2]`, when not 0).
+constexpr static const uint32_t EE_SCREENS_SEPL_NO_RANGE = 32;
+
 constexpr static const uint32_t EE_SCREENS_SEET_A_LABEL = 0;
 
 constexpr static const uint32_t EE_SCREENS_SEET_A_CHECK = 1;
@@ -1661,6 +2090,143 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
 
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
+
+/// The scenarios', movies' and sounds' directories made when missing -> their paths (`FSPath`) into p0's three
+/// words / the three paths p0 released.
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_PATHS = 700;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_PATHS_RELEASE = 701;
+
+/// A file box (`EEUIFileComboBox`) of the kind i0 (`EE_SCREENS_SEIN_FILES_*`: its path from p1's words, its
+/// pattern, its id, whether it lists none) made on the form p2 at the index i1, at (f0, f1), 150 wide; its text
+/// yellow, its list's line blue, its text box at 0.4; group 7 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_MAKE_FILES = 702;
+
+/// The button p0's event: the import's (i0 = 0, `EESEIEImport`) or the export's (`EESEIEExport`).
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_BUTTON_EVENT = 703;
+
+/// The file box p0's entries made again (`CreateEntries`).
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_FILE_ENTRIES = 704;
+
+/// `Load`'s and `Store`'s transfers over the controls p0's words (`EE_SCREENS_SEIN_C_*`): the scenario's media
+/// strings into the controls, the localization file's name into its box / the controls into the media strings.
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_LOAD = 705;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_STORE = 706;
+
+/// The file boxes' kinds: the scenario's map picture (`*.jpg`), the movie (`*.mpg`), the sound (`*.mp3`).
+constexpr static const int32_t EE_SCREENS_SEIN_FILES_MAP = 0;
+
+constexpr static const int32_t EE_SCREENS_SEIN_FILES_MOVIE = 1;
+
+constexpr static const int32_t EE_SCREENS_SEIN_FILES_SOUND = 2;
+
+/// The controls `Load` and `Store` read, in the words of their array: the three file boxes, the four text boxes
+/// (instructions, aftermath, hints, history), the localization box.
+constexpr static const size_t EE_SCREENS_SEIN_C_MAP = 0;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_MOVIE = 1;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_SOUND = 2;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_INSTRUCTIONS = 3;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_AFTERMATH = 4;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_HINTS = 5;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_HISTORY = 6;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_LOCALIZATION = 7;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_COUNT = 8;
+
+/// The tab's members (`ee_screens_sein_call`): `Load`, `Enter`, `Store` (and `Leave`, which stores).
+constexpr static const uint32_t EE_SCREENS_SEIN_LOAD = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_ENTER = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_STORE = 3;
+
+/// `EeScreensSeplCtl::flags`: the text white (and transparent) rather than yellow.
+constexpr static const uint32_t EE_SCREENS_SEPL_FG_WHITE = 64;
+
+/// A combo box's lines (`extra[1]`): the lines pushed before it (`EE_SCREENS_SEPL_OP_LINE_PUSH`), taken.
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_LINES_PENDING = 3;
+
+/// The control p0's help string set to i0 (`SetStringTableID`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_HELP = 65;
+
+/// The edit box p0's text set to the i0 bytes at p1.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EDIT_BYTES = 66;
+
+/// A line (i0 as `EE_SCREENS_SEPL_TEXT_*`, i1 the string, i2 the number) pushed for the next combo box made with
+/// `EE_SCREENS_SEPL_COMBO_LINES_PENDING`.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LINE_PUSH = 67;
+
+/// -> the terrain tables' count (`EETerrainTable::GetNumTables`) / whether table i0 is one of the editor's (not
+/// NULL, `mIsInEditor`), its id into i1 and its name string into i2.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_TERRAIN_COUNT = 500;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_TERRAIN = 501;
+
+/// The random map generators' display names / the rules' map sizes' names pushed as the next combo box's lines.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_LINES_GENERATORS = 502;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_LINES_MAP_SIZES = 503;
+
+/// -> the kind radio buttons' height: the form p1's manager's radio bitmap's, at least the screen font's.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_RADIO_HEIGHT = 504;
+
+/// A kind radio button (`UIRBMap`) made on the form p1: id i0, the string i1, the index i2, checked i3, at
+/// (f0, f1), f2 high; its label's opacity 0.4 and text yellow; group 1 -> its handle into p0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_MAKE_RADIO = 505;
+
+/// The create button (`UIBMap`, id 0x65, 260 wide, the font's height + 10 high, over the tab p2) made on the form
+/// p1 at the index i2, at (f0, f1); opacity 1; group 1 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_MAKE_BUTTON = 506;
+
+/// The create button p0's text ("Create Map" in the screen font, white).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_BUTTON_TEXT = 507;
+
+/// The elevation file box (`EEUIFileComboBox` over `data\Scenarios\Elevation Maps\*.dat`, id 0x75, 200 wide, its
+/// selection's `EESEERust` map type event over the tab p2, its help string) made on the form p1 at the index i2, at
+/// (f0, f1); group 1 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_MAKE_FILE_COMBO = 508;
+
+/// The text label's rectangle (left, top, right, bottom into f) of the combo box p0 (i0 = 0) or the radio button
+/// p0 (i0 = 1).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_LABEL_RECT = 509;
+
+/// -> the combo box p0's label's first line as `atoi` reads it.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_COMBO_ATOI = 510;
+
+/// The blank map action (width i0, height i1, terrain id i2) / the random map action (size i0, style i1) made.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_BLANK_MAP = 511;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_RANDOM_MAP = 512;
+
+/// -> a new seed (`URandomIntegers` seeded with the time, 0..1000000) given to the user interface / the user
+/// interface's seed set to i0.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_SEED_DRAW = 513;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_SEED_SET = 514;
+
+/// The form p0's control i0 (`GetControlById`) -> into p1.
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_CONTROL = 515;
+
+/// The control p0's selection event processed (with no form).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_PROCESS_SELECTION = 516;
+
+/// The file combo box p0's entries made again (`CreateEntries`).
+constexpr static const uint32_t EE_SCREENS_SEMP_OP_FILE_ENTRIES = 517;
+
+/// The tab's members (`ee_screens_semp_call`): `Enter`, `CreateMap`, `ShowElevationControls(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_SEMP_ENTER = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_CREATE_MAP = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEMP_SHOW_ELEVATION = 3;
 
 /// The selection tool: p0 -> three handles (the click, the lasso, the `EESEUICTriggerSelectUnits` made at the
 /// index i0 on the form p2, added to group 0).
@@ -8232,11 +8798,23 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 
+/// An op's outputs: a text and values.
+struct EeScreensCbOut;
+
+/// The area sub-screen (opaque to C++).
+struct EeScreensSeArea;
+
 /// The condition screen (opaque to C++).
 struct EeScreensSeConditionScreen;
 
 /// The effect screen (opaque to C++).
 struct EeScreensSeEffectScreen;
+
+/// The instructions tab (opaque to C++).
+struct EeScreensSeInstructions;
+
+/// The map tab (opaque to C++).
+struct EeScreensSeMap;
 
 /// The object screen (opaque to C++).
 struct EeScreensSeObject;
@@ -8797,6 +9375,9 @@ struct EeScreensSeplCtl {
   float bg2;
   uint32_t groups;
   int32_t extra[4];
+  /// a combo box's list's height and its text's characters (400 and 0 unless set)
+  int32_t list_height;
+  int32_t max_chars;
 };
 
 /// `kSETSConditionTitleLabel`, `kSETSConditionTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
@@ -8806,6 +9387,9 @@ constexpr static const int32_t EE_SCREENS_SECT_ALWAYS_TRUE_CONTROLS[6] = { 2300,
 /// `kSETSEffectTitleLabel`, `kSETSEffectTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
 /// `DuplicateButton`, `DeleteButton`.
 constexpr static const int32_t EE_SCREENS_SEET_NO_EFFECT_CONTROLS[6] = { 2400, 2401, 2011, 2012, 2006, 2007, };
+
+/// The map sizes the width and height combo boxes offer (0x4c4f40).
+constexpr static const int32_t MAP_SIZES[25] = { 15, 25, 50, 60, 70, 75, 80, 90, 100, 125, 130, 135, 140, 145, 150, 155, 160, 165, 175, 200, 225, 250, 300, 350, 400, };
 
 /// The unit actions the state combo box lists (those with a name), in id order.
 constexpr static const int32_t EE_SCREENS_SEOB_ACTIONS[24] = { 1000, 1002, 1003, 1006, 1008, 1009, 1012, 1013, 1017, 2001, 2004, 2011, 2017, 2021, 4002, 4004, 4012, 4026, 5000, 6001, 6002, 10003, 15000, 15001, };
@@ -8870,6 +9454,81 @@ long ee_screens_chat_log_load(void *file);
 
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
+
+/// An op's text appended (the host's answer).
+void ee_screens_cb_out_text(EeScreensCbOut *out, const uint8_t *text, size_t length);
+
+/// An op's value appended (the host's answer).
+void ee_screens_cb_out_value(EeScreensCbOut *out, int64_t value);
+
+/// `CivBuilderEditCivilization`.
+long ee_screens_cb_edit_civilization();
+
+/// `CivBuilderCreateCivilization(civ, reload)` (`civ` an `EECivilization*`).
+long ee_screens_cb_create_civilization(void *civ, bool reload);
+
+/// `EEProcessTimerExpired`.
+long ee_screens_cb_timer_expired();
+
+/// `EESetCivBuilderButtonBlinking`.
+long ee_screens_cb_set_blinking(bool blinking);
+
+/// `CivBuilderSaveCivilization(name, overwrite)` (UTF-8 bytes).
+long ee_screens_cb_save_civilization(const uint8_t *name, size_t length, bool overwrite);
+
+/// `CivBuilderEditCurrentCivilization`: the current player's civilization edited.
+void ee_screens_cb_edit_current();
+
+/// The edited civilization deleted (`delete gEditableCivilization`).
+void ee_screens_cb_free_civilization();
+
+/// A question's Yes (`EE_SCREENS_CBW_ANSWER_*`) with its form.
+void ee_screens_cb_answer(int64_t which, void *form);
+
+/// TEST ONLY (the builder's gate, `EESimCivBuilder.cpp`): the edited civilization: 0 its kind (0 none, 1 an edit,
+/// 2 a creator, 3 an unlimited creator), 1 its points left, 2 its maximum, 3 `mPointsLeft`, 4 its player, 5 whether
+/// it has choices, 6 whether it can change, 7 its picked upgrades' count, 8 picked upgrade `index`, 9 its upgrade ids'
+/// count, 10 id `index`.
+int64_t ee_screens_cb_civilization_query(uint32_t what,
+                                         uint32_t index);
+
+/// TEST ONLY: the edited civilization's name into `out` (`capacity` bytes) -> its length.
+size_t ee_screens_cb_civilization_name(uint8_t *out, size_t capacity);
+
+/// TEST ONLY: the last saved civilization file's name (`gLastCivilizationFile`) into `out` -> its length.
+size_t ee_screens_cb_last_file(uint8_t *out,
+                               size_t capacity);
+
+/// `AddLine`.
+void ee_screens_cbl_add_line(void *list, const uint8_t *text, size_t length);
+
+/// `ChangeSelectionIndex`.
+void ee_screens_cbl_change_selection(void *list, uint32_t index, bool fire, bool scroll);
+
+/// `DeleteLine`.
+void ee_screens_cbl_delete_line(void *list, uint32_t index);
+
+/// `DrawTextA` -> its result.
+long ee_screens_cbl_draw_text(void *list);
+
+/// `TabbedTo`.
+void ee_screens_cbl_tabbed_to(void *list);
+
+/// `GetSelectedUpgrade` -> 0 and the upgrade, bonus and cost (each written as the original wrote them), or the
+/// error.
+long ee_screens_cbl_selected_upgrade(void *list,
+                                     uint32_t *upgrade,
+                                     uint32_t *bonus,
+                                     uint32_t *cost);
+
+/// `SetUpgradesExcept`.
+void ee_screens_cbl_set_upgrades_except(void *list, const uint32_t *excluded, size_t count);
+
+/// `SetCivilizationUpgrades`.
+void ee_screens_cbl_set_civilization_upgrades(void *list, const uint32_t *ids, size_t count);
+
+/// `ReformatUpgrades`.
+void ee_screens_cbl_reformat(void *list, bool buy);
 
 /// The targeting mode of command `button`: false when it starts none.
 bool ee_screens_command_mode(unsigned long button, EeScreensCommandMode *out);
@@ -8957,6 +9616,56 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
 
+/// `EESETSArea`'s constructor: its controls made on `form` from the control index `*index` (advanced). Freed by
+/// `ee_screens_sear_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeArea *ee_screens_sear_new(void *form,
+                                     uint32_t *index);
+
+/// The destructor: the controls deleted, a paint action released, the object freed.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL) and is not used again.
+void ee_screens_sear_free(EeScreensSeArea *screen);
+
+/// The slot `what` (`EE_SCREENS_SEAR_SORT` ...) with the sub-screen's selection `sel` and the argument `a`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL).
+void ee_screens_sear_call(const EeScreensSeArea *screen,
+                          uint32_t what,
+                          int32_t sel,
+                          int32_t a);
+
+/// `MouseMove` at (`x`, `y`).
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL).
+void ee_screens_sear_mouse_move(const EeScreensSeArea *screen, float x, float y);
+
+/// `GetCenter`: whether there is one; it into `out[0..2]`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL); `out` holds two floats.
+bool ee_screens_sear_center(const EeScreensSeArea *screen, float *out);
+
+/// The state the editor gate reads: the painted rectangle into `rect[0..4]`, the anchor point into `point[0..2]`
+/// -> the flags (1 rectangle mode, 2 a rectangle, 4 a point, 8 a rectangle being painted).
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL); `rect` holds four floats, `point` two.
+uint32_t ee_screens_sear_state(const EeScreensSeArea *screen,
+                               float *rect,
+                               float *point);
+
+/// `GetNames`: the user areas' names into the `std::vector<UWideString>` `names`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sear_new` (or is NULL); `names` is a `std::vector<UWideString>`.
+void ee_screens_sear_names(const EeScreensSeArea *screen, void *names);
+
 /// The effect types' events (`EESEERust`, made by `EE_SCREENS_SEET_EV_OBJECTS` with these types and the controls):
 /// 0 the military group's object moved in (`a` 1) or out (`a` 0) of the group (`b`: the list's line), 1 the
 /// dialogue's camera scroll speed shown, 2 the AI attribute's ranges shown (`b`: the attribute combo box's line).
@@ -8968,6 +9677,55 @@ void ee_screens_seet_event(const EeScreensSeEffects *types,
                            uint32_t what,
                            uint32_t a,
                            uint32_t b);
+
+/// `EESEInstructions`' constructor: its controls made on `form` from the control index `*index` (advanced). Freed by
+/// `ee_screens_sein_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeInstructions *ee_screens_sein_new(void *form,
+                                             uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sein_new` (or is NULL) and is not used again.
+void ee_screens_sein_free(EeScreensSeInstructions *tab);
+
+/// One of the tab's members (`EE_SCREENS_SEIN_LOAD`, `_ENTER`, `_STORE`).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sein_new` (or is NULL).
+void ee_screens_sein_call(const EeScreensSeInstructions *tab, uint32_t what);
+
+/// `EEUIFSEMap`'s constructor: every control made on `form` from the control index `*index` (advanced); `shell` is
+/// the C++ `EEUIFSEMap` (the create button's and the elevation file event's). Freed by `ee_screens_semp_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeMap *ee_screens_semp_new(void *shell,
+                                    void *form,
+                                    uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_semp_new` (or is NULL) and is not used again.
+void ee_screens_semp_free(EeScreensSeMap *tab);
+
+/// One of the tab's members (`EE_SCREENS_SEMP_ENTER` ...) with its argument `a`.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_semp_new` (or is NULL).
+void ee_screens_semp_call(const EeScreensSeMap *tab, uint32_t what, int32_t a);
+
+/// A kind radio button's `Check` after the radio button's own (`id`: 0x6e blank, 0x6f random, 0x6d seeded) or its
+/// `HideControls` (`id` 0), over the controls of `form` by id.
+///
+/// # Safety
+/// `form` is the editor form.
+void ee_screens_semp_kind(void *form,
+                          uint32_t id);
 
 /// `EESETSObject`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_seob_free`.

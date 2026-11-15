@@ -125,7 +125,6 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEFormation.h"
 #include "ee/EECivilizationBuilder.h"
-#include "ee/EECBEditableCivilization.h"
 #include "ee/EEScenarioEditorIDs.h"
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
@@ -787,8 +786,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
                 theTime.mDay, theTime.mHour, theTime.mMinute, theTime.mSecond, (const char*)gSavedGameExtension);
         gGamePreferences.mSettings.mLastQuickSave = theName;
         gGamePreferences.Save();
-        theServer->SendToAllAndWait(new EEMLoadOrSaveGame(theName, TMGetTime(), 0, 1,
-                                                          gCommunications->GetNumberOfCTsProcessedInPhysics(), 0),
+        theServer->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, theName}),
                                     15000, 12);
         break;
     }
@@ -873,7 +871,6 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
 
 // ---- the civilization builder's (civ_builder.rs): inForm is the builder's form or one of its dialogs
 
-static UWideString sCivBuilderText;   // the typed name or the load list's selected file (EE_SCREENS_TEXT_CB_NAME)
 
 // ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
 
@@ -1063,85 +1060,6 @@ static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t i
         break;
     default:
         return EEScreensCameraCall(inForm, inOp, inA, inB, inC);
-    }
-    return 0;
-}
-
-static uint32_t EEScreensCivBuilderCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
-                                        uint32_t inC, uint32_t inD)
-{
-    switch (inOp) {
-    case EE_SCREENS_GAME_CB_SHOW_NAME_DIALOG:
-        return (uint32_t)CivBuilderShowNameDialog();
-    case EE_SCREENS_GAME_CB_TYPED:
-        sCivBuilderText = UWideString();
-        return (uint32_t)(inA ? CivBuilderGetTypedFileName(sCivBuilderText) : CivBuilderGetTypedName(sCivBuilderText));
-    case EE_SCREENS_GAME_CB_ACCEPT_NAME:
-        return (uint32_t)CivBuilderAcceptName();
-    case EE_SCREENS_GAME_CB_CLOSE:
-        return (uint32_t)CivBuilderClose(inA != 0);
-    case EE_SCREENS_GAME_CB_SAVE_AS:
-        return (uint32_t)CivBuilderSaveAs();
-    case EE_SCREENS_GAME_CB_SHOW_LOAD:
-        return (uint32_t)CivBuilderShowLoad();
-    case EE_SCREENS_GAME_CB_SHOW_SAVE:
-        return (uint32_t)CivBuilderShowSave();
-    case EE_SCREENS_GAME_CB_SELECTION: {
-        // the load list (the builder's helper finds it) or the event form's save list; the load list's file kept
-        UIFileListBox* theList = inA ? static_cast<UIFileListBox*>(inForm->GetControlById(kCivBuilderIdSaveCivFileListBox))
-                                     : CivBuilderGetLoadFileList();
-        if (theList == NULL)
-            return EE_SCREENS_CB_NO_LIST;
-        unsigned long theSelection;
-        long theResult = theList->GetCurrentSelection(theSelection);
-        if (theResult == kErrorOK && !inA)
-            sCivBuilderText = theList->GetData(theSelection);
-        return (uint32_t)theResult;
-    }
-    case EE_SCREENS_GAME_CB_SET_NAME_FROM_CIVILIZATION:
-        return (uint32_t)CivBuilderSetName(*gEditableCivilization->GetName());
-    case EE_SCREENS_GAME_CB_CLOSE_FORM:
-        return (uint32_t)CivBuilderCloseForm();
-    case EE_SCREENS_GAME_CB_UNCHANGED:
-        return gEditableCivilization->GetIsUnchanged();
-    case EE_SCREENS_GAME_CB_SAVE_NAME_SELECTED:
-        return (uint32_t)CivBuilderSaveNameSelected();
-    case EE_SCREENS_GAME_CB_CAN_CHANGE:
-        return CivBuilderCanChange();
-    case EE_SCREENS_GAME_CB_RESET_AVAILABLE:
-        return (uint32_t)CivBuilderResetAvailableSelection(inForm);
-    case EE_SCREENS_GAME_CB_RESET_BOUGHT:
-        return (uint32_t)CivBuilderResetBoughtSelection(inForm);
-    case EE_SCREENS_GAME_CB_LOCKED:
-        return gB565566;
-    case EE_SCREENS_GAME_CB_BUY:
-        return (uint32_t)CivBuilderBuyUpgrade(0);
-    case EE_SCREENS_GAME_CB_RETURN:
-        return (uint32_t)CivBuilderReturnUpgrade();
-    case EE_SCREENS_GAME_CB_POINTS_LEFT:
-        return (uint32_t)gEditableCivilization->GetPointsLeft();
-    case EE_SCREENS_GAME_CB_ASK_ACCEPT:
-        return (uint32_t)CivBuilderAskAccept(inForm);
-    case EE_SCREENS_GAME_CB_ACCEPT_CHANGES:
-        CivBuilderAcceptChanges(NULL);
-        break;
-    case EE_SCREENS_GAME_CB_FORM_ID:
-        return inForm->GetFormID();
-    case EE_SCREENS_GAME_CB_ASK_DELETE:
-        return (uint32_t)CivBuilderAskDelete(inForm, inEntity);
-    case EE_SCREENS_GAME_CB_CLEAN_UP:
-        delete gEditableCivilization;
-        gEditableCivilization = NULL;
-        break;
-    case EE_SCREENS_OP_CB_SHOW:
-        gUIManager->GetFormByID(kFormCivBuilder)->GetControl(inA >> 1)->SetDisplayMode(inA & 1 ? kDisplayModeShown
-                                                                                                 : kDisplayModeHidden);
-        break;
-    case EE_SCREENS_GAME_CB_HIDE_POINTS:
-        CivBuilderHidePoints();
-        break;
-    default:
-        return EEScreensDiplomacyCall(inForm, inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -1457,7 +1375,7 @@ static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32
         sPgsCampaign->SetDescription("");
         break;
     default:
-        return EEScreensCivBuilderCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+        return EEScreensDiplomacyCall(inForm, inOp, inA, inB, inC, inD);   // (the builder's ops: ee_screens civ_whole.rs)
     }
     return 0;
 }
@@ -1559,7 +1477,7 @@ static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint3
         EEScreensPdcsControl(3)->ResetSelection();
         break;
     case EE_SCREENS_GAME_PDCS_REQUEST: {
-        NEMessage* theRequest = new EEMCivUpgradesRequested(gWorld.mCurrentPlayer, sPdcsUpgrades, sPdcsName, 0);
+        NEMessage* theRequest = new EEMRecord(kMessageCivUpgradesRequested, {gWorld.mCurrentPlayer, 0, sPdcsUpgrades, sPdcsName});
         if (gCommunications->GetIsMultiplayerSession())
             gCommunications->ProcessLocalUserInput(theRequest, kSlotServer);
         else {
@@ -2241,7 +2159,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
         static_cast<EEServer*>(gCommunications)->StopPing();
         static_cast<EEServer*>(gCommunications)->mLoadState = true;
-        NEMessage* theMessage = new EEMStartLoading(1, TMGetTime());
+        NEMessage* theMessage = new EEMRecord(kMessageStartLoading, {1, TMGetTime()});
         gLocalPlayerOut = false;
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         break;
@@ -2425,7 +2343,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     case EE_SCREENS_GAME_LE_START_LOADING:
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMStartLoading((unsigned char)inA, (long)(int32_t)inB),
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)inA, (int32_t)inB}),
                                                          kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS:
@@ -2678,9 +2596,6 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         break;
     case EE_SCREENS_TEXT_DS_CIVILIZATION:
         theText = UWideString(gWorld.GetPlayer(inArg)->mCivilization.mName);
-        break;
-    case EE_SCREENS_TEXT_CB_NAME:
-        theText = sCivBuilderText;
         break;
     case EE_SCREENS_TEXT_RASTERIZER_SETTING:
         theText = (inArg ? EEGamePreferences::sDefaultSettings : gGamePreferences.GetSettings()).mRasterizerName;
@@ -3035,13 +2950,6 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         theButton->SetText(theText, theButton->GetGEText()->GetFont());
         break;
     }
-    case EE_SCREENS_TEXT_CB_CIVILIZATION_NAME:
-        CivBuilderSetCivilizationName(theText);
-        break;
-    case EE_SCREENS_TEXT_CB_SET_NAME:
-        return (uint32_t)CivBuilderSetName(theText);
-    case EE_SCREENS_TEXT_CB_LOAD:
-        return (uint32_t)CivBuilderLoadCivilization(UString(std::string((const char*)inText, inLength).c_str()));
     case EE_SCREENS_TEXT_MG_QUICK_LOAD: {
         // the last quick save's (the auto save's when inArg) load; theText shown when its file is not found
         UWideString theName = inArg ? gGamePreferences.mSettings.mLastAutoSave : gGamePreferences.mSettings.mLastQuickSave;
@@ -3134,8 +3042,8 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         return 1;
     }
     case EE_SCREENS_TEXT_SAVE_MESSAGE:
-        sSaveObject = reinterpret_cast<UIForm*>(static_cast<NEMessage*>(new EEMLoadOrSaveGame(
-            theText, TMGetTime(), 0, 0, gCommunications->GetNumberOfCTsProcessedInPhysics(), 0)));
+        sSaveObject = reinterpret_cast<UIForm*>(static_cast<NEMessage*>(new EEMRecord(
+            kMessageLoadOrSaveGame, {0, 0, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, theText})));
         break;
     case EE_SCREENS_TEXT_SAVE_ACTION: {
         std::vector<UString> theParts = Parts(inText, inLength);
@@ -3183,7 +3091,7 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
             gGameStateLoadType = 2;
             static_cast<EEServer*>(gCommunications)->StopPing();
             static_cast<EEServer*>(gCommunications)->SetLoadState(true);
-            gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
             return 1;
         }
         if (theFile != NULL)

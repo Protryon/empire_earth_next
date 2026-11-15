@@ -522,7 +522,7 @@ int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA,
     case EE_SCREENS_UM_OP_SERVER_LOAD:
         static_cast<EEServer*>(gCommunications)->StopPing();
         static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-        gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
         break;
     case EE_SCREENS_UM_OP_KEY_PRESSED:
         gISKeyboard->GetEntity(kKeys[inA], theKey);

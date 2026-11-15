@@ -101,7 +101,7 @@ bytes it came from, the bytes it exports again, its members as the import left t
 every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE
 the engine messages over edge payloads (with the players' inputs nested in the communications ticks). Their
 golden lines come from the C++ codec (EEMessage.cpp's original ExportMessage/ImportMessage bodies).
-NMDC is the messages' Execute decisions (ee/EEMessageExecute.h: the selection id check, the resources): every call in
+NMDC is the messages' Execute decisions (ee_netmsg execute.rs: the selection id check, the resources): every call in
 game, their tables over edge values once, the real players' prices, exchanges and refunds every five game minutes.
 Its golden lines come from the C++ decisions (R5b.4 leaf 4).
 USCK is the unit store's check (ee/EEUnitStore.h, R5b.4 leaf 5): at every physics tick and before every executed game
@@ -128,7 +128,8 @@ tile, arrival, animation, hit points, orientation, height). Its golden lines com
 the oracle, late, space and calamity profiles, before the models moved to Rust).
 SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
 every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
-object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile
+object's evaluation, SMEX every effect run, SMEW the world after it (the effect's objects' units, the players, the
+manager; R5b.5's eighth round), SMUP each trigger round. No random map has a trigger, so --profile
 scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from the data tree's campaign archives into
 build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
 scenario manager before its logic moved); its USCK stops the game on a mismatch like every profile's (a scenario's

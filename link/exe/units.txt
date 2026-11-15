@@ -144,11 +144,6 @@ dde43 dde94 Empire Earth/Formations/EEFShallowWedge.cpp
 dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
-f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
-f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
-f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
-f9b6d fb088 Empire Earth/Graphics Thread/EEE3DSnow.cpp
-fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
 10428c 1050fb Empire Earth/Graphics Thread/EEEffect2D.cpp
 1050fb 1054ec Empire Earth/Graphics Thread/EEEffect3D.cpp
@@ -319,8 +314,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 27adb0 27b911 Empire Earth/Civilization Builder/EEAEManager.cpp
 27bf4b 27c0f3 Empire Earth/Civilization Builder/EEAreaEffect.cpp
 27c0f3 27c8b9 Empire Earth/Civilization Builder/EEAreaEffectTemplate.cpp
-27c8b9 27c9db Empire Earth/Civilization Builder/EECBCivilizationCreator.cpp
-27c9db 27cd62 Empire Earth/Civilization Builder/EECBEditableCivilization.cpp
 27cfdb 27efca Empire Earth/Civilization Builder/EECBUIListBox.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
 27fdfe 2813f4 Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp
@@ -332,4 +325,3 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp
-f4bf3 f5d94 Empire Earth/Graphics Thread/EEE3DParticle.cpp
