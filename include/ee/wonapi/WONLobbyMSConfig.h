@@ -16,7 +16,7 @@ class MS3DFrame;
 // Config classes: only their base parts are declared.
 class MSButtonConfig : public ButtonConfig {
 public:
-    MSButtonConfig(); // empty, at 0x0078f3a0 (0x80 bytes)
+    MSButtonConfig() {} // empty, at 0x0078f3a0 (0x80 bytes)
     static ComponentConfig* CfgFactory(); // at 0x0078e600
     static Component* ButtonFactory(); // at 0x0078e480
     static Component* CheckboxFactory(); // at 0x0078e4e0

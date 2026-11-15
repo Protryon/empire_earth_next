@@ -111,16 +111,6 @@ StretchCenterImageConfig::StretchCenterImageConfig()
     this->mImage=this->mStretchCenterImage;
 }
 
-// FUNCTION: WON 0x0078c0e0
-// Reads the STRETCHIMAGE and CENTERIMAGE keys; other keys go to the image config
-bool StretchCenterImageConfig::Virtual24(const std::string& instruction)
-{
-    const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_STRETCHCENTERIMAGECONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0) this->mStretchCenterImage->SetStretchImage(this->ReadImage(false).get());
-    else if(aKeyIdx==1) this->mStretchCenterImage->SetCenterImage(this->ReadImage(false).get());
-    else return ImageConfig::Virtual24(instruction);
-    return true;
-}
 }
 
 // Compiler-generated and header-inline functions this unit emits:
