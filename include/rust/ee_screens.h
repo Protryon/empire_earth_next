@@ -1694,6 +1694,63 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
 
+/// The scenarios', movies' and sounds' directories made when missing -> their paths (`FSPath`) into p0's three
+/// words / the three paths p0 released.
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_PATHS = 700;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_PATHS_RELEASE = 701;
+
+/// A file box (`EEUIFileComboBox`) of the kind i0 (`EE_SCREENS_SEIN_FILES_*`: its path from p1's words, its
+/// pattern, its id, whether it lists none) made on the form p2 at the index i1, at (f0, f1), 150 wide; its text
+/// yellow, its list's line blue, its text box at 0.4; group 7 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_MAKE_FILES = 702;
+
+/// The button p0's event: the import's (i0 = 0, `EESEIEImport`) or the export's (`EESEIEExport`).
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_BUTTON_EVENT = 703;
+
+/// The file box p0's entries made again (`CreateEntries`).
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_FILE_ENTRIES = 704;
+
+/// `Load`'s and `Store`'s transfers over the controls p0's words (`EE_SCREENS_SEIN_C_*`): the scenario's media
+/// strings into the controls, the localization file's name into its box / the controls into the media strings.
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_LOAD = 705;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_OP_STORE = 706;
+
+/// The file boxes' kinds: the scenario's map picture (`*.jpg`), the movie (`*.mpg`), the sound (`*.mp3`).
+constexpr static const int32_t EE_SCREENS_SEIN_FILES_MAP = 0;
+
+constexpr static const int32_t EE_SCREENS_SEIN_FILES_MOVIE = 1;
+
+constexpr static const int32_t EE_SCREENS_SEIN_FILES_SOUND = 2;
+
+/// The controls `Load` and `Store` read, in the words of their array: the three file boxes, the four text boxes
+/// (instructions, aftermath, hints, history), the localization box.
+constexpr static const size_t EE_SCREENS_SEIN_C_MAP = 0;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_MOVIE = 1;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_SOUND = 2;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_INSTRUCTIONS = 3;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_AFTERMATH = 4;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_HINTS = 5;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_HISTORY = 6;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_LOCALIZATION = 7;
+
+constexpr static const size_t EE_SCREENS_SEIN_C_COUNT = 8;
+
+/// The tab's members (`ee_screens_sein_call`): `Load`, `Enter`, `Store` (and `Leave`, which stores).
+constexpr static const uint32_t EE_SCREENS_SEIN_LOAD = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_ENTER = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEIN_STORE = 3;
+
 /// `EeScreensSeplCtl::flags`: the text white (and transparent) rather than yellow.
 constexpr static const uint32_t EE_SCREENS_SEPL_FG_WHITE = 64;
 
@@ -7899,6 +7956,9 @@ struct EeScreensSeConditionScreen;
 /// The effect screen (opaque to C++).
 struct EeScreensSeEffectScreen;
 
+/// The instructions tab (opaque to C++).
+struct EeScreensSeInstructions;
+
 /// The map tab (opaque to C++).
 struct EeScreensSeMap;
 
@@ -8598,6 +8658,26 @@ void ee_screens_seet_event(const EeScreensSeEffects *types,
                            uint32_t what,
                            uint32_t a,
                            uint32_t b);
+
+/// `EESEInstructions`' constructor: its controls made on `form` from the control index `*index` (advanced). Freed by
+/// `ee_screens_sein_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeInstructions *ee_screens_sein_new(void *form,
+                                             uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sein_new` (or is NULL) and is not used again.
+void ee_screens_sein_free(EeScreensSeInstructions *tab);
+
+/// One of the tab's members (`EE_SCREENS_SEIN_LOAD`, `_ENTER`, `_STORE`).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_sein_new` (or is NULL).
+void ee_screens_sein_call(const EeScreensSeInstructions *tab, uint32_t what);
 
 /// `EEUIFSEMap`'s constructor: every control made on `form` from the control index `*index` (advanced); `shell` is
 /// the C++ `EEUIFSEMap` (the create button's and the elevation file event's). Freed by `ee_screens_semp_free`.

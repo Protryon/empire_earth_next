@@ -160,6 +160,9 @@ pub mod editor_effects_player;
 #[cfg(test)]
 mod editor_effects_tests;
 pub mod editor_events;
+pub mod editor_instructions;
+#[cfg(not(test))]
+mod editor_instructions_ffi;
 pub mod editor_map;
 #[cfg(not(test))]
 mod editor_map_ffi;
