@@ -21495,3 +21495,156 @@ to exist. Each class unit carried 30-40 lines of includes and comments and a 20-
   point i at the carrier's frame in its location scaled by its stats) and `RouteDockWaypoint` from another. The
   transformation's `Apply`, `ConvertToOrientation` and the point's `DistanceTo` are ee_ge's (the C++ forwards to
   them already), so the bits are the same. EE-PM-COUNT ends with "deck N", the placements.
+
+## R6 WONLobby, round 6: the direct path to the lobby game, the file dialog, the colour button and the EE lobby's glue (ee_won lobbyctl.rs, lobbydlg.rs, eecolor.rs, eeglue.rs; branch rust-wonlobby6, 2026-11-14)
+
+Round 5's list in order: the control objects calling the lobby game's Rust object directly, then EELobbyFileDialog on
+round 1's dialog object, EELobbyColorButton with its chooser, and the EE glue (EELobbyInit, EELobbyMisc and
+EELobbyInterface). EELobbyFileTransfer waited: the WON Internet lane's Rust-owned AsyncOp (rust-won-net24) merged
+into `rust` only late in the round; it is the next round's. Each commit has its golden over the original statements, mutations the golden catches, and a
+cargo replay of a recorded subset.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| c99e571b | the controls and the connect dialog call the lobby game's Rust object directly (12 + 2 ops gone) | -18 (69,370 -> 69,352) |
+| f4409f26 | EELobbyFileDialog as `lobbydlg.rs` kind `File`; its unit deleted | -87 (69,352 -> 69,265) |
+| 954e74ed | EELobbyColorButton and EELobbyColorChooser as `eecolor.rs` objects (new unit EELobbyGlueHost.cpp); its unit deleted | -129 (69,265 -> 69,136) |
+| 1edada1a | the glue as `eeglue.rs`; EELobbyInit, EELobbyMisc and EELobbyInterface deleted; 38 forwarders gone | -969 (69,136 -> 68,167) |
+| 01558497 | the 73 resource globals as one array over the rows (`EE_LOBBY_STRING`) | -434 (68,167 -> 67,733) |
+| 9efc01d1 | EELobbyTimeouts as `eeglue.rs` `TIMEOUTS`; its unit deleted | -97 (67,733 -> 67,636) |
+| 882f3f35 | won_eeglue_test's generator (epochs near the sixteenth) | 0 |
+
+Round total: WON C++ 69,370 -> 67,636 (-1,734) before the merge of rust; six units deleted (EELobbyFileDialog.cpp,
+EELobbyColorButton.cpp, EELobbyInit.cpp, EELobbyMisc.cpp, EELobbyInterface.cpp, EELobbyTimeouts.cpp), one added
+(WONLobby/EELobbyGlueHost.cpp, 966 lines: about 350 of them the game's window and network functions that were
+EELobbyInterface.cpp's).
+
+- **The direct path.** The game room's controls and the connect dialog asked the C++ host for an `EELobbyGame`'s
+  option or slot, and the host called the game's forwarder, which called back into the game's Rust object. They now
+  take the handle with one op (`GameRust`: `mRust`, a field read the goldens do not trace) and call
+  `eegame::game_call` (`game_call4` for SetGameFile's flag). The reference lives for that one call: the game's calls
+  out re-enter the controls through the lobby's sync events. `GetPlayerSlot(i)` of 0..7 was never NULL, so the
+  slot's checks went with the view. A name crosses as its `GUIStringData` (`EELobbyStr`, now in EELobbyGameCode.h).
+  Once the glue moved too, no C++ caller used 25 of the game's forwarders and 13 of the slot view's methods: they
+  are gone; the view keeps `Option` for `EELobbyPlayer::GetTeam`.
+- **The goldens with a real game.** `eegame.rs` has a `testgame` helper (a game over a test's op function, the
+  option types' lock, a set-up of options and raw slot options). The C++ goldens make a real `EeWonEeGame` per side
+  and sequence: the original's statements call it as the forwarders did (`ee_won_eegame_call`), the Rust directly;
+  its ops are traced as `gop`, its set-up as `gset`/`gslot`/`gplayer` lines the replays re-run. The map types a new
+  game reads are answered 12 untraced on both sides (the option types are a process static).
+- **EELobbyFileDialog** is the dialog object's seventeenth kind, `File`: the list and three buttons, the directory and
+  extension as bytes, ListFiles (a `PlatFind` record behind four ops; a name longer than the extension is listed
+  without it), the selected file's path, the load (EndDialog OK when it loaded) and the delete after a yes (a "no"
+  falls through to the dialog's handler, as the original's did). The shell maps `ListItemClicked`. An entry's text
+  crosses through a static `std::string` the Rust copies before its next op.
+- **EELobbyColorButton and EELobbyColorChooser** are `eecolor.rs` objects (two kinds, one host): the colour, the held
+  chooser, the hover, the choice, the taken colours (from the game's Rust object). The lobby's sixteen colours (the
+  original's `gEELobbyColors`) are the module's palette, set at the lobby's set-up. The chooser's `MouseEnter`
+  override only called its base and is gone.
+- **The glue** (`eeglue.rs`): EELobbyInit (the set-up, the server details' texts and paint, the epoch and map type
+  columns, the dialogs held, the connect wait), EELobbyMisc (the saved games: header info, the load with its refusals,
+  the room set up from the saved options and players, the room's options from the game's) and EELobbyInterface's
+  decisions (the game's options and sixteen players from the room, the adapter, the game-done event, the run loop,
+  the return from a game, the quit flag). A drawn or compared text is a `(EeWonEeGlueText, value)` pair the host makes
+  a `GUIString` of (a resource row, a number, a map type's name, a `GUIStringData`); a struct field of
+  `EEGameOptions` or a player is an `EeWonEeGlueField`. Names are compared as `GUIStringData::Compare` does
+  (`guistring::compare` on the name's units), which is all `std::set<GUIString>` and `std::map<GUIString, long>`
+  decided; a map lookup of a missing name reads (and inserts) 0, as `operator[]` did.
+- **What stays C++** (`WONLobby/EELobbyGlueHost.cpp`): the classes the factories make, the lobby's window and its
+  frames for the renderer (EELobbyOpen, Show, Hide, Close, the frame lock), the game's network objects (EELobbyHostGame,
+  EELobbyJoinGame, EELobbyStartHostedGame), Sierra Update, the lobby lock, one function per entry point, the two
+  hosts. The unit is an exe unit (`tools/units.py` EXTRA_UNITS, excluded from the WON library's list): the game's
+  headers need `LLE_EXE_HEADERS` (with the WON library's flags `EEClient` is abstract and `IsServer` returns void),
+  as the GameCode units it replaced had.
+- **The strings** (EELobbyResource.cpp): the 73 named globals are one array of ee_won's rows; the dozen named uses
+  left are `EE_LOBBY_STRING(gEELobby..._...)`, a lookup of the row by the global's name
+  (`ee_won_eeresource_find`; the program stops for a name the table lacks). The globals' init chain markers went
+  with them.
+- **EELobbyTimeouts** (a global with defaults no code read) is ported as `eeglue.rs`'s `TIMEOUTS` constant; the
+  unit is deleted.
+
+### Goldens, mutations, replays
+
+| Golden | Sequences | Trace lines | Replayed by cargo | First run |
+|---|---|---|---|---|
+| `won_lobbyctl_test` (a real game now) | 70,000 | 8,528,602 | `golden_lobbyctl.txt` (221 sequences) | identical |
+| `won_eedlg_test` (the connect dialog, a real game; the file dialog added) | 60,000 | 2,889,542 | `golden_eedlg.txt` (64) | identical |
+| `won_eecolor_test` (new) | 40,000 | 2,144,099 | `golden_eecolor.txt` (61) | identical |
+| `won_eeglue_test` (new; a real game and connect dialog) | 60,000 | 9,988,254 | `golden_eeglue.txt` (85) | identical |
+
+The goldens trace pointers' texts where the original passed strings (the file dialog's pattern and paths, an
+entry's text), the floats' bits where it passed floats (the player colours), the coordinates where it passed their
+addresses (LocalToRoot). A struct field read (`EEGameOptions`, a player being made, a header's checksum) and a C++
+object's Rust object (`GameRust`, `DialogRust`, `ChooserRust`) are answered from the sequence's world without a
+trace line: the original read them with no call, so their count is not the original's to keep.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| direct: a slot's option read from slot 0 | 3,448 of 70,000 |
+| direct: an option change sent without its notification flag | 80 |
+| direct: a reserved slot not opened for a random map | 8 |
+| direct: an observer listed in the connect dialog | 6,642 of 60,000 |
+| file: no separator added to the directory | 9,009 of 60,000 |
+| file: a name as long as the extension listed | 4,889 |
+| file: a refused delete not passed to the dialog | 9,818 |
+| file: a right double click loads | 7,222 |
+| file: the load without the empty path check | 5,341 |
+| colour: colour 16 accepted | 1,145 of 40,000 |
+| colour: the gap counted as a swatch | 712 |
+| colour: a taken colour chosen | 81 |
+| colour: an open chooser opened again | 11,844 |
+| colour: the hover kept on leaving | 590 |
+| colour: the frame drawn on a disabled button | 6,506 |
+| glue: the details' gap 10 for every column | 17,749 of 60,000 |
+| glue: a missing saved name maps to the last entry | 683 |
+| glue: an observer keeps its colour | 8 |
+| glue: the variant not less one | 1,114 |
+| glue: a client of a failed connect does not leave | 665 |
+| glue: the run loop keeps the game-done flag | 955 |
+| glue: the adapter index zero-based | 3,066 |
+| glue: colours rounded | 9,503 |
+| glue: the map size 5 dropped | 29 |
+| glue: the game-done count from the third time | 5,027 |
+| glue: the sixteenth epoch's exception dropped | 0: equivalent (option 15's name is row 15 by the general rule too) |
+
+The epoch mutation stayed at 0 after the generator set the epochs near 15 a third of the time (commit 882f3f35):
+GetEpochText's exception for 15 returns `gEELobbyGameOptionsCtrl_Epoch16`, the table's entry 15, which
+`GetOptionText(option, 0, 16)` returns for 15 as well.
+
+Unit tests: eecolor 7 (the replay and its changed-op check, the swatches and gaps, the palette, a colour set once
+and in range, the first click making the chooser, a taken colour refused), eeglue 6 (the replay and its check, the
+resource rows, the colours' clamping, the run loop's leave and the quit flag, the timeouts), lobbyctl and lobbydlg
+updated (a real game behind the unit limit, the saved game cancel and the player rows; the file dialog's listing),
+eeresource 3 (the name look-up).
+
+### Gates
+
+| Gate | c99e571b | f4409f26 | 954e74ed | 1edada1a | 01558497 + 9efc01d1 + 882f3f35 (gated together) | final tree (merged with rust fffdedf4) |
+|---|---|---|---|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates | the same | the same | the same | the same | the same |
+| Rust gate | PASS (after a rustfmt fix folded into the commit) | PASS | tests PASS; clippy's too-many-arguments fixed in the commit, then `cargo clippy -p ee_won` clean | PASS | PASS | PASS |
+| oracle | seeds 2-3 identical | 2-3 identical | 2-3 identical | 2-3 identical | 2-3 identical | seeds 2-7 identical |
+| lobby wontest | won_lobbyctl_test, won_eedlg_test exit 0 | won_eedlg_test exit 0 | won_eecolor_test exit 0 | won_eeglue_test exit 0 | won_eeglue_test exit 0 | twelve programs exit 0 (eeglue, eecolor, eedlg, lobbyctl, eegame, lobbydlg, dlglogic, lobbyscr, credits, lobbypopup, lanobj, stagingobj) |
+| `--test-profile windowed-software` | | | | | | 0 unresolved, 0 duplicates |
+| `tools/harness/lan_game.py` (harness lock) | | | | | | RESULT PASS lan-game (PT host 2958, joiner 2981) |
+
+The merge of rust needed one resolution: EELobbyInterface.cpp (deleted here) had ne6's connection request as an
+`NEMRecord` on rust; EELobbyHostGame and EELobbyJoinGame in EELobbyGlueHost.cpp make it so. The header was current,
+`rust_includes.py` changed nothing. WON C++ on the merged tree: 67,431 (rust alone: 69,164).
+
+### Behaviour changes
+
+- An end-of-popup event before the colour button made its chooser read through NULL in the original; the Rust
+  reads no choice (-1). No popup can end before it was opened.
+- The connect dialog and the player rows' slot reads have no NULL slot checks: GetPlayerSlot of 0..7 was never NULL.
+- EELobbyGetPlayerColors' float-to-int conversion is `cvttss2si`'s (out of range and NaN: INT_MIN, clamped to 0).
+
+### What only a person reaches
+
+The glue's window side did not change, but the run loop, the return from a game, the connect wait, the saved game
+load and the details' paint now run through Rust: the LAN game reaches the set-up, the run loop, the connect wait,
+the options and players (`EELobbyFillGameOptions`) and the adapter; the server list's details paint and columns are
+Internet lobby screens; a saved game in the game room (the file dialog, the load, the delete) and the colour chooser
+need a person in the LAN game room.
