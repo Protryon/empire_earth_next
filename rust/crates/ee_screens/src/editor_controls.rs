@@ -89,6 +89,7 @@ fn scenario(id: u32, screen: i32, mode: u32, group: u32) -> EeScreensSeplCtl {
 }
 
 /// An edit box of `chars` characters (`number`: a number box), `w` x `h`, in the screen's font or `gU531930`.
+#[allow(clippy::too_many_arguments)]
 fn edit(id: u32, chars: i32, number: bool, multi: bool, w: f32, h: f32, font530: bool, group: u32) -> EeScreensSeplCtl {
     let c = EeScreensSeplCtl::new(EE_SCREENS_SEPL_EDIT, id, 0.0, 0.0, w, h)
         .bg(BG)
