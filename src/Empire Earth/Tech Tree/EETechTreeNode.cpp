@@ -442,18 +442,10 @@ void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
 EETechTreeNode& EETechTreeNode::operator=(const EETechTreeNode& inOther)
 {
     if (&inOther != this) {
+        // the record's fields: ee_tech nodes.rs assign (the original's copy of mData->mMakesUnit onto the same
+        // shared data was a self-assignment, dropped)
         this->mData = inOther.mData;
-        this->mEpoch = inOther.mEpoch;
-        this->mObsoleteEpoch = inOther.mObsoleteEpoch;
-        this->mPrerequisiteFlags = inOther.mPrerequisiteFlags;
-        this->mData->mMakesUnit = inOther.mData->mMakesUnit;
-        this->mIsResearched = inOther.mIsResearched;
-        this->mIsObsolete = inOther.mIsObsolete;
-        this->mIsAvailable = inOther.mIsAvailable;
-        this->mIsAllowed = inOther.mIsAllowed;
-        this->mIsUnitMediaLoaded = inOther.mIsUnitMediaLoaded;
-        this->mScenEditorObsoleted = inOther.mScenEditorObsoleted;
-        this->mResearchDelay = inOther.mResearchDelay;
+        ee_tech_node_assign(this, &inOther, false);
         // mData is now inOther's (shared) block, which already holds the class cost tables: clearing and
         // re-copying them into the same map would empty them for every node sharing the block
         this->mButton = inOther.mButton;
