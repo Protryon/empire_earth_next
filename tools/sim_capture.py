@@ -135,6 +135,12 @@ scale, immunity, the three modifiers of a probe value, the morale count, the Cov
 acting on it as owner and index, its hit points and cloaking, the active list and the running state's save bytes.
 Their golden lines come from the C++ of the eight area-effect classes before they became one (calamities lane, round
 3; seeds 2-3 of the oracle, late, space and calamity profiles).
+CV** are the civilization builder lane's records (ee/EECivCapture.h; every profile): CVMG once (the civilization
+manager's and powers' data and every query over it, the premade civilizations' files loaded and matched), CVAP every
+ApplyUpgrade (the player's fields and the category set's class upgrades before and after; a power level adds the tech
+tree's nodes, the media count and HasPower), CVLD every EELoadCivilization, CVAF every EEApplyCivilizationFile with
+the player's civilization after. Their golden lines come from the C++ manager, powers and files before they moved
+(civilization builder lane, round 2; seeds 2-3 of the oracle, late, space, calamity and scenario profiles).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
