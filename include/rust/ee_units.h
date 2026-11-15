@@ -3541,6 +3541,18 @@ struct EeUnitsUuWallPiece {
   float yaw;
 };
 
+/// The camera's view of a sound's location (gathered by the C++ forwarder): whether the current player
+/// sees its tile, then (only then) `EEGetCameraPoint`'s screen point and depth, the camera's position
+/// (`gWorld.mTransformation`), `gViewport.GetYClippingPlane()` and the camera control's zoom.
+struct EeUnitsUuSoundView {
+  uint8_t seen;
+  float screen[3];
+  float depth;
+  float camera[3];
+  float y_clip;
+  float zoom;
+};
+
 /// A unit as the utilities read it: its object (`EEUnit*`, its records' addresses) and the pointer members and
 /// virtuals' answers the host reads once (`ee_units_uu_host_unit`). The records are null for a missing part (no
 /// complex unit, no class); `obj` 0 is no unit.
@@ -3571,6 +3583,9 @@ struct EeUnitsUuUnit {
   /// the complex unit's `mStats->mMaxVelocity`, `mStats->mAttack`
   float stats_max_velocity;
   float stats_attack;
+  /// the complex unit's `mStats != NULL`; its current command's `mType` (0: none)
+  uint8_t has_stats;
+  int32_t command;
 };
 
 /// A unit class as the utilities read it: its record and its two virtuals' answers (`ee_units_uu_host_class`).
@@ -5368,6 +5383,151 @@ uint8_t ee_units_uu_spot(int32_t which,
 /// `EEGetAttackPart`.
 uint64_t ee_units_uu_attack_part(uint64_t unit, uint64_t target);
 
+/// `EEGetSeabedDepth` (`which` 0) and `EEAdjustDiveDepth` (1): the point's new height.
+///
+/// # Safety
+/// `unit` is a live unit; `at` holds three floats.
+float ee_units_uu_seabed(int32_t which, uint64_t unit, const float (*at)[3]);
+
+/// `EEGetUnitTiles` (appended to `io`).
+///
+/// # Safety
+/// `unit` is a live unit; `io` a live tile vector.
+void ee_units_uu_unit_tiles_margin(uint64_t unit, float margin, void *io);
+
+/// `EEGetSelectionBounds` (`bounds`: left, top, right, bottom).
+///
+/// # Safety
+/// `units` is a live unit vector; `bounds` holds four floats.
+void ee_units_uu_selection_bounds(const void *units, float (*bounds)[4], int32_t filter);
+
+/// `EEGetUnitRadius` (`which` 0, two complex units) and `EEGetAngleFromNorth` (1, `from` and `to`).
+///
+/// # Safety
+/// The units are live; the points hold three floats when `which` is 1.
+float ee_units_uu_angle(int32_t which,
+                        uint64_t unit,
+                        uint64_t other,
+                        const float (*from)[3],
+                        const float (*to)[3]);
+
+/// `EEIsWithinReach` (`at` null) and `EEIsWithinReachOf`.
+///
+/// # Safety
+/// The units are live; `at` is null or holds three floats.
+uint8_t ee_units_uu_within_reach(uint64_t unit, uint64_t target, const float (*at)[3]);
+
+/// `EEIsFootprintVisibleTo`.
+uint8_t ee_units_uu_footprint_visible(uint64_t unit, uint64_t player);
+
+/// `EEGetEscapePoint` (`io` left alone without attackers).
+///
+/// # Safety
+/// `unit` is a live complex unit; `io` holds two floats.
+uint8_t ee_units_uu_escape_point(uint64_t unit, float (*io)[2]);
+
+/// `EEGetEnemiesAround` (`out` replaced).
+///
+/// # Safety
+/// `unit` is a live complex unit; `out` a live unit vector.
+void ee_units_uu_enemies_around(uint64_t unit, void *out);
+
+/// `EEAddToFootprintTiles` (`which` 0), `EERemoveFromFootprintTiles` (1), `EEAddBuildingRegion` (2),
+/// `EERemoveBuildingRegion` (3).
+void ee_units_uu_footprint(int32_t which,
+                           uint64_t unit);
+
+/// `EEStepAsideFromSite`.
+void ee_units_uu_step_aside(uint64_t unit,
+                            uint64_t class_,
+                            uint64_t player,
+                            int32_t x,
+                            int32_t y,
+                            uint8_t force);
+
+/// `EEBuildWall`.
+///
+/// # Safety
+/// `group` is a live active group; `pieces` a live unit vector.
+void ee_units_uu_build_wall(uint64_t group, const void *pieces);
+
+/// `EEPlanWall` (the new pieces appended to `out`).
+///
+/// # Safety
+/// `class` and `player` are live; `out` a live unit vector.
+void ee_units_uu_plan_wall(float start_x,
+                           float start_y,
+                           float end_x,
+                           float end_y,
+                           uint64_t class_,
+                           uint64_t player,
+                           uint8_t foundation,
+                           uint8_t skip_player_checks,
+                           void *out);
+
+/// `EEShapeWall` (its raised corners unused).
+void ee_units_uu_shape_wall(uint64_t complex, int32_t corner);
+
+/// `EEIsTileTopAbove` (`wall`: the wall found, 0 for none).
+///
+/// # Safety
+/// `wall` points to a u64.
+uint8_t ee_units_uu_tile_top_above(int32_t x,
+                                   int32_t y,
+                                   float height,
+                                   uint8_t bare,
+                                   uint64_t *wall);
+
+/// `EEIsLineBlocked` (`wall` written only when a tile was asked, `last`: the last free tile).
+///
+/// # Safety
+/// `wall` points to a u64, `written` to a byte, `last` to two ints.
+uint8_t ee_units_uu_line_blocked(int32_t x1,
+                                 int32_t y1,
+                                 int32_t x2,
+                                 int32_t y2,
+                                 uint64_t *wall,
+                                 uint8_t *written,
+                                 int32_t (*last)[2]);
+
+/// `EEGetPathLengthTo` (`tile` in and out).
+///
+/// # Safety
+/// `unit` is a live complex unit; `tile` holds two ints.
+float ee_units_uu_path_length_to(uint64_t unit, int32_t (*tile)[2], uint32_t limit, uint8_t walls);
+
+/// `EEComputeSoundParameters` (`out`: volume, pan, pitch) over the camera's view the caller gathered.
+///
+/// # Safety
+/// `view` points to a view; `location` holds three floats, `out` three.
+void ee_units_uu_sound_parameters(const EeUnitsUuSoundView *view,
+                                  float volume,
+                                  const float (*location)[3],
+                                  float (*out)[3]);
+
+/// `EEGetDopplerPitch`'s factor (`pitch` written unless silent or still).
+///
+/// # Safety
+/// `location` holds a matrix, `camera` three floats, `pitch` one.
+void ee_units_uu_doppler_pitch(float volume,
+                               float velocity,
+                               const float (*location)[4][4],
+                               const float (*camera)[3],
+                               float *pitch);
+
+/// `EEEditorCanPlace`.
+///
+/// # Safety
+/// `at` holds three floats.
+uint8_t ee_units_uu_editor_can_place(uint64_t player,
+                                     int32_t unit_type,
+                                     const float (*at)[3],
+                                     int32_t x,
+                                     int32_t y);
+
+/// `EEDepositLoad`.
+void ee_units_uu_deposit_load(uint64_t unit, uint64_t container);
+
 extern uint64_t ee_units_uu_host_map();
 
 extern uint64_t ee_units_uu_host_map_tile(uint64_t map, int32_t x, int32_t y);
@@ -5410,8 +5570,6 @@ extern uint32_t ee_units_uu_host_surrounding_tiles(uint64_t target,
 extern uint64_t ee_units_uu_host_container_continent(uint64_t container, uint64_t unit);
 
 extern uint64_t ee_units_uu_host_continent(int32_t which, uint64_t a, uint64_t b, uint64_t c);
-
-extern uint8_t ee_units_uu_host_line_blocked(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
 extern uint32_t ee_units_uu_host_tile_line(int32_t x1,
                                            int32_t y1,
@@ -5484,6 +5642,34 @@ extern int32_t ee_units_uu_host_spot(int32_t which,
                                      int32_t x,
                                      int32_t y,
                                      float *out);
+
+extern uint64_t ee_units_uu_host_world(int32_t which,
+                                       uint64_t a,
+                                       uint64_t b,
+                                       uint64_t c,
+                                       int32_t x,
+                                       int32_t y,
+                                       float f);
+
+extern float ee_units_uu_host_world_f(int32_t which, uint64_t a, uint64_t b, float f);
+
+extern uint32_t ee_units_uu_host_units_near(const float *center,
+                                            float radius,
+                                            uint64_t *out,
+                                            uint32_t capacity);
+
+extern uint32_t ee_units_uu_host_region_units(int32_t x,
+                                              int32_t y,
+                                              uint64_t *out,
+                                              uint32_t capacity);
+
+extern uint8_t ee_units_uu_host_find_path(uint64_t unit,
+                                          const int32_t *from,
+                                          const int32_t *to,
+                                          const int32_t *bounds,
+                                          uint32_t limit,
+                                          uint8_t walls,
+                                          int32_t *first);
 
 }  // extern "C"
 
