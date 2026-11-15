@@ -2460,6 +2460,10 @@ enum class EeWonCoreObject {
   AuthCtx = 10,
   /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
   HostOp = 11,
+  /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
+  HttpConn = 12,
+  /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
+  Lock = 13,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -7512,6 +7516,8 @@ struct EeWonCoreHooks {
   /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
   /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
   void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
+  /// `new HTTPConnection(NULL)`
+  void *(*new_http_conn)();
 };
 
 /// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
@@ -13976,6 +13982,18 @@ EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
                                 size_t product_len,
                                 const uint8_t *dir,
                                 size_t dir_len);
+
+/// A new connection object for the C++ `HTTPConnection*` `conn`, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` outlives the object.
+EeWonHttpConn *ee_won_http_conn_new_core(void *conn, const EeWonCoreHooks *core);
+
+/// A new session object for the C++ `HTTPSession*` `session`, its calls over the core table.
+///
+/// # Safety
+/// As `ee_won_http_conn_new_core`.
+EeWonHttpSession *ee_won_http_session_new_core(void *session, const EeWonCoreHooks *core);
 
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.

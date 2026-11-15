@@ -80,6 +80,7 @@ pub mod hostop;
 pub mod hostsock;
 pub mod http;
 pub mod httpcache;
+pub mod httpcpp;
 pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;

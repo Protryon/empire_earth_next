@@ -142,6 +142,12 @@ static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
         return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(anObject))->GetRouteObject();
     case EeWonCoreObject::AuthCtx: return const_cast<EeWonAuthCtx*>(static_cast<AuthContext*>(anObject)->Core());
     case EeWonCoreObject::HostOp: return static_cast<RustServerOp*>(static_cast<AsyncOp*>(anObject))->GetRustOp();
+    case EeWonCoreObject::HttpConn: return static_cast<HTTPConnection*>(anObject)->GetConnObject();
+    case EeWonCoreObject::Lock: {
+        if (HTTPConnection* c=dynamic_cast<HTTPConnection*>(anObject)) return c->GetLock();
+        if (HTTPSession* s=dynamic_cast<HTTPSession*>(anObject)) return s->GetLock();
+        return NULL;
+    }
     }
     return NULL;
 }
@@ -279,6 +285,7 @@ static long CoreTransformCall(void* inTransform,void* inMessage,bool inSend)
     return inSend ? aTransform->Send(aMessage) : aTransform->Recv(aMessage);
 }
 static void CoreTransformFree(void* inTransform) { delete static_cast<MsgTransform*>(inTransform); }
+static void* CoreNewHttpConn() { return static_cast<RefCount*>(new HTTPConnection(NULL)); }
 // the routing classes' (ee_won routecpp.rs): a new op on a connection, the connection's two virtuals
 static RoutingConnection* RouteConn(void* inConn)
 { return static_cast<RoutingConnection*>(static_cast<AsyncSocket*>(static_cast<RefCount*>(inConn))); }
@@ -359,7 +366,7 @@ static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletion
                                         &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreFileOpen,
                                         CoreFileWrite,CoreFileClose,CoreFileSetTime,CoreProgress,CoreAccept,
                                         CoreSocketHook,CoreTransformCall,CoreTransformFree,CoreNewRouteOp,
-                                        CoreRouteVirtual};
+                                        CoreRouteVirtual,CoreNewHttpConn};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
 }

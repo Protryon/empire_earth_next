@@ -104,6 +104,7 @@ static ROUTE_STUB: EeWonCoreHooks = EeWonCoreHooks {
     transform_free: None,
     new_route_op: Some(new_route_op_stub),
     route_virtual: Some(route_virtual_stub),
+    new_http_conn: None,
 };
 
 fn filled(kind: i32, values: &[Value]) -> RouteOp {

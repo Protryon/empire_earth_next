@@ -747,21 +747,28 @@ public:
 class RustServerOp; // an HTTPGetOp (httpget.rs)
 class HTTPSession;
 // HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
-// ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold
+// ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold.
+// Its calls back are Rust's since net round 26 (httpcpp.rs, over the core table; HTTPEngine.cpp is deleted); the
+// forwarders that take an op are below RustServerOp.
 class HTTPConnection : public RefCount {
 public:
-    HTTPConnection(HTTPSession* inSession = NULL); //2d2c80,new64 at2d2a97
-    virtual ~HTTPConnection(); //2d2d50, the members
-    void Kill(); //2d3600
-    void QueueOp(RustServerOp*); //2d33a0,ret4
-    void QueueOp(RustServerOp*,int); //2d3290,ret8
-    void RunOp(int); //2d3430,ret4
-    int GetNumOps();
-    static void StaticOpCallback(AsyncOpPtr,SmartPtr<RefCount>); //2d2df0, two owning by-value args
+    // 2d2c80 (new 64 at 2d2a97): idle, pipelining on
+    HTTPConnection(HTTPSession* inSession = NULL) : mSession(inSession)
+    { this->mImpl = ee_won_http_conn_new_core(static_cast<RefCount*>(this), WonCore()); }
+    virtual ~HTTPConnection() { ee_won_http_conn_free(this->mImpl); } //2d2d50: the socket, queues and completions
+    void Kill() { ee_won_http_conn_kill(this->mImpl); } //2d3600: the running and queued requests killed (finished)
+    void QueueOp(RustServerOp* inOp); //2d33a0: send-only on the pipeline queue, a full request without pipelining
+    void QueueOp(RustServerOp* inOp, int inId); //2d3290: on the send (0) or receive (1) queue, started when it was empty
+    void RunOp(int inId) { ee_won_http_conn_run_op(this->mImpl, inId); } //2d3430: a queue's next request on the socket
+    int GetNumOps() { return ee_won_http_conn_num_ops(this->mImpl); }
+    static void StaticOpCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inConnection) //2d2df0
+    { static_cast<HTTPConnection*>(inConnection.get())->OpCallback(inOp.get()); }
+    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
+    EeWonHttpConn* GetConnObject() const { return this->mImpl; }
 protected:
-    void OpCallback(RustServerOp*); //2d2e80, 1030 bytes; protected in the SDK
+    // 2d2e80: a sent request queued for its reply, or completed; all requeued when the pipeline drops
+    void OpCallback(AsyncOp* inOp) { ee_won_http_conn_op_callback(this->mImpl, static_cast<RefCount*>(inOp)); }
 private:
-    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit; //08..20
     HTTPSession* mSession; //20 NONOWNING, ctor raw assignment
     EeWonHttpConn* mImpl;   // owned: 0x24..0x64 (socket, counts, flag, last use, queues, retry, running ops)
@@ -772,13 +779,13 @@ typedef SmartPtr<HTTPConnection> HTTPConnectionPtr;
 // (httpengine.rs EeWonHttpSession).
 class HTTPSession : public RefCount {
 public:
-    HTTPSession();                          //2d27b0, out of line
-    virtual ~HTTPSession();                 //2d2870, the map
-    void AddOp(RustServerOp*);               //2d28f0, queues a completed op
-    void KillAll();                         //2d2bc0
-    int GetNumOps();
+    HTTPSession() { this->mImpl = ee_won_http_session_new_core(static_cast<RefCount*>(this), WonCore()); } //2d27b0
+    virtual ~HTTPSession() { ee_won_http_session_free(this->mImpl); } //2d2870, the map
+    void AddOp(RustServerOp*); //2d28f0: on its host's connection, made at the first use
+    void KillAll() { ee_won_http_session_kill_all(this->mImpl); } //2d2bc0: every connection's requests killed
+    int GetNumOps() { return ee_won_http_session_num_ops(this->mImpl); }
+    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
 private:
-    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit;              //08..20
     EeWonHttpSession* mImpl;                //20..2c, owned
 };
@@ -1158,6 +1165,13 @@ private:
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
+// the HTTP engine's forwarders that take an HTTP get op (HTTPEngine.cpp's, 2d33a0, 2d3290, 2d28f0)
+inline void HTTPConnection::QueueOp(RustServerOp* inOp)
+{ ee_won_http_conn_queue_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
+inline void HTTPConnection::QueueOp(RustServerOp* inOp, int inId)
+{ ee_won_http_conn_queue_op_id(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp)), inId); }
+inline void HTTPSession::AddOp(RustServerOp* inOp)
+{ ee_won_http_session_add_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
 
 // AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
 // and the last use) is an ee_won handle (rust/crates/ee_won/src/hostauth.rs over peerauth.rs's session, round 22):

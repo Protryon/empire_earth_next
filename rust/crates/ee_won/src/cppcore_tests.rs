@@ -71,6 +71,7 @@ static CORE_STUB: EeWonCoreHooks = EeWonCoreHooks {
     transform_free: None,
     new_route_op: None,
     route_virtual: None,
+    new_http_conn: None,
 };
 
 static OP_HOOKS: EeWonAsyncOpHooks = EeWonAsyncOpHooks {

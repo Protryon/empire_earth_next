@@ -73,6 +73,10 @@ pub enum EeWonCoreObject {
     AuthCtx = 10,
     /// a `RustServerOp*`'s [`EeWonHostOp`](crate::hostop::EeWonHostOp)
     HostOp = 11,
+    /// an `HTTPConnection*`'s [`EeWonHttpConn`](crate::httpengine::EeWonHttpConn)
+    HttpConn = 12,
+    /// an `HTTPConnection*`'s or `HTTPSession*`'s lock (its `CriticalSection`'s platform mutex)
+    Lock = 13,
 }
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -169,6 +173,8 @@ pub struct EeWonCoreHooks {
     /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
     pub route_virtual:
         Option<unsafe extern "C" fn(conn: *mut c_void, which: i32, op: *mut c_void, message_type: u8) -> *mut c_void>,
+    /// `new HTTPConnection(NULL)`
+    pub new_http_conn: Option<unsafe extern "C" fn() -> *mut c_void>,
 }
 
 // SAFETY: a static table of functions and one function address
