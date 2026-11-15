@@ -20415,3 +20415,52 @@ the base's and the continent's data into Rust records.
   2-3, and the four capture profiles passed at seeds 2-3 on the area record. Not run: `gates.sh` or any harness
   session (the tour is the only thing that draws: nothing here is drawn, the hulls are read by the AI only),
   `eedata check`/`cppgate` (no data change), macOS or Linux builds.
+
+## The unit utilities, round 1: the tile searches, the placement tests, the wall lines and the spot searches in Rust (ee_units uu.rs, uu_tiles.rs, uu_place.rs, uu_spots.rs; branch rust-unitutil1, 2026-11-14)
+
+- **The file is the original's "EEUnitUtilities.cpp".** EEFOFindNewTargetNearOldTarget.cpp (6,380 lines) holds some
+  200 free functions (the asserts name `EEUUGetIsUnitClassTargetable`; the unit map named it after the one class it
+  builds on the stack). Census: every function had a caller (the units and goals, the classic AI's build and resource
+  managers, the calamities, the random map's walls, the ghost and the screens), so nothing was dead before the move;
+  the move itself orphaned 13 functions and five comparators, which went with it.
+- **Capture first: UUTL.** Each of 50 utilities notes its outermost call on its thread (a thread-local depth, so a
+  body's nested utility calls are not noted and the record does not depend on which nested calls stay C++): its kind,
+  inputs and outputs (units as ids, floats as bits, tile and unit lists whole), folded per physics tick into one
+  FNV-1a 64 under a mutex. Recorded on the unmodified C++ (oracle, late, space, calamity at seeds 2-3; a second oracle
+  run gave the same digests, so the AI thread's calls are serialized with the physics). The notes stay in the C++
+  forwarders, so the same record gates the Rust bodies. EE-UU-COUNT (stderr, every 20,000 ticks) gives the calls per
+  kind: `EECanStandOn` 630k and `EEPlayerBlockTakes` 1.3 million in the eight games, `EEGetDockShipPlacement` 64,
+  `EEGetEscapePoint` none.
+- **The C++ leaves the moved code calls keep their records.** `EEGetTileLine` writes a CBTL record per call, so the
+  Rust bodies call it through the host (never ee_combat's `tile_line` directly), exactly once per line: the buffer is
+  sized from the line's bound instead of the count-then-retry the other list reads use.
+- **Sorts.** `EEGetSortedRingTiles` and `EEGetTilesAround` sort tiles by distance with many ties; MSVC's `std::sort`
+  is an insertion sort up to 32 elements and an introsort above, so rings of more than 32 tiles keep MSVC's unstable
+  order. ee_units cannot depend on ee_sound (its C++ imports enter ee_units' test binary: LNK2019 on
+  `ee_conductorcpp_*`), so `msvc_sort.rs` is a copy of ee_sound's, with its golden test reading ee_sound's golden
+  file. The sort-unique by unit id needs no particular sort (equal ids are one unit); `EEFindResourceSpot`'s
+  `std::stable_sort` is a stable sort on a boolean key; the fan's `U2DPoint` order (lower y, then higher x) is total.
+- **C++ quirks kept.** `EEGetBlockRing`'s second corner tests (x - 1, bottom - 1) with (x, height + 1);
+  `EEMakeWallJunctions` measures placed tiles by `unsigned long` differences (a tile left of or above the piece never
+  counts); `EEAdjustNavalPath` keeps the stale last point as the new start when a point is kept by the first two
+  tests; `EEFindFreeFarm` reads the units of every ring so far again each ring; `EEFindOpenSpot` asks the active
+  group about the spot and drops the answer; `EEGetSubTileSteps`' fall-through truncates `1 / size` the Windows way
+  (`i32::MIN` for an infinity, where `as` saturates); `EEGetFootprintTiles` appends a gate's pieces but clears for
+  any other unit; `EECanPlaceUnitOnTile` writes its flag only when it asked the tile's blockers (the Rust returns an
+  `Option`, the forwarder a sentinel).
+- **cbindgen.** The renames are global: a Rust `pub struct Unit` became `EeAStarUnit` (ee_astar's old rename) and
+  removed ee_astar's typedef; `pub(crate) const`s are exported too and a name shared with another crate (`TYPE_PATH_POINT`)
+  moves that crate's constant to ee_rust_common.h. The views are `UuView`/`UuClassView` with `cbindgen:ignore`, the
+  constants `UU_*` in an ignored module. Every `extern "C"` import of a Rust host is declared in the header too, so
+  the C++ host definitions are type-checked against it; the C++ name `class` cannot be a field of a cbindgen struct.
+- **Reads in place.** `EeUnitsUuUnit` carries a unit's four record addresses (the `RTSUnit`, `EEUnit` and
+  `EEComplexUnit` fields, the class's `EeUnitsUnitClassFields`) and its pointer members and two class virtuals'
+  answers, filled by one host call; the plain members are read through the records one field at a time
+  (`bool`s as bytes); the dock's next launch yaw is written into the complex record in place.
+- **Cost of the header.** ee_units.h is included by EEUnit.h, so every change to the crate's FFI recompiles ~1,000
+  units (about 25 minutes at -j 3 on the loaded machine): batch the FFI changes of a round and generate the header
+  once.
+- **Gates (the move's commit):** build `--sim` 0/0 at the first link; oracle seeds 2-3 identical; the captures at
+  seeds 2-3 equal to every golden, UUTL among them (oracle 173 digests, late 174, space 175, calamity 191); 29 new
+  Rust unit tests (with the copied sort's golden test). C++: EEFOFindNewTargetNearOldTarget.cpp 6,380 -> 4,725 lines
+  with the 230-line test capture.
