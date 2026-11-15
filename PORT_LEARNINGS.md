@@ -21585,3 +21585,89 @@ to exist. Each class unit carried 30-40 lines of includes and comments and a 20-
   point i at the carrier's frame in its location scaled by its stats) and `RouteDockWaypoint` from another. The
   transformation's `Apply`, `ConvertToOrientation` and the point's `DistanceTo` are ee_ge's (the C++ forwards to
   them already), so the bits are the same. EE-PM-COUNT ends with "deck N", the placements.
+
+## R4.4, twenty-second round: the raster table's model entries; EEROGroundShadows's draws, the farm, the earthquake and the smoke generators whole in Rust on EEE3DRust, the damage controller on EEE2DRust (ee_gfx shadows.rs, effect_farm.rs, effect_quake.rs, effect_smoke.rs; branch rust-gfx28, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 13,291 lines at the round's start; 12,692 after the
+table, the shadows and the farm (-599); 12,192 after the earthquake and the smoke generators (-500); 12,076 after the
+damage controller (-116). Deleted: `EEE3DFarm`, `EEE3DEarthquake`, `EEE3DSmokeGenerator`, `EEEDamagedEffect` (`.cpp`
+and `.h`); `EEROGroundShadows.cpp` keeps its constructor, `FrameStarting`, the list hand-over and the effects' queue-0
+pass. The round's C++ diff over `src` and `include/ee`: +445 -1,845 (net -1,400; the aim was 1,500).
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| e5ed3ea0 | the raster table's model entries; the ground shadows' draws; the farm on `EEE3DRust` | -599 |
+| c1f55eab | the earthquake and the smoke generators on `EEE3DRust` | -500 |
+| 55c4c760 | merge of `rust` (fffdedf4) | |
+| ebb2a467 | the damage controller on `EEE2DRust` | -116 |
+
+- **The table's model entries.** Round 20's item at last: `create_model` / `create_sub_model` (the model manager's,
+  with the arguments every caller passed alike fixed in the C++), `model_reference` / `model_dereference`,
+  `sub_model`, `store_mesh` (a built mesh's set values into vertex array 0 and polygon array 0: `EEEffectMesh::Store`
+  became the free `EEStoreMesh` both use), `material_ranges` (material 0's polygon and vertex ranges from 0),
+  `bounding_radius`, `copy_vertices` (points, optionally normals), `texture_wrap`, and two state reads
+  (`get_alpha_ref`, `get_blending`). The new entries that are more than one call are named static functions in
+  `EERenderObject.cpp` (the driver cuts them by name); the tests' log rasterizer keeps real per-model arrays (its
+  handles are 1-based indices into them).
+  - Only the final state of a model's arrays matters (the setters write arrays, nothing else): the farm's placeholder
+    copies, which the original wrote triple by triple into polygon 0, are one mesh whose polygon 0 holds the last
+    triple; the earthquake's interleaved point and texture-coordinate writes are one `store_mesh` of coordinates plus
+    `set_vertex_point`s.
+- **The ground shadows.** `shadows.rs` makes the StaticShadow quad (a static `AtomicPtr`, released by
+  `ReleaseShadowModel`), sets the scene's state and draws the placed objects' and the units' shadows. The C++ copies
+  the frame's two multimaps into arrays (texture, location, scale, opacity; a unit's transformation, its source's
+  shadow model and texture, its class's scale) and leaves out the units the original skipped first (submerged, no
+  shadow scale), so it reads nothing the original did not; the space test asks the C++ for a tile's water info (-1
+  off the mesh). `min(1.0f, fade)` is the macro's `1 < fade ? 1 : fade`.
+- **The farm.** The record's `farm` (the area and centre as the volcano's `EeGfxVolcanoArea`, the three model
+  handles, the sway, the flags, the queue's draw facts); `effect_farm.rs` builds the draw copies, the ground with its
+  placeholder sub-model and the crops, places them, picks the variant from the first drop site and sways the crop
+  tops in the step (the shared circle a `Mutex`ed static built by the first farm to step, as `sCircle`). `EEE3DRust`
+  gains `ElevationChanged` (the C++ rectangle test, then the new op `Rebuild`: place, set up, crops if built; the free
+  camera's queue uses it too), the farm's `IsTileVisible` (its tiles while it lives, else the current player's
+  doppelganger) and its empty `ReplaceUnit`.
+  - **Trap (an empty override):** `EEE3DFarm::ReplaceUnit` is empty (ICF-folded into 0x163d6f); the generic
+    `EEE3DRust::ReplaceUnit` calls `EEEffect::ReplaceUnit` and would have rebound a farm's unit. List every virtual a
+    deleted class overrides, the empty ones too.
+  - **Trap (queue result):** the farm's queue answers 10 for any base failure, not the base's code.
+- **The earthquake.** The record's `quake`; the two-point constructor's points arrive in `shot.path.start` and
+  `shot.location` (the linear projectile's constructor); `effect_quake.rs` builds and reshapes the strip over the
+  ground (the host's `ground_point`, `GetGroundPoint`) with `quake.rs`'s rows. The speed (`length / duration`) is set
+  in `Repair` instead of `Load`: the file ops get no graphic-effect facts, `RepairPointers` always follows a load and
+  nothing reads the speed between.
+- **The smoke generators.** Their set-up, tick and files were already Rust; `effect_smoke.rs` is the class: the point
+  constructor's placing, the queue's 10, and the tick's facts from the graphic effect and the host's `smoke_unit`
+  (the damage smoke's tag points read once a step into the call's `Ask`, as the vent's). The destruction smoke's
+  factory is three lines in `EEEffectManager.cpp`.
+- **The damage controller** (0x3e) is an `EEE2DRust` kind: its Rust arm answers the queue's 10 and nothing else; its
+  tick facts and children (`EEE2DRust::Step` for 0x3e) and its files (the `Load`/`Save` special cases) stay the
+  C++'s calls of the existing `ee_gfx_effect_damaged_step` / `_load_damaged` / `_save_damaged`. The fire functor
+  (`EEContagionManager.cpp` after the merge of `rust`: calamities round 2 moved it there) sets
+  `mRecord->damaged.finished`.
+- **Golden driver** (`build/gx28/drv`: `make_r22.py COMMIT|WORKTREE OUT`, `run.sh`): a new self-contained stub world
+  (models with real arrays: points, normals, coordinates, colours, opacities, polygons; every model's digest after
+  each operation; material, draw and state calls logged in order). The original classes are cut from ad3d3af9 and
+  linked with the current library (they use only the record's transformation and radius and `farm.rs`'s and
+  `quake.rs`'s FFI, unchanged); the new side is `EEE3DRust`'s constructors, virtuals and farm/earthquake answers cut
+  from the worktree with a driver-made host and table (the new entries cut by name). 300 effects on seed 1 (2,515
+  lines) and 3,000 on seed 2 (26,569 lines: 988 earthquakes, 1,028 farms, 983 shadow scenes), identical.
+  - **Trap (driver):** a static array of effects initialised from temporaries copied `EEEffect3D`'s reference members
+    (into the record) from temporaries that then freed their records: both sides crashed at the next shadow pass. An
+    effect whose members reference its own record must never be copied.
+  - **Trap (driver):** the originals' constructors leave state to `SetUp`, `Load` or `RepairPointers` (the farm's
+    phase, sway, row length, rebuild and BB4 flags; the crack's model and hold time); the driver zeroes them as the
+    record does, and the original crack's destructor dereferenced a model a failed load or repair never made (not
+    deleted there).
+  - A read past a vertex array (the sway over the placeholder sub-model of a farm whose crops were never rebuilt)
+    returns one fixed point in the stub, so both sides read the same value; in the game both read past it alike.
+- **Behaviour changes:** a crop variant (`mCloaked`) outside 0..4 picks the first crop frame (the original read past
+  its table); the earthquake's speed is set in `Repair`; its destructor tests its model. None reaches a gate game.
+- **Gates.** per commit, `build.py --sim` 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS (18 digests, the pre-round C++ golden), the Rust gate PASS (3,387 and 3,394 tests; clippy, rustfmt, header). The merge of `rust` fffdedf4 (55c4c760) conflicted only in PORT_LEARNINGS.md (both sides' new sections kept); `rust_build.py header` and `rust_includes.py` changed nothing; the calamities round had moved the fire functor into `EEContagionManager.cpp`, where the damage controller's switch went. On the result (ebb2a467): both builds 0/0 (`--sim` and the test profile), the Rust gate PASS (3,484 tests; clippy, rustfmt, header), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 171 digests, late 172, calamity 189; 4, 4 and 3 without a golden) and effects at seeds 2-7 (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), the tour (`fixture_game.py --exercise tour --play-seconds 60 --seed 7 --zoom-captures 100 40 20`, under the harness lock) `RESULT PASS tour` and the orders game `RESULT PASS random-game` (gather, repair, queued repair, move; patrol and attack-ground skipped: no button, no unit).
+- **The frames** (`build/gx28/frames.sh`: the tour with `--seed 7 --zoom-captures 100 40 20`, the pre-round test exe
+  of round 21's merge against this round's): both tours `RESULT PASS tour`, no GX errors in either; at each zoom (100, 40, 20) and in the gameplay frame the same scene (the start's town centre and its citizens): the citizens' shadows (soft ellipses under their feet) and the town centre's ground shadow have the same shapes and places (crops at zoom 40 compared by eye); about two thirds of the pixels differ, nine in ten of those by under 16 levels (the time of day's light and the cloud layer at another moment of the run) and the large differences only where citizens stood in other poses; the main menu differs in 166 pixels (the version text). No farm, earthquake or smoke was in view.
+- **Only a tour or a person reaches:** the ground shadows (every unit's and placed object's shadow: the frames
+  above), the farm's draw (fields of crops: the AI's farms, rarely near the tour's camera), the earthquake's crack (a
+  calamity), the smoke generators' puffs (their state is EE-SIM's and the effects capture's; the puffs are other
+  effects).
+- **Not moved:** the decal placement helpers (simulation-side C++; their callers are the physics models' and the
+  units'), the storms (their interface is `EEEMStorm`'s), the marching line, particle emitter and 3D particle.
