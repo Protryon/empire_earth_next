@@ -82,7 +82,7 @@ void LobbyLanSocket::SetClient(LobbyLanClient* inClient) { ee_won_lansocket_set_
 
 // FUNCTION: WON 0x007dfc00
 // Creates the LAN logic with an empty client list and empty LAN and direct-connect game lists
-LanLogic::LanLogic() : mJoinPassword(GetEmptyGUIStringData()), mRust(ee_won_lan_new(this, ee_won_lobbycpp_call))
+LanLogic::LanLogic() : mJoinPassword(GetEmptyGUIStringData()), mRust(ee_won_lan_new_model(this, ee_won_lobbycpp_call))
 {
     this->mClients = new LobbyClientList;
     this->mLanGames = new LobbyGameList(1);
@@ -412,7 +412,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         LobbyBroadcastEvent(new ClientChangedEvent(cl, l->GetRoomSpec(), (int)inC), true);
         return 0;
     case EeWonLobbyOp::ClientLeftGame: LobbyClientLeftGame(cl); return 0;
-    case EeWonLobbyOp::GameSetCaptainId: g->SetCaptainId((unsigned short)inC); return 0;
     case EeWonLobbyOp::LanServerClientIsCaptain:
         l->mServerSocket->SetClient(lc);
         lc->SetCaptain(true, true);
@@ -431,7 +430,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
             new SendMsgOp(LanMessageOf(inA, inC, inD, aHold)), -1);
         return 0;
     case EeWonLobbyOp::LanServerSend: l->mServerSocket->QueueOp(new SendMsgOp(LanMessageOf(inA, inC, inD, aHold)), -1); return 0;
-    case EeWonLobbyOp::ClientIsIgnored: return cl->IsIgnored();
     case EeWonLobbyOp::LanWhisperReceived: {
         if (LobbyGetChatSoundEffects())
             LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_WhisperRecv_Sound).get());
@@ -555,7 +553,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
                                                 g->GetClients().get()), true);
         return 1;
     }
-    case EeWonLobbyOp::GameAddressPort: return g->GetAddress().GetPort();
     case EeWonLobbyOp::LanSendSummary: {
         WriteBuffer aBuffer(0, true);
         aBuffer.AppendBytes(reinterpret_cast<const void*>(inC), (unsigned long)inD);
@@ -623,7 +620,6 @@ intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* i
         return 0;
     }
     case EeWonLobbyOp::LanNewServerSocket: l->mServerSocket = new LobbyLanSocket; return 0;
-    case EeWonLobbyOp::GameHasPassword: return g->GetHasPassword();
     case EeWonLobbyOp::LanJoinPasswordClear: l->mJoinPassword = GUIString(GetEmptyGUIStringData()); return 0;
     case EeWonLobbyOp::LanPasswordDialogRun: {
         l->mPasswordDialog->Reset();

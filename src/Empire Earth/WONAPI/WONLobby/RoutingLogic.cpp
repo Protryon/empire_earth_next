@@ -163,141 +163,22 @@ static intptr_t RoutingHost(void* inObj, EeWonRouteLogicOp inOp, intptr_t a, int
         return 0;
     }
     // ---- the model
-    case O::ServerNum:
-        switch (b) {
-        case 0: return (intptr_t)S(a)->GetClients().get();
-        case 1: return (intptr_t)S(a)->GetConnection().get();
-        case 2: return (intptr_t)S(a)->GetMyClient();
-        case 3: return S(a)->GetMyClientId();
-        case 4: return S(a)->GetName() == LobbyGetLastServerName();
-        case 5: return S(a)->GetNumClients();
-        case 6: return S(a)->HasAddress(GetLobbyConfig()->mLanguage);
-        case 7: return S(a)->IsConnected();
-        case 8: return (intptr_t)S(a)->GetGroupCount();
-        case 9: return S(a)->GetQueryingGroups();
-        case 10: return (intptr_t)S(a)->GetLastPing();
-        }
-        return 0;
-    case O::ServerFindByWonId: return (intptr_t)S(a)->FindClientByWONId((unsigned long)b);
-    case O::ServerGroup: return (intptr_t)S(a)->GetGroup((int)b);
-    case O::ServerClient: return (intptr_t)S(a)->GetClient((int)b);
-    case O::ServerGroupAt: return (intptr_t)S(a)->GroupAt((size_t)b);
-    case O::ServerAddClientToGroup: S(a)->AddClientToGroup(C(b), (unsigned char)c, G(d)); return 0;
+    // (the model's other values are its Rust objects': modelobj.rs route_op)
+    case O::ServerNum: return b == 4 ? S(a)->GetName() == LobbyGetLastServerName() : S(a)->HasAddress(GetLobbyConfig()->mLanguage);
     case O::ServerAddGroup: return (intptr_t)S(a)->AddGroup(RO(b)->GetGroupInfo().get());
     case O::ServerAddClient: return (intptr_t)S(a)->AddClient(RO(b)->GetClientInfo().get());
-    case O::ServerRemoveGroup: return Held(S(a)->RemoveGroup((unsigned short)b));
-    case O::ServerRemoveClient: return Held(S(a)->RemoveClient((unsigned short)b));
-    case O::ServerRemoveClientFromGroup: return Held(S(a)->RemoveClientFromGroup((unsigned short)b, G(c)));
-    case O::ServerDo:
-        switch (b) {
-        case 1: S(a)->Disconnect(); break;
-        case 2: S(a)->GetClients()->ClearInvited(); break;
-        case 3: S(a)->UpdateFriends(); break;
-        case 4: S(a)->ClearGroups(); break;
-        case 5: S(a)->SetQueryingGroups(c != 0); break;
-        case 6: S(a)->SetLastPing((unsigned long)c); break;
-        case 7: S(a)->SetMyClientId((unsigned short)c); break;
-        case 8: S(a)->SetConnection(RC(c)); break;
-        }
-        return 0;
     case O::ServerSyncClients: { RoutingClientMap m; RO(b)->GetClients(m); S(a)->SyncClients(m); return 0; }
     case O::ServerSyncGroups: { RoutingGroupMap m; RO(b)->GetGroups(m); S(a)->SyncGroups(m, c != 0); return 0; }
-    case O::FriendAtServer: return F(a)->GetAddress() == S(b)->GetAddress();
     case O::ListNum: return b == 0 ? (intptr_t)L->mServerList->GetCount() : L->mServerList->IsEmpty();
     case O::ListAt: return (intptr_t)L->mServerList->ServerAt((size_t)a);
     case O::ListAddressIs: return S(b)->GetAddress() == L->mServerList->AddressAt((size_t)a);
-    case O::GroupNum:
-        switch (b) {
-        case 0: return G(a)->GetId();
-        case 1: return G(a)->IsGameGroup();
-        case 2: return G(a)->IsPublicChatGroup();
-        case 3: return (intptr_t)G(a)->GetNumClients();
-        case 4: return G(a)->IsPasswordProtected();
-        case 5: return G(a)->IsAskToJoin();
-        case 6: return G(a)->GetCaptainId();
-        case 7: return G(a)->GetName().length();
-        case 8: return G(a)->GetName() == LobbyGetLastRoomName();
-        case 9: return (intptr_t)G(a)->GetClients().get();
-        }
-        return 0;
-    case O::GroupFindClient: return (intptr_t)G(a)->FindClient((unsigned short)b);
-    case O::GroupSetCaptain: return (intptr_t)G(a)->SetCaptain((unsigned short)b, reinterpret_cast<LobbyClient**>(c));
-    case O::ClientNum:
-        switch (b) {
-        case 0: return C(a)->GetClientId();
-        case 1: return (intptr_t)C(a)->GetWONUserId();
-        case 2: return C(a)->IsFriend();
-        case 3: return C(a)->IsAnonymous();
-        case 4: return C(a)->IsIgnored();
-        case 5: return C(a)->IsBlocked();
-        case 6: return C(a)->IsInChatGroup();
-        case 7: return C(a)->GetChatGroupId();
-        case 8: return C(a)->IsInGameGroup();
-        case 9: return C(a)->GetGameGroupId();
-        case 10: return C(a)->IsAway();
-        case 11: return C(a)->IsModerator();
-        case 12: return C(a)->IsAdmin();
-        case 13: return (intptr_t)C(a)->GetCDKeyId();
-        }
-        return 0;
-    case O::ClientDo:
-        switch (b) {
-        case 1: C(a)->SetMemberFlags((unsigned char)c, d != 0); break;
-        case 2: C(a)->SetClientFlags((unsigned long)c); break;
-        case 3: C(a)->SetIsFriend(c != 0); break;
-        case 4: C(a)->SetInvited(c != 0); break;
-        }
-        return 0;
-    case O::ClientIsTeammate: return C(a)->IsTeammate(C(b));
-    case O::FriendNum:
-        switch (b) {
-        case 0: return F(a)->GetFlags();
-        case 1: return (intptr_t)F(a)->GetLastLocate();
-        case 2: return (intptr_t)F(a)->GetUserId();
-        case 3: return F(a)->GetAnonymous();
-        case 4: return (intptr_t)F(a)->GetLastSearch();
-        case 5: return (intptr_t)F(a)->GetSearchStart();
-        }
-        return 0;
-    case O::FriendDo:
-        switch (b) {
-        case 1: F(a)->SetAnonymous(c != 0); break;
-        case 2: F(a)->SetStatusFromClient(C(c)); break;
-        case 3: F(a)->SetLocation(S(c)->GetAddress(), S(c)->GetName(), (int)d); break;
-        case 4: F(a)->ClearLocation(); break;
-        case 5: F(a)->StartLocate((unsigned long)c); break;
-        case 6: F(a)->SetLastSearch((unsigned long)c); break;
-        case 7: F(a)->EndLocate((unsigned long)c); break;
-        }
-        return 0;
+    case O::GroupNum: return b == 7 ? G(a)->GetName().length() : G(a)->GetName() == LobbyGetLastRoomName();
     case O::FindFriend: return (intptr_t)LobbyFindFriend((unsigned long)a);
     case O::AddFriendOfClient: return (intptr_t)LobbyAddFriend(C(a)->GetName(), C(a)->GetWONUserId());
     case O::AddFriendNamed: return (intptr_t)LobbyAddFriend(*T(a), (unsigned long)b);
     case O::RemoveFriend: LobbyRemoveFriend((unsigned long)a); return 0;
     case O::FriendCount: return (intptr_t)LobbyGetFriendCount();
     case O::FriendAt: return (intptr_t)LobbyGetFriendAt((size_t)a);
-    case O::GameNum:
-        switch (b) {
-        case 0: return GM(a)->GetAskToJoin();
-        case 1: return GM(a)->GetInviteOnly();
-        case 2: return GM(a)->GetGameType();
-        case 3: return GM(a)->GetGroupId();
-        case 4: return GM(a)->GetIsHost();
-        case 5: return GM(a)->GetIsFiltered();
-        case 6: return GM(a)->GetHasPassword();
-        case 7: return GM(a)->CanJoin();
-        case 8: return GM(a)->GetPing();
-        case 9: return GM(a)->GetSkill();
-        }
-        return 0;
-    case O::GameDo:
-        switch (b) {
-        case 1: GM(a)->SetGroupId((unsigned short)c); break;
-        case 2: GM(a)->SetClients(reinterpret_cast<LobbyClientList*>(c)); break;
-        case 3: GM(a)->SetInvited(c != 0); break;
-        case 4: GM(a)->ReadGroup(G(c)); break;
-        }
-        return 0;
     case O::GameReadSummary: return GM(a)->ReadSummaryBuffer(RO(b)->GetData().get());
     case O::GameText: return (intptr_t) new GUIString(b == 0 ? GM(a)->GetName() : GM(a)->GetPassword());
     case O::GameCreate: return Held(SmartPtr<LobbyGame>(LobbyGame::CreateGame(LobbyGameType_Internet)));
@@ -638,7 +519,7 @@ void RoutingLogic::InitComponent(ComponentConfig* inConfig)
 // FUNCTION: WON 0x007e6e80
 // Creates the Internet lobby logic with an empty server list and game list (the Rust object: not idle, not yet a
 // moderator, no server)
-RoutingLogic::RoutingLogic() : mRust(ee_won_routelogic_new(this, RoutingHost))
+RoutingLogic::RoutingLogic() : mRust(ee_won_routelogic_new_model(this, RoutingHost))
 {
     this->mServerList = new LobbyServerList;
     this->mGameList = new LobbyGameList(2);

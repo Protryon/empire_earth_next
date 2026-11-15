@@ -40,7 +40,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
 // ---- StagingLogic's shell
 
 // FUNCTION: WON 0x007ef160
-StagingLogic::StagingLogic() : mRust(ee_won_staging_new(this, ee_won_lobbycpp_call)) {}
+StagingLogic::StagingLogic() : mRust(ee_won_staging_new_model(this, ee_won_lobbycpp_call)) {}
 
 // FUNCTION: WON 0x007ef1b0
 StagingLogic::~StagingLogic() { ee_won_staging_free(this->mRust); }
@@ -191,18 +191,8 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     // a game
     case EeWonLobbyOp::GameHold: return Held(g);
     case EeWonLobbyOp::GameRelease: g->Release(); return 0;
-    case EeWonLobbyOp::GameIsHost: return g->GetIsHost();
-    case EeWonLobbyOp::GameFindClient: return (intptr_t)g->FindClient((unsigned short)inC);
-    case EeWonLobbyOp::GameType: return g->GetGameType();
-    case EeWonLobbyOp::GameIsInProgress: return g->IsInProgress();
-    case EeWonLobbyOp::GameAreAllReady: return g->AreAllReady();
     case EeWonLobbyOp::GameCanReady: return g->CanReady();
     case EeWonLobbyOp::GameCanStartAndTry: return g->CanStartGame() && g->TryStartGame();
-    case EeWonLobbyOp::GamePingReplied: return g->GetPingReplied();
-    case EeWonLobbyOp::GameIsPinging: return g->IsPinging();
-    case EeWonLobbyOp::GameIsSameGame: return g->IsSameGame(static_cast<LobbyGame*>(inB));
-    case EeWonLobbyOp::GameJoinStatus: return g->GetJoinStatus();
-    case EeWonLobbyOp::GamePing: return g->GetPing();
     case EeWonLobbyOp::GameNewCopy: {
         SmartPtr<LobbyGame> aGame = LobbyGame::CreateGame(static_cast<LobbyGameType>(g->GetGameType()));
         aGame->CopyFrom(g);
@@ -212,12 +202,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     case EeWonLobbyOp::GamePostNetCreate: return g->PostNetCreateGame();
     case EeWonLobbyOp::GamePreNetJoin: return g->PreNetJoinGame();
     case EeWonLobbyOp::GamePostNetJoin: return g->PostNetJoinGame();
-    case EeWonLobbyOp::GameBecomeHost:
-        g->SetIsHost(true);
-        g->SetCaptainId(clB->GetClientId());
-        clB->SetCaptain(true, true);
-        return 0;
-    case EeWonLobbyOp::GameAddHostClient: g->GetClients()->AddClient(clB); g->HandleHostGame(clB); return 0;
     case EeWonLobbyOp::GameLeaveNet:
         g->ClearPlayers();
         st->mMyClient = NULL;
@@ -225,7 +209,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         LobbyNetLeaveGame(g);
         g->PostNetLeaveGame();
         return 0;
-    case EeWonLobbyOp::GameRemoveClient: g->RemoveClient(clB); return 0;
     case EeWonLobbyOp::GameHandlePlayerJoined: g->HandlePlayerJoined(clB); return 0;
     case EeWonLobbyOp::GameSetInProgressNet:
         g->SetInProgress(inC != 0);
@@ -281,14 +264,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return 0;
     }
     // a client
-    case EeWonLobbyOp::ClientHasPlayer: return cl->HasPlayer();
-    case EeWonLobbyOp::ClientPlayer: return (intptr_t)cl->GetPlayer().get();
-    case EeWonLobbyOp::ClientIsReady: return cl->IsReady();
-    case EeWonLobbyOp::ClientId: return cl->GetClientId();
-    case EeWonLobbyOp::ClientIsGameCaptain: return cl->IsCaptain(1);
-    case EeWonLobbyOp::ClientIsTeammate: return cl->IsTeammate(clB);
-    case EeWonLobbyOp::ClientPlayerSetReady: cl->GetPlayer()->SetReady(inC != 0); return 0;
-    case EeWonLobbyOp::ClientPlayerSetPing: cl->GetPlayer()->SetPing((unsigned short)inC); return 0;
     case EeWonLobbyOp::ClientReadPlayer:
         try {
             SmartPtr<LobbyPlayer> aPlayer = LobbyPlayer::CreatePlayer();

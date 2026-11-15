@@ -6269,6 +6269,319 @@ enum class EeWonMenuCall : uint32_t {
   MouseUpCount,
 };
 
+/// A model object's class.
+enum class EeWonModelKind : uint32_t {
+  Player = 0,
+  Client,
+  ClientList,
+  Friend,
+  Group,
+  Game,
+  GameList,
+  Server,
+  ServerList,
+};
+
+/// The C++ the model calls (WONLobby/LobbyModelHost.cpp's `ModelHost`).
+enum class EeWonModelOp : uint32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef = 0,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `new LobbyClient` (held).
+  NewClient,
+  /// `new LobbyClientList` (held).
+  NewClientList,
+  /// `new LobbyGroup` (held).
+  NewGroup,
+  /// `new LobbyServer` (held).
+  NewServer,
+  /// `LobbyGame::CreateGame(a)` (held).
+  NewGame,
+  /// `LobbyPlayer::CreatePlayer()` (held).
+  NewPlayer,
+  /// `((LobbyClient*)a)->ReadRoutingInfo((RoutingClientInfo*)b)`.
+  ClientReadRouting,
+  /// `((LobbyGroup*)a)->ReadRoutingInfo((RoutingGroupInfo*)b, (LobbyClientList*)c)`.
+  GroupReadRouting,
+  /// `LobbyIsNameIgnored(GUIString((GUIStringData*)a))`.
+  NameIgnored,
+  /// `LobbyIsCDKeyBlocked(a)`.
+  CdKeyBlocked,
+  /// `LobbyFindFriend(a)`.
+  FindFriend,
+  /// `((LobbyPlayer*)a)->IsTeammate((LobbyPlayer*)b)` (the virtual).
+  PlayerIsTeammate,
+  /// `((LobbyGame*)a)->CopyFromHook((LobbyGame*)b)`.
+  GameCopyFromHook,
+  /// `((LobbyGame*)a)->HandleHostGameHook((LobbyClient*)b)`.
+  GameHostHook,
+  /// `((LobbyGame*)a)->HandlePlayerLeftHook((LobbyClient*)b, (LobbyPlayer*)c)`.
+  GamePlayerLeftHook,
+  /// `((LobbyGame*)a)->GetJoinStatusHook()`.
+  GameJoinStatusHook,
+  /// `((LobbyGame*)a)->CanStartGameHook()`.
+  GameCanStartHook,
+  /// `((RoutingConnection*)a)->QueueClose(-1)`.
+  ConnectionClose,
+};
+
+/// A member read by [`ee_won_model_get`] and written by [`ee_won_model_set`]. Numbers are the member's value; a
+/// text is its `GUIStringData*` (read: no reference added; written: the object takes one); an object is its
+/// pointer (the same); an address is its `const EeWonIpAddr*` (read: borrowed; written: copied).
+enum class EeWonModelField : uint32_t {
+  PlayerPing = 0,
+  PlayerReady,
+  ClientName = 10,
+  ClientId,
+  ClientFlags,
+  ClientWonUserId,
+  ClientCdKeyId,
+  ClientChatMemberFlags,
+  ClientGameMemberFlags,
+  ClientChatGroupId,
+  ClientGameGroupId,
+  ClientIgnored,
+  ClientBlocked,
+  ClientIsFriend,
+  ClientGameCaptain,
+  ClientChatCaptain,
+  ClientInvited,
+  ClientPlayer,
+  FriendName = 40,
+  FriendUserId,
+  FriendAddress,
+  FriendLocation,
+  FriendLastSearch,
+  FriendFlags,
+  FriendLastLocate,
+  FriendSearchStart,
+  FriendAnonymous,
+  GroupName = 60,
+  GroupId,
+  GroupCaptainId,
+  GroupNumClients,
+  GroupMaxClients,
+  GroupFlags,
+  GroupClients,
+  GameName = 80,
+  GamePassword,
+  GameHasPassword,
+  GameInviteOnly,
+  GameAskToJoin,
+  GameInProgress,
+  GameInvited,
+  GameIsHost,
+  GameShowDetails,
+  GameHaveDetails,
+  GamePingReplied,
+  GameLastSeen,
+  GameFiltered,
+  GameNumPlayers,
+  GameOpenSlots,
+  GameType,
+  GameSkill,
+  GameClients,
+  GameAddress,
+  GameCaptainId,
+  GameGroupId,
+  GamePing,
+  GameListType = 120,
+  ServerName = 130,
+  ServerAddress,
+  ServerNumChat,
+  ServerNumClients,
+  ServerLastPing,
+  ServerQuerying,
+  ServerClients,
+  ServerConnection,
+  ServerMyClientId,
+};
+
+/// A method ([`ee_won_model_call`]); `a`..`c` as each says. "Held" results carry a reference the caller gives
+/// back (a `SmartPtr` return).
+enum class EeWonModelCall : uint32_t {
+  /// `IsSameTeam((LobbyPlayer*)a)`.
+  PlayerIsSameTeam = 0,
+  /// `ClearGroup(a, b)`.
+  ClientClearGroup = 10,
+  ClientInChat,
+  ClientInGame,
+  /// `ReadRoutingInfo`'s stores: the name `a` (a `GUIStringData*`), then `(const intptr_t*)b`: the flags, the id,
+  /// the user id, the CD key id.
+  ClientSetRouting,
+  ClientUpdateIgnore,
+  ClientAnonymous,
+  /// `IsMuted(a)`.
+  ClientMuted,
+  ClientAway,
+  ClientAdmin,
+  ClientModerator,
+  /// `IsCaptain(a)`.
+  ClientIsCaptain,
+  /// `SetCaptain(a, b)`.
+  ClientSetCaptain,
+  ClientHasPlayer,
+  ClientIsReady,
+  ClientPing,
+  /// `IsTeammate((LobbyClient*)a)`.
+  ClientIsTeammate,
+  /// `SetGroupId(a, b)`.
+  ClientSetGroupId,
+  /// `SetMemberFlags(a, b)`.
+  ClientSetMemberFlags,
+  ListClear = 40,
+  /// `SyncClients`: `c` routing records, their ids at `(const uint16_t*)a`, their `RoutingClientInfo*`s at
+  /// `(const intptr_t*)b`, in the map's order.
+  ListSync,
+  ListUpdateIgnore,
+  /// `AddClient((LobbyClient*)a)`.
+  ListAdd,
+  /// `FindClient(a)`.
+  ListFind,
+  /// `RemoveClient(a)`: held.
+  ListRemove,
+  /// `FindClientByWONId(a)`.
+  ListFindByWonId,
+  ListClearInvited,
+  ListCount,
+  /// `ClientAt(a)`.
+  ListAt,
+  /// `LobbyClientIterator::HasMore` over the cursor `(EeWonModelCursor*)a`.
+  ListIterHasMore,
+  /// `LobbyClientIterator::Next` over the cursor `a`.
+  ListIterNext,
+  /// `LobbyClientSetIterator::HasMore` over the cursor `a`.
+  ListSetHasMore,
+  /// `LobbyClientSetIterator::Next((LobbyClient**)b)` over the cursor `a`: the player.
+  ListSetNext,
+  /// `SetLocation(*(const EeWonIpAddr*)a, (GUIStringData*)b, c)`.
+  FriendSetLocation = 70,
+  /// `ClearLocation()` (`d`: the empty string's data).
+  FriendClearLocation,
+  /// `SetStatusFromClient((LobbyClient*)a)`.
+  FriendSetStatusFromClient,
+  /// `StartLocate(a)`.
+  FriendStartLocate,
+  /// `EndLocate(a)`.
+  FriendEndLocate,
+  /// `ReadRoutingInfo`'s stores: the name `a`, then `(const intptr_t*)b`: id, current count, flags, captain,
+  /// capacity.
+  GroupSetRouting = 80,
+  /// `SetMembers`: `c` members, `(const uint16_t*)a` their ids and `(const uint8_t*)b` their flags in the map's
+  /// order, over the client list given by `GroupSetMembersList` first.
+  GroupSetMembers,
+  /// The client list `SetMembers` looks the members up in (`(LobbyClientList*)a`; NULL: none).
+  GroupSetMembersList,
+  /// `AddClient((LobbyClient*)a, b)`.
+  GroupAdd,
+  /// `RemoveClient(a)`: held.
+  GroupRemove,
+  /// `SetCaptain(a, (LobbyClient**)b)`.
+  GroupSetCaptain,
+  GroupCaptain,
+  /// `FindClient(a)`.
+  GroupFind,
+  /// The room's kind: bit 0 password, 1 ask to join, 2 invite only, 3 chat, 4 public chat.
+  GroupKind,
+  /// `CopyFrom((LobbyGame*)a)`.
+  GameCopyFrom = 100,
+  /// `FindClient(a)`.
+  GameFindClient,
+  /// `MatchesRoomSpec(a)`.
+  GameMatchesRoomSpec,
+  GamePinging,
+  GameQuerying,
+  /// `RemoveClient((LobbyClient*)a)`.
+  GameRemoveClient,
+  GameIsFull,
+  GameJoinStatus,
+  GameClearPlayers,
+  /// `IsSameGame((LobbyGame*)a)`.
+  GameIsSameGame,
+  /// `ReadGroup((LobbyGroup*)a)`.
+  GameReadGroup,
+  /// `HandleHostGame((LobbyClient*)a)`.
+  GameHandleHost,
+  GameAllReady,
+  GameCanStart,
+  /// `ReadSummary`'s stores: `(const EeWonGameSummary*)a`'s fields `read` names, the name `b` (a
+  /// `GUIStringData*`, with bit 4).
+  GameStoreSummary,
+  GameListClear = 130,
+  /// `AddGame((LobbyGame*)a)`.
+  GameListAdd,
+  /// `GetOrCreateGame(a, (bool*)b)` (by id).
+  GameListGetOrCreateId,
+  /// `GetOrCreateGame(*(const EeWonIpAddr*)a, (bool*)b)`.
+  GameListGetOrCreateAddr,
+  /// `GetGame(a)` (by id).
+  GameListGetId,
+  /// `GetGame(*(const EeWonIpAddr*)a)`.
+  GameListGetAddr,
+  /// `RemoveGame(a)` (by id): held.
+  GameListRemoveId,
+  /// `RemoveGame(*(const EeWonIpAddr*)a)`: held.
+  GameListRemoveAddr,
+  GameListRewind,
+  GameListHasMore,
+  GameListNext,
+  GameListIsEmpty,
+  /// `RemoveStaleGames(a)` at the time `b` (`time(NULL)`).
+  GameListRemoveStale,
+  /// `HasAddress`: `b` bytes at `(const char*)a`.
+  ServerHasAddress = 150,
+  /// `SyncClients` (as `ListSync`, then the clients' ignore states).
+  ServerSyncClients,
+  ServerUpdateFriends,
+  /// `ClearFriendLocations` at the time `a` (`d`: the empty string's data).
+  ServerClearFriendLocations,
+  /// `SyncGroups`: `c & 0xffffffff` rooms, ids at `a`, `RoutingGroupInfo*`s at `b`; `c >> 32`: update the clients.
+  ServerSyncGroups,
+  /// `AddClient((RoutingClientInfo*)a)`.
+  ServerAddClient,
+  /// `AddClientToGroup((LobbyClient*)a, b, (LobbyGroup*)c)`.
+  ServerAddClientToGroup,
+  /// `AddGroup((RoutingGroupInfo*)a)`.
+  ServerAddGroup,
+  /// `RemoveGroup(a)`: held.
+  ServerRemoveGroup,
+  /// `RemoveClient(a)`: held.
+  ServerRemoveClient,
+  /// `RemoveClientFromGroup(a, (LobbyGroup*)b)`: held.
+  ServerRemoveClientFromGroup,
+  /// `GetClient(a)`.
+  ServerGetClient,
+  /// `FindClientByWONId(a)`.
+  ServerFindByWonId,
+  ServerMyClient,
+  /// `GetGroup(a)`.
+  ServerGroup,
+  ServerNumClientsNow,
+  ServerConnected,
+  ServerClearGroups,
+  ServerGroupCount,
+  /// `GroupAt(a)`.
+  ServerGroupAt,
+  /// `ReadDirEntity`'s population (`_C`): `a`.
+  ServerSetListed,
+  /// `ReadDirEntity`'s address names (`_L`): the set cleared.
+  ServerAddressesClear,
+  /// One address name: `b` bytes at `a`.
+  ServerAddressAdd,
+  /// `Disconnect()` at the time `a` (`d`: the empty string's data).
+  ServerDisconnect,
+  /// `UpdateFromDirectory`'s entry: the server at `*(const EeWonIpAddr*)a`, made when new.
+  ServerListInsert = 190,
+  /// `FindServer(*(const EeWonIpAddr*)a)`.
+  ServerListFind,
+  ServerListCount,
+  /// `ServerAt(a)`.
+  ServerListAt,
+  /// `AddressAt(a)`: a borrowed `const EeWonIpAddr*`.
+  ServerListAddressAt,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonMsBtnCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -9551,6 +9864,9 @@ struct EeWonMRow;
 /// The Rust PopupMenu.
 struct EeWonMenu;
 
+/// One model object (see the module).
+struct EeWonModel;
+
 /// The Rust MSButtonBase.
 struct EeWonMsButton;
 
@@ -9686,7 +10002,6 @@ struct EeWonWriteBuffer;
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
 
-/// The server list.
 struct EeWonServerList;
 
 /// A member handed over.
@@ -11078,6 +11393,18 @@ struct EeWonMemberReady {
   bool has_player;
   bool game_captain;
   bool ready;
+};
+
+/// The host: `ModelHost(op, a, b, c)`.
+using EeWonModelHost = ptrdiff_t(*)(EeWonModelOp op, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
+
+/// A walk over a client list as the original's map iterator walked (`LobbyClientIterator`,
+/// `LobbyClientSetIterator`): the next client after the last one returned.
+struct EeWonModelCursor {
+  bool started;
+  /// the set iterator's: a client with a player is found and not yet returned
+  bool ready;
+  uint16_t last;
 };
 
 /// One paint's inputs: the kind, the state bits (`EE_WON_MSPAINT_*`), the size and the kind's arguments.
@@ -13079,6 +13406,9 @@ uint32_t ee_won_eecolor_palette(uint32_t i);
 void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
 
 /// A new lobby game for the C++ `game` (EELobbyGame's constructor).
+/// As `ee_won_eegame_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonEeGame *ee_won_eegame_new_model(void *game, EeWonEeGameHostFn host);
+
 EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);
 
 /// Releases the slots' members, the transfer and the names (the destructor's order) and frees the object.
@@ -16881,6 +17211,9 @@ bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 int32_t ee_won_lanlogic_direct_event(bool existed);
 
 /// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
+/// As `ee_won_lan_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLan *ee_won_lan_new_model(void *logic, EeWonLobbyHostFn host);
+
 EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
 
 /// # Safety
@@ -16973,6 +17306,11 @@ const EeWonLobbyCtlSlot *ee_won_lobbyctl_slot(uint32_t index);
 uint32_t ee_won_lobbyctl_slot_count();
 
 /// A new control object for the C++ `ctl` of `kind`.
+/// As `ee_won_lobbyctl_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLobbyCtl *ee_won_lobbyctl_new_model(void *ctl,
+                                         EeWonLobbyCtlKind kind,
+                                         EeWonLobbyCtlHostFn host);
+
 EeWonLobbyCtl *ee_won_lobbyctl_new(void *ctl, EeWonLobbyCtlKind kind, EeWonLobbyCtlHostFn host);
 
 /// Releases the members (reverse member order) and frees the object.
@@ -17161,6 +17499,11 @@ const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
                                      size_t *count);
 
 /// A new popup object for the C++ `popup` of `kind`.
+/// As `ee_won_lobbypopup_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonLobbyPopup *ee_won_lobbypopup_new_model(void *popup,
+                                             EeWonLobbyPopupKind kind,
+                                             EeWonLobbyPopupHostFn host);
+
 EeWonLobbyPopup *ee_won_lobbypopup_new(void *popup,
                                        EeWonLobbyPopupKind kind,
                                        EeWonLobbyPopupHostFn host);
@@ -17340,6 +17683,50 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// A new model object for the shell (its constructor's members); `empty` is the empty string's `GUIStringData`.
+///
+/// # Safety
+/// `shell` is the C++ object whose first member will hold the result; `host` answers the ops.
+EeWonModel *ee_won_model_new(void *shell,
+                             EeWonModelKind kind,
+                             EeWonModelHost host,
+                             void *empty);
+
+/// Frees a model object (its references given back in reverse member order, after it is gone).
+///
+/// # Safety
+/// `m` came from `ee_won_model_new` and is freed once.
+void ee_won_model_free(EeWonModel *m);
+
+/// A walk's `Rewind` (`LobbyClientIterator`, `LobbyClientSetIterator`): from the first client again.
+///
+/// # Safety
+/// `c` is a live cursor.
+void ee_won_model_cursor_reset(EeWonModelCursor *c);
+
+/// A member (see [`EeWonModelField`]).
+///
+/// # Safety
+/// `m` is live.
+ptrdiff_t ee_won_model_get(const EeWonModel *m, EeWonModelField f);
+
+/// Sets a member (see [`EeWonModelField`]).
+///
+/// # Safety
+/// `m` is live; an address is a live value.
+void ee_won_model_set(const EeWonModel *m, EeWonModelField f, ptrdiff_t v);
+
+/// A method (see [`EeWonModelCall`]); `empty` (`d`) is the empty string's data where a method resets a name.
+///
+/// # Safety
+/// `m` is live; the arguments are what each call says.
+ptrdiff_t ee_won_model_call(const EeWonModel *m,
+                            EeWonModelCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c,
+                            ptrdiff_t d);
 
 /// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
 EeWonMsButton *ee_won_msbtn_new(void *component, EeWonGuiHostFn host);
@@ -18631,6 +19018,9 @@ void ee_won_routeconn_close_hook(const EeWonRouteConn *r);
 /// As `ee_won_routeconn_set_completion`.
 void ee_won_routeconn_kill_hook(const EeWonRouteConn *r);
 
+/// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonRouteLogic *ee_won_routelogic_new_model(void *obj, EeWonRouteLogicHostFn host);
+
 /// A new logic for the shell `obj` (the members as the constructor sets them).
 EeWonRouteLogic *ee_won_routelogic_new(void *obj, EeWonRouteLogicHostFn host);
 
@@ -19894,6 +20284,9 @@ void ee_won_game_read_summary(const uint8_t *bytes,
                               void *context);
 
 /// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
+/// As `ee_won_staging_new`, with the model's ops answered by its Rust objects (the game's).
+EeWonStaging *ee_won_staging_new_model(void *logic, EeWonLobbyHostFn host);
+
 EeWonStaging *ee_won_staging_new(void *logic, EeWonLobbyHostFn host);
 
 /// # Safety

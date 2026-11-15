@@ -619,6 +619,8 @@ fn res(r: Res) -> isize {
 pub struct EeWonRouteLogic {
     obj: *mut c_void,
     host: EeWonRouteLogicHostFn,
+    /// the model's ops answered by its Rust objects (modelobj.rs; the game's logic), not the host
+    model: bool,
     last_server_refresh: Cell<i64>,
     suppress_idle: Cell<bool>,
     idle: Cell<bool>,
@@ -651,6 +653,7 @@ impl EeWonRouteLogic {
         EeWonRouteLogic {
             obj,
             host,
+            model: false,
             last_server_refresh: Cell::new(0),
             suppress_idle: Cell::new(false),
             idle: Cell::new(false),
@@ -666,6 +669,11 @@ impl EeWonRouteLogic {
 
     fn h(&self, op: Op, args: &[isize]) -> isize {
         let g = |i: usize| args.get(i).copied().unwrap_or(0);
+        if self.model {
+            if let Some(r) = crate::modelobj::route_op(op, g(0), g(1), g(2), g(3)) {
+                return r;
+            }
+        }
         // SAFETY: the host is the C++ (or a test's) function given at creation, called with its own object.
         unsafe { (self.host)(self.obj, op, g(0), g(1), g(2), g(3), g(4)) }
     }
@@ -2999,6 +3007,14 @@ impl EeWonRouteLogic {
 }
 
 // ---- the C ABI
+
+/// As `ee_won_routelogic_new`, with the model's ops answered by its Rust objects (the game's).
+#[no_mangle]
+pub extern "C" fn ee_won_routelogic_new_model(obj: *mut c_void, host: EeWonRouteLogicHostFn) -> *mut EeWonRouteLogic {
+    let mut l = EeWonRouteLogic::new(obj, host);
+    l.model = true;
+    Box::into_raw(Box::new(l))
+}
 
 /// A new logic for the shell `obj` (the members as the constructor sets them).
 #[no_mangle]

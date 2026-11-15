@@ -109,6 +109,7 @@ pub mod md5;
 pub mod menuobj;
 pub mod miscops;
 pub mod model;
+pub mod modelobj;
 pub mod msbtnobj;
 pub mod mspaint;
 pub mod multiobj;

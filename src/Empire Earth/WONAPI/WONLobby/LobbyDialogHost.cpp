@@ -506,7 +506,7 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
 static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a, intptr_t b, intptr_t c);
 
 LobbyRustPopup::LobbyRustPopup(EeWonLobbyPopupKind inKind)
-    : mLobbyPopup(ee_won_lobbypopup_new(this, inKind, LobbyPopupHost))
+    : mLobbyPopup(ee_won_lobbypopup_new_model(this, inKind, LobbyPopupHost))
 {
     this->PCall(EeWonLobbyPopupCall::Construct);
 }
@@ -595,21 +595,6 @@ static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a
     case Op::Width: return reinterpret_cast<Component*>(a)->Width();
     case Op::Height: return reinterpret_cast<Component*>(a)->Height();
     case Op::SetSize: aPopup->SetSize((int)a, (int)b); return 0;
-    case Op::ClientIsModerator: return aClient->IsModerator() ? 1 : 0;
-    case Op::ClientIsCaptain: return aClient->IsCaptain(b != 0) ? 1 : 0;
-    case Op::ClientId: return (intptr_t)aClient->GetClientId();
-    case Op::ClientWonUserId: return (intptr_t)aClient->GetWONUserId();
-    case Op::ClientGameGroupId: return (intptr_t)aClient->GetGameGroupId();
-    case Op::ClientIsInvited: return aClient->IsInvited() ? 1 : 0;
-    case Op::ClientIsFriend: return aClient->IsFriend() ? 1 : 0;
-    case Op::ClientIsAway: return aClient->IsAway() ? 1 : 0;
-    case Op::ClientIsIgnored: return aClient->IsIgnored() ? 1 : 0;
-    case Op::ClientIsBlocked: return aClient->IsBlocked() ? 1 : 0;
-    case Op::ClientIsMuted: return aClient->IsMuted(b != 0) ? 1 : 0;
-    case Op::GameCanJoin: return aGame->CanJoin() ? 1 : 0;
-    case Op::GameInProgress: return aGame->IsInProgress() ? 1 : 0;
-    case Op::GameType: return (intptr_t)aGame->GetGameType();
-    case Op::GameShowDetails: return aGame->GetShowDetails() ? 1 : 0;
     case Op::Config: return (intptr_t)GetLobbyConfig();
     case Op::ConfigNoPingInProgress: return reinterpret_cast<LobbyConfig*>(a)->GetNoPingInProgress() ? 1 : 0;
     case Op::BaseEvent: aPopup->Container::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
