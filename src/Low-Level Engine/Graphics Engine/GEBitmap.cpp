@@ -35,7 +35,17 @@
 #include "lle/GERasterizer.h"
 #include "lle/GE2DVertex.h"
 #include "lle/GEBitmap.h"
+#include "lle/GELine.h"   // GEVertexHost
+#include "lle/UWideString.h"
+#include "lle/GEMaterial.h"
+#include "lle/GEFont.h"
+#include "lle/GEText.h"
+#include "platform/PlatFont.h"
+#include "platform/PlatWindow.h"
+#include "GERustText.h"
 #include "GERustMath.h"
+#include <mbstring.h>
+#include "lle/Graphics Engine.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -150,6 +160,8 @@ void GERectangle::RoundToNearest()
 // This section is its shell: the forwarders and the host, which makes each call the original made on another
 // object (the rasterizer, the vertex array, the textures). Floats cross the host as their bits.
 
+// ---- the vertex host: the calls GEBitmap, GELine, GEPoint and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
+
 static intptr_t GEBitmapFloatBits(float inValue)
 {
     uint32_t theBits;
@@ -165,7 +177,7 @@ static float GEBitmapBitsFloat(intptr_t inBits)
     return theValue;
 }
 
-intptr_t GEBitmap::Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
+intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEVertexArray* theVertices = (GEVertexArray*)inObj;
     GETexture* theTexture = (GETexture*)inObj;
@@ -222,10 +234,101 @@ intptr_t GEBitmap::Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, 
         return (intptr_t)theTexture->GetHeight();
     case EeGeBmpOp::TexDropLevels:
         return (intptr_t)theTexture->GetNumMipLevelsToDrop();
+    case EeGeBmpOp::VertexCopyFrom:
+        theVertices->CopyFrom(*(const GEVertexArray*)b);
+        return 0;
     }
     (void)inOwner;
     return 0;
 }
+// ---- end of the vertex host
+
+// ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
+// and GEWindow's forwarders (its header does not include the Rust header)
+intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    UString* theString = (UString*)inObj;
+    UWideString* theWide = (UWideString*)inObj;
+    switch (inOp) {
+    case EeGeObjOp::StrNew:
+        return (intptr_t)new UString;
+    case EeGeObjOp::StrCopy:
+        return (intptr_t)new UString(*(const UString*)a);
+    case EeGeObjOp::StrDelete:
+        delete theString;
+        return 0;
+    case EeGeObjOp::StrAssign:
+        *theString = *(const UString*)a;
+        return 0;
+    case EeGeObjOp::StrSizeOf:
+        return (intptr_t)theString->SizeOf();
+    case EeGeObjOp::StrEqual:
+        return *theString == *(const UString*)a;
+    case EeGeObjOp::StrText:
+        return (intptr_t)(const char*)*theString;
+    case EeGeObjOp::WStrNew:
+        return (intptr_t)new UWideString((unsigned long)a);
+    case EeGeObjOp::WStrDelete:
+        delete theWide;
+        return 0;
+    case EeGeObjOp::WStrAssign:
+        *theWide = *(const UWideString*)a;
+        return 0;
+    case EeGeObjOp::WStrText:
+        return (intptr_t)(const char*)*theWide;
+    case EeGeObjOp::WStrLength:
+        return (intptr_t)theWide->GetLength();
+    case EeGeObjOp::TexReference:
+        ((GETexture*)inObj)->Reference();
+        return 0;
+    case EeGeObjOp::TexDereference:
+        ((GETexture*)inObj)->Dereference();
+        return 0;
+    case EeGeObjOp::RefReference:
+        ((UReferenceCounter*)inObj)->Reference();
+        return 0;
+    case EeGeObjOp::RefDereference:
+        ((UReferenceCounter*)inObj)->Dereference();
+        return 0;
+    case EeGeObjOp::FontObj:
+        return (intptr_t)((GEFont*)inObj)->GetRust();
+    case EeGeObjOp::PlatFontCreate:
+        return (intptr_t)PlatFontCreate((const char*)inObj, (int32_t)a, (int)(b & 1), (int)((b >> 1) & 1),
+                                        (int)((b >> 2) & 1), (int)((b >> 3) & 1));
+    case EeGeObjOp::PlatFontDestroy:
+        PlatFontDestroy((PlatFont*)inObj);
+        return 0;
+    case EeGeObjOp::PlatFontHeight: {
+        PlatFontMetrics theMetrics;
+        PlatFontGetMetrics((const PlatFont*)inObj, &theMetrics);
+        return theMetrics.mHeight;
+    }
+    case EeGeObjOp::TextOps:
+        return (intptr_t)GERustTextOps();
+    case EeGeObjOp::PlatWindowDestroy:
+        PlatWindowDestroy((PlatWindow*)inObj);
+        return 0;
+    case EeGeObjOp::PlatWindowSetSize:
+        PlatWindowSetSize((PlatWindow*)inObj, (int32_t)a, (int32_t)b);
+        return 0;
+    case EeGeObjOp::PlatWindowPosition:
+        PlatWindowGetPosition((PlatWindow*)inObj, (int32_t*)a, (int32_t*)b);
+        return 0;
+    }
+    (void)inOwner;
+    return 0;
+}
+
+GEWindow::GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long inHeight, unsigned long inDepth,
+                   bool inIsFullScreen)
+    : mRust(ee_ge_win_new(&GEObjectHost, this, inWindow, inWidth, inHeight, inDepth, inIsFullScreen)) {}
+GEWindow::~GEWindow() { ee_ge_win_destroy(this->mRust); }
+const GE2DPoint& GEWindow::GetClientOrigin() { return *reinterpret_cast<const GE2DPoint*>(ee_ge_win_origin(this->mRust)); }
+unsigned long GEWindow::GetHeight() const { return ee_ge_win_size(this->mRust, true); }
+PlatWindow* GEWindow::GetOSRepresentation() const { return static_cast<PlatWindow*>(ee_ge_win_os(this->mRust)); }
+unsigned long GEWindow::GetWidth() const { return ee_ge_win_size(this->mRust, false); }
+void GEWindow::Resize(unsigned long inWidth, unsigned long inHeight) { ee_ge_win_resize(this->mRust, inWidth, inHeight); }
+// ---- end of the object host
 
 // Returns the colours of the bitmap's four corners in vertex order (top left, top right, bottom left, bottom right)
 void GEBitmap::GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
@@ -309,7 +412,7 @@ void GEBitmap::SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRi
 // Creates an untextured, unscaled, unrotated white bitmap: one texture slot per screen and a four-vertex quad
 GEBitmap::GEBitmap()
 {
-    this->mRust = ee_ge_bmp_new(&GEBitmap::Host, this);
+    this->mRust = ee_ge_bmp_new(&GEVertexHost, this);
 }
 
 // Destroys the bitmap, deleting its vertex array and releasing the texture of every screen
@@ -337,4 +440,210 @@ void GEBitmap::FlipHorizontally()
 void GEBitmap::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
     ee_ge_bmp_set_texture(this->mRust, inTexture, inScreen);
+}
+
+// ---- GEFontBitmap (GEFontBitmap.cpp, folded here in R4.3 part 16)
+
+// ---- GEFontBitmap.
+//
+// port (R4.3, tenth part): the font bitmap is a whole Rust object (ee_ge fbobj.rs): the constructor's glyph rendering,
+// the destructor, CreateNewFontTexture, CreateSurfaceAlpha and the two draws. This unit is its shell: the forwarders
+// and the host, which makes each call the original made on another object (the rasterizer, the font, the working
+// text, the drawing bitmap, the textures, surfaces and screens). Floats cross the host as their bits.
+
+static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "ee_ge texobj.rs EeGeSurfaceDescription");
+
+intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    GEText* theText = (GEText*)inObj;
+    GEBitmap* theBitmap = (GEBitmap*)inObj;
+    GESurface* theSurface = (GESurface*)inObj;
+    GERasterizer* theRasterizer = (GERasterizer*)inObj;
+    GETexture* theTexture = (GETexture*)inObj;
+    GEScreen* theScreen = (GEScreen*)inObj;
+    unsigned long* theLongs = (unsigned long*)a;
+    float* theFloats = (float*)a;
+    GETextureCoordinate* theCoordinates = (GETextureCoordinate*)a;
+    switch (inOp) {
+    case EeGeFbOp::TextNew:
+        return (intptr_t)new GEText((GEFont*)inObj);
+    case EeGeFbOp::TextDelete:
+        delete theText;
+        return 0;
+    case EeGeFbOp::TextPrepare:
+        theText->SetFgColor(GEColor());
+        theText->SetIsTransparent(true);
+        return 0;
+    case EeGeFbOp::TextSetByte: {
+        // a cell is a Windows-1252 byte's character (decision D6: the text is UTF-8, so the cell holds that
+        // character's UTF-8 and Draw maps a drawn character back to its cell)
+        char theByte = (char)a;
+        char theCell[8];
+        PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
+        UWideString theString;
+        theString = theCell;
+        theText->SetText(theString);
+        return 0;
+    }
+    case EeGeFbOp::TextExtent:
+        theFloats[0] = theText->GetTextExtent().GetWidth();
+        theFloats[1] = theText->GetTextExtent().GetHeight();
+        return 0;
+    case EeGeFbOp::TextSetLocation:
+        theText->SetLocation(*(const GE2DPoint*)a);
+        return 0;
+    case EeGeFbOp::TextString:
+        return (intptr_t)(const char*)theText->GetText();
+    case EeGeFbOp::TextLocation:
+        return (intptr_t)&theText->GetLocation();
+    case EeGeFbOp::TextColor:
+        return (intptr_t)&theText->GetFgColor();
+    case EeGeFbOp::TextOps:
+        return (intptr_t)GERustTextOps();
+    case EeGeFbOp::FontRange: {
+        PlatFontMetrics theMetrics;   // the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar)
+        PlatFontGetMetrics(((GEFont*)inObj)->GetOSFont(), &theMetrics);
+        theLongs[0] = theMetrics.mFirstChar;
+        theLongs[1] = theMetrics.mLastChar;
+        return 0;
+    }
+    case EeGeFbOp::FontSetBitmap:
+        ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
+        return 0;
+    case EeGeFbOp::RasterScreen:
+        return (intptr_t)theRasterizer->GetScreen((unsigned long)a);
+    case EeGeFbOp::RasterGetBlending:
+        theRasterizer->GetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        return 0;
+    case EeGeFbOp::RasterSetBlending:
+        theRasterizer->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        return 0;
+    case EeGeFbOp::RasterDrawText:
+        return theRasterizer->Draw((GEText*)a, (GESurface*)b);
+    case EeGeFbOp::RasterDrawBitmap:
+        return theRasterizer->Draw((GEBitmap*)a, (unsigned long)b);
+    case EeGeFbOp::BmpNew:
+        return (intptr_t)new GEBitmap;
+    case EeGeFbOp::BmpDereference:
+        theBitmap->Dereference();
+        return 0;
+    case EeGeFbOp::BmpSetTexture:
+        theBitmap->SetTexture((GETexture*)a, (unsigned long)b);
+        return 0;
+    case EeGeFbOp::BmpStretch: {
+        const GERectangle* theRects = (const GERectangle*)a;
+        theBitmap->ComputeStretchedCoordsAndScale(theRects[0], theRects[0], theRects[1], (unsigned long)b);
+        return 0;
+    }
+    case EeGeFbOp::BmpUvsPerVertex: {
+        GETextureCoordinate theCoordinate;
+        theBitmap->GetTextureCoordinatesPerVertex(theCoordinates[0], theCoordinate, theCoordinate, theCoordinates[1]);
+        return 0;
+    }
+    case EeGeFbOp::BmpScales:
+        theFloats[0] = theBitmap->GetXScale();
+        theFloats[1] = theBitmap->GetYScale();
+        return 0;
+    case EeGeFbOp::BmpSetColor:
+        theBitmap->SetColor(*(const GEColor*)a);
+        return 0;
+    case EeGeFbOp::BmpSetUvs:
+        theBitmap->SetTextureCoordinates(theCoordinates[0], theCoordinates[1], theCoordinates[2], theCoordinates[3]);
+        return 0;
+    case EeGeFbOp::BmpSetXyScale: {
+        uint32_t theBits[2] = {(uint32_t)a, (uint32_t)b};
+        float theScales[2];
+        memcpy(theScales, theBits, sizeof(theScales));
+        theBitmap->SetXYScale(theScales[0], theScales[1]);
+        return 0;
+    }
+    case EeGeFbOp::BmpSetLocation:
+        theBitmap->SetLocation(*(const GE2DPoint*)a);
+        return 0;
+    case EeGeFbOp::TexSurface:
+        return (intptr_t)theTexture->GetSurface();
+    case EeGeFbOp::TexReference:
+        theTexture->Reference();
+        return 0;
+    case EeGeFbOp::TexStage:
+        switch ((EeGeTexStage)a) {
+        case EeGeTexStage::MinFilterMode:
+            theTexture->SetStageMinFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::MagFilterMode:
+            theTexture->SetStageMagFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::MipFilterMode:
+            theTexture->SetStageMipFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::TextureAddressingMode:
+            theTexture->SetStageTextureAddressingMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::AlphaMode:
+            theTexture->SetStageAlphaMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::ColorMode:
+            theTexture->SetStageColorMode((unsigned long)b, -1);
+            break;
+        default:
+            break;
+        }
+        return 0;
+    case EeGeFbOp::SurfTextUnlock:
+        return theSurface->TextUnlock();
+    case EeGeFbOp::SurfLock:
+        return theSurface->Lock();
+    case EeGeFbOp::SurfUnlock:
+        return theSurface->Unlock();
+    case EeGeFbOp::SurfPixels:
+        theLongs[0] = theSurface->GetWidth();
+        theLongs[1] = theSurface->GetHeight();
+        theLongs[2] = theSurface->GetBytesPerRow();
+        return (intptr_t)theSurface->GetMemoryAddress();
+    case EeGeFbOp::SurfClear: {
+        GEColor theBlack(0.0f, 0.0f, 0.0f);
+        return theSurface->Clear(theBlack, 1.0f);
+    }
+    case EeGeFbOp::ScreenCreateSurface:
+        return theScreen->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
+    case EeGeFbOp::ScreenMakeTexture:
+        return (intptr_t)theScreen->GetTextureManager()->MakeTexture((GESurface*)a);
+    case EeGeFbOp::Verify:
+        ESVerify(__FILE__, a == 0 ? 228 : 235, a == 0 ? "theResult == keseOK" : "theTexture != NULL");
+        return 0;
+    default:
+        return 0;
+    }
+}
+
+// Always returns true (any font matches)
+bool GEFontBitmap::operator==(GEFont* inFont)
+{
+    return true;
+}
+
+// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (Rust: ee_ge fbobj.rs)
+GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
+{
+    this->mRust = NULL;
+    this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen);
+}
+
+// Destroys the glyph bitmap, releasing its drawing bitmap
+GEFontBitmap::~GEFontBitmap()
+{
+    ee_ge_fb_destroy(this->mRust);
+}
+
+// Draws the text glyph by glyph at its location in its colour; returns the last draw's result (Rust: ee_ge fbobj.rs)
+long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
+{
+    return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen);
+}
+
+// Draws the text glyph by glyph clipped to a rectangle (Rust: ee_ge fbobj.rs)
+long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer,
+                        unsigned long inScreen)
+{
+    return ee_ge_fb_draw(this->mRust, inText, GERust(inRectangle), inRasterizer, inScreen);
 }
