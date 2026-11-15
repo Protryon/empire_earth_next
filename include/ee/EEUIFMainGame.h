@@ -15,6 +15,7 @@ class EEALasso;
 class EEAMouseClick;
 class EEAScroll;
 class EEUIFMGGroup;
+class EEUIFMGStatusButton;
 class EEUIFMGInformation;
 class EEUIFMGMainGroup;
 class EEUIFMGUnitHack;
@@ -24,11 +25,6 @@ class TMPoll;
 class TSCriticalSection;
 struct EeScreensMainFormIo;   // rust/ee_screens.h
 
-// the status buttons' availability tests (+0x520..+0x5cc; cdecl functions in EEUIFMGStatusButton.cpp's range
-// 0x26fe64..0x27115c; argument types inferred)
-typedef bool (*EEUIFMGButtonTest)(void* inArg1, void* inArg2);
-// the keyboard tests take the form only (UpdateKeyboard 0x271290 pushes one argument)
-typedef bool (*EEUIFMGKeyboardTest)(void* inForm);
 
 class EEUIFMainGame : public UIForm {
 public:
@@ -81,6 +77,8 @@ public:
     // ResumeInformation 0x266367, SetChatTop 0x26676e, HideMessages 0x2669e8,
     // RefreshSavedGroups 0x26716e, UpdateIconBar 0x2671b0, and the overrides above)
     int64_t Rust(uint32_t inWhich, int64_t inA = 0);
+    // a command button's member in Rust (EE_SCREENS_SB_DO_*; ee_screens status_button.rs over the form's host)
+    int64_t ButtonCall(EEUIFMGStatusButton* inButton, uint32_t inWhich, UWideString* outString = NULL);
     void ShowAllBackgrounds();              // 0x26568e (EERenderObject's; Rust's whole)
     void HideAllBackgrounds();              // 0x266960
     // the host of the per-frame work in Rust (ee_screens main_form.rs: CopyData, RefreshStatus, DisplayChatLine,
@@ -109,7 +107,7 @@ public:
     long mL51C;                             // +0x51c
     // indexed by mUIState: UpdateKeyboard 0x271290 [this + 0x520 + mUIState*4], UpdateMouse 0x2712b8 [this + 0x578 +
     // mUIState*4] (provisional names)
-    EEUIFMGKeyboardTest mKeyboardTests[22]; // +0x520
+    long mKeyboardModes[22];                // +0x520 (port: the keyboard tests as modes: 2 the cinematic's)
     long mMouseModes[22];                   // +0x578 (port: the mode's EE_SCREENS_MF_MODE_*, ee_screens mouse_modes.rs)
     long mUIState;                          // +0x5d0 (5: gate, 6: wall, 0xb: ..., 0x11: no scrolling; provisional name)
     long mMediaID;                          // +0x5d4 (= -1) the background media (UpdateBackgroundMedia)

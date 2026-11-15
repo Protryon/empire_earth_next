@@ -221,3 +221,91 @@ fn an_unplaceable_ghost_stops_the_build_unless_it_is_one_of_several_farms() {
         assert_eq!(h.log.iter().any(|o| o.0 == EE_SCREENS_MF_OP_MD_BUILD), built, "{count} {ty}");
     }
 }
+
+fn key(k: i64, bits: i64) -> (u32, i64, i64, i64) {
+    (EE_SCREENS_MF_OP_MD_KEY, k, 0, bits)
+}
+
+const DOWN: i64 = EE_SCREENS_MF_KEY_FOUND | EE_SCREENS_MF_KEY_HELD | EE_SCREENS_MF_KEY_JUST_PRESSED;
+const JUST: i64 = EE_SCREENS_MF_KEY_FOUND | EE_SCREENS_MF_KEY_JUST_PRESSED;
+
+/// The cinematic's calls of one keyboard update with these answers.
+fn cinematic(answers: Vec<(u32, i64, i64, i64)>) -> Vec<i64> {
+    let mut h = Script { answers, ..Default::default() };
+    assert_eq!(update_keyboard(&mut h, EE_SCREENS_MF_KEYBOARD_CINEMATIC), 0);
+    assert!(!h.log.iter().any(|o| o.0 == EE_SCREENS_MF_OP_BASE), "the cinematic takes the keys");
+    h.log
+        .iter()
+        .filter(|o| o.0 == EE_SCREENS_MF_OP_MD_CINEMATIC && o.1 != EE_SCREENS_MF_CINE_ENDING)
+        .map(|o| o.1)
+        .collect()
+}
+
+#[test]
+fn the_cinematic_keys() {
+    // Escape or F1 held and just pressed ends it, unless paused (then F3 may pause)
+    assert_eq!(cinematic(vec![key(EE_SCREENS_MF_KEY_ESCAPE, DOWN)]), [EE_SCREENS_MF_CINE_END]);
+    assert_eq!(cinematic(vec![key(EE_SCREENS_MF_KEY_F1, DOWN)]), [EE_SCREENS_MF_CINE_END]);
+    assert_eq!(cinematic(vec![key(EE_SCREENS_MF_KEY_ESCAPE, JUST)]), [] as [i64; 0]);
+    assert_eq!(
+        cinematic(vec![
+            key(EE_SCREENS_MF_KEY_ESCAPE, DOWN),
+            (EE_SCREENS_MF_OP_COMMS_PAUSED, 0, 0, 1),
+            key(EE_SCREENS_MF_KEY_F3, JUST)
+        ]),
+        [EE_SCREENS_MF_CINE_PAUSE]
+    );
+    // F3 just pressed pauses unless the cinematic is ending; then F9 takes a screenshot
+    assert_eq!(
+        cinematic(vec![key(EE_SCREENS_MF_KEY_F3, JUST), key(EE_SCREENS_MF_KEY_F9, JUST)]),
+        [EE_SCREENS_MF_CINE_PAUSE]
+    );
+    assert_eq!(
+        cinematic(vec![
+            key(EE_SCREENS_MF_KEY_F3, JUST),
+            (EE_SCREENS_MF_OP_MD_CINEMATIC, EE_SCREENS_MF_CINE_ENDING, 0, 1),
+            key(EE_SCREENS_MF_KEY_F9, JUST)
+        ]),
+        [EE_SCREENS_MF_CINE_SCREENSHOT]
+    );
+    assert_eq!(cinematic(vec![key(EE_SCREENS_MF_KEY_F9, EE_SCREENS_MF_KEY_JUST_PRESSED)]), [] as [i64; 0]);
+}
+
+#[test]
+fn the_other_keyboard_modes_are_the_forms() {
+    for mode in [0, 1] {
+        let mut h = Script {
+            answers: vec![(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_UPDATE_KEYBOARD, 0, 7)],
+            ..Default::default()
+        };
+        assert_eq!(update_keyboard(&mut h, mode), 7);
+        assert_eq!(h.log, [(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_UPDATE_KEYBOARD, 0)]);
+    }
+}
+
+#[test]
+fn update_mouse_runs_the_hack_the_controls_then_the_mode_read_after_them() {
+    let base = (EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_UPDATE_MOUSE, 0);
+    // no scrolling: only the flag cleared
+    let mut h = Script {
+        answers: vec![(EE_SCREENS_MF_OP_FIELD, EE_SCREENS_MF_FIELD_UI_STATE, 0, EE_SCREENS_MF_STATE_NO_SCROLL)],
+        ..Default::default()
+    };
+    assert_eq!(update_mouse(&mut h), 0);
+    assert_eq!(h.log.len(), 2);
+    // captured: the controls' result
+    let mut h = Script {
+        answers: vec![(EE_SCREENS_MF_OP_MOUSE_CAPTURED, 0, 0, 1), (base.0, base.1, 0, 4)],
+        ..Default::default()
+    };
+    assert_eq!(update_mouse(&mut h), 4);
+    assert_eq!(h.log[3..], [(EE_SCREENS_MF_OP_MD_HACK, 2, 0), (EE_SCREENS_MF_OP_MOUSE_CAPTURED, 0, 0), base]);
+    // free: the mode (none here) after the controls, its answer 0
+    let mut h = Script {
+        answers: vec![(EE_SCREENS_MF_OP_MD_MOUSE_AT, 0, 0, EE_SCREENS_MF_MODE_NONE), (base.0, base.1, 0, 4)],
+        ..Default::default()
+    };
+    assert_eq!(update_mouse(&mut h), 0);
+    assert_eq!(h.log.iter().filter(|o| o.0 == EE_SCREENS_MF_OP_MD_MOUSE_AT).count(), 2);
+    assert_eq!(*h.log.last().unwrap(), (EE_SCREENS_MF_OP_MD_MOUSE_AT, 0, 0));
+}
