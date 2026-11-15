@@ -24669,6 +24669,40 @@ Round: -245 net for the moves (the TEST ONLY capture +106 aside), far under the 
   lists. The next real saving is the element classes themselves as Rust records with C++ accessors, to be planned with
   the editor lane.
 
+
+## The address markers removed (2026-11-15, branch rust-markers)
+
+- **Decision** (owner): the port is past the original exe for good, so the comments that recorded where each
+  function or global sat in it are gone. `tools/strip_markers.py` removes them; it is idempotent and keeps every
+  other byte (line endings, encodings), so each lane runs it on its own branch before merging `rust` and the two
+  sides' edits are identical. `--check` exits 1 while any is left. Upstream merges bring markers back: run it after.
+- **Census before the sweep** (src, include, tests; none in rust/ or tools/ sources): 19,949 marker lines in 764
+  files (`FUNCTION` 11,296, `TEMPLATE` 4,764, `SYNTHETIC` 3,889, then 235 `ICF-FOLDED`; modules EXE, WON, LLE, JPEG,
+  EXEIMG, DX7HR, DX7HRTNL, DEFAULT, TCP, MIXER; no `GLOBAL`, `LIBRARY`, `VTABLE` or `STRING` here, though the script
+  knows them), and about 2,400 declarations with a trailing address-only comment (`void Reset();  // 0xea26`).
+  2,880 marker blocks were "orphans" (nothing below them: the reconstruction's records of compiler-generated
+  functions and template COMDATs, with headers such as "Compiler-generated for this unit (names in ...):") and 9,198
+  sat on the function they named.
+- **What the script decides.** A marker's own note goes with it, except under the last marker of a block that sits
+  on code (or heads a file before its `#include`s): that note is the function's description and stays, less its
+  name-only lines (mangled names, undecorated signatures, "(no address of its own: ...)"). Paragraphs after a `//`
+  separator and comments above the markers of attached blocks stay; so do `// UNIT-FLAGS:` (the build reads it),
+  `// RTTI:`, `// DEAD-IN-AOC:`, `// NEAR:` and every sentence that only mentions an address. A trailing comment goes
+  only when it is nothing but addresses in the binaries' ranges (0x1000..0xa00000, 0x10000000..0x10200000) with an
+  optional `(ret N)`, `(??_G 0x..)`, `(provisional name)`, `(ICF)`, `(inline)` or `(cdecl)`; no such value equals a
+  literal on its line. Pitfalls met: a marker whose note runs on (an open parenthesis, a trailing comma) needs its
+  continuation lines too; a block followed by `#include` is a file header whose last note is real text (GEVector.cpp).
+- **Tools.** Only `tools/harness/differential/dump.py` read markers (the writer index named each write's function by
+  the `// FUNCTION: EXE` above it and joined a round-38 score file); it now takes the enclosing definition line. The
+  harness resolves functions by mangled name from the link `.map` (`LinkMap`), never from markers, so it is unchanged.
+- **Gates** on the sweep: build `--sim` 0/0, the test profile 0/0, oracle seeds 2-7 identical, the editor gate PASS
+  (a first run under the selftest's load differed in one form's view rectangle; the rerun passed). The harness self
+  test stops in `selftest_inproc.probe` with `NESynchronousCommunications has no member mLastTickReceived`, which
+  predates the sweep (the member moved to ee_net in 44610d44; PROBE_FIELDS still names it). Under the harness lock: the
+  fixture tour `RESULT PASS tour`; the legacy tour (`game_session.py --exercise tour --input-check --play-seconds
+  120`, which finds its functions in the `.map`) reached `STOP <windowed session complete>` both times, its F3 check
+  failing once (paused False -> False -> False, an RDP session) and passing on the rerun.
+
 ## R5b.4, thirty-fourth round: the transport capture profile, the unit classes' trigger answers and the dispatch table in Rust (ee_units cls_condition.rs, cls_dispatch.rs; branch rust-r5b4-core34, 2026-11-15)
 
 | Commit | What | C++ (src, include/ee) |
