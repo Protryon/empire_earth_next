@@ -1,6 +1,6 @@
 // New (port): unit kinds as data (docs/RUST_PLAN.md R5b.4). The class tests the code made with dynamic_cast, as
 // reads of the kind tables ee_units owns (rust/crates/ee_units/src/kinds.rs):
-//   EEUnitClassCast<EEUCGate>(theClass)          == dynamic_cast<EEUCGate*>(theClass)
+//   EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theClass) == dynamic_cast<EEUCGate*>(theClass) (the classes until round 32)
 //   EEUnitCast<EEComplexUnit>(theUnit)           == dynamic_cast<EEComplexUnit*>(theUnit)   (from any RTSUnit)
 // A unit class's from EEUnitClass::mCategory and a unit object's from
 // RTSUnit::mObjectKind (kinds.rs says why);
@@ -22,102 +22,26 @@ extern const uint32_t EE_UNIT_OBJECT_KINDS[256];  // the unit object classes of 
 
 // The goal classes' test (EEGoalCast<EEUGLocation>) went with the last goal class that was a C++ class of its own:
 // every goal is an EEUGRust tested by its mKind (ee/EEUGRust.h: EELocationGoalCast and the others, R5b.4 round 21).
+// The unit classes went the same way in R5b.4 round 32: the 36 EEUC* subclasses are kinds of one EEUnitClass, tested
+// by these bits (EEUnitClassKinds.cpp's dispatchers run each kind's bodies).
 
-class EEUnitClass;
-class EEUCAmbient;
-class EEUCResource;
-class EEUCBuilding;
-class EEUCLandable;
-class EEUCAirplane;
-class EEUCNaval;
-class EEUCLand;
-class EEUCBasicCitizen;
-class EEUCLandCitizen;
-class EEUCNavalCitizen;
-class EEUCHelicopter;
-class EEUCProjectile;
-class EEUCBomb;
-class EEUCMissile;
-class EEUCTorpedo;
-class EEUCBasicPriest;
-class EEUCLandPriest;
-class EEUCNavalPriest;
-class EEUCHelicopterPriest;
-class EEUCNavalBuilding;
-class EEUCMiningBuilding;
-class EEUCGate;
-class EEUCBuildingPriest;
-class EEUCSpaceBuilding;
-class EEUCSubmergedNaval;
-class EEUCSeaAnimal;
-class EEUCAirAnimal;
-class EEUCTransport;
-class EEUCLandTransport;
-class EEUCHelicopterTransport;
-class EEUCNavalTransport;
-class EEUCSpaceTransport;
-class EEUCFortress;
-class EEUCLandMilitaryHero;
-class EEUCSpaceship;
-class EEUCPlanetSpaceship;
-
-// each unit class's bit
-template <class T> struct EEUnitClassKindBit;
-#define EE_UNIT_CLASS_KIND(T, B) \
-    template <> struct EEUnitClassKindBit<T> { static const uint64_t kBit = EE_CLASS_KIND_##B; }
-EE_UNIT_CLASS_KIND(EEUCAmbient, AMBIENT);
-EE_UNIT_CLASS_KIND(EEUCResource, RESOURCE);
-EE_UNIT_CLASS_KIND(EEUCBuilding, BUILDING);
-EE_UNIT_CLASS_KIND(EEUCLandable, LANDABLE);
-EE_UNIT_CLASS_KIND(EEUCAirplane, AIRPLANE);
-EE_UNIT_CLASS_KIND(EEUCNaval, NAVAL);
-EE_UNIT_CLASS_KIND(EEUCLand, LAND);
-EE_UNIT_CLASS_KIND(EEUCBasicCitizen, BASIC_CITIZEN);
-EE_UNIT_CLASS_KIND(EEUCLandCitizen, LAND_CITIZEN);
-EE_UNIT_CLASS_KIND(EEUCNavalCitizen, NAVAL_CITIZEN);
-EE_UNIT_CLASS_KIND(EEUCHelicopter, HELICOPTER);
-EE_UNIT_CLASS_KIND(EEUCProjectile, PROJECTILE);
-EE_UNIT_CLASS_KIND(EEUCBomb, BOMB);
-EE_UNIT_CLASS_KIND(EEUCMissile, MISSILE);
-EE_UNIT_CLASS_KIND(EEUCTorpedo, TORPEDO);
-EE_UNIT_CLASS_KIND(EEUCBasicPriest, BASIC_PRIEST);
-EE_UNIT_CLASS_KIND(EEUCLandPriest, LAND_PRIEST);
-EE_UNIT_CLASS_KIND(EEUCNavalPriest, NAVAL_PRIEST);
-EE_UNIT_CLASS_KIND(EEUCHelicopterPriest, HELICOPTER_PRIEST);
-EE_UNIT_CLASS_KIND(EEUCNavalBuilding, NAVAL_BUILDING);
-EE_UNIT_CLASS_KIND(EEUCMiningBuilding, MINING_BUILDING);
-EE_UNIT_CLASS_KIND(EEUCGate, GATE);
-EE_UNIT_CLASS_KIND(EEUCBuildingPriest, BUILDING_PRIEST);
-EE_UNIT_CLASS_KIND(EEUCSpaceBuilding, SPACE_BUILDING);
-EE_UNIT_CLASS_KIND(EEUCSubmergedNaval, SUBMERGED_NAVAL);
-EE_UNIT_CLASS_KIND(EEUCSeaAnimal, SEA_ANIMAL);
-EE_UNIT_CLASS_KIND(EEUCAirAnimal, AIR_ANIMAL);
-EE_UNIT_CLASS_KIND(EEUCTransport, TRANSPORT);
-EE_UNIT_CLASS_KIND(EEUCLandTransport, LAND_TRANSPORT);
-EE_UNIT_CLASS_KIND(EEUCHelicopterTransport, HELICOPTER_TRANSPORT);
-EE_UNIT_CLASS_KIND(EEUCNavalTransport, NAVAL_TRANSPORT);
-EE_UNIT_CLASS_KIND(EEUCSpaceTransport, SPACE_TRANSPORT);
-EE_UNIT_CLASS_KIND(EEUCFortress, FORTRESS);
-EE_UNIT_CLASS_KIND(EEUCLandMilitaryHero, LAND_MILITARY_HERO);
-EE_UNIT_CLASS_KIND(EEUCSpaceship, SPACESHIP);
-EE_UNIT_CLASS_KIND(EEUCPlanetSpaceship, PLANET_SPACESHIP);
-#undef EE_UNIT_CLASS_KIND
-
-// whether inClass (not NULL) is a T
-template <class T, class C> inline bool EEUnitClassIs(const C* inClass)
+// a class's kind bits (its category's entry: its own kind's EE_CLASS_KIND_* bit and its ancestors')
+template <class C> inline uint64_t EEUnitClassKinds(const C* inClass)
 {
     unsigned long theCategory = inClass->mCategory;
-    return theCategory < 256 && (EE_UNIT_CLASS_KINDS[theCategory] & EEUnitClassKindBit<T>::kBit) != 0;
+    return theCategory < 256 ? EE_UNIT_CLASS_KINDS[theCategory] : 0;
 }
 
-// dynamic_cast<T*>(inClass) for the unit classes
-template <class T, class C> inline T* EEUnitClassCast(C* inClass)
+// whether inClass (not NULL) is of kind B (an EE_CLASS_KIND_* bit): what dynamic_cast<EEUC*> tested
+template <uint64_t B, class C> inline bool EEUnitClassIsKind(const C* inClass)
 {
-    return inClass != NULL && EEUnitClassIs<T>(inClass) ? static_cast<T*>(inClass) : NULL;
+    return (EEUnitClassKinds(inClass) & B) != 0;
 }
-template <class T, class C> inline const T* EEUnitClassCast(const C* inClass)
+
+// inClass when it is of kind B, else NULL (NULL stays NULL)
+template <uint64_t B, class C> inline C* EEUnitClassOfKind(C* inClass)
 {
-    return inClass != NULL && EEUnitClassIs<T>(inClass) ? static_cast<const T*>(inClass) : NULL;
+    return inClass != NULL && EEUnitClassIsKind<B>(inClass) ? inClass : NULL;
 }
 
 class EEUnit;

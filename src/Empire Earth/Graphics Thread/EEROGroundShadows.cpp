@@ -1,9 +1,12 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEROGroundShadows.cpp (no __FILE__; name from the RTTI class). The ground
 // shadows' render object (vtable 0x4413f0): 0x111dae..0x11251f (ctor, ??_G, dtor, Virtual00, the static shadow
 // model's set-up, Virtual08, the two shadow passes, the space-tile test, the model's release); EEROTerrain.cpp's
-// init chains start at 0x11251f. The two floats before the vtable (0x4413e4/0x4413e8) are this unit's named consts.
+// init chains start at 0x11251f. The shared quad, the scene pass and both shadow passes are ee_gfx shadows.rs's
+// (RUST_PLAN R4.4): the C++ hands over the frame's render lists and draws the effects' ground pass.
 // Unit flags: the exe's module set.
 #include <windows.h>
+
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -42,13 +45,10 @@
 #include "ee/EERenderLists.h"
 #include "ee/EEROGroundShadows.h"
 #include "ee/EERenderSnapshot.h"
+#include "rust/ee_gfx.h"
 
-// the shadows' named consts (.rdata 0x4413e4/0x4413e8, reloaded per use) (provisional names)
-const float kShadowHeight = 0.01f;
-const float kShadowFade = 0.1f;
-
-// the static shadow quad (0x529098) (provisional name)
-static GEModel* sShadowModel;
+// the rasterizer as the Rust draws call it (EERenderObject.cpp)
+extern const EeGfxRaster gEERustRaster;
 
 // FUNCTION: EXE 0x511dae
 // Creates the ground shadows' render object
@@ -74,72 +74,27 @@ void EEROGroundShadows::FrameStarting()
 }
 
 // FUNCTION: EXE 0x511df8
-// Creates the shared shadow quad model (StaticShadow): a unit square in the ground plane
+// Creates the shared shadow quad model (StaticShadow): a unit square in the ground plane (ee_gfx shadows.rs)
 void EEROGroundShadows::CreateShadowModel()
 {
-    GETextureCoordinate theCoordinate0(0.0f, 0.0f);
-    GETextureCoordinate theCoordinate1(1.0f, 0.0f);
-    GETextureCoordinate theCoordinate2(0.0f, 1.0f);
-    GETextureCoordinate theCoordinate3(1.0f, 1.0f);
-    sShadowModel = gModelManager->CreateModel(2, 4, 1, 0, 1, 0, "StaticShadow", 1);
-    sShadowModel->Reference();
-    {
-        GE3DPoint thePoint(-0.5f, 0.5f, 0.0f);
-
-        sShadowModel->GetVertexArray(0)->SetPoint(thePoint, 0);
-        thePoint.SetX(0.5f);
-        thePoint.SetY(0.5f);
-        thePoint.SetZ(0.0f);
-        sShadowModel->GetVertexArray(0)->SetPoint(thePoint, 1);
-        thePoint.SetX(-0.5f);
-        thePoint.SetY(-0.5f);
-        thePoint.SetZ(0.0f);
-        sShadowModel->GetVertexArray(0)->SetPoint(thePoint, 2);
-        thePoint.SetX(0.5f);
-        thePoint.SetY(-0.5f);
-        thePoint.SetZ(0.0f);
-        sShadowModel->GetVertexArray(0)->SetPoint(thePoint, 3);
-    }
-    sShadowModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate0, 0);
-    sShadowModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, 1);
-    sShadowModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, 2);
-    sShadowModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, 3);
-    sShadowModel->GetPolygonArray(0)->SetVertexIndex1(0, 0);
-    sShadowModel->GetPolygonArray(0)->SetVertexIndex2(0, 3);
-    sShadowModel->GetPolygonArray(0)->SetVertexIndex3(0, 1);
-    sShadowModel->GetPolygonArray(0)->SetVertexIndex1(1, 0);
-    sShadowModel->GetPolygonArray(0)->SetVertexIndex2(1, 2);
-    sShadowModel->GetPolygonArray(0)->SetVertexIndex3(1, 3);
-    sShadowModel->GetMaterial(0)->SetColor(GEColor());
-    sShadowModel->GetMaterial(0)->SetOpacity(1.0f);
-    sShadowModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    sShadowModel->GetMaterial(0)->SetPolygonRangeLength(2, 0);
-    sShadowModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    sShadowModel->GetMaterial(0)->SetVertexRangeLength(4);
-    sShadowModel->ComputeModelNormals();
-    sShadowModel->ComputeBoundingVolumes();
+    ee_gfx_ground_shadows_create(&gEERustRaster);
 }
 
-// FUNCTION: EXE 0x51207f
-// Draws the static shadows and unit shadows (when ground shadows are on), then the effects' ground pass
-// (queue 0) per texture, alpha-blended with z test only
-void EEROGroundShadows::RenderScene()
+namespace {
+// the terrain's water info of a tile, -1 off the mesh (GetIsOverSpace, 0x51246b; the frame's snapshot)
+int32_t ShadowTileWater(void*, uint32_t inX, uint32_t inY)
+{
+    GETerrainMesh* theMesh = gRenderSnapshot.mTerrainMesh;
+    if (!theMesh->GetIsValidTile(inX, inY))
+        return -1;
+    return (int32_t)theMesh->GetWaterInfo(inX, inY);
+}
+
+// the effects' ground pass: queue 0, batched per texture
+void ShadowEffects(void*)
 {
     EEEffectQueue::iterator theIterator;
     std::deque<EEEffect*>::iterator theEffect;
-    unsigned long theScreen = gScreenIndex;
-    SetWhiteLighting();
-    SetSceneFog();
-    float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
-    gRasterizer->SetAlphaTestingRefValue(0.0f, gScreenIndex);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetShadingColorSource(0, theScreen);
-    gRasterizer->SetCulling(kCullNone);
-    if (gDrawGroundShadows) {
-        this->DrawShadows(EERenderLists::sInstance.mShadows2);
-        this->DrawUnitShadows(EERenderLists::sInstance.mUnits2);
-    }
     for (theIterator = gEffectQueues[0].begin(); theIterator != gEffectQueues[0].end(); theIterator++) {
         BeginEffectBatches(theIterator->first);
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
@@ -147,95 +102,53 @@ void EEROGroundShadows::RenderScene()
         FlushEffectBatches();
         EndEffectBatches();
     }
-    gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
+}
 }
 
-// FUNCTION: EXE 0x5121c8
-// Draws each static shadow with a positive scale as a textured quad just above its location
-void EEROGroundShadows::DrawShadows(EERenderShadowMap& inShadows)
+// FUNCTION: EXE 0x51207f
+// Draws the static shadows and unit shadows (when ground shadows are on), then the effects' ground pass
+// (queue 0) per texture, alpha-blended with z test only (ee_gfx shadows.rs over the frame's lists; the units that
+// cast no shadow, submerged or without a shadow scale, are left out here)
+void EEROGroundShadows::RenderScene()
 {
-    GETransformation theTransformation;
-    unsigned long theScreen = gScreenIndex;
-    EERenderShadowMap::iterator theIterator;
-    theIterator = inShadows.begin();
-    while (theIterator != inShadows.end()) {
-        EERenderShadow* theShadow = theIterator->second;
-        if (theShadow->mScale > 0.0f) {
-            theTransformation.SetX(theShadow->mLocation.GetX());
-            theTransformation.SetY(theShadow->mLocation.GetY());
-            theTransformation.SetZ(theShadow->mLocation.GetZ() + kShadowHeight);
-            sShadowModel->SetGraphicsPostModelTransform(theTransformation);
-            sShadowModel->SetGraphicsScale(theShadow->mScale);
-            sShadowModel->PrepareTransforms();
-            sShadowModel->GetMaterial(0)->SetTexture(theIterator->first, theScreen);
-            sShadowModel->SetOpacity(theShadow->mOpacity);
-            gRasterizer->Draw(sShadowModel, theScreen, 1.0f, gOrthographicView);
+    std::vector<EeGfxShadow> theShadows;
+    std::vector<EeGfxUnitShadow> theUnits;
+    if (gDrawGroundShadows) {
+        EERenderShadowMap& theShadowMap = EERenderLists::sInstance.mShadows2;
+        for (EERenderShadowMap::iterator i = theShadowMap.begin(); i != theShadowMap.end(); i++) {
+            const EERenderShadow* s = i->second;
+            EeGfxShadow theShadow = {i->first, {s->mLocation.mX, s->mLocation.mY, s->mLocation.mZ}, s->mScale, s->mOpacity};
+            theShadows.push_back(theShadow);
         }
-        theIterator++;
-    }
-}
-
-static bool GetIsOverSpace(const GE3DPoint& inLocation);
-
-// FUNCTION: EXE 0x5122bb
-// Draws each unit's shadow (its own model or the quad) on the ground under it, turned to its heading and
-// shrunk by height (fade 1 - 0.1 per unit of height; none from 10 up); skips submarines and units over space
-void EEROGroundShadows::DrawUnitShadows(EERenderUnitMap& inUnits)
-{
-    GETransformation theTransformation;
-    unsigned long theScreen = gScreenIndex;
-    EERenderUnitMap::iterator theIterator;
-    theIterator = inUnits.begin();
-    while (theIterator != inUnits.end()) {
-        EERenderUnit* theUnit = theIterator->second;
-        if (theUnit->mCategory != kUnitCategorySubmergedNaval && theUnit->mShadowScale > 0.0f) {
-            if (!GetIsOverSpace(theUnit->mTransformation.GetPosition())) {
-                GEModel* theModel = theUnit->mSource->mShadowModel;
-                if (theModel == NULL)
-                    theModel = sShadowModel;
-                theTransformation.SetOrientationYPR(UMArcTan2(theUnit->mTransformation.GetElement(1, 0),
-                                                              theUnit->mTransformation.GetElement(0, 0)), 0.0f, 0.0f);
-                theTransformation.SetX(theUnit->mTransformation.GetX());
-                theTransformation.SetY(theUnit->mTransformation.GetY());
-                theTransformation.SetZ(kShadowHeight + theUnit->mGroundZ);
-                theModel->SetGraphicsPostModelTransform(theTransformation);
-                float theFade = 1.0f - (theUnit->mTransformation.GetZ() - theUnit->mGroundZ) * kShadowFade;
-                theFade = min(1.0f, theFade);
-                // A unit 10 or more units above the ground casts no shadow (a negative scale would mirror it).
-                if (theFade > 0.0f) {
-                    float theScale = theUnit->mScale / gUnitClassTable[theUnit->mUnitClassIndex]->GetScale() * theUnit->mShadowScale;
-                    theModel->SetGraphicsScale(theScale * theFade);
-                    theModel->SetOpacity(theUnit->mOpacity);
-                    theModel->GetMaterial(0)->SetTexture(theUnit->mSource->mShadowTexture, theScreen);
-                    theModel->PrepareTransforms();
-                    gRasterizer->Draw(theModel, theScreen, 1.0f, gOrthographicView);
-                }
-            }
+        EERenderUnitMap& theUnitMap = EERenderLists::sInstance.mUnits2;
+        for (EERenderUnitMap::iterator i = theUnitMap.begin(); i != theUnitMap.end(); i++) {
+            const EERenderUnit* u = i->second;
+            if (u->mCategory == kUnitCategorySubmergedNaval || !(u->mShadowScale > 0.0f))
+                continue;
+            EeGfxUnitShadow theUnit;
+            theUnit.transformation = *reinterpret_cast<const EeGeTransformation*>(&u->mTransformation);
+            theUnit.model = u->mSource->mShadowModel;
+            theUnit.texture = u->mSource->mShadowTexture;
+            theUnit.category = (int32_t)u->mCategory;
+            theUnit.shadow_scale = u->mShadowScale;
+            theUnit.ground_z = u->mGroundZ;
+            theUnit.scale = u->mScale;
+            theUnit.class_scale = gUnitClassTable[u->mUnitClassIndex]->GetScale();
+            theUnit.opacity = u->mOpacity;
+            theUnits.push_back(theUnit);
         }
-        theIterator++;
     }
-}
-
-// FUNCTION: EXE 0x51246b
-// Returns whether a point is over space on a space map (a space tile, or off the mesh) (inferred)
-static bool GetIsOverSpace(const GE3DPoint& inLocation)
-{
-    // port: the frame's snapshot (ee/EERenderSnapshot.h); the tiles' water info is the terrain's, set at load
-    if (!gRenderSnapshot.mIsSpaceMap)
-        return false;
-    unsigned long theX = UMFloorUnsigned(inLocation.GetX());
-    unsigned long theY = UMFloorUnsigned(inLocation.GetY());
-    GETerrainMesh* theMesh = gRenderSnapshot.mTerrainMesh;
-    if (theMesh->GetIsValidTile(theX, theY))
-        return theMesh->GetWaterInfo(theX, theY) == 0x80;
-    return true;
+    EeGfxShadowScene theScene = {NULL, theShadows.empty() ? NULL : &theShadows[0], theShadows.size(),
+                                 theUnits.empty() ? NULL : &theUnits[0], theUnits.size(), gDrawGroundShadows,
+                                 gRenderSnapshot.mIsSpaceMap, ShadowTileWater, ShadowEffects};
+    ee_gfx_ground_shadows_render(&gEERustRaster, &theScene);
 }
 
 // FUNCTION: EXE 0x512513
-// Releases the shared shadow quad model
+// Releases the shared shadow quad model (ee_gfx shadows.rs)
 void EEROGroundShadows::ReleaseShadowModel()
 {
-    sShadowModel->Dereference();
+    ee_gfx_ground_shadows_release(&gEERustRaster);
 }
 
 // ICF-FOLDED: EXE 0x4e123d

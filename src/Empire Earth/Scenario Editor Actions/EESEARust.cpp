@@ -106,7 +106,7 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "lle/GEOrientation.h"
-#include "ee/EEUCBuilding.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEMessage.h"

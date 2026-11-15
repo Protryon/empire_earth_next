@@ -491,6 +491,14 @@ pub unsafe fn effect2d<H: Effect2DHost, R: Raster>(
     // SAFETY: the function's contract
     match unsafe { (*r).kind } {
         EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION => unsafe { confirm(op, r, g, h, x) },
+        // the damage controller draws nothing (its queue's 10, 0x1020dc) and sets up nothing; its tick is the C++'s
+        crate::effect_state::EE_GFX_EFFECT_KIND_DAMAGED => {
+            if op == EeGfxEffect3DOp::Queue {
+                10
+            } else {
+                0
+            }
+        }
         EE_GFX_EFFECT_KIND_SHOCKWAVE => unsafe { shockwave(op, r, g, h, x) },
         3 | 4 | 5 | 0xb | 0xc | 0x14 => unsafe { parts(op, r, g, h, x) },
         0x16 | 0x30 => unsafe { trail(op, r, g, h, x) },

@@ -14,6 +14,7 @@ use crate::uu_host::{set_tiles, set_units, tiles_of, units_of, Game};
 use crate::uu_place;
 use crate::uu_spots;
 use crate::uu_tiles::{self, EeUnitsUuSteps, EeUnitsUuWallPiece};
+use crate::uu_world::{self, EeUnitsUuSoundView};
 
 /// `EEGetSubTileSteps`.
 #[no_mangle]
@@ -697,4 +698,272 @@ pub unsafe extern "C" fn ee_units_uu_spot(which: i32, unit: u64, target: u64, io
 #[no_mangle]
 pub extern "C" fn ee_units_uu_attack_part(unit: u64, target: u64) -> u64 {
     uu_spots::attack_part(&mut Game, unit, target)
+}
+
+// ---- round 2 (uu_world.rs) ----
+
+/// `EEGetSeabedDepth` (`which` 0) and `EEAdjustDiveDepth` (1): the point's new height.
+///
+/// # Safety
+/// `unit` is a live unit; `at` holds three floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_seabed(which: i32, unit: u64, at: *const [f32; 3]) -> f32 {
+    // SAFETY: the caller's contract
+    let at = unsafe { *at };
+    if which == 0 {
+        uu_world::seabed_depth(&mut Game, unit, at)
+    } else {
+        uu_world::adjust_dive_depth(&mut Game, unit, at)
+    }
+}
+
+/// `EEGetUnitTiles` (appended to `io`).
+///
+/// # Safety
+/// `unit` is a live unit; `io` a live tile vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_unit_tiles_margin(unit: u64, margin: f32, io: *mut c_void) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let mut tiles = tiles_of(io);
+        uu_world::unit_tiles(&mut Game, unit, &mut tiles, margin);
+        set_tiles(io, &tiles);
+    }
+}
+
+/// `EEGetSelectionBounds` (`bounds`: left, top, right, bottom).
+///
+/// # Safety
+/// `units` is a live unit vector; `bounds` holds four floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_selection_bounds(units: *const c_void, bounds: *mut [f32; 4], filter: i32) {
+    // SAFETY: the caller's contract
+    unsafe { uu_world::selection_bounds(&mut Game, &units_of(units), &mut *bounds, filter) }
+}
+
+/// `EEGetUnitRadius` (`which` 0, two complex units) and `EEGetAngleFromNorth` (1, `from` and `to`).
+///
+/// # Safety
+/// The units are live; the points hold three floats when `which` is 1.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_angle(
+    which: i32,
+    unit: u64,
+    other: u64,
+    from: *const [f32; 3],
+    to: *const [f32; 3],
+) -> f32 {
+    if which == 0 {
+        uu_world::unit_radius(&mut Game, unit, other)
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { uu_world::angle_from_north(*from, *to) }
+    }
+}
+
+/// `EEIsWithinReach` (`at` null) and `EEIsWithinReachOf`.
+///
+/// # Safety
+/// The units are live; `at` is null or holds three floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_within_reach(unit: u64, target: u64, at: *const [f32; 3]) -> u8 {
+    // SAFETY: the caller's contract
+    let at = unsafe { at.as_ref().copied() };
+    u8::from(uu_world::within_reach(&mut Game, unit, target, at))
+}
+
+/// `EEIsFootprintVisibleTo`.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_footprint_visible(unit: u64, player: u64) -> u8 {
+    u8::from(uu_world::footprint_visible(&mut Game, unit, player))
+}
+
+/// `EEGetEscapePoint` (`io` left alone without attackers).
+///
+/// # Safety
+/// `unit` is a live complex unit; `io` holds two floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_escape_point(unit: u64, io: *mut [f32; 2]) -> u8 {
+    // SAFETY: the caller's contract
+    u8::from(uu_world::escape_point(&mut Game, unit, unsafe { &mut *io }))
+}
+
+/// `EEGetEnemiesAround` (`out` replaced).
+///
+/// # Safety
+/// `unit` is a live complex unit; `out` a live unit vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_enemies_around(unit: u64, out: *mut c_void) {
+    // SAFETY: the caller's contract
+    unsafe { set_units(out, &uu_world::enemies_around(&mut Game, unit)) }
+}
+
+/// `EEAddToFootprintTiles` (`which` 0), `EERemoveFromFootprintTiles` (1), `EEAddBuildingRegion` (2),
+/// `EERemoveBuildingRegion` (3).
+#[no_mangle]
+pub extern "C" fn ee_units_uu_footprint(which: i32, unit: u64) {
+    match which {
+        0 | 1 => uu_world::footprint_link(&mut Game, unit, which == 0),
+        _ => uu_world::building_region(&mut Game, unit, which == 2),
+    }
+}
+
+/// `EEStepAsideFromSite`.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_step_aside(unit: u64, class: u64, player: u64, x: i32, y: i32, force: u8) {
+    uu_world::step_aside_from_site(&mut Game, unit, class, player, [x, y], force != 0);
+}
+
+/// `EEBuildWall`.
+///
+/// # Safety
+/// `group` is a live active group; `pieces` a live unit vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_build_wall(group: u64, pieces: *const c_void) {
+    // SAFETY: the caller's contract
+    let pieces = unsafe { units_of(pieces) };
+    uu_world::build_wall(&mut Game, group, &pieces);
+}
+
+/// `EEPlanWall` (the new pieces appended to `out`).
+///
+/// # Safety
+/// `class` and `player` are live; `out` a live unit vector.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_units_uu_plan_wall(
+    start_x: f32,
+    start_y: f32,
+    end_x: f32,
+    end_y: f32,
+    class: u64,
+    player: u64,
+    foundation: u8,
+    skip_player_checks: u8,
+    out: *mut c_void,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let mut pieces = units_of(out);
+        uu_world::plan_wall(
+            &mut Game,
+            [start_x, start_y],
+            [end_x, end_y],
+            class,
+            player,
+            foundation != 0,
+            skip_player_checks != 0,
+            &mut pieces,
+        );
+        set_units(out, &pieces);
+    }
+}
+
+/// `EEShapeWall` (its raised corners unused).
+#[no_mangle]
+pub extern "C" fn ee_units_uu_shape_wall(complex: u64, corner: i32) {
+    uu_world::shape_wall(&mut Game, complex, corner);
+}
+
+/// `EEIsTileTopAbove` (`wall`: the wall found, 0 for none).
+///
+/// # Safety
+/// `wall` points to a u64.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_tile_top_above(x: i32, y: i32, height: f32, bare: u8, wall: *mut u64) -> u8 {
+    let (above, found) = uu_world::tile_top_above(&mut Game, x, y, height, bare != 0);
+    // SAFETY: the caller's contract
+    unsafe { *wall = found };
+    u8::from(above)
+}
+
+/// `EEIsLineBlocked` (`wall` written only when a tile was asked, `last`: the last free tile).
+///
+/// # Safety
+/// `wall` points to a u64, `written` to a byte, `last` to two ints.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_line_blocked(
+    x1: i32,
+    y1: i32,
+    x2: i32,
+    y2: i32,
+    wall: *mut u64,
+    written: *mut u8,
+    last: *mut [i32; 2],
+) -> u8 {
+    let (blocked, found, last_x, last_y) = uu_world::line_blocked(&mut Game, x1, y1, x2, y2);
+    // SAFETY: the caller's contract
+    unsafe {
+        *written = u8::from(found.is_some());
+        *wall = found.unwrap_or(0);
+        *last = [last_x, last_y];
+    }
+    u8::from(blocked)
+}
+
+/// `EEGetPathLengthTo` (`tile` in and out).
+///
+/// # Safety
+/// `unit` is a live complex unit; `tile` holds two ints.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_path_length_to(unit: u64, tile: *mut [i32; 2], limit: u32, walls: u8) -> f32 {
+    // SAFETY: the caller's contract
+    uu_world::path_length_to(&mut Game, unit, unsafe { &mut *tile }, limit, walls != 0)
+}
+
+/// `EEComputeSoundParameters` (`out`: volume, pan, pitch) over the camera's view the caller gathered.
+///
+/// # Safety
+/// `view` points to a view; `location` holds three floats, `out` three.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_sound_parameters(
+    view: *const EeUnitsUuSoundView,
+    volume: f32,
+    location: *const [f32; 3],
+    out: *mut [f32; 3],
+) {
+    // SAFETY: the caller's contract
+    unsafe { *out = uu_world::sound_parameters(&*view, volume, *location) }
+}
+
+/// `EEGetDopplerPitch`'s factor (`pitch` written unless silent or still).
+///
+/// # Safety
+/// `location` holds a matrix, `camera` three floats, `pitch` one.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_doppler_pitch(
+    volume: f32,
+    velocity: f32,
+    location: *const [[f32; 4]; 4],
+    camera: *const [f32; 3],
+    pitch: *mut f32,
+) {
+    // SAFETY: the caller's contract
+    unsafe {
+        if let Some(p) = uu_world::doppler_pitch(volume, velocity, &GeTransformation { m: *location }, *camera) {
+            *pitch = p;
+        }
+    }
+}
+
+/// `EEEditorCanPlace`.
+///
+/// # Safety
+/// `at` holds three floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_uu_editor_can_place(
+    player: u64,
+    unit_type: i32,
+    at: *const [f32; 3],
+    x: i32,
+    y: i32,
+) -> u8 {
+    // SAFETY: the caller's contract
+    u8::from(uu_world::editor_can_place(&mut Game, player, unit_type, unsafe { *at }, x, y))
+}
+
+/// `EEDepositLoad`.
+#[no_mangle]
+pub extern "C" fn ee_units_uu_deposit_load(unit: u64, container: u64) {
+    uu_world::deposit_load(&mut Game, unit, container);
 }

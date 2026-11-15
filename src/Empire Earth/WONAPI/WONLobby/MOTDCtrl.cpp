@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONLobbyEvents.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 MOTDCtrl::MOTDCtrl() : mNeedGenHTML(false) {}
 // The original stores its own vtable (0x7c0bff) before destroying the two paths, the browser and the base
@@ -77,9 +78,9 @@ void DrawLobbyPing(Graphics* inGraphics,unsigned short inPing,int inHeight,int i
     GUIString text(GetEmptyGUIStringData());
     SmartPtr<Image> image;
     int bars=0;
-    if(inPing==0xfffd) image=::LobbyGlobal_Searching_Image.get();
-    else if(inPing==0xfffc) { image=::LobbyGlobal_Searching_Image; image=image.get(); }
-    else if(inPing==0xffff) image=::ServerListCtrl_PingFailed_Image.get();
+    if(inPing==0xfffd) image=LOBBY_IMAGE(LobbyGlobal_Searching_Image).get();
+    else if(inPing==0xfffc) { image=LOBBY_IMAGE(LobbyGlobal_Searching_Image); image=image.get(); }
+    else if(inPing==0xffff) image=LOBBY_IMAGE(ServerListCtrl_PingFailed_Image).get();
     else {
         bars=10-int((static_cast<unsigned long>(inPing)*10)/sLobbyPingCeiling);
         if(bars<1) bars=1;

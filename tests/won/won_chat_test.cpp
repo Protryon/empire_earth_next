@@ -35,9 +35,9 @@ using namespace WONAPI;
     X(ServerBanHelp, "ServerBanHelp") X(ServerUnbanHelp, "ServerUnbanHelp") X(AlertHelp, "AlertHelp") \
     X(WarnHelp, "WarnHelp")
 
-#define DEFINE_STRING(name, text) GUIString ChatCommandLogic_##name##_String;
-CHAT_STRINGS(DEFINE_STRING)
-#define SET_STRING(name, text) ChatCommandLogic_##name##_String = GUIString(text);
+// the lobby's resource slots (WONLobbyResource.cpp's; the parser reads its strings by name, LOBBY_STRING)
+LobbyResourceSlot gLobbyResources[EE_WON_LOBBYRES_COUNT];
+#define SET_STRING(name, text) LOBBY_STRING(ChatCommandLogic_##name##_String) = GUIString(text);
 
 wchar_t gEmptyWideString[2];
 

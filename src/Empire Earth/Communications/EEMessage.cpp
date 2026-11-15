@@ -90,9 +90,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
 #include "ee/EEAirTrafficControl.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
-#include "ee/EEUCTransport.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEDatabase.h"
@@ -240,7 +238,7 @@ static void ExecuteImmediateCargoUnload(EEMRecord* m)
         && theTransport->mComplexUnit->GetNumCargoUnits() > 0 && theTransport->GetComplexUnit()->HasCargo(theCargo->GetComplexUnit())
         && !theTransport->GetComplexUnit()->UnloadCargoNow(theCargo->GetComplexUnit())) {
         if (theTransport->mUnitClass->IsTransport())
-            theText = EEUnitClassCast<EEUCTransport>(theTransport->GetUnitClass())->GetUnloadFailedTextID();
+            theText = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTransport->GetUnitClass())->GetUnloadFailedTextID();
         U2DPoint<long> theTile(theTransport->mTileX, theTransport->mTileY);
         EEPlayer* theOwner = theTransport->mPlayer;
         theOwner->mEvents.AddEvent(theTile, 2, theOwner, theText, false);
@@ -1021,7 +1019,7 @@ static int64_t EENetMsgHost(uint32_t inOp, EeNetMsgCall* c)
         case EE_NETMSG_ACT_JIT_TOGGLE: u->ToggleJITManufacturing(); break;
         case EE_NETMSG_ACT_REMOVE_RESEARCH: u->RemoveResearch(i[1], 0); break;
         case EE_NETMSG_ACT_LOCK_GATE: {   // a gate built as one piece (scenario Create effect) has no second or fourth part
-            EEUCGate* theGate = EEUnitClassCast<EEUCGate>(u->GetUnitClass());
+            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(u->GetUnitClass());
             u->SetLocked(i[1] != 0);
             if (EEComplexUnit* thePart = theGate->GetSecondPart(u))
                 thePart->SetLocked(i[1] != 0);

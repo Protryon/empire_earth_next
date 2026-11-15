@@ -39,8 +39,7 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EETileCoordinate.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitGoal.h"
@@ -827,7 +826,7 @@ extern "C" int32_t ee_units_pm_host_contact_gate(uint64_t inObject)
     EEComplexUnit* theUnit = PMUnit(inObject);
     if (theUnit->mUnitClass->mCategory != kUnitCategoryGate)
         return 0;
-    if (EEUnitClassCast<EEUCGate>(theUnit->mUnitClass) && (theUnit->mCommand ? theUnit->mCommand->mType : 0) != 0x3a99)
+    if (EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->mUnitClass) && (theUnit->mCommand ? theUnit->mCommand->mType : 0) != 0x3a99)
         return 2;
     return 1;
 }
@@ -977,8 +976,8 @@ extern "C" uint8_t ee_units_pm_host_gate_links(uint64_t inObject, uint64_t* outC
     EEComplexUnit* theUnit = PMUnit(inObject);
     if (!(theUnit->mPreviousPart == NULL && theUnit->mNextPart != NULL))
         return 0;
-    *outCarrier = PMObject(EEUnitClassCast<EEUCGate>(theUnit->GetUnitClass())->GetLastLinkedCarrier(theUnit));
-    *outLast = PMObject(EEUnitClassCast<EEUCGate>(theUnit->GetUnitClass())->GetLastLinked(theUnit));
+    *outCarrier = PMObject(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass())->GetLastLinkedCarrier(theUnit));
+    *outLast = PMObject(EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass())->GetLastLinked(theUnit));
     return 1;
 }
 

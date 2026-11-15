@@ -6,6 +6,12 @@
 // UIControl, UIFormManager, UIForm incl. its implicit copy members, UIEvent), the U2D key init chains (0x10059ebb),
 // UIManager's inline and implicit copy members, then its own code (0x1005a76e) and the vector/deque/map COMDATs
 // (0x1005aa1b..). UIBackgroundTable.cpp starts at 0x1005c34a.
+//
+// The backgrounds are whole in Rust (rust/crates/ee_ui/src/bgobj.rs, R6 ui round 20): this unit holds every
+// background class's forwarders (UIBackground, UIBitmapBackground, UITiledBackground, UIBFull, UIFullBackground; the
+// units UIBitmapBackground.cpp, UITiledBackground.cpp, UILRTiledBackground.cpp, UITBTiledBackground.cpp,
+// UIStretchedTiledBackground.cpp, UIBFull.cpp and UIFullBackground.cpp are gone) and the Rust object's calls out
+// (UIBackgroundHost::Op: the form's questions, locks and redraws, the virtuals, the bitmaps and textures).
 #define LLE_UIBACKGROUND_CPP   // UIManager::sMouseWheel/sMouseLeftHanded are visible here (UIManager.h) (provisional name)
 #include <windows.h>
 #include <algorithm>
@@ -23,6 +29,7 @@
 #include "lle/GEVertexArray.h"
 #include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
+#include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
 #include "lle/TMPoll.h"
 #include "lle/TSCriticalSection.h"
@@ -35,117 +42,188 @@
 #include "lle/UIForm.h"
 #include "lle/UIEvent.h"
 #include "lle/UIManager.h"
+#include "lle/UITiledBackground.h"
+#include "lle/UIBFull.h"
+#include "lle/UIFullBackground.h"
+#include "UIObjHost.h"
 
-// GERectangle <-> the Rust record (EeUiRect: bottom, left, right, top); guarded: a golden driver includes several
-// background units in one translation unit
-#ifndef UI_BACKGROUND_RECT_HELPERS
-#define UI_BACKGROUND_RECT_HELPERS
-static inline EeUiRect UIBgRect(const GERectangle& r) { return EeUiRect{r.mBottom, r.mLeft, r.mRight, r.mTop}; }
-static inline GERectangle UIBgRect(const EeUiRect& r) { return GERectangle(r.left, r.top, r.right, r.bottom); }
-#endif
+static_assert(sizeof(GETextureDescription) == sizeof(EeUiTextureDescription), "ee_ui bgobj.rs");
+static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui bgobj.rs");
 
-// The Rust moves' and visibility changes' view of a background (ee_ui background.rs, docs/RUST_PLAN.md R6)
-struct UIBackgroundRust {
-    static UIBackground* Background(void* inBackground) { return static_cast<UIBackground*>(inBackground); }
-    static bool Value(void* inBackground, int inWhich)
+// The Rust backgrounds' calls out (EeUiOp 540..562): the object is the record; the wide ops pass twelve floats
+struct UIBackgroundHost {
+    static UIBackground* Background(EeUiBackgroundFields* r) { return static_cast<UIBackground*>(r); }
+    static intptr_t Op(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
     {
-        UIBackground* theBackground = Background(inBackground);
-        if (inWhich == 0)
-            return theBackground->mIsVisible;
-        return theBackground->mForm == theBackground->mForm->GetManager()->GetCurrentForm();
-    }
-    static bool& Visible(void* inBackground) { return Background(inBackground)->mIsVisible; }
-    static GERectangle& Rectangle(void* inBackground) { return Background(inBackground)->mRectangle; }
-    static void Call(void* inBackground, int inCall, const EeUiRect* inRectangle)
-    {
-        UIForm* theForm = Background(inBackground)->mForm;
-        switch (inCall) {
-        case 0:
-            theForm->LockDrawBackground();
+        EeUiBackgroundFields* r = static_cast<EeUiBackgroundFields*>(inObj);
+        UIForm* theForm = static_cast<UIForm*>(r->mForm);
+        UIManager* m = theForm->GetManager();
+        unsigned long s = m->GetScreen();
+        GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
+        GETexture* theTexture = reinterpret_cast<GETexture*>(a);
+        switch (inOp) {
+        case EeUiOp::BgAdd: theForm->AddBackground(Background(r)); break;
+        case EeUiOp::BgWindow:
+            return a ? m->GetRasterizer()->GetWindow(s)->GetHeight() : m->GetRasterizer()->GetWindow(s)->GetWidth();
+        case EeUiOp::BgExclusive: return theForm->GetUseExclusiveCoords();
+        case EeUiOp::BgFormCurrent: return theForm == m->GetCurrentForm();
+        case EeUiOp::BgLock: a ? theForm->LockDrawBackground() : theForm->UnlockDrawBackground(); break;
+        case EeUiOp::BgRedraw: theForm->RedrawIntersectControls(UIObjHost::Rect(f)); break;
+        case EeUiOp::BgDirty: m->AddDirtyRectangle(UIObjHost::Rect(f), theForm); break;
+        case EeUiOp::BgVirtLoad: return Background(r)->LoadBackground();
+        case EeUiOp::BgVirtUnload: return Background(r)->UnloadBackground();
+        case EeUiOp::BgVirtStretched:
+            return static_cast<UIBitmapBackground*>(Background(r))
+                ->DrawStrectchedBackground(UIObjHost::Rect(f), UIObjHost::Rect(f + 4));
+        case EeUiOp::BgVirtTiled:
+            return static_cast<UITiledBackground*>(Background(r))
+                ->DrawTiledBackground(UIObjHost::Rect(f), a, b, c, d, f[4], f[5]);
+        case EeUiOp::BgBitmapNew: return (intptr_t) new GEBitmap;
+        case EeUiOp::BgBitmapRelease: theBitmap->Dereference(); break;
+        case EeUiOp::BgBitmapTexture: return (intptr_t)theBitmap->GetTexture(s);
+        case EeUiOp::BgBitmapSetTexture: theBitmap->SetTexture(reinterpret_cast<GETexture*>(b), s); break;
+        case EeUiOp::BgTextureSize:
+            f[0] = (float)theTexture->GetHeight();
+            return theTexture->GetWidth();
+        case EeUiOp::BgTextureLoad:
+            theTexture = m->GetRasterizer()->GetTextureManager(s)->LoadTexture(
+                UString(reinterpret_cast<const char*>(a)), *reinterpret_cast<const GETextureDescription*>(b));
+            theTexture->SetStageAlphaMode(kStageOpModulate, -1);
+            theTexture->SetStageColorMode(kStageOpModulate, -1);
+            theTexture->SetStageMinFilterMode(1, -1);
+            theTexture->SetStageMagFilterMode(1, -1);
+            theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
+            theTexture->SetStageMipMapBias(-0.75f, -1);
+            theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
+            return (intptr_t)theTexture;
+        case EeUiOp::BgBitmapStretch:
+            theBitmap->ComputeStretchedCoordsAndScale(UIObjHost::Rect(f), UIObjHost::Rect(f + 4), UIObjHost::Rect(f + 8), s);
             break;
-        case 1:
-            theForm->UnlockDrawBackground();
-            break;
-        case 2:
-            theForm->RedrawIntersectControls(UIBgRect(*inRectangle));
-            break;
-        default:
-            theForm->GetManager()->AddDirtyRectangle(UIBgRect(*inRectangle), theForm);
-            break;
+        case EeUiOp::BgBitmapSetLocation: theBitmap->SetLocation(GE2DPoint(f[0], f[1])); break;
+        case EeUiOp::BgBitmapSetOpacity: theBitmap->SetOpacity(f[0]); break;
+        case EeUiOp::BgBitmapDraw: return m->GetRasterizer()->Draw(theBitmap, s);
+        case EeUiOp::BgFormRect: UIObjHost::PutRect(f, theForm->GetRectangle()); break;
+        case EeUiOp::BgFormFade: f[0] = theForm->GetFadeOpacity(); break;
+        default: break;
         }
+        return 0;
+    }
+    static intptr_t CallRect(EeUiBackgroundFields* r, EeUiBgCall inCall, const GERectangle& inRectangle)
+    {
+        float f[4];
+        UIObjHost::PutRect(f, inRectangle);
+        return ee_ui_bg_call(r, inCall, 0, 0, f);
     }
 };
-extern "C" bool ee_uicpp_background_value(void* inBackground, int inWhich) { return UIBackgroundRust::Value(inBackground, inWhich); }
-extern "C" void ee_uicpp_background_set_visible(void* inBackground, bool inVisible) { UIBackgroundRust::Visible(inBackground) = inVisible; }
-extern "C" EeUiRect ee_uicpp_background_rect(void* inBackground) { return UIBgRect(UIBackgroundRust::Rectangle(inBackground)); }
-extern "C" void ee_uicpp_background_set_rect(void* inBackground, const EeUiRect* inRectangle)
-{
-    UIBackgroundRust::Rectangle(inBackground) = UIBgRect(*inRectangle);
-}
-extern "C" void ee_uicpp_background_call(void* inBackground, int inCall, const EeUiRect* inRectangle)
-{
-    UIBackgroundRust::Call(inBackground, inCall, inRectangle);
-}
+typedef EeUiBgCall C;
 
 // FUNCTION: LLE 0x1005a76e
 // Creates a background with its layout and draw priority and adds it to the form
 UIBackground::UIBackground(unsigned long inBackgroundID, const UILayoutUtility& inLayout, UIForm* inForm,
                            unsigned long inDrawPriority, bool inVisible)
-    : mBackgroundID(inBackgroundID)
 {
-    this->mLayout = inLayout;
-    this->mDrawPriority = inDrawPriority;
-    this->mForm = inForm;
-    this->mIsVisible = inVisible;
-    this->mForm->AddBackground(this);
+    ee_ui_bg_init(this, static_cast<EeUiBackgroundFields*>(this), UIBackgroundHost::Op, inBackgroundID,
+                  reinterpret_cast<const EeUiLayout*>(&inLayout), inForm, inDrawPriority, inVisible);
 }
 
-// FUNCTION: LLE 0x1005a7c9
-// Destroys the background (nothing to release)
-UIBackground::~UIBackground()
+UIBackground::~UIBackground() { ee_ui_bg_free(this); }
+intptr_t UIBackground::CallRect(C inCall, const GERectangle& inRectangle) { return UIBackgroundHost::CallRect(this, inCall, inRectangle); }
+void UIBackground::Close() { this->Call(C::Close); }
+void UIBackground::Open() { this->Call(C::Open); }
+void UIBackground::RelayoutBackground() { this->Call(C::Relayout); }
+void UIBackground::SetRectangle(const GERectangle& inRectangle) { this->CallRect(C::SetRectangle, inRectangle); }
+void UIBackground::SetVisibility(bool inVisible) { this->Call(C::SetVisibility, inVisible); }
+
+UIBitmapBackground::UIBitmapBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
+                                       const GETextureDescription& inDescription,
+                                       const GERectangle& inTextureRectangle, const UILayoutUtility& inLayout,
+                                       UIForm* inForm, unsigned long inDrawPriority, bool inVisible)
+    : UITextureBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm,
+                          inDrawPriority, inVisible)
 {
+    this->Call(C::BitmapInit);
 }
 
-// FUNCTION: LLE 0x1005a7d0
-// Closes the background by unloading its textures
-void UIBackground::Close()
+UIBitmapBackground::~UIBitmapBackground() { this->Call(C::BitmapRelease); }
+long UIBitmapBackground::DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(C::BitmapDraw, inRectangle); }
+long UIBitmapBackground::DrawStrectchedBackground(const GERectangle& inSource, const GERectangle& inDestination)
 {
-    this->UnloadBackground();
+    float f[12] = {0};
+    UIObjHost::PutRect(f, inSource);
+    UIObjHost::PutRect(f + 4, inDestination);
+    return (long)this->Call(C::BitmapStretched, 0, 0, f);
+}
+long UIBitmapBackground::LoadBackground() { return (long)this->Call(C::BitmapLoad); }
+void UIBitmapBackground::SetBitmapTexture(GETexture* inTexture) { this->Call(C::BitmapSetTexture, (intptr_t)inTexture); }
+long UIBitmapBackground::UnloadBackground() { return (long)this->Call(C::BitmapUnload); }
+
+UITiledBackground::UITiledBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
+                                     const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
+                                     const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority,
+                                     bool inVisible, UITiling inTiling, float inAcross, float inDown)
+    : UIBitmapBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm,
+                         inDrawPriority, inVisible)
+{
+    this->mTiling = inTiling;
+    this->mHorizontalCount = inAcross;
+    this->mVerticalCount = inDown;
 }
 
-// FUNCTION: LLE 0x1005a7d5
-// Lays the background out against the window size and loads its textures
-void UIBackground::Open()
+long UITiledBackground::DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(C::TiledDraw, inRectangle); }
+long UITiledBackground::DrawTiledBackground(const GERectangle& inClip, unsigned long inFirstRow, unsigned long inLastRow,
+                                            unsigned long inFirstColumn, unsigned long inLastColumn, float inWidth,
+                                            float inHeight)
 {
-    GEWindow* theWindow = this->mForm->GetManager()->GetRasterizer()->GetWindow(this->mForm->GetManager()->GetScreen());
-    GERectangle theScreenRectangle =
-        UIBgRect(ee_ui_background_screen_rect(theWindow->GetWidth(), theWindow->GetHeight(), this->mForm->GetUseExclusiveCoords()));
-    this->mLayout.CalculateRectangle(theScreenRectangle, this->mRectangle, this->mForm->GetUseExclusiveCoords());
-    this->LoadBackground();
+    float f[12] = {0};
+    UIObjHost::PutRect(f, inClip);
+    uint32_t theColumns[2] = {(uint32_t)inFirstColumn, (uint32_t)inLastColumn};
+    memcpy(f + 4, theColumns, sizeof theColumns);
+    f[6] = inWidth;
+    f[7] = inHeight;
+    return (long)this->Call(C::DrawTiled, inFirstRow, inLastRow, f);
 }
 
-// FUNCTION: LLE 0x1005a888
-// Recomputes the background rectangle from its layout against the window size
-void UIBackground::RelayoutBackground()
+UIBFull::UIBFull(unsigned long inBackgroundID, const UString& inTextureFileName,
+                 const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
+                 const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, unsigned long inColumns,
+                 unsigned long inRows, bool inVisible)
+    : UITextureBackground(inBackgroundID, inTextureFileName, inDescription, inTextureRectangle, inLayout, inForm,
+                          inDrawPriority, inVisible)
 {
-    GEWindow* theWindow = this->mForm->GetManager()->GetRasterizer()->GetWindow(this->mForm->GetManager()->GetScreen());
-    GERectangle theScreenRectangle = UIBgRect(ee_ui_background_screen_rect(theWindow->GetWidth(), theWindow->GetHeight(), false));
-    this->mLayout.CalculateRectangle(theScreenRectangle, this->mRectangle, this->mForm->GetUseExclusiveCoords());
+    this->Call(C::BFullInit, inColumns, inRows);
 }
 
-// FUNCTION: LLE 0x1005a92c
-// Moves the background, redrawing the old and new areas when its form is the current one
-void UIBackground::SetRectangle(const GERectangle& inRectangle)
+UIBFull::~UIBFull() { this->Call(C::BFullRelease); }
+long UIBFull::DrawBackground(const GERectangle& inRectangle) { return (long)this->CallRect(C::BFullDraw, inRectangle); }
+long UIBFull::LoadBackground() { return (long)this->Call(C::BFullLoad); }
+void UIBFull::SetBitmapTexture(GETexture* inTexture, unsigned long inColumn, unsigned long inRow)
 {
-    ee_ui_background_set_rectangle(this, UIBgRect(inRectangle));
+    uint32_t theRow = (uint32_t)inRow;
+    float f[4] = {0};
+    memcpy(f, &theRow, 4);
+    this->Call(C::BFullSetBitmapTexture, (intptr_t)inTexture, inColumn, f);
+}
+void UIBFull::SetNumberColumnsAndRows(unsigned long inColumns, unsigned long inRows) { this->Call(C::BFullSetGrid, inColumns, inRows); }
+long UIBFull::UnloadBackground() { return (long)this->Call(C::BFullUnload); }
+
+UIFullBackground::UIFullBackground(const UString& inFileName, unsigned long inColumns, unsigned long inRows,
+                                   UIForm* inForm, unsigned long inDesignedWidth, unsigned long inDesignedHeight)
+{
+    ee_ui_bg_full_init(this, static_cast<EeUiBackgroundFields*>(this), UIBackgroundHost::Op, inFileName, inColumns,
+                       inRows, inForm, inDesignedWidth, inDesignedHeight);
 }
 
-// FUNCTION: LLE 0x1005a9cc
-// Shows or hides the background and redraws its area
-void UIBackground::SetVisibility(bool inVisible)
+UIFullBackground::~UIFullBackground()
 {
-    ee_ui_background_set_visibility(this, inVisible);
+    ee_ui_bg_call(this, C::FullRelease, 0, 0, NULL);
+    ee_ui_bg_free(this);
 }
+long UIFullBackground::DrawBackground(const GERectangle& inRectangle) { return (long)UIBackgroundHost::CallRect(this, C::FullDraw, inRectangle); }
+long UIFullBackground::LoadBackground(const GETextureDescription& inDescription)
+{
+    return (long)ee_ui_bg_call(this, C::FullLoad, (intptr_t)&inDescription, 0, NULL);
+}
+long UIFullBackground::UnloadBackground() { return (long)ee_ui_bg_call(this, C::FullUnload, 0, 0, NULL); }
 
 // Header-inline members first emitted here (declaration order; names in analysis/lle/names.txt)
 // FUNCTION: LLE 0x10058d38
