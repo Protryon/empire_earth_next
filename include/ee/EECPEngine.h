@@ -48,14 +48,19 @@ struct EECPAIEntry {
                                     // information cheat, docs/AI_LUA_UNITS.md §11); false for every other AI
     bool mFillsGarrison;            // "fills_garrison": ai.garrison_fill may top a building's garrison up with no
                                     // citizens (the classic's FillGarrison cheat, docs/AI_LUA_UNITS.md §11)
+    bool mClassic;                  // "classic": the lobby's Classic (choice 0) plays this AI (the first so marked);
+                                    // the C++ classic is then the choice "Classic (C++)" after the manifest's AIs
 };
 
 const std::vector<EECPAIEntry>& EECPAIManifest();   // read at the first call
-unsigned long EECPEngineChoiceCount();              // 2 + the manifest's entries
-const EECPAIEntry* EECPAIByChoice(unsigned long inChoice);   // NULL: classic, random or out of range
+unsigned long EECPEngineChoiceCount();              // 2 + the manifest's entries (+ 1, Classic (C++), with a "classic" AI)
+const EECPAIEntry* EECPAIByChoice(unsigned long inChoice);   // NULL: the C++ classic, random or out of range (choice 0:
+                                                             // the "classic" AI when the manifest marks one)
+const EECPAIEntry* EECPClassicAI();                 // the manifest's "classic" AI, NULL: none (Classic is the C++)
+unsigned long EECPChoiceClassicCpp();               // the C++ classic's choice: after the AIs with a "classic" AI, else 0
 const EECPAIEntry* EECPAIByID(const std::string& inID);      // NULL: not in the manifest
-long EECPChoiceByName(const std::string& inName);    // classic, random, next (the first AI) or an id -> -1: none
-std::string EECPChoiceName(unsigned long inChoice);  // "classic", "random", the AI's id ("classic" out of range)
+long EECPChoiceByName(const std::string& inName);    // classic, classic_cpp, random, next (the first AI) or an id -> -1
+std::string EECPChoiceName(unsigned long inChoice);  // "classic", "classic_cpp", "random", the AI's id ("classic" out of range)
 // a hash of the AI folder's content (ais.json and every .lua by relative path; FNV-1a 32): part of the checksum a
 // joiner must match (EEInitializeNetwork), and logged at the start
 uint32_t EECPAIFolderHash();
@@ -65,7 +70,8 @@ void EECPEngineLog(const char* inFormat, ...);
 
 // the computer player's engine: kEECPEngineClassic or kEECPEngineNext
 long EECPEngine(const EEComputerPlayer* inPlayer);
-// what it plays: "classic" or its AI's id (the trace and the game log's engine=)
+// what it plays: its AI's id, or the C++ classic's "classic_cpp" ("classic" when no AI is marked "classic"; the trace and
+// the game log's engine=)
 std::string EECPEngineName(const EEComputerPlayer* inPlayer);
 // the next engine's AI id of a computer player ("" none)
 std::string EECPEngineAI(const EEComputerPlayer* inPlayer);

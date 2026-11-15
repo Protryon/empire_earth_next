@@ -931,12 +931,24 @@ local function group_step(g, view, mem)
     move(g, cx, cy, g.x, g.y, false)
 end
 
--- every group's step: call once a strategy step, after the economy's orders
+-- every group's step: call once a strategy step, after the economy's orders. mem.step_max (opt-in, nil: every group):
+-- at most that many groups a step, in turn from where the last step stopped (a deathmatch's dozens of groups, each
+-- with its ai.seen and ai.unit reads, passed a script's instruction budget in one step)
 function M.step(view, mem)
     M.init(mem)
     M.note_spots(mem)
-    for _, g in ipairs(M.all(mem)) do
-        group_step(g, view, mem)
+    local all = M.all(mem)
+    local max = mem.step_max
+    if max == nil or #all <= max then
+        for _, g in ipairs(all) do
+            group_step(g, view, mem)
+        end
+    else
+        local first = (mem.step_next or 0) % #all
+        for k = 0, max - 1 do
+            group_step(all[(first + k) % #all + 1], view, mem)
+        end
+        mem.step_next = first + max
     end
     if view.time % 30000 < 1000 then
         for _, g in ipairs(M.all(mem)) do

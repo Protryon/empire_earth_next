@@ -21,6 +21,7 @@ local C = T.C
 local M = {}
 
 local REQUEST_MS = 600000        -- EECPPersonnelRequest's deadline
+local GROUPS_A_STEP = 8           -- lib.groups' step_max (the instruction budget)
 local GATHER_MS = 30000          -- EECPAttackSubGroup::HasGathered: the longest wait at the rally point
 local DROP_MS = 45000            -- EECPAttackCommander::DropSpentGroups' period
 local REGION = 9                 -- EEInfluenceTable's region size (tiles)
@@ -3907,6 +3908,9 @@ function M.step(view, memory)
             end
         end
     end
+    -- (at most GROUPS_A_STEP groups a step, in turn: lib.groups' step_max; a deathmatch's groups passed the step's
+    -- instruction budget)
+    a.step_max = GROUPS_A_STEP
     G.step(view, a)
     -- (a waiting group whose last units died in the step keeps its slots)
     for _, g in ipairs(waiting) do
