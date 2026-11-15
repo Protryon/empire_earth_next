@@ -489,11 +489,15 @@ local function find_granary_site(view, memory)
     if claim then
         nearest_home_first(view, list)
     end
-    for _, c in ipairs(list) do
+    local gx, gy = R.scan_sites(memory, "granary", list, function(c)
         local x, y = R.find_site(C.granary, c.x, c.y, {min = r + 1, max = math.min(30, r + 29), margin = true})
         if x ~= nil and (not claim or tx == nil or d2(x, y, tx, ty) <= R.claim_range(memory) * R.claim_range(memory)) then
             return x, y
         end
+        return nil
+    end)
+    if gx ~= nil then
+        return gx, gy
     end
     return nil
 end
@@ -520,13 +524,9 @@ local function find_center_site(view, memory, class)
         end
     end
     nearest_home_first(view, list)
-    for _, c in ipairs(list) do
-        local x, y = R.find_site(class, c.x, c.y, {min = 2, max = math.min(30, radius(memory) + 5), margin = true})
-        if x ~= nil then
-            return x, y
-        end
-    end
-    return nil
+    return R.scan_sites(memory, "centre_" .. class, list, function(c)
+        return R.find_site(class, c.x, c.y, {min = 2, max = math.min(30, radius(memory) + 5), margin = true})
+    end)
 end
 
 -- FindProductionSite: the active centres nearest the town centre first
