@@ -5682,7 +5682,7 @@ exchange tells more than the W-L-C:
 13-17-2 (2995 army lost, 3557 killed, 1980 / 1526 citizens lost); hurt 12-14-6 (2768 / 3497, 1926 / 1562).
 
 **Pool against Age of AI** (Prehistoric, 90 min, seeds 2-33, the seats of the first bench): 29-1-2 against the base's 27-1-4; the classic's army lost
-3006 against 4046 (Age of AI's towers' share of it falls), its army at 90 minutes 93.8 against 55.7, its citizens lost
+3006 against 4046, its army at 90 minutes 93.8 against 55.7, its citizens lost
 732 against 728. The first run, with no cap on the pool, had 9 budget hits in one game (seed 30, minute 80: a 100-unit
 defence group's targeting); the pool is capped at 40 since, 0 errors.
 
