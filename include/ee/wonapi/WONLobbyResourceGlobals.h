@@ -2,10 +2,11 @@
 #ifndef EE_WONAPI_WONLOBBYRESOURCEGLOBALS_H
 #define EE_WONAPI_WONLOBBYRESOURCEGLOBALS_H
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/ee_won.h"
 
 // The lobby's 469 resources (the original's named globals and their ids) are the rows of ee_won's table
 // (rust/crates/ee_won/src/resource.rs: EeWonLobbyRes names them in order); one slot each, read by name through these
-// macros (the file using them includes rust/ee_won.h)
+// macros (EeWonLobbyRes is rust/ee_won.h's, included here as tools/rust_includes.py asks)
 struct LobbyResourceSlot {
     WONAPI::GUIString mString;
     WONAPI::SmartPtr<WONAPI::Image> mImage;
