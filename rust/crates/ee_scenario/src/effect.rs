@@ -976,7 +976,15 @@ fn change_attribute<H: Host>(h: &mut H, e: &EeScenarioEffectFields) {
                 }
             }
             for &(class, p) in &targets {
-                modify_unit_attribute(h, p, class, e.mAttribute, e.mUsesPercent, e.mAttributeAmount as c_long, e.mAttributeMode as c_long);
+                modify_unit_attribute(
+                    h,
+                    p,
+                    class,
+                    e.mAttribute,
+                    e.mUsesPercent,
+                    e.mAttributeAmount as c_long,
+                    e.mAttributeMode as c_long,
+                );
             }
         }
         _ => {
@@ -984,7 +992,15 @@ fn change_attribute<H: Host>(h: &mut H, e: &EeScenarioEffectFields) {
                 // the effect's own player (none below 0) and its upgrade of the unit type (none for type 0)
                 let p = e.mAttributePlayer as i64;
                 let class = if p >= 0 && e.mAttributeUnitType != 0 { e.mAttributeUnitType as i64 } else { -1 };
-                modify_unit_attribute(h, p, class, e.mAttribute, e.mUsesPercent, e.mAttributeAmount as c_long, e.mAttributeMode as c_long);
+                modify_unit_attribute(
+                    h,
+                    p,
+                    class,
+                    e.mAttribute,
+                    e.mUsesPercent,
+                    e.mAttributeAmount as c_long,
+                    e.mAttributeMode as c_long,
+                );
             } else {
                 let id = if e.mAttributeUnit != NONE { e.mAttributeUnit as i64 } else { -1 };
                 w(h, EE_SCENARIO_WORLD_CHANGE_UNIT, &[id, attr, percent, amount, mode]);

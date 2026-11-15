@@ -621,7 +621,11 @@ pub unsafe extern "C" fn ee_scenario_show_dialog(host: *const EeScenarioRoundHos
 /// # Safety
 /// `fields` must be the live manager's numbers and `at` two floats, for the call.
 #[no_mangle]
-pub unsafe extern "C" fn ee_scenario_camera_step(fields: *mut EeScenarioManagerFields, at: *mut [f32; 2], step: f32) -> bool {
+pub unsafe extern "C" fn ee_scenario_camera_step(
+    fields: *mut EeScenarioManagerFields,
+    at: *mut [f32; 2],
+    step: f32,
+) -> bool {
     // SAFETY: the caller's contract
     unsafe { round::camera_step(&mut *fields, &mut *at, step) }
 }

@@ -168,10 +168,7 @@ pub fn change_unit<H: Host>(
                 5 => 2,
                 _ => 6,
             };
-            if complex
-                && value(h, EE_SCENARIO_CU_GATHERING) != 0
-                && value(h, EE_SCENARIO_CU_RESOURCE_TYPE) != state
-            {
+            if complex && value(h, EE_SCENARIO_CU_GATHERING) != 0 && value(h, EE_SCENARIO_CU_RESOURCE_TYPE) != state {
                 return;
             }
             set(h, EE_SCENARIO_CU_RESOURCE_AMOUNT, a as i64);
@@ -216,11 +213,8 @@ pub fn change_unit<H: Host>(
             counter = Some((EE_SCENARIO_CU_STATS_RELOAD, EE_SCENARIO_CU_RELOAD_TIMER));
         }
         13 if complex => {
-            let mut scale = if percent {
-                float(value(h, EE_SCENARIO_CU_CLASS_SCALE)) * a as f32 * 0.01f32
-            } else {
-                a as f32
-            };
+            let mut scale =
+                if percent { float(value(h, EE_SCENARIO_CU_CLASS_SCALE)) * a as f32 * 0.01f32 } else { a as f32 };
             if mode == MODE_INCREASE {
                 scale += float(value(h, EE_SCENARIO_CU_SCALE));
             } else if mode == MODE_DECREASE {

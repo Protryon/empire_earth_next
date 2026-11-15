@@ -159,7 +159,8 @@ pub fn modify_unit_attribute<H: Host>(
     mode: c_long,
 ) {
     let seed = h.read(EE_SCENARIO_READ_CAPTURE_SEED, 0, 0);
-    let upgrade = player >= 0 && unit_type >= 0 && h.world(EE_SCENARIO_WORLD_CA_UPGRADE, [player, unit_type, 0, 0, 0, 0]) != 0;
+    let upgrade =
+        player >= 0 && unit_type >= 0 && h.world(EE_SCENARIO_WORLD_CA_UPGRADE, [player, unit_type, 0, 0, 0, 0]) != 0;
     if upgrade {
         let at = [player, unit_type, attribute as i64];
         if let Some(kind) = kind_of(attribute) {
@@ -172,7 +173,9 @@ pub fn modify_unit_attribute<H: Host>(
             let fcurrent = f32::from_bits(current as u32);
             let v = class_value(kind, percent, mode == 0, amount, base, current as c_long, fcurrent);
             let written = match kind {
-                EE_SCENARIO_CA_INT | EE_SCENARIO_CA_HIT_POINTS | EE_SCENARIO_CA_FLIGHT_TIME | EE_SCENARIO_CA_FLAG => v.value as i64,
+                EE_SCENARIO_CA_INT | EE_SCENARIO_CA_HIT_POINTS | EE_SCENARIO_CA_FLIGHT_TIME | EE_SCENARIO_CA_FLAG => {
+                    v.value as i64
+                }
                 _ => v.fvalue.to_bits() as i64,
             };
             h.world(EE_SCENARIO_WORLD_CA_SET, [at[0], at[1], at[2], written, 0, 0]);
@@ -182,7 +185,10 @@ pub fn modify_unit_attribute<H: Host>(
     }
     if seed >= 0 {
         let attr = attribute as i64 | (percent as i64) << 32;
-        h.world(EE_SCENARIO_WORLD_CA_CAPTURE, [player, if upgrade { unit_type } else { -1 }, attr, amount as i64, mode as i64, seed]);
+        h.world(
+            EE_SCENARIO_WORLD_CA_CAPTURE,
+            [player, if upgrade { unit_type } else { -1 }, attr, amount as i64, mode as i64, seed],
+        );
     }
 }
 

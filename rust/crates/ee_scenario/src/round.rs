@@ -213,7 +213,8 @@ mod tests {
 
     #[test]
     fn the_camera_steps_towards_the_start() {
-        let mut m = EeScenarioManagerFields { mStartX: 10.0, mStartY: 20.0, mIsMovingCamera: true, ..Default::default() };
+        let mut m =
+            EeScenarioManagerFields { mStartX: 10.0, mStartY: 20.0, mIsMovingCamera: true, ..Default::default() };
         let mut at = [13.0f32, 24.0];
         assert!(camera_step(&mut m, &mut at, 5.0));
         // 3 + 4 = 7: x by 5 * 3 / 7, y by 5 * 4 / 7, both back towards the start

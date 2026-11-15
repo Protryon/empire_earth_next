@@ -10,11 +10,11 @@
 use std::ffi::{c_void, CStr};
 use std::os::raw::{c_char, c_long, c_ulong};
 
+use crate::condition::choose_player_recorded;
 use crate::fields::{
     self, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields, EE_SCENARIO_RENUMBER_AREAS,
     EE_SCENARIO_RENUMBER_OBJECTS, EE_SCENARIO_RENUMBER_TRIGGERS,
 };
-use crate::condition::choose_player_recorded;
 use crate::host::{EeScenarioHost, Host, EE_SCENARIO_READ_CLASS_EXISTS};
 use crate::manager::{EeScenarioManagerFields, EeScenarioTimedQueue};
 
@@ -940,7 +940,7 @@ pub fn prepare_media<L: Lists + ?Sized, H: Host>(l: &mut L, h: &mut H) {
             if o.mIsSelectOnMap {
                 continue;
             }
-            let (_, players) = choose_player_recorded(h, o.mOwner as c_long as i32, false, true);
+            let (_, players) = choose_player_recorded(h, o.mOwner as i32, false, true);
             if players.len() == 1 && o.mClass != 0 && h.read(EE_SCENARIO_READ_CLASS_EXISTS, o.mClass as i32, 0) != 0 {
                 l.load_media(players[0], o.mClass);
             }
