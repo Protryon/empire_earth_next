@@ -480,6 +480,7 @@ dependencies = [
  "ee_astar",
  "ee_data",
  "ee_ge",
+ "ee_random",
 ]
 
 [[package]]
