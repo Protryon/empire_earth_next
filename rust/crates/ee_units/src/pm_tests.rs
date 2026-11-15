@@ -34,6 +34,8 @@ struct MockUnit {
     contacts: Vec<u64>,
     player: u32,
     transformations: u32,
+    home: u64,
+    tags: Option<Vec<Ge3DPoint>>,
 }
 
 #[derive(Default)]
@@ -46,6 +48,7 @@ struct World {
     draws: u32,
     notes: Vec<(u32, u32, usize)>,
     trampled: Vec<(u64, u64)>,
+    routed: Vec<u64>,
     tick: EeUnitsPmTick,
 }
 
@@ -412,12 +415,17 @@ impl PmHost for World {
     fn death_effect(&mut self, _obj: u64) {}
     fn impact_decal(&mut self, _obj: u64, _p: Ge3DPoint) {}
     fn land_ripple(&mut self, _p: Ge3DPoint) {}
-    fn docked(&mut self, _obj: u64) -> bool {
-        false
+    fn home_base(&mut self, obj: u64) -> u64 {
+        self.u(obj).home
     }
-    fn follow_carrier(&mut self, _obj: u64) {}
-    fn home_base(&mut self, _obj: u64) -> u64 {
-        0
+    fn carrier_tag_count(&mut self, carrier: u64) -> i32 {
+        self.u(carrier).tags.as_ref().map_or(-1, |t| t.len() as i32)
+    }
+    fn carrier_tag(&mut self, carrier: u64, index: i32) -> Ge3DPoint {
+        self.u(carrier).tags.as_ref().unwrap()[index as usize]
+    }
+    fn route_dock_waypoint(&mut self, obj: u64) {
+        self.routed.push(obj);
     }
     fn gate_links(&mut self, _obj: u64, _carrier: &mut u64, _last: &mut u64) -> bool {
         false
@@ -687,4 +695,83 @@ fn a_stuck_unit_gives_up_to_idle() {
     assert_eq!(w.u(a).cx.mCollisionState, 0);
     assert_eq!(w.u(a).command, 5000);
     assert_eq!(w.u(a).goal_kind, 0);
+}
+
+// ---- the carrier planes' deck walk (pm_air.rs docked, follow_carrier; EEPMAirplane::IsDocked, FollowCarrier,
+// OrientOnCarrier written out)
+
+fn deck_world() -> (World, u64, u64) {
+    let mut w = World::new();
+    w.floor_tiles(0, 20, 0, 20);
+    let carrier = w.add(at(10.0, 10.0, 0.0, 0.5), 3.0);
+    let plane = w.add(at(10.5, 10.5, 0.2, 0.0), 0.5);
+    w.u(carrier).tags = Some(vec![
+        Ge3DPoint { x: 9.0, y: 9.5, z: 0.4 },
+        Ge3DPoint { x: 9.5, y: 10.0, z: 0.4 },
+        Ge3DPoint { x: 11.0, y: 11.5, z: 0.4 },
+    ]);
+    let p = w.u(plane);
+    p.home = carrier;
+    p.class.air_traffic_type = 2;
+    p.command = ACTION_TAXI;
+    p.cx.mIsClearanceGranted = true;
+    p.waypoints = vec![Ge3DPoint { x: 10.2, y: 10.7, z: 0.4 }];
+    (w, carrier, plane)
+}
+
+#[test]
+fn docked_needs_a_carrier_plane_taxiing_with_clearance_short_of_the_deck() {
+    let (mut w, carrier, plane) = deck_world();
+    let u = w.view_of(plane);
+    assert!(crate::pm_air::docked(&mut w.ctx(), u));
+    w.u(plane).waypoints = vec![Ge3DPoint { x: 11.0, y: 11.5, z: 0.4 }];
+    assert!(!crate::pm_air::docked(&mut w.ctx(), u));
+    // no tag list: the deck point is the carrier's position at height 1
+    w.u(carrier).tags = None;
+    w.u(plane).waypoints = vec![Ge3DPoint { x: 10.0, y: 10.0, z: 1.0 }];
+    assert!(!crate::pm_air::docked(&mut w.ctx(), u));
+    w.u(plane).waypoints.clear();
+    assert!(crate::pm_air::docked(&mut w.ctx(), u));
+    for (att, command, clearance) in
+        [(1, ACTION_TAXI, true), (2, ACTION_CONTINUE_TO_BRAKE, true), (4, ACTION_BRAKE, false)]
+    {
+        let p = w.u(plane);
+        p.class.air_traffic_type = att;
+        p.command = command;
+        p.cx.mIsClearanceGranted = clearance;
+        assert!(!crate::pm_air::docked(&mut w.ctx(), u));
+    }
+    let p = w.u(plane);
+    p.class.air_traffic_type = 4;
+    p.cx.mIsClearanceGranted = true;
+    p.home = 0;
+    assert!(!crate::pm_air::docked(&mut w.ctx(), u));
+}
+
+#[test]
+fn follow_carrier_places_the_plane_along_the_deck() {
+    let (mut w, carrier, plane) = deck_world();
+    let u = w.view_of(plane);
+    crate::pm_air::follow_carrier(&mut w.ctx(), u);
+    // the C++ statements: the walked distance, the deck's length less it, the carrier's axes at tag 0
+    let here = Ge3DPoint { x: 10.5, y: 10.5, z: 0.2 };
+    let next = Ge3DPoint { x: 10.2, y: 10.7, z: 0.4 };
+    let start = Ge3DPoint { x: 9.0, y: 9.5, z: 0.4 };
+    let deck = Ge3DPoint { x: 11.0, y: 11.5, z: 0.4 };
+    let distance = start.distance_to(deck) - here.distance_to(next);
+    let mut t = at(10.0, 10.0, 0.0, 0.5);
+    t.m[0][3] = start.x;
+    t.m[1][3] = start.y;
+    t.m[2][3] = start.z;
+    let p = t.apply_point(Ge3DPoint { x: 0.0, y: distance, z: 0.0 });
+    let placed = w.u(plane).location;
+    assert_eq!((placed.x(), placed.y(), placed.z()), (p.x, p.y, p.z));
+    assert_eq!(w.u(plane).orientation, at(0.0, 0.0, 0.0, 0.5).orientation());
+    assert_eq!(w.routed, vec![plane]);
+    // an empty or missing list: nothing
+    w.u(carrier).tags = Some(Vec::new());
+    crate::pm_air::follow_carrier(&mut w.ctx(), u);
+    w.u(carrier).tags = None;
+    crate::pm_air::follow_carrier(&mut w.ctx(), u);
+    assert_eq!(w.routed.len(), 1);
 }

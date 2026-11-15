@@ -191,6 +191,7 @@
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
 #include "ee/EEUCMissile.h"         // the missile sweep's impact tests
 void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
+void EEPhysicsUnitSweep(long inCall);      // the units sweep (Physics Thread/EEPhysicsSweep.cpp)
 #include "ee/EEUGRust.h"
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
@@ -468,6 +469,7 @@ struct Options {
     bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
     bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
     bool mEffectSweep = false;                           // --effect-sweep (TEST ONLY; the capture's effects game)
+    bool mUnitSweep = false;                             // --unit-sweep (TEST ONLY; the capture's units game)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -1081,6 +1083,14 @@ void AfterTick()
     if (sOptions.mCalamities && theTime >= sNextCastMs) {
         sNextCastMs += 300000;
         EETechCaptureCastCalamities(sCasts++);
+    }
+    // TEST ONLY: --unit-sweep makes every player aircraft, ships under water, sea animals and spaceships every five
+    // game minutes and sends them at the next player (Physics Thread/EEPhysicsSweep.cpp)
+    static long sNextUnitSweepMs = 300000;
+    static long sUnitSweeps = 0;
+    if (sOptions.mUnitSweep && theTime >= sNextUnitSweepMs) {
+        sNextUnitSweepMs += 300000;
+        EEPhysicsUnitSweep(sUnitSweeps++);
     }
     if (theTime >= sNextSampleMs) {
         Sample s = TakeSample();
@@ -1899,6 +1909,8 @@ const char* kUsage =
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
     "  --missile-sweep        TEST ONLY: with EE_SIM_CAPTURE, when the game ends the players' units fire every\n"
     "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
+    "  --unit-sweep           TEST ONLY: every five game minutes every player gets aircraft, ships under water,\n"
+    "                         sea animals and spaceships sent at the next player (the capture's units game)\n"
     "  --effect-sweep         TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every swept 3D effect\n"
     "                         kind made, stepped, saved and loaded (the capture's effects game: EFSW, EFST, EFMU)\n"
     "  --editor-script FILE   TEST ONLY: instead of a game, the scenario editor (main menu -> Editors -> Scenario\n"
@@ -2096,6 +2108,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mCalamities = true;
         else if (a == "--missile-sweep")
             sOptions.mMissileSweep = true;
+        else if (a == "--unit-sweep")
+            sOptions.mUnitSweep = true;
         else if (a == "--effect-sweep") {
             sOptions.mEffectSweep = true;
             EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)

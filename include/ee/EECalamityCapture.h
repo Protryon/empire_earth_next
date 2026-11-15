@@ -11,7 +11,8 @@ void EECalamityCaptureClasses();
 // of the calamity game, before its casts
 void EECalamityCaptureSaves();
 class EECalamity;
-// CALK of one calamity (inIndex: its place among the active ones), and of the contagion manager
+// CALK of one calamity (inIndex: its place among the active ones; also at each calamity's start), and of the
+// contagion manager
 void EECalamityCaptureSave(EECalamity* inCalamity, unsigned long inIndex);
 void EECalamityCaptureContagionSave();
 // both CALKs whenever the calamity's time alive crossed a multiple of five seconds in its update (inBefore: the time

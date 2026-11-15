@@ -198,20 +198,21 @@ static void PMStepCommit()
     sPMStepCalls = 0;
 }
 
-// TEST ONLY: the steps per model so far (the lane's coverage of the capture's games), printed to stderr every 20000
+// TEST ONLY: the steps per model so far (the lane's coverage of the capture's games), printed to stderr every 4000
 // ticks while the capture runs: "EE-PM-COUNT <tick> <land> <airplane> .. <spaceship>"
 static uint32_t sPMStepKinds[12];
+static uint32_t sPMDeckWalks = 0;   // the deck walk's placements (OrientOnCarrier's route)
 
 static void PMStepNote(EEPhysicsModel* inModel, EEComplexUnit* inUnit, unsigned long inAction)
 {
     if (gPhysics->mNumTicksDone != sPMStepTick) {
         PMStepCommit();
         sPMStepTick = gPhysics->mNumTicksDone;
-        if (sPMStepTick % 20000 == 0) {
+        if (sPMStepTick % 4000 == 0) {
             fprintf(stderr, "EE-PM-COUNT %lu", sPMStepTick);
             for (int i = 0; i < 12; i++)
                 fprintf(stderr, " %u", sPMStepKinds[i]);
-            fprintf(stderr, "\n");
+            fprintf(stderr, " deck %u\n", sPMDeckWalks);
         }
     }
     uint32_t theModel = 0xff;
@@ -409,88 +410,6 @@ static void PMMissileStep0(EEComplexUnit* inUnit)
         PMMissileAccelerate(inUnit);
     else
         PMMissileHome(inUnit);
-}
-
-// ---- the carrier planes' deck walk (EEPMAirplane's; the carrier model's tag points)
-
-// FUNCTION: EXE 0x5582d6
-// Puts the plane at an offset along the carrier from a deck point, facing as the carrier, and routes it on
-static void PMOrientOnCarrier(const GETransformation& inCarrier, const GE3DPoint& inPoint, EEComplexUnit* inUnit, float inOffset)
-{
-    GEOrientation theOrientation;
-    GETransformation theTransformation(inCarrier);
-    GE3DPoint theResult;
-    GE3DPoint theOffset(0.0f, inOffset, 0.0f);
-    theTransformation.SetPosition(inPoint.GetX(), inPoint.GetY(), inPoint.GetZ());
-    theTransformation.Apply(theOffset, theResult);
-    theTransformation = inUnit->mHomeBase->mPhysicalModel.GetLocation();
-    theTransformation.SetPosition(theResult.GetX(), theResult.GetY(), theResult.GetZ());
-    long theTileX;
-    long theTileY;
-    EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
-    theTransformation.ConvertToOrientation(theOrientation);
-    inUnit->mOrientation = theOrientation;
-    inUnit->mUnitClass->RouteDockWaypoint(inUnit);
-}
-
-// NEAR: frame slot assignment (the original keeps theIndex in the dead inUnit slot); vector<EETagPoint*>::begin binds to 0x22eb7, the original calls the ICF copy 0x17a952
-// FUNCTION: EXE 0x557999
-// Keeps a docked plane on its carrier's deck between the deck tag points, at its path distance
-static void PMFollowCarrier(EEComplexUnit* inUnit)
-{
-    GE3DPoint thePosition;
-    GE3DPoint theNext;
-    GE3DPoint theStart;
-    EEComplexUnit* theCarrier = inUnit->mHomeBase;
-    GETransformation theTransformation(inUnit->mHomeBase->mPhysicalModel.GetLocation());
-    EEUnitClassUpgrade* theStats = theCarrier->mStats;
-    EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
-    float theScale = theStats->GetScale();
-    if (!theTags || theTags->mPoints.size() == 0)
-        return;
-    float theIndex;
-    inUnit->GetPathStart(theNext, theIndex);
-    inUnit->mPhysicalModel.GetLocation().GetPosition(thePosition);
-    float theDistance = thePosition.DistanceTo(theNext);
-    EETagPointList::Scale(theTransformation, theScale);
-    theTags->mPoints[2]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theNext);
-    theTags->mPoints[0]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theStart);
-    theDistance = theStart.DistanceTo(theNext) - theDistance;
-    PMOrientOnCarrier(theCarrier->mPhysicalModel.GetLocation(), theStart, inUnit, theDistance);
-}
-
-// NEAR: 98: the original loads mPoints[2] (ebx reused) before pushing GetPoint's arguments
-// FUNCTION: EXE 0x5581a0
-// Returns whether a carrier plane taxiing or braking with clearance on its carrier has not yet reached
-// the deck tag point
-static bool PMIsDocked(EEComplexUnit* inUnit)
-{
-    GETransformation theTransformation(false);
-    float theIndex;
-    GE3DPoint theDeck;
-    GE3DPoint theNext;
-    EEComplexUnit* theCarrier = inUnit->mHomeBase;
-    bool theResult = false;
-    if ((inUnit->mUnitClass->mAirTrafficType == 2 || inUnit->mUnitClass->mAirTrafficType == 4) && theCarrier
-        && ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionTaxi
-            || (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionBrake)
-        && inUnit->mIsClearanceGranted == true) {
-        theTransformation = theCarrier->mPhysicalModel.GetLocation();
-        EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->GetAnimation()];
-        inUnit->GetPathStart(theNext, theIndex);
-        if (theTags) {
-            theTags->Scale(theTransformation, theCarrier->mStats->mScale);
-            const std::vector<EETagPoint*>& thePoints = theTags->mPoints;
-            thePoints[2]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theDeck);
-        } else {
-            theDeck.mX = theTransformation.GetX();
-            theDeck.mY = theTransformation.GetY();
-            theDeck.mZ = 1.0f;
-        }
-        if (theNext != theDeck)
-            theResult = true;
-    }
-    return theResult;
 }
 
 // ---- the C++ the Rust models call (ee_units pm_host.rs; each the original statement it replaces)
@@ -1023,14 +942,33 @@ extern "C" void ee_units_pm_host_effect(uint64_t inObject, int32_t inWhich, floa
         EEPlaceImpactDecal(theUnit, thePoint);
 }
 
-extern "C" uint8_t ee_units_pm_host_docked(uint64_t inObject)
+// the carrier's tag points of its animation (pm_air.rs's deck walk): their count (-1: no list); with inIndex >= 0
+// point inIndex at the carrier's frame in its location scaled by its stats (IsDocked's and FollowCarrier's
+// EETagPointList::Scale and GetPoint)
+extern "C" int32_t ee_units_pm_host_carrier_tag(uint64_t inCarrier, int32_t inIndex, float* outPoint)
 {
-    return PMIsDocked(PMUnit(inObject)) == true ? 1 : 0;
+    EEComplexUnit* theCarrier = PMUnit(inCarrier);
+    EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
+    if (!theTags)
+        return -1;
+    if (inIndex >= 0) {
+        GETransformation theTransformation(theCarrier->mPhysicalModel.GetLocation());
+        EETagPointList::Scale(theTransformation, theCarrier->mStats->GetScale());
+        GE3DPoint thePoint;
+        theTags->mPoints[inIndex]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, thePoint);
+        outPoint[0] = thePoint.mX;
+        outPoint[1] = thePoint.mY;
+        outPoint[2] = thePoint.mZ;
+    }
+    return (int32_t)theTags->mPoints.size();
 }
 
-extern "C" void ee_units_pm_host_follow_carrier(uint64_t inObject)
+// OrientOnCarrier's last call: the class's RouteDockWaypoint(unit)
+extern "C" void ee_units_pm_host_route_dock_waypoint(uint64_t inObject)
 {
-    PMFollowCarrier(PMUnit(inObject));
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    sPMDeckWalks++;
+    theUnit->mUnitClass->RouteDockWaypoint(theUnit);
 }
 
 // a gate's first part (no previous part, a next one): its last linked carrier and last linked part
