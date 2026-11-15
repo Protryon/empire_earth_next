@@ -89,110 +89,89 @@ static EEGameOptionsPlayer sEmptyPlayer;
 #include "ee/EEStartingResources.h"
 #include "ee/EECPEngine.h"
 
+// The defaults the constructors read (the rules and the epoch count only: the global options are made before the
+// tables, the variants and the AI manifest exist)
+static EeAppOptionsLimits EEGameOptionsDefaults()
+{
+    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;
+    EeAppOptionsLimits theLimits = {};
+    theLimits.epochs = EEEpochCount();
+    theLimits.map_size_default = theRules.mMapSizeDefault;
+    theLimits.speed_default = theRules.mSpeedDefault;
+    theLimits.wonders_default = theRules.mWondersDefault;
+    return theLimits;
+}
+
+// The limits the Rust bodies check against: gameoptions.yaml's lists and numbers, the tables' sizes (the engine
+// choices only for a load, inLoad)
+static EeAppOptionsLimits EEGameOptionsLimits(bool inLoad = false)
+{
+    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;
+    EeAppOptionsLimits theLimits;
+    theLimits.load_types = kLoadTypeCount;
+    theLimits.resource_levels = EEGetNumberOfResourceLevels();
+    theLimits.variants = EEGetNumberOfGameVariants();
+    theLimits.epochs = EEEpochCount();
+    theLimits.map_sizes = theRules.mMapSizes.size();
+    theLimits.map_size_default = theRules.mMapSizeDefault;
+    theLimits.difficulties = theRules.mDifficulties.size();
+    theLimits.speeds = theRules.mSpeeds.size();
+    theLimits.speed_default = theRules.mSpeedDefault;
+    theLimits.wonders_default = theRules.mWondersDefault;
+    theLimits.wonders_maximum = EERuleLong(theRules.mWondersMaximum);
+    theLimits.unit_limit_minimum = EERuleLong(theRules.mUnitLimitMinimum);
+    theLimits.unit_limit_maximum = EERuleLong(theRules.mUnitLimitMaximum);
+    theLimits.unit_limit_default = EERuleLong(theRules.mUnitLimitDefault);
+    theLimits.engine_choices = inLoad ? EECPEngineChoiceCount() : 0;
+    return theLimits;
+}
+
+// the saved game's host: the file's primitives (EESavePrimitive; the records are the same) and the strings
+static_assert(EE_APP_SAVE_READ_ULONG == EE_UNITS_PLAYER_SAVE_READ_ULONG && EE_APP_SAVE_READ_LONG == EE_UNITS_PLAYER_SAVE_READ_LONG &&
+                  EE_APP_SAVE_READ_FLOAT == EE_UNITS_PLAYER_SAVE_READ_FLOAT && EE_APP_SAVE_READ_BOOL == EE_UNITS_PLAYER_SAVE_READ_BOOL &&
+                  EE_APP_SAVE_WRITE_ULONG == EE_UNITS_PLAYER_SAVE_WRITE_ULONG && EE_APP_SAVE_WRITE_LONG == EE_UNITS_PLAYER_SAVE_WRITE_LONG &&
+                  EE_APP_SAVE_WRITE_FLOAT == EE_UNITS_PLAYER_SAVE_WRITE_FLOAT && EE_APP_SAVE_WRITE_BOOL == EE_UNITS_PLAYER_SAVE_WRITE_BOOL &&
+                  sizeof(EeAppSaveIo) == sizeof(EeUnitsPlayerSaveIo) && offsetof(EeAppSaveIo, f) == offsetof(EeUnitsPlayerSaveIo, f) &&
+                  offsetof(EeAppSaveIo, b) == offsetof(EeUnitsPlayerSaveIo, b),
+              "ee_app save_io.rs mirrors EESavePrimitive's operations");
+struct EEGameOptionsFile {
+    EEGameOptions* mOptions;
+    FSFile* mFile;
+};
+static int32_t EEGameOptionsIo(void* inContext, int32_t inOp, uint32_t inIndex, EeAppSaveIo* io)
+{
+    EEGameOptionsFile* theContext = static_cast<EEGameOptionsFile*>(inContext);
+    EEGameOptions* theOptions = theContext->mOptions;
+    FSFile& theFile = *theContext->mFile;
+    UWideString* theStrings[3] = {&theOptions->mCampaignName, &theOptions->mScenarioName, &theOptions->mMapName};
+    switch (inOp) {
+    case EE_APP_OPTIONS_NAME_LOAD: return theOptions->mPlayers[inIndex].mName.Load(theFile);
+    case EE_APP_OPTIONS_NAME_SAVE: return theOptions->mPlayers[inIndex].mName.Save(theFile);
+    case EE_APP_OPTIONS_STRING_LOAD: return theStrings[inIndex]->Load(theFile);
+    case EE_APP_OPTIONS_STRING_SAVE: return theStrings[inIndex]->Save(theFile);
+    case EE_APP_OPTIONS_VARIANT_KNOWN: return gGameVariants[inIndex] != NULL;
+    }
+    return EESavePrimitive(theFile, inOp, reinterpret_cast<EeUnitsPlayerSaveIo*>(io));
+}
+static void EEGameOptionsSlots(EEGameOptions* inOptions, EeAppOptionsPlayerFields* outSlots[16])
+{
+    for (unsigned long i = 0; i < 16; i++)
+        outSlots[i] = &inOptions->mPlayers[i];
+}
+
 // FUNCTION: EXE 0x52f4dd
 // Creates an empty, closed player slot with no name, colour, team or starting citizens
 EEGameOptionsPlayer::EEGameOptionsPlayer()
 {
-    this->mType = 3;
-    this->mLoadedType = 3;
+    ee_app_options_player_default(this);
     this->mName = gEmptyString;
-    this->mPing = 0.0f;
-    this->mSlot = 0;
-    this->mColor = 0;
-    this->mTeam = 0;
-    this->mStartingCitizens = 0;
-    this->mIsLocal = false;
-    this->mIsReady = false;
-    this->mTransferID = 0;
-    this->mB36 = true;
-    this->mEngine = kEECPChoiceClassic;   // port (ee/EECPEngine.h)
 }
 
 // FUNCTION: EXE 0x52f526
-// Copies a player slot's settings (type, name, colour, team, citizens, ping, ready state and transfer id)
-EEGameOptionsPlayer& EEGameOptionsPlayer::operator=(const EEGameOptionsPlayer& inOther)
-{
-    this->mType = inOther.mType;
-    this->mName = inOther.mName;
-    this->mColor = inOther.mColor;
-    this->mTeam = inOther.mTeam;
-    this->mStartingCitizens = inOther.mStartingCitizens;
-    this->mPing = inOther.mPing;
-    this->mIsLocal = inOther.mIsLocal;
-    this->mIsReady = inOther.mIsReady;
-    this->mSlot = inOther.mSlot;
-    this->mB36 = inOther.mB36;
-    this->mLoadedType = inOther.mLoadedType;
-    this->mTransferID = inOther.mTransferID;
-    this->mEngine = inOther.mEngine;   // port (ee/EECPEngine.h)
-    return *this;
-}
-
+// (operator=: inline, ee/EEGameOptions.h)
 // FUNCTION: EXE 0x52f582
-// Reads a player slot from a saved game and remembers its loaded type; returns the first read error
-long EEGameOptionsPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    long theResult = inFile.Read(this->mType);
-    if (theResult == kErrorOK)
-        theResult = this->mName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPing);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSlot);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mColor);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTeam);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mStartingCitizens);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsLocal);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsReady);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mB36);
-    // port: the engine choice from version 0.251 (ee/EECPEngine.h); older saves and scenarios: classic. Before 0.253
-    // the values were 0 classic, 1 next (now the manifest's first AI, boom), 2 random (now 1)
-    this->mEngine = kEECPChoiceClassic;
-    if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 251)) {
-        theResult = inFile.Read(this->mEngine);
-        if (inMajorVersion == 0 && inMinorVersion < 253)
-            this->mEngine = this->mEngine == 1 ? (unsigned long)kEECPChoiceFirstAI
-                          : this->mEngine == 2 ? (unsigned long)kEECPChoiceRandom : (unsigned long)kEECPChoiceClassic;
-        if (this->mEngine >= EECPEngineChoiceCount())
-            this->mEngine = kEECPChoiceClassic;
-    }
-    this->mLoadedType = this->mType;
-    return theResult;
-}
-
 // FUNCTION: EXE 0x52f626
-// Writes a player slot to a saved game; returns the first write error
-long EEGameOptionsPlayer::Save(FSFile& outFile)
-{
-    long theResult = outFile.Write(this->mType);
-    if (theResult == 0)
-        theResult = this->mName.Save(outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mPing);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mSlot);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mColor);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mTeam);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mStartingCitizens);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mIsLocal);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mIsReady);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mB36);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mEngine);   // port: from version 0.251 (Load)
-    return theResult;
-}
+// (the slot's Load and Save: in EEGameOptions::Load/Save's Rust, ee_app game_options.rs load_player/save_player)
 
 // FUNCTION: EXE 0x52f6d8
 // Creates default game options (random epochs, normal speed and map size, unit limit 50, three wonders to win)
@@ -200,39 +179,23 @@ long EEGameOptionsPlayer::Save(FSFile& outFile)
 EEGameOptions::EEGameOptions()
 {
     ESVERIFY_AT(TSScheduler::CreateReadWriteLock(this->mLock) == keseOK, 304);
-    this->mLoadType = 0;
-    this->mResources = 0;
-    this->mVariant = 0;
-    this->mEpochStart = EEEpochCount();
-    this->mEpochEnd = EEEpochCount() - 1;
+    EeAppOptionsLimits theLimits = EEGameOptionsDefaults();
+    ee_app_options_default(this, &theLimits);
     this->mMapType = gEmptyString;
     this->mCampaignName = gEmptyString;
     this->mScenarioName = gEmptyString;
     this->mMapName = gEmptyString;
-    this->mDifficulty = 0;
-    this->mCampaignChecksum = 0;
-    this->mLockTeams = false;
-    this->mLockSpeed = false;
-    this->mRevealMap = false;
-    this->mCheatCodes = false;
-    this->mRecordGames = false;
-    this->mAllowCustomCivs = false;
-    this->mIsMultiplayer = false;
-    this->mMapSize = EEGetRules().mGameOptions.mMapSizeDefault;   // gameoptions.yaml (1, 3, 1 in the original)
-    this->mUnitLimit = 50;
-    this->mWondersForVictory = EEGetRules().mGameOptions.mWondersDefault;
-    this->mGameSpeed = EEGetRules().mGameOptions.mSpeedDefault;
-    this->mVictory = true;
-    this->mB407 = true;
     for (unsigned long i = 0; i < 16; i++)
         this->mPlayers[i] = sEmptyPlayer;
 }
 
 // FUNCTION: EXE 0x52f818
-// Creates a copy of other game options, with its own lock
+// Creates a copy of other game options, with its own lock (the copy keeps the defaults' mB407: operator= leaves it)
 EEGameOptions::EEGameOptions(const EEGameOptions& inOther)
 {
     ESVERIFY_AT(TSScheduler::CreateReadWriteLock(this->mLock) == keseOK, 349);
+    EeAppOptionsLimits theLimits = EEGameOptionsDefaults();
+    ee_app_options_default(this, &theLimits);
     *this = inOther;
 }
 
@@ -245,33 +208,13 @@ EEGameOptions::~EEGameOptions()
 
 // FUNCTION: EXE 0x52f8e0
 // Copies other game options, replacing each out-of-range setting (load type, resources, variant, epochs, map,
-// size, difficulty, speed, wonders, unit limit) with a default; copies names, flags and all sixteen slots as they are
-// The option lists and limits are gameoptions.yaml's (EEGameOptionRules): map sizes, speeds, difficulties, the unit
-// limit and the wonders (the original's literal 6, 4, 3 and dbworld constants); load types are the code's.
+// size, difficulty, speed, wonders, unit limit) with a default (ee_app game_options.rs assign); copies names, flags
+// and all sixteen slots as they are. A new game's map type must be a known generator's, else the first one's.
 EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
 {
-    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;
     unsigned long theIndex;
-    if (inOther.mLoadType < kLoadTypeCount)
-        this->mLoadType = inOther.mLoadType;
-    else
-        this->mLoadType = 0;
-    if (inOther.mResources < EEGetNumberOfResourceLevels())
-        this->mResources = inOther.mResources;
-    else
-        this->mResources = 0;
-    if (inOther.mVariant < EEGetNumberOfGameVariants())
-        this->mVariant = inOther.mVariant;
-    else
-        this->mVariant = 0;
-    if (inOther.mEpochStart <= EEEpochCount())
-        this->mEpochStart = inOther.mEpochStart;
-    else
-        this->mEpochStart = 0;
-    if (inOther.mEpochEnd < EEEpochCount() && (inOther.mEpochStart == EEEpochCount() || inOther.mEpochEnd >= inOther.mEpochStart))
-        this->mEpochEnd = inOther.mEpochEnd;
-    else
-        this->mEpochEnd = this->mEpochStart;
+    EeAppOptionsLimits theLimits = EEGameOptionsLimits();
+    ee_app_options_assign(this, &inOther, &theLimits);
     if (inOther.mLoadType == 0) {
         if (EERMFindGenerator(inOther.mMapType, theIndex) == 0)
             this->mMapType = inOther.mMapType;
@@ -280,38 +223,8 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
     } else {
         this->mMapType = inOther.mMapType;
     }
-    if (inOther.mMapSize < theRules.mMapSizes.size())
-        this->mMapSize = inOther.mMapSize;
-    else
-        this->mMapSize = theRules.mMapSizeDefault;
-    if (inOther.mDifficulty < theRules.mDifficulties.size())
-        this->mDifficulty = inOther.mDifficulty;
-    else
-        this->mDifficulty = 0;
-    if (inOther.mGameSpeed < theRules.mSpeeds.size())
-        this->mGameSpeed = inOther.mGameSpeed;
-    else
-        this->mGameSpeed = theRules.mSpeedDefault;
-    if (inOther.mWondersForVictory <= EERuleLong(theRules.mWondersMaximum))
-        this->mWondersForVictory = inOther.mWondersForVictory;
-    else
-        this->mWondersForVictory = 0;
-    if (inOther.mUnitLimit <= EERuleLong(theRules.mUnitLimitMaximum))
-        this->mUnitLimit = inOther.mUnitLimit;
-    else
-        this->mUnitLimit = EERuleLong(theRules.mUnitLimitMinimum);
     this->mCampaignName = inOther.mCampaignName;
     this->mScenarioName = inOther.mScenarioName;
-    this->mCampaignChecksum = inOther.mCampaignChecksum;
-    this->mVictory = inOther.mVictory;
-    this->mLockTeams = inOther.mLockTeams;
-    this->mLockSpeed = inOther.mLockSpeed;
-    this->mRevealMap = inOther.mRevealMap;
-    this->mCheatCodes = inOther.mCheatCodes;
-    this->mRecordGames = inOther.mRecordGames;
-    this->mAllowCustomCivs = inOther.mAllowCustomCivs;
-    this->mIsMultiplayer = inOther.mIsMultiplayer;
-    this->mIsScenarioGame = inOther.mIsScenarioGame;
     this->mMapName = inOther.mMapName;
     for (unsigned long i = 0; i < 16; i++)
         this->mPlayers[i] = inOther.mPlayers[i];
@@ -324,26 +237,16 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
 void EEGameOptions::GetMapDimensions(long& outWidth, long& outHeight)
 {
     const std::vector<EEMapSizeRule>& theSizes = EEGetRules().mGameOptions.mMapSizes;
-    if (this->mMapSize >= theSizes.size()) {
-        outWidth = 0;
-        outHeight = 0;
-        return;
-    }
-    outWidth = theSizes[this->mMapSize].mTiles;
-    outHeight = theSizes[this->mMapSize].mTiles;
+    outWidth = this->mMapSize < theSizes.size() ? theSizes[this->mMapSize].mTiles : 0;
+    outHeight = outWidth;
 }
 
 // FUNCTION: EXE 0x52fbc5
 // Returns the campaign scenario's map name when the options name a campaign with a checksum and a map, else ""
 bool EEGameOptions::GetCampaignMapName(UWideString& outName)
 {
-    bool theResult = false;
-    if (this->mCampaignName.GetLength() > 0 && this->mCampaignChecksum > 0 && this->mMapName.GetLength() > 0) {
-        outName = this->mMapName;
-        theResult = true;
-    } else {
-        outName = gEmptyString;
-    }
+    bool theResult = this->mCampaignName.GetLength() > 0 && this->mCampaignChecksum > 0 && this->mMapName.GetLength() > 0;
+    outName = theResult ? this->mMapName : UWideString(gEmptyString);
     return theResult;
 }
 
@@ -351,10 +254,7 @@ bool EEGameOptions::GetCampaignMapName(UWideString& outName)
 // Returns whether civilizations may be bought: not in the scenario editor and not in a scenario game
 bool EEGameOptions::CanBuyCivilization()
 {
-    bool theResult = false;
-    if (!gUIManager->mInScenarioEditor && !this->mIsScenarioGame)
-        theResult = true;
-    return theResult;
+    return !gUIManager->mInScenarioEditor && !this->mIsScenarioGame;
 }
 
 // FUNCTION: EXE 0x52fc27
@@ -363,220 +263,40 @@ bool EEGameOptions::CanBuyCivilization()
 void EEGameOptions::SetDefaults()
 {
     *this = gLobbyGameOptions;
-    this->mLoadType = 0;
-    this->mResources = EEGetNumberOfResourceLevels() - 1;
-    this->mVariant = 0;
-    this->mEpochStart = EEEpochCount();
-    this->mEpochEnd = EEEpochCount() - 1;
+    EeAppOptionsLimits theLimits = EEGameOptionsLimits();
+    ee_app_options_set_defaults(this, &theLimits, (unsigned long)gDifficultyLevel);
     this->mMapType = EERMGetNumberOfGenerators() > 0 ? EERMGetGeneratorName(0) : UWideString(gEmptyString);
     this->mCampaignName = gEmptyString;
     this->mScenarioName = gEmptyString;
     this->mMapName = gEmptyString;
-    this->mMapSize = EEGetRules().mGameOptions.mMapSizeDefault;
-    this->mUnitLimit = EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault);
-    this->mWondersForVictory = EEGetRules().mGameOptions.mWondersDefault;
-    this->mGameSpeed = EEGetRules().mGameOptions.mSpeedDefault;
-    this->mVictory = false;
-    this->mLockTeams = false;
-    this->mLockSpeed = false;
-    this->mRevealMap = false;
-    this->mCheatCodes = true;
-    this->mRecordGames = false;
-    this->mAllowCustomCivs = false;
-    this->mIsMultiplayer = false;
-    this->mB407 = true;
-    this->mIsScenarioGame = false;
-    this->mDifficulty = 0;
-    unsigned long theDifficulty = gDifficultyLevel;
-    if (theDifficulty < EEGetRules().mGameOptions.mDifficulties.size())
-        this->mDifficulty = theDifficulty;
     for (unsigned long i = 0; i < 16; i++)
         this->mPlayers[i] = sEmptyPlayer;
 }
 
 // FUNCTION: EXE 0x52fd6b
-// Reads the game options and the sixteen slots from a saved game (old saves lack the map name), falling back to
-// the first resource level and variant when out of range; returns the first read error
+// Reads the game options and the sixteen slots from a saved game (ee_app game_options.rs load); returns the first
+// read error
 long EEGameOptions::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    UWideString theUnused;
-    long theResult = 0;
-    unsigned long i;
-    if (inMajorVersion == 0 && inMinorVersion < 200) {
-        for (i = 0; i < 16 && theResult == 0; i++)
-            theResult = this->mPlayers[i].Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mGameSpeed);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLoadType);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mVariant);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mMapSize);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mEpochStart);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mEpochEnd);
-        if (theResult == 0) {
-            theResult = inFile.Read(this->mResources);
-            if (this->mResources >= EEGetNumberOfResourceLevels())
-                this->mResources = 0;
-        }
-        if (theResult == 0)
-            theResult = inFile.Read(this->mUnitLimit);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mWondersForVictory);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mDifficulty);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mVictory);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLockTeams);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLockSpeed);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mRevealMap);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mCheatCodes);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mRecordGames);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mAllowCustomCivs);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mIsMultiplayer);
-        if (theResult == 0)
-            theResult = this->mCampaignName.Load(inFile);
-        if (theResult == 0)
-            theResult = this->mScenarioName.Load(inFile);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mCampaignChecksum);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mIsScenarioGame);
-    } else {
-        for (i = 0; i < 16 && theResult == 0; i++)
-            theResult = this->mPlayers[i].Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mGameSpeed);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLoadType);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mVariant);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mMapSize);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mEpochStart);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mEpochEnd);
-        if (theResult == 0) {
-            theResult = inFile.Read(this->mResources);
-            if (this->mResources >= EEGetNumberOfResourceLevels())
-                this->mResources = 0;
-        }
-        if (theResult == 0)
-            theResult = inFile.Read(this->mUnitLimit);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mWondersForVictory);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mDifficulty);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mVictory);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLockTeams);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mLockSpeed);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mRevealMap);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mCheatCodes);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mRecordGames);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mAllowCustomCivs);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mIsMultiplayer);
-        if (theResult == 0)
-            theResult = this->mCampaignName.Load(inFile);
-        if (theResult == 0)
-            theResult = this->mScenarioName.Load(inFile);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mCampaignChecksum);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mIsScenarioGame);
-        if (theResult == 0)
-            theResult = this->mMapName.Load(inFile);
-    }
-    if (this->mVariant >= EEGetNumberOfGameVariants() || gGameVariants[this->mVariant] == NULL)
-        this->mVariant = 0;
-    return theResult;
+    EEGameOptionsFile theContext = {this, &inFile};
+    EeAppOptionsPlayerFields* theSlots[16];
+    EEGameOptionsSlots(this, theSlots);
+    EeAppOptionsLimits theLimits = EEGameOptionsLimits(true);
+    return ee_app_options_load(this, theSlots, 16, inMajorVersion, inMinorVersion, &theLimits, &theContext, EEGameOptionsIo);
 }
 
 // FUNCTION: EXE 0x530272
-// Calls each player slot's empty member, so does nothing (EEMStartLoading calls it under the read lock)
-void EEGameOptions::Fn130272()
-{
-    for (long i = 0; i < 16; i++)
-        this->mPlayers[i].FnE123D();
-}
-
-// (empty: ICF-folded into 0xe123d with the other empty members)
-void EEGameOptionsPlayer::FnE123D()
-{
-}
+// (Fn130272 and the slots' empty FnE123D: inline, ee/EEGameOptions.h)
 
 // FUNCTION: EXE 0x530289
-// Writes the sixteen player slots and the game options to a saved game; returns the first write error
+// Writes the sixteen player slots and the game options to a saved game (ee_app game_options.rs save); returns the
+// first write error
 long EEGameOptions::Save(FSFile& outFile)
 {
-    long theResult = 0;
-    for (unsigned long i = 0; i < 16 && theResult == 0; i++)
-        theResult = this->mPlayers[i].Save(outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mGameSpeed);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mLoadType);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mVariant);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mMapSize);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mEpochStart);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mEpochEnd);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mResources);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mUnitLimit);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mWondersForVictory);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mDifficulty);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mVictory);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mLockTeams);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mLockSpeed);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mRevealMap);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mCheatCodes);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mRecordGames);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mAllowCustomCivs);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mIsMultiplayer);
-    if (theResult == 0)
-        theResult = this->mCampaignName.Save(outFile);
-    if (theResult == 0)
-        theResult = this->mScenarioName.Save(outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mCampaignChecksum);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mIsScenarioGame);
-    if (theResult == 0)
-        theResult = this->mMapName.Save(outFile);
-    return theResult;
+    EEGameOptionsFile theContext = {this, &outFile};
+    EeAppOptionsPlayerFields* theSlots[16];
+    EEGameOptionsSlots(this, theSlots);
+    return ee_app_options_save(this, theSlots, 16, &theContext, EEGameOptionsIo);
 }
 
 // FUNCTION: EXE 0x5304b4
