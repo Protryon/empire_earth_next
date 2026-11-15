@@ -31,54 +31,26 @@
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
 #include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
 #include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
-#include "lle/UITextLabel.h"
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
-#include "lle/UILBString.h"
 #include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
 #include "lle/UIEditBox.h"
 #include "lle/UICheckBox.h"
 #include "lle/UIRadioButton.h"
-#include "lle/UISlider.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIESliderChange.h"
-#include "lle/SEMixer.h"
-#include "lle/SEConductor.h"
-#include "lle/NEProtocol.h"
 #include "lle/NESynchronousServer.h"
-#include "lle/UIScrollBar.h"
 #include "lle/UIFileListBox.h"
 #include "lle/FSRestorable.h"
-#include "lle/UILayoutUtility.h"
-#include "lle/UITextureBackground.h"
 #include "lle/UIBFull.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIBlinkingButton.h"
@@ -86,9 +58,7 @@
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EECivilization.h"
 #include "ee/EECommunications.h"
-#include "ee/EEGameOptions.h"
 #include "ee/EEGameState.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -106,7 +76,6 @@
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
-#include "ee/RTSGraphics.h"
 #include "ee/EEDisplayDevices.h"
 #include "ee/EEMessage.h"
 #include "ee/EEAction.h"
@@ -125,28 +94,22 @@
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEGameVariant.h"
-#include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
-#include "ee/EETechTreeTechID.h"
 #include "ee/EEAUserPauseGame.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "lle/NESynchronousClient.h"
-#include "lle/TSThread.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIEChatLogEvents.h"
-#include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUIBSavedGroup.h"
 #include "ee/EEMiniMap.h"
-#include "lle/GETransformation.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationManager.h"
-#include "lle/U2DPoint.h"
 #include "lle/UGraph.h"
 #include "lle/UIGraph.h"
 #include "lle/UILineGraph.h"
@@ -154,20 +117,15 @@
 #include "lle/UEncryption.h"
 #include "ee/EEUIPGSLineGraph.h"
 #include "ee/EEPGSFormManager.h"
-#include "ee/EEStatisticsHistory.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEAPlayerEvent.h"
 #include "ee/EECheatCodes.h"
-#include "lle/GETextAlignment.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EERenderObject.h"
-#include "ee/EECameraControl.h"
-#include "platform/PlatWindow.h"
 #include "ee/EEFormation.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEScenarioEditorIDs.h"
-#include "rust/ee_screens.h"
 
 extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
@@ -828,8 +786,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
                 theTime.mDay, theTime.mHour, theTime.mMinute, theTime.mSecond, (const char*)gSavedGameExtension);
         gGamePreferences.mSettings.mLastQuickSave = theName;
         gGamePreferences.Save();
-        theServer->SendToAllAndWait(new EEMLoadOrSaveGame(theName, TMGetTime(), 0, 1,
-                                                          gCommunications->GetNumberOfCTsProcessedInPhysics(), 0),
+        theServer->SendToAllAndWait(new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, theName}),
                                     15000, 12);
         break;
     }
@@ -1520,7 +1477,7 @@ static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint3
         EEScreensPdcsControl(3)->ResetSelection();
         break;
     case EE_SCREENS_GAME_PDCS_REQUEST: {
-        NEMessage* theRequest = new EEMCivUpgradesRequested(gWorld.mCurrentPlayer, sPdcsUpgrades, sPdcsName, 0);
+        NEMessage* theRequest = new EEMRecord(kMessageCivUpgradesRequested, {gWorld.mCurrentPlayer, 0, sPdcsUpgrades, sPdcsName});
         if (gCommunications->GetIsMultiplayerSession())
             gCommunications->ProcessLocalUserInput(theRequest, kSlotServer);
         else {
@@ -2202,7 +2159,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
         static_cast<EEServer*>(gCommunications)->StopPing();
         static_cast<EEServer*>(gCommunications)->mLoadState = true;
-        NEMessage* theMessage = new EEMStartLoading(1, TMGetTime());
+        NEMessage* theMessage = new EEMRecord(kMessageStartLoading, {1, TMGetTime()});
         gLocalPlayerOut = false;
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         break;
@@ -2386,7 +2343,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     case EE_SCREENS_GAME_LE_START_LOADING:
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMStartLoading((unsigned char)inA, (long)(int32_t)inB),
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)inA, (int32_t)inB}),
                                                          kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS:
@@ -3085,8 +3042,8 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         return 1;
     }
     case EE_SCREENS_TEXT_SAVE_MESSAGE:
-        sSaveObject = reinterpret_cast<UIForm*>(static_cast<NEMessage*>(new EEMLoadOrSaveGame(
-            theText, TMGetTime(), 0, 0, gCommunications->GetNumberOfCTsProcessedInPhysics(), 0)));
+        sSaveObject = reinterpret_cast<UIForm*>(static_cast<NEMessage*>(new EEMRecord(
+            kMessageLoadOrSaveGame, {0, 0, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 0, 0, theText})));
         break;
     case EE_SCREENS_TEXT_SAVE_ACTION: {
         std::vector<UString> theParts = Parts(inText, inLength);
@@ -3134,7 +3091,7 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
             gGameStateLoadType = 2;
             static_cast<EEServer*>(gCommunications)->StopPing();
             static_cast<EEServer*>(gCommunications)->SetLoadState(true);
-            gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
             return 1;
         }
         if (theFile != NULL)

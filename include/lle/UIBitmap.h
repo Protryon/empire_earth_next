@@ -1,29 +1,27 @@
 // C:\EEX\Low-Level Engine\User Interface\UIBitmap.h (RECONSTRUCTION). A control that draws one GEBitmap at its
-// top left corner. UIBitmap.cpp (0x1005d3a1..0x1005d72a) emits the inline members first, then the U2D key chains,
-// the ctor and the out-of-line members. Vtable 0x10098bfc. sizeof 0xb0 (??_E stride, 0x1005d46c).
-// Requires lle/UIControl.h, lle/GEBitmap.h.
+// top left corner. Vtable 0x10098bfc. The original's sizeof was 0xb0 (??_E stride, 0x1005d46c).
+//
+// Whole in Rust (rust/crates/ee_ui/src/mediaobj.rs, R6 ui round 21): the members are EeUiBitmapFields, the class's
+// private base; every method forwards there (UIBitmap.cpp, with UIMovie's), and the Rust record calls out through
+// UIMediaHost. Requires lle/UIControl.h.
 #ifndef LLE_UIBITMAP_H
 #define LLE_UIBITMAP_H
 
 #include "lle/UIControl.h"
 
-class LLE_API UIBitmap : public UIControl {
+class LLE_API UIBitmap : public UIControl, private EeUiBitmapFields {
+    friend struct UIMediaHost;              // UIBitmap.cpp: the Rust record's calls out
 public:
     UIBitmap(unsigned long inId, GEBitmap* inBitmap, const GERectangle& inRectangle, UIForm* inForm,
              unsigned long inIndex);
+    UIBitmap(const UIBitmap&) = delete;
+    UIBitmap& operator=(const UIBitmap&) = delete;
     virtual ~UIBitmap();
     virtual long CopyData();
     virtual long DrawPolygons();
     virtual long DrawTextA();
-    GEBitmap* GetBitmap() const { return this->mBitmap; }
-    void SetBitmap(GEBitmap* inBitmap)      // 0x1005d3a1
-    {
-        if (this->mBitmap)
-            this->mBitmap->Dereference();
-        this->mBitmap = inBitmap;
-        inBitmap->Reference();
-        this->SetDirty(true);
-    }
+    GEBitmap* GetBitmap() const { return static_cast<GEBitmap*>(this->mBitmap); }
+    void SetBitmap(GEBitmap* inBitmap);
     virtual long UpdateKeyboard() { return kErrorOK; }
 protected:
     virtual long MouseLButtonDown() { return kErrorOK; }
@@ -33,10 +31,6 @@ protected:
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedTo() {}
     virtual void TabbedFrom() {}
-
-    GE2DPoint mLocation;                    // +0xa0 mRectangle's top left as of the last CopyData
-    GEBitmap* mBitmap;                      // +0xa8 (referenced)
-    GEBitmap* mCopiedBitmap;                // +0xac
 };
 
 #endif

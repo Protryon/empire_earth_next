@@ -869,7 +869,7 @@ void EELobbyStartHostedGame()
     theServer->mLoadState = true;
     theServer->AllowNewPlayers(false);
     srand(TMGetTime());
-    gCommunications->ProcessGuaranteedLocalUserInput(new EEMStartLoading(theHumans, rand()), 0xff);
+    gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {theHumans, rand()}), 0xff);
     gGamePreferences.SetLastGameOptions(gGameOptions);
     gGameOptions.mLock->ReadUnlock();
 }

@@ -15,6 +15,7 @@
 #include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/TMPoll.h"
+#include "lle/FSFileSpec.h"
 #include "lle/Input System.h"
 #include "lle/ISKeyboard.h"
 #include "lle/UIEvent.h"
@@ -22,6 +23,20 @@
 
 TMPoll UIHotKey::sPressedPoll(50, 0, true);
 unsigned long UIHotKey::sPressedPollAmount;
+
+// The UI database files' calls (FSFileSpec&): the hot keys' records (hotkeyobj.rs), the events' and the background
+// table's (UIManager.cpp, UIBackgroundTable.cpp)
+extern "C" void ee_uicpp_file_open(void* inFile) { static_cast<FSFileSpec*>(inFile)->Open(kFileAccessRead); }
+extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount)
+{
+    return static_cast<FSFileSpec*>(inFile)->Read(*outCount);
+}
+extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength)
+{
+    unsigned long theRead = 0;
+    return static_cast<FSFileSpec*>(inFile)->Read(outData, inLength, theRead);
+}
+extern "C" void ee_uicpp_file_close(void* inFile) { static_cast<FSFileSpec*>(inFile)->Close(); }
 
 // The Rust hot keys' calls out (EeUiOp 570..581): the object is the record (NULL for the table's own calls)
 struct UIHotKeyHost {

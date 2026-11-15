@@ -1230,48 +1230,9 @@ long EEUnitClass::NavalPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned l
 // factory); slots +0x24, +0x2c, +0x6c (EEUCLandPriest's inline twin is ICF-folded into it), +0x74, +0x78, +0xa0 in
 // source order.
 
-// 0x447028: the highest a priest helicopter flies (one .rdata copy per unit: a named const) (provisional name)
-static const float kHelicopterPriestCeiling = 12.0f;
-
 // 0x23ca26 (cdecl; EEUCHelicopter.cpp declares it the same way; 0x249560 / 0x2495f5: ee/EEUnitUtilities.h)
 // (provisional name)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
-
-// FUNCTION: EXE 0x612edf
-// Returns the height to fly at towards a point: cruising height above the highest tile corner on the way, at least
-// the point's height, at most 12
-float EEUnitClass::HelicopterPriestGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    EEMap* theMap = ::gWorld.mMap;
-    float theHeight = inLocation.GetZ();
-    float theBase = this->mCruiseAltitude;
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-    EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
-               UMFloor(inLocation.GetY()), &theTiles, 1, 0);
-    for (std::vector<U2DPoint<long> >::iterator it = theTiles.begin(); it != theTiles.end(); it++) {
-        unsigned long theX = it->mX;
-        unsigned long theY = it->mY;
-        if (theMap->GetTile(theX, theY) == NULL)
-            continue;
-        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-    }
-    if (theHeight > kHelicopterPriestCeiling)
-        theHeight = kHelicopterPriestCeiling;
-    return theHeight;
-}
 
 // FUNCTION: EXE 0x6130b3
 // Gets the sound parameters with a Doppler pitch; silent while the helicopter is on the map but not seen

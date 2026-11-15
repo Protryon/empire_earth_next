@@ -1,30 +1,33 @@
 // C:\EEX\Low-Level Engine\User Interface\UIFileListBox.h (RECONSTRUCTION). A string list box listing the files of an
-// FSPath whose extension is one of mValidExtensions (stored without the extension). UIFileListBox.cpp
-// (0x1006fae7..0x1006ff58) holds the ctor and the out-of-line members; the inline members (GetFilePath,
-// AddValidExtension 0x100669b6) and the implicit copy members are emitted first by UIControlsTable.cpp. Vtable
-// 0x10099574 (UILBString's, no new virtuals). sizeof 0x150 (copy ctor 0x100669c8). Field names are provisional.
-// Requires lle/UILBString.h, lle/FSPath.h.
+// FSPath whose extension is one of the valid ones (listed without the extension). Vtable 0x10099574 (UILBString's, no
+// new virtuals). The original's sizeof was 0x150.
+//
+// Whole in Rust (rust/crates/ee_ui/src/filelistobj.rs, R6 ui round 21): the valid extensions and the path are the
+// Rust object mRust; every method forwards there (UIFileListBox.cpp, with UIFileComboBox's). Requires
+// lle/UILBString.h.
 #ifndef LLE_UIFILELISTBOX_H
 #define LLE_UIFILELISTBOX_H
 
-#include <vector>
 #include "lle/UILBString.h"
+#include "rust/ee_ui.h"
 
 class FSPath;
 
 class LLE_API UIFileListBox : public UILBString {
+    friend struct UIFileListHost;           // UIFileListBox.cpp: the Rust object's calls out
 public:
     UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSelect, const GERectangle& inRectangle,
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
+    UIFileListBox(const UIFileListBox&) = delete;
+    UIFileListBox& operator=(const UIFileListBox&) = delete;
     virtual ~UIFileListBox();
-    void AddValidExtension(const UString& inExtension) { this->mValidExtensions.push_back(inExtension); }  // 0x100669b6
+    void AddValidExtension(const UString& inExtension);
     void CreateEntries(unsigned long inSortType);
     long DeleteSelectedFile();
-    FSPath* GetFilePath() const { return this->mFilePath; }  // ICF-folded (0x1005968d)
+    FSPath* GetFilePath() const;
     void SetSearchPaths(FSPath* inPath);
 private:
-    std::vector<UString> mValidExtensions;  // +0x13c ".xxx" (4 characters, compared with the name's last 4)
-    FSPath* mFilePath;                      // +0x14c referenced
+    EeUiFileList* mRust;                    // the valid extensions (".xxx") and the path (referenced)
 };
 
 #endif

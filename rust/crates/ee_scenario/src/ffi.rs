@@ -9,6 +9,7 @@ use crate::area::{self, EeScenarioAreaRecord};
 use crate::attribute;
 use crate::condition::{self, EeScenarioCondition};
 use crate::create;
+use crate::effect;
 use crate::fields::{
     self, EeScenarioAreaSave, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields,
     EeScenarioTriggerFields,
@@ -38,7 +39,15 @@ unsafe fn host_of(host: *const EeScenarioHost) -> EeScenarioHost {
     // SAFETY: the caller's contract
     unsafe {
         let h = &*host;
-        EeScenarioHost { ctx: h.ctx, read: h.read, players: h.players, write: h.write, tiles: h.tiles }
+        EeScenarioHost {
+            ctx: h.ctx,
+            read: h.read,
+            players: h.players,
+            write: h.write,
+            tiles: h.tiles,
+            world: h.world,
+            object: h.object,
+        }
     }
 }
 
@@ -594,6 +603,33 @@ pub unsafe extern "C" fn ee_scenario_manager_update(host: *const EeScenarioRound
     round::update(&mut h);
 }
 
+/// `EEScenarioManager::ShowDialogMessage` (round.rs `show_dialog`) over the round's host.
+///
+/// # Safety
+/// As [`ee_scenario_manager_update`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_show_dialog(host: *const EeScenarioRoundHost) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe {
+        EeScenarioRoundHost { ctx: (*host).ctx, fields: (*host).fields, queue: (*host).queue, op: (*host).op }
+    };
+    round::show_dialog(&mut h);
+}
+
+/// `EEScenarioManager::MoveCameraToStart`'s step (round.rs `camera_step`): `at` the camera's focus (x, y), moved.
+///
+/// # Safety
+/// `fields` must be the live manager's numbers and `at` two floats, for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_camera_step(
+    fields: *mut EeScenarioManagerFields,
+    at: *mut [f32; 2],
+    step: f32,
+) -> bool {
+    // SAFETY: the caller's contract
+    unsafe { round::camera_step(&mut *fields, &mut *at, step) }
+}
+
 /// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
 ///
 /// # Safety
@@ -720,4 +756,40 @@ pub unsafe extern "C" fn ee_scenario_create_units(
     // SAFETY: the caller's contract; the numbers are copied before the first read
     let (mut h, f) = unsafe { (host_of(host), *fields) };
     create::create_units(&mut h, object, &f)
+}
+
+/// `EESMEffect::Execute`'s body (effect.rs): the effect's numbers `fields` (copied on entry), whether it runs in a
+/// cinematic.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_effect_execute(
+    host: *const EeScenarioHost,
+    fields: *const EeScenarioEffectFields,
+    cinematic: bool,
+) {
+    // SAFETY: the caller's contract; the numbers are copied before the first call
+    let (mut h, f) = unsafe { (host_of(host), *fields) };
+    effect::execute(&mut h, &f, cinematic);
+}
+
+/// `EEChangeUnit(attribute, percent, unit, minimum, maximum, random, mode)` (unit_change.rs) on the host context's
+/// unit.
+///
+/// # Safety
+/// `host` must be a valid host table whose context holds the unit, for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_change_unit(
+    host: *const EeScenarioHost,
+    attribute: c_ulong,
+    percent: bool,
+    minimum: c_long,
+    maximum: c_ulong,
+    random: bool,
+    mode: c_long,
+) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { host_of(host) };
+    crate::unit_change::change_unit(&mut h, attribute, percent, minimum, maximum, random, mode);
 }

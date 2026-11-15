@@ -234,7 +234,7 @@ static void EECivFileCall(void* inCtx, const EeTechCivFileCall* c, EeTechCivFile
         r->value = theCivilization->CanAffordAll(x.mUpgrades);
         break;
     case EE_TECH_CIVF_OP_GRANT: {
-        EEMCivUpgradesPurchased* theMessage = new EEMCivUpgradesPurchased(x.mPlayerIndex, x.mUpgrades, x.mName, (long)c->a);
+        EEMRecord* theMessage = new EEMRecord(kMessageCivUpgradesPurchased, {x.mPlayerIndex, (long)c->a, x.mUpgrades, x.mName});
         if (gCommunications->GetIsMultiplayerSession())
             gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         else {

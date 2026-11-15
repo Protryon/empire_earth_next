@@ -379,7 +379,7 @@ extern "C" int64_t ee_screenscpp_cb(uint32_t inOp, uintptr_t inP, int64_t inA, i
             theUpgrades.push_back((EECivUpgrade)(q[0] | q[1] << 8 | q[2] << 16 | (uint32_t)q[3] << 24));
         }
         unsigned char thePlayer = (unsigned char)inA;
-        NEMessage* theMessage = new EEMCivUpgradesRequested(thePlayer, theUpgrades, theName, 0);
+        NEMessage* theMessage = new EEMRecord(kMessageCivUpgradesRequested, {thePlayer, 0, theUpgrades, theName});
         if (gCommunications->GetIsMultiplayerSession())
             gCommunications->ProcessLocalUserInput(theMessage, kSlotServer);
         else {
