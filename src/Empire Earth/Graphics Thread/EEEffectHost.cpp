@@ -2085,44 +2085,44 @@ long EEEffect::Step()
     return ee_gfx_effect_damaged_step(this->mRecord, &theTick, &theHost);
 }
 
-// The battlefield decals' placement (from the deleted EEE2DBattlefieldAmbient.cpp, 0xde374..0xde6e9): the physics
-// models' and the units' shell holes and blood stains
-static EEGraphicEffect* AmbientPickVariant(EEGraphicEffect* inEffect);
-static bool AmbientRollChance(EEGraphicEffect* inEffect);
-static EeGfxEffectAmbient* AmbientFindNear(unsigned long inType, GE3DPoint& inLocation);
-static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation);
+// The battlefield decals' placement (EEE2DBattlefieldAmbient.cpp's helpers, 0xde374..0xde6e9: ee_gfx
+// effect_placement.rs) over the graphic effects, the manager's list, the map and the manager's placement
+namespace {
+struct EEDecalOps {
+    static EeGfxDecalEffect Effect(void*, void* inEffect)
+    {
+        EEGraphicEffect* theEffect = static_cast<EEGraphicEffect*>(inEffect);
+        return EeGfxDecalEffect{theEffect->GetParam2(), theEffect->GetParam3(), theEffect->GetParam4(), theEffect->GetParam5(),
+                                (int32_t)theEffect->mIntParam2,
+                                {theEffect->mLinkedEffect1, theEffect->mLinkedEffect2, theEffect->mLinkedEffect3}};
+    }
+    static void* Next(void*, void* inEffect)
+    {
+        return inEffect ? gEffectManager->Next(static_cast<EEEffect*>(inEffect)) : gEffectManager->First();
+    }
+    static EeGfxEffectRecord* Record(void*, void* inEffect) { return static_cast<EEEffect*>(inEffect)->mRecord; }
+    static float Height(void*, const EeGe3DPoint* inPoint)
+    {
+        return gWorld.mMap->GetHeight(*reinterpret_cast<const GE3DPoint*>(inPoint));
+    }
+    static void Place(void*, void* inEffect, const EeGe3DPoint* inPoint)
+    {
+        gEffectManager->CreatePlacedEffect(*reinterpret_cast<const GE3DPoint*>(inPoint), static_cast<EEGraphicEffect*>(inEffect),
+                                           NULL);
+    }
+};
+const EeGfxDecalHost kDecalHost = {NULL, EEDecalOps::Effect, EEDecalOps::Next, EEDecalOps::Record, EEDecalOps::Height,
+                                   EEDecalOps::Place};
+}
 
-// NEAR: register choice (the original keeps the effect in edi, &mL68 in esi and the ambient in ebx, reloading
-// inLocation; ours gives the variant a parameter slot)
 // FUNCTION: EXE 0x4de374
 // Places up to N shell-hole decals of the unit's class around a point (ambient effects on); stops on a failed roll
 // The first one renews a decal already on that spot instead, unless its scatter roll moves it
 void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
 {
-    long i;
-    EEGraphicEffect* theVariant;
-    GE3DPoint theLocation = inLocation;
     EEGraphicEffect* theEffect;
-    if (!gAmbientEffectsEnabled || (theEffect = inUnit->mUnitClass->mShellHoleEffect) == 0)
-        return;
-    theLocation.SetZ(theLocation.GetZ() + 0.005f);
-    for (i = 0; i < theEffect->mIntParam2; i++) {
-        theVariant = AmbientPickVariant(theEffect);
-        if (!AmbientRollChance(theVariant))
-            return;
-        if (i == 0) {
-            EeGfxEffectAmbient* theAmbient = AmbientFindNear(0, theLocation);
-            if (theAmbient && !AmbientScatter(theVariant, theLocation)) {
-                theAmbient->age = 0.0f;
-                continue;
-            }
-        } else {
-            theLocation.SetX(EEEffect::GetRandomSpread(theEffect->GetParam5(), inLocation.GetX()));
-            theLocation.SetY(EEEffect::GetRandomSpread(theEffect->GetParam5(), inLocation.GetY()));
-            theLocation.SetZ(gWorld.mMap->GetHeight(theLocation) + 0.005f);
-        }
-        gEffectManager->CreatePlacedEffect(theLocation, theVariant, NULL);
-    }
+    if (gAmbientEffectsEnabled && (theEffect = inUnit->mUnitClass->mShellHoleEffect) != 0)
+        ee_gfx_decal_impact(&kDecalHost, theEffect, reinterpret_cast<const EeGe3DPoint*>(&inLocation));
 }
 
 // FUNCTION: EXE 0x4de4a9
@@ -2130,95 +2130,16 @@ void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
 // (moved forward along the heading for giraffes and horses)
 void EEPlaceTrackDecal(EEComplexUnit* inUnit)
 {
-    GE3DPoint theLocation;
     EEGraphicEffect* theEffect;
     if (!gAmbientEffectsEnabled || !gDrawBlood || (theEffect = inUnit->mUnitClass->mBloodStainEffect) == 0)
         return;
-    EEGraphicEffect* theVariant = AmbientPickVariant(theEffect);
-    if (!AmbientRollChance(theVariant))
-        return;
+    GE3DPoint theLocation;
     inUnit->GetPosition(theLocation);
     unsigned long theType = inUnit->mUnitClass->mUnitType;
-    if (theType == kUnitTypeResGiraffe || theType == kUnitTypeResHorse) {
-        const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-        float theAngle = UMArcTan2(theTransformation.mMatrix[1][0], theTransformation.mMatrix[0][0]);
-        float theDistance = 0.4f;
-        if (theType == kUnitTypeResHorse) {
-            theDistance = 0.3f;
-            theAngle -= 0.7853982f;
-        }
-        theLocation.SetX(theLocation.GetX() + UMCos(theAngle) * theDistance);
-        theLocation.SetY(theLocation.GetY() + UMCos(1.5707964f - theAngle) * theDistance);
-    }
-    theLocation.SetZ(theLocation.GetZ() + 0.005f);
-    gEffectManager->CreatePlacedEffect(theLocation, theVariant, NULL);
-}
-
-// FUNCTION: EXE 0x4de5ca
-// Returns the first battlefield decal of the given type within 0.05 tiles of a point, or NULL
-// NEAR: registers only
-static EeGfxEffectAmbient* AmbientFindNear(unsigned long inType, GE3DPoint& inLocation)
-{
-    EEEffect* theEffect = gEffectManager->First();
-    while (theEffect) {
-        if (theEffect->mKind == kEffect2DBattlefieldAmbient) {
-            EeGfxEffectAmbient& theAmbient = theEffect->mRecord->ambient;
-            if (theAmbient.kind == inType) {
-                GE3DPoint theOffset = inLocation;
-                theOffset -= *reinterpret_cast<const GE3DPoint*>(&theAmbient.center);
-                if (theOffset.GetX() < 0.05 && theOffset.GetX() > -0.05 &&
-                    theOffset.GetY() < 0.05 && theOffset.GetY() > -0.05)
-                    return &theAmbient;
-            }
-        }
-        theEffect = gEffectManager->Next(theEffect);
-    }
-    return NULL;
-}
-
-// FUNCTION: EXE 0x4de66d
-// Rolls the effect's chance (parameter 2); always succeeds when it is 1 or more
-static bool AmbientRollChance(EEGraphicEffect* inEffect)
-{
-    if (inEffect->GetParam2() >= 1.0f)
-        return true;
-    float theChance = inEffect->GetParam2();
-    return EEEffect::GetRandom() <= theChance;
-}
-
-// FUNCTION: EXE 0x4de6a1
-// Picks the effect or one of its up to three linked variants, each equally likely
-static EEGraphicEffect* AmbientPickVariant(EEGraphicEffect* inEffect)
-{
-    long theCount;
-    if (inEffect->mLinkedEffect3)
-        theCount = 4;
-    else if (inEffect->mLinkedEffect2)
-        theCount = 3;
-    else if (inEffect->mLinkedEffect1)
-        theCount = 2;
-    else
-        return inEffect;
-    switch (GetEffectRandomLong(1, theCount)) {
-    case 2:
-        return inEffect->mLinkedEffect1;
-    case 3:
-        return inEffect->mLinkedEffect2;
-    case 4:
-        return inEffect->mLinkedEffect3;
-    }
-    return inEffect;
-}
-
-// FUNCTION: EXE 0x4de6e9
-// With the effect's scatter chance (parameter 3), moves the point randomly within parameter 4; returns whether it moved
-static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation)
-{
-    if (EEEffect::GetRandom() >= inEffect->GetParam3())
-        return false;
-    ioLocation.SetX(ioLocation.GetX() + inEffect->GetParam4() * (0.5f - EEEffect::GetRandom()));
-    ioLocation.SetY(ioLocation.GetY() + inEffect->GetParam4() * (0.5f - EEEffect::GetRandom()));
-    return true;
+    const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
+    ee_gfx_decal_track(&kDecalHost, theEffect, reinterpret_cast<const EeGe3DPoint*>(&theLocation),
+                       theType == kUnitTypeResGiraffe ? EE_GFX_TRACK_GIRAFFE : theType == kUnitTypeResHorse ? EE_GFX_TRACK_HORSE : 0,
+                       theTransformation.mMatrix[0][0], theTransformation.mMatrix[1][0]);
 }
 
 // FUNCTION: EXE 0x4e1814
