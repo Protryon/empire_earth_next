@@ -10,7 +10,6 @@
 // where the original's budget is exhausted; GETerrainMesh::GetNumVisibleTileRows is likewise an inline the budget
 // refuses (called through the import in six functions, expanded with size() out of line in Light).
 #include <windows.h>
-#include <stddef.h>
 #include "gx/GX.h"
 
 #include "dx7/DX7Rasterizer.h"
@@ -50,104 +49,17 @@
 // SYNTHETIC: DX7HR 0x10004e61
 // SYNTHETIC: DX7HR 0x10004e6d
 
-// The terrain draws moved to Rust (rust/crates/ee_dx7/src/draw_terrain.rs, docs/RUST_PLAN.md R4.2). The C++ here builds
-// the plain views of the mesh for it and forwards; the fixed visible-vertex arrays and the polygon records are pinned.
-#define DX7_PIN(cpp, rust, cppField, rustField) static_assert(offsetof(cpp, cppField) == offsetof(rust, rustField), #cppField)
-static_assert(sizeof(GETerrainMesh::GETMRenderVertex) == sizeof(EeDx7RenderVertex), "ee_dx7/src/draw_terrain.rs RenderVertex");
-DX7_PIN(GETerrainMesh::GETMRenderVertex, EeDx7RenderVertex, mPoint, point);
-DX7_PIN(GETerrainMesh::GETMRenderVertex, EeDx7RenderVertex, mColor, color);
-DX7_PIN(GETerrainMesh::GETMRenderVertex, EeDx7RenderVertex, mVisibility, visibility);
-DX7_PIN(GETerrainMesh::GETMRenderVertex, EeDx7RenderVertex, mFog, fog);
-DX7_PIN(GETerrainMesh::GETMRenderVertex, EeDx7RenderVertex, mClipFlags, clip_flags);
-DX7_PIN(GETerrainMesh::GETMRenderVertex, EeDx7RenderVertex, mLinkedVisibility, linked_visibility);
-static_assert(sizeof(GETerrainMesh::GETMPolygon) == sizeof(EeDx7TerrainPolygon), "ee_dx7/src/draw_terrain.rs TerrainPolygon");
-DX7_PIN(GETerrainMesh::GETMPolygon, EeDx7TerrainPolygon, mVertices, vertices);
-DX7_PIN(GETerrainMesh::GETMPolygon, EeDx7TerrainPolygon, mAlpha, alpha);
-DX7_PIN(GETerrainMesh::GETMPolygon, EeDx7TerrainPolygon, mUV, uv);
-static_assert(sizeof(GXMATERIAL) == 68 && sizeof(std::pair<U2DPoint<long>, U2DPoint<long> >) == 4 * sizeof(long), "ee_dx7 draw_terrain");
-
-static EeDx7TerrainMeshView DX7TerrainViewOf(GETerrainMesh& inMesh)
-{
-    EeDx7TerrainMeshView theView;
-    theView.mesh = &inMesh;
-    theView.terrain_vertices = reinterpret_cast<EeDx7RenderVertex*>(&inMesh.GetTerrainRenderVertexArray()[0][0]);
-    theView.water_vertices = reinterpret_cast<EeDx7RenderVertex*>(&inMesh.GetWaterRenderVertexArray()[0][0]);
-    theView.terrain_visible = &inMesh.GetTerrainPointVisibilityArray()[0][0];
-    theView.water_visible = &inMesh.GetWaterPointVisibilityArray()[0][0];
-    theView.visible_tile_rows = inMesh.GetNumVisibleTileRows();
-    inMesh.GetTerrainVisibleBottomLeftIndices(theView.start_x, theView.start_y);
-    inMesh.GetTerrainVisibleTileDimensions(theView.width, theView.height);
-    theView.water_percentage = inMesh.GetVisibleWaterTilePercentage();
-    theView.is_space = inMesh.GetIsSpaceMap();
-    theView.edge_world = reinterpret_cast<const float(*)[3]>(inMesh.GetEdgeWorldPoints());
-    theView.edge_vertices = reinterpret_cast<EeDx7RenderVertex* const*>(inMesh.GetEdgeRenderVertices());
-    theView.edge_count = inMesh.GetEdgeVertexCount();
-    theView.cliff_world = reinterpret_cast<const float(*)[3]>(inMesh.GetCliffWorldPoints());
-    theView.cliff_vertices = reinterpret_cast<EeDx7RenderVertex* const*>(inMesh.GetCliffRenderVertices());
-    theView.cliff_count = inMesh.GetCliffVertexCount();
-    return theView;
-}
-
-// the terrain (or with inWater, the water) materials
-static std::vector<EeDx7MaterialView> DX7MaterialViewsOf(GETerrainMesh& inMesh, bool inWater)
-{
-    std::vector<EeDx7MaterialView> theViews(inWater ? inMesh.GetWaterMaterialCount() : inMesh.GetTerrainMaterialCount());
-    for (size_t i = 0; i < theViews.size(); i++) {
-        GETerrainMesh::GETMMaterialView theMaterial;
-        inMesh.GetMaterialView(inWater, i, theMaterial);
-        theViews[i].texture = theMaterial.mTexture;
-        theViews[i].polygons = reinterpret_cast<EeDx7TerrainPolygon* const*>(theMaterial.mPolygons);
-        theViews[i].polygon_count = theMaterial.mPolygonCount;
-        theViews[i].indices = reinterpret_cast<EeDx7TerrainPolygon**>(theMaterial.mIndices);
-        theViews[i].indices_length = theMaterial.mIndicesLength;
-        theViews[i].strips = reinterpret_cast<EeDx7TerrainPolygon**>(theMaterial.mStrips);
-        theViews[i].strips_length = theMaterial.mStripsLength;
-    }
-    return theViews;
-}
-
-extern "C" {
-float ee_dx7cpp_mesh_z(void* inMesh, unsigned long inX, unsigned long inY) { return static_cast<GETerrainMesh*>(inMesh)->GetZ(inX, inY); }
-void ee_dx7cpp_mesh_normal(void* inMesh, unsigned long inX, unsigned long inY, float* outNormal)
-{
-    GEVector* theNormal = static_cast<GETerrainMesh*>(inMesh)->GetVertexNormal(inX, inY);
-    outNormal[0] = theNormal->GetX();
-    outNormal[1] = theNormal->GetY();
-    outNormal[2] = theNormal->GetZ();
-}
-void ee_dx7cpp_mesh_vertex_color(void* inMesh, unsigned long inX, unsigned long inY, float* outColor)
-{
-    const GEColor& theColor = static_cast<GETerrainMesh*>(inMesh)->GetVertexColor(inX, inY);
-    outColor[0] = theColor.GetRed();
-    outColor[1] = theColor.GetGreen();
-    outColor[2] = theColor.GetBlue();
-}
-void ee_dx7cpp_mesh_water_color(void* inMesh, unsigned long inX, unsigned long inY, float* outColor)
-{
-    const GEColor& theColor = static_cast<GETerrainMesh*>(inMesh)->GetWaterColor(inX, inY);
-    outColor[0] = theColor.GetRed();
-    outColor[1] = theColor.GetGreen();
-    outColor[2] = theColor.GetBlue();
-}
-bool ee_dx7cpp_mesh_valid_tile(void* inMesh, unsigned long inX, unsigned long inY) { return static_cast<GETerrainMesh*>(inMesh)->GetIsValidTile(inX, inY); }
-}
+// The terrain draws moved to Rust (rust/crates/ee_dx7/src/draw_terrain.rs, docs/RUST_PLAN.md R4.2), which reads the mesh's
+// visible frame off its Rust object (ee_ge tmobj.rs: the views, the materials, the points; draw_ffi.rs pins the
+// records). The C++ forwards.
+static_assert(sizeof(std::pair<U2DPoint<long>, U2DPoint<long> >) == 4 * sizeof(long), "ee_dx7 draw_terrain grid lines");
 
 // FUNCTION: DX7HR 0x10004e78
 // Draws the visible terrain texture by texture, unclipped then clipped polygons (space maps draw materials 1..8 first);
 // with no visible tile row fills the view with two black quads instead
 long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
-    EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, false);
-    std::vector<EeDx7MaterialMapEntry> theMap;
-    std::vector<std::pair<GETexture*, unsigned long> > theSource;
-    inMesh.GetTerrainMaterialMap(theSource);
-    for (size_t i = 0; i < theSource.size(); i++) {
-        EeDx7MaterialMapEntry theEntry = {theSource[i].first, theSource[i].second};
-        theMap.push_back(theEntry);
-    }
-    return ee_dx7r_draw_terrain(this->mDX7, inScreen, &theMesh, theMap.data(), theMap.size(), theMaterials.data(),
-                                theMaterials.size(), inOrthographic);
+    return ee_dx7r_draw_terrain(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10005b93
@@ -156,8 +68,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
                                   std::vector<std::pair<U2DPoint<long>, U2DPoint<long> > >& inLines,
                                   GETexture* inTexture, float inWidth, unsigned long inScreen, bool inOrthographic)
 {
-    EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    return ee_dx7r_draw_grid_lines(this->mDX7, inScreen, &theMesh, reinterpret_cast<const long(*)[4]>(inLines.data()),
+    return ee_dx7r_draw_grid_lines(this->mDX7, inScreen, inMesh.GetRust(), reinterpret_cast<const long(*)[4]>(inLines.data()),
                                    inLines.size(), inTexture, inWidth, inOrthographic);
 }
 
@@ -165,8 +76,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
 // Draws two red edge lines for every visible tile, one draw call per tile
 long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
-    EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    return ee_dx7r_draw_terrain_grid(this->mDX7, inScreen, &theMesh, inOrthographic);
+    return ee_dx7r_draw_terrain_grid(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x100065d1
@@ -175,29 +85,22 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
                                          unsigned long inScreen, bool inOrthographic, const GEColor& inColor,
                                          float inOpacity)
 {
-    EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
     const long theRect[4] = {inRectangle.mLeft, inRectangle.mTop, inRectangle.mRight, inRectangle.mBottom};
-    const float theColor[3] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()};
-    return ee_dx7r_draw_terrain_highlight(this->mDX7, inScreen, &theMesh, theRect, theColor, inOpacity, inOrthographic);
+    return ee_dx7r_draw_terrain_highlight(this->mDX7, inScreen, inMesh.GetRust(), theRect, reinterpret_cast<const float*>(&inColor),
+                                          inOpacity, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10006f40
 // Draws every water material, unclipped then clipped polygons, and counts its triangles
 long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
-    EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, true);
-    return ee_dx7r_draw_water(this->mDX7, inScreen, &theMesh, theMaterials.data(), theMaterials.size(), inOrthographic);
+    return ee_dx7r_draw_water(this->mDX7, inScreen, inMesh.GetRust(), inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x1000723b
 // Lights the visible terrain and water vertices: ambient plus each active directional light, normalised, times
 // the vertex colour
-void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen)
-{
-    EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    ee_dx7r_light_terrain(this->mDX7, inScreen, &theMesh);
-}
+void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen) { ee_dx7r_light_terrain(this->mDX7, inScreen, inMesh.GetRust()); }
 
 // FUNCTION: DX7HR 0x10007763
 // Moves the visible terrain and water vertices to camera space (animating the water waves) and sets their clip flags,
@@ -205,13 +108,8 @@ void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen)
 void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewport, float inScale, bool inWaterOnly,
                                       bool inOrthographic)
 {
-    EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    std::vector<EeDx7MaterialView> theTerrainMaterials = DX7MaterialViewsOf(inMesh, false);
-    std::vector<EeDx7MaterialView> theWaterMaterials = DX7MaterialViewsOf(inMesh, true);
-    ee_dx7r_transform_to_camera(this->mDX7, &theMesh, theTerrainMaterials.data(), theTerrainMaterials.size(),
-                                theWaterMaterials.data(), theWaterMaterials.size(), &inViewport, inScale, inWaterOnly, inOrthographic);
+    ee_dx7r_transform_to_camera(this->mDX7, inMesh.GetRust(), &inViewport, inScale, inWaterOnly, inOrthographic);
 }
-
 
 // COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head and atexit
 // registrars:

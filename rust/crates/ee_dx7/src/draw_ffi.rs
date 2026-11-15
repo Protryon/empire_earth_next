@@ -12,13 +12,19 @@ use crate::draw::*;
 use crate::draw2d::{self, Draw2DHost, TextHost, TextInfo, TextRect};
 use crate::draw_model::{self, MaterialInfo, ModelHost, ModelInfo, Plane, ViewportInfo};
 use crate::draw_terrain::{
-    self, LightData, MaterialMapEntry, MaterialView, TerrainHost, TerrainMeshView, TerrainPolygon, WaterRipple,
+    self, LightData, MaterialMapEntry, MaterialView, RenderVertex, TerrainHost, TerrainMeshView, TerrainPolygon,
+    WaterRipple,
 };
 use crate::gx::{device_light, yield_now, RawDevice, RawGx, RawHost};
 use crate::rastobj::{EeDx7RastOp, EeDx7Rasterizer};
 use crate::state::ScreenState;
 use crate::vertex::Dx7StdColorVertex;
 use ee_ge::rastobj::{ee_ge_rast_get, ee_ge_rast_model_visible, ee_ge_rast_pixel_size, ee_ge_rast_ripple, EeGeRastVal};
+use ee_ge::tmobj::{
+    ee_ge_tm_edge_points, ee_ge_tm_edge_vertices, ee_ge_tm_get, ee_ge_tm_get_f, ee_ge_tm_is_valid, ee_ge_tm_material,
+    ee_ge_tm_material_map, ee_ge_tm_point, ee_ge_tm_point_visibility, ee_ge_tm_render_vertices, ee_ge_tm_vertex_color,
+    ee_ge_tm_water_color, EeGeTerrainMesh, EeGeTmMaterialView, EeGeTmVal,
+};
 use ee_ge::types::GeTransformation;
 use ee_ge::viewport::GeViewport;
 
@@ -48,12 +54,6 @@ mod cpp {
         pub fn ee_dx7cpp_polygon_indices(model: Handle, lod: c_ulong) -> *const u16;
         pub fn ee_dx7cpp_frame_vertices(model: Handle, frame: c_ulong, vertex_type: c_ulong) -> *const c_void;
         pub fn ee_dx7cpp_sub_model(model: Handle, index: c_ulong) -> Handle;
-
-        pub fn ee_dx7cpp_mesh_z(mesh: Handle, x: c_ulong, y: c_ulong) -> f32;
-        pub fn ee_dx7cpp_mesh_normal(mesh: Handle, x: c_ulong, y: c_ulong, out: *mut f32);
-        pub fn ee_dx7cpp_mesh_vertex_color(mesh: Handle, x: c_ulong, y: c_ulong, out: *mut f32);
-        pub fn ee_dx7cpp_mesh_water_color(mesh: Handle, x: c_ulong, y: c_ulong, out: *mut f32);
-        pub fn ee_dx7cpp_mesh_valid_tile(mesh: Handle, x: c_ulong, y: c_ulong) -> bool;
 
         pub fn ee_dx7cpp_text_measure(font: *const c_void, text: *const c_char, length: u32) -> i32;
         pub fn ee_dx7cpp_text_scaled(font: *const c_void, scale: f32) -> *const c_void;
@@ -256,26 +256,23 @@ impl ModelHost for Host {
 }
 
 impl TerrainHost for Host {
+    // the mesh is the Rust mesh (`TerrainMeshView::mesh`): `GetZ`, `GetVertexNormal`, `GetVertexColor`,
+    // `GetWaterColor` (one colour for every point) and `GetIsValidTile`
     fn mesh_z(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> f32 {
-        unsafe { ee_dx7cpp_mesh_z(mesh, x, y) }
+        unsafe { (*ee_ge_tm_point(tm(mesh), x, y)).z }
     }
     fn mesh_normal(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> [f32; 3] {
-        let mut out = [0.0; 3];
-        unsafe { ee_dx7cpp_mesh_normal(mesh, x, y, out.as_mut_ptr()) };
-        out
+        let n = unsafe { *(*ee_ge_tm_point(tm(mesh), x, y)).normal };
+        [n.x, n.y, n.z]
     }
     fn mesh_vertex_color(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> [f32; 3] {
-        let mut out = [0.0; 3];
-        unsafe { ee_dx7cpp_mesh_vertex_color(mesh, x, y, out.as_mut_ptr()) };
-        out
+        unsafe { *(ee_ge_tm_vertex_color(tm(mesh), x, y) as *const [f32; 3]) }
     }
-    fn mesh_water_color(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> [f32; 3] {
-        let mut out = [0.0; 3];
-        unsafe { ee_dx7cpp_mesh_water_color(mesh, x, y, out.as_mut_ptr()) };
-        out
+    fn mesh_water_color(&mut self, mesh: Handle, _x: c_ulong, _y: c_ulong) -> [f32; 3] {
+        unsafe { *(ee_ge_tm_water_color(tm(mesh)) as *const [f32; 3]) }
     }
     fn mesh_valid_tile(&mut self, mesh: Handle, x: c_ulong, y: c_ulong) -> bool {
-        unsafe { ee_dx7cpp_mesh_valid_tile(mesh, x, y) }
+        unsafe { ee_ge_tm_is_valid(tm(mesh), x, y, true) }
     }
     fn mark_viewport_changed(&mut self) {
         unsafe { (*self.state).mViewportChanged = true };
@@ -401,65 +398,38 @@ pub unsafe extern "C" fn ee_dx7r_draw_3d_line(
     )
 }
 
-unsafe fn materials<'a>(materials: *const MaterialView, count: usize) -> &'a [MaterialView] {
-    if count == 0 {
-        &[]
-    } else {
-        unsafe { core::slice::from_raw_parts(materials, count) }
-    }
-}
-
-/// `Draw(GETerrainMesh&)`: `map` is the terrain material map, in map order.
+/// `Draw(GETerrainMesh&)`: `mesh` is the mesh's Rust object (`GETerrainMesh::GetRust`).
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn ee_dx7r_draw_terrain(
     rast: *mut EeDx7Rasterizer,
     screen: c_ulong,
-    mesh: *const TerrainMeshView,
-    map: *const MaterialMapEntry,
-    map_count: usize,
-    terrain_materials: *const MaterialView,
-    material_count: usize,
+    mesh: *mut EeGeTerrainMesh,
     orthographic: bool,
 ) -> c_long {
-    let map = if map_count == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(map, map_count) } };
-    draw_terrain::draw_terrain(
-        &mut unsafe { Host::new(rast, screen) },
-        unsafe { &*mesh },
-        map,
-        unsafe { materials(terrain_materials, material_count) },
-        &screen_viewport(rast, screen),
-        orthographic,
-    )
+    // SAFETY: the caller's contract (the views first, as the C++ built them before the draw)
+    unsafe {
+        let view = mesh_view(mesh);
+        let map = material_map(mesh);
+        let materials = material_views(mesh, false);
+        let viewport = screen_viewport(rast, screen);
+        draw_terrain::draw_terrain(&mut Host::new(rast, screen), &view, &map, &materials, &viewport, orthographic)
+    }
 }
 
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn ee_dx7r_draw_water(
     rast: *mut EeDx7Rasterizer,
     screen: c_ulong,
-    mesh: *const TerrainMeshView,
-    water_materials: *const MaterialView,
-    material_count: usize,
+    mesh: *mut EeGeTerrainMesh,
     orthographic: bool,
 ) -> c_long {
-    draw_terrain::draw_water_and_mark(
-        &mut unsafe { Host::new(rast, screen) },
-        unsafe { &*mesh },
-        unsafe { materials(water_materials, material_count) },
-        &screen_viewport(rast, screen),
-        orthographic,
-    )
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn ee_dx7r_draw_terrain_material(
-    rast: *mut EeDx7Rasterizer,
-    screen: c_ulong,
-    list: *mut *mut TerrainPolygon,
-    length: c_ulong,
-) -> c_long {
-    draw_terrain::draw_terrain_material(&mut unsafe { Host::new(rast, screen) }, list, length)
+    // SAFETY: the caller's contract
+    unsafe {
+        let view = mesh_view(mesh);
+        let materials = material_views(mesh, true);
+        let viewport = screen_viewport(rast, screen);
+        draw_terrain::draw_water_and_mark(&mut Host::new(rast, screen), &view, &materials, &viewport, orthographic)
+    }
 }
 
 /// `DrawGridLines`: `lines` is `count` `(x1, y1, x2, y2)` records.
@@ -468,7 +438,7 @@ pub unsafe extern "C" fn ee_dx7r_draw_terrain_material(
 pub unsafe extern "C" fn ee_dx7r_draw_grid_lines(
     rast: *mut EeDx7Rasterizer,
     screen: c_ulong,
-    mesh: *const TerrainMeshView,
+    mesh: *mut EeGeTerrainMesh,
     lines: *const [c_long; 4],
     count: usize,
     texture: Handle,
@@ -476,54 +446,58 @@ pub unsafe extern "C" fn ee_dx7r_draw_grid_lines(
     orthographic: bool,
 ) -> c_long {
     let lines = if count == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(lines, count) } };
-    draw_terrain::draw_grid_lines(
-        &mut unsafe { Host::new(rast, screen) },
-        unsafe { &*mesh },
-        lines,
-        texture,
-        width,
-        &screen_viewport(rast, screen),
-        orthographic,
-    )
+    // SAFETY: the caller's contract
+    unsafe {
+        let view = mesh_view(mesh);
+        let viewport = screen_viewport(rast, screen);
+        draw_terrain::draw_grid_lines(
+            &mut Host::new(rast, screen),
+            &view,
+            lines,
+            texture,
+            width,
+            &viewport,
+            orthographic,
+        )
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn ee_dx7r_draw_terrain_grid(
     rast: *mut EeDx7Rasterizer,
     screen: c_ulong,
-    mesh: *const TerrainMeshView,
+    mesh: *mut EeGeTerrainMesh,
     orthographic: bool,
 ) -> c_long {
-    draw_terrain::draw_terrain_grid(
-        &mut unsafe { Host::new(rast, screen) },
-        unsafe { &*mesh },
-        &screen_viewport(rast, screen),
-        orthographic,
-    )
+    // SAFETY: the caller's contract
+    unsafe {
+        let view = mesh_view(mesh);
+        let viewport = screen_viewport(rast, screen);
+        draw_terrain::draw_terrain_grid(&mut Host::new(rast, screen), &view, &viewport, orthographic)
+    }
 }
 
+/// `DrawTerrainHighlight`: `color` is a `GEColor`.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn ee_dx7r_draw_terrain_highlight(
     rast: *mut EeDx7Rasterizer,
     screen: c_ulong,
-    mesh: *const TerrainMeshView,
+    mesh: *mut EeGeTerrainMesh,
     rect: *const c_long,
     color: *const f32,
     opacity: f32,
     orthographic: bool,
 ) -> c_long {
-    let rect = unsafe { [*rect, *rect.add(1), *rect.add(2), *rect.add(3)] };
-    let color = unsafe { [*color, *color.add(1), *color.add(2)] };
-    draw_terrain::draw_terrain_highlight(
-        &mut unsafe { Host::new(rast, screen) },
-        unsafe { &*mesh },
-        rect,
-        color,
-        opacity,
-        &screen_viewport(rast, screen),
-        orthographic,
-    )
+    // SAFETY: the caller's contract
+    unsafe {
+        let view = mesh_view(mesh);
+        let rect = [*rect, *rect.add(1), *rect.add(2), *rect.add(3)];
+        let color = [*color, *color.add(1), *color.add(2)];
+        let viewport = screen_viewport(rast, screen);
+        let host = &mut Host::new(rast, screen);
+        draw_terrain::draw_terrain_highlight(host, &view, rect, color, opacity, &viewport, orthographic)
+    }
 }
 
 /// `Light`: the base's computed ambient colour.
@@ -531,28 +505,28 @@ pub unsafe extern "C" fn ee_dx7r_draw_terrain_highlight(
 pub unsafe extern "C" fn ee_dx7r_light_terrain(
     rast: *mut EeDx7Rasterizer,
     screen: c_ulong,
-    mesh: *const TerrainMeshView,
+    mesh: *mut EeGeTerrainMesh,
 ) {
     // SAFETY: the caller's contract
-    let c = unsafe { *ee_ge::rastobj::ee_ge_rast_color(EeDx7Rasterizer::base(rast), true) };
-    draw_terrain::light_terrain(&mut unsafe { Host::new(rast, screen) }, unsafe { &*mesh }, [c.red, c.green, c.blue]);
+    unsafe {
+        let view = mesh_view(mesh);
+        let c = *ee_ge::rastobj::ee_ge_rast_color(EeDx7Rasterizer::base(rast), true);
+        draw_terrain::light_terrain(&mut Host::new(rast, screen), &view, [c.red, c.green, c.blue]);
+    }
 }
 
 /// `TransformToCamera`: `viewport` is the `GEViewport` given; the base's water ripple and the water clock.
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn ee_dx7r_transform_to_camera(
     rast: *mut EeDx7Rasterizer,
-    mesh: *const TerrainMeshView,
-    terrain_materials: *const MaterialView,
-    terrain_count: usize,
-    water_materials: *const MaterialView,
-    water_count: usize,
+    mesh: *mut EeGeTerrainMesh,
     viewport: *const c_void,
     scale: f32,
     water_only: bool,
     orthographic: bool,
 ) {
+    // SAFETY: the caller's contract
+    let (view, terrain, water) = unsafe { (mesh_view(mesh), material_views(mesh, false), material_views(mesh, true)) };
     let mut ripple = [0.0f32; 3];
     // SAFETY: the caller's contract
     unsafe { ee_ge_rast_ripple(EeDx7Rasterizer::base(rast), &mut ripple, false) };
@@ -563,9 +537,9 @@ pub unsafe extern "C" fn ee_dx7r_transform_to_camera(
     EeDx7Rasterizer::with_water_time(|water_time| {
         draw_terrain::transform_to_camera(
             &mut host,
-            unsafe { &*mesh },
-            unsafe { materials(terrain_materials, terrain_count) },
-            unsafe { materials(water_materials, water_count) },
+            &view,
+            &terrain,
+            &water,
             &info,
             scale,
             water_only,
@@ -574,6 +548,105 @@ pub unsafe extern "C" fn ee_dx7r_transform_to_camera(
             water_time,
         )
     });
+}
+// ---- the terrain mesh's views, read off its Rust object (`ee_ge::tmobj`)
+
+// the mesh's visible-frame records are the draws' (`GETMRenderVertex`, `GETMPolygon`)
+const _: () = {
+    use core::mem::{offset_of, size_of};
+    use ee_ge::tmobj::{EeGeTmPolygon, EeGeTmRenderVertex};
+    assert!(size_of::<EeGeTmRenderVertex>() == size_of::<RenderVertex>());
+    assert!(offset_of!(EeGeTmRenderVertex, color) == offset_of!(RenderVertex, color));
+    assert!(offset_of!(EeGeTmRenderVertex, visibility) == offset_of!(RenderVertex, visibility));
+    assert!(offset_of!(EeGeTmRenderVertex, fog) == offset_of!(RenderVertex, fog));
+    assert!(offset_of!(EeGeTmRenderVertex, clip_flags) == offset_of!(RenderVertex, clip_flags));
+    assert!(offset_of!(EeGeTmRenderVertex, linked_visibility) == offset_of!(RenderVertex, linked_visibility));
+    assert!(size_of::<EeGeTmPolygon>() == size_of::<TerrainPolygon>());
+    assert!(offset_of!(EeGeTmPolygon, alpha) == offset_of!(TerrainPolygon, alpha));
+    assert!(offset_of!(EeGeTmPolygon, uv) == offset_of!(TerrainPolygon, uv));
+};
+
+/// `DX7TerrainViewOf`: the mesh's visible frame as the terrain draws read it.
+///
+/// # Safety
+/// `mesh` is a live mesh.
+unsafe fn mesh_view(mesh: *mut EeGeTerrainMesh) -> TerrainMeshView {
+    // SAFETY: the caller's contract
+    unsafe {
+        TerrainMeshView {
+            mesh: mesh as Handle,
+            terrain_vertices: ee_ge_tm_render_vertices(mesh, false) as *mut RenderVertex,
+            water_vertices: ee_ge_tm_render_vertices(mesh, true) as *mut RenderVertex,
+            terrain_visible: ee_ge_tm_point_visibility(mesh, false) as *const bool,
+            water_visible: ee_ge_tm_point_visibility(mesh, true) as *const bool,
+            visible_tile_rows: ee_ge_tm_get(mesh, EeGeTmVal::VisibleTileRows),
+            start_x: ee_ge_tm_get(mesh, EeGeTmVal::BottomLeftX),
+            start_y: ee_ge_tm_get(mesh, EeGeTmVal::BottomLeftY),
+            width: ee_ge_tm_get(mesh, EeGeTmVal::VisibleTileWidth),
+            height: ee_ge_tm_get(mesh, EeGeTmVal::VisibleTileHeight),
+            water_percentage: ee_ge_tm_get_f(mesh, EeGeTmVal::VisibleWaterPercentage),
+            is_space: ee_ge_tm_get(mesh, EeGeTmVal::SpaceTileCount) > 0,
+            edge_world: ee_ge_tm_edge_points(mesh, false) as *const [f32; 3],
+            edge_vertices: ee_ge_tm_edge_vertices(mesh, false) as *const *mut RenderVertex,
+            edge_count: ee_ge_tm_get(mesh, EeGeTmVal::EdgeVertexCount),
+            cliff_world: ee_ge_tm_edge_points(mesh, true) as *const [f32; 3],
+            cliff_vertices: ee_ge_tm_edge_vertices(mesh, true) as *const *mut RenderVertex,
+            cliff_count: ee_ge_tm_get(mesh, EeGeTmVal::CliffVertexCount),
+        }
+    }
+}
+
+/// `DX7MaterialViewsOf`: the terrain (or with `water`, the water) materials.
+///
+/// # Safety
+/// `mesh` is a live mesh.
+unsafe fn material_views(mesh: *mut EeGeTerrainMesh, water: bool) -> Vec<MaterialView> {
+    let what = if water { EeGeTmVal::WaterMaterialCount } else { EeGeTmVal::TerrainMaterialCount };
+    // SAFETY: the caller's contract
+    let count = unsafe { ee_ge_tm_get(mesh, what) };
+    (0..count)
+        .map(|i| {
+            let mut m = EeGeTmMaterialView {
+                texture: core::ptr::null_mut(),
+                polygons: core::ptr::null_mut(),
+                polygon_count: 0,
+                indices: core::ptr::null_mut(),
+                indices_length: 0,
+                strips: core::ptr::null_mut(),
+                strips_length: 0,
+            };
+            // SAFETY: the caller's contract; i is one of the materials
+            unsafe { ee_ge_tm_material(mesh, water, i, &mut m) };
+            MaterialView {
+                texture: m.texture,
+                polygons: m.polygons as *const *mut TerrainPolygon,
+                polygon_count: m.polygon_count as c_ulong,
+                indices: m.indices as *mut *mut TerrainPolygon,
+                indices_length: m.indices_length as c_ulong,
+                strips: m.strips as *mut *mut TerrainPolygon,
+                strips_length: m.strips_length as c_ulong,
+            }
+        })
+        .collect()
+}
+
+/// `GetTerrainMaterialMap`: (texture, material index) in map order.
+///
+/// # Safety
+/// `mesh` is a live mesh.
+unsafe fn material_map(mesh: *mut EeGeTerrainMesh) -> Vec<MaterialMapEntry> {
+    // SAFETY: the caller's contract
+    let capacity = unsafe { ee_ge_tm_get(mesh, EeGeTmVal::TerrainMaterialCount) } as usize;
+    let mut textures = vec![core::ptr::null_mut(); capacity];
+    let mut indices: Vec<c_ulong> = vec![0; capacity];
+    // SAFETY: as above; the buffers hold `capacity` entries
+    let count = unsafe { ee_ge_tm_material_map(mesh, textures.as_mut_ptr(), indices.as_mut_ptr(), capacity) };
+    (0..count.min(capacity)).map(|k| MaterialMapEntry { texture: textures[k], index: indices[k] }).collect()
+}
+
+/// The mesh of a view (its `mesh` handle is the Rust mesh).
+fn tm(mesh: Handle) -> *mut EeGeTerrainMesh {
+    mesh as *mut EeGeTerrainMesh
 }
 
 /// `DX7ViewportInfoOf`: a viewport as the 3D draws read it.

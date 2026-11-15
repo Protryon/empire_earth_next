@@ -135,62 +135,6 @@ struct EeDx7StdColorVertexArray;
 /// A C++ object seen from Rust.
 using EeDx7Handle = void*;
 
-/// `GETMRenderVertex`, pinned.
-struct EeDx7RenderVertex {
-  float point[3];
-  float color[3];
-  float visibility;
-  float fog;
-  unsigned long clip_flags;
-  float *linked_visibility;
-};
-
-/// The parts of one `GETerrainMesh` the draws read directly (plain data, valid during the forwarded call).
-struct EeDx7TerrainMeshView {
-  EeDx7Handle mesh;
-  EeDx7RenderVertex *terrain_vertices;
-  EeDx7RenderVertex *water_vertices;
-  const bool *terrain_visible;
-  const bool *water_visible;
-  unsigned long visible_tile_rows;
-  unsigned long start_x;
-  unsigned long start_y;
-  unsigned long width;
-  unsigned long height;
-  float water_percentage;
-  bool is_space;
-  const float (*edge_world)[3];
-  EeDx7RenderVertex *const *edge_vertices;
-  unsigned long edge_count;
-  const float (*cliff_world)[3];
-  EeDx7RenderVertex *const *cliff_vertices;
-  unsigned long cliff_count;
-};
-
-/// One `(texture, material index)` of the terrain material map, in map order.
-struct EeDx7MaterialMapEntry {
-  EeDx7Handle texture;
-  unsigned long index;
-};
-
-/// `GETMPolygon`, pinned.
-struct EeDx7TerrainPolygon {
-  EeDx7RenderVertex *vertices[3];
-  float alpha[3];
-  float uv[3][2];
-};
-
-/// One `GETMMaterial` (its vectors' memory).
-struct EeDx7MaterialView {
-  EeDx7Handle texture;
-  EeDx7TerrainPolygon *const *polygons;
-  unsigned long polygon_count;
-  EeDx7TerrainPolygon **indices;
-  unsigned long indices_length;
-  EeDx7TerrainPolygon **strips;
-  unsigned long strips_length;
-};
-
 /// One `GEText` and its font as plain data (`DX7DrawText`). `font` is a `PlatFont*`, null when the font has none.
 struct EeDx7TextInfo {
   const void *font;
@@ -410,32 +354,21 @@ long ee_dx7r_draw_3d_line(EeDx7Rasterizer *rast,
                           float v,
                           bool orthographic);
 
-/// `Draw(GETerrainMesh&)`: `map` is the terrain material map, in map order.
+/// `Draw(GETerrainMesh&)`: `mesh` is the mesh's Rust object (`GETerrainMesh::GetRust`).
 long ee_dx7r_draw_terrain(EeDx7Rasterizer *rast,
                           unsigned long screen,
-                          const EeDx7TerrainMeshView *mesh,
-                          const EeDx7MaterialMapEntry *map,
-                          size_t map_count,
-                          const EeDx7MaterialView *terrain_materials,
-                          size_t material_count,
+                          EeGeTerrainMesh *mesh,
                           bool orthographic);
 
 long ee_dx7r_draw_water(EeDx7Rasterizer *rast,
                         unsigned long screen,
-                        const EeDx7TerrainMeshView *mesh,
-                        const EeDx7MaterialView *water_materials,
-                        size_t material_count,
+                        EeGeTerrainMesh *mesh,
                         bool orthographic);
-
-long ee_dx7r_draw_terrain_material(EeDx7Rasterizer *rast,
-                                   unsigned long screen,
-                                   EeDx7TerrainPolygon **list,
-                                   unsigned long length);
 
 /// `DrawGridLines`: `lines` is `count` `(x1, y1, x2, y2)` records.
 long ee_dx7r_draw_grid_lines(EeDx7Rasterizer *rast,
                              unsigned long screen,
-                             const EeDx7TerrainMeshView *mesh,
+                             EeGeTerrainMesh *mesh,
                              const long (*lines)[4],
                              size_t count,
                              EeDx7Handle texture,
@@ -444,29 +377,24 @@ long ee_dx7r_draw_grid_lines(EeDx7Rasterizer *rast,
 
 long ee_dx7r_draw_terrain_grid(EeDx7Rasterizer *rast,
                                unsigned long screen,
-                               const EeDx7TerrainMeshView *mesh,
+                               EeGeTerrainMesh *mesh,
                                bool orthographic);
 
+/// `DrawTerrainHighlight`: `color` is a `GEColor`.
 long ee_dx7r_draw_terrain_highlight(EeDx7Rasterizer *rast,
                                     unsigned long screen,
-                                    const EeDx7TerrainMeshView *mesh,
+                                    EeGeTerrainMesh *mesh,
                                     const long *rect,
                                     const float *color,
                                     float opacity,
                                     bool orthographic);
 
 /// `Light`: the base's computed ambient colour.
-void ee_dx7r_light_terrain(EeDx7Rasterizer *rast,
-                           unsigned long screen,
-                           const EeDx7TerrainMeshView *mesh);
+void ee_dx7r_light_terrain(EeDx7Rasterizer *rast, unsigned long screen, EeGeTerrainMesh *mesh);
 
 /// `TransformToCamera`: `viewport` is the `GEViewport` given; the base's water ripple and the water clock.
 void ee_dx7r_transform_to_camera(EeDx7Rasterizer *rast,
-                                 const EeDx7TerrainMeshView *mesh,
-                                 const EeDx7MaterialView *terrain_materials,
-                                 size_t terrain_count,
-                                 const EeDx7MaterialView *water_materials,
-                                 size_t water_count,
+                                 EeGeTerrainMesh *mesh,
                                  const void *viewport,
                                  float scale,
                                  bool water_only,
