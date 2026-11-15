@@ -30,6 +30,9 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION = 65;
 /// `kEffect2DBattlefieldAmbient`, `kEffect2DParticle`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_DECAL = 50;
 
+/// `kEffect3DFarm`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_FARM = 41;
+
 /// The shield.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 
@@ -277,6 +280,9 @@ enum class EeGfxEffect3DOp : uint32_t {
   /// the constructor between two units or from a unit to a point (the 2D muzzle blast's: the C++ put the start in the
   /// record's `sprite.start`, the end in `sprite.draw_position`)
   CreateBetween = 15,
+  /// the farm's rebuild on its unit (`EEE3DRust::ElevationChanged` after its rectangle test): the area placed again,
+  /// set up, the crops built if the farm is
+  Rebuild = 16,
 };
 
 /// The set-ups, one per C++ function.
@@ -1122,6 +1128,39 @@ struct EeGfxEffectGlow {
   bool hidden;
 };
 
+/// A model to draw (`GEModel*`), opaque to Rust.
+using EeGfxModel = void*;
+
+/// The farm's state.
+struct EeGfxEffectFarm {
+  /// `mArea` (the farm's tiles) and `mCenter` (saved)
+  EeGfxVolcanoArea area;
+  /// `mGroundModel` ("farm ground model"; its sub-model 0: the crops), referenced
+  EeGfxModel ground;
+  /// `mGroundCopy`, `mCropsCopy`: the draw copies, referenced
+  EeGfxModel ground_copy;
+  EeGfxModel crops_copy;
+  /// `mPhase`: 0..1, the sway step
+  float phase;
+  /// `mSwayA` (odd vertices), `mSwayB` (even): 0..63
+  int32_t sway_a;
+  int32_t sway_b;
+  /// `mRowLength`: the farm's tile size + 1
+  int32_t row_length;
+  /// `mBB4` (saved; cleared by Load)
+  bool bb4;
+  /// `mRebuild`: the crops are due (saved)
+  bool rebuild;
+  /// `mHasCrops`: the farm is built
+  bool has_crops;
+  /// `mDrawCrops`, `mDoppelganger`: what the queue decided for the draw
+  bool draw_crops;
+  bool doppelganger;
+  /// the port's (R5a.3): the unit's draw opacity and whether the field is drawn, taken by the queue
+  float draw_opacity;
+  bool draw_shown;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -1189,6 +1228,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectMarching marching;
   /// the light glow's (`effect_glow.rs`)
   EeGfxEffectGlow glow;
+  /// the farm's (`effect_farm.rs`)
+  EeGfxEffectFarm farm;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1487,9 +1528,6 @@ struct EeGfxGraphicFacts {
   float alpha;
 };
 
-/// A model to draw (`GEModel*`), opaque to Rust.
-using EeGfxModel = void*;
-
 /// The beam's unit as its step reads it (`EEE3DCitizenBeam::Step`).
 struct EeGfxBeamUnit {
   /// the unit is a complex unit
@@ -1555,6 +1593,30 @@ struct EeGfxTracerEnds {
   EeGe3DPoint start;
   EeGe3DPoint end;
   bool has_target;
+};
+
+/// What the farm reads of its unit.
+struct EeGfxFarmUnit {
+  /// `GetTileX()`, `GetTileY()`
+  int32_t tile_x;
+  int32_t tile_y;
+  /// `GetClass()->GetTileSize()`
+  int32_t tile_size;
+  /// the complex unit's `mIsBuilt`
+  bool built;
+  /// the complex unit's `mCloaked`: the crop variant (0..4)
+  int32_t cloaked;
+};
+
+/// The terrain under a farm field, as C++ callbacks over `context` (the `GETerrainMesh`).
+struct EeGfxFarmTerrain {
+  void *context;
+  /// `GetZ(x, y)`
+  float (*z)(void *context, uint32_t x, uint32_t y);
+  /// `*GetVertexNormal(x, y)`
+  EeGeVector (*normal)(void *context, uint32_t x, uint32_t y);
+  /// `GetMeshZ(x, y)`
+  float (*mesh_z)(void *context, float x, float y);
 };
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -1689,6 +1751,41 @@ struct EeGfxEffect3DHost {
   int32_t (*volcano_build)(void *context, EeGe3DPoint *points, float *heights, uint32_t count);
   /// the volcano's model
   EeGfxModel (*volcano_model)(void *context);
+  /// the farm's unit: its tile, size, built state and crop variant (`mCloaked`)
+  EeGfxFarmUnit (*farm_unit)(void *context);
+  /// the terrain the farm's meshes follow (`gWorld.mMap->mTerrainMesh`)
+  EeGfxFarmTerrain (*farm_terrain)(void *context);
+  /// the tile of the farm's first drop site (`EEGetFarmDropSites`); false when it has none
+  bool (*farm_drop_site)(void *context, int32_t *x, int32_t *y);
+  /// the farm unit's crop variant stored (`mCloaked`)
+  void (*farm_set_variant)(void *context, int32_t variant);
+  /// the graphic object's `mLoops[index]`
+  bool (*farm_loops)(void *context, uint32_t index);
+  /// any player holds a doppelganger of the farm on its tile (`HasDoppelganger(tile, unit)`)
+  bool (*farm_doppelganger_any)(void *context);
+  /// the current player's doppelganger of the farm is drawn (none, a free camera or a player who sees all: -1),
+  /// built (1) or not (0)
+  int32_t (*farm_doppelganger)(void *context);
+  /// the unit's draw opacity from `opacity` (`Fn23CEE2(unit, false, opacity)`)
+  float (*farm_opacity)(void *context, float opacity);
+  /// `SetScaledModel(model)` of the farm unit
+  void (*set_scaled_model)(void *context, EeGfxModel model);
+};
+
+/// One vertex of a built mesh: `set` names the values a builder wrote.
+struct EeGfxMeshVertex {
+  uint32_t set;
+  EeGe3DPoint point;
+  EeGeVector normal;
+  EeGfxTexCoord coord;
+  EeGfxColor color;
+  float opacity;
+};
+
+/// One triangle of a built mesh: `set` is non-zero once a builder wrote its three indices.
+struct EeGfxMeshTriangle {
+  uint32_t set;
+  uint32_t v[3];
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1810,6 +1907,39 @@ struct EeGfxRaster {
                  float alpha,
                  float brightness,
                  float alpha_ref);
+  /// `GetAlphaTestingRefValue`
+  float (*get_alpha_ref)();
+  /// `GetBlending(source, destination)`
+  void (*get_blending)(uint32_t *source, uint32_t *destination);
+  /// `gModelManager->CreateModel(polygons, vertices, 1, 0, 1, sub_models, name, flags)`, its name NUL-terminated
+  /// UTF-8 (not referenced)
+  EeGfxModel (*create_model)(uint32_t polygons,
+                             uint32_t vertices,
+                             uint32_t sub_models,
+                             const uint8_t *name,
+                             uint32_t flags);
+  /// `gModelManager->CreateSubModel(polygons, vertices, 1, 0, 1, 0, 0, 0, parent)` (not referenced)
+  EeGfxModel (*create_sub_model)(uint32_t polygons, uint32_t vertices, EeGfxModel parent);
+  /// `Reference`, `Dereference`
+  void (*model_reference)(EeGfxModel model);
+  void (*model_dereference)(EeGfxModel model);
+  /// `GetSubModel(index)`
+  EeGfxModel (*sub_model)(EeGfxModel model, uint32_t index);
+  /// a built mesh's set values into vertex array 0 and polygon array 0 (`EEEffectMesh::Store`)
+  void (*store_mesh)(EeGfxModel model,
+                     const EeGfxMeshVertex *vertices,
+                     size_t vertex_count,
+                     const EeGfxMeshTriangle *triangles,
+                     size_t triangle_count);
+  /// material 0's ranges: polygons from 0 (`SetPolygonStartingIndex(0, 0)`, `SetPolygonRangeLength(polygons, 0)`),
+  /// vertices from 0 (`SetVertexStartingIndex(0)`, `SetVertexRangeLength(vertices)`)
+  void (*material_ranges)(EeGfxModel model, uint32_t polygons, uint32_t vertices);
+  /// `GetBoundingRadius(0)`
+  float (*bounding_radius)(EeGfxModel model);
+  /// vertex array 0's points (and normals) of `from` copied into `to`'s, over `from`'s size
+  void (*copy_vertices)(EeGfxModel from, EeGfxModel to, bool normals);
+  /// a texture's `SetStageTextureAddressingMode(kAddressingWrap, -1)`
+  void (*texture_wrap)(EeGfxModel texture);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
@@ -2046,33 +2176,6 @@ struct EeGfxFarmField {
   float tile_size;
 };
 
-/// The terrain under a farm field, as C++ callbacks over `context` (the `GETerrainMesh`).
-struct EeGfxFarmTerrain {
-  void *context;
-  /// `GetZ(x, y)`
-  float (*z)(void *context, uint32_t x, uint32_t y);
-  /// `*GetVertexNormal(x, y)`
-  EeGeVector (*normal)(void *context, uint32_t x, uint32_t y);
-  /// `GetMeshZ(x, y)`
-  float (*mesh_z)(void *context, float x, float y);
-};
-
-/// One vertex of a built mesh: `set` names the values a builder wrote.
-struct EeGfxMeshVertex {
-  uint32_t set;
-  EeGe3DPoint point;
-  EeGeVector normal;
-  EeGfxTexCoord coord;
-  EeGfxColor color;
-  float opacity;
-};
-
-/// One triangle of a built mesh: `set` is non-zero once a builder wrote its three indices.
-struct EeGfxMeshTriangle {
-  uint32_t set;
-  uint32_t v[3];
-};
-
 /// The mesh's sizes: the vertices a side, the vertices and the triangles.
 struct EeGfxVolcanoSizes {
   int32_t side;
@@ -2273,6 +2376,58 @@ struct EeGfxDrawnHost {
   bool (*first_drawn)(void *context);
   bool (*complex_in_view)(void *context);
   bool (*model_in_view)(void *context, float x, float y);
+};
+
+/// One placed object's shadow (`EERenderLists::mShadows2`: its texture key and `EERenderShadow`).
+struct EeGfxShadow {
+  EeGfxModel texture;
+  /// `mLocation`
+  EeGe3DPoint location;
+  /// `mScale` (drawn when positive)
+  float scale;
+  /// `mOpacity`
+  float opacity;
+};
+
+/// One unit's shadow (`EERenderLists::mUnits2`'s `EERenderUnit`, its source's shadow model and texture, its class's
+/// scale).
+struct EeGfxUnitShadow {
+  /// `mTransformation`
+  EeGeTransformation transformation;
+  /// `mSource->mShadowModel` (null: the shared quad)
+  EeGfxModel model;
+  /// `mSource->mShadowTexture`
+  EeGfxModel texture;
+  /// `mCategory`
+  int32_t category;
+  /// `mShadowScale` (drawn when positive)
+  float shadow_scale;
+  /// `mGroundZ`
+  float ground_z;
+  /// `mScale`
+  float scale;
+  /// `gUnitClassTable[mUnitClassIndex]->GetScale()`
+  float class_scale;
+  /// `mOpacity`
+  float opacity;
+};
+
+/// The frame's lists and the C++'s answers for one `RenderScene`.
+struct EeGfxShadowScene {
+  void *context;
+  const EeGfxShadow *shadows;
+  size_t shadow_count;
+  const EeGfxUnitShadow *units;
+  size_t unit_count;
+  /// `gDrawGroundShadows`
+  bool draw_shadows;
+  /// `gRenderSnapshot.mIsSpaceMap`
+  bool space_map;
+  /// the terrain mesh's water info of a tile, -1 off the mesh (`GetIsValidTile`, `GetWaterInfo`)
+  int32_t (*tile_water)(void *context, uint32_t x, uint32_t y);
+  /// the effects of render queue 0, batched per texture (`BeginEffectBatches`, `DrawPass2`, `FlushEffectBatches`,
+  /// `EndEffectBatches`)
+  void (*draw_effects)(void *context);
 };
 
 /// The texture's u across the five vertices of a row.
@@ -3497,6 +3652,24 @@ EeGfxColor ee_gfx_capture_waypoint_tint(int32_t carrier_id);
 
 /// `FillRenderLists`' music intensity.
 uint32_t ee_gfx_capture_music_intensity(uint32_t current, float fighting, float count);
+
+/// `EEROGroundShadows::CreateShadowModel`.
+///
+/// # Safety
+/// `raster` is readable and its functions valid.
+void ee_gfx_ground_shadows_create(const EeGfxRaster *raster);
+
+/// `EEROGroundShadows::ReleaseShadowModel`.
+///
+/// # Safety
+/// `raster` is readable and its functions valid.
+void ee_gfx_ground_shadows_release(const EeGfxRaster *raster);
+
+/// `EEROGroundShadows::RenderScene` over the frame's lists.
+///
+/// # Safety
+/// `raster` and `scene` are readable and their functions valid; `scene`'s arrays hold their counts.
+void ee_gfx_ground_shadows_render(const EeGfxRaster *raster, const EeGfxShadowScene *scene);
 
 }  // extern "C"
 

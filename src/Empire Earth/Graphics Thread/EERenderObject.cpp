@@ -33,6 +33,7 @@
 #include "lle/GERasterizer.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
+#include "lle/GEModelManager.h"
 #include "lle/GEPhysicalModel.h"
 #include "lle/GELight.h"
 #include "lle/GEBitmap.h"
@@ -57,6 +58,7 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEEffect.h"
 #include "ee/EEEffect2D.h"          // gEffect2DModel (the Rust draws' standing plane)
+#include "ee/EEEffectMesh.h"        // the table's store_mesh
 #include "ee/EERenderSnapshot.h"     // gRenderSnapshot (the Rust draws' camera)
 #include "ee/EEUnitPicker.h"
 #include "ee/EEGhostUnit.h"
@@ -1619,6 +1621,46 @@ static std::vector<float> sKeptU;      // the texture coordinates' u that model_
 static std::vector<EeGfxBeamVertex> sKeptBeam;   // the vertices model_stretch changed
 static std::vector<float> sKeptBeamYs;           // the sub-models' internal ys model_stretch changed
 
+// the raster table's models (ee_gfx raster.rs; the farm's and the ground shadows'): made through the model manager
+static void* EERasterCreateModel(uint32_t inPolygons, uint32_t inVertices, uint32_t inSubModels, const uint8_t* inName,
+                                 uint32_t inFlags)
+{
+    return gModelManager->CreateModel(inPolygons, inVertices, 1, 0, 1, inSubModels,
+                                      UString(reinterpret_cast<const char*>(inName)), inFlags);
+}
+static void* EERasterCreateSubModel(uint32_t inPolygons, uint32_t inVertices, void* inParent)
+{
+    return gModelManager->CreateSubModel(inPolygons, inVertices, 1, 0, 1, 0, 0, 0, static_cast<GEModel*>(inParent));
+}
+static void EERasterStoreMesh(void* inModel, const EeGfxMeshVertex* inVertices, size_t inVertexCount,
+                              const EeGfxMeshTriangle* inTriangles, size_t inTriangleCount)
+{
+    EEStoreMesh(static_cast<GEModel*>(inModel), inVertices, inVertexCount, inTriangles, inTriangleCount);
+}
+static void EERasterMaterialRanges(void* inModel, uint32_t inPolygons, uint32_t inVertices)
+{
+    GEMaterial* theMaterial = static_cast<GEModel*>(inModel)->GetMaterial(0);
+    theMaterial->SetPolygonStartingIndex(0, 0);
+    theMaterial->SetPolygonRangeLength(inPolygons, 0);
+    theMaterial->SetVertexStartingIndex(0);
+    theMaterial->SetVertexRangeLength(inVertices);
+}
+static void EERasterCopyVertices(void* inFrom, void* inTo, bool inNormals)
+{
+    GEVertexArray* theFrom = static_cast<GEModel*>(inFrom)->GetVertexArray(0);
+    GEVertexArray* theTo = static_cast<GEModel*>(inTo)->GetVertexArray(0);
+    GE3DPoint thePoint;
+    GEVector theNormal;
+    for (unsigned long i = 0; i < theFrom->GetSize(); i++) {
+        theFrom->GetPoint(thePoint, i);
+        theTo->SetPoint(thePoint, i);
+        if (inNormals) {
+            theFrom->GetNormal(theNormal, i);
+            theTo->SetNormal(theNormal, i);
+        }
+    }
+}
+
 // a beam model's vertices' points and texture coordinates (the tracer beam's stretch and its restore)
 static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
 {
@@ -1837,7 +1879,26 @@ const EeGfxRaster gEERustRaster = {
             AddGroundSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
         else
             AddBlendedSprite(thePosition, theColor, inRotation, inSize, inAlpha, inBrightness, inAlphaReference);
-    }
+    },
+    // the farm's and the ground shadows' (ee_gfx effect_farm.rs, shadows.rs): the state they keep, their models
+    []() -> float { return gRasterizer->GetAlphaTestingRefValue(gScreenIndex); },
+    [](uint32_t* outSource, uint32_t* outDestination) {
+        unsigned long theSource;
+        unsigned long theDestination;
+        gRasterizer->GetBlending(theSource, theDestination, gScreenIndex);
+        *outSource = (uint32_t)theSource;
+        *outDestination = (uint32_t)theDestination;
+    },
+    EERasterCreateModel,
+    EERasterCreateSubModel,
+    [](void* inModel) { static_cast<GEModel*>(inModel)->Reference(); },
+    [](void* inModel) { static_cast<GEModel*>(inModel)->Dereference(); },
+    [](void* inModel, uint32_t inIndex) -> void* { return static_cast<GEModel*>(inModel)->GetSubModel(inIndex); },
+    EERasterStoreMesh,
+    EERasterMaterialRanges,
+    [](void* inModel) -> float { return static_cast<GEModel*>(inModel)->GetBoundingRadius(0); },
+    EERasterCopyVertices,
+    [](void* inTexture) { static_cast<GETexture*>(inTexture)->SetStageTextureAddressingMode(kAddressingWrap, -1); },
 };
 
 // FUNCTION: EXE 0x50f60f

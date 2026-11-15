@@ -269,6 +269,8 @@ pub struct EeGfxEffectRecord {
     pub marching: crate::effect_icons::EeGfxEffectMarching,
     /// the light glow's (`effect_glow.rs`)
     pub glow: crate::effect_glow::EeGfxEffectGlow,
+    /// the farm's (`effect_farm.rs`)
+    pub farm: crate::effect_farm::EeGfxEffectFarm,
 }
 
 /// The identity (`GETransformation()`).
@@ -317,6 +319,7 @@ impl EeGfxEffectRecord {
             sprite: crate::effect_sprite::EeGfxEffectSprite::default(),
             marching: crate::effect_icons::EeGfxEffectMarching::default(),
             glow: crate::effect_glow::EeGfxEffectGlow::default(),
+            farm: crate::effect_farm::EeGfxEffectFarm::default(),
         }
     }
 

@@ -12,7 +12,8 @@
 // 0xee1b4..0xee5c0), 0x3b the multi-effect (EEE3DMultiEffect, 0xf4247..0xf43c7), 0x34 the energy wall
 // (EEE3DEnergyWall, 0xed606..0xee1b4), 0x35 the damage vent (EEE3DDamageVent, 0xea9e2..0xebbba), 2 the icon
 // (EEE3DIcon, 0xf2046..0xf2d93), 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600), 0x40 the tracer beam
-// (EEE3DTracerBeam, 0xfc382..0xfd330) and 0x20 the volcano (EEE3DVolcano, 0xfe553..0x101c34), all deleted.
+// (EEE3DTracerBeam, 0xfc382..0xfd330), 0x20 the volcano (EEE3DVolcano, 0xfe553..0x101c34) and 0x29 the farm
+// (EEE3DFarm, 0xee5c0..0xf1327), all deleted.
 // Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -50,10 +51,14 @@ public:
     virtual long Step() { return this->Call(EeGfxEffect3DOp::Step); }
     // the icon's and goal's (EEE3DIcon::SetLocation, 0xf2637): a fixed one moves to inLocation; others ignore it
     void SetLocation(const GE3DPoint& inLocation);
-    // the energy wall's: also true where the current player holds a doppelganger of its unit (then marked seen)
+    // the energy wall's: also true where the current player holds a doppelganger of its unit (then marked seen); the
+    // farm's: any of its tiles while it lives, else the current player's doppelganger of it
     virtual bool IsTileVisible(EEMapTile* inTile);
-    // the tracer beam's: its target too unless the effect keeps its unit (EEE3DTracerBeam::ReplaceUnit, 0xfd10f)
+    // the tracer beam's: its target too unless the effect keeps its unit (EEE3DTracerBeam::ReplaceUnit, 0xfd10f); the
+    // farm's is empty
     virtual void ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit);
+    // the farm's: rebuilt when the changed terrain rectangle overlaps its field (EEE3DFarm::ElevationChanged, 0xf128a)
+    virtual void ElevationChanged(long inLeft, long inBottom, long inRight, long inTop);
 
     // inArg: a constructor's unit, point or line (the multi-effect's linked effects are made through it)
     long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL, long inBase = 0,

@@ -6,7 +6,7 @@
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
 // EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp, EEE3DDamageVent.cpp,
-// EEE3DIcon.cpp, EEE3DGoal.cpp, EEE3DTracerBeam.cpp and EEE3DVolcano.cpp.
+// EEE3DIcon.cpp, EEE3DGoal.cpp, EEE3DTracerBeam.cpp, EEE3DVolcano.cpp and EEE3DFarm.cpp (effect_farm.rs).
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -66,6 +66,12 @@
 #include "lle/FSPath.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEEffectMesh.h"
+#include "ee/EEDoppelganger.h"
+#include "ee/EEAreaUtilities.h"
+
+class EEComplexUnit;
+// 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
+bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity);
 
 namespace {
 // the map's questions for ee_gfx volcano.rs (the volcano's build)
@@ -88,6 +94,22 @@ EeGfxColor EEVolcanoLight(void* inMap, int32_t inX, int32_t inY, int32_t inCorne
     const GEColor& theColor = static_cast<EEMap*>(inMap)->GetVertexColor(inX, inY, inCorner);
     EeGfxColor theResult = {theColor.mRed, theColor.mGreen, theColor.mBlue};
     return theResult;
+}
+
+// the terrain's questions for ee_gfx farm.rs (the farm's meshes)
+float EEFarmZ(void* inMesh, uint32_t inX, uint32_t inY)
+{
+    return static_cast<GETerrainMesh*>(inMesh)->GetZ(inX, inY);
+}
+EeGeVector EEFarmNormal(void* inMesh, uint32_t inX, uint32_t inY)
+{
+    const GEVector* theNormal = static_cast<GETerrainMesh*>(inMesh)->GetVertexNormal(inX, inY);
+    EeGeVector theResult = {theNormal->GetX(), theNormal->GetY(), theNormal->GetZ()};
+    return theResult;
+}
+float EEFarmMeshZ(void* inMesh, float inX, float inY)
+{
+    return static_cast<GETerrainMesh*>(inMesh)->GetMeshZ(inX, inY);
 }
 
 // the world's answers for one call
@@ -659,6 +681,60 @@ struct Ask {
         return (int32_t)theResult;
     }
     static void* VolcanoModel(void* inAsk) { return E(inAsk)->mVolcanoModel; }
+    // the farm's (EEE3DFarm, 0xee5c0..0xf1327): its unit, the terrain, its first drop site's tile, its crop variant
+    // (the unit's mCloaked), the graphic's loops, the doppelgangers, the draw opacity, the scaled model
+    static EeGfxFarmUnit FarmUnit(void* inAsk)
+    {
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        return EeGfxFarmUnit{(int32_t)theUnit->GetTileX(), (int32_t)theUnit->GetTileY(),
+                             (int32_t)theUnit->GetClass()->GetTileSize(), theComplex->mIsBuilt, (int32_t)theComplex->mCloaked};
+    }
+    static EeGfxFarmTerrain FarmTerrain(void*)
+    {
+        EeGfxFarmTerrain theTerrain;
+        theTerrain.context = &gWorld.mMap->mTerrainMesh;
+        theTerrain.z = EEFarmZ;
+        theTerrain.normal = EEFarmNormal;
+        theTerrain.mesh_z = EEFarmMeshZ;
+        return theTerrain;
+    }
+    static bool FarmDropSite(void* inAsk, int32_t* outX, int32_t* outY)
+    {
+        std::vector<EEUnit*> theUnits;
+        if (!EEGetFarmDropSites(E(inAsk)->mUnit->mComplexUnit, theUnits))
+            return false;
+        *outX = (int32_t)theUnits[0]->mComplexUnit->GetTileX();
+        *outY = (int32_t)theUnits[0]->mComplexUnit->GetTileY();
+        return true;
+    }
+    static void FarmSetVariant(void* inAsk, int32_t inVariant) { E(inAsk)->mUnit->mComplexUnit->mCloaked = inVariant; }
+    static bool FarmLoops(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mLoops[inIndex]; }
+    static bool FarmDoppelgangerAny(void* inAsk)
+    {
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        return gDoppelgangerManager.HasDoppelganger(static_cast<EETile*>(theUnit->mTile), theUnit) == true;
+    }
+    static int32_t FarmDoppelganger(void* inAsk)
+    {
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
+        EEDoppelganger* theDoppelganger = NULL;
+        if (theUnit->mTile)
+            theDoppelganger = gDoppelgangerManager.GetDoppelganger(static_cast<EETile*>(theUnit->mTile), theUnit, theCurrent->mPlayerID);
+        if (theDoppelganger && !gFreeCamera && !theCurrent->mSeesAll)
+            return theDoppelganger->IsBuilt() ? 1 : 0;
+        return -1;
+    }
+    static float FarmOpacity(void* inAsk, float inOpacity)
+    {
+        Fn23CEE2(E(inAsk)->mUnit->mComplexUnit, false, inOpacity);
+        return inOpacity;
+    }
+    static void SetScaledModel(void* inAsk, void* inModel)
+    {
+        E(inAsk)->mUnit->mComplexUnit->SetScaledModel(static_cast<GEModel*>(inModel));
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -780,6 +856,15 @@ EEE3DRust::~EEE3DRust()
         this->mTarget->Dereference();
     if (this->mVolcanoModel)   // the original dereferenced it without a test
         this->mVolcanoModel->Dereference();
+    if (this->mKind == 0x29) {   // the farm's ground model and draw copies (EEE3DFarm's destructor, 0xee775)
+        EeGfxEffectFarm& theFarm = this->mRecord->farm;
+        if (theFarm.ground)
+            static_cast<GEModel*>(theFarm.ground)->Dereference();
+        if (theFarm.ground_copy)
+            static_cast<GEModel*>(theFarm.ground_copy)->Dereference();
+        if (theFarm.crops_copy)
+            static_cast<GEModel*>(theFarm.crops_copy)->Dereference();
+    }
 }
 
 // the facts of an effect's graphic effect (inEffect), unit (inUnit) and the tick the Rust effects read (EEE3DRust's and
@@ -850,7 +935,9 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale,
                                  Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::MarketUnbuilt, Ask::QueueScreen,
                                  Ask::TracerEnds, Ask::TracerImpact, Ask::TracerHit, Ask::TracerSavedTarget,
-                                 Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel};
+                                 Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel, Ask::FarmUnit,
+                                 Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant, Ask::FarmLoops,
+                                 Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity, Ask::SetScaledModel};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -890,6 +977,8 @@ long EEE3DRust::RepairPointers()
 // the base's, then the tracer beam's target unless the effect keeps its unit (EEE3DTracerBeam::ReplaceUnit, 0xfd10f)
 void EEE3DRust::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 {
+    if (this->mKind == 0x29)   // the farm's is empty (ICF-folded into 0x163d6f)
+        return;
     EEEffect::ReplaceUnit(inOldUnit, inNewUnit);
     if (this->mKind != 0x40 || this->mTarget != inOldUnit || this->mKeepsUnit)
         return;
@@ -909,6 +998,24 @@ void EEE3DRust::SetLocation(const GE3DPoint& inLocation)
 // is marked seen: its texture frame restarts) (EEE3DEnergyWall::IsTileVisible, 0xed98d); the others: the base's
 bool EEE3DRust::IsTileVisible(EEMapTile* inTile)
 {
+    if (this->mKind == 0x29) {   // the farm (EEE3DFarm::IsTileVisible, 0xf0b1c)
+        bool theFarmSeen = false;
+        if (gWorld.mMap) {
+            if (this->mUnit->mHitPoints > 0) {
+                unsigned long theSize = this->mUnit->GetClass()->GetTileSize();
+                for (unsigned long y = 0; y < theSize && !theFarmSeen; y++) {
+                    for (unsigned long x = 0; x < theSize && !theFarmSeen; x++) {
+                        EEMapTile* theTile = gWorld.mMap->GetTile(this->mUnit->GetTileX() + x, this->mUnit->GetTileY() + y);
+                        if (theTile)
+                            theFarmSeen = EEEffect3D::IsTileVisible(theTile);
+                    }
+                }
+            }
+            if (!theFarmSeen)
+                theFarmSeen = gDoppelgangerManager.HasDoppelganger(inTile, this->mUnit->mComplexUnit, gWorld.mCurrentPlayer);
+        }
+        return theFarmSeen;
+    }
     bool theResult = inTile->IsSeenBy(gWorld.GetCurrentPlayer());
     if (theResult || this->mKind != 0x34)
         return theResult;
@@ -918,6 +1025,20 @@ bool EEE3DRust::IsTileVisible(EEMapTile* inTile)
     if (theResult)
         this->mRecord->wall.seen = true;
     return theResult;
+}
+
+// the farm (0x29): rebuilt on its unit when the changed terrain rectangle overlaps its field (EEE3DFarm::ElevationChanged,
+// 0xf128a); the others: the base's (nothing)
+void EEE3DRust::ElevationChanged(long inLeft, long inBottom, long inRight, long inTop)
+{
+    if (this->mKind != 0x29)
+        return;
+    GERectangle theRectangle(inLeft, inTop, inRight, inBottom);
+    const EeGfxVolcanoArea& theArea = this->mRecord->farm.area;
+    if (!(theRectangle.mLeft <= theArea.right) || !(theRectangle.mRight >= theArea.left) ||
+        !(theRectangle.mTop <= theArea.bottom) || !(theRectangle.mBottom >= theArea.top))
+        return;
+    this->Call(EeGfxEffect3DOp::Rebuild);
 }
 
 long EEE3DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)

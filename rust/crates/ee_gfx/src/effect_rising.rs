@@ -15,6 +15,7 @@ use ee_ge::types::{Ge3DPoint, GeTransformation, GeVector};
 use crate::effect_additive::{additive, EeGfxUnitFrame, EE_GFX_EFFECT_KIND_ADDITIVE_PASS};
 use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
+use crate::effect_farm::{farm_effect, farm_file, EeGfxFarmUnit, EE_GFX_EFFECT_KIND_FARM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
 use crate::effect_hurricane::{hurricane, load_hurricane, save_hurricane, EE_GFX_EFFECT_KIND_HURRICANE};
 use crate::effect_icon::{icon, load_icon, save_icon, EE_GFX_EFFECT_KIND_GOAL, EE_GFX_EFFECT_KIND_ICON};
@@ -37,6 +38,7 @@ use crate::effect_vent::{damage_vent, EeGfxFrames, EeGfxVentPoints, EeGfxVentUni
 use crate::effect_volcano::{volcano, volcano_file, EE_GFX_EFFECT_KIND_VOLCANO};
 use crate::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
 use crate::effects::EeGfxColor;
+use crate::ffi_mesh::EeGfxFarmTerrain;
 use crate::lighting::EeGfxLighting;
 use crate::raster::{EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE};
 
@@ -71,6 +73,9 @@ pub enum EeGfxEffect3DOp {
     /// the constructor between two units or from a unit to a point (the 2D muzzle blast's: the C++ put the start in the
     /// record's `sprite.start`, the end in `sprite.draw_position`)
     CreateBetween = 15,
+    /// the farm's rebuild on its unit (`EEE3DRust::ElevationChanged` after its rectangle test): the area placed again,
+    /// set up, the crops built if the farm is
+    Rebuild = 16,
 }
 
 /// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
@@ -262,6 +267,25 @@ pub struct EeGfxEffect3DHost {
         extern "C" fn(context: *mut c_void, points: *mut Ge3DPoint, heights: *mut f32, count: u32) -> i32,
     /// the volcano's model
     pub volcano_model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
+    /// the farm's unit: its tile, size, built state and crop variant (`mCloaked`)
+    pub farm_unit: extern "C" fn(context: *mut c_void) -> EeGfxFarmUnit,
+    /// the terrain the farm's meshes follow (`gWorld.mMap->mTerrainMesh`)
+    pub farm_terrain: extern "C" fn(context: *mut c_void) -> EeGfxFarmTerrain,
+    /// the tile of the farm's first drop site (`EEGetFarmDropSites`); false when it has none
+    pub farm_drop_site: extern "C" fn(context: *mut c_void, x: *mut i32, y: *mut i32) -> bool,
+    /// the farm unit's crop variant stored (`mCloaked`)
+    pub farm_set_variant: extern "C" fn(context: *mut c_void, variant: i32),
+    /// the graphic object's `mLoops[index]`
+    pub farm_loops: extern "C" fn(context: *mut c_void, index: u32) -> bool,
+    /// any player holds a doppelganger of the farm on its tile (`HasDoppelganger(tile, unit)`)
+    pub farm_doppelganger_any: extern "C" fn(context: *mut c_void) -> bool,
+    /// the current player's doppelganger of the farm is drawn (none, a free camera or a player who sees all: -1),
+    /// built (1) or not (0)
+    pub farm_doppelganger: extern "C" fn(context: *mut c_void) -> i32,
+    /// the unit's draw opacity from `opacity` (`Fn23CEE2(unit, false, opacity)`)
+    pub farm_opacity: extern "C" fn(context: *mut c_void, opacity: f32) -> f32,
+    /// `SetScaledModel(model)` of the farm unit
+    pub set_scaled_model: extern "C" fn(context: *mut c_void, model: EeGfxModel),
 }
 
 /// The world as the effects ask it.
@@ -409,6 +433,29 @@ pub trait Effect3DHost {
     fn volcano_model(&mut self) -> EeGfxModel {
         std::ptr::null_mut()
     }
+    fn farm_unit(&mut self) -> EeGfxFarmUnit {
+        EeGfxFarmUnit::default()
+    }
+    fn farm_terrain(&mut self) -> EeGfxFarmTerrain {
+        crate::effect_farm::flat_terrain()
+    }
+    fn farm_drop_site(&mut self, _x: &mut i32, _y: &mut i32) -> bool {
+        false
+    }
+    fn farm_set_variant(&mut self, _variant: i32) {}
+    fn farm_loops(&mut self, _index: u32) -> bool {
+        false
+    }
+    fn farm_doppelganger_any(&mut self) -> bool {
+        false
+    }
+    fn farm_doppelganger(&mut self) -> i32 {
+        -1
+    }
+    fn farm_opacity(&mut self, opacity: f32) -> f32 {
+        opacity
+    }
+    fn set_scaled_model(&mut self, _model: EeGfxModel) {}
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -591,6 +638,33 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn volcano_model(&mut self) -> EeGfxModel {
         (self.volcano_model)(self.context)
     }
+    fn farm_unit(&mut self) -> EeGfxFarmUnit {
+        (self.farm_unit)(self.context)
+    }
+    fn farm_terrain(&mut self) -> EeGfxFarmTerrain {
+        (self.farm_terrain)(self.context)
+    }
+    fn farm_drop_site(&mut self, x: &mut i32, y: &mut i32) -> bool {
+        (self.farm_drop_site)(self.context, x, y)
+    }
+    fn farm_set_variant(&mut self, variant: i32) {
+        (self.farm_set_variant)(self.context, variant)
+    }
+    fn farm_loops(&mut self, index: u32) -> bool {
+        (self.farm_loops)(self.context, index)
+    }
+    fn farm_doppelganger_any(&mut self) -> bool {
+        (self.farm_doppelganger_any)(self.context)
+    }
+    fn farm_doppelganger(&mut self) -> i32 {
+        (self.farm_doppelganger)(self.context)
+    }
+    fn farm_opacity(&mut self, opacity: f32) -> f32 {
+        (self.farm_opacity)(self.context, opacity)
+    }
+    fn set_scaled_model(&mut self, model: EeGfxModel) {
+        (self.set_scaled_model)(self.context, model)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -625,6 +699,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_ICON | EE_GFX_EFFECT_KIND_GOAL => unsafe { icon(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_TRACER_BEAM => unsafe { tracer(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_VOLCANO => unsafe { volcano(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_FARM => unsafe { farm_effect(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -736,6 +811,8 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
         EE_GFX_EFFECT_KIND_TRACER_BEAM => tracer_file(load, base, r, f, major, minor, h),
         // the base's result is ignored
         EE_GFX_EFFECT_KIND_VOLCANO => volcano_file(load, r, f, h),
+        // the base's result is ignored
+        EE_GFX_EFFECT_KIND_FARM => farm_file(load, r, f, h),
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();
