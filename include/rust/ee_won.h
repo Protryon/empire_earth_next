@@ -8398,6 +8398,8 @@ struct EeWonCoreHooks {
   long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
   /// a `ByteBuffer`'s bytes (its `mBytes`)
   const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  /// a socket op's virtual `Continue()`
+  long (*socketop_continue)(void *op);
 };
 
 /// A C++ call on one object (an op, a completion or the socket).
@@ -8810,25 +8812,6 @@ struct EeWonSocketOpBaseHooks {
   long (*accept)(void *socket, void **out);
 };
 
-/// A C++ call on a socket op (`SocketOp*`).
-using EeWonSocketOpFn = void(*)(void *op);
-
-/// What the socket thread calls back in the C++. One static table serves every socket thread.
-struct EeWonSocketOpHooks {
-  /// `op->GetStatus()`
-  long (*status)(void *op);
-  /// the virtual `op->Continue()`
-  long (*continue_op)(void *op);
-  /// `op->Finish(status)`
-  void (*finish)(void *op, long status);
-  /// `op->mInSocketThread = on`
-  void (*set_in_thread)(void *op, bool on);
-  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)`
-  EeWonSocketOpFn add_ref;
-  EeWonSocketOpFn release;
-  EeWonSocketOpFn kill;
-};
-
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
   uint8_t kind;
@@ -8892,31 +8875,6 @@ struct EeWonTabParts {
 struct EeWonThreadBody {
   void (*run)(void *context);
   void (*destroy)(void *context);
-  void *context;
-};
-
-/// An op callback: the op (a C++ `AsyncOp*`) and the context given with the table.
-using EeWonOpCall = void(*)(void *context, void *op);
-
-/// The C++ steps the timer thread takes on an op: `due` (it timed out: `Finish(WS_TimedOut)`, then the timer's
-/// reference released) and `purged` (the queue let it go: `Kill(true)`, then the reference released).
-struct EeWonTimerHooks {
-  EeWonOpCall due;
-  EeWonOpCall purged;
-  void *context;
-};
-
-/// The C++ steps the container takes on an op (`AsyncOp*`): references, its status, its run and its completion.
-struct EeWonContainerHooks {
-  EeWonOpCall add_ref;
-  EeWonOpCall release;
-  /// `mStatus==WS_Pending`
-  bool (*is_pending)(void *context, void *op);
-  bool (*completion_pending)(void *context, void *op);
-  EeWonOpCall start_run_async;
-  EeWonOpCall complete;
-  /// `Kill(true)`
-  EeWonOpCall kill;
   void *context;
 };
 
@@ -16604,9 +16562,11 @@ void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
 /// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
 void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
 
+/// A socket thread whose calls on its ops are answered in Rust over the library's `core` table (cppcore.rs).
+///
 /// # Safety
-/// `hooks` lives for the program.
-EeWonSocketThread *ee_won_socket_thread_new(const EeWonSocketOpHooks *hooks);
+/// `core` is the library's static table.
+EeWonSocketThread *ee_won_socket_thread_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `t` came from `ee_won_socket_thread_new` (or is null).
@@ -16634,11 +16594,12 @@ void ee_won_socket_thread_purge(const EeWonSocketThread *t);
 /// `t` is valid.
 size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 
-/// `SocketThread::DoOp` (a static of the C++ class).
+/// `SocketThread::DoOp` (a static of the C++ class), its calls answered in Rust over the library's `core` table.
 ///
 /// # Safety
-/// `hooks` is valid; `op` is a live op.
-bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
+/// `core` is the library's static table; `op` is a live op.
+bool ee_won_socket_thread_do_op(const EeWonCoreHooks *core,
+                                void *op);
 
 /// A new Rust Splitter for the C++ `component`, its calls out through `host`.
 EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
@@ -16904,7 +16865,7 @@ void ee_won_thread_wait_for_stop(const EeWonThread *t);
 /// `t` is valid.
 void ee_won_thread_set_priority(const EeWonThread *t, int32_t priority);
 
-EeWonTimerThread *ee_won_timer_thread_new(EeWonTimerHooks hooks);
+EeWonTimerThread *ee_won_timer_thread_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `t` came from `ee_won_timer_thread_new`; its thread does not run any more.
@@ -16946,7 +16907,7 @@ uint32_t ee_won_timer_thread_wait_time(const EeWonTimerThread *t);
 /// `t` is valid.
 size_t ee_won_timer_thread_len(const EeWonTimerThread *t);
 
-EeWonOpContainer *ee_won_container_new(EeWonContainerHooks hooks);
+EeWonOpContainer *ee_won_container_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `c` came from `ee_won_container_new`.

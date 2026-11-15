@@ -128,75 +128,17 @@ static const EeWonByteBuffer* CoreBytesOf(void* inBuffer)
 {
     return static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBuffer))->mBytes;
 }
+static long CoreSocketOpContinue(void* inOp)
+{
+    return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Continue();
+}
 static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletionCall,CoreObjectOf,
                                         CoreSocketOpDuplicate,CoreNewOp,HookNewCompletion,CoreNewSocketOp,
                                         CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
                                         reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
-                                        CoreBindLocal,CoreBytesOf};
+                                        CoreBindLocal,CoreBytesOf,CoreSocketOpContinue};
 const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
 
-// FUNCTION: WON 0x0069ef80
-// Creates an idle op with an infinite timeout, async run mode and no container or timer entry
-AsyncOp::AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),&kAsyncOpHooks); }
-// FUNCTION: WON 0x0069f000
-// Destroys the op: the completion's reference and the lock go with the Rust object
-AsyncOp::~AsyncOp() { ee_won_asyncop_free(this->mOp); }
-
-void AsyncOp::RunHook() {}
-void AsyncOp::CleanupHook() {}
-
-// Sets the op's container (NULL: WONAPICore's queue)
-void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
-{
-    ee_won_asyncop_set_container(this->mOp,inContainer,inContainer!=NULL ? inContainer->mContainer : NULL);
-}
-// FUNCTION: WON 0x0069f1b0
-// Sets the op's timeout unless the op is already running
-void AsyncOp::SetTimeout(unsigned long timeout) { ee_won_asyncop_set_timeout(this->mOp,static_cast<uint32_t>(timeout)); }
-// FUNCTION: WON 0x0069f1d0
-// Sets whether an async run starts at once instead of being queued
-void AsyncOp::SetRunAsyncImmediately(bool flag) { ee_won_asyncop_set_run_async_immediately(this->mOp,flag); }
-// FUNCTION: WON 0x0069f1e0
-// Marks the op killed and, when asked, finishes it with the killed status
-void AsyncOp::Kill(bool finish) { ee_won_asyncop_kill(this->mOp,finish); }
-// FUNCTION: WON 0x0069f200
-// Queues the op on its container, or on the global WONAPI core queue when it has none
-void AsyncOp::QueueInOpContainer() { ee_won_asyncop_queue_in_container(this->mOp); }
-// FUNCTION: WON 0x0069f220
-// Finishes a running op with the given status and queues its completion for async runs
-void AsyncOp::Finish(WONStatus status) { ee_won_asyncop_finish(this->mOp,status); }
-// FUNCTION: WON 0x0069f2f0
-// Finishes the op with the given status even when it already finished, unless a completion is pending
-void AsyncOp::ForceFinish(WONStatus status) { ee_won_asyncop_force_finish(this->mOp,status); }
-// FUNCTION: WON 0x0069f3a0
-// Delivers a pending completion: drops the timer entry, runs the cleanup hook and calls the completion
-void AsyncOp::Complete() { ee_won_asyncop_complete(this->mOp); }
-// FUNCTION: WON 0x0069f4c0
-// Starts an async run: runs the hook and arms the timeout timer, or times out at once for a zero timeout
-void AsyncOp::StartRunAsync() { ee_won_asyncop_start_run_async(this->mOp); }
-// FUNCTION: WON 0x0069f500
-// Starts the op in the given mode and timeout (async queued/immediate, else blocking); returns its status
-WONStatus AsyncOp::Run(long mode,unsigned long timeout)
-{
-    return ee_won_asyncop_run(this->mOp,static_cast<int32_t>(mode),static_cast<uint32_t>(timeout));
-}
-// FUNCTION: WON 0x0069f610
-// Starts an idle op as a pure timer that fires after the given timeout
-void AsyncOp::RunAsTimer(unsigned long timeout) { ee_won_asyncop_run_as_timer(this->mOp,static_cast<uint32_t>(timeout)); }
-// FUNCTION: WON 0x0069f6d0
-// Runs the op asynchronously with the given timeout
-void AsyncOp::RunAsync(long timeout) { this->Run(1,timeout); }
-// FUNCTION: WON 0x0069f6e0
-// Runs the op blocking with the given timeout; returns true on success
-bool AsyncOp::RunBlock(unsigned long timeout) {return this->Run(2,timeout)==WS_Success;}
-// FUNCTION: WON 0x0069f700
-// Returns the time left before the op times out; 0 for async runs or once the timeout has passed
-unsigned long AsyncOp::TimeLeft() { return ee_won_asyncop_time_left(this->mOp); }
-}
-
-// No original address identified: WON SDK AsyncOp::RealTimeLeft
-namespace WONAPI {
-DWORD AsyncOp::RealTimeLeft() { return ee_won_asyncop_real_time_left(this->mOp); }
 }
 
 // Compiler-generated and header-inline functions this unit emits:
@@ -248,36 +190,4 @@ ThreadBase::ThreadBase()
     this->mThread=ee_won_thread_new(aBody);
 }
 
-// a due op times out; a purged one is killed; then the timer's reference goes
-static void TimerOpDue(void*,void* inOp)
-{
-    AsyncOp* anOp=static_cast<AsyncOp*>(inOp);
-    anOp->Finish(WS_TimedOut);
-    anOp->Release();
-}
-static void TimerOpPurged(void*,void* inOp)
-{
-    AsyncOp* anOp=static_cast<AsyncOp*>(inOp);
-    anOp->Kill(true);
-    anOp->Release();
-}
-TimerThread::TimerThread()
-{
-    EeWonTimerHooks aHooks={TimerOpDue,TimerOpPurged,NULL};
-    this->mTimer=ee_won_timer_thread_new(aHooks);
-}
-
-static void OpAddRef(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->AddRef(); }
-static void OpRelease(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Release(); }
-static bool OpIsPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->GetStatus()==WS_Pending; }
-static bool OpCompletionPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->IsCompletionPending(); }
-static void OpStartRunAsync(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->StartRunAsync(); }
-static void OpComplete(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Complete(); }
-static void OpKill(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Kill(true); }
-AsyncOpContainer::AsyncOpContainer()
-{
-    EeWonContainerHooks aHooks={OpAddRef,OpRelease,OpIsPending,OpCompletionPending,OpStartRunAsync,OpComplete,OpKill,
-                                NULL};
-    this->mContainer=ee_won_container_new(aHooks);
-}
 }

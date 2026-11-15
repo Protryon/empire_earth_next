@@ -28,7 +28,9 @@ use crate::qsock::{EeWonQueueSocket, EeWonQueueSocketHooks};
 use crate::sockobj::EeWonAsyncSocket;
 use crate::sockop::EeWonSocketOp;
 use crate::sockops::{ee_won_socketop_address, ee_won_socketop_received};
+use crate::sockthread::EeWonSocketOpHooks;
 use crate::status::*;
+use crate::thread::{EeWonContainerHooks, EeWonTimerHooks};
 use crate::udpmgr::EeWonUdpManager;
 use crate::udpmgr::{ee_won_udpmanager_queue_op, ee_won_udpmanager_recv, ee_won_udpmanager_send, EeWonUdpHooks};
 use crate::udpops::{
@@ -114,6 +116,8 @@ pub struct EeWonCoreHooks {
     pub socket_bind_local: Option<unsafe extern "C" fn(socket: *mut c_void, port: u16, reuse: bool) -> c_long>,
     /// a `ByteBuffer`'s bytes (its `mBytes`)
     pub bytes_of: Option<unsafe extern "C" fn(buffer: *mut c_void) -> *const EeWonByteBuffer>,
+    /// a socket op's virtual `Continue()`
+    pub socketop_continue: Option<unsafe extern "C" fn(op: *mut c_void) -> c_long>,
 }
 
 // SAFETY: a static table of functions and one function address
@@ -678,6 +682,91 @@ pub static NATIVE_UDP_OP: EeWonUdpOpHooks = EeWonUdpOpHooks {
     manager_send: Some(n_udp_manager_send),
     new_wait: Some(n_udp_new_wait),
     recv_object: Some(n_udp_recv_object),
+};
+
+// ---- the timer thread, the op container and the socket thread
+
+unsafe extern "C" fn n_timer_due(_context: *mut c_void, o: *mut c_void) {
+    // SAFETY: the timer's op, its reference held until the release
+    unsafe {
+        n_op_finish(o, WS_TIMED_OUT as c_long);
+        n_ref_release(o);
+    }
+}
+unsafe extern "C" fn n_timer_purged(_context: *mut c_void, o: *mut c_void) {
+    // SAFETY: as `n_timer_due`
+    unsafe {
+        n_op_kill(o);
+        n_ref_release(o);
+    }
+}
+/// The timer thread's calls, answered in Rust: a due op times out, a purged one is killed, then the timer's reference
+/// goes.
+pub fn native_timer() -> EeWonTimerHooks {
+    EeWonTimerHooks { due: Some(n_timer_due), purged: Some(n_timer_purged), context: null_mut() }
+}
+
+unsafe extern "C" fn n_c_add_ref(_context: *mut c_void, o: *mut c_void) {
+    ref_add(o)
+}
+unsafe extern "C" fn n_c_release(_context: *mut c_void, o: *mut c_void) {
+    ref_release(o)
+}
+unsafe extern "C" fn n_c_is_pending(_context: *mut c_void, o: *mut c_void) -> bool {
+    op(o).is_some_and(|x| x.status() == WS_PENDING)
+}
+unsafe extern "C" fn n_c_completion_pending(_context: *mut c_void, o: *mut c_void) -> bool {
+    op(o).is_some_and(EeWonAsyncOp::completion_pending)
+}
+unsafe extern "C" fn n_c_start_run_async(_context: *mut c_void, o: *mut c_void) {
+    if let Some(x) = op(o) {
+        x.start_run_async();
+    }
+}
+unsafe extern "C" fn n_c_complete(_context: *mut c_void, o: *mut c_void) {
+    if let Some(x) = op(o) {
+        x.complete();
+    }
+}
+unsafe extern "C" fn n_c_kill(_context: *mut c_void, o: *mut c_void) {
+    if let Some(x) = op(o) {
+        x.kill(true);
+    }
+}
+/// The op container's calls, answered in Rust.
+pub fn native_container() -> EeWonContainerHooks {
+    EeWonContainerHooks {
+        add_ref: Some(n_c_add_ref),
+        release: Some(n_c_release),
+        is_pending: Some(n_c_is_pending),
+        completion_pending: Some(n_c_completion_pending),
+        start_run_async: Some(n_c_start_run_async),
+        complete: Some(n_c_complete),
+        kill: Some(n_c_kill),
+        context: null_mut(),
+    }
+}
+
+unsafe extern "C" fn n_t_continue(o: *mut c_void) -> c_long {
+    // SAFETY: the table's contract: a live socket op
+    core().and_then(|c| c.socketop_continue).map_or(WS_NONE as c_long, |h| unsafe { h(o) })
+}
+unsafe extern "C" fn n_t_set_in_thread(o: *mut c_void, on: bool) {
+    let so = socket_op(o);
+    if !so.is_null() {
+        // SAFETY: the op's live Rust object
+        unsafe { (*so).set_in_socket_thread(on) };
+    }
+}
+/// The socket thread's calls, answered in Rust but the virtual `Continue`.
+pub static NATIVE_SOCKET_THREAD: EeWonSocketOpHooks = EeWonSocketOpHooks {
+    status: Some(n_op_status),
+    continue_op: Some(n_t_continue),
+    finish: Some(n_op_finish),
+    set_in_thread: Some(n_t_set_in_thread),
+    add_ref: Some(n_ref_add),
+    release: Some(n_ref_release),
+    kill: Some(n_op_kill),
 };
 
 #[cfg(test)]

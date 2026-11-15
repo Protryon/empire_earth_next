@@ -8,7 +8,7 @@ namespace WONAPI {
 // under the timer's lock as before). The original unit (TimerThread.cpp) is deleted.
 class TimerThread {
 public:
-    TimerThread();
+    TimerThread() : mTimer(ee_won_timer_thread_new(WonCore())) {} // a due op times out, a purged one is killed
     ~TimerThread() { ee_won_timer_thread_free(this->mTimer); }   // kills every pending op first
     void Start() { ee_won_timer_thread_start(this->mTimer); }
     void Stop(bool waitForStop=true) { ee_won_timer_thread_stop(this->mTimer,waitForStop); }

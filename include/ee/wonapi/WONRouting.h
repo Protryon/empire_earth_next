@@ -41,6 +41,7 @@ class AsyncOpContainer;
 // the library's one table of C++ calls (AsyncOp.cpp): what the Rust objects still need the C++ for (references,
 // virtual calls, the classes' news); every other call of theirs is answered in Rust (ee_won cppcore.rs)
 const EeWonCoreHooks* WonCore();
+const EeWonAsyncOpHooks* AsyncOpHooks(); // the ops' own table (AsyncOp.cpp: the virtual hooks, the core's queue and timer)
 
 // AsyncOp: 0x44 bytes in the original (ctor 29ef80, dtor 29f000, three vtable slots). A Rust object since round 13
 // (rust/crates/ee_won/src/opobj.rs EeWonAsyncOp: the run state, the lock, the completion's reference, the
@@ -49,12 +50,15 @@ const EeWonCoreHooks* WonCore();
 // thread's entry of the op is the Rust timer thread's (thread.rs)
 class AsyncOp : public RefCount {
 public:
-    WONStatus Run(long inMode,unsigned long inTimeout);      //29f500, returns the status
+    // starts the op in the mode with the timeout (async queued or at once, else blocking); returns its status
+    WONStatus Run(long inMode,unsigned long inTimeout)       //29f500
+    { return ee_won_asyncop_run(this->mOp,static_cast<int32_t>(inMode),static_cast<uint32_t>(inTimeout)); }
 
-    AsyncOp();                              // 0x29ef80
-    virtual ~AsyncOp();                     // 0x29f000
-    virtual void RunHook();
-    virtual void CleanupHook();
+    // an idle op: an infinite timeout, async, no container or timer entry
+    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); } // 0x29ef80
+    virtual ~AsyncOp() { ee_won_asyncop_free(this->mOp); } // 0x29f000: the completion and lock go with it
+    virtual void RunHook() {}
+    virtual void CleanupHook() {}
     // (: AsyncOp's own vtable 0x84c834 has these three slots only; SocketOp and RoutingOp each introduce their
     // +0x0c/+0x10/+0x14: SocketOp's +0x14 returns 0, AcceptOp's a new AcceptOp; RoutingOp's +0x14 is GetType)
 
@@ -71,21 +75,31 @@ public:
     uint32_t GetStartTime() const { return ee_won_asyncop_start_time(this->mOp); }
     bool IsRunAsyncImmediately() const { return ee_won_asyncop_run_async_immediately(this->mOp); }
     AsyncOpContainer* GetContainer() const { return static_cast<AsyncOpContainer*>(ee_won_asyncop_container(this->mOp)); }
-    void SetContainer(AsyncOpContainer* inContainer);
-    void SetMode(AsyncRunMode); //29f190, conditional setter (enum argument)
-    void ForceFinish(WONStatus inStatus); //29f2f0, takes the full status
-    void RunAsTimer(unsigned long inTimeout); //29f610, DWORD timeout/ret4
-    void Finish(WONStatus inStatus);   // original29f220: completes pending status under lock
-    void SetTimeout(unsigned long inTimeout); //29f1b0, timeout DWORD at2c/ret4
-    bool RunBlock(unsigned long inTimeout); //29f6e0, 32-byte wrapper
-    void RunAsync(long inTimeout);          // 0x29f6d0
-    void Kill(bool inFlag);                 // 0x29f1e0
-    void SetRunAsyncImmediately(bool inFlag);  // 0x29f1d0
-    void QueueInOpContainer(); //29f200, queues the op in its container
-    void Complete(); //29f3a0
-    void StartRunAsync(); //29f4c0
-    unsigned long TimeLeft();               // 0x29f700
-    DWORD RealTimeLeft();
+    void SetContainer(AsyncOpContainer* inContainer); // NULL: WONAPICore's queue
+    // the mode, unless the op runs (29f190)
+    void SetMode(AsyncRunMode inMode) { ee_won_asyncop_set_mode(this->mOp,static_cast<int32_t>(inMode)); }
+    // finishes even a finished op, unless its completion is pending (29f2f0)
+    void ForceFinish(WONStatus inStatus) { ee_won_asyncop_force_finish(this->mOp,inStatus); }
+    // an idle op as a pure timer firing after the timeout (29f610)
+    void RunAsTimer(unsigned long inTimeout) { ee_won_asyncop_run_as_timer(this->mOp,static_cast<uint32_t>(inTimeout)); }
+    // finishes a running op, its completion queued for async runs (29f220)
+    void Finish(WONStatus inStatus) { ee_won_asyncop_finish(this->mOp,inStatus); }
+    // unless the op runs (29f1b0)
+    void SetTimeout(unsigned long inTimeout) { ee_won_asyncop_set_timeout(this->mOp,static_cast<uint32_t>(inTimeout)); }
+    bool RunBlock(unsigned long inTimeout) { return this->Run(2,inTimeout)==0; } // 29f6e0: whether it succeeded
+    void RunAsync(long inTimeout) { this->Run(1,inTimeout); } // 0x29f6d0
+    // marks the op killed and, when asked, finishes it killed (0x29f1e0)
+    void Kill(bool inFlag) { ee_won_asyncop_kill(this->mOp,inFlag); }
+    // whether an async run starts at once instead of being queued (0x29f1d0)
+    void SetRunAsyncImmediately(bool inFlag) { ee_won_asyncop_set_run_async_immediately(this->mOp,inFlag); }
+    void QueueInOpContainer() { ee_won_asyncop_queue_in_container(this->mOp); } // 29f200, or WONAPICore's queue
+    // a pending completion: the timer entry dropped, the cleanup hook run, the completion called (29f3a0)
+    void Complete() { ee_won_asyncop_complete(this->mOp); }
+    // the hook run and the timeout armed, or a time-out at once for 0 (29f4c0)
+    void StartRunAsync() { ee_won_asyncop_start_run_async(this->mOp); }
+    // the time before the time-out; 0 for async runs or once it passed (0x29f700)
+    unsigned long TimeLeft() { return ee_won_asyncop_time_left(this->mOp); }
+    DWORD RealTimeLeft() { return ee_won_asyncop_real_time_left(this->mOp); }
     // the run mode, start and timeout for the Rust op algorithms (rust/crates/ee_won/src/ops.rs)
     EeWonOpTiming GetTiming() const { return ee_won_asyncop_timing(this->mOp); }
     bool IsAsync() const { return this->GetMode()==1; }
@@ -118,7 +132,7 @@ public:
 // AsyncOp.cpp's hooks. The original unit (AsyncOpContainer.cpp) is deleted.
 class AsyncOpContainer {
 public:
-    AsyncOpContainer();
+    AsyncOpContainer() : mContainer(ee_won_container_new(WonCore())) {} // the ops' calls answered in Rust
     virtual ~AsyncOpContainer() { ee_won_container_free(this->mContainer); }
     void QueueOp(AsyncOp* inOp) { ee_won_container_queue(this->mContainer,inOp); }
     void PurgeOps() { ee_won_container_purge(this->mContainer); }
@@ -129,6 +143,10 @@ private:
     AsyncOpContainer(const AsyncOpContainer&);
     AsyncOpContainer& operator=(const AsyncOpContainer&);
 };
+inline void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
+{
+    ee_won_asyncop_set_container(this->mOp,inContainer,inContainer!=NULL ? inContainer->mContainer : NULL);
+}
 
 class SocketOp;
 class MsgTransform {
@@ -864,7 +882,6 @@ private:
 // AsyncOpWithTracker's op tracker: a Rust object since round 13 (rust/crates/ee_won/src/opobj.rs EeWonOpTracker: the
 // ops tracked by id, a reference each, in id order, the latest first among equal ids; an op tracked once; its lock).
 // The original's two multimaps (AsyncOpTrackerMaps, AsyncOpTrackerEntry) are gone.
-const EeWonAsyncOpHooks* AsyncOpHooks(); // AsyncOp.cpp's hook table
 class AsyncOpTracker {
 public:
     AsyncOpTracker() : mTracker(ee_won_op_tracker_new(AsyncOpHooks())) {}
@@ -874,9 +891,11 @@ public:
     // the op tracked at inIndex in id order (NULL past the end)
     AsyncOp* GetTrackedOp(int inIndex)
     { return static_cast<AsyncOp*>(ee_won_op_tracker_at(this->mTracker,static_cast<size_t>(inIndex))); }
-    AsyncOp* AddOp(AsyncOp* inOp, unsigned long inId); // original29fc80
-    bool RemoveOp(AsyncOp* inOp);             // original29fe50
-    void KillAll();                          // original29ffa0
+    // tracks an op under the id (refused when tracked already); returns the op (original 29fc80)
+    AsyncOp* AddOp(AsyncOp* inOp, unsigned long inId)
+    { return static_cast<AsyncOp*>(ee_won_op_tracker_add(this->mTracker,inOp,static_cast<uint32_t>(inId))); }
+    bool RemoveOp(AsyncOp* inOp) { return ee_won_op_tracker_remove(this->mTracker,inOp); } // original29fe50
+    void KillAll() { ee_won_op_tracker_kill_all(this->mTracker); } // each op killed, with completion (29ffa0)
     EeWonOpTracker* GetTrackerObject() const { return this->mTracker; }
 private:
     AsyncOpTracker(const AsyncOpTracker&);
@@ -888,9 +907,15 @@ private:
 // original's TrackerCompletion, 16 bytes, and its Callback, 0x2a00d0, are gone)
 class AsyncOpWithTracker : public AsyncOp {
 public:
-    AsyncOp* Track(AsyncOp*,int); //2a0100, protected in the SDK; returns the tracker's AddOp result
-    virtual void CleanupHook();             //slot08 CleanupHook2a0290
-    virtual bool CallbackHook(AsyncOp* inOp,int inParam); //slot0c, bool/ret8
+    // tracks a sub-op under the parameter, its completion back to this op (2a0100, protected in the SDK): while this
+    // op is pending and still tracks it, the sub-op leaves the tracker and CallbackHook runs
+    AsyncOp* Track(AsyncOp* op,int param)
+    {
+        return static_cast<AsyncOp*>(ee_won_asyncop_track(this->GetOpObject(),this->mTracker.GetTrackerObject(),op,
+                                                          op->GetOpObject(),param));
+    }
+    virtual void CleanupHook() { this->mTracker.KillAll(); } //slot08 2a0290
+    virtual bool CallbackHook(AsyncOp*,int) { return false; } //slot0c 2accc0: ignores the sub-op
     AsyncOpTracker mTracker;                //44..78
 };
 
@@ -1189,18 +1214,22 @@ public:
 
 // SocketThread (0x38) / SocketThreadSimple (0x44).
 // Needs Thread (0x1c) / Event (8) from above.
+// SocketThread.cpp's original addresses: SocketThread 2b60d0 / 2b6120 / ThreadFunc 2b6140 / DoOp 2b6160,
+// SocketThreadSimple 2b61a0 / PurgeOps 2b6380 / AddSocketOp 2b64f0 / RemoveSocketOp 2b6660 / Pump 2b6760 / ThreadFunc
+// 2b6890. The unit is deleted (net round 25): the ops' calls are answered in Rust (ee_won cppcore.rs)
 class SocketThread : public Thread {
 public:
-    SocketThread(); //2b60d0
-    virtual ~SocketThread(); //2b6120, explicit own vtable 44cb10
-    virtual void ThreadFunc(); //base slot10,2b6140
+    SocketThread() { this->mSingleThreaded=false; } //2b60d0: on its own thread
+    virtual ~SocketThread() {} //2b6120, explicit own vtable 44cb10
+    virtual void ThreadFunc() { while(!this->IsStopped()) this->Pump(1000); } //base slot10,2b6140
     virtual void AddSocketOp(SocketOp*) {} //new slot1c, 2fa500 (empty)
     virtual void RemoveSocketOp(SocketOp*) {} //20, version-empty2fa500
     virtual void Pump(unsigned long) {} //24, version-empty2fa500
     virtual void PurgeOps() {} //28, version-empty4142a0
     virtual bool NeedThread() {return true;} //2c, true2f30d0
     void SetSingleThreaded(bool value) { this->mSingleThreaded=value; } //inline bool 34 (WON SDK)
-    static bool DoOp(SocketOp*); //2b6160, cdecl, the caller pops (Rust's: ee_won sockthread.rs)
+    // continues a pending op and finishes it unless it still waits; whether it is done (2b6160, cdecl)
+    static bool DoOp(SocketOp* inOp) { return ee_won_socket_thread_do_op(WonCore(),static_cast<AsyncOp*>(inOp)); }
     bool mSingleThreaded; //34; total38 (the original's lock at 1c is SocketThreadSimple's Rust object's)
 };
 // SocketThreadSimple: a Rust object since round 13 (rust/crates/ee_won/src/sockthread.rs EeWonSocketThread: the ops
@@ -1209,13 +1238,18 @@ public:
 // thread is the Thread shim's; ThreadFunc pumps the object, then waits on the thread's signal
 class SocketThreadSimple : public SocketThread {
 public:
-    SocketThreadSimple();
-    virtual ~SocketThreadSimple(); //2b61a0, explicit ownVT44cb44 and PurgeOps
-    virtual void ThreadFunc(); //2b6890
-    virtual void AddSocketOp(SocketOp*); //2b64f0
-    virtual void RemoveSocketOp(SocketOp*); //2b6660
-    virtual void Pump(unsigned long); //2b6760
-    virtual void PurgeOps(); //2b6380
+    SocketThreadSimple() : mOps(ee_won_socket_thread_new(WonCore())) {}
+    virtual ~SocketThreadSimple() { ee_won_socket_thread_free(this->mOps); } //2b61a0: every op still held killed
+    virtual void ThreadFunc() { while(!this->IsStopped()) this->Pump(20); } //2b6890
+    virtual void AddSocketOp(SocketOp* inOp) { ee_won_socket_thread_add(this->mOps,static_cast<AsyncOp*>(inOp)); }
+    virtual void RemoveSocketOp(SocketOp* inOp) { ee_won_socket_thread_remove(this->mOps,static_cast<AsyncOp*>(inOp)); }
+    // every op continued once, the finished dropped, then a wait of up to 20 ms for a signal (2b6760)
+    virtual void Pump(unsigned long inWaitTime)
+    {
+        uint32_t aWait=ee_won_socket_thread_pump(this->mOps,static_cast<uint32_t>(inWaitTime));
+        if(aWait>0) this->WaitForSignal(aWait);
+    }
+    virtual void PurgeOps() { ee_won_socket_thread_purge(this->mOps); } //2b6380: killed and forgotten
 private:
     EeWonSocketThread* mOps; //owned
 };

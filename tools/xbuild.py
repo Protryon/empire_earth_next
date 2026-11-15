@@ -383,10 +383,8 @@ WON_TESTS = {
     "won_ops_test": [*[WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
                                                          "AsyncSocketInternet.cpp", "IPAddr.cpp",
                                                          "BlockingSocket.cpp", "SocketOps.cpp",
-                                                         "SocketRunHooks.cpp", "SocketOpsAccessors.cpp",
-                                                         "SocketThread.cpp")],
-                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
-                                                          "AsyncOpWithTracker.cpp", "WONDebug.cpp")],
+                                                         "SocketRunHooks.cpp", "SocketOpsAccessors.cpp")],
+                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",

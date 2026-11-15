@@ -509,8 +509,9 @@ impl Drop for EeWonTimerThread {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_won_timer_thread_new(hooks: EeWonTimerHooks) -> *mut EeWonTimerThread {
-    Box::into_raw(EeWonTimerThread::new(hooks))
+pub extern "C" fn ee_won_timer_thread_new(core: *const crate::cppcore::EeWonCoreHooks) -> *mut EeWonTimerThread {
+    crate::cppcore::bind(core);
+    Box::into_raw(EeWonTimerThread::new(crate::cppcore::native_timer()))
 }
 
 /// # Safety
@@ -769,8 +770,9 @@ impl Drop for EeWonOpContainer {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_won_container_new(hooks: EeWonContainerHooks) -> *mut EeWonOpContainer {
-    Box::into_raw(Box::new(EeWonOpContainer::new(hooks)))
+pub extern "C" fn ee_won_container_new(core: *const crate::cppcore::EeWonCoreHooks) -> *mut EeWonOpContainer {
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonOpContainer::new(crate::cppcore::native_container())))
 }
 
 /// # Safety

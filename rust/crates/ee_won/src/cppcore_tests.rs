@@ -55,6 +55,7 @@ static CORE_STUB: EeWonCoreHooks = EeWonCoreHooks {
     udp_response_check: std::ptr::null_mut(),
     socket_bind_local: None,
     bytes_of: None,
+    socketop_continue: None,
 };
 
 static OP_HOOKS: EeWonAsyncOpHooks = EeWonAsyncOpHooks {
