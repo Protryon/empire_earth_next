@@ -87,6 +87,9 @@
 //! - [`icon_bar`]: the selected-units icon bar whole (its state, refill, snapshot, drawing and clicks) over the
 //!   C++ host.
 //! - [`portrait`]: the selected unit's portrait's bars, level, drawing, tooltip and click over the C++ host.
+//! - [`hud_ctl`]: the game's controls whole on Rust records (`EEUIRustControl`'s subclasses) and their one host:
+//!   [`ping`] (the lobby's ping meter), [`chat_line`] (a chat display line), [`select_units`] (the box selection),
+//!   [`command_units`] (the right-drag command and its facing arrow).
 //! - [`main_group`]: the main game form's main panel group (the shown unit, its refresh and update, a command
 //!   button, the airport's buttons) over the C++ host.
 //! - [`upgrade`]: the improvement button's availability, tooltip, presses and cost update over the C++ host.
@@ -103,6 +106,7 @@ mod campaign_editor_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;
+pub mod chat_line;
 pub mod chat_log;
 #[cfg(not(test))]
 mod chat_log_ffi;
@@ -114,6 +118,7 @@ pub mod civ_choice;
 mod civ_choice_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
+pub mod command_units;
 pub mod cursor;
 #[cfg(not(test))]
 mod cursor_ffi;
@@ -146,6 +151,9 @@ pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
 pub mod hud;
+pub mod hud_ctl;
+#[cfg(not(test))]
+mod hud_ctl_ffi;
 pub mod icon_bar;
 #[cfg(not(test))]
 mod icon_bar_ffi;
@@ -176,6 +184,7 @@ mod mini_map_ffi;
 pub mod panel_groups;
 #[cfg(not(test))]
 mod panel_groups_ffi;
+pub mod ping;
 pub mod portrait;
 #[cfg(not(test))]
 mod portrait_ffi;
@@ -191,6 +200,7 @@ mod scenario_editor_ffi;
 pub mod scenario_screens;
 #[cfg(not(test))]
 mod scenario_screens_ffi;
+pub mod select_units;
 pub mod settings;
 pub mod settings_form;
 #[cfg(not(test))]
