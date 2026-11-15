@@ -622,6 +622,120 @@ constexpr static const int32_t EE_UNITS_COND_MINE_DEPLETED = 46;
 /// unit `a`'s goal (`GetGoal()`) is an attack goal whose target has hit points
 constexpr static const int32_t EE_UNITS_COND_SECONDARY_TARGET = 47;
 
+/// `EEUnitClass::ActionChanged`
+constexpr static const size_t EE_UNITS_BODY_ACTION_CHANGED = 0;
+
+/// `EEUnitClass::AddToRegion`
+constexpr static const size_t EE_UNITS_BODY_ADD_TO_REGION = 1;
+
+/// `EEUnitClass::AddToTile`
+constexpr static const size_t EE_UNITS_BODY_ADD_TO_TILE = 2;
+
+/// `EEUnitClass::AdjustPath`
+constexpr static const size_t EE_UNITS_BODY_ADJUST_PATH = 3;
+
+/// `EEUnitClass::BadlyHurt`
+constexpr static const size_t EE_UNITS_BODY_BADLY_HURT = 4;
+
+/// `EEUnitClass::CallParatroopPlane`
+constexpr static const size_t EE_UNITS_BODY_CALL_PARATROOP_PLANE = 5;
+
+/// `EEUnitClass::CanAttackMove`
+constexpr static const size_t EE_UNITS_BODY_CAN_ATTACK_MOVE = 6;
+
+/// `EEUnitClass::CargoAdded`
+constexpr static const size_t EE_UNITS_BODY_CARGO_ADDED = 7;
+
+/// `EEUnitClass::CargoRemoved`
+constexpr static const size_t EE_UNITS_BODY_CARGO_REMOVED = 8;
+
+/// `EEUnitClass::CargoUnloaded`
+constexpr static const size_t EE_UNITS_BODY_CARGO_UNLOADED = 9;
+
+/// `EEUnitClass::CheckGroundImpact`
+constexpr static const size_t EE_UNITS_BODY_CHECK_GROUND_IMPACT = 10;
+
+/// `EEUnitClass::CheckWaterImpact`
+constexpr static const size_t EE_UNITS_BODY_CHECK_WATER_IMPACT = 11;
+
+/// `EEUnitClass::CreateUnit`
+constexpr static const size_t EE_UNITS_BODY_CREATE_UNIT = 12;
+
+/// `EEUnitClass::CreateUnitAt`
+constexpr static const size_t EE_UNITS_BODY_CREATE_UNIT_AT = 13;
+
+/// `EEUnitClass::FliesOver`
+constexpr static const size_t EE_UNITS_BODY_FLIES_OVER = 14;
+
+/// `EEUnitClass::GateReplaced`
+constexpr static const size_t EE_UNITS_BODY_GATE_REPLACED = 15;
+
+/// `EEUnitClass::GetSoundParameters`
+constexpr static const size_t EE_UNITS_BODY_GET_SOUND_PARAMETERS = 16;
+
+/// `EEUnitClass::GetUnloadFailedTextID`
+constexpr static const size_t EE_UNITS_BODY_GET_UNLOAD_FAILED_TEXT_ID = 17;
+
+/// `EEUnitClass::GroundLocation`
+constexpr static const size_t EE_UNITS_BODY_GROUND_LOCATION = 18;
+
+/// `EEUnitClass::HasSunk`
+constexpr static const size_t EE_UNITS_BODY_HAS_SUNK = 19;
+
+/// `EEUnitClass::IsBuilding`
+constexpr static const size_t EE_UNITS_BODY_IS_BUILDING = 20;
+
+/// `EEUnitClass::IsLandBuilding`
+constexpr static const size_t EE_UNITS_BODY_IS_LAND_BUILDING = 21;
+
+/// `EEUnitClass::IsPartLeftOut`
+constexpr static const size_t EE_UNITS_BODY_IS_PART_LEFT_OUT = 22;
+
+/// `EEUnitClass::IsPickable`
+constexpr static const size_t EE_UNITS_BODY_IS_PICKABLE = 23;
+
+/// `EEUnitClass::IsSelectable`
+constexpr static const size_t EE_UNITS_BODY_IS_SELECTABLE = 24;
+
+/// `EEUnitClass::LaunchProjectile`
+constexpr static const size_t EE_UNITS_BODY_LAUNCH_PROJECTILE = 25;
+
+/// `EEUnitClass::LoadMedia`
+constexpr static const size_t EE_UNITS_BODY_LOAD_MEDIA = 26;
+
+/// `EEUnitClass::LocationToTile`
+constexpr static const size_t EE_UNITS_BODY_LOCATION_TO_TILE = 27;
+
+/// `EEUnitClass::RemoveFromRegion`
+constexpr static const size_t EE_UNITS_BODY_REMOVE_FROM_REGION = 28;
+
+/// `EEUnitClass::RemoveFromTile`
+constexpr static const size_t EE_UNITS_BODY_REMOVE_FROM_TILE = 29;
+
+/// `EEUnitClass::SimpleUnitCreated`
+constexpr static const size_t EE_UNITS_BODY_SIMPLE_UNIT_CREATED = 30;
+
+/// `EEUnitClass::UnitCreated`
+constexpr static const size_t EE_UNITS_BODY_UNIT_CREATED = 31;
+
+/// `EEUnitClass::UnloadAt`
+constexpr static const size_t EE_UNITS_BODY_UNLOAD_AT = 32;
+
+/// `EEUnitClass::UnloadMedia`
+constexpr static const size_t EE_UNITS_BODY_UNLOAD_MEDIA = 33;
+
+/// `EEUnitClass::Update`
+constexpr static const size_t EE_UNITS_BODY_UPDATE = 34;
+
+/// `EEUnitClass::UpdateEffects`
+constexpr static const size_t EE_UNITS_BODY_UPDATE_EFFECTS = 35;
+
+/// `EEUnitClass::Virtual70`
+constexpr static const size_t EE_UNITS_BODY_VIRTUAL70 = 36;
+
+/// The number of dispatched virtuals.
+constexpr static const size_t EE_UNITS_BODY_COUNT = 37;
+
 /// `gContinentManager.IsNextToArea(c, d, a)`
 constexpr static const int32_t EE_UNITS_CLS_NEXT_TO_AREA = 1;
 

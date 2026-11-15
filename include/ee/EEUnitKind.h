@@ -18,6 +18,7 @@ extern "C" {
 extern const uint32_t EE_UNIT_GOAL_KINDS[256];    // the goal classes of each EEUnitGoal::mKind
 extern const uint64_t EE_UNIT_CLASS_KINDS[256];   // the unit classes of each EEUnitClass::mCategory (below 256)
 extern const uint32_t EE_UNIT_OBJECT_KINDS[256];  // the unit object classes of each RTSUnit::mObjectKind
+extern const uint8_t EE_UNIT_CLASS_BODIES[EE_UNITS_BODY_COUNT][256];  // each virtual's body by category (cls_dispatch.rs)
 }
 
 // The goal classes' test (EEGoalCast<EEUGLocation>) went with the last goal class that was a C++ class of its own:
@@ -30,6 +31,13 @@ template <class C> inline uint64_t EEUnitClassKinds(const C* inClass)
 {
     unsigned long theCategory = inClass->mCategory;
     return theCategory < 256 ? EE_UNIT_CLASS_KINDS[theCategory] : 0;
+}
+
+// the body EEUnitClass's virtual inVirtual (an EE_UNITS_BODY_* row) runs for inClass: 0 the default, n its n-th
+template <class C> inline unsigned EEClassBody(const C* inClass, size_t inVirtual)
+{
+    unsigned long theCategory = inClass->mCategory;
+    return theCategory < 256 ? EE_UNIT_CLASS_BODIES[inVirtual][theCategory] : 0;
 }
 
 // whether inClass (not NULL) is of kind B (an EE_CLASS_KIND_* bit): what dynamic_cast<EEUC*> tested
