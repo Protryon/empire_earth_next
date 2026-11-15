@@ -15,7 +15,6 @@ namespace WONAPI {
 
 LoginScreen::LoginScreen() {}
 // Five pages are looked up first, the ScreenContainer panel last
-// FUNCTION: WON 0x007c0060
 // Looks up the right-panel pages from the layout and shows the message of the day
 void LoginScreen::InitComponent(ComponentInit& inInit)
 {
@@ -30,7 +29,6 @@ void LoginScreen::InitComponent(ComponentInit& inInit)
     this->mRightPanel->ShowScreen(this->mMOTDCtrl.get(),false);
 }
 // Switches on the control id of the pressed button, not of this screen
-// FUNCTION: WON 0x007c0130
 // Shows login help or the message of the day for their buttons; the rest goes to Component
 void LoginScreen::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -42,29 +40,12 @@ void LoginScreen::HandleComponentEvent(ComponentEvent* inEvent)
     }
     Component::HandleComponentEvent(inEvent);
 }
-// FUNCTION: WON 0x007c0180
 // Shows the message of the day in the right panel
 void LoginScreen::ShowMOTD() { this->mRightPanel->ShowScreen(this->mMOTDCtrl.get(),true); }
-// FUNCTION: WON 0x007c01a0
 // Shows the create-account page in the right panel
 void LoginScreen::ShowCreateAccountCtrl() { this->mRightPanel->ShowScreen(this->mCreateAccountCtrl.get(),true); }
-// FUNCTION: WON 0x007c01c0
 // Shows the lost-password page in the right panel
 void LoginScreen::ShowLostPasswordCtrl() { this->mRightPanel->ShowScreen(this->mLostPasswordCtrl.get(),true); }
-// FUNCTION: WON 0x007c01e0
 // Shows the lost-user-name page in the right panel
 void LoginScreen::ShowLostUsernameCtrl() { this->mRightPanel->ShowScreen(this->mLostUserNameCtrl.get(),true); }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007bff30
-// (public: virtual __thiscall WONAPI::LoginScreen::~LoginScreen(void)    [??1LoginScreen@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007ce1d0
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007bff10
-// (public: virtual void * __thiscall WONAPI::LoginScreen::`scalar deleting destructor'(unsigned int)    [??_GLoginScreen@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007bfed0
-// (public: __thiscall WONAPI::LoginScreen::LoginScreen(void)    [??0LoginScreen@WONAPI@@QAE@XZ])

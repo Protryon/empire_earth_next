@@ -10,7 +10,7 @@
 
 class EECPASGAir : public EECPAttackSubGroup {
 public:
-    EECPASGAir(EECPAttackGroup* inGroup, long inKind);   // 0x4192c
+    EECPASGAir(EECPAttackGroup* inGroup, long inKind);
     virtual ~EECPASGAir();                  // +0x00 (0x4194f)
     virtual void RequestUnits(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent, long inTownID); // +0x08 0x41976
     virtual void SetTask(const EECPAGTask& inTask);     // +0x14 0x41a2e

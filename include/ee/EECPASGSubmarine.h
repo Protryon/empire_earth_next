@@ -10,7 +10,7 @@
 
 class EECPASGSubmarine : public EECPASGSea {
 public:
-    EECPASGSubmarine(EECPAttackGroup* inGroup, long inKind);   // 0x513b7
+    EECPASGSubmarine(EECPAttackGroup* inGroup, long inKind);
     virtual ~EECPASGSubmarine();            // +0x00 (0x513da)
     virtual void Shutdown();                // +0x30 0x51401
     // +0x94 0x51479: the kept copy of an ICF group (EECPASGSea's identical override folds into it; the body sits in

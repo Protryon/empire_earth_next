@@ -40,22 +40,16 @@
 #include "ee/EECPASGLand.h"
 #include "ee/EECPASGTransport.h"
 
-// FUNCTION: EXE 0x451805
 // Creates the transport part of a sub-group, carrying no land group
 EECPASGTransport::EECPASGTransport() : mLand(NULL), mOwner(NULL), mCargoStage(0)
 {
 }
 
-// SYNTHETIC: EXE 0x451819
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x451835
 // Destroys the transport part (nothing to release)
 EECPASGTransport::~EECPASGTransport()
 {
 }
 
-// FUNCTION: EXE 0x45183c
 // Reads the carried land group's id (resolved later by Restore) and the cargo stage; returns the first read error
 long EECPASGTransport::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -68,7 +62,6 @@ long EECPASGTransport::Load(unsigned long inMajorVersion, unsigned long inMinorV
     return theResult;
 }
 
-// FUNCTION: EXE 0x451871
 // Turns the loaded land group id back into the commander's land sub-group and takes a reference; returns 0
 long EECPASGTransport::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -82,7 +75,6 @@ long EECPASGTransport::Restore(unsigned long inMajorVersion, unsigned long inMin
     return 0;
 }
 
-// FUNCTION: EXE 0x4518c7
 // Lets go of the carried land group: clears its transport if that is this one and drops the reference
 void EECPASGTransport::ReleaseLand()
 {
@@ -95,7 +87,6 @@ void EECPASGTransport::ReleaseLand()
     theLand->Dereference();
 }
 
-// FUNCTION: EXE 0x4518ec
 // Writes the carried land group's id (0 if none) and the cargo stage; returns the first write error
 long EECPASGTransport::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -106,7 +97,6 @@ long EECPASGTransport::Save(unsigned long inMajorVersion, unsigned long inMinorV
     return theResult;
 }
 
-// FUNCTION: EXE 0x451931
 // Switches to carrying another land group, releasing the old one and referencing the new one
 void EECPASGTransport::SetLand(EECPASGLand* inLand)
 {
@@ -119,9 +109,7 @@ void EECPASGTransport::SetLand(EECPASGLand* inLand)
 }
 
 
-// ICF-FOLDED: EXE 0x418aa9
 // Returns true
-// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
 bool EECPASGTransport::Virtual0C()
 {
     return true;

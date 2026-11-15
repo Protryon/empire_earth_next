@@ -40,9 +40,7 @@ typedef my_decomp_master * my_master_ptr;
  * CRUCIAL: this must match the actual capabilities of jdmerge.c!
  */
 
-// FUNCTION: JPEG 0x1008a84e
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x80a130
 use_merged_upsample (j_decompress_ptr cinfo)
 {
 #ifdef UPSAMPLE_MERGING_SUPPORTED
@@ -82,9 +80,7 @@ use_merged_upsample (j_decompress_ptr cinfo)
  * Also note that it may be called before the master module is initialized!
  */
 
-// FUNCTION: JPEG 0x1008a656
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x809f10
 jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
 /* Do computations that are needed before master selection phase */
 {
@@ -248,9 +244,7 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
  * enough and used often enough to justify this.
  */
 
-// FUNCTION: JPEG 0x1008aaac
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80a3e0
 prepare_range_limit_table (j_decompress_ptr cinfo)
 /* Allocate and fill in the sample_range_limit table */
 {
@@ -290,9 +284,7 @@ prepare_range_limit_table (j_decompress_ptr cinfo)
  * settings.
  */
 
-// FUNCTION: JPEG 0x1008a8f4
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80a200
 master_selection (j_decompress_ptr cinfo)
 {
   my_master_ptr master = (my_master_ptr) cinfo->master;
@@ -442,9 +434,7 @@ master_selection (j_decompress_ptr cinfo)
  * (In the latter case, jdapistd.c will crank the pass to completion.)
  */
 
-// FUNCTION: JPEG 0x1008ab32
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80a460
 prepare_for_output_pass (j_decompress_ptr cinfo)
 {
   my_master_ptr master = (my_master_ptr) cinfo->master;
@@ -504,9 +494,7 @@ prepare_for_output_pass (j_decompress_ptr cinfo)
  * Finish up at end of an output pass.
  */
 
-// FUNCTION: JPEG 0x1008ac5f
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80a5c0
 finish_output_pass (j_decompress_ptr cinfo)
 {
   my_master_ptr master = (my_master_ptr) cinfo->master;
@@ -551,9 +539,7 @@ jpeg_new_colormap (j_decompress_ptr cinfo)
  * This is performed at the start of jpeg_start_decompress.
  */
 
-// FUNCTION: JPEG 0x1008a8c3
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x80a1c0
 jinit_master_decompress (j_decompress_ptr cinfo)
 {
   my_master_ptr master;

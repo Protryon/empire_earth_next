@@ -65,47 +65,27 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffect.h"
 #include "ee/EEEffect3D.h"
-#include "ee/EEE3DStorm.h"
+#include "rust/ee_gfx.h"
+#include "ee/EEE3DRust.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEEMStorm.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEStormModifiers.h"
 #include "ee/EEStormType.h"
 
-// FUNCTION: EXE 0x52dba8
-// FUNCTION: EXE 0x52dbb2
-// FUNCTION: EXE 0x52dbc3
-// FUNCTION: EXE 0x52dbcf
 // Constructs the storm's "Storm-Data" key at startup and destroys it at exit (wrapper, constructor, registrar,
 // destructor)
 UString EEEMStorm::sStormData("Storm-Data");
-// FUNCTION: EXE 0x52dbeb
-// FUNCTION: EXE 0x52dbf5
-// FUNCTION: EXE 0x52dc06
-// FUNCTION: EXE 0x52dc12
 // Constructs the storm's "Environment-Data" key at startup and destroys it at exit (wrapper, constructor,
 // registrar, destructor)
 UString EEEMStorm::sEnvironmentData("Environment-Data");
-// FUNCTION: EXE 0x52dc2e
-// FUNCTION: EXE 0x52dc38
-// FUNCTION: EXE 0x52dc51
-// FUNCTION: EXE 0x52dc5d
 // Constructs the black storm colour at startup and registers its destructor
 GEColor gStormColor;                        // (read by Step: the environment manager's colour when a rain storm ends)
-// FUNCTION: EXE 0x52dc5e
-// FUNCTION: EXE 0x52dc68
-// FUNCTION: EXE 0x52dc87
-// FUNCTION: EXE 0x52dc93
 // Constructs the light storm colour at startup and registers its destructor
 GEColor gStormColorLight(0.679f, 0.726f, 0.8f);
-// FUNCTION: EXE 0x52dc94
-// FUNCTION: EXE 0x52dc9e
-// FUNCTION: EXE 0x52dcbd
-// FUNCTION: EXE 0x52dcc9
 // Constructs the dark storm colour at startup and registers its destructor
 GEColor gStormColorDark(0.273f, 0.343f, 0.457f);
 
-// FUNCTION: EXE 0x52dcca
 // Returns the cost of a snow storm's route step: cheap over cliffs and hills, dear over forest, shallows and the
 // map edge
 long EEAIGPGModifierStormRoutePlannerSnow::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
@@ -146,7 +126,6 @@ long EEAIGPGModifierStormRoutePlannerSnow::GetCost(EEAIAStarGraphNode* inFrom, E
     return theCost;
 }
 
-// FUNCTION: EXE 0x52dd54
 // Returns the cost of a rain storm's route step: cheap along shores, dear over water, cliffs and the map edge
 long EEAIGPGModifierStormRoutePlannerRain::GetCost(EEAIAStarGraphNode* inFrom, EEAIPathSubSector* inTo)
 {
@@ -182,7 +161,6 @@ long EEAIGPGModifierStormRoutePlannerRain::GetCost(EEAIAStarGraphNode* inFrom, E
     return theCost;
 }
 
-// FUNCTION: EXE 0x52ddbf
 // Returns the name of a storm type ("Rain", "Snow", "Hurricane", ...), or "Type Not defined"
 UWideString EEEMStorm::GetTypeName(long inType)
 {
@@ -222,7 +200,6 @@ UWideString EEEMStorm::GetTypeName(long inType)
     return theName;
 }
 
-// FUNCTION: EXE 0x52de72
 // Creates a storm of a type for the environment manager at full intensity; any known type starts at once
 EEEMStorm::EEEMStorm(long inType, EEEnvironmentManager* inManager)
     : mManager(inManager), mTargetIntensity(1.0f), mIntensity(1.0f)
@@ -240,17 +217,12 @@ EEEMStorm::EEEMStorm(long inType, EEEnvironmentManager* inManager)
         this->Begin();
 }
 
-// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
-// TEMPLATE: EXE 0x52df26
-
-// FUNCTION: EXE 0x52df42
 // Destroys the storm, cancelling its route request and ending its weather effect
 EEEMStorm::~EEEMStorm()
 {
     this->Release();
 }
 
-// FUNCTION: EXE 0x52df63
 // Starts the storm: picks a goal in a random player's town, a start over water (rain) or cliffs and hills (snow),
 // creates the weather effect around the start and requests its route
 void EEEMStorm::Begin()
@@ -313,15 +285,14 @@ void EEEMStorm::Begin()
     else if (this->mType == kStormSnow || this->mType == kStormBlizzard)
         theEffect = EEGraphicEffect::Get(kGraphicEffectSnow);
     gEffectManager->CreateWeatherEffect(theVisited, theEffect, &theHandle);
-    this->mStorm = dynamic_cast<EEE3DStorm*>(gEffectManager->GetEffect(theHandle));
+    this->mStorm = dynamic_cast<EEE3DRust*>(gEffectManager->GetEffect(theHandle));
     this->mStorm->Reference();
     this->mStorm->GetBounds(this->mArea);
-    this->mStorm->mIsSustained = true;
+    this->mStorm->mRecord->storm.sustained = true;
     theShaper->Dereference();
     this->RequestRoute();
 }
 
-// FUNCTION: EXE 0x52e395
 // Creates the storm shaper with no steps and a near radius of 8 tiles
 EEAIBPGModifierStormShaper::EEAIBPGModifierStormShaper()
 {
@@ -332,7 +303,6 @@ EEAIBPGModifierStormShaper::EEAIBPGModifierStormShaper()
     this->mSnow = false;
 }
 
-// FUNCTION: EXE 0x52e3d8
 // Returns whether the shaper's search should stop (no node, or the step limit reached)
 bool EEAIBPGModifierStormShaper::CheckNode(EEAIAStarNode* inNode)
 {
@@ -353,7 +323,6 @@ EeAStarStorm EEAIBPGModifierStormShaper::StormState() const
     return theStorm;
 }
 
-// FUNCTION: EXE 0x52e3ee
 // Returns the cost of a tile for shaping the storm: cheap on cliffs and hills (snow) or water (rain)
 long EEAIBPGModifierStormShaper::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
                                            long inParentY)
@@ -366,7 +335,6 @@ long EEAIBPGModifierStormShaper::GetCost(long inFromX, long inFromY, long inX, l
 
 // the shaper's acceptance chances (unit-local .rdata after its vtable): ee_astar modifiers::STORM_*_CHANCE
 
-// FUNCTION: EXE 0x52e48b
 // Returns whether the storm may spread onto a tile: always inside the inner box, else by a chance that falls with
 // distance
 bool EEAIBPGModifierStormShaper::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
@@ -377,7 +345,6 @@ bool EEAIBPGModifierStormShaper::CanEnter(EETile* inTile, long inX, long inY, bo
     return ee_astar_mod_storm_can_enter(&theCallbacks, &theStorm, inX, inY);
 }
 
-// FUNCTION: EXE 0x52e523
 // Raises the storm's intensity one step toward the target (from nothing straight to 0.15)
 void EEEMStorm::Grow()
 {
@@ -387,7 +354,6 @@ void EEEMStorm::Grow()
     this->SetIntensity(theIntensity);
 }
 
-// FUNCTION: EXE 0x52e559
 // Lowers the storm's intensity one step toward the target, ending it at 0.005 or below
 void EEEMStorm::Shrink()
 {
@@ -399,14 +365,12 @@ void EEEMStorm::Shrink()
     this->SetIntensity(theIntensity);
 }
 
-// FUNCTION: EXE 0x52e588
 // Returns whether the storm is over (no weather effect, or finished)
 bool EEEMStorm::IsOver()
 {
     return this->mStorm == NULL || this->mState == 6;
 }
 
-// FUNCTION: EXE 0x52e599
 // Loads the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
 long EEEMStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -427,7 +391,7 @@ long EEEMStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
     this->mGoal.Load(inFile);
     this->mArea.Load(inFile);
     theResult = inFile.Read(theHandle.mValue);
-    this->mStorm = reinterpret_cast<EEE3DStorm*>(theHandle.mValue);
+    this->mStorm = reinterpret_cast<EEE3DRust*>(theHandle.mValue);
     if (theResult == kErrorOK && (theResult = inFile.Read(this->mTargetIntensity)) == 0
         && (theResult = inFile.Read(this->mIntensity)) == 0 && (theResult = inFile.Read(this->mStep)) == 0
         && (theResult = inFile.Read(this->mType)) == 0 && (theResult = inFile.Read(this->mState)) == 0
@@ -436,14 +400,13 @@ long EEEMStorm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return 0;
 }
 
-// FUNCTION: EXE 0x52e6b5
 // Reconnects the loaded storm to its weather effect and renames it; returns 9 when the effect is missing
 long EEEMStorm::Restore()
 {
     long theResult = 0;
     EEEffectHandle theHandle;
     theHandle.mValue = USavedID(this->mStorm);
-    this->mStorm = dynamic_cast<EEE3DStorm*>(gEffectManager->GetEffect(theHandle));
+    this->mStorm = dynamic_cast<EEE3DRust*>(gEffectManager->GetEffect(theHandle));
     if (this->mStorm != NULL)
         this->mStorm->Reference();
     else {
@@ -451,14 +414,13 @@ long EEEMStorm::Restore()
         theResult = 9;
     }
     if (this->mPath.size() == 0 && this->mStorm != NULL)
-        this->mStorm->mIsSustained = false;
+        this->mStorm->mRecord->storm.sustained = false;
     this->mName = EEEMStorm::GetTypeName(this->mType);
     if (this->mState == 2)
         this->mState = 8;
     return theResult;
 }
 
-// FUNCTION: EXE 0x52e74e
 // Requests the storm's route from its start to its goal with the planner for its type
 void EEEMStorm::RequestRoute()
 {
@@ -485,7 +447,6 @@ void EEEMStorm::RequestRoute()
         thePlanner->Dereference();
 }
 
-// FUNCTION: EXE 0x52e817
 // Takes the finished route (reversed, to pop from the back) and starts moving
 void EEEMStorm::TakePath()
 {
@@ -496,7 +457,6 @@ void EEEMStorm::TakePath()
     this->mRequest = NULL;
 }
 
-// FUNCTION: EXE 0x52e876
 // Writes the storm's route, areas, weather effect handle, intensities, type, state and times; always returns 0
 long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -523,16 +483,14 @@ long EEEMStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return 0;
 }
 
-// FUNCTION: EXE 0x52e9a2
 // Sets the storm's intensity, also on its weather effect
 void EEEMStorm::SetIntensity(float inIntensity)
 {
     this->mIntensity = inIntensity;
     if (this->mStorm != NULL)
-        this->mStorm->mIntensity = inIntensity;
+        this->mStorm->mRecord->storm.intensity = inIntensity;
 }
 
-// FUNCTION: EXE 0x52e9bd
 // Sets the storm's target intensity, clamped to 0..2
 void EEEMStorm::SetTargetIntensity(float inIntensity)
 {
@@ -544,7 +502,6 @@ void EEEMStorm::SetTargetIntensity(float inIntensity)
     this->mTargetIntensity = inIntensity;
 }
 
-// FUNCTION: EXE 0x52e9eb
 // Cancels the storm's route request and ends its weather effect
 void EEEMStorm::Release()
 {
@@ -555,8 +512,8 @@ void EEEMStorm::Release()
     }
     if (this->mStorm == NULL)
         return;
-    this->mStorm->mIsSustained = false;
-    this->mStorm->mElapsedTime = this->mStorm->mDuration;
+    this->mStorm->mRecord->storm.sustained = false;
+    this->mStorm->mRecord->storm.elapsed = this->mStorm->mRecord->storm.duration;
     this->mStorm->Release();
     this->mStorm = NULL;
 }
@@ -566,7 +523,6 @@ static const float kStormNoon = 12.0f;
 static const float kStormDay = 24.0f;
 static const float kStormMaximumStay = 45000.0f;
 
-// FUNCTION: EXE 0x52ea48
 // Advances the storm: follows its route to the goal, lingers, then dies away (also at its end time) and fades its
 // intensity; the target is always 0.4 (the hour is fixed at 10)
 void EEEMStorm::Step(unsigned long inTime)
@@ -622,7 +578,7 @@ void EEEMStorm::Step(unsigned long inTime)
         break;
     case 6:
         theIntensity = 0.0f;
-        this->mStorm->mElapsedTime = this->mStorm->mDuration;
+        this->mStorm->mRecord->storm.elapsed = this->mStorm->mRecord->storm.duration;
         break;
     case 7:
         if (this->mNextMoveTime <= inTime)

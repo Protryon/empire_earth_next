@@ -25,19 +25,19 @@ protected:
 //
 // ----------------------------------------------------------------------------------------------------------------
 
-inline TSLockable::TSLockable()             // 0x4499
+inline TSLockable::TSLockable()
 {
     ESVERIFY_AT(TSScheduler::CreateReadWriteLock(this->mLock) == keseOK, 30);
 }
 
-inline TSLockable::~TSLockable()            // 0x44c8
+inline TSLockable::~TSLockable()
 {
     TSScheduler::DestroyReadWriteLock(this->mLock);
 }
 
-inline void TSLockable::ReadLock() const { this->mLock->ReadLock(); }    // 0x44d8
-inline void TSLockable::ReadUnlock() const { this->mLock->ReadUnlock(); }  // 0x44e0
-inline void TSLockable::WriteLock() { this->mLock->WriteLock(); }        // 0x44e8
-inline void TSLockable::WriteUnlock() { this->mLock->WriteUnlock(); }    // 0x44f0
+inline void TSLockable::ReadLock() const { this->mLock->ReadLock(); }
+inline void TSLockable::ReadUnlock() const { this->mLock->ReadUnlock(); }
+inline void TSLockable::WriteLock() { this->mLock->WriteLock(); }
+inline void TSLockable::WriteUnlock() { this->mLock->WriteUnlock(); }
 
 #endif

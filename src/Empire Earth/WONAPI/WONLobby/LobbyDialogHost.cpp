@@ -63,7 +63,6 @@ public:
     unsigned long mValues[6]; // 0x34..0x48: sort keys; only the WON id (1), expiry (2) and moderator id (4) are set
     bool mIsSimple; // 0x4c (padded to 0x50)
 };
-// FUNCTION: WON 0x7f5290
 // Creates a row from a bad user entry, writing the expiry as days, hours, minutes, seconds or infinite
 BadUserItem::BadUserItem(const RoutingBadUser& inUser, bool inSimple)
 {
@@ -101,14 +100,12 @@ BadUserItem::BadUserItem(const RoutingBadUser& inUser, bool inSimple)
     this->mStrings[5] = GUIString(inUser.mModeratorComment);
 }
 
-// FUNCTION: WON 0x7f5790
 // Takes the list's font and makes the row one text line high
 void BadUserItem::CalcDimensions(ListArea* inList)
 {
     this->mFont=inList->mFont;
     this->mHeight=this->mFont->GetHeight();
 }
-// FUNCTION: WON 0x7f5800
 // Draws the selection background and the text of the column being painted (the name in the simple list)
 void BadUserItem::Paint(Graphics& inGraphics,ListArea* inList)
 {
@@ -131,7 +128,6 @@ void BadUserItem::Paint(Graphics& inGraphics,ListArea* inList)
     inGraphics.SetFont(this->mFont.get());
     inGraphics.DrawString(this->mStrings[aColumn],0,0);
 }
-// FUNCTION: WON 0x7f58c0
 // Orders two rows by the sort column: numerically for the ids and expiry, else by text
 int BadUserItem::Compare(const ListItem* inOther,ListArea* inList) const
 {
@@ -155,7 +151,6 @@ public:
     virtual int Compare(const ListItem* inOther,ListArea* inList) const;
     long mHost; // 0x28; 0x2c bytes in all (the inherited column vector is at 0x18)
 };
-// FUNCTION: WON 0x7f9c00
 // Sorts the default adapter row (host 0) first, the others by their column text
 int NetworkAdapterListItem::Compare(const ListItem* inOther,ListArea* inList) const
 {

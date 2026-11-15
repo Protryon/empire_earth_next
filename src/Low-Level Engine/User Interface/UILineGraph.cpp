@@ -71,7 +71,6 @@ extern "C" void ee_uicpp_linegraph_point(const void* inSeries, unsigned long inI
     *outY = thePoint.GetY();
 }
 
-// FUNCTION: LLE 0x100786ed
 // Creates a line graph control on the form (plain graph setup)
 UILineGraph::UILineGraph(unsigned long inId, const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
                          unsigned long inBorderThickness)
@@ -79,22 +78,17 @@ UILineGraph::UILineGraph(unsigned long inId, const GERectangle& inRectangle, UIF
 {
 }
 
-// FUNCTION: LLE 0x10078714
 // Destroys the line graph (members only)
 UILineGraph::~UILineGraph()
 {
 }
 
-// FUNCTION: LLE 0x1007871f
 // Draws the graph frame, then every enabled series with at least two points; returns the last draw result
 long UILineGraph::DrawPolygons()
 {
     long theResult = UIGraph::DrawPolygons();
     return ee_ui_linegraph_draw_list(this, theResult, this->mCopiedGraph.GetSeriesCount());
 }
-
-// FUNCTION: LLE 0x10078793
-// (UILGClipSegment, the clip DrawSeries' fix added, is Rust: graph.rs clip_segment)
 
 // Draws a series as line segments scaled into the graph area, clipped to the displayed range
 // (skips a vertical segment at or left of the series' minimum X)
@@ -103,7 +97,6 @@ long UILineGraph::DrawSeries(const UGraphSeries& inSeries)
     return UILineGraphRust::DrawSeries(this, inSeries);
 }
 
-// FUNCTION: LLE 0x10078a53
 // Formats an axis value as text with two decimals (FormatXValues shares this body)
 void UILineGraph::FormatYValues(float inValue, UWideString& outString)
 {
@@ -115,29 +108,3 @@ void UILineGraph::FormatXValues(float inValue, UWideString& outString)
 {
     sprintf(outString, "%.2f", inValue);
 }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x100785cd
-// SYNTHETIC: LLE 0x100785d7
-// SYNTHETIC: LLE 0x100785e7
-// SYNTHETIC: LLE 0x100785f3
-// SYNTHETIC: LLE 0x100785fd
-// SYNTHETIC: LLE 0x10078607
-// SYNTHETIC: LLE 0x10078617
-// SYNTHETIC: LLE 0x10078623
-// SYNTHETIC: LLE 0x1007862d
-// SYNTHETIC: LLE 0x10078637
-// SYNTHETIC: LLE 0x10078647
-// SYNTHETIC: LLE 0x10078653
-// SYNTHETIC: LLE 0x1007865d
-// SYNTHETIC: LLE 0x10078667
-// SYNTHETIC: LLE 0x10078677
-// SYNTHETIC: LLE 0x10078683
-// SYNTHETIC: LLE 0x1007868d
-// SYNTHETIC: LLE 0x10078697
-// SYNTHETIC: LLE 0x100786a7
-// SYNTHETIC: LLE 0x100786b3
-// SYNTHETIC: LLE 0x100786bd
-// SYNTHETIC: LLE 0x100786c7
-// SYNTHETIC: LLE 0x100786d7
-// SYNTHETIC: LLE 0x100786e3

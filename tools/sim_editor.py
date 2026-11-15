@@ -11,6 +11,8 @@ The physics never runs and the UI thread's clock is pinned while a step runs, so
   python -I tools/sim_editor.py              # run and compare: PASS or the first differences
   python -I tools/sim_editor.py --update     # run and write expected.txt (a declared change of the editor's output)
   python -I tools/sim_editor.py --exe build/clang/exe/EE-SIM.exe --data DIR --out FILE
+  python -I tools/sim_editor.py --civbuilder # the civilization builder's gate: civbuilder.txt against
+                                             # civbuilder_expected.txt (EESimCivBuilder.cpp's "cb" steps)
 """
 import argparse
 import difflib
@@ -32,7 +34,13 @@ def main():
     ap.add_argument("--exe", help="EE-SIM.exe (tools/sim.py's default)")
     ap.add_argument("--data", default="open", help="the data tree (tools/sim.py --data)")
     ap.add_argument("--slot", default="sim-editor", help="the stage's name (one per concurrent run)")
+    ap.add_argument("--civbuilder", action="store_true",
+                    help="the civilization builder's gate (civbuilder.txt, civbuilder_expected.txt)")
     a = ap.parse_args()
+    if a.civbuilder:
+        a.script, a.expected = HERE / "civbuilder.txt", HERE / "civbuilder_expected.txt"
+        if a.out == ROOT / "build" / "sim_editor" / "out.txt":
+            a.out = ROOT / "build" / "sim_editor" / "civbuilder_out.txt"
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.unlink(missing_ok=True)
     cmd = [sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", a.data, "--slot", a.slot]

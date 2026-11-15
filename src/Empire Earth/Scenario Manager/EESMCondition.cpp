@@ -19,7 +19,6 @@
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
-// FUNCTION: EXE 0x5ba89f
 // Creates a player-attribute condition with default players, attribute and operator, and no trigger or time tests
 // (the numbers: ee_scenario fields.rs condition_defaults)
 EESMCondition::EESMCondition()
@@ -29,20 +28,17 @@ EESMCondition::EESMCondition()
     *static_cast<EeScenarioConditionFields*>(this) = ee_scenario_condition_defaults();
 }
 
-// FUNCTION: EXE 0x5ba976
 // Destroys the condition (members only)
 EESMCondition::~EESMCondition()
 {
 }
 
-// FUNCTION: EXE 0x5ba998
 // Returns whether the value compares to the target under the operator (<, <=, ==, >=, >); false for any other
 bool EESMCondition::Compare(unsigned long inValue, unsigned long inOperator, unsigned long inTarget)
 {
     return ee_scenario_compare((uint32_t)inValue, (uint32_t)inOperator, (uint32_t)inTarget);   // ee_scenario condition.rs
 }
 
-// FUNCTION: EXE 0x5ba9e7
 // Copies every setting of another condition, including its name, texts and ID
 void EESMCondition::Copy(const EESMCondition& inCondition)
 {
@@ -52,7 +48,6 @@ void EESMCondition::Copy(const EESMCondition& inCondition)
     *static_cast<EeScenarioConditionFields*>(this) = inCondition;   // every number
 }
 
-// FUNCTION: EXE 0x5baabf
 // Returns whether the condition holds: object exists, player attribute/technology/diplomacy for any or all chosen
 // players, trigger on/fired, elapsed time/hour/difficulty, or the last chat text containing a phrase
 bool EESMCondition::Evaluate()
@@ -74,7 +69,6 @@ bool EESMCondition::EvaluateUncaptured()
     return ee_scenario_condition_evaluate(&theHost, this);
 }
 
-// FUNCTION: EXE 0x5bb154
 // Reads the condition (diplomacy above 1 becomes 1); returns the first error, ignoring the chat text's
 // (ee_scenario save.rs condition_load)
 long EESMCondition::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -85,7 +79,6 @@ long EESMCondition::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return ee_scenario_condition_load(&theTable, this);
 }
 
-// FUNCTION: EXE 0x5bb3b6
 // Writes the condition; returns the first error (ee_scenario save.rs condition_save)
 long EESMCondition::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {

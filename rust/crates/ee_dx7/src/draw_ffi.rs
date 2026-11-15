@@ -19,6 +19,8 @@ use crate::gx::{device_light, yield_now, RawDevice, RawGx, RawHost};
 use crate::rastobj::{EeDx7RastOp, EeDx7Rasterizer};
 use crate::state::ScreenState;
 use crate::vertex::Dx7StdColorVertex;
+use ee_ge::bmpobj::{ee_ge_bmp_texture, ee_ge_bmp_vertices};
+use ee_ge::prim::{ee_ge_prim_texture, ee_ge_prim_vertices, EeGePrim};
 use ee_ge::rastobj::{ee_ge_rast_get, ee_ge_rast_model_visible, ee_ge_rast_pixel_size, ee_ge_rast_ripple, EeGeRastVal};
 use ee_ge::tmobj::{
     ee_ge_tm_edge_points, ee_ge_tm_edge_vertices, ee_ge_tm_get, ee_ge_tm_get_f, ee_ge_tm_is_valid, ee_ge_tm_material,
@@ -34,13 +36,8 @@ mod cpp {
 
     extern "C" {
 
-        pub fn ee_dx7cpp_bitmap_texture(bitmap: Handle, screen: c_ulong) -> Handle;
-        pub fn ee_dx7cpp_bitmap_vertices(bitmap: Handle) -> *mut Dx7StdColorVertex;
-        pub fn ee_dx7cpp_line_texture(lines: Handle, screen: c_ulong) -> Handle;
-        pub fn ee_dx7cpp_line_vertices(lines: Handle, index: c_ulong) -> *mut Dx7StdColorVertex;
-        pub fn ee_dx7cpp_point_texture(points: Handle, screen: c_ulong) -> Handle;
-        pub fn ee_dx7cpp_point_vertices(points: Handle, index: c_ulong) -> *mut Dx7StdColorVertex;
-        pub fn ee_dx7cpp_rhombus_vertices(rhombus: Handle) -> *mut Dx7StdColorVertex;
+        /// A `DX7StdColorVertexArray`'s vertices (`GEVertexArray*` of a bitmap, line, point or rhombus).
+        pub fn ee_dx7cpp_color_vertices(array: Handle) -> *mut Dx7StdColorVertex;
         pub fn ee_dx7cpp_texture_frame(texture: Handle, out_size: *mut f32, out_corner: *mut f32);
 
         pub fn ee_dx7cpp_model_info(model: Handle, out: *mut ModelInfo);
@@ -178,27 +175,37 @@ impl DrawHost for Host {
     }
 }
 
+/// Element `index` of a `GELine`/`GEPoint` array: each element is one pointer, its Rust object (ee_ge prim.rs).
+///
+/// # Safety
+/// `array` holds more than `index` elements.
+unsafe fn prim_at(array: Handle, index: u32) -> *const EeGePrim {
+    unsafe { *(array as *const *const EeGePrim).add(index as usize) }
+}
+
+// a bitmap is its Rust object (`GEBitmap::GetRust`), a line, point or rhombus a C++ array of them; the vertices are
+// the C++ vertex array's
 impl Draw2DHost for Host {
     fn bitmap_texture(&mut self, bitmap: Handle) -> Handle {
-        unsafe { ee_dx7cpp_bitmap_texture(bitmap, self.screen) }
+        unsafe { ee_ge_bmp_texture(bitmap.cast(), self.screen) }
     }
     fn bitmap_vertices(&mut self, bitmap: Handle) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_bitmap_vertices(bitmap) }
+        unsafe { ee_dx7cpp_color_vertices(ee_ge_bmp_vertices(bitmap.cast())) }
     }
     fn line_texture(&mut self, lines: Handle) -> Handle {
-        unsafe { ee_dx7cpp_line_texture(lines, self.screen) }
+        unsafe { ee_ge_prim_texture(prim_at(lines, 0), self.screen) }
     }
     fn line_vertices(&mut self, lines: Handle, index: u32) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_line_vertices(lines, index as c_ulong) }
+        unsafe { ee_dx7cpp_color_vertices(ee_ge_prim_vertices(prim_at(lines, index))) }
     }
     fn point_texture(&mut self, points: Handle) -> Handle {
-        unsafe { ee_dx7cpp_point_texture(points, self.screen) }
+        unsafe { ee_ge_prim_texture(prim_at(points, 0), self.screen) }
     }
     fn point_vertices(&mut self, points: Handle, index: u32) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_point_vertices(points, index as c_ulong) }
+        unsafe { ee_dx7cpp_color_vertices(ee_ge_prim_vertices(prim_at(points, index))) }
     }
     fn rhombus_vertices(&mut self, rhombus: Handle) -> *mut Dx7StdColorVertex {
-        unsafe { ee_dx7cpp_rhombus_vertices(rhombus) }
+        unsafe { ee_dx7cpp_color_vertices(ee_ge_prim_vertices(prim_at(rhombus, 0))) }
     }
     fn texture_frame(&mut self, texture: Handle) -> (f32, [f32; 2]) {
         let mut size = 0.0;

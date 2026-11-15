@@ -48,52 +48,52 @@ bool EEIsSpaceDockSiteOpen(long inX, long inY, EEPlayer* inPlayer);
 
 class EECPBuildManager {
 public:
-    EECPBuildManager(EECPCivilizationManager* inManager);   // 0x66c5d
+    EECPBuildManager(EECPCivilizationManager* inManager);
     virtual ~EECPBuildManager();            // +0x00 0x66d17 (vtable 0x43c050; ??_G 0x66cfb)
     static const UString sData;             // "EECPBuildManager-Data" (0x4e5d00, guard 0x4e5cf8 bit 1; chain 0x66af0..0x66b33)
-    bool HasUnitNear(long inUnitType, long inX, long inY, float inDistance);  // 0x66d50 (ret 0x10)
-    bool HasAntiAirNear(long inX, long inY);  // 0x66de3 (ret 8)
+    bool HasUnitNear(long inUnitType, long inX, long inY, float inDistance);
+    bool HasAntiAirNear(long inX, long inY);
     bool HasTownCenterNear(long inX, long inY, float inDistance);  // 0x66ee8 (ret 0xc; EECPResearchManager 0x90015 too)
     // EECPWallManager.cpp's calls (ret N from the bodies) (provisional names)
-    bool HasGateNear(long inX, long inY, float inRadius);  // 0x67122 (ret 0xc)
-    bool HasTowerNear(long inX, long inY, float inRadius);  // 0x671c2 (ret 0xc)
-    bool HasWallNear(long inX, long inY, float inRadius);  // 0x6725e (ret 0xc)
+    bool HasGateNear(long inX, long inY, float inRadius);
+    bool HasTowerNear(long inX, long inY, float inRadius);
+    bool HasWallNear(long inX, long inY, float inRadius);
     bool IsQueued(long inUnitClass);        // 0x672fa (ret 4): is the class queued
-    void BuilderLost(EEComplexUnit* inUnit);  // 0x67356 (ret 4)
+    void BuilderLost(EEComplexUnit* inUnit);
     bool StartBuilding(EECPBuildRequest inRequest);  // 0x674c4 (ret 0xc; Update passes a queue front by value)
-    void AssignBuilders();                  // 0x677c6
-    void CancelStalledBuilds();             // 0x679d7
+    void AssignBuilders();
+    void CancelStalledBuilds();
     void CollectSiteTiles(char inKind);     // 0x67b87 (ret 4; Restore passes 2 and 4)
-    bool HasEnemyNear(long inX, long inY);  // 0x67e10 (ret 8)
-    bool FindAirportSite(EETileCoordinate& outTile);  // 0x67f97 (ret 4)
-    bool FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile);  // 0x681b3 (ret 8)
+    bool HasEnemyNear(long inX, long inY);
+    bool FindAirportSite(EETileCoordinate& outTile);
+    bool FindAntiAirSiteNear(EEUnit* inUnit, EETileCoordinate& outTile);
     bool FindAntiAirSiteAround(EETileCoordinate& inTile, long inSize, EETileCoordinate& outTile);  // 0x681e3 (ret 0xc; uses no member)
-    bool FindAntiAirSite(EETileCoordinate& outTile);  // 0x6832b (ret 4)
-    bool FindCenterSite(long inUnitClass, EETileCoordinate& outTile);  // 0x6865a (ret 8)
-    bool FindGranarySite(EETileCoordinate& outTile);  // 0x68862 (ret 4)
-    bool FindProductionSite(long inUnitClass, EETileCoordinate& outTile);  // 0x689d0 (ret 8)
+    bool FindAntiAirSite(EETileCoordinate& outTile);
+    bool FindCenterSite(long inUnitClass, EETileCoordinate& outTile);
+    bool FindGranarySite(EETileCoordinate& outTile);
+    bool FindProductionSite(long inUnitClass, EETileCoordinate& outTile);
     bool FindShoreSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x68a45 (ret 0xc; the class's +0x28c)
-    bool FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x68c90 (ret 0xc)
-    bool FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x69245 (ret 0xc)
+    bool FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
+    bool FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile);
     bool FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile);  // 0x69d6c (ret 0xc; FindSite passes 10, 8, .., 2)
     bool FindSpotNearTownCenter(EEUnit* inUnit, EETileCoordinate& outTile);  // (the body reads inUnit->mUnitClass) // 0x69ee0 (ret 8; EECPResearchManager 0x88283)
     bool FindSite(long inUnitClass, EETileCoordinate& ioTile);  // 0x6a228 (ret 8; stores the found tile)
     bool FindSpotNearDock(EEUnit* inUnit, EETileCoordinate& outTile);  // (the body reads inUnit->mUnitClass) // 0x6a473 (ret 8; EECPResearchManager 0x882d1)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x6a73b
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     bool IsNearAirportEnd(long inX, long inY, long inSize, float inDistance);  // 0x6a833 (ret 0x10; CanBuildAt): a wall gate near
     bool HasLaterEpochRequests();           // 0x6a989: anything queued above the current epoch
     void QueueBuilding(unsigned long inUnitClass, bool inAppend, bool inFront);  // 0x6a9c1 (ret 0xc; the body tests bytes: bools)
-    void QueueBuildingAt(long inUnitClass, long inX, long inY);  // 0x6ab26 (ret 0xc)
+    void QueueBuildingAt(long inUnitClass, long inX, long inY);
     void BuildingAbandoned(EEComplexUnit* inUnit);  // 0x6abb5 (ret 4; EEUGBuildRepair 0x21f212)
     // its +0x150/+0x154 tile (EECPWallManager 0x9eb08 reads the fields directly; the members are not decoded, so an
     // accessor stands in) (provisional name)
     U2DPoint<long>& GetCenter();
-    void Reset();                           // 0x6acb8
-    void DropObsoleteRequests(long inEpoch);  // 0x6ad23 (ret 4)
-    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x6add5
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x6ae17
+    void Reset();
+    void DropObsoleteRequests(long inEpoch);
+    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     void SetTownCenter(EEUnit* inUnit);     // 0x6aef3 (ret 4; EECPUnitManager::UnitAdded)
-    void Update(unsigned long inTime);      // 0x6af0d
+    void Update(unsigned long inTime);
     // 0x6b0fb (ret 0x20): a site test (EECPResourceCenter 0x8bdfa calls it through the civilization manager's +0x3c)
     bool CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize, bool inArg5,
         bool inArg6, long inX, long inY);

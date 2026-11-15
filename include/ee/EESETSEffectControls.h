@@ -27,8 +27,8 @@ extern GEFont* gU531938;                    // 0x531938 (a font of Empire Earth.
 
 class EESETSEffectControls {
 public:
-    EESETSEffectControls(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x181792
-    ~EESETSEffectControls();                // 0x1824fc
+    // the constructor (0x181792) and destructor (0x1824fc) are ee_screens editor_controls.rs's tables: the members
+    // made, stored (EE_SCREENS_SEET_OP_SLOT) and deleted there; the class is made empty and deleted after them
 
     UITextLabel* mLabels[13];               // +0x00 (new 0x124, vtable 0x442d34)
     UIEditBox* mEditBoxes[2];               // +0x34 (new 0x1e0, vtable 0x442c98; all four edit-box members)

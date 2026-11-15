@@ -2,12 +2,12 @@
 // The trigger screen's area sub-screen (RTTI EESETSArea > EESETSBaseObject; vtable 0x44380c, sizeof 0x38, ctor
 // 0x17ccf3, ??_G 0x17d07f, dtor 0x17d09b; EESETSArea.cpp 0x17ccf3..0x17daa8). It edits the scenario manager's area
 // mL04 + 2 (EEScenarioManager::GetArea; areas 0/1 are the defaults): a rectangle painted with the mouse
-// (EESEAPaintArea) or an anchor tile, chosen by the mode combo box (EESEEAreaCheck). Layout from the ctor and the
-// slot bodies; provisional names. Requires ee/EESETSBaseObject.h, lle/GERectangle.h, lle/GE2DPoint.h.
+// (EESEAPaintArea) or an anchor tile, chosen by the mode combo box (EESEEAreaCheck). The screen is whole in Rust
+// (ee_screens editor_area.rs): the class holds its object and forwards. Requires ee/EESETSBaseObject.h, lle/GERectangle.h, lle/GE2DPoint.h.
 #ifndef EE_EESETSAREA_H
 #define EE_EESETSAREA_H
 
-class EESEARust;
+struct EeScreensSeArea;
 class GEFont;
 class UIButton;
 class UIComboBox;
@@ -16,7 +16,7 @@ class UITextLabel;
 
 class EESETSArea : public EESETSBaseObject {
 public:
-    EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x17ccf3
+    EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
     virtual ~EESETSArea();                  // +0x00 0x17d09b
     virtual void Sort();                    // +0x04 0x17d0e0 (sorts the areas)
     virtual void Update();                  // +0x08 0x17d0eb (drags the paint action's corner to the mouse)
@@ -38,17 +38,14 @@ public:
     // false if there is none (EESEECenterCameraOnArea)
     bool GetCenter(GE2DPoint& outCenter);
     void SetAreaMode(bool inRectangle);     // 0x17d5c5 (stores +0x34; EESEEAreaCheck passes selection == 0)
+    // the screen's state (the editor gate's areastate): the painted rectangle, the anchor point, the flags 1 rectangle
+    // mode, 2 a rectangle, 4 a point, 8 a rectangle being painted
+    void GetState(GERectangle& outRectangle, GE2DPoint& outPoint, unsigned long& outFlags) const;
 
-    GERectangle mRectangle;                 // +0x0c the painted rectangle
-    GE2DPoint mPoint;                       // +0x1c the anchor tile
-    UIComboBox* mModeComboBox;              // +0x24 (id 0x898: rectangle / anchor; EESEEAreaCheck)
-    UIButton* mCenterButton;                // +0x28 (id 0x89a; EESEECenterCameraOnArea)
-    UITextLabel* mLabel;                    // +0x2c (id 0x89b, red: shown while there is no area)
-    EESEARust* mPaintAction;                // +0x30 (while the left button paints)
-    bool mRectangleMode;                    // +0x34
-    bool GetHasRectangle() const { return this->mHasRectangle; }
-    bool mHasRectangle;                     // +0x35
-    bool mHasPoint;                         // +0x36
+    // the slot inWhat (EE_SCREENS_SEAR_*) with the base's selection
+    void Call(uint32_t inWhat, int32_t inArgument = 0);
+
+    EeScreensSeArea* mRust;                 // the screen (editor_area.rs): its controls, rectangle, point, paint action
 };
 
 #endif

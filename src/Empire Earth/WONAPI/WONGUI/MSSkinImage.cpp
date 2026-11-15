@@ -15,7 +15,6 @@ namespace WONAPI {
 // the types and flags mspaint.rs names
 static_assert(WONMSSkin::MSImageType_CloseButton==17 && WONMSSkin::MSImageType_ListHeader==13 && WONMSSkin::MSImageFlag_Checked==8,"mspaint.rs");
 
-// FUNCTION: WON 0x007172B0
 // Paints the skin image according to its type (frames, arrows, buttons, tab, check box, radio, scrollbar gutter and
 // corner, combo popup frame; the push button, arrow and close button faces were DrawPushButton 0x00717110,
 // DrawArrowButton 0x007171E0 and DrawCloseButton 0x00717250); unknown types draw nothing. The Rust plan

@@ -6,9 +6,9 @@
 
 class EECPASGUSpaceCarrier : public EECPAttackSubGroupUnit {
 public:
-    EECPASGUSpaceCarrier(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);    // 0xd3d6
-    EECPASGUSpaceCarrier(EECPAttackSubGroup* inSubGroup);   // 0xd415
-    virtual ~EECPASGUSpaceCarrier();        // 0xd434
+    EECPASGUSpaceCarrier(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup);
+    EECPASGUSpaceCarrier(EECPAttackSubGroup* inSubGroup);
+    virtual ~EECPASGUSpaceCarrier();
     virtual bool Retarget();                // +0x14 0xd43f
 };
 

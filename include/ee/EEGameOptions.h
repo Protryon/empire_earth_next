@@ -19,10 +19,10 @@ static const unsigned long kLoadTypeCount = 6;
 
 class EEGameOptionsPlayer {
 public:
-    EEGameOptionsPlayer();                                          // 0x12f4dd
+    EEGameOptionsPlayer();
     EEGameOptionsPlayer& operator=(const EEGameOptionsPlayer& inOther);   // 0x12f526 (field moves: user-written)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x12f582
-    long Save(FSFile& outFile);             // 0x12f626
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(FSFile& outFile);
     void FnE123D();                         // empty (ICF-folded into 0xe123d; EEGameOptions::Fn130272 calls it on each slot) (provisional name)
 
     unsigned long mType;                       // +0x00 0/1 human?, 2 computer?, 3 closed (provisional name)
@@ -45,12 +45,12 @@ public:
 
 class EEGameOptions {
 public:
-    EEGameOptions();                        // 0x12f6d8
+    EEGameOptions();
     EEGameOptions(const EEGameOptions& inOther);   // 0x12f818 (also asserts on CreateReadWriteLock: user-written)
     ~EEGameOptions();                       // 0x12f892 (out of line: the lobby's GameType calls it)
-    EEGameOptions& operator=(const EEGameOptions& inOther);   // 0x12f8e0
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x12fd6b
-    long Save(FSFile& outFile);                                                              // 0x130289
+    EEGameOptions& operator=(const EEGameOptions& inOther);
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(FSFile& outFile);
     bool CanBuyCivilization();              // 0x12fc0c: !gUIManager+0x13c && !mIsScenarioGame (EEMCivUpgradesPurchased; provisional name)
     void Fn130272();                        // 0x130272 (EEMStartLoading, under the read lock; provisional name)
     void GetMapDimensions(long& outWidth, long& outHeight);  // 0x12fb70 (by mMapSize; EERandomMap::CreateRandomMap)
@@ -116,7 +116,7 @@ public:
     bool mIsScenarioGame;                   // +0x409 (gWorld+0x519: the options menu hides Resign when set)
 };
 
-extern EEGameOptions& gGameOptions;          // 0x53125c
+extern EEGameOptions& gGameOptions;
 
 class GEColor;
 // 0x1318bd (another unit; provisional name): the colour of player colour inIndex (a vector<...*> at 0x4e610c, the

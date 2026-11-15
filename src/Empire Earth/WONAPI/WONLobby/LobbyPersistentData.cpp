@@ -99,7 +99,6 @@ template <class T> static const T* PersistArray(const std::vector<T>& inItems)
     return inItems.empty() ? NULL : &inItems[0];
 }
 
-// FUNCTION: WON 0x0075e6e0
 // Returns the preferences file name of a lobby user, _wonuser<id>.dat
 std::string LobbyPersistentData::GetUserFileName(long inUserId)
 {
@@ -107,7 +106,6 @@ std::string LobbyPersistentData::GetUserFileName(long inUserId)
     ee_won_prefs_user_file_name((int32_t)inUserId, PersistAppendBytes, &aName);
     return aName;
 }
-// FUNCTION: WON 0x0075e770
 // Returns the first free user id after the run of consecutive ids starting at the smallest (1 when none exist)
 long LobbyPersistentData::FindUnusedUserId()
 {
@@ -125,13 +123,11 @@ long gLobbyGlobalPrefsVersion = 2;
 long gLobbyUserPrefsVersion = 4;
 
 
-// FUNCTION: WON 0x0075baa0
 // Adds a value to the option set unless it is already present, keeping the values in insertion order
 void LobbyOptionSet::Add(const GUIString& inValue)
 {
     this->mValues.Insert(inValue);
 }
-// FUNCTION: WON 0x0075bc20
 // Removes a value from the option set; returns whether it was present
 bool LobbyOptionSet::Erase(const GUIString& inValue)
 {
@@ -184,7 +180,6 @@ struct PersistGlobalLoad {
         }
     }
 };
-// FUNCTION: WON 0x0075f7b0
 // Loads the saved login users (names, ids, encrypted passwords) and the lobby sound, music and network adapter
 // settings from _wonlobbypersistent.dat, muting the button click sound to match; another version changes nothing
 // more (the dirty flag stays), a cut file keeps what was read before the cut
@@ -202,7 +197,6 @@ void LobbyPersistentData::LoadGlobalPrefs()
     this->SetFlag(LobbyPersistentData::kGlobalDirty, false);
 }
 
-// FUNCTION: WON 0x0075faf0
 // Writes the login users and the lobby sound, music and network adapter settings to _wonlobbypersistent.dat
 void LobbyPersistentData::SaveGlobalPrefs()
 {
@@ -249,7 +243,6 @@ void LobbyPersistentData::SaveGlobalPrefs()
 }
 
 
-// FUNCTION: WON 0x0075c720
 // Resets the user's lobby options to their defaults: Quick Play tab for an internet user, LAN tab and the
 // default LAN name for the LAN user, all sounds and confirmations on, broadcast port 8585
 void LobbyPersistentData::RestoreDefaults()
@@ -263,7 +256,6 @@ void LobbyPersistentData::RestoreDefaults()
 
 
 
-// FUNCTION: WON 0x0075c910
 // Records a login (name and password) as the most recent use of a saved user, giving a new user a free id and
 // deleting any stale preferences file; with inExistingOnly returns NULL for a user never seen before
 LobbyUserInfo* LobbyAddUser(const GUIString& inUserName, const GUIString& inPassword, bool inExistingOnly)
@@ -294,7 +286,6 @@ LobbyUserInfo* LobbyAddUser(const GUIString& inUserName, const GUIString& inPass
     return &aUser;
 }
 
-// FUNCTION: WON 0x0075eb30
 // Keeps at most 50 saved users: drops users without an id, then deletes the least recently used ones and their files
 // (persist.rs prune_users chooses)
 void LobbyPersistentData::PruneUsers()
@@ -326,7 +317,6 @@ void LobbyPersistentData::PruneUsers()
     }
 }
 
-// FUNCTION: WON 0x0075d460
 // Adds a player to the current user's friend list unless the user id is already there; returns the friend entry
 LobbyFriend* LobbyAddFriend(const GUIString& inName, unsigned long inUserId)
 {
@@ -341,7 +331,6 @@ LobbyFriend* LobbyAddFriend(const GUIString& inName, unsigned long inUserId)
     }
     return aData->Friends().At(anAt);
 }
-// FUNCTION: WON 0x0075d2c0
 // Removes a user id from the friend list; the dirty flag is set to whether one was removed, so a miss clears it
 void LobbyRemoveFriend(unsigned long inUserId)
 {
@@ -360,7 +349,6 @@ namespace WONAPI {
 
 
 
-// FUNCTION: WON 0x0075f190
 // Decrypts a saved password with the machine-bound key (ReadEncryptedString's half after the read); returns an
 // empty string if it cannot be decoded
 GUIString LobbyPersistentData::DecryptString(const uint8_t* inData, size_t inLength)
@@ -385,7 +373,6 @@ GUIString LobbyPersistentData::DecryptString(const uint8_t* inData, size_t inLen
     return GUIString("");
 }
 
-// FUNCTION: WON 0x0075f530
 // Encrypts a password with the machine-bound key (WriteEncryptedString's half before the write; NULL if encryption
 // fails: a length of 0 is saved)
 ByteBufferPtr LobbyPersistentData::EncryptString(const GUIString& inText)
@@ -461,7 +448,6 @@ struct PersistUserLoad {
     }
 };
 // A file with another version returns early: the game filters then stay empty and the dirty flags unchanged
-// FUNCTION: WON 0x0075fc70
 // Loads the current user's _wonuser file: reconnect ids, ignored names, friends, blocked CD keys (loaded and saved
 // but never filled by the lobby), options, last server/room, sounds and game filters; LAN data for the LAN user
 // (ReadLanPrefs 0x00760b10 is persist.rs read_user's first part)
@@ -492,7 +478,6 @@ void LobbyPersistentData::LoadUserPrefs()
 
 
 // (WriteLanPrefs 0x00760da0 is persist.rs write_user's first part)
-// FUNCTION: WON 0x00760770
 // Writes the current user's _wonuser file (the counterpart of LoadUserPrefs) and clears the user dirty flag; a game
 // filter with no values is written without its count (persist.rs keeps the original's bug)
 void LobbyPersistentData::SaveUserPrefs()
@@ -585,7 +570,6 @@ void LobbyPersistentData::SaveUserPrefs()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x0075d940
 // Remembers the reconnect id for a server address with the current time and saves the user's preferences
 void LobbySetReconnectId(const IPAddr& inAddress, int inReconnectId)
 {
@@ -597,7 +581,6 @@ void LobbySetReconnectId(const IPAddr& inAddress, int inReconnectId)
     aData->ReconnectInfoMap().SetNumAt(anInfo, inReconnectId, 1);
     aData->SaveUserPrefs();
 }
-// FUNCTION: WON 0x0075db00
 // Returns the saved reconnect id for a server address, or 0 if none
 int LobbyGetReconnectId(const IPAddr& inAddress)
 {
@@ -607,7 +590,6 @@ int LobbyGetReconnectId(const IPAddr& inAddress)
     long anItr = aData->ReconnectInfoMap().Find(inAddress);
     return anItr < 0 ? 0 : (int)aData->ReconnectInfoMap().NumAt((size_t)anItr, 1);
 }
-// FUNCTION: WON 0x0075e040
 // Adds comma-separated values to a default game filter column; skips a column that already has values unless
 // inAppend is set
 void LobbyAddGameOption(const GUIString& inName, const GUIString& inValues, bool inAppend)
@@ -633,7 +615,6 @@ void LobbyAddGameOption(const GUIString& inName, const GUIString& inValues, bool
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x0075d100
 // Adds a player name to or removes it from the ignore list; the dirty flag is set to whether the list changed
 void LobbySetNameIgnored(const GUIString& inName, bool inIgnore)
 {
@@ -647,7 +628,6 @@ void LobbySetNameIgnored(const GUIString& inName, bool inIgnore)
         aDirty = aData->IgnoredNames().Erase(inName);
     aData->SetFlag(LobbyPersistentData::kUserDirty, aDirty);
 }
-// FUNCTION: WON 0x0075d6c0
 // Makes a non-empty name the current LAN name, stamping its use time and keeping the 50 most recent names
 void LobbySetLanName(const GUIString& inName)
 {
@@ -660,7 +640,6 @@ void LobbySetLanName(const GUIString& inName)
     aData->PruneLanNames();
     aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
-// FUNCTION: WON 0x0075d770
 // Forgets the current LAN name and falls back to the most recently used remaining one
 void LobbyRemoveLanName()
 {
@@ -671,7 +650,6 @@ void LobbyRemoveLanName()
     aData->SelectRecentLanName();
     aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
-// FUNCTION: WON 0x0075d7f0
 // Saves a named direct-connect address
 void LobbyAddDirectConnect(const IPAddr& inAddress, const GUIString& inName)
 {
@@ -680,7 +658,6 @@ void LobbyAddDirectConnect(const IPAddr& inAddress, const GUIString& inName)
     aData->DirectConnectMap().SetTextAt(aData->DirectConnectMap().Insert(inAddress), inName);
     aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
-// FUNCTION: WON 0x0075d870
 // Forgets a saved direct-connect address
 void LobbyRemoveDirectConnect(const IPAddr& inAddress)
 {
@@ -689,7 +666,6 @@ void LobbyRemoveDirectConnect(const IPAddr& inAddress)
     if (aData->DirectConnectMap().Erase(inAddress))
         aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
-// FUNCTION: WON 0x0075db70
 // Remembers the last server and room the user joined
 void LobbySetLastRoom(const GUIString& inServer, const GUIString& inGroup)
 {
@@ -697,7 +673,6 @@ void LobbySetLastRoom(const GUIString& inServer, const GUIString& inGroup)
     if (aData == NULL) return;
     aData->SetLastRoom(inServer, inGroup);
 }
-// FUNCTION: WON 0x0075df00
 // Resets the user's game filters to the configured defaults
 void LobbyResetFilters()
 {
@@ -707,7 +682,6 @@ void LobbyResetFilters()
     aData->GameOptions() = aData->DefaultGameOptions();
     aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
-// FUNCTION: WON 0x0075e7e0
 // Keeps at most 50 recent LAN names, dropping the least recently used (persist.rs prune_lan_names chooses)
 void LobbyPersistentData::PruneLanNames()
 {
@@ -722,7 +696,6 @@ void LobbyPersistentData::PruneLanNames()
         if (aDrop[i])
             this->mLanNameInfoMap.EraseAt(i);
 }
-// FUNCTION: WON 0x0075ea40
 // Makes the most recently used saved LAN name current, or the default name when none is saved
 // (persist.rs recent_lan_name chooses)
 void LobbyPersistentData::SelectRecentLanName()
@@ -739,7 +712,6 @@ void LobbyPersistentData::SelectRecentLanName()
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x0075c520
 // Returns the default LAN player name, with a number derived from the local IP address appended unless the
 // lobby configuration turns that off
 GUIString LobbyPersistentData::GetDefaultLanName()
@@ -818,7 +790,6 @@ void LobbyPersistentData::AfterRestoreDefaults(long inOldAdapter)
 { ee_won_lobbyprefs_after_restore(this->mPrefs, inOldAdapter); }
 LobbyPersistentData::~LobbyPersistentData() { ee_won_lobbyprefs_free(this->mPrefs); }
 
-// FUNCTION: WON 0x0075bcb0
 // Creates the lobby's saved settings with default options and a password key bound to this machine
 LobbyPersistentData::LobbyPersistentData()
     : mPrefs(ee_won_lobbyprefs_new()), mUserIds(EeWonLobbyKeyKind::Signed, EeWonLobbyMapHooks()),
@@ -852,209 +823,3 @@ void LobbyOptionSet::clear()
     this->mValues.clear();
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0075c140
-// (public: __thiscall std::map<unsigned long,class WONAPI::SmartPtr<class WONAPI::LobbyFriend>,struct std::less<unsigned long>,class std::allocator<struc)
-// TEMPLATE: WON 0x0075c900
-// (class WONAPI::LobbyPersistentData * __cdecl WONAPI::GetLobbyPersistentData(void)    [?GetLobbyPersistentData@WONAPI@@YAPAVLobbyPersistentData@1@XZ])
-// TEMPLATE: WON 0x0075cc90
-// (public: __thiscall WONAPI::LobbyUserInfo::~LobbyUserInfo(void)    [??1LobbyUserInfo@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x0075cd20
-// (public: __thiscall std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>::~pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUs)
-// TEMPLATE: WON 0x0075dd20
-// (public: __thiscall WONAPI::LobbyOptionSet::LobbyOptionSet(void)    [??0LobbyOptionSet@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x0075ddb0
-// (public: __thiscall WONAPI::LobbyOptionSet::~LobbyOptionSet(void)    [??1LobbyOptionSet@WONAPI@@QAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0075bfb0
-// (public: virtual void * __thiscall WONAPI::LobbyPersistentData::`scalar deleting destructor'(unsigned int)    [??_GLobbyPersistentData@WONAPI@@UAEPAXI@)
-// TEMPLATE: WON 0x0075c2c0
-// (public: virtual __thiscall WONAPI::LobbyPersistentData::~LobbyPersistentData(void)    [??1LobbyPersistentData@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0075c200
-// (public: __thiscall std::map<class WONAPI::GUIString,class WONAPI::LobbyOptionSet,struct WONAPI::GUIStringLessNoCase,class std::allocator<struct std::p)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0075bfd0
-// (public: __thiscall std::set<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoCase,class std::allocator<class WONAPI::GUIString> >::~set<class WON)
-// TEMPLATE: WON 0x0075e990
-// (public: __thiscall std::multimap<long,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk)
-// TEMPLATE: WON 0x0075edd0
-// (public: __thiscall std::multimap<long,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUse)
-// TEMPLATE: WON 0x00760610
-// (public: class std::map<class WONAPI::GUIString,class WONAPI::LobbyOptionSet,struct WONAPI::GUIStringLessNoCase,class std::allocator<struct std::pair<c)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0075bf00
-// (public: __thiscall std::set<long,struct std::less<long>,class std::allocator<long> >::~set<long,struct std::less<long>,class std::allocator<long> >(vo)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0075c090
-// (public: __thiscall std::set<unsigned long,struct std::less<unsigned long>,class std::allocator<unsigned long> >::~set<unsigned long,struct std::less<u)
-// TEMPLATE: WON 0x0071d2c0
-// (public: void __thiscall std::list<class WONAPI::GUIString,class std::allocator<class WONAPI::GUIString> >::_Insert(class std::list<class WONAPI::GUISt)
-// TEMPLATE: WON 0x00721f20
-// (protected: void __thiscall std::list<class WONAPI::GUIString,class std::allocator<class WONAPI::GUIString> >::_Incsize(unsigned int))
-// TEMPLATE: WON 0x00766b60
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class std::list<class WONAPI::GUIString,class std::al)
-// TEMPLATE: WON 0x00767370
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::_Mapk<class)
-// TEMPLATE: WON 0x007674f0
-// (public: __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>,struct std::_Mapk<)
-// TEMPLATE: WON 0x007675b0
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>,struct std::_Mapk<class)
-// TEMPLATE: WON 0x00767db0
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI::GUIString,long,)
-// TEMPLATE: WON 0x007684d0
-// (public: __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>,struct std::_Mapk<class WONAP)
-// TEMPLATE: WON 0x00768590
-// (public: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>,struct std::_Mapk<class WONAPI::IP)
-// TEMPLATE: WON 0x00768be0
-// (public: __thiscall WONAPI::LobbyUserInfo::LobbyUserInfo(struct WONAPI::LobbyUserInfo const &))
-// TEMPLATE: WON 0x00768c50
-// (public: __thiscall std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>::~pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>(void))
-// TEMPLATE: WON 0x00769a00
-// (public: class std::_Tree<class WONAPI::GUIString,class WONAPI::GUIString,struct std::_Setk<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoCase,)
-// TEMPLATE: WON 0x00769ab0
-// (public: class std::_Tree<class WONAPI::GUIString,class WONAPI::GUIString,struct std::_Setk<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoCase,)
-// TEMPLATE: WON 0x00769b00
-// (protected: class std::_Tree<class WONAPI::GUIString,class WONAPI::GUIString,struct std::_Setk<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoCa)
-// TEMPLATE: WON 0x0076a2b0
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::_Mapk<class)
-// TEMPLATE: WON 0x0076a4a0
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>,struct std::_Mapk<class)
-// TEMPLATE: WON 0x0076a550
-// (protected: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>,struct std::_Mapk<cl)
-// TEMPLATE: WON 0x0076a950
-// (protected: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_Mapk<cla)
-// TEMPLATE: WON 0x0076ac50
-// (public: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_M)
-// TEMPLATE: WON 0x0076af40
-// (public: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>,struct std::_Mapk<class WONAPI::IP)
-// TEMPLATE: WON 0x0076aff0
-// (public: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>,struct std::_Mapk<class )
-// TEMPLATE: WON 0x0076b040
-// (?insert@?$_Tree@JU?$pair@$$CBJViterator@?$_Tree@VGUIString@WONAPI@@U?$pair@$$CBVGUIString@WONAPI@@J@std@@U_Kfn@?$_Mapk@VGUIString@WONAPI@@JUGUIStringL)
-// TEMPLATE: WON 0x0076b0c0
-// ( ?? ?? :: ?? ::insert)
-// TEMPLATE: WON 0x0076b140
-// (public: class std::_Tree<long,struct std::pair<long const ,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,st)
-// TEMPLATE: WON 0x0076c3c0
-// (public: class std::_Tree<long,long,struct std::_Setk<long,struct std::less<long>,class std::allocator<long> >::_Kfn,struct std::less<long>,class std::)
-// TEMPLATE: WON 0x0076c400
-// (public: class std::_Tree<long,long,struct std::_Setk<long,struct std::less<long>,class std::allocator<long> >::_Kfn,struct std::less<long>,class std::)
-// TEMPLATE: WON 0x0076c530
-// (protected: struct std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class std::list<class WONAPI::GUIString,class std)
-// TEMPLATE: WON 0x0076d030
-// (protected: static struct std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::LobbyFriend> >,struct std)
-// TEMPLATE: WON 0x0076d5a0
-// (protected: struct std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::_Mapk<c)
-// TEMPLATE: WON 0x0076d630
-// (protected: void __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std)
-// TEMPLATE: WON 0x0076d670
-// (protected: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::_Mapk<cl)
-// TEMPLATE: WON 0x0076d970
-// (protected: static struct std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::)
-// TEMPLATE: WON 0x0076d990
-// (protected: static struct std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::)
-// TEMPLATE: WON 0x0076d9b0
-// (protected: void __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>,struct std)
-// TEMPLATE: WON 0x0076df60
-// (protected: struct std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_Mapk<cl)
-// TEMPLATE: WON 0x0076dfb0
-// (public: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_M)
-// TEMPLATE: WON 0x0076e350
-// (protected: struct std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI::GUIString,l)
-// TEMPLATE: WON 0x0076e3a0
-// (protected: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>,struct std::_Mapk<cla)
-// TEMPLATE: WON 0x0076e6e0
-// (public: class std::_Tree<long,struct std::pair<long const ,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,lo)
-// TEMPLATE: WON 0x0076eb90
-// (protected: void __thiscall std::_Tree<long,struct std::pair<long const ,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIStr)
-// TEMPLATE: WON 0x0076ebd0
-// (protected: class std::_Tree<long,struct std::pair<long const ,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const )
-// TEMPLATE: WON 0x0076eed0
-// (public: class std::_Tree<long,struct std::pair<long const ,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,st)
-// TEMPLATE: WON 0x0076f380
-// (protected: void __thiscall std::_Tree<long,struct std::pair<long const ,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIStr)
-// TEMPLATE: WON 0x0076f790
-// (protected: struct std::_Tree<class WONAPI::GUIString,class WONAPI::GUIString,struct std::_Setk<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoC)
-// TEMPLATE: WON 0x0076f7e0
-// (protected: struct std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::_Mapk<c)
-// TEMPLATE: WON 0x0076fa00
-// (void __cdecl std::_Construct(struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo> *,struct std::pair<class WONAPI::GUIString )
-// TEMPLATE: WON 0x0076fe80
-// (public: void __thiscall std::list<class WONAPI::GUIString,class std::allocator<class WONAPI::GUIString> >::insert(class std::list<class WONAPI::GUIStr)
-// TEMPLATE: WON 0x0076ffb0
-// (void __cdecl std::_Construct(struct std::pair<long const ,class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,lon)
-// TEMPLATE: WON 0x0076ffd0
-// (public: void * __thiscall std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>::`scalar deleting destructor'(unsigned int))
-// TEMPLATE: WON 0x0076fff0
-// (public: void * __thiscall std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>::`scalar deleting destructor'(unsigned int))
-// TEMPLATE: WON 0x00770070
-// (public: void * __thiscall std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>::`scalar deleting destructor'(unsigned int))
-// TEMPLATE: WON 0x007700b0
-// (public: void __thiscall std::list<class WONAPI::GUIString,class std::allocator<class WONAPI::GUIString> >::_Insert(class std::list<class WONAPI::GUISt)
-// TEMPLATE: WON 0x00768af0
-// (public: __thiscall std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>::~pair<class WONAPI::GUIString const ,class WONAPI::LobbyOpt)
-// TEMPLATE: WON 0x0076a360
-// (public: __thiscall std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOpti)
-// TEMPLATE: WON 0x0076a450
-// (public: __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,struct WONAPI::LobbyUserInfo>,struct std::_Mapk<)
-// TEMPLATE: WON 0x0076a850
-// (public: __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_Mapk<c)
-// TEMPLATE: WON 0x0076d050
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct std::_Mapk<class)
-// TEMPLATE: WON 0x0076da40
-// (public: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_Mapk<class )
-// TEMPLATE: WON 0x0076fa80
-// (void __cdecl std::_Construct(struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo> *,struct std::pair<class WONAPI::IPAddr c)
-// TEMPLATE: WON 0x0076fd90
-// (void __cdecl std::_Construct(struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet> *,struct std::pair<class WONAPI::GUIString )
-// TEMPLATE: WON 0x0076ff00
-// (void __cdecl std::_Construct(struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString> *,struct std::pair<class WONAPI::IPAddr const ,clas)
-// TEMPLATE: WON 0x00767ad0
-// (public: __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_Mapk<c)
-// TEMPLATE: WON 0x00767b90
-// (public: long & __thiscall std::map<class WONAPI::GUIString,long,struct WONAPI::GUIStringLessNoCase,class std::allocator<struct std::pair<class WONAPI:)
-// TEMPLATE: WON 0x00767cf0
-// (public: __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI::GUIString,)
-// TEMPLATE: WON 0x007682f0
-// (public: class WONAPI::GUIString & __thiscall std::map<class WONAPI::IPAddr,class WONAPI::GUIString,struct std::less<class WONAPI::IPAddr>,class std::a)
-// TEMPLATE: WON 0x00769700
-// (protected: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI::GUIString,lo)
-// TEMPLATE: WON 0x00769e00
-// (public: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::LobbyFriend> >,struct std::_Mapk<uns)
-// TEMPLATE: WON 0x0076a1b0
-// (public: struct std::pair<class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::LobbyOptionSet>,struct)
-// TEMPLATE: WON 0x0076a8a0
-// (public: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std::_Mapk<class )
-// TEMPLATE: WON 0x0076aca0
-// (public: struct std::pair<class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI)
-// TEMPLATE: WON 0x0076ada0
-// (public: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI::GUIString,long,)
-// TEMPLATE: WON 0x0076ae50
-// (public: struct std::pair<class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>,struct std::_Mapk)
-// TEMPLATE: WON 0x0076b1f0
-// (public: __thiscall std::map<class WONAPI::GUIString,class std::list<class WONAPI::GUIString,class std::allocator<class WONAPI::GUIString> >::iterator,)
-// TEMPLATE: WON 0x0076df20
-// (protected: void __thiscall std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,struct WONAPI::LobbyReconnectInfo>,struct std:)
-// TEMPLATE: WON 0x0076e010
-// (protected: void __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI::GU)
-// TEMPLATE: WON 0x0076e3e0
-// (protected: class std::_Tree<class WONAPI::IPAddr,struct std::pair<class WONAPI::IPAddr const ,class WONAPI::GUIString>,struct std::_Mapk<class WONAPI:)
-// TEMPLATE: WON 0x0076f6c0
-// (protected: void __thiscall std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class std::list<class WONAPI::GUIString,)
-// TEMPLATE: WON 0x0076f800
-// (protected: struct std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class std::list<class WONAPI::GUIString,class std)
-// TEMPLATE: WON 0x006a9950
-// (protected: struct std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::LobbyFriend> >,struct std::_Mapk)
-// TEMPLATE: WON 0x006a9980
-// (protected: struct std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::LobbyFriend> >,struct std::_Mapk)
-// TEMPLATE: WON 0x0076c440
-// (public: __thiscall std::list<class WONAPI::GUIString,class std::allocator<class WONAPI::GUIString> >::list<class WONAPI::GUIString,class std::allocato)
-// TEMPLATE: WON 0x0076e050
-// (protected: class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,long>,struct std::_Mapk<class WONAPI::GUIString,lo)

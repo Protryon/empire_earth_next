@@ -10,7 +10,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUIBColor.h"
 
-// FUNCTION: EXE 0x6547e0
 // Creates a 25x25 player colour button showing the given colour
 EEUIBColor::EEUIBColor(unsigned long inColor, unsigned long inId, const GE2DPoint& inLocation, UIForm* inForm,
                        unsigned long inIndex)
@@ -22,10 +21,6 @@ EEUIBColor::EEUIBColor(unsigned long inColor, unsigned long inId, const GE2DPoin
     this->SetBgOpacity(1.0f);
 }
 
-// SYNTHETIC: EXE 0x65486f
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIBColor+0x0)
-
-// FUNCTION: EXE 0x654892
 // Advances to the next player colour on a left click
 long EEUIBColor::MouseLButtonUp()
 {
@@ -33,14 +28,12 @@ long EEUIBColor::MouseLButtonUp()
     return UIButton::MouseLButtonUp();
 }
 
-// FUNCTION: EXE 0x6548ac
 // Treats a right button press like a left one
 long EEUIBColor::MouseRButtonDown()
 {
     return UIButton::MouseLButtonDown();
 }
 
-// FUNCTION: EXE 0x6548b2
 // Steps back to the previous player colour on a right click
 long EEUIBColor::MouseRButtonUp()
 {
@@ -49,7 +42,6 @@ long EEUIBColor::MouseRButtonUp()
     return 0;
 }
 
-// FUNCTION: EXE 0x6548ce
 // Sets the button's player colour, wrapping 16 to 0 and one below 0 to 15
 void EEUIBColor::SetColor(unsigned long inColor)
 {

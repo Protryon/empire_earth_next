@@ -47,7 +47,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFSERedo.h"
 
-// FUNCTION: EXE 0x5a4cbb
 // Creates the editor's Redo button with its redo action
 EEUIFSERedo::EEUIFSERedo(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
                      GEBitmap* inPressedBitmap, const GE2DPoint& inPosition, unsigned long inWidth,
@@ -58,17 +57,12 @@ EEUIFSERedo::EEUIFSERedo(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap*
     this->mRedoAction = new EEARedo;
 }
 
-// SYNTHETIC: EXE 0x5a4d5a
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x5a4d76
 // Destroys the Redo button, releasing its redo action
 EEUIFSERedo::~EEUIFSERedo()
 {
     this->mRedoAction->Dereference();
 }
 
-// FUNCTION: EXE 0x5a4d95
 // Posts the redo action, then releases the button
 void EEUIFSERedo::ButtonUp()
 {
@@ -76,14 +70,12 @@ void EEUIFSERedo::ButtonUp()
     UIButton::ButtonUp();
 }
 
-// FUNCTION: EXE 0x5a4db3
 // Redoes the last undone editor change
 void EEARedo::Virtual4()
 {
     gUserInterface->Redo();
 }
 
-// ICF-FOLDED: EXE 0x5720c6
 // Does nothing
 // (folded into the shared empty slot)
 void EEARedo::Virtual8()

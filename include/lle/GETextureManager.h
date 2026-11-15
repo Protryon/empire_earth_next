@@ -70,7 +70,7 @@ public:
 private:
     friend class GETexture;
     long PromoteTexture(GETexture* inTexture);
-    // the calls the Rust object makes on other objects (GETextureManager.cpp)
+    // the calls the Rust object makes on other objects (GETexture.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
     EeGeTextureManager* mRust;              // the cache (name -> texture), the lock, the path, the screen, the footprint

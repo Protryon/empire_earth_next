@@ -1,15 +1,16 @@
 // C:\EEX\Low-Level Engine\User Interface\UIFileListBox.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
-// 0x1006fae7..0x1006ff58: the U2D key init chains, the ctor (0x1006fc07), the dtor, then the out-of-line members in
-// alphabetical order. No COMDATs of its own: the InsertLine<UWSNoCaseAlphaSort> instance it calls is the one
-// UIFileComboBox.cpp emits. The inline members and the implicit copy members are emitted by UIControlsTable.cpp.
-// UIFontTable.cpp starts at 0x1006ff58.
+// The original units: UIFileListBox.cpp 0x1006fae7..0x1006ff58 and UIFileComboBox.cpp 0x1006f4ef..0x1006fae7.
+//
+// UIFileListBox and UIFileComboBox are whole in Rust (rust/crates/ee_ui/src/filelistobj.rs, R6 ui round 21): the
+// members below forward to the Rust object, which calls out through UIFileListHost (the list's own methods, a
+// directory search, the path's lookup and the file's delete, the path's references). UIFileComboBox.cpp's
+// forwarders live here too.
 #include <windows.h>
-#include <mbstring.h>
-#include <stdlib.h>
 #include <string.h>
 
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
@@ -39,130 +40,143 @@
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIListBox.h"
+#include "lle/UIEditBox.h"
 #include "lle/UILBString.h"
+#include "lle/UIComboBox.h"
 #include "lle/UIFileListBox.h"
+#include "lle/UIFileComboBox.h"
 
-// FUNCTION: LLE 0x1006fc07
+// The Rust file lists' calls out (EeUiOp 650..667): T's own list methods, a directory search, the path
+struct UIFileListHost {
+    struct Search {                         // the original's locals
+        FSFileSpec mFile;
+        FSFileSpec mDirectory;
+    };
+    static UIListBox<UWideString>* List(UIFileListBox* l) { return l; }
+    static UIListBox<UWideString>* List(UIFileComboBox* c) { return c->GetList(); }
+    template <class T> static intptr_t Op(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t, float* f)
+    {
+        T* t = static_cast<T*>(inObj);
+        Search* s = reinterpret_cast<Search*>(a);
+        FSPath* p = reinterpret_cast<FSPath*>(inOp == EeUiOp::FlDeleteFile || inOp == EeUiOp::FlDirFirst ? b : a);
+        UString theName;
+        UWideString theLine;
+        switch (inOp) {
+        case EeUiOp::FlDeleteAll: t->DeleteAllEntries(); break;
+        case EeUiOp::FlSearchNew: return (intptr_t) new Search;
+        case EeUiOp::FlSearchDelete: delete s; break;
+        case EeUiOp::FlDirCount: return p->GetDirectoryCount();
+        case EeUiOp::FlDirFirst:
+            p->GetDirectory((unsigned long)c, s->mDirectory);
+            return s->mDirectory.GetFirstFile(s->mFile);
+        case EeUiOp::FlNext: return s->mDirectory.GetNextFile(s->mFile);
+        case EeUiOp::FlRewind: s->mDirectory.GetFirstFile(s->mFile); break;
+        case EeUiOp::FlNameLength: return strlen(s->mFile.GetFile());
+        case EeUiOp::FlNameCopy: Copy((const char*)s->mFile.GetFile(), b, c); break;
+        case EeUiOp::FlAppend:
+        case EeUiOp::FlInsertSorted:
+            theName = reinterpret_cast<const char*>(a);
+            theLine = theName;
+            if (inOp == EeUiOp::FlAppend)
+                t->AppendLine(theLine);
+            else
+                List(t)->InsertLine(theLine, 0, UWSNoCaseAlphaSort());
+            break;
+        case EeUiOp::FlSelection: {
+            unsigned long theSelection = 0;
+            long theResult = t->GetCurrentSelection(theSelection);
+            uint32_t theBits = (uint32_t)theSelection;
+            memcpy(f, &theBits, 4);
+            return theResult;
+        }
+        case EeUiOp::FlLineLength:
+        case EeUiOp::FlLineCopy:
+            theName = List(t)->GetData((unsigned long)a);
+            if (inOp == EeUiOp::FlLineLength)
+                return strlen(theName);
+            Copy((const char*)theName, b, c);
+            break;
+        case EeUiOp::FlDeleteFile: {
+            FSFileSpec* theFile = NULL;
+            uint32_t theFound = 0;
+            theName = reinterpret_cast<const char*>(a);
+            long theResult = p->FindFile(theName, theFile);
+            if (theResult == kErrorOK) {
+                theFound = 1;
+                theResult = theFile->Delete();
+                delete theFile;
+            }
+            memcpy(f, &theFound, 4);
+            return theResult;
+        }
+        case EeUiOp::FlDeleteLine: t->DeleteLine((unsigned long)a); break;
+        case EeUiOp::FlPathReference: p->Reference(); break;
+        case EeUiOp::FlPathRelease: p->Dereference(); break;
+        default: break;
+        }
+        return 0;
+    }
+    // the bytes into the Rust buffer b of c bytes, NUL-terminated
+    static void Copy(const char* inBytes, intptr_t b, intptr_t c)
+    {
+        char* theBuffer = reinterpret_cast<char*>(b);
+        size_t n = strlen(inBytes);
+        if (n >= (size_t)c)
+            n = (size_t)c - 1;
+        memcpy(theBuffer, inBytes, n);
+        theBuffer[n] = 0;
+    }
+};
+
 // Creates an empty file list box with no search path
 UIFileListBox::UIFileListBox(unsigned long inId, GEFont* inFont, bool inAutoSelect, const GERectangle& inRectangle,
                              UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
     : UILBString(inId, std::vector<UWideString>(), inFont, inAutoSelect, inRectangle, inForm, inIndex,
-                 inBorderThickness),
-      mFilePath(NULL)
+                 inBorderThickness)
 {
+    this->mRust = ee_ui_file_list_new(this, UIFileListHost::Op<UIFileListBox>, false);
 }
 
-// FUNCTION: LLE 0x1006fc6e
-// Destroys the file list box, releasing its search path
-UIFileListBox::~UIFileListBox()
+UIFileListBox::~UIFileListBox() { ee_ui_file_list_free(this->mRust); }
+void UIFileListBox::AddValidExtension(const UString& inExtension)
 {
-    if (this->mFilePath)
-        this->mFilePath->Dereference();
+    ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension);
 }
-
-// FUNCTION: LLE 0x1006fc9a
-// Fills the list with every file in the search path that has a valid extension (names without it), appended or sorted
 void UIFileListBox::CreateEntries(unsigned long inSortType)
 {
-    UString theName;
-    UWideString theLine;
-    FSFileSpec theFile;
-    FSFileSpec theDirectory;
-    this->DeleteAllEntries();
-    for (unsigned long i = 0; i < this->mFilePath->GetDirectoryCount(); i++) {
-        this->mFilePath->GetDirectory(i, theDirectory);
-        long theResult = theDirectory.GetFirstFile(theFile);
-        while (theResult == kErrorOK) {
-            unsigned long theLength = strlen(theFile.GetFile()) - 4;
-            const char* theExtension = (const char*)theFile.GetFile() + theLength;
-            for (unsigned long j = 0; j < this->mValidExtensions.size(); j++) {
-                if (strcmp(theExtension, this->mValidExtensions[j]) != 0)
-                    continue;
-                theName = theFile.GetFile().GetSubstring(0, theLength);
-                theLine = theName;
-                switch (inSortType) {
-                case 0:
-                    this->AppendLine(theLine);
-                    break;
-                case 1:
-                    this->InsertLine(theLine, 0, UWSNoCaseAlphaSort());
-                    break;
-                default:
-                    this->InsertLine(theLine, 0, UWSNoCaseAlphaSort());
-                    break;
-                }
-                break;
-            }
-            theResult = theDirectory.GetNextFile(theFile);
-        }
-        theDirectory.GetFirstFile(theFile);
-    }
+    ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType);
 }
-
-// FUNCTION: LLE 0x1006fe5f
-// Deletes the selected file from disk (the listed name plus the first valid extension that finds a file) and removes
-// its line; returns the delete or lookup error
-long UIFileListBox::DeleteSelectedFile()
-{
-    UString theName;
-    unsigned long theSelection;
-    long theResult = this->GetCurrentSelection(theSelection);
-    if (theResult == kErrorOK) {
-        theName = this->GetData(theSelection);
-        for (unsigned long i = 0; i < this->mValidExtensions.size(); i++) {
-            // Fixed: the extensions used to be appended to theName cumulatively ("name.e1.e2"), so only the first
-            // one was tried correctly
-            UString theFileName(theName);
-            theFileName += this->mValidExtensions[i];
-            FSFileSpec* theFile = NULL;
-            theResult = this->mFilePath->FindFile(theFileName, theFile);
-            if (theResult != kErrorOK)
-                continue;
-            theResult = theFile->Delete();
-            if (theResult == kErrorOK) {
-                this->DeleteLine(theSelection);
-                delete theFile;
-                break;
-            }
-            delete theFile;
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1006ff35
-// Sets the search path the file list is built from, holding a reference to it
+long UIFileListBox::DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
+FSPath* UIFileListBox::GetFilePath() const { return (FSPath*)ee_ui_file_list_call(this->mRust, EeUiFileListCall::FilePath, 0); }
 void UIFileListBox::SetSearchPaths(FSPath* inPath)
 {
-    if (this->mFilePath)
-        this->mFilePath->Dereference();
-    this->mFilePath = inPath;
-    if (this->mFilePath)
-        this->mFilePath->Reference();
+    ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath);
 }
 
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1006fae7
-// SYNTHETIC: LLE 0x1006faf1
-// SYNTHETIC: LLE 0x1006fb01
-// SYNTHETIC: LLE 0x1006fb0d
-// SYNTHETIC: LLE 0x1006fb17
-// SYNTHETIC: LLE 0x1006fb21
-// SYNTHETIC: LLE 0x1006fb31
-// SYNTHETIC: LLE 0x1006fb3d
-// SYNTHETIC: LLE 0x1006fb47
-// SYNTHETIC: LLE 0x1006fb51
-// SYNTHETIC: LLE 0x1006fb61
-// SYNTHETIC: LLE 0x1006fb6d
-// SYNTHETIC: LLE 0x1006fb77
-// SYNTHETIC: LLE 0x1006fb81
-// SYNTHETIC: LLE 0x1006fb91
-// SYNTHETIC: LLE 0x1006fb9d
-// SYNTHETIC: LLE 0x1006fba7
-// SYNTHETIC: LLE 0x1006fbb1
-// SYNTHETIC: LLE 0x1006fbc1
-// SYNTHETIC: LLE 0x1006fbcd
-// SYNTHETIC: LLE 0x1006fbd7
-// SYNTHETIC: LLE 0x1006fbe1
-// SYNTHETIC: LLE 0x1006fbf1
-// SYNTHETIC: LLE 0x1006fbfd
+// Creates an empty file combo box (the given entries are ignored) with no search path
+UIFileComboBox::UIFileComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData,
+                               GEFont* inFont, const GE2DPoint& inLocation, float inWidth,
+                               unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex,
+                               unsigned long inMaxChars, unsigned long inBorderThickness)
+    : UIComboBox(inId, inTextBoxType, std::vector<UWideString>(), inFont,
+                 GERectangle(inLocation, GE2DPoint(inLocation.GetX() + inWidth, inLocation.GetY() + kScrollBarWidth)),
+                 inMaxListBoxHeight, inForm, inIndex, inMaxChars, inBorderThickness)
+{
+    this->mRust = ee_ui_file_list_new(this, UIFileListHost::Op<UIFileComboBox>, true);
+}
+
+UIFileComboBox::~UIFileComboBox() { ee_ui_file_list_free(this->mRust); }
+void UIFileComboBox::AddValidExtension(const UString& inExtension)
+{
+    ee_ui_file_list_call(this->mRust, EeUiFileListCall::AddExtension, (intptr_t)(const char*)inExtension);
+}
+void UIFileComboBox::CreateEntries(unsigned long inSortType)
+{
+    ee_ui_file_list_call(this->mRust, EeUiFileListCall::CreateEntries, (intptr_t)inSortType);
+}
+long UIFileComboBox::DeleteSelectedFile() { return (long)ee_ui_file_list_call(this->mRust, EeUiFileListCall::DeleteSelected, 0); }
+FSPath* UIFileComboBox::GetFilePath() const { return (FSPath*)ee_ui_file_list_call(this->mRust, EeUiFileListCall::FilePath, 0); }
+void UIFileComboBox::SetSearchPaths(FSPath* inPath)
+{
+    ee_ui_file_list_call(this->mRust, EeUiFileListCall::SetSearchPaths, (intptr_t)inPath);
+}

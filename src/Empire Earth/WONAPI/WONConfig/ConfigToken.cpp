@@ -55,16 +55,10 @@ static bool ConfigReadToken(ConfigParser* inParser, std::string* outNarrow, std:
     }
 }
 
-// FUNCTION: WON 0x007b5cf0
-// (ReadToken<wchar_t>) The wide token reader, ee_won's now
-// FUNCTION: WON 0x007b3d50
 // Reads the next token as a wide string (or the rest of the line), expanding $name$ defines; false at the end or
 // on an error
 bool ConfigParser::ReadToken(std::wstring& token,bool toEndLine,bool skip)
 { return ConfigReadToken(this,NULL,&token,toEndLine,skip); }
-// FUNCTION: WON 0x007b6370
-// (ReadToken<char>) The narrow token reader, ee_won's now
-// FUNCTION: WON 0x007b3d70
 // Reads the next token as a narrow string (or the rest of the line), expanding $name$ defines; false at the end or
 // on an error
 bool ConfigParser::ReadToken(std::string& token,bool toEndLine,bool skip)

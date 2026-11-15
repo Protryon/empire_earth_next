@@ -38,31 +38,21 @@
 #include "lle/GEText.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEGraphics.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEABuild.h"
-#include "ee/EEACalamity.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
-#include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEScreenEvent.h"
-#include "ee/EEUICSelectUnits.h"
-#include "ee/EEUICCommandUnits.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUnitSetManager.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
-#include "lle/GETerrainMesh.h"
-#include "ee/EEMap.h"
-#include "ee/EEGhostUnit.h"
 #include "ee/EEMouse.h"
 #include "ee/EEPhysics.h"
-#include "ee/EEUnitPicker.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
@@ -73,15 +63,7 @@ extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (= 100, a word: EEUCFor
 extern long& gGameResources;                 // 0x53123c (4: a game kind that delays JIT manufacturing) (provisional name)
 // 0x20d571 / 0x20da86: EEGetConversionCost / EECanConvert (ee/EEAreaUtilities.h; EEUCBasicPriest.cpp)
 
-long EEModeAirport(void* inLocation, void* inForm, long inCommand, long inKind);
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
-void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity's ghost at the mouse) (provisional name)
-
-
-static bool sB5652F0;                       // 0x5652f0 (the airport commands' shift state)
-static bool sB5652F1;                       // 0x5652f1 (the rally point's shift state)
-
-// FUNCTION: EXE 0x66de97
 // Creates a main game command button with its icon, dither and queue count text
 EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable)
     : UIButton(inTable.GetID(), NULL, NULL, NULL, inRectangle, inManager->GetFormByID(inTable.GetFormID()),
@@ -144,10 +126,6 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
     }
 }
 
-// SYNTHETIC: EXE 0x66e209
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMGStatusButton+0x0)
-
-// FUNCTION: EXE 0x66e225
 // Destroys the command button and its parts
 EEUIFMGStatusButton::~EEUIFMGStatusButton()
 {
@@ -392,7 +370,6 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     return 0;
 }
 
-// FUNCTION: EXE 0x66e274
 // Presses a command or tech button: runs the command, starts placing a building, wall or gate, queues the
 // research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
 // (ee_screens status_button.rs)
@@ -402,7 +379,6 @@ void EEUIFMGStatusButton::ButtonUp()
     ee_screens_status_button_up(&thePress);
 }
 
-// FUNCTION: EXE 0x66e71d
 // Releases the button's button object
 void EEUIFMGStatusButton::ReleaseButton()
 {
@@ -412,7 +388,6 @@ void EEUIFMGStatusButton::ReleaseButton()
     }
 }
 
-// FUNCTION: EXE 0x66e734
 // Snapshots the button for drawing: whether it is available, its icon and the queued count
 // The availability of the button: a command button by its own test (mB148), else its technology through the
 // player's WriteDetailsHook, or for a calamity with a cost whether a selected unit can pay it (each branch stores
@@ -423,7 +398,6 @@ long EEUIFMGStatusButton::CopyData()
     return (long)ee_screens_status_button_copy_data(&thePress);   // ee_screens status_button.rs copy_data
 }
 
-// FUNCTION: EXE 0x66eaf4
 // Draws the button's icon, dithered when unavailable
 // The icon (and the dither over an unavailable one at the last drawn rectangle) under the button
 long EEUIFMGStatusButton::DrawPolygons()
@@ -440,7 +414,6 @@ long EEUIFMGStatusButton::DrawPolygons()
     return UIButton::DrawPolygons();
 }
 
-// FUNCTION: EXE 0x66ebb5
 // Draws the queued count over the button
 long EEUIFMGStatusButton::DrawTextA()
 {
@@ -449,7 +422,6 @@ long EEUIFMGStatusButton::DrawTextA()
     return UIButton::DrawTextA();
 }
 
-// FUNCTION: EXE 0x66ebdf
 // Builds the button's help text: market trade prices, command help (with conversion cost for priests) and
 // hot key, or a tech's name, cost and description (ee_screens status_button.rs help_string)
 bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
@@ -461,14 +433,12 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
     return ee_screens_status_button_help(&thePress);
 }
 
-// FUNCTION: EXE 0x66f16c
 // Presses the button from its hot key
 void EEUIFMGStatusButton::HotKeyDown()
 {
     this->ButtonDown();
 }
 
-// FUNCTION: EXE 0x66f174
 // Releases the button from its hot key
 void EEUIFMGStatusButton::HotKeyUp()
 {
@@ -476,7 +446,6 @@ void EEUIFMGStatusButton::HotKeyUp()
         this->ButtonUp();
 }
 
-// FUNCTION: EXE 0x66f186
 // Presses a tech button on a right press
 long EEUIFMGStatusButton::MouseRButtonDown()
 {
@@ -487,7 +456,6 @@ long EEUIFMGStatusButton::MouseRButtonDown()
     return 0;
 }
 
-// FUNCTION: EXE 0x66f1a4
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
 // (ee_screens status_button.rs)
 long EEUIFMGStatusButton::MouseRButtonUp()
@@ -497,40 +465,6 @@ long EEUIFMGStatusButton::MouseRButtonUp()
     return 0;
 }
 
-// FUNCTION: EXE 0x66f2b0
-// Creates a remove-technology message
-// (inline ctor, out of line after its first user)
-
-
-// FUNCTION: EXE 0x66f927
-// Creates a clear-airport-commands message
-// (EEMClearAirportCommands' inline ctor)
-
-// FUNCTION: EXE 0x66f94b
-// Creates a market trade message
-// (EEMExchangeResources' inline ctor)
-
-// FUNCTION: EXE 0x66f986
-// Creates a go-fanatic message
-// (EEMGoFanatic's inline ctor)
-
-// FUNCTION: EXE 0x66f9aa
-// Creates a just-in-time manufacturing message
-// (EEMJITManufacturing's inline ctor)
-
-// FUNCTION: EXE 0x66f9ce
-// Creates a lock/unlock message
-// (EEMLockUnlock's inline ctor)
-
-// FUNCTION: EXE 0x66f9fb
-// Creates a pack/unpack message
-// (EEMPackUnpack's inline ctor)
-
-// FUNCTION: EXE 0x66fa28
-// Creates a patrol message
-// (EEMPatrol's inline ctor)
-
-// FUNCTION: EXE 0x66fa55
 // Asks the main panel to refill its unit (clearing its flag)
 void EEUIManager::Fn26FA55()
 {
@@ -539,7 +473,6 @@ void EEUIManager::Fn26FA55()
     theGroup->mReset = true;
 }
 
-// FUNCTION: EXE 0x66fa6a
 // Asks the main panel to refill its unit (setting its flag)
 void EEUIManager::Fn26FA6A()
 {
@@ -548,7 +481,6 @@ void EEUIManager::Fn26FA6A()
     theGroup->mReset = true;
 }
 
-// FUNCTION: EXE 0x66fa82
 // Makes the button a command button showing a button object
 void EEUIFMGStatusButton::SetCommandButton(unsigned long inButton)
 {
@@ -560,7 +492,6 @@ void EEUIFMGStatusButton::SetCommandButton(unsigned long inButton)
     this->mButtonObject->Acquire();
 }
 
-// FUNCTION: EXE 0x66faba
 // Makes the button a tech button for a unit's technology, showing the tech's button
 void EEUIFMGStatusButton::SetTechButton(long inTechnology, unsigned long inUnitType, unsigned long inUnitID)
 {
@@ -575,7 +506,6 @@ void EEUIFMGStatusButton::SetTechButton(long inTechnology, unsigned long inUnitT
     this->mButtonObject->Acquire();
 }
 
-// FUNCTION: EXE 0x66fb19
 // Moves the button, its icon and its queue count text
 void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
 {
@@ -587,7 +517,6 @@ void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
     UIButton::SetLocation(inLocation);
 }
 
-// FUNCTION: EXE 0x66fb79
 // Releases a pressed button when tabbing away
 void EEUIFMGStatusButton::TabbedFrom()
 {
@@ -597,14 +526,12 @@ void EEUIFMGStatusButton::TabbedFrom()
         UIButton::TabbedFrom();
 }
 
-// FUNCTION: EXE 0x66fb8d
 // Handles tabbing to the button
 void EEUIFMGStatusButton::TabbedTo()
 {
     UIButton::TabbedTo();
 }
 
-// FUNCTION: EXE 0x66fb93
 // Ends the cinematic at its saved end time (sends the end-cinematic message)
 // (EEMEndCinematic takes the end time as a float)
 long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -613,666 +540,6 @@ long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x66fbca
-// Creates an end-cinematic message
-// (EEMEndCinematic's inline ctor)
-
-// SYNTHETIC: EXE 0x66fbf7
-// (EEMessage's scalar deleting destructor, ICF-folded with every EEM* class's that has no members to destroy)
-
-// FUNCTION: EXE 0x66fc22
-// Handles the mouse in an airport rally mode: previews and, on a click, sends the airport command at the
-// clicked point (Shift keeps the mode)
-// NEAR: theChance lives in memory in the original; the pressed block is placed after the epilogue
-// (inCommand: EEMSetAirportCommand's command)
-long EEModeAirport(void* inLocation, void* inForm, long inCommand, long inKind)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EETile* theTile;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    long theTarget = -1;
-    ISEntity* theKey;
-    unsigned char theShift;
-    theForm->mIsCursorLocked = true;
-    if (!theForm->GetIsMouseCaptured() && gViewport.GetViewRectangle().Contains(theLocation)) {
-        gISKeyboard->GetEntity(kKeyShift, theKey);
-        theShift = theKey->GetValue() > 0;
-        gMouse->mPointer = 0xf;
-        EEPointUnitOrTile(theLocation, theTile, thePoint, true);
-        if (inCommand != 0xf) {
-            EEUnit* theUnit = gUnitPicker.PickUnit(theLocation, 0);
-            if (theUnit != NULL) {
-                theTarget = theUnit->mUnitID;
-                if (thePlayer != theUnit->mPlayer && theUnit->mPlayer->mEnemies[thePlayer->mPlayerID] &&
-                    EEIsSeenBy(static_cast<EEComplexUnit*>(theUnit), thePlayer, true)) {
-                    float theChance = 0.0f;
-                    long theClass = theUnit->GetUnitClass()->mFamily;
-                    if (theUnit->GetUnitClass()->CanBeAttacked())
-                        theChance = EEDamageFactor(theClass, inKind);
-                    if (theChance > 0.0f)
-                        gMouse->mPointer = 1;
-                }
-                theUnit->Dereference();
-            } else
-                theTarget = -1;
-        }
-        if (!UIManager::GetLMouseButton()->JustPressed() && !UIManager::GetRMouseButton()->JustUnpressed()) {
-            if (theShift)
-                return false;
-            if (!sB5652F0)
-                return false;
-            sB5652F0 = false;
-        } else {
-            sB5652F0 = theShift;
-            gCommunications->ProcessLocalUserInput(
-                new EEMRecord(kMessageSetAirportCommand, {GE2DPoint(thePoint.GetX(), thePoint.GetY()), inCommand, theTarget, theShift}),
-                kSlotNone);
-            if (theShift)
-                return false;
-        }
-        theForm->SetUIState(0);
-        theForm->mIsCursorLocked = false;
-        gMouse->mPointer = 0;
-    } else {
-        gMouse->mPointer = 0;
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x66fe14
-// Creates a set-airport-command message
-// (EEMSetAirportCommand's inline ctor)
-
-// FUNCTION: EXE 0x66fe64
-// Handles the mouse in atomic bomber rally mode (airport command 0xa)
-long EEModeAtomicBomberRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 0xa, 0);
-}
-
-// FUNCTION: EXE 0x66fe79
-// Handles the mouse in paratrooper rally mode (airport command 0x14)
-long EEModeParatrooperRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 0x14, 0);
-}
-
-// FUNCTION: EXE 0x66fe8e
-// Handles the mouse in bomber rally mode (airport command 9)
-long EEModeBomberRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 9, 0);
-}
-
-// FUNCTION: EXE 0x66fea3
-// Handles the mouse in fighter rally mode (airport command 8)
-long EEModeFighterRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 8, 0xc);
-}
-
-// FUNCTION: EXE 0x66feb8
-// Handles the mouse in timed atomic bomber rally mode (airport command 0xc)
-long EEModeTimedAtomicBomberRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 0xc, 0);
-}
-
-// FUNCTION: EXE 0x66fecd
-// Handles the mouse in timed bomber rally mode (airport command 0xd)
-long EEModeTimedBomberRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 0xd, 0);
-}
-
-// FUNCTION: EXE 0x66fee2
-// Handles the mouse in timed fighter rally mode (airport command 0xe)
-long EEModeTimedFighterRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 0xe, 0xc);
-}
-
-// FUNCTION: EXE 0x66fef7
-// Handles the mouse in timed rally mode (airport command 0xf)
-long EEModeTimedRally(void* inLocation, void* inForm)
-{
-    return EEModeAirport(inLocation, inForm, 0xf, 0xc);
-}
-
-// FUNCTION: EXE 0x66ff0c
-// Handles the mouse in attack-ground mode: range cursor, then an attack-ground order at the clicked point
-// NEAR: the range test's x87 shape and block layout
-long EEModeAttackGround(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEComplexUnit* theUnit = NULL;
-    EETile* theTile;
-    if (theForm->GetIsMouseCaptured())
-        return false;
-    if (!UIManager::GetLMouseButton()->JustPressed() && !UIManager::GetRMouseButton()->JustPressed()) {
-        if (EEPointUnitOrTile(theLocation, theTile, thePoint, true)) {
-            if (theTile->IsSeenBy(thePlayer)) {
-                if (EEGetFirstSelectedUnit(theUnit) == true) {
-                    gMouse->mPointer = theUnit->mComplexUnit->DistanceSquared3D(thePoint) >= UMSquare(theUnit->GetUnitClass()->mMinRange) ? 1 : 3;
-                } else {
-                    gMouse->mPointer = 0;
-                }
-            } else {
-                gMouse->mPointer = 7;
-            }
-        }
-        return false;
-    }
-    if (!EEPointUnitOrTile(theLocation, theTile, thePoint, true) || !theTile->IsSeenBy(thePlayer))
-        return false;
-    EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
-    if (EEGetFirstSelectedUnit(theUnit) == true) {
-        if (theUnit->mComplexUnit->DistanceSquared3D(thePoint) >= UMSquare(theUnit->GetUnitClass()->mMinRange))
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackGround, {thePoint.GetX(), thePoint.GetY()}), kSlotNone);
-        EEMakeCalamityEffect(thePoint, theTarget);
-    }
-    theForm->SetUIState(0);
-    gMouse->mPointer = 0;
-    theForm->mIsCursorLocked = false;
-    if (theTarget)
-        theTarget->Dereference();
-    return false;
-}
-
-// FUNCTION: EXE 0x67012b
-// Handles the mouse in build mode: previews the building ghost and places it on a click
-// NEAR: the ghost loop (out-of-line vector operator[]/_Ptrit operator+ in the original)
-long EEModeBuild(void* inLocation, void* inForm)
-{
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    GE2DPoint theTile(0.0f, 0.0f);
-    ISEntity* theKey;
-    if (!theForm->GetIsMouseCaptured()) {
-        EEPreviewPlacement(theForm->GetMouseLocation());
-        gMouse->mPointer = 0;
-        if (UIManager::GetLMouseButton()->JustPressed() || UIManager::GetLMouseButton()->GetValue())
-            return false;
-        if (UIManager::GetLMouseButton()->JustUnpressed()) {
-            gWorld.mGhostUnitsLock->Enter();
-            for (unsigned long i = 0; i < gWorld.GetNumGhostUnits(); i++) {
-                EEGhostUnit* theGhost = static_cast<EEGhostUnit*>(gWorld.mGhostUnits[i]);
-                if (!theGhost->mCanPlace &&
-                    ((theGhost->mUnitClass->mUnitType == kUnitTypeFarm || theGhost->mUnitClass->mUnitType == kUnitTypeRoboticFarm) &&
-                         gWorld.GetNumGhostUnits() == 1 ||
-                     theGhost->mUnitClass->mUnitType != kUnitTypeFarm && theGhost->mUnitClass->mUnitType != kUnitTypeRoboticFarm))
-                    goto leave;
-            }
-            gISKeyboard->GetEntity(kKeyShift, theKey);
-            theForm->mBuild->mIsQueued = theKey->GetValue() > 0;
-            theTile.SetX((float)(static_cast<EEGhostUnit*>(gWorld.mGhostUnits[0]))->mTileX);
-            theTile.SetY((float)((EEGhostUnit*)*(gWorld.mGhostUnits.begin() + 0))->mTileY);
-            theForm->mBuild->Build(theTile);
-            if (theKey->GetValue() == 0) {
-                gWorld.ClearGhostUnits();
-                theForm->SetUIState(0);
-            }
-        leave:
-            gWorld.mGhostUnitsLock->Leave();
-        } else if (!UIManager::GetRMouseButton()->JustPressed() && !UIManager::GetRMouseButton()->GetValue() &&
-                   UIManager::GetRMouseButton()->JustUnpressed()) {
-            gWorld.mGhostUnitsLock->Enter();
-            gWorld.ClearGhostUnits();
-            gWorld.mGhostUnitsLock->Leave();
-            theForm->SetUIState(0);
-        }
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x670343
-// Handles the mouse in gate placement mode
-long EEModeGate(void* inLocation, void* inForm)
-{
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    theForm->mIsCursorLocked = true;
-    if (!theForm->GetIsMouseCaptured()) {
-        gMouse->mPointer = 0;
-        theForm->mBuildGate.Update(*static_cast<const GE2DPoint*>(inLocation));
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x670379
-// Handles the mouse in wall placement mode
-long EEModeWall(void* inLocation, void* inForm)
-{
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    theForm->mIsCursorLocked = true;
-    if (!theForm->GetIsMouseCaptured()) {
-        gMouse->mPointer = 0;
-        theForm->mBuildWall.Update(*static_cast<const GE2DPoint*>(inLocation));
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x6703af
-// Handles the mouse in flare mode: a click on the map sends a flare there and leaves the mode
-long EEModeFlare(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    long theX = -10000;
-    long theY = -10000;
-    EETile* theTile = NULL;
-    theForm->mIsCursorLocked = true;
-    gMouse->mPointer = 0x16;
-    if (theForm->GetIsMouseCaptured())
-        return false;
-    if (!UIManager::GetLMouseButton()->JustPressed() && !UIManager::GetRMouseButton()->JustPressed())
-        return false;
-    if (EEPointUnitOrTileXY(theLocation, theTile, theX, theY, true)) {
-        EEOrderAtCursor(theLocation, NULL);
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {theX, theY}), kSlotNone);
-    }
-    theForm->SetUIState(0);
-    gMouse->mPointer = 0;
-    theForm->mIsCursorLocked = false;
-    return false;
-}
-
-// FUNCTION: EXE 0x67048e
-// Creates a send-flare message
-// (inline ctor: ee/EEMessage.h)
-
-// FUNCTION: EXE 0x6704c9
-// Handles the mouse in garrison mode: shows whether the unit under the cursor can take the selection, and
-// garrisons on a click
-// NEAR: the original reads the view rectangle through an out-of-line vector operator[]
-long EEModeGarrison(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    const GERectangle& theView = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
-    EEComplexUnit* theUnit = NULL;
-    EETile* theTile;
-    long theX;
-    long theY;
-    long theMessage;
-    if (theForm->GetIsMouseCaptured())
-        return false;
-    if (!theView.Contains(theLocation))
-        return false;
-    if (!UIManager::GetRMouseButton()->JustPressed() && !UIManager::GetLMouseButton()->JustPressed())
-        return false;
-    if (!EEPointUnitOrTileXY(theLocation, theTile, theX, theY, true))
-        return false;
-    EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
-    if (theTarget != NULL) {
-        EEComplexUnit* theComplex = theTarget->mComplexUnit;
-        if (EEGetFirstSelectedUnit(theUnit) == true) {
-            EEComplexUnit* theOwn = theUnit->mComplexUnit;
-            if (theOwn && theComplex && theComplex->mIsBuilt && theOwn->mPlayer == theComplex->mPlayer &&
-                theComplex->GetUnitClass()->mGarrisonCapacity != theComplex->mGarrisonCount) {
-                gCommunications->ProcessLocalUserInput(
-                    new EEMRecord(kMessageLoadGarrison, {theTarget->GetUnitID(), theOwn->mUnitID, 0}), kSlotNone);
-                EEOrderAtCursor(theLocation, theComplex);
-                goto done;
-            }
-            if (theComplex && theComplex->GetUnitClass()->mGarrisonCapacity)
-                theMessage = 0x7c3a;
-            else
-                theMessage = 0x7c41;
-        } else {
-            theMessage = 0x7c41;
-        }
-        {
-            U2DPoint<long> thePoint;
-            thePoint.mX = theX;
-            thePoint.mY = theY;
-            gWorld.GetCurrentPlayer()->mEvents.AddEvent(thePoint, 2, gWorld.GetCurrentPlayer(), theMessage, false);
-        }
-    done:
-        theTarget->Dereference();
-    } else {
-        U2DPoint<long> thePoint;
-        thePoint.mX = theX;
-        thePoint.mY = theY;
-        gWorld.GetCurrentPlayer()->mEvents.AddEvent(thePoint, 2, gWorld.GetCurrentPlayer(), 0x7c41, false);
-    }
-    theForm->SetUIState(0);
-    gMouse->mPointer = 0;
-    theForm->mIsCursorLocked = false;
-    return false;
-}
-
-// FUNCTION: EXE 0x670703
-// Handles the mouse in unload mode: unloads the selected transport at the clicked point
-// NEAR: the original reads the view rectangle through out-of-line begin()/operator+
-long EEModeUnload(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    const GERectangle& theView = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
-    EEComplexUnit* theUnit = NULL;
-    EETile* theTile;
-    long theX;
-    long theY;
-    if (theForm->GetIsMouseCaptured() || !theView.Contains(theLocation))
-        return false;
-    if (!UIManager::GetRMouseButton()->JustPressed() && !UIManager::GetLMouseButton()->JustPressed())
-        return false;
-    if (!EEPointUnitOrTileXY(theLocation, theTile, theX, theY, true))
-        return false;
-    EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
-    if (EEGetFirstSelectedUnit(theUnit) == true) {
-        if (theUnit) {
-            gCommunications->ProcessLocalUserInput(
-                new EEMRecord(kMessageUnloadTransport, {theUnit->GetComplexUnit()->GetUnitID(), theX, theY}), kSlotNone);
-            EEOrderAtCursor(theLocation, theTarget);
-        }
-    } else {
-        U2DPoint<long> thePoint;
-        thePoint.mX = theX;
-        thePoint.mY = theY;
-        gWorld.GetCurrentPlayer()->mEvents.AddEvent(thePoint, 2, gWorld.GetCurrentPlayer(), 0x7c3b, false);
-    }
-    theForm->SetUIState(0);
-    gMouse->mPointer = 0;
-    theForm->mIsCursorLocked = false;
-    if (theTarget)
-        theTarget->Dereference();
-    return false;
-}
-
-// FUNCTION: EXE 0x670898
-// Handles the mouse in heal mode: a click on a unit the healer's set can heal sends a heal order
-// NEAR: GetViewport inline budget, register choice
-long EEModeHeal(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    const GERectangle& theView = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
-    EEComplexUnit* theUnit = NULL;
-    theForm->mIsCursorLocked = true;
-    gMouse->mPointer = 0x12;
-    if (!theForm->GetIsMouseCaptured() && theView.Contains(theLocation)) {
-        if (EEGetFirstSelectedUnit(theUnit)) {
-            EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
-            EEComplexUnit* theComplex;
-            if (theTarget != NULL && (theComplex = theTarget->mComplexUnit) != NULL) {
-                if (gUnitSetManager.Contains(theComplex->GetUnitClass()->GetUnitType(), theUnit->mStats->mWonderUnitSet)) {
-                    if (!UIManager::GetLMouseButton()->JustUnpressed() &&
-                        !UIManager::GetRMouseButton()->JustUnpressed())
-                        goto done;
-                    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageHealUnit, {theComplex->mUnitID}), kSlotNone);
-                } else {
-                    gMouse->mPointer = 0x13;
-                    goto done;
-                }
-            } else {
-                if (!UIManager::GetRMouseButton()->JustUnpressed())
-                    goto done;
-            }
-            theForm->SetUIState(0);
-            theForm->mIsCursorLocked = false;
-        done:
-            if (theTarget)
-                theTarget->Dereference();
-        } else {
-            theForm->SetUIState(0);
-            theForm->mIsCursorLocked = false;
-        }
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x6709ee
-// Handles the mouse in convert mode: shows whether a selected unit can convert the unit under the cursor
-// (and is in range), and orders it on a click (Shift keeps the mode)
-// NEAR: view rectangle access and the loop shape
-long EEModeConvert(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    const GERectangle& theView = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
-    bool theInRange = false;
-    bool theFound = false;
-    ISEntity* theKey;
-    EEComplexUnit* theFirst = thePlayer->mSelectedGroup->GetFirstUnit();
-    theForm->mIsCursorLocked = true;
-    gMouse->mPointer = 10;
-    if (theForm->GetIsMouseCaptured())
-        return false;
-    if (!theView.Contains(theLocation))
-        return false;
-    if (theFirst != NULL) {
-        EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
-        EEComplexUnit* theComplex;
-        if (theTarget == NULL || (theComplex = theTarget->GetComplexUnit()) == NULL) {
-            if (!UIManager::GetRMouseButton()->JustUnpressed()) {
-                gMouse->mPointer = 0x13;
-                goto done;
-            }
-        } else {
-            for (unsigned long i = 0;; i++) {
-                if (!(i < thePlayer->mSelectedGroup->GetNumUnits()))
-                    break;
-                if (theFound)
-                    break;
-                if (theInRange) {
-                    gMouse->mPointer = 0x10;
-                    goto done;
-                }
-                theFound = EECanConvert(thePlayer->mSelectedGroup->GetUnit(i), theComplex, theInRange);
-            }
-            if (!theFound) {
-                if (theInRange)
-                    gMouse->mPointer = 0x10;
-                else
-                    gMouse->mPointer = 0x13;
-                goto done;
-            }
-            if (!UIManager::GetLMouseButton()->JustUnpressed() && !UIManager::GetRMouseButton()->JustUnpressed())
-                goto done;
-            gISKeyboard->GetEntity(kKeyShift, theKey);
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackUnit, {theComplex->mUnitID, theKey->GetValue() > 0, true}),
-                                                   kSlotNone);
-            if (theKey->GetValue())
-                goto done;
-        }
-        theForm->SetUIState(0);
-        theForm->mIsCursorLocked = false;
-done:
-        if (theTarget)
-            theTarget->Dereference();
-    } else {
-        theForm->SetUIState(0);
-        theForm->mIsCursorLocked = false;
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x670c08
-// Handles the mouse in calamity mode: previews the calamity at the cursor and casts it on a click
-// NEAR: GetViewport expands vector::operator[] (the original calls it), epilogue placement
-long EEModeCalamity(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    EEComplexUnit* theUnit = NULL;
-    const GERectangle& theView = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
-    theForm->mIsCursorLocked = true;
-    if (theForm->GetIsMouseCaptured())
-        return false;
-    EEPreviewPlacement(theForm->GetMouseLocation());
-    if (theView.Contains(theLocation)) {
-        long theCheck = theForm->mCalamity->Check(theLocation);
-        if (theCheck == 0) {
-            if (EEGetFirstSelectedUnit(theUnit) && theUnit->mHitPoints > 0) {
-                gMouse->mPointer = 0xd;
-                if (theUnit->mUnitID == theForm->mCalamity->mCasterID) {
-                    if (!UIManager::GetLMouseButton()->JustUnpressed() &&
-                        !UIManager::GetRMouseButton()->JustUnpressed())
-                        return false;
-                    theForm->mCalamity->Cast(theLocation);
-                }
-            }
-        } else if (theCheck == 1) {
-            if (EEGetFirstSelectedUnit(theUnit)) {
-                if (theUnit->mHitPoints > 0)
-                    gMouse->mPointer = 0xe;
-                else
-                    gMouse->mPointer = 0;
-                return false;
-            }
-        } else if (theCheck == 2) {
-            if (EEGetFirstSelectedUnit(theUnit)) {
-                if (theUnit->mHitPoints > 0)
-                    gMouse->mPointer = 0x11;
-                else
-                    gMouse->mPointer = 0;
-                return false;
-            }
-        } else
-            return false;
-        gWorld.mGhostUnitsLock->Enter();
-        gWorld.ClearGhostUnits();
-        gWorld.mGhostUnitsLock->Leave();
-        theForm->SetUIState(0);
-        theForm->mIsCursorLocked = false;
-    } else
-        gMouse->mPointer = 0;
-    return false;
-}
-
-// FUNCTION: EXE 0x670d77
-// Handles the mouse in the normal mode: selection, camera and the unit editing hack
-long EEModeNormal(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    GE2DPoint theTile(0.0f, 0.0f);
-    EETile* theTarget;
-    bool theInView = theForm->IsInGameView(theLocation);
-    if (theForm->GetIsMouseCaptured())
-        return false;
-    if (UIManager::GetLMouseButton()->JustPressed()) {
-        if (!theForm->GetEntityGroup(1)->GetIsEnabled()) {
-            theForm->mCurrentGroup = 0;
-            theForm->SetEntityGroup(1);
-        }
-        gWorld.mCameraControl.ClearUnitA();
-        gWorld.mCameraControl.ClearUnitB();
-        if (theInView) {
-            if (EEPointUnitOrTile(theLocation, theTarget, thePoint, true)) {
-                theTile.SetX(thePoint.GetX());
-                theTile.SetY(thePoint.GetY());
-                theForm->mUnitHack->Fn157269(theTile);
-            }
-            static_cast<EEUICSelectUnits*>(theForm->GetControl(kMainGameSelectUnits))->StartSelection(theLocation);
-        }
-    } else if (!UIManager::GetLMouseButton()->GetValue()) {
-        if (UIManager::GetLMouseButton()->JustUnpressed()) {
-            bool theFound = EEPointUnitOrTile(theLocation, theTarget, thePoint, true);
-            if (theInView && theFound) {
-                theTile.SetX(thePoint.GetX());
-                theTile.SetY(thePoint.GetY());
-                theForm->mUnitHack->PlaceUnit(theTile);
-            }
-        } else if (UIManager::GetRMouseButton()->JustPressed()) {
-            if (!theForm->GetEntityGroup(1)->GetIsEnabled()) {
-                theForm->mCurrentGroup = 0;
-                theForm->SetEntityGroup(1);
-            }
-            if (theInView)
-                (static_cast<EEUICCommandUnits*>(theForm->GetControl(kMainGameCommandUnits)))->StartCommand(theLocation);
-        } else if (!UIManager::GetRMouseButton()->GetValue()) {
-            UIManager::GetRMouseButton()->JustUnpressed();
-        }
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x670f20
-// Handles the mouse in rally point mode: sets the selected buildings' rally point at the clicked point
-// theShift is a byte (`setg` into it, `setne` when it is copied to the bool sB5652F1)
-long EEModeRally(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
-    EETile* theTile;
-    ISEntity* theKey;
-    EEComplexUnit* theUnit = NULL;
-    bool theDone = false;
-    unsigned char theShift;
-    theForm->mIsCursorLocked = true;
-    if (!theForm->GetIsMouseCaptured() && gViewport.GetViewRectangle().Contains(theLocation)) {
-        gMouse->mPointer = 0xf;
-        gISKeyboard->GetEntity(kKeyShift, theKey);
-        theShift = theKey->GetValue() > 0;
-        if (!UIManager::GetLMouseButton()->JustPressed() && !UIManager::GetRMouseButton()->JustUnpressed()) {
-            if (theShift)
-                return false;
-            if (!sB5652F1)
-                return false;
-            sB5652F1 = false;
-            goto finish;
-        }
-        sB5652F1 = theShift;
-        if (EEGetFirstSelectedUnit(theUnit)) {
-            if (theUnit->GetUnitClass()->mCanSetRallyPoint) {
-                EEPointUnitOrTile(theLocation, theTile, thePoint, true);
-                EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
-                long theTargetID;
-                if (theTarget != NULL) {
-                    theTargetID = theTarget->mUnitID;
-                    theTarget->Dereference();
-                } else
-                    theTargetID = -1;
-                EEComplexUnit* theComplex = theUnit->mComplexUnit;
-                gCommunications->ProcessLocalUserInput(
-                    new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(thePoint.GetX(), thePoint.GetY()), theTargetID, theComplex->GetUnitID(), theShift}),
-                    kSlotNone);
-            }
-        } else
-            theDone = true;
-        if (!theShift)
-            theDone = true;
-    } else {
-        gMouse->mPointer = 0;
-    }
-    if (theDone != true)
-        return false;
-finish:
-    theForm->SetUIState(0);
-    theForm->mIsCursorLocked = false;
-    gMouse->mPointer = 0;
-    return false;
-}
-
-// FUNCTION: EXE 0x6710d0
-// Starts a drag selection on a left press in the game view (stops following a unit)
-long EEModeCamera(void* inLocation, void* inForm)
-{
-    const GE2DPoint& theLocation = *static_cast<const GE2DPoint*>(inLocation);
-    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    bool theInView = gViewport.GetViewRectangle().Contains(theLocation);
-    if (theForm->GetIsMouseCaptured())
-        return false;
-    if (UIManager::GetLMouseButton()->JustPressed()) {
-        gWorld.mCameraControl.Follow(NULL, false, 1.0f, 0.0f, 0.0f);
-        if (theInView)
-            (static_cast<EEUICSelectUnits*>(theForm->GetControl(kMainGameSelectUnits)))->StartSelection(theLocation);
-    } else if (!UIManager::GetLMouseButton()->GetValue()) {
-        UIManager::GetLMouseButton()->JustUnpressed();
-    }
-    return false;
-}
-
-// FUNCTION: EXE 0x67115c
 // Handles the keys in cinematic mode: Escape or F1 ends it, F3 pauses, F9 takes a screenshot
 static bool EECinematicKeyPressed(unsigned long inKey)
 {
@@ -1298,10 +565,6 @@ bool EEModeKeyboardCinematic(void* inForm)
     return true;
 }
 
-// SYNTHETIC: EXE 0x671265
-// (EEUIEndCinematicModeEvent's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x671290
 // Runs the keyboard test of the current interface mode, else the form's keys
 // the keyboard tests take the form only (EEUIFMGKeyboardTest)
 long EEUIFMainGame::UpdateKeyboard()
@@ -1310,24 +573,5 @@ long EEUIFMainGame::UpdateKeyboard()
     // (the tests return bool; the original keeps the result in edi)
     if (!this->mKeyboardTests[this->mUIState](this))
         theResult = UIForm::UpdateKeyboard();
-    return theResult;
-}
-
-// FUNCTION: EXE 0x6712b8
-// Runs the mouse: the unit hack, the form's controls, then the current interface mode's mouse test
-// returns the last UpdateMouse/mouse-test result (the original never resets eax after `xor eax, eax`)
-long EEUIFMainGame::UpdateMouse()
-{
-    long theResult = 0;
-    this->mB5F0 = false;
-    if (this->mUIState != 0x11) {
-        this->mUnitHack->Update(this->GetMouseLocation());
-        if (this->GetMouseCaptured() == NULL) {
-            theResult = UIForm::UpdateMouse();
-            if (this->GetMouseCaptured() == NULL)
-                theResult = this->mMouseTests[this->mUIState]((void*)&this->GetMouseLocation(), this);
-        } else
-            theResult = UIForm::UpdateMouse();
-    }
     return theResult;
 }

@@ -48,24 +48,14 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEWorld.h"
 #include "ee/EEEffectManager.h"
-#include "ee/EEE3DParticleEmitter.h"
 #include "ee/EEE3DRust.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DRust.h"
-#include "ee/EEE3DMarchingLine.h"
-#include "ee/EEE3DStorm.h"
-#include "ee/EEE3DSnow.h"
-#include "ee/EEE3DRain.h"
-#include "ee/EEE3DParticle.h"
 #include "ee/EESimCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "lle/FSMemoryFile.h"
 
 
-// SYNTHETIC: EXE 0x5054ec
-// SYNTHETIC: EXE 0x5054f6
-// SYNTHETIC: EXE 0x505507
-// SYNTHETIC: EXE 0x505513
 // the guarded atexit dtor says a class static
 const UString EEEffectManager::sData("EEEffectManager-Data");
 
@@ -133,8 +123,8 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     EEEffect* theEffect = NULL;
     switch (inKind) {
     case kEffectDamaged: theEffect = new EEE2DRust(0x3e); break;
-    case kEffect3DParticle: theEffect = EEE3DParticle::Create(); break;
-    case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(0x3a); break;
+    case kEffect3DParticle: theEffect = new EEE3DRust(kEffect3DParticle); break;
+    case kEffect3DParticleEmitter: theEffect = new EEE3DRust(kEffect3DParticleEmitter); break;
     case kEffect2DParticle: theEffect = EEE2DRust::NewParticle(); break;
     case kEffect3DDestructionSmoke: theEffect = new EEE3DRust(0x1e); break;
     case kEffect2DVelocityParticle: theEffect = new EEE2DRust(0xc); break;
@@ -167,13 +157,13 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DFarm: theEffect = new EEE3DRust(0x29); break;
     case kEffect3DHurricane: theEffect = new EEE3DRust(0x24); break;
     case kEffect3DLinearProjectile: theEffect = new EEE3DRust(0x25); break;
-    case kEffect3DRain: theEffect = new EEE3DRain(); break;
-    case kEffect3DSnow: theEffect = new EEE3DSnow(); break;
+    case kEffect3DRain: theEffect = new EEE3DRust(kEffect3DRain); break;
+    case kEffect3DSnow: theEffect = new EEE3DRust(kEffect3DSnow); break;
     case kEffect3DShells: theEffect = new EEE3DRust(0x26); break;
     case kEffect3DAdditivePass: theEffect = new EEE3DRust(0x27); break;
     case kEffect3DNuclearExplosion: theEffect = new EEE3DRust(0x28); break;
     case kEffect3DIcon: theEffect = new EEE3DRust(2); break;
-    case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(); break;
+    case kEffect3DMarchingLine: theEffect = new EEE3DRust(kEffect3DMarchingLine); break;
     case kEffect3DGoal: theEffect = new EEE3DRust(0x3c); break;
     case kEffect3DTeleport: theEffect = new EEE3DRust(0x3f); break;
     case kEffect3DTimeWarp: theEffect = new EEE3DRust(0x44); break;
@@ -213,17 +203,12 @@ static long EERegisterEffect(EEEffectManager* inManager, EEEffect* inEffect, con
                                  outHandle ? &outHandle->mValue : NULL);
 }
 
-// FUNCTION: EXE 0x50552f
 // Creates an effect manager with no effects and no queued destructions
 EEEffectManager::EEEffectManager()
 {
     this->mStore = ee_gfx_effects_new();
 }
 
-// SYNTHETIC: EXE 0x50558c
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x5055a8
 // Destroys the manager, releasing every effect
 EEEffectManager::~EEEffectManager()
 {
@@ -232,7 +217,6 @@ EEEffectManager::~EEEffectManager()
     this->mStore = NULL;
 }
 
-// FUNCTION: EXE 0x50562c
 // Creates, sets up and registers the effect of the graphic effect's kind on a unit (kinds that need a living unit
 // return 10 without one); returns 10 for other kinds, else SetUp's result (added even when SetUp fails)
 long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, bool inKeepsUnit,
@@ -279,7 +263,12 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x3f: theEffect = new EEE3DRust(inUnit, inEffect, 0x3f); break;
     case 0x3e: theEffect = new EEE2DRust(inUnit, inEffect, 0x3e); break;
     case 0x3b: theEffect = new EEE3DRust(inUnit, inEffect, 0x3b); break;
-    case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
+    case 0x3a: {   // on the unit's tag point
+        EEE3DRust* theEmitter = new EEE3DRust(inUnit, inEffect, 0x3a);
+        theEmitter->mRecord->emitter.tag_point = (uint32_t)inTagPoint;
+        theEffect = theEmitter;
+        break;
+    }
     case 0x42: theEffect = new EEE3DRust(inUnit, inEffect, 0x42); break;
     case 0x47: theEffect = new EEE3DRust(inUnit, inEffect, 0x47); break;
     case 0x46: theEffect = new EEE3DRust(inUnit, inEffect, 0x46); break;
@@ -289,10 +278,6 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// SYNTHETIC: EXE 0x505dff
-// (EEE2DImpactBlood's scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x505e21
 // Creates, sets up and registers a two-unit effect (muzzle blast, winter breath, tracers, shells, projectile,
 // tracer beam); returns 10 for other kinds or missing units, else SetUp's result
 long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inEffect,
@@ -313,10 +298,6 @@ long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEG
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// SYNTHETIC: EXE 0x506016
-// (EEE3DShells's scalar deleting destructor, emitted with its vtable)
-
-// FUNCTION: EXE 0x506038
 // Creates, sets up and registers a unit-to-point effect (muzzle blast, projectile, citizen beam, tracer beam,
 // command confirmation, pulse cannon ball); returns 10 for other kinds or a missing unit, else SetUp's result
 long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGraphicEffect* inEffect,
@@ -339,7 +320,6 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x5061e9
 // Creates, sets up and registers an effect of the graphic effect's kind at a map point; returns 10 for kinds
 // without a point version, else SetUp's result
 long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle)
@@ -362,15 +342,14 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0x2e: theEffect = EEE2DRust::NewParticle(inLocation, inEffect); break;
     case 0x31: theEffect = new EEE2DRust(inLocation, inEffect, 0x31); break;
     case 0x32: theEffect = new EEE2DRust(inLocation, inEffect, 0x32); break;
-    case 0x39: theEffect = EEE3DParticle::Create(inLocation, inEffect); break;
-    case 0x3a: theEffect = new EEE3DParticleEmitter(inLocation, inEffect, 0x3a); break;
+    case 0x39: theEffect = new EEE3DRust(inLocation, inEffect, 0x39); break;
+    case 0x3a: theEffect = new EEE3DRust(inLocation, inEffect, 0x3a); break;
     case 0x3b: theEffect = new EEE3DRust(inLocation, inEffect, 0x3b); break;
     case 0x3c: theEffect = new EEE3DRust(inLocation, inEffect, 0x3c); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x5064e6
 // Creates, sets up and registers a water ripple or battlefield decal at a transformation; returns 10 for other
 // kinds, else SetUp's result
 long EEEffectManager::CreateTransformationEffect(const GETransformation& inTransformation, EEGraphicEffect* inEffect,
@@ -387,7 +366,6 @@ long EEEffectManager::CreateTransformationEffect(const GETransformation& inTrans
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x506596
 // Creates, sets up and registers a particle, particle emitter or multi-effect along a line; returns 10 for other
 // kinds, else SetUp's result
 long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffect, EEEffectHandle* outHandle)
@@ -399,14 +377,13 @@ long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffe
     switch (inEffect->mKind) {
     case kEffect2DVelocityParticle: theEffect = new EEE2DRust(inLine, inEffect, 0xc); break;
     case kEffect2DParticle: theEffect = EEE2DRust::NewParticle(inLine, inEffect); break;
-    case kEffect3DParticle: theEffect = EEE3DParticle::Create(inLine, inEffect); break;
-    case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(inLine, inEffect, 0x3a); break;
+    case kEffect3DParticle: theEffect = new EEE3DRust(inLine, inEffect, kEffect3DParticle); break;
+    case kEffect3DParticleEmitter: theEffect = new EEE3DRust(inLine, inEffect, kEffect3DParticleEmitter); break;
     case kEffect3DMultiEffect: theEffect = new EEE3DRust(inLine, inEffect, 0x3b); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x50667c
 // Creates, sets up and registers an earthquake, 3D projectile or marching line between two points; other kinds
 // create nothing and return 0
 long EEEffectManager::CreateEffectBetween(GE3DPoint& inFrom, GE3DPoint& inTo, EEGraphicEffect* inEffect,
@@ -419,12 +396,11 @@ long EEEffectManager::CreateEffectBetween(GE3DPoint& inFrom, GE3DPoint& inTo, EE
     switch (inEffect->mKind) {
     case kEffect3DEarthquake: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x1a); break;
     case kEffect3DLinearProjectile: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x25); break;
-    case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(inFrom, inTo, inEffect); break;
+    case kEffect3DMarchingLine: theEffect = new EEE3DRust(inFrom, inTo, inEffect, kEffect3DMarchingLine); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x50673e
 // Creates, sets up and registers rain or snow over a set of tiles; other kinds create nothing and return 0
 long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect,
                                           EEEffectHandle* outHandle)
@@ -434,13 +410,12 @@ long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& i
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case kEffect3DRain: theEffect = new EEE3DRain(inTiles, inEffect); break;
-    case kEffect3DSnow: theEffect = new EEE3DSnow(inTiles, inEffect); break;
+    case kEffect3DRain: theEffect = new EEE3DRust(inTiles, inEffect, kEffect3DRain); break;
+    case kEffect3DSnow: theEffect = new EEE3DRust(inTiles, inEffect, kEffect3DSnow); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x506852
 // Returns the effect with the given handle, or null
 EEEffect* EEEffectManager::GetEffect(EEEffectHandle inHandle)
 {
@@ -449,7 +424,6 @@ EEEffect* EEEffectManager::GetEffect(EEEffectHandle inHandle)
     return EEStoreEffect(ee_gfx_effects_find(this->mStore, inHandle.mValue));
 }
 
-// FUNCTION: EXE 0x506889
 // Unlinks and releases every effect and empties the handle index
 void EEEffectManager::ClearEffects()
 {
@@ -458,7 +432,6 @@ void EEEffectManager::ClearEffects()
     ee_gfx_effects_clear(this->mStore, &theHost);
 }
 
-// FUNCTION: EXE 0x5068c6
 // Queues an effect for destruction at the next update; returns 0
 long EEEffectManager::DestroyEffect(EEEffectHandle inHandle)
 {
@@ -466,7 +439,6 @@ long EEEffectManager::DestroyEffect(EEEffectHandle inHandle)
     return 0;
 }
 
-// FUNCTION: EXE 0x5068d8
 // After a load, repairs every effect's pointers, dropping effects whose unit is gone or that are above the
 // detail setting, then the goal markers'; returns the first other error
 long EEEffectManager::RepairPointers(unsigned long inFirst, unsigned long inSecond)
@@ -476,7 +448,6 @@ long EEEffectManager::RepairPointers(unsigned long inFirst, unsigned long inSeco
     return ee_gfx_effects_repair(this->mStore, &theHost);
 }
 
-// FUNCTION: EXE 0x506978
 // Reads the handle counter, then each effect by kind (old saves give handles anew when needed), the goal markers
 // and the destruction queue; returns the first read error (unknown kinds are not skipped)
 long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -487,7 +458,6 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return ee_gfx_effects_load(this->mStore, &theHost, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
-// FUNCTION: EXE 0x507305
 // Writes the handle counter, the saved effects (kind, then data), and the destruction queue; an effect's write
 // error can be overwritten by the next effect's result
 long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -498,7 +468,6 @@ long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     return ee_gfx_effects_save(this->mStore, &theHost, &theFile);
 }
 
-// FUNCTION: EXE 0x507430
 // Moves every effect on the old unit to the new one
 void EEEffectManager::ReplaceUnit(EEUnit* inOld, EEUnit* inNew)
 {
@@ -788,7 +757,6 @@ void EEEffectCaptureSweep()
     EESimCaptureRecord::Only(0);
 }
 
-// FUNCTION: EXE 0x507450
 // Updates the goal markers, destroys the queued effects, then steps every effect, removing those that finish
 // (Step returns 7)
 void EEEffectManager::Update()
@@ -800,7 +768,6 @@ void EEEffectManager::Update()
     EECaptureEffectStates(this);
 }
 
-// FUNCTION: EXE 0x5074c9
 // Tells every effect that the terrain height changed in a tile rectangle
 void EEEffectManager::ElevationChanged(long inLeft, long inTop, long inRight, long inBottom)
 {
@@ -811,18 +778,3 @@ void EEEffectManager::ElevationChanged(long inLeft, long inTop, long inRight, lo
         theEffect = theNext;
     }
 }
-
-// FUNCTION: EXE 0x5074f3
-// Destroys a handle index (map<unsigned long, EEEffect*>'s destructor)
-
-// FUNCTION: EXE 0x50751e
-// Empties a handle index (map<unsigned long, EEEffect*>::clear)
-
-// FUNCTION: EXE 0x507532
-// Erases a range of a handle index (map<unsigned long, EEEffect*>::erase(first, last))
-
-// FUNCTION: EXE 0x5075a3
-// Frees a subtree of a handle index (map<unsigned long, EEEffect*>'s _Erase)
-
-// FUNCTION: EXE 0x5075d5
-// Steps a handle-index iterator back (map<unsigned long, EEEffect*>::const_iterator::_Dec)

@@ -74,9 +74,9 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 extern GEFont* gU531938;                    // 0x531938 (Empire Earth.cpp's fonts)
+extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
-// FUNCTION: EXE 0x5705a2
 // Posts the import action for the file the question carries (the import question's yes) and frees
 // the question's import info
 void EESEImportTextAnswer(UIForm* inInfo)
@@ -86,10 +86,6 @@ void EESEImportTextAnswer(UIForm* inInfo)
     delete theInfo;
 }
 
-// SYNTHETIC: EXE 0x570605
-// (the scalar deleting destructor, emitted with the vtable; slot EESEIAImport+0x0, stores EESEIAImport vtable, stores EEAction vtable)
-
-// FUNCTION: EXE 0x570638
 // Starts importing data\Scenarios\<name>.lcl: asks to confirm, then validates first; complains when no
 // name is entered or the file is missing; returns the open result
 long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -126,376 +122,164 @@ long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5707ff
-// Creates the instructions tab: map/movie/sound file combos (directories created when missing), the text
-// boxes and labels, and the text import/export buttons. History reuses the hints label/box ids
+// Creates the instructions tab: map/movie/sound file combos (directories created when missing), the text boxes and
+// labels, and the text import/export buttons. History reuses the hints label/box ids (editor_instructions.rs)
 EESEInstructions::EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
 {
-    FSFileSpec theScenDirectory;
-    FSFileSpec theSoundsDirectory;
-    FSFileSpec theMoviesDirectory;
-    GE2DPoint theLocation;
-    UWideString theText;
-    UIEvent* theFindText = EECreateScreenEvent(EE_SCREENS_SE_FIND_TEXT);
-    GEText* theGEText;
-    theScenDirectory.SetVolume(gStartupVolume);
-    theScenDirectory.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-    FSPath* theScenPath = new FSPath;
-    theScenPath->AddDirectory(theScenDirectory, true);
-    theSoundsDirectory.SetVolume(gStartupVolume);
-    theSoundsDirectory.SetDirectory(gStartupDirectory + "data\\" + "Sounds\\");
-    FSPath* theSoundsPath = new FSPath;
-    theSoundsPath->AddDirectory(theSoundsDirectory, true);
-    theMoviesDirectory.SetVolume(gStartupVolume);
-    theMoviesDirectory.SetDirectory(gStartupDirectory + "data\\" + "Movies\\");
-    FSPath* theMoviesPath = new FSPath;
-    theMoviesPath->AddDirectory(theMoviesDirectory, true);
-    if (!theScenDirectory.IsDirectory())
-        ESVERIFY_AT(theScenDirectory.CreateDirectory() == keseOK, 536);
-
-    if (!theSoundsDirectory.IsDirectory())
-        ESVERIFY_AT(theSoundsDirectory.CreateDirectory() == keseOK, 539);
-
-    if (!theMoviesDirectory.IsDirectory())
-        ESVERIFY_AT(theMoviesDirectory.CreateDirectory() == keseOK, 542);
-
-    gResource->GetString(IDS_SCEN_INST, theText);
-    theLocation.SetXY(20.0f, 2.0f);
-    this->mMapLabel = new UITextLabel(theText, inFont, 0x44c, GERectangle(theLocation, 150.0f, (float)inFont->GetHeight()),
-                           inForm, 0, ioIndex, 0);
-    this->mMapLabel->SetAlignment(kTextAlignCenter);
-    this->mMapLabel->SetBgOpacity(0.4f);
-    theGEText = this->mMapLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mMapLabel, 7);
-    ioIndex++;
-    gResource->GetString(IDS_MOVIE, theText);
-    theLocation.SetX(437.0f);
-    this->mMovieLabel = new UITextLabel(theText, inFont, 0x44e, GERectangle(theLocation, 150.0f, (float)inFont->GetHeight()),
-                           inForm, 0, ioIndex, 0);
-    this->mMovieLabel->SetAlignment(kTextAlignCenter);
-    this->mMovieLabel->SetBgOpacity(0.4f);
-    theGEText = this->mMovieLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mMovieLabel, 7);
-    ioIndex++;
-    gResource->GetString(IDS_INST_SOUND_OVER, theText);
-    theLocation.SetX(854.0f);
-    this->mSoundLabel = new UITextLabel(theText, inFont, 0x450, GERectangle(theLocation, 150.0f, (float)inFont->GetHeight()),
-                           inForm, 0, ioIndex, 0);
-    this->mSoundLabel->SetAlignment(kTextAlignCenter);
-    this->mSoundLabel->SetBgOpacity(0.4f);
-    theGEText = this->mSoundLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSoundLabel, 7);
-    ioIndex++;
-    gResource->GetString(IDS_SCENARIO_INSTRUCTIONS, theText);
-    theLocation.SetXY(20.0f, 62.0f);
-    this->mInstructionsLabel = new UITextLabel(theText, inFont, 0x452, GERectangle(theLocation, 984.0f, (float)inFont->GetHeight()),
-                           inForm, 0, ioIndex, 0);
-    this->mInstructionsLabel->SetAlignment(kTextAlignCenter);
-    this->mInstructionsLabel->SetBgOpacity(0.4f);
-    theGEText = this->mInstructionsLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mInstructionsLabel, 7);
-    ioIndex++;
-    gResource->GetString(IDS_AFTERMATH, theText);
-    theLocation.SetY(386.0f);
-    this->mAftermathLabel = new UITextLabel(theText, inFont, 0x454, GERectangle(theLocation, 984.0f, (float)inFont->GetHeight()),
-                           inForm, 0, ioIndex, 0);
-    this->mAftermathLabel->SetAlignment(kTextAlignCenter);
-    this->mAftermathLabel->SetBgOpacity(0.4f);
-    theGEText = this->mAftermathLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mAftermathLabel, 7);
-    ioIndex++;
-    this->mAftermathLabel->SetDisplayMode(kDisplayModeHidden);
-    gResource->GetString(IDS_SE_HINTS, theText);
-    theLocation.SetY(202.0f);
-    this->mHintsLabel = new UITextLabel(theText, inFont, 0x456, GERectangle(theLocation, 984.0f, (float)inFont->GetHeight()),
-                           inForm, 0, ioIndex, 0);
-    this->mHintsLabel->SetAlignment(kTextAlignCenter);
-    this->mHintsLabel->SetBgOpacity(0.4f);
-    theGEText = this->mHintsLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mHintsLabel, 7);
-    ioIndex++;
-    gResource->GetString(IDS_SE_HISTORY, theText);
-    theLocation.SetY(342.0f);
-    this->mHistoryLabel = new UITextLabel(theText, inFont, 0x456, GERectangle(theLocation, 984.0f, (float)inFont->GetHeight()),
-                           inForm, 0, ioIndex, 0);
-    this->mHistoryLabel->SetAlignment(kTextAlignCenter);
-    this->mHistoryLabel->SetBgOpacity(0.4f);
-    theGEText = this->mHistoryLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mHistoryLabel, 7);
-    ioIndex++;
-    theLocation.SetY(80.0f);
-    this->mInstructionsEditBox = new UIEditBox(0x453, inFont, 0, false, GERectangle(theLocation, 984.0f, 120.0f), inForm, ioIndex, 2, true,
-                         false);
-    this->mInstructionsEditBox->SetBgOpacity(0.4f);
-    this->mInstructionsEditBox->SetTriggerEvent(kControlTriggerEnterPressed, theFindText);
-    theGEText = this->mInstructionsEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mInstructionsEditBox, 7);
-    ioIndex++;
-    theLocation.SetY(404.0f);
-    this->mAftermathEditBox = new UIEditBox(0x455, inFont, 0, false, GERectangle(theLocation, 984.0f, 120.0f), inForm, ioIndex, 2, true,
-                         false);
-    this->mAftermathEditBox->SetBgOpacity(0.4f);
-    this->mAftermathEditBox->SetTriggerEvent(kControlTriggerEnterPressed, theFindText);
-    theGEText = this->mAftermathEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mAftermathEditBox, 7);
-    ioIndex++;
-    this->mAftermathEditBox->SetDisplayMode(kDisplayModeHidden);
-    theLocation.SetY(220.0f);
-    this->mHintsEditBox = new UIEditBox(0x457, inFont, 0, false, GERectangle(theLocation, 984.0f, 120.0f), inForm, ioIndex, 2, true,
-                         false);
-    this->mHintsEditBox->SetBgOpacity(0.4f);
-    this->mHintsEditBox->SetTriggerEvent(kControlTriggerEnterPressed, theFindText);
-    theGEText = this->mHintsEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mHintsEditBox, 7);
-    ioIndex++;
-    theLocation.SetY(360.0f);
-    this->mHistoryEditBox = new UIEditBox(0x457, inFont, 0, false, GERectangle(theLocation, 984.0f, 120.0f), inForm, ioIndex, 2, true,
-                         false);
-    this->mHistoryEditBox->SetBgOpacity(0.4f);
-    this->mHistoryEditBox->SetTriggerEvent(kControlTriggerEnterPressed, theFindText);
-    theGEText = this->mHistoryEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mHistoryEditBox, 7);
-    ioIndex++;
-
-    // the file combo boxes
-    theLocation.SetXY(20.0f, 22.0f);
-    this->mMapComboBox = new EEUIFileComboBox(theScenPath, UString("*") + ".jpg", 0x44d, 1, std::vector<UWideString>(), inFont,
-                                theLocation, 150, 400, inForm, ioIndex, 0, 2, false);
-    theGEText = this->mMapComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mMapComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mMapComboBox->SetTextBoxBgOpacity(0.4f);
-    inForm->AddControl(this->mMapComboBox, 7);
-    ioIndex++;
-    theLocation.SetX(437.0f);
-    this->mMovieComboBox = new EEUIFileComboBox(theMoviesPath, UString("*") + ".mpg", 0x44f, 1, std::vector<UWideString>(), inFont,
-                                theLocation, 150, 400, inForm, ioIndex, 0, 2, true);
-    theGEText = this->mMovieComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mMovieComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mMovieComboBox->SetTextBoxBgOpacity(0.4f);
-    inForm->AddControl(this->mMovieComboBox, 7);
-    ioIndex++;
-    theLocation.SetX(854.0f);
-    this->mSoundComboBox = new EEUIFileComboBox(theSoundsPath, "*.mp3", 0x451, 1, std::vector<UWideString>(), inFont,
-                                theLocation, 150, 400, inForm, ioIndex, 0, 2, true);
-    theGEText = this->mSoundComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mSoundComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mSoundComboBox->SetTextBoxBgOpacity(0.4f);
-    inForm->AddControl(this->mSoundComboBox, 7);
-    ioIndex++;
-    theFindText->Dereference();
-
-    // the text import and export
-    theLocation.SetXY(20.0f, 494.0f);
-    this->mImportButton = new UIButton(0x458, NULL, NULL, NULL, GERectangle(theLocation, 150.0f, 20.0f), inForm, ioIndex, 2);
-    gResource->GetString(IDS_IMPORT, theText);
-    this->mImportButton->SetText(theText, gU531938);
-    this->mImportButton->SetStringTableID(IDS_IMPORT_LOCALIZED_TEXT_FILE_INTO_SCENARIO);
-    this->mImportButton->SetBgOpacity(0.4f);
-    theGEText = this->mImportButton->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    UIEvent* theEvent = new EESEIEImport;
-    this->mImportButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mImportButton, 7);
-    ioIndex++;
-    theLocation.SetXY(20.0f, 516.0f);
-    this->mExportButton = new UIButton(0x459, NULL, NULL, NULL, GERectangle(theLocation, 150.0f, 20.0f), inForm, ioIndex, 2);
-    gResource->GetString(IDS_EXPORT, theText);
-    this->mExportButton->SetText(theText, gU531938);
-    this->mExportButton->SetStringTableID(IDS_EXPORT_SCENARIO_TO_TEXT_FILE);
-    this->mExportButton->SetBgOpacity(0.4f);
-    theEvent = new EESEIEExport;
-    this->mExportButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    theGEText = this->mExportButton->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mExportButton, 7);
-    ioIndex++;
-    theLocation.SetXY(200.0f, 494.0f);
-    gResource->GetString(IDS_LOCALIZATION_TEXT_FILE_NAME, theText);
-    this->mLocalizationLabel = new UITextLabel(theText, inFont, 0x45a, GERectangle(theLocation, 400.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mLocalizationLabel->SetAlignment(kTextAlignCenter);
-    this->mLocalizationLabel->SetBgOpacity(0.4f);
-    theGEText = this->mLocalizationLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mLocalizationLabel, 7);
-    ioIndex++;
-    theLocation.SetY(516.0f);
-    this->mLocalizationEditBox = new UIEditBox(kSEInstructionsLocalizationEditBox, inFont, 0x100, false, GERectangle(theLocation, 400.0f, 20.0f), inForm, ioIndex, 2,
-                         false, false);
-    this->mLocalizationEditBox->SetBgOpacity(0.4f);
-    theGEText = this->mLocalizationEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mLocalizationEditBox, 7);
-    ioIndex++;
-    theScenPath->Dereference();
-    theSoundsPath->Dereference();
-    theMoviesPath->Dereference();
+    gSeplScreenFont = inFont;
+    uint32_t theIndex = (uint32_t)ioIndex;
+    this->mRust = ee_screens_sein_new(inForm, &theIndex);
+    ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x571b49
-// Destroys the export button's event and frees it when asked (EESEIEExport's scalar deleting destructor)
-
-// FUNCTION: EXE 0x571b74
-// Destroys the import button's event and frees it when asked (EESEIEImport's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x571b9f
-// (the scalar deleting destructor, emitted with the vtable; slot EESEInstructions+0x0)
-
-// SYNTHETIC: EXE 0x571bbb
-// (the scalar deleting destructor, emitted with the vtable; slot UITextLabel+0x0)
-
-// SYNTHETIC: EXE 0x571bd8
-// (the scalar deleting destructor, emitted with the vtable; slot UIButton+0x0)
-
-// FUNCTION: EXE 0x571bf5
-// Destroys the instructions tab and every control it created
+// Destroys the instructions tab and every control it created (editor_instructions.rs)
 EESEInstructions::~EESEInstructions()
 {
-    delete this->mMapLabel;
-    delete this->mMovieLabel;
-    delete this->mSoundLabel;
-    delete this->mMapComboBox;
-    delete this->mMovieComboBox;
-    delete this->mSoundComboBox;
-    delete this->mInstructionsLabel;
-    delete this->mInstructionsEditBox;
-    delete this->mAftermathLabel;
-    delete this->mAftermathEditBox;
-    delete this->mHintsLabel;
-    delete this->mHistoryLabel;
-    delete this->mHintsEditBox;
-    delete this->mHistoryEditBox;
-    delete this->mImportButton;
-    delete this->mExportButton;
-    delete this->mLocalizationLabel;
-    delete this->mLocalizationEditBox;
+    ee_screens_sein_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x571ce3
-// Fills the tab from the scenario's media strings (a file missing from a list goes into its combo's
-// label) and shows the .lcl name in the import box when that file exists
+// Fills the tab from the scenario's media strings (a file missing from a list goes into its combo's label) and shows
+// the .lcl name in the import box when that file exists (editor_instructions.rs; the transfers are the host's)
 void EESEInstructions::Load()
 {
-    FSFileSpec theFile;
-    UWideString theText;
-    UWideString theName;
-    EEScenarioManager* theManager = ::gWorld.mScenarioManager;
-    theText = theManager->mMediaStrings.mMapFile;
-    if (this->mMapComboBox->SelectFile(theText) && theText.GetLength() != 0)
-        this->mMapComboBox->GetTextLabel()->SetText(theText);
-    theText = theManager->mMediaStrings.mMovieFile;
-    this->mMovieComboBox->SelectFile(theText);
-    if (this->mMovieComboBox->SelectFile(theText) && theText.GetLength() != 0)
-        this->mMovieComboBox->GetTextLabel()->SetText(theText);
-    theText = theManager->mMediaStrings.mSoundFile;
-    if (this->mSoundComboBox->SelectFile(theText) && theText.GetLength() != 0)
-        this->mSoundComboBox->GetTextLabel()->SetText(theText);
-    theText = theManager->mMediaStrings.mInstructions;
-    this->mInstructionsEditBox->SetText(theText);
-    theText = theManager->mMediaStrings.mAftermath;
-    this->mAftermathEditBox->SetText(theText);
-    theText = theManager->mMediaStrings.mHints;
-    this->mHintsEditBox->SetText(theText);
-    theText = theManager->mMediaStrings.mHistory;
-    this->mHistoryEditBox->SetText(theText);
-    theText = theManager->mExportFileName;
-    if (theText.GetLength() > 0) {
-        theFile.SetVolume(gStartupVolume);
-        theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-        theFile.SetFile((const char*)theText);
-        if (theFile.FOpen("r") == 0) {
-            theName.CopyString(theText, theText.GetLength() - 4);
-            this->mLocalizationEditBox->SetText(theName);
-            theFile.Close();
-        } else {
-            this->mLocalizationEditBox->SetText(gEmptyString);
-        }
-    } else {
-        this->mLocalizationEditBox->SetText(gEmptyString);
-    }
+    ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_LOAD);
 }
 
-// FUNCTION: EXE 0x571f62
-// Rescans the movie, sound and map file lists when the tab is entered
+// Rescans the movie, sound and map file lists when the tab is entered (editor_instructions.rs)
 void EESEInstructions::Enter()
 {
-    if (this->mMovieComboBox != NULL)
-        this->mMovieComboBox->CreateEntries();
-    if (this->mSoundComboBox != NULL)
-        this->mSoundComboBox->CreateEntries();
-    if (this->mMapComboBox != NULL)
-        this->mMapComboBox->CreateEntries();
+    ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_ENTER);
 }
 
-// FUNCTION: EXE 0x571f8b
 // Stores the chosen map, movie and sound files and the four texts into the scenario's media strings
+// (editor_instructions.rs; the transfers are the host's)
 void EESEInstructions::Store()
 {
-    UWideString theText;
-    EEScenarioManager* theManager = ::gWorld.mScenarioManager;
-    theText = this->mMapComboBox->GetTextLabel()->GetText(0);
-    theManager->mMediaStrings.mMapFile = theText;
-    theText = this->mMovieComboBox->GetTextLabel()->GetText(0);
-    theManager->mMediaStrings.mMovieFile = theText;
-    theText = this->mSoundComboBox->GetTextLabel()->GetText(0);
-    theManager->mMediaStrings.mSoundFile = theText;
-    this->mInstructionsEditBox->GetAllText(theText);
-    theManager->mMediaStrings.mInstructions = theText;
-    this->mAftermathEditBox->GetAllText(theText);
-    theManager->mMediaStrings.mAftermath = theText;
-    this->mHintsEditBox->GetAllText(theText);
-    theManager->mMediaStrings.mHints = theText;
-    this->mHistoryEditBox->GetAllText(theText);
-    theManager->mMediaStrings.mHistory = theText;
+    ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_STORE);
 }
 
-// FUNCTION: EXE 0x5720c6
+// ---- the tab's host (editor_instructions.rs: the ops from 700)
+
+int32_t EESEInstructions::Host(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    switch (inOp) {
+    case EE_SCREENS_SEIN_OP_PATHS: {
+        const char* theNames[3] = {"Scenarios\\", "Sounds\\", "Movies\\"};
+        FSFileSpec theDirectories[3];
+        FSPath** thePaths = static_cast<FSPath**>(p[0]);
+        for (int k = 0; k < 3; k++) {
+            theDirectories[k].SetVolume(gStartupVolume);
+            theDirectories[k].SetDirectory(gStartupDirectory + "data\\" + theNames[k]);
+            thePaths[k] = new FSPath;
+            thePaths[k]->AddDirectory(theDirectories[k], true);
+        }
+        for (int k = 0; k < 3; k++)
+            if (!theDirectories[k].IsDirectory())
+                ESVERIFY_AT(theDirectories[k].CreateDirectory() == keseOK, 536 + 3 * k);
+        return 0;
+    }
+    case EE_SCREENS_SEIN_OP_PATHS_RELEASE:
+        for (int k = 0; k < 3; k++)
+            static_cast<FSPath**>(p[0])[k]->Dereference();
+        return 0;
+    case EE_SCREENS_SEIN_OP_MAKE_FILES: {
+        // the scenarios' *.jpg, the movies' *.mpg, the sounds' *.mp3 (the paths: scenarios, sounds, movies)
+        FSPath* const* thePaths = static_cast<FSPath* const*>(p[1]);
+        static const unsigned long kIDs[3] = {0x44d, 0x44f, 0x451};
+        FSPath* thePath = thePaths[i[0] == EE_SCREENS_SEIN_FILES_MAP ? 0 : i[0] == EE_SCREENS_SEIN_FILES_MOVIE ? 2 : 1];
+        UString thePattern = i[0] == EE_SCREENS_SEIN_FILES_MAP     ? UString("*") + ".jpg"
+                             : i[0] == EE_SCREENS_SEIN_FILES_MOVIE ? UString("*") + ".mpg"
+                                                                   : UString("*.mp3");
+        EEUIFileComboBox* t = new EEUIFileComboBox(thePath, thePattern, kIDs[i[0]], 1, std::vector<UWideString>(),
+                                                   gSeplScreenFont, GE2DPoint(f[0], f[1]), 150, 400,
+                                                   static_cast<UIForm*>(p[2]), (unsigned long)i[1], 0, 2,
+                                                   i[0] != EE_SCREENS_SEIN_FILES_MAP);
+        GEText* theGEText = t->GetGEText();
+        theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
+        theGEText->SetIsTransparent(true);
+        t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
+        t->SetTextBoxBgOpacity(0.4f);
+        static_cast<UIForm*>(p[2])->AddControl(t, 7);
+        *static_cast<UIControl**>(p[0]) = t;
+        return 0;
+    }
+    case EE_SCREENS_SEIN_OP_BUTTON_EVENT: {
+        UIEvent* theEvent = i[0] == 0 ? static_cast<UIEvent*>(new EESEIEImport) : new EESEIEExport;
+        static_cast<UIControl*>(p[0])->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
+        theEvent->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_SEIN_OP_FILE_ENTRIES: static_cast<EEUIFileComboBox*>(p[0])->CreateEntries(); return 0;
+    case EE_SCREENS_SEIN_OP_LOAD: {
+        UIControl* const* c = static_cast<UIControl* const*>(p[0]);
+        EEUIFileComboBox* theMap = static_cast<EEUIFileComboBox*>(c[EE_SCREENS_SEIN_C_MAP]);
+        EEUIFileComboBox* theMovie = static_cast<EEUIFileComboBox*>(c[EE_SCREENS_SEIN_C_MOVIE]);
+        EEUIFileComboBox* theSound = static_cast<EEUIFileComboBox*>(c[EE_SCREENS_SEIN_C_SOUND]);
+        UIEditBox* theLocalization = static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_LOCALIZATION]);
+        FSFileSpec theFile;
+        UWideString theText;
+        UWideString theName;
+        EEScenarioManager* theManager = ::gWorld.mScenarioManager;
+        theText = theManager->mMediaStrings.mMapFile;
+        if (theMap->SelectFile(theText) && theText.GetLength() != 0)
+            theMap->GetTextLabel()->SetText(theText);
+        theText = theManager->mMediaStrings.mMovieFile;
+        theMovie->SelectFile(theText);
+        if (theMovie->SelectFile(theText) && theText.GetLength() != 0)
+            theMovie->GetTextLabel()->SetText(theText);
+        theText = theManager->mMediaStrings.mSoundFile;
+        if (theSound->SelectFile(theText) && theText.GetLength() != 0)
+            theSound->GetTextLabel()->SetText(theText);
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_INSTRUCTIONS])->SetText(theManager->mMediaStrings.mInstructions);
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_AFTERMATH])->SetText(theManager->mMediaStrings.mAftermath);
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_HINTS])->SetText(theManager->mMediaStrings.mHints);
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_HISTORY])->SetText(theManager->mMediaStrings.mHistory);
+        theText = theManager->mExportFileName;
+        if (theText.GetLength() > 0) {
+            theFile.SetVolume(gStartupVolume);
+            theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
+            theFile.SetFile((const char*)theText);
+            if (theFile.FOpen("r") == 0) {
+                theName.CopyString(theText, theText.GetLength() - 4);
+                theLocalization->SetText(theName);
+                theFile.Close();
+            } else
+                theLocalization->SetText(gEmptyString);
+        } else
+            theLocalization->SetText(gEmptyString);
+        return 0;
+    }
+    case EE_SCREENS_SEIN_OP_STORE: {
+        UIControl* const* c = static_cast<UIControl* const*>(p[0]);
+        UWideString theText;
+        EESMMediaStrings& theMedia = ::gWorld.mScenarioManager->mMediaStrings;
+        theMedia.mMapFile = static_cast<UIComboBox*>(c[EE_SCREENS_SEIN_C_MAP])->GetTextLabel()->GetText(0);
+        theMedia.mMovieFile = static_cast<UIComboBox*>(c[EE_SCREENS_SEIN_C_MOVIE])->GetTextLabel()->GetText(0);
+        theMedia.mSoundFile = static_cast<UIComboBox*>(c[EE_SCREENS_SEIN_C_SOUND])->GetTextLabel()->GetText(0);
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_INSTRUCTIONS])->GetAllText(theText);
+        theMedia.mInstructions = theText;
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_AFTERMATH])->GetAllText(theText);
+        theMedia.mAftermath = theText;
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_HINTS])->GetAllText(theText);
+        theMedia.mHints = theText;
+        static_cast<UIEditBox*>(c[EE_SCREENS_SEIN_C_HISTORY])->GetAllText(theText);
+        theMedia.mHistory = theText;
+        return 0;
+    }
+    }
+    return 0;
+}
+
+extern "C" int32_t ee_screenscpp_sein(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    return EESEInstructions::Host(inOp, p, i, f);
+}
+
 // Does nothing (the shared empty body; EESETSBaseObject::RefreshControls and EEPhysicsTrace bind here too)
 void EEABuild::Virtual8()
 {
 }
 
-// FUNCTION: EXE 0x5720c7
-// Destroys the editor's main group and frees it when asked (EEUIFSEMainGroup's scalar deleting destructor)
-
-// FUNCTION: EXE 0x57210f
-// Creates an empty list of wide strings (vector<UWideString> default constructor, template COMDAT)
-
-// ICF-FOLDED: EXE 0x556dd8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESEInstructions::MouseMove(class GE2DPoint const &)
 {
 }
