@@ -15,10 +15,23 @@ struct DmReverb {
 	int32_t len[4];   // the delay lines, frames (each shortened by its all-pass)
 	int32_t ap[2];    // the all-pass delays, frames
 	int32_t dry, wet, golden, ap_gain[2], cur[4], prev[4];   // Q15
-	int32_t delay[0x4000];         // 4096 frames x 4 lines, interleaved
-	int32_t allpass[2][0x800];     // 1024 frames x 2 each
+	// (EE patch) The buffers are sized from the rate (powers of two, at least the 4096 and 1024 frames that hold
+	// every delay up to 48 kHz): fixed at those sizes, the delays wrapped and aliased above about 54 kHz.
+	uint32_t dmask;       // the delay lines' index mask (4 x their frames - 1)
+	uint32_t amask;       // the all-passes' (2 x their frames - 1)
+	int32_t* delay;       // the delay lines' frames x 4 lines, interleaved
+	int32_t* allpass[2];  // the all-passes' frames x 2 each
 	uint32_t pos, apos;
 };
+
+// The smallest power of two of at least n and at least floor
+static uint32_t DmReverb_pow2(uint32_t n, uint32_t floor) {
+	uint32_t v = floor;
+	while (v < n) {
+		v <<= 1;
+	}
+	return v;
+}
 
 static int32_t DmReverb_q15(float f) {
 	float v = f * 32768.0f + 0.5f;
@@ -111,11 +124,35 @@ DmReverb* DmReverb_create(float rate) {
 	slf->ap[0] = a1;
 	slf->ap[1] = a2;
 
+	// A line of len frames is read len + 1 frames behind its head (frames >= len + 2); an all-pass of ap frames,
+	// ap behind (frames >= ap + 1).
+	int32_t longest = slf->len[0];
+	for (int i = 1; i < 4; ++i) {
+		longest = slf->len[i] > longest ? slf->len[i] : longest;
+	}
+	uint32_t line_frames = DmReverb_pow2((uint32_t) (longest > 0 ? longest : 0) + 2, 0x1000);
+	uint32_t ap_frames = DmReverb_pow2((uint32_t) (a1 > a2 ? a1 : a2) + 1, 0x400);
+	slf->dmask = 4 * line_frames - 1;
+	slf->amask = 2 * ap_frames - 1;
+	slf->delay = Dm_alloc(sizeof(int32_t) * 4 * line_frames);
+	slf->allpass[0] = Dm_alloc(sizeof(int32_t) * 2 * ap_frames);
+	slf->allpass[1] = Dm_alloc(sizeof(int32_t) * 2 * ap_frames);
+	if (slf->delay == NULL || slf->allpass[0] == NULL || slf->allpass[1] == NULL) {
+		DmReverb_free(slf);
+		return NULL;
+	}
+
 	DmReverb_set(slf, 0.0f, -10.0f, 1000.0f, 0.001f);   // the original's defaults
 	return slf;
 }
 
 void DmReverb_free(DmReverb* slf) {
+	if (slf == NULL) {
+		return;
+	}
+	Dm_free(slf->delay);
+	Dm_free(slf->allpass[0]);
+	Dm_free(slf->allpass[1]);
 	Dm_free(slf);
 }
 
@@ -126,19 +163,20 @@ static int16_t DmReverb_clamp16(int32_t v) {
 void DmReverb_processStereo(DmReverb* slf, int16_t* buf, size_t frames) {
 	int32_t* d = slf->delay;
 	uint32_t pos = slf->pos, apos = slf->apos;
+	const uint32_t dm = slf->dmask, am = slf->amask;
 
-	uint32_t i1 = (uint32_t) (4 * slf->len[0] + 4 + (int32_t) pos) & 0x3fff;
-	uint32_t i2 = (uint32_t) (4 * slf->len[1] + 4 + (int32_t) pos) & 0x3fff;
-	uint32_t i3 = (uint32_t) (4 * slf->len[2] + 4 + (int32_t) pos) & 0x3fff;
-	uint32_t i4 = (uint32_t) (4 * slf->len[3] + 4 + (int32_t) pos) & 0x3fff;
+	uint32_t i1 = (uint32_t) (4 * slf->len[0] + 4 + (int32_t) pos) & dm;
+	uint32_t i2 = (uint32_t) (4 * slf->len[1] + 4 + (int32_t) pos) & dm;
+	uint32_t i3 = (uint32_t) (4 * slf->len[2] + 4 + (int32_t) pos) & dm;
+	uint32_t i4 = (uint32_t) (4 * slf->len[3] + 4 + (int32_t) pos) & dm;
 	int32_t* p1 = &d[i1];
 	int32_t* p2 = &d[i2 + 1];
 	int32_t* p3 = &d[i3 + 2];
 	int32_t* p4 = &d[i4 + 3];
-	i1 = (i1 - 4) & 0x3fff;
-	i2 = (i2 - 4) & 0x3fff;
-	i3 = (i3 - 4) & 0x3fff;
-	i4 = (i4 - 4) & 0x3fff;
+	i1 = (i1 - 4) & dm;
+	i2 = (i2 - 4) & dm;
+	i3 = (i3 - 4) & dm;
+	i4 = (i4 - 4) & dm;
 
 	const int32_t g = slf->golden;
 	for (size_t n = 0; n < frames; ++n) {
@@ -149,22 +187,22 @@ void DmReverb_processStereo(DmReverb* slf, int16_t* buf, size_t frames) {
 		const int32_t w_r = DmReverb_mul(slf->wet, in_r) >> 15;
 
 		// The first all-pass pair (lines 1 and 2)
-		int32_t* a = &slf->allpass[0][(2 * slf->ap[0] + apos) & 0x7ff];
+		int32_t* a = &slf->allpass[0][(2 * slf->ap[0] + apos) & am];
 		const int32_t o1 = d[i1], o2 = d[i2 + 1];
 		const int32_t y1a = DmReverb_add(DmReverb_mul(o2, g), DmReverb_mul(a[0], slf->ap_gain[0])) >> 15;
 		const int32_t y1b = DmReverb_sub(DmReverb_mul(a[1], slf->ap_gain[0]), DmReverb_mul(o1, g)) >> 15;
-		slf->allpass[0][apos & 0x7ff] = DmReverb_add(DmReverb_mul(y1b, g) >> 15, o1);
-		slf->allpass[0][(apos & 0x7ff) + 1] = DmReverb_sub(o2, DmReverb_mul(y1a, g) >> 15);
+		slf->allpass[0][apos & am] = DmReverb_add(DmReverb_mul(y1b, g) >> 15, o1);
+		slf->allpass[0][(apos & am) + 1] = DmReverb_sub(o2, DmReverb_mul(y1a, g) >> 15);
 		d[i1] = y1a;
 		d[i2 + 1] = y1b;
 
 		// The second (lines 3 and 4)
-		int32_t* b = &slf->allpass[1][(2 * slf->ap[1] + apos) & 0x7ff];
+		int32_t* b = &slf->allpass[1][(2 * slf->ap[1] + apos) & am];
 		const int32_t o3 = d[i3 + 2], o4 = d[i4 + 3];
 		const int32_t y2a = DmReverb_add(DmReverb_mul(o4, g), DmReverb_mul(b[0], slf->ap_gain[1])) >> 15;
 		const int32_t y2b = DmReverb_sub(DmReverb_mul(b[1], slf->ap_gain[1]), DmReverb_mul(o3, g)) >> 15;
-		slf->allpass[1][apos & 0x7ff] = DmReverb_add(DmReverb_mul(y2b, g) >> 15, o3);
-		slf->allpass[1][(apos & 0x7ff) + 1] = DmReverb_sub(o4, DmReverb_mul(y2a, g) >> 15);
+		slf->allpass[1][apos & am] = DmReverb_add(DmReverb_mul(y2b, g) >> 15, o3);
+		slf->allpass[1][(apos & am) + 1] = DmReverb_sub(o4, DmReverb_mul(y2a, g) >> 15);
 		d[i3 + 2] = y2a;
 		d[i4 + 3] = y2b;
 
@@ -175,19 +213,19 @@ void DmReverb_processStereo(DmReverb* slf, int16_t* buf, size_t frames) {
 		int32_t* w = &d[pos];
 		w[0] = DmReverb_add(DmReverb_add(DmReverb_mul(slf->prev[0], *p1), DmReverb_mul(slf->cur[0], y1a)) >> 15, w_l);
 		p1 = &d[i1];
-		i1 = (i1 - 4) & 0x3fff;
+		i1 = (i1 - 4) & dm;
 		w[1] = DmReverb_add(DmReverb_add(DmReverb_mul(slf->cur[1], d[i2 + 1]), DmReverb_mul(*p2, slf->prev[1])) >> 15, w_r);
 		p2 = &d[i2 + 1];
-		i2 = (i2 - 4) & 0x3fff;
+		i2 = (i2 - 4) & dm;
 		w[2] = DmReverb_sub(DmReverb_add(DmReverb_mul(slf->prev[2], *p3), DmReverb_mul(slf->cur[2], d[i3 + 2])) >> 15, w_r);
 		p3 = &d[i3 + 2];
-		i3 = (i3 - 4) & 0x3fff;
+		i3 = (i3 - 4) & dm;
 		w[3] = DmReverb_add(DmReverb_add(DmReverb_mul(slf->prev[3], *p4), DmReverb_mul(slf->cur[3], d[i4 + 3])) >> 15, w_l);
 		p4 = &d[i4 + 3];
-		i4 = (i4 - 4) & 0x3fff;
+		i4 = (i4 - 4) & dm;
 
-		apos = (apos - 2) & 0x7ff;
-		pos = (pos - 4) & 0x3fff;
+		apos = (apos - 2) & am;
+		pos = (pos - 4) & dm;
 		buf[2 * n] = DmReverb_clamp16(acc_l);
 		buf[2 * n + 1] = DmReverb_clamp16(acc_r);
 	}

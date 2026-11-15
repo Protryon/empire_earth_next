@@ -45,3 +45,6 @@ Changes made here (each marked "(EE patch)" at its place in the source):
   reallocates them.
 - `DmPerformance_setVolume` takes the performance's lock: the master volume shifts the sounding voices
   (`tsf_set_volume`), and the render thread sets it as well, so each change is applied once, in order.
+- The reverb's buffers (`Reverb.c`) are sized from the rate: powers of two of at least 4096 frames per delay line and
+  1024 per all-pass (the sizes that hold every delay up to 48 kHz, where the output is unchanged). Fixed at those
+  sizes, the delays wrapped above about 54 kHz (88.2, 96, 192 kHz devices).
