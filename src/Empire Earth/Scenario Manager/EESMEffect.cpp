@@ -177,7 +177,7 @@ void EESMEffect::Reset()
 void EESMEffect::BuildObject()
 {
     // port: the computer players' C++ attack groups this effect raised or aimed were deleted in stage 5 (the Lua AIs
-    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.89)
+    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.90)
     EECPEngineLog("scenario effect BuildObject: no C++ attack groups since stage 5, ignored");
 }
 
@@ -187,7 +187,7 @@ void EESMEffect::BuildObject()
 void EESMEffect::CreateAIMilitaryGroup()
 {
     // port: the computer players' C++ attack groups this effect raised or aimed were deleted in stage 5 (the Lua AIs
-    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.89)
+    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.90)
     EECPEngineLog("scenario effect CreateAIMilitaryGroup: no C++ attack groups since stage 5, ignored");
 }
 
@@ -197,7 +197,7 @@ void EESMEffect::CreateAIMilitaryGroup()
 void EESMEffect::ModifyAIMilitaryTarget()
 {
     // port: the computer players' C++ attack groups this effect raised or aimed were deleted in stage 5 (the Lua AIs
-    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.89)
+    // command their own soldiers): the effect does nothing (docs/AI_RESEARCH.md §8.90)
     EECPEngineLog("scenario effect ModifyAIMilitaryTarget: no C++ attack groups since stage 5, ignored");
 }
 

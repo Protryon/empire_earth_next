@@ -8,7 +8,7 @@
 // ONLY); a missing or unreadable file leaves just classic and random, a bad entry is skipped with a log line.
 // EEGameState::Create resolves random at the game's start from the game's random seed and the slot (the same on every
 // peer) and gives the computer player its AI's id (EECPNextState::mAI), whose manifest entry names the Lua script.
-// Every computer player runs a Lua AI (the C++ classic's decisions were deleted: stage 5, AI_RESEARCH §8.89). A player
+// Every computer player runs a Lua AI (the C++ classic's decisions were deleted: stage 5, AI_RESEARCH §8.90). A player
 // given no AI (a scenario's, a saved game's from before 0.251) plays the manifest's "classic" AI; a seat whose AI is
 // missing or does not load stands idle (a log line says why). Saved games keep the engine (EEPPlayerHelper,
 // from save version 0.251) and the AI's id (from 0.253; older saves' next seats are the manifest's "boom").

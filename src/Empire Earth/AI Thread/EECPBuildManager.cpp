@@ -1307,48 +1307,6 @@ bool EECPBuildManager::FindWonderSite(long inUnitClass, unsigned long inSize, EE
     return theResult;
 }
 
-// FUNCTION: EXE 0x469ee0
-// Finds a spot for another building of a unit's class in rings 3..1 around a random town centre that has
-// none of that class within squared distance 16
-bool EECPBuildManager::FindSpotNearTownCenter(EEUnit* inUnit, EETileCoordinate& outTile)
-{
-    bool theResult = false;
-    U2DPoint<long> theTile;
-    std::vector<EEUnit*> theCenters;
-    EEGetPlayerUnitsOfType(kUnitTypeSettlement, this->GetPlayer()->GetPlayerID(), theCenters);
-    EEGetPlayerUnitsOfType(kUnitTypeTownCenter, this->GetPlayer()->GetPlayerID(), theCenters);
-    EEGetPlayerUnitsOfType(kUnitTypeCapitol, this->GetPlayer()->GetPlayerID(), theCenters);
-    EEAIRandomShuffle(theCenters.begin(), theCenters.end());
-    std::vector<EEUnit*> theSame;
-    EEGetPlayerUnitsOfType(inUnit->GetUnitClass()->GetUnitType(), this->GetPlayer()->GetPlayerID(), theSame);
-    theSame.erase(std::find(theSame.begin(), theSame.end(), inUnit));
-    for (unsigned long i = 0; i < theCenters.size() && !theResult; i++) {
-        theTile = U2DPoint<long>((theCenters[i])->GetTileX(), (theCenters[i])->GetTileY());
-        if (std::find_if(theSame.begin(), theSame.end(), EECPUnitWithinDistance(theTile, 16.0f)) != theSame.end())
-            continue;
-        std::vector<U2DPoint<long> > theRing;
-        EEMap* theMap = gWorld.GetMap();
-        for (unsigned short r = 3; r > 0 && !theResult; r--) {
-            EEGetSquareRingTiles(theTile.GetX(), theTile.GetY(), r, theRing);
-            for (unsigned short k = 0; k < theRing.size() && !theResult; k++) {
-                EETile* theMapTile = theMap->GetTile((theRing[k]).GetX(), (theRing[k]).GetY());
-                if (theMapTile != NULL && inUnit->GetUnitClass()->mTerrainTypes[theMapTile->GetTerrainType()]) {
-                    long theSize = inUnit->GetUnitClass()->GetTileSize();
-                    if (EEPlayerBlockTakes(this->GetPlayer(), inUnit->GetUnitClass()->GetUnitType(), (theRing[k]).GetX(),
-                        (theRing[k]).GetY(), theSize, theSize, 0)) {
-                        outTile.mX = theRing[k].GetX();
-                        outTile.mY = theRing[k].GetY();
-                        theResult = true;
-                    } else
-                        theResult = false;
-                } else
-                    theResult = false;
-            }
-        }
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x46a228
 // Finds a building site for a class by its kind (wonder, granary, dock, centre, airport, tower, production,
 // anti-air, space) or, for farms, an unbuilt farm foundation; returns whether one was found
@@ -1429,45 +1387,6 @@ bool EECPBuildManager::FindSite(long inUnitClass, EETileCoordinate& theTile)
 }
 
 
-
-// FUNCTION: EXE 0x46a473
-// Finds a spot for another building of a unit's class in ring 4 around a random dock (space dock for space
-// buildings) that has none of that class within squared distance 25
-bool EECPBuildManager::FindSpotNearDock(EEUnit* inUnit, EETileCoordinate& outTile)
-{
-    U2DPoint<long> theTile;
-    bool theResult = false;
-    std::vector<EEUnit*> theSame;
-    EEGetPlayerUnitsOfType(inUnit->GetUnitClass()->GetUnitType(), this->GetPlayer()->GetPlayerID(), theSame);
-    theSame.erase(std::find(theSame.begin(), theSame.end(), inUnit));
-    long theCategory = inUnit->GetUnitClass()->GetCategory();
-    std::vector<EEUnit*> theBuildings;
-    EEGetPlayerUnitsOfType(theCategory == kUnitCategorySpaceBuilding ? 0x2d8 : 0x24, this->GetPlayer()->GetPlayerID(), theBuildings);
-    EEAIRandomShuffle(theBuildings.begin(), theBuildings.end());
-    for (std::vector<EEUnit*>::iterator it = theBuildings.begin(); it != theBuildings.end() && !theResult; it++) {
-        theTile = U2DPoint<long>((*it)->GetTileX(), (*it)->GetTileY());
-        if (std::find_if(theSame.begin(), theSame.end(), EECPUnitWithinDistance(theTile, 25.0f)) != theSame.end())
-            continue;
-        std::vector<U2DPoint<long> > theRing;
-        EEMap* theMap = gWorld.GetMap();
-        EEGetSquareRingTiles(theTile.GetX(), theTile.GetY(), 4, theRing);
-        for (unsigned short k = 0; k < theRing.size() && !theResult; k++) {
-            EETile* theMapTile = theMap->GetTile((theRing[k]).GetX(), (theRing[k]).GetY());
-            if (theMapTile != NULL && inUnit->GetUnitClass()->mTerrainTypes[theMapTile->GetTerrainType()]) {
-                long theSize = inUnit->GetUnitClass()->GetTileSize();
-                if (EEPlayerBlockTakes(this->GetPlayer(), inUnit->GetUnitClass()->GetUnitType(), (theRing[k]).GetX(),
-                    (theRing[k]).GetY(), theSize, theSize, 0)) {
-                    outTile.mX = theRing[k].GetX();
-                    outTile.mY = theRing[k].GetY();
-                    theResult = true;
-                } else
-                    theResult = false;
-            } else
-                theResult = false;
-        }
-    }
-    return theResult;
-}
 
 // FUNCTION: EXE 0x46a73b
 // Reads the build queues, town centre tile and next update time from a saved game (older saves lack

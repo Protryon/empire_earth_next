@@ -1028,7 +1028,7 @@ from data, so that a script can make its decisions with the same numbers:
 - **The lobby's Classic, `classic`.** A manifest entry may declare `"classic": true` (classic_lua does, the first so
   marked counts). The lobby's Classic (choice 0, every new seat's default, saves and network fallbacks included) then
   plays that AI; in EE-SIM and sim_bench `--engine classic` is the marked AI. Random keeps its pool: Classic (the marked
-  AI) and the AIs marked `random`. Stage 5 (AI_RESEARCH §8.89) deleted the C++ classic and its choice "Classic (C++)"
+  AI) and the AIs marked `random`. Stage 5 (AI_RESEARCH §8.90) deleted the C++ classic and its choice "Classic (C++)"
   (`classic_cpp`): a seat without a loadable AI stands idle (`engine=none` when the manifest marks no classic AI).
 - **The classic's garrison cheat, `fills_garrison`.** The C++ classic's FillGarrison sends the idle citizens into a
   settlement (or a town centre) it upgrades and tops the rest of the garrison up with no citizens

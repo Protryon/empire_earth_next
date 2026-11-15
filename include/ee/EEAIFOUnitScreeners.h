@@ -1,6 +1,6 @@
 // The unit class screeners the computer player's favourite types are chosen by (EEComputerPlayer::ChooseFavorite*Type,
 // GetScreenedTypesByLine). Extracted from ee/EECPUnitSelector.h when stage 5 deleted the unit selector with the rest
-// of the C++ combat tree (docs/AI_RESEARCH.md §8.89).
+// of the C++ combat tree (docs/AI_RESEARCH.md §8.90).
 #ifndef EE_EEAIFOUNITSCREENERS_H
 #define EE_EEAIFOUNITSCREENERS_H
 

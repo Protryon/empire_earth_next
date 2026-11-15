@@ -76,9 +76,7 @@ public:
     bool FindSpaceSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x68c90 (ret 0xc)
     bool FindTowerSite(long inUnitClass, long inSize, EETileCoordinate& outTile);  // 0x69245 (ret 0xc)
     bool FindWonderSite(long inUnitClass, unsigned long inSize, EETileCoordinate& outTile);  // 0x69d6c (ret 0xc; FindSite passes 10, 8, .., 2)
-    bool FindSpotNearTownCenter(EEUnit* inUnit, EETileCoordinate& outTile);  // (the body reads inUnit->mUnitClass) // 0x69ee0 (ret 8; EECPResearchManager 0x88283)
     bool FindSite(long inUnitClass, EETileCoordinate& ioTile);  // 0x6a228 (ret 8; stores the found tile)
-    bool FindSpotNearDock(EEUnit* inUnit, EETileCoordinate& outTile);  // (the body reads inUnit->mUnitClass) // 0x6a473 (ret 8; EECPResearchManager 0x882d1)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x6a73b
     bool IsNearAirportEnd(long inX, long inY, long inSize, float inDistance);  // 0x6a833 (ret 0x10; CanBuildAt): a wall gate near
     bool HasLaterEpochRequests();           // 0x6a989: anything queued above the current epoch

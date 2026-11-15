@@ -9,6 +9,64 @@ every original-bug fix) and is free to diverge from the original from here on. `
 This repository contains no game data and no original binaries. You need a legal copy of the game to play anything
 you build.
 
+## Getting started
+
+The game is the program plus one `Data` folder. Part of `Data` is in this repository and the rest comes from
+GitHub releases:
+
+| Part | Where it comes from |
+|---|---|
+| `Data/db` (the tables and rules) and `Data/ai` (the computer players) | this repository: `data/db`, `data/ai` |
+| models, textures, sounds, music, fonts | the media release, [open-media-ddb67f1](https://github.com/Protryon/empire_earth_next/releases/tag/open-media-ddb67f1) (`ee_open_media-ddb67f1.zip`) |
+| the 4x textures (optional, 1.3 GB) | [open-textures-4x-cb74e27](https://github.com/Protryon/empire_earth_next/releases/tag/open-textures-4x-cb74e27) (`ee_textures_4x-cb74e27.zip`) |
+
+The links are the current media releases. A newer one replaces them when the models or textures change; the
+[releases page](https://github.com/Protryon/empire_earth_next/releases) lists them all, and `tools/fetch_data.py`
+always takes the newest. Ignore the old `open-db-*`, `open-data-*`, `textures-4x-*` and `build-*` releases: the
+game no longer reads them.
+
+**Windows.** Install the requirements under [Building](#building), plus the GitHub CLI (`winget install
+GitHub.cli`, then `gh auth login`): `fetch_data.py` downloads the releases with it. Then:
+
+```
+git clone https://github.com/Protryon/empire_earth_next && cd empire_earth_next
+python -I tools/fetch_wgpu.py               # the graphics library, into toolchain/
+python -I build.py -j 10                    # -> build\clang\exe\EE-AOC.exe (about 2 minutes)
+python -I tools/fetch_data.py               # the media releases into data\ (--without textures-4x: skip the 1.3 GB)
+set EE_DATA_ROOT=%CD%\build\data-root       # cmd; PowerShell: $env:EE_DATA_ROOT = "$PWD\build\data-root"
+build\clang\exe\EE-AOC.exe
+```
+
+`fetch_data.py` also makes `build/data-root`: its `Data` is a link to `data/` (the repository's db and ai plus the
+media), beside the `Users` folder and the `.cfg` files. The game's settings (`config.yaml`) and logs land there.
+
+**macOS (Apple Silicon) and Linux.** See [Linux and macOS](#linux-and-macos) for the requirements. Then:
+
+```
+python3.12 -I tools/fetch_posix.py wgpu sdl3 fonts
+python3.12 -I tools/xbuild.py game -j 8      # -> build/xbuild/<target>/game/ee-aoc (macOS: also Empire Earth AoC.app)
+python3.12 -I tools/fetch_data.py
+EE_DATA_ROOT=$PWD/build/data-root build/xbuild/<target>/game/ee-aoc
+```
+
+`<target>` is `macos-arm64` or `linux-x86_64`.
+
+**Movies** (optional): the game plays the retail intro and campaign movies if they are converted from a retail
+disc's `.bik` files. `python -I tools/make_play_dir.py C:\EE-play --data build/data-root --movies DIR` (needs ffmpeg)
+makes a stand-alone play folder with them.
+
+**Staying up to date:**
+
+```
+git pull
+python -I tools/fetch_wgpu.py               # only downloads when its pin changed
+python -I build.py -j 10                    # macOS/Linux: python3.12 -I tools/xbuild.py game -j 8
+python -I tools/fetch_data.py               # only downloads a media part that has a newer release
+```
+
+The db tables, rules and AI scripts come with `git pull`. The game reads them from `data/` directly, so there is
+nothing to copy.
+
 ## What it builds
 
 One statically linked x86_64 `EE-AOC.exe` with the static C runtime. The original's DLLs are linked into it: the engine
@@ -190,7 +248,7 @@ EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer sea
 random, an AI's id such as boom, or next for the manifest's first AI; docs/AI_LUA_PLAN.md) through the lobby's engine
 boxes, as the lobby's host does: one value for every seat, or a comma list by seat. `classic` is the lobby's Classic:
 the AI the manifest marks `"classic": true` (classic_lua, the classic computer player's port to Lua). Every computer
-player runs a Lua AI: the C++ classic's decision code was deleted in stage 5 (docs/AI_RESEARCH.md §8.89). The report (JSON) holds the outcome, the game time and per player the
+player runs a Lua AI: the C++ classic's decision code was deleted in stage 5 (docs/AI_RESEARCH.md §8.90). The report (JSON) holds the outcome, the game time and per player the
 epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
 headless simulation" for what it shares with the game and where it differs.
 

@@ -74,6 +74,6 @@ public:
 };
 
 // (the attack sub groups' route planners, land, wall avoider, sea, helicopter, airplane and space, went with the C++
-// combat tree in stage 5, docs/AI_RESEARCH.md §8.89)
+// combat tree in stage 5, docs/AI_RESEARCH.md §8.90)
 
 #endif

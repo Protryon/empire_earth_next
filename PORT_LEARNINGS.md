@@ -2184,3 +2184,24 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Size delay lines from the rate.** The reverb's fixed 4096- and 1024-frame buffers held its delays only up to
   about 54 kHz, and the mixer opens the device at its own rate (88.2, 96 and 192 kHz exist). Powers of two from
   the rate, never below the old sizes, leave the output at 48 kHz and below bit-identical.
+
+## Stage 5: the C++ AI's decision code deleted (2026-11-15, docs/AI_RESEARCH.md §8.90)
+
+- **What went**: the lobby's Classic (C++) (`classic_cpp`), EECPNextTest.cpp, EEComputerPlayer's classic tick
+  (EnableManagers, the expansion, attack and catch-up timers, KeepStandingArmy, the classic CanAfford), every
+  EECPNextEngine gate, and the combat tree: 42 units and 54 headers (attack commander, groups, sub groups and their
+  units, defence commander, military aid, personnel, intelligence, unit selector, exploration, diplomacy and player
+  interaction managers), about 35,600 lines in all.
+- **What the rest of the game still needed** from those units: EECPASGFlags/EECPASGWeights (the path finder;
+  ee/EECPASGFlags.h), the favourite-type screeners and EEGetSquareRingTiles' declaration (ee/EEAIFOUnitScreeners.h),
+  ten engine helpers the original emitted out of line in the combat units after their first user there
+  (EEComplexUnit::HasCargo, GetMaxVelocity, EETile::IsSeenBy, kHeightEpsilon, ...: EECPEngineHelpers.cpp), and the
+  retire cheat (now in EEComputerPlayer.cpp). The link's unresolved list found the helpers; the compile errors the
+  rest.
+- **A seat without a loadable AI stands idle** (it used to fall back to the C++ classic); a scenario's computer player
+  plays the manifest's "classic" AI.
+- **Saved games** from before the deletion do not load (the combat and exploration managers' save blocks are gone;
+  save compatibility is not a goal).
+- **Benches beside other agents' benches**: with sim_bench's default `--port-base 2000`, EE-SIM runs crashed before
+  the game (rc 0xC0000005, no report) while other agents' games ran on the same TCP ports. Give each concurrent bench
+  its own `--port-base` (e.g. 13000, 21000, 31000).
