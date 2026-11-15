@@ -21588,3 +21588,121 @@ message manager's NewResponse (it reads the base class's fields).
   misaligned; a misaligned record with id 0 has no NUL inside the stand-in message's data, and the world's
   CreateXferFile reads the name past the data into whatever the heap holds next to each side's message. Run alone
   (`--first`, added this round) or again it is equal. Bounding that print in the world would end it.
+
+## R4.3, thirteenth part: DX7Rasterizer whole in Rust; the terrain draws over the mesh's Rust object (ee_dx7 rastobj.rs, draw_ffi.rs; branch rust-ge13, 2026-11-14)
+
+The first round on the DX7 plug-in's classes (RUST_PLAN R4.2 had left them C++: the classes, the lifetimes,
+`Set3DMode`'s composition, the PIM table). The measure first: `src/Low-Level Engine/Graphics Engine` was 11,058 lines,
+of which the census counts 4,252 as code; most of the rest are the address markers (`// FUNCTION:`, `SYNTHETIC`,
+`TEMPLATE`: GEBoundingBox.cpp alone has 367 of its 497), which a file keeps while it exists. So the round took the
+moves that delete files or whole function bodies: the DX7 plug-in's 3,588 lines (Common 3,159) were its largest pile.
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| 06d6bf52 | DX7Rasterizer whole in Rust (`rastobj.rs`); DX7TnLRasterizer.cpp/.h and DX7DrawSeam.cpp/.h deleted | +200 -1,044, net -844 |
+| c8c5192c | the vertex arrays read and write GEColor/GE3DPoint/GEVector/GETextureCoordinate in place | +28 -139, net -111 |
+| 6a8feaff | the terrain draws read the mesh's Rust object; GETerrainMesh's DX7-only accessors deleted | +14 -174, net -160 |
+
+Round total: net -1,115 (short of the 1,500 the rules ask: see "Left"). The Graphics Engine directory: 11,058 ->
+10,134 lines; the DX7 plug-in's units 3,588 -> 2,694, its headers 646 -> 506.
+
+- **The rasterizer object** (`EeDx7Rasterizer`): the per-screen DX7 records (`ScreenState`, boxed: a draw holds its
+  address for one call), the debug colour, the T&L flavour, the base's object (`GERasterizer::mRust`, read and written
+  directly through `ee_ge::rastobj`'s functions: the screen records, colours, culling, the drawing lock, the ripple, the
+  visibility tests), the activation in progress; the statics `gLightsInUse` and `sWaterTime` are Rust statics. Every
+  method of DX7Rasterizer.cpp is Rust: the enumeration (`ActivateRasterizer`), `AddValidScreen`, `ActivateScreen` /
+  `ActivateRenderingSurface` with their commit and the forced defaults (each setter called directly, in the original's
+  order), `ActivateTheScreen`, `Deactivate`, the scene, clears, memory and card flags, the lights, `Set2DMode`,
+  `Set3DMode` (the y/z swap composed with the camera inverse in Rust: `raster::view_and_projection`), `SetRenderTarget`,
+  `SetViewport`, the thirteen cached setters, the ambient and fog colours, culling, `SetTexture` and `ShowScene`'s
+  statistics. Every call on another C++ object is one host operation (`EeDx7RastOp`, 30: screens, surfaces, textures,
+  the manager, the window, the light, the lock, the clock, the verify; `DX7RasterizerHost`, a friend struct). No
+  reference to the object lives across a host call (a texture's `Promote` or a screen's `CreateSurface` may re-enter).
+- **The class** keeps its vtable (the game calls it through `GERasterizer`; the harness hooks `ShowScene` and
+  `ActivateScreen` by their mangled names, unchanged) and one member, `mDX7`. Its own four virtuals (`GetIsScreenValid`,
+  `CreateVertexBuffers`, `DrawTerrainMaterial`, `GetVideoMemory`) and the protected `LockVB`/`Set2DMode`/`Set3DMode`/
+  `UnlockVB` are gone (only Rust called them); the five overrides that only called the base (`SetDisplayNoTextureMode`,
+  `SetDisplayOverdrawMode`, `SetFogType`, `SetFogValue`, `SetWaitForVSync`) are gone (the base's virtuals run).
+  `DX7TnLRasterizer` overrode three virtuals with the T&L flavour of the same Rust functions: the class is gone and
+  DX7HRTnLDisplay.cpp makes `DX7Rasterizer(gName, true)`; `link/dx7hrtnl/units.txt` lost its unit.
+- **The draws** (`draw_ffi.rs`) take the rasterizer's object: the lock, the modes, the texture, the vertex buffer, the
+  triangle count, the base's visibility tests and pixel size, the viewport info (built from the record's `GeViewport`:
+  `DX7ViewportInfoOf` is Rust), the device lights (`gx_device_get_light`) and the UM trig (`ee_ge::um`) are Rust calls;
+  DX7DrawSeam.cpp/.h are deleted. The terrain draws, `Light` and `TransformToCamera` take the mesh's `EeGeTerrainMesh`
+  (`GETerrainMesh::GetRust`) and build the views, materials, material map and point reads from `ee_ge::tmobj`; the
+  record pins (`EeGeTmRenderVertex`/`RenderVertex`, `EeGeTmPolygon`/`TerrainPolygon`) moved to Rust const asserts, and
+  the fifteen GETerrainMesh accessors only the plug-in read (round 11's census additions) are deleted.
+- **The golden** (scratch, `build/ge13/golden`: `build.py orig|cur|mut`, `driver_dx7.cpp`, `fake_dx7.h`, `mutate.py`):
+  DX7Rasterizer.cpp, DX7TnLRasterizer.cpp and their headers of the base commit (unmodified, with the base's ee_dx7/ee_ge
+  from a `git archive`) or the worktree's shell, with GERasterizer.cpp and the real GX.cpp, over traced fakes: every
+  `gx_*` function (the C++ GX shims and Rust's direct calls meet there; enumeration, caps, device and vertex-buffer
+  creation, identifiers, video memory, still-drawing and lost-surface results), screens with random modes and
+  full-screen flags, surfaces with flip chains, textures with stage settings and frame surfaces, managers, windows,
+  lights; `operator new` zero-fills (the original's `new DX7RScreenState` left fields unset). Random sequences of up to
+  three rasterizers (HAL and T&L) made, activated, screen-activated (windowed and full screen, Z buffers),
+  rendering-surface activations that may fail, deactivated and deleted; every setter with forced and repeated values,
+  textures (changed or not, NULL), scenes, clears, lights, viewports, presentations, memory, creations; each step
+  followed by every rasterizer's state through the public accessors and the fakes' reference counts. 20,000
+  sequences identical (sha256 of the digests 5021f41c...). The driver had to avoid three crashes the original has on
+  paths the game never takes: a failed primary, flip chain or Z buffer in `ActivateScreen` (it dereferences them; the
+  Z buffer's attach result overwrites a failed back buffer's), a windowed screen without a back buffer (a NULL
+  `dynamic_cast` dereferenced), and `ActivateRenderingSurface` reading mode `count` after a failed search (a fixed
+  record past the modes in the fake).
+
+  | Mutation of the Rust | Sequences of 2,000 that change |
+  |---|---|
+  | defaults leave the blend source cached | 0 (equivalent: the DX7 record's caches are seeded stale) |
+  | defaults shade flat | 561 |
+  | texture changes not counted | 18 |
+  | texture not promoted | 734 |
+  | previous texture kept | 1,997 |
+  | render target not referenced | 1,997 |
+  | activation forgets the window | 2,000 (crash) |
+  | deactivate keeps the lights | 1,991 |
+  | deactivate keeps the screens | 713 |
+  | culling sent when unchanged | 16 |
+  | the clock read every frame | 1,997 |
+  | the flip never waits | 231 |
+  | fog colour equal ignores blue | 0 (the driver's fog colours never differ in blue alone) |
+  | ambient sends the set colour | 129 |
+  | always the T&L device | 1,997 |
+  | total and free swapped | 526 |
+  | card flags swapped | 866 |
+  | a new screen's viewport unchanged | 0 (only a draw's `Set2DMode` reads it; the driver draws nothing) |
+  | depth range swapped | 631 |
+  | the secondary not referenced | 945 |
+
+  No cargo replay of the driver this round (the rasterizer object calls `RawGx`, compiled out of `cargo test`); the
+  Rust tests cover `view_and_projection` and the existing raster/state goldens.
+- **Behaviour changes** (undefined paths only): a new screen's DX7 record starts zeroed (the original's was unset until
+  `ActivateTheScreen`); the rasterizer's destructor frees its records (the original's vector freed only the pointers);
+  a screen index past the records dereferences NULL (the original indexed past the vector); copying a rasterizer is
+  deleted. The terrain material map is read up to the material count (the original's C++ wrapper read the map's
+  length, past its buffers if the map were longer).
+- **What runs it: the tour.** EE-SIM makes no rasterizer and draws nothing: the oracle only shows these commits do not
+  touch the simulation. The draw paths, the activation, the setters and the terrain views run only in the game:
+  under the harness lock the tour (`fixture_game.py --exercise tour --play-seconds 60 --seed 2 --zoom-captures 50 100`)
+  `RESULT PASS tour` (render checks ok, view 83.2% lit, as round 12's 83.3%), its captures compared with the
+  pre-round exe's run of the same command: the menus pixel-equal (random map setup, single player, the four settings
+  tabs: 0 differing pixels; the main menu and the closed settings 226, its animated corner), the game views equal by
+  eye (terrain, the town center and units, the HUD, text, the mini map; the pixel counts differ because the two runs
+  captured at different game times). The random game with orders and the scroll check (`--exercise random-game
+  --play-seconds 30 --orders --scroll-check --zoom-captures 50 200`): every order done (gather, repair, repair queued,
+  move; patrol and attack-ground skipped, no button / unit), render checks ok (89.8% lit), and `SCROLL CHECK FAIL edge`
+  (the camera moved 0.041 at the screen edges) — the pre-round exe fails the same check the same way on this machine
+  today, so it is not this round's. Not exercised by either: water (no water in view), the terrain grid and highlight
+  draws, the 3D line, movies, the rendering surface activation, a lost device; the legacy debugger tour (menu
+  bmpdiff), the LAN game and the POSIX builds were not run.
+- **Gates.** Each commit: build `--sim` 0/0; the oracle on seeds 2-3 identical; the Rust gate PASS (after the first
+  commit and on the final tree). The `rust` branch (fffdedf4) was already an ancestor of the branch: nothing to merge.
+  On the final tree: build `--sim` 0/0 (EE-AOC 1,021 inputs), the test profile 0/0, the oracle identical on seeds 2-7,
+  the Rust gate PASS, the captures at seeds 2-3 PASS (oracle 171, late 172, effects 6 digests).
+- **Left.** The round is short of 1,500 net lines because the Graphics Engine's lines are mostly address markers a
+  remaining file keeps, and the remaining C++ of the plug-in is thin glue per class:
+  - `DX7Screen` and `DX7Surface` (Common, 345 + 285 lines, about 180 + 210 of code): fields, the attached-surface
+    vector, the screen list and the window creation over the Rust algorithms; whole objects would need their own
+    golden (the screen's enumeration and the surfaces' locks over the same GX fakes).
+  - `DX7Movie` (310): threads, events, the mixer and pl_mpeg as about 45 trampolines.
+  - the Draw units' seams over `GEModel`, `GEMaterial`, `GEText`/`GEFont`, `GEBitmap`, `GELine`/`GEPoint`/`GERhombus`
+    (the model and bitmap are Rust objects; reading them directly needs their objects at the call, as the mesh now).
+  - DX7Rasterizer.cpp keeps its forwarders and 300 address markers; the three Draw units theirs.
