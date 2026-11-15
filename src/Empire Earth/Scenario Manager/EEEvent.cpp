@@ -113,33 +113,18 @@ extern EEGraphicObject* gGraphicObjectU4E843C;
 extern EEGraphicObject* gGraphicObjectU4E8440;
 
 // FUNCTION: EXE 0x5ca6d9
-// Unloads the four built-in graphic objects and deletes those that are not in the media table
+// Unloads the four built-in graphic objects and deletes those that are not in the media table (the last first)
 void EEUnloadBuiltInGraphicObjects()
 {
-    EEGraphicObject* theObject4 = gGraphicObjectU4E8434;
-    EEGraphicObject* theObject3 = gGraphicObjectU4E8438;
-    EEGraphicObject* theObject2 = gGraphicObjectU4E843C;
-    EEGraphicObject* theObject1 = gGraphicObjectU4E8440;
-    if (theObject1 != NULL) {
-        theObject1->UnloadMedia();
-        if (theObject1->mMediaIndex == -1)
-            delete theObject1;
+    EEGraphicObject* theObjects[] = {gGraphicObjectU4E8440, gGraphicObjectU4E843C, gGraphicObjectU4E8438,
+                                     gGraphicObjectU4E8434};
+    for (EEGraphicObject* theObject : theObjects) {
+        if (theObject == NULL)
+            continue;
+        theObject->UnloadMedia();
+        if (theObject->mMediaIndex == -1)
+            delete theObject;
     }
-    if (theObject2 != NULL) {
-        theObject2->UnloadMedia();
-        if (theObject2->mMediaIndex == -1)
-            delete theObject2;
-    }
-    if (theObject3 != NULL) {
-        theObject3->UnloadMedia();
-        if (theObject3->mMediaIndex == -1)
-            delete theObject3;
-    }
-    if (theObject4 == NULL)
-        return;
-    theObject4->UnloadMedia();
-    if (theObject4->mMediaIndex == -1)
-        delete theObject4;
 }
 
 // FUNCTION: EXE 0x5ca76c
