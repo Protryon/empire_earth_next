@@ -13954,3 +13954,96 @@ step 1409 form 0 999 1
   c35 UIEditBox id=0x79 ix=35 g=1 r=449,686,497,700 m=0 bg=1,0,0,0 b=2 h=11008 fg=1,1,1 tr=1 fh=11 '' lines=1 '12'
   c36 UITextLabel id=0x76 ix=36 g=1 r=299,701,448,715 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Land Cutoff'
   c37 UIEditBox id=0x78 ix=37 g=1 r=449,701,497,715 m=0 bg=1,0,0,0 b=2 h=11009 fg=1,1,1 tr=1 fh=11 '' lines=1 '150'
+step 1412 tab 6
+step 1413 form 0 9999 7
+  c880 UITextLabel id=0x44c ix=880 g=7 r=20,2,169,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Scen Inst. Map'
+  c881 UITextLabel id=0x44e ix=881 g=7 r=437,2,586,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Movie'
+  c882 UITextLabel id=0x450 ix=882 g=7 r=854,2,1003,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Inst. Sound Over'
+  c883 UITextLabel id=0x452 ix=883 g=7 r=20,62,1003,77 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Scenario Instructions'
+  c884 UITextLabel id=0x454 ix=884 g=7 r=20,386,1003,401 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Aftermath'
+  c885 UITextLabel id=0x456 ix=885 g=7 r=20,202,1003,217 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Hints'
+  c886 UITextLabel id=0x456 ix=886 g=7 r=20,342,1003,357 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'History'
+  c887 UIEditBox id=0x453 ix=887 g=7 r=20,80,1003,199 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c888 UIEditBox id=0x455 ix=888 g=7 r=20,404,1003,523 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c889 UIEditBox id=0x457 ix=889 g=7 r=20,220,1003,339 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c890 UIEditBox id=0x457 ix=890 g=7 r=20,360,1003,479 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c891 EEUIFileComboBox id=0x44d ix=891 g=7 r=20,22,169,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=1 sel=none '<NONE>'
+  c892 EEUIFileComboBox id=0x44f ix=892 g=7 r=437,22,586,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=1 sel=none '<NONE>'
+  c893 EEUIFileComboBox id=0x451 ix=893 g=7 r=854,22,1003,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=11 sel=none '<NONE>'|'airraid'|'arthurian'|'eeintro'|'hurricane'|'jungle'
+  c894 UIButton id=0x458 ix=894 g=7 r=20,494,169,513 m=1 bg=0.4,0,0,0 b=2 h=11001 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Import' e8=EESEIEImport
+  c895 UIButton id=0x459 ix=895 g=7 r=20,516,169,535 m=1 bg=0.4,0,0,0 b=2 h=11002 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Export' e8=EESEIEExport
+  c896 UITextLabel id=0x45a ix=896 g=7 r=200,494,599,513 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Localization Text File Name'
+  c897 UIEditBox id=0x45b ix=897 g=7 r=200,516,599,535 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+step 1414 media
+  hints 0 ''
+  aftermath 0 ''
+  history 0 ''
+  instructions 0 ''
+  export ''
+step 1415 edit 0x453 Do_this_first
+step 1416 edit 0x455 After_it_all
+step 1417 edit %889 Hint_one
+step 1418 edit %890 Long_ago
+step 1419 tab 0
+step 1420 media
+  hints 8 'Hint_one'
+  aftermath 12 'After_it_all'
+  history 8 'Long_ago'
+  instructions 13 'Do_this_first'
+  export ''
+step 1421 edit 0x453 changed
+step 1422 edit %890 changed_too
+step 1423 tab 6
+step 1424 form 0 9999 7
+  c880 UITextLabel id=0x44c ix=880 g=7 r=20,2,169,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Scen Inst. Map'
+  c881 UITextLabel id=0x44e ix=881 g=7 r=437,2,586,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Movie'
+  c882 UITextLabel id=0x450 ix=882 g=7 r=854,2,1003,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Inst. Sound Over'
+  c883 UITextLabel id=0x452 ix=883 g=7 r=20,62,1003,77 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Scenario Instructions'
+  c884 UITextLabel id=0x454 ix=884 g=7 r=20,386,1003,401 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Aftermath'
+  c885 UITextLabel id=0x456 ix=885 g=7 r=20,202,1003,217 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Hints'
+  c886 UITextLabel id=0x456 ix=886 g=7 r=20,342,1003,357 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'History'
+  c887 UIEditBox id=0x453 ix=887 g=7 r=20,80,1003,199 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Do_this_first'
+  c888 UIEditBox id=0x455 ix=888 g=7 r=20,404,1003,523 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'After_it_all'
+  c889 UIEditBox id=0x457 ix=889 g=7 r=20,220,1003,339 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Hint_one'
+  c890 UIEditBox id=0x457 ix=890 g=7 r=20,360,1003,479 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Long_ago'
+  c891 EEUIFileComboBox id=0x44d ix=891 g=7 r=20,22,169,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=1 sel=none '<NONE>'
+  c892 EEUIFileComboBox id=0x44f ix=892 g=7 r=437,22,586,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=1 sel=none '<NONE>'
+  c893 EEUIFileComboBox id=0x451 ix=893 g=7 r=854,22,1003,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=11 sel=none '<NONE>'|'airraid'|'arthurian'|'eeintro'|'hurricane'|'jungle'
+  c894 UIButton id=0x458 ix=894 g=7 r=20,494,169,513 m=1 bg=0.4,0,0,0 b=2 h=11001 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Import' e8=EESEIEImport
+  c895 UIButton id=0x459 ix=895 g=7 r=20,516,169,535 m=1 bg=0.4,0,0,0 b=2 h=11002 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Export' e8=EESEIEExport
+  c896 UITextLabel id=0x45a ix=896 g=7 r=200,494,599,513 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Localization Text File Name'
+  c897 UIEditBox id=0x45b ix=897 g=7 r=200,516,599,535 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+step 1425 media
+  hints 8 'Hint_one'
+  aftermath 12 'After_it_all'
+  history 8 'Long_ago'
+  instructions 13 'Do_this_first'
+  export ''
+step 1426 enter 0x453
+step 1427 form 0 9999 7
+  c880 UITextLabel id=0x44c ix=880 g=7 r=20,2,169,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Scen Inst. Map'
+  c881 UITextLabel id=0x44e ix=881 g=7 r=437,2,586,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Movie'
+  c882 UITextLabel id=0x450 ix=882 g=7 r=854,2,1003,17 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Inst. Sound Over'
+  c883 UITextLabel id=0x452 ix=883 g=7 r=20,62,1003,77 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Scenario Instructions'
+  c884 UITextLabel id=0x454 ix=884 g=7 r=20,386,1003,401 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Aftermath'
+  c885 UITextLabel id=0x456 ix=885 g=7 r=20,202,1003,217 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Hints'
+  c886 UITextLabel id=0x456 ix=886 g=7 r=20,342,1003,357 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'History'
+  c887 UIEditBox id=0x453 ix=887 g=7 r=20,80,1003,199 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=2 '
+'
+  c888 UIEditBox id=0x455 ix=888 g=7 r=20,404,1003,523 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'After_it_all'
+  c889 UIEditBox id=0x457 ix=889 g=7 r=20,220,1003,339 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Hint_one'
+  c890 UIEditBox id=0x457 ix=890 g=7 r=20,360,1003,479 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Long_ago'
+  c891 EEUIFileComboBox id=0x44d ix=891 g=7 r=20,22,169,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=1 sel=none '<NONE>'
+  c892 EEUIFileComboBox id=0x44f ix=892 g=7 r=437,22,586,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=1 sel=none '<NONE>'
+  c893 EEUIFileComboBox id=0x451 ix=893 g=7 r=854,22,1003,41 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<NONE>' n=11 sel=none '<NONE>'|'airraid'|'arthurian'|'eeintro'|'hurricane'|'jungle'
+  c894 UIButton id=0x458 ix=894 g=7 r=20,494,169,513 m=1 bg=0.4,0,0,0 b=2 h=11001 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Import' e8=EESEIEImport
+  c895 UIButton id=0x459 ix=895 g=7 r=20,516,169,535 m=1 bg=0.4,0,0,0 b=2 h=11002 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Export' e8=EESEIEExport
+  c896 UITextLabel id=0x45a ix=896 g=7 r=200,494,599,513 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Localization Text File Name'
+  c897 UIEditBox id=0x45b ix=897 g=7 r=200,516,599,535 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+step 1428 tab 0
+step 1429 media
+  hints 8 'Hint_one'
+  aftermath 12 'After_it_all'
+  history 8 'Long_ago'
+  instructions 14 '|Do_this_first'
+  export ''

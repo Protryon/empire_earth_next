@@ -1407,3 +1407,23 @@ digest maprandom
 tab 3
 tab 0
 form 0 999 1
+# round 6: the instructions tab (EESEInstructions): its controls as made, texts typed, the tab left (Store) and the
+# scenario's media texts, the texts changed and the tab entered again (Enter, Load), a text box's Enter (EESEEFindText)
+tab 6
+form 0 9999 7
+media
+edit 0x453 Do_this_first
+edit 0x455 After_it_all
+edit %889 Hint_one
+edit %890 Long_ago
+tab 0
+media
+edit 0x453 changed
+edit %890 changed_too
+tab 6
+form 0 9999 7
+media
+enter 0x453
+form 0 9999 7
+tab 0
+media

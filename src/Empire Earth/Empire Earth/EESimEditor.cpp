@@ -71,6 +71,7 @@
 //   areastate                             the area screen's state and centre, the paint area, the scenario's areas
 //   align c|e                             the condition's or effect's labels' alignments (- never set)
 //   seed                                  the user interface's random seed (the map tab's CreateMap)
+//   media                                 the scenario's media texts (their lengths, first 60 bytes), the export file
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -1727,6 +1728,22 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 for (UITextLabel* l : theLabels)
                     theText += " " + (gSeetAlignments.count(l) ? std::to_string(gSeetAlignments[l]) : std::string("-"));
                 theOutput.push_back(theText);
+            };
+        else if (c == "media")   // the scenario's media texts (hints, aftermath, history, instructions) and export file
+            theCode = [=, &theOutput] {
+                EEScenarioManager* m = gWorld.mScenarioManager;
+                const char* theNames[4] = {"hints", "aftermath", "history", "instructions"};
+                for (unsigned long k = 0; k < 4; k++) {
+                    std::string theText = (const char*)m->mMediaStrings.GetSection(k);
+                    size_t n = (std::min)(theText.size(), (size_t)60);
+                    while (n > 0 && n < theText.size() && (theText[n] & 0xC0) == 0x80)   // a whole character
+                        n--;
+                    std::string theHead = theText.substr(0, n);
+                    std::replace(theHead.begin(), theHead.end(), '\n', '|');
+                    theOutput.push_back("  " + std::string(theNames[k]) + " " + std::to_string(theText.size()) + " '" +
+                                        theHead + "'");
+                }
+                theOutput.push_back(std::string("  export '") + (const char*)m->mExportFileName + "'");
             };
         else if (c == "seed")   // the user interface's random seed (the map tab's CreateMap draws or reads it)
             theCode = [=, &theOutput] { theOutput.push_back("  seed " + std::to_string(gUserInterface->mRandomSeed)); };
