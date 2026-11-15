@@ -13,8 +13,11 @@
 //! - `ne_records`: the engine messages as one data class (`NEMRecord`): layout, flags, responses, labels; the
 //!   factory's builders by type;
 //! - `execute`: the `Execute` bodies' decisions (the selection id check, the resources), with their C ABI;
+//! - `bodies`: the record types' `Execute` bodies and the physics' two ways to run a message over the C++ host's world
+//!   calls (round 5), the unit orders through the units lane's bodies;
 //! - `ffi`: the C ABI.
 
+pub mod bodies;
 pub mod classes;
 pub mod codec;
 pub mod engine;

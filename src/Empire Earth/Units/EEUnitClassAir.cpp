@@ -57,13 +57,7 @@
 // 0x447038..0x447050: the unit's named float constants (one .rdata block per unit) (provisional names)
 static const float kLandableNone = -10000.0f;   // 0x447038 (mInitialContactHeading: no landing height)
 
-static const float kLandableCeiling = 12.0f;    // 0x44703c
-
 static const float kLandableAngle = 0.5235988f; // 0x447040 (the approach's 30 degrees)
-
-static const float kLandableAhead = 2.0f;       // 0x447044
-
-static const float kLandableLow = 0.1f;         // 0x447048 (the touch-down height)
 
 // cdecl helpers (EEUCHelicopter.cpp declares the first the same way) (provisional names)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget);
@@ -76,108 +70,60 @@ EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inRang
 // ground is higher), then flies to the goal; returns true, doing nothing without an air traffic control
 bool EEUnitClass::LandableReturnToAirport(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePoint;
-    GEOrientation theOrientation;
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    if (inUnit == NULL || inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] == 0)
+    EEUCNote theNote(19); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
+    bool theResult = theNote.R([&]() -> bool {
+        GE3DPoint thePoint;
+        GEOrientation theOrientation;
+        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+        if (inUnit == NULL || inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] == 0)
+            return true;
+        float theGround = inUnit->mTile != NULL ? inUnit->mTile->mHeight : 0.0f;
+        inUnit->DropPath();
+        theTransformation.Apply(GE3DPoint(0.0f, 3.0f, 0.0f), thePoint);
+        this->AddWaypointAt(inUnit, thePoint.GetX(), thePoint.GetY(), theGround, true);
+        theTransformation.Apply(GE3DPoint(0.0f, 7.0f, 0.0f), thePoint);
+        float theHeight = this->GetCruiseAltitude() * 0.75f;
+        if (theGround > theHeight)
+            theHeight = theHeight + theGround;
+        this->AddWaypointAt(inUnit, thePoint.GetX(), thePoint.GetY(), theHeight, true);
+        thePoint.SetZ(theHeight);
+        theTransformation.ConvertToOrientation(theOrientation);
+        inUnit->mOrientation = theOrientation;
+        this->FlyToGoal(thePoint, inUnit);
         return true;
-    float theGround = inUnit->mTile != NULL ? inUnit->mTile->mHeight : 0.0f;
-    inUnit->DropPath();
-    theTransformation.Apply(GE3DPoint(0.0f, 3.0f, 0.0f), thePoint);
-    this->AddWaypointAt(inUnit, thePoint.GetX(), thePoint.GetY(), theGround, true);
-    theTransformation.Apply(GE3DPoint(0.0f, 7.0f, 0.0f), thePoint);
-    float theHeight = this->GetCruiseAltitude() * 0.75f;
-    if (theGround > theHeight)
-        theHeight = theHeight + theGround;
-    this->AddWaypointAt(inUnit, thePoint.GetX(), thePoint.GetY(), theHeight, true);
-    thePoint.SetZ(theHeight);
-    theTransformation.ConvertToOrientation(theOrientation);
-    inUnit->mOrientation = theOrientation;
-    this->FlyToGoal(thePoint, inUnit);
-    return true;
+    }());
+    theNote.S(inUnit);
+    return theResult;
 }
 
 // FUNCTION: EXE 0x613db5
 // Drops the path and adds a waypoint at the home carrier's take-off point (its tag point 2; its centre without tags)
 void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
 {
-    GE3DPoint theTarget;
-    EEComplexUnit* theCarrier = inUnit->mHomeBase;
-    EEUnitClassUpgrade* theStats = theCarrier->GetStats();
-    EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
-    float theX = theCarrier->mPhysicalModel.GetLocation().GetX();
-    float theY = theCarrier->mPhysicalModel.GetLocation().GetY();
-    float theScale = theStats->GetScale();
-    long theIndex = UMFloatToLong(inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity());
-    inUnit->DropPath();
-    if (theTags == NULL || theTags->mPoints.size() == 0) {
-        theTarget.SetX(theX);
-        theTarget.SetZ(1.0f);
-        theTarget.SetY(theY);
-    } else {
-        GETransformation theTransformation(false);
-        theTransformation = theCarrier->mPhysicalModel.GetLocation();
-        EETagPointList::Scale(theTransformation, theScale);
-        theTags->mPoints[2]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theTarget);
-    }
-    this->AddWaypointAt(inUnit, theTarget.GetX(), theTarget.GetY(), theTarget.GetZ(), true);
-}
-
-// FUNCTION: EXE 0x613ed2
-// Returns the height to fly at towards a point: its height above the ground, over the highest tile corner ahead
-// (the turning circle while circling, else the line to it), at most 12
-float EEUnitClass::LandableGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    GE3DPoint thePosition;
-    GEVector theStep;
-    GEVector theOffset;
-    std::vector<EETileCoordinate> theTiles;
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    thePosition.SetX(theLocation.GetX());
-    EEMap* theMap = ::gWorld.mMap;
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    thePosition.SetY(theLocation.GetY());
-    thePosition.SetZ(theLocation.GetZ());
-    float theHeight = inLocation.GetZ();
-    float theBase;
-    EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloor(inLocation.GetX()), UMFloor(inLocation.GetY()));
-    if (theTile != NULL && theTile->GetHeight() >= 0.0f)
-        theBase = theHeight - theTile->GetHeight();
-    else
-        theBase = theHeight;
-    unsigned long theState = inUnit->mCurrentPhysicsOrder;
-    if (theState == 0 || theState == 1) {
-        float theDistance = theStats->GetMaxVelocity() / theStats->GetMaxAngularVelocity();
-        theStep.SetX(theState != 0 ? -theDistance : theDistance);
-        theLocation.Apply(theStep, theOffset);
-        thePosition += theOffset;
-        EEGetTilesNearPoint(thePosition, kLandableAhead + theDistance, theTiles);
-    } else {
-        EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
-                   UMFloor(inLocation.GetY()), (std::vector<U2DPoint<long> >*)&theTiles, 1, 0);
-    }
-    for (std::vector<EETileCoordinate>::iterator theCoordinate = theTiles.begin(); theCoordinate != theTiles.end();
-         theCoordinate++) {
-        unsigned long theX = theCoordinate->mX;
-        unsigned long theY = theCoordinate->mY;
-        if (theMap->GetTile(theX, theY) == NULL)
-            continue;
-        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-    }
-    if (theHeight > kLandableCeiling)
-        theHeight = kLandableCeiling;
-    return theHeight;
+    EEUCNote theNote(20); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
+    [&]() {
+        GE3DPoint theTarget;
+        EEComplexUnit* theCarrier = inUnit->mHomeBase;
+        EEUnitClassUpgrade* theStats = theCarrier->GetStats();
+        EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
+        float theX = theCarrier->mPhysicalModel.GetLocation().GetX();
+        float theY = theCarrier->mPhysicalModel.GetLocation().GetY();
+        float theScale = theStats->GetScale();
+        long theIndex = UMFloatToLong(inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity());
+        inUnit->DropPath();
+        if (theTags == NULL || theTags->mPoints.size() == 0) {
+            theTarget.SetX(theX);
+            theTarget.SetZ(1.0f);
+            theTarget.SetY(theY);
+        } else {
+            GETransformation theTransformation(false);
+            theTransformation = theCarrier->mPhysicalModel.GetLocation();
+            EETagPointList::Scale(theTransformation, theScale);
+            theTags->mPoints[2]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theTarget);
+        }
+        this->AddWaypointAt(inUnit, theTarget.GetX(), theTarget.GetY(), theTarget.GetZ(), true);
+    }();
+    theNote.S(inUnit);
 }
 
 // FUNCTION: EXE 0x6141a3
@@ -294,18 +240,6 @@ void EEUnitClass::GetGroundHeight(GE3DPoint& inPoint, float* outHeight)
         *outHeight = 0.0f;
 }
 
-// FUNCTION: EXE 0x6146a9
-// Gets the unit's next waypoint and the climb to it; returns nonzero when there is none
-long EEUnitClass::GetNextFlightPoint(EEComplexUnit* inUnit, GE3DPoint& outTarget, float* outClimb)
-{
-    GE3DPoint thePosition;
-    inUnit->GetPosition(thePosition);
-    long theResult = inUnit->GetNextWaypointPoint(outTarget);
-    if (theResult == 0)
-        *outClimb = outTarget.GetZ() - thePosition.GetZ();
-    return theResult;
-}
-
 // New (R5b.4, the fourteenth round): EEUCLandable::ActionChanged's operations that are more than a call, each the
 // original's statements of its branch (ee_units actions.rs decides which, in which order; EEUnitUpdate.cpp's host
 // calls this with the operation code). inoutAirport: FIND_NEAREST_AIRPORT's result, for SET_HOME_BASE_FOUND.
@@ -353,20 +287,9 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
         break;
     case EE_UNITS_ACT_APPROACH_LANDING:
         if (inUnit->mUnitClass->mAirTrafficType == 1 || inUnit->mUnitClass->mAirTrafficType == 3) {
-            switch (inUnit->mHomeBase->mFacing) {
-            case 0:
-                theClass->ApproachRunwayPosY(inUnit);
-                break;
-            case 1:
-                theClass->ApproachRunwayNegY(inUnit);
-                break;
-            case 2:
-                theClass->ApproachRunwayPosX(inUnit);
-                break;
-            default:
-                theClass->ApproachRunwayNegX(inUnit);
-                break;
-            }
+            long theStep[2];
+            ee_units_cls_runway_direction((uint32_t)inUnit->mHomeBase->mFacing, &theStep);
+            theClass->ApproachRunway(inUnit, theStep[0], theStep[1]);
         } else
             theClass->ApproachCarrier(inUnit, inA != 0);
         break;
@@ -421,20 +344,9 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
                     theClass->LandableReturnToAirport(inUnit);
                 }
             } else if (inUnit->mUnitClass->mAirTrafficType == 1 || inUnit->mUnitClass->mAirTrafficType == 3) {
-                switch (inUnit->mHomeBase->mFacing) {
-                case 0:
-                    theClass->TakeOffFromRunwayPosY(inUnit);
-                    break;
-                case 1:
-                    theClass->TakeOffFromRunwayNegY(inUnit);
-                    break;
-                case 2:
-                    theClass->TakeOffFromRunwayPosX(inUnit);
-                    break;
-                default:
-                    theClass->TakeOffFromRunwayNegX(inUnit);
-                    break;
-                }
+                long theStep[2];
+                ee_units_cls_runway_direction((uint32_t)inUnit->mHomeBase->mFacing, &theStep);
+                theClass->TakeOffFromRunway(inUnit, theStep[0], theStep[1]);
             } else
                 theClass->TakeOffFromCarrier(inUnit);
             if (inUnit->mHomeBase == NULL)
@@ -520,65 +432,68 @@ void EEUnitClass::LandableUnitCreated(EEComplexUnit* inUnit)
 // half the area effect for the last bomb on a moving target, else 0.25 for the last bomb or none)
 bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
 {
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    GE3DPoint theOffset;
-    GE3DPoint theTarget;
-    GE3DPoint theStart;
-    EEUnit* theEnemy;
-    GEVector theVelocity;
-    GEVector theHeading;
-    EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
-    EEUGRust* theAttack = EEAttackUnitCast(inUnit->mGoalState);
-    float theGravity = this->mProjectileClass->mAcceleration;
-    float theSpeed = theStats->mLaunchSpeed;
-    if (theAttack == NULL)
-        return false;
-    if (theTags == NULL || theTags->mPoints.size() == 0) {
-        theOffset.SetZ(0.5f);
-        theOffset.SetX(0.0f);
-        theOffset.SetY(0.0f);
-    } else
-        theTags->mPoints[inUnit->mWeaponTagPoint]->GetOffset(inUnit->mPhysicalModel.GetFrame(), theOffset);
-    theOffset.SetX(theStats->GetScale() * theOffset.GetX());
-    theOffset.SetY(theStats->GetScale() * theOffset.GetY());
-    theOffset.SetZ(theStats->GetScale() * theOffset.GetZ());
-    theTransformation.Apply(theOffset, theStart);
-    EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
-    float theReach = inUnit->GetStats()->mAreaEffect;
-    if (theEnemy != NULL && theEnemy->mComplexUnit != NULL &&
-        (theEnemy->mComplexUnit->mVelocity < -0.0001f || theEnemy->mComplexUnit->mVelocity > 0.0001f) && theReach > 0.5f) {
-        if (inUnit->mAmmunition == 1)
-            theReach = theReach * 0.5f;
-        else if (theReach == 0.0f)
+    EEUCNote theNote(17); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
+    return theNote.R([&]() -> bool {
+        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+        EEUnitClassUpgrade* theStats = inUnit->GetStats();
+        GE3DPoint theOffset;
+        GE3DPoint theTarget;
+        GE3DPoint theStart;
+        EEUnit* theEnemy;
+        GEVector theVelocity;
+        GEVector theHeading;
+        EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
+        EEUGRust* theAttack = EEAttackUnitCast(inUnit->mGoalState);
+        float theGravity = this->mProjectileClass->mAcceleration;
+        float theSpeed = theStats->mLaunchSpeed;
+        if (theAttack == NULL)
+            return false;
+        if (theTags == NULL || theTags->mPoints.size() == 0) {
+            theOffset.SetZ(0.5f);
+            theOffset.SetX(0.0f);
+            theOffset.SetY(0.0f);
+        } else
+            theTags->mPoints[inUnit->mWeaponTagPoint]->GetOffset(inUnit->mPhysicalModel.GetFrame(), theOffset);
+        theOffset.SetX(theStats->GetScale() * theOffset.GetX());
+        theOffset.SetY(theStats->GetScale() * theOffset.GetY());
+        theOffset.SetZ(theStats->GetScale() * theOffset.GetZ());
+        theTransformation.Apply(theOffset, theStart);
+        EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
+        float theReach = inUnit->GetStats()->mAreaEffect;
+        if (theEnemy != NULL && theEnemy->mComplexUnit != NULL &&
+            (theEnemy->mComplexUnit->mVelocity < -0.0001f || theEnemy->mComplexUnit->mVelocity > 0.0001f) && theReach > 0.5f) {
+            if (inUnit->mAmmunition == 1)
+                theReach = theReach * 0.5f;
+            else if (theReach == 0.0f)
+                theReach = 0.25f;
+        } else if (inUnit->mAmmunition == 1 || theReach == 0.0f)
             theReach = 0.25f;
-    } else if (inUnit->mAmmunition == 1 || theReach == 0.0f)
-        theReach = 0.25f;
-    theVelocity.SetY(1.0f);
-    theTransformation.Apply(theVelocity, theHeading);
-    if (theHeading.GetZ() > 0.0f)
-        theHeading.SetZ(0.0f);
-    float theB = -(theHeading.GetZ() * theSpeed);
-    float theHalf = theGravity * 0.5f;
-    bool theResult = false;
-    float theDiscriminant = theB * theB - (theTarget.GetZ() - theStart.GetZ()) * theHalf * 4.0f;
-    if (theDiscriminant >= 0.0f) {
-        float theRoot = (float)sqrt(theDiscriminant);
-        float theOther = (-theB - theRoot) / (theHalf + theHalf);
-        float theTime = (theRoot - theB) / (theHalf + theHalf);
-        if (theOther > theTime)
-            theTime = theOther;
-        float theYaw = UMArcTan2(-theHeading.GetX(), theHeading.GetY());
-        float theAngle = UMArcCos(-theHeading.GetZ()) - 1.5707964f;
-        theVelocity.SetY(UMCos(theAngle) * theTime * theSpeed);
-        theVelocity.SetZ(theHeading.GetZ() * theTime * theSpeed - theTime * theTime * theGravity * 0.5f);
-        theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
+        theVelocity.SetY(1.0f);
         theTransformation.Apply(theVelocity, theHeading);
-        theStart += theHeading;
-        if (theReach * theReach >= theStart.DistanceToSquared(theTarget))
-            theResult = true;
-    }
-    return theResult;
+        if (theHeading.GetZ() > 0.0f)
+            theHeading.SetZ(0.0f);
+        float theB = -(theHeading.GetZ() * theSpeed);
+        float theHalf = theGravity * 0.5f;
+        bool theResult = false;
+        float theDiscriminant = theB * theB - (theTarget.GetZ() - theStart.GetZ()) * theHalf * 4.0f;
+        if (theDiscriminant >= 0.0f) {
+            float theRoot = (float)sqrt(theDiscriminant);
+            float theOther = (-theB - theRoot) / (theHalf + theHalf);
+            float theTime = (theRoot - theB) / (theHalf + theHalf);
+            if (theOther > theTime)
+                theTime = theOther;
+            float theYaw = UMArcTan2(-theHeading.GetX(), theHeading.GetY());
+            float theAngle = UMArcCos(-theHeading.GetZ()) - 1.5707964f;
+            theVelocity.SetY(UMCos(theAngle) * theTime * theSpeed);
+            theVelocity.SetZ(theHeading.GetZ() * theTime * theSpeed - theTime * theTime * theGravity * 0.5f);
+            theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
+            theTransformation.Apply(theVelocity, theHeading);
+            theStart += theHeading;
+            if (theReach * theReach >= theStart.DistanceToSquared(theTarget))
+                theResult = true;
+        }
+        return theResult;
+    }());
 }
 
 // FUNCTION: EXE 0x61562f
@@ -586,72 +501,76 @@ bool EEUnitClass::IsBombOnTarget(EEComplexUnit* inUnit)
 // full approach whatever the height), or just the deck when braking; makes the deck the move goal
 void EEUnitClass::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
 {
-    GEOrientation theOrientation;
-    EEComplexUnit* theCarrier = inUnit->mHomeBase;
-    GE3DPoint thePosition;
-    GE3DPoint theWaypoint;
-    GE3DPoint theDeck;
-    GE3DPoint theStep;
-    EEUnitClassUpgrade* theStats = theCarrier->GetStats();
-    EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
-    float theScale = theStats->GetScale();
-    inUnit->GetPosition(thePosition);
-    float theHeight = thePosition.GetZ();
-    inUnit->DropPath();
-    if (theTags == NULL || theTags->mPoints.size() == 0)
-        return;
-    GETransformation theTransformation(false);
-    theTransformation = theCarrier->mPhysicalModel.GetLocation();
-    EETagPointList::Scale(theTransformation, theScale);
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionBrake) {
-        theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
+    EEUCNote theNote(13); theNote.C(this).S(inUnit).U(inUnit->mHomeBase).I(inSteep);   // TEST ONLY (UCBD)
+    [&]() {
+        GEOrientation theOrientation;
+        EEComplexUnit* theCarrier = inUnit->mHomeBase;
+        GE3DPoint thePosition;
+        GE3DPoint theWaypoint;
+        GE3DPoint theDeck;
+        GE3DPoint theStep;
+        EEUnitClassUpgrade* theStats = theCarrier->GetStats();
+        EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
+        float theScale = theStats->GetScale();
+        inUnit->GetPosition(thePosition);
+        float theHeight = thePosition.GetZ();
+        inUnit->DropPath();
+        if (theTags == NULL || theTags->mPoints.size() == 0)
+            return;
+        GETransformation theTransformation(false);
         theTransformation = theCarrier->mPhysicalModel.GetLocation();
-        theTransformation.SetPosition(theDeck.GetX(), theDeck.GetY(), theDeck.GetZ());
-        float theLength = inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity();
-        long theCount = UMCeil(theLength);
-        float theRun = (float)theCount * 1.5f;
-        float theFar = theRun / UMTan(kLandableAngle) + theRun;
-        float theDX = thePosition.GetX() - (theDeck.GetX() - theFar);
-        if (theDX * theDX + (thePosition.GetY() - theDeck.GetY()) * (thePosition.GetY() - theDeck.GetY()) <=
-            (float)theCount * 2.5f) {
-            theWaypoint.SetX(theDeck.GetX());
-            theWaypoint.SetY(theDeck.GetY());
-            theWaypoint.SetZ(this->GetCruiseAltitude() * 0.7f);
-            this->PathToward(inUnit, thePosition, theWaypoint, true);
-            thePosition = theWaypoint;
+        EETagPointList::Scale(theTransformation, theScale);
+        if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionBrake) {
+            theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
+            theTransformation = theCarrier->mPhysicalModel.GetLocation();
+            theTransformation.SetPosition(theDeck.GetX(), theDeck.GetY(), theDeck.GetZ());
+            float theLength = inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity();
+            long theCount = UMCeil(theLength);
+            float theRun = (float)theCount * 1.5f;
+            float theFar = theRun / UMTan(kLandableAngle) + theRun;
+            float theDX = thePosition.GetX() - (theDeck.GetX() - theFar);
+            if (theDX * theDX + (thePosition.GetY() - theDeck.GetY()) * (thePosition.GetY() - theDeck.GetY()) <=
+                (float)theCount * 2.5f) {
+                theWaypoint.SetX(theDeck.GetX());
+                theWaypoint.SetY(theDeck.GetY());
+                theWaypoint.SetZ(this->GetCruiseAltitude() * 0.7f);
+                this->PathToward(inUnit, thePosition, theWaypoint, true);
+                thePosition = theWaypoint;
+            }
+            if (inSteep || this->GetCruiseAltitude() <= theHeight) {
+                theStep.SetY(-theFar);
+                theTransformation.Apply(theStep, theWaypoint);
+                theWaypoint.SetZ(this->GetCruiseAltitude());
+                this->PathToward(inUnit, thePosition, theWaypoint, true);
+            }
+            if (inSteep || theDeck.GetZ() + (this->GetCruiseAltitude() - theDeck.GetZ()) * 0.3f <= theHeight) {
+                theStep.SetY(-theRun);
+                theTransformation.Apply(theStep, theWaypoint);
+                theWaypoint.SetZ(theDeck.GetZ() + (this->GetCruiseAltitude() - theDeck.GetZ()) * 0.3f);
+                this->AddWaypointAt(inUnit, theWaypoint.GetX(), theWaypoint.GetY(), theWaypoint.GetZ(), true);
+            }
+            this->AddWaypointAt(inUnit, theDeck.GetX(), theDeck.GetY(), theDeck.GetZ(), true);
+            this->AddWaypointAt(inUnit, theCarrier->mPhysicalModel.GetLocation().GetX(),
+                     theCarrier->mPhysicalModel.GetLocation().GetY(), theCarrier->mPhysicalModel.GetLocation().GetZ(),
+                     true);
+        } else {
+            // braking: the deck's stop point is tag point 2, and the plane takes the carrier's own (unscaled) heading
+            (theTags->mPoints[2])->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
+            this->AddWaypointAt(inUnit, theDeck.GetX(), theDeck.GetY(), theDeck.GetZ(), true);
+            theCarrier->mPhysicalModel.GetLocation().ConvertToOrientation(theOrientation);
+            inUnit->mOrientation = theOrientation;
         }
-        if (inSteep || this->GetCruiseAltitude() <= theHeight) {
-            theStep.SetY(-theFar);
-            theTransformation.Apply(theStep, theWaypoint);
-            theWaypoint.SetZ(this->GetCruiseAltitude());
-            this->PathToward(inUnit, thePosition, theWaypoint, true);
-        }
-        if (inSteep || theDeck.GetZ() + (this->GetCruiseAltitude() - theDeck.GetZ()) * 0.3f <= theHeight) {
-            theStep.SetY(-theRun);
-            theTransformation.Apply(theStep, theWaypoint);
-            theWaypoint.SetZ(theDeck.GetZ() + (this->GetCruiseAltitude() - theDeck.GetZ()) * 0.3f);
-            this->AddWaypointAt(inUnit, theWaypoint.GetX(), theWaypoint.GetY(), theWaypoint.GetZ(), true);
-        }
-        this->AddWaypointAt(inUnit, theDeck.GetX(), theDeck.GetY(), theDeck.GetZ(), true);
-        this->AddWaypointAt(inUnit, theCarrier->mPhysicalModel.GetLocation().GetX(),
-                 theCarrier->mPhysicalModel.GetLocation().GetY(), theCarrier->mPhysicalModel.GetLocation().GetZ(),
-                 true);
-    } else {
-        // braking: the deck's stop point is tag point 2, and the plane takes the carrier's own (unscaled) heading
-        (theTags->mPoints[2])->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
-        this->AddWaypointAt(inUnit, theDeck.GetX(), theDeck.GetY(), theDeck.GetZ(), true);
-        theCarrier->mPhysicalModel.GetLocation().ConvertToOrientation(theOrientation);
-        inUnit->mOrientation = theOrientation;
-    }
-    EEUnitGoal* theLocation = NULL;   // a location goal or a heal goal
-    if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
-        theLocation = inUnit->GetGoal();
-    if (theLocation == NULL) {
-        EEUGRust* theMove = EEUGRust::NewLocation(&theDeck, false, true, false, 0.0f, false, false);
-        inUnit->ClearGoalQueue(0);
-        inUnit->SetGoal(theMove, 0, 0);
-    } else
-        EESetLocationGoalPoint(theLocation, theDeck);
+        EEUnitGoal* theLocation = NULL;   // a location goal or a heal goal
+        if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
+            theLocation = inUnit->GetGoal();
+        if (theLocation == NULL) {
+            EEUGRust* theMove = EEUGRust::NewLocation(&theDeck, false, true, false, 0.0f, false, false);
+            inUnit->ClearGoalQueue(0);
+            inUnit->SetGoal(theMove, 0, 0);
+        } else
+            EESetLocationGoalPoint(theLocation, theDeck);
+    }();
+    theNote.S(inUnit);
 }
 
 // FUNCTION: EXE 0x615a4d
@@ -659,438 +578,118 @@ void EEUnitClass::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
 // take-off point; otherwise flies off the deck end (tag point 2) towards the goal
 void EEUnitClass::TakeOffFromCarrier(EEComplexUnit* inUnit)
 {
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    GE3DPoint theStart;
-    EEComplexUnit* theCarrier = inUnit->mHomeBase;
-    GE3DPoint theEnd;
-    GE3DPoint theTarget;
-    GETransformation theCarrierLocation(false);
-    EEUnitClassUpgrade* theStats = theCarrier->GetStats();
-    EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
-    float theX = theCarrier->mPhysicalModel.GetLocation().GetX();
-    float theY = theCarrier->mPhysicalModel.GetLocation().GetY();
-    float theScale = theStats->GetScale();
-    inUnit->DropPath();
-    if (theTags != NULL && theTags->GetNumTagPoints() != 0) {
-        theCarrierLocation = theCarrier->mPhysicalModel.GetLocation();
-        EETagPointList::Scale(theCarrierLocation, theScale);
-        theTags->GetTagPoint(0)->GetPoint(inUnit->mPhysicalModel.GetFrame(), theCarrierLocation, theStart);
-        theTags->GetTagPoint(2)->GetPoint(inUnit->mPhysicalModel.GetFrame(), theCarrierLocation, theEnd);
-    } else {
-        theStart.SetX(theX);
-        theStart.SetY(theY);
-        theStart.SetZ(1.0f);
-        theEnd.SetX(theX);
-        theEnd.SetY(theY);
-        theEnd.SetZ(1.0f);
-    }
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionTakeoff) {
-        theTransformation.SetPosition(theStart);
-        inUnit->SetTransformation(theTransformation, true);
-        if (theStart.GetZ() >= this->GetCruiseAltitude())
-            inUnit->mPhysicalModel.SetScale(inUnit->GetStats()->GetScale());
-        else {
-            float theHalf = theStart.GetZ() / this->GetCruiseAltitude() * 0.5f;
-            inUnit->mPhysicalModel.SetScale(inUnit->GetStats()->GetScale() * (theHalf + 0.5f));
+    EEUCNote theNote(14); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
+    [&]() {
+        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+        GE3DPoint theStart;
+        EEComplexUnit* theCarrier = inUnit->mHomeBase;
+        GE3DPoint theEnd;
+        GE3DPoint theTarget;
+        GETransformation theCarrierLocation(false);
+        EEUnitClassUpgrade* theStats = theCarrier->GetStats();
+        EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
+        float theX = theCarrier->mPhysicalModel.GetLocation().GetX();
+        float theY = theCarrier->mPhysicalModel.GetLocation().GetY();
+        float theScale = theStats->GetScale();
+        inUnit->DropPath();
+        if (theTags != NULL && theTags->GetNumTagPoints() != 0) {
+            theCarrierLocation = theCarrier->mPhysicalModel.GetLocation();
+            EETagPointList::Scale(theCarrierLocation, theScale);
+            theTags->GetTagPoint(0)->GetPoint(inUnit->mPhysicalModel.GetFrame(), theCarrierLocation, theStart);
+            theTags->GetTagPoint(2)->GetPoint(inUnit->mPhysicalModel.GetFrame(), theCarrierLocation, theEnd);
+        } else {
+            theStart.SetX(theX);
+            theStart.SetY(theY);
+            theStart.SetZ(1.0f);
+            theEnd.SetX(theX);
+            theEnd.SetY(theY);
+            theEnd.SetZ(1.0f);
         }
-        long theIndex = UMFloatToLong(inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity());
-        this->RouteDockWaypoint(inUnit);
-    } else {
-        theCarrierLocation = theCarrier->mPhysicalModel.GetLocation();
-        theCarrierLocation.SetX(theEnd.GetX());
-        theCarrierLocation.SetY(theEnd.GetY());
-        theCarrierLocation.SetZ(theEnd.GetZ());
-        theStart.SetX(0.0f);
-        if (inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15SpaceFighter)
-            theStart.SetY(3.0f);
-        else theStart.SetY(10.0f);
-        theStart.SetZ(0.0f);
-        theCarrierLocation.Apply(theStart, theTarget);
-        this->AddWaypointAt(inUnit, theTarget.GetX(), theTarget.GetY(), this->GetCruiseAltitude() * 0.7f, true);
-        this->FlyToGoal(theTarget, inUnit);
-    }
+        if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionTakeoff) {
+            theTransformation.SetPosition(theStart);
+            inUnit->SetTransformation(theTransformation, true);
+            if (theStart.GetZ() >= this->GetCruiseAltitude())
+                inUnit->mPhysicalModel.SetScale(inUnit->GetStats()->GetScale());
+            else {
+                float theHalf = theStart.GetZ() / this->GetCruiseAltitude() * 0.5f;
+                inUnit->mPhysicalModel.SetScale(inUnit->GetStats()->GetScale() * (theHalf + 0.5f));
+            }
+            long theIndex = UMFloatToLong(inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity());
+            this->RouteDockWaypoint(inUnit);
+        } else {
+            theCarrierLocation = theCarrier->mPhysicalModel.GetLocation();
+            theCarrierLocation.SetX(theEnd.GetX());
+            theCarrierLocation.SetY(theEnd.GetY());
+            theCarrierLocation.SetZ(theEnd.GetZ());
+            theStart.SetX(0.0f);
+            if (inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15SpaceFighter)
+                theStart.SetY(3.0f);
+            else theStart.SetY(10.0f);
+            theStart.SetZ(0.0f);
+            theCarrierLocation.Apply(theStart, theTarget);
+            this->AddWaypointAt(inUnit, theTarget.GetX(), theTarget.GetY(), this->GetCruiseAltitude() * 0.7f, true);
+            this->FlyToGoal(theTarget, inUnit);
+        }
+    }();
+    theNote.S(inUnit).F(inUnit->mPhysicalModel.GetScale());
 }
 
 // FUNCTION: EXE 0x615ccf
 // Returns 0 (left) or 1 (right) when the next waypoint or goal lies inside the turning circle beside or behind
-// the plane, else 5
+// the plane, else 5 (ee_units cls_air.rs, R5b.4 round 33)
 unsigned long EEUnitClass::GetNextFlightState(EEComplexUnit* inUnit)
 {
-    GE3DPoint theLeft;
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    GE3DPoint theRight;
-    unsigned long theResult = 5;
-    GE3DPoint theAhead;
-    GE3DPoint theOffset;
-    GE3DPoint theTarget;
-    float theRadius = inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity();
-    float theRadius2 = theRadius * theRadius;
-    if ((long)inUnit->mWaypoints.size() > 0)
-        inUnit->GetNextWaypointPoint(theTarget);
-    else {
-        if (theGoal == NULL)
-            return 5;
-        switch (theGoal->mKind) {
-        case kGoalLocation:
-        case kGoalAttackGround:
-            theTarget = static_cast<EEUGRust*>(theGoal)->GetGroundTarget();
-            break;
-        case kGoalAttackUnit: {
-            EEUnit* theUnit = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
-            if (theUnit == NULL)
-                return 5;
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            if (theComplex != NULL) {
-                const GETransformation& theComplexLocation = theComplex->mPhysicalModel.GetLocation();
-                theTarget.SetX(theComplexLocation.GetX());
-                theTarget.SetY(theComplexLocation.GetY());
-                theTarget.SetZ(theComplexLocation.GetZ());
-            } else {
-                theTarget.SetX((float)theUnit->GetTileX() + 0.5f);
-                theTarget.SetY((float)theUnit->GetTileY() + 0.5f);
-                theTarget.SetZ(theUnit->mTile->GetHeight());
-            }
-            break;
-        }
-        case kGoalPatrol: {
-            EEComplexUnit* theOther = static_cast<EEUGRust*>(theGoal)->GetPatrolTarget();
-            const GETransformation& theOtherLocation = theOther->mPhysicalModel.GetLocation();
-            theTarget.SetX(theOtherLocation.GetX());
-            theTarget.SetY(theOtherLocation.GetY());
-            theTarget.SetZ(theOtherLocation.GetZ());
-            break;
-        }
-        case kGoalExplore: {
-            static_cast<EEUGRust*>(theGoal)->GetExploreTileCenter(theTarget);
-            break;
-        }
-        default:
-            return 5;
-        }
-    }
-    GETransformation theInverse(false);
-    inUnit->mPhysicalModel.GetLocation().MakeInverse(theInverse);
-    theInverse.Apply(theTarget, theOffset);
-    theOffset.SetZ(0.0f);
-    theLeft.SetX(-theRadius);
-    theRight.SetX(theRadius);
-    theAhead.SetY(-theRadius);
-    bool theNearLeft = theLeft.DistanceToSquared(theOffset) <= theRadius2;
-    bool theNearRight = theRight.DistanceToSquared(theOffset) <= theRadius2;
-    bool theNearAhead = theAhead.DistanceToSquared(theOffset) <= theRadius2;
-    if (theNearLeft || theNearRight || theNearAhead) {
-        theResult = theOffset.GetX() < 0.0f ? 0 : 1;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x615ed8
-// Returns whether the plane reached its next waypoint (within 0.5); braking onto a runway's last one, whether
-// inValue is at most 0.05
-bool EEUnitClass::LandableHasArrived(EEComplexUnit* inUnit, float inValue)
-{
-    GE3DPoint theTarget;
-    unsigned long theCount = inUnit->mWaypoints.size();
-    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
-                          0.0f);
-    inUnit->GetNextWaypointPoint(theTarget);
-    theTarget.SetZ(0.0f);
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionBrake && theCount <= 1 && this->mAirTrafficType != 2 && this->mAirTrafficType != 4) {
-        return inValue <= 0.05f;
-    }
-    return theTarget.DistanceToSquared(thePosition) <= 0.25f;
+    EEUCNote theNote(12); theNote.C(this).S(inUnit);   // TEST ONLY (UCBD)
+    return theNote.R(ee_units_cls_next_flight_state(EEObj(inUnit)));
 }
 
 // FUNCTION: EXE 0x615f7d
 // Plans a land plane's runway approach in a direction: turn onto the line, descent and touch-down at the airport
-// (a navy yard: its pier), then makes the airport the move goal (the queue kept behind an explore goal)
+// (a navy yard: its pier), then makes the airport the move goal (ee_units cls_air.rs, R5b.4 round 33). The four
+// direction wrappers (0x616308..0x616338) and the take-off's (0x616430..0x616460) are the runway direction's table.
 void EEUnitClass::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
 {
-    GE3DPoint theWaypoint;
-    EEComplexUnit* theBase = inUnit->mHomeBase;
-    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
-                          inUnit->mPhysicalModel.GetLocation().GetZ());
-    float theY = theBase->mPhysicalModel.GetLocation().GetY();
-    float theX = theBase->mPhysicalModel.GetLocation().GetX();
-    float theFar;
-    float theNear;
-    float theFinal;
-    float theLow;
-    float theFlare;
-    float theGround;
-    bool theCarrier;
-    if (theBase->mUnitClass->GetUnitType() == kUnitTypeNavyYard) {
-        theFar = 3.0f;
-        theGround = 0.0f;
-        theNear = 2.0f;
-        theFinal = 0.8f;
-        theLow = 0.3f;
-        theFlare = 0.05f;
-        theCarrier = true;
-        theX = (float)inDX * 1.5f + theX;
-        theY = (float)inDY * 1.5f + theY;
-    } else {
-        theFinal = 1.0f;
-        theFar = 7.0f;
-        theNear = 3.0f;
-        theLow = 0.5f;
-        theFlare = 0.15f;
-        theGround = kLandableLow;
-        theCarrier = false;
-    }
-    inUnit->DropPath();
-    float theLength = inUnit->GetStats()->GetMaxVelocity() / inUnit->GetStats()->GetMaxAngularVelocity();
-    long theCount = UMCeil(theLength);
-    float theDX = (float)inDX;
-    float theRadius = (float)theCount;
-    float theDY = (float)inDY;
-    float theStartX = theDX * theFar + theX;
-    float theRun = theRadius * 1.5f;
-    float theStartY = theDY * theFar + theY;
-    float theTurn = theRun / UMTan(kLandableAngle) + theRun;
-    float theOffsetY = theDY * theTurn;
-    float theOffsetX = theDX * theTurn;
-    float theDistY = thePosition.GetY() - (theStartY - theOffsetY);
-    float theDistX = thePosition.GetX() - (theStartX - theOffsetX);
-    if (theDistY * theDistY + theDistX * theDistX <= theRadius * 2.5f) {
-        theWaypoint.SetZ(this->GetCruiseAltitude());
-        theWaypoint.SetX(theStartX);
-        theWaypoint.SetY(theStartY);
-        this->PathToward(inUnit, thePosition, theWaypoint, true);
-        thePosition = theWaypoint;
-    }
-    theWaypoint.SetX(theOffsetX + theStartX);
-    theWaypoint.SetY(theOffsetY + theStartY);
-    theWaypoint.SetZ(this->GetCruiseAltitude() * theFinal);
-    this->PathToward(inUnit, thePosition, theWaypoint, true);
-    this->AddWaypointAt(inUnit, theDX * theRun + theStartX, theDY * theRun + theStartY, this->GetCruiseAltitude() * theLow, theCarrier);
-    this->AddWaypointAt(inUnit, theStartX, theStartY, this->GetCruiseAltitude() * theFlare, false);
-    this->AddWaypointAt(inUnit, theDX * theNear + theX, theDY * theNear + theY, theGround, false);
-    this->AddWaypointAt(inUnit, theDX + theX, theDY + theY, theGround, false);
-    this->AddWaypointAt(inUnit, theX, theY, theGround, false);
-    theWaypoint.SetX(theX);
-    theWaypoint.SetY(theY);
-    float theHeight = ::gWorld.mMap->GetTile(UMFloor(theX), UMFloor(theY))->GetHeight();
-    if (theHeight < 0.0f)
-        theHeight = 0.0f;
-    theWaypoint.SetZ(theHeight);
-    EEUGRust* theMove = EEUGRust::NewLocation(&theWaypoint, false, true, false, 0.0f, false, false);
-    bool theKeep;
-    if (inUnit->mGoalState == NULL || inUnit->mGoalState->mKind != kGoalExplore) {
-        inUnit->ClearGoalQueue(0);
-        theKeep = false;
-    } else
-        theKeep = true;
-    inUnit->SetGoal(theMove, theKeep, 0);
-}
-
-// FUNCTION: EXE 0x616308
-// Plans the runway approach along +x
-void EEUnitClass::ApproachRunwayPosX(EEComplexUnit* inUnit)
-{
-    this->ApproachRunway(inUnit, 1, 0);
-}
-
-// FUNCTION: EXE 0x616318
-// Plans the runway approach along +y
-void EEUnitClass::ApproachRunwayPosY(EEComplexUnit* inUnit)
-{
-    this->ApproachRunway(inUnit, 0, 1);
-}
-
-// FUNCTION: EXE 0x616328
-// Plans the runway approach along -y
-void EEUnitClass::ApproachRunwayNegY(EEComplexUnit* inUnit)
-{
-    this->ApproachRunway(inUnit, 0, -1);
-}
-
-// FUNCTION: EXE 0x616338
-// Plans the runway approach along -x
-void EEUnitClass::ApproachRunwayNegX(EEComplexUnit* inUnit)
-{
-    this->ApproachRunway(inUnit, -1, 0);
+    EEUCNote theNote(15); theNote.C(this).S(inUnit).U(inUnit->mHomeBase).I(inDX).I(inDY);   // TEST ONLY (UCBD)
+    ee_units_cls_approach_runway(EEObj(this), EEObj(inUnit), (int32_t)inDX, (int32_t)inDY);
+    theNote.S(inUnit);   // TEST ONLY (UCBD)
 }
 
 // FUNCTION: EXE 0x616348
 // Plans a runway take-off in a direction: rolls 3 tiles low, climbs to 3/4 cruising height 7 tiles out, then
-// flies to the goal
+// flies to the goal (ee_units cls_air.rs)
 void EEUnitClass::TakeOffFromRunway(EEComplexUnit* inUnit, long inDX, long inDY)
 {
-    GE3DPoint theTarget;
-    float theX = inUnit->mPhysicalModel.GetLocation().GetX();
-    float theY = inUnit->mPhysicalModel.GetLocation().GetY();
-    inUnit->DropPath();
-    this->AddWaypointAt(inUnit, (float)inDX * 3.0f + theX, (float)inDY * 3.0f + theY, kLandableLow, false);
-    float theEndY = (float)inDY * 7.0f + theY;
-    float theEndX = (float)inDX * 7.0f + theX;
-    this->AddWaypointAt(inUnit, theEndX, theEndY, this->GetCruiseAltitude() * 0.75f, false);
-    theTarget.SetX(theEndX);
-    theTarget.SetY(theEndY);
-    theTarget.SetZ(this->GetCruiseAltitude() * 0.75f);
-    this->FlyToGoal(theTarget, inUnit);
-}
-
-// FUNCTION: EXE 0x616430
-// Plans the runway take-off along +x
-void EEUnitClass::TakeOffFromRunwayPosX(EEComplexUnit* inUnit)
-{
-    this->TakeOffFromRunway(inUnit, 1, 0);
-}
-
-// FUNCTION: EXE 0x616440
-// Plans the runway take-off along +y
-void EEUnitClass::TakeOffFromRunwayPosY(EEComplexUnit* inUnit)
-{
-    this->TakeOffFromRunway(inUnit, 0, 1);
-}
-
-// FUNCTION: EXE 0x616450
-// Plans the runway take-off along -y
-void EEUnitClass::TakeOffFromRunwayNegY(EEComplexUnit* inUnit)
-{
-    this->TakeOffFromRunway(inUnit, 0, -1);
-}
-
-// FUNCTION: EXE 0x616460
-// Plans the runway take-off along -x
-void EEUnitClass::TakeOffFromRunwayNegX(EEComplexUnit* inUnit)
-{
-    this->TakeOffFromRunway(inUnit, -1, 0);
+    EEUCNote theNote(16); theNote.C(this).S(inUnit).I(inDX).I(inDY);   // TEST ONLY (UCBD)
+    ee_units_cls_take_off_from_runway(EEObj(this), EEObj(inUnit), (int32_t)inDX, (int32_t)inDY);
+    theNote.S(inUnit);   // TEST ONLY (UCBD)
 }
 
 // FUNCTION: EXE 0x616470
 // Returns whether the move goal is more than 1 from the home carrier's deck point (tag point 0): the carrier moved
 bool EEUnitClass::IsAwayFromGoal(EEComplexUnit* inUnit)
 {
-    GETransformation theTransformation(inUnit->mHomeBase->mPhysicalModel.GetLocation());
-    EEComplexUnit* theCarrier = inUnit->mHomeBase;
-    GE3DPoint theDeck;
-    EEUnitClassUpgrade* theStats = theCarrier->GetStats();
-    EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
-    if (theTags == NULL || theTags->mPoints.size() == 0) {
-        theDeck.SetX(theTransformation.GetX());
-        theDeck.SetY(theTransformation.GetY());
-        theDeck.SetZ(1.0f);
-    } else {
-        theTags->Scale(theTransformation, theStats->GetScale());
-        theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
-    }
-    bool theResult;
-    if (!(theDeck.DistanceToSquared(EELocationGoalPoint(inUnit->GetGoal())) <= 1.0f))
-        theResult = true;
-    else
-        theResult = false;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x61655a
-// Answers the plane's flight triggers (waypoint on ground, in air, higher, same, lower; bomb in range; fuel alarm;
-// clearance; airport destroyed; secondary target; controller moved; request queued); others the common way
-long EEUnitClass::LandableEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    GE3DPoint theTarget;
-    long theResult = 0;
-    bool theFlag = false;
-    float theClimb;
-    float theGround;
-    switch (inEvent) {
-    case kTriggerDyingAnimationFinished:
-        if (inUnit->GetUnitClass()->mDomains & kMovementSpace)
-            theFlag = true;
-        else
-            theFlag = inUnit->mVelocity == 0.0f;
-        break;
-    case kTriggerMovePreparationComplete:
-        theFlag = (long)inUnit->mWaypoints.size() > 0;
-        break;
-    case kTriggerWaypointOnGround: {
-        if (this->GetNextFlightPoint(inUnit, theTarget, &theClimb) == 0) {
-            this->GetGroundHeight(theTarget, &theGround);
-            theFlag = inUnit->mHasArrived && inUnit->mWaypoints.size() > 0 && theTarget.GetZ() == theGround;
-        }
-        break;
-    }
-    case kTriggerWaypointInAir: {
-        if (this->GetNextFlightPoint(inUnit, theTarget, &theClimb) == 0) {
-            this->GetGroundHeight(theTarget, &theGround);
-            theFlag = inUnit->mHasArrived && inUnit->mWaypoints.size() > 0 && theTarget.GetZ() > theGround;
-        }
-        break;
-    }
-    case kTriggerWaypointIsHigherElevation: {
-        if (this->GetNextFlightPoint(inUnit, theTarget, &theClimb) == 0)
-            theFlag = inUnit->mHasArrived && inUnit->mWaypoints.size() > 0 && theClimb > 0.0f;
-        break;
-    }
-    case kTriggerWaypointIsSameElevation: {
-        if (this->GetNextFlightPoint(inUnit, theTarget, &theClimb) == 0) {
-            unsigned long theCount = inUnit->mWaypoints.size();
-            if (inUnit->GetUnitClass()->mAirTrafficType == 2 || inUnit->GetUnitClass()->mAirTrafficType == 4)
-                theFlag = theCount <= 1;
-            else
-                theFlag = inUnit->mHasArrived && theCount > 0 && theClimb == 0.0f;
+    EEUCNote theNote(18); theNote.C(this).S(inUnit).U(inUnit->mHomeBase);   // TEST ONLY (UCBD)
+    return theNote.R([&]() -> bool {
+        GETransformation theTransformation(inUnit->mHomeBase->mPhysicalModel.GetLocation());
+        EEComplexUnit* theCarrier = inUnit->mHomeBase;
+        GE3DPoint theDeck;
+        EEUnitClassUpgrade* theStats = theCarrier->GetStats();
+        EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
+        if (theTags == NULL || theTags->mPoints.size() == 0) {
+            theDeck.SetX(theTransformation.GetX());
+            theDeck.SetY(theTransformation.GetY());
+            theDeck.SetZ(1.0f);
         } else {
-            theFlag = false;
+            theTags->Scale(theTransformation, theStats->GetScale());
+            theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
         }
-        break;
-    }
-    case kTriggerWaypointIsLowerElevation: {
-        if (this->GetNextFlightPoint(inUnit, theTarget, &theClimb) == 0) {
-            unsigned long theCount = inUnit->mWaypoints.size();
-            if (inUnit->GetUnitClass()->mAirTrafficType == 2 || inUnit->GetUnitClass()->mAirTrafficType == 4)
-                theFlag = theCount > 0;
-            else
-                theFlag = inUnit->mHasArrived && theCount > 0 && theClimb < 0.0f;
-        } else {
-            theFlag = false;
-        }
-        break;
-    }
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerUnitInWeaponRange:
-        if (this->mProjectileClass != NULL && this->mProjectileClass->mCategory == kUnitCategoryBomb)
-            theFlag = inUnit->mAmmunition < this->mAmmunition || this->IsBombOnTarget(inUnit);
+        bool theResult;
+        if (!(theDeck.DistanceToSquared(EELocationGoalPoint(inUnit->GetGoal())) <= 1.0f))
+            theResult = true;
         else
-            theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerFlightTimeAlarm:
-        theFlag = inUnit->mPhysicalModel.GetLocation().GetZ() != inUnit->mTile->GetHeight() && inUnit->mFlightTime == 0;
-        break;
-    case kTriggerLandingClearanceGranted:
-        theFlag = inUnit->mIsClearanceGranted;
-        break;
-    case kTriggerHoldingPatternComputed:
-        theFlag = true;
-        break;
-    case kTriggerAirportDestroyed:
-        theFlag = inUnit->mHomeBase == NULL || inUnit->mHomeBase->mHitPoints == 0;
-        break;
-    case kTriggerSecondaryTargetFound: {
-        EEUGRust* theAttack = EEAttackUnitCast(inUnit->GetGoal());
-        theFlag = theAttack != NULL && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0;
-        break;
-    }
-    case kTriggerAirtrafficControllerMoved: {
-        EEUnitGoal* theGoal = inUnit->GetGoal();
-        if (inUnit->mHomeBase != NULL) {
-            long theCategory = inUnit->mHomeBase->GetUnitClass()->mCategory;
-            if ((theCategory == kUnitCategoryNavalBuilding || theCategory == kUnitCategorySpaceBuilding) && inUnit->mHomeBase->GetUnitClass()->mAirTrafficType != 0
-                && EEGoalHasLocation(theGoal))
-                theFlag = this->IsAwayFromGoal(inUnit);
-        }
-        break;
-    }
-    case kTriggerRequestStillValid:
-        theFlag = inUnit->mPlayer->mAirTraffic[inUnit->GetUnitClass()->mAirTrafficType - 1]->GetQueuePosition(inUnit, 1) >= 0
-                  || inUnit->mPlayer->mAirTraffic[inUnit->GetUnitClass()->mAirTrafficType - 1]->GetQueuePosition(inUnit, 0) >= 0;
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
+            theResult = false;
+        return theResult;
+    }());
 }
 
 // FUNCTION: EXE 0x616c22
@@ -1265,10 +864,6 @@ void EEUnitClass::FlyOffMap(EEComplexUnit* inUnit)
 // +0xb8 in source order. Bodies are the EEUCLandable twins' (0x213ed2.., same sizes) with the animal's states.
 
 // 0x446fc0..0x446fc8: the unit's named float constants (one .rdata block per unit)
-static const float kAirAnimalHeight = 12.0f;     // 0x446fc0 (the highest an animal flies)
-
-static const float kAirAnimalAhead = 2.0f;       // 0x446fc4 (the look-ahead beyond the step)
-
 static const float kAirAnimalDoppler = 0.0025f;  // 0x446fc8 (0.05 squared)
 
 // FUNCTION: EXE 0x60a279
@@ -1293,63 +888,6 @@ bool EEUnitClass::AirAnimalReturnToAirport(EEComplexUnit* inUnit)
     inUnit->mOrientation = theOrientation;
     this->FlyToGoal(thePoint, inUnit);
     return true;
-}
-
-// FUNCTION: EXE 0x60a3c0
-// Returns the height to fly at toward a point: its height above ground kept over the highest terrain on the way
-// (the circle ahead when circling, else the tile line), capped at 12
-float EEUnitClass::AirAnimalGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    GE3DPoint thePosition;
-    GEVector theStep;
-    GEVector theOffset;
-    std::vector<EETileCoordinate> theTiles;
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    thePosition.SetX(theLocation.GetX());
-    EEMap* theMap = ::gWorld.mMap;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    thePosition.SetY(theLocation.GetY());
-    thePosition.SetZ(theLocation.GetZ());
-    float theHeight = inLocation.GetZ();
-    float theBase;
-    EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloor(inLocation.GetX()), UMFloor(inLocation.GetY()));
-    if (theTile != NULL && theTile->GetHeight() >= 0.0f)
-        theBase = theHeight - theTile->GetHeight();
-    else
-        theBase = theHeight;
-    unsigned long theState = inUnit->mCurrentPhysicsOrder;
-    if (theState == 0 || theState == 1) {
-        float theDistance = theStats->GetMaxVelocity() / theStats->GetMaxAngularVelocity();
-        theStep.SetX(theState != 0 ? -theDistance : theDistance);
-        theLocation.Apply(theStep, theOffset);
-        thePosition += theOffset;
-        EEGetTilesNearPoint(thePosition, kAirAnimalAhead + theDistance, theTiles);
-    } else {
-        EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
-                   UMFloor(inLocation.GetY()), (std::vector<U2DPoint<long> >*)&theTiles, 1, 0);
-    }
-    for (std::vector<EETileCoordinate>::iterator theCoordinate = theTiles.begin(); theCoordinate != theTiles.end();
-         theCoordinate++) {
-        unsigned long theX = theCoordinate->mX;
-        unsigned long theY = theCoordinate->mY;
-        if (theMap->GetTile(theX, theY) == NULL)
-            continue;
-        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-    }
-    if (theHeight > kAirAnimalHeight)
-        theHeight = kAirAnimalHeight;
-    return theHeight;
 }
 
 // FUNCTION: EXE 0x60a691
@@ -1434,81 +972,6 @@ void EEUnitClass::AirAnimalUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetHeight(0.0f);
 }
 
-// FUNCTION: EXE 0x60ad46
-// Returns whether the animal reached its next waypoint (within 0.5 tiles), or when braking on its last one, has stopped
-bool EEUnitClass::AirAnimalHasArrived(EEComplexUnit* inUnit, float inValue)
-{
-    GE3DPoint theTarget;
-    unsigned long theCount = inUnit->mWaypoints.size();
-    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
-                          0.0f);
-    inUnit->GetNextWaypointPoint(theTarget);
-    theTarget.SetZ(0.0f);
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionBrake && theCount <= 1 && this->mAirTrafficType != 2) {
-        return inValue == 0.0f;
-    }
-    return theTarget.DistanceToSquared(thePosition) <= 0.25f;
-}
-
-// FUNCTION: EXE 0x60ade9
-// Answers the flight triggers (next waypoint lower, level, higher, in the air or on the ground; move prepared; fall
-// finished); other triggers go to the common unit class
-long EEUnitClass::AirAnimalEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    float theZ = inUnit->mPhysicalModel.GetLocation().GetZ();
-    unsigned long theCount = inUnit->mWaypoints.size();
-    GE3DPoint theTarget;
-    long theResult = 0;
-    bool theFlag = false;
-    float theDelta = 0.0f;
-    float theGround = 0.0f;
-    if (inUnit->GetNextWaypointPoint(theTarget) == 0) {
-        theDelta = theTarget.GetZ() - theZ;
-        long theX;
-        long theY;
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloor(theTarget.GetX()), UMFloor(theTarget.GetY()));
-        if (theTile == NULL)
-            theTile = ::gWorld.mMap->GetClosestTile(&theTarget, &theX, &theY);
-        theGround = theTile->GetHeight();
-        if (theGround < 0.0f)
-            theGround = 0.0f;
-    }
-    switch (inEvent) {
-    case kTriggerWaypointIsLowerElevation:
-        if (inUnit->mUnitClass->mAirTrafficType != 2)
-            theFlag = inUnit->mHasArrived && theCount > 0 && theDelta < 0.0f;
-        else
-            theFlag = theCount > 0;
-        break;
-    case kTriggerWaypointIsSameElevation:
-        if (inUnit->mUnitClass->mAirTrafficType != 2)
-            theFlag = inUnit->mHasArrived && theCount > 0 && theDelta == 0.0f;
-        else
-            theFlag = theCount <= 1;
-        break;
-    case kTriggerWaypointIsHigherElevation:
-        theFlag = inUnit->mHasArrived && theCount > 0 && theDelta > 0.0f;
-        break;
-    case kTriggerWaypointInAir:
-        theFlag = inUnit->mHasArrived && theCount > 0 && theTarget.GetZ() > theGround;
-        break;
-    case kTriggerWaypointOnGround:
-        theFlag = inUnit->mHasArrived && theCount > 0 && theTarget.GetZ() == theGround;
-        break;
-    case kTriggerMovePreparationComplete:
-        theFlag = (long)inUnit->mWaypoints.size() > 0;
-        break;
-    case kTriggerDyingAnimationFinished:
-        theFlag = inUnit->mVelocity == 0.0f;
-        break;
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
-}
-
 // ---- EEUCPlanetSpaceship.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The planet
 // spaceship's unit class: 0x218e34..0x219143 (after EEUCNavalTransport.cpp; EEUCProjectile.cpp's +0xe0 0x219143
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); one own slot, +0x74.
@@ -1549,49 +1012,8 @@ void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit
 // alphabetical order. Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x24,
 // +0x74, +0xb8 in source order (the others are ICF-folded into twins).
 
-// 0x447020: the highest a helicopter flies (one .rdata copy per unit: a named const) (provisional name)
-static const float kHelicopterCeiling = 12.0f;
-
 // 0x249560 (cdecl): the point to fly to for the attack on inTarget (EEMap.cpp's range) (provisional name)
 void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outLocation);
-
-// FUNCTION: EXE 0x612a6f
-// Returns the height to fly at towards a point: cruising height above the highest tile corner on the way, at least
-// the point's height, kept between cruising height and 12
-float EEUnitClass::HelicopterGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    EEMap* theMap = ::gWorld.mMap;
-    float theHeight = inLocation.GetZ();
-    float theBase = this->mCruiseAltitude;
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-    EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
-               UMFloor(inLocation.GetY()), &theTiles, 1, 0);
-    for (std::vector<U2DPoint<long> >::iterator it = theTiles.begin(); it != theTiles.end(); it++) {
-        unsigned long theX = it->mX;
-        unsigned long theY = it->mY;
-        if (theMap->GetTile(theX, theY) == NULL)
-            continue;
-        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theBase;
-        if (theZ > theHeight)
-            theHeight = theZ;
-    }
-    if (theHeight >= kHelicopterCeiling)
-        theHeight = kHelicopterCeiling;
-    if (theHeight <= theBase)
-        theHeight = theBase;
-    return theHeight;
-}
 
 // New (R5b.4, the fourteenth round): EEUCHelicopter::ActionChanged's path to the goal when preparing to move (the
 // original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
@@ -1619,49 +1041,6 @@ void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
 // class: 0x21a219..0x21a6e0 (after EEUCSpaceBuilding.cpp; EEUCSpaceTransport.cpp's +0xe4 0x21a6e0 follows). Unit
 // flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x24, +0x2c, +0x74, +0x78,
 // +0xa0, +0xb8 in source order.
-
-// 0x447358: the highest a spaceship flies over the terrain (one .rdata copy per unit: a named const)
-static const float kSpaceshipHeight = 12.0f;
-
-// FUNCTION: EXE 0x61a219
-// Returns the flying height for a location: its z raised to clear every tile corner on the way by the cruise
-// altitude, kept between the cruise altitude and 12
-// The floor clamp is the class's mCruiseAltitude offset (the original keeps it on the FPU after the loop)
-float EEUnitClass::SpaceshipGetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    float theHeight = inLocation.GetZ();
-    EEMap* theMap = ::gWorld.mMap;
-    float theOffset = this->mCruiseAltitude;
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-    long theToY = UMFloor(inLocation.GetY());
-    long theToX = UMFloor(inLocation.GetX());
-    long theFromY = UMFloor(thePosition.GetY());
-    long theFromX = UMFloor(thePosition.GetX());
-    EEGetTileLine(theFromX, theFromY, theToX, theToY, &theTiles, 1, 0);
-    for (std::vector<U2DPoint<long> >::iterator theTile = theTiles.begin(); theTile != theTiles.end(); theTile++) {
-        long theX = theTile->GetX();
-        long theY = theTile->GetY();
-        if (theMap->GetTile(theX, theY) == NULL)
-            continue;
-        float theZ = theMap->mTerrainMesh.GetZ(theX, theY) + theOffset;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY) + theOffset;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX, theY + 1) + theOffset;
-        if (theZ > theHeight)
-            theHeight = theZ;
-        theZ = theMap->mTerrainMesh.GetZ(theX + 1, theY + 1) + theOffset;
-        if (theZ > theHeight)
-            theHeight = theZ;
-    }
-    theHeight = min(theHeight, kSpaceshipHeight);
-    theHeight = max(theHeight, theOffset);
-    return theHeight;
-}
 
 // FUNCTION: EXE 0x61a404
 // Returns a sound's volume, pan and pitch, with a doppler shift

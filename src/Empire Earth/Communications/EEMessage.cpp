@@ -68,6 +68,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameLog.h"
+#include "ee/EECivUpgrade.h"
 #include "ee/EEMessage.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECommunications.h"
@@ -105,12 +106,9 @@
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEMessageCapture.h"
-#include "ee/EEMessageExecute.h"
 #include "rust/ee_netmsg.h"   // ee_netmsg
 #include "rust/ee_units.h"
 #include "ee/EEUnitHost.h"   // EESortFarms
-static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
-static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits);
 
 // ---- the codec (ee_netmsg, docs/RUST_PLAN.md R5b.4): each message hands its members to the Rust as slots in wire
 // order, the header's four first; the layout (sizes, order, the strings' and lists' forms) is the Rust table's ----
@@ -130,13 +128,6 @@ static inline EeNetMsgSlot EENetMsgString(const UWideString& inString)
     return theSlot;
 }
 
-// records: on export the first record, a record's size and the count
-static inline EeNetMsgSlot EENetMsgRecords(void* inRecords, uint32_t inSize, size_t inCount)
-{
-    EeNetMsgSlot theSlot = {(uint8_t*)inRecords, inSize, (uint32_t)inCount, 0};
-    return theSlot;
-}
-
 // a new buffer of the message's size, filled by the Rust (the original's ExportMessage shape)
 static void EENetMsgExport(uint32_t inClass, EeNetMsgSlot* inSlots, size_t inCount, unsigned char** outPayloadPointer,
                            unsigned long& outMessageSize)
@@ -146,16 +137,9 @@ static void EENetMsgExport(uint32_t inClass, EeNetMsgSlot* inSlots, size_t inCou
     outMessageSize = ee_netmsg_export(inClass, inSlots, inCount, *outPayloadPointer, theMessageSize);
 }
 
-// New (game messages lane, round 1): the codec's side of every game message, once. A class gives its codec class
-// and its members as slots in wire order (GetCodecSlots); these run the codec over them, as each class's own
-// ExportMessage, ExportSize and ImportMessage did (a class whose members the slots cannot carry overrides them).
-size_t EEMessage::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    // only a class that overrides the three (EEMSelectTheseUnits) has none: the codec refuses the class
-    outClass = 0xffffffffu;
-    return 0;
-}
-
+// New (game messages lane, round 1): the codec's side of every game message, once. The message gives its codec
+// class and its members as slots in wire order (GetCodecSlots); these run the codec over them, as each class's own
+// ExportMessage, ExportSize and ImportMessage did.
 void EEMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
@@ -205,17 +189,18 @@ EEMRecord::EEMRecord(unsigned char* inData)
     this->ImportMessage(inData);
 }
 
-// a sender's: the members in wire order (fewer leave the rest 0)
+// a sender's: the members in wire order, then the ones off the wire (fewer leave the rest 0)
 EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue> inValues)
     : EEMessage(inType, (ee_netmsg_record_flags(inType) & EE_NETMSG_RECORD_WHEN_OUT) != 0)
 {
     memset(this->mRecord, 0, sizeof(this->mRecord));
-    uint32_t theClass = ee_netmsg_record_class(inType);
-    ESVERIFY_AT(theClass != 0xffffffffu, __LINE__);
+    ESVERIFY_AT(ee_netmsg_record_class(inType) != 0xffffffffu, __LINE__);
     uint32_t theIndex = 1;
     for (const EEMRecordValue& theValue : inValues) {
-        EeNetMsgRecordField theField = ee_netmsg_record_field(theClass, theIndex);
-        unsigned char* theTo = theField.kind == EE_NETMSG_RECORD_FIELD_STRING ? NULL : this->Field(theIndex, theField.size);
+        EeNetMsgRecordField theField = ee_netmsg_record_member(inType, theIndex);
+        bool theBeside = theField.kind == EE_NETMSG_RECORD_FIELD_STRING || theField.kind == EE_NETMSG_RECORD_FIELD_LIST
+                         || theField.kind == EE_NETMSG_RECORD_FIELD_BLOB;
+        unsigned char* theTo = theBeside ? NULL : this->Field(theIndex, theField.size);
         theIndex++;
         float theFloat = theValue.mIsFloat ? theValue.mFloats[0] : (float)theValue.mInteger;
         long long theInteger = theValue.mIsFloat ? (long long)theValue.mFloats[0] : theValue.mInteger;
@@ -224,6 +209,16 @@ EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue>
         case EE_NETMSG_RECORD_FIELD_STRING:   // the one string member (not in mRecord)
             ESVERIFY_AT(theValue.mString != NULL, __LINE__);
             this->mString = *theValue.mString;
+            break;
+        case EE_NETMSG_RECORD_FIELD_LIST:   // the one list (not in mRecord): each element's low bytes, one record
+            ESVERIFY_AT(theValue.mList != NULL && theValue.mListElement >= theField.size, __LINE__);
+            for (size_t i = 0; i < theValue.mListCount; i++) {
+                const unsigned char* theElement = (const unsigned char*)theValue.mList + i * theValue.mListElement;
+                this->mList.insert(this->mList.end(), theElement, theElement + theField.size);
+            }
+            break;
+        case EE_NETMSG_RECORD_FIELD_BLOB:   // the blob and a member off the wire as bytes: set by their sender
+        case EE_NETMSG_RECORD_FIELD_RAW:
             break;
         case EE_NETMSG_RECORD_FIELD_INTEGER:
             memcpy(theTo, &theInteger, theField.size);   // little-endian: the low bytes
@@ -243,7 +238,7 @@ EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue>
 
 unsigned char* EEMRecord::Field(uint32_t inIndex, size_t inSize) const
 {
-    EeNetMsgRecordField theField = ee_netmsg_record_field(ee_netmsg_record_class(this->mType), inIndex);
+    EeNetMsgRecordField theField = ee_netmsg_record_member(this->mType, inIndex);
     ESVERIFY_AT(theField.kind != EE_NETMSG_RECORD_FIELD_NONE && theField.size == inSize, __LINE__);
     return const_cast<unsigned char*>(this->mRecord) + theField.offset;
 }
@@ -258,6 +253,30 @@ char* EEMRecord::GetMessageLabel() const
     return const_cast<char*>(ee_netmsg_record_label(this->mType));
 }
 
+bool EEMRecord::GetSendToAllAndWaitMessageID(unsigned long& outID) const
+{
+    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
+    if (theRules.wait_field != 0)
+        outID = this->Get<uint32_t>(theRules.wait_field);
+    return theRules.wait_field != 0;
+}
+
+void EEMRecord::SetSendToAllAndWaitMessageID(unsigned long inID)
+{
+    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
+    if (theRules.wait_field != 0)
+        this->Set<uint32_t>(theRules.wait_field, (uint32_t)inID);
+}
+
+// FUNCTION: EXE 0x4c0e6a (EEMLoadOrSaveGame::IsResponse)
+// Whether a message is this one's response, by the type's rule (Load or Save: the response for its tick)
+bool EEMRecord::IsResponse(NEMessage* inMessage)
+{
+    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
+    return theRules.response_type != 0 && inMessage->GetType() == theRules.response_type
+           && this->Get<int32_t>(theRules.response_mine) == static_cast<EEMRecord*>(inMessage)->Get<int32_t>(theRules.response_theirs);
+}
+
 size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
     outClass = ee_netmsg_record_class(this->mType);
@@ -266,22 +285,38 @@ size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
     size_t theCount = 5;
     for (EeNetMsgRecordField theField; (theField = ee_netmsg_record_field(outClass, (uint32_t)theCount - 4)).kind != 0; theCount++) {
         EeNetMsgSlot theSlot = {this->mRecord + theField.offset, theField.size, 0, 0};
-        outSlots[theCount] = theField.kind == EE_NETMSG_RECORD_FIELD_STRING ? EENetMsgString(this->mString) : theSlot;
+        if (theField.kind == EE_NETMSG_RECORD_FIELD_STRING)
+            theSlot = EENetMsgString(this->mString);
+        else if (theField.kind == EE_NETMSG_RECORD_FIELD_LIST || theField.kind == EE_NETMSG_RECORD_FIELD_BLOB) {
+            // the records: the first, a record's size, the count; the blob: its bytes (the room for an import)
+            theSlot.data = this->mList.empty() ? NULL : &this->mList[0];
+            theSlot.size = theField.kind == EE_NETMSG_RECORD_FIELD_LIST ? theField.size : (uint32_t)this->mList.size();
+            theSlot.count = theField.kind == EE_NETMSG_RECORD_FIELD_LIST ? (uint32_t)(this->mList.size() / theField.size) : 0;
+        }
+        outSlots[theCount] = theSlot;
     }
     return theCount;
 }
 
-// the codec over the slots, then the string member's text from where the codec found it (UWideString::Import)
+// the codec over the slots, then the string member's text from where the codec found it (UWideString::Import), the
+// list's records from where it found them, the blob's bytes as many as it found
 void EEMRecord::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, __LINE__);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
     uint32_t theClass;
+    this->mList.clear();   // the slots carry no room: the list and the blob are copied from where the codec found them
     size_t theCount = this->GetCodecSlots(theSlots, theClass);
     ee_netmsg_import(theClass, inPayloadPointer, theSlots, theCount);
     for (size_t i = 5; i < theCount; i++) {
-        if (ee_netmsg_record_field(theClass, (uint32_t)i - 4).kind == EE_NETMSG_RECORD_FIELD_STRING)
-            this->mString.Import(inPayloadPointer + theSlots[i].offset);
+        EeNetMsgRecordField theField = ee_netmsg_record_field(theClass, (uint32_t)i - 4);
+        unsigned char* theFrom = inPayloadPointer + theSlots[i].offset;
+        if (theField.kind == EE_NETMSG_RECORD_FIELD_STRING)
+            this->mString.Import(theFrom);
+        else if (theField.kind == EE_NETMSG_RECORD_FIELD_LIST)
+            this->mList.assign(theFrom, theFrom + theSlots[i].count * theField.size);
+        else if (theField.kind == EE_NETMSG_RECORD_FIELD_BLOB)
+            this->mList.assign(theFrom, theFrom + theSlots[i].count);
     }
 }
 
@@ -309,92 +344,6 @@ EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
                           inPlayer.mIsLocal, inPlayer.mB36, (int32_t)inPlayer.mEngine});   // the engine: port
 }
 
-// EEMSelectTheseUnits' slot list (its id list is read and written around the codec)
-static size_t Slots(EEMSelectTheseUnits* inMessage, EeNetMsgSlot* outSlots, std::vector<int32_t>& ioIDs);
-
-// the Execute decisions (ee/EEMessageExecute.h), each call recorded by the capture's NMDC record (off by default)
-static inline uint8_t DecideSelectionMarksLocal(uint8_t inServer, uint8_t inLocal)
-{
-    uint8_t theResult = ee_netmsg_selection_marks_local(inServer, inLocal);
-    long long theValues[] = {inServer, inLocal, theResult};
-    EEMessageCaptureDecision(kDecisionSelectionMarksLocal, theValues, 3);
-    return theResult;
-}
-
-static inline uint8_t DecideSelectionCopies(uint8_t inLocal, uint8_t inID, uint8_t inCurrentID)
-{
-    uint8_t theResult = ee_netmsg_selection_copies(inLocal, inID, inCurrentID);
-    long long theValues[] = {inLocal, inID, inCurrentID, theResult};
-    EEMessageCaptureDecision(kDecisionSelectionCopies, theValues, 4);
-    return theResult;
-}
-
-static inline uint8_t DecideCommandRuns(uint8_t inServer, uint8_t inType, uint8_t inID, uint8_t inLastID)
-{
-    uint8_t theResult = ee_netmsg_command_runs(inServer, inType, inID, inLastID);
-    long long theValues[] = {inServer, inType, inID, inLastID, theResult};
-    EEMessageCaptureDecision(kDecisionCommandRuns, theValues, 5);
-    return theResult;
-}
-
-// the selection toggles' passes (the communications object replaying a selection)
-static inline uint32_t DecideSelectionPasses()
-{
-    uint8_t theExecuting = (gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection)
-        || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection);
-    uint32_t theResult = ee_netmsg_selection_passes(theExecuting);
-    long long theValues[] = {theExecuting, theResult};
-    EEMessageCaptureDecision(kDecisionSelectionPasses, theValues, 2);
-    return theResult;
-}
-
-static inline uint8_t DecideAddRemove(uint8_t inAdd, uint32_t inAmount, long inHave)
-{
-    uint8_t theResult = ee_netmsg_add_remove(inAdd, inAmount, inHave);
-    long long theValues[] = {inAdd, inAmount, inHave, theResult};
-    EEMessageCaptureDecision(kDecisionAddRemove, theValues, 4);
-    return theResult;
-}
-
-static inline EeNetMsgExchangeStep DecideExchangeStep(uint8_t inSell, long inPrice, long inHave)
-{
-    EeNetMsgExchangeStep theStep = ee_netmsg_exchange_step(inSell, inPrice, inHave);
-    long long theValues[] = {inSell, inPrice, inHave, theStep.apply, theStep.cost, theStep.amount};
-    EEMessageCaptureDecision(kDecisionExchangeStep, theValues, 6);
-    return theStep;
-}
-
-static inline uint32_t DecideTributeOrder(const uint32_t* inAmounts, uint8_t inText, uint8_t* outResources)
-{
-    uint32_t theCount = ee_netmsg_tribute_order(inAmounts, inText, outResources);
-    long long theValues[] = {inAmounts[2], inAmounts[3], inAmounts[4], inAmounts[5], inAmounts[6], inText, theCount,
-                             theCount > 0 ? outResources[0] : 0, theCount > 1 ? outResources[1] : 0,
-                             theCount > 2 ? outResources[2] : 0, theCount > 3 ? outResources[3] : 0,
-                             theCount > 4 ? outResources[4] : 0};
-    EEMessageCaptureDecision(kDecisionTributeOrder, theValues, 12);
-    return theCount;
-}
-
-static inline uint8_t DecideTributeViewer(uint8_t inFrom, uint8_t inTo)
-{
-    uint8_t theResult = ee_netmsg_tribute_viewer(inFrom, inTo);
-    long long theValues[] = {inFrom, inTo, theResult};
-    EEMessageCaptureDecision(kDecisionTributeViewer, theValues, 3);
-    return theResult;
-}
-
-static inline uint8_t DecideDisbandRefund(long inHitPoints, long inMaxHitPoints, uint8_t inCanDisband, float* outFraction)
-{
-    float theFraction = 0.0f;
-    uint8_t theResult = ee_netmsg_disband_refund(inHitPoints, inMaxHitPoints, inCanDisband, &theFraction);
-    uint32_t theBits;
-    memcpy(&theBits, &theFraction, 4);
-    long long theValues[] = {inHitPoints, inMaxHitPoints, inCanDisband, theResult, theBits};
-    EEMessageCaptureDecision(kDecisionDisbandRefund, theValues, 5);
-    *outFraction = theFraction;
-    return theResult;
-}
-
 // FUNCTION: EXE 0x4b8cda
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()
@@ -402,75 +351,18 @@ void EEMessage::RegisterKnownMessages()
     NEMessage::RegisterBuilder(0x41, 0xfd, EEMessage::BuildEEMessage);
 }
 
-// FUNCTION: EXE 0x4b8cf7
-// Executes a selection message under the fast-selection lock and records its selection id for the sending player;
-// for the local player whose id is current, copies the result into the selected group; clears the player's JIT flag
+// FUNCTION: EXE 0x4b8cf7 (ExecuteSelectionMessage), 0x4b8e86 (ExecuteMessage)
+// The physics' two ways to run a message (the selection id's framing and decisions: ee_netmsg bodies.rs
+// execute_framed, over the host at the end of this file)
+static void EENetMsgExecute(EEMRecord* inMessage, uint8_t inFraming);
 void EEMessage::ExecuteSelectionMessage()
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    if (thePlayer) {
-        uint8_t theServer = gCommunications->IsServer() ? 1 : 0;
-        uint8_t theLocal = thePlayer->mPlayerID == gWorld.GetCurrentPlayer()->mPlayerID ? 1 : 0;
-        TSCriticalSection* theLock;
-        unsigned char* theCurrentID;
-        unsigned char* theLastIDs;
-        if (theServer) {
-            theLock = static_cast<EEServer*>(gCommunications)->mFastSelectionLock;
-            theCurrentID = &static_cast<EEServer*>(gCommunications)->mFastSelectionID;
-            theLastIDs = static_cast<EEServer*>(gCommunications)->mFastSelection;
-        } else {
-            theLock = static_cast<EEClient*>(gCommunications)->mFastSelectionLock;
-            theCurrentID = &static_cast<EEClient*>(gCommunications)->mFastSelectionID;
-            theLastIDs = static_cast<EEClient*>(gCommunications)->mFastSelection;
-        }
-        theLock->Enter();
-        uint8_t theMarks = DecideSelectionMarksLocal(theServer, theLocal);
-        if (theMarks)
-            gWorld.mExecutingLocalSelection = true;
-        this->Execute();
-        if (theMarks)
-            gWorld.mExecutingLocalSelection = false;
-        if (DecideSelectionCopies(theLocal, this->mFastSelectionID, *theCurrentID)) {
-            thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
-            thePlayer->SetSelectedViewedUnit(thePlayer->mViewedUnit);
-        }
-        theLastIDs[(unsigned char)thePlayer->mPlayerID] = this->mFastSelectionID;
-        theLock->Leave();
-        if (thePlayer->mJITManufacturing) {
-            thePlayer->mJITManufacturing = false;
-            if (thePlayer == gWorld.GetCurrentPlayer())
-                gUserInterface->UpdateJITManufacturing();
-        }
-    }
+    EENetMsgExecute(static_cast<EEMRecord*>(this), 1);
 }
 
-// FUNCTION: EXE 0x4b8e86
-// Executes a command message if its selection id matches the sender's last selection; otherwise resets the sender's
-// active group to the selection (Game Restarting always runs; on clients Migration Slot Info too: the Rust decision)
 void EEMessage::ExecuteMessage()
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    if (thePlayer) {
-        uint8_t theServer = gCommunications->IsServer() ? 1 : 0;
-        TSCriticalSection* theLock;
-        unsigned char* theLastIDs;
-        if (theServer) {
-            theLock = static_cast<EEServer*>(gCommunications)->mFastSelectionLock;
-            theLastIDs = static_cast<EEServer*>(gCommunications)->mFastSelection;
-        } else {
-            theLock = static_cast<EEClient*>(gCommunications)->mFastSelectionLock;
-            theLastIDs = static_cast<EEClient*>(gCommunications)->mFastSelection;
-        }
-        theLock->Enter();
-        unsigned char theSelectionID = theLastIDs[(unsigned char)thePlayer->mPlayerID];
-        this->GetMessageLabel();
-        if (!DecideCommandRuns(theServer, this->mType, this->mFastSelectionID, theSelectionID)) {
-            thePlayer->UnselectAllUnits();
-            thePlayer->mSelectedGroup->CopySelection(thePlayer->mActiveGroup);
-        } else
-            this->Execute();
-        theLock->Leave();
-    }
+    EENetMsgExecute(static_cast<EEMRecord*>(this), 2);
 }
 
 // FUNCTION: EXE 0x4b8f8e
@@ -480,168 +372,15 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     unsigned char theType = inMemory[1];
     NEMessage* theMessage = NULL;
     ESVERIFY_AT(inMemory != NULL, 841);
-    // a record type (EEMRecord, ee_netmsg records.rs) the factory builds (not EEMEndCinematic's 0x9d: no game type)
+    // every type the factory builds is a record (EEMRecord, ee_netmsg records.rs; not EEMEndCinematic's 0x9d: no game
+    // type)
     if (ee_netmsg_record_class(theType) != 0xffffffffu && ee_netmsg_class_of_type(theType) != 0xffffffffu)
         theMessage = new EEMRecord(inMemory);
-    else switch (theType) {
-    case kMessageAddAndRemoveUnitsFromSelectedGroup:
-        theMessage = new EEMAddAndRemoveUnitsFromSelectedGroup(inMemory);
-        break;
-    case kMessageAddUnitsToSelectedGroup:
-        theMessage = new EEMAddUnitsToSelectedGroup(inMemory);
-        break;
-    case kMessageCivUpgradesPurchased:
-        theMessage = new EEMCivUpgradesPurchased(inMemory);
-        break;
-    case kMessageCivUpgradesRequested:
-        theMessage = new EEMCivUpgradesRequested(inMemory);
-        break;
-    case kMessageLoadOrSaveGame:
-        theMessage = new EEMLoadOrSaveGame(inMemory);
-        break;
-    case kMessageSelectTheseUnits:
-        theMessage = new EEMSelectTheseUnits(inMemory);
-        break;
-    case kMessageSelectUnits:
-        theMessage = new EEMSelectUnits(inMemory);
-        break;
-    case kMessageStartLoading:
-        theMessage = new EEMStartLoading(inMemory);
-        break;
-    default:
+    else
         ESVERIFY_AT("Undefined message type" == NULL, 1275);
-        break;
-    }
     EEMessageCaptureImport(theMessage, inMemory);   // TEST ONLY: the simulation capture's NMIM record (off by default)
     return theMessage;
      }
-
-// FUNCTION: EXE 0x4badd0
-// Toggles the listed units in the sender's selection (twice while a selection is being replayed)
-void EEMAddAndRemoveUnitsFromSelectedGroup::Execute()
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    uint32_t thePasses = DecideSelectionPasses();
-    for (uint32_t i = 0; i < thePasses; i++)
-        thePlayer->AddAndRemoveUnitsFromSelectedGroup(this->mUnitIDs);
-}
-
-// FUNCTION: EXE 0x4bae45
-// Returns the Add And Remove Units From Selected Group message's debug label
-char* EEMAddAndRemoveUnitsFromSelectedGroup::GetMessageLabel() const
-{
-    return "Remove Units From Selected Group";
-}
-
-// FUNCTION: EXE 0x4bae4b
-// Adds a patrol point for the sender's selection: inserts it into a selected path point's route, extends the
-// first unit's patrol, or starts a new patrol per unit category; with nothing selected, creates a lone patrol group
-static void ExecuteAddPatrolPoint(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs add_patrol_point: a selected path point takes the point into its
-    // route, a patrolling first unit adds it to its goal's route, else per formation slot 1..5 an active group of the
-    // mobile non-citizens gets a new patrol with the point, planned, one unit drawn to acknowledge; nothing selected:
-    // a lone patrol group) over the world calls of EEUnitHost.cpp
-    ee_units_add_patrol_point(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), m->Get<GE2DPoint>(1).GetX(),
-                              m->Get<GE2DPoint>(1).GetY());
-}
-
-// FUNCTION: EXE 0x4bb264
-// Gives a player an amount of one resource, or takes it if the amount is positive and no more than the stock
-static void ExecuteAddRemoveResources(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.mPlayers[m->Get<int32_t>(2)];
-    // the take's test compares unsigned, as on Windows (the decision); an add reads nothing
-    uint8_t theDecision = DecideAddRemove(m->Get<unsigned char>(4), m->Get<uint32_t>(1), m->Get<unsigned char>(4) ? 0 : thePlayer->mResourceCaps[m->Get<int32_t>(3)]);
-    if (theDecision == 1)
-        thePlayer->AddResource(m->Get<int32_t>(3), m->Get<uint32_t>(1));
-    else if (theDecision == 2)
-        thePlayer->TakeResource(m->Get<int32_t>(3), m->Get<uint32_t>(1));
-}
-
-// FUNCTION: EXE 0x4bb2a2
-// Toggles one unit in or out of the sender's selection (twice while a selection is being replayed)
-static void ExecuteAddUnitToSelectedGroup(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEUnit* theUnit = gWorld.GetUnit(m->Get<uint32_t>(1));
-    if (theUnit) {
-        uint32_t thePasses = DecideSelectionPasses();
-        for (uint32_t i = 0; i < thePasses; i++) {
-            if (thePlayer->mActiveGroup->Contains(theUnit->GetComplexUnit()))
-                thePlayer->RemoveUnitFromSelectedGroup(m->Get<uint32_t>(1));
-            else
-                thePlayer->AddUnitToSelectedGroup(m->Get<uint32_t>(1), true);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4bb44b
-// Adds the listed units to the sender's selection
-void EEMAddUnitsToSelectedGroup::Execute()
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    thePlayer->AddUnitsToSelectedGroup(this->mUnitIDs);
-}
-
-// FUNCTION: EXE 0x4bb473
-// Returns the Add Units To Selected Group message's debug label
-char* EEMAddUnitsToSelectedGroup::GetMessageLabel() const
-{
-    return "Add Units To Selected Group";
-}
-
-// FUNCTION: EXE 0x4bb479
-// Adds one unit to the sender's selection if it still exists (never removes it)
-static void ExecuteAlwaysAddUnitToSelectedGroup(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    if (gWorld.GetUnit(m->Get<uint32_t>(1)))
-        thePlayer->AddUnitToSelectedGroup(m->Get<uint32_t>(1), true);
-}
-
-// FUNCTION: EXE 0x4bb4be
-// Orders the sender's ground attackers, split by unit category, to attack a map location; sends each group's
-// command and plays an acknowledgement
-static void ExecuteAttackGround(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs attack_ground: per formation slot 1..5 an active group filled
-    // from the selection keeps its ground attackers, one drawn to acknowledge, an Attack Ground goal at the point on
-    // the map's height, planned, the attack marker) over the world calls of EEUnitHost.cpp
-    ee_units_attack_ground(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), m->Get<float>(1), m->Get<float>(2));
-}
-
-// FUNCTION: EXE 0x4bb75e
-// Runs the attack-players order (EEAttackPlayers) for the message's player and allies flag
-static void ExecuteAttackPlayers(EEMRecord* m)
-{
-    EEAttackPlayers(m->Get<int32_t>(1), m->Get<unsigned char>(2));
-}
-
-// FUNCTION: EXE 0x4bb869
-// Orders the sender's selection, split by unit category and spread around the target, to attack (or convert)
-// a living unit, queued or not; sends each group's command and plays an acknowledgement
-static void ExecuteAttackUnit(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs attack_unit: with a selection and a living target, per formation
-    // slot 1..5 an active group of the selection takes the queued flag, spreads around the target, one unit drawn, an
-    // Attack Unit goal, planned, the attack marker, the drawn unit acknowledging) over the world calls of EEUnitHost.cpp
-    ee_units_attack_unit(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1),
-                         m->Get<bool>(2), m->Get<bool>(3));
-}
-
-// FUNCTION: EXE 0x4bbb3f
-// Builds a gate for a player into the wall at the message's tile
-static void ExecuteBuildGate(EEMRecord* m)
-{
-    EETileCoordinate theTile;
-    theTile.mX = (long)m->Get<GE2DPoint>(1).GetX();
-    theTile.mY = (long)m->Get<GE2DPoint>(1).GetY();
-    EEBuildGate(theTile, m->Get<int32_t>(4), m->Get<int32_t>(2), m->Get<int32_t>(3));
-}
 
 // Orders farms for EEMBuildUnit::Execute: built ones first, then paid-for ones, then the nearer to the tile. Inline
 // (header-declared); its COMDAT 0x4c995c lands among this unit's sort COMDATs after its first user, the sort
@@ -665,49 +404,10 @@ inline bool EETileDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit
     return this->DistanceSquared(inFirst->GetTile()) < this->DistanceSquared(EETileCoordinate(inSecond->mTileX, inSecond->mTileY));
 }
 
-// FUNCTION: EXE 0x4bbcc4
-// Places a building for the sender where allowed and orders the selected citizens to build it (queued or at once);
-// for a granary, also hands them the free farms nearby, nearest first; plays an acknowledgement
-static void ExecuteBuildUnit(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units commands.rs build_unit: with a selection, one active group of it keeps its
-    // citizens; the technology's class is made where allowed, a granary's free farms sorted around the first unit;
-    // each unit builds it, queued or at once, and takes a farm; one unit drawn acknowledges) over the world calls of
-    // EEUnitHost.cpp; the tile is the point's (long) casts, as the original's
-    ee_units_build_unit(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), m->Get<int32_t>(2),
-                        (int64_t)(long)m->Get<GE2DPoint>(1).GetX(), (int64_t)(long)m->Get<GE2DPoint>(1).GetY(), m->Get<unsigned char>(3));
-}
-
-// FUNCTION: EXE 0x4bc12c
-// Plans a wall from start to end for a player and orders the selected citizens to build its pieces
-static void ExecuteBuildWall(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.mPlayers[m->Get<int32_t>(4)];
-    // New (R5b.4): the body is Rust (ee_units group.rs build_wall: with a selection, one active group of it keeps its
-    // citizens; with some left the wall is planned as foundations and one unit drawn acknowledges; the group builds the
-    // new pieces) over the world calls of EEUnitHost.cpp
-    ee_units_build_wall(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), m->Get<int32_t>(3), m->Get<GE2DPoint>(1).GetX(),
-                        m->Get<GE2DPoint>(1).GetY(), m->Get<GE2DPoint>(2).GetX(), m->Get<GE2DPoint>(2).GetY());
-}
-
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEStringIDs.h"
-// FUNCTION: EXE 0x4bc483
-// Starts a calamity or power for the sender's selected casters: one able caster (or all for teleport and
-// all-cast powers) gets the cast goal; calamity class 0x12 gives every selected caster a copy of the goal
-static void ExecuteCastCalamity(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units commands.rs cast_calamity: a living caster, the technology's calamity
-    // class; class 0x12 gives every selected caster a copy of the cast goal, else the first able caster, or every
-    // one for teleport and all-cast powers, gets its own) over the world calls of EEUnitHost.cpp (CanCastAt, the cost,
-    // the casters' split: the calamity classes' C++)
-    ee_units_cast_calamity(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1),
-                           m->Get<int32_t>(2), m->Get<int32_t>(3), m->Get<int32_t>(4), m->Get<int32_t>(5));
-}
 
 // FUNCTION: EXE 0x4bca28
 // Gives the sender's selection (and its saved group) a new formation of the requested type
@@ -722,153 +422,22 @@ static void ExecuteChangeFormation(EEMRecord* m)
     theFormation->Dereference();
 }
 
-// FUNCTION: EXE 0x4bcb62
-// Debug: grows or shrinks the inner or outer collision sphere (by collision sphere mode 9/10) of the first
-// selected unit's class by 0.05 and refreshes that unit's radius; the sea units it collects are never used
-static void ExecuteChangeSelectedUnitCollisionSphere(EEMRecord* m)
-{
-    std::vector<RTSUnit*> theUnits;
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
-    if (theGroup) {
-        EEComplexUnit* theUnit = theGroup->GetFirstUnit();
-        if (theUnit) {
-            if (theUnit->mUnitClass->mDomains & kMovementSea) {
-                for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
-                    EEPlayer* thePlayer = gWorld.mPlayers[i];
-                    if (thePlayer) {
-                        for (EEUnit* theOther = thePlayer->mFirstUnit; theOther; theOther = static_cast<EEUnit*>(theOther->mNext)) {
-                            if (theOther->mComplexUnit && theOther->mUnitClass->mUnitType == theUnit->mUnitClass->mUnitType)
-                                theUnits.push_back(theOther->mComplexUnit);
-                        }
-                    }
-                }
-            }
-            if (m->Get<bool>(1)) {
-                switch (gCollisionSphereMode) {
-                case 9:
-                    theUnit->mUnitClass->mInnerCollisionSphere += 0.05f;
-                    break;
-                case 10:
-                    theUnit->mUnitClass->mOuterCollisionSphere += 0.05f;
-                    break;
-                default:
-                    return;
-                }
-            } else {
-                switch (gCollisionSphereMode) {
-                case 9:
-                    theUnit->mUnitClass->mInnerCollisionSphere -= 0.05f;
-                    break;
-                case 10:
-                    theUnit->mUnitClass->mOuterCollisionSphere -= 0.05f;
-                    break;
-                default:
-                    return;
-                }
-            }
-            theUnit->mCollisionRadius = (float)theUnit->mUnitClass->mInnerCollisionSphere;
-            // the other units of the class (collected for sea units) take the new radius too
-            for (unsigned long j = 0; j < theUnits.size(); j++)
-                static_cast<EEComplexUnit*>(theUnits[j])->mCollisionRadius = (float)theUnit->mUnitClass->mInnerCollisionSphere;
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4bcd63
-// Posts a non-empty chat text to the chat log, marked as own when it came from the local slot
-static void ExecuteChat(EEMRecord* m)
-{
-    if (gCommunications && m->mString.GetLength() > 0) {
-        unsigned char theLocalSlot;
-        if (gCommunications->IsClient() == true)
-            theLocalSlot = static_cast<EEClient*>(gCommunications)->GetMySendToSlot();
-        else
-            theLocalSlot = 0xfe;
-        EEAction* theAction = new EEAAddChatMessage(m->mString, theLocalSlot == m->GetOriginatingSlot());
-        gUserInterface->PostAction(theAction);
-        theAction->Dereference();
-    }
-}
-
-// FUNCTION: EXE 0x4bced6
-// Applies a cheat code with its parameter for the sending player
-static void ExecuteCheatCode(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    gCheatCodes->ApplyCheatCode(m->Get<int32_t>(1), thePlayer->mPlayerID, m->Get<int32_t>(2));
-}
-
-// FUNCTION: EXE 0x4bd008
-// For a local player still choosing a civilization: warns that time is running out (clock tick), or ends
-// the choice (posts the timer-expired event, logs it, locks every other player's civilization)
-static void ExecuteCivTimerExpired(EEMRecord* m)
-{
-    UWideString theText;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    if (!thePlayer->mCivilizationChosen && !thePlayer->mObserverMode) {
-        if (m->Get<unsigned char>(1)) {
-            EESoundObject* theSound = EESoundObject::Get(kSoundClockTick);
-            if (theSound)
-                theSound->Play();
-            gResource->GetString(IDS_WARNING_YOU_ARE_RUNNING_OUT, theText);
-            gUserInterface->AddChatLogEntry(theText, 0);
-        } else {
-            UIEvent* theEvent = new EEUIEProcessTimerExpired;
-            gUserInterface->PostEvent(theEvent, NULL);
-            theEvent->Dereference();
-            gResource->GetString(IDS_CIVILIZATION_SELECTION_TIME_HAS_EXPIRED, theText);
-            gUserInterface->AddChatLogEntry(theText, 0);
-            for (unsigned long i = 1; i < gWorld.mNumPlayers; i++)
-                if (i != gWorld.mCurrentPlayer)
-                    gWorld.mPlayers[i]->mCivilizationLocked = true;
-        }
-    }
-}
-
-// EEMCivUpgrades' members as the codec's slots
-size_t EEMCivUpgrades::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CIV_UPGRADES;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgField(this->mNameString);
-    outSlots[7] = EENetMsgRecords(this->mUpgrades.empty() ? NULL : &this->mUpgrades[0], sizeof(EECivUpgrade),
-                                  this->mUpgrades.size());
-    outSlots[8] = EENetMsgString(this->mCivName);
-    return 9;
-}
-
-// FUNCTION: EXE 0x4bd327
-// Reads the civilization upgrades message (player, name string, upgrades, civ name) from a network buffer
-void EEMCivUpgrades::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 4392);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CIV_UPGRADES, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    for (unsigned long i = 0; i < theSlots[7].count; i++) {
-        EECivUpgrade theUpgrade;
-        memcpy(&theUpgrade, inPayloadPointer + theSlots[7].offset + i * sizeof(theUpgrade), sizeof(theUpgrade));
-        this->mUpgrades.push_back(theUpgrade);
-    }
-    this->mCivName.Import(inPayloadPointer + theSlots[8].offset);
-}
-
 // FUNCTION: EXE 0x4bd3f7
 // Applies a player's civilization (name and upgrades) validated by the server, once only when civs are bought;
-// locks the choice for players other than the local one
-void EEMCivUpgradesPurchased::Execute()
+// locks the choice for players other than the local one (members: the player, the name string, the upgrades, the name)
+static void ExecuteCivUpgradesPurchased(EEMRecord* m)
 {
     UWideString theName;
-    unsigned long thePlayerIndex = this->mPlayerID;
+    unsigned long thePlayerIndex = m->Get<unsigned char>(1);
     EEPlayer* thePlayer = gWorld.mPlayers[thePlayerIndex];
     bool theApply = gWorld.mGameOptions.CanBuyCivilization() ? !thePlayer->mCivUpgradesPurchased : true;
     if (theApply) {
-        theName = this->mCivName;
-        if (this->mNameString)
-            gResource->GetString(this->mNameString, theName);
+        theName = m->mString;
+        if (m->Get<int32_t>(2))
+            gResource->GetString(m->Get<int32_t>(2), theName);
         thePlayer->mCivilization.SetName(theName);
-        thePlayer->mCivilization.AddUpgrades(this->mUpgrades, thePlayerIndex, true);
+        std::vector<EECivUpgrade> theUpgrades = m->GetList<EECivUpgrade>();
+        thePlayer->mCivilization.AddUpgrades(theUpgrades, thePlayerIndex, true);
         thePlayer->mCivUpgradesPurchased = true;
         if (thePlayer != gWorld.GetCurrentPlayer()) {
             thePlayer->mCivilizationChosen = true;
@@ -877,326 +446,16 @@ void EEMCivUpgradesPurchased::Execute()
     }
 }
 
-// FUNCTION: EXE 0x4bd4ad
-// Returns the Civ Upgrades Purchased message's debug label
-char* EEMCivUpgradesPurchased::GetMessageLabel() const
-{
-    return "Civilization Builder upgrades validated and purchased from server";
-}
-
 // FUNCTION: EXE 0x4bd4b3
 // Has the server validate a player's requested civilization upgrades (EECBRequestUpgrades)
-void EEMCivUpgradesRequested::Execute()
+static void ExecuteCivUpgradesRequested(EEMRecord* m)
 {
-    EECBRequestUpgrades(this->mPlayerID, this->mCivName, this->mUpgrades);
-}
-
-// FUNCTION: EXE 0x4bd4ca
-// Returns the Civ Upgrades Requested message's debug label
-char* EEMCivUpgradesRequested::GetMessageLabel() const
-{
-    return "Civilization Builder requesting upgrades from server";
-}
-
-// FUNCTION: EXE 0x4bd588
-// Clears the queued orders of the sender's selected airports, carriers/space docks and navy yards (reopening
-// them and emptying their air traffic queue) and the orders of selected aircraft
-static void ExecuteClearAirportCommands(EEMRecord* m)
-{
-    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs clear_airport_commands: each selected
-    // airport's, air base's and navy yard's queues cleared and opened, an aircraft's queue 1, the goals refreshed)
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    ee_units_clear_airport_commands(static_cast<EEGroup*>(thePlayer->mActiveGroup));
-}
-
-// FUNCTION: EXE 0x4bd82a
-// Disbands the sender's living, disbandable selected units, refunding 75% of their cost scaled by health;
-// plays the cash register sound for the local player
-static void ExecuteDisband(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup->GetFirstUnit()) {
-        EESoundObject* theSound = EESoundObject::Get(kSoundCashRegister);
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            float theFraction;
-            if (DecideDisbandRefund(theUnit->mHitPoints, theUnit->mHitPoints > 0 ? theUnit->mStats->mMaxHitPoints : 1,
-                                    theUnit->mHitPoints > 0 && theUnit->mUnitClass->mCanDisband, &theFraction)) {
-                thePlayer->RefundTechnology(thePlayer->mTechnologies->Get(theUnit->mUnitClass->mTechnology), theUnit->mUnitClass->mUnitType,
-                                     theFraction);
-                gEffectManager->CreateUnitEffect(theUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, 1, 0, 0);
-                theUnit->Kill(0, 0, 0);
-            }
-        }
-        if (theSound && thePlayer == gWorld.GetCurrentPlayer())
-            theSound->Play();
-    }
-}
-
-// FUNCTION: EXE 0x4bd93c
-// Orders the sender's selection to carry its resources to the given drop-off building
-static void ExecuteDropoffResource(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs dropoff_resource: with a selection and a complex drop-off, one
-    // active group of the selection spreads around the drop-off's tile, gets a Gather goal with no resource and the
-    // drop-off, the action Dropoff Resource, plans, one unit drawn to acknowledge) over the world calls of EEUnitHost.cpp
-    ee_units_dropoff_resource(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1));
-}
-
-// FUNCTION: EXE 0x4bde48
-// Proposes an edict to the vote (argument 15) and clears the physics value mF84
-static void ExecuteEdictProposal(EEMRecord* m)
-{
-    gWorld.mVoting.Propose(m->Get<unsigned short>(1), 15);
-    gPhysics->mF84 = 0.0f;
-}
-
-// FUNCTION: EXE 0x4bdf7d
-// Ends the scenario's running cinematic
-static void ExecuteEndCinematic(EEMRecord* m)
-{
-    UWideString theText;
-    gWorld.mScenarioManager->EndCinematic();
-}
-
-// FUNCTION: EXE 0x4be076
-// Puts the sender into shift (queue-orders) mode, and the mouse too for the local player
-static void ExecuteEnterShiftMode(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    thePlayer->mShiftMode = true;
-    if (thePlayer == gWorld.GetCurrentPlayer())
-        gMouse->mShiftMode = true;
-}
-
-// FUNCTION: EXE 0x4be185
-// Takes the sender out of shift (queue-orders) mode, and the mouse too for the local player
-static void ExecuteExitShiftMode(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    thePlayer->mShiftMode = false;
-    if (thePlayer == gWorld.GetCurrentPlayer())
-        gMouse->mShiftMode = false;
+    std::vector<EECivUpgrade> theUpgrades = m->GetList<EECivUpgrade>();
+    EECBRequestUpgrades(m->Get<unsigned char>(1), m->mString, theUpgrades);
 }
 
 // 0x23cc42 (cdecl): the exchange rate between a resource and the trade resource for inPlayer (provisional name)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);
-
-// FUNCTION: EXE 0x4be3b1
-// Trades 100 of a resource for gold or buys 100 with gold at the market price, once or five times (a partial
-// trade when short), tracks the traded amount and refreshes the help text for the local player
-static void ExecuteExchangeResources(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    long theCount = 1;
-    if (m->Get<unsigned char>(3))
-        theCount = 5;
-    while (theCount > 0) {
-        long thePrice = EEGetTradePrice(thePlayer, m->Get<int32_t>(2), m->Get<unsigned char>(1));
-        long theHave = thePlayer->mResourceCaps[m->Get<unsigned char>(1) ? m->Get<int32_t>(2) : kResourceGold];
-        EeNetMsgExchangeStep theStep = DecideExchangeStep(m->Get<unsigned char>(1), thePrice, theHave);
-        if (theStep.apply) {
-            if (m->Get<unsigned char>(1)) {
-                thePlayer->TakeResource(m->Get<int32_t>(2), (long)theStep.cost);
-                thePlayer->AddResource(kResourceGold, (long)theStep.amount);
-                thePlayer->mResourceTrade[m->Get<int32_t>(2) - 2] -= (long)theStep.cost;
-            } else {
-                thePlayer->AddResource(m->Get<int32_t>(2), (long)theStep.cost);
-                thePlayer->TakeResource(kResourceGold, (long)theStep.amount);
-                thePlayer->mResourceTrade[m->Get<int32_t>(2) - 2] += (long)theStep.cost;
-            }
-        }
-        theCount--;
-    }
-    if (gWorld.mPlayers[gWorld.mCurrentPlayer]->mPlayerID == thePlayer->mPlayerID)
-        gUIManager->mMainGameForm->UpdateHelpString();
-}
-
-// FUNCTION: EXE 0x4be5b6
-// Sends the sender's mobile selected units, split by unit category, to explore unexplored areas
-static void ExecuteExplore(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs explore: per formation slot 1..5 an active group filled from
-    // the selection, given an Explore goal and planned, one unit drawn to acknowledge) over the world calls of
-    // EEUnitHost.cpp
-    ee_units_explore(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup));
-}
-
-// FUNCTION: EXE 0x4be7b7
-// Copies the received lobby game options into the game's options (except the B53 flag) and updates the lobby
-static void ExecuteFullGameOptions(EEMRecord* m)
-{
-    gGameOptions.mLock->WriteLock();
-    gGameOptions.mLoadType = m->Get<int32_t>(7);
-    gGameOptions.mMapType = m->mString;
-    gGameOptions.mMapSize = m->Get<int32_t>(11);
-    gGameOptions.mResources = m->Get<int32_t>(13);
-    gGameOptions.mEpochStart = m->Get<int32_t>(15);
-    gGameOptions.mEpochEnd = m->Get<int32_t>(5);
-    gGameOptions.mUnitLimit = m->Get<int32_t>(16);
-    gGameOptions.mWondersForVictory = m->Get<int32_t>(18);
-    gGameOptions.mVariant = m->Get<int32_t>(8);
-    gGameOptions.mDifficulty = m->Get<int32_t>(4);
-    gGameOptions.mGameSpeed = m->Get<int32_t>(6);
-    gGameOptions.mRecordGames = m->Get<bool>(12);
-    gGameOptions.mAllowCustomCivs = m->Get<bool>(1);
-    gGameOptions.mRevealMap = m->Get<bool>(14);
-    gGameOptions.mLockTeams = m->Get<bool>(10);
-    gGameOptions.mLockSpeed = m->Get<bool>(9);
-    gGameOptions.mCheatCodes = m->Get<bool>(3);
-    gGameOptions.mVictory = m->Get<bool>(17);
-    gGameOptions.mLock->WriteUnlock();
-    gUserInterface->PostLobbyUpdateGameOptions();
-}
-
-// FUNCTION: EXE 0x4bec38
-// Changes one lobby game option (0..17) to the message's value or map type and updates the lobby
-static void ExecuteGameOptions(EEMRecord* m)
-{
-    gGameOptions.mLock->WriteLock();
-    switch (m->Get<int32_t>(1)) {
-    case 0:
-        gGameOptions.mLoadType = m->Get<uint32_t>(2);
-        break;
-    case 1:
-        gGameOptions.mMapSize = m->Get<uint32_t>(2);
-        break;
-    case 2:
-        gGameOptions.mMapType = m->mString;
-        break;
-    case 3:
-        gGameOptions.mResources = m->Get<uint32_t>(2);
-        break;
-    case 4:
-        gGameOptions.mEpochStart = m->Get<uint32_t>(2);
-        break;
-    case 5:
-        gGameOptions.mEpochEnd = m->Get<uint32_t>(2);
-        break;
-    case 6:
-        gGameOptions.mUnitLimit = m->Get<uint32_t>(2);
-        break;
-    case 7:
-        gGameOptions.mWondersForVictory = m->Get<uint32_t>(2);
-        break;
-    case 8:
-        gGameOptions.mVariant = m->Get<uint32_t>(2);
-        break;
-    case 9:
-        gGameOptions.mDifficulty = m->Get<uint32_t>(2);
-        break;
-    case 10:
-        gGameOptions.mGameSpeed = m->Get<uint32_t>(2);
-        break;
-    case 11:
-        gGameOptions.mRecordGames = m->Get<uint32_t>(2) > 0;
-        break;
-    case 12:
-        gGameOptions.mAllowCustomCivs = m->Get<uint32_t>(2) > 0;
-        break;
-    case 13:
-        gGameOptions.mRevealMap = m->Get<uint32_t>(2) > 0;
-        break;
-    case 14:
-        gGameOptions.mLockTeams = m->Get<uint32_t>(2) > 0;
-        break;
-    case 15:
-        gGameOptions.mLockSpeed = m->Get<uint32_t>(2) > 0;
-        break;
-    case 16:
-        gGameOptions.mCheatCodes = m->Get<uint32_t>(2) > 0;
-        break;
-    case 17:
-        gGameOptions.mVictory = m->Get<uint32_t>(2) > 0;
-        break;
-    }
-    gGameOptions.mLock->WriteUnlock();
-    gUserInterface->PostLobbyUpdateGameOptions();
-}
-
-// FUNCTION: EXE 0x4beedd
-// Ends host migration on this machine (client or server) as the game restarts
-static void ExecuteGameRestarting(EEMRecord* m)
-{
-    if (gCommunications) {
-        if (gCommunications->IsClient())
-            (static_cast<EEClient*>(gCommunications))->mIsMigrating = false;
-        else
-            (static_cast<EEServer*>(gCommunications))->mIsMigrating = false;
-    }
-}
-
-// FUNCTION: EXE 0x4befb9
-// Sets the world's game speed to the requested speed
-static void ExecuteGameSpeed(EEMRecord* m)
-{
-    gWorld.SetGameSpeed(m->Get<float>(1));
-}
-
-// FUNCTION: EXE 0x4bf0a3
-// Sends the sender's selected units to gather from the target resource (if it has any left), spread around it,
-// optionally queued; acknowledges with a random unit's voice
-static void ExecuteGatherResource(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs gather: with a selection and a resource with something left, one
-    // active group of the selection takes the queued flag, spreads around the resource, gets a Gather goal, plans, the
-    // target marker, one unit drawn to acknowledge) over the world calls of EEUnitHost.cpp
-    ee_units_gather(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1), m->Get<bool>(2));
-}
-
-// FUNCTION: EXE 0x4bf3ba
-// Makes every living unit of the sender's selection that is in unit set 0x2f go fanatic
-static void ExecuteGoFanatic(EEMRecord* m)
-{
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
-    EEUnitSet* theSet = gUnitSetManager.GetSet(0x2f);
-    for (long i = theGroup->GetNumUnits() - 1; i >= 0; i--) {
-        EEComplexUnit* theUnit = theGroup->GetUnit(i);
-        if (theSet->Contains(theUnit->mUnitClass->mUnitType) && theUnit->mHitPoints > 0)
-            theUnit->GoFanatic();
-    }
-}
-
-// FUNCTION: EXE 0x4bf543
-// Cheat: creates a unit of the given type (or the sender's chosen cheat unit) at the point for the given player
-// (ambient/resource units go to player 0); buildings must fit on the map and start fully built
-static void ExecuteHackANewUnit(EEMRecord* m)
-{
-    // New (game messages lane, round 2): the body is Rust (ee_units hack.rs hack_new_unit: the class, the owner, a
-    // building's footprint on the map) over EEUnitHost.cpp's reads and creations; the message keeps the class
-    m->Set<int32_t>(1, ee_units_hack_new_unit(gWorld.GetPlayerBySlot(m->GetOriginatingSlot()), m->Get<int32_t>(1),
-                                             m->Get<GE2DPoint>(2).GetX(), m->Get<GE2DPoint>(2).GetY(), (int64_t)m->Get<unsigned char>(3)));
-}
-
-// FUNCTION: EXE 0x4bf8c8
-// Stops the sender's selected units: clears their goals and sets them idle
-static void ExecuteHaltSelectedGroup(EEMRecord* m)
-{
-    EEGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
-    unsigned long theCount = theGroup->GetNumUnits();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theUnit = theGroup->GetUnit(i);
-        theUnit->ClearGoals(0);
-        theUnit->StartAction(kActionIdle);
-        theUnit->mUnitClass->ActionChanged(theUnit);
-    }
-}
-
-// FUNCTION: EXE 0x4bf9df
-// Orders the sender's selected healers, one group per formation slot, to heal the target unit; acknowledges by voice
-static void ExecuteHealUnit(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs heal_unit: with a target, per formation slot 1..5 an active group
-    // of the selection gets a Heal Unit goal on the target's complex unit, planned, one unit drawn to acknowledge) over
-    // the world calls of EEUnitHost.cpp
-    ee_units_heal_unit(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1));
-}
 
 // FUNCTION: EXE 0x4bfcfd
 // Unloads one cargo unit from a living, enabled transport at once; if that fails, posts the transport class's
@@ -1215,156 +474,6 @@ static void ExecuteImmediateCargoUnload(EEMRecord* m)
         EEPlayer* theOwner = theTransport->mPlayer;
         theOwner->mEvents.AddEvent(theTile, 2, theOwner, theText, false);
     }
-}
-
-// FUNCTION: EXE 0x4bfdd2
-// Shows a chat line in the local chat log if the sender's chat target (all, allies, enemies, chosen players)
-// includes the local player and observers only reach observers; plays the incoming-chat sound; records the text
-static void ExecuteInGameChat(EEMRecord* m)
-{
-    UWideString theType;
-    EEPlayer* theSender = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEPlayer* theLocal = gWorld.GetCurrentPlayer();
-    if (theSender)   // port: the game log (ee/EEGameLog.h), every in-game chat line (notes typed while playing)
-        EEGameLogChat(theSender->mPlayerID, (const char*)m->mString);
-    if (theSender && theLocal) {
-        if (theLocal == theSender
-            || (theSender->mSlot != kSlotNone
-                && (theSender->mChatType == 0
-                    || (theSender->mChatType == 1 && theSender->mEnemies[theLocal->mPlayerID] == 0)
-                    || (theSender->mChatType == 2 && theSender->mEnemies[theLocal->mPlayerID] != 0)
-                    || (theSender->mChatType == 3 && theSender->mSendChatMessage[theLocal->mPlayerID])))) {
-            if (!theSender->mObserverMode || theLocal->mObserverMode) {
-                switch (theSender->mChatType) {
-                case 3:
-                    gResource->GetString(IDS_SETUP_CUSTOM, theType);
-                    break;
-                case 2:
-                    gResource->GetString(IDS_SETUP_ENEMIES, theType);
-                    break;
-                case 1:
-                    gResource->GetString(IDS_SETUP_ALLIES, theType);
-                    break;
-                case 0:
-                    gResource->GetString(IDS_SETUP_ALL, theType);
-                    break;
-                default:
-                    theType = "";
-                    break;
-                }
-                if (theSender->mObserverMode)
-                    gResource->GetString(IDS_OBSERVERS, theType);
-                if (theType.GetLength() != 0)
-                    theType = theType + " ";
-                gUserInterface->AddChatLogEntry(theSender->mColor, theSender->mName, theType + m->mString, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
-
-                if (theSender != theLocal) {
-                    EESoundObject* theSound = EESoundObject::Get(kSoundIncomingChatMessage);
-                    if (theSound)
-                        theSound->Play();
-                }
-            }
-        }
-        gWorld.mScenarioManager->mLastChatText = m->mString;
-    }
-}
-
-// FUNCTION: EXE 0x4c0150
-// Advances the sending player to the next epoch
-static void ExecuteIncrementEpic(EEMRecord* m)
-{
-    gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->IncrementEpic();
-}
-
-// FUNCTION: EXE 0x4c0170
-// Adds 60 seconds to the given goal queue's timer of every selected airport whose queue holds goals
-static void ExecuteIncrementRallyTimer(EEMRecord* m)
-{
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
-    for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-        EEComplexUnit* theUnit = theGroup->GetUnit(i);
-        if (theUnit && theUnit->mUnitClass->mUnitType == kUnitTypeAirport) {
-            EEUnitVectorItem& theItem = theUnit->mGoalQueues[m->Get<unsigned char>(1)];
-            if (theItem.mGoals.size() > 0)
-                theItem.AddTime(60000);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c036f
-// Toggles just-in-time manufacturing on the sender's living selected units and on the player; refreshes the
-// local interface
-static void ExecuteJITManufacturing(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEGroup* theGroup = thePlayer->mActiveGroup;
-    unsigned long theCount = theGroup->GetNumUnits();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theUnit = theGroup->GetUnit(i);
-        EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
-        if (theUnit->mHitPoints > 0 && theComplexUnit) {
-            theComplexUnit->ToggleJITManufacturing();
-            theComplexUnit->UpdateJITManufacturing();
-        }
-    }
-    thePlayer->mJITManufacturing = !thePlayer->mJITManufacturing;
-    if (thePlayer == gWorld.GetCurrentPlayer())
-        gUserInterface->UpdateJITManufacturing();
-}
-
-// FUNCTION: EXE 0x4c04d0
-// Returns whether deleting the unit refunds its cost: a paid-for land building still under construction that is
-// not a granary
-// (file static; provisional name)
-static bool IsRefundable(EEComplexUnit* inUnit)
-{
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    return theUnit != NULL && theUnit->mUnitClass->IsLandBuilding() && theUnit->mIsPaidFor && !theUnit->mComplexUnit->mIsBuilt
-           && theUnit->mUnitClass->mUnitType != kUnitTypeGranaryImproved && theUnit->mUnitClass->mUnitType != kUnitTypeGranary;
-}
-
-// FUNCTION: EXE 0x4c051c
-// Deletes the sender's first selected unit (or every selected unit) that may be deleted, refunding unfinished
-// buildings' cost first
-static void ExecuteKillUnit(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup) {
-        if (!m->Get<unsigned char>(1)) {
-            EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(theGroup->GetFirstUnit());
-            if (theUnit && (theUnit->mUnitClass->mUnitType == kUnitTypePathPoint || theUnit->mHitPoints > 0) && theUnit->CanDelete()) {
-                if (IsRefundable(theUnit)) {
-                    EETechnology* theTechnology = theUnit->GetPlayer()->GetTechTree()->Get(theUnit->GetUnitClass()->GetTechnology());
-                    if (theTechnology)
-                        theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(kWorldDeleteRefundFactor));
-                }
-                theUnit->Kill(1, 0, 0);
-            }
-        } else {
-            unsigned long theNumUnits = theGroup->GetNumUnits();
-            for (unsigned long i = 0; i < theNumUnits; i++) {
-                EEComplexUnit* theUnit = theGroup->GetUnit(i);
-                if (theUnit && (theUnit->GetUnitClass()->mUnitType == kUnitTypePathPoint || theUnit->GetHitPoints() > 0)
-                    && theUnit->CanDelete()) {
-                    if (IsRefundable(theUnit)) {
-                        EETechnology* theTechnology = theUnit->GetPlayer()->GetTechTree()->Get(theUnit->GetUnitClass()->GetTechnology());
-                        if (theTechnology)
-                            theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(kWorldDeleteRefundFactor));
-                    }
-                    theUnit->Kill(1, 0, 0);
-                }
-            }
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c06aa
-// Stores the network lag status and shows it (with the lag warning) in the interface
-static void ExecuteLagStatus(EEMRecord* m)
-{
-    gWorld.mLagStatus = m->Get<unsigned short>(1);
-    gUserInterface->SetLagStatus(m->Get<unsigned short>(1), m->Get<unsigned char>(2));
 }
 
 // inline (header-declared; the COMDAT 0x4c0894 sits here): inPoint on the terrain, its own z off
@@ -1412,96 +521,34 @@ static void ExecuteLoadMainScreen(EEMRecord* m)
 }
 
 bool gLocalPlayerOut;                      // 0x4e6099 (.bss between this unit's Execute statics 0x4e6098/0x4e609a; ee/EEMessage.h)
-// FUNCTION: EXE 0x4c0b60
-// Server: counts each slot's first response; once every human (minus dropped loaders) has answered, starts the game
-static void ExecuteLoadMainScreenResponse(EEMRecord* m)
-{
-    static std::vector<unsigned char> sResponses;
-    static unsigned char sNumResponses;
-    unsigned long theTime;
-    if (gCommunications->IsServer()) {
-        if (sNumResponses == 0)
-            sResponses.clear();
-        if (std::find(sResponses.begin(), sResponses.end(), m->Get<unsigned char>(1)) == sResponses.end()) {
-            sResponses.push_back(m->Get<unsigned char>(1));
-            if (m->Get<unsigned char>(2) != 0xff)
-                sNumResponses++;
-            if (sNumResponses == static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders) {
-                theTime = TMGetTime();
-                NEMessage* theMessage = new NEMRecord(kNetMessageStartGame, {theTime});   // the offset start time
-                if (theMessage) {
-                    static_cast<EEServer*>(gCommunications)->mLoadState = 0;
-                    gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-                    static_cast<EEServer*>(gCommunications)->SetGameState(2);
-                    sNumResponses = 0;
-                }
-            }
-        }
-    }
-}
-
-// EEMLoadOrSaveGame's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLoadOrSaveGame::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOAD_OR_SAVE_GAME;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mIsLoad);
-    outSlots[6] = EENetMsgField(this->mIsQuiet);
-    outSlots[7] = EENetMsgField(this->mTick);
-    outSlots[8] = EENetMsgField(this->mTime);
-    outSlots[9] = EENetMsgField(this->mIsAutoSave);
-    outSlots[10] = EENetMsgField(this->mWaitMessageID);
-    outSlots[11] = EENetMsgString(this->mFileName);
-    return 12;
-}
-
-// FUNCTION: EXE 0x4c0dae
-// Reads the load/save request (header, load, quiet, tick, time, auto-save, wait id, file name) from a received payload
-void EEMLoadOrSaveGame::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8602);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_OR_SAVE_GAME, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mFileName.Import(inPayloadPointer + theSlots[11].offset);
-}
-
-// FUNCTION: EXE 0x4c0e6a
-// Returns whether the message is the load/save response for this request's tick
-bool EEMLoadOrSaveGame::IsResponse(NEMessage* inMessage)
-{
-    bool theResult = false;
-    if (inMessage->GetType() == kMessageLoadOrSaveGameResponse && this->mTick == static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1))
-        theResult = true;
-    return theResult;
-}
 
 #include "ee/EESaveLoad.h"
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
 
 // FUNCTION: EXE 0x4c0e83
 // Single-player server load: loads the saved game and logs a response; anything else queues the save with the
-// physics thread; announces it in the chat log and shows the error box if loading failed
-void EEMLoadOrSaveGame::Execute()
+// physics thread; announces it in the chat log and shows the error box if loading failed (members: load, quiet,
+// tick, time, auto-save, the wait id, the file name)
+static void ExecuteLoadOrSaveGame(EEMRecord* m)
 {
     UWideString theText;
     UWideString theFormat;
     UString theDirectory;
     long theResult;
-    if (this->mIsLoad && gCommunications->IsServer() && !gCommunications->GetIsMultiplayerSession()) {
+    if (m->Get<unsigned char>(1) && gCommunications->IsServer() && !gCommunications->GetIsMultiplayerSession()) {
         gResource->GetString(IDS_LOADING, theFormat);
-        sprintf(theText, theFormat, (const char*)this->mFileName);
+        sprintf(theText, theFormat, (const char*)m->mString);
         gUserInterface->AddChatLogEntry(theText, 0);
         theDirectory = "data\\";
         theDirectory += "Saved Games\\";
-        theResult = EELoadSavedGameFile(UString(this->mFileName), true, this->mIsQuiet, theDirectory, 1);
-        EEMRecord* theResponse = new EEMRecord(kMessageLoadOrSaveGameResponse, {this->mTick});
+        theResult = EELoadSavedGameFile(UString(m->mString), true, m->Get<bool>(2), theDirectory, 1);
+        EEMRecord* theResponse = new EEMRecord(kMessageLoadOrSaveGameResponse, {m->Get<int32_t>(3)});
         theResponse->SetOriginatingSlot(gWorld.GetCurrentPlayer()->mSlot);
         static_cast<NESynchronousServer*>(gCommunications)->LogResponse(theResponse);
     } else {
-        gPhysics->QueueMessage(this);
+        gPhysics->QueueMessage(m);
         gResource->GetString(IDS_SAVING_GAME_AS, theFormat);
-        sprintf(theText, theFormat, (const char*)this->mFileName);
+        sprintf(theText, theFormat, (const char*)m->mString);
         gUserInterface->AddChatLogEntry(theText, 0);
         theResult = 0;
     }
@@ -1515,7 +562,7 @@ extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count Lo
 // FUNCTION: EXE 0x4c1052
 // Saves the game under the requested name, rotates the auto-saves for an auto-save, restores the mouse and reports
 // an error box on failure; returns the request's tick
-long EEMLoadOrSaveGame::LoadOrSave()
+long EELoadOrSave(EEMRecord* m)
 {
     GE2DPoint thePosition = gMouse->mPosition;
     UString theName;
@@ -1526,13 +573,13 @@ long EEMLoadOrSaveGame::LoadOrSave()
     theFolder = "data\\";
     theFolder += "Saved Games\\";
     gISMouse->SetUseBufferedMovement(false);
-    long theResult = SaveGame(UString(this->mFileName), this->mTime, this->mIsQuiet, theFolder);
-    if (this->mIsAutoSave == 1) {
+    long theResult = SaveGame(UString(m->mString), m->Get<int32_t>(4), m->Get<bool>(2), theFolder);
+    if (m->Get<unsigned char>(5) == 1) {
         theDirectory = UString("data\\") + UString("Saved Games\\");
         theName = UString("AutoSave") + UString("*") + gSavedGameExtension;
         TrimAutoSaves(theName, theDirectory, gAutoSaveCount);
     }
-    if (gCommunications->IsServer() && !this->mIsQuiet && theResult == 0)
+    if (gCommunications->IsServer() && !m->Get<bool>(2) && theResult == 0)
         gUserInterface->CloseForm(NULL);
     gISMouse->Refresh();
     gISMouse->SetUseBufferedMovement(true);
@@ -1540,20 +587,11 @@ long EEMLoadOrSaveGame::LoadOrSave()
     gMouse->SetPosition(thePosition);
     if (theResult != 0)
         gUIManager->DisplayMessage(gLoadSaveErrorMessage, 1, NULL, NULL, true);
-    return this->mTick;
+    return m->Get<int32_t>(3);
 }
 
 // FUNCTION: EXE 0x4c1264
 // Packs the load/save response (header, selection id, tick) into a new send buffer
-
-// FUNCTION: EXE 0x4c142a
-// Shows a slot's loading progress in the interface, capped at 100 percent
-static void ExecuteLoadPercent(EEMRecord* m)
-{
-    if (m->Get<uint32_t>(2) > 100)
-        m->Set<uint32_t>(2, 100);
-    gUserInterface->SetLoadPercent(m->Get<int32_t>(1), m->Get<uint32_t>(2));
-}
 
 // FUNCTION: EXE 0x4c153d
 // Changes the sender's cheat unit class: unloads the old class's data for every player and preloads the new one
@@ -1570,61 +608,6 @@ static void ExecuteLoadUnitData(EEMRecord* m)
             if (thePlayer->mHackUnitClass < EEUnitClassCount() && gUnitClassTable[thePlayer->mHackUnitClass])
                 gDataPreLoading->PostLoadUnitClass(gWorld.mPlayers[i]->mPlayerID, thePlayer->mHackUnitClass);
     }
-}
-
-// FUNCTION: EXE 0x4c1722
-// Sends the sender's selected units that can garrison into the target building (joining its load goal or starting
-// one); the others move next to it; posts an event if the goal is invalid
-static void ExecuteLoadGarrison(EEMRecord* m)
-{
-    // New (game messages lane, round 2): the body is Rust (ee_units boarding.rs load_garrison: the units that can
-    // garrison join or start its load goal, the others move to it) over the store and EEUnitHost.cpp's calls
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    ee_units_load_garrison(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1));
-}
-
-// FUNCTION: EXE 0x4c1b79
-// Boards the selected units (or one passenger) onto the transport via its load goal; units it can't carry move to
-// the pickup tile; acknowledges with the transport's voice
-static void ExecuteLoadTransport(EEMRecord* m)
-{
-    // New (game messages lane, round 2): the body is Rust (ee_units boarding.rs load_transport: the units it can
-    // carry join or start its load goal, the others move to the pickup tile) over the store and EEUnitHost.cpp's calls
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    ee_units_load_transport(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1),
-                            m->Get<int32_t>(2));
-}
-
-// FUNCTION: EXE 0x4c1fb6
-// Locks or unlocks every selected gate together with its second and fourth parts
-static void ExecuteLockUnlock(EEMRecord* m)
-{
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
-    if (theGroup->GetFirstUnit()) {
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass());
-            theUnit->SetLocked(m->Get<bool>(1));
-            // a gate built as a single piece (scenario Create effect) has no second or fourth part
-            EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
-            if (thePart != NULL)
-                thePart->SetLocked(m->Get<bool>(1));
-            thePart = theGate->GetFourthPart(theUnit);
-            if (thePart != NULL)
-                thePart->SetLocked(m->Get<bool>(1));
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c212b
-// Toggles whether the sending player sees the whole map; redraws the mini-map for the local player
-static void ExecuteMakeWorldVisible(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    thePlayer->mSeesAll = !thePlayer->mSeesAll;
-    if (thePlayer == gWorld.GetCurrentPlayer())
-        gMiniMap->Redraw();
 }
 
 // FUNCTION: EXE 0x4c2170
@@ -1653,438 +636,7 @@ static void ExecuteMigrationSlotInfo(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4c259d
-// Returns whether the unpacked unit class can be placed for the player on every tile of its footprint at x, y
-static bool CanUnpack(EEUnitClass* inClass, EEPlayer* inPlayer, long inX, long inY)
-{
-    EEMap* theMap = gWorld.mMap;
-    GE3DPoint theLocation((float)inX, (float)inY, 0.0f);
-    long theType = inClass->mUnitType;
-    long theSize = inClass->mTileSize;
-    bool theResult = true;
-    long theStartX;
-    long theStartY;
-    if (theSize <= 1) {
-        theStartX = inX;
-        theStartY = inY;
-        theSize = 1;
-    } else {
-        long theHalf = (long)(theSize * 0.5f);
-        theStartX = inX - theHalf;
-        theStartY = inY - theHalf;
-    }
-    long theEndX = theStartX + theSize;
-    long theEndY = theStartY + theSize;
-    for (long x = theStartX; x <= theEndX; x++)
-        for (long y = theStartY; y <= theEndY; y++) {
-            bool theOK;
-            if (theMap->GetTile(x, y))
-                theOK = EECanPlace(inPlayer, theType, &theLocation, x, y, 0, 0);
-            else
-                theOK = false;
-            if (x < theEndX && y < theEndY && !theOK)
-                theResult = false;
-        }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x4c2683
-// Packs or unpacks the sender's living selected units by replacing them with their packed/unpacked class; units
-// with no room to unpack stay packed and the local player gets a chat warning
-static void ExecutePackUnpack(EEMRecord* m)
-{
-    GETransformation theTransformation;
-    UWideString theText;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup->GetFirstUnit()) {
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            if (theUnit->mHitPoints > 0) {
-                if (m->Get<bool>(1) && !theUnit->mIsPacked) {
-                    EEUnitClass* thePacked = theUnit->mUnitClass->mPackedClass;
-                    if (thePacked)
-                        EEReplaceUnit(theUnit, thePlayer->GetPlayerID(), thePacked)->SetIsPacked(true);
-                } else if (!m->Get<bool>(1) && theUnit->mIsPacked) {
-                    EEUnitClass* theUnpacked = theUnit->mUnitClass->mPackedClass;
-                    if (theUnpacked) {
-                        if (CanUnpack(theUnpacked, thePlayer, theUnit->GetTileX(), theUnit->GetTileY())) {
-                            EEComplexUnit* theNew = EEReplaceUnit(theUnit, thePlayer->GetPlayerID(), theUnpacked);
-                            EEPlaceUnit(theNew, theNew->mUnitClass, thePlayer, U2DPoint<long>(theUnit->mTileX, theUnit->mTileY),
-                                        true);
-                            theNew->SetIsPacked(false);
-                        } else if (theText.GetLength() == 0)
-                            gResource->GetString(IDS_YOU_MAY_NOT_UNPACK_ALL_UNITS, theText);
-                    }
-                }
-            }
-        }
-    }
-    if (theText.GetLength() > 0 && thePlayer == gWorld.GetCurrentPlayer())
-        gUserInterface->AddChatLogEntry(theText, 0);
-}
-
 #include "lle/GE3DLine.h"
-
-// FUNCTION: EXE 0x4c281c
-// Moves the sender's selection to the target point (snapped onto the map and off blocking large units), one
-// group per formation slot, with facing, forced, queued and group-movement options; acknowledges by voice
-static void ExecutePathTo(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs path_to: with a selection, the point adjusted to the map and
-    // around a building the first unit cannot pass (the message keeps it), per formation slot 1..5 an active group of
-    // the mobile units gets a Location goal, its paths reset, planned, one unit drawn to acknowledge, the move marker)
-    // over the world calls of EEUnitHost.cpp
-    float theX = m->Get<float>(2), theY = m->Get<float>(3);   // the Rust may move the point: the record keeps it
-    ee_units_path_to(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), &theX, &theY, m->Get<float>(1),
-                     m->Get<bool>(4), m->Get<bool>(5), m->Get<bool>(6), m->Get<bool>(7));
-    m->Set<float>(2, theX);
-    m->Set<float>(3, theY);
-}
-
-// FUNCTION: EXE 0x4c2cf2
-// Patrol order: a selected path point gets the target's tile as a new point; other units patrol the target's
-// route (target id -1: the nearest town's patrol route); acknowledges by voice
-static void ExecutePatrol(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs patrol: the target by id or the nearest town's route point; a
-    // selected path point takes the target's tile, else per formation slot 1..5 an active group of the mobile units
-    // patrols the target's route, planned, the target marker, one unit drawn to acknowledge) over the world calls of
-    // EEUnitHost.cpp
-    ee_units_patrol(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), m->Get<int32_t>(1));
-}
-
-// FUNCTION: EXE 0x4c315b
-// Gives the tributed resources to the receiver and records them for both players; the giver and receiver get a
-// chat line listing the amounts
-static void ExecutePayTribute(EEMRecord* m)
-{
-    UWideString theYouGave;
-    UWideString theFood;
-    UWideString theWood;
-    UWideString theStone;
-    UWideString theGold;
-    UWideString theIron;
-    UWideString theText(0x400);
-    UWideString theSpace(" ");
-    EEPlayer* theFrom = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEPlayer* theTo = gWorld.mPlayers[m->Get<unsigned char>(6)];
-    unsigned long theAmount;
-    char theNumber[8];
-    uint32_t theAmounts[7] = {0, 0, m->Get<uint32_t>(1), m->Get<uint32_t>(5), m->Get<uint32_t>(4), m->Get<uint32_t>(2), m->Get<uint32_t>(3)};
-    uint8_t theOrder[5];
-    uint32_t theCount = DecideTributeOrder(theAmounts, 0, theOrder);
-    for (uint32_t i = 0; i < theCount; i++) {
-        theAmount = theAmounts[theOrder[i]];
-        theFrom->AddTribute(0, theOrder[i], theAmount);
-        theTo->AddResource(theOrder[i], theAmount);
-        theTo->AddTribute(1, theOrder[i], theAmount);
-    }
-    gResource->GetString(IDS_RESOURCE_NAME_STONE, theFood);
-    gResource->GetString(IDS_RESOURCE_NAME_GOLD, theWood);
-    if (gWorld.mUsingCarbon)
-        gResource->GetString(IDS_CARBON, theStone);
-    else
-        gResource->GetString(IDS_RESOURCE_NAME_WOOD, theStone);
-    gResource->GetString(IDS_RESOURCE_NAME_FOOD, theGold);
-    gResource->GetString(IDS_RESOURCE_NAME_IRON, theIron);
-    uint8_t theViewer = DecideTributeViewer(gWorld.GetCurrentPlayer() == theFrom, gWorld.GetCurrentPlayer() == theTo);
-    if (theViewer == 1) {
-        gResource->GetString(IDS_YOU_TRIBUTE, theYouGave);
-        sprintf(theText, "%s %s ", (const char*)theYouGave, (const char*)theTo->mName);
-    } else if (theViewer == 2) {
-        gResource->GetString(IDS_TRIBUTES_YOU, theYouGave);
-        sprintf(theText, "%s %s ", (const char*)theFrom->mName, (const char*)theYouGave);
-    } else
-        return;
-    // the chat line's names (the original's locals hold them crosswise: theGold is food's, theFood stone's, ...)
-    const char* theNames[7] = {NULL, NULL, (const char*)theGold, (const char*)theStone, (const char*)theFood,
-                               (const char*)theWood, (const char*)theIron};
-    theCount = DecideTributeOrder(theAmounts, 1, theOrder);
-    for (uint32_t i = 0; i < theCount; i++) {
-        PlatIToA(theAmounts[theOrder[i]], theNumber, 10);
-        theText += theNumber;
-        theText += theSpace;
-        theText += theNames[theOrder[i]];
-        theText += theSpace;
-    }
-    gUserInterface->AddChatLogEntry(theFrom->mColor, theFrom->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
-}
-
-// FUNCTION: EXE 0x4c3589
-// Applies the lobby field update to the slot's game options under the write lock and refreshes the lobby row
-static void ExecutePlayerInformation(EEMRecord* m)
-{
-    EEGameOptionsPlayer thePlayer;
-    gGameOptions.mLock->WriteLock();
-    thePlayer = gGameOptions.mPlayers[m->Get<int32_t>(4)];
-    switch (m->Get<int32_t>(2)) {
-    case kPlayerInfoEngine:   // port: a computer slot's engine (ee/EECPEngine.h)
-        thePlayer.mEngine = m->Get<uint32_t>(1) < EECPEngineChoiceCount() ? m->Get<uint32_t>(1) : (unsigned long)kEECPChoiceClassic;
-        break;
-    case 5:
-        thePlayer.mIsReady = m->Get<uint32_t>(1) > 0;
-        break;
-    case 4:
-        thePlayer.mStartingCitizens = m->Get<uint32_t>(1);
-        break;
-    case 3:
-        thePlayer.mTeam = m->Get<uint32_t>(1);
-        break;
-    case 2:
-        thePlayer.mColor = m->Get<uint32_t>(1);
-        break;
-    case 1:
-        thePlayer.mPing = m->Get<float>(3);
-        break;
-    case 0:
-        thePlayer.mType = m->Get<uint32_t>(1);
-        break;
-    }
-    gGameOptions.mPlayers[m->Get<int32_t>(4)] = thePlayer;
-    gGameOptions.mLock->WriteUnlock();
-    gUserInterface->PostLobbyUpdatePlayer(m->Get<int32_t>(4), m->Get<int32_t>(2));
-}
-
-// FUNCTION: EXE 0x4c3bbc
-// During recorded-game playback, switches graphics, physics and the player between slow and normal speed when the
-// local player sent it
-static void ExecuteRecordFrames(EEMRecord* m)
-{
-    if ((gCommunications->IsClient() == true
-         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
-        || (gCommunications->IsServer() == true
-            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
-        if (m->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot) {
-            gGraphics->PostSetFlag5B(m->Get<bool>(1));
-            gPhysics->SetSlowPlayback(m->Get<bool>(1));
-            if (gCommunications->IsClient()) {
-                if (m->Get<bool>(1))
-                    (static_cast<NESynchronousClient*>(gCommunications))->SetSlowPlayback();
-                else
-                    (static_cast<NESynchronousClient*>(gCommunications))->SetNormalPlayback();
-            }
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c3d36
-// Removes the unit from the sending player's selection
-static void ExecuteRemoveUnitFromSelectedGroup(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    thePlayer->RemoveUnitFromSelectedGroup(m->Get<int32_t>(1));
-}
-
-// FUNCTION: EXE 0x4c3e31
-// Orders the sender's selected units, spread around the target, to repair it (queued: adds it as a build target);
-// acknowledges by voice
-static void ExecuteRepairUnit(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs repair: one active group of the selection spreads around the
-    // target's tile; queued, its units add the target as a build target, else each orders the repair and all are
-    // added back; one unit drawn to acknowledge) over the world calls of EEUnitHost.cpp
-    ee_units_repair(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1), m->Get<bool>(2));
-}
-
-// FUNCTION: EXE 0x4c41da
-// Replants the given granary (farm id -1: every selected granary, if the first selected unit is one)
-static void ExecuteReplantFarms(EEMRecord* m)
-{
-    if (m->Get<int32_t>(1) == -1) {
-        EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-        EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-        if (theGroup->GetFirstUnit()) {
-            long theType = theGroup->GetFirstUnit()->mUnitClass->mUnitType;
-            if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary) {
-                unsigned long theNumUnits = theGroup->GetNumUnits();
-                for (unsigned long i = 0; i < theNumUnits; i++) {
-                    EEComplexUnit* theUnit = theGroup->GetUnit(i);
-                    long theUnitType = theUnit->mUnitClass->mUnitType;
-                    if (theUnitType == kUnitTypeGranaryImproved || theUnitType == kUnitTypeGranary)
-                        theUnit->mUnitClass->ReplantFarm(theUnit, thePlayer);
-                }
-                gPhysics->FlushWorld();
-            }
-        }
-    } else {
-        EEUnit* theUnit = gWorld.GetUnit(m->Get<int32_t>(1));
-        if (theUnit && theUnit->mTileNode) {
-            EEComplexUnit* theFarm = theUnit->GetComplexUnit();
-            long theType = theFarm->mUnitClass->mUnitType;
-            if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary) {
-                theFarm->mUnitClass->ReplantFarm(theFarm, theFarm->mPlayer);
-                gPhysics->FlushWorld();
-            }
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c42c8
-// Stores the two reported values in the sending player's statistics entries 0x14 and 0x15
-static void ExecuteReportStatistics(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    if (thePlayer) {
-        thePlayer->mSavedGroups.Set(0x14, m->Get<int32_t>(1));
-        thePlayer->mSavedGroups.Set(0x15, m->Get<int32_t>(2));
-    }
-}
-
-// FUNCTION: EXE 0x4c44bb
-// Removes the sending player from the game as resigned (observers excepted); the other machines post a
-// "has resigned" chat line
-static void ExecuteResign(EEMRecord* m)
-{
-    GEColor theColor(1.0f, 1.0f, 1.0f);
-    UWideString theUnused;
-    UWideString theText;
-    UWideString theFormat;
-    UWideString theName;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    if (!thePlayer->mObserverMode) {
-        gWorld.RemovePlayerFromGame(0, thePlayer->mPlayerID);
-        thePlayer->SetGameResult(2);
-        if (thePlayer != gWorld.GetCurrentPlayer()) {
-            gResource->GetString(IDS_PLAYER_HAS_RESIGNED_FROM_GAME, theFormat);
-            sprintf(theText, theFormat, (const char*)thePlayer->mName);
-            gResource->GetString(IDS_MSG_GAME, theName);
-            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c45b8
-// Removes the improvement from the queue of every living selected building of the clicked unit's type
-static void ExecuteRemoveImprovement(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theUnit = gWorld.GetUnit(m->Get<int32_t>(1));
-    if (theUnit && theUnit->mHitPoints > 0) {
-        long theType = theUnit->mUnitClass->mUnitType;
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theOther = theGroup->GetUnit(i);
-            long theOtherType = theOther->mUnitClass->mUnitType;
-            if (theOther->mHitPoints > 0 && theOtherType == theType && theOther->mComplexUnit) {
-                if (thePlayer->CountQueuedImprovements(theOtherType, m->Get<int32_t>(2)) == 0)
-                    thePlayer->RemoveQueuedImprovement(theOtherType, m->Get<int32_t>(2), false);
-                else
-                    thePlayer->RemoveQueuedImprovement(theOtherType, m->Get<int32_t>(2), true);
-            }
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c4766
-// Cancels the research (five times if asked) or toggles just-in-time manufacturing at each living selected
-// building of the clicked building's type; refreshes the JIT button for the local player
-static void ExecuteRemoveTechnology(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theUnit = gWorld.GetUnit(m->Get<int32_t>(1));
-    unsigned long theCount = m->Get<bool>(4) ? 5 : 1;
-    if (theUnit && theUnit->mHitPoints > 0) {
-        long theType = theUnit->mUnitClass->mUnitType;
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theOther = theGroup->GetUnit(i);
-            EEComplexUnit* theComplexUnit = theOther->mComplexUnit;
-            if (theOther->mHitPoints > 0 && theOther->mUnitClass->mUnitType == theType && theComplexUnit) {
-                if (m->Get<bool>(4)) {
-                    for (unsigned long j = 0; j < theCount; j++)
-                        theComplexUnit->RemoveResearch(m->Get<int32_t>(2), 0);
-                } else if (m->Get<bool>(3))
-                    theComplexUnit->ToggleJITManufacturing();
-                else
-                    theComplexUnit->RemoveResearch(m->Get<int32_t>(2), 0);
-                if (thePlayer == gWorld.GetCurrentPlayer())
-                    gUserInterface->UpdateJITManufacturing();
-            }
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c49b7
-// Queues the research at each built selected building sharing the clicked one's research (five times if asked);
-// kinds 0/2/7/8 and hero techs go to one building: one with an empty queue and no research, else the first
-static void ExecuteResearchTechnology(EEMRecord* m)
-{
-    // New (game messages lane, round 2): the body is Rust (ee_units research.rs research_technology: each built
-    // selected building of the type queues it, or the one with the shortest queue) over the store and EEUnitHost.cpp
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    ee_units_research_technology(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1),
-                                 m->Get<int32_t>(2), m->Get<bool>(3) ? 1 : 0);
-}
-
-// FUNCTION: EXE 0x4c4e02
-// Makes the target the home base of the selected aircraft in flight (resetting their flight time unless kept);
-// acknowledges by voice
-static void ExecuteReturnToBase(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEComplexUnit* theLastUnit = NULL;
-    EEUnit* theBase = gWorld.GetUnit(m->Get<int32_t>(1));
-    if (theBase) {
-        EEComplexUnit* theBaseUnit = theBase->GetComplexUnit();
-        if (theBaseUnit) {
-            for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-                EEComplexUnit* theUnit = theGroup->GetUnit(i);
-                if (theUnit) {
-                    long theCategory = theUnit->GetUnitClass()->mCategory;
-                    if ((theCategory == kUnitCategoryAirplane || theCategory == kUnitCategoryPlanetSpaceship) && theUnit->mFlightTime > 0) {
-                        theUnit->SetHomeBase(theBaseUnit);
-                        if (!m->Get<bool>(2))
-                            theUnit->SetFlightTime(0);
-                        theLastUnit = theUnit;
-                    }
-                }
-            }
-            if (theLastUnit)
-                thePlayer->PlayAcknowledgement(theLastUnit);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c4fd1
-// Adds the units of a saved group to the sender's selection, skipping ones already selected
-static void ExecuteSavedGroupAddSelection(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEGroup* theSavedGroup = thePlayer->mGroups[m->Get<unsigned char>(1)];
-    EEGroup* theActiveGroup = thePlayer->mActiveGroup;
-    for (unsigned long i = 0; i < theSavedGroup->GetNumUnits(); i++) {
-        EEComplexUnit* theUnit = theSavedGroup->GetUnit(i);
-        if (theUnit && !theActiveGroup->Contains(theUnit))
-            theActiveGroup->Add(theUnit);
-    }
-}
-
-// FUNCTION: EXE 0x4c5117
-// Clears the sender's saved group if it holds any units
-static void ExecuteSavedGroupClear(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEGroup* theGroup = thePlayer->mGroups[m->Get<unsigned char>(1)];
-    if (theGroup && theGroup->GetNumUnits() > 0)
-        thePlayer->ClearSavedGroup(m->Get<unsigned char>(1));
-}
-
-// FUNCTION: EXE 0x4c522e
-// Stores the sender's current selection as a saved group (when anything is selected)
-static void ExecuteSavedGroupCreate(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    if (thePlayer->mActiveGroup->GetNumUnits() > 0)
-        thePlayer->mGroups[m->Get<unsigned char>(1)]->Assign(thePlayer->mActiveGroup);
-}
 
 // FUNCTION: EXE 0x4c534a
 // Selects the sender's saved group; for the local player resets the command panel, centres the camera on it
@@ -2118,228 +670,45 @@ static void ExecuteSavedGroupSelect(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4c5587
-// Sends an airplane to the point: clears its goal queues and queues the move in queues 0 and 1 (1 s timer)
-static void ExecuteScrambleAircraft(EEMRecord* m)
-{
-    EEUnit* theUnit = gWorld.GetUnit(m->Get<int32_t>(3));
-    if (theUnit) {
-        EEComplexUnit* theAircraft = theUnit->GetComplexUnit();
-        if (theAircraft && (theAircraft->mUnitClass->mCategory == kUnitCategoryAirplane || theAircraft->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship)) {
-            EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(long(m->Get<int32_t>(1)), long(m->Get<int32_t>(2))), false, false, false, 0.0f, false, false);
-            theAircraft->ClearAllGoalQueues();
-            theAircraft->QueueGoal(theGoal, 0);
-            theAircraft->QueueGoal(theGoal->Clone(), 1);
-            theAircraft->mGoalQueues[1].AddTime(1000);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c5755
-// Sets whether the sender's chat goes to the given player
-static void ExecuteSelectCustomPlayerForChat(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    if (thePlayer)
-        thePlayer->mSendChatMessage[m->Get<int32_t>(1)] = m->Get<bool>(2);
-}
-
-// FUNCTION: EXE 0x4c587f
-// Selects the patrol group of the given unit for the sender
-static void ExecuteSelectPatrolGroup(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    unsigned long theID = m->Get<int32_t>(1);
-    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theID));
-    if (theUnit)
-        theUnit->mPatrolGroup->Select(thePlayer, true);
-}
-
-// FUNCTION: EXE 0x4c59ac
-// Sets the sender's chat recipient type
-static void ExecuteSelectPlayerChatType(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    if (thePlayer)
-        thePlayer->mChatType = m->Get<int32_t>(1);
-}
-
-// FUNCTION: EXE 0x4c5aaa
-// Replaces the sender's selection with the listed units that still exist
-void EEMSelectTheseUnits::Execute()
-{
-    EEGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
-    theGroup->Clear();
-    for (std::vector<long>::iterator it = this->mUnitIDs.begin(); it != this->mUnitIDs.end(); ++it) {
-        // a listed unit may have died between sending and executing (it used to be read through NULL)
-        EEUnit* theUnit = gWorld.GetUnit(*it);
-        if (theUnit != NULL)
-            theGroup->Add(theUnit->GetComplexUnit());
-    }
-}
-
-// EEMSelectTheseUnits' members as the codec's slots; the ids go through ioIDs as int32 (the wire's width)
-static size_t Slots(EEMSelectTheseUnits* inMessage, EeNetMsgSlot* outSlots, std::vector<int32_t>& ioIDs)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgRecords(ioIDs.empty() ? NULL : &ioIDs[0], sizeof(int32_t), ioIDs.size());
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c5afb
-// Packs the unit list (header, selection id, count, unit ids) into a new send buffer
-void EEMSelectTheseUnits::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    std::vector<int32_t> theIDs(this->mUnitIDs.begin(), this->mUnitIDs.end());   // 4 bytes on the wire (LP64: long is 8)
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELECT_THESE_UNITS, theSlots, Slots(this, theSlots, theIDs), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c5bc8
-// Returns the unit list's payload size: 4 bytes per unit plus 9
-unsigned long EEMSelectTheseUnits::ExportSize()
-{
-    std::vector<int32_t> theIDs(this->mUnitIDs.size());
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_SELECT_THESE_UNITS, theSlots, Slots(this, theSlots, theIDs));
-}
-
-// FUNCTION: EXE 0x4c5be3
-// Returns the message's debug label "Select These Units"
-char* EEMSelectTheseUnits::GetMessageLabel() const
-{
-    return "Select These Units";
-}
-
-// FUNCTION: EXE 0x4c5be9
-// Reads the unit list (header, selection id, count, unit ids) from a received payload, appending the ids
-void EEMSelectTheseUnits::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14244);
-    std::vector<int32_t> theIDs;
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SELECT_THESE_UNITS, inPayloadPointer, theSlots, Slots(this, theSlots, theIDs));
-    for (unsigned long i = 0; i < theSlots[5].count; i++) {
-        int32_t theUnitID;
-        memcpy(&theUnitID, inPayloadPointer + theSlots[5].offset + i * sizeof(theUnitID), sizeof(theUnitID));
-        this->mUnitIDs.push_back(theUnitID);
-    }
-}
-
-// FUNCTION: EXE 0x4c5c80
-// Selects one unit for the sender
-static void ExecuteSelectUnit(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    thePlayer->SelectUnit(m->Get<uint32_t>(1), true, true);
-}
-
 // New (port), TEST ONLY: set by the UI fixture (EETestFixture.cpp, only with EE_TEST_UI) to see each box selection's
 // decoded ids as its message is built on the UI thread; NULL otherwise
 void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
 
-// FUNCTION: EXE 0x4c5d7f
-// Creates a box selection: picks the local player's units of the given type in the rectangle and stores
-// them compressed (and decoded)
-EEMSelectUnits::EEMSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
-    : EEMessage(inType, true)
+// FUNCTION: EXE 0x4c5d7f (the EEMSelectUnits constructor)
+// Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
+// compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
+// on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1
+// or 2 bytes of the ids' middle 16 bits follow) and the ids' low bytes; at most 63 ids (CompressUnits 0x4c5e67,
+// ee_netmsg units.rs).
+EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, unsigned char inType)
 {
     std::vector<unsigned long> theUnits;
-    this->mRectangle = inRectangle;
-    this->mL30 = inUnitType;
-    gUnitPicker.PickUnits(this->mRectangle, gWorld.GetCurrentPlayer(), inUnitType, theUnits);
-    long thePlayerID = gWorld.GetCurrentPlayer()->mPlayerID;
-    this->mBufferSize = CompressUnits(theUnits, thePlayerID, this->mBuffer);
-    DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
-    if (gEESelectUnitsTestHook != NULL)   // TEST ONLY: the UI fixture's box selection (EETestFixture.cpp)
-        gEESelectUnitsTestHook(this->mUnitIDs);
+    gUnitPicker.PickUnits(inRectangle, gWorld.GetCurrentPlayer(), inUnitType, theUnits);
+    std::vector<uint32_t> theIDs(theUnits.begin(), theUnits.end());   // only the low 24 bits count
+    unsigned char theBuffer[0x100];
+    unsigned char theSize = ee_netmsg_compress_units(theIDs.empty() ? NULL : &theIDs[0], theIDs.size(),
+                                                     (uint32_t)gWorld.GetCurrentPlayer()->mPlayerID, theBuffer);
+    EEMRecord* theMessage = new EEMRecord(inType, {theSize, 0, 0, inUnitType});
+    theMessage->mList.assign(theBuffer, theBuffer + theSize);
+    theMessage->Set<GERectangle>(3, inRectangle);
+    if (gEESelectUnitsTestHook != NULL) {   // TEST ONLY: the UI fixture's box selection (EETestFixture.cpp)
+        std::vector<long> theUnitIDs;
+        EESelectUnitsIDs(theMessage, theUnitIDs);
+        gEESelectUnitsTestHook(theUnitIDs);
+    }
+    return theMessage;
 }
 
-// The selection on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1 or 2 bytes of the ids' middle 16 bits follow) and the ids' low bytes; at most 63 ids.
-// FUNCTION: EXE 0x4c5e67
-// Packs unit ids into the compact selection format above (at most 63 ids); returns the byte count
-static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer)
-{
-    std::vector<uint32_t> theIDs(inUnits.begin(), inUnits.end());   // only the low 24 bits count
-    return ee_netmsg_compress_units(theIDs.empty() ? NULL : &theIDs[0], theIDs.size(), (uint32_t)inOwner, outBuffer);
-}
-
-// FUNCTION: EXE 0x4c5fd1
-// Decodes a compact selection buffer into unit ids, replacing the list
-static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits)
+// FUNCTION: EXE 0x4c5fd1 (DecompressUnits)
+// Decodes a box selection's compact buffer into unit ids, replacing the list
+void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
 {
     int32_t theIDs[0x100];
-    size_t theCount = ee_netmsg_decompress_units(inBuffer, inSize, theIDs, 0x100);
+    size_t theCount = ee_netmsg_decompress_units(inMessage->mList.empty() ? NULL : &inMessage->mList[0],
+                                                 (unsigned char)inMessage->mList.size(), theIDs, 0x100);
     outUnits.clear();
     for (size_t i = 0; i < theCount && i < 0x100; i++)
         outUnits.push_back(theIDs[i]);   // the original's long: the 32-bit value, sign-extended on LP64
-}
-
-// New (port), TEST ONLY: the two helpers above for the simulation capture's NMCU record (ee/EEMessageCapture.h)
-unsigned char EEMessageCaptureCompress(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer,
-                                       std::vector<long>& outUnits)
-{
-    unsigned char theSize = CompressUnits(inUnits, inOwner, outBuffer);
-    DecompressUnits(outBuffer, theSize, outUnits);
-    return theSize;
-}
-
-// FUNCTION: EXE 0x4c606b
-// Selects the decoded units for the sender
-void EEMSelectUnits::Execute()
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    thePlayer->SelectUnits(this->mUnitIDs);
-}
-
-// EEMSelectUnits' members as the codec's slots (the buffer: mBufferSize of its bytes)
-size_t EEMSelectUnits::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SELECT_UNITS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mBufferSize);
-    EeNetMsgSlot theBuffer = {this->mBuffer, this->mBufferSize, 0, 0};
-    outSlots[6] = theBuffer;
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c613d
-// Returns the message's debug label "Select Units"
-char* EEMSelectUnits::GetMessageLabel() const
-{
-    return "Select Units";
-}
-
-// FUNCTION: EXE 0x4c6143
-// Reads the box selection (header, selection id, buffer size, compressed ids) from a received payload and
-// decodes its unit ids
-void EEMSelectUnits::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14536);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    this->CodecSlots(theSlots);
-    theSlots[6].size = sizeof(this->mBuffer);   // room for the bytes the Rust copies in
-    ee_netmsg_import(EE_NETMSG_SELECT_UNITS, inPayloadPointer, theSlots, 7);
-    DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
-}
-
-// FUNCTION: EXE 0x4c626c
-// Kills every living selected unit whose class has a death-spawn class; acknowledges by voice
-static void ExecuteSelfDestruct(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    EEGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup->GetFirstUnit()) {
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            if (theUnit->mHitPoints > 0 && theUnit->mUnitClass->mDeathSpawnClass != NULL)
-                theUnit->Kill(1, 0, 0);
-        }
-        thePlayer->PlayAcknowledgement(theGroup->GetFirstUnit());
-    }
 }
 
 // FUNCTION: EXE 0x4c63e8
@@ -2357,18 +726,6 @@ static void ExecuteSendFlare(EEMRecord* m)
         (*it)->mEvents.AddEvent(theTile, 3, *it, -1, true);
         (*it)->FlareReceived(thePlayer, theTile);
     }
-}
-
-// FUNCTION: EXE 0x4c65d2
-// Gives the sender's selected airports an order for their aircraft: attack the target (a seen enemy) or go to
-// the point, in the queue(s) the command picks (12-15 add a 60 s timer; 15 shares one attack goal)
-static void ExecuteSetAirportCommand(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs set_airport_command: the attack or move
-    // goal, each selected airport's queues and timers by the command) over the store and EEUnitHost.cpp's calls
-    ee_units_set_airport_command(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), m->Get<GE2DPoint>(1).GetX(),
-                                 m->Get<GE2DPoint>(1).GetY(), m->Get<int32_t>(2), m->Get<int32_t>(3), m->Get<unsigned char>(4));
 }
 
 // FUNCTION: EXE 0x4c6b85
@@ -2399,18 +756,6 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
     unsigned long theAttacker;
     return this->mStats->mAttack > 0.0f && (theTarget = this->mUnitClass->mAmmoType, theAttacker = inClass->mFamily, inClass->CanBeAttacked())
            && EEDamageFactor(theAttacker, theTarget) > 0.0f;
-}
-
-// FUNCTION: EXE 0x4c6dca
-// Sets the rally goal of the sender's selected buildings of this type: gather, attack, repair, patrol, garrison,
-// clear (target is the building) or move; airports, docks and aircraft fill their own queues
-static void ExecuteSetRallyGoal(EEMRecord* m)
-{
-    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs set_rally_goal: the goal the target gives,
-    // the building owner's selected units' rally queues by the building's type, the marker and the acknowledgement)
-    // over the store and EEUnitHost.cpp's calls
-    ee_units_set_rally_goal(gWorld.GetPlayerBySlot(m->GetOriginatingSlot()), (uint32_t)m->Get<int32_t>(3),
-                            m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY(), m->Get<int32_t>(2), m->Get<unsigned char>(4));
 }
 
 // FUNCTION: EXE 0x4c74da
@@ -2453,19 +798,6 @@ bool EEFarmDistanceGreater::operator()(EEComplexUnit* inFirst, EEComplexUnit* in
     return theResult;
 }
 
-// FUNCTION: EXE 0x4c7739
-// Sends the selected citizens to farm near the target: farmers whose farm drops here deposit, others take the
-// nearest free farm, else gather to or move to the target
-static void ExecuteSmartFarmers(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units commands.rs smart_farmers: with a selection and a complex target, one
-    // active group of it keeps its citizens; each drops its load at the target, keeps its farm, takes the nearest free
-    // farm, drops what it carries or moves to the target; one unit drawn acknowledges; the group finishes) over the
-    // world calls of EEUnitHost.cpp
-    ee_units_smart_farmers(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1));
-}
-
 // New (R5b.4): the two farm sorts for the host (ee/EEUnitHost.h), here with their comparators
 void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool inGreater)
 {
@@ -2475,130 +807,22 @@ void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool 
         std::sort(ioFarms.begin(), ioFarms.end(), EETileDistanceLess(EETileCoordinate(inX, inY)));
 }
 
-// EEMStartLoading's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMStartLoading::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
+// FUNCTION: EXE 0x4c7cdc (EEMStartLoading::Execute)
+// Starts loading the game: seeds the random generator, sets the human player count and multiplayer flag (members:
+// the humans, the seed). Not static: the legacy harness's seed pin breaks here and writes the seed into the record
+// (tools/build.py HARNESS_HOOKS, tools/harness/game_session.py).
+void EEStartLoading(EEMRecord* m)
 {
-    outClass = EE_NETMSG_START_LOADING;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mNumHumanPlayers);
-    outSlots[6] = EENetMsgField(this->mSeed);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c7cdc
-// Starts loading the game: seeds the random generator, sets the human player count and multiplayer flag
-void EEMStartLoading::Execute()
-{
-    FSFileSpec theFile;
-    UString theName;
     if (gPlatSimSeedSet)   // TEST ONLY: the headless simulation's seed (platform/PlatSim.h; the harness's --seed pin)
-        this->mSeed = (long)gPlatSimSeed;
+        m->Set<int32_t>(2, (int32_t)gPlatSimSeed);
     gGameOptions.mLock->ReadLock();
     gGameOptions.Fn130272();
     gGameOptions.mLock->ReadUnlock();
-    gPhysics->mRandom.SetSeed(this->mSeed);
-    gUserInterface->mRandomSeed = this->mSeed;
-    gCommunications->SetNumHumanPlayers(this->mNumHumanPlayers);
-    gCommunications->SetIsMultiplayerSession(this->mNumHumanPlayers > 1);
+    gPhysics->mRandom.SetSeed(m->Get<int32_t>(2));
+    gUserInterface->mRandomSeed = m->Get<int32_t>(2);
+    gCommunications->SetNumHumanPlayers(m->Get<unsigned char>(1));
+    gCommunications->SetIsMultiplayerSession(m->Get<unsigned char>(1) > 1);
     gUserInterface->PostStartLoading();
-}
-
-// FUNCTION: EXE 0x4c7e84
-// On the server, counts each slot's loading reply once; when every human has replied, sends the slot table
-// and tells everyone to show the main screen
-static void ExecuteStartLoadingResponse(EEMRecord* m)
-{
-    static std::vector<unsigned char> sResponses;
-    if (gCommunications->IsServer()) {
-        EEServer* theServer = static_cast<EEServer*>(gCommunications);
-        unsigned char theNumResponses = theServer->mNumLoadResponses;
-        if (!theNumResponses) {
-            sResponses.clear();
-            theServer->ClearSendToSlotArray();
-        }
-        if (std::find(sResponses.begin(), sResponses.end(), m->Get<unsigned char>(1)) == sResponses.end()) {
-            sResponses.push_back(m->Get<unsigned char>(1));
-            theServer->mNumLoadResponses = theNumResponses + 1;
-            if (m->Get<unsigned char>(2) != 0xff)
-                theServer->SetSendToSlotForPlayer(m->Get<unsigned char>(2), theServer->GetSendToSlot(m->Get<unsigned char>(3)));
-            if (theNumResponses + 1 == theServer->GetNumHumanPlayers()) {
-                theServer->SendPlayerSlotInfo();
-                theServer->mLoadState = 2;
-                gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadMainScreen, {0}), kSlotNone);
-            }
-        }
-    }
-}
-
-// FUNCTION: EXE 0x4c80bf
-// Asks the physics thread to snap the day/night cycle to daylight
-static void ExecuteSnapToDaylight(EEMRecord* m)
-{
-    gPhysics->mThread->Post(0x503, NULL, NULL, true);
-}
-
-// FUNCTION: EXE 0x4c818d
-// Stops the sender's living selected units: aircraft drop their orders and, unless taking off, flying a
-// pattern or landing, hold at their tile; other units halt
-static void ExecuteStopActiveGroup(EEMRecord* m)
-{
-    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs stop_active_group: aircraft drop their
-    // orders and, unless airborne, move to their tile; the other living units halt)
-    ee_units_stop_active_group(static_cast<EEGroup*>(gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup));
-}
-
-// FUNCTION: EXE 0x4c840a
-// Debug: when the mode value is negative, sets the collision cell size (if positive) or cycles the
-// collision flags 0..15
-static void ExecuteToggleCollisionDetection(EEMRecord* m)
-{
-    if (m->Get<int32_t>(2) < 0) {
-        if (m->Get<int32_t>(1) > 0)
-            gCollisionDetectionUnit = m->Get<int32_t>(1);
-        else
-            gWorld.mCollisionDetectionFlags = (gWorld.mCollisionDetectionFlags + 1) % 16;
-    }
-}
-
-// FUNCTION: EXE 0x4c84df
-// Asks the physics thread to toggle the day/night cycle
-static void ExecuteToggleDayNight(EEMRecord* m)
-{
-    gPhysics->mThread->Post(0x502, NULL, NULL, true);
-}
-
-// FUNCTION: EXE 0x4c8615
-// Splits the sender's selection by kind; parts with a loaded transport unload at the point, the rest move
-// there (a loaded transport that cannot unload there raises a warning event)
-static void ExecuteUnloadTransport(EEMRecord* m)
-{
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
-    // New (R5b.4): the body is Rust (ee_units group.rs unload_transport: per formation slot a group of the selection
-    // spreads for the unload; a loaded transport that can unload there gets the unload goal, else the group moves to
-    // the tile, with the warning event for a loaded one) over the world calls of EEUnitHost.cpp
-    ee_units_unload_transport(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (int64_t)m->Get<int32_t>(2),
-                              (int64_t)m->Get<int32_t>(3));
-}
-
-// FUNCTION: EXE 0x4c889e
-// Clears the sender's selection
-static void ExecuteUnselectAllUnits(EEMRecord* m)
-{
-    gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->UnselectAllUnits();
-}
-
-// FUNCTION: EXE 0x4c8972
-// Stores a slot's ping in the game options under the write lock and refreshes that lobby row
-static void ExecuteUpdatePingStat(EEMRecord* m)
-{
-    EEGameOptionsPlayer thePlayer;
-    gGameOptions.mLock->WriteLock();
-    thePlayer = gGameOptions.mPlayers[m->Get<unsigned char>(1)];
-    thePlayer.mPing = m->Get<float>(2);
-    gGameOptions.mPlayers[m->Get<unsigned char>(1)] = thePlayer;
-    gGameOptions.mLock->WriteUnlock();
-    gUserInterface->PostLobbyUpdatePlayer(m->Get<unsigned char>(1), 1);
 }
 
 // FUNCTION: EXE 0x4c8ae4
@@ -2621,117 +845,46 @@ static void ExecuteImproveUnit(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4c8cbb
-// During recorded-game playback, applies the sender's camera zoom when the sender is the local player
-static void ExecuteZoomInfo(EEMRecord* m)
-{
-    if ((gCommunications->IsClient() == true
-         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
-        || (gCommunications->IsServer() == true
-            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
-        if (m->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot)
-            gWorld.mCameraControl.SetZoom(m->Get<float>(1));
-    }
-}
-
-// FUNCTION: EXE 0x4c8df1
-// Sets the behaviour (stance) of the sender's selected units that can change it
-static void ExecuteSetUnitBehavior(EEMRecord* m)
-{
-    EEGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
-    EEUnitBehavior* theBehavior = EEUnitBehavior::sTable[m->Get<int32_t>(1)];
-    for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-        if (theGroup->GetUnit(i)->mUnitClass->mCanChangeBehavior) {
-            EEUnitBehavior*& theUnitBehavior = theGroup->GetUnit(i)->mBehavior;
-            if (theUnitBehavior != theBehavior)
-                theUnitBehavior = theBehavior;
-        }
-    }
-}
-
-// Inline members of ee/EEMessage.h whose first user is the message factory (0xba41b..0xbadd0): the import
-// ctors VC6 refused to expand there, the labels and other virtuals pulled in with the vtables, ??_G
+// Inline members of other headers whose first user is in this unit (the original's message classes' import ctors,
+// labels and ??_G at 0xba41b..0xbadd0 have no counterpart: every game message is an EEMRecord)
 // SYNTHETIC: EXE 0x4ba41b   ??0EEMSelectUnits@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba47b   ??0EEMAddPatrolPoint@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba4b8   ?GetMessageLabel@EEMAddRemoveResources@@UBEPADXZ
 // SYNTHETIC: EXE 0x4ba4be   ??0EEMAddUnitToSelectedGroup@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba4f1   ?GetMessageLabel@EEMAttackGround@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba4f7   ?GetMessageLabel@EEMAttackPlayers@@UBEPADXZ
 // SYNTHETIC: EXE 0x4ba4fd   ??0EEMBuildGate@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba53a   ??0EEMBuildUnit@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba577   ??0EEMBuildWall@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba5be   ??0EEMCameraLocationInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba600   ?GetMessageLabel@EEMCameraLocationInfo@@UBEPADXZ
 // SYNTHETIC: EXE 0x4ba606   ??0EEMChat@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba64a   ??_GEEMChat@@UAEPAXI@Z
 // SYNTHETIC: EXE 0x4ba684   ??0EEMCivUpgrades@@QAE@XZ
-// SYNTHETIC: EXE 0x4ba6d1   ?SetName@EEMCivUpgrades@@UAEXABVUWideString@@@Z
 // SYNTHETIC: EXE 0x4ba6e1   ??_GEEMCivUpgrades@@UAEPAXI@Z
 // SYNTHETIC: EXE 0x4ba6fd   ??1EEMCivUpgrades@@UAE@XZ
 // SYNTHETIC: EXE 0x4ba727   ??_GEEMCivUpgradesPurchased@@UAEPAXI@Z
 // SYNTHETIC: EXE 0x4ba749   ??_GEEMCivUpgradesRequested@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba76b   ?GetMessageLabel@EEMDisband@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba771   ?GetMessageLabel@EEMEdictPreProposal@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba777   ?GetMessageLabel@EEMEdictPreProposalResponse@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba77d   ?GetMessageLabel@EEMEdictProposal@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba783   ?GetMessageLabel@EEMEdictVote@@UBEPADXZ
 // SYNTHETIC: EXE 0x4ba789   ??0EEMExchangeResources@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba7bc   ?GetMessageLabel@EEMExplore@@UBEPADXZ
 // SYNTHETIC: EXE 0x4ba7c2   ??0EEMGameOptions@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba806   ??_GEEMGameOptions@@UAEPAXI@Z
 // SYNTHETIC: EXE 0x4ba83a   ??0EEMFullGameOptions@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba87e   ??0EEMHackANewUnit@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba8bb   ?GetMessageLabel@EEMHackANewUnit@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba8c1   ?GetMessageLabel@EEMImmediateCargoUnload@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba8c7   ?GetMessageLabel@EEMIncrementEpic@@UBEPADXZ
 // SYNTHETIC: EXE 0x4ba8cd   ??0EEMInGameChat@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4ba911   ??_GEEMInGameChat@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba94b   ?GetMessageLabel@EEMLoadMainScreen@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba951   ?GetMessageLabel@EEMLoadMainScreenResponse@@UBEPADXZ
 // SYNTHETIC: EXE 0x4ba957   ??0EEMLoadOrSaveGame@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba99b   ?GetMessageLabel@EEMLoadOrSaveGame@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba9a1   ?GetSendToAllAndWaitMessageID@EEMLoadOrSaveGame@@UBE_NAAK@Z
-// SYNTHETIC: EXE 0x4ba9af   ?SetSendToAllAndWaitMessageID@EEMLoadOrSaveGame@@UAEXK@Z
 // SYNTHETIC: EXE 0x4ba9b9   ??_GEEMLoadOrSaveGame@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba9ed   ?GetMessageLabel@EEMLoadOrSaveGameResponse@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba9f3   ?GetMessageLabel@EEMLoadPercent@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba9f9   ?GetMessageLabel@EEMLoadUnitData@@UBEPADXZ
-// SYNTHETIC: EXE 0x4ba9ff   ?GetMessageLabel@EEMLoadGarrison@@UBEPADXZ
-// SYNTHETIC: EXE 0x4baa05   ?GetMessageLabel@EEMSelfDestruct@@UBEPADXZ
-// SYNTHETIC: EXE 0x4baa0b   ?GetMessageLabel@EEMUnloadTransport@@UBEPADXZ
-// SYNTHETIC: EXE 0x4baa11   ?GetMessageLabel@EEMKillUnit@@UBEPADXZ
-// SYNTHETIC: EXE 0x4baa17   ?GetMessageLabel@EEMMakeWorldVisible@@UBEPADXZ
-// SYNTHETIC: EXE 0x4baa1d   ?GetMessageLabel@EEMMigrationSlotInfo@@UBEPADXZ
-// SYNTHETIC: EXE 0x4baa23   ?GetMessageLabel@EEMNewEdictEnacted@@UBEPADXZ
-// SYNTHETIC: EXE 0x4baa29   ?GetMessageLabel@EEMPayTribute@@UBEPADXZ
 // SYNTHETIC: EXE 0x4baa2f   ??0EEMFullPlayerInformation@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4baa73   ??0EEMPlayerSlotInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4baab7   ?GetMessageLabel@EEMPlayerSlotInfo@@UBEPADXZ
 // SYNTHETIC: EXE 0x4baabd   ??_GEEMFullGameOptions@@UAEPAXI@Z
 // SYNTHETIC: EXE 0x4baaf1   ??0EEMSelectTheseUnits@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4bab3d   ??_GEEMSelectTheseUnits@@UAEPAXI@Z
 // SYNTHETIC: EXE 0x4bab76   ??0EEMSetAirportCommand@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4babb3   ?GetMessageLabel@EEMSetAirportCommand@@UBEPADXZ
-// SYNTHETIC: EXE 0x4babb9   ?GetMessageLabel@EEMSetDiplomaticStance@@UBEPADXZ
 // SYNTHETIC: EXE 0x4babbf   ??0EEMSetRallyGoal@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4babfc   ?GetMessageLabel@EEMSendFlare@@UBEPADXZ
-// SYNTHETIC: EXE 0x4bac02   ?GetMessageLabel@EEMRecordFrames@@UBEPADXZ
-// SYNTHETIC: EXE 0x4bac08   ?GetMessageLabel@EEMStartLoading@@UBEPADXZ
-// SYNTHETIC: EXE 0x4bac0e   ?GetMessageLabel@EEMStartLoadingResponse@@UBEPADXZ
-// SYNTHETIC: EXE 0x4bac14   ?GetMessageLabel@EEMSetWaterLevel@@UBEPADXZ
 // SYNTHETIC: EXE 0x4bac1a   ??0EEMSnapToDaylight@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac4d   ?GetMessageLabel@EEMSnapToDaylight@@UBEPADXZ
 // SYNTHETIC: EXE 0x4bac53   ??0EEMToggleCollisionDetection@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac86   ?GetMessageLabel@EEMToggleCollisionDetection@@UBEPADXZ
 // SYNTHETIC: EXE 0x4bac8c   ??0EEMToggleDayNight@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bacbf   ?GetMessageLabel@EEMToggleDayNight@@UBEPADXZ
 // SYNTHETIC: EXE 0x4bacc5   ??0EEMUnselectAllUnits@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4bacf8   ??0EEMUpdatePingStat@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4bad2b   ??0EEMImproveUnit@@QAE@PAE@Z
 // SYNTHETIC: EXE 0x4bad5e   ??0EEMZoomInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bad91   ?GetMessageLabel@EEMZoomInfo@@UBEPADXZ
 // SYNTHETIC: EXE 0x4bad97   ??0EEMSetUnitBehavior@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4badca   ?GetMessageLabel@EEMSetUnitBehavior@@UBEPADXZ
 // SYNTHETIC: EXE 0x4bb02a   ?ClearGoal@EEActiveGroup@@QAEXXZ
 // SYNTHETIC: EXE 0x4bd11c   ?ProcessEvent@EEUIEProcessTimerExpired@@UAEJPAVUIForm@@PAVUIEntity@@@Z
 // SYNTHETIC: EXE 0x4bdb42   ??0EEAAddChatMessage@@QAE@ABVUWideString@@_N@Z
@@ -2796,110 +949,456 @@ static void ExecuteSetUnitBehavior(EEMRecord* m)
 // TEMPLATE: EXE 0x4ca240
 // TEMPLATE: EXE 0x4ca290
 
-// the record types' Execute bodies (a type with none does nothing)
-static const struct {
-    unsigned char mType;
-    void (*mExecute)(EEMRecord* m);
-} kRecordExecutes[] = {
-    {kMessageAddPatrolPoint, ExecuteAddPatrolPoint},
-    {kMessageAddRemoveResources, ExecuteAddRemoveResources},
-    {kMessageAddUnitToSelectedGroup, ExecuteAddUnitToSelectedGroup},
-    {kMessageAlwaysAddUnitToSelectedGroup, ExecuteAlwaysAddUnitToSelectedGroup},
-    {kMessageAttackGround, ExecuteAttackGround},
-    {kMessageAttackPlayers, ExecuteAttackPlayers},
-    {kMessageAttackUnit, ExecuteAttackUnit},
-    {kMessageBuildGate, ExecuteBuildGate},
-    {kMessageBuildUnit, ExecuteBuildUnit},
-    {kMessageBuildWall, ExecuteBuildWall},
-    {kMessageCastCalamity, ExecuteCastCalamity},
-    {kMessageChangeFormation, ExecuteChangeFormation},
-    {kMessageChangeSelectedUnitCollisionSphere, ExecuteChangeSelectedUnitCollisionSphere},
-    {kMessageChat, ExecuteChat},
-    {kMessageCheatCode, ExecuteCheatCode},
-    {kMessageCivTimerExpired, ExecuteCivTimerExpired},
-    {kMessageClearAirportCommands, ExecuteClearAirportCommands},
-    {kMessageDisband, ExecuteDisband},
-    {kMessageDropoffResource, ExecuteDropoffResource},
-    {kMessageEdictProposal, ExecuteEdictProposal},
-    {kMessageEndCinematic, ExecuteEndCinematic},
-    {kMessageEnterShiftMode, ExecuteEnterShiftMode},
-    {kMessageExchangeResources, ExecuteExchangeResources},
-    {kMessageExitShiftMode, ExecuteExitShiftMode},
-    {kMessageExplore, ExecuteExplore},
-    {kMessageFullGameOptions, ExecuteFullGameOptions},
-    {kMessageGameOptions, ExecuteGameOptions},
-    {kMessageGameRestarting, ExecuteGameRestarting},
-    {kMessageGameSpeed, ExecuteGameSpeed},
-    {kMessageGatherResource, ExecuteGatherResource},
-    {kMessageGoFanatic, ExecuteGoFanatic},
-    {kMessageHackANewUnit, ExecuteHackANewUnit},
-    {kMessageHaltSelectedGroup, ExecuteHaltSelectedGroup},
-    {kMessageHealUnit, ExecuteHealUnit},
-    {kMessageImmediateCargoUnload, ExecuteImmediateCargoUnload},
-    {kMessageImproveUnit, ExecuteImproveUnit},
-    {kMessageInGameChat, ExecuteInGameChat},
-    {kMessageIncrementEpic, ExecuteIncrementEpic},
-    {kMessageIncrementRallyTimer, ExecuteIncrementRallyTimer},
-    {kMessageJITManufacturing, ExecuteJITManufacturing},
-    {kMessageKillUnit, ExecuteKillUnit},
-    {kMessageLagStatus, ExecuteLagStatus},
-    {kMessageLoadGarrison, ExecuteLoadGarrison},
-    {kMessageLoadMainScreen, ExecuteLoadMainScreen},
-    {kMessageLoadMainScreenResponse, ExecuteLoadMainScreenResponse},
-    {kMessageLoadPercent, ExecuteLoadPercent},
-    {kMessageLoadTransport, ExecuteLoadTransport},
-    {kMessageLoadUnitData, ExecuteLoadUnitData},
-    {kMessageLockUnlock, ExecuteLockUnlock},
-    {kMessageMakeWorldVisible, ExecuteMakeWorldVisible},
-    {kMessageMigrationSlotInfo, ExecuteMigrationSlotInfo},
-    {kMessagePackUnpack, ExecutePackUnpack},
-    {kMessagePathTo, ExecutePathTo},
-    {kMessagePatrol, ExecutePatrol},
-    {kMessagePayTribute, ExecutePayTribute},
-    {kMessagePlayerInformation, ExecutePlayerInformation},
-    {kMessageRecordFrames, ExecuteRecordFrames},
-    {kMessageRemoveImprovement, ExecuteRemoveImprovement},
-    {kMessageRemoveTechnology, ExecuteRemoveTechnology},
-    {kMessageRemoveUnitFromSelectedGroup, ExecuteRemoveUnitFromSelectedGroup},
-    {kMessageRepairUnit, ExecuteRepairUnit},
-    {kMessageReplantFarms, ExecuteReplantFarms},
-    {kMessageReportStatistics, ExecuteReportStatistics},
-    {kMessageResearchTechnology, ExecuteResearchTechnology},
-    {kMessageResign, ExecuteResign},
-    {kMessageReturnToBase, ExecuteReturnToBase},
-    {kMessageSavedGroupAddSelection, ExecuteSavedGroupAddSelection},
-    {kMessageSavedGroupClear, ExecuteSavedGroupClear},
-    {kMessageSavedGroupCreate, ExecuteSavedGroupCreate},
-    {kMessageSavedGroupSelect, ExecuteSavedGroupSelect},
-    {kMessageScrambleAircraft, ExecuteScrambleAircraft},
-    {kMessageSelectCustomPlayerForChat, ExecuteSelectCustomPlayerForChat},
-    {kMessageSelectPatrolGroup, ExecuteSelectPatrolGroup},
-    {kMessageSelectPlayerChatType, ExecuteSelectPlayerChatType},
-    {kMessageSelectUnit, ExecuteSelectUnit},
-    {kMessageSelfDestruct, ExecuteSelfDestruct},
-    {kMessageSendFlare, ExecuteSendFlare},
-    {kMessageSetAirportCommand, ExecuteSetAirportCommand},
-    {kMessageSetDiplomaticStance, ExecuteSetDiplomaticStance},
-    {kMessageSetRallyGoal, ExecuteSetRallyGoal},
-    {kMessageSetUnitBehavior, ExecuteSetUnitBehavior},
-    {kMessageSmartFarmers, ExecuteSmartFarmers},
-    {kMessageSnapToDaylight, ExecuteSnapToDaylight},
-    {kMessageStartLoadingResponse, ExecuteStartLoadingResponse},
-    {kMessageStopActiveGroup, ExecuteStopActiveGroup},
-    {kMessageToggleCollisionDetection, ExecuteToggleCollisionDetection},
-    {kMessageToggleDayNight, ExecuteToggleDayNight},
-    {kMessageUnloadTransport, ExecuteUnloadTransport},
-    {kMessageUnselectAllUnits, ExecuteUnselectAllUnits},
-    {kMessageUpdatePingStat, ExecuteUpdatePingStat},
-    {kMessageZoomInfo, ExecuteZoomInfo},
-};
+// New (game messages lane, round 5): the record types' Execute bodies are Rust (ee_netmsg bodies.rs): it reads the
+// members, makes the decisions and asks here for each world call (EE_NETMSG_OP_*: an object, a fact, an action); the
+// unit orders go to the units lane's bodies. The bodies that stay here are the lobby's, the files', the strings' and
+// the screens' (kNetMsgBodies).
+// the bodies the C++ keeps (EE_NETMSG_BODY_*, in its order)
+static void (*const kNetMsgBodies[])(EEMRecord* m) = {
+    ExecuteCivUpgradesPurchased, ExecuteCivUpgradesRequested, ExecuteImmediateCargoUnload, ExecuteImproveUnit,
+    ExecuteLoadMainScreen, ExecuteLoadOrSaveGame, ExecuteLoadUnitData, ExecuteMigrationSlotInfo, ExecuteSavedGroupSelect,
+    ExecuteSendFlare, ExecuteSetDiplomaticStance, EEStartLoading, ExecuteChangeFormation};
+static const long kNetMsgTexts[] = {IDS_WARNING_YOU_ARE_RUNNING_OUT, IDS_CIVILIZATION_SELECTION_TIME_HAS_EXPIRED,
+                                    IDS_YOU_MAY_NOT_UNPACK_ALL_UNITS, IDS_SETUP_ALL, IDS_SETUP_ALLIES, IDS_SETUP_ENEMIES,
+                                    IDS_SETUP_CUSTOM, IDS_OBSERVERS};
+static const long kNetMsgSounds[] = {kSoundClockTick, kSoundCashRegister};
+
+// the world's actions (EE_NETMSG_OP_WORLD_ACT): the lobby's, the loading's, the chat's, the world's one calls
+static void EENetMsgWorldAct(EEMRecord* m, const int64_t* i, const float* f, EEPlayer* a, EEPlayer* b)
+{
+    EEServer* theServer = static_cast<EEServer*>(gCommunications);
+    switch (i[0]) {
+    case EE_NETMSG_WACT_ATTACK_PLAYERS: EEAttackPlayers(i[1], (unsigned char)i[2]); break;
+    case EE_NETMSG_WACT_BUILD_GATE: {
+        EETileCoordinate theTile;
+        theTile.mX = (long)f[0];
+        theTile.mY = (long)f[1];
+        EEBuildGate(theTile, i[1], i[2], i[3]);
+        break;
+    }
+    case EE_NETMSG_WACT_EDICT: gWorld.mVoting.Propose((unsigned short)i[1], 15); gPhysics->mF84 = 0.0f; break;
+    case EE_NETMSG_WACT_END_CINEMATIC: gWorld.mScenarioManager->EndCinematic(); break;
+    case EE_NETMSG_WACT_GAME_SPEED: gWorld.SetGameSpeed(f[0]); break;
+    case EE_NETMSG_WACT_MIGRATING_OFF:   // the host migration over as the game restarts
+        if (gCommunications && gCommunications->IsClient())
+            static_cast<EEClient*>(gCommunications)->mIsMigrating = false;
+        else if (gCommunications)
+            theServer->mIsMigrating = false;
+        break;
+    case EE_NETMSG_WACT_LAG: gWorld.mLagStatus = (unsigned short)i[1]; gUserInterface->SetLagStatus((unsigned short)i[1], (unsigned char)i[2]); break;
+    case EE_NETMSG_WACT_LOAD_PERCENT: gUserInterface->SetLoadPercent((int32_t)i[1], (uint32_t)i[2]); break;
+    case EE_NETMSG_WACT_POST_PHYSICS: gPhysics->mThread->Post(i[1], NULL, NULL, true); break;
+    case EE_NETMSG_WACT_COLLISION_UNIT: gCollisionDetectionUnit = i[1]; break;
+    case EE_NETMSG_WACT_COLLISION_FLAGS: gWorld.mCollisionDetectionFlags = (gWorld.mCollisionDetectionFlags + 1) % 16; break;
+    case EE_NETMSG_WACT_ZOOM: gWorld.mCameraControl.SetZoom(f[0]); break;
+    case EE_NETMSG_WACT_RECORD_FRAMES:   // slow or normal playback
+        gGraphics->PostSetFlag5B(i[1] != 0);
+        gPhysics->SetSlowPlayback(i[1] != 0);
+        if (gCommunications->IsClient() && i[1])
+            static_cast<NESynchronousClient*>(gCommunications)->SetSlowPlayback();
+        else if (gCommunications->IsClient())
+            static_cast<NESynchronousClient*>(gCommunications)->SetNormalPlayback();
+        break;
+    case EE_NETMSG_WACT_OPTIONS_LOCK:
+        if (i[1])
+            gGameOptions.mLock->WriteLock();
+        else {
+            gGameOptions.mLock->WriteUnlock();
+            gUserInterface->PostLobbyUpdateGameOptions();
+        }
+        break;
+    case EE_NETMSG_WACT_PLAYER_INFO: {   // lobby slot i1's field i2 (port: 6 a computer's engine) set to i3, the ping f0
+        EEGameOptionsPlayer thePlayer;
+        uint32_t theValue = (uint32_t)i[3];
+        gGameOptions.mLock->WriteLock();
+        thePlayer = gGameOptions.mPlayers[i[1]];
+        switch (i[2]) {
+        case kPlayerInfoEngine: thePlayer.mEngine = theValue < EECPEngineChoiceCount() ? theValue : (unsigned long)kEECPChoiceClassic; break;
+        case 5: thePlayer.mIsReady = theValue > 0; break;
+        case 4: thePlayer.mStartingCitizens = theValue; break;
+        case 3: thePlayer.mTeam = theValue; break;
+        case 2: thePlayer.mColor = theValue; break;
+        case 1: thePlayer.mPing = f[0]; break;
+        case 0: thePlayer.mType = theValue; break;
+        }
+        gGameOptions.mPlayers[i[1]] = thePlayer;
+        gGameOptions.mLock->WriteUnlock();
+        gUserInterface->PostLobbyUpdatePlayer(i[1], i[2]);
+        break;
+    }
+    case EE_NETMSG_WACT_POST_CHAT: {
+        EEAction* theAction = new EEAAddChatMessage(m->mString, i[1] != 0);
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        break;
+    }
+    case EE_NETMSG_WACT_TIMER_EXPIRED: {
+        UIEvent* theEvent = new EEUIEProcessTimerExpired;
+        gUserInterface->PostEvent(theEvent, NULL);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_NETMSG_WACT_START_GAME: {   // every human has shown the main screen: the start at the offset time
+        unsigned long theTime = TMGetTime();
+        NEMessage* theMessage = new NEMRecord(kNetMessageStartGame, {theTime});
+        theServer->mLoadState = 0;
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+        theServer->SetGameState(2);
+        break;
+    }
+    case EE_NETMSG_WACT_CLEAR_SEND_TO_SLOTS: theServer->ClearSendToSlotArray(); break;
+    case EE_NETMSG_WACT_LOAD_RESPONSES: theServer->mNumLoadResponses = (unsigned char)i[1]; break;
+    case EE_NETMSG_WACT_SEND_TO_SLOT: theServer->SetSendToSlotForPlayer((unsigned char)i[1], theServer->GetSendToSlot((unsigned char)i[2])); break;
+    case EE_NETMSG_WACT_ALL_LOADED:   // every human has loaded: the slots sent, the main screen shown everywhere
+        theServer->SendPlayerSlotInfo();
+        theServer->mLoadState = 2;
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadMainScreen, {0}), kSlotNone);
+        break;
+    case EE_NETMSG_WACT_CHAT_LOG: EEGameLogChat(a->mPlayerID, (const char*)m->mString); break;   // port: the game log
+    case EE_NETMSG_WACT_SHOW_CHAT: {   // the sender a's chat target's text (an observer's: the observers'), the line
+        UWideString theType;
+        for (int k = 1; k <= 2; k++)
+            if (i[k] >= 0)
+                gResource->GetString(kNetMsgTexts[i[k]], theType);
+        if (theType.GetLength() != 0)
+            theType = theType + " ";
+        gUserInterface->AddChatLogEntry(a->mColor, a->mName, theType + m->mString, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
+        EESoundObject* theSound = a != b ? EESoundObject::Get(kSoundIncomingChatMessage) : NULL;
+        if (theSound)
+            theSound->Play();
+        break;
+    }
+    case EE_NETMSG_WACT_LAST_CHAT: gWorld.mScenarioManager->mLastChatText = m->mString; break;
+    case EE_NETMSG_WACT_TRIBUTE_TEXT: {   // "<you tribute> <to> " (viewer 1) or "<from> <tributes you> ", the amounts
+        static const long kNames[7] = {0, 0, IDS_RESOURCE_NAME_FOOD, IDS_RESOURCE_NAME_WOOD, IDS_RESOURCE_NAME_STONE,
+                                       IDS_RESOURCE_NAME_GOLD, IDS_RESOURCE_NAME_IRON};
+        UWideString theYou;
+        UWideString theName;
+        UWideString theText(0x400);
+        char theNumber[8];
+        gResource->GetString(i[1] == 1 ? IDS_YOU_TRIBUTE : IDS_TRIBUTES_YOU, theYou);
+        if (i[1] == 1)
+            sprintf(theText, "%s %s ", (const char*)theYou, (const char*)b->mName);
+        else
+            sprintf(theText, "%s %s ", (const char*)a->mName, (const char*)theYou);
+        for (long k = 0; k < i[2]; k++) {
+            long r = (long)((i[3] >> (8 * k)) & 0xff);   // wood's name is carbon's on the carbon maps
+            gResource->GetString(r == 3 && gWorld.mUsingCarbon ? IDS_CARBON : kNames[r], theName);
+            PlatIToA((uint32_t)i[4 + r - 2], theNumber, 10);
+            theText += theNumber;
+            theText += " ";
+            theText += theName;
+            theText += " ";
+        }
+        gUserInterface->AddChatLogEntry(a->mColor, a->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
+        break;
+    }
+    case EE_NETMSG_WACT_RESIGN_TEXT: {   // "<name> has resigned" for the others
+        UWideString theText;
+        UWideString theFormat;
+        UWideString theName;
+        gResource->GetString(IDS_PLAYER_HAS_RESIGNED_FROM_GAME, theFormat);
+        sprintf(theText, theFormat, (const char*)a->mName);
+        gResource->GetString(IDS_MSG_GAME, theName);
+        gUserInterface->AddChatLogEntry(GEColor(1.0f, 1.0f, 1.0f), theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
+        break;
+    }
+    case EE_NETMSG_WACT_FLUSH: gPhysics->FlushWorld(); break;
+    }
+}
+
+static int64_t EENetMsgHost(uint32_t inOp, EeNetMsgCall* c)
+{
+    EEMRecord* m = (EEMRecord*)(uintptr_t)c->message;
+    EEPlayer* p = (EEPlayer*)(uintptr_t)c->a;
+    EEGroup* g = (EEGroup*)(uintptr_t)c->a;
+    EEComplexUnit* u = (EEComplexUnit*)(uintptr_t)c->b;   // an EEUnit* when a world lookup gave it
+    int64_t* i = c->i;
+    switch (inOp) {
+    case EE_NETMSG_OP_SENDER: return (int64_t)(uintptr_t)gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    case EE_NETMSG_OP_PLAYER: return (int64_t)(uintptr_t)gWorld.mPlayers[i[0]];
+    case EE_NETMSG_OP_CURRENT: return (int64_t)(uintptr_t)gWorld.GetCurrentPlayer();
+    case EE_NETMSG_OP_GROUP: return (int64_t)(uintptr_t)static_cast<EEGroup*>(p->mActiveGroup);
+    case EE_NETMSG_OP_SAVED_GROUP: return (int64_t)(uintptr_t)static_cast<EEGroup*>(p->mGroups[i[0]]);
+    case EE_NETMSG_OP_GROUP_COUNT: return g->GetNumUnits();
+    case EE_NETMSG_OP_GROUP_UNIT: return (int64_t)(uintptr_t)g->GetUnit(i[0]);
+    case EE_NETMSG_OP_GROUP_FIRST: return (int64_t)(uintptr_t)g->GetFirstUnit();
+    case EE_NETMSG_OP_GROUP_CONTAINS: return g->Contains(u);
+    case EE_NETMSG_OP_GROUP_ADD: g->Add(u); return 0;
+    case EE_NETMSG_OP_GROUP_CLEAR: g->Clear(); return 0;
+    case EE_NETMSG_OP_UNIT: return (int64_t)(uintptr_t)gWorld.GetUnit(i[0]);
+    case EE_NETMSG_OP_UNIT_FACT:
+        switch (i[0]) {
+        case EE_NETMSG_UNIT_HIT_POINTS: return u->mHitPoints;
+        case EE_NETMSG_UNIT_TYPE: return u->mUnitClass->mUnitType;
+        case EE_NETMSG_UNIT_CATEGORY: return u->GetUnitClass()->mCategory;
+        case EE_NETMSG_UNIT_MAX_HIT_POINTS: return u->mStats->mMaxHitPoints;
+        case EE_NETMSG_UNIT_CAN_DISBAND: return u->mUnitClass->mCanDisband;
+        case EE_NETMSG_UNIT_IS_PACKED: return u->mIsPacked;
+        case EE_NETMSG_UNIT_PACKED_CLASS: return (int64_t)(uintptr_t)u->mUnitClass->mPackedClass;
+        case EE_NETMSG_UNIT_FLIGHT_TIME: return u->mFlightTime;
+        case EE_NETMSG_UNIT_DEATH_SPAWN: return u->mUnitClass->mDeathSpawnClass != NULL;
+        case EE_NETMSG_UNIT_CAN_CHANGE_BEHAVIOR: return u->mUnitClass->mCanChangeBehavior;
+        case EE_NETMSG_UNIT_COMPLEX: return (int64_t)(uintptr_t)u->mComplexUnit;
+        case EE_NETMSG_UNIT_TILE_NODE: return u->mTileNode != NULL;
+        case EE_NETMSG_UNIT_OWNER: return (int64_t)(uintptr_t)u->mPlayer;
+        case EE_NETMSG_UNIT_LAND_BUILDING: return u->mUnitClass->IsLandBuilding();
+        case EE_NETMSG_UNIT_PAID_FOR: return u->mIsPaidFor;
+        case EE_NETMSG_UNIT_BUILT: return u->mIsBuilt;
+        case EE_NETMSG_UNIT_CAN_DELETE: return u->CanDelete();
+        case EE_NETMSG_UNIT_TILE_X: return u->GetTileX();
+        case EE_NETMSG_UNIT_TILE_Y: return u->GetTileY();
+        case EE_NETMSG_UNIT_DOMAINS: return u->mUnitClass->mDomains;
+        case EE_NETMSG_UNIT_NEXT: return (int64_t)(uintptr_t)u->mNext;
+        case EE_NETMSG_UNIT_AS_COMPLEX: return (int64_t)(uintptr_t)EEUnitCast<EEComplexUnit>(static_cast<EEUnit*>(u));
+        case EE_NETMSG_UNIT_IN_SET: return gUnitSetManager.GetSet(i[1])->Contains(u->mUnitClass->mUnitType);
+        }
+        return 0;
+    case EE_NETMSG_OP_PLAYER_FACT:
+        switch (i[0]) {
+        case EE_NETMSG_PLAYER_OBSERVER: return p->mObserverMode;
+        case EE_NETMSG_PLAYER_CIV_CHOSEN: return p->mCivilizationChosen;
+        case EE_NETMSG_PLAYER_SLOT: return p->mSlot;
+        case EE_NETMSG_PLAYER_CHAT_TYPE: return p->mChatType;
+        case EE_NETMSG_PLAYER_ENEMY: return p->mEnemies[i[1]];
+        case EE_NETMSG_PLAYER_SENDS_CHAT: return p->mSendChatMessage[i[1]];
+        case EE_NETMSG_PLAYER_ID: return p->mPlayerID;
+        case EE_NETMSG_PLAYER_RESOURCE: return p->mResourceCaps[i[1]];
+        case EE_NETMSG_PLAYER_FIRST_UNIT: return (int64_t)(uintptr_t)p->mFirstUnit;
+        case EE_NETMSG_PLAYER_TRADE_PRICE: return EEGetTradePrice(p, (long)i[1], (unsigned char)i[2]);
+        }
+        return 0;
+    case EE_NETMSG_OP_WORLD_FACT:
+        switch (i[0]) {
+        case EE_NETMSG_WORLD_NUM_PLAYERS: return gWorld.mNumPlayers;
+        case EE_NETMSG_WORLD_CURRENT_INDEX: return gWorld.mCurrentPlayer;
+        case EE_NETMSG_WORLD_EXECUTING_SELECTION:
+            return (gCommunications->IsClient() && static_cast<EEClient*>(gCommunications)->mIsExecutingSelection)
+                   || (gCommunications->IsServer() && static_cast<EEServer*>(gCommunications)->mIsExecutingSelection);
+        case EE_NETMSG_WORLD_IS_SERVER: return gCommunications->IsServer();
+        case EE_NETMSG_WORLD_HAS_COMMUNICATIONS: return gCommunications != NULL;
+        case EE_NETMSG_WORLD_LOCAL_SEND_SLOT:
+            return gCommunications->IsClient() == true ? static_cast<EEClient*>(gCommunications)->GetMySendToSlot() : 0xfe;
+        case EE_NETMSG_WORLD_STRING_LENGTH: return m->mString.GetLength();
+        case EE_NETMSG_WORLD_PLAYBACK:
+            return (gCommunications->IsClient() == true
+                    && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
+                   || (gCommunications->IsServer() == true
+                       && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying);
+        case EE_NETMSG_WORLD_COLLISION_SPHERE_MODE: return gCollisionSphereMode;
+        case EE_NETMSG_WORLD_LOADED_HUMANS:
+            return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders;
+        case EE_NETMSG_WORLD_LOAD_RESPONSES: return static_cast<EEServer*>(gCommunications)->mNumLoadResponses;
+        case EE_NETMSG_WORLD_HUMANS: return static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers();
+        }
+        return 0;
+    case EE_NETMSG_OP_DECISION: EEMessageCaptureDecision((unsigned int)i[0], (const long long*)&i[2], (unsigned int)i[1]); return 0;
+    case EE_NETMSG_OP_CHAT_TEXT: {
+        UWideString theText;
+        gResource->GetString(kNetMsgTexts[i[0]], theText);
+        if (!i[2] || theText.GetLength() > 0)
+            gUserInterface->AddChatLogEntry(theText, i[1]);
+        return 0;
+    }
+    case EE_NETMSG_OP_SOUND:
+        if (EESoundObject* theSound = EESoundObject::Get(kNetMsgSounds[i[0]]))
+            theSound->Play();
+        return 0;
+    case EE_NETMSG_OP_BODY: kNetMsgBodies[i[0]](m); return 0;
+    case EE_NETMSG_OP_SELECT_LIST: {
+        std::vector<long> theIDs((const int32_t*)(uintptr_t)c->b, (const int32_t*)(uintptr_t)c->b + i[1]);
+        if (i[0] == 0)
+            p->AddAndRemoveUnitsFromSelectedGroup(theIDs);
+        else if (i[0] == 1)
+            p->AddUnitsToSelectedGroup(theIDs);
+        else
+            p->SelectUnits(theIDs);
+        return 0;
+    }
+    case EE_NETMSG_OP_SELECT:
+        switch (i[0]) {
+        case 0: p->RemoveUnitFromSelectedGroup(i[1]); break;
+        case 1: p->AddUnitToSelectedGroup(i[1], true); break;
+        case 2: p->SelectUnit(i[1], true, true); break;
+        default: p->UnselectAllUnits(); break;
+        }
+        return 0;
+    case EE_NETMSG_OP_RESOURCE:
+        switch (i[0]) {
+        case 0: p->AddResource(i[1], i[2]); break;
+        case 1: p->TakeResource(i[1], i[2]); break;
+        case 2: p->mResourceTrade[i[1] - 2] += (long)i[2]; break;
+        default: p->AddTribute(i[3], i[1], i[2]); break;
+        }
+        return 0;
+    case EE_NETMSG_OP_KILL: u->Kill(i[0], 0, 0); return 0;
+    case EE_NETMSG_OP_DISBAND:
+        p->RefundTechnology(p->mTechnologies->Get(u->mUnitClass->mTechnology), u->mUnitClass->mUnitType, c->f[0]);
+        gEffectManager->CreateUnitEffect(u, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), NULL, 1, 0, 0);
+        u->Kill(0, 0, 0);
+        return 0;
+    case EE_NETMSG_OP_DELETE_REFUND:
+        if (EETechnology* theTechnology = u->GetPlayer()->GetTechTree()->Get(u->GetUnitClass()->GetTechnology()))
+            u->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(kWorldDeleteRefundFactor));
+        return 0;
+    case EE_NETMSG_OP_UNIT_ACT: {
+        EEUnitClass* theClass = (EEUnitClass*)(uintptr_t)c->a;
+        switch (i[0]) {
+        case EE_NETMSG_ACT_HALT: u->ClearGoals(0); u->StartAction(kActionIdle); u->mUnitClass->ActionChanged(u); break;
+        case EE_NETMSG_ACT_GO_FANATIC: u->GoFanatic(); break;
+        case EE_NETMSG_ACT_JIT: u->ToggleJITManufacturing(); u->UpdateJITManufacturing(); break;
+        case EE_NETMSG_ACT_JIT_TOGGLE: u->ToggleJITManufacturing(); break;
+        case EE_NETMSG_ACT_REMOVE_RESEARCH: u->RemoveResearch(i[1], 0); break;
+        case EE_NETMSG_ACT_LOCK_GATE: {   // a gate built as one piece (scenario Create effect) has no second or fourth part
+            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(u->GetUnitClass());
+            u->SetLocked(i[1] != 0);
+            if (EEComplexUnit* thePart = theGate->GetSecondPart(u))
+                thePart->SetLocked(i[1] != 0);
+            if (EEComplexUnit* thePart = theGate->GetFourthPart(u))
+                thePart->SetLocked(i[1] != 0);
+            break;
+        }
+        case EE_NETMSG_ACT_RALLY_TIME:
+            if (u->mGoalQueues[i[1]].mGoals.size() > 0)
+                u->mGoalQueues[i[1]].AddTime(60000);
+            break;
+        case EE_NETMSG_ACT_BEHAVIOR:
+            if (u->mBehavior != EEUnitBehavior::sTable[i[1]])
+                u->mBehavior = EEUnitBehavior::sTable[i[1]];
+            break;
+        case EE_NETMSG_ACT_REPLANT: u->mUnitClass->ReplantFarm(u, (EEPlayer*)(uintptr_t)c->a); break;
+        case EE_NETMSG_ACT_HOME_BASE: u->SetHomeBase((EEComplexUnit*)(uintptr_t)c->a); break;
+        case EE_NETMSG_ACT_LAND: u->SetFlightTime(0); break;
+        case EE_NETMSG_ACT_SCRAMBLE: {
+            EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(long(i[1]), long(i[2])), false, false, false, 0.0f, false, false);
+            u->ClearAllGoalQueues();
+            u->QueueGoal(theGoal, 0);
+            u->QueueGoal(theGoal->Clone(), 1);
+            u->mGoalQueues[1].AddTime(1000);
+            break;
+        }
+        case EE_NETMSG_ACT_PACK: EEReplaceUnit(u, i[1], theClass)->SetIsPacked(true); break;
+        case EE_NETMSG_ACT_UNPACK: {
+            EEComplexUnit* theNew = EEReplaceUnit(u, i[1], theClass);
+            EEPlaceUnit(theNew, theNew->mUnitClass, (EEPlayer*)(uintptr_t)i[2], U2DPoint<long>(u->mTileX, u->mTileY), true);
+            theNew->SetIsPacked(false);
+            break;
+        }
+        case EE_NETMSG_ACT_SPHERE:   // grown or shrunk by 0.05, the inner (mode 9) or the outer (10)
+            if (i[1] == 9)
+                u->mUnitClass->mInnerCollisionSphere += i[2] ? 0.05f : -0.05f;
+            else
+                u->mUnitClass->mOuterCollisionSphere += i[2] ? 0.05f : -0.05f;
+            u->mCollisionRadius = (float)u->mUnitClass->mInnerCollisionSphere;
+            break;
+        case EE_NETMSG_ACT_RADIUS: u->mCollisionRadius = (float)((EEComplexUnit*)(uintptr_t)c->a)->mUnitClass->mInnerCollisionSphere; break;
+        }
+        return 0;
+    }
+    case EE_NETMSG_OP_PLAYER_ACT:
+        switch (i[0]) {
+        case EE_NETMSG_PACT_SHIFT_MODE:
+            p->mShiftMode = i[1] != 0;
+            if (p == gWorld.GetCurrentPlayer())
+                gMouse->mShiftMode = i[1] != 0;
+            break;
+        case EE_NETMSG_PACT_SEES_ALL:
+            p->mSeesAll = !p->mSeesAll;
+            if (p == gWorld.GetCurrentPlayer())
+                gMiniMap->Redraw();
+            break;
+        case EE_NETMSG_PACT_INCREMENT_EPIC: p->IncrementEpic(); break;
+        case EE_NETMSG_PACT_JIT:
+            p->mJITManufacturing = !p->mJITManufacturing;
+        case EE_NETMSG_PACT_UPDATE_JIT:   // (JIT falls through)
+            if (p == gWorld.GetCurrentPlayer())
+                gUserInterface->UpdateJITManufacturing();
+            break;
+        case EE_NETMSG_PACT_CHEAT: gCheatCodes->ApplyCheatCode(i[1], p->mPlayerID, i[2]); break;
+        case EE_NETMSG_PACT_CHAT_TYPE: p->mChatType = i[1]; break;
+        case EE_NETMSG_PACT_SEND_CHAT: p->mSendChatMessage[i[1]] = i[2] != 0; break;
+        case EE_NETMSG_PACT_REPORT: p->mSavedGroups.Set(0x14, i[1]); p->mSavedGroups.Set(0x15, i[2]); break;
+        case EE_NETMSG_PACT_CLEAR_SAVED: p->ClearSavedGroup((unsigned char)i[1]); break;
+        case EE_NETMSG_PACT_ASSIGN_SAVED: p->mGroups[i[1]]->Assign(p->mActiveGroup); break;
+        case EE_NETMSG_PACT_ACKNOWLEDGE: p->PlayAcknowledgement((EEComplexUnit*)(uintptr_t)i[1]); break;
+        case EE_NETMSG_PACT_LOCK_CIV: p->mCivilizationLocked = true; break;
+        case EE_NETMSG_PACT_REMOVE: gWorld.RemovePlayerFromGame(0, p->mPlayerID); p->SetGameResult(2); break;
+        case EE_NETMSG_PACT_REMOVE_IMPROVEMENT: p->RemoveQueuedImprovement(i[1], i[2], p->CountQueuedImprovements(i[1], i[2]) != 0); break;
+        case EE_NETMSG_PACT_UPDATE_HELP:
+            if (gWorld.mPlayers[gWorld.mCurrentPlayer]->mPlayerID == p->mPlayerID)
+                gUIManager->mMainGameForm->UpdateHelpString();
+            break;
+        case EE_NETMSG_PACT_PATROL_GROUP:
+            if (EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(i[1])))
+                theUnit->mPatrolGroup->Select(p, true);
+            break;
+        }
+        return 0;
+    case EE_NETMSG_OP_WORLD_ACT: EENetMsgWorldAct(m, i, c->f, p, (EEPlayer*)(uintptr_t)c->b); return 0;
+    case EE_NETMSG_OP_OPTION:
+        switch (i[0]) {
+        case 0: gGameOptions.mLoadType = i[1]; break;
+        case 1: gGameOptions.mMapSize = i[1]; break;
+        case 2: gGameOptions.mMapType = m->mString; break;
+        case 3: gGameOptions.mResources = i[1]; break;
+        case 4: gGameOptions.mEpochStart = i[1]; break;
+        case 5: gGameOptions.mEpochEnd = i[1]; break;
+        case 6: gGameOptions.mUnitLimit = i[1]; break;
+        case 7: gGameOptions.mWondersForVictory = i[1]; break;
+        case 8: gGameOptions.mVariant = i[1]; break;
+        case 9: gGameOptions.mDifficulty = i[1]; break;
+        case 10: gGameOptions.mGameSpeed = i[1]; break;
+        case 11: gGameOptions.mRecordGames = i[1] != 0; break;
+        case 12: gGameOptions.mAllowCustomCivs = i[1] != 0; break;
+        case 13: gGameOptions.mRevealMap = i[1] != 0; break;
+        case 14: gGameOptions.mLockTeams = i[1] != 0; break;
+        case 15: gGameOptions.mLockSpeed = i[1] != 0; break;
+        case 16: gGameOptions.mCheatCodes = i[1] != 0; break;
+        case 17: gGameOptions.mVictory = i[1] != 0; break;
+        }
+        return 0;
+    case EE_NETMSG_OP_CLASS_FACT: return i[0] == EE_NETMSG_CLASS_TYPE ? ((EEUnitClass*)(uintptr_t)c->a)->mUnitType : ((EEUnitClass*)(uintptr_t)c->a)->mTileSize;
+    case EE_NETMSG_OP_SELECTION: {   // the communications object's fast-selection state (the server's or the client's)
+        EEServer* theServer = gCommunications->IsServer() ? static_cast<EEServer*>(gCommunications) : NULL;
+        EEClient* theClient = static_cast<EEClient*>(gCommunications);
+        unsigned char* theLastIDs = theServer ? theServer->mFastSelection : theClient->mFastSelection;
+        TSCriticalSection* theLock = theServer ? theServer->mFastSelectionLock : theClient->mFastSelectionLock;
+        switch (i[0]) {
+        case EE_NETMSG_SEL_LOCK: i[1] ? theLock->Enter() : theLock->Leave(); break;
+        case EE_NETMSG_SEL_MARK_LOCAL: gWorld.mExecutingLocalSelection = i[1] != 0; break;
+        case EE_NETMSG_SEL_CURRENT_ID: return theServer ? theServer->mFastSelectionID : theClient->mFastSelectionID;
+        case EE_NETMSG_SEL_LAST_ID: return theLastIDs[(unsigned char)p->mPlayerID];
+        case EE_NETMSG_SEL_SET_LAST_ID: theLastIDs[(unsigned char)p->mPlayerID] = (unsigned char)i[1]; break;
+        case EE_NETMSG_SEL_COPY: p->mSelectedGroup->CopySelection(p->mActiveGroup); p->SetSelectedViewedUnit(p->mViewedUnit); break;
+        case EE_NETMSG_SEL_RESET: p->UnselectAllUnits(); p->mSelectedGroup->CopySelection(p->mActiveGroup); break;
+        case EE_NETMSG_SEL_JIT_OFF:
+            if (p->mJITManufacturing) {
+                p->mJITManufacturing = false;
+                if (p == gWorld.GetCurrentPlayer())
+                    gUserInterface->UpdateJITManufacturing();
+            }
+            break;
+        }
+        return 0;
+    }
+    case EE_NETMSG_OP_CAN_PLACE: {
+        GE3DPoint theLocation((float)i[1], (float)i[2], 0.0f);
+        return gWorld.mMap->GetTile(i[3], i[4]) ? EECanPlace(p, i[0], &theLocation, i[3], i[4], 0, 0) : false;
+    }
+    }
+    return 0;
+}
+
+// the type's body (ee_netmsg bodies.rs) over the record and its list, with the host above: alone (Execute) or in the
+// physics' framing (1: a selection, 2: a command)
+static void EENetMsgExecute(EEMRecord* inMessage, uint8_t inFraming)
+{
+    ee_netmsg_execute(EENetMsgHost, inMessage, inMessage->GetType(), inMessage->GetOriginatingSlot(), inMessage->mFastSelectionID,
+                      inMessage->mRecord, inMessage->mList.empty() ? NULL : &inMessage->mList[0], inMessage->mList.size(),
+                      inFraming);
+}
 
 void EEMRecord::Execute()
 {
-    for (size_t i = 0; i < sizeof(kRecordExecutes) / sizeof(kRecordExecutes[0]); i++) {
-        if (kRecordExecutes[i].mType == this->mType) {
-            kRecordExecutes[i].mExecute(this);
-            return;
-        }
-    }
+    EENetMsgExecute(this, 0);
 }

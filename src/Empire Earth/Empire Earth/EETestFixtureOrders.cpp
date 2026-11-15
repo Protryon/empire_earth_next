@@ -882,7 +882,7 @@ void Scout(int inKind, OrderPlan& ioPlan)
     long theScout = ioPlan.mScout;
     long theX = ioPlan.mScoutX, theY = ioPlan.mScoutY;
     long theWorkerID = ioPlan.mUnits[0];
-    Post(new EEMSelectTheseUnits(ioPlan.mUnits));
+    Post(new EEMRecord(kMessageSelectTheseUnits, {ioPlan.mUnits}));
     bool theSelected = false;
     for (int k = 0; k < 40 && !theSelected; k++) {
         Wait(150);
@@ -954,7 +954,7 @@ bool SelectGroup(std::vector<long>& inUnits)
 {
     if (Selected(inUnits))
         return true;
-    Post(new EEMSelectTheseUnits(inUnits));
+    Post(new EEMRecord(kMessageSelectTheseUnits, {inUnits}));
     for (int k = 0; k < 40; k++) {
         Wait(150);
         if (Selected(inUnits))
@@ -1069,7 +1069,7 @@ void OrderRun(unsigned long inSeq, int inKind)
             theBuilding->mHitPoints = theBuilding->GetStats()->GetMaxHitPoints() / 2;
         gWorld.mLock->WriteUnlock();
     }
-    Post(new EEMSelectTheseUnits(thePlan.mUnits));
+    Post(new EEMRecord(kMessageSelectTheseUnits, {thePlan.mUnits}));
     bool theSelected = false;
     for (int k = 0; k < 40 && !theSelected; k++) {
         Wait(150);

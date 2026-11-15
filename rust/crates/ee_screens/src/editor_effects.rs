@@ -756,7 +756,7 @@ impl<H: SeplHost + ?Sized, F> Fx<'_, H, F> {
 
     // -- the screens (`editor_subscreens.rs`)
 
-    /// The screen's controls made on the form from the control index `*index` (advanced).
+    /// The screen's controls' object made (empty: `editor_controls.rs` makes the members); `*index` unchanged.
     pub(crate) fn controls_new(&mut self, form: usize, index: &mut u32) -> usize {
         let mut out = 0usize;
         let (_, i, _) = self.call(

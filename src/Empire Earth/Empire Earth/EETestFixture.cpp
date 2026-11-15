@@ -29,7 +29,9 @@
 //     "<seq> key <form> <dik> <ms>", a key (its DIK_* scan code) pressed, held ms milliseconds and released as the
 //     platform's key events deliver them (ISHandleEvent: the arrow keys' scroll and the zoom hot keys), or
 //     "<seq> wheel <form> <0|1> <n>", n notches of the mouse wheel (0 away from the user, 1 towards) 100 ms apart, or
-//     "<seq> cast <form> <enum> <offset>", a calamity cast by the local player at the camera's focus: see CastRun),
+//     "<seq> cast <form> <enum> <offset>", a calamity cast by the local player at the camera's focus: see CastRun, or
+//     "<seq> chat <form> 0 0", a line in the chat log as a game message adds one (AddChatLogEntry: the game form's
+//     chat lines show it)),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -572,7 +574,7 @@ void BoxLassoHook(const std::vector<long>& inUnitIDs)
     }
     if (theDead >= 0) {   // (the lock is released: these messages' ctors run the hook too, disarmed now)
         std::vector<long> theOne(1, theDead);
-        BoxPost(new EEMSelectTheseUnits(theOne));
+        BoxPost(new EEMRecord(kMessageSelectTheseUnits, {theOne}));
         BoxPost(new EEMRecord(kMessageKillUnit, {(unsigned char)0}));   // the first selected unit
     }
 }
@@ -1077,6 +1079,9 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
             }
         }).detach();
         theVerdict = "wheeled";
+    } else if (!strcmp(theOp, "chat") && a == inFormID && gUserInterface) {
+        gUserInterface->AddChatLogEntry(UWideString("TEST chat line: the chat display (EEUICChatLine)"), 0);
+        theVerdict = "chat-added";
     } else if (!strcmp(theOp, "boxselect") && a == inFormID) {
         theVerdict = BoxStart(theSeq, theLine, inForm);
     } else if (!strcmp(theOp, "cast") && theFields >= 5 && a == inFormID && b > 0 && c < 1000) {

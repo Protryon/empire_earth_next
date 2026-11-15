@@ -54,6 +54,12 @@
 #include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
 
+// the UI database file's calls (UIHotKey.cpp)
+extern "C" void ee_uicpp_file_open(void* inFile);
+extern "C" long ee_uicpp_file_read_count(void* inFile, unsigned long* outCount);
+extern "C" long ee_uicpp_file_read(void* inFile, unsigned char* outData, unsigned long inLength);
+extern "C" void ee_uicpp_file_close(void* inFile);
+
 ISEntity* UIManager::sLMouseButton;
 ISEntity* UIManager::sRMouseButton;
 ISEntity* UIManager::sMouseWheel;
@@ -737,6 +743,50 @@ long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
 // SYNTHETIC: LLE 0x10078e68
 // SYNTHETIC: LLE 0x10078e89
 // SYNTHETIC: LLE 0x1007b8e7
+
+// UIEvent is whole in Rust (rust/crates/ee_ui/src/eventobj.rs, R6 ui round 21; the original unit UIEvent.cpp,
+// 0x1006f278..0x1006f4ef): Initialize/Uninitialize over the record, the two loaders over the events file. The calls
+// out: the event's virtuals on the record, the file's reads (UIHotKey.cpp's ee_uicpp_file_*) and the owners'
+intptr_t UIEvent::HostOp(void* inObj, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+{
+    UIEvent* theEvent = static_cast<UIEvent*>(static_cast<EeUiEventFields*>(inObj));
+    UIEventData theData;
+    switch (inOp) {
+    case EeUiOp::EvInitialize: return theEvent->InitializeEvent();
+    case EeUiOp::EvUninitialize: return theEvent->UninitializeEvent();
+    case EeUiOp::BgtFileOpen: ee_uicpp_file_open(inObj); break;
+    case EeUiOp::BgtFileCount: {
+        unsigned long theCount = 0;
+        long theResult = ee_uicpp_file_read_count(inObj, &theCount);
+        uint32_t theBits = (uint32_t)theCount;
+        memcpy(f, &theBits, 4);
+        return theResult;
+    }
+    case EeUiOp::BgtFileRead: return ee_uicpp_file_read(inObj, reinterpret_cast<unsigned char*>(b), (unsigned long)c);
+    case EeUiOp::BgtFileClose: ee_uicpp_file_close(inObj); break;
+    case EeUiOp::EvOwner:
+        if (a == 0)
+            return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)b);
+        return (intptr_t) reinterpret_cast<UIManager*>(c)->GetFormByID((unsigned long)b);
+    case EeUiOp::EvAdd:
+        theData.mEventID = (unsigned long)c;
+        theData.mEventType = (unsigned long)d;
+        if (a == 0)
+            reinterpret_cast<UIControlsTable*>(b)->AddEvent(theData);
+        else
+            reinterpret_cast<UIForm*>(b)->AddEvent(theData);
+        break;
+    default: break;
+    }
+    return 0;
+}
+long UIEvent::CreateControlEvents(FSFileSpec& inFile) { return ee_ui_event_create(&inFile, UIEvent::HostOp, 0, NULL); }
+long UIEvent::CreateFormEvents(FSFileSpec& inFile, UIManager* inManager)
+{
+    return ee_ui_event_create(&inFile, UIEvent::HostOp, 1, inManager);
+}
+long UIEvent::Initialize() { return ee_ui_event_call(this, UIEvent::HostOp, EeUiEventCall::Initialize); }
+long UIEvent::Uninitialize() { return ee_ui_event_call(this, UIEvent::HostOp, EeUiEventCall::Uninitialize); }
 
 // TEST ONLY: the harness's presentation bridge (tools/harness/presentation_bridge.c) finds these by name in the map
 // (the manager's and forms' state is Rust's: ee_ui managerobj.rs, formobj.rs): the UI lock it try-enters, the form

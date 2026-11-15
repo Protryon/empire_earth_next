@@ -183,8 +183,8 @@ pub const EE_SCREENS_GA_OP_POST: u32 = 1;
 pub const EE_SCREENS_GA_OP_SEND: u32 = 2;
 /// The message `p` dereferenced.
 pub const EE_SCREENS_GA_OP_MESSAGE_RELEASE: u32 = 3;
-/// A selection message over the rectangle `p` (`GERectangle*`): i0 its type (0x4e select, 0x4f add, 0x50 add and
-/// remove), i1 the unit type; answers the message.
+/// A selection message (`EENewSelectUnits`) over the rectangle `p` (`GERectangle*`): i0 its type (0x4e select,
+/// 0x4f add, 0x50 add and remove), i1 the unit type; answers the message.
 pub const EE_SCREENS_GA_OP_SELECT_UNITS: u32 = 4;
 /// `EEUnitClassCount()`.
 pub const EE_SCREENS_GA_OP_CLASS_COUNT: u32 = 5;

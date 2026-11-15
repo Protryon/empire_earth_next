@@ -586,14 +586,8 @@ extern "C" int64_t ee_screenscpp_ga(uint32_t inOp, EeScreensGaFields* r, void* p
     case EE_SCREENS_GA_OP_POST: gUserInterface->PostAction(a); return 0;
     case EE_SCREENS_GA_OP_SEND: gCommunications->ProcessLocalUserInput(static_cast<EEMessage*>(p), kSlotNone); return 0;
     case EE_SCREENS_GA_OP_MESSAGE_RELEASE: static_cast<EEMessage*>(p)->Dereference(); return 0;
-    case EE_SCREENS_GA_OP_SELECT_UNITS: {
-        const GERectangle& theRectangle = *static_cast<const GERectangle*>(p);
-        if (i[0] == kMessageAddAndRemoveUnitsFromSelectedGroup)
-            return (intptr_t) static_cast<EEMessage*>(new EEMAddAndRemoveUnitsFromSelectedGroup(theRectangle, i[1], 0x50));
-        if (i[0] == kMessageAddUnitsToSelectedGroup)
-            return (intptr_t) static_cast<EEMessage*>(new EEMAddUnitsToSelectedGroup(theRectangle, i[1], 0x4f));
-        return (intptr_t) static_cast<EEMessage*>(new EEMSelectUnits(theRectangle, i[1], 0x4e));
-    }
+    case EE_SCREENS_GA_OP_SELECT_UNITS:   // the box selection's record (0x4e, 0x4f, 0x50)
+        return (intptr_t) static_cast<EEMessage*>(EENewSelectUnits(*static_cast<const GERectangle*>(p), i[1], (unsigned char)i[0]));
     case EE_SCREENS_GA_OP_CLASS_COUNT: return EEUnitClassCount();
     case EE_SCREENS_GA_OP_SAVED_GROUP_RESET: gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x15, 1); return 0;
     case EE_SCREENS_GA_OP_MOUSE:

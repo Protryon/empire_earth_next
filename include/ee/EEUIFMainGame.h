@@ -27,8 +27,6 @@ struct EeScreensMainFormIo;   // rust/ee_screens.h
 // the status buttons' availability tests (+0x520..+0x5cc; cdecl functions in EEUIFMGStatusButton.cpp's range
 // 0x26fe64..0x27115c; argument types inferred)
 typedef bool (*EEUIFMGButtonTest)(void* inArg1, void* inArg2);
-// the mouse tests return long (each ends `xor eax, eax`; UpdateMouse 0x2712b8 discards it)
-typedef long (*EEUIFMGMouseTest)(void* inArg1, void* inArg2);
 // the keyboard tests take the form only (UpdateKeyboard 0x271290 pushes one argument)
 typedef bool (*EEUIFMGKeyboardTest)(void* inForm);
 
@@ -112,7 +110,7 @@ public:
     // indexed by mUIState: UpdateKeyboard 0x271290 [this + 0x520 + mUIState*4], UpdateMouse 0x2712b8 [this + 0x578 +
     // mUIState*4] (provisional names)
     EEUIFMGKeyboardTest mKeyboardTests[22]; // +0x520
-    EEUIFMGMouseTest mMouseTests[22];       // +0x578
+    long mMouseModes[22];                   // +0x578 (port: the mode's EE_SCREENS_MF_MODE_*, ee_screens mouse_modes.rs)
     long mUIState;                          // +0x5d0 (5: gate, 6: wall, 0xb: ..., 0x11: no scrolling; provisional name)
     long mMediaID;                          // +0x5d4 (= -1) the background media (UpdateBackgroundMedia)
     long mEntityGroup;                      // +0x5d8 the enabled entity group (SetEntityGroup)

@@ -985,8 +985,9 @@ void RequestSaves(long inTime)
 {
     while (sNextSave < sOptions.mSaves.size() && inTime >= sOptions.mSaves[sNextSave].first) {
         std::string theName = SaveName(sNextSave) + (const char*)gSavedGameExtension;
-        NEMessage* theSave = new EEMLoadOrSaveGame(UWideString(theName.c_str()), TMGetTime(), 0, true,
-                                                   gCommunications->GetNumberOfCTsProcessedInPhysics(), 0);
+        UWideString theFile(theName.c_str());   // load, quiet, tick, time, auto-save, the wait id, the name
+        NEMessage* theSave = new EEMRecord(kMessageLoadOrSaveGame, {0, true, gCommunications->GetNumberOfCTsProcessedInPhysics(),
+                                                                    TMGetTime(), 0, 0, theFile});
         static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(theSave, 15000, 12);
         theSave->Dereference();
         Note("SAVE %zu requested at game ms %ld PT %lu", sNextSave, inTime, gPhysics->mNumTicksDone);
