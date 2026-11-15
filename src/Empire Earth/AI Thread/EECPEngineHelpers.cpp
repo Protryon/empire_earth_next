@@ -1,6 +1,6 @@
 // Engine helpers the original emitted out of line in the computer player's combat units (EECPASG*, EECPAttackSubGroup,
 // the prophet sub group units) after their first user there. Stage 5 deleted those units (docs/AI_RESEARCH.md
-// §8.89); the rest of the game still calls these, so they live here. New unit (tools/units.py EXTRA_UNITS).
+// §8.90); the rest of the game still calls these, so they live here. New unit (tools/units.py EXTRA_UNITS).
 #include <windows.h>
 #include <algorithm>
 #include <deque>

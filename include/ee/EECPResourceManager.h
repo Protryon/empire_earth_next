@@ -42,7 +42,6 @@ public:
     EEUnit* FindForestTarget(long inResource, EEComplexUnit* inUnit);  // 0x90af3 (ret 8)
     EEUnit* FindResourceTarget(long inResource, EEComplexUnit* inUnit, bool inArg);  // 0x90cb5 (ret 0xc)
     EEUnit* FindNearestDock(EEComplexUnit* inUnit); // 0x90ec6 (ret 4)
-    EEComplexUnit* FindNearestTownCenter(EEComplexUnit* inUnit);  // 0x90f72 (ret 4): the nearest of the player's 0x2b/0x23/0x29 units
     void Earn(long inResource, unsigned long inAmount);   // 0x91037 (ret 8; EEComputerPlayer 0x3eea8)
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x91054
     bool IsSettlementQueued(long inArg);    // 0x911ea (ret 4)
@@ -54,7 +53,6 @@ public:
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x9152a
     void TransportIdle(EEComplexUnit* inUnit);  // 0x91965 (ret 4; EEComputerPlayer 0x3f072)
     void RemoveCosts(EETechTreeNode* inNode, long inCount);  // 0x91b26 (ret 8; EECPBuildManager 0x6b07d, EECPUnitManager 0x93acc): AddCosts's Spend twin
-    bool UpdateWantedGatherers();           // 0x91b78: the wanted gatherers per resource; true if one changed
     // new (docs/AI_RESEARCH.md §8.8): the gatherers the held resource sites take (the active resource centers'
     // resource units x the mining limit; wood a fixed allowance), in all or for one resource
     unsigned long GetGatherCapacity(long inResource = -1);

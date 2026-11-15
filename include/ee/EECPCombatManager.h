@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\AI Thread\EECPCombatManager.h (RECONSTRUCTION; file name inferred).
 // A computer player's combat manager (RTTI EECPCombatManager; EECPCombatManager.cpp 0x71c7f..0x77084;
-// EEComputerPlayer::mCombatManager +0xbc0). Stage 5 (docs/AI_RESEARCH.md §8.89) deleted the original's combat tree it
+// EEComputerPlayer::mCombatManager +0xbc0). Stage 5 (docs/AI_RESEARCH.md §8.90) deleted the original's combat tree it
 // ran (the attack and defence commanders, the attack groups and sub-groups, personnel, intelligence, the unit selector,
 // the military aid packages): the Lua AIs command their own soldiers. What is left are the military class tests the
 // engine and the next engine's view still ask.

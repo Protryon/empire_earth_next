@@ -1,5 +1,5 @@
 // C:\EEX\Empire Earth\AI Thread\EECPCombatManager.cpp (RECONSTRUCTION). The combat manager's military class tests
-// (ee/EECPCombatManager.h); stage 5 deleted the combat tree the rest of it ran (docs/AI_RESEARCH.md §8.89).
+// (ee/EECPCombatManager.h); stage 5 deleted the combat tree the rest of it ran (docs/AI_RESEARCH.md §8.90).
 #include <windows.h>
 #include <vector>
 #include <deque>

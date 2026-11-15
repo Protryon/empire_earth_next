@@ -46,7 +46,7 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + MUSIC_UNITS,
                        "Empire Earth/AI Thread/EECPNextArmy.cpp",
                        # the computer player's engine per seat: classic or next (docs/AI_LUA_PLAN.md S0)
                        "Empire Earth/AI Thread/EECPEngine.cpp",
-                       # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.89)
+                       # engine helpers that lived in the combat units stage 5 deleted (docs/AI_RESEARCH.md §8.90)
                        "Empire Earth/AI Thread/EECPEngineHelpers.cpp",
                        # the computer player's Lua runtime: the strategy scripts' sandbox (docs/AI_LUA_PLAN.md §3)
                        "Empire Earth/AI Thread/EECPLua.cpp",

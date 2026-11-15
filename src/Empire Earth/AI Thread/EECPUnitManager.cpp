@@ -159,62 +159,6 @@ bool EECPUnitManager::HasUnfinished(long inUnitClass)
     return theFound;
 }
 
-// FUNCTION: EXE 0x493893
-// Cancels a count of requested units of a class for a town and continent, from the requests and then from the
-// build queues; returns true if the whole count was cancelled
-bool EECPUnitManager::CancelRequest(long inUnitClass, unsigned long inCount, long inTownID, unsigned short inContinent)
-{
-    std::deque<EECPUMRequest>::iterator it;
-    std::deque<EEComplexUnit*>::iterator theUnit;
-    unsigned long theLeft = inCount;
-    EETechTree* theTree = this->mPlayer->mTechnologies;
-    long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->mTechnology : 100000;
-    EETechTreeNode* theNode = theTree->Get(theID);
-    for (unsigned long i = 0; i < EEEpochCount(); i++) {
-        if (theLeft == 0)
-            goto done;
-        std::deque<EECPUMRequest>& theRequests = this->mRequests[i];
-        for (it = theRequests.begin(); it != theRequests.end() && theLeft != 0;) {
-            if ((*it).mUnitClass == inUnitClass && (*it).mContinent == inContinent && (*it).mTownID == inTownID) {
-                if (theLeft < (*it).mCount) {   // only the count still left (was inCount)
-                    (*it).mCount -= theLeft;
-                    this->mNumInProduction -= theLeft;
-                    theLeft = 0;
-                } else {
-                    theLeft -= (*it).mCount;
-                    this->mNumInProduction -= (*it).mCount;
-                    it = theRequests.erase(it, it + 1);   // continue at the next request
-                    continue;
-                }
-            }
-            ++it;
-        }
-    }
-    if (theLeft != 0) {
-        RTSTechTreeNodeData* theData = theNode->mData;
-        for (unsigned long j = 0; j < theData->mUnitClasses.size() && theLeft != 0; j++) {
-            std::deque<EEComplexUnit*>* theUnits = this->GetUnits(theData->mUnitClasses[j]);
-            if (theUnits) {
-                for (theUnit = theUnits->begin(); !(theUnit == theUnits->end()) && theLeft != 0; ++theUnit) {
-                    EEComplexUnit* theComplex = *theUnit;
-                    do {
-                        if (!theComplex->IsResearchQueued(theID))
-                            break;
-                        theComplex->RemoveResearch(theID, 0);
-                        theLeft--;
-                        this->mNumInProduction--;
-                    } while (theLeft != 0);
-                }
-            }
-        }
-        this->mManager->GetResourceManager()->RemoveCosts(theNode, theLeft);
-    }
-done:
-    if (this->mNumInProduction < 0)
-        this->mNumInProduction = 0;
-    return theLeft == 0;
-}
-
 // NEAR: the original multiplies with fimul (float loaded first, the long counted from memory); ours fild + fmul (90.5)
 // FUNCTION: EXE 0x493aee
 // Returns the citizen target: the population limit times the player's citizen percentage

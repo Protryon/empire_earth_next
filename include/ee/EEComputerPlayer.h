@@ -41,14 +41,11 @@ public:
     // per-difficulty (mDifficulty 0/1/2) scales: a member in percent times 0.01, else 1 (provisional names)
     float GetAttackDelayModifier();         // 0x2eafc (+0xd40/+0xd44)
     float GetAttackFrequencyModifier();     // 0x2eb26 (+0xd24/+0xd28)
-    float GetAttackGroupModifier();         // 0x2eb50 (+0xd68/+0xd70/+0xd6c)
     float GetUnitCostModifier();            // 0x2eb7c (+0xd80/+0xd84/+0xbec)
     float GetDMAttackFrequencyModifier();   // 0x2eba8 (+0xcac/+0xcb0/+0xcb4)
     float GetDMInitialAttackModifier();     // 0x2ebd9 (+0xcb8/+0xcbc/+0xcc0)
-    bool Fn2EC67();                         // 0x2ec67 (the resources option is 5)
     float GetPopLimitAdjustment();          // 0x2ec74 (+0xe2c/+0xe34/+0xe30)
     unsigned long GetIslandExpansionTimer();  // 0x2ed01 (+0xf08/+0xf0c/+0xf10, else 60000)
-    bool IsAttackDue(unsigned long inTime);  // 0x2ed2f (mCanAttack and inTime >= mNextAttackTime)
     virtual void Clear();                   // +0x1c 0x3cf73 (resets the centers, the exploration and combat managers)
     virtual void EpochMediaLoaded(long inEpoch);  // +0x88 0x3c992
     virtual void FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile);  // same EEPlayer slot, 0x3ce2e
@@ -83,11 +80,9 @@ public:
     void SetDMAttackFrequencyModifier(float inValue);  // 0x3ec9d (mDMAttackFrequencyModifierEasy/mDMAttackFrequencyModifierMedium/mDMAttackFrequencyModifierHard by difficulty) (provisional name)
     void SetDMInitialAttackModifier(float inValue);  // 0x3ecd6 (mDMInitialAttackModifierEasy/mDMInitialAttackModifierMedium/mDMInitialAttackModifierHard) (provisional name)
     void SetIslandExpansionTimer(unsigned long inValue);  // 0x3ed0f (mIslandExpansionTimerEasy/mIslandExpansionTimerMedium/mIslandExpansionTimerHard) (provisional name)
-    unsigned long GetBuildableTypes(long inCategory, std::vector<long>& outTypes);  // 0x2ed85 (ret 8): the buildable classes of a category (provisional name)
     virtual void RefreshResourceCenters();  // +0xdc 0x3ce56 (the computer player's own slot; EEUserInterface 0x276b97)
     void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
     // 0x2eca0: 1.0, or +0xe44/+0xe48 times a constant depending on +0xbd8 (0 or 2) (provisional name)
-    float GetResearchFrequencyModifier();
     float GetEpochFrequencyModifier();      // 0x2ec0a (EECPCivilizationManager::SetNextEpochAdvanceTime scales by it) (provisional name)
     // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
     // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)
@@ -95,7 +90,6 @@ public:
     unsigned long GetNumResourceCenters() { return this->mResourceCenters.size(); }
     EECPResourceCenter* GetResourceCenter(unsigned long inIndex);   // 0x2ef5e (ret 4: mResourceCenters[inIndex]) (provisional name)
     unsigned short GetObjectRegion(EEComplexUnit* inUnit);  // 0x2e9e7 (ret 4): a path area id for inUnit (EECPWallManager::Update) (provisional name)
-    EECPResourceCenter* GetResourceCenterOf(EEUnit* inUnit);  // 0x2ef6e (ret 4): the resource center holding inUnit (provisional name)
     void SetNextIslandExpansionTime();      // 0x3d652 (EECPResourceManager 0x8ecfd) (provisional name)
     long GetEpochFrequencyMax() const { return this->mEpochFrequencyMax; }
     long GetEpochFrequencyMin() const { return this->mEpochFrequencyMin; }
@@ -134,7 +128,6 @@ public:
     bool IsIslandExpansionDue();            // 0x2ed4b: the map flag 1/4 and gPhysics time >= mNextIslandExpansionTime (EECPResourceManager::AssignGatherers) (provisional name)
     void WorkOutPopulation();               // 0x2d1c7 (EECPDefenseCommander 0x78148) (provisional name)
     // 0x2e851 (ret 8): deletes inScorer.mCount own units by its scores (EECPDefenseCommander) (provisional name)
-    long ChooseUnitsToKill(EEAIFOUnitsToKillScoringBase& inScorer, bool inKill);  // (returns the count: eax)
     // 0x2db6d (ret 8): fills ioMap with the classes inScreener accepts (EECPUnitSelector::GatherCandidates)
     // (provisional name)
     void GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, EEAIFOUnitSelectionScreener& inScreener);

@@ -190,7 +190,7 @@ EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer sea
 random, an AI's id such as boom, or next for the manifest's first AI; docs/AI_LUA_PLAN.md) through the lobby's engine
 boxes, as the lobby's host does: one value for every seat, or a comma list by seat. `classic` is the lobby's Classic:
 the AI the manifest marks `"classic": true` (classic_lua, the classic computer player's port to Lua). Every computer
-player runs a Lua AI: the C++ classic's decision code was deleted in stage 5 (docs/AI_RESEARCH.md §8.89). The report (JSON) holds the outcome, the game time and per player the
+player runs a Lua AI: the C++ classic's decision code was deleted in stage 5 (docs/AI_RESEARCH.md §8.90). The report (JSON) holds the outcome, the game time and per player the
 epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
 headless simulation" for what it shares with the game and where it differs.
 
