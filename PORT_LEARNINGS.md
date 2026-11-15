@@ -23417,3 +23417,103 @@ servers, which are gone): no gate reaches them; the golden is their only check.
 
 LanLogicHost.cpp (666) and LobbyLogicHost.cpp (359), as their ops' objects move; RoutingLogic.cpp (2,107) as a round
 of its own; EELobbyGlueHost.cpp's game-side sequences stay the game's.
+
+## R6 WONLobby, round 9: RoutingLogic whole as one Rust object (ee_won routelogic.rs; branch rust-wonlobby9, 2026-11-15)
+
+Round 8's recommendation: RoutingLogic.cpp (2,107 lines, 91 methods, the Internet lobby's logic) in one round, the
+way round 8 moved PingLogic, AccountLogic and InitLogic.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 8e15c1f8 | RoutingLogic as a Rust object (`routelogic.rs`), its host in RoutingLogic.cpp | -1,418 (59,098 -> 57,680) |
+
+RoutingLogic.cpp 2,106 -> 769 lines, WONLobbyRoutingLogic.h 145 -> 64. No unit deleted (the shell keeps the original
+addresses of the constructor, destructor, InitComponent and the two event handlers), none added. The round stops
+short of 1,500 lines: what is left of the unit is the host, one case per run of C++ calls.
+
+### The object
+
+- **State in Rust** (`EeWonRouteLogic`): the current and pending servers, the chat and game rooms and the game list's
+  wait op as counted references (`AddRef` / `Release` ops; `SmartPtr`'s order on assignment: the old one released
+  before the new one is taken), the idle, suppress-idle, have-game-list and want-to-be-moderator flags and the last
+  server refresh. `LobbyGetCurrentServer` / `LobbyGetChatGroup` read them through the shell's `GetCurrentServer` /
+  `GetChatGroup` (the members are gone from the C++ class).
+- **The shell keeps** what the ops reach: NetLogic's vtable, the tracker, the server list and game list it owns,
+  the six dialogs' `SmartPtr`s and the game data type "G". The three `LogicCompletion<RoutingLogic>` targets
+  (`GetUserStatusComplete`, `QueryServerGroupsDone`, `ConnectionClosed`) are one-line forwarders.
+- **The routing notices' completion** (`RoutingOpCompletion`) carries a code (1..21) instead of a member-function
+  pointer; the killed checks and the op's server lookup moved to Rust (`Notify`).
+- **One op enum, 150 ops, one host** (`RoutingHost`, five arguments). Getters are grouped by object (`ServerNum`,
+  `GroupNum`, `ClientNum`, `FriendNum`, `GameNum`, `ParserNum`, `EventNum`) and setters likewise (`ServerDo`, ...).
+  Texts are `GUIString*`s the host makes (`GameText`, `DialogText`, `ParserText`) and `TextFree` frees; text 0 is
+  the empty string (`gEmptyGUIString` / `gEmptyWideString` as the original passed). Lists the host builds
+  (the data objects, the directory entities, a client iterator) are handles freed by `ListFree`; the bad users' ids
+  and the friend status map come back through `ee_won_routelogic_push`.
+- **`PendingServerCleanup`** is `with_pending`: the body, then `ClearPendingServer`, on every return.
+- **Argument order**: C++17 sequences the object before the arguments in `a->f(x)` but leaves the arguments'
+  order unspecified; the golden's first run differed in 5 of 80,000 sequences where the transcription had two ops
+  in one argument list (clang evaluated them right to left). Each such place now names its order explicitly (the
+  Rust's left to right), and so does the Rust.
+
+### The golden
+
+`won_routelogic_test` (new): RoutingLogic.cpp's statements copied from the C++ before the port, every call on a C++
+object replaced by its op (the host makes the same calls), against the Rust object over one scripted host.
+
+| Golden | Sequences | Trace lines | Replayed by cargo | First run |
+|---|---|---|---|---|
+| `won_routelogic_test` | 120,000 | 9,930,743 | `golden_routelogic.txt` (113 sequences) | identical after the argument-order fix of the transcription |
+
+- Each sequence makes 1 to 24 calls (every public method, the control and component events, the 21 notices on
+  random ops, the three completions); a modal op (dialog, status box, message box, yes/no) re-enters the logic with
+  another random call a quarter of the time; references, texts and lists are counted per handle and compared at
+  the end.
+- A per-sequence "luck" level (0..2) makes the answers mostly succeed in two thirds of the sequences, so the
+  connected states (rooms joined, a game hosted, the game list read) are reached.
+- **Branch coverage of the original statements** (clang source-based coverage of the golden's `OrigRouting`):
+  1,190 of 1,212 branches (98.2%). Of the 22 missed, 17 cannot be taken in the original either (NULL checks of
+  arguments every caller has checked, a `mCurrentServer` test after a successful connect, an `else if` whose
+  condition the `if` decides); 5 are reachable but rare (a NULL parser on a whisper to me, a captain change with no
+  old captain in the game room, Quick Play's loop losing the server through a re-entrant call, a kick action
+  without the game room, a NULL target of a peer chat).
+
+| Mutation of the Rust | Sequences that change (of 120,000) |
+|---|---|
+| peer chat: a room recipient up to 0x4002 | 11 |
+| reset: away set again while idle | 574 |
+| data object created: an existing game's change kind 0 | 289 |
+| banned: a kick up to 10 seconds | first 0 (the generator never made 10); 19 after a generator fix |
+| default room: a room of 50 players chosen | 7 |
+| connect: the moderator's register flags swapped | 42,681 |
+| Quick Play: the last of equal ranks wins | first 0 (equal ranks never met); 1 after two generator fixes |
+| clear pending: the current server disconnected too | 15,685 |
+| user status: a search with 0 left goes on | 2,101 |
+| leave server: the game list kept | 142 |
+| team chat: without the team flag | 21 |
+| server list: refreshed after 299 seconds | 33 |
+
+Unit tests: routelogic 4 (a new logic holds nothing; Quick Play's ranks cut to 16 bits, the first of equals wins;
+the reference order on assignment; the replay).
+
+### Behaviour changes
+
+- None on defined paths. The time differences (`long` casts of `time_t` and `unsigned long` differences) are the
+  32-bit Windows ones on every platform (on LP64 the original's `long` was 64-bit: the same for any two times
+  within 68 years of each other).
+- A C++ exception unwinding through a connect sequence no longer clears the pending server (the original's
+  destructor did); nothing there throws, and an exception through a Rust frame is not allowed anyway.
+- `HostGame` passes copies of the game's name and password (`GUIString`'s shared data) instead of references.
+
+### What only a person reaches
+
+The Internet lobby: no gate reaches it (the routing servers are gone), so the golden is its only check. The LAN game
+reaches the shell: every timer tick calls `Reset` (its early return without a server) and every lobby event and
+control goes through `HandleComponentEvent` / `HandleControlEvent` to the Rust's dispatch (`lan_game.py`).
+
+### What is left
+
+LanLogicHost.cpp (666), LobbyLogicHost.cpp (359) and now RoutingLogic.cpp's host shrink only as the objects their ops
+call move (the model's games, clients, servers and rooms, the routing connection, the dialogs); EELobbyGlueHost.cpp's
+sequences stay the game's.
