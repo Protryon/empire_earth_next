@@ -21495,3 +21495,78 @@ to exist. Each class unit carried 30-40 lines of includes and comments and a 20-
   point i at the carrier's frame in its location scaled by its stats) and `RouteDockWaypoint` from another. The
   transformation's `Apply`, `ConvertToOrientation` and the point's `DistanceTo` are ee_ge's (the C++ forwards to
   them already), so the bits are the same. EE-PM-COUNT ends with "deck N", the placements.
+
+## R6: WON's Internet code, round 25 (one C++ core table; the socket layer and the op machinery header-only)
+
+Branch `rust-won-net25`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 24.
+Rounds 23 and 24 freed hooks, not classes (about 200 lines each), so this round planned whole units.
+
+- **The measure first** (`build/wn25/measure.py`, as the WONGUI lane's round 36): every remaining Internet unit's
+  lines split into hook-table lines (C++ answering a Rust object), forwarders, other code and comments, and the step
+  that would delete it. Everything under WONSocket and the op machinery was already a shim: the state and steps were
+  Rust's since rounds 13-16, what was left were per-class hook tables and one-line forwarders. Steps by lines freed:
+  the socket and socket op classes header-only (809 lines in 7 units), QueueSocket + UDPManager (649 in 3), the
+  machinery (AsyncOp's tracker, mode, socket thread: 168 in 4); ServerConnection's table (48 hook lines) after them.
+  WONConfig (1,021, the lobby's configs too), WONCommon's utilities and the routing/server ops stay (7,785 lines).
+- **One core table instead of a table per class** (`cppcore.rs` `EeWonCoreHooks`, AsyncOp.cpp's `WonCore()`): what
+  the Rust objects still need the C++ for, once for the library: references (`RefCount`'s count and virtual
+  destructor), a C++ completion's `Complete`, a C++ object's Rust object (`object_of(ptr, kind)`: an op's
+  `EeWonAsyncOp`, a socket op's, a socket's, a queue's, a UDP manager's and ops', a server connection's), the virtual
+  `Start` / `Continue` / `Duplicate` / socket hooks / transforms / message check, the `new`s of the C++ classes, the
+  socket thread's add, the target file, the progress chunk, `Accept`. Every per-class hook (the queue socket's 25, the
+  UDP manager's 21 and ops' 17, the timer's 2, the container's 7, the socket thread's 7, the socket op base's 19, the
+  socket's 6, the server connection's 17 of 19) is answered in Rust over it: an op's call on its `EeWonAsyncOp`, a
+  socket's on its `EeWonAsyncSocket`; the Rust objects keep their internal hook structs (so their unit tests keep
+  their stand-ins) and get static native tables (`NATIVE_QUEUE`, `NATIVE_UDP`, ...). The table is bound by the first
+  object made with it (a global pointer: the adapters are plain C functions).
+- **Completions the C++ classes made are `EeWonCompletion`s** (round 24's `RustCompletion`): `ParamCompletion` over
+  the static callbacks, `QueueOpFastCompletion`, the close timer's and keep-alive's. A body holds what the original's
+  by-value `AsyncOpPtr` and `SmartPtr<RefCount>` parameters held for the call (an extra reference on the op and the
+  target), so the counts a callback sees are the original's: a mutation dropping the op's hold fails 14 golden lines.
+  The fast completion's original is found in a Rust registry (the C++ completion -> its original, the entry gone
+  with the body) instead of by `dynamic_cast`.
+- **The golden first** (`won_core_test`, over the unmodified QueueSocket.cpp, UDPManager.cpp, SocketThread.cpp and
+  AsyncOp.cpp): the queue's, the UDP manager's, the timer's, the container's and the socket thread's references and
+  lifetimes over real sockets on 127.0.0.1, every line with the objects' counts, the driver's objects logging their
+  destruction, the core single-threaded (`SetDoSocketAndTimerThreads(false)`: no count depends on another thread),
+  waits on completions. 174 lines, five runs the same. **Mutations**: a body without its op hold (14 lines fail), the
+  manager not held (73), the close timer's callback dropped (129) are caught; a fast completion losing its original
+  was not: no case reached it (socket ops are queued, so a fast op is still pending after its run and becomes the
+  queue's op). The case (an op run at once, finished in its own run) was added and its lines recorded over the
+  original units in a worktree at the golden commit (`git worktree add build/wn25/orig 67e13ee9`), the rest of the
+  golden unchanged.
+- **Header-only shims.** The classes stay the callers' types (the lobby subclasses `BlockingSocket`, `SocketOp`,
+  `UDPManagerSendRecvOp`), their forwarders inline in WONRouting.h with the original addresses in the comments.
+  AsyncOp.cpp is the one unit left: the ops' table, the core table, `QueueCloseOp`, the calls that need the platform
+  layer (`Bind`, `SendTo`, `RecvFrom`, `Accept`, the waits, the Winsock numbering asserts) or WONAPICore
+  (`SocketOp::CleanupHook`, the socket thread's add), and the thread's SEH body. Deleted: QueueSocket.cpp,
+  UDPManager.cpp, UDPManagerDefaults.cpp, AsyncOpMode.cpp, AsyncOpTracker.cpp, AsyncOpWithTracker.cpp,
+  SocketThread.cpp, SocketRunHooks.cpp, SocketOps.cpp, AsyncSocket.cpp, AsyncSocketDefaults.cpp,
+  AsyncSocketInternet.cpp, BlockingSocket.cpp, SocketOpsAccessors.cpp, ServerConnectionDefaults.cpp (15 units).
+  The static callbacks and internal members nothing outside called (`QueueSocket::StaticOpCallback`, the UDP ops'
+  `RecvCallback` / `SendRequest` / `QueueRecv`, `ServerConnection`'s `Static*Callback`) are gone.
+- **Met on the way.** A `CompletionBase*` cannot be `static_cast` to `RefCount*` in the header where `CompletionBase`
+  is still incomplete (`static_cast<void*>`, the same address). The Bash tool's quoted heredoc turned `\\x05` into a
+  raw byte in a Python-written C++ string (three NULs in the driver): write such scripts with the Write tool.
+- **Behaviour.** None on defined paths: every call answers what the C++ hook answered on the same object. An object
+  without its Rust object (a null) gets the hooks' defaults instead of a C++ null dereference.
+- **Reach.** The queue socket, the UDP manager and the socket ops are the LAN lobby's too (its sockets, the ping),
+  so the LAN game exercises them; the server connection only the Internet path.
+- **Net C++**: commits 16b52540 (QueueSocket, UDPManager) +194/-720, c9e7ae18 (machinery) +80/-300, ee198a26 (sockets
+  and socket ops) +358/-879, 01f344f5 (ServerConnection) +46/-150: src+include +673/-2,044, net -1,371. Not done
+  this round: the crypt transform as a Rust transform variant (about -25: the session's `Crypt` needs the message's
+  `ByteBufferPtr` read and replaced from Rust), RoutingConnection's 14 hooks (about -30 on the core),
+  ServerConnectionConnectOp (25 lines, a C++ `AsyncOp` the lobby makes), TitleConfig (on ConfigObject, the lobby's).
+
+### Gates
+
+| Gate | per commit | Merged with rust (72833f4c) |
+|---|---|---|
+| `build.py -j 3 --sim` | 16b52540: 0 / 0; ee198a26 (with c9e7ae18): 0 / 0; 01f344f5: with the merge | 0 / 0 |
+| oracle against the main checkout's `ref` | 16b52540 and ee198a26: seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | 16b52540: rustfmt failed (formatting), fixed before the commit; clippy and tests PASS | PASS |
+| `build.py --test-profile windowed-software` | (with the merge) | 0 / 0 |
+| `xbuild.py wontest` | each commit: won_core_test and the programs linking the changed units (sockobj, asyncop, ops, socket, servconn, routeops, smartroute, userstatus, hostsock, opcore, authsession): exit 0 | all 112 programs exit 0 |
+| `lan_game.py` (harness lock) | (with the merge) | `RESULT PASS lan-game PT host=3432 joiner=3435` |
+
+The merge of rust needed nothing: no conflict, `rust_build.py header` current, `rust_includes.py` changed nothing.
