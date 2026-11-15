@@ -383,47 +383,22 @@ void EEScenarioManager::ApplyPendingEffects()
     this->mB234 = false;
 }
 
+static void EESMPrepareMedia(EEScenarioManager* inManager);
+
 // FUNCTION: EXE 0x5b28c0
 // Unloads the unit class media loaded before, then preloads the media of each unit class a Create Object effect
-// makes for one fixed player (objects not selected on the map)
+// makes for one fixed player (objects not selected on the map; which: ee_scenario lists.rs prepare_media)
 void EEScenarioManager::Prepare()
 {
-    std::vector<long> thePlayers;
-    unsigned long i;
-    if (this->mUnitClassMedia.size() > 0) {
-        for (i = 0; i < this->mUnitClassMedia.size(); i++) {
-            EEPlayer* thePlayer = gWorld.GetPlayer(this->mUnitClassMedia[i].mPlayer);
-            EEUnitClassUpgrade* theUpgrade = thePlayer->GetUpgrade(this->mUnitClassMedia[i].mUnitClass);
-            theUpgrade->UnloadMedia(thePlayer);
-            EEDebugTrace("Scenario:: Unloading Media for %S for player %d", theUpgrade->GetUnitClass()->GetName(),
-                         this->mUnitClassMedia[i].mPlayer);
-        }
+    for (unsigned long i = 0; i < this->mUnitClassMedia.size(); i++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(this->mUnitClassMedia[i].mPlayer);
+        EEUnitClassUpgrade* theUpgrade = thePlayer->GetUpgrade(this->mUnitClassMedia[i].mUnitClass);
+        theUpgrade->UnloadMedia(thePlayer);
+        EEDebugTrace("Scenario:: Unloading Media for %S for player %d", theUpgrade->GetUnitClass()->GetName(),
+                     this->mUnitClassMedia[i].mPlayer);
     }
     this->mUnitClassMedia.clear();
-    for (unsigned long theTrigger = 0; theTrigger < this->mTriggers.size(); theTrigger++) {
-        EESMTrigger* theSMTrigger = this->mTriggers[theTrigger];
-        for (unsigned long theWrapper = 0; theWrapper < theSMTrigger->mEffects.size(); theWrapper++) {
-            EESMEffect* theEffect = this->mEffects[theSMTrigger->GetEffect(theWrapper)->mEffectIndex];
-            if (theEffect->GetType() != kSMEffectObject || theEffect->mObjectAction != kSMObjectActionCreate)
-                continue;
-            EESMObject* theObject = this->mObjects[theEffect->mObject];
-            if (theObject->GetIsSelectOnMap())
-                continue;
-            this->ChoosePlayer(theObject->GetOwner(), &thePlayers, false);
-            if (thePlayers.size() == 1) {
-                long thePlayerNumber = thePlayers[0];
-                long theUnitClass = theObject->GetClass();
-                if (theUnitClass != 0 && gUnitClassTable[theUnitClass] != NULL) {
-                    EEPlayer* thePlayer = gWorld.GetPlayer(thePlayerNumber);
-                    thePlayer->mUnitClassUpgrades[theUnitClass]->LoadMedia(thePlayer, 0x7f);
-                    EESMUnitClassMedia theMedia;
-                    theMedia.mPlayer = thePlayerNumber;
-                    theMedia.mUnitClass = theUnitClass;
-                    this->mUnitClassMedia.push_back(theMedia);
-                }
-            }
-        }
-    }
+    EESMPrepareMedia(this);
 }
 
 // FUNCTION: EXE 0x5b31e8
@@ -1058,6 +1033,15 @@ void* EESMListOp(void* inContext, uint32_t inOp, uint32_t inList, uintptr_t inIn
         gResource->GetString(kStrings[inIndex], theContext->mText);
         return (void*)(const char*)theContext->mText;
     }
+    case EE_SCENARIO_LIST_OP_MEDIA: {
+        EEPlayer* thePlayer = gWorld.GetPlayer(inList);
+        thePlayer->mUnitClassUpgrades[inIndex]->LoadMedia(thePlayer, 0x7f);
+        EESMUnitClassMedia theMedia;
+        theMedia.mPlayer = (long)inList;
+        theMedia.mUnitClass = (long)inIndex;
+        m->mUnitClassMedia.push_back(theMedia);
+        return NULL;
+    }
     case EE_SCENARIO_LIST_OP_ANCHOR:
         static_cast<EESMArea*>(inElement)->SetAnchor(U2DPoint<long>((long)(int32_t)inList, (long)(intptr_t)inIndex));
         return NULL;
@@ -1089,6 +1073,15 @@ static void EESMResetLists(EEScenarioManager* inManager)
 {
     EESMLists theLists(inManager);
     ee_scenario_list_reset(&theLists.mHost);
+}
+
+// Prepare's media (ee_scenario lists.rs prepare_media: the player choices through the scenario host)
+static void EESMPrepareMedia(EEScenarioManager* inManager)
+{
+    EESMLists theLists(inManager);
+    EESMHostContext theContext = {NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    ee_scenario_prepare_media(&theLists.mHost, &theHost);
 }
 
 // The editor's Sort, New, MoveUp/MoveDown, Delete and Duplicate of a list (EE_SCENARIO_LIST_*: 0x1b00c1..0x1b0674,

@@ -14,6 +14,8 @@ use crate::fields::{
     self, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields, EE_SCENARIO_RENUMBER_AREAS,
     EE_SCENARIO_RENUMBER_OBJECTS, EE_SCENARIO_RENUMBER_TRIGGERS,
 };
+use crate::condition::choose_player_recorded;
+use crate::host::{EeScenarioHost, Host, EE_SCENARIO_READ_CLASS_EXISTS};
 use crate::manager::{EeScenarioManagerFields, EeScenarioTimedQueue};
 
 /// The lists, by the manager's member: `mTriggers`, `mConditions`, `mEffects`, `mObjects`, `mAreas`,
@@ -82,6 +84,8 @@ pub const EE_SCENARIO_LIST_OP_RESOURCE: u32 = 18;
 pub const EE_SCENARIO_LIST_OP_OUT_NAME: u32 = 19;
 /// An area's `SetAnchor(U2DPoint<long>(x, y))`: `x` in `list` (32 bits), `y` in `index`.
 pub const EE_SCENARIO_LIST_OP_ANCHOR: u32 = 20;
+/// `Prepare`'s media: player `list`'s upgrade of unit class `index` loads its media, kept in `mUnitClassMedia`.
+pub const EE_SCENARIO_LIST_OP_MEDIA: u32 = 21;
 
 /// The strings of [`EE_SCENARIO_LIST_OP_RESOURCE`]: `IDS_COPY`, `IDS_EXISTS`, and the built-ins' names
 /// (`IDS_ALWAYS_TRUE`, `IDS_DO_NOTHING`, `IDS_NONE`, `IDS_OFF_MAP`, `IDS_PREVIOUS_LOCATION`).
@@ -129,6 +133,8 @@ pub trait Lists {
     fn resource(&mut self, which: usize) -> Vec<u8>;
     /// An area's `SetAnchor` (x, y).
     fn set_anchor(&mut self, area: Element, x: c_long, y: c_long);
+    /// `Prepare`'s media of unit class `class` for player `player` loaded and kept.
+    fn load_media(&mut self, player: i32, class: c_ulong);
     fn out_name(&mut self, name: &[u8]);
     fn manager(&mut self) -> &mut EeScenarioManagerFields;
     fn timed(&mut self) -> &mut EeScenarioTimedQueue;
@@ -842,6 +848,9 @@ impl Lists for HostLists<'_> {
     fn set_anchor(&mut self, area: Element, x: c_long, y: c_long) {
         self.call(EE_SCENARIO_LIST_OP_ANCHOR, x as u32, y as isize as usize, area);
     }
+    fn load_media(&mut self, player: i32, class: c_ulong) {
+        self.call(EE_SCENARIO_LIST_OP_MEDIA, player as u32, class as usize, std::ptr::null_mut());
+    }
     fn out_name(&mut self, name: &[u8]) {
         self.call_text(EE_SCENARIO_LIST_OP_OUT_NAME, 0, std::ptr::null_mut(), name);
     }
@@ -901,6 +910,53 @@ pub fn reset<L: Lists + ?Sized>(l: &mut L) {
         l.set_anchor(a, anchor, anchor);
         l.push(EE_SCENARIO_LIST_AREAS, a);
     }
+}
+
+/// `kSMEffectObject`, `kSMObjectActionCreate`.
+const EFFECT_OBJECT: c_ulong = 1;
+const OBJECT_ACTION_CREATE: c_ulong = 0;
+
+/// `EEScenarioManager::Prepare`'s media: for each trigger's effect entries in order, a Create Object effect whose
+/// object is not picked on the map, whose owner choice names one player (`ChoosePlayer`, listed) and whose class
+/// exists has that player's media of the class loaded.
+pub fn prepare_media<L: Lists + ?Sized, H: Host>(l: &mut L, h: &mut H) {
+    for t in 0..l.count(EE_SCENARIO_LIST_TRIGGERS) {
+        let trigger = l.at(EE_SCENARIO_LIST_TRIGGERS, t);
+        for k in 0..l.entry_count(trigger, true) {
+            let index = *l.entry(trigger, true, k) as usize;
+            let effect = l.at(EE_SCENARIO_LIST_EFFECTS, index);
+            if effect.is_null() {
+                continue; // the original indexed past the list
+            }
+            let e = *l.effect(effect);
+            if e.mType != EFFECT_OBJECT || e.mObjectAction != OBJECT_ACTION_CREATE {
+                continue;
+            }
+            let object = l.at(EE_SCENARIO_LIST_OBJECTS, e.mObject as usize);
+            if object.is_null() {
+                continue;
+            }
+            let o = *l.object(object);
+            if o.mIsSelectOnMap {
+                continue;
+            }
+            let (_, players) = choose_player_recorded(h, o.mOwner as c_long as i32, false, true);
+            if players.len() == 1 && o.mClass != 0 && h.read(EE_SCENARIO_READ_CLASS_EXISTS, o.mClass as i32, 0) != 0 {
+                l.load_media(players[0], o.mClass);
+            }
+        }
+    }
+}
+
+/// `EEScenarioManager::Prepare`'s media ([`prepare_media`]).
+///
+/// # Safety
+/// `lists` must be a valid host table over the live manager, `host` a valid scenario host, for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_prepare_media(lists: *const EeScenarioListHost, host: *const EeScenarioHost) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { std::ptr::read(host) };
+    prepare_media(&mut HostLists(unsafe { &*lists }), &mut h);
 }
 
 /// `EEScenarioManager::Reset`'s lists ([`reset`]).
@@ -1046,6 +1102,7 @@ mod tests {
         destroyed: Vec<usize>,
         out: Vec<Vec<u8>>,
         anchors: Vec<(usize, c_long, c_long)>,
+        media: Vec<(i32, c_ulong)>,
         manager: EeScenarioManagerFields,
         timed: EeScenarioTimedQueue,
     }
@@ -1146,6 +1203,9 @@ mod tests {
         fn set_anchor(&mut self, area: Element, x: c_long, y: c_long) {
             self.anchors.push((un(area), x, y));
         }
+        fn load_media(&mut self, player: i32, class: c_ulong) {
+            self.media.push((player, class));
+        }
         fn resource(&mut self, which: usize) -> Vec<u8> {
             let names = ["Copy", "Exists", "Always True", "Do Nothing", "None", "Off Map", "Previous Location"];
             names[which].as_bytes().to_vec()
@@ -1176,6 +1236,48 @@ mod tests {
         m.add(E, "Do Nothing");
         m.add(O, "None");
         m
+    }
+
+    /// A host whose choices name the owner itself (kind 7 + n: player n) and whose classes exist below 50.
+    struct Players;
+
+    impl Host for Players {
+        fn read4(&mut self, op: u32, a: i32, _b: i32, _c: i32, _d: i32) -> i64 {
+            match op {
+                crate::host::EE_SCENARIO_READ_CAPTURE_SEED => -1,
+                crate::host::EE_SCENARIO_READ_NUM_PLAYERS => 4,
+                crate::host::EE_SCENARIO_READ_PLAYER_EXISTS => (0..4).contains(&a) as i64,
+                EE_SCENARIO_READ_CLASS_EXISTS => (a < 50) as i64,
+                _ => 0,
+            }
+        }
+    }
+
+    #[test]
+    fn prepare_loads_the_media_of_one_player_creates() {
+        let mut m = base();
+        // effects: 0 Do Nothing; 1 create of object 1 (player 3, class 30); 2 create of object 2 (on the map);
+        // 3 create of object 3 (class 60, no such class)
+        let o1 = m.add(O, "o1");
+        m.objects[o1].mOwner = 9;
+        m.objects[o1].mClass = 30;
+        let o2 = m.add(O, "o2");
+        m.objects[o2].mOwner = 9;
+        m.objects[o2].mClass = 31;
+        m.objects[o2].mIsSelectOnMap = true;
+        let o3 = m.add(O, "o3");
+        m.objects[o3].mOwner = 9;
+        m.objects[o3].mClass = 60;
+        for object in 1..4 {
+            let e = m.add(E, "create");
+            m.effects[e].mType = EFFECT_OBJECT;
+            m.effects[e].mObjectAction = OBJECT_ACTION_CREATE;
+            m.effects[e].mObject = object;
+        }
+        let t = m.add(T, "t");
+        m.entries[t][1] = vec![0, 1, 2, 3, 1];
+        prepare_media(&mut m, &mut Players);
+        assert_eq!(m.media, [(3, 30), (3, 30)]);
     }
 
     #[test]

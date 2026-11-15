@@ -702,6 +702,9 @@ mod tests {
         fn set_anchor(&mut self, _: Element, _: std::os::raw::c_long, _: std::os::raw::c_long) {
             unimplemented!()
         }
+        fn load_media(&mut self, _: i32, _: std::os::raw::c_ulong) {
+            unimplemented!()
+        }
         fn out_name(&mut self, _: &[u8]) {
             unimplemented!()
         }

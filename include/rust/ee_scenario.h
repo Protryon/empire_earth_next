@@ -993,6 +993,9 @@ constexpr static const uint32_t EE_SCENARIO_LIST_OP_OUT_NAME = 19;
 /// An area's `SetAnchor(U2DPoint<long>(x, y))`: `x` in `list` (32 bits), `y` in `index`.
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_ANCHOR = 20;
 
+/// `Prepare`'s media: player `list`'s upgrade of unit class `index` loads its media, kept in `mUnitClassMedia`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_MEDIA = 21;
+
 /// The strings of [`EE_SCENARIO_LIST_OP_RESOURCE`]: `IDS_COPY`, `IDS_EXISTS`, and the built-ins' names
 /// (`IDS_ALWAYS_TRUE`, `IDS_DO_NOTHING`, `IDS_NONE`, `IDS_OFF_MAP`, `IDS_PREVIOUS_LOCATION`).
 constexpr static const size_t EE_SCENARIO_STRING_COPY = 0;
@@ -2344,6 +2347,13 @@ void ee_scenario_change_unit(const EeScenarioHost *host,
 /// # Safety
 /// `list` must be the list a [`EeScenarioHost::tiles`] call handed over, during that call.
 void ee_scenario_tiles_push(EeScenarioTiles *list, int32_t x, int32_t y);
+
+/// `EEScenarioManager::Prepare`'s media ([`prepare_media`]).
+///
+/// # Safety
+/// `lists` must be a valid host table over the live manager, `host` a valid scenario host, for the call.
+void ee_scenario_prepare_media(const EeScenarioListHost *lists,
+                               const EeScenarioHost *host);
 
 /// `EEScenarioManager::Reset`'s lists ([`reset`]).
 ///
