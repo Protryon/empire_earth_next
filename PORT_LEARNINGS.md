@@ -21567,3 +21567,51 @@ games also run.
   container and world calls with no decision in them; moving them over a host would not shrink the C++. Better
   candidates: the tech tree's containers Rust-owned (`mNodes`, `mUnitClasses`, `mClassCosts`, which removes the host's
   container operations and the C++ Load loops), the ghosts' gathering, `EEPlayer`'s `RepairPointers` and unit lists.
+
+## R5b.4, thirty-first round: the complex unit's whole-record operations and the towns' save in Rust; the original-statement rechecks retired (ee_units unit_bulk.rs, town_save.rs; branch rust-r5b4-core31, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| e3c3987b | `EEComplexUnit`'s reset, copy and dump over its Rust record (unit_bulk.rs) | +61 -280, net -219 |
+| 972252d4 | the towns' save, load, make and apply in Rust (town_save.rs) | +123 -198, net -75 |
+| ba1d85d8 | the original-statement rechecks retired (TEST ONLY: the group command sweep's `Original*` bodies, the USTM inline originals) | +46 -1661, net -1615 |
+| 2fddf6d2 | (merge) `rust` fffdedf4: PORT_LEARNINGS, EEPlayer.cpp (rust's `EETown` accessors applied to the towns' host), EEPWorldHelper.cpp (round 30's host kept, R5b.1's forest accessors applied); headers current | |
+
+The round's C++: net -1,909 (+230 -2139): the moves -294, the retired scaffolding -1,615.
+
+- **The complex unit's record operations** (unit_bulk.rs): `ResetEEComplexUnit`'s 104 stores into the Rust record
+  (`EeUnitsComplexUnitFields`) are one Rust `reset` (every member but `mU356`, `mDisabledReason`, `mU35E`, which the
+  original leaves; the class's and stats' values it read, and the heading's one random draw, are computed by the C++
+  as before and passed in); `CopyFrom`'s record copies are three Rust blocks at the original's points (after the
+  sound, after `UpdateCamouflage`, after the goals), the first with the four fractions scaled to this unit's maxima
+  (`UMFloatToLong` as ee_ge's `lrintf`; the power's zero maximum) and the camouflage set's test passed in;
+  `OutOfSynchDump`'s 65 record lines are Rust text written through one callback (`%6.6f` as `{:6.6}` of the f64;
+  `%2ld`/`%6ld` widths; the goals', waypoints' and area effects' lines stay C++ between the two parts).
+  Two statements moved past calls that do not read them: `mPlanetID`/`mProductionTime` after `PlayEffect` (it reads
+  neither), the first block's plain copies after `SetSound` (it only swaps the sound pointer).
+- **Golden.** Before the commit the Rust reset and copy ran with the original statements next to them over the
+  same record (both from the same starting bytes, compared member by member: padding differs once Rust assigns the
+  whole struct, so `memcmp` of the record was wrong). The first run failed at the first reset: `kTechNone` is 100000,
+  not -1 (written from memory); the constant is now `EE_TECH_NONE` so header_consts.rs checks it against
+  ee/EETechTreeTechID.h. After the fix: every reset and copy of oracle seeds 2-3 equal (over 2,000 resets and at least one copy per seed; a difference aborted EE-SIM). The dump's 58 labels and widths were compared with the
+  original's format strings by a script (all equal); unit tests cover the text.
+- **The towns' save** (town_save.rs): `EESaveTowns`, `EELoadTowns` (into a Rust pending state, dropped at the
+  first tick as before), `EEMakeSavedTowns` (0.268) and `EEApplySavedTowns` (the hull matching, the reindex and the
+  saved order) are Rust over one host (`EETownSaveHost`: the file's primitives, the towns by slot, a hull vertex, an
+  area's bytes, making, discarding and committing towns, the matched town's saved values, reindex, reorder, a debug
+  line). The saved bytes are unchanged (no version change).
+- **The original-statement rechecks retired.** The group command sweep (EEGroupCommandSweep.cpp) ran each Rust group
+  command body and the original body's statements (24 `Original*` functions copied from EEMessage.cpp before the
+  port, with their helpers) over the dry host and stopped EE-SIM when the logs differed; the USTM timers and
+  countdowns (`UpdateCamouflageTimer`, the cloak fade, `RegeneratePower`, the reload, target and heal search
+  countdowns, the rotting) did the same with the original's statements inline. Every body has matched since its
+  round (6-11, the messages lane's 1-2), and the USGC/USTM records hold the Rust results, whose digests are checked
+  against goldens recorded while both agreed: the copies are retired, the records and their digests stay. This is
+  test scaffolding, not a move: the lead may count or drop the commit separately.
+
+- **Coverage.** Reset runs for every unit made; `CopyFrom` for every unit replaced (upgrades); the dump only on an
+  out-of-sync dump (unit tests and the format check). The towns' save, load, make and apply run in the saveload matrix
+  (0.268 saves: the make path; the apply path for saves whose areas cannot be read is unit-tested).
+- **Behaviour:** none seen. The dump prints Rust's `NaN`/`inf` where the CRT printed `nan`/`inf`/`-nan(ind)`.
+- **Gates.** Commit 1 (with the temporary golden code): build `--sim` 0/0, oracle seeds 2-3 identical to `ref`, the goldens above. Commits 1-2 (one build, the goldens in): the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4). Commits 1-3 as committed (one build): build `--sim` 0/0, oracle seeds 2-3 identical, the oracle capture at seeds 2-3 PASS (171 digests, USGC and USTM among them). On the result merged with rust (fffdedf4): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle 171, late 172, space 173, calamity 189, scenario 22 digests PASS (the digests without a golden as on `rust`); the saveload matrix PASS with the same rows; the test profile links 0/0; the Rust gate PASS (3,485 tests, clippy, rustfmt, headers); a tour under the harness lock (`fixture_game.py --exercise tour --input-check --play-seconds 120`, the test-profile exe) `RESULT PASS tour`.
+- **For the next round.** The moves came to about -300; the round reaches its 1,500 only with the retired scaffolding. Measured and left: the tech tree's containers as Rust-owned would free about 60 lines (each loop over the nodes stays one C++ call per node: media, unload, copy); `EEPlayer::RepairPointers` is world calls only (a host would not shrink it); the ghosts' gathering about 25. Better by lines freed: `EEComplexUnit::UpdateHidden` (four copies of one tile walk over the records' hidden flags; tour-only: the flags are drawn, not simulated), `SightOn`/`SightOff`, `EEUnitClass`'s 29 effect references as one table (constructor and destructor), and the remaining TEST ONLY comparisons whose Rust has been golden for many rounds (the unit store's USCK member compare stays: it is the store's check).
