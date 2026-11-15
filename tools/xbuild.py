@@ -430,6 +430,9 @@ WON_TESTS = {
     # LanLogic as a whole Rust object (lanobj.rs): the original's methods over a scripted host against the Rust
     # object's calls out, op for op (golden: rust/crates/ee_won/src/golden_lanobj.txt)
     "won_lanobj_test": [],
+    # the game's LanLogic holding the shell's members (lanown.rs) against the golden's over LanLogicHost.cpp's cases
+    # as they were, on the model's objects
+    "won_lanmodel_test": [],
     # TextArea as a whole Rust object (textobj.rs): the original's methods and its segments' layout virtuals over a
     # scripted host against the Rust object's calls out, op for op (golden: rust/crates/ee_won/src/golden_textobj.txt)
     "won_textobj_test": [],

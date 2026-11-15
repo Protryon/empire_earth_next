@@ -97,6 +97,7 @@ pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod lanobj;
+mod lanown;
 pub mod layoutobj;
 pub mod listobj;
 pub mod lobbyctl;

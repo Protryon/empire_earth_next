@@ -4920,6 +4920,75 @@ enum class EeWonLobbyOp : uint32_t {
   /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
   /// JoinedRoomEvent.
   LanJoinArm,
+  /// `((RefCount*)a)->AddRef()` (a socket's, a timer's).
+  RefHold = 400,
+  RefRelease,
+  /// `((QueueSocket*)a)->Kill()`.
+  LanSocketKill,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  LanTimerKill,
+  /// a new AsyncOp with the network (`c` 0) or discovery (1) timer's completion; held.
+  LanNewTimer,
+  /// `((AsyncOp*)a)->RunAsTimer(c)`.
+  LanRunTimer,
+  /// `LobbyGameDisconnected(true)`.
+  LanGameDisconnected,
+  /// `new SyncGameListEvent(a)` broadcast.
+  LanSyncGameList,
+  /// `new GameChangedEvent(a, c)` broadcast.
+  LanGameChanged,
+  /// `new LobbyLanSocket`; held.
+  LanNewSocket,
+  /// HostGame's listen socket `a` bound to the lobby port and listening (an error dialog and 0 when not), its
+  /// accept completion and op; 1.
+  LanListen,
+  /// `new JoinedRoomEvent("", a's name, 10, c, a's clients)` broadcast.
+  LanJoinedRoom,
+  /// StartDiscovery's: `*(EeWonIpAddr*)a` the broadcast address on the LAN broadcast port, a new QueueSocket(1)
+  /// (held, returned) bound to it with address reuse, its bind status at `*(intptr_t*)b`.
+  LanNewDiscovery,
+  /// the discovery socket `a`'s receive completion and op.
+  LanArmDiscovery,
+  /// the game `a`'s summary (`WriteSummary`), taken.
+  LanSummaryTake,
+  /// a SendBytesToOp of the bytes `c`/`d` to the address `(const EeWonIpAddr*)b` queued on the socket `a`.
+  LanSendTo,
+  /// the receive op `a` is the socket `b`'s and succeeded.
+  LanOpOnSocket,
+  /// a PeerAuthOp (`c`) or ConnectOp to the game `a` on the socket `b` run with status: whether it succeeded.
+  LanConnectTo,
+  /// a RecvMsgOp on the socket `a` run with status: -1 failed, 0 no message, 1 its bytes taken into `b`.
+  LanRecvReply,
+  /// the socket `a`'s close and receive completions and its receive op.
+  LanArmSocket,
+  /// the password dialog: Reset, LobbyDoDialog.
+  LanPasswordDialog,
+  /// the password dialog's password, taken.
+  LanPasswordTake,
+  /// `LobbyPingGame(a, false)`.
+  LanPingGame,
+  /// `LobbySetCurrentUser(NULL)`.
+  LanNoCurrentUser,
+  /// `LobbyGetDirectConnectCount()`.
+  LanDirectCount,
+  /// `*(EeWonIpAddr*)a = LobbyGetDirectConnectAddressAt(c)`.
+  LanDirectAddressAt,
+  /// `a->SetName(LobbyGetDirectConnectNameAt(c))`.
+  LanDirectNameAt,
+  /// `LobbyRemoveDirectConnect(a's address)`.
+  LanRemoveSavedDirect,
+  /// AddDirectConnect's dialog and address (its DNS check): 1 with the address at `*(EeWonIpAddr*)a`, 0 when
+  /// cancelled or unresolved.
+  LanDirectAsk,
+  /// AddDirectConnect's name (the address when empty) set on the game `a` and saved with the address `b`.
+  LanDirectSave,
+  /// the summary read from the receive op `a`'s packet past its head into the game `b` (`ReadSummary`): its
+  /// result, or Threw.
+  LanReadSummary,
+  /// the receive op `a`'s sender address copied to `*(EeWonIpAddr*)b`.
+  LanRecvFromAddr,
+  /// a ClientOptionsPopup for `a` (this player's client `b`, room spec `c`).
+  LanClientOptions,
 };
 
 /// The inward calls (LanLogic's virtual slots and its completions). `a`, `b` pointers, `c`, `d` integers; a
@@ -4948,6 +5017,12 @@ enum class EeWonLanCall : uint32_t {
   DiscoveryTimer,
   DiscoveryRecv,
   Accept,
+  /// `GetMyClient()`.
+  MyClient,
+  /// `GetClientList()`.
+  ClientList,
+  /// `AddPendingSocket(a)` (a peer-authenticated socket the shell accepted).
+  AddPending,
 };
 
 /// The instruction classes.
@@ -17210,9 +17285,17 @@ bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
 
-/// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
-/// As `ee_won_lan_new`, with the model's ops answered by its Rust objects (the game's).
-EeWonLan *ee_won_lan_new_model(void *logic, EeWonLobbyHostFn host);
+/// The game's LanLogic for the C++ shell `logic`: as `ee_won_lan_new`, with the model's ops answered by its Rust
+/// objects and the shell's members held here (lanown.rs): the shell's new client list and LAN (type 1) and
+/// direct-connect (type 3) game lists, a reference taken on each.
+///
+/// # Safety
+/// The lists are live model shells.
+EeWonLan *ee_won_lan_new_model(void *logic,
+                               EeWonLobbyHostFn host,
+                               void *clients,
+                               void *lan_games,
+                               void *direct_games);
 
 EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
 

@@ -391,6 +391,77 @@ pub enum EeWonLobbyOp {
     /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
     /// JoinedRoomEvent.
     LanJoinArm,
+    // ---- the game's LanLogic (lanown.rs holds its members and answers the Lan ops above that read or set them;
+    // these are the C++ calls left in those cases)
+    /// `((RefCount*)a)->AddRef()` (a socket's, a timer's).
+    RefHold = 400,
+    RefRelease,
+    /// `((QueueSocket*)a)->Kill()`.
+    LanSocketKill,
+    /// `((AsyncOp*)a)->Kill(true)`.
+    LanTimerKill,
+    /// a new AsyncOp with the network (`c` 0) or discovery (1) timer's completion; held.
+    LanNewTimer,
+    /// `((AsyncOp*)a)->RunAsTimer(c)`.
+    LanRunTimer,
+    /// `LobbyGameDisconnected(true)`.
+    LanGameDisconnected,
+    /// `new SyncGameListEvent(a)` broadcast.
+    LanSyncGameList,
+    /// `new GameChangedEvent(a, c)` broadcast.
+    LanGameChanged,
+    /// `new LobbyLanSocket`; held.
+    LanNewSocket,
+    /// HostGame's listen socket `a` bound to the lobby port and listening (an error dialog and 0 when not), its
+    /// accept completion and op; 1.
+    LanListen,
+    /// `new JoinedRoomEvent("", a's name, 10, c, a's clients)` broadcast.
+    LanJoinedRoom,
+    /// StartDiscovery's: `*(EeWonIpAddr*)a` the broadcast address on the LAN broadcast port, a new QueueSocket(1)
+    /// (held, returned) bound to it with address reuse, its bind status at `*(intptr_t*)b`.
+    LanNewDiscovery,
+    /// the discovery socket `a`'s receive completion and op.
+    LanArmDiscovery,
+    /// the game `a`'s summary (`WriteSummary`), taken.
+    LanSummaryTake,
+    /// a SendBytesToOp of the bytes `c`/`d` to the address `(const EeWonIpAddr*)b` queued on the socket `a`.
+    LanSendTo,
+    /// the receive op `a` is the socket `b`'s and succeeded.
+    LanOpOnSocket,
+    /// a PeerAuthOp (`c`) or ConnectOp to the game `a` on the socket `b` run with status: whether it succeeded.
+    LanConnectTo,
+    /// a RecvMsgOp on the socket `a` run with status: -1 failed, 0 no message, 1 its bytes taken into `b`.
+    LanRecvReply,
+    /// the socket `a`'s close and receive completions and its receive op.
+    LanArmSocket,
+    /// the password dialog: Reset, LobbyDoDialog.
+    LanPasswordDialog,
+    /// the password dialog's password, taken.
+    LanPasswordTake,
+    /// `LobbyPingGame(a, false)`.
+    LanPingGame,
+    /// `LobbySetCurrentUser(NULL)`.
+    LanNoCurrentUser,
+    /// `LobbyGetDirectConnectCount()`.
+    LanDirectCount,
+    /// `*(EeWonIpAddr*)a = LobbyGetDirectConnectAddressAt(c)`.
+    LanDirectAddressAt,
+    /// `a->SetName(LobbyGetDirectConnectNameAt(c))`.
+    LanDirectNameAt,
+    /// `LobbyRemoveDirectConnect(a's address)`.
+    LanRemoveSavedDirect,
+    /// AddDirectConnect's dialog and address (its DNS check): 1 with the address at `*(EeWonIpAddr*)a`, 0 when
+    /// cancelled or unresolved.
+    LanDirectAsk,
+    /// AddDirectConnect's name (the address when empty) set on the game `a` and saved with the address `b`.
+    LanDirectSave,
+    /// the summary read from the receive op `a`'s packet past its head into the game `b` (`ReadSummary`): its
+    /// result, or Threw.
+    LanReadSummary,
+    /// the receive op `a`'s sender address copied to `*(EeWonIpAddr*)b`.
+    LanRecvFromAddr,
+    /// a ClientOptionsPopup for `a` (this player's client `b`, room spec `c`).
+    LanClientOptions,
 }
 
 /// A Rust lobby object's way out: the host and the C++ object it belongs to.
