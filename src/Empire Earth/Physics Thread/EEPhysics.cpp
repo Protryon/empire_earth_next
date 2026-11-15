@@ -149,21 +149,9 @@ void EEPhysics::AutoSave()
         gGamePreferences.mSettings.mLastAutoSave = theName;
         gGamePreferences.Save();
         static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(
-            new EEMLoadOrSaveGame(theName, TMGetTime(), 0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), 1),
+            new EEMRecord(kMessageLoadOrSaveGame, {0, 1, gCommunications->GetNumberOfCTsProcessedInPhysics(), TMGetTime(), 1, 0, theName}),
             15000, 12);
     }
-}
-
-// FUNCTION: EXE 0x551de3
-// Creates a load-or-save-game message for a file name, time and tick, with its load, quiet and autosave flags
-EEMLoadOrSaveGame::EEMLoadOrSaveGame(const UWideString& inS20, unsigned long inTime, unsigned char inIsLoad,
-                                     bool inIsQuiet, long inTick, unsigned char inIsAutoSave)
-    : EEMessage(kMessageLoadOrSaveGame, true), mIsLoad(inIsLoad), mIsQuiet(inIsQuiet)
-{
-    this->mFileName = inS20;
-    this->mTime = inTime;
-    this->mIsAutoSave = inIsAutoSave;
-    this->mTick = inTick;
 }
 
 // FUNCTION: EXE 0x551e4d
@@ -1322,7 +1310,7 @@ void EEPhysics::ServeLoadSaveRequests()
         if (this->mTicksToProcess == 0) {
             long theResult = 0;
             for (unsigned long i = 0; i < this->mLoadSaveRequests.size(); i++) {
-                theResult = static_cast<EEMLoadOrSaveGame*>(this->mLoadSaveRequests[i])->LoadOrSave();
+                theResult = EELoadOrSave(static_cast<EEMRecord*>(this->mLoadSaveRequests[i]));
                 this->mLoadSaveRequests[i]->Dereference();
                 this->mLoadSaveRequests[i] = NULL;
             }

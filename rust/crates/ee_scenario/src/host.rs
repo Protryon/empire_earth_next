@@ -134,6 +134,14 @@ pub trait Host {
     fn tiles(&mut self, _op: u32, _a: i32, _b: i32, _c: i32) -> Vec<(i32, i32)> {
         Vec::new()
     }
+    /// A world call of an effect's run (`EE_SCENARIO_WORLD_*`, effect.rs), six arguments (unused ones 0).
+    fn world(&mut self, _op: u32, _args: [i64; 6]) -> i64 {
+        0
+    }
+    /// `GetScenarioObject(index)`'s numbers, `None` for no object.
+    fn object(&mut self, _index: i32) -> Option<crate::fields::EeScenarioObjectFields> {
+        None
+    }
 }
 
 /// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
@@ -169,6 +177,10 @@ pub struct EeScenarioHost {
     pub write: unsafe extern "C" fn(ctx: *mut c_void, op: u32, player: c_long, b: i64, c: i64, d: i64),
     /// [`Host::tiles`]: the C++ fills `list` with [`ee_scenario_tiles_push`].
     pub tiles: unsafe extern "C" fn(ctx: *mut c_void, op: u32, a: i32, b: i32, c: i32, list: *mut EeScenarioTiles),
+    /// [`Host::world`] (`args` six values).
+    pub world: unsafe extern "C" fn(ctx: *mut c_void, op: u32, args: *const i64) -> i64,
+    /// [`Host::object`]: the object's numbers, null for none.
+    pub object: unsafe extern "C" fn(ctx: *mut c_void, index: i32) -> *const crate::fields::EeScenarioObjectFields,
 }
 
 impl Host for EeScenarioHost {
@@ -194,5 +206,13 @@ impl Host for EeScenarioHost {
         // SAFETY: as `read`; `list` lives through the call
         unsafe { (self.tiles)(self.ctx, op, a, b, c, &mut list) };
         list.0
+    }
+    fn world(&mut self, op: u32, args: [i64; 6]) -> i64 {
+        // SAFETY: as `read`; `args` lives through the call
+        unsafe { (self.world)(self.ctx, op, args.as_ptr()) }
+    }
+    fn object(&mut self, index: i32) -> Option<crate::fields::EeScenarioObjectFields> {
+        // SAFETY: as `read`; a non-null answer points to the live object's numbers, copied at once
+        unsafe { (self.object)(self.ctx, index).as_ref().copied() }
     }
 }

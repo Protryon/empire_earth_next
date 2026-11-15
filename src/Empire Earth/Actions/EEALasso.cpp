@@ -46,22 +46,22 @@ void EEALasso::SelectUnits(const GERectangle& inRectangle, long inFlags, unsigne
         if (inUnitType == 0xdf)
             this->mMessage = new EEMRecord(kMessageSelectPatrolGroup, {inPatrolGroup});
         else if (inFlags == 0)
-            this->mMessage = new EEMSelectUnits(inRectangle, inUnitType, 0x4e);
+            this->mMessage = EENewSelectUnits(inRectangle, inUnitType, 0x4e);
         else if (inFlags & kModifierControl)
-            this->mMessage = new EEMAddAndRemoveUnitsFromSelectedGroup(inRectangle, inUnitType, 0x50);
+            this->mMessage = EENewSelectUnits(inRectangle, inUnitType, 0x50);
         else if (inFlags & kModifierShift)
-            this->mMessage = new EEMAddUnitsToSelectedGroup(inRectangle, inUnitType, 0x4f);
+            this->mMessage = EENewSelectUnits(inRectangle, inUnitType, 0x4f);
         else
-            this->mMessage = new EEMSelectUnits(inRectangle, inUnitType, 0x4e);
+            this->mMessage = EENewSelectUnits(inRectangle, inUnitType, 0x4e);
     } else {
         if (inFlags == 0)
-            this->mMessage = new EEMSelectUnits(inRectangle, 0, 0x4e);
+            this->mMessage = EENewSelectUnits(inRectangle, 0, 0x4e);
         else if (inFlags & kModifierControl)
-            this->mMessage = new EEMAddAndRemoveUnitsFromSelectedGroup(inRectangle, 0, 0x50);
+            this->mMessage = EENewSelectUnits(inRectangle, 0, 0x50);
         else if (inFlags & kModifierShift)
-            this->mMessage = new EEMAddUnitsToSelectedGroup(inRectangle, 0, 0x4f);
+            this->mMessage = EENewSelectUnits(inRectangle, 0, 0x4f);
         else
-            this->mMessage = new EEMSelectUnits(inRectangle, 0, 0x4e);
+            this->mMessage = EENewSelectUnits(inRectangle, 0, 0x4e);
     }
     gUserInterface->PostAction(this);
 }
