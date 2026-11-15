@@ -7,15 +7,13 @@
         players' scripts): the retail db folder is not used; OUT/Users (the install's), OUT/WONLobby.cfg,
         OUT/zzWONVersion.cfg, OUT/open_data.json (what was built). (The game reads only the text db tables: there
         is no binary tree any more.)
-  python -I tools/open_data.py pack OUT.zip [--part all|media|db] [--tree DIR] [--game DIR] [--base DIR]
+  python -I tools/open_data.py pack OUT.zip [--part all|media] [--tree DIR] [--game DIR] [--base DIR]
         the bundle: the open tree (built into build/open_data/tree unless --tree names one), fonts/ (Liberation, with
         its LICENSE and AUTHORS) and README.txt. OUT must be under build/ or outside the repository.
-        --part: the releases ship it in parts that unzip into one folder (tools/fetch_data.py pulls them):
-          media  everything but Data/db and open_data.json: models, the original textures, sounds, music, scripts,
-                 fonts (large; changes rarely)
-          db     Data/db, Data/ai and open_data.json: the repository's data/db and data/ai (the tables, the rules
-                 documents and the computer players' scripts, the tweakables; small), for a game without a checkout
-        The third part, Data/Textures-4x, comes from tools/upscale.
+        --part media: the media release part (tools/fetch_data.py unpacks it into the repository's data/):
+                 everything but Data/db, Data/ai and open_data.json (those are in git as data/db and data/ai):
+                 models, the original textures, sounds, music, scripts, fonts. The other part, Data/Textures-4x,
+                 comes from tools/upscale.
   python -I tools/open_data.py sync TREE      (also: ai TREE)
         refresh a built tree's Data/ai and Data/db from the repository's data/ai and data/db
         in place (a copy; seconds, no rebuild) and record their hashes in its open_data.json ("ai", "db"). A build
@@ -96,11 +94,31 @@ def scripts_hash():
     return h.hexdigest()[:16]
 
 
+def _is_repo(target, folder):
+    """whether a tree's Data/<x> must be left alone: it is reached through a link (build/data-root, whose Data is a
+    checkout's data/: its db and ai are that checkout's own, never rewritten here), or it is the repository's folder"""
+    try:
+        if not target.exists():
+            return False
+        real = target.resolve()
+        if real == folder.resolve():
+            return True
+        if real != target.parent.parent.resolve() / target.parent.name / target.name:
+            print(f'{target}: reached through a link ({real}): left as it is', file=sys.stderr)
+            return True
+        return False
+    except OSError:
+        return False
+
+
 def refresh_scripts(tree):
     """Data/ai of a tree replaced by the repository's data/ai (ais.json, *.lua, the notices), its hash recorded in open_data.json -> the hash.
-    The old files are unlinked first, so a staged copy's hard links into another tree are never written through."""
+    The old files are unlinked first, so a staged copy's hard links into another tree are never written through. A
+    tree whose Data/ai is the repository's own (build/data-root) is left as it is."""
     tree = pathlib.Path(tree)
     target = tree / 'Data' / 'ai'
+    if _is_repo(target, AI_SCRIPTS):
+        return scripts_hash()
     if target.exists():
         shutil.rmtree(target)
     for p in ai_files():
@@ -133,6 +151,8 @@ def refresh_db(tree):
     recorded in open_data.json -> the hash."""
     tree = pathlib.Path(tree)
     target = tree / 'Data' / 'db'
+    if _is_repo(target, DB_TEXT):   # build/data-root: Data/db is data/db itself
+        return db_hash()
     if not db_files():
         sys.exit(f'{DB_TEXT}: no tables (a checkout without data/db?)')
     if target.exists():
@@ -162,13 +182,11 @@ def tree_stale(tree):
     return [k for k, h in (('ai', scripts_hash()), ('db', db_hash())) if report.get(k) != h]
 
 
-def sync_fetched(root):
-    """A data root that tools/fetch_data.py made (bundles.json) gets this checkout's data/db and data/ai (sync), so a
-    game run straight from it (posix_game.py, play_posix.py) never plays stale tables -> what was refreshed."""
+def fetched_root(root=ROOT):
+    """a checkout's build/data-root when tools/fetch_data.py filled its data/ (data/.fetched.json), else None"""
     root = pathlib.Path(root)
-    if not (root / 'bundles.json').exists() or 'checkout' not in (root / 'bundles.json').read_text(encoding='utf-8'):
-        return []
-    return sync(root)
+    game = root / 'build' / 'data-root'
+    return game if (root / 'data' / '.fetched.json').exists() and (game / 'Data').is_dir() else None
 
 
 def sync(tree):
@@ -224,18 +242,10 @@ Contents
 
 README_MEDIA = """
 This part
-  The media part: everything above but Data/db and open_data.json, which are the db part (ee_open_db-<sha>.zip,
-  small, republished whenever the tables or rules change). The 4x textures (ee_textures_4x-<sha>.zip,
-  Data/Textures-4x) are the third, optional part. Unzip the parts into one folder; tools/fetch_data.py in the source
-  repository does that.
-"""
-
-README_DB = """
-This part
-  The db part: Data/db (the tables as text and the rules documents, what a mod tweaks), Data/ai (the computer
-  players' Lua scripts) and open_data.json: the source repository's data/db and data/ai. It needs
-  the media part (ee_open_media-<sha>.zip: models, textures, sounds, fonts) in the same folder: unzip this one over
-  it (tools/fetch_data.py in the source repository does that).
+  The media part: everything above but Data/db, Data/ai and open_data.json. Data/db (the tables and the rules
+  documents) and Data/ai (the computer players' scripts) are in the source repository as data/db and data/ai, and
+  the game's release packages carry them. The 4x textures (ee_textures_4x-<sha>.zip, Data/Textures-4x) are the
+  other, optional part. tools/fetch_data.py in the source repository unpacks the parts into its data/.
 """
 
 
@@ -513,7 +523,7 @@ def pack_part(rel, part):
     if part == 'all':
         return True
     is_db = rel.parts[:2] in (('Data', 'db'), ('Data', 'ai')) or rel.as_posix() == 'open_data.json'
-    return (part == 'db') == is_db   # (the repository's data/db and data/ai: cmd_pack syncs the tree first)
+    return not is_db   # media: data/db and data/ai are in git
 
 
 def cmd_pack(a):
@@ -546,12 +556,11 @@ def cmd_pack(a):
                 n += 1
             elif p.is_dir() and not any(p.iterdir()):
                 z.write(p, rel.as_posix() + '/')   # an empty folder the game expects
-        if part != 'db':
-            for p in sorted(FONTS.iterdir()):
-                if p.is_file() and not p.name.startswith('.'):
-                    z.write(p, 'fonts/' + p.name)
-                    n += 1
-        readme = README + {'all': '', 'media': README_MEDIA, 'db': README_DB}[part]
+        for p in sorted(FONTS.iterdir()):
+            if p.is_file() and not p.name.startswith('.'):
+                z.write(p, 'fonts/' + p.name)
+                n += 1
+        readme = README + {'all': '', 'media': README_MEDIA}[part]
         z.writestr('README.txt' if part == 'all' else f'README-{part}.txt', readme.replace('\n', '\r\n'))
         n += 1
     tmp.replace(zip_path)
@@ -572,8 +581,8 @@ def main():
             p.add_argument('--force', action='store_true')
         else:
             p.add_argument('--tree')
-            p.add_argument('--part', choices=('all', 'media', 'db'), default='all',
-                           help='media: all but Data/db; db: Data/db and open_data.json (default all)')
+            p.add_argument('--part', choices=('all', 'media'), default='all',
+                           help='media: all but Data/db, Data/ai and open_data.json (default all)')
     p = sub.add_parser('check')
     p.add_argument('dir')
     for name in ('sync', 'ai'):

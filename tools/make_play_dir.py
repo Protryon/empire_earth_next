@@ -121,7 +121,8 @@ def main():
     ap.add_argument("out", type=pathlib.Path)
     ap.add_argument("--exe", type=pathlib.Path)
     ap.add_argument("--data", type=pathlib.Path, action="append",
-                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree); "
+                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree, "
+                         "else build/data-root when tools/fetch_data.py filled data/); "
                          "repeatable, each over the ones before")
     ap.add_argument("--movies", type=pathlib.Path, action="append", default=[],
                     help="a directory with .bik movies (repeatable)")
@@ -132,8 +133,11 @@ def main():
     exe = a.posix_exe or a.exe or ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"
     if not exe.exists():
         sys.exit(f"{exe} does not exist: build it first (python -I build.py)")
-    datas = a.data or [TREE]
-    if a.data is None and not (TREE / "open_data.json").exists():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data   # noqa: E402
+    fetched = open_data.fetched_root()
+    datas = a.data or [TREE if (TREE / "open_data.json").exists() or fetched is None else fetched]
+    if a.data is None and datas == [TREE] and not (TREE / "open_data.json").exists():
         print(f"data: building {TREE} from the installs (tools/open_data.py build)", flush=True)
         r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "open_data.py"), "build", str(TREE), "--force"])
         if r.returncode:
@@ -154,8 +158,7 @@ def main():
     for data in datas:
         print(f"game data from {data}", flush=True)
         info = copy_data(data, out) or info
-    sys.path.insert(0, str(ROOT / "tools"))
-    import open_data   # the exe's own tables and scripts: this checkout's, whatever the data brought (a release lags)
+    # the exe's own tables and scripts: this checkout's, whatever the data brought (a release lags)
     open_data.refresh_scripts(out)
     open_data.refresh_db(out)
     print("Data/db and Data/ai from this checkout's data/db and data/ai", flush=True)

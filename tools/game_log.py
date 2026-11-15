@@ -86,13 +86,13 @@ def main():
     a = ap.parse_args()
     logs = a.log
     if not logs:
-        roots = [a.data] if a.data else [ROOT / "build" / "data", ROOT / "build" / "boot" / "windowed_f"]
+        roots = [a.data] if a.data else [ROOT / "build" / "data-root", ROOT / "build" / "boot" / "windowed_f"]
         found = sorted((p for r in roots for p in (r / "Logs").glob("game-*.log")), key=lambda p: p.stat().st_mtime)
         if not found:
             sys.exit("no game log found: pass LOG or --data ROOT")
         logs = [found[-1]]
     out = []
-    colors = color_names([a.data or ROOT / "build" / "data", ROOT / "build" / "open_data" / "tree"])
+    colors = color_names([a.data or ROOT / "build" / "data-root", ROOT / "build" / "open_data" / "tree"])
     for path in logs:
         head, players, samples, epochs, end, ai_lines, chats = read(path)
         last = max((s[-1][0] for s in samples.values() if s), default=0)

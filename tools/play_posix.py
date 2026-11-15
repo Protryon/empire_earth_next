@@ -40,8 +40,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--fast', action='store_true', help='the plain build instead of the AddressSanitizer one')
     ap.add_argument('--build', action='store_true', help='build the chosen exe first (tools/xbuild.py game)')
-    ap.add_argument('--data', default=str(ROOT / 'build' / 'data'),
-                    help='the data root (EE_DATA_ROOT), default build/data (tools/fetch_data.py)')
+    ap.add_argument('--data', default=str(ROOT / 'build' / 'data-root'),
+                    help='the data root (EE_DATA_ROOT), default build/data-root (tools/fetch_data.py: Data is data/)')
     ap.add_argument('--exe', help='another exe to play (default: the chosen build)')
     ap.add_argument('--out', help='the session folder (default build/playtest/<time>)')
     ap.add_argument('game_args', nargs=argparse.REMAINDER, help='arguments for the game, after --')
@@ -63,10 +63,6 @@ def main():
     data = pathlib.Path(a.data).resolve()
     if not (data / 'Data').is_dir():
         sys.exit(f'play_posix.py: {data} has no Data folder (tools/fetch_data.py)')
-    sys.path.insert(0, str(ROOT / 'tools'))
-    import open_data   # a fetch_data.py folder: this checkout's data/db and data/ai first
-    for x in open_data.sync_fetched(data):
-        print(f'play_posix.py: {data}: Data/{x} refreshed from the checkout')
 
     out = pathlib.Path(a.out) if a.out else ROOT / 'build/playtest' / datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     out = out.resolve()

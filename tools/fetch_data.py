@@ -1,27 +1,33 @@
-"""Pull the game data from this repository's releases into one folder, with this checkout's data/db and data/ai.
+"""Pull the game's media from this repository's releases into data/, beside the committed data/db and data/ai: a
+custom git LFS on GitHub Releases.
 
-  python -I tools/fetch_data.py [OUT] [--without textures-4x] [--db checkout|release] [--tag PART=TAG ...] [--list]
+  python -I tools/fetch_data.py [--without textures-4x] [--tag PART=TAG ...] [--list] [--root DIR]
 
-The data ships in three parts that unzip into one data root (next to the exe, or EE_DATA_ROOT):
+data/ is the game's Data folder. data/db (the tables and the rules documents) and data/ai (the computer players'
+scripts) are in git; everything else in it is gitignored and comes from two release parts:
   media        open-media-<sha>        ee_open_media-<sha>.zip    models, the original textures, sounds, music,
-                                                                  scripts, fonts (tools/open_data.py pack --part media)
+                                                                  scripts (tools/open_data.py pack --part media)
   textures-4x  open-textures-4x-<sha>  ee_textures_4x-<sha>.zip   Data/Textures-4x, the AI-upscaled textures
                                                                   (tools/upscale; optional, 1.3 GB)
-  db           open-db-<sha>           ee_open_db-<sha>.zip       Data/db: the tables and the rules documents, the
-                                                                  tweakables (tools/open_data.py pack --part db)
-Each part is released on its own. OUT (default build/data) gets them in that order; OUT/bundles.json records which
-release each came from, and a part already at its newest release is skipped. A part's newest release is the latest
-one whose tag has the part's prefix (--tag pins one). Downloads are kept in build/data_cache. Needs the gh CLI.
+A part's Data/... files go into data/; its other files (Users/, WONLobby.cfg, zzWONVersion.cfg, fonts/ with the
+font licence, its README) into build/data-root, the data root to run the game with: build/data-root/Data is a link
+to data/ (a junction on Windows, a symlink elsewhere), so EE_DATA_ROOT=build/data-root plays the checkout's data/
+as it is (tools/sim.py --data open, make_play_dir.py, posix_game.py and play_posix.py find it by themselves). The
+game writes its Logs and config.yaml there and its saved games into data/ (gitignored), never into the repository
+root.
 
-The db part: the tables and the scripts are in git (data/db, data/ai), so by default (--db checkout) OUT/Data/db and
-OUT/Data/ai are copies of this checkout's, refreshed on every run (tools/open_data.py sync: seconds), and the db
-release is not downloaded. --db release takes the release instead (a folder for a game built from another commit; a
-db release made before data/db was committed has no dbrandommap.csv / dbterraingraytextures.csv and does not load).
-OUT may not be the repository's data/ (it holds the committed data/db and data/ai; an old download there,
-data/Data and data/bundles.json, is ignored by git and can be deleted).
+data/.fetched.json records each part's release and the files and folders it installed. A part already at its newest
+release, with all its files present, is skipped; a newer release first removes only that part's own old files.
+--without removes a part's files. Nothing under data/db or data/ai is ever written or removed (a zip entry there is
+skipped). A part's newest release is the latest one whose tag has the part's prefix (--tag pins one). Downloads are
+cached in the main checkout's build/data_cache (shared by its worktrees). Needs the gh CLI.
+
+--root DIR: fill another checkout layout instead of this one (DIR/data with its db and ai; DIR/build/data-root).
+An old download from before this layout (data/Data, data/bundles.json, build/data) is not used and can be deleted.
 """
 import argparse
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -29,8 +35,19 @@ import sys
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CACHE = ROOT / "build" / "data_cache"
-PARTS = [("media", "open-media-"), ("textures-4x", "open-textures-4x-"), ("db", "open-db-")]
+PARTS = [("media", "open-media-"), ("textures-4x", "open-textures-4x-")]
+TRACKED = ("db", "ai")          # data/db and data/ai: the repository's, never touched here
+MANIFEST = ".fetched.json"      # in data/ (gitignored)
+
+
+def main_checkout():
+    """the main checkout of this repository (a worktree shares its download cache)"""
+    out = subprocess.run(["git", "-C", str(ROOT), "worktree", "list", "--porcelain"], capture_output=True, text=True)
+    first = out.stdout.split("\n")[0]
+    return pathlib.Path(first.split(" ", 1)[1]) if first.startswith("worktree ") else ROOT
+
+
+CACHE = main_checkout() / "build" / "data_cache"
 
 
 def repo():
@@ -79,22 +96,118 @@ def download(tag):
     return dest
 
 
+class Layout:
+    """a checkout's data/ (the Data folder) and build/data-root (the data root: Data -> data/, the root files)"""
+
+    def __init__(self, root):
+        self.root = pathlib.Path(root).resolve()
+        self.data = self.root / "data"
+        self.game = self.root / "build" / "data-root"
+
+    def target(self, name):
+        """a zip member -> (its path in the layout, the path recorded) or None for one that is not ours to write"""
+        parts = [p for p in name.split("/") if p]
+        if not parts or any(p in ("..", ".") or ":" in p or "\\" in p for p in parts):
+            return None
+        if parts[0] == "Data":
+            if len(parts) == 1 or parts[1].lower() in TRACKED:
+                return None
+            rel = "data/" + "/".join(parts[1:])
+        elif parts[0].lower() in ("open_data.json", "data"):
+            return None
+        else:
+            rel = "build/data-root/" + "/".join(parts)
+        return self.root / rel, rel
+
+    @staticmethod
+    def tracked(rel):
+        parts = rel.split("/")
+        return parts[0] == "data" and len(parts) > 1 and parts[1].lower() in TRACKED
+
+    def link(self):
+        """build/data-root/Data -> data/ (a junction on Windows: no privileges needed)"""
+        self.game.mkdir(parents=True, exist_ok=True)
+        link = self.game / "Data"
+        if os.path.lexists(link):
+            try:
+                if link.resolve() == self.data.resolve():
+                    return link
+            except OSError:
+                pass
+            if link.is_symlink():
+                link.unlink()
+            elif getattr(link, "is_junction", lambda: False)():
+                os.rmdir(link)   # the junction itself, not its target
+            else:
+                sys.exit(f"{link} exists and is not a link to {self.data}: move it away")
+        if sys.platform == "win32":
+            import _winapi
+            _winapi.CreateJunction(str(self.data), str(link))
+        else:
+            os.symlink(os.path.relpath(self.data, self.game), link)
+        return link
+
+
+def remove_part(lay, entry):
+    """a part's recorded files, then its folders that are empty -> the number of files removed"""
+    n = 0
+    for rel in entry.get("files", []):
+        if lay.tracked(rel):
+            continue
+        p = lay.root / rel
+        if p.is_file() or p.is_symlink():
+            p.unlink()
+            n += 1
+    for rel in sorted(entry.get("dirs", []), key=lambda r: r.count("/"), reverse=True):
+        p = lay.root / rel
+        if not lay.tracked(rel) and p.is_dir() and not p.is_symlink() and not any(p.iterdir()):
+            p.rmdir()
+    return n
+
+
+def install_part(lay, zpath):
+    """a part's zip into the layout -> its entry (the files and folders it wrote)"""
+    files, dirs = [], set()
+    skipped = 0
+    with zipfile.ZipFile(zpath) as z:
+        for info in z.infolist():
+            t = lay.target(info.filename)
+            if t is None:
+                skipped += 1
+                continue
+            path, rel = t
+            if info.is_dir():
+                path.mkdir(parents=True, exist_ok=True)
+                dirs.add(rel.rstrip("/"))
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            parent = rel.rsplit("/", 1)[0]
+            while parent.count("/") >= 1 and parent != "build/data-root":
+                dirs.add(parent)
+                parent = parent.rsplit("/", 1)[0]
+            if path.is_symlink() or path.exists():
+                path.unlink()   # never write through a hard link into another tree
+            with z.open(info) as src, open(path, "wb") as dst:
+                shutil.copyfileobj(src, dst, 1 << 20)
+            files.append(rel)
+    if skipped:
+        print(f"  {skipped} entries left out (data/db, data/ai, open_data.json: the repository's)")
+    return dict(files=sorted(files), dirs=sorted(dirs))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], epilog=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("out", nargs="?", default=str(ROOT / "build" / "data"))
-    ap.add_argument("--db", choices=("checkout", "release"), default="checkout",
-                    help="Data/db and Data/ai: this checkout's data/db and data/ai (default) or the db release")
     ap.add_argument("--without", action="append", default=[], choices=[p for p, _ in PARTS],
-                    help="leave a part out (repeatable)")
+                    help="leave a part out, removing its files (repeatable)")
     ap.add_argument("--tag", action="append", default=[], metavar="PART=TAG", help="pin a part to a release")
     ap.add_argument("--list", action="store_true", help="print each part's newest release and exit")
+    ap.add_argument("--root", default=str(ROOT), help="the checkout layout to fill (default: this checkout)")
     a = ap.parse_args()
     pins = dict(t.split("=", 1) for t in a.tag)
     tags = releases()
     chosen = []
-    parts = [(p, x) for p, x in PARTS if p != "db" or a.db == "release"]
-    for part, prefix in parts:
+    for part, prefix in PARTS:
         tag = pins.get(part) or newest(tags, prefix)
         if tag is None:
             sys.exit(f"no release with a tag starting {prefix} ({part})")
@@ -102,55 +215,42 @@ def main():
     if a.list:
         for part, tag in chosen:
             print(f"{part:12} {tag}")
-        if a.db == "checkout":
-            print(f"{'db':12} checkout")   # data/db and data/ai of this checkout
         return 0
-    out = pathlib.Path(a.out).resolve()
-    if out.is_relative_to(ROOT) and not out.is_relative_to(ROOT / "build"):
-        sys.exit(f"{out} is inside the repository: use build/data (the default), another folder under build/ or one "
-                 f"outside it (data/ holds the committed data/db and data/ai)")
-    record = out / "bundles.json"
+    lay = Layout(a.root)
+    if not (lay.data / "db").is_dir():
+        sys.exit(f"{lay.data}: no db folder (not a checkout's data/)")
+    record = lay.data / MANIFEST
     have = json.loads(record.read_text(encoding="utf-8")) if record.exists() else {}
-    want = [(p, t) for p, t in chosen if p not in a.without]
-    # an older part under a newer one would mix two builds' files: when the media part changes, start clean
-    if out.exists() and have.get("media") not in (None, dict(want).get("media")):
-        print(f"{out}: the media part changes ({have.get('media')} -> {dict(want)['media']}): replacing the folder")
-        if not record.exists():
-            sys.exit(f"{out} has no bundles.json: not made by this script, refusing to delete it")
-        shutil.rmtree(out)
-        have = {}
-    out.mkdir(parents=True, exist_ok=True)
-    for part, tag in want:
-        if have.get(part) == tag:
+
+    def save():
+        record.write_bytes((json.dumps(have, indent=1) + "\n").encode())
+
+    for part, tag in chosen:
+        old = have.get(part)
+        if part in a.without:
+            if old:
+                print(f"{part:12} removed ({remove_part(lay, old)} files of {old['tag']})")
+                del have[part]
+                save()
+            continue
+        if old and old.get("tag") == tag and all((lay.root / f).exists() for f in old["files"]):
             print(f"{part:12} {tag} (current)")
             continue
         z = download(tag)
-        if part == "textures-4x" and (out / "Data" / "Textures-4x").exists():
-            shutil.rmtree(out / "Data" / "Textures-4x")   # a pack replaces the one before whole
-        if part == "db":
-            for sub in ("db", "ai"):                       # so a table or script the new release dropped goes too
-                if (out / "Data" / sub).exists():
-                    shutil.rmtree(out / "Data" / sub)
-        print(f"{part:12} {tag}: unzipping into {out}", flush=True)
-        with zipfile.ZipFile(z) as f:
-            f.extractall(out)
-        have[part] = tag
-        record.write_text(json.dumps(have, indent=2) + "\n", encoding="utf-8")
-    if "textures-4x" in a.without and have.pop("textures-4x", None) and (out / "Data" / "Textures-4x").exists():
-        shutil.rmtree(out / "Data" / "Textures-4x")
-    if a.db == "checkout":
-        sys.path.insert(0, str(ROOT / "tools"))
-        import open_data
-        meta = out / "open_data.json"
-        if not str(have.pop("db", "checkout")).startswith("checkout") and meta.exists():
-            meta.unlink()                                  # the db release's: it describes that release's tables
-        if not meta.exists():
-            meta.write_text(json.dumps(dict(made="tools/fetch_data.py", binary=False), indent=2) + "\n")
-        done = open_data.sync(out)
-        have["db"] = f"checkout (data/db {open_data.db_hash()}, data/ai {open_data.scripts_hash()})"
-        print(f"{'db':12} this checkout's data/db and data/ai" + (f": {', '.join(done)} refreshed" if done else " (current)"))
-    record.write_text(json.dumps(have, indent=2) + "\n", encoding="utf-8")
-    print(f"data ready in {out}: run the game with EE_DATA_ROOT={out} (or make_play_dir.py --data {out})")
+        if old:
+            print(f"{part:12} {old['tag']} -> {tag}: {remove_part(lay, old)} old files removed", flush=True)
+            del have[part]
+            save()
+        print(f"{part:12} {tag}: unpacking into {lay.data}", flush=True)
+        entry = install_part(lay, z)
+        have[part] = dict(tag=tag, **entry)
+        save()
+        print(f"{part:12} {tag}: {len(entry['files'])} files")
+    lay.link()
+    for old in (lay.data / "Data", lay.data / "bundles.json", lay.root / "build" / "data"):
+        if old.exists():
+            print(f"note: {old} is an old download (before data/ was the Data folder): not used, it can be deleted")
+    print(f"data ready: {lay.data} (data/db and data/ai as committed); run the game with EE_DATA_ROOT={lay.game}")
     return 0
 
 

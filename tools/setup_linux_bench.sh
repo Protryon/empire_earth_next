@@ -33,7 +33,7 @@ python3 -I tools/fetch_posix.py wgpu sdl3 fonts
 python3 -I tools/xbuild.py sim -j "$JOBS"
 
 gh auth status >/dev/null 2>&1 || { echo "gh is not logged in: gh auth login, then run this again"; exit 1; }
-python3 -I tools/fetch_data.py --without textures-4x   # build/data, with this checkout's data/db and data/ai
+python3 -I tools/fetch_data.py --without textures-4x   # the media into data/ (beside data/db, data/ai)
 
 mkdir -p build/sim
 python3 -I tools/sim.py --data open --slot smoke -- --seed 2 --game-seconds 300 --report build/sim/smoke.json

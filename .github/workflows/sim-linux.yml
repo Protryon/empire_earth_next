@@ -73,7 +73,7 @@ jobs:
           path: build/data_cache
           key: data-${{ steps.tags.outputs.tags }}
 
-      - name: Data (the media part; Data/db and Data/ai from the checkout)
+      - name: Data (the media part into data/, beside the committed data/db and data/ai)
         run: |
           python -I tools/fetch_data.py --without textures-4x
 

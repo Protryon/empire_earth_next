@@ -58,7 +58,8 @@ WRITABLE = {"saved games", "scenarios"}   # Data folders the game writes into: c
 def data_tree(kind):
     """The data tree: 'open' (build/open_data/tree) or a directory. The main
     checkout's trees are used when this checkout has none (a worktree; they are only read); 'open' is last the
-    released data that tools/fetch_data.py pulls into build/data (a machine without the retail installs)."""
+    released media that tools/fetch_data.py unpacks into data/ (build/data-root, this checkout's or the main one's:
+    a machine without the retail installs)."""
     if kind == "binary":
         sys.exit("--data binary: there is no binary tree any more (the game reads only the text db tables): --data open")
     if kind != "open":
@@ -70,8 +71,10 @@ def data_tree(kind):
             main = pathlib.Path(subprocess.run(["git", "-C", str(ROOT), "worktree", "list", "--porcelain"],
                                                capture_output=True, text=True).stdout.split("\n")[0].split(" ", 1)[1])
             tree = main / "build" / "open_data" / name
-            if not (tree / "Data").is_dir() and kind == "open" and (main / "build" / "data" / "Data").is_dir():
-                tree = main / "build" / "data"
+            if not (tree / "Data").is_dir():
+                sys.path.insert(0, str(ROOT / "tools"))
+                import open_data  # noqa: E402
+                tree = open_data.fetched_root(ROOT) or open_data.fetched_root(main) or tree
     if not (tree / "Data").is_dir():
         sys.exit(f"{tree}: no Data folder (python -I tools/open_data.py build ...; without the retail installs: "
                  f"python -I tools/fetch_data.py, then --data open)")
