@@ -23718,3 +23718,119 @@ The round: net **-1,801** (EEMessage.cpp 2,907 -> 1,407 lines, ee/EEMessage.h 28
   ground skipped by the map); the legacy tour (`game_session.py --exercise tour --seed 2`) STOP <windowed session
   complete> reached, the seed pin armed at `?EEStartLoading@@YAXPEAVEEMRecord@@@Z` [rcx+0x21] and written (old 30471,
   new 2).
+
+## R6 WONLobby, round 8: PingLogic, AccountLogic and InitLogic as Rust objects (ee_won logics.rs; branch rust-wonlobby8, 2026-11-14)
+
+The round's list: measure first, then PingLogic, AccountLogic, InitLogic, then the logic hosts as their objects move,
+EELobbyGlueHost.cpp's sequences, RoutingLogic if it fits.
+
+### The measure
+
+WONLobby before the round: 18,049 lines of units (`src/Empire Earth/WONAPI/WONLobby`) and 8,626 of headers named
+`WONLobby*` / `EELobby*` (most of the largest, WONLobbyGUI.h's 2,868, are WONGUI's classes: the WONGUI lane's). No
+mechanical pile like round 7's resource globals is left:
+
+- the address markers (`// FUNCTION:`, `// TEMPLATE:` and their mangled-name lines: 937 + 460 + about 460 in the
+  lane's units and WON's headers) stay while a file exists (the rule of R4.3 round 13);
+- a token count over src, include, tests and rust found no unused class and a dozen unused declarations (three
+  setters of LobbyPersistentData, which the persist fix lane has open; left);
+- RoutingLogic.cpp had 80 blank lines where earlier rounds took methods out (removed); InitLogic.cpp's 26
+  `} namespace WONAPI {` splits went with its rewrite.
+
+So the lines are in the classes, and a class moved this way (an op per run of C++ calls) frees only what was
+decision: PingLogic, AccountLogic and InitLogic, the round's item 1, freed 476 lines together. LanLogicHost.cpp and
+LobbyLogicHost.cpp are already only the C++ halves of round 20's ops; EELobbyGlueHost.cpp's window and network
+sequences (EELobbyOpen, Show, Hide, HostGame, JoinGame, StartHostedGame, Close) are the game's calls on its window,
+platform layer, network engine and UI, with no decision between them to move; RoutingLogic (2,107 lines, 91 methods,
+Internet only) is a round of its own. The round stops short of 1,500 lines for that reason.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 5357db6b | PingLogic with PingGameOp, AccountLogic and InitLogic as Rust objects (`logics.rs`) | -476 (61,025 -> 60,549) |
+| 8d82ec27 | RoutingLogic.cpp: the 80 blank lines left by earlier moves | -80 (60,549 -> 60,469) |
+
+Round total: WON C++ 61,025 -> 60,469 (-556) before the merge of rust; no unit deleted (the three keep their shells,
+original addresses and hosts), none added.
+
+### The three logics
+
+- **One object type, three kinds** (`EeWonLogic`, `ee_won_logic_new(kind, shell, host)`): each kind's members (the
+  ping queue and next request id; the last user name and the terms-of-use prompt; the start-up errors and the ignored
+  ones) and one call enum (`EeWonLogicCall`). One op enum (`EeWonLogicOp`, 120 ops) and one host signature; each
+  unit has its own host (`PingLogicHost`, `AccountHost`, `InitHost`) answering its kind's ops.
+- **The shells** keep what the ops reach: LobbyLogic's tracker and completions (`LogicCompletion<T>` needs the
+  member functions: the completions are one-line forwarders in the headers), the dialogs' `SmartPtr`s, InitLogic's
+  HTTP session, firewall socket, accept op and address and the advert's link (`std::string`), PingGameOp's game.
+  The controls' ids map to 1..3 in the shell (as LanLogic's do); events pass their type.
+- **PingGameOp** stays a `UDPManagerSendRecvOp` (the tracker's `dynamic_cast` in KillPings finds it) over an
+  `EeWonPingOp` record: the request id, the ping, the flags, the retries, the reply's bytes. `CheckResponse` reads the
+  C++ `ReadBuffer`'s Rust state (`EeWonReadBuffer`) in place; a read past the end returns `EE_WON_LOGIC_THREW` and
+  the shell throws `ReadBufferException` as the original did. The reply's summary and details are read by the game's
+  `LobbyGame::ReadSummary` over a `ReadBuffer` made from the Rust reader's state and written back (one position
+  across both reads, as the original's one buffer).
+- **The original's request id rule**: `ReadShort` (signed) was compared with the unsigned member, so a reply never
+  matches a request id from 0x8000 (after 32,768 pings in a session). Kept, with a unit test.
+- **Account names** cross as `wchar_t`s widened per platform (`wide_compare_no_case`'s rule, the C++
+  `WStringCompareNoCase`'s); the '@' strip is an op on the event and the name is read again.
+- **Texts**: InitLogic's descriptions are `GUIString`s the ops make and free (`TextNew`, `TextAppendRes`,
+  `TextStatus` ...), named by `EeWonLobbyRes` rows (round 7's slots), so the missing-servers list is built by Rust's
+  decisions; the init status event takes a title row and a text or a row.
+
+### Goldens, mutations, replays
+
+| Golden | Sequences | Trace lines | Replayed by cargo | First run |
+|---|---|---|---|---|
+| `won_logics_test` (new; the three logics and the ping op over the original statements) | 60,000 | 3,087,506 | `golden_logics.txt` (68 sequences) | identical |
+
+The test copies the three units' statements from the C++ before the port with every call on a C++ object replaced
+by its op; one scripted host answers both sides. A tracked op's completion re-enters PingGameDone a quarter of the
+time and a tracker kill half of the time; references are counted per object and compared at a sequence's end.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| ping: the reply's id compared unsigned | first missed (the logic's ids count from 0); the generator now also makes ping ops of any id: 27 |
+| ping: two retries, not three | 28 |
+| ping: a connection speed of 0 queues too | 1,799 |
+| ping: the answer's flags `& 1` | 38 |
+| account: the last user name compared with case | 34 |
+| account: '@' not stripped | 1,461 |
+| init: the comma before every missing list | 2,303 |
+| init: a retry clears the server lists | 13,126 |
+| init: a connection from the firewall server means behind it | 1,217 |
+
+Unit tests: logics 3 (the reply's type and id, the id rule, the replay).
+
+### Gates
+
+| Gate | 5357db6b + 8d82ec27 (built together) | final tree (merged with rust c9b6d980) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (991/992 inputs) | 0 / 0 (943/944 inputs) |
+| Rust gate | tests PASS; clippy's `collapsible_match` (two match guards) and rustfmt fixed before the commit | PASS (3,676 tests) on the rerun; the first run stopped at `ee_input` (STATUS_HEAP_CORRUPTION, a crate from the merge, not this lane's), which passed three runs alone and in the rerun |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| lobby wontest | won_logics_test exit 0 | 19 programs exit 0: logics, flow, eexfer, statusstr, eeglue, eecolor, eedlg, lobbyctl, eegame, lobbydlg, dlglogic, lobbyscr, credits, lobbypopup, lanobj, stagingobj, lanlogic, chat, persist (no longer hangs after rust-persistfix) |
+| `--test-profile windowed-software` | | 0 unresolved, 0 duplicates |
+| `tools/harness/lan_game.py` (harness lock) | | RESULT PASS lan-game (PT host 2845, joiner 2835) |
+
+The merge of rust (17 commits) conflicted only in PORT_LEARNINGS.md (both sides appended sections: kept both).
+`rust_build.py header` was current; `rust_includes.py` changed nothing.
+
+### Behaviour changes
+
+- None on defined paths. Consecutive appends to the ping answer's buffer are one append (the same bytes); a reply
+  buffer's `SmartPtr` locals are given back at an op's end rather than the method's (no destruction is visible:
+  the tracker or the status box holds the op). The DNS completion's remember-host address lives inside its op.
+- A `LobbyGame::ReadSummary` or `ReadDetails` that threw would have unwound through the Rust frame: neither throws
+  (both catch `ReadBufferException` themselves).
+
+### What only a person reaches
+
+PingLogic runs in every LAN game list (the LAN screen pings each game it lists; the host answers): `lan_game.py`
+reaches it. AccountLogic and InitLogic are the Internet lobby's (login, accounts, the start-up checks against WON's
+servers, which are gone): no gate reaches them; the golden is their only check.
+
+### What is left
+
+LanLogicHost.cpp (666) and LobbyLogicHost.cpp (359), as their ops' objects move; RoutingLogic.cpp (2,107) as a round
+of its own; EELobbyGlueHost.cpp's game-side sequences stay the game's.
