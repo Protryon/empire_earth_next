@@ -23,6 +23,7 @@
 //! - [`placement`]: where a Create effect places a unit (`EESMObject::FindPlacement`), `IsNearTile`, `IsNearUnit`.
 //! - [`player`]: the Set Player Attribute effect as a plan of writes (`EESMEffect::SetPlayerAttribute`).
 //! - [`attribute`]: a unit's value for an object's attribute filter (`EESMObject::GetUnitAttribute`) as a table.
+//! - [`class_attribute`]: a class attribute's new upgrade value (`EEModifyUnitAttribute`'s arithmetic).
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`tokens`]: a message's tags expanded (`EESMEffect::ExpandTokens`).
 //! - [`lists`]: the manager's element lists as the editor changes them (sort, new, move, delete, duplicate, the
@@ -35,6 +36,7 @@
 pub mod aivar;
 pub mod area;
 pub mod attribute;
+pub mod class_attribute;
 pub mod condition;
 pub mod create;
 pub mod effect;

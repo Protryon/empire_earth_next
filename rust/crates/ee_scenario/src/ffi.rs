@@ -747,3 +747,29 @@ pub unsafe extern "C" fn ee_scenario_effect_execute(
     effect::execute(&mut h, &f, cinematic);
 }
 
+/// `EEModifyUnitAttribute`'s arithmetic (class_attribute.rs): the upgrade's new value.
+#[no_mangle]
+pub extern "C" fn ee_scenario_class_value(
+    kind: u32,
+    percent: bool,
+    add: bool,
+    amount: c_long,
+    base: f32,
+    current: c_long,
+    fcurrent: f32,
+) -> crate::class_attribute::EeScenarioClassValue {
+    crate::class_attribute::class_value(kind, percent, add, amount, base, current, fcurrent)
+}
+
+/// `EEChangeUnit`'s amount for one unit value (class_attribute.rs `unit_amount`).
+#[no_mangle]
+pub extern "C" fn ee_scenario_unit_amount(
+    percent: bool,
+    mode: c_long,
+    amount: c_long,
+    base: f32,
+    current: c_long,
+    clamp: bool,
+) -> c_long {
+    crate::class_attribute::unit_amount(percent, mode, amount, base, current, clamp)
+}

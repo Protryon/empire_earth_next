@@ -181,6 +181,30 @@ constexpr static const int32_t EE_SCENARIO_CLASS_FORTRESS = 81;
 /// Added to a class field: the upgrade's class (`GetStats()->mUnitClass`) instead of the unit's.
 constexpr static const int32_t EE_SCENARIO_OF_STATS = 100;
 
+/// A `long` value clamped at 0 (reload time, work rate, objects carried, repair, carry amount, healing, power).
+constexpr static const uint32_t EE_SCENARIO_CA_INT = 0;
+
+/// The maximum hit points: as an int, then at least 1.
+constexpr static const uint32_t EE_SCENARIO_CA_HIT_POINTS = 1;
+
+/// The flight time: a fixed amount is in seconds (`(long)(amount / 0.001f + 0.5f)`).
+constexpr static const uint32_t EE_SCENARIO_CA_FLIGHT_TIME = 2;
+
+/// A `float` value clamped at 0 (attack, leadership, range, line of sight).
+constexpr static const uint32_t EE_SCENARIO_CA_FLOAT = 3;
+
+/// An armor: the bonus over the class's base changes, clamped at 0, and goes back on top of the base.
+constexpr static const uint32_t EE_SCENARIO_CA_ARMOR = 4;
+
+/// The maximum velocity: a percent unrounded, a fixed amount / 20, at least 0.0001.
+constexpr static const uint32_t EE_SCENARIO_CA_VELOCITY = 5;
+
+/// The animal AI flag (0/1; a percent amount is "above 0").
+constexpr static const uint32_t EE_SCENARIO_CA_FLAG = 6;
+
+/// The camera focus: in hundredths, no percent.
+constexpr static const uint32_t EE_SCENARIO_CA_CAMERA = 7;
+
 /// `kSMCondition*` (ee/EEScenarioIDs.h).
 constexpr static const uint32_t EE_SCENARIO_CONDITION_ALWAYS_TRUE = 0;
 
@@ -1785,6 +1809,12 @@ struct EeScenarioRoundHost {
   int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
 };
 
+/// The new value: `value` for the int kinds and the flag, `fvalue` for the float kinds.
+struct EeScenarioClassValue {
+  long value;
+  float fvalue;
+};
+
 /// The C++ host of the lists (`EESMListOp` in EEScenarioManager.cpp): the manager's numbers and timed effects, and
 /// one operation callback (`EE_SCENARIO_LIST_OP_*`; `text` a NUL-terminated name for `SET_NAME` and `OUT_NAME`).
 struct EeScenarioListHost {
@@ -2148,6 +2178,23 @@ bool ee_scenario_create_units(const EeScenarioHost *host,
 void ee_scenario_effect_execute(const EeScenarioHost *host,
                                 const EeScenarioEffectFields *fields,
                                 bool cinematic);
+
+/// `EEModifyUnitAttribute`'s arithmetic (class_attribute.rs): the upgrade's new value.
+EeScenarioClassValue ee_scenario_class_value(uint32_t kind,
+                                             bool percent,
+                                             bool add,
+                                             long amount,
+                                             float base,
+                                             long current,
+                                             float fcurrent);
+
+/// `EEChangeUnit`'s amount for one unit value (class_attribute.rs `unit_amount`).
+long ee_scenario_unit_amount(bool percent,
+                             long mode,
+                             long amount,
+                             float base,
+                             long current,
+                             bool clamp);
 
 /// Appends tile (x, y) to a list the host is filling.
 ///

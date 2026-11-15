@@ -413,21 +413,15 @@ long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 
 // FUNCTION: EXE 0x5c8871
 // Raises or lowers a player's unit type stat by an amount or percent of the class value (armor: the bonus over the
-// class base changes and is clamped at 0), clamped, and queues the change as a pending effect
-// Original cdecl helper. Parameter types follow the dispatcher's pushes and the actual player/upgrade readers.
-// Every case is written out in full (the original reads inUpgrade->mUnitClass per case; the int cases' shared
-// add/clamp/store tail is VC6 tail merging); theAdd is the original's sete (negate when it is false).
+// class base changes and is clamped at 0), clamped, and queues the change as a pending effect. The arithmetic is
+// ee_scenario class_attribute.rs's; here the upgrade's field and the class's base by attribute, and the line of
+// sight's and animal AI's world steps.
 void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
                 EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode)
 {
     std::vector<EEUnit*> theUnits;
     std::vector<EEHerd*> theHerds;
     EESMEffect theEffect;
-    bool theAdd = inMode == 0;
-    long theAmount = inAmount;
-    float theFloat;
-    EEUnit* theNode;
-    long theArmor = 0;
     theEffect.mAttributeUnit = (unsigned long)-1;
     theEffect.mType = kSMEffectObject;
     theEffect.mObjectAction = kSMObjectActionUnitAttribute;
@@ -440,211 +434,92 @@ void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlaye
     theEffect.mAttributeMode = inMode;
     if (inUpgrade == NULL)
         return;
+    EEUnitClass* theClass = inUpgrade->mUnitClass;
+    long* theLong = NULL;      // the upgrade's field, by its type
+    float* theFloat = NULL;
+    float theBase = 0.0f;      // the class's value, as the percent reads it
+    uint32_t theKind = EE_SCENARIO_CA_INT;
     switch (inAttribute) {
-    case kSMUnitAttributeShockArmorPlus: case kSMUnitAttributeArrowArmorPlus: case kSMUnitAttributePierceArmorPlus: case kSMUnitAttributeGunArmorPlus: case kSMUnitAttributeLaserArmorPlus: case kSMUnitAttributeMissileArmorPlus: {
-        switch (inAttribute) {
-        case kSMUnitAttributeShockArmorPlus: theArmor = 0; break;
-        case kSMUnitAttributeArrowArmorPlus: theArmor = 1; break;
-        case kSMUnitAttributePierceArmorPlus: theArmor = 2; break;
-        case kSMUnitAttributeGunArmorPlus: theArmor = 3; break;
-        case kSMUnitAttributeLaserArmorPlus: theArmor = 4; break;
-        case kSMUnitAttributeMissileArmorPlus: theArmor = 5; break;
-        }
-        if (inPercentage)
-            theAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mArmor[theArmor] * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = (inUpgrade->mArmor[theArmor] - (float)inUpgrade->mUnitClass->mArmor[theArmor]) + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        // the clamped bonus goes back on top of the class base armor (the upgrade holds the total armor)
-        inUpgrade->mArmor[theArmor] = theFloat + (float)inUpgrade->mUnitClass->mArmor[theArmor];
+    case kSMUnitAttributeShockArmorPlus: case kSMUnitAttributeArrowArmorPlus: case kSMUnitAttributePierceArmorPlus:
+    case kSMUnitAttributeGunArmorPlus: case kSMUnitAttributeLaserArmorPlus: case kSMUnitAttributeMissileArmorPlus: {
+        static const unsigned long kArmors[] = {kSMUnitAttributeShockArmorPlus, kSMUnitAttributeArrowArmorPlus,
+            kSMUnitAttributePierceArmorPlus, kSMUnitAttributeGunArmorPlus, kSMUnitAttributeLaserArmorPlus,
+            kSMUnitAttributeMissileArmorPlus};
+        long theArmor = std::find(kArmors, kArmors + 6, inAttribute) - kArmors;
+        theFloat = &inUpgrade->mArmor[theArmor];
+        theBase = (float)theClass->mArmor[theArmor];
+        theKind = EE_SCENARIO_CA_ARMOR;
         break;
     }
-    case kSMUnitAttributeReloadTimePlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mReloadTime * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mReloadTime;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mReloadTime = inAmount;
+    case kSMUnitAttributeReloadTimePlus: theLong = &inUpgrade->mReloadTime; theBase = (float)theClass->mReloadTime; break;
+    case kSMUnitAttributeAttackPlus: theFloat = &inUpgrade->mAttack; theBase = (float)theClass->mAttack; theKind = EE_SCENARIO_CA_FLOAT; break;
+    case kSMUnitAttributeWorkRatePlus: theLong = &inUpgrade->mWorkRate; theBase = (float)theClass->mWorkRate; break;
+    case kSMUnitAttributeFlightTimePlus:
+        theLong = &inUpgrade->mFlightTime;
+        theBase = (float)theClass->mFlightTime;
+        theKind = EE_SCENARIO_CA_FLIGHT_TIME;
         break;
-    case kSMUnitAttributeAttackPlus:
-        if (inPercentage)
-            theAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mAttack * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetAttack() + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        inUpgrade->mAttack = theFloat;
-        break;
-    case kSMUnitAttributeWorkRatePlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mWorkRate * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mWorkRate;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mWorkRate = inAmount;
-        break;
-    case kSMUnitAttributeFlightTimePlus: {
-        long theChange;
-        if (inPercentage)
-            theChange = UMFloatToLong((float)inUpgrade->mUnitClass->mFlightTime * inAmount * 0.01f);
-        else
-            theChange = (long)(inAmount / 0.001f + 0.5f);
-        if (!theAdd)
-            theChange = -theChange;
-        theChange += inUpgrade->mFlightTime;
-        if (theChange < 0)
-            theChange = 0;
-        inUpgrade->mFlightTime = theChange;
-        break;
-    }
     case kSMUnitAttributeLeadershipPlus:
-        if (inPercentage)
-            theAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mLeadership * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetLeadership() + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        inUpgrade->mLeadership = theFloat;
+        theFloat = &inUpgrade->mLeadership;
+        theBase = (float)theClass->mLeadership;
+        theKind = EE_SCENARIO_CA_FLOAT;
         break;
-    case kSMUnitAttributeMaxObjectsCarriedPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mMaxObjectCarry * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mMaxObjectCarry;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mMaxObjectCarry = inAmount;
-        break;
-    case kSMUnitAttributeRepairPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mRepairRate * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mRepairRate;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mRepairRate = inAmount;
-        break;
+    case kSMUnitAttributeMaxObjectsCarriedPlus: theLong = &inUpgrade->mMaxObjectCarry; theBase = (float)theClass->mMaxObjectCarry; break;
+    case kSMUnitAttributeRepairPlus: theLong = &inUpgrade->mRepairRate; theBase = (float)theClass->mRepairRate; break;
     case kSMUnitAttributeHitPointsPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mHitPoints * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mMaxHitPoints;
-        if (inAmount < 0)
-            inAmount = 0;
-        if (inAmount <= 1)
-            inAmount = 1;
-        inUpgrade->mMaxHitPoints = inAmount;
+        theLong = &inUpgrade->mMaxHitPoints;
+        theBase = (float)theClass->mHitPoints;
+        theKind = EE_SCENARIO_CA_HIT_POINTS;
         break;
-    case kSMUnitAttributeCarryAmountPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mCarryAmount * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mCarryAmount;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mCarryAmount = inAmount;
+    case kSMUnitAttributeCarryAmountPlus: theLong = &inUpgrade->mCarryAmount; theBase = (float)theClass->mCarryAmount; break;
+    case kSMUnitAttributeContainerHealingHPPerSecPlus: theLong = &inUpgrade->mHealingPoints; theBase = (float)theClass->mHealingPoints; break;
+    case kSMUnitAttributeRangePlus: theFloat = &inUpgrade->mRange; theBase = theClass->GetRange(); theKind = EE_SCENARIO_CA_FLOAT; break;
+    case kSMUnitAttributeLineOfSightPlus:
+        theFloat = &inUpgrade->mLineOfSight;
+        theBase = theClass->GetLineOfSight();
+        theKind = EE_SCENARIO_CA_FLOAT;
         break;
-    case kSMUnitAttributeContainerHealingHPPerSecPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mHealingPoints * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mHealingPoints;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mHealingPoints = inAmount;
+    case kSMUnitAttributeMaxVelocityPlus:
+        theFloat = &inUpgrade->mMaxVelocity;
+        theBase = theClass->GetMaxVelocity();
+        theKind = EE_SCENARIO_CA_VELOCITY;
         break;
-    case kSMUnitAttributeRangePlus:
-        if (inPercentage)
-            theAmount = UMFloatToLong(inUpgrade->mUnitClass->GetRange() * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetRange() + theFloat;
-        if (theFloat < 0.0f)
-            theFloat = 0.0f;
-        inUpgrade->SetRange(theFloat);
-        break;
-    case kSMUnitAttributeLineOfSightPlus: {
-        if (inPercentage)
-            theAmount = UMFloatToLong(inUpgrade->mUnitClass->GetLineOfSight() * inAmount * 0.01f);
-        theFloat = (float)theAmount;
-        if (!theAdd)
-            theFloat = -theFloat;
-        float theSpeed = inUpgrade->GetLineOfSight() + theFloat;
-        if (theSpeed < 0.0f)
-            theSpeed = 0.0f;
-        for (theNode = inPlayer->mFirstUnit; theNode != NULL;
-             theNode = static_cast<EEUnit*>(theNode->mNext)) {
-            if (theNode->mComplexUnit != NULL && theNode->mUnitClass == inUpgrade->mUnitClass) {
+    case kSMUnitAttributePowerPlus: theLong = &inUpgrade->mPower; theBase = (float)theClass->mPower; break;
+    case kSMUnitAttributeAnimalAIActivePlus: theKind = EE_SCENARIO_CA_FLAG; break;
+    case kSMUnitAttributeCameraFocusPlus: theFloat = &inUpgrade->mCameraFocus; theKind = EE_SCENARIO_CA_CAMERA; break;
+    default:
+        gWorld.mScenarioManager->AddV134Effect(theEffect);
+        return;
+    }
+    EeScenarioClassValue theValue = ee_scenario_class_value(theKind, inPercentage, inMode == 0, inAmount, theBase,
+        theKind == EE_SCENARIO_CA_FLAG ? (long)inUpgrade->mIsInitialized : theLong != NULL ? *theLong : 0,
+        theFloat != NULL ? *theFloat : 0.0f);
+    switch (inAttribute) {
+    case kSMUnitAttributeRangePlus: inUpgrade->SetRange(theValue.fvalue); break;
+    case kSMUnitAttributeMaxVelocityPlus: inUpgrade->SetMaxVelocity(theValue.fvalue); break;
+    case kSMUnitAttributeLineOfSightPlus:
+        // the sight leaves the map before the change and comes back after it
+        for (EEUnit* theNode = inPlayer->mFirstUnit; theNode != NULL; theNode = static_cast<EEUnit*>(theNode->mNext)) {
+            if (theNode->mComplexUnit != NULL && theNode->mUnitClass == theClass) {
                 theNode->mComplexUnit->SightOffHere();
                 theUnits.push_back(theNode);
             }
         }
-        inUpgrade->mLineOfSight = theSpeed;
+        inUpgrade->mLineOfSight = theValue.fvalue;
         for (unsigned long i = 0; i < theUnits.size(); i++)
             theUnits[i]->SightOnHere();
         break;
-    }
-    case kSMUnitAttributeMaxVelocityPlus:
-        if (inPercentage)
-            theFloat = inUpgrade->mUnitClass->GetMaxVelocity() * inAmount * 0.01f;
-        else
-            theFloat = (float)inAmount / 20.0f;
-        if (!theAdd)
-            theFloat = -theFloat;
-        theFloat = inUpgrade->GetMaxVelocity() + theFloat;
-        if (theFloat < 0.0001f)
-            theFloat = 0.0001f;
-        inUpgrade->SetMaxVelocity(theFloat);
-        break;
-    case kSMUnitAttributePowerPlus:
-        if (inPercentage)
-            inAmount = UMFloatToLong((float)inUpgrade->mUnitClass->mPower * inAmount * 0.01f);
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mPower;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mPower = inAmount;
-        break;
-    case kSMUnitAttributeAnimalAIActivePlus: {
-        if (inPercentage)
-            inAmount = inAmount > 0;
-        if (!theAdd)
-            inAmount = -inAmount;
-        inAmount += inUpgrade->mIsInitialized != false;
-        if (inAmount < 0)
-            inAmount = 0;
-        inUpgrade->mIsInitialized = inAmount > 0;
-        inPlayer->GetHerdsOfType(theHerds, inUpgrade->mUnitClass->mUnitType);
+    case kSMUnitAttributeAnimalAIActivePlus:
+        inUpgrade->mIsInitialized = theValue.value != 0;
+        inPlayer->GetHerdsOfType(theHerds, theClass->mUnitType);
         for (long j = (long)theHerds.size() - 1; j >= 0; --j)
             theHerds[j]->mIsActive = inUpgrade->mIsInitialized;
         break;
-    }
-    case kSMUnitAttributeCameraFocusPlus:
-        if (!theAdd)
-            inAmount = -inAmount;
-        theAmount = inAmount + (long)(inUpgrade->mCameraFocus * 100.0f);
-        if (theAmount < 0)
-            theAmount = 0;
-        inUpgrade->mCameraFocus = (float)theAmount * 0.01f;
+    default:
+        if (theLong != NULL)
+            *theLong = theValue.value;
+        else
+            *theFloat = theValue.fvalue;
         break;
     }
     gWorld.mScenarioManager->AddV134Effect(theEffect);
@@ -690,9 +565,8 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
     switch (inAttribute) {
     case kSMUnitAttributeHitPoints:
         if (inUnit != NULL && inUnit->GetHitPoints() > 0) {
-            if (inPercentage) theAmount = UMFloatToLong((float)theStats->mMaxHitPoints * theAmount * 0.01f);
-            if (inMode == kSMAttributeModeIncrease) theAmount += inUnit->GetHitPoints();
-            else if (inMode == kSMAttributeModeDecrease) theAmount = inUnit->GetHitPoints() - theAmount;
+            theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theStats->mMaxHitPoints,
+                                                inUnit->GetHitPoints(), false);
             if (theAmount < 1) {
                 if (inUnit->GetUnitClass()->GetCategory() == kUnitCategoryResource) {
                     inUnit->SetResourceAmount(0);
@@ -705,10 +579,8 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
         }
         break;
     case kSMUnitAttributeAnyResource: case kSMUnitAttributeStone: case kSMUnitAttributeGold: case kSMUnitAttributeWood: case kSMUnitAttributeFood: case kSMUnitAttributeIron: {
-        if (inPercentage) theAmount = UMFloatToLong((float)theStats->mCarryAmount * theAmount * 0.01f);
-        if (inMode == kSMAttributeModeIncrease) theAmount += inUnit->mResourceAmount;
-        else if (inMode == kSMAttributeModeDecrease) theAmount = inUnit->mResourceAmount - theAmount;
-        if (theAmount < 0) theAmount = 0;
+        theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theStats->mCarryAmount,
+                                            inUnit->mResourceAmount, true);
         unsigned long theState = 6;
         if (inAttribute == kSMUnitAttributeAnyResource) {
             // any resource: a random type unless the unit is gathering, which keeps the type it gathers
@@ -731,18 +603,13 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
         if (theComplex != NULL) {
             long theTime = inPercentage ? UMFloatToLong((float)theStats->mFlightTime * theAmount * 0.01f)
                                        : (long)(theAmount / 0.001f + 0.5f);
-            if (inMode == kSMAttributeModeIncrease) theTime += theComplex->mFlightTime;
-            else if (inMode == kSMAttributeModeDecrease) theTime = theComplex->mFlightTime - theTime;
-            if (theTime < 0) theTime = 0;
-            theComplex->SetFlightTime(theTime);
+            theComplex->SetFlightTime(ee_scenario_unit_amount(false, inMode, theTime, 0.0f, theComplex->mFlightTime, true));
         }
         break;
     case kSMUnitAttributeGarrisonLevel:
         if (theComplex != NULL && theComplex->GetUnitClass()->mGarrisonCapacity > 0) {
-            if (inPercentage) theAmount = UMFloatToLong((float)theClass->mGarrisonCapacity * theAmount * 0.01f);
-            if (inMode == kSMAttributeModeIncrease) theAmount += theComplex->mGarrisonCount;
-            else if (inMode == kSMAttributeModeDecrease) theAmount = theComplex->mGarrisonCount - theAmount;
-            if (theAmount < 0) theAmount = 0;
+            theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theClass->mGarrisonCapacity,
+                                                theComplex->mGarrisonCount, true);
             long theDelta = theAmount - theComplex->mGarrisonCount;
             if (theComplex->GetUnitClass()->mGarrisonCapacity < theComplex->mGarrisonCount + theDelta)
                 theDelta = theComplex->GetUnitClass()->mGarrisonCapacity - theComplex->mGarrisonCount;
@@ -757,10 +624,8 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
         break;
     case kSMUnitAttributeAmmunition:
         if (theComplex != NULL) {
-            if (inPercentage) theAmount = UMFloatToLong((float)(unsigned long)theClass->mAmmunition * theAmount * 0.01f);
-            if (inMode == kSMAttributeModeIncrease) theAmount += theComplex->mAmmunition;
-            else if (inMode == kSMAttributeModeDecrease) theAmount = theComplex->mAmmunition - theAmount;
-            if (theAmount < 0) theAmount = 0;
+            theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)(unsigned long)theClass->mAmmunition,
+                                                (long)theComplex->mAmmunition, true);
             if (theComplex->mAmmunition != (unsigned long)theAmount)
                 theComplex->mAmmunition = theAmount;
         }
@@ -803,10 +668,7 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
     case kSMUnitAttributeUnitVariable1: case kSMUnitAttributeUnitVariable2: case kSMUnitAttributeUnitVariable3:
         if (theComplex != NULL) {
             long& theCounter = theComplex->mUnitVariables[inAttribute - 17];
-            if (inMode == kSMAttributeModeIncrease) theAmount += theCounter;
-            else if (inMode == kSMAttributeModeDecrease) theAmount = theCounter - theAmount;
-            if (theAmount < 0) theAmount = 0;
-            theCounter = theAmount;
+            theCounter = ee_scenario_unit_amount(false, inMode, theAmount, 0.0f, theCounter, true);
         }
         break;
     }
@@ -814,10 +676,7 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
         return;
     long theCurrent = theValue == 1 ? theComplex->mReloadTimer
                     : theValue == 2 ? theComplex->mPower : theComplex->mRottingAwayTime;
-    if (inPercentage) theAmount = UMFloatToLong((float)theBase * theAmount * 0.01f);
-    if (inMode == kSMAttributeModeIncrease) theAmount += theCurrent;
-    else if (inMode == kSMAttributeModeDecrease) theAmount = theCurrent - theAmount;
-    if (theAmount < 0) theAmount = 0;
+    theAmount = ee_scenario_unit_amount(inPercentage, inMode, theAmount, (float)theBase, theCurrent, true);
     if (theCurrent != theAmount) {
         if (theValue == 1)
             theComplex->mReloadTimer = theAmount;
