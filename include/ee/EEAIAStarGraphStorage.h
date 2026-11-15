@@ -47,7 +47,7 @@ struct EEAIAStarGraphNode {
 
 class EEAIAStarGraphStorage {
 public:
-    EEAIAStarGraphStorage();                // 0x160b7
+    EEAIAStarGraphStorage();
     virtual ~EEAIAStarGraphStorage();       // +0x00 (dtor 0x1610c)
     virtual void ResetNodes();              // +0x04 0x16221 (Clear, then no path)
     virtual void Virtual08(long inArg) {}   // +0x08 (empty: ICF-folded `ret 4` 0x157269)
@@ -55,8 +55,8 @@ public:
     virtual void PrepareArrays(long inCount);  // +0x10 0x16af6 (the per-index arrays)
 
     static void FreeNodePool();             // 0x16070 (nothing to free: the Rust storages free their nodes with themselves)
-    bool GetFirstPathNode(EETileCoordinate& outTile, long& outIndex);   // 0x16258
-    bool GetNextPathNode(EETileCoordinate& outTile, long& outIndex);    // 0x1634f
+    bool GetFirstPathNode(EETileCoordinate& outTile, long& outIndex);
+    bool GetNextPathNode(EETileCoordinate& outTile, long& outIndex);
     // New (port): the objects of a list's nodes in its order (the chain goal's NumberChain)
     void ListObjects(EeAStarGraphList inList, std::vector<AStarGraphableObjectBase*>& outObjects);
     // New (port), TEST ONLY: the current and path nodes and every list's nodes in order into the A* capture

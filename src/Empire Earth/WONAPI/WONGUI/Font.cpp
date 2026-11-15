@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONStringCompare.h"
 using namespace WONAPI;
 
-// FUNCTION: WON 0x007267f0
 // Orders font descriptors by size, then style, then face name ignoring case
 bool FontDescriptor::operator<(const FontDescriptor& other) const {
     if(mSize<other.mSize) return true;
@@ -22,7 +21,6 @@ bool FontDescriptor::operator<(const FontDescriptor& other) const {
     return StringCompareNoCase(mFace,other.mFace)<0;
 }
 
-// FUNCTION: WON 0x00726840
 // Returns whether two font descriptors have the same size, style and face name (ignoring case)
 bool FontDescriptor::operator==(const FontDescriptor& other) const {
     if(this->mSize!=other.mSize) return false;
@@ -30,21 +28,14 @@ bool FontDescriptor::operator==(const FontDescriptor& other) const {
     return StringCompareNoCase(this->mFace,other.mFace)==0;
 }
 
-// FUNCTION: WON 0x00726880
 // Returns whether two font descriptors differ
 bool FontDescriptor::operator!=(const FontDescriptor& other) const {
     return !(*this==other);
 }
 
-// FUNCTION: WON 0x007268a0
 // Creates a font with a copy of the descriptor
 Font::Font(DisplayContext*,const FontDescriptor& descriptor)
  : mDescriptor(descriptor) {}
 
-// FUNCTION: WON 0x00726a60
 // Destroys the font (members only)
 Font::~Font() {}
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00726a40
-// (public: virtual void * __thiscall WONAPI::Font::`scalar deleting destructor'(unsigned int)    [??_GFont@WONAPI@@UAEPAXI@Z])

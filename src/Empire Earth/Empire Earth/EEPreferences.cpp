@@ -23,10 +23,6 @@
 
 // 0x529b90 (init chain 0x13242b: ctor 0x132435, atexit 0x13243f, guarded dtor 0x13244b)
 EEGameSettings EEGamePreferences::sDefaultSettings;
-// SYNTHETIC: EXE 0x53242b   (wrapper)
-// SYNTHETIC: EXE 0x532435   (ctor)
-// SYNTHETIC: EXE 0x53243f   (registrar)
-// SYNTHETIC: EXE 0x53244b   (guarded dtor)
 
 bool gGameWindowSizeDefaulted;   // port: no saved game window size (EEPreferences Load)
 
@@ -59,13 +55,11 @@ void EEApplyPortSettings(const EEGameSettings& inSettings)
     SPIMSetOutputDevice(inSettings.mAudioDevice);
 }
 
-// FUNCTION: EXE 0x532466
 // Destroys the game settings (members only)
 EEGameSettings::~EEGameSettings()
 {
 }
 
-// FUNCTION: EXE 0x5324f8
 // Creates the default game settings (Direct3D, volumes, scroll speeds, display, network and game options): the plain
 // members' are ee_app settings.rs's
 EEGameSettings::EEGameSettings()
@@ -85,19 +79,16 @@ EEGameSettings::EEGameSettings()
     this->mWonNetPassword = "";
 }
 
-// FUNCTION: EXE 0x53281e
 // Creates the game preferences with default settings
 EEGamePreferences::EEGamePreferences()
 {
 }
 
-// FUNCTION: EXE 0x532834
 // Destroys the game preferences (members only)
 EEGamePreferences::~EEGamePreferences()
 {
 }
 
-// FUNCTION: EXE 0x532848
 // Returns whether neither the game resources nor the system language is Korean
 bool EEGamePreferences::IsNotKorean()
 {
@@ -107,7 +98,6 @@ bool EEGamePreferences::IsNotKorean()
     return theResult;
 }
 
-// FUNCTION: EXE 0x53286a
 // Sets the default player, host and Sierra names to the "unknown" string and the WON password to ""
 void EEInitializeDefaultSettings()
 {
@@ -209,7 +199,6 @@ long EEWriteSettings(EEGameSettings& inSettings, bool inGameOptions)
 
 }   // namespace
 
-// FUNCTION: EXE 0x5328dd
 // Reads every game setting from config.yaml, writing the default for each missing value (no blood in Korean),
 // then loads the game options; returns their result (the rows and the rest: ee_app settings.rs)
 long EEGamePreferences::Load()
@@ -237,7 +226,6 @@ long EEGamePreferences::Load()
     return this->LoadGameOptions();
 }
 
-// FUNCTION: EXE 0x53505e
 // Reads the last game options from config.yaml's game_options block, writing defaults for missing values; returns 0
 long EEGamePreferences::LoadGameOptions()
 {
@@ -245,7 +233,6 @@ long EEGamePreferences::LoadGameOptions()
     return 0;
 }
 
-// FUNCTION: EXE 0x535943
 // Writes every game setting to config.yaml, then the game options; returns the first failure (0 when every value
 // was written)
 long EEGamePreferences::Save()
@@ -255,14 +242,12 @@ long EEGamePreferences::Save()
     return theResult != 0 ? theResult : theOptions;
 }
 
-// FUNCTION: EXE 0x53670d
 // Writes the last game options to config.yaml's game_options block; returns the first failure, else 0
 long EEGamePreferences::SaveGameOptions()
 {
     return EEWriteSettings(this->mSettings, true);
 }
 
-// FUNCTION: EXE 0x536b49
 // Remembers the options of a new random-map game as the last game options, then saves the preferences
 void EEGamePreferences::SetLastGameOptions(const EEGameOptions& inOptions)
 {

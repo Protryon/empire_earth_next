@@ -30,7 +30,6 @@
 #include "lle/GERasterizer.h"
 #include "lle/GELine.h"
 
-// FUNCTION: LLE 0x100167f3
 // Creates an untextured white line with both ends at the origin and one texture slot per screen
 GELine::GELine()
 {
@@ -56,7 +55,6 @@ GELine::GELine()
     this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 1.0f), 1);
 }
 
-// FUNCTION: LLE 0x10016909
 // Creates an untextured line between two screen points with a colour per end and one opacity
 GELine::GELine(GE2DPoint& inStart, GE2DPoint& inEnd, GEColor& inStartColor, GEColor& inEndColor, float inOpacity)
 {
@@ -83,7 +81,6 @@ GELine::GELine(GE2DPoint& inStart, GE2DPoint& inEnd, GEColor& inStartColor, GECo
     this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 1.0f), 1);
 }
 
-// FUNCTION: LLE 0x10016a11
 // Destroys the line, deleting its vertex array and releasing the texture of every screen
 GELine::~GELine()
 {
@@ -95,7 +92,6 @@ GELine::~GELine()
     delete[] this->mTextures;
 }
 
-// FUNCTION: LLE 0x10016a49
 // Sets the line's texture for one screen, releasing the old one and referencing the new one
 void GELine::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
@@ -107,31 +103,3 @@ void GELine::SetTexture(GETexture* inTexture, unsigned long inScreen)
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
-
-// Compiler-generated, continued:
-// SYNTHETIC: LLE 0x100166dd
-// SYNTHETIC: LLE 0x100166ed
-// SYNTHETIC: LLE 0x1001670d
-// SYNTHETIC: LLE 0x1001671d
-// SYNTHETIC: LLE 0x1001673d
-// SYNTHETIC: LLE 0x1001674d
-// SYNTHETIC: LLE 0x1001676d
-// SYNTHETIC: LLE 0x1001677d
-// SYNTHETIC: LLE 0x1001679d
-// SYNTHETIC: LLE 0x100167ad
-// SYNTHETIC: LLE 0x100167cd
-// SYNTHETIC: LLE 0x100167dd
-
-// Compiler-generated, continued:
-// SYNTHETIC: LLE 0x100166d3
-// SYNTHETIC: LLE 0x100166f9
-// SYNTHETIC: LLE 0x10016703
-// SYNTHETIC: LLE 0x10016729
-// SYNTHETIC: LLE 0x10016733
-// SYNTHETIC: LLE 0x10016759
-// SYNTHETIC: LLE 0x10016763
-// SYNTHETIC: LLE 0x10016789
-// SYNTHETIC: LLE 0x10016793
-// SYNTHETIC: LLE 0x100167b9
-// SYNTHETIC: LLE 0x100167c3
-// SYNTHETIC: LLE 0x100167e9

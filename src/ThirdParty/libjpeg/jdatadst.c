@@ -39,7 +39,6 @@ typedef my_destination_mgr * my_dest_ptr;
  * before any data is actually written.
  */
 
-// FUNCTION: JPEG 0x10087ea3
 METHODDEF(void)
 init_destination (j_compress_ptr cinfo)
 {
@@ -78,7 +77,6 @@ init_destination (j_compress_ptr cinfo)
  * write it out when emptying the buffer externally.
  */
 
-// FUNCTION: JPEG 0x10087ec9
 METHODDEF(boolean)
 empty_output_buffer (j_compress_ptr cinfo)
 {
@@ -104,7 +102,6 @@ empty_output_buffer (j_compress_ptr cinfo)
  * for error exit.
  */
 
-// FUNCTION: JPEG 0x10087f0b
 METHODDEF(void)
 term_destination (j_compress_ptr cinfo)
 {
@@ -129,7 +126,6 @@ term_destination (j_compress_ptr cinfo)
  * for closing it after finishing compression.
  */
 
-// FUNCTION: JPEG 0x10087e67
 GLOBAL(void)
 jpeg_stdio_dest (j_compress_ptr cinfo, FILE * outfile)
 {

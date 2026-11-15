@@ -53,26 +53,26 @@ public:
     void SetZoom(float inZoom);             // 0x129eb2: 0 (near) .. 1 (far)
     // EEScenarioManager::EndCinematic 0x1b1ae4 restores the camera from its saved EECameraKey with these (provisional
     // names by address; arguments from `ret 8` and the pushes)
-    void ResetPath();                       // 0x1277c9
+    void ResetPath();
     // GetLocation's siblings (`ret 8`; StartCinematic 0x1b1eee saves the camera with mFraction as the step)
-    void GetOffset(float inStep, GE3DPoint& outPoint);  // 0x12802b
-    void GetViewTurn(float inStep, GETransformation& outTransformation);  // 0x128089
-    void GetOffsetTurn(float inStep, GETransformation& outTransformation);  // 0x1280e7
+    void GetOffset(float inStep, GE3DPoint& outPoint);
+    void GetViewTurn(float inStep, GETransformation& outTransformation);
+    void GetOffsetTurn(float inStep, GETransformation& outTransformation);
     void SetOffset(const GE3DPoint& inPoint, bool inFlag);  // 0x129547 (key +0x80)
     void SetViewTurn(const GETransformation& inTransformation, bool inFlag);  // 0x1295fd (key +0x00)
     void SetOffsetTurn(const GETransformation& inTransformation, bool inFlag);  // 0x1296b6 (key +0x40)
     // the rest of the camera unit (provisional names)
-    EECameraControl();                      // 0x127654
+    EECameraControl();
     long AddKey(const EECameraKey& inKey);      // 0x1277e5: appends a key unless locked (5)
     void SetClippingDistances();            // 0x1279f0: the viewport's clipping distances
-    void CopyKey(const EECameraKey& inKey, EECameraKey& outKey);    // 0x127db3
+    void CopyKey(const EECameraKey& inKey, EECameraKey& outKey);
     void NextKey();                         // 0x127e5b: the next key, or the end of the key list
-    void BuildView(GETransformation& outTransformation, float inStep);  // 0x127eb1
-    void SlerpViewTurn(float inStep, GEQuaternion& outQuaternion);  // 0x12806d
-    void SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion);  // 0x1280cb
-    void GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint);  // 0x12816e
+    void BuildView(GETransformation& outTransformation, float inStep);
+    void SlerpViewTurn(float inStep, GEQuaternion& outQuaternion);
+    void SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion);
+    void GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint);
     void GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint);  // 0x12844f: the point to look at on a unit
-    void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation);  // 0x12851e
+    void GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation);
     static float GetPitch(float inZoom, long inMode);   // 0x1285ec (cdecl): the pitch for a zoom
     void StartPath();                       // 0x1286fa: plays the key list
     void GoTo(const EECameraKey& inKey);        // 0x12935b: moves towards a key

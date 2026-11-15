@@ -21,15 +21,15 @@ public:
     void AppendPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID);  // 0x1607c8 (appends after back())
     unsigned long IndexOf(EEComplexUnit* inUnit);    // 0x1608db (inUnit's index; a unit not in the list: its nearest point's)
     void InsertPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inAfter);  // 0x160a58 (a new point unit)
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile);   // 0x160ade
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile);
     void RemoveUnit(EEComplexUnit* inUnit);  // 0x160b72 (drops inUnit; the last one releases the group from its player)
     long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x160bf2 (ids -> units)
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile);   // 0x160ce4
-    void AddPoint(const GE2DPoint& inPoint, unsigned long inPlayerID);   // 0x160727
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile);
+    void AddPoint(const GE2DPoint& inPoint, unsigned long inPlayerID);
     // 0x1607f4: the patrol's unit nearest to (inTileX, inTileY) (EEMPatrol; provisional name)
     EEComplexUnit* GetNearest(long inTileX, long inTileY);
-    void InsertPatrolPointAt(const GE2DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inUnit);  // 0x1609e4
-    void Select(EEPlayer* inPlayer, bool inFlag);    // 0x160d70
+    void InsertPatrolPointAt(const GE2DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inUnit);
+    void Select(EEPlayer* inPlayer, bool inFlag);
     // 0x160da9: the patrol points from inPoints (taken by value: the callers copy-construct a vector on the stack)
     // for player inPlayerID (EETown 0xabc27/0xac4b6/0xac573; provisional name)
     void SetPatrolPoints(std::vector<U2DPoint<long> > inPoints, unsigned long inPlayerID);

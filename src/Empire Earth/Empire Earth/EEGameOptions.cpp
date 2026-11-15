@@ -81,10 +81,6 @@ unsigned long EEGetNumberOfResourceLevels();
 
 // 0x529b38: the empty slot every constructor and SetDefaults copies into the sixteen players
 static EEGameOptionsPlayer sEmptyPlayer;
-// SYNTHETIC: EXE 0x52f4b2
-// SYNTHETIC: EXE 0x52f4bc
-// SYNTHETIC: EXE 0x52f4c6
-// SYNTHETIC: EXE 0x52f4d2
 
 #include "ee/EEStartingResources.h"
 #include "ee/EECPEngine.h"
@@ -159,7 +155,6 @@ static void EEGameOptionsSlots(EEGameOptions* inOptions, EeAppOptionsPlayerField
         outSlots[i] = &inOptions->mPlayers[i];
 }
 
-// FUNCTION: EXE 0x52f4dd
 // Creates an empty, closed player slot with no name, colour, team or starting citizens
 EEGameOptionsPlayer::EEGameOptionsPlayer()
 {
@@ -167,13 +162,6 @@ EEGameOptionsPlayer::EEGameOptionsPlayer()
     this->mName = gEmptyString;
 }
 
-// FUNCTION: EXE 0x52f526
-// (operator=: inline, ee/EEGameOptions.h)
-// FUNCTION: EXE 0x52f582
-// FUNCTION: EXE 0x52f626
-// (the slot's Load and Save: in EEGameOptions::Load/Save's Rust, ee_app game_options.rs load_player/save_player)
-
-// FUNCTION: EXE 0x52f6d8
 // Creates default game options (random epochs, normal speed and map size, unit limit 50, three wonders to win)
 // with sixteen empty player slots
 EEGameOptions::EEGameOptions()
@@ -189,7 +177,6 @@ EEGameOptions::EEGameOptions()
         this->mPlayers[i] = sEmptyPlayer;
 }
 
-// FUNCTION: EXE 0x52f818
 // Creates a copy of other game options, with its own lock (the copy keeps the defaults' mB407: operator= leaves it)
 EEGameOptions::EEGameOptions(const EEGameOptions& inOther)
 {
@@ -199,14 +186,12 @@ EEGameOptions::EEGameOptions(const EEGameOptions& inOther)
     *this = inOther;
 }
 
-// FUNCTION: EXE 0x52f892
 // Destroys the game options, releasing their lock
 EEGameOptions::~EEGameOptions()
 {
     TSScheduler::DestroyReadWriteLock(this->mLock);
 }
 
-// FUNCTION: EXE 0x52f8e0
 // Copies other game options, replacing each out-of-range setting (load type, resources, variant, epochs, map,
 // size, difficulty, speed, wonders, unit limit) with a default (ee_app game_options.rs assign); copies names, flags
 // and all sixteen slots as they are. A new game's map type must be a known generator's, else the first one's.
@@ -231,7 +216,6 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
     return *this;
 }
 
-// FUNCTION: EXE 0x52fb70
 // Returns the map's width and height in tiles for the map size setting (0 x 0 for an unknown size)
 // (gameoptions.yaml map_sizes: 42, 58, 75, 105, 160, 220 in the original)
 void EEGameOptions::GetMapDimensions(long& outWidth, long& outHeight)
@@ -241,7 +225,6 @@ void EEGameOptions::GetMapDimensions(long& outWidth, long& outHeight)
     outHeight = outWidth;
 }
 
-// FUNCTION: EXE 0x52fbc5
 // Returns the campaign scenario's map name when the options name a campaign with a checksum and a map, else ""
 bool EEGameOptions::GetCampaignMapName(UWideString& outName)
 {
@@ -250,14 +233,12 @@ bool EEGameOptions::GetCampaignMapName(UWideString& outName)
     return theResult;
 }
 
-// FUNCTION: EXE 0x52fc0c
 // Returns whether civilizations may be bought: not in the scenario editor and not in a scenario game
 bool EEGameOptions::CanBuyCivilization()
 {
     return !gUIManager->mInScenarioEditor && !this->mIsScenarioGame;
 }
 
-// FUNCTION: EXE 0x52fc27
 // Resets the options to the lobby's defaults (all resources, random epochs, first map type, cheats on, victory off,
 // the preferred difficulty) with sixteen empty player slots
 void EEGameOptions::SetDefaults()
@@ -273,7 +254,6 @@ void EEGameOptions::SetDefaults()
         this->mPlayers[i] = sEmptyPlayer;
 }
 
-// FUNCTION: EXE 0x52fd6b
 // Reads the game options and the sixteen slots from a saved game (ee_app game_options.rs load); returns the first
 // read error
 long EEGameOptions::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -285,10 +265,6 @@ long EEGameOptions::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return ee_app_options_load(this, theSlots, 16, inMajorVersion, inMinorVersion, &theLimits, &theContext, EEGameOptionsIo);
 }
 
-// FUNCTION: EXE 0x530272
-// (Fn130272 and the slots' empty FnE123D: inline, ee/EEGameOptions.h)
-
-// FUNCTION: EXE 0x530289
 // Writes the sixteen player slots and the game options to a saved game (ee_app game_options.rs save); returns the
 // first write error
 long EEGameOptions::Save(FSFile& outFile)
@@ -299,14 +275,12 @@ long EEGameOptions::Save(FSFile& outFile)
     return ee_app_options_save(this, theSlots, 16, &theContext, EEGameOptionsIo);
 }
 
-// FUNCTION: EXE 0x5304b4
 // Returns the number of game variants
 unsigned long EEGetNumberOfGameVariants()
 {
     return gGameVariants.size();
 }
 
-// FUNCTION: EXE 0x5304cc
 // Returns the number of starting resource levels
 unsigned long EEGetNumberOfResourceLevels()
 {

@@ -34,7 +34,6 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEUICPortrait.h"
 #include "ee/EEStringIDs.h"
-// FUNCTION: EXE 0x65861c
 // Creates the selected-unit portrait with its research (green) and improvement (yellow) progress bars over a
 // red background, and a level text
 EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId,
@@ -66,10 +65,6 @@ EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, uns
     this->mText->SetLocation(inRectangle.GetTopRight());
 }
 
-// SYNTHETIC: EXE 0x658862
-// (the scalar deleting destructor, emitted with the vtable; slot EEUICPortrait+0x0)
-
-// FUNCTION: EXE 0x65887e
 // Destroys the portrait, releasing its unit and button
 EEUICPortrait::~EEUICPortrait()
 {
@@ -84,11 +79,6 @@ EEUICPortrait::~EEUICPortrait()
     this->mPortrait->Dereference();
 }
 
-// FUNCTION: EXE 0x65891c
-// FUNCTION: EXE 0x658987
-// FUNCTION: EXE 0x658af7
-// FUNCTION: EXE 0x658d02
-// FUNCTION: EXE 0x659028
 // The bars' rectangles, the drawing, the tooltip, the click and the update from the unit (the original's
 // GetBarRectangles, DrawPolygons, GetHelpString, MouseLButtonDown and Update): ee_screens portrait.rs over the host
 // below
@@ -108,7 +98,6 @@ bool EEUICPortrait::GetHelpString(UWideString& outString) const
     return theFound;
 }
 
-// FUNCTION: EXE 0x658ad0
 // Draws the improvement level when it is above 0
 long EEUICPortrait::DrawTextA()
 {
@@ -119,11 +108,6 @@ long EEUICPortrait::DrawTextA()
     return theResult;
 }
 
-// FUNCTION: EXE 0x658cb8
-// Returns the improvement the player is researching for a unit type
-// (EEPlayer::GetResearchedImprovement, inline in EEPlayer.h; emitted after its first user)
-
-// FUNCTION: EXE 0x658f5d
 // Updates the help text while the mouse moves over a portrait showing both bars
 long EEUICPortrait::MouseMove(const GE2DPoint& inLocation)
 {
@@ -132,20 +116,11 @@ long EEUICPortrait::MouseMove(const GE2DPoint& inLocation)
     return 0;
 }
 
-// FUNCTION: EXE 0x658f7d
-// Ignores right presses on the portrait
-// (inline in the class)
-
-// FUNCTION: EXE 0x658f82
 // Shows a unit's portrait (button face), taking references, and updates the bars (ee_screens portrait.rs)
 void EEUICPortrait::SetUnit(EEUnit* inUnit)
 {
     ee_screens_portrait_set_unit(this, inUnit);
 }
-
-// FUNCTION: EXE 0x6594e8
-// Returns the player's improvement progress for a unit type
-// (EEPlayer::GetImprovementProgress, inline in EEPlayer.h; emitted after its first user)
 
 // The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*, EEUIRustControl's host the toolkit's): units and nodes as
 // handles, ioF the op's floats

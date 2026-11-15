@@ -60,7 +60,6 @@
 #include "ee/EESEARust.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
-// FUNCTION: EXE 0x597261
 // Creates the scenario editor's unit command control with its rotate-units action
 EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
                                          EEAMouseClick* inListener)
@@ -69,17 +68,12 @@ EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, uns
     this->mRotateAction = new EESEARust(kSEARotate);
 }
 
-// SYNTHETIC: EXE 0x5972ac
-// (the scalar deleting destructor, emitted with the vtable; slot EESEUICCommandUnits+0x0)
-
-// FUNCTION: EXE 0x5972c8
 // Destroys the command control, releasing its rotate-units action
 EESEUICCommandUnits::~EESEUICCommandUnits()
 {
     this->mRotateAction->Dereference();
 }
 
-// FUNCTION: EXE 0x5972e6
 // Tracks the right-drag and, once it sets a facing, rotates the selected units to it
 long EESEUICCommandUnits::MouseMove(const GE2DPoint& inLocation)
 {
@@ -89,7 +83,6 @@ long EESEUICCommandUnits::MouseMove(const GE2DPoint& inLocation)
     return 0;
 }
 
-// FUNCTION: EXE 0x597316
 // Ends the right-click: without a drag, deletes the unit under the mouse; then hides and frees the mouse
 long EESEUICCommandUnits::MouseRButtonUp()
 {
@@ -108,7 +101,6 @@ long EESEUICCommandUnits::MouseRButtonUp()
     return 0;
 }
 
-// FUNCTION: EXE 0x59737c
 // Starts a right-click command and lets any selected unit be rotated by dragging
 void EESEUICCommandUnits::StartCommand(const GE2DPoint& inLocation)
 {

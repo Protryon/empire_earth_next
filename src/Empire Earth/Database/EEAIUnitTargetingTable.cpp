@@ -32,7 +32,6 @@ static_assert(sizeof(EEAIUnitTargetingRecord) == 160, "on-disk record: 160 bytes
 
 long** EEAIUnitTargetingTable::sTable;      // 0x4e60c0: three rows of ten values (provisional name)
 
-// FUNCTION: EXE 0x4d47a1
 // Loads the AI unit-targeting weights (three rows of ten) from the file; the table stays empty unless it has 3 records
 long EEAIUnitTargetingTable::Load(FSFileSpec* inFile)
 {
@@ -65,7 +64,6 @@ long EEAIUnitTargetingTable::Load(FSFileSpec* inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4d48d8
 // Frees the AI unit-targeting weight table
 void EEAIUnitTargetingTable::Unload()
 {

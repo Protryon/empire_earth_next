@@ -19,7 +19,6 @@
  * Quantization table setup routines
  */
 
-// FUNCTION: JPEG 0x100878b0
 GLOBAL(void)
 jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
 		      const unsigned int *basic_table,
@@ -61,7 +60,6 @@ jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
 }
 
 
-// FUNCTION: JPEG 0x10087962
 GLOBAL(void)
 jpeg_set_linear_quality (j_compress_ptr cinfo, int scale_factor,
 			 boolean force_baseline)
@@ -104,7 +102,6 @@ jpeg_set_linear_quality (j_compress_ptr cinfo, int scale_factor,
 }
 
 
-// FUNCTION: JPEG 0x10087994
 GLOBAL(int)
 jpeg_quality_scaling (int quality)
 /* Convert a user-specified quality rating to a percentage scaling factor
@@ -131,7 +128,6 @@ jpeg_quality_scaling (int quality)
 }
 
 
-// FUNCTION: JPEG 0x100879bb
 GLOBAL(void)
 jpeg_set_quality (j_compress_ptr cinfo, int quality, boolean force_baseline)
 /* Set or change the 'quality' (quantization) setting, using default tables.
@@ -152,7 +148,6 @@ jpeg_set_quality (j_compress_ptr cinfo, int quality, boolean force_baseline)
  * Huffman table setup routines
  */
 
-// FUNCTION: JPEG 0x10087b1d
 LOCAL(void)
 add_huff_table (j_compress_ptr cinfo,
 		JHUFF_TBL **htblptr, const UINT8 *bits, const UINT8 *val)
@@ -183,7 +178,6 @@ add_huff_table (j_compress_ptr cinfo,
 }
 
 
-// FUNCTION: JPEG 0x10087ac3
 LOCAL(void)
 std_huff_tables (j_compress_ptr cinfo)
 /* Set up the standard Huffman tables (cf. JPEG standard section K.3) */
@@ -270,7 +264,6 @@ std_huff_tables (j_compress_ptr cinfo)
  * your code will still work (they'll be set to reasonable defaults).
  */
 
-// FUNCTION: JPEG 0x100879d6
 GLOBAL(void)
 jpeg_set_defaults (j_compress_ptr cinfo)
 {
@@ -362,7 +355,6 @@ jpeg_set_defaults (j_compress_ptr cinfo)
  * Select an appropriate JPEG colorspace for in_color_space.
  */
 
-// FUNCTION: JPEG 0x10087b95
 GLOBAL(void)
 jpeg_default_colorspace (j_compress_ptr cinfo)
 {
@@ -395,7 +387,6 @@ jpeg_default_colorspace (j_compress_ptr cinfo)
  * Set the JPEG colorspace, and choose colorspace-dependent default values.
  */
 
-// FUNCTION: JPEG 0x10087bdb
 GLOBAL(void)
 jpeg_set_colorspace (j_compress_ptr cinfo, J_COLOR_SPACE colorspace)
 {

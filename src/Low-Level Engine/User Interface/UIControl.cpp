@@ -122,7 +122,6 @@ intptr_t UIControl::Call(EeUiControlCall inCall, intptr_t a, intptr_t b, float* 
 
 typedef EeUiControlCall C;
 
-// FUNCTION: LLE 0x10065076
 // Creates a shown, dirty control with a transparent black background (the record's state, ee_ui controlobj.rs); the
 // first one looks up the shared UI keys
 UIControl::UIControl(unsigned long inType, unsigned long inId, const GERectangle& inRectangle, UIForm* inForm,
@@ -162,7 +161,6 @@ UIControl::UIControl(unsigned long inType, unsigned long inId, const GERectangle
     gISKeyboard->GetEntity(kKeyInsert, UIControl::sInsertKey);
 }
 
-// FUNCTION: LLE 0x100653ab
 // Destroys the control: every trigger event released (ee_ui controlobj.rs), then the background rhombi
 UIControl::~UIControl()
 {
@@ -172,39 +170,24 @@ UIControl::~UIControl()
 }
 
 // The base's logic (ee_ui controlobj.rs)
-// FUNCTION: LLE 0x10065418
 void UIControl::CaptureKeyboard() { this->Call(C::CaptureKeyboard); }
-// FUNCTION: LLE 0x10065422
 void UIControl::CaptureMouse() { this->Call(C::CaptureMouse); }
-// FUNCTION: LLE 0x1006542c
 long UIControl::CopyData() { return (long)this->Call(C::CopyData); }
-// FUNCTION: LLE 0x1006586a
 void UIControl::FireTriggerEvent(unsigned long inEvent) { this->Call(C::FireTrigger, inEvent); }
-// FUNCTION: LLE 0x100658ce
 bool UIControl::GetHasMouseCapture() const { return this->Call(C::HasMouseCapture) != 0; }
-// FUNCTION: LLE 0x100658e9
 bool UIControl::GetHelpString(UWideString& outString) const { return this->Call(C::HelpString, (intptr_t)&outString) != 0; }
-// FUNCTION: LLE 0x10065913
 bool UIControl::GetLeftMouseButtonDown() const { return this->Call(C::LeftButtonDown) != 0; }
-// FUNCTION: LLE 0x10065942
 bool UIControl::GetRightMouseButtonDown() const { return this->Call(C::RightButtonDown) != 0; }
-// FUNCTION: LLE 0x10065978
 UIEvent* UIControl::GetTriggerEvent(unsigned long inEvent) { return (UIEvent*)this->Call(C::TriggerEvent, inEvent); }
-// FUNCTION: LLE 0x10065a0e
 void UIControl::ReleaseCapturedKeyboard() { this->Call(C::ReleaseKeyboard); }
-// FUNCTION: LLE 0x10065a23
 void UIControl::ReleaseCapturedMouse() { this->Call(C::ReleaseMouse); }
-// FUNCTION: LLE 0x10065ab9
 void UIControl::SetDirty(bool inDirty) { this->Call(C::SetDirty, inDirty); }
-// FUNCTION: LLE 0x10065af5
 void UIControl::SetDisplayMode(unsigned long inMode) { this->Call(C::SetDisplayMode, inMode); }
-// FUNCTION: LLE 0x10065d4c
 void UIControl::SetTriggerEvent(unsigned long inEvent, UIEvent* inTriggerEvent)
 {
     this->Call(C::SetTrigger, inEvent, (intptr_t)inTriggerEvent);
 }
 
-// FUNCTION: LLE 0x10065a69
 void UIControl::SetBgRectangle(const GERectangle& inRectangle)
 {
     float f[4];
@@ -212,14 +195,12 @@ void UIControl::SetBgRectangle(const GERectangle& inRectangle)
     this->Call(C::SetBgRectangle, 0, 0, f);
 }
 
-// FUNCTION: LLE 0x10065b94
 void UIControl::SetLocation(const GE2DPoint& inLocation)
 {
     float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
     this->Call(C::SetLocation, 0, 0, f);
 }
 
-// FUNCTION: LLE 0x10065c7a
 void UIControl::SetRectangle(const GERectangle& inRectangle)
 {
     float f[4];
@@ -227,21 +208,18 @@ void UIControl::SetRectangle(const GERectangle& inRectangle)
     this->Call(C::SetRectangle, 0, 0, f);
 }
 
-// FUNCTION: LLE 0x100654b4
 // Returns whether Delete (or keypad Del with Num Lock off) is held
 bool UIControl::DeleteKeyPressed()
 {
     return UIControl::sDeleteKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDeleteKey->GetValue();
 }
 
-// FUNCTION: LLE 0x100654ea
 // Returns whether Down (or keypad 2 with Num Lock off) is held
 bool UIControl::DownKeyPressed()
 {
     return UIControl::sDownKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumDownKey->GetValue();
 }
 
-// FUNCTION: LLE 0x10065520
 // Draws a bevelled border of the given thickness, dark top-left and light bottom-right (swapped for border type 1):
 // the rows on top, then the bottom, left and right ones, each line placed by Rust (ee_ui draw.rs)
 long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThickness)
@@ -263,7 +241,6 @@ long UIControl::DrawBorder(const GERectangle& inRectangle, unsigned long inThick
     return theResult;
 }
 
-// FUNCTION: LLE 0x100657cf
 // Draws the copied background and the border
 long UIControl::DrawPolygons()
 {
@@ -272,77 +249,66 @@ long UIControl::DrawPolygons()
     return this->DrawBorder(this->GetCopiedDrawRectangle(), this->mBorderThickness);
 }
 
-// FUNCTION: LLE 0x1006580f
 // Returns whether Enter or keypad Enter was just released
 bool UIControl::EnterKeyPressed()
 {
     return UIControl::sEnterKey->JustUnpressed() || UIControl::sNumEnterKey->JustUnpressed();
 }
 
-// FUNCTION: LLE 0x10065834
 // Returns whether End (or keypad 1 with Num Lock off) is held
 bool UIControl::EndKeyPressed()
 {
     return UIControl::sEndKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumEndKey->GetValue();
 }
 
-// FUNCTION: LLE 0x100658a5
 // Returns the UI manager's drawing surface
 GESurface* UIControl::GetDrawingSurface() const
 {
     return this->GetForm()->GetManager()->GetDrawingSurface();
 }
 
-// FUNCTION: LLE 0x10065929
 // Returns the form's mouse location
 const GE2DPoint& UIControl::GetMouseLocation() const
 {
     return this->GetForm()->GetMouseLocation();
 }
 
-// FUNCTION: LLE 0x10065932
 // Returns the UI manager's rasterizer
 GERasterizer* UIControl::GetRasterizer() const
 {
     return this->GetForm()->GetManager()->GetRasterizer();
 }
 
-// FUNCTION: LLE 0x10065958
 // Returns the UI manager's screen index
 unsigned long UIControl::GetScreenIndex() const
 {
     return this->GetForm()->GetManager()->GetScreen();
 }
 
-// FUNCTION: LLE 0x10065968
 // Returns the UI manager's sound manager
 SESoundManager* UIControl::GetSoundManager() const
 {
     return this->GetForm()->GetManager()->GetSoundManager();
 }
 
-// FUNCTION: LLE 0x100659a2
 // Returns whether Home (or keypad 7 with Num Lock off) is held
 bool UIControl::HomeKeyPressed()
 {
     return UIControl::sHomeKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumHomeKey->GetValue();
 }
 
-// FUNCTION: LLE 0x100659d8
 // Returns whether Left (or keypad 4 with Num Lock off) is held
 bool UIControl::LeftKeyPressed()
 {
     return UIControl::sLeftKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumLeftKey->GetValue();
 }
 
-// FUNCTION: LLE 0x10065a33
 // Returns whether Right (or keypad 6 with Num Lock off) is held
 bool UIControl::RightKeyPressed()
 {
     return UIControl::sRightKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumRightKey->GetValue();
 }
 
-// FUNCTION: LLE 0x10065dbd
 // Returns whether Shift is held or was just pressed
 bool UIControl::ShiftKeyPressed()
 {
@@ -523,7 +489,6 @@ extern "C" long ee_uicpp_control_mouse(void* inControl, const void* inLocation, 
                                 inArg);
 }
 
-// FUNCTION: LLE 0x10065de1
 // Dispatches left/right mouse button presses, releases and double clicks to the control, then the mouse move
 // (ee_ui mouse.rs)
 long UIControl::UpdateMouse(const GE2DPoint& inLocation)
@@ -531,51 +496,8 @@ long UIControl::UpdateMouse(const GE2DPoint& inLocation)
     return ee_ui_control_update_mouse(this, &inLocation);
 }
 
-// FUNCTION: LLE 0x10065eb3
 // Returns whether Up (or keypad 8 with Num Lock off) is held
 bool UIControl::UpKeyPressed()
 {
     return UIControl::sUpKey->GetValue() || UIForm::GetNumLockOff() && UIControl::sNumUpKey->GetValue();
 }
-
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x10064ed6
-// SYNTHETIC: LLE 0x10064ee0
-// SYNTHETIC: LLE 0x10064ef0
-// SYNTHETIC: LLE 0x10064efc
-// SYNTHETIC: LLE 0x10064f06
-// SYNTHETIC: LLE 0x10064f10
-// SYNTHETIC: LLE 0x10064f20
-// SYNTHETIC: LLE 0x10064f2c
-// SYNTHETIC: LLE 0x10064f36
-// SYNTHETIC: LLE 0x10064f40
-// SYNTHETIC: LLE 0x10064f50
-// SYNTHETIC: LLE 0x10064f5c
-// SYNTHETIC: LLE 0x10064f66
-// SYNTHETIC: LLE 0x10064f70
-// SYNTHETIC: LLE 0x10064f80
-// SYNTHETIC: LLE 0x10064f8c
-// SYNTHETIC: LLE 0x10064f96
-// SYNTHETIC: LLE 0x10064fa0
-// SYNTHETIC: LLE 0x10064fb0
-// SYNTHETIC: LLE 0x10064fbc
-// SYNTHETIC: LLE 0x10064fc6
-// SYNTHETIC: LLE 0x10064fd0
-// SYNTHETIC: LLE 0x10064fe0
-// SYNTHETIC: LLE 0x10064fec
-
-// Compiler-generated: the sDarkBorder/sLightBorder init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x10064ff6
-// SYNTHETIC: LLE 0x10065000
-// SYNTHETIC: LLE 0x10065019
-// SYNTHETIC: LLE 0x10065025
-// SYNTHETIC: LLE 0x10065036
-// SYNTHETIC: LLE 0x10065040
-// SYNTHETIC: LLE 0x10065059
-// SYNTHETIC: LLE 0x10065065
-
-// map<unsigned long, UIEvent*> COMDATs first emitted here (~_Tree, clear, const_iterator::_Dec); the map is Rust's now
-// TEMPLATE: LLE 0x10065ee9
-// TEMPLATE: LLE 0x10065f14
-// TEMPLATE: LLE 0x10065f28

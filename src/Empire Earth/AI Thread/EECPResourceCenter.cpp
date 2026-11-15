@@ -48,10 +48,6 @@
 #include "ee/EEAIKindIDs.h"
 
 const UString EECPResourceCenter::sData("EECPResourceCenter-Data");
-// SYNTHETIC: EXE 0x48bbbf   (wrapper)
-// SYNTHETIC: EXE 0x48bbc9   (ctor)
-// SYNTHETIC: EXE 0x48bbda   (registrar)
-// SYNTHETIC: EXE 0x48bbe6   (dtor)
 
 // The tiles by their distance from mCenter, the nearer first: the unit's own predicate (its sort COMDATs 0x48d45c..
 // call operator() out of line). Unit-local (provisional name)
@@ -64,7 +60,6 @@ struct EECPRCTileNearer {
     EETileCoordinate mCenter;
 };
 
-// FUNCTION: EXE 0x48bc02
 // Orders two tiles by their squared distance from mCenter, the nearer first
 // built without /Og (frame locals, leave; like EECPUnitTileDistanceLess 0x42cf1e): the pragma alone makes it exact
 #pragma optimize("g", off)
@@ -77,7 +72,6 @@ bool EECPRCTileNearer::operator()(const EETileCoordinate& inFirst, const EETileC
 }
 #pragma optimize("g", on)
 
-// FUNCTION: EXE 0x48bc3c
 // Creates a resource center for the computer player, holding the given resource unit if any, with no main building
 EECPResourceCenter::EECPResourceCenter(EEComputerPlayer* inPlayer, EEUnit* inUnit)
 {
@@ -87,7 +81,6 @@ EECPResourceCenter::EECPResourceCenter(EEComputerPlayer* inPlayer, EEUnit* inUni
         this->AddUnit(inUnit);
 }
 
-// FUNCTION: EXE 0x48bc71
 // Destroys the resource center, releasing its resource units
 EECPResourceCenter::~EECPResourceCenter()
 {
@@ -96,7 +89,6 @@ EECPResourceCenter::~EECPResourceCenter()
     this->mUnits.clear();
 }
 
-// FUNCTION: EXE 0x48bcae
 // Adds a resource unit to the center, taking a reference on it
 void EECPResourceCenter::AddUnit(EEUnit* inUnit)
 {
@@ -105,7 +97,6 @@ void EECPResourceCenter::AddUnit(EEUnit* inUnit)
 }
 
 // find's result in a local iterator, compared with a freshly loaded end()
-// FUNCTION: EXE 0x48bcc5
 // Returns whether the center holds the unit
 bool EECPResourceCenter::Contains(EEUnit* inUnit)
 {
@@ -117,7 +108,6 @@ bool EECPResourceCenter::Contains(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x48bd2b
 // Makes the player's drop site (not a granary) the center's main building if the center has none and the site is
 // within drop-off distance of one of its resource units
 void EECPResourceCenter::AdoptDropSite(EEComplexUnit* inUnit)
@@ -136,7 +126,6 @@ void EECPResourceCenter::AdoptDropSite(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x48bdb4
 // Returns the squared distance from this unit's position to another unit's position (its tile if not a complex unit)
 float EEComplexUnit::DistanceSquaredToUnit(EEUnit* inOther)
 {
@@ -216,7 +205,6 @@ struct EECPRCAreaEffectLess {
 
 // The tile vector is vector<U2DPoint<long> > (the zeroed U2DPoint locals pushed into it; EEGetSquareRingTiles /
 // EEGetSquareRing / find 0x8d7bc / copy ctor 0x26f46 by their bound names)
-// FUNCTION: EXE 0x48bdfa
 // Finds a site near the resource center for a building: towers by gold or iron, houses in the main building's
 // morale area, temples/universities/hospitals clear of their effects, others in rings round the center
 bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTile)
@@ -483,7 +471,6 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
     return theFound;
 }
 
-// FUNCTION: EXE 0x48cbec
 // Returns the smallest radius among the area effect templates of a unit class's upgrade (0 when it has none)
 long EECPResourceCenter::GetMinEffectRadius(long inUnitClass)
 {
@@ -500,7 +487,6 @@ long EECPResourceCenter::GetMinEffectRadius(long inUnitClass)
     return theRadius;
 }
 
-// FUNCTION: EXE 0x48cc5f
 // Returns how full the main building's morale effect is: its level plus the unfinished houses in range, over
 // its maximum level (1 without a main building or effect)
 float EECPResourceCenter::GetMoraleFill()
@@ -539,7 +525,6 @@ float EECPResourceCenter::GetMoraleFill()
 }
 
 // NEAR: the original reads mUnits[i] through out-of-line begin()/operator+ and keeps the box in memory
-// FUNCTION: EXE 0x48cdbf
 // Returns the free tile nearest the middle of the resource units (or next to the single unit or main building),
 // else the first candidate tile; leaves outCenter unchanged when there is nothing to measure
 void EECPResourceCenter::GetCenter(EETileCoordinate& outCenter)
@@ -598,7 +583,6 @@ search:
     if (!theFound && theTiles.size() > 0)
         outCenter = theTiles[0];
 }
-// FUNCTION: EXE 0x48d065
 // Returns the first resource unit of the given resource type that is not exhausted, or NULL
 EEUnit* EECPResourceCenter::FindResourceUnit(unsigned long inUnitType)
 {
@@ -612,7 +596,6 @@ EEUnit* EECPResourceCenter::FindResourceUnit(unsigned long inUnitType)
     return theResult;
 }
 
-// FUNCTION: EXE 0x48d0a2
 // Returns whether any tile under a unit class's footprint at (inX, inY) has an area effect of the kind for the player
 bool EECPResourceCenter::IsInAreaEffect(long inX, long inY, long inUnitClass, long inKind)
 {
@@ -630,7 +613,6 @@ bool EECPResourceCenter::IsInAreaEffect(long inX, long inY, long inUnitClass, lo
     return theResult;
 }
 
-// FUNCTION: EXE 0x48d126
 // Reads the resource unit ids and the main building's id (resolved by Restore) and, from version 0.141 on, the
 // active flag; returns the first read error
 long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -660,7 +642,6 @@ long EECPResourceCenter::Load(unsigned long inMajorVersion, unsigned long inMino
 
 // NEAR: the original reads the elements as *(begin() + i) through the out-of-line Ptrit operator+ and pushes the
 // element's address as a const long&
-// FUNCTION: EXE 0x48d1bd
 // Turns the loaded ids back into units (dropping missing and duplicate ones) and references the main building;
 // returns 3 if the main building no longer exists
 long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -689,7 +670,6 @@ long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inM
     return theResult;
 }
 
-// FUNCTION: EXE 0x48d2bc
 // Returns whether a unit's tile is within the player's drop-off distance of the center
 bool EECPResourceCenter::IsWithinRadius(EEUnit* inUnit)
 {
@@ -702,7 +682,6 @@ bool EECPResourceCenter::IsWithinRadius(EEUnit* inUnit)
     return theCenter.DistanceSquared(theTile) < theRadius * theRadius;
 }
 
-// FUNCTION: EXE 0x48d306
 // Writes the ids of the valid resource units, the main building's id (-1 for none) and the active flag; returns
 // the first write error
 long EECPResourceCenter::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -734,7 +713,6 @@ long EECPResourceCenter::Save(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x48d3c3
 // Sets the center's main building, moving the reference from the old one
 void EECPResourceCenter::SetUnit(EEComplexUnit* inUnit)
 {
@@ -745,7 +723,6 @@ void EECPResourceCenter::SetUnit(EEComplexUnit* inUnit)
         inUnit->Reference();
 }
 
-// FUNCTION: EXE 0x48d408
 // Releases and clears the main building if it is the given unit
 void EECPResourceCenter::ReleaseUnit(EEComplexUnit* inUnit)
 {
@@ -755,7 +732,6 @@ void EECPResourceCenter::ReleaseUnit(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x48d3e4
 // Sets whether the center is active; activating it also computes its center (the result is discarded)
 void EECPResourceCenter::SetActive(bool inFlag, long inArg2)
 {
@@ -766,46 +742,3 @@ void EECPResourceCenter::SetActive(bool inFlag, long inArg2)
     if (inFlag)
         this->GetCenter(theCenter);
 }
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
-// against the original by name)
-// TEMPLATE: EXE 0x48d421
-// TEMPLATE: EXE 0x48d45c
-// TEMPLATE: EXE 0x48d542
-// TEMPLATE: EXE 0x48d6e0
-// TEMPLATE: EXE 0x48d728
-// TEMPLATE: EXE 0x48d75b
-// TEMPLATE: EXE 0x48d7e9
-// TEMPLATE: EXE 0x48d8af
-// TEMPLATE: EXE 0x48da4d
-// TEMPLATE: EXE 0x48da9e
-// TEMPLATE: EXE 0x48dad1
-// TEMPLATE: EXE 0x48de27
-// TEMPLATE: EXE 0x48de6b
-// TEMPLATE: EXE 0x48e0ab
-// TEMPLATE: EXE 0x48e345
-
-// Template and inline COMDATs this unit already emits (compared by name)
-// TEMPLATE: EXE 0x48dbde
-// TEMPLATE: EXE 0x48dc28
-// TEMPLATE: EXE 0x48dc55
-// TEMPLATE: EXE 0x48dd31
-// TEMPLATE: EXE 0x48dd65
-// TEMPLATE: EXE 0x48deb8
-// TEMPLATE: EXE 0x48dfcf
-// TEMPLATE: EXE 0x48e00b
-// TEMPLATE: EXE 0x48e10c
-// TEMPLATE: EXE 0x48e149
-// TEMPLATE: EXE 0x48e18d
-// TEMPLATE: EXE 0x48e2ad
-// TEMPLATE: EXE 0x48e2e0
-// TEMPLATE: EXE 0x48e378
-// TEMPLATE: EXE 0x48e3bf
-// TEMPLATE: EXE 0x48e3ec
-// TEMPLATE: EXE 0x48e486
-// TEMPLATE: EXE 0x48e4fe
-// TEMPLATE: EXE 0x48e56f
-// TEMPLATE: EXE 0x48e5c5
-// TEMPLATE: EXE 0x48e628
-// TEMPLATE: EXE 0x48e67c
-// TEMPLATE: EXE 0x48e6cb

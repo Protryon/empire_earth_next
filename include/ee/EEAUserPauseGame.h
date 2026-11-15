@@ -7,7 +7,7 @@
 
 class EEAUserPauseGame : public EEAction {
 public:
-    virtual void Virtual4();                // 0x5280
+    virtual void Virtual4();
     virtual void Virtual8();                // 0x1720c6 (ICF-shared empty body)
 };
 

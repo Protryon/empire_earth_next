@@ -22,8 +22,8 @@ public:
     bool IsStepLimit(long inSteps) const { return false; }
     bool IsRevLimit(long inRevs) const { return false; }
     bool IsCheaper(unsigned long inCost, unsigned long inOld) const { return false; }
-    EEAIAStarPathAreaGoal();                // 0x173cc
-    virtual ~EEAIAStarPathAreaGoal();       // 0x18ac8 (??_G 0x18aac)
+    EEAIAStarPathAreaGoal();
+    virtual ~EEAIAStarPathAreaGoal();
     void CollectTiles();                    // 0x1747c: the storage's open and closed nodes get the id; mTiles gets them
     // 0x17510: a new EEAIPathArea (and, on kind 4, an EEAIForest) of mTiles; in a kind pass (mMode) the kind ids
     void CreateAreas();

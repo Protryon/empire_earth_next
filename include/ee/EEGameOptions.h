@@ -24,7 +24,7 @@ static const unsigned long kLoadTypeCount = 6;
 // class; the name stays here. The bodies are Rust (EEGameOptions.cpp).
 class EEGameOptionsPlayer : public EeAppOptionsPlayerFields {
 public:
-    EEGameOptionsPlayer();                                          // 0x12f4dd
+    EEGameOptionsPlayer();
     EEGameOptionsPlayer& operator=(const EEGameOptionsPlayer& inOther)   // 0x12f526 (every member)
     {
         static_cast<EeAppOptionsPlayerFields&>(*this) = inOther;
@@ -45,12 +45,12 @@ public:
 // are Rust over the limits record and the file's host (EEGameOptions.cpp).
 class EEGameOptions : public EeAppOptionsFields {
 public:
-    EEGameOptions();                        // 0x12f6d8
+    EEGameOptions();
     EEGameOptions(const EEGameOptions& inOther);   // 0x12f818 (also asserts on CreateReadWriteLock: user-written)
     ~EEGameOptions();                       // 0x12f892 (out of line: the lobby's GameType calls it)
-    EEGameOptions& operator=(const EEGameOptions& inOther);   // 0x12f8e0
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x12fd6b
-    long Save(FSFile& outFile);                                                              // 0x130289
+    EEGameOptions& operator=(const EEGameOptions& inOther);
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long Save(FSFile& outFile);
     bool CanBuyCivilization();              // 0x12fc0c: !gUIManager+0x13c && !mIsScenarioGame (EEMCivUpgradesPurchased; provisional name)
     // 0x130272 (EEMStartLoading, under the read lock): each slot's empty member (provisional name)
     void Fn130272() {}
@@ -96,7 +96,7 @@ public:
     bool GetIsScenarioGame() const { return this->mIsScenarioGame; }  // (MGOE OpenOptionsScreen's inline budget)
 };
 
-extern EEGameOptions& gGameOptions;          // 0x53125c
+extern EEGameOptions& gGameOptions;
 
 class GEColor;
 // 0x1318bd (another unit; provisional name): the colour of player colour inIndex (a vector<...*> at 0x4e610c, the

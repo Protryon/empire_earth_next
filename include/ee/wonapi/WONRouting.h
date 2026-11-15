@@ -55,7 +55,7 @@ public:
     { return ee_won_asyncop_run(this->mOp,static_cast<int32_t>(inMode),static_cast<uint32_t>(inTimeout)); }
 
     // an idle op: an infinite timeout, async, no container or timer entry
-    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); } // 0x29ef80
+    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); }
     virtual ~AsyncOp() { ee_won_asyncop_free(this->mOp); } // 0x29f000: the completion and lock go with it
     virtual void RunHook() {}
     virtual void CleanupHook() {}
@@ -87,7 +87,7 @@ public:
     // unless the op runs (29f1b0)
     void SetTimeout(unsigned long inTimeout) { ee_won_asyncop_set_timeout(this->mOp,static_cast<uint32_t>(inTimeout)); }
     bool RunBlock(unsigned long inTimeout) { return this->Run(2,inTimeout)==0; } // 29f6e0: whether it succeeded
-    void RunAsync(long inTimeout) { this->Run(1,inTimeout); } // 0x29f6d0
+    void RunAsync(long inTimeout) { this->Run(1,inTimeout); }
     // marks the op killed and, when asked, finishes it killed (0x29f1e0)
     void Kill(bool inFlag) { ee_won_asyncop_kill(this->mOp,inFlag); }
     // whether an async run starts at once instead of being queued (0x29f1d0)
@@ -1417,7 +1417,6 @@ public:
     // 0x2bf1d0: subscribes to the data objects of a type (EEWonNet's room and game objects)
     void SubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
                         CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bf2e0
     void UnsubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
                   CompletionBase<AsyncOpPtr>* inCompletion);
     // 0x2bcc30: registers the client
@@ -1435,7 +1434,7 @@ public:
     // 0x2bee30: replaces a data object
     void ReplaceDataObject(unsigned short inLinkId, const std::string& inDataType, const std::wstring& inName,
                            CompletionBase<AsyncOpPtr>* inCompletion);
-    void GetGroupList(unsigned char inFlags, CompletionBase<AsyncOpPtr>* inCompletion);       // 0x2bcf90
+    void GetGroupList(unsigned char inFlags, CompletionBase<AsyncOpPtr>* inCompletion);
     // 0x2c35a0: the client of a name
     // 0x2be540: chat to a group
     void SendChat(const std::wstring& inText, unsigned long inFlags, unsigned short inGroup,
@@ -1450,13 +1449,13 @@ public:
     // 0x2bd580: joins a group
     void JoinGroup(unsigned short inId, const std::wstring& inPassword, const std::wstring& inComment, unsigned char inFlag4,
                    unsigned char inFlag5, CompletionBase<AsyncOpPtr>* inCompletion);
-    void CancelJoinGroup(unsigned short inId, bool inFlag2, CompletionBase<AsyncOpPtr>* inCompletion);      // 0x2bd6b0
-    void LeaveGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion);              // 0x2bd850
+    void CancelJoinGroup(unsigned short inId, bool inFlag2, CompletionBase<AsyncOpPtr>* inCompletion);
+    void LeaveGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion);
     // 0x2bf0c0: subscribes to a group's data objects
     void ReadDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
                   CompletionBase<AsyncOpPtr>* inCompletion);
-    void GetClientList(CompletionBase<AsyncOpPtr>* inCompletion);  // 0x2bcd40
-    void GetMembersOfGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion);    // 0x2bd1e0
+    void GetClientList(CompletionBase<AsyncOpPtr>* inCompletion);
+    void GetMembersOfGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion);
 
 
 // Members of RoutingConnection (0x1c0).

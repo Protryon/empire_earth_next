@@ -209,7 +209,6 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
     }
 }
 
-// FUNCTION: WON 0x0072b660
 // Creates the window manager: becomes the default manager, sets standard colours. The original registered BMP and
 // WIM decoders here; the port reads PNG and JPEG pictures only (D9; the lobby's game code registers both), so they
 // went (round 18)
@@ -223,46 +222,13 @@ WindowManager::WindowManager() {
     // The window set, the events, the timers, the broadcasts and the screen state start empty in the Rust manager
     // (wmloop.rs); the original left the image cache count and the full-screen size unset
 }
-// FUNCTION: WON 0x0072ba90
-// Deleting destructor of the window manager (compiler-generated)
-// (??_GWindowManager@WONAPI@@UAEPAXI@Z)
 
-// FUNCTION: WON 0x0072bab0
-// Destroys the named-font map tree, freeing every node
-// (??1?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072bb70
-// Destroys the native image cache tree, freeing every node
-// (??1?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072bc30
-// Destroys the raw image cache tree, freeing every node
-// (??1?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072bcf0
-// Destroys the delay-load image cache tree, freeing every node
-// (??1?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072bdb0
-// Destroys the window set tree, freeing every node
-// (??1?$_Tree@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@std@@@std@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072be70
-// Destroys the timer event set tree, freeing every node
-// (??1?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072bf30
-// Destroys the broadcast component set tree, freeing every node
-// (??1?$_Tree@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072bff0
 // Destroys the window manager after closing every open window
 WindowManager::~WindowManager()
 {
 	this->CloseAllWindows();
 }
 
-// FUNCTION: WON 0x0072c230
 // Fills the colour scheme with the 17 standard Windows-style colours (face, shadow, highlight, text, links ...)
 void WindowManager::InitColorScheme()
 {
@@ -290,21 +256,18 @@ void WindowManager::InitColorScheme()
 	this->mColorScheme->SetStandardColor(StandardColor_LinkDown,0xFF0000);
 }
 
-// FUNCTION: WON 0x0072c2d0
 // Records that no window has focus and when focus was lost (tick 0 is stored as 1)
 void WindowManager::NotifyLostFocus()
 {
 	this->WmCall(EeWonWmCall::NotifyLostFocus);
 }
 
-// FUNCTION: WON 0x0072c300
 // Records the window that gained focus and clears the lost-focus tick
 void WindowManager::NotifyGotFocus(Window *theWindow)
 {
 	this->WmCall(EeWonWmCall::NotifyGotFocus, (intptr_t)theWindow);
 }
 
-// FUNCTION: WON 0x0072c320
 // Switches the screen resolution and remembers the previous one; only when both width and height differ
 // from the current mode
 void WindowManager::SetScreenResolution(int theWidth, int theHeight)
@@ -312,42 +275,36 @@ void WindowManager::SetScreenResolution(int theWidth, int theHeight)
 	this->WmCall(EeWonWmCall::SetScreenResolution, theWidth, theHeight);
 }
 
-// FUNCTION: WON 0x0072c390
 // Minimizes open windows that ask for it and switches back to the remembered screen resolution, if any
 void WindowManager::RestoreScreenResolution()
 {
 	this->WmCall(EeWonWmCall::RestoreScreenResolution);
 }
 
-// FUNCTION: WON 0x0072c440
 // Returns the window of the first open popup, or NULL when no popup is up
 Window* WindowManager::GetPopupWindow()
 {
 	return (Window*)this->WmCall(EeWonWmCall::PopupWindow);
 }
 
-// FUNCTION: WON 0x0072c470
 // Stores a font under a name (case-insensitive), replacing any earlier one
 void WindowManager::SetNamedFont(const std::string &theName, Font *theFont)
 {
 	this->WmCall(EeWonWmCall::SetNamedFont, (intptr_t)theName.data(), (intptr_t)theName.size(), (intptr_t)theFont);
 }
 
-// FUNCTION: WON 0x0072c4d0
 // Returns the font stored under a name, or the default font when there is none
 Font* WindowManager::GetNamedFont(const std::string &theName)
 {
 	return (Font*)this->WmCall(EeWonWmCall::GetNamedFont, (intptr_t)theName.data(), (intptr_t)theName.size());
 }
 
-// FUNCTION: WON 0x0072c540
 // Returns the default font, creating Tahoma 8 on the default window the first time
 Font* WindowManager::GetDefaultFont()
 {
 	return (Font*)this->WmCall(EeWonWmCall::GetDefaultFont);
 }
 
-// FUNCTION: WON 0x0072c700
 // Returns the default font with another style and, when the size is positive, another size
 Font* WindowManager::GetDefaultFontMod(int theStyle, int theSize)
 {
@@ -360,14 +317,12 @@ Font* WindowManager::GetDefaultFontMod(int theStyle, int theSize)
 	return this->GetDefaultWindow()->GetFont(aDesc).get();
 }
 
-// FUNCTION: WON 0x0072c7f0
 // Adds or drops one image-caching request; when the count reaches 0 it empties the native and raw image caches
 void WindowManager::SetCacheImages(bool cache)
 {
 	this->WmCall(EeWonWmCall::SetCacheImages, cache ? 1 : 0);
 }
 
-// FUNCTION: WON 0x0072c950
 // Decodes an image file for a display context, cached while caching is on; NULL without a context
 SmartPtr<NativeImage> WindowManager::DecodeImage(DisplayContext *theContext, const char *theFilePath)
 {
@@ -378,11 +333,6 @@ SmartPtr<NativeImage> WindowManager::DecodeImage(DisplayContext *theContext, con
 	return anImage;
 }
 
-// FUNCTION: WON 0x0072cc20
-// Destroys a native image cache entry (file name and image)
-// (??1?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072ccb0
 // Decodes an image file for the default window's display context; NULL when there is no window
 SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 {
@@ -392,7 +342,6 @@ SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 	return this->DecodeImage(this->GetDefaultWindow()->mDisplayContext.get(),theFilePath);
 }
 
-// FUNCTION: WON 0x0072ccf0
 // Returns an image that loads its file on first use, sized from the file's attributes; cached by path while
 // caching is on; NULL when the attributes cannot be read
 SmartPtr<Image> WindowManager::DecodeDelayImage(const char *theFilePath)
@@ -402,11 +351,6 @@ SmartPtr<Image> WindowManager::DecodeDelayImage(const char *theFilePath)
 	return anImage;
 }
 
-// FUNCTION: WON 0x0072d0d0
-// Destroys a delay-load image cache entry (file name and image)
-// (??1?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072d160
 // Decodes an image file into a raw image, through the raw image cache while caching is on
 SmartPtr<RawImage> WindowManager::DecodeImageRaw(const char *theFilePath)
 {
@@ -415,18 +359,12 @@ SmartPtr<RawImage> WindowManager::DecodeImageRaw(const char *theFilePath)
 	return anImage;
 }
 
-// FUNCTION: WON 0x0072d400
-// Destroys a raw image cache entry (file name and image)
-// (??1?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072d490
 // Sets the decoder used for sounds
 void WindowManager::SetSoundDecoder(SoundDecoder *theDecoder)
 {
 	this->mSoundDecoder = theDecoder;
 }
 
-// FUNCTION: WON 0x0072d4f0
 // Decodes a sound with the sound decoder, or returns a plain sound for the descriptor when there is none
 SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
 {
@@ -436,21 +374,18 @@ SmartPtr<Sound> WindowManager::DecodeSound(const SoundDescriptor &theDesc)
 		return this->mSoundDecoder->DecodeDescriptor(theDesc);
 }
 
-// FUNCTION: WON 0x0072d5b0
 // Closes every window, processes the resulting events and restores the screen resolution when full screen
 void WindowManager::CloseAllWindows()
 {
 	this->WmCall(EeWonWmCall::CloseAllWindows);
 }
 
-// FUNCTION: WON 0x0072d6a0
 // Adds a window to the managed set (the first one becomes the default window); always returns true
 bool WindowManager::AddWindow(Window *theWindow)
 {
 	return this->WmCall(EeWonWmCall::AddWindow, (intptr_t)theWindow) != 0;
 }
 
-// FUNCTION: WON 0x0072d840
 // Removes a window: drops its queued events, picks a new default window, ends its modal dialog and forgets
 // it as the saved popup window; false when it was not managed
 bool WindowManager::RemoveWindow(Window *theWindow)
@@ -458,70 +393,60 @@ bool WindowManager::RemoveWindow(Window *theWindow)
 	return this->WmCall(EeWonWmCall::RemoveWindow, (intptr_t)theWindow) != 0;
 }
 
-// FUNCTION: WON 0x0072ddf0
 // Makes the innermost message loop return
 void WindowManager::ExitMessageLoop()
 {
 	this->WmCall(EeWonWmCall::ExitMessageLoop);
 }
 
-// FUNCTION: WON 0x0072e7d0
 // Runs a nested message loop until it is exited; returns the dialog result, or -1 when there are no windows
 int WindowManager::MessageLoop()
 {
 	return (int)this->WmCall(EeWonWmCall::MessageLoop);
 }
 
-// FUNCTION: WON 0x0072e850
 // Queues a window event and signals the event loop when asked or when no message loop is running
 void WindowManager::PostEvent(WindowEventBase *theEvent, bool needSignal)
 {
 	this->WmCall(EeWonWmCall::PostEvent, (intptr_t)theEvent, needSignal ? 1 : 0);
 }
 
-// FUNCTION: WON 0x0072e960
 // Adds an event to be delivered on every timer tick
 void WindowManager::AddTimerEvent(WindowEventBase *theEvent)
 {
 	this->WmCall(EeWonWmCall::AddTimerEvent, (intptr_t)theEvent);
 }
 
-// FUNCTION: WON 0x0072ea70
 // Removes a timer event, deferring the removal while timers are being delivered
 void WindowManager::RemoveTimerEvent(WindowEventBase *theEvent)
 {
 	this->WmCall(EeWonWmCall::RemoveTimerEvent, (intptr_t)theEvent);
 }
 
-// FUNCTION: WON 0x0072f3f0
 // Adds a component to or removes it from the set that receives broadcast events
 void WindowManager::SubscribeToBroadcast(Component *theComponent, bool subscribe)
 {
 	this->WmCall(EeWonWmCall::SubscribeToBroadcast, (intptr_t)theComponent, subscribe ? 1 : 0);
 }
 
-// FUNCTION: WON 0x0072f5d0
 // Removes every component from the broadcast set
 void WindowManager::ClearSubscriptions()
 {
 	this->WmCall(EeWonWmCall::ClearSubscriptions);
 }
 
-// FUNCTION: WON 0x0072f680
 // Sends a component event to every subscribed component
 void WindowManager::BroadcastEvent(ComponentEvent *theEvent)
 {
 	this->WmCall(EeWonWmCall::BroadcastEvent, (intptr_t)theEvent);
 }
 
-// FUNCTION: WON 0x0072f700
 // Returns the next queued window event without removing it, or NULL
 WindowEventBase* WindowManager::PeekNextEvent()
 {
 	return (WindowEventBase*)this->WmCall(EeWonWmCall::PeekNextEvent);
 }
 
-// FUNCTION: WON 0x0072f760
 // Every 50 ms ends or keeps popups by focus, restores the resolution after focus loss and ticks windows and
 // timer events; then delivers queued events and idles every window (deferred timer removals are never cleared)
 void WindowManager::ProcessEvents()
@@ -529,7 +454,6 @@ void WindowManager::ProcessEvents()
 	this->WmCall(EeWonWmCall::ProcessEvents);
 }
 
-// FUNCTION: WON 0x0072da30
 // Recomputes modal state from the open popups and the modal dialog: flags popups, the popup input component
 // and the dialog, and makes every other window modal
 void WindowManager::CalcModality()
@@ -537,28 +461,24 @@ void WindowManager::CalcModality()
 	this->WmCall(EeWonWmCall::CalcModality);
 }
 
-// FUNCTION: WON 0x0072dc30
 // Returns true when a modal window exists and the given window is not it
 bool WindowManager::NotModalWindow(Window *theWindow)
 {
 	return this->WmCall(EeWonWmCall::NotModalWindow, (intptr_t)theWindow) != 0;
 }
 
-// FUNCTION: WON 0x0072dc50
 // Shows a component (default: the window's root) as a modal dialog until it ends; returns its result
 int WindowManager::DoDialog(Window *theWindow, Component *theComponent)
 {
 	return (int)this->WmCall(EeWonWmCall::DoDialog, (intptr_t)theWindow, (intptr_t)theComponent);
 }
 
-// FUNCTION: WON 0x0072ddb0
 // Ends the current modal dialog with a result, unless another window or dialog is named
 void WindowManager::EndDialog(int theResult, Window *theWindow, Component *theDialog)
 {
 	this->WmCall(EeWonWmCall::EndDialog, theResult, (intptr_t)theWindow, (intptr_t)theDialog);
 }
 
-// FUNCTION: WON 0x0072de00
 // Moves a popup back inside the screen or the parent's root, flipping it to the other side of the avoid rectangle
 void WindowManager::AdjustPopupPosition(Window *theParent, Component *theComponent, bool inOwnWindow, const WONRectangle &theAvoidRect)
 {
@@ -567,7 +487,6 @@ void WindowManager::AdjustPopupPosition(Window *theParent, Component *theCompone
 	             (intptr_t)&anAvoid);
 }
 
-// FUNCTION: WON 0x0072e040
 // Opens a popup at the given or mouse position, in its own popup window or inside the parent window, per
 // the popup flags; ignored while another popup opens or closes, or when the parent lacks focus
 void WindowManager::DoPopup(const PopupParams &theParams)
@@ -578,7 +497,6 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 	this->WmCall(EeWonWmCall::DoPopup, (intptr_t)&aParams);
 }
 
-// FUNCTION: WON 0x0072e4d0
 // Closes the given popup and every popup opened after it (NULL: all), firing the end-popup event and
 // keeping the last popup window for reuse
 void WindowManager::EndPopup(Component *thePopup)
@@ -586,14 +504,12 @@ void WindowManager::EndPopup(Component *thePopup)
 	this->WmCall(EeWonWmCall::EndPopup, (intptr_t)thePopup);
 }
 
-// FUNCTION: WON 0x0072e790
 // Closes the popups when the popup's owner component lies inside the given component
 void WindowManager::CheckEndPopup(Component *theAncestor)
 {
 	this->WmCall(EeWonWmCall::CheckEndPopup, (intptr_t)theAncestor);
 }
 
-// FUNCTION: WON 0x0072ef20
 // Dispatches one window event: mouse, key, focus, resize, close and other events, applying popup, modal
 // and full-screen rules; merges repeated mouse moves and size changes
 void WindowManager::DeliverEvent(WindowEventBase *theEvent)
@@ -652,159 +568,3 @@ void WindowManager::PumpOnce()
 {
 	this->GetNextEvent();
 }
-
-// FUNCTION: WON 0x0072fc40
-// Destroys a named-font map entry (name and font)
-// (??1?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@QAE@XZ)
-
-// FUNCTION: WON 0x0072fcd0
-// Links a new node into the native image cache tree and rebalances it
-// (?_Insert@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABU?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@2@@Z)
-
-// FUNCTION: WON 0x0072ffd0
-// Links a new node into the raw image cache tree and rebalances it
-// (?_Insert@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABU?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@2@@Z)
-
-// FUNCTION: WON 0x007302d0
-// Links a new node into the delay-load image cache tree and rebalances it
-// (?_Insert@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABU?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@2@@Z)
-
-// FUNCTION: WON 0x007305d0
-// Erases a range of entries from the window set (the whole tree at once when the range is everything)
-// (?erase@?$_Tree@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@std@@@std@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@V312@0@Z)
-
-// FUNCTION: WON 0x00730680
-// Returns the range of timer events equal to the given event
-// (?equal_range@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AU?$pair@Viterator@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@V123@@2@ABV?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@Z)
-
-// FUNCTION: WON 0x007306e0
-// Links a new node into the window set tree and rebalances it
-// (?_Insert@?$_Tree@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@std@@@std@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@5@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABV?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@Z)
-
-// FUNCTION: WON 0x007309e0
-// Advances a broadcast component set iterator to the next entry
-// (?_Inc@const_iterator@?$_Tree@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@$0A@@std@@QAEXXZ)
-
-// FUNCTION: WON 0x00730a30
-// Erases a range of entries from the timer event set (the whole tree at once when the range is everything)
-// (?erase@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@V312@0@Z)
-
-// FUNCTION: WON 0x00730ae0
-// Links a new node into the timer event set tree and rebalances it
-// (?_Insert@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABV?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@Z)
-
-// FUNCTION: WON 0x00730de0
-// Erases a range of entries from the broadcast component set (the whole tree at once when the range is everything)
-// (?erase@?$_Tree@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@V312@0@Z)
-
-// FUNCTION: WON 0x00730e90
-// Links a new node into the broadcast component set tree and rebalances it
-// (?_Insert@?$_Tree@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABV?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@Z)
-
-// FUNCTION: WON 0x007318f0
-// Builds the (position, inserted) result of a native image cache insert
-// (??0?$pair@Viterator@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$_Mapk@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@_N@std@@QAE@ABViterator@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$_Mapk@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@1@AB_N@Z)
-
-// FUNCTION: WON 0x00731a60
-// Erases one entry from the named-font map and rebalances the tree; returns the next entry
-// (?erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@@Z)
-
-// FUNCTION: WON 0x00731f80
-// Frees a subtree of the named-font map recursively, without rebalancing
-// (?_Erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z)
-
-// FUNCTION: WON 0x00731fc0
-// Links a new node into the named-font map tree and rebalances it
-// (?_Insert@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABU?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@2@@Z)
-
-// FUNCTION: WON 0x007322e0
-// Erases one entry from the native image cache and rebalances the tree; returns the next entry
-// (?erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@@Z)
-
-// FUNCTION: WON 0x00732800
-// Frees a subtree of the native image cache recursively, without rebalancing
-// (?_Erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z)
-
-// FUNCTION: WON 0x00732840
-// Erases one entry from the raw image cache and rebalances the tree; returns the next entry
-// (?erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@@Z)
-
-// FUNCTION: WON 0x00732d60
-// Frees a subtree of the raw image cache recursively, without rebalancing
-// (?_Erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z)
-
-// FUNCTION: WON 0x00732da0
-// Erases one entry from the delay-load image cache and rebalances the tree; returns the next entry
-// (?erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@@Z)
-
-// FUNCTION: WON 0x007332c0
-// Frees a subtree of the delay-load image cache recursively, without rebalancing
-// (?_Erase@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z)
-
-// FUNCTION: WON 0x00733300
-// Erases one entry from the window set and rebalances the tree; returns the next entry
-// (?erase@?$_Tree@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@std@@@std@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@V312@@Z)
-
-// FUNCTION: WON 0x007337f0
-// Frees a subtree of the window set recursively, without rebalancing
-// (?_Erase@?$_Tree@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@std@@@std@@UComp@12@V?$allocator@V?$SmartPtr@VWindow@WONAPI@@@WONAPI@@@5@$0A@@std@@IAEXPAU_Node@12@@Z)
-
-// FUNCTION: WON 0x00733830
-// Grows the window event list's element count, throwing length_error when it would overflow
-// (?_Incsize@?$list@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@@std@@IAEXI@Z)
-
-// FUNCTION: WON 0x00733980
-// Erases one entry from the timer event set and rebalances the tree; returns the next entry
-// (?erase@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@V312@@Z)
-
-// FUNCTION: WON 0x00733e70
-// Frees a subtree of the timer event set recursively, without rebalancing
-// (?_Erase@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@IAEXPAU_Node@12@@Z)
-
-// FUNCTION: WON 0x00733eb0
-// Erases one entry from the broadcast component set and rebalances the tree; returns the next entry
-// (?erase@?$_Tree@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@V12@U_Kfn@?$set@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@V312@@Z)
-
-// FUNCTION: WON 0x007343a0
-// Returns the first timer event not ordered before the given one
-// (?lower_bound@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@ABV?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@Z)
-
-// FUNCTION: WON 0x007343e0
-// Returns the first timer event ordered after the given one
-// (?upper_bound@?$_Tree@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@5@$0A@@std@@QAE?AViterator@12@ABV?$SmartPtr@VWindowEventBase@WONAPI@@@WONAPI@@@Z)
-
-// FUNCTION: WON 0x00734420
-// Frees a subtree of the broadcast component set recursively, without rebalancing
-// (?_Erase@?$_Tree@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@V12@U_Kfn@?$_Setk@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@std@@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@4@@std@@U?$less@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@V?$allocator@V?$SmartPtr@VComponent@WONAPI@@@WONAPI@@@5@$0A@@std@@IAEXPAU_Node@12@@Z)
-
-// FUNCTION: WON 0x00734f70
-// Advances a named-font map iterator to the next entry
-// (?_Inc@const_iterator@?$_Tree@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@2@U_Kfn@?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@UStringLessNoCase@4@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@@2@UStringLessNoCase@WONAPI@@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@@2@$0A@@std@@QAEXXZ)
-
-// FUNCTION: WON 0x007352a0
-// Deleting destructor of a named-font map entry
-// (??_G?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VFont@WONAPI@@@WONAPI@@@std@@QAEPAXI@Z)
-
-// FUNCTION: WON 0x007352c0
-// Deleting destructor of a native image cache entry
-// (??_G?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VNativeImage@WONAPI@@@WONAPI@@@std@@QAEPAXI@Z)
-
-// FUNCTION: WON 0x007352e0
-// Deleting destructor of a raw image cache entry
-// (??_G?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VRawImage@WONAPI@@@WONAPI@@@std@@QAEPAXI@Z)
-
-// FUNCTION: WON 0x00735300
-// Deleting destructor of a delay-load image cache entry
-// (??_G?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$SmartPtr@VImage@WONAPI@@@WONAPI@@@std@@QAEPAXI@Z)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0072fab0
-// (public: class WONAPI::SmartPtr<class WONAPI::Font> & __thiscall std::map<class std::basic_string<char,struct std::char_traits<char>,class std::allocat)
-// TEMPLATE: WON 0x00735010
-// (void __cdecl std::_Construct(struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WON)
-// TEMPLATE: WON 0x00735090
-// (void __cdecl std::_Construct(struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WON)
-// TEMPLATE: WON 0x00735110
-// (void __cdecl std::_Construct(struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WON)
-// TEMPLATE: WON 0x00735220
-// (void __cdecl std::_Construct(struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,class WON)

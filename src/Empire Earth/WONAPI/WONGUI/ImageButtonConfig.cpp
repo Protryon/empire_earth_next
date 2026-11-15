@@ -14,12 +14,10 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x0078ac90
 // Creates an image button configuration with no button bound
 ImageButtonConfig::ImageButtonConfig()
 {
 }
-// FUNCTION: WON 0x0078acb0
 // Handles the NORMALIMAGE, OVERIMAGE, DOWNIMAGE, DISABLEDIMAGE and CHECKEDIMAGE instructions by reading an
 // image into that state; others go to the base config
 bool ImageButtonConfig::Virtual24(const std::string& instruction)
@@ -35,7 +33,6 @@ bool ImageButtonConfig::Virtual24(const std::string& instruction)
     this->mImageButton->SetImage(type,this->ReadImage(false).get());
     return true;
 }
-// FUNCTION: WON 0x0078f8d0
 // Binds the configuration to its image button
 void ImageButtonConfig::SetComponent(Component* component)
 {

@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONGUIDraw.h"
 
 namespace WONAPI {
-// FUNCTION: WON 0x00700860
 // Paints an etched frame: a highlight rectangle offset by one pixel under a shadow rectangle
 void MSEtchedFrame::Paint(Graphics& g)
 {
@@ -20,7 +19,6 @@ void MSEtchedFrame::Paint(Graphics& g)
     WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::EtchedFrame,this->Width(),this->Height()));
 }
 
-// FUNCTION: WON 0x006ffad0
 // Paints the input box and a sunken 3D frame around it
 void MSInputBox::Paint(Graphics& g)
 {
@@ -30,7 +28,6 @@ void MSInputBox::Paint(Graphics& g)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x006ffb00
 // Returns the input box's preferred size, 100 x 22
 void MSInputBox::GetDesiredSize(int& width,int& height) { width=100; height=22; }
 }

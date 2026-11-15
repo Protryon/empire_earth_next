@@ -4,20 +4,6 @@
 // 0x10038020..0x10038527: GEDeviceContext's static init chains (sHDC 0x38020, sLock 0x38071), GEDeviceContext and
 // GEWindow members, then the map<HWND__*, GEDCCriticalSection> COMDATs its dtor pulls in (~_Tree, erase(F, L),
 // erase(P), _Erase). Every other GEWindow member is header-inline (GEBitmap.cpp emits them).
-//
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x10038020
-// SYNTHETIC: LLE 0x1003802a
-// SYNTHETIC: LLE 0x1003804a
-// SYNTHETIC: LLE 0x10038056
-// SYNTHETIC: LLE 0x10038071
-// SYNTHETIC: LLE 0x1003807b
-// SYNTHETIC: LLE 0x1003809f
-// SYNTHETIC: LLE 0x100380ab
-// TEMPLATE: LLE 0x10038199
-// TEMPLATE: LLE 0x100381c4
-// TEMPLATE: LLE 0x10038235
-// TEMPLATE: LLE 0x100384ec
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -26,7 +12,6 @@
 #include "GEWindow.h"
 #include "platform/PlatWindow.h"
 
-// FUNCTION: LLE 0x100380e4
 // Destroys the window object, destroying the native window only in full-screen mode
 GEWindow::~GEWindow()
 {
@@ -34,7 +19,6 @@ GEWindow::~GEWindow()
         PlatWindowDestroy(this->mWindow);
 }
 
-// FUNCTION: LLE 0x100380f3
 // Returns the screen position of the window's client area
 const GE2DPoint& GEWindow::GetClientOrigin()
 {
@@ -45,7 +29,6 @@ const GE2DPoint& GEWindow::GetClientOrigin()
     return this->mClientOrigin;
 }
 
-// FUNCTION: LLE 0x10038120
 // Resizes the window's client area (the original added the frame for an overlapped window, depth 1: the platform
 // window sizes the client area either way)
 void GEWindow::Resize(unsigned long inWidth, unsigned long inHeight)

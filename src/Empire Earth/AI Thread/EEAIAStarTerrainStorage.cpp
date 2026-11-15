@@ -12,17 +12,12 @@
 #include "ee/EEAIAStarFastStorage.h"
 #include "ee/EEAIAStarTerrainStorage.h"
 
-// FUNCTION: EXE 0x41c666
 // Creates the terrain flood-fill storage with the whole grid marked dirty (the Rust storage's constructor)
 EEAIAStarTerrainStorage::EEAIAStarTerrainStorage()
     : EEAIAStarFastStorage(EeAStarStorageKind::Terrain)
 {
 }
 
-// SYNTHETIC: EXE 0x41c68d
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x41c6a9
 // Destroys the storage (bases only)
 EEAIAStarTerrainStorage::~EEAIAStarTerrainStorage()
 {

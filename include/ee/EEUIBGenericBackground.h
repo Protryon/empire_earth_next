@@ -14,7 +14,7 @@ public:
                            const GETextureDescription& inDescription, const UILayoutUtility& inLayout,
                            UIForm* inForm, unsigned long inDrawPriority, const GEColor& inColor, bool inVisible,
                            float inOpacity, float inScaleX, float inScaleY, unsigned long inFlags);
-    virtual ~EEUIBGenericBackground();      // 0x254ac0 (??_G 0x254aa4)
+    virtual ~EEUIBGenericBackground();
     // +0x14 0x255131: the tinted rhombus, then the frame pieces mFrameFlags asks for (1 edges + small corners, 2 large
     // corners, 4 side ornaments; ee_screens frame.rs, with the original's DrawCorner 0x255463, DrawCorners 0x254acc,
     // DrawEdge 0x25528a, DrawEdges 0x254c5d, DrawFrameCorners 0x254e05 and DrawSides 0x254f98)

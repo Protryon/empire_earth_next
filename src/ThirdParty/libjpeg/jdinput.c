@@ -35,9 +35,7 @@ METHODDEF(int) consume_markers JPP((j_decompress_ptr cinfo));
  * Routines to calculate various quantities related to the size of the image.
  */
 
-// FUNCTION: JPEG 0x100882a3
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80a9c0
 initial_setup (j_decompress_ptr cinfo)
 /* Called once, when first SOS marker is reached */
 {
@@ -119,9 +117,7 @@ initial_setup (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x10087fe5
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80a680
 per_scan_setup (j_decompress_ptr cinfo)
 /* Do computations that are needed before processing a JPEG scan */
 /* cinfo->comps_in_scan and cinfo->cur_comp_info[] were set from SOS marker */
@@ -220,9 +216,7 @@ per_scan_setup (j_decompress_ptr cinfo)
  * not at the current Q-table slots.
  */
 
-// FUNCTION: JPEG 0x10088165
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80a830
 latch_quant_tables (j_decompress_ptr cinfo)
 {
   int ci, qtblno;
@@ -256,9 +250,7 @@ latch_quant_tables (j_decompress_ptr cinfo)
  * Subsequent calls come from consume_markers, below.
  */
 
-// FUNCTION: JPEG 0x10087fa8
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80a640
 start_input_pass (j_decompress_ptr cinfo)
 {
   per_scan_setup(cinfo);
@@ -275,9 +267,7 @@ start_input_pass (j_decompress_ptr cinfo)
  * the expected data of the scan.
  */
 
-// FUNCTION: JPEG 0x100881fd
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80a8e0
 finish_input_pass (j_decompress_ptr cinfo)
 {
   cinfo->inputctl->consume_input = consume_markers;
@@ -294,9 +284,7 @@ finish_input_pass (j_decompress_ptr cinfo)
  * we are reading a compressed data segment or inter-segment markers.
  */
 
-// FUNCTION: JPEG 0x1008820e
 METHODDEF(int)
-// FUNCTION: EXEIMG 0x80a900
 consume_markers (j_decompress_ptr cinfo)
 {
   my_inputctl_ptr inputctl = (my_inputctl_ptr) cinfo->inputctl;
@@ -347,9 +335,7 @@ consume_markers (j_decompress_ptr cinfo)
  * Reset state to begin a fresh datastream.
  */
 
-// FUNCTION: JPEG 0x10088469
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80abb0
 reset_input_controller (j_decompress_ptr cinfo)
 {
   my_inputctl_ptr inputctl = (my_inputctl_ptr) cinfo->inputctl;
@@ -371,9 +357,7 @@ reset_input_controller (j_decompress_ptr cinfo)
  * This is called only once, when the decompression object is created.
  */
 
-// FUNCTION: JPEG 0x10087f67
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x80a5f0
 jinit_input_controller (j_decompress_ptr cinfo)
 {
   my_inputctl_ptr inputctl;

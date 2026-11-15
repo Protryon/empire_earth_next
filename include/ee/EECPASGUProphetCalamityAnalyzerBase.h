@@ -109,8 +109,8 @@ public:
     virtual float Evaluate();               // +0x14 0xaa09
     virtual bool IsApplicable();            // +0x18 0xb513 (ICF: Plague's)
     // Virtual14's modifiers (provisional names)
-    float ApplyCitizenBonus(float inScore);  // 0xaaba
-    float ApplySplashBonus(float inScore);  // 0xab2b
+    float ApplyCitizenBonus(float inScore);
+    float ApplySplashBonus(float inScore);
 };
 
 // vtable 0x439838
@@ -122,7 +122,7 @@ public:
     virtual float Evaluate();               // +0x14 0xa0ba
     virtual bool IsApplicable();            // +0x18 0xb4c4 (ICF: Earthquake's)
     // Virtual14's modifiers (provisional names)
-    float ApplySplashBonus(float inScore);  // 0xa131
+    float ApplySplashBonus(float inScore);
 };
 
 // vtable 0x4398d0
@@ -134,8 +134,8 @@ public:
     virtual float Evaluate();               // +0x14 0xaf05
     virtual bool IsApplicable();            // +0x18 0xb562
     // Virtual14's modifiers (provisional names)
-    float AddTargetVeterancy(float inScore);  // 0xabd3
-    float ApplyShipFactor(float inScore);   // 0xaf78
+    float AddTargetVeterancy(float inScore);
+    float ApplyShipFactor(float inScore);
 };
 
 // vtable 0x439618
@@ -184,7 +184,7 @@ public:
     float ApplyStrongTownPenalty(float inScore);  // 0xa554: * 0.02 when the prophet stands in one of its player's towns
     float ApplyRandomFactor(float inScore);  // 0xa583: * a random 0.45..0.9
     float ApplyCitizenBonus(float inScore);  // 0xa5a9: * (1 + 0.055 * the targets of category 6 or 0x16)
-    float ApplySplashBonus(float inScore);  // 0xa61a
+    float ApplySplashBonus(float inScore);
 };
 
 // vtable 0x439580; sizeof 0x40
@@ -251,7 +251,7 @@ public:
     virtual float Evaluate();               // +0x14 0x975e
     virtual bool IsApplicable();            // +0x18 0x96c2
     // Virtual14's modifiers (provisional names)
-    float ApplyChokePointBonus(float inScore, bool inArg, bool& outFound);  // 0x9318 (ret 0xc)
+    float ApplyChokePointBonus(float inScore, bool inArg, bool& outFound);
     float ApplyWeakTownPenalty(float inScore);  // 0x9802: * 0.25 when the prophet stands in one of its player's towns
 };
 

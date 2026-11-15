@@ -36,7 +36,7 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
 extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
-extern unsigned long& gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;
 
 // one loaded icon (0x14 bytes) (provisional name)
 struct EEUIFMGIconBitmap {
@@ -44,40 +44,13 @@ struct EEUIFMGIconBitmap {
     GEBitmap* mBitmap;                      // +0x10
 };
 
-static GEColor kStatusColor1(0.0f, 0.0f, 1.0f);    // 0x5652e0
-static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);    // 0x5652d0
-static GEColor kStatusColor3(0.0f, 1.0f, 0.5f);    // 0x5652c0
-EEUIFMGIconBitmap EEUIFMGStatusBox::sIconBitmaps[50];   // 0x564ed8
+static GEColor kStatusColor1(0.0f, 0.0f, 1.0f);
+static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);
+static GEColor kStatusColor3(0.0f, 1.0f, 0.5f);
+EEUIFMGIconBitmap EEUIFMGStatusBox::sIconBitmaps[50];
 // (the icon cells' table, 0x564890, is Rust's: ee_screens status_box.rs CELLS)
 bool sIconsLoaded;                                  // 0x5652ec; cross-TU flag, original name/ordinary-global ownership provisional
 
-// SYNTHETIC: EXE 0x669ca8
-// SYNTHETIC: EXE 0x669cb2
-// SYNTHETIC: EXE 0x669ccb
-// SYNTHETIC: EXE 0x669cd7
-// SYNTHETIC: EXE 0x669cd8
-// SYNTHETIC: EXE 0x669ce2
-// SYNTHETIC: EXE 0x669cfb
-// SYNTHETIC: EXE 0x669d07
-// SYNTHETIC: EXE 0x669d08
-// SYNTHETIC: EXE 0x669d12
-// SYNTHETIC: EXE 0x669d2d
-// SYNTHETIC: EXE 0x669d39
-// SYNTHETIC: EXE 0x669d3a
-// SYNTHETIC: EXE 0x669d44
-// SYNTHETIC: EXE 0x669d66
-// SYNTHETIC: EXE 0x669d72
-// SYNTHETIC: EXE 0x669d83
-// SYNTHETIC: EXE 0x669d8d
-// SYNTHETIC: EXE 0x66ad9b
-// SYNTHETIC: EXE 0x66ada7
-// (the init chains of the five statics above, in definition order)
-
-// FUNCTION: EXE 0x66ad5f
-// Creates an icon cell table entry (texture index, corners, size, texture flag)
-// (EEUIFMGIconCell's ctor, out of line; the table is Rust's)
-
-// FUNCTION: EXE 0x66ada8
 // Creates the main panel's status box with no controls bound and no attributes shown
 EEUIFMGStatusBox::EEUIFMGStatusBox(UIForm* inForm) : mForm(inForm)
 {
@@ -457,7 +430,6 @@ extern "C" void ee_screenscpp_status_box_view(void* inCall, bool inFill, EeScree
 // (FillArmorAttributes 0x66ae16, UpdateArmorTexts 0x66c91d and GetAttributeText 0x66cb84 are Rust's: status_box.rs
 // fill_armor_attributes, update_armor_texts; hud.rs attribute_text)
 
-// FUNCTION: EXE 0x66b593
 // Fills the status box for a unit: name (gate lock state), civilization, hit point / power / flight / garrison
 // bars, the improvable attribute buttons and the background panels; clears it without a unit
 void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
@@ -466,7 +438,6 @@ void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
     ee_screens_status_box_fill(&theCall, inUnit != NULL);   // ee_screens status_box.rs fill
 }
 
-// FUNCTION: EXE 0x66c42a
 // Sets the status bar button's icon bitmap, stretched to the icon area
 // EEUIFMGStatusBar's icon (inline in the real header? first user here) (provisional name)
 void EEUIFMGStatusBar::SetIconBitmap(GEBitmap* inBitmap, const GERectangle& inTextureRectangle)
@@ -477,7 +448,6 @@ void EEUIFMGStatusBar::SetIconBitmap(GEBitmap* inBitmap, const GERectangle& inTe
     this->SetDirty(true);
 }
 
-// FUNCTION: EXE 0x66c470
 // Hides the status box's background panels (all but panel 0x7c)
 void EEUIFMGStatusBox::HideBackgrounds()
 {
@@ -485,7 +455,6 @@ void EEUIFMGStatusBox::HideBackgrounds()
     ee_screens_status_box_hide_backgrounds(&theCall);   // ee_screens status_box.rs hide_backgrounds
 }
 
-// FUNCTION: EXE 0x66c4fe
 // Loads the three unit improvement textures and points the 50 attribute icons at their cells
 void EEUIFMGStatusBox::LoadIcons()
 {
@@ -493,7 +462,6 @@ void EEUIFMGStatusBox::LoadIcons()
     ee_screens_status_box_load_icons(&theCall);   // ee_screens status_box.rs load_icons (the cells, the texture choice)
 }
 
-// FUNCTION: EXE 0x66c8f4
 // Releases the 50 attribute icon bitmaps
 // (an index loop: the strength-reduced pointer is compared signed, `jl`)
 void EEUIFMGStatusBox::UnloadIcons()
@@ -506,7 +474,6 @@ void EEUIFMGStatusBox::UnloadIcons()
     }
     sIconsLoaded = false;
 }
-// FUNCTION: EXE 0x66cbe1
 // Refreshes the status box texts for the unit: name, civilization, hit points, attributes, cargo, flight time
 // or power, garrison, and the resource it carries
 void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
@@ -515,15 +482,6 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
     ee_screens_status_box_refresh(&theCall);   // ee_screens status_box.rs refresh
 }
 
-// FUNCTION: EXE 0x66dac9
-// Returns the status bar's first value text
-// (EEUIFMGStatusBar::GetValueText: inline in ee/EEUIFMGStatusBar.h)
-
-// FUNCTION: EXE 0x66dad8
-// Returns the status bar's second value text
-// (EEUIFMGStatusBar::GetValue2Text: inline in ee/EEUIFMGStatusBar.h)
-
-// FUNCTION: EXE 0x66dae7
 // Shows on each visible improvement button how many of its improvements the player has queued
 void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement)
 {
@@ -531,7 +489,6 @@ void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovem
     ee_screens_status_box_update_queued(&theCall);   // ee_screens status_box.rs update_queued_counts
 }
 
-// FUNCTION: EXE 0x66dcd9
 // Reloads the three unit improvement textures (after a device loss); returns the first error
 long EEUIFMGStatusBox::ReloadIcons()
 {
@@ -554,13 +511,6 @@ long EEUIFMGStatusBox::ReloadIcons()
     return theResult;
 }
 
-// FUNCTION: EXE 0x66ddb7
-// FUNCTION: EXE 0x66de3b
-// (EEDecodeTradeButton and EECanAffordTrade, the market buttons' resource and affordability: ee_screens
-// status_button.rs decode_trade and form_op)
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 EEUIFMGStatusBox::~EEUIFMGStatusBox()
 {
 }

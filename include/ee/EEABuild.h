@@ -20,8 +20,8 @@ public:
     virtual void Virtual4();            // +0x04 (ICF: 0x28c4)
     virtual void Virtual8();            // +0x08 (0x1720c6)
     void Build(const GE2DPoint& inLocation);                            // 0x1760 (called from 0x27012b)
-    void BuildGate(const GE2DPoint& inLocation, long inSide);           // 0x18dd
-    void BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd);   // 0x199e
+    void BuildGate(const GE2DPoint& inLocation, long inSide);
+    void BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd);
 
     EEMessage* mMessage;                // +0x0c (Dereference()d by the dtor)
     long mTechnology;                   // +0x10 the tech tree id of what is built

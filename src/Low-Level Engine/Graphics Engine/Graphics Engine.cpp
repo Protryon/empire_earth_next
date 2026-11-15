@@ -72,7 +72,6 @@ unsigned long GEPackColor(unsigned long inFormat, const GEColor& inColor, float 
     return ee_ge_pack_color_float(inFormat, inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue(), inAlpha);
 }
 
-// FUNCTION: LLE 0x1003890c
 // Packs 8-bit red, green, blue and alpha into a pixel of the given format
 unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned long inGreen, unsigned long inBlue,
                           unsigned long inAlpha)
@@ -80,7 +79,6 @@ unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned 
     return ee_ge_pack_color(inFormat, inRed, inGreen, inBlue, inAlpha);
 }
 
-// FUNCTION: LLE 0x1003896b
 // Shuts the graphics engine down: forgets the rasterizers
 void GEShutdown(bool inForced)
 {
@@ -93,21 +91,18 @@ unsigned char GEUnpackRed(unsigned long inFormat, unsigned long inColor)
     return ee_ge_unpack_red(inFormat, inColor);
 }
 
-// FUNCTION: LLE 0x10038996
 // Returns a pixel's green channel scaled to 8 bits for the given format
 unsigned char GEUnpackGreen(unsigned long inFormat, unsigned long inColor)
 {
     return ee_ge_unpack_green(inFormat, inColor);
 }
 
-// FUNCTION: LLE 0x100389b2
 // Returns a pixel's blue channel scaled to 8 bits for the given format
 unsigned char GEUnpackBlue(unsigned long inFormat, unsigned long inColor)
 {
     return ee_ge_unpack_blue(inFormat, inColor);
 }
 
-// FUNCTION: LLE 0x100389ce
 // Returns a pixel's alpha channel scaled to 8 bits for the given format
 unsigned char GEUnpackAlpha(unsigned long inFormat, unsigned long inColor)
 {
@@ -115,51 +110,3 @@ unsigned char GEUnpackAlpha(unsigned long inFormat, unsigned long inColor)
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
-
-// Header-inline members emitted here (markers at the end):
-// SYNTHETIC: LLE 0x10038527
-// SYNTHETIC: LLE 0x10038531
-// SYNTHETIC: LLE 0x10038541
-// SYNTHETIC: LLE 0x1003854d
-// SYNTHETIC: LLE 0x10038557
-// SYNTHETIC: LLE 0x10038561
-// SYNTHETIC: LLE 0x10038571
-// SYNTHETIC: LLE 0x1003857d
-// SYNTHETIC: LLE 0x10038587
-// SYNTHETIC: LLE 0x10038591
-// SYNTHETIC: LLE 0x100385a1
-// SYNTHETIC: LLE 0x100385ad
-// SYNTHETIC: LLE 0x100385b7
-// SYNTHETIC: LLE 0x100385c1
-// SYNTHETIC: LLE 0x100385d1
-// SYNTHETIC: LLE 0x100385dd
-// SYNTHETIC: LLE 0x100385e7
-// SYNTHETIC: LLE 0x100385f1
-// SYNTHETIC: LLE 0x10038601
-// SYNTHETIC: LLE 0x1003860d
-// SYNTHETIC: LLE 0x10038617
-// SYNTHETIC: LLE 0x10038621
-// SYNTHETIC: LLE 0x10038631
-// SYNTHETIC: LLE 0x1003863d
-// SYNTHETIC: LLE 0x10038647
-// SYNTHETIC: LLE 0x1003865a
-// SYNTHETIC: LLE 0x1003867f
-// SYNTHETIC: LLE 0x10038681
-// SYNTHETIC: LLE 0x1003868f
-// SYNTHETIC: LLE 0x10038692
-// SYNTHETIC: LLE 0x10038695
-// SYNTHETIC: LLE 0x100386aa
-// SYNTHETIC: LLE 0x100386bd
-// SYNTHETIC: LLE 0x100386c7
-// SYNTHETIC: LLE 0x100386df
-// SYNTHETIC: LLE 0x100386eb
-// SYNTHETIC: LLE 0x1003883b
-// SYNTHETIC: LLE 0x100389ea
-// SYNTHETIC: LLE 0x10038a16
-// SYNTHETIC: LLE 0x10038a51
-// 0x10038a7d..0x10038abf: init pairs of UList<GELODMetaVertex*>/<GELODPolygon*>/<GELODVertex*>::sNodePool (their
-// $D/$E are GEBoundingBox.cpp's COMDATs 0x14ed4..; GELOD.h comes in through GEModel.h).
-// SYNTHETIC: LLE 0x10038a7d
-// SYNTHETIC: LLE 0x10038a9b
-// SYNTHETIC: LLE 0x10038aa7
-// SYNTHETIC: LLE 0x10038ab3

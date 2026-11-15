@@ -16,8 +16,8 @@ class UITextLabel;
 
 class EEUIFSEUpgradePanel {
 public:
-    EEUIFSEUpgradePanel(unsigned long& ioID, unsigned long& ioIndex, EEUIFScenarioEditor* inForm);   // 0x1a4e99
-    ~EEUIFSEUpgradePanel();                 // 0x1a549d
+    EEUIFSEUpgradePanel(unsigned long& ioID, unsigned long& ioIndex, EEUIFScenarioEditor* inForm);
+    ~EEUIFSEUpgradePanel();
     void ShowUnit(EEUnit* inUnit);          // 0x1a551a (the status box shows the unit)
 
     EEUIFMGAttribute* mAttributes[9];       // +0x00 (new 0x138, ctor 0x26783d; the status box's icons)

@@ -44,32 +44,6 @@
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
-// Compiler-generated, continued:
-// SYNTHETIC: LLE 0x1001eb9f
-// SYNTHETIC: LLE 0x1001eba9
-// SYNTHETIC: LLE 0x1001ebb9
-// SYNTHETIC: LLE 0x1001ebc5
-// SYNTHETIC: LLE 0x1001ebcf
-// SYNTHETIC: LLE 0x1001ebd9
-// SYNTHETIC: LLE 0x1001ebe9
-// SYNTHETIC: LLE 0x1001ebf5
-// SYNTHETIC: LLE 0x1001ebff
-// SYNTHETIC: LLE 0x1001ec09
-// SYNTHETIC: LLE 0x1001ec19
-// SYNTHETIC: LLE 0x1001ec25
-// SYNTHETIC: LLE 0x1001ec2f
-// SYNTHETIC: LLE 0x1001ec39
-// SYNTHETIC: LLE 0x1001ec49
-// SYNTHETIC: LLE 0x1001ec55
-// SYNTHETIC: LLE 0x1001ec5f
-// SYNTHETIC: LLE 0x1001ec69
-// SYNTHETIC: LLE 0x1001ec79
-// SYNTHETIC: LLE 0x1001ec85
-// SYNTHETIC: LLE 0x1001ec8f
-// SYNTHETIC: LLE 0x1001ec99
-// SYNTHETIC: LLE 0x1001eca9
-// SYNTHETIC: LLE 0x1001ecb5
-
 // A UString from Rust's bytes (no NUL inside)
 static UString GEModelString(const char* inData, size_t inLength)
 {
@@ -231,14 +205,12 @@ intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, i
     return 0;
 }
 
-// FUNCTION: LLE 0x1001ecbf
 // Creates an empty model owned by a model manager, with one LOD and no data allocated
 GEModel::GEModel(GEModelManager* inManager)
 {
     this->mRust = ee_ge_mod_new(&GEModel::Host, this, inManager);
 }
 
-// FUNCTION: LLE 0x1001edb9
 // Creates a named model with the given counts and allocates its data (no shared frames)
 GEModel::GEModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount,
                  unsigned long inTagPointCount, unsigned long inFrameCount, unsigned long inSubModelCount,
@@ -249,7 +221,6 @@ GEModel::GEModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsi
     this->mRust = ee_ge_mod_new_with_counts(&GEModel::Host, this, theCounts, &inName, inFlags, inManager);
 }
 
-// FUNCTION: LLE 0x1001eed6
 // Destroys the model: frees its vertex, polygon and tag point arrays (shared frames once),
 // releases its materials and sub-models
 GEModel::~GEModel()
@@ -257,91 +228,68 @@ GEModel::~GEModel()
     ee_ge_mod_destroy(this->mRust);
 }
 
-// FUNCTION: LLE 0x1001f69a
 void GEModel::ComputeBoundingVolumes()
 {
     ee_ge_mod_compute_bounding_volumes(this->mRust);
 }
 
-// FUNCTION: LLE 0x1001f80c
 void GEModel::ComputeModelNormals()
 {
     ee_ge_mod_compute_normals(this->mRust);
 }
 
-// FUNCTION: LLE 0x1001fa84
 // Releases a reference; when only the manager's (and one caller's) reference is left, removes it from the manager
 void GEModel::Dereference()
 {
     ee_ge_mod_dereference(this->mRust);
 }
 
-// FUNCTION: LLE 0x1001fab0
 unsigned long GEModel::GetPolygonCount(unsigned long inLOD) const
 {
     return ee_ge_mod_polygon_count(this->mRust, inLOD);
 }
 
-// FUNCTION: LLE 0x1001fb1d
 void GEModel::PrepareTransforms()
 {
     ee_ge_mod_prepare_transforms(this->mRust);
 }
 
-// FUNCTION: LLE 0x1002009b
 void GEModel::SetFractionalFramePosition(float inPosition)
 {
     ee_ge_mod_set_fractional(this->mRust, inPosition);
 }
 
-// FUNCTION: LLE 0x100200d7
 void GEModel::SetGraphicsCurrentFrame(unsigned long inFrame)
 {
     ee_ge_mod_set_current_frame(this->mRust, inFrame);
 }
 
-// FUNCTION: LLE 0x1002012f
 void GEModel::SetGraphicsNextFrame(unsigned long inFrame)
 {
     ee_ge_mod_set_next_frame(this->mRust, inFrame);
 }
 
-// FUNCTION: LLE 0x10020166
 void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
 {
     ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex);
 }
 
-// FUNCTION: LLE 0x100201b4
 void GEModel::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
     ee_ge_mod_set_texture(this->mRust, inTexture, inScreen);
 }
 
-// FUNCTION: LLE 0x10020213
 unsigned long GEModel::SizeOf()
 {
     return ee_ge_mod_size_of(this->mRust);
 }
 
-// FUNCTION: LLE 0x10020338
 void GEModel::SortTagPoints()
 {
     ee_ge_mod_sort_tag_points(this->mRust);
 }
 
-// FUNCTION: LLE 0x10020495
 bool GEModel::Verify() const
 {
     return ee_ge_mod_verify(this->mRust);
 }
-
-// map<unsigned long, long> COMDAT (mSharedFrames)
-// TEMPLATE: LLE 0x1002065a
-
-// UList<GELODVertex*>/<GELODPolygon*>/<GELODMetaVertex*>::sNodePool init wrapper and atexit registrars (GELOD.h via
-// GEModel.h; the $D ctors are GEBoundingBox.cpp's COMDATs 0x10014ed4/0x10014efb/0x10014f22)
-// SYNTHETIC: LLE 0x10020685
-// SYNTHETIC: LLE 0x100206a3
-// SYNTHETIC: LLE 0x100206af
-// SYNTHETIC: LLE 0x100206bb

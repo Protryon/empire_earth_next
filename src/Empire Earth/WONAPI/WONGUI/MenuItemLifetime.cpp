@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006fcd30
 // Creates an enabled menu item with the given text and listener and menu id 0
 MenuItem::MenuItem(const GUIString& text,ComponentListener* listener)
     :TextListItem(text),mListener(listener)
@@ -19,8 +18,6 @@ MenuItem::MenuItem(const GUIString& text,ComponentListener* listener)
     this->mDisabled=false;
     this->mMenuId=0;
 }
-// FUNCTION: WON 0x006fd440
-// FUNCTION: WON 0x006fd460
 // Adds a text item with a menu id and no listener (this overload is 0x006fd440; the listener overload
 // below is 0x006fd460)
 MenuItem* PopupMenu::AddItem(const GUIString& text,int id)
@@ -33,9 +30,3 @@ MenuItem* PopupMenu::AddItem(const GUIString& text,ComponentListener* listener,i
     return this->AddItem(text,static_cast<NativeImage*>(NULL),listener,id);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006fcdc0
-// (public: virtual void * __thiscall WONAPI::MenuItem::`scalar deleting destructor'(unsigned int)    [??_GMenuItem@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x006fcde0
-// (public: virtual __thiscall WONAPI::MenuItem::~MenuItem(void)    [??1MenuItem@WONAPI@@UAE@XZ])

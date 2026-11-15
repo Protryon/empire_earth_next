@@ -47,10 +47,6 @@ static_assert(sizeof(GE3DPoint) == sizeof(EeGe3DPoint) && sizeof(GETransformatio
 template <class R, class T> static inline const R* EECameraRust(const T& inValue) { return reinterpret_cast<const R*>(&inValue); }
 template <class R, class T> static inline R* EECameraRust(T& inValue) { return reinterpret_cast<R*>(&inValue); }
 
-// FUNCTION: EXE 0x527584
-// FUNCTION: EXE 0x52758e
-// FUNCTION: EXE 0x52759f
-// FUNCTION: EXE 0x5275ab
 // Constructs the game version string "2002.8.17.v1.00" and registers its destructor to run at exit
 UWideString gGameVersion("2002.8.17.v1.00");
 
@@ -63,8 +59,6 @@ float gCameraMaxZoom = 2.0f;
 
 // The limits (0x441e48..0x441eb8), the pitch limits, the clipping distances and the move speeds are Rust's (ee_app
 // camera.rs, ee_gfx camera.rs).
-// FUNCTION: EXE 0x5275b6
-// FUNCTION: EXE 0x5275bb
 // Initialises the camera's field of view (30 degrees)
 static float sCameraFieldOfView = 0.017453292f * 30.0f;
 
@@ -157,26 +151,19 @@ static uint32_t EECameraID(EEUnit* inUnit)
 }
 #define EE_CAMERA_HOST this, this, EECameraHost
 
-// FUNCTION: EXE 0x527654
 // Creates the camera controller with no followed unit or target point, mode 0, zoom 0.5 and no path
 EECameraControl::EECameraControl()
 {
     ee_app_camera_default(this);
 }
 
-// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
-// TEMPLATE: EXE 0x52779f
-
-// FUNCTION: EXE 0x5277bb
 // Destroys the camera controller (members only)
 EECameraControl::~EECameraControl()
 {
 }
 
-// FUNCTION: EXE 0x5277c9
 void EECameraControl::ResetPath() { ee_app_camera_reset_path(EE_CAMERA_HOST); }
 
-// FUNCTION: EXE 0x5277e5
 // Appends a key to the camera path; returns 0, or 5 while a path plays (camera locked)
 long EECameraControl::AddKey(const EECameraKey& inKey)
 {
@@ -186,66 +173,50 @@ long EECameraControl::AddKey(const EECameraKey& inKey)
     return 0;
 }
 
-// FUNCTION: EXE 0x5279f0
-// FUNCTION: EXE 0x527c09
 // (the original's EECameraRayDistance 0x527c09 built each ray twice; the Rust builds it once and measures it twice)
 void EECameraControl::SetClippingDistances() { ee_app_camera_set_clipping_distances(EE_CAMERA_HOST); }
 
-// FUNCTION: EXE 0x527db3
 void EECameraControl::CopyKey(const EECameraKey& inKey, EECameraKey& outKey) { outKey = inKey; }
 
-// Compiler-generated: EECameraKey's implicit operator= (two GETransformation imports, then the members):
-// TEMPLATE: EXE 0x527dc3
-
-// FUNCTION: EXE 0x527e5b
 void EECameraControl::NextKey() { ee_app_camera_next_key(EE_CAMERA_HOST); }
 
-// FUNCTION: EXE 0x527eb1
 void EECameraControl::BuildView(GETransformation& outTransformation, float inStep)
 {
     ee_app_camera_build_view(EE_CAMERA_HOST, inStep, EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// FUNCTION: EXE 0x52802b
 void EECameraControl::GetOffset(float inStep, GE3DPoint& outPoint) { ee_app_camera_point(this, 0, inStep, EECameraRust<EeGe3DPoint>(outPoint)); }
 
-// FUNCTION: EXE 0x52806d
 void EECameraControl::SlerpViewTurn(float inStep, GEQuaternion& outQuaternion)
 {
     ee_app_camera_slerp(this, 0, inStep, EECameraRust<EeGeQuaternion>(outQuaternion));
 }
 
-// FUNCTION: EXE 0x528089
 void EECameraControl::GetViewTurn(float inStep, GETransformation& outTransformation)
 {
     ee_app_camera_turn(this, 0, inStep, EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// FUNCTION: EXE 0x5280cb
 void EECameraControl::SlerpOffsetTurn(float inStep, GEQuaternion& outQuaternion)
 {
     ee_app_camera_slerp(this, 1, inStep, EECameraRust<EeGeQuaternion>(outQuaternion));
 }
 
-// FUNCTION: EXE 0x5280e7
 void EECameraControl::GetOffsetTurn(float inStep, GETransformation& outTransformation)
 {
     ee_app_camera_turn(this, 1, inStep, EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// FUNCTION: EXE 0x528129
 void EECameraControl::GetLocation(float inStep, GE3DPoint& outLocation)
 {
     ee_app_camera_point(this, 1, inStep, EECameraRust<EeGe3DPoint>(outLocation));
 }
 
-// FUNCTION: EXE 0x52816e
 void EECameraControl::GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint)
 {
     ee_app_camera_ground_point(EE_CAMERA_HOST, EECameraRust<EeGe3DLine>(inLine), EECameraRust<EeGe3DPoint>(outPoint));
 }
 
-// FUNCTION: EXE 0x52844f
 // Returns the point the camera focuses on for a unit: its model centre at camera-focus height, else its tile centre
 // (the host's EE_APP_CAMERA_OP_UNIT_POINT)
 void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
@@ -267,34 +238,27 @@ void EECameraControl::GetUnitPoint(EEUnit* inUnit, GE3DPoint& outPoint)
     }
 }
 
-// FUNCTION: EXE 0x52851e
 void EECameraControl::GetUnitTurn(EEUnit* inUnit, GETransformation& outTransformation)
 {
     ee_app_camera_unit_turn(EE_CAMERA_HOST, EECameraID(inUnit), EECameraRust<EeGeTransformation>(outTransformation));
 }
 
-// FUNCTION: EXE 0x5285ec
 float EECameraControl::GetPitch(float inZoom, long inMode)
 {
     return ee_gfx_camera_pitch(inZoom, (int32_t)inMode, EECameraRust<EeGeTransformation>(gWorld.mTransformation));
 }
 
-// FUNCTION: EXE 0x5286fa
 void EECameraControl::StartPath() { ee_app_camera_start_path(EE_CAMERA_HOST); }
 
-// FUNCTION: EXE 0x528722
 void EECameraControl::Revolve(const GE3DPoint& inAngles) { ee_app_camera_revolve(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
 
-// FUNCTION: EXE 0x52883b
 // Creates a camera key (members only)
 EECameraKey::EECameraKey()
 {
 }
 
-// FUNCTION: EXE 0x52887d
 void EECameraControl::Rotate(const GE3DPoint& inAngles) { ee_app_camera_rotate(EE_CAMERA_HOST, inAngles.GetX(), inAngles.GetY()); }
 
-// FUNCTION: EXE 0x528996
 void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlagA, float inDuration,
                                EEUnit* inUnitB, GE3DPoint inLocationB, bool inFlagB, float inZoom, float inTurnYaw,
                                float inTurnPitch)
@@ -305,55 +269,42 @@ void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlag
     ee_app_camera_move_to(EE_CAMERA_HOST, &theMove);
 }
 
-// FUNCTION: EXE 0x528ea5
 void EECameraControl::Scroll(float inDX, float inDY) { ee_app_camera_scroll(EE_CAMERA_HOST, inDX, inDY); }
 
-// FUNCTION: EXE 0x52934f
 void EECameraControl::ResetZoom() { this->SetZoom(1.0f); }
 
-// FUNCTION: EXE 0x52935b
 void EECameraControl::GoTo(const EECameraKey& inKey) { ee_app_camera_go_to(EE_CAMERA_HOST, EECameraRust<EeAppCameraKey>(inKey)); }
 
-// FUNCTION: EXE 0x529547
 void EECameraControl::SetOffset(const GE3DPoint& inPoint, bool inFlag)
 {
     ee_app_camera_set_offset(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inPoint), inFlag);
 }
 
-// FUNCTION: EXE 0x5295fd
 void EECameraControl::SetViewTurn(const GETransformation& inTransformation, bool inFlag)
 {
     ee_app_camera_set_view_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag);
 }
 
-// FUNCTION: EXE 0x5296b6
 void EECameraControl::SetOffsetTurn(const GETransformation& inTransformation, bool inFlag)
 {
     ee_app_camera_set_offset_turn(EE_CAMERA_HOST, EECameraRust<EeGeTransformation>(inTransformation), inFlag);
 }
 
-// FUNCTION: EXE 0x52976f
 void EECameraControl::KeepPose() { ee_app_camera_keep_pose(this); }
 
-// FUNCTION: EXE 0x529844
 void EECameraControl::SetLocation(const GE3DPoint& inLocation, bool inIsImmediate, bool inFollowTerrain)
 {
     ee_app_camera_set_location(EE_CAMERA_HOST, EECameraRust<EeGe3DPoint>(inLocation), inIsImmediate, inFollowTerrain);
 }
 
-// FUNCTION: EXE 0x5299c0
 void EECameraControl::SetMode(long inMode) { ee_app_camera_set_mode(EE_CAMERA_HOST, inMode); }
 
-// FUNCTION: EXE 0x5299dc
 void EECameraControl::SetChanged() { ee_app_camera_set_changed(this); }
 
-// FUNCTION: EXE 0x5299ed
 void EECameraControl::ClearUnitA() { ee_app_camera_clear_unit_a(EE_CAMERA_HOST); }
 
-// FUNCTION: EXE 0x529a04
 void EECameraControl::ClearUnitB() { ee_app_camera_clear_unit_b(EE_CAMERA_HOST); }
 
-// FUNCTION: EXE 0x529a34
 // Advances the camera each frame (ee_app camera.rs update), then applies the view, the orthographic size, the
 // clipping distances and the field of view to the viewport and refreshes the mini map's view
 void EECameraControl::Update(float inElapsedTime)
@@ -382,34 +333,13 @@ void EECameraControl::Update(float inElapsedTime)
     EEAppCaptureCamera(*this, 1, inElapsedTime);   // CAMU (TEST ONLY)
 }
 
-// FUNCTION: EXE 0x529dfe
 void EECameraControl::Follow(EEUnit* inUnit, bool inFlag, float inDuration, float inTurnYaw, float inTurnPitch)
 {
     ee_app_camera_follow(EE_CAMERA_HOST, EECameraID(inUnit), inFlag, inDuration, inTurnYaw, inTurnPitch);
 }
 
-// FUNCTION: EXE 0x529eb2
 void EECameraControl::SetZoom(float inZoom) { ee_app_camera_set_zoom(EE_CAMERA_HOST, inZoom); }
 
-// The vector<EECameraKey> COMDATs (push_back, clear, insert, erase, _Buy, insert(P, M, X), the iterator helpers,
-// the copy/fill helpers):
-// TEMPLATE: EXE 0x529f73
-// TEMPLATE: EXE 0x529f9f
-// TEMPLATE: EXE 0x529fda
-// TEMPLATE: EXE 0x52a037
-// TEMPLATE: EXE 0x52a081
-// TEMPLATE: EXE 0x52a0bb
-// TEMPLATE: EXE 0x52a3aa
-// TEMPLATE: EXE 0x52a3bf
-// TEMPLATE: EXE 0x52a426
-// TEMPLATE: EXE 0x52a454
-// TEMPLATE: EXE 0x52a46b
-// TEMPLATE: EXE 0x52a497
-// TEMPLATE: EXE 0x52a4cb
-// TEMPLATE: EXE 0x52a4eb
-// TEMPLATE: EXE 0x52a51c
-
-// FUNCTION: EXE 0x52a52e
 // Returns whether the local player can see a unit
 bool EEIsSeen(EEUnit* inUnit)
 {

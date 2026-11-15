@@ -7,13 +7,11 @@
 #include "lle/LowLevelEngineCore.h"
 #include "lle/GEVertexArray.h"
 
-// FUNCTION: LLE 0x100367fc
 // Creates the abstract vertex array (the rasterizer plug-ins implement it)
 GEVertexArray::GEVertexArray()
 {
 }
 
-// FUNCTION: LLE 0x10036805
 // Destroys the abstract vertex array
 GEVertexArray::~GEVertexArray()
 {

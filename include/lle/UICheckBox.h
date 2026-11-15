@@ -24,9 +24,9 @@ public:
     virtual long CopyData();
     virtual long DrawPolygons();
     virtual long DrawTextA();
-    bool GetIsChecked() const;              // 0x1005f9fc
-    UITextLabel* GetTextLabel() const;      // 0x100633b1 (ICF)
-    virtual unsigned long GetType() const { return kControlTypeCheckBox; }  // 0x1005fa03
+    bool GetIsChecked() const;
+    UITextLabel* GetTextLabel() const;
+    virtual unsigned long GetType() const { return kControlTypeCheckBox; }
     void SetChecked(bool inChecked);
     void SetDisabled(bool inDisabled);
     virtual void SetLocation(const GE2DPoint& inLocation);
@@ -40,8 +40,8 @@ protected:
     virtual void MouseOver();
     virtual long MouseRButtonDown() { return kErrorOK; }
     virtual long MouseRButtonUp() { return kErrorOK; }
-    virtual void TabbedTo() { UIButton::TabbedTo(); }     // 0x1005fcac (ICF)
-    virtual void TabbedFrom() { UIButton::TabbedFrom(); } // 0x1005fcb1 (ICF)
+    virtual void TabbedTo() { UIButton::TabbedTo(); }
+    virtual void TabbedFrom() { UIButton::TabbedFrom(); }
     // the original's members (+0x104 mTextLabel, +0x108 mIsChecked, +0x109 mHasText, +0x10a mScaleBitmap,
     // +0x10b mIsDisabled) are the Rust button's record (checkobj.rs)
 };

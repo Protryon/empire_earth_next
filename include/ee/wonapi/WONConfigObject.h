@@ -38,7 +38,7 @@ public:
     typedef std::list<SmartPtr<ConfigObject> > ChildList;
     typedef std::map<std::string,ConfigValueBasePtr,StringLessNoCase> KeyValMap;
     typedef std::map<std::string,ConfigObjectEntry,StringLessNoCase> KeyGroupMap;
-    ConfigObject();                        // 0x3aea90
+    ConfigObject();
     // The original ConfigObject vtable has these eight slots after its implicit virtual destructor.
     virtual bool HandleInstruction(ConfigParser* inParser, const std::string& inInstruction);
     virtual bool HandleValueInstruction(ConfigParser* inParser, const std::string& inKey, StringParser& inValue);
@@ -48,11 +48,11 @@ public:
     virtual void Reset(bool inFlag);
     virtual void GetAllKeyValues(std::string& outValues);
     virtual int SetKeyValue(const std::string& inKey, StringParser& inValue);
-    void KeyAdd(const char* inKey, unsigned short& ioValue, unsigned short inDefault);   // 0x3b1ba0
-    void KeyAdd(const char* inKey, bool& ioValue, bool inDefault); // 0x3b1b40
-    void KeyAdd(const char* inKey, std::string& ioValue, const char* inDefault); // 0x3b1c00
-    void KeyAdd(const char* inKey, std::wstring& ioValue, const wchar_t* inDefault); // 0x3b1c60
-    void KeyAdd(const char* inKey, std::list<std::string>& ioValue, const char* inDefault, bool inFlag); // 0x3b1cc0
+    void KeyAdd(const char* inKey, unsigned short& ioValue, unsigned short inDefault);
+    void KeyAdd(const char* inKey, bool& ioValue, bool inDefault);
+    void KeyAdd(const char* inKey, std::string& ioValue, const char* inDefault);
+    void KeyAdd(const char* inKey, std::wstring& ioValue, const wchar_t* inDefault);
+    void KeyAdd(const char* inKey, std::list<std::string>& ioValue, const char* inDefault, bool inFlag);
 
     void CopyKeyValsFrom(ConfigObject*); //SDK ordered case-insensitive merge/copy; no original address identified
     ConfigObject* NextChild();

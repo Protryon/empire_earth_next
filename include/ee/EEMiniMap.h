@@ -136,6 +136,6 @@ inline bool EEMiniMap::MMMapUnit::operator==(const MMMapUnit& inOther) const
 typedef EEMiniMap::MMPlayerUnit EEMiniMapDot;
 typedef EEMiniMap::MMMapUnit EEMiniMapUnitDot;
 
-extern EEMiniMap* gMiniMap;                 // 0x564888 (provisional name)
+extern EEMiniMap* gMiniMap;
 
 #endif

@@ -35,9 +35,9 @@ static_assert(sizeof(EEAmbientSoundRecord) == 152, "on-disk record: 152 bytes on
 // mNextTime, mIsLooping), the base; the fades, the play and the stop are Rust (EEAmbientSoundManager.cpp's host).
 class EEAmbientSound : public EeAppAmbientSoundFields {
 public:
-    EEAmbientSound();                       // 0x124b34
-    virtual ~EEAmbientSound();              // 0x124ba1
-    void Init(const EEAmbientSoundRecord& inRecord);   // 0x124bb4
+    EEAmbientSound();
+    virtual ~EEAmbientSound();
+    void Init(const EEAmbientSoundRecord& inRecord);
     // inline (COMDATs 0x1272c6.. in EEAmbientSoundManager.cpp)
     void ReleaseInstance()
     {

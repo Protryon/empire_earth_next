@@ -46,7 +46,6 @@
 typedef EeUiButtonCall C;
 #define EE_UI_RADIO(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)
 
-// FUNCTION: LLE 0x1007bbff
 // Creates a radio button with the shared radio bitmaps (checked ones when checked), 19x19 unless scaled, and a label
 UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFont* inFont,
                              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
@@ -60,16 +59,12 @@ UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFo
                 inIsChecked ? 1.0f : 0.0f, inScaleBitmap ? 1.0f : 0.0f);
 }
 
-// FUNCTION: LLE 0x1007be03
 // Checks the button: unchecks its checked neighbour, swaps to the checked bitmaps and fires the checked trigger
 void UIRadioButton::Check() { EE_UI_RADIO(RadioCheck); }
-// FUNCTION: LLE 0x1007bed5
 // Snapshots the button and its label (deleted once its text is cleared); a checked push button loses its border
 long UIRadioButton::CopyData() { return (long)EE_UI_RADIO(RadioCopyData); }
-// FUNCTION: LLE 0x1007bf2d
 // Draws the button (its bitmap scaled to the control height when scaled), then its label
 long UIRadioButton::DrawPolygons() { return (long)EE_UI_RADIO(RadioDrawPolygons); }
-// FUNCTION: LLE 0x1007bfbf
 // Draws the button's text and its label
 long UIRadioButton::DrawTextA() { return (long)EE_UI_RADIO(RadioDrawText); }
 bool UIRadioButton::GetIsChecked() const { return EE_UI_RADIO(RadioIsChecked) != 0; }
@@ -77,64 +72,27 @@ UITextLabel* UIRadioButton::GetTextLabel() const { return (UITextLabel*)EE_UI_RA
 bool UIRadioButton::GetTabable() const { return EE_UI_RADIO(RadioTabable) != 0; }
 // Checks the button (the virtual Check), then releases it
 void UIRadioButton::ButtonUp() { EE_UI_RADIO(RadioButtonUp); }
-// FUNCTION: LLE 0x1007bfd8
 // Presses the button, except a checked push button
 long UIRadioButton::MouseLButtonDown() { return (long)EE_UI_RADIO(RadioMouseLButtonDown); }
-// FUNCTION: LLE 0x1007bff0
 // Releases the button (plain button behaviour)
 long UIRadioButton::MouseLButtonUp() { return UIButton::MouseLButtonUp(); }
-// FUNCTION: LLE 0x1007bff5
-// (RemoveOtherChecks: the Rust button's radio walk, checkobj.rs)
-// FUNCTION: LLE 0x1007c066
 // Sets the pressed bitmap shown while checked
 void UIRadioButton::SetDownCheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetDownChecked, (intptr_t)inBitmap); }
-// FUNCTION: LLE 0x1007c098
 // Sets the pressed bitmap shown while unchecked
 void UIRadioButton::SetDownUncheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetDownUnchecked, (intptr_t)inBitmap); }
-// FUNCTION: LLE 0x1007c0ca
 // Moves the button, keeping its label to the right of the bitmap
 void UIRadioButton::SetLocation(const GE2DPoint& inLocation)
 {
     EE_UI_RADIO(RadioSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY());
 }
-// FUNCTION: LLE 0x1007c146
 // Sets the label text, creating the label right of the bitmap on first use; empty text hides the label
 void UIRadioButton::SetText(const UWideString& inText, GEFont* inFont)
 {
     EE_UI_RADIO(RadioSetText, (intptr_t)&inText, (intptr_t)inFont);
 }
-// FUNCTION: LLE 0x1007c25d
 // Sets the normal bitmap shown while checked
 void UIRadioButton::SetUpCheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetUpChecked, (intptr_t)inBitmap); }
-// FUNCTION: LLE 0x1007c28f
 // Sets the normal bitmap shown while unchecked
 void UIRadioButton::SetUpUncheckedBitmap(GEBitmap* inBitmap) { EE_UI_RADIO(RadioSetUpUnchecked, (intptr_t)inBitmap); }
-// FUNCTION: LLE 0x1007c2c1
 // Unchecks the button: swaps to the unchecked bitmaps, restores its border and fires the unchecked trigger
 void UIRadioButton::UnCheck() { EE_UI_RADIO(RadioUnCheck); }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x1007badf
-// SYNTHETIC: LLE 0x1007bae9
-// SYNTHETIC: LLE 0x1007baf9
-// SYNTHETIC: LLE 0x1007bb05
-// SYNTHETIC: LLE 0x1007bb0f
-// SYNTHETIC: LLE 0x1007bb19
-// SYNTHETIC: LLE 0x1007bb29
-// SYNTHETIC: LLE 0x1007bb35
-// SYNTHETIC: LLE 0x1007bb3f
-// SYNTHETIC: LLE 0x1007bb49
-// SYNTHETIC: LLE 0x1007bb59
-// SYNTHETIC: LLE 0x1007bb65
-// SYNTHETIC: LLE 0x1007bb6f
-// SYNTHETIC: LLE 0x1007bb79
-// SYNTHETIC: LLE 0x1007bb89
-// SYNTHETIC: LLE 0x1007bb95
-// SYNTHETIC: LLE 0x1007bb9f
-// SYNTHETIC: LLE 0x1007bba9
-// SYNTHETIC: LLE 0x1007bbb9
-// SYNTHETIC: LLE 0x1007bbc5
-// SYNTHETIC: LLE 0x1007bbcf
-// SYNTHETIC: LLE 0x1007bbd9
-// SYNTHETIC: LLE 0x1007bbe9
-// SYNTHETIC: LLE 0x1007bbf5

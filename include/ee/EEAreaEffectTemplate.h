@@ -57,7 +57,7 @@ static_assert(sizeof(EEAreaEffectData) == sizeof(EeAreaEffectData), "the Rust re
 // .. mAlpha +0x50.., mF60, mB64..mB68, and the color (+0x08 GEColor) as mColorRed, mColorGreen, mColorBlue.
 class EEAreaEffectTemplate : public UReferenceCounter, public EeAreaEffectTemplateFields {
 public:
-    EEAreaEffectTemplate();                 // 0x27c0f3
+    EEAreaEffectTemplate();
     virtual ~EEAreaEffectTemplate();        // 0x27c199 (??_G 0x27c17d): dereferences both graphic effects
     // 0x27c5ab: EEGraphicEffect::Load(inArg) on both graphic effects, then mMedia's LoadMedia
     void Load(bool inIsOnDemand);

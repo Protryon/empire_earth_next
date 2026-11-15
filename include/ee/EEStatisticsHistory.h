@@ -15,7 +15,7 @@ public:
     // 0x137e06: the members' ctors, then Reset(). Probably inline in the real header (0x137e06 follows EEWorld's ctor,
     // its first user), which needs the record type complete; declared here until EEStatisticsRecord is decoded
     EEStatisticsHistory();
-    ~EEStatisticsHistory();                 // 0x16dbc3
+    ~EEStatisticsHistory();
     // 0x16db99: clears the records and the name inline, zeroes +0x24..+0x37 (provisional name)
     void Reset();
     // inline (its COMDAT 0x1e5d0f sits in the post-game summary's range): &mRecords[mU28]; defined in

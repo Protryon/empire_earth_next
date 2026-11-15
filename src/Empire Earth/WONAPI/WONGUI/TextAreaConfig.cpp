@@ -14,14 +14,12 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x0078f860
 // Binds the config to its scroll area and keeps the component as the text area to configure
 void TextAreaConfig::SetComponent(Component* theComponent)
 {
     ScrollAreaConfig::SetComponent(theComponent);
     this->mTextArea = static_cast<TextArea*>(theComponent);
 }
-// FUNCTION: WON 0x00795990
 // Handles one text area config key (text flags, text, font, colours, limits, alignment); passes
 // unknown keys to the scroll area config and throws on an unknown text flag
 bool TextAreaConfig::Virtual24(const std::string& key)

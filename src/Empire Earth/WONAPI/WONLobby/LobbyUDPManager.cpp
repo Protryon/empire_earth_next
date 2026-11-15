@@ -16,7 +16,6 @@
 #include "ee/wonapi/WONLobbyCore.h"
 
 namespace WONAPI {
-// FUNCTION: WON 0x0075ba00
 // Binds the lobby UDP port from the config (8888 by default), else a random port 10000-19999, and starts receiving
 void LobbyBindUDPPort()
 {

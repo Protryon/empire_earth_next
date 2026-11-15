@@ -16,18 +16,15 @@
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "rust/ee_openformats.h"
 namespace WONAPI {
-// FUNCTION: WON 0x007d24e0
 // Registers a PNG decoder for the "png" extension with a multi-format decoder
 void PNGDecoder::Add(MultiImageDecoder* decoder)
 {
     PNGDecoder* png=new PNGDecoder;
     decoder->AddDecoder(png,"png");
 }
-// FUNCTION: WON 0x007d29d0
 // Returns a new PNG decoder
 ImageDecoder* PNGDecoder::Duplicate() { return new PNGDecoder; }
 
-// FUNCTION: WON 0x007d2550
 // Reads the PNG header for the image size: the signature and IHDR, then the chunks up to the first IDAT, as libpng's
 // png_read_info read them (their CRCs not checked); false when one is missing or cut short
 bool PNGDecoder::DoGetAttrib(ImageAttributes& attributes)
@@ -48,7 +45,6 @@ bool PNGDecoder::DoGetAttrib(ImageAttributes& attributes)
     return true;
 }
 
-// FUNCTION: WON 0x007d2660
 // Decodes the PNG into a 32-bit ARGB raw image, transparent when it has alpha or a tRNS chunk; NULL when it is
 // not a PNG or does not decode
 SmartPtr<RawImage> PNGDecoder::DoDecodeRaw()

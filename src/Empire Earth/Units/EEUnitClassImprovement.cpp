@@ -44,7 +44,6 @@ const float* StepFactors(EEUnitClass* inClass, float* outFactors)
 
 }  // namespace
 
-// FUNCTION: EXE 0x63a5bf
 // Creates the improvement levels with every improvement at level 1 and no points spent
 EEUnitClassImprovement::EEUnitClassImprovement()
 {
@@ -53,20 +52,17 @@ EEUnitClassImprovement::EEUnitClassImprovement()
     this->mTotalCost = 0;
 }
 
-// FUNCTION: EXE 0x63a5f7
 // Destroys the improvement levels (nothing to release)
 EEUnitClassImprovement::~EEUnitClassImprovement()
 {
 }
 
-// FUNCTION: EXE 0x63a5fe
 // Returns whether an improvement applies to a unit class: its upgrade flag, or a base stat above 0 (range above 1)
 bool EEUnitClassImprovement::CanUpgrade(EEUnitClass* inUnitClass, long inImprovement)
 {
     return ee_units_improve_can_upgrade_class(inUnitClass, (int32_t)inImprovement);
 }
 
-// FUNCTION: EXE 0x63a737
 // Raises another record's improvements by this record's levels above 1, one level at a time, moving its upgrade's stats
 void EEUnitClassImprovement::CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitClassImprovement* inTarget)
 {
@@ -76,14 +72,12 @@ void EEUnitClassImprovement::CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitC
     }
 }
 
-// FUNCTION: EXE 0x63a89d
 // Returns the level of an improvement
 long EEUnitClassImprovement::GetLevel(long inIndex)
 {
     return this->mLevels[inIndex];
 }
 
-// FUNCTION: EXE 0x63a8a8
 // Builds the upgrade button's " + n" help text: the stat gain of the improvement's step to level inLevel + 1
 void EEUnitClassImprovement::GetGainText(EEUnitClassUpgrade* inUpgrade, long inLevel, long inImprovement,
                                       UWideString& outText)
@@ -97,7 +91,6 @@ void EEUnitClassImprovement::GetGainText(EEUnitClassUpgrade* inUpgrade, long inL
     outText += theBuffer;
 }
 
-// FUNCTION: EXE 0x63adbd
 // Returns an improvement's display name (flight time or power by the class; empty for unknown kinds)
 void EEUnitClassImprovement::GetName(EEUnitClass* inUnitClass, long inImprovement, UWideString& outName)
 {
@@ -113,14 +106,12 @@ void EEUnitClassImprovement::GetName(EEUnitClass* inUnitClass, long inImprovemen
         outName = "";
 }
 
-// FUNCTION: EXE 0x63aee3
 // Returns the improvement points one level costs: 1 for the armour kinds (2..7), else 2
 long EEUnitClassImprovement::GetCost(long inImprovement)
 {
     return ee_units_improve_cost((int32_t)inImprovement);
 }
 
-// FUNCTION: EXE 0x63afc1
 // Raises (inDelta > 0) or lowers an improvement's level and points spent and moves the upgrade's stat as many steps
 // (range also moves line of sight, hit points stay at least 1); does nothing without the class's improvement table
 void EEUnitClassImprovement::ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, long inImprovement,
@@ -134,7 +125,6 @@ void EEUnitClassImprovement::ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUp
     this->mTotalCost = theTotal;
 }
 
-// FUNCTION: EXE 0x63b35b
 // Reapplies every raised improvement to the upgrade's freshly reset stats (levels end unchanged; the points spent
 // are recounted)
 void EEUnitClassImprovement::Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade)
@@ -151,7 +141,6 @@ void EEUnitClassImprovement::Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrad
 
 static_assert(sizeof(EEUnitClassImprovement::mLevels) == 0x40, "saved levels: 16 4-byte words on every target");
 
-// FUNCTION: EXE 0x63b39b
 // Reads the levels (and points spent, recounted) from a saved game and applies them to the upgrade's stats; saves
 // up to minor version 0xd8 drop leadership to level 1; returns the read error. The original's five version branches
 // read: up to 0x17 the levels; up to 0x6a the levels and 16 old words (the second read's status); up to 0xa0 the
@@ -187,7 +176,6 @@ long EEUnitClassImprovement::Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* 
     return theResult;
 }
 
-// FUNCTION: EXE 0x63b5e4
 // Writes the levels and the points spent to the saved game; returns the first write error
 long EEUnitClassImprovement::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {

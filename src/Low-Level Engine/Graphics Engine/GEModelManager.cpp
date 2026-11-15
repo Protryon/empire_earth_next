@@ -105,21 +105,18 @@ intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr
     }
 }
 
-// FUNCTION: LLE 0x100206c7
 // Creates the model manager with a model search path and its lock
 GEModelManager::GEModelManager(FSPath* inPath)
 {
     this->mRust = ee_ge_modman_new(&GEModelManager::Host, this, inPath);
 }
 
-// FUNCTION: LLE 0x10020717
 // Destroys the model manager: removes every unreferenced model, releases the path and the lock
 GEModelManager::~GEModelManager()
 {
     ee_ge_modman_free(this->mRust);
 }
 
-// FUNCTION: LLE 0x1002073d
 // Creates a new model registered under a numbered name ("GEModelManager::CreateModel(name_N)")
 GEModel* GEModelManager::CreateModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount, unsigned long inTagPointCount,
                                      unsigned long inFrameCount, unsigned long inSubModelCount, const UString& inName, unsigned long inFlags)
@@ -129,7 +126,6 @@ GEModel* GEModelManager::CreateModel(unsigned long inPolygonCount, unsigned long
     return (GEModel*)ee_ge_modman_create(this->mRust, &theArgs, inName);
 }
 
-// FUNCTION: LLE 0x100207d6
 // Creates a model and attaches it to a parent model as the sub-model at an index (the parent holds it)
 GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount, unsigned long inTagPointCount,
                                         unsigned long inFrameCount, unsigned long inSubModelCount, unsigned long inFlags,
@@ -140,7 +136,6 @@ GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned l
     return (GEModel*)ee_ge_modman_create_sub(this->mRust, &theArgs, inIndex, inParent);
 }
 
-// FUNCTION: LLE 0x10020845
 // Writes the list of loaded models and their reference counts to a file
 void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
@@ -152,7 +147,6 @@ unsigned long GEModelManager::GetMemoryFootprint()
     return ee_ge_modman_footprint(this->mRust);
 }
 
-// FUNCTION: LLE 0x100208b0
 // Returns the loaded model of that name, else finds its glTF (.glb, .gltf), stores it and registers it under the
 // name; NULL when there is none or it does not load. The cache's key is the name as given ("models\x"; the
 // original's was "<name>.cem")
@@ -161,21 +155,18 @@ GEModel* GEModelManager::LoadModel(const UString& inName, std::map<unsigned long
     return (GEModel*)ee_ge_modman_load(this->mRust, inName, &ioTextures);
 }
 
-// FUNCTION: LLE 0x100209dd
 // Releases every model nobody else references; returns 5 when some are still in use
 long GEModelManager::RemoveAllModels()
 {
     return ee_ge_modman_remove_all(this->mRust);
 }
 
-// FUNCTION: LLE 0x10020a53
 // Releases a model if nobody else references it; 3 when it is unknown, 5 when it is still in use
 long GEModelManager::RemoveModel(GEModel* inModel)
 {
     return ee_ge_modman_remove(this->mRust, inModel);
 }
 
-// FUNCTION: LLE 0x10020ad1
 // Replaces the model search path, keeping a reference to the new one
 void GEModelManager::SetModelPath(FSPath* inPath)
 {

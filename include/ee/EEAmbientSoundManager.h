@@ -33,7 +33,7 @@ public:
 class EEAmbientSoundManager : public EeAppAmbientFields {
 public:
     EEAmbientSoundManager();                // 0x124ee2 (Empire Earth.cpp's chain; stores EEAmbientWorldAnalyzer's vtable)
-    virtual ~EEAmbientSoundManager();       // 0x124f5d
+    virtual ~EEAmbientSoundManager();
     // 0x12572e: stores inEnabled at +0x64 and starts or stops the sounds when it changes (the settings pass the
     // "Ambient Sounds" check box; provisional name)
     void SetEnabled(bool inEnabled);
@@ -45,7 +45,7 @@ public:
     bool IsUpdateDue() { return this->mFrameCount >= this->mNextUpdateFrame && this->mIsEnabled == true && !this->mIsPaused; }
     void Update();                          // 0x125685 (when IsUpdateDue was true)
     long Load(FSFile& inFile);              // 0x125012 (the 0x98-byte sound records)
-    void ClearSounds();                     // 0x1257f8
+    void ClearSounds();
     float Random() { return this->mRandom.Generate(); }   // inline (COMDAT 0x12737c)
 
     EEAmbientWorldAnalyzer mAnalyzer;       // +0x04 (the ctor stores its vtable)
@@ -53,6 +53,6 @@ public:
     std::vector<EEAmbientSound> mSounds;    // +0x44 (0x4c-byte entries)
 };
 
-extern EEAmbientSoundManager gAmbientSoundManager;  // 0x52f5d0
+extern EEAmbientSoundManager gAmbientSoundManager;
 
 #endif

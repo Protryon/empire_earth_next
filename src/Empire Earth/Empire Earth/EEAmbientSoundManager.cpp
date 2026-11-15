@@ -48,17 +48,12 @@ extern EEAIContinentManager gContinentManager;
 // 0x524a88..0x524b34: the original's two EE-level trigonometry caller logs ("UMCos EE-Level", "UMSin EE-Level",
 // ESCallerLog, never called), deleted with the class (LLE lane round 1)
 
-// FUNCTION: EXE 0x524b34
 // Creates a silent ambient sound with no sound object, full probability and normal pitch
 EEAmbientSound::EEAmbientSound() : mSound(NULL), mInstance(NULL)
 {
     ee_app_ambient_sound_default(this);
 }
 
-// FUNCTION: EXE 0x524b85
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x524ba1
 // Destroys the ambient sound, unloading its sound object's media
 EEAmbientSound::~EEAmbientSound()
 {
@@ -66,7 +61,6 @@ EEAmbientSound::~EEAmbientSound()
         this->mSound->UnloadMedia();
 }
 
-// FUNCTION: EXE 0x524bb4
 // Sets up the ambient sound from its database record (sound, fades, volumes, probability, interval in ms), silent
 void EEAmbientSound::Init(const EEAmbientSoundRecord& inRecord)
 {
@@ -76,14 +70,6 @@ void EEAmbientSound::Init(const EEAmbientSoundRecord& inRecord)
     ee_app_ambient_sound_init(this, &theRecord);
 }
 
-// FUNCTION: EXE 0x524c16
-// FUNCTION: EXE 0x524c46
-// FUNCTION: EXE 0x524c72
-// FUNCTION: EXE 0x524ca9
-// FUNCTION: EXE 0x524d4e
-// (FadeIn, FadeOut, LoadSound, PlayAtVolume, UnloadSound: ee_app ambient.rs, over the host's sound operations)
-
-// FUNCTION: EXE 0x524d63
 // Counts a visible unit for the ambient sounds: citizens, farms, goats, eagles, attackers, and enemy bombers over
 // the local player's towns (from the atomic epochs on)
 void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit)
@@ -124,7 +110,6 @@ void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x524e80
 // Counts a visible tree when the unit is a wood resource
 void EEAmbientWorldAnalyzer::CountTree(EEUnit* inUnit)
 {
@@ -132,7 +117,6 @@ void EEAmbientWorldAnalyzer::CountTree(EEUnit* inUnit)
         this->AddTree(inUnit);
 }
 
-// FUNCTION: EXE 0x524e99
 // Counts a visible tree and, if no forest type is known yet, takes it from the AI forest at the unit
 void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit)
 {
@@ -144,7 +128,6 @@ void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit)
         this->mForestType = theForest->GetResourceKind();
 }
 
-// FUNCTION: EXE 0x524ec1
 // Resets the world analyzer's counters for the next ambient update
 void EEAmbientWorldAnalyzer::Clear()
 {
@@ -200,17 +183,12 @@ static void EEAmbientHost(void* inContext, int32_t inOp, EeAppAmbientIo* io)
 }
 #define EE_AMBIENT_HOST this, &this->mAnalyzer, this, EEAmbientHost
 
-// FUNCTION: EXE 0x524ee2
 // Creates the ambient sound manager, disabled and unpaused, updating every 10 frames
 EEAmbientSoundManager::EEAmbientSoundManager() : mRandom(1)
 {
     ee_app_ambient_default(this);
 }
 
-// SYNTHETIC: EXE 0x524f41
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x524f5d
 // Destroys the manager, stopping and discarding every ambient sound
 EEAmbientSoundManager::~EEAmbientSoundManager()
 {
@@ -218,20 +196,6 @@ EEAmbientSoundManager::~EEAmbientSoundManager()
     this->ClearSounds();
 }
 
-// FUNCTION: EXE 0x524f83
-// FUNCTION: EXE 0x5250ae
-// FUNCTION: EXE 0x525231
-// FUNCTION: EXE 0x525267
-// FUNCTION: EXE 0x525281
-// FUNCTION: EXE 0x5252c2
-// FUNCTION: EXE 0x5254c8
-// FUNCTION: EXE 0x52580b
-// FUNCTION: EXE 0x525d0d
-// FUNCTION: EXE 0x525fcc
-// (UpdateState, the day, dawn, night and dusk handlers, RandomRange, RandomInteger, UpdateAnimals, UpdateWater,
-// UpdateTerrain: ee_app ambient.rs)
-
-// FUNCTION: EXE 0x525012
 // Loads the ambient sound records from the file into their slots and seeds the random generator; returns the last
 // read status
 long EEAmbientSoundManager::Load(FSFile& inFile)
@@ -255,72 +219,39 @@ long EEAmbientSoundManager::Load(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5252b4
 // Stops every ambient sound and pauses the manager
 void EEAmbientSoundManager::Pause()
 {
     ee_app_ambient_stop_sounds(EE_AMBIENT_HOST, true);
 }
 
-// FUNCTION: EXE 0x525685
 // Runs one ambient update: day phase, terrain and animal sounds, the fades, then resets the world counters
 void EEAmbientSoundManager::Update()
 {
     ee_app_ambient_update(EE_AMBIENT_HOST);
 }
 
-// FUNCTION: EXE 0x52572e
 // Enables or disables the ambient sounds: loads every sound object, or stops and unloads them (slot 0 is skipped)
 void EEAmbientSoundManager::SetEnabled(bool inEnabled)
 {
     ee_app_ambient_set_enabled(EE_AMBIENT_HOST, inEnabled);
 }
 
-// FUNCTION: EXE 0x5257bc
 // Stops every ambient sound
 void EEAmbientSoundManager::StopSounds()
 {
     ee_app_ambient_stop_sounds(EE_AMBIENT_HOST, false);
 }
 
-// FUNCTION: EXE 0x5257f8
 // Discards every ambient sound
 void EEAmbientSoundManager::ClearSounds()
 {
     this->mSounds.clear();
 }
 
-// FUNCTION: EXE 0x525800
 // Unpauses the manager, running the next update straight away
 void EEAmbientSoundManager::Restart()
 {
     this->mIsPaused = false;
     this->mFrameCount = this->mNextUpdateFrame;
 }
-
-// Template and inline COMDATs (vector<EEAmbientSound>, EEAmbientSound copy/inline members, the analyzer's ??_G,
-// CheckState):
-// TEMPLATE: EXE 0x526c09
-// TEMPLATE: EXE 0x526c25
-// TEMPLATE: EXE 0x526c32
-// TEMPLATE: EXE 0x526c6d
-// TEMPLATE: EXE 0x526d29
-// TEMPLATE: EXE 0x526d94
-// TEMPLATE: EXE 0x526dcb
-// TEMPLATE: EXE 0x526e04
-// TEMPLATE: EXE 0x526e16
-// TEMPLATE: EXE 0x5270ec
-// TEMPLATE: EXE 0x527167
-// TEMPLATE: EXE 0x527192
-// TEMPLATE: EXE 0x5271a6
-// TEMPLATE: EXE 0x5271ca
-// TEMPLATE: EXE 0x5271f6
-// TEMPLATE: EXE 0x527213
-// TEMPLATE: EXE 0x52723f
-// TEMPLATE: EXE 0x527251
-// TEMPLATE: EXE 0x5272c6
-// TEMPLATE: EXE 0x5272ea
-// TEMPLATE: EXE 0x527312
-// TEMPLATE: EXE 0x52733e
-// TEMPLATE: EXE 0x52735f
-// TEMPLATE: EXE 0x527385

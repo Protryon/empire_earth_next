@@ -32,22 +32,22 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile);   // +0x08 0x14fead
 
     void AddCargoWeight(EEComplexUnit* inUnit);  // 0x14e9a8 (used cargo += the unit's weight)
-    void AddAirport(EEComplexUnit* inAirport);   // 0x14e9bb
+    void AddAirport(EEComplexUnit* inAirport);
     long QueueRequest(EEComplexUnit* inAirport, EEComplexUnit* inUnit, long inKind);  // 0x14ea34 (0 queued, 3 no such airport, 7 no room)
     long GetFreeCargoWeight(EEComplexUnit* inAirport);  // 0x14eaf7 (the airport's free cargo weight, -1 if unknown)
     bool RemoveFromTakeoffQueues(EEComplexUnit* inUnit);  // 0x14ec8c (drops inUnit from the takeoff queues)
     bool ClearAirportQueue(EEComplexUnit* inAirport, long inKind);  // 0x14ed30 (drops the idle takeoffs of a kind)
-    void Dump(FILE* inFile);                // 0x14f15d
+    void Dump(FILE* inFile);
     long GetChecksum();                     // 0x14f47d (an out-of-sync checksum)
     unsigned long GetQueueLength(EEComplexUnit* inAirport);  // 0x14f5fa (its takeoff queue's length)
     long GetQueuePosition(EEComplexUnit* inUnit, long inWhich);  // 0x14f61c (inUnit's place in its airport's queue, -1)
     void ReplaceUnits(std::vector<EEPUnitSwap>& inSwaps);  // 0x14f88d (replaces the old units by the new in the queues)
     void RemoveCargoWeight(EEComplexUnit* inUnit);  // 0x14fc39 (used cargo -= the unit's weight)
     void RemoveAirport(EEComplexUnit* inAirport);  // 0x14fc4c (the airport is gone)
-    void RemovePlane(EEComplexUnit* inAirport, EEComplexUnit* inUnit);  // 0x14fcc1
+    void RemovePlane(EEComplexUnit* inAirport, EEComplexUnit* inUnit);
     long RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x14fcf4 (ids back to units after a load)
     EEComplexUnit* FindNearestAirport(EEComplexUnit* inUnit);  // 0x15014c (the nearest airport that fits inUnit)
-    void Update();                          // 0x1501d4
+    void Update();
 
     // the airports (inline in the original over mSlots: 0x20b671, EEUCPlanetSpaceship::Virtual74 0x618e34)
     unsigned long GetNumSlots() { return ee_units_atc_slot_count(this->mRust); }
