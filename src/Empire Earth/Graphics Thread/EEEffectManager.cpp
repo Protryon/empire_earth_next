@@ -49,7 +49,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DParticleEmitter.h"
-#include "ee/EEEDamagedEffect.h"
 #include "ee/EEE3DRust.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DRust.h"
@@ -133,7 +132,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
 {
     EEEffect* theEffect = NULL;
     switch (inKind) {
-    case kEffectDamaged: theEffect = new EEEDamagedEffect(); break;
+    case kEffectDamaged: theEffect = new EEE2DRust(0x3e); break;
     case kEffect3DParticle: theEffect = EEE3DParticle::Create(); break;
     case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(0x3a); break;
     case kEffect2DParticle: theEffect = EEE2DRust::NewParticle(); break;
@@ -278,7 +277,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x35: theEffect = new EEE3DRust(inUnit, inEffect, 0x35); break;
     case 0x41: theEffect = new EEE2DRust(inUnit, inEffect, inGoalIndex, 0x41); break;
     case 0x3f: theEffect = new EEE3DRust(inUnit, inEffect, 0x3f); break;
-    case 0x3e: theEffect = new EEEDamagedEffect(inUnit, inEffect); break;
+    case 0x3e: theEffect = new EEE2DRust(inUnit, inEffect, 0x3e); break;
     case 0x3b: theEffect = new EEE3DRust(inUnit, inEffect, 0x3b); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
     case 0x42: theEffect = new EEE3DRust(inUnit, inEffect, 0x42); break;

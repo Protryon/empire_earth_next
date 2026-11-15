@@ -1462,6 +1462,10 @@ pub fn save_ambient<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
 
 // ---- the damage controller (EEEDamagedEffect, kind 0x3e)
 
+/// `kEffectDamaged`: the damage controller (on `EEE2DRust`: its virtuals answer here, its tick and files are the C++'s
+/// calls of `ee_gfx_effect_damaged_step`, `ee_gfx_effect_load_damaged` and `ee_gfx_effect_save_damaged`).
+pub const EE_GFX_EFFECT_KIND_DAMAGED: i32 = 0x3e;
+
 /// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
 /// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

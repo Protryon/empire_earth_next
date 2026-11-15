@@ -127,6 +127,10 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_2D = 46;
 /// The 3D particle (a model).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_3D = 57;
 
+/// `kEffectDamaged`: the damage controller (on `EEE2DRust`: its virtuals answer here, its tick and files are the C++'s
+/// calls of `ee_gfx_effect_damaged_step`, `ee_gfx_effect_load_damaged` and `ee_gfx_effect_save_damaged`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DAMAGED = 62;
+
 /// The water splash.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_SPLASH = 27;
 
