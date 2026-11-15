@@ -18,5 +18,7 @@ ee_plat_core = { path = "../ee_plat_core" }
 ee_ge = { path = "../ee_ge" }
 # the effect types read and write an effect's numbers in place (editor_effects.rs: EeScenarioEffectFields)
 ee_scenario = { path = "../ee_scenario" }
+# the box selection's geometry (select_units.rs)
+ee_gfx = { path = "../ee_gfx" }
 # the scenario editor's terrain paint draws its ambient units from URandom (editor_actions.rs)
 ee_random = { path = "../ee_random" }

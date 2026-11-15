@@ -3,6 +3,8 @@
 
 use std::ffi::{c_char, c_void, CStr};
 
+use crate::native;
+
 use crate::lagloss::LagLoss;
 use crate::msgmgr::{File, Host, Msg, MsgMgr};
 use crate::qhost::{Ev, FileH, Msg as QMsg, QHost, Thr};
@@ -427,9 +429,12 @@ pub enum EeNetQOp {
 pub type EeNetQHostFn =
     unsafe extern "C" fn(ctx: *mut c_void, op: EeNetQOp, a: usize, b: usize, c: usize, d: usize) -> isize;
 
+/// With `native` (the game's server and client) the clock, the events and the threads are the engine's own, called
+/// directly (`native.rs`: ee_time, ee_ts); without it (the goldens' worlds) the host answers those ops too.
 pub struct QFfiHost {
     pub(crate) ctx: *mut c_void,
     pub(crate) f: EeNetQHostFn,
+    pub(crate) native: bool,
 }
 
 // The context is the C++ client or server, used from its threads as the original's objects were.
@@ -444,6 +449,9 @@ impl QFfiHost {
 
 impl QHost for QFfiHost {
     fn time(&self) -> u32 {
+        if self.native {
+            return native::time();
+        }
         self.call(EeNetQOp::Time, 0, 0, 0, 0) as u32
     }
     fn verify(&self, unit: u32, line: u32) {
@@ -456,27 +464,51 @@ impl QHost for QFfiHost {
         self.call(EeNetQOp::FpuCheck, 0, 0, 0, 0);
     }
     fn event_new(&self) -> Ev {
+        if self.native {
+            return native::event_new();
+        }
         self.call(EeNetQOp::EventNew, 0, 0, 0, 0) as Ev
     }
     fn event_free(&self, e: Ev) {
+        if self.native {
+            return native::event_free(e);
+        }
         self.call(EeNetQOp::EventFree, e, 0, 0, 0);
     }
     fn event_set(&self, e: Ev) {
+        if self.native {
+            return native::event_set(e);
+        }
         self.call(EeNetQOp::EventSet, e, 0, 0, 0);
     }
     fn event_clear(&self, e: Ev) {
+        if self.native {
+            return native::event_clear(e);
+        }
         self.call(EeNetQOp::EventClear, e, 0, 0, 0);
     }
     fn event_wait(&self, e: Ev, timeout: u32) -> i32 {
+        if self.native {
+            return native::event_wait(e, timeout);
+        }
         self.call(EeNetQOp::EventWait, e, timeout as usize, 0, 0) as i32
     }
     fn thread_new(&self, kind: u32, obj: usize, out: &mut Thr) -> i32 {
+        if self.native {
+            return native::thread_new(kind, obj, out);
+        }
         self.call(EeNetQOp::ThreadNew, kind as usize, obj, out as *mut Thr as usize, 0) as i32
     }
     fn thread_name(&self, t: Thr, name: &str) {
+        if self.native {
+            return native::thread_name(t, name);
+        }
         self.call(EeNetQOp::ThreadName, t, name.as_ptr() as usize, name.len(), 0);
     }
     fn thread_free(&self, t: Thr) {
+        if self.native {
+            return native::thread_free(t);
+        }
         self.call(EeNetQOp::ThreadFree, t, 0, 0, 0);
     }
     fn msg_reference(&self, m: QMsg) {
@@ -541,7 +573,7 @@ fn rp<'a>(r: *const EeNetRecPlay) -> Option<&'a RecPlay<QFfiHost>> {
 /// `host` answers every op for `ctx` until `ee_net_ll_free`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_net_ll_new(ctx: *mut c_void, host: EeNetQHostFn) -> *mut EeNetLagLoss {
-    Box::into_raw(Box::new(EeNetLagLoss(LagLoss::new(QFfiHost { ctx, f: host }))))
+    Box::into_raw(Box::new(EeNetLagLoss(LagLoss::new(QFfiHost { ctx, f: host, native: false }))))
 }
 
 /// # Safety
@@ -604,7 +636,7 @@ pub extern "C" fn ee_net_ll_send(l: *const EeNetLagLoss, msg: *mut c_void) -> i3
 /// `host` answers every op for `ctx` until `ee_net_rp_free`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_net_rp_new(ctx: *mut c_void, host: EeNetQHostFn) -> *mut EeNetRecPlay {
-    Box::into_raw(Box::new(EeNetRecPlay(RecPlay::new(QFfiHost { ctx, f: host }))))
+    Box::into_raw(Box::new(EeNetRecPlay(RecPlay::new(QFfiHost { ctx, f: host, native: false }))))
 }
 
 /// # Safety

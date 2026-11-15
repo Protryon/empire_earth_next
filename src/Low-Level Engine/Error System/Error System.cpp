@@ -41,8 +41,6 @@
 // The error log the original opened at start-up ("<n>_Error.log", ESBeginRecording/ESEndRecording) went: nothing
 // ever wrote it, so it only created an empty file.
 
-void ESShutdown(bool inForced);                   // 0x100019cc
-
 // Reads Filter.txt from the startup directory into the Rust filters, once there is a startup path
 static void ESLoadFilters()
 {
@@ -87,24 +85,14 @@ unsigned long ESGetNativeError()
 }
 
 // FUNCTION: LLE 0x10001679
-// Initialises the error system: registers the shutdown hook
-void ESInitialize(HINSTANCE inInstance)
-{
-    URegisterShutdown(ESShutdown);
-}
+// Initialises the error system: registers the shutdown hook (ee_error_shutdown_hook, 0x100019cc: frees the filters)
+void ESInitialize(HINSTANCE inInstance) { ee_error_initialize(); }
 
 // FUNCTION: LLE 0x100016ed
 // Records a nonzero native error and returns it unchanged
 unsigned long ESRecordNativeError(unsigned long inError)
 {
     return ee_error_record_native(inError);
-}
-
-// FUNCTION: LLE 0x100019cc
-// Shuts the error system down: frees the filters (URegisterShutdown hook, ESInitialize)
-void ESShutdown(bool inForced)
-{
-    ee_error_shutdown();
 }
 
 // FUNCTION: LLE 0x10001a4a

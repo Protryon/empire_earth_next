@@ -185,7 +185,7 @@
 #include "ee/EESEAMouseClick.h"
 #include "lle/GEOrientation.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EEUCBuilding.h"
+#include "ee/EEUnitClassKinds.h"
 #include "lle/GE3DPlane.h"
 #include "lle/UIRadioButton.h"
 #include "ee/EEEffectManager.h"
@@ -1378,8 +1378,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 EESEAMouseClick* a = new EESEAMouseClick;
                 unsigned long theID = c == "clear" ? 0 : UnitRef(w[1]);
                 EEMessage* m = c == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
-                               : c == "toggle" ? static_cast<EEMessage*>(new EEMAddUnitToSelectedGroup(theID))
-                               : c == "add" ? static_cast<EEMessage*>(new EEMAlwaysAddUnitToSelectedGroup(theID))
+                               : c == "toggle" ? static_cast<EEMessage*>(new EEMRecord(kMessageAddUnitToSelectedGroup, {theID}))
+                               : c == "add" ? static_cast<EEMessage*>(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theID}))
                                : static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
                 a->SetMessage(m);
                 gUserInterface->PostAction(a);
@@ -1927,7 +1927,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 EESETSAMouseClick* a = new EESETSAMouseClick;
                 unsigned long theID = UnitRef(w[2]);
                 a->SetMessage(w[1] == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
-                                               : static_cast<EEMessage*>(new EEMAlwaysAddUnitToSelectedGroup(theID)));
+                                               : static_cast<EEMessage*>(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {theID})));
                 gUserInterface->PostAction(a);
                 a->Dereference();
             };

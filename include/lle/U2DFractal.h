@@ -1,24 +1,37 @@
 // Low-Level Engine U2DFractal (exported class), as seen by its includers. Member names are provisional.
-// Requires lle/LowLevelEngine.h. Layout proven by LLE's exported members (ctor 0x100545ff, dtor 0x100546a3,
-// GetValue 0x10012519) and Default.dll's HMUFractal (vtable 0x10019284: dtor, ComputeFractal, override of slot 2).
+// Requires lle/LowLevelEngine.h. A square height map filled by diamond-square subdivision.
+//
+// Whole in Rust (rust/crates/ee_util fractal.rs, LLE lane round 7): the class holds the map's pointer and forwards.
+// The original's virtual value generator was overridden only by Default.dll's HMUFractal, which is Rust's (ee_rmap
+// fractal.rs): nothing derives from this class now, so its vtable went. Values not computed are 0 (they were
+// uninitialised).
 #ifndef LLE_U2DFRACTAL_H
 #define LLE_U2DFRACTAL_H
 
-class LLE_API U2DFractal {                  // proven sizeof 0xc (HMUFractal adds +0xc)
+#include "rust/ee_util.h"
+
+class LLE_API U2DFractal {
 public:
-    U2DFractal(unsigned long inSquareDimension);
-    U2DFractal(unsigned long inSquareDimension, float inCornerValue, float inRange, unsigned long inSeed);
-    virtual ~U2DFractal();
+    // an uncomputed map
+    U2DFractal(unsigned long inSquareDimension) : mFractal(ee_util_fractal_new(inSquareDimension)) {}
+    // a map computed from a corner value, a random range and a seed
+    U2DFractal(unsigned long inSquareDimension, float inCornerValue, float inRange, unsigned long inSeed)
+        : mFractal(ee_util_fractal_new(inSquareDimension))
+    {
+        this->ComputeFractal(inCornerValue, inRange, inSeed);
+    }
+    ~U2DFractal() { ee_util_fractal_free(this->mFractal); }
+    U2DFractal(const U2DFractal&) = delete;
+    U2DFractal& operator=(const U2DFractal&) = delete;
 
-    virtual void ComputeFractal(float inCornerValue, float inRange, unsigned long inSeed);   // slot 1 (0x546d2)
-    float GetValue(unsigned long inX, unsigned long inY) { return this->mValues[inX][inY]; }
+    // diamond-square subdivision wrapping at the edges, the random range shrinking with the step; each value the
+    // average plus a random offset within the scaled range, clamped to 0..1
+    void ComputeFractal(float inCornerValue, float inRange, unsigned long inSeed)
+        { ee_util_fractal_compute(this->mFractal, inCornerValue, inRange, inSeed); }
+    float GetValue(unsigned long inX, unsigned long inY) { return ee_util_fractal_value(this->mFractal, inX, inY); }
 
-protected:
-    virtual float GenerateFractalValue(URandom& inRandom, float inRange, float inScale, float inAverage,
-                                       unsigned long inX, unsigned long inY);         // slot 2
-
-    float** mValues;                        // proven +0x04 (GetValue; one row per dimension)
-    unsigned long mSquareDimension;         // proven +0x08
+private:
+    EeUtilFractal* mFractal;
 };
 
 #endif

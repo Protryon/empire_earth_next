@@ -327,6 +327,8 @@ constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;
 /// `DIR_UF_SERVRETURNADDR`
 constexpr static const uint32_t EE_WON_DIR_UF_SERV_RETURN_ADDR = 16;
 
+constexpr static const int32_t CHOOSER_SIZE = 120;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -467,6 +469,11 @@ constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
 
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
+
+/// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;
+
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_TRANSLUCENT = 512;
 
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
@@ -2271,6 +2278,13 @@ constexpr static const int32_t EE_WON_SMART_ACT_BAN = 6;
 /// `BanClientByCDKeyId(group, on, seconds, text, value, NULL)`
 constexpr static const int32_t EE_WON_SMART_ACT_BAN_CDKEY = 7;
 
+/// `SurfaceFormat`.
+constexpr static const int32_t EE_WON_SURFACE_32 = 0;
+
+constexpr static const int32_t EE_WON_SURFACE_555 = 1;
+
+constexpr static const int32_t EE_WON_SURFACE_565 = 2;
+
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
@@ -3031,6 +3045,10 @@ enum class EeWonGuiOp : uint32_t {
   WbFont,
   /// `Button::CopyAttributes((Button*)a)`.
   WbBaseCopy,
+  /// a layout's call (`a` an `EeWonSkinLay`; `b`, `c`, `d` its arguments).
+  SkinLay = 620,
+  /// a grabber's call out (`a` an `EeWonGrab`; `b`, `c`, `d` its arguments).
+  Grab = 621,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3496,6 +3514,97 @@ enum class EeWonDlgLogicCall : uint32_t {
   Field,
 };
 
+/// The two objects.
+enum class EeWonEeColorKind : uint32_t {
+  Button = 0,
+  Chooser = 1,
+};
+
+/// The host's ops (`a`..`f` as documented; `self` the C++ object the Rust object belongs to).
+enum class EeWonEeColorOp : uint32_t {
+  /// `((Component*)a)->Invalidate()`.
+  Invalidate = 1,
+  /// `((Component*)a)->Width()`.
+  Width,
+  /// `((Component*)a)->Height()`.
+  Height,
+  /// `((Button*)a)->IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `((Button*)a)->IsPressed()` (0 or 1).
+  IsPressed,
+  /// `((Component*)a)->Component::Paint(*(Graphics*)b)`.
+  BasePaint,
+  /// `((Graphics*)a)->SetColor(b)` (0x00rrggbb).
+  SetColor,
+  /// `((Graphics*)a)->SetSysColor(StandardColor_MenuBack)`.
+  SetMenuBackColor,
+  /// `((Graphics*)a)->FillRect(b, c, d, e)`.
+  FillRect,
+  /// `((Graphics*)a)->DrawRect(b, c, d, e)`.
+  DrawRect,
+  /// `LobbyDraw3DFrame(*(Graphics*)a, b, c, d, e, f != 0)`.
+  Draw3DFrame,
+  /// `LobbyDrawFrame(*(Graphics*)a, b, c, d, e, f != 0)`.
+  DrawFrame,
+  /// `new EELobbyColorChooser` with a reference added (the button's `SmartPtr`).
+  ChooserNew,
+  /// `((EELobbyColorChooser*)a)->mRust`: the chooser's Rust object.
+  ChooserRust,
+  /// `((Component*)a)->SetDesiredSize(b, c)`.
+  SetDesiredSize,
+  /// `((Component*)a)->AddListener(new ComponentListenerComp((Component*)b))`.
+  AddListener,
+  /// `((Component*)a)->mParent`.
+  Parent,
+  /// `((Component*)a)->GetRoot()->ClosePopup((Component*)b)`.
+  ClosePopup,
+  /// `((Component*)a)->LocalToRoot(*(int*)b, *(int*)c)`.
+  LocalToRoot,
+  /// `PopupParams p((Component*)b, 0x23e7, (Component*)a, c, d); p.mAvoidRect.height = a->Height();
+  /// p.mAvoidRect.y = d - a->Height(); p.mInputComponent = a; a->GetRoot()->OpenPopup(p)`.
+  OpenPopup,
+  /// `((Component*)a)->FireEvent(100064, false)` (the player rows' colour change).
+  FireColorChanged,
+  /// `((Button*)a)->Button::HandleComponentEvent((ComponentEvent*)b)`.
+  BaseEvent,
+  /// `((Component*)a)->Component::AddedToParent()`.
+  BaseAddedToParent,
+  /// `((Component*)a)->Component::MouseExit()`.
+  BaseMouseExit,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object.
+  GameRust,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+};
+
+/// The inward calls (the classes' methods and virtuals).
+enum class EeWonEeColorCall : uint32_t {
+  /// Button: `SetColor(a)` (0 or 1: whether it changed).
+  SetColor = 1,
+  /// Button: `mColor`.
+  GetColor,
+  /// Both: `Paint(*(Graphics*)a)`.
+  Paint,
+  /// Button: `HandleActivate()` (0).
+  Activate,
+  /// Button: `HandleComponentEvent(a)`, `b` 1 for an end of popup.
+  Event,
+  /// Chooser: `AddedToParent()`.
+  AddedToParent,
+  /// Chooser: `MouseMove(a, b)`.
+  MouseMove,
+  /// Chooser: `MouseDown(a, b, c)`.
+  MouseDown,
+  /// Chooser: `MouseExit()`.
+  MouseExit,
+  /// Chooser: a member: 0 `mHover`, 1 `mSelected`, 2..17 `mTaken[a - 2]`; Button: 0 `mChooser`.
+  Field,
+  /// Chooser: `mSelected = a`.
+  SetSelected,
+};
+
 /// The host's ops. `a`..`d` as documented; a read answers `isize::MIN` when it threw.
 enum class EeWonEeGameOp : uint32_t {
   /// `a->AddRef()` (a `SmartPtr`'s reference: a client, a player, the file transfer, a `GUIStringData`).
@@ -3736,6 +3845,256 @@ enum class EeWonEeGameCall : uint32_t {
   SlotPlayer,
 };
 
+/// The host's ops (`a`..`f` as documented).
+enum class EeWonEeGlueOp : uint32_t {
+  /// `GetMyLobbyGame()`.
+  MyGame = 1,
+  /// `((EELobbyGame*)a)->mRust`.
+  GameRust,
+  /// `((LobbyGame*)a)->GetIsHost()` (0 or 1).
+  GameIsHost,
+  /// `((ServerDetailsItem*)a)->mGame.get()`.
+  ItemGame,
+  /// `((LobbyRustDialog*)a)->mLobbyDlg`.
+  DialogRust,
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `((Graphics*)a)->SetColor(b)`.
+  SetColor,
+  /// `((Graphics*)a)->DrawString(text, d, e)`.
+  DrawText,
+  /// `g->mFont->GetStringWidth(text, 0, text.length())` of the Graphics `a`.
+  TextWidth,
+  /// `((Graphics*)a)->mFont->GetHeight()`.
+  FontHeight,
+  /// `((MultiListArea*)a)->mFont->GetHeight()`.
+  ListFontHeight,
+  /// `text.findNoCase(*(const GUIString*)d, 0)`.
+  TextFind,
+  /// `textA.CompareNoCase(textB)` (text A: kind `a`, value `b`; text B: kind `c`, value `d`).
+  TextCompareNoCase,
+  /// `GUIStringData* a`'s length (`mLength`); `b` non-NULL: its units copied to the `uint32_t*` `b`.
+  StringUnits,
+  /// The column `a` (0 "Epoch", 1 "MapType") of `ServerListCtrl::GetColumnInfo`: its paint, compare and filter
+  /// functions set to the host's.
+  SetColumnHandlers,
+  /// The game, player, server details item and config factories set.
+  SetFactories,
+  /// `EELobbyResource_Init(NULL)`, the five component allocators added to it, `EELobbyAddResources` and
+  /// `LobbyAddComponentLoader` (the component getter).
+  AddResources,
+  /// `LobbyAddGameOption(a ? "MapType" : "Epoch", text, true)`.
+  AddGameOption,
+  /// `EERMGetNumberOfGenerators()`.
+  NumMapTypes,
+  /// `EEGetPlayerColor(a)`'s red, green and blue into the `float[3]` `b`.
+  PlayerColor,
+  /// `LobbySetProductName(L"EEAOC", NULL)`.
+  SetProductName,
+  /// `((ComboBox*)a)->Clear(true)`.
+  ComboClear,
+  /// `((ComboBox*)a)->AddString(EELobbyToGUIString(EERMGetGeneratorDisplayName(b)))`.
+  ComboAddMapType,
+  /// `SafeGetComponent(a, ptr, b ? "EELobbyConnectDialog" : "EELobbyFileDialog", __FILE__, 329 or 328)` into a
+  /// local `SmartPtr`: the dialog with a reference added.
+  FindDialog,
+  /// `EELobbyClose()`.
+  LobbyClose,
+  /// `EELobbyResource_Destroy()`.
+  ResourceDestroy,
+  /// `GetLobbyConfig()`.
+  Config,
+  /// `((EELobbyConfig*)a)->mFileTransferPort`.
+  ConfigPort,
+  /// `LobbySetGameInProgress(a)`.
+  SetGameInProgress,
+  /// `LobbyLeaveGame(a != 0)`.
+  LeaveGame,
+  /// `LobbyIAmCaptain()` (0 or 1).
+  IAmCaptain,
+  /// `GetLobbyWindow()`.
+  LobbyWindow,
+  /// `((WindowManager*)a)->PostEvent(new UserEvent(send connect status, b), true)`.
+  PostSendConnectStatus,
+  /// A saved game's record (an `EEPSaveGameHeader`, an `EEGameOptions`, an `FSFileSpec` set to the file `a`).
+  SaveNew,
+  /// `spec.Open(1) == keseOK` (0 or 1).
+  SaveOpen,
+  /// `spec.GetLength(length)` (from 0).
+  SaveLength,
+  /// `spec.Close()`.
+  SaveClose,
+  /// The header's save versions set and `LoadFromFile(spec) == keseOK` (0 or 1).
+  SaveLoadHeader,
+  /// `header.mChecksum`.
+  SaveChecksum,
+  /// `options = header.mGameOptions`; the options' address.
+  SaveOptions,
+  /// The record freed.
+  SaveFree,
+  /// `LobbyMessageBox(gEELobbyInterface_LoadGameError, gEELobbyInterface_ErrorReadingFile)`.
+  BoxReadError,
+  /// `LobbyMessageBox(gEELobbyInterface_LoadGameError, LobbyFormatString(gEELobbyInterface_PlayerNotInGame,
+  /// GUIString(a)))`.
+  BoxNotInGame,
+  /// `((const EEGameOptions*)a)->` field `b` (an `EeWonEeGlueField`).
+  OptionsField,
+  /// `((const EEGameOptions*)a)->mPlayers[b].` field `c`.
+  OptionsPlayer,
+  /// `EELobbyToGUIString(((const EEGameOptions*)a)->mPlayers[b].mName)`'s data with a reference added.
+  OptionsPlayerName,
+  /// `WONFile(a).GetFileName()`'s data with a reference added.
+  FileName,
+  /// `WONFile(a).GetSize()`.
+  FileSize,
+  /// `((LobbyClient*)a)->GetPlayer().mPtr`.
+  ClientPlayer,
+  /// `&gGamePreferences.GetSettings().mGameOptions`.
+  DefaultOptions,
+  /// `gGameOptions.mLock->WriteLock(); gGameOptions = gLobbyGameOptions; mIsMultiplayer = true; mCheatCodes =
+  /// false`.
+  OptionsBegin,
+  /// `gGameOptions.` field `a` `= b`.
+  OptionSet,
+  /// `gGameOptions.mMapType = EELobbyToWideString(GUIString(a))`.
+  OptionMapTypeName,
+  /// `gGameOptions.mMapType = EERMGetGeneratorName(a)`.
+  OptionMapTypeGenerator,
+  /// `gGameOptions.mLock->WriteUnlock()`.
+  OptionsEnd,
+  /// The player being made: a new `EEGameOptionsPlayer`.
+  PlayerNew,
+  /// Its field `a` `= b`.
+  PlayerSet,
+  /// Its `mType`.
+  PlayerType,
+  /// Its `mName = EELobbyToWideString(GUIString(a))`.
+  PlayerSetName,
+  /// `gGameOptions.mPlayers[a] = ` it.
+  PlayerCommit,
+  /// `*(EEGameOptionsPlayer*)a = ` it.
+  PlayerCopyTo,
+  /// `WONAPI::IPAddr::GetLocalHost()`.
+  LocalHost,
+  /// `LobbyGetNetAddresses(list, false)` into a new vector.
+  AddressesGet,
+  /// Its size.
+  AddressesCount,
+  /// Its entry `b`'s `mHandle`.
+  AddressHandle,
+  /// The vector freed.
+  AddressesFree,
+  /// `gNetworkAdapter = a`.
+  SetNetworkAdapter,
+  /// `((UIForm*)a)->GetControl(b)->SetDisplayMode(0)`.
+  FormHide,
+  /// `EEIsLobbyOpen()` (0 or 1).
+  IsLobbyOpen,
+  /// `EELobbyIsShown()` (0 or 1).
+  IsShown,
+  /// `EELobbyPostReturnFromGame()`.
+  PostReturnFromGame,
+  /// The UI manager's copy lock and the world's write lock released (`EELobbyActionLocksReleased`).
+  LocksRelease,
+  /// ... and taken back.
+  LocksRetake,
+  /// `LobbyRun()`.
+  LobbyRun,
+  /// `EELobbyPostAction(EELobbyStartHostedGame)`.
+  PostStartHostedGame,
+  /// `EELobbyShowGameScreen()`.
+  ShowGameScreen,
+  /// `LobbySuspend()`.
+  LobbySuspend,
+  /// `EELobbyHide()`.
+  Hide,
+  /// `EELobbyJoinGame()`.
+  JoinGame,
+  /// `EELobbyRunSierraUpdate()`.
+  SierraUpdate,
+  /// `delete gCommunications; gCommunications = NULL`.
+  DeleteCommunications,
+  /// `EELobbyShow(true)`.
+  Show,
+  /// `gUIManager->GetFormByID(30)`.
+  GameForm,
+  /// `gUIManager->GetCurrentForm()`.
+  CurrentForm,
+  /// `gUIManager->Pop()`.
+  PopForm,
+  /// `LobbyResume()`.
+  LobbyResume,
+  /// `LobbyMessageBox(RoutingLogic_GameDissolvedTitle_String, RoutingLogic_GameDissolvedDetails_String)`.
+  BoxDissolved,
+};
+
+/// The inward calls (`a`.. as documented).
+enum class EeWonEeGlueCall : uint32_t {
+  /// `EELobbyInit()`.
+  Init = 1,
+  /// `EELobbyServerDetailsItem::PaintDetailsHook(*(Graphics*)b)` of the item `a`.
+  PaintDetails,
+  /// `GetDetailsHeightHook((MultiListArea*)a)`.
+  DetailsHeight,
+  /// The epoch column's paint of the item `b` into the Graphics `a`.
+  EpochPaint,
+  /// The epoch column's order of the items `a` and `b`.
+  EpochCompare,
+  /// The epoch column's filter: whether the item `a` stays for the filter text `*(const GUIString*)b` (0 or 1).
+  EpochKeep,
+  MapTypePaint,
+  MapTypeCompare,
+  MapTypeKeep,
+  /// The component getter of the config `a` (the file and connect dialogs).
+  GetComponents,
+  /// `EELobbyShutdown()`.
+  Shutdown,
+  /// `EELobbyGetFileTransferPort()`.
+  FileTransferPort,
+  /// `EELobbyGetFileDialog()`.
+  FileDialog,
+  /// `EELobbyGetConnectDialog()`.
+  ConnectDialog,
+  /// `EELobbyRunConnectDialog()` (0 or 1).
+  RunConnectDialog,
+  /// `EELobbySetSlotConnected(a, b != 0)`.
+  SetSlotConnected,
+  /// `EELobbyCancelConnectDialog()`.
+  CancelConnectDialog,
+  /// `EELobbyPostConnectStatus(a != 0)`.
+  PostConnectStatus,
+  /// The posted send of the connect status `a`.
+  SendConnectStatus,
+  /// `EELobbyIsConnectDialogRunning()` (0 or 1).
+  IsConnectDialogRunning,
+  /// `EELobbyGetSavedGameInfo((const char*)a, *(uint32_t*)b, *(uint32_t*)c)` (0 or 1).
+  SavedGameInfo,
+  /// `EELobbyLoadSavedGame((const char*)a)` (0 or 1).
+  LoadSavedGame,
+  /// `EELobbyFillMapTypeCombo((ComboBox*)a)`: its op is the host's; the loop is here.
+  FillMapTypeCombo,
+  /// `EELobbySetDefaultGameOptions((EELobbyGame*)a)`.
+  SetDefaultGameOptions,
+  /// `EELobbyFillGameOptions(*(EEGameOptionsPlayer*)a)`.
+  FillGameOptions,
+  /// `EELobbySyncNetworkAdapter()`.
+  SyncNetworkAdapter,
+  /// `EELobbyGameDoneEvent::ProcessEvent((UIForm*)a)` with its count at the `int32_t*` `b`.
+  GameDone,
+  /// `EELobbyRunLoop()`.
+  RunLoop,
+  /// `EELobbyReturnFromGame()`.
+  ReturnFromGame,
+  /// `EESetQuitFlag()`.
+  SetQuitFlag,
+  /// a member: 0 the file dialog, 1 the connect dialog, 2 the closing flag, 3 the game-done flag.
+  Field,
+  /// The state forgotten without releases (the goldens' fresh start; the game never calls it).
+  Reset,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -3762,6 +4121,24 @@ enum class EeWonStageRoute {
   Net = 2,
   /// Handled locally and handed to the network logic too (the host's broadcast).
   LocalAndNet = 3,
+};
+
+/// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
+enum class EeWonGrabCall : uint32_t {
+  /// `Clear()`.
+  Clear = 1,
+  /// `PrePaint((Component*)a, *(Graphics*)b)`.
+  PrePaint,
+  /// `Paint((Component*)a, *(Graphics*)b)`.
+  Paint,
+  /// `SetTranslucentColor(a, b)`.
+  SetTranslucentColor,
+  /// `Invalidate((Component*)a)`.
+  Invalidate,
+  /// `SizeChanged((Component*)a)` (nothing).
+  SizeChanged,
+  /// `NeedDrawBG()` (0 or 1).
+  NeedDrawBG,
 };
 
 /// What `ButtonUp` does.
@@ -4673,24 +5050,11 @@ enum class EeWonLobbyCtlOp : uint32_t {
   FillMapTypes,
   /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
   ComboHasSel,
-  /// `((EELobbyGame*)a)->GetOption(b)`.
-  GameOption,
-  /// `((EELobbyGame*)a)->SetOption(b, c)`.
-  GameSetOption,
-  /// `((EELobbyGame*)a)->ChangeOption(b, c, true)`.
-  GameChangeOption,
-  /// `((EELobbyGame*)a)->SendGameState()`.
-  GameSendState,
-  /// `((EELobbyGame*)a)->HasGameFile()` (0 or 1).
-  GameHasFile,
-  /// `((Label*)a)->SetText(((EELobbyGame*)b)->GetGameFileName())`.
-  LabelSetGameFile,
-  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-  GameSlot,
-  /// `((EELobbyPlayerSlot*)a)->mOptions[0]` (the slot's state).
-  SlotState,
-  /// `((EELobbyPlayerSlot*)a)->SetOpen()`.
-  SlotSetOpen,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the game's
+  /// options, slots and changes were ops that bounced through the C++ forwarders).
+  GameRust,
+  /// `((Label*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string).
+  LabelSetName,
   /// `LobbyIAmCaptain()` (0 or 1).
   IAmCaptain,
   /// `((EELobbySyncOptionEvent*)a)->mParam`.
@@ -4698,10 +5062,9 @@ enum class EeWonLobbyCtlOp : uint32_t {
   /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
   /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
   ChooseSavedGame,
-  /// `((EELobbyPlayerSlot*)a)->mOptions[b]` (round 5: EELobbyPlayerOptionsCtrl).
-  SlotOption,
-  /// `((ComboBox*)a)->SetText(((EELobbyPlayerSlot*)b)->GetName())`.
-  ComboSetSlotName,
+  /// `((ComboBox*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string; round 5:
+  /// EELobbyPlayerOptionsCtrl).
+  ComboSetName,
   /// `((ComboBox*)a)->mEdit->mTextColor = b`.
   ComboSetTextColor,
   /// `GetMyLobbyPlayer()->GetReady()` (0 or 1).
@@ -4718,8 +5081,6 @@ enum class EeWonLobbyCtlOp : uint32_t {
   ColorGetColor,
   /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
   LabelSetPercent,
-  /// `((EELobbyGame*)a)->ChangePlayerOption(b, c & 0xff, c >> 8)` (the slot, the option, the value).
-  GameChangePlayerOption,
 };
 
 /// The inward calls.
@@ -4782,6 +5143,8 @@ enum class EeWonLobbyDlgKind : uint32_t {
   Credits = 14,
   /// EELobbyConnectDialog (round 5): the players' connection wait before a launch.
   Connect = 15,
+  /// EELobbyFileDialog (round 6): the game room's saved games, loaded or deleted.
+  File = 16,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -4981,11 +5344,11 @@ enum class EeWonLobbyDlgOp : uint32_t {
   DefaultFontStringWidth,
   /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
   GameIsHost,
-  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-  GameSlot,
-  /// `((EELobbyPlayerSlot*)a)->Option(0)` (the slot's state).
-  SlotState,
-  /// `((ListArea*)a)->InsertItem(new ConnectListItem(((EELobbyPlayerSlot*)b)->GetName(), image, c & 0xff), -1)`,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the slots'
+  /// states were ops through the C++ slot views).
+  GameRust,
+  /// `((ListArea*)a)->InsertItem(new ConnectListItem(GUIString(b), image, c & 0xff), -1)` (`b` the slot's name, a
+  /// `GUIStringData`),
   /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
   /// image is not the ready one.
   ConnectInsert,
@@ -5003,6 +5366,34 @@ enum class EeWonLobbyDlgOp : uint32_t {
   ConnectItemSetImage,
   /// `((ConnectListItem*)a)->mImage.mPtr != GameUserListCtrl_Ready_Image.mPtr` (0 or 1).
   ConnectItemNotReady,
+  /// `PlatFindFirst((const char*)a, &data)` into a new find record (the find and its data); NULL when nothing
+  /// was found (the record freed).
+  FindFirst,
+  /// `GUIString(data.mName).length()` of the find record `a`.
+  FindNameLength,
+  /// `GUIString theName(data.mName); theName.resize(c); ((ListArea*)a)->InsertString(theName, -1)` (`b` the
+  /// find record).
+  FileListInsert,
+  /// `PlatFindNext(find, &data) == PLAT_FILE_OK` of the find record `a` (0 or 1).
+  FindNext,
+  /// `PlatFindClose(find)` and the find record freed.
+  FindClose,
+  /// `static_cast<TextListItem*>(a)->mText.mData->GetString()`, NUL-terminated (valid until the next op).
+  ItemText,
+  /// `EELobbyLoadSavedGame((const char*)a)` (0 or 1).
+  LoadSavedGame,
+  /// `this->GetRoot()`.
+  Root,
+  /// `LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true)`.
+  FileAskDelete,
+  /// `WONFile theFile((const char*)a); theFile.Delete(true)`.
+  FileDelete,
+  /// `((ListArea*)a)->RemoveItem((ListItem*)b)`.
+  ListRemove,
+  /// `((ListItemClickedEvent*)a)->mDoubleClick` (0 or 1).
+  EventDoubleClick,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
   /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
   ListRefresh,
 };
@@ -5070,6 +5461,8 @@ enum class EeWonLobbyDlgCall : uint32_t {
   ConnectEnd,
   /// EELobbyConnectDialog: `SetConnected(a, b != 0)`.
   ConnectSetConnected,
+  /// EELobbyFileDialog: `ListFiles(a, b)` (the directory and the extension, NUL-terminated).
+  FileListFiles,
 };
 
 /// A container's key kind (its comparator).
@@ -5553,6 +5946,42 @@ enum class EeWonPrefsText {
   LastRoomName = 3,
 };
 
+/// Which Rust object of a C++ object [`EeWonCoreHooks::object_of`] returns.
+enum class EeWonCoreObject {
+  /// an `AsyncOp*`'s [`EeWonAsyncOp`]
+  Op = 0,
+  /// a `SocketOp*`'s [`EeWonSocketOp`]
+  SocketOp = 1,
+  /// an `AsyncSocket*`'s [`EeWonAsyncSocket`]
+  Socket = 2,
+  /// a `QueueSocket*`'s [`EeWonQueueSocket`]
+  Queue = 3,
+  /// a `UDPManager*`'s [`EeWonUdpManager`]
+  UdpManager = 4,
+  /// a `UDPManagerRecvOp*`'s [`EeWonUdpRecvOp`]
+  UdpRecv = 5,
+  /// a `UDPManagerSendRecvOp*`'s [`EeWonUdpSendRecvOp`]
+  UdpSendRecv = 6,
+  /// a `ServerConnection*`'s [`EeWonServerConn`]
+  ServerConn = 7,
+};
+
+/// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
+enum class EeWonCoreSocketOp {
+  /// `new CloseOp(socket)`
+  Close = 0,
+  /// the queue socket's queued close: a socket op without a socket whose `Continue` succeeds, not run at once
+  QueueClose = 1,
+  /// `new RecvBytesFromOp(size, socket)`
+  RecvFrom = 2,
+  /// `new SendBytesToOp(bytes, addr, socket)`
+  SendTo = 3,
+  /// `new RecvMsgOp(socket)`
+  RecvMsg = 4,
+  /// `new SendMsgOp(bytes, socket)`
+  SendMsg = 5,
+};
+
 /// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
 enum class EeWonResKind {
   String = 0,
@@ -5685,6 +6114,32 @@ enum class EeWonScrollTextCall : uint32_t {
   Field,
 };
 
+/// Which method (`ee_won_skin_layout`'s `kind`).
+enum class EeWonSkinLayKind : uint32_t {
+  /// `MSComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  MsCombo = 1,
+  /// `MSScrollContainer::Virtual08` (after `Container::Virtual08`).
+  MsScroll,
+  /// `MSListCtrl::Virtual08`: the scroll container's, then the header.
+  MsList,
+  /// `WONComboBox::GetDesiredSize` (the size out).
+  WonComboSize,
+  /// `WONComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  WonCombo,
+  /// `WONScrollContainer::Virtual08` (after `Container::Virtual08`).
+  WonScroll,
+  /// `WONListCtrl::Virtual08`: the scroll container's, then the header.
+  WonList,
+  /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b, c)`.
+  WonListTextHeader,
+  /// `WONListCtrl::SetColumnHeader(a, (Component*)b, c)`.
+  WonListHeader,
+  /// `MSEtchedFrameGroup::GetDesiredSize` (the size out).
+  EtchedSize,
+  /// `WONSimpleButton::GetDesiredSize` (the size out).
+  SimpleButtonSize,
+};
+
 /// Which copy `ee_won_smart_get` makes.
 enum class EeWonSmartGet {
   /// `GetClient(a)`
@@ -5786,6 +6241,58 @@ enum class EeWonStagingCall : uint32_t {
   LeaveGame,
   NotifyStagingChange,
   NotifyPingChange,
+};
+
+/// A surface's field (`ee_won_surface_get`).
+enum class EeWonSurfaceField : uint32_t {
+  /// `GetSurfaceFormat()`.
+  Format = 1,
+  Width,
+  Height,
+  BytesPerRow,
+  PixelsPerRow,
+  /// `GetPixelSize()` (4 or 2).
+  PixelSize,
+  ClipX1,
+  ClipY1,
+  ClipX2,
+  ClipY2,
+  /// `GetColor()` (the pixel value: a 16-bit surface's converted colour).
+  Color,
+};
+
+/// A drawing method (`ee_won_surface_draw`; its arguments in the original's order).
+enum class EeWonSurfaceDraw : uint32_t {
+  /// `SetColor(a)`.
+  SetColor = 1,
+  /// `FillRect(a, b, c, d)`.
+  FillRect,
+  /// `DrawRect(a, b, c, d)`.
+  DrawRect,
+  /// `DrawHorzLine(a, b, c)` (x1, x2, y).
+  HorzLine,
+  /// `DrawVertLine(a, b, c)` (x, y1, y2).
+  VertLine,
+  /// `DrawLine(a, b, c, d)`.
+  Line,
+  /// `DrawCircle(a, b, c)`.
+  Circle,
+  /// `FillCircle(a, b, c)`.
+  FillCircle,
+  /// `DrawEllipse(a, b, c, d)`.
+  Ellipse,
+  /// `FillEllipse(a, b, c, d)`.
+  FillEllipse,
+  /// `DrawArc(a, b, c, d, e, f)`.
+  Arc,
+  /// `PutPixel(a, b)`.
+  PutPixel,
+  /// `SetPixel(a, b, c)`.
+  SetPixel,
+  /// `SetClipRect(a, b, c, d)`.
+  SetClipRect,
+  /// `ClearClipRect()`.
+  ClearClipRect,
 };
 
 /// The inward calls of the C++ `TabBar` shell.
@@ -6737,6 +7244,8 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   ComboSelChanged = 3,
   /// `LobbyEvent_GotHTTPDocument` (round 3: a `GotHTTPDocumentEvent`, broadcast when a download finished)
   GotHttpDocument = 4,
+  /// `ComponentEvent_ListItemClicked` (round 6: a `ListItemClickedEvent`)
+  ListItemClicked = 5,
 };
 
 /// The button's and component's methods a skin button calls (`SkinBtn`).
@@ -7020,6 +7529,162 @@ enum class EeWonLobbyCtlPref : uint32_t {
   ConnectionSpeed,
 };
 
+/// The host's calls (`EeWonGuiOp::SkinLay`; `a` this, `b`, `c`, `d` its arguments; `k` the layout's kind).
+enum class EeWonSkinLay : uint32_t {
+  /// The receiver's part `c` (`EeWonSkinPart`) as the kind `b`'s class holds it.
+  Part = 1,
+  /// The receiver's field `c` (`EeWonSkinField`) as the kind `b`'s class holds it.
+  Field,
+  /// `mHeaderHeight = b`.
+  SetHeaderHeight,
+  /// `((Component*)b)->Width()`.
+  Width,
+  Height,
+  Left,
+  Top,
+  Right,
+  /// `IsVisible()` (0 or 1).
+  Visible,
+  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c`.
+  SetPosSize,
+  /// `((Component*)b)->GetDesiredSize(wh[0], wh[1])` with `wh` the two ints at `c`.
+  DesiredSize,
+  /// `((InputBox*)b)->SetLeftPad(c)`.
+  SetLeftPad,
+  /// `((ListArea*)b)->GetNumItems()`.
+  ListCount,
+  /// `((ListArea*)b)->GetTotalWidth()`.
+  ListTotalWidth,
+  /// `mHeader->SetColumn(b, *(const GUIString*)c, (int*)d)`.
+  SetColumn,
+  /// `mHeader->SetColumnItem(b, (Component*)c)`.
+  SetColumnItem,
+  /// `((MultiListArea*)GetScrollArea())->SetColumnWidth(b, c, false)`.
+  SetColumnWidth,
+  /// `mImages[b]`'s width and height into the two ints at `c` (0: no image, else 1).
+  Image,
+};
+
+/// A part of the receiver (`EeWonSkinLay::Part`): a `Component*`, 0 for none.
+enum class EeWonSkinPart : uint32_t {
+  /// A combo box's `mButton`.
+  Button = 1,
+  /// A combo box's `mEdit`.
+  Edit,
+  /// A combo box's `mListArea`.
+  ListArea,
+  /// A scroll container's `GetScrollArea()`.
+  ScrollArea,
+  /// `GetScrollbar(true)`.
+  VertBar,
+  /// `GetScrollbar(false)`.
+  HorzBar,
+  /// A list control's `mHeader`.
+  Header,
+  /// An etched group's `mLabel`.
+  Label,
+  /// An etched group's `mComponent`.
+  Contained,
+};
+
+/// A field of the receiver (`EeWonSkinLay::Field`).
+enum class EeWonSkinField : uint32_t {
+  DrawFrame = 1,
+  Draw3DFrame,
+  ButtonInFrame,
+  HeaderHeight,
+  /// `mFrame.mLeft` (the WON skin's frame).
+  FrameLeft,
+  FrameTop,
+  FrameRight,
+  FrameBottom,
+};
+
+/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments).
+enum class EeWonGrab : uint32_t {
+  /// `((Component*)b)->LocalToRoot(p[0], p[1])` with `p` the two ints at `c`.
+  LocalToRoot = 1,
+  /// `((Graphics*)b)->DrawImage(mBGImage, c, d)`.
+  DrawImage,
+  /// `((Graphics*)b)->mClipRect` into the `EeWonRect4` at `c`.
+  Clip,
+  /// `((Component*)b)->Width()` and `Height()` into the two ints at `c`.
+  CompSize,
+  /// whether `mBGImage` is set (0 or 1), its `GetWidth()` and `GetHeight()` into the two ints at `c` when it is.
+  ImageSize,
+  /// `mBGImage = ((Component*)b)->GetRoot()->CreateImage(c, d)`.
+  NewImage,
+  /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
+  FlagSet,
+  /// `mDebugWindow.get() != NULL` (0 or 1).
+  DebugExists,
+  /// the debug window made (`CreateNativeWindow()`, parent `((Component*)b)->GetRoot()`, style 0x40, created at
+  /// the background image's size).
+  DebugCreate,
+  /// the debug window shows the background image at the component's place on the screen (its root emptied, a new
+  /// ImageComponent of the image added, moved to the component's root point plus its window's screen corner).
+  DebugShow,
+  /// `mDebugWindow->mRoot->Invalidate()`.
+  DebugInvalidate,
+  /// the screen under the component: `x = y = 0`, `((Component*)b)->RootToChild(x, y)`,
+  /// `mBGImage->GetGraphics().DrawImage(b->GetRoot()->GetOffscreenImage(), x, y)`.
+  Capture,
+  /// `((Graphics*)b)->BlendSupported()` (0 or 1).
+  BlendSupported,
+  /// `g.SetColor(c); g.FillRectBlend(0, 0, w, h, alpha)` with `g` the Graphics `b` and `w`, `h`, `alpha` the
+  /// three ints at `d`.
+  Blend,
+  /// the background image's raw pixels tinted (`mBGImage->GetRaw()`, `ee_won_grab_tint(pixels, width * height,
+  /// c, d)`), then drawn: `((Graphics*)b)->DrawImage(raw, 0, 0)`.
+  Tint,
+};
+
+/// A field of `EEGameOptions` or of an `EEGameOptionsPlayer` the glue reads or writes.
+enum class EeWonEeGlueField : uint32_t {
+  LoadType = 0,
+  MapSize,
+  Resources,
+  EpochStart,
+  EpochEnd,
+  Variant,
+  Difficulty,
+  GameSpeed,
+  UnitLimit,
+  WondersForVictory,
+  RevealMap,
+  AllowCustomCivs,
+  LockTeams,
+  LockSpeed,
+  Victory,
+  /// read: `EERMFindGenerator(mMapType, index)`'s index (0 when not found)
+  MapTypeIndex,
+  Type,
+  LoadedType,
+  Slot,
+  Color,
+  Team,
+  StartingCitizens,
+  IsLocal,
+  IsReady,
+  B36,
+  /// read: `mName == ""` (0 or 1)
+  NameEmpty,
+};
+
+/// A text's kind (the `value` it goes with).
+enum class EeWonEeGlueText : uint32_t {
+  /// the empty string
+  Empty = 0,
+  /// `EELobbyResource_GetString(value)`
+  Resource = 1,
+  /// `sprintf("%ld", value)`
+  Number = 2,
+  /// `EELobbyToGUIString(EERMGetGeneratorDisplayName(value))`
+  MapType = 3,
+  /// the `GUIStringData*` `value` (0 the empty string)
+  Data = 4,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -7077,6 +7742,9 @@ struct EeWonDialog;
 /// DialogLogic's Rust half.
 struct EeWonDlgLogic;
 
+/// A colour button or a colour chooser.
+struct EeWonEeColor;
+
 /// The lobby game's Rust half.
 struct EeWonEeGame;
 
@@ -7085,6 +7753,9 @@ struct EeWonFirewallOp;
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
+
+/// The Rust BackgroundGrabber.
+struct EeWonGrabber;
 
 /// An op of the Rust op base, as the C++ `RustServerOp` holds it.
 struct EeWonHostOp;
@@ -7215,6 +7886,9 @@ struct EeWonSplitter;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
+
+/// The Rust surface.
+struct EeWonSurface;
 
 /// The Rust TreeItem.
 struct EeWonTNode;
@@ -7641,6 +8315,16 @@ using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
                                          ptrdiff_t c,
                                          ptrdiff_t d);
 
+/// The host: `(object, op, a, b, c, d, e, f) -> result`.
+using EeWonEeColorHostFn = ptrdiff_t(*)(void *obj,
+                                        EeWonEeColorOp op,
+                                        ptrdiff_t a,
+                                        ptrdiff_t b,
+                                        ptrdiff_t c,
+                                        ptrdiff_t d,
+                                        ptrdiff_t e,
+                                        ptrdiff_t f);
+
 /// The host: `(game, op, a, b, c, d) -> result`.
 using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
                                        EeWonEeGameOp op,
@@ -7648,6 +8332,15 @@ using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
                                        ptrdiff_t b,
                                        ptrdiff_t c,
                                        ptrdiff_t d);
+
+/// The host: `(op, a, b, c, d, e, f) -> result`.
+using EeWonEeGlueHostFn = ptrdiff_t(*)(EeWonEeGlueOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c,
+                                       ptrdiff_t d,
+                                       ptrdiff_t e,
+                                       ptrdiff_t f);
 
 /// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
 struct EeWonEeResource {
@@ -7840,6 +8533,25 @@ struct EeWonGetCertHooks {
   void (*clear_one_time)(void*, void*);
 };
 
+/// A rectangle (x, y, width, height).
+struct EeWonRect4 {
+  int32_t x;
+  int32_t y;
+  int32_t w;
+  int32_t h;
+};
+
+/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
+/// map's `int` key), its image's place, its clip rectangle and its image.
+struct EeWonRootGrab {
+  int32_t need;
+  int32_t order;
+  int32_t x;
+  int32_t y;
+  EeWonRect4 clip;
+  ptrdiff_t image;
+};
+
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
 /// the operand threw).
 struct EeWonExprHost {
@@ -7852,14 +8564,6 @@ struct EeWonExprHost {
 
 /// Whether item `i` (below the count) matches, read from the C++ list.
 using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
-
-/// A rectangle (x, y, width, height).
-struct EeWonRect4 {
-  int32_t x;
-  int32_t y;
-  int32_t w;
-  int32_t h;
-};
 
 /// Whether tab `i` (any int) is disabled, as `TabBar::Disabled`.
 using EeWonDisabledOf = bool(*)(const void *ctx, int32_t i);
@@ -8783,51 +9487,74 @@ struct EeWonPrefsEvent {
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
 
+/// A C++ call on one object.
+using EeWonCoreFn = void(*)(void *object);
+
+/// The C++ calls of the whole library (AsyncOp.cpp's one table). Every object crosses as its `RefCount*`; a `new`
+/// object holds no reference yet.
+struct EeWonCoreHooks {
+  /// `object->AddRef()`, `object->Release()` (any `RefCount*`)
+  EeWonCoreFn ref_add;
+  EeWonCoreFn ref_release;
+  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
+  void (*completion_call)(void *completion, void *op);
+  /// the object's Rust object of that kind (null for a null object)
+  void *(*object_of)(void *object, EeWonCoreObject kind);
+  /// a socket op's virtual `Duplicate()` (a new op, or null)
+  void *(*socketop_duplicate)(void *op);
+  /// `new AsyncOp`
+  void *(*new_op)();
+  /// `new RustCompletion(body)`: its `Complete` runs the body, its deletion frees it
+  void *(*new_completion)(EeWonCompletion *body);
+  /// a new socket op of the class (`socket`, `bytes` and `addr` may be null where the class takes none)
+  void *(*new_socket_op)(EeWonCoreSocketOp kind,
+                         void *socket,
+                         void *bytes,
+                         const EeWonIpAddr *addr,
+                         uint16_t size);
+  /// `new QueueSocket(type)`
+  void *(*new_queue_socket)(int32_t kind);
+  /// `new UDPManagerRecvOp` (from `addr`; any sender for null)
+  void *(*new_udp_recv_op)(const EeWonIpAddr *addr);
+  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  long (*udp_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `UDPManagerSendRecvOp::StaticCheckResponse`, a reply wait's message check (kept as the C++ function's address)
+  void *udp_response_check;
+  /// a socket's `Fn2B0D90(port, reuse)`: bound to the local host
+  long (*socket_bind_local)(void *socket, uint16_t port, bool reuse);
+  /// a `ByteBuffer`'s bytes (its `mBytes`)
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  /// a socket op's virtual `Continue()`
+  long (*socketop_continue)(void *op);
+  /// a socket op's virtual `Start()`
+  long (*socketop_start)(void *op);
+  /// `WONAPICore::AddToSocketThread(op)`
+  EeWonCoreFn socket_thread_add;
+  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
+  /// `fclose`, the modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
+  long (*accept)(void *socket, void **out);
+  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
+  void (*socket_hook)(void *socket, int32_t which);
+  /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
+  long (*transform_call)(void *transform, void *message, bool send);
+  /// `delete transform`
+  EeWonCoreFn transform_free;
+};
+
 /// A C++ call on one object (an op, a completion or the socket).
 using EeWonQueueFn = void(*)(void *object);
-
-/// A C++ call making a new object (its reference not yet taken).
-using EeWonQueueNewFn = void*(*)(void *socket);
-
-/// What the queue object calls back in the C++. One static table serves every queue socket.
-struct EeWonQueueSocketHooks {
-  /// `completion->AddRef()`, `->Release()`, `->Complete(op)`
-  EeWonQueueFn completion_add_ref;
-  EeWonQueueFn completion_release;
-  void (*completion_call)(void *completion, void *op);
-  /// `op->AddRef()`, `->Release()` (any `AsyncOp*`)
-  EeWonQueueFn op_add_ref;
-  EeWonQueueFn op_release;
-  /// `op->GetStatus()`, `->IsKilled()`, `->GetTimeout()`, `->GetCompletion()`
-  long (*op_status)(void *op);
-  bool (*op_killed)(void *op);
-  uint32_t (*op_timeout)(void *op);
-  void *(*op_completion)(void *op);
-  /// `op->SetCompletion(c)`, `->SetTimeout(t)`, `->RunAsync(t)`, `->Kill(true)`, `->ForceFinish(s)`,
-  /// `->SetRunAsyncImmediately(false)`
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_set_timeout)(void *op, uint32_t timeout);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonQueueFn op_kill;
-  void (*op_force_finish)(void *op, long status);
-  /// a socket op's `SetSocket(socket)` and the virtual `Duplicate()` (a new op, or null)
-  void (*op_set_socket)(void *op, void *socket);
-  void *(*op_duplicate)(void *op);
-  /// `dynamic_cast<QueueOpFastCompletion*>(completion)`'s original completion, or null
-  void *(*fast_original)(void *completion);
-  /// new objects: `ParamCompletion(StaticOpCallback, socket)`, `QueueOpFastCompletion(StaticOpCallback,
-  /// socket, original)`, a close timer (`AsyncOp` with `ParamCompletion(StaticCloseTimerCallback, socket)`),
-  /// `QueueCloseOp`, `CloseOp(socket)`
-  EeWonQueueNewFn new_op_completion;
-  void *(*new_fast_completion)(void *socket, void *original);
-  EeWonQueueNewFn new_close_timer;
-  EeWonQueueNewFn new_queue_close_op;
-  EeWonQueueNewFn new_close_op;
-  /// the socket's `Close()`, `IsValid()`, `GetType() == UDP`
-  EeWonQueueFn socket_close;
-  bool (*socket_valid)(void *socket);
-  bool (*socket_datagram)(void *socket);
-};
 
 /// What a LAN socket object calls back: the client's references and its back link (`client->mSocket = socket`).
 struct EeWonLanSocketHooks {
@@ -9026,38 +9753,12 @@ using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
                                            int32_t w,
                                            int32_t h);
 
-/// What the connection object calls back in the C++. One static table serves every connection. Every object is
-/// passed as its `RefCount*`.
-struct EeWonServerConnHooks {
-  /// `object->AddRef()`, `->Release()` (an auth context, an op or a completion)
-  void (*add_ref)(void *object);
-  void (*release)(void *object);
-  /// an op's `GetStatus()`, `IsKilled()`, `Kill(true)`, `SetCompletion(c)`, `RunAsync(t)`, `RunBlock(t)`
-  long (*op_status)(void *op);
-  bool (*op_killed)(void *op);
-  void (*op_kill)(void *op);
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_run_async)(void *op, long timeout);
-  void (*op_run_block)(void *op, uint32_t timeout);
-  /// `completion->Complete(AsyncOpPtr(op))`
-  void (*complete)(void *completion, void *op);
+/// What only the C++ `ServerConnection` answers: the peer authentication op's maker and its virtual `MsgCallback`.
+struct EeWonServerConnCpp {
   /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
   void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
-  /// `op->SetCompletion(new ParamCompletion(StaticConnectCallback, conn))`
-  void (*route_connect)(void *conn, void *op);
-  /// `new AsyncOp` with its completion `ParamCompletion(StaticKeepAliveCallback, conn)` (reference not taken)
-  void *(*new_keep_alive)(void *conn);
-  /// `SetRepeatCompletion(new ParamCompletion(StaticMsgCallback, conn))`, then `SetRepeatOp(new RecvMsgOp)`
-  void (*start_messages)(void *conn);
-  /// `SetRepeatCompletion(NULL)`
-  void (*stop_messages)(void *conn);
-  /// `QueueOp(new SendMsgOp(new ByteBuffer(bytes)), -1)`
-  void (*queue_message)(void *conn, const uint8_t *bytes, size_t length);
-  /// the socket's `Close()`, `GetLengthFieldSize()`, and `QueueSocket::CloseHook()`, `QueueSocket::KillHook()`
-  void (*close)(void *conn);
-  uint8_t (*length_field_size)(void *conn);
-  void (*queue_close_hook)(void *conn);
-  void (*queue_kill_hook)(void *conn);
+  /// `conn->MsgCallback(message)` (a `ByteBuffer*`)
+  void (*msg_callback)(void *conn, void *message);
 };
 
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
@@ -9174,87 +9875,6 @@ struct EeWonSmartAction {
   size_t text_len;
 };
 
-/// A C++ call on a socket (`AsyncSocket*`).
-using EeWonAsyncSocketFn = void(*)(void *socket);
-
-/// A transform's `Send` / `Recv` on a message (`MsgTransform*`, `ByteBufferPtr*`): its status.
-using EeWonTransformFn = long(*)(void *transform, void *message);
-
-/// What the socket object calls back in the C++. One static table serves every socket.
-struct EeWonAsyncSocketHooks {
-  /// the virtual `OpenHook`, `CloseHook`, `KillHook`
-  EeWonAsyncSocketFn open_hook;
-  EeWonAsyncSocketFn close_hook;
-  EeWonAsyncSocketFn kill_hook;
-  /// `transform->Send(message)`, `transform->Recv(message)`
-  EeWonTransformFn transform_send;
-  EeWonTransformFn transform_recv;
-  /// `delete transform`
-  void (*transform_free)(void *transform);
-};
-
-/// A C++ call on a socket op (`SocketOp*`).
-using EeWonSocketOpBaseFn = void(*)(void *op);
-
-/// A C++ call on a socket (`AsyncSocket*`).
-using EeWonSocketRefFn = void(*)(void *socket);
-
-/// What the op object calls back in the C++. One static table serves every socket op.
-struct EeWonSocketOpBaseHooks {
-  /// the virtual `Start()` and `Continue()`
-  long (*start)(void *op);
-  long (*continue_op)(void *op);
-  /// `Finish(status)`
-  void (*finish)(void *op, long status);
-  /// `GetMode()`
-  int32_t (*mode)(void *op);
-  /// `WONAPICore::AddToSocketThread(op)`
-  EeWonSocketOpBaseFn add_to_socket_thread;
-  /// `socket->AddRef()`, `socket->Release()`
-  EeWonSocketRefFn socket_add_ref;
-  EeWonSocketRefFn socket_release;
-  /// the socket's Rust object (`socket->mSock`)
-  EeWonAsyncSocket *(*socket_object)(void *socket);
-  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
-  EeWonSocketRefFn ref_add;
-  EeWonSocketRefFn ref_release;
-  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
-  const EeWonByteBuffer *(*bytes_of)(void *buffer);
-  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
-  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
-  /// result's
-  long (*transform)(void *socket, void **message, bool send);
-  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
-  /// modify time (`utime`)
-  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
-  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
-  int32_t (*file_close)(void *file);
-  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
-  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
-  void (*progress)(void *op, void *completion);
-  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
-  long (*accept)(void *socket, void **out);
-};
-
-/// A C++ call on a socket op (`SocketOp*`).
-using EeWonSocketOpFn = void(*)(void *op);
-
-/// What the socket thread calls back in the C++. One static table serves every socket thread.
-struct EeWonSocketOpHooks {
-  /// `op->GetStatus()`
-  long (*status)(void *op);
-  /// the virtual `op->Continue()`
-  long (*continue_op)(void *op);
-  /// `op->Finish(status)`
-  void (*finish)(void *op, long status);
-  /// `op->mInSocketThread = on`
-  void (*set_in_thread)(void *op, bool on);
-  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)`
-  EeWonSocketOpFn add_ref;
-  EeWonSocketOpFn release;
-  EeWonSocketOpFn kill;
-};
-
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
   uint8_t kind;
@@ -9321,31 +9941,6 @@ struct EeWonThreadBody {
   void *context;
 };
 
-/// An op callback: the op (a C++ `AsyncOp*`) and the context given with the table.
-using EeWonOpCall = void(*)(void *context, void *op);
-
-/// The C++ steps the timer thread takes on an op: `due` (it timed out: `Finish(WS_TimedOut)`, then the timer's
-/// reference released) and `purged` (the queue let it go: `Kill(true)`, then the reference released).
-struct EeWonTimerHooks {
-  EeWonOpCall due;
-  EeWonOpCall purged;
-  void *context;
-};
-
-/// The C++ steps the container takes on an op (`AsyncOp*`): references, its status, its run and its completion.
-struct EeWonContainerHooks {
-  EeWonOpCall add_ref;
-  EeWonOpCall release;
-  /// `mStatus==WS_Pending`
-  bool (*is_pending)(void *context, void *op);
-  bool (*completion_pending)(void *context, void *op);
-  EeWonOpCall start_run_async;
-  EeWonOpCall complete;
-  /// `Kill(true)`
-  EeWonOpCall kill;
-  void *context;
-};
-
 /// The strings `ToString` prints (each a pointer and a length).
 struct EeWonTitleText {
   const uint8_t *name;
@@ -9379,78 +9974,6 @@ struct EeWonTitleFlags {
   bool ascii_account_names;
 };
 
-/// A C++ call on one object.
-using EeWonUdpFn = void(*)(void *object);
-
-/// What the manager calls back in the C++. One static table serves every manager.
-struct EeWonUdpHooks {
-  /// any object's `AddRef()` / `Release()` (`RefCount*`)
-  EeWonUdpFn ref_add;
-  EeWonUdpFn ref_release;
-  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
-  /// `ForceFinish(s)`, `TimeLeft()`
-  long (*op_status)(void *op);
-  void *(*op_completion)(void *op);
-  void (*op_set_completion)(void *op, void *completion);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonUdpFn op_kill;
-  void (*op_finish)(void *op, long status);
-  void (*op_force_finish)(void *op, long status);
-  uint32_t (*op_time_left)(void *op);
-  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
-  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  EeWonIpAddr *(*recv_address)(void *op);
-  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
-  void (*recv_set_msg)(void *op, void *bytes);
-  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
-  void *(*new_recv_op)(const EeWonIpAddr *addr);
-  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
-  void *(*socket_new)();
-  EeWonUdpFn socket_kill;
-  void (*socket_set_broadcast)(void *socket, bool on);
-  long (*socket_bind)(void *socket, int32_t port);
-  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
-  /// `SetRepeatOp(new RecvBytesFromOp(size))`
-  void (*socket_repeat)(void *socket, void *manager, int32_t size);
-  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
-  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
-};
-
-/// A C++ call on one object.
-using EeWonUdpOpFn = void(*)(void *object);
-
-/// What the ops call back in the C++. One static table serves every op.
-struct EeWonUdpOpHooks {
-  /// any object's `AddRef()` / `Release()` (`RefCount*`)
-  EeWonUdpOpFn ref_add;
-  EeWonUdpOpFn ref_release;
-  /// an op's `GetMode()`, `GetTimeout()`, `GetStatus()`, `Finish(s)`, `RunAsync(t)`, `Kill(true)`
-  int32_t (*op_mode)(void *op);
-  long (*op_timeout)(void *op);
-  long (*op_status)(void *op);
-  void (*op_finish)(void *op, long status);
-  void (*op_run_async)(void *op, long timeout);
-  EeWonUdpOpFn op_kill;
-  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
-  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
-  /// `new QueueSocket(UDP)` bound to any port (`Fn2B0D90(0, false)`), a reference taken; a socket's `Kill()`
-  void *(*socket_new_bound)();
-  EeWonUdpOpFn socket_kill;
-  /// `QueueRecv`'s op: `QueueOp(new RecvBytesFromOp(1024)` completing to the receive op's `StaticRecvCallback`, `-1)`
-  void (*socket_queue_recv)(void *socket, void *op);
-  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
-  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
-  /// a manager's `QueueOp(op, timeout)` and `Send(bytes, addr)`
-  void (*manager_queue)(void *manager, void *op, uint32_t timeout);
-  void (*manager_send)(void *manager, void *bytes, const EeWonIpAddr *addr);
-  /// the reply wait: `new UDPManagerRecvOp(addr)` completing to the request op's `StaticRecvCallback`, its check the
-  /// request's `StaticCheckResponse`; a reference taken
-  void *(*new_wait)(void *request, const EeWonIpAddr *addr);
-  /// a receive op's Rust object
-  const EeWonUdpRecvOp *(*recv_object)(void *op);
-};
-
 /// One entry, to the C++ copy.
 using EeWonUserStatusSink = void(*)(void *context, uint64_t id, uint8_t status);
 
@@ -9460,17 +9983,6 @@ struct EeWonItemClick {
   bool up;
   int32_t x;
   int32_t y;
-};
-
-/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
-/// map's `int` key), its image's place, its clip rectangle and its image.
-struct EeWonRootGrab {
-  int32_t need;
-  int32_t order;
-  int32_t x;
-  int32_t y;
-  EeWonRect4 clip;
-  ptrdiff_t image;
 };
 
 /// An input event's fields, as the C++ forwarder reads them (`KeyEvent`, `MouseEvent`, `SizeEvent`, `InputEvent`).
@@ -10751,6 +11263,34 @@ ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
                                ptrdiff_t d,
                                ptrdiff_t e);
 
+/// A new colour button or chooser for the C++ object `obj`.
+EeWonEeColor *ee_won_eecolor_new(void *obj, EeWonEeColorKind kind, EeWonEeColorHostFn host);
+
+/// Releases the button's chooser and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_eecolor_new` (or is NULL) and is not used again.
+void ee_won_eecolor_free(EeWonEeColor *p);
+
+/// One inward call (`EeWonEeColorCall`).
+///
+/// # Safety
+/// `p` is live; a paint's `a` is a `Graphics*`.
+ptrdiff_t ee_won_eecolor_call(const EeWonEeColor *p,
+                              EeWonEeColorCall call,
+                              ptrdiff_t a,
+                              ptrdiff_t b,
+                              ptrdiff_t c);
+
+/// The palette's colour `i` (0..15).
+uint32_t ee_won_eecolor_palette(uint32_t i);
+
+/// Sets the palette from `n` colours (0x00rrggbb; at most 16 are read).
+///
+/// # Safety
+/// `colors` holds `n` values.
+void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
+
 /// A new lobby game for the C++ `game` (EELobbyGame's constructor).
 EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);
 
@@ -10774,6 +11314,15 @@ ptrdiff_t ee_won_eegame_call(const EeWonEeGame *p,
 /// EELobbyPlayer::IsTeammate's rule: team 0 (no team) has no teammates.
 bool ee_won_eegame_is_teammate(uint8_t mine, uint8_t theirs);
 
+/// Sets the glue's host (the C++ calls it once, before any other call).
+void ee_won_eeglue_set_host(EeWonEeGlueHostFn host);
+
+/// One inward call (`EeWonEeGlueCall`).
+///
+/// # Safety
+/// The call's pointer arguments as documented.
+ptrdiff_t ee_won_eeglue_call(EeWonEeGlueCall call, ptrdiff_t a, ptrdiff_t b, ptrdiff_t c);
+
 /// The number of game lobby strings.
 size_t ee_won_eeresource_count();
 
@@ -10782,6 +11331,13 @@ size_t ee_won_eeresource_count();
 /// # Safety
 /// `out` is writable.
 bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
+
+/// The row of a global's name (`EE_LOBBY_STRING`: the lobby's code names a string by its original global), -1 when
+/// the table has none.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+ptrdiff_t ee_won_eeresource_find(const char *name);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
@@ -11971,6 +12527,31 @@ void ee_won_getcert_setup(EeWonGetCert *op,
                           size_t length,
                           void *block);
 
+/// A new grabber for the C++ `BackgroundGrabber` `me`.
+EeWonGrabber *ee_won_grab_new(void *me, EeWonGuiHostFn host);
+
+/// # Safety
+/// `g` is null or from `ee_won_grab_new`, not freed before.
+void ee_won_grab_free(EeWonGrabber *g);
+
+/// One of the shell's methods (`EeWonGrabCall`).
+///
+/// # Safety
+/// `g` is a live grabber.
+ptrdiff_t ee_won_grab_call(const EeWonGrabber *g, EeWonGrabCall c, ptrdiff_t a, ptrdiff_t b);
+
+/// The root container's read of the grabber's state into `q` (its `image` left as it was).
+///
+/// # Safety
+/// `g` is a live grabber, `q` points at an `EeWonRootGrab`.
+void ee_won_grab_read(const EeWonGrabber *g, EeWonRootGrab *q);
+
+/// The translucent pass over `n` pixels at `pixels` (`tint`).
+///
+/// # Safety
+/// `pixels` points at `n` pixels (or `n` is 0).
+void ee_won_grab_tint(uint32_t *pixels, size_t n, int32_t level, int32_t color);
+
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///
 /// # Safety
@@ -12434,6 +13015,39 @@ uint32_t ee_won_gui_sel_foreground(uint32_t background,
                                    uint32_t foreground,
                                    int32_t mode,
                                    uint32_t original);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_image_component(bool has,
+                                       bool stretch,
+                                       bool tile,
+                                       int32_t image_width,
+                                       int32_t image_height,
+                                       int32_t width,
+                                       int32_t height,
+                                       EeWonDrawOp *out,
+                                       size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle(int32_t solid,
+                                 int32_t outline,
+                                 int32_t width,
+                                 int32_t height,
+                                 EeWonDrawOp *out,
+                                 size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle_3d(bool up,
+                                    int32_t thickness,
+                                    int32_t solid,
+                                    int32_t light,
+                                    int32_t dark,
+                                    int32_t width,
+                                    int32_t height,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
 
 /// `move_cursor` over a `GUIString`'s units.
 ///
@@ -14124,6 +14738,37 @@ void ee_won_imgf_crop(const EeWonRawPixels *src,
                       int32_t row_bytes,
                       int32_t height);
 
+/// `StretchImageFilter`'s pixel work over the plan's `n` operations at `ops` (`stretch_run`).
+///
+/// # Safety
+/// As `stretch_run`; `ops` points at `n` operations (or `n` is 0).
+void ee_won_imgf_stretch_run(const EeWonRawPixels *src,
+                             const EeWonRawPixels *dst,
+                             const EeWonDrawOp *ops,
+                             size_t n);
+
+/// RawImage32::GetNative's transparency pass (`mask32`).
+///
+/// # Safety
+/// As `mask32`.
+void ee_won_imgf_mask32(uint32_t *pixels,
+                        int32_t width,
+                        int32_t height,
+                        uint8_t *mask,
+                        int32_t pitch);
+
+/// RawImage8::GetNative's mask (`mask8`).
+///
+/// # Safety
+/// As `mask8`.
+void ee_won_imgf_mask8(const uint8_t *pixels,
+                       int32_t width,
+                       int32_t height,
+                       int32_t pixel_pitch,
+                       int32_t transparent,
+                       uint8_t *mask,
+                       int32_t pitch);
+
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
 EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
 
@@ -15672,12 +16317,13 @@ void ee_won_lobbyprefs_after_global_save(EeWonLobbyPrefs *p);
 /// `p` is live.
 void ee_won_lobbyprefs_after_user_load(EeWonLobbyPrefs *p);
 
-/// A new queue object for the C++ `socket` (the hooks get it), on the socket's lock `lock`.
+/// A new queue object for the C++ `socket`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `core` is the library's static table; `socket` and `lock` outlive the object.
 EeWonQueueSocket *ee_won_queuesocket_new(void *socket,
-                                         const EeWonQueueSocketHooks *hooks,
+                                         const EeWonCoreHooks *core,
                                          void *lock);
 
 /// Frees the queue object (its references go).
@@ -16336,11 +16982,15 @@ ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
                                  ptrdiff_t a,
                                  ptrdiff_t b);
 
-/// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+/// A new connection object for the C++ `conn`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table but the two of `cpp` (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `conn` and `lock` outlive the object.
-EeWonServerConn *ee_won_servconn_new(void *conn, const EeWonServerConnHooks *hooks, void *lock);
+/// `core` and `cpp` are static tables; `conn` and `lock` outlive the object.
+EeWonServerConn *ee_won_servconn_new(void *conn,
+                                     const EeWonCoreHooks *core,
+                                     const EeWonServerConnCpp *cpp,
+                                     void *lock);
 
 /// Frees the connection object (its references go).
 ///
@@ -16609,6 +17259,19 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
+/// `layout` for the C++ (`w`, `h` null for a layout that has no size out).
+///
+/// # Safety
+/// `me` is the component `host` serves; `w` and `h` are null or point at ints.
+void ee_won_skin_layout(EeWonSkinLayKind kind,
+                        void *me,
+                        EeWonGuiHostFn host,
+                        int32_t a,
+                        ptrdiff_t b,
+                        int32_t c,
+                        int32_t *w,
+                        int32_t *h);
+
 /// A new model: the ignore file's path (`path_len` bytes), the C++'s `wchar_t` size.
 ///
 /// # Safety
@@ -16723,9 +17386,7 @@ void ee_won_smart_dump(EeWonSmartRoute *r,
 ///
 /// # Safety
 /// `hooks` is a static table; `socket` outlives the object.
-EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
-                                         const EeWonAsyncSocketHooks *hooks,
-                                         int32_t kind);
+EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket, const EeWonCoreHooks *core, int32_t kind);
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
 ///
@@ -17002,7 +17663,7 @@ long ee_won_asyncsocket_recv_line(const EeWonAsyncSocket *s,
 ///
 /// # Safety
 /// `hooks` is a static table; `op` outlives the object.
-EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonSocketOpBaseHooks *hooks);
+EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonCoreHooks *core);
 
 /// Frees the op object (the socket's reference goes).
 ///
@@ -17199,9 +17860,11 @@ void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
 /// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
 void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
 
+/// A socket thread whose calls on its ops are answered in Rust over the library's `core` table (cppcore.rs).
+///
 /// # Safety
-/// `hooks` lives for the program.
-EeWonSocketThread *ee_won_socket_thread_new(const EeWonSocketOpHooks *hooks);
+/// `core` is the library's static table.
+EeWonSocketThread *ee_won_socket_thread_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `t` came from `ee_won_socket_thread_new` (or is null).
@@ -17229,11 +17892,12 @@ void ee_won_socket_thread_purge(const EeWonSocketThread *t);
 /// `t` is valid.
 size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 
-/// `SocketThread::DoOp` (a static of the C++ class).
+/// `SocketThread::DoOp` (a static of the C++ class), its calls answered in Rust over the library's `core` table.
 ///
 /// # Safety
-/// `hooks` is valid; `op` is a live op.
-bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
+/// `core` is the library's static table; `op` is a live op.
+bool ee_won_socket_thread_do_op(const EeWonCoreHooks *core,
+                                void *op);
 
 /// A new Rust Splitter for the C++ `component`, its calls out through `host`.
 EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
@@ -17382,6 +18046,96 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  const int32_t *b,
                                  size_t b_count);
 
+/// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
+EeWonSurface *ee_won_surface_new(int32_t format);
+
+/// `GetNewSurface(gDefaultSurfaceFormat)`.
+EeWonSurface *ee_won_surface_new_default();
+
+/// `SetDefaultSurfaceFormat(format)`.
+void ee_won_surface_set_default_format(int32_t format);
+
+/// `SURFACE_32_TO_555` / `SURFACE_32_TO_565` (`SurfaceColorFrom32`).
+uint32_t ee_won_surface_color_from32(uint32_t c, int32_t format);
+
+/// `SURFACE_555_TO_32` / `SURFACE_565_TO_32`.
+uint32_t ee_won_surface_color_to32(uint32_t p, int32_t format);
+
+/// The surface's destruction (its pixels freed).
+///
+/// # Safety
+/// `s` is null or from `ee_won_surface_new` / `ee_won_surface_duplicate`, not freed before.
+void ee_won_surface_free(EeWonSurface *s);
+
+/// `Create(width, height)`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_create(EeWonSurface *s, int32_t width, int32_t height);
+
+/// `Free()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_release(EeWonSurface *s);
+
+/// A field (`EeWonSurfaceField`).
+///
+/// # Safety
+/// `s` is a live surface.
+int32_t ee_won_surface_get(const EeWonSurface *s, EeWonSurfaceField f);
+
+/// `GetPixelsBase()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void *ee_won_surface_pixels(EeWonSurface *s);
+
+/// A drawing method (`EeWonSurfaceDraw` with its arguments in the original's order).
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_draw(EeWonSurface *s,
+                         EeWonSurfaceDraw op,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c,
+                         int32_t d,
+                         int32_t e,
+                         int32_t f);
+
+/// `GetPixel(x, y)`.
+///
+/// # Safety
+/// `s` is a live surface.
+uint32_t ee_won_surface_pixel(EeWonSurface *s, int32_t x, int32_t y);
+
+/// `CopySurface(src, mask, x, y, left, top, width, height)` (`mask` null: the copy without a mask).
+///
+/// # Safety
+/// `s` and `src` are live surfaces (possibly the same); `mask` is null or covers the source's rows.
+void ee_won_surface_copy(EeWonSurface *s,
+                         const EeWonSurface *src,
+                         const uint8_t *mask,
+                         int32_t x,
+                         int32_t y,
+                         int32_t left,
+                         int32_t top,
+                         int32_t width,
+                         int32_t height);
+
+/// `Duplicate()`: a new surface.
+///
+/// # Safety
+/// `s` is a live surface.
+EeWonSurface *ee_won_surface_duplicate(const EeWonSurface *s);
+
+/// The BITMAPINFO header's fields (`EeWonSurface::bitmap_info`) into `out` (eight ints).
+///
+/// # Safety
+/// `s` is a live surface, `out` points at eight ints.
+void ee_won_surface_bitmap_info(const EeWonSurface *s, int32_t *out);
+
 /// A new Rust TabBar for the C++ `component` over its container's Rust object `ct`, the bar of the control `ctrl`
 /// (NULL for none), its calls out through `host`.
 ///
@@ -17499,7 +18253,7 @@ void ee_won_thread_wait_for_stop(const EeWonThread *t);
 /// `t` is valid.
 void ee_won_thread_set_priority(const EeWonThread *t, int32_t priority);
 
-EeWonTimerThread *ee_won_timer_thread_new(EeWonTimerHooks hooks);
+EeWonTimerThread *ee_won_timer_thread_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `t` came from `ee_won_timer_thread_new`; its thread does not run any more.
@@ -17541,7 +18295,7 @@ uint32_t ee_won_timer_thread_wait_time(const EeWonTimerThread *t);
 /// `t` is valid.
 size_t ee_won_timer_thread_len(const EeWonTimerThread *t);
 
-EeWonOpContainer *ee_won_container_new(EeWonContainerHooks hooks);
+EeWonOpContainer *ee_won_container_new(const EeWonCoreHooks *core);
 
 /// # Safety
 /// `c` came from `ee_won_container_new`.
@@ -17663,11 +18417,13 @@ ptrdiff_t ee_won_tnode_call(const EeWonTNode *node,
                             ptrdiff_t b,
                             ptrdiff_t c);
 
-/// A new manager object for the C++ `manager`.
+/// A new manager object for the C++ `manager`; its calls are answered in Rust over the library's `core` table
+/// (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `manager` outlives the object.
-EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+/// `core` is the library's static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager,
+                                       const EeWonCoreHooks *core);
 
 /// Frees the object (its references go).
 ///
@@ -17736,9 +18492,10 @@ void ee_won_udpmanager_recv(const EeWonUdpManager *m,
 /// A receive op's object (`addr` null for any sender).
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table, `addr` null or a live value.
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (the op's calls are answered in Rust over it:
+/// cppcore.rs), `addr` null or a live value.
 EeWonUdpRecvOp *ee_won_udprecvop_new(void *op,
-                                     const EeWonUdpOpHooks *hooks,
+                                     const EeWonCoreHooks *core,
                                      const EeWonIpAddr *addr);
 
 /// Frees the object, its references given back.
@@ -17843,8 +18600,8 @@ void ee_won_udprecvop_run(const EeWonUdpRecvOp *r);
 /// A request op's object.
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table.
-EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonUdpOpHooks *hooks);
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (as the receive op's).
+EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonCoreHooks *core);
 
 /// Frees the object, its references given back.
 ///

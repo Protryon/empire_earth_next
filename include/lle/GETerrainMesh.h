@@ -45,19 +45,9 @@ public:
         GETextureCoordinate mUV[3];         // +0x18
     };
 
-    // A material of this frame as the renderer reads it (DX7Rasterizer DrawTerrain.cpp): its texture and its three
-    // polygon lists (the polygons, then the two NULL-terminated lists TransformToCamera fills) (EeGeTmMaterialView)
-    struct GETMMaterialView {
-        GETexture* mTexture;
-        GETMPolygon** mPolygons;
-        size_t mPolygonCount;
-        GETMPolygon** mIndices;
-        size_t mIndicesLength;
-        GETMPolygon** mStrips;
-        size_t mStripsLength;
-    };
-
     GETerrainMesh();
+    // the mesh's Rust object (the DX7 plug-in's terrain draws read its visible frame there: ee_dx7 draw_ffi.rs)
+    EeGeTerrainMesh* GetRust() const { return this->mRust; }
     virtual ~GETerrainMesh();
     GETerrainMesh(const GETerrainMesh&) = delete;
     GETerrainMesh& operator=(const GETerrainMesh&) = delete;
@@ -70,13 +60,6 @@ public:
     void GetClosestTile(const GE3DLine& inLine, long& outX, long& outY) const;
     void GetClosestTile(const GE3DPoint& inPoint, long& outX, long& outY) const;
     unsigned char GetColorTableIndex(unsigned long inX, unsigned long inY) const;
-    // the skirt (edge) and cliff vertices of this frame: as many world points as render vertices
-    unsigned long GetEdgeVertexCount() const;
-    GETMRenderVertex* const* GetEdgeRenderVertices() const;
-    const GE3DPoint* GetEdgeWorldPoints() const;
-    unsigned long GetCliffVertexCount() const;
-    GETMRenderVertex* const* GetCliffRenderVertices() const;
-    const GE3DPoint* GetCliffWorldPoints() const;
     const GE3DPlane& GetFrontPlane() const;
     unsigned long GetGlobalWaterSetID() const;
     bool GetIsValidPoint(unsigned long inX, unsigned long inY) const;
@@ -91,13 +74,6 @@ public:
     unsigned long GetNumVisibleTileRows() const;
     GETextureSet* GetRegisteredTextureSet(unsigned long inID) const;
     const GE3DPlane& GetRightPlane() const;
-    unsigned long GetTerrainMaterialCount() const;
-    // the texture -> terrain material index map, in texture order
-    void GetTerrainMaterialMap(std::vector<std::pair<GETexture*, unsigned long> >& outEntries) const;
-    // material inIndex of the terrain (or with inWater, the water) material list
-    void GetMaterialView(bool inWater, unsigned long inIndex, GETMMaterialView& outView);
-    bool (&GetTerrainPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];
-    GETMRenderVertex (&GetTerrainRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];
     void GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const;
     void GetTerrainVisibleTileDimensions(unsigned long& outWidth, unsigned long& outHeight) const;
     unsigned long GetTextureSetID(unsigned long inX, unsigned long inY) const;
@@ -106,11 +82,7 @@ public:
     void GetVisibleTileRow(unsigned long inIndex, long& outY, long& outStartX, long& outEndX) const;
     float GetVisibleSpaceTilePercentage() const;
     float GetVisibleWaterTilePercentage() const;
-    const GEColor& GetWaterColor(unsigned long inX, unsigned long inY) const;
     unsigned char GetWaterInfo(unsigned long inX, unsigned long inY) const;
-    unsigned long GetWaterMaterialCount() const;
-    bool (&GetWaterPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];
-    GETMRenderVertex (&GetWaterRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];
     float GetZ(unsigned long inX, unsigned long inY) const;
     bool Intersects(const GE3DLine& inLine, float& outDistance) const;
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);

@@ -27,8 +27,14 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
 /// `kEffect3DCommandConfirmation`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION = 65;
 
+/// `kEffect2DBattlefieldAmbient`, `kEffect2DParticle`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DECAL = 50;
+
 /// The shield.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
+
+/// `kEffect2DLightGlow`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_LIGHT_GLOW = 13;
 
 /// `kEffect3DHurricane`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_HURRICANE = 36;
@@ -371,6 +377,12 @@ struct EeGfxEffectLists;
 
 /// The effect manager's containers (opaque to the C++).
 struct EeGfxEffectStore;
+
+/// The glows (owned by the record).
+struct EeGfxGlowSpots;
+
+/// The icons' offsets and the frame's copy (owned by the record).
+struct EeGfxMarchingLists;
 
 /// The effect's orbitals (`mOrbitals`, copies of the graphic's) and the angles the draw uses (`mAngles`).
 struct EeGfxOrbitals;
@@ -741,6 +753,9 @@ struct EeGfxEffectAmbient {
   float size;
   /// `mHidden`: 1 off the map or on a slope
   float hidden;
+  /// the queue's copy of the age and the size it draws (`mDrawAge`, `mDrawSize`)
+  float draw_age;
+  float draw_size;
 };
 
 /// `EEEDamagedEffect`'s state: its child effects' handles (owned: made on first use, freed with the record) and the
@@ -1079,6 +1094,34 @@ struct EeGfxEffectSprite {
   float fade;
 };
 
+/// The marching icons' state.
+struct EeGfxEffectMarching {
+  /// the offsets (made on first use; owned by the record)
+  EeGfxMarchingLists *lists;
+  /// `mAreaEffectType` (saved)
+  int32_t area_type;
+  /// `mLocation`: the unit's position for the draw
+  EeGe3DPoint location;
+  /// `mAngularOffset`, `mRotationSpeed` (radians per second) (saved)
+  float angle;
+  float speed;
+  /// `mIconCount` (saved)
+  uint32_t count;
+  /// `mVisible`
+  bool visible;
+};
+
+/// The light glow's state.
+struct EeGfxEffectGlow {
+  /// the spots (made by the set-up; owned by the record)
+  EeGfxGlowSpots *spots;
+  /// `mAge` (ms; saved) and the queue's fade-in `mDrawAge` (0..1)
+  float age;
+  float draw_age;
+  /// `mHidden`: the unit is off the visible terrain
+  bool hidden;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -1142,6 +1185,10 @@ struct EeGfxEffectRecord {
   EeGfxEffectVolcano volcano;
   /// the 2D sprites' (`effect_sprite.rs`)
   EeGfxEffectSprite sprite;
+  /// the marching icons' (`effect_icons.rs`)
+  EeGfxEffectMarching marching;
+  /// the light glow's (`effect_glow.rs`)
+  EeGfxEffectGlow glow;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1263,6 +1310,22 @@ struct EeGfxParticleGround {
   bool (*is_space_tile)(void *context, uint32_t x, uint32_t y);
   float (*mesh_z)(void *context, float x, float y);
   void (*mesh_normal)(void *context, float x, float y, EeGe3DPoint *normal);
+};
+
+/// One glow (`EEE2DLightGlowSpot`).
+struct EeGfxGlowSpot {
+  /// `mPosition` and the queue's copy
+  EeGe3DPoint position;
+  EeGe3DPoint draw_position;
+  /// `mColor` (the name's 0..255 over 255)
+  EeGfxColor color;
+  /// `mOnTime`, `mPeriod`, `mStart` (ms): lit while `(age - start) % period <= on`
+  uint32_t on_time;
+  uint32_t period;
+  uint32_t start;
+  /// `mVisible` and the queue's copy
+  bool visible;
+  bool draw_visible;
 };
 
 /// What a decal's constructor reads from its graphic effect: `GetStartSize()`, `GetSize()`, `mIntParam1`, `mFlag1`.
@@ -1786,6 +1849,47 @@ struct EeGfx2DPart {
   bool done;
 };
 
+/// What `IsIconShown` reads of the effect's unit.
+struct EeGfxIconUnit {
+  /// the effect has a unit
+  bool has_unit;
+  /// its class is a land building, and its tile size
+  bool land_building;
+  int32_t tile_size;
+  /// it has a player, and the player's id
+  bool has_player;
+  uint32_t player;
+  /// its complex unit's location's x and y
+  float x;
+  float y;
+};
+
+/// The set-up's unit: its light tags (0 without a list or tags; the host keeps the list for the names) and where it
+/// stands (its complex unit's location, else its tile's centre on the terrain).
+struct EeGfxGlowSetUp {
+  uint32_t count;
+  EeGe3DPoint position;
+};
+
+/// The glows' placing: whether they show (not for another player's cloaked unit or an unfinished land building),
+/// whether the unit has light tags (the host keeps the list, the frame and the scaled location for `glow_point`),
+/// and where it stands.
+struct EeGfxGlowPlace {
+  bool show;
+  bool has_tags;
+  EeGe3DPoint position;
+};
+
+/// The visible terrain's bottom-left tile and size, and the unit's tile.
+struct EeGfxGlowArea {
+  uint32_t x;
+  uint32_t y;
+  uint32_t width;
+  uint32_t height;
+  int32_t tile_x;
+  int32_t tile_y;
+};
+
 /// The C++'s answers for an `EEE2DRust`.
 struct EeGfxEffect2DHost {
   void *context;
@@ -1872,6 +1976,34 @@ struct EeGfxEffect2DHost {
   /// the kept graphic object's orbitals (`GetOrbitalCount`, `GetOrbital`: model, speed and angle)
   uint32_t (*orbital_count)(void *context);
   EeGfxOrbital (*orbital)(void *context, uint32_t index);
+  /// the marching icons': the unit as `IsIconShown` reads it; whether `player` has the area effect `kind` at (x, y)
+  /// (`gAEManager.HasEffect` with the unit's own list)
+  EeGfxIconUnit (*icon_unit)(void *context);
+  bool (*area_effect)(void *context, int32_t kind, float x, float y, uint32_t player);
+  /// the unit's pending area effects (`mNumAreaEffects`), and its new count (`FnE123D` at 0)
+  int32_t (*area_effects)(void *context);
+  void (*set_area_effects)(void *context, int32_t count);
+  /// the unit's type is in its player's active group (a town centre or capitol also with 0x23 or 0x29 there)
+  bool (*icons_selected)(void *context);
+  /// the unit is the current player's and built
+  bool (*icons_owner)(void *context);
+  /// `gWorld.GetNumGhostUnits()`
+  uint32_t (*ghost_units)(void *context);
+  /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
+  EeGfx2DPoint (*ground_point)(void *context, EeGe3DPoint at);
+  /// the light glow's: the set-up's unit (its light tags kept for the names), tag `index`'s name into `out` (its
+  /// length returned; `capacity` bytes written at most)
+  EeGfxGlowSetUp (*glow_set_up)(void *context);
+  uint32_t (*glow_tag_name)(void *context, uint32_t index, uint8_t *out, uint32_t capacity);
+  /// the placing's unit (its tags, frame and scaled location kept), and tag `index`'s point
+  EeGfxGlowPlace (*glow_place)(void *context);
+  EeGe3DPoint (*glow_point)(void *context, uint32_t index);
+  /// the visible terrain and the unit's tile; its visible rows
+  EeGfxGlowArea (*glow_area)(void *context);
+  uint32_t (*glow_rows)(void *context);
+  /// the particle's move facts (`EEParticleTick` at the effect's position) and the terrain it bounces on
+  EeGfxParticleTick (*particle_tick)(void *context);
+  EeGfxParticleGround (*particle_ground)(void *context);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -2770,22 +2902,6 @@ int32_t ee_gfx_effect_smoke_set_up(const EeGfxEffectRecord *r,
                                    const EeGfxSmokeSetUp *setup,
                                    const EeGfxSmokeHost *host);
 
-/// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
-/// points into `out`; their count.
-///
-/// # Safety
-/// `out` has room for `capacity` points.
-size_t ee_gfx_effect_marching_offsets(int32_t kind,
-                                      int32_t count,
-                                      float angle,
-                                      float radius,
-                                      float half_side,
-                                      EeGe3DPoint *out,
-                                      size_t capacity);
-
-/// The square icons' bounding radius (`sqrt(2 r r)`).
-float ee_gfx_effect_square_icons_radius(float half_side);
-
 /// The particles' `SetUp` state (their draws).
 ///
 /// # Safety
@@ -2828,6 +2944,24 @@ int32_t ee_gfx_effect_load_particle(EeGfxEffectRecord *r,
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_effect_save_particle(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
+/// The marching icons' offsets (`which` 0) or the frame's copy (1) into `out` (up to `capacity`); their count (the
+/// golden driver's view of the record).
+///
+/// # Safety
+/// `r` is a live record; `out` has room for `capacity` points (null with 0).
+size_t ee_gfx_effect_marching_points(const EeGfxEffectRecord *r,
+                                     int32_t which,
+                                     EeGe3DPoint *out,
+                                     size_t capacity);
+
+/// The light glow's spots into `out` (up to `capacity`); their count (the golden driver's view of the record).
+///
+/// # Safety
+/// `r` is a live record; `out` has room for `capacity` spots (null with 0).
+size_t ee_gfx_effect_glow_spots(const EeGfxEffectRecord *r,
+                                EeGfxGlowSpot *out,
+                                size_t capacity);
+
 /// `EEE2DBattlefieldAmbient`'s constructor at a point (its draws and the terrain's corners).
 ///
 /// # Safety
@@ -2836,24 +2970,6 @@ void ee_gfx_effect_ambient_new(EeGfxEffectRecord *r,
                                const EeGe3DPoint *at,
                                const EeGfxAmbientNew *n,
                                const EeGfxParticleGround *ground);
-
-/// `EEE2DBattlefieldAmbient::Step`: 7 when it ends.
-///
-/// # Safety
-/// `r` is a live record.
-int32_t ee_gfx_effect_ambient_step(EeGfxEffectRecord *r, float tick_seconds, uint32_t duration);
-
-/// `EEE2DBattlefieldAmbient::Load`'s own reads.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_effect_load_ambient(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
-
-/// `EEE2DBattlefieldAmbient::Save`'s own writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_effect_save_ambient(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEEDamagedEffect::Step`: 7 when it ends. The lists are out of the record while the C++ creates and destroys.
 ///

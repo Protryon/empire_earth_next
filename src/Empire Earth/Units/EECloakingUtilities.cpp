@@ -27,7 +27,7 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EETileCoordinate.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEUCBuilding.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEAIKindIDs.h"
 
 // 0x2035ef (EEGhostUnit.cpp's spelling): the terrain kind blocks a wall piece's ground

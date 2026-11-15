@@ -315,24 +315,20 @@ impl ClientHost for Replay {
         *out = v.parse().unwrap();
         r == "1"
     }
-    fn msg_get(&self, m: Msg, f: MsgField) -> usize {
-        let a = self.op(format!("c20 m{m} {}", f as u32));
-        if f == MsgField::XferData {
-            return self.keep(unhex(&a));
+    fn msg_get(&self, m: Msg, i: u32) -> usize {
+        let a = self.op(format!("c20 m{m} {i}"));
+        // a block: its bytes ("x" and their hex), kept for the client to read
+        if let Some(h) = a.strip_prefix('x') {
+            return self.keep(unhex(h));
         }
         a.parse::<i64>().unwrap() as usize
     }
-    fn msg_new(&self, kind: NewMsg, a: usize, b: usize, c: usize, d: usize) -> Msg {
-        let args = match kind {
-            NewMsg::TickResponse => format!("c21 0 {a} {b} {c}"),
-            NewMsg::StopGameResponse => "c21 1".into(),
-            NewMsg::StartGameResponse => format!("c21 2 {a}"),
-            NewMsg::UnPauseGameResponse => format!("c21 3 {a}"),
-            NewMsg::PauseGameResponse => format!("c21 4 {a}"),
-            NewMsg::XferMessage => format!("c21 5 {}", hex(bytes_at(a, 40))),
-            NewMsg::XferStatus => format!("c21 6 {} {c}", (a & 0xff) | (b & 0xff) << 8 | (d & 0xff) << 16),
-        };
-        id(&self.op(args))
+    fn msg_new(&self, message_type: u8, values: &[u32]) -> Msg {
+        let v: String = values.iter().map(|v| format!(" {v}")).collect();
+        id(&self.op(format!("c21 {message_type}{v}")))
+    }
+    fn msg_import(&self, data: usize) -> Msg {
+        id(&self.op(format!("c42 {}", hex(bytes_at(data, 40)))))
     }
     fn msg_add_input(&self, response: Msg, input: Msg) -> i32 {
         self.num(format!("c22 m{response} m{input}")) as i32
@@ -593,7 +589,7 @@ fn the_tick_rules_and_the_throttle_are_the_originals() {
     let golden = sequences();
     let s = golden.iter().flatten().collect::<Vec<_>>();
     assert!(s.iter().any(|l| l.as_str() == "ret 7"), "no input was dropped in the record");
-    assert!(s.iter().any(|l| l.starts_with("op c21 0 ")), "no tick was answered in the record");
+    assert!(s.iter().any(|l| l.starts_with("op c21 39 ")), "no tick was answered in the record");
     assert!(s.iter().any(|l| l.starts_with("op c37")), "no connection was lost in the record");
     assert!(s.iter().any(|l| l.starts_with("op c25 ")), "no transfer was written in the record");
 }

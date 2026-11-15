@@ -895,8 +895,7 @@ void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERe
 
 // FillUnit's classes, included here (after the unit's init chains) so their statics do not renumber the chains
 #include "ee/EEWheel.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEAreaEffectTemplate.h"
 
@@ -1063,7 +1062,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
             outUnit->mFogScale = 0.6f;
         }
         if (theComplex->mUnitClass->mCategory == kUnitCategoryGate) {
-            EEUCGate* theGate = dynamic_cast<EEUCGate*>(theComplex->mUnitClass);
+            EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theComplex->mUnitClass);
             if (theComplex->GetHitPoints() > 0 && theGate->IsSidePart(theComplex)) {
                 outUnit->mSubModelOffsetScale = theComplex->GetOpenFraction();
                 outUnit->mHasSubModelOffset = true;

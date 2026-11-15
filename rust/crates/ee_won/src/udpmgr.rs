@@ -486,17 +486,18 @@ macro_rules! mgr {
     };
 }
 
-/// A new manager object for the C++ `manager`.
+/// A new manager object for the C++ `manager`; its calls are answered in Rust over the library's `core` table
+/// (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `manager` outlives the object.
+/// `core` is the library's static table; `manager` outlives the object.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_udpmanager_new(
     manager: *mut c_void,
-    hooks: *const EeWonUdpHooks,
+    core: *const crate::cppcore::EeWonCoreHooks,
 ) -> *mut EeWonUdpManager {
-    // SAFETY: the caller's static table
-    Box::into_raw(Box::new(EeWonUdpManager::new(manager, unsafe { &*hooks })))
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonUdpManager::new(manager, &crate::cppcore::NATIVE_UDP)))
 }
 /// Frees the object (its references go).
 ///

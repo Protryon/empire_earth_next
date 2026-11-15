@@ -4,40 +4,23 @@
 // setters, EEUIEndCinematicModeEvent::ProcessEvent, the main game form's button tests 0x26fc22..0x27115c and its
 // UpdateKeyboard/UpdateMouse). Unit flags: the exe module set.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
 #include "lle/SESoundManager.h"
 #include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
 #include "lle/UIEntityGroup.h"
 #include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "lle/UIButton.h"
@@ -52,16 +35,13 @@
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "lle/UResourceFile.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
-#include "lle/UITextLabel.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEGraphics.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEAction.h"
 #include "ee/EEABuild.h"
 #include "ee/EEACalamity.h"
 #include "ee/EEUIFMainGame.h"
@@ -77,7 +57,6 @@
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
-#include "ee/EECameraControl.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EEGhostUnit.h"
@@ -246,26 +225,25 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
         NEMessage* theMessage;
         switch (inA) {
         case EE_SCREENS_SB_SEND_UNLOAD:
-            theMessage = new EEMUnloadTransport(thePress.mTransport->mUnitID, thePress.mTransport->GetTileX(),
-                                                thePress.mTransport->GetTileY());
+            theMessage = new EEMRecord(kMessageUnloadTransport, {thePress.mTransport->mUnitID, thePress.mTransport->GetTileX(), thePress.mTransport->GetTileY()});
             break;
         case EE_SCREENS_SB_SEND_STOP: theMessage = new EEMRecord(kMessageStopActiveGroup); break;
         case EE_SCREENS_SB_SEND_DISBAND: theMessage = new EEMRecord(kMessageDisband); break;
         case EE_SCREENS_SB_SEND_SELF_DESTRUCT: theMessage = new EEMRecord(kMessageSelfDestruct); break;
-        case EE_SCREENS_SB_SEND_PATROL: theMessage = new EEMPatrol(-1); break;
-        case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMReplantFarms(-1); break;
+        case EE_SCREENS_SB_SEND_PATROL: theMessage = new EEMRecord(kMessagePatrol, {-1}); break;
+        case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMRecord(kMessageReplantFarms, {-1}); break;
         case EE_SCREENS_SB_SEND_CLEAR_AIRPORT: theMessage = new EEMRecord(kMessageClearAirportCommands); break;
         case EE_SCREENS_SB_SEND_EXPLORE: theMessage = new EEMRecord(kMessageExplore); break;
-        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMLockUnlock(inB != 0); break;
-        case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMPackUnpack(inB != 0); break;
+        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMRecord(kMessageLockUnlock, {inB != 0}); break;
+        case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMRecord(kMessagePackUnpack, {inB != 0}); break;
         case EE_SCREENS_SB_SEND_FANATIC: theMessage = new EEMRecord(kMessageGoFanatic); break;
         case EE_SCREENS_SB_SEND_JIT: theMessage = new EEMRecord(kMessageJITManufacturing); break;
-        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMExchangeResources((inB & 1) != 0, (long)(inB >> 1), inC != 0); break;
+        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMRecord(kMessageExchangeResources, {(inB & 1) != 0, (long)(inB >> 1), inC != 0}); break;
         case EE_SCREENS_SB_SEND_RESEARCH:
-            theMessage = new EEMResearchTechnology(theButton->mUnitID, theButton->mTechnology, inB != 0);
+            theMessage = new EEMRecord(kMessageResearchTechnology, {theButton->mUnitID, theButton->mTechnology, inB != 0});
             break;
         default:
-            theMessage = new EEMRemoveTechnology(theButton->mUnitID, theButton->mTechnology, false, inB != 0);
+            theMessage = new EEMRecord(kMessageRemoveTechnology, {theButton->mUnitID, theButton->mTechnology, false, inB != 0});
             break;
         }
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
@@ -631,7 +609,7 @@ void EEUIFMGStatusButton::TabbedTo()
 // (EEMEndCinematic takes the end time as a float)
 long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gCommunications->ProcessLocalUserInput(new EEMEndCinematic(gSavedGameSpeed), kSlotNone);
+    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone);
     return kErrorOK;
 }
 
@@ -795,7 +773,7 @@ long EEModeAttackGround(void* inLocation, void* inForm)
     EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
     if (EEGetFirstSelectedUnit(theUnit) == true) {
         if (theUnit->mComplexUnit->DistanceSquared3D(thePoint) >= UMSquare(theUnit->GetUnitClass()->mMinRange))
-            gCommunications->ProcessLocalUserInput(new EEMAttackGround(thePoint.GetX(), thePoint.GetY()), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackGround, {thePoint.GetX(), thePoint.GetY()}), kSlotNone);
         EEMakeCalamityEffect(thePoint, theTarget);
     }
     theForm->SetUIState(0);
@@ -936,7 +914,7 @@ long EEModeGarrison(void* inLocation, void* inForm)
             if (theOwn && theComplex && theComplex->mIsBuilt && theOwn->mPlayer == theComplex->mPlayer &&
                 theComplex->GetUnitClass()->mGarrisonCapacity != theComplex->mGarrisonCount) {
                 gCommunications->ProcessLocalUserInput(
-                    new EEMLoadGarrison(theTarget->GetUnitID(), theOwn->mUnitID, 0), kSlotNone);
+                    new EEMRecord(kMessageLoadGarrison, {theTarget->GetUnitID(), theOwn->mUnitID, 0}), kSlotNone);
                 EEOrderAtCursor(theLocation, theComplex);
                 goto done;
             }
@@ -989,7 +967,7 @@ long EEModeUnload(void* inLocation, void* inForm)
     if (EEGetFirstSelectedUnit(theUnit) == true) {
         if (theUnit) {
             gCommunications->ProcessLocalUserInput(
-                new EEMUnloadTransport(theUnit->GetComplexUnit()->GetUnitID(), theX, theY), kSlotNone);
+                new EEMRecord(kMessageUnloadTransport, {theUnit->GetComplexUnit()->GetUnitID(), theX, theY}), kSlotNone);
             EEOrderAtCursor(theLocation, theTarget);
         }
     } else {
@@ -1026,7 +1004,7 @@ long EEModeHeal(void* inLocation, void* inForm)
                     if (!UIManager::GetLMouseButton()->JustUnpressed() &&
                         !UIManager::GetRMouseButton()->JustUnpressed())
                         goto done;
-                    gCommunications->ProcessLocalUserInput(new EEMHealUnit(theComplex->mUnitID), kSlotNone);
+                    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageHealUnit, {theComplex->mUnitID}), kSlotNone);
                 } else {
                     gMouse->mPointer = 0x13;
                     goto done;
@@ -1098,7 +1076,7 @@ long EEModeConvert(void* inLocation, void* inForm)
             if (!UIManager::GetLMouseButton()->JustUnpressed() && !UIManager::GetRMouseButton()->JustUnpressed())
                 goto done;
             gISKeyboard->GetEntity(kKeyShift, theKey);
-            gCommunications->ProcessLocalUserInput(new EEMAttackUnit(theComplex->mUnitID, theKey->GetValue() > 0, true),
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackUnit, {theComplex->mUnitID, theKey->GetValue() > 0, true}),
                                                    kSlotNone);
             if (theKey->GetValue())
                 goto done;
@@ -1256,8 +1234,7 @@ long EEModeRally(void* inLocation, void* inForm)
                     theTargetID = -1;
                 EEComplexUnit* theComplex = theUnit->mComplexUnit;
                 gCommunications->ProcessLocalUserInput(
-                    new EEMSetRallyGoal(theComplex->GetUnitID(), GE2DPoint(thePoint.GetX(), thePoint.GetY()),
-                                        theTargetID, theShift),
+                    new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(thePoint.GetX(), thePoint.GetY()), theTargetID, theComplex->GetUnitID(), theShift}),
                     kSlotNone);
             }
         } else

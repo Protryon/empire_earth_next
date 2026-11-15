@@ -1,77 +1,96 @@
 // C:\EEX\Low-Level Engine\Utilities\UGraph.h (RECONSTRUCTION). Requires lle/LowLevelEngine.h, lle/U2DPoint.h,
-// lle/GEColor.h. A set of named series of integer points (UIGraph/UILineGraph draw it). UGraph.cpp
-// (0x1005726b..0x10058d38) is the first includer: the U2DPoint key chains, then these classes' inline members in
-// declaration order (getters/setters, then the implicit copy ctors and dtors; most getters are ICF-folded into
-// earlier twins), then the out-of-line members.
+// lle/GEColor.h. A set of named series of integer points (UIGraph/UILineGraph draw it).
+//
+// Whole in Rust (rust/crates/ee_util graph.rs, LLE lane round 7): a series is an EeUtilSeries and a graph's series and
+// range an EeUtilGraph; these classes hold the pointer and forward. GetSeries hands out the graph's slot for a series
+// (a UGraphSeries is that one pointer), GetDataPoint and GetColor the Rust values' addresses (laid out as U2DPoint<long>
+// and GEColor): each lasts until its container changes, as the C++ vectors' did. The title and labels stay here.
 #ifndef LLE_UGRAPH_H
 #define LLE_UGRAPH_H
 
-class LLE_API UGraphSeries {                // sizeof 0x30 (UGraph::GetSeriesCount divides by 0x30)
-public:
-    UGraphSeries();
-    // implicit copy ctor (0x572f1) and dtor (0x57331); operator= is user-defined
-    UGraphSeries& operator=(const UGraphSeries& inSeries);
+#include "rust/ee_util.h"
 
-    void AddDataPoint(const U2DPoint<long>& inPoint);
-    void ClearAllDataPoints();
-    const GEColor& GetColor() const { return this->mColor; }
-    const U2DPoint<long>& GetDataPoint(unsigned long inIndex) const;
-    const unsigned long GetDataPointCount() const { return this->mDataPoints.size(); }
-    const bool GetIsEnabled() const { return this->mIsEnabled; }
-    long GetMaxX() const { return this->mMaxX; }
-    long GetMaxY() const { return this->mMaxY; }
-    long GetMinX() const { return this->mMinX; }
-    long GetMinY() const { return this->mMinY; }
-    void SetColor(const GEColor& inColor) { this->mColor = inColor; }
-    void SetIsEnabled(bool inIsEnabled) { this->mIsEnabled = inIsEnabled; }
+class LLE_API UGraphSeries {                // one pointer (was sizeof 0x30)
+public:
+    UGraphSeries() : mSeries(ee_util_series_new()) {}
+    UGraphSeries(const UGraphSeries& inSeries) : mSeries(ee_util_series_clone(inSeries.mSeries)) {}
+    ~UGraphSeries() { ee_util_series_free(this->mSeries); }
+    UGraphSeries& operator=(const UGraphSeries& inSeries)
+        { ee_util_series_assign(this->mSeries, inSeries.mSeries); return *this; }
+
+    // replaces the last point if it has the same x, keeps the points sorted by x then y, recomputes min/max
+    void AddDataPoint(const U2DPoint<long>& inPoint) { ee_util_series_add_point(this->mSeries, inPoint.mX, inPoint.mY); }
+    void ClearAllDataPoints() { ee_util_series_clear(this->mSeries); }
+    const GEColor& GetColor() const { return *reinterpret_cast<const GEColor*>(ee_util_series_color(this->mSeries)); }
+    const U2DPoint<long>& GetDataPoint(unsigned long inIndex) const
+        { return *reinterpret_cast<const U2DPoint<long>*>(ee_util_series_point(this->mSeries, inIndex)); }
+    const unsigned long GetDataPointCount() const { return ee_util_series_count(this->mSeries); }
+    const bool GetIsEnabled() const { return ee_util_series_enabled(this->mSeries); }
+    long GetMaxX() const { return ee_util_series_range(this->mSeries)->max_x; }
+    long GetMaxY() const { return ee_util_series_range(this->mSeries)->max_y; }
+    long GetMinX() const { return ee_util_series_range(this->mSeries)->min_x; }
+    long GetMinY() const { return ee_util_series_range(this->mSeries)->min_y; }
+    void SetColor(const GEColor& inColor)
+        { ee_util_series_set_color(this->mSeries, reinterpret_cast<const EeUtilColor*>(&inColor)); }
+    void SetIsEnabled(bool inIsEnabled) { ee_util_series_set_enabled(this->mSeries, inIsEnabled); }
 
 private:
-    void RecomputeMinMaxValues();
-
-    std::vector<U2DPoint<long> > mDataPoints;   // +0x00 sorted by x
-    GEColor mColor;                         // +0x10
-    long mMinX;                             // +0x1c
-    long mMaxX;                             // +0x20
-    long mMinY;                             // +0x24
-    long mMaxY;                             // +0x28
-    bool mIsEnabled;                        // +0x2c
+    friend class UGraph;
+    EeUtilSeries* mSeries;
 };
 
-class LLE_API UGraph {                      // sizeof 0x5c
+class LLE_API UGraph {                      // a pointer and the three strings (was sizeof 0x5c)
 public:
-    UGraph();
-    // implicit copy ctor (0x5738d) and dtor (0x573de); operator= is user-defined
-    UGraph& operator=(const UGraph& inGraph);
+    UGraph() : mGraph(ee_util_graph_new())
+    {
+        this->mXLabel = "";
+        this->mYLabel = "";
+        this->mTitle = "";
+    }
+    UGraph(const UGraph& inGraph)
+        : mGraph(ee_util_graph_clone(inGraph.mGraph)), mTitle(inGraph.mTitle), mXLabel(inGraph.mXLabel),
+          mYLabel(inGraph.mYLabel) {}
+    ~UGraph() { ee_util_graph_free(this->mGraph); }
+    UGraph& operator=(const UGraph& inGraph)
+    {
+        if (&inGraph != this) {
+            ee_util_graph_assign(this->mGraph, inGraph.mGraph);
+            this->mTitle = inGraph.mTitle;
+            this->mXLabel = inGraph.mXLabel;
+            this->mYLabel = inGraph.mYLabel;
+        }
+        return *this;
+    }
 
-    void AddSeries(const UGraphSeries& inSeries);
-    void ClearAllSeries();
-    void CombineGraph(const UGraph& inGraph, UGraph& outGraph);
-    long GetMaxX() const { return this->mMaxX; }
-    long GetMaxY() const { return this->mMaxY; }
-    long GetMinX() const { return this->mMinX; }
-    long GetMinY() const { return this->mMinY; }
-    const UGraphSeries& GetSeries(unsigned long inIndex) const;
-    const unsigned long GetSeriesCount() const { return this->mSeries.size(); }
+    // adds a copy of the series and widens min/max to include it
+    void AddSeries(const UGraphSeries& inSeries) { ee_util_graph_add_series(this->mGraph, inSeries.mSeries); }
+    void ClearAllSeries() { ee_util_graph_clear(this->mGraph); }
+    // adds to outGraph, per series index of both, the sum of their values at every x either has
+    void CombineGraph(const UGraph& inGraph, UGraph& outGraph)
+        { ee_util_graph_combine(this->mGraph, inGraph.mGraph, outGraph.mGraph); }
+    long GetMaxX() const { return ee_util_graph_range(this->mGraph)->max_x; }
+    long GetMaxY() const { return ee_util_graph_range(this->mGraph)->max_y; }
+    long GetMinX() const { return ee_util_graph_range(this->mGraph)->min_x; }
+    long GetMinY() const { return ee_util_graph_range(this->mGraph)->min_y; }
+    const UGraphSeries& GetSeries(unsigned long inIndex) const
+        { return *reinterpret_cast<const UGraphSeries*>(ee_util_graph_series(this->mGraph, inIndex)); }
+    const unsigned long GetSeriesCount() const { return ee_util_graph_count(this->mGraph); }
     const UWideString& GetTitle() const { return this->mTitle; }
     const UWideString& GetXLabel() const { return this->mXLabel; }
     const UWideString& GetYLabel() const { return this->mYLabel; }
-    void PruneGraph();
-    void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled);
+    // reduces every series to one point per x, keeping the highest y
+    void PruneGraph() { ee_util_graph_prune(this->mGraph); }
+    void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled)
+        { ee_util_graph_set_enabled(this->mGraph, inIndex, inIsEnabled); }
     void SetTitle(const UWideString& inTitle) { this->mTitle = inTitle; }
     void SetXLabel(const UWideString& inLabel) { this->mXLabel = inLabel; }
     void SetYLabel(const UWideString& inLabel) { this->mYLabel = inLabel; }
 
 private:
-    void RecomputeMinMaxValues();
-
-    std::vector<UGraphSeries> mSeries;      // +0x00
-    UWideString mTitle;                     // +0x10
-    UWideString mXLabel;                    // +0x24
-    UWideString mYLabel;                    // +0x38
-    long mMinX;                             // +0x4c
-    long mMaxX;                             // +0x50
-    long mMinY;                             // +0x54
-    long mMaxY;                             // +0x58
+    EeUtilGraph* mGraph;                    // the series and min/max
+    UWideString mTitle;
+    UWideString mXLabel;
+    UWideString mYLabel;
 };
 
 #endif

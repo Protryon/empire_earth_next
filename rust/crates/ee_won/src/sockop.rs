@@ -260,10 +260,10 @@ impl Drop for EeWonSocketOp {
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_socketop_new(
     op: *mut c_void,
-    hooks: *const EeWonSocketOpBaseHooks,
+    core: *const crate::cppcore::EeWonCoreHooks,
 ) -> *mut EeWonSocketOp {
-    // SAFETY: the caller's static table
-    Box::into_raw(Box::new(EeWonSocketOp::new(op, unsafe { &*hooks })))
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonSocketOp::new(op, &crate::cppcore::NATIVE_SOCKOP)))
 }
 
 /// Frees the op object (the socket's reference goes).

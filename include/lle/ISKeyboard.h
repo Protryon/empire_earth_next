@@ -25,8 +25,10 @@ public:
     }
     unsigned long GetModifierState() const { return ee_input_keyboard_modifiers(Rust()); }
     bool GetShouldUpdate() const { return ee_input_keyboard_should_update(Rust()); }
-    void Refresh();
-    void Resume();
+    // reads the buffered key events (presses, releases, modifiers, double presses) at TMGetTime
+    void Refresh() { ee_input_keyboard_refresh_now(Rust()); }
+    // reacquires the keyboard and rereads its state
+    void Resume() { ee_input_keyboard_resume_now(Rust()); }
     void Suspend() { ee_input_keyboard_suspend(Rust()); }
 private:
     ISKeyboard() = delete;
