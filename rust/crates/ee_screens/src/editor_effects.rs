@@ -177,6 +177,33 @@ pub const EE_SCREENS_SEET_OP_EVENT_PUSH: u32 = 80;
 pub const EE_SCREENS_SEET_OP_EVENT_PROCESS: u32 = 81;
 /// The technology i2's name (the unit class's for a unit-making node, "" for none) into p2 (capacity i1).
 pub const EE_SCREENS_SEET_OP_TECH_NAME: u32 = 82;
+/// The screen's controls (`EESETSConditionControls` / `EESETSEffectControls`) made on the form p1 from the control
+/// index i2 (advanced; the screen font) -> their handle into p2's first word / the controls p0 deleted.
+pub const EE_SCREENS_SEET_OP_CONTROLS_NEW: u32 = 83;
+pub const EE_SCREENS_SEET_OP_CONTROLS_FREE: u32 = 84;
+/// The scenario's condition / effect i2 (`GetCondition` / `GetEffect`) -> its pointer and its numbers' into p2's two
+/// words (0: none).
+pub const EE_SCREENS_SEET_OP_ENTRY: u32 = 85;
+/// The conditions' / effects' list operation i2 (`EE_SCREENS_SEOB_SM_*`) on the entry i3.
+pub const EE_SCREENS_SEET_OP_LIST: u32 = 86;
+/// The user conditions' / effects' names into the `std::vector<UWideString>` p1.
+pub const EE_SCREENS_SEET_OP_GET_NAMES: u32 = 87;
+/// The trigger tab's i2 (`EE_SCREENS_SEET_TS_*`).
+pub const EE_SCREENS_SEET_OP_TSCREEN: u32 = 88;
+/// The trigger tab's description box's whole text into p2 (capacity i1) / set to the i2 bytes at p2.
+pub const EE_SCREENS_SEET_OP_TEXT_BOX: u32 = 89;
+pub const EE_SCREENS_SEET_OP_SET_TEXT_BOX: u32 = 90;
+/// -> the player tab's player count / the player picker's (the index) player count set to i2.
+pub const EE_SCREENS_SEET_OP_PLAYER_COUNT: u32 = 91;
+pub const EE_SCREENS_SEET_OP_SET_PLAYER_COUNT: u32 = 92;
+/// -> the combo box p1's selection, -1 when it has none.
+pub const EE_SCREENS_SEET_OP_HANDLE_SELECTION: u32 = 93;
+
+/// The trigger tab's description box (and alphabetical sort) hidden, its alphabetical sort shown, its description
+/// box shown (`EE_SCREENS_SEET_OP_TSCREEN`).
+pub const EE_SCREENS_SEET_TS_HIDE_TEXT: i32 = 0;
+pub const EE_SCREENS_SEET_TS_SHOW_ALPHA_SORT: i32 = 1;
+pub const EE_SCREENS_SEET_TS_SHOW_TEXT: i32 = 2;
 
 /// The events (`EE_SCREENS_SEET_OP_EVENT_NEW`): a screen event (`EECreateScreenEvent(i1)`), an `EESEERust(i1)`, a
 /// `UIESliderChange(label i1, modifier f0, offset i2)`, an `EESEENewSliderChange(label i1, format i2: 0 "%2.0f",
@@ -725,6 +752,57 @@ impl<H: SeplHost + ?Sized, F> Fx<'_, H, F> {
     /// The technology `t`'s name ("" for none).
     pub(crate) fn tech_name(&mut self, t: i32) -> Vec<u8> {
         self.read(EE_SCREENS_SEET_OP_TECH_NAME, 0, [0, 0, t, 0], 1).unwrap_or_default()
+    }
+
+    // -- the screens (`editor_subscreens.rs`)
+
+    /// The screen's controls made on the form from the control index `*index` (advanced).
+    pub(crate) fn controls_new(&mut self, form: usize, index: &mut u32) -> usize {
+        let mut out = 0usize;
+        let (_, i, _) = self.call(
+            EE_SCREENS_SEET_OP_CONTROLS_NEW,
+            [form, &mut out as *mut usize as usize],
+            [0, 0, *index as i32, 0],
+            [0.0; 4],
+        );
+        *index = i[2] as u32;
+        out
+    }
+    pub(crate) fn controls_free(&mut self) {
+        self.op(EE_SCREENS_SEET_OP_CONTROLS_FREE, 0, 0, 0, 0);
+    }
+    /// The scenario's entry `k`: its pointer and its numbers'.
+    pub(crate) fn entry(&mut self, k: i32) -> Option<(usize, usize)> {
+        let mut out = [0usize; 2];
+        self.call(EE_SCREENS_SEET_OP_ENTRY, [0, out.as_mut_ptr() as usize], [0, 0, k, 0], [0.0; 4]);
+        (out[0] != 0).then_some((out[0], out[1]))
+    }
+    /// The list operation `op` (`EE_SCREENS_SEOB_SM_*`) on the entry `k`.
+    pub(crate) fn list(&mut self, op: i32, k: i32) {
+        self.op(EE_SCREENS_SEET_OP_LIST, 0, 0, op, k);
+    }
+    pub(crate) fn get_names(&mut self, names: usize) {
+        self.call(EE_SCREENS_SEET_OP_GET_NAMES, [names, 0], [0; 4], [0.0; 4]);
+    }
+    pub(crate) fn tscreen(&mut self, what: i32) {
+        self.op(EE_SCREENS_SEET_OP_TSCREEN, 0, 0, what, 0);
+    }
+    pub(crate) fn text_box(&mut self) -> Vec<u8> {
+        self.read(EE_SCREENS_SEET_OP_TEXT_BOX, 0, [0; 4], 1).unwrap_or_default()
+    }
+    pub(crate) fn set_text_box(&mut self, text: &[u8]) {
+        self.call(EE_SCREENS_SEET_OP_SET_TEXT_BOX, [0, text.as_ptr() as usize], [0, 0, text.len() as i32, 0], [0.0; 4]);
+    }
+    pub(crate) fn player_count(&mut self) -> i32 {
+        self.op(EE_SCREENS_SEET_OP_PLAYER_COUNT, 0, 0, 0, 0)
+    }
+    pub(crate) fn set_player_count(&mut self, k: u32, n: i32) {
+        self.op(EE_SCREENS_SEET_OP_SET_PLAYER_COUNT, PLAYER, k, n, 0);
+    }
+    /// The combo box `combo`'s selection, `None` when it has none.
+    pub(crate) fn handle_selection(&mut self, combo: usize) -> Option<u32> {
+        let (s, _, _) = self.call(EE_SCREENS_SEET_OP_HANDLE_SELECTION, [combo, 0], [0; 4], [0.0; 4]);
+        (s >= 0).then_some(s as u32)
     }
 }
 

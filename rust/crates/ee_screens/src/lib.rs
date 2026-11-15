@@ -61,6 +61,8 @@
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
+//! - [`editor_subscreens`]: the scenario editor's trigger tab condition and effect screens whole in Rust
+//!   (`EESETSCondition`, `EESETSEffect`): their title and type combo box, store, load, names and type switch.
 //! - [`editor_conditions`]: the scenario editor's condition types whole in Rust (`EESETSConditionType` and its
 //!   seven `EESETSCT*` classes) over the effect types' generic host, by the condition screen's controls.
 //! - [`editor_effects`]: the scenario editor's effect types whole in Rust (`EESETSEffectType` and every `EESETSET*`
@@ -144,8 +146,6 @@ pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
 pub mod editor_conditions;
-#[cfg(not(test))]
-mod editor_conditions_ffi;
 pub mod editor_effects;
 #[cfg(not(test))]
 mod editor_effects_ffi;
@@ -163,6 +163,9 @@ pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_subscreens;
+#[cfg(not(test))]
+mod editor_subscreens_ffi;
 pub mod editor_trigger;
 #[cfg(not(test))]
 mod editor_trigger_ffi;

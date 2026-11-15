@@ -1322,6 +1322,46 @@ constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_PROCESS = 81;
 /// The technology i2's name (the unit class's for a unit-making node, "" for none) into p2 (capacity i1).
 constexpr static const uint32_t EE_SCREENS_SEET_OP_TECH_NAME = 82;
 
+/// The screen's controls (`EESETSConditionControls` / `EESETSEffectControls`) made on the form p1 from the control
+/// index i2 (advanced; the screen font) -> their handle into p2's first word / the controls p0 deleted.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_CONTROLS_NEW = 83;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_CONTROLS_FREE = 84;
+
+/// The scenario's condition / effect i2 (`GetCondition` / `GetEffect`) -> its pointer and its numbers' into p2's two
+/// words (0: none).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_ENTRY = 85;
+
+/// The conditions' / effects' list operation i2 (`EE_SCREENS_SEOB_SM_*`) on the entry i3.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_LIST = 86;
+
+/// The user conditions' / effects' names into the `std::vector<UWideString>` p1.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_GET_NAMES = 87;
+
+/// The trigger tab's i2 (`EE_SCREENS_SEET_TS_*`).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TSCREEN = 88;
+
+/// The trigger tab's description box's whole text into p2 (capacity i1) / set to the i2 bytes at p2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TEXT_BOX = 89;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_TEXT_BOX = 90;
+
+/// -> the player tab's player count / the player picker's (the index) player count set to i2.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_PLAYER_COUNT = 91;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_SET_PLAYER_COUNT = 92;
+
+/// -> the combo box p1's selection, -1 when it has none.
+constexpr static const uint32_t EE_SCREENS_SEET_OP_HANDLE_SELECTION = 93;
+
+/// The trigger tab's description box (and alphabetical sort) hidden, its alphabetical sort shown, its description
+/// box shown (`EE_SCREENS_SEET_OP_TSCREEN`).
+constexpr static const int32_t EE_SCREENS_SEET_TS_HIDE_TEXT = 0;
+
+constexpr static const int32_t EE_SCREENS_SEET_TS_SHOW_ALPHA_SORT = 1;
+
+constexpr static const int32_t EE_SCREENS_SEET_TS_SHOW_TEXT = 2;
+
 /// The events (`EE_SCREENS_SEET_OP_EVENT_NEW`): a screen event (`EECreateScreenEvent(i1)`), an `EESEERust(i1)`, a
 /// `UIESliderChange(label i1, modifier f0, offset i2)`, an `EESEENewSliderChange(label i1, format i2: 0 "%2.0f",
 /// 1 "%#2.1f", f0, f1)`, an `EESEENewUseObjectArea(label i1, scenario combo box i2, radio i3)`, an
@@ -2367,6 +2407,35 @@ constexpr static const uint32_t EE_SCREENS_SEPL_COPY_FIRST_TO_ALL = 10;
 constexpr static const uint32_t EE_SCREENS_SEPL_PLAYER_COUNT = 11;
 
 constexpr static const uint32_t EE_SCREENS_SEPL_MARK_CHANGED = 12;
+
+constexpr static const uint32_t EE_SCREENS_SESC_SORT = 1;
+
+constexpr static const uint32_t EE_SCREENS_SESC_MOVE_DOWN = 2;
+
+constexpr static const uint32_t EE_SCREENS_SESC_MOVE_UP = 3;
+
+constexpr static const uint32_t EE_SCREENS_SESC_DELETE = 4;
+
+constexpr static const uint32_t EE_SCREENS_SESC_DUPLICATE = 5;
+
+constexpr static const uint32_t EE_SCREENS_SESC_NEW = 6;
+
+constexpr static const uint32_t EE_SCREENS_SESC_ACTIVATE = 7;
+
+constexpr static const uint32_t EE_SCREENS_SESC_STORE = 8;
+
+constexpr static const uint32_t EE_SCREENS_SESC_HIDE = 9;
+
+constexpr static const uint32_t EE_SCREENS_SESC_LOAD = 10;
+
+constexpr static const uint32_t EE_SCREENS_SESC_SHOW = 11;
+
+constexpr static const uint32_t EE_SCREENS_SESC_REFRESH = 12;
+
+/// `ChangeConditionType` / `ChangeEffectType`; `ChangeEffectAction`.
+constexpr static const uint32_t EE_SCREENS_SESC_CHANGE_TYPE = 13;
+
+constexpr static const uint32_t EE_SCREENS_SESC_CHANGE_ACTION = 14;
 
 /// The triggers' list: i0 the operation (`EE_SCREENS_SEOB_SM_*`) on the trigger i1.
 constexpr static const uint32_t EE_SCREENS_SETR_OP_SM = 200;
@@ -7623,11 +7692,11 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 
-/// The condition types (opaque to C++).
-struct EeScreensSeConditions;
+/// The condition screen (opaque to C++).
+struct EeScreensSeConditionScreen;
 
-/// The effect types (opaque to C++).
-struct EeScreensSeEffects;
+/// The effect screen (opaque to C++).
+struct EeScreensSeEffectScreen;
 
 /// The object screen (opaque to C++).
 struct EeScreensSeObject;
@@ -7655,6 +7724,9 @@ struct EeScreensSewAction;
 
 /// The unit hack's record (opaque to C++).
 struct EeScreensUnitHack;
+
+/// Every effect type (`EESETSEffect::mTypes`): no effect, object, player, trigger, media, game, AI.
+struct EffectTypes;
 
 /// A chat log entry's fixed fields (its name and text go as bytes beside it).
 struct EeScreensChatLogHead {
@@ -7715,6 +7787,9 @@ struct EeScreensPanelButton {
   uint32_t research;
   unsigned long control;
 };
+
+/// The effect types (opaque to C++; the effect screen's `EffectTypes`, whose address their events carry).
+using EeScreensSeEffects = EffectTypes;
 
 /// A lobby slot (`EEGameOptionsPlayer`) but its name.
 struct EeScreensLobbyPlayerRecord {
@@ -8252,62 +8327,12 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
 
-/// The condition types' constructors (`EESETSCondition`'s `new`s): the player attribute type's event made. Freed
-/// by `ee_screens_sect_free`.
-///
-/// # Safety
-/// `controls` is the condition screen's `EESETSConditionControls`.
-EeScreensSeConditions *ee_screens_sect_new(void *controls);
-
-/// The destructors: the event released, the object freed.
-///
-/// # Safety
-/// `types` comes from `ee_screens_sect_new` (or is NULL) and is not used again.
-void ee_screens_sect_free(EeScreensSeConditions *types, void *controls);
-
-/// The condition type `ty`'s (`kSMCondition*`) slot `slot` (`EE_SCREENS_SEET_STORE`, `_HIDE`, `_LOAD`, `_SHOW`)
-/// over the controls and, for the slots that take one, the condition (`EESMCondition*`) and its numbers (its
-/// `EeScenarioConditionFields`).
-///
-/// # Safety
-/// `types` comes from `ee_screens_sect_new` (or is NULL); `fields` is `condition`'s numbers when the slot reads them.
-void ee_screens_sect_call(const EeScreensSeConditions *types,
-                          uint32_t ty,
-                          uint32_t slot,
-                          void *controls,
-                          void *condition,
-                          void *fields);
-
-/// The effect types' constructors (`EESETSEffect`'s `new`s): their events made. Freed by `ee_screens_seet_free`.
-///
-/// # Safety
-/// `controls` is the effect screen's `EESETSEffectControls`.
-EeScreensSeEffects *ee_screens_seet_new(void *controls);
-
-/// The destructors: the events released, the object freed.
-///
-/// # Safety
-/// `types` comes from `ee_screens_seet_new` (or is NULL) and is not used again.
-void ee_screens_seet_free(EeScreensSeEffects *types, void *controls);
-
-/// The effect type `ty`'s (`kSMEffect*`) slot `slot` (`EE_SCREENS_SEET_CHANGE_ACTION` ...) over the controls and,
-/// for the slots that take one, the effect (`EESMEffect*`) and its numbers (its `EeScenarioEffectFields`).
-///
-/// # Safety
-/// `types` comes from `ee_screens_seet_new` (or is NULL); `fields` is `effect`'s numbers when the slot reads them.
-void ee_screens_seet_call(const EeScreensSeEffects *types,
-                          uint32_t ty,
-                          uint32_t slot,
-                          void *controls,
-                          void *effect,
-                          void *fields);
-
 /// The effect types' events (`EESEERust`, made by `EE_SCREENS_SEET_EV_OBJECTS` with these types and the controls):
 /// 0 the military group's object moved in (`a` 1) or out (`a` 0) of the group (`b`: the list's line), 1 the
 /// dialogue's camera scroll speed shown, 2 the AI attribute's ranges shown (`b`: the attribute combo box's line).
 ///
 /// # Safety
-/// `types` comes from `ee_screens_seet_new` (or is NULL); `controls` are the effect screen's.
+/// `types` are an effect screen's types (`ee_screens_sefx_new`; or NULL); `controls` are its controls.
 void ee_screens_seet_event(const EeScreensSeEffects *types,
                            void *controls,
                            uint32_t what,
@@ -8380,6 +8405,72 @@ uint32_t ee_screens_sepl_call(const EeScreensSePlayers *screen,
 void *ee_screens_sepl_control(const EeScreensSePlayers *screen,
                               uint32_t row,
                               uint32_t which);
+
+/// `EESETSCondition`'s constructor on the form: its controls from the control index `*index` (advanced; the screen
+/// font is `gSeplScreenFont`). Freed by `ee_screens_secd_free`.
+///
+/// # Safety
+/// `form` is the editor form; `index` is valid.
+EeScreensSeConditionScreen *ee_screens_secd_new(void *form,
+                                                uint32_t *index);
+
+/// The destructor: the controls deleted, the types' event released, the object freed.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_secd_new` (or is NULL) and is not used again.
+void ee_screens_secd_free(EeScreensSeConditionScreen *screen);
+
+/// The slot `what` (`EE_SCREENS_SESC_*`) with the trigger tab's selection `selection`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_secd_new` (or is NULL).
+void ee_screens_secd_call(const EeScreensSeConditionScreen *screen,
+                          uint32_t what,
+                          int32_t selection);
+
+/// `GetNames`: the scenario's user conditions' names into the `std::vector<UWideString>` `names`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_secd_new` (or is NULL); `names` is a vector.
+void ee_screens_secd_names(const EeScreensSeConditionScreen *screen, void *names);
+
+/// The screen's controls (0: `EESETSConditionControls`), type combo box (1) or title (2).
+///
+/// # Safety
+/// `screen` comes from `ee_screens_secd_new` (or is NULL).
+void *ee_screens_secd_handle(const EeScreensSeConditionScreen *screen, uint32_t which);
+
+/// `EESETSEffect`'s constructor on the form: its controls from the control index `*index` (advanced; the screen
+/// font is `gSeplScreenFont`). Freed by `ee_screens_sefx_free`.
+///
+/// # Safety
+/// `form` is the editor form; `index` is valid.
+EeScreensSeEffectScreen *ee_screens_sefx_new(void *form,
+                                             uint32_t *index);
+
+/// The destructor: the controls and the title deleted, the types' events released, the object freed.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sefx_new` (or is NULL) and is not used again.
+void ee_screens_sefx_free(EeScreensSeEffectScreen *screen);
+
+/// The slot `what` (`EE_SCREENS_SESC_*`) with the trigger tab's selection `selection`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sefx_new` (or is NULL).
+void ee_screens_sefx_call(const EeScreensSeEffectScreen *screen, uint32_t what, int32_t selection);
+
+/// `GetNames`: the scenario's user effects' names into the `std::vector<UWideString>` `names`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sefx_new` (or is NULL); `names` is a vector.
+void ee_screens_sefx_names(const EeScreensSeEffectScreen *screen, void *names);
+
+/// The screen's controls (0: `EESETSEffectControls`), type combo box (1) or title (2).
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sefx_new` (or is NULL).
+void *ee_screens_sefx_handle(const EeScreensSeEffectScreen *screen, uint32_t which);
 
 /// `EESETSTrigger`'s constructor: every control made on `form` from the control index `*index` (advanced).
 /// Freed by `ee_screens_setr_free`.
