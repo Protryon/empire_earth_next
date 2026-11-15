@@ -377,13 +377,9 @@ WON_TESTS = {
     # the forwarders to ee_won (rust/crates/ee_won)
     "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("CRC16.cpp", "MD5.cpp")],
                         *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")]],
-    "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
-                                                            "AsyncSocketInternet.cpp", "IPAddr.cpp")],
+    "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
-    "won_ops_test": [*[WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
-                                                         "AsyncSocketInternet.cpp", "IPAddr.cpp",
-                                                         "BlockingSocket.cpp", "SocketOps.cpp",
-                                                         "SocketRunHooks.cpp", "SocketOpsAccessors.cpp")],
+    "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
                      *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)

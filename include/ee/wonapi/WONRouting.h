@@ -180,69 +180,98 @@ public:
 	static __int64 GetNumMessagesReceived() { return ee_won_netstats_get(5); }
 };
 
+// AsyncSocket.cpp's original addresses: the constructor 2b0340, Duplicate 2b0420, the destructor 2b04a0, the length
+// field 2b0600 / 2b0610, AddMsgTransform 2b0620, the transforms 2b0730 / 2b07e0, GetLastSocketError 2b0890, IsValid
+// 2b08c0, IsConnected 2b08d0, GetDestAddr 2b08e0, GetLocalPort 2b08f0, Start/StopWinsock 2b0940 / 2b0980,
+// HasInternetConnection 2b09a0, GetType 2b0a40, SetBroadcast 2b0a50, Open 2b0a90, Bind 2b0c90, Fn2B0D90, Fn2B0E60,
+// Listen 2b0fc0, Accept 2b1060, WaitForConnect 2b1220, WaitForAccept 2b1350, WaitForWrite 2b1360, WaitForRead 2b1410,
+// Send 2b14c0, Recv 2b15e0, SendTo 2b1700, RecvFrom 2b1840, Disconnect 2b1980, ClosePrv 2b1a10, Close 2b1ad0, Kill
+// 2b1b50; the empty hooks fold into 326b60. The unit is deleted (net round 25): the class is this shim over its Rust
+// object, the calls taking platform addresses are the core unit's (AsyncOp.cpp)
 class AsyncSocket : public RefCount {
 public:
     enum SocketType { TCP, UDP }; //WON SDK type, 32-bit enum
-    SocketType GetType(); //2b0a40, 4-byte nonvirtual function
-    static int TimeLeft(DWORD,DWORD);
-    void RemoveAllMsgTransforms();
-    bool IsOpen();
-    void SetType(SocketType);
-    WONStatus SetNagling(bool);
-    static WONStatus StartWinsock(); //2b0940, cdecl (WON SDK); the user count is Rust's
-    static WONStatus StopWinsock(); //2b0980, cdecl (WON SDK)
-    static bool HasInternetConnection();
-    WONStatus SetBroadcast(bool); //2b0a50, sets the broadcast socket option
-    WONStatus Open();     //2b0a90, creates the socket
-    WONStatus RecvFrom(void*,int,IPAddr*,int*); //2b1840, signed count/output on success
-    void Disconnect(); //2b1980, disconnect
-    WONStatus Bind(const IPAddr&,bool);     //2b0c90, address bind/reuse
-    WONStatus Fn2B0E60(const IPAddr&); //2b0e60, connect
-    WONStatus Accept(SmartPtr<AsyncSocket>&);   //2b1060, owning accepted output reference
-    WONStatus WaitForConnect(unsigned long); //2b1220, waits for the connection
-    void WaitForAccept(unsigned long); //2b1350/13 (WON SDK)
-
-    AsyncSocket(int inType); //2b0340; fresh factory2b0420 new74
-    virtual ~AsyncSocket(); //ordinary2b04a0; scalar deleting2b0480
-    virtual void OpenHook();  //326b60; called on open at 2b0c69, SDK OpenHook
-    virtual void CloseHook(); //326b60; close2b1b1d/kill2b1b9d, SDK CloseHook
-    virtual void KillHook();  //326b60; kill2b1ba4, SDK KillHook
-    virtual AsyncSocket* Duplicate(); //2b0420, factory result consumed2b111c
-    WONStatus Fn2B0D90(unsigned short,bool); // bind to the local host address: (port, allowReuse)
-    WONStatus Listen(int);   //2b0fc0
-    void WaitForWrite(unsigned long); //2b1360
-    WONStatus Send(const void*,int,int*); //2b14c0
-    void Close();    //2b1ad0
-    void Kill();  //2b1b50; separate from the SDK's Kill
-    unsigned short GetLocalPort(); //2b08f0, called at 2cf882; the SDK takes no arguments
-    unsigned char GetLengthFieldSize() const; //2b0610, called at 2b5b10
-    void SetLengthFieldSize(unsigned char); //2b0600, bytearg->50/ret4
-    bool IsConnected(); //2b08d0, byte51 ->AL; SDK IsConnected corroboration
-    IPAddr GetDestAddr(); //2b08e0; a copy taken under the lock (the original returned a reference to the member)
-    void AddMsgTransform(MsgTransform*); //2b0620, owns raw transform pushed into list
-    void WaitForRead(unsigned long); //2b1410, wait-for-read timeout
-    void ClosePrv(); //2b1a10, ClosePrv handle shutdown/close
-    WONStatus GetLastSocketError(); //2b0890, socket WSA status mapping
-    bool IsValid();  //2b08c0, handle20 != PLAT_SOCKET_INVALID
-    WONStatus TransformRecvMsg(ByteBufferPtr&); //recv transforms reverse-list slot08
-    WONStatus TransformSendMsg(ByteBufferPtr&); //send transforms forward-list slot04
-    WONStatus SendTo(const void*,int,const IPAddr&);   //sendto
-    WONStatus Recv(void*,int,int*);     //recv
+    // a closed socket of the type (0 stream, 1 datagram) with a 4-byte length field, counted
+    AsyncSocket(int inType) : mSock(ee_won_asyncsocket_new(static_cast<void*>(this), WonCore(), inType)) {}
+    // closes the socket, deletes every message transform and uncounts it
+    virtual ~AsyncSocket() { ee_won_asyncsocket_free(this->mSock); }
+    virtual void OpenHook() {}
+    virtual void CloseHook() {}
+    virtual void KillHook() {}
+    virtual AsyncSocket* Duplicate() { return new AsyncSocket(this->GetType()); } // a new, unopened one
+    SocketType GetType() { return (SocketType)ee_won_asyncsocket_kind(this->mSock); }
+    static int TimeLeft(DWORD theTotalTime, DWORD theStartTime)
+    { return static_cast<int>(ee_won_real_time_left(theStartTime, theTotalTime)); }
+    void RemoveAllMsgTransforms() { ee_won_asyncsocket_remove_all_transforms(this->mSock); }
+    bool IsOpen() { return ee_won_asyncsocket_is_open(this->mSock); }
+    void SetType(SocketType theType) { ee_won_asyncsocket_set_type(this->mSock, theType); }
+    WONStatus SetNagling(bool on) { return ee_won_asyncsocket_set_nagling(this->mSock, on); }
+    // the socket system started on first use, its users counted (Winsock's numbering), cdecl in the SDK
+    static WONStatus StartWinsock() { return ee_won_socket_start(); }
+    static WONStatus StopWinsock() { return ee_won_socket_stop(); }
+    // an up network adapter with an IPv4 address neither 0.0.0.0 nor loopback (the original asked wininet)
+    static bool HasInternetConnection() { return ee_won_has_internet_connection(); }
+    WONStatus SetBroadcast(bool on) { return ee_won_asyncsocket_set_broadcast(this->mSock, on); }
+    // a fresh non-blocking handle (broadcast for UDP, no linger for TCP), the open hook run
+    WONStatus Open() { return ee_won_asyncsocket_open(this->mSock); }
+    WONStatus RecvFrom(void*,int,IPAddr*,int*); // a signed count; the sender on success
+    // closes a stream socket; dissolves a datagram socket's association
+    void Disconnect() { ee_won_asyncsocket_disconnect(this->mSock); }
+    WONStatus Bind(const IPAddr&,bool); // opened first; address reuse optional
+    // connects: an existing stream connection dropped, opened and bound to the local host if needed
+    WONStatus Fn2B0E60(const IPAddr& inAddress)
+    { return ee_won_asyncsocket_connect_to(this->mSock, inAddress.GetValue(), static_cast<uint32_t>(IPAddr::GetLocalHost())); }
+    WONStatus Accept(SmartPtr<AsyncSocket>&); // a new socket of the same type (the virtual Duplicate), a reference
+    // success, the socket error or WS_TimedOut
+    WONStatus WaitForConnect(unsigned long inWaitTime)
+    { return ee_won_asyncsocket_wait_for_connect(this->mSock, static_cast<uint32_t>(inWaitTime)); }
+    void WaitForAccept(unsigned long inTimeout) { this->WaitForRead(inTimeout); }
+    // binds to the local host address on the port (the SDK's second parameter is bool)
+    WONStatus Fn2B0D90(unsigned short inPort, bool inReuse) { return this->Bind(IPAddr(IPAddr::GetLocalHost(), inPort), inReuse); }
+    WONStatus Listen(int inBacklog) { return ee_won_asyncsocket_listen(this->mSock, inBacklog); }
+    void WaitForWrite(unsigned long); // up to the time (none for 0 or a closed socket)
+    // WS_TimedOut (PartialSendTo for datagrams) on a short send
+    WONStatus Send(const void* inData, int inLength, int* outSent)
+    { return ee_won_asyncsocket_send(this->mSock, inData, inLength, outSent); }
+    // after the socket thread is told and the close hook run
+    void Close() { ee_won_asyncsocket_close(this->mSock); }
+    void Kill() { ee_won_asyncsocket_kill(this->mSock); } // the close and kill hooks; separate from the SDK's Kill
+    unsigned short GetLocalPort() { return ee_won_asyncsocket_local_port(this->mSock); } // or 0
+    unsigned char GetLengthFieldSize() const { return ee_won_asyncsocket_length_field_size(this->mSock); }
+    void SetLengthFieldSize(unsigned char inSize) { ee_won_asyncsocket_set_length_field_size(this->mSock, inSize); }
+    bool IsConnected() { return ee_won_asyncsocket_is_connected(this->mSock); }
+    // a copy taken under the lock (the original returned a reference to the member)
+    IPAddr GetDestAddr() { return IPAddr::FromValue(ee_won_asyncsocket_dest_addr(this->mSock)); }
+    void AddMsgTransform(MsgTransform* inTransform) { ee_won_asyncsocket_add_transform(this->mSock, inTransform); } // owned
+    void WaitForRead(unsigned long);
+    void ClosePrv() { ee_won_asyncsocket_close_handle(this->mSock); } // a hard close if it would block
+    // Winsock's numbering; would-block and in-progress are WS_TimedOut, any other recorded
+    WONStatus GetLastSocketError() { return ee_won_asyncsocket_last_error(this->mSock); }
+    bool IsValid() { return ee_won_asyncsocket_is_valid(this->mSock); }
+    // the transform chain, the received message in reverse order, the outgoing in order; the first failure
+    WONStatus TransformRecvMsg(ByteBufferPtr& inMessage) { return ee_won_asyncsocket_transform_recv(this->mSock, &inMessage); }
+    WONStatus TransformSendMsg(ByteBufferPtr& inMessage) { return ee_won_asyncsocket_transform_send(this->mSock, &inMessage); }
+    WONStatus SendTo(const void*,int,const IPAddr&); // opened first if needed; fails on stream sockets
+    // Shutdown when the peer closed, WS_TimedOut on a short stream read
+    WONStatus Recv(void* outData, int inLength, int* outReceived)
+    { return ee_won_asyncsocket_recv(this->mSock, outData, inLength, outReceived); }
 
     typedef void (*CloseCallback)(AsyncSocket*);
     // the socket's lock (the original's mDataCrit, a recursive mutex the Rust object owns), which the subclasses
     // (QueueSocket, the routing and server connections) take around their own state too: AutoCrit takes it
     PlatMutex* GetDataLock() const { return static_cast<PlatMutex*>(ee_won_asyncsocket_mutex(this->mSock)); }
     void SetDestAddr(const IPAddr& inAddr) { ee_won_asyncsocket_set_dest_addr(this->mSock,inAddr.GetValue()); }
-    void SetThreadCloseCallback(CloseCallback inCallback);
-    WONStatus GetSocketStatus() const; // the last socket error recorded (the original's +0x54)
+    void SetThreadCloseCallback(CloseCallback inCallback)
+    { ee_won_asyncsocket_set_close_callback(this->mSock, reinterpret_cast<void*>(inCallback)); }
+    // the last socket error recorded (the original's +0x54)
+    WONStatus GetSocketStatus() const { return ee_won_asyncsocket_status(this->mSock); }
     EeWonAsyncSocket* GetSocketObject() const { return this->mSock; }
 private:
     AsyncSocket(const AsyncSocket&);
     AsyncSocket& operator=(const AsyncSocket&);
     // A Rust object since round 14 (rust/crates/ee_won/src/sockobj.rs EeWonAsyncSocket): the handle, type, flags,
     // status and times (the original's +0x20..+0x5c), the length field size (+0x50), the message transforms (+0x60,
-    // owned) and the socket thread's close callback (+0x6c), and every step of AsyncSocket.cpp; since round 15 also
+    // owned) and the socket thread's close callback (+0x6c), and every step of the class; since round 15 also
     // the lock (mDataCrit, +0x08) and the destination address (mDestAddr, +0x28)
     EeWonAsyncSocket* mSock;
 };
@@ -257,10 +286,17 @@ public:
     // the op's socket (a reference held)
     AsyncSocket* GetSocket() { return static_cast<AsyncSocket*>(ee_won_socketop_socket(this->mSockOp)); }
     void SetSocket(AsyncSocket* theSocket) { ee_won_socketop_set_socket(this->mSockOp,theSocket); }
-    SocketOp(AsyncSocket* inSocket); // SocketRunHooks.cpp (the original's was inline)
-    virtual ~SocketOp(); // the Rust object (the original's was implicit, 29153d)
-    virtual void RunHook();                 // +0x04 0x2b6070 RunHook
-    virtual void CleanupHook();             // +0x08 0x2b60c0
+    // an op on the socket (a reference held): no socket thread, no waits, the event indices -1
+    SocketOp(AsyncSocket* inSocket) : mSockOp(ee_won_socketop_new(static_cast<void*>(this),WonCore()))
+    {
+        this->SetSocket(inSocket);
+        this->SetRunAsyncImmediately(SocketOp::mRunAsyncImmediatelyDef);
+    }
+    virtual ~SocketOp() { ee_won_socketop_free(this->mSockOp); } // the original's was implicit, 29153d
+    // +0x04 0x2b6070: started (finished InvalidSocket first without a socket); a pending start goes to the socket
+    // thread (async) or is continued and finished (blocking), any other result finishes it
+    virtual void RunHook() { ee_won_socketop_run_hook(this->mSockOp); }
+    virtual void CleanupHook();             // +0x08 0x2b60c0: out of the socket thread (AsyncOp.cpp)
     //: +0x0c starts the operation, +0x10 continues it (SendFileOp 0x2915d2 / 0x291613 return a WONStatus). Since net
     // round 23 the socket op classes' own Start and Continue (ConnectOp, AcceptOp, the send and receive ops,
     // RecvCRMsgOp: one-line forwarders each) are these: the op's Rust object runs its class's step (sockops.rs); a
@@ -278,9 +314,8 @@ public:
     long GetEventIndex(int i) const { return ee_won_socketop_event_index(this->mSockOp,i); }
     void SetEventIndex(int i,long inIndex) { ee_won_socketop_set_event_index(this->mSockOp,i,inIndex); }
     EeWonSocketOp* GetSocketOpObject() const { return this->mSockOp; }
+    static void HookAddToSocketThread(void* inOp); // WONAPICore's friend (AsyncOp.cpp: the core table's)
 private:
-    static void HookAddToSocketThread(void* inOp); // WONAPICore's friend
-    static const EeWonSocketOpBaseHooks kHooks;
     // A Rust object since round 14 (rust/crates/ee_won/src/sockop.rs EeWonSocketOp): the socket thread flag (+0x44),
     // the event indices (+0x48), the socket (+0x54, a reference) and the wait flags (+0x58), and RunHook
     EeWonSocketOp* mSockOp;
@@ -326,28 +361,57 @@ public:
 // 0x2b5d20)
 class RecvBytesOp : public SocketOp {
 public:
-    RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket = NULL); //2b4de0
-    virtual void CleanupHook(); //2b5580
-    virtual AsyncOp* Duplicate(); //2b4f00
-    void SetProgressCompletion(CompletionBase<AsyncOpPtr>*, long inInterval);
-    ByteBufferPtr GetBytes() const; //2b1df0, owning return by value
+    // the number of bytes (0: until the peer closes) into memory (2b4de0)
+    RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
+    {
+        this->SetWaitForEvent(0,true);
+        ee_won_socketop_init_recv(this->GetSocketOpObject(), static_cast<uint32_t>(inLength), false);
+    }
+    // out of the socket thread, the target file closed (2b5580)
+    virtual void CleanupHook()
+    {
+        SocketOp::CleanupHook();
+        ee_won_socketop_close_file(this->GetSocketOpObject(), this->GetStatus());
+    }
+    virtual AsyncOp* Duplicate() //2b4f00: the same length and socket
+    { return new RecvBytesOp(ee_won_socketop_length(this->GetSocketOpObject()),this->GetSocket()); }
+    // the completion called after every interval bytes (2b4f90)
+    void SetProgressCompletion(CompletionBase<AsyncOpPtr>* completion, long interval)
+    {
+        ee_won_socketop_set_progress(this->GetSocketOpObject(), static_cast<void*>(completion), // its RefCount
+                                     static_cast<int32_t>(interval));
+    }
+    ByteBufferPtr GetBytes() const //2b1df0 (folded)
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_received(this->GetSocketOpObject()))); }
     void SetFilePath(const std::string& theFilePath)
     { ee_won_socketop_set_path(this->GetSocketOpObject(),reinterpret_cast<const uint8_t*>(theFilePath.data()),theFilePath.size()); }
     void SetAppendFile(bool theVal) { ee_won_socketop_set_flag(this->GetSocketOpObject(),0,theVal); }
     void SetBinaryFile(bool isBinary) { ee_won_socketop_set_flag(this->GetSocketOpObject(),1,isBinary); }
     void SetFileModifyTime(time_t theTime) { ee_won_socketop_set_modify_time(this->GetSocketOpObject(),static_cast<int64_t>(theTime)); }
     void SetSkipBytes(bool skip) { ee_won_socketop_set_flag(this->GetSocketOpObject(),2,skip); }
-    std::string GetFilePath() const; // a copy (the original returned a reference to the member)
+    std::string GetFilePath() const // a copy (the original returned a reference to the member)
+    {
+        std::string aPath;
+        ee_won_socketop_path(this->GetSocketOpObject(), [](void* inContext, const uint8_t* inBytes, size_t inLength) {
+            static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+        }, &aPath);
+        return aPath;
+    }
     unsigned long GetBytesRead() const { return ee_won_socketop_bytes_read(this->GetSocketOpObject()); }
 protected:
     struct MessageTag {};
-    RecvBytesOp(AsyncSocket* inSocket, MessageTag); // RecvMsgOp's
+    RecvBytesOp(AsyncSocket* inSocket, MessageTag) : SocketOp(inSocket) // RecvMsgOp's: length-prefixed messages
+    {
+        this->SetWaitForEvent(0,true);
+        ee_won_socketop_init_recv(this->GetSocketOpObject(), 0, true);
+    }
 };
 class RecvMsgOp : public RecvBytesOp {
 public:
     RecvMsgOp(AsyncSocket* inSocket = NULL) : RecvBytesOp(inSocket, MessageTag()) {}
-    virtual AsyncOp* Duplicate(); //2ab3d0
-    ByteBufferPtr GetMsg() const; //2ab770, owning return by value
+    virtual AsyncOp* Duplicate() { return new RecvMsgOp(this->GetSocket()); } //2ab3d0
+    ByteBufferPtr GetMsg() const //2ab770
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_message(this->GetSocketOpObject()))); }
 };
 
 // vtable 44ca78, six slots. The line so far (the original's WriteBuffer at 0x5c) and the message (+0x74) are the
@@ -446,10 +510,10 @@ private:
 // drivers keep the statements: tests/won/won_blocking.h)
 class BlockingSocket : public QueueSocket {
 public:
-    BlockingSocket(int inType); //2b1bd0, just QueueSocket(inType), ownvptr
+    BlockingSocket(int inType) : QueueSocket(inType) {} //2b1bd0: stream or datagram
     // IMPLICIT destructor normal2aad90(375B), no own-vptr; inlines Queue members
     // then calls AsyncSocket::~AsyncSocket 2b04a0. Scalar deleting 2b1bf0.
-    virtual AsyncSocket* Duplicate(); //2aab50, newa0 and forwards type24
+    virtual AsyncSocket* Duplicate() { return new BlockingSocket(this->GetType()); } //2aab50: a new, unopened one
 };
 
 // further socket operations and managers
@@ -458,31 +522,58 @@ public:
 // read position of the original's ReadBuffer +0x5c)
 class SendBytesOp : public SocketOp {
 public:
-    SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL); // SendMsgOp passes NULL
+    SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL) : SocketOp(inSocket) // NULL sends nothing
+    {
+        this->SetWaitForEvent(1,true);
+        ee_won_socketop_init_send(this->GetSocketOpObject(), const_cast<ByteBuffer*>(inData), NULL, false);
+    }
 };
 
-// TD4d41c0, VT44c9a0, total70 (the message +0x6c is the Rust object's)
+// TD4d41c0, VT44c9a0, total70 (the message +0x6c is the Rust object's): through the socket's send transforms
 class SendMsgOp : public SendBytesOp {
 public:
-    SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL);
+    SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL) : SendBytesOp(NULL, inSocket)
+    { ee_won_socketop_init_send(this->GetSocketOpObject(), NULL, const_cast<ByteBuffer*>(inMessage), true); }
 };
 
-// TD4d4040, VT44c948, total88 (the bytes +0x5c and the address +0x60 are the Rust object's)
+// TD4d4040, VT44c948, total88 (the bytes +0x5c and the address +0x60 are the Rust object's): to the address, or on
+// the connection when the socket is connected
 class SendBytesToOp : public SocketOp {
 public:
-    SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, AsyncSocket* inSocket = NULL);
+    SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
+    {
+        this->SetWaitForEvent(1,true);
+        ee_won_socketop_init_send_to(this->GetSocketOpObject(), const_cast<ByteBuffer*>(inData), inAddress.GetValue());
+    }
 };
 
 // TD4d4440, VT44caf4, total90. Original out-of-line constructor2b55a0. A Rust object since round 15 (sockops.rs:
 // the buffer +0x5c, the datagram +0x60, the size +0x64, the sender +0x68)
 class RecvBytesFromOp : public SocketOp {
 public:
-    RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket = NULL);
-    virtual ~RecvBytesFromOp(); //2b56f0
-    virtual void RunHook();   //2b57d0
-    virtual AsyncOp* Duplicate(); //2b5660, fresh allocation of the same class
-    SmartPtr<ByteBuffer> GetBytes() const; //2aa920, owning51B sret/AddRef, field60
-    IPAddr GetAddr() const; // a copy (the original returned a reference to the member)
+    RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket = NULL) : SocketOp(inSocket) // one datagram
+    {
+        this->SetWaitForEvent(0,true);
+        ee_won_socketop_init_recv_from(this->GetSocketOpObject(), inMaxLength);
+    }
+    virtual ~RecvBytesFromOp() {} //2b56f0: the buffer goes with the Rust object
+    // the buffer allocated if needed, the last datagram cleared, then the run (2b57d0)
+    virtual void RunHook()
+    {
+        ee_won_socketop_recv_from_prepare(this->GetSocketOpObject());
+        SocketOp::RunHook();
+    }
+    virtual AsyncOp* Duplicate() //2b5660: the same size and socket
+    {
+        return new RecvBytesFromOp(static_cast<unsigned short>(ee_won_socketop_length(this->GetSocketOpObject())),
+                                   this->GetSocket());
+    }
+    SmartPtr<ByteBuffer> GetBytes() const //2aa920
+    {
+        return const_cast<ByteBuffer*>(static_cast<const ByteBuffer*>(
+            static_cast<RefCount*>(ee_won_socketop_received(this->GetSocketOpObject()))));
+    }
+    IPAddr GetAddr() const { return IPAddr::FromValue(ee_won_socketop_address(this->GetSocketOpObject())); } // a copy
 };
 
 // AoC UDP records: four slots each; the archived UDP header's extra

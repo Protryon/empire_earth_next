@@ -56,6 +56,19 @@ static CORE_STUB: EeWonCoreHooks = EeWonCoreHooks {
     socket_bind_local: None,
     bytes_of: None,
     socketop_continue: None,
+    socketop_start: None,
+    socket_thread_add: None,
+    bytes_adopt: None,
+    transform: None,
+    file_open: None,
+    file_write: None,
+    file_close: None,
+    file_set_time: None,
+    progress: None,
+    accept: None,
+    socket_hook: None,
+    transform_call: None,
+    transform_free: None,
 };
 
 static OP_HOOKS: EeWonAsyncOpHooks = EeWonAsyncOpHooks {

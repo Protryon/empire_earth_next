@@ -11,15 +11,10 @@
 2a6090 2a6c03 WONCommon/StringUtil.cpp
 2a6dc0 2a759d WONCommon/WONDebug.cpp
 2a7610 2a8106 WONCommon/WONFile.cpp
-2aa920 2b606c WONSocket/SocketOps.cpp
 2aab10 2ac38b WONServer/ServerConnection.cpp
-2aab50 2b2177 WONSocket/BlockingSocket.cpp
 2ac390 2acc05 WONServer/ServerContext.cpp
 2acc10 2acf01 WONServer/ServerOp.cpp
-2b0340 2b1bcc WONSocket/AsyncSocket.cpp
-2b09a0 2b0a27 WONSocket/AsyncSocketInternet.cpp
 2b2350 2b38d3 WONSocket/IPAddr.cpp
-2b6070 2b60b4 WONSocket/SocketRunHooks.cpp
 2ba050 2bfa0f WONRouting/RoutingConnection.cpp
 2bcd30 2c7d36 WONRouting/RoutingOp.cpp
 2bfb00 2c4165 WONRouting/SmartRoutingConnection.cpp

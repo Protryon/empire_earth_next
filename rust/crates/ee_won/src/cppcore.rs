@@ -25,8 +25,8 @@ use crate::buffer::{ee_won_bytes_data, ee_won_bytes_length, EeWonByteBuffer};
 use crate::ipobj::{ee_won_ipaddr_free, EeWonIpAddr};
 use crate::opobj::{EeWonAsyncOp, EeWonCompletion, HeldRef};
 use crate::qsock::{EeWonQueueSocket, EeWonQueueSocketHooks};
-use crate::sockobj::EeWonAsyncSocket;
-use crate::sockop::EeWonSocketOp;
+use crate::sockobj::{EeWonAsyncSocket, EeWonAsyncSocketHooks};
+use crate::sockop::{EeWonSocketOp, EeWonSocketOpBaseHooks};
 use crate::sockops::{ee_won_socketop_address, ee_won_socketop_received};
 use crate::sockthread::EeWonSocketOpHooks;
 use crate::status::*;
@@ -118,6 +118,33 @@ pub struct EeWonCoreHooks {
     pub bytes_of: Option<unsafe extern "C" fn(buffer: *mut c_void) -> *const EeWonByteBuffer>,
     /// a socket op's virtual `Continue()`
     pub socketop_continue: Option<unsafe extern "C" fn(op: *mut c_void) -> c_long>,
+    /// a socket op's virtual `Start()`
+    pub socketop_start: Option<unsafe extern "C" fn(op: *mut c_void) -> c_long>,
+    /// `WONAPICore::AddToSocketThread(op)`
+    pub socket_thread_add: EeWonCoreFn,
+    /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
+    pub bytes_adopt: Option<unsafe extern "C" fn(bytes: *mut EeWonByteBuffer) -> *mut c_void>,
+    /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+    /// result's
+    pub transform: Option<unsafe extern "C" fn(socket: *mut c_void, message: *mut *mut c_void, send: bool) -> c_long>,
+    /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
+    /// `fclose`, the modify time (`utime`)
+    pub file_open:
+        Option<unsafe extern "C" fn(path: *const u8, length: usize, binary: bool, append: bool) -> *mut c_void>,
+    pub file_write: Option<unsafe extern "C" fn(file: *mut c_void, data: *const u8, length: usize) -> usize>,
+    pub file_close: Option<unsafe extern "C" fn(file: *mut c_void) -> i32>,
+    pub file_set_time: Option<unsafe extern "C" fn(path: *const u8, length: usize, time: i64)>,
+    /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+    pub progress: Option<unsafe extern "C" fn(op: *mut c_void, completion: *mut c_void)>,
+    /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
+    pub accept: Option<unsafe extern "C" fn(socket: *mut c_void, out: *mut *mut c_void) -> c_long>,
+    /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
+    pub socket_hook: Option<unsafe extern "C" fn(socket: *mut c_void, which: i32)>,
+    /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
+    pub transform_call:
+        Option<unsafe extern "C" fn(transform: *mut c_void, message: *mut c_void, send: bool) -> c_long>,
+    /// `delete transform`
+    pub transform_free: EeWonCoreFn,
 }
 
 // SAFETY: a static table of functions and one function address
@@ -767,6 +794,99 @@ pub static NATIVE_SOCKET_THREAD: EeWonSocketOpHooks = EeWonSocketOpHooks {
     add_ref: Some(n_ref_add),
     release: Some(n_ref_release),
     kill: Some(n_op_kill),
+};
+
+// ---- the socket op base and the socket
+
+/// A call passed to the core table (the default without one).
+macro_rules! pass {
+    ($name:ident, $field:ident, ($($a:ident: $t:ty),*) -> $r:ty, $default:expr) => {
+        unsafe extern "C" fn $name($($a: $t),*) -> $r {
+            // SAFETY: the table's contract
+            core().and_then(|c| c.$field).map_or($default, |h| unsafe { h($($a),*) })
+        }
+    };
+    ($name:ident, $field:ident, ($($a:ident: $t:ty),*)) => {
+        unsafe extern "C" fn $name($($a: $t),*) {
+            if let Some(h) = core().and_then(|c| c.$field) {
+                // SAFETY: the table's contract
+                unsafe { h($($a),*) };
+            }
+        }
+    };
+}
+pass!(n_so_start, socketop_start, (o: *mut c_void) -> c_long, WS_NONE as c_long);
+pass!(n_so_thread_add, socket_thread_add, (o: *mut c_void));
+pass!(n_bytes_of, bytes_of, (b: *mut c_void) -> *const EeWonByteBuffer, std::ptr::null());
+pass!(n_bytes_adopt, bytes_adopt, (b: *mut EeWonByteBuffer) -> *mut c_void, null_mut());
+pass!(n_transform, transform, (s: *mut c_void, m: *mut *mut c_void, send: bool) -> c_long, WS_NONE as c_long);
+pass!(n_file_open, file_open, (p: *const u8, n: usize, binary: bool, append: bool) -> *mut c_void, null_mut());
+pass!(n_file_write, file_write, (f: *mut c_void, d: *const u8, n: usize) -> usize, 0);
+pass!(n_file_close, file_close, (f: *mut c_void) -> i32, -1);
+pass!(n_file_set_time, file_set_time, (p: *const u8, n: usize, t: i64));
+pass!(n_progress, progress, (o: *mut c_void, c: *mut c_void));
+pass!(n_accept, accept, (s: *mut c_void, out: *mut *mut c_void) -> c_long, WS_NONE as c_long);
+pass!(n_transform_free, transform_free, (t: *mut c_void));
+unsafe extern "C" fn n_socket_object(s: *mut c_void) -> *mut EeWonAsyncSocket {
+    object_of(s, EeWonCoreObject::Socket).cast()
+}
+fn socket_hook(s: *mut c_void, which: i32) {
+    if let Some(h) = core().and_then(|c| c.socket_hook) {
+        // SAFETY: the table's contract: a live socket
+        unsafe { h(s, which) };
+    }
+}
+unsafe extern "C" fn n_open_hook(s: *mut c_void) {
+    socket_hook(s, 0)
+}
+unsafe extern "C" fn n_close_hook(s: *mut c_void) {
+    socket_hook(s, 1)
+}
+unsafe extern "C" fn n_kill_hook(s: *mut c_void) {
+    socket_hook(s, 2)
+}
+fn transform_call(t: *mut c_void, m: *mut c_void, send: bool) -> c_long {
+    // SAFETY: the table's contract: a live transform and message
+    core().and_then(|c| c.transform_call).map_or(WS_NONE as c_long, |h| unsafe { h(t, m, send) })
+}
+unsafe extern "C" fn n_transform_send(t: *mut c_void, m: *mut c_void) -> c_long {
+    transform_call(t, m, true)
+}
+unsafe extern "C" fn n_transform_recv(t: *mut c_void, m: *mut c_void) -> c_long {
+    transform_call(t, m, false)
+}
+
+/// The socket op base's calls: the op's own answered in Rust, the rest the core table's.
+pub static NATIVE_SOCKOP: EeWonSocketOpBaseHooks = EeWonSocketOpBaseHooks {
+    start: Some(n_so_start),
+    continue_op: Some(n_t_continue),
+    finish: Some(n_op_finish),
+    mode: Some(n_op_mode),
+    add_to_socket_thread: Some(n_so_thread_add),
+    socket_add_ref: Some(n_ref_add),
+    socket_release: Some(n_ref_release),
+    socket_object: Some(n_socket_object),
+    ref_add: Some(n_ref_add),
+    ref_release: Some(n_ref_release),
+    bytes_of: Some(n_bytes_of),
+    bytes_adopt: Some(n_bytes_adopt),
+    transform: Some(n_transform),
+    file_open: Some(n_file_open),
+    file_write: Some(n_file_write),
+    file_close: Some(n_file_close),
+    file_set_time: Some(n_file_set_time),
+    progress: Some(n_progress),
+    accept: Some(n_accept),
+};
+
+/// The socket's calls: its virtual hooks and its transforms', through the core table.
+pub static NATIVE_SOCKET: EeWonAsyncSocketHooks = EeWonAsyncSocketHooks {
+    open_hook: Some(n_open_hook),
+    close_hook: Some(n_close_hook),
+    kill_hook: Some(n_kill_hook),
+    transform_send: Some(n_transform_send),
+    transform_recv: Some(n_transform_recv),
+    transform_free: Some(n_transform_free),
 };
 
 #[cfg(test)]

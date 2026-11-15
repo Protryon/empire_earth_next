@@ -8400,6 +8400,31 @@ struct EeWonCoreHooks {
   const EeWonByteBuffer *(*bytes_of)(void *buffer);
   /// a socket op's virtual `Continue()`
   long (*socketop_continue)(void *op);
+  /// a socket op's virtual `Start()`
+  long (*socketop_start)(void *op);
+  /// `WONAPICore::AddToSocketThread(op)`
+  EeWonCoreFn socket_thread_add;
+  /// a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// a receive op's target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`,
+  /// `fclose`, the modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)` (the virtual `Duplicate` makes the socket): on success `*out` with a reference
+  long (*accept)(void *socket, void **out);
+  /// the socket's virtual `OpenHook` (0), `CloseHook` (1) or `KillHook` (2)
+  void (*socket_hook)(void *socket, int32_t which);
+  /// a transform's virtual `Send` (`send`) or `Recv` on the message (a `ByteBufferPtr*`)
+  long (*transform_call)(void *transform, void *message, bool send);
+  /// `delete transform`
+  EeWonCoreFn transform_free;
 };
 
 /// A C++ call on one object (an op, a completion or the socket).
@@ -8748,68 +8773,6 @@ struct EeWonSmartAction {
   bool on;
   const uint32_t *text;
   size_t text_len;
-};
-
-/// A C++ call on a socket (`AsyncSocket*`).
-using EeWonAsyncSocketFn = void(*)(void *socket);
-
-/// A transform's `Send` / `Recv` on a message (`MsgTransform*`, `ByteBufferPtr*`): its status.
-using EeWonTransformFn = long(*)(void *transform, void *message);
-
-/// What the socket object calls back in the C++. One static table serves every socket.
-struct EeWonAsyncSocketHooks {
-  /// the virtual `OpenHook`, `CloseHook`, `KillHook`
-  EeWonAsyncSocketFn open_hook;
-  EeWonAsyncSocketFn close_hook;
-  EeWonAsyncSocketFn kill_hook;
-  /// `transform->Send(message)`, `transform->Recv(message)`
-  EeWonTransformFn transform_send;
-  EeWonTransformFn transform_recv;
-  /// `delete transform`
-  void (*transform_free)(void *transform);
-};
-
-/// A C++ call on a socket op (`SocketOp*`).
-using EeWonSocketOpBaseFn = void(*)(void *op);
-
-/// A C++ call on a socket (`AsyncSocket*`).
-using EeWonSocketRefFn = void(*)(void *socket);
-
-/// What the op object calls back in the C++. One static table serves every socket op.
-struct EeWonSocketOpBaseHooks {
-  /// the virtual `Start()` and `Continue()`
-  long (*start)(void *op);
-  long (*continue_op)(void *op);
-  /// `Finish(status)`
-  void (*finish)(void *op, long status);
-  /// `GetMode()`
-  int32_t (*mode)(void *op);
-  /// `WONAPICore::AddToSocketThread(op)`
-  EeWonSocketOpBaseFn add_to_socket_thread;
-  /// `socket->AddRef()`, `socket->Release()`
-  EeWonSocketRefFn socket_add_ref;
-  EeWonSocketRefFn socket_release;
-  /// the socket's Rust object (`socket->mSock`)
-  EeWonAsyncSocket *(*socket_object)(void *socket);
-  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
-  EeWonSocketRefFn ref_add;
-  EeWonSocketRefFn ref_release;
-  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
-  const EeWonByteBuffer *(*bytes_of)(void *buffer);
-  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
-  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
-  /// result's
-  long (*transform)(void *socket, void **message, bool send);
-  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
-  /// modify time (`utime`)
-  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
-  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
-  int32_t (*file_close)(void *file);
-  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
-  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
-  void (*progress)(void *op, void *completion);
-  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
-  long (*accept)(void *socket, void **out);
 };
 
 /// A room message's fields (`RoomMsg`).
@@ -16086,9 +16049,7 @@ void ee_won_smart_dump(EeWonSmartRoute *r,
 ///
 /// # Safety
 /// `hooks` is a static table; `socket` outlives the object.
-EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
-                                         const EeWonAsyncSocketHooks *hooks,
-                                         int32_t kind);
+EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket, const EeWonCoreHooks *core, int32_t kind);
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
 ///
@@ -16365,7 +16326,7 @@ long ee_won_asyncsocket_recv_line(const EeWonAsyncSocket *s,
 ///
 /// # Safety
 /// `hooks` is a static table; `op` outlives the object.
-EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonSocketOpBaseHooks *hooks);
+EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonCoreHooks *core);
 
 /// Frees the op object (the socket's reference goes).
 ///
