@@ -1,4 +1,4 @@
--- The coarse verbs in Lua (docs/AI_LUA_VERBS.md; AI_RESEARCH §8.91): the order tables an AI returns
+-- The coarse verbs in Lua (docs/AI_LUA_VERBS.md; AI_RESEARCH §8.92): the order tables an AI returns
 -- ({verb = "gather", resource = "wood", n = 8}, build, train, fish, claim, ...) carried out with the per-unit commands,
 -- as the C++ managers did (EECPUnitManager, EECPResourceManager, EECPBuildManager, EECPResearchManager and the
 -- civilization manager's repairs). An AI module is wrapped once, at its return:

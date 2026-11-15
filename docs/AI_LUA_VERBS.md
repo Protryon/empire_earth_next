@@ -1,6 +1,6 @@
 # The coarse verbs: inventory and the move to Lua
 
-Stage 6 of the computer player (2026-11-15; AI_RESEARCH §8.91). classic_lua gives unit-level commands only. boom,
+Stage 6 of the computer player (2026-11-15; AI_RESEARCH §8.92). classic_lua gives unit-level commands only. boom,
 rush, ageofai and the rb libraries still return the older order tables (`{verb = "gather", ...}`), which
 EECPNextLua.cpp's `EECPNextRunOrder` hands to `EECPNext*` in EECPNextTactics.cpp. Those functions only fill the
 C++ managers' queues and settings. The managers' runners do the work every tick in `EECPNextUpdate`

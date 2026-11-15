@@ -2206,7 +2206,7 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   the game (rc 0xC0000005, no report) while other agents' games ran on the same TCP ports. Give each concurrent bench
   its own `--port-base` (e.g. 13000, 21000, 31000).
 
-## Stage 6: the economy verbs in Lua, the managers deleted (2026-11-15, docs/AI_LUA_VERBS.md, docs/AI_RESEARCH.md §8.91)
+## Stage 6: the economy verbs in Lua, the managers deleted (2026-11-15, docs/AI_LUA_VERBS.md, docs/AI_RESEARCH.md §8.92)
 
 - **A foundation from `ai.build` is not on the map until its builder reaches it** (`pending` in its record; `ai.units`
   and the C++ view leave it out). A verbs library that counts buildings for the script must count its own pending
