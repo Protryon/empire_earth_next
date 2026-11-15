@@ -1581,7 +1581,7 @@ static int LuaMove(lua_State* L)
     bool theQueue = EECPUnitsOptBool(L, 4, "queue", false);
     bool theForced = EECPUnitsOptBool(L, 4, "forced", false);
     bool theFormation = EECPUnitsOptBool(L, 4, "formation", false);
-    EEMPathTo theMessage((float)x + 0.5f, (float)y + 0.5f, 0.0f, theForced, false, theQueue, theFormation);
+    EEMRecord theMessage(kMessagePathTo, {0.0f, (float)x + 0.5f, (float)y + 0.5f, theForced, false, theQueue, theFormation});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "move", kOK, (long)s->mIds2.size(), x, y);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1606,7 +1606,7 @@ static int LuaAttack(lua_State* L)
         EECPUnitsTraceCmd(me, s, "attack", kNotSeen, 0, theID, 0);
         return EECPUnitsResult(L, kNotSeen, 0, 0);
     }
-    EEMAttackUnit theMessage(theID, EECPUnitsOptBool(L, 3, "queue", false), false);
+    EEMRecord theMessage(kMessageAttackUnit, {theID, EECPUnitsOptBool(L, 3, "queue", false), false});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "attack", kOK, (long)s->mIds2.size(), theID, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1623,7 +1623,7 @@ static int LuaAttackGround(lua_State* L)
     if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
         return EECPUnitsResult(L, kBadArgument, 0, 0);
     long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    EEMAttackGround theMessage((float)x + 0.5f, (float)y + 0.5f);
+    EEMRecord theMessage(kMessageAttackGround, {(float)x + 0.5f, (float)y + 0.5f});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "attack_ground", kOK, (long)s->mIds2.size(), x, y);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1645,7 +1645,7 @@ static int LuaGather(lua_State* L)
         EECPUnitsTraceCmd(me, s, "gather", kUnexplored, 0, theID, 0);
         return EECPUnitsResult(L, kUnexplored, 0, 0);
     }
-    EEMGatherResource theMessage(theID, EECPUnitsOptBool(L, 3, "queue", false));
+    EEMRecord theMessage(kMessageGatherResource, {theID, EECPUnitsOptBool(L, 3, "queue", false)});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "gather", kOK, (long)s->mIds2.size(), theID, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1698,7 +1698,7 @@ static int LuaBuild(lua_State* L)
     for (EEUnit* theUnit = me->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
         if ((long)theUnit->mUnitID > theBefore)
             theBefore = (long)theUnit->mUnitID;
-    EEMBuildUnit theMessage(GE2DPoint((float)x, (float)y), theTech, EECPUnitsOptBool(L, 5, "queue", false) ? 1 : 0);
+    EEMRecord theMessage(kMessageBuildUnit, {GE2DPoint((float)x, (float)y), theTech, EECPUnitsOptBool(L, 5, "queue", false) ? 1 : 0});
     EECPUnitsRun(me, s, theMessage, true);
     long theNew = EECPUnitsNewBuilding(me, theType, x, y, theBefore);
     if (theNew != 0) {
@@ -1722,7 +1722,7 @@ static int LuaRepair(lua_State* L)
     EEUnit* theTarget = EECPUnitsAlive(theID);
     if (theTarget == NULL || theTarget->mPlayer == NULL || !me->IsAlly(theTarget->mPlayer))
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRepairUnit theMessage(theID, EECPUnitsOptBool(L, 3, "queue", false));
+    EEMRecord theMessage(kMessageRepairUnit, {theID, EECPUnitsOptBool(L, 3, "queue", false)});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "repair", kOK, (long)s->mIds2.size(), theID, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1744,10 +1744,10 @@ static int EECPUnitsLoadInto(lua_State* L, bool inGarrison)
     s->mIds2.erase(std::remove(s->mIds2.begin(), s->mIds2.end(), theID), s->mIds2.end());
     long theBefore = (long)theInto->GetNumCargoUnits();
     if (inGarrison) {
-        EEMLoadGarrison theMessage(theID, -1, 0);
+        EEMRecord theMessage(kMessageLoadGarrison, {theID, -1, 0});
         EECPUnitsRun(me, s, theMessage, true);
     } else {
-        EEMLoadTransport theMessage(theID, -1, 0);
+        EEMRecord theMessage(kMessageLoadTransport, {theID, -1, 0});
         EECPUnitsRun(me, s, theMessage, true);
     }
     EECPUnitsTake(me, s, theInto);
@@ -1776,7 +1776,7 @@ static int LuaUnload(lua_State* L)
     if (!lua_isinteger(L, 2) || !lua_isinteger(L, 3) || !EECPUnitsTileOK((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3)))
         return EECPUnitsResult(L, kBadArgument, 0, 0);
     long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
-    EEMUnloadTransport theMessage(s->mIds2[0], x, y);
+    EEMRecord theMessage(kMessageUnloadTransport, {s->mIds2[0], x, y});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "unload", kOK, (long)s->mIds2.size(), x, y);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1812,7 +1812,7 @@ static int EECPUnitsQueue(lua_State* L, bool inTrain)
             theBefore += (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0);
     }
     for (long k = 0; k < n; k++) {
-        EEMResearchTechnology theMessage((long)theFirst->mUnitID, theTech, false);
+        EEMRecord theMessage(kMessageResearchTechnology, {(long)theFirst->mUnitID, theTech, false});
         EECPUnitsRun(me, s, theMessage, false);
     }
     long theAfter = 0;
@@ -1848,7 +1848,7 @@ static int LuaStance(lua_State* L)
     if (!lua_isinteger(L, 2) || lua_tointeger(L, 2) < 0 || (unsigned long)lua_tointeger(L, 2) >= EEUnitBehavior::sTable.size()
         || EEUnitBehavior::sTable[(unsigned long)lua_tointeger(L, 2)] == NULL)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMSetUnitBehavior theMessage((long)lua_tointeger(L, 2));
+    EEMRecord theMessage(kMessageSetUnitBehavior, {(long)lua_tointeger(L, 2)});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "stance", kOK, (long)s->mIds2.size(), (long)lua_tointeger(L, 2), 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1887,7 +1887,7 @@ static int LuaDelete(lua_State* L)
     int r;
     if (!EECPUnitsBegin(L, me, s, true, NULL, "delete", r))
         return r;
-    EEMKillUnit theMessage(1);
+    EEMRecord theMessage(kMessageKillUnit, {1});
     EECPUnitsRun(me, s, theMessage, false);
     EECPUnitsTraceCmd(me, s, "delete", kOK, (long)s->mIds2.size(), 0, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1990,7 +1990,7 @@ static int LuaTestSpawn(lua_State* L)
         lua_pushboolean(L, 0);
         return 1;
     }
-    EEMHackANewUnit theMessage(theType, GE2DPoint((float)lua_tointeger(L, 2), (float)lua_tointeger(L, 3)), (unsigned char)thePlayer);
+    EEMRecord theMessage(kMessageHackANewUnit, {theType, GE2DPoint((float)lua_tointeger(L, 2), (float)lua_tointeger(L, 3)), (unsigned char)thePlayer});
     unsigned char theSlot = me->mSlot;
     me->mSlot = kBorrowedSlot;
     theMessage.SetOriginatingSlot(kBorrowedSlot);
@@ -2605,10 +2605,10 @@ static int LuaWaterSites(lua_State* L)
     EEAIContinent* theWater = theWaterID != 0 ? gContinentManager.GetContinentFromID(theWaterID) : NULL;
     EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
     if (theWater == NULL || theLand == NULL
-        || !gContinentManager.mTileFlags[theWaterID * gContinentManager.mFlagsWidth + theLand->mID])
+        || !gContinentManager.mTileFlags[theWaterID * gContinentManager.mFlagsWidth + theLand->GetID()])
         return 1;
     std::vector<U2DPoint<long> > theShore;
-    theWater->GetShoreNextTo(theLand->mID, theShore);
+    theWater->GetShoreNextTo(theLand->GetID(), theShore);
     EECPUnitsCharge(L, (int64_t)theShore.size() * 9 * kCostScan);
     std::vector<U2DPoint<long> > theTiles;
     theTiles.reserve(theShore.size() * 9);
@@ -2841,9 +2841,9 @@ static int LuaArea(lua_State* L)
     if (theArea == NULL)
         return 0;
     lua_createtable(L, 0, 3);
-    EECPUnitsSetInt(L, "id", (long)theArea->mID);
-    EECPUnitsSetInt(L, "category", (long)theArea->mCategory);
-    EECPUnitsSetInt(L, "tiles", (long)theArea->mTiles.Size());
+    EECPUnitsSetInt(L, "id", (long)theArea->GetID());
+    EECPUnitsSetInt(L, "category", (long)theArea->GetCategory());
+    EECPUnitsSetInt(L, "tiles", (long)theArea->GetNumTiles());
     return 1;
 }
 
@@ -2867,14 +2867,14 @@ static int LuaForestPoint(lua_State* L)
         return 0;
     U2DPoint<long> theFrom(x, y);
     std::vector<EEAIForest*> theForests;
-    for (size_t i = 0; i < theLand->mForestIDs.size(); i++) {
-        unsigned short theID = theLand->mForestIDs[i];
+    for (size_t i = 0; i < theLand->GetForestIDs().size(); i++) {
+        unsigned short theID = theLand->GetForestIDs()[i];
         EEAIForest* theForest = theID < gContinentManager.mForests.size() ? gContinentManager.mForests[theID] : NULL;
-        if (theForest != NULL && (theForest->mHull.BoundedContains(theFrom)
+        if (theForest != NULL && (theForest->HullContains(theFrom)
                 || theForest->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
             theForests.push_back(theForest);
     }
-    EECPUnitsCharge(L, (int64_t)theLand->mForestIDs.size() * kCostScan * 4);
+    EECPUnitsCharge(L, (int64_t)theLand->GetForestIDs().size() * kCostScan * 4);
     if (theForests.empty())
         return 0;
     long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theForests.size());
@@ -2882,9 +2882,9 @@ static int LuaForestPoint(lua_State* L)
         thePick += (long)theForests.size();
     URandom theRandom((unsigned long)lua_tointeger(L, 5));
     EEAIForest* theForest = theForests[thePick];
-    if (!(theForest->mTiles.Size() > 0))
+    if (!(theForest->GetNumTiles() > 0))
         return 0;
-    U2DPoint<long> thePoint = theForest->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theForest->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     lua_pushinteger(L, (lua_Integer)theForests.size());
@@ -2909,24 +2909,24 @@ static int LuaHillPoint(lua_State* L)
         return 0;
     U2DPoint<long> theFrom(x, y);
     std::vector<EEAIHill*> theHills;
-    for (size_t i = 0; i < theLand->mHillIDs.size(); i++) {
-        unsigned short theID = theLand->mHillIDs[i];
+    for (size_t i = 0; i < theLand->GetHillIDs().size(); i++) {
+        unsigned short theID = theLand->GetHillIDs()[i];
         EEAIHill* theHill = theID < gContinentManager.mHills.size() ? gContinentManager.mHills[theID] : NULL;
-        if (theHill != NULL && (theHill->mHull.BoundedContains(theFrom)
+        if (theHill != NULL && (theHill->HullContains(theFrom)
                 || theHill->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
             theHills.push_back(theHill);
     }
-    EECPUnitsCharge(L, (int64_t)theLand->mHillIDs.size() * kCostScan * 4);
+    EECPUnitsCharge(L, (int64_t)theLand->GetHillIDs().size() * kCostScan * 4);
     if (theHills.empty())
         return 0;
     long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theHills.size());
     if (thePick < 0)
         thePick += (long)theHills.size();
     EEAIHill* theHill = theHills[thePick];
-    if (!(theHill->mTiles.Size() > 0))
+    if (!(theHill->GetNumTiles() > 0))
         return 0;
     URandom theRandom((unsigned long)lua_tointeger(L, 5));
-    U2DPoint<long> thePoint = theHill->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theHill->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     lua_pushinteger(L, (lua_Integer)theHills.size());
@@ -3074,7 +3074,7 @@ static int LuaChokePoint(lua_State* L)
     if (theLand == NULL)
         return 0;
     std::vector<EEAIChokePoint*> theChokePoints;
-    gContinentManager.GetChokePoints(theChokePoints, theLand->mID, false);
+    gContinentManager.GetChokePoints(theChokePoints, theLand->GetID(), false);
     EECPUnitsCharge(L, (int64_t)theChokePoints.size() * kCostScan * 4);
     long theTotal = (long)theChokePoints.size();
     if (theChokePoints.empty())
@@ -3096,10 +3096,10 @@ static int LuaChokePoint(lua_State* L)
     if (thePick < 0)
         thePick += (long)theChokePoints.size();
     EEAIChokePoint* theChoke = theChokePoints[thePick];
-    if (!(theChoke->mTiles.Size() > 0))
+    if (!(theChoke->GetNumTiles() > 0))
         return 0;
     URandom theRandom((unsigned long)lua_tointeger(L, 5));
-    U2DPoint<long> thePoint = theChoke->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theChoke->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     lua_pushinteger(L, (lua_Integer)theTotal);
@@ -3117,10 +3117,10 @@ static int LuaAreaPoint(lua_State* L)
     if (theID <= 0 || (size_t)theID >= gContinentManager.mContinents.size())
         return 0;
     EEAIContinent* theArea = gContinentManager.GetContinentByID((unsigned short)theID);
-    if (theArea == NULL || !(theArea->mTiles.Size() > 0))
+    if (theArea == NULL || !(theArea->GetNumTiles() > 0))
         return 0;
     URandom theRandom((unsigned long)lua_tointeger(L, 2));
-    U2DPoint<long> thePoint = theArea->mTiles.GetRandomPoint(theRandom);
+    U2DPoint<long> thePoint = theArea->GetTileSet().GetRandomPoint(theRandom);
     lua_pushinteger(L, (lua_Integer)thePoint.mX);
     lua_pushinteger(L, (lua_Integer)thePoint.mY);
     return 2;
@@ -3249,7 +3249,7 @@ static int LuaHeal(lua_State* L)
     EEUnit* theTarget = EECPUnitsAlive(theID);
     if (theTarget == NULL || theTarget->mPlayer == NULL || !me->IsAlly(theTarget->mPlayer))
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMHealUnit theMessage(theID);
+    EEMRecord theMessage(kMessageHealUnit, {theID});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "heal", kOK, (long)s->mIds2.size(), theID, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3280,7 +3280,7 @@ static int LuaRally(lua_State* L)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
     // the message sets the rally of the selected buildings of the named one's type
     long n = (long)s->mIds2.size();
-    EEMSetRallyGoal theMessage(s->mIds2[0], GE2DPoint((float)x + 0.5f, (float)y + 0.5f), theTarget, 0);
+    EEMRecord theMessage(kMessageSetRallyGoal, {GE2DPoint((float)x + 0.5f, (float)y + 0.5f), theTarget, s->mIds2[0], 0});
     EECPUnitsRun(me, s, theMessage, false);
     EECPUnitsTraceCmd(me, s, "rally", kOK, n, x, y);
     return EECPUnitsResult(L, kOK, n, 0);
@@ -3305,7 +3305,7 @@ static int LuaCancel(lua_State* L)
         theTech = (long)lua_tointeger(L, 2);
     if (theTech < 0)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRemoveTechnology theMessage(s->mIds2[0], theTech, false, false);
+    EEMRecord theMessage(kMessageRemoveTechnology, {s->mIds2[0], theTech, false, false});
     EECPUnitsRun(me, s, theMessage, false);
     EECPUnitsTraceCmd(me, s, "cancel", kOK, (long)s->mIds2.size(), theTech, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3323,7 +3323,7 @@ static int LuaImprove(lua_State* L)
     long theImprovement = (long)lua_tointeger(L, 2);
     if (!me->CanBuy(theUnit->mUnitClass->GetUnitType(), theImprovement, NULL))
         return EECPUnitsResult(L, kCannotAfford, 0, 0);
-    EEMImproveUnit theMessage((long)theUnit->mUnitID, theImprovement);
+    EEMRecord theMessage(kMessageImproveUnit, {(long)theUnit->mUnitID, theImprovement});
     unsigned char theSlot = me->mSlot;
     me->mSlot = kBorrowedSlot;
     theMessage.SetOriginatingSlot(kBorrowedSlot);
@@ -3373,7 +3373,7 @@ static int LuaFormation(lua_State* L)
         return r;
     if (!lua_isinteger(L, 2) || lua_tointeger(L, 2) < 0 || lua_tointeger(L, 2) > 16)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMChangeFormation theMessage((long)lua_tointeger(L, 2));
+    EEMRecord theMessage(kMessageChangeFormation, {(long)lua_tointeger(L, 2), true});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "formation", kOK, (long)s->mIds2.size(), (long)lua_tointeger(L, 2), 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3387,7 +3387,7 @@ static int LuaPack(lua_State* L)
     int r;
     if (!EECPUnitsBegin(L, me, s, false, NULL, "pack", r))
         return r;
-    EEMPackUnpack theMessage(lua_toboolean(L, 2) != 0);
+    EEMRecord theMessage(kMessagePackUnpack, {lua_toboolean(L, 2) != 0});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "pack", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3405,7 +3405,7 @@ static int LuaDropoff(lua_State* L)
     EEComplexUnit* theDrop = EECPUnitsOwn(me, theID);
     if (theDrop == NULL || !theDrop->mIsBuilt)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMDropoffResource theMessage(theID);
+    EEMRecord theMessage(kMessageDropoffResource, {theID});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "dropoff", kOK, (long)s->mIds2.size(), theID, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3427,7 +3427,7 @@ static int LuaReplant(lua_State* L)
     s->mIds2.push_back(theID);
     if (!EECPUnitsWithinLimits(s, 1))
         return EECPUnitsResult(L, kLimit, 0, 0);
-    EEMReplantFarms theMessage(theID);
+    EEMRecord theMessage(kMessageReplantFarms, {theID});
     theMessage.Execute();
     EECPUnitsTraceCmd(me, s, "replant", kOK, 1, theID, 0);
     return EECPUnitsResult(L, kOK, 1, 0);
@@ -3444,7 +3444,7 @@ static int LuaFarm(lua_State* L)
     long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
     if (EECPUnitsOwn(me, theID) == NULL)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMSmartFarmers theMessage(theID, EECPUnitsOptBool(L, 3, "queue", false) ? 1 : 0);
+    EEMRecord theMessage(kMessageSmartFarmers, {theID, EECPUnitsOptBool(L, 3, "queue", false) ? 1 : 0});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "farm", kOK, (long)s->mIds2.size(), theID, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3475,7 +3475,7 @@ static int LuaCast(lua_State* L)
         y = theUnit->GetTileY();
     } else
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMCastCalamity theMessage(s->mIds2[0], theTarget, x, y, theTech);
+    EEMRecord theMessage(kMessageCastCalamity, {s->mIds2[0], theTarget, x, y, theTech});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "cast", kOK, (long)s->mIds2.size(), theTech, theTarget);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3523,7 +3523,7 @@ static int LuaWall(lua_State* L)
         EECPUnitsTraceCmd(me, s, "wall", kCannotAfford, 0, theType, x1);
         return EECPUnitsResult(L, kCannotAfford, 0, 0);
     }
-    EEMBuildWall theMessage(GE2DPoint((float)x1, (float)y1), GE2DPoint((float)x2, (float)y2), theTech, (long)me->mPlayerID);
+    EEMRecord theMessage(kMessageBuildWall, {GE2DPoint((float)x1, (float)y1), GE2DPoint((float)x2, (float)y2), theTech, (long)me->mPlayerID});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "wall", kOK, (long)s->mIds2.size(), theType, x1 * 10000 + y1);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3572,7 +3572,7 @@ static int LuaGate(lua_State* L)
         EECPUnitsTraceCmd(me, s, "gate", kCannotPlace, 0, theType, x * 10000 + y);
         return EECPUnitsResult(L, kCannotPlace, 0, 0);
     }
-    EEMBuildGate theMessage(GE2DPoint((float)x, (float)y), theTech, theSide, (long)me->mPlayerID);
+    EEMRecord theMessage(kMessageBuildGate, {GE2DPoint((float)x, (float)y), theTech, theSide, (long)me->mPlayerID});
     theMessage.Execute();
     EECPUnitsTraceCmd(me, s, "gate", kOK, 1, theType, x * 10000 + y);
     return EECPUnitsResult(L, kOK, 1, 0);
@@ -3609,7 +3609,7 @@ static int LuaPatrol(lua_State* L)
         thePoints.push_back(GE2DPoint((float)x, (float)y));
     }
     for (unsigned long k = 0; k < thePoints.size(); k++) {
-        EEMAddPatrolPoint theMessage(thePoints[k]);
+        EEMRecord theMessage(kMessageAddPatrolPoint, {thePoints[k]});
         EECPUnitsRun(me, s, theMessage, true);
     }
     EECPUnitsTraceCmd(me, s, "patrol", kOK, (long)s->mIds2.size(), n, (long)thePoints[0].GetX() * 10000 + (long)thePoints[0].GetY());
@@ -3624,7 +3624,7 @@ static int LuaLock(lua_State* L)
     int r;
     if (!EECPUnitsBegin(L, me, s, false, EECPUnitsGatePiece, "lock", r))
         return r;
-    EEMLockUnlock theMessage(lua_toboolean(L, 2) != 0);
+    EEMRecord theMessage(kMessageLockUnlock, {lua_toboolean(L, 2) != 0});
     EECPUnitsRun(me, s, theMessage, false);
     EECPUnitsTraceCmd(me, s, "lock", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3698,7 +3698,7 @@ static int LuaTrade(lua_State* L)
         EECPUnitsTraceCmd(me, s, "trade", kCannotAfford, 0, theResource, n);
         return EECPUnitsResult(L, kCannotAfford, 0, 0);
     }
-    EEMExchangeResources theMessage(theSell ? 1 : 0, theResource, n == 5 ? 1 : 0);
+    EEMRecord theMessage(kMessageExchangeResources, {theSell ? 1 : 0, theResource, n == 5 ? 1 : 0});
     unsigned char theSlot = me->mSlot;
     me->mSlot = kBorrowedSlot;
     if (gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {

@@ -14,7 +14,6 @@
 #include "lle/U2DRectangle.h"
 #include "lle/U2DPolygon.h"
 #include "dx7/DX7Rasterizer.h"
-#include "dx7/DX7TnLRasterizer.h"
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Surface.h"
 
@@ -101,7 +100,7 @@
 static UString gName("Direct3D Hardware TnL");
 // (gTnLRasterizer: "gRasterizer" in the original DLL; one image with the game, whose own gRasterizer has the same
 // name: ELF/Mach-O symbols do not carry the type)
-static DX7TnLRasterizer gTnLRasterizer(gName);
+static DX7Rasterizer gTnLRasterizer(gName, true);   // DX7TnLRasterizer: the T&L flavour (rastobj.rs)
 DX7Rasterizer* gRasterizerInstance = &gTnLRasterizer;
 static unsigned long gType = 'rast';
 

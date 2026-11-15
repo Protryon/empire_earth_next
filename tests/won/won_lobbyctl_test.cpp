@@ -58,6 +58,15 @@ static const int kControlIds[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0x30
 
 static bool sRust;
 static EeWonLobbyCtl* sRustCtl;
+// R6 WONLobby round 6: the game is a real ee_won game (eegame.rs) on both sides. The original's calls on it are the
+// C++ forwarders' (EELobbyGame::GetOption and the others were ee_won_eegame_call on its mRust); the Rust control
+// calls it directly. Its ops are traced as "gop"; the lobby's sync events it raises re-enter the control.
+static EeWonEeGame* sGame;
+typedef EeWonEeGameCall GC;
+static intptr_t EG(GC inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
+{
+    return ee_won_eegame_call(sGame, inCall, a, b, c, 0);
+}
 static int sDepth;
 static intptr_t OrigCall(Call inCall, intptr_t a, intptr_t b, intptr_t c);
 
@@ -104,12 +113,10 @@ static intptr_t Host(Op inOp, intptr_t a, intptr_t b, intptr_t c)
     case Op::GameCanReady: case Op::GameMatchesSpec: case Op::IAmReady: case Op::ClientHasPlayer:
     case Op::ItemClientIs: case Op::OnLoginScreen: case Op::OnLanScreen: case Op::FirewallTestDone:
     case Op::BehindFirewall: case Op::PublicAddressValid:
-    case Op::IsButton: case Op::IsCombo: case Op::ComboHasSel: case Op::GameHasFile: case Op::IAmCaptain:
+    case Op::IsButton: case Op::IsCombo: case Op::ComboHasSel: case Op::IAmCaptain:
         r = R(5) != 0; break;
-    case Op::GameOption: r = R(4) == 0 ? (intptr_t)R(1300) : (intptr_t)R(3); break;
-    case Op::GameSlot: r = R(3) ? kSlot + b : 0; break;
-    case Op::SlotState: r = R(6); break;
-    case Op::SlotOption: r = R(3) ? R(6) : R(120); break;
+    // the C++ game's Rust object: the side's real game (a field read, not traced)
+    case Op::GameRust: return (intptr_t)sGame;
     case Op::MyPlayerReady: r = R(3) == 0; break;
     case Op::MyPlayer: r = R(5) ? kPlayer : 0; break;
     case Op::PlayerSlot: r = R(4) ? R(8) : R(256); break;
@@ -125,6 +132,23 @@ static intptr_t Host(Op inOp, intptr_t a, intptr_t b, intptr_t c)
     if (inOp == Op::ComboClear && b != 0) Reenter(Ev::ComboSelChanged, a);
     if (inOp == Op::ListClear && b != 0) Reenter(Ev::ListSelChanged, kOther);
     if (inOp == Op::ChooseSavedGame) Reenter((Ev)R(20), kOther);
+    return r;
+}
+
+static intptr_t GameHost(void*, EeWonEeGameOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    if (inOp == EeWonEeGameOp::NumMapTypes) return 12; // read by a new game (untraced; the Rust tests answer 12)
+    intptr_t r = 0;
+    switch (inOp) {
+    case EeWonEeGameOp::IsHost: case EeWonEeGameOp::IAmCaptain: case EeWonEeGameOp::ClientIsCaptain: r = R(3) != 0; break;
+    case EeWonEeGameOp::NewBuffer: r = 0x7000; break;
+    case EeWonEeGameOp::ClientName: r = R(2) ? 0x7100 + R(4) : 0; break;
+    default: r = R(4); break;
+    }
+    Line("gop %lld %lld %lld %lld %lld", (long long)inOp, a, b, c, d);
+    sTrace.back() += " = " + std::to_string((long long)r);
+    if (inOp == EeWonEeGameOp::SyncOption) Reenter(Ev::SyncOption, kOther);
+    if (inOp == EeWonEeGameOp::SyncPlayer) Reenter(Ev::SyncPlayer, kOther);
     return r;
 }
 
@@ -735,20 +759,20 @@ static void GoUpdateOption(int inOption, intptr_t inGame)
         case 1: {
             intptr_t theCheck = GoGetCheckBox(inOption);
             if (theCheck != 0)
-                O(Op::ButtonSetCheck, theCheck, O(Op::GameOption, inGame, inOption) != 0, 0);
+                O(Op::ButtonSetCheck, theCheck, (long)EG(GC::GetOption, inOption) != 0, 0);
             break;
         }
         case 0: {
             intptr_t theCombo = GoGetComboBox(inOption);
             if (theCombo != 0)
-                O(Op::ComboSetSel, theCombo, (int)(long)O(Op::GameOption, inGame, inOption), 0);
+                O(Op::ComboSetSel, theCombo, (int)(long)EG(GC::GetOption, inOption), 0);
             break;
         }
         }
     } else {
         intptr_t theCombo = GoGetComboBox(9);
         if (theCombo != 0)
-            O(Op::ComboSetSel, theCombo, (int)((uint32_t)(long)O(Op::GameOption, inGame, 9) / 50 - 1), 0);
+            O(Op::ComboSetSel, theCombo, (int)((uint32_t)(long)EG(GC::GetOption, 9) / 50 - 1), 0);
     }
 }
 static void GoUpdateAll()
@@ -759,7 +783,7 @@ static void GoUpdateAll()
     int i;
     for (i = 0; i < 16; i++)
         GoUpdateOption(i, theGame);
-    bool theNotRandomMap = O(Op::GameOption, theGame, 0) != 0;
+    bool theNotRandomMap = (long)EG(GC::GetOption, 0) != 0;
     bool theFlag = O(Op::GameIsHost, theGame) != 0;
     for (int j = 0; j < 16; j++) {
         intptr_t theControl = GoGetControl(j);
@@ -773,10 +797,11 @@ static void GoUpdateAll()
         if (theControl != 0)
             O(Op::SetEnabled, theControl, theEnabled);
     }
-    if (O(Op::GameHasFile, theGame)) {
+    if (EG(GC::HasGameFile) != 0) {
         O(Op::SetVisible, sO.mCampaignInfoBox1, 0);
         O(Op::SetVisible, sO.mCampaignInfoBox2, 1);
-        O(Op::LabelSetGameFile, sO.mCampaignInfoLabel, theGame);
+        // SetText(theGame->GetGameFileName()): the transfer's name
+        O(Op::LabelSetName, sO.mCampaignInfoLabel, EG(GC::GetGameFileName));
     } else {
         O(Op::SetVisible, sO.mCampaignInfoBox1, 1);
         O(Op::SetVisible, sO.mCampaignInfoBox2, 0);
@@ -801,26 +826,26 @@ static void GoChangeGameType()
     intptr_t theGame = GoGetGame();
     if (theGame == 0)
         return;
-    long theOldType = (long)O(Op::GameOption, theGame, 0);
+    long theOldType = (long)EG(GC::GetOption, 0);
     if (O(Op::ComboGetSel, theCombo) == 1) {
         int theResult = (int)O(Op::ChooseSavedGame);
         theGame = GoGetGame();
         if (theGame != 0) {
             if (theResult == 100001) {
-                O(Op::GameSetOption, theGame, 0, 1);
-                O(Op::GameSendState, theGame);
+                EG(GC::SetOption, 0, (intptr_t)(uint32_t)1);
+                EG(GC::SendGameState);
             } else
                 O(Op::ComboSetSel, theCombo, (int)theOldType, 0);
         }
     } else {
         O(Op::ComboSetSel, theCombo, 0, 0);
-        O(Op::GameSetOption, theGame, 0, 0);
+        EG(GC::SetOption, 0, 0);
         for (int i = 0; i < 8; i++) {
-            intptr_t theSlot = O(Op::GameSlot, theGame, i);
-            if (theSlot != 0 && O(Op::SlotState, theSlot) == 4)
-                O(Op::SlotSetOpen, theSlot);
+            // theGame->GetPlayerSlot(i) (&mSlots[i]); Option(0); SetOpen()
+            if ((unsigned char)EG(GC::SlotRawOption, i, 0) == 4)
+                EG(GC::SlotSetOpen, i);
         }
-        O(Op::GameSendState, theGame);
+        EG(GC::SendGameState);
     }
 }
 static void GoOptionChanged(int inOption)
@@ -839,20 +864,20 @@ static void GoOptionChanged(int inOption)
                 case 1: {
                     intptr_t theCheck = GoGetCheckBox(inOption);
                     if (theCheck != 0)
-                        O(Op::GameChangeOption, theGame, inOption, O(Op::ButtonIsChecked, theCheck));
+                        EG(GC::ChangeOption, inOption, (intptr_t)(uint32_t)(unsigned long)O(Op::ButtonIsChecked, theCheck), 1);
                     break;
                 }
                 case 0: {
                     intptr_t theCombo = GoGetComboBox(inOption);
                     if (theCombo != 0 && O(Op::ComboHasSel, theCombo))
-                        O(Op::GameChangeOption, theGame, inOption, (int)O(Op::ComboGetSel, theCombo));
+                        EG(GC::ChangeOption, inOption, (intptr_t)(uint32_t)(unsigned long)(int)O(Op::ComboGetSel, theCombo), 1);
                     break;
                 }
                 }
             } else {
                 intptr_t theCombo = GoGetComboBox(9);
                 if (theCombo != 0 && O(Op::ComboHasSel, theCombo))
-                    O(Op::GameChangeOption, theGame, 9, ((int)O(Op::ComboGetSel, theCombo) + 1) * 50);
+                    EG(GC::ChangeOption, 9, (intptr_t)(uint32_t)(unsigned long)(((int)O(Op::ComboGetSel, theCombo) + 1) * 50), 1);
             }
         } else
             GoChangeGameType();
@@ -894,47 +919,48 @@ static void PlayerInit(intptr_t config)
     }
     O(Op::SubscribeBroadcast, 1);
 }
+// the slot view's Option(k): (unsigned char) of the game's raw option
+static intptr_t SlotOpt(int inSlot, int inOption) { return (unsigned char)EG(GC::SlotRawOption, inSlot, inOption); }
 static void PlayerUpdate(int inSlot, intptr_t inGame)
 {
     if (inGame == 0 || inSlot < 0 || inSlot >= 8) return;
-    intptr_t theSlot = O(Op::GameSlot, inGame, inSlot);
-    if (theSlot == 0) return;
+    int theSlot = inSlot; // inGame->GetPlayerSlot(inSlot): &mSlots[inSlot], never NULL here
     intptr_t theTeam = sO.mTeamCombo[inSlot];
-    O(Op::ComboSetSel, theTeam, O(Op::SlotOption, theSlot, 1));
+    O(Op::ComboSetSel, theTeam, SlotOpt(theSlot, 1));
     intptr_t theCitizen = sO.mCitizenCombo[inSlot];
-    O(Op::ComboSetSel, theCitizen, O(Op::SlotOption, theSlot, 3) - 1);
+    O(Op::ComboSetSel, theCitizen, SlotOpt(theSlot, 3) - 1);
     bool theTaken = false;
     bool theShowTeam = false;
-    bool theNotRandomMap = O(Op::GameOption, inGame, 0) != 0;
+    bool theNotRandomMap = (long)EG(GC::GetOption, 0) != 0;
     bool theIsMe = false;
     if (inSlot == sO.mMySlot && !O(Op::MyPlayerReady)) theIsMe = true;
-    if (O(Op::SlotOption, theSlot, 0) == 1) theShowTeam = true;
+    if (SlotOpt(theSlot, 0) == 1) theShowTeam = true;
     intptr_t* theName;
-    if (O(Op::SlotOption, theSlot, 0) != 3 && O(Op::SlotOption, theSlot, 0) != 4) {
+    if (SlotOpt(theSlot, 0) != 3 && SlotOpt(theSlot, 0) != 4) {
         theName = &sO.mPlayerNameCombo[inSlot];
-        O(Op::ComboSetSel, *theName, O(Op::SlotOption, theSlot, 0));
+        O(Op::ComboSetSel, *theName, SlotOpt(theSlot, 0));
         O(Op::ComboSetTextColor, *theName, 0x8000000e);
         O(Op::SetVisible, sO.mObserveCheck[inSlot], 0);
         O(Op::SetVisible, sO.mColorButton[inSlot], 0);
         O(Op::SetVisible, sO.mFileTransferLabel[inSlot], 0);
     } else {
-        theShowTeam = O(Op::SlotOption, theSlot, 4) == 0;
+        theShowTeam = SlotOpt(theSlot, 4) == 0;
         theName = &sO.mPlayerNameCombo[inSlot];
         theTaken = true;
-        O(Op::ComboSetSlotName, *theName, theSlot);
-        if (O(Op::SlotOption, theSlot, 0) == 4) O(Op::ComboSetTextColor, *theName, 0xff0000);
+        O(Op::ComboSetName, *theName, EG(GC::SlotGetName, theSlot)); // SetText(theSlot->GetName())
+        if (SlotOpt(theSlot, 0) == 4) O(Op::ComboSetTextColor, *theName, 0xff0000);
         else O(Op::ComboSetTextColor, *theName, 0x8000000e);
         O(Op::SetVisible, sO.mObserveCheck[inSlot], 1);
         O(Op::SetEnabled, sO.mObserveCheck[inSlot], theIsMe && !theNotRandomMap);
-        O(Op::ButtonSetCheck, sO.mObserveCheck[inSlot], O(Op::SlotOption, theSlot, 4) != 0, 0);
-        O(Op::SetVisible, sO.mColorButton[inSlot], O(Op::SlotOption, theSlot, 4) == 0);
+        O(Op::ButtonSetCheck, sO.mObserveCheck[inSlot], SlotOpt(theSlot, 4) != 0, 0);
+        O(Op::SetVisible, sO.mColorButton[inSlot], SlotOpt(theSlot, 4) == 0);
         O(Op::SetEnabled, sO.mColorButton[inSlot], theIsMe && !theNotRandomMap);
-        O(Op::ColorSetColor, sO.mColorButton[inSlot], O(Op::SlotOption, theSlot, 2));
-        if (O(Op::SlotOption, theSlot, 5) >= 100)
+        O(Op::ColorSetColor, sO.mColorButton[inSlot], SlotOpt(theSlot, 2));
+        if (SlotOpt(theSlot, 5) >= 100)
             O(Op::SetVisible, sO.mFileTransferLabel[inSlot], 0);
         else {
             O(Op::SetVisible, sO.mFileTransferLabel[inSlot], 1);
-            O(Op::LabelSetPercent, sO.mFileTransferLabel[inSlot], O(Op::SlotOption, theSlot, 5));
+            O(Op::LabelSetPercent, sO.mFileTransferLabel[inSlot], SlotOpt(theSlot, 5));
         }
     }
     O(Op::SetEnabled, *theName, sO.mIsHost && inSlot != sO.mMySlot && !theNotRandomMap);
@@ -980,7 +1006,7 @@ static void PlayerOptionChanged(int inSlot, int inWhat)
     case 1: theValue = (unsigned char)O(Op::ComboGetSel, sO.mTeamCombo[inSlot]); break;
     case 0: theValue = (unsigned char)O(Op::ComboGetSel, sO.mPlayerNameCombo[inSlot]); break;
     }
-    O(Op::GameChangePlayerOption, theGame, inSlot, inWhat | theValue << 8);
+    EG(GC::ChangePlayerOption, inSlot, inWhat, theValue);
 }
 static void PlayerChanged(intptr_t inEvent)
 {
@@ -1129,13 +1155,31 @@ static void OrigFree()
 static intptr_t RustHost(void*, Op inOp, intptr_t a, intptr_t b, intptr_t c) { return Host(inOp, a, b, c); }
 
 struct Step { Call mCall; intptr_t a, b, c; };
+// the game's set-up: an option's value ("gset", SetOption: below its limit) or a slot's raw option ("gslot")
+struct Setup { int mSlot, mOption; intptr_t mValue; };
+static intptr_t GameHostFn(void* p, EeWonEeGameOp o, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    return GameHost(p, o, a, b, c, d);
+}
 
-static std::vector<std::string> RunSide(bool inRust, Kind inKind, unsigned inSeed, const std::vector<Step>& inSteps)
+static std::vector<std::string> RunSide(bool inRust, Kind inKind, unsigned inSeed, const std::vector<Step>& inSteps,
+                                        const std::vector<Setup>& inSetup)
 {
     sTrace.clear();
     sSeed = inSeed;
     sRust = inRust;
     sDepth = 0;
+    sGame = ee_won_eegame_new((void*)0x6000, GameHostFn);
+    for (size_t i = 0; i < inSetup.size(); i++) {
+        const Setup& u = inSetup[i];
+        if (u.mSlot < 0) {
+            Line("gset %lld %lld", u.mOption, u.mValue);
+            ee_won_eegame_call(sGame, GC::SetOption, u.mOption, u.mValue, 0, 0);
+        } else {
+            Line("gslot %lld %lld %lld", u.mSlot, u.mOption, u.mValue);
+            ee_won_eegame_call(sGame, GC::SlotSetRawOption, u.mSlot, u.mOption, u.mValue, 0);
+        }
+    }
     if (inRust) sRustCtl = ee_won_lobbyctl_new((void*)0x9090, inKind, RustHost);
     else {
         memset(&sO, 0, sizeof(sO));
@@ -1156,6 +1200,9 @@ static std::vector<std::string> RunSide(bool inRust, Kind inKind, unsigned inSee
     Line("free");
     if (inRust) ee_won_lobbyctl_free(sRustCtl);
     else OrigFree();
+    Line("gfree");
+    ee_won_eegame_free(sGame);
+    sGame = NULL;
     return sTrace;
 }
 
@@ -1223,11 +1270,21 @@ int main(int argc, char** argv)
             }
             aSteps.push_back(s);
         }
+        // the game's options and its slots' raw options (only the game room's kinds read them)
+        std::vector<Setup> aSetup;
+        if (aKind == Kind::GameOptions || aKind == Kind::PlayerOptions) {
+            for (int o = 0; o < 16; o++)
+                if (R(2)) aSetup.push_back(Setup{-1, o, R(4) == 0 ? (intptr_t)R(1300) : (intptr_t)R(3)});
+            static const unsigned kSlotRange[6] = {6, 6, 17, 6, 2, 120};
+            for (int i = 0; i < 8; i++)
+                for (int o = 0; o < 6; o++)
+                    if (R(2)) aSetup.push_back(Setup{i, o, (intptr_t)(o == 5 && R(3) ? 100 : R(kSlotRange[o]))});
+        }
         aStepSeed = sSeed;
         sSeed = aSave;
         unsigned aSeed = 101u + (unsigned)n * 7919u;
-        std::vector<std::string> a = RunSide(false, aKind, aSeed, aSteps);
-        std::vector<std::string> b = RunSide(true, aKind, aSeed, aSteps);
+        std::vector<std::string> a = RunSide(false, aKind, aSeed, aSteps, aSetup);
+        std::vector<std::string> b = RunSide(true, aKind, aSeed, aSteps, aSetup);
         aLines += a.size();
         sChecks++;
         if (a != b) {

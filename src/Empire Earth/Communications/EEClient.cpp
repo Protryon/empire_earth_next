@@ -536,24 +536,26 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
     switch (inMessage->GetType()) {
     case kMessageFullPlayerInformation:
         if (inMessage->GetOriginatingSlot() != this->GetMySendToSlot()) {
-            EEMFullPlayerInformation* theInfo = static_cast<EEMFullPlayerInformation*>(inMessage);
-            thePlayer.mColor = theInfo->mColor;
-            thePlayer.mType = theInfo->mSlotType;
-            thePlayer.mTeam = theInfo->mTeam;
-            thePlayer.mName = theInfo->mName;
-            thePlayer.mPing = theInfo->mPing;
-            thePlayer.mLoadedType = theInfo->mLoadedType;
-            thePlayer.mStartingCitizens = theInfo->mCitizenBonus;
-            thePlayer.mEngine = (unsigned long)theInfo->mEngine < EECPEngineChoiceCount() ? (unsigned long)theInfo->mEngine
+            EEMRecord* theInfo = static_cast<EEMRecord*>(inMessage);
+            // the record, in wire order: slot 1, type 2, loaded type 3, the name (mString), ping 5, colour 6, team 7,
+            // citizens 8, ready 9, local 10, mB42 11, engine 12
+            thePlayer.mColor = theInfo->Get<int32_t>(6);
+            thePlayer.mType = theInfo->Get<int32_t>(2);
+            thePlayer.mTeam = theInfo->Get<int32_t>(7);
+            thePlayer.mName = theInfo->mString;
+            thePlayer.mPing = theInfo->Get<float>(5);
+            thePlayer.mLoadedType = theInfo->Get<int32_t>(3);
+            thePlayer.mStartingCitizens = theInfo->Get<int32_t>(8);
+            thePlayer.mEngine = (unsigned long)theInfo->Get<int32_t>(12) < EECPEngineChoiceCount() ? (unsigned long)theInfo->Get<int32_t>(12)
                                                                                        : (unsigned long)kEECPChoiceClassic;   // port
-            thePlayer.mB36 = theInfo->mB42;
-            thePlayer.mIsReady = theInfo->mIsReady;
-            thePlayer.mSlot = theInfo->mSlot;
-            thePlayer.mIsLocal = theInfo->mSlot == this->mUISlotNumber;
+            thePlayer.mB36 = theInfo->Get<bool>(11);
+            thePlayer.mIsReady = theInfo->Get<bool>(9);
+            thePlayer.mSlot = theInfo->Get<int32_t>(1);
+            thePlayer.mIsLocal = theInfo->Get<int32_t>(1) == this->mUISlotNumber;
             gGameOptions.mLock->WriteLock();
             gGameOptions.mPlayers[thePlayer.mSlot] = thePlayer;
             gGameOptions.mLock->WriteUnlock();
-            this->HandleSlotUpdate(theInfo->mSlot, thePlayer);
+            this->HandleSlotUpdate(theInfo->Get<int32_t>(1), thePlayer);
         }
         break;
     case kNetMessageXferStatus: {
@@ -603,14 +605,14 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
         inMessage->Execute();
         break;
     case kMessagePlayerSlotInfo: {
-        EEMPlayerSlotInfo* theInfo = static_cast<EEMPlayerSlotInfo*>(inMessage);
+        EEMRecord* theInfo = static_cast<EEMRecord*>(inMessage);
         gWorld.mLock->WriteLock();
-        EEPlayer* thePlayer = gWorld.mPlayers[theInfo->mPlayerID];
+        EEPlayer* thePlayer = gWorld.mPlayers[theInfo->Get<unsigned char>(1)];   // the player, slot, firewall, address
         if (thePlayer != NULL) {
-            thePlayer->mSlot = theInfo->mSlot;
+            thePlayer->mSlot = theInfo->Get<unsigned char>(2);
             if (thePlayer->IsHuman()) {
-                static_cast<EEHumanPlayer*>(thePlayer)->SetName(theInfo->mAddress);
-                thePlayer->mBehindFirewall = theInfo->mIsBehindFirewall;
+                static_cast<EEHumanPlayer*>(thePlayer)->SetName(theInfo->mString);
+                thePlayer->mBehindFirewall = theInfo->Get<bool>(3);
             }
         }
         gWorld.mLock->WriteUnlock();

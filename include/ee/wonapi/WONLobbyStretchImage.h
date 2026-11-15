@@ -2,6 +2,7 @@
 #ifndef EE_WONAPI_WONLOBBYSTRETCHIMAGE_H
 #define EE_WONAPI_WONLOBBYSTRETCHIMAGE_H
 #include "ee/wonapi/WONLobbyImageHelpers.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 class ImageFilter : public RefCount {
 public:

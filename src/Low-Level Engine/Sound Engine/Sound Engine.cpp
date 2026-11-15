@@ -14,8 +14,8 @@
 // (SECD, MCI; SEInitializeCD) is gone: the game never asked for it (inUseCD was always false)
 long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow)
 {
-    URegisterShutdown(SEShutdown);
-    return SEInitializeMixers(inDirectory, inWindow);
+    SEMixerStart theStart = {&inDirectory, inWindow, NULL};
+    return ee_sound_initialize(reinterpret_cast<EeSoundMixerStart*>(&theStart));
 }
 
 // FUNCTION: LLE 0x1005354b
@@ -28,8 +28,4 @@ long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow)
 }
 
 // FUNCTION: LLE 0x100535e2
-// Deletes every mixer (the first one until none is left: ee_sound mixers.rs)
-void SEShutdown(bool inForced)
-{
-    ee_sound_mixers_delete_all();
-}
+// SEShutdown, the shutdown hook SEInitialize registers: ee_sound_shutdown (every mixer deleted, ee_sound mixers.rs)

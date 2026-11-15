@@ -128,9 +128,6 @@
 #include "lle/UIComboBox.h"
 #include "lle/UITextLabel.h"
 #include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSEffectType.h"
-#include "ee/EESETSETAI.h"
-#include "ee/EESETSETMedia.h"
 #include "ee/EEAQuickSaveLoad.h"
 #include "ee/EEStringIDs.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
@@ -155,7 +152,7 @@
 
 // The host of the editor form's events whole in Rust (EE_SCREENS_SEE_OP_*; EESEERust in ee/EESEARust.h)
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
-void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas);   // EESETSETPlayer.cpp
+void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas);   // EESETSEffect.cpp
 
 static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_SCREENS_SEE_CHANGE_VIEWPORT &&
                   kSEEQuickLoad == EE_SCREENS_SEE_QUICK_LOAD && kSEEQuickSave == EE_SCREENS_SEE_QUICK_SAVE &&
@@ -174,7 +171,6 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
 {
     void* p = inPointers[0];
     void* q = inPointers[1];
-    void* r = inPointers[2];
     switch (inOp) {
     case EE_SCREENS_SEE_OP_REFERENCE:
         static_cast<EEAction*>(p)->Reference();
@@ -234,17 +230,12 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
                    ? (int32_t)theSelection
                    : -1;
     }
-    case EE_SCREENS_SEE_OP_CAMG_ADD:
-        static_cast<EESETSETCreateAIMilitaryGroup*>(p)->AddObject((unsigned long)i[0], static_cast<UILBString*>(q),
-                                                                  static_cast<UILBString*>(r));
-        break;
+    case EE_SCREENS_SEE_OP_CAMG_ADD:   // the effect types (editor_effects.rs), the effect screen's controls
     case EE_SCREENS_SEE_OP_CAMG_REMOVE:
-        static_cast<EESETSETCreateAIMilitaryGroup*>(p)->RemoveObject((unsigned long)i[0], static_cast<UILBString*>(q),
-                                                                     static_cast<UILBString*>(r));
+        ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 0, inOp == EE_SCREENS_SEE_OP_CAMG_ADD ? 1 : 0,
+                              (uint32_t)i[0]);
         break;
-    case EE_SCREENS_SEE_OP_MSD_SHOW:
-        static_cast<EESETSETMediaSendDialog*>(p)->ShowCameraScrollSpeed(static_cast<EESETSEffectControls*>(q));
-        break;
+    case EE_SCREENS_SEE_OP_MSD_SHOW: ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 1, 0, 0); break;
     case EE_SCREENS_SEE_OP_COMBO_SELECTION: {
         unsigned long theSelection;
         return static_cast<UIComboBox*>(static_cast<UIEntity*>(p))->GetCurrentSelection(theSelection) == kErrorOK
@@ -252,8 +243,7 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
                    : -1;
     }
     case EE_SCREENS_SEE_OP_SAA_SHOW:
-        static_cast<EESETSETSetAIAttribute*>(p)->ShowAttributeRanges((unsigned long)i[0],
-                                                                     static_cast<EESETSEffectControls*>(q));
+        ee_screens_seet_event(static_cast<EeScreensSeEffects*>(p), q, 2, 0, (uint32_t)i[0]);
         break;
     case EE_SCREENS_SEE_OP_FILL_AREA_OBJECT: {
         UIForm* theForm = static_cast<UIForm*>(p);

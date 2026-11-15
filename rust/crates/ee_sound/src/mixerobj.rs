@@ -233,6 +233,25 @@ pub unsafe extern "C" fn ee_sound_mixers_initialize(start: *mut EeSoundMixerStar
     mixers::initialize_mixers(&mut Start(start))
 }
 
+/// `SEInitialize`: [`ee_sound_shutdown`] registered with the engine's shutdown list (ee_util), then the mixers.
+///
+/// # Safety
+/// As `ee_sound_mixers_initialize`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sound_initialize(start: *mut EeSoundMixerStart) -> i32 {
+    crate::sys::ee_util_register_shutdown(ee_sound_shutdown);
+    ee_sound_mixers_initialize(start)
+}
+
+/// `SEShutdown` (a shutdown-list function): every mixer deleted.
+///
+/// # Safety
+/// None beyond the engine's: the shutdown list calls it once the sound threads are done.
+#[no_mangle]
+pub unsafe extern "C" fn ee_sound_shutdown(_forced: bool) {
+    ee_sound_mixers_delete_all();
+}
+
 /// `SEShutdown`'s mixers: the first one deleted until none is left.
 #[no_mangle]
 pub extern "C" fn ee_sound_mixers_delete_all() {

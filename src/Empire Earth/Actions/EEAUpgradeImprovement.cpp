@@ -92,7 +92,7 @@ void EEAUpgradeImprovement::Virtual4()
     EEUnitClassUpgrade* theStats = this->mUnit->mStats;
     if (this->mIsInGame == true) {
         if (this->mRaise == true)
-            gCommunications->ProcessLocalUserInput(new EEMImproveUnit(this->mUnit->GetUnitID(), this->mImprovement), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageImproveUnit, {this->mUnit->GetUnitID(), this->mImprovement}), kSlotNone);
         else
             gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveImprovement, {this->mUnit->GetUnitID(), this->mImprovement}), kSlotNone);
     } else if (this->mRaise == true) {

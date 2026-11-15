@@ -27,11 +27,9 @@ pub mod gx;
 #[cfg(not(test))]
 mod movie_ffi;
 #[cfg(not(test))]
-mod raster_ffi;
+pub mod rastobj;
 #[cfg(not(test))]
 mod screen_ffi;
-#[cfg(not(test))]
-mod state_ffi;
 #[cfg(not(test))]
 mod surface_ffi;
 

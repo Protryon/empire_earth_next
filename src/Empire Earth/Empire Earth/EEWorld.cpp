@@ -124,7 +124,6 @@
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEE2DLightGlow.h"
 #include "ee/EEStringIDs.h"
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
@@ -390,6 +389,35 @@ void EEWorld::SetDiplomaticStance(unsigned long inPlayerID, long inOther, long i
     }
 }
 
+
+// port: the deactivations queued before the unit had an id (EEWorld::DeactivateUnit), Reference()d, in call order
+static std::vector<EEComplexUnit*> sUnbornDeactivations;
+
+static void EEDropUnbornDeactivations()
+{
+    for (size_t i = 0; i < sUnbornDeactivations.size(); i++)
+        sUnbornDeactivations[i]->Dereference();
+    sUnbornDeactivations.clear();
+}
+
+// port: the waiting deactivations whose units have an id now join the queue (one entry per unit, as the original's
+// pointer queue kept it); a unit still without one is dropped, as the original's lookup of its id found nothing
+void EEWorld::QueueBornDeactivations()
+{
+    if (sUnbornDeactivations.empty())
+        return;
+    std::vector<EEComplexUnit*> theWaiting;
+    theWaiting.swap(sUnbornDeactivations);
+    for (size_t i = 0; i < theWaiting.size(); i++) {
+        EEComplexUnit* theUnit = theWaiting[i];
+        if (!UIsNone32(theUnit->mUnitID)
+            && std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), theUnit) == this->mDeactivateQueue.end())
+            this->mDeactivateQueue.push_back(theUnit);   // the reference DeactivateUnit took goes with it
+        else
+            theUnit->Dereference();
+    }
+}
+
 // FUNCTION: EXE 0x538551
 // Tears down the current game: records the end statistics, unloads media, removes every unit, ghost, effect,
 // calamity and manager, frees the minimap and active unit lists, and returns campaign games to the campaign screen
@@ -448,6 +476,7 @@ void EEWorld::Clear()
         (*it)->Dereference();
     for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
         (*it)->Dereference();
+    EEDropUnbornDeactivations();
     std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
     for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
         (*ct)->Dereference();
@@ -1551,6 +1580,7 @@ void EEWorld::UpdateActiveUnits()
     std::deque<EEUnitHandle<EEComplexUnit> >::iterator theFound;
     std::deque<EEUnitHandle<EEComplexUnit> >::iterator it;
     std::map<long, EEUnitHandle<EEComplexUnit> >::iterator mt;
+    this->QueueBornDeactivations();
     if (this->mActivateQueue.size() != 0) {
         for (it = this->mActivateQueue.begin(); it != this->mActivateQueue.end(); ++it) {
             long theID = (*it)->GetUnitID();
@@ -1606,6 +1636,16 @@ void EEWorld::DeactivateUnit(EEComplexUnit* inUnit)
 {
     if (inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
         return;
+    // port: a unit without an id (one ProduceUnit has just made and LoadCargo puts away: an aircraft into its airport
+    // or carrier) waits by pointer, as the original's queue held it: a handle to it would resolve to nothing
+    std::vector<EEComplexUnit*>::iterator theUnborn = std::find(sUnbornDeactivations.begin(), sUnbornDeactivations.end(), inUnit);
+    if (theUnborn != sUnbornDeactivations.end())
+        return;
+    if (UIsNone32(inUnit->mUnitID)) {
+        sUnbornDeactivations.push_back(inUnit);
+        inUnit->Reference();
+        return;
+    }
     std::deque<EEUnitHandle<EEComplexUnit> >::iterator it = std::find(this->mDeactivateQueue.begin(), this->mDeactivateQueue.end(), inUnit);
     if (it == this->mDeactivateQueue.end()) {
         this->mDeactivateQueue.push_back(inUnit);
@@ -1624,6 +1664,7 @@ void EEWorld::RebuildActiveUnits()
         (*it)->Dereference();
     for (it = this->mDeactivateQueue.begin(); it != this->mDeactivateQueue.end(); ++it)
         (*it)->Dereference();
+    EEDropUnbornDeactivations();
     std::deque<EEUnitHandle<EEComplexUnit> >::iterator ct;
     for (ct = this->mUpdateUnits.begin(); ct != this->mUpdateUnits.end(); ++ct)
         (*ct)->Dereference();
@@ -2072,7 +2113,8 @@ void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned ch
 UString gDefaultCampaignUser("default");
 
 // FUNCTION: EXE 0x53c772
-// Unloads the per-player foundation media and the shared effects, button sounds and light glow model of the game
+// Unloads the per-player foundation media and the shared effects and button sounds of the game (the light glow's
+// model, never drawn, is gone since R4.4's twenty-first round)
 void EEWorld::UnloadMedia()
 {
     if (this->mMediaLoaded != true)
@@ -2100,7 +2142,6 @@ void EEWorld::UnloadMedia()
     EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits)->Unload();
     EESoundObject::Get(kSoundButton1)->UnloadMedia();
     EESoundObject::Get(kSoundButton2)->UnloadMedia();
-    EEE2DLightGlow::ReleaseModel(true);
     this->mMediaLoaded = false;
 }
 

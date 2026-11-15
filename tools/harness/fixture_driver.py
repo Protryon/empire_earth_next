@@ -13,6 +13,7 @@ EE-GAME lines) is the second source. The lobby options, the dismiss table and th
   frame(g, name)                   the next presented frame -> BMP bytes (also out/<name>.bmp)
   window_frame(g, name)            Windows: the game window's content (PrintWindow) -> BMP bytes
   capture_frame(g, name)           window_frame on Windows, frame elsewhere
+  cast_calamities(g, form, names)  calamities cast at the camera's focus (the fixture's cast command), captured
   game_log(directory)              the newest EE-GAME log there, summarised
 """
 import json
@@ -862,6 +863,64 @@ def zoom_captures(g, form, percents):
         out[f'zoom{percent}'] = g.capture(f'zoom{percent}') is not None
     return out
 
+
+
+# the calamity classes by name (EECalamityEnum, ee/EECalamityManager.h) for cast_calamities
+CALAMITIES = dict(earthquake=3, hurricane=4, plague=7, leprosy=8, volcano=9, fire=10, morale=13, time_warp=14,
+                  teleport=15, cloaking=23, meteor=24, line_of_sight=25)
+
+
+def cast_calamities(g, form, names, offset=4, capture_every=2.0, captures=6, linger=60):
+    """--cast: each calamity of names cast by the local player at the camera's focus moved offset tiles east through
+    the fixture's cast command (EETestFixture.cpp CastRun: TEST ONLY, straight into the calamity manager under the
+    world's write lock, as EE-SIM --calamities does), a capture before it (cast-<name>-before) and every capture_every
+    seconds while it lives (cast-<name>-<k>, at most captures), then up to linger seconds for its end ->
+    {name: {enum, result, at, alive_ms, ended, frames}}; raises when the fixture refuses the command."""
+    out = {}
+    for name in names:
+        enum = CALAMITIES[name]
+        row = dict(enum=enum, result=None, at=None, alive_ms=0, ended=False, frames=[])
+        out[name] = row
+        if g.capture(f'cast-{name}-before') is not None:
+            row['frames'].append(f'cast-{name}-before')
+        start = len(g.game_output())
+        _command(g, f'cast {form} {enum} {offset}', ('cast-started',), f'cast {name}')
+        cast = re.compile(rf'^TEST UI cast {enum} (\S+) at (-?\d+) (-?\d+)', re.M)
+        end = time.monotonic() + 30
+        found = None
+        while found is None and time.monotonic() < end:
+            g.check_alive()
+            time.sleep(0.2)
+            found = cast.search(g.game_output(), start)
+        if found is None:
+            row['result'] = 'no-answer'
+            g.note(f'CAST {name}: no answer from the fixture')
+            continue
+        row['result'], row['at'] = found[1], [int(found[2]), int(found[3])]
+        if row['result'] != 'cast':
+            g.note(f'CAST {name}: {row["result"]} at {row["at"]}')
+            continue
+        alive = re.compile(rf'^TEST UI calamity {enum} alive (\d+)', re.M)
+        over = re.compile(rf'^TEST UI calamity {enum} (ended|timeout)', re.M)
+        for k in range(captures):
+            time.sleep(capture_every)
+            g.check_alive()
+            if g.capture(f'cast-{name}-{k}') is not None:
+                row['frames'].append(f'cast-{name}-{k}')
+            if over.search(g.game_output(), start):
+                break
+        end = time.monotonic() + linger
+        while not over.search(g.game_output(), start) and time.monotonic() < end:
+            g.check_alive()
+            time.sleep(0.5)
+        text = g.game_output()
+        times = [int(v) for v in alive.findall(text, start)]
+        row['alive_ms'] = max(times, default=0)
+        ended = over.search(text, start)
+        row['ended'] = ended[1] if ended else False
+        g.note(f'CAST {name}: cast at {row["at"]}, alive {row["alive_ms"]} ms, end {row["ended"]}, '
+               f'{len(row["frames"])} frames')
+    return out
 
 GAME_LINE = re.compile(r'^EE-GAME (\d+) p(\d+) (\w+)(.*)$')
 

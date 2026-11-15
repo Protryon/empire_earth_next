@@ -262,7 +262,7 @@ void EECPCombatManager::AddAttackTask(unsigned long inUnitID, unsigned long inAr
             theTask.mPlayer = gWorld.mPlayers[thePlayer->mPlayerID];
         theTask.mType = kAGTaskLocation;
         if (theArea) {
-            long theType = theArea->mAreaType;
+            long theType = theArea->GetAreaType();
             theLocation.mSerial = inAreaSerial;
             theLocation.mType = theType;
         } else {
@@ -302,7 +302,7 @@ void EECPCombatManager::AddDefendTask(unsigned long inUnitID, unsigned long inAr
             theTask.mPlayer = gWorld.mPlayers[thePlayer->mPlayerID];
         theTask.mType = kAGTaskLocation;
         if (theArea) {
-            long theType = theArea->mAreaType;
+            long theType = theArea->GetAreaType();
             theLocation.mSerial = inAreaSerial;
             theLocation.mType = theType;
         } else {
@@ -687,52 +687,52 @@ bool EECPCombatManager::ChooseTask(EECPAGTask& outTask, bool inLand, bool inWate
             EEComplexUnit* theUnit = this->mDefendTasks[i].mUnit;
             if (theUnit && theUnit->GetHitPoints() > 0) {
                 EEAIContinent* theContinent = gContinentManager.GetContinentAt(theUnit);
-                if (theContinent && theContinent->mID == inContinent)
+                if (theContinent && theContinent->GetID() == inContinent)
                     theIndices.push_back(i);
             } else if (theArea) {
                 EEAIRectangleArea* theRectangle = dynamic_cast<EEAIRectangleArea*>(theArea);
                 if (theRectangle) {
                     long x;
                     long y;
-                    if (inLand && theRectangle->mNumLandTiles > 0) {
-                        if (inContinent == theRectangle->mContinentID) {
+                    if (inLand && theRectangle->GetNumLandTiles() > 0) {
+                        if (inContinent == theRectangle->GetContinentID()) {
                             theIndices.push_back(i);
                         } else {
-                            for (x = theRectangle->mRect.mLeft; x <= theRectangle->mRect.mRight; x++) {
-                                for (y = theRectangle->mRect.mTop; y <= theRectangle->mRect.mBottom; y++) {
+                            for (x = theRectangle->GetRect().mLeft; x <= theRectangle->GetRect().mRight; x++) {
+                                for (y = theRectangle->GetRect().mTop; y <= theRectangle->GetRect().mBottom; y++) {
                                     if (!theMap->GetTile(x, y))
                                         continue;
                                     EEAIContinent* theContinent = gContinentManager.GetContinentAt(x, y);
-                                    if (theContinent && theContinent->mID == inContinent)
+                                    if (theContinent && theContinent->GetID() == inContinent)
                                         theIndices.push_back(i);
                                 }
                             }
                         }
                     }
-                    if (inWater && theRectangle->mNumWaterTiles > 0) {
-                        if (inContinent == theRectangle->mContinentID) {
+                    if (inWater && theRectangle->GetNumWaterTiles() > 0) {
+                        if (inContinent == theRectangle->GetContinentID()) {
                             theIndices.push_back(i);
                         } else {
-                            for (x = theRectangle->mRect.mLeft; x <= theRectangle->mRect.mRight; x++) {
-                                for (y = theRectangle->mRect.mTop; y <= theRectangle->mRect.mBottom; y++) {
+                            for (x = theRectangle->GetRect().mLeft; x <= theRectangle->GetRect().mRight; x++) {
+                                for (y = theRectangle->GetRect().mTop; y <= theRectangle->GetRect().mBottom; y++) {
                                     if (theMap->GetTile(x, y)) {
                                         EEAIContinent* theContinent = gContinentManager.GetContinentAt(x, y);
-                                        if (theContinent && theContinent->mID == inContinent)
+                                        if (theContinent && theContinent->GetID() == inContinent)
                                             theIndices.push_back(i);
                                     }
                                 }
                             }
                         }
                     }
-                    if (inSpace && theRectangle->mNumSpaceTiles > 0) {
-                        if (inContinent == theRectangle->mContinentID) {
+                    if (inSpace && theRectangle->GetNumSpaceTiles() > 0) {
+                        if (inContinent == theRectangle->GetContinentID()) {
                             theIndices.push_back(i);
                         } else {
-                            for (x = theRectangle->mRect.mLeft; x <= theRectangle->mRect.mRight; x++) {
-                                for (y = theRectangle->mRect.mTop; y <= theRectangle->mRect.mBottom; y++) {
+                            for (x = theRectangle->GetRect().mLeft; x <= theRectangle->GetRect().mRight; x++) {
+                                for (y = theRectangle->GetRect().mTop; y <= theRectangle->GetRect().mBottom; y++) {
                                     if (theMap->GetTile(x, y)) {
                                         EEAIContinent* theContinent = gContinentManager.GetContinentAt(x, y);
-                                        if (theContinent && theContinent->mID == inContinent)
+                                        if (theContinent && theContinent->GetID() == inContinent)
                                             theIndices.push_back(i);
                                     }
                                 }
@@ -1203,7 +1203,7 @@ void EECPCombatManager::Attack(EEPlayer* inTarget, const EETileLocation& inTile,
         theUnits += (*(theAttacking.begin() + i))->GetNumUnits();
         theAttack = theUnits < theNeeded;
     }
-    if (theContinent && theContinent->mCategory != kContinentCategoryMapEdge) {
+    if (theContinent && theContinent->GetCategory() != kContinentCategoryMapEdge) {
         EETileLocation theHome(this->mPlayer->mCivilizationManager->mBuildManager->mTownCenterTile.mX,
             this->mPlayer->mCivilizationManager->mBuildManager->mTownCenterTile.mY);
         // theAttack keeps the unit-limit test above (was reset to true here)
@@ -1222,8 +1222,8 @@ void EECPCombatManager::Attack(EEPlayer* inTarget, const EETileLocation& inTile,
         if (theTile && (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)) {
             theFilter.mNearWater = true;
         } else if (gDCGameSpeed > 300) {
-            for (long j = theContinent->mShoreTiles.size() - 1; j >= 0 && !theFilter.mNearWater; j--)
-                theFilter.mNearWater = inTile.DistanceToSquared(*(theContinent->mShoreTiles.begin() + j)) <= 36;
+            for (long j = theContinent->GetShoreTiles().size() - 1; j >= 0 && !theFilter.mNearWater; j--)
+                theFilter.mNearWater = inTile.DistanceToSquared(*(theContinent->GetShoreTiles().begin() + j)) <= 36;
         } else {
             theFilter.mNearWater = false;
         }

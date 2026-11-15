@@ -192,6 +192,7 @@ void EEPhysics::FlushWorld()
         if (gWorld.mPlayers[i] != NULL)
             gWorld.mPlayers[i]->AddPendingUnits(0, 1);
     }
+    gWorld.QueueBornDeactivations();   // port: the units given an id just now (EEWorld::DeactivateUnit)
     this->ProcessUnitSwaps();
     for (i = 0; i < theNumPlayers; i++) {
         if (gWorld.mPlayers[i] != NULL)
@@ -863,99 +864,100 @@ static void EEPhysicsLogOrder(NEMessage* inMessage, unsigned long inTime)
     const char* theVerb = NULL;
     std::string theRest;
     bool theGroup = true;   // the order is for the player's active group
+    // the orders are records (EEMRecord): Get<T>(i) reads member i in wire order (ee_netmsg classes.rs)
     switch (inMessage->GetType()) {
     case kMessagePathTo: {
-        EEMPathTo* m = static_cast<EEMPathTo*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "move";
-        EEPhysicsLogAt(theRest, m->mX, m->mY);
-        if (m->mIsForcedMove)
+        EEPhysicsLogAt(theRest, m->Get<float>(2), m->Get<float>(3));
+        if (m->Get<bool>(4))
             theRest += " forced=1";
-        if (m->mIsQueued)
+        if (m->Get<bool>(6))
             theRest += " queued=1";
         break;
     }
     case kMessageAttackUnit: {
-        EEMAttackUnit* m = static_cast<EEMAttackUnit*>(inMessage);
-        theVerb = m->mIsConvert ? "convert" : "attack";
-        EEPhysicsLogTarget(theRest, m->mTargetID);
-        if (m->mIsQueued)
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
+        theVerb = m->Get<bool>(3) ? "convert" : "attack";
+        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
+        if (m->Get<bool>(2))
             theRest += " queued=1";
         break;
     }
     case kMessageGatherResource: {
-        EEMGatherResource* m = static_cast<EEMGatherResource*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "gather";
-        EEPhysicsLogTarget(theRest, m->mTargetID);
-        if (m->mIsQueued)
+        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
+        if (m->Get<bool>(2))
             theRest += " queued=1";
         break;
     }
     case kMessageBuildUnit: {
-        EEMBuildUnit* m = static_cast<EEMBuildUnit*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "build";
-        EEPhysicsLogTech(theRest, thePlayer, m->mTechnology, theVerb);
-        EEPhysicsLogAt(theRest, m->mPoint.GetX(), m->mPoint.GetY());
+        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(2), theVerb);
+        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
         break;
     }
     case kMessageRepairUnit:
         theVerb = "repair";
-        EEPhysicsLogTarget(theRest, static_cast<EEMRepairUnit*>(inMessage)->mTargetID);
+        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         break;
     case kMessageHaltSelectedGroup:
     case kMessageStopActiveGroup:
         theVerb = "stop";
         break;
     case kMessageLoadGarrison: {
-        EEMLoadGarrison* m = static_cast<EEMLoadGarrison*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "garrison";
-        EEPhysicsLogTarget(theRest, m->mGarrisonID);
-        if (m->mUnitID > 0) {
+        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
+        if (m->Get<int32_t>(2) > 0) {
             char b[32];
-            snprintf(b, sizeof(b), " unit=%ld", (long)m->mUnitID);
+            snprintf(b, sizeof(b), " unit=%ld", (long)m->Get<int32_t>(2));
             theRest += b;
         }
         break;
     }
     case kMessageLoadTransport:
         theVerb = "load";
-        EEPhysicsLogTarget(theRest, static_cast<EEMLoadTransport*>(inMessage)->mTransportID);
+        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         break;
     case kMessageUnloadTransport: {
-        EEMUnloadTransport* m = static_cast<EEMUnloadTransport*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "unload";
         theGroup = false;
-        EEPhysicsLogTarget(theRest, m->mUnitID);
-        EEPhysicsLogAt(theRest, (float)m->mX, (float)m->mY);
+        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
+        EEPhysicsLogAt(theRest, (float)m->Get<int32_t>(2), (float)m->Get<int32_t>(3));
         break;
     }
     case kMessageImmediateCargoUnload:
         theVerb = "unload";
         theGroup = false;
-        EEPhysicsLogTarget(theRest, static_cast<EEMImmediateCargoUnload*>(inMessage)->mTransportID);
+        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         break;
     case kMessagePatrol:
         theVerb = "patrol";
         break;
     case kMessageAddPatrolPoint: {
-        EEMAddPatrolPoint* m = static_cast<EEMAddPatrolPoint*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "patrol_point";
-        EEPhysicsLogAt(theRest, m->mPoint.GetX(), m->mPoint.GetY());
+        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
         break;
     }
     case kMessageChangeFormation: {
         char b[32];
         theVerb = "formation";
-        snprintf(b, sizeof(b), " kind=%ld", (long)static_cast<EEMChangeFormation*>(inMessage)->mFormationType);
+        snprintf(b, sizeof(b), " kind=%ld", (long)static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         theRest += b;
         break;
     }
     case kMessageResearchTechnology: {
-        EEMResearchTechnology* m = static_cast<EEMResearchTechnology*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "research";
         theGroup = false;
-        EEPhysicsLogTarget(theRest, m->mBuildingID);
-        EEPhysicsLogTech(theRest, thePlayer, m->mTechnology, theVerb);
-        if (m->mFiveTimes)
+        EEPhysicsLogTarget(theRest, m->Get<int32_t>(1));
+        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(2), theVerb);
+        if (m->Get<bool>(3))
             theRest += " times=5";
         break;
     }
@@ -963,21 +965,21 @@ static void EEPhysicsLogOrder(NEMessage* inMessage, unsigned long inTime)
         theVerb = "explore";
         break;
     case kMessageAttackGround: {
-        EEMAttackGround* m = static_cast<EEMAttackGround*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "attack_ground";
-        EEPhysicsLogAt(theRest, m->mX, m->mY);
+        EEPhysicsLogAt(theRest, m->Get<float>(1), m->Get<float>(2));
         break;
     }
     case kMessageHealUnit:
         theVerb = "heal";
-        EEPhysicsLogTarget(theRest, static_cast<EEMHealUnit*>(inMessage)->mTargetID);
+        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         break;
     case kMessageSetRallyGoal: {
-        EEMSetRallyGoal* m = static_cast<EEMSetRallyGoal*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "rally";
-        EEPhysicsLogAt(theRest, m->mPoint.GetX(), m->mPoint.GetY());
-        if (m->mTargetID > 0)
-            EEPhysicsLogTarget(theRest, m->mTargetID);
+        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
+        if (m->Get<int32_t>(2) > 0)
+            EEPhysicsLogTarget(theRest, m->Get<int32_t>(2));
         break;
     }
     case kMessageReturnToBase:
@@ -985,28 +987,28 @@ static void EEPhysicsLogOrder(NEMessage* inMessage, unsigned long inTime)
         break;
     case kMessageDropoffResource:
         theVerb = "dropoff";
-        EEPhysicsLogTarget(theRest, static_cast<EEMDropoffResource*>(inMessage)->mDropoffID);
+        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         break;
     case kMessageSetUnitBehavior: {
         char b[32];
         theVerb = "stance";
-        snprintf(b, sizeof(b), " kind=%ld", (long)static_cast<EEMSetUnitBehavior*>(inMessage)->mBehavior);
+        snprintf(b, sizeof(b), " kind=%ld", (long)static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         theRest += b;
         break;
     }
     case kMessageBuildWall: {
-        EEMBuildWall* m = static_cast<EEMBuildWall*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "wall";
-        EEPhysicsLogTech(theRest, thePlayer, m->mTechnology, theVerb);
-        EEPhysicsLogAt(theRest, m->mStart.GetX(), m->mStart.GetY());
-        EEPhysicsLogAt(theRest, m->mEnd.GetX(), m->mEnd.GetY());
+        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(3), theVerb);
+        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
+        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(2).GetX(), m->Get<GE2DPoint>(2).GetY());
         break;
     }
     case kMessageBuildGate: {
-        EEMBuildGate* m = static_cast<EEMBuildGate*>(inMessage);
+        EEMRecord* m = static_cast<EEMRecord*>(inMessage);
         theVerb = "gate";
-        EEPhysicsLogTech(theRest, thePlayer, m->mTechnology, theVerb);
-        EEPhysicsLogAt(theRest, m->mPoint.GetX(), m->mPoint.GetY());
+        EEPhysicsLogTech(theRest, thePlayer, m->Get<int32_t>(2), theVerb);
+        EEPhysicsLogAt(theRest, m->Get<GE2DPoint>(1).GetX(), m->Get<GE2DPoint>(1).GetY());
         break;
     }
     case kMessageDisband:
@@ -1017,10 +1019,10 @@ static void EEPhysicsLogOrder(NEMessage* inMessage, unsigned long inTime)
     case kMessageImproveUnit:
         theVerb = "improve";
         theGroup = false;
-        EEPhysicsLogTarget(theRest, static_cast<EEMImproveUnit*>(inMessage)->mUnitID);
+        EEPhysicsLogTarget(theRest, static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1));
         break;
     case kMessagePackUnpack:
-        theVerb = static_cast<EEMPackUnpack*>(inMessage)->mPack ? "pack" : "unpack";
+        theVerb = static_cast<EEMRecord*>(inMessage)->Get<bool>(1) ? "pack" : "unpack";
         break;
     case kMessageGoFanatic:
         theVerb = "fanatic";
@@ -1187,15 +1189,7 @@ void EEPhysics::ReportStatistics()
         return;
     sReportedFirst = theFirst;
     sReportedSecond = theSecond;
-    gCommunications->ProcessLocalUserInput(new EEMReportStatistics(theFirst, theSecond), kSlotNone);
-}
-
-// FUNCTION: EXE 0x553917
-// Creates a report-statistics message carrying the player's two statistics
-EEMReportStatistics::EEMReportStatistics(long inL10, long inL14)
-    : EEMessage(kMessageReportStatistics, false), mL10(inL10)
-{
-    this->mL14 = inL14;
+    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageReportStatistics, {theFirst, theSecond}), kSlotNone);
 }
 
 // FUNCTION: EXE 0x55394b
@@ -1293,16 +1287,16 @@ void EEPhysics::UpdateCivTimer()
         if (gWorld.mGameOptions.CanBuyCivilization()) {
             if (this->mTickWorkCount == 0 && !gWorld.GetCurrentPlayer()->mCivilizationChosen && !gWorld.GetCurrentPlayer()->mObserverMode)
                 EESetCivBuilderButtonBlinking(true);
-            EEMCivTimerExpired* theMessage;
+            EEMRecord* theMessage;
             if (this->mGameTime > EEGetCivTimerLimit()) {
                 this->mCivTimerRuns = false;
-                theMessage = new EEMCivTimerExpired((unsigned char)0);
+                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)0});
             } else if (this->mGameTime > EEGetCivTimerSecondWarning() && !this->mCivTimerSecondWarning) {
                 this->mCivTimerSecondWarning = true;
-                theMessage = new EEMCivTimerExpired((unsigned char)1);
+                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)1});
             } else if (this->mGameTime > EEGetCivTimerFirstWarning() && !this->mCivTimerFirstWarning) {
                 this->mCivTimerFirstWarning = true;
-                theMessage = new EEMCivTimerExpired((unsigned char)1);
+                theMessage = new EEMRecord(kMessageCivTimerExpired, {(unsigned char)1});
             } else
                 return;
             if (theMessage != NULL)
@@ -1314,14 +1308,6 @@ void EEPhysics::UpdateCivTimer()
         if (gWorld.mGameOptions.CanBuyCivilization() && !gWorld.GetCurrentPlayer()->mCivilizationChosen && !gWorld.GetCurrentPlayer()->mObserverMode)
             EESetCivBuilderButtonBlinking(true);
     }
-}
-
-// FUNCTION: EXE 0x553dd2
-// Creates a civ timer message: a warning (1) or the expiry (0)
-EEMCivTimerExpired::EEMCivTimerExpired(unsigned char inIsWarning)
-    : EEMessage(kMessageCivTimerExpired, false)
-{
-    this->mIsWarning = inIsWarning;
 }
 
 // FUNCTION: EXE 0x553dff
@@ -1370,15 +1356,7 @@ void EEPhysics::CheckShiftMode()
     ISKeyboard* theKeyboard = gISKeyboard;
     ISEntity* theKey;
     if (theKeyboard != NULL && theKeyboard->GetEntity(kKeyShift, theKey) == kErrorOK && theKey->GetValue() == 0)
-        gCommunications->ProcessLocalUserInput(new EEMExitShiftMode(this->mGameTime), kSlotNone);
-}
-
-// FUNCTION: EXE 0x553ff1
-// Creates an exit-shift-mode message stamped with the game time
-EEMExitShiftMode::EEMExitShiftMode(long inGameTime)
-    : EEMessage(kMessageExitShiftMode, false)
-{
-    this->mGameTime = inGameTime;
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExitShiftMode, {this->mGameTime}), kSlotNone);
 }
 
 // FUNCTION: EXE 0x55401e

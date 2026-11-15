@@ -1,5 +1,6 @@
 //! The calamity classes' own data and the per-class virtuals around their Rust `Start`/`Stop`/`Update`
-//! (`src/Empire Earth/Calamities/EECalamityClass.cpp`; the twenty `EECC*` classes kept only their world steps).
+//! (`src/Empire Earth/Calamities/EECalamityClass.cpp`; the twenty `EECC*` classes are gone, their world steps are the
+//! host's, `EECalamityUpdate.cpp`).
 //!
 //! Every class's numbers are one record, [`EeCalamityClassFields`], that `EECalamityClass` derives from: the base
 //! members with their C++ names and types, then the union of the subclasses' numbers (each name is one class's
@@ -12,7 +13,8 @@
 //! - [`get_mode`]: how `Initialize` fetched each effect and sound (unconditionally, when the id is not 0, when it is
 //!   above 0), [`fill`]: the numbers `Initialize` computed from the db record and the effects;
 //! - [`media_step`]: `LoadMedia`'s, `UnloadMedia`'s and the destructor's steps in each class's order;
-//! - [`sound_mode`]: `PlaySound`; [`functor_kind`]: the contagion functor `Initialize` made;
+//! - [`sound_mode`]: `PlaySound`; [`functor_kind`]: the contagion functor `Initialize` made; [`target_kind`]: the
+//!   base class the manager makes for the kind (the subclasses are gone: their world steps are EECalamityUpdate.cpp's);
 //! - [`run`]: the parameters and sounds `Start`, `Stop` and `Update` handed to the Rust bodies;
 //! - [`reset`]: `Reset(calamity)`; [`cast_fields`] and [`targets_by_functor`]: `IsValidLocation` and `IsValidTarget`.
 //!
@@ -404,6 +406,42 @@ pub fn functor_kind(class_enum: i32) -> u32 {
     }
 }
 
+/// What a class is cast at ([`target_kind`]; its `GetTargetKind`): no class of the kind.
+pub const EE_CALAMITY_TARGET_NONE: u32 = 0;
+/// `EEGlobalCalamityClass` (1): nothing (the cloaking, the line of sight).
+pub const EE_CALAMITY_TARGET_GLOBAL: u32 = 1;
+/// `EELocationCalamityClass` (2): a tile.
+pub const EE_CALAMITY_TARGET_LOCATION: u32 = 2;
+/// `EEUnitCalamityClass` (3): a unit.
+pub const EE_CALAMITY_TARGET_UNIT: u32 = 3;
+
+/// The base `EECalamityManager::LoadCalamityClasses` makes for a record's kind (the base each `EECC*` class derived
+/// from); none for kinds 1, 2, 5, 6, 11, 12 and unknown ones.
+pub fn target_kind(class_enum: i32) -> u32 {
+    match class_enum {
+        kind::CLOAKING | kind::LINE_OF_SIGHT => EE_CALAMITY_TARGET_GLOBAL,
+        kind::EARTHQUAKE
+        | kind::HURRICANE
+        | kind::LEPROSY
+        | kind::VOLCANO
+        | kind::TELEPORT
+        | kind::AREA_EFFECT
+        | kind::AE_EXTRA_DAMAGE
+        | kind::AE_MIND_CONTROL
+        | kind::METEOR_STORM
+        | kind::SPECIAL_LOCATION => EE_CALAMITY_TARGET_LOCATION,
+        kind::PLAGUE
+        | kind::FIRE
+        | kind::MORALE
+        | kind::TIME_WARP
+        | kind::SPECIAL_ATTACK
+        | kind::CONSCRIPTION
+        | kind::LOGIC_BOMB
+        | kind::DROP_OBJECT => EE_CALAMITY_TARGET_UNIT,
+        _ => EE_CALAMITY_TARGET_NONE,
+    }
+}
+
 /// The step lists of [`media_step`]: `LoadMedia(player, on demand)`.
 pub const EE_CALAMITY_MEDIA_LOAD: u32 = 0;
 /// `UnloadMedia(player)`.
@@ -767,6 +805,12 @@ pub unsafe extern "C" fn ee_calamity_class_fill(
 #[no_mangle]
 pub extern "C" fn ee_calamity_class_functor_kind(class_enum: i32) -> u32 {
     functor_kind(class_enum)
+}
+
+/// [`target_kind`].
+#[no_mangle]
+pub extern "C" fn ee_calamity_class_target_kind(class_enum: i32) -> u32 {
+    target_kind(class_enum)
 }
 
 /// [`media_step`].

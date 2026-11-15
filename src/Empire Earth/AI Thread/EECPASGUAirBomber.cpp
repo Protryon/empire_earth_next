@@ -91,7 +91,7 @@ bool EECPASGUAirBomber::Retarget()
             theTile.mY = theY;
             theTile.mX = theX;
             EEAIContinent* theContinent = gContinentManager.GetContinentAt(theTile);
-            if (theContinent == NULL || theContinent->mCategory != kContinentCategoryLand)
+            if (theContinent == NULL || theContinent->GetCategory() != kContinentCategoryLand)
                 return false;
             EEUGRust* theGoal = EEUGRust::NewUnloadTransport(this->mUnit, theTile.GetX(), theTile.mY, false);
             if (theGoal->CanUnloadAtDestination()) {

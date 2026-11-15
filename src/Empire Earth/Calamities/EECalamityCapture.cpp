@@ -25,26 +25,6 @@
 #include "ee/EEGlobalCalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
-#include "ee/EECCAreaEffect.h"
-#include "ee/EECCAEExtraDamage.h"
-#include "ee/EECCAEMindControl.h"
-#include "ee/EECCCloaking.h"
-#include "ee/EECCConscription.h"
-#include "ee/EECCDropObject.h"
-#include "ee/EECCEarthquake.h"
-#include "ee/EECCFire.h"
-#include "ee/EECCHurricane.h"
-#include "ee/EECCLeprosy.h"
-#include "ee/EECCLineOfSight.h"
-#include "ee/EECCLogicBomb.h"
-#include "ee/EECCMeteorStorm.h"
-#include "ee/EECCMorale.h"
-#include "ee/EECCPlague.h"
-#include "ee/EECCSpecialAttack.h"
-#include "ee/EECCSpecialLocation.h"
-#include "ee/EECCTeleport.h"
-#include "ee/EECCTimeWarp.h"
-#include "ee/EECCVolcano.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
@@ -90,22 +70,19 @@ int EffectIndex(EEGraphicEffect* inEffect)
                  EEGraphicEffect::sEffects.begin());
 }
 
-void Functor(EESimCaptureRecord& ioRecord, EEContagionFunctor* inFunctor)
+void Functor(EESimCaptureRecord& ioRecord, EEContagionFunctor* f)
 {
-    if (inFunctor == NULL) {
+    // the record each of the six classes wrote (its tag: 1 fire, 2 leprosy, 3 plague, 4 area, 5 extra damage, 6 mind)
+    static const unsigned int kTags[7] = {7, 4, 5, 6, 1, 2, 3};   // by EE_CALAMITY_FUNCTOR_*
+    if (f == NULL) {
         ioRecord.U32(0);
         return;
     }
-    if (EEAEExtraDamageFunctor* f = dynamic_cast<EEAEExtraDamageFunctor*>(inFunctor)) {
-        ioRecord.U32(5);
-        ioRecord.U32(f->mFlag ? 1 : 0);
-    } else if (EEAEMindControlFunctor* f = dynamic_cast<EEAEMindControlFunctor*>(inFunctor)) {
-        ioRecord.U32(6);
-        ioRecord.I32(EffectIndex(f->mEffect));
-    } else if (dynamic_cast<EEAreaEffectFunctor*>(inFunctor) != NULL)
-        ioRecord.U32(4);
-    else if (EEFireFunctor* f = dynamic_cast<EEFireFunctor*>(inFunctor)) {
-        ioRecord.U32(1);
+    ioRecord.U32(kTags[f->mKind]);
+    switch (f->mKind) {
+    case EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE: ioRecord.U32(f->mFlag ? 1 : 0); break;
+    case EE_CALAMITY_FUNCTOR_MIND_CONTROL: ioRecord.I32(EffectIndex(f->mEffect)); break;
+    case EE_CALAMITY_FUNCTOR_FIRE:
         ioRecord.I32(EffectIndex(f->mEffect));
         ioRecord.F32(f->mRadius);
         ioRecord.F32(f->mChance);
@@ -114,30 +91,29 @@ void Functor(EESimCaptureRecord& ioRecord, EEContagionFunctor* inFunctor)
         ioRecord.U32(f->mSpreadTime);
         ioRecord.U32(f->mUnitSet);
         ioRecord.I32(f->mMode);
-    } else if (EELeprosyFunctor* f = dynamic_cast<EELeprosyFunctor*>(inFunctor)) {
-        ioRecord.U32(2);
+        return;
+    case EE_CALAMITY_FUNCTOR_LEPROSY:
         ioRecord.I32(f->mDamage);
         ioRecord.U32(f->mSpreadTime);
         ioRecord.U32(f->mUnitSet);
         ioRecord.I32(f->mMode);
-    } else if (EEPlagueFunctor* f = dynamic_cast<EEPlagueFunctor*>(inFunctor)) {
-        ioRecord.U32(3);
+        return;
+    case EE_CALAMITY_FUNCTOR_PLAGUE:
         ioRecord.F32(f->mRadius);
         ioRecord.F32(f->mChance);
         ioRecord.I32(f->mDamage);
-        ioRecord.U32(f->mDamageTime);
+        ioRecord.U32(f->mSpreadTime);
         ioRecord.U32(f->mUnitSet);
         ioRecord.I32(f->mMode);
-    } else
-        ioRecord.U32(7);
-    if (EEAreaEffectFunctor* f = dynamic_cast<EEAreaEffectFunctor*>(inFunctor)) {
-        ioRecord.I32(EffectIndex(f->mEffect2));
-        ioRecord.I32(EffectIndex(f->mEffect3));
-        ioRecord.I32(f->mDamage);
-        ioRecord.I32(f->mUpdateTime);
-        ioRecord.U32(f->mValue);
-        ioRecord.I32(f->mMode);
+        return;
     }
+    // the area effects' base
+    ioRecord.I32(EffectIndex(f->mEffect2));
+    ioRecord.I32(EffectIndex(f->mEffect3));
+    ioRecord.I32(f->mDamage);
+    ioRecord.I32((long)f->mSpreadTime);
+    ioRecord.U32(f->mUnitSet);
+    ioRecord.I32(f->mMode);
 }
 
 // the media slots in one order for every class: effects 1-4, the sound and the secondary sound (a class without a
@@ -155,194 +131,143 @@ void Media(EESimCaptureRecord& ioRecord, EEGraphicEffect* inEffect1, EEGraphicEf
     Functor(ioRecord, inFunctor);
 }
 
-// the classes' protected members, read through a derived type
-struct AreaPeek : EECCAreaEffect {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c, long e2t)
-    {
-        AreaPeek* p = static_cast<AreaPeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, p->mFunctor);
-        r.I32(p->mDamageFactor);
-        r.U32(p->mEffect1Duration);
-        r.U32(p->mRadiusTiles);
-        r.I32(e2t);
-    }
-};
-struct ExtraPeek : EECCAEExtraDamage {
-    static long Time(EECalamityClass* c) { return static_cast<ExtraPeek*>(c)->mEffect2Time; }
-};
-struct MindPeek : EECCAEMindControl {
-    static long Time(EECalamityClass* c) { return static_cast<MindPeek*>(c)->mEffect2Time; }
-};
-struct CloakPeek : EECCCloaking {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        CloakPeek* p = static_cast<CloakPeek*>(c);
-        Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, NULL, NULL);
-    }
-};
-struct DropPeek : EECCDropObject {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        DropPeek* p = static_cast<DropPeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, NULL);
-        r.I32(p->mUnitClassIndex);
-    }
-};
-struct QuakePeek : EECCEarthquake {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        QuakePeek* p = static_cast<QuakePeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, NULL, NULL, p->mSound, NULL, NULL);
-        r.I32(p->mDamage);
-        r.I32(p->mTickTime);
-        r.I32(p->mShake);
-        r.I32(p->mCrackCount);
-        r.F32(p->mDuration);
-        r.F32(p->mRadius);
-        r.F32(p->mShakeInterval);
-        r.F32(p->mVolume);
-        r.F32(p->mQuakeVolume);
-        r.F32(p->mMinimumFactor);
-        r.F32(p->mQuakeMinimumFactor);
-        r.F32(p->mSpeed);
-        r.F32(p->mSourceSpeed);
-        r.F32(p->mFalloff);
-    }
-};
-struct FirePeek : EECCFire {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        FirePeek* p = static_cast<FirePeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, NULL, NULL, p->mSound, NULL, p->mFunctor);
-        r.I32(p->mBurn);
-        r.I32(p->mDamage);
-        r.F32(p->mRadius);
-        r.F32(p->mChance);
-    }
-};
-struct StormPeek : EECCHurricane {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        StormPeek* p = static_cast<StormPeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, NULL);
-        r.I32(p->mDamage);
-        r.U32(p->mTickTime);
-        r.I32(p->mArea);
-        r.I32(p->mUnitClassIndex);
-        r.F32(p->mRadius);
-        r.U32(p->mOverWater ? 1 : 0);
-    }
-};
-struct LeprosyPeek : EECCLeprosy {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        LeprosyPeek* p = static_cast<LeprosyPeek*>(c);
-        Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, NULL, p->mFunctor);
-        r.I32(p->mDamage);
-        r.U32(p->mEffect1Duration);
-        r.U32(p->mRadiusTiles);
-    }
-};
-struct SightPeek : EECCLineOfSight {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        SightPeek* p = static_cast<SightPeek*>(c);
-        Media(r, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-        r.F32(p->mSightBonus);
-    }
-};
-struct BombPeek : EECCLogicBomb {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        BombPeek* p = static_cast<BombPeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, NULL);
-        r.U32(p->mEffectTime2);
-        r.U32(p->mEffectTime3);
-    }
-};
-struct MeteorPeek : EECCMeteorStorm {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        MeteorPeek* p = static_cast<MeteorPeek*>(c);
-        Media(r, NULL, NULL, NULL, NULL, p->mSound, NULL, NULL);
-        r.F32(p->mMinimumInterval);
-        r.F32(p->mMaximumInterval);
-        r.F32(p->mRadius);
-        r.I32(p->mUnitClassIndex);
-    }
-};
-struct MoralePeek : EECCMorale {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        MoralePeek* p = static_cast<MoralePeek*>(c);
-        Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, p->mSecondarySound, NULL);
-        r.I32(p->mEffectDuration);
-        r.U32(p->mPositive ? 1 : 0);
-    }
-};
-struct PlaguePeek : EECCPlague {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        PlaguePeek* p = static_cast<PlaguePeek*>(c);
-        Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, p->mSecondarySound, p->mFunctor);
-        r.I32(p->mDamage);
-    }
-};
-struct TeleportPeek : EECCTeleport {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        TeleportPeek* p = static_cast<TeleportPeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, NULL, NULL, p->mSound, p->mSecondarySound, NULL);
-        r.F32(p->mDamageShare);
-        r.I32(p->mPlacementRange);
-        r.I32(p->mHoldTime);
-    }
-};
-struct WarpPeek : EECCTimeWarp {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        WarpPeek* p = static_cast<WarpPeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, p->mGraphicEffect4, p->mSound,
-              p->mSecondarySound, NULL);
-        r.I32(p->mPlacementRange);
-        r.I32(p->mGraphicEffect1 != NULL ? p->mDepartTime : 0);   // (not set without the first effect)
-        r.I32(p->mAwayTime);
-    }
-};
-struct VolcanoPeek : EECCVolcano {
-    static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
-    {
-        VolcanoPeek* p = static_cast<VolcanoPeek*>(c);
-        Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, p->mGraphicEffect4, p->mSound, NULL, NULL);
-        r.I32(p->mL3C);
-        r.I32(p->mL40);
-        r.I32(p->mUnitClassIndex);
-        r.I32(p->mL48);
-        r.F32(p->mMaximumRadius);
-        r.F32(p->mMinimumRadius);
-    }
-};
+// each class's own members (the base's, by the class's enum)
+void AreaRec(EESimCaptureRecord& r, EECalamityClass* p, long e2t)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, p->mFunctor);
+    r.I32(p->mDamageFactor);
+    r.U32(p->mEffect1Duration);
+    r.U32(p->mRadiusTiles);
+    r.I32(e2t);
+}
+void CloakRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, NULL, NULL);
+}
+void DropRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, NULL);
+    r.I32(p->mUnitClassIndex);
+}
+void QuakeRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, NULL, NULL, p->mSound, NULL, NULL);
+    r.I32(p->mDamage);
+    r.I32(p->mTickTime);
+    r.I32(p->mShake);
+    r.I32(p->mCrackCount);
+    r.F32(p->mDuration);
+    r.F32(p->mRadius);
+    r.F32(p->mShakeInterval);
+    r.F32(p->mVolume);
+    r.F32(p->mQuakeVolume);
+    r.F32(p->mMinimumFactor);
+    r.F32(p->mQuakeMinimumFactor);
+    r.F32(p->mSpeed);
+    r.F32(p->mSourceSpeed);
+    r.F32(p->mFalloff);
+}
+void FireRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, NULL, NULL, p->mSound, NULL, p->mFunctor);
+    r.I32(p->mBurn);
+    r.I32(p->mDamage);
+    r.F32(p->mRadius);
+    r.F32(p->mChance);
+}
+void StormRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, NULL);
+    r.I32(p->mDamage);
+    r.U32(p->mTickTime);
+    r.I32(p->mArea);
+    r.I32(p->mUnitClassIndex);
+    r.F32(p->mRadius);
+    r.U32(p->mOverWater ? 1 : 0);
+}
+void LeprosyRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, NULL, p->mFunctor);
+    r.I32(p->mDamage);
+    r.U32(p->mEffect1Duration);
+    r.U32(p->mRadiusTiles);
+}
+void SightRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    r.F32(p->mSightBonus);
+}
+void BombRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, NULL);
+    r.U32(p->mEffectTime2);
+    r.U32(p->mEffectTime3);
+}
+void MeteorRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, NULL, NULL, NULL, NULL, p->mSound, NULL, NULL);
+    r.F32(p->mMinimumInterval);
+    r.F32(p->mMaximumInterval);
+    r.F32(p->mRadius);
+    r.I32(p->mUnitClassIndex);
+}
+void MoraleRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, p->mSecondarySound, NULL);
+    r.I32(p->mEffectDuration);
+    r.U32(p->mPositive ? 1 : 0);
+}
+void PlagueRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, p->mSecondarySound, p->mFunctor);
+    r.I32(p->mDamage);
+}
+void TeleportRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, NULL, NULL, p->mSound, p->mSecondarySound, NULL);
+    r.F32(p->mDamageShare);
+    r.I32(p->mPlacementRange);
+    r.I32(p->mHoldTime);
+}
+void WarpRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, p->mGraphicEffect4, p->mSound,
+          p->mSecondarySound, NULL);
+    r.I32(p->mPlacementRange);
+    r.I32(p->mGraphicEffect1 != NULL ? p->mDepartTime : 0);   // (not set without the first effect)
+    r.I32(p->mAwayTime);
+}
+void VolcanoRec(EESimCaptureRecord& r, EECalamityClass* p)
+{
+    Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, p->mGraphicEffect4, p->mSound, NULL, NULL);
+    r.I32(p->mL3C);
+    r.I32(p->mL40);
+    r.I32(p->mUnitClassIndex);
+    r.I32(p->mL48);
+    r.F32(p->mMaximumRadius);
+    r.F32(p->mMinimumRadius);
+}
 
 void ClassRecord(EESimCaptureRecord& r, EECalamityClass* c)
 {
     switch (c->mClassEnum) {
-    case kCalamityEarthquake: QuakePeek::Rec(r, c); break;
-    case kCalamityHurricane: StormPeek::Rec(r, c); break;
-    case kCalamityPlague: PlaguePeek::Rec(r, c); break;
-    case kCalamityLeprosy: LeprosyPeek::Rec(r, c); break;
-    case kCalamityVolcano: VolcanoPeek::Rec(r, c); break;
-    case kCalamityFire: FirePeek::Rec(r, c); break;
-    case kCalamityMorale: MoralePeek::Rec(r, c); break;
-    case kCalamityTimeWarp: WarpPeek::Rec(r, c); break;
-    case kCalamityTeleport: TeleportPeek::Rec(r, c); break;
-    case kCalamityAreaEffect: AreaPeek::Rec(r, c, 0); break;
-    case kCalamityAEExtraDamage: AreaPeek::Rec(r, c, ExtraPeek::Time(c)); break;
-    case kCalamityAEMindControl: AreaPeek::Rec(r, c, MindPeek::Time(c)); break;
-    case kCalamityLogicBomb: BombPeek::Rec(r, c); break;
-    case kCalamityDropObject: DropPeek::Rec(r, c); break;
-    case kCalamityCloaking: CloakPeek::Rec(r, c); break;
-    case kCalamityMeteorStorm: MeteorPeek::Rec(r, c); break;
-    case kCalamityLineOfSight: SightPeek::Rec(r, c); break;
+    case kCalamityEarthquake: QuakeRec(r, c); break;
+    case kCalamityHurricane: StormRec(r, c); break;
+    case kCalamityPlague: PlagueRec(r, c); break;
+    case kCalamityLeprosy: LeprosyRec(r, c); break;
+    case kCalamityVolcano: VolcanoRec(r, c); break;
+    case kCalamityFire: FireRec(r, c); break;
+    case kCalamityMorale: MoraleRec(r, c); break;
+    case kCalamityTimeWarp: WarpRec(r, c); break;
+    case kCalamityTeleport: TeleportRec(r, c); break;
+    case kCalamityAreaEffect: AreaRec(r, c, 0); break;
+    case kCalamityAEExtraDamage: AreaRec(r, c, c->mEffect2Time); break;
+    case kCalamityAEMindControl: AreaRec(r, c, c->mEffect2Time); break;
+    case kCalamityLogicBomb: BombRec(r, c); break;
+    case kCalamityDropObject: DropRec(r, c); break;
+    case kCalamityCloaking: CloakRec(r, c); break;
+    case kCalamityMeteorStorm: MeteorRec(r, c); break;
+    case kCalamityLineOfSight: SightRec(r, c); break;
     default: Media(r, NULL, NULL, NULL, NULL, NULL, NULL, NULL); break;   // special attack, conscription, location
     }
 }

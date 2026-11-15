@@ -565,7 +565,7 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
         gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectUnit, {inA}), kSlotNone);
         break;
     case EE_SCREENS_GAME_HK_ADD_UNIT:
-        gCommunications->ProcessLocalUserInput(new EEMAlwaysAddUnitToSelectedGroup(inA), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAlwaysAddUnitToSelectedGroup, {inA}), kSlotNone);
         break;
     case EE_SCREENS_GAME_HK_CENTER: {
         // the camera on the unit, the mini map refreshed, the camera no longer following
@@ -789,7 +789,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         if (inA)
             gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEnterShiftMode, {gPhysics->mGameTime}), kSlotNone);
         else
-            gCommunications->ProcessLocalUserInput(new EEMExitShiftMode(gPhysics->mGameTime), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExitShiftMode, {gPhysics->mGameTime}), kSlotNone);
         break;
     case EE_SCREENS_GAME_MG_AIRPORT_SELECTED: {
         EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
@@ -844,7 +844,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         inForm->mClockMode = (long)inA;
         break;
     case EE_SCREENS_GAME_MG_KILL:
-        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMKillUnit(inA != 0), kSlotNone);
+        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageKillUnit, {inA != 0}), kSlotNone);
     case EE_SCREENS_GAME_MG_ATTACK:
         return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackPlayers, {gWorld.mCurrentPlayer, inA != 0}),
                                                                 kSlotNone);
@@ -894,7 +894,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         return theUnit->mUnitClass->mCommands[inA];
     }
     case EE_SCREENS_GAME_MG_BEHAVIOR:
-        gCommunications->ProcessLocalUserInput(new EEMSetUnitBehavior((long)inA), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSetUnitBehavior, {(long)inA}), kSlotNone);
         break;
     case EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS:
         gUIManager->mMainGameForm->GetEntityGroup(9)->Disable();
@@ -1010,7 +1010,7 @@ static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
     case EE_SCREENS_GAME_MG_SET_FORMATION: {
         // the selected group's formation, posted; the formation menu closed
         EEFormation* theFormation = EEFormation::Create((long)inA);
-        gCommunications->ProcessLocalUserInput(new EEMChangeFormation((long)inA), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageChangeFormation, {(long)inA, true}), kSlotNone);
         gUIManager->mMainGameForm->GetEntityGroup(8)->Disable();
         gUIManager->mMainGameForm->GetBackgroundByID(0x98)->SetVisibility(false);
         theFormation->mB5C = true;
@@ -2349,7 +2349,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_LE_SEND_OPTION:
         gCommunications->ProcessGuaranteedLocalUserInput(
-            new EEMGameOptions((long)(int32_t)inA, (long)(int32_t)inB, UWideString("")), kSlotNone);
+            new EEMRecord(kMessageGameOptions, {(long)(int32_t)inA, (long)(int32_t)inB, UWideString("")}), kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_SET_OPTION:
         EEScreensLobbySetOption(inA, (long)(int32_t)inB);
@@ -2478,7 +2478,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_LE_FULL_PLAYER:
         if (inA < 16)
-            gCommunications->ProcessGuaranteedLocalUserInput(new EEMFullPlayerInformation(gGameOptions.mPlayers[inA]),
+            gCommunications->ProcessGuaranteedLocalUserInput(EENewFullPlayerInformation(gGameOptions.mPlayers[inA]),
                                                              kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_RULE:
@@ -2542,7 +2542,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gGameOptions.mLockSpeed = theOptions.mLockSpeed;
         gGameOptions.mCheatCodes = theOptions.mCheatCodes;
         gGameOptions.mVictory = theOptions.mVictory;
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMFullGameOptions(gGameOptions), kSlotNone);
+        gCommunications->ProcessGuaranteedLocalUserInput(EENewFullGameOptions(gGameOptions), kSlotNone);
         break;
     }
     case EE_SCREENS_GAME_LE_RANDOM_MAP_OPTIONS:
@@ -3067,7 +3067,7 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         break;
     }
     case EE_SCREENS_TEXT_CH_CHAT:
-        gCommunications->ProcessLocalUserInput(new EEMInGameChat(theText), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageInGameChat, {theText}), kSlotNone);
         break;
     case EE_SCREENS_TEXT_CL_APPEND:
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->AppendText(theText);
@@ -3262,10 +3262,10 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         gGameOptions.mMapType = theText;
         break;
     case EE_SCREENS_TEXT_LE_SEND_MAP_TYPE:
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMGameOptions(2, (long)inArg, theText), kSlotNone);
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageGameOptions, {2, (long)inArg, theText}), kSlotNone);
         break;
     case EE_SCREENS_TEXT_LE_CHAT:
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMChat(0, theText), kSlotNone);
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageChat, {0, theText}), kSlotNone);
         break;
     case EE_SCREENS_TEXT_LE_CHECK_LOAD: {
         // the start's check of the loaded game's file (a header of its own)

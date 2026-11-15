@@ -393,24 +393,11 @@ pub enum EeWonLobbyCtlOp {
     FillMapTypes,
     /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
     ComboHasSel,
-    /// `((EELobbyGame*)a)->GetOption(b)`.
-    GameOption,
-    /// `((EELobbyGame*)a)->SetOption(b, c)`.
-    GameSetOption,
-    /// `((EELobbyGame*)a)->ChangeOption(b, c, true)`.
-    GameChangeOption,
-    /// `((EELobbyGame*)a)->SendGameState()`.
-    GameSendState,
-    /// `((EELobbyGame*)a)->HasGameFile()` (0 or 1).
-    GameHasFile,
-    /// `((Label*)a)->SetText(((EELobbyGame*)b)->GetGameFileName())`.
-    LabelSetGameFile,
-    /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-    GameSlot,
-    /// `((EELobbyPlayerSlot*)a)->mOptions[0]` (the slot's state).
-    SlotState,
-    /// `((EELobbyPlayerSlot*)a)->SetOpen()`.
-    SlotSetOpen,
+    /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the game's
+    /// options, slots and changes were ops that bounced through the C++ forwarders).
+    GameRust,
+    /// `((Label*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string).
+    LabelSetName,
     /// `LobbyIAmCaptain()` (0 or 1).
     IAmCaptain,
     /// `((EELobbySyncOptionEvent*)a)->mParam`.
@@ -418,10 +405,9 @@ pub enum EeWonLobbyCtlOp {
     /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
     /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
     ChooseSavedGame,
-    /// `((EELobbyPlayerSlot*)a)->mOptions[b]` (round 5: EELobbyPlayerOptionsCtrl).
-    SlotOption,
-    /// `((ComboBox*)a)->SetText(((EELobbyPlayerSlot*)b)->GetName())`.
-    ComboSetSlotName,
+    /// `((ComboBox*)a)->SetText(GUIString(b))` (`b` a `GUIStringData`, 0 the empty string; round 5:
+    /// EELobbyPlayerOptionsCtrl).
+    ComboSetName,
     /// `((ComboBox*)a)->mEdit->mTextColor = b`.
     ComboSetTextColor,
     /// `GetMyLobbyPlayer()->GetReady()` (0 or 1).
@@ -438,8 +424,6 @@ pub enum EeWonLobbyCtlOp {
     ColorGetColor,
     /// `sprintf(buffer, "%d", b); ((Label*)a)->SetText(LobbyFormatString(TransferPercent, buffer))` (50 bytes).
     LabelSetPercent,
-    /// `((EELobbyGame*)a)->ChangePlayerOption(b, c & 0xff, c >> 8)` (the slot, the option, the value).
-    GameChangePlayerOption,
 }
 
 /// The inward calls.
@@ -464,6 +448,7 @@ pub enum EeWonLobbyCtlCall {
 pub type EeWonLobbyCtlHostFn =
     Option<unsafe extern "C" fn(ctl: *mut c_void, op: EeWonLobbyCtlOp, a: isize, b: isize, c: isize) -> isize>;
 
+use crate::eegame::{game_call, EeWonEeGameCall as GC};
 use EeWonLobbyCtlEvent as Ev;
 use EeWonLobbyCtlKind as Kind;
 use EeWonLobbyCtlOp as Op;
@@ -743,6 +728,16 @@ impl EeWonLobbyCtl {
 
     fn ask(&self, op: Op, a: isize) -> bool {
         self.op(op, a, 0, 0) != 0
+    }
+
+    /// A call on the C++ game `game`'s Rust object (its `mRust`), as the C++ forwarder made it.
+    fn game(&self, game: isize, call: GC, a: isize, b: isize) -> isize {
+        self.game3(game, call, a, b, 0)
+    }
+
+    fn game3(&self, game: isize, call: GC, a: isize, b: isize, c: isize) -> isize {
+        let handle = self.op(Op::GameRust, game, 0, 0);
+        game_call(handle, call, a, b, c)
     }
 
     fn m(&self, i: usize) -> isize {
@@ -1423,20 +1418,20 @@ impl EeWonLobbyCtl {
             if OPTION_IS_CHECK[option as usize] {
                 let check = self.option_check(option);
                 if check != 0 {
-                    let v = self.op(Op::GameOption, game, option as isize, 0);
+                    let v = self.game(game, GC::GetOption, option as isize, 0);
                     self.op(Op::ButtonSetCheck, check, (v != 0) as isize, 0);
                 }
             } else {
                 let combo = self.option_combo(option);
                 if combo != 0 {
-                    let v = self.op(Op::GameOption, game, option as isize, 0) as i32;
+                    let v = self.game(game, GC::GetOption, option as isize, 0) as i32;
                     self.op(Op::ComboSetSel, combo, v as isize, 0);
                 }
             }
         } else {
             let combo = self.option_combo(9);
             if combo != 0 {
-                let v = self.op(Op::GameOption, game, 9, 0) as u32;
+                let v = self.game(game, GC::GetOption, 9, 0) as u32;
                 self.op(Op::ComboSetSel, combo, (v / 50).wrapping_sub(1) as i32 as isize, 0);
             }
         }
@@ -1450,7 +1445,7 @@ impl EeWonLobbyCtl {
         for i in 0..16 {
             self.update_option(i, game);
         }
-        let not_random_map = self.op(Op::GameOption, game, 0, 0) != 0;
+        let not_random_map = self.game(game, GC::GetOption, 0, 0) != 0;
         let host = self.ask(Op::GameIsHost, game);
         for j in 0..16 {
             let control = self.option_control(j);
@@ -1459,10 +1454,11 @@ impl EeWonLobbyCtl {
                 self.set_enabled(control, enabled);
             }
         }
-        if self.ask(Op::GameHasFile, game) {
+        if self.game(game, GC::HasGameFile, 0, 0) != 0 {
             self.op(Op::SetVisible, self.m(G_BOX1), 0, 0);
             self.op(Op::SetVisible, self.m(G_BOX2), 1, 0);
-            self.op(Op::LabelSetGameFile, self.m(G_LABEL), game, 0);
+            let name = self.game(game, GC::GetGameFileName, 0, 0);
+            self.op(Op::LabelSetName, self.m(G_LABEL), name, 0);
         } else {
             self.op(Op::SetVisible, self.m(G_BOX1), 1, 0);
             self.op(Op::SetVisible, self.m(G_BOX2), 0, 0);
@@ -1492,28 +1488,28 @@ impl EeWonLobbyCtl {
         if game == 0 {
             return;
         }
-        let old = self.op(Op::GameOption, game, 0, 0) as i32;
+        let old = self.game(game, GC::GetOption, 0, 0) as i32;
         if self.op(Op::ComboGetSel, combo, 0, 0) == 1 {
             let result = self.op(Op::ChooseSavedGame, 0, 0, 0);
             let game = self.op(Op::MyGame, 0, 0, 0);
             if game != 0 {
                 if result == 100001 {
-                    self.op(Op::GameSetOption, game, 0, 1);
-                    self.op(Op::GameSendState, game, 0, 0);
+                    self.game(game, GC::SetOption, 0, 1);
+                    self.game(game, GC::SendGameState, 0, 0);
                 } else {
                     self.op(Op::ComboSetSel, combo, old as isize, 0);
                 }
             }
         } else {
             self.op(Op::ComboSetSel, combo, 0, 0);
-            self.op(Op::GameSetOption, game, 0, 0);
+            self.game(game, GC::SetOption, 0, 0);
+            // GetPlayerSlot(i) of 0..7 is never NULL
             for i in 0..8 {
-                let slot = self.op(Op::GameSlot, game, i, 0);
-                if slot != 0 && self.op(Op::SlotState, slot, 0, 0) == 4 {
-                    self.op(Op::SlotSetOpen, slot, 0, 0);
+                if self.game(game, GC::SlotRawOption, i, 0) == 4 {
+                    self.game(game, GC::SlotSetOpen, i, 0);
                 }
             }
-            self.op(Op::GameSendState, game, 0, 0);
+            self.game(game, GC::SendGameState, 0, 0);
         }
     }
 
@@ -1538,20 +1534,20 @@ impl EeWonLobbyCtl {
                 let check = self.option_check(option);
                 if check != 0 {
                     let v = self.op(Op::ButtonIsChecked, check, 0, 0);
-                    self.op(Op::GameChangeOption, game, option as isize, v);
+                    self.game3(game, GC::ChangeOption, option as isize, v, 1);
                 }
             } else {
                 let combo = self.option_combo(option);
                 if combo != 0 && self.ask(Op::ComboHasSel, combo) {
                     let v = self.op(Op::ComboGetSel, combo, 0, 0) as i32;
-                    self.op(Op::GameChangeOption, game, option as isize, v as isize);
+                    self.game3(game, GC::ChangeOption, option as isize, v as isize, 1);
                 }
             }
         } else {
             let combo = self.option_combo(9);
             if combo != 0 && self.ask(Op::ComboHasSel, combo) {
                 let sel = self.op(Op::ComboGetSel, combo, 0, 0) as i32;
-                self.op(Op::GameChangeOption, game, 9, sel.wrapping_add(1).wrapping_mul(50) as isize);
+                self.game3(game, GC::ChangeOption, 9, sel.wrapping_add(1).wrapping_mul(50) as isize, 1);
             }
         }
     }
@@ -1591,8 +1587,9 @@ impl EeWonLobbyCtl {
         self.op(Op::SubscribeBroadcast, 1, 0, 0);
     }
 
-    fn slot_option(&self, slot: isize, option: isize) -> isize {
-        self.op(Op::SlotOption, slot, option, 0)
+    /// The slot's `mOptions[option]` (the view's `Option`).
+    fn slot_option(&self, game: isize, slot: isize, option: isize) -> isize {
+        self.game(game, GC::SlotRawOption, slot, option)
     }
 
     /// UpdatePlayer(slot, game): one slot's row (name or state, team, colour, citizen, observer, transfer percent),
@@ -1601,52 +1598,51 @@ impl EeWonLobbyCtl {
         if game == 0 || !(0..8).contains(&slot) {
             return;
         }
-        let s = self.op(Op::GameSlot, game, slot as isize, 0);
-        if s == 0 {
-            return;
-        }
+        // GetPlayerSlot of 0..7 is never NULL
+        let s = slot as isize;
         let i = slot as usize;
         let team = self.m(P_TEAM + i);
-        self.op(Op::ComboSetSel, team, self.slot_option(s, 1), 0);
+        self.op(Op::ComboSetSel, team, self.slot_option(game, s, 1), 0);
         let citizen = self.m(P_CITIZEN + i);
-        self.op(Op::ComboSetSel, citizen, self.slot_option(s, 3) - 1, 0);
+        self.op(Op::ComboSetSel, citizen, self.slot_option(game, s, 3) - 1, 0);
         let mut taken = false;
         let mut show_team = false;
-        let not_random_map = self.op(Op::GameOption, game, 0, 0) != 0;
+        let not_random_map = self.game(game, GC::GetOption, 0, 0) != 0;
         let is_me = slot == self.my_slot.get() && !self.ask(Op::MyPlayerReady, 0);
-        if self.slot_option(s, 0) == 1 {
+        if self.slot_option(game, s, 0) == 1 {
             show_team = true;
         }
         let name = self.m(P_NAME + i);
-        if self.slot_option(s, 0) != 3 && self.slot_option(s, 0) != 4 {
-            self.op(Op::ComboSetSel, name, self.slot_option(s, 0), 0);
+        if self.slot_option(game, s, 0) != 3 && self.slot_option(game, s, 0) != 4 {
+            self.op(Op::ComboSetSel, name, self.slot_option(game, s, 0), 0);
             self.op(Op::ComboSetTextColor, name, 0x8000000e, 0);
             self.op(Op::SetVisible, self.m(P_OBSERVE + i), 0, 0);
             self.op(Op::SetVisible, self.m(P_COLOR + i), 0, 0);
             self.op(Op::SetVisible, self.m(P_TRANSFER + i), 0, 0);
         } else {
-            show_team = self.slot_option(s, 4) == 0;
+            show_team = self.slot_option(game, s, 4) == 0;
             taken = true;
-            self.op(Op::ComboSetSlotName, name, s, 0);
-            let color = if self.slot_option(s, 0) == 4 { 0xff0000 } else { 0x8000000e };
+            let text = self.game(game, GC::SlotGetName, s, 0);
+            self.op(Op::ComboSetName, name, text, 0);
+            let color = if self.slot_option(game, s, 0) == 4 { 0xff0000 } else { 0x8000000e };
             self.op(Op::ComboSetTextColor, name, color, 0);
             let observe = self.m(P_OBSERVE + i);
             self.op(Op::SetVisible, observe, 1, 0);
             self.set_enabled(observe, is_me && !not_random_map);
-            let checked = self.slot_option(s, 4) != 0;
+            let checked = self.slot_option(game, s, 4) != 0;
             self.op(Op::ButtonSetCheck, observe, checked as isize, 0);
             let button = self.m(P_COLOR + i);
-            let visible = self.slot_option(s, 4) == 0;
+            let visible = self.slot_option(game, s, 4) == 0;
             self.op(Op::SetVisible, button, visible as isize, 0);
             self.set_enabled(button, is_me && !not_random_map);
-            self.op(Op::ColorSetColor, button, self.slot_option(s, 2), 0);
+            self.op(Op::ColorSetColor, button, self.slot_option(game, s, 2), 0);
             let transfer = self.m(P_TRANSFER + i);
-            let percent = self.slot_option(s, 5);
+            let percent = self.slot_option(game, s, 5);
             if percent >= 100 {
                 self.op(Op::SetVisible, transfer, 0, 0);
             } else {
                 self.op(Op::SetVisible, transfer, 1, 0);
-                self.op(Op::LabelSetPercent, transfer, self.slot_option(s, 5), 0);
+                self.op(Op::LabelSetPercent, transfer, self.slot_option(game, s, 5), 0);
             }
         }
         let host = self.is_host.get();
@@ -1701,7 +1697,7 @@ impl EeWonLobbyCtl {
             // the transfer label (5) has no value of its own: 0
             _ => 0,
         };
-        self.op(Op::GameChangePlayerOption, game, slot as isize, what as isize | (value as isize) << 8);
+        self.game3(game, GC::ChangePlayerOption, slot as isize, what as isize, value as isize);
     }
 
     fn players_event(&self, event: isize, kind: Ev) {

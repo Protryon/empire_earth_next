@@ -68,10 +68,12 @@ splash, tracers, disease, 3D projectile, shells, additive pass, citizen beam, te
 time warp, shield, screen flash; since the sixteenth round also the hurricane, nuclear explosion, energy wave, goal,
 icon, tracer beam, command confirmation, energy wall, damage vent, farm, the smoke generators, particle emitter,
 multi-effect and volcano; since the nineteenth round the 2D kinds, with a transformation and a line entry; since the
-twentieth the three that start at a weapon tag point, on the armed unit) is made in its world through each entry point that makes it, stepped, saved
+twentieth the three that start at a weapon tag point, on the armed unit; since the twenty-first the square marching
+icons with the circular ones' graphic effects) is made in its world through each entry point that makes it, stepped, saved
 and loaded: EFSW one record per case (the creation, the save, the load and repair, the second save), EFST and EFMU after
 every update of the sweep. Its golden came from the C++ effects of f839d277 (R4.4, fourteenth, sixteenth and nineteenth rounds; the twentieth's
-from the C++ of 2c6cd492, whose 2D kinds but the shockwave and confirmation were the original classes).
+from the C++ of 2c6cd492, whose 2D kinds but the shockwave and confirmation were the original classes; the
+twenty-first's from the C++ of cddb6963, whose particle, decals, marching icons and light glow were the original classes).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
@@ -84,9 +86,10 @@ SetEpoch, AdvanceEpoch, SetNodeAvailable) were recorded from the C++ before thos
 CALI (every calamity class as Initialize left it: the base fields, the effects and sounds by table index, the functor,
 the class's own numbers; once, at the calamity game's first cast) and CALK (an active calamity's out-of-sync checksum,
 its Save's bytes and the state a fresh calamity loads from them, and the contagion manager's checksum, Save bytes and
-reload; every five game minutes and whenever a calamity's time alive crosses a multiple of five seconds) are the
-calamity profile's (ee/EECalamityCapture.h), recorded from the C++ before the classes' data, Initialize, media,
-Reset and the saves moved (calamities lane, round 1; golden for seeds 2-3).
+reload; every five game minutes, at each calamity's start and whenever a calamity's time alive crosses a multiple
+of five seconds) are the calamity profile's (ee/EECalamityCapture.h), recorded from the C++ before the classes' data,
+Initialize, media, Reset and the saves moved (calamities lane, round 1; golden for seeds 2-3; the starts' records
+from the unmodified C++ of round 2).
 GetBuildTime and NeedsUnitMedia, asked from the media loader's thread too, are TNMT: their records' order and count
 depend on timing, so TNMT has no golden (TNWK was recorded again without them from the unmodified C++).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
@@ -126,6 +129,12 @@ scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from th
 build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
 scenario manager before its logic moved); its USCK stops the game on a mismatch like every profile's (a scenario's
 path points, on the map in no list, are the store's unlisted records: R5b.4's fourteenth round).
+AETP and AEFX are the area effects' records (ee/EEAECapture.h; every profile): AETP every area-effect template as Init
+left it (once), AEFX after every area-effect tick each unit's own effects (kind, location, checksum, strength, radius,
+scale, immunity, the three modifiers of a probe value, the morale count, the Covers of its own unit), the effects
+acting on it as owner and index, its hit points and cloaking, the active list and the running state's save bytes.
+Their golden lines come from the C++ of the eight area-effect classes before they became one (calamities lane, round
+3; seeds 2-3 of the oracle, late, space and calamity profiles).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
@@ -161,7 +170,15 @@ PROFILES = {
     # a retail campaign scenario per seed (SCENARIOS; EE-SIM --scenario: the lobby's Play Scenario screen), the
     # scenario manager's triggers, conditions, objects, areas and effects (SM** records; no random map runs one)
     "scenario": ["--game-seconds", "1800", "--scenario", "{scenario}"],
+    # from the Atomic Age (WW I), every five game minutes every player makes aircraft (airport, carrier and its deck
+    # walk, navy yard), submarines, sea animals and spaceships and sends them at the next player (EE-SIM
+    # --unit-sweep: no other profile steps those physics models); the map by seed (UNIT_MAPS: water or space)
+    "units": ["--difficulty", "Hard", "--game-seconds", "1500", "--cheats", "all", "--ai", "3", "--lobby", "183=#9",
+              "--map-type", "{map}", "--unit-sweep"],
 }
+
+# the units profile's map by seed (seed 2 the first): water for the ships, space for the spaceships
+UNIT_MAPS = ["Continental", "Planets Small"]
 
 # the scenario profile's games by seed (seed 2 the first): (campaign archive, scenario) of the data tree's
 # Data/Campaigns, extracted once into build/sim_capture/scenarios (retail data: never committed)
@@ -209,7 +226,8 @@ def one(name, exe, seed, data, profile="oracle"):
     capture, trace, report = d / f"capture-{seed}.bin", d / f"trace-{seed}.txt", d / f"report-{seed}.json"
     capture.unlink(missing_ok=True)
     env = dict(os.environ, EE_SIM_CAPTURE=str(capture.resolve()))
-    args =[str(scenario_file(seed, data)) if v == "{scenario}" else v for v in PROFILES[profile]]
+    args = [str(scenario_file(seed, data)) if v == "{scenario}" else UNIT_MAPS[(seed - 2) % len(UNIT_MAPS)]
+            if v == "{map}" else v for v in PROFILES[profile]]
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
                         f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *args,
                         "--report", str(report), "--ai-trace", "--trace", str(trace)], cwd=ROOT, capture_output=True,

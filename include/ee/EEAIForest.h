@@ -16,15 +16,47 @@ public:
     void UpdateResourceKind();              // 0x29d69 (after the counts are set)
     // +0x28 0x29e17: EEAIArea's, then the removed tile's resource kind (EEAIHasResourceUnit) leaves its count
     virtual bool RemoveTile(const U2DPoint<long>& inPoint);
+    // New (port): the members behind accessors (R5b.1 blocker (b))
+    long GetResourceKind() const { return this->mResourceKind; }
+    long GetNumResources1() const { return this->mNumResources1; }
+    long GetNumResources2() const { return this->mNumResources2; }
+    long GetNumResources3() const { return this->mNumResources3; }
+    void SetNumResources1(long inCount) { this->mNumResources1 = inCount; }
+    void SetNumResources2(long inCount) { this->mNumResources2 = inCount; }
+    void SetNumResources3(long inCount) { this->mNumResources3 = inCount; }
+    unsigned long GetNextRenewal() const { return this->mNextRenewal; }
+    void SetNextRenewal(unsigned long inTime) { this->mNextRenewal = inTime; }
+    unsigned short GetContinentID() const { return this->mContinentID; }
+    void SetContinentID(unsigned short inID) { this->mContinentID = inID; }
+    unsigned short GetID() const { return this->mID; }
+    void SetID(unsigned short inID) { this->mID = inID; }
+    // the members in a saved game (EEAIContinentSave.cpp's writer and reader), in this order
+    template <class W> void WriteFields(W& ioWriter) const
+    {
+        ioWriter.I32(this->mResourceKind);
+        ioWriter.I32(this->mNumResources1);
+        ioWriter.I32(this->mNumResources2);
+        ioWriter.I32(this->mNumResources3);
+        ioWriter.I32(this->mL78);
+        ioWriter.U32(this->mNextRenewal);
+        ioWriter.U16(this->mContinentID);
+        ioWriter.U16(this->mID);
+    }
+    template <class R> bool ReadFields(R& ioReader)
+    {
+        return ioReader.I32(this->mResourceKind) && ioReader.I32(this->mNumResources1)
+            && ioReader.I32(this->mNumResources2) && ioReader.I32(this->mNumResources3) && ioReader.I32(this->mL78)
+            && ioReader.U32(this->mNextRenewal) && ioReader.U16(this->mContinentID) && ioReader.U16(this->mID);
+    }
+
+private:
     long mResourceKind;                     // +0x68 (EEAmbientWorldAnalyzer 0x124e99 keeps it) (provisional name)
     long mNumResources1;                    // +0x6c
     long mNumResources2;                    // +0x70
     long mNumResources3;                    // +0x74
     long mL78;                              // +0x78 (the ctor zeroes it)
     unsigned long mNextRenewal;             // +0x7c (unsigned deadline, 0x22a3fd)
-    unsigned short GetContinentID() const { return this->mContinentID; }
     unsigned short mContinentID;            // +0x80 (provisional name)
-    unsigned short GetID() const { return this->mID; }
     unsigned short mID;                     // +0x82 (provisional name)
 };
 

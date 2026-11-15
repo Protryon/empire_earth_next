@@ -4,7 +4,7 @@
 // ctor 0x181792 (the first function of EESETSEComboBox.cpp), dtor 0x1824fc (EESETSEffect's dtor 0x1829a4 calls it
 // before `delete`). Member types from the ctor's `new` + ctor (+ the vtable stored) per array, each filled by a loop
 // whose bound gives the count; the ctor fills them in the order +0x00, +0xa8, +0x4c, +0x5c, +0x64, +0x34, +0x3c,
-// +0x44, +0x48, +0x80, +0x98, +0x74, +0xb0. The effect types (ee/EESETSEffectType.h) get it as their last argument.
+// +0x44, +0x48, +0x80, +0x98, +0x74, +0xb0. The effect types (ee_screens editor_effects.rs) address it by array and index.
 // Member names are provisional.
 #ifndef EE_EESETSEFFECTCONTROLS_H
 #define EE_EESETSEFFECTCONTROLS_H

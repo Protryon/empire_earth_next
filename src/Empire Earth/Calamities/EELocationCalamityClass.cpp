@@ -19,6 +19,9 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EEMap.h"
+#include "ee/EEPhysics.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"
 
 // FUNCTION: EXE 0x4b6f21
 // Creates a calamity of the class at the location for the caster and resets it for its start
@@ -46,6 +49,25 @@ long EELocationCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLoca
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
     return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
                              EECalamityCanCastAt(this, EeCalamityCastMode::Location, inUnit, inX, inY, inCheck, inTargetUnit));
+}
+
+// FUNCTION: EXE 0x4b4e74 (EECCVolcano::GetRandomLocation)
+// Picks a random point on the map between the minimum and maximum radius around the centre, at the tile's height
+void EELocationCalamityClass::GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation)
+{
+    EEMapTile* theTile;
+    do {
+        float theAngle = gPhysics->mRandom.Generate() * 6.2831855f - 3.1415927f;
+        float theFraction = gPhysics->mRandom.Generate();
+        float theCos = UMCos(theAngle);
+        float theSin = UMCos(1.5707964f - theAngle);
+        float theDistance = (1.0f - theFraction) * this->mMinimumRadius + theFraction * this->mMaximumRadius;
+        outLocation.SetX(theCos * theDistance);
+        outLocation.SetY(theSin * theDistance);
+        outLocation += inCenter;
+        theTile = ::gWorld.mMap->GetTile(UMFloor(outLocation.GetX()), UMFloor(outLocation.GetY()));
+    } while (theTile == NULL);
+    outLocation.SetZ(theTile->mHeight);
 }
 
 // The class's IsValidLocation: the shared rule over the class's radius, water flag, map area, space terrain and placed

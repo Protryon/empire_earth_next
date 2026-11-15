@@ -17,10 +17,16 @@
 //! - [`calamity_start`]: every calamity class's `Start` and `Stop` over the same host.
 //! - [`contagion_save`]: the contagion helpers' and their manager's `Load`, `Save` and checksum.
 //! - [`contagion`]: the contagion helpers' update and spread over a host, the functors' damage arithmetic.
+//! - [`contagion_functor`]: the six contagion functors as one record: their numbers, getters and `Apply`'s hit.
 //! - [`nodes`]: the tree's, the epochs' and the nodes' members as records and the tree's walks over them (research,
 //!   availability, obsolescence, the epochs, the saved game, the checksum, the media table).
+//! - [`area_effect`]: the area effects' eight kinds as one record over a host of world calls, their templates'
+//!   numbers, player and area tests.
+//! - [`area_effect_save`]: the area effects' running state in a saved game.
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
 
+pub mod area_effect;
+pub mod area_effect_save;
 pub mod calamity;
 pub mod calamity_cast;
 pub mod calamity_class;
@@ -29,6 +35,7 @@ pub mod calamity_start;
 pub mod calamity_update;
 pub mod capture;
 pub mod contagion;
+pub mod contagion_functor;
 pub mod contagion_save;
 pub mod effects;
 pub mod ffi;

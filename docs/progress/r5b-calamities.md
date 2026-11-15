@@ -1,32 +1,38 @@
-# R5b calamities (src/Empire Earth/Calamities)
+# R5b calamities (src/Empire Earth/Calamities, and the area effects of Civilization Builder)
 
 The lane's state. Each round rewrites this file to the current state; the round's story goes in PORT_LEARNINGS.md
-("Calamities lane, round 1").
+("Calamities lane, round 1", "round 2", "round 3").
 
-**Round 1** (branch `rust-calamities1`, `ee_tech`): before it, R5b.2 had moved every class's `Update`, `Start`,
-`Stop`, the cast tests and the contagion update into Rust over host calls; the classes' data, `Initialize`, media,
-`Reset`, the per-class run wrappers and the saves were C++ (7,969 lines in the directory).
+**Rust** (`ee_tech`): every calamity class's `Start`, `Stop` and `Update` decisions, the cast tests and the contagion
+update (R5b.2); the classes' data as one record with every per-class virtual as a table by `mClassEnum`, the base each
+kind is made as (`calamity_class.rs`); an active calamity's record, `Reset`, checksum, `Load` and `Save`
+(`calamity_record.rs`); the contagion helpers' record and saves (`contagion_save.rs`); the contagion functors as one
+record, their getters, `Update`'s discrete time and `Apply`'s hit (`contagion_functor.rs`). Since round 3 the area
+effects: the eight kinds (healing, morale, the two immunities, morale from buildings, from military heroes, economy
+from units, cloaking) as one record `EeAreaEffectFields` keyed by the template's kind, every slot's body over a host
+of world calls, the template's numbers, constructor, `Init`, player and area tests (`area_effect.rs`); the running
+state saved since 0.256, its record and bytes (`area_effect_save.rs`).
 
-- **The classes' data as one Rust record, every per-class virtual in the base** (`calamity_class.rs`):
-  `EECalamityClass` derives from `EeCalamityClassFields` (the base members, then the twenty subclasses' numbers by
-  their C++ names; the area effects' and the leprosy's radius in tiles is `mRadiusTiles`, the teleport's float share
-  `mDamageShare`) and holds the effects, sounds and functor (`mGraphicEffect1..4`, `mSound`, `mSecondarySound`,
-  `mFunctor`). `Initialize` (each slot's fetch mode, the numbers, the functor), the destructor, `LoadMedia`,
-  `UnloadMedia`, `PlaySound`, `Reset`, `Start`, `Stop`, `Update`, `GetContagionFunctor`, `IsValidTarget` and
-  `IsValidLocation` are the base's (or the unit/location base's), run by Rust tables keyed by `mClassEnum`. The
-  `EECC*` classes keep only their world steps (`StartStep`, `UpdateStep`, their helpers) and the special virtuals
-  (`CanCastAt` of the line of sight and special attack, `AffectsOwnUnits`, `Virtual4C`, the volcano's `Place`).
-- **An active calamity's record** (`calamity_record.rs`): `EECalamity` derives from `EeCalamityFields` (its 17 plain
-  members); `Reset`'s numbers, the out-of-sync checksum, `Load` and `Save` are Rust over one I/O callback.
-- **The contagion saves** (`contagion_save.rs`): `EEContagionHelper` derives from `EeContagionHelperFields`; the
-  helper's and the manager's `Load`/`Save` and the helper's checksum are Rust over one I/O callback.
-- **C++**: net -2,546 this round (the directory 7,969 -> 6,293 lines with the 514-line test capture).
-- **Gate**: CALI (every class as `Initialize` left it) and CALK (each active calamity's checksum, save bytes and
-  reload, the contagion manager's), recorded from the unmodified C++ (calamity profile, seeds 2-3), with CALT/CALW/
-  CONT/CCAS; every class is cast, started, updated and stopped in the calamity profile's game.
+**C++ left** (Calamities: 4,172 lines with the 439-line test capture):
+- `EECalamityUpdate.cpp` (1,350): the host every Rust run asks, one switch over `EeCalamityOp`; the twenty classes'
+  world steps (effects, sounds, units, orders, the camera shake).
+- The three bases and `EECalamityClass` (379), `EECalamityManager` (410), `EECalamity` (365), `EEContagionHelper`
+  (402), `EEContagionManager` (412), `EECalamityCast.cpp` (216).
+- Area effects (Civilization Builder; 1,617 lines with the 208-line test capture, 2,067 before round 3):
+  `EEAreaEffect.cpp` (the one class's slots as calls into Rust, the host switch `EEAEHost`: unit sets, tech nodes,
+  player relations, positions, continents, hit points, the cloaking's world steps, the buildings' count; the
+  template's ctor/dtor/Init/tests), `EEAreaEffectTemplate.cpp` (the template's media, the unit's list
+  `EEUnitAreaEffectList`), `EEAEManager.cpp` (the tick's unit functor passes, `CollectEffects`, `FindEffect`, the
+  templates' load, the running state's walk over the units and its after-load fix-up).
 
-**Left** (C++): the world steps of each class (`StartStep`/`UpdateStep` and their helpers: the effects, sounds,
-units and orders; by design until the world calls are Rust), `EECalamityManager` (the active list, `Update`, the
-creates, the class factory), `EECalamity`'s ctor/dtor/sound setters and out-of-sync dump, the contagion helper's
-unit list (`AddUnit`, `RemoveUnit`, `SwapUnit`, `RestorePointers`) and the manager's helper list, the functors
-(`EE*Functor.cpp`), `EECalamityUpdate.cpp`/`EECalamityCast.cpp` (the shared hosts).
+**Next**: the unit lists as ids (the contagion helper's units, the calamity's target and caster; the area effects'
+owner unit and the units' two lists) once a pending unit (no id yet: a conversion's new unit in `SwapUnit`) can be
+held by id; the manager's lists in a Rust store; the world steps as the effect manager's and the units' calls become
+Rust.
+
+**Gates**: the calamity profile's CALI, CALK, CALT, CALW, CONT, CCAS, CALS, CALU records at seeds 2-3; AETP and AEFX
+(the area effects: every template, every unit's own and affecting effects, their state, modifiers and Covers, and
+the running state's save bytes after every area-effect tick) in the oracle, late, space and calamity profiles at
+seeds 2-3, recorded from the unmodified C++; the oracle; the saveload matrix (`oracle,calamity`).
+**Tour**: `fixture_game.py --exercise random-game --cast earthquake,hurricane,meteor,volcano` casts each calamity at
+the camera's focus through the fixture's cast command (EETestFixture.cpp, TEST ONLY) and captures it.
