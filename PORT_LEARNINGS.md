@@ -24757,3 +24757,68 @@ Round: -245 net for the moves (the TEST ONLY capture +106 aside), far under the 
   blocks, `EESMCreateUnit`, the cinematics, `EEEvent`'s handlers, the stream and list hosts); the elements' strings and
   lists. The next real saving is the element classes themselves as Rust records with C++ accessors, to be planned with
   the editor lane.
+
+## R4.3, sixteenth part: GEMaterial, GEFont, GEText and GEWindow whole in Rust; the value types' units folded into GEValues.cpp; the shells merged into three units (ee_ge smallobj.rs; branch rust-ge16, 2026-11-15)
+
+Rounds 14 and 15's rule held again: only whole files cut lines. Twenty-seven Graphics Engine units are gone: four with
+their classes (now Rust), fifteen value-type units folded into one, eight shells merged into three.
+
+| Commit | What | Net C++ (src + include, include/rust excluded) |
+|---|---|---|
+| d684236d | GEMaterial, GEFont, GEText and GEWindow whole in Rust; their four units deleted | +211 -398, net -187 |
+| c204e613 | the value types' fifteen units folded into GEValues.cpp | +993 -1,795, net -802 |
+| c79a8c31 | the shells of GEModel, GEModelManager, GEPhysicalModel, GETerrainMesh, GETexture, GETextureManager, GETextureSet, GESurface, GEBitmap and GEFontBitmap merged into GEModel.cpp, GETexture.cpp and GEBitmap.cpp | +1,240 -1,866, net -626 |
+
+Round total: net -1,615. The Graphics Engine directory (with the DX7 plug-in's 1,351 lines): 7,284 -> 5,698; its units
+are GEBitmap.cpp, GEModel.cpp, GERasterizer.cpp, GETexture.cpp and GEValues.cpp.
+
+- **The four classes** (`smallobj.rs`): a material (name, colour, a texture per screen, polygon ranges per level of
+  detail, vertex range, texture index, opacity), a font (name, platform font, quality, style, size, cell height, glyph
+  bitmap), a text (location, colours, extent, string, font, alignment, transparency) and a window (platform window,
+  client origin, size, depth, full-screen flag), with every member of their units and headers. The C++ classes keep
+  their interfaces (the models, the UI's controls and the renderer use them); a material and a font keep their
+  `UReferenceCounter` base, so the count stays C++. The `UString`s and `UWideString` the originals held by value are
+  C++ objects the Rust object owns through the host (accessors such as `GetName()` and `GetText()` return references,
+  so they must be real C++ strings). One host, `GEObjectHost` (`EeGeObjOp`, GEBitmap.cpp), makes every call on the
+  strings, the referenced textures, fonts and font bitmaps, the platform fonts and windows and the platform's text
+  functions, in the original's order. The text extent calls `font_ffi.rs`'s `ee_ge_text_extent` from Rust.
+  - GEWindow.h is included by most of the game: it forward-declares the object (`struct EeGeWin`) and keeps its
+    forwarders out of line next to the host, so it does not pull `rust/ee_ge.h` into those units.
+  - `GEMaterial::SizeOf` feeds the model manager's footprint: it passes the size of the original object's layout (a
+    local struct of its old members) so the footprint did not change when the class shrank to a pointer.
+  - The copies are deleted. GEText's implicit copy shared the font without taking a reference (a double release when
+    both copies died); nothing used it, nor the others'. `GEText::operator=` stays (its self-assignment released the
+    font before taking it again, as the original did; the golden skips it).
+  - cbindgen: a function returning `*mut [f32; 3]` made the header generator stop with "`float` is declared twice";
+    the colour accessors return `*mut f32` (the first of three, `GEColor`'s layout).
+  - The store gate's digest read a material's members as a friend: it reads the accessors now (a `ScreenCount` field
+    for the texture slots); store gate PASS (25,140 lines).
+- **The fold** (`GEValues.cpp`, an extra lle unit in tools/units.py): GE3DPoint, GEVector, GE3DLine, GE3DPlane,
+  GETransformation, GEOrientation, GEQuaternion, GEBoundingBox, GEViewport, GERectangle, GEColor, GELight,
+  GETextureCoordinate, GEVertexArray and GEPolygonArray held Rust forwarders, the static string ids, the quantized
+  vector table, the file I/O and address markers. Their bodies are one unit in the same statements; the markers and
+  the include lists went with the files. The forwarders did not become header inlines: GE3DPoint.h and its siblings
+  are included by about 230 game units, and an inline over Rust would pull `rust/ee_ge.h` into each (any ee_ge FFI
+  change would rebuild them). The statics now initialize at the extra unit's link position; nothing reads them during
+  static initialization. GEVector.cpp's `#define LLE_GEVECTOR_CPP` (which makes the statics visible) is the unit's
+  first line.
+- **The shell merge**: by what the shells serve: GEModel.cpp (the model, its loader, the manager with the open-format
+  lookups' host, the physical model's walk table, the terrain mesh), GETexture.cpp (the texture, the manager, the
+  texture set, the surface with libjpeg's calls) and GEBitmap.cpp (the bitmap, the font bitmap, the vertex and object
+  hosts). A scratch script did the folds (build/ge16/fold.py: markers, the leading comment block and marker-only
+  comments dropped, includes merged in first-seen order); two things it could not see: GESurface.cpp included
+  libjpeg inside `extern "C" { }`, and the merged include list put the include outside it (16 unresolved `jpeg_*`
+  symbols at the link); GETerrainMesh.cpp's `#define LLE_GETERRAINMESH_CPP` had no reader and went.
+- **Cost**: a comment edited in GE2DPoint.h rebuilt nearly every unit (about 27 minutes at -j 3 on the loaded
+  machine). Comment-only header edits are not free here.
+- **The golden** (scratch, build/ge16/gms: `build.py orig|cur|mut`, `fake_ms.h`, `driver_ms.cpp`, `mutate.py`): over
+  the base commit's unmodified GEMaterial.cpp, GEFont.cpp, GEText.cpp and GEWindow.cpp and their headers, with traced
+  fakes of `UReferenceCounter`, `UString`, `UWideString`, textures, font bitmaps, platform fonts (one face that fails)
+  and windows and the platform's text functions (two-byte characters, a measure per byte); random sequences of every
+  constructor, setter, getter, `SetTexture`, `SizeOf`, `CompareFont`, `SetFontBitmap`, `SetText`, `SetFont`,
+  `operator=`, `GetClientOrigin`, `Resize` and destruction, each step followed by a digest of every live object. 20,000
+  sequences identical (5.7 M trace lines, sha256 of the digests 1ae1c6e8...). 25 of 25 mutations caught (the weakest,
+  "extent measured without a platform font" and "assign keeps the location", change 19 of 2,000 sequences).
+- **What only the game exercises**: the texts, fonts and windows exist only in a running game (EE-SIM draws no UI);
+  materials are made by every model load (the store gate covers them). The tour is the texts' and windows' gate.
+- **Gates on the tree merged with `rust`** (c80a1b00, local `rust`): `build.py --sim` and `--test-profile windowed-software` 0/0 (878/879 inputs); sim oracle seeds 2-7 identical; captures at seeds 2-3: oracle 179 and late 180 digests equal (4 without a golden each), effects 6 equal; store gate PASS (25,140 lines, before the merge); Rust gate PASS (3,876 tests; after a clippy and rustfmt fix to smallobj.rs, 26af197f, rerun with the relink and oracle seeds 2-3). Per commit: build 0/0 and oracle seeds 2-3 identical for each, the Rust gate after the first (its one failure, `ee_gx`'s `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`, a timing test under load, passed alone), the effects capture after the fold. Harness: the tour `RESULT PASS tour` (83.6% lit, render checks ok); the legacy tour `STOP <windowed session complete> reached`, F3 input check ok; the orders game `ORDERS PASS` (gather, repair, repair-queued, move) with the edge scroll check failing as it does on this machine (0.041); the LAN game `RESULT PASS lan-game`. Against round 15's merged tour (same seed): the settings tabs and single player equal; the main menu and closed settings 168 pixels (the animated corner); the random map setup 598 pixels, all in a 42 x 40 box that is the game's mouse pointer at another position; the game views differ run to run as before; the HUD by eye as before (the orders game's captures: the resource bar's texts, the age label, the mini map).
