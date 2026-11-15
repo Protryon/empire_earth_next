@@ -20,7 +20,6 @@ class EEComputerPlayer : public EEPlayer {
 public:
     static const UString sData;             // 0x4e5c70 "EEComputerPlayer-Data" (chain 0x2ce2e; guard 0x4e5c68 bit 1) (provisional name)
     static const UString sCPUOnlyFlag;      // 0x4e5c58 "EEComputerPlayer-CPU Only Flag" (chain 0x2ce71; bit 2) (provisional name)
-    bool CanEnableManager(long inKind, long inResource);  // 0x3eeca, signed resource threshold, ret8/AL
     EEComputerPlayer();                     // 0x2d03d (EEPPlayerHelper's CreatePlayer)
     virtual ~EEComputerPlayer();            // +0x00 (??_G 0x2d021, dtor 0x2d0bb)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x2fd50 (no /Og)
@@ -68,10 +67,8 @@ public:
     void Regroup();                         // 0x2e2a3 (Attacked when there is no resource center)
     void EnterEpoch(long inEpoch);          // 0x3c9c5 (GetMaxWidth: a new epoch)
     void UpdateGroups();                    // 0x3f3f1
-    void EnableManagers(unsigned long inTime);  // 0x2d334 (Update) (provisional name)
     void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
     void ChooseCivilization();              // 0x3ca49 (Update, unless gGameOptions.mLoadType) (provisional name)
-    void FlagGroup();                       // 0x2e6ae (Update at mNextExpansionTime) (provisional name)
     void GetObjectsToGroup(std::vector<EEUnit*>& outUnits, long& outCount);  // 0x2edff (ret 8) (provisional name)
     virtual void EpochReached(long inEpoch);  // +0xa4 0x3d45d
     virtual void UnitStranded(EEComplexUnit* inUnit);  // +0xac 0x3ed48
@@ -84,8 +81,6 @@ public:
     virtual void EpochMediaUnloaded(long inEpoch);  // +0xcc 0x3f142
     virtual bool AvoidsEnemies(EEComplexUnit* inUnit);  // +0xd0 0x3f73e (a citizen, or a transport holding only citizens)
     virtual void WonderStarted(EEComplexUnit* inUnit);  // +0xd4 0x3f7ba
-    void SetEnableTime(long inTime);        // 0x3d492: mNextEnableTime = mEnableInterval seconds after inTime, mIsEnableTimeSet (provisional name)
-    void SetNextExpansionTime(unsigned long inTime);  // 0x3d61a: mNextExpansionTime = inTime + the per-difficulty seconds (provisional name)
     void SetActive(bool inActive);          // 0x3ec42 (sets mActive, telling the unit manager) (provisional name)
     void SetCitizenPercentage(float inValue);  // 0x3ec89 (mCitizenPercentage, mIsCitizenPercentageSet) (provisional name)
     void SetDMAttackFrequencyModifier(float inValue);  // 0x3ec9d (mDMAttackFrequencyModifierEasy/mDMAttackFrequencyModifierMedium/mDMAttackFrequencyModifierHard by difficulty) (provisional name)
@@ -93,11 +88,9 @@ public:
     void SetIslandExpansionTimer(unsigned long inValue);  // 0x3ed0f (mIslandExpansionTimerEasy/mIslandExpansionTimerMedium/mIslandExpansionTimerHard) (provisional name)
     unsigned long GetBuildableTypes(long inCategory, std::vector<long>& outTypes);  // 0x2ed85 (ret 8): the buildable classes of a category (provisional name)
     virtual void RefreshResourceCenters();  // +0xdc 0x3ce56 (the computer player's own slot; EEUserInterface 0x276b97)
-    void CatchUpEpoch(EEPlayer* inPlayer);  // 0x2f064 (EEPlayer::EpochReached calls it for each computer player; provisional name)
     void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
     // 0x2eca0: 1.0, or +0xe44/+0xe48 times a constant depending on +0xbd8 (0 or 2) (provisional name)
     float GetResearchFrequencyModifier();
-    void KeepStandingArmy();                // new: the personality's standing army (docs/AI_RESEARCH.md §8.13)
     float GetEpochFrequencyModifier();      // 0x2ec0a (EECPCivilizationManager::SetNextEpochAdvanceTime scales by it) (provisional name)
     // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
     // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)
@@ -505,9 +498,9 @@ public:
     bool mRegroupPending;
     bool GetAttackStarted() const { return this->mAttackStarted; }
     bool mAttackStarted;
-    // port: the engine (ee/EECPEngine.h: kEECPEngineClassic or kEECPEngineNext; EEGameState::Create sets it from
-    // the lobby, EEPPlayerHelper saves it), in the padding
-    unsigned char mEngine = 0;
+    // port: the engine (ee/EECPEngine.h: always kEECPEngineNext since the C++ classic's decisions were deleted, stage
+    // 5; EEGameState::Create sets the AI from the lobby, EEPPlayerHelper saves it), in the padding
+    unsigned char mEngine = 1;
     char _gapF57[0xf58 - 0xf57];
     struct EECPNextState* mNextState;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
     struct EECPUnitsState* mUnitsState;     // new: the per-unit Lua interface's state (ee/EECPNextUnits.h; NULL until used)

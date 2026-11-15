@@ -246,9 +246,9 @@ void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
     EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(theTargetUnit);
     if (theTarget == NULL || !theTarget->IsFoundation())
         return;
-    // the next engine (docs/AI_RESEARCH.md §8.35): a builder lost where enemy towers or soldiers are seen is not
-    // replaced (the playtest sent 80 citizens one after another to a settlement under the other player's towers)
-    if (EECPNextEngine(this->mPlayer) && EECPNextBuildUnsafe(this->mPlayer, theTarget->mTileX, theTarget->mTileY) != kNextBlockedNone) {
+    // docs/AI_RESEARCH.md §8.35: a builder lost where enemy towers or soldiers are seen is not replaced (the playtest
+    // sent 80 citizens one after another to a settlement under the other player's towers)
+    if (EECPNextBuildUnsafe(this->mPlayer, theTarget->mTileX, theTarget->mTileY) != kNextBlockedNone) {
         EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=builder_lost", (long)theTarget->mUnitClass->mUnitType,
             (long)theTarget->mTileX, (long)theTarget->mTileY);
         return;
@@ -306,8 +306,7 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
         if (theHasTile)
             this->mManager->mWallManager->BuildWall(inRequest.second, inRequest.second, theClassID, false);
         theResult = true;
-    } else if (theHasTile && EECPNextEngine(this->mPlayer)
-               && EECPNextBuildUnsafe(this->mPlayer, theTile.mX, theTile.mY) != kNextBlockedNone) {
+    } else if (theHasTile && EECPNextBuildUnsafe(this->mPlayer, theTile.mX, theTile.mY) != kNextBlockedNone) {
         // the next engine (§8.35): the site (or the way there) came under enemy towers or soldiers since it was
         // queued: dropped, and the strategy told
         EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=queued", theClassID, (long)theTile.mX,
@@ -328,14 +327,9 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                 EE_CP_TRACE(this->mPlayer, "build.nosite", "cls=%ld", theClassID);
                 // economy.forage_patches: no room for a farm, granary or settlement: claim more land (the towers follow
                 // the new worked sites, EECPRMGuardSites)
-                if (EECPNextEngine(this->mPlayer)) {
-                    // the next engine: the request is dropped and the strategy told (it decides where else, or to
-                    // claim more land)
-                    EECPNextEventAdd(this->mPlayer, kNextEventNoSite, theClassID, 1);
-                    theNoSite = true;
-                } else if (EECPClaimRangeOn(this->mPlayer)
-                    && (theClassID == kUnitTypeFarm || theClassID == kUnitTypeGranary || theClassID == kUnitTypeSettlement))
-                    EECPClaimExpand(this->mPlayer);
+                // the request is dropped and the strategy told (it decides where else, or to claim more land)
+                EECPNextEventAdd(this->mPlayer, kNextEventNoSite, theClassID, 1);
+                theNoSite = true;
             }
             if (theWorker != NULL) {
                 EEUnit* theTarget;
@@ -429,11 +423,10 @@ void EECPBuildManager::AssignBuilders()
             theBuildings.push_back(theUnit);
     }
     this->mManager->mUnitManager->GetCitizens(theWorkers);
-    bool theNext = EECPNextEngine(this->mPlayer);
     for (std::vector<EEUnit*>::iterator it = theBuildings.begin(); it != theBuildings.end(); it++) {
         if (EECPUnitsHolds(this->mPlayer, (*it)->mComplexUnit))
             continue;   // a script's foundation (ee/EECPNextUnits.h): its own builders
-        long theUnsafe = theNext ? EECPNextBuildUnsafe(this->mPlayer, (*it)->mTileX, (*it)->mTileY) : kNextBlockedNone;
+        long theUnsafe = EECPNextBuildUnsafe(this->mPlayer, (*it)->mTileX, (*it)->mTileY);
         if (theUnsafe != kNextBlockedNone) {
             // the next engine (§8.35): no builder is sent; its builders leave it; a foundation under a seen enemy tower
             // (or with one on the way) is given up and refunded, as CancelStalledBuilds does
@@ -578,53 +571,10 @@ void EECPBuildManager::CollectSiteTiles(char inKind)
 // or planet maps), ignoring idle searchers (timer above 60 s)
 bool EECPBuildManager::HasEnemyNear(long inX, long inY)
 {
-    // the next engine: a real threat that the player sees or remembers (EECPNextSiteThreat: enemy soldiers seen within
-    // kNextThreatRange tiles lately, an enemy tower or armed building in range; docs/AI_RESEARCH.md §8.34). The
-    // original counts every armed unit not its own in a box of influence regions (up to 27 tiles across), citizens
-    // and towers out of range too, whether the player sees them or not.
-    if (EECPNextEngine(this->mPlayer))
-        return EECPNextSiteThreat(this->mPlayer, inX, inY, false, NULL) != 0;
-    std::vector<EEComplexUnit*> theUnits;
-    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
-    EEMap* theMap = gWorld.mMap;
-    U2DRectangle<long> theRect;
-    long theCount = 0;
-    unsigned long thePlayerID = this->mPlayer->mPlayerID;
-    if (theTable != NULL) {
-        unsigned long theHeight;
-        if (theMap != NULL && ((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap)
-            && (theHeight = theMap->mL195610) <= 0x2a) {
-            theRect.mLeft = inX - 1;
-            theRect.mRight = inX + 1;
-            theRect.mTop = inY - 1;
-            theRect.mBottom = inY + 1;
-        } else {
-            long theSize = theTable->mRegionSize;
-            theRect.mLeft = inX - theSize;
-            theRect.mRight = inX + theSize;
-            theRect.mTop = inY - theSize;
-            theRect.mBottom = theSize + inY;
-        }
-        theCount = theTable->SumEnemyValue(thePlayerID, theTable->GetRegions(theRect), true);
-        if (theCount > 0) {
-            gWorld.mMap->mUnitRegions->CollectValues(theRect, theUnits, std::less<EEComplexUnit*>());
-            std::vector<EEComplexUnit*>::iterator it;
-            for (it = theUnits.begin(); it != theUnits.end();) {
-                if ((*it)->mPlayer == this->mPlayer)
-                    it = theUnits.erase(it);
-                else
-                    it++;
-            }
-            for (it = theUnits.begin(); it != theUnits.end();) {
-                if ((*it)->mStats->mAttack == 0.0f || (*it)->mTargetSearchTimer > 60000)
-                    it = theUnits.erase(it);
-                else
-                    it++;
-            }
-            theCount = theUnits.size();
-        }
-    }
-    return theCount > 0;
+    // a real threat that the player sees or remembers (EECPNextSiteThreat: enemy soldiers seen within kNextThreatRange
+    // tiles lately, an enemy tower or armed building in range; docs/AI_RESEARCH.md §8.34). The original counted every
+    // armed unit not its own in a box of influence regions, whether the player saw them or not (deleted in stage 5).
+    return EECPNextSiteThreat(this->mPlayer, inX, inY, false, NULL) != 0;
 }
 
 // FUNCTION: EXE 0x467f97
@@ -1619,28 +1569,6 @@ bool EECPBuildManager::HasLaterEpochRequests()
 // temporary straight into push_back: first is the element's unsigned long); open: inUnitClass kept in memory, cmp al, bl
 void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, bool inFront)
 {
-    // economy.forage_patches: no houses in the Prehistoric (the owner: "idk why the ai builds houses so early"; four in
-    // the first four minutes of a playtest): the wood goes to the settlements and the Stone Age
-    // (both vetoes are classic only: the next engine's strategy decides what to build)
-    bool theClassic = !EECPNextEngine(this->mPlayer);
-    if (theClassic && inUnitClass == kUnitTypeHouse && EECPClaimRangeOn(this->mPlayer) && this->mPlayer->mTechnologies != NULL
-        && this->mPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
-        return;
-    // economy.early_trainers (docs/AI_RESEARCH.md §8.29; the owner: "the AI builds too much. no more than 2 barracks
-    // and 2 archery ranges pre-copper"; dbcpbehavior wants 7 and 6): before the Copper Age at most that many of each,
-    // built or building
-    long theTrainers = EECPEarlyTrainers(this->mPlayer);
-    if (theClassic && theTrainers > 0 && this->mPlayer->mTechnologies != NULL
-        && this->mPlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper && inUnitClass < EEUnitClassCount()
-        && gUnitClassTable[inUnitClass] != NULL) {
-        long theType = gUnitClassTable[inUnitClass]->mUnitType;
-        if (theType == kUnitTypeBarracks || theType == kUnitTypeArcheryRange) {
-            std::vector<EEUnit*> theHave;
-            EEGetPlayerUnitsOfType(theType, this->mPlayer->mPlayerID, theHave);
-            if ((long)theHave.size() >= theTrainers)
-                return;
-        }
-    }
     U2DPoint<long> theTile;
     EECPBuildQueue::iterator it;
     EECPBuildRequest theRequest;

@@ -569,8 +569,8 @@ void EECPCombatManager::NoteThreat(EEComplexUnit* inUnit, bool inUseTarget)
     EETileLocation theKey;
     GE3DPoint theTarget;
     long theCount = 1;
-    // (the next engine sends no groups on its own: its strategy sees the threats in the view)
-    if (!inUnit || EECPNextEngine(this->mPlayer) || !gWorld.mInfluenceTable || gLoadingSavedGame || gWorldClearing || !this->mTracksThreats || this->mPlayer->mObserverMode
+    // (no groups are sent on their own since stage 5: the strategy sees the threats in the view)
+    if (true || !inUnit || !gWorld.mInfluenceTable || gLoadingSavedGame || gWorldClearing || !this->mTracksThreats || this->mPlayer->mObserverMode
         || inUnit->mTileX == -10000)
         return;
     if (inUseTarget && inUnit->mActiveGoal) {

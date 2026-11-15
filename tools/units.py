@@ -44,8 +44,6 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + MUSIC_UNITS,
                        "Empire Earth/AI Thread/EECPNextView.cpp",
                        # its army: the groups (docs/AI_LUA_PLAN.md §5, stage S4)
                        "Empire Earth/AI Thread/EECPNextArmy.cpp",
-                       # TEST ONLY: the next engine's C++ test opening (stage S1's proof of the verbs)
-                       "Empire Earth/AI Thread/EECPNextTest.cpp",
                        # the computer player's engine per seat: classic or next (docs/AI_LUA_PLAN.md S0)
                        "Empire Earth/AI Thread/EECPEngine.cpp",
                        # the computer player's Lua runtime: the strategy scripts' sandbox (docs/AI_LUA_PLAN.md §3)

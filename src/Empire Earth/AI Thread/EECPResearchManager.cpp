@@ -82,67 +82,6 @@ EECPResearchManager::~EECPResearchManager()
 {
 }
 
-// FUNCTION: EXE 0x48a0f0
-// Picks a random research: a producible candidate that upgrades citizen attributes, else a shuffled one whose
-// researching building the player has; starts it if its costs stay below the resource caps and records it
-void EECPResearchManager::ChooseResearch()
-{
-    EETechTreeNode* theNode = NULL;
-    bool theFound = false;
-    long theID = 100000;
-    bool theAffordable = true;
-    if (!this->mEnabled)
-        return;
-    unsigned long i;
-    unsigned long theCount;
-    for (i = 0, theCount = this->mCandidates.size(); i < theCount && !theFound; i++) {
-        theID = this->mCandidates[i];
-        theNode = this->mTechTree->Get(theID);
-        if (theNode == NULL || !this->mPlayer->CanProduce(theID, theNode->GetUnitClass(0), 1, true, 3, NULL))
-            continue;
-        EEEvent* theEvent = EEEvent::Get(theNode->mData->mResearchedEvent);
-        if (theEvent == NULL)
-            continue;
-        for (unsigned long e = 0; e < theEvent->GetNumEffects() && !theFound; e++) {
-            EEEventEffect* theEffect = EEEvent::GetEventEffect(theEvent->GetEffect(e));
-            if (theEffect->mKind == 2 && (theEffect->mUnitClass == 0x20 || theEffect->mUnitClass == 0x1e0)
-                && (theEffect->mAttribute == 0x1a || theEffect->mAttribute == 0x1b || theEffect->mAttribute == 0x1c
-                    || theEffect->mAttribute == 0x1d || theEffect->mAttribute == 0x20 || theEffect->mAttribute == 0x21
-                    || theEffect->mAttribute == 0x1f))
-                theFound = true;
-            else
-                theFound = false;
-        }
-    }
-    if (!theFound) {
-        EEAIRandomShuffle(this->mCandidates.begin(), this->mCandidates.end());
-        // the second loop reuses theCount (the original's one [ebp-0x14] slot for both sizes)
-        unsigned long j;
-        for (j = 0, theCount = this->mCandidates.size(); j < theCount && !theFound; j++) {
-            theID = this->mCandidates[j];
-            theNode = this->mTechTree->Get(theID);
-            if (theNode != NULL && this->mPlayer->CanProduce(theID, theNode->GetUnitClass(0), 1, true, 3, NULL)) {
-                for (unsigned long k = 0; k < theNode->GetNumUnitClasses() && !theFound; k++)
-                    theFound = this->mManager->GetUnitManager()->GetCount(theNode->GetUnitClass(k)) > 0;
-            }
-        }
-        if (!theFound)
-            return;
-    }
-    long theCosts[7];
-    memset(theCosts, 0, sizeof(theCosts));
-    this->mTechTree->SumCosts(theID, theNode->GetUnitClass(0), theCosts);
-    for (unsigned long r = 2; r < 7 && theAffordable; r++)
-        theAffordable = this->mManager->IsBelowResourceCap(r, this->mPlayer->ScaleCost(theCosts[r]));
-    if (!theAffordable)
-        return;
-    this->Research(theID);
-    this->AddHistory(theID);
-    std::vector<long>::iterator theIterator = std::find(this->mCandidates.begin(), this->mCandidates.end(), theID);
-    if (theIterator != this->mCandidates.end())
-        this->mCandidates.erase(theIterator);
-}
-
 // SYNTHETIC: EXE 0x48a42e
 // (EETechTreeNode::GetNumUnitClasses, inline in ee/EEPlayer.h: emitted after its first user)
 
@@ -446,12 +385,8 @@ bool EECPResearchManager::TryResearch(long inID)
                     if (EEIsEpochID(inID)) {
                         this->mManager->mAdvancingEpoch = false;
                         this->mManager->mScheduleEpochAdvance = true;
-                    } else if (EECPNextEngine(this->mPlayer)) {
-                        // the next engine: no producer is queued on its own (research() refuses with no_producer)
-                    } else if (gUnitClassTable[theClass]->IsLandBuilding())
-                        this->mManager->mBuildManager->QueueBuilding(theClass, 0, 0);
-                    else
-                        this->mManager->mUnitManager->RequestUnits(theClass, 1, 0, 0);
+                    }
+                    // (no producer is queued on its own: research() refuses with no_producer)
                 } else {
                     theIterator = theUnits->begin();
                     if (theCount > 1) {
@@ -524,17 +459,6 @@ long EECPResearchManager::Save(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
-// FUNCTION: EXE 0x48b1fb
-// Schedules the next random research the player's research frequency (seconds, scaled by its modifier) after inTime
-void EECPResearchManager::SetNextRandomResearchTime(unsigned long inTime)
-{
-    long theDelay = this->mPlayer->mResearchFrequency;
-    theDelay = UMFloatToLong(this->mPlayer->GetResearchFrequencyModifier() * theDelay);
-    this->mNextTime = theDelay * 1000 + inTime;
-    ESDebugOut("EECPResearchManager::SetNextRandomResearchTime  setting next research time to %ld (%f)\n", this->mNextTime,
-               (double)theDelay);
-}
-
 // FUNCTION: EXE 0x48b24e
 // On reaching a valid epoch, schedules the next epoch advance (not while loading) and resets the current epoch's
 // SOL count
@@ -589,7 +513,6 @@ void EECPResearchManager::Update(unsigned long inTime)
                 this->mRecordsHistory = true;
             break;
         }
-        this->SetNextRandomResearchTime(inTime);
         this->mStarted = true;
     }
     if (this->mEpoch != this->mTechTree->mCurrentEpoch) {
@@ -607,11 +530,7 @@ void EECPResearchManager::Update(unsigned long inTime)
             }
         }
     }
-    if (!(inTime > this->mNextTime) || EECPNextEngine(this->mPlayer))   // the next engine orders research()
-        return;
-    ESDebugOut("EECPResearchManager::Update  attempting random research at %ld\n", inTime);
-    this->ChooseResearch();
-    this->SetNextRandomResearchTime(inTime);
+    // (the original's random research every mResearchFrequency seconds is gone: the strategy orders research())
 }
 
 // FUNCTION: EXE 0x48b467
