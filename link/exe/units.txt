@@ -144,15 +144,11 @@ dde43 dde94 Empire Earth/Formations/EEFShallowWedge.cpp
 dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
-ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
-ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
 f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
 f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
-f9871 f9b6d Empire Earth/Graphics Thread/EEE3DSmokeGenerator.cpp
 f9b6d fb088 Empire Earth/Graphics Thread/EEE3DSnow.cpp
 fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
-101fce 10251d Empire Earth/Graphics Thread/EEEDamagedEffect.cpp
 10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
 10428c 1050fb Empire Earth/Graphics Thread/EEEffect2D.cpp
 1050fb 1054ec Empire Earth/Graphics Thread/EEEffect3D.cpp
@@ -282,42 +278,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 208c37 208e6b Empire Earth/Graphics Thread/EEOrbital.cpp
 208e6b 209008 Empire Earth/Units/EESavedGroup.cpp
 209008 20a279 Empire Earth/Units/EESelectedGroup.cpp
-20a279 20b192 Empire Earth/Units/EEUCAirAnimal.cpp
-20b192 20b9fc Empire Earth/Units/EEUCAirplane.cpp
-20b9fc 20bcf7 Empire Earth/Units/EEUCAmbient.cpp
-20bcf7 20d571 Empire Earth/Units/EEUCBasicCitizen.cpp
-20d571 20e2cb Empire Earth/Units/EEUCBasicPriest.cpp
-20e2cb 20e58d Empire Earth/Units/EEUCBomb.cpp
-20e58d 21005e Empire Earth/Units/EEUCBuilding.cpp
-21005e 21013b Empire Earth/Units/EEUCBuildingPriest.cpp
-21013b 21048f Empire Earth/Units/EEUCFortress.cpp
-21048f 212a6f Empire Earth/Units/EEUCGate.cpp
-212a6f 212edf Empire Earth/Units/EEUCHelicopter.cpp
-212edf 21339d Empire Earth/Units/EEUCHelicopterPriest.cpp
-21339d 213866 Empire Earth/Units/EEUCHelicopterTransport.cpp
-213866 213c60 Empire Earth/Units/EEUCLand.cpp
-213c60 216c48 Empire Earth/Units/EEUCLandable.cpp
-216c48 216d4b Empire Earth/Units/EEUCLandCitizen.cpp
-216d4b 216d57 Empire Earth/Units/EEUCLandMilitaryHero.cpp
-216d57 216de3 Empire Earth/Units/EEUCLandPriest.cpp
-216de3 217085 Empire Earth/Units/EEUCLandTransport.cpp
-217085 217337 Empire Earth/Units/EEUCMiningBuilding.cpp
-217337 217c6d Empire Earth/Units/EEUCMissile.cpp
-217c6d 218158 Empire Earth/Units/EEUCNaval.cpp
-218158 218490 Empire Earth/Units/EEUCNavalBuilding.cpp
-218490 21880c Empire Earth/Units/EEUCNavalCitizen.cpp
-21880c 218a45 Empire Earth/Units/EEUCNavalPriest.cpp
-218a45 218e34 Empire Earth/Units/EEUCNavalTransport.cpp
-218e34 219143 Empire Earth/Units/EEUCPlanetSpaceship.cpp
-219143 219c49 Empire Earth/Units/EEUCProjectile.cpp
-219c49 219d67 Empire Earth/Units/EEUCResource.cpp
-219d67 219fe3 Empire Earth/Units/EEUCSeaAnimal.cpp
-219fe3 21a219 Empire Earth/Units/EEUCSpaceBuilding.cpp
-21a219 21a6e0 Empire Earth/Units/EEUCSpaceship.cpp
-21a6e0 21ab66 Empire Earth/Units/EEUCSpaceTransport.cpp
-21ab66 21b163 Empire Earth/Units/EEUCSubmergedNaval.cpp
-21b163 21b27a Empire Earth/Units/EEUCTorpedo.cpp
-21b27a 21ce6c Empire Earth/Units/EEUCTransport.cpp
 228c4c 22a509 Empire Earth/Units/EEUnit.cpp
 22a509 22d95f Empire Earth/Units/EEUnitAction.cpp
 22d95f 22f272 Empire Earth/Units/EEUnitAI.cpp
@@ -372,7 +332,5 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 28d82d 28f0cb Empire Earth/Campaign/EECampaignEditorBehavior.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
-291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp
-29ce06 29cfda Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbySound.cpp
 f4bf3 f5d94 Empire Earth/Graphics Thread/EEE3DParticle.cpp

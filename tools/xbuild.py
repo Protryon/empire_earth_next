@@ -240,12 +240,17 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None, cwd=None):
+def run_program(target, exe, args=(), env=None, cwd=None, timeout=None):
+    """Runs a built test; with `timeout` (seconds) a program still running then is killed and counts as a failure."""
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
-    r = subprocess.run([str(exe), *args], env=env, cwd=cwd)
+    try:
+        r = subprocess.run([str(exe), *args], env=env, cwd=cwd, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print(f"{exe.name}: FAILED, still running after {timeout} s (killed)", flush=True)
+        return 1
     print(f"{exe.name}: exit {r.returncode}")
     return r.returncode
 
@@ -377,22 +382,19 @@ WON_TESTS = {
     # the forwarders to ee_won (rust/crates/ee_won)
     "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("CRC16.cpp", "MD5.cpp")],
                         *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")]],
-    "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
-                                                            "AsyncSocketInternet.cpp", "IPAddr.cpp")],
+    "won_socket_test": "won_ops_test",
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
-    "won_ops_test": [*[WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
-                                                         "AsyncSocketInternet.cpp", "IPAddr.cpp",
-                                                         "BlockingSocket.cpp", "QueueSocket.cpp", "SocketOps.cpp",
-                                                         "SocketRunHooks.cpp", "SocketOpsAccessors.cpp",
-                                                         "SocketThread.cpp", "UDPManager.cpp",
-                                                         "UDPManagerDefaults.cpp")],
-                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
-                                                          "AsyncOpWithTracker.cpp", "WONDebug.cpp")],
+    "won_ops_test": [WON_SRC / "WONSocket" / "IPAddr.cpp",
+                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
     # the socket classes' events (golden: rust/crates/ee_won/src/golden_sockobj.txt, recorded over the C++ classes)
     "won_sockobj_test": "won_ops_test",
+    # the references and lifetimes of the queue socket, the UDP manager and its ops, the timer, the op container and
+    # the socket thread (golden: rust/crates/ee_won/src/golden_core.txt, recorded over QueueSocket.cpp, UDPManager.cpp,
+    # SocketThread.cpp and AsyncOp.cpp before their hooks were answered in Rust, net round 25)
+    "won_core_test": "won_ops_test",
     # ServerConnection and ServerConnectionConnectOp over 127.0.0.1 with a stand-in peer authentication (golden:
     # rust/crates/ee_won/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
     # and reply dispatch; its units (won_ops_test's, WONServer's ServerConnection, WONRouting's but the smart
@@ -604,6 +606,11 @@ WON_TESTS = {
     # the EE lobby's glue (EELobbyInit, EELobbyMisc, EELobbyInterface's decisions) in Rust (golden:
     # rust/crates/ee_won/src/golden_eeglue.txt)
     "won_eeglue_test": [],
+    # GetWONStatusString's choice (statusstr.rs) against the original switch over every status
+    "won_statusstr_test": [],
+    # EELobbyFileTransfer, its SendFileOp and the EE lobby's sounds as Rust objects (golden:
+    # rust/crates/ee_won/src/golden_eexfer.txt)
+    "won_eexfer_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -741,8 +748,7 @@ WON_TESTS = {
                                                              "StringParserLists.cpp", "StringUtil.cpp")]],
 }
 WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
-                                  *[WON_SRC / "WONServer" / f for f in ("ServerConnection.cpp",
-                                                                       "ServerConnectionDefaults.cpp")],
+                                  WON_SRC / "WONServer" / "ServerConnection.cpp",
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
@@ -835,12 +841,17 @@ def build_won_test(t, name, units, folder="won"):
     return exe
 
 
+# a WON test program still running after this long has hung: it is killed and fails, so the gate chain goes on
+WON_TEST_TIMEOUT = 20 * 60
+
+
 def cmd_wontest(a):
     t = Target(a.target)
     why = t.can_build()
     if why:
         sys.exit(f"{t.name}: {why}")
     result = 0
+    failed = []
     for name, units in WON_TESTS.items():
         if a.programs and name not in a.programs:
             continue
@@ -854,7 +865,12 @@ def cmd_wontest(a):
             # sharing one would see each other's
             scratch = exe.parent / "run"
             scratch.mkdir(exist_ok=True)
-            result |= run_program(t, exe, cwd=scratch)
+            code = run_program(t, exe, cwd=scratch, timeout=WON_TEST_TIMEOUT)
+            if code:
+                failed.append(name)
+            result |= code
+    if failed:
+        print(f"wontest: {len(failed)} failed: {' '.join(failed)}")
     return result
 
 

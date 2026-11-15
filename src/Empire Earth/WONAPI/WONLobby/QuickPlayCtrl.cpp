@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyScreens.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 
 QuickPlayCtrl::QuickPlayCtrl() {}
@@ -37,9 +38,9 @@ void QuickPlayCtrl::RefreshUserName()
 {
     LobbyUserInfo* user=LobbyGetCurrentUser();
     if(user!=NULL)
-        this->mWelcomeLabel->SetText(LobbyFormatString(::InternetQuickPlay_UserWelcome_String,user->mUserName),true);
+        this->mWelcomeLabel->SetText(LobbyFormatString(LOBBY_STRING(InternetQuickPlay_UserWelcome_String),user->mUserName),true);
     else
-        this->mWelcomeLabel->SetText(::InternetQuickPlay_Welcome_String,true);
+        this->mWelcomeLabel->SetText(LOBBY_STRING(InternetQuickPlay_Welcome_String),true);
 }
 // FUNCTION: WON 0x007c1800
 // Refreshes the welcome on entering the screen; Play sends a quick-play request for the chosen skill (1-4)

@@ -77,7 +77,9 @@ public:
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     virtual long RepairPointers();
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
-    virtual long Step() { return this->Call(EeGfxEffect3DOp::Step); }
+    // the damage controller's (0x3e, EEEDamagedEffect::Step 0x10225c): its tick facts and children here, the counts
+    // in Rust (ee_gfx_effect_damaged_step); the others' Call
+    virtual long Step();
 
     long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL,
               unsigned long inMajorVersion = 0, unsigned long inMinorVersion = 0);
