@@ -696,7 +696,10 @@ mod tests {
         fn entry(&mut self, _: Element, _: bool, _: usize) -> &mut c_ulong {
             unimplemented!()
         }
-        fn resource(&mut self, _: bool) -> Vec<u8> {
+        fn resource(&mut self, _: usize) -> Vec<u8> {
+            unimplemented!()
+        }
+        fn set_anchor(&mut self, _: Element, _: std::os::raw::c_long, _: std::os::raw::c_long) {
             unimplemented!()
         }
         fn out_name(&mut self, _: &[u8]) {

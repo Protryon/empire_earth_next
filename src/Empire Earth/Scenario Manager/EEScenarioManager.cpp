@@ -108,48 +108,15 @@ EEScenarioManager::EEScenarioManager()
 // SYNTHETIC: EXE 0x5afb95
 // (the scalar deleting destructor, emitted with the vtable; slot EEScenarioManager+0x10)
 
+static void EESMResetLists(EEScenarioManager* inManager);
+
 // FUNCTION: EXE 0x5afbb1
 // Empties the scenario back to its defaults (an Always True condition, a Do Nothing effect, a None object, the
 // Off Map and Previous Location areas); zeroes the clocks and ID counters, clears the timed and pending effects
 void EEScenarioManager::Reset()
 {
-    UWideString theName;
-
     ee_scenario_manager_reset(this, this->mTimedEffects);   // the numbers, the timed effects (manager.rs reset)
-    DeleteVectorContents(this->mTriggers);
-    DeleteVectorContents(this->mConditions);
-    EESMCondition* theCondition = new EESMCondition;
-    gResource->GetString(IDS_ALWAYS_TRUE, theName);
-    theCondition->mName = theName;
-    theCondition->mType = kSMConditionAlwaysTrue;
-    this->mConditions.push_back(theCondition);
-
-    DeleteVectorContents(this->mEffects);
-    EESMEffect* theEffect = new EESMEffect;
-    gResource->GetString(IDS_DO_NOTHING, theName);
-    theEffect->mName = theName;
-    theEffect->mType = kSMEffectNone;
-    this->mEffects.push_back(theEffect);
-
-    DeleteVectorContents(this->mObjects);
-    EESMObject* theObject = new EESMObject;
-    gResource->GetString(IDS_NONE, theName);
-    theObject->SetName(theName);
-    this->mObjects.push_back(theObject);
-
-    DeleteVectorContents(this->mAreas);
-    this->mAreas.clear();
-    EESMArea* theArea = new EESMArea;
-    gResource->GetString(IDS_OFF_MAP, theName);
-    theArea->mName = theName;
-    theArea->SetAnchor(U2DPoint<long>(-10000, -10000));
-    this->mAreas.push_back(theArea);
-    theArea = new EESMArea;
-    gResource->GetString(IDS_PREVIOUS_LOCATION, theName);
-    theArea->mName = theName;
-    theArea->SetAnchor(U2DPoint<long>(-1, -1));
-    this->mAreas.push_back(theArea);
-
+    EESMResetLists(this);   // the lists and their built-ins (lists.rs reset)
     this->mPendingEffects.clear();
 }
 
@@ -1116,9 +1083,15 @@ void* EESMListOp(void* inContext, uint32_t inOp, uint32_t inList, uintptr_t inIn
         return (void*)(uintptr_t)(inList ? theTrigger->mEffects.size() : theTrigger->mConditions.size());
     case EE_SCENARIO_LIST_OP_ENTRY:
         return inList ? (void*)&theTrigger->mEffects[inIndex]->mEffectIndex : (void*)&theTrigger->mConditions[inIndex]->mValue;
-    case EE_SCENARIO_LIST_OP_RESOURCE:
-        gResource->GetString(inIndex ? IDS_EXISTS : IDS_COPY, theContext->mText);
+    case EE_SCENARIO_LIST_OP_RESOURCE: {
+        static const unsigned long kStrings[] = {IDS_COPY, IDS_EXISTS, IDS_ALWAYS_TRUE, IDS_DO_NOTHING, IDS_NONE,
+                                                 IDS_OFF_MAP, IDS_PREVIOUS_LOCATION};   // EE_SCENARIO_STRING_*
+        gResource->GetString(kStrings[inIndex], theContext->mText);
         return (void*)(const char*)theContext->mText;
+    }
+    case EE_SCENARIO_LIST_OP_ANCHOR:
+        static_cast<EESMArea*>(inElement)->SetAnchor(U2DPoint<long>((long)(int32_t)inList, (long)(intptr_t)inIndex));
+        return NULL;
     case EE_SCENARIO_LIST_OP_OUT_NAME: theContext->mNames->push_back(UWideString(inText)); return NULL;
     }
     switch (inList) {
@@ -1141,6 +1114,13 @@ struct EESMLists {
     }
 };
 }   // namespace
+
+// Reset's lists and built-ins (ee_scenario lists.rs reset)
+static void EESMResetLists(EEScenarioManager* inManager)
+{
+    EESMLists theLists(inManager);
+    ee_scenario_list_reset(&theLists.mHost);
+}
 
 // The editor's Sort, New, MoveUp/MoveDown, Delete and Duplicate of a list (EE_SCENARIO_LIST_*: 0x1b00c1..0x1b0674,
 // 0x1b074c..0x1b0b65, 0x1b0beb..0x1b0e71 and 0x1b3e75..0x1b4017, 0x1b0ec6..0x1b10ed, 0x1b120d..0x1b1978)

@@ -970,11 +970,30 @@ constexpr static const uint32_t EE_SCENARIO_LIST_OP_ENTRY_COUNT = 16;
 /// `mEffectIndex` (a pointer to the `unsigned long`).
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_ENTRY = 17;
 
-/// `gResource->GetString(index ? IDS_EXISTS : IDS_COPY)` as a C string.
+/// `gResource->GetString` of string `index` (`EE_SCENARIO_STRING_*`) as a C string.
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_RESOURCE = 18;
 
 /// `text` appended to the caller's name list.
 constexpr static const uint32_t EE_SCENARIO_LIST_OP_OUT_NAME = 19;
+
+/// An area's `SetAnchor(U2DPoint<long>(x, y))`: `x` in `list` (32 bits), `y` in `index`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_ANCHOR = 20;
+
+/// The strings of [`EE_SCENARIO_LIST_OP_RESOURCE`]: `IDS_COPY`, `IDS_EXISTS`, and the built-ins' names
+/// (`IDS_ALWAYS_TRUE`, `IDS_DO_NOTHING`, `IDS_NONE`, `IDS_OFF_MAP`, `IDS_PREVIOUS_LOCATION`).
+constexpr static const size_t EE_SCENARIO_STRING_COPY = 0;
+
+constexpr static const size_t EE_SCENARIO_STRING_EXISTS = 1;
+
+constexpr static const size_t EE_SCENARIO_STRING_ALWAYS_TRUE = 2;
+
+constexpr static const size_t EE_SCENARIO_STRING_DO_NOTHING = 3;
+
+constexpr static const size_t EE_SCENARIO_STRING_NONE = 4;
+
+constexpr static const size_t EE_SCENARIO_STRING_OFF_MAP = 5;
+
+constexpr static const size_t EE_SCENARIO_STRING_PREVIOUS_LOCATION = 6;
 
 /// The manager's string slots in its stream: `mExportFileName`, `mLastChatText`.
 constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
@@ -2302,6 +2321,12 @@ void ee_scenario_change_unit(const EeScenarioHost *host,
 /// # Safety
 /// `list` must be the list a [`EeScenarioHost::tiles`] call handed over, during that call.
 void ee_scenario_tiles_push(EeScenarioTiles *list, int32_t x, int32_t y);
+
+/// `EEScenarioManager::Reset`'s lists ([`reset`]).
+///
+/// # Safety
+/// `host` must be a valid host table over the live manager.
+void ee_scenario_list_reset(const EeScenarioListHost *host);
 
 /// `Sort*` of `list` ([`sort`]).
 ///
