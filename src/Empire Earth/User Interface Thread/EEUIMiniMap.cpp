@@ -37,9 +37,7 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEAMiniMap.h"
 #include "ee/EEUIMiniMap.h"
-#include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
 #include "rust/ee_gfx.h"
-#include "rust/ee_screens.h"   // mini_map.rs
 
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 

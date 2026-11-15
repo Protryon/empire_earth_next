@@ -34,7 +34,6 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEUICPortrait.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"   // ee_screens_portrait_* (ee_screens portrait.rs)
 // FUNCTION: EXE 0x65861c
 // Creates the selected-unit portrait with its research (green) and improvement (yellow) progress bars over a
 // red background, and a level text

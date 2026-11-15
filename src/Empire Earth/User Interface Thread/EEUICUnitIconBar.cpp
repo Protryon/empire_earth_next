@@ -32,7 +32,6 @@
 #include "lle/UIControlsTable.h"
 #include "ee/EEUICUnitIconBar.h"
 
-#include "rust/ee_screens.h"   // ee_screens_icon_bar_* (ee_screens icon_bar.rs)
 
 static unsigned long sIconBarUpSound;           // 0x56458c (sound 0x208)
 static unsigned long sIconBarDownSound;         // 0x564590 (sound 0x207)

@@ -28,8 +28,6 @@
 #include "ee/EEUIBUpgrade.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFMGStatusBar.h"
-#include "ee/EEStringIDs.h"
-#include "ee/EEImprovementIDs.h"
 #include "rust/ee_screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
 static const float kBgOpacity = 0.15f;      // 0x449d4c
 
