@@ -844,7 +844,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         inForm->mClockMode = (long)inA;
         break;
     case EE_SCREENS_GAME_MG_KILL:
-        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMKillUnit(inA != 0), kSlotNone);
+        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageKillUnit, {inA != 0}), kSlotNone);
     case EE_SCREENS_GAME_MG_ATTACK:
         return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageAttackPlayers, {gWorld.mCurrentPlayer, inA != 0}),
                                                                 kSlotNone);

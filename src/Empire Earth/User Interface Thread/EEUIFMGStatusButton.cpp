@@ -255,16 +255,16 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
         case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMReplantFarms(-1); break;
         case EE_SCREENS_SB_SEND_CLEAR_AIRPORT: theMessage = new EEMRecord(kMessageClearAirportCommands); break;
         case EE_SCREENS_SB_SEND_EXPLORE: theMessage = new EEMRecord(kMessageExplore); break;
-        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMLockUnlock(inB != 0); break;
+        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMRecord(kMessageLockUnlock, {inB != 0}); break;
         case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMRecord(kMessagePackUnpack, {inB != 0}); break;
         case EE_SCREENS_SB_SEND_FANATIC: theMessage = new EEMRecord(kMessageGoFanatic); break;
         case EE_SCREENS_SB_SEND_JIT: theMessage = new EEMRecord(kMessageJITManufacturing); break;
-        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMExchangeResources((inB & 1) != 0, (long)(inB >> 1), inC != 0); break;
+        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMRecord(kMessageExchangeResources, {(inB & 1) != 0, (long)(inB >> 1), inC != 0}); break;
         case EE_SCREENS_SB_SEND_RESEARCH:
             theMessage = new EEMRecord(kMessageResearchTechnology, {theButton->mUnitID, theButton->mTechnology, inB != 0});
             break;
         default:
-            theMessage = new EEMRemoveTechnology(theButton->mUnitID, theButton->mTechnology, false, inB != 0);
+            theMessage = new EEMRecord(kMessageRemoveTechnology, {theButton->mUnitID, theButton->mTechnology, false, inB != 0});
             break;
         }
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);

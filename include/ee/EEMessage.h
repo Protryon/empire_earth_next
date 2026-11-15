@@ -333,22 +333,6 @@ public:
     float mF10;                             // +0x10 (the cinematic's end time)
 };
 
-// vtable 0x43dfec; sizeof 0x1c
-class EEMExchangeResources : public EEMessage {
-public:
-    EEMExchangeResources(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x26f94b after its first user EEUIFMGStatusButton::Command (type 0xae)
-    EEMExchangeResources(unsigned char inIsSell, long inResourceType, unsigned char inFiveTimes)
-        : EEMessage(kMessageExchangeResources, false), mIsSell(inIsSell), mResourceType(inResourceType), mFiveTimes(inFiveTimes) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    unsigned char mIsSell;                  // +0x10
-    int32_t mResourceType;                  // +0x14
-    unsigned char mFiveTimes;               // +0x18
-};
-
 // vtable 0x43db9c; sizeof 0x14
 class EEMExitShiftMode : public EEMessage {
 public:
@@ -432,35 +416,6 @@ public:
     uint32_t mValue;                        // +0x28 the value (unsigned: the flags are mL28 > 0 with seta)
 };
 
-// vtable 0x43e088; sizeof 0x20
-class EEMHackANewUnit : public EEMessage {
-public:
-    // inline (out-of-line COMDAT 0x262c24 after its first user, the main game form's unit hack)
-    EEMHackANewUnit(const long& inType, const GE2DPoint& inTile, unsigned char inPlayer)
-        : EEMessage(kMessageHackANewUnit), mUnitType(inType), mPoint(inTile), mPlayerID(inPlayer) {}
-    EEMHackANewUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Hack A New Unit"; }
-
-    int32_t mUnitType;                      // +0x10
-    GE2DPoint mPoint;                       // +0x14
-    unsigned char mPlayerID;                // +0x1c
-};
-
-// vtable 0x43d994; sizeof 0x14
-class EEMKillUnit : public EEMessage {
-public:
-    EEMKillUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: out-of-line COMDAT 0x260685 after its first user (type 0x5c)
-    EEMKillUnit(unsigned char inAllUnits) : EEMessage(kMessageKillUnit, false), mAllUnits(inAllUnits) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Delete Unit"; }
-
-    unsigned char mAllUnits;                // +0x10
-};
-
 // vtable 0x43e0f0; sizeof 0x34; import ctor 0xba957, ??_G 0xba9b9; Get/SetSendToAllAndWaitMessageID inline (0xba9a1/0xba9af)
 class EEMLoadOrSaveGame : public EEMessage {
 public:
@@ -484,19 +439,6 @@ public:
     bool mIsQuiet;                          // +0x1d
     unsigned char mIsAutoSave;              // +0x1e
     UWideString mFileName;                  // +0x20
-};
-
-// vtable 0x43d7f4; sizeof 0x14
-class EEMLockUnlock : public EEMessage {
-public:
-    EEMLockUnlock(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x26f9ce after its first user EEUIFMGStatusButton::Command (type 0x8c)
-    EEMLockUnlock(bool inLock) : EEMessage(kMessageLockUnlock, false), mIsLocked(inLock) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    bool mIsLocked;                         // +0x10 (locked)
 };
 
 // vtable 0x43d6f0; sizeof 0x18
@@ -552,35 +494,6 @@ public:
     unsigned char mPlayerID;                // +0x24
     unsigned char mSlot;                    // +0x25
     bool mIsBehindFirewall;                 // +0x26
-};
-
-// vtable 0x43d584; sizeof 0x1c
-class EEMRemoveTechnology : public EEMessage {
-public:
-    EEMRemoveTechnology(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: out-of-line COMDAT 0x26f2b0 after its first user EEUIFMGStatusButton::MouseRButtonUp (type 0x53;
-    // mFiveTimes follows the vptr store: a body assignment)
-    EEMRemoveTechnology(long inUnitID, long inTechnology, bool inToggleJITManufacturing, bool inFiveTimes)
-        : EEMessage(kMessageRemoveTechnology, false), mUnitID(inUnitID), mTechnology(inTechnology), mToggleJITManufacturing(inToggleJITManufacturing)
-    {
-        this->mFiveTimes = inFiveTimes;
-    }
-    // inline: COMDAT-free (EEUICPortrait::MouseLButtonDown 0x258d02 expands it: mFiveTimes before the vptr, then the
-    // body; type 0x53)
-    EEMRemoveTechnology(long inUnitID, long inTechnology, bool inToggleJITManufacturing) : EEMessage(kMessageRemoveTechnology, false), mFiveTimes(false)
-    {
-        this->mUnitID = inUnitID;
-        this->mTechnology = inTechnology;
-        this->mToggleJITManufacturing = inToggleJITManufacturing;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mUnitID;                        // +0x10
-    int32_t mTechnology;                    // +0x14
-    bool mToggleJITManufacturing;           // +0x18 (toggle the JIT manufacturing)
-    bool mFiveTimes;                        // +0x19 (five times)
 };
 
 // vtable 0x43d5b8; sizeof 0x14
@@ -640,19 +553,6 @@ public:
     virtual char* GetMessageLabel() const;
 
     std::vector<long> mUnitIDs;             // +0x10
-};
-
-// vtable 0x438f4c; sizeof 0x18
-class EEMSmartFarmers : public EEMessage {
-public:
-    EEMSmartFarmers(long inTargetID, unsigned char inIsQueued) : EEMessage(kMessageSmartFarmers, false), mTargetID(inTargetID), mIsQueued(inIsQueued) {}  // inline (EEAMouseClick::Execute 0x4039e4)
-    EEMSmartFarmers(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mTargetID;                      // +0x10
-    unsigned char mIsQueued;                // +0x14
 };
 
 // vtable 0x43d278; sizeof 0x18

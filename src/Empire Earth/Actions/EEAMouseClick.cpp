@@ -356,7 +356,7 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                                 if (theFarmers.size() == 1)
                                 {
                                     EEUnit* theFarmer = theFarmers[0];
-                                    theMessage = new EEMSmartFarmers(theFarmer->GetUnitID(), theShift);
+                                    theMessage = new EEMRecord(kMessageSmartFarmers, {theFarmer->GetUnitID(), theShift});
                                 }
                                 else
                                     theMessage = new EEMRecord(kMessageGatherResource, {theTarget->GetUnitID(), theShift});
@@ -392,7 +392,7 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                                 if (theClass->GetUnitType() != kUnitTypeGranaryImproved && theClass->GetUnitType() != kUnitTypeGranary)
                                     theMessage = new EEMRecord(kMessageDropoffResource, {theTarget->GetUnitID()});
                                 else
-                                    theMessage = new EEMSmartFarmers(theTarget->GetUnitID(), theShift);
+                                    theMessage = new EEMRecord(kMessageSmartFarmers, {theTarget->GetUnitID(), theShift});
                             } else {
                                 unsigned long theLoad = 0;
                                 if ((theGroupFlags & kUnitKindHelicopterTransport) == kUnitKindHelicopterTransport)

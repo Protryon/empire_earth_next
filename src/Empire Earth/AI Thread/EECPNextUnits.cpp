@@ -1887,7 +1887,7 @@ static int LuaDelete(lua_State* L)
     int r;
     if (!EECPUnitsBegin(L, me, s, true, NULL, "delete", r))
         return r;
-    EEMKillUnit theMessage(1);
+    EEMRecord theMessage(kMessageKillUnit, {1});
     EECPUnitsRun(me, s, theMessage, false);
     EECPUnitsTraceCmd(me, s, "delete", kOK, (long)s->mIds2.size(), 0, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -1990,7 +1990,7 @@ static int LuaTestSpawn(lua_State* L)
         lua_pushboolean(L, 0);
         return 1;
     }
-    EEMHackANewUnit theMessage(theType, GE2DPoint((float)lua_tointeger(L, 2), (float)lua_tointeger(L, 3)), (unsigned char)thePlayer);
+    EEMRecord theMessage(kMessageHackANewUnit, {theType, GE2DPoint((float)lua_tointeger(L, 2), (float)lua_tointeger(L, 3)), (unsigned char)thePlayer});
     unsigned char theSlot = me->mSlot;
     me->mSlot = kBorrowedSlot;
     theMessage.SetOriginatingSlot(kBorrowedSlot);
@@ -3305,7 +3305,7 @@ static int LuaCancel(lua_State* L)
         theTech = (long)lua_tointeger(L, 2);
     if (theTech < 0)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMRemoveTechnology theMessage(s->mIds2[0], theTech, false, false);
+    EEMRecord theMessage(kMessageRemoveTechnology, {s->mIds2[0], theTech, false, false});
     EECPUnitsRun(me, s, theMessage, false);
     EECPUnitsTraceCmd(me, s, "cancel", kOK, (long)s->mIds2.size(), theTech, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3444,7 +3444,7 @@ static int LuaFarm(lua_State* L)
     long theID = lua_isinteger(L, 2) ? EECPUnitsForward(s, (long)lua_tointeger(L, 2)) : 0;
     if (EECPUnitsOwn(me, theID) == NULL)
         return EECPUnitsResult(L, kBadArgument, 0, 0);
-    EEMSmartFarmers theMessage(theID, EECPUnitsOptBool(L, 3, "queue", false) ? 1 : 0);
+    EEMRecord theMessage(kMessageSmartFarmers, {theID, EECPUnitsOptBool(L, 3, "queue", false) ? 1 : 0});
     EECPUnitsRun(me, s, theMessage, true);
     EECPUnitsTraceCmd(me, s, "farm", kOK, (long)s->mIds2.size(), theID, 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3624,7 +3624,7 @@ static int LuaLock(lua_State* L)
     int r;
     if (!EECPUnitsBegin(L, me, s, false, EECPUnitsGatePiece, "lock", r))
         return r;
-    EEMLockUnlock theMessage(lua_toboolean(L, 2) != 0);
+    EEMRecord theMessage(kMessageLockUnlock, {lua_toboolean(L, 2) != 0});
     EECPUnitsRun(me, s, theMessage, false);
     EECPUnitsTraceCmd(me, s, "lock", kOK, (long)s->mIds2.size(), lua_toboolean(L, 2), 0);
     return EECPUnitsResult(L, kOK, (long)s->mIds2.size(), 0);
@@ -3698,7 +3698,7 @@ static int LuaTrade(lua_State* L)
         EECPUnitsTraceCmd(me, s, "trade", kCannotAfford, 0, theResource, n);
         return EECPUnitsResult(L, kCannotAfford, 0, 0);
     }
-    EEMExchangeResources theMessage(theSell ? 1 : 0, theResource, n == 5 ? 1 : 0);
+    EEMRecord theMessage(kMessageExchangeResources, {theSell ? 1 : 0, theResource, n == 5 ? 1 : 0});
     unsigned char theSlot = me->mSlot;
     me->mSlot = kBorrowedSlot;
     if (gWorld.GetPlayerBySlot(kBorrowedSlot) == me) {

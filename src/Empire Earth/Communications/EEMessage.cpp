@@ -484,20 +484,11 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageGameOptions:
         theMessage = new EEMGameOptions(inMemory);
         break;
-    case kMessageHackANewUnit:
-        theMessage = new EEMHackANewUnit(inMemory);
-        break;
     case kMessageInGameChat:
         theMessage = new EEMInGameChat(inMemory);
         break;
-    case kMessageKillUnit:
-        theMessage = new EEMKillUnit(inMemory);
-        break;
     case kMessageLoadOrSaveGame:
         theMessage = new EEMLoadOrSaveGame(inMemory);
-        break;
-    case kMessageLockUnlock:
-        theMessage = new EEMLockUnlock(inMemory);
         break;
     case kMessageNewEdictEnacted:
         theMessage = new EEMNewEdictEnacted(inMemory);
@@ -514,9 +505,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageReplantFarms:
         theMessage = new EEMReplantFarms(inMemory);
         break;
-    case kMessageRemoveTechnology:
-        theMessage = new EEMRemoveTechnology(inMemory);
-        break;
     case kMessageReportStatistics:
         theMessage = new EEMReportStatistics(inMemory);
         break;
@@ -529,17 +517,11 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageSelectUnits:
         theMessage = new EEMSelectUnits(inMemory);
         break;
-    case kMessageSmartFarmers:
-        theMessage = new EEMSmartFarmers(inMemory);
-        break;
     case kMessageStartLoading:
         theMessage = new EEMStartLoading(inMemory);
         break;
     case kMessageStartLoadingResponse:
         theMessage = new EEMStartLoadingResponse(inMemory);
-        break;
-    case kMessageExchangeResources:
-        theMessage = new EEMExchangeResources(inMemory);
         break;
     default:
         ESVERIFY_AT("Undefined message type" == NULL, 1275);
@@ -1158,50 +1140,31 @@ char* EEMExitShiftMode::GetMessageLabel() const
     return "Exit Shift Mode";
 }
 
-// EEMExchangeResources's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMExchangeResources::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_EXCHANGE_RESOURCES;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mIsSell);
-    outSlots[6] = EENetMsgField(this->mResourceType);
-    outSlots[7] = EENetMsgField(this->mFiveTimes);
-    return 8;
-}
-
-// FUNCTION: EXE 0x4be334
-// Returns the Exchange Resources message's debug label
-char* EEMExchangeResources::GetMessageLabel() const
-{
-    return "Exchange Resources";
-}
-
 // 0x23cc42 (cdecl): the exchange rate between a resource and the trade resource for inPlayer (provisional name)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);
 
 // FUNCTION: EXE 0x4be3b1
 // Trades 100 of a resource for gold or buys 100 with gold at the market price, once or five times (a partial
 // trade when short), tracks the traded amount and refreshes the help text for the local player
-void EEMExchangeResources::Execute()
+static void ExecuteExchangeResources(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     long theCount = 1;
-    if (this->mFiveTimes)
+    if (m->Get<unsigned char>(3))
         theCount = 5;
     while (theCount > 0) {
-        long thePrice = EEGetTradePrice(thePlayer, this->mResourceType, this->mIsSell);
-        long theHave = thePlayer->mResourceCaps[this->mIsSell ? this->mResourceType : kResourceGold];
-        EeNetMsgExchangeStep theStep = DecideExchangeStep(this->mIsSell, thePrice, theHave);
+        long thePrice = EEGetTradePrice(thePlayer, m->Get<int32_t>(2), m->Get<unsigned char>(1));
+        long theHave = thePlayer->mResourceCaps[m->Get<unsigned char>(1) ? m->Get<int32_t>(2) : kResourceGold];
+        EeNetMsgExchangeStep theStep = DecideExchangeStep(m->Get<unsigned char>(1), thePrice, theHave);
         if (theStep.apply) {
-            if (this->mIsSell) {
-                thePlayer->TakeResource(this->mResourceType, (long)theStep.cost);
+            if (m->Get<unsigned char>(1)) {
+                thePlayer->TakeResource(m->Get<int32_t>(2), (long)theStep.cost);
                 thePlayer->AddResource(kResourceGold, (long)theStep.amount);
-                thePlayer->mResourceTrade[this->mResourceType - 2] -= (long)theStep.cost;
+                thePlayer->mResourceTrade[m->Get<int32_t>(2) - 2] -= (long)theStep.cost;
             } else {
-                thePlayer->AddResource(this->mResourceType, (long)theStep.cost);
+                thePlayer->AddResource(m->Get<int32_t>(2), (long)theStep.cost);
                 thePlayer->TakeResource(kResourceGold, (long)theStep.amount);
-                thePlayer->mResourceTrade[this->mResourceType - 2] += (long)theStep.cost;
+                thePlayer->mResourceTrade[m->Get<int32_t>(2) - 2] += (long)theStep.cost;
             }
         }
         theCount--;
@@ -1467,27 +1430,15 @@ static void ExecuteGoFanatic(EEMRecord* m)
     }
 }
 
-// EEMHackANewUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMHackANewUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_HACK_A_NEW_UNIT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mUnitType);
-    outSlots[6] = EENetMsgField(this->mPoint);
-    outSlots[7] = EENetMsgField(this->mPlayerID);
-    return 8;
-}
-
 // FUNCTION: EXE 0x4bf543
 // Cheat: creates a unit of the given type (or the sender's chosen cheat unit) at the point for the given player
 // (ambient/resource units go to player 0); buildings must fit on the map and start fully built
-void EEMHackANewUnit::Execute()
+static void ExecuteHackANewUnit(EEMRecord* m)
 {
     // New (game messages lane, round 2): the body is Rust (ee_units hack.rs hack_new_unit: the class, the owner, a
     // building's footprint on the map) over EEUnitHost.cpp's reads and creations; the message keeps the class
-    this->mUnitType = ee_units_hack_new_unit(gWorld.GetPlayerBySlot(this->GetOriginatingSlot()), this->mUnitType,
-                                             this->mPoint.GetX(), this->mPoint.GetY(), (int64_t)this->mPlayerID);
+    m->Set<int32_t>(1, ee_units_hack_new_unit(gWorld.GetPlayerBySlot(m->GetOriginatingSlot()), m->Get<int32_t>(1),
+                                             m->Get<GE2DPoint>(2).GetX(), m->Get<GE2DPoint>(2).GetY(), (int64_t)m->Get<unsigned char>(3)));
 }
 
 // FUNCTION: EXE 0x4bf8c8
@@ -1656,16 +1607,6 @@ static void ExecuteJITManufacturing(EEMRecord* m)
         gUserInterface->UpdateJITManufacturing();
 }
 
-// EEMKillUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMKillUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_KILL_UNIT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mAllUnits);
-    return 6;
-}
-
 // FUNCTION: EXE 0x4c04d0
 // Returns whether deleting the unit refunds its cost: a paid-for land building still under construction that is
 // not a granary
@@ -1680,12 +1621,12 @@ static bool IsRefundable(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x4c051c
 // Deletes the sender's first selected unit (or every selected unit) that may be deleted, refunding unfinished
 // buildings' cost first
-void EEMKillUnit::Execute()
+static void ExecuteKillUnit(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EEGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup) {
-        if (!this->mAllUnits) {
+        if (!m->Get<unsigned char>(1)) {
             EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(theGroup->GetFirstUnit());
             if (theUnit && (theUnit->mUnitClass->mUnitType == kUnitTypePathPoint || theUnit->mHitPoints > 0) && theUnit->CanDelete()) {
                 if (IsRefundable(theUnit)) {
@@ -1949,41 +1890,24 @@ static void ExecuteLoadTransport(EEMRecord* m)
                             m->Get<int32_t>(2));
 }
 
-// EEMLockUnlock's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLockUnlock::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOCK_UNLOCK;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mIsLocked);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c1f60
-// Returns the message's debug label "Lock Unlock"
-char* EEMLockUnlock::GetMessageLabel() const
-{
-    return "Lock Unlock";
-}
-
 // FUNCTION: EXE 0x4c1fb6
 // Locks or unlocks every selected gate together with its second and fourth parts
-void EEMLockUnlock::Execute()
+static void ExecuteLockUnlock(EEMRecord* m)
 {
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
+    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
     if (theGroup->GetFirstUnit()) {
         unsigned long theNumUnits = theGroup->GetNumUnits();
         for (unsigned long i = 0; i < theNumUnits; i++) {
             EEComplexUnit* theUnit = theGroup->GetUnit(i);
             EEUCGate* theGate = EEUnitClassCast<EEUCGate>(theUnit->GetUnitClass());
-            theUnit->SetLocked(this->mIsLocked);
+            theUnit->SetLocked(m->Get<bool>(1));
             // a gate built as a single piece (scenario Create effect) has no second or fourth part
             EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
             if (thePart != NULL)
-                thePart->SetLocked(this->mIsLocked);
+                thePart->SetLocked(m->Get<bool>(1));
             thePart = theGate->GetFourthPart(theUnit);
             if (thePart != NULL)
-                thePart->SetLocked(this->mIsLocked);
+                thePart->SetLocked(m->Get<bool>(1));
         }
     }
 }
@@ -2512,12 +2436,12 @@ static void ExecuteRemoveImprovement(EEMRecord* m)
 // FUNCTION: EXE 0x4c4766
 // Cancels the research (five times if asked) or toggles just-in-time manufacturing at each living selected
 // building of the clicked building's type; refreshes the JIT button for the local player
-void EEMRemoveTechnology::Execute()
+static void ExecuteRemoveTechnology(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theUnit = gWorld.GetUnit(this->mUnitID);
-    unsigned long theCount = this->mFiveTimes ? 5 : 1;
+    EEUnit* theUnit = gWorld.GetUnit(m->Get<int32_t>(1));
+    unsigned long theCount = m->Get<bool>(4) ? 5 : 1;
     if (theUnit && theUnit->mHitPoints > 0) {
         long theType = theUnit->mUnitClass->mUnitType;
         unsigned long theNumUnits = theGroup->GetNumUnits();
@@ -2525,38 +2449,18 @@ void EEMRemoveTechnology::Execute()
             EEComplexUnit* theOther = theGroup->GetUnit(i);
             EEComplexUnit* theComplexUnit = theOther->mComplexUnit;
             if (theOther->mHitPoints > 0 && theOther->mUnitClass->mUnitType == theType && theComplexUnit) {
-                if (this->mFiveTimes) {
+                if (m->Get<bool>(4)) {
                     for (unsigned long j = 0; j < theCount; j++)
-                        theComplexUnit->RemoveResearch(this->mTechnology, 0);
-                } else if (this->mToggleJITManufacturing)
+                        theComplexUnit->RemoveResearch(m->Get<int32_t>(2), 0);
+                } else if (m->Get<bool>(3))
                     theComplexUnit->ToggleJITManufacturing();
                 else
-                    theComplexUnit->RemoveResearch(this->mTechnology, 0);
+                    theComplexUnit->RemoveResearch(m->Get<int32_t>(2), 0);
                 if (thePlayer == gWorld.GetCurrentPlayer())
                     gUserInterface->UpdateJITManufacturing();
             }
         }
     }
-}
-
-// EEMRemoveTechnology's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMRemoveTechnology::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_REMOVE_TECHNOLOGY;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mUnitID);
-    outSlots[6] = EENetMsgField(this->mTechnology);
-    outSlots[7] = EENetMsgField(this->mToggleJITManufacturing);
-    outSlots[8] = EENetMsgField(this->mFiveTimes);
-    return 9;
-}
-
-// FUNCTION: EXE 0x4c4929
-// Returns the message's debug label "Remove Technology"
-char* EEMRemoveTechnology::GetMessageLabel() const
-{
-    return "Remove Technology";
 }
 
 // FUNCTION: EXE 0x4c49b7
@@ -3021,14 +2925,14 @@ bool EEFarmDistanceGreater::operator()(EEComplexUnit* inFirst, EEComplexUnit* in
 // FUNCTION: EXE 0x4c7739
 // Sends the selected citizens to farm near the target: farmers whose farm drops here deposit, others take the
 // nearest free farm, else gather to or move to the target
-void EEMSmartFarmers::Execute()
+static void ExecuteSmartFarmers(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     // New (R5b.4): the body is Rust (ee_units commands.rs smart_farmers: with a selection and a complex target, one
     // active group of it keeps its citizens; each drops its load at the target, keeps its farm, takes the nearest free
     // farm, drops what it carries or moves to the target; one unit drawn acknowledges; the group finishes) over the
     // world calls of EEUnitHost.cpp
-    ee_units_smart_farmers(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID);
+    ee_units_smart_farmers(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)m->Get<int32_t>(1));
 }
 
 // New (R5b.4): the two farm sorts for the host (ee/EEUnitHost.h), here with their comparators
@@ -3038,24 +2942,6 @@ void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool 
         std::sort(ioFarms.begin(), ioFarms.end(), EEFarmDistanceGreater(EETileCoordinate(inX, inY)));
     else
         std::sort(ioFarms.begin(), ioFarms.end(), EETileDistanceLess(EETileCoordinate(inX, inY)));
-}
-
-// EEMSmartFarmers's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSmartFarmers::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SMART_FARMERS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mTargetID);
-    outSlots[6] = EENetMsgField(this->mIsQueued);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c7b7b
-// Returns the message's debug label "Smart Farmers"
-char* EEMSmartFarmers::GetMessageLabel() const
-{
-    return "Smart Farmers";
 }
 
 // EEMStartLoading's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -3411,11 +3297,13 @@ static const struct {
     {kMessageDisband, ExecuteDisband},
     {kMessageDropoffResource, ExecuteDropoffResource},
     {kMessageEnterShiftMode, ExecuteEnterShiftMode},
+    {kMessageExchangeResources, ExecuteExchangeResources},
     {kMessageExplore, ExecuteExplore},
     {kMessageGameRestarting, ExecuteGameRestarting},
     {kMessageGameSpeed, ExecuteGameSpeed},
     {kMessageGatherResource, ExecuteGatherResource},
     {kMessageGoFanatic, ExecuteGoFanatic},
+    {kMessageHackANewUnit, ExecuteHackANewUnit},
     {kMessageHaltSelectedGroup, ExecuteHaltSelectedGroup},
     {kMessageHealUnit, ExecuteHealUnit},
     {kMessageImmediateCargoUnload, ExecuteImmediateCargoUnload},
@@ -3423,6 +3311,7 @@ static const struct {
     {kMessageIncrementEpic, ExecuteIncrementEpic},
     {kMessageIncrementRallyTimer, ExecuteIncrementRallyTimer},
     {kMessageJITManufacturing, ExecuteJITManufacturing},
+    {kMessageKillUnit, ExecuteKillUnit},
     {kMessageLagStatus, ExecuteLagStatus},
     {kMessageLoadGarrison, ExecuteLoadGarrison},
     {kMessageLoadMainScreen, ExecuteLoadMainScreen},
@@ -3430,6 +3319,7 @@ static const struct {
     {kMessageLoadPercent, ExecuteLoadPercent},
     {kMessageLoadTransport, ExecuteLoadTransport},
     {kMessageLoadUnitData, ExecuteLoadUnitData},
+    {kMessageLockUnlock, ExecuteLockUnlock},
     {kMessageMakeWorldVisible, ExecuteMakeWorldVisible},
     {kMessageMigrationSlotInfo, ExecuteMigrationSlotInfo},
     {kMessagePackUnpack, ExecutePackUnpack},
@@ -3438,6 +3328,7 @@ static const struct {
     {kMessagePlayerInformation, ExecutePlayerInformation},
     {kMessageRecordFrames, ExecuteRecordFrames},
     {kMessageRemoveImprovement, ExecuteRemoveImprovement},
+    {kMessageRemoveTechnology, ExecuteRemoveTechnology},
     {kMessageRemoveUnitFromSelectedGroup, ExecuteRemoveUnitFromSelectedGroup},
     {kMessageRepairUnit, ExecuteRepairUnit},
     {kMessageResearchTechnology, ExecuteResearchTechnology},
@@ -3457,6 +3348,7 @@ static const struct {
     {kMessageSetDiplomaticStance, ExecuteSetDiplomaticStance},
     {kMessageSetRallyGoal, ExecuteSetRallyGoal},
     {kMessageSetUnitBehavior, ExecuteSetUnitBehavior},
+    {kMessageSmartFarmers, ExecuteSmartFarmers},
     {kMessageSnapToDaylight, ExecuteSnapToDaylight},
     {kMessageStopActiveGroup, ExecuteStopActiveGroup},
     {kMessageToggleCollisionDetection, ExecuteToggleCollisionDetection},
