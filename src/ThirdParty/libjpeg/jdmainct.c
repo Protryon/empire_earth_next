@@ -153,9 +153,7 @@ METHODDEF(void) process_data_crank_post
 #endif
 
 
-// FUNCTION: JPEG 0x1008b67b
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80d880
 alloc_funny_pointers (j_decompress_ptr cinfo)
 /* Allocate space for the funny pointer lists.
  * This is done only once, not once per pass.
@@ -193,9 +191,7 @@ alloc_funny_pointers (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x1008b790
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80d9b0
 make_funny_pointers (j_decompress_ptr cinfo)
 /* Create the funny pointer lists discussed in the comments above.
  * The actual workspace is already allocated (in main->buffer),
@@ -238,9 +234,7 @@ make_funny_pointers (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x1008ba4a
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80dcb0
 set_wraparound_pointers (j_decompress_ptr cinfo)
 /* Set up the "wraparound" pointers at top and bottom of the pointer lists.
  * This changes the pointer list state from top-of-image to the normal state.
@@ -268,9 +262,7 @@ set_wraparound_pointers (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x1008bb34
 LOCAL(void)
-// FUNCTION: EXEIMG 0x80ddc0
 set_bottom_pointers (j_decompress_ptr cinfo)
 /* Change the pointer lists to duplicate the last sample row at the bottom
  * of the image.  whichptr indicates which xbuffer holds the final iMCU row.
@@ -311,9 +303,7 @@ set_bottom_pointers (j_decompress_ptr cinfo)
  * Initialize for a processing pass.
  */
 
-// FUNCTION: JPEG 0x1008b728
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80d930
 start_pass_main (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
 {
   my_main_ptr main = (my_main_ptr) cinfo->main;
@@ -351,9 +341,7 @@ start_pass_main (j_decompress_ptr cinfo, J_BUF_MODE pass_mode)
  * This handles the simple case where no context is required.
  */
 
-// FUNCTION: JPEG 0x1008b8d0
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80db00
 process_data_simple_main (j_decompress_ptr cinfo,
 			  JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
 			  JDIMENSION out_rows_avail)
@@ -393,9 +381,7 @@ process_data_simple_main (j_decompress_ptr cinfo,
  * This handles the case where context rows must be provided.
  */
 
-// FUNCTION: JPEG 0x1008b938
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80db70
 process_data_context_main (j_decompress_ptr cinfo,
 			   JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
 			   JDIMENSION out_rows_avail)
@@ -469,9 +455,7 @@ process_data_context_main (j_decompress_ptr cinfo,
 
 #ifdef QUANT_2PASS_SUPPORTED
 
-// FUNCTION: JPEG 0x1008bbce
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x80de60
 process_data_crank_post (j_decompress_ptr cinfo,
 			 JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
 			 JDIMENSION out_rows_avail)
@@ -488,9 +472,7 @@ process_data_crank_post (j_decompress_ptr cinfo,
  * Initialize main buffer controller.
  */
 
-// FUNCTION: JPEG 0x1008b5a6
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x80d7b0
 jinit_d_main_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
 {
   my_main_ptr main;

@@ -89,207 +89,14 @@ const float kDefaultHeightMapSmoothness = 0.2f;
 const float kDefaultF2FC = 0.0f;
 const float kDefaultResourceSeperation = 3.0f;
 
-// Compiler-generated for this unit (names in analysis/default/names.txt):
-// (0x11a9b / 0x11cdf: called out of line in the original, inlined in ours: inline-budget rows)
-// TEMPLATE: DEFAULT 0x10011a9b
-// TEMPLATE: DEFAULT 0x10011b5a
-// TEMPLATE: DEFAULT 0x10011bed
-// TEMPLATE: DEFAULT 0x10011c80
-// TEMPLATE: DEFAULT 0x10011cdf
-// TEMPLATE: DEFAULT 0x10011cef
-// TEMPLATE: DEFAULT 0x10011d1b
-// TEMPLATE: DEFAULT 0x10011d47
-// TEMPLATE: DEFAULT 0x10012094
-// TEMPLATE: DEFAULT 0x10013ccb
-// TEMPLATE: DEFAULT 0x10012560
-// TEMPLATE: DEFAULT 0x10011c45
-// TEMPLATE: DEFAULT 0x1001244a
-// TEMPLATE: DEFAULT 0x10014f70
-// TEMPLATE: DEFAULT 0x10011bc1
-// TEMPLATE: DEFAULT 0x10011cb3
-// TEMPLATE: DEFAULT 0x10012331
-// TEMPLATE: DEFAULT 0x100124fa
-// TEMPLATE: DEFAULT 0x100131bd
-// TEMPLATE: DEFAULT 0x10014fe2
-// TEMPLATE: DEFAULT 0x10015014
-// TEMPLATE: DEFAULT 0x10015037
-// SYNTHETIC: DEFAULT 0x100153d7
-// TEMPLATE: DEFAULT 0x10011ab1
-// TEMPLATE: DEFAULT 0x10013a05
-// TEMPLATE: DEFAULT 0x10013fc8
-// TEMPLATE: DEFAULT 0x10014265
-// TEMPLATE: DEFAULT 0x10014dac
-// TEMPLATE: DEFAULT 0x10014dc3
-// TEMPLATE: DEFAULT 0x10014dd7
-// TEMPLATE: DEFAULT 0x10015206
-// TEMPLATE: DEFAULT 0x10015231
-// TEMPLATE: DEFAULT 0x10015253
-// TEMPLATE: DEFAULT 0x10015283
-// TEMPLATE: DEFAULT 0x1001543e
-// TEMPLATE: DEFAULT 0x10011c19
-// TEMPLATE: DEFAULT 0x100124a0
-// TEMPLATE: DEFAULT 0x100123a0
-// TEMPLATE: DEFAULT 0x100123fa
-// TEMPLATE: DEFAULT 0x10013485
-// TEMPLATE: DEFAULT 0x1001374d
-// TEMPLATE: DEFAULT 0x10011abe
-// TEMPLATE: DEFAULT 0x10011ac5
-// TEMPLATE: DEFAULT 0x10011af9
-// TEMPLATE: DEFAULT 0x10011cac
-// TEMPLATE: DEFAULT 0x10011d73
-// TEMPLATE: DEFAULT 0x10011d80
-// TEMPLATE: DEFAULT 0x1001238b
-// TEMPLATE: DEFAULT 0x1001248e
-// TEMPLATE: DEFAULT 0x10013fb1
-// TEMPLATE: DEFAULT 0x10014d71
-// TEMPLATE: DEFAULT 0x10014d85
-// TEMPLATE: DEFAULT 0x10014f4c
-// TEMPLATE: DEFAULT 0x10015066
-// TEMPLATE: DEFAULT 0x10015089
-// TEMPLATE: DEFAULT 0x100150b8
-// TEMPLATE: DEFAULT 0x100150ed
-// TEMPLATE: DEFAULT 0x10015112
-// TEMPLATE: DEFAULT 0x10015144
-// TEMPLATE: DEFAULT 0x1001516c
-// TEMPLATE: DEFAULT 0x1001519c
-// TEMPLATE: DEFAULT 0x100151d4
-// SYNTHETIC: DEFAULT 0x100153ed
-// SYNTHETIC: DEFAULT 0x10015403
-// SYNTHETIC: DEFAULT 0x10015428
-// TEMPLATE: DEFAULT 0x10012554
-// TEMPLATE: DEFAULT 0x10012698
-// TEMPLATE: DEFAULT 0x10012dba
-// TEMPLATE: DEFAULT 0x100147de
-// TEMPLATE: DEFAULT 0x10014c03
-// TEMPLATE: DEFAULT 0x10014e1f
-// TEMPLATE: DEFAULT 0x10011d87
-// TEMPLATE: DEFAULT 0x10011a57
-// TEMPLATE: DEFAULT 0x10011b86
-// TEMPLATE: DEFAULT 0x10011db3
-// TEMPLATE: DEFAULT 0x10011efd
-// TEMPLATE: DEFAULT 0x100125a4
-// TEMPLATE: DEFAULT 0x10011e19
-// TEMPLATE: DEFAULT 0x10011ee9
-// TEMPLATE: DEFAULT 0x10011f6c
-// TEMPLATE: DEFAULT 0x1001203c
-// TEMPLATE: DEFAULT 0x10012050
-// TEMPLATE: DEFAULT 0x100122e1
-// TEMPLATE: DEFAULT 0x100125f4
-// TEMPLATE: DEFAULT 0x1001271d
-// TEMPLATE: DEFAULT 0x10012922
-// TEMPLATE: DEFAULT 0x10012ab6
-// TEMPLATE: DEFAULT 0x10012e2a
-// TEMPLATE: DEFAULT 0x10012f27
-// TEMPLATE: DEFAULT 0x1001427a
-// TEMPLATE: DEFAULT 0x1001484e
-// TEMPLATE: DEFAULT 0x1001490a
-// TEMPLATE: DEFAULT 0x10014d30
-// TEMPLATE: DEFAULT 0x10015325
-// TEMPLATE: DEFAULT 0x1001534b
-// TEMPLATE: DEFAULT 0x10014c74
-// TEMPLATE: DEFAULT 0x10014dee
-// TEMPLATE: DEFAULT 0x10014e90
-// TEMPLATE: DEFAULT 0x10014f9d
-// TEMPLATE: DEFAULT 0x100152a4
-// TEMPLATE: DEFAULT 0x100152da
-// TEMPLATE: DEFAULT 0x100152f8
-// TEMPLATE: DEFAULT 0x10015372
-// TEMPLATE: DEFAULT 0x1001539a
-// SYNTHETIC: DEFAULT 0x10015455
-// SYNTHETIC: DEFAULT 0x10015472
-// TEMPLATE: DEFAULT 0x10011948
-// TEMPLATE: DEFAULT 0x10011a43
-// TEMPLATE: DEFAULT 0x10011dee
-// TEMPLATE: DEFAULT 0x10011f41
-// TEMPLATE: DEFAULT 0x100120c0
-// TEMPLATE: DEFAULT 0x100126ac
-// TEMPLATE: DEFAULT 0x100128b1
-// TEMPLATE: DEFAULT 0x10011973
-// TEMPLATE: DEFAULT 0x10012131
-// SYNTHETIC: DEFAULT 0x100122c5
-// TEMPLATE: DEFAULT 0x1001265f
-// TEMPLATE: DEFAULT 0x10012afa
-// SYNTHETIC: DEFAULT 0x10012db1
-// TEMPLATE: DEFAULT 0x10012df5
-// TEMPLATE: DEFAULT 0x10012e60
-// TEMPLATE: DEFAULT 0x10012ea2
-// TEMPLATE: DEFAULT 0x10012ee6
-// TEMPLATE: DEFAULT 0x10014527
-// TEMPLATE: DEFAULT 0x10014819
-// TEMPLATE: DEFAULT 0x10014884
-// TEMPLATE: DEFAULT 0x100148c6
-// TEMPLATE: DEFAULT 0x1001494b
-// TEMPLATE: DEFAULT 0x10014c3f
-// TEMPLATE: DEFAULT 0x10014caa
-// TEMPLATE: DEFAULT 0x10014cec
-// TEMPLATE: DEFAULT 0x10014ea4
-// TEMPLATE: DEFAULT 0x10014edc
-// TEMPLATE: DEFAULT 0x10014f14
-// TEMPLATE: DEFAULT 0x10014fc2
-// TEMPLATE: DEFAULT 0x100153bf
-// SYNTHETIC: DEFAULT 0x1000c737
-// SYNTHETIC: DEFAULT 0x1000c741
-// SYNTHETIC: DEFAULT 0x1000c752
-// SYNTHETIC: DEFAULT 0x1000c75e
-// SYNTHETIC: DEFAULT 0x1000c769
-// SYNTHETIC: DEFAULT 0x1000c773
-// SYNTHETIC: DEFAULT 0x1000c784
-// SYNTHETIC: DEFAULT 0x1000c790
-// SYNTHETIC: DEFAULT 0x1000c79b
-// SYNTHETIC: DEFAULT 0x1000c7a5
-// SYNTHETIC: DEFAULT 0x1000c7b6
-// SYNTHETIC: DEFAULT 0x1000c7c2
-// SYNTHETIC: DEFAULT 0x1000c7cd
-// SYNTHETIC: DEFAULT 0x1000c7d7
-// SYNTHETIC: DEFAULT 0x1000c7e8
-// SYNTHETIC: DEFAULT 0x1000c7f4
-// SYNTHETIC: DEFAULT 0x1000c7ff
-// SYNTHETIC: DEFAULT 0x1000c809
-// SYNTHETIC: DEFAULT 0x1000c81a
-// SYNTHETIC: DEFAULT 0x1000c826
-// SYNTHETIC: DEFAULT 0x1000c831
-// SYNTHETIC: DEFAULT 0x1000c83b
-// SYNTHETIC: DEFAULT 0x1000c84c
-// SYNTHETIC: DEFAULT 0x1000c858
-// SYNTHETIC: DEFAULT 0x1000c863
-// SYNTHETIC: DEFAULT 0x1000c86d
-// SYNTHETIC: DEFAULT 0x1000c87e
-// SYNTHETIC: DEFAULT 0x1000c88a
-// SYNTHETIC: DEFAULT 0x1000c895
-// SYNTHETIC: DEFAULT 0x1000c89f
-// SYNTHETIC: DEFAULT 0x1000c8b7
-// SYNTHETIC: DEFAULT 0x1000c8c3
-// SYNTHETIC: DEFAULT 0x1000c8cd
-// SYNTHETIC: DEFAULT 0x1000c8d7
-// SYNTHETIC: DEFAULT 0x1000c8ef
-// SYNTHETIC: DEFAULT 0x1000c8fb
-// SYNTHETIC: DEFAULT 0x1000c905
-// SYNTHETIC: DEFAULT 0x1000c90f
-// SYNTHETIC: DEFAULT 0x1000c927
-// SYNTHETIC: DEFAULT 0x1000c933
-// SYNTHETIC: DEFAULT 0x1000c93d
-// SYNTHETIC: DEFAULT 0x1000c947
-// SYNTHETIC: DEFAULT 0x1000c967
-// SYNTHETIC: DEFAULT 0x1000c973
-// SYNTHETIC: DEFAULT 0x1000c97d
-// SYNTHETIC: DEFAULT 0x1000c987
-// SYNTHETIC: DEFAULT 0x1000c9a7
-// SYNTHETIC: DEFAULT 0x1000c9b3
-// SYNTHETIC: DEFAULT 0x1000c9bd
-// SYNTHETIC: DEFAULT 0x1000c9c7
-// SYNTHETIC: DEFAULT 0x1000c9e7
-// SYNTHETIC: DEFAULT 0x1000c9f3
-// SYNTHETIC: DEFAULT 0x1001548f
-// SYNTHETIC: DEFAULT 0x10015499
-
 // ---- Globals in definition order (= dynamic initializer order 0xc895.., after the U2D header keys).
 std::vector<UString> gFileNames;                    // 0x1c810: script file stack (#include)
 std::vector<long> gLineNumbers;                     // 0x1c800: line number per open script file
 std::vector<long> gIfStack;                         // 0x1c7f0: #if state per nesting level (0 not yet taken,
                                                     // 1 active, 2 done or inside an inactive branch)
-std::map<UString, RMDefine> gDefines;               // 0x1c7e0
-std::map<UString, UString> gMapTypes;               // 0x1c7d0
-std::map<UString, long> gKeywords;                  // 0x1c7c0
+std::map<UString, RMDefine> gDefines;
+std::map<UString, UString> gMapTypes;
+std::map<UString, long> gKeywords;
 
 long GetMapType(const UString& inName, UString& outValue);
 long GetKeyword(const UString& inName);
@@ -304,7 +111,6 @@ static void ParseNumber(const UString& inText, long inType, void* outValue, long
 static void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long inType, void* outValue, long inSize);
 
 // NEAR: the original keeps i in ebx (shared with the _Buy(0) zero) and i*16 in inText's slot; declaration variants did not move it
-// FUNCTION: DEFAULT 0x1000c9fd
 // Parses a script value list into integers: plain numbers directly, expressions such as Between or
 // OneOf evaluated; an entry that fails stays 0xbaadf00d
 void ParseLongList(EERandomMap* ioMap, const UString& inText, std::vector<long>& outValues)
@@ -327,7 +133,6 @@ void ParseLongList(EERandomMap* ioMap, const UString& inText, std::vector<long>&
     }
 }
 
-// FUNCTION: DEFAULT 0x1000cb54
 // Replaces every token that names a #define or map constant with its value (a leading # token stays)
 static void ExpandMapTypes(const std::vector<UString>& inTokens, std::vector<UString>& outTokens)
 {
@@ -344,7 +149,6 @@ static void ExpandMapTypes(const std::vector<UString>& inTokens, std::vector<USt
     }
 }
 
-// FUNCTION: DEFAULT 0x1000cbea
 // Reads a float or integer from text into the given value of matching size
 static void ParseNumber(const UString& inText, long inType, void* outValue, long inSize)
 {
@@ -362,7 +166,6 @@ static void ParseNumber(const UString& inText, long inType, void* outValue, long
     }
 }
 
-// FUNCTION: DEFAULT 0x1000cc97
 // Looks up a #define or map constant; returns kErrorNotFound when it is unknown
 long GetMapType(const UString& inName, UString& outValue)
 {
@@ -386,7 +189,6 @@ void InitializeKeywords();
 void ReadScript(EERandomMap* ioMap, const UString& inName);
 
 // NEAR: the original inlines URandom::Generate() (NextInSeries / modulus, 8-byte fild temp) inside Generate(min, max); ours calls the import. Lead: Generate() is an exported inline in the real header (shared-header change, not tested)
-// FUNCTION: DEFAULT 0x1000cccb
 // Evaluates a script value expression: OneOf picks a random listed value, Between a random value in
 // range; user keywords go to the keyword handler (still reported as ignored)
 void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long inType, void* outValue, long inSize)
@@ -465,7 +267,6 @@ void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long inType, 
     }
 }
 
-// FUNCTION: DEFAULT 0x1000d1fc
 // Returns the token of a script keyword, or 0 when it is unknown
 long GetKeyword(const UString& inName)
 {
@@ -476,7 +277,6 @@ long GetKeyword(const UString& inName)
 }
 
 // NEAR: as ParseLongList, plus the frame is 4 bytes larger in the original (0x58)
-// FUNCTION: DEFAULT 0x1000d223
 // Parses a script value list into floats like ParseLongList (a failed entry stays -1163005952.0)
 void ParseFloatList(EERandomMap* ioMap, const UString& inText, std::vector<float>& outValues)
 {
@@ -499,7 +299,6 @@ void ParseFloatList(EERandomMap* ioMap, const UString& inText, std::vector<float
 }
 
 // NEAR: inline-budget pattern (begin()/operator+ in/out of line differs per access); structure verified
-// FUNCTION: DEFAULT 0x1000d378
 // Resets and reads a .rmv script, converts the elevations to 0..1 units, sizes the flat area from
 // the placed units and walls, and maps tree types to forest indices (dropping unknown ones)
 long SetRandomMapValues(EERandomMap* ioMap, const UString& inScriptName)
@@ -608,7 +407,6 @@ long SetRandomMapValues(EERandomMap* ioMap, const UString& inScriptName)
     return 0;
 }
 
-// FUNCTION: DEFAULT 0x1000d943
 // Fills the table of script attribute and directive names with tokens and value types
 void InitializeDefines()
 {
@@ -717,7 +515,6 @@ void InitializeDefines()
     AddDefine("MapCharacteristics", kRMTokenMapCharacteristics, kRMLong);
 }
 
-// FUNCTION: DEFAULT 0x1000e68f
 // Adds a script attribute or directive name with its token and value type
 static void AddDefine(const UString& inName, long inToken, long inType)
 {
@@ -730,7 +527,6 @@ static void AddDefine(const UString& inName, long inToken, long inType)
     gDefines.insert(thePair);
 }
 
-// FUNCTION: DEFAULT 0x1000e703
 // Fills the script constants: map types, booleans, map sizes, resource kinds, epochs, the game's
 // start epoch, player count and map size, and every unit, terrain and cliff name
 void InitializeMapTypes(EERandomMap* ioMap)
@@ -808,7 +604,6 @@ void InitializeMapTypes(EERandomMap* ioMap)
     }
 }
 
-// FUNCTION: DEFAULT 0x1000ef63
 // Adds a script constant or #define with its text value
 static void AddMapType(const UString& inName, const UString& inValue)
 {
@@ -819,7 +614,6 @@ static void AddMapType(const UString& inName, const UString& inValue)
 }
 
 
-// FUNCTION: DEFAULT 0x1000efd7
 // Fills the expression keyword table (Between, OneOf, AND/OR/XOR/NOT, comparisons, PERCENT, DEFINED)
 void InitializeKeywords()
 {
@@ -841,7 +635,6 @@ void InitializeKeywords()
     AddKeyword("NOTDEFINED", kRMNotDefined);
 }
 
-// FUNCTION: DEFAULT 0x1000f1c4
 // Adds an expression keyword with its token
 static void AddKeyword(const UString& inName, long inToken)
 {
@@ -851,7 +644,6 @@ static void AddKeyword(const UString& inName, long inToken)
     gKeywords.insert(thePair);
 }
 
-// FUNCTION: DEFAULT 0x1000f222
 // Opens <name>.rmv in the map's script directory and parses it line by line; a missing file is skipped
 void ReadScript(EERandomMap* ioMap, const UString& inName)
 {
@@ -876,7 +668,6 @@ void ReadScript(EERandomMap* ioMap, const UString& inName)
 }
 
 // NEAR: frame layout differs (original keeps theLong spilled at [ebp-0x30], 0x1a0 frame, DefineForest temp between theQuote and theUnused); control flow and every case body verified against the dispatch emulation
-// FUNCTION: DEFAULT 0x1000f361
 // Parses one script line: applies an attribute to the map settings (inside an active #if branch) or
 // handles #define, #if/#elif/#else/#endif and #include; comment lines are skipped
 void ParseLine(EERandomMap* ioMap, const UString& inLine)
@@ -1485,7 +1276,6 @@ void ParseLine(EERandomMap* ioMap, const UString& inLine)
 }
 
 // NEAR: the original inlines begin() for the first theExpanded[0] (operator+ out of line); budget pattern
-// FUNCTION: DEFAULT 0x100111dc
 // Evaluates an #if condition: a number, a logical/comparison keyword on nested conditions, PERCENT
 // (true with that chance), or DEFINED/NOTDEFINED of a constant; returns 1 or 0
 long EvaluateCondition(EERandomMap* ioMap, const UString& inText)
@@ -1590,7 +1380,6 @@ long EvaluateCondition(EERandomMap* ioMap, const UString& inText)
     return theResult;
 }
 
-// FUNCTION: DEFAULT 0x100115e9
 // Returns the token of a script attribute or directive, or 0 when it is unknown
 long GetAttributeToken(const UString& inName)
 {
@@ -1607,7 +1396,6 @@ long GetAttributeToken(const UString& inName)
     return theResult;
 }
 
-// FUNCTION: DEFAULT 0x10011641
 // Returns the value type of a script attribute (integer, float, 0 for directives)
 long GetAttributeType(const UString& inName)
 {
@@ -1617,7 +1405,6 @@ long GetAttributeType(const UString& inName)
     return 0;
 }
 
-// FUNCTION: DEFAULT 0x10011668
 // Sets every random map script setting to its default before a script is read
 void SetDefaults(EERandomMap* ioMap)
 {

@@ -15,7 +15,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x00789f80
 // Handles the dialog config instructions ALLOWDRAG, KEEPINROOT, ENDONESCAPE, DONTENDONESCAPE and
 // DEFAULTBUTTON; passes others to the container config
 bool DialogConfig::Virtual24(const std::string& instruction)
@@ -38,7 +37,3 @@ bool DialogConfig::Virtual24(const std::string& instruction)
     return true;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a1eb0
-// (class WONAPI::Button * __cdecl WONAPI::SafeConfigGetComponent(class WONAPI::Component *,char const *)    [?SafeConfigGetComponent@WONAPI@@YAPAVButton@)

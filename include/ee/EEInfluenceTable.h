@@ -11,7 +11,7 @@ class EEUnit;
 
 class EEInfluenceTable : public RTSRegionTable<std::pair<unsigned long, long> > {
 public:
-    EEInfluenceTable(EEMap* inMap, unsigned long inNumPlayers);   // 0xa5589
+    EEInfluenceTable(EEMap* inMap, unsigned long inNumPlayers);
     virtual ~EEInfluenceTable();            // +0x00 0xa55cd (??_G 0xa55b1)
     void Init();                            // 0xa55d8: every region gets (i, 0) for i = 0..mNumPlayers
     // 0xa5685 (ret 8): the sum of GetValue over the rectangle (x from its left to its right, y from its top to its bottom)

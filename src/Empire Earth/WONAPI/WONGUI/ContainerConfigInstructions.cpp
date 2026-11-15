@@ -17,7 +17,6 @@
 // The LAYOUT rule's instruction names and its offsets' rule are ee_won's guilayout module
 // (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
-// FUNCTION: WON 0x00788840
 // Reads a comma-separated list of components and adds each to the container
 bool ContainerConfig::HandleAdd()
 {
@@ -34,7 +33,6 @@ bool ContainerConfig::HandleAdd()
 
 	return true;
 }
-// FUNCTION: WON 0x00788870
 // Reads a comma-separated list of layout points and adds each to the container
 bool ContainerConfig::HandleAddLayoutPoint()
 {
@@ -51,7 +49,6 @@ bool ContainerConfig::HandleAddLayoutPoint()
 
 	return true;
 }
-// FUNCTION: WON 0x007888b0
 // Reads a layout rule (target, instruction names, reference, up to four offsets) and adds it to the container;
 // chain and repeat forms reuse the previous rule's instructions and reference
 bool ContainerConfig::HandleLayout(bool chain, bool repeat)
@@ -127,7 +124,6 @@ bool ContainerConfig::HandleLayout(bool chain, bool repeat)
 
 	return true;
 }
-// FUNCTION: WON 0x00789c80
 // Handles the container config instructions (ADD, LAYOUT and its variants, layout ids, tab focus,
 // child-only input); other instructions go to the base config
 bool ContainerConfig::Virtual24(const std::string& theInstruction)
@@ -193,7 +189,3 @@ bool ContainerConfig::Virtual24(const std::string& theInstruction)
 	return true;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a1da0
-// (class WONAPI::LayoutPoint * __cdecl WONAPI::SafeConfigGetComponent(class WONAPI::Component *,char const *)    [?SafeConfigGetComponent@WONAPI@@YAPAVLa)

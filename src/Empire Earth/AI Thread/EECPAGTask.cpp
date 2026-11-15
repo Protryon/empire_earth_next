@@ -20,17 +20,12 @@
 #include "ee/EECPILocation.h"
 #include "ee/EECPAGTask.h"
 
-// FUNCTION: EXE 0x44162f
 // Creates an inactive attack group task of no type or mode, with no target unit or player
 EECPAGTask::EECPAGTask()
     : mUnit(NULL), mPlayer(NULL), mAggression(0.0f), mType(kAGTaskNone), mMode(kAGModeNone), mIsActive(false), mB31(false)
 {
 }
 
-// SYNTHETIC: EXE 0x44165d
-// (the scalar deleting destructor; the inline dtor expanded)
-
-// FUNCTION: EXE 0x441686
 // Creates a copy of a task, taking its own reference on the target unit
 EECPAGTask::EECPAGTask(const EECPAGTask& inTask)
 {
@@ -46,7 +41,6 @@ EECPAGTask::EECPAGTask(const EECPAGTask& inTask)
         this->mUnit->Reference();
 }
 
-// FUNCTION: EXE 0x4416e3
 // Returns the target player's id, or -1 when the task has no player
 long EECPAGTask::GetPlayerID()
 {
@@ -55,7 +49,6 @@ long EECPAGTask::GetPlayerID()
     return -1;
 }
 
-// FUNCTION: EXE 0x4416f5
 // Reads the task from a saved game (unit and player as ids until Restore); returns the first read error
 long EECPAGTask::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -83,7 +76,6 @@ long EECPAGTask::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return theResult;
 }
 
-// FUNCTION: EXE 0x441791
 // Turns the loaded player and unit ids back into pointers (-1: none) and references the unit; returns
 // the location's restore result
 long EECPAGTask::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -103,7 +95,6 @@ long EECPAGTask::Restore(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
-// FUNCTION: EXE 0x4417f5
 // Releases the reference on the target unit and clears it
 void EECPAGTask::ReleaseUnit()
 {
@@ -112,7 +103,6 @@ void EECPAGTask::ReleaseUnit()
     this->mUnit = NULL;
 }
 
-// FUNCTION: EXE 0x44180a
 // Writes the task to the saved game (unit id or -1, player id or -1); returns the first write error
 long EECPAGTask::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -137,7 +127,6 @@ long EECPAGTask::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return theResult;
 }
 
-// FUNCTION: EXE 0x4418c9
 // Copies another task, moving the unit reference to its target unit
 EECPAGTask& EECPAGTask::operator=(const EECPAGTask& inTask)
 {
@@ -152,7 +141,6 @@ EECPAGTask& EECPAGTask::operator=(const EECPAGTask& inTask)
     return *this;
 }
 
-// FUNCTION: EXE 0x441912
 // Sets the target unit: releases the old reference first (even for the same unit), then references the new
 void EECPAGTask::SetUnit(EEComplexUnit* inUnit)
 {

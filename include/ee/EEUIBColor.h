@@ -8,7 +8,7 @@
 class EEUIBColor : public UIButton {
 public:
     EEUIBColor(unsigned long inColor, unsigned long inId, const GE2DPoint& inLocation, UIForm* inForm,
-               unsigned long inIndex);      // 0x2547e0
+               unsigned long inIndex);
     virtual ~EEUIBColor() {}                // +0x00 (??_G 0x25486f: the vptr store, then UIButton's dtor)
     void SetColor(unsigned long inColor);   // 0x2548ce (wraps to 0..15)
     long GetColor() const { return this->mColor; }

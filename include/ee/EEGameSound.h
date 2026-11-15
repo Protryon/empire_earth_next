@@ -8,7 +8,7 @@ class SESoundManager;
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFalloff);
 
-extern SESoundManager* gSoundManager;       // 0x5319c4
+extern SESoundManager* gSoundManager;
 
 class GE3DPoint;
 class EEGraphicObject;

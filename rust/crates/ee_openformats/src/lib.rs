@@ -11,10 +11,12 @@
 
 mod cgltf;
 mod ffi;
+pub mod find;
 mod import;
 mod jsmn;
 mod json;
 mod png;
+pub mod surface_file;
 
 pub use ffi::*;
 pub use import::{gltf_to_model, Resolver};

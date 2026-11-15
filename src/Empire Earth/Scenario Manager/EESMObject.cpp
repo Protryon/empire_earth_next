@@ -38,7 +38,6 @@
 // (inX, inY), the unit's nearest tile out (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
-// FUNCTION: EXE 0x5c5f73
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
 // (the numbers: ee_scenario fields.rs object_defaults)
 EESMObject::EESMObject()
@@ -48,22 +47,11 @@ EESMObject::EESMObject()
     *static_cast<EeScenarioObjectFields*>(this) = ee_scenario_object_defaults();
 }
 
-// SYNTHETIC: EXE 0x5c6019
-// (the scalar deleting destructor, emitted with the vtable; slot EESMObject+0x0)
-
-// FUNCTION: EXE 0x5c6035
 // Destroys the object (members only)
 EESMObject::~EESMObject()
 {
 }
 
-// FUNCTION: EXE 0x5c6148
-// IsNearUnit: ee_scenario placement.rs near_unit (objeval.rs asks it)
-
-// FUNCTION: EXE 0x5c629f
-// IsNearTile: ee_scenario placement.rs near_tile (find_placement asks it)
-
-// FUNCTION: EXE 0x5c6386
 // Copies another object's name and filter settings, and its unit list when it picks units on the map
 void EESMObject::Copy(const EESMObject& inObject)
 {
@@ -73,7 +61,6 @@ void EESMObject::Copy(const EESMObject& inObject)
         this->mUnits = inObject.mUnits;
 }
 
-// FUNCTION: EXE 0x5c6458
 // Rebuilds a dynamic object's units (parent or owners), keeps those passing the state/attribute/selected/visible/area/
 // near filters, shuffles and caps them; returns whether any pass (visibility uses the selected-by player)
 bool EESMObject::Evaluate(bool inIncludeDead)
@@ -229,7 +216,6 @@ void EESMObjectTiles(uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, std::
     }
 }
 
-// FUNCTION: EXE 0x5c6b14
 // Picks the unit type to create for the object: the parent's first unit's type, the object's class, or a random
 // class matching its epoch/family/AI kind/unit set filter; -1 if none
 long EESMObject::PickUnitType()
@@ -239,7 +225,6 @@ long EESMObject::PickUnitType()
     return ee_scenario_object_pick_unit_type(&theHost, this);
 }
 
-// FUNCTION: EXE 0x5c6d4f
 // Finds a free spot for a new unit of the type that meets the object's area and nearness filters (random tries for
 // 'not in/near' filters, then one retry without them); returns whether one was found
 bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
@@ -271,7 +256,6 @@ bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& ou
     return theResult == EE_SCENARIO_PLACEMENT_FOUND;
 }
 
-// FUNCTION: EXE 0x5c7749
 // Returns a unit's attribute for an object filter: current values, upgrade bonuses over the class, or totals,
 // optionally as a percentage of the class or upgrade value; 0 for a NULL unit
 long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEUnit* inUnit,
@@ -364,14 +348,12 @@ int64_t EESMUnitField(EEUnit* inUnit, int32_t inField)
 }
 
 
-// FUNCTION: EXE 0x5c8274
 // Copies the object's unit ids out
 void EESMObject::GetUnits(std::vector<unsigned long>& outUnits) const
 {
     outUnits = this->mUnits;
 }
 
-// FUNCTION: EXE 0x5c8284
 // Reads the object's units (appended) and filter settings (files before 0.0xcd: attribute ids above Construction
 // Complete move up by 3); returns the first error (ee_scenario save.rs object_load)
 long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -382,7 +364,6 @@ long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_object_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c85a4
 // Replaces every occurrence of a unit id in the object's unit list by a new id
 void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
 {
@@ -394,7 +375,6 @@ void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
     }
 }
 
-// FUNCTION: EXE 0x5c85de
 // Writes the object's units and filter settings (the parent only for minor version >= 0x2a); returns the first error
 // (ee_scenario save.rs object_save)
 long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -405,12 +385,6 @@ long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_object_save(&theTable, this, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c8871
-// EEModifyUnitAttribute: a player's unit type stat raised or lowered by an amount or percent of the class value, then
-// queued as a pending effect (ee_scenario class_attribute.rs modify_unit_attribute; the upgrade's fields are
-// EESMEffect.cpp's EE_SCENARIO_WORLD_CA_*)
-
-// FUNCTION: EXE 0x5c8f28
 // Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
 // rot time, built state, variables) by a fixed, random or percentage amount
 // Original cdecl helper; random range and the percentage flag are independent of add/subtract/assign mode.
@@ -438,7 +412,6 @@ static void EEChangeUnitUncaptured(unsigned long inAttribute, bool inPercentage,
     ee_scenario_change_unit(&theHost, inAttribute, inPercentage, inMinimum, inMaximum, inRandom, inMode);
 }
 
-// FUNCTION: EXE 0x5c9628
 // Renames the object and renames its object conditions to "<name> Exists" (ee_scenario lists.rs)
 void EESMObject::SetName(const UWideString& inName)
 {
@@ -447,7 +420,6 @@ void EESMObject::SetName(const UWideString& inName)
         gWorld.mScenarioManager->ObjectChanged(this, false, 0);
 }
 
-// FUNCTION: EXE 0x5c96b7
 // Sets the parent object; a parent chain that loops back to this object resets the parent to 0 (ee_scenario
 // lists.rs set_parent)
 void EESMObject::SetParent(long inParent)
@@ -457,14 +429,12 @@ void EESMObject::SetParent(long inParent)
         gWorld.mScenarioManager->ObjectChanged(this, true, inParent);
 }
 
-// FUNCTION: EXE 0x5c97a8
 // Replaces the object's unit list
 void EESMObject::SetUnits(const std::vector<unsigned long>& inUnits)
 {
     this->mUnits = inUnits;
 }
 
-// FUNCTION: EXE 0x5c97b7
 // Creates an enabled, non-looping trigger with one empty condition entry and one empty effect entry
 EESMTrigger::EESMTrigger()
 {
@@ -489,7 +459,6 @@ EESMTrigger::EESMTrigger()
     this->mID = 0;
 }
 
-// FUNCTION: EXE 0x5c98dd
 // Destroys the trigger and its condition and effect entries
 EESMTrigger::~EESMTrigger()
 {
@@ -505,7 +474,6 @@ EESMTrigger::~EESMTrigger()
     }
 }
 
-// FUNCTION: EXE 0x5c9966
 // Copies another trigger's name, text, conditions, effects and flags (not its condition start time)
 void EESMTrigger::Copy(const EESMTrigger& inTrigger)
 {
@@ -521,7 +489,6 @@ void EESMTrigger::Copy(const EESMTrigger& inTrigger)
     this->mIsInCinematic = inTrigger.mIsInCinematic;
 }
 
-// FUNCTION: EXE 0x5c99c7
 // Deletes a condition entry; deleting the last one makes the previous entry end the list
 void EESMTrigger::DeleteCondition(unsigned long inIndex)
 {
@@ -531,7 +498,6 @@ void EESMTrigger::DeleteCondition(unsigned long inIndex)
         this->mConditions[inIndex - 1]->mOperator = kSMTriggerOperatorEnd;
 }
 
-// FUNCTION: EXE 0x5c9a3e
 // Deletes an effect entry; deleting the last one makes the previous entry end the list
 void EESMTrigger::DeleteEffect(unsigned long inIndex)
 {
@@ -541,7 +507,6 @@ void EESMTrigger::DeleteEffect(unsigned long inIndex)
         this->mEffects[inIndex - 1]->mOperator = kSMTriggerOperatorEnd;
 }
 
-// FUNCTION: EXE 0x5c9ab5
 // Fires the trigger when its AND/OR condition chain has held for the set duration: queues all effects, or one random
 // OR-separated group, at their delays, and turns a non-looping trigger off
 // (EEScenarioManager::Update 0x1b20e6)
@@ -584,10 +549,6 @@ void EESMTrigger::EvaluateUncaptured(float inTime)
         gWorld.mScenarioManager->AddTimedEffect((long)theTimed[t].effect, theTimed[t].time, this->mIsInCinematic);
 }
 
-// FUNCTION: EXE 0x5c9caf
-// (EESMTConditionWrapper::Evaluate: ee_scenario trigger.rs entry)
-
-// FUNCTION: EXE 0x5c9d0e
 // Returns the condition entry at an index, or NULL
 EESMTConditionWrapper* EESMTrigger::GetCondition(unsigned long inIndex)
 {
@@ -597,7 +558,6 @@ EESMTConditionWrapper* EESMTrigger::GetCondition(unsigned long inIndex)
     return theWrapper;
 }
 
-// FUNCTION: EXE 0x5c9d32
 // Returns the effect entry at an index, or NULL
 EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
 {
@@ -607,7 +567,6 @@ EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
     return theWrapper;
 }
 
-// FUNCTION: EXE 0x5c9d56
 // Reads the trigger's settings, condition entries and effect entries (id -1 becomes 0); returns the first error
 // (ee_scenario save.rs trigger_load)
 long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -618,7 +577,6 @@ long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     return ee_scenario_trigger_load(&theTable, this);
 }
 
-// FUNCTION: EXE 0x5ca0b3
 // Writes the trigger's settings, condition entries and effect entries; returns the first error
 // (ee_scenario save.rs trigger_save)
 long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -629,7 +587,6 @@ long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     return ee_scenario_trigger_save(&theTable, this);
 }
 
-// FUNCTION: EXE 0x5ca29d
 // Sets a condition entry's condition index and NOT flag
 void EESMTrigger::SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition)
 {
@@ -637,7 +594,6 @@ void EESMTrigger::SetCondition(unsigned long inIndex, bool inNot, unsigned long 
     this->mConditions[inIndex]->mValue = inCondition;
 }
 
-// FUNCTION: EXE 0x5ca2c3
 // Sets a condition entry's operator; a non-end operator on the last entry appends an empty entry
 void EESMTrigger::SetConditionOperator(unsigned long inIndex, long inOperator)
 {
@@ -646,7 +602,6 @@ void EESMTrigger::SetConditionOperator(unsigned long inIndex, long inOperator)
     this->mConditions[inIndex]->mOperator = inOperator;
 }
 
-// FUNCTION: EXE 0x5ca331
 // Replaces the trigger's condition entries by copies of the given ones
 void EESMTrigger::CopyConditions(const std::vector<EESMTConditionWrapper*>& inConditions)
 {
@@ -659,7 +614,6 @@ void EESMTrigger::CopyConditions(const std::vector<EESMTConditionWrapper*>& inCo
     }
 }
 
-// FUNCTION: EXE 0x5ca39b
 // Sets an effect entry's effect index and delay
 void EESMTrigger::SetEffect(unsigned long inIndex, long inDelay, unsigned long inEffect)
 {
@@ -667,7 +621,6 @@ void EESMTrigger::SetEffect(unsigned long inIndex, long inDelay, unsigned long i
     this->mEffects[inIndex]->mEffectIndex = inEffect;
 }
 
-// FUNCTION: EXE 0x5ca3c1
 // Sets an effect entry's operator; a non-end operator on the last entry appends an empty entry
 void EESMTrigger::SetEffectOperator(unsigned long inIndex, long inType)
 {
@@ -676,7 +629,6 @@ void EESMTrigger::SetEffectOperator(unsigned long inIndex, long inType)
     this->mEffects[inIndex]->mOperator = inType;
 }
 
-// FUNCTION: EXE 0x5ca42f
 // Replaces the trigger's effect entries by copies of the given ones
 void EESMTrigger::CopyEffects(const std::vector<EESMTEffectWrapper*>& inEffects)
 {
@@ -688,9 +640,3 @@ void EESMTrigger::CopyEffects(const std::vector<EESMTEffectWrapper*>& inEffects)
         this->SetEffectOperator(i, theWrapper->mOperator);
     }
 }
-
-// FUNCTION: EXE 0x5ca496
-// Appends a condition entry to a trigger's list (vector<EESMTConditionWrapper*>::push_back)
-
-// FUNCTION: EXE 0x5ca4c2
-// Appends an effect entry to a trigger's list (vector<EESMTEffectWrapper*>::push_back)

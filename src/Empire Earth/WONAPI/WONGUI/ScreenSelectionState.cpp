@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00706a70
 // Adds a hidden screen to the container, laid out to the container's size
 void ScreenContainer::AddScreen(Component* screen)
 {
@@ -20,7 +19,6 @@ void ScreenContainer::AddScreen(Component* screen)
     this->AddChild(screen);
 }
 
-// FUNCTION: WON 0x00706ab0
 // Hides the current screen and shows the given one, optionally giving it focus; no-op if it is already current
 void ScreenContainer::ShowScreen(Component* screen,bool takeFocus)
 {

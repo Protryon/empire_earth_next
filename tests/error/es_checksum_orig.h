@@ -23,7 +23,7 @@ public:
 
 private:
     friend class ESChecksum;
-    bool Compare(const ESChecksumEntry& inOther, UString& outError) const;   // 0x29f3
+    bool Compare(const ESChecksumEntry& inOther, UString& outError) const;
 
     UString mDescription;                   // +0x00
     uint32_t mChecksum;                     // +0x10 (32 bits on every data model: saved and compared between peers)
@@ -32,14 +32,14 @@ private:
 class LLE_API ESChecksum {                  // vtable 0x10097520 (dtor only); sizeof 0x18
 public:
     ESChecksum(bool inVerbose = true);      // 0x2a50; default proven by the closure ??_F (0x2977: push 1)
-    virtual ~ESChecksum() {}                // 0x2921 (inline)
+    virtual ~ESChecksum() {}
     // implicit copy ctor (0x292f) and operator= (0x2956)
 
-    void AddChecksum(const UString& inDescription, unsigned long inChecksum);   // 0x2a78
-    bool Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const;   // 0x2b1b
-    bool GetIsVerboseMode() const;          // 0x2c3e
-    unsigned long GetTotalChecksum() const; // 0x2c42
-    void PrintReport() const;               // 0x2c57
+    void AddChecksum(const UString& inDescription, unsigned long inChecksum);
+    bool Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const;
+    bool GetIsVerboseMode() const;
+    unsigned long GetTotalChecksum() const;
+    void PrintReport() const;
 
 protected:
     void AddChecksum(unsigned long inChecksum);   // 0x2ac9: added to the last entry (one anonymous entry when
@@ -55,20 +55,6 @@ protected:
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// TEMPLATE: LLE 0x10002cb1
-// TEMPLATE: LLE 0x10002f3d
-// SYNTHETIC: LLE 0x1000297f
-// TEMPLATE: LLE 0x10002c67
-// TEMPLATE: LLE 0x10002f05
-// TEMPLATE: LLE 0x1000326d
-// TEMPLATE: LLE 0x1000352a
-// TEMPLATE: LLE 0x1000358e
-// TEMPLATE: LLE 0x100035c3
-// TEMPLATE: LLE 0x100035ed
-// SYNTHETIC: LLE 0x10003694
-
-// FUNCTION: LLE 0x100029f3
 // Compares two checksum entries by tag, then value; on a mismatch writes the reason to outError and returns false
 bool ESChecksumEntry::Compare(const ESChecksumEntry& inOther, UString& outError) const
 {
@@ -84,14 +70,12 @@ bool ESChecksumEntry::Compare(const ESChecksumEntry& inOther, UString& outError)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10002a50
 // Creates an empty checksum set, verbose (one tagged entry per checksum) or summed
 ESChecksum::ESChecksum(bool inVerbose)
 {
     this->mVerbose = inVerbose;
 }
 
-// FUNCTION: LLE 0x10002a78
 // Adds a tagged checksum entry in verbose mode, else adds the value to the running sum
 void ESChecksum::AddChecksum(const UString& inDescription, unsigned long inChecksum)
 {
@@ -104,7 +88,6 @@ void ESChecksum::AddChecksum(const UString& inDescription, unsigned long inCheck
         this->AddChecksum(inChecksum);
 }
 
-// FUNCTION: LLE 0x10002ac9
 // Adds a value to the last checksum entry, creating the first entry if there is none
 void ESChecksum::AddChecksum(unsigned long inChecksum)
 {
@@ -115,7 +98,6 @@ void ESChecksum::AddChecksum(unsigned long inChecksum)
     theLast.mChecksum += inChecksum;
 }
 
-// FUNCTION: LLE 0x10002b1b
 // Compares two checksum sets entry by entry, collecting one error text per mismatch; false if any differ
 bool ESChecksum::Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const
 {
@@ -146,14 +128,12 @@ bool ESChecksum::Compare(const ESChecksum& inOther, std::vector<UString>& outErr
     return theResult;
 }
 
-// FUNCTION: LLE 0x10002c3e
 // Returns whether the checksum set keeps one tagged entry per checksum
 bool ESChecksum::GetIsVerboseMode() const
 {
     return this->mVerbose;
 }
 
-// FUNCTION: LLE 0x10002c42
 // Returns the sum of every entry's checksum
 unsigned long ESChecksum::GetTotalChecksum() const
 {
@@ -164,7 +144,6 @@ unsigned long ESChecksum::GetTotalChecksum() const
     return theTotal;
 }
 
-// FUNCTION: LLE 0x10002c57
 // Walks the entries and prints nothing (the report body is compiled out of the retail build)
 void ESChecksum::PrintReport() const
 {
@@ -172,25 +151,3 @@ void ESChecksum::PrintReport() const
          ++theEntry)
         ;
 }
-
-// Compiler-generated, continued:
-// SYNTHETIC: LLE 0x100028ca
-// SYNTHETIC: LLE 0x100028e5
-// SYNTHETIC: LLE 0x100028f5
-// SYNTHETIC: LLE 0x10002901
-// SYNTHETIC: LLE 0x1000291c
-// SYNTHETIC: LLE 0x10002921
-// SYNTHETIC: LLE 0x1000292f
-// SYNTHETIC: LLE 0x10002956
-// SYNTHETIC: LLE 0x10002977
-// TEMPLATE: LLE 0x10002e19
-// TEMPLATE: LLE 0x10002e45
-// SYNTHETIC: LLE 0x10002e71
-// TEMPLATE: LLE 0x10002ecb
-// SYNTHETIC: LLE 0x10002f8d
-// TEMPLATE: LLE 0x10003518
-// TEMPLATE: LLE 0x10003563
-// TEMPLATE: LLE 0x1000361f
-// TEMPLATE: LLE 0x1000364b
-// TEMPLATE: LLE 0x10003668
-// SYNTHETIC: LLE 0x100036b3

@@ -16,7 +16,6 @@
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
-// FUNCTION: WON 0x007971c0
 // Reads a BUTTONSTATE line (Normal, Pressed, Disabled or Over, and an image) and sets that image; throws on a bad state
 void WONSimpleButtonConfig::HandleButtonState()
 {
@@ -36,7 +35,6 @@ void WONSimpleButtonConfig::HandleButtonState()
 	this->mButton->SetImage(aState,anImage.get());
 }
 
-// FUNCTION: WON 0x007973f0
 // Reads up to four comma-separated images into the normal, pressed, disabled and over states
 void WONSimpleButtonConfig::HandleButtonStates()
 {	
@@ -50,7 +48,6 @@ void WONSimpleButtonConfig::HandleButtonStates()
 	}
 }
 
-// FUNCTION: WON 0x007974e0
 // Handles the simple button keys SCALEIMAGE, TYPE (copy a skin type; throws if unknown), BUTTONSTATE(S)
 // and CHECKMOUSEBUTTONDOWN; other keys go to the button config
 bool WONSimpleButtonConfig::Virtual24(const std::string &theInstruction)
@@ -76,7 +73,6 @@ bool WONSimpleButtonConfig::Virtual24(const std::string &theInstruction)
 	return true;
 }
 
-// FUNCTION: WON 0x00797740
 // Reads a BUTTONSTATE line: a (Checked)Normal/Pressed/Disabled/Over/Default state, an image and an optional
 // colour and font; throws on an unknown state
 void WONButtonConfig::HandleSetButtonState()
@@ -117,7 +113,6 @@ void WONButtonConfig::HandleSetButtonState()
 	this->mButton->SetButtonState(aState,anImage.get(),aColor,aFont.get(),checked);
 }
 
-// FUNCTION: WON 0x00797aa0
 // Handles the skinned button keys (font, type, colours, alignment, transparency, wrap, padding, button
 // states, focus rectangle); the INCREMENT...TEXTPAD keys are accepted and ignored
 bool WONButtonConfig::Virtual24(const std::string& theInstruction)
@@ -200,7 +195,6 @@ bool WONButtonConfig::Virtual24(const std::string& theInstruction)
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x00796a20
 // Binds the simple button config to its button
 void WONSimpleButtonConfig::SetComponent(Component* component) { this->mButton=static_cast<WONSimpleButton*>(component); ButtonConfig::SetComponent(component); }
 // Binds the skinned button config to its button (the linker folds this body into the identical one at

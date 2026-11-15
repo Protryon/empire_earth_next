@@ -31,7 +31,6 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 
-// FUNCTION: EXE 0x4a5589
 // Creates the influence table over the map in 9x9-tile regions, with a zero entry per player and a total
 EEInfluenceTable::EEInfluenceTable(EEMap* inMap, unsigned long inNumPlayers)
     : RTSRegionTable<std::pair<unsigned long, long> >(inMap, 9)
@@ -40,16 +39,11 @@ EEInfluenceTable::EEInfluenceTable(EEMap* inMap, unsigned long inNumPlayers)
     this->Init();
 }
 
-// SYNTHETIC: EXE 0x4a55b1
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4a55cd
 // Destroys the influence table (the region table frees the regions)
 EEInfluenceTable::~EEInfluenceTable()
 {
 }
 
-// FUNCTION: EXE 0x4a55d8
 // Gives every region a zero influence entry for each player plus a zero total entry
 void EEInfluenceTable::Init()
 {
@@ -64,7 +58,6 @@ void EEInfluenceTable::Init()
 
 // NEAR: corner points built directly; the original copies them through the U2DPoint<long> copy ctor 0x4d28b
 // (the U2DPoint<long> copy family) from inline corner accessors
-// FUNCTION: EXE 0x4a5685
 // Returns a player's influence summed over a rectangle of regions
 long EEInfluenceTable::SumValue(unsigned long inPlayer, const U2DRectangle<long>& inRect)
 {
@@ -77,7 +70,6 @@ long EEInfluenceTable::SumValue(unsigned long inPlayer, const U2DRectangle<long>
     return theTotal;
 }
 
-// FUNCTION: EXE 0x4a56f6
 // Returns the other players' influence summed over a rectangle of regions (start corner clipped at 0)
 long EEInfluenceTable::SumOthersValue(unsigned long inPlayer, const U2DRectangle<long>& inRect)
 {
@@ -91,7 +83,6 @@ long EEInfluenceTable::SumOthersValue(unsigned long inPlayer, const U2DRectangle
     return theTotal;
 }
 
-// FUNCTION: EXE 0x4a57f9
 // Returns the influence of all players but one in a region (the total minus that player's); 0 off the grid
 long EEInfluenceTable::GetOthersValue(unsigned long inPlayer, unsigned long inX, unsigned long inY)
 {
@@ -99,7 +90,6 @@ long EEInfluenceTable::GetOthersValue(unsigned long inPlayer, unsigned long inX,
     return theRegion != NULL ? (*theRegion)[this->mNumPlayers].second - (*theRegion)[inPlayer].second : 0;
 }
 
-// FUNCTION: EXE 0x4a5839
 // Adds a unit's influence to its owner's and the total entry of the region holding a tile
 void EEInfluenceTable::AddUnit(EEUnit* inUnit, long inX, long inY)
 {
@@ -113,7 +103,6 @@ void EEInfluenceTable::AddUnit(EEUnit* inUnit, long inX, long inY)
     }
 }
 
-// FUNCTION: EXE 0x4a58a7
 // Subtracts a unit's influence from its owner's and the total entry of the region holding a tile, clamped at 0
 void EEInfluenceTable::RemoveUnit(EEUnit* inUnit, long inX, long inY)
 {
@@ -132,7 +121,6 @@ void EEInfluenceTable::RemoveUnit(EEUnit* inUnit, long inX, long inY)
         theTotal.second = 0;
 }
 
-// FUNCTION: EXE 0x4a5920
 // Returns the influence in a region of the players a player is at war with (player 0 only if inWithFirst)
 long EEInfluenceTable::GetEnemyValue(unsigned long inPlayer, const U2DPoint<long>& inTile, bool inWithFirst)
 {
@@ -148,7 +136,6 @@ long EEInfluenceTable::GetEnemyValue(unsigned long inPlayer, const U2DPoint<long
     return theTotal;
 }
 
-// FUNCTION: EXE 0x4a598d
 // Returns the enemies' influence (player 0 only if inWithFirst) summed over a rectangle of regions
 long EEInfluenceTable::SumEnemyValue(unsigned long inPlayer, const U2DRectangle<long>& inRect, bool inWithFirst)
 {
@@ -168,9 +155,3 @@ long EEInfluenceTable::SumEnemyValue(unsigned long inPlayer, const U2DRectangle<
     }
     return theTotal;
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x4a5b05
-// TEMPLATE: EXE 0x4a5b1a
-// TEMPLATE: EXE 0x4a5b36
-// TEMPLATE: EXE 0x4a5b91

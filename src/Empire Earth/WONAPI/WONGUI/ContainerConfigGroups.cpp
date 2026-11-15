@@ -17,7 +17,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x007885d0
 // Reads a PERCENTLAYOUT group into a percent layout (relative to the component if no reference is given)
 // or a COLORSCHEME group into the container's colour scheme; other instructions go to the base config
 bool ContainerConfig::HandleInstruction(ConfigParser* parser,const std::string& type)

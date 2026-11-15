@@ -15,7 +15,6 @@
 namespace WONAPI {
 LostUserNameCtrl::LostUserNameCtrl() {}
 // The destructor is implicit. Unlike LostPasswordCtrl it does not subscribe to broadcasts
-// FUNCTION: WON 0x007c0830
 // Looks up the e-mail field and retrieve button from the layout and updates the button
 void LostUserNameCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -27,13 +26,11 @@ void LostUserNameCtrl::InitComponent(ComponentInit& inInit)
     this->UpdateRetrieveButton();
 }
 // The std::string temporary lives until after SetEnabled
-// FUNCTION: WON 0x007c0890
 // Enables the retrieve button only while the e-mail address looks valid
 void LostUserNameCtrl::UpdateRetrieveButton()
 {
     this->mRetrieveButton->SetEnabled(LobbyIsValidEmail(this->mEmailInput->GetText()));
 }
-// FUNCTION: WON 0x007c0930
 // Updates the button on typing and requests the lost user name for the e-mail address on retrieve
 void LostUserNameCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -46,20 +43,3 @@ void LostUserNameCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 }
 }
 // GetLostUserNameEvent's destructor is implicit: 0x7c0ab0 (no store of its own vtable 0x853b14), scalar deleting destructor 0x7c0a90
-
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c0ab0
-// (public: virtual __thiscall WONAPI::GetLostUserNameEvent::~GetLostUserNameEvent(void)    [??1GetLostUserNameEvent@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c0770
-// (public: virtual void * __thiscall WONAPI::LostUserNameCtrl::`scalar deleting destructor'(unsigned int)    [??_GLostUserNameCtrl@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007c0790
-// (public: virtual __thiscall WONAPI::LostUserNameCtrl::~LostUserNameCtrl(void)    [??1LostUserNameCtrl@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007c0a90
-// (public: virtual void * __thiscall WONAPI::GetLostUserNameEvent::`scalar deleting destructor'(unsigned int)    [??_GGetLostUserNameEvent@WONAPI@@UAEPAX)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c0750
-// (public: __thiscall WONAPI::LostUserNameCtrl::LostUserNameCtrl(void)    [??0LostUserNameCtrl@WONAPI@@QAE@XZ])

@@ -14,7 +14,7 @@ class UIForm;
 
 class EEAJoinOrHostAGame : public EEAction {
 public:
-    EEAJoinOrHostAGame(long inMode, const UWideString& inPlayerName, const UWideString& inGameName);   // 0x2086
+    EEAJoinOrHostAGame(long inMode, const UWideString& inPlayerName, const UWideString& inGameName);
     virtual ~EEAJoinOrHostAGame();          // +0x00 (??_G 0x20da, dtor 0x20f6)
     virtual void Virtual4();                // +0x04 0x2120
     virtual void Virtual8();                // +0x08 (the shared empty slot 0x1720c6)

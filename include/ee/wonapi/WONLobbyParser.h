@@ -50,7 +50,7 @@ public:
     bool ReadValue(char &theByte) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theByte = (char)anInt; return aRet; }
     bool ReadValue(unsigned char &theByte) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theByte = (unsigned char)anInt; return aRet; }
     bool ReadValue(bool& outValue); //2a5550
-    bool ReadString(std::string& outString, bool inFlag); // 0x2a49f0
+    bool ReadString(std::string& outString, bool inFlag);
     // Genuine nominal static formatting overloads; call-only original-owned implementations.
     static void ValueToString(const bool&,std::string&); //2a5820
     static void ValueToString(const int&,std::string&); //2a5a70 call-only scalar formatter
@@ -74,7 +74,7 @@ public:
 // tables, the settings, what a parse leaves); the class keeps the room's client list and the target client.
 class ChatCommandParser : public RefCount {
 public:
-    ChatCommandParser();                  // 0x355750
+    ChatCommandParser();
     virtual ~ChatCommandParser();         // 0x3559f0; only virtual slot
     void InitCommands();
     void SetClientList(LobbyClientList* inClients, int inMatchThreshold);

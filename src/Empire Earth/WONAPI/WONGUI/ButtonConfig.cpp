@@ -15,7 +15,6 @@
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
 
-// FUNCTION: WON 0x00781880
 // Reads a list of named button flags (each optionally negated) and sets or clears them; throws on an
 // unknown name (WantDefault is tested twice, and the message has no separator before the name)
 void ButtonConfig::HandleButtonFlags()
@@ -41,7 +40,6 @@ void ButtonConfig::HandleButtonFlags()
     }
 }
 
-// FUNCTION: WON 0x00781d00
 // Grows the button to fit the largest of a comma-separated list of texts, keeping its current text
 void ButtonConfig::HandleFitText()
 {
@@ -63,7 +61,6 @@ void ButtonConfig::HandleFitText()
     this->mButton->SetSize(width,height);
 }
 
-// FUNCTION: WON 0x00781e80
 // Handles the BUTTONFLAGS, TEXT, SETCHECK, CLICKSOUND and FITTEXT instructions; others go to the base config
 bool ButtonConfig::Virtual24(const std::string& inInstruction)
 {
@@ -78,12 +75,3 @@ bool ButtonConfig::Virtual24(const std::string& inInstruction)
 }
 
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00781b10
-// (public: virtual __thiscall WONAPI::ConfigObjectException::~ConfigObjectException(void)    [??1ConfigObjectException@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00781af0
-// (public: virtual void * __thiscall WONAPI::ConfigObjectException::`scalar deleting destructor'(unsigned int)    [??_GConfigObjectException@WONAPI@@UAEP)
-// TEMPLATE: WON 0x00781b80

@@ -27,14 +27,12 @@ static std::wstring Wide(const uint16_t* inUnits, size_t inCount)
     return s;
 }
 
-// FUNCTION: WON 0x006c7b40
 // Creates a routing op of a type on a connection (or none): the Rust op with its constructor's members
 RoutingOp::RoutingOp(RoutingConnection* inConnection, RoutingOpType inType)
     : mConnection(inConnection), mRust(ee_won_routeop_new((int32_t)inType)) {}
 RoutingOp::~RoutingOp() { ee_won_routeop_free(this->mRust); }
 RoutingOpType RoutingOp::GetType() const { return (RoutingOpType)ee_won_routeop_type(this->mRust); }
 
-// FUNCTION: WON 0x006c7d20
 // Sends the request; fails at once in blocking mode, which routing ops do not support
 void RoutingOp::RunHook()
 {
@@ -70,7 +68,6 @@ WONStatus RoutingOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
     return (WONStatus)aRead.status;
 }
 
-// FUNCTION: WON 0x6c7c00
 // Queues the message on the connection for sending, with the connection's length field
 void RoutingOp::SendMsg(const std::string& inMessage)
 {
@@ -79,7 +76,6 @@ void RoutingOp::SendMsg(const std::string& inMessage)
     this->mConnection->QueueOp(new SendMsgOp(aMsg.ToByteBuffer(true).get()), -1);
 }
 
-// FUNCTION: WON 0x006c7d10
 // Registers the op with the connection to receive replies
 void RoutingOp::AddOp() { this->mConnection->AddOp(this); }
 
@@ -255,7 +251,6 @@ RoutingClientInfoPtr RoutingOp::GetClientInfo() const
     return c.mClient;
 }
 
-// FUNCTION: WON 0x006c6cb0
 // Returns a new group record filled from the group created notice
 RoutingGroupInfoPtr RoutingOp::GetGroupInfo() const
 {
@@ -268,14 +263,9 @@ RoutingGroupInfoPtr RoutingOp::GetGroupInfo() const
     return group;
 }
 
-// FUNCTION: WON 0x006c5f70
 // Parses a group list body into the group map (Rust's read); false when the body runs short (what was read stays)
 bool RoutingOp::ParseGroupListObj(const void* inData, unsigned long inSize)
 {
     return ee_won_routeop_parse_group_list(this->mRust, static_cast<const uint8_t*>(inData), inSize);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006c7b20
-// (public: virtual void * __thiscall WONAPI::RoutingOp::`scalar deleting destructor'(unsigned int)    [??_GRoutingOp@WONAPI@@UAEPAXI@Z])

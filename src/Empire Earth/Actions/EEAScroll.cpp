@@ -25,11 +25,10 @@
 static float sVelocityX;
 static float sVelocityY;
 
-static const float kMinimumSpeedFactor = 0.1f;      // 0x439070
-static const float kScaleFactor = 0.1f;             // 0x43906c
-static const float kAccelerationFactor = 0.01f;     // 0x439074
+static const float kMinimumSpeedFactor = 0.1f;
+static const float kScaleFactor = 0.1f;
+static const float kAccelerationFactor = 0.01f;
 
-// FUNCTION: EXE 0x40470f
 // Creates the edge-scroll action, not scrolling, with its 10 ms poll timer
 EEAScroll::EEAScroll()
     : EEAction(false), mPoll(10, 0, false)
@@ -42,16 +41,11 @@ EEAScroll::EEAScroll()
     this->mAccelerate = true;
 }
 
-// SYNTHETIC: EXE 0x404764
-// (the scalar deleting destructor; ICF: also EEAServerMigration's)
-
-// FUNCTION: EXE 0x404780
 // Destroys the edge-scroll action
 EEAScroll::~EEAScroll()
 {
 }
 
-// FUNCTION: EXE 0x40478e
 // Scrolls the camera toward the active screen edges, accelerating up to the side-scroll speed setting
 // the scroll speed comes through EEGameSettings::GetSideScrollSpeed() (inline)
 void EEAScroll::Virtual4()
@@ -96,7 +90,6 @@ void EEAScroll::Virtual4()
         ::gWorld.mCameraControl.Scroll(theDX, theDY);
 }
 
-// FUNCTION: EXE 0x404935
 // Updates which screen edges the mouse touches and the elapsed time; returns whether any edge scrolls
 bool EEAScroll::Update(const GE2DPoint& inPoint)
 {
@@ -145,8 +138,6 @@ bool EEAScroll::Update(const GE2DPoint& inPoint)
     return theScrolling;
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAScroll::Virtual8()
 {
 }

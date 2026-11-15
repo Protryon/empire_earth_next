@@ -17,7 +17,7 @@ class EEAutoPathRequest;
 
 class EEEMStorm {
 public:
-    EEEMStorm(long inType, EEEnvironmentManager* inManager);   // 0x12de72
+    EEEMStorm(long inType, EEEnvironmentManager* inManager);
     virtual ~EEEMStorm();                   // +0x00
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04
     // +0x08 0x12e6b5 (RepairPointers: mStorm from its saved handle, 9 when gone; the name again; state 2 -> 8;

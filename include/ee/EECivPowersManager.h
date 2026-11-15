@@ -41,14 +41,14 @@ public:
     bool GetPower(long inID, EECivPower& outPower);   // 0x2831d0 (inID - 0x26 indexes a vector of records)
     bool HasPower(EEPlayer* inPlayer, long inID);   // 0x283248 (whether inPlayer's civilization has power inID; EEPlayer 0x1654be; provisional name)
     EECivPower* GetPowerRecord(long inID);  // 0x283235 (&record[inID - 0x26]; EEUCProjectile::ActionChanged) (provisional name)
-    EECivPowersManager();               // 0x2830d0
-    virtual ~EECivPowersManager();      // 0x283116
+    EECivPowersManager();
+    virtual ~EECivPowersManager();
 
     // +0x04 (ctor 0x2830d0: the vector, then clear(); Load pushes 0x98-byte records; GetPower/GetPowerRecord index it
     // by inID - 0x26)
     std::vector<EECivPower> mPowers;
 };
 
-extern EECivPowersManager gCivPowersManager;    // 0x52a310
+extern EECivPowersManager gCivPowersManager;
 
 #endif

@@ -18,7 +18,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x00798f90
 // Reads an orientation word; true for "Vert" (any case), false for anything else
 bool WONSkinConfig::ReadVert()
 {
@@ -26,7 +25,6 @@ bool WONSkinConfig::ReadVert()
     const int aNameIdx_text=ee_won_gui_cfg_name(EE_WON_CFG_NAMES_WONSKINCONFIG_READVERT_TEXT,text.mData->mText,text.mData->mLength,sizeof(wchar_t));
     return aNameIdx_text==0;
 }
-// FUNCTION: WON 0x00799010
 // Runs the base pre-parse and creates the global skin as the Windows-look skin when there is none
 bool WONSkinConfig::PreParse(ConfigParser* parser)
 {
@@ -36,7 +34,6 @@ bool WONSkinConfig::PreParse(ConfigParser* parser)
         gSkin=new WONMSSkin;
     return true;
 }
-// FUNCTION: WON 0x007990e0
 // Reads a sound and sets it as the click sound of the skin's template buttons and every named button type
 void WONSkinConfig::HandleButtonClickSound()
 {
@@ -52,7 +49,6 @@ void WONSkinConfig::HandleButtonClickSound()
     for(;it!=gSkin->mButtonTypeMap.end();++it)
         it->second->SetClickSound(sound.get());
 }
-// FUNCTION: WON 0x00799210
 // Handles the skin keys that replace the global skin's template controls, add named button types, set the
 // click sound and image cursors; false for other keys (WINSKIN is accepted and ignored)
 bool WONSkinConfig::Virtual24(const std::string &theInstruction)
@@ -142,24 +138,6 @@ bool WONSkinConfig::Virtual24(const std::string &theInstruction)
 	return true;
 }
 
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007926a0
-// (public: __thiscall WONAPI::ConfigObjectException::ConfigObjectException(class std::basic_string<char,struct std::char_traits<char>,class std::allocato)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0079c9e0
-// (public: struct std::pair<class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::SmartPtr<class WONAPI:)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0079cae0
-// (public: struct std::pair<class std::_Tree<class WONAPI::GUIString,struct std::pair<class WONAPI::GUIString const ,class WONAPI::SmartPtr<class WONAPI:)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a1560
-// TEMPLATE: WON 0x007a1860
-// TEMPLATE: WON 0x007a2ef0
-// (void __cdecl std::_Construct(struct std::pair<class WONAPI::GUIString const ,class WONAPI::SmartPtr<class WONAPI::WONButton> > *,struct std::pair<clas)
 
 // Compiler-generated and header-inline functions this unit emits:
 }

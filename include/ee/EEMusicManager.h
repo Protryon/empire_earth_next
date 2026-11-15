@@ -15,7 +15,7 @@ class TSThread;
 
 class EEMusicManager {
 public:
-    EEMusicManager(SEConductor* inConductor, long inThreadPriority);    // 0x131bde
+    EEMusicManager(SEConductor* inConductor, long inThreadPriority);
     virtual ~EEMusicManager();              // +0x00 0x131db4 (??_G 0x131d98)
 
     static unsigned long MusicManagerMain(void* inThis);    // 0x131e0a (the thread function)
@@ -23,7 +23,7 @@ public:
     void SetIntensity(unsigned long inIntensity);   // 0x131f87 (then mSetIntensity->Set())
     void Start();                           // 0x132000: mStart->Set() (the settings turn the music on)
     void Stop();                            // 0x1321b1: mStop->Set() (the settings turn the music off)
-    void Update(unsigned long inElapsedTime);   // 0x132410
+    void Update(unsigned long inElapsedTime);
 
     URandom mRandom;                        // +0x04 (seeded with TMGetTime())
     SEConductor* mConductor;                // +0x14
@@ -44,6 +44,6 @@ public:
     unsigned long mRequestedIntensity;      // +0x50
 };
 
-extern EEMusicManager* gMusicManager;       // 0x531904
+extern EEMusicManager* gMusicManager;
 
 #endif

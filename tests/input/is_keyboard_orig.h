@@ -16,13 +16,13 @@ class ISEntity;
 
 class LLE_API ISDevice {
 public:
-    static unsigned long GetCount() { return ISDevice::sDevices.size(); }  // 0x38b29
+    static unsigned long GetCount() { return ISDevice::sDevices.size(); }
     static long GetDevice(unsigned long inIndex, ISDevice*& outDevice);
     virtual long GetEntity(unsigned long inIndex, ISEntity*& outEntity) const = 0;
     virtual unsigned long GetEntityCount() const = 0;
     virtual unsigned long GetFirstDigitalEntity() const = 0;
-    const UString& GetName() const { return this->mName; }            // 0x38b41 (ICF)
-    bool IsSuspended() const { return this->mSuspended; }             // 0x3d783 (ICF)
+    const UString& GetName() const { return this->mName; }
+    bool IsSuspended() const { return this->mSuspended; }
     virtual void Refresh() = 0;
     virtual void Resume() = 0;
     virtual long SetMode(unsigned long inMode) = 0;
@@ -69,8 +69,8 @@ public:
     virtual long SetCalibration(ISCalibration& inCalibration) = 0;
     virtual long SetMode(unsigned long inMode) = 0;
 protected:
-    ISEntity() {}                           // 0x38abf
-    virtual ~ISEntity() {}                  // 0x38ac8
+    ISEntity() {}
+    virtual ~ISEntity() {}
     virtual void CheckForDoublePress() = 0;
 };
 
@@ -412,7 +412,6 @@ inline unsigned long ISMouseButton::JustUnpressedAmount()
 
 std::vector<ISDevice*> ISDevice::sDevices;
 
-// FUNCTION: LLE 0x1003975e
 // Creates an input device with a name and adds it to the global device list
 ISDevice::ISDevice(const UString& inName)
     : mName(inName)
@@ -421,7 +420,6 @@ ISDevice::ISDevice(const UString& inName)
     ISDevice::sDevices.push_back(this);
 }
 
-// FUNCTION: LLE 0x10039791
 // Destroys the input device and removes it from the device list
 ISDevice::~ISDevice()
 {
@@ -433,7 +431,6 @@ ISDevice::~ISDevice()
         }
 }
 
-// FUNCTION: LLE 0x1003979f
 // Returns the input device at an index in the device list; beyond-end error past it
 long ISDevice::GetDevice(unsigned long inIndex, ISDevice*& outDevice)
 {
@@ -446,14 +443,6 @@ long ISDevice::GetDevice(unsigned long inIndex, ISDevice*& outDevice)
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
-// Header-inline members emitted here (markers at the end):
-// SYNTHETIC: LLE 0x10039715
-// SYNTHETIC: LLE 0x1003971f
-// SYNTHETIC: LLE 0x10039737
-// SYNTHETIC: LLE 0x10039743
-// SYNTHETIC: LLE 0x100397cb
-// SYNTHETIC: LLE 0x100397f7
-
 // ---- ISKey.cpp
 // C:\EEX\Low-Level Engine\Input System\ISKey.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
@@ -462,14 +451,12 @@ long ISDevice::GetDevice(unsigned long inIndex, ISDevice*& outDevice)
 // (the first unit that includes UResourceFile.h).
 
 
-// FUNCTION: LLE 0x10039b2a
 // Creates a keyboard key with its scan code and display name
 ISKey::ISKey(ISKeyboard* inKeyboard, unsigned long inIndex, const UWideString& inName)
     : mName(inName), mKeyboard(inKeyboard), mIndex(inIndex), mLastPressTime(0), mDoublePressed(false)
 {
 }
 
-// FUNCTION: LLE 0x10039b61
 // Creates a copy of a key (name, keyboard, scan code and double-press state)
 ISKey::ISKey(const ISKey* inKey)
     : mName(inKey->GetName())
@@ -480,13 +467,11 @@ ISKey::ISKey(const ISKey* inKey)
     this->mDoublePressed = inKey->mDoublePressed;
 }
 
-// FUNCTION: LLE 0x10039ba4
 // Destroys the key
 ISKey::~ISKey()
 {
 }
 
-// FUNCTION: LLE 0x10039bbd
 // Updates the key's double-press flag: set when it is pressed again within the double-press delay + 200 ms
 void ISKey::CheckForDoublePress()
 {
@@ -503,12 +488,6 @@ void ISKey::CheckForDoublePress()
         this->mDoublePressed = false;
 }
 
-// Header-inline members emitted here (markers at the end):
-// SYNTHETIC: LLE 0x10039c02
-// SYNTHETIC: LLE 0x10039c07
-// SYNTHETIC: LLE 0x10039c2a
-// SYNTHETIC: LLE 0x10039c47
-
 // ---- ISExtendedKey.cpp
 // C:\EEX\Low-Level Engine\Input System\ISExtendedKey.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
@@ -516,14 +495,12 @@ void ISKey::CheckForDoublePress()
 // 0x10039a8d..0x10039b2a: the ctor and the dtor (everything else is header-inline, emitted by Input System.cpp).
 
 
-// FUNCTION: LLE 0x10039a8d
 // Creates a combined key for a left/right pair (e.g. both Shift keys), named "<key1> and <key2>"
 ISExtendedKey::ISExtendedKey(const ISKey* inKey1, const ISKey* inKey2, unsigned long inIndex)
     : mName(inKey1->GetName() + " and " + inKey2->GetName()), mKey1(inKey1), mKey2(inKey2), mIndex(inIndex)
 {
 }
 
-// FUNCTION: LLE 0x10039b01
 // Destroys the combined key
 ISExtendedKey::~ISExtendedKey()
 {
@@ -537,7 +514,6 @@ ISExtendedKey::~ISExtendedKey()
 // Input System.cpp). The ctor's key table names every key by its DIK_* name ("ESCAPE key", ...).
 
 
-// FUNCTION: LLE 0x10039ca1
 // Creates the keyboard device: one key per scan code, named from the resources or the built-in English table,
 // plus combined Ctrl/Shift/Alt keys; leaves the device suspended
 ISKeyboard::ISKeyboard(ISDeviceInput* inDevice, const UString& inName, UResourceFile* inResources,
@@ -613,7 +589,6 @@ ISKeyboard::ISKeyboard(ISDeviceInput* inDevice, const UString& inName, UResource
     this->Suspend();
 }
 
-// FUNCTION: LLE 0x1003b035
 // Destroys the keyboard and every key it created
 ISKeyboard::~ISKeyboard()
 {
@@ -622,7 +597,6 @@ ISKeyboard::~ISKeyboard()
     delete[] this->mKeys;
 }
 
-// FUNCTION: LLE 0x1003b070
 // Returns the key for a scan code (NULL and a beyond-end error past the table)
 long ISKeyboard::GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
 {
@@ -634,7 +608,6 @@ long ISKeyboard::GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
     return kErrorBeyondEnd;
 }
 
-// FUNCTION: LLE 0x1003b099
 // Reads the buffered key events: updates key states, the pressed count, modifiers and double presses; rereads the
 // whole state after a buffer overflow
 void ISKeyboard::Refresh()
@@ -684,7 +657,6 @@ void ISKeyboard::Refresh()
     }
 }
 
-// FUNCTION: LLE 0x1003b1d8
 // Rereads the whole keyboard state, discarding buffered events and resetting the modifiers
 void ISKeyboard::RecomputeCurrentKeyState()
 {
@@ -713,7 +685,6 @@ void ISKeyboard::RecomputeCurrentKeyState()
     }
 }
 
-// FUNCTION: LLE 0x1003b2a0
 // Reacquires the keyboard and rereads its state
 void ISKeyboard::Resume()
 {
@@ -722,7 +693,6 @@ void ISKeyboard::Resume()
     this->RecomputeCurrentKeyState();
 }
 
-// FUNCTION: LLE 0x1003b2bc
 // Releases the keyboard (its events are no longer buffered) and marks it suspended
 void ISKeyboard::Suspend()
 {
@@ -740,7 +710,6 @@ void ISKeyboard::Suspend()
 // exclusive DirectInput mouse was.
 
 
-// FUNCTION: LLE 0x1003b2ce
 // Creates the mouse with X/Y/Z axes and four buttons, left suspended (the original created the buttons the
 // DirectInput device reported; the axes' granularity was DirectInput's: 1 for X and Y, WHEEL_DELTA for the wheel)
 ISMouse::ISMouse(ISDeviceInput* inDevice, PlatWindow* inWindow, const UString& inName)
@@ -774,7 +743,6 @@ ISMouse::ISMouse(ISDeviceInput* inDevice, PlatWindow* inWindow, const UString& i
     this->Suspend();
 }
 
-// FUNCTION: LLE 0x1003b689
 // Destroys the mouse and every axis and button entity it owns
 ISMouse::~ISMouse()
 {
@@ -783,7 +751,6 @@ ISMouse::~ISMouse()
     delete[] this->mEntities;
 }
 
-// FUNCTION: LLE 0x1003b6c4
 // Returns the axis or button entity at an index; kErrorNotFound for an absent one, kErrorBeyondEnd past the end
 long ISMouse::GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
 {
@@ -795,7 +762,6 @@ long ISMouse::GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
     return kErrorBeyondEnd;
 }
 
-// FUNCTION: LLE 0x1003b6f5
 // Clears the mouse state, then reads the device's current buttons and motion directly and flushes its buffer
 void ISMouse::RecomputeCurrentButtonState()
 {
@@ -822,7 +788,6 @@ void ISMouse::RecomputeCurrentButtonState()
     memcpy(this->mLastStatus, this->mCurrentStatus, sizeof(ISMouseState));
 }
 
-// FUNCTION: LLE 0x1003b7cc
 // Reads the buffered mouse events: position, wheel and button press/release counts, then updates double presses
 void ISMouse::Refresh()
 {
@@ -885,7 +850,6 @@ void ISMouse::Refresh()
             this->mEntities[j]->CheckForDoublePress();
 }
 
-// FUNCTION: LLE 0x1003b9ba
 // Reads the current cursor movement from the device (zeroed when buffered movement is off)
 void ISMouse::RefreshXY()
 {
@@ -900,7 +864,6 @@ void ISMouse::RefreshXY()
     }
 }
 
-// FUNCTION: LLE 0x1003b9fc
 // Takes the mouse for the game (the pointer in relative mode: DirectInput's exclusive foreground mouse) and
 // re-reads its state
 void ISMouse::Resume()
@@ -912,7 +875,6 @@ void ISMouse::Resume()
     this->RecomputeCurrentButtonState();
 }
 
-// FUNCTION: LLE 0x1003ba39
 // Sets the mouse axis mode (0 relative, 1 absolute); kErrorFailed for any other mode. The axes stay relative (the
 // game only ever asks for relative axes)
 long ISMouse::SetMode(unsigned long inMode)
@@ -923,7 +885,6 @@ long ISMouse::SetMode(unsigned long inMode)
     return theResult;
 }
 
-// FUNCTION: LLE 0x1003ba87
 // Releases the mouse (its events are no longer buffered; the pointer leaves relative mode) and marks it suspended
 void ISMouse::Suspend()
 {
@@ -940,7 +901,6 @@ void ISMouse::Suspend()
 // 0x1003bab2..0x1003bafc: the ctor and the dtor (everything else is header-inline, emitted by Input System.cpp).
 
 
-// FUNCTION: LLE 0x1003bab2
 // Creates a mouse axis with a name, the device value it reads and the axis granularity
 ISMouseAxis::ISMouseAxis(const UWideString& inName, long* inValue, long& inGranularity)
     : mName(inName), mValue(inValue)
@@ -948,7 +908,6 @@ ISMouseAxis::ISMouseAxis(const UWideString& inName, long* inValue, long& inGranu
     this->mGranularity = inGranularity;
 }
 
-// FUNCTION: LLE 0x1003bae3
 // Destroys the mouse axis (members only)
 ISMouseAxis::~ISMouseAxis()
 {
@@ -962,20 +921,17 @@ ISMouseAxis::~ISMouseAxis()
 // Input System.cpp).
 
 
-// FUNCTION: LLE 0x1003bafc
 // Creates a mouse button with its owner mouse, button index and name, with no press recorded
 ISMouseButton::ISMouseButton(ISMouse* inMouse, unsigned long inIndex, const UWideString& inName)
     : mName(inName), mMouse(inMouse), mIndex(inIndex), mLastPressTime(0), mDoublePressed(false)
 {
 }
 
-// FUNCTION: LLE 0x1003bb33
 // Destroys the mouse button (members only)
 ISMouseButton::~ISMouseButton()
 {
 }
 
-// FUNCTION: LLE 0x1003bb4c
 // Marks a double press when the button is pressed again within the double-press time of its last press
 void ISMouseButton::CheckForDoublePress()
 {

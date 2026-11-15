@@ -1,5 +1,5 @@
 // storegate's digests of what a GEModel and a GETexture store: a model read through its members (GEStoreDigest is a
-// friend of GEModel, GEMaterial and GETexture), a texture and the manager's cache through their accessors. FNV-1a over
+// friend of GEModel and GETexture; a material through its accessors), a texture and the manager's cache through their accessors. FNV-1a over
 // every value, floats by their bits; an array shared with an earlier frame is hashed as that frame's number.
 #include <windows.h>
 #include <stdio.h>
@@ -209,22 +209,23 @@ static void HashModel(Hash& ioHash, GEModel* m, GEModel* inParent)
     }
     for (unsigned long i = 0; i < m->GetMaterialCount() && m->GetMaterials(); i++) {
         GEMaterial* theMaterial = m->GetMaterials()[i];
-        ioHash.S(theMaterial->mName);
-        ioHash.F(theMaterial->mColor.GetRed());
-        ioHash.F(theMaterial->mColor.GetGreen());
-        ioHash.F(theMaterial->mColor.GetBlue());
-        ioHash.U(theMaterial->mScreenCount);
-        for (unsigned long k = 0; k < theMaterial->mScreenCount; k++)
-            ioHash.U(theMaterial->mTextures[k] != NULL);
-        ioHash.U(theMaterial->mLODCount);
-        for (unsigned long k = 0; k < theMaterial->mLODCount; k++) {
-            ioHash.U(theMaterial->mPolygonStartingIndices[k]);
-            ioHash.U(theMaterial->mPolygonRangeLengths[k]);
+        ioHash.S(theMaterial->GetName());
+        ioHash.F(theMaterial->GetColor().GetRed());
+        ioHash.F(theMaterial->GetColor().GetGreen());
+        ioHash.F(theMaterial->GetColor().GetBlue());
+        unsigned long theScreens = ee_ge_mat_get(theMaterial->GetRust(), EeGeMatField::ScreenCount, 0);
+        ioHash.U(theScreens);
+        for (unsigned long k = 0; k < theScreens; k++)
+            ioHash.U(theMaterial->GetTexture(k) != NULL);
+        ioHash.U(theMaterial->GetLODCount());
+        for (unsigned long k = 0; k < theMaterial->GetLODCount(); k++) {
+            ioHash.U(theMaterial->GetPolygonStartingIndex(k));
+            ioHash.U(theMaterial->GetPolygonRangeLength(k));
         }
-        ioHash.U(theMaterial->mVertexStartingIndex);
-        ioHash.U(theMaterial->mVertexRangeLength);
-        ioHash.U(theMaterial->mTextureIndex);
-        ioHash.F(theMaterial->mOpacity);
+        ioHash.U(theMaterial->GetVertexStartingIndex());
+        ioHash.U(theMaterial->GetVertexRangeLength());
+        ioHash.U(theMaterial->GetTextureIndex());
+        ioHash.F(theMaterial->GetOpacity());
         if (m->GetTextureFilenames())
             ioHash.S(m->GetTextureFilenames()[i]);
     }

@@ -26,9 +26,7 @@
  * The error manager must already be set up (in case memory manager fails).
  */
 
-// FUNCTION: JPEG 0x10086d56
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x805aa0
 jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
 {
   int i;
@@ -90,7 +88,6 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
  */
 
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x805b80
 jpeg_destroy_decompress (j_decompress_ptr cinfo)
 {
   jpeg_destroy((j_common_ptr) cinfo); /* use common routine */
@@ -113,9 +110,7 @@ jpeg_abort_decompress (j_decompress_ptr cinfo)
  * Set default decompression parameters.
  */
 
-// FUNCTION: JPEG 0x10086f14
 LOCAL(void)
-// FUNCTION: EXEIMG 0x805cc0
 default_decompress_parms (j_decompress_ptr cinfo)
 {
   /* Guess the input colorspace, and set output colorspace accordingly. */
@@ -242,9 +237,7 @@ default_decompress_parms (j_decompress_ptr cinfo)
  * extra error checking.
  */
 
-// FUNCTION: JPEG 0x10086e16
 GLOBAL(int)
-// FUNCTION: EXEIMG 0x805b90
 jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
 {
   int retcode;
@@ -290,9 +283,7 @@ jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
  * method.
  */
 
-// FUNCTION: JPEG 0x10086e78
 GLOBAL(int)
-// FUNCTION: EXEIMG 0x805c00
 jpeg_consume_input (j_decompress_ptr cinfo)
 {
   int retcode = JPEG_SUSPENDED;
@@ -374,9 +365,7 @@ jpeg_has_multiple_scans (j_decompress_ptr cinfo)
  * a suspending data source is used.
  */
 
-// FUNCTION: JPEG 0x10087097
 GLOBAL(boolean)
-// FUNCTION: EXEIMG 0x805e60
 jpeg_finish_decompress (j_decompress_ptr cinfo)
 {
   if ((cinfo->global_state == DSTATE_SCANNING ||

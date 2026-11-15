@@ -19,7 +19,7 @@ public:
     void Clear();    // original27b5d1 clears real manager-owned containers; no implementation credit
     long Load(FSFile* inFile); // original-backed 0x27b079; caller1414a3, FSFile IO proof
     EEAEManager();                          // 0x27adb0 (Empire Earth.cpp's chain)
-    virtual ~EEAEManager();                 // 0x27ae03
+    virtual ~EEAEManager();
     void Tick(float inElapsed);             // 0x27b634 (EEPhysics::Fn153C59 every 2000; provisional name)
     // 0x27b4f3: whether an area effect of inKind covers tile (inX, inY) for inPlayer
     bool HasAreaEffect(long inKind, long inX, long inY, long inPlayer);
@@ -64,7 +64,7 @@ public:
     UReferenceContainer<EEAreaEffect*> mEffects;
 };
 
-extern EEAEManager gAEManager;              // 0x52f638
+extern EEAEManager gAEManager;
 
 // port (save version 0.256, EEPWorldHelper): the units' own area effects' locations, the effects acting on each unit
 // and the active list (EEAEManager.cpp), which the original rebuilt only at the next area-effect tick

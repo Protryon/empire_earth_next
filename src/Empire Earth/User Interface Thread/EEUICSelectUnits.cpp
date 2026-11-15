@@ -26,19 +26,9 @@
 #include "lle/GELine.h"
 #include "ee/EEUICSelectUnits.h"
 
-static GEColor sSelectBoxColor(1.0f, 1.0f, 1.0f);   // 0x564580
-static GEColor sSelectShadowColor(0.0f, 0.0f, 0.0f);    // 0x564570
+static GEColor sSelectBoxColor(1.0f, 1.0f, 1.0f);
+static GEColor sSelectShadowColor(0.0f, 0.0f, 0.0f);
 
-// SYNTHETIC: EXE 0x65952f
-// SYNTHETIC: EXE 0x659539
-// SYNTHETIC: EXE 0x659552
-// SYNTHETIC: EXE 0x65955e
-// SYNTHETIC: EXE 0x65955f
-// SYNTHETIC: EXE 0x659569
-// SYNTHETIC: EXE 0x659582
-// SYNTHETIC: EXE 0x65958e
-
-// FUNCTION: EXE 0x65958f
 // Creates the main game view's drag-selection box (white lines over black shadow lines), hidden
 EEUICSelectUnits::EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex, EEAMouseClick* inClick,
                                    EEALasso* inLasso)
@@ -55,10 +45,6 @@ EEUICSelectUnits::EEUICSelectUnits(UIForm* inForm, unsigned long inId, unsigned 
         this->mLines[i].SetColor(i < 4 ? sSelectShadowColor : sSelectBoxColor);
 }
 
-// SYNTHETIC: EXE 0x65971d
-// (the scalar deleting destructor, emitted with the vtable; slot EEUICSelectUnits+0x0)
-
-// FUNCTION: EXE 0x659739
 // Destroys the selection box, releasing its click and lasso handlers
 EEUICSelectUnits::~EEUICSelectUnits()
 {
@@ -67,12 +53,6 @@ EEUICSelectUnits::~EEUICSelectUnits()
     delete[] this->mLines;
 }
 
-// FUNCTION: EXE 0x659775
-// FUNCTION: EXE 0x6597e2
-// FUNCTION: EXE 0x659af1
-// FUNCTION: EXE 0x659bda
-// FUNCTION: EXE 0x659cfc
-// FUNCTION: EXE 0x659ec5
 // CopyData, DrawPolygons, the double click, the release, the drag and StartSelection: ee_screens select_units.rs
 // (EE_SCREENS_SU_DO_*) over the lines', picker's and actions' ops below
 long EEUICSelectUnits::Rust(uint32_t inWhich, const GE2DPoint* inLocation)

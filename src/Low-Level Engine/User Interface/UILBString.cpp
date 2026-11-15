@@ -98,7 +98,6 @@ intptr_t UIListBoxHostOp(UIControl* inList, EeUiOp inOp, intptr_t a, intptr_t b,
     return UIObjHost::List(inList, inOp, a, b, f);
 }
 
-// FUNCTION: LLE 0x10078371
 // Draws the scroll bar text and each visible line of the string list box, clipped by the form
 long UILBString::DrawTextA()
 {
@@ -135,7 +134,6 @@ extern "C" int ee_uicpp_string_list_first(void* inList, unsigned long inIndex)
     return theLine.GetLength() > 0 ? (unsigned char)theLine[0] : -1;
 }
 
-// FUNCTION: LLE 0x10078470
 // Selects the next line starting with the typed letter (any case), wrapping to the top; kErrorNotFound when none does
 // (the search is Rust: ee_ui find_key.rs)
 long UILBString::UpdateTranslatedKey(const char* inKey, short inRepeat)
@@ -148,29 +146,3 @@ long UILBString::UpdateTranslatedKey(const char* inKey, short inRepeat)
     this->SetDirty(true);
     return kErrorOK;
 }
-
-// Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x10078251
-// SYNTHETIC: LLE 0x1007825b
-// SYNTHETIC: LLE 0x1007826b
-// SYNTHETIC: LLE 0x10078277
-// SYNTHETIC: LLE 0x10078281
-// SYNTHETIC: LLE 0x1007828b
-// SYNTHETIC: LLE 0x1007829b
-// SYNTHETIC: LLE 0x100782a7
-// SYNTHETIC: LLE 0x100782b1
-// SYNTHETIC: LLE 0x100782bb
-// SYNTHETIC: LLE 0x100782cb
-// SYNTHETIC: LLE 0x100782d7
-// SYNTHETIC: LLE 0x100782e1
-// SYNTHETIC: LLE 0x100782eb
-// SYNTHETIC: LLE 0x100782fb
-// SYNTHETIC: LLE 0x10078307
-// SYNTHETIC: LLE 0x10078311
-// SYNTHETIC: LLE 0x1007831b
-// SYNTHETIC: LLE 0x1007832b
-// SYNTHETIC: LLE 0x10078337
-// SYNTHETIC: LLE 0x10078341
-// SYNTHETIC: LLE 0x1007834b
-// SYNTHETIC: LLE 0x1007835b
-// SYNTHETIC: LLE 0x10078367

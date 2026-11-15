@@ -56,7 +56,6 @@
 #include "ee/EECPAttackFormation.h"
 #include "ee/EEUGRust.h"
 
-// FUNCTION: EXE 0x45096f
 // Creates a space transport sub-group for the attack group, with no land group to carry yet
 EECPASGSpaceTransport::EECPASGSpaceTransport(EECPAttackGroup* inGroup, long inKind)
     : EECPASGSpaceship(inGroup, inKind), EECPASGTransport()
@@ -65,16 +64,11 @@ EECPASGSpaceTransport::EECPASGSpaceTransport(EECPAttackGroup* inGroup, long inKi
     this->mOwner = this;
 }
 
-// SYNTHETIC: EXE 0x4509ad
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4509c9
 // Destroys the space transport sub-group (base members only)
 EECPASGSpaceTransport::~EECPASGSpaceTransport()
 {
 }
 
-// FUNCTION: EXE 0x4509f2
 // Returns the share of transports in danger, at least 0.75 if an endangered one carries cargo; 0 while redirecting
 float EECPASGSpaceTransport::GetDangerRatio(long inArg1)
 {
@@ -100,7 +94,6 @@ float EECPASGSpaceTransport::GetDangerRatio(long inArg1)
     return theResult;
 }
 
-// FUNCTION: EXE 0x450ab8
 // Returns the total transport capacity of the sub-group's units
 long EECPASGSpaceTransport::GetCargoCapacity()
 {
@@ -110,7 +103,6 @@ long EECPASGSpaceTransport::GetCargoCapacity()
     return theSum;
 }
 
-// FUNCTION: EXE 0x450af9
 // Moves the rally point to where a ship would dock at one of the player's docks (picked after a shuffle);
 // returns the rally point
 EETileLocation EECPASGSpaceTransport::GetRallyPoint(bool inIncludeAllies)
@@ -131,7 +123,6 @@ EETileLocation EECPASGSpaceTransport::GetRallyPoint(bool inIncludeAllies)
     return this->mRallyPoint.mTile;
 }
 
-// FUNCTION: EXE 0x450c4a
 // Switches state: idle gets a task, remove/move/load/scatter run their handlers, carrying puts the land group in
 // transit, release drops the land group and makes a return task to a fresh rally point; others go to the base
 void EECPASGSpaceTransport::SetState(long inState, long inTime)
@@ -181,7 +172,6 @@ void EECPASGSpaceTransport::SetState(long inState, long inTime)
     }
 }
 
-// FUNCTION: EXE 0x450ddc
 // Loads the sub-group and then its transport data from a saved game; returns the first error
 long EECPASGSpaceTransport::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -191,7 +181,6 @@ long EECPASGSpaceTransport::Load(unsigned long inMajorVersion, unsigned long inM
     return theResult;
 }
 
-// FUNCTION: EXE 0x450e0d
 // Moves the sub-group to a random tile within 5 tiles of its current position
 void EECPAttackSubGroup::ScatterDestination()
 {
@@ -206,7 +195,6 @@ void EECPAttackSubGroup::ScatterDestination()
     this->MoveToDestination();
 }
 
-// FUNCTION: EXE 0x450e95
 // Places the formation at the next waypoint (the task location if unset, the rally point if off the map),
 // snapped to the closest map tile
 void EECPASGSpaceTransport::MoveToDestination()
@@ -233,7 +221,6 @@ void EECPASGSpaceTransport::MoveToDestination()
     this->PlaceFormation(theLocation);
 }
 
-// FUNCTION: EXE 0x450fa8
 // Writes the sub-group and then its transport data to the saved game; returns the first error
 long EECPASGSpaceTransport::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -243,7 +230,6 @@ long EECPASGSpaceTransport::Save(unsigned long inMajorVersion, unsigned long inM
     return theResult;
 }
 
-// FUNCTION: EXE 0x450fd9
 // Tests a condition: request filled; task valid or has cargo = the land group has units; should return, all
 // aboard, all unloaded, loading blocked; others go to the base
 // (EECPASGSeaTransport's identical copy folds into this one: ICF)
@@ -316,7 +302,6 @@ bool EECPASGSpaceTransport::IsLoadingBlocked()
     return theResult;
 }
 
-// FUNCTION: EXE 0x45110d
 // Removes the unit the base way; while loading, restarts loading once for every transport still in service (not
 // while the world clears or a game loads); returns whether it was removed
 bool EECPASGSpaceTransport::RemoveUnit(EEComplexUnit* inUnit)
@@ -333,13 +318,6 @@ bool EECPASGSpaceTransport::RemoveUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// SYNTHETIC: EXE 0x45117e
-// (the scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x451189
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4511a6
 // Resets every total and count to zero
 void EECPASGStats::Clear()
 {
@@ -362,7 +340,6 @@ void EECPASGStats::Clear()
     this->mL44 = 0;
 }
 
-// FUNCTION: EXE 0x4511e2
 // Recomputes the statistics from the given sub-group units
 void EECPASGStats::Compute(std::vector<EECPAttackSubGroupUnit*>& inUnits)
 {
@@ -372,7 +349,6 @@ void EECPASGStats::Compute(std::vector<EECPAttackSubGroupUnit*>& inUnits)
         this->Add(inUnits[i]->GetUnit());
 }
 
-// FUNCTION: EXE 0x451239
 // Adds one unit: attackers, influence, attack, hit points, range and speed totals, calamity casters, priests
 // (and emissaries), citizens and prophets
 void EECPASGStats::Add(EEComplexUnit* inUnit)
@@ -404,33 +380,18 @@ void EECPASGStats::Add(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x4512e9
-// Destroys a map<long, long> (std::_Tree destructor)
-
-// FUNCTION: EXE 0x451314
-// Erases a range of a map<long, long>, clearing the whole tree at once for begin..end (std::_Tree erase)
-
-// FUNCTION: EXE 0x451385
-// Frees a subtree of a map<long, long> (std::_Tree _Erase)
-
-// ICF-FOLDED: EXE 0x4ac98e
 // Does nothing: transports never attack
-// (no address of its own: folded into the shared `ret 0xc` body the vtable slot points at)
 void EECPASGSpaceTransport::AttackWith(EECPAttackSubGroupUnit*,EEComplexUnit*,EETileCoordinate*)
 {
 }
 
-// ICF-FOLDED: EXE 0x444b05
 // Sets the land group the transports carry
-// (no address of its own: the same body as EECPASGAirTransport::SetLand, which ICF kept; [sib 12])
 void EECPASGSpaceTransport::SetLand(EECPASGLand* inLand)
 {
     EECPASGTransport::SetLand(inLand);
 }
 
-// ICF-FOLDED: EXE 0x444188
 // Counts the units aboard all the sub-group's transports
-// (no address of its own: the same body as EECPASGAirTransport::Virtual04, which ICF kept; [sib 14])
 long EECPASGSpaceTransport::CountCargo()
 {
     long theResult = 0;
@@ -440,9 +401,7 @@ long EECPASGSpaceTransport::CountCargo()
     return theResult;
 }
 
-// ICF-FOLDED: EXE 0x441a2e
 // Sets the sub-group's task and flags every unit as needing new orders
-// (no address of its own: the same body as EECPASGAir::Virtual14, which ICF kept; [sib 29])
 void EECPASGSpaceTransport::SetTask(const EECPAGTask& inTask)
 {
     EECPAttackSubGroup::SetTask(inTask);
@@ -451,9 +410,7 @@ void EECPASGSpaceTransport::SetTask(const EECPAGTask& inTask)
     }
 }
 
-// ICF-FOLDED: EXE 0x444a58
 // Switches to the load state if there are transports and the land group still has units not aboard
-// (no address of its own: the same body as EECPASGAirTransport::Virtual14, which ICF kept; [sib 30])
 void EECPASGSpaceTransport::StartLoading()
 {
     std::vector<EEComplexUnit*> theUnits;
@@ -464,9 +421,7 @@ void EECPASGSpaceTransport::StartLoading()
         this->SetState(kASGStateLoad, gPhysics->mGameTime);
 }
 
-// ICF-FOLDED: EXE 0x44e801
 // Sends the transports back to the rally point, lets go of any land group, then asks for removal
-// (no address of its own: the same body as EECPASGSeaTransport::RequestRemoval, which ICF kept; [sib 35])
 void EECPASGSpaceTransport::RequestRemoval()
 {
     this->ReturnToRallyPoint();
@@ -476,10 +431,8 @@ void EECPASGSpaceTransport::RequestRemoval()
     EECPAttackSubGroup::RequestRemoval();
 }
 
-// ICF-FOLDED: EXE 0x44e9bb
 // Runs the transport state machine every 2 s (5 s after a scatter): wait, gather, move, load (scatter if
 // blocked), carry until unloaded, release, then remove or idle; task-valid is tested twice when moving
-// (no address of its own: the same body as EECPASGSeaTransport::Update, which ICF kept; [sib 37])
 void EECPASGSpaceTransport::Update(long inTime)
 {
     long theDelay = 2000;
@@ -563,18 +516,14 @@ void EECPASGSpaceTransport::Update(long inTime)
     this->mNextUpdateTime = inTime + theDelay;
 }
 
-// ICF-FOLDED: EXE 0x44e76a
 // Lets go of the land group it carries, then shuts the sub-group down
-// (no address of its own: the same body as EECPASGSeaTransport::Shutdown, which ICF kept; [sib 47])
 void EECPASGSpaceTransport::Shutdown()
 {
     EECPASGTransport::ReleaseLand();
     EECPAttackSubGroup::Shutdown();
 }
 
-// ICF-FOLDED: EXE 0x444740
 // Asks the land group to board the active transports and marks the cargo stage as loading
-// (no address of its own: the same body as EECPASGAirTransport::LoadCargo, which ICF kept)
 void EECPASGSpaceTransport::LoadCargo()
 {
     std::vector<EEComplexUnit*> theUnits;
@@ -589,10 +538,8 @@ void EECPASGSpaceTransport::LoadCargo()
     this->mCargoStage = 1;
 }
 
-// ICF-FOLDED: EXE 0x44e781
 // Rebuilds the formation with 2-tile spacing (forced moves allowed) and places it at the location, facing the
 // heading from the sub-group's position
-// (no address of its own: the same body as EECPASGSeaTransport::PlaceFormation, which ICF kept)
 void EECPASGSpaceTransport::PlaceFormation(const EECPILocation& inLocation)
 {
     EETileLocation theTile;
@@ -605,9 +552,7 @@ void EECPASGSpaceTransport::PlaceFormation(const EECPILocation& inLocation)
     this->mFormation->Place(inLocation, theDistance);
 }
 
-// ICF-FOLDED: EXE 0x444ada
 // Restores the air sub-group and then the transport links after a load; returns the first error
-// (no address of its own: the same body as EECPASGAirTransport::Restore, which ICF kept)
 long EECPASGSpaceTransport::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = EECPAttackSubGroup::Restore(inMajorVersion, inMinorVersion);   // the twin's EECPASGAir::Restore is this one
@@ -617,10 +562,8 @@ long EECPASGSpaceTransport::Restore(unsigned long inMajorVersion, unsigned long 
     return theResult;
 }
 
-// ICF-FOLDED: EXE 0x44ec4b
 // Gives one unit a move goal to the location's tile (its area if off the map); inFlag forces it; frees the goal
 // if the unit refuses it
-// (no address of its own: the same body as EECPASGSeaTransport::SendUnitTo, which ICF kept)
 void EECPASGSpaceTransport::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation& inLocation, bool inFlag)
 {
     GE2DPoint thePoint(0.0f, 0.0f);
@@ -636,10 +579,8 @@ void EECPASGSpaceTransport::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EEC
         delete theGoal;
 }
 
-// ICF-FOLDED: EXE 0x444c2f
 // Orders each transport to unload at the location; empty ones and those unable to unload there (the tile is marked
 // to avoid) move to a random tile within 7 of it instead; marks the cargo stage as unloading
-// (no address of its own: the same body as EECPASGAirTransport::UnloadAt, which ICF kept)
 void EECPASGSpaceTransport::UnloadAt(const EECPILocation& inLocation)
 {
     EEAIAStarBounds theBounds;

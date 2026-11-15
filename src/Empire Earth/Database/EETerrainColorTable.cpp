@@ -27,13 +27,11 @@ std::vector<EETerrainColorTable*> EETerrainColorTable::sTable;
 
 static const float kColorScale = 1.0f / 255.0f;
 
-// FUNCTION: EXE 0x4daeac
 // Creates an empty terrain colour entry
 EETerrainColorTable::EETerrainColorTable()
 {
 }
 
-// FUNCTION: EXE 0x4daec4
 // Loads the terrain colours from the pixels of textures\ColorPalette.png (16 per row); returns the texture load status
 long EETerrainColorTable::Load()
 {
@@ -82,7 +80,6 @@ long EETerrainColorTable::Load()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4db0e7
 // Destroys every terrain colour and empties the table
 void EETerrainColorTable::Unload()
 {
@@ -90,14 +87,3 @@ void EETerrainColorTable::Unload()
         delete EETerrainColorTable::sTable[i];
     EETerrainColorTable::sTable.resize(0);
 }
-
-// TEMPLATE: EXE 0x4db127
-// std::copy_backward for the table's _Ptrit (vector insert; ICF-named for vector<long>)
-
-// SYNTHETIC: EXE 0x4db14c
-// (the scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x4dae63
-// SYNTHETIC: EXE 0x4dae6d
-// SYNTHETIC: EXE 0x4dae85
-// SYNTHETIC: EXE 0x4dae91
