@@ -79,6 +79,20 @@ end
 -- Copper Age from minute 5 (2-46 on land, where the C++, under the port's first explorer, mostly ran without it)
 local SAFE_BONUS = false
 
+-- New (AI_RESEARCH 8.87): an enemy a whole epoch ahead makes the advance due now (the catchup cheat's rule, without
+-- the cheat: the advance still pays its full cost). The owner reached the Bronze Age at 99 minutes; the port, at the
+-- Copper Age since 71, waited for its epoch timer and stood in the Copper Age to the end
+local CATCH_UP = true
+
+function M.enemy_ahead(view)
+    for _, e in ipairs(view.enemies or {}) do
+        if (e.epoch or 0) > view.epoch then
+            return true
+        end
+    end
+    return false
+end
+
 -- EECPEpochPressure in thousandths: the Prehistoric's schedule (the game time over stone_span minutes), else the
 -- elapsed share of the epoch timer; plus the safe bonus from the Stone Age while no stronger army is near (SAFE_BONUS)
 function M.epoch_pressure_k(view, memory)
@@ -129,7 +143,7 @@ local function attempt_advance(view, memory)
             due = due > sooner and due - sooner or 0
         end
     end
-    if view.time < due then
+    if view.time < due and not (CATCH_UP and M.enemy_ahead(view)) then
         return
     end
     local missing = e.required_sol - e.current_sol
