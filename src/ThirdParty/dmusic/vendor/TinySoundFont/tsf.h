@@ -1489,7 +1489,7 @@ TSFDEF void tsf_set_output(tsf* f, enum TSFOutputMode outputmode, int samplerate
 
 TSFDEF void tsf_set_volume(tsf* f, float global_volume)
 {
-	// (dmusic patch) The master volume changes the voices already sounding too, as the channel volume does and as
+	// (EE patch) The master volume changes the voices already sounding too, as the channel volume does and as
 	// the original's synth does: upstream set it for new notes only, so a fade-in from 0 left every note started during
 	// it silent to its end (held notes for many seconds) and a mute left the sounding notes playing. Volume 0 is
 	// -100 dB (silent, tsf_decibelsToGain), not -infinity, so a mute and its undo shift the voices by finite amounts.

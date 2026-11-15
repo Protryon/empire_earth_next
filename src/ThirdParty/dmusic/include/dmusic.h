@@ -631,6 +631,13 @@ DMAPI void DmPerformance_setVolume(DmPerformance* slf, float vol);
 /// \param level The master groove level.
 DMAPI void DmPerformance_setGrooveLevel(DmPerformance* slf, uint8_t level);
 
+/// \brief Stop the performance as the original's Stop sounds: the messages due within \p lookahead_ms are played first
+///        (a segment started just before still sounds its first notes), then every sounding note is released and
+///        everything else queued is dropped.
+/// \param slf[in] The performance.
+/// \param lookahead_ms The synthesizer's latency to honour, in milliseconds.
+DMAPI void DmPerformance_stop(DmPerformance* slf, uint32_t lookahead_ms);
+
 /// \brief Switch the original's synthesizer reverb on the performance's stereo output on or off and set it
 ///        (the effect and its four settings): the same reverb as the original's synthesizer, sample for
 ///        sample, on the 16-bit mix. Off by default. Mono output is not reverberated.
@@ -640,13 +647,6 @@ DMAPI void DmPerformance_setGrooveLevel(DmPerformance* slf, uint8_t level);
 /// \param mix_db The reverb mix in dB (at most 0; -96 is all dry).
 /// \param time_ms The reverb time in milliseconds.
 /// \param hf_ratio The high-frequency decay time as a fraction of the reverb time (0.001 .. 0.999).
-/// \brief Stop the performance as the original's Stop sounds: the messages due within \p lookahead_ms are played first
-///        (a segment started just before still sounds its first notes), then every sounding note is released and
-///        everything else queued is dropped.
-/// \param slf[in] The performance.
-/// \param lookahead_ms The synthesizer's latency to honour, in milliseconds.
-DMAPI void DmPerformance_stop(DmPerformance* slf, uint32_t lookahead_ms);
-
 DMAPI void DmPerformance_setReverb(DmPerformance* slf, int enabled, float gain_in_db, float mix_db, float time_ms, float hf_ratio);
 
 /// \}
