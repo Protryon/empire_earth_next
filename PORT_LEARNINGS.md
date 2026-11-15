@@ -22866,3 +22866,141 @@ The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input c
 gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
 (`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
 kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.
+
+## R6 WONLobby, round 7: the lobby's resources by name, the status texts, the saved game's transfer and the EE lobby's sounds (ee_won resource.rs, statusstr.rs, eexfer.rs, eesound.rs; branch rust-wonlobby7, 2026-11-14)
+
+Round 6's list named EELobbyFileTransfer, EELobbySound and the logics. Measuring the lobby's units for the round's
+1,500-line target found the biggest one first: WONLobbyResource.cpp (3,420 lines) and its header (986), whose rows
+were Rust since round 1 but whose 469 globals, their externs, an unused id enum, the id table, the name-matched slot
+table and 2,400 lines of the globals' init chain markers were not. The round took that, then WONStatusString.cpp
+(the switch from a status to its resource string), then the round's item 1 (the transfer and the sounds). The logics
+(LanLogic's and StagingLogic's hosts, AccountLogic, InitLogic, PingLogic, RoutingLogic) were measured and left.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 35e15601 | the 469 resource globals as one slot array over ee_won's rows (`EeWonLobbyRes`) | -4,242 (67,431 -> 63,189) |
+| d8817d77 | GetWONStatusString's switch as `statusstr.rs` | -366 (63,189 -> 62,823) |
+| 284c3423 | EELobbyFileTransfer, SendFileOp, EELobbyMusic and EELobbySound as `eexfer.rs` / `eesound.rs` objects; two units deleted | -333 (62,823 -> 62,490) |
+| 89b92e40 | (after the merge of rust) WONLobbyResourceGlobals.h includes `rust/ee_won.h`, as `rust_includes.py` asked | +1 |
+
+Round total: WON C++ 67,431 -> 62,490 (-4,941) before the merge of rust; two units deleted (EELobbyFileTransfer.cpp,
+EELobbySound.cpp), none added.
+
+### The resources by name
+
+- `EeWonLobbyRes` (resource.rs) names the table's 469 rows in order (`#[allow(non_camel_case_types)]`: the variants
+  are the original globals' names, `LobbyGlobal_Cancel_String` ...); `EE_WON_LOBBYRES_COUNT` is the array's size and
+  `ee_won_lobbyres_kind` exports the enum (cbindgen emits an enum only when a function or the export list names it).
+  A unit test checks each variant's Debug name against its row's name, so the enum and the rows cannot drift.
+- The C++ keeps one slot per row, `LobbyResourceSlot gLobbyResources[EE_WON_LOBBYRES_COUNT]` (a `GUIString`, a
+  `SmartPtr<Image>`, a `SmartPtr<Sound>`; a row uses the member of its kind), read through `LOBBY_STRING(name)`,
+  `LOBBY_IMAGE(name)`, `LOBBY_SOUND(name)`: `gLobbyResources[(int)EeWonLobbyRes::name].mX`. The 482 uses in 23 lobby
+  units were rewritten by a script (code only, not comments); a unit using the macros includes `rust/ee_won.h`
+  (WONLobbyResourceGlobals.h does not: 288 units include it through WONLobbyResource.h, and ee_won's header changes
+  with every WON lane's FFI).
+- Before the move a script checked that the externs, the `_Id` enum, the definitions, the id table (`gResources`), the
+  slot table and the Rust rows list the same 469 names in the same order: `LobbyResource_GetString(id)` and
+  `GetImage(id)` index the slots by the same ids (ChatCtrl's duration texts, ServerListCtrl's icons). The getters of
+  fonts, backgrounds, colours and ints (one shared body each in the original) had no caller and are gone.
+- Load and unload walk the rows as before; the slot is the row's index (no name compare at each load any more).
+
+### The status texts
+
+`GetWONStatusString`'s switch (284 labels, 83 groups) is `statusstr.rs`, generated from the C++ switch with the
+labels as WONStatus.h's values (a group's names in its comment; clippy's `manual_range_patterns` allowed: the labels
+stay one by one). `ee_won_status_lobby_text` (named so: `ee_won_status_text` is ffi_net.rs's status name) gives the
+row and whether it is a general text; the C++ formats a general one with `WONStatusToString` as before.
+
+### The saved game's transfer and the sounds
+
+- **EELobbyFileTransfer** is a `RefCount` shell over an `eexfer.rs` object: the path, the local file's size and
+  checksum, the host file's, the listening socket and the clients' sockets (a reference each; the clients in pointer
+  order, `std::set<SmartPtr<AsyncSocket>>`'s), the progress time, every method and the four completion callbacks. The
+  shell keeps the host's file name (a `GUIString` the lobby game reads) and address (an `IPAddr` the download's
+  `ConnectOp` takes). The lobby game's Rust object still reaches it through its `Transfer*` ops (eegame's golden did
+  not change); those cases call the transfer's Rust object.
+- **The completions stay LobbyCompletion's**: the original's `LobbyCompletion<EELobbyFileTransfer>` runs its callback
+  on the window thread (posting it when completed elsewhere) and holds the transfer. Round 24's `RustCompletion`
+  runs on the completing thread, so the host has a `LobbyCompletionBase` subclass (`EELobbyTransferCompletion`: the
+  transfer held, `Run` calls the Rust callback) instead.
+- **SendFileOp** is a `SocketOp` shell (its `Start`, `Continue`, `CleanupHook` forward) over an `EeWonEeXferSend`: the
+  path, the open file, the 0x2000-byte chunk and its read position (the original's `ReadBuffer`), the send loop.
+- **CloseClients walks a copy**: the original killed each client while iterating the set; a kill whose close
+  completion ran at once would have erased from the set under the iterator. Completions on the window thread are run
+  at once when the kill is made there, so the Rust walks a copy of the set and then gives back the references of
+  those still in it.
+- **EELobbyMusic, EELobbySound** keep their classes (WONGUI's `Sound` base); the music's volume and the effect's sample
+  and playing instance are `eesound.rs` objects, the decoder's load `ee_won_eesound_load` (-1: no sound manager). The
+  host is EELobbyGlueHost.cpp (an exe unit: the game's UI and sound managers).
+- EELobbySound.cpp and EELobbyFileTransfer.cpp are deleted (their lines in link/exe/units.txt with them).
+
+### Goldens, mutations, replays
+
+| Golden | Sequences | Trace lines | Replayed by cargo | First run |
+|---|---|---|---|---|
+| `won_statusstr_test` (new) | every status in -200,000..200,000 and both ends (400,003) | - | (exhaustive; the unit test checks samples) | identical |
+| `won_eexfer_test` (new; the transfer, the send op, both sounds and the decoder's load) | 50,000 | 1,426,574 | `golden_eexfer.txt` (61 sequences) | identical |
+
+The resources' move has no golden of its own: the load and unload run the same rows in the same order (round 1's
+`golden_resource.txt` still replays them), and `the_enum_names_the_rows` ties each enum variant to its row by name.
+`won_eexfer_test` counts references per object and prints the counts at a sequence's end (the original's `SmartPtr`
+temporaries take and give back references the Rust does not take); a socket's kill re-enters the close callback half of
+the time. Its first host answered the clock with any of 5,000 milliseconds, and the mutation "progress at exactly 1000
+ms" changed nothing; the clock now answers in steps of 500 ms.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| status: one label's general flag flipped, one label dropped | 2 statuses of 400,003 (both) |
+| transfer: progress reported at exactly 1000 ms | 271 of 50,000 |
+| transfer: Stop does not kill the listening socket | 5,316 |
+| transfer: a failed accept kept | 25,236 |
+| transfer: a download without a valid host | 4,092 |
+| send: a timed-out send ends without asking the time left | 7,046 |
+| transfer: a client already held referenced again | 925 |
+| sound: an effect stopped when not playing | 6,082 |
+| sound: an effect's resume plays | 8,399 |
+
+Unit tests: resource +1 (the enum names the rows), statusstr 1, eexfer 4 (the replay; Serve's stop and failed bind;
+the file-here rule; the send loop's chunks), eesound 3.
+
+### Gates
+
+| Gate | 35e15601 + d8817d77 (built together) | 284c3423 | final tree (merged with rust e5758718, + 89b92e40, the chat test) |
+|---|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (35e15601 compiled alone: `--compile-only`, 974 units) | 0 / 0 | 0 / 0 |
+| Rust gate | tests and clippy PASS after clippy's `manual_range_patterns` was allowed in statusstr.rs; rustfmt fixed in d8817d77 (amended) | tests, clippy PASS; rustfmt (statusstr.rs) fixed | PASS (3,638 tests) |
+| oracle | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| lobby wontest | won_statusstr_test exit 0 | won_eexfer_test, won_statusstr_test, won_eegame_test, won_eeglue_test exit 0 | 17 programs: 16 exit 0 (eexfer, statusstr, eeglue, eecolor, eedlg, lobbyctl, eegame, lobbydlg, dlglogic, lobbyscr, credits, lobbypopup, lanobj, stagingobj, lanlogic, chat after its fix); won_persist_test hangs with no output, and so does the main checkout's own build of it (19:41, before this branch merged): not this round's |
+| `--test-profile windowed-software` | | | 0 unresolved, 0 duplicates |
+| `tools/harness/lan_game.py` (harness lock) | | | RESULT PASS lan-game (PT host 3353, joiner 3347) |
+
+The merge of rust (e5758718) had no conflict and no new use of a resource global by name (a script checked every
+code line of src, include and tests/won). `rust_build.py header` was current; `rust_includes.py` added
+`rust/ee_won.h` to WONLobbyResourceGlobals.h (its macros name `EeWonLobbyRes`), committed as 89b92e40: the 288 units
+that include WONLobbyResource.h now see ee_won's header. won_chat_test links ChatCommandParser.cpp and defined the
+chat command globals itself; it defines the slot array now. WON C++ on the merged tree: 61,025 (rust alone: 65,965).
+
+### Behaviour changes
+
+- None on defined paths. The transfer's `CloseClients` walks a copy of its clients (above); a socket's references are
+  taken once per holder, not for the original's `SmartPtr` temporaries (the counts at each call's end are the same:
+  the golden compares them).
+- `GetWONStatusString` of a status outside `int32_t` (WONStatus is a `long`, 64 bits on Linux and macOS) is truncated
+  to 32 bits before the switch; every WON status is in range.
+
+### What only a person reaches
+
+The saved game's transfer runs only when a LAN or Internet game room loads a saved game (the host serves it, a client
+without the file downloads it): `lan_game.py` starts a random map, so it does not reach it. The lobby's sounds (the
+music's volume, the effects) are reached by every lobby session, the LAN game's too; whether they are heard needs a
+person. The status texts are shown by the Internet screens' failures and the LAN direct connect's status box.
+
+### What is left
+
+The logics, measured: LanLogicHost.cpp (666) and LobbyLogicHost.cpp (359) are the C++ halves of round 20's Rust
+objects (195 ops; what is left are calls on C++ objects: they shrink as the dialogs, sockets and model move);
+AccountLogic.cpp (253) and InitLogic.cpp (649) are Internet only, each method a run of C++ calls on ops, dialogs and
+server lists (InitLogic's decisions already flow.rs); PingLogic.cpp (301; the LAN game's pings) is the next
+whole-unit candidate (its queue, retries and reply parse), then AccountLogic; RoutingLogic.cpp (2,186) last.
