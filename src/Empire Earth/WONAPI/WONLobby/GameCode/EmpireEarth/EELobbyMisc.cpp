@@ -101,7 +101,7 @@ bool EELobbyLoadSavedGame(const char* inFile)
     }
     for (i = 0; i < 8; i++) {
         EELobbyPlayerSlot* theSlot = theGame->GetPlayerSlot(i);
-        if (theSlot != NULL && theSlot->mOptions[0] == 3 && theNames.find(theSlot->GetName()) == theNames.end()) {
+        if (theSlot != NULL && theSlot->Option(0) == 3 && theNames.find(theSlot->GetName()) == theNames.end()) {
             LobbyMessageBox(gEELobbyInterface_LoadGameError,
                             LobbyFormatString(gEELobbyInterface_PlayerNotInGame, theSlot->GetName()));
             return false;
@@ -147,7 +147,7 @@ void EELobbySetupSavedGame(const EEGameOptions& inOptions, const char* inFile, c
     }
     for (i = 0; i < 8; i++) {
         EELobbyPlayerSlot* theSlot = theGame->GetPlayerSlot(i);
-        if (theSlot->mOptions[0] == 3) {
+        if (theSlot->Option(0) == 3) {
             long theIndex = theNames[theSlot->GetName()];
             EELobbySetSlot(theSlot, inOptions.mPlayers[theIndex]);
             theFreeOptions.erase(theIndex);
@@ -173,14 +173,14 @@ void EELobbySetSlot(EELobbyPlayerSlot* inSlot, const EEGameOptionsPlayer& inPlay
         break;
     case 1:
     case 2:
-        if (inSlot->mClient.mPtr != NULL && inSlot->mClient->GetPlayer().mPtr != NULL) {
-            inSlot->mOptions[4] = inPlayer.mType == 2;
-            inSlot->SetPlayer(inSlot->mClient.mPtr, (EELobbyPlayer*)inSlot->mClient->GetPlayer().mPtr);
+        if (inSlot->GetClient() != NULL && inSlot->GetClient()->GetPlayer().mPtr != NULL) {
+            inSlot->SetRawOption(4, inPlayer.mType == 2);
+            inSlot->SetPlayer(inSlot->GetClient(), (EELobbyPlayer*)inSlot->GetClient()->GetPlayer().mPtr);
         } else if (inPlayer.mName == "") {
             inSlot->SetClosed();
         } else {
             inSlot->SetName(EELobbyToGUIString(inPlayer.mName));
-            inSlot->mOptions[4] = inPlayer.mType == 2;
+            inSlot->SetRawOption(4, inPlayer.mType == 2);
         }
         break;
     case 3:
@@ -191,10 +191,10 @@ void EELobbySetSlot(EELobbyPlayerSlot* inSlot, const EEGameOptionsPlayer& inPlay
         return;
     }
     if (inPlayer.mType == 1)
-        inSlot->mOptions[2] = (unsigned char)inPlayer.mColor;
+        inSlot->SetRawOption(2, (unsigned char)inPlayer.mColor);
     if (inPlayer.mType != 2) {
-        inSlot->mOptions[1] = (unsigned char)inPlayer.mTeam;
-        inSlot->mOptions[3] = (unsigned char)inPlayer.mStartingCitizens;
+        inSlot->SetRawOption(1, (unsigned char)inPlayer.mTeam);
+        inSlot->SetRawOption(3, (unsigned char)inPlayer.mStartingCitizens);
     }
 }
 

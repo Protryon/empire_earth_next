@@ -68,7 +68,6 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
-#include "ee/EECCVolcano.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // EE_SCREENS_MG_*, EE_SCREENS_CAM_*: the main game form's events (main_game.rs, camera.rs)
 #include "ee/EEUICChatLine.h"
@@ -1087,7 +1086,7 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_GHOST:
         EEGhostUnit::Create(theForm->GetMouseLocation(),
                             inA == 0 ? theCall.mNode->mData->mUnitClass
-                                     : dynamic_cast<EECCVolcano*>(theCall.mCalamity)->GetUnitClassIndex(),
+                                     : theCall.mCalamity->mUnitClassIndex,
                             gWorld.GetCurrentPlayer(), 0.0f, false);
         return 0;
     case EE_SCREENS_MF_OP_CHAT_LOG_ERROR: gUserInterface->AddChatLogEntry(theCall.mText, 0); return 0;

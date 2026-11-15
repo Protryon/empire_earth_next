@@ -61,8 +61,16 @@
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
+//! - [`editor_object`]: the scenario editor's trigger tab object screen whole in Rust (`EESETSObject`): its controls,
+//!   modes, filters, store, load and generated names.
 //! - [`editor_players`]: the scenario editor's player tab whole in Rust (`EESEPlayerScreen`, its player rows and
 //!   game options page): the controls it makes as tables, its pages, rows, diplomacy grid, load and store.
+//! - [`editor_trigger`]: the scenario editor's trigger tab trigger screen whole in Rust (`EESETSTrigger`): its
+//!   controls, condition and effect rows, operators, store and load.
+//! - [`editor_tscreen`]: the scenario editor's trigger tab whole in Rust (`EESETriggerScreen`): its controls, entry
+//!   list and buttons, sub-tabs, the open entry's store and load.
+//! - [`editor_unit`]: the scenario editor's unit tab whole in Rust (`EESEUnit`): its controls, palettes, sorts and
+//!   owners and the class list they fill, the cargo, the unit, wall and gate placement state, the mouse and keys.
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
 //!   exit, quick save, the tech lists, the rotation, the trigger area, the blank map (the elevation file's heights)
 //!   and the random map, the wall and gate placements, the unit placement and move ([`editor_place`]).
@@ -136,10 +144,22 @@ pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
 pub mod editor_events;
+pub mod editor_object;
+#[cfg(not(test))]
+mod editor_object_ffi;
 pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]
 mod editor_players_ffi;
+pub mod editor_trigger;
+#[cfg(not(test))]
+mod editor_trigger_ffi;
+pub mod editor_tscreen;
+#[cfg(not(test))]
+mod editor_tscreen_ffi;
+pub mod editor_unit;
+#[cfg(not(test))]
+mod editor_unit_ffi;
 pub mod editor_whole;
 #[cfg(not(test))]
 mod editor_whole_ffi;

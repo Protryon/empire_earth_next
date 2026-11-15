@@ -2424,7 +2424,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         static_cast<UIEditBox*>(Ctl())->DeleteText();
         break;
     case EE_SCREENS_GAME_LE_DISCONNECT:
-        gCommunications->ProcessGuaranteedLocalUserInput(new NEMClientDisconnectionNotification(false), kSlotNone);
+        gCommunications->ProcessGuaranteedLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {false}), kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_REMOVE_HOST: {
         EEAction* theAction = new EEARemovePlayer(0xfe);
@@ -2575,7 +2575,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     case EE_SCREENS_GAME_GO_REQUEST_PAUSE:
-        gCommunications->ProcessLocalUserInput(new NEMClientRequestPause, kSlotNone);
+        gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientRequestPause), kSlotNone);
         break;
     case EE_SCREENS_GAME_GO_FORM_EXISTS:
         return gUIManager->GetFormByID(inA) != NULL;
@@ -3128,7 +3128,7 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
         static_cast<EEServer*>(gCommunications)->StartThreads();
         static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
-        gCommunications->ProcessLocalUserInput(new NEMClientConnectionRequest(theText, gGameVersion, gBinaryChecksum, false),
+        gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientConnectionRequest, {false, gBinaryChecksum}, {gGameVersion, theText}),
                                                kSlotNone);
         break;
     // the load and save screens' (save_load.rs)

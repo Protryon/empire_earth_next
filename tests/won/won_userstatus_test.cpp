@@ -18,6 +18,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAPICore.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 
@@ -98,10 +99,10 @@ static void Query(const char* inName, const std::vector<unsigned long>& inIds, b
     // one request; every scripted reply answers it, in order (a retransmit needs the pump: none is waited for)
     ByteBufferPtr aGot;
     IPAddr aFrom;
-    WONStatus aStatus = sServer->RecvBytesFrom(aGot, 512, aFrom, 5000);
+    WONStatus aStatus = WonBlocking::RecvBytesFrom(sServer, aGot, 512, aFrom, 5000);
     Log("server got " + St(aStatus) + " " + Hex(aGot.get()));
     for (size_t r = 0; aStatus == WS_Success && r < inReplies.size(); r++) {
-        sServer->SendBytesTo(Bytes(inReplies[r]), aFrom, 5000);
+        WonBlocking::SendBytesTo(sServer, Bytes(inReplies[r]), aFrom, 5000);
         if (r + 1 < inReplies.size()) { // a reply the op refuses: still waiting after it was read
             uint32_t aStart = WONTickCount();
             while (WONTickCount() - aStart < 200)

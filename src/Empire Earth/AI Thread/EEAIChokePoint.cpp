@@ -145,7 +145,7 @@ static void EEAIChokeCreate(EEMap* inMap)
     for (std::map<long, EEAIChokePoint*>::iterator theIt = theMachine.mGoal.mChokePoints.begin();
          theIt != theMachine.mGoal.mChokePoints.end(); theIt++) {
         EEAIChokePoint* theChokePoint = theIt->second;
-        theChokePoint->mSerial = ++gContinentManager.mLastSerial;
+        theChokePoint->SetSerial(++gContinentManager.mLastSerial);
         gContinentManager.AddChokePoint(theChokePoint);
     }
 }
@@ -161,7 +161,7 @@ static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTile
     outInfo->tile = true;
     EEAIContinent* theContinent = gContinentManager.GetContinentFromID(gContinentManager.GetContinentID(inX, inY));
     outInfo->category = theContinent->GetCategory();
-    outInfo->continent_serial = (uint32_t)theContinent->mSerial;
+    outInfo->continent_serial = (uint32_t)theContinent->GetSerial();
     if (outInfo->category != kContinentCategoryLand && outInfo->category != kContinentCategoryCliff)
         return;
     outInfo->resource = EEAIHasResourceUnit(inTile) != 0;
@@ -169,13 +169,13 @@ static void EEAIChokeGetTileInfo(EETile* inTile, long inX, long inY, EeChokeTile
         return;
     EETileLocation theTile(inX, inY);
     EEAIForest* theForest = gContinentManager.GetForestAt(theTile);
-    unsigned short theID = theForest ? theForest->mID : 0;
+    unsigned short theID = theForest ? theForest->GetID() : 0;
     const std::vector<EEAIForest*>& theForests = gContinentManager.mForests;
     theForest = theForests[theID];
     if (theForest) {
         outInfo->forest = true;
-        outInfo->forest_serial = (uint32_t)theForest->mSerial;
-        outInfo->forest_tiles = (int32_t)theForest->mTiles.Size();
+        outInfo->forest_serial = (uint32_t)theForest->GetSerial();
+        outInfo->forest_tiles = (int32_t)theForest->GetNumTiles();
     }
 }
 

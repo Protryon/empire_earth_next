@@ -154,10 +154,10 @@ void EESMEffect::BuildObject()
             }
             EECPCombatManager* theCombat = thePlayer->mCombatManager;
             if (theTown != NULL) {
-                theLocation.mSerial = theTown->mSerial;
+                theLocation.mSerial = theTown->GetSerial();
                 theLocation.mType = kAIAreaTown;
             } else {
-                theLocation.mSerial = theContinent->mSerial;
+                theLocation.mSerial = theContinent->GetSerial();
                 theLocation.mType = kAIAreaContinent;
             }
             theLocation.ResetToArea();
@@ -244,15 +244,15 @@ void EESMEffect::CreateAIMilitaryGroup()
                 if (theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
                     for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
                         EEAIRectangleArea* theRectangle = gContinentManager.mRectangleAreas[j];
-                        if (theRectangle != NULL && theRectangle->mScenarioAreaID == theArea->mID) {
-                            theAreaSerial = theRectangle->mSerial;
+                        if (theRectangle != NULL && theRectangle->GetScenarioAreaID() == theArea->mID) {
+                            theAreaSerial = theRectangle->GetSerial();
                             break;
                         }
                     }
                     if (theAreaSerial == 0 && theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
                         EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
                         if (theContinent != NULL) {
-                            theAreaSerial = theContinent->mSerial;
+                            theAreaSerial = theContinent->GetSerial();
                             theContinentArea = true;
                         }
                     }
@@ -381,15 +381,15 @@ void EESMEffect::ModifyAIMilitaryTarget()
         if (theArea != NULL && !theArea->IsUnset() && !theArea->IsOffMap()) {
             for (long j = (long)gContinentManager.mRectangleAreas.size() - 1; j >= 0; --j) {
                 if (gContinentManager.mRectangleAreas[j] != NULL
-                    && (gContinentManager.mRectangleAreas[j])->mScenarioAreaID == theArea->mID) {
-                    theSerial = (gContinentManager.mRectangleAreas[j])->mSerial;
+                    && (gContinentManager.mRectangleAreas[j])->GetScenarioAreaID() == theArea->mID) {
+                    theSerial = (gContinentManager.mRectangleAreas[j])->GetSerial();
                     break;
                 }
             }
             if (theSerial == 0 && theArea->mAnchor.mX >= 0 && theArea->mAnchor.mY >= 0) {
                 EEAIContinent* theContinent = gContinentManager.GetContinentAt(theArea->mAnchor.mX, theArea->mAnchor.mY);
                 if (theContinent != NULL)
-                    theSerial = theContinent->mSerial;
+                    theSerial = theContinent->GetSerial();
             }
         }
         unsigned long theUnitID = (unsigned long)-1;

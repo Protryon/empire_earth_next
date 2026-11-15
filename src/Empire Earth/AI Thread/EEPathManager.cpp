@@ -1119,25 +1119,15 @@ start:
 void EEPathManager::MergeWaypoints(std::vector<GE3DPoint>& ioPath, std::deque<EEComplexUnitWaypoint>& inWaypoints,
                                    long inArg3)
 {
-    std::vector<GE3DPoint> theWaypoints;
-    bool theFound = false;
-    theWaypoints.reserve(ioPath.size() > inWaypoints.size() ? ioPath.size() : inWaypoints.size());
-    for (long i = inWaypoints.size() - 1; i >= 0 && !theFound; i--) {
-        long theY = UMFloor(inWaypoints[i].mLocation.GetY());
-        long theX = UMFloor(inWaypoints[i].mLocation.GetX());
-        for (long j = ioPath.size() - 1; j >= 0; j--) {
-            if (UMFloor(ioPath[j].GetX()) == theX && UMFloor(ioPath[j].GetY()) == theY) {
-                theFound = true;
-                break;
-            }
-        }
-        if (!theFound)
-            theWaypoints.push_back(inWaypoints[i].mLocation);
-    }
-    if (theFound) {
-        for (long k = theWaypoints.size() - 1; k >= 0; k--)
-            ioPath.push_back(theWaypoints[k]);
-    }
+    // (Rust: ee_astar path_splice.rs merge_waypoints: the waypoint found)
+    std::vector<GE3DPoint> theLocations;
+    theLocations.reserve(inWaypoints.size());
+    for (size_t i = 0; i < inWaypoints.size(); i++)
+        theLocations.push_back(inWaypoints[i].mLocation);
+    long theFound = (long)ee_path_merge_waypoints(EEPathPoints(ioPath), ioPath.size(), EEPathPoints(theLocations),
+                                                  theLocations.size());
+    if (theFound >= 0)
+        ioPath.insert(ioPath.end(), theLocations.begin() + theFound + 1, theLocations.end());
 }
 
 // The y test floors the comparison's result, not the coordinate (the original's parenthesis).

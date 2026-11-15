@@ -701,7 +701,7 @@ bool EECPASGSpaceship::IsTaskActive(const EECPAGTask& inTask)
         theResult = false;
         EEAIContinent* theContinent = gContinentManager.GetContinentAt(theX, theY);
         if (theContinent != NULL)
-            theResult = theContinent->mCategory == kContinentCategorySpace;
+            theResult = theContinent->GetCategory() == kContinentCategorySpace;
     }
     return theResult;
 }
@@ -1114,7 +1114,7 @@ void EECPASGSpaceship::RequestUnits(std::vector<long>& inClasses, std::vector<lo
         this->mRequest = this->mGroup->mCommander->mPersonnel->NewContinentRequest(inClasses, inUnitIDs, inContinent);
     else {
         EECPPersonnel* thePersonnel = this->mGroup->mCommander->mPersonnel;
-        this->mRequest = thePersonnel->NewTownRequest(inClasses, inUnitIDs, inTownID, theTown->mHull.GetCenter());
+        this->mRequest = thePersonnel->NewTownRequest(inClasses, inUnitIDs, inTownID, theTown->GetHullCenter());
     }
     if (this->mRequest != NULL && this->mPlayer2->mCombatManager->mIsWonderRace)
         this->mRequest->mDeadline = gPhysics->mGameTime + 300000;

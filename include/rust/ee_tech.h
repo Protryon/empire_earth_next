@@ -68,6 +68,18 @@ constexpr static const uint32_t EE_CALAMITY_FUNCTOR_LEPROSY = 5;
 /// `EEPlagueFunctor(mRadius, mChance, mDamage, mSpreadTime, unit set, mode)`.
 constexpr static const uint32_t EE_CALAMITY_FUNCTOR_PLAGUE = 6;
 
+/// What a class is cast at ([`target_kind`]; its `GetTargetKind`): no class of the kind.
+constexpr static const uint32_t EE_CALAMITY_TARGET_NONE = 0;
+
+/// `EEGlobalCalamityClass` (1): nothing (the cloaking, the line of sight).
+constexpr static const uint32_t EE_CALAMITY_TARGET_GLOBAL = 1;
+
+/// `EELocationCalamityClass` (2): a tile.
+constexpr static const uint32_t EE_CALAMITY_TARGET_LOCATION = 2;
+
+/// `EEUnitCalamityClass` (3): a unit.
+constexpr static const uint32_t EE_CALAMITY_TARGET_UNIT = 3;
+
 /// The step lists of [`media_step`]: `LoadMedia(player, on demand)`.
 constexpr static const uint32_t EE_CALAMITY_MEDIA_LOAD = 0;
 
@@ -1050,6 +1062,53 @@ struct EeCalamityIoFfi {
   long (*call)(void *ctx, uint32_t op, void *value);
 };
 
+/// A functor's numbers (the six classes' members, each under its C++ name; the plague's `mDamageTime` and the area
+/// effects' `mUpdateTime` are `mSpreadTime`, the area effects' unit set `mValue` is `mUnitSet`, the extra damage's
+/// flag `mFlag`). Its effects are C++ members of `EEContagionFunctor`.
+struct EeContagionFunctorFields {
+  /// The functor's kind (`EE_CALAMITY_FUNCTOR_*`).
+  uint32_t mKind;
+  /// The spread radius (the fire's, the plague's).
+  float mRadius;
+  /// The spread chance (the fire's, the plague's).
+  float mChance;
+  /// The fire's burn: hundredths of the unit's maximum hit points burnt at once.
+  long mBurn;
+  /// The damage per discrete update (the area effects': the factor of the unit's attack stat).
+  long mDamage;
+  /// The discrete update time (the fire's and the leprosy's spread time, the plague's damage time, the area
+  /// effects' update time).
+  unsigned long mSpreadTime;
+  /// The unit set it can infect.
+  unsigned long mUnitSet;
+  /// `TakeHit`'s mode: 2 when the class is blocked by immunity, else 3.
+  long mMode;
+  /// The calamity's discrete updates of this helper update (`Update`).
+  unsigned long mUpdates;
+  /// The extra damage's flag: the pulse cannon effect, else the battle cry.
+  bool mFlag;
+};
+
+/// The functor's answers an update reads (all plain getters, read once before it).
+struct EeContagionParams {
+  /// `GetSpreadTime()`.
+  uint32_t spread_time;
+  /// `GetChance()`.
+  float chance;
+  /// `GetRadius()`.
+  float radius;
+  /// `EE_CONTAGION_*` bits.
+  uint32_t flags;
+};
+
+/// What `Apply` does to a unit ([`apply_damage`]): whether it hits and the damage.
+struct EeContagionFunctorHit {
+  /// The unit takes a hit.
+  bool hits;
+  /// Its damage.
+  int32_t damage;
+};
+
 /// A contagion helper's numbers (`EEContagionHelper` derives from it).
 struct EeContagionHelperFields {
   long mHelperID;
@@ -1210,18 +1269,6 @@ struct EeTechConversion {
   bool move_queued;
   /// The new units take their class's behaviour (tech 0x413 or 0x138d).
   bool set_behavior;
-};
-
-/// The functor's answers an update reads (all plain getters, read once before it).
-struct EeContagionParams {
-  /// `GetSpreadTime()`.
-  uint32_t spread_time;
-  /// `GetChance()`.
-  float chance;
-  /// `GetRadius()`.
-  float radius;
-  /// `EE_CONTAGION_*` bits.
-  uint32_t flags;
 };
 
 /// The helper's timers (`mTimeSinceLastSpread`, `mTimeSinceLastUpdate`).
@@ -1449,6 +1496,9 @@ void ee_calamity_class_fill(EeCalamityClassFields *fields,
 /// [`functor_kind`].
 uint32_t ee_calamity_class_functor_kind(int32_t class_enum);
 
+/// [`target_kind`].
+uint32_t ee_calamity_class_target_kind(int32_t class_enum);
+
 /// [`media_step`].
 uint32_t ee_calamity_class_media_step(int32_t class_enum, uint32_t list, uint32_t index);
 
@@ -1508,6 +1558,35 @@ long ee_calamity_record_load(EeCalamityFields *fields, EeCalamityIoFfi io);
 /// # Safety
 /// `fields` valid for reads; `io`'s callback valid.
 long ee_calamity_record_save(const EeCalamityFields *fields, EeCalamityIoFfi io);
+
+/// [`init`] into `*out`.
+///
+/// # Safety
+/// `class` valid for reads, `out` for writes.
+void ee_contagion_functor_init(EeContagionFunctorFields *out,
+                               const EeCalamityClassFields *class_,
+                               uint32_t kind);
+
+/// [`params`].
+///
+/// # Safety
+/// `f` valid for reads.
+EeContagionParams ee_contagion_functor_params(const EeContagionFunctorFields *f,
+                                              bool blocked_by_immunity);
+
+/// [`discrete_time`].
+///
+/// # Safety
+/// `f` valid for reads.
+float ee_contagion_functor_discrete_time(const EeContagionFunctorFields *f);
+
+/// [`apply_damage`].
+///
+/// # Safety
+/// `f` valid for reads.
+EeContagionFunctorHit ee_contagion_functor_apply_damage(const EeContagionFunctorFields *f,
+                                                        int32_t hit_points,
+                                                        float attack);
 
 /// [`helper_load`] into `*fields`.
 ///

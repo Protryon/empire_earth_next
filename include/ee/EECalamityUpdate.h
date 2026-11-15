@@ -1,7 +1,7 @@
-// New (port): the calamity classes' updates in Rust (ee_tech calamity_update.rs; docs/RUST_PLAN.md R5b.2). Every
-// class's Update fills an EeCalamityParams from its members and calls EECalamityRunUpdate; the Rust update asks the
-// world through EECalamityUpdateHost: the calls every class shares are answered in EECalamityUpdate.cpp, the
-// class's own world steps (its effects, units, orders) by the class's static UpdateStep in its own unit.
+// New (port): the calamity classes' starts, stops and updates in Rust (ee_tech calamity_start.rs, calamity_update.rs;
+// docs/RUST_PLAN.md R5b.2). A class's Start, Stop and Update fill an EeCalamityParams and call EECalamityRunStart /
+// RunStop / RunUpdate; the Rust run asks the world through EECalamityUpdateHost, answered in EECalamityUpdate.cpp:
+// the calls every class shares and each class's own world steps (its effects, units, orders), keyed by its enum.
 // Requires lle/LowLevelEngine.h.
 #ifndef EE_EECALAMITYUPDATE_H
 #define EE_EECALAMITYUPDATE_H
@@ -16,16 +16,11 @@ class EEComplexUnit;
 class EESoundObject;
 class EEUnit;
 
-struct EECalamityUpdateHost;
-// a class's own world steps: false for a call it does not answer
-typedef bool (*EECalamityStepFn)(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
-
 struct EECalamityUpdateHost {
     EECalamityClass* mClass;
     EECalamity* mCalamity;
     EESoundObject* mSounds[2];              // the class's sound and secondary sound (UpdateSound's)
     std::vector<EEUnit*> mUnits;            // the last EEGetUnitsNear's
-    EECalamityStepFn mStep;
     void* mPending;                         // a class step's object for its next step (the cloak's area effect)
 };
 
@@ -33,14 +28,14 @@ struct EECalamityUpdateHost {
 EeCalamityParams EECalamityBaseParams(EECalamityClass* inClass, EESoundObject* inSound, EESoundObject* inSecondarySound);
 // runs the class's update in Rust; the calamity's members in and out (EeCalamityState) around it and every host call
 long EECalamityRunUpdate(EECalamityClass* inClass, EECalamity* inCalamity, float inElapsedTime, const EeCalamityParams& inParams,
-                         EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep);
+                         EESoundObject* inSound, EESoundObject* inSecondarySound);
 
 // runs the class's Start / Stop in Rust (ee_tech calamity_start.rs) over the same host: the class's own steps are
-// the EeCalamityOp::ClassStep calls its StartStep answers
+// the EeCalamityOp::ClassStep calls
 bool EECalamityRunStart(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
-                        EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep);
+                        EESoundObject* inSound, EESoundObject* inSecondarySound);
 void EECalamityRunStop(EECalamityClass* inClass, EECalamity* inCalamity, const EeCalamityParams& inParams,
-                       EESoundObject* inSound, EESoundObject* inSecondarySound, EECalamityStepFn inStep);
+                       EESoundObject* inSound, EESoundObject* inSecondarySound);
 
 // the cast tests in Rust (ee_tech calamity_cast.rs; EECalamityCast.cpp): the class's enum, the tile, the caster and
 // the immunity flag of a question

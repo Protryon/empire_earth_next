@@ -1226,13 +1226,13 @@ void EECPPersonnel::UnloadTransport(EEComplexUnit* inUnit)
         }
     } else if (inUnit->GetUnitClass()->mDomains & kMovementSeaOrSpace) {
         EEAIContinent* theTarget = theContinent;
-        if (theContinent->mCategory != kContinentCategoryLand) {
-            gContinentManager.GetAdjacentIDs(theIDs, theContinent->mID);
+        if (theContinent->GetCategory() != kContinentCategoryLand) {
+            gContinentManager.GetAdjacentIDs(theIDs, theContinent->GetID());
             if (theIDs.size() != 0) {
                 PermuteValues(theIDs, UMFloatToLong(gPhysics->mRandom.Generate()));
                 while (theIDs.size() != 0) {
                     if (gContinentManager.GetContinentByID(theIDs.back()) != NULL &&
-                        gContinentManager.GetContinentByID(theIDs.back())->mCategory == kContinentCategoryLand) {
+                        gContinentManager.GetContinentByID(theIDs.back())->GetCategory() == kContinentCategoryLand) {
                         theTarget = gContinentManager.GetContinentByID(theIDs.back());
                         break;
                     }

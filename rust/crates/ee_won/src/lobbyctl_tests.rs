@@ -81,7 +81,7 @@ fn call_of(n: u32) -> EeWonLobbyCtlCall {
 
 fn kind_of(n: u32) -> EeWonLobbyCtlKind {
     use EeWonLobbyCtlKind as K;
-    [K::Browser, K::Staging, K::LanOptions, K::NetOptions, K::UserList, K::GameOptions][n as usize]
+    [K::Browser, K::Staging, K::LanOptions, K::NetOptions, K::UserList, K::GameOptions, K::PlayerOptions][n as usize]
 }
 
 fn replay(golden: &'static str) -> Result<usize, String> {
@@ -184,7 +184,7 @@ fn the_connection_speeds_and_their_entries() {
 #[test]
 fn the_slots_hold_each_kinds_lookups_in_order() {
     // every name distinct within its kind and every member filled once
-    let kinds = [0..=10, 11..=12, 13..=29, 30..=33, 34..=35, 36..=54];
+    let kinds = [0..=10, 11..=12, 13..=29, 30..=33, 34..=35, 36..=54, 55..=102];
     for k in kinds {
         let mut members = std::collections::BTreeSet::new();
         for i in k {
@@ -325,4 +325,55 @@ fn a_saved_game_needs_the_file_dialogs_load() {
     assert_eq!(l.last().unwrap(), &(O::ComboSetSel, types, 0, 0));
     assert!(!l.iter().any(|x| x.0 == O::GameSendState));
     p.release_all();
+}
+
+#[test]
+fn a_player_row_shows_a_seated_player_and_sends_our_own_changes() {
+    use EeWonLobbyCtlOp as O;
+    // slot 2 is ours, a client's, not observing, 40 percent transferred; a random map; not the host
+    let p = made(EeWonLobbyCtlKind::PlayerOptions, move |op, a, b| match op {
+        O::MyGame => 0x30,
+        O::GameMatchesSpec => 1,
+        O::MyPlayer => 0x40,
+        O::PlayerSlot => 2,
+        O::GameSlot => 0x50 + b,
+        O::SlotOption => match (a, b) {
+            (0x52, 0) => 3,
+            (0x52, 5) => 40,
+            (0x52, 2) => 7,
+            _ => 0,
+        },
+        O::ComboGetSel => 3,
+        _ => 0,
+    });
+    event_players(&p, EeWonLobbyCtlEvent::JoinedGame, 0);
+    assert_eq!(p.call(EeWonLobbyCtlCall::Field, 104, 0, 0), 2);
+    let l = log();
+    // slot 2's row: the name, the colour button enabled and set, the percent shown
+    let color = 0x100 + (55 + 2 * 6 + 2) * 0x10;
+    let transfer = 0x100 + (55 + 2 * 6 + 5) * 0x10;
+    assert!(l.contains(&(O::ComboSetSlotName, 0x100 + (55 + 12) * 0x10, 0x52, 0)));
+    assert!(l.contains(&(O::SetEnabled, color, 1, 0)));
+    assert!(l.contains(&(O::ColorSetColor, color, 7, 0)));
+    assert!(l.contains(&(O::LabelSetPercent, transfer, 40, 0)));
+    // the citizen combo (id 2 * 6 + 4): the selection + 1 sent as option 3 of slot 2
+    LOG.with(|l| l.borrow_mut().clear());
+    p.call(EeWonLobbyCtlCall::Event, 0xE1, EeWonLobbyCtlEvent::ComboSelChanged as isize, 0);
+    let l = log();
+    assert!(l.iter().all(|x| x.0 != O::GameChangePlayerOption), "the control id answered 0");
+    let p2 = made(EeWonLobbyCtlKind::PlayerOptions, move |op, _, _| match op {
+        O::MyGame => 0x30,
+        O::GameMatchesSpec => 1,
+        O::EventControlId => 2 * 6 + 4,
+        O::ComboGetSel => 3,
+        _ => 0,
+    });
+    event_players(&p2, EeWonLobbyCtlEvent::JoinedGame, 0);
+    LOG.with(|l| l.borrow_mut().clear());
+    event_players(&p2, EeWonLobbyCtlEvent::ComboSelChanged, 0);
+    assert!(log().contains(&(O::GameChangePlayerOption, 0x30, 2, 3 | 4 << 8)));
+}
+
+fn event_players(p: &EeWonLobbyCtl, e: EeWonLobbyCtlEvent, component: isize) {
+    p.call(EeWonLobbyCtlCall::Event, 0xE1, e as isize, component);
 }

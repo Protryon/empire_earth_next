@@ -141,6 +141,24 @@ fn won_file(path: &[u8], which: i64) -> i64 {
     }
 }
 
+/// `WONFile(path).GetModifyTime()` (0: no file).
+pub(crate) fn won_file_modify_time(path: &[u8]) -> i64 {
+    won_file(path, 2)
+}
+
+/// `ServerContext`'s generator (its `CopyAddresses`' shuffle): `srand(time(NULL))` when seeding (0), else `rand()`,
+/// the CRT's.
+pub(crate) fn crt_srand_and_rand(seed: bool) -> i32 {
+    if seed {
+        // SAFETY: the CRT's
+        unsafe { sys::srand(now() as c_uint) };
+        0
+    } else {
+        // SAFETY: the CRT's
+        unsafe { sys::rand() }
+    }
+}
+
 /// The first character of a text-mode open: -2 for no file, -1 for an empty one.
 fn first_char(path: &[u8]) -> i64 {
     let p = c_path(path);

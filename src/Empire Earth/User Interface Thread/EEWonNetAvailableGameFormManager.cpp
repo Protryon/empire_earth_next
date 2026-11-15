@@ -280,7 +280,7 @@ void EEExitGame()
             if (theClient->mIsServerLost)
                 gCommunications->ExecuteRemovePlayer(::gWorld.mCurrentPlayer, false, false, true);
             else
-                gCommunications->ProcessLocalUserInput(new NEMClientDisconnectionNotification(true), kSlotNone);
+                gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientDisconnectionNotification, {true}), kSlotNone);
         }
     } else {
         unsigned char theState = static_cast<NESynchronousServer*>(gCommunications)->GetGameState();
