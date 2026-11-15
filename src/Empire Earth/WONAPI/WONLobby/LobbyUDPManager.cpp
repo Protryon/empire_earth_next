@@ -14,13 +14,15 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
+#include "ee/wonapi/WONLobbyPersistence.h"
 
 namespace WONAPI {
-// Binds the lobby UDP port from the config (8888 by default), else a random port 10000-19999, and starts receiving
+// Binds the lobby UDP port from the config (8888 by default; + the harness slot's offset, TEST ONLY), else a random
+// port 10000-19999, and starts receiving
 void LobbyBindUDPPort()
 {
     LobbyConfig* aConfig=GetLobbyConfig();
-    unsigned short aPort=aConfig?aConfig->mLobbyPort:8888;
+    unsigned short aPort=(unsigned short)((aConfig?aConfig->mLobbyPort:8888)+LobbyTestPortOffset());
     LobbySetLobbyPort(aPort);
     UDPManager* aMgr=LobbyGetUDPManager();
     if(aMgr==NULL)

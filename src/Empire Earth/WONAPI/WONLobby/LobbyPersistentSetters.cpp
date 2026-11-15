@@ -12,13 +12,15 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
+#include "ee/wonapi/WONLobbyPersistence.h"
 namespace WONAPI {
-// Sets the LAN broadcast port, marking the user's preferences changed
+// Sets the LAN broadcast port, marking the user's preferences changed (the stored port is without the harness slot's
+// offset, which LobbyGetLanBroadcastPort adds: TEST ONLY)
 void LobbySetLanBroadcastPort(unsigned short value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data!=NULL)
-        data->ChangeLanBroadcastPort(value);
+        data->ChangeLanBroadcastPort((unsigned short)(value - LobbyTestPortOffset()));
 }
 
 // Turns chat profanity filtering on or off, marking the user's preferences changed

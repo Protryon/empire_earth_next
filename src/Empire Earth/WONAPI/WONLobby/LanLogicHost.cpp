@@ -263,7 +263,9 @@ void LanLogic::AddDirectConnect()
         return;
     IPAddr anAddress;
     LobbyConfig* aConfig = GetLobbyConfig();
-    int aDefaultPort = ee_won_lanlogic_direct_default_port(aConfig != NULL, aConfig != NULL ? aConfig->mLobbyPort : 0,
+    // (the configured port moved by the harness slot's offset, as LobbyBindUDPPort's: TEST ONLY)
+    int aDefaultPort = ee_won_lanlogic_direct_default_port(aConfig != NULL,
+                                                           aConfig != NULL ? aConfig->mLobbyPort + LobbyTestPortOffset() : 0,
                                                            LobbyGetLobbyPort());
     anAddress.SetWithDefaultPortNoDNS(this->mDirectConnectDialog->GetAddress(), aDefaultPort);
     if (!anAddress.IsValid()) {
