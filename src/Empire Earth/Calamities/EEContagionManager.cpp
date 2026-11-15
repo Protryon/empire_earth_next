@@ -25,7 +25,7 @@
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
-#include "ee/EEEffect2D.h"
+#include "ee/EEEffect.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEMap.h"
 #include "ee/EEMedia.h"

@@ -41,6 +41,7 @@ pub mod effect_glow;
 pub mod effect_hurricane;
 pub mod effect_icon;
 pub mod effect_icons;
+pub mod effect_kinds;
 pub mod effect_manager;
 pub mod effect_multi;
 pub mod effect_nuclear;

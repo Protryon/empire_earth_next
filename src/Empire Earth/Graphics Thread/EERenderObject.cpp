@@ -446,7 +446,6 @@ void EERenderObject::QueueEffects()
                 EEEffect* theOne = *(theRegion->begin() + k);
                 if (!(!theOne->mIsLocalOnly || theOne->mIsLocalOnly == true && theOne->mPlayer == gWorld.mCurrentPlayer))
                     continue;
-                theOne->PrepareQueue();
                 if (theOne->Queue(gEffectQueues) == 0)
                     theOne->Reference();
             }

@@ -2851,10 +2851,30 @@ struct EeGfxShadowScene {
   void (*draw_effects)(void *context);
 };
 
+/// The 2D kinds: the exhaust trail 3, explosion 4, fire 5, impacts 6 and 7, lightning 8, muzzle flash 9, plasma pulse
+/// 0xa, smoke puffs 0xb and 0xc, light glow 0xd, fire trail 0xe, marching icons 0xf and 0x10, shockwave 0x12, smoke
+/// muzzle blast 0x14, winter breath 0x16, water ripple 0x22, the pooled particle 0x2e, pulse wave 0x2f, 2D projectile
+/// 0x30, vortex 0x31, battlefield decal 0x32, the damage controller 0x3e and the command confirmation 0x41.
+constexpr static const int32_t KINDS_2D[25] = { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 34, 46, 47, 48, 49, 50, 62, 65, };
+
+/// The 3D kinds: the icon 2, blast wave 0x18, earthquake 0x1a, water splash 0x1b, destruction smoke 0x1e, volcano 0x20,
+/// tracers 0x21, disease 0x23, hurricane 0x24, linear projectile 0x25, shells 0x26, additive pass 0x27, nuclear
+/// explosion 0x28, farm 0x29, rain 0x2a, smoke generators 0x2b and 0x2c, marching line 0x2d, citizen beam 0x33,
+/// energy wall 0x34, damage vent 0x35, 3D particle 0x39, particle emitter 0x3a, multi-effect 0x3b, goal 0x3c, snow
+/// 0x3d, teleport 0x3f, tracer beam 0x40, virus 0x42, pulse cannon ball 0x43, time warp 0x44, shield 0x45, screen
+/// flash 0x46, energy wave 0x47.
+constexpr static const int32_t KINDS_3D[34] = { 2, 24, 26, 27, 30, 32, 33, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 51, 52, 53, 57, 58, 59, 60, 61, 63, 64, 66, 67, 68, 69, 70, 71, };
+
 /// The texture's u across the five vertices of a row.
 constexpr static const float EE_GFX_QUAKE_ROW_U[5] = { 0.0, 0.25, 0.5, 0.75, 1.0, };
 
 extern "C" {
+
+/// `is_2d` for the C++ (`EEEffect::mIs2D`).
+bool ee_gfx_effect_is_2d(int32_t kind);
+
+/// `loadable` for the C++ (the manager's load-time effects).
+bool ee_gfx_effect_loadable(int32_t kind);
 
 /// `EECameraControl::GetPitch(zoom, mode)`; `world` is `gWorld.mTransformation` (read in mode 2 only).
 ///
