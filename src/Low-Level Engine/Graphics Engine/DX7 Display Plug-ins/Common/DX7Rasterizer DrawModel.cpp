@@ -15,7 +15,7 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "lle/GEMaterial.h"
-#include "dx7/DX7DrawSeam.h"
+#include "rust/ee_dx7.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x1000383a
@@ -68,36 +68,10 @@ void ee_dx7cpp_model_info(void* inModel, EeDx7ModelInfo* outInfo)
     outInfo->scale = theModel->GetGraphicsScale();
     outInfo->opacity = theModel->GetModelOpacity();
     outInfo->fraction = theModel->GetFractionalFramePosition();
-    DX7CopyTransform(theModel->GetGraphicsTransform(), outInfo->transform);
-}
-
-void ee_dx7cpp_model_visible(void* inRasterizer, unsigned long inScreen, void* inModel, float inScale, const float inTransform[4][4], bool inOrthographic,
-                             bool* outVisible, bool* outClipped)
-{
-    DX7DrawAccess* theRasterizer = DX7Access(inRasterizer);
-    GEViewport* theViewport = &theRasterizer->GetViewport(inScreen);
-    GETransformation theTransformation(inTransform);
-    bool theVisible;
-    bool theClipped;
-    if (!inOrthographic)
-        theRasterizer->IsPerspectiveModelVisible(static_cast<GEModel*>(inModel), inScale, theViewport, theTransformation, theVisible, theClipped);
-    else
-        theRasterizer->IsOrthographicModelVisible(static_cast<GEModel*>(inModel), theViewport, theTransformation, theVisible, theClipped);
-    *outVisible = theVisible;
-    *outClipped = theClipped;
-}
-
-float ee_dx7cpp_pixel_size(void* inRasterizer, unsigned long inScreen, void* inModel, const float inTransform[4][4], float inScale, bool inOrthographic)
-{
-    DX7DrawAccess* theRasterizer = DX7Access(inRasterizer);
-    GEViewport* theViewport = &theRasterizer->GetViewport(inScreen);
-    GETransformation theTransformation(inTransform);
-    return theRasterizer->GetPixelSize(static_cast<GEModel*>(inModel), theViewport, theTransformation, inScale, inOrthographic);
-}
-
-float ee_dx7cpp_view_width(void* inRasterizer, unsigned long inScreen)
-{
-    return DX7Access(inRasterizer)->GetViewport(inScreen).GetViewRectangle().GetWidth();
+    const GETransformation& theTransform = theModel->GetGraphicsTransform();
+    for (int r = 0; r < 4; r++)
+        for (int c = 0; c < 4; c++)
+            outInfo->transform[r][c] = theTransform.GetElement(r, c);
 }
 
 void ee_dx7cpp_material_info(void* inModel, unsigned long inScreen, unsigned long inIndex, unsigned long inLOD, EeDx7MaterialInfo* outInfo)
@@ -138,7 +112,7 @@ long DX7Rasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVe
     unsigned long theType = inVertices.GetType();
     const void* theVertices = theType == 1 ? static_cast<const void*>(((DX7StdColorVertexArray&)inVertices).mVertices)
                                            : static_cast<const void*>(((DX7StandardVertexArray&)inVertices).mVertices);
-    return ee_dx7r_draw_polygon_array(this, inScreen, DX7DrawState(this, inScreen), ((DX7PolygonArray&)inPolygons).mIndices,
+    return ee_dx7r_draw_polygon_array(this->mDX7, inScreen, ((DX7PolygonArray&)inPolygons).mIndices,
                                       inCount, theType, theVertices, inVertexCount, inTexture);
 }
 
@@ -146,7 +120,7 @@ long DX7Rasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVe
 // Draws a model and its sub-models under the drawing lock (the float argument becomes the level-of-detail divisor)
 long DX7Rasterizer::Draw(GEModel* inModel, unsigned long inScreen, float inOpacity, bool inOrthographic)
 {
-    return ee_dx7r_draw_model(this, inScreen, DX7DrawState(this, inScreen), inModel, inOpacity, inOrthographic);
+    return ee_dx7r_draw_model(this->mDX7, inScreen, inModel, inOpacity, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10003ea7
@@ -156,16 +130,15 @@ long DX7Rasterizer::Draw3DLine(std::vector<std::pair<GE3DPoint, float> >& inPoin
                                float inV, unsigned long inScreen, bool inOrthographic)
 {
     static_assert(sizeof(std::pair<GE3DPoint, float>) == 16, "ee_dx7/src/draw_model.rs draw_3d_line: (x, y, z, advance)");
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
-    return ee_dx7r_draw_3d_line(this, inScreen, DX7DrawState(this, inScreen), reinterpret_cast<const float(*)[4]>(inPoints.data()),
-                                inPoints.size(), inTexture, inV, inOrthographic, &theViewport);
+    return ee_dx7r_draw_3d_line(this->mDX7, inScreen, reinterpret_cast<const float(*)[4]>(inPoints.data()), inPoints.size(),
+                                inTexture, inV, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x100042c1
 // Draws a model and recursively its sub-models (no parent: the top of a hierarchy); stops at the first sub-model error
 long DX7Rasterizer::DrawModelHierarchy(GEModel* inModel, unsigned long inScreen, float inDetail, bool inOrthographic)
 {
-    return ee_dx7r_draw_model_hierarchy(this, inScreen, DX7DrawState(this, inScreen), inModel, inDetail, inOrthographic);
+    return ee_dx7r_draw_model_hierarchy(this->mDX7, inScreen, inModel, inDetail, inOrthographic);
 }
 
 // FUNCTION: DX7HR 0x10004741

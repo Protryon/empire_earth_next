@@ -4,7 +4,8 @@
 // client has answered which message. Abstract: the game implements the pure virtual callbacks.
 // Whole in Rust (ee_net server.rs; PORT_LEARNINGS "LLE Network Engine, round 4"): the class keeps the type callers
 // hold, its virtual members, the base class's fields and Publish's name; every other member forwards to the Rust
-// object. The original layout (sizeof 0x208) is gone with its fields.
+// object. The original layout (sizeof 0x208) is gone with its fields; Publish's name, announcement and adapter went
+// to the Rust object with the protocol calls (round 7).
 #ifndef LLE_NESYNCHRONOUSSERVER_H
 #define LLE_NESYNCHRONOUSSERVER_H
 
@@ -128,8 +129,8 @@ protected:
     void UnregisterSlot(unsigned char inSlot);
 
 private:
-    NEProtocol* Protocol() const;
-    NEServer* Server() const;
+    EeNetProtocol* Protocol() const;   // protocol 0 (ee_net ffi_protocol.rs)
+    void* Server() const;              // the published server (the plug-in's handle)
     // the server's calls out (ee_net's EeNetSvOp): the engine, the protocol and its server, the messages, the base
     // class's fields, the game's virtual members
     static ptrdiff_t Host(void* inServer, EeNetSvOp inOp, size_t a, size_t b, size_t c, size_t d);
@@ -138,9 +139,6 @@ private:
     // the queues' common calls out (ee_net's EeNetQOp)
     static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
 
-    UWideString mName;                      // Publish's name (+0x70)
-    bool mAnnounce;                         // Publish's announcement
-    unsigned long mNetworkAdapter;          // Publish's adapter
     EeNetServer* mRust;                     // the server, whole in Rust (ee_net server.rs)
 };
 

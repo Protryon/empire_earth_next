@@ -229,6 +229,9 @@ dependencies = [
 [[package]]
 name = "ee_error"
 version = "0.1.0"
+dependencies = [
+ "ee_util",
+]
 
 [[package]]
 name = "ee_formations"
@@ -279,6 +282,10 @@ dependencies = [
 [[package]]
 name = "ee_input"
 version = "0.1.0"
+dependencies = [
+ "ee_time",
+ "ee_util",
+]
 
 [[package]]
 name = "ee_mixer"
@@ -403,6 +410,7 @@ dependencies = [
  "ee_ui",
  "ee_units",
  "ee_ustring",
+ "ee_util",
  "ee_won",
 ]
 
@@ -422,6 +430,7 @@ dependencies = [
  "ee_gfx",
  "ee_plat_core",
  "ee_random",
+ "ee_scenario",
 ]
 
 [[package]]
@@ -443,6 +452,7 @@ name = "ee_time"
 version = "0.1.0"
 dependencies = [
  "ee_plat_core",
+ "ee_util",
 ]
 
 [[package]]
@@ -452,6 +462,7 @@ dependencies = [
  "ee_error",
  "ee_plat_core",
  "ee_plat_sys",
+ "ee_util",
 ]
 
 [[package]]
@@ -469,6 +480,7 @@ dependencies = [
  "ee_astar",
  "ee_data",
  "ee_ge",
+ "ee_random",
 ]
 
 [[package]]
@@ -476,6 +488,14 @@ name = "ee_ustring"
 version = "0.1.0"
 dependencies = [
  "ee_plat_core",
+]
+
+[[package]]
+name = "ee_util"
+version = "0.1.0"
+dependencies = [
+ "ee_plat_core",
+ "ee_random",
 ]
 
 [[package]]

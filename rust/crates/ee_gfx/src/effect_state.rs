@@ -103,6 +103,9 @@ pub struct EeGfxEffectAmbient {
     pub size: f32,
     /// `mHidden`: 1 off the map or on a slope
     pub hidden: f32,
+    /// the queue's copy of the age and the size it draws (`mDrawAge`, `mDrawSize`)
+    pub draw_age: f32,
+    pub draw_size: f32,
 }
 
 impl Default for EeGfxEffectAmbient {
@@ -117,6 +120,8 @@ impl Default for EeGfxEffectAmbient {
             rotation: 0.0,
             size: 0.0,
             hidden: 0.0,
+            draw_age: 0.0,
+            draw_size: 0.0,
         }
     }
 }
@@ -260,6 +265,10 @@ pub struct EeGfxEffectRecord {
     pub volcano: crate::effect_volcano::EeGfxEffectVolcano,
     /// the 2D sprites' (`effect_sprite.rs`)
     pub sprite: crate::effect_sprite::EeGfxEffectSprite,
+    /// the marching icons' (`effect_icons.rs`)
+    pub marching: crate::effect_icons::EeGfxEffectMarching,
+    /// the light glow's (`effect_glow.rs`)
+    pub glow: crate::effect_glow::EeGfxEffectGlow,
 }
 
 /// The identity (`GETransformation()`).
@@ -306,6 +315,8 @@ impl EeGfxEffectRecord {
             confirm: crate::effect_confirm::EeGfxEffectConfirm::default(),
             volcano: crate::effect_volcano::EeGfxEffectVolcano::default(),
             sprite: crate::effect_sprite::EeGfxEffectSprite::default(),
+            marching: crate::effect_icons::EeGfxEffectMarching::default(),
+            glow: crate::effect_glow::EeGfxEffectGlow::default(),
         }
     }
 

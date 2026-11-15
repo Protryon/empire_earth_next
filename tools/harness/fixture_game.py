@@ -29,7 +29,10 @@ fixture_driver.py's, shared with posix_game.py.
                then scrolls the camera by an arrow key and by the screen edge and zooms it by the hot keys and the
                wheel (fixture_driver.scroll_check: each move checked through the fixture's camera telemetry to change
                the camera and keep it on the map; "SCROLL CHECK PASS|FAIL ..."), and --zoom-captures P ... captures
-               the game at each zoom percent (as posix_game.py)
+               the game at each zoom percent (as posix_game.py); --cast earthquake,hurricane,volcano,meteor casts
+               each calamity as the local player at the camera's focus (--cast-offset tiles east; the fixture's
+               cast command, TEST ONLY: straight into the calamity manager) and captures it every --capture-every
+               seconds while it lives (fixture_driver.cast_calamities; "CAST <name>: ..." lines)
   random-game  the tour without the settings
   ai-game      as game_session.py's ai-game: the lobby set up (the human idles in slot 0, N computers), Start, the
                civilization timer pre-empted, played until the game ends, --max-game-seconds of game time
@@ -275,6 +278,15 @@ def tour(g, a, summary):
         summary['scroll_check'] = fixture_driver.scroll_check(g, GAME)
     if a.zoom_captures:
         summary['zoom_captures'] = fixture_driver.zoom_captures(g, GAME, a.zoom_captures)
+    if a.cast:
+        summary['casts'] = fixture_driver.cast_calamities(g, GAME, a.cast, a.cast_offset, a.capture_every,
+                                                          a.cast_captures)
+        missing = [n for n, r in summary['casts'].items() if r['result'] != 'cast']
+        if missing:
+            raise RuntimeError(f'calamities not cast: {missing}')
+        still = [n for n, r in summary['casts'].items() if r['alive_ms'] <= 0]
+        if still:   # cast but never updated (the physics stopped: a calamity defeated the player first)
+            raise RuntimeError(f'calamities that never aged: {still}')
     (g.out / 'rendering.json').write_text(json.dumps([r['rendering'] for r in results if 'rendering' in r],
                                                      indent=2) + '\n')
     summary['result'] = 'PASS'
@@ -395,6 +407,12 @@ def main():
     ap.add_argument('--zoom-captures', type=int, nargs='*', default=[], metavar='P',
                     help='tour/random-game: once in the game set the camera zoom to each percent (100 = the original '
                          'farthest) and capture (as posix_game.py)')
+    ap.add_argument('--cast', type=lambda v: v.split(','), default=[], metavar='NAME,...',
+                    help='tour/random-game: cast each calamity (' + ', '.join(fixture_driver.CALAMITIES) + ') at the '
+                         "camera's focus through the fixture's cast command and capture it (fixture_driver.cast_calamities)")
+    ap.add_argument('--cast-offset', type=int, default=4, help="--cast: tiles east of the camera's focus")
+    ap.add_argument('--capture-every', type=float, default=2.0, help='--cast: seconds between the captures')
+    ap.add_argument('--cast-captures', type=int, default=6, help='--cast: captures per calamity at most')
     ap.add_argument('--ai-players', type=int, default=2)
     ap.add_argument('--map-size', default='Small')
     ap.add_argument('--map-type', default='Continental')
@@ -420,6 +438,9 @@ def main():
             timeshim.parse_factor(a.time_factor)
         except ValueError as error:
             ap.error(str(error))
+    unknown = [n for n in a.cast if n not in fixture_driver.CALAMITIES]
+    if unknown:
+        ap.error(f'--cast: unknown calamities {unknown} (known: {", ".join(fixture_driver.CALAMITIES)})')
     if a.input_check and not a.play_seconds:
         ap.error('--input-check needs --play-seconds')
     if a.exercise in ('tour', 'random-game') and a.play_seconds is None:

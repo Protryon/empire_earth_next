@@ -24,7 +24,7 @@
 #include "lle/GEPoint.h"
 #include "lle/GERhombus.h"
 #include "lle/GEText.h"
-#include "dx7/DX7DrawSeam.h"
+#include "rust/ee_dx7.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x10002b04
@@ -61,25 +61,25 @@
 // ee_dx7cpp_* below read the GE objects for it.
 long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
 {
-    return ee_dx7r_draw_bitmap(this, inScreen, DX7DrawState(this, inScreen), inBitmap);
+    return ee_dx7r_draw_bitmap(this->mDX7, inScreen, inBitmap);
 }
 
 // FUNCTION: DX7HR 0x10002e88
 long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long inScreen)
 {
-    return ee_dx7r_draw_lines(this, inScreen, DX7DrawState(this, inScreen), inLine, inCount);
+    return ee_dx7r_draw_lines(this->mDX7, inScreen, inLine, inCount);
 }
 
 // FUNCTION: DX7HR 0x10003042
 long DX7Rasterizer::Draw(GEPoint* inPoint, unsigned long inCount, unsigned long inScreen)
 {
-    return ee_dx7r_draw_points(this, inScreen, DX7DrawState(this, inScreen), inPoint, inCount);
+    return ee_dx7r_draw_points(this->mDX7, inScreen, inPoint, inCount);
 }
 
 // FUNCTION: DX7HR 0x100031b6
 long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
 {
-    return ee_dx7r_draw_rhombus(this, inScreen, DX7DrawState(this, inScreen), inRhombus);
+    return ee_dx7r_draw_rhombus(this->mDX7, inScreen, inRhombus);
 }
 
 static Dx7StdColorVertex* DX7StdColorVerticesOf(GEVertexArray* inArray)

@@ -208,26 +208,25 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
         NEMessage* theMessage;
         switch (inA) {
         case EE_SCREENS_SB_SEND_UNLOAD:
-            theMessage = new EEMUnloadTransport(thePress.mTransport->mUnitID, thePress.mTransport->GetTileX(),
-                                                thePress.mTransport->GetTileY());
+            theMessage = new EEMRecord(kMessageUnloadTransport, {thePress.mTransport->mUnitID, thePress.mTransport->GetTileX(), thePress.mTransport->GetTileY()});
             break;
         case EE_SCREENS_SB_SEND_STOP: theMessage = new EEMRecord(kMessageStopActiveGroup); break;
         case EE_SCREENS_SB_SEND_DISBAND: theMessage = new EEMRecord(kMessageDisband); break;
         case EE_SCREENS_SB_SEND_SELF_DESTRUCT: theMessage = new EEMRecord(kMessageSelfDestruct); break;
-        case EE_SCREENS_SB_SEND_PATROL: theMessage = new EEMPatrol(-1); break;
-        case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMReplantFarms(-1); break;
+        case EE_SCREENS_SB_SEND_PATROL: theMessage = new EEMRecord(kMessagePatrol, {-1}); break;
+        case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMRecord(kMessageReplantFarms, {-1}); break;
         case EE_SCREENS_SB_SEND_CLEAR_AIRPORT: theMessage = new EEMRecord(kMessageClearAirportCommands); break;
         case EE_SCREENS_SB_SEND_EXPLORE: theMessage = new EEMRecord(kMessageExplore); break;
-        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMLockUnlock(inB != 0); break;
-        case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMPackUnpack(inB != 0); break;
+        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMRecord(kMessageLockUnlock, {inB != 0}); break;
+        case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMRecord(kMessagePackUnpack, {inB != 0}); break;
         case EE_SCREENS_SB_SEND_FANATIC: theMessage = new EEMRecord(kMessageGoFanatic); break;
         case EE_SCREENS_SB_SEND_JIT: theMessage = new EEMRecord(kMessageJITManufacturing); break;
-        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMExchangeResources((inB & 1) != 0, (long)(inB >> 1), inC != 0); break;
+        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMRecord(kMessageExchangeResources, {(inB & 1) != 0, (long)(inB >> 1), inC != 0}); break;
         case EE_SCREENS_SB_SEND_RESEARCH:
-            theMessage = new EEMResearchTechnology(theButton->mUnitID, theButton->mTechnology, inB != 0);
+            theMessage = new EEMRecord(kMessageResearchTechnology, {theButton->mUnitID, theButton->mTechnology, inB != 0});
             break;
         default:
-            theMessage = new EEMRemoveTechnology(theButton->mUnitID, theButton->mTechnology, false, inB != 0);
+            theMessage = new EEMRecord(kMessageRemoveTechnology, {theButton->mUnitID, theButton->mTechnology, false, inB != 0});
             break;
         }
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
@@ -593,7 +592,7 @@ void EEUIFMGStatusButton::TabbedTo()
 // (EEMEndCinematic takes the end time as a float)
 long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gCommunications->ProcessLocalUserInput(new EEMEndCinematic(gSavedGameSpeed), kSlotNone);
+    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone);
     return kErrorOK;
 }
 

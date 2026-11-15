@@ -62,7 +62,7 @@ void EEABuild::Build(const GE2DPoint& inLocation)
     }
     theLocation.SetX(inLocation.GetX() - theOffset);
     theLocation.SetY(inLocation.GetY() - theOffset);
-    this->mMessage = new EEMBuildUnit(theLocation, this->mTechnology, this->mIsQueued);
+    this->mMessage = new EEMRecord(kMessageBuildUnit, {theLocation, this->mTechnology, this->mIsQueued});
     gUserInterface->PostAction(this);
 }
 
@@ -83,7 +83,7 @@ void EEABuild::Build(const GE2DPoint& inLocation)
 void EEABuild::BuildGate(const GE2DPoint& inLocation, long inSide)
 {
     if (::gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, 0x20, 1, true, 3, NULL)) {
-        this->mMessage = new EEMBuildGate(inLocation, this->mTechnology, inSide, ::gWorld.mPlayers[::gWorld.mCurrentPlayer]->mPlayerID);
+        this->mMessage = new EEMRecord(kMessageBuildGate, {inLocation, this->mTechnology, inSide, ::gWorld.mPlayers[::gWorld.mCurrentPlayer]->mPlayerID});
         gUserInterface->PostAction(this);
     }
 }
@@ -97,7 +97,7 @@ void EEABuild::BuildGate(const GE2DPoint& inLocation, long inSide)
 void EEABuild::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
 {
     if (::gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, 0x20, 1, true, 3, NULL)) {
-        this->mMessage = new EEMBuildWall(inStart, inEnd, this->mTechnology, ::gWorld.mPlayers[::gWorld.mCurrentPlayer]->mPlayerID);
+        this->mMessage = new EEMRecord(kMessageBuildWall, {inStart, inEnd, this->mTechnology, ::gWorld.mPlayers[::gWorld.mCurrentPlayer]->mPlayerID});
         gUserInterface->PostAction(this);
     }
 }

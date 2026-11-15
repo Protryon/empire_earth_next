@@ -239,7 +239,7 @@ extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t 
     case EE_SCREENS_UH_OP_SEND_PLACE: {
         long theType = inA;
         gCommunications->ProcessLocalUserInput(
-            new EEMHackANewUnit(theType, GE2DPoint(ioPoint[0], ioPoint[1]), (unsigned char)inB), kSlotNone);
+            new EEMRecord(kMessageHackANewUnit, {theType, GE2DPoint(ioPoint[0], ioPoint[1]), (unsigned char)inB}), kSlotNone);
         return 0;
     }
     case EE_SCREENS_UH_OP_SEND_LOAD:
@@ -825,18 +825,19 @@ static int64_t EEMouseModeOp(EEUIFMGFormCall& theCall, uint32_t inOp, int64_t in
             theMessage = new EEMRecord(kMessageSetAirportCommand, {GE2DPoint(ioIo->f[0], ioIo->f[1]), (long)inB,
                                                                    (long)ioIo->n[0], (unsigned char)ioIo->n[1]});
             break;
-        case EE_SCREENS_MF_SEND_ATTACK_GROUND: theMessage = new EEMAttackGround(ioIo->f[0], ioIo->f[1]); break;
+        case EE_SCREENS_MF_SEND_ATTACK_GROUND: theMessage = new EEMRecord(kMessageAttackGround, {ioIo->f[0], ioIo->f[1]}); break;
         case EE_SCREENS_MF_SEND_LOAD_GARRISON:
-            theMessage = new EEMLoadGarrison(thePicked->GetUnitID(), theFirst->mComplexUnit->mUnitID, 0);
+            theMessage = new EEMRecord(kMessageLoadGarrison, {thePicked->GetUnitID(), theFirst->mComplexUnit->mUnitID, 0});
             break;
         case EE_SCREENS_MF_SEND_UNLOAD:
-            theMessage = new EEMUnloadTransport(theFirst->GetComplexUnit()->GetUnitID(), (long)ioIo->n[0], (long)ioIo->n[1]);
+            theMessage = new EEMRecord(kMessageUnloadTransport,
+                                       {theFirst->GetComplexUnit()->GetUnitID(), (long)ioIo->n[0], (long)ioIo->n[1]});
             break;
-        case EE_SCREENS_MF_SEND_HEAL: theMessage = new EEMHealUnit(theComplex->mUnitID); break;
-        case EE_SCREENS_MF_SEND_CONVERT: theMessage = new EEMAttackUnit(theComplex->mUnitID, inB != 0, true); break;
+        case EE_SCREENS_MF_SEND_HEAL: theMessage = new EEMRecord(kMessageHealUnit, {theComplex->mUnitID}); break;
+        case EE_SCREENS_MF_SEND_CONVERT: theMessage = new EEMRecord(kMessageAttackUnit, {theComplex->mUnitID, inB != 0, true}); break;
         case EE_SCREENS_MF_SEND_RALLY:
-            theMessage = new EEMSetRallyGoal(theFirst->mComplexUnit->GetUnitID(), GE2DPoint(ioIo->f[0], ioIo->f[1]),
-                                             (long)ioIo->n[0], (unsigned char)ioIo->n[1]);
+            theMessage = new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(ioIo->f[0], ioIo->f[1]), (long)ioIo->n[0],
+                                                              theFirst->mComplexUnit->GetUnitID(), (unsigned char)ioIo->n[1]});
             break;
         default: theMessage = new EEMRecord(kMessageSendFlare, {(long)ioIo->n[0], (long)ioIo->n[1]}); break;
         }

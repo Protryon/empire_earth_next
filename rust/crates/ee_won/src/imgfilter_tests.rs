@@ -284,3 +284,157 @@ fn trim_of_a_single_filled_row_at_the_top() {
     // SAFETY: the image's buffer
     assert_eq!(unsafe { trim(&px, 9) }, Some((1, 0, 1, 1)));
 }
+
+// ---- StretchImageFilter's pixel work (R6 WON round 37): `golden_stretchpx.txt`, recorded by
+// tests/won/won_stretchpx_test.cpp `--print` over the original CopyRawImage and RawStretch, replayed over images
+// rebuilt from its seeds through guidraw's plan and `stretch_run`
+
+fn fnv_bytes(b: &[u8]) -> u64 {
+    let mut h: u64 = 1469598103934665603;
+    for &x in b {
+        h ^= x as u64;
+        h = h.wrapping_mul(1099511628211);
+    }
+    h
+}
+
+#[test]
+fn stretch_golden_replays() {
+    use crate::guidraw::{stretch_filter, EeWonStretchFilter};
+    let text = include_str!("golden_stretchpx.txt");
+    let mut n = 0;
+    for line in text.lines() {
+        let (head, want) = line.split_once(" = ").unwrap();
+        let v: Vec<i64> = head.split(' ').map(|x| x.parse().unwrap()).collect();
+        let (kind, sw, sh, seed) = (v[0] as i32, v[1] as i32, v[2] as i32, v[3] as u32);
+        let f = EeWonStretchFilter {
+            width: v[4] as i32,
+            height: v[5] as i32,
+            left: v[6] as i32,
+            right: v[7] as i32,
+            top: v[8] as i32,
+            bottom: v[9] as i32,
+            src_width: sw,
+            src_height: sh,
+            tile_horz: v[10] != 0,
+            tile_vert: v[11] != 0,
+            skip_center: v[12] != 0,
+        };
+        let mut src = Img::new(kind, sw, sh);
+        let mut s = seed;
+        for b in src.bytes.iter_mut() {
+            s = s.wrapping_mul(1103515245).wrapping_add(12345);
+            *b = (s >> 16) as u8;
+        }
+        let (w, h, ops) = stretch_filter(&f);
+        let mut dst = Img::new(kind, w, h);
+        // SAFETY: both images hold their rows; the plan stays inside them (the borders are inside the source)
+        unsafe { stretch_run(&src.px(), &dst.px(), &ops) };
+        let got = format!("{} {} {} {:016x}", w, h, ops.len(), fnv_bytes(&dst.bytes));
+        assert_eq!(got, want, "{line}");
+        n += 1;
+    }
+    assert_eq!(n, 300);
+}
+
+#[test]
+fn stretch_copies_a_corner_and_stretches_a_side() {
+    // a 2 x 1 8-bit source: a copy of pixel 1 to the destination's 0, then the 1-pixel tile stretched over 3
+    let mut src = Img::new(1, 2, 1);
+    src.bytes[0] = 5;
+    src.bytes[1] = 9;
+    let mut dst = Img::new(1, 4, 1);
+    let ops = vec![
+        EeWonDrawOp { kind: EE_WON_DRAW_COPY_PIXELS, a: 0, b: 0, c: 0, d: 1, e: 0, f: 1, g: 1, ..Default::default() },
+        EeWonDrawOp { kind: EE_WON_DRAW_STRETCH_PIXELS, a: 1, b: 4, c: 0, d: 1, e: 0, f: 0, g: 1, h: 1 },
+    ];
+    // SAFETY: as above
+    unsafe { stretch_run(&src.px(), &dst.px(), &ops) };
+    assert_eq!(&dst.bytes[..4], &[9, 5, 5, 5]);
+}
+
+// ---- the raw images' transparency masks (R6 WON round 37): `golden_imgmask.txt`, recorded by
+// tests/won/won_imgmask_test.cpp `--print` over Image.cpp's GetNative loops, replayed over images rebuilt from its
+// seeds
+
+#[test]
+fn mask_golden_replays() {
+    let text = include_str!("golden_imgmask.txt");
+    let mut n = 0;
+    for line in text.lines() {
+        let (head, want) = line.split_once(" = ").unwrap();
+        let v: Vec<i64> = head.split(' ').map(|x| x.parse().unwrap()).collect();
+        let (bits, w, h, transparent, seed) = (v[0], v[1] as i32, v[2] as i32, v[3] as i32, v[4] as u32);
+        // the mask: RawImage1's rows (the unpadded bytes rounded up to four), filled as `new` left them
+        let mpitch = (w / 8 + i32::from(w % 8 != 0) + 3) / 4 * 4;
+        let mut mask = vec![0u8; (mpitch * h) as usize + 1];
+        let mut s = seed;
+        let mut next = || {
+            s = s.wrapping_mul(1103515245).wrapping_add(12345);
+            s
+        };
+        for b in mask.iter_mut() {
+            *b = (next() >> 16) as u8;
+        }
+        let got = if bits == 32 {
+            let mut px: Vec<u32> = (0..w * h)
+                .map(|_| {
+                    let s = next();
+                    let mut v = s ^ (s << 11);
+                    if (s >> 7) % 3 == 0 {
+                        v &= 0x00ff_ffff;
+                    }
+                    v
+                })
+                .collect();
+            // SAFETY: the pixels and the mask's rows
+            unsafe { mask32(px.as_mut_ptr(), w, h, mask.as_mut_ptr(), mpitch) };
+            let bytes: Vec<u8> = px.iter().flat_map(|p| p.to_le_bytes()).collect();
+            fnv_chain(&mask[..(mpitch * h) as usize], fnv_chain(&bytes, 1469598103934665603))
+        } else {
+            let pitch = (w + 3) / 4 * 4;
+            let px: Vec<u8> = (0..pitch * h)
+                .map(|_| {
+                    let s = next();
+                    if (s >> 9) % 3 == 0 {
+                        transparent as u8
+                    } else {
+                        (s >> 16) as u8
+                    }
+                })
+                .collect();
+            // SAFETY: as above
+            unsafe { mask8(px.as_ptr(), w, h, pitch, transparent, mask.as_mut_ptr(), mpitch) };
+            fnv_chain(&mask[..(mpitch * h) as usize], 1469598103934665603)
+        };
+        assert_eq!(format!("{got:016x}"), want, "{line}");
+        n += 1;
+    }
+    assert_eq!(n, 300);
+}
+
+fn fnv_chain(b: &[u8], mut h: u64) -> u64 {
+    for &x in b {
+        h ^= x as u64;
+        h = h.wrapping_mul(1099511628211);
+    }
+    h
+}
+
+#[test]
+fn masks_set_the_transparent_pixels_high_bit_first() {
+    let mut px = [0x00ff_ffffu32, 0xff00_0000, 0x0000_0001];
+    let mut mask = [0xffu8; 4];
+    // SAFETY: three pixels in one row, a 4-byte mask row
+    unsafe { mask32(px.as_mut_ptr(), 3, 1, mask.as_mut_ptr(), 4) };
+    assert_eq!(px, [0, 0xff00_0000, 0]);
+    assert_eq!(mask[0], 0b1011_1111);
+    let p8 = [7u8, 3, 7, 7];
+    let mut m8 = [0u8; 4];
+    // SAFETY: as above; an index of 263 matches nothing (the original compared an unsigned char with the int)
+    unsafe { mask8(p8.as_ptr(), 4, 1, 4, 263, m8.as_mut_ptr(), 4) };
+    assert_eq!(m8[0], 0);
+    // SAFETY: as above
+    unsafe { mask8(p8.as_ptr(), 4, 1, 4, 7, m8.as_mut_ptr(), 4) };
+    assert_eq!(m8[0], 0b1011_0000);
+}

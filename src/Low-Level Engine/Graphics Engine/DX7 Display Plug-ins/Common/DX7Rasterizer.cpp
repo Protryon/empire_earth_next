@@ -16,10 +16,9 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Movie.h"
+#include "dx7/DX7StdColorVertexArray.h"
 #include "rust/ee_dx7.h"
-
-// The algorithms are in Rust (rust/crates/ee_dx7/src/raster.rs); this class keeps the members, the virtuals and the
-// engine objects, each method forwards or is an ee_dx7cpp_rast_* trampoline.
+#include "lle/TSCriticalSection.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x100091aa
@@ -51,70 +50,121 @@
 // SYNTHETIC: DX7HR 0x100092f1
 // SYNTHETIC: DX7HR 0x100092fd
 
-// The D3D light indices in use, shared by every screen (provisional name).
-unsigned long gLightsInUse[8];
+// DX7Rasterizer is whole in Rust (rust/crates/ee_dx7/src/rastobj.rs, R4.3 part 13): the per-screen DX7 records, the
+// debug colour, the light slots and every method below; DX7TnLRasterizer is its T&L flavour. The class keeps its vtable
+// (the game calls it through GERasterizer) and one member, mDX7; the methods forward, and DX7RasterizerHost makes the
+// calls on other objects Rust asks for.
 
-// Trampoline access to the protected members (the extern "C" hosts below).
-struct DX7RasterAccess : DX7Rasterizer {
-    using DX7Rasterizer::SetRenderTarget;
-    using DX7Rasterizer::Set3DMode;
-    void MakeActive() { GERasterizer::SetActiveRasterizer(this); }
-    GERScreenState* State(unsigned long inScreen) { return this->GetScreenState(inScreen); }
-    DX7RScreenState* DX7State(unsigned long inScreen) { return this->mDX7ScreenStates[inScreen]; }
-    void SetCullingUnknown() { this->GERasterizer::SetCulling(-16); }
-    long CallActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary, GETextureManager* inManager, GEWindow* inWindow)
-        { return this->ActivateTheScreen(inScreen, inPrimary, inSecondary, inManager, inWindow); }
+// The calls the Rust rasterizer makes on other objects (EeDx7RastOp), in the original's order.
+struct DX7RasterizerHost {
+    static intptr_t Call(void* inOwner, EeDx7RastOp inOp, void* inObj, intptr_t a, intptr_t b)
+    {
+        GEScreen* theScreen = static_cast<GEScreen*>(inObj);
+        GESurface* theSurface = static_cast<GESurface*>(inObj);
+        GETexture* theTexture = static_cast<GETexture*>(inObj);
+        switch (inOp) {
+        case EeDx7RastOp::ScreenNew:
+            return (intptr_t) static_cast<GEScreen*>(new DX7Screen(NULL, static_cast<GXDirectDraw*>(inObj),
+                                                                   reinterpret_cast<const char*>(a), (b & 1) != 0, (b & 2) != 0));
+        case EeDx7RastOp::ScreenDelete: delete static_cast<DX7Screen*>(theScreen); return 0;
+        case EeDx7RastOp::ScreenDirectDraw: return (intptr_t) static_cast<DX7Screen*>(theScreen)->mDirectDraw;
+        case EeDx7RastOp::ScreenIsFullScreen: return theScreen->GetIsFullScreen();
+        case EeDx7RastOp::ScreenCurrentMode: *reinterpret_cast<GEVideoMode*>(a) = theScreen->GetCurrentMode(); return 0;
+        case EeDx7RastOp::ScreenModeCount: return (intptr_t)theScreen->GetModeCount();
+        case EeDx7RastOp::ScreenMode: *reinterpret_cast<GEVideoMode*>(b) = theScreen->GetMode((unsigned long)a); return 0;
+        case EeDx7RastOp::ScreenCreateSurface:
+            return theScreen->CreateSurface(*reinterpret_cast<GESurfaceDescription*>(a), reinterpret_cast<GESurface**>(b));
+        case EeDx7RastOp::ScreenSetTextureManager: theScreen->SetTextureManager(reinterpret_cast<GETextureManager*>(a)); return 0;
+        case EeDx7RastOp::ManagerSetScreen: static_cast<GETextureManager*>(inObj)->SetScreen(reinterpret_cast<GEScreen*>(a)); return 0;
+        case EeDx7RastOp::SurfaceAttached: return (intptr_t)theSurface->GetAttachedSurface(0);
+        case EeDx7RastOp::SurfaceAttach: return theSurface->AttachSurface(reinterpret_cast<GESurface*>(a));
+        case EeDx7RastOp::SurfaceReference: theSurface->Reference(); return 0;
+        case EeDx7RastOp::SurfaceDereference: theSurface->Dereference(); return 0;
+        case EeDx7RastOp::SurfaceGx: return (intptr_t)(GXSurface*)*static_cast<DX7Surface*>(theSurface);
+        case EeDx7RastOp::SurfaceGxChecked: return (intptr_t)(GXSurface*)*dynamic_cast<DX7Surface*>(theSurface);
+        case EeDx7RastOp::SurfaceSize:
+            reinterpret_cast<uint32_t*>(a)[0] = theSurface->GetWidth();
+            reinterpret_cast<uint32_t*>(a)[1] = theSurface->GetHeight();
+            return 0;
+        case EeDx7RastOp::SurfaceFlip: return theSurface->Flip(a != 0);
+        case EeDx7RastOp::TextureHasChanged: return theTexture->HasChanged();
+        case EeDx7RastOp::TextureReference: theTexture->Reference(); return 0;
+        case EeDx7RastOp::TextureDereference: theTexture->Dereference(); return 0;
+        case EeDx7RastOp::TexturePromote: theTexture->Promote(); return 0;
+        case EeDx7RastOp::TextureStage: {
+            const GETStage* theStage = theTexture->GetStage();
+            EeDx7StageView* theView = reinterpret_cast<EeDx7StageView*>(a);
+            theView->surface = (GXSurface*)*static_cast<DX7Surface*>(theTexture->GetStageTexture(0)->GetFrameSurface());
+            theView->mColorMode = theStage->mColorMode;
+            theView->mAlphaMode = theStage->mAlphaMode;
+            theView->mTextureAddressingMode = theStage->mTextureAddressingMode;
+            theView->mMinFilterMode = theStage->mMinFilterMode;
+            theView->mMagFilterMode = theStage->mMagFilterMode;
+            theView->mMipFilterMode = theStage->mMipFilterMode;
+            theView->mMipMapBias = theStage->mMipMapBias;
+            return 0;
+        }
+        case EeDx7RastOp::TextureValidate: theTexture->ValidateChanges(); return 0;
+        case EeDx7RastOp::WindowOrigin: {
+            GE2DPoint theOrigin = static_cast<GEWindow*>(inObj)->GetClientOrigin();
+            reinterpret_cast<float*>(a)[0] = theOrigin.GetX();
+            reinterpret_cast<float*>(a)[1] = theOrigin.GetY();
+            return 0;
+        }
+        case EeDx7RastOp::LightParams: {
+            GELight& theLight = *static_cast<GELight*>(inObj);
+            EeDx7LightParams* theParams = reinterpret_cast<EeDx7LightParams*>(a);
+            const float theFields[] = { theLight.GetLocation().GetX(), theLight.GetLocation().GetY(), theLight.GetLocation().GetZ(),
+                                        theLight.GetDirection().GetX(), theLight.GetDirection().GetY(), theLight.GetDirection().GetZ(),
+                                        theLight.GetComputedColor().GetRed(), theLight.GetComputedColor().GetGreen(),
+                                        theLight.GetComputedColor().GetBlue() };
+            memcpy(theParams->location, theFields, sizeof theFields);
+            theParams->style = theLight.GetStyle();
+            theParams->attenuation[0] = theLight.GetAttenuation0();
+            theParams->attenuation[1] = theLight.GetAttenuation1();
+            theParams->attenuation[2] = theLight.GetAttenuation2();
+            theParams->range = theLight.GetRange();
+            return 0;
+        }
+        case EeDx7RastOp::LockEnter: static_cast<TSCriticalSection*>(inObj)->Enter(); return 0;
+        case EeDx7RastOp::LockLeave: static_cast<TSCriticalSection*>(inObj)->Leave(); return 0;
+        case EeDx7RastOp::Time: return (intptr_t)TMGetTime();
+        case EeDx7RastOp::Verify: ESVERIFY_AT(a != 0, (unsigned long)b); return 0;
+        default: return 0;
+        }
+    }
 };
 
-// What the Rust activation asks the C++ side for (the ee_dx7cpp_rast_* hosts below).
-struct DX7ActivateContext {
-    DX7RasterAccess* mRasterizer;
-    unsigned long mScreen;
-    GETextureManager* mManager;
-    GEWindow* mWindow;
-};
+static_assert(sizeof(GEVideoMode) == sizeof(EeDx7VideoMode) && sizeof(GESurfaceDescription) == sizeof(EeDx7SurfaceDescription),
+              "ee_dx7/src/screen.rs VideoMode, api.rs SurfaceDescription");
 
-// The light fields Rust's UpdateLight reads
-static EeDx7LightParams DX7LightParams(GELight& inLight)
+// GERectangle's left, top, right, bottom (Rust's order; the class keeps another)
+static void DX7Rect(const GERectangle& inRectangle, float outRect[4])
 {
-    EeDx7LightParams theParams;
-    theParams.location[0] = inLight.GetLocation().GetX();
-    theParams.location[1] = inLight.GetLocation().GetY();
-    theParams.location[2] = inLight.GetLocation().GetZ();
-    theParams.direction[0] = inLight.GetDirection().GetX();
-    theParams.direction[1] = inLight.GetDirection().GetY();
-    theParams.direction[2] = inLight.GetDirection().GetZ();
-    theParams.computed_color[0] = inLight.GetComputedColor().GetRed();
-    theParams.computed_color[1] = inLight.GetComputedColor().GetGreen();
-    theParams.computed_color[2] = inLight.GetComputedColor().GetBlue();
-    theParams.style = inLight.GetStyle();
-    theParams.attenuation[0] = inLight.GetAttenuation0();
-    theParams.attenuation[1] = inLight.GetAttenuation1();
-    theParams.attenuation[2] = inLight.GetAttenuation2();
-    theParams.range = inLight.GetRange();
-    return theParams;
+    outRect[0] = inRectangle.GetLeft();
+    outRect[1] = inRectangle.GetTop();
+    outRect[2] = inRectangle.GetRight();
+    outRect[3] = inRectangle.GetBottom();
 }
 
 // FUNCTION: DX7HR 0x1000978b
-// Creates the DirectX 7 rasterizer with the given name and a dark blue debug colour
-DX7Rasterizer::DX7Rasterizer(const UString& inName)
+// Creates the DirectX 7 rasterizer with the given name and a dark blue debug colour (inTnL: the T&L rasterizer)
+DX7Rasterizer::DX7Rasterizer(const UString& inName, bool inTnL)
     : GERasterizer(inName)
 {
-    this->mDebugColor = 0xff000040;
+    this->mDX7 = ee_dx7r_new(&DX7RasterizerHost::Call, this, this->mRust, inTnL);
 }
 
 // FUNCTION: DX7HR 0x100097bd
-// Destroys the rasterizer (base class only)
+// Destroys the rasterizer (the DX7 records; the base's in the base)
 DX7Rasterizer::~DX7Rasterizer()
 {
+    ee_dx7r_destroy(this->mDX7);
 }
 
 // FUNCTION: DX7HR 0x100097d8
 // Enumerates the DirectDraw devices into screens (Ex enumeration on 98/2000) and makes this the active rasterizer
-long DX7Rasterizer::ActivateRasterizer()
-{
-    return ee_dx7r_activate_rasterizer(this);
-}
+long DX7Rasterizer::ActivateRasterizer() { return ee_dx7r_activate_rasterizer(this->mDX7); }
 
 // FUNCTION: DX7HR 0x10009876
 // Sets up a screen to render into an offscreen surface of the given size at the desktop depth, retrying with a
@@ -122,8 +172,7 @@ long DX7Rasterizer::ActivateRasterizer()
 long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                              unsigned long inWidth, unsigned long inHeight)
 {
-    DX7ActivateContext theContext = { static_cast<DX7RasterAccess*>(this), inScreen, inManager, inWindow };
-    return ee_dx7r_activate_rendering_surface(&theContext, inWidth, inHeight);
+    return ee_dx7r_activate_rendering_surface(this->mDX7, inScreen, inManager, inWindow, inWidth, inHeight);
 }
 
 // FUNCTION: DX7HR 0x10009ab4
@@ -132,29 +181,25 @@ long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureMa
 long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                    unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
 {
-    DX7ActivateContext theContext = { static_cast<DX7RasterAccess*>(this), inScreen, inManager, inWindow };
-    return ee_dx7r_activate_screen(&theContext, inWindow->mWidth, inWindow->mHeight, inBackBuffers, inZBuffer, inZBufferFormat);
+    return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->mWidth, inWindow->mHeight, inBackBuffers,
+                                   inZBuffer, inZBufferFormat);
 }
 
 // FUNCTION: DX7HR 0x10009fa2
-// Creates the HAL Direct3D device on the back buffer, sets the viewport and fixed render states, the vertex buffer
-// and the card quirks (texture alpha modulation off on small Rage Pro cards, no dirty rectangles on two cards)
+// Creates the HAL (or T&L) Direct3D device on the back buffer, sets the viewport and fixed render states, the vertex
+// buffer and the card quirks (texture alpha modulation off on small Rage Pro cards, no dirty rectangles on two cards)
 long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
                                       GETextureManager* inManager, GEWindow* inWindow)
 {
-    DX7Surface* theTarget = dynamic_cast<DX7Surface*>(inSecondary);
-    return ee_dx7r_activate_the_screen(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]),
-                                       static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw,
-                                       (GXSurface*)*theTarget, theTarget->GetWidth(), theTarget->GetHeight(), false);
+    return ee_dx7r_activate_the_screen(this->mDX7, inScreen, inSecondary);
 }
 
 // FUNCTION: DX7HR 0x1000a581
 // Takes a free light slot (of 8), sets the light into it and enables it; returns 7 when all slots are in use
 long DX7Rasterizer::AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex)
 {
-    EeDx7LightParams theParams = DX7LightParams(inLight);
     uint32_t theIndex = 0;
-    long theResult = ee_dx7r_add_light(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse, &theParams, &theIndex);
+    long theResult = ee_dx7r_add_light(this->mDX7, &inLight, inScreen, &theIndex);
     outIndex = theIndex;
     return theResult;
 }
@@ -163,48 +208,37 @@ long DX7Rasterizer::AddLight(GELight& inLight, unsigned long inScreen, unsigned 
 // Adds a screen with a fresh DirectX 7 screen state
 long DX7Rasterizer::AddValidScreen(GEScreen* inScreen)
 {
-    this->mDX7ScreenStates.push_back(new DX7RScreenState(inScreen));
-    return GERasterizer::AddValidScreen(inScreen);
+    ee_dx7r_add_valid_screen(this->mDX7, inScreen);
+    return kErrorOK;
 }
 
 // FUNCTION: DX7HR 0x1000a64e
 // Sets the render target and begins the scene, waiting while the device is still drawing; 9 when the surface is lost
-long DX7Rasterizer::BeginScene(GESurface* inTarget, unsigned long inScreen)
-{
-    this->SetRenderTarget(inTarget, inScreen);
-    return ee_dx7r_begin_scene(this->mDX7ScreenStates[inScreen]->GetDevice());
-}
+long DX7Rasterizer::BeginScene(GESurface* inTarget, unsigned long inScreen) { return ee_dx7r_begin_scene(this->mDX7, inTarget, inScreen); }
 
 // FUNCTION: DX7HR 0x1000a6af
 // Sets the texture and asks the device whether it can draw the current state in one pass
 bool DX7Rasterizer::CanDoCurrentState(GETexture* inTexture, unsigned long inScreen)
 {
-    bool theResult = false;
-    this->SetTexture(inTexture, inScreen);
-    unsigned long thePasses;
-    HRESULT theError = this->mDX7ScreenStates[inScreen]->GetDevice()->ValidateDevice(&thePasses);
-    if (theError == GX_OK)
-        theResult = true;
-    else
-        ESRecordNativeError(theError);
-    return theResult;
+    return ee_dx7r_can_do_current_state(this->mDX7, inTexture, inScreen);
 }
 
 // FUNCTION: DX7HR 0x1000a6f7
 // Fills a rectangle of the render target with a colour, waiting while the device is still drawing
 long DX7Rasterizer::Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen)
 {
-    const float theRect[4] = { inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom() };
-    const float theRGB[3] = { inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue() };
-    return ee_dx7r_clear(this->mDX7ScreenStates[inScreen]->GetDevice(), theRect, theRGB);
+    float theRect[4];
+    DX7Rect(inRectangle, theRect);
+    return ee_dx7r_clear(this->mDX7, theRect, reinterpret_cast<const EeGeRastColor*>(&inColor), 0.0f, inScreen);
 }
 
 // FUNCTION: DX7HR 0x1000a861
 // Fills a rectangle of the Z-buffer with a depth value, waiting while the device is still drawing
 long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen)
 {
-    const float theRect[4] = { inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom() };
-    return ee_dx7r_clear_z(this->mDX7ScreenStates[inScreen]->GetDevice(), theRect, inZ);
+    float theRect[4];
+    DX7Rect(inRectangle, theRect);
+    return ee_dx7r_clear(this->mDX7, theRect, NULL, inZ, inScreen);
 }
 
 // FUNCTION: DX7HR 0x1000a9e5
@@ -240,23 +274,9 @@ long DX7Rasterizer::CreateTextureHandle(GETexture* inTexture)
 // Creates a vertex array of type 0 (standard) or 1 (coloured); null for any other type
 GEVertexArray* DX7Rasterizer::CreateVertexArray(unsigned long inType, unsigned long inCount)
 {
-    GEVertexArray* theArray = NULL;
-    switch (inType) {
-    case 0:
-        theArray = new DX7StandardVertexArray(inCount);
-        break;
-    case 1:
-        theArray = new DX7StdColorVertexArray(inCount);
-        break;
-    }
-    return theArray;
-}
-
-// FUNCTION: DX7HR 0x1000aaa5
-// Creates the screen's system-memory vertex buffer of 2,400 coloured vertices
-long DX7Rasterizer::CreateVertexBuffers(unsigned long inScreen)
-{
-    return ee_dx7r_create_vertex_buffers(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), false);
+    if (inType == 0)
+        return new DX7StandardVertexArray(inCount);
+    return inType == 1 ? new DX7StdColorVertexArray(inCount) : NULL;
 }
 
 long DX7Rasterizer::DemoteTexture(GETexture* inTexture)
@@ -268,29 +288,8 @@ long DX7Rasterizer::DemoteTexture(GETexture* inTexture)
 // Releases every screen's texture, vertex buffer, lights, device and Direct3D, deletes the screens and their states
 long DX7Rasterizer::Deactivate()
 {
-    unsigned long theScreen = 0;
-    for (std::vector<DX7RScreenState*>::iterator theState = this->mDX7ScreenStates.begin();
-         theState != this->mDX7ScreenStates.end(); theState++, theScreen++) {
-        this->SetTexture(NULL, theScreen);
-        if ((*theState)->mVertexBuffer != NULL) {
-            (*theState)->mVertexBuffer->Release();
-            (*theState)->mVertexBuffer = NULL;
-        }
-        if ((*theState)->mDevice != NULL) {
-            this->RemoveAllLights(theScreen);
-            (*theState)->GetDevice()->Release();
-            (*theState)->mDevice = NULL;
-        }
-        if ((*theState)->mDirect3D != NULL) {
-            (*theState)->mDirect3D->Release();
-            (*theState)->mDirect3D = NULL;
-        }
-        if ((*theState)->mScreen != NULL)
-            delete (DX7Screen*)(*theState)->mScreen;
-        delete *theState;
-    }
-    this->mDX7ScreenStates.clear();
-    return GERasterizer::Deactivate();
+    ee_dx7r_deactivate(this->mDX7);
+    return kErrorOK;
 }
 
 // FUNCTION: DX7HR 0x1000abbf
@@ -301,29 +300,22 @@ void DX7Rasterizer::DestroyTextureHandle(GETexture* inTexture)
 
 // FUNCTION: DX7HR 0x1000abc2
 // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
-long DX7Rasterizer::EndScene(unsigned long inScreen)
-{
-    return ee_dx7r_end_scene(this->mDX7ScreenStates[inScreen]->GetDevice());
-}
+long DX7Rasterizer::EndScene(unsigned long inScreen) { return ee_dx7r_end_scene(this->mDX7, inScreen); }
 
 // FUNCTION: DX7HR 0x1000ac18
 // Returns the free video memory of the screen
 long DX7Rasterizer::GetAvailableVideoMemory(unsigned long inScreen, unsigned long& outBytes)
 {
-    unsigned long theTotal = 0;
-    unsigned long theFree = 0;
-    long theResult = this->GetVideoMemory(inScreen, theTotal, theFree);
+    uint32_t theBytes = 0;
+    long theResult = ee_dx7r_video_memory(this->mDX7, inScreen, false, &theBytes);
     if (theResult == kErrorOK)
-        outBytes = theFree;
+        outBytes = theBytes;
     return theResult;
 }
 
 // FUNCTION: DX7HR 0x1000ac48
 // Returns whether the screen's card can modulate texture alpha
-bool DX7Rasterizer::GetCanModulateTextureAlpha(unsigned long inScreen)
-{
-    return this->mDX7ScreenStates[inScreen]->mCanModulateTextureAlpha;
-}
+bool DX7Rasterizer::GetCanModulateTextureAlpha(unsigned long inScreen) { return ee_dx7r_card_flag(this->mDX7, inScreen, false); }
 
 // FUNCTION: DX7HR 0x1000ac58
 // Returns 0 for any capability
@@ -334,51 +326,17 @@ unsigned long DX7Rasterizer::GetCaps(unsigned long inCap, unsigned long inScreen
 
 // FUNCTION: DX7HR 0x1000ac5d
 // Returns whether the screen's card supports dirty-rectangle updates
-bool DX7Rasterizer::GetDirtyRectangleSupport(unsigned long inScreen)
-{
-    return this->mDX7ScreenStates[inScreen]->mDirtyRectangleSupport;
-}
-
-// FUNCTION: DX7HR 0x1000ac6d
-// Returns whether the screen's device has a hardware-rasterizing Direct3D device
-bool DX7Rasterizer::GetIsScreenValid(DX7Screen* inScreen)
-{
-    return ee_dx7r_is_screen_valid((GXDirectDraw*)*inScreen, false);
-}
+bool DX7Rasterizer::GetDirtyRectangleSupport(unsigned long inScreen) { return ee_dx7r_card_flag(this->mDX7, inScreen, true); }
 
 // FUNCTION: DX7HR 0x1000ad17
 // Returns the total video memory of the screen
 long DX7Rasterizer::GetTotalVideoMemory(unsigned long inScreen, unsigned long& outBytes)
 {
-    unsigned long theTotal = 0;
-    unsigned long theFree = 0;
-    long theResult = this->GetVideoMemory(inScreen, theTotal, theFree);
+    uint32_t theBytes = 0;
+    long theResult = ee_dx7r_video_memory(this->mDX7, inScreen, true, &theBytes);
     if (theResult == kErrorOK)
-        outBytes = theTotal;
+        outBytes = theBytes;
     return theResult;
-}
-
-// FUNCTION: DX7HR 0x1000ad47
-// Reads the screen's total and free video memory; 0xd when it cannot be read or is 0
-long DX7Rasterizer::GetVideoMemory(unsigned long inScreen, unsigned long& outTotal, unsigned long& outFree)
-{
-    uint32_t theTotal = 0;
-    uint32_t theFree = 0;
-    long theResult = ee_dx7r_get_video_memory(static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw,
-                                              &theTotal, &theFree);
-    if (theResult == kErrorOK) {
-        outTotal = theTotal;
-        outFree = theFree;
-    }
-    return theResult;
-}
-
-// FUNCTION: DX7HR 0x1000adb6
-// Locks room for the given number of vertices in the vertex buffer, discarding it when full; always returns success
-long DX7Rasterizer::LockVB(unsigned long inCount, unsigned long inScreen, GXVERTEX_STD_COLOR*& outVertices)
-{
-    return ee_dx7r_lock_vb(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inCount,
-                           reinterpret_cast<void**>(&outVertices));
 }
 
 long DX7Rasterizer::PromoteTexture(GETexture* inTexture)
@@ -388,481 +346,76 @@ long DX7Rasterizer::PromoteTexture(GETexture* inTexture)
 
 // FUNCTION: DX7HR 0x1000ae3a
 // Removes all 8 lights
-long DX7Rasterizer::RemoveAllLights(unsigned long inScreen)
-{
-    return ee_dx7r_remove_all_lights(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse);
-}
+long DX7Rasterizer::RemoveAllLights(unsigned long inScreen) { return ee_dx7r_remove_all_lights(this->mDX7, inScreen); }
 
 // FUNCTION: DX7HR 0x1000ae5c
 // Disables a light and frees its slot; 9 when the slot was not in use
-long DX7Rasterizer::RemoveLight(unsigned long inIndex, unsigned long inScreen)
-{
-    return ee_dx7r_remove_light(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse, inIndex);
-}
+long DX7Rasterizer::RemoveLight(unsigned long inIndex, unsigned long inScreen) { return ee_dx7r_remove_light(this->mDX7, inIndex, inScreen); }
 
-// FUNCTION: DX7HR 0x1000aea4
-// Switches the screen to 2D drawing: identity world and view, a projection mapping pixels to the viewport
-long DX7Rasterizer::Set2DMode(unsigned long inScreen)
-{
-    return ee_dx7r_set_2d_mode(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]));
-}
-
-// FUNCTION: DX7HR 0x1000b072
-// Switches the screen to 3D drawing: the camera view (Y and Z swapped) and the perspective or orthographic projection
-long DX7Rasterizer::Set3DMode(unsigned long inScreen)
-{
-    GETransformation theSwap;
-    GETransformation theView(false);
-    theSwap.SetElement(1, 1, 0.0f);
-    theSwap.SetElement(1, 2, 1.0f);
-    theSwap.SetElement(2, 1, 1.0f);
-    theSwap.SetElement(2, 2, 0.0f);
-    theSwap.Apply(this->GetViewport(inScreen).GetCameraInverse(), theView);
-    const GETransformation& theProjection = this->GetProjectionMode(inScreen) == 1
-        ? this->GetViewport(inScreen).GetPerspectiveProjection() : this->GetViewport(inScreen).GetOrthographicProjection();
-    float theViewElements[16];
-    float theProjectionElements[16];
-    for (unsigned long r = 0; r < 4; r++)
-        for (unsigned long c = 0; c < 4; c++) {
-            theViewElements[r * 4 + c] = theView.GetElement(r, c);
-            theProjectionElements[r * 4 + c] = theProjection.GetElement(r, c);
-        }
-    return ee_dx7r_set_3d_mode(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), theViewElements, theProjectionElements);
-}
-
-// FUNCTION: DX7HR 0x1000b22b
-// Turns alpha testing on or off when it changes
-void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_alpha_testing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mAlphaTesting))
-        GERasterizer::SetAlphaTesting(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b26c
-// Sets the alpha test compare function (skipped when unchanged)
+// The render state setters (0x1000b22b..0x1000c910): each sends the state when it changes and records it in the base.
+void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTesting, inState, inScreen); }
 void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_alpha_testing_compare_state(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mAlphaTestingCompareState))
-        GERasterizer::SetAlphaTestingCompareState(inState, inScreen);
+    ee_dx7r_set(this->mDX7, EeDx7RastSet::AlphaTestingCompareState, inState, inScreen);
 }
-
-// FUNCTION: DX7HR 0x1000b2fa
-// Sets the alpha test reference value (0..1 scaled to 0..255) when it changes
-void DX7Rasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScreen)
-{
-    if (ee_dx7r_set_alpha_testing_ref_value(this->mDX7ScreenStates[inScreen]->mDevice, inValue, this->GetScreenState(inScreen)->mAlphaTestingRefValue))
-        GERasterizer::SetAlphaTestingRefValue(inValue, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b35b
-// Sets the ambient light colour and sends it scaled by the ambient intensity
+void DX7Rasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScreen) { ee_dx7r_set_float(this->mDX7, false, inValue, inScreen); }
 void DX7Rasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScreen)
 {
-    GERasterizer::SetAmbientColor(inColor, inScreen);
-    const float theRGB[3] = { this->GetComputedAmbientColor().GetRed(), this->GetComputedAmbientColor().GetGreen(),
-                              this->GetComputedAmbientColor().GetBlue() };
-    ee_dx7r_set_ambient(this->mDX7ScreenStates[inScreen]->mDevice, theRGB);
+    ee_dx7r_set_color(this->mDX7, EeDx7RastColor::Ambient, reinterpret_cast<const EeGeRastColor*>(&inColor), inScreen);
 }
-
-// FUNCTION: DX7HR 0x1000b403
-// Sets the ambient light intensity and sends the ambient colour scaled by it
-void DX7Rasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScreen)
-{
-    GERasterizer::SetAmbientIntensity(inIntensity, inScreen);
-    const float theRGB[3] = { this->GetComputedAmbientColor().GetRed(), this->GetComputedAmbientColor().GetGreen(),
-                              this->GetComputedAmbientColor().GetBlue() };
-    ee_dx7r_set_ambient(this->mDX7ScreenStates[inScreen]->mDevice, theRGB);
-}
-
-// FUNCTION: DX7HR 0x1000b49d
-// Turns sort-independent antialiasing on or off when it changes
-void DX7Rasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_anti_aliasing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mAntiAliasing))
-        GERasterizer::SetAntiAliasing(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b4ea
-// Sets the source and destination blend factors, turning alpha blending off for one/zero and sending only what changed
+void DX7Rasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScreen) { ee_dx7r_set_float(this->mDX7, true, inIntensity, inScreen); }
+void DX7Rasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::AntiAliasing, inState, inScreen); }
 void DX7Rasterizer::SetBlending(unsigned long inSource, unsigned long inDestination, unsigned long inScreen)
 {
-    if (ee_dx7r_set_blending(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inSource, inDestination, this->GetScreenState(inScreen)->mBlendSource,
-                             this->GetScreenState(inScreen)->mBlendDestination))
-        GERasterizer::SetBlending(inSource, inDestination, inScreen);
+    ee_dx7r_set_blending(this->mDX7, inSource, inDestination, inScreen);
 }
-
-// FUNCTION: DX7HR 0x1000b79d
-// Turns colour keying on or off when it changes
-void DX7Rasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_color_keying(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mColorKeying))
-        GERasterizer::SetColorKeying(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b7e7
-// Sets the culling mode (clockwise, counter-clockwise or none) on every screen's device
-void DX7Rasterizer::SetCulling(unsigned long inState)
-{
-    if (inState == this->GetCulling())
-        return;
-    for (unsigned long i = 0; i < this->mDX7ScreenStates.size(); i++) {
-        GXDevice* theDevice = this->mDX7ScreenStates[i]->mDevice;
-        if (theDevice != NULL)
-            ee_dx7r_set_cull_mode(theDevice, inState);
-    }
-    GERasterizer::SetCulling(inState);
-}
-
-// FUNCTION: DX7HR 0x1000b843
-// Sets the debug colour (opaque)
+void DX7Rasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ColorKeying, inState, inScreen); }
+void DX7Rasterizer::SetCulling(unsigned long inState) { ee_dx7r_set_culling(this->mDX7, inState); }
 void DX7Rasterizer::SetDebugColor(const GEColor& inColor)
 {
-    const float theRGB[3] = { inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue() };
-    this->mDebugColor = ee_dx7r_debug_color(theRGB);
+    ee_dx7r_set_color(this->mDX7, EeDx7RastColor::Debug, reinterpret_cast<const EeGeRastColor*>(&inColor), 0);
 }
-
-// FUNCTION: DX7HR 0x1000b8aa
-// Turns the no-texture debug display on or off (base class only)
-void DX7Rasterizer::SetDisplayNoTextureMode(bool inState, unsigned long inScreen)
-{
-    GERasterizer::SetDisplayNoTextureMode(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b8bb
-// Turns the overdraw debug display on or off (base class only)
-void DX7Rasterizer::SetDisplayOverdrawMode(bool inState, unsigned long inScreen)
-{
-    GERasterizer::SetDisplayOverdrawMode(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b8cc
-// Turns dithering on or off when it changes
-void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_dithering(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mDithering))
-        GERasterizer::SetDithering(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b916
-// Sets solid, wireframe or point drawing when it changes
-void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
-{
-    if (ee_dx7r_set_draw_style(this->mDX7ScreenStates[inScreen]->mDevice, inStyle, this->GetScreenState(inScreen)->mDrawStyle))
-        GERasterizer::SetDrawStyle(inStyle, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b970
-// Turns fog on or off when it changes
-void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_fog(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mFogState))
-        GERasterizer::SetFog(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000b9ba
-// Sets the fog colour when it changes
+void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Dithering, inState, inScreen); }
+void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::DrawStyle, inStyle, inScreen); }
+void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Fog, inState, inScreen); }
 void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 {
-    const float theRGB[3] = { inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue() };
-    if (ee_dx7r_set_fog_color(this->mDX7ScreenStates[inScreen]->mDevice, theRGB, this->GetScreenState(inScreen)->mFog.mColor == inColor))
-        GERasterizer::SetFogColor(inColor, inScreen);
+    ee_dx7r_set_color(this->mDX7, EeDx7RastColor::Fog, reinterpret_cast<const EeGeRastColor*>(&inColor), inScreen);
 }
-
-// FUNCTION: DX7HR 0x1000ba78
-// Sets the fog start and end distances, sending only the ones that changed
-void DX7Rasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen)
+void DX7Rasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen) { ee_dx7r_set_fog_range(this->mDX7, inStart, inEnd, inScreen); }
+void DX7Rasterizer::SetLighting(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Lighting, inState, inScreen); }
+void DX7Rasterizer::SetShading(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Shading, inState, inScreen); }
+void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long inScreen)
 {
-    ee_dx7r_set_fog_range(this->mDX7ScreenStates[inScreen]->mDevice, inStart, inEnd, this->GetScreenState(inScreen)->mFog.mStart, this->GetScreenState(inScreen)->mFog.mEnd);
-    GERasterizer::SetFogRange(inStart, inEnd, inScreen);
+    ee_dx7r_set(this->mDX7, EeDx7RastSet::ShadingColorSource, inSource, inScreen);
 }
-
-// FUNCTION: DX7HR 0x1000baf6
-// Records the fog type (base class only; no device state)
-void DX7Rasterizer::SetFogType(unsigned long inType, unsigned long inScreen)
-{
-    GERasterizer::SetFogType(inType, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000bb07
-// Records the fog value (base class only; no device state)
-void DX7Rasterizer::SetFogValue(float inValue, unsigned long inScreen)
-{
-    GERasterizer::SetFogValue(inValue, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000bb1c
-// Turns lighting on or off when it changes
-void DX7Rasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_lighting(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mLighting))
-        GERasterizer::SetLighting(inState, inScreen);
-}
+void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::Specular, inState, inScreen); }
+void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ZBuffer, inState, inScreen); }
+void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen) { ee_dx7r_set(this->mDX7, EeDx7RastSet::ZCompare, inState, inScreen); }
 
 // FUNCTION: DX7HR 0x1000bb66
 // Makes a surface the render target (swapping the references) and fits the viewport to its size
-void DX7Rasterizer::SetRenderTarget(GESurface* inTarget, unsigned long inScreen)
-{
-    if (inTarget == this->GetScreenState(inScreen)->mRenderTarget)
-        return;
-    if (this->GetScreenState(inScreen)->mRenderTarget != NULL)
-        this->GetScreenState(inScreen)->mRenderTarget->Dereference();
-    this->GetScreenState(inScreen)->mRenderTarget = inTarget;
-    inTarget->Reference();
-    ee_dx7r_set_render_target(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), (GXSurface*)*static_cast<DX7Surface*>(inTarget),
-                              inTarget->GetWidth(), inTarget->GetHeight());
-}
-
-// FUNCTION: DX7HR 0x1000bcb3
-// Sets Gouraud or flat shading when it changes
-void DX7Rasterizer::SetShading(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_shading(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mShading))
-        GERasterizer::SetShading(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000bcfd
-// Takes lighting colours from the material (source 0) or from the vertex colours (white material) when it changes
-void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long inScreen)
-{
-    if (ee_dx7r_set_shading_color_source(this->mDX7ScreenStates[inScreen]->mDevice, inSource, this->GetScreenState(inScreen)->mShadingColorSource))
-        GERasterizer::SetShadingColorSource(inSource, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000be76
-// Turns specular highlights on or off when it changes
-void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_specular(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mSpecular))
-        GERasterizer::SetSpecular(inState, inScreen);
-}
+void DX7Rasterizer::SetRenderTarget(GESurface* inTarget, unsigned long inScreen) { ee_dx7r_set_render_target(this->mDX7, inTarget, inScreen); }
 
 // FUNCTION: DX7HR 0x1000bec0
 // Binds a texture to stage 0 with its colour and alpha operations, addressing, filters and mip bias, sending
 // only what changed; null disables texturing; stage 1 is always disabled
-void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
-{
-    GERScreenState* theState = this->GetScreenState(inScreen);
-    if (inTexture == theState->mTexture && (inTexture == NULL || !inTexture->HasChanged()))
-        return;
-    if ((inTexture != NULL) != theState->m33C)
-        theState->m33C = inTexture != NULL;
-    if (theState->mTexture != NULL)
-        theState->mTexture->Dereference();
-    theState->mTexture = inTexture;
-    if (inTexture != NULL) {
-        inTexture->Reference();
-        inTexture->Promote();
-    }
-    this->GetScreenState(inScreen)->m32C[3]++;
-    EeDx7ScreenState* theDX7State = reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]);
-    if (inTexture == NULL) {
-        ee_dx7r_clear_texture(theDX7State);
-        return;
-    }
-    const GETStage* theStage = inTexture->GetStage();
-    EeDx7StageView theView;
-    theView.surface = (GXSurface*)*static_cast<DX7Surface*>(inTexture->GetStageTexture(0)->GetFrameSurface());
-    theView.mColorMode = theStage->mColorMode;
-    theView.mAlphaMode = theStage->mAlphaMode;
-    theView.mTextureAddressingMode = theStage->mTextureAddressingMode;
-    theView.mMinFilterMode = theStage->mMinFilterMode;
-    theView.mMagFilterMode = theStage->mMagFilterMode;
-    theView.mMipFilterMode = theStage->mMipFilterMode;
-    theView.mMipMapBias = theStage->mMipMapBias;
-    ee_dx7r_apply_texture_stage(theDX7State, &theView);
-    inTexture->ValidateChanges();
-}
+void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen) { ee_dx7r_set_texture(this->mDX7, inTexture, inScreen); }
 
 // FUNCTION: DX7HR 0x1000c634
 // Sets the viewport rectangle and depth range on the device and marks the 2D/3D transforms for refresh
-void DX7Rasterizer::SetViewport(const GEViewport& inViewport, unsigned long inScreen)
-{
-    GERasterizer::SetViewport(inViewport, inScreen);
-    GERectangle theRectangle;
-    theRectangle = inViewport.GetViewRectangle();
-    const float theRect[4] = { theRectangle.GetLeft(), theRectangle.GetTop(), theRectangle.GetRight(), theRectangle.GetBottom() };
-    float theNear, theFar;
-    inViewport.GetDepthRange(theNear, theFar);
-    ee_dx7r_set_viewport(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), theRect, theNear, theFar);
-}
-
-// FUNCTION: DX7HR 0x1000c839
-// Records whether to wait for the vertical sync (base class only)
-void DX7Rasterizer::SetWaitForVSync(bool inState, unsigned long inScreen)
-{
-    GERasterizer::SetWaitForVSync(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000c84a
-// Sets Z testing and Z writing from the Z-buffer state when it changes, sending only what changed
-void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_z_buffer(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inState, this->GetScreenState(inScreen)->mZBuffer))
-        GERasterizer::SetZBuffer(inState, inScreen);
-}
-
-// FUNCTION: DX7HR 0x1000c910
-// Sets the Z compare function when it changes
-void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
-{
-    if (ee_dx7r_set_z_compare(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mZCompare))
-        GERasterizer::SetZCompare(inState, inScreen);
-}
+void DX7Rasterizer::SetViewport(const GEViewport& inViewport, unsigned long inScreen) { ee_dx7r_set_viewport(this->mDX7, &inViewport, inScreen); }
 
 // FUNCTION: DX7HR 0x1000c99e
 // Shows the frame (flip full screen, blit to the window's client area windowed); every 12 frames updates the
 // frame, polygon and texture-change statistics
-long DX7Rasterizer::ShowScene(unsigned long inScreen)
-{
-    GERScreenState* theState = this->GetScreenState(inScreen);
-    EeDx7FrameStats theStats;
-    theStats.frame_counter = theState->m32C[0];
-    theStats.scene_polys = theState->m32C[1];
-    theStats.last_time = theState->m32C[2];
-    theStats.texture_changes = theState->m32C[3];
-    theStats.drawn_poly_count = theState->mDrawnPolyCount;
-    theStats.drawn_poly_area = theState->mDrawnPolyArea;
-    theStats.area_per_frame = theState->mDrawnPolyAreaPerFrame;
-    theStats.area_per_second = theState->mDrawnPolyAreaPerSecond;
-    theStats.polys_per_frame = theState->mDrawnPolysPerFrame;
-    theStats.polys_per_second = theState->mDrawnPolysPerSecond;
-    theStats.frames_per_second = theState->mFramesPerSecond;
-    theStats.scene_polys_per_frame = theState->mScenePolysPerFrame;
-    theStats.scene_polys_per_second = theState->mScenePolysPerSecond;
-    theStats.texture_changes_per_frame = theState->mTotalTextureChangesPerFrame;
-    ee_dx7r_update_frame_stats(&theStats, theStats.frame_counter + 1 == 12 ? TMGetTime() : 0);   // the clock is read every 12 frames only
-    theState->m32C[0] = theStats.frame_counter;
-    theState->m32C[1] = theStats.scene_polys;
-    theState->m32C[2] = theStats.last_time;
-    theState->m32C[3] = theStats.texture_changes;
-    theState->mDrawnPolyCount = theStats.drawn_poly_count;
-    theState->mDrawnPolyArea = theStats.drawn_poly_area;
-    theState->mDrawnPolyAreaPerFrame = theStats.area_per_frame;
-    theState->mDrawnPolyAreaPerSecond = theStats.area_per_second;
-    theState->mDrawnPolysPerFrame = theStats.polys_per_frame;
-    theState->mDrawnPolysPerSecond = theStats.polys_per_second;
-    theState->mFramesPerSecond = theStats.frames_per_second;
-    theState->mScenePolysPerFrame = theStats.scene_polys_per_frame;
-    theState->mScenePolysPerSecond = theStats.scene_polys_per_second;
-    theState->mTotalTextureChangesPerFrame = theStats.texture_changes_per_frame;
-
-    GXSurface* thePrimary = *static_cast<DX7Surface*>(theState->mPrimarySurface);
-    GXSurface* theSecondary = NULL;
-    unsigned long theWidth = 0, theHeight = 0;
-    float theX = 0.0f, theY = 0.0f;
-    bool theFullScreen = theState->mScreen->GetIsFullScreen();
-    if (!theFullScreen) {
-        theSecondary = *static_cast<DX7Surface*>(theState->mSecondarySurface);
-        theWidth = theState->mSecondarySurface->GetWidth();
-        theHeight = theState->mSecondarySurface->GetHeight();
-        GE2DPoint theOrigin = theState->mWindow->GetClientOrigin();
-        theX = theOrigin.GetX();
-        theY = theOrigin.GetY();
-    }
-    return ee_dx7r_show_scene(theFullScreen, thePrimary, theSecondary, theWidth, theHeight, theX, theY, theState->mPrimarySurface,
-                              theState->mWaitForVSync);
-}
+long DX7Rasterizer::ShowScene(unsigned long inScreen) { return ee_dx7r_show_scene(this->mDX7, inScreen); }
 
 // FUNCTION: DX7HR 0x1000cbe5
 // Sends a light (point or directional, colour, attenuation, range) to its slot; 9 when the slot is not in use
 long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen)
 {
-    EeDx7LightParams theParams = DX7LightParams(inLight);
-    return ee_dx7r_update_light(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse, inIndex, &theParams);
-}
-
-// FUNCTION: DX7HR 0x1000ccab
-// Unlocks the vertex buffer, waiting while it is busy
-long DX7Rasterizer::UnlockVB(unsigned long inScreen)
-{
-    return ee_dx7r_unlock_vb(this->mDX7ScreenStates[inScreen]->mVertexBuffer);
-}
-
-// ---- the trampolines the Rust rasterizer calls
-extern "C" {
-bool ee_dx7cpp_rast_is_full_screen(DX7ActivateContext* c) { return c->mRasterizer->State(c->mScreen)->mScreen->GetIsFullScreen(); }
-void ee_dx7cpp_rast_current_mode(DX7ActivateContext* c, GEVideoMode* outMode) { *outMode = c->mRasterizer->State(c->mScreen)->mScreen->GetCurrentMode(); }
-unsigned long ee_dx7cpp_rast_mode_count(DX7ActivateContext* c) { return c->mRasterizer->State(c->mScreen)->mScreen->GetModeCount(); }
-void ee_dx7cpp_rast_mode(DX7ActivateContext* c, unsigned long inIndex, GEVideoMode* outMode) { *outMode = c->mRasterizer->State(c->mScreen)->mScreen->GetMode(inIndex); }
-int32_t ee_dx7cpp_rast_create_surface(DX7ActivateContext* c, GESurfaceDescription* inDescription, void** outSurface)
-{
-    return c->mRasterizer->State(c->mScreen)->mScreen->CreateSurface(*inDescription, reinterpret_cast<GESurface**>(outSurface));
-}
-void* ee_dx7cpp_rast_attached_surface(void* inSurface) { return static_cast<GESurface*>(inSurface)->GetAttachedSurface(0); }
-int32_t ee_dx7cpp_rast_attach_surface(void* inSurface, void* inAttached) { return static_cast<GESurface*>(inSurface)->AttachSurface(static_cast<GESurface*>(inAttached)); }
-void ee_dx7cpp_rast_dereference(void* inSurface) { static_cast<GESurface*>(inSurface)->Dereference(); }
-int32_t ee_dx7cpp_rast_activate_the_screen(DX7ActivateContext* c, void* inPrimary, void* inSecondary)
-{
-    return c->mRasterizer->CallActivateTheScreen(c->mScreen, static_cast<GESurface*>(inPrimary), static_cast<GESurface*>(inSecondary), c->mManager, c->mWindow);
-}
-void ee_dx7cpp_rast_commit_activation(DX7ActivateContext* c, void* inPrimary, void* inSecondary)
-{
-    GERScreenState* theState = c->mRasterizer->State(c->mScreen);
-    GEScreen* theScreen = theState->mScreen;
-    theScreen->SetTextureManager(c->mManager);
-    c->mManager->SetScreen(theScreen);
-    theState->mPrimarySurface = static_cast<GESurface*>(inPrimary);
-    theState->mTexture = NULL;
-    theState->mRenderTarget = NULL;
-    theState->mSecondarySurface = static_cast<GESurface*>(inSecondary);
-    theState->mWindow = c->mWindow;
-    theState->mIsScreenActivated = true;
-    c->mRasterizer->SetRenderTarget(static_cast<GESurface*>(inSecondary), c->mScreen);
-    static_cast<GESurface*>(inSecondary)->Reference();
-}
-void ee_dx7cpp_rast_apply_defaults(DX7ActivateContext* c)
-{
-    DX7RasterAccess* theRasterizer = c->mRasterizer;
-    unsigned long inScreen = c->mScreen;
-    GERScreenState* theState = theRasterizer->State(inScreen);
-    theState->mAlphaTesting = -16;
-    theRasterizer->SetAlphaTesting(0, inScreen);
-    theState->mAlphaTestingCompareState = -16;
-    theRasterizer->SetAlphaTestingCompareState(0, inScreen);
-    theState->mAlphaTestingRefValue = 4294967296.0f;
-    theRasterizer->SetAlphaTestingRefValue(0.0f, inScreen);
-    theState->mAntiAliasing = -16;
-    theRasterizer->SetAntiAliasing(0, inScreen);
-    theState->mBlendSource = -16;
-    theState->mBlendDestination = -16;
-    theRasterizer->SetBlending(1, 0, inScreen);
-    theState->mColorKeying = -16;
-    theRasterizer->SetColorKeying(0, inScreen);
-    theRasterizer->SetCullingUnknown();
-    theRasterizer->SetCulling(0);
-    theState->mDithering = -16;
-    theRasterizer->SetDithering(0, inScreen);
-    theState->mDrawStyle = -16;
-    theRasterizer->SetDrawStyle(0, inScreen);
-    theState->mFogState = -16;
-    theRasterizer->SetFog(0, inScreen);
-    theState->mLighting = -16;
-    theRasterizer->SetLighting(0, inScreen);
-    theState->mProjectionMode = -16;
-    theRasterizer->SetProjectionMode(1, inScreen);
-    theState->mShading = -16;
-    theRasterizer->SetShading(1, inScreen);
-    theState->mShadingColorSource = -16;
-    theRasterizer->SetShadingColorSource(1, inScreen);
-    theState->mSpecular = -16;
-    theRasterizer->SetSpecular(0, inScreen);
-    theState->mZBuffer = -16;
-    theRasterizer->SetZBuffer(0, inScreen);
-    theState->mZCompare = -16;
-    theRasterizer->SetZCompare(0, inScreen);
-    theRasterizer->DX7State(inScreen)->mIs3DMode = false;
-    theRasterizer->Set3DMode(inScreen);
-}
-void ee_dx7cpp_rast_verify(bool inOK, uint32_t inLine) { ESVERIFY_AT(inOK, inLine); }
-void* ee_dx7cpp_rast_new_screen(DX7Rasterizer*, void* inDirectDraw, const char* inName, bool inAttached, bool inPrimary)
-{
-    return static_cast<GEScreen*>(new DX7Screen(NULL, static_cast<GXDirectDraw*>(inDirectDraw), inName, inAttached, inPrimary));
-}
-bool ee_dx7cpp_rast_screen_is_valid(DX7Rasterizer* r, void* inScreen) { return r->GetIsScreenValid(static_cast<DX7Screen*>(static_cast<GEScreen*>(inScreen))); }
-void ee_dx7cpp_rast_add_valid_screen(DX7Rasterizer* r, void* inScreen) { r->AddValidScreen(static_cast<GEScreen*>(inScreen)); }
-void ee_dx7cpp_rast_delete_screen(void* inScreen) { delete static_cast<DX7Screen*>(static_cast<GEScreen*>(inScreen)); }
-void ee_dx7cpp_rast_set_active(DX7Rasterizer* r) { static_cast<DX7RasterAccess*>(r)->MakeActive(); }
-int32_t ee_dx7cpp_rast_flip(void* inPrimary, bool inWait) { return static_cast<GESurface*>(inPrimary)->Flip(inWait); }
+    return ee_dx7r_update_light(this->mDX7, inIndex, &inLight, inScreen);
 }
 
 // COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head and atexit
