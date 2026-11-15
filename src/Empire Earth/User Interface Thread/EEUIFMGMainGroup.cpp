@@ -434,7 +434,6 @@ void EEUIFMGMainGroup::Virtual08()
 {
 }
 
-#include "ee/EETechTreeTechID.h"
 
 // FUNCTION: EXE 0x667eaa
 // Returns the epoch the tech tree shows to the player (two past the start, at most the end; at least the Bronze

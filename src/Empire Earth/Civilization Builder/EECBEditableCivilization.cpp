@@ -17,7 +17,6 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EECommunications.h"
 #include "ee/EEMessage.h"
-#include "ee/EECivilization.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECBEditableCivilization.h"
 #include "ee/EEStringIDs.h"

@@ -107,6 +107,8 @@
 //!   [`command_units`] (the right-drag command and its facing arrow).
 //! - [`main_group`]: the main game form's main panel group (the shown unit, its refresh and update, a command
 //!   button, the airport's buttons) over the C++ host.
+//! - [`mouse_modes`]: the main game form's mouse modes (targets, placements, orders, the normal mode's starts)
+//!   and the wall and gate placements' mouse over the main form's host.
 //! - [`upgrade`]: the improvement button's availability, tooltip, presses and cost update over the C++ host.
 
 pub mod actions;
@@ -215,6 +217,7 @@ pub mod main_group;
 #[cfg(not(test))]
 mod main_group_ffi;
 pub mod menus;
+pub mod mouse_modes;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
 mod menus_ffi;
