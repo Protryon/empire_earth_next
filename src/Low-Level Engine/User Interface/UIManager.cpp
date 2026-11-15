@@ -2,7 +2,8 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x10078c81..0x1007ba37: the U2D key init chains, the implicit copy members and ??_E of UIStretchedTiledBackground
-// and UITBTiledBackground (UIManager.cpp is their first includer), the ctor, the dtor and the out-of-line members in
+// and UITBTiledBackground (UIManager.cpp was their first includer; both are UITiledBackground's tilings now), the
+// ctor, the dtor and the out-of-line members in
 // the original's order, then the vector/deque COMDATs. UIMovie.cpp starts at 0x1007ba37.
 #define LLE_UIMANAGER_CPP   // UIManager::sMouseWheel/sMouseLeftHanded are visible here (see UIManager.h)
 #include <windows.h>
@@ -46,9 +47,6 @@
 #include "lle/UIBFull.h"
 #include "lle/UIBitmapBackground.h"
 #include "lle/UITiledBackground.h"
-#include "lle/UILRTiledBackground.h"
-#include "lle/UITBTiledBackground.h"
-#include "lle/UIStretchedTiledBackground.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
 #include "lle/UIIMECandidate.h"
@@ -432,20 +430,20 @@ void UIManager::CreateBackgrounds()
                         theTable->GetNumCols(), theTable->GetNumRows(), theTable->GetVisible());
             break;
         case kBackgroundLRTiled:
-            new UILRTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                    theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                    theTable->GetDrawPriority(), theTable->GetVisible());
+            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
+                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
+                                  theTable->GetDrawPriority(), theTable->GetVisible(), kTilingLeftRight);
             break;
         case kBackgroundTBTiled:
-            new UITBTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                    theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                    theTable->GetDrawPriority(), theTable->GetVisible());
+            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
+                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
+                                  theTable->GetDrawPriority(), theTable->GetVisible(), kTilingTopBottom);
             break;
         case kBackgroundStretchedTiled:
-            new UIStretchedTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                           theTable->GetTextureRect(), theTable->GetTileWidthPercent(),
-                                           theTable->GetTileHeightPercent(), theTable->GetLayout(), theForm,
-                                           theTable->GetDrawPriority(), theTable->GetVisible());
+            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
+                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
+                                  theTable->GetDrawPriority(), theTable->GetVisible(), kTilingStretched,
+                                  theTable->GetTileWidthPercent(), theTable->GetTileHeightPercent());
             break;
         default:
             this->CreateUserDefinedBackground(*theTable);

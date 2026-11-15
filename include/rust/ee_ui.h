@@ -820,6 +820,107 @@ enum class EeUiOp : uint32_t {
   CtlAddEvent = 532,
   /// The string table's `GetString(b, *(UWideString*)a)`.
   CtlHelpString = 533,
+  /// The form's `AddBackground(this)`.
+  BgAdd = 540,
+  /// *Pure*: the manager's window's `GetWidth()` (a 0) or `GetHeight()` (a 1).
+  BgWindow = 541,
+  /// *Pure*: the form's `GetUseExclusiveCoords()`.
+  BgExclusive = 542,
+  /// *Pure*: whether the form is the manager's current form.
+  BgFormCurrent = 543,
+  /// The form's `LockDrawBackground()` (a 1) or `UnlockDrawBackground()` (a 0).
+  BgLock = 544,
+  /// The form's `RedrawIntersectControls(f)`.
+  BgRedraw = 545,
+  /// The manager's `AddDirtyRectangle(f, the form)`.
+  BgDirty = 546,
+  /// The virtual `LoadBackground()` -> its result.
+  BgVirtLoad = 547,
+  /// The virtual `UnloadBackground()` -> its result.
+  BgVirtUnload = 548,
+  /// *Wide*: the virtual `DrawStrectchedBackground(f[0..4], f[4..8])` -> its result.
+  BgVirtStretched = 549,
+  /// *Wide*: the virtual `DrawTiledBackground(f[0..4], a, b, c, d, f[4], f[5])` -> its result.
+  BgVirtTiled = 550,
+  /// `new GEBitmap` -> the bitmap.
+  BgBitmapNew = 551,
+  /// Bitmap `a`'s `Dereference()`.
+  BgBitmapRelease = 552,
+  /// *Pure*: bitmap `a`'s `GetTexture(the screen)` (NULL 0).
+  BgBitmapTexture = 553,
+  /// Bitmap `a`'s `SetTexture(texture b, the screen)`.
+  BgBitmapSetTexture = 554,
+  /// *Pure*: texture `a`'s `GetWidth()`, its `GetHeight()` in f[0].
+  BgTextureSize = 555,
+  /// The screen's texture manager's `LoadTexture(name a, *(GETextureDescription*)b)` with the backgrounds' stage
+  /// modes (modulate, linear filters, point mip filter, bias -0.75, clamped) -> the texture.
+  BgTextureLoad = 556,
+  /// *Wide*: bitmap `a`'s `ComputeStretchedCoordsAndScale(f[0..4], f[4..8], f[8..12], the screen)`.
+  BgBitmapStretch = 557,
+  /// Bitmap `a`'s `SetLocation(f[0], f[1])`.
+  BgBitmapSetLocation = 558,
+  /// Bitmap `a`'s `SetOpacity(f[0])`.
+  BgBitmapSetOpacity = 559,
+  /// The rasterizer's `Draw(bitmap a, the screen)` -> its result.
+  BgBitmapDraw = 560,
+  /// *Pure*: the form's `GetRectangle()`.
+  BgFormRect = 561,
+  /// *Pure*: the form's `GetFadeOpacity()` in f[0].
+  BgFormFade = 562,
+};
+
+/// The inward calls (each C++ class's methods forward here with their own call).
+enum class EeUiBgCall : uint32_t {
+  /// `UIBackground::Close()`.
+  Close = 1,
+  /// `UIBackground::Open()`.
+  Open = 2,
+  /// `UIBackground::RelayoutBackground()`.
+  Relayout = 3,
+  /// `SetRectangle(f)`.
+  SetRectangle = 4,
+  /// `SetVisibility(a != 0)`.
+  SetVisibility = 5,
+  /// `UIBitmapBackground`'s constructor: its bitmap.
+  BitmapInit = 6,
+  /// `UIBitmapBackground`'s destructor.
+  BitmapRelease = 7,
+  /// `UIBitmapBackground::DrawBackground(f)`.
+  BitmapDraw = 8,
+  /// `UIBitmapBackground::DrawStrectchedBackground(f[0..4], f[4..8])` (twelve floats).
+  BitmapStretched = 9,
+  /// `UIBitmapBackground::LoadBackground()`.
+  BitmapLoad = 10,
+  /// `UIBitmapBackground::SetBitmapTexture(texture a)`.
+  BitmapSetTexture = 11,
+  /// `UIBitmapBackground::UnloadBackground()`.
+  BitmapUnload = 12,
+  /// `UITiledBackground::DrawBackground(f)` (the tiling's).
+  TiledDraw = 13,
+  /// `UITiledBackground::DrawTiledBackground(f[0..4], a, b, f[4] bits, f[5] bits, f[6], f[7])` (twelve floats).
+  DrawTiled = 14,
+  /// `UIBFull`'s constructor: a columns by b rows.
+  BFullInit = 15,
+  /// `UIBFull`'s destructor.
+  BFullRelease = 16,
+  /// `UIBFull::DrawBackground(f)`.
+  BFullDraw = 17,
+  /// `UIBFull::LoadBackground()`.
+  BFullLoad = 18,
+  /// `UIBFull::SetBitmapTexture(texture a, column b, row f[0] bits)`.
+  BFullSetBitmapTexture = 19,
+  /// `UIBFull::SetNumberColumnsAndRows(a, b)`.
+  BFullSetGrid = 20,
+  /// `UIBFull::UnloadBackground()`.
+  BFullUnload = 21,
+  /// `UIFullBackground`'s destructor.
+  FullRelease = 22,
+  /// `UIFullBackground::DrawBackground(f)`.
+  FullDraw = 23,
+  /// `UIFullBackground::LoadBackground(*(GETextureDescription*)a)`.
+  FullLoad = 24,
+  /// `UIFullBackground::UnloadBackground()`.
+  FullUnload = 25,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -2053,12 +2154,75 @@ using EeUiHostFn = ptrdiff_t(*)(void *obj,
                                 ptrdiff_t d,
                                 float *f);
 
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
+};
+
 /// `GERectangle`: the C++ member order, `mBottom` first.
 struct EeUiRect {
   float bottom;
   float left;
   float right;
   float top;
+};
+
+/// `GETextureDescription` (`lle/GETextureManager.h`), copied with the background.
+struct EeUiTextureDescription {
+  unsigned long mSurfaceVolatility;
+  unsigned long mFrameFormat;
+  unsigned long mPixelDepth;
+  long mNumMipLevelsToDrop;
+  bool mIs3DRenderable;
+  bool mIsTransparencyEnabled;
+  bool mHasAlpha;
+  bool mCreateMIPMaps;
+  bool mUseTexturePack;
+};
+
+/// The backgrounds' members (`include/lle/UIBackground.h` and its subclasses'), the C++ classes' base.
+struct EeUiBackgroundFields {
+  /// The C++ background (the host's object).
+  void *mCpp;
+  /// The host of the calls out.
+  EeUiHostFn mHost;
+  EeUiLayout mLayout;
+  EeUiRect mRectangle;
+  /// `UITextureBackground`'s: the texture's rectangle.
+  EeUiRect mTextureRectangle;
+  /// `UITextureBackground`'s.
+  EeUiTextureDescription mTextureDescription;
+  unsigned long mBackgroundID;
+  unsigned long mDrawPriority;
+  /// The form (`UIForm*`).
+  void *mForm;
+  /// The texture file's name (`UITextureBackground::mTextureFileName`, `UIFullBackground::mFileName`): NUL-terminated
+  /// bytes, owned (`mNameSize` with the NUL), NULL before [`ee_ui_bg_texture`].
+  uint8_t *mName;
+  size_t mNameSize;
+  /// `UIBitmapBackground`'s bitmap (`GEBitmap*`).
+  void *mBitmap;
+  /// `UIBFull`'s and `UIFullBackground`'s tile bitmaps, row major (owned, `mBitmapCount` of them; NULL for none).
+  void **mBitmaps;
+  size_t mBitmapCount;
+  unsigned long mColumns;
+  unsigned long mRows;
+  /// `UIFullBackground`'s: the screen size the grid was designed for.
+  unsigned long mDesignedWidth;
+  unsigned long mDesignedHeight;
+  /// `UITiledBackground`'s tiling: 0 both ways, 1 left to right, 2 top to bottom, 3 stretched
+  /// (`mHorizontalCount` x `mVerticalCount` tiles).
+  unsigned long mTiling;
+  float mHorizontalCount;
+  float mVerticalCount;
+  bool mIsVisible;
 };
 
 /// `UIControl`'s members (`include/lle/UIControl.h`), the C++ class's base.
@@ -2153,18 +2317,6 @@ struct EeUiControlsTableFields {
   bool loop_movie;
 };
 
-/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
-struct EeUiLayout {
-  float left_offset;
-  float right_offset;
-  float top_offset;
-  float bottom_offset;
-  unsigned long left_type;
-  unsigned long right_type;
-  unsigned long top_type;
-  unsigned long bottom_type;
-};
-
 /// `GEColor`: red, green, blue.
 struct EeUiColor {
   float red;
@@ -2188,19 +2340,6 @@ struct EeUiControlsTableData {
   /// The normal, pressed and focused file names and the button down and up sounds, NUL-terminated (owned by the
   /// object).
   const char *names[5];
-};
-
-/// What a tiling class's `DrawBackground` hands its (virtual) `DrawTiledBackground`: the redraw rectangle's overlap
-/// with the background, the rows and columns of tiles under it (longs passed as unsigned longs, as the C++ did) and
-/// the tile size.
-struct EeUiTilePlan {
-  EeUiRect clip;
-  unsigned long first_row;
-  unsigned long last_row;
-  unsigned long first_column;
-  unsigned long last_column;
-  float w;
-  float h;
 };
 
 /// One record of the backgrounds database file (`UIDbDataBackgrounds`, 308 bytes on every target).
@@ -2435,6 +2574,59 @@ struct EeUiTableLike {
 };
 
 extern "C" {
+
+/// `UIBackground`'s constructor over its record (`layout` an `EeUiLayout`).
+///
+/// # Safety
+/// `rec` is the C++ background's base, `layout` a live layout.
+void ee_ui_bg_init(EeUiBackgroundFields *rec,
+                   void *cpp,
+                   EeUiHostFn host,
+                   unsigned long id,
+                   const EeUiLayout *layout,
+                   void *form,
+                   unsigned long priority,
+                   bool visible);
+
+/// `UITextureBackground`'s constructor: the texture's rectangle (four floats), description and NUL-terminated name.
+///
+/// # Safety
+/// `rec` is a record [`ee_ui_bg_init`] set up; the pointers live.
+void ee_ui_bg_texture(EeUiBackgroundFields *rec,
+                      const float *rect,
+                      const EeUiTextureDescription *description,
+                      const char *name);
+
+/// `UIFullBackground`'s constructor over its record.
+///
+/// # Safety
+/// `rec` is the C++ background's base; `name` NUL-terminated.
+void ee_ui_bg_full_init(EeUiBackgroundFields *rec,
+                        void *cpp,
+                        EeUiHostFn host,
+                        const char *name,
+                        unsigned long columns,
+                        unsigned long rows,
+                        void *form,
+                        unsigned long designed_width,
+                        unsigned long designed_height);
+
+/// The record's own memory, freed (the C++ base's destructor, after the classes' own releases).
+///
+/// # Safety
+/// `rec` is a record [`ee_ui_bg_init`] or [`ee_ui_bg_full_init`] set up.
+void ee_ui_bg_free(EeUiBackgroundFields *rec);
+
+/// One of the backgrounds' methods ([`EeUiBgCall`]).
+///
+/// # Safety
+/// `rec` is a live record set up by an init; `f` four live floats (twelve for the wide calls) or NULL for the calls
+/// that read none.
+ptrdiff_t ee_ui_bg_call(EeUiBackgroundFields *rec,
+                        EeUiBgCall call,
+                        ptrdiff_t a,
+                        ptrdiff_t b,
+                        float *f);
 
 /// A new Rust button for the C++ `button` (its `UIControl` part constructed), its calls out through `host`.
 EeUiButton *ee_ui_button_new(void *button,
@@ -2820,71 +3012,6 @@ ptrdiff_t ee_ui_controls_table_call(const EeUiControlsTable *table,
 /// `SetupStringArray`'s count: the strings `begin..=end` (none unless `begin` is positive and `end` not before it).
 unsigned long ee_ui_controls_table_string_count(long begin,
                                                 long end);
-
-/// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
-long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
-
-/// The tiling classes' `DrawBackground(redraw)` up to `DrawTiledBackground`: `kind` 0 tiled, 1 left-right,
-/// 2 top-bottom, 3 stretched (`across` x `down` tiles) -> whether the redraw rectangle meets the background, the
-/// plan in `out`.
-bool ee_ui_background_tiled_plan(int kind,
-                                 float across,
-                                 float down,
-                                 EeUiRect rect,
-                                 EeUiRect texture,
-                                 EeUiRect redraw,
-                                 EeUiTilePlan *out);
-
-/// `UITiledBackground::DrawTiledBackground(clip, rows, columns, w, h)` (`rect`: the background's).
-long ee_ui_background_draw_tiled(void *background,
-                                 EeUiRect rect,
-                                 EeUiRect clip,
-                                 unsigned long first_row,
-                                 unsigned long last_row,
-                                 unsigned long first_column,
-                                 unsigned long last_column,
-                                 float w,
-                                 float h);
-
-/// `UIFullBackground::DrawBackground(redraw)`: the first tile's texture size, the window's, the designed screen's
-/// and the grid (columns, rows) -> the last draw's result.
-long ee_ui_background_full_draw(void *background,
-                                EeUiRect redraw,
-                                unsigned long texture_width,
-                                unsigned long texture_height,
-                                unsigned long window_width,
-                                unsigned long window_height,
-                                unsigned long designed_width,
-                                unsigned long designed_height,
-                                unsigned long columns,
-                                unsigned long rows);
-
-/// `UIBFull::DrawBackground(redraw)`: the form's rectangle, the first tile's texture size, the texture rectangle
-/// and the grid (columns, rows) -> the last draw's result.
-long ee_ui_background_bfull_draw(void *background,
-                                 EeUiRect form,
-                                 EeUiRect redraw,
-                                 unsigned long texture_width,
-                                 unsigned long texture_height,
-                                 EeUiRect texture_rect,
-                                 unsigned long columns,
-                                 unsigned long rows);
-
-/// The screen rectangle `UIBackground::Open` (`exclusive`: the form's exclusive coordinates) and
-/// `RelayoutBackground` (never exclusive) lay a background out in.
-EeUiRect ee_ui_background_screen_rect(unsigned long width, unsigned long height, bool exclusive);
-
-/// `UIBackground::SetRectangle(rect)`.
-void ee_ui_background_set_rectangle(void *background, EeUiRect rect);
-
-/// `UIBackground::SetVisibility(visible)`.
-void ee_ui_background_set_visibility(void *background, bool visible);
-
-/// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.
-void ee_ui_background_full_tile_name(const char *name,
-                                     unsigned long row,
-                                     unsigned long column,
-                                     void *out);
 
 /// `UIBackgroundTable::Create`.
 long ee_ui_background_table_create(void *file);
