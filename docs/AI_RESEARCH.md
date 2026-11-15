@@ -5904,6 +5904,14 @@ games.
 The classic's raids now come only from its Lua attack groups; the pool keeps the army home, so the enemy's economy
 loses less (as §8.86's pool row showed).
 
+### 8.91 The Rush and balanced scripts removed (2026-11-15)
+
+**The owner:** "remove rush AI, it's completely undeveloped". `data/ai/rush.lua` and its manifest entry go, with
+`data/ai/balanced.lua` (not in the manifest, so not playable) and the two libraries only those two used,
+`lib/rb_economy.lua` and `lib/rb_army.lua`. The manifest now lists Boom, Age of AI and Classic (Lua). The S4 results
+(§8.31) stay as history. The `aggressive` personality in `aipersonalities.yaml` is the classic's and stays. The group
+verbs that only Rush used no longer need a Lua port before EECPNextArmy can go.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
