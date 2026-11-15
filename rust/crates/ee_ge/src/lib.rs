@@ -74,6 +74,7 @@ pub mod pixel;
 pub mod point;
 pub mod prim;
 pub mod rastobj;
+pub mod smallobj;
 pub mod surface_px;
 pub mod terrain;
 pub mod terrain_mesh;

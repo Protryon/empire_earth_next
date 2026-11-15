@@ -36,6 +36,13 @@
 #include "lle/GE2DVertex.h"
 #include "lle/GEBitmap.h"
 #include "lle/GELine.h"   // GEVertexHost
+#include "lle/UWideString.h"
+#include "lle/GEMaterial.h"
+#include "lle/GEFont.h"
+#include "lle/GEText.h"
+#include "platform/PlatFont.h"
+#include "platform/PlatWindow.h"
+#include "GERustText.h"
 #include "GERustMath.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
@@ -417,6 +424,93 @@ intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, in
     return 0;
 }
 // ---- end of the vertex host
+
+// ---- the object host: the calls GEMaterial, GEFont, GEText and GEWindow (ee_ge smallobj.rs) make on other objects,
+// and GEWindow's forwarders (its header does not include the Rust header)
+intptr_t GEObjectHost(void* inOwner, EeGeObjOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    UString* theString = (UString*)inObj;
+    UWideString* theWide = (UWideString*)inObj;
+    switch (inOp) {
+    case EeGeObjOp::StrNew:
+        return (intptr_t)new UString;
+    case EeGeObjOp::StrCopy:
+        return (intptr_t)new UString(*(const UString*)a);
+    case EeGeObjOp::StrDelete:
+        delete theString;
+        return 0;
+    case EeGeObjOp::StrAssign:
+        *theString = *(const UString*)a;
+        return 0;
+    case EeGeObjOp::StrSizeOf:
+        return (intptr_t)theString->SizeOf();
+    case EeGeObjOp::StrEqual:
+        return *theString == *(const UString*)a;
+    case EeGeObjOp::StrText:
+        return (intptr_t)(const char*)*theString;
+    case EeGeObjOp::WStrNew:
+        return (intptr_t)new UWideString((unsigned long)a);
+    case EeGeObjOp::WStrDelete:
+        delete theWide;
+        return 0;
+    case EeGeObjOp::WStrAssign:
+        *theWide = *(const UWideString*)a;
+        return 0;
+    case EeGeObjOp::WStrText:
+        return (intptr_t)(const char*)*theWide;
+    case EeGeObjOp::WStrLength:
+        return (intptr_t)theWide->GetLength();
+    case EeGeObjOp::TexReference:
+        ((GETexture*)inObj)->Reference();
+        return 0;
+    case EeGeObjOp::TexDereference:
+        ((GETexture*)inObj)->Dereference();
+        return 0;
+    case EeGeObjOp::RefReference:
+        ((UReferenceCounter*)inObj)->Reference();
+        return 0;
+    case EeGeObjOp::RefDereference:
+        ((UReferenceCounter*)inObj)->Dereference();
+        return 0;
+    case EeGeObjOp::FontObj:
+        return (intptr_t)((GEFont*)inObj)->GetRust();
+    case EeGeObjOp::PlatFontCreate:
+        return (intptr_t)PlatFontCreate((const char*)inObj, (int32_t)a, (int)(b & 1), (int)((b >> 1) & 1),
+                                        (int)((b >> 2) & 1), (int)((b >> 3) & 1));
+    case EeGeObjOp::PlatFontDestroy:
+        PlatFontDestroy((PlatFont*)inObj);
+        return 0;
+    case EeGeObjOp::PlatFontHeight: {
+        PlatFontMetrics theMetrics;
+        PlatFontGetMetrics((const PlatFont*)inObj, &theMetrics);
+        return theMetrics.mHeight;
+    }
+    case EeGeObjOp::TextOps:
+        return (intptr_t)GERustTextOps();
+    case EeGeObjOp::PlatWindowDestroy:
+        PlatWindowDestroy((PlatWindow*)inObj);
+        return 0;
+    case EeGeObjOp::PlatWindowSetSize:
+        PlatWindowSetSize((PlatWindow*)inObj, (int32_t)a, (int32_t)b);
+        return 0;
+    case EeGeObjOp::PlatWindowPosition:
+        PlatWindowGetPosition((PlatWindow*)inObj, (int32_t*)a, (int32_t*)b);
+        return 0;
+    }
+    (void)inOwner;
+    return 0;
+}
+
+GEWindow::GEWindow(PlatWindow* inWindow, unsigned long inWidth, unsigned long inHeight, unsigned long inDepth,
+                   bool inIsFullScreen)
+    : mRust(ee_ge_win_new(&GEObjectHost, this, inWindow, inWidth, inHeight, inDepth, inIsFullScreen)) {}
+GEWindow::~GEWindow() { ee_ge_win_destroy(this->mRust); }
+const GE2DPoint& GEWindow::GetClientOrigin() { return *reinterpret_cast<const GE2DPoint*>(ee_ge_win_origin(this->mRust)); }
+unsigned long GEWindow::GetHeight() const { return ee_ge_win_size(this->mRust, true); }
+PlatWindow* GEWindow::GetOSRepresentation() const { return static_cast<PlatWindow*>(ee_ge_win_os(this->mRust)); }
+unsigned long GEWindow::GetWidth() const { return ee_ge_win_size(this->mRust, false); }
+void GEWindow::Resize(unsigned long inWidth, unsigned long inHeight) { ee_ge_win_resize(this->mRust, inWidth, inHeight); }
+// ---- end of the object host
 
 // FUNCTION: LLE 0x1000f3a4
 // Returns the colours of the bitmap's four corners in vertex order (top left, top right, bottom left, bottom right)

@@ -190,7 +190,7 @@ long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureMa
 long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                    unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
 {
-    return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->mWidth, inWindow->mHeight, inBackBuffers,
+    return ee_dx7r_activate_screen(this->mDX7, inScreen, inManager, inWindow, inWindow->GetWidth(), inWindow->GetHeight(), inBackBuffers,
                                    inZBuffer, inZBufferFormat);
 }
 
