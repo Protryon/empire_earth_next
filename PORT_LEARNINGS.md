@@ -23554,3 +23554,135 @@ Round total: net -1,464. The Graphics Engine directory: 10,134 -> 8,752 lines; t
 - **Left in the plug-in**: DX7Rasterizer.cpp (852 lines: the forwarders, the draws' reads of GE objects, the rasterizer's
   host, about 300 address markers), DX7Trampolines.cpp (366: the vertex arrays' shells, the screen, surface and movie
   shells and hosts, the layout pins) and GX.cpp (137: the GX shims the splash screen and `tools/gx_test`/`sdl_test` call).
+
+## R6: the civilization builder, round 1: the builder's gate in EE-SIM; the builder, the edited civilization and the list box's logic whole in Rust over one host (ee_screens civ_whole.rs, civ_edit.rs, civ_list.rs; branch rust-civbuilder1, 2026-11-14)
+
+### The census
+
+`src/Empire Earth/Civilization Builder` without the area effects (the calamities lane's): 7 units, 3,761 lines.
+
+| Unit | Lines | What | Callers | Kind |
+|---|---|---|---|---|
+| EECivilizationBuilder | 617 | the forms' helpers (`CivBuilder*`: names, typed texts, lists, points, file dialogs, upgrade moves), `EEProcessTimerExpired`, `EESetCivBuilderButtonBlinking` | the builder's events (Rust since screens round 9, through EEScreens.cpp's host), the physics' civ timer, the main game form, scenario effects | UI |
+| EECBUIListBox | 835 | the builder's list box (a `UILBString`): '/'-token lines, categories' headers, sort, selection on upgrade lines, formatting with costs, drawing | the controls table's factory (forms 7 and 35), `EECivilizationManager::FillCivilizationList`, the choice form's host | UI |
+| EECBCivilizationFiles | 848 | the builder's state and file spec, its open/close/buy/return/load/save/delete/accept; `EELoadCivilization`, `EEApplyCivilizationFile`, `EECBRequestUpgrades`, the timer limits | the builder; the AI (`EEComputerPlayer` applies premade civilizations), the campaign, the player resets, the server's message | UI + simulation |
+| EECBEditableCivilization | 197 | the edited civilization (points, picks, name; `Apply` sends `EEMCivUpgradesRequested`) | the builder, the list box's formatting, the campaign, the world's reset | UI |
+| EECBCivilizationCreator | 78 | the editor's creator (always changeable, unlimited with the free camera) | the builder | UI |
+| EECivPowersManager | 271 | the powers table and `ApplyPower` | the tech tree, units, the manager | data + simulation |
+| EECivilizationManager | 915 | the categories, premade civilizations, upgrade ids and keys, `ApplyUpgradeLevel` | everything above, the AI, the units | data + simulation |
+
+The builder's events and the choice form were already Rust (`civ_builder.rs`, `civ_choice.rs`, game screens rounds 9
+and 10); the only civ-builder code in the game screens lane's files was EEScreens.cpp's builder host cases (removed
+here: the builder's ops route to Rust before reaching that host).
+
+### The gate (TEST ONLY, recorded on the unmodified builder)
+
+No tour opens the builder (the ai-game gate opens it in the real game and dismisses it with Exit). EE-SIM's scripted
+editor builds every form, so the gate is a script of the editor gate's driver: `python -I tools/sim_editor.py
+--civbuilder` (`tools/sim_editor/civbuilder.txt`, `civbuilder_expected.txt`; the "cb" command,
+`src/Empire Earth/Empire Earth/EESimCivBuilder.cpp`, about 400 lines). It opens the builder as a person does (the
+editor's builder button: the creator, unlimited and with points; the game's edit of the current player's
+civilization; the civilization timer: the predefined civilizations' choice, then the builder with custom
+civilizations), fires the forms' events (buttons, the lists' release and selection events, the message boxes'
+buttons), sets edit boxes, picks lines (headers in both directions on the choice form, where auto select is off),
+and digests: every control of a form (class, id, mode, texts, the lists' every line, flags, selection, events), the
+form stack, the editor's and the current player's civilizations, the edited civilization, the last saved file and
+the civilization files' bytes. It saves (new, overwrite No/Yes, a premade name, a name the file system refuses),
+loads (a keyed file, a legacy binary file the script writes), deletes, renames, accepts, exits, buys until refused,
+returns (one the civilization owned: refused), runs the campaign's save and `EEApplyCivilizationFile`, `TabbedTo`,
+`ResetSelection`, `CopyData`, the blinking button. Recorded twice on the unmodified builder: 3,913 lines,
+identical. The move passed it on its first run.
+
+### The move
+
+- **One host.** `ee_screenscpp_cb(op, p, a, b, c, text, length, out)` in EECivilizationBuilder.cpp (the unit that
+  held the helpers; ~420 lines): forms and controls by id (texts, numbers, display modes, pushes, the file lists,
+  the open/close events), the list's base calls (`EECBUIListBox::HostOp`, which reaches the protected base:
+  `mData`, `UIListBox::AppendLine/DeleteLine/ChangeSelectionIndex`, the copied lines and the draw), the language's
+  strings and the percent format, the civilization manager's lookups, the edited `EECivilization`'s costs and
+  points, the request message, the world's flags, the sounds, messages and questions, the file spec 0x565518 (shared
+  with `EELoadCivilization`, which stays C++), the players' reset. Answers come back through an opaque Rust sink
+  (`ee_screens_cb_out_text`, `ee_screens_cb_out_value`).
+- **Whole in Rust.** `civ_whole.rs`: every `CivBuilder*` helper, `EEShowCivBuilderPoints`,
+  `EESetCivBuilderButtonBlinking`, `EEProcessTimerExpired`, the builder's state (the original's six globals), the
+  file's writing (`keyed_file`, `legacy_file`), the builder's events' ops (`event_call`, `event_text`,
+  `event_put_text`: `civ_builder_ffi.rs` routes them before the screens' host). `civ_edit.rs`: `EECBEditableCivilization`
+  and `EECBCivilizationCreator` as one record (`creator: Option<unlimited>`), its state in cells (the list's
+  formatting reads its costs while a helper holds it), owned by an `AtomicPtr` (`gEditableCivilization`).
+  `civ_list.rs`: the list box's logic. Deleted: EECBEditableCivilization.cpp/.h, EECBCivilizationCreator.cpp/.h; the
+  builder's half of EECBCivilizationFiles.cpp; EEScreens.cpp's builder host (~90 lines). `EECBUIListBox` keeps its
+  ctor, `CopyData`, the members the choice form's host sets, and one-line forwarders.
+- **Kept names.** The game's callers keep `CivBuilderEditCivilization`, `CivBuilderCreateCivilization`,
+  `EEProcessTimerExpired`, `EESetCivBuilderButtonBlinking`, `CivBuilderSaveCivilization`,
+  `CivBuilderEditCurrentCivilization` (forwarders in the host unit); the campaign and the world's reset call
+  `CivBuilderFreeCivilization()` in place of `delete gEditableCivilization`.
+
+### Traps
+
+- **The overwrite question's close flag was a dangling pointer.** `CivBuilderSaveCivilization` passed
+  `(UIForm*)&theClose` (a local) as the question's data; the answer read it after the function returned. Rust uses
+  false. A probe (`build/cb/probe2.txt`: an upgrade bought, saved over, Yes) shows the answer runs and writes the file
+  (217 -> 244 bytes, the fourth upgrade in it) and the save dialog stays; with the flag true (the mutation below) the
+  dialog stays too (the close the answer posts from the UI thread's 0x417 message pops nothing; why was not traced), so
+  the flag is not observable in EE-SIM.
+- **`GetSelectedUpgrade`'s out parameters.** A selected line that does not read whole still answers OK; the upgrade
+  is written only when it scans, the bonus and cost are set to 0 for a missing token and left for one that does not
+  scan (`GetNumber`). The predefined civilizations' lines ("cat/name/ / / / / ") are upgrade lines whose ids do not
+  scan.
+- **Sorting.** The original's `std::sort` with the special-powers-first comparator; no two lines of a list compare
+  equal (distinct ids or categories), so Rust's stable sort gives the same order. The comparator's prefix is the
+  special powers' name's character count (D6: `GetLength` counts characters).
+- **The trimmed include block** of EECBCivilizationFiles.cpp failed to compile (`UIControl.h` needs `GERhombus`,
+  `GEColor` first): the units' include blocks are order-dependent; keep the original block and drop lines one by one.
+
+### Mutations of the Rust against the gate (build/cb/mut.py; each built and run)
+
+| Mutation | Diff lines |
+|---|---|
+| the line order: the special powers last | 4,909 |
+| `GetRefund` at the full count (no one fewer) | 90 |
+| the bought list's points: the refund without the category's places before it | 28 |
+| the keyed file's upgrades joined without a space | 12 |
+| a header's selection: the other direction first | 4 |
+| the overwrite question's Yes closes the form (`OVERWRITE_CLOSE` true) | **0**: see the trap above |
+
+5 of 6 caught.
+
+### Behaviour
+
+None intended. Where the original would crash (a missing form, list or edited civilization), Rust skips the step.
+
+### Only a person reaches
+
+The lists' drawing (`DrawTextA`: EE-SIM draws nothing; the real game's ai-game gate opens the builder and draws it
+before its Exit), the mouse on the lists, multiplayer (the request to the server, `CanChange`'s multiplayer rule, the
+not-spent-all question), a campaign map's name.
+
+### Gates
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| ec373643 | the builder's gate (TEST ONLY: EESimCivBuilder.cpp, the "cb" command, `--civbuilder`) | +433 |
+| 287d022c | the builder, the edited civilization and the list box's logic whole in Rust | +1,147 -2,953, net -1,806 (the builder -1,819, the gate's digest +13) |
+
+| Gate | After the move (287d022c) | Merged with rust (a71f84db) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC, EE-SIM 0 unresolved, 0 duplicates | EE-AOC, EE-SIM 0/0 |
+| the builder's gate (`sim_editor.py --civbuilder`) | PASS 3,913 (unchanged) | PASS 3,913 |
+| the editor gate (`sim_editor.py`) | PASS 12,723 | PASS 12,723 |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (3,655 tests) | PASS (3,713 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0/0 |
+| tour (harness lock, the merged test profile) | | `RESULT PASS tour` (render checks ok, F3 input check ok, `gx_errors` {}) |
+| ai-game (harness lock, the gates' flags) | | first run `RESULT FAIL ai-game error: main-menu: the window capture is blank` (at the main menu, before any game: a blank capture of the window at 01:26, the display's; not the builder); rerun `RESULT PASS ai-game outcome time-cap ... alive_computers [2, 3]`, `gx_errors` {}: the civilization timer opened form 7 through `civ_whole::open_form` (both lists filled) and Exit (7, 16) closed it |
+| captures | not run: no simulation code changed (EELoadCivilization, EEApplyCivilizationFile, EECBRequestUpgrades stay C++) | |
+
+The merge of rust (a71f84db): PORT_LEARNINGS.md and docs/RUST_PLAN.md conflicted (this branch's base had touched
+them; rust holds both sides): rust's copies taken. No code conflict; `rust_build.py header` and `rust_includes.py`
+changed nothing; no name of `civ_whole.rs` lands in `ee_rust_common.h` (the ops are `EE_SCREENS_CBW_*`, the
+crate-private constants are not exported).
+
+### Left
+
+`EECivilizationManager` (915) and `EECivPowersManager` (271): data plus simulation (`ApplyUpgradeLevel`,
+`ApplyPower`); `EELoadCivilization` (the AI reaches it); these need the oracle and the capture profiles.
