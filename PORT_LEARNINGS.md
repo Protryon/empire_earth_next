@@ -24809,6 +24809,22 @@ The action manager (`EEUserInterface`'s queues) is Rust since screens round 18 (
 
 Rust: `game_actions.rs` 1,956 lines, `game_actions_ffi.rs` 192, tests 158, the replay 317.
 
+### Gates
+
+| Gate | The move (3026b8ba) | Merged with rust (92c1190e, after the address markers) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates | 0 unresolved, 0 duplicates |
+| `build.py --test-profile windowed-software` | | 0 unresolved, 0 duplicates |
+| `tools/sim_editor.py` | PASS (12,723 lines) | PASS (14,049 lines) |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (3,707 tests) | PASS (3,867 tests) |
+| capture, oracle profile, seeds 2-3 | | PASS (179 digests; 4 SMSV/TNMT records without a golden, not this lane's) |
+| harness (the lock held) | | tour PASS, orders + box select PASS, LAN game PASS, legacy tour `STOP <windowed session complete>`; the scroll check passed once on the first merge (21cbf437) and failed twice on the final tree, once on the edge and once on the key scroll (the key scroll is not this lane's code: machine load; edge scrolling is flaky here) |
+
+The first legacy tour on the first merge crashed in `EETestCommsRefresh` (the fixture's graphics-thread read of
+`gCommunications` while the UI thread replaced it at the single player start: `ee_net_comms_get` on a freed object);
+the rerun on the final tree passed. The race is the fixture's, not the actions'.
+
 ### Behaviour
 
 None intended. Unset members of the original are zero now (the record is value-initialised):
