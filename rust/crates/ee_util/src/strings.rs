@@ -7,10 +7,7 @@ use crate::language_strings::{LANGUAGE, STRINGS};
 
 /// The text of string `id` (without its closing NUL), or `None` when the table has no such string.
 pub fn resource_string(id: u16) -> Option<&'static str> {
-    STRINGS
-        .binary_search_by_key(&id, |&(key, _)| key)
-        .ok()
-        .map(|i| &STRINGS[i].1[..STRINGS[i].1.len() - 1])
+    STRINGS.binary_search_by_key(&id, |&(key, _)| key).ok().map(|i| &STRINGS[i].1[..STRINGS[i].1.len() - 1])
 }
 
 /// The strings' Windows LANGID, or 0 when the table is empty (the caller then asks the system).
