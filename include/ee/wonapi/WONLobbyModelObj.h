@@ -5,6 +5,7 @@
 // The rest of the model (friends, rooms, servers, the lists) is WONLobbyModel.h's.
 #ifndef EE_WONAPI_WONLOBBYMODELOBJ_H
 #define EE_WONAPI_WONLOBBYMODELOBJ_H
+#include "rust/ee_won.h"
 
 typedef EeWonModelField LobbyMF;
 typedef EeWonModelCall LobbyMC;
