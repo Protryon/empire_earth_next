@@ -1051,25 +1051,3 @@ void EEUnitClass::SpaceshipGetSoundParameters(EEUnit* inUnit, EESoundObject* inS
     EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
 }
 
-// FUNCTION: EXE 0x61a59e
-// Answers dying done (always) and move preparation complete (has a path); others to the base class
-long EEUnitClass::SpaceshipEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theFlag = false;
-    switch (inEvent) {
-    case kTriggerDyingAnimationFinished:
-        theFlag = true;
-        break;
-    case kTriggerMovePreparationComplete:
-        theFlag = (long)inUnit->mWaypoints.size() > 0;
-        break;
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
-}
-

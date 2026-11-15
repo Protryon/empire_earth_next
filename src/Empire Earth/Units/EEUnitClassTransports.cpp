@@ -400,32 +400,6 @@ void EEUnitClass::HelicopterTransportUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetHeight(theZ);
 }
 
-// FUNCTION: EXE 0x6137f8
-// Answers the dying-finished (below its tile's height) and move-prepared (has waypoints) triggers; others the
-// common way
-long EEUnitClass::HelicopterTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theFlag = false;
-    switch (inEvent) {
-    case kTriggerDyingAnimationFinished:
-        if (inUnit->mPhysicalModel.GetLocation().GetZ() < inUnit->mTile->GetHeight())
-            theFlag = true;
-        else
-            theFlag = false;
-        break;
-    case kTriggerMovePreparationComplete:
-        theFlag = (long)inUnit->mWaypoints.size() > 0;
-        break;
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
-}
-
 // ---- EEUCNavalTransport.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The naval
 // transport's unit class: 0x218a45..0x218e34 (after EEUCNavalPriest.cpp; EEUCPlanetSpaceship.cpp's +0x74 0x218e34
 // follows). Unit flags: the exe's module set. Its ctor is inline (EEUnitClass.cpp's factory; vtable 0x448718); its
@@ -471,15 +445,6 @@ void EEUnitClass::SpaceTransportRemoveFromTile(EEUnit* inUnit)
         theTile->RemoveUnit(theUnit);
 }
 
-// FUNCTION: EXE 0x61ab3b
-// Answers dying done (always) and move preparation complete (has a path) as a spaceship; others to the base class
-long EEUnitClass::SpaceTransportEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    if (inEvent == kTriggerDyingAnimationFinished || inEvent == kTriggerMovePreparationComplete)
-        return this->SpaceshipVirtualA0(inUnit, inEvent);
-    return this->BaseEvaluateCondition(inUnit, inEvent);
-}
-
 void EEUnitClass::SpaceshipVirtual2C(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                               float* outPitch)
 {
@@ -499,21 +464,6 @@ void EEUnitClass::SpaceshipVirtual78(EEComplexUnit* inUnit)
     theTransformation.SetZ(theZ);
     inUnit->SetTransformation(theTransformation, true);
     inUnit->SetHeight(theZ);
-}
-
-long EEUnitClass::SpaceshipVirtualA0(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theDone;
-    if (inEvent == kTriggerDyingAnimationFinished)
-        theDone = true;
-    else if (inEvent == kTriggerMovePreparationComplete)
-        theDone = (long)inUnit->mWaypoints.size() > 0;
-    else
-        return this->BaseEvaluateCondition(inUnit, inEvent);
-    if (theDone)
-        theResult = 1;
-    return theResult;
 }
 
 // ---- EEUCFortress.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The fortress (a land
@@ -541,23 +491,6 @@ void EEUnitClass::FortressUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetBuilt(0, 1, 1);
     this->BaseUnitCreated(inUnit);
     inUnit->SetRegenerationTimer(1000);
-}
-
-// FUNCTION: EXE 0x610357
-// Answers the fall-finished trigger once it has sunk below -2; other triggers go to the common unit class
-long EEUnitClass::FortressEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    switch (inEvent) {
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerDyingAnimationFinished:
-        if (inUnit->mPhysicalModel.GetLocation().GetZ() < -2.0f)
-            theResult = 1;
-        break;
-    }
-    return theResult;
 }
 
 // FUNCTION: EXE 0x610391

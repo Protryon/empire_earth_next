@@ -478,77 +478,6 @@ void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect)
     theSound->Play(theVolume, thePan, thePitch);
 }
 
-// FUNCTION: EXE 0x60d10e
-// Answers the citizen triggers: starts the next queued build, build queue empty, smart task not assigned (true when
-// it has a goal), goal is repair; gather and build triggers go to the active goal (2 when not the main goal)
-long EEUnitClass::BasicCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    bool theTrue = false;
-    long theResult = 0;
-    switch (inEvent) {
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerBuildingInBuildQueue:
-        if ((long)inUnit->mCitizenBuildQueue.size() > 0) {
-            EEUnit* theSite = inUnit->PopBuildTarget();
-            if (theSite != NULL) {
-                inUnit->SetGoal(EEUGRust::NewBuildRepair(inUnit->GetPlayer(), theSite, true), 0, 0);
-                inUnit->StartAction(kActionMoveToRepairSite);
-                theTrue = true;
-            }
-        }
-        break;
-    case kTriggerBuildQueueEmpty:
-        theTrue = inUnit->mCitizenBuildQueue.size() == 0;
-        break;
-    case kTriggerSmartTaskNotAssigned:
-        // True while the citizen still has a goal, as in the original: "not assigned" means the smart task gave it
-        // no new job, so it still holds its finished build goal. A smart task that found work has already moved the
-        // citizen out of TaskSmartCitizen (FindNextWork starts an action), so this only fires for the leftovers, whose
-        // Idle clears the stale goal. Inverting it (== NULL) left every such citizen in TaskSmartCitizen for good,
-        // still in its work animation beside the finished building.
-        theTrue = inUnit->mGoalState != NULL;
-        break;
-    case kTriggerGoalIsRepairSite:
-        if (inUnit->mActiveGoal != NULL && inUnit->mActiveGoal->mKind == kGoalBuildRepair)
-            theTrue = true;
-        else
-            theTrue = false;
-        break;
-    case kTriggerBuildingDestroyed:
-    case kTriggerBuildingRepaired:
-    case kTriggerResourceCapacityFilled:
-    case kTriggerResourceCapacityEmpty:
-    case kTriggerNewResourceFound:
-    case kTriggerResourceDepleted:
-    case kTriggerResourceInRange:
-    case kTriggerStorageInRange:
-    case kTriggerStorageFound:
-    case kTriggerRepairSiteInRange:
-    case kTriggerStorageDestroyed:
-    case kTriggerBuildSiteClear:
-    case kTriggerBuildSiteVisible:
-    case kTriggerBuildSiteValid:
-    case kTriggerResourceAccessible:
-    case kTriggerWaitingAreaInRange:
-    case kTriggerResourceTargetIsTree:
-    case kTriggerOpenPositionAvailable:
-    case kTriggerGoalIsBuild:
-    case kTriggerGoalIsResource:
-    case kTriggerGoalIsStorage:
-    case kTriggerGoalIsWaitingArea: {
-        EEUnitGoal* theGoal = inUnit->mActiveGoal;
-        if (theGoal != NULL && theGoal->EvaluateCondition(inUnit, inEvent))
-            theResult = (theGoal != inUnit->mGoalState) + 1;
-        break;
-    }
-    }
-    if (theTrue)
-        theResult = 1;
-    return theResult;
-}
-
 // FUNCTION: EXE 0x60d2dc
 // Returns whether a tile holds a unit that blocks a citizen (not a farm, robotic farm, path point, ambient or
 // foundation)
@@ -707,37 +636,6 @@ EEUnit* EEUnitClass::NavalCitizenCreateUnit(long inX, long inY, long inPlayer, b
     theTransformation.SetY((float)inY);
     theTransformation.SetZ(0.0f);
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
-}
-
-// FUNCTION: EXE 0x618664
-// Answers dying done: true once the boat's transformed bounding box lies wholly below the water line
-long EEUnitClass::NavalCitizenEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    GE3DPoint thePosition;
-    GEBoundingBox theBox;
-    GEBoundingBox theTransformedBox;
-    EEComplexUnit* theUnit = inUnit;
-    const GEPhysicalModel& thePhysicalModel = theUnit->mPhysicalModel;
-    GEModel* theModel = thePhysicalModel.GetModel();
-    long theResult = 0;
-    if (inEvent != kTriggerDyingAnimationFinished)
-        theResult = this->BasicCitizenEvaluateCondition(theUnit, inEvent);
-    else {
-        theUnit->GetPosition(thePosition);
-        GETransformation theTransformation(false);
-        thePhysicalModel.GetLocation().Apply(theModel->GetInternalTransform(thePhysicalModel.GetFrame()),
-                                             theTransformation);
-        float theScale = thePhysicalModel.GetScale();
-        theTransformation.Scale(theScale, theScale, theScale);
-        theTransformation.SetX(thePosition.GetX());
-        theTransformation.SetY(thePosition.GetY());
-        theTransformation.SetZ(thePosition.GetZ());
-        theBox = theModel->GetBoundingBox(theUnit->mPhysicalModel.GetFrame());
-        theBox.Transform(theTransformation, theTransformedBox);
-        if (theTransformedBox.GetTopRightBack().GetZ() < 0.0f)
-            theResult = 1;
-    }
-    return theResult;
 }
 
 // ---- EEUCBasicPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The priests' common
@@ -910,63 +808,6 @@ void EEUnitClass::BasicPriestLoadMedia(EEPlayer* inPlayer)
 {
     EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Load(false);
     this->BaseLoadMedia(inPlayer);
-}
-
-// FUNCTION: EXE 0x60dd2d
-// Answers the conversion triggers (attacker convertible, enough faith, goal still valid, goal is or is not a
-// conversion, target converted); the faith check uses the attacker's conversion cost
-long EEUnitClass::BasicPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    switch (inEvent) {
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerAttackerIsLegalConversionTarget: {
-        bool theFlag;
-        theResult = inUnit->mLastAttacker != NULL && EECanConvert(inUnit, static_cast<EEComplexUnit*>(inUnit->mLastAttacker), theFlag) ? 1 : 0;
-        break;
-    }
-    case kTriggerHasEnoughManaForConversion:
-        theResult = inUnit->mLastAttacker != NULL && inUnit->GetPower() >= EEGetConversionCost(inUnit) ? 1 : 0;
-        break;
-    case kTriggerConvertGoalStillValid:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL && theGoal->GetAttackTarget() != NULL &&
-                (theGoal->GetAttackTarget()->mTileNode == NULL || !theGoal->GetAttackTarget()->GetComplexUnit()->mIsDisabled ||
-                 theGoal->GetAttackTarget()->GetComplexUnit()->IsProtected()))
-                theResult = 1;
-            else
-                theResult = 0;
-        }
-        break;
-    case kTriggerGoalIsNotConversion: {
-        EEUnitGoal* theGoal = inUnit->mGoalState;
-        if (theGoal == NULL || theGoal->mKind != kGoalAttackUnit ||
-            (inUnit->GetUnitClass()->IsCrusader() && !static_cast<EEUGRust*>(theGoal)->IsConvertAttack()))
-            theResult = 1;
-        break;
-    }
-    case kTriggerGoalIsConversion:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL && (!inUnit->GetUnitClass()->IsCrusader() || theGoal->IsConvertAttack()))
-                theResult = 1;
-        }
-        break;
-    case kTriggerEnemyUnitConverted:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL) {
-                EEPlayer* thePlayer = theGoal->GetAttackTarget()->GetPlayer();
-                if (thePlayer == inUnit->GetPlayer() || inUnit->GetPlayer()->mEnemies[thePlayer->GetPlayerID()] == 0)
-                    theResult = 1;
-            }
-        }
-        break;
-    }
-    return theResult;
 }
 
 // FUNCTION: EXE 0x60dee4
@@ -1203,35 +1044,6 @@ EEUnit* EEUnitClass::NavalPriestCreateUnitAt(GETransformation& inTransformation,
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x618942
-// Answers dying done: true once the ship's transformed bounding box lies wholly below the water line
-long EEUnitClass::NavalPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GEBoundingBox theBox;
-    GEBoundingBox theTransformedBox;
-    EEComplexUnit* theUnit = inUnit;
-    GEPhysicalModel& theModel = theUnit->mPhysicalModel;
-    GEModel* theGEModel = theModel.GetModel();
-    long theResult = 0;
-    if (inEvent != kTriggerDyingAnimationFinished) {
-        theResult = this->BasicPriestEvaluateCondition(theUnit, inEvent);
-    } else {
-        GETransformation theTransformation(false);
-        theUnit->GetPosition(thePosition);
-        theModel.GetLocation().Apply(theGEModel->GetInternalTransform(theModel.GetFrame()), theTransformation);
-        theTransformation.Scale(theModel.GetScale());
-        theTransformation.SetX(thePosition.GetX());
-        theTransformation.SetY(thePosition.GetY());
-        theTransformation.SetZ(thePosition.GetZ());
-        theBox = theGEModel->GetBoundingBox(theUnit->mPhysicalModel.GetFrame());
-        theBox.Transform(theTransformation, theTransformedBox);
-        if (theTransformedBox.GetTopRightBack().GetZ() < 0.0f)
-            theResult = 1;
-    }
-    return theResult;
-}
-
 // ---- EEUCHelicopterPriest.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).
 // The priest
 // helicopter's unit class: 0x212edf..0x21339d (after EEUCHelicopter.cpp; EEUCHelicopterTransport.cpp follows). One unit
@@ -1295,31 +1107,5 @@ void EEUnitClass::HelicopterPriestUnitCreated(EEComplexUnit* inUnit)
     theTransformation.SetZ(theZ);
     inUnit->SetTransformation(theTransformation, true);
     inUnit->SetHeight(theZ);
-}
-
-// FUNCTION: EXE 0x613344
-// Answers the dying-finished (below its tile's height) and move-prepared (has waypoints) triggers; others the
-// priest's way
-long EEUnitClass::HelicopterPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    bool theFlag = false;
-    switch (inEvent) {
-    case kTriggerDyingAnimationFinished:
-        if (inUnit->mPhysicalModel.GetLocation().GetZ() < inUnit->mTile->GetHeight())
-            theFlag = true;
-        else
-            theFlag = false;
-        break;
-    case kTriggerMovePreparationComplete:
-        theFlag = (long)inUnit->mWaypoints.size() > 0;
-        break;
-    default:
-        theResult = this->BasicPriestEvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
 }
 

@@ -759,3 +759,55 @@ pub extern "C" fn ee_units_cls_landing_condition(class: u64, unit: u64, event: u
     };
     answer.unwrap_or(-1)
 }
+
+// ---- the trigger answers (cls_condition.rs) over `ee_units_cls_cond_host` (EEUnitAI.cpp)
+use crate::cls_condition::{self as cond, Answer, CombatKind, CondHost, EeUnitsCondIo};
+
+extern "C" {
+    fn ee_units_cls_cond_host(op: i32, a: u64, b: u64, c: i64, d: i64, io: *mut EeUnitsCondIo) -> i64;
+}
+
+impl CondHost for ClsGame {
+    fn unit(&mut self, obj: u64) -> EeUnitsUuUnit {
+        self.0.unit(obj)
+    }
+    fn class(&mut self, class: u64) -> *const EeUnitsUnitClassFields {
+        self.0.class(class).fields
+    }
+    fn location(&mut self, unit: u64) -> [f32; 3] {
+        let m = self.0.location(unit);
+        [m.m[0][3], m.m[1][3], m.m[2][3]]
+    }
+    fn op(&mut self, op: i32, a: u64, b: u64, c: i64, d: i64, io: &mut EeUnitsCondIo) -> i64 {
+        // SAFETY: the C++ switch reads live objects the bodies hand it
+        unsafe { ee_units_cls_cond_host(op, a, b, c, d, io) }
+    }
+    fn landing(&mut self, class: u64, unit: u64, event: u32, animal: bool) -> Option<i32> {
+        if animal {
+            air::air_animal_condition(self, unit, event)
+        } else {
+            let fields = TrHost::class(self, class);
+            air::landable_condition(self, class, fields, unit, event)
+        }
+    }
+}
+
+/// `EEUnitClass::EvaluateCondition`: the answer (0, 1, 2), or a shot's kind for ee_combat's answer (-1 the torpedo,
+/// -2 the missile, -3 the projectile).
+#[no_mangle]
+pub extern "C" fn ee_units_cls_condition(class: u64, unit: u64, event: u32) -> i32 {
+    match cond::condition(&mut ClsGame(Game), class, unit, event) {
+        Answer::Value(v) => v,
+        Answer::Combat(CombatKind::Torpedo) => -1,
+        Answer::Combat(CombatKind::Missile) => -2,
+        Answer::Combat(CombatKind::Projectile) => -3,
+    }
+}
+
+/// `EEUnitClass::BaseEvaluateCondition` (the common answer of the class `class`).
+#[no_mangle]
+pub extern "C" fn ee_units_cls_base_condition(class: u64, unit: u64, event: u32) -> i32 {
+    let mut h = ClsGame(Game);
+    let fields = CondHost::class(&mut h, class);
+    cond::base(&mut h, class, fields, unit, event)
+}

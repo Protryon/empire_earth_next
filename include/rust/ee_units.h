@@ -475,6 +475,153 @@ constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
 /// `kGoalBuildRepair`
 constexpr static const uint8_t GOAL_BUILD_REPAIR = 4;
 
+/// unit `a`'s `mActiveGoal` (`c` 0) or `mGoalState` (`c` 1)
+constexpr static const int32_t EE_UNITS_COND_GOAL = 1;
+
+/// goal `b`'s `mKind`, with `mB1C` as bit 8 and (a move goal) `GetIsForcedMove()` as bit 9
+constexpr static const int32_t EE_UNITS_COND_GOAL_INFO = 2;
+
+/// goal `b`'s `EvaluateCondition(unit a, c)`
+constexpr static const int32_t EE_UNITS_COND_GOAL_CONDITION = 3;
+
+/// goal `b` started at least `c` ms ago (`gPhysics->mGameTime - GetStartTime()`, unsigned)
+constexpr static const int32_t EE_UNITS_COND_GOAL_ELAPSED = 4;
+
+/// attack goal `b`'s `GetAttackTarget()`
+constexpr static const int32_t EE_UNITS_COND_GOAL_TARGET = 5;
+
+/// unit `a`'s `mBehavior`: `mCanTargetEnemies` 1, `mCanFlee` 2, `mCanPursuePastInitialContactLOS` 4,
+/// `mReturnsToInitialContactLocation` 8
+constexpr static const int32_t EE_UNITS_COND_BEHAVIOR = 6;
+
+/// unit `a`'s `mBehavior->CanMoveFreely(a)`
+constexpr static const int32_t EE_UNITS_COND_MOVE_FREELY = 7;
+
+/// `EEIsLocationGoalQueued(a)`
+constexpr static const int32_t EE_UNITS_COND_LOCATION_QUEUED = 8;
+
+/// unit `a`'s `mLastAttacker`
+constexpr static const int32_t EE_UNITS_COND_LAST_ATTACKER = 9;
+
+/// unit `a`'s `GetConditionTarget()`
+constexpr static const int32_t EE_UNITS_COND_CONDITION_TARGET = 10;
+
+/// unit `a`'s `CanReachUnit(b)`
+constexpr static const int32_t EE_UNITS_COND_CAN_REACH = 11;
+
+/// unit `a`'s `IsInReach(b)`
+constexpr static const int32_t EE_UNITS_COND_IN_REACH = 12;
+
+/// class `b`'s `CanBeAttacked()`
+constexpr static const int32_t EE_UNITS_COND_CAN_BE_ATTACKED = 13;
+
+/// `EEDamageFactor(c, d)` into `f`
+constexpr static const int32_t EE_UNITS_COND_DAMAGE_FACTOR = 14;
+
+/// `EEFindDropLocation(a, &target, &p, NULL)`: the target, the location into `p`
+constexpr static const int32_t EE_UNITS_COND_DROP_LOCATION = 15;
+
+/// unit `a`'s `GetLineOfSight()` into `f`
+constexpr static const int32_t EE_UNITS_COND_LINE_OF_SIGHT = 16;
+
+/// `EEGetHitDistanceSquared(a, b, -10000, -10000)` into `f`
+constexpr static const int32_t EE_UNITS_COND_HIT_DISTANCE = 17;
+
+/// unit `a`'s `DistanceSquared3D(p)` into `f`
+constexpr static const int32_t EE_UNITS_COND_DISTANCE_3D = 18;
+
+/// unit `a`'s player's attack response range (its computer player's, else the behaviours table's) into `f`
+constexpr static const int32_t EE_UNITS_COND_RESPONSE_RANGE = 19;
+
+/// unit `a`'s `DistanceSquaredTo(b)` into `f`
+constexpr static const int32_t EE_UNITS_COND_DISTANCE_TO = 20;
+
+/// `EEIsEnemyWithinRange(a)`
+constexpr static const int32_t EE_UNITS_COND_ENEMY_IN_RANGE = 21;
+
+/// unit `a`'s player: a computer player 1, a human player 2
+constexpr static const int32_t EE_UNITS_COND_OWNER = 22;
+
+/// unit `a`'s location: off the mesh (`c` 0), on a space tile (`c` 1), farther from its tile than the world's stray
+/// distance (`c` 2)
+constexpr static const int32_t EE_UNITS_COND_OFF_MAP = 23;
+
+/// unit `a`'s `GetNumCargoUnits()`
+constexpr static const int32_t EE_UNITS_COND_CARGO = 24;
+
+/// unit `a`'s model's frame count of its animation
+constexpr static const int32_t EE_UNITS_COND_FRAME_COUNT = 25;
+
+/// unit `a`'s `GetMaxVelocity()` into `f`
+constexpr static const int32_t EE_UNITS_COND_MAX_VELOCITY = 26;
+
+/// the obstacle trigger's statement on unit `a` (the wait drawn, the count reset)
+constexpr static const int32_t EE_UNITS_COND_OBSTACLE = 27;
+
+/// unit `a`'s `ShouldMoveToNextAutoWaypoint()`
+constexpr static const int32_t EE_UNITS_COND_AUTO_WAYPOINT = 28;
+
+/// the waypoint triggers' statements on unit `a` (`c`: no more waypoints 0, next retrieved 1, arrived 2, one
+/// remaining 3)
+constexpr static const int32_t EE_UNITS_COND_WAYPOINT_STEP = 29;
+
+/// unit `a`'s herd (0: none, else 1 | group attack 2 | parental vengeance 4 | group flee 8)
+constexpr static const int32_t EE_UNITS_COND_HERD = 30;
+
+/// class `b`'s `AttackNearby(a, goal c)`
+constexpr static const int32_t EE_UNITS_COND_ATTACK_NEARBY = 31;
+
+/// unit `a`'s `mInitialContactLocation` into `p`
+constexpr static const int32_t EE_UNITS_COND_INITIAL_CONTACT = 32;
+
+/// unit `a`'s `mWaypoints.size()`
+constexpr static const int32_t EE_UNITS_COND_WAYPOINTS = 33;
+
+/// unit `a`'s `GetPosition()` into `p` (virtual)
+constexpr static const int32_t EE_UNITS_COND_POSITION = 34;
+
+/// `gWorld.mMap->GetGroundPoint(p)`'s z into `f`
+constexpr static const int32_t EE_UNITS_COND_GROUND_Z = 35;
+
+/// unit `a`'s tile's `GetHeight()` into `f`, its terrain the answer
+constexpr static const int32_t EE_UNITS_COND_TILE = 36;
+
+/// unit `a`'s citizen build queue: its size (`c` 0); the next build started (`c` 1: popped, a build goal to it, the
+/// action begun)
+constexpr static const int32_t EE_UNITS_COND_BUILD_QUEUE = 37;
+
+/// `EECanConvert(a, b, flag)`
+constexpr static const int32_t EE_UNITS_COND_CAN_CONVERT = 38;
+
+/// `EEGetConversionCost(a)`
+constexpr static const int32_t EE_UNITS_COND_CONVERSION_COST = 39;
+
+/// unit `a`'s attack goal (`EEAttackUnitCast(GetGoal())`): 0 none; else 1, its target valid for a conversion 2, its
+/// `IsConvertAttack()` 4, its target's player is not an enemy 8
+constexpr static const int32_t EE_UNITS_COND_ATTACK_GOAL = 40;
+
+/// unit `a`'s class's `IsCrusader()`
+constexpr static const int32_t EE_UNITS_COND_CRUSADER = 41;
+
+/// the sunk test of the ships (`DyingAnimationFinished`): unit `a`'s transformed bounding box below the water
+constexpr static const int32_t EE_UNITS_COND_SUNK = 42;
+
+/// class `b`'s `SelectUnitToRelease(a)` (`c` 0), `EruptVolcano(a)` (1), `HasSunk(a)` (2), `AreEnemiesNear(a)` (3),
+/// `IsPasserNear(a)` (4)
+constexpr static const int32_t EE_UNITS_COND_MEMBER = 43;
+
+/// the launch triggers' statements on building `a` (`c`: no launch requests 0, take-off clearance 1)
+constexpr static const int32_t EE_UNITS_COND_LAUNCH = 44;
+
+/// unit `a`'s `GetQueuedGoal(c) != NULL`
+constexpr static const int32_t EE_UNITS_COND_QUEUED_GOAL = 45;
+
+/// unit `a`'s mine is gone or empty
+constexpr static const int32_t EE_UNITS_COND_MINE_DEPLETED = 46;
+
+/// unit `a`'s goal (`GetGoal()`) is an attack goal whose target has hit points
+constexpr static const int32_t EE_UNITS_COND_SECONDARY_TARGET = 47;
+
 /// `gContinentManager.IsNextToArea(c, d, a)`
 constexpr static const int32_t EE_UNITS_CLS_NEXT_TO_AREA = 1;
 
@@ -2927,6 +3074,12 @@ struct EeUnitsClsIo {
   void *list;
 };
 
+/// One host operation's values in and out.
+struct EeUnitsCondIo {
+  float f;
+  float p[3];
+};
+
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
 struct EeUnitRecord {
@@ -4443,6 +4596,22 @@ int32_t ee_units_cls_landing_condition(uint64_t class_,
                                        uint64_t unit,
                                        uint32_t event,
                                        bool animal);
+
+extern int64_t ee_units_cls_cond_host(int32_t op,
+                                      uint64_t a,
+                                      uint64_t b,
+                                      int64_t c,
+                                      int64_t d,
+                                      EeUnitsCondIo *io);
+
+/// `EEUnitClass::EvaluateCondition`: the answer (0, 1, 2), or a shot's kind for ee_combat's answer (-1 the torpedo,
+/// -2 the missile, -3 the projectile).
+int32_t ee_units_cls_condition(uint64_t class_,
+                               uint64_t unit,
+                               uint32_t event);
+
+/// `EEUnitClass::BaseEvaluateCondition` (the common answer of the class `class`).
+int32_t ee_units_cls_base_condition(uint64_t class_, uint64_t unit, uint32_t event);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);

@@ -230,59 +230,17 @@ EEUnit* EEUnitClass::CreateUnitAt(GETransformation& inTransformation, long inPla
     return this->BaseCreateUnitAt(inTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// the landing kinds' triggers (ee_units cls_air.rs): the common unit class answers the others
-static long EELandingCondition(EEUnitClass* inClass, EEComplexUnit* inUnit, unsigned long inEvent, bool inAnimal)
-{
-    long theAnswer = ee_units_cls_landing_condition(EEObj(inClass), EEObj(inUnit), (uint32_t)inEvent, inAnimal);
-    return theAnswer >= 0 ? theAnswer : inClass->BaseEvaluateCondition(inUnit, inEvent);
-}
-
+// the kinds' trigger answers are Rust (ee_units cls_condition.rs, R5b.4 round 34); the shots' are ee_combat's
 long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    uint64_t theKinds = EEUnitClassKinds(this);
-    if (theKinds & EE_CLASS_KIND_AIR_ANIMAL)
-        return EELandingCondition(this, inUnit, inEvent, true);
-    if (theKinds & EE_CLASS_KIND_FORTRESS)
-        return this->FortressEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
-        return this->BuildingPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_GATE)
-        return this->GateEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_HELICOPTER_PRIEST)
-        return this->HelicopterPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & (EE_CLASS_KIND_HELICOPTER_TRANSPORT | EE_CLASS_KIND_HELICOPTER))
-        return this->HelicopterTransportEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_MINING_BUILDING)
-        return this->MiningBuildingEvaluateCondition(inUnit, inEvent);
-    if (theKinds & (EE_CLASS_KIND_NAVAL_BUILDING | EE_CLASS_KIND_SPACE_BUILDING))
-        return this->NavalBuildingEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_NAVAL_CITIZEN)
-        return this->NavalCitizenEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_NAVAL_PRIEST)
-        return this->NavalPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & (EE_CLASS_KIND_NAVAL_TRANSPORT | EE_CLASS_KIND_NAVAL))
-        return this->NavalEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_SPACE_TRANSPORT)
-        return this->SpaceTransportEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_TORPEDO)
+    int32_t theAnswer = ee_units_cls_condition(EEObj(this), EEObj(inUnit), (uint32_t)inEvent);
+    if (theAnswer == -1)
         return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
-    if (theKinds & EE_CLASS_KIND_BASIC_CITIZEN)
-        return this->BasicCitizenEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
-        return this->BasicPriestEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_BUILDING)
-        return this->BuildingEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_LANDABLE)
-        return EELandingCondition(this, inUnit, inEvent, false);
-    if (theKinds & EE_CLASS_KIND_MISSILE)
+    if (theAnswer == -2)
         return this->MissileEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_PROJECTILE)
+    if (theAnswer == -3)
         return EECombatCondition(EE_COMBAT_GOAL_PROJECTILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
-    if (theKinds & EE_CLASS_KIND_SPACESHIP)
-        return this->SpaceshipEvaluateCondition(inUnit, inEvent);
-    if (theKinds & EE_CLASS_KIND_SUBMERGED_NAVAL)
-        return this->SubmergedNavalEvaluateCondition(inUnit, inEvent);
-    return this->BaseEvaluateCondition(inUnit, inEvent);
+    return theAnswer;
 }
 
 void EEUnitClass::FilterLoadable(std::vector<EEComplexUnit*>* ioUnits, EEComplexUnit* inTransport, std::vector<EEComplexUnit*>* outRejected)
