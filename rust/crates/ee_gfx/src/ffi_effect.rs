@@ -149,6 +149,10 @@ pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
             // SAFETY: the lists came from `put_storm`'s Box and are owned by the record
             drop(unsafe { Box::from_raw(record.storm.lists) });
         }
+        if !record.storm.draws.is_null() {
+            // SAFETY: the draws came from `effect_weather`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.storm.draws) });
+        }
         if !record.orbit.orbitals.is_null() {
             // SAFETY: the orbitals came from `effect_orbit`'s Box and are owned by the record
             drop(unsafe { Box::from_raw(record.orbit.orbitals) });
@@ -824,7 +828,7 @@ pub struct EeGfxStormHost {
     pub ripple: extern "C" fn(context: *mut c_void, x: f32, y: f32),
 }
 
-struct Storm<'a>(&'a EeGfxStormHost);
+pub(crate) struct Storm<'a>(pub(crate) &'a EeGfxStormHost);
 
 impl StormHost for Storm<'_> {
     fn on_map(&mut self, x: i32, y: i32) -> bool {
@@ -850,7 +854,7 @@ impl StormHost for Storm<'_> {
 ///
 /// # Safety
 /// `r` is a live record.
-unsafe fn take_storm(r: *mut EeGfxEffectRecord) -> EeGfxStormLists {
+pub(crate) unsafe fn take_storm(r: *mut EeGfxEffectRecord) -> EeGfxStormLists {
     // SAFETY: the function's contract
     unsafe {
         let p = (*r).storm.lists;
@@ -866,7 +870,7 @@ unsafe fn take_storm(r: *mut EeGfxEffectRecord) -> EeGfxStormLists {
 ///
 /// # Safety
 /// `r` is a live record.
-unsafe fn put_storm(r: *mut EeGfxEffectRecord, lists: EeGfxStormLists) {
+pub(crate) unsafe fn put_storm(r: *mut EeGfxEffectRecord, lists: EeGfxStormLists) {
     // SAFETY: the function's contract
     unsafe {
         let p = (*r).storm.lists;
@@ -882,7 +886,7 @@ unsafe fn put_storm(r: *mut EeGfxEffectRecord, lists: EeGfxStormLists) {
 ///
 /// # Safety
 /// `r` is a live record.
-unsafe fn on_storm<T>(
+pub(crate) unsafe fn on_storm<T>(
     r: *mut EeGfxEffectRecord,
     f: impl FnOnce(&mut EeGfxEffectRecord, &mut EeGfxStormLists) -> T,
 ) -> T {

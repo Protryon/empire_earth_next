@@ -39,7 +39,9 @@ use crate::effect_tracer::{tracer, tracer_file, EeGfxTracerEnds, EE_GFX_EFFECT_K
 use crate::effect_vent::{damage_vent, EeGfxFrames, EeGfxVentPoints, EeGfxVentUnit, EE_GFX_EFFECT_KIND_DAMAGE_VENT};
 use crate::effect_volcano::{volcano, volcano_file, EE_GFX_EFFECT_KIND_VOLCANO};
 use crate::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
+use crate::effect_weather::{is_weather, weather, weather_file};
 use crate::effects::EeGfxColor;
+use crate::ffi_effect::EeGfxStormHost;
 use crate::ffi_mesh::EeGfxFarmTerrain;
 use crate::lighting::EeGfxLighting;
 use crate::raster::{EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE};
@@ -135,6 +137,8 @@ pub struct EeGfxGraphicFacts {
     pub time2: i32,
     /// `mAlpha` (the 2D smoke's opacity and trail spacing)
     pub alpha: f32,
+    /// `gWorld.GetGameSpeed()` (the snow's fall)
+    pub world_speed: f32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -296,6 +300,13 @@ pub struct EeGfxEffect3DHost {
     pub smoke_tag_point: extern "C" fn(context: *mut c_void, index: u32) -> Ge3DPoint,
     /// the linked effect 1 placed at `point`; the placement's result
     pub smoke_place: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint) -> i32,
+    /// the weather storms' map (`effect_weather.rs`; its own context)
+    pub storm: EeGfxStormHost,
+    /// the rain's three sound objects' media loaded (the record's `storm.sounds`)
+    pub rain_media: extern "C" fn(context: *mut c_void),
+    /// the rain's sounds: the loop started (`start`), the thunder `rumble` (1 or 2: the record's `storm.sounds[rumble]`)
+    /// played, then both levels from the camera's distance (`EEE3DRain::StartSounds` after its timer, 0xf8195)
+    pub rain_sounds: extern "C" fn(context: *mut c_void, start: bool, rumble: i32),
 }
 
 /// The world as the effects ask it.
@@ -478,6 +489,22 @@ pub trait Effect3DHost {
     fn smoke_place(&mut self, _point: &Ge3DPoint) -> i32 {
         0
     }
+    /// the weather storms' map (the tests' hosts that make no storm: no tile is on it)
+    fn storm_on_map(&mut self, _x: i32, _y: i32) -> bool {
+        false
+    }
+    fn storm_is_water(&mut self, _x: i32, _y: i32) -> bool {
+        false
+    }
+    fn storm_ground_z(&mut self, _x: i32, _y: i32) -> f32 {
+        0.0
+    }
+    fn storm_step_toward(&mut self, from: [i32; 2], _to: [i32; 2]) -> [i32; 2] {
+        from
+    }
+    fn storm_ripple(&mut self, _x: f32, _y: f32) {}
+    fn rain_media(&mut self) {}
+    fn rain_sounds(&mut self, _start: bool, _rumble: i32) {}
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -699,6 +726,29 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn smoke_place(&mut self, point: &Ge3DPoint) -> i32 {
         (self.smoke_place)(self.context, point)
     }
+    fn storm_on_map(&mut self, x: i32, y: i32) -> bool {
+        (self.storm.on_map)(self.storm.context, x, y)
+    }
+    fn storm_is_water(&mut self, x: i32, y: i32) -> bool {
+        (self.storm.is_water)(self.storm.context, x, y)
+    }
+    fn storm_ground_z(&mut self, x: i32, y: i32) -> f32 {
+        (self.storm.ground_z)(self.storm.context, x, y)
+    }
+    fn storm_step_toward(&mut self, from: [i32; 2], to: [i32; 2]) -> [i32; 2] {
+        let mut out = from;
+        (self.storm.step_toward)(self.storm.context, from[0], from[1], to[0], to[1], out.as_mut_ptr());
+        out
+    }
+    fn storm_ripple(&mut self, x: f32, y: f32) {
+        (self.storm.ripple)(self.storm.context, x, y)
+    }
+    fn rain_media(&mut self) {
+        (self.rain_media)(self.context)
+    }
+    fn rain_sounds(&mut self, start: bool, rumble: i32) {
+        (self.rain_sounds)(self.context, start, rumble)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -736,6 +786,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_FARM => unsafe { farm_effect(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_EARTHQUAKE => unsafe { quake(op, r, g, h, x) },
         k if is_smoke(k) => unsafe { smoke(op, r, g, h) },
+        k if is_weather(k) => unsafe { weather(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -859,6 +910,7 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 crate::effect_state::save_smoke(r, f)
             }
         }
+        k if is_weather(k) => weather_file(load, base, r, f),
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();

@@ -60,6 +60,7 @@ pub mod effect_vent;
 pub mod effect_volcano;
 pub mod effect_vortex;
 pub mod effect_wall;
+pub mod effect_weather;
 pub mod effects;
 pub mod farm;
 pub mod ffi;

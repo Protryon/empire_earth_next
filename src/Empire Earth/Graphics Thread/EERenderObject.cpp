@@ -1661,6 +1661,31 @@ static void EERasterCopyVertices(void* inFrom, void* inTo, bool inNormals)
     }
 }
 
+// a texture loaded with its stage settings (ee_gfx raster.rs load_texture: the effects' and render objects' media)
+static void* EERasterLoadTexture(const uint8_t* inName, const EeGfxTextureLoad* inLoad)
+{
+    GETextureDescription theDescription;
+    theDescription.mSurfaceVolatility = inLoad->volatility;
+    theDescription.mFrameFormat = inLoad->frame_format;
+    theDescription.mPixelDepth = inLoad->pixel_depth;
+    theDescription.mNumMipLevelsToDrop = (long)inLoad->mip_levels_to_drop;
+    theDescription.mIs3DRenderable = false;
+    theDescription.mIsTransparencyEnabled = false;
+    theDescription.mHasAlpha = inLoad->has_alpha;
+    theDescription.mCreateMIPMaps = inLoad->mip_maps;
+    GETexture* theTexture = gTextureManager->LoadTexture(UString(reinterpret_cast<const char*>(inName)), theDescription);
+    if (inLoad->reference)
+        theTexture->Reference();
+    theTexture->SetStageAlphaMode(inLoad->alpha_mode, -1);
+    theTexture->SetStageColorMode(inLoad->color_mode, -1);
+    theTexture->SetStageMinFilterMode(inLoad->min_filter, -1);
+    theTexture->SetStageMagFilterMode(inLoad->mag_filter, -1);
+    theTexture->SetStageMipFilterMode(inLoad->mip_filter, -1);
+    theTexture->SetStageMipMapBias(inLoad->mip_bias, -1);
+    theTexture->SetStageTextureAddressingMode(inLoad->addressing, -1);
+    return theTexture;
+}
+
 // a beam model's vertices' points and texture coordinates (the tracer beam's stretch and its restore)
 static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
 {
@@ -1899,6 +1924,7 @@ const EeGfxRaster gEERustRaster = {
     [](void* inModel) -> float { return static_cast<GEModel*>(inModel)->GetBoundingRadius(0); },
     EERasterCopyVertices,
     [](void* inTexture) { static_cast<GETexture*>(inTexture)->SetStageTextureAddressingMode(kAddressingWrap, -1); },
+    EERasterLoadTexture,
 };
 
 // FUNCTION: EXE 0x50f60f

@@ -191,6 +191,11 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_VORTEX = 49;
 /// `kEffect3DEnergyWall`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WALL = 52;
 
+/// The rain sound's fade-in (0x440be8, ms) and its share until then (0x440bec).
+constexpr static const float EE_GFX_RAIN_FADE_TIME = 6500.0;
+
+constexpr static const float EE_GFX_RAIN_FADE_SHARE = 0.4;
+
 /// The calls of one set-up, in order.
 constexpr static const size_t EE_GFX_RASTER_OPS = 8;
 
@@ -399,6 +404,10 @@ struct EeGfxMarchingLists;
 
 /// The effect's orbitals (`mOrbitals`, copies of the graphic's) and the angles the draw uses (`mAngles`).
 struct EeGfxOrbitals;
+
+/// The drops to draw this frame (`mDraws`): written by `Queue` under the world's lock, read by the draw pass, apart
+/// from the drops the simulation steps.
+struct EeGfxStormDraws;
 
 /// A storm's tiles (`mTiles`) and its drops or flakes (`mDrops`, `mFlakes`).
 struct EeGfxStormLists;
@@ -831,6 +840,12 @@ struct EeGfxEffectStorm {
   uint32_t loaded;
   /// the rain's `mRumbleDelay`: ms to the next thunder (saved)
   float rumble_delay;
+  /// `mModel`: the drop or flake model the set-up builds (`GEModel*`; the C++ dereferences it with the effect)
+  void *model;
+  /// the rain's `mSoundID`, `mRumbleID1`, `mRumbleID2`: the graphic effect's int params 1-3 (sound object ids)
+  uint32_t sounds[3];
+  /// the drops `Queue` copied for this frame's draw (owned: made by the first queue, freed with the record)
+  EeGfxStormDraws *draws;
 };
 
 /// `EEE3DIcon`'s state (and `EEE3DGoal`'s time left).
@@ -1554,6 +1569,8 @@ struct EeGfxGraphicFacts {
   int32_t time2;
   /// `mAlpha` (the 2D smoke's opacity and trail spacing)
   float alpha;
+  /// `gWorld.GetGameSpeed()` (the snow's fall)
+  float world_speed;
 };
 
 /// The beam's unit as its step reads it (`EEE3DCitizenBeam::Step`).
@@ -1820,6 +1837,13 @@ struct EeGfxEffect3DHost {
   EeGe3DPoint (*smoke_tag_point)(void *context, uint32_t index);
   /// the linked effect 1 placed at `point`; the placement's result
   int32_t (*smoke_place)(void *context, const EeGe3DPoint *point);
+  /// the weather storms' map (`effect_weather.rs`; its own context)
+  EeGfxStormHost storm;
+  /// the rain's three sound objects' media loaded (the record's `storm.sounds`)
+  void (*rain_media)(void *context);
+  /// the rain's sounds: the loop started (`start`), the thunder `rumble` (1 or 2: the record's `storm.sounds[rumble]`)
+  /// played, then both levels from the camera's distance (`EEE3DRain::StartSounds` after its timer, 0xf8195)
+  void (*rain_sounds)(void *context, bool start, int32_t rumble);
 };
 
 /// One vertex of a built mesh: `set` names the values a builder wrote.
@@ -1836,6 +1860,32 @@ struct EeGfxMeshVertex {
 struct EeGfxMeshTriangle {
   uint32_t set;
   uint32_t v[3];
+};
+
+/// A texture's load (`GETextureDescription`: not 3D-renderable, no transparency) and the stage settings made on it
+/// after (`SetStageAlphaMode`, `SetStageColorMode`, `SetStageMinFilterMode`, `SetStageMagFilterMode`,
+/// `SetStageMipFilterMode`, `SetStageMipMapBias`, `SetStageTextureAddressingMode`, each on every stage: -1).
+struct EeGfxTextureLoad {
+  /// `mPixelDepth` (16 or 32)
+  uint32_t pixel_depth;
+  /// `mNumMipLevelsToDrop`
+  uint32_t mip_levels_to_drop;
+  /// `mFrameFormat`
+  uint32_t frame_format;
+  /// `mSurfaceVolatility`
+  uint32_t volatility;
+  /// `mHasAlpha`, `mCreateMIPMaps`
+  bool has_alpha;
+  bool mip_maps;
+  uint32_t alpha_mode;
+  uint32_t color_mode;
+  uint32_t min_filter;
+  uint32_t mag_filter;
+  uint32_t mip_filter;
+  float mip_bias;
+  uint32_t addressing;
+  /// the texture is referenced once loaded (`Reference`)
+  bool reference;
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1990,6 +2040,9 @@ struct EeGfxRaster {
   void (*copy_vertices)(EeGfxModel from, EeGfxModel to, bool normals);
   /// a texture's `SetStageTextureAddressingMode(kAddressingWrap, -1)`
   void (*texture_wrap)(EeGfxModel texture);
+  /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
+  /// the reference `load` asks for; the texture (`GETexture*`)
+  EeGfxModel (*load_texture)(const uint8_t *name, const EeGfxTextureLoad *load);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it

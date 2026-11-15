@@ -14,15 +14,19 @@
 // (EEE3DIcon, 0xf2046..0xf2d93), 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600), 0x40 the tracer beam
 // (EEE3DTracerBeam, 0xfc382..0xfd330), 0x20 the volcano (EEE3DVolcano, 0xfe553..0x101c34), 0x29 the farm
 // (EEE3DFarm, 0xee5c0..0xf1327), 0x1a the earthquake (EEE3DEarthquake, 0xec6e4..0xed606) and the smoke generators
-// 0x2b, 0x2c (the damage smoke) and 0x1e (the destruction smoke) (EEE3DSmokeGenerator, 0xf9871..0xf9b6d), all deleted.
-// Requires ee/EEEffect3D.h and rust/ee_gfx.h.
+// 0x2b, 0x2c (the damage smoke) and 0x1e (the destruction smoke) (EEE3DSmokeGenerator, 0xf9871..0xf9b6d), 0x2a the
+// rain and 0x3d the snow (EEE3DRain 0xf7394..0xf8ceb, EEE3DSnow 0xf9b6d..0xfb088 and their base EEE3DStorm
+// 0xfb088..0xfb9f6), all deleted. Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
+#include <vector>
 #include "rust/ee_gfx.h"
 
 class EEGraphicObject;
 class SESMInstanceNode;
 class GEModel;
+template <class T> class U2DPoint;
+template <class T> class U2DRectangle;
 
 class EEE3DRust : public EEEffect3D {
 public:
@@ -36,6 +40,8 @@ public:
     EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind);
     // along a line (the multi-effect)
     EEE3DRust(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind);
+    // over a copy of the tiles, centred on them (the rain, the snow: EEE3DStorm 0xfb0c8)
+    EEE3DRust(const std::vector<U2DPoint<long> >& inTiles, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE3DRust(long inKind);                 // for loading
     virtual ~EEE3DRust();
     virtual long DrawPass2() { return this->Call(EeGfxEffect3DOp::DrawPass2); }
@@ -61,13 +67,22 @@ public:
     // the farm's: rebuilt when the changed terrain rectangle overlaps its field (EEE3DFarm::ElevationChanged, 0xf128a)
     virtual void ElevationChanged(long inLeft, long inBottom, long inRight, long inTop);
 
+    // the weather storms' (EEEMStorm's): their tiles moved one step towards their places around a new centre, the
+    // storm recentred there with its bounds and radius (EEE3DStorm::Move, 0xfb252); the tiles' bounds (unchanged
+    // without tiles; GetBounds, 0xfb6b4); the centre; the number of tiles
+    void Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds);
+    void GetBounds(U2DRectangle<long>& outBounds);
+    U2DPoint<long> GetCenterPoint() const;
+    unsigned long GetTileCount() const { return ee_gfx_storm_tile_count(this->mRecord); }
+
     // inArg: a constructor's unit, point or line (the multi-effect's linked effects are made through it)
     long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL, long inBase = 0,
               unsigned long inMajorVersion = 0, unsigned long inMinorVersion = 0, void* inArg = NULL);
 
     EEGraphicObject* mGraphicObject = NULL;
     EEGraphicObject* mUnitModel = NULL;     // the additive pass's: its unit's model (EEModel), loaded while it lives
-    SESMInstanceNode* mSound = NULL;        // the disease's, virus's and hurricane's animation sound
+    SESMInstanceNode* mSound = NULL;        // the disease's, virus's and hurricane's animation sound; the rain's loop
+    SESMInstanceNode* mRumble = NULL;       // the rain's thunder
     EEUnit* mTarget = NULL;                 // the tracer beam's target unit (referenced; -1 from Load to RepairPointers)
     GEModel* mVolcanoModel = NULL;          // the volcano's model (referenced by its build)
 };

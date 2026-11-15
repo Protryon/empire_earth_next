@@ -34,6 +34,64 @@ pub const EE_GFX_SPRITE_BLENDED: u32 = 2;
 /// A model to draw (`GEModel*`), opaque to Rust.
 pub type EeGfxModel = *mut c_void;
 
+/// `kStageOpModulate` (a texture stage's colour and alpha operations).
+pub(crate) const STAGE_OP_MODULATE: u32 = 2;
+/// `kMipFilterPoint`.
+pub(crate) const MIP_FILTER_POINT: u32 = 1;
+/// `kAddressingClamp`.
+pub(crate) const ADDRESSING_CLAMP: u32 = 0;
+
+/// A texture's load (`GETextureDescription`: not 3D-renderable, no transparency) and the stage settings made on it
+/// after (`SetStageAlphaMode`, `SetStageColorMode`, `SetStageMinFilterMode`, `SetStageMagFilterMode`,
+/// `SetStageMipFilterMode`, `SetStageMipMapBias`, `SetStageTextureAddressingMode`, each on every stage: -1).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxTextureLoad {
+    /// `mPixelDepth` (16 or 32)
+    pub pixel_depth: u32,
+    /// `mNumMipLevelsToDrop`
+    pub mip_levels_to_drop: u32,
+    /// `mFrameFormat`
+    pub frame_format: u32,
+    /// `mSurfaceVolatility`
+    pub volatility: u32,
+    /// `mHasAlpha`, `mCreateMIPMaps`
+    pub has_alpha: bool,
+    pub mip_maps: bool,
+    pub alpha_mode: u32,
+    pub color_mode: u32,
+    pub min_filter: u32,
+    pub mag_filter: u32,
+    pub mip_filter: u32,
+    pub mip_bias: f32,
+    pub addressing: u32,
+    /// the texture is referenced once loaded (`Reference`)
+    pub reference: bool,
+}
+
+impl EeGfxTextureLoad {
+    /// The effects' common load: 16 bits, alpha and MIP maps, modulated, bilinear with point MIP filtering biased by -1,
+    /// `addressing` as given.
+    pub fn effect(addressing: u32) -> EeGfxTextureLoad {
+        EeGfxTextureLoad {
+            pixel_depth: 16,
+            mip_levels_to_drop: 0,
+            frame_format: 0,
+            volatility: 1,
+            has_alpha: true,
+            mip_maps: true,
+            alpha_mode: STAGE_OP_MODULATE,
+            color_mode: STAGE_OP_MODULATE,
+            min_filter: 1,
+            mag_filter: 1,
+            mip_filter: MIP_FILTER_POINT,
+            mip_bias: -1.0,
+            addressing,
+            reference: false,
+        }
+    }
+}
+
 /// The C++'s rasterizer calls, each on the current screen.
 #[repr(C)]
 pub struct EeGfxRaster {
@@ -189,6 +247,9 @@ pub struct EeGfxRaster {
     pub copy_vertices: extern "C" fn(from: EeGfxModel, to: EeGfxModel, normals: bool),
     /// a texture's `SetStageTextureAddressingMode(kAddressingWrap, -1)`
     pub texture_wrap: extern "C" fn(texture: EeGfxModel),
+    /// `gTextureManager->LoadTexture(name, description)` (the name NUL-terminated UTF-8), then the stage settings and
+    /// the reference `load` asks for; the texture (`GETexture*`)
+    pub load_texture: extern "C" fn(name: *const u8, load: *const EeGfxTextureLoad) -> EeGfxModel,
 }
 
 /// The rasterizer as the draws call it.
@@ -290,6 +351,7 @@ pub trait Raster {
     fn bounding_radius(&mut self, model: EeGfxModel) -> f32;
     fn copy_vertices(&mut self, from: EeGfxModel, to: EeGfxModel, normals: bool);
     fn texture_wrap(&mut self, texture: EeGfxModel);
+    fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel;
 }
 
 impl Raster for &EeGfxRaster {
@@ -521,6 +583,12 @@ impl Raster for &EeGfxRaster {
     }
     fn texture_wrap(&mut self, texture: EeGfxModel) {
         (self.texture_wrap)(texture)
+    }
+    fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel {
+        let mut bytes = Vec::with_capacity(name.len() + 1);
+        bytes.extend_from_slice(name.as_bytes());
+        bytes.push(0);
+        (self.load_texture)(bytes.as_ptr(), load)
     }
 }
 
@@ -852,5 +920,12 @@ impl Raster for LogRaster {
     }
     fn texture_wrap(&mut self, _texture: EeGfxModel) {
         self.calls.push("wrap".into());
+    }
+    fn load_texture(&mut self, name: &str, load: &EeGfxTextureLoad) -> EeGfxModel {
+        self.calls.push(format!(
+            "texture {name} {} {} {} {} {} {}",
+            load.pixel_depth, load.has_alpha, load.min_filter, load.mip_filter, load.addressing, load.reference
+        ));
+        0x7700 as EeGfxModel
     }
 }

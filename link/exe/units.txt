@@ -146,9 +146,6 @@ ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
 f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
-f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
-f9b6d fb088 Empire Earth/Graphics Thread/EEE3DSnow.cpp
-fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
 10428c 1050fb Empire Earth/Graphics Thread/EEEffect2D.cpp
 1050fb 1054ec Empire Earth/Graphics Thread/EEEffect3D.cpp

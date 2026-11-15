@@ -53,9 +53,6 @@
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DRust.h"
 #include "ee/EEE3DMarchingLine.h"
-#include "ee/EEE3DStorm.h"
-#include "ee/EEE3DSnow.h"
-#include "ee/EEE3DRain.h"
 #include "ee/EEE3DParticle.h"
 #include "ee/EESimCapture.h"
 #include "ee/EESaveGameFiles.h"
@@ -167,8 +164,8 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DFarm: theEffect = new EEE3DRust(0x29); break;
     case kEffect3DHurricane: theEffect = new EEE3DRust(0x24); break;
     case kEffect3DLinearProjectile: theEffect = new EEE3DRust(0x25); break;
-    case kEffect3DRain: theEffect = new EEE3DRain(); break;
-    case kEffect3DSnow: theEffect = new EEE3DSnow(); break;
+    case kEffect3DRain: theEffect = new EEE3DRust(kEffect3DRain); break;
+    case kEffect3DSnow: theEffect = new EEE3DRust(kEffect3DSnow); break;
     case kEffect3DShells: theEffect = new EEE3DRust(0x26); break;
     case kEffect3DAdditivePass: theEffect = new EEE3DRust(0x27); break;
     case kEffect3DNuclearExplosion: theEffect = new EEE3DRust(0x28); break;
@@ -434,8 +431,8 @@ long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& i
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case kEffect3DRain: theEffect = new EEE3DRain(inTiles, inEffect); break;
-    case kEffect3DSnow: theEffect = new EEE3DSnow(inTiles, inEffect); break;
+    case kEffect3DRain: theEffect = new EEE3DRust(inTiles, inEffect, kEffect3DRain); break;
+    case kEffect3DSnow: theEffect = new EEE3DRust(inTiles, inEffect, kEffect3DSnow); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }

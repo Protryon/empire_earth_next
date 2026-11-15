@@ -7,7 +7,8 @@
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
 // EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp, EEE3DDamageVent.cpp,
 // EEE3DIcon.cpp, EEE3DGoal.cpp, EEE3DTracerBeam.cpp, EEE3DVolcano.cpp, EEE3DFarm.cpp (effect_farm.rs) and
-// EEE3DEarthquake.cpp (effect_quake.rs) and EEE3DSmokeGenerator.cpp (effect_smoke.rs).
+// EEE3DEarthquake.cpp (effect_quake.rs) and EEE3DSmokeGenerator.cpp (effect_smoke.rs), EEE3DStorm.cpp, EEE3DRain.cpp
+// and EEE3DSnow.cpp (effect_weather.rs).
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -69,12 +70,79 @@
 #include "ee/EEEffectMesh.h"
 #include "ee/EEDoppelganger.h"
 #include "ee/EEAreaUtilities.h"
+#include "lle/U2DPoint.h"
+#include "lle/U2DRectangle.h"
+#include "lle/SESMInstanceNode.h"
+#include "ee/EETileCoordinate.h"
+#include "ee/EEAIAStarStorage.h"
+#include "ee/EESoundObject.h"
 
 class EEComplexUnit;
 // 0x23cee2 (EERenderLists.h): the unit's draw opacity (the farm's)
 bool Fn23CEE2(EEComplexUnit* inUnit, bool inTranslucent, float& ioOpacity);
 
 namespace {
+// the map a weather storm reads and calls into (ee_gfx effect_storm.rs; the storms' and EEEMStorm's moves)
+struct EEStormHostOps {
+    static bool OnMap(void*, int32_t inX, int32_t inY) { return gWorld.GetMap()->GetTile(inX, inY) != NULL; }
+    static bool IsWater(void*, int32_t inX, int32_t inY)
+    {
+        EEMapTile* theTile = gWorld.GetMap()->GetTile(inX, inY);
+        return theTile && (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater);
+    }
+    static float GroundZ(void*, int32_t inX, int32_t inY) { return gWorld.GetMap()->mTerrainMesh.GetZ(inX, inY); }
+    static void StepToward(void*, int32_t inFromX, int32_t inFromY, int32_t inToX, int32_t inToY, int32_t* outTile)
+    {
+        EETileCoordinate theFrom;
+        EETileCoordinate theTile;
+        theFrom.mX = inFromX;
+        theFrom.mY = inFromY;
+        EEGetNextTile(theFrom, theTile, EEGetTileDirection(inFromX, inFromY, inToX, inToY), 1);
+        outTile[0] = (int32_t)theTile.mX;
+        outTile[1] = (int32_t)theTile.mY;
+    }
+    static void Ripple(void*, float inX, float inY)
+    {
+        GE3DPoint theSplash(inX, inY, 0.0f);
+        gWorld.GetEffectManager()->CreatePlacedEffect(theSplash, EEGraphicEffect::Get(kGraphicEffectLandRipple), NULL);
+    }
+};
+const EeGfxStormHost kStormHost = {NULL, EEStormHostOps::OnMap, EEStormHostOps::IsWater, EEStormHostOps::GroundZ,
+                                   EEStormHostOps::StepToward, EEStormHostOps::Ripple};
+
+// a rain sound replaced by a referenced node (EEE3DRain::SetSound 0xf8337, SetRumble 0xf835e), the node's own
+// reference then dropped (StartSounds)
+void EESetRainSound(SESMInstanceNode*& ioSound, SESMInstanceNode* inSound)
+{
+    if (inSound != ioSound) {
+        if (ioSound)
+            ioSound->Dereference();
+        ioSound = inSound;
+        if (inSound)
+            inSound->Reference();
+    }
+    if (ioSound)
+        ioSound->Dereference();
+}
+
+// a rain sound's volume, pan and pitch from the camera's distance to the storm (range 5 times its radius), scaled by
+// inVolume and by 0.4 in the first 6.5 s (EEE3DRain::SetSoundLevel, 0xf80e8)
+void EESetRainSoundLevel(EEE3DRust* inRain, SESMInstanceNode* inSound, float inVolume)
+{
+    GE3DPoint thePosition;
+    if (!inSound)
+        return;
+    float theVolume;
+    float thePan;
+    float thePitch;
+    inRain->mTransformation.GetPosition(thePosition);
+    EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, inRain->mBoundingRadius * 5.0f);
+    theVolume *= inVolume;
+    if (inRain->mRecord->storm.elapsed < EE_GFX_RAIN_FADE_TIME)
+        theVolume = EE_GFX_RAIN_FADE_SHARE * theVolume;
+    gSoundManager->SetSoundParameters(inSound, theVolume, thePan, thePitch);
+}
+
 // the map's questions for ee_gfx volcano.rs (the volcano's build)
 float EEVolcanoZ(void* inMap, uint32_t inX, uint32_t inY)
 {
@@ -790,6 +858,31 @@ struct Ask {
         gWorld.mMap->GetGroundPoint(theGround, theGround);
         return EeGe3DPoint{theGround.mX, theGround.mY, theGround.mZ};
     }
+    // the rain's (EEE3DRain::Virtual64, 0xf7792): its three sound objects' media
+    static void RainMedia(void* inAsk)
+    {
+        for (int i = 0; i < 3; i++) {
+            EESoundObject* theSound = EESoundObject::Get(E(inAsk)->mRecord->storm.sounds[i]);
+            if (theSound)
+                theSound->LoadMedia();
+        }
+    }
+    // the rain's sounds (EEE3DRain::StartSounds, 0xf8195, after its thunder timer): the loop at the start or after a
+    // load, the thunder inRumble (1 or 2), both levels
+    static void RainSounds(void* inAsk, bool inStart, int32_t inRumble)
+    {
+        EEE3DRust* theRain = E(inAsk);
+        const uint32_t* theIDs = theRain->mRecord->storm.sounds;
+        EESoundObject* theSound;
+        if (inStart && (theSound = EESoundObject::Get(theIDs[0])) != NULL)
+            EESetRainSound(theRain->mSound, gSoundManager->PlayAndReturnReferencedNode(
+                theSound->GetSampleID(), theSound->GetVolume(), 0.0f, 1.0f, theSound->GetLooping(), "3DRain"));
+        if (inRumble != 0 && (theSound = EESoundObject::Get(theIDs[inRumble])) != NULL)
+            EESetRainSound(theRain->mRumble, gSoundManager->PlayAndReturnReferencedNode(
+                theSound->GetSampleID(), theSound->GetVolume(), 0.0f, 1.0f, theSound->GetLooping(), "3D Rain Rumble"));
+        EESetRainSoundLevel(theRain, theRain->mSound, 0.5f);
+        EESetRainSoundLevel(theRain, theRain->mRumble, 1.0f);
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -891,6 +984,54 @@ EEE3DRust::EEE3DRust(long inKind)
 {
 }
 
+// the rain (0x2a) and the snow (0x3d) over the tiles, centred on them (EEE3DStorm, 0xfb0c8; the rain's first thunder,
+// EEE3DRain 0xf7394)
+EEE3DRust::EEE3DRust(const std::vector<U2DPoint<long> >& inTiles, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect3D(0, inGraphicEffect, inKind)
+{
+    std::vector<int32_t> theTiles;
+    for (size_t i = 0; i < inTiles.size(); i++) {
+        theTiles.push_back((int32_t)inTiles[i].mX);
+        theTiles.push_back((int32_t)inTiles[i].mY);
+    }
+    ee_gfx_storm_new(this->mRecord, theTiles.empty() ? NULL : &theTiles[0], (uint32_t)inTiles.size());
+    this->Call(EeGfxEffect3DOp::Create);
+}
+
+// the weather storms': every tile one step towards its place around the new centre (a step off the map stays), the
+// storm recentred on the terrain there; the tiles' bounds; the radius half the longer side (ee_gfx effect_storm.rs)
+void EEE3DRust::Move(const U2DPoint<long>& inCenter, U2DRectangle<long>& outBounds)
+{
+    int32_t theBounds[4] = {(int32_t)outBounds.mLeft, (int32_t)outBounds.mTop, (int32_t)outBounds.mRight,
+                            (int32_t)outBounds.mBottom};
+    EeGe3DPoint thePoint;
+    if (!ee_gfx_storm_move(this->mRecord, (int32_t)inCenter.mX, (int32_t)inCenter.mY, theBounds, &kStormHost, &thePoint))
+        return;
+    outBounds.mLeft = theBounds[0];
+    outBounds.mTop = theBounds[1];
+    outBounds.mRight = theBounds[2];
+    outBounds.mBottom = theBounds[3];
+    GETransformation theTransformation;
+    theTransformation.SetPosition(thePoint.x, thePoint.y, thePoint.z);
+    this->SetTransformation(theTransformation);
+}
+
+void EEE3DRust::GetBounds(U2DRectangle<long>& outBounds)
+{
+    int32_t theBounds[4];
+    if (!ee_gfx_storm_bounds(this->mRecord, theBounds))
+        return;
+    outBounds.mLeft = theBounds[0];
+    outBounds.mTop = theBounds[1];
+    outBounds.mRight = theBounds[2];
+    outBounds.mBottom = theBounds[3];
+}
+
+U2DPoint<long> EEE3DRust::GetCenterPoint() const
+{
+    return U2DPoint<long>(this->mRecord->storm.center_x, this->mRecord->storm.center_y);
+}
+
 // stops the sound (the disease's and virus's), unloads the graphic object's media and the unit model's (the
 // additive pass's), releases the tracer beam's target
 EEE3DRust::~EEE3DRust()
@@ -900,6 +1041,20 @@ EEE3DRust::~EEE3DRust()
         this->mSound->Dereference();
         this->mSound = NULL;
     }
+    if (this->mRumble) {   // the rain's thunder, then its three sound objects' media and its drop model (0xf74a0)
+        gSoundManager->Stop(this->mRumble, false);
+        this->mRumble->Dereference();
+        this->mRumble = NULL;
+    }
+    if (this->mKind == 0x2a) {
+        for (int i = 0; i < 3; i++) {
+            EESoundObject* theSound = EESoundObject::Get(this->mRecord->storm.sounds[i]);
+            if (theSound)
+                theSound->UnloadMedia();
+        }
+    }
+    if ((this->mKind == 0x2a || this->mKind == 0x3d) && this->mRecord->storm.model)
+        static_cast<GEModel*>(this->mRecord->storm.model)->Dereference();
     if (this->mGraphicObject) {
         this->mGraphicObject->UnloadMedia();
         this->mGraphicObject = NULL;
@@ -975,6 +1130,7 @@ EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
         theFacts.time1 = (uint32_t)theEffect->mTime1;
         theFacts.time2 = (int32_t)theEffect->mTime2;
     }
+    theFacts.world_speed = gWorld.GetGameSpeed();
     return theFacts;
 }
 
@@ -997,7 +1153,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel, Ask::FarmUnit,
                                  Ask::FarmTerrain, Ask::FarmDropSite, Ask::FarmSetVariant, Ask::FarmLoops,
                                  Ask::FarmDoppelgangerAny, Ask::FarmDoppelganger, Ask::FarmOpacity, Ask::SetScaledModel,
-                                 Ask::GroundPoint, Ask::SmokeUnit, Ask::SmokeTagPoint, Ask::SmokePlace};
+                                 Ask::GroundPoint, Ask::SmokeUnit, Ask::SmokeTagPoint, Ask::SmokePlace, kStormHost,
+                                 Ask::RainMedia, Ask::RainSounds};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
