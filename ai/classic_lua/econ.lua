@@ -233,7 +233,7 @@ local function settle_patches(view, memory)
         return
     end
     -- EECPRMPatchSite: rings 2 .. 5 round the patch, with a margin
-    local x, y = ai.find_site(C.settlement, best.x, best.y, {min = 2, max = 5, margin = true})
+    local x, y = R.find_site(C.settlement, best.x, best.y, {min = 2, max = 5, margin = true})
     if x == nil then
         R.claim_expand(view, memory)
         return
@@ -316,7 +316,7 @@ local function settlement_for(view, memory)
                     ok = #ai.resources{kind = 'wood', near = {res.x, res.y, 3}, limit = 5} >= 5
                 end
                 if ok then
-                    local x, y = ai.find_site(C.settlement, res.x, res.y, {min = 2, max = r, margin = true})
+                    local x, y = R.find_site(C.settlement, res.x, res.y, {min = 2, max = r, margin = true})
                     if x ~= nil and R.d2(x, y, res.x, res.y) <= r * r then
                         local near = false
                         for _, d in ipairs(R.drops(false)) do
@@ -702,9 +702,14 @@ local function rebalance(view, memory, records)
 end
 
 -- AssignIdleGatherers: each idle citizen to the most under-served of gold, iron, stone, wood (the C++ port's order)
+local IDLE_A_PASS = 12   -- the idle citizens placed a pass (every 10 s; the rest at the next: the instruction budget)
+
 local function assign_idle_gatherers(view, memory, idle)
     local rm = R.state(memory)
-    for _, u in ipairs(idle) do
+    for k, u in ipairs(idle) do
+        if k > IDLE_A_PASS then
+            break
+        end
         local order = {"gold", "iron", "stone", "wood"}
         table.sort(order, function(a, b)
             local da, db = rm.wanted[a] - #rm.lists[a], rm.wanted[b] - #rm.lists[b]
