@@ -65,6 +65,10 @@ pub enum EeWonCoreObject {
     UdpSendRecv = 6,
     /// a `ServerConnection*`'s [`EeWonServerConn`]
     ServerConn = 7,
+    /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
+    RouteOp = 8,
+    /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
+    RouteConn = 9,
 }
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -155,6 +159,12 @@ pub struct EeWonCoreHooks {
         Option<unsafe extern "C" fn(transform: *mut c_void, message: *mut c_void, send: bool) -> c_long>,
     /// `delete transform`
     pub transform_free: EeWonCoreFn,
+    /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
+    pub new_route_op: Option<unsafe extern "C" fn(conn: *mut c_void, ty: i32) -> *mut c_void>,
+    /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
+    /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
+    pub route_virtual:
+        Option<unsafe extern "C" fn(conn: *mut c_void, which: i32, op: *mut c_void, message_type: u8) -> *mut c_void>,
 }
 
 // SAFETY: a static table of functions and one function address
@@ -171,7 +181,7 @@ pub fn bind(core: *const EeWonCoreHooks) {
     }
 }
 
-fn core() -> Option<&'static EeWonCoreHooks> {
+pub(crate) fn core() -> Option<&'static EeWonCoreHooks> {
     // SAFETY: a bound table lives for the program
     unsafe { CORE.load(Ordering::Acquire).as_ref() }
 }
@@ -185,15 +195,15 @@ pub(crate) fn object_of(object: *mut c_void, kind: EeWonCoreObject) -> *mut c_vo
     core().and_then(|c| c.object_of).map_or(null_mut(), |h| unsafe { h(object, kind) })
 }
 
-fn op<'a>(o: *mut c_void) -> Option<&'a EeWonAsyncOp> {
+pub(crate) fn op<'a>(o: *mut c_void) -> Option<&'a EeWonAsyncOp> {
     // SAFETY: an op's Rust object lives as long as the op, which the caller holds
     unsafe { (object_of(o, EeWonCoreObject::Op) as *const EeWonAsyncOp).as_ref() }
 }
-fn socket<'a>(s: *mut c_void) -> Option<&'a EeWonAsyncSocket> {
+pub(crate) fn socket<'a>(s: *mut c_void) -> Option<&'a EeWonAsyncSocket> {
     // SAFETY: as `op`
     unsafe { (object_of(s, EeWonCoreObject::Socket) as *const EeWonAsyncSocket).as_ref() }
 }
-fn queue<'a>(s: *mut c_void) -> Option<&'a EeWonQueueSocket> {
+pub(crate) fn queue<'a>(s: *mut c_void) -> Option<&'a EeWonQueueSocket> {
     // SAFETY: as `op`
     unsafe { (object_of(s, EeWonCoreObject::Queue) as *const EeWonQueueSocket).as_ref() }
 }
@@ -209,7 +219,7 @@ fn ref_add(o: *mut c_void) {
         }
     }
 }
-fn ref_release(o: *mut c_void) {
+pub(crate) fn ref_release(o: *mut c_void) {
     if !o.is_null() {
         if let Some(h) = core().and_then(|c| c.ref_release) {
             // SAFETY: the table's contract: a reference the caller held
@@ -219,8 +229,8 @@ fn ref_release(o: *mut c_void) {
 }
 
 /// A reference held for a scope (a by-value `SmartPtr`); none for null.
-struct Hold(Option<HeldRef>);
-fn hold(o: *mut c_void) -> Hold {
+pub(crate) struct Hold(Option<HeldRef>);
+pub(crate) fn hold(o: *mut c_void) -> Hold {
     if o.is_null() {
         return Hold(None);
     }
@@ -238,7 +248,7 @@ fn completion(call: impl Fn(*mut c_void) + Send + Sync + 'static) -> *mut c_void
     EeWonCompletion::make_with(core().and_then(|c| c.new_completion), call)
 }
 
-fn new_socket_op(
+pub(crate) fn new_socket_op(
     kind: EeWonCoreSocketOp,
     socket: *mut c_void,
     bytes: *mut c_void,
@@ -263,10 +273,10 @@ fn bind_local(s: *mut c_void, port: u16) -> c_long {
 
 // ---- an op's, a completion's and a socket's calls
 
-unsafe extern "C" fn n_ref_add(o: *mut c_void) {
+pub(crate) unsafe extern "C" fn n_ref_add(o: *mut c_void) {
     ref_add(o)
 }
-unsafe extern "C" fn n_ref_release(o: *mut c_void) {
+pub(crate) unsafe extern "C" fn n_ref_release(o: *mut c_void) {
     ref_release(o)
 }
 unsafe extern "C" fn n_completion_call(c: *mut c_void, o: *mut c_void) {
@@ -291,10 +301,10 @@ unsafe extern "C" fn n_op_timeout_long(o: *mut c_void) -> c_long {
 unsafe extern "C" fn n_op_mode(o: *mut c_void) -> i32 {
     op(o).map_or(0, EeWonAsyncOp::run_mode)
 }
-unsafe extern "C" fn n_op_completion(o: *mut c_void) -> *mut c_void {
+pub(crate) unsafe extern "C" fn n_op_completion(o: *mut c_void) -> *mut c_void {
     op(o).map_or(null_mut(), EeWonAsyncOp::completion)
 }
-unsafe extern "C" fn n_op_set_completion(o: *mut c_void, c: *mut c_void) {
+pub(crate) unsafe extern "C" fn n_op_set_completion(o: *mut c_void, c: *mut c_void) {
     if let Some(x) = op(o) {
         // SAFETY: a live completion or null; the op takes its own reference
         unsafe { x.set_completion(c) };
@@ -306,12 +316,12 @@ unsafe extern "C" fn n_op_set_timeout(o: *mut c_void, t: u32) {
     }
 }
 /// `RunAsync(t)`: `Run(OP_MODE_ASYNC, t)` with the `long` taken as the unsigned timeout
-unsafe extern "C" fn n_op_run_async(o: *mut c_void, t: c_long) {
+pub(crate) unsafe extern "C" fn n_op_run_async(o: *mut c_void, t: c_long) {
     if let Some(x) = op(o) {
         x.run(1, t as u32);
     }
 }
-unsafe extern "C" fn n_op_kill(o: *mut c_void) {
+pub(crate) unsafe extern "C" fn n_op_kill(o: *mut c_void) {
     if let Some(x) = op(o) {
         x.kill(true);
     }
@@ -811,13 +821,13 @@ pub static NATIVE_SOCKET_THREAD: EeWonSocketOpHooks = EeWonSocketOpHooks {
 /// A call passed to the core table (the default without one).
 macro_rules! pass {
     ($name:ident, $field:ident, ($($a:ident: $t:ty),*) -> $r:ty, $default:expr) => {
-        unsafe extern "C" fn $name($($a: $t),*) -> $r {
+        pub(crate) unsafe extern "C" fn $name($($a: $t),*) -> $r {
             // SAFETY: the table's contract
             core().and_then(|c| c.$field).map_or($default, |h| unsafe { h($($a),*) })
         }
     };
     ($name:ident, $field:ident, ($($a:ident: $t:ty),*)) => {
-        unsafe extern "C" fn $name($($a: $t),*) {
+        pub(crate) unsafe extern "C" fn $name($($a: $t),*) {
             if let Some(h) = core().and_then(|c| c.$field) {
                 // SAFETY: the table's contract
                 unsafe { h($($a),*) };
@@ -1041,4 +1051,4 @@ pub static NATIVE_SERVCONN: EeWonServerConnHooks = EeWonServerConnHooks {
 
 #[cfg(test)]
 #[path = "cppcore_tests.rs"]
-mod tests;
+pub(crate) mod tests;

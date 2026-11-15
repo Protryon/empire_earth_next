@@ -15,10 +15,8 @@
 2ac390 2acc05 WONServer/ServerContext.cpp
 2acc10 2acf01 WONServer/ServerOp.cpp
 2b2350 2b38d3 WONSocket/IPAddr.cpp
-2ba050 2bfa0f WONRouting/RoutingConnection.cpp
 2bcd30 2c7d36 WONRouting/RoutingOp.cpp
 2bfb00 2c4165 WONRouting/SmartRoutingConnection.cpp
-2c6630 2c6c08 WONRouting/RoutingGetUserStatusOp.cpp
 2d28f0 2d3782 WONMisc/HTTPEngine.cpp
 2d7a20 2d8391 WONMisc/URL.cpp
 2d95a0 2d995e WONCommon/DNSTestOp.cpp

@@ -1767,6 +1767,107 @@ constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
 /// How many op types have a completion slot (`mCompletions[61]`).
 constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
 
+/// `CreateGroup(group, name, password, max players, group flags, join flags, async flags)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_GROUP = 0;
+
+/// `JoinGroup(group, password, comment, join flags, member flags)`
+constexpr static const int32_t EE_WON_RTQ_JOIN_GROUP = 1;
+
+/// `BanClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_BAN = 2;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_WON_ID = 3;
+
+constexpr static const int32_t EE_WON_RTQ_BAN_CDKEY_ID = 4;
+
+/// `MuteClient(group, on, seconds, explanation, client id)`; by WON id; by CD key id
+constexpr static const int32_t EE_WON_RTQ_MUTE = 5;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_WON_ID = 6;
+
+constexpr static const int32_t EE_WON_RTQ_MUTE_CDKEY_ID = 7;
+
+/// `Register(name, password, reconnect id, async flags, register flags, client flags)`
+constexpr static const int32_t EE_WON_RTQ_REGISTER = 8;
+
+/// `GetClientList()`, `GetClientListEx()`
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST = 9;
+
+constexpr static const int32_t EE_WON_RTQ_CLIENT_LIST_EX = 10;
+
+/// `GetGroupList(flags)`
+constexpr static const int32_t EE_WON_RTQ_GROUP_LIST = 11;
+
+/// `GetMembersOfGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_MEMBERS = 12;
+
+/// `LeaveGroup(group)`
+constexpr static const int32_t EE_WON_RTQ_LEAVE = 13;
+
+/// `CancelJoinGroup(group, leave)`
+constexpr static const int32_t EE_WON_RTQ_CANCEL_JOIN = 14;
+
+/// `AcceptClient(group, client, on, explanation)`, `InviteClient(...)`
+constexpr static const int32_t EE_WON_RTQ_ACCEPT = 15;
+
+constexpr static const int32_t EE_WON_RTQ_INVITE = 16;
+
+/// `SetGroupFlags(group, mask, flags, async mask, async flags)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_FLAGS = 17;
+
+/// `SendServerAlert(text)`; `SendServerAlertWithRecipientList(text, recipients)` (nothing for none)
+constexpr static const int32_t EE_WON_RTQ_ALERT = 18;
+
+constexpr static const int32_t EE_WON_RTQ_ALERT_TO = 19;
+
+/// `StartServerShutdown(text, seconds)`, `AbortServerShutdown()`
+constexpr static const int32_t EE_WON_RTQ_START_SHUTDOWN = 20;
+
+constexpr static const int32_t EE_WON_RTQ_ABORT_SHUTDOWN = 21;
+
+/// `SetClientFlags(mask, flags, async mask, async flags)` (the mask cut to 16 bits)
+constexpr static const int32_t EE_WON_RTQ_SET_CLIENT_FLAGS = 22;
+
+/// `SendChatTo(text, flags, recipients)` (`SendChat`: one recipient)
+constexpr static const int32_t EE_WON_RTQ_CHAT = 23;
+
+/// `SendData(data, flags, recipients)`
+constexpr static const int32_t EE_WON_RTQ_DATA = 24;
+
+/// `BecomeModerator(on)`
+constexpr static const int32_t EE_WON_RTQ_MODERATOR = 25;
+
+/// `CreateDataObject(flags, link, type, name, data)`
+constexpr static const int32_t EE_WON_RTQ_CREATE_DATA = 26;
+
+/// `ReplaceDataObject(link, type, name)`: the delete request
+constexpr static const int32_t EE_WON_RTQ_DELETE_DATA = 27;
+
+/// `ModifyDataObject(link, type, name, offset, insert, data)`
+constexpr static const int32_t EE_WON_RTQ_MODIFY_DATA = 28;
+
+/// `ReadDataObject` / `SubscribeDataObject` / `GetClientCDKeyIdList`: (subscribe, link, type, flags)
+constexpr static const int32_t EE_WON_RTQ_READ_DATA = 29;
+
+/// `UnsubscribeDataObject(link, type, flags)`
+constexpr static const int32_t EE_WON_RTQ_UNSUBSCRIBE_DATA = 30;
+
+/// `DisconnectClient()`
+constexpr static const int32_t EE_WON_RTQ_DISCONNECT = 31;
+
+/// `SetGroupName(group, name)`, `SetGroupMaxPlayers(group, max)`, `RelinquishCaptaincy(group, new captain)`
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_NAME = 32;
+
+constexpr static const int32_t EE_WON_RTQ_SET_GROUP_MAX_PLAYERS = 33;
+
+constexpr static const int32_t EE_WON_RTQ_RELINQUISH = 34;
+
+/// `DetectFirewall(listen port, longest connect wait, listen)` (a `RoutingDetectFirewallOp`)
+constexpr static const int32_t EE_WON_RTQ_DETECT_FIREWALL = 35;
+
+/// `GetBadUserList(list type, group, flags)`
+constexpr static const int32_t EE_WON_RTQ_BAD_USERS = 36;
+
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
 /// `WS_None`
@@ -5571,6 +5672,10 @@ enum class EeWonCoreObject {
   UdpSendRecv = 6,
   /// a `ServerConnection*`'s [`EeWonServerConn`]
   ServerConn = 7,
+  /// a `RoutingOp*`'s [`EeWonRouteOp`](crate::routeop::EeWonRouteOp)
+  RouteOp = 8,
+  /// a `RoutingConnection*`'s [`EeWonRouteConn`](crate::routeconn::EeWonRouteConn)
+  RouteConn = 9,
 };
 
 /// The socket op classes [`EeWonCoreHooks::new_socket_op`] makes.
@@ -7220,6 +7325,7 @@ struct EeWonRoot;
 struct EeWonRouteConn;
 
 /// A routing op, as the C++ `RoutingOp` holds it.
+/// The second field is the C++ `RoutingConnection*` it was made on (borrowed; 0 for none).
 struct EeWonRouteOp;
 
 /// The Rust ScrollArea.
@@ -8883,6 +8989,11 @@ struct EeWonCoreHooks {
   long (*transform_call)(void *transform, void *message, bool send);
   /// `delete transform`
   EeWonCoreFn transform_free;
+  /// `new RoutingOp(conn, type)` (a `RoutingDetectFirewallOp` for `RoutingOp_DetectFirewall`)
+  void *(*new_route_op)(void *conn, int32_t ty);
+  /// a routing connection's virtual `RoutingOpCompleteHook(op)` (`which` 0: null returned) or
+  /// `GetUnsolicitedDerivedOp(type)` (1: the new op with one reference for the caller, or null)
+  void *(*route_virtual)(void *conn, int32_t which, void *op, uint8_t message_type);
 };
 
 /// A C++ call on one object (an op, a completion or the socket).
@@ -15954,6 +16065,51 @@ void ee_won_routeconn_close_hook(const EeWonRouteConn *r);
 /// # Safety
 /// As `ee_won_routeconn_set_completion`.
 void ee_won_routeconn_kill_hook(const EeWonRouteConn *r);
+
+/// A request helper of a kind (`EE_WON_RTQ_*`) on the connection `conn` (a `RoutingConnection*`), its `count`
+/// values in the helper's parameter order (`num` a number or a buffer's presence; `data` / `len` a text's UTF-16
+/// little-endian units, a data type, a buffer's bytes, the recipients as 16-bit little-endian ids), with the
+/// completion (or null).
+///
+/// # Safety
+/// `conn` is a live connection; `values` holds `count` values whose bytes are valid for the call.
+void ee_won_routeconn_request(void *conn,
+                              int32_t kind,
+                              const EeWonAdminValue *values,
+                              size_t count,
+                              void *completion);
+
+/// A new routing op of a type (`RoutingOpType`) on the connection `conn` (borrowed: the C++ op holds its reference;
+/// the Rust op sends on it and leaves a group on it).
+EeWonRouteOp *ee_won_routeop_new_on(int32_t ty,
+                                    void *conn);
+
+/// `RoutingOp::SendRequest`'s base: the op's message (when it sends one) after the connection's length field,
+/// queued on the connection as a `SendMsgOp`; the op `cpp` added to the connection's list when it waits for a reply.
+///
+/// # Safety
+/// `op` is the live Rust op of the C++ op `cpp` (a `RoutingOp*` as its `RefCount*`).
+void ee_won_routeop_send(EeWonRouteOp *op,
+                         void *cpp);
+
+/// A new routing connection object for the C++ `conn`, on the socket's lock, its calls over the core table.
+///
+/// # Safety
+/// `core` is the library's static table; `conn` and `lock` outlive the object.
+EeWonRouteConn *ee_won_routeconn_new_core(void *conn,
+                                          const EeWonCoreHooks *core,
+                                          void *lock);
+
+/// `SmartRoutingConnection::HandleInput(input, group)`: the model's reading of a chat line (`len` `wchar_t`s), the
+/// request it makes sent on the connection `conn`; whether the line was taken. The caller holds the socket's lock.
+///
+/// # Safety
+/// `r` is the connection's model; `conn` the live connection; `text` holds `len` `wchar_t`s.
+bool ee_won_smart_handle_input(EeWonSmartRoute *r,
+                               void *conn,
+                               const void *text,
+                               size_t len,
+                               int32_t group);
 
 /// A request's message into `sink`.
 ///

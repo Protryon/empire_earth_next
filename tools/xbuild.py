@@ -719,8 +719,9 @@ WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
 # WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
-# rust/crates/ee_won/src/golden_userstatus.txt, recorded over the C++ class); its units (won_ops_test's and the op's)
-WON_TESTS["won_userstatus_test"] = [*WON_TESTS["won_ops_test"], WON_SRC / "WONRouting" / "RoutingGetUserStatusOp.cpp"]
+# rust/crates/ee_won/src/golden_userstatus.txt, recorded over the C++ class); its units are won_ops_test's (the op
+# is header-only since net round 26)
+WON_TESTS["won_userstatus_test"] = WON_TESTS["won_ops_test"]
 # RustServerOp's host calls that need no C++ object (the clock, the CRT's random numbers, an address, the op's file,
 # the files it measures, the web proxy file) through the op's own call path (golden:
 # rust/crates/ee_won/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units (won_ops_test's,
