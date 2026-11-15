@@ -389,68 +389,8 @@ long UIManager::CloseIMECompositionString() { return (long)this->Call(EeUiManage
 long UIManager::CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
 
 // FUNCTION: LLE 0x1007a216
-// Creates every background in the UI background database on its form, by type (others via CreateUserDefinedBackground)
-// tiled backgrounds get the row's ID where every other type gets its background ID
-void UIManager::CreateBackgrounds()
-{
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = 16;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    unsigned long theCount = UIBackgroundTable::GetArraySize();
-    theDescription.mPixelDepth = this->GetUITextureBitDepth();
-    for (unsigned long i = 0; i < theCount; i++) {
-        UIBackgroundTable* theTable = UIBackgroundTable::GetUIBackgroundTable(i);
-        if (!theTable)
-            continue;
-        theDescription.mHasAlpha = theTable->GetHasAlpha();
-        UIForm* theForm = this->GetFormByID(theTable->GetFormID());
-        if (!theForm)
-            continue;   // no such form (GetFormByID used to return a garbage pointer here)
-        switch (theTable->GetBackgroundType()) {
-        case kBackgroundBitmap:
-            new UIBitmapBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                   theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                   theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundTiled:
-            // Fixed: passed the row ID (GetID) where every other case passes the background ID
-            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                  theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundFull:
-            new UIBFull(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                        theTable->GetTextureRect(), theTable->GetLayout(), theForm, theTable->GetDrawPriority(),
-                        theTable->GetNumCols(), theTable->GetNumRows(), theTable->GetVisible());
-            break;
-        case kBackgroundLRTiled:
-            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                  theTable->GetDrawPriority(), theTable->GetVisible(), kTilingLeftRight);
-            break;
-        case kBackgroundTBTiled:
-            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                  theTable->GetDrawPriority(), theTable->GetVisible(), kTilingTopBottom);
-            break;
-        case kBackgroundStretchedTiled:
-            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                  theTable->GetDrawPriority(), theTable->GetVisible(), kTilingStretched,
-                                  theTable->GetTileWidthPercent(), theTable->GetTileHeightPercent());
-            break;
-        default:
-            this->CreateUserDefinedBackground(*theTable);
-            break;
-        }
-    }
-}
+// Creates every background in the UI background database on its form, by type (bgtableobj.rs)
+void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
 
 // FUNCTION: LLE 0x1007a438 (CreateBitmap): the Rust constructor's MgrBitmapCoords and BitmapSetScale.
 

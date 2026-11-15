@@ -893,6 +893,28 @@ enum class EeUiOp : uint32_t {
   HkDelete = 581,
   /// *Pure*: `gISKeyboard->GetEntity(a, ...)`'s result.
   HkEntityResult = 582,
+  /// `new UIBackgroundTable` with the record at a and the texture file name b -> the entry.
+  BgtNew = 590,
+  /// `delete` entry `a`.
+  BgtDelete = 591,
+  /// *Pure*: the manager's `GetFormByID(a)`.
+  BgtForm = 592,
+  /// *Pure*: the manager's `GetUITextureBitDepth()`.
+  BgtTextureDepth = 593,
+  /// Entry `a`'s background on form `b` with the description at `c` (`CreateBackgrounds`' switch).
+  BgtMake = 594,
+  /// *Pure*: entry `a`'s `GetHasAlpha()`.
+  BgtEntryAlpha = 595,
+  /// *Pure*: entry `a`'s `GetFormID()`.
+  BgtEntryFormId = 596,
+  /// The file's `Open(kFileAccessRead)`.
+  BgtFileOpen = 597,
+  /// The file's count read -> its result, the count's bits in f[0].
+  BgtFileCount = 598,
+  /// The file's read of `c` bytes into `b` -> its result.
+  BgtFileRead = 599,
+  /// The file's `Close()`.
+  BgtFileClose = 600,
 };
 
 /// The inward calls (each C++ class's methods forward here with their own call).
@@ -2271,6 +2293,35 @@ struct EeUiBackgroundFields {
   bool mIsVisible;
 };
 
+/// `GEColor`: red, green, blue.
+struct EeUiColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// `UIBackgroundTable`'s members (`include/lle/UIBackgroundTable.h`), the C++ class's base.
+struct EeUiBgTableFields {
+  EeUiLayout mLayout;
+  EeUiRect mTextureRect;
+  EeUiColor mColor;
+  float mTileWidthPercent;
+  float mTileHeightPercent;
+  float mOpacity;
+  long mID;
+  unsigned long mBackgroundID;
+  unsigned long mFormID;
+  unsigned long mBackgroundType;
+  long mNumCols;
+  long mNumRows;
+  unsigned long mDrawPriority;
+  bool mVisible;
+  bool mHasAlpha;
+  bool mAttribute1;
+  bool mAttribute2;
+  bool mAttribute3;
+};
+
 /// `UIControl`'s members (`include/lle/UIControl.h`), the C++ class's base.
 struct EeUiControlFields {
   /// The C++ control (the host's object; `this` in the comparisons with the form's controls and captures).
@@ -2384,13 +2435,6 @@ struct EeUiControlsTableFields {
   bool loop_movie;
 };
 
-/// `GEColor`: red, green, blue.
-struct EeUiColor {
-  float red;
-  float green;
-  float blue;
-};
-
 /// The table's data as the C++ getters read it.
 struct EeUiControlsTableData {
   EeUiControlsTableFields fields;
@@ -2407,71 +2451,6 @@ struct EeUiControlsTableData {
   /// The normal, pressed and focused file names and the button down and up sounds, NUL-terminated (owned by the
   /// object).
   const char *names[5];
-};
-
-/// One record of the backgrounds database file (`UIDbDataBackgrounds`, 308 bytes on every target).
-struct EeUiDbBackground {
-  uint8_t name[100];
-  uint8_t texture_file[100];
-  float top_offset;
-  float bottom_offset;
-  float left_offset;
-  float right_offset;
-  float tile_width_percent;
-  float tile_height_percent;
-  float opacity;
-  int32_t id;
-  uint32_t background_id;
-  uint32_t form_id;
-  int32_t texture_top;
-  int32_t texture_left;
-  int32_t texture_bottom;
-  int32_t texture_right;
-  uint32_t background_type;
-  uint32_t top_offset_type;
-  uint32_t bottom_offset_type;
-  uint32_t left_offset_type;
-  uint32_t right_offset_type;
-  int32_t num_cols;
-  int32_t num_rows;
-  int32_t draw_priority;
-  int32_t red;
-  int32_t green;
-  int32_t blue;
-  uint8_t visible;
-  uint8_t has_alpha;
-  uint8_t attribute1;
-  uint8_t attribute2;
-  uint8_t attribute3;
-  uint8_t pad[3];
-};
-
-/// `UIBackgroundTable`'s members from `mTileWidthPercent` (+0x50 in the original) to `mAttribute3`, in order
-/// (offsets `static_assert`ed in `UIBackgroundTable.cpp`).
-struct EeUiBackgroundTableFields {
-  float tile_width_percent;
-  float tile_height_percent;
-  float opacity;
-  long id;
-  unsigned long background_id;
-  unsigned long form_id;
-  unsigned long background_type;
-  long num_cols;
-  long num_rows;
-  unsigned long draw_priority;
-  bool visible;
-  bool has_alpha;
-  bool attribute1;
-  bool attribute2;
-  bool attribute3;
-};
-
-/// One table entry as Rust writes it: its record from `mTileWidthPercent` on, `mLayout`, `mTextureRect`, `mColor`.
-struct EeUiBackgroundTableRefs {
-  EeUiBackgroundTableFields *fields;
-  EeUiLayout *layout;
-  EeUiRect *texture_rect;
-  EeUiColor *color;
 };
 
 /// `CopyData`'s rectangles: the title's, the axis labels' (empty when off) and the plot area.
@@ -2694,6 +2673,30 @@ ptrdiff_t ee_ui_bg_call(EeUiBackgroundFields *rec,
                         ptrdiff_t a,
                         ptrdiff_t b,
                         float *f);
+
+/// `UIBackgroundTable::Create(*file)`; `host` reads the file (its object) and makes the entries.
+///
+/// # Safety
+/// `file` is a live `FSFileSpec`.
+long ee_ui_bgtable_create(void *file, EeUiHostFn host);
+
+/// `UIBackgroundTable`'s constructor over its record.
+///
+/// # Safety
+/// `rec` is the C++ entry's base.
+void ee_ui_bgtable_init(EeUiBgTableFields *rec);
+
+/// `UIBackgroundTable::DeleteAll()`: each entry deleted (`BgtDelete`) in order, the array emptied.
+void ee_ui_bgtable_delete_all(EeUiHostFn host);
+
+/// `UIBackgroundTable::GetArraySize()`.
+unsigned long ee_ui_bgtable_count();
+
+/// `UIBackgroundTable::GetUIBackgroundTable(i)`: its record (NULL for an empty slot).
+EeUiBgTableFields *ee_ui_bgtable_at(unsigned long i);
+
+/// `UIManager::CreateBackgrounds()` (`manager` the host's object).
+void ee_ui_bgtable_create_backgrounds(void *manager, EeUiHostFn host);
 
 /// A new Rust button for the C++ `button` (its `UIControl` part constructed), its calls out through `host`.
 EeUiButton *ee_ui_button_new(void *button,
@@ -3122,13 +3125,6 @@ ptrdiff_t ee_ui_controls_table_call(const EeUiControlsTable *table,
 /// `SetupStringArray`'s count: the strings `begin..=end` (none unless `begin` is positive and `end` not before it).
 unsigned long ee_ui_controls_table_string_count(long begin,
                                                 long end);
-
-/// `UIBackgroundTable::Create`.
-long ee_ui_background_table_create(void *file);
-
-/// The new table entry's members from a record (`Create`'s copy; the C++ copies the texture file name).
-void ee_ui_background_table_from_record(const EeUiDbBackground *record,
-                                        EeUiBackgroundTableRefs out);
 
 /// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1).
 long ee_ui_event_create(void *file, int kind, void *manager);

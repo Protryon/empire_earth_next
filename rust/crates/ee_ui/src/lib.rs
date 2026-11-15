@@ -8,6 +8,7 @@
 pub mod background;
 pub mod background_table;
 pub mod bgobj;
+pub mod bgtableobj;
 pub mod button;
 pub mod button_variants;
 pub mod buttonobj;
@@ -56,8 +57,7 @@ pub mod text;
 pub mod variantobj;
 pub mod wrap;
 
-// imports the C++ database files, the background array and the events' owners (UIBackgroundTable.cpp, UIEvent.cpp),
-// absent from a test binary
+// imports the C++ database files and the events' owners (UIEvent.cpp), absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
 // imports the C++ entity groups' entities and the string list's lines (UIEntityGroup.cpp, UILBString.cpp), absent

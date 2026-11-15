@@ -850,6 +850,31 @@ pub enum EeUiOp {
     HkDelete = 581,
     /// *Pure*: `gISKeyboard->GetEntity(a, ...)`'s result.
     HkEntityResult = 582,
+
+    // ---- the background table (R6 ui round 20, bgtableobj.rs): on the file (Create) or the manager
+    // (CreateBackgrounds); an entry is its record's address
+    /// `new UIBackgroundTable` with the record at a and the texture file name b -> the entry.
+    BgtNew = 590,
+    /// `delete` entry `a`.
+    BgtDelete = 591,
+    /// *Pure*: the manager's `GetFormByID(a)`.
+    BgtForm = 592,
+    /// *Pure*: the manager's `GetUITextureBitDepth()`.
+    BgtTextureDepth = 593,
+    /// Entry `a`'s background on form `b` with the description at `c` (`CreateBackgrounds`' switch).
+    BgtMake = 594,
+    /// *Pure*: entry `a`'s `GetHasAlpha()`.
+    BgtEntryAlpha = 595,
+    /// *Pure*: entry `a`'s `GetFormID()`.
+    BgtEntryFormId = 596,
+    /// The file's `Open(kFileAccessRead)`.
+    BgtFileOpen = 597,
+    /// The file's count read -> its result, the count's bits in f[0].
+    BgtFileCount = 598,
+    /// The file's read of `c` bytes into `b` -> its result.
+    BgtFileRead = 599,
+    /// The file's `Close()`.
+    BgtFileClose = 600,
 }
 
 impl EeUiOp {
@@ -979,6 +1004,10 @@ impl EeUiOp {
                 | HkKeyIndex
                 | HkEntity
                 | HkEntityResult
+                | BgtForm
+                | BgtTextureDepth
+                | BgtEntryAlpha
+                | BgtEntryFormId
         )
     }
 

@@ -258,6 +258,21 @@ impl<'a> Replay<'a> {
         } else {
             (ta, tb)
         };
+        // the background table's (R6 ui round 20): a new entry's record as its digest and its name as its hash, the
+        // description as its digest, the file read's buffer as 0
+        // SAFETY: those ops pass a record and NUL-terminated bytes, a description
+        let (ta, tb, tc) = unsafe {
+            match op {
+                EeUiOp::BgtNew => {
+                    (crate::bgtableobj::entry_digest(&*(a as *const crate::bgtableobj::EeUiBgTableFields)), fnv(b), tc)
+                }
+                EeUiOp::BgtMake => {
+                    (ta, tb, crate::bgobj::description_digest(&*(c as *const crate::bgobj::EeUiTextureDescription)))
+                }
+                EeUiOp::BgtFileRead => (ta, 0, tc),
+                _ => (ta, tb, tc),
+            }
+        };
         // a wide op's other eight floats follow its four
         let wide = if op.is_wide() {
             // SAFETY: wide ops pass twelve floats
