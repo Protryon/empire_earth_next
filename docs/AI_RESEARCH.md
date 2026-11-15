@@ -4233,6 +4233,41 @@ K10p is on in boom_order.
 The Lua port is now the opponent to beat. One run also hit lib/defence's micro instruction budget at 108 minutes,
 under a large attack.
 
+**Against the Lua classic (2026-11-15, classic = classic_lua since main fa6d460e).** Boom loses nearly every game
+(about 4-53-7 on 64 seeds). The cause is economy, not epoch pace. Medians at 20/40/60/75 minutes:
+- citizens: the classic 47/92/166/180, boom 33/71/104/124;
+- income a minute: the classic 255/474/874/1015, boom 180/308/355/554;
+- army at 75/90 minutes: the classic 46/58, boom 23/32.
+
+Both reach the same epochs at the same time. The classic trains past its epoch save below 50 workers, hunts with
+16.5 citizens at 20 minutes (boom 3, behind 14.5 on bushes), and works about 4 mine units of each metal (24
+gatherers) off 1-2 drop sites. Boom stays at 12-13 on 2 sites.
+
+What did not work:
+- Scouting sees the classic's town only in passing: citizens_seen 0-12 all game. So `cit_parity` never fires, and
+  `army_parity` reacts only once the attack is in sight.
+- `overrun_spend` (a threat twice the army and towers spends the save) fires in 25 of 32 games, but the army still
+  peaks at 18-23.
+- The growth series, 32 seeds:
+  - G1, no floor: 136/159 citizens at 60/75, but the Copper save stalled (Copper in 2 of 32 games);
+  - G2, the Prehistoric cap lifted and hunting first: 43 citizens at 20, but Stone in only 9 of 32;
+  - G3, + `mines_free`: no better than G2;
+  - G4, the floor 50/80/120: income 540 at 60 minutes (was 355), epochs unchanged; on 64 seeds it is level with LP;
+  - G4p, + the Prehistoric floor: Stone 5-8 minutes late. Boom's Prehistoric save is less efficient than the
+    classic's, which reaches Stone on time with 47 citizens.
+
+Kept, in boom_order:
+- `cit_grow` (the owner: "grow when food is spare");
+- `overrun_spend`;
+- `recover_raids` (the force check counts the raids near the site: an all-in of 36 had met 59 and lost 24);
+- `grow_always` with GROW_FLOOR 50/80/120;
+- `raid_towers` (on 64 seeds against the C++ classic 31-20-13, against 27-23-14).
+
+The final config against the C++ classic, 32 seeds: 14-9-9, 2 defeated.
+
+Also: lib/defence's micro handles at most 4 raids a step (the budget errors at defence.lua:415/1073). The remaining
+gap is the army production plan: barracks and soldiers scaled with income, as the Lua classic out-trains boom.
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
