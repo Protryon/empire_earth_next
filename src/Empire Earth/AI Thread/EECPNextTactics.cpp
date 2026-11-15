@@ -906,3 +906,126 @@ EECPNextResult EECPNextAdvance(EEComputerPlayer* inPlayer)
 }
 
 // (the groups, defend and attack: EECPNextArmy.cpp)
+
+// ---------------------------------------------------------------------------------------------------------------
+// The placement searches for the Lua verbs (data/ai/lib/verbs.lua, docs/AI_LUA_VERBS.md; ai.place): one search each,
+// the rules build() placed by; which search, round what and in what order is the script's choice
+
+// the dock's tile by the nearest fish within kNextDockReach of the town centre with none of the player's docks within
+// kNextDockSpacing of it (any fish, seen or not: the start's food, as EECPNextDockByFish); false: none (outReason)
+static bool EECPNextDockFishSite(EEComputerPlayer* inPlayer, EETileCoordinate& outTile, long& outFishX, long& outFishY)
+{
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    if (theBuild->mTownCenterTile.mX == -10000 || gUnitClassTable[kUnitTypeDock] == NULL || gWorld.mPlayers[0] == NULL)
+        return false;
+    long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
+    std::vector<EEUnit*> theDocks;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (theUnit->mUnitClass->mUnitType == kUnitTypeDock && theUnit->mHitPoints > 0)
+            theDocks.push_back(theUnit);
+    EEUnitClass* theClass = gUnitClassTable[kUnitTypeDock];
+    long theSize = theClass->GetTileSize() > 0 ? theClass->GetTileSize() : 1;
+    unsigned short theContinent = gContinentManager.GetContinent(theBuild->mTownCenterTile, kAIPathLandMass);
+    EEUnit* theBestFish = NULL;
+    long long theBestD2 = 0;
+    std::vector<EETileCoordinate> theTiles;
+    for (EEUnit* theFish = gWorld.mPlayers[0]->mFirstUnit; theFish != NULL; theFish = static_cast<EEUnit*>(theFish->mNext)) {
+        if (theFish->mUnitClass->mFamily != kUnitFamilyFish || theFish->mResourceType != kResourceFood
+            || !(theFish->mResourceAmount > 0) || theFish->mTile == NULL)
+            continue;
+        long long theDX = theFish->GetTileX() - theTownX, theDY = theFish->GetTileY() - theTownY;
+        long long theD2 = theDX * theDX + theDY * theDY;
+        if (theD2 > (long long)kNextDockReach * kNextDockReach || (theBestFish != NULL && theD2 >= theBestD2))
+            continue;
+        bool theServed = false;
+        for (unsigned long d = 0; d < theDocks.size() && !theServed; d++) {
+            long long theX = theDocks[d]->GetTileX() - theFish->GetTileX(), theY = theDocks[d]->GetTileY() - theFish->GetTileY();
+            theServed = theX * theX + theY * theY <= (long long)kNextDockSpacing * kNextDockSpacing;
+        }
+        if (theServed)
+            continue;
+        bool theShore = false;
+        for (long theRing = 1; theRing <= 6 && !theShore; theRing++) {
+            theTiles.clear();
+            EEGetSquareRingTiles(theFish->GetTileX(), theFish->GetTileY(), theRing, theTiles);
+            for (unsigned long k = 0; k < theTiles.size() && !theShore; k++)
+                theShore = theBuild->CanBuildAt(theContinent, kUnitTypeDock, theTiles[k], theSize, false, true, theTownX, theTownY);
+        }
+        if (theShore) {
+            theBestFish = theFish;
+            theBestD2 = theD2;
+        }
+    }
+    if (theBestFish == NULL)
+        return false;
+    bool theFound = false;
+    long long theBestHome = 0;
+    for (long theRing = 1; theRing <= 6 && !theFound; theRing++) {
+        theTiles.clear();
+        EEGetSquareRingTiles(theBestFish->GetTileX(), theBestFish->GetTileY(), theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++) {
+            if (!theBuild->CanBuildAt(theContinent, kUnitTypeDock, theTiles[k], theSize, false, true, theTownX, theTownY))
+                continue;
+            long long theDX = theTiles[k].mX - theTownX, theDY = theTiles[k].mY - theTownY;
+            if (!theFound || theDX * theDX + theDY * theDY < theBestHome) {
+                theFound = true;
+                theBestHome = theDX * theDX + theDY * theDY;
+                outTile = theTiles[k];
+            }
+        }
+    }
+    outFishX = theBestFish->GetTileX();
+    outFishY = theBestFish->GetTileY();
+    return theFound;
+}
+
+bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, long inX, long inY, long inFirst,
+    long inLast, const std::vector<long>& inUnits, long inSite, long& outX, long& outY, long& outGap)
+{
+    outX = outY = -1;
+    outGap = -1;
+    if (inType < 0 || (unsigned long)inType >= EEUnitClassCount() || gUnitClassTable[inType] == NULL
+        || inPlayer->mCivilizationManager == NULL || gWorld.mMap == NULL)
+        return false;
+    EETileCoordinate theTile(0, 0);
+    bool theFound = false;
+    switch (inMode) {
+    case kNextPlaceRing:
+        theFound = EECPNextRingSite(inPlayer, inType, inX, inY, inFirst, inLast, theTile);
+        break;
+    case kNextPlaceTower:
+        theFound = EECPNextTowerRingSite(inPlayer, inType, inX, inY, inFirst, inLast, theTile);
+        break;
+    case kNextPlaceAdjacent: {
+        std::vector<EEUnit*> theUnits;
+        for (unsigned long k = 0; k < inUnits.size(); k++) {
+            EEUnit* theUnit = gWorld.GetUnit((unsigned long)inUnits[k]);
+            if (theUnit != NULL && theUnit->mIsValid && theUnit->mTile != NULL)
+                theUnits.push_back(theUnit);
+        }
+        theFound = EECPNextAdjacentSite(inPlayer, inType, inX, inY, inLast, theUnits, theTile, outGap);
+        break;
+    }
+    case kNextPlaceCentre: {
+        EECPResourceCenter* theCenter = EECPNextSiteAt(inPlayer, inSite);
+        theFound = theCenter != NULL && theCenter->FindBuildSite(inType, theTile);
+        break;
+    }
+    case kNextPlaceClassic:
+        theFound = inPlayer->mCivilizationManager->mBuildManager->FindSite(inType, theTile);
+        break;
+    case kNextPlaceDock: {
+        long theFishX = -1, theFishY = -1;
+        theFound = EECPNextDockFishSite(inPlayer, theTile, theFishX, theFishY);
+        outGap = theFishX >= 0 ? theFishX * 65536 + theFishY : -1;   // (the fish's tile, for the trace)
+        break;
+    }
+    default:
+        return false;
+    }
+    if (!theFound || (theTile.mX == 0 && theTile.mY == 0))
+        return false;
+    outX = theTile.mX;
+    outY = theTile.mY;
+    return true;
+}

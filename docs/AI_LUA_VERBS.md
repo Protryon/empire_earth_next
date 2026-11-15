@@ -108,3 +108,24 @@ repair ratio, the nearest on the same land first.
   EECPBuildManager, EECPResourceManager (but the reflexes), EECPResearchManager, EECPCivilizationManager and
   EECPWallManager (no Lua AI builds walls through it: the build verb refuses walls; ai.wall lays them), their
   EECPNextUpdate ticks, the manager hooks in EEComputerPlayer.
+
+## 5. Decision code left in C++: the reflexes
+
+The reflexes still decide in C++, on the damage events (EEComputerPlayer::DamageTaken), for every computer seat that
+leaves them on (`ai.reflex`). They stay for now (owner, 2026-11-15):
+
+| Reflex | Code (EECPResourceManager.cpp today) | What it decides | Who uses it |
+|---|---|---|---|
+| militia | EECPRMMilitia, ~165 lines | a citizen hit by soldiers: the odds of the citizens, soldiers and towers near against the raiders; fight (the soldiers, then the nearest citizens as the odds need) or run (to a tower, the town centre or the farthest drop site), the spot a danger zone | rush (the personality's `military.militia`); boom (lib.defence), ageofai (its militia) and classic_lua switch it off |
+| danger zones and flight | EECPRMNoteDanger, EECPRMFleeRaids, EECPRMResourceInDanger, ~110 lines | a human's harassing raid (2 soldiers at most) marks a zone for 30 s; the gatherers within 8 tiles go home, the 4 nearest free soldiers attack the raider, the finders and the view's `blocked` / `danger` skip it | every seat against a human; against computers only with the experiment `flee` |
+| naval flight | EECPRMNavalFlee, ~70 lines | a boat or ship hit by a warship it cannot answer leaves with the own units within 12 tiles | boom (unless lib.defence's `boats`), rush, ageofai |
+
+With the Lua verbs a seat's citizens are held (`ai.take`), so the verbs library asks `ai.reflex{held = true}`: the
+militia and the danger zones take held citizens too, as they took the runners' citizens before.
+
+**What porting them would take:** the micro step (`micro`, 250 ms) already gets the `attacked` events; lib.defence is a
+Lua militia and flight (boom's), and classic_lua's militia.lua ports EECPRMMilitia. A shared `lib/reflex.lua` would be
+EECPRMMilitia's odds and orders on ai.seen / ai.strength / ai.attack / ai.move, the danger zones as script memory read
+by the verbs' finders in place of `ai.site_blocked`'s `danger`, and the naval flight on the ships' events. Each
+reflex is benched on its own (rush for the militia, an island map for the naval flight); then `ai.reflex` and the C++
+reflexes go.

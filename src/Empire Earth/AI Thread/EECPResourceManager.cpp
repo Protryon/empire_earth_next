@@ -2363,8 +2363,11 @@ static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, uns
     float theHP = 0.0f, theAttack = 0.0f;
     for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         EEComplexUnit* theComplex = theUnit->mComplexUnit;
-        if (theComplex == NULL || !(theUnit->mHitPoints > 0) || theComplex->mIsDisabled || theComplex->mIsDetachedFromAI
-            || theComplex->mContainer != NULL)
+        // (ai.reflex{held = true}: the script's held citizens join, lib/verbs.lua)
+        bool theHeldCitizen = theComplex != NULL && theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen
+            && EECPUnitsReflexOn(thePlayer, "held") && EECPUnitsHolds(thePlayer, theComplex);
+        if (theComplex == NULL || !(theUnit->mHitPoints > 0) || theComplex->mIsDisabled
+            || (theComplex->mIsDetachedFromAI && !theHeldCitizen) || theComplex->mContainer != NULL)
             continue;
         if (theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && EECPRMNear(theUnit, theX, theY, kMilitiaRange)
             && theComplex->mCitizenBuildQueue.size() == 0) {

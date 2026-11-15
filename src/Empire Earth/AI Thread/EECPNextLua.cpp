@@ -201,6 +201,7 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         const EECPNextSite& s = inView.sites[k];
         EECPLuaValue e = EECPLuaValue::NewMap();
         e.Set("index", EECPNextInt(s.index + 1));   // its place in view.sites: claim{site = index}
+        e.Set("id", EECPNextInt(s.id));
         if (s.resource >= 0 && s.resource < kNextResources)
             e.Set("resource", EECPLuaValue::Str(kNextResourceNames[s.resource]));   // nil: nothing left
         e.Set("units", EECPNextInt(s.units));
@@ -224,6 +225,12 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         static const char* const kBlocked[6] = {"", "unexplored", "enemy_near", "danger", "area", "tower"};
         if (s.blocked > 0 && s.blocked <= kNextBlockedTower)   // why the gatherer finders would pass it over (nil: they would not)
             e.Set("blocked", EECPLuaValue::Str(kBlocked[s.blocked]));
+        if (k < inView.site_units.size()) {   // its resource units with some left (the Lua verbs' finders)
+            EECPLuaValue theIds = EECPLuaValue::NewArray();
+            for (unsigned long u = 0; u < inView.site_units[k].size(); u++)
+                theIds.Push(EECPNextInt(inView.site_units[k][u]));
+            e.Set("ids", std::move(theIds));
+        }
         theSites.Push(std::move(e));
     }
     v.Set("sites", std::move(theSites));

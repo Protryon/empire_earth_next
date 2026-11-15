@@ -958,7 +958,8 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
             && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL
             && !this->IsAlly(gWorld.mPlayers[inPlayer])
             && (gWorld.mPlayers[inPlayer]->IsHuman() || EECPExperiment(this, "flee") || EECPMilitiaOn(this))
-            && EECPUnitsReflexOn(this, "danger") && !EECPUnitsHolds(this, inUnit->mComplexUnit))
+            && EECPUnitsReflexOn(this, "danger")
+            && (!EECPUnitsHolds(this, inUnit->mComplexUnit) || EECPUnitsReflexOn(this, "held")))
             EECPRMNoteDanger(this->mCivilizationManager->mResourceManager, inUnit, (unsigned long)inPlayer);
     }
 }

@@ -233,17 +233,17 @@ long EECPNextHuntReach(EEComputerPlayer* inPlayer)
 
 long EECPNextAssigned(EEComputerPlayer* inPlayer, EEUnit* inResource)
 {
-    EECPResourceManager* theResources = inPlayer->mCivilizationManager->mResourceManager;
+    // the player's living land citizens whose gather goal is the resource, whoever holds them (the Lua verbs hold
+    // every citizen: lib/verbs.lua)
     long theCount = 0;
-    for (long r = 0; r < 7; r++)
-        for (unsigned long k = 0; k < theResources->mGatherers[r].size(); k++) {
-            EEComplexUnit* theUnit = theResources->mGatherers[r][k];
-            if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen || !(theUnit->GetHitPoints() > 0))
-                continue;
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-            if (theGather != NULL && theGather->mResource == inResource)
-                theCount++;
-        }
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* c = theUnit->mComplexUnit;
+        if (c == NULL || theUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen || !(theUnit->mHitPoints > 0))
+            continue;
+        EEUGGather* theGather = dynamic_cast<EEUGGather*>(c->GetLoadGoal());
+        if (theGather != NULL && theGather->mResource == inResource)
+            theCount++;
+    }
     return theCount;
 }
 
@@ -678,6 +678,8 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         EECPNextSite theSite;
         memset(&theSite, 0, sizeof(theSite));
         theSite.index = (long)k;
+        theSite.id = !theCenter->mUnits.empty() ? (long)theCenter->mUnits[0]->mUnitID
+            : theCenter->mUnit != NULL ? -(long)theCenter->mUnit->mUnitID : -(long)k - 1;
         theSite.resource = -1;
         theSite.x = theSite.y = -1;
         long theCounts[kNextResources] = {0, 0, 0, 0, 0};
@@ -692,6 +694,10 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         }
         for (long r = 0; r < kNextResources; r++)
             theSite.holds[r] = theCounts[r];
+        outView.site_units.push_back(std::vector<long>());
+        for (unsigned long u = 0; u < theCenter->mUnits.size(); u++)
+            if (EECPNextResourceLeft(theCenter->mUnits[u]))
+                outView.site_units.back().push_back((long)theCenter->mUnits[u]->mUnitID);
         for (long r = 0; r < kNextResources; r++)
             if (theCounts[r] > 0 && (theSite.resource < 0 || theCounts[r] > theCounts[theSite.resource]))
                 theSite.resource = r;

@@ -72,6 +72,8 @@ const long kNextResources = 5;
 
 struct EECPNextSite {           // a resource centre (EEComputerPlayer::mResourceCenters, by distance from the town)
     long index;                 // the centre's index this step (claim/release/build near take it)
+    long id;                    // a key that stays with the centre (its first unit id; minus the drop site id for the
+                                // town centre's own centre): the Lua verbs key their claims by it
     long resource;              // 0..4: the resource most of its units hold (-1: none left)
     long units;                 // its resource units of that resource with some left (a mine's hit points drop to 0 at
                                 // the first gather, EEUnit::TakeHit; it stays until its amount is gone)
@@ -279,6 +281,7 @@ struct EECPNextView {
     long town_x, town_y;        // the town centre tile (-1: none)
     long claim_range;           // tiles
     std::vector<EECPNextSite> sites;
+    std::vector<std::vector<long> > site_units;   // by site: its resource units with some left, in the centre's order (ids)
     std::vector<EECPNextBuildings> buildings;
     std::vector<EECPNextSoldiers> soldiers;
     long army_count;
@@ -528,5 +531,16 @@ std::string EECPNextTechName(long inTech);
 // state; a Lua script gets its memory back at the first step (LoadPersonality, RestoreMemory, never init)
 bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes);
 bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes);
+
+// the placement searches of the Lua verbs (ai.place; data/ai/lib/verbs.lua, docs/AI_LUA_VERBS.md): ring: the first
+// tile in the rings inFirst..inLast round (x, y) where the class can be built (the build manager's CanBuildAt with its
+// margin, on the land of (x, y)); tower: the same, none of the player's towers within its range; adjacent: the tile
+// nearest the resource units inUnits (the town's land), then nearest the town, rings 1..inLast round (x, y) (outGap:
+// its tiles from them); centre: the resource centre inSite's own site (EECPResourceCenter::FindBuildSite); classic: the
+// build manager's FindSite for the class; dock: the shore by the nearest fish within kNextDockReach of the town that
+// no dock of the player's serves (outGap: the fish's x * 65536 + y)
+enum { kNextPlaceRing = 0, kNextPlaceTower, kNextPlaceAdjacent, kNextPlaceCentre, kNextPlaceClassic, kNextPlaceDock };
+bool EECPNextPlaceSearch(EEComputerPlayer* inPlayer, long inType, long inMode, long inX, long inY, long inFirst,
+    long inLast, const std::vector<long>& inUnits, long inSite, long& outX, long& outY, long& outGap);
 
 #endif

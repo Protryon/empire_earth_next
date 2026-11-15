@@ -147,6 +147,7 @@ struct EECPUnitsState {
     bool mReflexNavalFlee = true;
     bool mReflexDanger = true;
     bool mReflexMilitia = true;    // the engine's citizen militia (EECPRMMilitia); off when the script fights its own
+    bool mReflexHeld = false;      // the militia and the danger zones act on the script's held citizens too (lib/verbs.lua)
     bool mUsed = false;                             // a binding was called (the save's shadow step cannot replay commands)
     long mMicroNext = -1;                           // -1: not started; 0x7fffffff: the script has no micro
     long mOrdersThisStep = 0, mUnitOrdersThisStep = 0;
@@ -386,7 +387,9 @@ void EECPUnitsHeld(const EEComputerPlayer* inPlayer, std::vector<long>& outIDs)
 bool EECPUnitsReflexOn(const EEComputerPlayer* inPlayer, const char* inName)
 {
     if (inPlayer == NULL || inPlayer->mUnitsState == NULL)
-        return true;
+        return strcmp(inName, "held") != 0;
+    if (strcmp(inName, "held") == 0)
+        return inPlayer->mUnitsState->mReflexHeld;
     if (strcmp(inName, "naval_flee") == 0)
         return inPlayer->mUnitsState->mReflexNavalFlee;
     if (strcmp(inName, "danger") == 0)
@@ -2137,7 +2140,8 @@ static int LuaRelease(lua_State* L)
     return EECPUnitsHold(L, false);
 }
 
-// ai.reflex{naval_flee = false, danger = false, militia = false, memory_ms = 180000}
+// ai.reflex{naval_flee = false, danger = false, militia = false, held = true, memory_ms = 180000} (held: the militia
+// and the danger zones take the held citizens too; not saved: a script that wants it says so every step)
 static int LuaReflex(lua_State* L)
 {
     EECPUnitsCharge(L, kCostCall);
@@ -2146,6 +2150,7 @@ static int LuaReflex(lua_State* L)
     s->mReflexNavalFlee = EECPUnitsOptBool(L, 1, "naval_flee", s->mReflexNavalFlee);
     s->mReflexDanger = EECPUnitsOptBool(L, 1, "danger", s->mReflexDanger);
     s->mReflexMilitia = EECPUnitsOptBool(L, 1, "militia", s->mReflexMilitia);
+    s->mReflexHeld = EECPUnitsOptBool(L, 1, "held", s->mReflexHeld);
     long theMs;
     if (EECPUnitsOptInt(L, 1, "memory_ms", theMs) && theMs >= 0 && theMs <= 3600000)
         s->mMemoryMs = theMs;
@@ -4379,7 +4384,7 @@ static void EECPUnitsPushCost(lua_State* L, EEComputerPlayer* me, EETechTreeNode
     lua_setfield(L, -2, "data_cost");
 }
 
-// ai.techs{epoch = n, id = tech} -> the player's tech tree nodes of epochs n..0 (default: the current epoch) in the
+// ai.techs{epoch = n, id = tech, name = data id} -> the player's tech tree nodes of epochs n..0 (default: the current epoch) in the
 // tree's order (EETechTree::GetEpochNodeIDs, the latest epoch first, as the classic research manager collects them):
 // id, name, epoch, kind, makes (the class made, by name), counts_toward_epoch, researched, available, obsolete,
 // obsolete_epoch, producers (the classes that research or train it), plain_producer (a producer is no citizen and
@@ -4398,6 +4403,13 @@ static int LuaTechs(lua_State* L)
     long theEpoch = theTree->mCurrentEpoch, theOnly = -1;
     EECPUnitsOptInt(L, 1, "epoch", theEpoch);
     EECPUnitsOptInt(L, 1, "id", theOnly);
+    const char* theName = EECPUnitsOptString(L, 1, "name");   // a tech by its data id (ai.techs{name = "t_..."})
+    if (theName != NULL)
+        theOnly = EECPNextTechByName(theName);
+    if (theName != NULL && theOnly < 0) {
+        lua_newtable(L);
+        return 1;
+    }
     std::vector<long> theIDs;
     if (theOnly >= 0)
         theIDs.push_back(theOnly);
@@ -4449,6 +4461,88 @@ static int LuaTechs(lua_State* L)
         EECPUnitsSetBool(L, "citizen_upgrade", EECPUnitsCitizenUpgrade(theNode));
         lua_rawseti(L, -2, (lua_Integer)++n);
     }
+    return 1;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The helper queries of the Lua verbs (data/ai/lib/verbs.lua, docs/AI_LUA_VERBS.md): searches and the view's safety
+// tests, one call each; the policy is the script's
+
+static const char* const kUnitsBlocked[6] = {NULL, "unexplored", "enemy_near", "danger", "area", "tower"};
+
+// ai.place(type, mode, {x =, y =, first =, last =, units = {ids}, site = index}) -> x, y, gap: a building site by one
+// of build()'s rules (mode "ring", "tower", "adjacent", "centre", "classic", "dock": ee/EECPNext.h EECPNextPlaceSearch);
+// nil: none
+static int LuaPlace(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    long theType = EECPUnitsClassArg(L, 1);
+    const char* theMode = lua_type(L, 2) == LUA_TSTRING ? lua_tostring(L, 2) : "";
+    static const char* const kModes[6] = {"ring", "tower", "adjacent", "centre", "classic", "dock"};
+    long theKind = -1;
+    for (long k = 0; k < 6; k++)
+        if (strcmp(theMode, kModes[k]) == 0)
+            theKind = k;
+    long x = -1, y = -1, theFirst = 0, theLast = 6, theSite = 0;
+    EECPUnitsOptInt(L, 3, "x", x);
+    EECPUnitsOptInt(L, 3, "y", y);
+    EECPUnitsOptInt(L, 3, "first", theFirst);
+    EECPUnitsOptInt(L, 3, "last", theLast);
+    EECPUnitsOptInt(L, 3, "site", theSite);
+    std::vector<long> theUnits;
+    if (lua_type(L, 3) == LUA_TTABLE) {
+        lua_getfield(L, 3, "units");
+        if (lua_type(L, -1) == LUA_TTABLE)
+            EECPUnitsReadIds(L, lua_gettop(L), theUnits);
+        lua_pop(L, 1);
+    }
+    theFirst = theFirst < 0 ? 0 : theFirst;
+    theLast = theLast > 30 ? 30 : theLast;
+    if (theKind < 0 || theType < 0) {
+        EECPUnitsCharge(L, kCostCall);
+        return 0;
+    }
+    long theRings = theKind == kNextPlaceClassic || theKind == kNextPlaceCentre || theKind == kNextPlaceDock ? 30 : theLast;
+    EECPUnitsCharge(L, kCostCall + (2 * theRings + 1) * (2 * theRings + 1) * 6 + (int64_t)theUnits.size() * 50);
+    long theX, theY, theGap;
+    if (!EECPNextPlaceSearch(me, theType, theKind, x, y, theFirst, theLast, theUnits, theSite - 1, theX, theY, theGap))
+        return 0;
+    lua_pushinteger(L, (lua_Integer)theX);
+    lua_pushinteger(L, (lua_Integer)theY);
+    lua_pushinteger(L, (lua_Integer)theGap);
+    return 3;
+}
+
+// ai.site_blocked(resource) -> nil when the next engine's gather safety lets gatherers go to the resource unit, else
+// why not: "unexplored", "enemy_near", "danger", "area", "tower" (EECPNextSiteBlocked: the view's threat memory)
+static int LuaSiteBlocked(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCall + 400);
+    EEUnit* theUnit = lua_isinteger(L, 1) ? gWorld.GetUnit((unsigned long)lua_tointeger(L, 1)) : NULL;
+    if (theUnit == NULL || !theUnit->mIsValid || theUnit->mTile == NULL) {
+        lua_pushstring(L, "unexplored");
+        return 1;
+    }
+    long theKind = EECPNextSiteBlocked(me, theUnit, NULL);
+    if (theKind <= 0 || theKind >= 6)
+        return 0;
+    lua_pushstring(L, kUnitsBlocked[theKind]);
+    return 1;
+}
+
+// ai.build_unsafe(x, y) -> nil when builders may go to the tile, else why not ("enemy_near", "danger", "tower":
+// EECPNextBuildUnsafe)
+static int LuaBuildUnsafe(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsCharge(L, kCostCall + 400);
+    if (!lua_isinteger(L, 1) || !lua_isinteger(L, 2))
+        return 0;
+    long theKind = EECPNextBuildUnsafe(me, (long)lua_tointeger(L, 1), (long)lua_tointeger(L, 2));
+    if (theKind <= 0 || theKind >= 6)
+        return 0;
+    lua_pushstring(L, kUnitsBlocked[theKind]);
     return 1;
 }
 
@@ -4533,6 +4627,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
         {"tuning", LuaTuning}, {"techs", LuaTechs}, {"epoch", LuaEpoch}, {"gatherers", LuaGatherers},
+        {"place", LuaPlace}, {"site_blocked", LuaSiteBlocked}, {"build_unsafe", LuaBuildUnsafe},
         {NULL, NULL}};
     for (const luaL_Reg* f = kFunctions; f->name != NULL; f++) {
         lua_pushlightuserdata(L, inPlayer);
