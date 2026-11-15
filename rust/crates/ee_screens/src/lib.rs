@@ -27,7 +27,10 @@
 //!   the C++ host and the editor's C++ model).
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
 //! - [`civ_builder`]: the civilization builder's events whole (its form's and dialogs' control events, the form's
-//!   open and close events, over the C++ builder helpers).
+//!   open and close events; the builder's ops over [`civ_whole`]).
+//! - [`civ_whole`]: the civilization builder whole (its forms' helpers, the timer, its files' writing, its open,
+//!   close, buys, returns, loads, deletes and accept) with [`civ_edit`] (the edited civilization, the creator) and
+//!   [`civ_list`] (the upgrade list box's logic), over one C++ host.
 //! - [`civ_choice`]: the in-game civilization choice form whole (form 35: the predefined civilizations, over the C++
 //!   host; the posted loads' files by slot).
 //! - [`debug_sound`]: the debug sound panel whole (form 22: its sliders' events over the C++ host).
@@ -133,6 +136,11 @@ mod civ_builder_ffi;
 pub mod civ_choice;
 #[cfg(not(test))]
 mod civ_choice_ffi;
+pub mod civ_edit;
+pub mod civ_list;
+pub mod civ_whole;
+#[cfg(not(test))]
+mod civ_whole_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod command_units;
