@@ -101,6 +101,8 @@ function M.need(mem)
     return state(mem).need
 end
 
+M.count_raids = false  -- (BO.OPT.recover_raids) the raids near a site count in its force check
+M.RAID_R = 15          -- tiles round the site
 M.cap_need = false     -- (BO.OPT.recover_cap) urgent: train to the force check's need only, and release the urgency
                        -- once the force goes (the citizens are trained again at once)
 
@@ -279,7 +281,20 @@ function M.step(view, mem, sites)
         return
     end
     local units, towers = enemy_at(best.x, best.y)
-    local need = M.NEED_BASE + M.NEED_UNIT * #units + M.NEED_TOWER * #towers
+    local n_enemy = #units
+    if M.count_raids then
+        -- (BO.OPT.recover_raids: against the Lua classic an all-in of 36 met 59 soldiers by the site and lost 24; the
+        -- raids lib.defence tracks within RAID_R of the site count too, the seen soldiers being only those in sight)
+        local D = require("lib.defence")
+        local near = 0
+        for _, cl in ipairs(D.clusters()) do
+            if d2(cl.x, cl.y, best.x, best.y) <= M.RAID_R * M.RAID_R then
+                near = near + cl.n
+            end
+        end
+        n_enemy = math.max(n_enemy, near)
+    end
+    local need = M.NEED_BASE + M.NEED_UNIT * n_enemy + M.NEED_TOWER * #towers
     local existential = working[best.r] < M.URGENT_MIN and S.peak[best.r] >= M.URGENT_MIN
     local ids = existential and all_soldiers(mem) or G.free_soldiers(best.x, best.y)
     if existential then

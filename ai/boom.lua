@@ -1856,6 +1856,7 @@ function M.step(view, memory)
     if ECON.order and BO.OPT.iron_recover then
         RC.parity = BO.OPT.metal_parity == true
         RC.cap_need = BO.OPT.recover_cap == true
+        RC.count_raids = BO.OPT.recover_raids == true
         RC.step(view, memory, view.sites)   -- (before the guard: the operation's soldiers are committed)
     end
     GD.step(view, memory, {zone = view.claim_range})

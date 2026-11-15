@@ -68,6 +68,7 @@ M.OPT = {
     cit_grow = false,       -- (off until benched) the developed Stone and the Copper town grow on to CIT_GROW
     overrun_spend = false,  -- (off until benched) a threat OVERRUN_PCT of the army and towers spends the save too
     raid_towers = false,    -- (off until benched) from Stone a tower more per RAID_TOWER_PER raiders of the largest raid
+    recover_raids = false,  -- (off until benched) lib.recover's force check counts the raids near the site
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
