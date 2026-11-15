@@ -33,8 +33,13 @@ UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                "dx7hrtnl": DX7_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
+                       # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
+                       # game's code, built as the GameCode units it replaced were
+                       "Empire Earth/WONAPI/WONLobby/EELobbyGlueHost.cpp",
                        # the 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs)
                        "Empire Earth/Graphics Thread/EEE3DRust.cpp", "Empire Earth/Graphics Thread/EEE2DRust.cpp",
+                       # the host of the game's controls whose logic is Rust (ee_screens hud_ctl.rs; ee/EEUIRustControl.h)
+                       "Empire Earth/User Interface Thread/EEUIRustControl.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
@@ -89,6 +94,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Calamities/EECalamityCast.cpp",
                        # TEST ONLY: the calamity lane's capture records (ee/EECalamityCapture.h: CALI, CALK)
                        "Empire Earth/Calamities/EECalamityCapture.cpp",
+                       # TEST ONLY: the area effects' capture records (ee/EEAECapture.h: AETP, AEFX)
+                       "Empire Earth/Civilization Builder/EEAECapture.cpp",
                        # TEST ONLY: the game messages' capture records (ee/EEMessageCapture.h; RUST_PLAN R5b.4)
                        "Empire Earth/Communications/EEMessageCapture.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
@@ -129,8 +136,10 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
 
 def _won_extra_units():
     """The WON library's units that no unit list names (link/won/units.txt lists the ones with an original address;
-    the lobby glue, WONLobby/GameCode, is in the exe's list): every other .cpp under src/Empire Earth/WONAPI."""
+    the lobby glue, WONLobby/GameCode and EELobbyGlueHost.cpp, is the exe's): every other .cpp under src/Empire Earth/WONAPI."""
     listed = {p.resolve() for mod in ("won", "exe") for _, _, p in module_units(mod)}
+    # the exe's own units under WONAPI (the lobby glue's hosts)
+    listed |= {(ROOT / "src" / rel).resolve() for rel in EXTRA_UNITS["exe"]}
     won = ROOT / "src" / "Empire Earth" / "WONAPI"
     return [p.relative_to(ROOT / "src").as_posix() for p in sorted(won.rglob("*.cpp"))
             if p.resolve() not in listed and p.name not in WON_NOT_LINKED]

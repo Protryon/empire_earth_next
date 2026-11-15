@@ -295,31 +295,42 @@ EEGroupPathRequest* EEGroup::FindPathRequest(EEComplexUnit* inUnit)
     return theResult;
 }
 
+// port (R5b.4, round 30): Load's and Save's bodies are Rust (ee_units group_save.rs) over these parts and the file's
+// primitives (EESavePrimitive)
+struct EEGroupSaveContext {
+    EEGroup* mGroup;
+    FSFile* mFile;
+};
+
+static int32_t EEGroupSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEGroupSaveContext& theContext = *static_cast<EEGroupSaveContext*>(inContext);
+    EEGroup* theGroup = theContext.mGroup;
+    switch (inOp) {
+    case EE_UNITS_GROUP_SAVE_FORMATION_SET: {
+        EEFormation* theFormation = EEFormation::Create((unsigned long)io->i);
+        if (theFormation) {
+            if (theGroup->mFormation)
+                theGroup->mFormation->Dereference();
+            theGroup->mFormation = theFormation;
+        }
+        return 0;
+    }
+    case EE_UNITS_GROUP_SAVE_PUSH_ID: theGroup->mUnits.push_back(reinterpret_cast<EEComplexUnit*>((unsigned long)io->i)); return 0;
+    case EE_UNITS_GROUP_SAVE_KIND: io->i = theGroup->mFormation ? (int64_t)theGroup->mFormation->mType : 8; return 0;
+    case EE_UNITS_GROUP_SAVE_COUNT: io->i = (int64_t)theGroup->mUnits.size(); return 0;
+    case EE_UNITS_GROUP_SAVE_UNIT_ID: io->i = (int64_t)theGroup->GetUnitAt(inIndex)->mUnitID; return 0;
+    }
+    return EESavePrimitive(*theContext.mFile, inOp, io);
+}
+
 // FUNCTION: EXE 0x6064f4
 // Reads the formation kind (8 = keep the current one) and appends the unit ids from the saved game;
 // returns the first count or id read error
 long EEGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theKind;
-    inFile.Read(theKind);
-    if (theKind != 8) {
-        EEFormation* theFormation = EEFormation::Create(theKind);
-        if (theFormation) {
-            if (this->mFormation)
-                this->mFormation->Dereference();
-            this->mFormation = theFormation;
-        }
-    }
-    unsigned long theCount;
-    long theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
-            unsigned long theID;
-            theResult = inFile.Read(theID);
-            this->mUnits.push_back(reinterpret_cast<EEComplexUnit*>(theID));
-        }
-    }
-    return theResult;
+    EEGroupSaveContext theContext = {this, &inFile};
+    return ee_units_group_load(&theContext, &EEGroupSaveOperation);
 }
 
 // FUNCTION: EXE 0x606581
@@ -539,21 +550,8 @@ long EEGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinor
 // Writes the formation kind (8 = none), unit count and unit ids to the saved game; returns the first error
 long EEGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theKind = 8;
-    unsigned long theCount = this->mUnits.size();
-    if (this->mFormation)
-        theKind = this->mFormation->mType;
-    long theResult = outFile.Write(theKind);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(theCount);
-    if (theResult != 0)
-        return theResult;
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        unsigned long theID = this->GetUnitAt(i)->mUnitID;
-        theResult = outFile.Write(theID);
-    }
-    return theResult;
+    EEGroupSaveContext theContext = {this, &outFile};
+    return ee_units_group_save(&theContext, &EEGroupSaveOperation);
 }
 
 // FUNCTION: EXE 0x606ef2

@@ -478,8 +478,9 @@ constexpr static const uint8_t EE_NETMSG_RECORD_PAUSED = 1;
 /// A sender's message may be sent while the local player is out (`EEMessage::mCanSendWhenOut`; an imported one never).
 constexpr static const uint8_t EE_NETMSG_RECORD_WHEN_OUT = 2;
 
-/// The record's room: at least the largest record type's members after the selection id (`EEMPayTribute`'s 21 bytes).
-constexpr static const size_t EE_NETMSG_RECORD_BYTES = 32;
+/// The record's room: at least the largest record type's fixed members after the selection id
+/// (`EEMFullGameOptions`' 48 bytes).
+constexpr static const size_t EE_NETMSG_RECORD_BYTES = 64;
 
 /// No such member.
 constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_NONE = 0;
@@ -498,6 +499,9 @@ constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_POINT = 4;
 
 /// A `GEVector` (three floats).
 constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_VECTOR = 5;
+
+/// The type's string (`UWideString`; the C++ object's `mString`, not in the record: offset and size 0 of it).
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_STRING = 6;
 
 /// The header's size: reserved, type, target slot, originating slot.
 constexpr static const size_t HEADER_SIZE = 4;

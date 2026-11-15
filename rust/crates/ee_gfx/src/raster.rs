@@ -16,6 +16,7 @@ use crate::lighting::EeGfxLighting;
 pub(crate) const ZBUFFER_TEST_ONLY: u32 = 2;
 pub(crate) const ZBUFFER_TEST_AND_WRITE: u32 = 3;
 /// `kBlendOne`, `kBlendSrcAlpha`, `kBlendInvSrcAlpha`.
+pub(crate) const BLEND_ZERO: u32 = 0;
 pub(crate) const BLEND_ONE: u32 = 1;
 pub(crate) const BLEND_SRC_ALPHA: u32 = 4;
 pub(crate) const BLEND_INV_SRC_ALPHA: u32 = 5;

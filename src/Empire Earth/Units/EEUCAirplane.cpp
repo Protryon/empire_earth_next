@@ -101,7 +101,7 @@ void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
     EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
     if (inUnit->mHomeBase == NULL) {
         if (theControl->GetNumSlots() > 0)
-            inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
+            inUnit->SetHomeBase(theControl->GetSlotAirport(0));
         else
             inUnit->Kill(true, false, false);
         if (inUnit->mHomeBase == NULL)

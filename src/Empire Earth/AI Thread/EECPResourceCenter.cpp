@@ -32,7 +32,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectTemplate.h"
-#include "ee/EEAEMorale.h"
+#include "ee/EEAreaEffectKindIDs.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EEAreaUtilities.h"
@@ -305,7 +305,7 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
             long theY = this->GetUnit()->GetTileY() + theUnitSize / 2;
             for (std::vector<EEAreaEffect*>::iterator theIterator = this->GetUnit()->mAreaEffects.mItems.begin();
                  theIterator != this->GetUnit()->mAreaEffects.mItems.end(); ++theIterator) {
-                EEAEMoraleFromBuildings* theEffect = dynamic_cast<EEAEMoraleFromBuildings*>(*theIterator);
+                EEAreaEffect* theEffect = (*theIterator)->mKind == kAreaEffectMoraleFromBuildings ? *theIterator : NULL;
                 if (theEffect == NULL)
                     continue;
                 theEffectRadius = UMFloatToLong(theEffect->GetRadius());
@@ -515,7 +515,7 @@ float EECPResourceCenter::GetMoraleFill()
         long theY = theUnit->GetTileY() + theHalf;
         for (std::vector<EEAreaEffect*>::iterator theIterator = theUnit->mAreaEffects.mItems.begin();
              theIterator != theUnit->mAreaEffects.mItems.end(); ++theIterator) {
-            EEAEMoraleFromBuildings* theEffect = dynamic_cast<EEAEMoraleFromBuildings*>(*theIterator);
+            EEAreaEffect* theEffect = (*theIterator)->mKind == kAreaEffectMoraleFromBuildings ? *theIterator : NULL;
             if (theEffect == NULL)
                 continue;
             theEffect->MarkDirty();

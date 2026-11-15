@@ -11,24 +11,14 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinFrame.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x00717A90
-// Returns the largest width and height among the button's four state images
+// Returns the largest width and height among the button's four state images (skinlay.rs)
 void WONSimpleButton::GetDesiredSize(int &width, int &height)
 {
-	width = height = 0;
-	for(int i=0; i<4; i++)
-	{
-		Image *anImage = this->mImages[i].get();
-		if(anImage==NULL)
-			continue;
-		if(anImage->mWidth>width)
-			width = anImage->mWidth;
-
-		if(anImage->mHeight>height)
-			height = anImage->mHeight;
-	}
+	WONSkinLayout(this,EeWonSkinLayKind::SimpleButtonSize,0,0,0,&width,&height);
 }
 
 // FUNCTION: WON 0x00717BD0

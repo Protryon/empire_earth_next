@@ -20,8 +20,13 @@
 //! - [`contagion_functor`]: the six contagion functors as one record: their numbers, getters and `Apply`'s hit.
 //! - [`nodes`]: the tree's, the epochs' and the nodes' members as records and the tree's walks over them (research,
 //!   availability, obsolescence, the epochs, the saved game, the checksum, the media table).
+//! - [`area_effect`]: the area effects' eight kinds as one record over a host of world calls, their templates'
+//!   numbers, player and area tests.
+//! - [`area_effect_save`]: the area effects' running state in a saved game.
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
 
+pub mod area_effect;
+pub mod area_effect_save;
 pub mod calamity;
 pub mod calamity_cast;
 pub mod calamity_class;

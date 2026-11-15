@@ -44,7 +44,7 @@ void EEALasso::SelectUnits(const GERectangle& inRectangle, long inFlags, unsigne
 {
     if (inUnitType < EEUnitClassCount()) {   // else any type (kAnyUnitType; the original: 0x366)
         if (inUnitType == 0xdf)
-            this->mMessage = (EEMSelectUnits*)new EEMSelectPatrolGroup(inPatrolGroup);
+            this->mMessage = new EEMRecord(kMessageSelectPatrolGroup, {inPatrolGroup});
         else if (inFlags == 0)
             this->mMessage = new EEMSelectUnits(inRectangle, inUnitType, 0x4e);
         else if (inFlags & kModifierControl)
