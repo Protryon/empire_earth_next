@@ -22866,3 +22866,53 @@ The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input c
 gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
 (`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
 kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.
+## The unit utilities, round 2: the units' frames, the footprints, the walls, the line's walls, the sound and the deposit in Rust (ee_units uu_world.rs; branch rust-unitutil2, 2026-11-14)
+
+- **Capture first, writes as events.** UUTL gained 35 kinds (51..86) for the functions this round moves and their
+  neighbours (the unit replacement, conversion and tile update stay C++, noted for the next round). A body that writes
+  to the world (a build target, a builder starting over, a unit stepping aside, the deposited amount) records each
+  write as an event of the thread's outermost recording note (`UUEvent` through a thread-local `sUUCurrent`), so the
+  Rust body's host writes the same event at the same point; a body that changes tile lists notes the units on its
+  footprint after the call (`OutFoot`). The kinds' table grew to 128 (EE-UU-COUNT prints them all). Recorded on the
+  unmodified bodies (oracle, late, space, calamity at seeds 2-3; oracle seeds 2-3 identical with the notes), in its
+  own commit before the move.
+- **Coverage (EE-UU-COUNT, the eight capture games).** Reached as outermost calls: the unit's tiles, the gather reach
+  (1.7 million calls in the first 40,000 ticks of an oracle game), the footprint and region registration, the step aside, the wall builders and the wall plan
+  (late and space only, a few calls), the tiles' wall tops, the line test (space only), the sound parameters (EE-SIM
+  computes them: 100k a game), the deposit. Not reached (unit tests and review only): the submarines' depth, the
+  selection bounds, the facing radius, the angle from north, the footprint's visibility (a mouse click), the
+  escape point, the path length, the Doppler pitch, the scenario editor's placement.
+- **The host.** Two multiplexed C++ functions (`ee_units_uu_host_world`: handles, ints and the writes;
+  `ee_units_uu_host_world_f`: the floats) carry the 22 questions, with three list readers (the units near a point,
+  a unit region's units, a path's first tile). The sound and Doppler bodies are pure: the C++ forwarder gathers the
+  camera's view (`EeUnitsUuSoundView`) and Rust does the arithmetic. The round-1 host's `EEIsLineBlocked` call is a
+  Rust call now.
+- **C++ quirks kept.** `EEIsLineBlocked` sets its last x at every test of its loop (a comma in the `for` condition),
+  so a free line reports its last tile; `EEIsTileTopAbove` writes the wall found (NULL too) on every call;
+  `EEDepositLoad`'s garrison levels mix `long` and `unsigned long` (the third level is an unsigned difference turned
+  float); `EEIsEditorSpacingClear` keeps the last unit's answer; `EEClearUnderBuilding` reads each tile's list as it
+  stands (the Rust snapshot equals the C++ walk because a killed unit's node outlives the walk); `EEPlanWall` reads
+  the tile's raised corners for `EEShapeWall`, which never used them (dropped: a pure read).
+- **Guards where the C++ had undefined behaviour** (no gate game reaches them): an unplaced submarine (no tiles: the
+  C++ read before its vector), an empty wall or builder group (the C++ read past the pieces or looped forever), a
+  NULL unit in a tile's list.
+- **Deleted with no caller left:** `EEHasZeroCount`, `EEGetSeabedUnder`, `EEGetUnitAngle` and `EEUUAngleLess`,
+  `EEGetEnemiesAround`, `EEClearUnderBuilding`, `EEIsEditorSpacingClear`, the sound falloff globals
+  (`gF564520`, `gF56451C`, `gF564518`) and the blank runs round 1 left.
+- **The merge with rust moved the UUTL digests, not the game.** rust's R5b.4 round 31 retired the Original* group
+  command rechecks that ran beside the Rust bodies over the dry host; they called `EEGetFarmDropSites`,
+  `EEFindFreeFarm`, `EEGetFootprintTiles` and `EECanPlaceUnitOnTile` a second time, so those four kinds' outermost
+  calls halve (EE-UU-COUNT: no other kind's count changes) and every UUTL digest with them, while oracle seeds 2-7
+  stay identical and every other tag of the four captures equals its golden. The UUTL lines were re-recorded on the
+  merged tree in their own commit (a second capture run of oracle and calamity gave the same digests). A lane that
+  retires a caller of a noted utility should expect this: EE-UU-COUNT names the kinds.
+- **Gates (the move's commit):** build `--sim` 0/0; oracle seeds 2-3 identical; the captures at seeds 2-3 equal to
+  every golden, UUTL among them (oracle 173 digests, late 174, space 175, calamity 191); 14 new Rust unit tests.
+- **Final gates (merged with rust 42af0588):** build `--sim` 0/0; test-profile build 0/0; oracle seeds 2-7 identical;
+  the four captures at seeds 2-3 equal to every golden but UUTL (re-recorded from them), then a second run of
+  oracle (177 digests) and calamity (195) PASS; the saveload matrix (`--settings all --seeds
+  2-3 --at 1000,1900 --expect`) PASS; the Rust gate PASS (3,643 tests); a sim_bench game (seed 5, Small, Hard, 2 AI)
+  to the time cap with both computers alive (populations 39 and 45); under the harness lock the tour (`RESULT PASS
+  tour`, render and F3 checks ok) and an orders game (`ORDERS PASS`: gather, repair, queued repair, move;
+  `RESULT PASS random-game`). C++ of the round: net -741 (the capture +73, the move -814); the file 4,725 -> 3,996
+  lines.
