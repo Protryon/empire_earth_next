@@ -14,10 +14,11 @@ use std::os::raw::c_long;
 use ee_ge::types::{Ge3DPoint, GeTransformation};
 
 use crate::cls_air::{self as air, AirHost, ConditionHost, FlightHost};
+use crate::cls_building::{self as bld, BuildingHost};
 use crate::cls_transport::{self as tr, Cls, TrHost};
 use crate::unit_class_fields::EeUnitsUnitClassFields;
 use crate::uu::{EeUnitsUuUnit, UuHost};
-use crate::uu_host::{set_units, units_of, Game};
+use crate::uu_host::{set_tiles, set_units, tiles_of, units_of, Game};
 use crate::uu_tiles::Tile;
 
 /// One host operation's values.
@@ -95,6 +96,14 @@ pub const EE_UNITS_CLS_PATH_TOWARD: i32 = 24;
 pub const EE_UNITS_CLS_FLY_TO_GOAL: i32 = 25;
 /// unit `a`'s runway move goal at `io.p`
 pub const EE_UNITS_CLS_RUNWAY_GOAL: i32 = 26;
+/// `gWorld.mMap->mTerrainMesh.GetIsSpaceMap()`
+pub const EE_UNITS_CLS_IS_SPACE_MAP: i32 = 27;
+/// `gWorld.mMap->mSize`
+pub const EE_UNITS_CLS_MAP_SIZE: i32 = 28;
+/// continent `a`'s `GetHullCenter()` into `io.a`, `io.b`
+pub const EE_UNITS_CLS_HULL_CENTER: i32 = 29;
+/// `EEGetUnitsNear(io.p, io.f, out)`: each unit pushed as its address's low and high halves
+pub const EE_UNITS_CLS_UNITS_NEAR: i32 = 30;
 /// unit `a`'s command's type (0: none)
 pub const EE_UNITS_CLS_COMMAND_TYPE: i32 = 31;
 /// class `b`'s `GetGroundHeight(io.p, &io.f)`
@@ -345,6 +354,62 @@ impl FlightHost for ClsGame {
     }
     fn runway_goal(&mut self, unit: u64, point: Ge3DPoint) {
         self.point_op(EE_UNITS_CLS_RUNWAY_GOAL, unit, 0, 0, point, Ge3DPoint::default());
+    }
+}
+
+impl BuildingHost for ClsGame {
+    fn unit(&mut self, obj: u64) -> EeUnitsUuUnit {
+        self.0.unit(obj)
+    }
+    fn map_tile(&mut self, x: i32, y: i32) -> u64 {
+        let map = self.0.map();
+        self.0.map_tile(map, x, y)
+    }
+    fn tile_terrain(&mut self, tile: u64) -> i32 {
+        self.0.tile_terrain(tile)
+    }
+    fn raised_corners(&mut self, x: i32, y: i32) -> i32 {
+        let map = self.0.map();
+        self.0.raised_corners(map, x, y)
+    }
+    fn mesh_z(&mut self, x: i32, y: i32) -> f32 {
+        let map = self.0.map();
+        self.0.mesh_z(map, x, y)
+    }
+    fn is_space_map(&mut self) -> bool {
+        let mut io = EeUnitsClsIo::default();
+        self.call(EE_UNITS_CLS_IS_SPACE_MAP, 0, 0, 0, 0, &mut io) != 0
+    }
+    fn map_size(&mut self) -> i32 {
+        let mut io = EeUnitsClsIo::default();
+        self.call(EE_UNITS_CLS_MAP_SIZE, 0, 0, 0, 0, &mut io) as i32
+    }
+    fn continent_at(&mut self, x: i32, y: i32) -> u64 {
+        self.0.continent_at(x, y)
+    }
+    fn hull_center(&mut self, continent: u64) -> Tile {
+        let mut io = EeUnitsClsIo::default();
+        self.call(EE_UNITS_CLS_HULL_CENTER, continent, 0, 0, 0, &mut io);
+        [io.a as i32, io.b as i32]
+    }
+    fn position(&mut self, unit: u64) -> [f32; 3] {
+        self.0.position(unit)
+    }
+    fn units_near(&mut self, point: [f32; 3], radius: f32) -> Vec<u64> {
+        let mut handle = EeUnitsClsListHandle::default();
+        let mut io =
+            EeUnitsClsIo { f: radius, p: point, list: std::ptr::addr_of_mut!(handle).cast(), ..Default::default() };
+        self.call(EE_UNITS_CLS_UNITS_NEAR, 0, 0, 0, 0, &mut io);
+        handle.tiles.iter().map(|t| u64::from(t[0] as u32) | (u64::from(t[1] as u32) << 32)).collect()
+    }
+    fn unit_set_contains(&mut self, unit_type: u32, set: i32) -> bool {
+        self.0.unit_set_contains(unit_type, set)
+    }
+    fn enemy(&mut self, player: u64, other_id: i32) -> bool {
+        self.0.enemy(player, other_id)
+    }
+    fn part(&mut self, complex: u64, next: bool) -> u64 {
+        self.0.part(complex, next)
     }
 }
 
@@ -599,6 +664,80 @@ pub unsafe extern "C" fn ee_units_cls_runway_direction(facing: u32, out: *mut [c
     let (x, y) = air::runway_direction(facing);
     // SAFETY: the caller's contract
     unsafe { set_tile(out, [x, y]) }
+}
+
+/// `EEGetFacingQuarter`.
+#[no_mangle]
+pub extern "C" fn ee_units_cls_facing_quarter(x: i32, y: i32) -> i32 {
+    bld::facing_quarter(&mut ClsGame(Game), x, y)
+}
+
+/// A navy yard's facing at a tile (`GetNavyYardFacing`).
+#[no_mangle]
+pub extern "C" fn ee_units_cls_navy_yard_facing(x: u32, y: u32) -> i32 {
+    bld::navy_yard_facing(&mut ClsGame(Game), x, y)
+}
+
+/// `EEGetDockFacing`.
+#[no_mangle]
+pub extern "C" fn ee_units_cls_dock_facing(x: u32, y: u32) -> i32 {
+    bld::dock_facing(&mut ClsGame(Game), x, y)
+}
+
+/// `EETurnGatePart`'s answer: the piece's animation, and the yaw it turns to in `yaw` (`turned` false: kept).
+///
+/// # Safety
+/// `yaw` and `turned` are writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cls_gate_part_turn(
+    direction: i32,
+    index: i32,
+    yaw: *mut f32,
+    turned: *mut bool,
+) -> i32 {
+    let (action, turn) = bld::gate_part_turn(direction, index);
+    // SAFETY: the caller's contract
+    unsafe {
+        *turned = turn.is_some();
+        *yaw = turn.unwrap_or(0.0);
+    }
+    action
+}
+
+/// `EEGetWallGateTiles` (appended to `out`, a `std::vector<U2DPoint<long> >`).
+///
+/// # Safety
+/// `out` is a live vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cls_wall_gate_tiles(x: i32, y: i32, direction: i32, out: *mut c_void) {
+    // SAFETY: the caller's contract
+    unsafe {
+        let mut tiles = tiles_of(out);
+        tiles.extend(bld::wall_gate_tiles([x, y], direction));
+        set_tiles(out, &tiles);
+    }
+}
+
+/// `EEAreTilesLevel` (`tiles` a `std::vector<U2DPoint<long> >`).
+///
+/// # Safety
+/// `tiles` is a live vector.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_cls_tiles_level(tiles: *const c_void) -> bool {
+    // SAFETY: the caller's contract
+    let list = unsafe { tiles_of(tiles) };
+    bld::tiles_level(&mut ClsGame(Game), &list)
+}
+
+/// The gate's `AreEnemiesNear` (`passers` false) or `IsPasserNear`.
+#[no_mangle]
+pub extern "C" fn ee_units_cls_gate_near(unit: u64, passers: bool) -> bool {
+    let mut h = ClsGame(Game);
+    if passers {
+        bld::passer_near(&mut h, unit)
+    } else {
+        bld::enemies_near(&mut h, unit)
+    }
 }
 
 /// `EEUnitClass::HasArrived` of the landing kinds (`animal`: the air animal's).

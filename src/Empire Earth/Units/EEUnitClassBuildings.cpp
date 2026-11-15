@@ -105,11 +105,6 @@ static const float kBuildingSunk = -2.0f;       // 0x446ff4 (VirtualA0 6000: bel
 // 0x446dc0: the yaw of each map quarter (EEGetFacingQuarter's 0..3) (provisional name)
 static const float kQuarterYaws[4] = { 0.0f, 3.1415927f, -1.5707964f, 1.5707964f };
 
-// 0x4c8ef8/0x4c8f08: the quarter for each side, and the steps along the four sides (EEGetDockFacing) (provisional names)
-static long sSideQuarters[4] = { 0, 2, 1, 3 };
-
-static long sSideSteps[4][2] = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
-
 // FUNCTION: EXE 0x60e58d
 // Puts docks and navy yards on the water plane and lifts other buildings just above the ground
 void EEUnitClass::BuildingGroundLocation(GE3DPoint& ioLocation)
@@ -234,132 +229,31 @@ EEUnit* EEUnitClass::BuildingCreateUnit(long inX, long inY, long inPlayer, bool 
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x60ea01
-// Counts the tiles of a terrain that follow a tile in steps of (inDX, inDY), up to inLength; returns whether all did
-static bool CountTerrainRun(unsigned long inX, unsigned long inY, long inDX, long inDY, long inLength, long inTerrain,
-                     long* outCount)
-{
-    EEMap* theMap = ::gWorld.mMap;
-    long i;
-    unsigned long theX = inX;
-    for (i = 0; i < inLength; i++) {
-        theX += inDX;
-        inY += inDY;
-        EEMapTile* theTile = theMap->GetTile(theX, inY);
-        if (theTile == NULL || theTile->mTerrainType != inTerrain)
-            break;
-    }
-    *outCount = i;
-    return i >= inLength;
-}
-
 // FUNCTION: EXE 0x60ea89
 // Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
-// sides)
+// sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
 long EEGetDockFacing(unsigned long inX, unsigned long inY)
 {
     EEUCNote theNote(23); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> long {
-        long theResult = 0;
-        long theCounts[4];
-        long theScores[4];
-        long i;
-        for (i = 0; i < 4; i++)
-            CountTerrainRun(inX, inY, sSideSteps[i][0], sSideSteps[i][1], 6, 0xc, &theCounts[i]);
-        for (i = 0; i < 4; i++)
-            theScores[i] = (theCounts[(i + 3) & 3] >> 1) + (theCounts[(i + 1) & 3] >> 1) + theCounts[i];
-        long theBest = -1;
-        for (i = 0; i < 4; i++) {
-            if (theScores[i] > theBest) {
-                theBest = theScores[i];
-                theResult = sSideQuarters[i];
-            }
-        }
-        return theResult;
-    }());
+    return theNote.R(ee_units_cls_dock_facing((uint32_t)inX, (uint32_t)inY));
 }
 
 // FUNCTION: EXE 0x60eb1c
 // Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
-// that has them, else the side with the longest run
+// that has them, else the side with the longest run (cls_building.rs)
 static long GetNavyYardFacing(unsigned long inX, unsigned long inY)
 {
     EEUCNote theNote(22); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> long {
-        long theResult = EEGetFacingQuarter(inX, inY);
-        long theBest = 0;
-        long theQuarters[4] = { 0, 2, 1, 3 };
-        long theSteps[8] = { 0, 1, 1, 0, 0, -1, -1, 0 };
-        long theCount;
-        long theSide;
-        for (theSide = 0; theSide < 4; theSide++) {
-            if (theQuarters[theSide] == theResult)
-                break;
-        }
-        long theTries;
-        for (theTries = 0; theTries < 4; theTries++) {
-            if (CountTerrainRun(inX, inY, theSteps[theSide * 2], theSteps[theSide * 2 + 1], 5, 1, &theCount))
-                break;
-            if (theCount > theBest) {
-                theBest = theCount;
-                theResult = theQuarters[theSide];
-            }
-            theSide++;
-            if (theSide >= 4)
-                theSide = 0;
-        }
-        if (theTries < 4)
-            theResult = theQuarters[theSide];
-        return theResult;
-    }());
+    return theNote.R(ee_units_cls_navy_yard_facing((uint32_t)inX, (uint32_t)inY));
 }
 
 // FUNCTION: EXE 0x60ebda
 // Returns the map quarter (0..3) a tile faces from the middle of its continent (space maps) or of the map
+// (cls_building.rs)
 long EEGetFacingQuarter(long inX, long inY)
 {
     EEUCNote theNote(21); theNote.I(inX).I(inY);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> long {
-        GEVector theDirection;
-        EEMap* theMap = ::gWorld.mMap;
-        long theResult = 2;
-        float theX = (float)inX;
-        float theY = (float)inY;
-        long theCenterX;
-        long theCenterY;
-        float theMiddleX;
-        float theMiddleY;
-        EEAIContinent* theContinent = NULL;
-        if (theMap->mTerrainMesh.GetIsSpaceMap())
-            theContinent = gContinentManager.GetContinentAt(inX, inY);
-        if (theContinent != NULL) {
-            theCenterX = theContinent->GetHullCenter().mX;
-            theCenterY = theContinent->GetHullCenter().mY;
-            theMiddleX = (float)theCenterX;
-            theMiddleY = (float)theCenterY;
-        } else {
-            theMiddleY = (float)theMap->mSize * 0.5f;
-            theMiddleX = theMiddleY;
-            theCenterX = theMap->mSize / 2;
-            theCenterY = theCenterX;
-        }
-        if (inX != theCenterX || inY != theCenterY) {
-            theDirection.SetX(theMiddleX - theX);
-            theDirection.SetY(theMiddleY - theY);
-            theDirection.SetZ(0.0f);
-            theDirection.Normalize();
-            float theAngle = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-            if (theAngle <= 0.78539819f && theAngle >= -0.78539819f)
-                theResult = 0;
-            else if (theAngle <= -0.78539819f && theAngle >= -2.3561945f)
-                theResult = 2;
-            else if (theAngle <= 2.3561945f && theAngle >= 0.78539819f)
-                theResult = 3;
-            else
-                theResult = 1;
-        }
-        return theResult;
-    }());
+    return theNote.R(ee_units_cls_facing_quarter((int32_t)inX, (int32_t)inY));
 }
 
 // FUNCTION: EXE 0x60ed11
@@ -862,12 +756,6 @@ static const float kGateClosed = 0.0f;          // 0x447008
 
 static const float kGateStep = 0.2f;            // 0x44700c (per update)
 
-static const float kGateRangeBase = 1.0f;       // 0x447010 (added to half the class's +0x178)
-
-static const float kGateMaximumSlope = 0.6f;    // 0x447014 (the gate's tiles' corner heights)
-
-static const float kGateSearchRadius = 2.5f;    // 0x447018 (the units near the gate)
-
 long EETurnGatePart(GETransformation& ioTransformation, long inDirection, long inIndex);
 
 void EEGetWallGateTiles(const U2DPoint<long>& inTile, long inDirection, std::vector<U2DPoint<long> >& outTiles);
@@ -1092,60 +980,16 @@ static EEUnit* EEGetMiddleOf(std::vector<EEUnit*>& inUnits)
 
 // FUNCTION: EXE 0x611028
 // Turns gate piece inIndex for a gate in direction 1..4; returns its animation: 9 a post, 10 a diagonal post, 11 else
+// (the yaws: cls_building.rs)
 long EETurnGatePart(GETransformation& ioTransformation, long inDirection, long inIndex)
 {
     EEUCNote theNote(24); theNote.I(inDirection).I(inIndex);   // TEST ONLY (UCBD)
-    long theResult = theNote.R([&]() -> long {
-        long theResult = 11;
-        switch (inIndex) {
-        case 4:
-            switch (inDirection) {
-            case 4:
-                ioTransformation.SetOrientationYPR(2.3561945f, 0.0f, 0.0f);
-                theResult = 10;
-                break;
-            case 3:
-                ioTransformation.SetOrientationYPR(-2.3561945f, 0.0f, 0.0f);
-                theResult = 10;
-                break;
-            case 2:
-                ioTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f);
-                theResult = 9;
-                break;
-            case 1:
-                ioTransformation.SetOrientationYPR(1.5707964f, 0.0f, 0.0f);
-                theResult = 9;
-                break;
-            }
-            break;
-        case 0:
-            switch (inDirection) {
-            case 4:
-                ioTransformation.SetOrientationYPR(-0.78539819f, 0.0f, 0.0f);
-                theResult = 10;
-                break;
-            case 3:
-                ioTransformation.SetOrientationYPR(0.78539819f, 0.0f, 0.0f);
-                theResult = 10;
-                break;
-            case 2:
-                ioTransformation.SetOrientationYPR(0.0f, 0.0f, 0.0f);
-                theResult = 9;
-                break;
-            case 1:
-                ioTransformation.SetOrientationYPR(-1.5707964f, 0.0f, 0.0f);
-                theResult = 9;
-                break;
-            }
-            break;
-        case 1:
-        case 2:
-        case 3:
-            theResult = 11;
-            break;
-        }
-        return theResult;
-    }());
+    float theYaw;
+    bool theTurned;
+    long theResult = ee_units_cls_gate_part_turn((int32_t)inDirection, (int32_t)inIndex, &theYaw, &theTurned);
+    if (theTurned)
+        ioTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
+    theNote.R(theResult);   // TEST ONLY (UCBD)
     theNote.F(ioTransformation.GetYaw());
     return theResult;
 }
@@ -1182,129 +1026,30 @@ EEComplexUnit* EEUnitClass::GetPart(EEComplexUnit* inGate, long inIndex)
 
 // FUNCTION: EXE 0x611171
 // Lists the five tiles of a gate line through a tile: direction 1 along x, 2 along y, 3 and 4 the diagonals
+// (cls_building.rs)
 void EEGetWallGateTiles(const U2DPoint<long>& inTile, long inDirection, std::vector<U2DPoint<long> >& outTiles)
 {
     EEUCNote theNote(33); theNote.T(inTile).I(inDirection).Ts(outTiles);   // TEST ONLY (UCBD)
-    [&]() {
-        long x = inTile.mX;
-        long y = inTile.mY;
-        switch (inDirection) {
-        case 1:
-            outTiles.push_back(U2DPoint<long>(x - 2, y));
-            outTiles.push_back(U2DPoint<long>(x - 1, y));
-            outTiles.push_back(U2DPoint<long>(x, y));
-            outTiles.push_back(U2DPoint<long>(x + 1, y));
-            outTiles.push_back(U2DPoint<long>(x + 2, y));
-            break;
-        case 2:
-            outTiles.push_back(U2DPoint<long>(x, y - 2));
-            outTiles.push_back(U2DPoint<long>(x, y - 1));
-            outTiles.push_back(U2DPoint<long>(x, y));
-            outTiles.push_back(U2DPoint<long>(x, y + 1));
-            outTiles.push_back(U2DPoint<long>(x, y + 2));
-            break;
-        case 3:
-            outTiles.push_back(U2DPoint<long>(x + 2, y - 2));
-            outTiles.push_back(U2DPoint<long>(x + 1, y - 1));
-            outTiles.push_back(U2DPoint<long>(x, y));
-            outTiles.push_back(U2DPoint<long>(x - 1, y + 1));
-            outTiles.push_back(U2DPoint<long>(x - 2, y + 2));
-            break;
-        case 4:
-            outTiles.push_back(U2DPoint<long>(x - 2, y - 2));
-            outTiles.push_back(U2DPoint<long>(x - 1, y - 1));
-            outTiles.push_back(U2DPoint<long>(x, y));
-            outTiles.push_back(U2DPoint<long>(x + 1, y + 1));
-            outTiles.push_back(U2DPoint<long>(x + 2, y + 2));
-            break;
-        }
-    }();
-    theNote.Ts(outTiles);
+    ee_units_cls_wall_gate_tiles((int32_t)inTile.mX, (int32_t)inTile.mY, (int32_t)inDirection, &outTiles);
+    theNote.Ts(outTiles);   // TEST ONLY (UCBD)
 }
 
 // FUNCTION: EXE 0x6113a9
 // Returns whether a living enemy unit of unit set 0x62 is within reach of the gate or its next two pieces
-// (the squared distance is compared with the unsquared reach)
+// (the squared distance is compared with the unsquared reach; cls_building.rs)
 bool EEUnitClass::AreEnemiesNear(EEComplexUnit* inUnit)
 {
     EEUCNote theNote(27); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        std::vector<EEUnit*> theUnits;
-        GE3DPoint thePosition;
-        EEUnitSet* theSet = gUnitSetManager.GetSet(0x62);
-        bool theFound = false;
-        EEPlayer* thePlayer = inUnit->mPlayer;
-        inUnit->GetPosition(thePosition);
-        EEComplexUnit* theNext = inUnit->mNextPart;
-        EEComplexUnit* theLast = theNext->mNextPart;
-        EEGetUnitsNear(thePosition, kGateSearchRadius, theUnits);
-        for (long i = theUnits.size() - 1; i >= 0 && !theFound; i--) {
-            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theUnits[i]);
-            if (!theSet->Contains(theUnit->GetUnitClass()->GetUnitType()) || !(theUnit->mHitPoints > 0) ||
-                thePlayer == theUnit->mPlayer || theUnit->mPlayer->mEnemies[thePlayer->mPlayerID] == 0)
-                continue;
-            float theRange = theUnit->GetUnitClass()->mInnerCollisionSphere * 0.5f + kGateRangeBase;
-            theRange *= theRange;  // compared with squared distances
-            if (inUnit->DistanceSquaredTo(theUnit) <= theRange ||
-                theNext->DistanceSquaredTo(theUnit) <= theRange ||
-                theLast->DistanceSquaredTo(theUnit) <= theRange)
-                theFound = true;
-            else
-                theFound = false;
-        }
-        return theFound;
-    }());
+    return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), false));
 }
 
 // FUNCTION: EXE 0x611506
 // Returns whether a unit that may pass is within reach of the gate or its next two pieces: a mobile land unit
-// the owner is not hostile to, or an enemy of unit set 0x62 (squared distance against the unsquared reach)
+// the owner is not hostile to, or an enemy of unit set 0x62 (cls_building.rs)
 bool EEUnitClass::IsPasserNear(EEComplexUnit* inUnit)
 {
     EEUCNote theNote(28); theNote.C(this).U(inUnit);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        std::vector<EEUnit*> theUnits;
-        GE3DPoint thePosition;
-        EEUnitSet* theSet;
-        theSet = gUnitSetManager.mSets.size() < 99 ? NULL : gUnitSetManager.mSets[0x62];
-        EEPlayer* thePlayer = inUnit->GetPlayer();
-        bool theFound = false;
-        inUnit->GetPosition(thePosition);
-        EEComplexUnit* theNext = inUnit->mNextPart;
-        EEComplexUnit* theLast = theNext->mNextPart;
-        EEGetUnitsNear(thePosition, kGateSearchRadius, theUnits);
-        for (long i = theUnits.size() - 1; i >= 0 && !theFound; i--) {
-            EEUnit* theUnit = theUnits[i];
-            bool theFriend;
-            if (theUnit->GetPlayer() == thePlayer || thePlayer->mEnemies[theUnit->GetPlayer()->mPlayerID] == 0)
-                theFriend = true;
-            else
-                theFriend = false;
-            if (theUnit->GetHitPoints() > 0) {
-                bool thePasses;
-                if (theFriend) {
-                    if (theUnit->GetStats()->mMaxVelocity <= 0.0f) {
-                        theFound = false;
-                        continue;
-                    }
-                    thePasses = (theUnit->GetUnitClass()->mDomains & kMovementLand) != 0;
-                } else
-                    thePasses = theSet->Contains(theUnit->GetUnitClass()->GetUnitType());
-                if (thePasses) {
-                    float theRange = theUnit->GetUnitClass()->mInnerCollisionSphere * 0.5f + kGateRangeBase;
-                    theRange *= theRange;  // compared with squared distances
-                    if (inUnit->DistanceSquaredTo(theUnit->GetComplexUnit()) <= theRange ||
-                        theNext->DistanceSquaredTo(theUnit->GetComplexUnit()) <= theRange ||
-                        theLast->DistanceSquaredTo(theUnit->GetComplexUnit()) <= theRange) {
-                        theFound = true;
-                        continue;
-                    }
-                }
-            }
-            theFound = false;
-        }
-        return theFound;
-    }());
+    return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), true));
 }
 
 // FUNCTION: EXE 0x6116a2
@@ -1485,37 +1230,11 @@ long EEUnitClass::GateEvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
 
 // FUNCTION: EXE 0x611d00
 // Returns whether all tiles are on the map, flat or ramps (0 or 2 raised corners), and differ in height by at most
-// kGateMaximumSlope
-// (EECPWallManager.cpp declares it the same way)
+// 0.6 (0x447014; cls_building.rs) (EECPWallManager.cpp declares it the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 {
     EEUCNote theNote(26); theNote.Ts(inTiles);   // TEST ONLY (UCBD)
-    return theNote.R([&]() -> bool {
-        bool theResult = false;
-        float theLowest = 100.0f;
-        float theHighest = -100.0f;
-        bool theOk = true;
-        EEMap* theMap = ::gWorld.GetMap();
-        for (std::vector<U2DPoint<long> >::iterator it = inTiles.begin(); theOk && it != inTiles.end(); it++) {
-            long theRaised = theMap->GetNumRaisedCorners(it->GetX(), it->GetY());
-            if (theMap->GetTileAtLocation(*it) != NULL) {
-                float theZ = theMap->GetMinimumCornerZ(it->GetX(), it->GetY());
-                if (theLowest >= theZ)
-                    theLowest = theZ;
-                theZ = theMap->GetMaximumCornerZ(it->GetX(), it->GetY());
-                if (theHighest <= theZ)
-                    theHighest = theZ;
-                if (theRaised == 0 || theRaised == 2)
-                    theOk = true;
-                else
-                    theOk = false;
-            } else
-                theOk = false;
-        }
-        if (theOk)
-            theResult = theHighest - theLowest <= kGateMaximumSlope;
-        return theResult;
-    }());
+    return theNote.R(ee_units_cls_tiles_level(&inTiles));
 }
 
 // ---- EEUCMiningBuilding.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass). The mining

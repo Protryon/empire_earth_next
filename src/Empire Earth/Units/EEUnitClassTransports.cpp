@@ -188,6 +188,21 @@ extern "C" int64_t ee_units_cls_host(int32_t inOp, uint64_t inA, uint64_t inB, i
     case EE_UNITS_CLS_TILES_NEAR_POINT:
         EEGetTilesNearPoint(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), ioIo->f, theTiles);
         break;
+    case EE_UNITS_CLS_IS_SPACE_MAP:
+        return ::gWorld.mMap->mTerrainMesh.GetIsSpaceMap();
+    case EE_UNITS_CLS_MAP_SIZE:
+        return ::gWorld.mMap->GetSize();
+    case EE_UNITS_CLS_HULL_CENTER:
+        ioIo->a = ((EEAIContinent*)(uintptr_t)inA)->GetHullCenter().mX;
+        ioIo->b = ((EEAIContinent*)(uintptr_t)inA)->GetHullCenter().mY;
+        return 0;
+    case EE_UNITS_CLS_UNITS_NEAR: {
+        std::vector<EEUnit*> theUnits;
+        EEGetUnitsNear(GE3DPoint(ioIo->p[0], ioIo->p[1], ioIo->p[2]), ioIo->f, theUnits);
+        for (size_t i = 0; i < theUnits.size(); i++)
+            ee_units_cls_push((EeUnitsClsListHandle*)ioIo->list, (int32_t)EEObj(theUnits[i]), (int32_t)(EEObj(theUnits[i]) >> 32));
+        return 0;
+    }
     case EE_UNITS_CLS_HOME_BASE:
         return EEObj(theUnit->mHomeBase);
     case EE_UNITS_CLS_FLIGHT_TARGET: {   // GetNextFlightState's goal target (0x615ccf)

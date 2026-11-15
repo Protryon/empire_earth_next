@@ -553,6 +553,18 @@ constexpr static const int32_t EE_UNITS_CLS_FLY_TO_GOAL = 25;
 /// unit `a`'s runway move goal at `io.p`
 constexpr static const int32_t EE_UNITS_CLS_RUNWAY_GOAL = 26;
 
+/// `gWorld.mMap->mTerrainMesh.GetIsSpaceMap()`
+constexpr static const int32_t EE_UNITS_CLS_IS_SPACE_MAP = 27;
+
+/// `gWorld.mMap->mSize`
+constexpr static const int32_t EE_UNITS_CLS_MAP_SIZE = 28;
+
+/// continent `a`'s `GetHullCenter()` into `io.a`, `io.b`
+constexpr static const int32_t EE_UNITS_CLS_HULL_CENTER = 29;
+
+/// `EEGetUnitsNear(io.p, io.f, out)`: each unit pushed as its address's low and high halves
+constexpr static const int32_t EE_UNITS_CLS_UNITS_NEAR = 30;
+
 /// unit `a`'s command's type (0: none)
 constexpr static const int32_t EE_UNITS_CLS_COMMAND_TYPE = 31;
 
@@ -4373,6 +4385,39 @@ void ee_units_cls_take_off_from_runway(uint64_t class_, uint64_t unit, int32_t d
 /// # Safety
 /// `out` points to two writable `long`s.
 void ee_units_cls_runway_direction(uint32_t facing, long (*out)[2]);
+
+/// `EEGetFacingQuarter`.
+int32_t ee_units_cls_facing_quarter(int32_t x, int32_t y);
+
+/// A navy yard's facing at a tile (`GetNavyYardFacing`).
+int32_t ee_units_cls_navy_yard_facing(uint32_t x, uint32_t y);
+
+/// `EEGetDockFacing`.
+int32_t ee_units_cls_dock_facing(uint32_t x, uint32_t y);
+
+/// `EETurnGatePart`'s answer: the piece's animation, and the yaw it turns to in `yaw` (`turned` false: kept).
+///
+/// # Safety
+/// `yaw` and `turned` are writable.
+int32_t ee_units_cls_gate_part_turn(int32_t direction,
+                                    int32_t index,
+                                    float *yaw,
+                                    bool *turned);
+
+/// `EEGetWallGateTiles` (appended to `out`, a `std::vector<U2DPoint<long> >`).
+///
+/// # Safety
+/// `out` is a live vector.
+void ee_units_cls_wall_gate_tiles(int32_t x, int32_t y, int32_t direction, void *out);
+
+/// `EEAreTilesLevel` (`tiles` a `std::vector<U2DPoint<long> >`).
+///
+/// # Safety
+/// `tiles` is a live vector.
+bool ee_units_cls_tiles_level(const void *tiles);
+
+/// The gate's `AreEnemiesNear` (`passers` false) or `IsPasserNear`.
+bool ee_units_cls_gate_near(uint64_t unit, bool passers);
 
 /// `EEUnitClass::HasArrived` of the landing kinds (`animal`: the air animal's).
 bool ee_units_cls_landing_has_arrived(uint64_t class_, uint64_t unit, float value, bool animal);

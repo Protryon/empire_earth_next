@@ -31,6 +31,7 @@ pub mod boarding;
 pub mod build;
 pub mod calamity;
 pub mod cls_air;
+pub mod cls_building;
 pub mod cls_host;
 pub mod cls_transport;
 pub mod commands;
