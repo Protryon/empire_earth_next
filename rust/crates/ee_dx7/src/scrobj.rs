@@ -71,6 +71,12 @@ pub fn capture_state() -> CaptureState {
     *CAPTURE.lock().unwrap()
 }
 
+/// A fresh process's capture statics (the tests).
+#[cfg(test)]
+pub(crate) fn reset_capture_state() {
+    *CAPTURE.lock().unwrap() = CaptureState::default();
+}
+
 /// The object as the [`ScreenHost`] of the algorithms.
 pub struct ScreenRef(pub *mut EeDx7Screen);
 
@@ -482,3 +488,7 @@ mod ffi {
 #[cfg(test)]
 #[path = "scrobj_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "scrobj_replay.rs"]
+mod replay;

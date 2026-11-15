@@ -23,6 +23,15 @@ thread_local! {
     static PROBE_FAILS: RefCell<bool> = const { RefCell::new(false) };
 }
 
+/// The screen tests share the screen list and the capture statics: one at a time.
+pub(crate) static SCREEN_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn screen_tests() -> std::sync::MutexGuard<'static, ()> {
+    let guard = SCREEN_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+    scrobj::reset_capture_state();
+    guard
+}
+
 fn event(s: String) {
     EVENTS.with(|e| e.borrow_mut().push(s));
 }
@@ -291,6 +300,7 @@ fn mode_desc(w: u32, h: u32, bits: u32) -> SurfaceDesc {
 
 #[test]
 fn a_screen_lists_its_modes_finds_the_current_one_and_registers() {
+    let _serial = screen_tests();
     let (mut gx, mut h) = Recorder::pair();
     gx.modes = vec![mode_desc(640, 480, 16), mode_desc(800, 600, 16), mode_desc(1024, 768, 32)];
     gx.display_mode = mode_desc(1024, 768, 32);
@@ -325,6 +335,7 @@ fn a_screen_lists_its_modes_finds_the_current_one_and_registers() {
 
 #[test]
 fn capture_and_release_count_and_track_full_screen() {
+    let _serial = screen_tests();
     let (mut gx, mut h) = Recorder::pair();
     gx.modes = vec![mode_desc(800, 600, 16)];
     PROBE_FAILS.with(|f| *f.borrow_mut() = true);
@@ -348,6 +359,7 @@ fn capture_and_release_count_and_track_full_screen() {
 
 #[test]
 fn create_surface_builds_the_flip_chain_on_the_screen() {
+    let _serial = screen_tests();
     let (mut gx, mut h) = Recorder::pair();
     gx.modes = vec![mode_desc(800, 600, 16)];
     PROBE_FAILS.with(|f| *f.borrow_mut() = true);
@@ -376,6 +388,7 @@ fn create_surface_builds_the_flip_chain_on_the_screen() {
 
 #[test]
 fn the_probe_window_is_captured_released_and_deleted() {
+    let _serial = screen_tests();
     let (mut gx, mut h) = Recorder::pair();
     gx.modes = vec![mode_desc(800, 600, 16)];
     let name = String::from("s");
@@ -389,4 +402,15 @@ fn the_probe_window_is_captured_released_and_deleted() {
     assert!(e.iter().any(|l| l.starts_with("new surface")) && e.iter().any(|l| l.starts_with("delete ")));
     let _ = VideoMode::default();
     unsafe { EeDx7Screen::destroy(p, &mut gx) };
+}
+
+#[test]
+fn the_golden_driver_replays_bit_for_bit() {
+    let _serial = screen_tests();
+    scrobj::reset_capture_state();
+    let golden: Vec<&str> = include_str!("golden_scrobj.txt").lines().collect();
+    let got = super::replay::digests(golden.len() as u64);
+    for (i, (g, r)) in golden.iter().zip(&got).enumerate() {
+        assert_eq!(*g, r, "sequence {}", i + 1);
+    }
 }
