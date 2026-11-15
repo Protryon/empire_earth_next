@@ -965,6 +965,12 @@ DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t len, DmRe
 		double ticks_per_sample = Dm_getTicksPerSample(slf->time_signature, slf->tempo, slf->sample_rate) / channels;
 		uint32_t time_offset = (uint32_t) max_s32((int) msg.time - (int) slf->time, 0);
 		double needed = ((double) time_offset - slf->time_carry) / ticks_per_sample;
+
+		// (EE patch) Compared as a double first: a message further ahead than the block (in a long silence, or at a slow
+		// tempo, past 2^32 samples) does not fit a uint32_t, and that conversion is undefined (x86 and arm64 differ)
+		if (needed >= (double) (len - sample) + 1.0) {   // (the same test as below: floor(needed) > len - sample)
+			break;
+		}
 		uint32_t offset_samples = needed > 0.0 ? (uint32_t) needed : 0;
 
 		if (offset_samples > len - sample) {
