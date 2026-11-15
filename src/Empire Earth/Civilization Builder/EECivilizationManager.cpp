@@ -81,6 +81,7 @@
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EECivPowerIDs.h"
+#include "ee/EECivCapture.h"
 
 // The premade civilizations' sort order (RTTI EECMPremadeCivSorter, vtable 0x44bfdc: only the deleting dtor; std::sort
 // copies it by value; the comparison is inline)
@@ -568,15 +569,25 @@ std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
 
 // FUNCTION: EXE 0x681e4d
 // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
+static bool EEApplyUpgradeUncaptured(EECivilizationManager* inManager, EECivUpgrade inUpgrade, long inPlayer);
 bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
 {
+    EECivCaptureApply* theCapture = EECivCaptureApplyBegin(inUpgrade, inPlayer);   // TEST ONLY: CVAP
+    bool theResult = EEApplyUpgradeUncaptured(this, inUpgrade, inPlayer);
+    EECivCaptureApplyEnd(theCapture, theResult);
+    return theResult;
+}
+
+static bool EEApplyUpgradeUncaptured(EECivilizationManager* inManager, EECivUpgrade inUpgrade, long inPlayer)
+{
+    EECivilizationManager* const self = inManager;
     float theValue = 0.0f;
     unsigned long theCategory;
     unsigned long theIndex;
     bool theResult = false;
-    this->SplitAttribute(inUpgrade, &theCategory, &theIndex);
-    long theSet = this->mCategories[theCategory].mUnitSet;
-    if (this->LookupLevel(inUpgrade, &theValue, NULL)) {
+    self->SplitAttribute(inUpgrade, &theCategory, &theIndex);
+    long theSet = self->mCategories[theCategory].mUnitSet;
+    if (self->LookupLevel(inUpgrade, &theValue, NULL)) {
         EECBProcessUpgrade* theFunctor = new EECBProcessUpgrade(inPlayer, theIndex, theValue);
         gUnitSetManager.ForEach(theSet, theFunctor);
         delete theFunctor;

@@ -85,6 +85,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EECivCapture.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fe94 (wrapper)
@@ -132,7 +133,16 @@ UString EEGetCivilizationDirectory(bool inX)
 // FUNCTION: EXE 0x6806e7
 // Gives a player the civilization from a file (the game's, else the user's), buying its upgrades at no cost;
 // a game file's premade civilization keeps its localized name
+static long EEApplyCivilizationFileUncaptured(UString& ioName, EEPlayer* inPlayer);
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer)
+{
+    UString theName = ioName;
+    long theResult = EEApplyCivilizationFileUncaptured(ioName, inPlayer);
+    EECivCaptureApplyFile(theName, inPlayer, theResult);   // TEST ONLY: CVAF
+    return theResult;
+}
+
+static long EEApplyCivilizationFileUncaptured(UString& ioName, EEPlayer* inPlayer)
 {
     long theNameID;
     unsigned long theCost;
@@ -190,8 +200,18 @@ static long EEReadKeyedCivilization(const std::string& inText, const UString& in
 // FUNCTION: EXE 0x680840
 // Reads a civilization file's name and upgrade ids from the data path or the given directory
 // (the legacy binary form: its (category << 6) | level ids converted; or the keyed text, EEKeyedCivilization)
+static long EELoadCivilizationUncaptured(const UString& inName, const UString& inDirectory, UWideString& outName,
+                                        std::vector<EECivUpgrade>& outUpgrades);
 long EELoadCivilization(const UString& inName, const UString& inDirectory, UWideString& outName,
                         std::vector<EECivUpgrade>& outUpgrades)
+{
+    long theResult = EELoadCivilizationUncaptured(inName, inDirectory, outName, outUpgrades);
+    EECivCaptureLoad(inName, inDirectory, theResult, outName, outUpgrades);   // TEST ONLY: CVLD
+    return theResult;
+}
+
+static long EELoadCivilizationUncaptured(const UString& inName, const UString& inDirectory, UWideString& outName,
+                                        std::vector<EECivUpgrade>& outUpgrades)
 {
     FSFileSpec* theFile = NULL;
     unsigned long theLength = 0;
