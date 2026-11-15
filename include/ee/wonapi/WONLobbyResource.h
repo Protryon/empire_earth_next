@@ -3,6 +3,8 @@
 // Requires <string>, ee/EEWonNet.h (RefCount, SmartPtr).
 #ifndef EE_WONAPI_WONLOBBYRESOURCE_H
 #define EE_WONAPI_WONLOBBYRESOURCE_H
+#include "rust/ee_won.h"
+#include <stdexcept>
 #include <set>
 #include <map>
 #include "ee/wonapi/WONConfigObject.h"
@@ -276,47 +278,48 @@ std::string WStringToString(const std::wstring& inString, int inCodePage);
 // members provisional). Its implicit dtor is out of line (0x29141e, a COMDAT of the lobby glue).
 class WONFile {
 public:
-    WONFile(const std::string& inPath);     // 0x2a7610 (WONAPI, /GX)
-    bool NormalizePath();
-    std::string GetRelativePath(const WONFile&);
-    static WONFile GetWorkingDirectory();
-    bool SetWorkingDirectory();
-    static const char PATH_SEP;
-    void Reset();                          // 0x2a76c0
-    void CalcFileInfo();                   // 0x2a79f0
-    void CalcFileDirectory();              // 0x2a7a60
-    void CalcFullPath();                   // 0x2a7c30
-    void CalcFileExtension();              // 0x2a7d80
-    bool SetReadOnly(bool inReadOnly);      // file attributes
-    bool Exists();
-    bool IsDir();
-    bool CreateAsDirectory(bool inCreateAll = true);
-    const std::string& GetFilePath();
-    const std::string& GetFileDirectory();
-    const std::string& GetFileExtension();
-    const std::string& GetFullPath();
-    void SetFilePath(const std::string& inPath); // 0x2a7840
-    const std::string& GetFileName();       // 0x2a7ff0 (+0x20, parsed on first use)
-    long GetModifyTime();                   // 0x2a8070
-    unsigned long GetSize();                // 0x2a8050 (+0x60, read on first use; inferred)
-    bool Delete(bool inFlag);               // 0x2a7960
-
-    std::string mPath;                      // +0x00
-    std::string mFileDirectory;             // +0x10
-    std::string mFileName;                  // +0x20
-    std::string mFileNameNoExtension;       // +0x30
-    std::string mFileExtension;             // +0x40
-    std::string mFullPath;                  // +0x50
-    unsigned long mSize;                   // +0x60, _stat st_size
-    long mModifyTime;                       // +0x64, _stat st_mtime
-    bool mExists;                           // +0x68, _stat success
-    bool mIsReadOnly;                       // +0x69, original mode-derived predicate
-    bool mIsDir;                            // +0x6a, directory predicate
-    bool mFileDirectoryValid;               // +0x6b, string10 cache flag
-    bool mFileNameValid;                    // +0x6c, string20 cache flag
-    bool mFileExtensionValid;               // +0x6d, string40 cache flag
-    bool mStatValid;                        // +0x6e
-    bool mFullPathValid;                    // +0x6f, string50 cache flag
+    // the path, its parts, the stat details and the cache flags are ee_won's (wonfile.rs EeWonFile; WONFile.cpp is
+    // deleted: net round 27); the getters return copies
+    WONFile(const std::string& inPath) : mFile(ee_won_file_new(B(inPath), inPath.size())) {} // 0x2a7610
+    WONFile(const WONFile& inFile) : mFile(ee_won_file_clone(inFile.mFile)) {}
+    WONFile& operator=(const WONFile& inFile) { ee_won_file_assign(this->mFile, inFile.mFile); return *this; }
+    ~WONFile() { ee_won_file_free(this->mFile); }
+    bool NormalizePath() { return this->Num(EE_WON_FILE_NORMALIZE) != 0; } // false for an empty path
+    std::string GetRelativePath(const WONFile& inSub) { return this->Text(EE_WON_FILE_RELATIVE, inSub.mFile); }
+    static WONFile GetWorkingDirectory() { return WONFile(ee_won_file_new(NULL, 0)); }
+    bool SetWorkingDirectory() { return false; } // the game's working directory stays its data root
+    static const char PATH_SEP = '\\';
+    void Reset() { this->Num(EE_WON_FILE_RESET); } // 0x2a76c0
+    void CalcFileInfo() { this->Num(EE_WON_FILE_CALC_INFO); } // 0x2a79f0
+    void CalcFileDirectory() { this->Num(EE_WON_FILE_CALC_DIRECTORY); } // 0x2a7a60
+    void CalcFullPath() { this->Num(EE_WON_FILE_CALC_FULL_PATH); } // 0x2a7c30
+    void CalcFileExtension() { this->Num(EE_WON_FILE_CALC_EXTENSION); } // 0x2a7d80
+    bool SetReadOnly(bool inReadOnly) { return this->Num(EE_WON_FILE_SET_READ_ONLY, inReadOnly) != 0; }
+    bool Exists() { return this->Num(EE_WON_FILE_EXISTS) != 0; }
+    bool IsDir() { return this->Num(EE_WON_FILE_IS_DIR) != 0; }
+    bool CreateAsDirectory(bool = true) { return this->Num(EE_WON_FILE_CREATE_DIRECTORY) != 0; }
+    std::string GetFilePath() { return this->Text(EE_WON_FILE_PATH); }
+    std::string GetFileDirectory() { return this->Text(EE_WON_FILE_DIRECTORY); }
+    std::string GetFileExtension() { return this->Text(EE_WON_FILE_EXTENSION); }
+    std::string GetFullPath() { return this->Text(EE_WON_FILE_FULL_PATH); }
+    void SetFilePath(const std::string& inPath) { ee_won_file_op(this->mFile, EE_WON_FILE_SET_PATH, 0, B(inPath), inPath.size()); } // 0x2a7840
+    std::string GetFileName() { return this->Text(EE_WON_FILE_NAME); } // 0x2a7ff0
+    std::string GetFileNameNoExtension() { return this->Text(EE_WON_FILE_NAME_NO_EXTENSION); } // the member as it is
+    long GetModifyTime() { return static_cast<long>(this->Num(EE_WON_FILE_MODIFY_TIME)); } // 0x2a8070
+    unsigned long GetSize() { return static_cast<unsigned long>(this->Num(EE_WON_FILE_SIZE)); } // 0x2a8050
+    bool Delete(bool inEvenIfReadOnly) { return this->Num(EE_WON_FILE_DELETE, inEvenIfReadOnly) != 0; } // 0x2a7960
+    EeWonFile* mFile;
+private:
+    explicit WONFile(EeWonFile* inFile) : mFile(inFile) {}
+    static const uint8_t* B(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
+    static void Sink(void* inText, const uint8_t* inBytes, size_t inLength)
+    { static_cast<std::string*>(inText)->assign(reinterpret_cast<const char*>(inBytes), inLength); }
+    // where the original's substr threw (2: a full path or NormalizePath of ".")
+    static void Check(long long inResult) { if (inResult == 2) throw std::out_of_range("invalid string position"); }
+    long long Num(int inWhich, long long inValue = 0)
+    { long long r = ee_won_file_op(this->mFile, inWhich, inValue, NULL, 0); if (inWhich == EE_WON_FILE_CALC_FULL_PATH || inWhich == EE_WON_FILE_NORMALIZE) Check(r); return r; }
+    std::string Text(int inWhich, const EeWonFile* inOther = NULL)
+    { std::string s; Check(ee_won_file_text(this->mFile, inWhich, inOther, Sink, &s)); return s; }
 };
 
 

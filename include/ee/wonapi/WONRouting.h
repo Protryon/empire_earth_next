@@ -5,6 +5,10 @@
 #ifndef EE_WONAPI_WONROUTING_H
 #define EE_WONAPI_WONROUTING_H
 
+#include "ee/wonapi/WONStatus.h"
+#include <time.h>
+#include <stdlib.h>
+#include <vector>
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONElGamal.h"
 #include "ee/wonapi/WONBlowfish.h"
@@ -1009,31 +1013,77 @@ typedef std::map<std::wstring,DirEntityList> DirEntityMap;
 typedef std::set<IPAddr> AddrSet;
 // A shim over ee_won's server list (rust/crates/ee_won/src/servctx.rs: the addresses, their order, the one-time
 // shuffle and the lock); the original's 0x3c-byte layout is gone
+// a shim over ee_won's server list (servctx.rs: the addresses, their order, the one-time shuffle and the lock);
+// header-only since net round 27 (ServerContext.cpp deleted): it converts IPAddr values and walks the entities
 class ServerContext : public RefCount {
 public:
     EeWonServerList* GetListObject() const { return this->mList; }
-    ServerContext();
-    virtual ~ServerContext();
-    bool AddAddress(const IPAddr& inAddress); //2ac4b0, AL = success
-    void Clear(); //2ac390
-    void NotifyFailed(const IPAddr&); //2ac980
-    bool AddAddressesFromDir(const DirEntityList&,const wchar_t* inNameFilter=NULL); //2acab0/332
-    void RemoveAllAddresses(); //2acc00, SDK name, 5-byte body
-    unsigned long GetNumAddresses();
+    ServerContext() : mList(ee_won_ctx_new()) {}
+    virtual ~ServerContext() { ee_won_ctx_free(this->mList); }
+    // a valid address not yet in the list appended; whether it was
+    bool AddAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_add(this->mList, &a); } //2ac4b0
+    void Clear() { ee_won_ctx_clear(this->mList); } //2ac390: the one-time shuffle re-enabled
+    // a server that failed to the end of the list
+    void NotifyFailed(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); ee_won_ctx_notify_failed(this->mList, &a); } //2ac980
+    // the directory's services' addresses (only those of the name when one is given)
+    bool AddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL) //2acab0/332
+    {
+        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
+        bool added = false;
+        for (size_t i = 0; i < anAddrs.size(); i++) if (this->AddAddress(anAddrs[i])) added = true;
+        return added;
+    }
+    void RemoveAllAddresses() { this->Clear(); } //2acc00
+    unsigned long GetNumAddresses() { return (unsigned long)ee_won_ctx_len(this->mList); }
     typedef std::list<IPAddr> AddrList;
-    void CopyAddresses(AddrList&); //2ac6d0, 685 bytes
-    bool RemoveAddress(const IPAddr&);
-    void CopyAddresses(AddrSet&);
-    bool AddAddressesFromDir(const DirEntityMap&,const std::wstring&,const wchar_t* inNameFilter=NULL);
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityList&,const wchar_t* inNameFilter=NULL);
-    bool AtomicClearAndAddAddressesFromDir(const DirEntityMap&,const std::wstring&,const wchar_t* inNameFilter=NULL);
+    // shuffled the first time (the CRT's srand(time(NULL)) and rand, as random_shuffle drew)
+    void CopyAddresses(AddrList& outCopy) { outCopy.clear(); ee_won_ctx_copy(this->mList, Rand, ToList, &outCopy); } //2ac6d0
+    bool RemoveAddress(const IPAddr& inAddress) { EeWonAddr a = inAddress.ToRaw(); return ee_won_ctx_remove(this->mList, &a); }
+    void CopyAddresses(AddrSet& outCopy) { outCopy.clear(); ee_won_ctx_copy_sorted(this->mList, ToSet, &outCopy); }
+    bool AddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
+    {
+        DirEntityMap::const_iterator i = inDir.find(inPath);
+        return i != inDir.end() && this->AddAddressesFromDir(i->second, inNameFilter);
+    }
+    // cleared and refilled under the list's one lock
+    bool AtomicClearAndAddAddressesFromDir(const DirEntityList& inDir, const wchar_t* inNameFilter=NULL)
+    {
+        std::vector<IPAddr> anAddrs = DirAddresses(inDir, inNameFilter);
+        std::vector<EeWonAddr> aRaw;
+        for (size_t i = 0; i < anAddrs.size(); i++) aRaw.push_back(anAddrs[i].ToRaw());
+        return ee_won_ctx_replace(this->mList, aRaw.empty() ? NULL : &aRaw[0], aRaw.size());
+    }
+    bool AtomicClearAndAddAddressesFromDir(const DirEntityMap& inDir, const std::wstring& inPath, const wchar_t* inNameFilter=NULL)
+    {
+        DirEntityMap::const_iterator i = inDir.find(inPath);
+        if (i != inDir.end()) return this->AtomicClearAndAddAddressesFromDir(i->second, inNameFilter);
+        ee_won_ctx_replace(this->mList, NULL, 0); // the original cleared the list before looking the path up
+        return false;
+    }
     // the original's public mShuffleAddresses (copies shuffle once while it is on)
-    void SetShuffleAddresses(bool inShuffle);
-    bool GetShuffleAddresses();
+    void SetShuffleAddresses(bool inShuffle) { ee_won_ctx_set_shuffle(this->mList, inShuffle); }
+    bool GetShuffleAddresses() { return ee_won_ctx_shuffle(this->mList); }
 
 private:
     ServerContext(const ServerContext&);
     ServerContext& operator=(const ServerContext&);
+    static std::vector<IPAddr> DirAddresses(const DirEntityList& inDir, const wchar_t* inNameFilter)
+    {
+        std::wstring aFilter;
+        if (inNameFilter != NULL) aFilter = inNameFilter;
+        std::vector<IPAddr> anAddrs;
+        for (DirEntityList::const_iterator i = inDir.begin(); i != inDir.end(); ++i) {
+            DirEntity* e = i->get();
+            if (e->mType == 'D' || (!aFilter.empty() && !(aFilter == e->mName))) continue;
+            anAddrs.push_back(e->GetNetAddrAsIP());
+        }
+        return anAddrs;
+    }
+    static IPAddr FromRaw(const EeWonAddr* inRaw) { IPAddr a; a.FromRaw(*inRaw); return a; }
+    static void ToList(void* inList, const EeWonAddr* inRaw) { static_cast<AddrList*>(inList)->push_back(FromRaw(inRaw)); }
+    static void ToSet(void* inSet, const EeWonAddr* inRaw)
+    { AddrSet* s = static_cast<AddrSet*>(inSet); s->insert(s->end(), FromRaw(inRaw)); }
+    static int32_t Rand(bool inSeed) { if (inSeed) { srand((unsigned)time(NULL)); return 0; } return rand(); }
     EeWonServerList* mList;
 };
 
@@ -1262,12 +1312,14 @@ private:
     static void RunThreadFunc(void* inThread);     // the Rust thread's body (AsyncOp.cpp: the crash dump's SEH filter)
     static void DeleteThread(void* inThread);
 };
-// WON SDK static-only diagnostics API; no instance fields, bases, or virtual slots.
+// WON SDK static-only diagnostics API (ee_won debug.rs: the stack file and the crash dump; the trace is Rust's of
+// the calling thread, the filter's: theInfo is not read)
 class WONDebug {
 public:
-    static void SetStackFileName(const std::string &theName);
-    static const std::string& GetStackFileName();
-    static int DumpStackToFile(void *theInfo = NULL);
+    static void SetStackFileName(const std::string &theName)
+    { ee_won_debug_set_stack_file(reinterpret_cast<const uint8_t*>(theName.data()), theName.size()); }
+    static std::string GetStackFileName() { std::string s; ee_won_debug_stack_file(WonStringSink, &s); return s; }
+    static int DumpStackToFile(void* = NULL) { return ee_won_debug_dump_stack(); }
 };
 class Thread : public ThreadBase {
 public:
@@ -1276,13 +1328,13 @@ public:
 class DNSTestOp : public AsyncOp {
     friend class DNSTestThread;
 public:
-    DNSTestOp(const std::string& inHost);    //2d95a0
+    DNSTestOp(const std::string& inHost) { this->mHostString = inHost; } //2d95a0 (header-only since net round 27)
     // Accessor as in the SDK's DNSTestOp.h; the LAN family 3e28d0 reads
     // receiver+54 directly (no out-of-line helper).
     const IPAddr& GetHostAddr() { return this->mHostAddr; }
 protected:
-    virtual ~DNSTestOp();                   //2d9740 explicit/out of line
-    virtual void RunHook();                 //2d97f0 RunHook,slot04
+    virtual ~DNSTestOp() {}                 //2d9740
+    virtual void RunHook();                 //2d97f0: a self-deleting thread resolves the host
     std::string mHostString;                //44..54
     IPAddr mHostAddr;                       //54..7c
 };
@@ -1290,9 +1342,20 @@ typedef SmartPtr<DNSTestOp> DNSTestOpPtr;
 class DNSTestThread : public Thread {
 public:
     DNSTestThread(DNSTestOp* inOp) : mOp(inOp) {} //inline constructor 2d9826..985d
-    virtual void ThreadFunc(); //slot10 2d9920
+    // the op finished with success or the host-lookup failure status
+    virtual void ThreadFunc() //slot10 2d9920
+    {
+        this->mOp->mHostAddr.SetWithDefaultPort(this->mOp->mHostString, 0);
+        this->mOp->Finish(this->mOp->mHostAddr.IsValid() ? WS_Success : WS_InvalidAddress);
+    }
     DNSTestOpPtr mOp; //1c,owned; full20. Implicit dtor2d98b0 no ownvptr store.
 };
+inline void DNSTestOp::RunHook()
+{
+    DNSTestThread* aThread = new DNSTestThread(this);
+    aThread->SetAutoDelete(true);
+    aThread->Start();
+}
 
 
 // WONAPI's HTTP document request (sizeof 0xdc; implicit dtor 0x4cff46; ctor out of line in the base game,

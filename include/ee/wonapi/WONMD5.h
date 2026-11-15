@@ -9,10 +9,11 @@ namespace WONAPI {
 class MD5 {
     EeWonMd5 mState;
 public:
-    MD5(); //2a26b0
-    void Reset(); //2a26c0
-    void Update(const void*,unsigned long); //2a26f0
-    void Digest(unsigned char[16]); //2a27d0
+    // ee_won's (md5.rs); header-only since net round 27
+    MD5() { ee_won_md5_reset(&this->mState); } //2a26b0
+    void Reset() { ee_won_md5_reset(&this->mState); } //2a26c0
+    void Update(const void* inData, unsigned long inLength) { ee_won_md5_update(&this->mState, static_cast<const uint8_t*>(inData), inLength); } //2a26f0
+    void Digest(unsigned char outDigest[16]) { ee_won_md5_finish(&this->mState, outDigest); } //2a27d0: padded, then reset
 };
 }
 #endif

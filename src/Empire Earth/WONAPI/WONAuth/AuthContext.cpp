@@ -54,7 +54,7 @@ bool CDKey::LoadFromRegistry(long inRoot, const char* inPath)
 {
     if (this->mProduct.empty()) return false;
     RegKey aKey(inRoot, std::string(inPath), false, true);
-    if (!aKey.mIsOpen) return false;
+    if (!aKey.IsOpen()) return false;
     ByteBufferPtr anEncrypted;
     if (aKey.QueryBinary(this->mProduct, anEncrypted) != 0) return false;
     return this->InitEncrypted(anEncrypted->data(), anEncrypted->length());
