@@ -22866,3 +22866,103 @@ The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input c
 gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
 (`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
 kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.
+
+## R6: the game screens, thirtieth round: the main game form's mouse modes and the wall and gate placements' mouse in Rust over the form's own host; the lane's include trim (ee_screens mouse_modes.rs; branch rust-screens30, 2026-11-14)
+
+The editor lane's round 4 showed that one host addressing many classes' parts beats a host per class. The HUD's
+biggest remaining C++ logic was not a control but the main game form's mouse modes: 21 free functions
+(`EEModeNormal` .. `EEModeConvert`, 650 lines in `EEUIFMGStatusButton.cpp`'s range) plus the wall's and gate's
+`Update` (125 lines), all calls on the form and the world. They moved onto the main game form's existing host
+(`ee_screenscpp_main_form`, round 28) instead of a new one: 32 ops added (`EE_SCREENS_MF_OP_MD_*`, one function
+`EEMouseModeOp` the host's `default:` calls) and 8 existing ones reused (two fields, the picked unit's release, the
+ghost lock and clear, the gate wall test, the calamity's cast, the selection count, the wall preview).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| dfeb0403 | the mouse modes and the placements' mouse in Rust (`mouse_modes.rs`, the host's 32 ops) | +295 -867, net -572 |
+| 45a97b37, 7a1cc55e | the UI fixture's `chat` command, the tour's chat check (TEST ONLY; the second commit fixes a quote and the capture's summary entry) | +6 -1 |
+| 093d773b (merge 4a332ed3) | fifteen more units' dead project includes (system headers kept) | -526 |
+| 0b7019a8 | the wall, gate and status button units' includes the modes no longer need | -87 |
+| 7935e67e (merge dbc8aab6) | a second pass after the units' own headers (main game form, UI manager, user interface, main group, generic background, civ powers) | -96 |
+| 0e7f4473 | the merge of `rust` (the modes' message records) | |
+
+Against `rust` (42af0588) the branch is +302 -1576, net -1,274 C++ (src and include/ee); short of the 1,500 asked
+(see Left).
+
+- **The pattern.** `EEUIFMainGame::mMouseTests[22]` (function pointers) became `mMouseModes[22]`, each an
+  `EE_SCREENS_MF_MODE_*` (main_form.rs' table order, so `Construct`'s ops are unchanged); `UpdateMouse` (moved next
+  to the host) calls `ee_screens_main_form_mouse(call, mode, x, y)`. The host's call record gained the first
+  selected unit, the pointed tile and the running placement (`mFirst`, `mTile`, `mWall`, `mGate`); the picked unit
+  was there (`mPicked`). The wall and gate placements keep their virtual `Update`: the scenario editor's subclasses
+  (`EESEUIBuildWall`, `EESEUIBuildGate`) override `Build` and `Cancel` and its unit tab calls `Update` (the first
+  build stopped on it after the slot had been dropped). The wall and gate modes ask the form's placement to update
+  (`EE_SCREENS_MF_OP_MD_PLACEMENT`), and `Update` (defined next to the host) comes back into Rust over a call of its
+  own, with the placement held and its members from `mState` / `mUnitClass` on as a record by address
+  (`EeScreensBuildWallFields`, `EeScreensBuildGateFields`, `static_assert`ed offsets): the classes keep their members
+  for the editor (`EESEUnit`, `EESimEditor` read `mStart`, `mTileX`, `mDirection`...); `Build`, `Cancel`,
+  `Initialize`, `Terminate` and the gate's `ClearGhostUnits` stay C++ and are reached virtually through the held
+  placement. The golden logs each Rust entry (a mode, a wall or a gate update) as a block of its own.
+  The two shift flags (0x5652f0/f1) are Rust thread-locals (the UI thread's). The mouse buttons are one read (6
+  bits): `JustPressed`/`JustUnpressed`/`GetValue` are pure reads of the input entity.
+- **The golden** (`build/sc30/drv`): the 21 modes and the two `Update`s cut from 3dbed1c5 (no namespace: the fake
+  classes take the original member definitions as they are) against the new host function and the Rust, over one
+  fake world whose every answer is a pure function of the call's rolled state (so the two sides may read as often as
+  they like): units with and without complex units, players and enemies, the selection, three ghosts, the gate's wall
+  test, the range edge exactly hit a quarter of the time, the mouse near the last press. Each case 1-30 calls of a
+  random mode (0-22); every effect traced (picks and releases, messages with their typed fields, events, previews,
+  builds, the UI state, the camera, the unit hack, the starts), the pointer, the cursor lock, the current group, the
+  build's queue flag and both records digested after each call. Seeds 2, 3, 4, 7 x 10,000 cases (620,000 calls):
+  0 differences. Host mutations: 29 of 33 caught (the four survivors equivalent: the 3D point's and the tile's initial values, the convert loop's in-range input, the first unit's non-null bit). `golden_mouse_modes.txt` (100 cases, 1,705 calls, 1.1 MB) is the new
+  side's op log, replayed by `mouse_modes::tests::replays_the_golden`; 26 of 31 Rust mutations fail it; of the five it missed, four fail the driver (rebuilt over the mutated library: the fighter rally's damage column once the fake's damage factor read the column whole, the convert's queued shift, the wall preview's y test, the gate's same-tile test) and one is equivalent (the wall's next start is its end, just set to the same centre).
+- **Lessons.** (1) A driver's per-case state must restart per case on both sides: a `static` "last mouse" carried
+  from the other side's previous case gave false differences. (2) After a mutation run, rebuild the clean driver
+  before trusting its numbers: the mutation script restores the source, not the exe. (3) Equivalent mutations here:
+  the 3D point's and the tile's initial values (the real `EEPointUnitOrTile[XY]` always write them), the convert
+  loop's in-range input (it is always false when asked), the first unit's non-null bit (`EEGetFirstSelectedUnit` never
+  answers true with NULL), `Cancel()` for the form's `SetUIState(0)` (the form is the main game form).
+- **Behaviour.** None intended.
+- **What runs it.** Every frame in the game: the normal mode's box selection and right-drag starts (the orders
+  game's box selection and orders), the camera mode. The others only when a person picks a command button: the
+  airport and rally targets, attack ground, building placement (the build mode), flares, garrison, unload, heal,
+  convert, calamities, walls and gates. EE-SIM builds no form: the oracle and the editor gate are unchanged by
+  construction. **Only a person reaches**: every mode but the normal one (no gate places a building through the
+  mouse, rallies, garrisons, unloads, heals, converts, casts or drags a wall).
+- **The chat line in the tour.** The fixture has a `chat` command (`AddChatLogEntry` of a test line, as a game message
+  adds one) and the tour sends it after its play (`chat_check`, a `chat` capture): the chat line's Rust
+  (`chat_line.rs`, round 29) now runs in every tour.
+- **The include trim.** `mininc.py` (now bytes-preserving: the units mix CRLF and LF lines) over the lane's
+  units the round-29 trim had left (EEScreens, the UI manager, the user interface, the error form, the file combo box,
+  the line graph, the generic background, the scenario intro, the campaign form manager and editor model, the civ
+  builder's five units): 526 lines; then the wall, gate and status button units once the modes left (87); then a
+  second pass that also tries the includes after a unit's own header (96). Only quoted includes are dropped: the
+  first pass's system headers (`<algorithm>`, `<string>`, `<set>`...) were put back, as libc++ and libstdc++ include
+  less transitively than MSVC's STL. The POSIX build was not run.
+- **The merge of `rust`.** Its game messages round 4 had turned the modes' message classes into `EEMRecord` records
+  in the very functions this round deleted; the host sends the same records (the rally goal's wire order: point,
+  target, unit, queued) and the golden was rerun against `rust`'s modes (0 differences).
+- **Gates.** Per commit: the mouse modes' commit built `--sim` 0/0 (EE-AOC, EE-SIM), the oracle identical on seeds 2-3,
+  the editor gate PASS (6,823 lines), clippy, rustfmt and the header check clean (the Rust gate's tests stopped once on
+  `ee_gfx` `effect_storm`'s shared random seed under parallel tests: it passes alone); the trims built with it
+  (`--sim` 0/0 after 0b7019a8). On the result merged with `rust` (dbc8aab6, then the harness fix 7a1cc55e): the build
+  `--sim` 0/0, the test profile 0/0, the oracle identical on seeds 2-7, the editor gate PASS (12,723 lines: rust's
+  rounds), the Rust gate PASS (3,633 tests). Harness (the lock, the merged test profile): `--exercise tour
+  --play-seconds 60` `RESULT PASS tour` with the chat line on screen (`chat` capture: "> TEST chat line ..." at the
+  top left), `gx_errors` {}; `--exercise random-game --play-seconds 60 --orders --box-select` `BOX SELECT PASS` (4
+  steps, the add grew the group), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground
+  skipped), `RESULT PASS random-game`, `gx_errors` {}; `tools/harness/lan_game.py` `RESULT PASS lan-game`;
+  `--exercise random-game --play-seconds 30 --scroll-check --zoom-captures 50 100 200`: two runs FAILED (`SCROLL
+  CHECK FAIL edge`: each edge moved the camera one tick, 0.04, and stopped), the third PASSED (left edge 15.9). The
+  one-tick stall is not this round's: the lead's `rust` test exe (19:30) stalled the same way on its left edge (its
+  right edge then moved 10.5), and so did this branch's first commit alone (left stalled, right 24.2); a fresh build of
+  `rust` at 42af0588 passed (left 30.2). The edge scroll's first `EEAScroll::Update` posts one step; the stall means
+  the next updates no longer see the pointer at the edge or are not called (not found; the check passes when either
+  edge moves 0.5). The include trims were checked by code, not only by compiling: each trimmed unit compiled to
+  assembly before and after gives the same code and data (`build/sc30/asmdiff.py`; 19 of 20 units, the civilization
+  files unit's inline assembly does not round-trip through `/FA`). No simulation code changed: no capture profile ran.
+- **Left.** The `UIButton` counterpart of `EEUIRustControl` for the HUD's button subclasses was not built: measured
+  by hand, `EEUIBColor`, `EEUIBSavedGroup` and the status button's own members net about -150 (their lines are
+  calls on C++ objects: bitmaps, textures, sounds, messages), and `EEUIFMGStatusBar` derives from `EEUIBUpgrade`, so
+  it needs a template base. Bigger and cheaper: the status button's host (`ee_screenscpp_status_button`, 230 lines)
+  can ride the main form's host as the modes now do (its sends, the cursor, the UI state, the panels). The portrait
+  and icon bar onto `EEUIRustControl` (~-45, their replay goldens renumbered); the keyboard tests
+  (`EEModeKeyboardCinematic`); the last events (~1.7k).
