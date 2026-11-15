@@ -850,6 +850,13 @@ long EEE2DRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
 {
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Load);
+    // the damage controller's children's handles and, from 0.249 on, its finished flag (EEEDamagedEffect::Load
+    // 0x1020e2; the base's result ignored)
+    if (this->mKind == 0x3e) {
+        EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
+        EeGfxEffectFile theFile = EEEffectFile(inFile);
+        return ee_gfx_effect_load_damaged(this->mRecord, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+    }
     // the explosion has no state of its own: the base's result (EEE2DExplosion::Load)
     if (this->mKind == 4)
         return EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
@@ -873,6 +880,12 @@ long EEE2DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
 {
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Save);
+    // the damage controller's (EEEDamagedEffect::Save 0x1021a2; the base's result ignored)
+    if (this->mKind == 0x3e) {
+        EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
+        EeGfxEffectFile theFile = EEEffectFile(outFile);
+        return ee_gfx_effect_save_damaged(this->mRecord, &theFile, this->mGraphicEffect->mLinkedEffect2 != NULL);
+    }
     if (this->mKind == 4)
         return EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
     // the particle is saved where it was drawn (EEE2DParticle::Save 0xe517c)
@@ -885,6 +898,65 @@ long EEE2DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
         return theBase;
     EeGfxEffectFile theFile = EEEffectFile(outFile);
     return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile);
+}
+
+// The world the damage controller's Rust tick calls into: its children made and destroyed (from the deleted
+// EEEDamagedEffect.cpp)
+namespace {
+struct EEDamagedHost {
+    static EEE2DRust& Self(void* inContext) { return *static_cast<EEE2DRust*>(inContext); }
+    static uint32_t Create(void* inContext, bool inSecondary, uint32_t inIndex)
+    {
+        EEE2DRust& theEffect = Self(inContext);
+        EEEffectHandle theHandle;
+        EEGraphicEffect* theLinked = inSecondary ? theEffect.GetGraphicEffect()->GetLinkedEffect2()
+                                                 : theEffect.GetGraphicEffect()->GetLinkedEffect1();
+        gWorld.GetEffectManager()->CreateUnitEffect(theEffect.GetUnit(), theLinked, &theHandle, 0, inIndex, 0);
+        return theHandle.mValue;
+    }
+    static void Destroy(void*, uint32_t inHandle)
+    {
+        EEEffectHandle theHandle = {inHandle};
+        gWorld.GetEffectManager()->DestroyEffect(theHandle);
+    }
+};
+}
+
+// The damage controller (0x3e; EEEDamagedEffect::Step, 0x10225c): one child damage effect (plus its secondary) per
+// damage tag point, more as the unit's health drops; all hidden on a cloaked enemy unit; once finished destroys them
+// and returns 7 (the counts and the children's handles are ee_gfx effect_state.rs's). The others: Rust's
+long EEE2DRust::Step()
+{
+    if (this->mKind != 0x3e)
+        return this->Call(EeGfxEffect3DOp::Step);
+    EeGfxDamagedTick theTick = {};
+    EEGraphicEffect* theEffect = this->GetGraphicEffect();
+    theTick.has_linked2 = theEffect->GetLinkedEffect2() != NULL;
+    theTick.param2 = theEffect->GetParam2();
+    EEUnit* theUnit = this->mUnit;
+    if (theUnit && !this->mRecord->damaged.finished) {
+        theTick.has_unit = true;
+        if (theUnit->mTileNode) {
+            while (theUnit->mComplexUnit->mPreviousPart)
+                theUnit = theUnit->mComplexUnit->mPreviousPart;
+        }
+        EETagPointList* theList;
+        if (theUnit->mTileNode)
+            theList = theUnit->GetModel()->GetTagPoints(theUnit->mComplexUnit->GetAnimation(),
+                                                        theEffect->GetLinkedEffect1()->mTagPointKind);
+        else
+            theList = theUnit->GetModel()->GetTagPoints(0, theEffect->GetLinkedEffect1()->mTagPointKind);
+        theTick.tag_count = theList ? (uint32_t)theList->GetNumTagPoints() : 1;
+        theTick.hit_points = (int32_t)theUnit->GetHitPoints();
+        theTick.max_hit_points = (int32_t)theUnit->GetStats()->GetMaxHitPoints();
+        if (theUnit->GetTileNode()) {
+            EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
+            if (theComplexUnit->GetIsCloaked() && !gWorld.GetCurrentPlayer()->IsAlly(theComplexUnit->GetPlayer()))
+                theTick.hidden = true;
+        }
+    }
+    EeGfxDamagedHost theHost = {this, EEDamagedHost::Create, EEDamagedHost::Destroy};
+    return ee_gfx_effect_damaged_step(this->mRecord, &theTick, &theHost);
 }
 
 // The battlefield decals' placement (from the deleted EEE2DBattlefieldAmbient.cpp, 0xde374..0xde6e9): the physics

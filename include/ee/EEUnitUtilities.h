@@ -56,7 +56,6 @@ bool EEFindDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* i
 // 0x20da86: EECanConvert (ee/EEAreaUtilities.h)
 float EEGetAngleFromNorth(GE3DPoint* inFrom, GE3DPoint* inTo);
 float EEGetSeaHeading(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo);
-float EEGetUnitAngle(EEUnit* inFrom, EEUnit* inTo);
 bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget);
 // 0x243561 EEFindPlacement: declared in ee/EEUnit.h; the wrapper 0x24352f (no unit, inArg9 false) (provisional
 // name)
@@ -73,12 +72,8 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale);
 // 0x148992 (cdecl): inPoint in camera space (outScreen) and its depth provisional name and meaning
 void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth);
-extern float gF564518;                      // 0x564518 (sound: behind-the-camera falloff) (provisional name)
-extern float gF56451C;                      // 0x56451c (sound: off-screen falloff) (provisional name)
-extern float gF564520;                      // 0x564520 (sound: pan scale) (provisional name)
 void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology);
 EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClass* inClass);
-bool EEClearUnderBuilding(long inX, long inY, long inSize);  // (3 arguments: the callee reads +8..+0x10 only)
 // 0x23e530 / 0x23e598 (cdecl, before the range): the units on inTile in the way of a unit of inUnitType (outUnits) /
 // whether they may be pushed aside (provisional names)
 bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner, std::vector<EEUnit*>& outUnits);
@@ -100,16 +95,9 @@ bool EECanTargetClass(EEComplexUnit* inUnit, EEUnitClass* inClass);
 void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor);
 // 0x2467bb with the types its body reads (ee/EEAreaUtilities.h declares EEUnit* first) (provisional name)
 float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther);
-void EEGetEnemiesAround(EEComplexUnit* inUnit, std::vector<EEUnit*>& outAttackers);
 long EETurnDirection(long inDirection, long inSteps, bool inClockwise);  // 0x24da82 (the definition and names.txt are (long, long, bool))
 void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance);  // 0x248ecc: the tile inDistance steps from inTile in inDirection (also in ee/EEE3DStorm.h)
 void EEMoveInDirection(const GE2DPoint& inFrom, GE2DPoint& outTo, long inDirection, long inDistance);
-// orders units by their angle from mUnit (std::sort 0x2509af from 0x246254) (provisional name)
-struct EEUUAngleLess {
-    EEUUAngleLess(EEComplexUnit* inUnit) : mUnit(inUnit) {}
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
-    EEComplexUnit* mUnit;
-};
 bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint);
 void EEGetSquareRing(long inX, long inY, long inWidth, long inHeight, std::vector<U2DPoint<long> >& outTiles);
 bool EEIsCornerBlocked(unsigned long inX1, unsigned long inY1, unsigned long inX2, unsigned long inY2);

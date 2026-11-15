@@ -44,7 +44,7 @@
 #include "ee/EECPBehavior.h"
 #include "ee/EEAnimal.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEUCLandable.h"
+#include "ee/EEUnitClassKinds.h"
 
 // The obstacle wait time scale at 0x4c2374 (a long, 4000; EvaluateCondition reads it at 0x22eca0). Its owning unit
 // is not recoverable, so it is only declared here (provisional name).
@@ -113,20 +113,10 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
     return theResult;
 }
 
-// FUNCTION: EXE 0x62db0f
-// Runs the default handling of the unit's new AI-script action (animation, goals, herd, flight, healing, death,
-// rotting), then restarts the current goal's timer
-void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
-{
-    // New (R5b.4, the thirteenth round): the decision is Rust (ee_units actions.rs), its operations
-    // EEUnitUpdate.cpp's host calls
-    EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit);
-}
-
 // FUNCTION: EXE 0x62e47a
 // Tests one AI-script trigger for inUnit (its active goal may answer first); returns 0 for false, 1 for true, 2 for
 // true from an active goal that is not the current one
-long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+long EEUnitClass::BaseEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     long theResult = 0;
     bool theFlag = false;

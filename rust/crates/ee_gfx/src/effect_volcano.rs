@@ -242,7 +242,7 @@ pub unsafe fn volcano<H: Effect3DHost, R: Raster>(
 }
 
 /// `GERectangle::Load` of the area's edges.
-fn load_area<F: EffectFile>(f: &mut F, a: &mut EeGfxVolcanoArea) -> i32 {
+pub(crate) fn load_area<F: EffectFile>(f: &mut F, a: &mut EeGfxVolcanoArea) -> i32 {
     if !f.is_open() {
         return 4; // kErrorNotOpen
     }
@@ -260,7 +260,7 @@ fn load_area<F: EffectFile>(f: &mut F, a: &mut EeGfxVolcanoArea) -> i32 {
 }
 
 /// `GERectangle::Save` of the area's edges.
-fn save_area<F: EffectFile>(f: &mut F, a: &EeGfxVolcanoArea) -> i32 {
+pub(crate) fn save_area<F: EffectFile>(f: &mut F, a: &EeGfxVolcanoArea) -> i32 {
     if !f.is_open() {
         return 4; // kErrorNotOpen
     }

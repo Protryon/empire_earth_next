@@ -24,16 +24,12 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUCProjectile.h"
-#include "ee/EEUCMissile.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEUnitKind.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
-#include "ee/EEUCLandable.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/RTSWorld.h"
@@ -463,9 +459,9 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
         case EE_COMBAT_GOAL_HEAL:
             return EEHealLocationCondition(theUnit, theContext->mEvent);
         case EE_COMBAT_GOAL_TORPEDO:
-            return (uint32_t)static_cast<EEUCMissile*>(theContext->mClass)->EEUCMissile::EvaluateCondition(theUnit, theContext->mEvent);
+            return (uint32_t)theContext->mClass->MissileEvaluateCondition(theUnit, theContext->mEvent);
         default:
-            return (uint32_t)theContext->mClass->EEUnitClass::EvaluateCondition(theUnit, theContext->mEvent);
+            return (uint32_t)theContext->mClass->BaseEvaluateCondition(theUnit, theContext->mEvent);
         }
     case EE_COMBAT_READ_CAN_REACH_TILE: {
         const GE3DPoint& theTarget = static_cast<EEUGRust*>(theContext->mGoal)->GetGroundTarget();
@@ -483,13 +479,9 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
     case EE_COMBAT_READ_TARGETABLE:
         return EEUUGetIsUnitClassTargetable(theUnit, theContext->mImpact->GetUnitClass());
     case EE_COMBAT_READ_GROUND_IMPACT:
-        if (theContext->mKind == EE_COMBAT_GOAL_PROJECTILE)
-            return static_cast<EEUCProjectile*>(theContext->mClass)->CheckGroundImpact(theUnit);
-        return static_cast<EEUCMissile*>(theContext->mClass)->CheckGroundImpact(theUnit);
+        return theContext->mClass->CheckGroundImpact(theUnit);
     case EE_COMBAT_READ_WATER_IMPACT:
-        if (theContext->mKind == EE_COMBAT_GOAL_PROJECTILE)
-            return static_cast<EEUCProjectile*>(theContext->mClass)->CheckWaterImpact(theUnit);
-        return static_cast<EEUCMissile*>(theContext->mClass)->CheckWaterImpact(theUnit);
+        return theContext->mClass->CheckWaterImpact(theUnit);
     }
     return 0;
 }
@@ -645,7 +637,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_SCALE:
         return EEConditionBits(EEQueryComplex(inObject)->mPhysicalModel.GetScale());
     case EE_COMBAT_Q_SIDE_PART:
-        return EEUnitClassCast<EEUCGate>(theObject->GetUnitClass())->IsSidePart(theObject->mComplexUnit);
+        return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theObject->GetUnitClass())->IsSidePart(theObject->mComplexUnit);
     case EE_COMBAT_Q_PATH_ATTEMPTS:
         return (uint32_t)theContext->mGoal->mPathAttempts;
     case EE_COMBAT_Q_CAN_REACH_UNIT:

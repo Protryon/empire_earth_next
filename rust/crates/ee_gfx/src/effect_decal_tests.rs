@@ -109,3 +109,19 @@ fn the_particle_moves_in_the_queue_and_steps_to_the_move() {
     assert_eq!((back.particle.draw_position, back.particle.duration), (back.position, 1500.0));
     assert_eq!(back.particle.velocity, r.particle.velocity);
 }
+
+#[test]
+fn the_damage_controller_draws_and_sets_up_nothing() {
+    let mut r = EeGfxEffectRecord::new(crate::effect_state::EE_GFX_EFFECT_KIND_DAMAGED);
+    let mut h = Host::default();
+    let mut x = LogRaster::default();
+    let g = EeGfxGraphicFacts::default();
+    // SAFETY (each call): the record is live and only reached through this pointer during the call
+    unsafe {
+        assert_eq!(effect2d(EeGfxEffect3DOp::Create, &mut r, &g, &mut h, &mut x), 0);
+        assert_eq!(effect2d(EeGfxEffect3DOp::SetUp, &mut r, &g, &mut h, &mut x), 0);
+        assert_eq!(effect2d(EeGfxEffect3DOp::Queue, &mut r, &g, &mut h, &mut x), 10);
+        assert_eq!(effect2d(EeGfxEffect3DOp::DrawPass2, &mut r, &g, &mut h, &mut x), 0);
+    }
+    assert!(h.calls.is_empty() && x.calls.is_empty());
+}
