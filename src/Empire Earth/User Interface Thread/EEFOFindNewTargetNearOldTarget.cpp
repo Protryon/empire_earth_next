@@ -107,13 +107,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
-#include "ee/EEUCAmbient.h"
-#include "ee/EEUCTransport.h"
-#include "ee/EEUCLandable.h"
-#include "ee/EEUCSpaceship.h"
-#include "ee/EEUCAirplane.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEDebugTrace.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EERandomMapClass.h"
@@ -1258,7 +1252,7 @@ void EEGetTilesAround(EEComplexUnit* inUnit, EEComplexUnit* inTarget, long inX, 
         if (inArg8)
             inTarget->mUnitClass->GetSurroundingTiles(inTarget, outTiles, 1, false);
         else
-            inTarget->mUnitClass->EEUnitClass::GetSurroundingTiles(inTarget, outTiles, 1, false);
+            inTarget->mUnitClass->BaseGetSurroundingTiles(inTarget, outTiles, 1, false);
     } else {
         EEGetSquareBlockRing(inCorners, inX - inRange + 1, inY - inRange + 1, inSize + inRange * 2 - 2, outTiles, false);
     }
@@ -1516,9 +1510,9 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
             theLink = theLink->mNextPart;
         }
         if (inTarget->mUnitClass->GetCategory() == kUnitCategoryGate) {
-            EEComplexUnit* theFirst = dynamic_cast<EEUCGate*>(inTarget->mUnitClass)->GetLastLinkedCarrier(
+            EEComplexUnit* theFirst = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inTarget->mUnitClass)->GetLastLinkedCarrier(
                 theLink->GetOutermostCarrier());
-            EEComplexUnit* theSecond = dynamic_cast<EEUCGate*>(inTarget->GetUnitClass())->GetLastLinked(
+            EEComplexUnit* theSecond = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(inTarget->GetUnitClass())->GetLastLinked(
                 theFirst->GetOutermostCarrier());
             float theDistance = inUnit->DistanceSquaredTo(theFirst);
             theLink = theFirst;
@@ -2710,7 +2704,7 @@ bool EEClearUnderBuilding(long inX, long inY, long inSize)
                 if (theUnit == NULL)
                     continue;
                 EEUnitClass* theClass = theUnit->mUnitClass;
-                if (dynamic_cast<EEUCAmbient*>(theClass) == NULL || theClass->mUnitType == kUnitTypePathPoint || !theClass->mIsDeletable)
+                if (EEUnitClassOfKind<EE_CLASS_KIND_AMBIENT>(theClass) == NULL || theClass->mUnitType == kUnitTypePathPoint || !theClass->mIsDeletable)
                     continue;
                 if (theUnit->mResourceAmount != 0)
                     theUnit->mResourceAmount = 0;
@@ -3974,7 +3968,7 @@ void EEGetWallSideTiles(EEComplexUnit* inUnit, EEComplexUnit* inTarget, std::vec
     if (theClass->mCategory != kUnitCategoryGate && !theClass->mIsWall)
         return;
     if (theClass->mCategory == kUnitCategoryGate) {
-        EEUCGate* theGate = dynamic_cast<EEUCGate*>(theClass);
+        EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theClass);
         theGate->GetLastLinkedCarrier(inTarget->GetOutermostCarrier())->GetPosition(theFirst);
         theGate->GetLastLinked(inTarget->GetOutermostCarrier())->GetPosition(theSecond);
         theThird.SetX(theSecond.GetX());
@@ -4453,7 +4447,7 @@ void EEGetFootprintTiles(EEUnit* inUnit, std::vector<EETileCoordinate>& outTiles
         unsigned long theStartX = theX;
         unsigned long theStartY = theY;
         if (theClass->mUnitType == kUnitTypeAirport) {
-            EEUCBuilding* theBuilding = dynamic_cast<EEUCBuilding*>(theClass);
+            EEUnitClass* theBuilding = EEUnitClassOfKind<EE_CLASS_KIND_BUILDING>(theClass);
             switch (EEGetFacingQuarter(theX, theY)) {
             case 0:
                 theHeight = theSize * 4;

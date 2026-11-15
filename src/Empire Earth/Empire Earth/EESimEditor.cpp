@@ -180,7 +180,7 @@
 #include "ee/EESEAMouseClick.h"
 #include "lle/GEOrientation.h"
 #include "ee/EEGhostUnit.h"
-#include "ee/EEUCBuilding.h"
+#include "ee/EEUnitClassKinds.h"
 #include "lle/GE3DPlane.h"
 #include "lle/UIRadioButton.h"
 #include "ee/EEEffectManager.h"

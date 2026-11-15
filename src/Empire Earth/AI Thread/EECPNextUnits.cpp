@@ -65,8 +65,7 @@
 #include "ee/EEAIChokePoint.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEMessage.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EETeam.h"
@@ -3488,7 +3487,7 @@ bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType
 
 static bool EECPUnitsGatePiece(EEComplexUnit* c)
 {
-    return dynamic_cast<EEUCGate*>(c->GetUnitClass()) != NULL;
+    return EEUnitClassOfKind<EE_CLASS_KIND_GATE>(c->GetUnitClass()) != NULL;
 }
 
 // ai.wall(ids, type, x1, y1, x2, y2): the citizens lay a straight wall of the class between the two tiles, as a
@@ -3540,7 +3539,7 @@ static int LuaGate(lua_State* L)
     long theType = (lua_type(L, 1) == LUA_TNIL || (lua_type(L, 1) == LUA_TSTRING && strcmp(lua_tostring(L, 1), "gate") == 0))
         && me->mCivilizationManager != NULL ? me->mCivilizationManager->GetGateClass() : EECPUnitsClassArg(L, 1);
     if (theType < 0 || (unsigned long)theType >= EEUnitClassCount() || gUnitClassTable[theType] == NULL
-        || dynamic_cast<EEUCGate*>(gUnitClassTable[theType]) == NULL || !lua_isinteger(L, 2) || !lua_isinteger(L, 3))
+        || EEUnitClassOfKind<EE_CLASS_KIND_GATE>(gUnitClassTable[theType]) == NULL || !lua_isinteger(L, 2) || !lua_isinteger(L, 3))
         return EECPUnitsResult(L, kBadArgument, 0, 0);
     long x = (long)lua_tointeger(L, 2), y = (long)lua_tointeger(L, 3);
     if (gWorld.mMap == NULL || gWorld.mMap->GetTile((unsigned long)x, (unsigned long)y) == NULL)
