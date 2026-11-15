@@ -229,6 +229,40 @@ void GE3DPoint::InterpolateTo(const GE3DPoint& inPoint, float inStep, std::vecto
 
 // FUNCTION: LLE 0x1000dc23
 // Reads x, y and z from an open file; 4 when the file is not open, else the first read error
+// ---- GE2DPoint.cpp's (R4.3 part 15: the unit deleted, its component-wise members inline in the headers)
+// The side of the line inFrom-inTo this point lies on (the 2D cross product)
+float GE2DPoint::GetDirection(const GE2DPoint& inFrom, const GE2DPoint& inTo) const
+{
+    return ee_ge_2d_direction(GERust(*this), GERust(inFrom), GERust(inTo));
+}
+
+float GE2DPoint::DistanceTo(const GE2DPoint& inPoint) const { return ee_ge_2d_distance(GERust(*this), GERust(inPoint)); }
+float GE2DPoint::DistanceToSquared(const GE2DPoint& inPoint) const { return ee_ge_2d_distance_squared(GERust(*this), GERust(inPoint)); }
+float GE3DPoint::DistanceTo(const GE3DPoint& inPoint) const { return ee_ge_3d_distance(GERust(*this), GERust(inPoint)); }
+float GE3DPoint::DistanceToSquared(const GE3DPoint& inPoint) const { return ee_ge_3d_distance_squared(GERust(*this), GERust(inPoint)); }
+
+// Points every inStep along the segment to inPoint, always ending with inPoint itself
+void GE2DPoint::InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const
+{
+    GE2DPoint theFrom(*this);
+    GE2DPoint theTo(inPoint);   // copies: either may be an element of outPoints
+    outPoints.clear();
+    ee_ge_2d_interpolate(GERust(theFrom), GERust(theTo), inStep, GERustPush2D, &outPoints);
+}
+
+// x and y from (to) an open file; 4 when the file is not open, else the first read (write) error
+long GE2DPoint::Load(FSFile& inFile)
+{
+    const float* theFields[] = {&this->mX, &this->mY};
+    return GERustFields(inFile, theFields, 2, inFile.GetIsOpen(), false, false);
+}
+
+long GE2DPoint::Save(FSFile& inFile)
+{
+    const float* theFields[] = {&this->mX, &this->mY};
+    return GERustFields(inFile, theFields, 2, inFile.GetIsOpen(), true, false);
+}
+
 long GE3DPoint::Load(FSFile& inFile)
 {
     const float* theFields[] = {&this->mX, &this->mY, &this->mZ};

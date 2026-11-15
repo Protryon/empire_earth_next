@@ -8,7 +8,6 @@
 09ec5 0a843 File System/FSMemoryFile.cpp
 0a843 0bdb4 File System/FSPath.cpp
 0bdb4 0c129 File System/FSPersistentList.cpp
-0c129 0cb72 Graphics Engine/GE2DPoint.cpp
 0cb72 0d24d Graphics Engine/GE3DLine.cpp
 0d24d 0d56f Graphics Engine/GE3DPlane.cpp
 0d56f 0dd9e Graphics Engine/GE3DPoint.cpp
@@ -40,7 +39,6 @@
 367fc 3680c Graphics Engine/GEVertexArray.cpp
 3680c 38020 Graphics Engine/GEViewport.cpp
 38020 38527 Graphics Engine/GEWindow.cpp
-38527 38abf Graphics Engine/Graphics Engine.cpp
 38abf 39715 Input System/Input System.cpp
 3e05c 40123 Network Engine/NEMessage.cpp
 45c00 47301 Network Engine/NESynchronousClient.cpp
