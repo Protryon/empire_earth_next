@@ -48,30 +48,30 @@ private:
 // virtual slots and completions, and the steps that are C++ alone.
 class LanLogic : public NetLogic {
 public:
-    LanLogic(); // 0x7dfc00
+    LanLogic();
     int GetRoomSpec() const { return 8; }
-    virtual ~LanLogic(); // 0x7dfef0
-    virtual void InitComponent(ComponentConfig* inConfig); // 0x7e00a0
-    virtual void HandleControlEvent(int inControlId); // 0x7e2760
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // 0x7e27c0
-    virtual bool HostGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::HostGame, inGame) != 0; } // 0x7e37a0
-    virtual bool JoinGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::JoinGame, inGame) != 0; } // 0x7e3d20
-    virtual LobbyClient* GetMyClient() { return this->mMyClient.get(); } // 0x7e0180
-    virtual void SendToCaptain(const ByteBuffer* inBuffer) // 0x7e1c30
+    virtual ~LanLogic();
+    virtual void InitComponent(ComponentConfig* inConfig);
+    virtual void HandleControlEvent(int inControlId);
+    virtual void HandleComponentEvent(ComponentEvent* inEvent);
+    virtual bool HostGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::HostGame, inGame) != 0; }
+    virtual bool JoinGame(LobbyGame* inGame) { return this->Call(EeWonLanCall::JoinGame, inGame) != 0; }
+    virtual LobbyClient* GetMyClient() { return this->mMyClient.get(); }
+    virtual void SendToCaptain(const ByteBuffer* inBuffer)
     { this->CallMessage(EeWonLanCall::SendToCaptain, inBuffer, NULL); }
-    virtual void BroadcastToGame(const ByteBuffer* inBuffer) // 0x7e1cf0
+    virtual void BroadcastToGame(const ByteBuffer* inBuffer)
     { this->CallMessage(EeWonLanCall::BroadcastToGame, inBuffer, NULL); }
-    virtual void SendToClient(LobbyClient* inClient, const ByteBuffer* inBuffer) // 0x7e1db0
+    virtual void SendToClient(LobbyClient* inClient, const ByteBuffer* inBuffer)
     { this->CallMessage(EeWonLanCall::SendToClient, inBuffer, inClient); }
-    virtual void AdvertiseGame(LobbyGame* inGame) { this->Call(EeWonLanCall::AdvertiseGame, inGame); } // 0x7e45c0
-    virtual void RemoveGameAdvertisement(LobbyGame* inGame) // 0x7e45e0
+    virtual void AdvertiseGame(LobbyGame* inGame) { this->Call(EeWonLanCall::AdvertiseGame, inGame); }
+    virtual void RemoveGameAdvertisement(LobbyGame* inGame)
     { this->Call(EeWonLanCall::RemoveGameAdvertisement, inGame); }
-    virtual void KickClient(LobbyClient* inClient, bool) { this->Call(EeWonLanCall::KickClient, NULL, inClient); } // 0x7e4590
+    virtual void KickClient(LobbyClient* inClient, bool) { this->Call(EeWonLanCall::KickClient, NULL, inClient); }
     virtual void SetGameInProgress(bool) {} // empty: the shared one-argument stub at 0x6fa500
-    virtual void LeaveGame(LobbyGame*) { this->Call(EeWonLanCall::LeaveGame); } // 0x7e45b0
+    virtual void LeaveGame(LobbyGame*) { this->Call(EeWonLanCall::LeaveGame); }
     virtual void Suspend() {} // empty: the shared no-argument stub at 0x8142a0
-    virtual void Resume(); // 0x7e5900
-    virtual void Logout() { this->Call(EeWonLanCall::Logout); } // 0x7e5910
+    virtual void Resume();
+    virtual void Logout() { this->Call(EeWonLanCall::Logout); }
     LobbyClientList* GetClientList() { return this->mClients.get(); }
     intptr_t Call(EeWonLanCall inCall, void* inA = NULL, void* inB = NULL, intptr_t inC = 0)
     { return ee_won_lan_call(this->mRust, inCall, inA, inB, inC, 0); }
@@ -84,7 +84,7 @@ public:
     void HandleDiscoveryRecv(AsyncOp* inOp) { this->Call(EeWonLanCall::DiscoveryRecv, inOp); }
     void HandleAccept(AsyncOp* inOp) { this->Call(EeWonLanCall::Accept, inOp); }
     // the steps that are C++ alone (the host's ops)
-    void HandlePeerAuthDone(AsyncOp* inOp); // 0x7e1600
+    void HandlePeerAuthDone(AsyncOp* inOp);
     void AddPendingSocket(LobbyLanSocket* inSocket);
     void StartNetworkTimer();
     void StartDiscoveryTimer();

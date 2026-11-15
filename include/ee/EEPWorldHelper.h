@@ -14,8 +14,8 @@ class EEWorld;
 
 class EEPWorldHelper : public FSPersistent {
 public:
-    EEPWorldHelper();                                                           // 0x14c151
-    EEPWorldHelper(EEWorld& inWorld);                                           // 0x14c1e2
+    EEPWorldHelper();
+    EEPWorldHelper(EEWorld& inWorld);
     // implicit virtual dtor: ??_G +0x10 0x14c1bc
     virtual void GetChecksum(ESChecksum& ioChecksum) const;                     // +0x00 (empty: ICF-folded 0x157269)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x14c2bd

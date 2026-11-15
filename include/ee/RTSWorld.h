@@ -26,7 +26,7 @@ struct RTSWorldUnitEntry {
 
 class RTSWorld {
 public:
-    RTSWorld();                             // 0x147dfd
+    RTSWorld();
     // RTSWorld.cpp's non-virtual members (provisional names unless stated)
     long GetPlayerIndex(EEPlayer* inPlayer);    // 0x148024: index in mPlayers[0..mNumPlayers), -1 if none
     unsigned long GetNumPlayers() const { return this->mNumPlayers; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)

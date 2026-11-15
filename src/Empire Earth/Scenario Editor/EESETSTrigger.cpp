@@ -92,12 +92,7 @@
 #include "ee/EESMTConditionWrapper.h"
 #include "ee/EESMTEffectWrapper.h"
 
-// FUNCTION: EXE 0x595c35
-// Creates a trigger combo box whose right click opens the picked entry's tab (kind: condition or effect)
-// EESETSTriggerUIComboBox::EESETSTriggerUIComboBox (inline, ee/EESETSTriggerUIComboBox.h)
-
 // NEAR: register choice (the original keeps this in edi and the selection in a stack slot) and the screen via the refused vector operator[]
-// FUNCTION: EXE 0x595cb5
 // Opens the tab of the entry picked in the combo box on a right click and selects it there: triggers,
 // conditions (object conditions go to the object tab), effects, objects or areas
 long EESETSTriggerUIComboBox::MouseRButtonUp()
@@ -195,13 +190,6 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     return 0;
 }
 
-// SYNTHETIC: EXE 0x595f98
-// (EESETSTriggerUIComboBox's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x595fc2
-// (EESETSTrigger's scalar deleting destructor)
-
-
 // The trigger screen whole in Rust (ee_screens editor_trigger.rs): the constructor (0x59393b), the destructor
 // (0x595fde), Sort, MoveDown, MoveUp, Delete, UpdateSecondConditionRow, UpdateSecondEffectRow, Duplicate, Activate,
 // Store (0x596415), ChangeOperator, GetNames, Hide, Load (0x596785), New, RemoveEntry, ShowOperator, Show and the
@@ -210,7 +198,6 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x59393b
 // Builds the trigger sub-screen: if/then labels, two condition and two effect rows (not, combo, and/or,
 // delay, remove), scroll buttons and the is-on, condition timer, looping and cinematic check boxes (editor_trigger.rs)
 EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -221,7 +208,6 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x595fde
 // Destroys the trigger sub-screen's controls and releases its operator event (editor_trigger.rs)
 EESETSTrigger::~EESETSTrigger()
 {
@@ -252,8 +238,6 @@ void EESETSTrigger::DecrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP
 void EESETSTrigger::IncrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 3); }
 void EESETSTrigger::GetNames(std::vector<UWideString>& outNames) { ee_screens_setr_get_names(this->mRust, &outNames); }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESETSTrigger::Deactivate()
 {
 }

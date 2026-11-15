@@ -34,14 +34,8 @@ float EEJitterHeading(float inAngle, float inMin, float inMax);
 
 
 const UString kWheelName("wheel");
-const float kMinimumWheelDistance = 0.1f;   // 0x449ae8
-// the trade price curve's two words (0x449af8, 0x449afc) are ee_netmsg's (execute.rs)
-// SYNTHETIC: EXE 0x63c83a   (wrapper)
-// SYNTHETIC: EXE 0x63c844   (ctor)
-// SYNTHETIC: EXE 0x63c855   (registrar)
-// SYNTHETIC: EXE 0x63c861   (dtor)
+const float kMinimumWheelDistance = 0.1f;
 
-// FUNCTION: EXE 0x63c86c
 // Creates a wheel for a model part, its radius half the part's bounding-box height, unturned
 EEWheel::EEWheel(GEModel* inModel)
 {
@@ -50,10 +44,6 @@ EEWheel::EEWheel(GEModel* inModel)
     this->mAngle = 0.0f;
 }
 
-// SYNTHETIC: EXE 0x63c895
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x63c8b1
 // Creates a copy of a wheel (model part, radius and angle)
 EEWheel::EEWheel(const EEWheel& inWheel)
 {
@@ -62,20 +52,17 @@ EEWheel::EEWheel(const EEWheel& inWheel)
     this->mAngle = inWheel.mAngle;
 }
 
-// FUNCTION: EXE 0x63c8d2
 // Destroys the wheel (nothing to release)
 EEWheel::~EEWheel()
 {
 }
 
-// FUNCTION: EXE 0x63c8d9
 // Returns whether a model part is a wheel (its name starts with "wheel", any case)
 bool EEIsWheelModel(GEModel* inModel)
 {
     return inModel->GetName().EqualsIgnoreCase(kWheelName, kWheelName.GetLength());
 }
 
-// FUNCTION: EXE 0x63c8ff
 // Rolls the wheel back by the unit's travel this tick (speed or turn rate, whichever is the larger share of its top)
 // over its scaled radius, in physics actions 0, 4 and 5 above a tenth of the top; wraps the angle by a full turn
 void EEWheel::Update(EEComplexUnit* inUnit)
@@ -101,7 +88,6 @@ void EEWheel::Update(EEComplexUnit* inUnit)
         this->mAngle += 2.0f * 3.1415927f;
 }
 
-// FUNCTION: EXE 0x63c9d9
 // Returns the unit's attack animation set: 0xb for the special attack of Roman Legionnaires and capital ships,
 // 8 when it fires high over walls, else 0
 long EEGetAttackFrameSet(EEComplexUnit* inUnit)
@@ -116,7 +102,6 @@ long EEGetAttackFrameSet(EEComplexUnit* inUnit)
     return 0;
 }
 
-// FUNCTION: EXE 0x63ca26
 // Replaces a target the unit can't reach: with its position when that is reachable, else with a reachable spot up to
 // 9 tiles away, halved toward the target to within half a tile (the unit's position when none is found)
 void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget)
@@ -162,7 +147,6 @@ void EEFindLandingPoint(EEComplexUnit* inUnit, GE3DPoint* ioTarget)
     ioTarget->SetY(theY);
 }
 
-// FUNCTION: EXE 0x63cc42
 // Returns a resource's market price (1..1000) from the world table's rate and the player's trade balance in it;
 // 1 lower when inBuy is set, else 1 higher
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy)
@@ -178,7 +162,6 @@ long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy)
     return (long)ee_netmsg_trade_price(theRate, theTrade, inBuy);   // the price curve (ee_netmsg execute.rs)
 }
 
-// FUNCTION: EXE 0x63cd32
 // Picks a point 4..12 tiles from the unit along its goal-to-unit heading (+-20 degrees) on its land continent, up to
 // 13 tries; returns whether found, else writes its position ((0, 0) when it has no goal)
 // cdecl with a real GE2DPoint output: EEComplexUnit::FleeAfterCalamity and 0xbaab pass one (provisional name)
@@ -213,7 +196,6 @@ bool EEGetRandomPointAhead(EEComplexUnit* inUnit, GE2DPoint* outPoint)
     return theFound;
 }
 
-// FUNCTION: EXE 0x63cea6
 // Returns the unit type of the player's farms: 0x33a once the robotic farm upgrade is researched, else 0x2a
 long EEGetFarmType(EEPlayer* inPlayer)
 {

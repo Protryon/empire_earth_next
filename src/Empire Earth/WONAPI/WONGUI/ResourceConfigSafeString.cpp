@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 using namespace WONAPI;
-// FUNCTION: WON 0x007a2680
 // Returns the named entry of a resource map, or throws "<type> resource not found: <key> (ResourceGroup: <group>)"
 // (this address holds the string instance; the image and sound instances follow at 0x007a27f0 and 0x007a2960)
 template<class Map>
@@ -27,20 +26,17 @@ static typename Map::mapped_type::first_type& ResourceConfig_SafeGetRes(
         typeName,key.c_str(),config->mName.c_str());
     throw ConfigObjectException(text);
 }
-// FUNCTION: WON 0x00793890
 // Returns the named string resource; throws when it is missing
 const GUIString& ResourceConfig::SafeGetString(const std::string& key)
 {
     return ResourceConfig_SafeGetRes("String",key,this->mStringMap,this);
 }
 
-// FUNCTION: WON 0x007938b0
 // Returns the named image resource; throws when it is missing
 Image* ResourceConfig::SafeGetImage(const std::string& key)
 {
     return ResourceConfig_SafeGetRes("Image",key,this->mImageMap,this).get();
 }
-// FUNCTION: WON 0x007938d0
 // Returns the named sound resource; throws when it is missing
 Sound* ResourceConfig::SafeGetSound(const std::string& key)
 {
@@ -69,9 +65,3 @@ int ResourceConfig::SafeGetInt(const std::string &theKey)
 {
 	return ResourceConfig_SafeGetRes("Int",theKey,this->mIntMap,this);
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007a27f0
-// (class WONAPI::SmartPtr<class WONAPI::Image> & __cdecl ResourceConfig_SafeGetRes(char const *,class std::basic_string<char,struct std::char_traits<char)
-// TEMPLATE: WON 0x007a2960
-// (class WONAPI::SmartPtr<class WONAPI::Sound> & __cdecl ResourceConfig_SafeGetRes(char const *,class std::basic_string<char,struct std::char_traits<char)

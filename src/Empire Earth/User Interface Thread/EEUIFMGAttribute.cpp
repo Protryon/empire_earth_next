@@ -12,7 +12,6 @@
 #include "ee/EEUIBUpgrade.h"
 #include "ee/EEUIFMGAttribute.h"
 
-// FUNCTION: EXE 0x66783d
 // Creates the main game form's attribute upgrade button with a level text in its corner
 EEUIFMGAttribute::EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERectangle& inRectangle,
                                    unsigned long inIndex, unsigned long inId, const GEColor& inTextColor,
@@ -28,17 +27,12 @@ EEUIFMGAttribute::EEUIFMGAttribute(GEFont* inFont, UIForm* inForm, const GERecta
                             this->GetRectangle().GetTop() + this->GetBorderThickness() * 2.0f);
 }
 
-// SYNTHETIC: EXE 0x667920
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMGAttribute+0x0)
-
-// FUNCTION: EXE 0x66793c
 // Destroys the attribute button and its level text
 EEUIFMGAttribute::~EEUIFMGAttribute()
 {
     delete this->mLevelText;
 }
 
-// FUNCTION: EXE 0x667972
 // Snapshots the button for drawing; shows the number of queued upgrades as its level text
 long EEUIFMGAttribute::CopyData()
 {
@@ -53,7 +47,6 @@ long EEUIFMGAttribute::CopyData()
     return theResult;
 }
 
-// FUNCTION: EXE 0x6679e3
 // Draws the button and, when shown, its level text
 long EEUIFMGAttribute::DrawTextA()
 {
@@ -68,7 +61,6 @@ long EEUIFMGAttribute::DrawTextA()
     return theResult;
 }
 
-// FUNCTION: EXE 0x667a6b
 // Returns the icon's rectangle: the whole button, or a 17-pixel strip at its left in free camera mode
 GERectangle EEUIFMGAttribute::GetIconRectangle() const
 {

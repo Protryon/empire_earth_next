@@ -20,23 +20,17 @@
 #include "ee/EECampaignFormManager.h"
 #include "ee/EECampaignEditorBehavior.h"
 #include "ee/EEStringIDs.h"
-// FUNCTION: EXE 0x68d82d
 // Creates the campaign editor's model with an empty campaign, not new and not edited
 EECampaignEditorBehavior::EECampaignEditorBehavior()
     : mIsNew(false), mPasswordEntered(false)
 {
 }
 
-// SYNTHETIC: EXE 0x68d885
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x68d8a1
 // Destroys the campaign editor's model
 EECampaignEditorBehavior::~EECampaignEditorBehavior()
 {
 }
 
-// FUNCTION: EXE 0x68d8d6
 // Moves an available scenario to the end of the campaign's scenario list and marks the campaign edited; returns
 // whether it was available
 bool EECampaignEditorBehavior::AddScenario(const UWideString& inScenario)
@@ -56,7 +50,6 @@ bool EECampaignEditorBehavior::AddScenario(const UWideString& inScenario)
     return theResult;
 }
 
-// FUNCTION: EXE 0x68d98b
 // Moves a campaign scenario by a number of places in the list and marks the campaign edited; returns false when it
 // is not in the campaign or the new place is out of range
 bool EECampaignEditorBehavior::MoveScenario(const UWideString& inScenario, long inDelta)
@@ -89,7 +82,6 @@ bool EECampaignEditorBehavior::MoveScenario(const UWideString& inScenario, long 
     return theResult;
 }
 
-// FUNCTION: EXE 0x68dadc
 // Starts a new campaign: default name, author, e-mail and description texts, no scenarios, no password; returns
 // the first string-table error
 long EECampaignEditorBehavior::New()
@@ -122,7 +114,6 @@ long EECampaignEditorBehavior::New()
     return theResult;
 }
 
-// FUNCTION: EXE 0x68dbfc
 // Deletes a campaign file from the campaigns directory and drops it from the campaign list; returns whether it
 // worked, with an error text otherwise
 bool EECampaignEditorBehavior::Delete(const UWideString& inName, UWideString& outError)
@@ -149,21 +140,18 @@ bool EECampaignEditorBehavior::Delete(const UWideString& inName, UWideString& ou
     return theResult;
 }
 
-// FUNCTION: EXE 0x68dd83
 // Returns the names of the campaigns on disk
 void EECampaignEditorBehavior::GetScenarios(std::vector<UWideString>& outScenarios)
 {
     outScenarios = this->mScenarios;
 }
 
-// FUNCTION: EXE 0x68dd96
 // Returns the scenarios that are not in the campaign
 void EECampaignEditorBehavior::GetAvailableScenarios(std::vector<UWideString>& outScenarios)
 {
     outScenarios = this->mAvailableScenarios;
 }
 
-// FUNCTION: EXE 0x68dda9
 // Returns whether the campaign may be edited: it is new, has no password, or the entered password matches
 bool EECampaignEditorBehavior::GetIsUnlocked()
 {
@@ -174,63 +162,54 @@ bool EECampaignEditorBehavior::GetIsUnlocked()
     return theResult;
 }
 
-// FUNCTION: EXE 0x68de0c
 // Returns the campaign's background image name
 const UWideString& EECampaignEditorBehavior::GetBackgroundImage()
 {
     return this->mCampaign.GetBackgroundImage();
 }
 
-// FUNCTION: EXE 0x68de14
 // Returns the civilization the campaign requires
 const UWideString& EECampaignEditorBehavior::GetRequiredCiv()
 {
     return this->mCampaign.GetRequiredCiv();
 }
 
-// FUNCTION: EXE 0x68de1c
 // Returns the campaign's scenario names
 void EECampaignEditorBehavior::GetCampaignScenarios(std::vector<UWideString>& outScenarios)
 {
     outScenarios = this->mCampaign.GetScenarios();
 }
 
-// FUNCTION: EXE 0x68de31
 // Returns the author's e-mail address
 UWideString EECampaignEditorBehavior::GetAuthorEmail()
 {
     return this->mCampaign.GetAuthorEmail();
 }
 
-// FUNCTION: EXE 0x68de4b
 // Returns the author's name
 UWideString EECampaignEditorBehavior::GetAuthorName()
 {
     return this->mCampaign.GetAuthorName();
 }
 
-// FUNCTION: EXE 0x68de65
 // Returns the campaign description
 UWideString EECampaignEditorBehavior::GetDescription()
 {
     return this->mCampaign.GetDescription();
 }
 
-// FUNCTION: EXE 0x68de7f
 // Returns the campaign name
 UWideString EECampaignEditorBehavior::GetName()
 {
     return this->mCampaign.GetCampaignName();
 }
 
-// FUNCTION: EXE 0x68de99
 // Lists the campaign's scenario files with their media; returns whether all were found
 bool EECampaignEditorBehavior::GetScenarioList(std::vector<UWideString>& outScenarios, UWideString& outError)
 {
     return this->mCampaign.ListScenarioFiles(outScenarios, outError, false, false);
 }
 
-// FUNCTION: EXE 0x68deb0
 // Rescans the user campaigns and the scenarios not in the campaign (sorted); warns once when a campaign scenario on
 // disk differs from its archived copy; returns true
 bool EECampaignEditorBehavior::Reset()
@@ -333,7 +312,6 @@ bool EECampaignEditorBehavior::Reset()
     return true;
 }
 
-// FUNCTION: EXE 0x68e655
 // Moves a campaign scenario back to the sorted available list and marks the campaign edited; returns whether it
 // was in the campaign
 bool EECampaignEditorBehavior::RemoveScenario(const UWideString& inScenario)
@@ -353,7 +331,6 @@ bool EECampaignEditorBehavior::RemoveScenario(const UWideString& inScenario)
     return theResult;
 }
 
-// FUNCTION: EXE 0x68e736
 // Validates and saves the campaign with the entered password, then rescans the lists; returns whether it worked
 bool EECampaignEditorBehavior::Save(UWideString& outError)
 {
@@ -369,7 +346,6 @@ bool EECampaignEditorBehavior::Save(UWideString& outError)
     return theResult;
 }
 
-// FUNCTION: EXE 0x68e77a
 // Loads a campaign by name (checking its scenarios exist) and rescans the lists, locked until its password is
 // entered; returns whether it worked
 bool EECampaignEditorBehavior::Load(const UWideString& inName, UWideString& outError)
@@ -387,42 +363,36 @@ bool EECampaignEditorBehavior::Load(const UWideString& inName, UWideString& outE
     return theResult;
 }
 
-// FUNCTION: EXE 0x68e7f7
 // Sets the campaign author's e-mail address
 void EECampaignEditorBehavior::SetAuthorEmail(const UWideString& inText)
 {
     this->mCampaign.SetAuthorEmail(inText);
 }
 
-// FUNCTION: EXE 0x68e806
 // Sets the campaign author's name
 void EECampaignEditorBehavior::SetAuthorName(const UWideString& inText)
 {
     this->mCampaign.SetAuthorName(inText);
 }
 
-// FUNCTION: EXE 0x68e815
 // Sets the campaign's background image name
 void EECampaignEditorBehavior::SetBackgroundImage(const UWideString& inText)
 {
     this->mCampaign.SetBackgroundImage(inText);
 }
 
-// FUNCTION: EXE 0x68e824
 // Sets the campaign description
 void EECampaignEditorBehavior::SetDescription(const UWideString& inText)
 {
     this->mCampaign.SetCampaignDescription(inText);
 }
 
-// FUNCTION: EXE 0x68e833
 // Sets the campaign name
 void EECampaignEditorBehavior::SetName(const UWideString& inText)
 {
     this->mCampaign.SetCampaignName(inText);
 }
 
-// FUNCTION: EXE 0x68e842
 // Sets the entered password and marks the campaign edited
 void EECampaignEditorBehavior::SetPassword(const UWideString& inPassword)
 {
@@ -430,14 +400,12 @@ void EECampaignEditorBehavior::SetPassword(const UWideString& inPassword)
     this->mPasswordEntered = true;
 }
 
-// FUNCTION: EXE 0x68e860
 // Sets the civilization the campaign requires
 void EECampaignEditorBehavior::SetRequiredCiv(const UWideString& inText)
 {
     this->mCampaign.SetRequiredCiv(inText);
 }
 
-// FUNCTION: EXE 0x68e86f
 // Checks that the campaign has a name; returns false with an error text otherwise
 bool EECampaignEditorBehavior::ValidateName(UWideString& outError)
 {
@@ -450,7 +418,6 @@ bool EECampaignEditorBehavior::ValidateName(UWideString& outError)
     return theResult;
 }
 
-// FUNCTION: EXE 0x68e8c7
 // Checks the campaign's name, other settings and scenario list; returns false with the first error text otherwise
 bool EECampaignEditorBehavior::Validate(UWideString& outError)
 {
@@ -460,14 +427,12 @@ bool EECampaignEditorBehavior::Validate(UWideString& outError)
     return theResult;
 }
 
-// ICF-FOLDED: EXE 0x4b3257
 // Accepts any other campaign setting (`return true`: folded into an identical function elsewhere)
 bool EECampaignEditorBehavior::ValidateOther(UWideString& outError)
 {
     return true;
 }
 
-// FUNCTION: EXE 0x68e8fe
 // Checks that the campaign has at least one scenario; returns false with an error text otherwise
 bool EECampaignEditorBehavior::ValidateScenarios(UWideString& outError)
 {
@@ -480,39 +445,3 @@ bool EECampaignEditorBehavior::ValidateScenarios(UWideString& outError)
         gResource->GetString(IDS_CAMPAIGN_MUST_HAVE_AT_LEAST, outError);
     return theResult;
 }
-
-// The template COMDATs of the unit, in the original's order (std::sort of vector<UWideString>, then erase):
-// TEMPLATE: EXE 0x68e967
-// (std::sort)
-// TEMPLATE: EXE 0x68ea12
-// (std::_Insertion_sort)
-// TEMPLATE: EXE 0x68ea37
-// (std::_Sort)
-// TEMPLATE: EXE 0x68eafc
-// (std::_Unguarded_insertion_sort)
-// TEMPLATE: EXE 0x68eb39
-// (std::_Insertion_sort_1)
-// TEMPLATE: EXE 0x68ebff
-// (std::make_heap)
-// TEMPLATE: EXE 0x68ec39
-// (std::sort_heap)
-// TEMPLATE: EXE 0x68ec6f
-// (std::_Unguarded_partition)
-// TEMPLATE: EXE 0x68ed89
-// (std::_Unguarded_insert)
-// TEMPLATE: EXE 0x68edde
-// (std::_Make_heap)
-// TEMPLATE: EXE 0x68ee39
-// (std::pop_heap)
-// TEMPLATE: EXE 0x68ee5e
-// (std::_Adjust_heap)
-// TEMPLATE: EXE 0x68ef01
-// (std::_Pop_heap_0)
-// TEMPLATE: EXE 0x68ef6e
-// (std::_Push_heap)
-// TEMPLATE: EXE 0x68efe1
-// (std::_Pop_heap)
-// TEMPLATE: EXE 0x68f02d
-// (vector<UWideString>::erase(iterator))
-// TEMPLATE: EXE 0x68f0a1
-// (std::copy)

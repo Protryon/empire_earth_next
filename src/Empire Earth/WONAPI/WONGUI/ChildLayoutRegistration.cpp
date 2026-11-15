@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006f61d0
 // Adds a child layout instruction to a group; group 0 is enabled and applied at once, other groups start disabled
 // (the statements are the Rust layout manager's, R6 WON round 31)
 void Container::AddChildLayout(ChildLayoutInstructionBase* theInstr, int theId)
@@ -23,7 +22,6 @@ void Container::AddChildLayout(ChildLayoutInstructionBase* theInstr, int theId)
 #include "ee/wonapi/WONLobbyLayout.h"
 namespace WONAPI {
 // The SDK's AddChildLayout overload for one child component
-// FUNCTION: WON 0x006f6140
 // Adds a layout instruction placing a child relative to a reference component (flags, offsets, size)
 // to a layout group
 void Container::Fn2F6140(Component* child,int flags,Component* reference,

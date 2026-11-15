@@ -43,7 +43,6 @@ static void init_source(j_decompress_ptr cinfo)
 }
 static void term_source(j_decompress_ptr) {}
 
-// FUNCTION: WON 0x007d2b30
 // Refills the libjpeg input buffer with up to 4 KB from the file reader; at end of data, errors on an empty file
 // or warns and inserts a fake end-of-image marker
 static boolean fill_input_buffer(j_decompress_ptr cinfo)
@@ -63,7 +62,6 @@ static boolean fill_input_buffer(j_decompress_ptr cinfo)
     source->start_of_file=FALSE;
     return TRUE;
 }
-// FUNCTION: WON 0x007d2ba0
 // Skips input bytes, first from the buffer, then by skipping the rest in the file reader
 static void skip_input_data(j_decompress_ptr cinfo,long bytes)
 {
@@ -77,7 +75,6 @@ static void skip_input_data(j_decompress_ptr cinfo,long bytes)
         source->mReader->SkipBytes(bytes);
     }
 }
-// FUNCTION: WON 0x007d2ac0
 // Sets up a libjpeg source manager that reads from a FileReader (allocated once per decompressor)
 void jpeg_filereader_src(j_decompress_ptr cinfo,WONAPI::FileReader* reader)
 {
@@ -96,7 +93,6 @@ void jpeg_filereader_src(j_decompress_ptr cinfo,WONAPI::FileReader* reader)
 }}
 using namespace WONJPG;
 namespace WONAPI {
-// FUNCTION: WON 0x007d2a20
 // Registers one JPEG decoder with a multi-decoder for the jpg, jpe, jpeg and pjpeg extensions
 void JPGDecoder::Add(MultiImageDecoder* decoder)
 {
@@ -106,11 +102,9 @@ void JPGDecoder::Add(MultiImageDecoder* decoder)
     decoder->AddDecoder(jpg,"jpeg");
     decoder->AddDecoder(jpg,"pjpeg");
 }
-// FUNCTION: WON 0x007d2f50
 // Creates a new JPEG decoder
 ImageDecoder* JPGDecoder::Duplicate() { return new JPGDecoder; }
 
-// FUNCTION: WON 0x007d2bf0
 // Reads the JPEG header to get the image size; false on a libjpeg error
 bool JPGDecoder::DoGetAttrib(ImageAttributes& attributes)
 {
@@ -132,7 +126,6 @@ bool JPGDecoder::DoGetAttrib(ImageAttributes& attributes)
     return true;
 }
 
-// FUNCTION: WON 0x007d2cd0
 // Decodes the JPEG into a 32-bit raw image (greyscale expanded to RGB); NULL on a libjpeg error, leaking any
 // image already allocated
 SmartPtr<RawImage> JPGDecoder::DoDecodeRaw()
@@ -178,12 +171,3 @@ SmartPtr<RawImage> JPGDecoder::DoDecodeRaw()
     return image.get();
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007d2b20
-// (_init_source)
-// TEMPLATE: WON 0x007d2cb0
-// (_my_error_exit)
-// TEMPLATE: WON 0x007d2fa0
-// TEMPLATE: WON 0x007d2fc0
-// TEMPLATE: WON 0x007d2be0

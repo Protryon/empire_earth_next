@@ -68,7 +68,6 @@ METHODDEF(boolean) compress_output
 #endif
 
 
-// FUNCTION: JPEG 0x10091191
 LOCAL(void)
 start_iMCU_row (j_compress_ptr cinfo)
 /* Reset within-iMCU-row counters for a new row */
@@ -97,7 +96,6 @@ start_iMCU_row (j_compress_ptr cinfo)
  * Initialize for a processing pass.
  */
 
-// FUNCTION: JPEG 0x100910ff
 METHODDEF(void)
 start_pass_coef (j_compress_ptr cinfo, J_BUF_MODE pass_mode)
 {
@@ -141,7 +139,6 @@ start_pass_coef (j_compress_ptr cinfo, J_BUF_MODE pass_mode)
  * which we index according to the component's SOF position.
  */
 
-// FUNCTION: JPEG 0x100911d1
 METHODDEF(boolean)
 compress_data (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
 {
@@ -244,7 +241,6 @@ compress_data (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
  * at the scan-dependent variables (MCU dimensions, etc).
  */
 
-// FUNCTION: JPEG 0x100913bd
 METHODDEF(boolean)
 compress_first_pass (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
 {
@@ -341,7 +337,6 @@ compress_first_pass (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
  * NB: input_buf is ignored; it is likely to be a NULL pointer.
  */
 
-// FUNCTION: JPEG 0x100915a1
 METHODDEF(boolean)
 compress_output (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
 {
@@ -406,7 +401,6 @@ compress_output (j_compress_ptr cinfo, JSAMPIMAGE input_buf)
  * Initialize coefficient buffer controller.
  */
 
-// FUNCTION: JPEG 0x1009104e
 GLOBAL(void)
 jinit_c_coef_controller (j_compress_ptr cinfo, boolean need_full_buffer)
 {

@@ -15,10 +15,9 @@ class GEBitmap;
 
 class EEUIMiniMap : public UIControl {
 public:
-    // 0x275459 (ret 0x14)
     EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
                 unsigned long inBorderThickness);
-    virtual ~EEUIMiniMap();                 // 0x275547 (??_G 0x27552b)
+    virtual ~EEUIMiniMap();
     virtual long CopyData();                // +0x14 0x275585
     virtual long DrawPolygons();            // +0x18 0x275ba1
     virtual void SetLocation(const GE2DPoint& inLocation);  // +0x6c 0x2761f6

@@ -66,9 +66,7 @@ const char * const jpeg_std_message_table[] = {
  * or jpeg_destroy) at some point.
  */
 
-// FUNCTION: JPEG 0x10087475
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x805f70
 error_exit (j_common_ptr cinfo)
 {
   /* Always display the message */
@@ -96,9 +94,7 @@ error_exit (j_common_ptr cinfo)
  * not just not use this routine.
  */
 
-// FUNCTION: JPEG 0x10087491
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x805f90
 output_message (j_common_ptr cinfo)
 {
   char buffer[JMSG_LENGTH_MAX];
@@ -128,9 +124,7 @@ output_message (j_common_ptr cinfo)
  * or change the policy about which messages to display.
  */
 
-// FUNCTION: JPEG 0x100874ca
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x805fd0
 emit_message (j_common_ptr cinfo, int msg_level)
 {
   struct jpeg_error_mgr * err = cinfo->err;
@@ -159,9 +153,7 @@ emit_message (j_common_ptr cinfo, int msg_level)
  * Few applications should need to override this method.
  */
 
-// FUNCTION: JPEG 0x100874fb
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x806010
 format_message (j_common_ptr cinfo, char * buffer)
 {
   struct jpeg_error_mgr * err = cinfo->err;
@@ -216,9 +208,7 @@ format_message (j_common_ptr cinfo, char * buffer)
  * this method if it has additional error processing state.
  */
 
-// FUNCTION: JPEG 0x10087595
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x8060c0
 reset_error_mgr (j_common_ptr cinfo)
 {
   cinfo->err->num_warnings = 0;
@@ -237,9 +227,7 @@ reset_error_mgr (j_common_ptr cinfo)
  * after which the application may override some of the methods.
  */
 
-// FUNCTION: JPEG 0x10087429
 GLOBAL(struct jpeg_error_mgr *)
-// FUNCTION: EXEIMG 0x805f20
 jpeg_std_error (struct jpeg_error_mgr * err)
 {
   err->error_exit = error_exit;

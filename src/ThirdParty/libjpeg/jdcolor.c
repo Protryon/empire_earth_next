@@ -66,9 +66,7 @@ typedef my_color_deconverter * my_cconvert_ptr;
  * Initialize tables for YCC->RGB colorspace conversion.
  */
 
-// FUNCTION: JPEG 0x1008eaab
 LOCAL(void)
-// FUNCTION: EXEIMG 0x811660
 build_ycc_rgb_table (j_decompress_ptr cinfo)
 {
   my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
@@ -118,9 +116,7 @@ build_ycc_rgb_table (j_decompress_ptr cinfo)
  * offset required on that side.
  */
 
-// FUNCTION: JPEG 0x1008eb5b
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x811720
 ycc_rgb_convert (j_decompress_ptr cinfo,
 		 JSAMPIMAGE input_buf, JDIMENSION input_row,
 		 JSAMPARRAY output_buf, int num_rows)
@@ -169,9 +165,7 @@ ycc_rgb_convert (j_decompress_ptr cinfo,
  * converting from separate-planes to interleaved representation.
  */
 
-// FUNCTION: JPEG 0x1008ec69
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x811850
 null_convert (j_decompress_ptr cinfo,
 	      JSAMPIMAGE input_buf, JDIMENSION input_row,
 	      JSAMPARRAY output_buf, int num_rows)
@@ -203,9 +197,7 @@ null_convert (j_decompress_ptr cinfo,
  * we just copy the Y (luminance) component and ignore chrominance.
  */
 
-// FUNCTION: JPEG 0x1008ece1
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x8118e0
 grayscale_convert (j_decompress_ptr cinfo,
 		   JSAMPIMAGE input_buf, JDIMENSION input_row,
 		   JSAMPARRAY output_buf, int num_rows)
@@ -221,9 +213,7 @@ grayscale_convert (j_decompress_ptr cinfo,
  * with grayscale as a separate case.
  */
 
-// FUNCTION: JPEG 0x1008ed04
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x811910
 gray_rgb_convert (j_decompress_ptr cinfo,
 		  JSAMPIMAGE input_buf, JDIMENSION input_row,
 		  JSAMPARRAY output_buf, int num_rows)
@@ -251,9 +241,7 @@ gray_rgb_convert (j_decompress_ptr cinfo,
  * We assume build_ycc_rgb_table has been called.
  */
 
-// FUNCTION: JPEG 0x1008ed5d
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x811980
 ycck_cmyk_convert (j_decompress_ptr cinfo,
 		   JSAMPIMAGE input_buf, JDIMENSION input_row,
 		   JSAMPARRAY output_buf, int num_rows)
@@ -312,9 +300,7 @@ start_pass_dcolor (j_decompress_ptr cinfo)
  * Module initialization routine for output colorspace conversion.
  */
 
-// FUNCTION: JPEG 0x1008e97b
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x811490
 jinit_color_deconverter (j_decompress_ptr cinfo)
 {
   my_cconvert_ptr cconvert;

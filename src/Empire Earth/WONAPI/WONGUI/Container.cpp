@@ -190,7 +190,6 @@ extern "C" intptr_t ee_won_guicpp_ct_call(void* inComp, EeWonGuiOp op, intptr_t 
 
 namespace WONAPI {
 bool Container::mMouseWheelGoesToFocusChildDef=false;
-// FUNCTION: WON 0x006f5b70
 // Creates an empty, focusable container (the Rust container: no child, no mouse or focus child, no cursor, no modal
 // state) with an empty child layout
 Container::Container()
@@ -199,7 +198,6 @@ Container::Container()
     this->mChildLayout=new ChildLayoutManager;
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
 }
-// FUNCTION: WON 0x006f5e80
 // Destroys the container: the Rust container detaches the children, then releases the cursor, the child layout, the
 // timer children and the children
 Container::~Container() { ee_won_ct_free(this->mCt); }

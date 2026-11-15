@@ -49,7 +49,6 @@
 
 extern long& gNumPlayers;                    // 0x530e0c (EECPAttackSubGroupUnit.cpp declares it too) (provisional name)
 
-// FUNCTION: EXE 0x45198e
 // Creates the computer player's attack commander with no groups and 35 group updates per tick
 EECPAttackCommander::EECPAttackCommander(EEComputerPlayer* inPlayer, EECPPersonnel* inPersonnel,
     EECPIntelligence* inIntelligence)
@@ -64,10 +63,6 @@ EECPAttackCommander::EECPAttackCommander(EEComputerPlayer* inPlayer, EECPPersonn
     this->mL34 = 0;
 }
 
-// SYNTHETIC: EXE 0x4519d9
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4519f5
 // Destroys the commander, deleting every attack group
 EECPAttackCommander::~EECPAttackCommander()
 {
@@ -75,7 +70,6 @@ EECPAttackCommander::~EECPAttackCommander()
         delete this->mGroups[i];
 }
 
-// FUNCTION: EXE 0x451a45
 // Offers a replacement unit to each group's sub-groups in turn; returns true once one takes it
 bool EECPAttackCommander::Offer(EEComplexUnit* inOld, EEComplexUnit* inUnit)
 {
@@ -88,7 +82,6 @@ bool EECPAttackCommander::Offer(EEComplexUnit* inOld, EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x451a8a
 // Places a unit (or its container) in a sub-group of a group on its continent, else in a new group added to
 // the commander; returns false when it has no continent, the player observes, or no sub-group takes it
 // NEAR: the original keeps theContinent at [ebp-4] and this at [ebp-0xc] (frame 0x2c), theResult in bl; ours
@@ -119,7 +112,6 @@ bool EECPAttackCommander::TakeUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x451bb9
 // Creates an attack group for a task with a default strategy of the given kind (special plus counter units, or
 // already-defined units for kind 3); keeps it unless the plan leaves it spent, then returns NULL
 // the experiment "prepeace" (docs/AI_RESEARCH.md §8.27; the owner: "I don't focus at all on attacks" before the Stone
@@ -194,14 +186,12 @@ EECPAttackGroup* EECPAttackCommander::CreateGroup(EECPAGTask& inTask, long inKin
     return theGroup;
 }
 
-// FUNCTION: EXE 0x451d19
 // Creates an empty counter-unit requirement with nothing wanted
 EECPUnitRequirement::EECPUnitRequirement()
     : mL04(-1), mL08(-1), mNumLeft(0), mNumWanted(0), mCategory(0x23), mUnitClass(0), mFamily(0x17), mUnitKind(0), mKind(kRequirementCounter)
 {
 }
 
-// FUNCTION: EXE 0x451d49
 // Resets the requirement to an empty counter-unit requirement with nothing wanted
 void EECPUnitRequirement::Clear()
 {
@@ -216,10 +206,6 @@ void EECPUnitRequirement::Clear()
     this->mNumWanted = 0;
 }
 
-// SYNTHETIC: EXE 0x451d71
-// (EECPUnitRequirement's scalar deleting destructor; the empty dtor is inline in ee/EECPUnitRequirement.h)
-
-// FUNCTION: EXE 0x451d8e
 // Creates an attack group for a task from a copy of a combat strategy, collecting the planned unit ids; keeps it
 // unless the plan leaves it spent, then returns NULL
 EECPAttackGroup* EECPAttackCommander::CreateGroupFromStrategy(EECPAGTask& inTask, const EECPCombatStrategy& inStrategy,
@@ -243,7 +229,6 @@ EECPAttackGroup* EECPAttackCommander::CreateGroupFromStrategy(EECPAGTask& inTask
     return theGroup;
 }
 
-// FUNCTION: EXE 0x451e14
 // Tells every group about a change to a target player, then drops spent groups
 void EECPAttackCommander::TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag)
 {
@@ -252,7 +237,6 @@ void EECPAttackCommander::TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag)
     this->DropSpentGroups(this->mNextDropTime);
 }
 
-// FUNCTION: EXE 0x451e61
 // Deletes every spent group and schedules the next drop 45 seconds later
 void EECPAttackCommander::DropSpentGroups(unsigned long inTime)
 {
@@ -268,7 +252,6 @@ void EECPAttackCommander::DropSpentGroups(unsigned long inTime)
     this->mNextDropTime = inTime + 45000;
 }
 
-// FUNCTION: EXE 0x451ef0
 // Empties the group list, then deletes every group it held
 void EECPAttackCommander::DeleteGroups()
 {
@@ -280,7 +263,6 @@ void EECPAttackCommander::DeleteGroups()
     theGroups.clear();
 }
 
-// FUNCTION: EXE 0x451f7f
 // Returns the sub-group holding a unit, or NULL
 EECPAttackSubGroup* EECPAttackCommander::FindHolder(EEUnit* inUnit)
 {
@@ -290,7 +272,6 @@ EECPAttackSubGroup* EECPAttackCommander::FindHolder(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x451fc0
 // Appends every sub-group listing a unit to a list; returns the list's size
 unsigned long EECPAttackCommander::ListUnit(EEComplexUnit* inUnit, std::vector<EECPAttackSubGroup*>& outGroups)
 {
@@ -299,7 +280,6 @@ unsigned long EECPAttackCommander::ListUnit(EEComplexUnit* inUnit, std::vector<E
     return outGroups.size();
 }
 
-// FUNCTION: EXE 0x452015
 // Returns the sub-group with an id, or NULL
 EECPAttackSubGroup* EECPAttackCommander::GetSubGroup(unsigned long inID)
 {
@@ -309,14 +289,12 @@ EECPAttackSubGroup* EECPAttackCommander::GetSubGroup(unsigned long inID)
     return theResult;
 }
 
-// FUNCTION: EXE 0x452056
 // Returns the player's combat manager
 EECPCombatManager* EECPAttackCommander::GetCombatManager()
 {
     return this->mPlayer->mCombatManager;
 }
 
-// FUNCTION: EXE 0x452060
 // Appends the units of every group with no continent (defence groups) to a list
 void EECPAttackCommander::CollectDefendingUnits(std::vector<EEComplexUnit*>& inUnits)
 {
@@ -325,7 +303,6 @@ void EECPAttackCommander::CollectDefendingUnits(std::vector<EEComplexUnit*>& inU
             this->mGroups[i]->CollectUnits(inUnits);
 }
 
-// FUNCTION: EXE 0x4520bd
 // Returns true if any group keeps a unit
 bool EECPAttackCommander::KeepsUnit(EEComplexUnit* inUnit)
 {
@@ -338,7 +315,6 @@ bool EECPAttackCommander::KeepsUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4520ff
 // Reads the groups (count, then each group) and a trailing value from the saved game; returns the first read
 // error (groups are still created after one)
 long EECPAttackCommander::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -358,7 +334,6 @@ long EECPAttackCommander::Load(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
-// FUNCTION: EXE 0x4521d1
 // Updates every group
 void EECPAttackCommander::UpdateGroups()
 {
@@ -366,7 +341,6 @@ void EECPAttackCommander::UpdateGroups()
         this->mGroups[i]->Update();
 }
 
-// FUNCTION: EXE 0x45220a
 // Replaces each swapped-out unit by its new unit in every group
 void EECPAttackCommander::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
@@ -377,7 +351,6 @@ void EECPAttackCommander::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     }
 }
 
-// FUNCTION: EXE 0x452283
 // Releases a unit from the first continent group holding it; returns true if one did
 bool EECPAttackCommander::ReleaseFromAreaGroups(EEComplexUnit* inUnit)
 {
@@ -392,7 +365,6 @@ bool EECPAttackCommander::ReleaseFromAreaGroups(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4522ec
 // Restores every group after loading; returns the first error
 long EECPAttackCommander::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -403,7 +375,6 @@ long EECPAttackCommander::Restore(unsigned long inMajorVersion, unsigned long in
     return theResult;
 }
 
-// FUNCTION: EXE 0x452337
 // Writes the groups (count, then each group) and a trailing value to the saved game; returns the first write error
 long EECPAttackCommander::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -419,7 +390,6 @@ long EECPAttackCommander::Save(unsigned long inMajorVersion, unsigned long inMin
     return theResult;
 }
 
-// FUNCTION: EXE 0x4523b0
 // Removes a unit from the first group holding it; returns true if one did
 bool EECPAttackCommander::RemoveUnit(EEUnit* inUnit)
 {
@@ -432,7 +402,6 @@ bool EECPAttackCommander::RemoveUnit(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4523f2
 // Ticks groups round-robin until the per-tick update budget is used up (at least size / players groups), then
 // drops spent groups when due, or at once if the player has no units or observes
 void EECPAttackCommander::Update(unsigned long inTime)
@@ -452,22 +421,6 @@ void EECPAttackCommander::Update(unsigned long inTime)
         this->DropSpentGroups(inTime);
 }
 
-// TEMPLATE: EXE 0x452497
-// (deque<EECPAttackGroup*>::resize, from Load)
-
-// TEMPLATE: EXE 0x4524dc
-// (vector<EECPUnitRequirement>::push_back, from CreateGroup)
-
-// TEMPLATE: EXE 0x452508
-// (vector<EECPUnitRequirement>::insert(P, X))
-
-// TEMPLATE: EXE 0x452562
-// (deque<EECPAttackGroup*>::push_front)
-
-// TEMPLATE: EXE 0x4525df
-// (vector<EECPUnitRequirement>::insert(P, N, X))
-
-// FUNCTION: EXE 0x4528b1
 // Creates a copy of a unit requirement
 EECPUnitRequirement::EECPUnitRequirement(const EECPUnitRequirement& inOther)
 {
@@ -482,16 +435,6 @@ EECPUnitRequirement::EECPUnitRequirement(const EECPUnitRequirement& inOther)
     this->mUnitKind = inOther.mUnitKind;
 }
 
-// TEMPLATE: EXE 0x4528f6
-// (vector<EECPUnitRequirement>::_Ufill)
-
-// TEMPLATE: EXE 0x452921
-// (vector<EECPUnitRequirement>::_Ucopy)
-
-// TEMPLATE: EXE 0x45294d
-// (std::copy over EECPUnitRequirement)
-
-// FUNCTION: EXE 0x45296a
 // Copies a unit requirement
 EECPUnitRequirement& EECPUnitRequirement::operator=(const EECPUnitRequirement& inOther)
 {
@@ -506,13 +449,3 @@ EECPUnitRequirement& EECPUnitRequirement::operator=(const EECPUnitRequirement& i
     this->mUnitKind = inOther.mUnitKind;
     return *this;
 }
-
-// TEMPLATE: EXE 0x4529a9
-// (std::copy_backward over EECPUnitRequirement)
-
-// TEMPLATE: EXE 0x4529d5
-// (std::_Construct(EECPUnitRequirement*, const EECPUnitRequirement&))
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
-// against the original by name)
-// TEMPLATE: EXE 0x451cf8

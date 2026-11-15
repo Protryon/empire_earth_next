@@ -53,8 +53,8 @@ class UString;
 // chains 0x13ea01 ".ees" / 0x13ea33 ".scn"; the lobby reads and assigns the two names)
 extern UString gSavedGameExtension;        // 0x530ba8 ".ees"
 extern UString gScenarioExtension;         // 0x530b98 ".scn"
-extern UString& gLoadSavedGameName;         // 0x5307f4
-extern UString& gLoadScenarioName;          // 0x530804
+extern UString& gLoadSavedGameName;
+extern UString& gLoadScenarioName;
 extern long& gDifficultyLevel;              // 0x530870 (the lobby difficulty also sets it; provisional name)
 // 0x5319e8: the free camera is on (the mouse revolve/rotate events need it; 10+ users around 0xeda02..0x109eee;
 // provisional name)
@@ -120,14 +120,14 @@ extern long gEELearningChecksum;
 // (115 functions; e.g. the game settings' InGameOk 0x1d6cf2: GERasterizer::GetScreen(gScreenIndex) on it) and the
 // screen index passed with it (170 functions)
 class GERasterizer;
-extern GERasterizer* gRasterizer;          // 0x531910
-extern unsigned long& gScreenIndex;         // 0x5308a8
+extern GERasterizer* gRasterizer;
+extern unsigned long& gScreenIndex;
 // the managers Empire Earth.cpp's start-up news (0x14265e: asserts "gTextureManager != NULL", "gModelManager !=
 // NULL")
 class GETextureManager;
 class GEModelManager;
-extern GETextureManager* gTextureManager;  // 0x531918
-extern GEModelManager* gModelManager;      // 0x531914
+extern GETextureManager* gTextureManager;
+extern GEModelManager* gModelManager;
 
 // 0x21080d (cdecl): EEMBuildGate::Execute's work (the tile of the gate's point, then the message's three longs)
 // (provisional name and argument names)
@@ -140,7 +140,7 @@ void EESetGameViewRectangle(const GERectangle& inRectangle);
 // (provisional names): what EEDataPreLoading::LoadGame (0xd439f) reads and calls
 void EELoadGameMedia();                    // 0x13fcbc (six resets in a row; when the first argument is false)
 void EECreateGameTimer();                  // 0x13fc7c (EEPhysics::CreateGameTimer; provisional name)
-extern bool& gLoadingSavedGame;             // 0x5318d8
+extern bool& gLoadingSavedGame;
 extern bool& gWorldClearing;                // 0x5318d9 (EETown 0xac573 tests it after gLoadingSavedGame; provisional name)
 extern unsigned long& gEffectDetail;        // 0x53089c (compared with an effect's +0x84 before it plays: a detail level? EEUCProjectile::UpdateEffects; provisional name)
 extern bool& gLoadingPlayerMedia;           // 0x5318e3 (EECPCombatManager 0x475047 tests it after gLoadingSavedGame; provisional name)
@@ -173,11 +173,11 @@ float EEDamageFactor(long inRow, long inColumn);
 // game window (EEUIFError: GetWidth +0xc, GetHeight +0x10 scale its layout) and the Tahoma fonts
 class GEWindow;
 class GEFont;
-extern GEWindow* gGameWindow;              // 0x531920
+extern GEWindow* gGameWindow;
 extern GEFont* gFontTahoma10;              // 0x531998 (EEE3DGoal's countdown; provisional name by the order)
-extern GEFont* gFontTahoma12;              // 0x53199c
-extern GEFont* gFontTahoma14;              // 0x5319a0
-extern GEFont* gFontTahoma16;              // 0x5319a4
+extern GEFont* gFontTahoma12;
+extern GEFont* gFontTahoma14;
+extern GEFont* gFontTahoma16;
 extern bool& gUnitImprovementsAllowed;      // 0x5318db (EEUIBUpgrade only acts when it is true; provisional name)
 
 // 0x13f736 (cdecl; Empire Earth.cpp): a checksum of the file inFile in inDirectory (EECampaignEditorBehavior::Reset

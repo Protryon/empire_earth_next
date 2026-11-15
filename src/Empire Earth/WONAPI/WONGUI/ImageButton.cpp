@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyImageButton.h"
 #include "ee/wonapi/WONComponentFlags.h"
 using namespace WONAPI;
-// FUNCTION: WON 0x006f7d70
 // Creates an image button that takes focus but not tab focus, with stretching off
 ImageButton::ImageButton() {
     this->SetButtonFlags(1,true);
@@ -19,10 +18,8 @@ ImageButton::ImageButton() {
     this->SetComponentFlags(ComponentFlag_WantTabFocus,false);
     this->mStretch=false;
 }
-// FUNCTION: WON 0x006f7e20
 // Destroys the image button (members only)
 ImageButton::~ImageButton() {}
-// FUNCTION: WON 0x006f7e80
 // Returns the largest width and height among the button's five state images
 void ImageButton::GetDesiredSize(int& outWidth,int& outHeight) {
     int width=0,height=0;
@@ -36,7 +33,6 @@ void ImageButton::GetDesiredSize(int& outWidth,int& outHeight) {
     outWidth=width;
     outHeight=height;
 }
-// FUNCTION: WON 0x006f7ed0
 // Draws the image for the current state (disabled, checked, down, over), falling back to the normal image,
 // resizing it to the button first when stretching
 void ImageButton::Paint(Graphics& g) {
@@ -53,7 +49,3 @@ void ImageButton::Paint(Graphics& g) {
         image->SetSize(this->Width(),this->Height());
     g.DrawImage(image,0,0);
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006f7e00
-// (protected: virtual void * __thiscall WONAPI::ImageButton::`scalar deleting destructor'(unsigned int)    [??_GImageButton@WONAPI@@MAEPAXI@Z])

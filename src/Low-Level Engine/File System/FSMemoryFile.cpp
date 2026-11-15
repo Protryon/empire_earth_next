@@ -49,7 +49,6 @@ void FSBuildFileOps(FSFile& inFile, EeFsFileOps& outOps)
     outOps.write_bytes = FileWriteBytes;
 }
 
-// FUNCTION: LLE 0x10009ec5
 // Creates an open, empty memory file with room for inBlockCount blocks, growing by blocks or by doubling
 FSMemoryFile::FSMemoryFile(unsigned long inBlockSize, bool inGrowByDoubling, unsigned long inBlockCount)
     : mState(ee_fs_mem_new(inBlockSize, inGrowByDoubling, inBlockCount)), mOwnsState(true)
@@ -57,7 +56,6 @@ FSMemoryFile::FSMemoryFile(unsigned long inBlockSize, bool inGrowByDoubling, uns
     this->mTemporaryFileName = "";
 }
 
-// FUNCTION: LLE 0x10009f30
 // Creates an open memory file holding the caller's buffer, which is copied and freed (the caller gave it up)
 FSMemoryFile::FSMemoryFile(unsigned char* inData, unsigned long inLength, unsigned long inBlockSize,
                            bool inGrowByDoubling)
@@ -74,7 +72,6 @@ FSMemoryFile::FSMemoryFile(EeFsMemFile* inState, bool inOwns)
     this->mTemporaryFileName = "";
 }
 
-// FUNCTION: LLE 0x10009f91
 // Destroys the memory file, closing it and freeing its buffer
 FSMemoryFile::~FSMemoryFile()
 {
@@ -85,7 +82,6 @@ FSMemoryFile::~FSMemoryFile()
     this->mState = NULL;
 }
 
-// FUNCTION: LLE 0x10009fbe
 // Marks the memory file closed and closes (deletes) its temporary disk copy
 long FSMemoryFile::Close()
 {
@@ -100,14 +96,12 @@ long FSMemoryFile::Close()
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009ff6
 // Shrinks the buffer to the written length and rewinds to the start; kErrorNotOpen when closed
 long FSMemoryFile::Compact()
 {
     return ee_fs_mem_compact(this->mState);
 }
 
-// FUNCTION: LLE 0x1000a05e
 // Compresses the contents in place (only above 12 bytes) and closes the file; outLength is the new length
 // (an incompressible result, error 0x16, keeps the data uncompressed and succeeds)
 long FSMemoryFile::Compress(unsigned long inLevel, unsigned long& outLength)
@@ -120,7 +114,6 @@ long FSMemoryFile::Compress(unsigned long inLevel, unsigned long& outLength)
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000a176
 // Writes the contents to a disk file; kErrorAlreadyExists if inFailIfExists and it exists
 long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool inKeepAttributes)
 {
@@ -143,14 +136,12 @@ long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool 
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000a315
 // Frees the buffer and leaves the memory file empty and closed
 long FSMemoryFile::Delete()
 {
     return ee_fs_mem_delete(this->mState);
 }
 
-// FUNCTION: LLE 0x1000a343
 // Copies the contents to a new temporary disk file and reopens it as a stdio stream with the given mode
 long FSMemoryFile::FOpen(char* inMode)
 {
@@ -190,7 +181,6 @@ long FSMemoryFile::FOpen(char* inMode)
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000a45b
 // Returns the written length
 long FSMemoryFile::GetLength(unsigned long& outLength) const
 {
@@ -198,7 +188,6 @@ long FSMemoryFile::GetLength(unsigned long& outLength) const
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x1000a46c
 // Returns the current position, or -1 when closed or empty
 long FSMemoryFile::GetPosition(long& outPosition) const
 {
@@ -216,7 +205,6 @@ long FSMemoryFile::Create()
     return this->GetData() ? kErrorOK : kErrorFailed;
 }
 
-// FUNCTION: LLE 0x1000a4e9
 // Replaces the contents with inLength bytes read from another file; on failure leaves it empty and closed
 long FSMemoryFile::Load(FSFile& inFile, unsigned long inLength)
 {
@@ -225,7 +213,6 @@ long FSMemoryFile::Load(FSFile& inFile, unsigned long inLength)
     return ee_fs_mem_load(this->mState, &theOps, inLength);
 }
 
-// FUNCTION: LLE 0x1000a55c
 // Replaces the contents with a length-prefixed block read from another file
 long FSMemoryFile::Load(FSFile& inFile)
 {
@@ -234,14 +221,12 @@ long FSMemoryFile::Load(FSFile& inFile)
     return ee_fs_mem_load_prefixed(this->mState, &theOps);
 }
 
-// FUNCTION: LLE 0x1000a58b
 // Reopens the memory file at its start, allocating one block if it has no buffer
 long FSMemoryFile::Open(unsigned long inAccess)
 {
     return ee_fs_mem_open(this->mState);
 }
 
-// FUNCTION: LLE 0x1000a5de
 // Copies inLength bytes from the current position; kErrorEndOfFile (nothing read) if fewer are left
 long FSMemoryFile::Read(unsigned char* outData, unsigned long inLength, unsigned long& outRead)
 {
@@ -251,14 +236,12 @@ long FSMemoryFile::Read(unsigned char* outData, unsigned long inLength, unsigned
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000a624
 // Reads raw characters from the current position
 long FSMemoryFile::Read(char* outData, unsigned long inLength, unsigned long& outRead)
 {
     return this->Read(reinterpret_cast<unsigned char*>(outData), inLength, outRead);
 }
 
-// FUNCTION: LLE 0x1000a638
 // Reads a float from the current position
 long FSMemoryFile::Read(float& outValue)
 {
@@ -278,7 +261,6 @@ long FSMemoryFile::Read(uint32_t& outValue)
     return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
 }
 
-// FUNCTION: LLE 0x1000a64d
 // Reads a short from the current position
 long FSMemoryFile::Read(short& outValue)
 {
@@ -292,7 +274,6 @@ long FSMemoryFile::Read(unsigned short& outValue)
     return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
 }
 
-// FUNCTION: LLE 0x1000a662
 // Reads a signed byte from the current position
 long FSMemoryFile::Read(signed char& outValue)
 {
@@ -312,7 +293,6 @@ long FSMemoryFile::Read(bool& outValue)
     return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
 }
 
-// FUNCTION: LLE 0x1000a677
 // Reads a double from the current position
 long FSMemoryFile::Read(double& outValue)
 {
@@ -320,7 +300,6 @@ long FSMemoryFile::Read(double& outValue)
     return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
 }
 
-// FUNCTION: LLE 0x1000a68c
 // Writes the first inLength bytes of the contents to another file
 long FSMemoryFile::Save(FSFile& outFile, unsigned long inLength)
 {
@@ -329,7 +308,6 @@ long FSMemoryFile::Save(FSFile& outFile, unsigned long inLength)
     return ee_fs_mem_save(this->mState, &theOps, inLength);
 }
 
-// FUNCTION: LLE 0x1000a6ab
 // Writes the length, then the compacted contents to another file; returns only the second write's result
 long FSMemoryFile::Save(FSFile& outFile)
 {
@@ -338,14 +316,12 @@ long FSMemoryFile::Save(FSFile& outFile)
     return ee_fs_mem_save_prefixed(this->mState, &theOps);
 }
 
-// FUNCTION: LLE 0x1000a6ec
 // Moves the position within the written data (from the end it counts backwards); never past the end
 long FSMemoryFile::SetPosition(long inOffset, unsigned long inOrigin, bool inExtend)
 {
     return ee_fs_mem_set_position(this->mState, inOffset, inOrigin);
 }
 
-// FUNCTION: LLE 0x1000a754
 // Writes bytes at the current position, growing the buffer by a block or by doubling; kErrorNotOpen when closed
 long FSMemoryFile::Write(const unsigned char* inData, unsigned long inLength, unsigned long& outWritten)
 {
@@ -355,14 +331,12 @@ long FSMemoryFile::Write(const unsigned char* inData, unsigned long inLength, un
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000a7cc
 // Writes raw characters at the current position
 long FSMemoryFile::Write(const char* inData, unsigned long inLength, unsigned long& outWritten)
 {
     return this->Write(reinterpret_cast<const unsigned char*>(inData), inLength, outWritten);
 }
 
-// FUNCTION: LLE 0x1000a7e3
 // Writes a float at the current position
 long FSMemoryFile::Write(const float& inValue)
 {
@@ -382,7 +356,6 @@ long FSMemoryFile::Write(const uint32_t& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-// FUNCTION: LLE 0x1000a7fb
 // Writes a short at the current position
 long FSMemoryFile::Write(const short& inValue)
 {
@@ -396,7 +369,6 @@ long FSMemoryFile::Write(const unsigned short& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-// FUNCTION: LLE 0x1000a813
 // Writes a signed byte at the current position
 long FSMemoryFile::Write(const signed char& inValue)
 {
@@ -416,7 +388,6 @@ long FSMemoryFile::Write(const bool& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-// FUNCTION: LLE 0x1000a82b
 // Writes a double at the current position
 long FSMemoryFile::Write(const double& inValue)
 {

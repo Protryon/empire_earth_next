@@ -17,7 +17,6 @@
 namespace WONAPI {
 
 QuickPlayCtrl::QuickPlayCtrl() {}
-// FUNCTION: WON 0x007c1690
 // Finds the welcome label, the four skill radios and the play button in the layout
 void QuickPlayCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -32,7 +31,6 @@ void QuickPlayCtrl::InitComponent(ComponentInit& inInit)
     SafeGetComponent(config,this->mPlayButton,"PlayButton",__FILE__,34);
     this->SubscribeToBroadcast(1);
 }
-// FUNCTION: WON 0x007c1750
 // Welcomes the logged-in user by name, or shows the plain welcome text
 void QuickPlayCtrl::RefreshUserName()
 {
@@ -42,7 +40,6 @@ void QuickPlayCtrl::RefreshUserName()
     else
         this->mWelcomeLabel->SetText(LOBBY_STRING(InternetQuickPlay_Welcome_String),true);
 }
-// FUNCTION: WON 0x007c1800
 // Refreshes the welcome on entering the screen; Play sends a quick-play request for the chosen skill (1-4)
 void QuickPlayCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -64,17 +61,3 @@ void QuickPlayCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     Dialog::HandleComponentEvent(inEvent);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c1520
-// (public: virtual void * __thiscall WONAPI::QuickPlayCtrl::`scalar deleting destructor'(unsigned int)    [??_GQuickPlayCtrl@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007c1540
-// (public: virtual __thiscall WONAPI::QuickPlayCtrl::~QuickPlayCtrl(void)    [??1QuickPlayCtrl@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x007c1920
-// (public: virtual void * __thiscall WONAPI::QuickPlayEvent::`scalar deleting destructor'(unsigned int)    [??_GQuickPlayEvent@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007c1940
-// (public: virtual __thiscall WONAPI::QuickPlayEvent::~QuickPlayEvent(void)    [??1QuickPlayEvent@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c14e0
-// (public: __thiscall WONAPI::QuickPlayCtrl::QuickPlayCtrl(void)    [??0QuickPlayCtrl@WONAPI@@QAE@XZ])

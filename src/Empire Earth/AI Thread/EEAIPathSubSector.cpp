@@ -47,20 +47,17 @@
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
 
-// FUNCTION: EXE 0x42be88
 // Creates an empty path sub-sector with no sector, ids 0, kind none and no owner
 EEAIPathSubSector::EEAIPathSubSector()
     : mSector(NULL), mContinentID(0), mPathAreaID(0), mID(0), mKind(kAITileNone), mPlayerID(0), mIsStale(false)
 {
 }
 
-// FUNCTION: EXE 0x42bf08
 // Destroys the sub-sector (members only)
 EEAIPathSubSector::~EEAIPathSubSector()
 {
 }
 
-// FUNCTION: EXE 0x42bf45
 // Returns the unit on the sub-sector's location that makes its kind: the gate, the wall (not a gate), a
 // blocking player or gaia unit, or the tree; NULL for other kinds or when none is there
 EEComplexUnit* EEAIPathSubSector::GetBlockingUnit()
@@ -133,7 +130,6 @@ EEComplexUnit* EEAIPathSubSector::GetBlockingUnit()
     return theResult;
 }
 
-// FUNCTION: EXE 0x42c0b9
 // Appends the sub-sector's links to the sub-sector with the given id; always returns false
 bool EEAIPathSubSector::GetLinks(unsigned short inID,
                                  std::vector<std::pair<EEAIPathSubSector*, EEAIPathSubSector*> >& outLinks)
@@ -148,7 +144,6 @@ bool EEAIPathSubSector::GetLinks(unsigned short inID,
     return false;
 }
 
-// FUNCTION: EXE 0x42c10f
 // Returns true when the sub-sector's gate lets the player through (no live gate, open, or own/non-enemy and
 // unlocked); false for side parts and closed enemy or locked gates (the last gate found carries over)
 bool EEAIPathSubSector::IsPassable(long inPlayer)
@@ -186,7 +181,6 @@ bool EEAIPathSubSector::IsPassable(long inPlayer)
     return thePassable;
 }
 
-// FUNCTION: EXE 0x42c219
 // Returns false only when the other sub-sector is a neighbour with links to this one and no link end's kind
 // (an index into inFlags.mFlags) is allowed; true otherwise
 bool EEAIPathSubSector::AreLinksBlocked(EEAIPathSubSector* inOther, const EECPASGFlags& inFlags)
@@ -204,7 +198,6 @@ bool EEAIPathSubSector::AreLinksBlocked(EEAIPathSubSector* inOther, const EECPAS
     return theResult;
 }
 
-// FUNCTION: EXE 0x42c2c5
 // Drops every link to or through the other sub-sector and removes it from the neighbours; returns whether it
 // was a neighbour
 bool EEAIPathSubSector::RemoveNeighbor(EEAIPathSubSector* inOther)
@@ -226,7 +219,6 @@ bool EEAIPathSubSector::RemoveNeighbor(EEAIPathSubSector* inOther)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42c379
 // Drops the sub-sector's links to the sub-sector with the given id
 void EEAIPathSubSector::RemoveLinks(unsigned short inID)
 {
@@ -240,18 +232,8 @@ void EEAIPathSubSector::RemoveLinks(unsigned short inID)
         this->mLinks.erase(theFirst, theEnd);
 }
 
-// FUNCTION: EXE 0x42c3bc
 // Fills the sub-sector's tile set from a tile list
 void EEAIPathSubSector::CreateTiles(const std::vector<U2DPoint<long> >& inTiles)
 {
     this->mTiles.Create(inTiles);
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt):
-// SYNTHETIC: EXE 0x42beec
-// TEMPLATE: EXE 0x42c3cc
-// TEMPLATE: EXE 0x42c3f7
-// TEMPLATE: EXE 0x42c6a5
-// TEMPLATE: EXE 0x42c716
-// TEMPLATE: EXE 0x42c742
-// TEMPLATE: EXE 0x42c774

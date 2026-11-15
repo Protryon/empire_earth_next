@@ -63,7 +63,6 @@
 #include "ee/EEAction.h"
 #include "ee/EEACenterCamera.h"
 
-// FUNCTION: EXE 0x401de1
 // Centres the camera on the stored location, or follows the stored unit (a camera object takes over the camera)
 void EEACenterCamera::Virtual4()
 {
@@ -86,7 +85,6 @@ void EEACenterCamera::Virtual4()
     }
 }
 
-// FUNCTION: EXE 0x401ee0
 // Stores a map tile's centre as the camera target and posts the action (ignored off the map)
 void EEACenterCamera::SetLocation(long inX, long inY)
 {
@@ -100,7 +98,6 @@ void EEACenterCamera::SetLocation(long inX, long inY)
     gUserInterface->PostAction(this);
 }
 
-// FUNCTION: EXE 0x401f43
 // Stores a unit as the camera target (a camera object by id, else its outermost container's position) and posts it
 void EEACenterCamera::SetUnit(EEUnit* inUnit)
 {
@@ -124,8 +121,6 @@ void EEACenterCamera::SetUnit(EEUnit* inUnit)
     gUserInterface->PostAction(this);
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEACenterCamera::Virtual8()
 {
 }

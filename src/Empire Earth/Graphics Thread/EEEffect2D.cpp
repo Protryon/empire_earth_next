@@ -45,13 +45,8 @@
 #include <math.h>
 #include "rust/ee_gfx.h"
 
-// SYNTHETIC: EXE 0x50428c
-// SYNTHETIC: EXE 0x504296
-// SYNTHETIC: EXE 0x5042a7
-// SYNTHETIC: EXE 0x5042b3
 const UString EEEffect2D::sData("EEEffect2D-Data");
 
-// FUNCTION: EXE 0x5042cf
 // Destroys the 2D effect, unloading every part's media and releasing its model
 EEEffect2D::~EEEffect2D()
 {
@@ -64,7 +59,6 @@ EEEffect2D::~EEEffect2D()
     }
 }
 
-// FUNCTION: EXE 0x504332
 // Returns 10 (skip) when the effect's tile is missing or unseen by the current player (unless the camera is free) or
 // its bounding sphere lies outside the view on any side; else 0
 long EEEffect2D::Queue(EEEffectQueue* inQueues)
@@ -89,7 +83,6 @@ long EEEffect2D::Queue(EEEffectQueue* inQueues)
 }
 
 // NEAR: the floor conversions (y first, through a copy) and the register choice of the tag list
-// FUNCTION: EXE 0x504623
 // Creates one sprite part per tag point of the effect's kind on the unit (else one part at the unit, tag 10000),
 // lifting a buried position by inOffset; returns the position and the height (farthest part + effect size)
 void EEEffect2D::CreateParts(GE3DPoint& outPosition, float& outHeight, float inOffset)
@@ -150,7 +143,6 @@ void EEEffect2D::CreateParts(GE3DPoint& outPosition, float& outHeight, float inO
     outHeight = theHeight;
 }
 
-// FUNCTION: EXE 0x5048b1
 // Unloads every part's media, drops the parts and the model, then releases the base effect's resources
 void EEEffect2D::ReleaseResources()
 {
@@ -165,7 +157,6 @@ void EEEffect2D::ReleaseResources()
     EEEffect::ReleaseResources();
 }
 
-// FUNCTION: EXE 0x50490e
 // Resets a pooled 2D effect onto a new unit and graphic effect with the given model (referenced), with no parts
 void EEEffect2D::Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, GEModel* inModel, bool inKeepsUnit)
 {
@@ -176,7 +167,6 @@ void EEEffect2D::Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, GEMode
         inModel->Reference();
 }
 
-// FUNCTION: EXE 0x50493b
 // Resets a pooled 2D effect to the empty state with the given model (referenced), with no parts
 void EEEffect2D::Reinit(GEModel* inModel, bool inKeepsUnit)
 {
@@ -187,7 +177,6 @@ void EEEffect2D::Reinit(GEModel* inModel, bool inKeepsUnit)
         inModel->Reference();
 }
 
-// FUNCTION: EXE 0x504960
 // Drops the parts and the model pointer (without releasing it) and zeroes the position and bounding radius (the
 // record's)
 void EEEffect2D::Clear()
@@ -227,7 +216,6 @@ struct EEEffect2DPartOps {
     }
 };
 
-// FUNCTION: EXE 0x504985
 // Reads the position, bounding radius and parts (position, tag, frame, time, done), reloading each part's media;
 // returns the first error, stopping at a part whose media fails (the base class result is ignored)
 // (ee_gfx effect_state.rs)
@@ -239,7 +227,6 @@ long EEEffect2D::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_gfx_effect_load_2d(this->mRecord, &theFile, &theParts);
 }
 
-// FUNCTION: EXE 0x504a8a
 // Writes the position, bounding radius and parts (position, tag, frame, time, done); returns the first write error
 // (the base class result is ignored)
 // (ee_gfx effect_state.rs)
@@ -251,50 +238,12 @@ long EEEffect2D::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_gfx_effect_save_2d(this->mRecord, &theFile, &theParts);
 }
 
-// FUNCTION: EXE 0x504ba8
-// Appends a part to a part list (std::vector<EEEffect2DPart>::push_back; first used by CreateParts)
-
-// FUNCTION: EXE 0x504bd4
-// Removes every part from a part list (std::vector<EEEffect2DPart>::clear)
-
-// FUNCTION: EXE 0x504c0f
-// Inserts one part before a position (std::vector<EEEffect2DPart>::insert(iterator, const T&))
-
-// FUNCTION: EXE 0x504c69
-// Erases a range of parts and returns the position after it (std::vector<EEEffect2DPart>::erase(iterator, iterator))
-
-// FUNCTION: EXE 0x504cb3
-// Inserts n copies of a part, growing the storage if needed (vector<EEEffect2DPart>::insert(it, n, const T&))
-
-// FUNCTION: EXE 0x504f6a
-// Copy-constructs n parts into raw storage (std::vector<EEEffect2DPart>::_Ufill)
-
-// FUNCTION: EXE 0x504f97
-// Copies a range of parts forwards (std::copy<EEEffect2DPart*, iterator>)
-
-// FUNCTION: EXE 0x504fbb
-// Copy-constructs a range of parts into raw storage (std::vector<EEEffect2DPart>::_Ucopy)
-
-// FUNCTION: EXE 0x504fed
-// Assigns one part to every element of a range (std::fill<iterator, EEEffect2DPart>)
-
-// FUNCTION: EXE 0x50500a
-// Copies a range of parts backwards (std::copy_backward<iterator, iterator>)
-
-// FUNCTION: EXE 0x505036
-// Copy-constructs one part in place (std::_Construct<EEEffect2DPart, EEEffect2DPart>)
-
-// FUNCTION: EXE 0x50504c
-// Copies a part (the implicit EEEffect2DPart::operator=)
-
-// FUNCTION: EXE 0x505089
 // Creates an empty part (no graphic object, frame 0, not done)
 inline EEEffect2DPart::EEEffect2DPart()
     : mGraphicObject(NULL), mTag(0), mFrame(0), mDrawFrame(0), mTime(0.0f), mIsDone(false)
 {
 }
 
-// FUNCTION: EXE 0x5050b0
 // Creates a part at a position with a graphic object and tag, starting on the object's first start frame
 inline EEEffect2DPart::EEEffect2DPart(const GE3DPoint& inPosition, EEGraphicObject* inGraphicObject,
                                       unsigned long inTag)
@@ -308,9 +257,7 @@ inline EEEffect2DPart::EEEffect2DPart(const GE3DPoint& inPosition, EEGraphicObje
     this->mIsDone = false;
 }
 
-// ICF-FOLDED: EXE 0x4e8eb1
 // Repairs the effect's unit pointer (a `jmp` to EEEffect::RepairPointers)
-// (no address of its own: the same body as EEEffect3D::RepairPointers, which ICF kept)
 long EEEffect2D::RepairPointers()
 {
     return EEEffect::RepairPointers();

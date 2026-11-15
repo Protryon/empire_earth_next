@@ -65,7 +65,6 @@
 #include "rust/ee_formations.h"
 #include "ee/EEFormationRust.h"
 
-// FUNCTION: EXE 0x4ddcc6
 // Creates the formation of a type: 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge;
 // 6-7 inward, outward circle; NULL for any other type
 EEFormation* EEFormation::Create(long inType)
@@ -100,7 +99,6 @@ EEFormation* EEFormation::Create(long inType)
     return theFormation;
 }
 
-// FUNCTION: EXE 0x4dddd5
 // Collects the group's units and places them into formation slots
 void EEFormation::Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlots)
 {

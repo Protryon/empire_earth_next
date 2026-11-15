@@ -51,7 +51,6 @@
 extern long& gDCGameSpeed;                   // 0x530d24 (> 0: sea explorers; EECPDefenseCommander.cpp's name) (provisional name)
 extern long& gNumSpaceTiles;                 // 0x530d2c (> 0: space explorers) (provisional name)
 
-// FUNCTION: EXE 0x47ed38
 // Creates the computer player's exploration manager, disabled and with no explorers
 EECPExplorationManager::EECPExplorationManager(EEComputerPlayer* inPlayer)
 {
@@ -61,10 +60,6 @@ EECPExplorationManager::EECPExplorationManager(EEComputerPlayer* inPlayer)
     this->mEnabled = false;
 }
 
-// SYNTHETIC: EXE 0x47ed7a
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x47ed96
 // Destroys the exploration manager, releasing each open explorer request back to the personnel manager
 EECPExplorationManager::~EECPExplorationManager()
 {
@@ -79,7 +74,6 @@ EECPExplorationManager::~EECPExplorationManager()
 
 // NEAR: inline budget: the original calls the screener base ctor 0x4783b8 and dtor 0x47f148, vector begin()/
 // operator+ and mUnitClassUpgrades's operator[] out of line; this build expands them.
-// FUNCTION: EXE 0x47edf7
 // Asks the personnel manager for one explorer of the kind (land, sea, air, space): the fastest acceptable unit
 // class of that domain (no fishing boats), on the largest sea or space continent for those kinds
 void EECPExplorationManager::RequestExplorer(long inKind)
@@ -157,14 +151,12 @@ void EECPExplorationManager::RequestExplorer(long inKind)
         delete it->second;
 }
 
-// FUNCTION: EXE 0x47f14f
 // Returns true if the unit is one of the player's explorers
 bool EECPExplorationManager::IsExplorer(unsigned long inUnitID)
 {
     return std::find(this->mUnitIDs.begin(), this->mUnitIDs.end(), inUnitID) != this->mUnitIDs.end();
 }
 
-// FUNCTION: EXE 0x47f1a4
 // Reads the explorer ids, the two flags and the open request ids (resolved later by Restore) from a saved game;
 // skips an extra value in old (0.32 and earlier) saves; returns the last read's result
 long EECPExplorationManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -197,7 +189,6 @@ long EECPExplorationManager::Load(unsigned long inMajorVersion, unsigned long in
 }
 
 // NEAR: the last mNew read computes the element address first (lea; mov [ecx+4]); ours folds it.
-// FUNCTION: EXE 0x47f26d
 // Replaces swapped-out explorers' ids with their new units' ids, for swaps involving this player
 void EECPExplorationManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
 {
@@ -215,7 +206,6 @@ void EECPExplorationManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
 }
 
 // NEAR: inline budget: the original calls _Ptrit::operator+ (and begin()) out of line in the first loop.
-// FUNCTION: EXE 0x47f352
 // Turns the loaded request ids back into referenced requests (dropping missing ones) and puts every living
 // explorer back into the exploring AI state; always succeeds
 long EECPExplorationManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -239,7 +229,6 @@ long EECPExplorationManager::Restore(unsigned long inMajorVersion, unsigned long
     return 0;
 }
 
-// FUNCTION: EXE 0x47f452
 // Writes the explorer ids, the two flags and the open requests' ids to the saved game; stops at the first
 // error before the requests, then returns the last write's result
 long EECPExplorationManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -264,7 +253,6 @@ long EECPExplorationManager::Save(unsigned long inMajorVersion, unsigned long in
     return theResult;
 }
 
-// FUNCTION: EXE 0x47f4f4
 // Forgets a removed explorer, unless it is only being swapped for another unit
 void EECPExplorationManager::UnitRemoved(EEComplexUnit* inUnit, bool inSwapped)
 {
@@ -278,7 +266,6 @@ void EECPExplorationManager::UnitRemoved(EEComplexUnit* inUnit, bool inSwapped)
 }
 
 // NEAR: inline budget again (the requests' size()/begin()/operator+ out of line in the original); slots.
-// FUNCTION: EXE 0x47f590
 // Every 30 s: counts explorers and requests per domain and requests more where short (space uses the sea quota);
 // takes filled requests' units, retiring an outdated explorer each, and sends idle explorers out to explore
 void EECPExplorationManager::Update(unsigned long inTime)
@@ -483,13 +470,3 @@ void EECPExplorationManager::Update(unsigned long inTime)
     }
     this->mNextTime = inTime + 30000;
 }
-
-// The inline and template COMDATs this unit emits (first users here): the screeners' base dtor 0x47f148 (after
-// RequestExplorer), vector<EECPPersonnelRequest*>::push_back 0x47ffd0, vector<EECPPersonnelRequest::Unit>::back
-// 0x47fffc, FSLoadVector/FSSaveVector<unsigned long> 0x480003/0x4800a1.
-// Not emitted by this build: 0x47f148 and 0x47fffc, which it expands inline (see RequestExplorer and Update).
-// TEMPLATE: EXE 0x47f148
-// TEMPLATE: EXE 0x47ffd0
-// TEMPLATE: EXE 0x47fffc
-// TEMPLATE: EXE 0x480003
-// TEMPLATE: EXE 0x4800a1

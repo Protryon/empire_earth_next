@@ -29,8 +29,8 @@ public:
     virtual void SetVolume(const UString& inVolume);                  // +0x70 0x7ca6
 
     unsigned long GetFileAccess() const { return this->mFileAccess; }  // inline: GESurface/GETexture read +0x34 directly; export folded 0x4c365
-    unsigned long GetVersion() const;                                 // 0x7c6a
-    void SetVersion(unsigned long inVersion);                         // 0x7c9c
+    unsigned long GetVersion() const;
+    void SetVersion(unsigned long inVersion);
 
 protected:
     UString mVolume;                                  // +0x04
@@ -53,16 +53,16 @@ public:
     using FSFile::Read;    // the long/unsigned long adapters (lle/FSFile.h)
     using FSFile::Write;
     FSFileSpec();                                     // 0x8d15: names from gStartupVolume/gStartupDirectory
-    FSFileSpec(const FSFileSpec& inSpec);             // 0x8dad
-    FSFileSpec(const UString& inPath);                // 0x8dcd
-    virtual ~FSFileSpec();                            // 0x8efe
-    FSFileSpec& operator=(const FSFileSpec& inSpec);  // 0x8f2f
+    FSFileSpec(const FSFileSpec& inSpec);
+    FSFileSpec(const UString& inPath);
+    virtual ~FSFileSpec();
+    FSFileSpec& operator=(const FSFileSpec& inSpec);
     bool operator<(FSFileSpec& inSpec);               // 0x8f74 (non-const parameter, as exported)
 
     // Members in alphabetical order, as the first unit's emission order shows (CloseSearchHandle 0x13d6, GetFirstFile
     // 0x13e8, Read 0x1420, Write 0x1434); the new virtuals keep their relative order (vtable slots unchanged).
     virtual long Close();                                                       // +0x08 0x91cd
-    void CloseSearchHandle()                          // 0x13d6 (inline)
+    void CloseSearchHandle()
     {
         PlatFindClose(static_cast<PlatFind*>(this->mHandle));
         this->mHandle = NULL;
@@ -81,7 +81,7 @@ public:
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile);  // +0xac 0x9406
     virtual bool GetIsOpen() const;                                             // +0x24 (folded 0x4b4d9)
     virtual long GetLength(unsigned long& outLength) const;                     // +0xb4 0x95e3
-    long GetLengthFromClosedFile(unsigned long& outLength);   // 0x9627
+    long GetLengthFromClosedFile(unsigned long& outLength);
     virtual long GetNextFile(FSFileSpec& outFile);                              // +0xb8 0x9661
     virtual void GetParentDirectory(FSFileSpec& outDirectory) const;            // +0xbc 0x9816
     virtual long GetPosition(long& outPosition) const;                          // +0xc0 0x98d8
@@ -129,7 +129,6 @@ protected:
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 
 
-// FUNCTION: LLE 0x10007af6
 // Creates a closed file spec with empty volume, directory and name, for reading
 FSBasicFile::FSBasicFile()
     : mVolume(256), mDirectory(256), mFile(256), mVersion(0), mIsOpen(false)
@@ -137,7 +136,6 @@ FSBasicFile::FSBasicFile()
     this->mFileAccess = kFileAccessRead;
 }
 
-// FUNCTION: LLE 0x10007b3a
 // Copies a file spec's volume, directory and name; the copy starts closed
 FSBasicFile::FSBasicFile(const FSBasicFile& inFile)
 {
@@ -149,7 +147,6 @@ FSBasicFile::FSBasicFile(const FSBasicFile& inFile)
     this->mFileAccess = kFileAccessRead;
 }
 
-// FUNCTION: LLE 0x10007ba6
 // Deletes the file from disk; fails if it is open or its path is longer than PLAT_MAX_PATH
 long FSBasicFile::Delete()
 {
@@ -169,63 +166,54 @@ long FSBasicFile::Delete()
     return theResult;
 }
 
-// FUNCTION: LLE 0x10007c46
 // Copies the file name to outFile
 void FSBasicFile::GetFile(UString& outFile) const
 {
     outFile = this->mFile;
 }
 
-// FUNCTION: LLE 0x10007c56
 // Copies the directory to outDirectory
 void FSBasicFile::GetDirectory(UString& outDirectory) const
 {
     outDirectory = this->mDirectory;
 }
 
-// FUNCTION: LLE 0x10007c66
 // Returns whether the file is open
 bool FSBasicFile::GetIsOpen() const
 {
     return this->mIsOpen;
 }
 
-// FUNCTION: LLE 0x10007c6a
 // Returns the file's version number
 unsigned long FSBasicFile::GetVersion() const
 {
     return this->mVersion;
 }
 
-// FUNCTION: LLE 0x10007c6e
 // Copies the volume to outVolume
 void FSBasicFile::GetVolume(UString& outVolume) const
 {
     outVolume = this->mVolume;
 }
 
-// FUNCTION: LLE 0x10007c7e
 // Sets the file's directory
 void FSBasicFile::SetDirectory(const UString& inDirectory)
 {
     this->mDirectory = inDirectory;
 }
 
-// FUNCTION: LLE 0x10007c8d
 // Sets the file's name
 void FSBasicFile::SetFile(const UString& inFile)
 {
     this->mFile = inFile;
 }
 
-// FUNCTION: LLE 0x10007c9c
 // Sets the file's version number
 void FSBasicFile::SetVersion(unsigned long inVersion)
 {
     this->mVersion = inVersion;
 }
 
-// FUNCTION: LLE 0x10007ca6
 // Sets the file's volume
 void FSBasicFile::SetVolume(const UString& inVolume)
 {
@@ -256,7 +244,6 @@ const UString& FSBasicFile::GetVolume() const
 
 
 
-// FUNCTION: LLE 0x10008d15
 // Creates a closed file spec for the game's startup directory with no file name
 FSFileSpec::FSFileSpec()
 {
@@ -268,14 +255,12 @@ FSFileSpec::FSFileSpec()
     this->mFileAccess = kFileAccessRead;
 }
 
-// FUNCTION: LLE 0x10008dad
 // Copies a file spec's path; the copy is closed and has no search handle
 FSFileSpec::FSFileSpec(const FSFileSpec& inSpec)
     : FSBasicFile(inSpec), mHandle(NULL), mStream(NULL)
 {
 }
 
-// FUNCTION: LLE 0x10008dcd
 // Creates a closed file spec from a full path, split into volume, directory and file name
 // (the startup directory when the path is two characters or less or has no backslash)
 FSFileSpec::FSFileSpec(const UString& inPath)
@@ -306,7 +291,6 @@ FSFileSpec::FSFileSpec(const UString& inPath)
     this->mFileAccess = kFileAccessRead;
 }
 
-// FUNCTION: LLE 0x10008efe
 // Destroys the file spec, closing the file or an open directory search
 FSFileSpec::~FSFileSpec()
 {
@@ -316,7 +300,6 @@ FSFileSpec::~FSFileSpec()
         this->CloseSearchHandle();
 }
 
-// FUNCTION: LLE 0x10008f2f
 // Copies another spec's path into this one, leaving it closed with no search handle
 FSFileSpec& FSFileSpec::operator=(const FSFileSpec& inSpec)
 {
@@ -330,7 +313,6 @@ FSFileSpec& FSFileSpec::operator=(const FSFileSpec& inSpec)
     return *this;
 }
 
-// FUNCTION: LLE 0x10008f74
 // Returns whether this file was last written before the other one, opening either as needed (true on failure)
 bool FSFileSpec::operator<(FSFileSpec& inSpec)
 {
@@ -355,7 +337,6 @@ bool FSFileSpec::operator<(FSFileSpec& inSpec)
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000901a
 // Creates an empty file at the path; fails on invalid characters or a blank name, kErrorAlreadyExists if present
 long FSFileSpec::Create()
 {
@@ -385,7 +366,6 @@ long FSFileSpec::Create()
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009142
 // Creates the spec's directory; kErrorAlreadyExists if present, kErrorBadPath when the path is too long
 long FSFileSpec::CreateDirectory()
 {
@@ -407,7 +387,6 @@ long FSFileSpec::CreateDirectory()
     return theResult;
 }
 
-// FUNCTION: LLE 0x100091cd
 // Closes the file handle or stdio stream; native error (still open) if closing fails, OK when not open
 long FSFileSpec::Close()
 {
@@ -432,7 +411,6 @@ long FSFileSpec::Close()
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000921c
 // Copies the file to a destination path; unless inKeepAttributes, clears the copy's read-only flag
 long FSFileSpec::Copy(const UString& inDestination, bool inFailIfExists, bool inKeepAttributes)
 {
@@ -452,7 +430,6 @@ long FSFileSpec::Copy(const UString& inDestination, bool inFailIfExists, bool in
     return theResult;
 }
 
-// FUNCTION: LLE 0x100092ca
 // Removes the spec's (empty) directory; refuses the root directory
 long FSFileSpec::DeleteDirectory()
 {
@@ -472,7 +449,6 @@ long FSFileSpec::DeleteDirectory()
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000935a
 // Opens the file as a stdio stream with the given fopen mode; native error if that fails
 long FSFileSpec::FOpen(char* inMode)
 {
@@ -494,7 +470,6 @@ long FSFileSpec::FOpen(char* inMode)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009406
 // Starts a search in the spec's directory and returns the first match (skipping "." and "..") in outFile
 // (kErrorNotFound when nothing matches, kErrorFailed when the spec is not a directory)
 long FSFileSpec::GetFirstFile(const UString& inPattern, FSFileSpec& outFile)
@@ -536,7 +511,6 @@ long FSFileSpec::GetFirstFile(const UString& inPattern, FSFileSpec& outFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x100095e3
 // Returns the open file's length; kErrorFailed for a stdio stream, kErrorNotOpen when closed
 long FSFileSpec::GetLength(unsigned long& outLength) const
 {
@@ -557,7 +531,6 @@ long FSFileSpec::GetLength(unsigned long& outLength) const
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009627
 // Opens the file just to read its length, then closes it; returns OK even when it cannot open it (length 0)
 long FSFileSpec::GetLengthFromClosedFile(unsigned long& outLength)
 {
@@ -573,7 +546,6 @@ long FSFileSpec::GetLengthFromClosedFile(unsigned long& outLength)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10009661
 // Returns the next match of the directory search in outFile (skipping "." and ".."); ends with kErrorNoMoreFiles
 long FSFileSpec::GetNextFile(FSFileSpec& outFile)
 {
@@ -619,7 +591,6 @@ long FSFileSpec::GetNextFile(FSFileSpec& outFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009816
 // Returns the parent of the spec's directory (the root stays the root), with no file name
 void FSFileSpec::GetParentDirectory(FSFileSpec& outDirectory) const
 {
@@ -644,7 +615,6 @@ void FSFileSpec::GetParentDirectory(FSFileSpec& outDirectory) const
     }
 }
 
-// FUNCTION: LLE 0x100098d8
 // Returns the position in the open file; kErrorFailed for a stdio stream, kErrorNotOpen when closed
 long FSFileSpec::GetPosition(long& outPosition) const
 {
@@ -665,7 +635,6 @@ long FSFileSpec::GetPosition(long& outPosition) const
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000991f
 // Returns whether the spec names an existing directory (no file name part)
 bool FSFileSpec::IsDirectory() const
 {
@@ -681,7 +650,6 @@ bool FSFileSpec::IsDirectory() const
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009992
 // Makes the file read-only; kErrorAlreadyExists if it already is
 long FSFileSpec::Lock()
 {
@@ -707,7 +675,6 @@ long FSFileSpec::Lock()
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009a41
 // Opens the existing file for reading, writing, appending (at its end) or both, sharing reads with others
 long FSFileSpec::Open(unsigned long inAccess)
 {
@@ -747,7 +714,6 @@ long FSFileSpec::Open(unsigned long inAccess)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009b48
 // Reads up to inLength bytes from the open file; kErrorEndOfFile when nothing is left
 long FSFileSpec::Read(unsigned char* outData, unsigned long inLength, unsigned long& outRead)
 {
@@ -775,7 +741,6 @@ long FSFileSpec::Read(unsigned char* outData, unsigned long inLength, unsigned l
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009ba5
 // Reads a float from the file; kErrorFailed on a short read
 long FSFileSpec::Read(float& outValue)
 {
@@ -804,7 +769,6 @@ long FSFileSpec::Read(uint32_t& outValue)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009bcc
 // Reads a short from the file; kErrorFailed on a short read
 long FSFileSpec::Read(short& outValue)
 {
@@ -824,7 +788,6 @@ long FSFileSpec::Read(unsigned short& outValue)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009bf3
 // Reads a double from the file; kErrorFailed on a short read
 long FSFileSpec::Read(double& outValue)
 {
@@ -835,7 +798,6 @@ long FSFileSpec::Read(double& outValue)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009c1a
 // Reads a signed byte from the file; kErrorFailed on a short read
 long FSFileSpec::Read(signed char& outValue)
 {
@@ -864,7 +826,6 @@ long FSFileSpec::Read(bool& outValue)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009c41
 // Sets the open file's length to ioLength (inTruncate is ignored); kErrorNotWritable for a read-only open
 long FSFileSpec::SetLength(unsigned long& ioLength, bool inTruncate)
 {
@@ -885,7 +846,6 @@ long FSFileSpec::SetLength(unsigned long& ioLength, bool inTruncate)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009c9f
 // Moves the file position relative to the begin, end or current position
 // (a target past the end fails with kErrorBeyondEnd unless inExtend is set on a file opened for writing)
 long FSFileSpec::SetPosition(long inOffset, unsigned long inOrigin, bool inExtend)
@@ -926,7 +886,6 @@ long FSFileSpec::SetPosition(long inOffset, unsigned long inOrigin, bool inExten
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009d44
 // Clears the file's read-only flag; kErrorAlreadyExists if it was not read-only
 long FSFileSpec::Unlock()
 {
@@ -952,7 +911,6 @@ long FSFileSpec::Unlock()
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009df6
 // Writes bytes to the open file; native error on a short write, kErrorNotWritable for a read-only open
 long FSFileSpec::Write(const unsigned char* inData, unsigned long inLength, unsigned long& outWritten)
 {
@@ -977,7 +935,6 @@ long FSFileSpec::Write(const unsigned char* inData, unsigned long inLength, unsi
     return theResult;
 }
 
-// FUNCTION: LLE 0x10009e51
 // Writes a float to the file
 long FSFileSpec::Write(const float& inValue)
 {
@@ -997,7 +954,6 @@ long FSFileSpec::Write(const uint32_t& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-// FUNCTION: LLE 0x10009e6e
 // Writes a short to the file
 long FSFileSpec::Write(const short& inValue)
 {
@@ -1011,7 +967,6 @@ long FSFileSpec::Write(const unsigned short& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-// FUNCTION: LLE 0x10009e8b
 // Writes a signed byte to the file
 long FSFileSpec::Write(const signed char& inValue)
 {
@@ -1031,7 +986,6 @@ long FSFileSpec::Write(const bool& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-// FUNCTION: LLE 0x10009ea8
 // Writes a double to the file
 long FSFileSpec::Write(const double& inValue)
 {
@@ -1044,5 +998,3 @@ bool FSFileSpec::GetIsOpen() const
 {
     return this->mIsOpen;
 }
-
-// SYNTHETIC: LLE 0x10008d53

@@ -17,7 +17,6 @@
 #include "ee/EEUIBuildGate.h"
 
 
-// FUNCTION: EXE 0x65643d
 // Asks the main game form to build a wall from the start to the end point
 void EEUIBuildWall::Build()
 {
@@ -30,7 +29,6 @@ void EEUIBuildWall::Cancel()
     gUIManager->mMainGameForm->SetUIState(0);
 }
 
-// FUNCTION: EXE 0x656456
 // Starts wall placement for a player: no points yet, the wall class's media loaded
 void EEUIBuildWall::Initialize(long inPlayer)
 {
@@ -45,7 +43,6 @@ void EEUIBuildWall::Initialize(long inPlayer)
     this->mPlayer = inPlayer;
 }
 
-// FUNCTION: EXE 0x6564a2
 // Ends wall placement: unlocks the cursor and unloads the wall class's media
 void EEUIBuildWall::Terminate()
 {
@@ -54,6 +51,3 @@ void EEUIBuildWall::Terminate()
     EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
     thePlayer->UnloadUnitClassMedia(theNode->mData->mUnitClass);
 }
-
-// FUNCTION: EXE 0x6564df
-// (Update: EEUIFMainGame.cpp, next to its host; ee_screens mouse_modes.rs wall_update)

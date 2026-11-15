@@ -24,7 +24,6 @@
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEPersistentTag.h"
 
-// FUNCTION: EXE 0x5497f4
 // Creates the saved-calamities chunk with no calamity list and a fresh contagion manager
 EEPCalamityHelper::EEPCalamityHelper()
     : FSPersistent(kPersistentCalamities)
@@ -33,10 +32,6 @@ EEPCalamityHelper::EEPCalamityHelper()
     this->mContagionManager = new EEContagionManager;
 }
 
-// SYNTHETIC: EXE 0x549826
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x549842
 // Destroys the chunk, deleting its calamity list and contagion manager
 EEPCalamityHelper::~EEPCalamityHelper()
 {
@@ -44,7 +39,6 @@ EEPCalamityHelper::~EEPCalamityHelper()
     this->ClearContagionManager();
 }
 
-// FUNCTION: EXE 0x549860
 // Deletes the calamity list
 void EEPCalamityHelper::ClearCalamities()
 {
@@ -52,7 +46,6 @@ void EEPCalamityHelper::ClearCalamities()
     this->mCalamities = NULL;
 }
 
-// FUNCTION: EXE 0x549880
 // Deletes the contagion manager
 void EEPCalamityHelper::ClearContagionManager()
 {
@@ -60,7 +53,6 @@ void EEPCalamityHelper::ClearContagionManager()
     this->mContagionManager = NULL;
 }
 
-// FUNCTION: EXE 0x549897
 // Empties the chunk: no calamity list and a fresh contagion manager
 void EEPCalamityHelper::Reset()
 {
@@ -69,7 +61,6 @@ void EEPCalamityHelper::Reset()
     this->mContagionManager = new EEContagionManager;
 }
 
-// FUNCTION: EXE 0x5498c2
 // Copies another chunk's calamity list and contagion manager into fresh copies of its own
 EEPCalamityHelper& EEPCalamityHelper::operator=(const EEPCalamityHelper& inOther)
 {
@@ -88,17 +79,12 @@ EEPCalamityHelper& EEPCalamityHelper::operator=(const EEPCalamityHelper& inOther
     return *this;
 }
 
-// TEMPLATE: EXE 0x54994a
-// (EEContagionManager's implicit operator=, emitted after its first user)
-
-// FUNCTION: EXE 0x549977
 // Creates an empty saved-calamities chunk (persistent factory)
 FSPersistent* EEPCalamityHelper::CreateDefault() const
 {
     return new EEPCalamityHelper;
 }
 
-// FUNCTION: EXE 0x54998e
 // Reads the active calamities and then the contagion manager from a saved game; returns the contagion manager's error
 long EEPCalamityHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -116,7 +102,6 @@ long EEPCalamityHelper::Load(unsigned long inMajorVersion, unsigned long inMinor
     return this->mContagionManager->Load(inMajorVersion, inMinorVersion, inFile);
 }
 
-// FUNCTION: EXE 0x549a33
 // Reconnects the loaded calamities to their caster and target units and loads their media, deleting those whose units
 // are gone; then reconnects the contagions
 long EEPCalamityHelper::RepairPointers(unsigned long inFirst, unsigned long inSecond)
@@ -157,7 +142,6 @@ long EEPCalamityHelper::RepairPointers(unsigned long inFirst, unsigned long inSe
     return theResult;
 }
 
-// FUNCTION: EXE 0x549b30
 // Writes the calamity manager's active calamities (with their current target ids) and the world's contagions to a save
 long EEPCalamityHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -188,14 +172,10 @@ long EEPCalamityHelper::Save(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEPCalamityHelper::GetChecksum(class ESChecksum &) const
 {
 }
 
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEPCalamityHelper::Virtual1C(long)
 {
 }

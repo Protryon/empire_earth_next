@@ -31,14 +31,14 @@ static_assert(sizeof(EEAmbientSoundRecord) == 152, "on-disk record: 152 bytes on
 
 class EEAmbientSound {
 public:
-    EEAmbientSound();                       // 0x124b34
-    virtual ~EEAmbientSound();              // 0x124ba1
-    void Init(const EEAmbientSoundRecord& inRecord);   // 0x124bb4
+    EEAmbientSound();
+    virtual ~EEAmbientSound();
+    void Init(const EEAmbientSoundRecord& inRecord);
     void FadeIn();                          // 0x124c16 (fade up)
     void FadeOut();                         // 0x124c46 (fade down)
     bool LoadSound();                       // 0x124c72 (start: loads the sound object; whether there is one)
     void PlayAtVolume(float inVolume);      // 0x124ca9 (plays/updates at inVolume; 0 or less stops)
-    void UnloadSound();                     // 0x124d4e
+    void UnloadSound();
     // inline (COMDATs 0x1272c6.. in EEAmbientSoundManager.cpp)
     void ReleaseInstance()
     {

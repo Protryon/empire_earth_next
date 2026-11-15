@@ -19,7 +19,6 @@ extern SmartPtr<Dialog> gLobbyFailureDialog;
 extern GUIString gLobbyInitError;
 extern bool gLobbyInitFailed;
 
-// FUNCTION: WON 0x00762170
 // Clears the start-up failure state, then logs out, destroys the lobby, stops its music and unloads its resources
 void LobbyShutdown()
 {

@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00749040
 // Returns a new palette with a copy of this palette's colors
 SmartPtr<Palette> Palette::Duplicate()
 {
