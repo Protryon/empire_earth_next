@@ -77,6 +77,8 @@ enum class EeGeBmpOp : uint32_t {
   TexHeight,
   /// `obj->GetNumMipLevelsToDrop()`.
   TexDropLevels,
+  /// `obj->CopyFrom(*(const GEVertexArray*)b)` (a rhombus's assignment, `prim.rs`).
+  VertexCopyFrom,
 };
 
 /// A float of the header's accessors (`ee_ge_bmp_getf`).
@@ -440,6 +442,16 @@ enum class EeGeModXf : uint32_t {
   Internal,
 };
 
+/// Which class a default constructor builds.
+enum class EeGePrimKind : uint32_t {
+  /// `GELine()`: two white opaque vertices at the origin facing -z, texture coordinates (0, 0) and (1, 1).
+  Line = 1,
+  /// `GEPoint()`: one opaque vertex, texture coordinate (0, 0).
+  Point,
+  /// `GERhombus()`: four white opaque vertices facing -z, an empty rectangle, no rotation.
+  Rhombus,
+};
+
 /// The calls the rasterizer makes on other objects. `obj` is the object called; `a`, `b` as each says.
 enum class EeGeRastOp : uint32_t {
   /// `new UString(*(const UString*)a)` (the name).
@@ -786,6 +798,9 @@ struct EeGeModel;
 
 /// The model manager.
 struct EeGeModelManager;
+
+/// The primitive.
+struct EeGePrim;
 
 /// The rasterizer.
 struct EeGeRasterizer;
@@ -2259,6 +2274,119 @@ bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
                                unsigned long other_frame,
                                unsigned long lod);
 
+/// The default constructors (`GELine()`, `GEPoint()`, `GERhombus()`).
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_prim_destroy`.
+EeGePrim *ee_ge_prim_new(EeGeBmpHostFn host, void *owner, EeGePrimKind kind);
+
+/// `GELine(start, end, start colour, end colour, opacity)` (the colours as `const GEColor*`).
+///
+/// # Safety
+/// As `ee_ge_prim_new`; the pointers are valid.
+EeGePrim *ee_ge_prim_new_line(EeGeBmpHostFn host,
+                              void *owner,
+                              const EeGe2DPoint *start,
+                              const EeGe2DPoint *end,
+                              const void *start_color,
+                              const void *end_color,
+                              float opacity);
+
+/// `GEPoint(point, colour, opacity)` (the colour as `const GEColor*`).
+///
+/// # Safety
+/// As `ee_ge_prim_new`; the pointers are valid.
+EeGePrim *ee_ge_prim_new_point(EeGeBmpHostFn host,
+                               void *owner,
+                               const EeGe2DPoint *point,
+                               const void *color,
+                               float opacity);
+
+/// The destructors.
+///
+/// # Safety
+/// `p` is live (freed).
+void ee_ge_prim_destroy(EeGePrim *p);
+
+/// One vertex array call on vertex `i` (`op` one of the `Vertex*` operations with a pointer argument: the colours,
+/// points, normals and texture coordinates the headers read and write).
+///
+/// # Safety
+/// `p` is live; `arg` points at what `op` reads or writes.
+void ee_ge_prim_vertex(EeGePrim *p,
+                       EeGeBmpOp op,
+                       unsigned long i,
+                       void *arg);
+
+/// `GetOpacity(i)` of the vertex array.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_prim_opacity(EeGePrim *p, unsigned long i);
+
+/// `SetOpacity(opacity, i)` of the vertex array.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_prim_set_opacity(EeGePrim *p, unsigned long i, float opacity);
+
+/// `SetStartPoint`/`SetEndPoint`/`SetPoint`: vertex `i` at (x, y, 0).
+///
+/// # Safety
+/// `p` is live; `point` is valid.
+void ee_ge_prim_set_xy(EeGePrim *p, unsigned long i, const EeGe2DPoint *point);
+
+/// `GEPoint::GetPoint`: vertex `i`'s x and y.
+///
+/// # Safety
+/// `p` is live; `out` is valid.
+void ee_ge_prim_xy(EeGePrim *p, unsigned long i, EeGe2DPoint *out);
+
+/// `SetTexture(texture, screen)`.
+///
+/// # Safety
+/// `p` is live; `texture` a texture or NULL.
+void ee_ge_prim_set_texture(EeGePrim *p, void *texture, unsigned long screen);
+
+/// `GetTexture(screen)` (NULL past the screens: the original read past its array).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_prim_texture(const EeGePrim *p, unsigned long screen);
+
+/// `GetVertexArray()`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_prim_vertices(const EeGePrim *p);
+
+/// A rhombus's `GetRectangle()`: the rectangle inside the object.
+///
+/// # Safety
+/// `p` is live.
+const EeGeRectangle *ee_ge_prim_rectangle(const EeGePrim *p);
+
+/// A rhombus's `SetRectangle` (`rectangle` set) or `SetRotation` (`rectangle` NULL), then `ComputeRotation`.
+///
+/// # Safety
+/// `p` is live; `rectangle` is valid or NULL.
+void ee_ge_prim_place(EeGePrim *p,
+                      const EeGeRectangle *rectangle,
+                      float rotation);
+
+/// A rhombus's `SetZPerVertex` (`SetZ` passes one four times): the four points read, their depths set, written back.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_prim_set_depths(EeGePrim *p,
+                           const float (*z)[4]);
+
+/// A rhombus's `operator=`: the vertices copied (`CopyFrom`), then the rectangle and the rotation.
+///
+/// # Safety
+/// `p` and `from` are live rhombi.
+void ee_ge_prim_assign(EeGePrim *p, const EeGePrim *from);
+
 /// `GERasterizer(inName)`.
 ///
 /// # Safety
@@ -3238,12 +3366,6 @@ bool ee_ge_physical_visible(const EeGeTransformation *location,
                             const EeGeBoundingBox *bbox,
                             const EeGeViewport *viewport,
                             bool orthographic);
-
-/// `GERhombus::ComputeRotation`'s corners into `out`.
-///
-/// # Safety
-/// `rectangle` is valid; `out` holds four points.
-void ee_ge_rhombus_corners(const EeGeRectangle *rectangle, float rotation, EeGe2DPoint *out);
 
 }  // extern "C"
 

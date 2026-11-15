@@ -35,6 +35,7 @@
 #include "lle/GERasterizer.h"
 #include "lle/GE2DVertex.h"
 #include "lle/GEBitmap.h"
+#include "lle/GELine.h"   // GEVertexHost
 #include "GERustMath.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
@@ -334,6 +335,8 @@ void GERectangle::RoundToNearest()
 // This section is its shell: the forwarders and the host, which makes each call the original made on another
 // object (the rasterizer, the vertex array, the textures). Floats cross the host as their bits.
 
+// ---- the vertex host: the calls GEBitmap, GELine, GEPoint and GERhombus (ee_ge bmpobj.rs, prim.rs) make on other objects
+
 static intptr_t GEBitmapFloatBits(float inValue)
 {
     uint32_t theBits;
@@ -349,7 +352,7 @@ static float GEBitmapBitsFloat(intptr_t inBits)
     return theValue;
 }
 
-intptr_t GEBitmap::Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
+intptr_t GEVertexHost(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
 {
     GEVertexArray* theVertices = (GEVertexArray*)inObj;
     GETexture* theTexture = (GETexture*)inObj;
@@ -406,10 +409,14 @@ intptr_t GEBitmap::Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, 
         return (intptr_t)theTexture->GetHeight();
     case EeGeBmpOp::TexDropLevels:
         return (intptr_t)theTexture->GetNumMipLevelsToDrop();
+    case EeGeBmpOp::VertexCopyFrom:
+        theVertices->CopyFrom(*(const GEVertexArray*)b);
+        return 0;
     }
     (void)inOwner;
     return 0;
 }
+// ---- end of the vertex host
 
 // FUNCTION: LLE 0x1000f3a4
 // Returns the colours of the bitmap's four corners in vertex order (top left, top right, bottom left, bottom right)
@@ -505,7 +512,7 @@ void GEBitmap::SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRi
 // Creates an untextured, unscaled, unrotated white bitmap: one texture slot per screen and a four-vertex quad
 GEBitmap::GEBitmap()
 {
-    this->mRust = ee_ge_bmp_new(&GEBitmap::Host, this);
+    this->mRust = ee_ge_bmp_new(&GEVertexHost, this);
 }
 
 // FUNCTION: LLE 0x1000fb74

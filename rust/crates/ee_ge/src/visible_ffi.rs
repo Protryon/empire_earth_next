@@ -1,10 +1,9 @@
-//! The C ABI of `GEViewport`'s math (`viewport.rs`), `GEPhysicalModel::Intersects(viewport)` (`physical.rs`) and
-//! the rhombus corners. The viewport pointer is the C++ object itself (`GERustViewport.h` pins the layout).
+//! The C ABI of `GEViewport`'s math (`viewport.rs`), `GEPhysicalModel::Intersects(viewport)` (`physical.rs`).
+//! The viewport pointer is the C++ object itself (`GERustViewport.h` pins the layout).
 //! (`UpdateVisibleTerrain`'s plan is the terrain mesh's own, `tmobj.rs`.)
 
-use crate::bitmap;
 use crate::physical;
-use crate::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation};
+use crate::types::{Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation};
 use crate::viewport::GeViewport;
 
 // ---- GEViewport ----
@@ -165,19 +164,4 @@ pub unsafe extern "C" fn ee_ge_physical_visible(
 ) -> bool {
     // SAFETY: the function's contract
     unsafe { physical::model_visible(&*location, scale, &*internal, *center, radius, &*bbox, &*viewport, orthographic) }
-}
-
-// ---- GERhombus (GEBitmap's corners and stretch are its Rust object's: bmpobj.rs) ----
-
-/// `GERhombus::ComputeRotation`'s corners into `out`.
-///
-/// # Safety
-/// `rectangle` is valid; `out` holds four points.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_rhombus_corners(rectangle: *const GeRectangle, rotation: f32, out: *mut Ge2DPoint) {
-    // SAFETY: the function's contract
-    unsafe {
-        let corners = bitmap::rhombus_corners(&*rectangle, rotation);
-        std::ptr::copy_nonoverlapping(corners.as_ptr(), out, 4);
-    }
 }

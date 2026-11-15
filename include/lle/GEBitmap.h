@@ -58,11 +58,10 @@ public:
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft);
     GEBitmap(const GEBitmap&) = delete;
     GEBitmap& operator=(const GEBitmap&) = delete;
+    EeGeBitmap* GetRust() const { return this->mRust; }
 private:
     virtual ~GEBitmap();
-    // (ComputeRotation 0x1000fbb9 is the Rust object's)
-    // The calls the bitmap makes on other objects (EeGeBmpOp), in the original's statements
-    static intptr_t Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b);
+    // (ComputeRotation 0x1000fbb9 is the Rust object's; the calls on other objects are GEVertexHost's, lle/GELine.h)
 
     EeGeBitmap* mRust;                      // the bitmap (ee_ge bmpobj.rs)
 };

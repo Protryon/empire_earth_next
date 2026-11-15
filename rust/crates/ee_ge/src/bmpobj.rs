@@ -57,6 +57,8 @@ pub enum EeGeBmpOp {
     TexHeight,
     /// `obj->GetNumMipLevelsToDrop()`.
     TexDropLevels,
+    /// `obj->CopyFrom(*(const GEVertexArray*)b)` (a rhombus's assignment, `prim.rs`).
+    VertexCopyFrom,
 }
 
 /// The host: `owner` is the C++ bitmap of the object calling.
