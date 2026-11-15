@@ -21968,3 +21968,200 @@ The merge of rust (f6cde783) needed nothing: no conflict, headers current, no du
 The condition types (`EESETSConditionType.cpp`, 888 lines, the same shape over `EESETSConditionControls`: the
 generic host's pattern applies directly), then the effect, condition and area screens (`EESETSEffect`,
 `EESETSCondition`, `EESETSArea`), the editor form (`EEUIFScenarioEditor`), the unit tab's small control classes.
+
+## R6 WON round 37: the software raster surface whole in Rust; BackgroundGrabber whole; the skins' layouts, the image components' paints, the images' pixel loops (ee_won surface.rs, grabobj.rs, skinlay.rs; branch rust-r6-won37, 2026-11-14)
+
+Round 36 did -651 lines by moving painters; this round took whole classes where the measure showed the logic: the
+software raster surface (the biggest WONGUI unit, 1,147 lines, which round 36's parser could not count: a template),
+BackgroundGrabber, then the skins' layouts the lead listed and the images' remaining pixel loops.
+
+WON C++ (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 70,837 at the branch's start
+(c26a2615, round 36 merged with rust) -> 69,371 before the merge of rust (net -1,466).
+
+### The software raster surface (ee_won surface.rs)
+
+- **What it is.** The WON SDK's `SurfaceBase` and its `Surface<PixelType>` template (Surface32, Surface16 for 555
+  and 565): the pixel buffer every lobby window, offscreen image and native image draws into. PlatGraphics fills,
+  frames, lines, ellipses and arcs through it, PlatNativeImage makes its surfaces with it, PlatGUIFont writes glyphs
+  into its pixels. Every lobby pixel goes through it.
+- **The move.** One Rust object (`EeWonSurface`): the format, size, row pitch, pixels (a `Vec<u32>`, so the C++'s
+  `uint32_t*` casts stay aligned), clip rectangle and colour, and every method: `SetClipRect`/`ClearClipRect`, the
+  two `DoClipRect`s, `FillRect`, `DrawRect` (its one-pixel cases), the horizontal and vertical lines, `DrawLine` with
+  its clip codes and `DrawLineClip`'s walk, the midpoint circle and filled circle, the ellipse, filled ellipse and arc
+  in the original's `double`s (the octant end points, its `PI` of 3.14159, `cos`/`sin` from the C runtime as the
+  original's), pixels put, set and read, the copies (with a transparency mask; a copy within one surface pixel by
+  pixel in the original's order), `Duplicate`, `Create`/`Free`, the 555/565 conversions and the WIN32_NOT_XBOX
+  bitmap header (`BlitToDC`, kept under its never-defined macro). WONSurface.h's `SurfaceBase` is the
+  reference-counted shell: every method a one-line forwarder, `Surface16`/`Surface32` typedefs of it; Surface.cpp is
+  deleted. The commented-out `DrawString` (over an `SFont` this SDK never had) and the unused `my_round` were not
+  code and are not ported.
+- **Corners kept.** `Free` keeps the pixels per row (the original did); a created surface 0 pixels wide still has
+  pixels (the original's `new char[0]`); a 16-bit surface's colour is the converted value truncated; the double to
+  int conversions truncate toward zero as C converts. Ints wrap.
+- **Behaviour changes, on undefined paths only:** new pixels are 0 (the original's were whatever `new` gave; the
+  port's only creator, PlatNativeImage's `NewSurface`, cleared them at once); a pixel outside the buffer (a source
+  rectangle outside the source, which the original read past) reads 0 and writes nothing.
+- **The golden** (`tests/won/won_surface_test.cpp`, `xbuild.py wontest won_surface_test`): WONSurface.h and
+  Surface.cpp copied unmodified (their includes left out; a RefCount and SmartPtr stand in), 20,000 sequences of 60
+  random operations on three slots of random formats and sizes (copies from another slot or within one, with and
+  without masks, mixed 32-bit into 16-bit, duplicates, re-creates, frees); after each operation the slot's fields
+  and every pixel byte compared: 1,336,319 checks, identical on the first run. `golden_surface.txt` (150 sequences,
+  each operation with the hash of its slot's pixels) is replayed by cargo.
+- **A driver trap:** round 36's `mutate.py` restored the file with `git checkout`, which does nothing for a file not
+  yet committed: the first mutation run piled every mutation onto the uncommitted `surface.rs` (stopped, reversed by
+  hand and checked with the golden replay). `build/r37/mutate.py` saves the file's bytes and writes them back.
+
+### BackgroundGrabber (ee_won grabobj.rs)
+
+What a background-grabbing or translucent component keeps of the screen under it. The Rust object holds the captured
+image's place, the clip it was captured in, whether it is captured and must be put back, the translucent colour and
+level and the capture's order (the original's static 64-bit counter: one per thread, as the lobby's one GUI thread made
+every capture), and runs every method: the capture (a new background image when the component's size changed, the
+DebugBG window made and shown, the offscreen image copied in), the tint (one blended fill when the Graphics blends,
+else each pixel scaled to n/8 plus the colour's (8-n)/8: the pixel's `DWORD` shifts logical, the colour's `int` shifts
+arithmetic, as the original's macros were), PrePaint's put-back, Invalidate, Clear. The C++ keeps the background image
+and the debug window (C++ objects) and is the host (`Grab` op 621, 15 calls each a run of the original's statements);
+RootContainer reads the state through `ee_won_grab_read`. BackgroundGrabber.cpp 227 -> 104 lines.
+
+- **Behaviour change:** the original's tint loop (`do ... while (++p != end)`) never ended over 0 pixels (a
+  translucent component 0 pixels wide on a Graphics without blending); the Rust's returns.
+- **The golden** (`won_grabobj_test`): BackgroundGrabber.cpp's statements over stand-ins for the component, its
+  window, the Graphics, the native and raw images (pixels from the image's number and generation; a raw image's draw
+  traces the hash of its tinted pixels) and the debug window; 20,000 sequences of 40 random calls between random
+  changes of the world, every call traced and the root's read compared after each: 1,600,000 checks identical on the
+  first good run. `golden_grabobj.txt` (300 sequences) is replayed by cargo over the world rebuilt in Rust.
+
+### The skins' layouts (ee_won skinlay.rs)
+
+MSComboBox's, MSScrollContainer's, MSListCtrl's, WONComboBox's, WONScrollContainer's and WONListCtrl's `Virtual08`
+(where the drop button, edit box, scrollbars, scroll area and header go), WONListCtrl's two column header setters (the
+first header fixes the height, else 15) and the desired sizes of WONComboBox, MSEtchedFrameGroup and WONSimpleButton.
+Each method is a forwarder (`WONSkinLayout`, include/ee/wonapi/WONSkinLayout.h) to `ee_won_skin_layout`, which reads
+the receiver's parts and fields and moves the parts through SkinnedContainers.cpp's host (`SkinLay` op 620). The
+lists' layouts are the containers' layouts then the header (the original called the base's `Virtual08`, which is
+`Container::Virtual08` and the layout; a NULL scroll area still faults in the header, as the original's did).
+
+- **Lines:** about level (the host's per-class part and field reads cost what the layouts saved); the logic is Rust.
+- **The golden** (`won_skinlay_test`): the eleven methods' statements over a stand-in receiver and parts (traced:
+  every SetPosSize, SetLeftPad, GetDesiredSize, SetColumn, SetColumnItem, SetColumnWidth and the header height's
+  store), parts NULL where the original tested them; 200,000 random worlds, identical on the first good run;
+  `golden_skinlay.txt` (400 worlds, each printed whole) replayed by cargo.
+
+### The image and rectangle components' paints (guidraw.rs)
+
+ImageComponent::Paint (stretched with its size set first, once, or tiled inside a clip), RectangleComponent::Paint
+and RectangleComponent3D::Paint are draw plans (`image_component_paint`, `rectangle_paint`, `rectangle_3d_paint`)
+run by `WONDrawRun`. Behaviour change: the original's tiling never ended for an image 0 pixels wide (or high) over a
+component with room; the plan tiles nothing then. `won_compaint_test`: 300,000 paints against the original statements
+over a logged Graphics and image, identical; `golden_compaint.txt` (400) replayed by cargo.
+- **A driver trap:** the first compaint driver skipped such a hanging paint with `n--; continue`, which re-seeded the
+  same paint for ever (the seed is the paint's number); it now draws that paint untiled.
+
+### The images' pixel loops (imgfilter.rs)
+
+StretchImageFilter's copies and stretches (StretchImage.cpp's CopyRawImage and RawStretch templates, run over
+guidraw's nine-piece plan) are `stretch_run` (one call per filter); RawImage32::GetNative's transparency pass and
+RawImage8::GetNative's mask (Image.cpp) are `mask32` and `mask8`. The stretch reads each source pixel it writes (the
+original read the next one after each step, past the row's end after its last). `won_stretchpx_test` (100,000 filters,
+8- and 32-bit, borders inside the source) and `won_imgmask_test` (200,000 images, the masks' unused bits as `new` left
+them) identical; their goldens (300 each) replayed by cargo.
+
+### Mutations
+
+`build/r37/mutate.py` (each mutation applied to the Rust file alone, cargo's tests run, the file's saved bytes
+written back; the drivers were not rerun per mutation this round: a release build of the whole Rust library per
+mutation costs about four minutes on the shared machine, so cargo's replay of each golden stands for the driver).
+33 mutations, 29 caught by cargo at once; of the four it missed, two had no reachable difference and two got unit
+tests (the second commit of the surface's tests):
+
+| Module | Mutation | cargo |
+|---|---|---|
+| surface | the line's last point not drawn | replay, unit test |
+| surface | the clip's bottom one row lower | replay |
+| surface | the circle's straight step +6 | replay |
+| surface | the ellipse's second region step 2 b2 | replay |
+| surface | the arc's octants 3 and 4 excluding their first limit (`<` for `<=`) | missed: equivalent (a point's y equals an end point's only at the octants' `BIG_VAL` limits) |
+| surface | the arc's negative start not wrapped (`% 360` dropped) | missed (the goldens' starts are above -720); unit test added |
+| surface | 565 green from bit 11 | replay, unit test |
+| surface | the masked copy's first bit one later | replay, unit test |
+| surface | the copy's source rows at the destination's pitch | replay |
+| surface | rows padded by 2 bytes (for `4 - bpr % 4`) | missed: equivalent (a row's bytes are 0 or 2 modulo 4) |
+| surface | the filled circle's last row | replay |
+| surface | the clipped line's step one late | replay |
+| surface | the horizontal line's ends not swapped | replay |
+| surface | Free clearing the pixels per row | replay, unit test |
+| surface | GetPixel reading x == width | missed (the read pixel was 0 where the goldens read there); unit test added |
+| skinlay | the MS combo's right pad 1 | replay, unit test |
+| skinlay | the framed button at the edit's left | replay |
+| skinlay | the MS 3D frame 1 pixel | replay, unit test |
+| skinlay | a text header's height 0 kept | replay, unit test |
+| skinlay | the WON combo's desired height +3 | replay |
+| grabobj | the constructor's level 3 | replay |
+| grabobj | PrePaint's x added | replay, unit test |
+| grabobj | the colour's shift logical | replay, unit test |
+| grabobj | the tint at level 8 | replay, unit test |
+| grabobj | Invalidate before a capture | replay |
+| guidraw | the stretched image's size always set | replay, unit test |
+| guidraw | the tiles' columns one image apart too few | replay, unit test |
+| guidraw | the 3D frame's colours not swapped when down | replay, unit test |
+| imgfilter | the copy from the source always | replay |
+| imgfilter | the stretch's column step without the remainder | replay |
+| imgfilter | the stretch's tile height as its width | replay |
+| imgfilter | the mask's bits low first | replay, unit test |
+| imgfilter | an 8-bit index compared as a byte | replay, unit test |
+
+(skinlay, grabobj, guidraw and imgfilter each had a longer list written, `build/r37/mut_*.full.json`; the run was
+cut to the rows above for time.)
+
+### Commits, gates, what only the lobby reaches, what is left
+
+| Commit | What | WON C++ (`wc -l`, src/Empire Earth/WONAPI + include/ee/wonapi) |
+|---|---|---|
+| 815ab56d | the software raster surface whole (`surface.rs`), Surface.cpp deleted | +87 -1298 (-1,211) |
+| 2240997f | the image and rectangle components' paints (guidraw.rs plans) | +14 -57 (-43) |
+| d2ff58cc | the images' pixel loops (`imgfilter.rs` stretch_run, mask32, mask8) | +14 -91 (-77) |
+| 51890edb | the skins' layouts (`skinlay.rs`, WONSkinLayout.h) | +145 -156 (-11) |
+| 82c31423 | BackgroundGrabber whole (`grabobj.rs`) | +97 -222 (-125) |
+| 1b081a2b | surface unit tests for the two mutations the replay missed | 0 |
+| d891ae55 | the merge of rust (rust/cbindgen.toml's export list: both sides' names) | (other lanes' WON changes: 69,371 -> 67,698) |
+
+The round's own net: -1,466 (70,837 -> 69,371), short of the 1,500 asked by 34 lines. WONGUI's units: 20,704 ->
+19,288 lines (measure.py: code 13,350 -> 11,815, logic 5,995 -> 5,313).
+
+The four commits after the surface were built and gated together (one `build.py --sim` 0/0, oracle seeds 2-3
+identical, ee_won's tests, clippy and rustfmt clean) and split one concern each afterwards, each with its own
+generated header (`build/r37/commit_split.py`); the intermediate commits were not built alone.
+
+| Gate | Per commit | The merged result (d891ae55) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (EE-AOC, EE-SIM) at 815ab56d and at 82c31423 (the four later pieces built together; a first build of them failed on three units: SkinnedContainers' host outside `namespace WONAPI`, and a `DWORD*` passed for a `uint32_t*` twice: a `DWORD` is an `unsigned long` on Windows) | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical at both | seeds 2-7 identical |
+| `rust_build.py gate` | at 815ab56d: tests passed, clippy failed on the original's `PI` of 3.14159 (`approx_constant`: allowed with a comment, the original's value kept); at 82c31423: ee_won's 644 tests, clippy and rustfmt clean | PASS |
+| `build.py --test-profile windowed-software` | | 0 / 0 |
+| `xbuild.py wontest` | the six new programs exit 0 | all 117 programs exit 0 (`WONTEST EXIT 0`, about two and a half hours beside the other gates) |
+| `lan_game.py` (harness lock, the test-profile exe) | | `RESULT PASS lan-game` (PT host 3216, joiner 3437; no fault line in either game.log) |
+
+The merge of rust (other lanes' rounds, round 36's merge among them) conflicted only in `rust/cbindgen.toml`'s export
+list (one line both sides grew: rust's line with this round's four names added); `rust_build.py header` current,
+`rust_includes.py` changed nothing.
+
+The lobby captures of the LAN game (`build/lan_game/20261114-153857`, host and joiner: lobby-open, lan-screen,
+create-dialog, staging-host, lan-list, staging-joiner, staging-ready, game, play) were looked at: the tabs, list
+headers, combo buttons, check boxes, radio circles, frames, the stretched dialog frame and the text draw as before
+(every pixel through the Rust surface).
+
+- **What runs it: only the lobby.** EE-SIM never builds the lobby (the oracle is unchanged by construction). In a LAN
+  game every lobby pixel goes through the Rust surface (PlatGraphics' fills, lines, frames, ellipses and arcs; the
+  native images' surfaces; the glyphs written into its pixels), the skinned combo boxes, list controls and scroll
+  containers lay out through skinlay, the lobby's image and rectangle components paint through the plans, the stretch
+  images build through `stretch_run`, the transparent raw images' masks through `mask32`/`mask8`, and translucent or
+  grabbing components (tool tips, popups) through the Rust grabber. `lan_game.py` runs them; only the lobby captures
+  show whether they look the same.
+- **Draws that changed path (for the lobby screenshots):** every pixel the lobby draws (the surface); the skinned
+  combo boxes' buttons and edit boxes, the list controls' scrollbars, scroll areas and headers (their places); image
+  components (the lobby's pictures, stretched or tiled), rectangle components and 3D rectangles; the stretch images'
+  nine pieces; the masked raw images; tool tips' and popups' grabbed backgrounds.
+- **What is left** (the measure, below): the platform layer (PlatWindowManager, PlatGraphics, PlatGUIWindow,
+  PlatNativeImage, PlatGUIFont), the resource configs (ComponentConfig and its subclasses: the census first), the
+  remaining images (Image.cpp's ProgramImage::Draw and RawImage1's layout, the decoders), the WON skin's compositions
+  (WONMSSkin's constructor, WONSkin's factories), the widgets' remains (Component, ComponentTraversal, WrappedText).

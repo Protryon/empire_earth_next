@@ -497,6 +497,24 @@ WON_TESTS = {
     # the Windows skin's drawing helpers and MS control paints as Rust plans (mspaint.rs) against the original
     # statements over a logged Graphics (golden: rust/crates/ee_won/src/golden_mspaint.txt)
     "won_mspaint_test": [],
+    # the software raster surface as a whole Rust object (surface.rs) against the WON SDK's Surface.cpp
+    # (golden: rust/crates/ee_won/src/golden_surface.txt)
+    "won_surface_test": [],
+    # the skins' layouts (skinlay.rs: the combo boxes', scroll containers' and list controls' Virtual08, the column
+    # headers, three desired sizes) against the original statements (golden: rust/crates/ee_won/src/golden_skinlay.txt)
+    "won_skinlay_test": [],
+    # BackgroundGrabber as a whole Rust object (grabobj.rs) against the original statements over a traced world
+    # (golden: rust/crates/ee_won/src/golden_grabobj.txt)
+    "won_grabobj_test": [],
+    # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
+    # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
+    "won_compaint_test": [],
+    # StretchImageFilter's pixel work (imgfilter.rs stretch_run) against the original CopyRawImage and RawStretch over
+    # guidraw's plan (golden: rust/crates/ee_won/src/golden_stretchpx.txt)
+    "won_stretchpx_test": [],
+    # the raw images' transparency masks (imgfilter.rs mask32, mask8) against Image.cpp's GetNative loops
+    # (golden: rust/crates/ee_won/src/golden_imgmask.txt)
+    "won_imgmask_test": [],
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
     # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],
