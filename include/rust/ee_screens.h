@@ -1197,7 +1197,7 @@ constexpr static const uint32_t EE_SCREENS_SEET_OP_FIRE_RANGE = 33;
 /// The control's help string set to i2 (`SetStringTableID`).
 constexpr static const uint32_t EE_SCREENS_SEET_OP_STRING_TABLE = 34;
 
-/// The combo box's or edit box's text font set to `gU531930`.
+/// The combo box's or edit box's text font set to `gU531930` (i2 = 1: a combo box's list box's too).
 constexpr static const uint32_t EE_SCREENS_SEET_OP_FONT_530 = 35;
 
 /// -> the player picker's player / set to i2 / its flags set to i2 (`SetFlags`: refilled).
@@ -1306,12 +1306,21 @@ constexpr static const uint32_t EE_SCREENS_SEET_OP_UNIT_TYPE = 74;
 constexpr static const uint32_t EE_SCREENS_SEET_OP_UNIT_NAME = 75;
 
 /// The editor's technologies kept by the host (the tree's nodes shown in the editor and the epochs, sorted by
-/// name) -> their count / the kept technology i2 / the technology i2's line into p2 (capacity i1).
+/// name; i2 = 1: only those making no unit, the condition types') -> their count / the kept technology i2 / the technology i2's line into p2 (capacity i1).
 constexpr static const uint32_t EE_SCREENS_SEET_OP_TECHS = 76;
 
 constexpr static const uint32_t EE_SCREENS_SEET_OP_TECH = 77;
 
 constexpr static const uint32_t EE_SCREENS_SEET_OP_TECH_LINE = 78;
+
+/// The control's trigger event p1 (an `EESEERust` check display event) given the control to show or hide
+/// (`EESEEPushControl`) / processed on the control (`ProcessEvent` with the editor form).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_PUSH = 80;
+
+constexpr static const uint32_t EE_SCREENS_SEET_OP_EVENT_PROCESS = 81;
+
+/// The technology i2's name (the unit class's for a unit-making node, "" for none) into p2 (capacity i1).
+constexpr static const uint32_t EE_SCREENS_SEET_OP_TECH_NAME = 82;
 
 /// The events (`EE_SCREENS_SEET_OP_EVENT_NEW`): a screen event (`EECreateScreenEvent(i1)`), an `EESEERust(i1)`, a
 /// `UIESliderChange(label i1, modifier f0, offset i2)`, an `EESEENewSliderChange(label i1, format i2: 0 "%2.0f",
@@ -1339,6 +1348,11 @@ constexpr static const int32_t EE_SCREENS_SEET_S_MESSAGE = 2;
 constexpr static const int32_t EE_SCREENS_SEET_S_FILE_NAME = 3;
 
 constexpr static const int32_t EE_SCREENS_SEET_S_DESCRIPTION = 4;
+
+/// A condition's chat text; the entry's text (the trigger tab's description box).
+constexpr static const int32_t EE_SCREENS_SEET_S_CHAT = 5;
+
+constexpr static const int32_t EE_SCREENS_SEET_S_TEXT = 6;
 
 /// A behaviour's values: settable, the first, second and float sliders' minimum and maximum, the float scale.
 constexpr static const int32_t EE_SCREENS_SEET_B_SETTABLE = 0;
@@ -7609,6 +7623,9 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 
+/// The condition types (opaque to C++).
+struct EeScreensSeConditions;
+
 /// The effect types (opaque to C++).
 struct EeScreensSeEffects;
 
@@ -8077,6 +8094,10 @@ struct EeScreensSeplCtl {
   int32_t extra[4];
 };
 
+/// `kSETSConditionTitleLabel`, `kSETSConditionTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
+/// `DuplicateButton`, `DeleteButton`: what the always-true type hides while shown.
+constexpr static const int32_t EE_SCREENS_SECT_ALWAYS_TRUE_CONTROLS[6] = { 2300, 2301, 2011, 2012, 2006, 2007, };
+
 /// `kSETSEffectTitleLabel`, `kSETSEffectTypeComboBox`, `kSETriggerScreenNameEditBox`, `NameLabel`,
 /// `DuplicateButton`, `DeleteButton`.
 constexpr static const int32_t EE_SCREENS_SEET_NO_EFFECT_CONTROLS[6] = { 2400, 2401, 2011, 2012, 2006, 2007, };
@@ -8230,6 +8251,32 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
+
+/// The condition types' constructors (`EESETSCondition`'s `new`s): the player attribute type's event made. Freed
+/// by `ee_screens_sect_free`.
+///
+/// # Safety
+/// `controls` is the condition screen's `EESETSConditionControls`.
+EeScreensSeConditions *ee_screens_sect_new(void *controls);
+
+/// The destructors: the event released, the object freed.
+///
+/// # Safety
+/// `types` comes from `ee_screens_sect_new` (or is NULL) and is not used again.
+void ee_screens_sect_free(EeScreensSeConditions *types, void *controls);
+
+/// The condition type `ty`'s (`kSMCondition*`) slot `slot` (`EE_SCREENS_SEET_STORE`, `_HIDE`, `_LOAD`, `_SHOW`)
+/// over the controls and, for the slots that take one, the condition (`EESMCondition*`) and its numbers (its
+/// `EeScenarioConditionFields`).
+///
+/// # Safety
+/// `types` comes from `ee_screens_sect_new` (or is NULL); `fields` is `condition`'s numbers when the slot reads them.
+void ee_screens_sect_call(const EeScreensSeConditions *types,
+                          uint32_t ty,
+                          uint32_t slot,
+                          void *controls,
+                          void *condition,
+                          void *fields);
 
 /// The effect types' constructors (`EESETSEffect`'s `new`s): their events made. Freed by `ee_screens_seet_free`.
 ///

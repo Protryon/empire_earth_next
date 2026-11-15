@@ -4,14 +4,16 @@
 // scenario manager's condition mL04 + 1 (EEScenarioManager::GetCondition): the name/text edit boxes of the trigger
 // screen, a type combo box (mTypeComboBox, id 0x8fd; types 2.. are mTypes[selection + 2]) and the current type's
 // controls (mControls). Slot names by offset; provisional names. Requires ee/EESETSBaseObject.h.
-// (EESETSConditionType.h / EESETSConditionControls.h only for the slot bodies.)
+// The seven condition types are one Rust object (ee_screens editor_conditions.rs). (EESETSConditionControls.h only
+// for the slot bodies.)
 #ifndef EE_EESETSCONDITION_H
 #define EE_EESETSCONDITION_H
 
 class UIComboBox;
 class UITextLabel;
 class EESETSConditionControls;
-class EESETSConditionType;
+class EESMCondition;
+struct EeScreensSeConditions;
 class GEFont;
 
 class EESETSCondition : public EESETSBaseObject {
@@ -34,9 +36,11 @@ public:
     virtual void RefreshControls();         // +0x44 0x17ebc2
 
     void ChangeConditionType();             // 0x17e8be (EESEEChangeConditionType)
+    void TypeCall(unsigned long inSlot, EESMCondition* inCondition);   // the current type's slot (EE_SCREENS_SEET_*)
 
     unsigned long mType;                    // +0x0c (the current mTypes index; 1 in the ctor)
-    EESETSConditionType* mTypes[8];         // +0x10 ([1] is never set)
+    EeScreensSeConditions* mTypes;          // the seven condition types (ee_screens editor_conditions.rs; the
+                                            // original's mTypes[8] at +0x10, [1] never set)
     EESETSConditionControls* mControls;     // +0x30
     UITextLabel* mTitleLabel;               // +0x34 (id 0x8fc)
     UIComboBox* mTypeComboBox;              // +0x38 (id 0x8fd)

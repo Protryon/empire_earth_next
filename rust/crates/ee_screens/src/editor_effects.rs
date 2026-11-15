@@ -98,7 +98,7 @@ pub const EE_SCREENS_SEET_OP_PAGE_SIZE: u32 = 32;
 pub const EE_SCREENS_SEET_OP_FIRE_RANGE: u32 = 33;
 /// The control's help string set to i2 (`SetStringTableID`).
 pub const EE_SCREENS_SEET_OP_STRING_TABLE: u32 = 34;
-/// The combo box's or edit box's text font set to `gU531930`.
+/// The combo box's or edit box's text font set to `gU531930` (i2 = 1: a combo box's list box's too).
 pub const EE_SCREENS_SEET_OP_FONT_530: u32 = 35;
 /// -> the player picker's player / set to i2 / its flags set to i2 (`SetFlags`: refilled).
 pub const EE_SCREENS_SEET_OP_PLAYER: u32 = 36;
@@ -167,10 +167,16 @@ pub const EE_SCREENS_SEET_OP_UNIT_TYPE: u32 = 74;
 /// -> the unit type i2's name string.
 pub const EE_SCREENS_SEET_OP_UNIT_NAME: u32 = 75;
 /// The editor's technologies kept by the host (the tree's nodes shown in the editor and the epochs, sorted by
-/// name) -> their count / the kept technology i2 / the technology i2's line into p2 (capacity i1).
+/// name; i2 = 1: only those making no unit, the condition types') -> their count / the kept technology i2 / the technology i2's line into p2 (capacity i1).
 pub const EE_SCREENS_SEET_OP_TECHS: u32 = 76;
 pub const EE_SCREENS_SEET_OP_TECH: u32 = 77;
 pub const EE_SCREENS_SEET_OP_TECH_LINE: u32 = 78;
+/// The control's trigger event p1 (an `EESEERust` check display event) given the control to show or hide
+/// (`EESEEPushControl`) / processed on the control (`ProcessEvent` with the editor form).
+pub const EE_SCREENS_SEET_OP_EVENT_PUSH: u32 = 80;
+pub const EE_SCREENS_SEET_OP_EVENT_PROCESS: u32 = 81;
+/// The technology i2's name (the unit class's for a unit-making node, "" for none) into p2 (capacity i1).
+pub const EE_SCREENS_SEET_OP_TECH_NAME: u32 = 82;
 
 /// The events (`EE_SCREENS_SEET_OP_EVENT_NEW`): a screen event (`EECreateScreenEvent(i1)`), an `EESEERust(i1)`, a
 /// `UIESliderChange(label i1, modifier f0, offset i2)`, an `EESEENewSliderChange(label i1, format i2: 0 "%2.0f",
@@ -189,6 +195,9 @@ pub const EE_SCREENS_SEET_S_NEW_NAME: i32 = 1;
 pub const EE_SCREENS_SEET_S_MESSAGE: i32 = 2;
 pub const EE_SCREENS_SEET_S_FILE_NAME: i32 = 3;
 pub const EE_SCREENS_SEET_S_DESCRIPTION: i32 = 4;
+/// A condition's chat text; the entry's text (the trigger tab's description box).
+pub const EE_SCREENS_SEET_S_CHAT: i32 = 5;
+pub const EE_SCREENS_SEET_S_TEXT: i32 = 6;
 
 /// A behaviour's values: settable, the first, second and float sliders' minimum and maximum, the float scale.
 pub const EE_SCREENS_SEET_B_SETTABLE: i32 = 0;
@@ -269,21 +278,22 @@ pub(crate) use crate::editor_effects_ids::*;
 
 // ---- the generic host
 
-/// One call's context: the host, the effect screen's controls, the effect (0 for a control-only slot) and its
-/// numbers, the effect types' own handle (the events of the military group, dialogue and AI attribute types).
-pub struct Fx<'a, H: SeplHost + ?Sized> {
+/// One call's context: the host, the screen's controls, the entry (0 for a control-only slot) and its numbers
+/// (`F`: an effect's `EeScenarioEffectFields`, a condition's `EeScenarioConditionFields`), the types' own handle
+/// (the events of the military group, dialogue and AI attribute types).
+pub struct Fx<'a, H: SeplHost + ?Sized, F = EeScenarioEffectFields> {
     pub h: &'a mut H,
     pub controls: usize,
     pub effect: usize,
-    pub fields: *mut EeScenarioEffectFields,
+    pub fields: *mut F,
     pub me: usize,
 }
 
-impl<H: SeplHost + ?Sized> Fx<'_, H> {
-    /// The effect's numbers (never held across a host call).
+impl<H: SeplHost + ?Sized, F> Fx<'_, H, F> {
+    /// The entry's numbers (never held across a host call).
     #[allow(clippy::mut_from_ref)]
-    pub(crate) fn e(&self) -> &mut EeScenarioEffectFields {
-        // SAFETY: the effect screen passes its selected effect's numbers for the slots that take an effect; the
+    pub(crate) fn e(&self) -> &mut F {
+        // SAFETY: the screen passes its selected entry's numbers for the slots that take an effect; the
         // reference lives for one field access
         unsafe { &mut *self.fields }
     }
@@ -497,6 +507,18 @@ impl<H: SeplHost + ?Sized> Fx<'_, H> {
     pub(crate) fn font_530(&mut self, a: u32, k: u32) {
         self.op(EE_SCREENS_SEET_OP_FONT_530, a, k, 0, 0);
     }
+    /// The combo box's text and list box fonts set to `gU531930`.
+    pub(crate) fn font_530_both(&mut self, a: u32, k: u32) {
+        self.op(EE_SCREENS_SEET_OP_FONT_530, a, k, 1, 0);
+    }
+    /// The check display event `event` given the control (a, k) to show or hide with its check box.
+    pub(crate) fn event_push(&mut self, event: usize, a: u32, k: u32) {
+        self.call(EE_SCREENS_SEET_OP_EVENT_PUSH, [event, 0], [a as i32, k as i32, 0, 0], [0.0; 4]);
+    }
+    /// The event processed on the control (a, k) (`ProcessEvent` with the editor form).
+    pub(crate) fn event_process(&mut self, event: usize, a: u32, k: u32) {
+        self.call(EE_SCREENS_SEET_OP_EVENT_PROCESS, [event, 0], [a as i32, k as i32, 0, 0], [0.0; 4]);
+    }
     pub(crate) fn player(&mut self, k: u32) -> u32 {
         self.op(EE_SCREENS_SEET_OP_PLAYER, PLAYER, k, 0, 0) as u32
     }
@@ -689,30 +711,38 @@ impl<H: SeplHost + ?Sized> Fx<'_, H> {
     }
     /// The editor's technologies (the host's sorted list).
     pub(crate) fn techs(&mut self) -> Vec<i32> {
-        let n = self.op(EE_SCREENS_SEET_OP_TECHS, 0, 0, 0, 0).max(0);
+        self.techs_of(false)
+    }
+    /// The editor's technologies; `no_units`: only those making no unit.
+    pub(crate) fn techs_of(&mut self, no_units: bool) -> Vec<i32> {
+        let n = self.op(EE_SCREENS_SEET_OP_TECHS, 0, 0, no_units as i32, 0).max(0);
         (0..n).map(|k| self.op(EE_SCREENS_SEET_OP_TECH, 0, 0, k, 0)).collect()
     }
     /// The technology `t`'s line in the technology combo box.
     pub(crate) fn tech_line(&mut self, t: i32) -> Vec<u8> {
         self.read(EE_SCREENS_SEET_OP_TECH_LINE, 0, [0, 0, t, 0], 1).unwrap_or_default()
     }
+    /// The technology `t`'s name ("" for none).
+    pub(crate) fn tech_name(&mut self, t: i32) -> Vec<u8> {
+        self.read(EE_SCREENS_SEET_OP_TECH_NAME, 0, [0, 0, t, 0], 1).unwrap_or_default()
+    }
 }
 
 /// A yellow label of the effect screen: `mLabels[k]` at (x, y), w by h, the string `id`, shown.
-pub(crate) fn label<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, id: u32, x: f32, y: f32, w: f32, h: f32) {
+pub(crate) fn label<H: SeplHost + ?Sized, F>(c: &mut Fx<H, F>, k: u32, id: u32, x: f32, y: f32, w: f32, h: f32) {
     c.set_rect(LABEL, k, x, y, w, h);
     c.text_id(LABEL, k, id);
     c.show(LABEL, k);
 }
 
 /// A radio button's or check box's text (the string `id` in `gU531934`), yellow and transparent.
-pub(crate) fn radio_text<H: SeplHost + ?Sized>(c: &mut Fx<H>, a: u32, k: u32, id: u32) {
+pub(crate) fn radio_text<H: SeplHost + ?Sized, F>(c: &mut Fx<H, F>, a: u32, k: u32, id: u32) {
     c.text_font(a, k, id, FONT_534);
     c.yellow(a, k);
 }
 
 /// A radio button of the effect screen at (x, y): its text, yellow, located, shown.
-pub(crate) fn radio<H: SeplHost + ?Sized>(c: &mut Fx<H>, k: u32, id: u32, x: f32, y: f32) {
+pub(crate) fn radio<H: SeplHost + ?Sized, F>(c: &mut Fx<H, F>, k: u32, id: u32, x: f32, y: f32) {
     radio_text(c, RADIO, k, id);
     c.locate(RADIO, k, x, y);
     c.show(RADIO, k);
@@ -727,18 +757,18 @@ pub(crate) fn first_word(text: &[u8]) -> &[u8] {
 }
 
 /// Whether the effect still has a default `<...>` name.
-pub(crate) fn default_named<H: SeplHost + ?Sized>(c: &mut Fx<H>) -> bool {
+pub(crate) fn default_named<H: SeplHost + ?Sized, F>(c: &mut Fx<H, F>) -> bool {
     c.effect_text(EE_SCREENS_SEET_S_NAME).first() == Some(&b'<')
 }
 
 /// The new name into the effect and the trigger tab's name box.
-pub(crate) fn rename<H: SeplHost + ?Sized>(c: &mut Fx<H>, name: &[u8]) {
+pub(crate) fn rename<H: SeplHost + ?Sized, F>(c: &mut Fx<H, F>, name: &[u8]) {
     c.set_effect_text(EE_SCREENS_SEET_S_NAME, name);
     c.set_name_box(name);
 }
 
 /// `"<" + first word of the string id + ">"` (the media, game and AI types' names).
-pub(crate) fn rename_by_action<H: SeplHost + ?Sized>(c: &mut Fx<H>, id: u32) {
+pub(crate) fn rename_by_action<H: SeplHost + ?Sized, F>(c: &mut Fx<H, F>, id: u32) {
     if default_named(c) {
         let s = c.string(id);
         let mut name = b"<".to_vec();
@@ -749,7 +779,7 @@ pub(crate) fn rename_by_action<H: SeplHost + ?Sized>(c: &mut Fx<H>, id: u32) {
 }
 
 /// A player's name as the triggers write it: the string of players 0..=6, else the player format of `p - 6`.
-pub(crate) fn player_name<H: SeplHost + ?Sized>(c: &mut Fx<H>, p: u32) -> Vec<u8> {
+pub(crate) fn player_name<H: SeplHost + ?Sized, F>(c: &mut Fx<H, F>, p: u32) -> Vec<u8> {
     if p <= 6 {
         c.string(p + IDS_TRIGGER_PLAYER_FIRST)
     } else {

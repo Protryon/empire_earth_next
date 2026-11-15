@@ -259,7 +259,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 17ccf3 17daa8 Empire Earth/Scenario Editor/EESETSArea.cpp
 17daa8 17e49e Empire Earth/Scenario Editor/EESETSCComboBox.cpp
 17e49e 17ef10 Empire Earth/Scenario Editor/EESETSCondition.cpp
-17ef10 181792 Empire Earth/Scenario Editor/EESETSConditionType.cpp
 181792 182629 Empire Earth/Scenario Editor/EESETSEComboBox.cpp
 182629 182dda Empire Earth/Scenario Editor/EESETSEffect.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp

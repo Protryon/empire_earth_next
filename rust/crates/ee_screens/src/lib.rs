@@ -61,6 +61,8 @@
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
+//! - [`editor_conditions`]: the scenario editor's condition types whole in Rust (`EESETSConditionType` and its
+//!   seven `EESETSCT*` classes) over the effect types' generic host, by the condition screen's controls.
 //! - [`editor_effects`]: the scenario editor's effect types whole in Rust (`EESETSEffectType` and every `EESETSET*`
 //!   class: [`editor_effects_object`], [`editor_effects_player`], [`editor_effects_more`]) over one generic host of
 //!   the effect screen's controls by array and index.
@@ -141,6 +143,9 @@ mod diplomacy_ffi;
 pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
+pub mod editor_conditions;
+#[cfg(not(test))]
+mod editor_conditions_ffi;
 pub mod editor_effects;
 #[cfg(not(test))]
 mod editor_effects_ffi;

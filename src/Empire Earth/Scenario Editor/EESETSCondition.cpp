@@ -79,7 +79,6 @@
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESETSConditionControls.h"
-#include "ee/EESETSConditionType.h"
 #include "ee/EESETSCondition.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
@@ -87,7 +86,7 @@
 #include "rust/ee_screens.h"
 // FUNCTION: EXE 0x57e49e
 // Creates the condition sub-screen: shared controls, title label, condition-type combo and the seven condition
-// types, starting on the object condition
+// types (one Rust object, ee_screens editor_conditions.rs), starting on the object condition
 EESETSCondition::EESETSCondition(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
 {
     UWideString theText;
@@ -124,13 +123,7 @@ EESETSCondition::EESETSCondition(GEFont* inFont, UIForm* inForm, unsigned long& 
     this->mTypeComboBox->SetBgOpacity(1.0f);
     inForm->AddControl(this->mTypeComboBox, 12);
     ioIndex++;
-    this->mTypes[kSMConditionChatMessageContains] = new EESETSCTChatMessage;
-    this->mTypes[kSMConditionTriggerAttribute] = new EESETSCTTriggerAttribute;
-    this->mTypes[kSMConditionPlayerAttribute] = new EESETSCTPlayerResource;
-    this->mTypes[kSMConditionPlayerTechnology] = new EESETSCTPlayerResearch;
-    this->mTypes[kSMConditionAlwaysTrue] = new EESETSCTAlwaysTrue;
-    this->mTypes[kSMConditionPlayerDiplomacy] = new EESETSCTDiplomacy;
-    this->mTypes[kSMConditionGameAttribute] = new EESETSCTGame;
+    this->mTypes = ee_screens_sect_new(this->mControls);
     this->mType = kSMConditionObject;
 }
 
@@ -144,13 +137,14 @@ EESETSCondition::~EESETSCondition()
     delete this->mControls;
     delete this->mTypeComboBox;
     delete this->mTitleLabel;
-    delete this->mTypes[7];
-    delete this->mTypes[4];
-    delete this->mTypes[2];
-    delete this->mTypes[3];
-    delete this->mTypes[0];
-    delete this->mTypes[5];
-    delete this->mTypes[6];
+    ee_screens_sect_free(this->mTypes, NULL);
+}
+
+// the current type's slot (EE_SCREENS_SEET_STORE, _HIDE, _LOAD, _SHOW) over the controls and the condition
+void EESETSCondition::TypeCall(unsigned long inSlot, EESMCondition* inCondition)
+{
+    ee_screens_sect_call(this->mTypes, (uint32_t)this->mType, (uint32_t)inSlot, this->mControls, inCondition,
+                         inCondition != NULL ? static_cast<EeScenarioConditionFields*>(inCondition) : NULL);
 }
 
 // FUNCTION: EXE 0x57e8be
@@ -163,10 +157,10 @@ void EESETSCondition::ChangeConditionType()
     unsigned long theType = theSelection + 2;
     if (theType == this->mType)
         return;
-    this->mTypes[this->mType]->Hide(this->mControls);
+    this->TypeCall(EE_SCREENS_SEET_HIDE, NULL);
     this->mType = theType;
-    this->mTypes[this->mType]->Show(this->mControls);
-    this->mTypes[this->mType]->Load(theCondition, this->mControls);
+    this->TypeCall(EE_SCREENS_SEET_SHOW, NULL);
+    this->TypeCall(EE_SCREENS_SEET_LOAD, theCondition);
     this->RefreshControls();
 }
 
@@ -218,7 +212,7 @@ void EESETSCondition::Activate()
         this->mControls->mPlayers[i]->mPlayerCount = thePlayer;
     if (this->mType == kSMConditionAlwaysTrue || this->mType == kSMConditionObject)
         this->mType = kSMConditionPlayerAttribute;
-    this->mTypes[this->mType]->Show(this->mControls);
+    this->TypeCall(EE_SCREENS_SEET_SHOW, NULL);
     this->RefreshControls();
 }
 
@@ -232,7 +226,7 @@ void EESETSCondition::Store()
         theCondition->SetName(UWideString(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetName()));
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->GetAllText(theText);
         theCondition->SetText(theText);
-        this->mTypes[this->mType]->Store(theCondition, this->mControls);
+        this->TypeCall(EE_SCREENS_SEET_STORE, theCondition);
         theCondition->SetType(this->mType);
     }
 }
@@ -267,15 +261,15 @@ void EESETSCondition::Load()
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(theCondition->GetName());
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->SetText(theCondition->GetText());
         if (this->mType != theCondition->GetType()) {
-            this->mTypes[this->mType]->Hide(this->mControls);
+            this->TypeCall(EE_SCREENS_SEET_HIDE, NULL);
             this->mType = theCondition->GetType();
             if (this->mType > kSMConditionObject)
                 this->mTypeComboBox->SetCurrentSelection(theCondition->GetType() - 2);
             if (theCondition->GetType() != kSMConditionObject)
-                this->mTypes[this->mType]->Show(this->mControls);
+                this->TypeCall(EE_SCREENS_SEET_SHOW, NULL);
         }
         if (theCondition->GetType() != kSMConditionObject) {
-            this->mTypes[this->mType]->Load(theCondition, this->mControls);
+            this->TypeCall(EE_SCREENS_SEET_LOAD, theCondition);
             this->RefreshControls();
         }
     }
@@ -344,8 +338,7 @@ void EESETSCondition::Show()
 }
 
 // FUNCTION: EXE 0x57ee40
-// Creates the player-attribute condition type (EESETSCTPlayerResource ctor)
-// (inline, ee/EESETSConditionType.h)
+// Creates the player-attribute condition type (EESETSCTPlayerResource ctor; ee_screens editor_conditions.rs)
 
 // SYNTHETIC: EXE 0x57ee9c
 // (EESETSCTPlayerResource's scalar deleting destructor)

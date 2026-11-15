@@ -3,8 +3,10 @@
 // order of their bodies, the GetEffect COMDAT and EESEEChangeEffectType's ??_G), the twin of EESETSCondition.cpp.
 // After EESETSEComboBox.cpp, before EESETSETAI.cpp. Unit flags: the exe module set.
 // Its seven effect types (EESETSEffectType and every EESETSET* class, once EESETSETAI.cpp .. EESETSETSetObjectStance.cpp,
-// 0x182dda..0x18efb7) are whole in Rust (ee_screens editor_effects.rs): this unit keeps their one host,
-// ee_screenscpp_seet, which addresses the effect screen's controls by array and index.
+// 0x182dda..0x18efb7) are whole in Rust (ee_screens editor_effects.rs), as the condition screen's seven condition
+// types (EESETSConditionType and its EESETSCT* classes, once EESETSConditionType.cpp; editor_conditions.rs): this
+// unit keeps their two hosts, ee_screenscpp_seet and ee_screenscpp_sect, one template over the effect or condition
+// screen's controls by array and index.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -87,6 +89,8 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEComboBox.h"
 #include "ee/EESETSConditionControls.h"
+#include "ee/EESETSCComboBox.h"
+#include "ee/EESMCondition.h"
 #include "ee/EESEARust.h"
 #include "ee/EESEPlayerScreen.h"
 #include "ee/EESETSEffect.h"
@@ -392,6 +396,13 @@ static_assert(kSETriggerScreenTrigger == 0 && kSETriggerScreenObject == 3 && kSE
                   kSMEffectNone == 0 && kSMEffectObject == 1 && kSMEffectPlayer == 2 && kSMEffectTrigger == 3 &&
                   kSMEffectMedia == 4 && kSMEffectGame == 5 && kSMEffectAI == 6,
               "editor_effects.rs's values");
+static_assert(kSMConditionAlwaysTrue == 0 && kSMConditionPlayerAttribute == 2 && kSMConditionPlayerTechnology == 3 &&
+                  kSMConditionTriggerAttribute == 4 && kSMConditionPlayerDiplomacy == 5 &&
+                  kSMConditionGameAttribute == 6 && kSMConditionChatMessageContains == 7 &&
+                  kSETSConditionTitleLabel == 0x8fc && kSETSConditionTypeComboBox == 0x8fd &&
+                  kControlTriggerUnchecked == 0x3ea && kControlTriggerEnterPressed == 0x3f1 &&
+                  kSEECheckDisplay == EE_SCREENS_SEE_CHECK_DISPLAY,
+              "editor_conditions.rs's values");
 
 // a technology's name in the editor (as EESETSConditionType.cpp's EESETSCTResearchNameLess; once EESETSETPlayer.cpp)
 UWideString SeetTechName(long inID)
@@ -428,6 +439,13 @@ UWideString SeetBytes(const void* inBytes, int32_t inLength)
     return UWideString(std::string(static_cast<const char*>(inBytes), (size_t)(inLength > 0 ? inLength : 0)).c_str());
 }
 
+// the controls by array (EE_SCREENS_SEET_A_*): the effect screen's and the condition screen's (one slider, no
+// effect combo boxes, second edit boxes or list boxes)
+UISlider* SeetSlider(EESETSEffectControls* c, int32_t k) { return c->mSliders[k]; }
+UISlider* SeetSlider(EESETSConditionControls* c, int32_t) { return c->mSlider; }
+UILBString* SeetList(EESETSEffectControls* c, int32_t k) { return c->mListBoxes[k]; }
+UILBString* SeetList(EESETSConditionControls*, int32_t) { return NULL; }
+
 UIControl* SeetControl(EESETSEffectControls* c, int32_t a, int32_t k)
 {
     switch (a) {
@@ -447,11 +465,37 @@ UIControl* SeetControl(EESETSEffectControls* c, int32_t a, int32_t k)
     return NULL;
 }
 
+UIControl* SeetControl(EESETSConditionControls* c, int32_t a, int32_t k)
+{
+    switch (a) {
+    case EE_SCREENS_SEET_A_LABEL: return c->mLabels[k];
+    case EE_SCREENS_SEET_A_CHECK: return c->mCheckBoxes[k];
+    case EE_SCREENS_SEET_A_COMBO: return c->mComboBoxes[k];
+    case EE_SCREENS_SEET_A_SCEN: return c->mScenarioComboBoxes[k];
+    case EE_SCREENS_SEET_A_EDIT: return c->mEditBoxes[k];
+    case EE_SCREENS_SEET_A_TEXT: return c->mTextEditBox;
+    case EE_SCREENS_SEET_A_RADIO: return c->mRadioButtons[k];
+    case EE_SCREENS_SEET_A_SLIDER: return c->mSlider;
+    case EE_SCREENS_SEET_A_PLAYER: return c->mPlayers[k];
+    }
+    return NULL;
+}
+
 UIComboBox* SeetCombo(EESETSEffectControls* c, int32_t a, int32_t k)
 {
     switch (a) {
     case EE_SCREENS_SEET_A_COMBO: return c->mComboBoxes[k];
     case EE_SCREENS_SEET_A_ECOMBO: return c->mEffectComboBoxes[k];
+    case EE_SCREENS_SEET_A_SCEN: return c->mScenarioComboBoxes[k];
+    case EE_SCREENS_SEET_A_PLAYER: return c->mPlayers[k];
+    }
+    return NULL;
+}
+
+UIComboBox* SeetCombo(EESETSConditionControls* c, int32_t a, int32_t k)
+{
+    switch (a) {
+    case EE_SCREENS_SEET_A_COMBO: return c->mComboBoxes[k];
     case EE_SCREENS_SEET_A_SCEN: return c->mScenarioComboBoxes[k];
     case EE_SCREENS_SEET_A_PLAYER: return c->mPlayers[k];
     }
@@ -468,27 +512,36 @@ UIEditBox* SeetEdit(EESETSEffectControls* c, int32_t a, int32_t k)
     return NULL;
 }
 
-GEText* SeetLabelText(EESETSEffectControls* c, int32_t a, int32_t k)
+UIEditBox* SeetEdit(EESETSConditionControls* c, int32_t a, int32_t k)
 {
     switch (a) {
-    case EE_SCREENS_SEET_A_CHECK: return c->mCheckBoxes[k]->GetTextLabel()->GetGEText();
-    case EE_SCREENS_SEET_A_RADIO: return c->mRadioButtons[k]->GetTextLabel()->GetGEText();
-    case EE_SCREENS_SEET_A_LIST: return c->mListBoxes[k]->GetGEText();
+    case EE_SCREENS_SEET_A_EDIT: return c->mEditBoxes[k];
+    case EE_SCREENS_SEET_A_TEXT: return c->mTextEditBox;
     }
     return NULL;
 }
 
-}   // namespace
-
-// The effect types' host (editor_effects.rs: p0 the controls, p1 the effect or a handle, p2 a buffer or an out word;
-// i0 the control array, i1 its index, i2 and i3 the arguments; f the floats)
-extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i, float* f)
+template <class C>
+GEText* SeetLabelText(C* c, int32_t a, int32_t k)
 {
-    EESETSEffectControls* c = static_cast<EESETSEffectControls*>(p[0]);
-    EESMEffect* theEffect = static_cast<EESMEffect*>(p[1]);
+    switch (a) {
+    case EE_SCREENS_SEET_A_CHECK: return c->mCheckBoxes[k]->GetTextLabel()->GetGEText();
+    case EE_SCREENS_SEET_A_RADIO: return c->mRadioButtons[k]->GetTextLabel()->GetGEText();
+    case EE_SCREENS_SEET_A_LIST: return SeetList(c, k)->GetGEText();
+    }
+    return NULL;
+}
+
+// The ops both hosts share (the controls, the texts and the world; editor_effects.rs: p0 the controls, p1 the entry
+// or a handle, p2 a buffer or an out word; i0 the control array, i1 its index, i2 and i3 the arguments; f the
+// floats). outHandled false: not one of them.
+template <class C>
+int32_t SeetOp(uint32_t inOp, C* c, void* const* p, int32_t* i, float* f, bool& outHandled)
+{
     int32_t a = i[0];
     int32_t k = i[1];
     UWideString theText;
+    outHandled = true;
     switch (inOp) {
     case EE_SCREENS_SEET_OP_DISPLAY: SeetControl(c, a, k)->SetDisplayMode((unsigned long)i[2]); return 0;
     case EE_SCREENS_SEET_OP_RECT: {
@@ -516,14 +569,14 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEET_OP_GET_TEXT:
         if (a == EE_SCREENS_SEET_A_LABEL) theText = c->mLabels[k]->GetText(0);
-        else if (a == EE_SCREENS_SEET_A_ECOMBO) theText = c->mEffectComboBoxes[k]->GetTextLabel()->GetText(0);
+        else if (UIComboBox* b = SeetCombo(c, a, k)) theText = b->GetTextLabel()->GetText(0);
         else theText = SeetEdit(c, a, k)->GetText(0);
         return SeetWrite(p[2], i[3], theText);
     case EE_SCREENS_SEET_OP_GET_ALL_TEXT:
         SeetEdit(c, a, k)->GetAllText(theText);
         return SeetWrite(p[2], i[3], theText);
     case EE_SCREENS_SEET_OP_LIST_DATA:
-        theText = c->mListBoxes[k]->GetData((unsigned long)i[2]);
+        theText = SeetList(c, k)->GetData((unsigned long)i[2]);
         return SeetWrite(p[2], i[3], theText);
     case EE_SCREENS_SEET_OP_TEXT_INT:
         if (a == EE_SCREENS_SEET_A_LABEL) return (int32_t)c->mLabels[k]->GetTextAsInt(0);
@@ -535,7 +588,7 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEET_OP_GET_WIDTH: return (int32_t)SeetEdit(c, a, k)->GetWidth();
     case EE_SCREENS_SEET_OP_CLEAR:
-        if (a == EE_SCREENS_SEET_A_LIST) c->mListBoxes[k]->DeleteAllEntries();
+        if (a == EE_SCREENS_SEET_A_LIST) SeetList(c, k)->DeleteAllEntries();
         else SeetCombo(c, a, k)->DeleteAllEntries();
         return 0;
     case EE_SCREENS_SEET_OP_APPEND_STRING:
@@ -544,7 +597,7 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
             gResource->GetString((unsigned long)i[2], theText);
         else
             theText = SeetBytes(p[2], i[2]);
-        if (a == EE_SCREENS_SEET_A_LIST) c->mListBoxes[k]->AppendLine(theText);
+        if (a == EE_SCREENS_SEET_A_LIST) SeetList(c, k)->AppendLine(theText);
         else SeetCombo(c, a, k)->AppendLine(theText);
         return 0;
     case EE_SCREENS_SEET_OP_SELECTION: {
@@ -575,6 +628,12 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEET_OP_EVENT_SET:
         SeetControl(c, a, k)->SetTriggerEvent((unsigned long)i[2], static_cast<UIEvent*>(p[1]));
         return 0;
+    case EE_SCREENS_SEET_OP_EVENT_PUSH:
+        EESEEPushControl(static_cast<EESEERust*>(static_cast<UIEvent*>(p[1])), SeetControl(c, a, k));
+        return 0;
+    case EE_SCREENS_SEET_OP_EVENT_PROCESS:
+        static_cast<UIEvent*>(p[1])->ProcessEvent(gUIManager->mScenarioEditorForm, SeetControl(c, a, k));
+        return 0;
     case EE_SCREENS_SEET_OP_CHECKED:
         if (a == EE_SCREENS_SEET_A_RADIO) return c->mRadioButtons[k]->GetIsChecked() ? 1 : 0;
         return c->mCheckBoxes[k]->GetIsChecked() ? 1 : 0;
@@ -593,15 +652,19 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
         theGEText->SetIsTransparent(true);
         return 0;
     }
-    case EE_SCREENS_SEET_OP_SLIDER: return (int32_t)c->mSliders[k]->GetCurrentRangeValue();
-    case EE_SCREENS_SEET_OP_SET_SLIDER: c->mSliders[k]->SetCurrentRangeValue(i[2]); return 0;
-    case EE_SCREENS_SEET_OP_RANGE: c->mSliders[k]->SetRange(i[2], i[3]); return 0;
-    case EE_SCREENS_SEET_OP_PAGE_SIZE: c->mSliders[k]->SetPageSize(i[2]); return 0;
-    case EE_SCREENS_SEET_OP_FIRE_RANGE: c->mSliders[k]->FireTriggerEvent(kControlTriggerRangeChanged); return 0;
+    case EE_SCREENS_SEET_OP_SLIDER: return (int32_t)SeetSlider(c, k)->GetCurrentRangeValue();
+    case EE_SCREENS_SEET_OP_SET_SLIDER: SeetSlider(c, k)->SetCurrentRangeValue(i[2]); return 0;
+    case EE_SCREENS_SEET_OP_RANGE: SeetSlider(c, k)->SetRange(i[2], i[3]); return 0;
+    case EE_SCREENS_SEET_OP_PAGE_SIZE: SeetSlider(c, k)->SetPageSize(i[2]); return 0;
+    case EE_SCREENS_SEET_OP_FIRE_RANGE: SeetSlider(c, k)->FireTriggerEvent(kControlTriggerRangeChanged); return 0;
     case EE_SCREENS_SEET_OP_STRING_TABLE: SeetControl(c, a, k)->SetStringTableID((unsigned long)i[2]); return 0;
     case EE_SCREENS_SEET_OP_FONT_530:
         if (UIEditBox* e = SeetEdit(c, a, k)) e->GetGEText()->SetFont(gU531930);
-        else SeetCombo(c, a, k)->GetGEText()->SetFont(gU531930);
+        else {
+            SeetCombo(c, a, k)->GetGEText()->SetFont(gU531930);
+            if (i[2] != 0)
+                SeetCombo(c, a, k)->GetListBox()->GetGEText()->SetFont(gU531930);
+        }
         return 0;
     case EE_SCREENS_SEET_OP_PLAYER: return (int32_t)c->mPlayers[k]->GetSelectedPlayer();
     case EE_SCREENS_SEET_OP_SET_PLAYER: c->mPlayers[k]->SetSelectedPlayer((unsigned long)(uint32_t)i[2]); return 0;
@@ -624,20 +687,22 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEET_OP_FILL_SCENARIO:
         FillScenarioComboBox(c->mScenarioComboBoxes[k], c->mLabels[i[2]], i[3] != 0);
         return 0;
-    case EE_SCREENS_SEET_OP_FILL_PLACE: FillPlaceComboBox(i[3] != 0, c->mLabels[i[2]], c->mComboBoxes[k]); return 0;
+    case EE_SCREENS_SEET_OP_FILL_PLACE:
+        FillPlaceComboBox(i[3] != 0, c->mLabels[i[2]], SeetCombo(c, EE_SCREENS_SEET_A_COMBO, k));
+        return 0;
     case EE_SCREENS_SEET_OP_LIST_OPACITY:
-        c->mListBoxes[k]->SetBgOpacity(f[0]);
-        c->mListBoxes[k]->SetScrollBarBgOpacity(f[0]);
+        SeetList(c, k)->SetBgOpacity(f[0]);
+        SeetList(c, k)->SetScrollBarBgOpacity(f[0]);
         return 0;
     case EE_SCREENS_SEET_OP_LIST_INSERT:
-        c->mListBoxes[k]->InsertLine(SeetBytes(p[2], i[2]), (unsigned long)i[3]);
+        SeetList(c, k)->InsertLine(SeetBytes(p[2], i[2]), (unsigned long)i[3]);
         return 0;
-    case EE_SCREENS_SEET_OP_LIST_DELETE: c->mListBoxes[k]->DeleteLine((unsigned long)i[2]); return 0;
+    case EE_SCREENS_SEET_OP_LIST_DELETE: SeetList(c, k)->DeleteLine((unsigned long)i[2]); return 0;
     case EE_SCREENS_SEET_OP_FORM_DISPLAY:
         c->mTextEditBox->GetForm()->GetControlById((unsigned long)i[2])->SetDisplayMode((unsigned long)i[3]);
         return 0;
     case EE_SCREENS_SEET_OP_SLIDER_MODIFIER:
-        static_cast<UIESliderChange*>(c->mSliders[k]->GetTriggerEvent(kControlTriggerRangeChanged))->SetModifier(f[0]);
+        static_cast<UIESliderChange*>(SeetSlider(c, k)->GetTriggerEvent(kControlTriggerRangeChanged))->SetModifier(f[0]);
         return 0;
     case EE_SCREENS_SEET_OP_EVENT_NEW: {
         UIEvent* theEvent = NULL;
@@ -681,25 +746,6 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
         return 0;
     case EE_SCREENS_SEET_OP_NAME_BOX:
         return SeetWrite(p[2], k, gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetName());
-    case EE_SCREENS_SEET_OP_EFFECT_TEXT:
-    case EE_SCREENS_SEET_OP_SET_EFFECT_TEXT: {
-        UWideString* theField = i[2] == EE_SCREENS_SEET_S_NEW_NAME      ? &theEffect->mNewName
-                                : i[2] == EE_SCREENS_SEET_S_MESSAGE     ? &theEffect->mMessage
-                                : i[2] == EE_SCREENS_SEET_S_FILE_NAME   ? &theEffect->mFileName
-                                : i[2] == EE_SCREENS_SEET_S_DESCRIPTION ? &theEffect->mDescription
-                                                                        : &theEffect->mName;
-        if (inOp == EE_SCREENS_SEET_OP_EFFECT_TEXT)
-            return SeetWrite(p[2], k, *theField);
-        *theField = SeetBytes(p[2], i[3]);
-        return 0;
-    }
-    case EE_SCREENS_SEET_OP_OBJECT_COUNT: return (int32_t)theEffect->mObjects.size();
-    case EE_SCREENS_SEET_OP_OBJECT: return (int32_t)theEffect->mObjects[(size_t)i[2]];
-    case EE_SCREENS_SEET_OP_SET_OBJECTS: {
-        const uint32_t* theObjects = static_cast<const uint32_t*>(p[2]);
-        theEffect->mObjects.assign(theObjects, theObjects + (i[2] > 0 ? i[2] : 0));
-        return 0;
-    }
     case EE_SCREENS_SEET_OP_NAMES:
         sSeetNames.clear();
         gWorld.mScenarioManager->GetNames((unsigned long)i[2], sSeetNames);
@@ -759,14 +805,16 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
     }
     case EE_SCREENS_SEET_OP_UNIT_NAME: return (int32_t)gUnitClassTable[i[2]]->mNameStringID;
     case EE_SCREENS_SEET_OP_TECHS: {
-        // the tree's nodes and the epochs, those shown in the editor, sorted by name (the original's first Show)
+        // the tree's nodes and the epochs, those shown in the editor (i2: and making no unit, the condition
+        // types'), sorted by name (the originals' first Show)
         sSeetTechs.clear();
         gTechTree.GetNodeIDs(sSeetTechs);
         for (unsigned long theEpoch = 0; theEpoch < (unsigned long)EEEpochCount(); theEpoch++)
             sSeetTechs.push_back((long)theEpoch);
         unsigned long theIndex = 0;
         while (theIndex < sSeetTechs.size()) {
-            if (gTechTree.Get(sSeetTechs[theIndex])->mData->mShowInEditor == true)
+            RTSTechTreeNodeData* theData = gTechTree.Get(sSeetTechs[theIndex])->mData;
+            if (theData->mShowInEditor == true && (i[2] == 0 || theData->mMakesUnit == false))
                 theIndex++;
             else
                 sSeetTechs.erase(sSeetTechs.begin() + theIndex);
@@ -782,6 +830,64 @@ extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i,
             sprintf(theText, "BAD Node %ld - (name not available in release)", theNode->mData->mID);
         return SeetWrite(p[2], k, theText);
     }
+    case EE_SCREENS_SEET_OP_TECH_NAME: return SeetWrite(p[2], k, SeetTechName(i[2]));
     }
+    outHandled = false;
     return 0;
+}
+
+}   // namespace
+
+// The effect types' host (editor_effects.rs): the shared ops over the effect screen's controls, and the effect's
+// texts and objects
+extern "C" int32_t ee_screenscpp_seet(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    EESETSEffectControls* c = static_cast<EESETSEffectControls*>(p[0]);
+    EESMEffect* theEffect = static_cast<EESMEffect*>(p[1]);
+    switch (inOp) {
+    case EE_SCREENS_SEET_OP_EFFECT_TEXT:
+    case EE_SCREENS_SEET_OP_SET_EFFECT_TEXT: {
+        UWideString* theField = i[2] == EE_SCREENS_SEET_S_NEW_NAME      ? &theEffect->mNewName
+                                : i[2] == EE_SCREENS_SEET_S_MESSAGE     ? &theEffect->mMessage
+                                : i[2] == EE_SCREENS_SEET_S_FILE_NAME   ? &theEffect->mFileName
+                                : i[2] == EE_SCREENS_SEET_S_DESCRIPTION ? &theEffect->mDescription
+                                : i[2] == EE_SCREENS_SEET_S_TEXT        ? &theEffect->mText
+                                                                        : &theEffect->mName;
+        if (inOp == EE_SCREENS_SEET_OP_EFFECT_TEXT)
+            return SeetWrite(p[2], i[1], *theField);
+        *theField = SeetBytes(p[2], i[3]);
+        return 0;
+    }
+    case EE_SCREENS_SEET_OP_OBJECT_COUNT: return (int32_t)theEffect->mObjects.size();
+    case EE_SCREENS_SEET_OP_OBJECT: return (int32_t)theEffect->mObjects[(size_t)i[2]];
+    case EE_SCREENS_SEET_OP_SET_OBJECTS: {
+        const uint32_t* theObjects = static_cast<const uint32_t*>(p[2]);
+        theEffect->mObjects.assign(theObjects, theObjects + (i[2] > 0 ? i[2] : 0));
+        return 0;
+    }
+    }
+    bool theHandled;
+    return SeetOp(inOp, c, p, i, f, theHandled);
+}
+
+// The condition types' host (editor_conditions.rs): the shared ops over the condition screen's controls, and the
+// condition's texts
+extern "C" int32_t ee_screenscpp_sect(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    EESETSConditionControls* c = static_cast<EESETSConditionControls*>(p[0]);
+    EESMCondition* theCondition = static_cast<EESMCondition*>(p[1]);
+    switch (inOp) {
+    case EE_SCREENS_SEET_OP_EFFECT_TEXT:
+    case EE_SCREENS_SEET_OP_SET_EFFECT_TEXT: {
+        UWideString* theField = i[2] == EE_SCREENS_SEET_S_CHAT   ? &theCondition->mChatText
+                                : i[2] == EE_SCREENS_SEET_S_TEXT ? &theCondition->mText
+                                                                 : &theCondition->mName;
+        if (inOp == EE_SCREENS_SEET_OP_EFFECT_TEXT)
+            return SeetWrite(p[2], i[1], *theField);
+        *theField = SeetBytes(p[2], i[3]);
+        return 0;
+    }
+    }
+    bool theHandled;
+    return SeetOp(inOp, c, p, i, f, theHandled);
 }
