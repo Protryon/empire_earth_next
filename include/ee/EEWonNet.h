@@ -70,7 +70,7 @@ public:
     int StringCompare(const IPAddr&) const; //2b3260, numeric host then host-order port
     IPAddr();                               // WONAPI
     IPAddr(const std::string& inHostAndPort); //target2b2440, complete85B native ctor + pinned SDK
-    std::string GetHostString(bool inFlag) const;   // 0x2b2fc0
+    std::string GetHostString(bool inFlag) const;
     unsigned short GetPort() const; //2b31c0, host byte order
     long GetHost() const;  //2b2fb0, ntohl host IPv4, nominal GetHost
     bool SetWithDefaultPort(const std::string&,unsigned short); //2b2d50, DNS default-port dispatch
@@ -81,8 +81,8 @@ public:
     static bool SetLocalHost(long, bool); //2b37a0, cdecl host +validation flag
     bool operator==(const IPAddr&) const; //2b3220, six network-byte equality
     bool operator!=(const IPAddr&) const; //2b3240
-    void SetPort(unsigned short inPort);    // 0x2b2f90
-    bool IsValid() const;                   // 0x2b31d0
+    void SetPort(unsigned short inPort);
+    bool IsValid() const;
     const char* GetSixByte() const;         // 0x2b29c0: the value's sockaddr port/IP bytes
     void SetSixByte(const void* inAddress); // 0x2b29d0: consumes six bytes, clears host and sets validity
     bool operator<(const IPAddr& inOther) const; // 0x2b31f0: six network-order port/IP bytes
@@ -236,39 +236,7 @@ public:
 // Native directory value records. DataObject14, ACL10; node sizes1c/18.
 class ByteBuffer;
 class Blowfish;
-class CDKey {
-protected:
-    static const char* mCDKeyPath; // genuine SDK static default registry path, no instance layout
-public:
-    CDKey(); //2e3090, actual complete1c polymorphic owner
-    CDKey(const std::string& inProduct); //existing legacy constructor contract retained
-    bool LoadFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath); //2e3ac0; genuine SDK default local-machine/path arguments
-    void ClearFromRegistry(long inMode = 2, const char* inKey = mCDKeyPath);
-    bool SaveToRegistry(long inMode = 2, const char* inKey = mCDKeyPath); //genuine SDK bool result; old unprovided legacy void declaration retained in history
-    void Invalidate(); //2e30c0, support only
-    void SetProductString(const std::string&); //2e30d0
-    static DWORD GetMachineId(bool* inSuccess = NULL); //2e3320
-    bool InitEncrypted(const void*, unsigned long); //2e3880
-    bool Init(const std::string&);
-    std::string GetString() const;
-    ConstSmartPtr<ByteBuffer> GetEncrypted() const;
-    bool InitRaw(const void*);
-    bool SaveToFile(const std::string&);
-    bool LoadFromFile(const std::string&);
-    bool IsBeta() const;
-    bool IsForceCheck() const;
-    const ByteBuffer* GetRaw() const { return mKey.get(); } //genuine SDK borrowed key accessor, mutable owner to const pointee only
-    bool IsValid() const { return mValid; } //genuine SDK CDKey validity bool18
-protected:
-    bool CalcKeyFromBuffer(const char*); //2e3220, exactly8 copied bytes and product CRC
-    void GetSymmetricKey(Blowfish&, bool = true) const; //2e35a0
-    virtual void NotifyUsedOldMethodToDecrypt() {} //actual slot0/326b60, no virtual destructor
-    virtual bool GetUseNewEncryptMethod() const { return true; } //actual slot4/2f30d0
-public:
-    std::string mProduct; //04..14; actual SDK mProduct
-    ConstSmartPtr<ByteBuffer> mKey; //14..18; actual SDK mKey, real ByteBuffer owner
-    bool mValid; //18; actual SDK mIsValid; complete extent1c
-};
+class CDKey; // ee/wonapi/WONAuthContext.h
 
 
 struct DirDataObject {
@@ -321,81 +289,7 @@ class AuthPeerData;
 class WriteBuffer;
 class ElGamal;
 class ServerContext; //actual complete3c owner in Routing
-// AuthContext (0xc0 bytes in the original) is ee_won's (rust/crates/ee_won/src/authobj.rs): its lock, sessions and
-// certificate flow, peer data, login data, server list and the class's verifier key (0x566018, its checked flag
-// 0x5661e1). This class is a RefCount shim holding one reference to it; every method forwards.
-class AuthContext : public RefCount {
-    void Init(); //2ddb70 original private SDK initializer
-public:
-protected:
-    virtual ~AuthContext(); //2de370 original external493, scalar2ddf90/30; genuine SDK protected access
-public:
-    AuthContext(); //2dddf0 original external404; real completec0 allocation authority
-    AuthContext(const std::wstring&,const std::wstring&,const std::wstring&);
-    bool AddAddress(const IPAddr&);
-    bool AddAddressesFromDir(const DirEntityList&,const wchar_t* = NULL);
-    void RemoveAllCommunity();
-    void AddCDKeyCommunityJoin(const std::wstring&,const CDKey&);
-    void AddUserData(const std::wstring&,const ByteBuffer*);
-    void SetLoginSecretFile(const std::string&);
-    void AddNickname(const std::wstring&);
-    void SetNickname(const std::wstring&,const std::wstring&);
-    void ClearNicknames();
-    bool RemoveAddress(const IPAddr&);
-    void RemoveAllAddresses();
-    bool AddAddressesFromDir(const std::map<std::wstring,DirEntityList>&,const std::wstring&,const wchar_t* = NULL);
-    static bool LoadVerifierKey(const std::string&); //2df440 actual cdecl/ret0
-    void SetServerContext(ServerContext*); //2df330 support0
-    SmartPtr<ServerContext> GetServerContext(); //2df3e0 support0
-    void ClearCDKeyCommunityJoins(); //2e0510 genuine SDK locked one-time CDKey join map clear
-    void ClearUserData(); //2e05e0 genuine SDK locked one-time community user-data map clear
-    void ClearOneTimeData(); //2e06b0 genuine SDK ClearUserData then ClearCDKeyCommunityJoins dispatcher
-    bool LoadSecretList(); //2e1240
-    bool SaveSecretList(); //2e1460
-    void AppendLoginSecrets(WriteBuffer&); //2e1560
-    void AddSecret(const void*); //2e1650
-    void RemoveSecret(const void*); //2e1790
-    void CommitSecrets(time_t,time_t); //2e1890
-    ConstSmartPtr<AuthPeerData> GetPeerData(); //2e19e0 support0
-    bool IsExpired(time_t = 0); //2e1a30 support0
-    void SetPeerData(const AuthPeerData*); //2e1aa0
-    void SetUserName(const std::wstring&); //2df620 actual locked call-only API
-    void SetPassword(const std::wstring&); //2df760 actual locked call-only API
-    void AddCommunity(const std::wstring&); //2df8a0 actual insert-only call API
-    void RemoveCommunity(const std::wstring&); //2e02d0 actual erase-range call API
-
-    // inline accessor: one more inline expansion in EEUIEWNAROpenScreen::ProcessEvent makes VC6 refuse the fourth
-    // UIEvent ctor as in the original (0x1eb3a2)
-    std::wstring GetName() const { return this->LoginText(1); } // a copy (the original returned its member)
-    std::wstring GetUserName() const { return this->LoginText(1); }
-    std::wstring GetPassword() const { return this->LoginText(2); }
-
-    void SetDoAutoRefresh(bool); //actual reference-only flag/reset API2deb30
-    void SetCommunity(const std::wstring&); //2dfcc0 preserves selected existing full3c record before clear
-    void SetCDKey(const std::wstring&,const CDKey&); //2e0380 original locked map mutation, borrowed call-only
-    bool SetHashFile(const std::wstring&); //2e06d0 support0 adapter
-    bool SetHashFile(const std::wstring&,const std::string&); //2e07f0 support0 adapter
-    bool SetHashFileList(const std::wstring&,const std::list<std::string>&); //2e08e0 actual HashFileList alias expansion
-    void AppendHashes(WriteBuffer&,const std::basic_string<unsigned char>&); //2e0c50, exact RawBuffer alias expansion
-    void AppendCommunityData(WriteBuffer&); //2e0e50
-    static void StaticAutoRefreshCallback(SmartPtr<AsyncOp>,SmartPtr<RefCount>); //2de760, genuine owned-value callback
-    void AutoRefreshCallback(AsyncOp*); //2de7f0
-    void StopAutoRefresh(); //2de8e0
-    void Kill(); //2df260
-    void StartAutoRefresh(bool = false); //2de970 actual call-only, owner allocation remains original
-    // a waiting LightGetCertOp: its run (an AsyncOp) and its member (ee_won authflow.rs), or NULL for none
-    void RefreshAsync(AsyncOp* = NULL, EeWonLightCert* = NULL, DWORD = INFINITE); //2deba0 actual call-only
-    long RefreshBlock(DWORD = INFINITE); //2dedf0, actual WONStatus=long alias expansion before Routing typedef
-    void GetCertCallback(GetCertOp*); //2de5f0
-    static void StaticGetCertCallback(SmartPtr<AsyncOp>,SmartPtr<RefCount>); //2de560 support0
-    friend struct AuthContextFlow;
-    // the Rust object (the certificate ops' host calls answer on it: ee_won hostauth.rs)
-    const EeWonAuthCtx* Core() const { return this->mCore; }
-private:
-    const EeWonAuthCtx* mCore; // one reference
-    std::wstring LoginText(int inWhich) const;
-    void LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue = std::string(), long long inNum = 0);
-};
+class AuthContext; // ee/wonapi/WONAuthContext.h (a shim over ee_won authobj.rs)
 } //namespace WONAPI
 
 // The game room's published game information (provisional names): three strings and counts;
@@ -461,60 +355,59 @@ public:
     void SelectServer(const std::wstring& inName, WONAPI::IPAddr inAddress);
     // 0xce9e1: hosts a game; stores inName in gHostedGameName (0x530790)
     void HostGame(const char* inName, const char* inPassword);
-    void JoinGame(const char* inName, const char* inPassword);   // 0xcede5
-    void JoinRoom(const char* inRoom, const char* inPassword);   // 0xcf570
+    void JoinGame(const char* inName, const char* inPassword);
+    void JoinRoom(const char* inRoom, const char* inPassword);
     void LeaveRoom();                       // 0xcffd8 (jmp 0xcf99b; the game room's Back)
     // (the lobby's Start/Cancel; provisional names, by address)
-    void GetGameInfo(EEWonNetGameInfo& outInfo);        // 0xcffb5
-    void SetGameInfo(EEWonNetGameInfo& inInfo);         // 0xd104d
-    void ClearGameList();                               // 0xcffd3
-    bool RejoinRoom(bool inFlag);                       // 0xcf3f4
+    void GetGameInfo(EEWonNetGameInfo& outInfo);
+    void SetGameInfo(EEWonNetGameInfo& inInfo);
+    void ClearGameList();
+    bool RejoinRoom(bool inFlag);
     void PlayerJoined();                                // 0xe123d (an empty body, ICF-folded; EEClient 0xb80ef)
     void RefreshGameList(UIControl* inGamesBox);   // 0xcfc91 (once per request: +0x18b; needs the routing server +0x0c)
     void UpdateGameList();                  // 0xcfa56 (refills the games box of form 0x20)
     // 0xd0001: changes the account's password (the update-account form's Submit)
     void UpdateAccount(const UWideString& inName, const UWideString& inPassword, bool inFlag);
-    void OpenUpdateAccount();               // 0xd01c3
-    void SendChat(const UWideString& inText);   // 0xd0a14
+    void OpenUpdateAccount();
+    void SendChat(const UWideString& inText);
     // 0xd1104: refills the room list form's rooms box and its two labels (controls 6, 16, 14)
     void UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel16, UITextLabel* inLabel14);
 
     // (EEWonNet.cpp; provisional names, by behaviour)
-    wchar_t* A2W(wchar_t* outString, const char* inString, int inLength);     // 0xcd794
-    void ListGamesCallback(WONAPI::AsyncOp* inOp);                          // 0xcd8e6
-    void ListRoomCallback(WONAPI::AsyncOp* inOp);                           // 0xcda04
-    void CloseCallback(WONAPI::AsyncOp* inOp);                              // 0xcdcbb
-    void TempCallback(WONAPI::AsyncOp* inOp);                               // 0xcdd2c
-    void ConnectCallback(WONAPI::AsyncOp* inOp);                            // 0xce0c2
-    void ChatRoomListCallback(WONAPI::AsyncOp* inOp);                       // 0xce244
-    void JoinGameDataCallback(WONAPI::AsyncOp* inOp);                       // 0xce421
-    void CreateGameCallback(WONAPI::AsyncOp* inOp);                         // 0xce695
-    void CreateGame();                                                        // 0xce99e
-    void UpdateGameObject();                                                  // 0xceb2d
-    void ExportGameInfo(EEWonNetGameInfo& inInfo, unsigned char*& outData, unsigned long& outSize);   // 0xcebbd
-    void ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& outInfo);                   // 0xcece1
-    void Disconnect();                                                        // 0xcf952
-    void LeaveGroups();                                                       // 0xcf99b
-    void ClearGames();                                                        // 0xcf9fe
-    void JoinGroupCallback(WONAPI::AsyncOp* inOp);                          // 0xcf02c
-    void JoinGameObjectsCallback(WONAPI::AsyncOp* inOp);                    // 0xcf1fc
-    void JoinRoomCallback(WONAPI::AsyncOp* inOp);                           // 0xcf7ec
-    void ClientListCallback(WONAPI::AsyncOp* inOp);                         // 0xcfce5
-    void MembersCallback(WONAPI::AsyncOp* inOp);                            // 0xcfd42
-    void UpdateAccountCallback(WONAPI::AsyncOp* inOp);                      // 0xd0141
-    void GetAccountCallback(WONAPI::AsyncOp* inOp);                         // 0xd02ba
-    void OnChat(WONAPI::AsyncOp* inOp);                                     // 0xd040c
-    void OnDataObjectChanged(WONAPI::AsyncOp* inOp);                        // 0xd0612
-    void OnDataObjectCreated(WONAPI::AsyncOp* inOp);                        // 0xd062b
-    void OnDataObjectDeleted(WONAPI::AsyncOp* inOp);                        // 0xd0714
-    void OnDataObjectModified(WONAPI::AsyncOp* inOp);                       // 0xd07c2
-    void OnGroupMaxPlayersChanged(WONAPI::AsyncOp* inOp);                   // 0xd08ab
-    void RegisterCallback(WONAPI::AsyncOp* inOp);                           // 0xd0929
-    void SendChatCallback(WONAPI::AsyncOp* inOp);                           // 0xd09f9
-    std::wstring ToWString(const char* inString);                             // 0xd0f8c
+    wchar_t* A2W(wchar_t* outString, const char* inString, int inLength);
+    void ListGamesCallback(WONAPI::AsyncOp* inOp);
+    void ListRoomCallback(WONAPI::AsyncOp* inOp);
+    void CloseCallback(WONAPI::AsyncOp* inOp);
+    void TempCallback(WONAPI::AsyncOp* inOp);
+    void ConnectCallback(WONAPI::AsyncOp* inOp);
+    void ChatRoomListCallback(WONAPI::AsyncOp* inOp);
+    void JoinGameDataCallback(WONAPI::AsyncOp* inOp);
+    void CreateGameCallback(WONAPI::AsyncOp* inOp);
+    void CreateGame();
+    void UpdateGameObject();
+    void ExportGameInfo(EEWonNetGameInfo& inInfo, unsigned char*& outData, unsigned long& outSize);
+    void ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& outInfo);
+    void Disconnect();
+    void LeaveGroups();
+    void ClearGames();
+    void JoinGroupCallback(WONAPI::AsyncOp* inOp);
+    void JoinGameObjectsCallback(WONAPI::AsyncOp* inOp);
+    void JoinRoomCallback(WONAPI::AsyncOp* inOp);
+    void ClientListCallback(WONAPI::AsyncOp* inOp);
+    void MembersCallback(WONAPI::AsyncOp* inOp);
+    void UpdateAccountCallback(WONAPI::AsyncOp* inOp);
+    void GetAccountCallback(WONAPI::AsyncOp* inOp);
+    void OnChat(WONAPI::AsyncOp* inOp);
+    void OnDataObjectChanged(WONAPI::AsyncOp* inOp);
+    void OnDataObjectCreated(WONAPI::AsyncOp* inOp);
+    void OnDataObjectDeleted(WONAPI::AsyncOp* inOp);
+    void OnDataObjectModified(WONAPI::AsyncOp* inOp);
+    void OnGroupMaxPlayersChanged(WONAPI::AsyncOp* inOp);
+    void RegisterCallback(WONAPI::AsyncOp* inOp);
+    void SendChatCallback(WONAPI::AsyncOp* inOp);
+    std::wstring ToWString(const char* inString);
     // 0xd146d: out of line in EEWonNet.cpp (ToString calls it)
     char* W2A(char* outString, int inSize, const wchar_t* inString, int inLength);
-    // 0xd14a9 (inline)
     std::string ToString(const std::wstring& inString)
     {
         int theSize = inString.length() * 4 + 1;   // UTF-8 (decision D6): up to four bytes a character
@@ -593,7 +486,7 @@ public:
     bool mB18E;
 };
 
-extern EEWonNet* gWonNet;                   // 0x5319cc
+extern EEWonNet* gWonNet;
 extern UWideString& gHostedGameName;         // 0x530790 (HostGame stores the name; the game room screen shows it)
 
 // 0x27c3 (first unit; provisional name): the user/game name is acceptable

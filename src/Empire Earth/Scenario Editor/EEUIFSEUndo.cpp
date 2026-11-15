@@ -47,7 +47,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFSEUndo.h"
 
-// FUNCTION: EXE 0x5a4dbe
 // Creates the editor's Undo button with its undo action
 EEUIFSEUndo::EEUIFSEUndo(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap,
                      GEBitmap* inPressedBitmap, const GE2DPoint& inPosition, unsigned long inWidth,
@@ -58,10 +57,6 @@ EEUIFSEUndo::EEUIFSEUndo(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap*
     this->mUndoAction = new EEAUndo;
 }
 
-// SYNTHETIC: EXE 0x5a4e5d
-// (the scalar deleting destructor, with the inline dtor)
-
-// ICF-FOLDED: EXE 0x5a4d95
 // Posts the undo action, then releases the button
 // (identical to EEUIFSERedo::ButtonUp)
 void EEUIFSEUndo::ButtonUp()
@@ -70,14 +65,12 @@ void EEUIFSEUndo::ButtonUp()
     UIButton::ButtonUp();
 }
 
-// FUNCTION: EXE 0x5a4e8e
 // Undoes the last editor change
 void EEAUndo::Virtual4()
 {
     gUserInterface->Undo();
 }
 
-// ICF-FOLDED: EXE 0x5720c6
 // Does nothing
 // (folded into the shared empty slot)
 void EEAUndo::Virtual8()

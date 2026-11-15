@@ -9,8 +9,8 @@
 
 class EEAIAStarTerrainStorage : public EEAIAStarFastStorage {
 public:
-    EEAIAStarTerrainStorage();              // 0x1c666
-    virtual ~EEAIAStarTerrainStorage();     // 0x1c6a9
+    EEAIAStarTerrainStorage();
+    virtual ~EEAIAStarTerrainStorage();
 };
 
 #endif

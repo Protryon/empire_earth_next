@@ -27,8 +27,8 @@ public:
     virtual void SetVolume(const UString& inVolume);                  // +0x70 0x7ca6
 
     unsigned long GetFileAccess() const { return this->mFileAccess; }  // inline: GESurface/GETexture read +0x34 directly; export folded 0x4c365
-    unsigned long GetVersion() const;                                 // 0x7c6a
-    void SetVersion(unsigned long inVersion);                         // 0x7c9c
+    unsigned long GetVersion() const;
+    void SetVersion(unsigned long inVersion);
 
 protected:
     UString mVolume;                                  // +0x04

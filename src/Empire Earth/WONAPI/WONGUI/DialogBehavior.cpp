@@ -44,7 +44,6 @@ extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x006f7910
 // Creates a focusable, draggable dialog that grabs its background, stays inside the root window and ignores Escape
 // (the Rust dialog: no drag, drag allowed and kept in the root, the Escape result -1, no default button)
 Dialog::Dialog()
@@ -54,7 +53,6 @@ Dialog::Dialog()
 }
 // Destroys the dialog: the Rust dialog gives the default button back (the implicit destructor in the original)
 Dialog::~Dialog() { ee_won_dlg_free(this->mDlg); }
-// FUNCTION: WON 0x006f79c0
 // Sets the button that Enter activates (held by reference)
 void Dialog::SetDefaultButton(Button* button) { this->DCall(EeWonDlgCall::SetDefaultButton,(intptr_t)static_cast<Component*>(button)); }
 }

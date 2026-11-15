@@ -40,7 +40,6 @@ typedef my_source_mgr * my_src_ptr;
  * before any data is actually read.
  */
 
-// FUNCTION: JPEG 0x10087383
 METHODDEF(void)
 init_source (j_decompress_ptr cinfo)
 {
@@ -87,7 +86,6 @@ init_source (j_decompress_ptr cinfo)
  * the front of the buffer rather than discarding it.
  */
 
-// FUNCTION: JPEG 0x1008738f
 METHODDEF(boolean)
 fill_input_buffer (j_decompress_ptr cinfo)
 {
@@ -126,7 +124,6 @@ fill_input_buffer (j_decompress_ptr cinfo)
  * buffer is the application writer's problem.
  */
 
-// FUNCTION: JPEG 0x100873fb
 METHODDEF(void)
 skip_input_data (j_decompress_ptr cinfo, long num_bytes)
 {
@@ -168,7 +165,6 @@ skip_input_data (j_decompress_ptr cinfo, long num_bytes)
  * for error exit.
  */
 
-// FUNCTION: JPEG 0x10087428
 METHODDEF(void)
 term_source (j_decompress_ptr cinfo)
 {
@@ -182,7 +178,6 @@ term_source (j_decompress_ptr cinfo)
  * for closing it after finishing decompression.
  */
 
-// FUNCTION: JPEG 0x1008731f
 GLOBAL(void)
 jpeg_stdio_src (j_decompress_ptr cinfo, FILE * infile)
 {

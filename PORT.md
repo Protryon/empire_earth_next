@@ -20,6 +20,8 @@ the fetch scripts, `include/dinkum/`) and the exe's link tables (`link/exe/*.tsv
 deleted here, keep them deleted) were rewritten or deleted here. When upstream changes one of them, keep this fork's version
 (`git checkout --ours <file>`) and port anything relevant by hand. Upstream's matching stand-ins
 (`include/LostDebug.h`, `EE_LOST_*`) are deleted here too: resolve new uses by dropping them.
+Upstream's sources still carry the original binaries' address markers (`// FUNCTION: EXE 0x...` and kin), which
+this fork no longer keeps: after a merge, run `python -I tools/strip_markers.py` and commit what it removes.
 
 ## Where the port stands (2026-11-04)
 
@@ -62,6 +64,10 @@ deleted here, keep them deleted) were rewritten or deleted here. When upstream c
   `tools/harness/vc6_layout.json.gz` serves the harness (VC6 offsets translated by member name).
 - Test-only builds (`--test-profile`, `--sanitize-null`) change only staged copies of a few units; `src/` is never
   edited by a build.
+- No address markers (owner, 2026-11-15: the port is past the original exe). Functions and globals carry no
+  `// FUNCTION:`/`TEMPLATE:`/`SYNTHETIC:`/`ICF-FOLDED:` line, mangled-name note or trailing `// 0x...` address; new
+  code adds none. `tools/strip_markers.py` removes them (idempotent; `--check` reports any left). The harness finds
+  functions by mangled name in the link map, not by markers.
 
 ## Next steps
 

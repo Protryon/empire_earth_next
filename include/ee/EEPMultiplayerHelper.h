@@ -9,7 +9,7 @@
 
 class EEPMultiplayerHelper : public FSPersistent {
 public:
-    EEPMultiplayerHelper();                                                     // 0x14ae4d
+    EEPMultiplayerHelper();
     virtual ~EEPMultiplayerHelper();                                            // +0x10 0x14ae79 (??_G 0x14ae5d)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x14ae9e
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x14aff1

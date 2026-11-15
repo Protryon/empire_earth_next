@@ -144,9 +144,7 @@
  * Perform dequantization and inverse DCT on one block of coefficients.
  */
 
-// FUNCTION: JPEG 0x10095485
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x815340
 jpeg_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 		 JCOEFPTR coef_block,
 		 JSAMPARRAY output_buf, JDIMENSION output_col)

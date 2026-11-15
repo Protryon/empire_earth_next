@@ -107,42 +107,34 @@
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFactor);
 
-static const float kHeadingUnset = -10000.0f;    // 0x447ac0
+static const float kHeadingUnset = -10000.0f;
 static const float kSoundDistanceFactor = 4.0f;  // 0x447ac4 (Virtual2C)
 static const float kMaxLineOfSight = 32.0f;      // 0x447ac8 (the ctor: the largest line of sight)
-static const float kBuildingZOffset = 0.01f;     // 0x447acc
-static const float kCloakFadeTime = 750.0f;      // 0x447ad0
-static const float kCloakFadeMaxOpacity = 1.0f;  // 0x447ad4
-static const float kCloakFadeMinOpacity = 0.6f;  // 0x447ad8
+static const float kBuildingZOffset = 0.01f;
+static const float kCloakFadeTime = 750.0f;
+static const float kCloakFadeMaxOpacity = 1.0f;
+static const float kCloakFadeMinOpacity = 0.6f;
 static const float k447ADC = 0.40824828f;        // 0x447adc (1 / sqrt(6))
-static const float kFacingTolerance = 0.043633234f;  // 0x447ae0
+static const float kFacingTolerance = 0.043633234f;
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
-static const float kFleeDistanceScale = 1.5f;    // 0x447ae8
-static const float k447AF0 = 0.01f;              // 0x447af0
-static const float kLargeUnitScale = 1.5f;       // 0x447af4
-static const float kMinConstructionScale = 0.1f;  // 0x447af8
-static const float k447AFC = 10.0f;              // 0x447afc
-static const float kMinWaypointDistanceSquared = 36.0f;  // 0x447b00
-static const float kMinDamageRoll = 0.05f;       // 0x447b04
-static const float kMaxDamageRoll = 0.2f;        // 0x447b08
+static const float kFleeDistanceScale = 1.5f;
+static const float k447AF0 = 0.01f;
+static const float kLargeUnitScale = 1.5f;
+static const float kMinConstructionScale = 0.1f;
+static const float k447AFC = 10.0f;
+static const float kMinWaypointDistanceSquared = 36.0f;
+static const float kMinDamageRoll = 0.05f;
+static const float kMaxDamageRoll = 0.2f;
 // the wall pieces' yaws (0x446dc0, one object shared with EEGhostUnit.cpp and EEUCBuilding.cpp; ReplantFarm)
 static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964f};
 
-// SYNTHETIC: EXE 0x62f272
-// SYNTHETIC: EXE 0x62f277
 [[maybe_unused]] static float sCloakFadeRate = 1.0f / kCloakFadeTime;  // 0x5636a8: the cloak fade per millisecond (provisional name; the fade is ee_units step.rs cloak_fade)
 
-// SYNTHETIC: EXE 0x62f286
-// SYNTHETIC: EXE 0x62f28b
 [[maybe_unused]] static float sCloakFadeOpacityRange = kCloakFadeMaxOpacity - kCloakFadeMinOpacity;  // 0x5636a4: the cloak fade's opacity range (provisional name)
 
-// SYNTHETIC: EXE 0x62f29e
-// SYNTHETIC: EXE 0x62f2a3
-static float sUnusedHalfInverseSqrt6 = k447ADC * 0.5f;          // 0x5636a0 (provisional name)
+static float sUnusedHalfInverseSqrt6 = k447ADC * 0.5f;
 
-// SYNTHETIC: EXE 0x62f2b6
-// SYNTHETIC: EXE 0x62f2bb
-static float sUnusedFourInverseSqrt6 = k447ADC * 4.0f;          // 0x56369c (provisional name)
+static float sUnusedFourInverseSqrt6 = k447ADC * 4.0f;
 
 // the unit classes by type (0x5636ac in the original: 0x367 entries up to sUnitTypes at 0x564448; ee/EEUnit.h)
 // (the original's fixed EEUnitClassCount() slots; now one per unit type, sized by CreateUnitClasses: EEUnitClassCount() empty slots until then)
@@ -154,12 +146,7 @@ float gSpaceStationHeight = 1.5f;
 // 0x564448: the unit types registered in gUnitClassTable (Register 0x236a9c push_backs; the vector right after the
 // table, guarded dtor bit 1 of 0x563698: a class static).
 std::vector<unsigned long> EEUnitClass::sUnitTypes;
-// SYNTHETIC: EXE 0x62f2ce   (wrapper)
-// SYNTHETIC: EXE 0x62f2d8   (ctor)
-// SYNTHETIC: EXE 0x62f2f0   (registrar)
-// SYNTHETIC: EXE 0x62f2fc   (dtor)
 
-// FUNCTION: EXE 0x62f317
 // Creates a unit class from its dbunits record: stats, sounds and effects (referenced), terrain table, movement
 // domains and kind flags. Port (R5b.4 round 27): the plain stores are ee_units unit_class_fields.rs's fill of the
 // class's record base from the row, given the lookups it reads (the tech tree's epoch and calamity technology, the
@@ -251,15 +238,11 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mBehavior = EEUnitBehavior::sTable[inRecord->mBehavior];
 }
 
-// SYNTHETIC: EXE 0x6305d2
-// (the scalar deleting destructor, emitted with the vtable; slot EEUnitClass+0x0)
-
 // the class's effects as GetEffects' array (the members are contiguous: 29 pointers from mAttachedEffect)
 static const long kUnitClassEffectCount = 29;
 static_assert(offsetof(EEUnitClass, mBloodStainEffect) - offsetof(EEUnitClass, mAttachedEffect)
                   == (kUnitClassEffectCount - 1) * sizeof(EEGraphicEffect*), "the class's effects are one array");
 
-// FUNCTION: EXE 0x6305ee
 // Destroys the unit class, releasing its graphic effects and its projectile, scaffolding, death and remains classes
 EEUnitClass::~EEUnitClass()
 {
@@ -293,7 +276,6 @@ EEUnitClass::~EEUnitClass()
     }
 }
 
-// FUNCTION: EXE 0x63086c
 // Adds a waypoint at a map point, inZ above the tile's ground (on water at inZ); off the map it snaps or is dropped
 void EEUnitClass::AddWaypointAt(EEComplexUnit* inUnit, float inX, float inY, float inZ, bool inSnapToMap)
 {
@@ -319,7 +301,6 @@ void EEUnitClass::AddWaypointAt(EEComplexUnit* inUnit, float inX, float inY, flo
     inUnit->AddWaypoint(theLocation, inSnapToMap);
 }
 
-// FUNCTION: EXE 0x63094b
 // Returns a new building's height and flattens the ground under multi-tile land buildings to their lowest corner
 // (granaries take the average; space turrets and orbital stations sit higher)
 // NEAR: the original calls the map's GetTile out of line (0x2f85) at the top; loop counters in swapped slots
@@ -380,7 +361,6 @@ void EEUnitClass::LevelGround(GETerrainMesh* inMesh, unsigned long inX, unsigned
 // (0x630c55 ApplyAreaDamage, 0x630fd2 ApplyHit and the damage of one hit: ee_combat damage.rs since the tenth
 // round, over the world host in EECombatGoals.cpp)
 
-// FUNCTION: EXE 0x631312
 // Fires one shot of inUnit's attack (a direct hit, a projectile or a special attack), then plays the muzzle effects,
 // uses up ammunition and moves to the next weapon tag point
 // The shot's target and drop point come from EEFindDropLocation; a direct shot checks the line for a blocker
@@ -395,7 +375,6 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
     EECombatCaptureXAction(EE_COMBAT_XA_FIRE_SHOT, inUnit, EECombatShotTarget(inUnit), 0);
 }
 
-// FUNCTION: EXE 0x631723
 // Returns whether units of this class may board a container of inClass (transport, fortress, carrier, airport ...)
 bool EEUnitClass::CanEnter(EEUnitClass* inClass)
 {
@@ -406,7 +385,6 @@ bool EEUnitClass::CanEnter(EEUnitClass* inClass)
            (this->mUnitType == kUnitTypeSp15SpaceFighter && inClass->mUnitType == kUnitTypeSp15SpaceCarrier);
 }
 
-// FUNCTION: EXE 0x6317d7
 // Returns whether the class is in the unit set of the calamity flag (plague, leprosy, fire, AE damage, mind control)
 bool EEUnitClass::IsAffectedByCalamity(unsigned long inFlag)
 {
@@ -439,7 +417,6 @@ bool EEUnitClass::IsAffectedByCalamity(unsigned long inFlag)
     return theResult;
 }
 
-// FUNCTION: EXE 0x63187a
 // Returns the high-ground damage factor of a land attacker (or a projectile's launcher) on a land unit or building
 float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
@@ -468,7 +445,6 @@ float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTa
     return EECombatElevation(theIn);
 }
 
-// FUNCTION: EXE 0x63198b
 // Fills the AI's per-tile-kind passability flags for the unit or class (an air unit passes everything)
 void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
 {
@@ -499,7 +475,6 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
     outFlags.mFlags[kAITileSpace] = this->CanMoveOnTerrain(inUnit, 0xc);
 }
 
-// FUNCTION: EXE 0x631ad2
 // Computes the volume, pan and pitch of a sound played at the unit's position
 void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
                             float* outPitch)
@@ -519,7 +494,6 @@ void EEUnitClass::BaseGetSoundParameters(EEUnit* inUnit, EESoundObject* inSound,
                              kSoundDistanceFactor);
 }
 
-// FUNCTION: EXE 0x631b55
 // Produces a unit of inClass at the building inUnit: loads aircraft and missiles into it, else places the unit toward
 // the rally point and hands it the queued goals; returns false at the population cap or with no room
 bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool inArg)
@@ -714,7 +688,6 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
     return theSuccess;
 }
 
-// FUNCTION: EXE 0x63241c
 // Creates a unit of the class for a player at a tile's centre with a heading, grounded when a map is given, and
 // queues it in the player's pending units
 EEUnit* EEUnitClass::CreateUnitAtTile(EEPlayer* inPlayer, long inX, long inY, EEMap* inMap, float inHeading)
@@ -770,7 +743,6 @@ EEUnit* EEUnitClass::CreateUnitAtTile(EEPlayer* inPlayer, long inX, long inY, EE
     return theUnit;
 }
 
-// FUNCTION: EXE 0x6325fd
 // Creates a unit of the class for a player at a map point with a heading, grounded when a map is given, and queues it
 // in the player's pending units
 EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY, EEMap* inMap, float inHeading)
@@ -828,7 +800,6 @@ EEUnit* EEUnitClass::CreateUnitAtPoint(EEPlayer* inPlayer, float inX, float inY,
     return theUnit;
 }
 
-// FUNCTION: EXE 0x6327ff
 // Creates a unit of the class at a transformation for a player and adds it to the world (an airport gets its runways)
 EEUnit* EEUnitClass::BaseCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -877,7 +848,6 @@ EEUnit* EEUnitClass::BaseCreateUnitAt(GETransformation& inTransformation, long i
     return theUnit;
 }
 
-// FUNCTION: EXE 0x6329f7
 // Creates a unit of the class at a tile for a player (yaw pi) and adds it to the world (an airport gets its runways)
 EEUnit* EEUnitClass::BaseCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -943,7 +913,6 @@ EEUnit* EEUnitClass::BaseCreateUnit(long inX, long inY, long inPlayer, bool inIs
     return theUnit;
 }
 
-// FUNCTION: EXE 0x632c9f
 // Plants the player's farms on the free plots of the 3x3 grid around the unit, each with one hit point
 void EEUnitClass::ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer)
 {
@@ -990,7 +959,6 @@ void EEUnitClass::ReplantFarm(EEComplexUnit* inUnit, EEPlayer* inPlayer)
     }
 }
 
-// FUNCTION: EXE 0x632e4a
 // Builds the airport's three runway pieces in its facing direction on levelled ground and links them to it
 void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool inIsFoundation)
 {
@@ -1047,7 +1015,6 @@ void EEUnitClass::CreateRunways(EEComplexUnit* inUnit, EEPlayer* inPlayer, bool 
     gCameraFollowing = false;
 }
 
-// FUNCTION: EXE 0x63302d
 // Flattens the ground on the +X side of the airport (four airport lengths) to the airport tile's height
 void EEUnitClass::LevelRunwayPosX(EEComplexUnit* inUnit)
 {
@@ -1071,7 +1038,6 @@ void EEUnitClass::LevelRunwayPosX(EEComplexUnit* inUnit)
             theMap->GetTile(x, y)->mHeight = theHeight;
 }
 
-// FUNCTION: EXE 0x633122
 // Flattens the ground on the +Y side of the airport (four airport lengths) to the airport tile's height
 void EEUnitClass::LevelRunwayPosY(EEComplexUnit* inUnit)
 {
@@ -1094,7 +1060,6 @@ void EEUnitClass::LevelRunwayPosY(EEComplexUnit* inUnit)
             theMap->GetTile(x, y)->mHeight = theHeight;
 }
 
-// FUNCTION: EXE 0x633210
 // Flattens the ground on the -Y side of the airport (three lengths, to its first row) to the airport's height
 void EEUnitClass::LevelRunwayNegY(EEComplexUnit* inUnit)
 {
@@ -1118,7 +1083,6 @@ void EEUnitClass::LevelRunwayNegY(EEComplexUnit* inUnit)
             theMap->GetTile(x, y)->mHeight = theHeight;
 }
 
-// FUNCTION: EXE 0x633306
 // Flattens the ground on the -X side of the airport (three lengths, to its first column) to the airport's height
 void EEUnitClass::LevelRunwayNegX(EEComplexUnit* inUnit)
 {
@@ -1142,7 +1106,6 @@ void EEUnitClass::LevelRunwayNegX(EEComplexUnit* inUnit)
             theMap->GetTile(x, y)->mHeight = theHeight;
 }
 
-// FUNCTION: EXE 0x6333fb
 // Releases every unit class in the class table
 void EEUnitClass::ReleaseUnitClasses()
 {
@@ -1150,7 +1113,6 @@ void EEUnitClass::ReleaseUnitClasses()
         EEUnitClass::ReleaseUnitClass(i);
 }
 
-// FUNCTION: EXE 0x633410
 // Returns the unit a projectile hits: its attack target first, then the units of its region in storage order (walls,
 // enemies); a hit on a non-target wall makes the launcher fire high
 EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
@@ -1167,7 +1129,6 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
     return theFound;
 }
 
-// FUNCTION: EXE 0x633a14
 // Returns whether the unit faces the target unit (or its tile's centre)
 bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance)
 {
@@ -1189,7 +1150,6 @@ bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUs
     return theFaces;
 }
 
-// FUNCTION: EXE 0x633a72
 // Returns whether the unit (or its turrets) faces a point within its firing arc or the fixed tolerance; broadside
 // ships also count the opposite side
 bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
@@ -1208,10 +1168,6 @@ bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation,
     return theFaces;
 }
 
-// FUNCTION: EXE 0x633ccc
-// EEUnitClass::TurretsFacePoint: ee_combat reads.rs turrets_face_point (FacesPoint's only callee)
-
-// FUNCTION: EXE 0x633f0e
 // Starts a unit's death: spawns the death class, plays the death effect and sound (not for ICBMs), the dying animation,
 // and makes it uncommandable
 void EEUnitClass::UnitDied(EEComplexUnit* inUnit)
@@ -1237,7 +1193,6 @@ void EEUnitClass::UnitDied(EEComplexUnit* inUnit)
     inUnit->DropPath();
 }
 
-// FUNCTION: EXE 0x634000
 // Sends a computer player's unit to an escape point, when one is found
 void EEUnitClass::FindSafeLocation(EEComplexUnit* inUnit)
 {
@@ -1250,7 +1205,6 @@ void EEUnitClass::FindSafeLocation(EEComplexUnit* inUnit)
     inUnit->mUnitClass->ActionChanged(inUnit);
 }
 
-// FUNCTION: EXE 0x634084
 // Plays the class's creation effect on the unit
 void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
 {
@@ -1258,7 +1212,6 @@ void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
         gEffectManager->CreateUnitEffect(inUnit, this->mCreationEffect, NULL, 0, 0, 0);
 }
 
-// FUNCTION: EXE 0x6340a7
 // Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point; the
 // volcano idles after each launch (new: the launch transform, its tile and the special attack's choices are
 // ee_combat's launch_shot)
@@ -1339,7 +1292,6 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
         inUnit->StartAction(kActionIdle);
 }
 
-// FUNCTION: EXE 0x6345d2
 // Moves the unit away from its pursuer to the first standable spot of eight directions (Gaia animals only 1-2 tiles);
 // else idles
 void EEUnitClass::Flee(EEComplexUnit* inUnit)
@@ -1384,7 +1336,6 @@ void EEUnitClass::Flee(EEComplexUnit* inUnit)
     inUnit->mUnitClass->ActionChanged(inUnit);
 }
 
-// FUNCTION: EXE 0x634779
 // Plays the class's ripple effect at the model's ripple tag points that are under water, when the player sees the unit
 void EEUnitClass::CreateRipples(EEComplexUnit* inUnit)
 {
@@ -1411,7 +1362,6 @@ void EEUnitClass::CreateRipples(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x634965
 // Lists the ring of tiles around the unit's footprint (optionally with corners, appending or replacing)
 void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
 {
@@ -1420,7 +1370,6 @@ void EEUnitClass::BaseGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EET
     EEGetSquareBlockRing(inCorners, inUnit->GetTileX(), inUnit->GetTileY(), this->GetTileSize(), outTiles, inAppend);
 }
 
-// FUNCTION: EXE 0x6349b1
 // Returns the unit's passable terrain as bits: cliff 1, water 2, land 4, space 8
 long EEUnitClass::GetPassableFlags(EEUnit* inUnit)
 {
@@ -1436,7 +1385,6 @@ long EEUnitClass::GetPassableFlags(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x634a05
 // Finds a unit within range (default: line of sight) that the unit can heal and reach; returns whether one was found
 bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** outTarget)
 {
@@ -1459,7 +1407,6 @@ bool EEUnitClass::FindTargetNear(EEComplexUnit* inUnit, float inRange, EEUnit** 
     return theResult;
 }
 
-// FUNCTION: EXE 0x634ad8
 // Returns whether the unit (by its stats) or the class may move on a terrain type
 bool EEUnitClass::CanMoveOnTerrain(EEUnit* inUnit, long inTerrainType)
 {
@@ -1471,7 +1418,6 @@ bool EEUnitClass::CanMoveOnTerrain(EEUnit* inUnit, long inTerrainType)
     return theResult;
 }
 
-// FUNCTION: EXE 0x634b05
 // Returns a land continent beside the unit (the target's, when given); with no match, the last continent examined
 EEAIContinent* EEUnitClass::GetContainerContinent(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
@@ -1496,7 +1442,6 @@ EEAIContinent* EEUnitClass::GetContainerContinent(EEComplexUnit* inUnit, EECompl
     return theContinent;
 }
 
-// FUNCTION: EXE 0x634be6
 // Advances the unit to its next waypoint, first marking a land unit blocked when the next tile (or both corners of a
 // diagonal step) holds an impassable unit
 void EEUnitClass::NextWaypoint(EEComplexUnit* inUnit)
@@ -1562,7 +1507,6 @@ void EEUnitClass::NextWaypoint(EEComplexUnit* inUnit)
     inUnit->NextWaypoint();
 }
 
-// FUNCTION: EXE 0x634ea2
 // Returns the number of goal queues: airport 5, navy yard 3, buildings, airfields, airplanes and spaceships 2, else 1
 long EEUnitClass::GetNumGoalQueues()
 {
@@ -1576,7 +1520,6 @@ long EEUnitClass::GetNumGoalQueues()
     return 1;
 }
 
-// FUNCTION: EXE 0x634ee7
 // Lists every unit class whose unit type is in a unit set
 void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>& outClasses)
 {
@@ -1588,7 +1531,6 @@ void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>
     }
 }
 
-// FUNCTION: EXE 0x634f34
 // Returns whether a building of another unit type shares this one's rally point (military, town centre, dock)
 bool EEUnitClass::SharesRallyPoint(unsigned long inUnitType)
 {
@@ -1627,7 +1569,6 @@ bool EEUnitClass::SharesRallyPoint(unsigned long inUnitType)
     return theResult;
 }
 
-// FUNCTION: EXE 0x634fbd
 // Returns whether another unit type shares this one's research (town centre and capitol, male and female citizens)
 bool EEUnitClass::SharesResearch(long inUnitType)
 {
@@ -1649,7 +1590,6 @@ bool EEUnitClass::SharesResearch(long inUnitType)
 
 // IsImportantUnit reads the heal goal (included here, after the unit's init chains: its class static would renumber them)
 
-// FUNCTION: EXE 0x634fff
 // Heals the heal goal's target when in range: plays the healing animation and the class's heal effect
 // The heal effect is drawn between the two units or on the target, by the graphic effect's kind
 void EEUnitClass::Heal(EEComplexUnit* inUnit)
@@ -1705,7 +1645,6 @@ void EEUnitClass::Heal(EEComplexUnit* inUnit)
         inUnit->mHealEffect = theHandle;
 }
 
-// FUNCTION: EXE 0x63511e
 // Sets up a new unit: full hit points, ammunition, behaviour, heal timer, standing still and idle
 void EEUnitClass::BaseUnitCreated(EEComplexUnit* inUnit)
 {
@@ -1719,14 +1658,12 @@ void EEUnitClass::BaseUnitCreated(EEComplexUnit* inUnit)
     this->ActionChanged(inUnit);
 }
 
-// FUNCTION: EXE 0x6351ba
 // Gives a new simple unit its full hit points
 void EEUnitClass::BaseSimpleUnitCreated(EEUnit* inUnit)
 {
     inUnit->SetHitPoints(inUnit->mStats->mMaxHitPoints);
 }
 
-// FUNCTION: EXE 0x6351cf
 // Adds a placed unit (not a path marker) to the map's unit region of its tile
 void EEUnitClass::BaseAddToRegion(EEUnit* inUnit)
 {
@@ -1740,7 +1677,6 @@ void EEUnitClass::BaseAddToRegion(EEUnit* inUnit)
     ee_combat_regions_add(theTable, (uint32_t)theRegion.mX, (uint32_t)theRegion.mY, (uint64_t)(uintptr_t)inUnit->GetComplexUnit());
 }
 
-// FUNCTION: EXE 0x63523c
 // Adds the unit to its tile's unit list
 void EEUnitClass::BaseAddToTile(EEUnit* inUnit)
 {
@@ -1749,7 +1685,6 @@ void EEUnitClass::BaseAddToTile(EEUnit* inUnit)
         theTile->mUnits = theTile->AddUnit(inUnit, theTile->mUnits);
 }
 
-// FUNCTION: EXE 0x63525a
 // Adds waypoints along the line to a point at turning-radius steps and cruise altitude (a near point: one waypoint)
 void EEUnitClass::PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint& inTo, bool inSnapToMap)
 {
@@ -1772,7 +1707,6 @@ void EEUnitClass::PathToward(EEComplexUnit* inUnit, GE3DPoint& inFrom, GE3DPoint
         this->AddWaypointAt(inUnit, inTo.GetX(), inTo.GetY(), inTo.GetZ(), inSnapToMap);
 }
 
-// FUNCTION: EXE 0x6353bb
 // Returns whether the unit has reached its current waypoint, given the distance left
 bool EEUnitClass::BaseHasArrived(EEComplexUnit* inUnit, float inValue)
 {
@@ -1806,7 +1740,6 @@ bool EEUnitClass::BaseHasArrived(EEComplexUnit* inUnit, float inValue)
     return theResult;
 }
 
-// FUNCTION: EXE 0x6354ae
 // Loads the class's sounds and model and acquires its button
 void EEUnitClass::LoadClassMedia()
 {
@@ -1827,7 +1760,6 @@ void EEUnitClass::LoadClassMedia()
         this->mButton->Acquire();
 }
 
-// FUNCTION: EXE 0x635527
 // Loads the buttons of the class's research and commands for a human player, and its calamities' media
 void EEUnitClass::LoadButtons(EEPlayer* inPlayer)
 {
@@ -1851,7 +1783,6 @@ void EEUnitClass::LoadButtons(EEPlayer* inPlayer)
             EEButtonObject::Get(this->mCommands[j])->Acquire();
 }
 
-// FUNCTION: EXE 0x6355e3
 // Loads the class's graphic effects and marks its related classes (projectile, death, farms, runways ...) for loading
 void EEUnitClass::BaseLoadMedia(EEPlayer* inPlayer)
 {
@@ -1901,7 +1832,6 @@ static const signed char kCategoryPhysicsModels[0x23] = {
     0, 2, 4, 8, 7, 4, 4, 0, 0, 8, 2, 9, 10, 8, 8, 11,     // land transport .. spaceship
     11, 11, 1};                                         // space building, space transport, planet spaceship
 
-// FUNCTION: EXE 0x6358b1
 // Builds every unit class from dbobjects by category, links the related classes and set flags, sorts sUnitTypes by
 // name (the class table has a slot per unit type, sized from the records)
 // The cases are in the order the original lays their bodies out
@@ -1997,7 +1927,6 @@ void EEUnitClass::CreateUnitClasses()
     std::sort(EEUnitClass::sUnitTypes.begin(), EEUnitClass::sUnitTypes.end(), EEUnitClassNameLess());
 }
 
-// FUNCTION: EXE 0x6364c0
 // Returns the class's AI script action for a key, or NULL when the class has no script or no such action
 EEUnitAction* EEUnitClass::FindAction(long inKey)
 {
@@ -2044,7 +1973,6 @@ static void EETurnTurretsRust(EEComplexUnit* inUnit, bool inAim, float inX, floa
             inUnit->mTurretAngles[i] = theParts[i].angle;
 }
 
-// FUNCTION: EXE 0x6364f3
 // Turns each turret of a living unit back toward straight ahead by at most its turn rate for this tick
 // port (R5b.4): the turn is Rust (ee_units turret.rs), as TurnTurrets'
 void EEUnitClass::TurnTurretsBack(EEComplexUnit* inUnit)
@@ -2052,7 +1980,6 @@ void EEUnitClass::TurnTurretsBack(EEComplexUnit* inUnit)
     EETurnTurretsRust(inUnit, false, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x63658b
 // Sends a goalless unit to the centre of its tile; with a goal, faces the unit to the centre and places it there
 void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
 {
@@ -2097,7 +2024,6 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EEAIPathGoalModifiers.h"
-// FUNCTION: EXE 0x63674b
 // Requests a path from the unit's tile to its goal (cancelling its paths when it already stands there), setting
 // its start heading when unset and an enemy-avoidance modifier for players that avoid enemies; idles when pathless
 // A location goal's group path state and auto-waypoint flag pick the revisions and the graph; a unit without
@@ -2160,7 +2086,6 @@ void EEUnitClass::PathToGoal(EEComplexUnit* inUnit)
         inUnit->SetCurrentPhysicsAction(4);
 }
 
-// FUNCTION: EXE 0x6369b9
 // Rocks a moving, living space unit that takes damage by a random roll to either side, clamped to the maximum roll
 void EEUnitClass::UnitDamaged(EEComplexUnit* inUnit, EEComplexUnit* inAttacker, long inDamage)
 {
@@ -2180,7 +2105,6 @@ void EEUnitClass::UnitDamaged(EEComplexUnit* inUnit, EEComplexUnit* inAttacker, 
     theUnit->mRoll = theValue;
 }
 
-// FUNCTION: EXE 0x636a83
 // Counts one unit of the class gone and records the time when the last one goes
 void EEUnitClass::UnitRemoved()
 {
@@ -2188,7 +2112,6 @@ void EEUnitClass::UnitRemoved()
         this->mLastUnitGoneTime = TMGetTime();
 }
 
-// FUNCTION: EXE 0x636a9c
 // Adds a unit class to the class table under its unit type and to the list of unit types, keeping a reference
 void EEUnitClass::RegisterUnitClass(EEUnitClass* inClass)
 {
@@ -2199,7 +2122,6 @@ void EEUnitClass::RegisterUnitClass(EEUnitClass* inClass)
     EEUnitClass::sUnitTypes.push_back(inClass->mUnitType);
 }
 
-// FUNCTION: EXE 0x636ac6
 // Removes a placed unit (not a path marker) from the map's unit region that holds its tile
 // NEAR: the original calls a vector remove helper 0x239ee2 (find + erase; a COMDAT of this unit)
 void EEUnitClass::BaseRemoveFromRegion(EEUnit* inUnit)
@@ -2214,7 +2136,6 @@ void EEUnitClass::BaseRemoveFromRegion(EEUnit* inUnit)
     ee_combat_regions_remove(theTable, (uint32_t)theRegion.mX, (uint32_t)theRegion.mY, (uint64_t)(uintptr_t)inUnit->GetComplexUnit());
 }
 
-// FUNCTION: EXE 0x636b33
 // Releases the class table's entry for a unit type and clears it
 void EEUnitClass::ReleaseUnitClass(unsigned long inUnitType)
 {
@@ -2224,7 +2145,6 @@ void EEUnitClass::ReleaseUnitClass(unsigned long inUnitType)
     theEntry = NULL;
 }
 
-// FUNCTION: EXE 0x636b55
 // Removes a unit from the tile it stands on, if any
 void EEUnitClass::BaseRemoveFromTile(EEUnit* inUnit)
 {
@@ -2233,7 +2153,6 @@ void EEUnitClass::BaseRemoveFromTile(EEUnit* inUnit)
         theTile->RemoveUnit(inUnit);
 }
 
-// FUNCTION: EXE 0x636b69
 // Moves a unit on along its path: a melee attacker closing in retargets or sidesteps to the less crowded side;
 // otherwise merges a short bounded path toward the goal into its waypoints, or stops when it is already there
 // The sidestep counts the units on the side tiles of the unit and of the goal; a diagonal squeeze counts as blocked.
@@ -2492,7 +2411,6 @@ void EEUnitClass::FindPath(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x63795f
 // Creates a target screen that accepts units closer to the attacker than its current target
 EEFOFindNewTargetInMeleeRange::EEFOFindNewTargetInMeleeRange(EEComplexUnit* inUnit, EEUnit* inTarget)
     : mUnit(inUnit), mTarget(inTarget)
@@ -2500,7 +2418,6 @@ EEFOFindNewTargetInMeleeRange::EEFOFindNewTargetInMeleeRange(EEComplexUnit* inUn
     this->mRange = EEGetHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
 }
 
-// FUNCTION: EXE 0x63799d
 // Returns whether a candidate is alive and closer to the attacker than its current target (new: ee_combat's screen)
 // the melee screen's candidate distance (asked by ee_combat's screen for a living candidate only)
 struct EEMeleeScreenContext {
@@ -2533,7 +2450,6 @@ bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
     return EEMeleeScreen(this, inUnit);
 }
 
-// FUNCTION: EXE 0x6379dd
 // Turns an attacked unit on its attacker (or to its location when unseen) and calls idle nearby soldiers to help
 void EEUnitClass::Attacked(EEComplexUnit* inUnit)
 {
@@ -2543,7 +2459,6 @@ void EEUnitClass::Attacked(EEComplexUnit* inUnit)
     EECombatCaptureXAction(EE_COMBAT_XA_ATTACKED, inUnit, NULL, theBefore);
 }
 
-// FUNCTION: EXE 0x637ca6
 // Sends a unit running away from its attacker or pursuer to the first standable spot of up to 8 directions
 void EEUnitClass::FleeAttacker(EEComplexUnit* inUnit)
 {
@@ -2593,7 +2508,6 @@ void EEUnitClass::FleeAttacker(EEComplexUnit* inUnit)
     inUnit->mLastAttacker = NULL;
 }
 
-// FUNCTION: EXE 0x637e79
 // Creates the class's remains unit for the dead unit's player at a free spot near where it died
 void EEUnitClass::CreateRemainsUnit(EEComplexUnit* inUnit)
 {
@@ -2611,7 +2525,6 @@ void EEUnitClass::CreateRemainsUnit(EEComplexUnit* inUnit)
     theClass->CreateUnitAt(theTransformation, inUnit->mPlayer->GetPlayerID(), false, NULL);
 }
 
-// FUNCTION: EXE 0x637f2f
 // Spawns the class's death unit where the unit (or its container) was and launches it at that ground point
 void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
 {
@@ -2650,7 +2563,6 @@ void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x638087
 // Fires the class's projectile from the unit's turret weapon point at a target or ground location;
 // without a turret part, fires a plain shot
 // The launch point is the weapon tag point mWeaponTagPoint scaled by the stats' scale and turned by the turret's
@@ -2694,7 +2606,6 @@ void EEUnitClass::LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3D
         this->LaunchShot(inUnit, inTarget, inLocation, NULL);
 }
 
-// FUNCTION: EXE 0x6382fd
 // Unloads the class's acknowledge, selection, death and creation sounds, its model and its button
 void EEUnitClass::UnloadClassMedia()
 {
@@ -2715,7 +2626,6 @@ void EEUnitClass::UnloadClassMedia()
         this->mButton->Release();
 }
 
-// FUNCTION: EXE 0x638376
 // Releases a human player's buttons for the class's research technologies and commands, and calamity media
 void EEUnitClass::UnloadButtons(EEPlayer* inPlayer)
 {
@@ -2741,7 +2651,6 @@ void EEUnitClass::UnloadButtons(EEPlayer* inPlayer)
             EEButtonObject::Get(this->mCommands[j])->Release();
 }
 
-// FUNCTION: EXE 0x638432
 // Unloads a player's media for the classes this class spawns and for all its effects, and marks it unloaded
 void EEUnitClass::BaseUnloadMedia(EEPlayer* inPlayer)
 {
@@ -2770,7 +2679,6 @@ void EEUnitClass::BaseUnloadMedia(EEPlayer* inPlayer)
     this->mIsMediaLoaded = false;
 }
 
-// FUNCTION: EXE 0x6386cf
 // Fires a shot when an attacking unit's animation steps across one of its attack set's sound frames
 void EEUnitClass::FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFrame)
 {
@@ -2787,7 +2695,6 @@ void EEUnitClass::FireOnAttackFrame(EEComplexUnit* inUnit, long inArg, long inFr
         this->FireShot(inUnit);
 }
 
-// FUNCTION: EXE 0x638761
 // Uncloaks a unit while an enemy is within its cloak radius and moves it on the minimap when that changes
 void EEUnitClass::UpdateCloakDetection(EEComplexUnit* inUnit)
 {
@@ -2831,7 +2738,6 @@ void EEUnitClass::UpdateCloakDetection(EEComplexUnit* inUnit)
         gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
 }
 
-// FUNCTION: EXE 0x638948
 // Turns each turret toward the unit's attack, heal or calamity target by its turn rate; else turns them back
 // port (R5b.4): the turn is Rust (ee_units turret.rs) over the parts' numbers; the C++ finds the goal's point
 void EEUnitClass::TurnTurrets(EEComplexUnit* inUnit)
@@ -2860,7 +2766,6 @@ void EEUnitClass::TurnTurrets(EEComplexUnit* inUnit)
     EETurnTurretsRust(inUnit, true, theTarget.GetX(), theTarget.GetY());
 }
 
-// FUNCTION: EXE 0x638ce7
 // Advances a unit's animation by this tick, plays the frame sounds and returns the number of frames stepped
 long EEUnitClass::Animate(EEComplexUnit* inUnit)
 {
@@ -2969,7 +2874,6 @@ long EEUnitClass::Animate(EEComplexUnit* inUnit)
     return theSteps;
 }
 
-// FUNCTION: EXE 0x6393a9
 // Counts down a unit's trail timer and creates the class's trail effect each time it runs out
 void EEUnitClass::UpdateTrail(EEComplexUnit* inUnit)
 {
@@ -2985,7 +2889,6 @@ void EEUnitClass::UpdateTrail(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x6393ff
 // Creates ripples behind a unit on water at a rate that grows with its speed
 void EEUnitClass::UpdateRipples(EEComplexUnit* inUnit)
 {
@@ -3006,7 +2909,6 @@ void EEUnitClass::UpdateRipples(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x6394b0
 // Returns one over the unit's top speed, its active group's when it moves in one
 float EEComplexUnit::GetInverseMaxVelocity()
 {
@@ -3015,7 +2917,6 @@ float EEComplexUnit::GetInverseMaxVelocity()
     return this->mStats->mInverseMaxVelocity;
 }
 
-// FUNCTION: EXE 0x6394cd
 // Ticks a building: finishes its production countdown (a unit, retried in 5 seconds when it cannot be placed,
 // or a technology), then its orbitals, camouflage, effects, rotting, production queue and garrison healing
 // EEUCBuilding::Update; production is instant under the player's mInstantBuild
@@ -3059,7 +2960,6 @@ void EEUnitClass::UpdateBuilding(EEComplexUnit* inUnit)
     this->HealGarrison(inUnit);
 }
 
-// FUNCTION: EXE 0x639644
 // Ticks an animal: physics, effects, timers and animation; fires on attack frames and lets its carcass rot
 void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
 {
@@ -3108,7 +3008,6 @@ static uint32_t CloakBits(float inValue)
     return theBits;
 }
 
-// FUNCTION: EXE 0x63978b
 // Counts down a unit's camouflage timers (dropping them without vital buildings) and fades its cloak opacity
 void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
 {
@@ -3194,7 +3093,6 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
     inUnit->SetOpacityChain(theOpacity);
 }
 
-// FUNCTION: EXE 0x639aad
 // Sets or clears the unit's camouflaged flag (the top bit of its camouflage timer)
 void EEComplexUnit::SetCamouflaged(bool inValue)
 {
@@ -3204,7 +3102,6 @@ void EEComplexUnit::SetCamouflaged(bool inValue)
         this->mCamouflageTimer &= 0x7fffffff;
 }
 
-// FUNCTION: EXE 0x639ac7
 // Restores a unit's power by its regeneration rate every 5 seconds, up to its maximum (not during cinematics)
 void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 {
@@ -3242,7 +3139,6 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 extern GEViewport gViewport;
 extern bool& gOrthographicView;
 
-// FUNCTION: EXE 0x639b47
 // Updates the volume, pan and pitch of a unit's animation sound every third tick (off-screen every 21st)
 void EEUnitClass::RefreshSound(EEComplexUnit* inUnit)
 {
@@ -3269,7 +3165,6 @@ void EEUnitClass::RefreshSound(EEComplexUnit* inUnit)
     gSoundManager->SetSoundParameters(theInstance, theVolume, thePan, thePitch);
 }
 
-// FUNCTION: EXE 0x639c74
 // Heals the living units garrisoned in a living unit by its healing points each second
 void EEUnitClass::HealGarrison(EEComplexUnit* inUnit)
 {
@@ -3301,7 +3196,6 @@ void EEUnitClass::HealGarrison(EEComplexUnit* inUnit)
     inUnit->SetRegenerationTimer(theTimerOut.timer);
 }
 
-// FUNCTION: EXE 0x639d8a
 // Regenerates a living unit's hit points each second up to its maximum (not during cinematics)
 void EEUnitClass::Regenerate(EEComplexUnit* inUnit)
 {
@@ -3321,30 +3215,22 @@ void EEUnitClass::Regenerate(EEComplexUnit* inUnit)
     inUnit->SetRegenerationTimer(theOut.timer);
 }
 
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
 void EEUnitClass::UpdateDone(class EEComplexUnit *)
 {
 }
 
-// ICF-FOLDED: EXE 0x62db0f
 // Runs the default handling of the unit's new AI-script action (animation, goals, herd, flight, healing, death,
 // rotting), then restarts the current goal's timer
-// (no address of its own: the same body as EEUnitClass::ActionChanged, which ICF kept: a call of it)
 void EEUnitClass::HandleActionChanged(EEComplexUnit* inUnit)
 {
     EEUnitClassActionChanged(EE_UNITS_ACTION_BASE, this, inUnit);
 }
 
-// ICF-FOLDED: EXE 0x69059d
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 bool EEUnitClass::Virtual4C(unsigned long)
 {
     return false;
 }
 
-// ICF-FOLDED: EXE 0x556dd8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUnitClass::Virtual50(unsigned long)
 {
 }

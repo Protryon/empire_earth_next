@@ -37,7 +37,6 @@
 
 static const long kNoArea = -10000;
 
-// FUNCTION: EXE 0x5ba02f
 // Creates an unnamed rectangle-mode area with no rectangle or anchor and no cached centre tile
 EESMArea::EESMArea()
 {
@@ -51,13 +50,11 @@ EESMArea::EESMArea()
     this->mTilesTime = 0;
 }
 
-// FUNCTION: EXE 0x5ba0ac
 // Destroys the area (members only)
 EESMArea::~EESMArea()
 {
 }
 
-// FUNCTION: EXE 0x5ba0d1
 // Returns whether the unit is in the area (no anchor: the unit is off the map; negative anchor: it has no complex
 // unit or that stands on the unit's tile; else by tile); false for no unit
 bool EESMArea::ContainsUnit(EEUnit* inUnit)
@@ -79,7 +76,6 @@ bool EESMArea::ContainsUnitUncaptured(EEUnit* inUnit)
     return ee_scenario_area_contains_unit(&theHost, &theRecord);
 }
 
-// FUNCTION: EXE 0x5ba154
 // Returns whether a tile is in the area: inside the rectangle, on the anchor's continent, or inside the hull of a
 // non-Gaia town that contains the anchor
 bool EESMArea::ContainsTile(const U2DPoint<long>& inTile)
@@ -99,7 +95,6 @@ bool EESMArea::ContainsTileUncaptured(const U2DPoint<long>& inTile)
     return ee_scenario_area_contains_tile(&theHost, &theRecord, (int32_t)inTile.GetX(), (int32_t)inTile.GetY());
 }
 
-// FUNCTION: EXE 0x5ba2b2
 // Copies another area's name, text, rectangle, anchor, select mode and ID (not its tile cache)
 void EESMArea::Copy(const EESMArea& inArea)
 {
@@ -116,7 +111,6 @@ void EESMArea::Copy(const EESMArea& inArea)
 #include "ee/EEPhysics.h"
 #include "ee/EEMap.h"
 
-// FUNCTION: EXE 0x5ba315
 // Returns the area's centre tile, computing and caching it once: rectangle centre, continent centre, or the hull
 // centre of the town holding the anchor (else the anchor)
 U2DPoint<long> EESMArea::GetCenterTile()
@@ -140,7 +134,6 @@ U2DPoint<long> EESMArea::GetCenterTileUncaptured()
     return U2DPoint<long>(theTile[0], theTile[1]);
 }
 
-// FUNCTION: EXE 0x5ba45e
 // Returns true when the area has no anchor (an anchor coordinate is the -10000 no-area value)
 bool EESMArea::IsUnset() const
 {
@@ -150,7 +143,6 @@ bool EESMArea::IsUnset() const
     return true;
 }
 
-// FUNCTION: EXE 0x5ba473
 // Returns whether the anchor has a negative coordinate (an off-map area)
 bool EESMArea::IsOffMap() const
 {
@@ -159,7 +151,6 @@ bool EESMArea::IsOffMap() const
     return false;
 }
 
-// FUNCTION: EXE 0x5ba495
 // Copies the area's tiles out, rebuilding the cache when empty or unused for 3000 ticks; every cached read
 // restarts the timer
 void EESMArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
@@ -192,7 +183,6 @@ void EESMArea::GetTilesUncaptured(std::vector<U2DPoint<long> >& outTiles)
     outTiles = this->mTiles;
 }
 
-// FUNCTION: EXE 0x5ba670
 // Reads the area's name, text, anchor (as floats), rectangle, flags, select mode, tile time and ID; returns the first
 // error (ee_scenario save.rs area_load)
 long EESMArea::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -200,7 +190,6 @@ long EESMArea::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     return this->SaveIO(inFile, false);
 }
 
-// FUNCTION: EXE 0x5ba78e
 // Writes the area's name, text, anchor, rectangle, flags, select mode, tile time and ID; returns the first error
 long EESMArea::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {

@@ -46,7 +46,6 @@
 #include "ee/EEAIRectangleArea.h"
 #include "ee/EEAIRandom.h"
 
-// FUNCTION: EXE 0x42c79f
 // Creates an empty rectangle area with no scenario area, tile counts or continent
 EEAIRectangleArea::EEAIRectangleArea()
     : mScenarioAreaID(0), mNumLandTiles(0), mNumWaterTiles(0), mNumSpaceTiles(0), mContinentID(0), mID(0)
@@ -55,7 +54,6 @@ EEAIRectangleArea::EEAIRectangleArea()
 
 // NEAR: the original calls the map's _Tree(pred, alloc) ctor out of line (ours expands it and refuses _Tree_val one
 // level deeper) and keeps the inner loop counter in edi; EE_LOST_DEBUG 1..16 does not close it
-// FUNCTION: EXE 0x42c7df
 // Recounts the rectangle's land, water and space tiles and stores and returns the continent with the most
 // of its tiles (the lowest id on a tie; 0 when none)
 unsigned short EEAIRectangleArea::UpdateContinents()
@@ -102,7 +100,6 @@ unsigned short EEAIRectangleArea::UpdateContinents()
 
 // NEAR: the original returns EEAIArea::GetRandomPoint() straight into the hidden result; ours copies a temporary (the
 // open U2DPoint<long> copy-ctor family)
-// FUNCTION: EXE 0x42c929
 // Returns a random tile of the area (EEAIArea's pick); the two arguments are unused
 U2DPoint<long> EEAIRectangleArea::GetBaseRandomPoint(long inArg1, long inArg2)
 {
@@ -111,7 +108,6 @@ U2DPoint<long> EEAIRectangleArea::GetBaseRandomPoint(long inArg1, long inArg2)
 
 // NEAR: the original calls RTSMap::GetTile (0x2f85), _Ptrit::operator+ and begin() out of line and builds the
 // random point straight in its local (inline-budget / U2DPoint copy family)
-// FUNCTION: EXE 0x42c939
 // Returns a random area tile; when it is off the map, a random on-map tile of the area instead (unchanged when
 // there is none)
 U2DPoint<long> EEAIRectangleArea::GetRandomPoint()
@@ -134,14 +130,3 @@ U2DPoint<long> EEAIRectangleArea::GetRandomPoint()
     }
     return theResult;
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x42ca87
-// TEMPLATE: EXE 0x42cab2
-// TEMPLATE: EXE 0x42cb23
-// TEMPLATE: EXE 0x42cb55
-// TEMPLATE: EXE 0x42cb99
-// TEMPLATE: EXE 0x42cbc0
-// TEMPLATE: EXE 0x42cbf2
-// TEMPLATE: EXE 0x42cc49
-// SYNTHETIC: EXE 0x42cc65

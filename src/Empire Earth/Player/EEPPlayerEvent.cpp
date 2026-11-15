@@ -25,7 +25,6 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEPPlayerEvent.h"
 
-// FUNCTION: EXE 0x56e1a2
 // Creates a player event (attack, garrison or flare alert) at a location with its source, duration and text id
 EEPPlayerEvent::EEPPlayerEvent(const EETileLocation& inSource, const EETileLocation& inLocation, long inType,
                                float inTimeRemaining, long inTextID)
@@ -38,16 +37,11 @@ EEPPlayerEvent::EEPPlayerEvent(const EETileLocation& inSource, const EETileLocat
     this->mTextID = inTextID;
 }
 
-// SYNTHETIC: EXE 0x56e1f6
-// (the scalar deleting destructor, emitted with the vtable; slot EEPPlayerEvent+0x0)
-
-// FUNCTION: EXE 0x56e212
 // Destroys the player event
 EEPPlayerEvent::~EEPPlayerEvent()
 {
 }
 
-// FUNCTION: EXE 0x56e219
 // Resets the event: no type, no time left, both locations off the map, inactive, no text
 void EEPPlayerEvent::Reset()
 {
@@ -61,7 +55,6 @@ void EEPPlayerEvent::Reset()
     this->mTextID = -1;
 }
 
-// FUNCTION: EXE 0x56e23c
 // Stops an active attack event: removes the sight it shared at its location (and the local view of it when
 // the local player sees that player's sight)
 void EEPPlayerEvent::Deactivate(EEPlayer* inPlayer)
@@ -82,7 +75,6 @@ void EEPPlayerEvent::Deactivate(EEPlayer* inPlayer)
     this->mActive = false;
 }
 
-// FUNCTION: EXE 0x56e2fd
 // Returns an event type's duration: 5 s for a garrison alert, 15 s otherwise
 float EEPPlayerEvent::GetDuration(long inType)
 {
@@ -97,7 +89,6 @@ float EEPPlayerEvent::GetDuration(long inType)
     return 15000.0f;
 }
 
-// FUNCTION: EXE 0x56e316
 // Activates the event again for the player
 void EEPPlayerEvent::Reactivate(EEPlayer* inPlayer)
 {
@@ -105,7 +96,6 @@ void EEPPlayerEvent::Reactivate(EEPlayer* inPlayer)
     this->Activate(inPlayer);
 }
 
-// FUNCTION: EXE 0x56e326
 // Reads the event (source, type, time left, active flag, location, text id) from the saved game
 long EEPPlayerEvent::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -139,7 +129,6 @@ long EEPPlayerEvent::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     return theResult;
 }
 
-// FUNCTION: EXE 0x56e3c3
 // Activates an attack event: the player gets sight at its location (and the local player sees it on the
 // mini map and terrain when sharing that sight)
 void EEPPlayerEvent::Activate(EEPlayer* inPlayer)
@@ -158,7 +147,6 @@ void EEPPlayerEvent::Activate(EEPlayer* inPlayer)
     this->mActive = true;
 }
 
-// FUNCTION: EXE 0x56e487
 // Writes the event (source, type, time left, active flag, location, text id) to the saved game
 long EEPPlayerEvent::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -186,7 +174,6 @@ long EEPPlayerEvent::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     return theResult;
 }
 
-// FUNCTION: EXE 0x56e53a
 // Counts the event's time down; an attack event's revealed sight ends 5 s after it started and when it expires
 void EEPPlayerEvent::Update(EEPlayer* inPlayer, float inElapsedTime)
 {

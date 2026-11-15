@@ -16,10 +16,7 @@
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
 #include "lle/GEBitmap.h"
-#include "lle/SESoundManager.h"
 #include "lle/Input System.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
 #include "lle/UIHotKey.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
@@ -29,7 +26,6 @@
 #include "lle/NESynchronousCommunications.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EEScenarioManager.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMessage.h"
@@ -40,21 +36,17 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"
-#include "ee/EEGameSound.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEScreenEvent.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUnitSetManager.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
-#include "ee/EEMouse.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEStringIDs.h"
 #include "rust/ee_screens.h"   // ee_screens_button_*, ee_screens_command_*: the command panel (ee_screens command_panel.rs)
@@ -64,7 +56,6 @@ extern long& gGameResources;                 // 0x53123c (4: a game kind that de
 // 0x20d571 / 0x20da86: EEGetConversionCost / EECanConvert (ee/EEAreaUtilities.h; EEUCBasicPriest.cpp)
 
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
-// FUNCTION: EXE 0x66de97
 // Creates a main game command button with its icon, dither and queue count text
 EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable)
     : UIButton(inTable.GetID(), NULL, NULL, NULL, inRectangle, inManager->GetFormByID(inTable.GetFormID()),
@@ -127,10 +118,6 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
     }
 }
 
-// SYNTHETIC: EXE 0x66e209
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMGStatusButton+0x0)
-
-// FUNCTION: EXE 0x66e225
 // Destroys the command button and its parts
 EEUIFMGStatusButton::~EEUIFMGStatusButton()
 {
@@ -140,15 +127,12 @@ EEUIFMGStatusButton::~EEUIFMGStatusButton()
     this->ReleaseButton();
 }
 
-// One press of a command button (ee_screens status_button.rs asks its reads and calls through
-// ee_screenscpp_status_button): the button, the first selected unit (the unload's transport), CanProduce's reason
-struct EEUIFMGStatusButtonPress {
-    EEUIFMGStatusButton* mButton;
-    EEComplexUnit* mTransport;
-    UWideString mReason;
-    UWideString mText;          // GetHelpString's held text
-    UWideString* mOut;          // GetHelpString's result
-};
+// The command buttons' part of the main game form's host (ee_screens status_button_ffi.rs; EE_SCREENS_MF_OP_SB +
+// EE_SCREENS_SB_OP_*): the button, the first selected unit (the unload's transport), the form's held text
+// (CanProduce's reason, the help text's pieces) and the help string's result; the selected group's units by index,
+// the button's node by its technology, a unit class by its table index. The ops the form's host answers itself
+// (the pointer, the UI state, the cursor lock, the refresh, the sounds, the panels, the first selected unit, the
+// chat line, the strings, the text's read) are its own.
 static_assert(EE_SCREENS_SB_TYPE_TELEPORTER == kUnitTypeTeleporter && EE_SCREENS_SB_CATEGORY_FORTRESS == kUnitCategoryFortress &&
                   EE_SCREENS_SB_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_SB_SOUND_BUTTON2 == kSoundButton2 &&
                   EE_SCREENS_SB_WORLD_JIT_DELAY == kWorldDeathmatchJitManufacturingDelay &&
@@ -162,12 +146,9 @@ static_assert(EE_SCREENS_SB_TYPE_TELEPORTER == kUnitTypeTeleporter && EE_SCREENS
                   EE_SCREENS_SB_IDS_IMPROVEMENT_POWER == IDS_IMPROVEMENT_POWER && EE_SCREENS_SB_IDS_POP_COST == IDS_POP_COST,
               "status_button.rs's constants");
 
-// The press's reads and calls (EE_SCREENS_SB_OP_*); the selected group's units by index, the button's node by its
-// technology, a unit class by its table index
-extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst, UWideString& ioText,
+                         UWideString* outString, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
-    EEUIFMGStatusButtonPress& thePress = *static_cast<EEUIFMGStatusButtonPress*>(inPress);
-    EEUIFMGStatusButton* theButton = thePress.mButton;
     EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(theButton->GetForm());
     EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
     EESelectedGroup* theGroup = thePlayer != NULL ? thePlayer->mSelectedGroup : NULL;   // read only by the ops that use it
@@ -183,15 +164,9 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
                                     (inOp >= EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED && inOp <= EE_SCREENS_SB_OP_CLASS_NAME_ID)
                                 ? gUnitClassTable[inA]
                                 : NULL;
-    EESoundObject* theSound;
     switch (inOp) {
     case EE_SCREENS_SB_OP_IS_COMMAND: return theButton->mIsCommand;
     case EE_SCREENS_SB_OP_BUTTON: return theButton->mButton;
-    case EE_SCREENS_SB_OP_PANEL:
-        if (inC != 0) gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Enable();
-        else gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Disable();
-        gUIManager->GetMainGameForm()->GetBackgroundByID(inB)->SetVisibility(inC != 0);
-        break;
     case EE_SCREENS_SB_OP_MAIN_GROUP:
         if (inA == 0) gUIManager->Fn26FA6A();
         else gUIManager->Fn26FA55();
@@ -201,14 +176,13 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     case EE_SCREENS_SB_OP_UNIT_TYPE: return theUnit->GetUnitClass()->mUnitType;
     case EE_SCREENS_SB_OP_UNIT_POWER: return inB != 0 ? theUnit->GetPower() : (long)theUnit->mPower;
     case EE_SCREENS_SB_OP_UNLOAD_COST: return gFortressUnloadCost;
-    case EE_SCREENS_SB_OP_FIRST_SELECTED: return EEGetFirstSelectedUnit(thePress.mTransport) == true;
-    case EE_SCREENS_SB_OP_FIRST_CATEGORY: return thePress.mTransport->GetUnitClass()->mCategory;
-    case EE_SCREENS_SB_OP_FIRST_TYPE: return thePress.mTransport->GetUnitClass()->mUnitType;
+    case EE_SCREENS_SB_OP_FIRST_CATEGORY: return inFirst->GetUnitClass()->mCategory;
+    case EE_SCREENS_SB_OP_FIRST_TYPE: return inFirst->GetUnitClass()->mUnitType;
     case EE_SCREENS_SB_OP_SEND: {
         NEMessage* theMessage;
         switch (inA) {
         case EE_SCREENS_SB_SEND_UNLOAD:
-            theMessage = new EEMRecord(kMessageUnloadTransport, {thePress.mTransport->mUnitID, thePress.mTransport->GetTileX(), thePress.mTransport->GetTileY()});
+            theMessage = new EEMRecord(kMessageUnloadTransport, {inFirst->mUnitID, inFirst->GetTileX(), inFirst->GetTileY()});
             break;
         case EE_SCREENS_SB_SEND_STOP: theMessage = new EEMRecord(kMessageStopActiveGroup); break;
         case EE_SCREENS_SB_SEND_DISBAND: theMessage = new EEMRecord(kMessageDisband); break;
@@ -232,14 +206,7 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         break;
     }
-    case EE_SCREENS_SB_OP_LOCK_CURSOR: theForm->mIsCursorLocked = true; break;
-    case EE_SCREENS_SB_OP_POINTER: gMouse->mPointer = inA; break;
-    case EE_SCREENS_SB_OP_UI_STATE: theForm->SetUIState(inA); break;
     case EE_SCREENS_SB_OP_SHOW_CANCEL: theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown); break;
-    case EE_SCREENS_SB_OP_REFRESH_GROUP:
-        if (gUIManager->GetMainGameForm())
-            gUIManager->GetMainGameForm()->mRefreshGroup = true;
-        break;
     case EE_SCREENS_SB_OP_START_PATROL: theForm->StartPatrol(); break;
     case EE_SCREENS_SB_OP_START_FLARE: theForm->StartFlare(); break;
     case EE_SCREENS_SB_OP_GAME_RESOURCES: return gGameResources;
@@ -256,19 +223,7 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
         gUserInterface->AddChatLogEntry(theString, 0);
         break;
     }
-    case EE_SCREENS_SB_OP_CAN_AFFORD_TRADE: return EECanAffordTrade(inA);
-    case EE_SCREENS_SB_OP_DECODE_TRADE: {
-        long theResource;
-        bool theSell;
-        if (!EEDecodeTradeButton(inA, theResource, theSell) && inB == 0)   // (GetHelpString, b 1, ignores the result)
-            return -1;
-        return (int64_t)theResource * 2 + (theSell ? 1 : 0);
-    }
     case EE_SCREENS_SB_OP_SHIFT: return UIControl::ShiftKeyPressed();
-    case EE_SCREENS_SB_OP_SOUND:
-        theSound = EESoundObject::Get(inA);
-        gSoundManager->Play(theSound->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-        break;
     case EE_SCREENS_SB_OP_NODE_KIND: return theNode->mData->mKind;
     case EE_SCREENS_SB_OP_NODE_CLASS: return theNode->mData->mUnitClass;
     case EE_SCREENS_SB_OP_CLASS_PRESENT: return theClass != NULL;
@@ -279,12 +234,10 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     case EE_SCREENS_SB_OP_START_WALL: theForm->StartWall(theButton->mTechnology); break;
     case EE_SCREENS_SB_OP_START_GATE: theForm->StartGate(theButton->mTechnology); break;
     case EE_SCREENS_SB_OP_CAN_PRODUCE:
-        return thePlayer->CanProduce(theButton->mTechnology, theButton->mUnitType, inA, true, 3, &thePress.mReason) == true;
+        return thePlayer->CanProduce(theButton->mTechnology, theButton->mUnitType, inA, true, 3, &ioText) == true;
     case EE_SCREENS_SB_OP_TIME: return (uint32_t)TMGetTime();
     case EE_SCREENS_SB_OP_LAST_ERROR: return (uint32_t)theButton->mLastErrorTime;
     case EE_SCREENS_SB_OP_SET_LAST_ERROR: theButton->mLastErrorTime = (unsigned long)inA; break;
-    case EE_SCREENS_SB_OP_CHAT_REASON: gUserInterface->AddChatLogEntry(thePress.mReason, 0); break;
-    case EE_SCREENS_SB_OP_REASON_STRING: gResource->GetString(inA, thePress.mReason); break;
     case EE_SCREENS_SB_OP_CALAMITY_COST: {
         EECalamityClass* theCalamity = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(
             (EECalamityEnum)theNode->mData->mCalamity);
@@ -313,35 +266,30 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     case EE_SCREENS_SB_OP_HELP_TEXT: {
         UIHotKey* theHotKey = NULL;
         switch (inA) {
-        case EE_SCREENS_SB_TEXT_STRING: gResource->GetString((unsigned long)inB, thePress.mText); break;
+        case EE_SCREENS_SB_TEXT_STRING: gResource->GetString((unsigned long)inB, ioText); break;
         case EE_SCREENS_SB_TEXT_OBJECT_HOT_KEY: {
             EEButtonObject* theObject = EEButtonObject::Get(theButton->mButton);
             if (theObject == NULL || (theHotKey = theObject->GetHotKey()) == NULL)
                 return -1;
-            theHotKey->GetHotKeyName(thePress.mText);
+            theHotKey->GetHotKeyName(ioText);
             break;
         }
         case EE_SCREENS_SB_TEXT_NODE_HOT_KEY:
             if ((theHotKey = theNode->GetHotKey()) == NULL)
                 return -1;
-            theHotKey->GetHotKeyName(thePress.mText);
+            theHotKey->GetHotKeyName(ioText);
             break;
         case EE_SCREENS_SB_TEXT_UPGRADE_NAME:
-            thePress.mText = thePlayer->mUnitClassUpgrades[gUnitClassTable[inB]->mUnitType]->mName;
+            ioText = thePlayer->mUnitClassUpgrades[gUnitClassTable[inB]->mUnitType]->mName;
             break;
-        case EE_SCREENS_SB_TEXT_COST: theNode->GetCostString(thePress.mText, theButton->mUnitType, 1.0f); break;
+        case EE_SCREENS_SB_TEXT_COST: theNode->GetCostString(ioText, theButton->mUnitType, 1.0f); break;
         }
-        return (int64_t)strlen(thePress.mText);
-    }
-    case EE_SCREENS_SB_OP_HELP_TEXT_READ: {
-        size_t theLength = strlen(thePress.mText);
-        memcpy(reinterpret_cast<char*>(inA), (const char*)thePress.mText, theLength < (size_t)inB ? theLength : (size_t)inB);
-        return (int64_t)theLength;
+        return (int64_t)strlen(ioText);
     }
     case EE_SCREENS_SB_OP_HELP_OUT: {
         std::vector<char> theBytes(reinterpret_cast<const char*>(inA), reinterpret_cast<const char*>(inA) + inB);
         theBytes.push_back(0);
-        *thePress.mOut = &theBytes[0];
+        *outString = &theBytes[0];
         break;
     }
     case EE_SCREENS_SB_OP_TRADE_PRICE: return EEGetTradePrice(thePlayer, (long)inA, inB != 0);
@@ -375,17 +323,14 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     return 0;
 }
 
-// FUNCTION: EXE 0x66e274
 // Presses a command or tech button: runs the command, starts placing a building, wall or gate, queues the
 // research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
 // (ee_screens status_button.rs)
 void EEUIFMGStatusButton::ButtonUp()
 {
-    EEUIFMGStatusButtonPress thePress = {this, NULL};
-    ee_screens_status_button_up(&thePress);
+    static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_UP);
 }
 
-// FUNCTION: EXE 0x66e71d
 // Releases the button's button object
 void EEUIFMGStatusButton::ReleaseButton()
 {
@@ -395,18 +340,15 @@ void EEUIFMGStatusButton::ReleaseButton()
     }
 }
 
-// FUNCTION: EXE 0x66e734
 // Snapshots the button for drawing: whether it is available, its icon and the queued count
 // The availability of the button: a command button by its own test (mB148), else its technology through the
 // player's WriteDetailsHook, or for a calamity with a cost whether a selected unit can pay it (each branch stores
 // mAvailable; VC6 merges the stores)
 long EEUIFMGStatusButton::CopyData()
 {
-    EEUIFMGStatusButtonPress thePress = {this, NULL};
-    return (long)ee_screens_status_button_copy_data(&thePress);   // ee_screens status_button.rs copy_data
+    return (long)static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_COPY_DATA);
 }
 
-// FUNCTION: EXE 0x66eaf4
 // Draws the button's icon, dithered when unavailable
 // The icon (and the dither over an unavailable one at the last drawn rectangle) under the button
 long EEUIFMGStatusButton::DrawPolygons()
@@ -423,7 +365,6 @@ long EEUIFMGStatusButton::DrawPolygons()
     return UIButton::DrawPolygons();
 }
 
-// FUNCTION: EXE 0x66ebb5
 // Draws the queued count over the button
 long EEUIFMGStatusButton::DrawTextA()
 {
@@ -432,26 +373,20 @@ long EEUIFMGStatusButton::DrawTextA()
     return UIButton::DrawTextA();
 }
 
-// FUNCTION: EXE 0x66ebdf
 // Builds the button's help text: market trade prices, command help (with conversion cost for priests) and
 // hot key, or a tech's name, cost and description (ee_screens status_button.rs help_string)
 bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
 {
-    EEUIFMGStatusButtonPress thePress;
-    thePress.mButton = const_cast<EEUIFMGStatusButton*>(this);
-    thePress.mTransport = NULL;
-    thePress.mOut = &outString;
-    return ee_screens_status_button_help(&thePress);
+    EEUIFMGStatusButton* theButton = const_cast<EEUIFMGStatusButton*>(this);
+    return static_cast<EEUIFMainGame*>(theButton->GetForm())->ButtonCall(theButton, EE_SCREENS_SB_DO_HELP, &outString) != 0;
 }
 
-// FUNCTION: EXE 0x66f16c
 // Presses the button from its hot key
 void EEUIFMGStatusButton::HotKeyDown()
 {
     this->ButtonDown();
 }
 
-// FUNCTION: EXE 0x66f174
 // Releases the button from its hot key
 void EEUIFMGStatusButton::HotKeyUp()
 {
@@ -459,7 +394,6 @@ void EEUIFMGStatusButton::HotKeyUp()
         this->ButtonUp();
 }
 
-// FUNCTION: EXE 0x66f186
 // Presses a tech button on a right press
 long EEUIFMGStatusButton::MouseRButtonDown()
 {
@@ -470,50 +404,14 @@ long EEUIFMGStatusButton::MouseRButtonDown()
     return 0;
 }
 
-// FUNCTION: EXE 0x66f1a4
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
 // (ee_screens status_button.rs)
 long EEUIFMGStatusButton::MouseRButtonUp()
 {
-    EEUIFMGStatusButtonPress thePress = {this, NULL};
-    ee_screens_status_button_right_up(&thePress);
+    static_cast<EEUIFMainGame*>(this->GetForm())->ButtonCall(this, EE_SCREENS_SB_DO_RIGHT_UP);
     return 0;
 }
 
-// FUNCTION: EXE 0x66f2b0
-// Creates a remove-technology message
-// (inline ctor, out of line after its first user)
-
-
-// FUNCTION: EXE 0x66f927
-// Creates a clear-airport-commands message
-// (EEMClearAirportCommands' inline ctor)
-
-// FUNCTION: EXE 0x66f94b
-// Creates a market trade message
-// (EEMExchangeResources' inline ctor)
-
-// FUNCTION: EXE 0x66f986
-// Creates a go-fanatic message
-// (EEMGoFanatic's inline ctor)
-
-// FUNCTION: EXE 0x66f9aa
-// Creates a just-in-time manufacturing message
-// (EEMJITManufacturing's inline ctor)
-
-// FUNCTION: EXE 0x66f9ce
-// Creates a lock/unlock message
-// (EEMLockUnlock's inline ctor)
-
-// FUNCTION: EXE 0x66f9fb
-// Creates a pack/unpack message
-// (EEMPackUnpack's inline ctor)
-
-// FUNCTION: EXE 0x66fa28
-// Creates a patrol message
-// (EEMPatrol's inline ctor)
-
-// FUNCTION: EXE 0x66fa55
 // Asks the main panel to refill its unit (clearing its flag)
 void EEUIManager::Fn26FA55()
 {
@@ -522,7 +420,6 @@ void EEUIManager::Fn26FA55()
     theGroup->mReset = true;
 }
 
-// FUNCTION: EXE 0x66fa6a
 // Asks the main panel to refill its unit (setting its flag)
 void EEUIManager::Fn26FA6A()
 {
@@ -531,7 +428,6 @@ void EEUIManager::Fn26FA6A()
     theGroup->mReset = true;
 }
 
-// FUNCTION: EXE 0x66fa82
 // Makes the button a command button showing a button object
 void EEUIFMGStatusButton::SetCommandButton(unsigned long inButton)
 {
@@ -543,7 +439,6 @@ void EEUIFMGStatusButton::SetCommandButton(unsigned long inButton)
     this->mButtonObject->Acquire();
 }
 
-// FUNCTION: EXE 0x66faba
 // Makes the button a tech button for a unit's technology, showing the tech's button
 void EEUIFMGStatusButton::SetTechButton(long inTechnology, unsigned long inUnitType, unsigned long inUnitID)
 {
@@ -558,7 +453,6 @@ void EEUIFMGStatusButton::SetTechButton(long inTechnology, unsigned long inUnitT
     this->mButtonObject->Acquire();
 }
 
-// FUNCTION: EXE 0x66fb19
 // Moves the button, its icon and its queue count text
 void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
 {
@@ -570,7 +464,6 @@ void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
     UIButton::SetLocation(inLocation);
 }
 
-// FUNCTION: EXE 0x66fb79
 // Releases a pressed button when tabbing away
 void EEUIFMGStatusButton::TabbedFrom()
 {
@@ -580,14 +473,12 @@ void EEUIFMGStatusButton::TabbedFrom()
         UIButton::TabbedFrom();
 }
 
-// FUNCTION: EXE 0x66fb8d
 // Handles tabbing to the button
 void EEUIFMGStatusButton::TabbedTo()
 {
     UIButton::TabbedTo();
 }
 
-// FUNCTION: EXE 0x66fb93
 // Ends the cinematic at its saved end time (sends the end-cinematic message)
 // (EEMEndCinematic takes the end time as a float)
 long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -595,80 +486,3 @@ long EEUIEndCinematicModeEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageEndCinematic, {gSavedGameSpeed}), kSlotNone);
     return kErrorOK;
 }
-
-// FUNCTION: EXE 0x66fbca
-// Creates an end-cinematic message
-// (EEMEndCinematic's inline ctor)
-
-// SYNTHETIC: EXE 0x66fbf7
-// (EEMessage's scalar deleting destructor, ICF-folded with every EEM* class's that has no members to destroy)
-
-// FUNCTION: EXE 0x66fc22
-// FUNCTION: EXE 0x66fe64
-// FUNCTION: EXE 0x66fe79
-// FUNCTION: EXE 0x66fe8e
-// FUNCTION: EXE 0x66fea3
-// FUNCTION: EXE 0x66feb8
-// FUNCTION: EXE 0x66fecd
-// FUNCTION: EXE 0x66fee2
-// FUNCTION: EXE 0x66fef7
-// FUNCTION: EXE 0x66ff0c
-// FUNCTION: EXE 0x67012b
-// FUNCTION: EXE 0x670343
-// FUNCTION: EXE 0x670379
-// FUNCTION: EXE 0x6703af
-// FUNCTION: EXE 0x6704c9
-// FUNCTION: EXE 0x670703
-// FUNCTION: EXE 0x670898
-// FUNCTION: EXE 0x6709ee
-// FUNCTION: EXE 0x670c08
-// FUNCTION: EXE 0x670d77
-// FUNCTION: EXE 0x670f20
-// FUNCTION: EXE 0x6710d0
-// The mouse modes (airport and rally targets, attack ground, build, gate, wall, flare, garrison, unload, heal,
-// convert, calamity, normal, camera; the message ctors after their first users): ee_screens mouse_modes.rs over
-// the main game form's host (EEUIFMainGame.cpp, EEUIFMainGame::UpdateMouse)
-
-// FUNCTION: EXE 0x67115c
-// Handles the keys in cinematic mode: Escape or F1 ends it, F3 pauses, F9 takes a screenshot
-static bool EECinematicKeyPressed(unsigned long inKey)
-{
-    ISEntity* theKey;
-    return gISKeyboard->GetEntity(inKey, theKey) == 0 && theKey->GetValue() && theKey->JustPressed();
-}
-
-bool EEModeKeyboardCinematic(void* inForm)
-{
-    ISEntity* theKey;
-    // either key ends the cinematic (each is tested, not only the first one found)
-    if ((EECinematicKeyPressed(kKeyEscape) || EECinematicKeyPressed(kKeyF1)) && !gCommunications->GetIsGamePaused()) {
-        UIEvent* theEvent = new EEUIEndCinematicModeEvent;
-        gUserInterface->PostEvent(theEvent, NULL);
-        theEvent->Dereference();
-    } else if (gISKeyboard->GetEntity(kKeyF3, theKey) == 0 && theKey->JustPressed() && !gWorld.GetScenarioManager()->mIsEndingCinematic) {
-        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
-        gUserInterface->PostEvent(theEvent, NULL);
-        theEvent->Dereference();
-    } else if (gISKeyboard->GetEntity(kKeyF9, theKey) == 0 && theKey->JustPressed()) {
-        gUserInterface->PostScreenShot(-1, true, false);
-    }
-    return true;
-}
-
-// SYNTHETIC: EXE 0x671265
-// (EEUIEndCinematicModeEvent's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x671290
-// Runs the keyboard test of the current interface mode, else the form's keys
-// the keyboard tests take the form only (EEUIFMGKeyboardTest)
-long EEUIFMainGame::UpdateKeyboard()
-{
-    long theResult = 0;
-    // (the tests return bool; the original keeps the result in edi)
-    if (!this->mKeyboardTests[this->mUIState](this))
-        theResult = UIForm::UpdateKeyboard();
-    return theResult;
-}
-
-// FUNCTION: EXE 0x6712b8
-// (EEUIFMainGame::UpdateMouse: EEUIFMainGame.cpp, next to the mouse modes' host)

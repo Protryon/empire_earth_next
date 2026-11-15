@@ -85,7 +85,6 @@ struct UIScrollBarRust {
 };
 typedef EeUiScrollBarCall C;
 
-// FUNCTION: LLE 0x1007ca21
 // Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons
 // Fixed: the rectangle's size was `x + (style == 1) ? 19 : length - 1` (a precedence slip), which made it
 // 19 x (length - 1) for both styles; a horizontal bar is now (length - 1) x 19

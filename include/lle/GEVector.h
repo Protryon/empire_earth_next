@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GEVector.h (RECONSTRUCTION). GEVector.cpp (__FILE__ anchor, ~0x10036755)
-// holds the quantized-vector code; the basic operations are emitted in the GE2DPoint.cpp block (0x1000c240..).
+// holds the quantized-vector code and the magnitudes (Rust: ee_ge vector.rs); the component-wise members are inline.
 #ifndef LLE_GEVECTOR_H
 #define LLE_GEVECTOR_H
 
@@ -22,18 +22,17 @@ public:
     GEVector(const GEVector& inVector) : mX(inVector.mX), mY(inVector.mY), mZ(inVector.mZ) {}
     ~GEVector() {}
     GEVector& operator=(const GEVector& inVector) { this->mX = inVector.mX; this->mY = inVector.mY; this->mZ = inVector.mZ; return *this; }
-    GEVector operator-() const;
-#ifdef LLE_EXE_HEADERS
-    // inline in the exe's view: the exe never imports ??YGEVector@@QAEAAV0@ABV0@@Z and expands it (fadd x, y, z:
-    // EEMap::Fn11D5E8 0x51d831)
+    GEVector operator-() const { return GEVector(-this->mX, -this->mY, -this->mZ); }
     GEVector& operator+=(const GEVector& inVector) { this->mX += inVector.mX; this->mY += inVector.mY; this->mZ += inVector.mZ; return *this; }
-#else
-    GEVector& operator+=(const GEVector& inVector);
-#endif
-    GEVector& operator-=(const GEVector& inVector);
-    bool operator==(const GEVector& inVector) const;
-    bool operator!=(const GEVector& inVector) const;
-    void Add(const GEVector& inVector, GEVector& outVector) const;
+    GEVector& operator-=(const GEVector& inVector) { this->mX -= inVector.mX; this->mY -= inVector.mY; this->mZ -= inVector.mZ; return *this; }
+    bool operator==(const GEVector& inVector) const { return this->mX == inVector.mX && this->mY == inVector.mY && this->mZ == inVector.mZ; }
+    bool operator!=(const GEVector& inVector) const { return this->mX != inVector.mX || this->mY != inVector.mY || this->mZ != inVector.mZ; }
+    void Add(const GEVector& inVector, GEVector& outVector) const
+    {
+        outVector.mX = inVector.mX + this->mX;
+        outVector.mY = inVector.mY + this->mY;
+        outVector.mZ = inVector.mZ + this->mZ;
+    }
     // inline (GE3DPlane::IsPointOnPlane 0xd4c3 expands it; the plug-ins never call it)
     float DotProduct(const GEVector& inVector) const { return inVector.mZ * this->mZ + inVector.mY * this->mY + inVector.mX * this->mX; }
     float GetMagnitude() const;
@@ -82,11 +81,11 @@ public:
 private:
     struct QuantizedVectorArray;
 
-    static const UString sVectorXStringID;              // 0x1012d888
-    static const UString sVectorYStringID;              // 0x1012d870
-    static const UString sVectorZStringID;              // 0x1012d860
-    static const UString sQuantizedVectorIndexStringID; // 0x1012d850
-    static QuantizedVectorArray sQuantizedVectorArray;  // 0x1010ff70
+    static const UString sVectorXStringID;
+    static const UString sVectorYStringID;
+    static const UString sVectorZStringID;
+    static const UString sQuantizedVectorIndexStringID;
+    static QuantizedVectorArray sQuantizedVectorArray;
 #endif
 };
 

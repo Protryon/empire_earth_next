@@ -18,19 +18,19 @@ TARGETS = ["exe"]
 TARGET_MODULES = {"exe": ["exe", "won", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
-# with the engine, the open model/texture formats (glTF, PNG: tools/eemodel) with the engine, and new game units that
-# have no address in the original (the db text loader, ...)
+# with the engine, and new game units that have no address in the original (the db text loader, ...)
 # (PlatConfig, PlatPath, PlatString, PlatTime, PlatMessage, PlatSim, PlatFile, PlatThread, PlatSocket, PlatWindow and
 # PlatFont are Rust: rust/crates/ee_plat_core, ee_plat_sys, ee_plat_ui and ee_plat_sdl, linked through ee_rust)
 PLATFORM_UNITS = [
                   # the fonts built in (PORT.md step 4.5; the C compiler's #embed, PlatFont itself is Rust)
                   "Platform/Common/PlatFontData.c"]
-OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]   # the converters are Rust (ee_openformats)
 # the DX7 renderer's C++ trampolines into Rust (ee_dx7, docs/RUST_PLAN.md R4.2): the classes' deleted bodies live there
 DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp"]
 # the UI toolkit's C++ trampolines into Rust (ee_ui, docs/RUST_PLAN.md R6): the moved units' members live there
 UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
+# the Graphics Engine's value types' out-of-line members, fifteen units folded into one (R4.3 part 16)
+GE_UNITS = ["Low-Level Engine/Graphics Engine/GEValues.cpp"]
+EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                "dx7hrtnl": DX7_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the EE lobby glue's shells and hosts (R6 WONLobby round 6; ee_won eecolor.rs, eeglue.rs): the
@@ -102,6 +102,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Civilization Builder/EECivCapture.cpp",
                        # TEST ONLY: the game messages' capture records (ee/EEMessageCapture.h; RUST_PLAN R5b.4)
                        "Empire Earth/Communications/EEMessageCapture.cpp",
+                       # the game messages' class: EEMessage's codec, EEMRecord (split from EEMessage.cpp)
+                       "Empire Earth/Communications/EEMRecord.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
                        "Empire Earth/Units/EEUnitStore.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)

@@ -96,6 +96,9 @@
 #include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEGraphicEffect.h"
+#include "ee/EEUnitGoal.h"
+#include "ee/EEEffect.h"
+#include "ee/EEEffectManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/RTSGraphics.h"
 #include "ee/EEGraphics.h"
@@ -110,248 +113,12 @@
 #include "rust/ee_units.h"
 #include "ee/EEUnitHost.h"   // EESortFarms
 
-// ---- the codec (ee_netmsg, docs/RUST_PLAN.md R5b.4): each message hands its members to the Rust as slots in wire
-// order, the header's four first; the layout (sizes, order, the strings' and lists' forms) is the Rust table's ----
-static const size_t kNetMsgMaxSlots = 32;
-
-template <class T> static inline EeNetMsgSlot EENetMsgField(T& inMember)
-{
-    EeNetMsgSlot theSlot = {(uint8_t*)&inMember, (uint32_t)sizeof(T), 0, 0};
-    return theSlot;
-}
-
-// a string's bytes (UWideString::Export's strlen); on import the Rust reports where the string is
-static inline EeNetMsgSlot EENetMsgString(const UWideString& inString)
-{
-    const char* theBytes = inString;
-    EeNetMsgSlot theSlot = {(uint8_t*)theBytes, (uint32_t)strlen(theBytes), 0, 0};
-    return theSlot;
-}
-
-// a new buffer of the message's size, filled by the Rust (the original's ExportMessage shape)
-static void EENetMsgExport(uint32_t inClass, EeNetMsgSlot* inSlots, size_t inCount, unsigned char** outPayloadPointer,
-                           unsigned long& outMessageSize)
-{
-    unsigned long theMessageSize = ee_netmsg_export_size(inClass, inSlots, inCount);
-    *outPayloadPointer = new unsigned char[theMessageSize];
-    outMessageSize = ee_netmsg_export(inClass, inSlots, inCount, *outPayloadPointer, theMessageSize);
-}
-
-// New (game messages lane, round 1): the codec's side of every game message, once. The message gives its codec
-// class and its members as slots in wire order (GetCodecSlots); these run the codec over them, as each class's own
-// ExportMessage, ExportSize and ImportMessage did.
-void EEMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    uint32_t theClass;
-    size_t theCount = this->GetCodecSlots(theSlots, theClass);
-    EENetMsgExport(theClass, theSlots, theCount, outPayloadPointer, outMessageSize);
-}
-
-// a class of fixed members its constant, else the size of these members
-unsigned long EEMessage::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    uint32_t theClass;
-    size_t theCount = this->GetCodecSlots(theSlots, theClass);
-    uint32_t theFixed = ee_netmsg_fixed_size(theClass);
-    return theFixed != 0 ? theFixed : ee_netmsg_export_size(theClass, theSlots, theCount);
-}
-
-void EEMessage::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, __LINE__);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    uint32_t theClass;
-    size_t theCount = this->GetCodecSlots(theSlots, theClass);
-    ee_netmsg_import(theClass, inPayloadPointer, theSlots, theCount);
-}
-
-// ---- EEMRecord (game messages lane, round 3): the record types' messages (ee/EEMessage.h; ee_netmsg records.rs) ----
-EEMRecordValue::EEMRecordValue(const GE2DPoint& inPoint) : mInteger(0), mIsFloat(true)
-{
-    this->mFloats[0] = inPoint.GetX();
-    this->mFloats[1] = inPoint.GetY();
-}
-
-EEMRecordValue::EEMRecordValue(const GEVector& inVector) : mInteger(0), mIsFloat(true)
-{
-    this->mFloats[0] = inVector.GetX();
-    this->mFloats[1] = inVector.GetY();
-    this->mFloats[2] = inVector.GetZ();
-}
-
-// the import constructor: EEMessage's defaults (no send flag), as the old classes' import constructors
-EEMRecord::EEMRecord(unsigned char* inData)
-{
-    memset(this->mRecord, 0, sizeof(this->mRecord));
-    this->mType = inData[1];
-    this->ImportMessage(inData);
-}
-
-// a sender's: the members in wire order, then the ones off the wire (fewer leave the rest 0)
-EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue> inValues)
-    : EEMessage(inType, (ee_netmsg_record_flags(inType) & EE_NETMSG_RECORD_WHEN_OUT) != 0)
-{
-    memset(this->mRecord, 0, sizeof(this->mRecord));
-    ESVERIFY_AT(ee_netmsg_record_class(inType) != 0xffffffffu, __LINE__);
-    uint32_t theIndex = 1;
-    for (const EEMRecordValue& theValue : inValues) {
-        EeNetMsgRecordField theField = ee_netmsg_record_member(inType, theIndex);
-        bool theBeside = theField.kind == EE_NETMSG_RECORD_FIELD_STRING || theField.kind == EE_NETMSG_RECORD_FIELD_LIST
-                         || theField.kind == EE_NETMSG_RECORD_FIELD_BLOB;
-        unsigned char* theTo = theBeside ? NULL : this->Field(theIndex, theField.size);
-        theIndex++;
-        float theFloat = theValue.mIsFloat ? theValue.mFloats[0] : (float)theValue.mInteger;
-        long long theInteger = theValue.mIsFloat ? (long long)theValue.mFloats[0] : theValue.mInteger;
-        bool theBool = theInteger != 0 || (theValue.mIsFloat && theValue.mFloats[0] != 0.0f);
-        switch (theField.kind) {
-        case EE_NETMSG_RECORD_FIELD_STRING:   // the one string member (not in mRecord)
-            ESVERIFY_AT(theValue.mString != NULL, __LINE__);
-            this->mString = *theValue.mString;
-            break;
-        case EE_NETMSG_RECORD_FIELD_LIST:   // the one list (not in mRecord): each element's low bytes, one record
-            ESVERIFY_AT(theValue.mList != NULL && theValue.mListElement >= theField.size, __LINE__);
-            for (size_t i = 0; i < theValue.mListCount; i++) {
-                const unsigned char* theElement = (const unsigned char*)theValue.mList + i * theValue.mListElement;
-                this->mList.insert(this->mList.end(), theElement, theElement + theField.size);
-            }
-            break;
-        case EE_NETMSG_RECORD_FIELD_BLOB:   // the blob and a member off the wire as bytes: set by their sender
-        case EE_NETMSG_RECORD_FIELD_RAW:
-            break;
-        case EE_NETMSG_RECORD_FIELD_INTEGER:
-            memcpy(theTo, &theInteger, theField.size);   // little-endian: the low bytes
-            break;
-        case EE_NETMSG_RECORD_FIELD_BOOL:
-            *theTo = theBool ? 1 : 0;
-            break;
-        case EE_NETMSG_RECORD_FIELD_FLOAT:
-            memcpy(theTo, &theFloat, 4);
-            break;
-        default:   // a point or a vector
-            memcpy(theTo, theValue.mFloats, theField.size);
-            break;
-        }
-    }
-}
-
-unsigned char* EEMRecord::Field(uint32_t inIndex, size_t inSize) const
-{
-    EeNetMsgRecordField theField = ee_netmsg_record_member(this->mType, inIndex);
-    ESVERIFY_AT(theField.kind != EE_NETMSG_RECORD_FIELD_NONE && theField.size == inSize, __LINE__);
-    return const_cast<unsigned char*>(this->mRecord) + theField.offset;
-}
-
-bool EEMRecord::GetCanSendWhilePaused() const
-{
-    return (ee_netmsg_record_flags(this->mType) & EE_NETMSG_RECORD_PAUSED) != 0;
-}
-
-char* EEMRecord::GetMessageLabel() const
-{
-    return const_cast<char*>(ee_netmsg_record_label(this->mType));
-}
-
-bool EEMRecord::GetSendToAllAndWaitMessageID(unsigned long& outID) const
-{
-    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
-    if (theRules.wait_field != 0)
-        outID = this->Get<uint32_t>(theRules.wait_field);
-    return theRules.wait_field != 0;
-}
-
-void EEMRecord::SetSendToAllAndWaitMessageID(unsigned long inID)
-{
-    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
-    if (theRules.wait_field != 0)
-        this->Set<uint32_t>(theRules.wait_field, (uint32_t)inID);
-}
-
-// FUNCTION: EXE 0x4c0e6a (EEMLoadOrSaveGame::IsResponse)
-// Whether a message is this one's response, by the type's rule (Load or Save: the response for its tick)
-bool EEMRecord::IsResponse(NEMessage* inMessage)
-{
-    EeNetMsgRecordRules theRules = ee_netmsg_record_rules(this->mType);
-    return theRules.response_type != 0 && inMessage->GetType() == theRules.response_type
-           && this->Get<int32_t>(theRules.response_mine) == static_cast<EEMRecord*>(inMessage)->Get<int32_t>(theRules.response_theirs);
-}
-
-size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = ee_netmsg_record_class(this->mType);
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    size_t theCount = 5;
-    for (EeNetMsgRecordField theField; (theField = ee_netmsg_record_field(outClass, (uint32_t)theCount - 4)).kind != 0; theCount++) {
-        EeNetMsgSlot theSlot = {this->mRecord + theField.offset, theField.size, 0, 0};
-        if (theField.kind == EE_NETMSG_RECORD_FIELD_STRING)
-            theSlot = EENetMsgString(this->mString);
-        else if (theField.kind == EE_NETMSG_RECORD_FIELD_LIST || theField.kind == EE_NETMSG_RECORD_FIELD_BLOB) {
-            // the records: the first, a record's size, the count; the blob: its bytes (the room for an import)
-            theSlot.data = this->mList.empty() ? NULL : &this->mList[0];
-            theSlot.size = theField.kind == EE_NETMSG_RECORD_FIELD_LIST ? theField.size : (uint32_t)this->mList.size();
-            theSlot.count = theField.kind == EE_NETMSG_RECORD_FIELD_LIST ? (uint32_t)(this->mList.size() / theField.size) : 0;
-        }
-        outSlots[theCount] = theSlot;
-    }
-    return theCount;
-}
-
-// the codec over the slots, then the string member's text from where the codec found it (UWideString::Import), the
-// list's records from where it found them, the blob's bytes as many as it found
-void EEMRecord::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, __LINE__);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    uint32_t theClass;
-    this->mList.clear();   // the slots carry no room: the list and the blob are copied from where the codec found them
-    size_t theCount = this->GetCodecSlots(theSlots, theClass);
-    ee_netmsg_import(theClass, inPayloadPointer, theSlots, theCount);
-    for (size_t i = 5; i < theCount; i++) {
-        EeNetMsgRecordField theField = ee_netmsg_record_field(theClass, (uint32_t)i - 4);
-        unsigned char* theFrom = inPayloadPointer + theSlots[i].offset;
-        if (theField.kind == EE_NETMSG_RECORD_FIELD_STRING)
-            this->mString.Import(theFrom);
-        else if (theField.kind == EE_NETMSG_RECORD_FIELD_LIST)
-            this->mList.assign(theFrom, theFrom + theSlots[i].count * theField.size);
-        else if (theField.kind == EE_NETMSG_RECORD_FIELD_BLOB)
-            this->mList.assign(theFrom, theFrom + theSlots[i].count);
-    }
-}
-
-// FUNCTION: EXE 0x4be6c6 (the EEMFullGameOptions constructor)
-// The lobby's game options, whole (the server sends gGameOptions); the members in wire order
-EEMRecord* EENewFullGameOptions(const EEGameOptions& inOptions)
-{
-    return new EEMRecord(kMessageFullGameOptions,
-                         {inOptions.GetAllowCustomCivs(), inOptions.GetB407(), inOptions.GetCheatCodes(),
-                          inOptions.GetDifficulty(), inOptions.GetEpochEnd(), inOptions.GetGameSpeed(),
-                          inOptions.GetLoadType(), inOptions.GetVariant(), inOptions.GetLockSpeed(),
-                          inOptions.GetLockTeams(), inOptions.GetMapSize(), inOptions.GetRecordGames(),
-                          inOptions.GetResources(), inOptions.GetRevealMap(), inOptions.GetEpochStart(),
-                          inOptions.GetUnitLimit(), inOptions.GetVictory(), inOptions.GetWondersForVictory(),
-                          inOptions.GetMapType()});
-}
-
-// FUNCTION: EXE 0x4c378e (the EEMFullPlayerInformation constructor)
-// One lobby slot, whole (the server sends it to the players); the members in wire order
-EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
-{
-    return new EEMRecord(kMessageFullPlayerInformation,
-                         {inPlayer.mSlot, inPlayer.mType, inPlayer.mLoadedType, inPlayer.mName, inPlayer.mPing,
-                          inPlayer.mColor, inPlayer.mTeam, inPlayer.mStartingCitizens, inPlayer.mIsReady,
-                          inPlayer.mIsLocal, inPlayer.mB36, (int32_t)inPlayer.mEngine});   // the engine: port
-}
-
-// FUNCTION: EXE 0x4b8cda
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()
 {
     NEMessage::RegisterBuilder(0x41, 0xfd, EEMessage::BuildEEMessage);
 }
 
-// FUNCTION: EXE 0x4b8cf7 (ExecuteSelectionMessage), 0x4b8e86 (ExecuteMessage)
 // The physics' two ways to run a message (the selection id's framing and decisions: ee_netmsg bodies.rs
 // execute_framed, over the host at the end of this file)
 static void EENetMsgExecute(EEMRecord* inMessage, uint8_t inFraming);
@@ -365,7 +132,6 @@ void EEMessage::ExecuteMessage()
     EENetMsgExecute(static_cast<EEMRecord*>(this), 2);
 }
 
-// FUNCTION: EXE 0x4b8f8e
 // Creates the game message object for a received buffer from its type byte (NULL and an assert for an unknown type)
 NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
 {
@@ -409,7 +175,6 @@ inline bool EETileDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit
 #include "ee/EECalamityClass.h"
 #include "ee/EEStringIDs.h"
 
-// FUNCTION: EXE 0x4bca28
 // Gives the sender's selection (and its saved group) a new formation of the requested type
 static void ExecuteChangeFormation(EEMRecord* m)
 {
@@ -422,7 +187,6 @@ static void ExecuteChangeFormation(EEMRecord* m)
     theFormation->Dereference();
 }
 
-// FUNCTION: EXE 0x4bd3f7
 // Applies a player's civilization (name and upgrades) validated by the server, once only when civs are bought;
 // locks the choice for players other than the local one (members: the player, the name string, the upgrades, the name)
 static void ExecuteCivUpgradesPurchased(EEMRecord* m)
@@ -446,7 +210,6 @@ static void ExecuteCivUpgradesPurchased(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4bd4b3
 // Has the server validate a player's requested civilization upgrades (EECBRequestUpgrades)
 static void ExecuteCivUpgradesRequested(EEMRecord* m)
 {
@@ -457,7 +220,6 @@ static void ExecuteCivUpgradesRequested(EEMRecord* m)
 // 0x23cc42 (cdecl): the exchange rate between a resource and the trade resource for inPlayer (provisional name)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);
 
-// FUNCTION: EXE 0x4bfcfd
 // Unloads one cargo unit from a living, enabled transport at once; if that fails, posts the transport class's
 // unload-failed event to its owner
 static void ExecuteImmediateCargoUnload(EEMRecord* m)
@@ -489,9 +251,6 @@ void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
         outPoint.SetZ(inPoint.GetZ());
 }
 
-// TEMPLATE: EXE 0x4c0894
-
-// FUNCTION: EXE 0x4c0936
 // With the flag set, stops the graphics thread and waits for it; otherwise restarts it, switches to the game (or
 // scenario editor) screen and answers the server with a load-main-screen response
 static void ExecuteLoadMainScreen(EEMRecord* m)
@@ -523,9 +282,8 @@ static void ExecuteLoadMainScreen(EEMRecord* m)
 bool gLocalPlayerOut;                      // 0x4e6099 (.bss between this unit's Execute statics 0x4e6098/0x4e609a; ee/EEMessage.h)
 
 #include "ee/EESaveLoad.h"
-long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
+long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 
-// FUNCTION: EXE 0x4c0e83
 // Single-player server load: loads the saved game and logs a response; anything else queues the save with the
 // physics thread; announces it in the chat log and shows the error box if loading failed (members: load, quiet,
 // tick, time, auto-save, the wait id, the file name)
@@ -559,7 +317,6 @@ static void ExecuteLoadOrSaveGame(EEMRecord* m)
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
 // (0x14cbc7 TrimAutoSaves: ee/EESaveLoad.h)
 
-// FUNCTION: EXE 0x4c1052
 // Saves the game under the requested name, rotates the auto-saves for an auto-save, restores the mouse and reports
 // an error box on failure; returns the request's tick
 long EELoadOrSave(EEMRecord* m)
@@ -590,10 +347,6 @@ long EELoadOrSave(EEMRecord* m)
     return m->Get<int32_t>(3);
 }
 
-// FUNCTION: EXE 0x4c1264
-// Packs the load/save response (header, selection id, tick) into a new send buffer
-
-// FUNCTION: EXE 0x4c153d
 // Changes the sender's cheat unit class: unloads the old class's data for every player and preloads the new one
 static void ExecuteLoadUnitData(EEMRecord* m)
 {
@@ -610,7 +363,6 @@ static void ExecuteLoadUnitData(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4c2170
 // After a host migration, moves a player to the new slot; a player left without a slot is announced as dropped and
 // (unless observing) removed from the game as defeated; tells the local client a new host is set
 static void ExecuteMigrationSlotInfo(EEMRecord* m)
@@ -638,7 +390,6 @@ static void ExecuteMigrationSlotInfo(EEMRecord* m)
 
 #include "lle/GE3DLine.h"
 
-// FUNCTION: EXE 0x4c534a
 // Selects the sender's saved group; for the local player resets the command panel, centres the camera on it
 // when asked and plays its selection sound
 static void ExecuteSavedGroupSelect(EEMRecord* m)
@@ -674,7 +425,6 @@ static void ExecuteSavedGroupSelect(EEMRecord* m)
 // decoded ids as its message is built on the UI thread; NULL otherwise
 void (*gEESelectUnitsTestHook)(const std::vector<long>& inUnitIDs) = NULL;
 
-// FUNCTION: EXE 0x4c5d7f (the EEMSelectUnits constructor)
 // Creates a box selection: picks the local player's units of the given type in the rectangle and stores them
 // compressed (the count, the blob), the rectangle and the type beside (members 3 and 4, off the wire). The selection
 // on the wire: byte 0 is the owner (the ids' top byte), then runs of a count byte (low 6 bits; the top 2 bits: 0, 1
@@ -699,7 +449,6 @@ EEMRecord* EENewSelectUnits(const GERectangle& inRectangle, long inUnitType, uns
     return theMessage;
 }
 
-// FUNCTION: EXE 0x4c5fd1 (DecompressUnits)
 // Decodes a box selection's compact buffer into unit ids, replacing the list
 void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
 {
@@ -711,7 +460,6 @@ void EESelectUnitsIDs(const EEMRecord* inMessage, std::vector<long>& outUnits)
         outUnits.push_back(theIDs[i]);   // the original's long: the 32-bit value, sign-extended on LP64
 }
 
-// FUNCTION: EXE 0x4c63e8
 // Shows a flare at the tile to the sender and each ally, and tells each ally it received one
 static void ExecuteSendFlare(EEMRecord* m)
 {
@@ -728,7 +476,6 @@ static void ExecuteSendFlare(EEMRecord* m)
     }
 }
 
-// FUNCTION: EXE 0x4c6b85
 // Sets the sender's stance toward a player and posts "<name> changes diplomatic stance to" friendly
 // (stance 0) or hostile to the chat log
 static void ExecuteSetDiplomaticStance(EEMRecord* m)
@@ -758,9 +505,6 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
            && EEDamageFactor(theAttacker, theTarget) > 0.0f;
 }
 
-// FUNCTION: EXE 0x4c74da
-// Packs the water-level message (header, selection id, level byte) into a new send buffer
-
 // EEMSmartFarmers' sort predicate (provisional name): the farther farm first, with +0x34c, then +0x344 ordering
 // the units; `this` is the EETileDistanceLess the distances are taken from.
 struct EEFarmDistanceGreater : public EETileDistanceLess {
@@ -771,7 +515,6 @@ struct EEFarmDistanceGreater : public EETileDistanceLess {
 // NEAR: the original is built without optimization (ebp frame, `this` and every bool test through memory
 // temporaries); `#pragma optimize("g", off)` alone does not reproduce it (59%), so it is not used
 
-// FUNCTION: EXE 0x4c75a6
 // Orders farms for smart farmers: unpaid before paid-for before built farms, the farther farm first in a tier
 bool EEFarmDistanceGreater::operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const
 {
@@ -807,7 +550,6 @@ void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool 
         std::sort(ioFarms.begin(), ioFarms.end(), EETileDistanceLess(EETileCoordinate(inX, inY)));
 }
 
-// FUNCTION: EXE 0x4c7cdc (EEMStartLoading::Execute)
 // Starts loading the game: seeds the random generator, sets the human player count and multiplayer flag (members:
 // the humans, the seed). Not static: the legacy harness's seed pin breaks here and writes the seed into the record
 // (tools/build.py HARNESS_HOOKS, tools/harness/game_session.py).
@@ -825,7 +567,6 @@ void EEStartLoading(EEMRecord* m)
     gUserInterface->PostStartLoading();
 }
 
-// FUNCTION: EXE 0x4c8ae4
 // Queues the improvement for the unit's type if its owner can buy it; otherwise the local owner hears an error
 // click and sees the reason in the chat log
 static void ExecuteImproveUnit(EEMRecord* m)
@@ -844,110 +585,6 @@ static void ExecuteImproveUnit(EEMRecord* m)
         }
     }
 }
-
-// Inline members of other headers whose first user is in this unit (the original's message classes' import ctors,
-// labels and ??_G at 0xba41b..0xbadd0 have no counterpart: every game message is an EEMRecord)
-// SYNTHETIC: EXE 0x4ba41b   ??0EEMSelectUnits@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba47b   ??0EEMAddPatrolPoint@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba4be   ??0EEMAddUnitToSelectedGroup@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba4fd   ??0EEMBuildGate@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba53a   ??0EEMBuildUnit@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba577   ??0EEMBuildWall@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba5be   ??0EEMCameraLocationInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba606   ??0EEMChat@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba64a   ??_GEEMChat@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba684   ??0EEMCivUpgrades@@QAE@XZ
-// SYNTHETIC: EXE 0x4ba6e1   ??_GEEMCivUpgrades@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba6fd   ??1EEMCivUpgrades@@UAE@XZ
-// SYNTHETIC: EXE 0x4ba727   ??_GEEMCivUpgradesPurchased@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba749   ??_GEEMCivUpgradesRequested@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba789   ??0EEMExchangeResources@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba7c2   ??0EEMGameOptions@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba806   ??_GEEMGameOptions@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba83a   ??0EEMFullGameOptions@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba87e   ??0EEMHackANewUnit@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba8cd   ??0EEMInGameChat@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba911   ??_GEEMInGameChat@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4ba957   ??0EEMLoadOrSaveGame@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4ba9b9   ??_GEEMLoadOrSaveGame@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4baa2f   ??0EEMFullPlayerInformation@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4baa73   ??0EEMPlayerSlotInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4baabd   ??_GEEMFullGameOptions@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4baaf1   ??0EEMSelectTheseUnits@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bab3d   ??_GEEMSelectTheseUnits@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4bab76   ??0EEMSetAirportCommand@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4babbf   ??0EEMSetRallyGoal@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac1a   ??0EEMSnapToDaylight@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac53   ??0EEMToggleCollisionDetection@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bac8c   ??0EEMToggleDayNight@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bacc5   ??0EEMUnselectAllUnits@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bacf8   ??0EEMUpdatePingStat@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bad2b   ??0EEMImproveUnit@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bad5e   ??0EEMZoomInfo@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bad97   ??0EEMSetUnitBehavior@@QAE@PAE@Z
-// SYNTHETIC: EXE 0x4bb02a   ?ClearGoal@EEActiveGroup@@QAEXXZ
-// SYNTHETIC: EXE 0x4bd11c   ?ProcessEvent@EEUIEProcessTimerExpired@@UAEJPAVUIForm@@PAVUIEntity@@@Z
-// SYNTHETIC: EXE 0x4bdb42   ??0EEAAddChatMessage@@QAE@ABVUWideString@@_N@Z
-// SYNTHETIC: EXE 0x4bdc00   ??_GEEAAddChatMessage@@UAEPAXI@Z
-// SYNTHETIC: EXE 0x4c0c9f   $E60
-// SYNTHETIC: EXE 0x4c8007   $E62
-// SYNTHETIC: EXE 0x4c350f   ?AddTribute@EEPlayer@@QAEXJJJ@Z
-// SYNTHETIC: EXE 0x4c8f32   ?push_back@?$vector@EV?$allocator@E@std@@@std@@QAEXABE@Z
-// SYNTHETIC: EXE 0x4c8f5e   ?clear@?$vector@EV?$allocator@E@std@@@std@@QAEXXZ
-// SYNTHETIC: EXE 0x4c8f99   ?push_back@?$vector@PAVEEGroup@@V?$allocator@PAVEEGroup@@@std@@@std@@QAEXABQAVEEGroup@@@Z
-// SYNTHETIC: EXE 0x4c948f   ?find@std@@YA?AV?$_Ptrit@EHPAEAAEPAEAAE@1@V21@0ABE@Z
-// SYNTHETIC: EXE 0x4c8fc5   ??A?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@std@@QAEAAV?$vector@KV?$allocator@K@std@@@1@ABK@Z
-// SYNTHETIC: EXE 0x4c901b   ??1?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@QAE@XZ
-// SYNTHETIC: EXE 0x4ca2d4   ?clear@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAEXXZ
-// SYNTHETIC: EXE 0x4c9072   ?insert@?$vector@EV?$allocator@E@std@@@std@@QAE?AV?$_Ptrit@EHPAEAAEPAEAAE@2@V32@ABE@Z
-// SYNTHETIC: EXE 0x4c90b6   ?insert@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@QAE?AU?$pair@Viterator@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@_N@2@ABU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@2@@Z
-// SYNTHETIC: EXE 0x4c916c   ?erase@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@QAE?AViterator@12@V312@0@Z
-// SYNTHETIC: EXE 0x4ca54f   ?erase@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAE?AViterator@12@V312@0@Z
-// SYNTHETIC: EXE 0x4ca2e8   ?insert@?$vector@EV?$allocator@E@std@@@std@@QAEXV?$_Ptrit@EHPAEAAEPAEAAE@2@IABE@Z
-// SYNTHETIC: EXE 0x4c91dd   ?_Erase@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z
-// SYNTHETIC: EXE 0x4c9217   ?_Insert@?$_Tree@KU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@U_Kfn@?$map@KV?$vector@KV?$allocator@K@std@@@std@@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@@2@U?$less@K@2@V?$allocator@U?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@std@@@2@$0A@@std@@IAE?AViterator@12@_NPAU_Node@12@ABU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@2@@Z
-// SYNTHETIC: EXE 0x4ca5c0   ?erase@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAE?AViterator@12@V312@@Z
-// SYNTHETIC: EXE 0x4ca86e   ?_Erase@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@IAEXPAU_Node@12@@Z
-// SYNTHETIC: EXE 0x4ca8a0   ?_Inc@const_iterator@?$_Tree@EU?$pair@$$CBEE@std@@U_Kfn@?$map@EEU?$less@E@std@@V?$allocator@U?$pair@$$CBEE@std@@@2@@2@U?$less@E@2@V?$allocator@U?$pair@$$CBEE@std@@@2@$0A@@std@@QAEXXZ
-// SYNTHETIC: EXE 0x4ca8d8   ?fill@std@@YAXV?$_Ptrit@EHPAEAAEPAEAAE@1@0ABE@Z
-// SYNTHETIC: EXE 0x4ca8ee   ?copy_backward@std@@YA?AV?$_Ptrit@EHPAEAAEPAEAAE@1@V21@00@Z
-// SYNTHETIC: EXE 0x4c9594   ?_Construct@std@@YAXPAU?$pair@$$CBKV?$vector@KV?$allocator@K@std@@@std@@@1@ABU21@@Z
-
-// EEMBuildUnit::Execute's std::sort over vector<EEComplexUnit*> with EETileDistanceLess (Dinkum 2.33, deferred
-// template COMDATs; the predicate 0xc995c and the second tree 0xc94b0.., from 0xc7739, are open):
-// TEMPLATE: EXE 0x4c93ab
-// TEMPLATE: EXE 0x4c95b1
-// TEMPLATE: EXE 0x4c95e4
-// TEMPLATE: EXE 0x4c96ec
-// TEMPLATE: EXE 0x4c98ab
-// TEMPLATE: EXE 0x4c9a43
-// TEMPLATE: EXE 0x4c9a87
-// TEMPLATE: EXE 0x4c9ad4
-// TEMPLATE: EXE 0x4c9bf4
-// TEMPLATE: EXE 0x4c9eb7
-// TEMPLATE: EXE 0x4c9f14
-// TEMPLATE: EXE 0x4c9fd7
-// TEMPLATE: EXE 0x4ca051
-// TEMPLATE: EXE 0x4ca1ad
-// TEMPLATE: EXE 0x4ca1fc
-// TEMPLATE: EXE 0x4c7486   EEComplexUnit::CanAttackClass
-// TEMPLATE: EXE 0x4c995c   EETileDistanceLess::operator()(EEComplexUnit*, EEComplexUnit*)
-// TEMPLATE: EXE 0x4c9046   vector<EEUnitGoal*>::push_back (EEMSetRallyGoal)
-// TEMPLATE: EXE 0x4c94b0   std::sort<EEComplexUnit*, EEFarmDistanceGreater> (EEMSmartFarmers) and its helpers
-// TEMPLATE: EXE 0x4c972e
-// TEMPLATE: EXE 0x4c9761
-// TEMPLATE: EXE 0x4c9869
-// TEMPLATE: EXE 0x4c9c27
-// TEMPLATE: EXE 0x4c9cd8
-// TEMPLATE: EXE 0x4c9d1c
-// TEMPLATE: EXE 0x4c9d69
-// TEMPLATE: EXE 0x4c9e84
-// TEMPLATE: EXE 0x4c9f47
-// TEMPLATE: EXE 0x4c9fa4
-// TEMPLATE: EXE 0x4ca0c1
-// TEMPLATE: EXE 0x4ca13d
-// TEMPLATE: EXE 0x4ca240
-// TEMPLATE: EXE 0x4ca290
 
 // New (game messages lane, round 5): the record types' Execute bodies are Rust (ee_netmsg bodies.rs): it reads the
 // members, makes the decisions and asks here for each world call (EE_NETMSG_OP_*: an object, a fact, an action); the
@@ -1401,4 +1038,149 @@ static void EENetMsgExecute(EEMRecord* inMessage, uint8_t inFraming)
 void EEMRecord::Execute()
 {
     EENetMsgExecute(this, 0);
+}
+
+// (moved from EEClient.cpp in game messages round 6, unchanged: the command messages' local markers; EEClient.cpp
+// keeps the client)
+// Shows the local command markers of a group order (move, attack, target, unload) on the goal the units just
+// queued, else on the first unit whose last goal fits
+// NEAR: the original refuses vector::operator[]'s begin()/operator+ in the first loop (more inline pressure than
+// ours), mL29C compares unsigned (jb; EEUnit.h has long)
+// effects 0xb8 move, 0xb9 attack, 0xba target, 0xbb unload
+void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlayerID, long inCommand, long inGoalQueue)
+{
+    GE3DPoint theLocation;
+    GE3DPoint theGround;
+    unsigned long theIndex = inGoalQueue;
+    long theFormation = inGroup->mFormation->mType;
+    unsigned long theBestTime = 0;
+    long theMarkers = 0;
+    bool theDone = false;
+    EEEffectHandle theHandle;
+    if (gCommunications->GetIsGamePaused())
+        return;
+    EEGraphicEffect* theAttackEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationAttack);
+    EEGraphicEffect* theMoveEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationMove);
+    EEGraphicEffect* theTargetEffect = EEGraphicEffect::Get(kGraphicEffectCommandConfirmationGatherOther);
+    float theFraction = inGroup->GetNumUnits() * 0.05f;
+    long theRounded = UMFloatToLong(theFraction);
+    if (theRounded < theFraction)
+        theRounded++;
+    long theStep = theRounded;
+    if (theRounded == 0)
+        theStep = 1;
+    if (theFormation == 1 || theFormation == 2 || theFormation == 3 || theFormation == 4 || theFormation == 5)
+        theFormation = 1;
+    unsigned long i;
+    for (i = 0; i < inGroup->GetNumUnits(); i++) {
+        EEComplexUnit* theUnit = inGroup->GetUnit(i);
+        if ((theFormation != 0 || !(theUnit->mFormationSlot < 15)) && (theFormation != 1 || !(theUnit->mFormationSlot < 20)) &&
+            ((theFormation != 6 && theFormation != 7) || i % theStep != 0))
+            continue;
+        EEUnitClass* theClass = theUnit->mUnitClass;
+        if (theClass->mAIKind == kAIKindAircraftCarrier || theClass->mAIKind == kAIKindSpaceCarrier || theClass->mUnitType == kUnitTypeAirport) {
+            for (unsigned long j = 0; j < theUnit->GetNumGoalQueues(); j++) {
+                if (theUnit->mGoalQueues[j].mGoals.size() == 0)
+                    continue;
+                EEUnitGoal* theQueued = theUnit->mGoalQueues[j].mGoals.back();
+                if (theQueued != NULL && theBestTime <= theQueued->GetCreationTime()) {
+                    theBestTime = theQueued->GetCreationTime();
+                    theIndex = j;
+                }
+            }
+        } else
+            theIndex = inGoalQueue;
+        EEUnitGoal* theGoal;
+        theGoal = theIndex < theUnit->GetNumGoalQueues() && theUnit->mGoalQueues[theIndex].mGoals.size() != 0 ? theUnit->mGoalQueues[theIndex].mGoals.back() : NULL;
+        if (theGoal == NULL) {
+            theDone = true;
+            continue;
+        }
+        if (inCommand == 0xb8 && EEGoalHasLocation(theGoal)) {
+            theGoal->GetGoalLocation(theLocation);
+            EEMap* theMap = gWorld.mMap;
+            if (theMap->GetTile((long)theLocation.GetX(), (long)theLocation.GetY()) != NULL) {
+                theMap->GetGroundPoint(theLocation, theGround);
+                theUnit->mUnitClass->GroundLocation(theGround);
+                if (theGround.GetZ() < 0.0f)
+                    theGround.SetZ(0.0f);
+                gWorld.GetEffectManager()->CreateEffect(theUnit, theGround, theMoveEffect, &theHandle, theIndex);
+                EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
+                theEffect->mIsLocalOnly = true;
+                theEffect->mPlayer = inPlayerID;
+                theEffect->mIsSaved = false;
+                theDone = true;
+            }
+            continue;
+        }
+        if (inCommand == 0xb9) {
+            if (EEAttackUnitCast(theGoal) != NULL)
+                break;
+            if (EEAttackGroundCast(theGoal) != NULL) {
+                theGoal->GetGoalLocation(theGround);
+                gWorld.GetEffectManager()->CreateEffect(NULL, theGround, theAttackEffect, &theHandle, theIndex);
+                EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
+                theEffect->mIsLocalOnly = true;
+                theEffect->mPlayer = inPlayerID;
+                theEffect->mIsSaved = false;
+                return;
+            }
+        }
+        if (inCommand == 0xbb) {
+            theGoal->GetGoalLocation(theGround);
+            if (theGoal->mKind == kGoalUnloadTransport) {
+                EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
+                if (theUnload != NULL && theUnload->GetUnloadTransport() != NULL &&
+                    theUnload->GetUnloadTransport()->mUnitClass->mCategory == kUnitCategoryFortress)
+                    theUnload->GetUnloadTransport()->GetPosition(theGround);
+            }
+            gWorld.GetEffectManager()->CreateEffect(theUnit, theGround, theMoveEffect, &theHandle, theIndex);
+            EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
+            theMarkers++;
+            theEffect->mIsLocalOnly = true;
+            theEffect->mPlayer = inPlayerID;
+            theEffect->mIsSaved = false;
+            theDone = true;
+            if (theMarkers == 10)
+                return;
+            continue;
+        }
+        if (inTarget != NULL) {
+            if (EEBuildRepairGoalCast(theGoal) != NULL || EEGatherGoalCast(theGoal) != NULL ||
+                EELoadGarrisonGoalCast(theGoal) != NULL)
+                break;
+            gWorld.GetEffectManager()->CreateUnitEffect(inTarget, theTargetEffect, &theHandle, 0, 0, theIndex);
+        } else {
+            theGoal->GetGoalLocation(theGround);
+            gWorld.GetEffectManager()->CreateEffect(NULL, theGround, theTargetEffect, &theHandle, theIndex);
+        }
+        EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
+        theEffect->mIsLocalOnly = true;
+        theEffect->mPlayer = inPlayerID;
+        theEffect->mIsSaved = false;
+        theDone = true;
+        break;
+    }
+    if (theDone)
+        return;
+    for (i = 0; i < inGroup->GetNumUnits(); i++) {
+        EEComplexUnit* theUnit = inGroup->GetUnit(i);
+        if (!(theIndex < theUnit->GetNumGoalQueues()))
+            continue;
+        EEUnitGoal* theGoal = theUnit->mGoalQueues[theIndex].mGoals.size() > 0 ? theUnit->mGoalQueues[theIndex].mGoals.back()
+                                                                          : NULL;
+        if (theGoal == NULL || inCommand == 0xb8 ||
+            ((inCommand != 0xb9 || !EEGoalHasLocation(theGoal)) &&
+             (inCommand != 0xba || !EEGoalHasLocation(theGoal))))
+            continue;
+        theGoal->GetGoalLocation(theLocation);
+        gWorld.mMap->GetGroundPoint(theLocation, theGround);
+        theUnit->mUnitClass->GroundLocation(theGround);
+        gWorld.GetEffectManager()->CreateEffect(theUnit, theGround, theMoveEffect, &theHandle, theIndex);
+        EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
+        theEffect->mIsLocalOnly = true;
+        theEffect->mPlayer = inPlayerID;
+        theEffect->mIsSaved = false;
+        return;
+    }
 }

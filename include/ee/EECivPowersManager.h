@@ -43,10 +43,10 @@ public:
     bool HasPower(EEPlayer* inPlayer, long inID);   // 0x283248 (whether inPlayer's civilization has power inID; EEPlayer 0x1654be; provisional name)
     EECivPower* GetPowerRecord(long inID);  // 0x283235 (&record[inID - 0x26]; EEUCProjectile::ActionChanged) (provisional name)
     unsigned long GetNumPowers();           // (the original's mPowers.size())
-    EECivPowersManager();               // 0x2830d0
-    virtual ~EECivPowersManager();      // 0x283116
+    EECivPowersManager();
+    virtual ~EECivPowersManager();
 };
 
-extern EECivPowersManager gCivPowersManager;    // 0x52a310
+extern EECivPowersManager gCivPowersManager;
 
 #endif

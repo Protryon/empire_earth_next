@@ -92,7 +92,7 @@
 
 extern long& gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; FindLandTransport: > 0 for a sea transport) (provisional name)
 
-static const float kAGNearDistance = 324.0f;    // 0x43bca8
+static const float kAGNearDistance = 324.0f;
 
 // 0x564f6 / 0x5661e (cdecl): a new sub group unit for inUnit (of its kind), or the load path's empty one (inUnit 0)
 // (provisional names)
@@ -104,7 +104,6 @@ struct EECPAGTownLess {
     bool operator()(EETown* inA, EETown* inB) const;
 };
 
-// FUNCTION: EXE 0x45a8ad
 // Orders towns by continent id, then by value
 // not inline: every sort/heap helper calls it out of line (0x45aa73, 0x45a953, 0x45ab13, 0x45abd4); an in-class body
 // is expanded there. Placed among the template COMDATs in the original.
@@ -113,7 +112,6 @@ bool EECPAGTownLess::operator()(EETown* inA, EETown* inB) const
     return inA->mContinent < inB->mContinent || inA->mContinent == inB->mContinent && inA->mValue < inB->mValue;
 }
 
-// FUNCTION: EXE 0x45473a
 // Creates an empty attack group for the commander, with the combat manager's next group id and no continent
 EECPAttackGroup::EECPAttackGroup(EECPAttackCommander* inCommander)
 {
@@ -125,10 +123,6 @@ EECPAttackGroup::EECPAttackGroup(EECPAttackCommander* inCommander)
     this->mContinentID = 0;
 }
 
-// SYNTHETIC: EXE 0x45479a
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4547b6
 // Destroys the group, shutting down and releasing every sub-group
 EECPAttackGroup::~EECPAttackGroup()
 {
@@ -139,7 +133,6 @@ EECPAttackGroup::~EECPAttackGroup()
     this->mSubGroups.clear();
 }
 
-// FUNCTION: EXE 0x454829
 // Adds a unit to the nearest sub-group of its kind within 18 tiles; returns false when none is that close
 bool EECPAttackGroup::JoinSubGroup(EEComplexUnit* inOld, EEComplexUnit* inUnit)
 {
@@ -164,7 +157,6 @@ bool EECPAttackGroup::JoinSubGroup(EEComplexUnit* inOld, EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x454948
 // Adds a combat unit to a sub-group of its kind with under 10 units, else to a new one sent to an own town, a
 // near choke point or a random continent point against a random enemy; false for transports, ports, AM batteries
 bool EECPAttackGroup::PlaceInSubGroup(EEComplexUnit* inUnit)
@@ -309,7 +301,6 @@ bool EECPAttackGroup::PlaceInSubGroup(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x454f62
 // Gives an air sub-group a strike on the best reachable target region, else a defence task, else a return to its
 // rally point
 void EECPAttackGroup::AssignAirTask(EECPAttackSubGroup* inSubGroup)
@@ -335,7 +326,6 @@ void EECPAttackGroup::AssignAirTask(EECPAttackSubGroup* inSubGroup)
     inSubGroup->SetTask(theTask);
 }
 
-// FUNCTION: EXE 0x45502e
 // Gives a land sub-group an attack on the best reachable target region, else a defence task, a random point on
 // the group's continent, its rally point or its own position (the continent pointer is never NULL-checked)
 void EECPAttackGroup::AssignLandTask(EECPAttackSubGroup* inSubGroup)
@@ -389,7 +379,6 @@ done:
     inSubGroup->SetTask(theTask);
 }
 
-// FUNCTION: EXE 0x4551d6
 // Gives a sea sub-group a task: 25% of the time hunts a known enemy unit on its or a connected water body, else a
 // defence task or a random point on its (or a connected) water body, else its rally point
 void EECPAttackGroup::AssignSeaTask(EECPAttackSubGroup* inSubGroup)
@@ -497,7 +486,6 @@ ranged:
     inSubGroup->SetTask(theTask);
 }
 
-// FUNCTION: EXE 0x455754
 // Gives a space sub-group a task: 25% of the time hunts a known enemy unit in its or a connected space area, else
 // a defence task or a random point in its (or a connected) space area, else its rally point
 void EECPAttackGroup::AssignSpaceTask(EECPAttackSubGroup* inSubGroup)
@@ -605,7 +593,6 @@ ranged:
     inSubGroup->SetTask(theTask);
 }
 
-// FUNCTION: EXE 0x455cdd
 // When the group's target player changes state: on true sends every sub-group home and disbands the group,
 // otherwise marks every sub-group out of the fight
 void EECPAttackGroup::TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag)
@@ -632,7 +619,6 @@ void EECPAttackGroup::TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag)
     }
 }
 
-// FUNCTION: EXE 0x455d55
 // Moves every unit of one sub-group into another of the same kind; returns false for a NULL or mismatched pair
 bool EECPAttackGroup::MergeSubGroups(EECPAttackSubGroup* inInto, EECPAttackSubGroup* inFrom)
 {
@@ -647,7 +633,6 @@ bool EECPAttackGroup::MergeSubGroups(EECPAttackSubGroup* inInto, EECPAttackSubGr
     return theResult;
 }
 
-// FUNCTION: EXE 0x455dbd
 // Makes one sub-group per kind among the selected units and unit classes, sets its mission from the strategy,
 // requests its units and gives it the group's task (a territory task when the target is only an area)
 void EECPAttackGroup::MakeSubGroups(EECPUnitSelectionGroup& inGroup, std::vector<EECPAttackSubGroup*>& outSubGroups)
@@ -756,7 +741,6 @@ void EECPAttackGroup::MakeSubGroups(EECPUnitSelectionGroup& inGroup, std::vector
     }
 }
 
-// FUNCTION: EXE 0x456416
 // Makes the planned sub-groups and adds them to the group; for a non-location task makes none unless the target
 // player has known targets
 void EECPAttackGroup::PlaceSubGroups(EECPUnitSelectionGroup& inGroup)
@@ -777,7 +761,6 @@ done:
         this->mSubGroups.push_back(theSubGroups[i]);
 }
 
-// FUNCTION: EXE 0x4564f6
 // Creates the sub-group entry for a unit, choosing its kind (ship, carrier, bomber, fighter, transport, priest,
 // prophet, hero, space...) from its class; a generic or empty entry when asked or for no unit
 EECPAttackSubGroupUnit* EECPCreateSubGroupUnit(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup, bool inGeneric)
@@ -821,7 +804,6 @@ EECPAttackSubGroupUnit* EECPCreateSubGroupUnit(EEComplexUnit* inUnit, EECPAttack
     return EECPCreateSubGroupUnitOfKind(inUnit, inSubGroup, theKind);
 }
 
-// FUNCTION: EXE 0x45661e
 // Creates a sub-group entry of the given kind for a unit, or an empty one when the unit is NULL (the plain entry
 // for unknown kinds)
 EECPAttackSubGroupUnit* EECPCreateSubGroupUnitOfKind(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup, long inKind)
@@ -891,7 +873,6 @@ EECPAttackSubGroupUnit* EECPCreateSubGroupUnitOfKind(EEComplexUnit* inUnit, EECP
     return NULL;
 }
 
-// FUNCTION: EXE 0x4569f8
 // Cancels a sub-group's orders, removes, disbands and releases it, and marks the group finished once empty
 void EECPAttackGroup::RemoveSubGroup(EECPAttackSubGroup* inSubGroup)
 {
@@ -907,7 +888,6 @@ void EECPAttackGroup::RemoveSubGroup(EECPAttackSubGroup* inSubGroup)
         this->mIsFinished = this->mSubGroups.size() == 0;
 }
 
-// FUNCTION: EXE 0x456a9c
 // Returns the sub-group holding a unit, or NULL
 EECPAttackSubGroup* EECPAttackGroup::FindHolder(EEUnit* inUnit)
 {
@@ -922,7 +902,6 @@ EECPAttackSubGroup* EECPAttackGroup::FindHolder(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x456ae6
 // Appends every sub-group listing a unit to a list; returns the list's size
 unsigned long EECPAttackGroup::ListUnit(EEComplexUnit* inUnit, std::vector<EECPAttackSubGroup*>& outGroups)
 {
@@ -931,7 +910,6 @@ unsigned long EECPAttackGroup::ListUnit(EEComplexUnit* inUnit, std::vector<EECPA
     return outGroups.size();
 }
 
-// FUNCTION: EXE 0x456b35
 // Appends the units of every sub-group not on an attack mission to a list
 void EECPAttackGroup::CollectUnits(std::vector<EEComplexUnit*>& inUnits)
 {
@@ -940,7 +918,6 @@ void EECPAttackGroup::CollectUnits(std::vector<EEComplexUnit*>& inUnits)
             this->mSubGroups[i]->CollectUnits(inUnits);
 }
 
-// FUNCTION: EXE 0x456b73
 // Fills a list with the target player's known target locations
 void EECPAttackGroup::GetTargetLocations(std::vector<EECPILocation>& outTargets)
 {
@@ -957,7 +934,6 @@ void EECPAttackGroup::FilterTargets(std::vector<EECPILocation>& ioTargets)
 {
 }
 
-// FUNCTION: EXE 0x456bac
 // Returns the sub-group with an id, or NULL
 EECPAttackSubGroup* EECPAttackGroup::GetSubGroup(unsigned long inID)
 {
@@ -970,7 +946,6 @@ EECPAttackSubGroup* EECPAttackGroup::GetSubGroup(unsigned long inID)
     return theResult;
 }
 
-// FUNCTION: EXE 0x456bee
 // Returns the sub-group kind for a unit class: land (and heroes), sea, submarine, hurricane, air, helicopter,
 // storm, transports or space kinds; 100 when it moves in none of these
 long EECPAttackGroup::GetSubGroupKind(EEUnitClass* inClass)
@@ -1000,7 +975,6 @@ long EECPAttackGroup::GetSubGroupKind(EEUnitClass* inClass)
     return theKind;
 }
 
-// FUNCTION: EXE 0x456caf
 // Returns true if the group has a continent and one of its sub-groups holds the unit
 bool EECPAttackGroup::KeepsUnit(EEComplexUnit* inUnit)
 {
@@ -1010,7 +984,6 @@ bool EECPAttackGroup::KeepsUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x456cc8
 // Reads the task, the sub-groups (kind, then body), the orders, id, continent and finished flag from the saved
 // game; returns the first read error
 long EECPAttackGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1101,7 +1074,6 @@ long EECPAttackGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x456f9e
 // Cancels every pending order naming a sub-group
 void EECPAttackGroup::DropOrdersOf(EECPAttackSubGroup* inSubGroup)
 {
@@ -1112,7 +1084,6 @@ void EECPAttackGroup::DropOrdersOf(EECPAttackSubGroup* inSubGroup)
             this->mOrders[i].mIsActive = false;
 }
 
-// FUNCTION: EXE 0x457017
 // Picks the best-scoring target the air sub-group can reach (any sub-group else takes the first target); returns
 // false when there is none
 bool EECPAttackGroup::FindAirTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo)
@@ -1148,7 +1119,6 @@ bool EECPAttackGroup::FindAirTarget(EECPAttackSubGroup* inSubGroup, EECPILocatio
 // (not emitted here) 0x4571dd
 // EECPILocation::~EECPILocation (inline, ee/EECPILocation.h; out of line for the score map's pairs)
 
-// FUNCTION: EXE 0x4571e4
 // For a group with no continent, picks the best-scoring target region the sub-group can reach (the first target
 // with no sub-group); returns false when there is none
 bool EECPAttackGroup::FindLandTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo)
@@ -1184,7 +1154,6 @@ bool EECPAttackGroup::FindLandTarget(EECPAttackSubGroup* inSubGroup, EECPILocati
     return theResult;
 }
 
-// FUNCTION: EXE 0x45737e
 // Finds no sea target: clears the result and returns false
 bool EECPAttackGroup::FindSeaTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo)
 {
@@ -1192,14 +1161,12 @@ bool EECPAttackGroup::FindSeaTarget(EECPAttackSubGroup* inSubGroup, EECPILocatio
     return false;
 }
 
-// FUNCTION: EXE 0x45738c
 // Finds no space target (always false)
 bool EECPAttackGroup::FindSpaceTarget(EECPAttackSubGroup* inSubGroup, EECPILocation& inFrom, EECPILocation& outTo)
 {
     return false;
 }
 
-// FUNCTION: EXE 0x457391
 // Selects units for the group's task with a strategy, buys them improvements when allowed (not on easy), makes
 // the sub-groups and marks the group finished if none were made
 void EECPAttackGroup::MakePlan(EECPCombatStrategy& inStrategy, std::vector<long>& outUnitIDs)
@@ -1218,7 +1185,6 @@ void EECPAttackGroup::MakePlan(EECPCombatStrategy& inStrategy, std::vector<long>
     this->mIsFinished = this->mSubGroups.size() == 0;
 }
 
-// FUNCTION: EXE 0x457470
 // Creates an empty unit selection with no players or strategy
 EECPUnitSelectionGroup::EECPUnitSelectionGroup()
 {
@@ -1229,10 +1195,6 @@ EECPUnitSelectionGroup::EECPUnitSelectionGroup()
     this->mStrategy = NULL;
 }
 
-// SYNTHETIC: EXE 0x45750e
-// (EEAIFOPAvailablePersonnelGatherer's scalar deleting destructor: its inline dtor is declared in ee/EECPUnitSelector.h)
-
-// FUNCTION: EXE 0x457533
 // Destroys the selection, deleting its strategy
 EECPUnitSelectionGroup::~EECPUnitSelectionGroup()
 {
@@ -1240,10 +1202,6 @@ EECPUnitSelectionGroup::~EECPUnitSelectionGroup()
         delete this->mStrategy;
 }
 
-// SYNTHETIC: EXE 0x45759f
-// (EECPUnitSelectionGroup's scalar deleting destructor)
-
-// FUNCTION: EXE 0x4575bb
 // Refreshes each sub-group's task location; a continent group then moves to the continent holding most of its
 // units
 void EECPAttackGroup::Update()
@@ -1277,7 +1235,6 @@ void EECPAttackGroup::Update()
     this->mContinentID = theID;
 }
 
-// FUNCTION: EXE 0x457727
 // Carries out a queued order (check unit, split, remove, set state, merge, travel, assign task, return home);
 // returns true
 bool EECPAttackGroup::ExecuteOrder(EECPAGOrder& inOrder, unsigned long inTime)
@@ -1312,14 +1269,12 @@ bool EECPAttackGroup::ExecuteOrder(EECPAGOrder& inOrder, unsigned long inTime)
     return true;
 }
 
-// FUNCTION: EXE 0x4577d4
 // Removes a unit from the group
 bool EECPAttackGroup::ReleaseUnit(EEComplexUnit* inUnit)
 {
     return this->RemoveUnit(inUnit);
 }
 
-// FUNCTION: EXE 0x4577e0
 // Removes an order's unit from its sub-group if it still exists, and removes the sub-group once empty
 void EECPAttackGroup::CheckUnit(EECPAGOrder& inOrder)
 {
@@ -1331,7 +1286,6 @@ void EECPAttackGroup::CheckUnit(EECPAGOrder& inOrder)
         this->RemoveSubGroup(inOrder.mSubGroup);
 }
 
-// FUNCTION: EXE 0x457838
 // Restores the task, sub-groups and orders after loading, then drops empty sub-groups without a request (all of
 // them, and the continent, when the task has no player); returns the first error
 long EECPAttackGroup::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -1370,7 +1324,6 @@ long EECPAttackGroup::Restore(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x457962
 // Gives a sub-group a new task by its kind: land, sea, air or space
 void EECPAttackGroup::AssignTask(EECPAttackSubGroup* inSubGroup)
 {
@@ -1386,7 +1339,6 @@ void EECPAttackGroup::AssignTask(EECPAttackSubGroup* inSubGroup)
 
 // The selected transport classes and the land units already in the selection go to the new sub group, which takes
 // inLand
-// FUNCTION: EXE 0x4579f4
 // Creates a transport sub-group for a land sub-group's cargo: space (space epoch and map), else air (atomic
 // epoch, with a carrier), else sea, sized by the cargo; returns it, or NULL
 EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
@@ -1568,16 +1520,6 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
     return theTransport;
 }
 
-// TEMPLATE: EXE 0x458554
-// (EEAIFOContinentScreenBase::Virtual04, inline in ee/EEAIFunctionObjects.h)
-
-// TEMPLATE: EXE 0x458560
-// (EEAIFOContinentScreenContinentsShareAdjacentID's inline ctor)
-
-// TEMPLATE: EXE 0x458584
-// (EEAIFOContinentScreenBase::Test, inline)
-
-// FUNCTION: EXE 0x458591
 // Accepts one of the two continents, or a water (or, for the space variant, space) area adjacent to both
 // category 4 (space) when mOcean (the space transport path), else 2 (water)
 bool EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID::Test(unsigned short inID)
@@ -1596,10 +1538,6 @@ bool EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID::Test(unsigned
     return theResult;
 }
 
-// SYNTHETIC: EXE 0x458608
-// (EEAIFOContinentScreenBase's scalar deleting destructor; the derived screens' fold into it)
-
-// FUNCTION: EXE 0x458625
 // Writes the task, the sub-groups (kind, then body), the orders, id, continent and finished flag to the saved
 // game; returns the first write error
 long EECPAttackGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1640,7 +1578,6 @@ long EECPAttackGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x458741
 // Splits the units a sub-group picks off into a new sub-group of their kind (dropped if it ends up empty); a
 // one-unit sub-group gets its task deactivated instead
 void EECPAttackGroup::SplitSubGroup(EECPAttackSubGroup* inSubGroup)
@@ -1707,7 +1644,6 @@ void EECPAttackGroup::SplitSubGroup(EECPAttackSubGroup* inSubGroup)
         inSubGroup->mTask.mIsActive = false;
 }
 
-// FUNCTION: EXE 0x4589c4
 // Replaces a unit by a new one in the first sub-group holding it; returns true if one did
 bool EECPAttackGroup::ReplaceUnit(EEComplexUnit* inUnit, EEComplexUnit* inNewUnit)
 {
@@ -1720,7 +1656,6 @@ bool EECPAttackGroup::ReplaceUnit(EEComplexUnit* inUnit, EEComplexUnit* inNewUni
     return theResult;
 }
 
-// FUNCTION: EXE 0x458a06
 // Removes a unit from the sub-groups, queueing removal of a sub-group it empties; returns whether a
 // sub-group held it
 bool EECPAttackGroup::RemoveUnit(EEUnit* inUnit)
@@ -1743,7 +1678,6 @@ bool EECPAttackGroup::RemoveUnit(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x458a9e
 // Updates every sub-group that is due, then carries out and empties the order queue
 void EECPAttackGroup::Tick(unsigned long inTime)
 {
@@ -1759,7 +1693,6 @@ void EECPAttackGroup::Tick(unsigned long inTime)
     }
 }
 
-// FUNCTION: EXE 0x458b2e
 // Buys random affordable improvements for random unit types in the selection, up to the player's limits (each
 // unit type once)
 void EECPAttackGroup::GiveImprovements(EECPUnitSelectionGroup& inGroup)
@@ -1816,196 +1749,6 @@ void EECPAttackGroup::GiveImprovements(EECPUnitSelectionGroup& inGroup)
 
 // (ICF/other unit names it) 0x458e58: vector<EECPAttackSubGroup*>::push_back
 
-// TEMPLATE: EXE 0x458e84
-// (?resize@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAEXI@Z)
-
-// TEMPLATE: EXE 0x458ec2
-// (?pop_front@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAEXXZ)
-
 // (ICF/other unit names it) 0x458f17: deque<EECPAGOrder>::iterator::operator* (ICF-named)
 
-// TEMPLATE: EXE 0x458f45
-// (??1?$_Tree@JU?$pair@$$CBJU?$pair@JPAVEEUnitClass@@@std@@@std@@U_Kfn@?$map@JU?$pair@JPAVEEUnitClass@@@std@@U?$l)
-
-// TEMPLATE: EXE 0x458f70
-// (??1?$_Tree@MU?$pair@$$CBMPAVEECPAttackSubGroup@@@std@@U_Kfn@?$multimap@MPAVEECPAttackSubGroup@@U?$greater@M@st)
-
-// TEMPLATE: EXE 0x458f9b
-// (??1?$_Tree@JU?$pair@$$CBJPAVEEAIChokePoint@@@std@@U_Kfn@?$multimap@JPAVEEAIChokePoint@@U?$less@J@std@@V?$alloc)
-
-// TEMPLATE: EXE 0x458fc6
-// (??1?$_Tree@JU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@U_Kfn@?$map@JU?$pair@V?$)
-
-// TEMPLATE: EXE 0x458ff1
-// (?insert@?$_Tree@JU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@U_Kfn@?$map@JU?$pai)
-
-// TEMPLATE: EXE 0x4590a7
-// (?find@?$_Tree@JU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@U_Kfn@?$map@JU?$pair@)
-
 // (ICF/other unit names it) 0x45910c: vector<EECPAttackSubGroup*>::insert (ICF-named)
-
-// TEMPLATE: EXE 0x4590e1
-// (??1?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@QAE@XZ)
-
-// TEMPLATE: EXE 0x45915c
-// (?resize@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAEXIVEECPAGOrder@@@Z)
-
-// TEMPLATE: EXE 0x4591a9
-// (?erase@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAE?AViterator@12@V312@0@Z)
-
-// TEMPLATE: EXE 0x459252
-// (?pop_back@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAEXXZ)
-
-// TEMPLATE: EXE 0x4592a1
-// (??1?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAE@XZ)
-
-// TEMPLATE: EXE 0x4592ba
-// (?_Tidy@?$vector@VEECPILocation@@V?$allocator@VEECPILocation@@@std@@@std@@IAEXXZ)
-
-// TEMPLATE: EXE 0x4592f3
-// (?erase@?$_Tree@JU?$pair@$$CBJU?$pair@JPAVEEUnitClass@@@std@@@std@@U_Kfn@?$map@JU?$pair@JPAVEEUnitClass@@@std@@)
-
-// TEMPLATE: EXE 0x4593d5
-// (?insert@?$_Tree@JU?$pair@$$CBJPAVEEAIChokePoint@@@std@@U_Kfn@?$multimap@JPAVEEAIChokePoint@@U?$less@J@std@@V?$)
-
-// TEMPLATE: EXE 0x459516
-// (?_Insert@?$_Tree@JU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@U_Kfn@?$map@JU?$pa)
-
-// TEMPLATE: EXE 0x4596aa
-// (??0?$_Tree@GU?$pair@$$CBGJ@std@@U_Kfn@?$map@GJU?$less@G@std@@V?$allocator@U?$pair@$$CBGJ@std@@@2@@2@U?$less@G@)
-
-// TEMPLATE: EXE 0x4596cb
-// (?insert@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@QAE?AU?$pair@Viterator@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@_N@2@ABU?$pair@$$CBMVEECPILocation@@@2@@Z)
-
-// TEMPLATE: EXE 0x45972d
-// (?erase@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@QAE?AViterator@12@V312@0@Z)
-
-// TEMPLATE: EXE 0x45979e
-// (?insert@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAEXViterator@12@IABVEECPAGOrder@@@Z)
-
-// TEMPLATE: EXE 0x4599e6
-// (?_Erase@?$_Tree@JU?$pair@$$CBJU?$pair@JPAVEEUnitClass@@@std@@@std@@U_Kfn@?$map@JU?$pair@JPAVEEUnitClass@@@std@)
-
-// TEMPLATE: EXE 0x459ab1
-// (?erase@?$_Tree@JU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@U_Kfn@?$map@JU?$pair)
-
-// TEMPLATE: EXE 0x459d69
-// (?_Erase@?$_Tree@JU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@U_Kfn@?$map@JU?$pai)
-
-// TEMPLATE: EXE 0x459dda
-// (?_Lbound@?$_Tree@JU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@U_Kfn@?$map@JU?$pa)
-
-// TEMPLATE: EXE 0x459e7c
-// (?erase@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@QAE?AViterator@12@V312@@Z)
-
-// TEMPLATE: EXE 0x45a131
-// (?_Erase@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@IAEXPAU_Node@12@@Z)
-
-// TEMPLATE: EXE 0x45a19f
-// (?_Insert@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@IAE?AViterator@12@_NPAU_Node@12@ABU?$pair@$$CBMVEECPILocation@@@2@@Z)
-
-// TEMPLATE: EXE 0x45a333
-// (?_Inc@const_iterator@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@QAEXXZ)
-
-// TEMPLATE: EXE 0x45a36b
-// (?push_front@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@std@@QAEXABVEECPAGOrder@@@Z)
-
-// TEMPLATE: EXE 0x45a3f4
-// (?_Rrotate@?$_Tree@MU?$pair@$$CBMVEECPILocation@@@std@@U_Kfn@?$multimap@MVEECPILocation@@U?$greater@M@std@@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@3@@2@U?$greater@M@2@V?$allocator@U?$pair@$$CBMVEECPILocation@@@std@@@2@$00@std@@IAEXPAU_Node@12@@Z)
-
-// TEMPLATE: EXE 0x45a438
-// (?sort@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45a4f5
-// (?EEAIRandomShuffle@@YAXABV?$_Ptrit@PAVEEAIChokePoint@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@std@@0@Z)
-
-// TEMPLATE: EXE 0x45a51c
-// (?copy_backward@std@@YA?AViterator@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@1@V231@00@Z)
-
-// TEMPLATE: EXE 0x45a55f
-// (?copy@std@@YA?AViterator@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@1@V231@00@Z)
-
-// TEMPLATE: EXE 0x45a5a2
-// (?fill@std@@YAXViterator@?$deque@VEECPAGOrder@@V?$allocator@VEECPAGOrder@@@std@@@1@0ABVEECPAGOrder@@@Z)
-
-// TEMPLATE: EXE 0x45a5ce
-// (?_Construct@std@@YAXPAU?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@1@ABU21@@Z)
-
-// TEMPLATE: EXE 0x45a5e0
-// (?_Construct@std@@YAXPAU?$pair@$$CBMVEECPILocation@@@1@ABU21@@Z)
-
-// TEMPLATE: EXE 0x45a5fd
-// (??0?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@QAE@ABU01@@Z)
-
-// TEMPLATE: EXE 0x45a61e
-// (??0?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@QAE@ABU01@@Z)
-
-// TEMPLATE: EXE 0x45a64d
-// (??_G?$pair@$$CBJU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@QAEPAXI@Z)
-
-// TEMPLATE: EXE 0x45a696
-// (??0?$pair@JU?$pair@V?$vector@JV?$allocator@J@std@@@std@@V12@@std@@@std@@QAE@ABJABU?$pair@V?$vector@J...@1@@Z)
-
-// TEMPLATE: EXE 0x45a6c6
-// (??0?$pair@MVEECPILocation@@@std@@QAE@ABMABVEECPILocation@@@Z)
-
-// TEMPLATE: EXE 0x45a6e3
-// (?_Insertion_sort@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45a70c
-// (?_Sort@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0HUEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45a7df
-// (?_Unguarded_insertion_sort@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@PAPA)
-
-// TEMPLATE: EXE 0x45a810
-// (?_Insertion_sort_1@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@PAPAVEETown@)
-
-// TEMPLATE: EXE 0x45a8d8
-// (?make_heap@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45a912
-// (?sort_heap@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45a953
-// (?_Unguarded_partition@std@@YA?AV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@V21@0UEECPAGTownLess@@PAPA)
-
-// TEMPLATE: EXE 0x45aa73
-// (?_Unguarded_insert@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@PAVEETown@@UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45aaa6
-// (?_Make_heap@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@PAHPAPAVEETown@@@Z)
-
-// TEMPLATE: EXE 0x45aaea
-// (?pop_heap@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45ab13
-// (?_Adjust_heap@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEETown@@UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45ab81
-// (?_Pop_heap_0@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPAGTownLess@@PAPAVEETown@@@Z)
-
-// TEMPLATE: EXE 0x45abd4
-// (?_Push_heap@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEETown@@UEECPAGTownLess@@@Z)
-
-// TEMPLATE: EXE 0x45ac23
-// (?_Pop_heap@std@@YAXV?$_Ptrit@PAVEETown@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@00PAVEETown@@UEECPAGTownLess@@PAH@Z)
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
-// against the original by name)
-// TEMPLATE: EXE 0x458e58
-// TEMPLATE: EXE 0x45910c
-// TEMPLATE: EXE 0x459364
-// TEMPLATE: EXE 0x459434
-// TEMPLATE: EXE 0x4594a5
-// TEMPLATE: EXE 0x459a4d
-// TEMPLATE: EXE 0x459a7f
-// TEMPLATE: EXE 0x45a16a
-// Named COMDATs of this unit (compiled here; names in analysis/exe/names.txt)
-// TEMPLATE: EXE 0x458f17
-// TEMPLATE: EXE 0x459a18
-// TEMPLATE: EXE 0x459da5
-// TEMPLATE: EXE 0x459e03
-// TEMPLATE: EXE 0x459e44
-// More named COMDATs of this unit (names in analysis/exe/names.txt)
-// TEMPLATE: EXE 0x4571dd

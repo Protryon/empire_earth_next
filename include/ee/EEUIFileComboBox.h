@@ -12,9 +12,9 @@ public:
     EEUIFileComboBox(FSPath* inPath, const UString& inPattern, unsigned long inId, unsigned long inTextBoxType,
                      std::vector<UWideString> inData, GEFont* inFont, const GE2DPoint& inLocation,
                      unsigned long inWidth, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex,
-                     unsigned long inMaxChars, unsigned long inBorderThickness, bool inUnused);   // 0x2624a6
+                     unsigned long inMaxChars, unsigned long inBorderThickness, bool inUnused);
     virtual ~EEUIFileComboBox();            // +0x00 (??_G 0x262567, dtor 0x262583)
-    void CreateEntries();                   // 0x2625ae
+    void CreateEntries();
     long SelectFile(const UWideString& inName);   // 0x262699 (kErrorNotFound and line 0 when it is not listed)
 
     FSPath* mPath;                          // +0xe0 referenced

@@ -26,7 +26,6 @@ const UString EEPPlayerHelper::sPlayerNum("EEPPlayerHelper-PlayerNum");
 const UString EEPPlayerHelper::sPlayerCode("EEPPlayerHelper-PlayerCode");
 const UString EEPPlayerHelper::sScenarioPlayerIndex("EEPPlayerHelper-ScenarioPlayerIndex");
 
-// FUNCTION: EXE 0x54b339
 // Creates an empty saved-players chunk for loading (three player slots, local player 0)
 EEPPlayerHelper::EEPPlayerHelper()
     : FSPersistent(kPersistentPlayers)
@@ -37,10 +36,6 @@ EEPPlayerHelper::EEPPlayerHelper()
     this->mMaxPlayers = 3;
 }
 
-// SYNTHETIC: EXE 0x54b380
-// (the scalar deleting destructor, emitted with the vtable; the implicit dtor inline)
-
-// FUNCTION: EXE 0x54b3a6
 // Creates the saved-players chunk for saving from the world's existing players, slot count and current player
 EEPPlayerHelper::EEPPlayerHelper(EEWorld& inWorld)
     : FSPersistent(kPersistentPlayers)
@@ -56,14 +51,12 @@ EEPPlayerHelper::EEPPlayerHelper(EEWorld& inWorld)
     this->mMaxPlayers = inWorld.mMaxPlayers;
 }
 
-// FUNCTION: EXE 0x54b42f
 // Creates an empty saved-players chunk for loading (persistent factory)
 FSPersistent* EEPPlayerHelper::CreateDefault() const
 {
     return new EEPPlayerHelper;
 }
 
-// FUNCTION: EXE 0x54b446
 // Adds every player's checksum and the local player index to a running checksum
 void EEPPlayerHelper::GetChecksum(ESChecksum& ioChecksum) const
 {
@@ -72,7 +65,6 @@ void EEPPlayerHelper::GetChecksum(ESChecksum& ioChecksum) const
     ioChecksum.AddChecksum("EEPPlayerHelper::mLocalPlayerIndex", this->mLocalPlayerIndex);
 }
 
-// FUNCTION: EXE 0x54b4a3
 // Returns the loaded local player index; error 13 unless the chunk was loaded
 long EEPPlayerHelper::GetLocalPlayerIndex(long& outIndex)
 {
@@ -84,7 +76,6 @@ long EEPPlayerHelper::GetLocalPlayerIndex(long& outIndex)
     return theResult;
 }
 
-// FUNCTION: EXE 0x54b4c0
 // Returns the loaded players; error 13 unless the chunk was loaded
 long EEPPlayerHelper::GetPlayers(std::vector<EEPlayer*>& outPlayers)
 {
@@ -99,7 +90,6 @@ long EEPPlayerHelper::GetPlayers(std::vector<EEPlayer*>& outPlayers)
 static EEPlayer* CreatePlayer(long inType);
 static long GetPlayerType(EEPlayer* inPlayer);
 
-// FUNCTION: EXE 0x54b4e1
 // Reads the slot count, the local player index and each player (human or computer) from a saved game, then fills
 // each player's ally list with the allies that share line of sight; returns the first read error
 long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -214,7 +204,6 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x54b629
 // Creates an empty human (type 0) or computer (type 1) player; NULL (and an assert for type 3) otherwise
 static EEPlayer* CreatePlayer(long inType)
 {
@@ -233,7 +222,6 @@ static EEPlayer* CreatePlayer(long inType)
     return thePlayer;
 }
 
-// FUNCTION: EXE 0x54b689
 // Returns a player's save type: 0 human, 1 computer, 3 for both (asserts when it is neither)
 static long GetPlayerType(EEPlayer* inPlayer)
 {
@@ -247,7 +235,6 @@ static long GetPlayerType(EEPlayer* inPlayer)
     return 1;
 }
 
-// FUNCTION: EXE 0x54b6d0
 // Writes the player count, slot count, local player index and each player with its type to a save; fails for a
 // loading chunk or no players
 long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -306,23 +293,6 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
     return kErrorFailed;
 }
-
-// SYNTHETIC: EXE 0x54b22d
-// SYNTHETIC: EXE 0x54b237
-// SYNTHETIC: EXE 0x54b248
-// SYNTHETIC: EXE 0x54b254
-// SYNTHETIC: EXE 0x54b270
-// SYNTHETIC: EXE 0x54b27a
-// SYNTHETIC: EXE 0x54b28b
-// SYNTHETIC: EXE 0x54b297
-// SYNTHETIC: EXE 0x54b2b3
-// SYNTHETIC: EXE 0x54b2bd
-// SYNTHETIC: EXE 0x54b2ce
-// SYNTHETIC: EXE 0x54b2da
-// SYNTHETIC: EXE 0x54b2f6
-// SYNTHETIC: EXE 0x54b300
-// SYNTHETIC: EXE 0x54b311
-// SYNTHETIC: EXE 0x54b31d
 
 // Does nothing (no address: empty, ICF-folded into 0x157269; EEGameStateLoader::RestorePlayers 0x14a98d calls it
 // with its EEGameState: `push [esi]; mov ecx, [ebp+8] (the EEPPlayerHelper*); call 0x157269`, a direct thiscall on

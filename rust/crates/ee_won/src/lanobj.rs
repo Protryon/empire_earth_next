@@ -83,7 +83,7 @@ fn units(bytes: &[u8]) -> Vec<u16> {
 impl EeWonLan {
     pub fn new(logic: *mut c_void, call: EeWonLobbyHostFn) -> Self {
         EeWonLan {
-            host: Host { logic, call },
+            host: Host { logic, call, model: false },
             next_client_id: Cell::new(0),
             is_captain: Cell::new(false),
             require_peer_auth: Cell::new(false),
@@ -923,6 +923,14 @@ unsafe fn message_bytes<'a>(m: &Msg) -> &'a [u8] {
 // ---- the C ABI (WONLobbyLan.h)
 
 /// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
+/// As `ee_won_lan_new`, with the model's ops answered by its Rust objects (the game's).
+#[no_mangle]
+pub extern "C" fn ee_won_lan_new_model(logic: *mut c_void, host: EeWonLobbyHostFn) -> *mut EeWonLan {
+    let mut l = EeWonLan::new(logic, host);
+    l.host.model = true;
+    Box::into_raw(Box::new(l))
+}
+
 #[no_mangle]
 pub extern "C" fn ee_won_lan_new(logic: *mut c_void, host: EeWonLobbyHostFn) -> *mut EeWonLan {
     Box::into_raw(Box::new(EeWonLan::new(logic, host)))

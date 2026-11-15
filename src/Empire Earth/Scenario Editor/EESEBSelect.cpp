@@ -118,20 +118,11 @@
 #include "ee/EESEBSelect.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
-// SYNTHETIC: EXE 0x572d2c
-// SYNTHETIC: EXE 0x572d36
-// SYNTHETIC: EXE 0x572d4b
-// SYNTHETIC: EXE 0x572d57
-// SYNTHETIC: EXE 0x572d68
-// SYNTHETIC: EXE 0x572d72
-// SYNTHETIC: EXE 0x572d87
-// SYNTHETIC: EXE 0x572d93
 // the class statics' `$E` chains 0x172d2c / 0x172d68 (definition order; one guard byte 0x531f50, bits 1 and 2: TMPoll's
 // dtor is empty, so each atexit entry only sets its bit)
 TMPoll EESEBSelect::sRepeatDelay(500, 0, false);
 TMPoll EESEBSelect::sRepeatRate(200, 0, false);
 
-// FUNCTION: EXE 0x572da4
 // Creates a 40x25 tech tree arrow button labelled <<, >>, < or > by its id, with white transparent text
 EESEBSelect::EESEBSelect(unsigned long inId, const GE2DPoint& inLocation, UIForm* inForm, GEFont* inFont,
                          unsigned long inIndex)
@@ -158,10 +149,6 @@ EESEBSelect::EESEBSelect(unsigned long inId, const GE2DPoint& inLocation, UIForm
     theGEText->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
 }
 
-// FUNCTION: EXE 0x572e64
-// Destroys the arrow button and frees it when asked (EESEBSelect's scalar deleting destructor)
-
-// FUNCTION: EXE 0x572e87
 // Moves the selected technology while < or > is held: immediately, again after 500 ms, then every 200 ms
 void EESEBSelect::ButtonDown()
 {
@@ -183,7 +170,6 @@ void EESEBSelect::ButtonDown()
     UIButton::ButtonDown();
 }
 
-// FUNCTION: EXE 0x572f0e
 // Moves every technology across when the << or >> button is released and stops the key repeat
 void EESEBSelect::ButtonUp()
 {
@@ -193,7 +179,6 @@ void EESEBSelect::ButtonUp()
     UIButton::ButtonUp();
 }
 
-// FUNCTION: EXE 0x572f3b
 // Posts a tech tree action that moves the selected technology (or all of them) between the two lists
 // for the player chosen in the editor's player combo box
 void EESEBSelect::Select()
@@ -235,11 +220,10 @@ void EESEBSelect::Select()
         return;
     }
     unsigned long thePlayer;
-    gUIManager->mScenarioEditorForm->mPlayerComboBox->GetCurrentSelection(thePlayer);
+    gUIManager->mScenarioEditorForm->GetPlayerComboBox()->GetCurrentSelection(thePlayer);
     (new EESEARust(kSEATechTree, NULL, theFirst, theLast, (int32_t)thePlayer + 1, theLeft))->Dereference();
 }
 
-// FUNCTION: EXE 0x573060
 // Creates a 150x25 player screen tab (player pages 1/2, options, tech tree, AI settings) without bitmaps
 EESETab::EESETab(unsigned long inId, const GE2DPoint& inLocation, GEFont* inFont, UIForm* inForm,
                  unsigned long inIndex, bool inIsChecked)
@@ -274,29 +258,25 @@ EESETab::EESETab(unsigned long inId, const GE2DPoint& inLocation, GEFont* inFont
     theGEText->SetIsTransparent(true);
 }
 
-// FUNCTION: EXE 0x57318d
-// Destroys the tab and frees it when asked (EESETab's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5731b0
 // Switches the player screen to the page of the checked tab
 void EESETab::Check()
 {
     const EEUIFScenarioEditor* theEditor = static_cast<const EEUIFScenarioEditor*>(this->GetForm());
     switch (this->GetId()) {
     case 0x170:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenAISettings);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenAISettings);
         break;
     case 0x15d:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenPlayerPage2);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenPlayerPage2);
         break;
     case 0x15a:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenOptions);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenOptions);
         break;
     case 0x12d:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenTechTree);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenTechTree);
         break;
     case 0x12c:
-        static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenPlayerPage1);
+        static_cast<EESEPlayerScreen*>(theEditor->GetTabGroup(kEditorTabPlayers))->SelectPage(kPlayerScreenPlayerPage1);
         break;
     }
     UIRadioButton::Check();

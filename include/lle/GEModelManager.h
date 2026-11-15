@@ -32,7 +32,7 @@ public:
     long RemoveModel(GEModel* inModel);
     void SetModelPath(FSPath* inPath);
 private:
-    // the calls the Rust object makes on other objects (GEModelManager.cpp)
+    // the calls the Rust object makes on other objects (GEModel.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
     EeGeModelManager* mRust;                // the cache (name -> model), the path, the lock and the footprint

@@ -55,7 +55,7 @@ public:
     { return ee_won_asyncop_run(this->mOp,static_cast<int32_t>(inMode),static_cast<uint32_t>(inTimeout)); }
 
     // an idle op: an infinite timeout, async, no container or timer entry
-    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); } // 0x29ef80
+    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); }
     virtual ~AsyncOp() { ee_won_asyncop_free(this->mOp); } // 0x29f000: the completion and lock go with it
     virtual void RunHook() {}
     virtual void CleanupHook() {}
@@ -87,7 +87,7 @@ public:
     // unless the op runs (29f1b0)
     void SetTimeout(unsigned long inTimeout) { ee_won_asyncop_set_timeout(this->mOp,static_cast<uint32_t>(inTimeout)); }
     bool RunBlock(unsigned long inTimeout) { return this->Run(2,inTimeout)==0; } // 29f6e0: whether it succeeded
-    void RunAsync(long inTimeout) { this->Run(1,inTimeout); } // 0x29f6d0
+    void RunAsync(long inTimeout) { this->Run(1,inTimeout); }
     // marks the op killed and, when asked, finishes it killed (0x29f1e0)
     void Kill(bool inFlag) { ee_won_asyncop_kill(this->mOp,inFlag); }
     // whether an async run starts at once instead of being queued (0x29f1d0)
@@ -747,21 +747,28 @@ public:
 class RustServerOp; // an HTTPGetOp (httpget.rs)
 class HTTPSession;
 // HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
-// ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold
+// ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold.
+// Its calls back are Rust's since net round 26 (httpcpp.rs, over the core table; HTTPEngine.cpp is deleted); the
+// forwarders that take an op are below RustServerOp.
 class HTTPConnection : public RefCount {
 public:
-    HTTPConnection(HTTPSession* inSession = NULL); //2d2c80,new64 at2d2a97
-    virtual ~HTTPConnection(); //2d2d50, the members
-    void Kill(); //2d3600
-    void QueueOp(RustServerOp*); //2d33a0,ret4
-    void QueueOp(RustServerOp*,int); //2d3290,ret8
-    void RunOp(int); //2d3430,ret4
-    int GetNumOps();
-    static void StaticOpCallback(AsyncOpPtr,SmartPtr<RefCount>); //2d2df0, two owning by-value args
+    // 2d2c80 (new 64 at 2d2a97): idle, pipelining on
+    HTTPConnection(HTTPSession* inSession = NULL) : mSession(inSession)
+    { this->mImpl = ee_won_http_conn_new_core(static_cast<RefCount*>(this), WonCore()); }
+    virtual ~HTTPConnection() { ee_won_http_conn_free(this->mImpl); } //2d2d50: the socket, queues and completions
+    void Kill() { ee_won_http_conn_kill(this->mImpl); } //2d3600: the running and queued requests killed (finished)
+    void QueueOp(RustServerOp* inOp); //2d33a0: send-only on the pipeline queue, a full request without pipelining
+    void QueueOp(RustServerOp* inOp, int inId); //2d3290: on the send (0) or receive (1) queue, started when it was empty
+    void RunOp(int inId) { ee_won_http_conn_run_op(this->mImpl, inId); } //2d3430: a queue's next request on the socket
+    int GetNumOps() { return ee_won_http_conn_num_ops(this->mImpl); }
+    static void StaticOpCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inConnection) //2d2df0
+    { static_cast<HTTPConnection*>(inConnection.get())->OpCallback(inOp.get()); }
+    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
+    EeWonHttpConn* GetConnObject() const { return this->mImpl; }
 protected:
-    void OpCallback(RustServerOp*); //2d2e80, 1030 bytes; protected in the SDK
+    // 2d2e80: a sent request queued for its reply, or completed; all requeued when the pipeline drops
+    void OpCallback(AsyncOp* inOp) { ee_won_http_conn_op_callback(this->mImpl, static_cast<RefCount*>(inOp)); }
 private:
-    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit; //08..20
     HTTPSession* mSession; //20 NONOWNING, ctor raw assignment
     EeWonHttpConn* mImpl;   // owned: 0x24..0x64 (socket, counts, flag, last use, queues, retry, running ops)
@@ -772,13 +779,13 @@ typedef SmartPtr<HTTPConnection> HTTPConnectionPtr;
 // (httpengine.rs EeWonHttpSession).
 class HTTPSession : public RefCount {
 public:
-    HTTPSession();                          //2d27b0, out of line
-    virtual ~HTTPSession();                 //2d2870, the map
-    void AddOp(RustServerOp*);               //2d28f0, queues a completed op
-    void KillAll();                         //2d2bc0
-    int GetNumOps();
+    HTTPSession() { this->mImpl = ee_won_http_session_new_core(static_cast<RefCount*>(this), WonCore()); } //2d27b0
+    virtual ~HTTPSession() { ee_won_http_session_free(this->mImpl); } //2d2870, the map
+    void AddOp(RustServerOp*); //2d28f0: on its host's connection, made at the first use
+    void KillAll() { ee_won_http_session_kill_all(this->mImpl); } //2d2bc0: every connection's requests killed
+    int GetNumOps() { return ee_won_http_session_num_ops(this->mImpl); }
+    PlatMutex* GetLock() const { return this->mDataCrit.mCrit; }
 private:
-    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit;              //08..20
     EeWonHttpSession* mImpl;                //20..2c, owned
 };
@@ -866,30 +873,53 @@ enum RoutingBadUserListType {
 // RoutingCreateGroupOp::CheckLeaveGroup). This class is the AsyncOp the connection's list and the completions hold,
 // one per op type (RoutingOpType, WONRoutingOpTypes.h); its readers read the members through the accessors and the
 // records as copies. The original's 55 op classes (RunHook 2c7d20, HandleReply 2bcd30, the request builders and
-// notification parsers 2c4170..2c8f00) are gone; RoutingDetectFirewallOp keeps its listening socket below.
+// notification parsers 2c4170..2c8f00) are gone; RoutingDetectFirewallOp keeps its listening socket below. Since
+// net round 26 the op's calls from the connection (its type, HandleReply 2bcd30, its end) and SendRequest's base
+// (SendMsg 2c7c00, AddOp 2c7d10) are Rust's too (routecpp.rs); the Rust op knows its connection.
+inline void WonStringSink(void* inContext, const uint8_t* inBytes, size_t inLength) // bytes into the std::string
+{ static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength); }
 class RoutingOp : public AsyncOp {
 public:
     RoutingOp(RoutingConnection* inConnection, RoutingOpType inType); // a connection-less op with NULL
-    virtual void RunHook();   //RunHook2c7d20: in blocking mode finishes BlockMode_NotSupported, else SendRequest
-    virtual void SendRequest(); // the op's request (Rust's), sent; added to the connection's list when it waits
-    virtual WONStatus HandleReply(unsigned char, ReadBuffer&); // Rust's read; a cut short read throws
-    virtual RoutingOpType GetType() const;
+    //2c7d20: in blocking mode finishes BlockMode_NotSupported (100009), else SendRequest
+    virtual void RunHook() { if (this->GetMode() == OP_MODE_BLOCK) this->Finish(100009); else this->SendRequest(); }
+    // the op's request (Rust's), sent on the connection; added to its list when it waits for a reply
+    virtual void SendRequest() { ee_won_routeop_send(this->mRust, static_cast<RefCount*>(this)); }
+    virtual RoutingOpType GetType() const { return (RoutingOpType)ee_won_routeop_type(this->mRust); }
     bool IsDerivedServerOp() const { return this->GetType() == 60; } // RoutingOp_DerivedServerOp
-    void SendMsg(const std::string& inMessage); //2c7c00: queued on the connection with its length field
-    void AddOp(); //2c7d10
     RoutingConnection* GetConnection() { return this->mConnection.get(); }
 
     // the members (EE_WON_RTF_* numbers, EE_WON_RTT_* texts)
     long long Num(int inField) const { return ee_won_routeop_num(this->mRust, inField); }
     void SetNum(int inField, long long inValue) { ee_won_routeop_set_num(this->mRust, inField, inValue); }
-    std::wstring Text(int inWhich) const;
-    void SetText(int inWhich, const std::wstring& inText);
-    std::string DataType() const;
-    void SetDataType(const std::string& inType);
-    ByteBufferPtr GetData() const; // NULL when the op has no buffer
-    void SetData(const ByteBuffer* inData);
-    std::list<unsigned short> Recipients() const;
-    void SetRecipients(const std::list<unsigned short>& inIds);
+    std::wstring Text(int inWhich) const { std::wstring s; ee_won_routeop_text(this->mRust, inWhich, WonWideSink, &s); return s; }
+    void SetText(int inWhich, const std::wstring& inText)
+    {
+        std::string b;
+        WideAppendUtf16LE(b, inText);
+        ee_won_routeop_set_text(this->mRust, inWhich, reinterpret_cast<const uint16_t*>(b.data()), b.size() / 2);
+    }
+    std::string DataType() const { std::string s; ee_won_routeop_data_type(this->mRust, WonStringSink, &s); return s; }
+    void SetDataType(const std::string& inType)
+    { ee_won_routeop_set_data_type(this->mRust, reinterpret_cast<const uint8_t*>(inType.data()), inType.size()); }
+    // NULL when the op has no buffer
+    ByteBufferPtr GetData() const { ByteBufferPtr b; ee_won_routeop_data(this->mRust, WonByteBufferSink, &b); return b; }
+    void SetData(const ByteBuffer* inData)
+    {
+        if (inData == NULL) ee_won_routeop_set_data(this->mRust, false, NULL, 0);
+        else ee_won_routeop_set_data(this->mRust, true, reinterpret_cast<const uint8_t*>(inData->data()), inData->length());
+    }
+    std::list<unsigned short> Recipients() const
+    {
+        std::vector<uint16_t> anIds(ee_won_routeop_ids(this->mRust, NULL, 0) + 1);
+        size_t n = ee_won_routeop_ids(this->mRust, &anIds[0], anIds.size() - 1);
+        return std::list<unsigned short>(anIds.begin(), anIds.begin() + n);
+    }
+    void SetRecipients(const std::list<unsigned short>& inIds)
+    {
+        std::vector<uint16_t> anIds(inIds.begin(), inIds.end());
+        ee_won_routeop_set_ids(this->mRust, anIds.empty() ? NULL : &anIds[0], anIds.size());
+    }
     unsigned short GetGroupId() const { return (unsigned short)this->Num(EE_WON_RTF_GROUP_ID); }
     unsigned short GetClientId() const { return (unsigned short)this->Num(EE_WON_RTF_CLIENT_ID); }
     unsigned short GetLinkId() const { return (unsigned short)this->Num(EE_WON_RTF_LINK_ID); }
@@ -902,12 +932,14 @@ public:
     void GetBadUsers(RoutingBadUserList& outList) const; // mBadUserList
     RoutingClientInfoPtr GetClientInfo() const;          // the client joined server notice's mClientInfo (or NULL)
     RoutingGroupInfoPtr GetGroupInfo() const;            //2c6cb0: the group created notice's group
-    bool ParseGroupListObj(const void*, unsigned long);  //2c5f70, the group list op's body into its map
+    //2c5f70, the group list op's body into its map (false when it runs short; what was read stays)
+    bool ParseGroupListObj(const void* inData, unsigned long inSize)
+    { return ee_won_routeop_parse_group_list(this->mRust, static_cast<const uint8_t*>(inData), inSize); }
 
     SmartPtr<RoutingConnection> mConnection; //60, destructor owns release
     EeWonRouteOp* mRust; // owned
 protected:
-    virtual ~RoutingOp();
+    virtual ~RoutingOp() { ee_won_routeop_free(this->mRust); }
 };
 typedef SmartPtr<RoutingOp> RoutingOpPtr;
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
@@ -917,14 +949,49 @@ typedef SmartPtr<RoutingOp> RoutingOpPtr;
 class RoutingGetUserStatusOp : public UDPManagerSendRecvOp {
 public:
     typedef std::map<unsigned long,unsigned char> FriendStatusMap;
-    RoutingGetUserStatusOp(const IPAddr&,UDPManager*); //2c6630/ret8
-    virtual ~RoutingGetUserStatusOp(); // the Rust object (the original's was implicit, 2c6750)
-    virtual void RunHook();   //RunHook2c6970
-    virtual WONStatus CheckResponse(ReadBuffer&); //UnpackMsg2c6ab0
-    void AddWONUserId(unsigned long); //2c68c0/ret4
-    FriendStatusMap GetFriendStatusMap() const; // a copy
-    void SetFriendStatusMap(const FriendStatusMap& inMap);
+    // 2c6630: a query to the server address, 3 retransmits, a 1 s message timeout
+    RoutingGetUserStatusOp(const IPAddr& inAddress, UDPManager* inManager) : mStatus(ee_won_userstatus_new())
+    {
+        this->SetDestAddr(inAddress);
+        this->SetUDPManager(inManager);
+        this->SetNumRetransmits(3);
+        this->SetMsgTimeout(1000);
+    }
+    virtual ~RoutingGetUserStatusOp() { ee_won_userstatus_free(this->mStatus); } // (the original's implicit 2c6750)
+    // 2c6970: the datagram listing every queried id, then the send and receive
+    virtual void RunHook()
+    {
+        ByteBufferPtr aMessage;
+        ee_won_userstatus_request(this->mStatus, WonByteBufferSink, &aMessage);
+        this->SetOutgoing(aMessage);
+        UDPManagerSendRecvOp::RunHook();
+    }
+    // 2c6ab0: the reply's header, count and each user's status (a reply cut short: an unpack failure, what was
+    // read kept)
+    virtual WONStatus CheckResponse(ReadBuffer& inMessage)
+    {
+        size_t aPos = 0;
+        WONStatus aStatus = ee_won_userstatus_reply(this->mStatus, reinterpret_cast<const uint8_t*>(inMessage.data()),
+                                                    inMessage.length(), (size_t)inMessage.pos(), &aPos);
+        inMessage.SetPos((int)aPos);
+        return aStatus;
+    }
+    void AddWONUserId(unsigned long inId) { ee_won_userstatus_add(this->mStatus, inId); } //2c68c0, status 0 until the reply
+    FriendStatusMap GetFriendStatusMap() const // a copy
+    {
+        FriendStatusMap aMap;
+        ee_won_userstatus_each(this->mStatus, StatusSink, &aMap);
+        return aMap;
+    }
+    void SetFriendStatusMap(const FriendStatusMap& inMap)
+    {
+        ee_won_userstatus_clear(this->mStatus);
+        for (FriendStatusMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i)
+            ee_won_userstatus_put(this->mStatus, i->first, i->second);
+    }
 private:
+    static void StatusSink(void* inContext, uint64_t inId, uint8_t inStatus)
+    { (*static_cast<FriendStatusMap*>(inContext))[(unsigned long)inId] = inStatus; }
     EeWonUserStatus* mStatus; // owned
 };
 #define EE_WON_USER_STATUS_RUST 1 // the map is a Rust object (won_userstatus_test sets it so)
@@ -1098,6 +1165,13 @@ private:
     EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
+// the HTTP engine's forwarders that take an HTTP get op (HTTPEngine.cpp's, 2d33a0, 2d3290, 2d28f0)
+inline void HTTPConnection::QueueOp(RustServerOp* inOp)
+{ ee_won_http_conn_queue_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
+inline void HTTPConnection::QueueOp(RustServerOp* inOp, int inId)
+{ ee_won_http_conn_queue_op_id(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp)), inId); }
+inline void HTTPSession::AddOp(RustServerOp* inOp)
+{ ee_won_http_session_add_op(this->mImpl, static_cast<RefCount*>(static_cast<AsyncOp*>(inOp))); }
 
 // AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
 // and the last use) is an ee_won handle (rust/crates/ee_won/src/hostauth.rs over peerauth.rs's session, round 22):
@@ -1406,131 +1480,201 @@ public:
 // The op list, the completions and the reply dispatch are a Rust object since net round 16
 // (rust/crates/ee_won/src/routeconn.rs EeWonRouteConn: the list +0xb8, the completions +0xc8 and the default one
 // +0x1bc, and AddOp 2ba630, CalcCompletion 2ba740, GetUnsolicitedOp 2ba830, MsgCallback 2bc850, CloseHook 2bcb20,
-// KillHook 2bcbb0); each request helper below makes a RoutingOp (a Rust op since net round 18) and runs it
+// KillHook 2bcbb0). Since net round 26 its calls back are Rust's (routecpp.rs NATIVE_ROUTECONN) but a new op and
+// the two virtuals below (AsyncOp.cpp's core table), and every request helper is Rust's (ee_won_routeconn_request:
+// a RoutingOp of the helper's type, its members from the values in the helper's parameter order, run async; the
+// original addresses are in the comments); RoutingConnection.cpp is deleted.
+// A request helper's values in parameter order: numbers, texts (UTF-16), data types, a buffer (or none), recipients
+class RoutingRequestValues {
+public:
+    RoutingRequestValues& N(long long inNum) { return this->Add(inNum, std::string()); }
+    RoutingRequestValues& W(const std::wstring& inText) { std::string b; WideAppendUtf16LE(b, inText); return this->Add(0, b); }
+    RoutingRequestValues& S(const std::string& inBytes) { return this->Add(0, inBytes); }
+    RoutingRequestValues& D(const ByteBuffer* inData)
+    { return inData == NULL ? this->Add(0, std::string()) : this->Add(1, std::string(inData->data(), inData->length())); }
+    RoutingRequestValues& L(const std::list<unsigned short>& inIds)
+    {
+        std::string b;
+        for (std::list<unsigned short>::const_iterator i = inIds.begin(); i != inIds.end(); ++i)
+            b.append(1, (char)(*i & 0xff)).append(1, (char)(*i >> 8));
+        return this->Add(0, b);
+    }
+    void Run(RefCount* inConn, int inKind, CompletionBase<AsyncOpPtr>* inCompletion)
+    {
+        std::vector<EeWonAdminValue> v;
+        for (std::list<std::pair<long long, std::string> >::iterator i = mValues.begin(); i != mValues.end(); ++i) {
+            EeWonAdminValue x = {i->first, reinterpret_cast<const uint8_t*>(i->second.data()), i->second.size()};
+            v.push_back(x);
+        }
+        ee_won_routeconn_request(inConn, inKind, v.empty() ? NULL : &v[0], v.size(), static_cast<RefCount*>(inCompletion));
+    }
+private:
+    RoutingRequestValues& Add(long long inNum, const std::string& inBytes)
+    { this->mValues.push_back(std::make_pair(inNum, inBytes)); return *this; }
+    std::list<std::pair<long long, std::string> > mValues;
+};
+typedef CompletionBase<AsyncOpPtr> RouteCompletion;
 class RoutingConnection : public ServerConnection {
 public:
-    void AddOp(RoutingOp*); //2ba630, AutoCrit/list ownership
-    RoutingConnection(); //2ba050; allocation1c0 at3eddd4
+    // 2ba630: the op (its completion resolved) waits for its replies
+    void AddOp(RoutingOp* inOp) { ee_won_routeconn_add_op(this->mRoute, static_cast<RefCount*>(inOp)); }
+    // 2ba050 (allocation 1c0 at 3eddd4): 2-byte length fields; every derived-server message unsolicited
+    RoutingConnection() : mAllDerivedOpsAreUnsolicited(true)
+    {
+        this->SetLengthFieldSize(2);
+        this->mRoute = ee_won_routeconn_new_core(static_cast<RefCount*>(this), WonCore(), static_cast<void*>(this->GetDataLock()));
+    }
     // the completion an op of a type (RoutingOpType, below 61) gets when it has none, and the default one
-    void SetOpCompletion(int inType, CompletionBase<AsyncOpPtr>* inCompletion);
-    void SetDefaultOpCompletion(CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bf1d0: subscribes to the data objects of a type (EEWonNet's room and game objects)
-    void SubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
-                        CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bf2e0
-    void UnsubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
-                  CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bcc30: registers the client
+    void SetOpCompletion(int inType, RouteCompletion* inCompletion)
+    { ee_won_routeconn_set_completion(this->mRoute, inType, static_cast<RefCount*>(inCompletion)); }
+    void SetDefaultOpCompletion(RouteCompletion* inCompletion)
+    { ee_won_routeconn_set_completion(this->mRoute, -1, static_cast<RefCount*>(inCompletion)); }
+    void SubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag, RouteCompletion* c)
+    { RoutingRequestValues().N(1).N(inLinkId).S(inDataType).N(inFlag).Run(this, EE_WON_RTQ_READ_DATA, c); } // 2bf1d0
+    void UnsubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag, RouteCompletion* c)
+    { RoutingRequestValues().N(inLinkId).S(inDataType).N(inFlag).Run(this, EE_WON_RTQ_UNSUBSCRIBE_DATA, c); } // 2bf2e0
     void Register(const std::wstring& inName, const std::wstring& inPassword, unsigned long inReconnectId,
-                  unsigned long inAsyncFlags, unsigned long inRegisterFlags, unsigned long inFlags,
-                  CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bd430: creates a game group
-    void CreateGroup(unsigned short inParent, const std::wstring& inName, const std::wstring& inPassword,
-                     unsigned short inMaxPlayers, unsigned long inGroupFlags, unsigned char inFlag, unsigned long inArg7,
-                     CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2becd0: creates a data object
-    void CreateDataObject(unsigned char inFlag, unsigned short inLinkId, const std::string& inDataType,
-                          const std::wstring& inName, const ByteBuffer* inData,
-                          CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bee30: replaces a data object
-    void ReplaceDataObject(unsigned short inLinkId, const std::string& inDataType, const std::wstring& inName,
-                           CompletionBase<AsyncOpPtr>* inCompletion);
-    void GetGroupList(unsigned char inFlags, CompletionBase<AsyncOpPtr>* inCompletion);       // 0x2bcf90
-    // 0x2c35a0: the client of a name
-    // 0x2be540: chat to a group
-    void SendChat(const std::wstring& inText, unsigned long inFlags, unsigned short inGroup,
-                  CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2be6a0: chat to clients
+                  unsigned long inAsyncFlags, unsigned long inRegisterFlags, unsigned long inFlags, RouteCompletion* c)
+    {
+        RoutingRequestValues().W(inName).W(inPassword).N(inReconnectId).N(inAsyncFlags).N(inRegisterFlags).N(inFlags)
+            .Run(this, EE_WON_RTQ_REGISTER, c);
+    } // 2bcc30
+    void CreateGroup(unsigned short inGroupId, const std::wstring& inName, const std::wstring& inPassword,
+                     unsigned short inMaxPlayers, unsigned long inGroupFlags, unsigned char inJoinFlags,
+                     unsigned long inAsyncFlags, RouteCompletion* c)
+    {
+        RoutingRequestValues().N(inGroupId).W(inName).W(inPassword).N(inMaxPlayers).N(inGroupFlags).N(inJoinFlags)
+            .N(inAsyncFlags).Run(this, EE_WON_RTQ_CREATE_GROUP, c);
+    } // 2bd430
+    void CreateDataObject(unsigned char inFlags, unsigned short inLinkId, const std::string& inDataType,
+                          const std::wstring& inName, const ByteBuffer* inData, RouteCompletion* c)
+    { RoutingRequestValues().N(inFlags).N(inLinkId).S(inDataType).W(inName).D(inData).Run(this, EE_WON_RTQ_CREATE_DATA, c); } // 2becd0
+    // 2bee30: the delete request
+    void ReplaceDataObject(unsigned short inLinkId, const std::string& inDataType, const std::wstring& inName, RouteCompletion* c)
+    { RoutingRequestValues().N(inLinkId).S(inDataType).W(inName).Run(this, EE_WON_RTQ_DELETE_DATA, c); }
+    void GetGroupList(unsigned char inFlags, RouteCompletion* c)
+    { RoutingRequestValues().N(inFlags).Run(this, EE_WON_RTQ_GROUP_LIST, c); } // 2bcf90
+    void SendChat(const std::wstring& inText, unsigned long inFlags, unsigned short inRecipient, RouteCompletion* c)
+    { this->SendChatTo(inText, (unsigned short)inFlags, std::list<unsigned short>(1, inRecipient), c); } // 2be540
     void SendChatTo(const std::wstring& inText, unsigned short inFlags, const std::list<unsigned short>& inClients,
-                    CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bef50: replaces a data object's data
+                    RouteCompletion* c)
+    { RoutingRequestValues().W(inText).N(inFlags).L(inClients).Run(this, EE_WON_RTQ_CHAT, c); } // 2be6a0
     void ModifyDataObject(unsigned short inLinkId, const std::string& inDataType, const std::wstring& inName,
-                          unsigned short inOffset, bool inFlag, const ByteBuffer* inData,
-                          CompletionBase<AsyncOpPtr>* inCompletion);
-    // 0x2bd580: joins a group
-    void JoinGroup(unsigned short inId, const std::wstring& inPassword, const std::wstring& inComment, unsigned char inFlag4,
-                   unsigned char inFlag5, CompletionBase<AsyncOpPtr>* inCompletion);
-    void CancelJoinGroup(unsigned short inId, bool inFlag2, CompletionBase<AsyncOpPtr>* inCompletion);      // 0x2bd6b0
-    void LeaveGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion);              // 0x2bd850
-    // 0x2bf0c0: subscribes to a group's data objects
-    void ReadDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
-                  CompletionBase<AsyncOpPtr>* inCompletion);
-    void GetClientList(CompletionBase<AsyncOpPtr>* inCompletion);  // 0x2bcd40
-    void GetMembersOfGroup(unsigned short inId, CompletionBase<AsyncOpPtr>* inCompletion);    // 0x2bd1e0
+                          unsigned short inOffset, bool inInsert, const ByteBuffer* inData, RouteCompletion* c)
+    {
+        RoutingRequestValues().N(inLinkId).S(inDataType).W(inName).N(inOffset).N(inInsert).D(inData)
+            .Run(this, EE_WON_RTQ_MODIFY_DATA, c);
+    } // 2bef50
+    void JoinGroup(unsigned short inId, const std::wstring& inPassword, const std::wstring& inComment,
+                   unsigned char inJoinFlags, unsigned char inMemberFlags, RouteCompletion* c)
+    {
+        RoutingRequestValues().N(inId).W(inPassword).W(inComment).N(inJoinFlags).N(inMemberFlags)
+            .Run(this, EE_WON_RTQ_JOIN_GROUP, c);
+    } // 2bd580
+    void CancelJoinGroup(unsigned short inId, bool inLeave, RouteCompletion* c)
+    { RoutingRequestValues().N(inId).N(inLeave).Run(this, EE_WON_RTQ_CANCEL_JOIN, c); } // 2bd6b0
+    void LeaveGroup(unsigned short inId, RouteCompletion* c) { RoutingRequestValues().N(inId).Run(this, EE_WON_RTQ_LEAVE, c); } // 2bd850
+    void ReadDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag, RouteCompletion* c)
+    { RoutingRequestValues().N(0).N(inLinkId).S(inDataType).N(inFlag).Run(this, EE_WON_RTQ_READ_DATA, c); } // 2bf0c0
+    void GetClientList(RouteCompletion* c) { RoutingRequestValues().Run(this, EE_WON_RTQ_CLIENT_LIST, c); } // 2bcd40
+    void GetMembersOfGroup(unsigned short inId, RouteCompletion* c)
+    { RoutingRequestValues().N(inId).Run(this, EE_WON_RTQ_MEMBERS, c); } // 2bd1e0
+    // 2be390: the client mask cut to 16 bits
+    void SetClientFlags(unsigned long inMask, unsigned long inFlags, unsigned long inAsyncMask, unsigned long inAsyncFlags,
+                        RouteCompletion* c)
+    { RoutingRequestValues().N(inMask).N(inFlags).N(inAsyncMask).N(inAsyncFlags).Run(this, EE_WON_RTQ_SET_CLIENT_FLAGS, c); }
+    void SetGroupFlags(unsigned short inId, unsigned long inMask, unsigned long inFlags, unsigned long inAsyncMask,
+                       unsigned long inAsyncFlags, RouteCompletion* c)
+    {
+        RoutingRequestValues().N(inId).N(inMask).N(inFlags).N(inAsyncMask).N(inAsyncFlags)
+            .Run(this, EE_WON_RTQ_SET_GROUP_FLAGS, c);
+    } // 2bdc10
+    void SendData(const ByteBuffer* inData, unsigned char inFlags, unsigned short inRecipient, RouteCompletion* c)
+    { this->SendData(inData, inFlags, std::list<unsigned short>(1, inRecipient), c); } // 2be910
+    void SendData(const ByteBuffer* inData, unsigned char inFlags, const std::list<unsigned short>& inRecipients,
+                  RouteCompletion* c)
+    { RoutingRequestValues().D(inData).N(inFlags).L(inRecipients).Run(this, EE_WON_RTQ_DATA, c); } // 2bea70
+    // a ban or a mute: the group, on, the seconds, the explanation, the client (by client id, WON id or CD key id)
+    void BanClient(unsigned short inGroupId, bool inOn, unsigned long inSeconds, const std::wstring& inExplanation,
+                   unsigned short inClientId, RouteCompletion* c)
+    { this->Moderate(EE_WON_RTQ_BAN, inGroupId, inOn, inSeconds, inExplanation, inClientId, c); } // 2bf590
+    void BanClientByWONId(unsigned short inGroupId, bool inOn, unsigned long inSeconds, const std::wstring& inExplanation,
+                          unsigned long inWONId, RouteCompletion* c)
+    { this->Moderate(EE_WON_RTQ_BAN_WON_ID, inGroupId, inOn, inSeconds, inExplanation, inWONId, c); } // 2bf6b0
+    void BanClientByCDKeyId(unsigned short inGroupId, bool inOn, unsigned long inSeconds,
+                            const std::wstring& inExplanation, unsigned long inCDKeyId, RouteCompletion* c)
+    { this->Moderate(EE_WON_RTQ_BAN_CDKEY_ID, inGroupId, inOn, inSeconds, inExplanation, inCDKeyId, c); } // WON SDK
+    void MuteClient(unsigned short inGroupId, bool inOn, unsigned long inSeconds, const std::wstring& inExplanation,
+                    unsigned short inClientId, RouteCompletion* c)
+    { this->Moderate(EE_WON_RTQ_MUTE, inGroupId, inOn, inSeconds, inExplanation, inClientId, c); } // 2bf7d0
+    void MuteClientByWONId(unsigned short inGroupId, bool inOn, unsigned long inSeconds,
+                           const std::wstring& inExplanation, unsigned long inWONId, RouteCompletion* c)
+    { this->Moderate(EE_WON_RTQ_MUTE_WON_ID, inGroupId, inOn, inSeconds, inExplanation, inWONId, c); } // 2bf8f0
+    void MuteClientByCDKeyId(unsigned short inGroupId, bool inOn, unsigned long inSeconds,
+                             const std::wstring& inExplanation, unsigned long inCDKeyId, RouteCompletion* c)
+    { this->Moderate(EE_WON_RTQ_MUTE_CDKEY_ID, inGroupId, inOn, inSeconds, inExplanation, inCDKeyId, c); } // WON SDK
+    // 2bd9f0 (accept), 2bdb00 (invite): the answer to a client's join attempt, an invitation
+    void AcceptClient(unsigned short inGroupId, unsigned short inClientId, bool inOn, const std::wstring& inExplanation,
+                      RouteCompletion* c)
+    { RoutingRequestValues().N(inGroupId).N(inClientId).N(inOn).W(inExplanation).Run(this, EE_WON_RTQ_ACCEPT, c); }
+    void InviteClient(unsigned short inGroupId, unsigned short inClientId, bool inOn, const std::wstring& inExplanation,
+                      RouteCompletion* c)
+    { RoutingRequestValues().N(inGroupId).N(inClientId).N(inOn).W(inExplanation).Run(this, EE_WON_RTQ_INVITE, c); }
+    void BecomeModerator(bool inOn, RouteCompletion* c) { RoutingRequestValues().N(inOn).Run(this, EE_WON_RTQ_MODERATOR, c); } // 2bf3f0
+    void SendServerAlert(const std::wstring& inText, RouteCompletion* c)
+    { RoutingRequestValues().W(inText).Run(this, EE_WON_RTQ_ALERT, c); } // 2bddd0
+    void StartServerShutdown(const std::wstring& inText, unsigned long inSeconds, RouteCompletion* c)
+    { RoutingRequestValues().W(inText).N(inSeconds).Run(this, EE_WON_RTQ_START_SHUTDOWN, c); } // 2be010
+    void AbortServerShutdown(RouteCompletion* c) { RoutingRequestValues().Run(this, EE_WON_RTQ_ABORT_SHUTDOWN, c); } // 2be200
 
+    // Further WON SDK requests; no original address identified.
+    void DisconnectClient(RouteCompletion* c) { RoutingRequestValues().Run(this, EE_WON_RTQ_DISCONNECT, c); }
+    // the _KeyId data objects (link 0xffff, flags 0)
+    void GetClientCDKeyIdList(RouteCompletion* c, bool inSubscribe)
+    { RoutingRequestValues().N(inSubscribe).N(0xffff).S("_KeyId").N(0).Run(this, EE_WON_RTQ_READ_DATA, c); }
+    void GetClientListEx(RouteCompletion* c) { RoutingRequestValues().Run(this, EE_WON_RTQ_CLIENT_LIST_EX, c); }
+    void SetGroupName(unsigned short inGroupId, const std::wstring& inName, RouteCompletion* c)
+    { RoutingRequestValues().N(inGroupId).W(inName).Run(this, EE_WON_RTQ_SET_GROUP_NAME, c); }
+    void SetGroupMaxPlayers(unsigned short inGroupId, unsigned short inMaxPlayers, RouteCompletion* c)
+    { RoutingRequestValues().N(inGroupId).N(inMaxPlayers).Run(this, EE_WON_RTQ_SET_GROUP_MAX_PLAYERS, c); }
+    void RelinquishCaptaincy(unsigned short inGroupId, unsigned short inNewCaptainId, RouteCompletion* c)
+    { RoutingRequestValues().N(inGroupId).N(inNewCaptainId).Run(this, EE_WON_RTQ_RELINQUISH, c); }
+    // nothing for an empty list
+    void SendServerAlertWithRecipientList(const std::wstring& inText, std::list<unsigned short>& inRecipients,
+                                          RouteCompletion* c)
+    { RoutingRequestValues().W(inText).L(inRecipients).Run(this, EE_WON_RTQ_ALERT_TO, c); }
+    // a RoutingDetectFirewallOp
+    void DetectFirewall(unsigned short inListenPort, unsigned long inMaxConnectSeconds, bool inDoListen, RouteCompletion* c)
+    { RoutingRequestValues().N(inListenPort).N(inMaxConnectSeconds).N(inDoListen).Run(this, EE_WON_RTQ_DETECT_FIREWALL, c); }
+    void GetBadUserList(RoutingBadUserListType inListType, unsigned short inGroupId, unsigned char inFlags, RouteCompletion* c)
+    { RoutingRequestValues().N(inListType).N(inGroupId).N(inFlags).Run(this, EE_WON_RTQ_BAD_USERS, c); }
 
-// Members of RoutingConnection (0x1c0).
-// All return void.
-void SetClientFlags(unsigned long clientMask, unsigned long clientFlags,
-    unsigned long asyncMask, unsigned long asyncFlags,
-    CompletionBase<AsyncOpPtr>* completion); //2be390 ret14
-void SetGroupFlags(unsigned short groupId, unsigned long groupMask,
-    unsigned long groupFlags, unsigned long asyncMask, unsigned long asyncFlags,
-    CompletionBase<AsyncOpPtr>* completion); //2bdc10 ret18
-void SendData(const ByteBuffer* data, unsigned char flags, unsigned short recipient,
-    CompletionBase<AsyncOpPtr>* completion); //2be910 ret10; flags lowbyte in2bea70
-void SendData(const ByteBuffer* data,unsigned char flags,const std::list<unsigned short>& recipients,
-    CompletionBase<AsyncOpPtr>* completion); //2bea70 ret10; SDK overload
-void BanClient(unsigned short groupId, bool isBanned, unsigned long seconds,
-    const std::wstring& explanation, unsigned short clientId,
-    CompletionBase<AsyncOpPtr>* completion); //2bf590 ret18; SDKBanClientByClientId
-void AcceptClient(unsigned short groupId, unsigned short clientId, bool accepted,
-    const std::wstring& explanation,
-    CompletionBase<AsyncOpPtr>* completion); //2bd9f0 ret14
-void InviteClient(unsigned short groupId, unsigned short clientId, bool invited,
-    const std::wstring& explanation,
-    CompletionBase<AsyncOpPtr>* completion); //2bdb00 ret14
-void BanClientByCDKeyId(unsigned short groupId,bool on,unsigned long seconds,
-    const std::wstring& explanation,unsigned long cdKeyId,
-    CompletionBase<AsyncOpPtr>* completion); //dispatch (WON SDK); no original address identified
-void BanClientByWONId(unsigned short groupId, bool on, unsigned long seconds,
-    const std::wstring& explanation, unsigned long wonId,
-    CompletionBase<AsyncOpPtr>* completion); //2bf6b0 ret18
-void MuteClientByWONId(unsigned short groupId, bool on, unsigned long seconds,
-    const std::wstring& explanation, unsigned long wonId,
-    CompletionBase<AsyncOpPtr>* completion); //2bf8f0 ret18
-void BecomeModerator(bool moderatorOn,
-    CompletionBase<AsyncOpPtr>* completion); //2bf3f0 ret8
-void MuteClient(unsigned short groupId, bool isMuted, unsigned long seconds,
-    const std::wstring& explanation, unsigned short clientId,
-    CompletionBase<AsyncOpPtr>* completion); //2bf7d0 ret18; SDKMuteClientByClientId
-void SendServerAlert(const std::wstring& text,
-    CompletionBase<AsyncOpPtr>* completion); //2bddd0 ret8
-void StartServerShutdown(const std::wstring& text, unsigned long seconds,
-    CompletionBase<AsyncOpPtr>* completion); //2be010 ret0c
-void AbortServerShutdown(CompletionBase<AsyncOpPtr>* completion); //2be200 ret4
-
-// Further WON SDK operation functions; no original address identified.
-    void DisconnectClient(CompletionBase<AsyncOpPtr> *theCompletion);
-    void GetClientCDKeyIdList(CompletionBase<AsyncOpPtr> *theCompletion, bool bDoSubscribe);
-    void GetClientListEx(CompletionBase<AsyncOpPtr> *theCompletion);
-    void SetGroupName(unsigned short theGroupId, const std::wstring &theName, CompletionBase<AsyncOpPtr> *theCompletion);
-    void SetGroupMaxPlayers(unsigned short theGroupId, unsigned short theMaxPlayers, CompletionBase<AsyncOpPtr> *theCompletion);
-    void RelinquishCaptaincy(unsigned short theGroupId, unsigned short theNewCaptainId, CompletionBase<AsyncOpPtr> *theCompletion);
-    void SendServerAlertWithRecipientList(const std::wstring &theAlertText, std::list<unsigned short>& recipientList, CompletionBase<AsyncOpPtr> *theCompletion);
-    void DetectFirewall(unsigned short theListenPort, unsigned long theMaxConnectSeconds, bool doListen, CompletionBase<AsyncOpPtr> *theCompletion);
-    void MuteClientByCDKeyId(unsigned short theGroupId, bool isMuted, unsigned long theSeconds, 
-	const std::wstring &theComment, unsigned long theCDKeyId, CompletionBase<AsyncOpPtr> *theCompletion);
-    void GetBadUserList(RoutingBadUserListType theListType, unsigned short theGroupId, unsigned char theFlags,
-									   CompletionBase<AsyncOpPtr> *theCompletion);
-
-
-    virtual void CloseHook(); //CloseHook2bcb20
-    virtual void KillHook();  //KillHook2bcbb0
-    virtual void MsgCallback(const ByteBuffer*); //MsgCallback2bc850, ret4
+    virtual void CloseHook() { ee_won_routeconn_close_hook(this->mRoute); } // 2bcb20: the ops killed, the list emptied
+    virtual void KillHook() { ee_won_routeconn_kill_hook(this->mRoute); } // 2bcbb0: the completions dropped
+    // 2bc850: the message to the first pending or unsolicited op that takes it
+    virtual void MsgCallback(const ByteBuffer* inData)
+    { ee_won_routeconn_msg_callback(this->mRoute, reinterpret_cast<const uint8_t*>(inData->data()), inData->length()); }
     // (the record factories GetNewClientInfo 2ba100, GetNewMemberInfo 2ba230 and GetNewGroupInfo 2ba300 are gone:
     // the ops' records are Rust's since net round 18)
-    virtual SmartPtr<RoutingOp> GetUnsolicitedDerivedOp(unsigned char); //GetUnsolicitedDerivedOp2bc6c0, sret+arg ret8
+    // 2bc6c0: a new derived-server op when every derived message is unsolicited, else NULL
+    virtual SmartPtr<RoutingOp> GetUnsolicitedDerivedOp(unsigned char)
+    { return this->mAllDerivedOpsAreUnsolicited ? new RoutingOp(this, 60) : NULL; } // RoutingOp_DerivedServerOp
     virtual void RoutingOpCompleteHook(RoutingOp*) {} //inline RoutingOpCompleteHook (WON SDK), shared 30a800 ret4
-    // 04/10/14 are inherited unchanged; no generic vtable padding or aliases.
+    EeWonRouteConn* GetRouteObject() const { return this->mRoute; }
     bool mAllDerivedOpsAreUnsolicited; //c4 (GetUnsolicitedDerivedOp reads it)
 protected:
-    virtual ~RoutingConnection(); //ordinary2ba4b0; explicit own-vptr store
+    virtual ~RoutingConnection() { ee_won_routeconn_free(this->mRoute); } //2ba4b0
 private:
+    void Moderate(int inKind, unsigned short inGroupId, bool inOn, unsigned long inSeconds,
+                  const std::wstring& inExplanation, unsigned long inId, RouteCompletion* c)
+    { RoutingRequestValues().N(inGroupId).N(inOn).N(inSeconds).W(inExplanation).N(inId).Run(this, inKind, c); }
     RoutingConnection(const RoutingConnection&);
     RoutingConnection& operator=(const RoutingConnection&);
     EeWonRouteConn* mRoute; // owned
 };
+// 6c7b40: a routing op of a type on a connection (or none): the Rust op with its constructor's members
+inline RoutingOp::RoutingOp(RoutingConnection* inConnection, RoutingOpType inType)
+    : mConnection(inConnection), mRust(ee_won_routeop_new_on((int32_t)inType, static_cast<RefCount*>(inConnection))) {}
 
 // The client, group and member model, the ignore list, the chat commands and the snapshots are a Rust object since
 // net round 17 (rust/crates/ee_won/src/smartroute.rs EeWonSmartRoute: the maps +0x1c0..0x1d7, the iterators, the
@@ -1577,36 +1721,68 @@ public:
             mMemberCount(0) {}
     };
     SmartRoutingConnection(); //2bfb00; the 0x258 allocation is this class
-    virtual void CloseHook(); //CloseHook2c4120
-    virtual void RoutingOpCompleteHook(RoutingOp*); //2c0be0
+    // 2c4120: this client's id and record forgotten, then the routing connection closed
+    virtual void CloseHook()
+    {
+        { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_close(this->mModel); }
+        RoutingConnection::CloseHook();
+    }
+    // 2c0be0: the maps updated from a finished op by its type; a chat, invitation or join attempt from an ignored
+    // client loses its completion
+    virtual void RoutingOpCompleteHook(RoutingOp* inOp)
+    {
+        AutoCrit aCrit(this->GetDataLock());
+        if (ee_won_smart_routeop(this->mModel, inOp->mRust, inOp->GetStatus())) inOp->SetCompletion(NULL);
+    }
     bool GetClient(unsigned short,ClientInfo&);
     bool GetGroup(unsigned short,GroupInfo&);
     bool GetMember(unsigned short,unsigned short,MemberInfo&);
-    void StartClientItr();
+    void StartClientItr() { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_start(this->mModel, 0, 0); }
     bool GetNextClient(ClientInfo&);
-    void StartGroupItr();
+    void StartGroupItr() { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_start(this->mModel, 1, 0); }
     bool GetNextGroup(GroupInfo&);
-    bool StartMemberItr(unsigned short);
+    bool StartMemberItr(unsigned short inId)
+    { AutoCrit aCrit(this->GetDataLock()); return ee_won_smart_start(this->mModel, 2, inId); }
     bool GetNextMember(MemberInfo&);
     bool GetLastTargetMember(MemberInfo&);
     bool GetLastTargetClient(ClientInfo&);
     // 2c35a0: the client a typed name refers to (exact, unique prefix, ambiguous or not found); outFound when the
     // search set one (the original's out pointer)
     MatchResult FindClient(const std::wstring&, ClientInfo&, bool& outFound);
-    void IgnoreClient(unsigned short inClientId, bool inOn); //2c37d0, the client GetClient(id) finds
-    void AddCommandString(const std::wstring&, InputCommand); //2c3970
-    void ClearCommandStrings();
-    void SetAllowPartialNameMatch(bool); //2c40a0
-    void SetServerWideCommands(bool); //2c40f0
-    void SetDoColonEmote(bool);
-    bool HandleInput(const std::wstring&,int=-1);
-    void SetProductName(const std::string&); //2c2fc0, the ignore file's path (provisional name)
+    // 2c37d0: the client GetClient(id) finds ignored or not, the ignore list saved
+    void IgnoreClient(unsigned short inClientId, bool inOn)
+    { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_ignore(this->mModel, inClientId, inOn); }
+    // 2c3970: a chat command word (case-insensitive)
+    void AddCommandString(const std::wstring& inText, InputCommand inCommand)
+    {
+        AutoCrit aCrit(this->GetDataLock());
+        ee_won_smart_add_command(this->mModel, inText.data(), inText.length(), inCommand);
+    }
+    void ClearCommandStrings() { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_clear_commands(this->mModel); }
+    void SetAllowPartialNameMatch(bool inAllow) { this->SetSmart(EeWonSmartNumber::PartialNames, inAllow); } //2c40a0
+    void SetServerWideCommands(bool inOn) { this->SetSmart(EeWonSmartNumber::ServerWide, inOn); } //2c40f0
+    void SetDoColonEmote(bool inOn) { this->SetSmart(EeWonSmartNumber::ColonEmote, inOn); }
+    // a line of chat input: a command, a colon emote or a broadcast; its request sent (ee_won routecpp.rs)
+    bool HandleInput(const std::wstring& inInput, int inGroupIdContext = -1)
+    {
+        AutoCrit aCrit(this->GetDataLock());
+        return ee_won_smart_handle_input(this->mModel, static_cast<RefCount*>(this), inInput.data(), inInput.length(),
+                                         inGroupIdContext);
+    }
+    // 2c2fc0, the ignore file's path (provisional name)
+    void SetProductName(const std::string& inPath)
+    {
+        AutoCrit aCrit(this->GetDataLock());
+        ee_won_smart_set_path(this->mModel, reinterpret_cast<const uint8_t*>(inPath.data()), inPath.length());
+    }
     void ClearProductName() { this->SetProductName(""); }
-    unsigned short GetMyClientId(); // OnChat 0x4d040c
+    unsigned short GetMyClientId() // OnChat 0x4d040c
+    { AutoCrit aCrit(this->GetDataLock()); return (unsigned short)ee_won_smart_number(this->mModel, EeWonSmartNumber::ClientId); }
     EeWonSmartRoute* mModel; // owned
 protected:
-    virtual ~SmartRoutingConnection();
+    virtual ~SmartRoutingConnection() { ee_won_smart_free(this->mModel); }
 private:
+    void SetSmart(EeWonSmartNumber inWhich, bool inOn) { AutoCrit aCrit(this->GetDataLock()); ee_won_smart_set(this->mModel, inWhich, inOn); }
     SmartRoutingConnection(const SmartRoutingConnection&);
     SmartRoutingConnection& operator=(const SmartRoutingConnection&);
 };
@@ -1619,5 +1795,8 @@ typedef SmartPtr<SmartRoutingConnection> SmartRoutingConnectionPtr;
 
 
 }
+
+// CDKey and AuthContext (their forwarders need the classes above)
+#include "ee/wonapi/WONAuthContext.h"
 
 #endif

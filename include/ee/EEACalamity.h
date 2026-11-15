@@ -21,7 +21,7 @@ public:
         this->mY = 0;
         this->mValid = 1;
     }
-    virtual ~EEACalamity();                 // 0x1a8d
+    virtual ~EEACalamity();
     virtual void Virtual4();                // +0x04 (ICF-folded into EEALasso::Virtual4 0x28c4)
     virtual void Virtual8();                // +0x08 (the shared empty slot 0x1720c6)
     void Cast(const GE2DPoint& inLocation);     // 0x1ab2: posts an EEMCastCalamity at inLocation

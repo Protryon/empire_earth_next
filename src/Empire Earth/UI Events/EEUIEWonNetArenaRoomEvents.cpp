@@ -57,6 +57,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEWonNet.h"
+#include "ee/wonapi/WONRouting.h" // AuthContext (WONAuthContext.h)
 #include "ee/EEUICWonNetRoomsBox.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
@@ -66,7 +67,6 @@ static unsigned long sLastUpdateTime;
 
 static long JoinSelectedRoom(UIForm* inForm);
 
-// FUNCTION: EXE 0x5eafcb
 // Refreshes the WON room list, its server name and game count every 10 seconds or when the list changed
 long EEUIEWNARUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -82,7 +82,6 @@ long EEUIEWNARUpdateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5eb075
 // Installs the room list's update event the first time and refreshes the room list, server name and game count
 long EEUIEWNARActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -100,16 +99,11 @@ long EEUIEWNARActivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5eb12c
-// Destroys the room list's update event and frees it when asked (scalar deleting destructor)
-// Back below returns to the previous screen (ICF-folded into EEUIEWNMUACancel 0x5eb7e8: no address of its own)
-
 long EEUIEWNARBack::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     return inForm->GetManager()->Pop();
 }
 
-// FUNCTION: EXE 0x5eb157
 // Removes the current form's update event when the room list is deactivated
 long EEUIEWNARDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -117,14 +111,12 @@ long EEUIEWNARDeactivateForm::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5eb172
 // Joins the double-clicked WON room
 long EEUIEWNARDoubleClickRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     return JoinSelectedRoom(inForm);
 }
 
-// FUNCTION: EXE 0x5eb17f
 // Joins the WON room selected in the room list; always returns 0
 static long JoinSelectedRoom(UIForm* inForm)
 {
@@ -138,7 +130,6 @@ static long JoinSelectedRoom(UIForm* inForm)
     return 0;
 }
 
-// FUNCTION: EXE 0x5eb1ec
 // Opens the update-account screen and asks WON for the account details
 long EEUIEWNARClickUpdateAccount::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -153,11 +144,6 @@ long EEUIEWNARClickUpdateAccount::ProcessEvent(UIForm* inForm, UIEntity* inEntit
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5eb28d
-// Destroys the update-account open event and frees it when asked (scalar deleting destructor)
-// (??_G of EEUIEWNMUAOpenScreen)
-
-// FUNCTION: EXE 0x5eb2b8
 // Joins the selected WON room, at most once every 5 seconds
 long EEUIEWNARJoinRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -170,7 +156,6 @@ long EEUIEWNARJoinRoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x5eb2e2
 // Sets up the WON room list: hooks its buttons and list to their events, shows the user name and connects to the lobby
 long EEUIEWNAROpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -194,22 +179,3 @@ long EEUIEWNAROpenScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     sLastUpdateTime = TMGetTime();
     return kErrorOK;
 }
-
-// FUNCTION: EXE 0x5eb4e0
-// Destroys the room list's activate event and frees it when asked (scalar deleting destructor)
-// (??_G in declaration order: ActivateForm, Back, DeactivateForm, DoubleClickRoom, ClickUpdateAccount, JoinRoom)
-
-// FUNCTION: EXE 0x5eb50b
-// Destroys the room list's back event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eb536
-// Destroys the room list's deactivate event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eb561
-// Destroys the room list's double-click event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eb58c
-// Destroys the room list's update-account event and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x5eb5b7
-// Destroys the room list's join event and frees it when asked (scalar deleting destructor)

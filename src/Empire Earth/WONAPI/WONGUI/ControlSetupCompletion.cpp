@@ -18,7 +18,6 @@ WONScrollContainer::WONScrollContainer()
     this->mHeaderHeight=0;
     this->mTransparent=false;
 }
-// FUNCTION: WON 0x00719f70
 // Copies another scroll container's frame and corner component
 void WONScrollContainer::CopyAttributes(WONScrollContainer* from)
 {
@@ -26,15 +25,3 @@ void WONScrollContainer::CopyAttributes(WONScrollContainer* from)
     this->SetCorner(from->mCorner.get());
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00719c50
-// (public: __thiscall WONAPI::WONScrollContainer::WONScrollContainer(void)    [??0WONScrollContainer@WONAPI@@QAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00719cc0
-// (public: virtual void * __thiscall WONAPI::WONScrollContainer::`scalar deleting destructor'(unsigned int)    [??_GWONScrollContainer@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00719ce0
-// (public: virtual __thiscall WONAPI::WONScrollContainer::~WONScrollContainer(void))

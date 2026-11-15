@@ -44,23 +44,17 @@
 #include "ee/EEUGRust.h"
 
 
-// FUNCTION: EXE 0x44fd61
 // Creates a space fighter sub-group belonging to the given attack group
 EECPASGSpaceFighter::EECPASGSpaceFighter(EECPAttackGroup* inGroup, long inKind)
     : EECPASGSpaceship(inGroup, inKind)
 {
 }
 
-// SYNTHETIC: EXE 0x44fd7d
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x44fd99
 // Destroys the space fighter sub-group (base members only)
 EECPASGSpaceFighter::~EECPASGSpaceFighter()
 {
 }
 
-// FUNCTION: EXE 0x44fda4
 // Orders a unit to attack the target (or the unit holding it): off the map it gets an attack goal; on the map,
 // unless taking off, landing or out of fuel while airborne, it flies to the target's tile
 void EECPASGSpaceFighter::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTarget, EETileCoordinate* inTile)
@@ -100,7 +94,6 @@ void EECPASGSpaceFighter::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUn
     }
 }
 
-// FUNCTION: EXE 0x44fffb
 // Takes any requested units; without an active task, releases every unit's target, flags it for orders and
 // zeroes on-map units' flight time unless units were just taken
 void EECPASGSpaceFighter::GoIdle()
@@ -120,7 +113,6 @@ void EECPASGSpaceFighter::GoIdle()
     }
 }
 
-// FUNCTION: EXE 0x4500d8
 // Switches state: idle gets a task and goes idle; remove, launch, hold-at-task and hold-territory (return to the
 // task) run their handlers; other states go to the spaceship class
 void EECPASGSpaceFighter::SetState(long inState, long inTime)
@@ -154,7 +146,6 @@ void EECPASGSpaceFighter::SetState(long inState, long inTime)
     }
 }
 
-// FUNCTION: EXE 0x45019d
 // Runs the state machine (next update in 3 s): scans or drops targets, updates units, then moves between the idle,
 // wait, launch, hold, follow, reposition and hold-territory states as their conditions change
 void EECPASGSpaceFighter::Update(long inTime)
@@ -233,7 +224,6 @@ void EECPASGSpaceFighter::Update(long inTime)
     this->mNextUpdateTime = inTime + 3000;
 }
 
-// FUNCTION: EXE 0x450433
 // Sends every active unit to the location (its area if off the map): units off the map prepare to move, others
 // not taking off or landing get a move goal, forced for active non-wonder tasks
 void EECPASGSpaceFighter::SetDestination(const EECPILocation& inLocation)
@@ -273,7 +263,6 @@ void EECPASGSpaceFighter::SetDestination(const EECPILocation& inLocation)
     }
 }
 
-// FUNCTION: EXE 0x45072c
 // Sends one unit to the centre of the location's tile (its area if off the map) like SetDestination; inFlag forces it
 void EECPASGSpaceFighter::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation& inLocation, bool inFlag)
 {
@@ -304,9 +293,7 @@ void EECPASGSpaceFighter::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPI
     }
 }
 
-// ICF-FOLDED: EXE 0x442220
 // Gives a live, enabled unit that is on the map or held by another the goal and starts the action; false otherwise
-// (no address of its own: the same body as EECPASGAir::GiveGoal, which ICF kept; [sib 5])
 bool EECPASGSpaceFighter::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bool inKeepCurrent, long inAction)
 {
     bool theResult = false;
@@ -320,9 +307,7 @@ bool EECPASGSpaceFighter::GiveGoal(EEComplexUnit* inUnit, EEUnitGoal* inGoal, bo
     return theResult;
 }
 
-// ICF-FOLDED: EXE 0x441d2f
 // Clears every unit's goals and all goal queues of the base or carrier holding it, then disbands the sub-group
-// (no address of its own: the same body as EECPASGAir::Disband, which ICF kept; [sib 56])
 void EECPASGSpaceFighter::Disband()
 {
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
@@ -338,9 +323,7 @@ void EECPASGSpaceFighter::Disband()
     EECPAttackSubGroup::Disband();
 }
 
-// ICF-FOLDED: EXE 0x4423d4
 // Recalls every active unit (zeroes its flight time or clears its holder's goals), clears its goals, asks for removal
-// (no address of its own: the same body as EECPASGAir::RequestRemoval, which ICF kept)
 void EECPASGSpaceFighter::RequestRemoval()
 {
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
@@ -355,9 +338,7 @@ void EECPASGSpaceFighter::RequestRemoval()
     EECPAttackSubGroup::RequestRemoval();
 }
 
-// ICF-FOLDED: EXE 0x441ef8
 // Launches the sub-group: every unit retargets now and needs orders, then all fly to the task location if active
-// (no address of its own: the same body as EECPASGAir::Launch, which ICF kept)
 void EECPASGSpaceFighter::Launch(long inTime)
 {
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {

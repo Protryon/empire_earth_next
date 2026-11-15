@@ -4,83 +4,35 @@
 // GetConditionCount COMDAT, then the trigger events' ??_G). After EESETSObject.cpp (whose range ends with
 // vector<UWideString>::operator= 0x1937b1), before EESETSUICBPlayer.cpp (0x196ebe). Unit flags: the exe module set.
 #include <windows.h>
-#include <mbstring.h>
-#include <algorithm>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
-#include "lle/GESurface.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GETextureManager.h"
-#include "lle/GETexture.h"
-#include "GEWindow.h"
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
-#include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
-#include "lle/GEBitmap.h"
-#include "lle/FSFileSpec.h"
-#include "lle/FSArchive.h"
-#include "lle/FSPath.h"
-#include "lle/TMPoll.h"
-#include "lle/TSCriticalSection.h"
-#include "lle/TSScheduler.h"
-#include "lle/SESample.h"
-#include "lle/SESMInstanceNode.h"
-#include "lle/SESoundManager.h"
-#include "lle/Input System.h"
-#include "lle/ISKeyboard.h"
-#include "lle/ISMouse.h"
-#include "lle/UIControl.h"
-#include "lle/UIEvent.h"
-#include "lle/UIEntityGroup.h"
-#include "lle/UIBackground.h"
-#include "lle/UIFontTable.h"
-#include "lle/UIHotKey.h"
-#include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
-#include "lle/UIButton.h"
-#include "lle/NEMessage.h"
-#include "lle/NESynchronousCommunications.h"
-#include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIListBox.h"
-#include "lle/GEFont.h"
 #include "lle/GEText.h"
 #include "lle/UILBString.h"
-#include "lle/UIComboBox.h"
 #include "lle/UIFileComboBox.h"
-#include "lle/UIFormManager.h"
 #include "lle/UResourceFile.h"
-#include "lle/UISlider.h"
 #include "lle/UICheckBox.h"
 #include "lle/UIRadioButton.h"
-#include <vector>
-#include <deque>
 #include "ee/EmpireEarth.h"
-#include "ee/EEAction.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
-#include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 #include "lle/USingleton.h"
-#include "ee/EECalamityClass.h"
-#include "ee/EECalamityManager.h"
 #include "ee/EEMedia.h"
-#include "ee/EEGraphicEffect.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "ee/EESETSEScenarioComboBox.h"
-#include "ee/EESETSUICBPlayer.h"
-#include "ee/EESETSEffectControls.h"
-#include "ee/EESMArea.h"
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESMCondition.h"
 #include "ee/EESMTrigger.h"
@@ -89,15 +41,8 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
-#include "ee/EESMTConditionWrapper.h"
-#include "ee/EESMTEffectWrapper.h"
-
-// FUNCTION: EXE 0x595c35
-// Creates a trigger combo box whose right click opens the picked entry's tab (kind: condition or effect)
-// EESETSTriggerUIComboBox::EESETSTriggerUIComboBox (inline, ee/EESETSTriggerUIComboBox.h)
 
 // NEAR: register choice (the original keeps this in edi and the selection in a stack slot) and the screen via the refused vector operator[]
-// FUNCTION: EXE 0x595cb5
 // Opens the tab of the entry picked in the combo box on a right click and selects it there: triggers,
 // conditions (object conditions go to the object tab), effects, objects or areas
 long EESETSTriggerUIComboBox::MouseRButtonUp()
@@ -195,13 +140,6 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     return 0;
 }
 
-// SYNTHETIC: EXE 0x595f98
-// (EESETSTriggerUIComboBox's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x595fc2
-// (EESETSTrigger's scalar deleting destructor)
-
-
 // The trigger screen whole in Rust (ee_screens editor_trigger.rs): the constructor (0x59393b), the destructor
 // (0x595fde), Sort, MoveDown, MoveUp, Delete, UpdateSecondConditionRow, UpdateSecondEffectRow, Duplicate, Activate,
 // Store (0x596415), ChangeOperator, GetNames, Hide, Load (0x596785), New, RemoveEntry, ShowOperator, Show and the
@@ -210,7 +148,6 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
 
 extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
 
-// FUNCTION: EXE 0x59393b
 // Builds the trigger sub-screen: if/then labels, two condition and two effect rows (not, combo, and/or,
 // delay, remove), scroll buttons and the is-on, condition timer, looping and cinematic check boxes (editor_trigger.rs)
 EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
@@ -221,7 +158,6 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x595fde
 // Destroys the trigger sub-screen's controls and releases its operator event (editor_trigger.rs)
 EESETSTrigger::~EESETSTrigger()
 {
@@ -252,8 +188,6 @@ void EESETSTrigger::DecrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP
 void EESETSTrigger::IncrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 3); }
 void EESETSTrigger::GetNames(std::vector<UWideString>& outNames) { ee_screens_setr_get_names(this->mRust, &outNames); }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESETSTrigger::Deactivate()
 {
 }
