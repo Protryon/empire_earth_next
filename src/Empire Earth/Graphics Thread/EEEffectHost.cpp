@@ -1567,7 +1567,7 @@ EEEffect::EEEffect(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* i
 // scaled location, the blast's 15 higher for a high-arc shooter (0xe6664, 0xe2f58)
 EEEffect::EEEffect(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind)
 {
-    static const float kTargetLift = 15.0f;   // 0x440014
+    static const float kTargetLift = 15.0f;
     if (inKind == 0x40) {
         this->Attach(inFrom, inGraphicEffect, inKind, false);
         this->mTarget = inTo;
@@ -1965,7 +1965,6 @@ long EEEffect::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEf
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
 }
 
-// FUNCTION: EXE 0x504623
 // Creates one sprite part per tag point of the effect's kind on the unit (else one part at the unit, tag 10000),
 // lifting a buried position by inOffset; returns the position and the height (farthest part + effect size)
 void EEEffect::CreateParts(GE3DPoint& outPosition, float& outHeight, float inOffset)
@@ -2115,7 +2114,6 @@ const EeGfxDecalHost kDecalHost = {NULL, EEDecalOps::Effect, EEDecalOps::Next, E
                                    EEDecalOps::Place};
 }
 
-// FUNCTION: EXE 0x4de374
 // Places up to N shell-hole decals of the unit's class around a point (ambient effects on); stops on a failed roll
 // The first one renews a decal already on that spot instead, unless its scatter roll moves it
 void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
@@ -2125,7 +2123,6 @@ void EEPlaceImpactDecal(EEComplexUnit* inUnit, GE3DPoint& inLocation)
         ee_gfx_decal_impact(&kDecalHost, theEffect, reinterpret_cast<const EeGe3DPoint*>(&inLocation));
 }
 
-// FUNCTION: EXE 0x4de4a9
 // Places the unit class's blood-stain decal under the unit if ambient effects and blood are on and its roll passes
 // (moved forward along the heading for giraffes and horses)
 void EEPlaceTrackDecal(EEComplexUnit* inUnit)
@@ -2142,7 +2139,6 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit)
                        theTransformation.mMatrix[0][0], theTransformation.mMatrix[1][0]);
 }
 
-// FUNCTION: EXE 0x4e1814
 // Scales the rotation part of a transformation by a factor (the translation is kept) (from the deleted
 // EEE2DImpact.cpp, whose range held it)
 void EETagPointList::Scale(GETransformation& ioTransformation, float inScale)

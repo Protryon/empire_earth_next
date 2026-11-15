@@ -52,10 +52,6 @@
 #include "lle/FSMemoryFile.h"
 
 
-// SYNTHETIC: EXE 0x5054ec
-// SYNTHETIC: EXE 0x5054f6
-// SYNTHETIC: EXE 0x505507
-// SYNTHETIC: EXE 0x505513
 // the guarded atexit dtor says a class static
 const UString EEEffectManager::sData("EEEffectManager-Data");
 
@@ -142,17 +138,12 @@ static long EERegisterEffect(EEEffectManager* inManager, EEEffect* inEffect, con
                                  outHandle ? &outHandle->mValue : NULL);
 }
 
-// FUNCTION: EXE 0x50552f
 // Creates an effect manager with no effects and no queued destructions
 EEEffectManager::EEEffectManager()
 {
     this->mStore = ee_gfx_effects_new();
 }
 
-// SYNTHETIC: EXE 0x50558c
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x5055a8
 // Destroys the manager, releasing every effect
 EEEffectManager::~EEEffectManager()
 {
@@ -161,7 +152,6 @@ EEEffectManager::~EEEffectManager()
     this->mStore = NULL;
 }
 
-// FUNCTION: EXE 0x50562c
 // Creates, sets up and registers the effect of the graphic effect's kind on a unit (kinds that need a living unit
 // return 10 without one); returns 10 for other kinds, else SetUp's result (added even when SetUp fails)
 long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect, EEEffectHandle* outHandle, bool inKeepsUnit,
@@ -175,7 +165,6 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
 }
 
 
-// FUNCTION: EXE 0x505e21
 // Creates, sets up and registers a two-unit effect (muzzle blast, winter breath, tracers, shells, projectile,
 // tracer beam); returns 10 for other kinds or missing units, else SetUp's result
 long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inEffect,
@@ -189,7 +178,6 @@ long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEG
 }
 
 
-// FUNCTION: EXE 0x506038
 // Creates, sets up and registers a unit-to-point effect (muzzle blast, projectile, citizen beam, tracer beam,
 // command confirmation, pulse cannon ball); returns 10 for other kinds or a missing unit, else SetUp's result
 long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGraphicEffect* inEffect,
@@ -202,7 +190,6 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x5061e9
 // Creates, sets up and registers an effect of the graphic effect's kind at a map point; returns 10 for kinds
 // without a point version, else SetUp's result
 long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect* inEffect, EEEffectHandle* outHandle)
@@ -214,7 +201,6 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x5064e6
 // Creates, sets up and registers a water ripple or battlefield decal at a transformation; returns 10 for other
 // kinds, else SetUp's result
 long EEEffectManager::CreateTransformationEffect(const GETransformation& inTransformation, EEGraphicEffect* inEffect,
@@ -229,7 +215,6 @@ long EEEffectManager::CreateTransformationEffect(const GETransformation& inTrans
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x506596
 // Creates, sets up and registers a particle, particle emitter or multi-effect along a line; returns 10 for other
 // kinds, else SetUp's result
 long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffect, EEEffectHandle* outHandle)
@@ -241,7 +226,6 @@ long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffe
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x50667c
 // Creates, sets up and registers an earthquake, 3D projectile or marching line between two points; other kinds
 // create nothing and return 0
 long EEEffectManager::CreateEffectBetween(GE3DPoint& inFrom, GE3DPoint& inTo, EEGraphicEffect* inEffect,
@@ -254,7 +238,6 @@ long EEEffectManager::CreateEffectBetween(GE3DPoint& inFrom, GE3DPoint& inTo, EE
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x50673e
 // Creates, sets up and registers rain or snow over a set of tiles; other kinds create nothing and return 0
 long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect,
                                           EEEffectHandle* outHandle)
@@ -266,7 +249,6 @@ long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& i
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
 
-// FUNCTION: EXE 0x506852
 // Returns the effect with the given handle, or null
 EEEffect* EEEffectManager::GetEffect(EEEffectHandle inHandle)
 {
@@ -275,7 +257,6 @@ EEEffect* EEEffectManager::GetEffect(EEEffectHandle inHandle)
     return EEStoreEffect(ee_gfx_effects_find(this->mStore, inHandle.mValue));
 }
 
-// FUNCTION: EXE 0x506889
 // Unlinks and releases every effect and empties the handle index
 void EEEffectManager::ClearEffects()
 {
@@ -284,7 +265,6 @@ void EEEffectManager::ClearEffects()
     ee_gfx_effects_clear(this->mStore, &theHost);
 }
 
-// FUNCTION: EXE 0x5068c6
 // Queues an effect for destruction at the next update; returns 0
 long EEEffectManager::DestroyEffect(EEEffectHandle inHandle)
 {
@@ -292,7 +272,6 @@ long EEEffectManager::DestroyEffect(EEEffectHandle inHandle)
     return 0;
 }
 
-// FUNCTION: EXE 0x5068d8
 // After a load, repairs every effect's pointers, dropping effects whose unit is gone or that are above the
 // detail setting, then the goal markers'; returns the first other error
 long EEEffectManager::RepairPointers(unsigned long inFirst, unsigned long inSecond)
@@ -302,7 +281,6 @@ long EEEffectManager::RepairPointers(unsigned long inFirst, unsigned long inSeco
     return ee_gfx_effects_repair(this->mStore, &theHost);
 }
 
-// FUNCTION: EXE 0x506978
 // Reads the handle counter, then each effect by kind (old saves give handles anew when needed), the goal markers
 // and the destruction queue; returns the first read error (unknown kinds are not skipped)
 long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -313,7 +291,6 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return ee_gfx_effects_load(this->mStore, &theHost, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
-// FUNCTION: EXE 0x507305
 // Writes the handle counter, the saved effects (kind, then data), and the destruction queue; an effect's write
 // error can be overwritten by the next effect's result
 long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -324,7 +301,6 @@ long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     return ee_gfx_effects_save(this->mStore, &theHost, &theFile);
 }
 
-// FUNCTION: EXE 0x507430
 // Moves every effect on the old unit to the new one
 void EEEffectManager::ReplaceUnit(EEUnit* inOld, EEUnit* inNew)
 {
@@ -614,7 +590,6 @@ void EEEffectCaptureSweep()
     EESimCaptureRecord::Only(0);
 }
 
-// FUNCTION: EXE 0x507450
 // Updates the goal markers, destroys the queued effects, then steps every effect, removing those that finish
 // (Step returns 7)
 void EEEffectManager::Update()
@@ -626,7 +601,6 @@ void EEEffectManager::Update()
     EECaptureEffectStates(this);
 }
 
-// FUNCTION: EXE 0x5074c9
 // Tells every effect that the terrain height changed in a tile rectangle
 void EEEffectManager::ElevationChanged(long inLeft, long inTop, long inRight, long inBottom)
 {
@@ -637,18 +611,3 @@ void EEEffectManager::ElevationChanged(long inLeft, long inTop, long inRight, lo
         theEffect = theNext;
     }
 }
-
-// FUNCTION: EXE 0x5074f3
-// Destroys a handle index (map<unsigned long, EEEffect*>'s destructor)
-
-// FUNCTION: EXE 0x50751e
-// Empties a handle index (map<unsigned long, EEEffect*>::clear)
-
-// FUNCTION: EXE 0x507532
-// Erases a range of a handle index (map<unsigned long, EEEffect*>::erase(first, last))
-
-// FUNCTION: EXE 0x5075a3
-// Frees a subtree of a handle index (map<unsigned long, EEEffect*>'s _Erase)
-
-// FUNCTION: EXE 0x5075d5
-// Steps a handle-index iterator back (map<unsigned long, EEEffect*>::const_iterator::_Dec)

@@ -82,22 +82,16 @@ static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GE3DPoint) == s
               sizeof(GERectangle) == sizeof(EeGeRectangle) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
               sizeof(GEViewport) == sizeof(EeGeViewport) && sizeof(GEColor) == sizeof(EeGfxColor), "GE mirrors");
 
-// FUNCTION: EXE 0x5144e8
 // Creates the units' render object
 EEROUnits::EEROUnits()
 {
 }
 
-// SYNTHETIC: EXE 0x5144fa
-// (the scalar deleting destructor, emitted with the vtable; slot EEROUnits+0x10)
-
-// FUNCTION: EXE 0x514516
 // Destroys the units' render object
 EEROUnits::~EEROUnits()
 {
 }
 
-// FUNCTION: EXE 0x514521
 // Fills the render lists of units and objects for this frame
 void EEROUnits::FrameStarting()
 {
@@ -338,7 +332,6 @@ struct UnitsFrame {
 };
 }
 
-// FUNCTION: EXE 0x516a97
 // Loads the units' media: bar rhombi, command and dotted-line textures, the line buffer, the area-effect
 // ring model and the three selection ring models (segment count by detail level) (ee_gfx ro_units.rs)
 void EEROUnits::LoadMedia()
@@ -358,10 +351,6 @@ void EEROUnits::LoadMedia()
     }
 }
 
-// SYNTHETIC: EXE 0x5181a7
-// (GELine's vector deleting destructor, emitted for ReleaseMedia's delete[] sLines)
-
-// FUNCTION: EXE 0x518203
 // Draws the selections and rings (not in cinematics), the object and unit models, the buildings being
 // placed, the air selection rings and bars, then the effects' pass 5 (ee_gfx ro_units.rs)
 void EEROUnits::RenderScene()
@@ -370,7 +359,6 @@ void EEROUnits::RenderScene()
     ee_gfx_ro_units_render(&gEERustRaster, &theFrame.mScene);
 }
 
-// FUNCTION: EXE 0x51852f
 // Draws the unit labels (not in cinematics; ee_gfx ro_units.rs) and the effects' pass 3
 void EEROUnits::FrameDone()
 {
@@ -386,7 +374,6 @@ void EEROUnits::FrameDone()
     }
 }
 
-// FUNCTION: EXE 0x5185b5
 // Releases the units' media: bar rhombi, line buffer, textures, ring and selection models (ee_gfx ro_units.rs)
 void EEROUnits::ReleaseMedia()
 {
@@ -398,7 +385,6 @@ void EEROUnits::ReleaseMedia()
     ee_gfx_ro_units_release(&gEERustRaster);
 }
 
-// FUNCTION: EXE 0x518676
 // Projects a world point to window coordinates in the game view (ee_gfx units.rs)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 {
@@ -406,8 +392,6 @@ void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
                               reinterpret_cast<const EeGe3DPoint*>(&inPoint), reinterpret_cast<EeGe2DPoint*>(&outPoint));
 }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROUnits::SceneStarting()
 {
 }

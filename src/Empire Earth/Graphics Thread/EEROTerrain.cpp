@@ -44,7 +44,7 @@
 #include "ee/EERenderSnapshot.h"
 #include "rust/ee_gfx.h"
 
-extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
+extern unsigned long& gTextureMipLevelsToDrop;
 extern bool& gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)
 extern bool& gTrilinearFilter;               // 0x5308da (the sky textures use mip filtering; provisional name)
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)
@@ -58,17 +58,12 @@ std::vector<RTSMapTileRun> gGridRuns;
 GETexture* gAreaEffectTexture;
 GETexture* gCircleAreaEffectTexture;
 
-// FUNCTION: EXE 0x5125fb
 // Creates the terrain's render object with the terrain grid off
 EEROTerrain::EEROTerrain()
 {
     this->mGridMode = 0;
 }
 
-// SYNTHETIC: EXE 0x512611
-// (the scalar deleting destructor, emitted with the vtable; slot EEROTerrain+0x10)
-
-// FUNCTION: EXE 0x51262d
 // Destroys the terrain's render object
 EEROTerrain::~EEROTerrain()
 {
@@ -80,7 +75,6 @@ static EeGfxTerrainMedia EETerrainMedia()
     return theMedia;
 }
 
-// FUNCTION: EXE 0x512638
 // Prepares the frame: updates the sky colours and models, the clouds (black fog colour on space maps instead),
 // the fog of war (all seen for see-all or the free camera) and copies the map's grid runs
 void EEROTerrain::FrameStarting()
@@ -99,7 +93,6 @@ void EEROTerrain::FrameStarting()
     EETakeTerrainSnapshot();   // port: what RenderScene draws from the map and the editor (ee/EERenderSnapshot.h)
 }
 
-// FUNCTION: EXE 0x512e7f
 // Creates the sky dome model and its colour table, the star models, the clouds (when clouds are on) and
 // loads the area-effect textures (square and circle) (ee_gfx ro_terrain.rs, with CreateStarModels 0x5126ce and
 // CreateCloudModel 0x512bc4)
@@ -151,7 +144,6 @@ void TerrainEffects(void*)
 }
 }
 
-// FUNCTION: EXE 0x5131a4
 // Draws the sky (stars on space maps, the inner layer only with clouds on; else sky and clouds), the terrain,
 // the editor brush highlight, the map's coloured rectangles (erasing faded ones), grid, lines and ground effects
 // (ee_gfx ro_terrain.rs)
@@ -163,14 +155,12 @@ void EEROTerrain::RenderScene()
     ee_gfx_ro_terrain_render(&gEERustRaster, &theScene);
 }
 
-// FUNCTION: EXE 0x5138a6
 // Steps the terrain grid mode forwards or backwards through 0..17, wrapping around
 void EEROTerrain::StepGridMode(bool inBackwards)
 {
     this->mGridMode = ee_gfx_terrain_grid_mode_step((int32_t)this->mGridMode, inBackwards);   // ee_gfx terrain.rs
 }
 
-// FUNCTION: EXE 0x5138d2
 // Releases the sky, cloud and star models and textures and the two area-effect textures (ee_gfx ro_terrain.rs)
 void EEROTerrain::ReleaseSkyModels()
 {
@@ -179,27 +169,14 @@ void EEROTerrain::ReleaseSkyModels()
     gCircleAreaEffectTexture = NULL;
 }
 
-// the COMDATs closing the unit: the coloured rectangles' erase (vector<RTSColoredRectangle>::erase, its copy and the
-// element's implicit operator=) and RTSWorld::GetMap's refused copy
-// SYNTHETIC: EXE 0x5141c5
-// SYNTHETIC: EXE 0x514229
-// SYNTHETIC: EXE 0x514252
-// SYNTHETIC: EXE 0x51428f
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::FrameDone()
 {
 }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::SceneStarting()
 {
 }
 
-// ICF-FOLDED: EXE 0x557269
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROTerrain::Virtual14(long)
 {
 }

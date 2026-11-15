@@ -56,15 +56,7 @@
 #include "lle/U2DPoint.h"
 #include "ee/EESoundObject.h"
 
-// SYNTHETIC: EXE 0x50251d
-// SYNTHETIC: EXE 0x502527
-// SYNTHETIC: EXE 0x502538
-// SYNTHETIC: EXE 0x502544
 const UString EEEffect::sData("EEEffect-Data");
-
-// SYNTHETIC: EXE 0x502560
-// SYNTHETIC: EXE 0x502565
-// (the effects' random numbers, the original's file-static URandom: ee_gfx effect_state.rs)
 
 // The effects' records (ee_gfx effect_state.rs) hold the GE value classes as their mirrors
 static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation), "GE mirrors");
@@ -163,7 +155,6 @@ int32_t EEEffectBatchDraw(uint32_t inWhich, uint32_t inCount, void* inTexture)
                                       static_cast<GETexture*>(inTexture), gScreenIndex, gOrthographicView);
 }
 
-// FUNCTION: EXE 0x50269c
 // Creates the quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays
 // (provisional name)
 void CreateEffectBatchBuffers()
@@ -179,12 +170,10 @@ void CreateEffectBatchBuffers()
     sEffectVertices[EE_GFX_BATCH_GROUND] = gRasterizer->CreateVertexArray(1, 0x800);
 }
 
-// FUNCTION: EXE 0x502724
 // Starts both quad batches empty with the given texture, referencing it once per batch (provisional name)
 void BeginEffectBatches(GETexture* inTexture) { ee_gfx_effect_batches_begin(&gEERustRaster, inTexture); }
 
 
-// FUNCTION: EXE 0x502e1b
 // Deletes the quad batches' polygon array and vertex arrays (provisional name)
 void DeleteEffectBatchBuffers()
 {
@@ -198,23 +187,18 @@ void DeleteEffectBatchBuffers()
     sEffectVertices[0] = sEffectVertices[1] = NULL;
 }
 
-// FUNCTION: EXE 0x502f20
 // Drops the two texture references BeginEffectBatches took (both through the first batch's texture)
 void EndEffectBatches() { ee_gfx_effect_batches_end(&gEERustRaster); }
 
-// FUNCTION: EXE 0x5030ab
 // Creates the two shared quad models (provisional name)
 void CreatePlaneModels() { ee_gfx_effect_planes_create(&gEERustRaster); }
 
-// FUNCTION: EXE 0x503f64
 // Draws whatever the ground batch and then the camera batch still hold (provisional name)
 void FlushEffectBatches() { ee_gfx_effect_batches_flush(&gEERustRaster); }
 
-// FUNCTION: EXE 0x504275
 // Releases the two shared quad models (provisional name)
 void ReleasePlaneModels() { ee_gfx_effect_planes_release(&gEERustRaster); }
 
-// FUNCTION: EXE 0x50258e
 // The original base constructor's part (EEEffect 0x10258e: Init, both pointers referenced, the kind, the keeps-unit
 // flag, the media load), then the kind's class part
 void EEEffect::Attach(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit)
@@ -256,7 +240,6 @@ EEEffect::EEEffect(long inKind)
     this->Begin(inKind);
 }
 
-// FUNCTION: EXE 0x502600
 // Destroys the effect: the leaves' parts (the marching line's regions, the sounds, the rain's sound media, the storms'
 // and the farm's and earthquake's models, the kept graphic objects, the tracer beam's target, the marching line's
 // ends), the 2D parts and plane model (EEEffect2D 0x1042cf), then the base's: the graphic effect unloaded and
@@ -343,7 +326,6 @@ void EEEffect::ReleaseBase()
     }
 }
 
-// FUNCTION: EXE 0x502e61
 // Releases what the destructor releases without destroying the effect: the particles' graphic object (0xf4f30,
 // 0xe4b2b), the marching line's regions (0xf3882), the 2D parts and plane model (0x1048b1), the base's
 void EEEffect::ReleaseResources()
@@ -368,7 +350,6 @@ void EEEffect::ReleaseResources()
     this->mTileY = -1;
 }
 
-// FUNCTION: EXE 0x502759
 // Returns the unit's position (physical model, else its tile centre at the tile's height; the origin without a
 // unit) in a shared static point
 const GE3DPoint& EEEffect::GetUnitLocation()
@@ -385,7 +366,6 @@ const GE3DPoint& EEEffect::GetUnitLocation()
     return sLocation;
 }
 
-// FUNCTION: EXE 0x502807
 // The base queues: 10 (skip) for an effect shown only to another player; with inInView also off the map, on a tile
 // the current player does not see (the 3D kinds' IsTileVisible) unless the camera is free, or with its bounding
 // sphere out of view (EEEffect2D::Queue 0x104332 at its position, EEEffect3D::Queue 0x10513e at its translation)
@@ -410,21 +390,18 @@ long EEEffect::BaseQueue(bool inInView)
     return 0;
 }
 
-// FUNCTION: EXE 0x502f3d
 // Returns a random float between the minimum and the maximum from the effects' random generator
 float GetEffectRandomFloat(float inMinimum, float inMaximum)
 {
     return ee_gfx_effect_random_float(inMinimum, inMaximum);
 }
 
-// FUNCTION: EXE 0x502f57
 // Returns a random long from the minimum to the maximum (clamped to the maximum) (provisional name)
 long GetEffectRandomLong(long inMinimum, long inMaximum)
 {
     return ee_gfx_effect_random_long((int32_t)inMinimum, (int32_t)inMaximum);
 }
 
-// FUNCTION: EXE 0x502f8b
 // Returns the next random fraction from the effects' random generator
 float EEEffect::GetRandom()
 {
@@ -437,7 +414,6 @@ unsigned long EEEffectRandomSeed()
     return ee_gfx_effect_random_seed();
 }
 
-// FUNCTION: EXE 0x502f96
 // Returns the graphic object (media) of the effect's graphic effect, or null without one
 EEGraphicObject* EEEffect::GetGraphicObject()
 {
@@ -469,7 +445,6 @@ struct EEEffectPartOps {
     }
 };
 
-// FUNCTION: EXE 0x503027
 // Reads the base's state (the graphic effect id, whose media loads, the region, the saved unit id, the handle and the
 // keeps-unit flag; ee_gfx effect_state.rs: its result ignored by every class), then the 3D kinds' transformation and
 // radius (0x105484) or the 2D kinds' position, radius and parts (0x104985), then the kind's own (ee_gfx); the command
@@ -504,7 +479,6 @@ long EEEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile, 0, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x50400a
 // Writes the base's state (the graphic effect id, the region, the unit id or -1, the handle, the keeps-unit flag;
 // its result ignored by every class), then the 3D kinds' transformation and radius (0x1054b8) or the 2D kinds'
 // position, radius and parts (0x104a8a; the particle where it was drawn, 0xe517c), then the kind's own (ee_gfx; the
@@ -525,14 +499,13 @@ long EEEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     }
     EeGfxEffectParts theParts = {this, EEEffectPartOps::Push, EEEffectPartOps::Count, EEEffectPartOps::Get};
     long theBase = ee_gfx_effect_save_2d(this->mRecord, &theFile, &theParts);
-    if (this->mKind == 0x3e)   // 0x1021a2
+    if (this->mKind == 0x3e)
         return ee_gfx_effect_save_damaged(this->mRecord, &theFile, this->mGraphicEffect->mLinkedEffect2 != NULL);
     if (this->mKind == 4 || ((this->mKind == 0xf || this->mKind == 0x10) && theBase != 0))
         return theBase;
     return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile, 0, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x503f81
 // After a load: the saved unit id back to the unit (7 when it is gone) and the map region joined (the base's; not
 // the command confirmation's), then the tracer beam's target (0xfd000), the marching line's ends (0xf3ee8), the kind's
 // own (ee_gfx), or the light glow's set-up again (0xe25a1)
@@ -576,7 +549,6 @@ long EEEffect::RepairPointers()
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
 }
 
-// FUNCTION: EXE 0x50409b
 // Moves the effect to the map region under a point (the marching line: its regions along it again, 0xf3e29)
 void EEEffect::MoveToPoint(const GE3DPoint& inLocation)
 {
@@ -587,7 +559,6 @@ void EEEffect::MoveToPoint(const GE3DPoint& inLocation)
         this->AddRegions(inLocation, *reinterpret_cast<const GE3DPoint*>(&this->mRecord->march.to));
 }
 
-// FUNCTION: EXE 0x504175
 // Moves the effect to the map region under a transformation's translation (the marching line's: 0xf3e52)
 void EEEffect::MoveToTransformation(const GETransformation& inTransformation)
 {
@@ -625,7 +596,6 @@ void EEEffect::SetTransformation(const GETransformation& inTransformation)
     this->MoveToTransformation(inTransformation);
 }
 
-// FUNCTION: EXE 0x504250
 // Moves the effect from the old unit to the new one (when it is on the old unit and does not keep its unit); the
 // marching line's ends (0xf4017) and the tracer beam's target unless it keeps its unit (0xfd10f); the farm's is empty
 void EEEffect::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
