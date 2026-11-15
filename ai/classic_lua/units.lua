@@ -281,10 +281,12 @@ function M.reserve_share(view, memory)
     if share > 1000 then
         share = 1000
     end
-    -- New (AI_RESEARCH 8.87): the whole cost kept once the advance is ordered (the classic ramps the share up with
-    -- the epoch pressure, and the research, the army and the citizens spent the food and gold meanwhile: the port
-    -- ordered the Bronze Age at 90 minutes and had not paid it at 140)
-    if FULL_ONCE_ORDERED and C2.state(memory).advancing then
+    -- New (AI_RESEARCH 8.87): the whole cost kept once the advance is ordered while an enemy is a whole epoch ahead
+    -- (the classic ramps the share up with the epoch pressure, and the research, the army and the citizens spent the
+    -- food and gold meanwhile: the port ordered the Bronze Age at 90 minutes against the owner, who was in it, and
+    -- had not paid it at 140). Not while level or ahead: the whole cost kept then cost the standard bench against the
+    -- C++ classic (32 seeds, 90 minutes: 18-6-8 against 22-6-4)
+    if FULL_ONCE_ORDERED and C2.state(memory).advancing and C2.enemy_ahead(view) then
         share = 1000
     end
     local e = ai.epoch(memory.rs.pending)
