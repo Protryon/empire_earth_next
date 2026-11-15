@@ -341,7 +341,9 @@ function M.step(view, memory)
     CIV.update(view, memory)
     EXPLORE.step(view, memory)   -- (ExplorationManager: before the combat's defence takes the free soldiers)
     ARMY.step(view, memory)   -- (EECPCombatManager::Tick: army.lua)
-    if view.time % 30000 < 1000 then
+    -- (the standing army's check at the next 30 s when the step has used most of its instruction budget: a large
+    -- game's step passed it here)
+    if view.time % 30000 < 1000 and not require("lib.groups").over_share(800) then
         keep_standing_army(view, memory)
     end
     if view.time % 60000 < 1000 then
