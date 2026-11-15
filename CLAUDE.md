@@ -45,12 +45,13 @@ a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stand
   - `--incremental` keeps objects newer than their `.cpp`; it does not track headers, so after a header change do a full build.
   - Don't relink the exe while a game runs from it. For a compile check meanwhile, set
     `EE_XBUILD_OUT=$PWD/build/xbuild-check`.
-- Data: `python3 -I tools/fetch_data.py` unzips the latest media releases into `build/data` (it skips the parts
-  already current; `--without textures-4x` leaves the 1.3 GB part out) and copies the checkout's `data/db` and
-  `data/ai` in as `Data/db` and `Data/ai`. Rerun it when a media release changes; `posix_game.py` and
-  `play_posix.py` refresh `Data/db` and `Data/ai` from the checkout themselves. Run with
-  `EE_DATA_ROOT=$PWD/build/data build/xbuild/macos-arm64/game/ee-aoc`. (An old download in `data/Data` is ignored
-  by git and can be deleted.)
+- Data: `python3 -I tools/fetch_data.py` unpacks the latest media releases straight into the repository's `data/`
+  (the game's `Data` folder, beside the committed `data/db` and `data/ai`, which it never touches; it skips the
+  parts already current; `--without textures-4x` leaves the 1.3 GB part out or removes it). Rerun it when a media
+  release changes. It also makes `build/data-root`, the data root: `Data` there is a symlink to `data/`, beside
+  `Users` and the `.cfg` files. Run with `EE_DATA_ROOT=$PWD/build/data-root build/xbuild/macos-arm64/game/ee-aoc`;
+  `posix_game.py`, `play_posix.py` and `sim.py --data open` use it by default. (An old download, `data/Data`,
+  `data/bundles.json` or `build/data`, is not used any more and can be deleted.)
 - Live tests: `tools/harness/posix_game.py --exercise menu|random-game|ai-game`. Evidence goes to `build/posix_game/<time>/`:
   `game.log`, `summary.json`, `samples.json`, window captures. Useful options:
   - `--exe` (e.g. the ASan build), `--play-seconds`, `--max-game-seconds`;
@@ -98,9 +99,8 @@ There is no `data.ssa` and no registry. Settings live in `config.yaml` next to t
 python -I tools/open_data.py build build/open_data/tree [--force]  # from the two installs (read only), ~4 min
 python -I tools/open_data.py sync build/open_data/tree             # Data/db, Data/ai from data/db, data/ai (seconds)
 python -I tools/open_data.py db-regen                              # data/db converted again from retail
-python -I tools/open_data.py pack build/ee_open_media-<sha>.zip --part media   # release part: all but Data/db
-python -I tools/open_data.py pack build/ee_open_db-<sha>.zip --part db         # release part: data/db, data/ai
-python -I tools/fetch_data.py [OUT] [--without textures-4x]      # media releases + the checkout's db (build/data)
+python -I tools/open_data.py pack build/ee_open_media-<sha>.zip --part media   # release part: all but db, ai
+python -I tools/fetch_data.py [--without textures-4x]            # the media releases into data/ (+ build/data-root)
 python -I tools/open_data.py check build/open_data/tree
 python -I tools/make_play_dir.py C:\EE-play [--data TREE|ZIP|DIR ...] [--movies DIR]   # exe + data + movies
 ```
@@ -158,15 +158,13 @@ Before merging or pushing any code change, all of these are required:
 - Media bundles go only to **GitHub Releases** of this repository (no git, no LFS). Create them with
   `gh release create ... -R Protryon/empire_earth_next --target main` (always `-R`: with the upstream remote present,
   gh may pick the wrong repository).
-- The data ships in three parts that unzip into one folder, each its own release (`tools/fetch_data.py` pulls the
-  media parts and copies the checkout's `data/db` and `data/ai`; `--db release` pulls the db part instead):
+- The media ship in two releases, a home-made git LFS: `tools/fetch_data.py` unpacks them into `data/` and records
+  each part's tag and files in `data/.fetched.json`, so a newer release replaces only its own files:
   - `open-media-<sha>`: `ee_open_media-<sha>.zip` (`pack --part media`: models, original textures, sounds, fonts);
-  - `open-textures-4x-<sha>`: `ee_textures_4x-<sha>.zip` (`Data/Textures-4x`, tools/upscale);
-  - `open-db-<sha>`: `ee_open_db-<sha>.zip` (`pack --part db`: `data/db` and `data/ai` as `Data/db` and `Data/ai`,
-    and `open_data.json`), for a game without a checkout (a play folder, a binary release).
-- Changes to the tables, rules documents and scripts are commits to `data/db` and `data/ai`; the db part is
-  republished only for players without a checkout. Republish the media part only when the models, textures or
-  other converters change; the 4x part when tools/upscale's output changes.
+  - `open-textures-4x-<sha>`: `ee_textures_4x-<sha>.zip` (`Data/Textures-4x`, tools/upscale).
+- There is no db release: the tables, rules documents and scripts are commits to `data/db` and `data/ai`, and the
+  `v*` release packages (`.github/workflows/release.yml`) carry them as `Data/db` and `Data/ai`. Republish the media
+  part only when the models, textures or other converters change; the 4x part when tools/upscale's output changes.
 - The original game's campaigns stay out of the bundle.
 
 ## Git

@@ -2140,9 +2140,15 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   Python side recognises the retail form by its length (8 + 29 x 132 bytes).
 - **Tables nothing reads**: the census rule (every field the text carries has a reader) would leave such a table's
   text empty and lose the retail values; `overlay.UNREAD_TABLES` exempts the two.
-- **Data folder**: `tools/fetch_data.py` used to unpack into `data/`, which now holds tracked files (and a media
-  release replacing the folder would have deleted them). It unpacks into `build/data` now and copies the checkout's
-  `data/db` and `data/ai` in; the .gitignore ignores everything else under `data/`.
+- **Data folder**: `data/` is the game's whole `Data` folder: `data/db` and `data/ai` tracked, the media
+  gitignored and unpacked into it by `tools/fetch_data.py` from the media releases (a home-made git LFS). The old
+  fetch deleted its whole output folder for a new media release, which would have taken the tracked folders with
+  it; it now records each part's files in `data/.fetched.json` and removes only those, never anything under
+  `data/db` or `data/ai`. The game needs a root *holding* `Data` (and writes Logs and config.yaml there): a root at
+  the repository would put those files into it, so `build/data-root/Data` is a link to `data/` (a junction on
+  Windows: no privileges needed; the name `Data` exactly, so no case lookup is needed on Linux, although PlatPath's
+  per-component case-insensitive fallback would find `data` too). `open_data.py`'s refresh functions never write
+  through such a link (they would delete the tracked files and copy them onto themselves).
 - **No binary tables in the game**: with the text committed, the game's .dat path (EEDbFindFile's fallback to the
   .dat, the binary tree's `*.ids` row names, the binary branch of the content dump) is gone, with `open_data.py build
   --binary`, `tree-binary` and the gates' binary runs. A table whose text is missing stops the game with its name.

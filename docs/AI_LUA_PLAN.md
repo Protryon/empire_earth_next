@@ -483,7 +483,7 @@ the game (one error line).
 into the tree's `Data/ai/`; `open_data.py ai TREE` refreshes only `Data/ai` (seconds) and records the scripts' hash as
 `ai` in `open_data.json`; the harness (`exe_boot.data_tree`) refreshes its own trees when that hash differs (the
 converters' hash leaves the scripts out, so a script change never rebuilds the 4-minute tree); `tools/sim.py` warns.
-`open_data.py pack --part db` ships `Data/ai` with `Data/db`. The installer copies `ais.json`, every `.lua` and a ported AI's notice
+The `v*` release packages ship `Data/ai` with `Data/db` (there is no db release since 2026-11-15). The installer copies `ais.json`, every `.lua` and a ported AI's notice
 files (`LICENSE`, `UPSTREAM`, `README`, `NOTICE`, `COPYING` under `data/ai`: `data/ai/ageofai/LICENSE` is the GPL-3.0 text,
 `UPSTREAM` the upstream pin); the scripts' hash in `open_data.json` covers the same files. The game's own AI folder
 hash (`EECPAIFolderHash`, the multiplayer checksum) covers `ais.json` and the scripts only. TEST ONLY: `EE_AI_SCRIPTS=<absolute dir>` (the dir
@@ -535,7 +535,7 @@ where clang fuses `a * b + c` by default; the Windows/macOS trace comparison sti
 ### 3.3 The AI manifest (2026-11-09)
 
 The lobby's per-seat AI choice comes from data: `Data/ai/ais.json` (written in the repository as `data/ai/ais.json`;
-`tools/open_data.py ai TREE` and every tree build install it with the scripts, and it ships in the db release part
+`tools/open_data.py ai TREE` and every tree build install it with the scripts, and the release packages carry it
 with the rest of `Data/ai`). Code: `include/ee/EECPEngine.h`, `src/Empire Earth/AI Thread/EECPEngine.cpp`.
 
 ```json
