@@ -233,6 +233,9 @@
 #include "ee/EESELoadThread.h"
 #include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_time.h"
+#include <vector>
+// the civilization builder's steps (TEST ONLY; EESimCivBuilder.cpp): false for an unknown one
+bool EESimCivBuilderStep(const std::vector<std::string>& w, std::vector<std::string>& outLines);
 
 // TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_time)
 
@@ -1879,6 +1882,11 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             theCode = [=, &theOutput] { ObjectDigest(theOutput); };
         else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)
             theCode = [=, &theOutput] { ScenarioListStep(w, theOutput); };
+        else if (c == "cb")   // cb ...: the civilization builder's steps (EESimCivBuilder.cpp)
+            theCode = [=, &theOutput] {
+                if (!EESimCivBuilderStep(w, theOutput))
+                    theOutput.push_back("  cb: unknown " + (w.size() > 1 ? w[1] : std::string()));
+            };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
                 gPhysics->FlushWorld();
