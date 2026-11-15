@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONLobbySkinTab.h"
 #include "ee/wonapi/WONLobbyMSPainters.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0071AAA0
 // Sets the tab frame: adds a stretched frame image over the page area and, when opaque, a dialog back inside it
 void WONTabCtrl::SetFrame(const WONFrame &theFrame)
 {
@@ -31,14 +30,12 @@ void WONTabCtrl::SetFrame(const WONFrame &theFrame)
         this->AddChild(this->mBack.get());
     }
 }
-// FUNCTION: WON 0x0071ac50
 // Removes the dialog back when made transparent; never stores the flag or re-adds the back
 void WONTabCtrl::SetTransparent(bool isTransparent)
 {
     if(this->mBack.get()!=NULL && isTransparent)
         this->RemoveChild(this->mBack.get());
 }
-// FUNCTION: WON 0x0071AC70
 // Adds a page with a skinned tab button showing the given text
 void WONTabCtrl::AddStandardTab(const GUIString &theText,Container *theContainer)
 {

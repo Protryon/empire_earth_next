@@ -52,7 +52,6 @@
 // set. Its ctor is inline (EEUnitClass.cpp's factory); slots +0x04, +0x08, +0x64, +0x7c, +0x84, +0x98, +0xb8 in
 // source order (unit type 0x234 sits on the water plane).
 
-// FUNCTION: EXE 0x60ba14
 // For cattails, returns the tile where the view line through a point meets the water plane; otherwise sets nothing
 void EEUnitClass::AmbientLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
@@ -67,7 +66,6 @@ void EEUnitClass::AmbientLocationToTile(const GE3DPoint& inLocation, long& outX,
     outY = UMFloor(thePoint.GetY());
 }
 
-// FUNCTION: EXE 0x60baf0
 // Adds the unit to every map tile of its footprint, its own tile first
 void EEUnitClass::AmbientAddToTile(EEUnit* inUnit)
 {
@@ -91,7 +89,6 @@ void EEUnitClass::AmbientAddToTile(EEUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x60bbd0
 // Removes the unit from every map tile of its footprint, its own tile first
 void EEUnitClass::AmbientRemoveFromTile(EEUnit* inUnit)
 {
@@ -119,7 +116,6 @@ void EEUnitClass::AmbientRemoveFromTile(EEUnit* inUnit)
 // class: 0x219c49..0x219d67 (after EEUCProjectile.cpp; EEUCSeaAnimal.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline (no new site in the range); +0x70/+0x98 are ICF-folded elsewhere.
 
-// FUNCTION: EXE 0x619c49
 // Sets up a new resource unit with the class's resource type and amount
 void EEUnitClass::ResourceSimpleUnitCreated(EEUnit* inUnit)
 {
@@ -129,7 +125,6 @@ void EEUnitClass::ResourceSimpleUnitCreated(EEUnit* inUnit)
         inUnit->SetResourceAmount(this->mResourceAmount);
 }
 
-// FUNCTION: EXE 0x619c7e
 // Adds the resource to every tile of its footprint (its own tile first), unless it is queued for deletion
 void EEUnitClass::ResourceAddToTile(EEUnit* inUnit)
 {
@@ -168,7 +163,6 @@ void EECreateCarrierAircraft(EEComplexUnit* inUnit, long inPlayer);
 // 0xde4a9 (EEE2DBattlefieldAmbient.cpp's range): the unit's battlefield ambience (provisional name)
 void EEPlaceTrackDecal(EEComplexUnit* inUnit);
 
-// FUNCTION: EXE 0x613866
 // Sets up a new land unit: its class's resource (and amount when it has one) and, for the radio man, its power
 void EEUnitClass::LandUnitCreated(EEComplexUnit* inUnit)
 {
@@ -180,7 +174,6 @@ void EEUnitClass::LandUnitCreated(EEComplexUnit* inUnit)
         inUnit->SetPower(inUnit->mUnitClass->mPower);
 }
 
-// FUNCTION: EXE 0x61393c
 // Calls a paratroop plane (class 0x2e1): it appears over the last map tile beyond the unit in +y and flies to the
 // unit's goal location to unload its cargo
 void EEUnitClass::LandCallParatroopPlane(EEComplexUnit* inUnit)
@@ -208,7 +201,6 @@ void EEUnitClass::LandCallParatroopPlane(EEComplexUnit* inUnit)
     thePlane->mUnitClass->ActionChanged(thePlane);
 }
 
-// FUNCTION: EXE 0x613c37
 // Updates each of the unit's wheels
 void EEComplexUnit::UpdateWheels()
 {
@@ -230,7 +222,6 @@ void EEComplexUnit::UpdateWheels()
 // Virtual0C 0x217c6d forwards (inUnit, ioPath, inArg) to the cdecl 0x23df77 (declared here).
 
 
-// FUNCTION: EXE 0x617d6a
 // Sets up a new ship at sea level (z 0), with the class's resource type and amount
 void EEUnitClass::NavalUnitCreated(EEComplexUnit* inUnit)
 {
@@ -244,7 +235,6 @@ void EEUnitClass::NavalUnitCreated(EEComplexUnit* inUnit)
         inUnit->SetResourceAmount(this->mResourceAmount);
 }
 
-// FUNCTION: EXE 0x617dcf
 // Returns whether the ship may stop: already sinking, a slow request, or at the path's end tile with its speed reached
 bool EEUnitClass::NavalHasArrived(EEComplexUnit* inUnit, float inValue)
 {
@@ -268,7 +258,6 @@ bool EEUnitClass::NavalHasArrived(EEComplexUnit* inUnit, float inValue)
     return theResult;
 }
 
-// FUNCTION: EXE 0x617fb5
 // Updates a fish resource: while its resources rot it loses one every 4 s; a rotting unit counts its rotting time down
 void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
 {
@@ -292,7 +281,6 @@ void EEUnitClass::UpdateResourceUnit(EEComplexUnit* inUnit)
 // 0x23f27e (cdecl): moves a location to the depth a submerged unit may take at its tile (provisional name)
 void EEGetSeabedDepth(EEComplexUnit* inUnit, GE3DPoint& ioLocation);
 
-// FUNCTION: EXE 0x61ab66
 // Lifts a location that lies below the terrain mesh (the sea floor) up onto it
 void EEUnitClass::SubmergedNavalGroundLocation(GE3DPoint& ioLocation)
 {
@@ -302,7 +290,6 @@ void EEUnitClass::SubmergedNavalGroundLocation(GE3DPoint& ioLocation)
         ioLocation.SetZ(theGround);
 }
 
-// FUNCTION: EXE 0x61aba6
 // Returns the tile where the view line through a point meets the submarine's cruise depth (or the sea
 // floor where that is higher)
 void EEUnitClass::SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
@@ -322,7 +309,6 @@ void EEUnitClass::SubmergedNavalLocationToTile(const GE3DPoint& inLocation, long
     outY = UMFloor(thePoint.GetY());
 }
 
-// FUNCTION: EXE 0x61aca0
 // Creates a submarine at a placement kept above the sea floor, then moves it to the depth it may take there
 EEUnit* EEUnitClass::SubmergedNavalCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                          EEUnit* inCreator)
@@ -342,7 +328,6 @@ EEUnit* EEUnitClass::SubmergedNavalCreateUnitAt(GETransformation& inTransformati
     return theUnit;
 }
 
-// FUNCTION: EXE 0x61ad2c
 // Creates a submarine on a tile (yaw pi) kept above the sea floor, then moves it to the depth it may take there
 EEUnit* EEUnitClass::SubmergedNavalCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -367,7 +352,6 @@ EEUnit* EEUnitClass::SubmergedNavalCreateUnit(long inX, long inY, long inPlayer,
     return theUnit;
 }
 
-// FUNCTION: EXE 0x61aef9
 // Adds the submarine to its tile's unit list
 void EEUnitClass::SubmergedNavalAddToTile(EEUnit* inUnit)
 {
@@ -377,7 +361,6 @@ void EEUnitClass::SubmergedNavalAddToTile(EEUnit* inUnit)
         theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
 }
 
-// FUNCTION: EXE 0x61af45
 // Returns whether the submarine reached its waypoint: on the waypoint's tile with more to go, when its collision
 // radius covers the distance left; otherwise when that distance is at most 0.05 (always in collision state 8)
 bool EEUnitClass::SubmergedNavalHasArrived(EEComplexUnit* inUnit, float inValue)
@@ -409,7 +392,6 @@ const float kSeaAnimalMinimumDepth = -0.6f;
 
 const float kSeaAnimalMaximumDepthFactor = 0.81f;
 
-// FUNCTION: EXE 0x619d87
 // Gives each path point (from the end back) a depth one random step toward a random depth: dolphins step 0.2..1.2
 // and may dive deeper, others step up to 0.48; kept under -0.1 (dolphins) or -0.6 and 0.09 above the sea floor
 void EEUnitClass::SeaAnimalAdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)

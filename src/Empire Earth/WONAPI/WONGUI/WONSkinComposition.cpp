@@ -15,7 +15,6 @@
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 #include "ee/wonapi/WONLobbySkinTab.h"
 namespace WONAPI {
-// FUNCTION: WON 0x007156a0
 // Returns a new scrollbar from the skin template with its thumb, gutter and arrows, one arrow wide or high
 WONScrollbar* WONSkin::GetScrollbar(bool vertical)
 {
@@ -34,7 +33,6 @@ WONScrollbar* WONSkin::GetScrollbar(bool vertical)
     }
     return bar;
 }
-// FUNCTION: WON 0x007158a0
 // Returns a new combo box from the skin template with its arrow button and a framed popup list
 WONComboBox* WONSkin::GetComboBox()
 {
@@ -49,7 +47,6 @@ WONComboBox* WONSkin::GetComboBox()
     combo->SetListBox(list);
     return combo;
 }
-// FUNCTION: WON 0x00715ae0
 // Returns a new scroll container from the skin template with skinned vertical and horizontal scrollbars
 WONScrollContainer* WONSkin::GetScrollContainer()
 {
@@ -58,7 +55,6 @@ WONScrollContainer* WONSkin::GetScrollContainer()
     container->SetScrollbar(this->GetScrollbar(false));
     return container;
 }
-// FUNCTION: WON 0x00715c10
 // Returns a new tab control from the skin template, bound to this skin, with skinned left and right arrows
 WONTabCtrl* WONSkin::GetTabCtrl()
 {
@@ -68,11 +64,3 @@ WONTabCtrl* WONSkin::GetTabCtrl()
     return tab;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00728770
-// (public: virtual void * __thiscall WONAPI::WONMSSkin::MSImage::`scalar deleting destructor'(unsigned int)    [??_GMSImage@WONMSSkin@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007159f0
-// (public: virtual void __thiscall WONAPI::ProgramImage::SetSize(int,int))

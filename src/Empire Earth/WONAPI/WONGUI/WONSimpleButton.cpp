@@ -14,14 +14,12 @@
 #include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 
-// FUNCTION: WON 0x00717A90
 // Returns the largest width and height among the button's four state images (skinlay.rs)
 void WONSimpleButton::GetDesiredSize(int &width, int &height)
 {
 	WONSkinLayout(this,EeWonSkinLayKind::SimpleButtonSize,0,0,0,&width,&height);
 }
 
-// FUNCTION: WON 0x00717BD0
 // Draws the disabled, pressed or mouse-over image (the normal one when that state has none), scaled if set
 void WONSimpleButton::Paint(Graphics &g)
 {

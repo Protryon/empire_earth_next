@@ -20,7 +20,6 @@ inline void NEProtocolTrace(const UString& inName) {}
 
 std::vector<NEProtocol*> NEProtocol::sProtocols;
 
-// FUNCTION: LLE 0x100444a6
 // Registers a network protocol for a loaded plug-in module, resolving each NPIM* entry point, then activates it
 NEProtocol::NEProtocol(PIMModule* inModule)
     : mModule(inModule), mBytesSent(0), mBytesReceived(0)
@@ -68,7 +67,6 @@ NEProtocol::NEProtocol(PIMModule* inModule)
         NEProtocolTrace(this->GetName());
 }
 
-// FUNCTION: LLE 0x100448ad
 // Destroys the protocol: deactivates it while its module is valid, unregisters it and unloads the module
 NEProtocol::~NEProtocol()
 {
@@ -80,7 +78,6 @@ NEProtocol::~NEProtocol()
     this->mModule->Unload();
 }
 
-// FUNCTION: LLE 0x1004492a
 // Accepts an incoming connection on a server into a new connection; on failure deletes it and returns NULL
 long NEProtocol::Accept(const NEServer* inServer, NEConnection*& outConnection)
 {
@@ -93,7 +90,6 @@ long NEProtocol::Accept(const NEServer* inServer, NEConnection*& outConnection)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044970
 // Accepts an incoming file-transfer connection on a server; on failure deletes it and returns NULL
 long NEProtocol::AcceptForXfer(const NEServer* inServer, NEConnection*& outConnection)
 {
@@ -106,14 +102,12 @@ long NEProtocol::AcceptForXfer(const NEServer* inServer, NEConnection*& outConne
     return theResult;
 }
 
-// FUNCTION: LLE 0x100449b7
 // Lets the plug-in allow or refuse new connections to a published server
 void NEProtocol::AllowNewConnections(const NEServer* inServer, bool inAllow)
 {
     (*this->mAllowNewConnections)(inServer, inAllow);
 }
 
-// FUNCTION: LLE 0x100449c7
 // Closes a connection through the plug-in and deletes it when the close succeeds
 long NEProtocol::Close(NEConnection* inConnection)
 {
@@ -123,7 +117,6 @@ long NEProtocol::Close(NEConnection* inConnection)
     return theResult;
 }
 
-// FUNCTION: LLE 0x100449ea
 // Closes a published server through the plug-in and deletes it when the close succeeds
 long NEProtocol::Close(NEServer* inServer)
 {
@@ -133,7 +126,6 @@ long NEProtocol::Close(NEServer* inServer)
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044a0d
 // Connects to a host into a new connection with an event and timeout; on failure deletes it and returns NULL
 long NEProtocol::Connect(const UString& inName, const UString& inHost, const UWideString& inAddress,
                          unsigned long inPort, TSEvent* inEvent, NEConnection*& outConnection, unsigned long inTimeout)
@@ -147,7 +139,6 @@ long NEProtocol::Connect(const UString& inName, const UString& inHost, const UWi
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044a66
 // Opens a file-transfer connection alongside an existing one; on failure deletes it and returns NULL
 long NEProtocol::ConnectForXfer(const NEConnection*& inConnection, unsigned long inPort, TSEvent* inEvent,
                                 NEConnection*& outConnection)
@@ -161,7 +152,6 @@ long NEProtocol::ConnectForXfer(const NEConnection*& inConnection, unsigned long
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044ab8
 // Returns the registered protocol at an index, or a beyond-end error
 long NEProtocol::GetProtocol(unsigned long inIndex, NEProtocol*& outProtocol)
 {
@@ -172,7 +162,6 @@ long NEProtocol::GetProtocol(unsigned long inIndex, NEProtocol*& outProtocol)
     return kErrorBeyondEnd;
 }
 
-// FUNCTION: LLE 0x10044ae4
 // Publishes a named game server with its accept/receive/transfer events; on failure deletes it and returns NULL
 long NEProtocol::Publish(const UString& inName, const UWideString& inAddress, unsigned long inPort,
                          TSEvent* inAcceptEvent, TSEvent* inReceiveEvent, TSEvent* inXferEvent, NEServer*& outServer,
@@ -188,7 +177,6 @@ long NEProtocol::Publish(const UString& inName, const UWideString& inAddress, un
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044b46
 // Receives data on a connection and adds the received byte count to the protocol's total
 long NEProtocol::Receive(NEConnection* inConnection, unsigned long inSize, unsigned char* outBuffer,
                          unsigned long& outReceived)
@@ -198,7 +186,6 @@ long NEProtocol::Receive(NEConnection* inConnection, unsigned long inSize, unsig
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044b6e
 // Receives data from any client of a server, giving its index, and adds the bytes to the received total
 long NEProtocol::ReceiveFrom(NEServer* inServer, unsigned long inSize, unsigned char* outBuffer,
                              unsigned long& outReceived, unsigned long& outIndex)
@@ -208,7 +195,6 @@ long NEProtocol::ReceiveFrom(NEServer* inServer, unsigned long inSize, unsigned 
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044b99
 // Sends data on a connection and adds its length to the protocol's sent total
 long NEProtocol::Send(NEConnection* inConnection, const unsigned char* inData, unsigned long inLength)
 {
@@ -217,7 +203,6 @@ long NEProtocol::Send(NEConnection* inConnection, const unsigned char* inData, u
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044bb8
 // Sends a single datagram to a host and port and adds its length to the sent total
 long NEProtocol::SendSingle(const UString& inHost, unsigned short inPort, const unsigned char* inData,
                             unsigned long inLength)
@@ -227,7 +212,6 @@ long NEProtocol::SendSingle(const UString& inHost, unsigned short inPort, const 
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044bdb
 // Sends data to one client of a server and adds its length to the sent total
 long NEProtocol::SendTo(NEServer* inServer, unsigned long inIndex, const unsigned char* inData,
                         unsigned long inLength)
@@ -237,7 +221,6 @@ long NEProtocol::SendTo(NEServer* inServer, unsigned long inIndex, const unsigne
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044bfe
 // Receives file-transfer data and adds the received byte count to the protocol's total
 long NEProtocol::XferReceive(unsigned long inSize, unsigned char* outBuffer, unsigned long& outReceived)
 {
@@ -246,7 +229,6 @@ long NEProtocol::XferReceive(unsigned long inSize, unsigned char* outBuffer, uns
     return theResult;
 }
 
-// FUNCTION: LLE 0x10044c22
 // Sends file-transfer data to one client of a server and adds its length to the sent total
 long NEProtocol::XferSendTo(NEServer* inServer, unsigned long inIndex, const unsigned char* inData,
                             unsigned long inLength)
@@ -255,15 +237,3 @@ long NEProtocol::XferSendTo(NEServer* inServer, unsigned long inIndex, const uns
     this->mBytesSent += inLength;
     return theResult;
 }
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x1004440f
-// SYNTHETIC: LLE 0x10044419
-// SYNTHETIC: LLE 0x10044422
-// SYNTHETIC: LLE 0x1004443a
-// SYNTHETIC: LLE 0x1004444e
-// SYNTHETIC: LLE 0x1004445d
-// SYNTHETIC: LLE 0x10044467
-// SYNTHETIC: LLE 0x1004447f
-// SYNTHETIC: LLE 0x1004448b
-// SYNTHETIC: LLE 0x10044c45

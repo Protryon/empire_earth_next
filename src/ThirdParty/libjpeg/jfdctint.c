@@ -136,7 +136,6 @@
  * Perform the forward DCT on one block of samples.
  */
 
-// FUNCTION: JPEG 0x10096103
 GLOBAL(void)
 jpeg_fdct_islow (DCTELEM * data)
 {

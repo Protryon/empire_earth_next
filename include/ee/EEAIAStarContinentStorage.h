@@ -17,8 +17,8 @@ struct EEAIAStarContinentTile {
 
 class EEAIAStarContinentStorage : public EEAIAStarTerrainStorage {
 public:
-    EEAIAStarContinentStorage();            // 0x15a47
-    virtual ~EEAIAStarContinentStorage();   // 0x15a79
+    EEAIAStarContinentStorage();
+    virtual ~EEAIAStarContinentStorage();
     // +0x10 0x15a99: sizes the tile arrays for an inWidth x inHeight search (a same-size call only clears the part the
     // last search touched, grown by one tile)
     virtual void PrepareGrid(long inWidth, long inHeight);

@@ -25,7 +25,6 @@
 #include "ee/EEAction.h"
 #include "ee/EEACalamity.h"
 
-// FUNCTION: EXE 0x401a8d
 // Destroys the calamity action, releasing the message it has not sent
 EEACalamity::~EEACalamity()
 {
@@ -43,7 +42,6 @@ void EEACalamity::Virtual4()
     }
 }
 
-// FUNCTION: EXE 0x401ab2
 // Builds the message that casts the selected calamity at a screen point (or at the caster for the Conquistador spell)
 void EEACalamity::Cast(const GE2DPoint& inLocation)
 {
@@ -83,15 +81,6 @@ void EEACalamity::Cast(const GE2DPoint& inLocation)
     gUserInterface->PostAction(this);
 }
 
-// FUNCTION: EXE 0x401bce
-// Creates the message that asks the simulation to cast a calamity technology at a target
-// (EEMCastCalamity's inline ctor, ee/EEMessage.h)
-
-// FUNCTION: EXE 0x401c16
-// Returns the cast-calamity message's label
-// (EEMCastCalamity::GetMessageLabel, inline in ee/EEMessage.h)
-
-// FUNCTION: EXE 0x401c1c
 // Sets the id of the unit that casts the calamity
 // (out of line: EEUIFMainGame 0x2666d4 calls it; ICF representative of the one-member setters, EEContagionHelper's too)
 void EEACalamity::SetCasterID(long inCasterID)
@@ -99,7 +88,6 @@ void EEACalamity::SetCasterID(long inCasterID)
     this->mCasterID = inCasterID;
 }
 
-// FUNCTION: EXE 0x401c26
 // Checks whether the calamity may be cast at a screen point by its caster; stores the target tile and the validity
 long EEACalamity::Check(const GE2DPoint& inLocation)
 {
@@ -140,15 +128,6 @@ long EEACalamity::Check(const GE2DPoint& inLocation)
     return this->mValid;
 }
 
-// FUNCTION: EXE 0x401db4
-// Drops one reference to a unit, deleting it when none is left
-// (RTSUnit::Dereference, inline in ee/EEUnit.h)
-
-// SYNTHETIC: EXE 0x401dc5
-// (the scalar deleting destructor)
-
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEACalamity::Virtual8()
 {
 }

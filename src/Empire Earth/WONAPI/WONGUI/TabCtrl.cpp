@@ -60,7 +60,6 @@ TabBar::TabBar(TabCtrl* inCtrl)
 }
 // Destroys the tab bar: the Rust bar gives the buttons back
 TabBar::~TabBar() { ee_won_tabbar_free(this->mBar); }
-// FUNCTION: WON 0x00708670
 // Creates a tab control with 5-pixel padding and no tabs: makes its tab bars, their containers and the page area's
 // layout point, which the Rust control sets up and adds
 TabCtrl::TabCtrl()

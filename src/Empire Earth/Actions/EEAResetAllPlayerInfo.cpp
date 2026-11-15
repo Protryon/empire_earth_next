@@ -59,13 +59,11 @@
 #include "ee/EESELoadThread.h"
 #include "ee/EEAResetAllPlayerInfo.h"
 
-// FUNCTION: EXE 0x404444
 // Destroys the reset-all-player-info action
 EEAResetAllPlayerInfo::~EEAResetAllPlayerInfo()
 {
 }
 
-// FUNCTION: EXE 0x404464
 // Reloads each listed player's civilization in the scenario editor and posts their epoch and refresh requests
 void EEAResetAllPlayerInfo::Virtual4()
 {
@@ -83,11 +81,6 @@ void EEAResetAllPlayerInfo::Virtual4()
             reinterpret_cast<void*>(this->mPlayers[i]), reinterpret_cast<void*>(::gWorld.mPlayers[this->mPlayers[i]]->GetTechTree()->mStartEpoch));
 }
 
-// SYNTHETIC: EXE 0x4045f7
-// (the scalar deleting destructor)
-
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAResetAllPlayerInfo::Virtual8()
 {
 }

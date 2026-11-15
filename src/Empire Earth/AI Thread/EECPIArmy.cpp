@@ -45,7 +45,6 @@
 #include "ee/EECPIArmy.h"
 
 // The original stores the zero members in the order 68, 6c, 78, 70, 7c, 84, 74 (not declaration order)
-// FUNCTION: EXE 0x48013d
 // Creates an empty army area with zero strength and a join distance of 12 tiles
 EECPIArmy::EECPIArmy()
 {
@@ -60,10 +59,6 @@ EECPIArmy::EECPIArmy()
     this->mJoinDistanceSq = 0x90;
 }
 
-// SYNTHETIC: EXE 0x48017b
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x48019d
 // Adds the unit's tile (its container's when it is inside one) to the army, growing the bounds and the strength
 // (the unit's own)
 void EECPIArmy::AddUnit(EEComplexUnit* inUnit)
@@ -85,7 +80,6 @@ void EECPIArmy::AddUnit(EEComplexUnit* inUnit)
     this->mStrength += inUnit->mUnitClass->mInfluence;   // the unit's own strength (the container only lends its tile)
 }
 
-// FUNCTION: EXE 0x480221
 // Merges another army into this one: its tiles, strength and second counter
 void EECPIArmy::Merge(EECPIArmy* inOther)
 {
@@ -99,7 +93,6 @@ void EECPIArmy::Merge(EECPIArmy* inOther)
 
 // NEAR: the original materialises the land flag (`shr al,1; and al,1`: a bool accessor?) and keeps the result
 // in another register
-// FUNCTION: EXE 0x480296
 // Returns true if the unit (or its container) is a land unit on the army's continent (or the army has none) and
 // lies inside the army's bounds or within the join distance of them; any land unit joins an empty army
 bool EECPIArmy::IsNear(EEComplexUnit* inUnit)
@@ -125,16 +118,3 @@ bool EECPIArmy::IsNear(EEComplexUnit* inUnit)
     }
     return theResult;
 }
-
-// The inline geometry COMDATs first emitted here (exe-view U2DRectangle<long> / U2DPoint<long> members in
-// lle/U2DRectangle.h and lle/U2DPoint.h): GetClosestPoint 0x80347, GetClosestCorner 0x803f4,
-// GetClosestPointOnSegment 0x805ff, GetBottomLeft 0x8070d, GetTopRight 0x8071e, ProjectOnSegment 0x80730,
-// GetBottomRight 0x807f3, GetTopLeft 0x80804
-// TEMPLATE: EXE 0x480347
-// TEMPLATE: EXE 0x4803f4
-// TEMPLATE: EXE 0x4805ff
-// TEMPLATE: EXE 0x48070d
-// TEMPLATE: EXE 0x48071e
-// TEMPLATE: EXE 0x480730
-// TEMPLATE: EXE 0x4807f3
-// TEMPLATE: EXE 0x480804

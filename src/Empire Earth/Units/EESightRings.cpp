@@ -27,10 +27,6 @@
 // the largest sight radius the rings cover (0x446f60, loaded through memory)
 static const float kMaxSightRadius = 32.0f;
 
-// SYNTHETIC: EXE 0x60834c   (wrapper)
-// SYNTHETIC: EXE 0x608356   (ctor)
-// SYNTHETIC: EXE 0x60837a   (registrar)
-// SYNTHETIC: EXE 0x608386   (dtor)
 // the original dtor tests a guard bit (0x963288): a static data member of a class not identified yet
 // A ring entry. Not a GE2DPoint: its copy is memberwise (`mov edx, [ecx + eax*8]; mov eax, [ecx + eax*8 + 4]` where GE2DPoint's
 // inline copy ctor goes through an address; push_back 0x608c0b is its own COMDAT next to GE2DPoint's 0x688c8d).
@@ -42,9 +38,8 @@ struct EESightOffset {
     float mY;
 };
 std::vector<EESightOffset> gSightRings[33];     // 0x963290 (r = 0..32)
-bool gSightRingsBuilt;                      // 0x9634a0
+bool gSightRingsBuilt;
 
-// FUNCTION: EXE 0x6083b0
 // Adds a player's sight to every tile within a radius (at most 32) of a point, showing them if the current player
 // is that player or an ally both sharing line of sight
 void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
@@ -79,7 +74,6 @@ void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
     }
 }
 
-// FUNCTION: EXE 0x608550
 // Adds a player's sight to the tiles of the outer two rings around the new centre that the old one did not see
 void EEAddSightRingStep(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer)
 {
@@ -120,7 +114,6 @@ void EEAddSightRingStep(float inOldX, float inOldY, float inNewX, float inNewY, 
     }
 }
 
-// FUNCTION: EXE 0x60872b
 // Builds the tile offsets of each sight ring (distance rounded up, 0..32 tiles from the centre), once at startup
 void EEBuildSightRings()
 {
@@ -137,7 +130,6 @@ void EEBuildSightRings()
     gSightRingsBuilt = true;
 }
 
-// FUNCTION: EXE 0x6087cb
 // Removes a player's sight from every tile within a radius (at most 32) of a point, hiding them if the current player
 // is that player or an ally both sharing line of sight
 void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
@@ -172,7 +164,6 @@ void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlaye
     }
 }
 
-// FUNCTION: EXE 0x608958
 // Removes a player's sight from the tiles of the outer two rings around the old centre that the new one does not see
 void EERemoveSightRingStep(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer)
 {
@@ -213,7 +204,6 @@ void EERemoveSightRingStep(float inOldX, float inOldY, float inNewX, float inNew
     }
 }
 
-// FUNCTION: EXE 0x608b20
 // Moves a unit's sight: a step of at most one tile updates only the outer rings, a longer one redoes the whole circle
 void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, float inRadius, EEPlayer* inPlayer)
 {
@@ -227,6 +217,3 @@ void EEMoveSightCircle(float inOldX, float inOldY, float inNewX, float inNewY, f
         EERemoveSightRingStep(inOldX, inOldY, inNewX, inNewY, inRadius, inPlayer);
     }
 }
-
-// TEMPLATE: EXE 0x608c0b
-// (vector<GE2DPoint>::push_back, first used by EEBuildSightRings)

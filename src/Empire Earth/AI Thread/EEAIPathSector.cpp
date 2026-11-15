@@ -46,21 +46,18 @@
 #include "ee/EEAIPathArea.h"
 #include "ee/EEAIPathSector.h"
 
-// FUNCTION: EXE 0x42bbd3
 // Creates an empty path sector with id 0
 EEAIPathSector::EEAIPathSector()
     : mID(0)
 {
 }
 
-// FUNCTION: EXE 0x42bc4a
 // Destroys the path sector, deleting its sub-sectors
 EEAIPathSector::~EEAIPathSector()
 {
     this->DeleteSubSectors();
 }
 
-// FUNCTION: EXE 0x42bc72
 // Adds a continent touching the sector unless it is already listed
 void EEAIPathSector::AddNeighbor(EEAIContinent* inContinent)
 {
@@ -69,7 +66,6 @@ void EEAIPathSector::AddNeighbor(EEAIContinent* inContinent)
         this->mNeighbors.push_back(inContinent);
 }
 
-// FUNCTION: EXE 0x42bccf
 // Adds a path area id to the sector's sorted id list unless it is already there
 void EEAIPathSector::AddPathAreaID(unsigned short inID)
 {
@@ -79,7 +75,6 @@ void EEAIPathSector::AddPathAreaID(unsigned short inID)
     }
 }
 
-// FUNCTION: EXE 0x42bd4d
 // Returns the sector's path area containing the point (last listed first), or NULL
 EEAIPathArea* EEAIPathSector::GetPathAreaAt(const U2DPoint<long>& inPoint)
 {
@@ -94,7 +89,6 @@ EEAIPathArea* EEAIPathSector::GetPathAreaAt(const U2DPoint<long>& inPoint)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42bda4
 // Deletes every sub-sector of the sector and empties the sub-sector map
 void EEAIPathSector::DeleteSubSectors()
 {
@@ -104,7 +98,6 @@ void EEAIPathSector::DeleteSubSectors()
     this->mSubSectors.clear();
 }
 
-// FUNCTION: EXE 0x42bde6
 // Removes a path area id from the sector's sorted id list when present
 void EEAIPathSector::RemovePathAreaID(unsigned short inID)
 {
@@ -112,8 +105,3 @@ void EEAIPathSector::RemovePathAreaID(unsigned short inID)
     if (theID != this->mPathAreaIDs.end() && *theID == inID)
         this->mPathAreaIDs.erase(theID);
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt):
-// SYNTHETIC: EXE 0x42bc2e
-// TEMPLATE: EXE 0x42be51
-// TEMPLATE: EXE 0x42be65

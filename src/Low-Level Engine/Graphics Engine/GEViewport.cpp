@@ -23,14 +23,12 @@
 
 GEVector GEViewport::sLocalLookAtVector(0.0f, 1.0f, 0.0f);
 
-// FUNCTION: LLE 0x1003684c
 // Creates a default viewport: identity camera, 90-degree field of view, clipping from 1 to 10
 GEViewport::GEViewport()
 {
     ee_ge_viewport_default(GERust(*this));
 }
 
-// FUNCTION: LLE 0x100369b3
 // Creates a viewport for a screen rectangle and camera, computing its projections and clipping planes
 GEViewport::GEViewport(const GERectangle& inViewRectangle, const GERectangle& inOrthographicRectangle,
                        const GETransformation& inCamera, float inFrontClippingDistance,
@@ -40,7 +38,6 @@ GEViewport::GEViewport(const GERectangle& inViewRectangle, const GERectangle& in
                         inFrontClippingDistance, inRearClippingDistance, inFieldOfView);
 }
 
-// FUNCTION: LLE 0x10036b86
 // Copies every field of another viewport (rectangles, planes, camera, matrices, projection factors)
 GEViewport& GEViewport::operator=(const GEViewport& inViewport)
 {
@@ -48,21 +45,18 @@ GEViewport& GEViewport::operator=(const GEViewport& inViewport)
     return *this;
 }
 
-// FUNCTION: LLE 0x10036d8b
 // Recomputes the orthographic projection and its screen-to-world matrix (skipped with no rear clipping distance)
 void GEViewport::ComputeOrthographicMatrix()
 {
     ee_ge_viewport_orthographic_matrix(GERust(*this));
 }
 
-// FUNCTION: LLE 0x10036f6f
 // Recomputes the perspective projection and its screen-to-world matrix (skipped with no rear clipping distance)
 void GEViewport::ComputePerspectiveMatrix()
 {
     ee_ge_viewport_perspective_matrix(GERust(*this));
 }
 
-// FUNCTION: LLE 0x100372ea
 // Returns the six world-space planes of the frustum under a screen rectangle (perspective or orthographic)
 void GEViewport::GetFrustrumWorldPlanes(const GERectangle& inRectangle, std::vector<GE3DPlane>& outPlanes,
                                         bool inOrthographic) const
@@ -71,7 +65,6 @@ void GEViewport::GetFrustrumWorldPlanes(const GERectangle& inRectangle, std::vec
     ee_ge_viewport_frustum_planes(GERust(*this), GERust(inRectangle), inOrthographic, GERust(outPlanes[0]));
 }
 
-// FUNCTION: LLE 0x100375a6
 // Appends the eight world-space corners (near and far per screen corner) of the frustum under a screen
 // rectangle, widened to at least 2 pixels each way
 void GEViewport::GetFrustrumWorldPoints(const GERectangle& inRectangle, std::vector<GE3DPoint>& outPoints,
@@ -83,51 +76,27 @@ void GEViewport::GetFrustrumWorldPoints(const GERectangle& inRectangle, std::vec
         outPoints.push_back(thePoints[k]);
 }
 
-// FUNCTION: LLE 0x10037941
 // Changes the field of view and recomputes the perspective and the clipping planes
 void GEViewport::SetFieldOfView(float inFieldOfView)
 {
     ee_ge_viewport_set_field_of_view(GERust(*this), inFieldOfView);
 }
 
-// FUNCTION: LLE 0x1003799b
 // Changes the front clipping distance (pushing the rear one back if needed) and recomputes everything
 void GEViewport::SetFrontClippingDistance(float inDistance)
 {
     ee_ge_viewport_set_front(GERust(*this), inDistance);
 }
 
-// FUNCTION: LLE 0x100379dc
 // Changes the rear clipping distance (pulling the front one in if needed) and recomputes everything
 void GEViewport::SetRearClippingDistance(float inDistance)
 {
     ee_ge_viewport_set_rear(GERust(*this), inDistance);
 }
 
-// FUNCTION: LLE 0x10037a1d
 // Changes the screen rectangle, its centre and aspect ratio and the clipping planes and
 // the projection matrices
 void GEViewport::SetViewRectangle(const GERectangle& inRectangle)
 {
     ee_ge_viewport_set_view_rectangle(GERust(*this), GERust(inRectangle));
 }
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// SYNTHETIC: LLE 0x1003680c
-// SYNTHETIC: LLE 0x10036816
-// SYNTHETIC: LLE 0x1003682f
-// SYNTHETIC: LLE 0x1003683b
-// TEMPLATE: LLE 0x10037b00
-// TEMPLATE: LLE 0x10037b10
-// TEMPLATE: LLE 0x10037b2c
-// TEMPLATE: LLE 0x10037b3c
-// TEMPLATE: LLE 0x10037b48
-// TEMPLATE: LLE 0x10037bfc
-// TEMPLATE: LLE 0x10037ed9
-// TEMPLATE: LLE 0x10037f23
-// TEMPLATE: LLE 0x10037f4a
-// TEMPLATE: LLE 0x10037f61
-// TEMPLATE: LLE 0x10037f89
-// TEMPLATE: LLE 0x10037fa6
-// TEMPLATE: LLE 0x10037fd2
-// TEMPLATE: LLE 0x10037ff6

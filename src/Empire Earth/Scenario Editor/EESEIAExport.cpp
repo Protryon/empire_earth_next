@@ -122,7 +122,6 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // 0x1705a2, in EESEInstructions.cpp (the import question's answer)
 void EESEImportTextAnswer(UIForm* inInfo);
 
-// FUNCTION: EXE 0x56ff5f
 // Writes the scenario's text to the chosen .lcl file under a {Version_1} header and reports success
 // (noting a changed file name) or a file error
 void EESEIAExport::Virtual4()
@@ -156,7 +155,6 @@ void EESEIAExport::Virtual4()
     gUIManager->DisplayMessage(theError, 1, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x5700e9
 // Posts the export action for the given file spec and frees the spec (the replace question's yes)
 static void EESEExportTextAnswer(UIForm* inFile)
 {
@@ -165,10 +163,6 @@ static void EESEExportTextAnswer(UIForm* inFile)
     delete theFile;
 }
 
-// FUNCTION: EXE 0x57013d
-// Destroys the export action and frees it when asked (EESEIAExport's scalar deleting destructor)
-
-// FUNCTION: EXE 0x570170
 // Exports the scenario text to data\Scenarios\<name>.lcl, asking first when the file exists; complains
 // when no name is entered; returns the open result (nonzero when the file was new)
 long EESEIEExport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -201,7 +195,6 @@ long EESEIEExport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x570345
 // Imports trigger text from the .lcl file after checking its {Version_n} header; a validation run lists the
 // errors and asks to import anyway; the file is closed on every path
 void EESEIAImport::Virtual4()

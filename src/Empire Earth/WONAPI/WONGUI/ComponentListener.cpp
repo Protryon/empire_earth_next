@@ -10,7 +10,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00737bf0
 // Forwards a component event to the listening component
 void ComponentListenerComp::HandleComponentEvent(ComponentEvent* event)
 {

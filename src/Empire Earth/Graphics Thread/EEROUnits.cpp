@@ -68,81 +68,33 @@ extern EERenderUnit* gU529044;              // 0x529044 (the unit with the debug
 extern UWideString gU529030;                // 0x529030 (that label; EERenderObject.cpp; provisional name)
 
 const UString kPlayerColorKey("player color");
-// SYNTHETIC: EXE 0x514296   (wrapper)
-// SYNTHETIC: EXE 0x5142a0   (ctor)
-// SYNTHETIC: EXE 0x5142b1   (registrar)
-// SYNTHETIC: EXE 0x5142bd   (dtor)
 
 // the rings' and bars' colours (0x5294c0..0x529418) (provisional names)
-GEColor gRingHighlightColor(0.537f, 0.678f, 1.0f);   // 0x5294c0
-// SYNTHETIC: EXE 0x5142c8   (wrapper)
-// SYNTHETIC: EXE 0x5142d2   (ctor)
-// SYNTHETIC: EXE 0x5142ef   (registrar)
-// SYNTHETIC: EXE 0x5142fb   (dtor)
-GEColor gRingColor(0.0f, 1.0f, 0.0f);   // 0x5294b0
-// SYNTHETIC: EXE 0x5142fc   (wrapper)
-// SYNTHETIC: EXE 0x514306   (ctor)
-// SYNTHETIC: EXE 0x51431f   (registrar)
-// SYNTHETIC: EXE 0x51432b   (dtor)
+GEColor gRingHighlightColor(0.537f, 0.678f, 1.0f);
+GEColor gRingColor(0.0f, 1.0f, 0.0f);
 GEColor gU5294A0(1.0f, 0.75f, 0.5f);
-// SYNTHETIC: EXE 0x51432c   (wrapper)
-// SYNTHETIC: EXE 0x514336   (ctor)
-// SYNTHETIC: EXE 0x514353   (registrar)
-// SYNTHETIC: EXE 0x51435f   (dtor)
 GEColor gU529490(1.0f, 0.56f, 0.25f);
-// SYNTHETIC: EXE 0x514360   (wrapper)
-// SYNTHETIC: EXE 0x51436a   (ctor)
-// SYNTHETIC: EXE 0x514387   (registrar)
-// SYNTHETIC: EXE 0x514393   (dtor)
 GEColor gSelectionRingDark(1.0f, 0.375f, 0.0f);
-// SYNTHETIC: EXE 0x514394   (wrapper)
-// SYNTHETIC: EXE 0x51439e   (ctor)
-// SYNTHETIC: EXE 0x5143b9   (registrar)
-// SYNTHETIC: EXE 0x5143c5   (dtor)
 GEColor gBarColor(0.0f, 1.0f, 0.0f);
-// SYNTHETIC: EXE 0x5143c6   (wrapper)
-// SYNTHETIC: EXE 0x5143d0   (ctor)
-// SYNTHETIC: EXE 0x5143e9   (registrar)
-// SYNTHETIC: EXE 0x5143f5   (dtor)
 GEColor gBarBackColor(1.0f, 0.0f, 0.0f);
-// SYNTHETIC: EXE 0x5143f6   (wrapper)
-// SYNTHETIC: EXE 0x514400   (ctor)
-// SYNTHETIC: EXE 0x514419   (registrar)
-// SYNTHETIC: EXE 0x514425   (dtor)
 GEColor gU529448(1.0f, 1.0f, 0.0f);
-// SYNTHETIC: EXE 0x514426   (wrapper)
-// SYNTHETIC: EXE 0x514430   (ctor)
-// SYNTHETIC: EXE 0x514449   (registrar)
-// SYNTHETIC: EXE 0x514455   (dtor)
 GEColor gBarBorderColor(0.9f, 0.9f, 0.9f);
-// SYNTHETIC: EXE 0x514456   (wrapper)
-// SYNTHETIC: EXE 0x514460   (ctor)
-// SYNTHETIC: EXE 0x514479   (registrar)
-// SYNTHETIC: EXE 0x514485   (dtor)
 GEColor gHealthColor(0.0f, 0.0f, 0.7f);
-// SYNTHETIC: EXE 0x514486   (wrapper)
-// SYNTHETIC: EXE 0x514490   (ctor)
-// SYNTHETIC: EXE 0x5144ab   (registrar)
-// SYNTHETIC: EXE 0x5144b7   (dtor)
 GEColor gHealthBackColor(1.0f, 1.0f, 1.0f);
-// SYNTHETIC: EXE 0x5144b8   (wrapper)
-// SYNTHETIC: EXE 0x5144c2   (ctor)
-// SYNTHETIC: EXE 0x5144db   (registrar)
-// SYNTHETIC: EXE 0x5144e7   (dtor)
 
 // the media (provisional names): the ring model, the selection models by size, the bars' rhombi
-static GEModel* sRingModel;                 // 0x5294f0
-static GEModel* sSelectionModels[3];        // 0x5294f4
+static GEModel* sRingModel;
+static GEModel* sSelectionModels[3];
 GETexture* sTexture4E0;                     // 0x5294e0 (EEE3DCommandConfirmation.cpp reads it)
 GETexture* sTexture4E4;                     // 0x5294e4 (EEE3DCommandConfirmation.cpp reads it)
 GETexture* sTexture4E8;                     // 0x5294e8 (EEE3DCommandConfirmation.cpp reads it)
-static GEModel* sModel4EC;                  // 0x5294ec
+static GEModel* sModel4EC;
 static GELine* sLines;                      // 0x529478 (new[])
 static GETexture* sDottedLineTexture;       // 0x529474 (the lines' texture)
-static GETexture* sSelectionTexture;        // 0x529500
-static GETexture* sAreaEffectTexture;       // 0x529504
-static GERhombus* sFGBar;              // 0x529508
-static GERhombus* sBGBar;          // 0x52950c
+static GETexture* sSelectionTexture;
+static GETexture* sAreaEffectTexture;
+static GERhombus* sFGBar;
+static GERhombus* sBGBar;
 long gCollisionSphereMode;                  // 0x529510 (ee/EmpireEarth.h; read-only: EERenderObject, EEMessage. .bss after this
                                             // unit's statics, before EEROUserInterface's gUIViewport 0x529518: either unit)
 
@@ -153,11 +105,11 @@ static unsigned long sBarWidth = 24;
 static float sBarHeight = 2.0f;
 static float sBarStep = 5.0f;
 // the unit's named constants (0x441ba0..0x441bb4) (provisional names)
-const float kFogDepth = 500.0f;             // 0x441ba0
-const float kMinAlphaRef = 0.03f;           // 0x441ba4
-const float kZWriteOpacity = 0.6f;          // 0x441ba8
-const float kTranslucentAmbientScale = 0.59f;  // 0x441bac
-const float kBarFraction = 0.75f;           // 0x441bb0
+const float kFogDepth = 500.0f;
+const float kMinAlphaRef = 0.03f;
+const float kZWriteOpacity = 0.6f;
+const float kTranslucentAmbientScale = 0.59f;
+const float kBarFraction = 0.75f;
 // 0x441bb4 (0.3, kSelectionGrow): ee_gfx units.rs SELECTION_GROW
 // after the vtable (0x441bd0..0x441be4)
 // 0x441bd0..0x441bd8: DrawBars's bar literals 0.0013020834f (1 / 768), 24.0f and 1 / 1024 (orig fmul [1/1024]; fmul [24]:
@@ -186,29 +138,22 @@ static const GERectangle& EERORect(const EeGfxBarRects& inRects, int inIndex)
     return *reinterpret_cast<const GERectangle*>(&inRects.rects[inIndex]);
 }
 
-// FUNCTION: EXE 0x5144e8
 // Creates the units' render object
 EEROUnits::EEROUnits()
 {
 }
 
-// SYNTHETIC: EXE 0x5144fa
-// (the scalar deleting destructor, emitted with the vtable; slot EEROUnits+0x10)
-
-// FUNCTION: EXE 0x514516
 // Destroys the units' render object
 EEROUnits::~EEROUnits()
 {
 }
 
-// FUNCTION: EXE 0x514521
 // Fills the render lists of units and objects for this frame
 void EEROUnits::FrameStarting()
 {
     this->FillRenderLists();
 }
 
-// FUNCTION: EXE 0x514526
 // Draws the small selection ring under each selected aircraft
 void EEROUnits::DrawSelectionRings()
 {
@@ -229,7 +174,6 @@ void EEROUnits::DrawSelectionRings()
     }
 }
 
-// FUNCTION: EXE 0x51461b
 // Draws the area-effect ring of each unit with an area effect, its first segments (one per strength point)
 // in the ring colour and the rest of the seven in the highlight colour, turned to the camera
 void EEROUnits::DrawRings()
@@ -267,10 +211,6 @@ void EEROUnits::DrawRings()
         theIterator++;
     }
 }
-
-// FUNCTION: EXE 0x5147f8
-// Draws one bar of a unit on screen above its bar tag (row inRow): the filled part in inColor and the rest
-// in inBackColor, each as two shaded rhombi at least one pixel wide (the rectangles: ee_gfx units.rs)
 
 void EEROUnits::DrawBar(EERenderUnit* inUnit, const GEColor& inColor, const GEColor& inBackColor, float inFraction,
                          long inRow)
@@ -312,7 +252,6 @@ void EEROUnits::DrawBar(EERenderUnit* inUnit, const GEColor& inColor, const GECo
     }
 }
 
-// FUNCTION: EXE 0x514cbc
 // Draws a building being placed: its model (fogged red where it cannot be placed), then for land buildings
 // its footprint outline and the edges of its blocked cells as screen lines
 void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
@@ -387,7 +326,6 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
     gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
 }
 
-// FUNCTION: EXE 0x515488
 // Draws the selection ring (small, medium or large by size) under each selected ground unit, and with
 // collision spheres on, each unit's inner collision sphere
 void EEROUnits::DrawSelection()
@@ -428,7 +366,6 @@ void EEROUnits::DrawSelection()
     }
 }
 
-// FUNCTION: EXE 0x515674
 // Draws one map object's model at its frame, scale and location, with alpha test and z writes by its opacity
 void EEROUnits::DrawObjectModel(GETransformation& ioTransformation, EERenderShadow* inObject)
 {
@@ -456,7 +393,6 @@ void EEROUnits::DrawObjectModel(GETransformation& ioTransformation, EERenderShad
     gRasterizer->Draw(theModel, theScreen, inObject->mObject->mOpacity, gOrthographicView);
 }
 
-// FUNCTION: EXE 0x5157b6
 // Draws a selected object's health bar above the object at its bar tag, restoring the blending
 void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
 {
@@ -490,7 +426,6 @@ void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
     gRasterizer->SetBlending(theSource, theDestination, theScreen);
 }
 
-// FUNCTION: EXE 0x515a50
 // Draws the map objects' models facing the camera, lit as fogged or not, translucent ones additively
 // when the card cannot modulate texture alpha
 void EEROUnits::DrawObjectModels(EERenderShadowMap& inObjects)
@@ -518,7 +453,6 @@ void EEROUnits::DrawObjectModels(EERenderShadowMap& inObjects)
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
 }
 
-// FUNCTION: EXE 0x515b63
 // Draws the selection ring at each selected object that has a ring size
 void EEROUnits::DrawObjectSelection()
 {
@@ -542,7 +476,6 @@ void EEROUnits::DrawObjectSelection()
     }
 }
 
-// FUNCTION: EXE 0x515c3a
 // Draws a unit's health bar (when it has health) and one bar per extra fraction above it; returns the bars'
 // height in pixels (5 per bar)
 long EEROUnits::DrawUnitBars(EERenderUnit* inUnit)
@@ -560,7 +493,6 @@ long EEROUnits::DrawUnitBars(EERenderUnit* inUnit)
     return theRow * 5.0f;
 }
 
-// FUNCTION: EXE 0x515cc7
 // Draws a unit's model: frame textures, player colour, turret/orbital/wheel rotations, frames and opacity
 // (model detail), then its second graphic object's model (a robotic farm's at full opacity when gone or at 1 hp)
 void EEROUnits::DrawUnitModel(EERenderUnit* inUnit)
@@ -651,7 +583,6 @@ void EEROUnits::DrawUnitModel(EERenderUnit* inUnit)
     gRasterizer->Draw(theModel, theScreen, inUnit->mSource->mOpacity, gOrthographicView);
 }
 
-// FUNCTION: EXE 0x516299
 // Draws the units' models, tinted ones inside a fog band of their tint colour, translucent ones additively
 // when the card cannot modulate texture alpha
 void EEROUnits::DrawUnitModels(EERenderUnitMap& inUnits)
@@ -702,7 +633,6 @@ void EEROUnits::DrawUnitModels(EERenderUnitMap& inUnits)
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
 }
 
-// FUNCTION: EXE 0x516500
 // Sizes the bars from the window and draws the bars of every selected unit and object and the pointed-at ones
 void EEROUnits::DrawBars()
 {
@@ -729,7 +659,6 @@ void EEROUnits::DrawBars()
         this->DrawObjectBars(EERenderLists::sInstance.mSelectedObject);
 }
 
-// FUNCTION: EXE 0x516692
 // Draws the units' text labels (a name starting with a blank, and the debug label above its unit), clipped
 // to the view above and beside the main game form's bottom strip unless the camera is free
 void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
@@ -794,7 +723,6 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
     }
 }
 
-// FUNCTION: EXE 0x516a97
 // Loads the units' media: bar rhombi, command and dotted-line textures, the line buffer, the area-effect
 // ring model and the three selection ring models (segment count by detail level)
 void EEROUnits::LoadMedia()
@@ -952,13 +880,6 @@ void EEROUnits::LoadMedia()
     }
 }
 
-// SYNTHETIC: EXE 0x5181a7
-// (GELine's vector deleting destructor, emitted for ReleaseMedia's delete[] sLines)
-
-// FUNCTION: EXE 0x518203
-// Draws the selections and rings (not in cinematics), the object and unit models, the buildings being
-// placed, the air selection rings and bars, then the effects' pass 5
-
 void EEROUnits::RenderScene()
 {
     EERenderUnitRecord theRecord;
@@ -1017,7 +938,6 @@ void EEROUnits::RenderScene()
     gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
 
-// FUNCTION: EXE 0x51852f
 // Draws the unit labels (not in cinematics) and the effects' pass 3
 void EEROUnits::FrameDone()
 {
@@ -1031,7 +951,6 @@ void EEROUnits::FrameDone()
     }
 }
 
-// FUNCTION: EXE 0x5185b5
 // Releases the units' media: bar rhombi, line buffer, textures, ring and selection models
 void EEROUnits::ReleaseMedia()
 {
@@ -1055,7 +974,6 @@ void EEROUnits::ReleaseMedia()
         sModel4EC->Dereference();
 }
 
-// FUNCTION: EXE 0x518676
 // Projects a world point to window coordinates in the game view (ee_gfx units.rs)
 void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 {
@@ -1063,8 +981,6 @@ void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
                               reinterpret_cast<const EeGe3DPoint*>(&inPoint), reinterpret_cast<EeGe2DPoint*>(&outPoint));
 }
 
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEROUnits::SceneStarting()
 {
 }

@@ -53,7 +53,6 @@ long EEUIEMGHotKeyStatusButton::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x667ec8
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
     : EEUIFMGGroup(inOwner)
@@ -67,32 +66,12 @@ EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)
     this->mStatusBox = new EEUIFMGStatusBox(inOwner);
 }
 
-// FUNCTION: EXE 0x667f17
-// Asks the panel to refill its unit on the next refresh
-// (Virtual10, inline in ee/EEUIFMGMainGroup.h)
-
-// SYNTHETIC: EXE 0x667f1c
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIFMGMainGroup+0x0)
-
-// FUNCTION: EXE 0x667f38
 // Destroys the main panel group and its status box
 EEUIFMGMainGroup::~EEUIFMGMainGroup()
 {
     delete this->mStatusBox;
 }
 
-// FUNCTION: EXE 0x6687db
-// Destroys a status-button hot key event (scalar deleting destructor)
-// (emitted after its first user)
-
-// FUNCTION: EXE 0x667f61
-// FUNCTION: EXE 0x668070
-// FUNCTION: EXE 0x668162
-// FUNCTION: EXE 0x6681c2
-// FUNCTION: EXE 0x6682ea
-// FUNCTION: EXE 0x668dee
-// FUNCTION: EXE 0x668f3f
-// FUNCTION: EXE 0x66915e
 // The group's members but ShowCommands (the original's Refresh, SetUnit, GetSelectedUnit, Open, ShowCommandButton,
 // ShowSpecialButtons, Update, WantsRefresh): ee_screens main_group.rs over the host below
 void EEUIFMGMainGroup::Refresh()
@@ -294,7 +273,6 @@ extern "C" int64_t ee_screenscpp_main_group(void* inGroup, uint32_t inOp, int64_
     return 0;
 }
 
-// FUNCTION: EXE 0x668806
 // Lays out the command and research buttons of the player's selected unit (civ power buttons, the class's
 // commands, its available techs with hot keys, airport timers); hides them all for others
 // NEAR: the first mResearchTechnologies[m] calls begin()/operator+ out of line in the original (inline budget), the frame is 8 bytes
@@ -397,7 +375,6 @@ void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
         ee_screens_main_group_member(this, EE_SCREENS_MGR_DO_SPECIAL_BUTTONS, inUnit, 0);
 }
 
-// FUNCTION: EXE 0x668dc6
 // Returns the tech node's hot key, or NULL
 UIHotKey* EETechTreeNode::GetHotKey()
 {
@@ -406,14 +383,12 @@ UIHotKey* EETechTreeNode::GetHotKey()
     return NULL;
 }
 
-// FUNCTION: EXE 0x669137
 // Returns the citizen's queued build target at an index
 EEUnit* EEComplexUnit::GetCitizenBuildTarget(unsigned long inIndex)
 {
     return this->mCitizenBuildQueue[inIndex];
 }
 
-// FUNCTION: EXE 0x66918d
 // Returns the button's hot key, or NULL
 UIHotKey* EEButtonObject::GetHotKey()
 {
@@ -422,20 +397,15 @@ UIHotKey* EEButtonObject::GetHotKey()
     return NULL;
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUIFMGMainGroup::Select()
 {
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUIFMGMainGroup::Virtual08()
 {
 }
 
 
-// FUNCTION: EXE 0x667eaa
 // Returns the epoch the tech tree shows to the player (two past the start, at most the end; at least the Bronze
 // Age's): the statistics group's "wonders available in" (inline in the original EEUIFMGGStatistics.h)
 long EETechTree::GetShownEpoch() const
@@ -480,14 +450,12 @@ extern "C" int32_t ee_screenscpp_group(void* inGroup, bool inPrint, uint32_t inW
     return 0;
 }
 
-// FUNCTION: EXE 0x667ce7
 // Refreshes the panel group (the statistics group: the conversions against their limit, when the text changed)
 void EEUIFMGGRust::Refresh()
 {
     ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_REFRESH);
 }
 
-// FUNCTION: EXE 0x667db1
 // Selects the panel group (the statistics group: the wonders to win, the epoch wonders become available in, then
 // the conversions)
 void EEUIFMGGRust::Select()

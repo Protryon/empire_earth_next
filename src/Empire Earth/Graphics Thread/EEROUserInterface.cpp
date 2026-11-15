@@ -38,10 +38,6 @@
 
 // the UI's viewport (0x529518) (provisional name)
 GEViewport gUIViewport;
-// SYNTHETIC: EXE 0x518741   (wrapper)
-// SYNTHETIC: EXE 0x51874b   (ctor)
-// SYNTHETIC: EXE 0x518756   (registrar)
-// SYNTHETIC: EXE 0x518762   (dtor)
 
 // the panel corners of the z-buffer clears (.rdata 0x441c00.., reloaded per use: named consts) (provisional names)
 const float kUnitPanelRight = 0.17f;
@@ -51,23 +47,17 @@ const float kRightPanelLeft = 0.8275f;
 // the current player has a selection (FrameStarting sets it, EEROUnits reads it; 0x5297a0) (provisional name)
 bool gUnitPanelActive;
 
-// FUNCTION: EXE 0x51876d
 // Creates the UI's render object for a UI manager
 EEROUserInterface::EEROUserInterface(UIManager* inManager)
 {
     this->mUIManager = inManager;
 }
 
-// SYNTHETIC: EXE 0x518788
-// (the scalar deleting destructor, emitted with the vtable; slot EEROUserInterface+0x10)
-
-// FUNCTION: EXE 0x5187a4
 // Destroys the UI's render object
 EEROUserInterface::~EEROUserInterface()
 {
 }
 
-// FUNCTION: EXE 0x5187af
 // Copies the UI's frame data and notes whether the current player has a selection or a viewed unit (the unit
 // panel is shown)
 void EEROUserInterface::FrameStarting()
@@ -82,7 +72,6 @@ void EEROUserInterface::FrameStarting()
         gUnitPanelActive = false;
 }
 
-// FUNCTION: EXE 0x518802
 // Clears the z buffer under the bottom-right panel, and under the unit panel when it is shown, so the
 // world draws behind them (not with the free camera or in UI state 0x11)
 void EEROUserInterface::SceneStarting()
@@ -106,7 +95,6 @@ void EEROUserInterface::SceneStarting()
     gRasterizer->ClearZBuffer(0.0f, theRectangle, gScreenIndex);
 }
 
-// FUNCTION: EXE 0x518907
 // Draws the UI's polygons over the whole render target with fog, lighting, alpha test and z buffer off,
 // restoring the fog and alpha reference (lighting stays off)
 void EEROUserInterface::RenderScene()
@@ -128,7 +116,6 @@ void EEROUserInterface::RenderScene()
     gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
 
-// FUNCTION: EXE 0x518a99
 // Draws the UI's text
 void EEROUserInterface::FrameDone()
 {

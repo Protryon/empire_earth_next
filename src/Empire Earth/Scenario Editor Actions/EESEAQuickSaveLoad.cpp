@@ -51,7 +51,6 @@
 #include "ee/EEAQuickSaveLoad.h"
 #include "ee/EESEAQuickSaveLoad.h"
 
-// FUNCTION: EXE 0x5aa70e
 // Runs the quick save or load, then resumes the editor's current tab
 void EESEAQuickSaveLoad::Virtual4()
 {

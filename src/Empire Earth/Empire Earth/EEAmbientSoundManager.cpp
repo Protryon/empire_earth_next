@@ -86,7 +86,6 @@ static const float kAmbientTerrainPitchHigh2 = 1.096f;
 static const float kAmbientTerrainPitchLow3 = 0.865f;
 static const float kAmbientTerrainPitchHigh3 = 1.066f;
 
-// FUNCTION: EXE 0x524ee2
 // Creates the ambient sound manager, disabled and unpaused, updating every 10 frames
 EEAmbientSoundManager::EEAmbientSoundManager()
     : mRandom(1), mFrameCount(0), mNextUpdateFrame(0), mUpdateInterval(10)
@@ -95,10 +94,6 @@ EEAmbientSoundManager::EEAmbientSoundManager()
     this->mIsEnabled = false;
 }
 
-// SYNTHETIC: EXE 0x524f41
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x524f5d
 // Destroys the manager, stopping and discarding every ambient sound
 EEAmbientSoundManager::~EEAmbientSoundManager()
 {
@@ -106,7 +101,6 @@ EEAmbientSoundManager::~EEAmbientSoundManager()
     this->ClearSounds();
 }
 
-// FUNCTION: EXE 0x524f83
 // Picks the day phase (day, dusk, night, dawn) from the time of day and runs that phase's ambient update
 void EEAmbientSoundManager::UpdateState(float inTimeOfDay, long inTime)
 {
@@ -137,7 +131,6 @@ void EEAmbientSoundManager::UpdateState(float inTimeOfDay, long inTime)
     }
 }
 
-// FUNCTION: EXE 0x525012
 // Loads the ambient sound records from the file into their slots and seeds the random generator; returns the last
 // read status
 long EEAmbientSoundManager::Load(FSFile& inFile)
@@ -161,7 +154,6 @@ long EEAmbientSoundManager::Load(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5250ae
 // Silences the wind and, early in the day when due and the chance allows, plays a bird call (full and centred when
 // farms are visible, else random volume and pan)
 void EEAmbientSoundManager::UpdateDay(float inTimeOfDay, long inTime)
@@ -188,21 +180,18 @@ void EEAmbientSoundManager::UpdateDay(float inTimeOfDay, long inTime)
     this->mSounds[9].mNextTime = this->mSounds[9].mInterval + inTime;
 }
 
-// FUNCTION: EXE 0x525231
 // Fades the wind up to its maximum volume at dawn
 void EEAmbientSoundManager::UpdateDawn(float inTimeOfDay, long inTime)
 {
     this->mSounds[7].SetTargetVolume(this->mSounds[7].mMaximumVolume);
 }
 
-// FUNCTION: EXE 0x525267
 // Returns a random float between two bounds
 float EEAmbientSoundManager::RandomRange(float inLow, float inHigh)
 {
     return this->mRandom.Generate() * (inHigh - inLow) + inLow;
 }
 
-// FUNCTION: EXE 0x525281
 // Returns a random integer between two bounds, inclusive
 long EEAmbientSoundManager::RandomInteger(long inLow, long inHigh)
 {
@@ -213,7 +202,6 @@ long EEAmbientSoundManager::RandomInteger(long inLow, long inHigh)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5252b4
 // Stops every ambient sound and pauses the manager
 void EEAmbientSoundManager::Pause()
 {
@@ -221,7 +209,6 @@ void EEAmbientSoundManager::Pause()
     this->mIsPaused = true;
 }
 
-// FUNCTION: EXE 0x5252c2
 // Fades the wind with the time of night and, when due and the chance allows, plays a bird call; the next call comes
 // after a random part of its interval
 void EEAmbientSoundManager::UpdateNight(float inTimeOfDay, long inTime)
@@ -251,7 +238,6 @@ void EEAmbientSoundManager::UpdateNight(float inTimeOfDay, long inTime)
         (long)(this->mRandom.Generate() * this->mSounds[9].mInterval) + inTime;
 }
 
-// FUNCTION: EXE 0x5254c8
 // Sets the wind's target volume for dusk, rising with the time of day between its start and maximum volume
 void EEAmbientSoundManager::UpdateDusk(float inTimeOfDay, long inTime)
 {
@@ -262,7 +248,6 @@ void EEAmbientSoundManager::UpdateDusk(float inTimeOfDay, long inTime)
         this->mSounds[7].SetTargetVolume(theVolume);
 }
 
-// FUNCTION: EXE 0x525685
 // Runs one ambient update: day phase, terrain and animal sounds, the fades, then resets the world counters
 void EEAmbientSoundManager::Update()
 {
@@ -282,7 +267,6 @@ void EEAmbientSoundManager::Update()
     this->mNextUpdateFrame = this->mUpdateInterval + this->mFrameCount;
 }
 
-// FUNCTION: EXE 0x52572e
 // Enables or disables the ambient sounds: loads every sound object, or stops and unloads them (slot 0 is skipped)
 void EEAmbientSoundManager::SetEnabled(bool inEnabled)
 {
@@ -301,7 +285,6 @@ void EEAmbientSoundManager::SetEnabled(bool inEnabled)
     }
 }
 
-// FUNCTION: EXE 0x5257bc
 // Stops every ambient sound
 void EEAmbientSoundManager::StopSounds()
 {
@@ -309,14 +292,12 @@ void EEAmbientSoundManager::StopSounds()
         this->mSounds[i].Stop();
 }
 
-// FUNCTION: EXE 0x5257f8
 // Discards every ambient sound
 void EEAmbientSoundManager::ClearSounds()
 {
     this->mSounds.clear();
 }
 
-// FUNCTION: EXE 0x525800
 // Unpauses the manager, running the next update straight away
 void EEAmbientSoundManager::Restart()
 {
@@ -324,7 +305,6 @@ void EEAmbientSoundManager::Restart()
     this->mFrameCount = this->mNextUpdateFrame;
 }
 
-// FUNCTION: EXE 0x52580b
 // Plays the dawn/dusk animal calls and the citizen chatter (more than 3 citizens visible) when due; these play when
 // the random draw is above the sound's probability, unlike the other ambient sounds
 void EEAmbientSoundManager::UpdateAnimals(float inTimeOfDay, long inTime)
@@ -387,7 +367,6 @@ void EEAmbientSoundManager::UpdateAnimals(float inTimeOfDay, long inTime)
     }
 }
 
-// FUNCTION: EXE 0x525d0d
 // Fades in one forest sound (picked by the forest type) when trees fill the view by day or night, fading out the
 // others; returns whether a forest sound plays
 bool EEAmbientSoundManager::UpdateWater(float inTimeOfDay, long inTime, bool inForce, float inRatio)
@@ -436,7 +415,6 @@ bool EEAmbientSoundManager::UpdateWater(float inTimeOfDay, long inTime, bool inF
     return theResult;
 }
 
-// FUNCTION: EXE 0x525fcc
 // Sets the terrain ambience from the visible units and tiles: crowd and battle noise, farm/goat/eagle calls, air
 // raid sirens, wind over water, space sounds, forest sounds and the quiet background
 void EEAmbientSoundManager::UpdateTerrain(float inTimeOfDay, long inTime)
@@ -558,30 +536,3 @@ void EEAmbientSoundManager::UpdateTerrain(float inTimeOfDay, long inTime)
                     this->mState == 2;
     this->mSounds[13].SetTargetVolume(theQuiet ? 0.0f : this->mSounds[13].mMaximumVolume);
 }
-
-// Template and inline COMDATs (vector<EEAmbientSound>, EEAmbientSound copy/inline members, the analyzer's ??_G,
-// CheckState):
-// TEMPLATE: EXE 0x526c09
-// TEMPLATE: EXE 0x526c25
-// TEMPLATE: EXE 0x526c32
-// TEMPLATE: EXE 0x526c6d
-// TEMPLATE: EXE 0x526d29
-// TEMPLATE: EXE 0x526d94
-// TEMPLATE: EXE 0x526dcb
-// TEMPLATE: EXE 0x526e04
-// TEMPLATE: EXE 0x526e16
-// TEMPLATE: EXE 0x5270ec
-// TEMPLATE: EXE 0x527167
-// TEMPLATE: EXE 0x527192
-// TEMPLATE: EXE 0x5271a6
-// TEMPLATE: EXE 0x5271ca
-// TEMPLATE: EXE 0x5271f6
-// TEMPLATE: EXE 0x527213
-// TEMPLATE: EXE 0x52723f
-// TEMPLATE: EXE 0x527251
-// TEMPLATE: EXE 0x5272c6
-// TEMPLATE: EXE 0x5272ea
-// TEMPLATE: EXE 0x527312
-// TEMPLATE: EXE 0x52733e
-// TEMPLATE: EXE 0x52735f
-// TEMPLATE: EXE 0x527385

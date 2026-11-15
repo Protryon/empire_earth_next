@@ -23,7 +23,6 @@
 #include "ee/EEAction.h"
 #include "ee/EEABuild.h"
 
-// FUNCTION: EXE 0x40173b
 // Destroys the build action, releasing the message it has not sent
 EEABuild::~EEABuild()
 {
@@ -41,7 +40,6 @@ void EEABuild::Virtual4()
     }
 }
 
-// FUNCTION: EXE 0x401760
 // Places the current player's selected building at a screen point (centred for its tile size) and posts the action
 void EEABuild::Build(const GE2DPoint& inLocation)
 {
@@ -66,19 +64,6 @@ void EEABuild::Build(const GE2DPoint& inLocation)
     gUserInterface->PostAction(this);
 }
 
-// FUNCTION: EXE 0x401844
-// Creates the message that asks the simulation to build a unit of a technology at a location for a player
-// (EEMBuildUnit's inline ctor, ee/EEMessage.h)
-
-// FUNCTION: EXE 0x401891
-// Reports that a message may be sent (the shared EEM* default)
-// (EEMessage::GetIsAvailableToSend, inline in ee/EEMessage.h: the copy every EEM* vtable shares)
-
-// FUNCTION: EXE 0x4018a4
-// Returns the player's technology entry for a technology id
-// (EETechTree::Get, inline in ee/EEPlayer.h)
-
-// FUNCTION: EXE 0x4018dd
 // Posts a gate build at a location and wall side, if the current player can produce the technology
 void EEABuild::BuildGate(const GE2DPoint& inLocation, long inSide)
 {
@@ -88,11 +73,6 @@ void EEABuild::BuildGate(const GE2DPoint& inLocation, long inSide)
     }
 }
 
-// FUNCTION: EXE 0x40194a
-// Creates the message that asks the simulation to build a gate in a wall
-// (EEMBuildGate's inline ctor, ee/EEMessage.h)
-
-// FUNCTION: EXE 0x40199e
 // Posts a wall build between two points, if the current player can produce the technology
 void EEABuild::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
 {
@@ -101,10 +81,3 @@ void EEABuild::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
         gUserInterface->PostAction(this);
     }
 }
-
-// FUNCTION: EXE 0x401a0b
-// Creates the message that asks the simulation to build a wall between two points
-// (EEMBuildWall's inline ctor, ee/EEMessage.h)
-
-// SYNTHETIC: EXE 0x401a71
-// (the scalar deleting destructor)

@@ -5,7 +5,6 @@
 inline void NESSTrace(unsigned long inA) {}
 inline void NESSTrace(unsigned long inA, unsigned long inB) {}
 
-// FUNCTION: LLE 0x10047e85
 // Boots every client that has not answered a message, pausing the game around the removal when running
 void NESynchronousServer::BootAllLaggers(unsigned long inMessageNumber)
 {
@@ -30,7 +29,6 @@ void NESynchronousServer::BootAllLaggers(unsigned long inMessageNumber)
         delete theLaggers;
 }
 
-// FUNCTION: LLE 0x10047f45
 // Boots the client picked as slowest CPU in a multiplayer game and announces its removal
 void NESynchronousServer::BootTheSlowestClientCPU()
 {
@@ -45,7 +43,6 @@ void NESynchronousServer::BootTheSlowestClientCPU()
         this->ProcessLocalUserInput(theMessage, kSlotNone);
 }
 
-// FUNCTION: LLE 0x10047fc1
 // Boots the slowest-responding client, pausing the game around the removal when running
 void NESynchronousServer::BootTheSlowestResponder()
 {
@@ -59,14 +56,12 @@ void NESynchronousServer::BootTheSlowestResponder()
         this->BootPlayer(theSlot, true, false);
 }
 
-// FUNCTION: LLE 0x100480d3
 // Returns the client with the highest recorded CPU load; 0xff if none has any
 unsigned char NESynchronousServer::GetSlowestClientCPU()
 {
     return ee_net_mm_slowest_client_cpu(this->mMessageManager);
 }
 
-// FUNCTION: LLE 0x1004907e
 // Sets physics ticks per second from the slowest CPU within the limits; flags a client after repeated slow ticks
 bool NESynchronousServer::TuneForSlowCPU()
 {
@@ -101,7 +96,6 @@ bool NESynchronousServer::TuneForSlowCPU()
     return true;
 }
 
-// FUNCTION: LLE 0x10049196
 // Adapts the tick send interval to client response times; resends, warns, or boots laggers when late
 bool NESynchronousServer::TuneForSlowNetwork()
 {
@@ -270,7 +264,6 @@ bool NESynchronousServer::TuneForSlowNetwork()
     return theResult;
 }
 
-// FUNCTION: LLE 0x1004969a
 // Tunes for network and CPU speed and reports (or clears) the lagging players; returns false while lagging
 bool NESynchronousServer::TuneServer()
 {

@@ -132,20 +132,11 @@ static unsigned long sPowersCategory;
 // chain at 0x6813f4 (wrapper)
 //   object 0x9654d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 const UString kCivKey(".civ");
-// SYNTHETIC: EXE 0x6813f4   (wrapper)
-// SYNTHETIC: EXE 0x6813fe   (ctor)
-// SYNTHETIC: EXE 0x68140f   (registrar)
-// SYNTHETIC: EXE 0x68141b   (dtor)
 
 // chain at 0x681426 (wrapper)
 //   object 0x9654c0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 const UString kCivilizationsKey("Civilizations");
-// SYNTHETIC: EXE 0x681426   (wrapper)
-// SYNTHETIC: EXE 0x681430   (ctor)
-// SYNTHETIC: EXE 0x681441   (registrar)
-// SYNTHETIC: EXE 0x68144d   (dtor)
 
-// FUNCTION: EXE 0x681458
 // Creates the civilization manager with no categories
 EECivilizationManager::EECivilizationManager()
 {
@@ -153,16 +144,11 @@ EECivilizationManager::EECivilizationManager()
     this->mCategoryCount = 0;
 }
 
-// SYNTHETIC: EXE 0x6814a8
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x6814c4
 // Destroys the civilization manager
 EECivilizationManager::~EECivilizationManager()
 {
 }
 
-// FUNCTION: EXE 0x6814e5
 // Appends a category record to the category table
 void EECivilizationManager::AddCategory(const EECivilizationCategoryEntry& inEntry)
 {
@@ -172,7 +158,6 @@ void EECivilizationManager::AddCategory(const EECivilizationCategoryEntry& inEnt
     this->mCategoryCount++;
 }
 
-// FUNCTION: EXE 0x681514
 // Reads the upgrade categories from the civilization file, then appends the civ powers category (one level per
 // power 0x26..0x3c, cost from world table entry 0x56)
 // The powers category is civbuilder.yaml's powers_category; its levels are the attributes that apply a power.
@@ -244,7 +229,6 @@ long EECivilizationManager::Load(FSFile* inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x681672
 // Reads the premade civilizations, sorts them by index and records the distinct era name ids in order
 long EECivilizationManager::LoadPremadeCivilizations(FSFile* inFile)
 {
@@ -277,11 +261,6 @@ long EECivilizationManager::LoadPremadeCivilizations(FSFile* inFile)
     return theResult;
 }
 
-// FUNCTION: EXE 0x681856
-// Destroys a premade civilization sorter (scalar deleting destructor)
-// (emitted after its first user)
-
-// FUNCTION: EXE 0x681873
 // Returns the extra cost per pick of the upgrade's category
 long EECivilizationManager::GetExtraCost(EECivUpgrade inUpgrade)
 {
@@ -290,7 +269,6 @@ long EECivilizationManager::GetExtraCost(EECivUpgrade inUpgrade)
     return this->mCategories[theCategory].mCost;
 }
 
-// FUNCTION: EXE 0x68189e
 // Counts the upgrades in the list that share the upgrade's category
 long EECivilizationManager::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
 {
@@ -306,7 +284,6 @@ long EECivilizationManager::CountInCategory(EECivUpgrade inUpgrade, std::vector<
     return theCount;
 }
 
-// FUNCTION: EXE 0x6818f9
 // Copies every premade civilization
 void EECivilizationManager::GetCivilizations(std::vector<EECivilizationEntry>& outCivs)
 {
@@ -315,7 +292,6 @@ void EECivilizationManager::GetCivilizations(std::vector<EECivilizationEntry>& o
         outCivs.push_back(this->mCivilizations[i]);
 }
 
-// FUNCTION: EXE 0x681945
 // Copies the premade civilizations of one era name id
 void EECivilizationManager::GetCivilizationsOfType(std::vector<EECivilizationEntry>& outCivs, long inType)
 {
@@ -326,7 +302,6 @@ void EECivilizationManager::GetCivilizationsOfType(std::vector<EECivilizationEnt
     }
 }
 
-// FUNCTION: EXE 0x68199b
 // Fills a list box with one header per era and a line per premade civilization of that era
 void EECivilizationManager::FillCivilizationList(EECBUIListBox* inList)
 {
@@ -351,7 +326,6 @@ void EECivilizationManager::FillCivilizationList(EECBUIListBox* inList)
         inList->ChangeSelectionIndex(0, false, false);
 }
 
-// FUNCTION: EXE 0x681bc5
 // Tells whether a file is a premade civilization whose checksum (name characters, upgrade ids, their count)
 // matches; reports the premade civilization's name id (0 when the file is not premade)
 // ecx unused: it reads gCivilizationManager
@@ -381,7 +355,6 @@ bool EECivilizationManager::MatchesPremadeCivilization(const UWideString& inFile
     return theResult;
 }
 
-// FUNCTION: EXE 0x681c92
 // Reads a category's name string id (categories 0..0x22)
 bool EECivilizationManager::GetCategoryNameID(unsigned long inCategory, long* outNameID)
 {
@@ -393,7 +366,6 @@ bool EECivilizationManager::GetCategoryNameID(unsigned long inCategory, long* ou
     return theResult;
 }
 
-// FUNCTION: EXE 0x681cb2
 // Runs a functor over every upgrade of every category until it returns false
 bool EECivilizationManager::ForEachUpgrade(EECMUpgradeFunctor& inFunctor)
 {
@@ -403,7 +375,6 @@ bool EECivilizationManager::ForEachUpgrade(EECMUpgradeFunctor& inFunctor)
     return theResult;
 }
 
-// FUNCTION: EXE 0x681cd5
 // Runs a functor over the 0x3c upgrade levels of a category until it returns false
 bool EECivilizationManager::ForEachUpgradeOfCategory(unsigned long inCategory, EECMUpgradeFunctor& inFunctor)
 {
@@ -419,7 +390,6 @@ bool EECivilizationManager::ForEachUpgradeOfCategory(unsigned long inCategory, E
     return theResult;
 }
 
-// FUNCTION: EXE 0x681d18
 // Reads an upgrade's value and bonus from its category level table
 bool EECivilizationManager::LookupLevel(EECivUpgrade inUpgrade, float* outValue, float* outBonus)
 {
@@ -427,7 +397,6 @@ bool EECivilizationManager::LookupLevel(EECivUpgrade inUpgrade, float* outValue,
                                   outBonus);
 }
 
-// FUNCTION: EXE 0x681d37
 // Reads the value and bonus of a category's level (1-based); false for an unknown category
 bool EECivilizationManager::GetCategoryLevel(unsigned long inCategory, unsigned long inIndex, float* outValue,
                                      float* outBonus)
@@ -445,7 +414,6 @@ bool EECivilizationManager::GetCategoryLevel(unsigned long inCategory, unsigned 
     return true;
 }
 
-// FUNCTION: EXE 0x681d79
 // Returns a category's record; false past the loaded categories
 bool EECivilizationManager::GetCategory(unsigned long inCategory, EECivilizationCategoryEntry** outEntry)
 {
@@ -457,7 +425,6 @@ bool EECivilizationManager::GetCategory(unsigned long inCategory, EECivilization
     return theResult;
 }
 
-// FUNCTION: EXE 0x681d9c
 // Builds an upgrade id from a category and a level index (category << 6 | index)
 unsigned long EECivilizationManager::MakeUpgrade(unsigned long inCategory, unsigned long inIndex)
 {
@@ -536,14 +503,12 @@ bool EECivilizationManager::FindUpgradeKey(const std::string& inKey, EECivUpgrad
     return false;
 }
 
-// FUNCTION: EXE 0x681db1
 // Builds the upgrade id of a civ power from its index
 unsigned long EECivilizationManager::MakePowerUpgrade(unsigned long inIndex)
 {
     return (inIndex & kCivUpgradeLevelMask) + (sPowersCategory << kCivUpgradeLevelBits);
 }
 
-// FUNCTION: EXE 0x681dc7
 // Splits an upgrade id into its category and level index
 void EECivilizationManager::SplitAttribute(EECivUpgrade inUpgrade, unsigned long* outCategory, unsigned long* outIndex)
 {
@@ -553,7 +518,6 @@ void EECivilizationManager::SplitAttribute(EECivUpgrade inUpgrade, unsigned long
         *outIndex = inUpgrade & kCivUpgradeLevelMask;
 }
 
-// FUNCTION: EXE 0x681ded
 // Returns every upgrade id of every category
 std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
 {
@@ -562,11 +526,6 @@ std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
     return theFunctor.mUpgrades;
 }
 
-// FUNCTION: EXE 0x681e3b
-// Appends an upgrade id to the collected list and continues the enumeration
-// (inline, out of line after its first user)
-
-// FUNCTION: EXE 0x681e4d
 // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
 bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
 {
@@ -735,7 +694,6 @@ static void EECBApplyStat(const EECivApply& inApply, EEUnitClassUpgrade* inUpgra
     }
 }
 
-// FUNCTION: EXE 0x681ed3
 // Applies one upgrade level to a player's unit class (attack, hit points, reload, armor, range and sight,
 // speed, gathering, build time, cost ...); levels 0x26..0x3c apply the civ power instead
 // upgrade index inIndex (1..0x17; 0x26..0x3c are the civilization powers) applied with inValue to inUpgrade, the
@@ -780,7 +738,6 @@ void EECivilizationManager::ApplyUpgradeLevel(EEUnitClassUpgrade* inUpgrade, uns
     }
 }
 
-// FUNCTION: EXE 0x68239e
 // Raises one armor kind of a class upgrade by a share of the class's base armor (at least 1)
 // NEAR: the final add is fld [mem]; faddp in the original, fadd [mem] here (+=, = x + y and a float& all give
 // fadd [mem])
@@ -792,7 +749,6 @@ void EECBUpgradeArmor(EEUnitClassUpgrade* inUpgrade, long inKind, float inValue)
     inUpgrade->mArmor[inKind] += theAdd;
 }
 
-// FUNCTION: EXE 0x6823e2
 // Creates the per-class upgrade functor for a player, level index and value
 EECBProcessUpgrade::EECBProcessUpgrade(long inPlayer, unsigned long inIndex, float inValue)
 {
@@ -801,7 +757,6 @@ EECBProcessUpgrade::EECBProcessUpgrade(long inPlayer, unsigned long inIndex, flo
     this->mValue = inValue;
 }
 
-// FUNCTION: EXE 0x682409
 // Applies the upgrade level to the player's upgrade of one unit class (hit points scaled by the game variant)
 bool EECBProcessUpgrade::Execute(long inUnitType)
 {
@@ -816,100 +771,3 @@ bool EECBProcessUpgrade::Execute(long inUnitType)
     }
     return true;
 }
-
-
-// FUNCTION: EXE 0x68246c
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682498
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x6824d3
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x68252a
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x68256e
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682829
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x68283d
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682920
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682931
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x68295b
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x68298d
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x6829b0
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x6829df
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x6829f5
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682a00
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682a32
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682b22
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682b6f
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682c3b
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682c41
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682c87
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682ccc
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682dc7
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682df0
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682e5d
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682e8f
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682eb4
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682f4b
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x682fdf
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x68300c
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x68305e
-// Standard library code for the premade civilization list (vector or sort template COMDAT)
-
-// FUNCTION: EXE 0x6830ae
-// Runs a functor on every unit type of a unit set (EEUnitSetManager::ForEach, emitted after ApplyUpgrade)

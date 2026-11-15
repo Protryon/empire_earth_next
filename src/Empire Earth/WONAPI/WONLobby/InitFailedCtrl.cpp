@@ -15,7 +15,6 @@ namespace WONAPI {
 // Lobby start-up failure panel: shows why connecting failed, with Retry and (when allowed) Ignore buttons
 InitFailedCtrl::InitFailedCtrl() {}
 // The implicit destructor (0x7bdaf0) releases the three controls in reverse order, then the Container
-// FUNCTION: WON 0x007bdbb0
 // Looks up the retry and ignore buttons and the description label, starts hidden and listens for broadcasts
 void InitFailedCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -28,7 +27,6 @@ void InitFailedCtrl::InitComponent(ComponentInit& inInit)
     this->SetVisible(false);
     this->SubscribeToBroadcast(1);
 }
-// FUNCTION: WON 0x007bdc30
 // Hides the panel when start-up begins (kind 1); on failure (kind 3) shows the reason and Ignore if allowed
 void InitFailedCtrl::HandleLoginInitStatus(LoginInitStatusEvent* inEvent)
 {
@@ -42,7 +40,6 @@ void InitFailedCtrl::HandleLoginInitStatus(LoginInitStatusEvent* inEvent)
         this->Relayout();
     }
 }
-// FUNCTION: WON 0x007bdcb0
 // Handles start-up status events; Retry restarts start-up and Ignore restarts it ignoring the current errors
 void InitFailedCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -64,14 +61,3 @@ void InitFailedCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     Component::HandleComponentEvent(inEvent);
 }
 }
-
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007bdad0
-// (public: virtual void * __thiscall WONAPI::InitFailedCtrl::`scalar deleting destructor'(unsigned int)    [??_GInitFailedCtrl@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x007bdaf0
-// (public: virtual __thiscall WONAPI::InitFailedCtrl::~InitFailedCtrl(void)    [??1InitFailedCtrl@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007bdaa0
-// (public: __thiscall WONAPI::InitFailedCtrl::InitFailedCtrl(void)    [??0InitFailedCtrl@WONAPI@@QAE@XZ])

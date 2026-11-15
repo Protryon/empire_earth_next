@@ -105,7 +105,6 @@ static const float kBuildingLift = 0.001f;      // 0x446ff0 (a building sits jus
 // 0x446dc0: the yaw of each map quarter (EEGetFacingQuarter's 0..3) (provisional name)
 static const float kQuarterYaws[4] = { 0.0f, 3.1415927f, -1.5707964f, 1.5707964f };
 
-// FUNCTION: EXE 0x60e58d
 // Puts docks and navy yards on the water plane and lifts other buildings just above the ground
 void EEUnitClass::BuildingGroundLocation(GE3DPoint& ioLocation)
 {
@@ -115,7 +114,6 @@ void EEUnitClass::BuildingGroundLocation(GE3DPoint& ioLocation)
         ioLocation.SetZ(ioLocation.GetZ() + kBuildingLift);
 }
 
-// FUNCTION: EXE 0x60e5b8
 // Picks the first fully healed garrisoned unit that should leave (a human's unit whose rally queue has a goal, a unit
 // with a goal, or one with an explore order) as the exiting unit; returns whether one was picked
 bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
@@ -173,7 +171,6 @@ bool EEUnitClass::BuildingSelectUnitToRelease(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x60e809
 // Erupts a volcano: gives it an attack-ground goal at a random spot near it; returns true
 bool EEUnitClass::EruptVolcano(EEComplexUnit* inUnit)
 {
@@ -188,7 +185,6 @@ bool EEUnitClass::EruptVolcano(EEComplexUnit* inUnit)
     return true;
 }
 
-// FUNCTION: EXE 0x60e8ae
 // Creates a building at a placement: docks and navy yards on the water plane, others (not the camera object) lifted
 // just above it
 EEUnit* EEUnitClass::BuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
@@ -203,7 +199,6 @@ EEUnit* EEUnitClass::BuildingCreateUnitAt(GETransformation& inTransformation, lo
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x60e909
 // Creates a building on a tile's centre (docks and navy yards at water level, off-map tiles at the -10000 sentinel)
 EEUnit* EEUnitClass::BuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -229,7 +224,6 @@ EEUnit* EEUnitClass::BuildingCreateUnit(long inX, long inY, long inPlayer, bool 
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x60ea89
 // Returns the map quarter facing the most space terrain within 6 tiles of a tile (half weight to the neighbouring
 // sides; its terrain run 0x60ea01 and the side tables 0x4c8ef8/0x4c8f08: ee_units cls_building.rs, R5b.4 round 33)
 long EEGetDockFacing(unsigned long inX, unsigned long inY)
@@ -238,7 +232,6 @@ long EEGetDockFacing(unsigned long inX, unsigned long inY)
     return theNote.R(ee_units_cls_dock_facing((uint32_t)inX, (uint32_t)inY));
 }
 
-// FUNCTION: EXE 0x60eb1c
 // Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
 // that has them, else the side with the longest run (cls_building.rs)
 static long GetNavyYardFacing(unsigned long inX, unsigned long inY)
@@ -247,7 +240,6 @@ static long GetNavyYardFacing(unsigned long inX, unsigned long inY)
     return theNote.R(ee_units_cls_navy_yard_facing((uint32_t)inX, (uint32_t)inY));
 }
 
-// FUNCTION: EXE 0x60ebda
 // Returns the map quarter (0..3) a tile faces from the middle of its continent (space maps) or of the map
 // (cls_building.rs)
 long EEGetFacingQuarter(long inX, long inY)
@@ -256,14 +248,12 @@ long EEGetFacingQuarter(long inX, long inY)
     return theNote.R(ee_units_cls_facing_quarter((int32_t)inX, (int32_t)inY));
 }
 
-// FUNCTION: EXE 0x60ed11
 // Returns the map quarter the unit's tile faces
 long EEGetUnitFacingQuarter(EEComplexUnit* inUnit)
 {
     return EEGetFacingQuarter(inUnit->GetTileX(), inUnit->GetTileY());
 }
 
-// FUNCTION: EXE 0x60ed25
 // Returns the model part for a wall piece kind (0..8); outFlag is set for the corner kinds 0, 2, 6 and 8
 // (inferred meaning)
 long EEGetWallPiecePart(long inIndex, bool* outFlag)
@@ -290,7 +280,6 @@ long EEGetWallPiecePart(long inIndex, bool* outFlag)
     return theResult;
 }
 
-// FUNCTION: EXE 0x60ed72
 // Returns the first living targetable building found in rings 1..19 around a unit's tile
 EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
 {
@@ -322,7 +311,6 @@ EEUnit* EEUnitClass::FindNearestTargetBuilding(EEUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x60ee56
 // Lists the tiles around a building; an airport's include its runway (four times its size toward its facing)
 void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners,
                              bool inAppend)
@@ -372,7 +360,6 @@ void EEUnitClass::BuildingGetSurroundingTiles(EEComplexUnit* inUnit, std::vector
         this->BaseGetSurroundingTiles(inUnit, outTiles, inCorners, inAppend);
 }
 
-// FUNCTION: EXE 0x60f17f
 // Sets up a new building (built, its resource stock, regeneration); an airport turns to its map quarter, a navy yard
 // picks its facing and a space dock its yaw
 void EEUnitClass::BuildingUnitCreated(EEComplexUnit* inUnit)
@@ -400,7 +387,6 @@ void EEUnitClass::BuildingUnitCreated(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x60f2bb
 // Launches the exiting unit: places it at the exit (runway, water or tag point), gives it the building's rally
 // goals or its own (else loads it back) and starts its takeoff from this home base
 void EEUnitClass::ReleaseUnit(EEComplexUnit* inUnit)
@@ -553,7 +539,6 @@ void EEUnitClass::ReleaseUnit(EEComplexUnit* inUnit)
     inUnit->SetExitingUnitID(-1);
 }
 
-// FUNCTION: EXE 0x60fef9
 // Runs an armed building's tick (physics, turrets, timers, animation, sound) and fires on its attack frame; skips
 // disabled ones and standing foundations
 void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
@@ -655,16 +640,7 @@ void EEUnitClass::PriestVirtualB8(EEComplexUnit* inUnit)
 // unit later globals get lower addresses: 0x5634f0 / 0x5634e0) (provisional names)
 static GEColor sGateHighlight(0.0f, 1.0f, 0.0f);
 
-// SYNTHETIC: EXE 0x61048f   (wrapper)
-// SYNTHETIC: EXE 0x610499   (ctor)
-// SYNTHETIC: EXE 0x6104b2   (registrar)
-// SYNTHETIC: EXE 0x6104be   (dtor)
 static GEColor sGateNormal(1.0f, 1.0f, 1.0f);
-
-// SYNTHETIC: EXE 0x6104bf   (wrapper)
-// SYNTHETIC: EXE 0x6104c9   (ctor)
-// SYNTHETIC: EXE 0x6104e2   (registrar)
-// SYNTHETIC: EXE 0x6104ee   (dtor)
 
 // 0x447004..0x447018: the unit's named float constants (one .rdata block per unit) (provisional names)
 // 0x447004/0x447008 (1.0 open, 0.0 closed) are ee_units cls_condition.rs GATE_OPEN, GATE_CLOSED
@@ -687,7 +663,6 @@ long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& o
 // 0x24f8f9: after a gate is built for the current player (the new gate's piece 2) (provisional name)
 void EECreateSpaceGateEnergyWall(EEComplexUnit* inGate);
 
-// FUNCTION: EXE 0x6104ef
 // Replaces the other four pieces of a gate whose gate piece was replaced (new owner and class), turning and
 // relinking them; the posts go idle and the doors take the new gate piece's action
 void EEUnitClass::GateGateReplaced(EEUnit* inGate, EEUnit* inUnit)
@@ -721,7 +696,6 @@ void EEUnitClass::GateGateReplaced(EEUnit* inGate, EEUnit* inUnit)
 
 }
 
-// FUNCTION: EXE 0x61080d
 // Turns the five wall pieces across a tile into a closed gate of the technology's class for a player (EEMBuildGate's
 // work): weakest wall's health, posts on the lower ground; adds the energy wall once space gates are available
 void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, long inDirection)
@@ -807,7 +781,6 @@ template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E 
     ioValues.erase(theEnd, ioValues.end());
 }
 
-// FUNCTION: EXE 0x610e86
 // Collects the footprint tiles of every gate piece not left out (doors and gate piece while open), sorted and unique
 void EEUnitClass::GateGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETileCoordinate>& outTiles, long inCorners, bool inAppend)
 {
@@ -825,7 +798,6 @@ void EEUnitClass::GateGetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EET
     EESortUnique(outTiles, std::less<U2DPoint<long> >(), std::equal_to<U2DPoint<long> >());
 }
 
-// FUNCTION: EXE 0x610eee
 // Returns whether a gate fits across a wall unit's tile in a direction (1..4), giving the five walls of the type
 // (EECPWallManager.cpp declares it the same way)
 bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType, std::vector<EEUnit*>& outUnits)
@@ -836,7 +808,6 @@ bool EEDoesWallGateFitOnUnit(EEComplexUnit* inUnit, long inSide, long inUnitType
     return EEDoesWallGateFit(theTile, inSide, inUnitType, outUnits);
 }
 
-// FUNCTION: EXE 0x610f19
 // Returns whether a gate fits across a tile in a direction: five built, living walls of the type on level tiles
 // (else outUnits is emptied)
 bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigned long inUnitType,
@@ -874,7 +845,6 @@ bool EEDoesWallGateFit(const EETileCoordinate& inTile, long inDirection, unsigne
     return theResult;
 }
 
-// FUNCTION: EXE 0x610fe2
 // Returns the first piece of a unit's linked chain (+0x1cc)
 EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit)
 {
@@ -883,7 +853,6 @@ EEComplexUnit* EEGetFirstPart(EEComplexUnit* inUnit)
     return inUnit;
 }
 
-// FUNCTION: EXE 0x610ff5
 // Returns the middle unit of a list (the lower of the two middles for an even count)
 static EEUnit* EEGetMiddleOf(std::vector<EEUnit*>& inUnits)
 {
@@ -893,7 +862,6 @@ static EEUnit* EEGetMiddleOf(std::vector<EEUnit*>& inUnits)
     return inUnits[theIndex];
 }
 
-// FUNCTION: EXE 0x611028
 // Turns gate piece inIndex for a gate in direction 1..4; returns its animation: 9 a post, 10 a diagonal post, 11 else
 // (the yaws: cls_building.rs)
 long EETurnGatePart(GETransformation& ioTransformation, long inDirection, long inIndex)
@@ -909,7 +877,6 @@ long EETurnGatePart(GETransformation& ioTransformation, long inDirection, long i
     return theResult;
 }
 
-// FUNCTION: EXE 0x61112a
 // Returns piece inIndex (0..4) of a gate, found along its linked chain (2 is the gate piece itself)
 EEComplexUnit* EEUnitClass::GetPart(EEComplexUnit* inGate, long inIndex)
 {
@@ -939,7 +906,6 @@ EEComplexUnit* EEUnitClass::GetPart(EEComplexUnit* inGate, long inIndex)
     return theResult;
 }
 
-// FUNCTION: EXE 0x611171
 // Lists the five tiles of a gate line through a tile: direction 1 along x, 2 along y, 3 and 4 the diagonals
 // (cls_building.rs)
 void EEGetWallGateTiles(const U2DPoint<long>& inTile, long inDirection, std::vector<U2DPoint<long> >& outTiles)
@@ -949,7 +915,6 @@ void EEGetWallGateTiles(const U2DPoint<long>& inTile, long inDirection, std::vec
     theNote.Ts(outTiles);   // TEST ONLY (UCBD)
 }
 
-// FUNCTION: EXE 0x6113a9
 // Returns whether a living enemy unit of unit set 0x62 is within reach of the gate or its next two pieces
 // (the squared distance is compared with the unsquared reach; cls_building.rs)
 bool EEUnitClass::AreEnemiesNear(EEComplexUnit* inUnit)
@@ -958,7 +923,6 @@ bool EEUnitClass::AreEnemiesNear(EEComplexUnit* inUnit)
     return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), false));
 }
 
-// FUNCTION: EXE 0x611506
 // Returns whether a unit that may pass is within reach of the gate or its next two pieces: a mobile land unit
 // the owner is not hostile to, or an enemy of unit set 0x62 (cls_building.rs)
 bool EEUnitClass::IsPasserNear(EEComplexUnit* inUnit)
@@ -967,7 +931,6 @@ bool EEUnitClass::IsPasserNear(EEComplexUnit* inUnit)
     return theNote.R(ee_units_cls_gate_near(EEObj(inUnit), true));
 }
 
-// FUNCTION: EXE 0x6116a2
 // Returns whether a tile holds a highlighted living wall that can take a gate, giving its gate direction
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
 {
@@ -986,14 +949,12 @@ bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection)
     return theFound;
 }
 
-// FUNCTION: EXE 0x611723
 // Returns the piece before the last one of a unit's linked chain
 EEComplexUnit* EEUnitClass::GetLastLinkedCarrier(EEComplexUnit* inUnit)
 {
     return this->GetLastLinked(inUnit)->mPreviousPart;
 }
 
-// FUNCTION: EXE 0x611735
 // Returns gate piece 1 (the piece before piece 3); NULL when the chain is too short (a gate created as a single
 // piece, e.g. by a scenario effect)
 EEComplexUnit* EEUnitClass::GetSecondPart(EEComplexUnit* inGate)
@@ -1002,7 +963,6 @@ EEComplexUnit* EEUnitClass::GetSecondPart(EEComplexUnit* inGate)
     return theFourth != NULL ? theFourth->mPreviousPart : NULL;
 }
 
-// FUNCTION: EXE 0x611747
 // Returns the last piece of a unit's linked chain
 EEComplexUnit* EEUnitClass::GetLastLinked(EEComplexUnit* inUnit)
 {
@@ -1011,7 +971,6 @@ EEComplexUnit* EEUnitClass::GetLastLinked(EEComplexUnit* inUnit)
     return inUnit;
 }
 
-// FUNCTION: EXE 0x61175c
 // Returns gate piece 3 (two pieces before the end of the chain); NULL when the chain is too short (a gate created
 // as a single piece, e.g. by a scenario effect)
 EEComplexUnit* EEUnitClass::GetFourthPart(EEComplexUnit* inGate)
@@ -1020,7 +979,6 @@ EEComplexUnit* EEUnitClass::GetFourthPart(EEComplexUnit* inGate)
     return theCarrier != NULL ? theCarrier->mPreviousPart : NULL;
 }
 
-// FUNCTION: EXE 0x61176e
 // Restores the normal colour of a player's walls of a type and clears their gate direction (after gate placement)
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 {
@@ -1036,7 +994,6 @@ void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
     }
 }
 
-// FUNCTION: EXE 0x611905
 // Sets up a new gate piece the building's way; the chain's first piece starts closed
 void EEUnitClass::GateUnitCreated(EEComplexUnit* inUnit)
 {
@@ -1048,7 +1005,6 @@ void EEUnitClass::GateUnitCreated(EEComplexUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x611957
 // Highlights the middle wall of a gate line through each of a player's walls of a type when one or three of the
 // four directions fit (an XOR of the four tests); the first fitting direction is used
 void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
@@ -1103,7 +1059,6 @@ void EEHighlightGateWalls(EEPlayer* inPlayer, long inUnitType)
     }
 }
 
-// FUNCTION: EXE 0x611d00
 // Returns whether all tiles are on the map, flat or ramps (0 or 2 raised corners), and differ in height by at most
 // 0.6 (0x447014; cls_building.rs) (EECPWallManager.cpp declares it the same way)
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
@@ -1116,7 +1071,6 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 // building's unit class (a mine built on a resource unit): 0x217085..0x217337 (after EEUCLandTransport.cpp;
 // EEUCMissile.cpp follows). Unit flags: the exe's module set. Its ctor is inline (vtable 0x44843c).
 
-// FUNCTION: EXE 0x617085
 // Creates a mine at a placement and ties it to the first resource under its footprint that it can gather
 EEUnit* EEUnitClass::MiningBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                          EEUnit* inCreator)
@@ -1144,7 +1098,6 @@ EEUnit* EEUnitClass::MiningBuildingCreateUnitAt(GETransformation& inTransformati
     return theUnit;
 }
 
-// FUNCTION: EXE 0x6171b6
 // Creates a mine on a tile, at the tile's height (0 off the map)
 EEUnit* EEUnitClass::MiningBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -1168,7 +1121,6 @@ EEUnit* EEUnitClass::MiningBuildingCreateUnit(long inX, long inY, long inPlayer,
 // module set. Its ctor is inline. Virtual74/78/88 are ICF-folded into EEUCSpaceBuilding.cpp's copies; VirtualA0/E0
 // here are also EEUCSpaceBuilding's (ICF).
 
-// FUNCTION: EXE 0x618164
 // Picks the first fully healed docked ship that should leave (a human's ship whose own or the dock's rally goal is an
 // attack, move or explore goal; any ship with a goal for a computer player); returns whether one was picked
 bool EEUnitClass::NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit)
@@ -1208,7 +1160,6 @@ bool EEUnitClass::NavalBuildingSelectUnitToRelease(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x618320
 // Returns whether the dock's transformed bounding box lies wholly below the water line
 bool EEUnitClass::NavalBuildingHasSunk(EEComplexUnit* inUnit)
 {
@@ -1236,7 +1187,6 @@ bool EEUnitClass::NavalBuildingHasSunk(EEComplexUnit* inUnit)
 // exe's module set. Its ctor is inline. Virtual74/78/88 are also EEUCNavalBuilding's (ICF: these copies are kept);
 // VirtualA0/E0 are EEUCNavalBuilding.cpp's (ICF).
 
-// FUNCTION: EXE 0x619ff3
 // Returns the tile under a location along the camera line, at the cruise altitude
 void EEUnitClass::SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
 {
@@ -1250,7 +1200,6 @@ void EEUnitClass::SpaceBuildingLocationToTile(const GE3DPoint& inLocation, long&
     outY = UMFloor(thePoint.GetY());
 }
 
-// FUNCTION: EXE 0x61a0a0
 // Creates a space building at a placement, at the cruise altitude
 EEUnit* EEUnitClass::SpaceBuildingCreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
                                         EEUnit* inCreator)
@@ -1261,7 +1210,6 @@ EEUnit* EEUnitClass::SpaceBuildingCreateUnitAt(GETransformation& inTransformatio
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x61a0dd
 // Creates a space building on a tile, at the cruise altitude
 EEUnit* EEUnitClass::SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
 {
@@ -1272,7 +1220,6 @@ EEUnit* EEUnitClass::SpaceBuildingCreateUnit(long inX, long inY, long inPlayer, 
     return this->BaseCreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x61a129
 // Sets up a new space building as a building, already built
 void EEUnitClass::SpaceBuildingUnitCreated(EEComplexUnit* inUnit)
 {
@@ -1280,7 +1227,6 @@ void EEUnitClass::SpaceBuildingUnitCreated(EEComplexUnit* inUnit)
     inUnit->SetBuilt(1, 0, 1);
 }
 
-// FUNCTION: EXE 0x61a144
 // Returns whether the space building may stop: already sinking, a slow request, or at its next waypoint's tile
 bool EEUnitClass::SpaceBuildingHasArrived(EEComplexUnit* inUnit, float inValue)
 {

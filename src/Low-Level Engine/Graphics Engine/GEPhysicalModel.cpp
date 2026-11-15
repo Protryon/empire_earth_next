@@ -89,7 +89,6 @@ const EeGePhysicalModels kPMModels = { PMHasParent, PMInternalTransform, PMCente
                                        PMRetryLine };
 }   // namespace
 
-// FUNCTION: LLE 0x10020e09
 // Places a model in the world at a location and scale, holding a reference to it, at frame 0
 GEPhysicalModel::GEPhysicalModel(GEModel* inModel, const GETransformation& inLocation, float inScale)
 {
@@ -101,7 +100,6 @@ GEPhysicalModel::GEPhysicalModel(GEModel* inModel, const GETransformation& inLoc
     this->mFrame = 0;
 }
 
-// FUNCTION: LLE 0x10020e3b
 // Destroys the placed model, releasing its model
 GEPhysicalModel::~GEPhysicalModel()
 {
@@ -109,7 +107,6 @@ GEPhysicalModel::~GEPhysicalModel()
         this->mModel->Dereference();
 }
 
-// FUNCTION: LLE 0x10020e48
 // Copies another placed model (model reference, location, scale, frame)
 GEPhysicalModel& GEPhysicalModel::operator=(const GEPhysicalModel& inModel)
 {
@@ -124,7 +121,6 @@ GEPhysicalModel& GEPhysicalModel::operator=(const GEPhysicalModel& inModel)
     return *this;
 }
 
-// FUNCTION: LLE 0x10020e84
 // Tests a line against a model and its sub-models: bounding sphere, then box (LOD > 0), then triangles (LOD > 1);
 // with inExact the hit must lie on the segment
 // (the walk is Rust: ee_ge physical_walk.rs, line_walk)
@@ -135,7 +131,6 @@ bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEMod
                                     inLOD, &outDistance, inExact);
 }
 
-// FUNCTION: LLE 0x10021404
 // Tests a model scaled per axis against this placed model, sub-models included;
 // in exact mode a top model with no hit retries as a uniformly scaled line test
 // (the walk is Rust: ee_ge physical_walk.rs, scaled_walk)
@@ -148,7 +143,6 @@ bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEMod
                                       inZ);
 }
 
-// FUNCTION: LLE 0x1002179e
 // Tests this placed model against another model: bounding spheres, then boxes (LOD > 0),
 // then triangle boxes at a reduced LOD (LOD > 1); recurses into this model's sub-models
 // (the walk is Rust: ee_ge physical_walk.rs, model_walk)
@@ -162,7 +156,6 @@ bool GEPhysicalModel::Intersects(const GETransformation& inLocation, const GEMod
                                      inScale, inOtherModel, inFrame, inLOD);
 }
 
-// FUNCTION: LLE 0x10021fc0
 // Returns whether the placed model can be visible in a viewport: bounding sphere against the four planes and the
 // clip distances, or its box against the orthographic rectangle
 // (the test is Rust: ee_ge physical.rs, model_visible)
@@ -175,7 +168,6 @@ bool GEPhysicalModel::Intersects(const GEViewport& inViewport, bool inOrthograph
                                   inOrthographic);
 }
 
-// FUNCTION: LLE 0x1002232f
 // Replaces the placed model's model, keeping a reference to the new one
 void GEPhysicalModel::SetModel(GEModel* inModel)
 {
@@ -185,40 +177,3 @@ void GEPhysicalModel::SetModel(GEModel* inModel)
     if (inModel)
         inModel->Reference();
 }
-
-// vector<vector<GEBoundingBox> > / vector<GEBoundingBox> COMDATs (Intersects of two models)
-// TEMPLATE: LLE 0x10022350
-// TEMPLATE: LLE 0x10022376
-// TEMPLATE: LLE 0x10022429
-// TEMPLATE: LLE 0x10022462
-// TEMPLATE: LLE 0x1002249a
-// TEMPLATE: LLE 0x1002254e
-// TEMPLATE: LLE 0x10022563
-// TEMPLATE: LLE 0x10022817
-// TEMPLATE: LLE 0x10022880
-// TEMPLATE: LLE 0x10022b51
-// TEMPLATE: LLE 0x10022b9b
-// TEMPLATE: LLE 0x10022bd5
-// TEMPLATE: LLE 0x10022c00
-// TEMPLATE: LLE 0x10022c4a
-// TEMPLATE: LLE 0x10022c77
-// TEMPLATE: LLE 0x10022c8e
-// TEMPLATE: LLE 0x10022cba
-// TEMPLATE: LLE 0x10022cd7
-// TEMPLATE: LLE 0x10022d03
-// TEMPLATE: LLE 0x10022d27
-// TEMPLATE: LLE 0x10022d44
-// TEMPLATE: LLE 0x10022d70
-// TEMPLATE: LLE 0x10022d94
-// TEMPLATE: LLE 0x10022dc6
-// TEMPLATE: LLE 0x10022dd8
-// TEMPLATE: LLE 0x10022dee
-// TEMPLATE: LLE 0x10022e0a
-// TEMPLATE: LLE 0x10022f72
-
-// UList<GELODVertex*>/<GELODPolygon*>/<GELODMetaVertex*>::sNodePool init wrapper and atexit registrars (GELOD.h via
-// GEModel.h; the $D ctors are GEBoundingBox.cpp's COMDATs 0x10014ed4/0x10014efb/0x10014f22)
-// SYNTHETIC: LLE 0x10022f88
-// SYNTHETIC: LLE 0x10022fa6
-// SYNTHETIC: LLE 0x10022fb2
-// SYNTHETIC: LLE 0x10022fbe

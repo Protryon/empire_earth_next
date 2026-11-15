@@ -119,37 +119,37 @@ public:
 
 class EECPUnitSelector {
 public:
-    EECPUnitSelector(EEComputerPlayer* inPlayer);   // 0x979ff
+    EECPUnitSelector(EEComputerPlayer* inPlayer);
     virtual ~EECPUnitSelector();            // +0x00 0x97a2d (??_G 0x97a11)
 
     // requirement kind 3 (EECPUnitRequirement::mKind; AllocateRequirements's switch); named by its trace string
-    void AllocateAlreadyDefinedUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement);   // 0x97a34
+    void AllocateAlreadyDefinedUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement);
     void AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement);  // 0x97c61 (kind 1)
     void AllocateFavoriteUnits(EECPUnitSelectionGroup* inGroup);  // 0x980a0 (the strategy's mB48)
     void AllocateRequirements(EECPUnitSelectionGroup* inGroup);  // 0x98731 (every requirement of the strategy by its kind)
     void AllocateCounterUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement);  // 0x987c7 (kind 0)
     void AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement);  // 0x995ea (kind 2)
-    void RedistributeDomainCounts(EECPUnitSelectionGroup* inGroup);  // 0x9a1d1
+    void RedistributeDomainCounts(EECPUnitSelectionGroup* inGroup);
     // 0x9a44f: the gathered classes of inGroup sorted into the strategy's four kinds
     void SplitByDomain(EECPUnitSelectionGroup* inGroup, std::vector<long>& outKind34, std::vector<long>& outKind38,
                  std::vector<long>& outKind3C, std::vector<long>& outKind40);
-    void FreeUnits(EECPUnitSelectionGroup* inGroup);   // 0x9a5a9
-    void FreeClassesByKind(std::map<long, std::vector<long>*>& ioMap);   // 0x9a5fc
+    void FreeUnits(EECPUnitSelectionGroup* inGroup);
+    void FreeClassesByKind(std::map<long, std::vector<long>*>& ioMap);
     void Select(EECPUnitSelectionGroup* inGroup);   // 0x9a64a (EECPAttackGroup 0x57391/0x579f4)
-    void ComputeDomainShares(EECPUnitSelectionGroup* inGroup);  // 0x9a695
-    float GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inSea);  // 0x9ab2f (ret 8)
-    void ComputeGroupSize(EECPUnitSelectionGroup* inGroup);  // 0x9ad60
+    void ComputeDomainShares(EECPUnitSelectionGroup* inGroup);
+    float GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inSea);
+    void ComputeGroupSize(EECPUnitSelectionGroup* inGroup);
     void GatherDefendingUnits(EECPUnitSelectionGroup* inGroup);  // 0x9b126 (the defending groups' units)
-    void GatherCandidates(EECPUnitSelectionGroup* inGroup);  // 0x9b2e9
+    void GatherCandidates(EECPUnitSelectionGroup* inGroup);
     // 0x9b34e: weights inClass's three linked classes (+0x1d4: 3, +0x1d8: 2, +0x1dc: 1) found in inMap into ioCounts
     void WeighCounters(EEUnitClass* inClass, std::map<long, long>& ioCounts, std::map<long, std::vector<long>*>& inMap);
     void GetIntelligenceFiles(EECPUnitSelectionGroup* inGroup);  // 0x9b497 (the two intelligence files)
     bool IsCandidate(long inClass, std::map<long, std::vector<long>*>& inMap);  // 0x9b4fa (inClass is in any list)
-    bool IsAvailable(long inClass, EEAIFOPAvailablePersonnelGatherer& inGatherer);  // 0x9b569
-    void KeepBestClasses(std::map<long, std::vector<long>*>& ioMap);  // 0x9b5ca
+    bool IsAvailable(long inClass, EEAIFOPAvailablePersonnelGatherer& inGatherer);
+    void KeepBestClasses(std::map<long, std::vector<long>*>& ioMap);
     long GetRandomOfKind(long inKind, std::map<long, std::vector<long>*>& inMap);  // 0x9b817 (a random class of that list)
     long GetRandomOfCategory(long inCategory, std::map<long, std::vector<long>*>& inMap);  // 0x9b86b (a random class of that category)
-    void FilterByStrategy(EECPUnitSelectionGroup* inGroup);  // 0x9b949
+    void FilterByStrategy(EECPUnitSelectionGroup* inGroup);
 
     EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x04
