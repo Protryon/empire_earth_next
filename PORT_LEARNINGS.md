@@ -23622,3 +23622,91 @@ C++ diff over `src` and `include/ee`: +530 -2,152 (net -1,622).
   line (a waypoint line: a person's queued orders and the scenario goals).
 - **Not moved:** the render objects' passes (`EEROUnits`, `EEROTerrain`: their media can use `load_texture` now), the
   capture's world walks (`EERenderObject.cpp`), the decal placement helpers.
+
+## R4.4, twenty-fourth round: the terrain's and the units' render objects whole in Rust; EEInitialiseScene's key frames (ee_gfx ro_terrain.rs, ro_units.rs, scene.rs; branch rust-gfx30, 2026-11-15)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 10,697 lines at the round's start; 9,714 after the
+render objects (-983); 9,577 after the key frames (-137); 9,575 merged with `rust`. The round's C++ diff over `src` and `include/ee`: +381
+-1,523 (net -1,142), short of the 1,500 aimed at: `EERenderObject.cpp`'s remaining world walks (`FillUnit`,
+`FillObject`, the doppelgangers, the ghost records, `FillRenderLists`) read the live world under the lock on every
+line, so a Rust version needs a host answer per read and frees about as much C++ as it adds; they were left.
+
+| Commit | What | Graphics Thread C++ (.cpp) |
+|---|---|---|
+| e83014a6 | `EEROTerrain` and `EEROUnits` whole in Rust over the raster table (16 new entries) | -983 |
+| f945bda5, 51fca7bd | `EEInitialiseScene`'s time-of-day key frames and fill lights (`scene.rs` `initial_tables`) | -137 |
+| 37c22d49 | merge of `rust` (3114725d) | |
+
+- **The terrain's render object** (`ro_terrain.rs`). The sky dome, the two star models and the cloud layer (made
+  through `create_model`, `store_mesh`, `material_ranges`, their textures through `load_texture`), the area-effect
+  textures (the C++ globals `gAreaEffectTexture`, `gCircleAreaEffectTexture` keep the returned pointers), the frame's
+  sky colours and cloud layer (`FrameStarting`'s `UpdateSkyColors` and `UpdateCloudLayer`: the fog colour and the
+  cloud offset come back to the C++) and the scene pass. The sky colour table (`gSkyColors`) is a Rust const. The
+  C++ keeps `EeGfxTerrainScene`'s host calls: the terrain mesh's draw, the highlights from the snapshot, the grid, the
+  grid lines, the 3D lines and the effects' pass 4.
+- **The units' render object** (`ro_units.rs`). Its media (the line, command, selection and area-effect textures,
+  the area-effect ring, the three selection rings), `RenderScene` (object and unit selection rings, area-effect rings,
+  the map objects' and units' models with their tint fog bands, the buildings being placed with their footprint
+  lines in batches of 64, the air units' rings, the bars) and `FrameDone`'s labels. The C++ hands the frame over as
+  records (`EeGfxUnitsScene`: the pool's units and objects in pool order, the maps and selections as index lists in
+  their order, the ghost records with their grids); it keeps the two bar rhombi and the line batch (the rasterizer
+  may hold their pointers), the label's `GEText` and the effects' passes 3 and 5. The colour constants (`gRingColor`
+  ...) are Rust consts; `EEE2DRust`'s command textures come from `ee_gfx_ro_units_command_texture`.
+- **The raster table's new entries** (16): alpha testing, rear clipping, the sky draw, 32-bit texture support,
+  texture alpha modulation, ambient intensity, the fog attributes and the fog type, colour and range setters, a unit
+  model's frame textures (the material loop), a graphic object's group colour, the gate's sub-model offset (it
+  returns the transform set, which the second model's draw reuses as the original did), the bar rhombi (set and
+  draw), the screen line batch, the label and a texture's dereference.
+  - **Trap (types):** the table's `model_dereference` casts to `GEModel*`. Releasing textures through it calls
+    `GEModel::Dereference` on a `GETexture` (the driver caught it: `mderef` where the original printed `tderef`).
+    Textures have their own entry, `texture_dereference`.
+  - **Trap (cbindgen):** an exported record's array sized by a `pub(crate)` const (`[[f32; PLACEMENT_GRID]; ...]`)
+    is emitted with the const's name, which the C++ cannot see: the build fails in every includer of the header.
+    Size exported arrays with literals.
+- **The key frames** (`scene.rs` `initial_tables`): the 17 light colours, the light, terrain-ambient and
+  unit-ambient intensities and the three fill lights (normalised by `GeVector::normalize`, the header's `Normalize`)
+  that `EEInitialiseScene` wrote into five C++ globals; `Fn10C036` takes them through `ee_gfx_scene_daylight_tables`
+  and adds the ambient colour and the sun and moon.
+- **Golden drivers** (`build/gx30/drv`): `make_r24.py COMMIT|WORKTREE OUT`: the original `EEROTerrain.cpp` and
+  `EEROUnits.cpp` of 8657a831 against the new ones with the raster table's entries cut from `EERenderObject.cpp`,
+  over one stub GE (models with materials and sub-models, textures with frames, the rasterizer, rhombi, lines, texts)
+  that prints every rasterizer call and each drawn object's whole state, and every model's and texture's state after
+  each media load. 300 frames on seed 1 (1,309 lines) and 2,000 on seed 2 (8,721 lines, 58 MB: 48,853 rhombi, 1,431
+  line batches, 1,801 labels, 17,912 sky draws), identical. `drv/tables/make.py`: the original fills against
+  `initial_tables`, 71 values bit for bit.
+  - **Trap (driver):** the render lists and effect queues are multimaps keyed by texture pointers: keys allocated on
+    the heap sort differently in the two executables (other allocations come first), so equal frames drew in another
+    order. Key them with a static array.
+  - **Trap (driver):** the stub's `GetFrameTexture` past the frame count and `GetSubModel(0)` of a model without
+    sub-models crashed both sides (the game's models always have them where the code reads them): the stub answers.
+- **Behaviour changes:** the textures' stage settings are made in `load_texture`'s order (alpha, colour, filters, MIP
+  filter, bias, addressing; the originals set the bias and addressing before the MIP filter) and the line batch is
+  made after the textures and models (it was between the command textures and the selection texture): the end state
+  is the same. `LoadMedia`'s and `CreateSkyModel`'s asserts on a null texture are gone (a null texture crashed at its
+  `Reference` either way). The unused `GetLighting` read of `DrawUnitModels` is gone.
+- **Gates.** Per commit: `build.py --sim` 0/0, the oracle at seeds 2-3 identical, `ee_gfx`'s tests, clippy and
+  rustfmt (one clippy finding, `manual_repeat_n`, fixed before the commit; one rustfmt fix as its own commit). Before
+  the merge the branch's history was rewritten by the lead's `fix_plan_history.sh` (its oversized
+  `docs/RUST_PLAN.md`, 305 MB in each of this lane's unpushed commits, replaced by the clean blob; the tree unchanged).
+  The merge of `rust` 3114725d (37c22d49) conflicted in `docs/RUST_PLAN.md`, `include/rust/ee_units.h` and the four
+  `tools/sim_capture/golden_cpp*.txt` (`rust`'s copies taken), `link/exe/units.txt` (both sides' removals:
+  `EEE3DParticle.cpp` here, `EELobbySound.cpp` there) and `PORT_LEARNINGS.md` (both sides' sections kept);
+  `rust_build.py header` and `rust_includes.py` changed nothing. On the result: both builds 0/0 (`--sim` and the test
+  profile), the Rust gate (tests, clippy, rustfmt, header) PASS with 3,729 tests, the oracle identical on seeds 2-7,
+  the oracle, late and calamity captures at seeds 2-3 PASS (177, 178, 195 digests) and the effects capture at seeds
+  2-7 PASS (18), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the
+  matrix as expected), the tour `RESULT PASS tour` and the orders game `RESULT PASS random-game`.
+- **The frames.** `build/gx30/frames.sh`: the tour at seed 7 with the PT rate pinned at 40 (`--pt-rate 40`) and
+  `--zoom-captures 100 40 20`, round 23's merged test exe (`build/gx29/new_exe`) against this round's merged one, one
+  after the other under the harness lock. The pinned rate brought the captures close in game time: the zoom-100
+  capture at about 112.4 s of game time before and 105.3 s after (the game log's line next to each capture). Both
+  `RESULT PASS tour`, no GX errors in either; the menus and settings equal but for 223 pixels (the version text); at
+  each zoom and in the gameplay frame the same scene (the start's town centre in its player colour, its citizens, the
+  ground shadows, the selection bar's tick), about two thirds of the pixels differing, nine in ten of those by under
+  16 levels (the time of day's light 7 s apart and the clouds); the large differences where citizens stood in other
+  poses and the HUD's and the map's crown icons, which only the later (pre-round) capture shows. No placement,
+  label, ring or area-effect ring was in view.
+- **Only a tour or a person reaches** all of this round's code: the sky, stars and clouds, the terrain's highlights,
+  grid and lines, every unit and map object model, the selection and area-effect rings, the bars, the building
+  placement and its footprint lines (a person placing a building), the command names and the debug label (a
+  person's pointer over an enemy), the collision spheres (a debug key). EE-SIM never draws.
