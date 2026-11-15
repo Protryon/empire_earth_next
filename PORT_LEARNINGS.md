@@ -2111,3 +2111,33 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Fix**: a model without both lists, with no source points, or with fewer target points than source points, gets no
   vents (Step returns early). The vents are cosmetic and draw from the effects' own random generator, so the
   simulation does not change.
+
+## The music as the original plays it (dmusic patches, PR #1, 2026-11-15)
+
+- **A clock rounded per call makes the tempo depend on the block size.** dmusic advanced its music time by whole
+  ticks in every `renderPcm` call, so the tempo depended on how many frames the device asked for (at 48 kHz: 10 %
+  slow in 128-frame blocks, 1 to 2.6 % fast in 512-frame ones). Carry the fraction of a tick from call to call
+  (`time_carry`). Anything that converts audio frames to a coarser unit per callback has this bug.
+- **A DLS bank is MSB, LSB and a drum flag.** dmusic compared the band's bank LSB alone, so no preset matched and
+  every instrument of the eight songs played as preset 0. The band patch holds MSB in bits 16-22, LSB in 8-14 and
+  the drum flag in bit 31; a DLS bank has MSB in 8-14, LSB in 0-6, the flag in 31.
+- **Equal times in a heap have no order.** A note's end and the next note's start on the same key at the same tick
+  came out in either order, and about half the time the note-off cut the new note (every other measure of a loop
+  silent). The comparator now puts the note-off first.
+- **miniaudio kept a start position Miles reset.** The sound manager gives every looping sound a random offset
+  before it plays the channel; `AIL_start_sample` started from 0 anyway, the new mixer kept the offset, so the
+  menu theme and every ambient loop began at a random point. `SPIMPlayChannel` now starts from 0. Port a library's
+  call semantics, not just its signatures.
+- **A library's lock must cover every path that touches its state.** dmusic rendered the last part of each block
+  outside the performance's lock (safe upstream, where only the render thread changed the synthesizer). The new
+  `DmPerformance_stop` and the master volume (which now shifts the sounding voices) changed TSF voices from the
+  game's thread meanwhile, and `tsf_note_on` reallocates its voice array when it runs out: a use after free on the
+  render thread, and a volume change applied twice when two threads applied it at once. The whole block now renders
+  under the lock, `setVolume`/`playSegment`/`playTransition` take it, and each collection's voices are allocated
+  once (`tsf_set_max_voices`).
+- **Keep parsing out of the audio callback.** The first band to use a collection converted it inside `renderPcm`
+  (879 KB for the built-in general MIDI set). The loader now builds each collection's synthesizer when it loads,
+  and `playSegment` creates the fonts as copies (`tsf_copy`, shared samples) before the play is queued.
+- **Size delay lines from the rate.** The reverb's fixed 4096- and 1024-frame buffers held its delays only up to
+  about 54 kHz, and the mixer opens the device at its own rate (88.2, 96 and 192 kHz exist). Powers of two from
+  the rate, never below the old sizes, leave the output at 48 kHz and below bit-identical.
