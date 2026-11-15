@@ -11671,3 +11671,1053 @@ step 1107 form 97 113
   c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Player-Attribute Player 1>'
   c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
   c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 1112 tab 4
+step 1113 trigger 1
+step 1114 newentry
+step 1115 newentry
+step 1116 tscreenstate
+  tscreen screen=1 storing=0 list 3: '<Player-Attribute Player 1>' '<Player-Attribute Player 1>' '<Condition8>' selected 2 s0=0+ s1=2+ s2=0+ s3=0+ s4=0-
+step 1117 tscreen select 0                   # condition type 2: player attribute
+step 1118 ctype 2
+step 1119 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player Attribute Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=264,668,324,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=155,646,165,666 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''s'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '23'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=167,646,292,664 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none e1=EEScreenEvent
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none e1=EEScreenEvent
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 1' n=9 sel=5 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 2' n=9 sel=6 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player-Attribute' n=6 sel=0 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1120 cctl player 0 2
+step 1121 cctl combo 0 23
+step 1122 cctl combo 1 3
+step 1123 cctl edit 0 150
+step 1124 ctl c radio 1
+step 1125 cctl player 1 3
+step 1126 cctl combo 2 40
+step 1127 ui c
+  condition controls
+  label0 mode=1 'Player Attribute Condition Details'
+  label1 mode=0 'Min'
+  label2 mode=1 ''s'
+  label3 mode=0 '23'
+  label4 mode=0 ''
+  slider0 mode=0 value=23
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  check2 mode=0 checked=1
+  radio0 mode=1
+  radio1 mode=1
+  combo0 mode=1 lines=67
+  combo1 mode=1 lines=5
+  combo2 mode=1 lines=67
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1128 crefresh
+step 1129 tscreen select 1
+step 1130 tscreen select 0
+step 1131 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player Attribute Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=264,668,324,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=155,646,165,666 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''s'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '23'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=167,646,292,664 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Wood Sent' n=67 sel=23 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '>=' n=5 sel=3 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=40 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '150'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none e1=EEScreenEvent
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none e1=EEScreenEvent
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Any Computer' n=9 sel=1 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Human' n=9 sel=2 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player-Attribute' n=6 sel=0 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1132 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Player-Attribute Any Computer>' n 2 3 1 0 17 28 0 96 0 2 3 0 0 0 0 5 b000001 text '' chat ''
+  condition 2 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text '' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<NONE>> Exists' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1133 tscreen select 0                   # condition type 3: player research
+step 1134 ctype 3
+step 1135 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=163,646,363,666 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Has Researched'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=155,646,165,666 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''s'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '23'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=163,676,413,694 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Epoch Prehistoric' n=310 sel=67 'Allow Settlement Upgrade'|'Allow Town Center Upgrade'|'Amalgamation: +15% Gold Gathering'|'Ancestor Worship: +1 Temple Range'|'Anesthesia: + Hospital Healing Rate & Range'|'Anti-Aging Pill: +5 Pop Cap'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '>=' n=5 sel=3 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=40 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '150'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Any Computer' n=9 sel=1 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Human' n=9 sel=2 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player-Technology' n=6 sel=1 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1136 cctl player 0 3
+step 1137 cctl combo 0 5
+step 1138 ui c
+  condition controls
+  label0 mode=1 'Player Condition Details'
+  label1 mode=1 'Has Researched'
+  label2 mode=0 ''s'
+  label3 mode=0 '23'
+  label4 mode=0 ''
+  slider0 mode=0 value=23
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  check2 mode=0 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=1 lines=310
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1139 crefresh
+step 1140 tscreen select 1
+step 1141 tscreen select 0
+step 1142 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=163,646,363,666 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Has Researched'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=155,646,165,666 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''s'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '23'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=163,676,413,694 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Anti-Aging Pill: +5 Pop Cap' n=310 sel=5 'Allow Settlement Upgrade'|'Allow Town Center Upgrade'|'Amalgamation: +15% Gold Gathering'|'Ancestor Worship: +1 Temple Range'|'Anesthesia: + Hospital Healing Rate & Range'|'Anti-Aging Pill: +5 Pop Cap'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Human' n=9 sel=2 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 2' n=9 sel=6 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player-Technology' n=6 sel=1 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1143 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Player-Technology All Human>' n 3 3 1 0 17 28 36b1 96 0 3 3 0 0 0 0 5 b000001 text '' chat ''
+  condition 2 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text '' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<NONE>> Exists' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1144 tscreen select 0                   # condition type 4: trigger attribute
+step 1145 ctype 4
+step 1146 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Condition Attributes'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=14,641,304,661 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'The Trigger'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=155,646,165,666 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''s'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '23'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=163,676,413,694 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Anti-Aging Pill: +5 Pop Cap' n=310 sel=5 'Allow Settlement Upgrade'|'Allow Town Center Upgrade'|'Amalgamation: +15% Gold Gathering'|'Ancestor Worship: +1 Temple Range'|'Anesthesia: + Hospital Healing Rate & Range'|'Anti-Aging Pill: +5 Pop Cap'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger0_Copy>' n=2 sel=none '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=314,666,413,685 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Is On'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=314,695,413,714 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Has Fired'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Human' n=9 sel=2 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 2' n=9 sel=6 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger- Attribute' n=6 sel=2 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1147 cctl scen 0 1
+step 1148 ctl c check 0 1
+step 1149 ctl c check 1 1
+step 1150 ui c
+  condition controls
+  label0 mode=1 'Trigger Condition Attributes'
+  label1 mode=1 'The Trigger'
+  label2 mode=0 ''s'
+  label3 mode=0 '23'
+  label4 mode=0 ''
+  slider0 mode=0 value=23
+  check0 mode=1 checked=1
+  check1 mode=1 checked=1
+  check2 mode=0 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=0 lines=310
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=1 kind=0 lines=2 selection=1
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1151 crefresh
+step 1152 tscreen select 1
+step 1153 tscreen select 0
+step 1154 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Condition Attributes'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=14,641,304,661 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'The Trigger'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=155,646,165,666 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''s'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '23'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=167,646,292,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger1>' n=2 sel=1 '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=314,666,413,685 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Is On'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=314,695,413,714 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Has Fired'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 1' n=9 sel=5 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 2' n=9 sel=6 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger- Attribute' n=6 sel=2 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1155 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Trigger-<Trigger1>>' n 4 3 1 0 17 28 36b1 96 0 3 3 0 0 0 1 5 b110001 text '' chat ''
+  condition 2 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text '' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<NONE>> Exists' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1156 tscreen select 0                   # condition type 5: diplomacy
+step 1157 ctype 5
+step 1158 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Diplomacy Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=163,644,486,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Diplomacy Towards'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=314,666,334,686 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'is'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=4,644,154,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=336,666,486,684 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Allied' n=2 sel=none 'Allied'|'Enemy'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger1>' n=2 sel=1 '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=314,666,413,685 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Is On'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=314,695,413,714 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Has Fired'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,666,153,685 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Human' n=9 sel=2 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=163,666,312,685 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Human' n=9 sel=2 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player-Diplomacy' n=6 sel=3 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1159 cctl player 0 2
+step 1160 cctl player 1 4
+step 1161 cctl combo 0 2
+step 1162 ui c
+  condition controls
+  label0 mode=1 'Diplomacy Condition Details'
+  label1 mode=1 'Diplomacy Towards'
+  label2 mode=1 'is'
+  label3 mode=1 'Player'
+  label4 mode=0 ''
+  slider0 mode=0 value=23
+  check0 mode=0 checked=1
+  check1 mode=0 checked=1
+  check2 mode=0 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=1 lines=2
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=1
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1163 crefresh
+step 1164 tscreen select 1
+step 1165 tscreen select 0
+step 1166 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Diplomacy Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=163,644,486,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Diplomacy Towards'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=314,666,334,686 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'is'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=4,644,154,664 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=336,666,486,684 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Allied' n=2 sel=none 'Allied'|'Enemy'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger1>' n=2 sel=1 '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=314,666,413,685 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Is On'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=314,695,413,714 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Has Fired'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,666,153,685 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Any Computer' n=9 sel=1 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=163,666,312,685 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Computer' n=9 sel=3 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=23 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player-Diplomacy' n=6 sel=3 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1167 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Player-Diplomacy Any Computer>' n 5 3 1 0 17 28 36b1 96 0 2 4 0 0 0 1 5 b110001 text '' chat ''
+  condition 2 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text '' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<NONE>> Exists' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1168 tscreen select 0                   # condition type 6: game
+step 1169 ctype 6
+step 1170 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Game Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=264,668,324,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=334,668,394,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ' 0'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=14,668,214,686 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Medium' n=3 sel=1 'Easy'|'Medium'|'Hard'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger1>' n=2 sel=1 '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=264,691,323,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at' e1=EESEERust e2=EESEERust
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is' e1=EESEERust e2=EESEERust
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least' e1=EESEERust e2=EESEERust
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,666,153,685 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Any Computer' n=9 sel=1 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=163,666,312,685 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'All Computer' n=9 sel=3 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=0 max=23 e0=EESEERust
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Game-Attribute' n=6 sel=4 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1171 ctl c check 0 1
+step 1172 cctl combo 0 1
+step 1173 ctl c check 1 1
+step 1174 cctl edit 0 300
+step 1175 cctl edit 1 100
+step 1176 ctl c check 2 1
+step 1177 ctl c slide 0 15
+step 1178 ui c
+  condition controls
+  label0 mode=1 'Game Condition Details'
+  label1 mode=1 'Min'
+  label2 mode=1 'Max'
+  label3 mode=1 '15'
+  label4 mode=0 ''
+  slider0 mode=1 value=15
+  check0 mode=1 checked=1
+  check1 mode=1 checked=1
+  check2 mode=1 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=1 lines=3
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=1
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1179 crefresh
+step 1180 tscreen select 1
+step 1181 tscreen select 0
+step 1182 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Game Condition Details'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=264,668,324,688 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=334,668,394,688 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '15'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=14,668,214,686 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Medium' n=3 sel=1 'Easy'|'Medium'|'Hard'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger1>' n=2 sel=1 '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=264,691,323,710 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '300'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '300'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=0,0,119,19 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at' e1=EESEERust e2=EESEERust
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is' e1=EESEERust e2=EESEERust
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least' e1=EESEERust e2=EESEERust
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 1' n=9 sel=5 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 2' n=9 sel=6 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=1 bg=0.4,0,0,0 b=2 h=0 v=15 max=23 e0=EESEERust
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Game-Attribute' n=6 sel=4 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1183 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Game-Attribute>' n 6 3 1 0 17 28 36b1 96 0 2 4 12c 12c f 1 5 b111111 text '' chat ''
+  condition 2 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text '' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<NONE>> Exists' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1184 tscreen select 0                   # condition type 7: chat message
+step 1185 ctype 7
+step 1186 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Chat'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=264,668,324,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=334,668,394,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '15'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=14,668,214,686 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Medium' n=3 sel=1 'Easy'|'Medium'|'Hard'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger1>' n=2 sel=1 '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=264,691,323,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '300'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '300'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=14,641,304,661 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 1' n=9 sel=5 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 2' n=9 sel=6 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=15 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Chat Message Contains' n=6 sel=5 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1187 cctl text 0 hello_there
+step 1188 ui c
+  condition controls
+  label0 mode=1 'Chat'
+  label1 mode=0 'Min'
+  label2 mode=0 'Max'
+  label3 mode=0 '15'
+  label4 mode=0 ''
+  slider0 mode=0 value=15
+  check0 mode=0 checked=1
+  check1 mode=0 checked=1
+  check2 mode=0 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=0 lines=3
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=1
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1189 crefresh
+step 1190 tscreen select 1
+step 1191 tscreen select 0
+step 1192 form 0 999 12
+  c151 UITextLabel id=0x906 ix=151 g=12 r=4,616,304,636 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Chat'
+  c152 UITextLabel id=0x907 ix=152 g=12 r=264,668,324,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c153 UITextLabel id=0x908 ix=153 g=12 r=155,646,165,666 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''s'
+  c154 UITextLabel id=0x909 ix=154 g=12 r=594,668,614,688 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '15'
+  c155 UITextLabel id=0x90a ix=155 g=12 r=0,0,149,19 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c156 EESETSCComboBox id=0x933 ix=156 g=12 r=167,646,292,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c157 EESETSCComboBox id=0x934 ix=157 g=12 r=297,646,347,664 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '=' n=5 sel=2 '<'|'<='|'='|'>='|'>'
+  c158 EESETSCComboBox id=0x935 ix=158 g=12 r=506,670,631,688 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Stone' n=67 sel=2 'Any Resource'|'All Resources'|'Stone'|'Gold'|'Wood'|'Food'
+  c159 EESETSEScenarioComboBox id=0x936 ix=159 g=12 r=14,666,304,684 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '<Trigger1>' n=2 sel=1 '<Trigger0_Copy>'|'<Trigger1>'
+  c160 EESETSEScenarioComboBox id=0x937 ix=160 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c161 EESETSEScenarioComboBox id=0x938 ix=161 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c162 EESETSEScenarioComboBox id=0x939 ix=162 g=12 r=0,0,289,19 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '' n=0 sel=none
+  c163 UIEditBox id=0x910 ix=163 g=12 r=506,646,565,665 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c164 UIEditBox id=0x911 ix=164 g=12 r=334,691,393,710 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '300'
+  c165 UIEditBox id=0x915 ix=165 g=12 r=14,641,304,661 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'hello there'
+  c166 UICheckBox id=0x924 ix=166 g=12 r=14,646,213,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Difficulty Level at'
+  c167 UICheckBox id=0x925 ix=167 g=12 r=224,646,423,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Elapsed Time is'
+  c168 UICheckBox id=0x926 ix=168 g=12 r=433,646,632,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Hour is at least'
+  c169 UIRadioButton id=0x91a ix=169 g=12 r=352,646,501,665 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Amount' btn fg=none
+  c170 UIRadioButton id=0x91b ix=170 g=12 r=352,670,501,689 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=14 '' lines=1 'Use Player Attribute' btn fg=none
+  c171 EESETSUICBPlayer id=0x92e ix=171 g=12 r=4,646,153,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 1' n=9 sel=5 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c172 EESETSUICBPlayer id=0x92f ix=172 g=12 r=506,646,655,665 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Player 2' n=9 sel=6 'Any Human'|'Any Computer'|'All Human'|'All Computer'|'Any Exclude World'|'Player 1'
+  c173 UISlider id=0x942 ix=173 g=12 r=493,668,592,687 m=0 bg=0.4,0,0,0 b=2 h=0 v=15 max=23
+  c174 UITextLabel id=0x8fc ix=174 g=12 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Type Of Condition'
+  c175 UIComboBox id=0x8fd ix=175 g=12 r=329,527,528,546 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Chat Message Contains' n=6 sel=5 'Player-Attribute'|'Player-Technology'|'Trigger- Attribute'|'Player-Diplomacy'|'Game-Attribute'|'Chat Message Contains' e3=EEScreenEvent
+step 1193 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Chat="hello there">' n 7 3 1 0 17 28 36b1 96 0 2 4 12c 12c f 1 5 b111111 text '' chat 'hello there'
+  condition 2 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text '' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<NONE>> Exists' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1194 tscreen select 1                   # the second: its type shown, then the first's (Load's type switch)
+step 1195 ctype 5
+step 1196 tscreen select 0
+step 1197 ui c
+  condition controls
+  label0 mode=1 'Chat'
+  label1 mode=0 'Diplomacy Towards'
+  label2 mode=0 'is'
+  label3 mode=0 'Player'
+  label4 mode=0 ''
+  slider0 mode=0 value=15
+  check0 mode=0 checked=1
+  check1 mode=0 checked=1
+  check2 mode=0 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=0 lines=2
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=1
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1198 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Chat="hello there">' n 7 3 1 0 17 28 36b1 96 0 2 4 12c 12c f 1 5 b111111 text '' chat 'hello there'
+  condition 2 '<Player-Diplomacy Player 1>' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text '' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<NONE>> Exists' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1199 trigger 0
+step 1200 trigger 1
+step 1201 ui c
+  condition controls
+  label0 mode=1 'Chat'
+  label1 mode=0 'Diplomacy Towards'
+  label2 mode=0 'is'
+  label3 mode=0 'Player'
+  label4 mode=0 ''
+  slider0 mode=0 value=15
+  check0 mode=0 checked=1
+  check1 mode=0 checked=1
+  check2 mode=0 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=0 lines=2
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=1
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 1202 tscreenstate
+  tscreen screen=1 storing=0 list 3: '<Chat="hello there">' '<Player-Diplomacy Player 1>' '<Player-Attribute Player 1>' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1204 tab 4
+step 1205 trigger 2
+step 1206 etype 6 5
+step 1207 ctl e combo 1 2
+step 1208 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:999'
+  label6 mode=1 '0'
+  label7 mode=1 'Set Int Value 2'
+  label8 mode=1 '0:999'
+  label9 mode=1 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '-nan(ind)'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1209 ctl e slide 2 500
+step 1210 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:999'
+  label6 mode=1 '0'
+  label7 mode=1 'Set Int Value 2'
+  label8 mode=1 '0:999'
+  label9 mode=1 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '500'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=500
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1211 ctl e slide 2 7
+step 1212 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:999'
+  label6 mode=1 '0'
+  label7 mode=1 'Set Int Value 2'
+  label8 mode=1 '0:999'
+  label9 mode=1 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '7'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=7
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1213 ctl e combo 1 60
+step 1214 ctl e slide 2 3
+step 1215 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:100'
+  label6 mode=1 '0'
+  label7 mode=1 'Set Int Value 2'
+  label8 mode=1 '0:100'
+  label9 mode=1 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '3'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=3
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1216 ctl e combo 1 10
+step 1217 ctl e slide 2 50
+step 1218 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=0 'Set Int Value 1'
+  label5 mode=0 '0:100'
+  label6 mode=0 '0'
+  label7 mode=0 'Set Int Value 2'
+  label8 mode=0 '0:100'
+  label9 mode=0 '0'
+  label10 mode=1 'Set Float Value'
+  label11 mode=1 '0:100'
+  label12 mode=1 '0.5'
+  slider0 mode=0 value=0
+  slider1 mode=0 value=0
+  slider2 mode=1 value=50
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1219 ctl e combo 1 11
+step 1220 ctl e slide 2 50
+step 1221 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:999'
+  label6 mode=1 '0'
+  label7 mode=1 'Set Int Value 2'
+  label8 mode=1 '0:999'
+  label9 mode=1 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:100'
+  label12 mode=0 '0.5'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=50
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1222 ctl e combo 1 12
+step 1223 ctl e slide 2 50
+step 1224 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:100'
+  label6 mode=1 '0'
+  label7 mode=0 'Set Int Value 2'
+  label8 mode=0 '0:999'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:100'
+  label12 mode=0 '0.5'
+  slider0 mode=1 value=0
+  slider1 mode=0 value=0
+  slider2 mode=0 value=50
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1227 tab 4
+step 1228 trigger 1
+step 1229 tscreen select 1
+step 1230 edit 0x7db Named_condition
+step 1231 edit 0x963 condition_text
+step 1232 tscreen select 0
+step 1233 tscreen select 1
+step 1234 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Chat="hello there">' n 7 3 1 0 17 28 36b1 96 0 2 4 12c 12c f 1 5 b111111 text '' chat 'hello there'
+  condition 2 'Named_condition' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text 'condition_text' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<<<NONE>> Exists>' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1235 tscreen dup
+step 1236 tscreenstate
+  tscreen screen=1 storing=0 list 4: '<Chat="hello there">' 'Named_condition' '<Player-Attribute Player 1>' '<Named_condition_Copy>' selected 3 s0=0+ s1=3+ s2=0+ s3=0+ s4=0-
+step 1237 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Chat="hello there">' n 7 3 1 0 17 28 36b1 96 0 2 4 12c 12c f 1 5 b111111 text '' chat 'hello there'
+  condition 2 'Named_condition' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text 'condition_text' chat ''
+  condition 3 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 4 '<Player-Diplomacy Player 1>' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 a b000000 text 'condition_text' chat ''
+  condition 5 '<<<NONE>> Exists>' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1238 tscreen up
+step 1239 tscreen down
+step 1240 tscreen sort
+step 1241 tscreenstate
+  tscreen screen=1 storing=0 list 4: '<Chat="hello there">' '<Player-Attribute Player 1>' '<Player-Diplomacy Player 1>' 'Named_condition' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1242 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Chat="hello there">' n 7 3 1 0 17 28 36b1 96 0 2 4 12c 12c f 1 5 b111111 text '' chat 'hello there'
+  condition 2 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 3 '<Player-Diplomacy Player 1>' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 a b000000 text 'condition_text' chat ''
+  condition 4 'Named_condition' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text 'condition_text' chat ''
+  condition 5 '<<<NONE>> Exists>' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1243 tscreen delete
+step 1244 tscreenstate
+  tscreen screen=1 storing=0 list 3: '<Player-Attribute Player 1>' '<Player-Diplomacy Player 1>' 'Named_condition' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1245 conditionstate
+  condition 0 'Always True' n 0 2 1 0 2 2 0 0 0 7 8 0 0 0 0 0 b000000 text '' chat ''
+  condition 1 '<Player-Attribute Player 1>' n 2 2 1 0 2 2 0 0 0 7 8 0 0 0 0 9 b000000 text '' chat ''
+  condition 2 '<Player-Diplomacy Player 1>' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 a b000000 text 'condition_text' chat ''
+  condition 3 'Named_condition' n 5 2 1 0 2 2 0 0 0 7 8 0 0 0 0 8 b000000 text 'condition_text' chat ''
+  condition 4 '<<<NONE>> Exists>' n 1 2 1 0 2 2 0 0 1 7 8 0 0 0 0 1 b000000 text '' chat ''
+step 1246 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14 r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=3 sel=0 '<Player-Attribute Player 1>'|'<Player-Diplomacy Player 1>'|'Named_condition' e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14 r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14 r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14 r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14 r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14 r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14 r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14 r=104,586,193,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14 r=204,586,293,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14 r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14 r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14 r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14 r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14 r=329,458,578,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Player-Attribute Player 1>'
+  c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 1247 trigger 2
+step 1248 tscreen select 1
+step 1249 edit 0x7db Named_effect
+step 1250 edit 0x963 effect_text
+step 1251 tscreen select 0
+step 1252 tscreen select 1
+step 1253 effectstate
+  effect 0 'Do Nothing' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 0 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 1 '<Set>' n 19 0 8 1 2 7 3 5 18 3 3 0 b 2 6 c 1 2714 7f800000 0 0 ffffffff 0 1 4 0 1 c 78 6 3 1 16 7 0 ffffffff 49 2 4 1 1 9 1 12c 0 1 0 1 10000 0 10001 new 'Class Y' msg 'chat text' file 'talk.mp3' desc 'a line' text '' objects 1
+  effect 2 'Named_effect' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 2 0 1010001 10100 new '' msg '' file '' desc '' text 'effect_text' objects
+step 1254 tscreen new
+step 1255 tscreen dup
+step 1256 tscreenstate
+  tscreen screen=2 storing=0 list 4: '<Set>' 'Named_effect' '<Effect2>' '<Effect2_Copy>' selected 3 s0=0+ s1=0+ s2=3+ s3=0+ s4=0-
+step 1257 effectstate
+  effect 0 'Do Nothing' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 0 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 1 '<Set>' n 19 0 8 1 2 7 3 5 18 3 3 0 b 2 6 c 1 2714 7f800000 0 0 ffffffff 0 1 4 0 1 c 78 6 3 1 16 7 0 ffffffff 49 2 4 1 1 9 1 12c 0 1 0 1 10000 0 10001 new 'Class Y' msg 'chat text' file 'talk.mp3' desc 'a line' text '' objects 1
+  effect 2 'Named_effect' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 2 0 1010001 10100 new '' msg '' file '' desc '' text 'effect_text' objects
+  effect 3 '<Effect2>' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 3 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 4 '<Effect2_Copy>' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 4 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+step 1258 tscreen up
+step 1259 tscreen down
+step 1260 tscreen sort
+step 1261 tscreenstate
+  tscreen screen=2 storing=0 list 4: '<Effect2>' '<Effect2_Copy>' '<Set>' 'Named_effect' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1262 effectstate
+  effect 0 'Do Nothing' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 0 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 1 '<Effect2>' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 3 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 2 '<Effect2_Copy>' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 4 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 3 '<Set>' n 19 0 8 1 2 7 3 5 18 3 3 0 b 2 6 c 1 2714 7f800000 0 0 ffffffff 0 1 4 0 1 c 78 6 3 1 16 7 0 ffffffff 49 2 4 1 1 9 1 12c 0 1 0 1 10000 0 10001 new 'Class Y' msg 'chat text' file 'talk.mp3' desc 'a line' text '' objects 1
+  effect 4 'Named_effect' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 2 0 1010001 10100 new '' msg '' file '' desc '' text 'effect_text' objects
+step 1263 tscreen delete
+step 1264 tscreenstate
+  tscreen screen=2 storing=0 list 3: '<Effect2_Copy>' '<Set>' 'Named_effect' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1265 effectstate
+  effect 0 'Do Nothing' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 0 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 1 '<Effect2_Copy>' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 4 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+  effect 2 '<Set>' n 19 0 8 1 2 7 3 5 18 3 3 0 b 2 6 c 1 2714 7f800000 0 0 ffffffff 0 1 4 0 1 c 78 6 3 1 16 7 0 ffffffff 49 2 4 1 1 9 1 12c 0 1 0 1 10000 0 10001 new 'Class Y' msg 'chat text' file 'talk.mp3' desc 'a line' text '' objects 1
+  effect 3 'Named_effect' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 2 0 1010001 10100 new '' msg '' file '' desc '' text 'effect_text' objects
+step 1266 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14 r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=3 sel=0 '<Effect2_Copy>'|'<Set>'|'Named_effect' e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14 r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14 r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14 r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14 r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14 r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14 r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14 r=104,586,193,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14 r=204,586,293,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14 r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14 r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14 r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14 r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14 r=329,458,578,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Effect2_Copy>'
+  c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 1267 ui e
+  effect controls
+  label0 mode=1 'Object Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Object'
+  label3 mode=0 'Attribute'
+  label4 mode=0 'Set Int Value 1'
+  label5 mode=0 '0:100'
+  label6 mode=0 '0'
+  label7 mode=0 'Set Int Value 2'
+  label8 mode=0 '0:999'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:100'
+  label12 mode=0 'inf'
+  slider0 mode=0 value=0
+  slider1 mode=0 value=0
+  slider2 mode=0 value=100
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=13
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1268 trigger 0
+step 1269 trigger 2
+step 1270 ui e
+  effect controls
+  label0 mode=1 'Object Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Object'
+  label3 mode=0 'Attribute'
+  label4 mode=0 'Set Int Value 1'
+  label5 mode=0 '0:100'
+  label6 mode=0 '0'
+  label7 mode=0 'Set Int Value 2'
+  label8 mode=0 '0:999'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:100'
+  label12 mode=0 'inf'
+  slider0 mode=0 value=0
+  slider1 mode=0 value=0
+  slider2 mode=0 value=100
+  slider3 mode=0 value=0
+  check0 mode=0 checked=1
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=13
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=500
+  combo3 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=2 selection=0
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=2 selection=1
+  list0 mode=0 lines=0
+  list1 mode=0 lines=1 '<<NONE>>'
+step 1271 tscreenstate
+  tscreen screen=2 storing=0 list 3: '<Effect2_Copy>' '<Set>' 'Named_effect' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-

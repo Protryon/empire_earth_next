@@ -22755,3 +22755,114 @@ Round total: net -1,115 (short of the 1,500 the rules ask: see "Left"). The Grap
   - the Draw units' seams over `GEModel`, `GEMaterial`, `GEText`/`GEFont`, `GEBitmap`, `GELine`/`GEPoint`/`GERhombus`
     (the model and bitmap are Rust objects; reading them directly needs their objects at the call, as the mesh now).
   - DX7Rasterizer.cpp keeps its forwarders and 300 address markers; the three Draw units theirs.
+
+## R6: the scenario editor screens, round 5: the condition types and the condition and effect screens whole in Rust; the editor gate drives every condition type, the screens' list buttons and texts, and the AI attribute's float slider (ee_screens editor_conditions.rs, editor_subscreens.rs; branch rust-editor5, 2026-11-14)
+
+### The generic host, a template now
+
+Round 4's host addressed `EESETSEffectControls` by array and index. The condition types (`EESETSConditionType` and its
+seven `EESETSCT*` classes, `EESETSConditionType.cpp`, 888 lines) do the same over `EESETSConditionControls`, a smaller
+set of the same arrays (5 labels, 2 edit boxes, the chat box, 3 combo boxes, 4 scenario combo boxes, 3 check boxes,
+2 player pickers, 2 radios, one slider; no effect combo boxes, second edit boxes or list boxes). So the host's body
+became one template, `SeetOp<C>` (EESETSEffect.cpp), over overloads that resolve an array and index on either
+controls class (`SeetControl`, `SeetCombo`, `SeetEdit`, `SeetSlider`: the condition controls' one slider is index
+0, `SeetList`: none); `ee_screenscpp_seet` and its twin `ee_screenscpp_sect` keep only what differs, the entry
+(`EESMEffect` or `EESMCondition`): its texts, objects, list and controls. On the Rust side `Fx` is generic over the
+entry's numbers (`Fx<H, F = EeScenarioEffectFields>`; `Cx<H>` is `Fx<H, EeScenarioConditionFields>`), so every
+helper (`label`, `radio`, `player_name`, `rename`) serves both. New shared ops: a check display event's controls
+(`EESEEPushControl`), an event processed on a control (the player attribute type's Load), a technology's plain name,
+a combo box's list font, the technology list with the condition types' filter (no unit-making node).
+
+### The moves
+
+- **The condition types** (`editor_conditions.rs`, `ConditionTypes`): every Store, Hide, Load and Show of the seven
+  types; the research type's list built on its first Show (the original's per-object `mTechnologies`, sorted by name
+  in the host as the effect types' list); the player attribute type's 67 attributes (the resources, "Variable0".."9",
+  each resource sent and received, the statistics with the two that read the last statistic's name, the settings) and
+  its radio buttons' event. `EESETSConditionType.cpp` and its header deleted.
+- **The condition and effect screens** (`editor_subscreens.rs`, `ConditionScreen`, `EffectScreen`): the
+  constructors (the controls through the host, the title and the type combo box through the shared maker), the
+  destructors in the originals' orders, ChangeConditionType, ChangeEffectType, ChangeEffectAction, the list buttons
+  (Sort, MoveDown, MoveUp, Delete, Duplicate, New), Activate, Store, Hide, Load, Show, RefreshControls (the
+  condition's `<...>` names), GetNames. The effect screen owns its `EffectTypes`; their events still carry their
+  address (`EeScreensSeEffects` is `repr(transparent)` over it). The classes keep one `mRust` and forward; the gate
+  reads the controls and the type combo box through accessors (their own commit, first). The screens use two hosts:
+  the shared maker's (`ee_screenscpp_sepl`, by handle) and the types' (by array, the entry, the scenario's lists, the
+  trigger tab's boxes, the player tab's count).
+
+### The gate (three commits, TEST ONLY, each recorded on the unmodified classes, twice identical, old lines unchanged)
+
+- The condition types: `cctl` (a condition control's text or line set, no event), `crefresh`, `conditionstate`
+  (each condition's words, its six flags, text and chat text: the six bools read by name, the struct's two padding
+  bytes left out). Each type on the first of two new conditions: picked, the controls dumped (group 12), values set
+  (the game type's check boxes and slider through their events, the player attribute's radio), renamed, stored and
+  loaded back; the second's type switch through Load; the sub-tab left and entered. 11,673 -> 12,526 (with the slider
+  tail below).
+- Round 4's zero-diff mutation (the AI attribute's float slider modifier): the slider dragged on attributes of scale 1
+  and 100. Recorded on the pre-move effect types too: a scratch worktree of 69f7795f (the commit before round 4's
+  move) under build/, its own `EE_ORIG_SRC_ROOT`, ran 69f7795f's script plus this tail; the current build ran the
+  same script: identical (11,885 lines), including an `-nan(ind)` label the original also prints (the slider event
+  fires with the previous attribute's modifier before the new one is set).
+- The screens' own slots: a name and a description typed and stored, New, Duplicate, Up, Down, Sort, Delete on the
+  condition and effect sub-tabs with the lists, selections and entries after each, the trigger tab's controls, the
+  effect sub-tab left and entered. 12,526 -> 12,723.
+
+Both moves passed the gate on their first run.
+
+### Mutations of the Rust against the editor gate (build/ed5/mut.py; each built and run)
+
+| Mutation | Diff lines |
+|---|---|
+| game Store: a minimum above the maximum no longer raises it | 18 |
+| research Show: the unit-making technologies listed too | 96 |
+| player attribute Load: the radio button's event not processed | 4 |
+| diplomacy Hide: the "towards" label keeps its centre alignment | **0**: not equivalent; the next type shown in the script (game) centres that label again, and no step shows a type that leaves it as it finds it |
+| chat Show: no Enter event on the chat box | **0**: not equivalent; no step presses Enter in it (a person's Enter stores the entry) |
+| condition screen Activate: an object type kept | **0**: not equivalent; the gate's first entry into the sub-tab is followed by a Load that switches the type before any dump |
+| condition screen RefreshControls: the chat text unquoted | 16 |
+| effect screen Load: the no-effect type shown once, not twice | **0**: equivalent (its Show hides the same six controls) |
+| effect screen Delete: the type not hidden after | **0**: not equivalent in general; in the script every delete is followed by the trigger tab's Load of the next entry, which hides and shows again (a delete leaving no entry would leave the controls up) |
+
+Round 4's zero-diff mutation (the AI attribute's float slider modifier) is now reached by the slider tail (the
+scale-100 attribute prints 0.5 for 50; that mutant was not re-run this round).
+
+### Behaviour
+
+None intended. On undefined paths: a Store or Load of an entry the scenario manager does not have does nothing (the
+originals dereference it); a type switch or action change with no selected entry shows the type without loading it
+(the original loads NULL); the type combo box with no selection reads as its first line (the original's `0`
+initialiser); the effect screen's Load with a type combo box that will not take the type does not show it (the
+original compares an unset local); the research type's Store with no selection keeps the technology.
+
+### Only a person reaches
+
+The controls' look (EE-SIM draws nothing); picking a line of a condition combo box by the mouse
+(`EESETSCComboBox::ChangeSelection`: the gate calls RefreshControls directly); the always-true condition type
+(user conditions are never always true: its Show and Hide are reached by no list); closing the editor (the
+destructors). No tour opens the editor.
+
+### Gates
+
+| Gate | Per move | Merged with rust (fffdedf4) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| `tools/sim_editor.py` | PASS 12,526 (condition types), 12,723 (screens), each on the first run | PASS 12,723 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | the condition types' run failed rustfmt only (fixed before the commit); the screens' PASS (3,456 tests) | PASS (3,474 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: no simulation code changed | |
+
+The merge of rust needed only PORT_LEARNINGS (both sides' sections kept); headers current, no duplicate constant
+of ee_screens' across crates.
+
+C++ lines (src and include/ee, include/rust aside): the condition types +180 -1,063 (net -883; EESETSConditionType.cpp
+and its header deleted), the accessors +9 -5, the screens +168 -466 (net -298): net **-1,177** over the round, short
+of the 1,500 aimed at. The scratch worktree's staging root `C:/EEX-trig-ed5wt` (outside the worktree) is left for
+the lead to delete.
+
+### Left
+
+The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input calls, only a person reaches it; the
+gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
+(`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
+kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.
