@@ -23770,3 +23770,20 @@ control goes through `HandleComponentEvent` / `HandleControlEvent` to the Rust's
 LanLogicHost.cpp (666), LobbyLogicHost.cpp (359) and now RoutingLogic.cpp's host shrink only as the objects their ops
 call move (the model's games, clients, servers and rooms, the routing connection, the dialogs); EELobbyGlueHost.cpp's
 sequences stay the game's.
+
+### Gates
+
+| Gate | code commit (built alone) | final tree (merged with rust 3114725d) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (943/944 inputs) | 0 / 0 (929/930 inputs) |
+| Rust gate | PASS (after clippy's `unnecessary_cast` and `collapsible_match` and rustfmt) | PASS |
+| oracle | seeds 2-3 identical | seeds 2-7 identical |
+| lobby wontest | won_routelogic_test exit 0 | 21 programs exit 0: routelogic, routing, logics, flow, eexfer, statusstr, eeglue, eecolor, eedlg, lobbyctl, eegame, lobbydlg, dlglogic, lobbyscr, credits, lobbypopup, lanobj, stagingobj, lanlogic, chat, persist |
+| `--test-profile windowed-software` | | 0 unresolved, 0 duplicates |
+| `tools/harness/lan_game.py` (harness lock) | | RESULT PASS lan-game (PT host 2756, joiner 2753) |
+
+The merge of rust: the branch's history (from before rust's rewrite) carried the 3.36 GB docs/RUST_PLAN.md, and
+git segfaulted merging it; a commit taking rust's copy of the file let the merge through (PORT_LEARNINGS.md and the
+progress file conflicted: kept both sides' sections; rust lacked round 8, which the merge brings). Then the lead's
+`fix_plan_history.sh` rewrote the 37 commits origin/rust lacks (the tree unchanged, no oversized blob left).
+`rust_build.py header` was current; `rust_includes.py` changed nothing.
