@@ -13972,17 +13972,6 @@ void *ee_won_http_cache_global(const uint8_t *dir,
 /// last); the next [`ee_won_http_cache_global`] makes a new one.
 void ee_won_http_cache_reset_global();
 
-/// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
-/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
-///
-/// # Safety
-/// The texts hold their lengths' bytes.
-EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
-                                const uint8_t *product,
-                                size_t product_len,
-                                const uint8_t *dir,
-                                size_t dir_len);
-
 /// A new connection object for the C++ `HTTPConnection*` `conn`, its calls over the core table.
 ///
 /// # Safety
@@ -13994,6 +13983,17 @@ EeWonHttpConn *ee_won_http_conn_new_core(void *conn, const EeWonCoreHooks *core)
 /// # Safety
 /// As `ee_won_http_conn_new_core`.
 EeWonHttpSession *ee_won_http_session_new_core(void *session, const EeWonCoreHooks *core);
+
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
+/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
+                                const uint8_t *product,
+                                size_t product_len,
+                                const uint8_t *dir,
+                                size_t dir_len);
 
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.
@@ -15473,6 +15473,33 @@ EeWonHostOp *ee_won_hostop_peerauth(const uint8_t *addr,
 
 /// `new PeerAuthServerOp(context, socket)`'s Rust op.
 EeWonHostOp *ee_won_hostop_peerauth_server();
+
+/// `PerfTimer::GetCountedTime()`.
+double ee_won_perf_counted_time();
+
+/// `PerfTimer::GetElapsedTime()`.
+double ee_won_perf_elapsed_time();
+
+/// `PerfTimer::GetPercentTime()`.
+double ee_won_perf_percent_time();
+
+/// `PerfTimer::GlobalStart()`.
+void ee_won_perf_global_start();
+
+/// `PerfTimer::GlobalStop()`.
+void ee_won_perf_global_stop();
+
+/// `PerfTimer::Start()` of a timer (`named`: it has a name; `running`: its `mStarted`).
+///
+/// # Safety
+/// `running` is the timer's flag.
+void ee_won_perf_start(bool named, bool *running);
+
+/// `PerfTimer::Stop()` of a timer.
+///
+/// # Safety
+/// As `ee_won_perf_start`.
+void ee_won_perf_stop(bool named, bool *running);
 
 /// `write_global` into the sink.
 ///

@@ -4,7 +4,6 @@
 2a1e30 2a26a5 WONCommon/FileWriter.cpp
 2a26c0 2a30d7 WONCommon/MD5.cpp
 2a30e0 2a37eb WONCommon/MiscUtil.cpp
-2a3820 2a39e9 WONCommon/PerfTimer.cpp
 2a41d0 2a48b4 WONCommon/RegKey.cpp
 2a48c0 2a5fe5 WONCommon/StringParser.cpp
 2a57e0 2aa209 WONCommon/StringParserLists.cpp
