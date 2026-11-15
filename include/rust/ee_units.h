@@ -733,6 +733,69 @@ constexpr static const int32_t EE_UNITS_MAP_SAVE_FIRST_CLIFF = 124;
 /// the region tables made again for `mSize`, then `UpdateCliffs` over the map
 constexpr static const int32_t EE_UNITS_MAP_SAVE_FINISH = 125;
 
+/// The selectors of `ee_units_pg_host_unit` (one unit-side call each).
+constexpr static const int32_t EE_UNITS_PG_SET_GROUP = 0;
+
+constexpr static const int32_t EE_UNITS_PG_GROUP_OF = 1;
+
+constexpr static const int32_t EE_UNITS_PG_KILL = 2;
+
+constexpr static const int32_t EE_UNITS_PG_KILL_UNIT = 3;
+
+constexpr static const int32_t EE_UNITS_PG_REMOVE_GROUP = 4;
+
+constexpr static const int32_t EE_UNITS_PG_UNIT_ID = 5;
+
+constexpr static const int32_t EE_UNITS_PG_FIND_UNIT = 6;
+
+constexpr static const int32_t EE_UNITS_PG_SELECT = 7;
+
+constexpr static const int32_t EE_UNITS_PG_SELECT_FLAG = 8;
+
+/// The selectors of `ee_units_pg_host_file`
+constexpr static const int32_t EE_UNITS_PG_WRITE_U32 = 0;
+
+constexpr static const int32_t EE_UNITS_PG_WRITE_BOOL = 1;
+
+constexpr static const int32_t EE_UNITS_PG_READ_U32 = 2;
+
+constexpr static const int32_t EE_UNITS_PG_READ_BOOL = 3;
+
+/// The members' operations of [`ee_units_patrol_group`].
+constexpr static const int32_t EE_UNITS_PG_OP_NEW_ID = 0;
+
+constexpr static const int32_t EE_UNITS_PG_OP_RESET_IDS = 1;
+
+constexpr static const int32_t EE_UNITS_PG_OP_DESTROY = 2;
+
+constexpr static const int32_t EE_UNITS_PG_OP_ADD_POINT = 3;
+
+constexpr static const int32_t EE_UNITS_PG_OP_APPEND = 4;
+
+constexpr static const int32_t EE_UNITS_PG_OP_NEAREST = 5;
+
+constexpr static const int32_t EE_UNITS_PG_OP_INDEX_OF = 6;
+
+constexpr static const int32_t EE_UNITS_PG_OP_NEXT = 7;
+
+constexpr static const int32_t EE_UNITS_PG_OP_PREVIOUS = 8;
+
+constexpr static const int32_t EE_UNITS_PG_OP_LAST = 9;
+
+constexpr static const int32_t EE_UNITS_PG_OP_INSERT_AT = 10;
+
+constexpr static const int32_t EE_UNITS_PG_OP_INSERT = 11;
+
+constexpr static const int32_t EE_UNITS_PG_OP_REMOVE = 12;
+
+constexpr static const int32_t EE_UNITS_PG_OP_SELECT = 13;
+
+constexpr static const int32_t EE_UNITS_PG_OP_LOAD = 14;
+
+constexpr static const int32_t EE_UNITS_PG_OP_REPAIR = 15;
+
+constexpr static const int32_t EE_UNITS_PG_OP_SAVE = 16;
+
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -3078,6 +3141,23 @@ struct EeUnitsPushIn {
   float tick_seconds;
 };
 
+/// The fields' record (`mID`, `mIsLoop`, `mIsTownPatrol`) across the C ABI.
+struct EeUnitsPgFields {
+  uint32_t id;
+  uint8_t is_loop;
+  uint8_t is_town_patrol;
+};
+
+/// One call's arguments: a unit (or player, or file), a point, two integers (a player id, tile x/y, a flag, a save's
+/// version).
+struct EeUnitsPgArgs {
+  uint64_t unit;
+  uint64_t file;
+  float point[3];
+  int32_t a;
+  int32_t b;
+};
+
 /// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
 struct EeUnitsTurn {
   float delta;
@@ -4383,6 +4463,41 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
 
+extern uint32_t ee_units_pg_host_points(uint64_t group, uint64_t *out, uint32_t capacity);
+
+extern void ee_units_pg_host_set_points(uint64_t group, const uint64_t *points, uint32_t count);
+
+extern void ee_units_pg_host_fields(uint64_t group, uint8_t set, EeUnitsPgFields *io);
+
+extern void ee_units_pg_host_unit_tile(uint64_t unit, int32_t *out_x, int32_t *out_y);
+
+extern float ee_units_pg_host_distance(uint64_t unit, int32_t x, int32_t y);
+
+extern uint8_t ee_units_pg_host_tile_at(float x, float y, uint64_t probe, float *out_height);
+
+extern uint64_t ee_units_pg_host_create_point(uint64_t group, float x, float y, uint32_t player);
+
+extern uint64_t ee_units_pg_host_unit(int32_t which, uint64_t unit, uint64_t other);
+
+extern uint8_t ee_units_pg_host_live_state(uint32_t major, uint32_t minor);
+
+extern int32_t ee_units_pg_host_file(uint64_t file, int32_t which, uint32_t *io);
+
+/// Every `EEPPatrolGroup` member's body by its operation (`EE_UNITS_PG_OP_*`) on the group object; the result is a
+/// unit handle, an index, an id or an error code as the member returns it.
+uint64_t ee_units_patrol_group(int32_t op,
+                               uint64_t group,
+                               EeUnitsPgArgs args);
+
+/// `SetPatrolPoints`'s tiles (`inPoints`, U2DPoint<long> pairs) for the group of player `player`.
+///
+/// # Safety
+/// `tiles` holds `count` (x, y) pairs of 32-bit integers (or is null with `count` 0), valid for the call.
+void ee_units_patrol_group_set_points(uint64_t group,
+                                      const int32_t *tiles,
+                                      uint32_t count,
+                                      uint32_t player);
+
 /// `TurnTowardAngle` over the C++'s values.
 ///
 /// # Safety
@@ -4658,9 +4773,9 @@ extern void ee_units_pm_host_adjust_dive_depth(uint64_t obj, float *io);
 
 extern void ee_units_pm_host_effect(uint64_t obj, int32_t which, float x, float y, float z);
 
-extern uint8_t ee_units_pm_host_docked(uint64_t obj);
+extern int32_t ee_units_pm_host_carrier_tag(uint64_t carrier, int32_t index, float *out);
 
-extern void ee_units_pm_host_follow_carrier(uint64_t obj);
+extern void ee_units_pm_host_route_dock_waypoint(uint64_t obj);
 
 extern uint8_t ee_units_pm_host_gate_links(uint64_t obj, uint64_t *carrier, uint64_t *last);
 

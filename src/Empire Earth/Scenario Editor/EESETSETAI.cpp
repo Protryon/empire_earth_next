@@ -250,7 +250,7 @@ void EESETSETAI::UpdateName(EESMEffect* inEffect, EESETSEffectControls* inContro
             theName = theText;
         theText = "<" + theName + ">";
         inEffect->mName = theText;
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mNameEditBox->SetText(theText);
+        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(theText);
     }
 }
 

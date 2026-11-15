@@ -33,6 +33,13 @@ BRIDGE_NAMES = {
     "?GetIsChecked@UICheckBox@@QEBA_NXZ": "selftest_get_checked",
     "GXTestSetPresentHook": "selftest_set_present_hook",
     "GXTestReadFrame": "selftest_read_frame",
+    "EETestUILock": "selftest_ui_lock",
+    "EETestUIFormCount": "selftest_ui_form_count",
+    "EETestUIForm": "selftest_ui_form",
+    "EETestUIFormID": "selftest_form_id",
+    "EETestUIFormControlCount": "selftest_form_control_count",
+    "EETestUIFormControl": "selftest_form_control",
+    "EETestCommsRefresh": "selftest_comms_refresh",
 }
 
 
@@ -203,7 +210,8 @@ def plumbing(arch, d):
         problems.append(f"static exe {b.static_exe_args()}")
     defines = b.bridge_defines()
     lay = L.Layout(fake)
-    if defines["EE_OFF_UIM_FORMS_LAST"] - defines["EE_OFF_UIM_FORMS_FIRST"] != b.ptr \
+    # the UI manager's and forms' state is reached by name (EETestUI*), never at offsets
+    if any(k.startswith(("EE_OFF_UIM_", "EE_OFF_FORM_")) for k in defines) \
             or defines["EE_SIZE_UWIDESTRING"] != lay.size("UWideString"):
         problems.append(f"bridge defines {defines}")
     if PROBE_STAGE.exists():

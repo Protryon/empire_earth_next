@@ -4147,7 +4147,7 @@ bool EEEditorCanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, lo
     bool theResult = inType == 0x167;
     EETile* theTile = theMap->GetTile(inX, inY);
     if (theTile != NULL && !theResult) {
-        long theID = gUIManager->mScenarioEditorForm->GetUnitScreen()->mUnitUnderMouse;
+        long theID = gUIManager->mScenarioEditorForm->GetUnitScreen()->GetUnitUnderMouse();
         if (theID != -1) {
             EEUnit* theUnit = static_cast<EEUnit*>(::gWorld.GetUnit(theID));
             if (theUnit != NULL) {

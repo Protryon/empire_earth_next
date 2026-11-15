@@ -113,7 +113,7 @@ UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFoc
                    unsigned long inBorderThickness)
     : UIControl(kControlTypeButton, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mBorderType = 1;
+    this->SetBorderType(1);
     this->mRust = ee_ui_button_new(this, UIButtonHost::Op, inNormalBitmap, inFocusedBitmap, inPressedBitmap);
 }
 

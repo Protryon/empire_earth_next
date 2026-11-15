@@ -9,11 +9,24 @@
 
 constexpr static const int32_t BEYOND_END = 10;
 
-/// The score table, owned by the C++ `SEConductor` (created and destroyed with it).
-struct EeConductor;
+/// The conductor.
+struct EeSoundConductor;
 
-/// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
+/// The manager.
 struct EeSoundManager;
+
+/// A mixer: its conductor, its plug-in module and the module's entry points.
+struct EeSoundMixer;
+
+/// An instance node: its reference count, free flag and fields.
+struct EeSoundNode;
+
+/// A sample: the mixer it was made for, its wave data (the mixer's) and its playing state.
+struct EeSoundSample;
+
+/// A score: one dmusic segment (one reference, released with the score). The original's secondary scores (one per
+/// motif of the segment's style) do not exist on dmusic: none is ever made.
+struct EeSoundScore;
 
 /// The conductor's scalar members (the C++ object's, read and written around each call).
 struct EeConductorFields {
@@ -26,6 +39,16 @@ struct EeConductorFields {
   uint32_t intensity;
   uint32_t channel_group_count;
 };
+
+/// `SEMixerStart` (Sound Engine's `SEInitializeMixers`): the directory, the window and the module being walked.
+struct EeSoundMixerStart {
+  const void *directory;
+  void *window;
+  void *module;
+};
+
+/// A mixer's music or movie source: interleaved stereo float frames added at the output rate.
+using EeSoundSource = void(*)(void*, float*, unsigned long);
 
 /// The data fields of an `SESMInstanceNode` (its reference count and free flag stay with the C++ object).
 struct EeSoundNodeFields {
@@ -44,343 +67,754 @@ struct EeSoundNodeFields {
 
 extern "C" {
 
-/// An empty score table (the constructor).
-EeConductor *ee_conductor_create();
-
-/// Frees the table; its scores were deleted by the stop before (a stopped conductor holds none).
+/// `SEConductor::GetCurrentlyPlayingScore` (-1: none or not running).
 ///
 /// # Safety
-/// `c` from `ee_conductor_create`, not used afterwards.
-void ee_conductor_destroy(EeConductor *c);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_playing(const EeSoundConductor *c);
 
-/// The constructor's scalar members.
-EeConductorFields ee_conductor_fields_new();
-
-/// `LoadScore(name, outID, secondary)`; `written` says whether the C++ wrote `outID` (then `out_id` holds it).
+/// `GetScore` (NULL: none or not loaded).
 ///
 /// # Safety
-/// As `with`; `name` NUL-terminated, the outs valid.
-int32_t ee_conductor_load_score(EeConductor *c,
-                                void *ctx,
-                                EeConductorFields *f,
-                                const char *name,
-                                bool secondary,
-                                int32_t *out_id,
-                                bool *written);
+/// `c` is a live conductor.
+EeSoundScore *ee_sound_conductor_score(const EeSoundConductor *c, int32_t id);
 
-/// `SetConductorState`.
+/// `GetScoreID` (-1: not found or NULL).
 ///
 /// # Safety
-/// As `with`.
-int32_t ee_conductor_set_state(EeConductor *c, void *ctx, EeConductorFields *f, uint32_t state);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_score_id(const EeSoundConductor *c, EeSoundScore *score);
 
-/// `InitializeConductor`.
+/// `LoadScore(name, outID)`: `out_id` is written when the C++ wrote it.
 ///
 /// # Safety
-/// As `with`.
-int32_t ee_conductor_initialize(EeConductor *c, void *ctx, EeConductorFields *f);
-
-/// `UninitializeConductor`.
-///
-/// # Safety
-/// As `with`.
-int32_t ee_conductor_uninitialize(EeConductor *c, void *ctx, EeConductorFields *f);
+/// `c` is a live conductor, `name` NUL-terminated, `out_id` valid.
+int32_t ee_sound_conductor_load_score(const EeSoundConductor *c, const char *name, int32_t *out_id);
 
 /// `Play`.
 ///
 /// # Safety
-/// As `with`.
-int32_t ee_conductor_play(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_play(const EeSoundConductor *c, int32_t id);
 
 /// `Queue`.
 ///
 /// # Safety
-/// As `with`.
-int32_t ee_conductor_queue(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
-
-/// `Stop`.
-///
-/// # Safety
-/// As `with`.
-int32_t ee_conductor_stop(EeConductor *c, void *ctx, EeConductorFields *f);
-
-/// `TransitionTo(id, command, flags)` (the flags are unused).
-///
-/// # Safety
-/// As `with`.
-int32_t ee_conductor_transition_to(EeConductor *c,
-                                   void *ctx,
-                                   EeConductorFields *f,
-                                   int32_t id,
-                                   uint32_t command);
-
-/// `UnloadScore`.
-///
-/// # Safety
-/// As `with`.
-int32_t ee_conductor_unload_score(EeConductor *c, void *ctx, EeConductorFields *f, int32_t id);
-
-/// `SetVolume`.
-///
-/// # Safety
-/// As `with`.
-int32_t ee_conductor_set_volume(EeConductor *c, void *ctx, EeConductorFields *f, float volume);
-
-/// `SetIntensity`.
-///
-/// # Safety
-/// As `with`.
-int32_t ee_conductor_set_intensity(EeConductor *c,
-                                   void *ctx,
-                                   EeConductorFields *f,
-                                   uint32_t intensity,
-                                   bool immediate);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_queue(const EeSoundConductor *c, int32_t id);
 
 /// `SetChannelGroupCount`.
 ///
 /// # Safety
-/// `f` valid, the C++ lock held.
-int32_t ee_conductor_set_channel_group_count(EeConductorFields *f, uint32_t count);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_set_channel_group_count(const EeSoundConductor *c, uint32_t count);
 
-/// `GetCurrentlyPlayingScore`.
+/// `SetConductorState`.
 ///
 /// # Safety
-/// `f` valid.
-int32_t ee_conductor_currently_playing(const EeConductorFields *f);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_set_state(const EeSoundConductor *c, uint32_t state);
 
-/// `GetScore`: the `SEScore*` (null: none).
+/// `SetIntensity`.
 ///
 /// # Safety
-/// As `with` (no host is reached).
-void *ee_conductor_score(EeConductor *c, int32_t id);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_set_intensity(const EeSoundConductor *c,
+                                         uint32_t intensity,
+                                         bool immediate);
 
-/// `GetScoreID`.
+/// `SetMusicFolder`: the name without its last character (the trailing separator).
 ///
 /// # Safety
-/// As `with` (no host is reached).
-int32_t ee_conductor_score_id(EeConductor *c, void *score);
+/// `c` is a live conductor, `folder` NUL-terminated (UTF-8).
+int32_t ee_sound_conductor_set_music_folder(const EeSoundConductor *c, const char *folder);
 
-/// One entry of the score table, for inspection (tests, the golden driver): false past the last. `name` gets at
-/// most `name_capacity - 1` bytes and a NUL.
+/// `GetMusicFolder`: NUL-terminated, valid until the next `SetMusicFolder`.
 ///
 /// # Safety
-/// As `with`; `name` has `name_capacity` bytes (> 0), the outs are valid.
-bool ee_conductor_entry(EeConductor *c,
-                        uint32_t index,
-                        char *name,
-                        uint32_t name_capacity,
-                        void **score,
-                        int32_t *id,
-                        uint32_t *load_count);
+/// `c` is a live conductor.
+const char *ee_sound_conductor_music_folder(const EeSoundConductor *c);
 
-/// The constructor's state: categories each allowed every channel.
-EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);
-
-/// The destructor's part after the scavenger thread and the lock are gone; frees `m`.
+/// `SetReverb`: only the state is kept (dmusic's synthesizer has no reverb).
 ///
 /// # Safety
-/// `m` from `ee_sound_create`, not used afterwards.
-void ee_sound_destroy(EeSoundManager *m, void *ctx);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_set_reverb(const EeSoundConductor *c, uint32_t reverb);
 
-/// # Safety
-/// As `with`.
-uint32_t ee_sound_set_category_percentage(EeSoundManager *m, uint32_t category, float percent);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_set_category_priority(EeSoundManager *m, uint32_t category, uint32_t priority);
-
-/// # Safety
-/// As `with`.
-uint32_t ee_sound_available_channels(EeSoundManager *m);
-
-/// # Safety
-/// As `with`; `name` NUL-terminated.
-uint32_t ee_sound_load(EeSoundManager *m,
-                       void *ctx,
-                       const char *name,
-                       uint32_t category,
-                       uint32_t max_instances);
-
-/// `PlayAndReturnReferencedNode`.
+/// `SetVolume`.
 ///
 /// # Safety
-/// As `with`.
-void *ee_sound_play(EeSoundManager *m,
-                    void *ctx,
-                    uint32_t sample_id,
-                    float volume,
-                    float pan,
-                    float pitch,
-                    bool looping);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_set_volume(const EeSoundConductor *c, float volume);
 
-/// The playing, else paused, instance with the id (no reference added).
+/// `Stop`.
 ///
 /// # Safety
-/// As `with`.
-void *ee_sound_find_instance(EeSoundManager *m, void *ctx, uint32_t instance_id);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_stop(const EeSoundConductor *c);
 
-/// # Safety
-/// As `with`.
-bool ee_sound_is_looping(EeSoundManager *m, void *ctx, uint32_t instance_id);
-
-/// # Safety
-/// As `with`.
-bool ee_sound_is_playing(EeSoundManager *m, void *ctx, uint32_t instance_id);
-
-/// # Safety
-/// As `with`.
-float ee_sound_pan(EeSoundManager *m, void *ctx, uint32_t instance_id);
-
-/// # Safety
-/// As `with`.
-float ee_sound_pitch(EeSoundManager *m, void *ctx, uint32_t instance_id);
-
-/// `GetVolume2(id)`.
+/// `TransitionTo(id, command, flags)` (the flags are not used by dmusic).
 ///
 /// # Safety
-/// As `with`.
-float ee_sound_volume(EeSoundManager *m, void *ctx, uint32_t instance_id);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_transition_to(const EeSoundConductor *c, int32_t id, uint32_t command);
 
-/// # Safety
-/// As `with`.
-uint32_t ee_sound_sample_id(EeSoundManager *m, void *ctx, uint32_t instance_id);
-
-/// # Safety
-/// As `with`.
-uint32_t ee_sound_sample_rate(EeSoundManager *m, void *ctx, uint32_t instance_id);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_time_left(EeSoundManager *m, void *ctx, uint32_t instance_id);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_total_play_time(EeSoundManager *m, void *ctx, uint32_t sample_id);
-
-/// `SetVolume2(id)`.
+/// `UnloadScore`.
 ///
 /// # Safety
-/// As `with`.
-int32_t ee_sound_set_volume(EeSoundManager *m, void *ctx, uint32_t instance_id, float v);
+/// `c` is a live conductor.
+int32_t ee_sound_conductor_unload_score(const EeSoundConductor *c, int32_t id);
 
-/// # Safety
-/// As `with`.
-int32_t ee_sound_set_pan(EeSoundManager *m, void *ctx, uint32_t instance_id, float v);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_set_pitch(EeSoundManager *m, void *ctx, uint32_t instance_id, float v);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_set_parameters(EeSoundManager *m,
-                                void *ctx,
-                                uint32_t instance_id,
-                                float volume,
-                                float pan,
-                                float pitch);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_register_one_shot(EeSoundManager *m,
-                                   void *ctx,
-                                   uint32_t sample_id,
-                                   uint32_t instance_id);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_stop(EeSoundManager *m, void *ctx, uint32_t instance_id, bool let_finish);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_stop_all_one_shots(EeSoundManager *m, void *ctx);
-
-/// # Safety
-/// As `with`.
-int32_t ee_sound_unload(EeSoundManager *m, void *ctx, uint32_t sample_id);
-
-/// # Safety
-/// As `with`.
-void ee_sound_update_one_shots(EeSoundManager *m, void *ctx);
-
-/// One pass of the scavenger thread.
+/// The scalar members the game reads (no lock, as the original's inline getters): volume.
 ///
 /// # Safety
-/// As `with`.
-void ee_sound_scavenge(EeSoundManager *m, void *ctx, bool muted);
+/// `c` is a live conductor.
+EeConductorFields ee_sound_conductor_fields(const EeSoundConductor *c);
 
-/// # Safety
-/// As `with`.
-int32_t ee_sound_set_max_channels(EeSoundManager *m, void *ctx, uint32_t count);
-
-/// # Safety
-/// `node` is a live node.
-bool ee_sound_node_is_looping(void *node);
-
-/// # Safety
-/// `node` is a live node.
-bool ee_sound_node_is_playing(void *node);
-
-/// # Safety
-/// `node` is a live node.
-float ee_sound_node_pan(void *node);
-
-/// # Safety
-/// `node` is a live node.
-float ee_sound_node_pitch(void *node);
-
-/// # Safety
-/// `node` is a live node.
-int32_t ee_sound_node_set_volume(void *node, float v);
-
-/// # Safety
-/// `node` is a live node.
-int32_t ee_sound_node_set_pan(void *node, float v);
-
-/// # Safety
-/// `node` is a live node.
-int32_t ee_sound_node_set_pitch(void *node, float v);
-
-/// # Safety
-/// `node` is a live node.
-int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
-
-/// The constructor: a new mixer joins the registry.
+/// `SetNotificationCallback` (kept for the interface: dmusic reports no event).
 ///
 /// # Safety
-/// `mixer` is a live `SEMixer*`.
-void ee_mixers_register(void *mixer);
+/// `c` is a live conductor, `event` < 6.
+void ee_sound_conductor_set_callback(const EeSoundConductor *c, uint32_t event, void *callback);
 
-/// The destructor's decisions: the active mixer stops and deactivates, then the mixer leaves the registry.
+/// `SESoundManager::Create` (the constructor): the pool's lock, the path (referenced), the state (every category
+/// at 100%; the mixer's channel count when `channel_count` is 0), the lock, the events, the scavenger thread.
 ///
 /// # Safety
-/// `mixer` is the `SEMixer*` being destroyed.
-void ee_mixers_destroy(void *mixer);
+/// `mixer` is a live mixer, `path` NULL or a live `FSPath*`.
+EeSoundManager *ee_sound_manager_new(void *path,
+                                     EeSoundMixer *mixer,
+                                     uint32_t category_count,
+                                     uint32_t channel_count);
+
+/// `SESoundManager::Destroy` (the destructor): the scavenger stopped, the thread, events and lock gone, every paused
+/// instance dropped, every sample and category deleted, the mixer's channels stopped and destroyed; the path
+/// dereferenced.
+///
+/// # Safety
+/// `m` from `ee_sound_manager_new`, not used afterwards.
+void ee_sound_manager_free(EeSoundManager *m);
+
+/// `GetAvailableChannels`.
+///
+/// # Safety
+/// `m` is a live manager.
+uint32_t ee_sound_manager_available_channels(const EeSoundManager *m);
+
+/// `GetInstanceID(node)` (`NONE`: no node).
+///
+/// # Safety
+/// `node` is NULL or a live node; `m` is live when it is not.
+uint32_t ee_sound_manager_node_instance_id(const EeSoundManager *m, EeSoundNode *node);
+
+/// `GetSampleID(node)` (`NONE`: no node).
+///
+/// # Safety
+/// As `ee_sound_manager_node_instance_id`.
+uint32_t ee_sound_manager_node_sample_id(const EeSoundManager *m, EeSoundNode *node);
+
+/// `GetIsLooping(id)`.
+///
+/// # Safety
+/// `m` is a live manager when `id` is not none.
+bool ee_sound_manager_is_looping(const EeSoundManager *m, uint32_t id);
+
+/// The node form (`false` without a node).
+///
+/// # Safety
+/// `node` is NULL or a live node; `m` is live when it is not.
+bool ee_sound_manager_node_is_looping(const EeSoundManager *m, EeSoundNode *node);
+
+/// The node form (`false` without a node).
+///
+/// # Safety
+/// `node` is NULL or a live node; `m` is live when it is not.
+bool ee_sound_manager_node_is_playing(const EeSoundManager *m, EeSoundNode *node);
+
+/// The node form (`0.0` without a node).
+///
+/// # Safety
+/// `node` is NULL or a live node; `m` is live when it is not.
+float ee_sound_manager_node_pan(const EeSoundManager *m, EeSoundNode *node);
+
+/// The node form (`0.0` without a node).
+///
+/// # Safety
+/// `node` is NULL or a live node; `m` is live when it is not.
+float ee_sound_manager_node_pitch(const EeSoundManager *m, EeSoundNode *node);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+bool ee_sound_manager_is_playing(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+float ee_sound_manager_pan(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+float ee_sound_manager_pitch(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+uint32_t ee_sound_manager_sample_id(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+uint32_t ee_sound_manager_sample_rate(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_time_left(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_total_play_time(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+float ee_sound_manager_volume(const EeSoundManager *m, uint32_t id);
+
+/// The instance-id form, under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_unload(const EeSoundManager *m, uint32_t id);
+
+/// `GetAndReferenceSoundInstance` (NULL: none).
+///
+/// # Safety
+/// `m` is a live manager when `id` is not none.
+EeSoundNode *ee_sound_manager_get_and_reference(const EeSoundManager *m, uint32_t id);
+
+/// `Load` -> the sample id (`NONE`: not loaded).
+///
+/// # Safety
+/// `m` is a live manager, `name` NUL-terminated.
+uint32_t ee_sound_manager_load(const EeSoundManager *m,
+                               const char *name,
+                               uint32_t category,
+                               uint32_t max);
+
+/// `PlayAndReturnReferencedNode` (NULL: not played).
+///
+/// # Safety
+/// `m` is a live manager.
+EeSoundNode *ee_sound_manager_play_node(const EeSoundManager *m,
+                                        uint32_t sample_id,
+                                        float volume,
+                                        float pan,
+                                        float pitch,
+                                        bool looping);
+
+/// `Play` -> the new instance id (`NONE`: not played).
+///
+/// # Safety
+/// `m` is a live manager.
+uint32_t ee_sound_manager_play(const EeSoundManager *m,
+                               uint32_t sample_id,
+                               float volume,
+                               float pan,
+                               float pitch,
+                               bool looping);
+
+/// `RegisterOneShotSound`.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_register_one_shot(const EeSoundManager *m,
+                                           uint32_t sample_id,
+                                           uint32_t id);
+
+/// `SetCategoryPercentage` -> the category's instance limit.
+///
+/// # Safety
+/// `m` is a live manager.
+uint32_t ee_sound_manager_set_category_percentage(const EeSoundManager *m,
+                                                  uint32_t category,
+                                                  float percent);
+
+/// `SetCategoryPriority`.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_category_priority(const EeSoundManager *m,
+                                               uint32_t category,
+                                               uint32_t priority);
+
+/// `SetMaxChannels`.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_max_channels(const EeSoundManager *m, uint32_t count);
+
+/// `SetPath`: the old path dereferenced, the new one referenced.
+///
+/// # Safety
+/// `m` is a live manager, `path` NULL or a live `FSPath*`.
+void ee_sound_manager_set_path(const EeSoundManager *m, void *path);
+
+/// `GetPath`.
+///
+/// # Safety
+/// `m` is a live manager.
+void *ee_sound_manager_path(const EeSoundManager *m);
+
+/// `SetVolume(id)`, `SetPan(id)`, `SetPitch(id)`, `SetSoundParameters(id)`: under the lock.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_volume(const EeSoundManager *m, uint32_t id, float v);
+
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_pan(const EeSoundManager *m, uint32_t id, float v);
+
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_pitch(const EeSoundManager *m, uint32_t id, float v);
+
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_parameters(const EeSoundManager *m,
+                                        uint32_t id,
+                                        float volume,
+                                        float pan,
+                                        float pitch);
+
+/// The node forms of `SetVolume`, `SetPan`, `SetPitch`: the lock is taken even without a node (as the C++ took it).
+///
+/// # Safety
+/// `m` is a live manager, `node` NULL or a live node.
+int32_t ee_sound_manager_node_set(const EeSoundManager *m,
+                                  EeSoundNode *node,
+                                  uint32_t which,
+                                  float v);
+
+/// `SetSoundParameters(node)` (no lock without a node).
+///
+/// # Safety
+/// `node` is NULL or a live node; `m` is live when it is not.
+int32_t ee_sound_manager_node_set_parameters(const EeSoundManager *m,
+                                             EeSoundNode *node,
+                                             float volume,
+                                             float pan,
+                                             float pitch);
+
+/// `Stop(id, letFinish)`.
+///
+/// # Safety
+/// `m` is a live manager when `id` is not none.
+int32_t ee_sound_manager_stop(const EeSoundManager *m, uint32_t id, bool let_finish);
+
+/// `Stop(node, flag)`: by the node's instance id, read under the lock.
+///
+/// # Safety
+/// `node` is NULL or a live node; `m` is live when it is not.
+int32_t ee_sound_manager_stop_node(const EeSoundManager *m, EeSoundNode *node, bool flag);
+
+/// `StopAllOneShotSounds`.
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_stop_all_one_shots(const EeSoundManager *m);
+
+/// `GetCriticalSection` (a `TSCriticalSection*`).
+///
+/// # Safety
+/// `m` is a live manager.
+void *ee_sound_manager_lock(const EeSoundManager *m);
+
+/// `GetIsMuted` / `SetIsMuted` (read by the scavenger's pass).
+///
+/// # Safety
+/// `m` is a live manager.
+bool ee_sound_manager_muted(const EeSoundManager *m);
+
+/// # Safety
+/// `m` is a live manager.
+void ee_sound_manager_set_muted(const EeSoundManager *m, bool muted);
+
+/// The manager's mixer (`GetMasterVolume`, `SetMasterVolume`, `GetMaxChannels`, ... are the mixer's).
+///
+/// # Safety
+/// `m` is a live manager.
+EeSoundMixer *ee_sound_manager_mixer(const EeSoundManager *m);
+
+/// `GetHighestTimerDelay`, `GetMaxChannels` (the mixer's).
+///
+/// # Safety
+/// `m` is a live manager.
+uint32_t ee_sound_manager_mixer_value(const EeSoundManager *m, uint32_t which);
+
+/// `GetMasterVolume`.
+///
+/// # Safety
+/// `m` is a live manager.
+float ee_sound_manager_master_volume(const EeSoundManager *m);
+
+/// `SetMasterVolume`, `SetLatency(ms)`, `MixAhead` (the mixer's results).
+///
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_master_volume(const EeSoundManager *m, float v);
+
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_set_latency(const EeSoundManager *m, uint32_t milliseconds);
+
+/// # Safety
+/// `m` is a live manager.
+int32_t ee_sound_manager_mix_ahead(const EeSoundManager *m);
+
+/// `SEInitializeMixers`: a mixer for every valid sound plug-in; `kErrorNotFound` when none is left.
+///
+/// # Safety
+/// `start` is the C++ start state.
+int32_t ee_sound_mixers_initialize(EeSoundMixerStart *start);
+
+/// `SEShutdown`'s mixers: the first one deleted until none is left.
+void ee_sound_mixers_delete_all();
+
+/// `SEMixer::GetActiveMixer`.
+EeSoundMixer *ee_sound_mixer_active();
 
 /// `SEMixer::GetCount`.
-uint32_t ee_mixers_count();
+uint32_t ee_sound_mixer_count();
 
 /// `SEMixer::GetMixer`: `kErrorBeyondEnd` past the last (`out` untouched).
 ///
 /// # Safety
 /// `out` is valid.
-int32_t ee_mixers_get(uint32_t index, void **out);
+int32_t ee_sound_mixer_get(uint32_t index, EeSoundMixer **out);
 
 /// `SEMixer::UseMixer` (null: none).
 ///
 /// # Safety
-/// `mixer` is null or a live `SEMixer*`.
-int32_t ee_mixers_use(void *mixer_ptr);
+/// `m` is null or a live mixer.
+int32_t ee_sound_mixer_use(EeSoundMixer *m);
 
-/// `SEInitializeMixers` over the C++ start state `ctx`.
+/// `SEMixer::GetConductor`.
 ///
 /// # Safety
-/// `ctx` is what the trampolines expect.
-int32_t ee_mixers_initialize(void *ctx);
+/// `m` is a live mixer.
+EeSoundConductor *ee_sound_mixer_conductor(EeSoundMixer *m);
 
-/// `SEShutdown`'s mixers.
-void ee_mixers_delete_all();
+/// The mixer's `PIMModule*` (`GetName`, `IsValid`).
+///
+/// # Safety
+/// `m` is a live mixer.
+void *ee_sound_mixer_module(EeSoundMixer *m);
+
+/// `GetCPUUsage`.
+///
+/// # Safety
+/// `m` is a live mixer.
+float ee_sound_mixer_cpu_usage(EeSoundMixer *m);
+
+/// `GetDirectSoundInterface`.
+///
+/// # Safety
+/// `m` is a live mixer.
+void *ee_sound_mixer_direct_sound(EeSoundMixer *m);
+
+/// `ProcessMessage`.
+///
+/// # Safety
+/// `m` is a live mixer.
+bool ee_sound_mixer_process_message(EeSoundMixer *m, unsigned long message, void *p1, void *p2);
+
+/// `GetOutputRate` (0 for a plug-in without it).
+///
+/// # Safety
+/// `m` is a live mixer.
+unsigned long ee_sound_mixer_output_rate(EeSoundMixer *m);
+
+/// `SetMusicSource` (nothing for a plug-in without it).
+///
+/// # Safety
+/// `m` is a live mixer.
+void ee_sound_mixer_set_music_source(EeSoundMixer *m, EeSoundSource source, void *context);
+
+/// `SetMovieSource` (nothing for a plug-in without it).
+///
+/// # Safety
+/// `m` is a live mixer.
+void ee_sound_mixer_set_movie_source(EeSoundMixer *m, EeSoundSource source, void *context);
+
+/// `SESMInstanceNode::Reference`.
+///
+/// # Safety
+/// `node` is a live node.
+void ee_sound_node_reference(EeSoundNode *node);
+
+/// `SESMInstanceNode::Dereference`: the last reference returns the node to the pool (under the pool's lock).
+///
+/// # Safety
+/// `node` is a live node.
+void ee_sound_node_dereference(EeSoundNode *node);
+
+/// `SESoundManager::CleanupMemoryPoolAndDestroyCriticalSections`: once; frees the free nodes and the pool's lock.
+void ee_sound_pool_cleanup();
+
+/// The copy constructor (`SPIMDuplicateSample`'s `new SESample(*inSample)`): the state without the wave data and
+/// the channel.
+///
+/// # Safety
+/// `s` is a live sample.
+EeSoundSample *ee_sound_sample_duplicate(const EeSoundSample *s);
+
+/// `data`.
+///
+/// # Safety
+/// `s` is a live sample.
+void *ee_sound_sample_data(EeSoundSample *s);
+
+/// `looping`.
+///
+/// # Safety
+/// `s` is a live sample.
+bool ee_sound_sample_is_looping(EeSoundSample *s);
+
+/// `length_bytes`.
+///
+/// # Safety
+/// `s` is a live sample.
+uint32_t ee_sound_sample_length_in_bytes(EeSoundSample *s);
+
+/// `length_samples`.
+///
+/// # Safety
+/// `s` is a live sample.
+uint32_t ee_sound_sample_length_in_samples(EeSoundSample *s);
+
+/// `mixer_channel`.
+///
+/// # Safety
+/// `s` is a live sample.
+uint32_t ee_sound_sample_mixer_channel(EeSoundSample *s);
+
+/// `pan`.
+///
+/// # Safety
+/// `s` is a live sample.
+float ee_sound_sample_pan(EeSoundSample *s);
+
+/// `pitch`.
+///
+/// # Safety
+/// `s` is a live sample.
+float ee_sound_sample_pitch(EeSoundSample *s);
+
+/// `bits`.
+///
+/// # Safety
+/// `s` is a live sample.
+uint32_t ee_sound_sample_bits(EeSoundSample *s);
+
+/// `rate`.
+///
+/// # Safety
+/// `s` is a live sample.
+uint32_t ee_sound_sample_rate(EeSoundSample *s);
+
+/// `volume`.
+///
+/// # Safety
+/// `s` is a live sample.
+float ee_sound_sample_volume(EeSoundSample *s);
+
+/// The plain store of `data` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_data(EeSoundSample *s, void *v);
+
+/// The plain store of `length_bytes` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_length_in_bytes(EeSoundSample *s, uint32_t v);
+
+/// The plain store of `length_samples` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_length_in_samples(EeSoundSample *s, uint32_t v);
+
+/// The plain store of `mixer_channel` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_mixer_channel(EeSoundSample *s, uint32_t v);
+
+/// The plain store of `bits` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_bits(EeSoundSample *s, uint32_t v);
+
+/// The plain store of `rate` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_rate(EeSoundSample *s, uint32_t v);
+
+/// The plain store of `looping` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_the_is_looping(EeSoundSample *s, bool v);
+
+/// The plain store of `pan` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_the_pan(EeSoundSample *s, float v);
+
+/// The plain store of `pitch` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_the_pitch(EeSoundSample *s, float v);
+
+/// The plain store of `volume` (the mixer is not told).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_the_volume(EeSoundSample *s, float v);
+
+/// `GetFilename`: NUL-terminated, valid until the next `SetFilename`.
+///
+/// # Safety
+/// `s` is a live sample.
+const char *ee_sound_sample_filename(EeSoundSample *s);
+
+/// `SetFilename`.
+///
+/// # Safety
+/// `s` is a live sample, `name` NUL-terminated.
+void ee_sound_sample_set_filename(EeSoundSample *s, const char *name);
+
+/// Through the sample's mixer: `SetIsLooping` (`SPIMSetSampleLooping`).
+///
+/// # Safety
+/// `s` is a live sample.
+void ee_sound_sample_set_is_looping(EeSoundSample *s, bool looping);
+
+/// `SetVolume`, `SetPan`, `SetPitch` through the sample's mixer: the mixer's result.
+///
+/// # Safety
+/// `s` is a live sample.
+int32_t ee_sound_sample_set_volume(EeSoundSample *s, float v);
+
+/// # Safety
+/// `s` is a live sample.
+int32_t ee_sound_sample_set_pan(EeSoundSample *s, float v);
+
+/// # Safety
+/// `s` is a live sample.
+int32_t ee_sound_sample_set_pitch(EeSoundSample *s, float v);
+
+/// `SetOffset` (`SPIMSetSampleOffset`).
+///
+/// # Safety
+/// `s` is a live sample.
+int32_t ee_sound_sample_set_offset(EeSoundSample *s, uint32_t offset);
+
+/// `GetSampleOffset` (`SPIMGetSampleOffset`).
+///
+/// # Safety
+/// `s` is a live sample.
+uint32_t ee_sound_sample_offset(EeSoundSample *s);
+
+/// `LoadWaveData(spec)` (`SPIMLoadWaveData`).
+///
+/// # Safety
+/// `s` is a live sample, `spec` a live `FSFileSpec*`.
+int32_t ee_sound_sample_load_wave_data(EeSoundSample *s, void *spec);
+
+/// # Safety
+/// `s` is a live sample.
+uint32_t ee_mixer_host_mixer_channel(void *s);
+
+/// # Safety
+/// `s` is a live sample.
+void ee_mixer_host_set_mixer_channel(void *s, uint32_t channel);
+
+/// # Safety
+/// `s` is a live sample.
+const void *ee_mixer_host_data(void *s);
+
+/// # Safety
+/// `s` is a live sample.
+void ee_mixer_host_set_data(void *s, const void *data);
+
+/// # Safety
+/// `s` is a live sample.
+bool ee_mixer_host_is_looping(void *s);
+
+/// # Safety
+/// `s` is a live sample.
+float ee_mixer_host_pan(void *s);
+
+/// # Safety
+/// `s` is a live sample.
+float ee_mixer_host_pitch(void *s);
+
+/// # Safety
+/// `s` is a live sample.
+float ee_mixer_host_volume(void *s);
+
+/// # Safety
+/// `s` is a live sample.
+void ee_mixer_host_set_is_looping(void *s, bool looping);
+
+/// # Safety
+/// `s` is a live sample.
+void ee_mixer_host_set_pan(void *s, float v);
+
+/// # Safety
+/// `s` is a live sample.
+void ee_mixer_host_set_pitch(void *s, float v);
+
+/// # Safety
+/// `s` is a live sample.
+void ee_mixer_host_set_volume(void *s, float v);
+
+/// `SEScore::GetIsSecondaryScore`.
+///
+/// # Safety
+/// `s` is a live score.
+bool ee_sound_score_is_secondary(const EeSoundScore *s);
+
+/// `SEScore::GetRepeatCount`.
+///
+/// # Safety
+/// `s` is a live score.
+uint32_t ee_sound_score_repeat_count(const EeSoundScore *s);
+
+/// `SEScore::SetRepeatCount` (the game loops a score with a large count).
+///
+/// # Safety
+/// `s` is a live score.
+void ee_sound_score_set_repeat_count(const EeSoundScore *s, uint32_t count);
 
 /// One wake-up of the music thread: `wait` is `TSEvent::WaitAny`'s result, `elapsed` the time since the last
 /// one. True when the thread must end.

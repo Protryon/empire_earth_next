@@ -47,6 +47,7 @@ pub mod motion;
 pub mod msvc_sort;
 pub mod order;
 pub mod patrol;
+pub mod patrol_group;
 pub mod physics;
 pub mod physics_save;
 pub mod player_save;

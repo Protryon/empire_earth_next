@@ -24,6 +24,7 @@
 #include "lle/FSPersistentList.h"
 #include "lle/FSMemoryFile.h"
 #include "lle/File System.h"
+#include "rust/ee_fs.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // SYNTHETIC: LLE 0x1000422a
@@ -35,45 +36,19 @@ UString gStartupDirectory(256);
 
 // FUNCTION: LLE 0x100047df
 // Splits a path into its volume (drive or UNC server share) and its directory (with a trailing backslash) into outSpec
+// (rust/crates/ee_fs spec.rs, LLE lane round 6)
 void FSGetVolumeAndDirectory(const UString& inPath, FSFileSpec& outSpec)
 {
-    UString theVolume(256);
-    UString theDirectory(256);
-    theVolume = inPath.GetSubstring(0, 2);
-    if (theVolume != "\\\\")
-        theDirectory = inPath.GetSubstring(2, inPath.GetLength() - 2);
-    else {
-        unsigned long theOffset = inPath.Find("\\", 2);
-        theVolume = inPath.GetSubstring(0, theOffset);
-        theDirectory = inPath.GetSubstring(theOffset, inPath.GetLength() - theOffset);
-    }
-    theDirectory += "\\";
-    outSpec.SetVolume(theVolume);
-    outSpec.SetDirectory(theDirectory);
+    ee_fs_volume_and_directory(reinterpret_cast<const EeFsString*>(&inPath), reinterpret_cast<EeFsSpec*>(&outSpec));
 }
 
 // FUNCTION: LLE 0x100048e7
 // Records the startup volume and directory (upper case) from the path, or from the current directory when the path
-// is empty or not a directory
+// is empty or not a directory (rust/crates/ee_fs spec.rs)
 void FSInitialize(const UString& inPath)
 {
-    char theCurrentDirectory[PLAT_MAX_PATH] = {0};
-    FSFileSpec theSpec;
-    UString thePath(PLAT_MAX_PATH);
-    bool theFound = false;
-    if (inPath.GetLength() > 0) {
-        FSGetVolumeAndDirectory(inPath, theSpec);
-        theFound = theSpec.IsDirectory();
-    }
-    if (!theFound) {
-        PlatGetCurrentDirectory(theCurrentDirectory, PLAT_MAX_PATH);
-        thePath = theCurrentDirectory;
-        FSGetVolumeAndDirectory(thePath, theSpec);
-    }
-    gStartupVolume = theSpec.GetVolume();
-    gStartupDirectory = theSpec.GetDirectory();
-    gStartupVolume.ToUpper();
-    gStartupDirectory.ToUpper();
+    ee_fs_initialize(reinterpret_cast<const EeFsString*>(&inPath), reinterpret_cast<EeFsString*>(&gStartupVolume),
+                     reinterpret_cast<EeFsString*>(&gStartupDirectory));
 }
 
 // Compiler-generated, continued:

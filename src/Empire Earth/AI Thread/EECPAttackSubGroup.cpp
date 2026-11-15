@@ -68,7 +68,6 @@
 #include "ee/EEFOLocationScreenBase.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
-#include "ee/EECCSpecialAttack.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECivPowersManager.h"
@@ -413,7 +412,7 @@ void EECPAttackSubGroup::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUni
     } else {
         long theType = inUnit->GetUnit()->GetUnitClass()->mUnitType;
         if ((theType == kUnitTypeArch03SimpleBowmanFlaming || theType == kUnitTypeArch05CompositeBowFlaming || theType == kUnitTypeArch06LongBowFlaming) && inTarget->mUnitClass->IsLandBuilding()) {
-            EECCSpecialAttack* theClass = NULL;
+            EEUnitCalamityClass* theClass = NULL;
             USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(0x17, theClass);
             if (gUnitSetManager.GetSet(theClass->GetUnitSet())->Contains(inTarget->mUnitClass->mUnitType)
                 && inUnit->GetUnit()->GetPower() >= theClass->GetCost()
@@ -427,7 +426,7 @@ void EECPAttackSubGroup::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUni
                    && gPhysics->mRandom.Generate() <= gWorldTable.GetFloatValue2(kWorldAiSpecialAttackChance)) {
             inUnit->GetUnit()->GoFanatic();
         } else if (inUnit->GetUnit()->GetUnitClass()->mUnitType == kUnitTypeSp15CapitalShip || inUnit->GetUnit()->GetUnitClass()->mUnitType == kUnitTypeCapitalShipYamato) {
-            EECCSpecialAttack* theClass = NULL;
+            EEUnitCalamityClass* theClass = NULL;
             USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(0x1e, theClass);
             if (inTarget->mHitPoints > inUnit->GetUnit()->GetUnitClass()->mProjectileClass->mAttack
                 && inUnit->GetUnit()->GetPower() >= theClass->GetCost()
