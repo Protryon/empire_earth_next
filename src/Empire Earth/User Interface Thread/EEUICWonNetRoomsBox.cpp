@@ -57,7 +57,6 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEUICWonNetRoomsBox.h"
 
-// FUNCTION: EXE 0x65cead
 // Creates the WON room list
 EEUICWonNetRoomsBox::EEUICWonNetRoomsBox(unsigned long inId, GEFont* inFont, const GE2DPoint& inLocation,
                                          unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
@@ -74,10 +73,6 @@ EEUICWonNetRoomsBox::EEUICWonNetRoomsBox(unsigned long inId, GEFont* inFont, con
     this->SetFocusedRectColor(GEColor(0.0f, 0.0f, 0.0f));
 }
 
-// SYNTHETIC: EXE 0x65cfd3
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x65cfef
 // Destroys the room list and its texts
 EEUICWonNetRoomsBox::~EEUICWonNetRoomsBox()
 {
@@ -85,7 +80,6 @@ EEUICWonNetRoomsBox::~EEUICWonNetRoomsBox()
     delete this->mText;
 }
 
-// FUNCTION: EXE 0x65d023
 // Snapshots the list and its text style for drawing
 long EEUICWonNetRoomsBox::CopyData()
 {
@@ -94,7 +88,6 @@ long EEUICWonNetRoomsBox::CopyData()
     return theResult;
 }
 
-// FUNCTION: EXE 0x65d045
 // Draws each room line: name, description, number of games and number of players
 long EEUICWonNetRoomsBox::DrawTextA()
 {
@@ -137,135 +130,3 @@ long EEUICWonNetRoomsBox::DrawTextA()
     }
     return theResult;
 }
-
-// FUNCTION: EXE 0x65d2d9
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::UIListBox<EEUICWNRBLine>
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d553
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::~UIListBox<EEUICWNRBLine>
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d5e7
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::AppendLine
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d60d
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::AppendStringArray
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d662
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::CopyData
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d8be
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::DeleteAllEntries
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d8ef
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::DeleteLine
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d97d
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::ProcessHome
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d9bc
-// Template code for the rooms list: UIListBox<EEUICWNRBLine>::`scalar deleting destructor'
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65d9d8
-// Template code for the rooms list: EEUICWNRBLine::operator=
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65da07
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::operator=
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65db94
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::resize
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dbbe
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::size
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dbd4
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::push_back
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dc00
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::erase
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dc73
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::clear
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dcae
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::_Buy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dce8
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::_Tidy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dd20
-// Template code for the rooms list: steps a line iterator forward (std::_Ptrit::operator+)
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65dd35
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::resize
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65ddf9
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::insert
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65de53
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::erase
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65debd
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::insert
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e1a2
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::_Ufill
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e1cd
-// Template code for the rooms list: steps a line iterator back (std::_Ptrit::operator-)
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e1e4
-// Template code for the rooms list: std::copy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e20d
-// Template code for the rooms list: std::copy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e231
-// Template code for the rooms list: std::vector<EEUICWNRBLine,A>::_Ucopy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e25d
-// Template code for the rooms list: std::fill
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e27a
-// Template code for the rooms list: std::copy_backward
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e2a6
-// Template code for the rooms list: std::_Destroy
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e2be
-// Template code for the rooms list: std::_Construct
-// (template COMDAT)
-
-// FUNCTION: EXE 0x65e2d0
-// Template code for the rooms list: EEUICWNRBLine::`scalar deleting destructor'
-// (template COMDAT)

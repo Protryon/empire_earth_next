@@ -59,22 +59,16 @@ static_assert(sizeof(EEUnitPickerHit) == sizeof(EeGfxPickHit) && offsetof(EEUnit
               offsetof(EEUnitPickerHit, mExact) == offsetof(EeGfxPickHit, exact) &&
               offsetof(EEUnitPickerHit, mLarge) == offsetof(EeGfxPickHit, large), "EEUnitPickerHit");
 
-// FUNCTION: EXE 0x518aa2
 // Creates the water's render object
 EEROWater::EEROWater()
 {
 }
 
-// SYNTHETIC: EXE 0x518ab4
-// (the scalar deleting destructor, emitted with the vtable; slot EEROWater+0x10)
-
-// FUNCTION: EXE 0x518ad0
 // Destroys the water's render object
 EEROWater::~EEROWater()
 {
 }
 
-// FUNCTION: EXE 0x518adb
 // Advances the terrain's water animation
 void EEROWater::FrameStarting()
 {
@@ -86,7 +80,6 @@ void EEROWater::SceneStarting()
 {
 }
 
-// FUNCTION: EXE 0x518ae9
 // Draws the water unlit with fog, alpha-blended with z test only, then the effects' pass 6
 void EEROWater::RenderScene()
 {
@@ -117,7 +110,6 @@ void EEROWater::FrameDone()
 {
 }
 
-// FUNCTION: EXE 0x518c40
 // Returns a unit's click priority: 1 land building or wall, 4 own or allied unit, 6 enemy unit or AA
 // building, 2 wood, 3 stone/gold/other resource, 5 any resource when preferring resources (provisional name)
 // GetUnitPickPriority's questions (pick.rs EeGfxPickQuestion), asked where the original asked them
@@ -143,7 +135,6 @@ long GetUnitPickPriority(EEUnit* inUnit, bool inPreferResources)
     return ee_gfx_pick_priority(&theFacts, inPreferResources, inUnit, EEPickAsk);
 }
 
-// FUNCTION: EXE 0x518cf8
 // Creates a unit picker with room for the given number of units and its lock
 EEUnitPicker::EEUnitPicker(unsigned long inCapacity)
 {
@@ -155,13 +146,6 @@ EEUnitPicker::EEUnitPicker(unsigned long inCapacity)
     this->mShowHiddenUnits = 0;
 }
 
-// SYNTHETIC: EXE 0x518dbb
-// (the scalar deleting destructor, emitted with the vtable; slot EEUnitPicker+0x0)
-
-// SYNTHETIC: EXE 0x518dd7
-// (EEUnitPickerEntry's vector deleting destructor, for the dtor's delete[])
-
-// FUNCTION: EXE 0x518e35
 // Destroys the picker, releasing its units and entries and its lock
 EEUnitPicker::~EEUnitPicker()
 {
@@ -171,7 +155,6 @@ EEUnitPicker::~EEUnitPicker()
     TSScheduler::DestroyCriticalSection(this->mLock);
 }
 
-// FUNCTION: EXE 0x518e74
 // Returns whether the picker holds a unit
 bool EEUnitPicker::Contains(EEUnit* inUnit)
 {
@@ -185,7 +168,6 @@ bool EEUnitPicker::Contains(EEUnit* inUnit)
 
 static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes);
 
-// FUNCTION: EXE 0x518eaf
 // Adds the ids of a player's living pickable units of a type inside a screen rectangle (a part's carrier
 // instead); without a type, its units, or failing those one building
 void EEUnitPicker::PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
@@ -242,7 +224,6 @@ void EEUnitPicker::PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inP
 static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
                      unsigned long inLOD, std::vector<GE3DPlane>& inPlanes);
 
-// FUNCTION: EXE 0x51911c
 // Returns whether an entry's model lies inside the side planes 2..5 of a selection frustum (bounding sphere
 // first, then the vertices)
 static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes)
@@ -272,7 +253,6 @@ static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DP
     return theResult;
 }
 
-// FUNCTION: EXE 0x5192f2
 // Returns whether a vertex of a model (or of a sub model) is on or above every side plane 2..5
 static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
                      unsigned long inLOD, std::vector<GE3DPlane>& inPlanes)
@@ -325,7 +305,6 @@ EEUnit* EEUnitPicker::GetEntryUnit(unsigned long inIndex)
     return static_cast<EEUnit*>(gWorld.GetUnit(this->mEntries[inIndex].mUnitID));
 }
 
-// FUNCTION: EXE 0x519540
 // Returns the unit under a screen point (its carrier for a part), referenced: polygon hits beat
 // bounding hits, then the nearest, with click priority deciding near ties; or null
 EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources)
@@ -420,7 +399,6 @@ EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
     return theResult;
 }
 
-// FUNCTION: EXE 0x519d63
 // Returns the ids of the pickable units of a type (citizens of either sex for the citizen types) inside
 // a screen rectangle, a part's carrier instead
 void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inType,
@@ -457,7 +435,6 @@ void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inT
     this->mLock->Leave();
 }
 
-// FUNCTION: EXE 0x519ea2
 // Returns the ids of a player's units of a type inside a screen rectangle (male and female citizens for
 // either citizen type)
 void EEUnitPicker::PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,
@@ -475,7 +452,6 @@ void EEUnitPicker::PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer,
     this->mLock->Leave();
 }
 
-// FUNCTION: EXE 0x519f08
 // Empties the picker (port, R5a.3: ids, nothing to release; the original dereferenced every
 // unit and carrier here)
 void EEUnitPicker::Clear()
@@ -485,7 +461,6 @@ void EEUnitPicker::Clear()
     this->mCount = 0;
 }
 
-// FUNCTION: EXE 0x519f7c
 // Empties the picker and takes the frame's viewport, projection and see-through mode
 void EEUnitPicker::Reset()
 {
@@ -497,7 +472,6 @@ void EEUnitPicker::Reset()
 
 // (ReferenceCarriers 0x519faa: gone with the references, R5a.3)
 
-// FUNCTION: EXE 0x519ffb
 // Adds a unit at a transformation when there is room and it is big enough on screen (no path points;
 // no ambient units or projectiles but ICBMs unless the camera is free)
 void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize)
@@ -530,13 +504,6 @@ void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformat
     this->mCount++;
 }
 
-// TEMPLATE: EXE 0x51a0e1
-// (vector<EEUnitPickerHit>::push_back; its end() and _Ptrit copy are ICF-shared)
-
-// TEMPLATE: EXE 0x51a10d
-// (std::fill over EEUnitPickerHit, ICF-named for GEVideoMode)
-
-// FUNCTION: EXE 0x51a130
 // Computes the fog visibility of a point into outValue (linear fog only, which it also turns off; else 1)
 void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outValue)
 {

@@ -14,7 +14,6 @@
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0075b9c0
 // Switches the local address to an adapter, saves the choice if new and rebinds the UDP port after a switch
 void LobbySetNetworkAdapter(long address)
 {

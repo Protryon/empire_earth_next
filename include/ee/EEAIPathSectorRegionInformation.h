@@ -12,7 +12,7 @@ template <class T> class U2DPoint;
 
 class EEAIPathSectorRegionInformation {
 public:
-    EEAIPathSectorRegionInformation();      // 0x2bb72
+    EEAIPathSectorRegionInformation();
     virtual ~EEAIPathSectorRegionInformation() {}   // +0x00 (??_G 0x263ef)
     // 0x2bb84: every member 0 (the ctor and EEAIContinentManager 0x1f624 call it)
     void Reset();

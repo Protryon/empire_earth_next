@@ -13,8 +13,8 @@ class EEGameState;
 
 class EEPPlayerHelper : public FSPersistent {
 public:
-    EEPPlayerHelper();                                                          // 0x14b339
-    EEPPlayerHelper(EEWorld& inWorld);                                          // 0x14b3a6
+    EEPPlayerHelper();
+    EEPPlayerHelper(EEWorld& inWorld);
     // implicit virtual dtor: ??_G +0x10 0x14b380
     virtual void GetChecksum(ESChecksum& ioChecksum) const;                     // +0x00 0x14b446
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x14b4e1

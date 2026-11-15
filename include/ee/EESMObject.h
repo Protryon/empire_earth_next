@@ -19,13 +19,13 @@ class EESMObject : public EeScenarioObjectFields {
 public:
     bool FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom);  // 0x1c6d4f, actual ret12/AL/float output
     bool FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom);  // (+ SMFP)
-    EESMObject();                           // 0x1c5f73
+    EESMObject();
     virtual ~EESMObject();                  // +0x00 (??_G 0x1c6019; the body 0x1c6035)
     // slot signatures from `ret N` and EEScenarioManager's broadcast hooks
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x1c8284
     virtual void ReplaceUnit(long inOldUnit, long inNewUnit);  // +0x18 0x1c85a4 (replaces a unit id in mUnits)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x1c 0x1c85de
-    void Copy(const EESMObject& inObject);  // 0x1c6386 (provisional name)
+    void Copy(const EESMObject& inObject);
     long GetUnitAttribute(unsigned long inMetric, bool inFlag, EEUnit* inUnit, long inArg4, long inArg5);  // 0x1c7749; last two slots unused/provisional
     long PickUnitType();                   // 0x1c6b14: chooses a matching unit class (provisional name)
     bool Evaluate(bool inIncludeDead);      // 0x1c6458 (the object condition: its units exist/are in the area; provisional name)
@@ -53,7 +53,7 @@ public:
     unsigned long GetMaxCount() const { return this->mMaxCount; }
     unsigned long GetArea() const { return this->mArea; }
     unsigned long GetNearObject() const { return this->mNearObject; }
-    void SetUnits(const std::vector<unsigned long>& inUnits);  // 0x1c97a8
+    void SetUnits(const std::vector<unsigned long>& inUnits);
     void SetParent(long inParent);          // 0x1c96b7 (0 when it would close a cycle; provisional name)
     void SetName(const UWideString& inName);    // 0x1c9628 (also renames the conditions that use the object)
 

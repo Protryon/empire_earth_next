@@ -17,7 +17,7 @@ class GETransformation;
 
 class EEDoppelganger : public FSRestorable {
 public:
-    EEDoppelganger();                       // 0x201d85
+    EEDoppelganger();
     // FSRestorable (its GetChecksum is the engine's)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x201e9a
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond);   // +0x08 0x201ecd
@@ -41,7 +41,7 @@ public:
     virtual ~EEDoppelganger();              // +0x4c 0x201dce (??_E 0x203433)
     virtual void Clear();                   // +0x50 0x201de5
 
-    void Reset();                           // 0x201dd9
+    void Reset();
     bool GetIsValid();                      // 0x201e16: the unit's mIsValid
     EEPlayer* GetPlayer();                  // 0x201e1d: the unit's owner
 

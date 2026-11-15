@@ -44,7 +44,6 @@
 const float kGoalSpacing = 0.4f;
 const float kGoalHeight = 0.02f;
 
-// FUNCTION: EXE 0x507616
 // Creates a goal marker of a type with its effect (type 0 a marching line, 1 a waypoint icon, 2..6 rally
 // flags), shown only to the given player and not saved
 EEGraphicalGoal::EEGraphicalGoal(long inType, long inPlayer)
@@ -81,20 +80,17 @@ EEGraphicalGoal::EEGraphicalGoal(long inType, long inPlayer)
     theEffect->mPlayer = inPlayer;
 }
 
-// FUNCTION: EXE 0x5076e3
 // Destroys the marker object (its effect stays; DestroyEffect removes it)
 EEGraphicalGoal::~EEGraphicalGoal()
 {
 }
 
-// FUNCTION: EXE 0x5076ea
 // Queues the marker's effect for destruction
 void EEGraphicalGoal::DestroyEffect()
 {
     gEffectManager->DestroyEffect(this->mEffect);
 }
 
-// FUNCTION: EXE 0x5076f9
 // Moves a changed marker's effect: a line to its from/to points, an icon to its to point; a marker whose effect
 // was not created (its graphic effect is above the effect detail setting) has nothing to move
 void EEGraphicalGoal::Update()
@@ -131,17 +127,12 @@ void EEGraphicalGoal::Update()
     this->mChanged = false;
 }
 
-// FUNCTION: EXE 0x50779d
 // Creates a goal marker manager with no markers
 EEGraphicalGoalManager::EEGraphicalGoalManager()
 {
     this->mGoals.clear();
 }
 
-// SYNTHETIC: EXE 0x5077cd
-// (the scalar deleting destructor, emitted with the vtable; slot EEGraphicalGoalManager+0x0)
-
-// FUNCTION: EXE 0x5077e9
 // Destroys the manager, queueing every marker's effect for destruction
 EEGraphicalGoalManager::~EEGraphicalGoalManager()
 {
@@ -156,7 +147,6 @@ EEGraphicalGoalManager::~EEGraphicalGoalManager()
     this->mGoals.clear();
 }
 
-// FUNCTION: EXE 0x50786c
 // Appends a new marker of a type for a player when the list has no marker at the given index yet
 void EEGraphicalGoalManager::AddGoal(long inPlayer, unsigned long inCount, long inType)
 {
@@ -166,7 +156,6 @@ void EEGraphicalGoalManager::AddGoal(long inPlayer, unsigned long inCount, long 
     }
 }
 
-// FUNCTION: EXE 0x5078c9
 // Places the player's goal markers for the selected units' queued goals (lines and icons per unit kind and
 // queue; units only in shift mode, buildings always), then trims the leftovers and every other player's
 // For each selected unit with a tile or a holder, each queued goal (but the automatic waypoints) gives a line from
@@ -337,7 +326,6 @@ void EEGraphicalGoalManager::Rebuild(long inPlayer)
     }
 }
 
-// FUNCTION: EXE 0x50815e
 // Returns the goal at an index of the queue
 // EEUnitVectorItem's member, out of line here after its first user Rebuild (the header declares it out of line)
 EEUnitGoal* EEUnitVectorItem::GetGoalAt(unsigned long inIndex)
@@ -345,7 +333,6 @@ EEUnitGoal* EEUnitVectorItem::GetGoalAt(unsigned long inIndex)
     return this->mGoals[inIndex];
 }
 
-// FUNCTION: EXE 0x508185
 // Destroys a player's markers of a type from the end of the list until at most the given count remain (Rebuild has
 // just placed this frame's markers at the front)
 void EEGraphicalGoalManager::TrimGoals(long inPlayer, unsigned long inCount, long inType)
@@ -357,7 +344,6 @@ void EEGraphicalGoalManager::TrimGoals(long inPlayer, unsigned long inCount, lon
     }
 }
 
-// FUNCTION: EXE 0x5081f1
 // Rebuilds the current player's goal markers, then moves every changed marker's effect
 void EEGraphicalGoalManager::Update()
 {
@@ -382,120 +368,8 @@ long EEGraphicalGoalManager::RepairPointers(unsigned long inFirst, unsigned long
     return 0;
 }
 
-// FUNCTION: EXE 0x508b0c
 // Returns the number of a player's markers of a type (creating the empty list when missing)
 unsigned long EEGraphicalGoalManager::GetGoalCount(long inPlayer, long inType)
 {
     return this->mGoals[inPlayer][inType].size();
 }
-
-// TEMPLATE: EXE 0x508268
-// (the player map's _Tree destructor, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508293
-// (the player map's clear, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5082a7
-// (vector<EEGraphicalGoal>::push_back, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5082d3
-// (vector<EEGraphicalGoal>::erase(iterator), a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508347
-// (the player map's erase, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5083b8
-// (vector<EEGraphicalGoal>::insert(iterator, const T&), a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508412
-// (the player map's erase, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5086c8
-// (the player map's _Erase, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508702
-// (vector<EEGraphicalGoal>::insert(iterator, n, const T&), a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5089dc
-// (named set<UString>::const_iterator::_Inc, an identical-code twin, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508a14
-// (vector<EEGraphicalGoal>::_Ufill, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508a3f
-// (std::copy of goal markers, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508a68
-// (std::fill of goal markers, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508a85
-// (std::copy_backward of goal markers, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508b4c
-// (the player map's operator[], a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508bba
-// (the type map's operator[], a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508cc6
-// (the type map's _Tree destructor, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508f3b
-// (the type map's erase, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x509140
-// (vector<EEGraphicalGoal>'s copy constructor, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x50918a
-// (named vector<EECPUnitRequirement>::_Buy, an identical-code twin, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5091c4
-// (the type map's erase, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x50947a
-// (the type map's _Copy, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5094da
-// (the type map's _Erase, a template COMDAT emitted by this unit)
-
-
-
-// TEMPLATE: EXE 0x509596
-// (the type map's _Copy, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x509619
-// (vector<EEGraphicalGoal>::_Ucopy, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5096a9
-// (the type map pair's constructor, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5096c6
-// (std::_Construct of a goal marker, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508c10
-// (the player map's insert, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508cf1
-// (the type map's insert, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508da7
-// (the player map's _Insert, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x508fac
-// (the type map's _Insert, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x509645
-// (std::_Construct of a player map pair, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x509657
-// (std::_Construct of a type map pair, a template COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x509674
-// (the player map pair's constructor, a template COMDAT emitted by this unit)
-
-// EEGraphicalGoal's implicit operator= and copy ctor, its ??_G, and two map _Dec COMDATs
-// TEMPLATE: EXE 0x508ab1
-// TEMPLATE: EXE 0x509514
-// TEMPLATE: EXE 0x509555
-// TEMPLATE: EXE 0x5096d8
-// SYNTHETIC: EXE 0x50970f

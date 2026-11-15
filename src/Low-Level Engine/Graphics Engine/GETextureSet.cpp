@@ -3,12 +3,6 @@
 //
 // 0x100346a7..0x100349a3: ctor, dtor, SetTexture, then the vector<vector<GETexture*> > COMDATs (resize, erase,
 // _Construct). The accessors are header-inline (GEBoundingBox.cpp emits them). No init chains.
-//
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// TEMPLATE: LLE 0x1003484f
-// TEMPLATE: LLE 0x10034875
-// TEMPLATE: LLE 0x10034928
-// TEMPLATE: LLE 0x10034991
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -21,7 +15,6 @@
 #include "lle/GETexture.h"
 #include "lle/GETextureSet.h"
 
-// FUNCTION: LLE 0x100346a7
 // Creates a width x height grid of empty texture slots
 GETextureSet::GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inNumTexturesInHeight,
                            unsigned long inTextureTileCoverage)
@@ -34,7 +27,6 @@ GETextureSet::GETextureSet(unsigned long inNumTexturesInWidth, unsigned long inN
         this->mTextures[i].resize(inNumTexturesInHeight, NULL);
 }
 
-// FUNCTION: LLE 0x100346f8
 // Destroys the texture grid, releasing every texture in it
 GETextureSet::~GETextureSet()
 {
@@ -46,7 +38,6 @@ GETextureSet::~GETextureSet()
     }
 }
 
-// FUNCTION: LLE 0x1003474b
 // Puts a texture into a grid slot, releasing the old one and referencing the new one
 void GETextureSet::SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture)
 {

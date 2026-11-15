@@ -36,7 +36,7 @@ struct EECPUnitDistanceLess {
     EECPUnitDistanceLess(long inX, long inY) : mCenter(inX, inY) {}
     EECPUnitDistanceLess(const EECPUnitDistanceLess& inOther) : mCenter(inOther.mCenter) {}
     ~EECPUnitDistanceLess() {}
-    bool operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const;   // 0x93552
+    bool operator()(EEComplexUnit* inFirst, EEComplexUnit* inSecond) const;
 
     EETileCoordinate mCenter;
 };
@@ -48,7 +48,7 @@ public:
     unsigned long GetCount(long inUnitClass);   // 0x945de: GetUnits(inUnitClass)'s size, 0 if none (unsigned: ChooseResearch's seta)
     std::deque<EEComplexUnit*>* GetUnits(long inUnitClass);    // 0x94608: 0 if none
     void RequestFishingBoats(long inCount);  // 0x9487b (ret 4; EECPResourceManager::AssignGatherers) (provisional name)
-    void RequestUnits(long inUnitClass, long inArg2, long inTownID, unsigned short inArg4);  // 0x948e6 (ret 0x10)
+    void RequestUnits(long inUnitClass, long inArg2, long inTownID, unsigned short inArg4);
     // 0x93ed4 (ret 4): the units, requests and upgrades to ioGatherer's slots (EECPDefenseCommander)
     void GatherUnits(EECPUMGatherUnitsScreenBase& ioGatherer);
     void BalanceProduction(EEComplexUnit* inUnit);  // 0x93b97 (ret 4; EEComputerPlayer::Virtual68 0x2e1e9) (provisional name)
@@ -56,33 +56,33 @@ public:
     void ReleaseUnits();                    // 0x93b20 (EEComputerPlayer::SetActive: deactivated) (provisional name)
     long CountMilitaryUnits(bool inByClass, bool inRequests);  // 0x945a7 (ret 8; EECPCombatManager::GetUnitsAvailable)
     // (EECPCivilizationManager.cpp's calls; ret N from the bodies; provisional names)
-    EECPUnitManager(EECPCivilizationManager* inManager);   // 0x935e6
+    EECPUnitManager(EECPCivilizationManager* inManager);
     ~EECPUnitManager();                     // 0x93660 (not virtual: the civilization manager calls it, then delete)
-    bool IsRequested(long inUnitClass);     // 0x93696 (ret 4)
+    bool IsRequested(long inUnitClass);
     bool IsInProduction(long inUnitClass);  // 0x936ec (ret 4; EECPResourceManager 0x8ecfd) (provisional name)
-    long GetWantedCitizens();               // 0x93aee
-    void GetIdleCitizens(std::vector<EEComplexUnit*>& outUnits);  // 0x940fe (ret 4)
-    void GetCitizens(std::vector<EEComplexUnit*>& outUnits);  // 0x9447e (ret 4)
-    bool IsCitizenAvailable(EEComplexUnit* inUnit);  // 0x94524 (ret 4)
-    unsigned long GetNumWorkers();          // 0x94572
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x9462f
-    bool HasLaterEpochRequests();           // 0x947f3
-    void Reset();                           // 0x94c80
-    void DropObsoleteRequests(long inEpoch);  // 0x94cac (ret 4)
-    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // 0x94d9b
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x94db4
+    long GetWantedCitizens();
+    void GetIdleCitizens(std::vector<EEComplexUnit*>& outUnits);
+    void GetCitizens(std::vector<EEComplexUnit*>& outUnits);
+    bool IsCitizenAvailable(EEComplexUnit* inUnit);
+    unsigned long GetNumWorkers();
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    bool HasLaterEpochRequests();
+    void Reset();
+    void DropObsoleteRequests(long inEpoch);
+    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     bool StartProduction(EECPUMRequest& inRequest, long& outMade);  // 0x94f42 (ret 8; returns al)
     void UnitAdded(EEUnit* inUnit, long inArg);  // 0x95440 (ret 8; reads the argument's +0x30 complex unit)
     void UnitLost(EEUnit* inUnit);          // 0x956b9 (ret 4; likewise)
-    bool CancelRequest(long inUnitClass, unsigned long inCount, long inTownID, unsigned short inContinent);  // 0x93893 (ret 0x10) (provisional name)
+    bool CancelRequest(long inUnitClass, unsigned long inCount, long inTownID, unsigned short inContinent);
     // EECPWallManager.cpp's calls (provisional names)
     EEComplexUnit* FindBuilder(GE2DPoint& inLocation, long inUnitClass);  // 0x941bb (ret 8): a builder for inLocation
     EEComplexUnit* FindBuilderForTile(U2DPoint<long>& inTile, long inUnitClass);  // 0x94174 (ret 8; returns the worker)
     // EECPBuildManager.cpp's calls (ret N from the bodies) (provisional names)
-    bool HasUnfinished(long inUnitClass);   // 0x93832 (ret 4)
+    bool HasUnfinished(long inUnitClass);
     EEComplexUnit* FindStalledBuilder();    // 0x93de4: the next idle builder (0 when none)
-    EEComplexUnit* FindBuilderForTarget(EEUnit* inTarget, long inUnitClass);  // 0x94197 (ret 8)
-    void Update(unsigned long inTime);      // 0x95929 (ret 4)
+    EEComplexUnit* FindBuilderForTarget(EEUnit* inTarget, long inUnitClass);
+    void Update(unsigned long inTime);
 
     std::map<long, std::deque<EEComplexUnit*>*> mUnits;   // +0x00
     EEEpochArray<std::deque<EECPUMRequest>> mRequests;   // +0x0c the requests by epoch (the original: 15)

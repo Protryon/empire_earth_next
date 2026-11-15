@@ -11,7 +11,7 @@
 
 class EEUICChatLine : public EEUIRustControl, protected EeScreensChatLineFields {
 public:
-    EEUICChatLine(const GERectangle& inRectangle, UIControlsTable& inTable, UIForm* inForm);   // 0x257223
+    EEUICChatLine(const GERectangle& inRectangle, UIControlsTable& inTable, UIForm* inForm);
     virtual ~EEUICChatLine();
     // 0x2574d5: shows another line's text (EEUIFMainGame scrolls the chat lines up: 0x264a68)
     unsigned long Copy(const EEUICChatLine& inLine);

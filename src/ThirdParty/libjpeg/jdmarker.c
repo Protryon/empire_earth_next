@@ -193,9 +193,7 @@ typedef my_marker_reader * my_marker_ptr;
  */
 
 
-// FUNCTION: JPEG 0x10088d59
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x804910
 get_soi (j_decompress_ptr cinfo)
 /* Process an SOI marker */
 {
@@ -235,9 +233,7 @@ get_soi (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x10088e04
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x8049d0
 get_sof (j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
 /* Process a SOFn marker */
 {
@@ -301,9 +297,7 @@ get_sof (j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
 }
 
 
-// FUNCTION: JPEG 0x10089103
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x804cf0
 get_sos (j_decompress_ptr cinfo)
 /* Process a SOS marker */
 {
@@ -421,9 +415,7 @@ get_dac (j_decompress_ptr cinfo)
 #endif /* D_ARITH_CODING_SUPPORTED */
 
 
-// FUNCTION: JPEG 0x100893f1
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x805000
 get_dht (j_decompress_ptr cinfo)
 /* Process a DHT marker */
 {
@@ -494,9 +486,7 @@ get_dht (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x10089692
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x805370
 get_dqt (j_decompress_ptr cinfo)
 /* Process a DQT marker */
 {
@@ -554,9 +544,7 @@ get_dqt (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x100898ee
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x805600
 get_dri (j_decompress_ptr cinfo)
 /* Process a DRI marker */
 {
@@ -592,9 +580,7 @@ get_dri (j_decompress_ptr cinfo)
 #define APPN_DATA_LEN	14	/* Must be the largest of the above!! */
 
 
-// FUNCTION: JPEG 0x100887f3
 LOCAL(void)
-// FUNCTION: EXEIMG 0x8041b0
 examine_app0 (j_decompress_ptr cinfo, JOCTET FAR * data,
 	      unsigned int datalen, INT32 remaining)
 /* Examine first few bytes from an APP0.
@@ -670,9 +656,7 @@ examine_app0 (j_decompress_ptr cinfo, JOCTET FAR * data,
 }
 
 
-// FUNCTION: JPEG 0x10088a01
 LOCAL(void)
-// FUNCTION: EXEIMG 0x804440
 examine_app14 (j_decompress_ptr cinfo, JOCTET FAR * data,
 	       unsigned int datalen, INT32 remaining)
 /* Examine first few bytes from an APP14.
@@ -703,9 +687,7 @@ examine_app14 (j_decompress_ptr cinfo, JOCTET FAR * data,
 }
 
 
-// FUNCTION: JPEG 0x100886c8
 METHODDEF(boolean)
-// FUNCTION: EXEIMG 0x804070
 get_interesting_appn (j_decompress_ptr cinfo)
 /* Process an APP0 or APP14 marker without saving it */
 {
@@ -859,9 +841,7 @@ save_marker (j_decompress_ptr cinfo)
 #endif /* SAVE_MARKERS_SUPPORTED */
 
 
-// FUNCTION: JPEG 0x10088ac2
 METHODDEF(boolean)
-// FUNCTION: EXEIMG 0x804520
 skip_variable (j_decompress_ptr cinfo)
 /* Skip over an unknown or uninteresting variable-length marker */
 {
@@ -890,9 +870,7 @@ skip_variable (j_decompress_ptr cinfo)
  * but it will never be 0 or FF.
  */
 
-// FUNCTION: JPEG 0x1008858e
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x803ef0
 next_marker (j_decompress_ptr cinfo)
 {
   int c;
@@ -939,9 +917,7 @@ next_marker (j_decompress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x100899cd
 LOCAL(boolean)
-// FUNCTION: EXEIMG 0x8056f0
 first_marker (j_decompress_ptr cinfo)
 /* Like next_marker, but used to obtain the initial SOI marker. */
 /* For this marker, we do not allow preceding garbage or fill; otherwise,
@@ -972,9 +948,7 @@ first_marker (j_decompress_ptr cinfo)
  * JPEG_SUSPENDED, JPEG_REACHED_SOS, or JPEG_REACHED_EOI.
  */
 
-// FUNCTION: JPEG 0x10088b65
 METHODDEF(int)
-// FUNCTION: EXEIMG 0x8045c0
 read_markers (j_decompress_ptr cinfo)
 {
   /* Outer loop repeats once for each marker. */
@@ -1135,9 +1109,7 @@ read_markers (j_decompress_ptr cinfo)
  * it holds a marker which the decoder will be unable to read past.
  */
 
-// FUNCTION: JPEG 0x10089a69
 METHODDEF(boolean)
-// FUNCTION: EXEIMG 0x805790
 read_restart_marker (j_decompress_ptr cinfo)
 {
   /* Obtain a marker unless we already did. */
@@ -1216,9 +1188,7 @@ read_restart_marker (j_decompress_ptr cinfo)
  * any other marker would have to be bogus data in that case.
  */
 
-// FUNCTION: JPEG 0x100884a0
 GLOBAL(boolean)
-// FUNCTION: EXEIMG 0x803df0
 jpeg_resync_to_restart (j_decompress_ptr cinfo, int desired)
 {
   int marker = cinfo->unread_marker;
@@ -1268,9 +1238,7 @@ jpeg_resync_to_restart (j_decompress_ptr cinfo, int desired)
  * Reset marker processing state to begin a fresh datastream.
  */
 
-// FUNCTION: JPEG 0x10089ae7
 METHODDEF(void)
-// FUNCTION: EXEIMG 0x805820
 reset_marker_reader (j_decompress_ptr cinfo)
 {
   my_marker_ptr marker = (my_marker_ptr) cinfo->marker;
@@ -1290,9 +1258,7 @@ reset_marker_reader (j_decompress_ptr cinfo)
  * This is called only once, when the decompression object is created.
  */
 
-// FUNCTION: JPEG 0x10088665
 GLOBAL(void)
-// FUNCTION: EXEIMG 0x804000
 jinit_marker_reader (j_decompress_ptr cinfo)
 {
   my_marker_ptr marker;

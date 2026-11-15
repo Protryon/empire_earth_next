@@ -16,14 +16,12 @@
 #include "lle/GE3DPlane.h"
 #include "GERustMath.h"
 
-// FUNCTION: LLE 0x1000d24d
 // Defines the plane through three points (first point plus the unit normal of their cross product)
 void GE3DPlane::Define(const GE3DPoint& inPoint1, const GE3DPoint& inPoint2, const GE3DPoint& inPoint3)
 {
     ee_ge_plane_define(GERust(inPoint1), GERust(inPoint2), GERust(inPoint3), GERust(*this));
 }
 
-// FUNCTION: LLE 0x1000d2c7
 // Finds the line where this plane meets another; false when the planes are parallel
 bool GE3DPlane::Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const
 {
@@ -31,21 +29,18 @@ bool GE3DPlane::Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const
     return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine));
 }
 
-// FUNCTION: LLE 0x1000d435
 // Tells whether a point lies on the plane or on the normal's side
 bool GE3DPlane::IsPointOnOrAbovePlane(const GE3DPoint& inPoint) const
 {
     return ee_ge_plane_side(GERust(*this), GERust(inPoint), 2);
 }
 
-// FUNCTION: LLE 0x1000d47c
 // Tells whether a point lies on the plane or behind it
 bool GE3DPlane::IsPointOnOrBelowPlane(const GE3DPoint& inPoint) const
 {
     return ee_ge_plane_side(GERust(*this), GERust(inPoint), 3);
 }
 
-// FUNCTION: LLE 0x1000d52f
 // Loads the plane's point and normal from a file; returns the first read error
 long GE3DPlane::Load(FSFile& inFile)
 {
@@ -55,7 +50,6 @@ long GE3DPlane::Load(FSFile& inFile)
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000d54f
 // Saves the plane's point and normal to a file; returns the first write error
 long GE3DPlane::Save(FSFile& inFile)
 {

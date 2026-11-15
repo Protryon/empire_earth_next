@@ -13,7 +13,7 @@ class EEUIFSEPaintElevation : public EEUIFSEPaint {
 public:
     EEUIFSEPaintElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long inId,
                           const GE2DPoint& inLocation, unsigned long inWidth, unsigned long inHeight, UIForm* inForm,
-                          unsigned long inIndex);   // 0x1a4470
+                          unsigned long inIndex);
     virtual ~EEUIFSEPaintElevation();       // +0x00 0x1a44dc (??_G 0x1a44c0)
     virtual long MouseLButtonUp();          // +0x38 0x1a475d
     virtual long MouseMove(const GE2DPoint& inLocation);   // +0x40 0x1a4782

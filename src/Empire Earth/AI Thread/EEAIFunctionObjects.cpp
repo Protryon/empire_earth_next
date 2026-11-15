@@ -60,7 +60,6 @@
 #include "ee/EECPExplorationManager.h"
 
 // The aircraft carrier gatherer's slots: the unit's first members (range start 0x29f57).
-// FUNCTION: EXE 0x429f57
 // Adds a request's count to the requested total when its class is an aircraft carrier (naval building with air
 // traffic); returns whether it counted
 bool EECPUGatheAircraftCarriersCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
@@ -73,7 +72,6 @@ bool EECPUGatheAircraftCarriersCount::CountRequest(EEUnitClass* inClass, EECPUMR
     return theResult;
 }
 
-// FUNCTION: EXE 0x429f7e
 // Counts one unit when it is an aircraft carrier (naval building with air traffic); returns whether it counted
 bool EECPUGatheAircraftCarriersCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -85,7 +83,6 @@ bool EECPUGatheAircraftCarriersCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x429fa1
 // Adds a class's unit list size to the unit total when the class is an aircraft carrier; returns whether it counted
 bool EECPUGatheAircraftCarriersCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -97,7 +94,6 @@ bool EECPUGatheAircraftCarriersCount::CountUnits(EEUnitClass* inClass, std::dequ
     return theResult;
 }
 
-// FUNCTION: EXE 0x429fcc
 // Returns true when the continent id is one of the two screened continents or is adjacent to both of them
 // the two id tests as one bool (`bool theResult = a || b; if (!theResult) {..}`), the original's shape
 bool EEAIFOContinentScreenContinentsShareAdjacentID::Test(unsigned short inID)
@@ -111,7 +107,6 @@ bool EEAIFOContinentScreenContinentsShareAdjacentID::Test(unsigned short inID)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a019
 // Scores a military unit for disbanding: minus its influence, raised for explorers, obsolete units and units
 // below half (more below a fifth) health
 long EEAIFOUnitsToKillScoringBase::ScoreMilitary(EEComplexUnit* inUnit)
@@ -130,7 +125,6 @@ long EEAIFOUnitsToKillScoringBase::ScoreMilitary(EEComplexUnit* inUnit)
     return UMCeil(theScore);
 }
 
-// FUNCTION: EXE 0x42a126
 // Scores a transport for disbanding: 10000, more when parked unloading, idle or detached from the AI, plus its
 // cargo count
 long EEAIFOUnitsToKillScoringBase::ScoreTransport(EEComplexUnit* inUnit)
@@ -146,7 +140,6 @@ long EEAIFOUnitsToKillScoringBase::ScoreTransport(EEComplexUnit* inUnit)
     return inUnit->GetNumCargoUnits() + theScore;
 }
 
-// FUNCTION: EXE 0x42a193
 // Scores a citizen for disbanding: idle highest, then waiting gatherers plus a per-resource bonus (wood most),
 // builders lowest
 long EEAIFOUnitsToKillScoringBase::ScoreCitizen(EEComplexUnit* inUnit)
@@ -182,7 +175,6 @@ long EEAIFOUnitsToKillScoringBase::ScoreCitizen(EEComplexUnit* inUnit)
     return theScore;
 }
 
-// FUNCTION: EXE 0x42a246
 // Creates the disband scorer for a player with the numbers of citizens, transports and military units to kill
 EEAIFOUnitsToKillForMilitary::EEAIFOUnitsToKillForMilitary(EEComputerPlayer* inPlayer, long inCitizensToKill, long inTransportsToKill, long inMilitaryToKill)
 {
@@ -192,7 +184,6 @@ EEAIFOUnitsToKillForMilitary::EEAIFOUnitsToKillForMilitary(EEComputerPlayer* inP
     this->mMilitaryToKill = inMilitaryToKill;
 }
 
-// FUNCTION: EXE 0x42a271
 // Returns whether a live, population-costing, uncontained unit may be disbanded: citizens while citizens remain
 // to kill, non-transport military (not space carriers) while military remain; transports never
 bool EEAIFOUnitsToKillForMilitary::CanKill(EEComplexUnit* inUnit)
@@ -208,7 +199,6 @@ bool EEAIFOUnitsToKillForMilitary::CanKill(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a2d7
 // Returns a unit's disband score as a citizen or as military; transports and space carriers score 0
 long EEAIFOUnitsToKillForMilitary::GetKillScore(EEComplexUnit* inUnit)
 {
@@ -220,7 +210,6 @@ long EEAIFOUnitsToKillForMilitary::GetKillScore(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a31f
 // Adds a request's count to the requested total when its class is a land or naval citizen; returns whether it
 // counted
 bool EECPUGatherCitizenUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
@@ -233,7 +222,6 @@ bool EECPUGatherCitizenUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequ
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a348
 // Returns how many citizens (existing plus requested) the player has above its citizen share of the population
 // limit; also returns the citizen ratio and count (0 when the limit is 0)
 // NEAR: the original zeroes theCount (edi) after the gatherer and keeps theResult in ebx (declaring theCount later
@@ -259,7 +247,6 @@ long EEAIFOUnitsToKillScoringBase::GetCitizenSurplus(EEComputerPlayer* inPlayer,
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a40f
 // Returns the player's citizen surplus over its citizen share of the population limit
 long EEAIFOUnitsToKillScoringBase::GetCitizensToKill(EEComputerPlayer* inPlayer)
 {
@@ -268,7 +255,6 @@ long EEAIFOUnitsToKillScoringBase::GetCitizensToKill(EEComputerPlayer* inPlayer)
     return EEAIFOUnitsToKillScoringBase::GetCitizenSurplus(inPlayer, theRatio, theCount);
 }
 
-// FUNCTION: EXE 0x42a432
 // Counts one unit when it is a land or naval citizen; returns whether it counted
 bool EECPUGatherCitizenUnitsCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -280,7 +266,6 @@ bool EECPUGatherCitizenUnitsCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a457
 // Adds a citizen class's unit list size to the unit total; returns whether it counted
 bool EECPUGatherCitizenUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -292,7 +277,6 @@ bool EECPUGatherCitizenUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<E
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a486
 // Records one available unit under its unit class, starting the class's count at 1 or incrementing it
 void EEAIFOPAvailablePersonnelGatherer::AddUnit(const std::pair<long, EEUnit*>& inUnit)
 {
@@ -303,7 +287,6 @@ void EEAIFOPAvailablePersonnelGatherer::AddUnit(const std::pair<long, EEUnit*>& 
         this->mClasses.insert(std::make_pair(inUnit.first, std::make_pair(1L, inUnit.second->mUnitClass)));
 }
 
-// FUNCTION: EXE 0x42a4d9
 // Takes one available unit of the class (dropping the class at 0); returns the class, or 0 when none is
 long EEAIFOPAvailablePersonnelGatherer::TakeUnitClass(long inUnitClass)
 {
@@ -318,7 +301,6 @@ long EEAIFOPAvailablePersonnelGatherer::TakeUnitClass(long inUnitClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a51e
 // Takes one available unit of the first class in the unit category; returns that class, or 0 when none matches
 long EEAIFOPAvailablePersonnelGatherer::TakeByCategory(long inCategory)
 {
@@ -336,7 +318,6 @@ long EEAIFOPAvailablePersonnelGatherer::TakeByCategory(long inCategory)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a57e
 // Takes one available unit of the first class of the AI kind; returns that class, or 0 when none matches
 long EEAIFOPAvailablePersonnelGatherer::TakeByKind(long inKind)
 {
@@ -354,7 +335,6 @@ long EEAIFOPAvailablePersonnelGatherer::TakeByKind(long inKind)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a5de
 // Orders unit class ids by epoch, latest first
 bool EEAIFOUnitClassGreater::operator()(const long& inA, const long& inB)
 {
@@ -362,7 +342,6 @@ bool EEAIFOUnitClassGreater::operator()(const long& inA, const long& inB)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42a60a
 // Creates a sub group filter for a continent (0: any), allowing adjacent continents and packaged groups as asked
 EEAIFOSubGroupFilter::EEAIFOSubGroupFilter(unsigned short inContinent, bool inAllowAdjacent, bool inAllowPackaged)
 {
@@ -371,14 +350,12 @@ EEAIFOSubGroupFilter::EEAIFOSubGroupFilter(unsigned short inContinent, bool inAl
     this->mAllowPackaged = inAllowPackaged;
 }
 
-// FUNCTION: EXE 0x42a65d
 // Returns whether an attack group has no continent
 bool EEAIFOSubGroupFilter::operator()(EECPAttackGroup* inGroup)
 {
     return inGroup->mContinentID == 0;
 }
 
-// FUNCTION: EXE 0x42a66d
 // Accepts a non-empty sub group that is idle or defending, of an accepted kind, on (or next to) the continent,
 // and not in an aid package unless packaged groups are allowed
 bool EEAIFOSubGroupFilter::operator()(EECPAttackSubGroup* inGroup)
@@ -403,7 +380,6 @@ bool EEAIFOSubGroupFilter::operator()(EECPAttackSubGroup* inGroup)
     return result;
 }
 
-// FUNCTION: EXE 0x42a752
 // Replaces the filter's aid packages with the map's non-null packages and collects their sub group ids
 void EEAIFOSubGroupFilter::SetPackages(std::map<long, EECPMilitaryAidPackage*>& inPackages)
 {
@@ -421,7 +397,6 @@ void EEAIFOSubGroupFilter::SetPackages(std::map<long, EECPMilitaryAidPackage*>& 
     }
 }
 
-// FUNCTION: EXE 0x42a7d2
 // Accepts a moving, attacking, non-citizen class within the epoch span whose domain is allowed, whose tech is
 // live and whose builder is live or present, and which passes that domain's favourite-unit test
 bool EEAIFOFavoriteUnitScreener::Screen(EEUnitClass* inClass)
@@ -469,10 +444,6 @@ bool EEAIFOFavoriteUnitScreener::Screen(EEUnitClass* inClass)
     return theResult;
 }
 
-// SYNTHETIC: EXE 0x42a978
-// (EECPUSFavoriteUnitsScreen's scalar deleting destructor)
-
-// FUNCTION: EXE 0x42a9bd
 // Returns whether an air class is a favourite: an attacking mover that is no hero, healer, priest, special,
 // transport, mine or support kind and is not in unit set 0x75
 bool EECPUSFavoriteUnitsScreen::IsFavoriteAir(EEUnitClass* inClass)
@@ -503,7 +474,6 @@ bool EECPUSFavoriteUnitsScreen::IsFavoriteAir(EEUnitClass* inClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42aab4
 // Returns whether a sea class is a favourite: an attacking mover that is no hero, healer, priest, special,
 // transport, mine, anti-air or support kind and is not in unit set 0x74
 bool EECPUSFavoriteUnitsScreen::IsFavoriteSea(EEUnitClass* inClass)
@@ -535,7 +505,6 @@ bool EECPUSFavoriteUnitsScreen::IsFavoriteSea(EEUnitClass* inClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42aba7
 // Returns whether a land class is a favourite: an attacking mover that is no hero, healer, anti-tank, siege,
 // anti-air, artillery, transport or mine, not in unit set 0x73 (fliers: nor 0x75)
 bool EECPUSFavoriteUnitsScreen::IsFavoriteLand(EEUnitClass* inClass)
@@ -572,7 +541,6 @@ bool EECPUSFavoriteUnitsScreen::IsFavoriteLand(EEUnitClass* inClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42ad11
 // Returns whether a space class is a favourite: an attacking mover that is no hero, healer, priest, special,
 // transport, mine, anti-air or support kind and is not in unit set 0x98
 bool EECPUSFavoriteUnitsScreen::IsFavoriteSpace(EEUnitClass* inClass)
@@ -604,7 +572,6 @@ bool EECPUSFavoriteUnitsScreen::IsFavoriteSpace(EEUnitClass* inClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42ae09
 // Accepts a moving attack, defence or transport class of the current epoch or earlier whose tech is live, whose
 // builder is live or present (carrier aircraft: a carrier exists or is requested), in a combat category
 bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
@@ -665,7 +632,6 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42afdf
 // Accepts a buildable non-citizen class from the last two epochs that costs 1 population, can explore, heals
 // nothing and is no support, siege, building, hero or carrier kind
 bool EEAIFOAcceptableComputerPlayerExplorerUnitScreener::Screen(EEUnitClass* inClass)
@@ -702,7 +668,6 @@ bool EEAIFOAcceptableComputerPlayerExplorerUnitScreener::Screen(EEUnitClass* inC
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b0ba
 // Orders EECPIntelligence's GetTargets list: higher score first, building-19 targets ahead; a building-19 and a
 // other target pair orders the building first (struct in ee/EECPIntelligence.h)
 bool EECPITargetScoreGreater::operator()(const std::pair<EEComplexUnit*, long>& inFirst,
@@ -717,7 +682,6 @@ bool EECPITargetScoreGreater::operator()(const std::pair<EEComplexUnit*, long>& 
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b100
 // Creates a strike-location scorer for a sub group starting from the given tile
 EEAIFOBestRegionToAttack::EEAIFOBestRegionToAttack(EECPAttackSubGroup* inSubGroup, const EETileLocation& inTile)
     : mSubGroup(inSubGroup)
@@ -725,7 +689,6 @@ EEAIFOBestRegionToAttack::EEAIFOBestRegionToAttack(EECPAttackSubGroup* inSubGrou
     this->mTile = inTile;
 }
 
-// FUNCTION: EXE 0x42b129
 // Creates the land strike-location scorer for a sub group starting from the given tile
 EEAIFOBestInfluenceRegionToAttack::EEAIFOBestInfluenceRegionToAttack(EECPAttackSubGroup* inSubGroup,
     const EETileLocation& inTile)
@@ -733,7 +696,6 @@ EEAIFOBestInfluenceRegionToAttack::EEAIFOBestInfluenceRegionToAttack(EECPAttackS
 {
 }
 
-// FUNCTION: EXE 0x42b145
 // Scores every location 0
 float EEAIFOBestInfluenceRegionToAttack::operator()(const EECPILocation& inLocation)
 {
@@ -746,7 +708,6 @@ float EEAIFOBestInfluenceRegionToAirStrike::operator()(const EECPILocation& inLo
     return 0.0f;
 }
 
-// FUNCTION: EXE 0x42b14e
 // Creates the air strike scorer; a positive chance sets the strike count to chance * 10 (at least 1), else 1
 // strike at chance 0
 EEAIFOBestInfluenceRegionToAirStrike::EEAIFOBestInfluenceRegionToAirStrike(EECPAttackSubGroup* inSubGroup,
@@ -762,10 +723,6 @@ EEAIFOBestInfluenceRegionToAirStrike::EEAIFOBestInfluenceRegionToAirStrike(EECPA
     this->mChance = inChance;
 }
 
-// SYNTHETIC: EXE 0x42b1a4
-// (EEAIFOBestRegionToAttack's scalar deleting destructor, shared with EEAIFOBestInfluenceRegionToAttack by ICF)
-
-// FUNCTION: EXE 0x42b1c1
 // Adds a request's count to the requested total for any non-null class; returns whether it counted
 bool EECPUMGatherUnitsScreenBase::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -775,7 +732,6 @@ bool EECPUMGatherUnitsScreenBase::CountRequest(EEUnitClass* inClass, EECPUMReque
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b1da
 // Counts any non-null unit; returns whether it counted
 bool EECPUMGatherUnitsScreenBase::CountUnit(EEComplexUnit* inUnit)
 {
@@ -785,7 +741,6 @@ bool EECPUMGatherUnitsScreenBase::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b1ec
 // Adds a class's unit list size to the unit total; returns whether it counted
 bool EECPUMGatherUnitsScreenBase::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -797,7 +752,6 @@ bool EECPUMGatherUnitsScreenBase::CountUnits(EEUnitClass* inClass, std::deque<EE
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b207
 // Creates a military unit counter for a player, counting units or population as asked
 EECPUGatherMilitaryUnitsCount::EECPUGatherMilitaryUnitsCount(EEComputerPlayer* inPlayer, bool inByClass,
     bool inRequests, bool inCountPopulation)
@@ -807,7 +761,6 @@ EECPUGatherMilitaryUnitsCount::EECPUGatherMilitaryUnitsCount(EEComputerPlayer* i
     this->mCountPopulation = inCountPopulation;
 }
 
-// FUNCTION: EXE 0x42b239
 // Adds a military request (not unit type 0x2e5 or a space/naval building) to the requested total, in units or
 // population (the type tests run only after the null and military tests pass)
 bool EECPUGatherMilitaryUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
@@ -820,7 +773,6 @@ bool EECPUGatherMilitaryUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMReq
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b2b2
 // Counts a military unit (not unit type 0x2e5 or a space/naval building) as 1 or its population cost;
 // the type tests run only after the null and military tests pass
 bool EECPUGatherMilitaryUnitsCount::CountUnit(EEComplexUnit* inUnit)
@@ -840,7 +792,6 @@ bool EECPUGatherMilitaryUnitsCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b323
 // Adds a military class's unit list size (or that times its population cost) to the unit total (the type tests
 // run only after the null and military tests pass)
 bool EECPUGatherMilitaryUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
@@ -853,7 +804,6 @@ bool EECPUGatherMilitaryUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b3a7
 // Creates a transport counter for a player
 EECPUGatherTransportUnitsCount::EECPUGatherTransportUnitsCount(EEComputerPlayer* inPlayer, bool inByClass,
     bool inRequests)
@@ -862,7 +812,6 @@ EECPUGatherTransportUnitsCount::EECPUGatherTransportUnitsCount(EEComputerPlayer*
     this->mPlayer = inPlayer;
 }
 
-// FUNCTION: EXE 0x42b3d2
 // Adds a transport request's count to the requested total; returns whether it counted
 bool EECPUGatherTransportUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -874,7 +823,6 @@ bool EECPUGatherTransportUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRe
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b3fc
 // Counts one unit when it is a transport; returns whether it counted
 bool EECPUGatherTransportUnitsCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -886,7 +834,6 @@ bool EECPUGatherTransportUnitsCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b422
 // Adds a transport class's unit list size to the unit total; returns whether it counted
 bool EECPUGatherTransportUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -898,7 +845,6 @@ bool EECPUGatherTransportUnitsCount::CountUnits(EEUnitClass* inClass, std::deque
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b450
 // Adds a request's count when its class has the wanted unit type or AI kind; returns whether it counted
 bool EECPUGatherSpecialUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -911,7 +857,6 @@ bool EECPUGatherSpecialUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequ
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b48b
 // Counts one unit whose class has the wanted unit type or AI kind; returns whether it counted
 bool EECPUGatherSpecialUnitsCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -925,7 +870,6 @@ bool EECPUGatherSpecialUnitsCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b4c2
 // Adds the unit list size of a class with the wanted unit type or AI kind; returns whether it counted
 bool EECPUGatherSpecialUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -938,7 +882,6 @@ bool EECPUGatherSpecialUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<E
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b503
 // Adds a hero request's count to the requested total; returns whether it counted
 bool EECPUGatherHeroesCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
@@ -951,7 +894,6 @@ bool EECPUGatherHeroesCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* i
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b528
 // Counts one unit when it is a hero; returns whether it counted
 bool EECPUGatherHeroesCount::CountUnit(EEComplexUnit* inUnit)
 {
@@ -964,7 +906,6 @@ bool EECPUGatherHeroesCount::CountUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x42b549
 // Adds a hero class's unit list size to the unit total; returns whether it counted
 bool EECPUGatherHeroesCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
@@ -977,20 +918,6 @@ bool EECPUGatherHeroesCount::CountUnits(EEUnitClass* inClass, std::deque<EECompl
     return theResult;
 }
 
-// TEMPLATE: EXE 0x42b574
-// TEMPLATE: EXE 0x42b588
-// TEMPLATE: EXE 0x42b5c2
-// TEMPLATE: EXE 0x42b5ee
-// TEMPLATE: EXE 0x42b628
-// TEMPLATE: EXE 0x42b6de
-// TEMPLATE: EXE 0x42b718
-// TEMPLATE: EXE 0x42b789
-// TEMPLATE: EXE 0x42ba37
-// TEMPLATE: EXE 0x42ba69
-// TEMPLATE: EXE 0x42ba92
-// TEMPLATE: EXE 0x42babb
-// TEMPLATE: EXE 0x42bae4
-// FUNCTION: EXE 0x42baf4
 // Adds a sector id to the path area's sorted id list unless it is already there (twin of the EEAIContinent
 // id-list helpers)
 void EEAIPathArea::AddSectorID(unsigned short inSectorID)
@@ -1001,7 +928,6 @@ void EEAIPathArea::AddSectorID(unsigned short inSectorID)
     }
 }
 
-// FUNCTION: EXE 0x42a995
 // Returns the tech node's unit class at the index, or its default unit class past the end
 // (out of line in this range)
 long EETechTreeNode::GetUnitClass(unsigned long inIndex)

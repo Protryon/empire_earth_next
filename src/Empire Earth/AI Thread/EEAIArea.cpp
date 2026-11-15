@@ -158,7 +158,6 @@ void EEAIArea::SetHullPoints(const std::vector<U2DPoint<long> >& inPoints)
         this->CaptureSetPoints(inPoints);
 }
 
-// FUNCTION: EXE 0x40d6e3
 // Adds tiles to the area and, when asked, rebuilds its hull and influence-region bounds
 void EEAIArea::AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpdate)
 {
@@ -168,7 +167,6 @@ void EEAIArea::AddTiles(const std::vector<U2DPoint<long> >& inTiles, bool inUpda
     }
 }
 
-// FUNCTION: EXE 0x40d705
 // Fills the area with the given tiles and builds its hull and influence-region bounds
 void EEAIArea::Create(const std::vector<U2DPoint<long> >& inTiles)
 {
@@ -178,14 +176,12 @@ void EEAIArea::Create(const std::vector<U2DPoint<long> >& inTiles)
 
 // NEAR: the original builds each corner twice through the out-of-line U2DPoint<long> (const long&, const long&) ctor
 // 0xaa817 and copy ctor 0x4d28b (the exe's older U2DPoint.h; the open U2DPoint copy-ctor family)
-// FUNCTION: EXE 0x40d763
 // Sets the area's bounds in influence-table regions from its hull's bounding box (no table: unchanged)
 void EEAIArea::UpdateBounds(EEInfluenceTable* inTable)
 {
     ee_astar_area_update_bounds(this, EEAIAreaRegionSize(inTable));
 }
 
-// FUNCTION: EXE 0x40d81e
 // Returns the squared distance between the closest points of this area's hull and another's
 float EEAIArea::GetHullDistanceSquared(EEAIArea* inOther)
 {
@@ -203,7 +199,6 @@ float EEAIArea::GetHullDistanceSquared(EEAIArea* inOther)
     return theResult;
 }
 
-// FUNCTION: EXE 0x40d859
 // Appends the units standing on the area's tiles (empty area: none)
 void EEAIArea::GetUnitsOnTiles(std::vector<EEUnit*>& outUnits)
 {
@@ -213,7 +208,6 @@ void EEAIArea::GetUnitsOnTiles(std::vector<EEUnit*>& outUnits)
     }
 }
 
-// FUNCTION: EXE 0x40d87f
 // Appends the units standing inside the area's hull (empty area: none)
 void EEAIArea::GetUnitsInHull(std::vector<EEUnit*>& outUnits)
 {
@@ -223,7 +217,6 @@ void EEAIArea::GetUnitsInHull(std::vector<EEUnit*>& outUnits)
     }
 }
 
-// FUNCTION: EXE 0x40d8a5
 // Returns the point itself when it is inside the area's hull, else the closest point on the hull outline
 U2DPoint<long> EEAIArea::GetClosestHullPoint(const U2DPoint<long>& inPoint)
 {
@@ -240,14 +233,12 @@ U2DPoint<long> EEAIArea::GetClosestHullPoint(const U2DPoint<long>& inPoint)
     return theResult;
 }
 
-// FUNCTION: EXE 0x40d8e6
 // Returns the area tile closest to a point
 U2DPoint<long> EEAIArea::GetClosestPoint(const U2DPoint<long>& inPoint)
 {
     return this->mTiles.GetClosestPoint(inPoint);
 }
 
-// FUNCTION: EXE 0x40d8fe
 // Finds this area's tile and the other area's hull outline point closest to each other; false (both (0, 0))
 // when either area is empty
 bool EEAIArea::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DPoint<long>& outOther)
@@ -287,7 +278,6 @@ bool EEAIArea::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis, U2DP
     return theResult;
 }
 
-// FUNCTION: EXE 0x40da77
 // Returns a random tile of the area from the game's random stream, or (0, 0) when it is empty
 U2DPoint<long> EEAIArea::GetRandomPoint()
 {
@@ -297,7 +287,6 @@ U2DPoint<long> EEAIArea::GetRandomPoint()
     return theResult;
 }
 
-// FUNCTION: EXE 0x40daae
 // Appends every tile inside the area's hull, row by row
 void EEAIArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
 {
@@ -313,7 +302,6 @@ void EEAIArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
     }
 }
 
-// FUNCTION: EXE 0x40db32
 // Rebuilds the area's hull from its edge tiles and updates its influence-region bounds
 void EEAIArea::UpdateHull()
 {
@@ -326,7 +314,6 @@ void EEAIArea::UpdateHull()
     }
 }
 
-// FUNCTION: EXE 0x40db7f
 // Removes a tile from the area and rebuilds the hull (bounds not updated); returns whether the tile was there
 bool EEAIArea::RemoveTile(const U2DPoint<long>& inPoint)
 {
@@ -339,39 +326,3 @@ bool EEAIArea::RemoveTile(const U2DPoint<long>& inPoint)
     }
     return theResult;
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x40dbdc
-// TEMPLATE: EXE 0x40dc07
-// TEMPLATE: EXE 0x40dc78
-// TEMPLATE: EXE 0x40dcaa
-// TEMPLATE: EXE 0x40dcbe
-// TEMPLATE: EXE 0x40de5c
-// TEMPLATE: EXE 0x40e01d
-// TEMPLATE: EXE 0x40de7f
-// TEMPLATE: EXE 0x40e043
-// TEMPLATE: EXE 0x40e0b9
-// TEMPLATE: EXE 0x40e104
-// TEMPLATE: EXE 0x40e181
-// TEMPLATE: EXE 0x40e23e
-// TEMPLATE: EXE 0x40e2aa
-// TEMPLATE: EXE 0x40e2d3
-// TEMPLATE: EXE 0x40e3a6
-// TEMPLATE: EXE 0x40e3d7
-// TEMPLATE: EXE 0x40e415
-// TEMPLATE: EXE 0x40e464
-// TEMPLATE: EXE 0x40e501
-// TEMPLATE: EXE 0x40e53b
-// TEMPLATE: EXE 0x40e57c
-// TEMPLATE: EXE 0x40e69c
-// TEMPLATE: EXE 0x40e6cf
-// TEMPLATE: EXE 0x40e711
-// TEMPLATE: EXE 0x40e755
-// TEMPLATE: EXE 0x40e77e
-// TEMPLATE: EXE 0x40e7be
-// TEMPLATE: EXE 0x40e82c
-// TEMPLATE: EXE 0x40e87f
-// TEMPLATE: EXE 0x40e8ce
-// TEMPLATE: EXE 0x40e902
-// TEMPLATE: EXE 0x40e964
-// TEMPLATE: EXE 0x40e98e

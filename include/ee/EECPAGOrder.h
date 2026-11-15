@@ -10,18 +10,18 @@ class EECPAttackSubGroup;
 
 class EECPAGOrder {
 public:
-    EECPAGOrder();                          // 0x412b1
-    EECPAGOrder(const EECPAGOrder& inOrder);   // 0x412fd
+    EECPAGOrder();
+    EECPAGOrder(const EECPAGOrder& inOrder);
     virtual ~EECPAGOrder();                 // +0x00 (??_G 0x412e1, dtor 0x41369)
 
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // 0x413a4
-    void ReleaseOtherSubGroup();            // 0x4144b
-    void ReleaseSubGroup();                 // 0x41461
-    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion, EECPAttackGroup* inGroup);   // 0x41477
-    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x414c6
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    void ReleaseOtherSubGroup();
+    void ReleaseSubGroup();
+    long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion, EECPAttackGroup* inGroup);
+    long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     void SetOtherSubGroup(EECPAttackSubGroup* inSubGroup);  // 0x4159a (referenced)
     void SetSubGroup(EECPAttackSubGroup* inSubGroup);  // 0x415bb (referenced)
-    EECPAGOrder& operator=(const EECPAGOrder& inOrder);   // 0x415dc
+    EECPAGOrder& operator=(const EECPAGOrder& inOrder);
 
     EECPILocation mLocation;                // +0x04
     EECPAttackSubGroup* mSubGroup;          // +0x1c (referenced; saved as its id)

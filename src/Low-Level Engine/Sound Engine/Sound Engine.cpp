@@ -9,7 +9,6 @@
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
-// FUNCTION: LLE 0x100532d9
 // Initialises the sound engine: registers its shutdown and loads the mixer plug-ins. The original's CD audio
 // (SECD, MCI; SEInitializeCD) is gone: the game never asked for it (inUseCD was always false)
 long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow)
@@ -18,7 +17,6 @@ long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow)
     return ee_sound_initialize(reinterpret_cast<EeSoundMixerStart*>(&theStart));
 }
 
-// FUNCTION: LLE 0x1005354b
 // Creates a mixer for every valid sound plug-in of the plug-in table; kErrorNotFound when none loads (the choice:
 // rust/crates/ee_sound mixers.rs)
 long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow)
@@ -26,6 +24,3 @@ long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow)
     SEMixerStart theStart = {&inDirectory, inWindow, NULL};
     return ee_sound_mixers_initialize(reinterpret_cast<EeSoundMixerStart*>(&theStart));
 }
-
-// FUNCTION: LLE 0x100535e2
-// SEShutdown, the shutdown hook SEInitialize registers: ee_sound_shutdown (every mixer deleted, ee_sound mixers.rs)

@@ -84,52 +84,20 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 
 // chain at 0x53e967 (wrapper)
 UString gU530BE0("B7B226DDB7B226DDBCD9344624C93DE6C4A90DD4B7B20375");
-// SYNTHETIC: EXE 0x53e967   (wrapper)
-// SYNTHETIC: EXE 0x53e971   (ctor)
-// SYNTHETIC: EXE 0x53e982   (registrar)
-// SYNTHETIC: EXE 0x53e98e   (dtor)
 // chain at 0x53e999 (wrapper)
 UWideString gU530BC8;
-// SYNTHETIC: EXE 0x53e999   (wrapper)
-// SYNTHETIC: EXE 0x53e9a3   (ctor)
-// SYNTHETIC: EXE 0x53e9ae   (registrar)
-// SYNTHETIC: EXE 0x53e9ba   (dtor)
 // chain at 0x53e9c5 (wrapper)
 UString gExecutableName("Empire Earth.exe");
-// SYNTHETIC: EXE 0x53e9c5   (wrapper)
-// SYNTHETIC: EXE 0x53e9cf   (ctor)
-// SYNTHETIC: EXE 0x53e9e0   (registrar)
-// SYNTHETIC: EXE 0x53e9ec   (dtor)
 // chain at 0x53e9f7 (wrapper)
 UString gSavedGameExtension(".ees");
-// SYNTHETIC: EXE 0x53e9f7   (wrapper)
-// SYNTHETIC: EXE 0x53ea01   (ctor)
-// SYNTHETIC: EXE 0x53ea12   (registrar)
-// SYNTHETIC: EXE 0x53ea1e   (dtor)
 // chain at 0x53ea29 (wrapper)
 UString gScenarioExtension(".scn");
-// SYNTHETIC: EXE 0x53ea29   (wrapper)
-// SYNTHETIC: EXE 0x53ea33   (ctor)
-// SYNTHETIC: EXE 0x53ea44   (registrar)
-// SYNTHETIC: EXE 0x53ea50   (dtor)
 // chain at 0x53ea5b (wrapper)
 UString gU530B88(".ssa");
-// SYNTHETIC: EXE 0x53ea5b   (wrapper)
-// SYNTHETIC: EXE 0x53ea65   (ctor)
-// SYNTHETIC: EXE 0x53ea76   (registrar)
-// SYNTHETIC: EXE 0x53ea82   (dtor)
 // chain at 0x53ea8d (wrapper)
 UString gCampaignExtension(".ssa");
-// SYNTHETIC: EXE 0x53ea8d   (wrapper)
-// SYNTHETIC: EXE 0x53ea97   (ctor)
-// SYNTHETIC: EXE 0x53eaa8   (registrar)
-// SYNTHETIC: EXE 0x53eab4   (dtor)
 // chain at 0x53eabf (wrapper)
 GEViewport gViewport;
-// SYNTHETIC: EXE 0x53eabf   (wrapper)
-// SYNTHETIC: EXE 0x53eac9   (ctor)
-// SYNTHETIC: EXE 0x53ead4   (registrar)
-// SYNTHETIC: EXE 0x53eae0   (dtor)
 // chain at 0x53eaeb (wrapper)
 EEGamePreferences gGamePreferences;
 // data the original placed inside gGamePreferences (it addressed them as globals): references to the members
@@ -170,10 +138,6 @@ bool& gUnitLighting = gGamePreferences.mSettings.mUnitLighting;   // +0x5db
 bool& gDisplayWeatherEffects = gGamePreferences.mSettings.mDisplayWeatherEffects;   // +0x5de
 bool& gTakeJPGScreenshots = gGamePreferences.mSettings.mTakeJPGScreenshots;   // +0x5e0
 bool& gAntiAliasing = gGamePreferences.mSettings.mAntiAliasing;   // +0x5e1
-// SYNTHETIC: EXE 0x53eaeb   (wrapper)
-// SYNTHETIC: EXE 0x53eaf5   (ctor)
-// SYNTHETIC: EXE 0x53eaff   (registrar)
-// SYNTHETIC: EXE 0x53eb0b   (dtor)
 // chain at 0x53eb15 (wrapper)
 EEWorld gWorld;
 // data the original placed inside gWorld (it addressed them as globals): references to the members
@@ -196,52 +160,21 @@ bool& gShowCollisionSpheres = gWorld.mShowCollisionSpheres;   // +0xb9c
 bool& gInCinematic = gWorld.mInCinematic;   // +0xba0
 bool& gLoadingPlayerMedia = gWorld.mLoadingPlayerMedia;   // +0xba3
 bool& gUsingCarbon = gWorld.mUsingCarbon;   // +0xba4
-// SYNTHETIC: EXE 0x53eb15   (wrapper)
-// SYNTHETIC: EXE 0x53eb1f   (ctor)
-// SYNTHETIC: EXE 0x53eb29   (registrar)
-// SYNTHETIC: EXE 0x53eb35   (dtor)
 // chain at 0x53eb3f (wrapper)
 EEEvent gEvent;
-// SYNTHETIC: EXE 0x53eb3f   (wrapper)
-// SYNTHETIC: EXE 0x53eb49   (ctor)
-// SYNTHETIC: EXE 0x53eb53   (registrar)
-// SYNTHETIC: EXE 0x53eb5f   (dtor)
 // chain at 0x53eb69 (wrapper)
 EEDatabase gDatabaseObjects;
-// SYNTHETIC: EXE 0x53eb69   (wrapper)
-// SYNTHETIC: EXE 0x53eb73   (ctor)
-// SYNTHETIC: EXE 0x53eb7d   (registrar)
-// SYNTHETIC: EXE 0x53eb89   (dtor)
 // chain at 0x53eb93 (wrapper)
 EETechTree gTechTree;
-// SYNTHETIC: EXE 0x53eb93   (wrapper)
-// SYNTHETIC: EXE 0x53eb9d   (ctor)
-// SYNTHETIC: EXE 0x53eba7   (registrar)
-// SYNTHETIC: EXE 0x53ebb3   (dtor)
 // chain at 0x53ebbd (wrapper)
 EEToHitTable gToHitTable;
-// SYNTHETIC: EXE 0x53ebbd   (wrapper)
-// SYNTHETIC: EXE 0x53ebc7   (ctor)
-// SYNTHETIC: EXE 0x53ebef   (registrar)
-// SYNTHETIC: EXE 0x53ebfb   (dtor)
-
-// FUNCTION: EXE 0x53ebd2
-// Destroys the to-hit table and frees it when asked (scalar deleting destructor)
 
 // chain at 0x53ec06 (wrapper)
 EEAIUnitTargetingTable gAIUnitTargetingTable;
-// SYNTHETIC: EXE 0x53ec06   (wrapper)
-// SYNTHETIC: EXE 0x53ec10   (ctor)
-// SYNTHETIC: EXE 0x53ec1b   (registrar)
-// SYNTHETIC: EXE 0x53ec27   (dtor)
 // chain at 0x53ec32 (wrapper)
 EEPathManager gPathManager;
 // data the original placed inside gPathManager (it addressed them as globals): references to the members
 long& gEEAIRegionSize = gPathManager.mLC8;   // +0xc8
-// SYNTHETIC: EXE 0x53ec32   (wrapper)
-// SYNTHETIC: EXE 0x53ec3c   (ctor)
-// SYNTHETIC: EXE 0x53ec46   (registrar)
-// SYNTHETIC: EXE 0x53ec52   (dtor)
 // chain at 0x53ec5c (wrapper)
 EEAIContinentManager gContinentManager;
 // data the original placed inside gContinentManager (it addressed them as globals): references to the members
@@ -251,210 +184,75 @@ long& gNumSpaceTiles = gContinentManager.mNumSpaceTiles;   // +0x13c
 unsigned long& gMapWidth = reinterpret_cast<unsigned long&>(gContinentManager.mWidth);   // +0x144
 unsigned long& gMapHeight = reinterpret_cast<unsigned long&>(gContinentManager.mHeight);   // +0x148
 bool& gContinentManagerClearing = gContinentManager.mClearing;   // +0x14c
-// SYNTHETIC: EXE 0x53ec5c   (wrapper)
-// SYNTHETIC: EXE 0x53ec66   (ctor)
-// SYNTHETIC: EXE 0x53ec70   (registrar)
-// SYNTHETIC: EXE 0x53ec7c   (dtor)
 // chain at 0x53ec86 (wrapper)
 EEWorldTable gWorldTable;
-// SYNTHETIC: EXE 0x53ec86   (wrapper)
-// SYNTHETIC: EXE 0x53ec90   (ctor)
-// SYNTHETIC: EXE 0x53ec9a   (registrar)
-// SYNTHETIC: EXE 0x53eca6   (dtor)
 // chain at 0x53ecc6 (wrapper)
 EETerrainTable gTerrainTable;
-// SYNTHETIC: EXE 0x53ecc6   (wrapper)
-// SYNTHETIC: EXE 0x53ecd0   (ctor)
-// SYNTHETIC: EXE 0x53ecda   (registrar)
-// SYNTHETIC: EXE 0x53ece6   (dtor)
 // chain at 0x53ecf0 (wrapper)
 EETerrainColorTable gTerrainColorTable;
-// SYNTHETIC: EXE 0x53ecf0   (wrapper)
-// SYNTHETIC: EXE 0x53ecfa   (ctor)
-// SYNTHETIC: EXE 0x53ed04   (registrar)
-// SYNTHETIC: EXE 0x53ed10   (dtor)
 // chain at 0x53ed1b (wrapper)
 EETerrainTypeTable gTerrainTypeTable;
-// SYNTHETIC: EXE 0x53ed1b   (wrapper)
-// SYNTHETIC: EXE 0x53ed25   (ctor)
-// SYNTHETIC: EXE 0x53ed2f   (registrar)
-// SYNTHETIC: EXE 0x53ed3b   (dtor)
 // chain at 0x53ed46 (wrapper)
 EERandomMapTable gRandomMapTable;
-// SYNTHETIC: EXE 0x53ed46   (wrapper)
-// SYNTHETIC: EXE 0x53ed50   (ctor)
-// SYNTHETIC: EXE 0x53ed5a   (registrar)
-// SYNTHETIC: EXE 0x53ed66   (dtor)
 // chain at 0x53ed71 (wrapper)
 EEGameState gGameState;
 // data the original placed inside gGameState (it addressed them as globals): references to the members
 long& gGameStateLoadType = reinterpret_cast<long&>(gGameState.mGameOptions.mLoadType);   // +0x3e0
 bool& gGameStateIsMultiplayer = gGameState.mGameOptions.mIsMultiplayer;   // +0x410
 float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc
-// SYNTHETIC: EXE 0x53ed71   (wrapper)
-// SYNTHETIC: EXE 0x53ed7b   (ctor)
-// SYNTHETIC: EXE 0x53ed85   (registrar)
-// SYNTHETIC: EXE 0x53ed91   (dtor)
 // chain at 0x53ed9b (wrapper)
 EEComputerPlayerBehaviorTable gComputerPlayerBehaviorTable;
-// SYNTHETIC: EXE 0x53ed9b   (wrapper)
-// SYNTHETIC: EXE 0x53eda5   (ctor)
-// SYNTHETIC: EXE 0x53edcd   (registrar)
-// SYNTHETIC: EXE 0x53edd9   (dtor)
-
-// FUNCTION: EXE 0x53edb0
-// Destroys the computer player behaviour table and frees it when asked (scalar deleting destructor)
 
 // chain at 0x53ede4 (wrapper)
 EEUnitSetManager gUnitSetManager;
-// SYNTHETIC: EXE 0x53ede4   (wrapper)
-// SYNTHETIC: EXE 0x53edee   (ctor)
-// SYNTHETIC: EXE 0x53ee10   (registrar)
-// SYNTHETIC: EXE 0x53ee1c   (dtor)
 // chain at 0x53ee26 (wrapper)
 EEAEManager gAEManager;
-// SYNTHETIC: EXE 0x53ee26   (wrapper)
-// SYNTHETIC: EXE 0x53ee30   (ctor)
-// SYNTHETIC: EXE 0x53ee3a   (registrar)
-// SYNTHETIC: EXE 0x53ee46   (dtor)
 // chain at 0x53ee50 (wrapper)
 EEAmbientSoundManager gAmbientSoundManager;
-// SYNTHETIC: EXE 0x53ee50   (wrapper)
-// SYNTHETIC: EXE 0x53ee5a   (ctor)
-// SYNTHETIC: EXE 0x53ee64   (registrar)
-// SYNTHETIC: EXE 0x53ee70   (dtor)
 // chain at 0x53ee7a (wrapper)
 EECivilizationManager gCivilizationManager;
-// SYNTHETIC: EXE 0x53ee7a   (wrapper)
-// SYNTHETIC: EXE 0x53ee84   (ctor)
-// SYNTHETIC: EXE 0x53ee8e   (registrar)
-// SYNTHETIC: EXE 0x53ee9a   (dtor)
 // chain at 0x53eea4 (wrapper)
 EEDoppelgangerManager gDoppelgangerManager;
-// SYNTHETIC: EXE 0x53eea4   (wrapper)
-// SYNTHETIC: EXE 0x53eeae   (ctor)
-// SYNTHETIC: EXE 0x53eeb8   (registrar)
-// SYNTHETIC: EXE 0x53eec4   (dtor)
 // chain at 0x53eece (wrapper)
 EECivPowersManager gCivPowersManager;
-// SYNTHETIC: EXE 0x53eece   (wrapper)
-// SYNTHETIC: EXE 0x53eed8   (ctor)
-// SYNTHETIC: EXE 0x53eee2   (registrar)
-// SYNTHETIC: EXE 0x53eeee   (dtor)
 // chain at 0x53eef8 (wrapper)
 UWideString gCampaignAOCRoman("AOCRoman");
-// SYNTHETIC: EXE 0x53eef8   (wrapper)
-// SYNTHETIC: EXE 0x53ef02   (ctor)
-// SYNTHETIC: EXE 0x53ef13   (registrar)
-// SYNTHETIC: EXE 0x53ef1f   (dtor)
 // chain at 0x53ef2a (wrapper)
 UWideString gCampaignAOCPacific("AOCPacific");
-// SYNTHETIC: EXE 0x53ef2a   (wrapper)
-// SYNTHETIC: EXE 0x53ef34   (ctor)
-// SYNTHETIC: EXE 0x53ef45   (registrar)
-// SYNTHETIC: EXE 0x53ef51   (dtor)
 // chain at 0x53ef5c (wrapper)
 UWideString gCampaignAOCAsian("AOCAsian");
-// SYNTHETIC: EXE 0x53ef5c   (wrapper)
-// SYNTHETIC: EXE 0x53ef66   (ctor)
-// SYNTHETIC: EXE 0x53ef77   (registrar)
-// SYNTHETIC: EXE 0x53ef83   (dtor)
 // chain at 0x53ef8e (wrapper)
 UWideString gCampaignEEDemo("EEDemo");
-// SYNTHETIC: EXE 0x53ef8e   (wrapper)
-// SYNTHETIC: EXE 0x53ef98   (ctor)
-// SYNTHETIC: EXE 0x53efa9   (registrar)
-// SYNTHETIC: EXE 0x53efb5   (dtor)
 // chain at 0x53efc0 (wrapper)
 UWideString gCampaignEELearning("EELearningCampaign");
-// SYNTHETIC: EXE 0x53efc0   (wrapper)
-// SYNTHETIC: EXE 0x53efca   (ctor)
-// SYNTHETIC: EXE 0x53efdb   (registrar)
-// SYNTHETIC: EXE 0x53efe7   (dtor)
 // chain at 0x53eff2 (wrapper)
 UWideString gU52A280("een1ve1s_");
-// SYNTHETIC: EXE 0x53eff2   (wrapper)
-// SYNTHETIC: EXE 0x53effc   (ctor)
-// SYNTHETIC: EXE 0x53f00d   (registrar)
-// SYNTHETIC: EXE 0x53f019   (dtor)
 // chain at 0x53f024 (wrapper)
 UString gPhysicsThreadName("Physics");
-// SYNTHETIC: EXE 0x53f024   (wrapper)
-// SYNTHETIC: EXE 0x53f02e   (ctor)
-// SYNTHETIC: EXE 0x53f03f   (registrar)
-// SYNTHETIC: EXE 0x53f04b   (dtor)
 // chain at 0x53f056 (wrapper)
 UString gGraphicsThreadName("Graphics");
-// SYNTHETIC: EXE 0x53f056   (wrapper)
-// SYNTHETIC: EXE 0x53f060   (ctor)
-// SYNTHETIC: EXE 0x53f071   (registrar)
-// SYNTHETIC: EXE 0x53f07d   (dtor)
 // chain at 0x53f088 (wrapper)
 UString gDataPreLoadingThreadName("DataPreLd");
-// SYNTHETIC: EXE 0x53f088   (wrapper)
-// SYNTHETIC: EXE 0x53f092   (ctor)
-// SYNTHETIC: EXE 0x53f0a3   (registrar)
-// SYNTHETIC: EXE 0x53f0af   (dtor)
 // chain at 0x53f0ba (wrapper)
 UString gMousePointerThreadName("MousePtr");
-// SYNTHETIC: EXE 0x53f0ba   (wrapper)
-// SYNTHETIC: EXE 0x53f0c4   (ctor)
-// SYNTHETIC: EXE 0x53f0d5   (registrar)
-// SYNTHETIC: EXE 0x53f0e1   (dtor)
 // chain at 0x53f0ec (wrapper)
 UString gScenarioEditorThreadName("ScenEdit");
-// SYNTHETIC: EXE 0x53f0ec   (wrapper)
-// SYNTHETIC: EXE 0x53f0f6   (ctor)
-// SYNTHETIC: EXE 0x53f107   (registrar)
-// SYNTHETIC: EXE 0x53f113   (dtor)
 // chain at 0x53f11e (wrapper)
 UString gUserInterfaceThreadName("UserIntfc");
-// SYNTHETIC: EXE 0x53f11e   (wrapper)
-// SYNTHETIC: EXE 0x53f128   (ctor)
-// SYNTHETIC: EXE 0x53f139   (registrar)
-// SYNTHETIC: EXE 0x53f145   (dtor)
 // chain at 0x53f150 (wrapper)
 UString gCommSendThreadName("CommSend");
-// SYNTHETIC: EXE 0x53f150   (wrapper)
-// SYNTHETIC: EXE 0x53f15a   (ctor)
-// SYNTHETIC: EXE 0x53f16b   (registrar)
-// SYNTHETIC: EXE 0x53f177   (dtor)
 // chain at 0x53f182 (wrapper)
 UString gCommRecvThreadName("CommRecv");
-// SYNTHETIC: EXE 0x53f182   (wrapper)
-// SYNTHETIC: EXE 0x53f18c   (ctor)
-// SYNTHETIC: EXE 0x53f19d   (registrar)
-// SYNTHETIC: EXE 0x53f1a9   (dtor)
 // chain at 0x53f1b4 (wrapper)
 UString gCommMainThreadName("CommMain");
-// SYNTHETIC: EXE 0x53f1b4   (wrapper)
-// SYNTHETIC: EXE 0x53f1be   (ctor)
-// SYNTHETIC: EXE 0x53f1cf   (registrar)
-// SYNTHETIC: EXE 0x53f1db   (dtor)
 // chain at 0x53f1e6 (wrapper)
 UString gCommLagLossThreadName("CommLagLoss");
-// SYNTHETIC: EXE 0x53f1e6   (wrapper)
-// SYNTHETIC: EXE 0x53f1f0   (ctor)
-// SYNTHETIC: EXE 0x53f201   (registrar)
-// SYNTHETIC: EXE 0x53f20d   (dtor)
 // chain at 0x53f218 (wrapper)
 UString gCommRecPlayThreadName("CommRecPlay");
-// SYNTHETIC: EXE 0x53f218   (wrapper)
-// SYNTHETIC: EXE 0x53f222   (ctor)
-// SYNTHETIC: EXE 0x53f233   (registrar)
-// SYNTHETIC: EXE 0x53f23f   (dtor)
 // chain at 0x53f24a (wrapper)
 UString gSoundScavengerThreadName("SoundScavngr");
-// SYNTHETIC: EXE 0x53f24a   (wrapper)
-// SYNTHETIC: EXE 0x53f254   (ctor)
-// SYNTHETIC: EXE 0x53f265   (registrar)
-// SYNTHETIC: EXE 0x53f271   (dtor)
 // chain at 0x53f27c (wrapper)
 UString gCDAudioThreadName("CDAudio");
-// SYNTHETIC: EXE 0x53f27c   (wrapper)
-// SYNTHETIC: EXE 0x53f286   (ctor)
-// SYNTHETIC: EXE 0x53f297   (registrar)
-// SYNTHETIC: EXE 0x53f2a3   (dtor)
 
 // The unit's own data (provisional names): the network settings EELoadNetworkSettings reads from the string resources
 // (0x4c05d4.., .data, all 1), the start screen's window class (0x4c05e8, a char array: both RegisterClassEx and
@@ -494,7 +292,6 @@ public:
     TSEvent* mEndThreadEvent;               // +0x08
     bool mQuit;                             // +0x0c
 };
-// FUNCTION: EXE 0x53f2ae
 // Creates the loading splash screen for the instance, with its end-of-thread event
 EEStartScreen::EEStartScreen(HINSTANCE inInstance)
 {
@@ -503,14 +300,12 @@ EEStartScreen::EEStartScreen(HINSTANCE inInstance)
     this->mQuit = false;
 }
 
-// FUNCTION: EXE 0x53f2eb
 // Destroys the splash screen's end-of-thread event
 EEStartScreen::~EEStartScreen()
 {
     TSScheduler::DestroyEvent(this->mEndThreadEvent);
 }
 
-// FUNCTION: EXE 0x53f2f6
 // In full screen only: starts the splash screen thread and waits until it has painted the splash bitmap
 // (Win32 only: elsewhere there is no splash window yet; PORT.md step 4)
 void EEStartScreen::Start()
@@ -525,7 +320,6 @@ void EEStartScreen::Start()
 #endif
 }
 
-// FUNCTION: EXE 0x53f331
 // In full screen only: tells the splash screen thread to quit, waits for it to end and destroys it
 void EEStartScreen::Stop()
 {
@@ -540,7 +334,6 @@ void EEStartScreen::Stop()
 
 #ifdef _WIN32
 
-// FUNCTION: EXE 0x53f358
 // Splash window procedure: hides the cursor, skips background erases and paints the splash bitmap (flagging it painted)
 LRESULT CALLBACK EEStartScreen::WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam)
 {
@@ -564,7 +357,6 @@ LRESULT CALLBACK EEStartScreen::WindowProc(HWND inWindow, UINT inMessage, WPARAM
     return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
 }
 
-// FUNCTION: EXE 0x53f3f9
 // Splash screen thread: loads the splash bitmap, shows it in a centred popup window and pumps messages until
 // told to quit, then signals its end event and frees the bitmap
 unsigned long EEStartScreen::ThreadMain(void* inParameter)
@@ -628,7 +420,6 @@ unsigned long EEStartScreen::ThreadMain(void* inParameter)
 }
 #endif   // _WIN32: the start screen's window
 
-// FUNCTION: EXE 0x53f5be
 // Puts the calling thread's FPU into 53-bit precision and round-to-nearest mode (the thread name is unused)
 // (every game thread calls it first, passing its name)
 void EESetThreadFloatingPoint(const char* inThreadName)
@@ -639,7 +430,6 @@ void EESetThreadFloatingPoint(const char* inThreadName)
         UMSetFloatingPointRoundingMode(0);
 }
 
-// FUNCTION: EXE 0x53f5e9
 // Makes every computer player at war with the given player attack it; with the flag set, the others (its allies
 // and its own computer player) defend it
 void EEAttackPlayers(long inPlayer, unsigned char inFlag)
@@ -668,10 +458,6 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag)
     }
 }
 
-// FUNCTION: EXE 0x53f719
-// Destroys the AI unit targeting table and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x53f736
 // Sums a checksum over the directory's files matching the pattern (name order, one encrypted name skipped): file
 // bytes, or write time and size when asked
 #include <algorithm>
@@ -743,7 +529,6 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
     return theChecksum;
 }
 
-// FUNCTION: EXE 0x53f991
 // Reads the five campaign checksums from string resources 0x32..0x34, 0x37, 0x36; a missing string keeps the value
 void EELoadNetworkSettings()
 {
@@ -837,14 +622,14 @@ class EEArtificialIntelligence;
 class EECheatCodes;
 class EEUIManager;
 class EEMouse;
-SEMixer* gConductor;                        // 0x5319c0
-SESoundManager* gSoundManager;              // 0x5319c4
-NESynchronousCommunications* gCommunications;   // 0x5319c8
-EEWonNet* gWonNet;                          // 0x5319cc
-EEArtificialIntelligence* gArtificialIntelligence;   // 0x5319d0
-EECheatCodes* gCheatCodes;                  // 0x5319d4
-EEUIManager* gUIManager;                    // 0x53191c
-EEMouse* gMouse;                            // 0x531924
+SEMixer* gConductor;
+SESoundManager* gSoundManager;
+NESynchronousCommunications* gCommunications;
+EEWonNet* gWonNet;
+EEArtificialIntelligence* gArtificialIntelligence;
+EECheatCodes* gCheatCodes;
+EEUIManager* gUIManager;
+EEMouse* gMouse;
 bool gFreeCamera;                           // 0x5319e8 (EmpireEarth.h)
 // the game view and water ripple constants (.rdata 0x442090..0x4420a8, read from memory by both graphics initializers)
 static const float kStartViewLeft = 0.0f;
@@ -900,11 +685,10 @@ bool EEInitializeDisplay();
 void EEInitializeGraphics();
 bool EEInitializeSounds(); // 0x543557; EEInitializePart1 tests its result in AL
 void EEInitializeNetwork();
-void EEInitializeDatabase(); // 0x5414a3
-void EEInitializeGameObjects(); // 0x542363
+void EEInitializeDatabase();
+void EEInitializeGameObjects();
 EEUserInterface* gUserInterface; // 0x5318f8, created by EEInitializePart1
 
-// FUNCTION: EXE 0x5412a0
 // Starts the engine (input, threads, timers), opens the display and initializes graphics, sound, network, the
 // database, game objects and the user interface; returns false (after a message box) when sound fails
 bool EEInitializePart1()
@@ -1003,7 +787,6 @@ EEPhysics* gPhysics;
 #include <typeinfo>
 #include "ee/EEUnit.h"
 
-// FUNCTION: EXE 0x54265e
 // Creates the texture and model managers, activates the screen at 640x480, sets the default render states,
 // creates the render objects and every UI font, and registers the graphics shutdown
 void EEInitializeGraphics()
@@ -1181,7 +964,6 @@ void EEInitializeGraphics()
     ESVERIFY_AT(theResult == keseOK, 1526);
 }
 
-// FUNCTION: EXE 0x5431dc
 // Starts the network engine, registers the message types and checksums the engine DLLs, databases, AI scripts,
 // models and archive timestamps; appends the checksum's low 13 bits to the game version
 void EEInitializeNetwork()
@@ -1238,7 +1020,6 @@ void EEInitializeNetwork()
     gGameVersion += theSuffix;
 }
 
-// FUNCTION: EXE 0x53fa74
 // Registers the saved game's persistent sections (checksum, map, scenario, players, world, effects, ...)
 // (called from the start-up 0x540d73)
 void EERegisterPersistents()
@@ -1259,7 +1040,6 @@ void EERegisterPersistents()
     ESVERIFY_AT(theResult == keseOK, 1863);
 }
 
-// FUNCTION: EXE 0x53fc7c
 // Creates the game timer
 void EECreateGameTimer()
 {
@@ -1283,7 +1063,6 @@ void EECreateGameTimer()
 
 void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
 
-// FUNCTION: EXE 0x53fcbc
 // Loads the status box icons, mini map, effect, unit, sky and ground shadow media
 void EELoadGameMedia()
 {
@@ -1298,9 +1077,8 @@ void EELoadGameMedia()
 
 // The two original zero-initialized search-path pointers, written here after the replacements are populated.
 FSPath* gDataPath;
-FSPath* gCivilizationDataPath; // 0x53190c (provisional name)
+FSPath* gCivilizationDataPath;
 
-// FUNCTION: EXE 0x53fe97
 // Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
 // Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
 // original game's loose data (tools/open_data.py). The original searched four places: this install's Data\data.ssa
@@ -1334,7 +1112,6 @@ void EEShowSinglePlayerScreen()
     gDataPath = theDataPath;
 }
 
-// FUNCTION: EXE 0x54013d
 // Creates the game state, empty
 EEGameState::EEGameState()
     : mChecksum(true)
@@ -1342,7 +1119,6 @@ EEGameState::EEGameState()
     this->Init();
 }
 
-// FUNCTION: EXE 0x5401da
 // Destroys the game state, clearing it
 EEGameState::~EEGameState()
 {
@@ -1353,7 +1129,6 @@ EEGameState::~EEGameState()
 static const float kGameViewScaleX = 0.000625f;
 static const float kGameViewScaleY = 0.00083333335f;
 
-// FUNCTION: EXE 0x540251
 // Sets the viewport to the rectangle (given in 1600x1200 layout units, scaled to the window unless the camera is
 // free) and stops camera following
 void EESetGameViewRectangle(const GERectangle& inRectangle)
@@ -1375,16 +1150,8 @@ void EESetGameViewRectangle(const GERectangle& inRectangle)
     gB529068 = false;
 }
 
-// FUNCTION: EXE 0x540976
-// Sets the mouse's bounds and clamps its position into them
-
-// FUNCTION: EXE 0x540999
-// Tells the mouse pointer thread to quit and waits until it has
-// RTSMousePointer::Shutdown (inline, defined above)
-
 #include "GEWindow.h"
 
-// FUNCTION: EXE 0x54382b
 // Creates the music manager, mouse pointer, graphics, data preloading and physics threads; registers their shutdown
 void EEInitializeThreads()
 {
@@ -1408,7 +1175,6 @@ void EEInitializeThreads()
     ESVERIFY_AT(theResult == keseOK, 2030);
 }
 
-// FUNCTION: EXE 0x5409bd
 // Switches the screen to the mode of that size and depth (optionally the lowest refresh above 60 Hz), resizes
 // the window and clears both surfaces; does nothing when the mode is already active
 void EESetVideoMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount, bool inPreferRefresh)
@@ -1462,10 +1228,6 @@ void EESetVideoMode(unsigned long inWidth, unsigned long inHeight, unsigned long
     }
 }
 
-// SYNTHETIC: EXE 0x540ccf
-// (the scalar deleting destructor, emitted with the vtable; slot EEGameState+0x0)
-
-// FUNCTION: EXE 0x540ceb
 // Stops the music, ambient sounds (disabling them) and every one-shot sound
 // (EEWorld::Clear and the main game form call it)
 void EEStopAllSounds()
@@ -1479,7 +1241,6 @@ void EEStopAllSounds()
 
 void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
 
-// FUNCTION: EXE 0x540d1e
 // Releases the status box icons, mini map, effect, unit, sky and ground shadow media
 void EEUnloadGameMedia()
 {
@@ -1491,7 +1252,6 @@ void EEUnloadGameMedia()
     EEROGroundShadows::ReleaseShadowModel();
 }
 
-// FUNCTION: EXE 0x540d3c
 // Points the texture, model and sound managers at the data search path
 void EESetDataPaths()
 {
@@ -1502,7 +1262,6 @@ void EESetDataPaths()
 
 #include "lle/TSReadWriteLock.h"
 
-// FUNCTION: EXE 0x5411a2
 // Ends the current game: pauses graphics and physics, releases the scene, deletes the communications, and
 // clears the world and game state under the world lock
 void EEClearGame()
@@ -1529,7 +1288,6 @@ void EEClearGame()
     gWorld.mLock->WriteUnlock();
 }
 
-// FUNCTION: EXE 0x541481
 // Creates the game threads and registers the saved game's persistent sections
 void EEInitializePart2()
 {
@@ -1539,13 +1297,6 @@ void EEInitializePart2()
     EESetThreadFloatingPoint("EEInitializePart2:EEInitializePersistentList");
 }
 
-// FUNCTION: EXE 0x54260b
-// Creates the AI scheduler with no computer players and a 1000 ms update interval
-
-// SYNTHETIC: EXE 0x542639
-// (the scalar deleting destructor, emitted with the vtable; slot EEArtificialIntelligence+0x0, stores EEArtificialIntelligence vtable)
-
-// FUNCTION: EXE 0x54318c
 // Sizes the memory pools for tile unit lists, sounds, doppelgangers and 2D/3D particles
 void EEInitGamePools()
 {
@@ -1557,10 +1308,9 @@ void EEInitGamePools()
 
 
 #ifdef _WIN32
-static HANDLE sInstanceMutex;               // 0x5319dc
+static HANDLE sInstanceMutex;
 #endif
 
-// FUNCTION: EXE 0x54398d
 // Creates the single-instance mutex; returns false when another copy of the game already holds it
 // (called by the start-up 0x540d73)
 bool EECreateInstanceMutex()
@@ -1586,7 +1336,6 @@ bool EECreateInstanceMutex()
 
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen); // defined below
 
-// FUNCTION: EXE 0x5439b5
 // Plays the Sierra, Mad Doc and Empire Earth intro movies unless skipped (Escape, Space or a click skips one),
 // then switches to 1024x768
 void EEPlayIntroMovies(bool inSkipMovies)
@@ -1652,7 +1401,6 @@ void EEPlayIntroMovies(bool inSkipMovies)
     TSScheduler::GetCurrentThread()->SetPriority(thePriority);
 }
 
-// FUNCTION: EXE 0x543cf0
 // Closes the single-instance mutex and saves the preferences
 // (no direct caller: registered as a shutdown routine)
 void EEReleaseInstanceMutex(bool inShutdown)
@@ -1672,7 +1420,6 @@ extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
 void DeleteEffectBatchBuffers(); // effect-render cleanup, defined in EEEffect.cpp
 static unsigned long sOriginalVideoMode; // 0x52a1a8: the video mode index found at start-up, restored at shutdown
 
-// FUNCTION: EXE 0x543ece
 // Releases models, textures and fonts, restores the start-up video mode, destroys the game window and deletes
 // the render objects and the texture and model managers
 void EEGraphicsShutdown(bool inShutdown)
@@ -1744,20 +1491,10 @@ void EEGraphicsShutdown(bool inShutdown)
     gModelManager = NULL;
 }
 
-// SYNTHETIC: EXE 0x54423e
-// (the scalar deleting destructor, emitted with the vtable; )
-
-// SYNTHETIC: EXE 0x54425b
-// (the scalar deleting destructor, emitted with the vtable; )
-
-// SYNTHETIC: EXE 0x544278
-// (the scalar deleting destructor, emitted with the vtable; )
-
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EEMiniMap.h"
 
-// FUNCTION: EXE 0x544295
 // Releases the particle and complex unit pools and logs the list node pools' statistics
 // (EEDeleteDatabase passes true; the argument is not read)
 void EEReleaseGamePools(bool inShutdown)
@@ -1768,7 +1505,6 @@ void EEReleaseGamePools(bool inShutdown)
     UList<EEComplexUnit*>::sNodePool.DumpStats(false);
 }
 
-// FUNCTION: EXE 0x5442e0
 // Releases the attack target, tile unit list and doppelganger pools
 void EEReleaseUnitPools()
 {
@@ -1777,13 +1513,11 @@ void EEReleaseUnitPools()
     gDoppelgangerManager.Release();
 }
 
-// FUNCTION: EXE 0x5442f4
 // Does nothing (the network start-up registers it as its shutdown routine)
 void EEEmptyShutdown(bool inShutdown)
 {
 }
 
-// FUNCTION: EXE 0x5442f5
 // Deletes the sound manager, logs its memory pool and frees the pool and its locks
 // (no direct caller: registered as a shutdown routine)
 void EEDeleteSoundManager(bool inShutdown)
@@ -1798,7 +1532,6 @@ void EEDeleteSoundManager(bool inShutdown)
 #include "ee/EEUserInterface.h"
 #include "ee/EEUnitPicker.h"
 
-// FUNCTION: EXE 0x544324
 // Stops physics, deletes the communications and WON connection, then shuts down and deletes the physics, data
 // preloading, graphics and mouse pointer threads, the music manager and the user interface
 void EEShutdownThreads(bool inShutdown)
@@ -1836,21 +1569,12 @@ void EEShutdownThreads(bool inShutdown)
     gUnitPicker.Reset();
 }
 
-// FUNCTION: EXE 0x544488
-// Tells the physics thread to quit and waits until it has
-// RTSPhysics::Shutdown (inline, defined above)
-
-// FUNCTION: EXE 0x5444ac
-// Tells the data preloading thread to quit and waits until it has
-// EEDataPreLoading::Shutdown (inline, defined above)
-
 #include "ee/EECameraControl.h"
 #include "ee/EEButtonObject.h"
 
 void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
 extern bool sIconsLoaded; // the status box's icons-loaded flag (defined in EEUIFMGStatusBox's unit)
 
-// FUNCTION: EXE 0x540306
 // Re-creates the display at the new size (full screen or not): reactivates the rasterizer, resets render states
 // and the camera, reloads mouse, textures, buttons and icons and restarts the mouse pointer thread
 // port: the menus' resolution. Their controls are laid out for 1024x768 (pixel sizes; the forms anchor to their
@@ -1972,12 +1696,11 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
 #include "lle/Graphics Engine.h"
 #include "ee/EEUserInterface.h"
 
-void EEEnumerateDisplayDevices(); // 0x548514
+void EEEnumerateDisplayDevices();
 void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
 GERasterizer* gRasterizer;
 GEWindow* gGameWindow;
 
-// FUNCTION: EXE 0x5444d0
 // Starts the graphics engine, picks the preferred rasterizer, validates screen, depths and resolution (falling
 // back to 800x600x16), creates and captures the game window; returns true
 bool EEInitializeDisplay()
@@ -2072,12 +1795,11 @@ bool EEInitializeDisplay()
 #include <objbase.h>
 #endif
 
-bool EEParseCommandLineFirstPass(const char* inCommandLine, bool& outShowMovies); // 0x52d9e5
+bool EEParseCommandLineFirstPass(const char* inCommandLine, bool& outShowMovies);
 bool EEParseCommandLine(const char* inCommandLine); // 0x52d703 (after start-up)
 HINSTANCE gInstance;
 UResourceFile* gResource;
 #pragma optimize("g", off)   // rule 4, owner 2026-11-01: WinMain is no-/Og (memory locals, constant push 1/pop eax test)
-// FUNCTION: EXE 0x540d73
 // Runs the game: single-instance check, start-up, splash and intro, the user interface loop, then shutdown;
 // returns 1 when the original Empire Earth install is missing, else 0
 // (the previous instance and show command arguments are unused)
@@ -2325,177 +2047,10 @@ int main(int argc, char** argv)
 }
 #endif
 #pragma optimize("g", on)   // ??_GUResourceFile 0x54494d (no-/Og in the original) is emitted under WinMain's state
-// FUNCTION: EXE 0x54494d
-// Destroys the resource file and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x544977
-// Returns an iterator to the first world table entry
-
-// FUNCTION: EXE 0x54499e
-// Returns an iterator past the last world table entry
-
-// FUNCTION: EXE 0x5449c5
-// Appends a copy of the file spec to the vector
-
-// FUNCTION: EXE 0x5449f6
-// Copies a world table entry iterator
-
-// FUNCTION: EXE 0x544a15
-// Empties the display rasterizer list
-
-// TEMPLATE: EXE 0x544a68
-// USingleton<EECalamityManager>::DestroyInstance (inline; EEDeleteDatabase): deletes the calamity manager
-
-// FUNCTION: EXE 0x544aa0
-// Creates a new saved-game number section with the same tag
-
-// FUNCTION: EXE 0x544b08
-// Adds nothing to the checksum (value sections)
-// (shared by EEPTGeneric<unsigned long> and EEPTRestorable<GE3DPoint>)
-
-// FUNCTION: EXE 0x544b13
-// Reads the section's number from the saved game; a short read fails with error 0xe
-
-// FUNCTION: EXE 0x544b59
-// Writes the section's number to the saved game; a short write fails with error 0xe
-
-// FUNCTION: EXE 0x544ba2
-// Creates a new, empty saved-game map section with the same tag
-
-// FUNCTION: EXE 0x544c38
-// Loads the section's object from the saved game
-// (shared by EEPTPRestorable<EEMap>, <EEScenarioManager>, <EEEffectManager> and <EEEnvironmentManager>)
-
-// FUNCTION: EXE 0x544c68
-// Saves the section's object to the saved game
-// (shared by EEPTPRestorable<EEMap>, <EEScenarioManager>, <EEEffectManager> and <EEEnvironmentManager>)
-
-// FUNCTION: EXE 0x544c98
-// Creates a saved-game point section with the given tag and point
-
-// FUNCTION: EXE 0x544d1b
-// Creates a new saved-game point section (at the origin) with the same tag
-
-// FUNCTION: EXE 0x544d86
-// Reads the section's point from the saved game
-
-// FUNCTION: EXE 0x544dab
-// Writes the section's point to the saved game
-
-// FUNCTION: EXE 0x544dd0
-// Creates a new, empty saved-game scenario section with the same tag
-
-// FUNCTION: EXE 0x544e66
-// Creates a new, empty saved-game effects section with the same tag
-
-// FUNCTION: EXE 0x544ef9
-// Creates a new, empty saved-game environment section with the same tag
-
-// FUNCTION: EXE 0x544f8c
-// Adds the section's object to the checksum
-// (shared by EEPTPRestorable<EEMap>, <EEScenarioManager>, <EEEffectManager> and <EEEnvironmentManager>)
-
-// FUNCTION: EXE 0x544faa
-// Destroys a saved-game value section and frees it when asked (scalar deleting destructor)
-// (shared by EEPTGeneric<unsigned long> and EEPTRestorable<GE3DPoint>)
-
-// FUNCTION: EXE 0x544fd6
-// Destroys the saved-game map section and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x545001
-// Destroys the saved-game map section, deleting the map when it owns it
-
-// FUNCTION: EXE 0x54505d
-// Destroys the saved-game scenario section and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x545088
-// Destroys the saved-game scenario section, deleting the scenario manager when it owns it
-
-// FUNCTION: EXE 0x5450e4
-// Destroys the saved-game effects section and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x54510f
-// Destroys the saved-game effects section, deleting the effect manager when it owns it
-
-// FUNCTION: EXE 0x54516b
-// Destroys the saved-game environment section and frees it when asked (scalar deleting destructor)
-
-// FUNCTION: EXE 0x545196
-// Destroys the saved-game environment section, deleting the environment manager when it owns it
-
-// FUNCTION: EXE 0x5451f2
-// Inserts a copy of the file spec before the position; returns an iterator to it
-
-// FUNCTION: EXE 0x5452a6
-// Allocates room for the given number of file specs; returns whether any was allocated
-
-// FUNCTION: EXE 0x545305
-// Destroys every file spec in the vector and frees its storage
-
-// FUNCTION: EXE 0x545388
-// Removes the display rasterizers in the range; returns an iterator to the first one after it
-
-// FUNCTION: EXE 0x54541f
-// Allocates room for the given number of unit set pointers; returns whether any was allocated
-
-// FUNCTION: EXE 0x54547c
-// Inserts the given number of copies of the file spec before the position, growing as needed
-
-// FUNCTION: EXE 0x545b5d
-// Destroys the file specs in the range
-
-// FUNCTION: EXE 0x545b89
-// Returns the file spec iterator moved forward by the count
-
-// FUNCTION: EXE 0x545bb7
-// Copy-constructs the given number of copies of the file spec into raw storage; returns the end
-
-// FUNCTION: EXE 0x545c41
-// Throws length_error for a file spec vector that grew too long
-
-// FUNCTION: EXE 0x545cbd
-// Returns the file spec iterator moved back by the count
-
-// FUNCTION: EXE 0x545ceb
-// Prints the complex unit list node pool's statistics (to the debugger when asked)
-
-// FUNCTION: EXE 0x545d72
-// Prints the mini map dot list node pool's statistics (to the debugger when asked)
-
-// FUNCTION: EXE 0x545df9
-// Prints the mini map unit dot list node pool's statistics (to the debugger when asked)
-
-// FUNCTION: EXE 0x545e80
-// Sorts the file specs by file name
-
-// FUNCTION: EXE 0x545f4f
-// Prints the LOD vertex list node pool's statistics (to the debugger when asked)
-
-// FUNCTION: EXE 0x545fd6
-// Prints the LOD polygon list node pool's statistics (to the debugger when asked)
-
-// FUNCTION: EXE 0x54605d
-// Copies a range of display rasterizers; returns the end of the destination
-
-// FUNCTION: EXE 0x5460a0
-// Copy-constructs a range of file specs into raw storage; returns the end
-
-// FUNCTION: EXE 0x546146
-// Assigns the file spec to every element of the range
-
-// FUNCTION: EXE 0x54617e
-// Copies a range of file specs backwards to end at the destination; returns its start
-
-// FUNCTION: EXE 0x5461c8
-// Destroys one display rasterizer in place
-
-// FUNCTION: EXE 0x5461f6
-// Copy-constructs a file spec in place
 
 #include "lle/UMFastMath.h"
 #include <string.h>
 
-// FUNCTION: EXE 0x53fcda
 // Loads and starts a .wav or .mp3 sound (a bare name tries .wav, then .mp3), registering it as a one-shot when
 // asked; returns the sample and instance, -1 on failure
 void EELoadSound(const UString& inName, unsigned long inType, unsigned long& outSample,
@@ -2562,7 +2117,6 @@ long EEFn0FCA98(); // 0x4fca98: a post-load check that returns 0
 void EEBuildSightRings(); // the start-up's sight distance tables
 long EEClearRandomMapGenerators(); // clears the random-map generator list; returns 0
 
-// FUNCTION: EXE 0x543557
 // Starts the sound engine and music conductor from the preferences and creates the sound manager; returns false
 // if the sound engine fails, else true
 bool EEInitializeSounds()
@@ -2608,7 +2162,6 @@ bool EEInitializeSounds()
     return true;    // the success path returned no value (the caller tested whatever AL held)
 }
 
-// FUNCTION: EXE 0x5414a3
 // Loads every database table in start-up order, creates the user folders (campaigns, saved games, scenarios,
 // users), loads the ambient sounds, sizes the game pools and registers the database shutdown
 void EEInitializeDatabase()
@@ -2828,7 +2381,6 @@ void EEInitializeDatabase()
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x4cb, "theResult == keseOK");
 }
 
-// FUNCTION: EXE 0x542363
 // Sets up random maps, game options, physics models and sight rings, creates the mouse, unit classes, UI
 // manager, AI, cheat codes and game timer, and registers their shutdown
 void EEInitializeGameObjects()
@@ -2865,7 +2417,6 @@ void EEInitializeGameObjects()
     // GERasterizer::GetScreen and GERectangle::operator= out of line and emits the EEArtificialIntelligence ctor 0x54260b)
 }
 
-// FUNCTION: EXE 0x543e04
 // Deletes the game timer, AI, cheat codes, UI manager, mouse and mini map and clears the world and game state
 void EEDeleteGameObjects(bool inShutdown)
 {
@@ -2899,7 +2450,6 @@ void EEReportLeakingUnits();
 void EEUnloadBuiltInGraphicObjects();
 void EEDeleteMediaTable();
 
-// FUNCTION: EXE 0x543d0c
 // Unloads every database table and its media, deletes the calamity manager and language resources, frees the pools
 void EEDeleteDatabase(bool inShutdown)
 {
@@ -2948,98 +2498,6 @@ void EEDeleteDatabase(bool inShutdown)
 // 0x54541f goes 17.65 -> exact and nothing else changes.
 #pragma optimize("g", off)
 
-// TEMPLATE: EXE 0x54630b
-// TEMPLATE: EXE 0x5463c4
-// TEMPLATE: EXE 0x546a13
-
-// TEMPLATE: EXE 0x54640a
-// ??4EEDisplayRasterizer@@QAEAAU0@ABU0@@Z
-// TEMPLATE: EXE 0x546442
-// ??4?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@QAEAAV01@ABV01@@Z
-// TEMPLATE: EXE 0x5468dc
-// ?begin@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QBE?AV?$_Ptrit@UEEDisplayMode@@HPBU1@ABU1@PAU1@AAU1@@2@XZ
-// TEMPLATE: EXE 0x546903
-// ?size@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@QBEIXZ
-// TEMPLATE: EXE 0x546934
-// ?_Buy@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@IAE_NI@Z
-// TEMPLATE: EXE 0x546993
-// ?_Tidy@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@IAEXXZ
-// TEMPLATE: EXE 0x546a7a
-// ?_Insertion_sort@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0UEEFileNameSorter@@@Z
-// TEMPLATE: EXE 0x546aa6
-// ?_Sort@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0HUEEFileNameSorter@@@Z
-// TEMPLATE: EXE 0x546b87
-// ?_Unguarded_insertion_sort@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0UEEFileNameSorter@@PAVFSFileSpec@@@Z
-// TEMPLATE: EXE 0x546be0
-// ??D?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@std@@QBEAAVFSFileSpec@@XZ
-// TEMPLATE: EXE 0x546bee
-// ?_Ucopy@?$vector@UEEDisplayScreen@@V?$allocator@UEEDisplayScreen@@@std@@@std@@IAEPAUEEDisplayScreen@@V?$_Ptrit@UEEDisplayScreen@@HPBU1@ABU1@PAU1@AAU1@@2@0PAU3@@Z
-// TEMPLATE: EXE 0x546c84
-// ?_Destroy@std@@YAXPAUEEDisplayScreen@@@Z
-// TEMPLATE: EXE 0x546cb2
-// ??4EEDisplayScreen@@QAEAAU0@ABU0@@Z
-// TEMPLATE: EXE 0x546cea
-// ??_GEEDisplayScreen@@QAEPAXI@Z
-// TEMPLATE: EXE 0x546d21
-// ??4?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QAEAAV01@ABV01@@Z
-// TEMPLATE: EXE 0x547145
-// ?end@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QBE?AV?$_Ptrit@UEEDisplayMode@@HPBU1@ABU1@PAU1@AAU1@@2@XZ
-// TEMPLATE: EXE 0x54716c
-// ?size@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QBEIXZ
-// TEMPLATE: EXE 0x54719d
-// ?_Buy@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@IAE_NI@Z
-// TEMPLATE: EXE 0x5471fc
-// ?_Tidy@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@IAEXXZ
-// TEMPLATE: EXE 0x54728e
-// ?_Insertion_sort_1@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0UEEFileNameSorter@@PAVFSFileSpec@@@Z
-// TEMPLATE: EXE 0x5473ac
-// ??E?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@std@@QAEAAV01@XZ
-// TEMPLATE: EXE 0x5473c5
-// ?make_heap@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0UEEFileNameSorter@@@Z
-// TEMPLATE: EXE 0x547404
-// ?sort_heap@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0UEEFileNameSorter@@@Z
-// TEMPLATE: EXE 0x54744c
-// ?_Unguarded_partition@std@@YA?AV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@V21@0UEEFileNameSorter@@PAVFSFileSpec@@@Z
-// TEMPLATE: EXE 0x547719
-// ?_Unguarded_insert@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@VFSFileSpec@@UEEFileNameSorter@@@Z
-// TEMPLATE: EXE 0x54778b
-// ?_Ucopy@?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@IAEPAUEEDisplayMode@@V?$_Ptrit@UEEDisplayMode@@HPBU1@ABU1@PAU1@AAU1@@2@0PAU3@@Z
-// TEMPLATE: EXE 0x547820
-// ??4EEDisplayMode@@QAEAAU0@ABU0@@Z
-// TEMPLATE: EXE 0x54785b
-// ??0EEDisplayScreen@@QAE@ABU0@@Z
-// TEMPLATE: EXE 0x547895
-// ??_GEEDisplayMode@@QAEPAXI@Z
-// TEMPLATE: EXE 0x5478bf
-// ??0?$vector@UEEDisplayMode@@V?$allocator@UEEDisplayMode@@@std@@@std@@QAE@ABV01@@Z
-// TEMPLATE: EXE 0x547959
-// ?_Make_heap@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0UEEFileNameSorter@@PAHPAVFSFileSpec@@@Z
-// TEMPLATE: EXE 0x5479c9
-// ?pop_heap@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0UEEFileNameSorter@@@Z
-// TEMPLATE: EXE 0x5479f5
-// ?iter_swap@std@@YAXV?$_Ptrit@VFSFileSpec@@HPAV1@AAV1@PAV1@AAV1@@1@0@Z
-// TEMPLATE: EXE 0x547a1e
-// ?_Construct@std@@YAXPAUEEDisplayMode@@ABU2@@Z
-// The UList<EEComplexUnit*>::sNodePool chain pieces and the memory pool's COMDATs, the FSFileSpec heap helpers
-// TEMPLATE: EXE 0x54622a
-// TEMPLATE: EXE 0x54624d
-// TEMPLATE: EXE 0x546276
-// TEMPLATE: EXE 0x546286
-// TEMPLATE: EXE 0x546296
-// TEMPLATE: EXE 0x5462a6
-// TEMPLATE: EXE 0x5462d9
-// TEMPLATE: EXE 0x546866
-// TEMPLATE: EXE 0x547a6a
-// TEMPLATE: EXE 0x547bb9
-// TEMPLATE: EXE 0x547c29
-// TEMPLATE: EXE 0x547c5f
-// TEMPLATE: EXE 0x547d39
-// TEMPLATE: EXE 0x547d8a
-// TODO 0x547da5, 0x547dcd,
-// 0x547dd9, 0x547de5, 0x547df1: COMDATs not emitted/named yet
-
-// ICF-FOLDED: EXE 0x4fca98
-// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)
 long EEFn0FCA98()
 {
     return 0;

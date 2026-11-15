@@ -19,7 +19,6 @@ static_assert(ComponentFlag_Invisible == EE_WON_COMP_FLAG_INVISIBLE && Component
               ComponentFlag_Translucent == EE_WON_COMP_FLAG_TRANSLUCENT && ComponentFlag_NoInput == EE_WON_COMP_FLAG_NO_INPUT &&
               ComponentFlag_WantTabFocus == EE_WON_COMP_FLAG_WANT_TAB_FOCUS, "compobj.rs flags");
 static_assert(sizeof(WONRectangle) == sizeof(EeWonRect), "compobj.rs rectangles");
-// FUNCTION: WON 0x006f4890
 // Creates the extra component state with no background grabber and tooltips allowed
 ComponentExtra::ComponentExtra()
 {
@@ -28,7 +27,6 @@ ComponentExtra::ComponentExtra()
 }
 // Destroys the extra state, deleting its background grabber before the other members (emitted at 0x006f48d0)
 ComponentExtra::~ComponentExtra() { delete this->mGrabBG; }
-// FUNCTION: WON 0x006f49e0
 // Creates a component with no parent, no flags, no control id and no extra data
 Component::Component()
 {
@@ -42,19 +40,14 @@ Component::Component()
 }
 // Destroys the component, deleting its extra state (emitted at 0x006f4a70)
 Component::~Component() { delete this->mExtraStuff; }
-// FUNCTION: WON 0x006f4ac0
 // Allocates the extra component state on first use
 void Component::AllocateExtraStuff()
 {
     if(this->mExtraStuff==NULL) this->mExtraStuff=new ComponentExtra;
 }
-// FUNCTION: WON 0x006f5a00
 SmartPtr<Font> Component::GetFont(const FontDescriptor& descriptor) { return this->GetRoot()->GetFont(descriptor); }
-// FUNCTION: WON 0x006f5b20
 Font* Component::GetDefaultFont() { return this->GetRoot()->mManager->GetDefaultFont(); }
-// FUNCTION: WON 0x006f5b30
 Font* Component::GetNamedFont(const std::string& name) { return this->GetRoot()->GetWindowManager()->GetNamedFont(name); }
-// FUNCTION: WON 0x006f5b50
 Font* Component::GetDefaultFontMod(int style,int size) { return this->GetRoot()->GetWindowManager()->GetDefaultFontMod(style,size); }
 
 // the Rust component's calls out (compobj.rs EeWonComp), each a run of the original's statements
@@ -164,11 +157,3 @@ extern "C" intptr_t ee_won_guicpp_comp_call(void*, EeWonGuiOp op, intptr_t k, in
     }
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006f48b0
-// (public: virtual void * __thiscall WONAPI::ComponentExtra::`scalar deleting destructor'(unsigned int)    [??_GComponentExtra@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x006f48d0
-// (public: virtual __thiscall WONAPI::ComponentExtra::~ComponentExtra(void)    [??1ComponentExtra@WONAPI@@UAE@XZ])
-// TEMPLATE: WON 0x006f4a70
-// (public: virtual __thiscall WONAPI::Component::~Component(void)    [??1Component@WONAPI@@UAE@XZ])

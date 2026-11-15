@@ -14,10 +14,10 @@ public:
     using FSFile::Read;    // the long/unsigned long adapters (lle/FSFile.h)
     using FSFile::Write;
     // defaults proven by the default-constructor closure ??_F (0x4715: push 1; push 1; push 1000)
-    FSMemoryFile(unsigned long inBlockSize = 1000, bool inGrowByDoubling = true, unsigned long inBlockCount = 1);   // 0x9ec5
-    FSMemoryFile(unsigned char* inData, unsigned long inLength, unsigned long inBlockSize, bool inGrowByDoubling);   // 0x9f30
+    FSMemoryFile(unsigned long inBlockSize = 1000, bool inGrowByDoubling = true, unsigned long inBlockCount = 1);
+    FSMemoryFile(unsigned char* inData, unsigned long inLength, unsigned long inBlockSize, bool inGrowByDoubling);
     FSMemoryFile(EeFsMemFile* inState, bool inOwns);                            // over a state made by Rust; inOwns: free it
-    virtual ~FSMemoryFile();                                                    // 0x9f91
+    virtual ~FSMemoryFile();
     // implicit copy ctor (0x466d) and operator= (0x46c4) dropped: they copied the raw buffer pointer (double delete)
     FSMemoryFile(const FSMemoryFile&) = delete;
     FSMemoryFile& operator=(const FSMemoryFile&) = delete;
@@ -66,13 +66,13 @@ public:
     virtual long Unlock() { return kErrorFailed; }                                         // +0xd4 (0x4652)
     virtual void CloseSearchHandle() {}                                         // +0xd8 (folded 0x0c16a)
 
-    const unsigned char* GetData() const;                                       // 0x4630
-    long Compact();                                                             // 0x9ff6
-    long Compress(unsigned long inMethod, unsigned long& outLength);            // 0xa05e (provisional names)
-    long Load(FSFile& inFile, unsigned long inLength);                          // 0xa4e9
-    long Load(FSFile& inFile);                                                  // 0xa55c
-    long Save(FSFile& outFile, unsigned long inLength);                         // 0xa68c
-    long Save(FSFile& outFile);                                                 // 0xa6ab
+    const unsigned char* GetData() const;
+    long Compact();
+    long Compress(unsigned long inMethod, unsigned long& outLength);
+    long Load(FSFile& inFile, unsigned long inLength);
+    long Load(FSFile& inFile);
+    long Save(FSFile& outFile, unsigned long inLength);
+    long Save(FSFile& outFile);
 
 protected:
     UString mTemporaryFileName;                       // +0x48

@@ -83,7 +83,6 @@ const UWideString kEECampaignRequiredCivNameKey("RequiredCivName");
 const UWideString kEECampaignBackgroundImageKey("BackgroundImage");
 const UWideString kEECampaignScenarioListKey("ScenarioList.txt");
 
-// FUNCTION: EXE 0x68c08c
 // Creates an empty campaign in the game's data directory, with no required civilization or background image
 EECampaign::EECampaign()
 {
@@ -92,7 +91,6 @@ EECampaign::EECampaign()
     this->mBackgroundImage = "";
 }
 
-// FUNCTION: EXE 0x68c122
 // Copies each scenario and media file into the data directory under its campaign-prefixed name; returns whether
 // every one was copied
 bool EECampaign::CopyScenarioFiles(std::vector<UWideString>& inFiles, std::vector<UWideString>& outFiles)
@@ -132,7 +130,6 @@ bool EECampaign::CopyScenarioFiles(std::vector<UWideString>& inFiles, std::vecto
 }
 
 // NEAR: register allocation only (this in esi/iterator in ebx in the original; ours edi/esi)
-// FUNCTION: EXE 0x68c36e
 // Writes the campaign's scenario list (one scenario file name per line) to a file in the campaign directory;
 // returns whether it worked, with an error text otherwise
 bool EECampaign::CreateScenarioList(const UWideString& inFile, UWideString& outError)
@@ -165,7 +162,6 @@ bool EECampaign::CreateScenarioList(const UWideString& inFile, UWideString& outE
     return theResult;
 }
 
-// FUNCTION: EXE 0x68c4a5
 // Returns a stored campaign password decrypted
 UWideString EECampaign::DecryptPassword(const UWideString& inPassword)
 {
@@ -177,7 +173,6 @@ UWideString EECampaign::DecryptPassword(const UWideString& inPassword)
     return theResult;
 }
 
-// FUNCTION: EXE 0x68c517
 // Returns a campaign password encrypted for storage
 UWideString EECampaign::EncryptPassword(const UWideString& inPassword)
 {
@@ -189,7 +184,6 @@ UWideString EECampaign::EncryptPassword(const UWideString& inPassword)
     return theResult;
 }
 
-// FUNCTION: EXE 0x68c589
 // Returns the archive path of the campaign's scenario list file
 UWideString EECampaign::GetScenarioListFile()
 {
@@ -200,56 +194,48 @@ UWideString EECampaign::GetScenarioListFile()
     return theFile;
 }
 
-// FUNCTION: EXE 0x68c5f2
 // Returns the author's e-mail address
 const UWideString& EECampaign::GetAuthorEmail()
 {
     return this->mAuthorEmail;
 }
 
-// FUNCTION: EXE 0x68c5f6
 // Returns the author's name
 const UWideString& EECampaign::GetAuthorName()
 {
     return this->mAuthorName;
 }
 
-// FUNCTION: EXE 0x68c5fa
 // Returns the background image name
 const UWideString& EECampaign::GetBackgroundImage()
 {
     return this->mBackgroundImage;
 }
 
-// FUNCTION: EXE 0x68c5fe
 // Returns the campaign description
 const UWideString& EECampaign::GetDescription()
 {
     return this->mDescription;
 }
 
-// FUNCTION: EXE 0x68c602
 // Returns the campaign name
 const UWideString& EECampaign::GetCampaignName()
 {
     return this->mCampaignName;
 }
 
-// ICF-FOLDED: EXE 0x52c738
 // Returns the campaign's scenario names (`return this`: folded into an identical function elsewhere)
 const std::vector<UWideString>& EECampaign::GetScenarios()
 {
     return this->mScenarios;
 }
 
-// FUNCTION: EXE 0x68c606
 // Returns the decrypted campaign password
 const UWideString& EECampaign::GetPassword()
 {
     return this->mPassword;
 }
 
-// FUNCTION: EXE 0x68c60d
 // Returns the civilization the campaign requires ("" for any)
 const UWideString& EECampaign::GetRequiredCiv()
 {
@@ -258,7 +244,6 @@ const UWideString& EECampaign::GetRequiredCiv()
 
 // NEAR: FSArchive::FindFile(const UWideString&) is inline in our header, the original calls the import, and
 // its two push_backs are expanded (insert(end(), x)); slots follow from that
-// FUNCTION: EXE 0x68c614
 // Reads a campaign archive: its tags, decrypted password and scenario list (optionally checking every scenario
 // exists); returns whether it worked, with an error text otherwise
 bool EECampaign::Load(const UWideString& inFile, UWideString& outError, bool inCheckFiles)
@@ -330,11 +315,7 @@ bool EECampaign::Load(const UWideString& inFile, UWideString& outError, bool inC
     return theResult;
 }
 
-// SYNTHETIC: EXE 0x68c9e9
-// (FSArchive's scalar deleting destructor, with the local copy of its vtable 0x44c050: `new FSArchive` in Load)
-
 // NEAR: register allocation only (this in edi, the += import in ebx in the original)
-// FUNCTION: EXE 0x68ca06
 // Lists every scenario file of the campaign (optionally with the campaign prefix) with its media and sounds, plus
 // the background image; returns false at the first scenario whose files are missing
 bool EECampaign::ListScenarioFiles(std::vector<UWideString>& outFiles, UWideString& outError, bool inAdd,
@@ -375,7 +356,6 @@ bool EECampaign::ListScenarioFiles(std::vector<UWideString>& outFiles, UWideStri
     return theResult;
 }
 
-// FUNCTION: EXE 0x68cc2e
 // Adds a scenario's media files and effect sounds that are not in an archive to a file list (no duplicates);
 // returns whether all were found, with an error text naming the missing ones otherwise
 bool EECampaign::ListScenarioMedia(const UWideString& inFile, std::vector<UWideString>& ioFiles,
@@ -432,7 +412,6 @@ bool EECampaign::ListScenarioMedia(const UWideString& inFile, std::vector<UWideS
     return theResult;
 }
 
-// FUNCTION: EXE 0x68ceba
 // Adds the sound file of a play-sound or dialogue effect (.wav or .mp3, optionally campaign-prefixed) to a file
 // list unless archived or already listed; returns false with its name in the error when the sound is missing
 bool EECampaign::ListEffectSound(const UWideString& inFile, EESMEffect* inEffect, std::vector<UWideString>& ioFiles,
@@ -489,7 +468,6 @@ bool EECampaign::ListEffectSound(const UWideString& inFile, EESMEffect* inEffect
     return theResult;
 }
 
-// FUNCTION: EXE 0x68d219
 // Adds the sounds of every effect in a scenario's saved scenario manager to a file list; returns whether all were
 // found, collecting the missing names in the error
 bool EECampaign::ListEffectSounds(const UWideString& inFile, std::vector<UWideString>& ioFiles,
@@ -523,7 +501,6 @@ bool EECampaign::ListEffectSounds(const UWideString& inFile, std::vector<UWideSt
     return theResult;
 }
 
-// FUNCTION: EXE 0x68d2e3
 // Returns whether a file lies outside the game's archives
 bool EECampaign::NotArchived(UWideString inFile)
 {
@@ -532,7 +509,6 @@ bool EECampaign::NotArchived(UWideString inFile)
     return theArchived == false;
 }
 
-// FUNCTION: EXE 0x68d317
 // Builds the campaign archive from the scenario list file and copies of every scenario file, then deletes the
 // copies; returns whether it worked
 bool EECampaign::SaveArchive(FSArchive* inArchive, UWideString& outError)
@@ -577,7 +553,6 @@ bool EECampaign::SaveArchive(FSArchive* inArchive, UWideString& outError)
     return theResult;
 }
 
-// FUNCTION: EXE 0x68d53b
 // Saves the campaign: writes its tags (password encrypted) and then the archive; needs a campaign name; returns
 // whether it worked, with an error text otherwise
 bool EECampaign::Save(UWideString& outError)
@@ -620,98 +595,56 @@ done:
     return theResult;
 }
 
-// FUNCTION: EXE 0x68d79b
 // Sets the author's e-mail address
 void EECampaign::SetAuthorEmail(const UWideString& inText)
 {
     this->mAuthorEmail = inText;
 }
 
-// FUNCTION: EXE 0x68d7ab
 // Sets the author's name
 void EECampaign::SetAuthorName(const UWideString& inText)
 {
     this->mAuthorName = inText;
 }
 
-// FUNCTION: EXE 0x68d7bb
 // Sets the background image name
 void EECampaign::SetBackgroundImage(const UWideString& inText)
 {
     this->mBackgroundImage = inText;
 }
 
-// FUNCTION: EXE 0x68d7cb
 // Sets the campaign description
 void EECampaign::SetCampaignDescription(const UWideString& inText)
 {
     this->mDescription = inText;
 }
 
-// FUNCTION: EXE 0x68d7db
 // Sets the campaign name
 void EECampaign::SetCampaignName(const UWideString& inText)
 {
     this->mCampaignName = inText;
 }
 
-// FUNCTION: EXE 0x68d7eb
 // Sets the campaign's scenario list
 void EECampaign::SetCampaignScenarios(const std::vector<UWideString>& inScenarios)
 {
     this->mScenarios = inScenarios;
 }
 
-// FUNCTION: EXE 0x68d7f7
 // Sets the directory the campaign is saved into
 void EECampaign::SetDirectory(const UWideString& inText)
 {
     this->mDirectory = inText;
 }
 
-// FUNCTION: EXE 0x68d807
 // Sets the campaign password (plain text)
 void EECampaign::SetPassword(const UWideString& inText)
 {
     this->mPassword = inText;
 }
 
-// FUNCTION: EXE 0x68d81a
 // Sets the civilization the campaign requires
 void EECampaign::SetRequiredCiv(const UWideString& inText)
 {
     this->mRequiredCiv = inText;
 }
-
-// SYNTHETIC: EXE 0x68befc
-// SYNTHETIC: EXE 0x68bf06
-// SYNTHETIC: EXE 0x68bf17
-// SYNTHETIC: EXE 0x68bf23
-// SYNTHETIC: EXE 0x68bf2e
-// SYNTHETIC: EXE 0x68bf38
-// SYNTHETIC: EXE 0x68bf49
-// SYNTHETIC: EXE 0x68bf55
-// SYNTHETIC: EXE 0x68bf60
-// SYNTHETIC: EXE 0x68bf6a
-// SYNTHETIC: EXE 0x68bf7b
-// SYNTHETIC: EXE 0x68bf87
-// SYNTHETIC: EXE 0x68bf92
-// SYNTHETIC: EXE 0x68bf9c
-// SYNTHETIC: EXE 0x68bfad
-// SYNTHETIC: EXE 0x68bfb9
-// SYNTHETIC: EXE 0x68bfc4
-// SYNTHETIC: EXE 0x68bfce
-// SYNTHETIC: EXE 0x68bfdf
-// SYNTHETIC: EXE 0x68bfeb
-// SYNTHETIC: EXE 0x68bff6
-// SYNTHETIC: EXE 0x68c000
-// SYNTHETIC: EXE 0x68c011
-// SYNTHETIC: EXE 0x68c01d
-// SYNTHETIC: EXE 0x68c028
-// SYNTHETIC: EXE 0x68c032
-// SYNTHETIC: EXE 0x68c043
-// SYNTHETIC: EXE 0x68c04f
-// SYNTHETIC: EXE 0x68c05a
-// SYNTHETIC: EXE 0x68c064
-// SYNTHETIC: EXE 0x68c075
-// SYNTHETIC: EXE 0x68c081

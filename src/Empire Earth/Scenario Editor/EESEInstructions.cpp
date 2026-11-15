@@ -77,7 +77,6 @@ extern GEFont* gU531938;                    // 0x531938 (Empire Earth.cpp's font
 extern GEFont* gSeplScreenFont;   // the screen's font while a tab makes its controls (EESERBUnitTypes.cpp)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
-// FUNCTION: EXE 0x5705a2
 // Posts the import action for the file the question carries (the import question's yes) and frees
 // the question's import info
 void EESEImportTextAnswer(UIForm* inInfo)
@@ -87,10 +86,6 @@ void EESEImportTextAnswer(UIForm* inInfo)
     delete theInfo;
 }
 
-// SYNTHETIC: EXE 0x570605
-// (the scalar deleting destructor, emitted with the vtable; slot EESEIAImport+0x0, stores EESEIAImport vtable, stores EEAction vtable)
-
-// FUNCTION: EXE 0x570638
 // Starts importing data\Scenarios\<name>.lcl: asks to confirm, then validates first; complains when no
 // name is entered or the file is missing; returns the open result
 long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -127,7 +122,6 @@ long EESEIEImport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5707ff
 // Creates the instructions tab: map/movie/sound file combos (directories created when missing), the text boxes and
 // labels, and the text import/export buttons. History reuses the hints label/box ids (editor_instructions.rs)
 EESEInstructions::EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
@@ -138,29 +132,12 @@ EESEInstructions::EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFon
     ioIndex = theIndex;
 }
 
-// FUNCTION: EXE 0x571b49
-// Destroys the export button's event and frees it when asked (EESEIEExport's scalar deleting destructor)
-
-// FUNCTION: EXE 0x571b74
-// Destroys the import button's event and frees it when asked (EESEIEImport's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x571b9f
-// (the scalar deleting destructor, emitted with the vtable; slot EESEInstructions+0x0)
-
-// SYNTHETIC: EXE 0x571bbb
-// (the scalar deleting destructor, emitted with the vtable; slot UITextLabel+0x0)
-
-// SYNTHETIC: EXE 0x571bd8
-// (the scalar deleting destructor, emitted with the vtable; slot UIButton+0x0)
-
-// FUNCTION: EXE 0x571bf5
 // Destroys the instructions tab and every control it created (editor_instructions.rs)
 EESEInstructions::~EESEInstructions()
 {
     ee_screens_sein_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x571ce3
 // Fills the tab from the scenario's media strings (a file missing from a list goes into its combo's label) and shows
 // the .lcl name in the import box when that file exists (editor_instructions.rs; the transfers are the host's)
 void EESEInstructions::Load()
@@ -168,14 +145,12 @@ void EESEInstructions::Load()
     ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_LOAD);
 }
 
-// FUNCTION: EXE 0x571f62
 // Rescans the movie, sound and map file lists when the tab is entered (editor_instructions.rs)
 void EESEInstructions::Enter()
 {
     ee_screens_sein_call(this->mRust, EE_SCREENS_SEIN_ENTER);
 }
 
-// FUNCTION: EXE 0x571f8b
 // Stores the chosen map, movie and sound files and the four texts into the scenario's media strings
 // (editor_instructions.rs; the transfers are the host's)
 void EESEInstructions::Store()
@@ -300,20 +275,11 @@ extern "C" int32_t ee_screenscpp_sein(uint32_t inOp, void* const* p, int32_t* i,
     return EESEInstructions::Host(inOp, p, i, f);
 }
 
-// FUNCTION: EXE 0x5720c6
 // Does nothing (the shared empty body; EESETSBaseObject::RefreshControls and EEPhysicsTrace bind here too)
 void EEABuild::Virtual8()
 {
 }
 
-// FUNCTION: EXE 0x5720c7
-// Destroys the editor's main group and frees it when asked (EEUIFSEMainGroup's scalar deleting destructor)
-
-// FUNCTION: EXE 0x57210f
-// Creates an empty list of wide strings (vector<UWideString> default constructor, template COMDAT)
-
-// ICF-FOLDED: EXE 0x556dd8
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESEInstructions::MouseMove(class GE2DPoint const &)
 {
 }

@@ -11,7 +11,6 @@
 // Release-build trace: compiled out, but its argument is still evaluated
 inline void NETimestampedTrace(unsigned long inSize) {}
 
-// FUNCTION: LLE 0x1004b04f
 // Creates a timestamped message from a recorded buffer (timestamp, then the message)
 NETimestampedMessage::NETimestampedMessage(unsigned char* inPayloadPointer)
 {
@@ -22,7 +21,6 @@ NETimestampedMessage::NETimestampedMessage(unsigned char* inPayloadPointer)
         NETimestampedTrace(this->mMessage->ExportSize());
 }
 
-// FUNCTION: LLE 0x1004b09b
 // Exports the message as [timestamp][size][message] in a new buffer
 void NETimestampedMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
@@ -44,7 +42,6 @@ void NETimestampedMessage::ExportMessage(unsigned char** outPayloadPointer, unsi
     outMessageSize = theTimestampedMessageSize;
 }
 
-// FUNCTION: LLE 0x1004b138
 // Reads the timestamp and message from a recorded buffer
 void NETimestampedMessage::ImportMessage(unsigned char* inPayloadPointer)
 {
