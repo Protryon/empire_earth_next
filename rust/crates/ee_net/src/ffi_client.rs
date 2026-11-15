@@ -3,11 +3,14 @@
 //! the queues' common ones (the clock, events, threads, messages) to its `EeNetQOp` host.
 
 use std::ffi::c_void;
+use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 use crate::client::*;
 use crate::ffi::{EeNetQHostFn, QFfiHost};
 use crate::ffi_comms::{comms_of, EeNetComms};
+use crate::ffi_protocol::*;
 use crate::lagloss::LagLoss;
+use crate::native;
 use crate::qhost::{Ev, FileH, Msg, QHost, Thr};
 use crate::recplay::RecPlay;
 
@@ -53,10 +56,9 @@ pub enum EeNetClOp {
     MsgSetSlot = 18,
     /// a message, an uint32_t* -> GetSendToAllAndWaitMessageID(*out)
     MsgS2awId = 19,
-    /// a message, a field (EeNetClMsgField) -> the typed message's field
+    /// an engine message, a member (NEMRecord's numbering) -> its value (a block: its address)
     MsgGet = 20,
-    /// a kind (EeNetClNewMsg), then its arguments (the transfer status: slot | percent << 8 | status << 16, the id)
-    /// -> the new message
+    /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
     MsgNew = 21,
     /// a tick response, an input -> AddPlayerInput(input)
     MsgAddInput = 22,
@@ -98,6 +100,8 @@ pub enum EeNetClOp {
     HandleConnectionTimeoutWarning = 40,
     /// a message, a player -> the virtual ProcessLocalUserInput
     ProcessLocalUserInput = 41,
+    /// received bytes -> new NEMRecord(bytes) (the transfer message)
+    MsgImport = 42,
 }
 
 /// A message's virtual flags
@@ -109,63 +113,41 @@ pub enum EeNetClMsgFlag {
     IsAvailableToSend = 2,
 }
 
-/// The fields of the typed messages this class read (each a `static_cast` and a getter)
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetClMsgField {
-    /// NEMCommunicationsTick::GetCurrentCommunicationsTick
-    TickCt = 0,
-    /// NEMCommunicationsTickResponse::GetServersCommunicationTick
-    ServersTick = 1,
-    /// NEMStartGame::GetOffsetStartTime
-    OffsetStartTime = 2,
-    /// NEMClientConnectionRequestResponse::GetSendToSlot
-    SendToSlot = 3,
-    /// NEMClientConnectionRequestResponse::GetError
-    ConnectionError = 4,
-    /// NEMClientConnectionRequestResponse::GetCurrentCT
-    ConnectionCt = 5,
-    /// NEMClientReconnectionRequestResponse::GetNewSendToSlot
-    NewSendToSlot = 6,
-    /// NEMClientReconnectionRequestResponse::GetCurrentCT
-    ReconnectionCt = 7,
-    /// NEMPauseGame / NEMUnPauseGame::GetUniqueID
-    UniqueId = 8,
-    /// NEMXferMessage::GetID
-    XferId = 9,
-    /// NEMXferMessage::GetData (a pointer)
-    XferData = 10,
-    /// NEMXferMessage::GetDataSize
-    XferDataSize = 11,
-}
-
-/// The messages this class made (`new`, one reference)
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetClNewMsg {
-    /// NEMCommunicationsTickResponse(CTs processed, the tick, the average physics update time)
-    TickResponse = 0,
-    StopGameResponse = 1,
-    /// NEMStartGameResponse(time)
-    StartGameResponse = 2,
-    /// NEMUnPauseGameResponse(id)
-    UnPauseGameResponse = 3,
-    /// NEMPauseGameResponse(id)
-    PauseGameResponse = 4,
-    /// NEMXferMessage(the received bytes)
-    XferMessage = 5,
-    /// NEMXferStatus(slot, percent done, transfer id, status)
-    XferStatus = 6,
-}
-
 pub type EeNetClHostFn =
     unsafe extern "C" fn(ctx: *mut c_void, op: EeNetClOp, a: usize, b: usize, c: usize, d: usize) -> isize;
 
-/// The client's host: its own ops and the queues' common ones.
+/// `Connect`'s strings as bytes (the client calling the protocol itself: `ee_net_cl_new`'s `tcp`)
+#[repr(C)]
+pub struct EeNetClStrings {
+    pub name: *const u8,
+    pub name_length: usize,
+    pub host: *const u8,
+    pub host_length: usize,
+    pub address: *const u8,
+    pub address_length: usize,
+}
+
+/// `GetDetectedGame`'s answers: the name, the host and the address to their sinks (with `tcp`)
+#[repr(C)]
+pub struct EeNetClSinks {
+    pub name: EeNetPrSink,
+    pub name_context: *mut c_void,
+    pub host: EeNetPrSink,
+    pub host_context: *mut c_void,
+    pub address: EeNetPrSink,
+    pub address_context: *mut c_void,
+}
+
+/// The service the game searches for
+const SERVICE: &[u8] = b"EEService";
+
+/// The client's host: its own ops and the queues' common ones; with `tcp` (the protocol it got) the client calls the
+/// protocol itself (ffi_protocol), else the host answers the protocol ops (the goldens' worlds).
 pub struct ClFfiHost {
     ctx: *mut c_void,
     f: EeNetClHostFn,
     q: QFfiHost,
+    tcp: Option<AtomicUsize>,
 }
 
 // The context is the C++ client, used from its threads as the original's members were.
@@ -173,6 +155,9 @@ unsafe impl Send for ClFfiHost {}
 unsafe impl Sync for ClFfiHost {}
 
 impl ClFfiHost {
+    fn p(&self) -> Option<*const EeNetProtocol> {
+        self.tcp.as_ref().map(|t| t.load(SeqCst) as *const EeNetProtocol)
+    }
     fn call(&self, op: EeNetClOp, a: usize, b: usize, c: usize, d: usize) -> isize {
         unsafe { (self.f)(self.ctx, op, a, b, c, d) }
     }
@@ -261,43 +246,91 @@ impl QHost for ClFfiHost {
 
 impl ClientHost for ClFfiHost {
     fn wait_any(&self, events: &[Ev], timeout: u32) -> i32 {
+        if self.q.native {
+            return native::wait_any(events, timeout);
+        }
         self.call(EeNetClOp::WaitAny, events.as_ptr() as usize, events.len(), timeout as usize, 0) as i32
     }
     fn thread_priority(&self, t: Thr) {
+        if self.q.native {
+            return native::thread_priority(t);
+        }
         self.call(EeNetClOp::ThreadPriority, t, 0, 0, 0);
     }
     fn protocol_count(&self) -> u32 {
+        if self.tcp.is_some() {
+            return ee_net_pr_count();
+        }
         self.call(EeNetClOp::ProtocolCount, 0, 0, 0, 0) as u32
     }
     fn protocol_get(&self, out: &mut usize) -> i32 {
+        if let Some(t) = &self.tcp {
+            let r = unsafe { ee_net_pr_get(0, out as *mut usize as *mut *mut EeNetProtocol) };
+            t.store(*out, SeqCst);
+            return r;
+        }
         self.call(EeNetClOp::ProtocolGet, out as *mut usize as usize, 0, 0, 0) as i32
     }
     fn connect(&self, strings: usize, event: Ev, out: &mut usize, timeout: u32) -> i32 {
+        if let Some(p) = self.p() {
+            let s = unsafe { &*(strings as *const EeNetClStrings) };
+            let (o, e) = (out as *mut usize as *mut *mut c_void, event as *const c_void);
+            let (n, h, a) = ((s.name, s.name_length), (s.host, s.host_length), (s.address, s.address_length));
+            return unsafe { ee_net_pr_connect(p, n.0, n.1, h.0, h.1, a.0, a.1, 2, e, o, timeout) };
+        }
         self.call(EeNetClOp::Connect, strings, event, out as *mut usize as usize, timeout as usize) as i32
     }
     fn connect_for_xfer(&self, connection: usize, event: Ev, out: &mut usize) -> i32 {
+        if let Some(p) = self.p() {
+            let (c, e, o) = (connection as *mut c_void, event as *const c_void, out as *mut usize as *mut *mut c_void);
+            return unsafe { ee_net_pr_connect_for_xfer(p, c, 1, e, o) };
+        }
         self.call(EeNetClOp::ConnectForXfer, connection, event, out as *mut usize as usize, 0) as i32
     }
     fn conn_close(&self, connection: usize) -> i32 {
+        if let Some(p) = self.p() {
+            return unsafe { ee_net_pr_close(p, connection as *mut c_void, false) };
+        }
         self.call(EeNetClOp::ConnClose, connection, 0, 0, 0) as i32
     }
     fn conn_receive(&self, connection: usize, buf: &mut [u8], length: &mut u32) -> i32 {
+        if let Some(p) = self.p() {
+            let (b, n) = (buf.as_mut_ptr(), buf.len() as u32);
+            return unsafe { ee_net_pr_receive(p, connection as *mut c_void, n, b, length) };
+        }
         let (p, n) = (buf.as_mut_ptr() as usize, buf.len());
         self.call(EeNetClOp::ConnReceive, connection, p, n, length as *mut u32 as usize) as i32
     }
     fn conn_send(&self, connection: usize, data: usize, size: u32) -> i32 {
+        if let Some(p) = self.p() {
+            return unsafe { ee_net_pr_send(p, connection as *mut c_void, data as *mut u8, size) };
+        }
         self.call(EeNetClOp::ConnSend, connection, data, size as usize, 0) as i32
     }
     fn detected_game_count(&self) -> u32 {
+        if let Some(p) = self.p() {
+            return unsafe { ee_net_pr_detected_game_count(p) };
+        }
         self.call(EeNetClOp::DetectedGameCount, 0, 0, 0, 0) as u32
     }
     fn detected_game(&self, index: u32, strings: usize) -> i32 {
+        if let Some(p) = self.p() {
+            let s = unsafe { &*(strings as *const EeNetClSinks) };
+            let (n, h, a) = ((s.name, s.name_context), (s.host, s.host_context), (s.address, s.address_context));
+            return unsafe { ee_net_pr_detected_game(p, index, n.0, n.1, h.0, h.1, a.0, a.1) };
+        }
         self.call(EeNetClOp::DetectedGame, index as usize, strings, 0, 0) as i32
     }
     fn search_for_game(&self, start: bool) -> i32 {
+        if let Some(p) = self.p() {
+            return unsafe { ee_net_pr_search_for_game(p, SERVICE.as_ptr(), SERVICE.len(), start) };
+        }
         self.call(EeNetClOp::SearchForGame, start as usize, 0, 0, 0) as i32
     }
     fn xfer_receive(&self, buf: &mut [u8], received: &mut u32) -> i32 {
+        if let Some(p) = self.p() {
+            return unsafe { ee_net_pr_xfer_receive(p, buf.len() as u32, buf.as_mut_ptr(), received) };
+        }
         let (p, n) = (buf.as_mut_ptr() as usize, buf.len());
         self.call(EeNetClOp::XferReceive, p, n, received as *mut u32 as usize, 0) as i32
     }
@@ -316,15 +349,14 @@ impl ClientHost for ClFfiHost {
     fn msg_s2aw_id(&self, m: Msg, out: &mut u32) -> bool {
         self.call(EeNetClOp::MsgS2awId, m, out as *mut u32 as usize, 0, 0) != 0
     }
-    fn msg_get(&self, m: Msg, f: MsgField) -> usize {
-        self.call(EeNetClOp::MsgGet, m, f as usize, 0, 0) as usize
+    fn msg_get(&self, m: Msg, i: u32) -> usize {
+        self.call(EeNetClOp::MsgGet, m, i as usize, 0, 0) as usize
     }
-    fn msg_new(&self, kind: NewMsg, a: usize, b: usize, c: usize, d: usize) -> Msg {
-        if kind == NewMsg::XferStatus {
-            let packed = (a & 0xff) | (b & 0xff) << 8 | (d & 0xff) << 16;
-            return self.call(EeNetClOp::MsgNew, kind as usize, packed, c, 0) as Msg;
-        }
-        self.call(EeNetClOp::MsgNew, kind as usize, a, b, c) as Msg
+    fn msg_new(&self, message_type: u8, values: &[u32]) -> Msg {
+        self.call(EeNetClOp::MsgNew, message_type as usize, values.as_ptr() as usize, values.len(), 0) as Msg
+    }
+    fn msg_import(&self, data: usize) -> Msg {
+        self.call(EeNetClOp::MsgImport, data, 0, 0, 0) as Msg
     }
     fn msg_add_input(&self, response: Msg, input: Msg) -> i32 {
         self.call(EeNetClOp::MsgAddInput, response, input, 0, 0) as i32
@@ -399,15 +431,19 @@ fn cl<'a>(c: *const EeNetClient) -> &'a Client<ClFfiHost> {
 ///
 /// # Safety
 /// `host` and `qhost` answer every op for `ctx` until `ee_net_cl_free`; `comms` from `ee_net_comms_new` (the C++
-/// base class's).
+/// base class's). With `tcp` the client calls the protocol itself (`ee_net_cl_connect` then takes an
+/// `EeNetClStrings*`, `ee_net_cl_detected_game` an `EeNetClSinks*`); without it the host answers the protocol ops.
 #[no_mangle]
 pub unsafe extern "C" fn ee_net_cl_new(
     ctx: *mut c_void,
     host: EeNetClHostFn,
     qhost: EeNetQHostFn,
     comms: *const EeNetComms,
+    tcp: bool,
 ) -> *mut EeNetClient {
-    let h = ClFfiHost { ctx, f: host, q: QFfiHost { ctx, f: qhost } };
+    let q = QFfiHost { ctx, f: qhost, native: tcp };
+    let tcp = tcp.then(|| AtomicUsize::new(0));
+    let h = ClFfiHost { ctx, f: host, q, tcp };
     Box::into_raw(Box::new(EeNetClient(Client::new(h, comms_of(comms)))))
 }
 
@@ -473,7 +509,8 @@ pub extern "C" fn ee_net_cl_send_end_connect_message(c: *const EeNetClient) {
     cl(c).send_end_connect_message()
 }
 
-/// `Connect(name, host, address)`: `strings` points at the three, handed to the host's Connect.
+/// `Connect(name, host, address)`: `strings` points at the three (an `EeNetClStrings` with `tcp`), handed to the
+/// host's Connect without.
 #[no_mangle]
 pub extern "C" fn ee_net_cl_connect(c: *const EeNetClient, strings: *const c_void) -> i32 {
     cl(c).connect(strings as usize)
@@ -494,7 +531,8 @@ pub extern "C" fn ee_net_cl_disconnect_from_xfer(c: *const EeNetClient) -> i32 {
     cl(c).disconnect_from_xfer()
 }
 
-/// `GetDetectedGame(index, name, host, address)`: `strings` points at the three, handed to the host.
+/// `GetDetectedGame(index, name, host, address)`: `strings` points at the three (an `EeNetClSinks` with `tcp`),
+/// handed to the host without.
 #[no_mangle]
 pub extern "C" fn ee_net_cl_detected_game(c: *const EeNetClient, index: u32, strings: *const c_void) -> i32 {
     cl(c).detected_game(index, strings as usize)

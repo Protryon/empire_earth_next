@@ -25,6 +25,7 @@
 pub mod actions;
 pub mod ai;
 pub mod animate;
+pub mod atc;
 pub mod atc_save;
 pub mod boarding;
 pub mod build;
@@ -35,6 +36,7 @@ pub mod ffi;
 pub mod gather;
 pub mod goals;
 pub mod group;
+pub mod group_save;
 pub mod hack;
 mod header_consts;
 pub mod host;
@@ -70,7 +72,9 @@ pub mod stats;
 pub mod step;
 pub mod store;
 pub mod tick;
+pub mod town_save;
 pub mod turret;
+pub mod unit_bulk;
 pub mod unit_class_fields;
 pub mod unit_fields;
 pub mod unit_load;
@@ -89,5 +93,6 @@ pub mod uu_world;
 #[cfg(test)]
 mod uu_world_tests;
 pub mod world;
+pub mod world_save;
 
 pub use registry::Registry;

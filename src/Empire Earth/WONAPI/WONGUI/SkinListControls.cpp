@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbySkinListControls.h"
 #include "ee/wonapi/WONLobbyMSSkinImage.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x007193C0
@@ -36,47 +37,28 @@ void WONHeaderButton::Paint(Graphics &g)
 }
 
 // FUNCTION: WON 0x0071A450
-// Sets a column's header to a skinned text button and its width; the first header fixes the header height (15 if none)
+// Sets a column's header to a skinned text button and its width; the first header fixes the header height (15 if
+// none; skinlay.rs)
 void WONListCtrl::SetStandarColumnHeader(int theCol, const GUIString &theTitle, int theWidth)
 {
-	int aDesiredHeight = 0;
-	this->mHeader->SetColumn(theCol,theTitle, &aDesiredHeight);
-
-	if(this->mHeaderHeight==0)
-	{
-		if(aDesiredHeight>0)
-			this->mHeaderHeight = aDesiredHeight;
-		else
-			this->mHeaderHeight = 15;
-	}
-		
-	static_cast<MultiListArea*>(this->GetScrollArea())->SetColumnWidth(theCol,theWidth,false);
+	WONSkinLayout(this,EeWonSkinLayKind::WonListTextHeader,theCol,(intptr_t)&theTitle,theWidth);
 }
 
 // FUNCTION: WON 0x0071A4C0
-// Sets a column's header to the given component and its width; the first header fixes the header height (15 if none)
+// Sets a column's header to the given component and its width; the first header fixes the header height (15 if
+// none; skinlay.rs)
 void WONListCtrl::SetColumnHeader(int theCol, Component *theHeader, int theWidth)
 {
-	if(this->mHeaderHeight==0)
-	{
-		if(theHeader->Height()>0)
-			this->mHeaderHeight = theHeader->Height();
-		else
-			this->mHeaderHeight = 15;
-	}
-
-	this->mHeader->SetColumnItem(theCol,theHeader);
-	static_cast<MultiListArea*>(this->GetScrollArea())->SetColumnWidth(theCol,theWidth,false);
+	WONSkinLayout(this,EeWonSkinLayKind::WonListHeader,theCol,(intptr_t)theHeader,theWidth);
 }
 
 
 // FUNCTION: WON 0x0071a580
-// Lays out the scroll container, then places the header strip directly above the list area
+// Lays out the scroll container, then places the header strip directly above the list area (skinlay.rs)
 void WONListCtrl::Virtual08()
 {
-	WONScrollContainer::Virtual08();
-
-	this->mHeader->SetPosSize(this->GetScrollArea()->Left(),this->GetScrollArea()->Top()-this->mHeaderHeight,this->GetScrollArea()->Width(),this->mHeaderHeight);
+	Container::Virtual08();
+	WONSkinLayout(this,EeWonSkinLayKind::WonList);
 }
 }
 

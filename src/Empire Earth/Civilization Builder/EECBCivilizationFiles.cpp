@@ -567,7 +567,7 @@ void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vecto
         sprintf(theText, theFormat, (const char*)thePlayer->mName, (const char*)inName,
                 (const char*)::gWorld.GetCurrentPlayer()->mName);
         gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelectPlayerChatType, {0L}), kSlotNone);
-        gCommunications->ProcessLocalUserInput(new EEMInGameChat(theText), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageInGameChat, {theText}), kSlotNone);
         gPhysics->GetRandom(0L, 1L);
     }
 }

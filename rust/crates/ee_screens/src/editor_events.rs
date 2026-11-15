@@ -31,11 +31,11 @@ pub const EE_SCREENS_SEE_SLIDER_CHANGE: u32 = 5;
 pub const EE_SCREENS_SEE_CHECK_DISPLAY: u32 = 6;
 /// `EESEEUseObjectArea` (its label, combo box and area control: `ee_screens_see_object_area`).
 pub const EE_SCREENS_SEE_USE_OBJECT_AREA: u32 = 7;
-/// `EESETSETCAMGModifyObject` (the military group type, its two lists: `ee_screens_see_objects`).
+/// `EESETSETCAMGModifyObject` (the effect types `EeScreensSeEffects`, the effect controls: `ee_screens_see_objects`).
 pub const EE_SCREENS_SEE_CAMG_MODIFY_OBJECT: u32 = 8;
-/// `EESETSETMSDCameraScrollChange` (the send-dialogue type, the effect's controls: `ee_screens_see_objects`).
+/// `EESETSETMSDCameraScrollChange` (the effect types, the effect's controls: `ee_screens_see_objects`).
 pub const EE_SCREENS_SEE_MSD_CAMERA_SCROLL: u32 = 9;
-/// `EESETSETSAAAttributeChange` (the set-AI-attribute type, the effect's controls: `ee_screens_see_objects`).
+/// `EESETSETSAAAttributeChange` (the effect types, the effect's controls: `ee_screens_see_objects`).
 pub const EE_SCREENS_SEE_SAA_ATTRIBUTE: u32 = 10;
 /// `EESEEUseAreaObject` and `EESEEMoveAreaObject` (one body: ICF folded them): the label 0x96d, the combo box 0x99e,
 /// the area radio 0x988.
@@ -93,14 +93,15 @@ pub const EE_SCREENS_SEE_OP_SET_SELECTION: u32 = 14;
 pub const EE_SCREENS_SEE_OP_ENTITY_ID: u32 = 15;
 /// -> the list box p's selection, -1 for none.
 pub const EE_SCREENS_SEE_OP_LIST_SELECTION: u32 = 16;
-/// The military group type p's `AddObject(i0, q, r)` / `RemoveObject(i0, q, r)` (the lists q and r).
+/// The effect types p's military group `AddObject(i0)` / `RemoveObject(i0)` over the effect controls q
+/// (`ee_screens_seet_event`).
 pub const EE_SCREENS_SEE_OP_CAMG_ADD: u32 = 17;
 pub const EE_SCREENS_SEE_OP_CAMG_REMOVE: u32 = 18;
-/// The send-dialogue type p's `ShowCameraScrollSpeed(q)` (q the effect's controls).
+/// The effect types p's dialogue `ShowCameraScrollSpeed` over the effect controls q.
 pub const EE_SCREENS_SEE_OP_MSD_SHOW: u32 = 19;
 /// -> the combo box p's selection, -1 for none.
 pub const EE_SCREENS_SEE_OP_COMBO_SELECTION: u32 = 20;
-/// The set-AI-attribute type p's `ShowAttributeRanges(i0, q)` (q the effect's controls).
+/// The effect types p's AI attribute `ShowAttributeRanges(i0)` over the effect controls q.
 pub const EE_SCREENS_SEE_OP_SAA_SHOW: u32 = 21;
 /// The form p's label i0 and scenario combo box i1 refilled with the areas (i2 != 0) or the objects
 /// (`FillAreaObjectComboBox`).
@@ -173,18 +174,18 @@ pub enum SeeKind {
         combo: usize,
         area: usize,
     },
-    /// `ty`: the `EESETSETCreateAIMilitaryGroup`; `first`, `second`: its "to add" and "added" lists
+    /// `ty`: the effect types (`EeScreensSeEffects`); `first`: the effect's `EESETSEffectControls`; `second`: none
     CamgModifyObject {
         ty: usize,
         first: usize,
         second: usize,
     },
-    /// `ty`: the `EESETSETMediaSendDialog`; `controls`: the effect's `EESETSEffectControls`
+    /// `ty`: the effect types (`EeScreensSeEffects`); `controls`: the effect's `EESETSEffectControls`
     MsdCameraScroll {
         ty: usize,
         controls: usize,
     },
-    /// `ty`: the `EESETSETSetAIAttribute`; `controls`: the effect's `EESETSEffectControls`
+    /// `ty`: the effect types (`EeScreensSeEffects`); `controls`: the effect's `EESETSEffectControls`
     SaaAttribute {
         ty: usize,
         controls: usize,

@@ -11,6 +11,8 @@
 
 use core::ffi::c_ulong;
 
+use ee_ge::types::GeTransformation;
+
 use crate::api::*;
 use crate::screen::VideoMode;
 use crate::state::ScreenState;
@@ -454,6 +456,19 @@ pub fn set_3d_mode<G: Gx>(gx: &mut G, state: &mut ScreenState, view: [[f32; 4]; 
     state.mIs3DMode = true;
     state.mViewportChanged = false;
     K_OK
+}
+
+/// `Set3DMode`'s matrices: the camera view (`theSwap.Apply(camera inverse)`: y and z swapped) and the projection
+/// (`mode` 1 perspective, else orthographic).
+pub fn view_and_projection(v: &ee_ge::viewport::GeViewport, mode: c_ulong) -> (GeTransformation, GeTransformation) {
+    let mut swap = GeTransformation::IDENTITY;
+    swap.m[1][1] = 0.0;
+    swap.m[1][2] = 1.0;
+    swap.m[2][1] = 1.0;
+    swap.m[2][2] = 0.0;
+    let view = swap.compose(&v.camera_inverse);
+    let projection = if mode == 1 { v.perspective_projection } else { v.orthographic_projection };
+    (view, projection)
 }
 
 /// `DX7Rasterizer::SetRenderTarget` after the reference counting: the device target and the viewport size.
@@ -1310,6 +1325,27 @@ mod tests {
             run += 1;
         }
         assert!(run > 30, "ran {run}");
+    }
+
+    #[test]
+    fn set_3d_mode_view_swaps_y_and_z_of_the_camera_inverse() {
+        let mut v = ee_ge::viewport::GeViewport::default();
+        for (i, row) in v.camera_inverse.m.iter_mut().enumerate() {
+            for (j, e) in row.iter_mut().enumerate() {
+                *e = (i * 4 + j) as f32 + 1.0;
+            }
+        }
+        v.perspective_projection.m[0][0] = 7.0;
+        v.orthographic_projection.m[0][0] = 9.0;
+        let (view, projection) = view_and_projection(&v, 1);
+        let c = v.camera_inverse.m;
+        assert_eq!(view.m[0], c[0]);
+        assert_eq!(view.m[1], c[2]);
+        assert_eq!(view.m[2], c[1]);
+        assert_eq!(view.m[3], c[3]); // the bottom row copied from the camera inverse
+        assert_eq!(projection.m[0][0], 7.0);
+        assert_eq!(view_and_projection(&v, 0).1.m[0][0], 9.0);
+        assert_eq!(view_and_projection(&v, 2).1.m[0][0], 9.0); // anything but 1 is orthographic
     }
 
     #[test]

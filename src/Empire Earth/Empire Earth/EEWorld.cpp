@@ -124,7 +124,6 @@
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEAEManager.h"
-#include "ee/EEE2DLightGlow.h"
 #include "ee/EEStringIDs.h"
 
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
@@ -2114,7 +2113,8 @@ void EEWorld::MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned ch
 UString gDefaultCampaignUser("default");
 
 // FUNCTION: EXE 0x53c772
-// Unloads the per-player foundation media and the shared effects, button sounds and light glow model of the game
+// Unloads the per-player foundation media and the shared effects and button sounds of the game (the light glow's
+// model, never drawn, is gone since R4.4's twenty-first round)
 void EEWorld::UnloadMedia()
 {
     if (this->mMediaLoaded != true)
@@ -2142,7 +2142,6 @@ void EEWorld::UnloadMedia()
     EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits)->Unload();
     EESoundObject::Get(kSoundButton1)->UnloadMedia();
     EESoundObject::Get(kSoundButton2)->UnloadMedia();
-    EEE2DLightGlow::ReleaseModel(true);
     this->mMediaLoaded = false;
 }
 

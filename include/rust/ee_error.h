@@ -32,6 +32,12 @@ void ee_error_filters_load(bool found,
 /// `text` is a NUL-terminated string.
 bool ee_error_filter_passes(const char *text);
 
+/// `ESInitialize`: [`ee_error_shutdown_hook`] registered with the engine's shutdown list (ee_util).
+void ee_error_initialize();
+
+/// `ESShutdown` (a shutdown-list function): [`ee_error_shutdown`].
+void ee_error_shutdown_hook(bool _forced);
+
 /// The shutdown hook's part (`ESShutdown`): the filters freed.
 void ee_error_shutdown();
 

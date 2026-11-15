@@ -16,12 +16,10 @@ public:
     void* GetData() const;
     const char* GetFilename() const;
     bool GetIsLooping() const;
-    unsigned long GetLengthInBytes() const;
     unsigned long GetLengthInSamples() const;
     unsigned long GetMixerChannel() const;   // -1: not on a channel
     float GetPan() const;
     float GetPitch() const;
-    unsigned long GetSampleBits() const;
     unsigned long GetSampleOffset();
     unsigned long GetSampleRate() const;
     float GetVolume() const;

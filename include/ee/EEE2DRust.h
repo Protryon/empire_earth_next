@@ -6,7 +6,9 @@
 // 9 the muzzle flash, 0xa the plasma pulse, 0xe the fire trail, 0x22 the water ripple, 0x2f the pulse wave (their
 // classes deleted), and those of ee_gfx effect_parts.rs: 3 the exhaust trail, 4 the explosion, 5 the fire, 0xb and 0xc
 // the smoke puffs, 0x14 the smoke muzzle blast; of effect_trail.rs: 0x16 the winter breath, 0x30 the 2D projectile; 0x31
-// the vortex (effect_vortex.rs).
+// the vortex (effect_vortex.rs); since the twenty-first round 0xf and 0x10 the square and circular marching icons
+// (effect_icons.rs), 0xd the light glow (effect_glow.rs), 0x32 the battlefield decal and 0x2e the pooled 2D particle
+// (effect_decal.rs).
 // Requires ee/EEEffect2D.h and rust/ee_gfx.h.
 #ifndef EE_EEE2DRUST_H
 #define EE_EEE2DRUST_H
@@ -15,6 +17,9 @@
 class EEGraphicObject;
 class GETexture;
 class SESMInstanceNode;
+class GE3DLine;
+class GEVector;
+template <class T> class UMemoryPool;
 
 // EEROUnits.cpp's three command textures (0x5294e0/0x5294e4/0x5294e8, loaded there; the confirmation draws with them)
 // (provisional names)
@@ -31,6 +36,12 @@ public:
     // the other kinds on a unit, at a point (kept in the record's sprite.start for Rust), at a transformation (the
     // water ripple's: the record's aged.transformation) and for loading; each with its kind's shared model
     EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);
+    // the light glow (0xd) keeps its unit when asked (a tag type: a bool argument would take the confirmation's
+    // (unit, effect, goal index, kind) calls)
+    struct KeepsUnit {
+        bool mValue;
+    };
+    EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, KeepsUnit inKeepsUnit);
     EEE2DRust(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(const GETransformation& inTransformation, EEGraphicEffect* inGraphicEffect, long inKind);
     // along a line (the velocity particle: the start and direction in the record's sprite.start and sprite.velocity);
@@ -41,7 +52,18 @@ public:
     EEE2DRust(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(long inKind);
+    // the particle (0x2e) is pooled: the pool's objects (made cleared), taken by NewParticle on a unit, at a point,
+    // along a line or for loading, given back by LastDereference
+    EEE2DRust();
+    static EEE2DRust* NewParticle();
+    static EEE2DRust* NewParticle(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect);
+    static EEE2DRust* NewParticle(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect);
+    static EEE2DRust* NewParticle(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect);
+    static bool SetParticlePoolSize(unsigned long inChunkSize, unsigned long inMaxChunks);
+    static void ReleaseParticlePool();      // its statistics, then the pool's release
     virtual ~EEE2DRust();
+    virtual void ReleaseResources();
+    virtual void LastDereference();
     virtual long DrawPass2() { return this->Call(EeGfxEffect3DOp::DrawPass2); }
     virtual long DrawPass3() { return this->Call(EeGfxEffect3DOp::DrawPass3); }
     virtual long DrawPass4() { return this->Call(EeGfxEffect3DOp::DrawPass4); }
@@ -62,6 +84,12 @@ public:
 
     EEGraphicObject* mGraphicObject = NULL;
     SESMInstanceNode* mSound = NULL;        // the animation sound (impacts, lightning, plasma pulse)
+
+private:
+    static EEE2DRust* TakeParticle(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect);
+    EEE2DRust* StartParticle(const GE3DPoint& inPosition, const GEVector* inVelocity);
+    void ClearParticle();
+    static UMemoryPool<EEE2DRust> sParticlePool;
 };
 
 // the facts of an effect's graphic effect, unit and tick the Rust effects read (EEE3DRust.cpp)

@@ -31,12 +31,10 @@ SESample* SESample::Duplicate(const SESample& inSample) { return reinterpret_cas
 void* SESample::GetData() const { return ee_sound_sample_data(SAMPLE); }
 const char* SESample::GetFilename() const { return ee_sound_sample_filename(SAMPLE); }
 bool SESample::GetIsLooping() const { return ee_sound_sample_is_looping(SAMPLE); }
-unsigned long SESample::GetLengthInBytes() const { return ee_sound_sample_length_in_bytes(SAMPLE); }
 unsigned long SESample::GetLengthInSamples() const { return ee_sound_sample_length_in_samples(SAMPLE); }
 unsigned long SESample::GetMixerChannel() const { return Wide(ee_sound_sample_mixer_channel(SAMPLE)); }
 float SESample::GetPan() const { return ee_sound_sample_pan(SAMPLE); }
 float SESample::GetPitch() const { return ee_sound_sample_pitch(SAMPLE); }
-unsigned long SESample::GetSampleBits() const { return ee_sound_sample_bits(SAMPLE); }
 unsigned long SESample::GetSampleOffset() { return ee_sound_sample_offset(SAMPLE); }
 unsigned long SESample::GetSampleRate() const { return ee_sound_sample_rate(SAMPLE); }
 float SESample::GetVolume() const { return ee_sound_sample_volume(SAMPLE); }
@@ -71,9 +69,6 @@ void SESoundManager::Destroy(SESoundManager* inManager) { ee_sound_manager_free(
 // FUNCTION: LLE 0x1004f8ee
 void SESoundManager::CleanupMemoryPoolAndDestroyCriticalSections() { ee_sound_pool_cleanup(); }
 // FUNCTION: LLE 0x100501eb
-SESMInstanceNode* SESoundManager::GetAndReferenceSoundInstance(unsigned long inInstanceID) { return reinterpret_cast<SESMInstanceNode*>(ee_sound_manager_get_and_reference(RUST, (uint32_t)inInstanceID)); }
-unsigned long SESoundManager::GetAvailableChannels() const { return ee_sound_manager_available_channels(CRUST); }
-TSCriticalSection* SESoundManager::GetCriticalSection() const { return static_cast<TSCriticalSection*>(ee_sound_manager_lock(CRUST)); }
 unsigned long SESoundManager::GetHighestTimerDelay() const { return ee_sound_manager_mixer_value(CRUST, 0); }
 // FUNCTION: LLE 0x1004fc19
 unsigned long SESoundManager::GetInstanceID(SESMInstanceNode* inNode) { return Wide(ee_sound_manager_node_instance_id(RUST, NODE(inNode))); }
@@ -104,7 +99,6 @@ unsigned long SESoundManager::GetSampleID(SESMInstanceNode* inNode) { return Wid
 // FUNCTION: LLE 0x1005017e
 unsigned long SESoundManager::GetSampleRate(unsigned long inInstanceID) { return ee_sound_manager_sample_rate(RUST, (uint32_t)inInstanceID); }
 // FUNCTION: LLE 0x10050273
-long SESoundManager::GetTimeLeftInMilli(unsigned long inInstanceID) { return ee_sound_manager_time_left(RUST, (uint32_t)inInstanceID); }
 // FUNCTION: LLE 0x100502c6
 long SESoundManager::GetTotalPlayTimeInMilli(unsigned long inSampleID) { return ee_sound_manager_total_play_time(RUST, (uint32_t)inSampleID); }
 // FUNCTION: LLE 0x1005034f
