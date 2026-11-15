@@ -42,6 +42,7 @@ local ECON = {
     useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
     order = false,          -- the owner's build order (lib.build_order): the phases, their exact gatherers and buildings
     iron_guard = false,     -- from the Copper Age, while saving, the epoch's iron kept from the army's exemption (§8.51)
+    iron_guard_stone = false,   -- (with iron_guard) the same from the Stone Age (the Copper save)
     iron_push = false,      -- from the Copper Age, while the save lacks iron: iron claimed further out, 18 on it, from
                             -- the food once the epoch's food is in stock (§8.51)
 }
@@ -551,6 +552,69 @@ function M.step(view, memory)
         if BO.OPT.early_towers and phase == "pre" then
             plan.tower_at = BO.EARLY_TOWERS_AT
         end
+        -- (BO.OPT.cit_parity, the owner's income parity: the Lua classic trains past its saving and stood at 146
+        -- citizens to boom's 91 at 60 minutes, in the same epoch) from the Stone Age's growth, once an enemy town is
+        -- seen bigger than the plan, the citizen target follows it: the most of its citizens seen at once plus
+        -- CIT_PARITY_MARGIN, up to CIT_PARITY_MOST (the Prehistoric keeps the owner's 32)
+        memory.cit_seen = memory.cit_seen or 0
+        for _, e in ipairs(view.enemies or {}) do
+            memory.cit_seen = math.max(memory.cit_seen, e.citizens_seen or 0)
+        end
+        if (BO.OPT.cit_parity or BO.OPT.army_parity) and view.time - (memory.parity_seen_t or -300000) >= 300000 then
+            memory.parity_seen_t = view.time
+            local parts = {}
+            for _, e in ipairs(view.enemies or {}) do
+                parts[#parts + 1] = string.format("p%d:cit=%d,army=%d,last=%d", e.player, e.citizens_seen or -1,
+                    e.seen_army or -1, (e.last_seen or 0) // 1000)
+            end
+            print("parity seen " .. table.concat(parts, " "))
+        end
+        -- (BO.OPT.cit_grow: scouting sees the enemy town only in passing, citizens_seen 0-12 all game against the Lua
+        -- classic's 140-180, so cit_parity never fires; the owner's income parity without the sighting) the developed
+        -- Stone town and the Copper town grow on to CIT_GROW[phase], the citizens past the plan trained from the food
+        -- above the reserve as citizens_max already is
+        if BO.OPT.cit_grow and BO.CIT_GROW[phase] ~= nil and BO.CIT_GROW[phase] > plan.citizens_max then
+            plan.citizens_max = BO.CIT_GROW[phase]
+        end
+        -- (BO.OPT.raid_towers: the towers stood at 7-9 against the Lua classic's 40-70-soldier attacks as against the
+        -- C++'s 5-7) from the Stone Age, one more tower per RAID_TOWER_PER raiders of the largest raid met in the claim
+        -- range in the last RAID_TOWER_MS, up to RAID_TOWER_MOST
+        if BO.OPT.raid_towers and phase ~= "pre" then
+            local r = (view.claim_range or 30) + 5
+            for _, cl in ipairs(D.clusters()) do
+                local dx, dy = cl.x - view.town_x, cl.y - view.town_y
+                if dx * dx + dy * dy <= r * r and (memory.raid_big == nil or cl.n >= memory.raid_big.n
+                        or view.time - memory.raid_big.t > BO.RAID_TOWER_MS) then
+                    memory.raid_big = {n = cl.n, t = view.time}
+                end
+            end
+            local big = memory.raid_big
+            if big ~= nil and view.time - big.t <= BO.RAID_TOWER_MS then
+                local add = big.n // BO.RAID_TOWER_PER
+                local t = math.min((plan.towers or 0) + add, BO.RAID_TOWER_MOST)
+                if t > (plan.towers or 0) then
+                    if (memory.raid_towers_said or 0) ~= t then
+                        memory.raid_towers_said = t
+                        print(string.format("raid towers want=%d raid=%d plan=%d", t, big.n, plan.towers or 0))
+                    end
+                    plan.towers = t
+                    if plan.towers_saving ~= nil then
+                        plan.towers_saving = math.max(plan.towers_saving, t)
+                    end
+                end
+            end
+        end
+        if BO.OPT.cit_parity and phase ~= "pre" and phase ~= "stone_start" then
+            local want = math.min(memory.cit_seen + BO.CIT_PARITY_MARGIN, BO.CIT_PARITY_MOST)
+            if want > plan.citizens_max then
+                if (memory.cit_parity_said or 0) + 10 <= want then
+                    memory.cit_parity_said = want
+                    print(string.format("parity citizens want=%d seen=%d plan=%d", want, memory.cit_seen,
+                        plan.citizens_max))
+                end
+                plan.citizens, plan.citizens_max = math.max(plan.citizens, want), want
+            end
+        end
     end
     PL.afford_retry = ECON.order and (BO.OPT.settle_afford or BO.OPT.mines_early) or false
     PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false
@@ -612,6 +676,32 @@ function M.step(view, memory)
     if soldiers_wanted > plan.soldiers_max then
         soldiers_wanted = plan.soldiers_max
     end
+    -- (BO.OPT.army_parity, the owner's parity: the Lua classic's army stood at 46 at 75 minutes and 72 at 90 to boom's
+    -- 19-21, and its attacks from 75 minutes finished boom) from the Stone Age, the army follows the largest enemy army
+    -- seen at once in the last ARMY_PARITY_MS: ARMY_PARITY_PCT percent of it, up to ARMY_PARITY_MOST, past soldiers_max
+    if ECON.order and BO.OPT.army_parity and age >= 2 then
+        memory.army_seen = memory.army_seen or {}
+        local big = 0
+        for _, e in ipairs(view.enemies) do
+            local k = tostring(e.player)
+            local a = memory.army_seen[k]
+            if e.last_seen > 0 and (a == nil or e.seen_army >= a.n or view.time - a.t > BO.ARMY_PARITY_MS) then
+                memory.army_seen[k] = {n = e.seen_army, t = view.time}
+                a = memory.army_seen[k]
+            end
+            if a ~= nil and view.time - a.t <= BO.ARMY_PARITY_MS then
+                big = math.max(big, a.n)
+            end
+        end
+        local want = math.min(big * BO.ARMY_PARITY_PCT // 100, BO.ARMY_PARITY_MOST)
+        if want > soldiers_wanted then
+            if (memory.army_parity_said or 0) + 10 <= want then
+                memory.army_parity_said = want
+                print(string.format("parity army want=%d seen=%d army=%d", want, big, view.army_count))
+            end
+            soldiers_wanted = want
+        end
+    end
     -- (plan.soldier_pace, off; the owner's Stone Age: 3 soldiers at +2 min, 6 at +5.5, 9 at +8.5 - boom-econ found the 8
     -- trained at once took a third of the Stone food) in the Stone Age, one soldier per soldier_pace ms after the advance,
     -- all at once while enemy soldiers are in sight or under a threat
@@ -652,7 +742,13 @@ function M.step(view, memory)
     -- force it can build, to retake the lost site)
     local recover_urgent = ECON.order and BO.OPT.iron_recover and RC.urgent(memory)
     if recover_urgent then
-        soldiers_wanted = math.max(soldiers_wanted, plan.soldiers_max)
+        -- (BO.OPT.recover_cap: only the force check's need; every K3f operation was existential, and the whole
+        -- soldiers_max cost 6 citizens at 60 minutes against K0 on 64 seeds)
+        local cap = plan.soldiers_max
+        if BO.OPT.recover_cap and RC.need(memory) ~= nil then
+            cap = math.min(cap, RC.need(memory))
+        end
+        soldiers_wanted = math.max(soldiers_wanted, cap)
     end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
@@ -709,11 +805,25 @@ function M.step(view, memory)
     -- to gather it (a playtest: a raid's scramble spent the Copper Age's iron, 433 to 22, and the last safe iron mine ran
     -- out: the Stone Age for the rest of the game)
     local no_site = memory.no_site or {}
+    -- (BO.OPT.overrun_spend, the owner: respond to raids; against the Lua classic a 40-soldier attack met boom saving
+    -- for Copper with food 1600 and gold 730 kept as nearly paid, 9 soldiers wanted 50 and none trained while the
+    -- citizens fell 74 -> 45) a threat OVERRUN_X times the army and towers spends the save too
+    local overrun = ECON.order and BO.OPT.overrun_spend and threatened and short_strength > 0
+        and (memory.threat or 0) * 100 >= BO.OVERRUN_PCT * (view.army_strength + towers_built * TOWER_STRENGTH)
+    if overrun and not memory.overrun_said then
+        print(string.format("overrun threat=%d army=%d towers=%d", memory.threat or 0, view.army_count, towers_built))
+    end
+    memory.overrun_said = overrun or nil
     local function guarded(r)
+        if overrun then
+            return false
+        end
         -- (ECON.iron_guard, boom-defence's late-game finding: the Bronze save unpaid 44 minutes on iron alone, stock 3-27,
         -- the reserve 0 iron while the light army, always short in Copper, retrained spearmen and macemen from it) from
         -- the Copper Age, while saving, the epoch's iron is kept from the army too
-        if ECON.iron_guard and r == "iron" and age >= 3 and saving and cost[r] > 0 then
+        -- (ECON.iron_guard_stone: from the Stone Age; normal starts against the classic reached developed with 10-190
+        -- gold and iron in stock and paid the Copper save's iron last in 20 of 25 games)
+        if ECON.iron_guard and r == "iron" and age >= (ECON.iron_guard_stone and 2 or 3) and saving and cost[r] > 0 then
             return true
         end
         return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
@@ -755,8 +865,11 @@ function M.step(view, memory)
     for _, r in ipairs(V.resources) do
         local want = 0
         -- (ECON.order: only while saving; the raid force's spearmen, 30 food and 30 iron each, wait on no reserve)
+        -- (BO.OPT.stone_metal_keep: under ECON.order the gold and iron are kept from stone_grow, before the save)
         local kept = not last and not view.advancing and not unreachable
-            and (saving or (age >= 2 and (r == "gold" or r == "iron") and not ECON.order))
+            and (saving or (age >= 2 and (r == "gold" or r == "iron") and not ECON.order)
+                or (ECON.order and BO.OPT.stone_metal_keep and age == 2 and phase == "stone_grow"
+                    and (r == "gold" or r == "iron")))
         if kept then
             want = cost[r]
             epoch_need[r] = cost[r]
@@ -814,6 +927,21 @@ function M.step(view, memory)
             if cut > 0 and reserve[r] > 0 then
                 reserve[r] = math.max(reserve[r] - cut, 0)
                 differs = differs or reserve[r] ~= view.reserve[r]
+            end
+        end
+    end
+    -- (BO.OPT.grow_always, the owner: boom slowed its growth to save for the epochs while the Lua classic blew up its
+    -- economy, 45/84/144/180 citizens at 20/40/60/75 against 33/72/90/95) the citizens are trained out of the income
+    -- at all times up to grow_cap (the pop cap, or BO.GROW_FLOOR's per epoch); the save takes only the food left
+    local grow_cap = nil
+    if ECON.order and BO.OPT.grow_always and citizen ~= nil and (age >= 2 or BO.OPT.grow_pre) then
+        grow_cap = BO.GROW_FLOOR ~= nil and BO.GROW_FLOOR[age] or view.population_cap
+        local planned_now = view.citizens + citizen.in_production + citizen.requested
+        if planned_now < grow_cap and view.population < view.population_cap then
+            local left = math.max(view.stock.food - 2 * citizen.cost.food, 0) // 50 * 50
+            if reserve.food > left then
+                reserve.food = left
+                differs = differs or reserve.food ~= view.reserve.food
             end
         end
     end
@@ -900,6 +1028,9 @@ function M.step(view, memory)
         if soldiers_payable and view.stock.food - reserve.food < 2 * soldier_cost.food + citizen.cost.food then
             cap = math.min(cap, planned)
         end
+    end
+    if grow_cap ~= nil and cap < grow_cap then   -- (BO.OPT.grow_always: past every plan cap, to the pop cap)
+        cap = grow_cap
     end
     -- (ECON.order, lib.raid: memory.raid.priority while the raid force trains) no new citizens are queued then
     local yield = ECON.order and memory.raid ~= nil and memory.raid.priority == true
@@ -1025,6 +1156,11 @@ function M.step(view, memory)
         -- the food places (§8.35): the open patches kept (6 each), the game near the town (HUNT_MAX at most, one
         -- hunter an animal) and, from the Copper Age, the farms
         local hunt_cap = plan.hunt or HUNT_MAX   -- (§8.36: hunting fills what the patches cannot take, see below)
+        -- (BO.OPT.hunt_first: the Lua classic hunted with 16.5 at 20 minutes, boom with 3 beside 14.5 on bushes; a hunter
+        -- gathers about 1.5 times a forager's food) every animal in reach takes its 3 hunters, no cap
+        if ECON.order and BO.OPT.hunt_first then
+            hunt_cap = 99
+        end
         local hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, hunt_cap)
         local farm_places = V.total(V.buildings(view, "b_farm"))
         local food_wanted = want.food
@@ -1125,15 +1261,25 @@ function M.step(view, memory)
             -- (BO.OPT.copper_mines, the owner: "conquer more resource before they pull ahead"; iron stood at 12 places on 2
             -- sites the whole Copper Age) from the Copper Age a third gold and a third iron site are claimed at once,
             -- further out on the town's side when the claim range holds none; lib.recover guards and retakes them
-            if ECON.order and BO.OPT.copper_mines and age >= 3 and (r == "gold" or r == "iron") then
+            -- (BO.OPT.stone_mines: the same from the Stone Age's growth, the owner's 12-18 gold and iron in Stone; 2 sites
+            -- held 12 places and the Copper save waited on iron in 20 of 25 games)
+            if ECON.order and (r == "gold" or r == "iron") and ((BO.OPT.copper_mines and age >= 3)
+                    or (BO.OPT.stone_mines and age == 2 and phase ~= "stone_start")) then
                 claim_want = math.max(claim_want, 3 * SITE_PLACES)
                 most = math.max(most, 3)
                 if (memory.copper_places or {})[r] ~= nil and memory.copper_places[r] < 3 * SITE_PLACES then
                     claim_far[r] = true
                 end
             end
+            -- (BO.OPT.mines_free, the owner: settlements are cheap; the Lua classic gathered 24 gold and 24 iron at 60
+            -- minutes on about 4 mine units each, boom 13/12 on 2 sites) from the Stone Age the metal is claimed for
+            -- every gatherer the town can put on it, up to MINES_FREE_SITES sites
+            if ECON.order and BO.OPT.mines_free and age >= 2 and (r == "gold" or r == "iron") then
+                most = math.max(most, BO.MINES_FREE_SITES)
+                claim_want = math.max(claim_want, (view.gatherers[r] or 0) + 2 * SITE_PLACES)
+            end
             local places, c = claim_sites(view, order, keep, r, false, claim_want, most, range, unsettled_r)
-            if ECON.order and BO.OPT.copper_mines then
+            if ECON.order and (BO.OPT.copper_mines or BO.OPT.stone_mines) then
                 memory.copper_places = memory.copper_places or {}
                 memory.copper_places[r] = places
             end
@@ -1739,6 +1885,8 @@ function M.step(view, memory)
     memory.epoch_now = view.epoch
     if ECON.order and BO.OPT.iron_recover then
         RC.parity = BO.OPT.metal_parity == true
+        RC.cap_need = BO.OPT.recover_cap == true
+        RC.count_raids = BO.OPT.recover_raids == true
         RC.step(view, memory, view.sites)   -- (before the guard: the operation's soldiers are committed)
     end
     GD.step(view, memory, {zone = view.claim_range})
