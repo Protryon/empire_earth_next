@@ -467,6 +467,9 @@ typedef struct DmSynthChannel {
 	int32_t transpose;
 
 	float reset_volume;
+	float reset_expression;
+	float volume;     // (EE patch) CC7 and CC11 kept apart; DmSynth_applyVolume combines them
+	float expression;
 	float reset_pan;
 	int reset_pitch;
 } DmSynthChannel;
@@ -536,6 +539,8 @@ typedef struct DmMessageQueue {
 	}* blocks;
 } DmMessageQueue;
 
+typedef struct DmReverb DmReverb;   // (EE patch, src/Reverb.c)
+
 struct DmPerformance {
 	_Atomic size_t reference_count;
 	mtx_t lock;
@@ -554,10 +559,15 @@ struct DmPerformance {
 	uint32_t time;
 	uint8_t groove;
 	uint8_t groove_range;
-	int8_t groove_master;
+	uint8_t groove_base;     // (EE patch) the command track's level, before the master level and the range
+	int32_t groove_master;   // (added to every command's groove level, DmPerformance_setGrooveLevel)
+	double time_carry;   // (EE patch) the clock: music time rendered beyond `time`, ticks with their fraction (renderPcm)
 	double tempo;
 	DmMessage_Chord chord;
 	DmTimeSignature time_signature;
+
+	DmReverb* reverb;   // (EE patch) The original's synth reverb on the mix, DmPerformance_setReverb; NULL until first on
+	bool reverb_on;
 };
 
 /// \brief Allocate \p len bytes on the heap.
@@ -651,7 +661,13 @@ DMINT void DmStyle_release(DmStyle* slf);
 DMINT DmResult DmStyle_parse(DmStyle* slf, void* buf, size_t len);
 DMINT DmResult DmStyle_download(DmStyle* slf, DmLoader* loader);
 DMINT DmPart* DmStyle_findPart(DmStyle* slf, DmPartReference* pref);
-DMINT DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType cmd);
+DMINT DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType cmd, uint32_t measures_left);
+
+// (EE patch) The original's synth reverb, src/Reverb.c
+DMINT DmReverb* DmReverb_create(float rate);
+DMINT void DmReverb_free(DmReverb* slf);
+DMINT void DmReverb_set(DmReverb* slf, float gain_in_db, float mix_db, float time_ms, float hf_ratio);
+DMINT void DmReverb_processStereo(DmReverb* slf, int16_t* buf, size_t frames);
 
 DMINT void DmPart_init(DmPart* slf);
 DMINT void DmPart_free(DmPart* slf);
@@ -670,6 +686,7 @@ DMINT void DmSynth_reset(DmSynth* slf);
 DMINT void DmSynth_setVolume(DmSynth* slf, float vol);
 DMINT DmResult DmSynth_createTsfForDls(DmDls* dls, tsf** out);
 DMINT void DmSynth_sendBandUpdate(DmSynth* slf, DmBand* band);
+DMINT DmResult DmSynth_prepareFonts(DmSynth* slf, DmBand* band);   // (EE patch)
 DMINT void DmSynth_sendControl(DmSynth* slf, uint32_t channel, uint8_t control, float value);
 DMINT void DmSynth_sendControlReset(DmSynth* slf, uint32_t channel, uint8_t control, float reset);
 DMINT void DmSynth_sendPitchBend(DmSynth* slf, uint32_t channel, int bend);

@@ -196,6 +196,14 @@ typedef struct DmDls {
 
 	uint32_t wave_table_size;
 	DmDlsWave* wave_table;
+
+	// (EE patch) Nonzero: backing_memory is a SoundFont 2 file of this size, standing in for a collection (it has no
+	// instruments of its own here: the synthesizer reads the file as it is).
+	size_t sound_font_len;
+
+	// (EE patch) The collection's synthesizer, built once when the collection is loaded (DmLoader, off the audio
+	// thread): each performance's font is a tsf_copy of it, sharing its samples. NULL: built when first played.
+	struct tsf* synth_template;
 } DmDls;
 
 DMINT DmResult DmDls_create(DmDls** slf);

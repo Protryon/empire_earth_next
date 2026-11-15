@@ -360,15 +360,15 @@ DMAPI char const* DmSegment_getName(DmSegment const* slf);
 /// \return The number of seconds one repeat of the segment takes.
 DMAPI double DmSegment_getLength(DmSegment const* slf);
 
+/// \brief Set how many times the segment repeats after its first play.
+/// \param slf[in] The segment.
+/// \param repeats The number of repeats (0: played once).
+DMAPI void DmSegment_setRepeats(DmSegment* slf, uint32_t repeats);
+
 /// \brief Get the number of times the segment repeats.
 /// \param slf[in] The segment to get the number of repeats of.
 /// \return The number of times the segment repeats or `0` if \p slf is `NULL`.
 DMAPI uint32_t DmSegment_getRepeats(DmSegment const* slf);
-
-/// \brief Set the number of times the segment repeats (empire_earth_next addition).
-/// \param slf[in] The segment to set the number of repeats of.
-/// \param repeats The number of repeats.
-DMAPI void DmSegment_setRepeats(DmSegment* slf, uint32_t repeats);
 
 /// \}
 
@@ -625,10 +625,28 @@ DMAPI DmResult DmPerformance_renderPcm(DmPerformance* slf, void* buf, size_t num
 /// \param vol The new volume to set (between 0 and 1).
 DMAPI void DmPerformance_setVolume(DmPerformance* slf, float vol);
 
-/// \brief Set the master groove level (empire_earth_next addition): an offset added to the groove level of the
-///        segments' command tracks when patterns are chosen, as DirectMusic's GUID_PerfMasterGrooveLevel.
-/// \param slf[in] The performance to set the master groove level of.
-/// \param level The offset (-99 to 99).
-DMAPI void DmPerformance_setMasterGrooveLevel(DmPerformance* slf, int8_t level);
+/// \brief Set the performance's master groove level: added to the groove level of every
+///        segment's groove commands from then on (the result clamped to 0 .. 100), as the original does.
+/// \param slf[in] The performance.
+/// \param level The master groove level.
+DMAPI void DmPerformance_setGrooveLevel(DmPerformance* slf, uint8_t level);
+
+/// \brief Stop the performance as the original's Stop sounds: the messages due within \p lookahead_ms are played first
+///        (a segment started just before still sounds its first notes), then every sounding note is released and
+///        everything else queued is dropped.
+/// \param slf[in] The performance.
+/// \param lookahead_ms The synthesizer's latency to honour, in milliseconds.
+DMAPI void DmPerformance_stop(DmPerformance* slf, uint32_t lookahead_ms);
+
+/// \brief Switch the original's synthesizer reverb on the performance's stereo output on or off and set it
+///        (the effect and its four settings): the same reverb as the original's synthesizer, sample for
+///        sample, on the 16-bit mix. Off by default. Mono output is not reverberated.
+/// \param slf[in] The performance.
+/// \param enabled Whether the reverb runs (non-zero: on).
+/// \param gain_in_db The input gain in dB (at most 0).
+/// \param mix_db The reverb mix in dB (at most 0; -96 is all dry).
+/// \param time_ms The reverb time in milliseconds.
+/// \param hf_ratio The high-frequency decay time as a fraction of the reverb time (0.001 .. 0.999).
+DMAPI void DmPerformance_setReverb(DmPerformance* slf, int enabled, float gain_in_db, float mix_db, float time_ms, float hf_ratio);
 
 /// \}
