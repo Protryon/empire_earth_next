@@ -105,7 +105,13 @@ pub unsafe extern "C" fn ee_screens_sefm_selected(form: *const EeScreensSeForm, 
 /// # Safety
 /// `form` comes from `ee_screens_sefm_new` (or is NULL); `r` is NULL or points at four floats.
 #[no_mangle]
-pub unsafe extern "C" fn ee_screens_sefm_call(form: *const EeScreensSeForm, what: u32, a: i32, p: *mut c_void, r: *const f32) -> i32 {
+pub unsafe extern "C" fn ee_screens_sefm_call(
+    form: *const EeScreensSeForm,
+    what: u32,
+    a: i32,
+    p: *mut c_void,
+    r: *const f32,
+) -> i32 {
     if form.is_null() {
         return 0;
     }

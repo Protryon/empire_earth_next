@@ -9,9 +9,9 @@
 //! group) are the tab's host, `ee_screenscpp_seel` (ops from 900, `Scenario Editor/EEUIFSEElevation.cpp`).
 
 use crate::editor_players::{
-    rect, EeScreensSeplCtl, Maker, SeplHost, EE_SCREENS_SEPL_ALIGN_CENTER, EE_SCREENS_SEPL_FG, EE_SCREENS_SEPL_FONT_534,
-    EE_SCREENS_SEPL_FONT_HEIGHT, EE_SCREENS_SEPL_LABEL, EE_SCREENS_SEPL_OP_DELETE, EE_SCREENS_SEPL_OP_LABEL_NUMBER,
-    EE_SCREENS_SEPL_OP_SCREEN_EVENT, EE_SCREENS_SEPL_RADIO,
+    rect, EeScreensSeplCtl, Maker, SeplHost, EE_SCREENS_SEPL_ALIGN_CENTER, EE_SCREENS_SEPL_FG,
+    EE_SCREENS_SEPL_FONT_534, EE_SCREENS_SEPL_FONT_HEIGHT, EE_SCREENS_SEPL_LABEL, EE_SCREENS_SEPL_OP_DELETE,
+    EE_SCREENS_SEPL_OP_LABEL_NUMBER, EE_SCREENS_SEPL_OP_SCREEN_EVENT, EE_SCREENS_SEPL_RADIO,
 };
 
 /// `EeScreensSeplCtl::flags`: a radio button's or check box's background opacity (`bg`) is its text label's.
@@ -108,12 +108,19 @@ impl ElevationTab {
                 .group(GROUP)
         };
         let mut y = 616.0;
-        for (k, (id, string)) in [(ID_RAISE, IDS_PAINT_HILLS), (ID_LOWER, IDS_PAINT_CLIFFS), (ID_LEVEL, IDS_PAINT_CLIFF_PATHS)]
-            .into_iter()
-            .enumerate()
+        for (k, (id, string)) in
+            [(ID_RAISE, IDS_PAINT_HILLS), (ID_LOWER, IDS_PAINT_CLIFFS), (ID_LEVEL, IDS_PAINT_CLIFF_PATHS)]
+                .into_iter()
+                .enumerate()
         {
             let c = mk(h, form, index, radio(id, string, y, k == 0));
-            call(h, EE_SCREENS_SEPL_OP_SCREEN_EVENT, [c, 0, 0], [crate::scenario_editor::EE_SCREENS_SE_ELEVATION_TOOL as i32, SCREEN_EVENT_ON_CHECKED, 0, 0], [0.0; 4]);
+            call(
+                h,
+                EE_SCREENS_SEPL_OP_SCREEN_EVENT,
+                [c, 0, 0],
+                [crate::scenario_editor::EE_SCREENS_SE_ELEVATION_TOOL as i32, SCREEN_EVENT_ON_CHECKED, 0, 0],
+                [0.0; 4],
+            );
             y = rect(h, c)[3] + 1.0;
             match k {
                 0 => t.raise = c,
@@ -138,10 +145,25 @@ impl ElevationTab {
 
         let top = rect(h, t.strength_title)[3] + 1.0;
         let bottom = rect(h, t.strength_label)[1];
-        let (slider, strength) = make(h, EE_SCREENS_SEEL_OP_ELEVATION_SLIDER, form, 0, *index, [297.0, top, (bottom - top) as u32 as f32, 0.0]);
+        let (slider, strength) = make(
+            h,
+            EE_SCREENS_SEEL_OP_ELEVATION_SLIDER,
+            form,
+            0,
+            *index,
+            [297.0, top, (bottom - top) as u32 as f32, 0.0],
+        );
         t.elevation_slider = slider;
         *index += 1;
-        t.strength_slider = make(h, EE_SCREENS_SEEL_OP_STRENGTH_SLIDER, form, t.strength_label, *index, [297.0, top, bottom - top, 0.0]).0;
+        t.strength_slider = make(
+            h,
+            EE_SCREENS_SEEL_OP_STRENGTH_SLIDER,
+            form,
+            t.strength_label,
+            *index,
+            [297.0, top, bottom - top, 0.0],
+        )
+        .0;
         *index += 1;
         call(h, EE_SCREENS_SEPL_OP_LABEL_NUMBER, [t.strength_label, 0, 0], [strength, 1, 0, 0], [0.0; 4]);
         call(h, EE_SCREENS_SEEL_OP_ADD, [t.strength_slider, form, 0], [0; 4], [0.0; 4]);

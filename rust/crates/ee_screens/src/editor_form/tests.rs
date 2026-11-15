@@ -55,7 +55,12 @@ impl ScenarioRecords for Scenario {
 }
 
 fn trigger(on: bool, duration: u32, looping: bool) -> EeScenarioTriggerFields {
-    EeScenarioTriggerFields { mIsOn: on, mConditionDuration: duration as c_ulong, mIsLooping: looping, ..Default::default() }
+    EeScenarioTriggerFields {
+        mIsOn: on,
+        mConditionDuration: duration as c_ulong,
+        mIsLooping: looping,
+        ..Default::default()
+    }
 }
 
 fn condition(ty: u32, object: u32) -> EeScenarioConditionFields {
@@ -82,7 +87,12 @@ fn trigger_report_matches_the_original() {
             (trigger(false, 7, true), "Alpha", "Desc", vec![[1, 1, 2], [0, 9, 0]], vec![[4, 1, 1], [0, 9, 0]]),
             (trigger(true, 0, false), "Beta", "", vec![[0, 0, 0]], vec![[0, 2, 0]]),
         ],
-        conditions: vec![(condition(0, 0), "Always"), (condition(2, 0), "C1"), (condition(2, 0), "C2"), (condition(1, 2), "C3")],
+        conditions: vec![
+            (condition(0, 0), "Always"),
+            (condition(2, 0), "C1"),
+            (condition(2, 0), "C2"),
+            (condition(1, 2), "C3"),
+        ],
         effects: vec![
             (effect(0, 0), "None", vec![]),
             (effect(1, 10), "E1", vec![1]),
@@ -154,7 +164,10 @@ impl SeplHost for Rec {
             }
             EE_SCREENS_SEFM_OP_BUTTON => {
                 let b = unsafe { *(p[2] as *const EeScreensSefmButton) };
-                self.log.push(format!("button {} id {} ix {} help {:#x} ev {:#x} {:?} {:?}", b.kind, b.id, b.index, b.help, b.event, b.dest, b.rect));
+                self.log.push(format!(
+                    "button {} id {} ix {} help {:#x} ev {:#x} {:?} {:?}",
+                    b.kind, b.id, b.index, b.help, b.event, b.dest, b.rect
+                ));
                 self.next += 1;
                 out(0x200 + self.next);
                 return 0;
@@ -217,7 +230,9 @@ fn build_makes_the_controls_in_order() {
     assert!(log.contains("806 0 at 9") && log.contains("806 6 at 27"));
     assert!(log.contains("button 0 id 220 ix 30 help 0x213a"));
     assert!(log.contains("button 0 id 226 ix 36 help 0x2143"));
-    assert!(log.contains("button 1 id 17 ix 37 help 0x2159 ev 0x2422 [307.0, 735.0, 338.0, 766.0] [307.0, 735.0, 338.0, 766.0]"));
+    assert!(log.contains(
+        "button 1 id 17 ix 37 help 0x2159 ev 0x2422 [307.0, 735.0, 338.0, 766.0] [307.0, 735.0, 338.0, 766.0]"
+    ));
     assert!(log.contains("button 1 id 12 ix 38 help 0x2140 ev 0x3 [647.0, 736.0, 678.0, 767.0]"));
     assert!(log.contains("button 1 id 15 ix 43 help 0x213f ev 0x242b"));
     assert!(log.contains("809 [44, 0, 0, 0]"));
@@ -337,7 +352,9 @@ fn draw_background_clips_the_panel() {
     form.set(EE_SCREENS_SEFM_PANEL_BACKGROUND, 0x600);
     let mut h = Rec::default();
     form.draw_background(&mut h, [100.0, 500.0, 300.0, 700.0]);
-    assert!(h.log[0].starts_with("844 0x600,0x50,0x") && h.log[0].ends_with("[0, 0, 0, 0] [100.0, 606.0, 300.0, 700.0]"));
+    assert!(
+        h.log[0].starts_with("844 0x600,0x50,0x") && h.log[0].ends_with("[0, 0, 0, 0] [100.0, 606.0, 300.0, 700.0]")
+    );
     assert!(h.log[1].starts_with("821 ") && h.log[1].contains("[2, 0, 0, 0] [100.0, 500.0, 300.0, 700.0]"));
     h.log.clear();
     form.draw_background(&mut h, [0.0, 0.0, 100.0, 100.0]);

@@ -18,7 +18,10 @@ impl SeplHost for Rec {
                 let h = if c.flags & EE_SCREENS_SEPL_FONT_HEIGHT != 0 { 11.0 + c.h } else { c.h };
                 let handle = 0x100 + self.next;
                 self.rects.push((handle, [c.x, c.y, c.x + (c.w - 1.0), c.y + (h - 1.0)]));
-                self.log.push(format!("make {:#x} ix {} at {},{} {}x{} flags {} bg {} on {}", c.id, c.index, c.x, c.y, c.w, h, c.flags, c.bg, c.extra[0]));
+                self.log.push(format!(
+                    "make {:#x} ix {} at {},{} {}x{} flags {} bg {} on {}",
+                    c.id, c.index, c.x, c.y, c.w, h, c.flags, c.bg, c.extra[0]
+                ));
                 unsafe { *(p[0] as *mut usize) = handle };
                 return 0;
             }

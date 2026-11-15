@@ -319,7 +319,15 @@ pub struct EditorTab {
     pub brush: bool,
 }
 
-const fn tab(group: u32, help: u32, normal: [f32; 2], pressed: [f32; 2], flag: u32, full_view: bool, brush: bool) -> EditorTab {
+const fn tab(
+    group: u32,
+    help: u32,
+    normal: [f32; 2],
+    pressed: [f32; 2],
+    flag: u32,
+    full_view: bool,
+    brush: bool,
+) -> EditorTab {
     EditorTab { group, order: group, help, normal, pressed, flag, full_view, brush }
 }
 
@@ -527,7 +535,13 @@ impl EditorForm {
         index += 1;
 
         let mut event = 0usize;
-        let combo = make(h, EE_SCREENS_SEFM_OP_PLAYER_COMBO, [self.shell, &mut event as *mut usize as usize], [index as i32, 0, 0, 0], [0.0; 4]);
+        let combo = make(
+            h,
+            EE_SCREENS_SEFM_OP_PLAYER_COMBO,
+            [self.shell, &mut event as *mut usize as usize],
+            [index as i32, 0, 0, 0],
+            [0.0; 4],
+        );
         self.set(EE_SCREENS_SEFM_PLAYER_COMBO, combo);
         self.set(EE_SCREENS_SEFM_NEW_PLAYER_EVENT, event);
         index += 1;
@@ -566,7 +580,9 @@ impl EditorForm {
     /// The camera's events and hot keys, the trigger-only save and load, the grab scroll, the debug hot keys.
     fn create_camera_keys<H: SeplHost + ?Sized>(&self, h: &mut H) {
         use crate::camera::*;
-        use crate::main_game::{EE_SCREENS_MG_DUMP_MEDIA_EDITOR, EE_SCREENS_MG_DUMP_MEDIA_EDITOR_ALL, EE_SCREENS_MG_TOGGLE_HIDDEN};
+        use crate::main_game::{
+            EE_SCREENS_MG_DUMP_MEDIA_EDITOR, EE_SCREENS_MG_DUMP_MEDIA_EDITOR_ALL, EE_SCREENS_MG_TOGGLE_HIDDEN,
+        };
         use crate::scenario_editor::{EE_SCREENS_SE_HOME_ROTATION, EE_SCREENS_SE_LOAD_TRIGGERS_ONLY};
         let shell = self.shell;
         let wheel = Self::screen_event(h, EE_SCREENS_CAM_WHEEL_ZOOM);
@@ -595,10 +611,22 @@ impl EditorForm {
         op(h, EE_SCREENS_SEFM_OP_DEREFERENCE, [home, 0, 0], [DEREF_EVENT, 0, 0, 0], [0.0; 4]);
 
         let add = |h: &mut H, key: i32, mods: [i32; 2], slot: i32, group: i32, event: usize| {
-            op(h, EE_SCREENS_SEFM_OP_ADD_HOT_KEY, [event, shell, 0], [key, mods[0], mods[1], slot | (group << 4)], [0.0; 4]);
+            op(
+                h,
+                EE_SCREENS_SEFM_OP_ADD_HOT_KEY,
+                [event, shell, 0],
+                [key, mods[0], mods[1], slot | (group << 4)],
+                [0.0; 4],
+            );
         };
         let ctrl = [EE_SCREENS_SEFM_KEY_CONTROL, EE_SCREENS_SEFM_KEY_NONE];
-        let save = make(h, EE_SCREENS_SEFM_OP_SEE_EVENT, [0, 0], [EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY as i32, 0, 0, 0], [0.0; 4]);
+        let save = make(
+            h,
+            EE_SCREENS_SEFM_OP_SEE_EVENT,
+            [0, 0],
+            [EE_SCREENS_SEE_SAVE_TRIGGERS_ONLY as i32, 0, 0, 0],
+            [0.0; 4],
+        );
         add(h, EE_SCREENS_SEFM_KEY_S, ctrl, 2, 0, save);
         let load = Self::screen_event(h, EE_SCREENS_SE_LOAD_TRIGGERS_ONLY);
         add(h, EE_SCREENS_SEFM_KEY_L, ctrl, 2, 0, load);
@@ -648,7 +676,13 @@ impl EditorForm {
                 rect: [t.order as f32 * 44.0, 735.0, 0.0, 0.0],
                 ..Default::default()
             };
-            let c = make(h, EE_SCREENS_SEFM_OP_BUTTON, [self.shell, &b as *const EeScreensSefmButton as usize], [0; 4], [0.0; 4]);
+            let c = make(
+                h,
+                EE_SCREENS_SEFM_OP_BUTTON,
+                [self.shell, &b as *const EeScreensSefmButton as usize],
+                [0; 4],
+                [0.0; 4],
+            );
             self.set(EE_SCREENS_SEFM_TAB_BUTTON + i as u32, c);
             *index += 1;
         }
@@ -669,7 +703,13 @@ impl EditorForm {
             rect: dest,
             ..Default::default()
         };
-        let c = make(h, EE_SCREENS_SEFM_OP_BUTTON, [self.shell, &b as *const EeScreensSefmButton as usize], [0; 4], [0.0; 4]);
+        let c = make(
+            h,
+            EE_SCREENS_SEFM_OP_BUTTON,
+            [self.shell, &b as *const EeScreensSefmButton as usize],
+            [0; 4],
+            [0.0; 4],
+        );
         self.set(EE_SCREENS_SEFM_CIV_BUILDER, c);
         *index += 1;
     }
@@ -704,7 +744,13 @@ impl EditorForm {
                 rect: [x, y, x + (32.0 - 1.0), y + (32.0 - 1.0)],
                 ..Default::default()
             };
-            let c = make(h, EE_SCREENS_SEFM_OP_BUTTON, [self.shell, &b as *const EeScreensSefmButton as usize], [0; 4], [0.0; 4]);
+            let c = make(
+                h,
+                EE_SCREENS_SEFM_OP_BUTTON,
+                [self.shell, &b as *const EeScreensSefmButton as usize],
+                [0; 4],
+                [0.0; 4],
+            );
             self.set(slot, c);
             *index += 1;
         }
@@ -924,7 +970,9 @@ impl EditorForm {
         self.group_call(h, EE_SCREENS_SEFM_GROUP_UPDATE, [0.0; 4]);
         let t = self.current_tab();
         if !t.full_view
-            && (op(h, EE_SCREENS_SEFM_OP_CAPTURED, [0, self.shell, 0], [0; 4], [0.0; 4]) == 0 || t.group == 1 || t.group == 2)
+            && (op(h, EE_SCREENS_SEFM_OP_CAPTURED, [0, self.shell, 0], [0; 4], [0.0; 4]) == 0
+                || t.group == 1
+                || t.group == 2)
         {
             op(h, EE_SCREENS_SEFM_OP_EDGE_SCROLL, [self.get(EE_SCREENS_SEFM_EDGE_SCROLL), 0, 0], [0; 4], [0.0; 4]);
         }
@@ -1129,7 +1177,13 @@ impl EditorForm {
         let result = op(h, EE_SCREENS_SEFM_OP_REPORT_SAVE, [0; 3], [0; 4], [0.0; 4]);
         if result == 0 {
             let text = trigger_report(&mut Records(h));
-            op(h, EE_SCREENS_SEFM_OP_REPORT_WRITE, [text.as_ptr() as usize, 0, 0], [text.len() as i32, 0, 0, 0], [0.0; 4]);
+            op(
+                h,
+                EE_SCREENS_SEFM_OP_REPORT_WRITE,
+                [text.as_ptr() as usize, 0, 0],
+                [text.len() as i32, 0, 0, 0],
+                [0.0; 4],
+            );
         }
         result
     }
@@ -1187,7 +1241,13 @@ impl<H: SeplHost + ?Sized> ScenarioRecords for Records<'_, H> {
         let mut out = vec![0u8; 256];
         loop {
             let cap = out.len();
-            let n = op(self.0, EE_SCREENS_SEFM_OP_SM_TEXT, [out.as_mut_ptr() as usize, 0, 0], [list, index as i32, which, cap as i32], [0.0; 4]);
+            let n = op(
+                self.0,
+                EE_SCREENS_SEFM_OP_SM_TEXT,
+                [out.as_mut_ptr() as usize, 0, 0],
+                [list, index as i32, which, cap as i32],
+                [0.0; 4],
+            );
             if n < 0 {
                 return Vec::new();
             }
@@ -1372,9 +1432,11 @@ pub fn trigger_report<R: ScenarioRecords + ?Sized>(r: &mut R) -> Vec<u8> {
 
     for i in 2..n_areas {
         let iv = i as c_ulong;
-        let mut unused = !effects.iter().skip(1).flatten().any(|e| {
-            e.mTargetArea == iv || e.mPlaceArea == iv || e.mTaskArea == iv || e.mLocationArea == iv
-        });
+        let mut unused = !effects
+            .iter()
+            .skip(1)
+            .flatten()
+            .any(|e| e.mTargetArea == iv || e.mPlaceArea == iv || e.mTaskArea == iv || e.mLocationArea == iv);
         if unused && objects.iter().skip(1).flatten().any(|o| o.mArea == iv) {
             unused = false;
         }
