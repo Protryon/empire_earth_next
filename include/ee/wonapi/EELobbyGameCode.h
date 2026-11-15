@@ -4,7 +4,6 @@
 #ifndef EE_WONAPI_EELOBBYGAMECODE_H
 #define EE_WONAPI_EELOBBYGAMECODE_H
 
-#include <set>                              // EELobbyFileTransfer::mClients
 #include "ee/wonapi/WONLobbyEvents.h" // the shared LobbyEvent base (0x20 bytes)
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONLobbyRustCtrl.h"
@@ -41,7 +40,9 @@ private:
 };
 
 // a saved game's transfer between the host and the clients (EELobbyFileTransfer.cpp 0x291463..; 0x68 bytes;
-// vtable 0x84c440; method names inferred) (provisional name)
+// vtable 0x84c440) (provisional name). R6 WONLobby round 7: a shell over ee_won's eexfer.rs object (the path, the
+// local and host file's size and checksum, the listening and clients' sockets, the progress time, every method and
+// completion callback); the host is EELobbyGameHost.cpp. The shell keeps what the lobby game hands it as C++ objects.
 class AsyncSocket;
 class QueueSocket;
 class AsyncOp;
@@ -49,31 +50,10 @@ class EELobbyFileTransfer : public RefCount {
 public:
     EELobbyFileTransfer();                  // 0x2916b8
     virtual ~EELobbyFileTransfer();         // 0x29175b
-    void SetPath(const std::string& inPath);            // 0x2917a2 (where the file is)
-    void SetFileInfo(const GUIString& inName, unsigned long inSize, unsigned long inChecksum);  // 0x2917e9
-    void SetHost(const IPAddr& inAddress);  // 0x29180c (fetch it from the host)
-    bool IsFileHere();                      // 0x291859 (the file is here already)
-    long Serve(unsigned short inPort);      // 0x291a09
-    void Stop();                            // 0x291b1e
-    void CloseClients();                    // 0x291b40
-    void Download();                        // 0x291b79
-    // the completions' callbacks (LobbyCompletion<EELobbyFileTransfer>)
-    void OnClientClosed(AsyncOp* inOp);     // 0x291870 (a client's socket closed)
-    void OnClientAccepted(AsyncOp* inOp);   // 0x2918b2 (a client connected: send it the file)
-    void OnProgress(AsyncOp* inOp);         // 0x29199e
-    void OnFileReceived(AsyncOp* inOp);     // 0x2919dc (the file arrived)
 
-    // (the constructor 0x2916b8 and the destructor 0x29175b give the members) (provisional names)
-    SmartPtr<QueueSocket> mConnection;      // +0x08 the listening socket (Serve; Stop closes it)
-    std::set<SmartPtr<AsyncSocket> > mClients;   // +0x0c the clients' sockets (CloseClients closes each)
-    std::string mPath;                      // +0x18 (SetPath)
-    unsigned long mLocalSize;               // +0x28 (EELobbyGetSavedGameInfo of mPath)
-    unsigned long mLocalChecksum;           // +0x2c
-    GUIString mName;                        // +0x30
-    unsigned long mSize;                    // +0x34
-    unsigned long mChecksum;                // +0x38
-    IPAddr mHost;                           // +0x3c (SetHost)
-    long mLastProgressTime;                 // +0x64
+    EeWonEeXfer* mRust;
+    GUIString mName;                        // +0x30 the host's file name (SetFileInfo)
+    IPAddr mHost;                           // +0x3c (SetHost: fetch it from the host)
 };
 
 // the lobby's game (0x180 bytes in the original; RTTI EELobbyGame > LobbyGame; EELobbyGame.cpp 0x29222b..)

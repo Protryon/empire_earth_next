@@ -4082,6 +4082,135 @@ enum class EeWonEeGlueCall : uint32_t {
   Reset,
 };
 
+/// The two kinds.
+enum class EeWonEeSoundKind : uint32_t {
+  Music = 0,
+  Effect = 1,
+};
+
+/// The host's ops.
+enum class EeWonEeSoundOp : uint32_t {
+  /// `gUIManager != NULL` (0 or 1).
+  HasUiManager = 1,
+  /// `gUIManager->SetMusicVolume(gGamePreferences.mSettings.GetMusicVolume())`.
+  MusicVolumeOn,
+  /// `gUIManager->SetMusicVolume(0.0f)`.
+  MusicVolumeOff,
+  /// `gSoundManager != NULL` (0 or 1).
+  HasSoundManager,
+  /// `gSoundManager->Unload(a)`.
+  Unload,
+  /// `gSoundManager->Play(a, 1.0f, 0.0f, 1.0f, false, NULL)`: the instance.
+  Play,
+  /// `gSoundManager->Stop(a, false)`.
+  Stop,
+  /// `gSoundManager->Load(path, 0, 1)` (`a` the descriptor's path, a NUL-terminated `char*`): the sample.
+  Load,
+};
+
+/// The inward calls (the classes' virtuals).
+enum class EeWonEeSoundCall : uint32_t {
+  /// `PlayHook()`.
+  Play = 1,
+  /// `StopHook()`.
+  Stop,
+  /// `ResumeHook()` (the music's; an effect's is the base's empty one).
+  Resume,
+  /// a member: 0 `mSampleID`, 1 `mInstanceID`.
+  Field,
+};
+
+/// The host's ops (`obj` the transfer's shell or the send op's).
+enum class EeWonEeXferOp : uint32_t {
+  /// `EELobbyGetSavedGameInfo(a, *(uint32_t*)b, *(uint32_t*)c)` (`a` a NUL-terminated path).
+  SavedGameInfo = 1,
+  /// `(unsigned long)PlatTimeMilliseconds64()`.
+  Time,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->UpdateTransferProgress(b, c)`.
+  GameProgress,
+  /// `((AsyncOp*)a)->Succeeded()` (0 or 1).
+  Succeeded,
+  /// `static_cast<SocketOp*>(a)->GetSocket()` (no reference).
+  OpSocket,
+  /// `static_cast<AcceptOp*>(a)->GetAcceptedSocket()` (no reference).
+  AcceptedSocket,
+  /// `static_cast<RecvChunkOp*>(a)->GetRecvOp()->GetBytesRead()`.
+  BytesRead,
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `((AsyncSocket*)a)->Kill()`.
+  Kill,
+  /// `new QueueSocket(0)` with a reference added.
+  NewSocket,
+  /// `((QueueSocket*)a)->Fn2B0D90(b, 0)`: the status.
+  Bind,
+  /// `((QueueSocket*)a)->Listen(1000)`: the status.
+  Listen,
+  /// `a->SetRepeatCompletion(completion(OnClientAccepted)); a->SetRepeatOp(new AcceptOp(NULL))`.
+  RepeatAccept,
+  /// `a->SetCloseCompletion(completion(OnClientClosed)); a->QueueOp(new SendFileOp(path b, c bytes), -1);
+  /// a->QueueOp(new CloseOp(NULL), -1)`.
+  QueueSend,
+  /// `this->mHost.IsValid()` (0 or 1).
+  HostValid,
+  /// `a->SetCloseCompletion(completion(OnClientClosed))`; a `RecvBytesOp(0, NULL)` with the completion
+  /// `OnFileReceived`, the file path (`b`, `c` bytes) and the progress completion `OnProgress` every 10000 bytes;
+  /// `a->QueueOp(new ConnectOp(this->mHost), -1); a->QueueOp(op, -1)`.
+  QueueDownload,
+  /// `PlatFOpen(a, "rb")` (`a` a NUL-terminated path): the `FILE*` or 0.
+  Open = 40,
+  /// `fread(b, 1, c, (FILE*)a)`: the count.
+  Read,
+  /// `fclose((FILE*)a)`.
+  Close,
+  /// `GetSocket()->WaitForWrite(TimeLeft())`.
+  WaitForWrite,
+  /// `GetSocket()->Send(a, b, (int*)c)`: the status.
+  Send,
+  /// `TimeLeft()`.
+  TimeLeft,
+};
+
+/// The transfer's inward calls.
+enum class EeWonEeXferCall : uint32_t {
+  /// `SetPath(a, b bytes)`.
+  SetPath = 1,
+  /// `SetFileInfo`'s size `a` and checksum `b` (the shell keeps the name).
+  SetFileInfo,
+  /// `IsFileHere()` (0 or 1).
+  IsFileHere,
+  /// `Serve(a)`: the status.
+  Serve,
+  /// `Stop()`.
+  Stop,
+  /// `CloseClients()`.
+  CloseClients,
+  /// `Download()`.
+  Download,
+  /// the completions' callbacks (`a` the op).
+  OnClientClosed,
+  OnClientAccepted,
+  OnProgress,
+  OnFileReceived,
+  /// a member: 0 `mLocalSize`, 1 `mLocalChecksum`, 2 `mSize`, 3 `mChecksum`, 4 `mLastProgressTime`,
+  /// 5 `mConnection`, 6 the number of clients, 7 `mPath`'s length.
+  Field,
+};
+
+/// The send op's inward calls.
+enum class EeWonEeXferSendCall : uint32_t {
+  /// `Start()`: the status.
+  Start = 1,
+  /// `Continue()`: the status.
+  Continue,
+  /// `CleanupHook()` (the file closed).
+  Cleanup,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -7968,6 +8097,15 @@ struct EeWonEeColor;
 /// The lobby game's Rust half.
 struct EeWonEeGame;
 
+/// One lobby sound.
+struct EeWonEeSound;
+
+/// One transfer.
+struct EeWonEeXfer;
+
+/// One send op: the path, the open file, the chunk and its read position.
+struct EeWonEeXferSend;
+
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
@@ -8563,6 +8701,16 @@ struct EeWonEeResource {
   const char *name;
   bool new_section;
 };
+
+/// The host: `(object, op, a) -> result` (`object` the C++ sound, or null for the decoder's load).
+using EeWonEeSoundHostFn = ptrdiff_t(*)(void *obj, EeWonEeSoundOp op, ptrdiff_t a);
+
+/// The host: `(object, op, a, b, c) -> result`.
+using EeWonEeXferHostFn = ptrdiff_t(*)(void *obj,
+                                       EeWonEeXferOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -11740,6 +11888,65 @@ bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
 /// # Safety
 /// `name` is NULL or a NUL-terminated string.
 ptrdiff_t ee_won_eeresource_find(const char *name);
+
+/// A new sound for the C++ object `obj` (an effect of sample `sample`; the music's is unused).
+EeWonEeSound *ee_won_eesound_new(void *obj,
+                                 EeWonEeSoundKind kind,
+                                 EeWonEeSoundHostFn host,
+                                 uint32_t sample);
+
+/// The C++ object's destructor: an effect's sample unloaded, the object freed.
+///
+/// # Safety
+/// `p` came from [`ee_won_eesound_new`] (or is null), not used after.
+void ee_won_eesound_free(EeWonEeSound *p);
+
+/// A virtual of the C++ object.
+///
+/// # Safety
+/// `p` is a live object of [`ee_won_eesound_new`].
+ptrdiff_t ee_won_eesound_call(const EeWonEeSound *p, EeWonEeSoundCall call, ptrdiff_t a);
+
+/// `EELobbySoundDecoder::Decode`'s load: the sample of `path` (a NUL-terminated `char*`), or -1 without a sound
+/// manager (no sound is made then).
+int64_t ee_won_eesound_load(EeWonEeSoundHostFn host,
+                            const uint8_t *path);
+
+/// A new transfer for the C++ shell `obj`.
+EeWonEeXfer *ee_won_eexfer_new(void *obj, EeWonEeXferHostFn host);
+
+/// The shell's destructor.
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_new`] (or is null), not used after.
+void ee_won_eexfer_free(EeWonEeXfer *p);
+
+/// A method of the transfer.
+///
+/// # Safety
+/// `p` is a live transfer; the host's calls may come back into it (a completion run at once).
+ptrdiff_t ee_won_eexfer_call(const EeWonEeXfer *p, EeWonEeXferCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new send op for the C++ shell `obj`, of the file at `path` (`len` bytes).
+///
+/// # Safety
+/// `path` holds `len` readable bytes (or `len` is 0).
+EeWonEeXferSend *ee_won_eexfer_send_new(void *obj,
+                                        EeWonEeXferHostFn host,
+                                        const uint8_t *path,
+                                        size_t len);
+
+/// The send op's destructor (the file is not closed: the op's cleanup does that).
+///
+/// # Safety
+/// `p` came from [`ee_won_eexfer_send_new`] (or is null), not used after.
+void ee_won_eexfer_send_free(EeWonEeXferSend *p);
+
+/// A virtual of the send op.
+///
+/// # Safety
+/// `p` is a live send op.
+int32_t ee_won_eexfer_send_call(const EeWonEeXferSend *p, EeWonEeXferSendCall call);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

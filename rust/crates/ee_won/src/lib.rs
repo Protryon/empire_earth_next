@@ -41,6 +41,8 @@ pub mod eecolor;
 pub mod eegame;
 pub mod eeglue;
 pub mod eeresource;
+pub mod eesound;
+pub mod eexfer;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;
