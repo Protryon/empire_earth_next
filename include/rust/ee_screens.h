@@ -3491,6 +3491,10 @@ constexpr static const uint32_t EE_SCREENS_HC_VIEW_HAS_MOUSE = 23;
 /// -> the game window's width.
 constexpr static const uint32_t EE_SCREENS_HC_WINDOW_WIDTH = 24;
 
+/// A class's own ops from here (`EE_SCREENS_HC_CLASS + op` reaches its `RustOp` as `op`; the portrait's, the icon
+/// bar's).
+constexpr static const uint32_t EE_SCREENS_HC_CLASS = 64;
+
 /// `kDisplayModeHidden`, `kDisplayModeShown`.
 constexpr static const int64_t EE_SCREENS_HC_HIDDEN = 0;
 
@@ -7213,6 +7217,9 @@ constexpr static const uint32_t EE_SCREENS_SB_DO_COPY_DATA = 2;
 
 constexpr static const uint32_t EE_SCREENS_SB_DO_HELP = 3;
 
+/// `kResourceGold` (`mResourceCaps`' index).
+constexpr static const int64_t EE_SCREENS_SB_RESOURCE_GOLD = 5;
+
 /// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
 constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
 
@@ -8183,6 +8190,33 @@ constexpr static const uint32_t EE_SCREENS_UP_OP_BORDER_THICKNESS = 42;
 
 /// -> the scenario editor's first selected unit's complex unit.
 constexpr static const uint32_t EE_SCREENS_UP_OP_EDITOR_COMPLEX = 43;
+
+/// The bar's a: `mEnabled` (0), `mPressed` (1), `GetHasMouseCapture()` (2).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_FIELD = 44;
+
+/// The bar's `mPressed = a != 0`.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_SET_PRESSED = 45;
+
+/// Whether the button's rectangle contains the form's mouse location (a 0) or the call's location (a 1).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_INSIDE = 46;
+
+/// The handler under the bar's: `UIButton::MouseLButtonDown` (a 0), `UIButton::MouseLButtonUp` (1),
+/// `EEUIBUpgrade::MouseRButtonDown` (2); its result.
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_BASE = 47;
+
+/// The icon moved by (a, a) (`mIcon->SetLocation(its top left + (a, a))`).
+constexpr static const uint32_t EE_SCREENS_UP_OP_BAR_ICON = 48;
+
+/// The status bar's mouse handlers (`bar_mouse`'s which).
+constexpr static const uint32_t EE_SCREENS_UP_BAR_L_DOWN = 0;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_L_UP = 1;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_MOVE = 2;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_R_DOWN = 3;
+
+constexpr static const uint32_t EE_SCREENS_UP_BAR_R_UP = 4;
 
 /// The fields of [`EE_SCREENS_UP_OP_FIELD`]: the improvement, the scenario editor flag, the level last shown, the
 /// greyed-out state of the last cost update, the time of the last refusal line.
@@ -9760,6 +9794,10 @@ int64_t ee_screens_upgrade_mouse_r_up(void *call);
 
 /// `EEUIBUpgrade::UpdateCost` (the call's out text is the new cost).
 void ee_screens_upgrade_update_cost(void *call);
+
+/// `EEUIFMGStatusBar`'s mouse handler `which` (`EE_SCREENS_UP_BAR_*`; the call's location is `MouseMove`'s).
+int64_t ee_screens_upgrade_bar_mouse(void *call,
+                                     uint32_t which);
 
 }  // extern "C"
 

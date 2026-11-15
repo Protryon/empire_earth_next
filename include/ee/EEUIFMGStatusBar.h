@@ -30,7 +30,8 @@ protected:
     virtual long MouseMove(const GE2DPoint& inLocation);   // +0x40 0x269afa
     virtual long MouseRButtonDown();        // +0x44 0x269b8b
     virtual long MouseRButtonUp();          // +0x48 0x269be6
-    void MoveIcon(const GE2DPoint& inOffset);   // 0x269c43 (the icon follows the pressed state when it can upgrade)
+    // the mouse handler EE_SCREENS_UP_BAR_* in Rust (ee_screens upgrade.rs bar_mouse; MoveIcon 0x269c43 is its)
+    long BarMouse(uint32_t inWhich, const GE2DPoint* inLocation);
     // 0x26c42a (EEUIFMGStatusBox.cpp's range, after its first user; provisional name): mIcon shows inBitmap
     void SetIconBitmap(GEBitmap* inBitmap, const GERectangle& inTextureRectangle);
 public:

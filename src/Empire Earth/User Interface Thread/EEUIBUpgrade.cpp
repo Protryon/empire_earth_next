@@ -26,6 +26,8 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIBUpgrade.h"
+#include "lle/UIBitmap.h"
+#include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEImprovementIDs.h"
 #include "rust/ee_screens.h"   // ee_screens_upgrade_* (ee_screens upgrade.rs)
@@ -100,6 +102,14 @@ struct EEUIBUpgradeCall {
     UWideString mText;
     const GE2DPoint* mLocation;
 };
+
+// The status bar's mouse handler `inWhich` (EE_SCREENS_UP_BAR_*) at the location (MouseMove's)
+long EEUIFMGStatusBar::BarMouse(uint32_t inWhich, const GE2DPoint* inLocation)
+{
+    EEUIBUpgradeCall theCall = {this, NULL};
+    theCall.mLocation = inLocation;
+    return (long)ee_screens_upgrade_bar_mouse(&theCall, inWhich);
+}
 
 // FUNCTION: EXE 0x6569a2
 // FUNCTION: EXE 0x656b3c
@@ -326,6 +336,22 @@ int64_t EEUIBUpgrade::HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t in
     case EE_SCREENS_UP_OP_BORDER_THICKNESS:
         theButton->SetBorderThickness((unsigned long)inA);
         return 0;
+    case EE_SCREENS_UP_OP_BAR_FIELD: {
+        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theButton);
+        return inA == 0 ? theBar->mEnabled : inA == 1 ? theBar->mPressed : theButton->GetHasMouseCapture();
+    }
+    case EE_SCREENS_UP_OP_BAR_SET_PRESSED: static_cast<EEUIFMGStatusBar*>(theButton)->mPressed = inA != 0; return 0;
+    case EE_SCREENS_UP_OP_BAR_INSIDE:
+        return theButton->GetRectangle().Contains(inA == 0 ? theButton->GetForm()->GetMouseLocation() : *ioCall.mLocation);
+    case EE_SCREENS_UP_OP_BAR_BASE:
+        return inA == 0 ? theButton->UIButton::MouseLButtonDown()
+             : inA == 1 ? theButton->UIButton::MouseLButtonUp() : theButton->EEUIBUpgrade::MouseRButtonDown();
+    case EE_SCREENS_UP_OP_BAR_ICON: {
+        UIBitmap* theIcon = static_cast<EEUIFMGStatusBar*>(theButton)->mIcon;
+        GE2DPoint theTopLeft = theIcon->GetRectangle().GetTopLeft();
+        theIcon->SetLocation(GE2DPoint(theTopLeft.GetX() + (float)inA, theTopLeft.GetY() + (float)inA));
+        return 0;
+    }
     }
     return 0;
 }
