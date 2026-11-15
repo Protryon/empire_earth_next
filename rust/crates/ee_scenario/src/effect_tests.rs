@@ -478,3 +478,23 @@ fn dialogue_goes_to_the_current_player_and_an_empty_box_to_the_others() {
     execute(&mut w, &e, true);
     assert_eq!(w.calls(), vec!["57", "58 1", "59"]);
 }
+
+#[test]
+fn build_objects_task_takes_the_town_else_a_continent() {
+    let mut w = World::new(4);
+    w.answers.insert(EE_SCENARIO_WORLD_AI_TOWN, 7);
+    w.answers.insert(EE_SCENARIO_WORLD_AI_RANDOM_ENEMY, 3);
+    assert!(crate::effect_ai::build_task(&mut w, 2));
+    assert_eq!(w.calls(), ["100 2", "114 7 5", "115 2", "117 3", "118"]);
+    let mut w = World::new(4);
+    w.answers.insert(EE_SCENARIO_WORLD_AI_TOWN, -1);
+    w.answers.insert(EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT, 4);
+    w.answers.insert(EE_SCENARIO_WORLD_AI_RANDOM_ENEMY, -1);
+    assert!(crate::effect_ai::build_task(&mut w, 2));
+    assert_eq!(w.calls(), ["100 2", "185 1", "114 4 1", "115 2", "117", "118"]);
+    let mut w = World::new(4);
+    w.answers.insert(EE_SCENARIO_WORLD_AI_TOWN, -1);
+    w.answers.insert(EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT, -1);
+    assert!(!crate::effect_ai::build_task(&mut w, 2));
+    assert_eq!(w.calls(), ["100 2", "185 1", "185"]);
+}

@@ -679,29 +679,15 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     EESMEffect* theEffect = inRun->mEffect;
     EEActiveGroup* theGroup = inRun->mGroup;
     switch (inOp) {
-    case EE_SCENARIO_WORLD_AI_BUILD_TASK: {
+    case EE_SCENARIO_WORLD_AI_TOWN: {
         EEComputerPlayer* thePlayer = SMEComputer(a[0]);
-        EETown* theTown = NULL;
-        EEAIContinent* theContinent = NULL;
-        if (thePlayer->mTowns.size() != 0)
-            theTown = thePlayer->mTowns[0];
-        if (theTown == NULL) {
-            theContinent = gContinentManager.GetContinentByID((unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryLand));
-            if (theContinent == NULL) {
-                theContinent = gContinentManager.GetContinentByID((unsigned short)gContinentManager.GetLargestContinent(kContinentCategoryNone));
-                if (theContinent == NULL)
-                    return 0;
-            }
-        }
-        inRun->mLocation.mSerial = theTown != NULL ? theTown->GetSerial() : theContinent->GetSerial();
-        inRun->mLocation.mType = theTown != NULL ? kAIAreaTown : kAIAreaContinent;
-        inRun->mLocation.ResetToArea();
-        inRun->mTask.mLocation = inRun->mLocation;
-        EEPlayer* theTarget = thePlayer->mCombatManager->mIntelligence->GetRandomEnemy(thePlayer);
-        inRun->mTask.mPlayer = theTarget != NULL ? gWorld.GetPlayer(theTarget->mPlayerID) : gWorld.GetPlayer(0);
-        inRun->mTask.mType = kAGTaskLocation;
-        inRun->mTask.mIsActive = true;
-        return 1;
+        EETown* theTown = thePlayer->mTowns.size() != 0 ? thePlayer->mTowns[0] : NULL;
+        return theTown != NULL ? (int64_t)(uint32_t)theTown->GetSerial() : -1;
+    }
+    case EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT: {
+        EEAIContinent* theContinent = gContinentManager.GetContinentByID(
+            (unsigned short)gContinentManager.GetLargestContinent((long)a[0]));
+        return theContinent != NULL ? (int64_t)(uint32_t)theContinent->GetSerial() : -1;
     }
     case EE_SCENARIO_WORLD_EFFECT_OBJECT_COUNT: return (int64_t)theEffect->mObjects.size();
     case EE_SCENARIO_WORLD_EFFECT_OBJECT_AT: return (int64_t)(uint32_t)theEffect->mObjects[(size_t)a[0]];

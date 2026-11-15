@@ -599,9 +599,11 @@ constexpr static const int64_t EE_SCENARIO_GFX_PAIR = 2;
 /// A marching line (between any unit and the next).
 constexpr static const int64_t EE_SCENARIO_GFX_MARCHING = 4;
 
-/// Computer player a's task for Build Object: its first town, else the largest land (or any) continent, an enemy
-/// picked by its intelligence; 0 when it has none of them.
-constexpr static const uint32_t EE_SCENARIO_WORLD_AI_BUILD_TASK = 100;
+/// Computer player a's first town's serial (`mTowns[0]`), -1 without one.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_TOWN = 100;
+
+/// The serial of the largest continent of category a (`GetContinentByID(GetLargestContinent(a))`), -1 for none.
+constexpr static const uint32_t EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT = 185;
 
 /// The effect's object list's count.
 constexpr static const uint32_t EE_SCENARIO_WORLD_EFFECT_OBJECT_COUNT = 101;

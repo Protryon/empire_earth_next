@@ -11,9 +11,10 @@ use crate::effect::*;
 use crate::fields::{EeScenarioEffectFields, EeScenarioObjectFields};
 use crate::host::*;
 
-/// Computer player a's task for Build Object: its first town, else the largest land (or any) continent, an enemy
-/// picked by its intelligence; 0 when it has none of them.
-pub const EE_SCENARIO_WORLD_AI_BUILD_TASK: u32 = 100;
+/// Computer player a's first town's serial (`mTowns[0]`), -1 without one.
+pub const EE_SCENARIO_WORLD_AI_TOWN: u32 = 100;
+/// The serial of the largest continent of category a (`GetContinentByID(GetLargestContinent(a))`), -1 for none.
+pub const EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT: u32 = 185;
 /// The effect's object list's count.
 pub const EE_SCENARIO_WORLD_EFFECT_OBJECT_COUNT: u32 = 101;
 /// The effect's object list's entry a.
@@ -116,6 +117,35 @@ fn players_backwards<H: Host>(h: &mut H, kind: c_ulong) -> Vec<i64> {
     players(h, kind).into_iter().rev().map(|p| p as i64).collect()
 }
 
+/// Build Object's task for computer player `p`: at its first town, else on the largest land (or any) continent,
+/// against an enemy its intelligence picks (else player 0); false when it has neither a town nor a continent.
+pub(crate) fn build_task<H: Host>(h: &mut H, p: i64) -> bool {
+    let town = w(h, EE_SCENARIO_WORLD_AI_TOWN, &[p]);
+    let (serial, kind) = if town >= 0 {
+        (town, AREA_TOWN)
+    } else {
+        let mut continent = w(h, EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT, &[CONTINENT_LAND]);
+        if continent < 0 {
+            continent = w(h, EE_SCENARIO_WORLD_AI_LARGEST_CONTINENT, &[CONTINENT_ANY]);
+            if continent < 0 {
+                return false;
+            }
+        }
+        (continent, AREA_CONTINENT)
+    };
+    w(h, EE_SCENARIO_WORLD_AI_LOCATION_AREA, &[serial, kind]);
+    let enemy = w(h, EE_SCENARIO_WORLD_AI_RANDOM_ENEMY, &[p]);
+    w(h, EE_SCENARIO_WORLD_AI_TASK_PLAYER, &[if enemy >= 0 { enemy } else { 0 }]);
+    w(h, EE_SCENARIO_WORLD_AI_TASK_TYPE, &[0]);
+    true
+}
+
+/// `kAIAreaTown`, `kAIAreaContinent`; `kContinentCategoryLand`, `kContinentCategoryNone` (any).
+const AREA_TOWN: i64 = 5;
+const AREA_CONTINENT: i64 = 1;
+const CONTINENT_LAND: i64 = 1;
+const CONTINENT_ANY: i64 = 0;
+
 /// Build Object: each chosen computer player raises a military group of the target object's unit kind (a random
 /// count) at its first town or the largest continent, aimed at a random enemy.
 pub fn build_object<H: Host>(h: &mut H, e: &EeScenarioEffectFields) {
@@ -123,7 +153,7 @@ pub fn build_object<H: Host>(h: &mut H, e: &EeScenarioEffectFields) {
         if w(h, EE_SCENARIO_WORLD_PLAYER_IS_COMPUTER, &[p]) == 0 {
             continue;
         }
-        if w(h, EE_SCENARIO_WORLD_AI_BUILD_TASK, &[p]) == 0 {
+        if !build_task(h, p) {
             continue;
         }
         w(h, EE_SCENARIO_WORLD_AI_STRATEGY, &[1, 0]);
