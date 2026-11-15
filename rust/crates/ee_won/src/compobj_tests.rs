@@ -748,3 +748,14 @@ fn set_size_clamps_and_skips_the_same_size() {
     p.set_size(1, 0, 5);
     with(|w| assert!(w.trace.is_empty()));
 }
+
+#[test]
+fn contains_excludes_the_right_and_bottom_edges() {
+    one(vec![Cmp { r: EeWonRect::new(10, 20, 5, 4), ..Default::default() }]);
+    let p = comp();
+    assert!(p.contains(1, 10, 20));
+    assert!(p.contains(1, 14, 23));
+    assert!(!p.contains(1, 15, 20));
+    assert!(!p.contains(1, 10, 24));
+    assert!(!p.contains(1, 9, 20));
+}
