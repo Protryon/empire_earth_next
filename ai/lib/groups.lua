@@ -948,24 +948,45 @@ local function group_step(g, view, mem)
     move(g, cx, cy, g.x, g.y, false)
 end
 
--- every group's step: call once a strategy step, after the economy's orders. mem.step_max (opt-in, nil: every group):
--- at most that many groups a step, in turn from where the last step stopped (a deathmatch's dozens of groups, each
--- with its ai.seen and ai.unit reads, passed a script's instruction budget in one step)
+-- every group's step: call once a strategy step, after the economy's orders. Both bounds are opt-in (nil: every
+-- group), and the groups left over step first at the next call:
+-- - mem.step_max: at most that many groups a step (a deathmatch's dozens of groups, each with its ai.seen and ai.unit
+--   reads, passed a script's instruction budget in one step);
+-- - mem.step_used_k: no further group once the call has used that share (in thousandths) of its instruction budget
+--   (ai.used; a large game's groups of 40-60 soldiers passed the budget with 8 groups a step). The first group of a
+--   step always steps
+local function over_share(k)
+    if k == nil or ai.used == nil then
+        return false
+    end
+    local used, budget = ai.used()
+    return budget ~= nil and budget > 0 and used * 1000 > budget * k
+end
+M.over_share = over_share
+
 function M.step(view, mem)
     M.init(mem)
     M.note_spots(mem)
     local all = M.all(mem)
     local max = mem.step_max
-    if max == nil or #all <= max then
+    if (max == nil or #all <= max) and mem.step_used_k == nil then
         for _, g in ipairs(all) do
             group_step(g, view, mem)
         end
-    else
-        local first = (mem.step_next or 0) % #all
-        for k = 0, max - 1 do
-            group_step(all[(first + k) % #all + 1], view, mem)
+    elseif #all > 0 then
+        if max == nil or max > #all then
+            max = #all
         end
-        mem.step_next = first + max
+        local first = (mem.step_next or 0) % #all
+        local done = 0
+        for k = 0, max - 1 do
+            if k > 0 and over_share(mem.step_used_k) then
+                break
+            end
+            group_step(all[(first + k) % #all + 1], view, mem)
+            done = done + 1
+        end
+        mem.step_next = first + done
     end
     if view.time % 30000 < 1000 then
         for _, g in ipairs(M.all(mem)) do

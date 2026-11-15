@@ -215,6 +215,7 @@ local RECOVERY = 12   -- kCPRecoveryCitizens
 -- (32 seeds: Prehistoric land 22-3 against 13-13, a Stone Age start on land 14-9 against 2-21, a Copper Age start on
 -- the islands 19-0 against 3-18)
 local RESERVE_FREE_WORKERS = 50
+local FULL_ONCE_ORDERED = true
 
 -- EECPArmyThreat: enemy soldiers within 40 tiles of the town centre stronger (hit points x attack) than the own army;
 -- for 4 minutes. DEVIATION (fog): the soldiers seen (the original reads every player's units)
@@ -278,6 +279,14 @@ function M.reserve_share(view, memory)
     end
     local share = (pressure - p.epoch_pressure_start_k) * 1000 // span
     if share > 1000 then
+        share = 1000
+    end
+    -- New (AI_RESEARCH 8.88): the whole cost kept once the advance is ordered while an enemy is a whole epoch ahead
+    -- (the classic ramps the share up with the epoch pressure, and the research, the army and the citizens spent the
+    -- food and gold meanwhile: the port ordered the Bronze Age at 90 minutes against the owner, who was in it, and
+    -- had not paid it at 140). Not while level or ahead: the whole cost kept then cost the standard bench against the
+    -- C++ classic (32 seeds, 90 minutes: 18-6-8 against 22-6-4)
+    if FULL_ONCE_ORDERED and C2.state(memory).advancing and C2.enemy_ahead(view) then
         share = 1000
     end
     local e = ai.epoch(memory.rs.pending)

@@ -23,6 +23,7 @@ local M = {}
 
 local REQUEST_MS = 600000        -- EECPPersonnelRequest's deadline
 local GROUPS_A_STEP = 8           -- lib.groups' step_max (the instruction budget)
+local GROUPS_USED_K = 550         -- lib.groups' step_used_k: no further group past 55% of the step's budget
 local GATHER_MS = 30000          -- EECPAttackSubGroup::HasGathered: the longest wait at the rally point
 local DROP_MS = 45000            -- EECPAttackCommander::DropSpentGroups' period
 local REGION = 9                 -- EEInfluenceTable's region size (tiles)
@@ -4013,6 +4014,7 @@ function M.step(view, memory)
     -- (at most GROUPS_A_STEP groups a step, in turn: lib.groups' step_max; a deathmatch's groups passed the step's
     -- instruction budget)
     a.step_max = GROUPS_A_STEP
+    a.step_used_k = GROUPS_USED_K
     G.step(view, a)
     if tactics then
         local all = G.all(a)
@@ -4037,7 +4039,7 @@ function M.step(view, memory)
     for _, g in ipairs(parked) do
         a.groups[g.id] = g
     end
-    if view.time % 60000 < 1000 then
+    if view.time % 60000 < 1000 and not G.over_share(800) then
         local n, units, slots = 0, 0, 0
         for _, g in ipairs(G.all(a)) do
             n = n + 1

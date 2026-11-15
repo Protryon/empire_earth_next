@@ -79,7 +79,7 @@ end
 -- build queue's centre sites tried every centre in one step, and a step passed the 2,000,000-instruction budget at
 -- 96 minutes (find_center_site). Past the budget it finds nothing this step (site_budget_spent: the callers that claim
 -- more land on no site wait), and the queue tries again at its next update
-local FIND_SITE_MAX = 6
+local FIND_SITE_MAX = 16
 
 function M.find_site(class, x, y, opts)
     local b = M.memo("find_site_budget", function()
@@ -96,6 +96,38 @@ end
 function M.site_budget_spent()
     local b = sStep.memo["find_site_budget"]
     return b ~= nil and b.spent == true
+end
+
+-- a site search over a list of centres that the step's find_site budget can cut short: fn(entry) -> x, y or nil.
+-- Where the budget ran out, the next step's search goes on from that entry (memory: rm.scan[key]); a search that ends
+-- (a site, or none in the whole list) starts from the list's first entry the next time. New (AI_RESEARCH 8.88): the
+-- granary search tried the same first centres every step and never reached the one with room
+function M.scan_sites(memory, key, list, fn)
+    local rm = M.state(memory)
+    rm.scan = rm.scan or {}
+    local n = #list
+    if n == 0 then
+        rm.scan[key] = nil
+        return nil
+    end
+    local start = rm.scan[key] or 1
+    if start > n then
+        start = 1
+    end
+    for k = 0, n - 1 do
+        local i = (start - 1 + k) % n + 1
+        local x, y = fn(list[i])
+        if x ~= nil then
+            rm.scan[key] = nil
+            return x, y
+        end
+        if M.site_budget_spent() then
+            rm.scan[key] = i
+            return nil
+        end
+    end
+    rm.scan[key] = nil
+    return nil
 end
 
 -- the own gatherers sent to a resource (ai.gatherers, once a step; raised as the step sends more)
@@ -437,6 +469,14 @@ M.find_resource_unit = find_resource_unit
 
 -- the own drop sites (town centres, capitols, settlements; with food a granary): {id, x, y (the middle), built}
 function M.drops(food)
+    -- (once a step, each kind: a deathmatch's build queue read the drop sites for every centre it tried and passed the
+    -- step's instruction budget at 43 minutes; the callers only read the list)
+    return M.memo(food and "drops_food" or "drops", function()
+        return M.drops_now(food)
+    end)
+end
+
+function M.drops_now(food)
     local out = {}
     local types = {C.town_center, C.capitol, C.settlement}
     if food then

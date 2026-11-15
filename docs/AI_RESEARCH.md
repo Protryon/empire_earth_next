@@ -5732,6 +5732,67 @@ the AIs that fight with their armies (the per-unit direction): lib.tactics is on
 boom: its guard already focuses fire and pulls hurt units back (lib.guard), it has no attacks wired, and its fights
 against Age of AI are already won 1.57 to 1, so nothing was ported there.
 
+### 8.87 Stage 4: classic_lua is the lobby's Classic, the soak and the instruction budget (2026-11-14, EE-SIM)
+
+The manifest's `"classic": true` makes classic_lua the lobby's Classic; the C++ classic stays as Classic (C++)
+(`--engine classic_cpp`). Stage 3's open items, each seen in a game:
+- the flare (EE-SIM `--flare`): `army.attack_at flare`;
+- the WW1 groups from an Industrial start, Retaliate in the deathmatch soak;
+- cloaking: civ power 18 is in no premade civ, so neither engine can show it;
+- walls: the pieces built (walls without towers), port 6.0 against the C++'s 4.7 at 89 minutes; the old 8 against 62
+  counted orders.
+
+**The soak** (32 seeds a cell, 60 minutes, classic_lua in every computer seat): 4 players on Continental, Highlands,
+Mediterranean, Small Islands and Planets Earth; 2v2 on Continental and Small Islands; 7 players on Continental and
+Large Islands; the 4-player deathmatch. Every game reached the time cap with rc 0. The stalls (a seat's citizens,
+buildings and army unchanged for 15 minutes) are seats saving at exactly 50 citizens or starved of food.
+
+**The instruction budget** (2,000,000 a step). Late, large and deathmatch games passed it; each fix bounds the work
+a step:
+
+| where | fix | check |
+|---|---|---|
+| units.lua military, 83 min | military_in_production once a step | 120 min: boom vs classic, 4 classic: 0 errors |
+| build.lua find_site, 96 min | at most 16 ai.find_site a step (R.find_site), the searches go on next step (R.scan_sites) | as above |
+| lib/groups (deathmatch) | at most 8 groups a step, in turn (step_max) | deathmatch 32 games: 0 (7) |
+| resource.lua drops (deathmatch) | the drop sites once a step | deathmatch 32 games: 0 (1 in 16) |
+| lib/groups members, candidates, fight (boom's G1, 160+ citizens a side) | no further group past 55% of the step's budget (step_used_k, ai.used) | 120 min, 32 games: 0 |
+
+### 8.88 The Copper Age stall (2026-11-14, EE-SIM)
+
+The owner's game (classic_lua, Medium, Small Continental): the port pushed hard to the Copper Age (70.6 minutes),
+then stayed in it to the end while he went Bronze at 98.7. Its citizens stood at wood (117 of 190, wood stock
+35,000), food at 24 gatherers and gold at 12; the Bronze Age was ordered at 90 minutes and never paid.
+
+Reproduced in EE-SIM (Small Continental, Medium, 120 minutes, classic vs classic_cpp, 32 seeds): both engines stall
+the same way (16 and 15 seats 30 minutes or more in the Copper Age). Four causes:
+- **Farms**: a farm request is queued while the granary's farm foundations stand; the gatherers built the
+  foundation before the build queue reached it, and the request waited forever, while the building counts queue a
+  granary only when no farm is queued. Towns kept their first granary's 3 farms (4.2 at the end). A farm request
+  with no foundation is now done. The C++ keeps the request.
+- **Granary sites**: the step's find_site budget was always spent before the granary search reached a centre with
+  room (the search tried the same first centres every step). The searches now go on where the budget stopped them;
+  farms at the end 9.9.
+- **Gold**: the gather capacity counted the mines by the enemy's town, where no gatherer is sent: wanted gold 48-60,
+  placed 24-36, and the rest went to wood. The capacity now leaves out the sites with an enemy near.
+- **Pacing**: the classic keeps the epoch's cost by a share that ramps with the epoch pressure, so the army and the
+  research spent the food and gold first. While an enemy is a whole epoch ahead, the advance is now due at once (the
+  catchup cheat's rule without the cheat) and keeps its whole cost once ordered.
+
+Results (32 seeds, port won-lost-close; Bronze = the port's seats that reached the Bronze Age):
+
+| bench | before | after |
+|---|---|---|
+| the reproduction (120 min) | 19-9-4, Bronze 10 | 17-7-8, Bronze 13 |
+| the reproduction, the whole cost kept always | | 18-6-8, Bronze 26 |
+| boom vs classic, Small Hard, 120 min | 23-1-8, Bronze 16 | 24-1-7, Bronze 22 |
+| the standard bench, 90 min | 25-4-3 | 22-6-4 |
+| Prehistoric land, 60 min | 22-4-6 | 21-4-7 |
+| Stone Age land, 60 min | 14-9-9 | 9-6-17 |
+
+The whole cost kept always (not only behind) paid the advance in 26 games of the reproduction but cost the standard
+bench 18-6-8, so it is kept only while an enemy is ahead: the owner's case. Determinism identical; 0 script errors.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
