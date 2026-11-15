@@ -867,6 +867,32 @@ enum class EeUiOp : uint32_t {
   BgFormRect = 561,
   /// *Pure*: the form's `GetFadeOpacity()` in f[0].
   BgFormFade = 562,
+  /// *Pure*: entity `a`'s `GetValue()`.
+  HkValue = 570,
+  /// *Pure*: entity `a`'s `JustDoublePressed()`.
+  HkDoublePressed = 571,
+  /// *Pure*: entity `a`'s `JustPressed()`.
+  HkJustPressed = 572,
+  /// *Pure*: entity `a`'s `JustUnpressed()`.
+  HkJustUnpressed = 573,
+  /// *Pure*: `gISKeyboard->GetModifierState()`.
+  HkKeyboardState = 574,
+  /// *Pure*: `ISKeyboard::ComputeModifierState(a)`.
+  HkModifierState = 575,
+  /// *Pure*: entity `a`'s `GetIndex()`.
+  HkKeyIndex = 576,
+  /// *Pure*: the entity `gISKeyboard->GetEntity(a, ...)` gives (NULL for a code without a key).
+  HkEntity = 577,
+  /// Event `a`'s `Uninitialize()` (b 0), `Dereference()` (1), `Reference()` (2) or `Initialize()` (3).
+  HkEventCall = 578,
+  /// Event `a`'s `ProcessEvent(the form, this hot key)`.
+  HkProcess = 579,
+  /// `new UIHotKey` -> its record.
+  HkNew = 580,
+  /// `delete` the hot key of record `a`.
+  HkDelete = 581,
+  /// *Pure*: `gISKeyboard->GetEntity(a, ...)`'s result.
+  HkEntityResult = 582,
 };
 
 /// The inward calls (each C++ class's methods forward here with their own call).
@@ -1468,6 +1494,26 @@ enum class EeUiFormCall : uint32_t {
   UseGdiForText = 92,
   DrawToolTipShadow = 93,
   SetDrawToolTipShadow = 94,
+};
+
+/// The inward calls (the C++ class's methods that forward here).
+enum class EeUiHotKeyCall : uint32_t {
+  /// The default constructor's state.
+  Init = 1,
+  /// The copy constructor `UIHotKey(form b, *(record a))`.
+  Copy = 2,
+  /// The destructor: the four events released.
+  Release = 3,
+  /// `Set*Event(b)`: a 0 double-pressed, 1 just-pressed, 2 pressed, 3 just-unpressed (`HotKeyEvent`).
+  SetEvent = 4,
+  /// `SetModifier(a, slot b)`.
+  SetModifier = 5,
+  /// `SetKey(a)`.
+  SetKey = 6,
+  /// `CalculateKeyCount()`.
+  CountKeys = 7,
+  /// `FireEvents()`.
+  FireEvents = 8,
 };
 
 /// The inward calls (the C++ shims' methods).
@@ -2265,6 +2311,27 @@ struct EeUiControlFields {
   bool mAlwaysDirty;
 };
 
+/// `UIHotKey`'s members (`include/lle/UIHotKey.h`), the C++ class's base.
+struct EeUiHotKeyFields {
+  /// The host of the calls out (its object is the record).
+  EeUiHostFn mHost;
+  /// The key (`ISEntity*`).
+  void *mKey;
+  /// The modifiers (`ISEntity*`, NULL for none).
+  void *mModifiers[3];
+  /// The events (`UIEvent*`, referenced).
+  void *mDoublePressedEvent;
+  void *mJustPressedEvent;
+  void *mJustUnpressedEvent;
+  void *mPressedEvent;
+  /// The form (`UIForm*`).
+  void *mForm;
+  unsigned long mModifierState;
+  unsigned long mKeyCount;
+  bool mEnabled;
+  bool mAlwaysFire;
+};
+
 /// `GE2DPoint`: x, y.
 struct EeUiPoint {
   float x;
@@ -2805,6 +2872,49 @@ ptrdiff_t ee_ui_form_call(const EeUiForm *form,
                           ptrdiff_t b,
                           float *f);
 
+/// `UIHotKey()` over its record.
+///
+/// # Safety
+/// `rec` is the C++ hot key's base.
+void ee_ui_hotkey_init(EeUiHotKeyFields *rec, EeUiHostFn host);
+
+/// `UIHotKey(form, *other)` over its record.
+///
+/// # Safety
+/// `rec` is the C++ hot key's base, `other` a live hot key's.
+void ee_ui_hotkey_copy(EeUiHotKeyFields *rec, EeUiHostFn host, EeUiHotKeyFields *other, void *form);
+
+/// One of `UIHotKey`'s methods ([`EeUiHotKeyCall`], not the constructors).
+///
+/// # Safety
+/// `rec` is a live record [`ee_ui_hotkey_init`] or [`ee_ui_hotkey_copy`] set up.
+ptrdiff_t ee_ui_hotkey_call(EeUiHotKeyFields *rec, EeUiHotKeyCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// `UIHotKey::CreateHotKeys(*file)`: the table filled from the file (`host` answers `HkNew` and the keyboard's
+/// questions for the new hot keys).
+///
+/// # Safety
+/// `file` is a live `FSFileSpec`.
+long ee_ui_hotkey_create_all(void *file,
+                             EeUiHostFn host);
+
+/// `UIHotKey::DeleteHotKeys()`: each hot key of the table deleted (`HkDelete`), in order; the table emptied.
+void ee_ui_hotkey_delete_all(EeUiHostFn host);
+
+/// `UIHotKey::GetHotKeyCount()`.
+unsigned long ee_ui_hotkey_count();
+
+/// `UIHotKey::GetHotKey(i)`: its record (NULL for an unused record).
+EeUiHotKeyFields *ee_ui_hotkey_at(unsigned long i);
+
+extern void ee_uicpp_file_open(void *file);
+
+extern long ee_uicpp_file_read_count(void *file, unsigned long *count);
+
+extern long ee_uicpp_file_read(void *file, uint8_t *data, unsigned long length);
+
+extern void ee_uicpp_file_close(void *file);
+
 /// A new Rust label for the C++ `label` (its `UIControl` part constructed): `f` the rectangle given (a
 /// `GERectangle`), `font` the text font. Its text is set by the first [`ee_ui_label_call`] (`Init`).
 ///
@@ -3116,15 +3226,6 @@ EeUiCandidateFrame ee_ui_ime_frame(EeUiRect rect, long selection, unsigned long 
 /// `DrawTextA`'s row of line `index`.
 EeUiRect ee_ui_ime_row(EeUiRect rect, unsigned long index, unsigned long height);
 
-/// `UIHotKey::CalculateKeyCount` from which of the key and the three modifiers are set.
-unsigned long ee_ui_hotkey_key_count(bool has_key, bool m0, bool m1, bool m2);
-
-/// `UIHotKeySorter::operator()`.
-bool ee_ui_hotkey_before(bool left_always,
-                         unsigned long left_keys,
-                         bool right_always,
-                         unsigned long right_keys);
-
 /// `UIHotKey::GetHotKeyName`: the modifiers' names (NULL: no modifier) and the key's, as C strings -> the name in
 /// `out` (`capacity` bytes, NUL-terminated); returns its length. The C++ sizes `out` from the names' lengths.
 size_t ee_ui_hotkey_name(const char *m0,
@@ -3133,18 +3234,6 @@ size_t ee_ui_hotkey_name(const char *m0,
                          const char *key,
                          uint8_t *out,
                          size_t capacity);
-
-/// `UIHotKey::FireEvents` -> whether an event fired.
-bool ee_ui_hotkey_fire_events(void *key);
-
-/// `UIHotKey::SetDoublePressedEvent` .. `SetPressedEvent`: `slot` is the member.
-void ee_ui_hotkey_set_event(void **slot, void *event);
-
-/// `UIHotKey::SetModifier(code, slot)`.
-void ee_ui_hotkey_set_modifier(void *key, unsigned long code, int slot);
-
-/// `UIHotKey::CreateHotKeys(file)` -> its result.
-long ee_ui_hotkey_create_hotkeys(void *file);
 
 /// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
 EeUiBorderLine ee_ui_border_line(EeUiRect r,

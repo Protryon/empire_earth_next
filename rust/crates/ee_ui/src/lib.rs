@@ -31,6 +31,7 @@ pub mod form_state;
 pub mod formobj;
 pub mod graph;
 pub mod hotkey;
+pub mod hotkeyobj;
 pub mod ime;
 pub mod label_fit;
 pub mod labelobj;
@@ -69,8 +70,7 @@ mod graph_ffi;
 // imports the C++ candidate list's walk (UIIMECandidate.cpp), absent from a test binary
 #[cfg(not(test))]
 mod ime_ffi;
-// imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
-#[cfg(not(test))]
+// the hot keys' name and order (UIHotKey.cpp, UIForm.cpp)
 mod hotkey_ffi;
 // imports nothing: the clipped text draw takes the C++'s draw as a function
 mod draw_ffi;

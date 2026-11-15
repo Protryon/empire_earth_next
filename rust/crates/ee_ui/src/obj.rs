@@ -821,6 +821,35 @@ pub enum EeUiOp {
     BgFormRect = 561,
     /// *Pure*: the form's `GetFadeOpacity()` in f[0].
     BgFormFade = 562,
+
+    // ---- the hot keys (R6 ui round 20, hotkeyobj.rs): on the hot key's record (NULL for the table's own calls); an
+    // entity or event is its address
+    /// *Pure*: entity `a`'s `GetValue()`.
+    HkValue = 570,
+    /// *Pure*: entity `a`'s `JustDoublePressed()`.
+    HkDoublePressed = 571,
+    /// *Pure*: entity `a`'s `JustPressed()`.
+    HkJustPressed = 572,
+    /// *Pure*: entity `a`'s `JustUnpressed()`.
+    HkJustUnpressed = 573,
+    /// *Pure*: `gISKeyboard->GetModifierState()`.
+    HkKeyboardState = 574,
+    /// *Pure*: `ISKeyboard::ComputeModifierState(a)`.
+    HkModifierState = 575,
+    /// *Pure*: entity `a`'s `GetIndex()`.
+    HkKeyIndex = 576,
+    /// *Pure*: the entity `gISKeyboard->GetEntity(a, ...)` gives (NULL for a code without a key).
+    HkEntity = 577,
+    /// Event `a`'s `Uninitialize()` (b 0), `Dereference()` (1), `Reference()` (2) or `Initialize()` (3).
+    HkEventCall = 578,
+    /// Event `a`'s `ProcessEvent(the form, this hot key)`.
+    HkProcess = 579,
+    /// `new UIHotKey` -> its record.
+    HkNew = 580,
+    /// `delete` the hot key of record `a`.
+    HkDelete = 581,
+    /// *Pure*: `gISKeyboard->GetEntity(a, ...)`'s result.
+    HkEntityResult = 582,
 }
 
 impl EeUiOp {
@@ -941,6 +970,15 @@ impl EeUiOp {
                 | BgTextureSize
                 | BgFormRect
                 | BgFormFade
+                | HkValue
+                | HkDoublePressed
+                | HkJustPressed
+                | HkJustUnpressed
+                | HkKeyboardState
+                | HkModifierState
+                | HkKeyIndex
+                | HkEntity
+                | HkEntityResult
         )
     }
 
