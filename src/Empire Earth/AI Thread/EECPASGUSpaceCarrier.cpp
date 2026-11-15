@@ -25,7 +25,6 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPASGUSpaceCarrier.h"
 
-// FUNCTION: EXE 0x40d3d6
 // Creates a space carrier sub group unit for a unit
 EECPASGUSpaceCarrier::EECPASGUSpaceCarrier(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -33,10 +32,6 @@ EECPASGUSpaceCarrier::EECPASGUSpaceCarrier(EEComplexUnit* inUnit, EECPAttackSubG
     this->mType = kASGUKindSpaceCarrier;
 }
 
-// SYNTHETIC: EXE 0x40d3f9
-// (the scalar deleting destructor; 0x1c bytes)
-
-// FUNCTION: EXE 0x40d415
 // Creates an empty space carrier sub group unit (no unit yet; used when loading)
 EECPASGUSpaceCarrier::EECPASGUSpaceCarrier(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -44,13 +39,11 @@ EECPASGUSpaceCarrier::EECPASGUSpaceCarrier(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindSpaceCarrier;
 }
 
-// FUNCTION: EXE 0x40d434
 // Destroys the space carrier sub group unit (base members only)
 EECPASGUSpaceCarrier::~EECPASGUSpaceCarrier()
 {
 }
 
-// FUNCTION: EXE 0x40d43f
 // Picks a target and, unless the carrier already attacks it, orders the carrier and each cargo unit to attack it
 // and opens the bays; returns whether it re-targeted
 bool EECPASGUSpaceCarrier::Retarget()
@@ -81,8 +74,4 @@ bool EECPASGUSpaceCarrier::Retarget()
     this->GetUnit()->GetUnitClass()->ActionChanged(this->GetUnit());
     return true;
 }
-
-// FUNCTION: EXE 0x40d5c5
-// Returns the number of cargo units the unit carries
-// (EEComplexUnit::GetNumCargoUnits, inline in ee/EEUnit.h: its first user is Virtual14)
 

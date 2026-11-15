@@ -20,9 +20,9 @@ public:
     virtual ~EEUnitSet();                   // +0x00 (??_G 0x136dae)
     bool Contains(unsigned long inUnitType);   // 0x136ea5 (unsigned: the sets hold unsigned long, find/insert take the parameter's address)
     void Init();                            // 0x136e72 (clears both sets, mName = "", the rest 0; provisional name)
-    EEUnitSet();                            // 0x136d66
+    EEUnitSet();
     void AddFamily(unsigned long inUnitClass);     // 0x136dee (a class in 1..0x3b; sets mB38; provisional name)
-    void AddUnitType(unsigned long inUnitClass);   // 0x136e1b (provisional name)
+    void AddUnitType(unsigned long inUnitClass);
     // 0x136e3a (every unit type 1..EEUnitClassCount() - 1 in the set; stops at the first false). void: the original keeps the loop's
     // result in bl and never loads al; both callers discard it
     void ForEach(EEUnitSetFunctor* inFunctor);
@@ -60,6 +60,6 @@ public:
     std::vector<EEUnitSet*> mSets;          // +0x04 (`_Buy` 0x14541f)
 };
 
-extern EEUnitSetManager gUnitSetManager;    // 0x52f660
+extern EEUnitSetManager gUnitSetManager;
 
 #endif

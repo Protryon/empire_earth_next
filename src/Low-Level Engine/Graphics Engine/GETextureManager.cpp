@@ -5,10 +5,6 @@
 // map<UString, GETexture*> operator[] and dtor COMDATs. No init chains. GEModelManager.cpp is its twin.
 // The ESVERIFY is the original's line 43 (0x2b).
 //
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// TEMPLATE: LLE 0x10034643
-// TEMPLATE: LLE 0x1003467c
-//
 // port (R4.3, seventh part): the manager is a whole Rust object (ee_ge texobj.rs): the cache, the path, the lock, the
 // screen and the footprint with every method, the cache name's stem, the texture pack's file first and the surface
 // description a texture description asks for. This unit is its shell: the forwarders and the host, which makes each
@@ -263,21 +259,18 @@ GETexture* GETextureManager::GetTextureAt(unsigned long inIndex)
     return (GETexture*)ee_ge_texman_at(this->mRust, inIndex);
 }
 
-// FUNCTION: LLE 0x10033bef
 // Creates a texture manager on a search path (referenced), with no textures and its own lock
 GETextureManager::GETextureManager(FSPath* inTexturePath)
 {
     this->mRust = ee_ge_texman_new(&GETextureManager::Host, this, inTexturePath);
 }
 
-// FUNCTION: LLE 0x10033c43
 // Destroys the texture manager, removing every unreferenced texture and releasing the path and lock
 GETextureManager::~GETextureManager()
 {
     ee_ge_texman_free(this->mRust);
 }
 
-// FUNCTION: LLE 0x10033c69
 // Prints every loaded texture file and its reference count to a dump file
 void GETextureManager::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
@@ -309,7 +302,6 @@ void GETextureManager::SetScreen(GEScreen* inScreen)
     ee_ge_texman_set_screen(this->mRust, inScreen);
 }
 
-// FUNCTION: LLE 0x10033cd4
 // Returns the named texture, loading and caching it from the search path if needed (port, D9: its PNG frames, the
 // name's stem; the original tried <name>.tga, then <name>.sst); NULL if it cannot be found or loaded
 GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureDescription& inDescription)
@@ -317,21 +309,18 @@ GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureD
     return (GETexture*)ee_ge_texman_load(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
 }
 
-// FUNCTION: LLE 0x10033f3f
 // Wraps a surface in a new managed texture, named by a running counter, with modulate blending
 GETexture* GETextureManager::MakeTexture(GESurface* inSurface)
 {
     return (GETexture*)ee_ge_texman_make(this->mRust, inSurface);
 }
 
-// FUNCTION: LLE 0x1003400b
 // Marks the texture as promoted; always succeeds
 long GETextureManager::PromoteTexture(GETexture* inTexture)
 {
     return ee_ge_texman_promote(this->mRust, inTexture);
 }
 
-// FUNCTION: LLE 0x10034018
 // Reloads an already cached texture from its files (port, D9: the cache name is the PNG files' stem; the original
 // looked <name>.tga, then <name>.sst up), updating the memory footprint; 3 when it is not cached
 long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescription& inDescription)
@@ -339,7 +328,6 @@ long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescr
     return ee_ge_texman_reload(this->mRust, inName, (const EeGeTextureDescription*)&inDescription);
 }
 
-// FUNCTION: LLE 0x100341d9
 // Reloads every cached texture from its files (or recreates its surface when they are gone),
 // then reapplies the frames' saved stage settings to the whole texture; returns the last result
 long GETextureManager::RefreshAllTextures()
@@ -347,28 +335,24 @@ long GETextureManager::RefreshAllTextures()
     return ee_ge_texman_refresh_all(this->mRust);
 }
 
-// FUNCTION: LLE 0x100344d7
 // Removes and releases every texture nobody else references; returns 5 if any are still in use
 long GETextureManager::RemoveAllTextures()
 {
     return ee_ge_texman_remove_all(this->mRust);
 }
 
-// FUNCTION: LLE 0x1003454d
 // Removes and releases one texture if nobody else references it; 5 if still in use, 3 if not managed here
 long GETextureManager::RemoveTexture(GETexture* inTexture)
 {
     return ee_ge_texman_remove(this->mRust, inTexture);
 }
 
-// FUNCTION: LLE 0x100345d0
 // Replaces the texture search path, moving the reference
 void GETextureManager::SetTexturePath(FSPath* inTexturePath)
 {
     ee_ge_texman_set_path(this->mRust, inTexturePath);
 }
 
-// FUNCTION: LLE 0x100345f1
 // Sets the MIP filter mode of every cached texture that uses MIP filtering
 void GETextureManager::UpdateMIPFilterMode(unsigned long inMode)
 {

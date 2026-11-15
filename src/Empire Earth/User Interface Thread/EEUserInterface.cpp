@@ -87,15 +87,15 @@ unsigned long EEMenuHeight();
 // free functions of other units (declared where they are used, as their own units do) (provisional names)
 void DeleteEffectBatchBuffers();            // 0x102e1b (before the rasterizer is deactivated)
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFlag);  // 0x140306 (Empire Earth.cpp)
-void EEUnloadGameMedia();                   // 0x140d1e
-void EEUpdateLandContinents();              // 0x23d76c
-long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
+void EEUnloadGameMedia();
+void EEUpdateLandContinents();
+long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);
 bool EEIsLobbyOpen();                       // 0x297eca (the external lobby is running)
-void EESetQuitFlag();                       // 0x297ed6
+void EESetQuitFlag();
 void EEResetGraphicsValues();               // 0x10fc7e (before a screen capture without the cursor)
-void EEPostGraphicsAll();                   // 0x10fc0c
+void EEPostGraphicsAll();
 // CivBuilderEditCivilization 0x280faf, CivBuilderCreateCivilization 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
-void EELobbyShutdown();                     // 0x295bd2
+void EELobbyShutdown();
 // the lobby's LobbyUpdatePlayer, LobbyUpdateGameOptions, LobbyUpdateForm and LobbyShowTransferProgress: Rust's
 // (rust/ee_screens.h, ee_screens lobby_form.rs)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested scenario starts) (provisional name)
@@ -115,7 +115,6 @@ static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c.
 
 // the IME strings' buffer (0x56536c, its size 0x565368; grown in 0x100-byte steps)
 static unsigned long sLastLoadPercent;      // 0x565370 (SetLoadProgress)
-// FUNCTION: EXE 0x676631
 // Creates the UI thread object: its thread and the message-done event (the action, undo and redo queues and their
 // locks are Rust's: ee_screens actions.rs)
 EEUserInterface::EEUserInterface()
@@ -129,10 +128,6 @@ EEUserInterface::EEUserInterface()
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 177);
 }
 
-// SYNTHETIC: EXE 0x676724
-// (the scalar deleting destructor, emitted with the vtable; slot EEUserInterface+0x0)
-
-// FUNCTION: EXE 0x676740
 // Destroys the UI thread object, releasing every queued, undoable and redoable action
 EEUserInterface::~EEUserInterface()
 {
@@ -142,7 +137,6 @@ EEUserInterface::~EEUserInterface()
     TSScheduler::DestroyEvent(this->mMessageQueueDone);
 }
 
-// FUNCTION: EXE 0x676804
 // Switches to another rasterizer: hides the cursor, releases the screens, deactivates the old rasterizer and
 // resizes the game screen to 1024x768
 void EEUserInterface::ChangeRasterizer(long inRasterizer, long inScreen)
@@ -163,7 +157,6 @@ void EEUserInterface::ChangeRasterizer(long inRasterizer, long inScreen)
     this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
 }
 
-// FUNCTION: EXE 0x6768fe
 // Resizes the game screen (unless the size is unchanged and not forced), relays out the forms and redraws the
 // mini map
 void EEUserInterface::ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag)
@@ -187,7 +180,6 @@ void EEUserInterface::ResizeGameScreen(unsigned long inWidth, unsigned long inHe
     gWorld.mLock->WriteUnlock();
 }
 
-// FUNCTION: EXE 0x6769da
 // Shows the local player's epoch name in the main game form's status text
 void EEUserInterface::ShowEpochName()
 {
@@ -199,7 +191,6 @@ void EEUserInterface::ShowEpochName()
     }
 }
 
-// FUNCTION: EXE 0x676a38
 // Shows the WON game and system messages of the day on the multiplayer form when it is visible
 void EEUserInterface::ShowMessageOfTheDay(const UWideString& inGame, const UWideString& inSystem)
 {
@@ -232,13 +223,6 @@ void EEUserInterface::PostLoginDone()
     this->mThread->Post(0x441, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x677023
-// FUNCTION: EXE 0x677170
-// FUNCTION: EXE 0x677290
-// FUNCTION: EXE 0x677315
-// FUNCTION: EXE 0x6777cd
-// FUNCTION: EXE 0x677c1f
-// FUNCTION: EXE 0x679013
 // LeaveMap, CancelGame, CloseScenarioEditor, EnterScenarioEditor, StartLoadingFromEditor, ShowCivilizationBuilder and
 // RestartGame are Rust's whole (ee_screens ui_game.rs; the thread's messages run them by ee_screens_ui_member).
 // The game starts' and the loop's calls (EE_SCREENS_UG_OP_*) on the UI object inUI (ee_screens ui_game.rs)
@@ -496,7 +480,6 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
     return 0;
 }
 
-// FUNCTION: EXE 0x676ab0
 // Starts a test of the edited scenario: rebuilds continents, herds, towns and AI centres, restarts units and
 // switches to the main game form (ee_screens ui_game.rs)
 void EEUserInterface::TestScenario()
@@ -504,14 +487,12 @@ void EEUserInterface::TestScenario()
     ee_screens_ui_test_scenario(this);
 }
 
-// FUNCTION: EXE 0x676cb1
 // Closes the IME composition string
 void EEUserInterface::CloseIMECompositionString()
 {
     gUIManager->CloseIMECompositionString();
 }
 
-// FUNCTION: EXE 0x676cbc
 // Saves the edited scenario as ScenDefault and starts testing it like a game (reporting a save error; ee_screens
 // ui_game.rs)
 void EEUserInterface::SaveAndTestScenario()
@@ -519,7 +500,6 @@ void EEUserInterface::SaveAndTestScenario()
     ee_screens_ui_save_and_test_scenario(this);
 }
 
-// FUNCTION: EXE 0x67754b
 // Creates the UI's render object and pushes it on the graphics thread
 long EEUserInterface::CreateRenderObject()
 {
@@ -528,7 +508,6 @@ long EEUserInterface::CreateRenderObject()
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x67757c
 // Loads a saved game or scenario file: checks its header, starts a local server and posts the load; reports
 // an invalid file (ee_screens ui_game.rs)
 void EEUserInterface::LoadSavedGame(FSFile* inFile)
@@ -536,7 +515,6 @@ void EEUserInterface::LoadSavedGame(FSFile* inFile)
     ee_screens_ui_load_saved_game(this, inFile);
 }
 
-// FUNCTION: EXE 0x67783c
 // Opens the WON server selection, remembering the password when asked
 void EEUserInterface::OpenSelectServer()
 {
@@ -558,10 +536,6 @@ void EEUserInterface::OpenSelectServer()
     gUIManager->UnlockUIForCopyData();
 }
 
-// SYNTHETIC: EXE 0x67798d
-// (EEUIEWNSSOpenScreen's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x6779b8
 // Runs the UI thread: collects and handles its messages, keeps the FPU in 53-bit mode, updates the interface
 // and the free camera each pass until quitting (ee_screens ui_game.rs)
 long EEUserInterface::Run(void* inParameter)
@@ -569,7 +543,6 @@ long EEUserInterface::Run(void* inParameter)
     return (long)ee_screens_ui_run(this);
 }
 
-// FUNCTION: EXE 0x677e63
 // Pauses the graphics thread and waits until it is paused
 void EEUserInterface::PauseGraphics()
 {
@@ -578,12 +551,6 @@ void EEUserInterface::PauseGraphics()
         PlatSleep(1);
 }
 
-// FUNCTION: EXE 0x676fe0
-// FUNCTION: EXE 0x677529
-// FUNCTION: EXE 0x677e8e
-// FUNCTION: EXE 0x677eb4
-// FUNCTION: EXE 0x677ef2
-// FUNCTION: EXE 0x677f21
 // Runs the queued actions under the UI copy lock and the world's write lock; undoable ones go on the undo list (at
 // most 100) and clear the redo list (the original's queue helpers ClearQueue, GetQueueSize, PeekBack, PopFront,
 // PopBack and PushBack with it: ee_screens actions.rs)
@@ -623,7 +590,6 @@ extern "C" uint32_t ee_screenscpp_action(uint32_t inOp, void* inAction)
     return 0;
 }
 
-// FUNCTION: EXE 0x6780d3
 // Passes the input method's composition string (PLAT_EVENT_TEXT_EDITING; the original read it with
 // ImmGetCompositionStringA), its attributes (the edited part as the target clause, the rest as input: IMM's
 // ATTR_TARGET_CONVERTED / ATTR_INPUT) and the cursor to the UI
@@ -639,14 +605,12 @@ void EEUserInterface::UpdateIMECompositionString(const char* inText, long inCurs
                                           (unsigned long)(inCursor < 0 ? 0 : inCursor));
 }
 
-// FUNCTION: EXE 0x6781da
 // Passes the input method's result string to the UI (the committed composition)
 void EEUserInterface::AddIMEResultString(const char* inText)
 {
     gUIManager->AddIMEResultString(inText);
 }
 
-// FUNCTION: EXE 0x67828f
 // Handles one UI thread message (0x401..0x443): the switch is Rust's (ee_screens ui_thread.rs), over the host below
 void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParameter1, LONG_PTR inParameter2)
 {
@@ -815,11 +779,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     return 0;
 }
 
-// FUNCTION: EXE 0x678ebc
-// Destroys a chat log entry
-// (EEChatLogEntry's implicit destructor, after its first user)
-
-// FUNCTION: EXE 0x678ed3
 // Updates the interface: keyboard and mouse input, the UI under the world read lock, then the queued actions
 void EEUserInterface::UpdateInterface()
 {
@@ -835,29 +794,24 @@ void EEUserInterface::UpdateInterface()
     this->ProcessActions();
 }
 
-// FUNCTION: EXE 0x678f54
-// FUNCTION: EXE 0x678f79
 // Queues an action for the UI thread (taking a reference; ee_screens actions.rs)
 void EEUserInterface::PostAction(EEAction* inAction)
 {
     ee_screens_actions_post(inAction);
 }
 
-// FUNCTION: EXE 0x678fc0
 // Opens the IME composition string
 void EEUserInterface::OpenIMECompositionString()
 {
     gUIManager->OpenIMECompositionString();
 }
 
-// FUNCTION: EXE 0x678fce
 // Redoes the last undone action; returns 7 when there is none (ee_screens actions.rs)
 long EEUserInterface::Redo()
 {
     return ee_screens_actions_redo();
 }
 
-// FUNCTION: EXE 0x679139
 // Posts a screenshot request (message 0x41b)
 void EEUserInterface::PostScreenShot(long inX, bool inFlag1, bool inFlag2)
 {
@@ -869,98 +823,84 @@ void EEUserInterface::PostScreenShot(long inX, bool inFlag1, bool inFlag2)
     this->mThread->Post(0x41b, theCapture, (void*)inFlag1, true);
 }
 
-// FUNCTION: EXE 0x679174
 // Posts a background media update (message 0x403)
 void EEUserInterface::PostUpdateBackgroundMedia()
 {
     this->mThread->Post(0x403, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679189
 // Posts showing the epoch name (message 0x404)
 void EEUserInterface::PostShowEpochName()
 {
     this->mThread->Post(0x404, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x67919e
 // Posts a scenario dialog message (message 0x422)
 void EEUserInterface::PostDialogMessage(const EESMDialogMessage& inMessage)
 {
     this->mThread->Post(0x422, new EESMDialogMessage(inMessage), NULL, true);
 }
 
-// FUNCTION: EXE 0x6791d3
 // Posts selecting a scenario editor tab (message 0x421)
 void EEUserInterface::PostSelectEditorTab(long inX, long inY)
 {
     this->mThread->Post(0x421, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
 }
 
-// FUNCTION: EXE 0x6791ee
 // Posts starting the scenario test (message 0x40f)
 void EEUserInterface::StartScenarioTest()
 {
     this->mThread->Post(0x40f, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679203
 // Posts a display change (message 0x429)
 void EEUserInterface::PostDisplayChanged(bool inFlag)
 {
     this->mThread->Post(0x429, (void*)inFlag, NULL, true);
 }
 
-// FUNCTION: EXE 0x67921e
 // Posts cancelling the game (message 0x412)
 void EEUserInterface::PostCancelGame()
 {
     this->mThread->Post(0x412, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679233
 // Posts that loading the game failed (message 0x430)
 void EEUserInterface::PostLoadGameFailed(bool inFlag)
 {
     this->mThread->Post(0x430, NULL, (void*)inFlag, true);
 }
 
-// FUNCTION: EXE 0x67924e
 // Posts leaving the scenario editor (message 0x410)
 void EEUserInterface::LeaveScenarioEditor()
 {
     this->mThread->Post(0x410, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679263
 // Posts entering the scenario editor (message 0x411)
 long EEUserInterface::PostEnterScenarioEditor(bool inFlag)
 {
     return this->mThread->Post(0x411, (void*)inFlag, NULL, true);
 }
 
-// FUNCTION: EXE 0x67927e
 // Posts quitting the UI thread
 void EEUserInterface::PostQuit()
 {
     this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679293
 // Posts showing or hiding the pause information (message 0x427)
 void EEUserInterface::PostPauseInformation(bool inFlag)
 {
     this->mThread->Post(0x427, (void*)inFlag, NULL, true);
 }
 
-// FUNCTION: EXE 0x6792ae
 // Posts that the host migrated (message 0x426)
 void EEUserInterface::PostHostMigrated()
 {
     this->mThread->Post(0x426, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x6792c3
 // Posts starting to load the game (0x407; 0x413 from the scenario editor)
 void EEUserInterface::PostStartLoading()
 {
@@ -970,14 +910,12 @@ void EEUserInterface::PostStartLoading()
         this->mThread->Post(0x413, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x6792ed
 // Posts loading a saved game file (message 0x408)
 void EEUserInterface::PostLoadSavedGame(const FSFileSpec& inSpec)
 {
     this->mThread->Post(0x408, new FSFileSpec(inSpec), NULL, true);
 }
 
-// FUNCTION: EXE 0x67932d
 // Posts a UI event for a form (message 0x40e)
 long EEUserInterface::PostEvent(UIEvent* inEvent, UIForm* inForm)
 {
@@ -985,7 +923,6 @@ long EEUserInterface::PostEvent(UIEvent* inEvent, UIForm* inForm)
     return this->mThread->Post(0x40e, inEvent, inForm, true);
 }
 
-// FUNCTION: EXE 0x67934c
 // Posts playing a movie (message 0x41c)
 void EEUserInterface::PostPlayMovie(const FSFileSpec& inSpec, UReferenceCounter* inObject)
 {
@@ -995,7 +932,6 @@ void EEUserInterface::PostPlayMovie(const FSFileSpec& inSpec, UReferenceCounter*
     this->mThread->Post(0x41c, theSpec, inObject, true);
 }
 
-// FUNCTION: EXE 0x679396
 // Posts that a movie finished (message 0x41d)
 void EEUserInterface::PostMovieDone(UReferenceCounter* inObject)
 {
@@ -1004,35 +940,30 @@ void EEUserInterface::PostMovieDone(UReferenceCounter* inObject)
     this->mThread->Post(0x41d, inObject, NULL, true);
 }
 
-// FUNCTION: EXE 0x6793b7
 // Posts hiding the messages (message 0x432)
 void EEUserInterface::PostHideMessages()
 {
     this->mThread->Post(0x432, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x6793cc
 // Posts opening the civilization builder (message 0x420)
 long EEUserInterface::OpenCivilizationBuilder(EECivilization* inCivilization, bool inFlag)
 {
     return this->mThread->Post(0x420, inCivilization, (void*)inFlag, true);
 }
 
-// FUNCTION: EXE 0x6793e9
 // Posts closing a form (message 0x419)
 long EEUserInterface::CloseForm(UIForm* inForm)
 {
     return this->mThread->Post(0x419, inForm, NULL, true);
 }
 
-// FUNCTION: EXE 0x679402
 // Posts switching to a form (message 0x414)
 long EEUserInterface::SwitchToForm(UIForm* inForm)
 {
     return this->mThread->Post(0x414, inForm, NULL, true);
 }
 
-// FUNCTION: EXE 0x67941b
 // Posts showing a loaded object (message 0x40c)
 void EEUserInterface::ShowLoadedObject(UReferenceCounter* inObject)
 {
@@ -1040,49 +971,42 @@ void EEUserInterface::ShowLoadedObject(UReferenceCounter* inObject)
     this->mThread->Post(0x40c, inObject, NULL, true);
 }
 
-// FUNCTION: EXE 0x679438
 // Posts that a message box closed, with its callback data (message 0x417)
 void EEUserInterface::PostErrorClosed(UIForm* inForm, EEUIFErrorCallbackData* inData)
 {
     this->mThread->Post(0x417, inForm, inData, true);
 }
 
-// FUNCTION: EXE 0x679453
 // Posts restarting the game (message 0x428)
 void EEUserInterface::PostRestartGame()
 {
     this->mThread->Post(0x428, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679468
 // Posts starting the scenario test the second way (message 0x415)
 void EEUserInterface::StartScenarioTest2()
 {
     this->mThread->Post(0x415, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x67947d
 // Posts showing the civilization builder (message 0x41f)
 long EEUserInterface::PostDisplayCivBuilder()
 {
     return this->mThread->Post(0x41f, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679492
 // Posts opening a form (message 0x40d)
 long EEUserInterface::OpenForm(UIForm* inForm)
 {
     return this->mThread->Post(0x40d, inForm, NULL, true);
 }
 
-// FUNCTION: EXE 0x6794ab
 // Posts changing the rasterizer (message 0x41e)
 void EEUserInterface::PostChangeRasterizer(long inX, long inY)
 {
     this->mThread->Post(0x41e, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
 }
 
-// FUNCTION: EXE 0x6794c6
 // Posts a chat log entry with a name, colour, text, display time and type (message 0x418)
 long EEUserInterface::AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                                       unsigned long inTime, unsigned long inType)
@@ -1096,7 +1020,6 @@ long EEUserInterface::AddChatLogEntry(const GEColor& inColor, const UWideString&
     return this->mThread->Post(0x418, theEntry, NULL, true);
 }
 
-// FUNCTION: EXE 0x679536
 // Posts a white system line to the chat log, shown three times the usual time
 long EEUserInterface::AddChatLogEntry(const UWideString& inText, long inY)
 {
@@ -1104,63 +1027,54 @@ long EEUserInterface::AddChatLogEntry(const UWideString& inText, long inY)
     return this->AddChatLogEntry(theColor, " > ", inText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 3, 2);
 }
 
-// FUNCTION: EXE 0x679591
 // Posts a just-in-time manufacturing update (message 0x416)
 void EEUserInterface::UpdateJITManufacturing()
 {
     this->mThread->Post(0x416, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x6795a6
 // Posts a lobby player update (message 0x436)
 void EEUserInterface::PostLobbyUpdatePlayer(long inX, long inY)
 {
     this->mThread->Post(0x436, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
 }
 
-// FUNCTION: EXE 0x6795c1
 // Posts a lobby game options update (message 0x437)
 void EEUserInterface::PostLobbyUpdateGameOptions()
 {
     this->mThread->Post(0x437, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x6795d6
 // Posts a player's lag status (message 0x442)
 void EEUserInterface::SetLagStatus(unsigned short inLag, unsigned char inStatus)
 {
     this->mThread->Post(0x442, reinterpret_cast<void*>(inLag), (void*)(inStatus == 1), true);
 }
 
-// FUNCTION: EXE 0x6795fa
 // Posts a player's load percentage (message 0x443)
 void EEUserInterface::SetLoadPercent(long inPlayer, unsigned long inPercent)
 {
     this->mThread->Post(0x443, reinterpret_cast<void*>(inPlayer), reinterpret_cast<void*>(inPercent), true);
 }
 
-// FUNCTION: EXE 0x679615
 // Posts the lobby's transfer progress (message 0x439)
 void EEUserInterface::PostLobbyShowTransferProgress(long inX, long inY)
 {
     this->mThread->Post(0x439, reinterpret_cast<void*>(inX), reinterpret_cast<void*>(inY), true);
 }
 
-// FUNCTION: EXE 0x679630
 // Posts a lobby form update (message 0x438)
 void EEUserInterface::PostLobbyUpdateForm()
 {
     this->mThread->Post(0x438, NULL, NULL, true);
 }
 
-// FUNCTION: EXE 0x679645
 // Posts refreshing a saved group button (message 0x435)
 void EEUserInterface::PostRefreshSavedGroup(long inX)
 {
     this->mThread->Post(0x435, reinterpret_cast<void*>(inX), NULL, true);
 }
 
-// FUNCTION: EXE 0x67965e
 // Posts the load progress percentage; in multiplayer also tells the others at every 20 percent step
 void EEUserInterface::SetLoadProgress(float inFraction)
 {
@@ -1175,18 +1089,12 @@ void EEUserInterface::SetLoadProgress(float inFraction)
     this->mThread->Post(0x40a, reinterpret_cast<void*>(thePercent), NULL, true);
 }
 
-// FUNCTION: EXE 0x679709
-// Creates a load-percent message
-// (EEMLoadPercent's inline ctor, after its first user)
-
-// FUNCTION: EXE 0x67973d
 // Posts a loading text (message 0x40b)
 void EEUserInterface::SetLoadingText(long inX)
 {
     this->mThread->Post(0x40b, reinterpret_cast<void*>(inX), NULL, true);
 }
 
-// FUNCTION: EXE 0x679756
 // Posts the icon bar update (message 0x424) once until it is handled
 void EEUserInterface::PostMessage424Once()
 {
@@ -1196,7 +1104,6 @@ void EEUserInterface::PostMessage424Once()
     }
 }
 
-// FUNCTION: EXE 0x67977c
 // Shows a lag state: a waiting message in the game, or the blinking lag button in the lobby
 void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging)
 {
@@ -1219,14 +1126,12 @@ void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging)
     gUIManager->UnlockUIForCopyData();
 }
 
-// FUNCTION: EXE 0x67985e
 // Undoes the last action; returns 7 when there is none (ee_screens actions.rs)
 long EEUserInterface::Undo()
 {
     return ee_screens_actions_undo();
 }
 
-// FUNCTION: EXE 0x6798a3
 // Resumes the graphics thread and waits until it runs
 void EEUserInterface::ResumeGraphics()
 {
@@ -1235,7 +1140,6 @@ void EEUserInterface::ResumeGraphics()
         PlatSleep(1);
 }
 
-// FUNCTION: EXE 0x6798ce
 // Handles the game window's events (platform/PlatWindow.h; the original's window procedure, case by case): close,
 // minimise and restore (muting while minimised), focus (the game minimises itself and suspends input while inactive),
 // the Control/AltGr state, typed text and the input method's composition (shown by the edit box; the system draws
@@ -1351,7 +1255,6 @@ int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, i
 }
 #endif
 
-// FUNCTION: EXE 0x679fbc
 // Shows a loading text on the splash form
 void EEUserInterface::ShowLoadingText(long inStringID)
 {
@@ -1363,19 +1266,3 @@ void EEUserInterface::ShowLoadingText(long inStringID)
     }
     gUIManager->UnlockUIForCopyData();
 }
-
-// FUNCTION: EXE 0x67a050
-// Appends a thread message to the message vector (std::vector::push_back)
-// (std::vector<EEUIThreadMessage>::push_back, after its first user)
-
-// FUNCTION: EXE 0x67a07c
-// Inserts copies of a thread message into the message vector (std::vector::insert)
-// (std::vector<EEUIThreadMessage>::insert(iterator, size_type, const T&))
-
-// FUNCTION: EXE 0x67a342
-// Copies thread messages (std::copy, ICF-shared)
-// (std::copy over EEUIThreadMessage, ICF-shared)
-
-// FUNCTION: EXE 0x67a36a
-// Constructs a thread message in place (std::_Construct)
-// (std::_Construct<EEUIThreadMessage>)

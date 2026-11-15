@@ -20,14 +20,12 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPPlayerInteractionManager.h"
 
-// FUNCTION: EXE 0x489574
 // Creates a copy of a chat history entry
 EECPPIMEntry::EECPPIMEntry(const EECPPIMEntry& inEntry)
 {
     this->Copy(inEntry);
 }
 
-// FUNCTION: EXE 0x489586
 // Zeroes every field of the chat history entry
 void EECPPIMEntry::Clear()
 {
@@ -48,7 +46,6 @@ EECPPIMEntry& EECPPIMEntry::operator=(const EECPPIMEntry& inEntry)
     return *this;
 }
 
-// FUNCTION: EXE 0x4895a3
 // Copies every field of another chat history entry
 void EECPPIMEntry::Copy(const EECPPIMEntry& inEntry)
 {
@@ -63,7 +60,6 @@ void EECPPIMEntry::Copy(const EECPPIMEntry& inEntry)
     this->mL00 = inEntry.mL00;
 }
 
-// FUNCTION: EXE 0x4895de
 // Creates the computer player's chat manager, seeded from the player, with no line used yet in any of 8 groups
 EECPPlayerInteractionManager::EECPPlayerInteractionManager(EEComputerPlayer* inComputerPlayer)
 {
@@ -73,16 +69,11 @@ EECPPlayerInteractionManager::EECPPlayerInteractionManager(EEComputerPlayer* inC
     this->mLastIndex.resize(8, -1);
 }
 
-// SYNTHETIC: EXE 0x489635
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x489651
 // Destroys the chat manager (members only)
 EECPPlayerInteractionManager::~EECPPlayerInteractionManager()
 {
 }
 
-// FUNCTION: EXE 0x48966c
 // Unless the message was sent less than 5 s ago, picks one of its 10 string variants (never the group's last one)
 // and posts it to the chat log; returns whether it was posted
 bool EECPPlayerInteractionManager::SendChat(long inStringID, long inType)
@@ -132,7 +123,6 @@ bool EECPPlayerInteractionManager::SendChat(long inStringID, long inType)
     return theResult;
 }
 
-// FUNCTION: EXE 0x48979b
 // Posts a chat line under the computer player's name and colour and blocks the message id for 5 s; returns true
 bool EECPPlayerInteractionManager::SendChat(long inStringID, long inType, const UWideString& inString)
 {
@@ -145,20 +135,3 @@ bool EECPPlayerInteractionManager::SendChat(long inStringID, long inType, const 
     this->mEntries[inStringID] = theEntry;
     return true;
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt): the std::map<long, EECPPIMEntry> COMDATs
-// TEMPLATE: EXE 0x48980c
-// TEMPLATE: EXE 0x48984a
-// TEMPLATE: EXE 0x489875
-// TEMPLATE: EXE 0x4898af
-// TEMPLATE: EXE 0x489965
-// TEMPLATE: EXE 0x4899d6
-// TEMPLATE: EXE 0x489c84
-// TEMPLATE: EXE 0x489cb6
-// TEMPLATE: EXE 0x489ceb
-// TEMPLATE: EXE 0x489e7f
-// TEMPLATE: EXE 0x489ea8
-// TEMPLATE: EXE 0x489eea
-// TEMPLATE: EXE 0x489f2e
-// TEMPLATE: EXE 0x489f6f
-// TEMPLATE: EXE 0x489fa7

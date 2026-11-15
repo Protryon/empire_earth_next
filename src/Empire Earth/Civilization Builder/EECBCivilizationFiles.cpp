@@ -91,33 +91,25 @@ extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 //   object 0x965518  ctor __imp_??0FSFileSpec@@QAE@XZ  dtor __imp_??1FSFileSpec@@UAE@XZ
 // the civilization file being saved or loaded (the builder's host, EECivilizationBuilder.cpp, saves through it)
 FSFileSpec gU565518;
-// SYNTHETIC: EXE 0x67fe94   (wrapper)
-// SYNTHETIC: EXE 0x67fe9e   (ctor)
-// SYNTHETIC: EXE 0x67fea9   (registrar)
-// SYNTHETIC: EXE 0x67feb5   (dtor)
 
-// FUNCTION: EXE 0x67ffae
 // Returns the civilization choice time limit (300 s)
 unsigned long EEGetCivTimerLimit()
 {
     return 0x493e0;
 }
 
-// FUNCTION: EXE 0x67ffb4
 // Returns the time of the civilization timer's first warning (240 s)
 unsigned long EEGetCivTimerFirstWarning()
 {
     return 0x3a980;
 }
 
-// FUNCTION: EXE 0x67ffba
 // Returns the time of the civilization timer's second warning (270 s)
 unsigned long EEGetCivTimerSecondWarning()
 {
     return 0x41eb0;
 }
 
-// FUNCTION: EXE 0x67ffc0
 // Returns the civilization folder: the user's full path (Users\default\Civilizations\) or the relative one
 UString EEGetCivilizationDirectory(bool inX)
 {
@@ -129,7 +121,6 @@ UString EEGetCivilizationDirectory(bool inX)
     return theDirectory;
 }
 
-// FUNCTION: EXE 0x6806e7
 // Gives a player the civilization from a file (the game's, else the user's), buying its upgrades at no cost;
 // a game file's premade civilization keeps its localized name
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer)
@@ -187,7 +178,6 @@ static long EEReadKeyedCivilization(const std::string& inText, const UString& in
     return kErrorFailed;
 }
 
-// FUNCTION: EXE 0x680840
 // Reads a civilization file's name and upgrade ids from the data path or the given directory
 // (the legacy binary form: its (category << 6) | level ids converted; or the keyed text, EEKeyedCivilization)
 long EELoadCivilization(const UString& inName, const UString& inDirectory, UWideString& outName,
@@ -252,7 +242,6 @@ long EELoadCivilization(const UString& inName, const UString& inDirectory, UWide
     return theResult;
 }
 
-// FUNCTION: EXE 0x680a05
 // Grants a player's civilization upgrade request when allowed, valid and affordable (broadcast in multiplayer);
 // otherwise posts a chat line naming the refused civilization
 void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vector<EECivUpgrade>& inUpgrades)

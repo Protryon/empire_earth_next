@@ -25,7 +25,7 @@ class EECPPersonnelRequest : public UReferenceCounter {
 public:
     // EECPPersonnel.cpp's first functions 0x85ace..0x868b8 (vtable 0x43c234: ??_G 0x85b29, Restore 0x86624, Save
     // 0x86742; Load 0x862c9 is not virtual). Names are provisional
-    EECPPersonnelRequest(EECPPersonnel* inPersonnel, long inID);   // 0x85ace
+    EECPPersonnelRequest(EECPPersonnel* inPersonnel, long inID);
     virtual ~EECPPersonnelRequest();        // +0x00 0x85b45 (??_G 0x85b29)
     virtual long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // +0x04 0x86624
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x08 0x86742
@@ -33,14 +33,14 @@ public:
     float UpdateFill();                     // 0x860c0: mF24 = filled / slots (returns it: the caller pops st0)
     void Clear();                           // 0x860fa: dereferences the units, clears the slots
     long GetTownID();                       // 0x8619f: mTownID from mTile's town
-    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x862c9
-    bool Remove(EEComplexUnit* inUnit);     // 0x865a2 (ret 4)
-    bool Replace(EEComplexUnit* inOld, EEComplexUnit* inNew);   // 0x86878 (ret 8)
-    void ReleaseAll();                      // 0x85d51
+    long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    bool Remove(EEComplexUnit* inUnit);
+    bool Replace(EEComplexUnit* inOld, EEComplexUnit* inNew);
+    void ReleaseAll();
     long GetPopulation();                   // 0x86144 (EECPDefenseCommander 0x799fa: its unit value) (provisional name)
     // (EECPExplorationManager): 0x41eb3 mUnits.size() == 0 (out of line); 0x8655c takes the last unit
-    bool IsEmpty();                         // 0x41eb3 (provisional name)
-    void PopSlot();                         // 0x8655c (provisional name)
+    bool IsEmpty();
+    void PopSlot();
     bool TryAssign(EEComplexUnit* inUnit);  // 0x85b64 (ret 4): fills the slot waiting for inUnit's id, else one of its class (provisional name)
     // 0x861de (ret 0xc): resets the request to one slot per class and per unit id (provisional name)
     void Setup(long inID, std::vector<long>& inClasses, std::vector<long>& inUnitIDs);
@@ -88,7 +88,7 @@ public:
             ioGatherer.AddUnit(*it);   // (a copy of the entry, the handle resolved)
     }
 
-    EECPPersonnel(EEComputerPlayer* inPlayer);   // 0x868b8 (ret 4)
+    EECPPersonnel(EEComputerPlayer* inPlayer);
     virtual ~EECPPersonnel();               // +0x00 (??_G 0x86915, dtor 0x86931: ClearAll, then the members)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x87275
     virtual long Restore(unsigned long inMajorVersion, unsigned long inMinorVersion);   // +0x08 0x87d12
@@ -102,11 +102,11 @@ public:
     // 0x875ab (ret 0x10): the same for a town (its id, its hull's centre; EECPASGAir::Virtual08) (provisional name)
     EECPPersonnelRequest* NewTownRequest(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inTownID,
                                   const U2DPoint<long>& inCenter);
-    void Update(unsigned long inTime);      // 0x86e81 (ret 4)
-    void UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps);  // 0x87687 (ret 4)
+    void Update(unsigned long inTime);
+    void UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps);
     void ClearAll();                        // 0x87c5b: dereferences every unit and request, clears both maps
-    void ReturnUnit(EEUnit* inUnit);        // 0x87fc0 (ret 4)
-    void AddNewUnit(EEComplexUnit* inUnit);  // 0x881cc (ret 4)
+    void ReturnUnit(EEUnit* inUnit);
+    void AddNewUnit(EEComplexUnit* inUnit);
     bool RemoveUnit(EEComplexUnit* inUnit);  // 0x88337 (ret 4; returns al: RemoveFromRequests's result)
     bool RemoveFromRequests(EEComplexUnit* inUnit);  // 0x87ccd (ret 4): every request's Remove (provisional name)
     void RequestProduction(long inUnitClass, long inTownID, unsigned short inContinent);  // 0x87f9e (ret 0xc): one more unit requested (provisional name)

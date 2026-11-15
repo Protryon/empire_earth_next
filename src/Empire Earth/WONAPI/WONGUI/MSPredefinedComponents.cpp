@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0078fdd0
 // Maps HORZSCROLLBAR / VERTSCROLLBAR to the scroll container's scrollbars with a new scrollbar config;
 // other names go to the scroller config base
 bool MSScrollContainerConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)

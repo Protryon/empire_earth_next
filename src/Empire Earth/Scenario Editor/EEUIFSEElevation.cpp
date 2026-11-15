@@ -118,7 +118,6 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 
-// FUNCTION: EXE 0x5a098e
 // Builds the elevation tab: the paint area, the hills / cliffs / cliff paths radio buttons, the titles,
 // the elevation and strength sliders and their value label (the strength slider starts hidden)
 EEUIFSEElevation::EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long& ioIndex,
@@ -240,10 +239,6 @@ EEUIFSEElevation::EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBru
     this->mStrengthSlider->SetDisplayMode(kDisplayModeHidden);
 }
 
-// SYNTHETIC: EXE 0x5a125d
-// (EEUIFSEElevation's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5a1279
 // Destroys the elevation tab, deleting its paint area, radio buttons, labels and sliders
 EEUIFSEElevation::~EEUIFSEElevation()
 {
@@ -258,7 +253,6 @@ EEUIFSEElevation::~EEUIFSEElevation()
     delete this->mStrengthSlider;
 }
 
-// FUNCTION: EXE 0x5a12fb
 // Refreshes the brush highlight at the mouse position while the editor form is the current form
 void EEUIFSEElevation::Update()
 {
@@ -266,7 +260,6 @@ void EEUIFSEElevation::Update()
         this->MouseMove(gMouse->mPosition);
 }
 
-// FUNCTION: EXE 0x5a1329
 // Shows the brush highlight on the tile under the mouse while it is inside the game view, else hides it
 void EEUIFSEElevation::MouseMove(const GE2DPoint& inLocation)
 {

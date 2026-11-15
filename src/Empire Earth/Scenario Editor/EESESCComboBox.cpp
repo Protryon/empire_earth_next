@@ -113,14 +113,9 @@
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EEScenarioIDs.h"
 
-// SYNTHETIC: EXE 0x57acf6
-// SYNTHETIC: EXE 0x57ad00
-// SYNTHETIC: EXE 0x57ad11
-// SYNTHETIC: EXE 0x57ad1d
 // the unit's global's `$E` chain (a plain global: unguarded atexit dtor) (provisional name)
-UString gSECivilizationExtension(".civ");   // 0x531fd8
+UString gSECivilizationExtension(".civ");
 
-// FUNCTION: EXE 0x57ad28
 // Changes the selection and refreshes the controls of the trigger screen the combo sits on
 void EESETSEScenarioComboBox::ChangeSelection()
 {
@@ -144,7 +139,6 @@ void EESETSEScenarioComboBox::ChangeSelection()
     }
 }
 
-// FUNCTION: EXE 0x57add4
 // Jumps to the trigger, condition, effect, object or area entry right-clicked in the combo (skipping the
 // list's leading built-in entries)
 long EESETSEScenarioComboBox::MouseRButtonUp()

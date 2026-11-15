@@ -45,7 +45,7 @@ private:
 extern int32_t* gEEAIChokeTileKinds;        // 0x4e5c44 (0x36: a tile with a resource or an area of its own; fixed-width: ee_astar choke.rs)
 extern uint32_t* gEEAIChokeTileSerials;     // 0x4e5c48 (the serial of the area the tile belongs to)
 extern unsigned char* gEEAIChokeTileFlags;  // 0x4e5c4c (set: a tile between two areas)
-extern long gEEAIChokeWidth;                // 0x4e5c50
-extern long gEEAIChokeHeight;               // 0x4e5c54
+extern long gEEAIChokeWidth;
+extern long gEEAIChokeHeight;
 
 #endif

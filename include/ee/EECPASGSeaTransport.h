@@ -12,7 +12,7 @@
 
 class EECPASGSeaTransport : public EECPASGSea, public EECPASGTransport {
 public:
-    EECPASGSeaTransport(EECPAttackGroup* inGroup, long inKind);   // 0x4e6e7
+    EECPASGSeaTransport(EECPAttackGroup* inGroup, long inKind);
     virtual ~EECPASGSeaTransport();         // +0x00 (0x4e725)
     virtual void SetTask(const EECPAGTask& inTask);     // +0x14 0x41a2e
     // +0x1c 0xac98e (`ret 0xc`)

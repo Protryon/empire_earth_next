@@ -797,7 +797,6 @@ extern "C" void* ee_screenscpp_ga_record(uint32_t inKind, const EeScreensGaValue
 // ------------------------------------------------------------------------------------------------ the originals' COMDATs
 // (out of line in these units after their first users)
 
-// FUNCTION: EXE 0x402786
 // Message box callback: replaces the communications object with a freshly started client
 void EEAJoinOrHostAGameRestartClient(UIForm* inForm)
 {
@@ -809,7 +808,6 @@ void EEAJoinOrHostAGameRestartClient(UIForm* inForm)
     static_cast<EEClient*>(gCommunications)->StartThreads();
 }
 
-// FUNCTION: EXE 0x4027c3
 // Returns whether a player name is non-empty and free of control, quote, backslash and @ characters
 bool EEIsValidName(const UWideString& inName)
 {
@@ -821,7 +819,6 @@ bool EEIsValidName(const UWideString& inName)
     return ee_screens_valid_name(theChars.data(), theLength);
 }
 
-// FUNCTION: EXE 0x402cfc
 // Returns the group's first unit, or NULL when the group is empty
 EEComplexUnit* EEGroup::GetFirstUnit()
 {
@@ -830,14 +827,12 @@ EEComplexUnit* EEGroup::GetFirstUnit()
     return NULL;
 }
 
-// FUNCTION: EXE 0x404229
 // Returns whether the unit class is a building that handles aircraft (an air base or carrier)
 bool EEUnitClass::IsAirBase()
 {
     return this->mAirTrafficType != 0 && (this->mCategory == kUnitCategoryBuilding || this->mCategory == kUnitCategoryNavalBuilding || this->mCategory == kUnitCategorySpaceBuilding);
 }
 
-// FUNCTION: EXE 0x404249
 // Returns whether units can drop resources off at the unit class
 bool EEUnitClass::IsDropSite()
 {
@@ -845,14 +840,12 @@ bool EEUnitClass::IsDropSite()
            this->IsLandBuilding() && this->mUnitType != kUnitTypeFarm && this->mUnitType != kUnitTypeDock && this->mUnitType != kUnitTypeNavyYard && this->mResourceType > kResourceNone && this->mResourceType < 7;
 }
 
-// FUNCTION: EXE 0x404292
 // Returns whether the unit class is a land, helicopter or naval transport
 bool EEUnitClass::IsTransport()
 {
     return this->mCategory == kUnitCategoryLandTransport || this->mCategory == kUnitCategoryHelicopterTransport || this->mCategory == kUnitCategoryNavalTransport || this->mCategory == kUnitCategorySpaceTransport || this->mCategory == kUnitCategoryFortress;
 }
 
-// FUNCTION: EXE 0x4042e2
 // Returns whether the tile is visible to a player (or the player sees everything)
 bool EETile::IsVisibleTo(EEPlayer* inPlayer)
 {
@@ -860,7 +853,6 @@ bool EETile::IsVisibleTo(EEPlayer* inPlayer)
            inPlayer->mSeesAll;
 }
 
-// FUNCTION: EXE 0x40432f
 // Returns the graphic effect at an index, or NULL past the end of the table
 EEGraphicEffect* EEGraphicEffect::Get(unsigned long inIndex)
 {

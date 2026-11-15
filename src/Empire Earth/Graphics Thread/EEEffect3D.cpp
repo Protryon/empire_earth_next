@@ -30,13 +30,8 @@
 #include "rust/ee_ge.h"   // ee_gfx view.rs: the frustum test (RUST_PLAN R4.4)
 #include "rust/ee_gfx.h"
 
-// SYNTHETIC: EXE 0x5050fb
-// SYNTHETIC: EXE 0x505105
-// SYNTHETIC: EXE 0x505116
-// SYNTHETIC: EXE 0x505122
 const UString EEEffect3D::sData("EEEffect3D-Data");
 
-// FUNCTION: EXE 0x50513e
 // Returns 10 (skip) when the effect's tile is missing or not visible (IsTileVisible; unless the camera is free) or its
 // bounding sphere lies outside the view on any side; else 0
 long EEEffect3D::Queue(EEEffectQueue* inQueues)
@@ -60,21 +55,18 @@ long EEEffect3D::Queue(EEEffectQueue* inQueues)
     return 0;
 }
 
-// FUNCTION: EXE 0x505424
 // Releases the base effect's resources
 void EEEffect3D::ReleaseResources()
 {
     EEEffect::ReleaseResources();
 }
 
-// FUNCTION: EXE 0x505429
 // Returns whether the current player sees the tile
 bool EEEffect3D::IsTileVisible(EEMapTile* inTile)
 {
     return inTile->IsSeenBy(gWorld.GetCurrentPlayer());
 }
 
-// FUNCTION: EXE 0x505441
 // Resets a pooled 3D effect onto a new unit and graphic effect, with an identity transformation
 void EEEffect3D::Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
 {
@@ -82,7 +74,6 @@ void EEEffect3D::Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
     this->InitTransformation();
 }
 
-// FUNCTION: EXE 0x50545e
 // Resets a pooled 3D effect to the empty state with an identity transformation
 void EEEffect3D::Reinit()
 {
@@ -90,14 +81,12 @@ void EEEffect3D::Reinit()
     this->InitTransformation();
 }
 
-// FUNCTION: EXE 0x505471
 // Resets the transformation to identity and the bounding radius to 0 (the record's)
 void EEEffect3D::InitTransformation()
 {
     ee_gfx_effect_init_transformation(this->mRecord);
 }
 
-// FUNCTION: EXE 0x505484
 // Reads the transformation and bounding radius (ee_gfx effect_state.rs); returns the first read error (the base
 // class result is ignored)
 long EEEffect3D::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -107,7 +96,6 @@ long EEEffect3D::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_gfx_effect_load_3d(this->mRecord, &theFile);
 }
 
-// FUNCTION: EXE 0x5054b8
 // Writes the transformation and bounding radius (ee_gfx effect_state.rs); returns the first write error (the base
 // class result is ignored)
 long EEEffect3D::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -117,7 +105,6 @@ long EEEffect3D::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_gfx_effect_save_3d(this->mRecord, &theFile);
 }
 
-// FUNCTION: EXE 0x4e8e76
 // Creates an empty 3D effect of a kind for loading from a saved game (emitted by EEE3DAdditivePass.cpp, deleted)
 EEEffect3D::EEEffect3D(long inKind)
     : EEEffect(inKind)

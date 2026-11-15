@@ -149,7 +149,6 @@ public:
     bool mNearMapEdge;
 };
 
-// FUNCTION: EXE 0x471c7f
 // Returns true for a sub group that may take a new attack: it holds units, is not in transit or on mission 2, is
 // not on a live wonder task, and its kind is wanted by the flags (transports never)
 bool EECPCMSubGroupFilter::operator()(EECPAttackSubGroup* inGroup)
@@ -198,7 +197,6 @@ bool EECPCMSubGroupFilter::operator()(EECPAttackSubGroup* inGroup)
     return theResult;
 }
 
-// FUNCTION: EXE 0x471d74
 // Creates the combat manager with its personnel, intelligence, attack and defense commanders and unit selector
 EECPCombatManager::EECPCombatManager(EEComputerPlayer* inPlayer)
 {
@@ -219,10 +217,6 @@ EECPCombatManager::EECPCombatManager(EEComputerPlayer* inPlayer)
     this->mTracksThreats = true;
 }
 
-// SYNTHETIC: EXE 0x471e8a
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x471ea6
 // Destroys the combat manager with its commanders, unit selector, intelligence and personnel
 EECPCombatManager::~EECPCombatManager()
 {
@@ -234,7 +228,6 @@ EECPCombatManager::~EECPCombatManager()
     this->mPlayer = NULL;
 }
 
-// FUNCTION: EXE 0x471f16
 // Queues an attack task on a unit (a location task for an own unit) or, without one, on an area against a random
 // enemy; a unit id that no longer resolves queues nothing
 void EECPCombatManager::AddAttackTask(unsigned long inUnitID, unsigned long inAreaSerial)
@@ -275,7 +268,6 @@ void EECPCombatManager::AddAttackTask(unsigned long inUnitID, unsigned long inAr
     this->mAttackTasks.push_back(theTask);
 }
 
-// FUNCTION: EXE 0x47203a
 // Queues a defend task on a unit (a location task for an own unit) or, without one, on an area against a random
 // enemy
 void EECPCombatManager::AddDefendTask(unsigned long inUnitID, unsigned long inAreaSerial)
@@ -315,7 +307,6 @@ void EECPCombatManager::AddDefendTask(unsigned long inUnitID, unsigned long inAr
     this->mDefendTasks.push_back(theTask);
 }
 
-// FUNCTION: EXE 0x47215c
 // Offers a new unit that is not a citizen or building to the attack commander; returns true if a group took it
 bool EECPCombatManager::OfferUnit(EEComplexUnit* inOld, EEComplexUnit* inUnit)
 {
@@ -332,7 +323,6 @@ struct EECPHitPointsGreater {
     bool operator()(EEUnit* inFirst, EEUnit* inSecond) const { return inFirst->mHitPoints > inSecond->mHitPoints; }
 };
 
-// FUNCTION: EXE 0x47219a
 // When an attack is due, picks an enemy (biggest front overlap, nearest, weakest gatherer of a needed resource or
 // most damage done) for a new attack group; after being attacked, targets the leading wonder racer's nearest wonder
 // NEAR: the original calls GetRandom, begin()+i and the U2DPoint copy out of line
@@ -546,14 +536,12 @@ void EECPCombatManager::Update(unsigned long inTime)
     this->mPlayer->SetNextAttackTime(inTime);
 }
 
-// FUNCTION: EXE 0x472c03
 // Deletes every attack group
 void EECPCombatManager::DeleteGroups()
 {
     this->mAttackCommander->DeleteGroups();
 }
 
-// FUNCTION: EXE 0x472c0b
 // Passes a target-player notice to the attack and defense commanders
 void EECPCombatManager::TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag)
 {
@@ -561,7 +549,6 @@ void EECPCombatManager::TargetPlayerNotice(EEPlayer* inPlayer, bool inFlag)
     this->mDefenseCommander->TargetPlayerNotice(inPlayer, inFlag);
 }
 
-// FUNCTION: EXE 0x472c32
 // Counts threats per influence region (5 for a unit heading somewhere, else 1); past 20 in one region, sends groups
 // to the unit's tile and forgets the region
 void EECPCombatManager::NoteThreat(EEComplexUnit* inUnit, bool inUseTarget)
@@ -603,7 +590,6 @@ void EECPCombatManager::NoteThreat(EEComplexUnit* inUnit, bool inUseTarget)
     }
 }
 
-// FUNCTION: EXE 0x472e2f
 // Sends air, sea and space groups to cover a land sub group's unload tile (two attacks for an air transport);
 // always returns false
 bool EECPCombatManager::CoverLanding(EECPAttackSubGroup* inGroup)
@@ -621,7 +607,6 @@ bool EECPCombatManager::CoverLanding(EECPAttackSubGroup* inGroup)
     return false;
 }
 
-// FUNCTION: EXE 0x472ec3
 // Attacks an enemy player's most valuable unit, taunts and plays the attack sound, and halves the aid timers
 void EECPCombatManager::AttackPlayer(EEPlayer* inPlayer)
 {
@@ -643,7 +628,6 @@ void EECPCombatManager::AttackPlayer(EEPlayer* inPlayer)
     this->mDefenseCommander->mNextAidTime >>= 1;
 }
 
-// FUNCTION: EXE 0x472ff5
 // Sends groups to defend a player's most valuable unit and halves the aid timers
 void EECPCombatManager::DefendPlayer(EEPlayer* inPlayer)
 {
@@ -660,14 +644,12 @@ void EECPCombatManager::DefendPlayer(EEPlayer* inPlayer)
     this->mDefenseCommander->mNextAidTime >>= 1;
 }
 
-// FUNCTION: EXE 0x47305d
 // Collects the attack commander's defending units into inUnits
 void EECPCombatManager::CollectDefendingUnits(std::vector<EEComplexUnit*>& inUnits)
 {
     this->mAttackCommander->CollectDefendingUnits(inUnits);
 }
 
-// FUNCTION: EXE 0x47306c
 // Picks a random defend task on the continent (a unit on it, or an area with wanted tiles there, weighted by tile)
 // into outTask, aimed at the unit's tile; returns true if that tile has a continent
 bool EECPCombatManager::ChooseTask(EECPAGTask& outTask, bool inLand, bool inWater, bool inSpace, unsigned short inContinent)
@@ -759,7 +741,6 @@ bool EECPCombatManager::ChooseTask(EECPAGTask& outTask, bool inLand, bool inWate
     return theResult;
 }
 
-// FUNCTION: EXE 0x47342e
 // Returns how many more military units fit in the military share of the population limit (95% in a wonder race)
 long EECPCombatManager::GetUnitsAvailable()
 {
@@ -779,7 +760,6 @@ long EECPCombatManager::GetUnitsAvailable()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4734af
 // Returns the military share of the population limit (95% in a wonder race)
 long EECPCombatManager::GetUnitLimit()
 {
@@ -796,7 +776,6 @@ long EECPCombatManager::GetUnitLimit()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4734fa
 // Deactivates every sub group task aimed at the given area
 void EECPCombatManager::ForgetTarget(unsigned long inSerial)
 {
@@ -814,7 +793,6 @@ void EECPCombatManager::ForgetTarget(unsigned long inSerial)
     }
 }
 
-// FUNCTION: EXE 0x47355b
 // Deactivates every sub group task aimed at the given unit
 void EECPCombatManager::ForgetTargetUnit(unsigned long inUnitID)
 {
@@ -832,7 +810,6 @@ void EECPCombatManager::ForgetTargetUnit(unsigned long inUnitID)
     }
 }
 
-// FUNCTION: EXE 0x4735e2
 // Returns true when the attack commander keeps the land unit (never while the world is clearing)
 bool EECPCombatManager::KeepsUnit(EEComplexUnit* inUnit)
 {
@@ -842,7 +819,6 @@ bool EECPCombatManager::KeepsUnit(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x47360a
 // Returns true when the strategy or list is not empty and the task's area or unit is still a valid target (hostile,
 // or allied for a task on an own location)
 bool EECPCombatManager::IsValidTask(EECPAGTask& inTask, EECPCombatStrategy& inStrategy, std::vector<long>& inList)
@@ -859,7 +835,6 @@ bool EECPCombatManager::IsValidTask(EECPAGTask& inTask, EECPCombatStrategy& inSt
     return theResult;
 }
 
-// FUNCTION: EXE 0x473684
 // Returns true when the area exists (a town only if hostile or allied as inEnemy asks) or, without one, when the
 // unit is hostile or allied as asked (allied includes nature)
 bool EECPCombatManager::IsValidTarget(unsigned long inSerial, unsigned long inUnitID, bool inEnemy)
@@ -887,7 +862,6 @@ bool EECPCombatManager::IsValidTarget(unsigned long inSerial, unsigned long inUn
     return theResult;
 }
 
-// FUNCTION: EXE 0x47377e
 // Returns true for a live, AI-controlled unit of a military class that can move
 bool EECPCombatManager::IsMilitaryUnit(EEComplexUnit* inUnit)
 {
@@ -897,7 +871,6 @@ bool EECPCombatManager::IsMilitaryUnit(EEComplexUnit* inUnit)
     return false;
 }
 
-// FUNCTION: EXE 0x4737c9
 // Returns true for a mobile military class (not a citizen, building, projectile or naval mine)
 bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
 {
@@ -948,7 +921,6 @@ bool EECPCombatManager::IsMilitaryClass(EEUnitClass* inClass)
     return theResult;
 }
 
-// FUNCTION: EXE 0x47384c
 // Reads the commanders, group ids, defend and attack tasks, wonder-race state and threat counts from a saved game
 // (older versions stop earlier); returns the first read error
 long EECPCombatManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -1089,7 +1061,6 @@ long EECPCombatManager::Load(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// FUNCTION: EXE 0x473dc1
 // On reaching the WW1 epoch in a game started earlier, sends an attack group at a random enemy, plus 1-4 cruisers
 // when gDCGameSpeed >= 250 and cruisers are available
 void EECPCombatManager::EpochReached(long inEpoch)
@@ -1135,7 +1106,6 @@ void EECPCombatManager::EpochReached(long inEpoch)
     }
 }
 
-// FUNCTION: EXE 0x473fc6
 // Returns the player's most valuable non-wonder unit (influence, fixed buildings first, plus its tile's influence),
 // or NULL
 // multimap with greater<long> (insert 0x3fcf6 compares with setg): begin() is the HIGHEST weight
@@ -1162,7 +1132,6 @@ EEComplexUnit* EECPCombatManager::ChooseTargetUnit(EEPlayer* inPlayer)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4740ee
 // Sends the nearest groups of the wanted kinds to attack a tile (groups already attacking when it is unreachable),
 // tells a human target by chat, and may create a new group
 // NEAR: the original calls GetTile, the U2DPoint copy and the _Ptrit/vector accessors out of line
@@ -1295,7 +1264,6 @@ void EECPCombatManager::Attack(EEPlayer* inTarget, const EETileLocation& inTile,
         this->mAttackCommander->CreateGroup(theTask, 0);
 }
 
-// FUNCTION: EXE 0x47475d
 // Updates the attack groups and refreshes the defense commander
 void EECPCombatManager::Refresh()
 {
@@ -1303,7 +1271,6 @@ void EECPCombatManager::Refresh()
     this->mDefenseCommander->Refresh();
 }
 
-// FUNCTION: EXE 0x474772
 // Passes swapped units to the attack and defense commanders and personnel
 void EECPCombatManager::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
@@ -1312,14 +1279,12 @@ void EECPCombatManager::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
     this->mPersonnel->UnitsSwapped(ioSwaps);
 }
 
-// FUNCTION: EXE 0x47479a
 // Releases the unit from the attack commander's area groups
 void EECPCombatManager::ReleaseFromAreaGroups(EEComplexUnit* inUnit)
 {
     this->mAttackCommander->ReleaseFromAreaGroups(inUnit);
 }
 
-// FUNCTION: EXE 0x4747a9
 // Drops defend tasks whose area is gone and whose unit is gone or dead
 void EECPCombatManager::DropLostTasks()
 {
@@ -1332,7 +1297,6 @@ void EECPCombatManager::DropLostTasks()
     }
 }
 
-// FUNCTION: EXE 0x474873
 // Drops the defend task on the area (and deactivates sub group tasks on it when inRelease); returns true if found
 bool EECPCombatManager::DropAreaTask(unsigned long inSerial, bool inRelease)
 {
@@ -1354,7 +1318,6 @@ bool EECPCombatManager::DropAreaTask(unsigned long inSerial, bool inRelease)
     return theFound;
 }
 
-// FUNCTION: EXE 0x474940
 // Drops the defend task on the unit (and deactivates sub group tasks on it when inRelease); returns true if found
 bool EECPCombatManager::DropUnitTask(unsigned long inUnitID, bool inRelease)
 {
@@ -1377,7 +1340,6 @@ bool EECPCombatManager::DropUnitTask(unsigned long inUnitID, bool inRelease)
 }
 
 // NEAR: the version < 0xcb fix-up of the units' sub groups (0x474b8f..0x474d5e) is only roughly reconstructed
-// FUNCTION: EXE 0x474a2f
 // Restores personnel, tasks and commanders after loading; saves before 0xcb also leave each military unit in at
 // most one sub group (detached units in none); returns the first error
 long EECPCombatManager::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
@@ -1430,7 +1392,6 @@ long EECPCombatManager::Restore(unsigned long inMajorVersion, unsigned long inMi
     return theResult;
 }
 
-// FUNCTION: EXE 0x474d63
 // Writes the commanders, group ids, tasks, wonder-race state and threat counts to the saved game; returns the first
 // write error
 long EECPCombatManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -1478,7 +1439,6 @@ long EECPCombatManager::Save(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// FUNCTION: EXE 0x474fd8
 // Hands a new military unit to personnel (not while loading, nor for most unit swaps)
 void EECPCombatManager::UnitAdded(EEUnit* inUnit)
 {
@@ -1492,7 +1452,6 @@ void EECPCombatManager::UnitAdded(EEUnit* inUnit)
     this->mPersonnel->AddNewUnit(inUnit->mComplexUnit);
 }
 
-// FUNCTION: EXE 0x475047
 // Removes a lost military unit from personnel and the attack groups; a lost citizen is noted as a threat (unit
 // swaps excepted)
 void EECPCombatManager::UnitRemoved(EEUnit* inUnit)
@@ -1512,7 +1471,6 @@ void EECPCombatManager::UnitRemoved(EEUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x4750f2
 // Removes the unit from its attack group, returning it to personnel when asked; returns true if it was in one
 bool EECPCombatManager::TakeFromAttack(EEUnit* inUnit, bool inReturnUnit)
 {
@@ -1522,7 +1480,6 @@ bool EECPCombatManager::TakeFromAttack(EEUnit* inUnit, bool inReturnUnit)
     return theResult;
 }
 
-// FUNCTION: EXE 0x475122
 // Returns true when the unit type's class is in a military category
 bool EECPCombatManager::IsMilitaryType(unsigned long inUnitType)
 {
@@ -1577,7 +1534,6 @@ bool EECPCombatManager::IsMilitaryType(unsigned long inUnitType)
     return theResult;
 }
 
-// FUNCTION: EXE 0x47517d
 // Returns true when the unit's type is military
 bool EECPCombatManager::IsMilitaryTypeUnit(EEUnit* inUnit)
 {
@@ -1586,7 +1542,6 @@ bool EECPCombatManager::IsMilitaryTypeUnit(EEUnit* inUnit)
     return false;
 }
 
-// FUNCTION: EXE 0x475198
 // Runs the attack and defense commanders, personnel, the attack choice and the wonder race each tick
 void EECPCombatManager::Tick(unsigned long inTime)
 {
@@ -1600,7 +1555,6 @@ void EECPCombatManager::Tick(unsigned long inTime)
         this->UpdateWonderRace(inTime);
 }
 
-// FUNCTION: EXE 0x4751e0
 // Checks whether an enemy team has enough wonders; while it does, attacks a random wonder of that team every
 // 150 s, otherwise clears the wonder attack times
 void EECPCombatManager::UpdateWonderRace(unsigned long inTime)
@@ -1654,7 +1608,6 @@ void EECPCombatManager::UpdateWonderRace(unsigned long inTime)
     }
 }
 
-// FUNCTION: EXE 0x4754e7
 // Sends a difficulty-sized share of the groups at a wonder and creates a group; a non-wonder target or a team
 // about to win gets every group and sets the wonder race (five new groups for a wonder)
 void EECPCombatManager::AttackUnit(EEComplexUnit* inTarget)
@@ -1722,7 +1675,6 @@ void EECPCombatManager::AttackUnit(EEComplexUnit* inTarget)
         this->mPlayer->mInteractionManager->SendChat(IDS_CHAT_THIS_IS_YOUR_LAST_ACT, 15000);
 }
 
-// FUNCTION: EXE 0x47590f
 // Sends a difficulty-sized share of the groups to defend a wonder (every group otherwise), creates a defend group
 // and tells a human owner by chat
 void EECPCombatManager::DefendUnit(EEComplexUnit* inTarget)
@@ -1785,7 +1737,6 @@ void EECPCombatManager::DefendUnit(EEComplexUnit* inTarget)
         this->mPlayer->mInteractionManager->SendChat(IDS_CHAT_WE_WILL_HELP_YOU_PROTECT, 15000);
 }
 
-// FUNCTION: EXE 0x475c90
 // Defends an own or allied unit, or attacks an enemy one (marking the manager attacked and starting the wonder
 // attack timer in a wonder race)
 void EECPCombatManager::RespondToUnit(EEComplexUnit* inUnit)
@@ -1804,84 +1755,3 @@ void EECPCombatManager::RespondToUnit(EEComplexUnit* inUnit)
         }
     }
 }
-
-// TEMPLATE: EXE 0x47669d
-// (EEAIAStarBounds::Intersect: the inline body in ee/EEAIAStarStorage.h, emitted after its first user Update)
-
-// Template and inline COMDATs this unit's code instantiates (the bodies come from the headers; each was compared
-// against the original by name)
-// TEMPLATE: EXE 0x47366e
-// TEMPLATE: EXE 0x475d24
-// TEMPLATE: EXE 0x475d52
-// TEMPLATE: EXE 0x475d7d
-// TEMPLATE: EXE 0x475e3d
-// TEMPLATE: EXE 0x475e51
-// TEMPLATE: EXE 0x475e6d
-// TEMPLATE: EXE 0x475e99
-// TEMPLATE: EXE 0x475f0d
-// TEMPLATE: EXE 0x475f4b
-// TEMPLATE: EXE 0x475f76
-// TEMPLATE: EXE 0x475fe7
-// TEMPLATE: EXE 0x47602b
-// TEMPLATE: EXE 0x4760ee
-// TEMPLATE: EXE 0x476145
-// TEMPLATE: EXE 0x47617c
-// TEMPLATE: EXE 0x4761b5
-// TEMPLATE: EXE 0x4761ce
-// TEMPLATE: EXE 0x47623f
-// TEMPLATE: EXE 0x476271
-// TEMPLATE: EXE 0x4762a3
-// TEMPLATE: EXE 0x4762e4
-// TEMPLATE: EXE 0x4765c1
-// TEMPLATE: EXE 0x47662c
-// TEMPLATE: EXE 0x47665e
-// TEMPLATE: EXE 0x476689
-// TEMPLATE: EXE 0x476710
-// TEMPLATE: EXE 0x4767cd
-// TEMPLATE: EXE 0x476831
-// TEMPLATE: EXE 0x476895
-// TEMPLATE: EXE 0x4768bc
-// TEMPLATE: EXE 0x476918
-// TEMPLATE: EXE 0x476941
-// TEMPLATE: EXE 0x47696d
-// TEMPLATE: EXE 0x47698a
-// TEMPLATE: EXE 0x4769b6
-// TEMPLATE: EXE 0x4769da
-// TEMPLATE: EXE 0x476b19
-// TEMPLATE: EXE 0x476b66
-// TEMPLATE: EXE 0x476b9f
-// TEMPLATE: EXE 0x476bec
-// TEMPLATE: EXE 0x476c5c
-
-// Template and inline COMDATs this unit already emits (compared by name)
-// TEMPLATE: EXE 0x475f1f
-
-// Template COMDATs named by their mangled names
-// TEMPLATE: EXE 0x4769ec
-// ?_Insertion_sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x476a15
-// ?_Sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0HUEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x476ae8
-// ?_Unguarded_insertion_sort@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x476ca9
-// ?_Insertion_sort_1@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x476d3a
-// ?make_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x476d74
-// ?sort_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x476db5
-// ?_Unguarded_partition@std@@YA?AV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@V21@0UEECPHitPointsGreater@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x476eb3
-// ?_Unguarded_insert@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@PAVEEUnit@@UEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x476edc
-// ?_Make_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@PAHPAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x476f20
-// ?pop_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x476f49
-// ?_Adjust_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEEUnit@@UEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x476fae
-// ?_Pop_heap_0@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@0UEECPHitPointsGreater@@PAPAVEEUnit@@@Z
-// TEMPLATE: EXE 0x477001
-// ?_Push_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@HHPAVEEUnit@@UEECPHitPointsGreater@@@Z
-// TEMPLATE: EXE 0x477040
-// ?_Pop_heap@std@@YAXV?$_Ptrit@PAVEEUnit@@HPAPAV1@AAPAV1@PAPAV1@AAPAV1@@1@00PAVEEUnit@@UEECPHitPointsGreater@@PAH@Z

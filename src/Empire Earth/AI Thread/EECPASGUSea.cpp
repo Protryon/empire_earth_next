@@ -10,7 +10,6 @@
 #include "ee/EECPAttackSubGroupUnit.h"
 #include "ee/EECPASGUSea.h"
 
-// FUNCTION: EXE 0x40d1b6
 // Creates a sea sub group unit for a unit
 EECPASGUSea::EECPASGUSea(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inUnit, inSubGroup)
@@ -18,10 +17,6 @@ EECPASGUSea::EECPASGUSea(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindSea;
 }
 
-// SYNTHETIC: EXE 0x40d1d9
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x40d1f5
 // Creates an empty sea sub group unit (no unit yet; used when loading)
 EECPASGUSea::EECPASGUSea(EECPAttackSubGroup* inSubGroup)
     : EECPAttackSubGroupUnit(inSubGroup)
@@ -29,13 +24,11 @@ EECPASGUSea::EECPASGUSea(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindSea;
 }
 
-// FUNCTION: EXE 0x40d214
 // Destroys the sea sub group unit (base members only)
 EECPASGUSea::~EECPASGUSea()
 {
 }
 
-// FUNCTION: EXE 0x40d21f
 // Updates the unit like any sub group unit
 void EECPASGUSea::Update(unsigned long inTime)
 {

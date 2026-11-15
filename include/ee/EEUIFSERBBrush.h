@@ -12,7 +12,7 @@ public:
                    GEFont* inFont, const GE2DPoint& inPosition, UIForm* inForm, unsigned long inIndex,
                    bool inIsChecked);
     virtual ~EEUIFSERBBrush() {}            // inline (??_G 0x1a4c98)
-    virtual void Check();                   // 0x1a4c83
+    virtual void Check();
 
     EEUIFSEBrushGroup* mGroup;              // +0x114
     long mBrushSize;                        // +0x118

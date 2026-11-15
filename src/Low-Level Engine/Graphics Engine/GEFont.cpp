@@ -13,7 +13,6 @@
 #include "lle/GEFont.h"
 #include "platform/PlatFont.h"
 
-// FUNCTION: LLE 0x100151b7
 // Creates a font (name, pixel size, bold/italic/underline style, quality: platform/PlatFont.h, CreateFont's
 // arguments; only the antialiased quality is antialiased) and measures its height (tmHeight)
 GEFont::GEFont(const UString& inName, unsigned long inSize, unsigned long inStyle, unsigned long inQuality)
@@ -34,7 +33,6 @@ GEFont::GEFont(const UString& inName, unsigned long inSize, unsigned long inStyl
     this->mHeight = theHeight;
 }
 
-// FUNCTION: LLE 0x100152b6
 // Destroys the font and releases its glyph bitmap
 GEFont::~GEFont()
 {

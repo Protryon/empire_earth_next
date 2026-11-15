@@ -12,7 +12,6 @@
 #include "lle/FSPersistentList.h"
 #include "rust/ee_fs.h"
 
-// FUNCTION: LLE 0x1000be88
 // Returns a new default object of the registered type with the given tag, or NULL when no type has that tag
 FSPersistent* FSPersistentList::CreateDefaultPersistent(long inTagID)
 {
@@ -20,7 +19,6 @@ FSPersistent* FSPersistentList::CreateDefaultPersistent(long inTagID)
     return thePrototype != NULL ? thePrototype->CreateDefault() : NULL;
 }
 
-// FUNCTION: LLE 0x1000bed8
 // Deletes every registered prototype, the lowest tag first (inForced is not used)
 void FSPersistentList::Shutdown(bool inForced)
 {
@@ -28,7 +26,6 @@ void FSPersistentList::Shutdown(bool inForced)
         delete thePrototype;
 }
 
-// FUNCTION: LLE 0x1000bf54
 // Registers a prototype under its tag; for a tag already taken deletes the prototype and returns kErrorAlreadyExists
 long FSPersistentList::RegisterPersistent(FSPersistent* inPersistent)
 {

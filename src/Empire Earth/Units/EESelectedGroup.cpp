@@ -33,23 +33,21 @@
 
 // The order units are sorted in when a selection changes (RTTI EESGUnitSorter; vtable 0x446fb8: only its
 // user-declared empty virtual dtor, whose ??_G 0x20944c follows SortUnits, its first user) (provisional names).
-static const float kWounded = 0.1f;   // 0x446fb0 (provisional name)
+static const float kWounded = 0.1f;
 
 class EESGUnitSorter {
 public:
     virtual ~EESGUnitSorter() {}
-    bool operator()(EEComplexUnit* const& inFirst, EEComplexUnit* const& inSecond) const;   // 0x209008
-    bool Compare(EEComplexUnit* const& inFirst, EEComplexUnit* const& inSecond) const;      // 0x209018
+    bool operator()(EEComplexUnit* const& inFirst, EEComplexUnit* const& inSecond) const;
+    bool Compare(EEComplexUnit* const& inFirst, EEComplexUnit* const& inSecond) const;
 };
 
-// FUNCTION: EXE 0x609008
 // Returns whether the first unit sorts before the second in a selection (see Compare)
 bool EESGUnitSorter::operator()(EEComplexUnit* const& inFirst, EEComplexUnit* const& inSecond) const
 {
     return this->Compare(inFirst, inSecond);
 }
 
-// FUNCTION: EXE 0x609018
 // Orders selected units: same class healthy before wounded (<= 10% hit points), then by id; else shorter range first,
 // then smaller scale if both are ranged, else stronger attack, then unit type
 bool EESGUnitSorter::Compare(EEComplexUnit* const& inFirst, EEComplexUnit* const& inSecond) const
@@ -90,14 +88,12 @@ bool EESGUnitSorter::Compare(EEComplexUnit* const& inFirst, EEComplexUnit* const
     return theResult;
 }
 
-// FUNCTION: EXE 0x609144
 // Destroys the selection, clearing it first
 EESelectedGroup::~EESelectedGroup()
 {
     this->Clear();
 }
 
-// FUNCTION: EXE 0x60915b
 // Copies another selection's units, sort flag and saved group, and stamps the change time
 EESelectedGroup& EESelectedGroup::CopySelection(EESelectedGroup* inGroup)
 {
@@ -108,7 +104,6 @@ EESelectedGroup& EESelectedGroup::CopySelection(EESelectedGroup* inGroup)
     return *this;
 }
 
-// FUNCTION: EXE 0x609185
 // Adds a unit, optionally marking the selection for sorting; for the current player updates the UI and area outlines
 void EESelectedGroup::AddUnit(EEComplexUnit* inUnit, bool inNeedsSort)
 {
@@ -123,14 +118,12 @@ void EESelectedGroup::AddUnit(EEComplexUnit* inUnit, bool inNeedsSort)
     this->mChangeTime = TMGetTime();
 }
 
-// FUNCTION: EXE 0x6091d1
 // Adds a valid unit that is not selected yet, marking the selection for sorting
 void EESelectedGroup::Add(EEComplexUnit* inUnit)
 {
     this->AddIfAbsent(inUnit, true);
 }
 
-// FUNCTION: EXE 0x6091df
 // Adds a valid unit that is not selected yet and forgets the saved group the selection came from
 void EESelectedGroup::AddIfAbsent(EEComplexUnit* inUnit, bool inNeedsSort)
 {
@@ -140,7 +133,6 @@ void EESelectedGroup::AddIfAbsent(EEComplexUnit* inUnit, bool inNeedsSort)
     }
 }
 
-// FUNCTION: EXE 0x60920c
 // Selects a saved group's units, remembering the group only if asked (its index is searched for but unused)
 void EESelectedGroup::SelectSavedGroup(EEGroup* inGroup, bool inRememberGroup)
 {
@@ -157,7 +149,6 @@ void EESelectedGroup::SelectSavedGroup(EEGroup* inGroup, bool inRememberGroup)
     this->mChangeTime = TMGetTime();
 }
 
-// FUNCTION: EXE 0x60924f
 // Returns the continent id most of the selected units are on
 unsigned short EESelectedGroup::GetContinent()
 {
@@ -175,7 +166,6 @@ unsigned short EESelectedGroup::GetContinent()
     return theBest->first;
 }
 
-// FUNCTION: EXE 0x60930f
 // Reads the base group and the saved group's index from the saved game; returns the first read error
 long EESelectedGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -188,7 +178,6 @@ long EESelectedGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x609340
 // Empties the selection, clears its sort flag, refreshes the area outlines and stamps the change time
 void EESelectedGroup::Clear()
 {
@@ -198,7 +187,6 @@ void EESelectedGroup::Clear()
     this->mChangeTime = TMGetTime();
 }
 
-// FUNCTION: EXE 0x60935e
 // Removes a unit, refreshing the area outlines and (for the current player) the UI, and forgets the saved group
 void EESelectedGroup::RemoveUnit(EEComplexUnit* inUnit)
 {
@@ -211,7 +199,6 @@ void EESelectedGroup::RemoveUnit(EEComplexUnit* inUnit)
     this->mChangeTime = TMGetTime();
 }
 
-// FUNCTION: EXE 0x6093a3
 // Turns the loaded saved-group index back into the player's group (-1 for none) and refreshes the area outlines
 long EESelectedGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
@@ -225,7 +212,6 @@ long EESelectedGroup::RepairPointers(unsigned long inMajorVersion, unsigned long
     return theResult;
 }
 
-// FUNCTION: EXE 0x6093df
 // Writes the base group and the saved group's index (-1 if none) to the saved game; returns the first write error
 long EESelectedGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -241,7 +227,6 @@ long EESelectedGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     return theResult;
 }
 
-// FUNCTION: EXE 0x60942f
 // Sorts the selected units with EESGUnitSorter if a change asked for it
 void EESelectedGroup::SortUnits()
 {
@@ -251,10 +236,6 @@ void EESelectedGroup::SortUnits()
     }
 }
 
-// SYNTHETIC: EXE 0x60944c
-// (EESGUnitSorter's scalar deleting destructor)
-
-// FUNCTION: EXE 0x609469
 // Drops dead units without a tile (keeping aircraft and spaceships inside a carrier), moves along found paths and
 // refreshes the area outlines if units remain
 void EESelectedGroup::Validate()
@@ -280,7 +261,6 @@ void EESelectedGroup::Validate()
 // the area-effect ranges are shown on the map (ShowSelectionAreas; 0x5634c8) (provisional name)
 static bool sAreasShown;
 
-// FUNCTION: EXE 0x609500
 // Outlines on the map the area-effect range and continent of every built building of the type of the first built
 // building (not an airport) with an area effect in the current player's selection; else clears the outlines
 // The range is the template's radius times the stats' area-effect scale (+0x84)
@@ -348,7 +328,6 @@ void EESelectedGroup::ShowSelectionAreas()
     sAreasShown = true;
 }
 
-// FUNCTION: EXE 0x6097b3
 // Refreshes the area outlines when the unit is a building
 void EESelectedGroup::RefreshSelectionAreas(EEComplexUnit* inUnit)
 {
@@ -356,58 +335,3 @@ void EESelectedGroup::RefreshSelectionAreas(EEComplexUnit* inUnit)
         this->ShowSelectionAreas();
     }
 }
-
-
-// The template COMDATs of the unit, in the original's order (the vector<rectangle> push_back/insert members
-// 0x2097cb..0x209bc0 and the map search 0x209ad6 come from the unwritten ShowSelectionAreas/GetContinent):
-// TEMPLATE: EXE 0x609b15
-// (EESelectedGroup::SortBy<EESGUnitSorter>)
-// TEMPLATE: EXE 0x609bc0
-// (std::sort)
-// TEMPLATE: EXE 0x609ca0
-// (EESGUnitSorter's implicit copy ctor)
-// TEMPLATE: EXE 0x609cab
-// (std::_Insertion_sort)
-// TEMPLATE: EXE 0x609cdd
-// (std::_Sort)
-// TEMPLATE: EXE 0x609dc7
-// (std::_Unguarded_insertion_sort)
-// TEMPLATE: EXE 0x609e03
-// (std::_Insertion_sort_1)
-// TEMPLATE: EXE 0x609eb4
-// (std::make_heap)
-// TEMPLATE: EXE 0x609ef7
-// (std::sort_heap)
-// TEMPLATE: EXE 0x609f3e
-// (std::_Unguarded_partition)
-// TEMPLATE: EXE 0x60a04f
-// (std::_Unguarded_insert)
-// TEMPLATE: EXE 0x60a07f
-// (std::_Make_heap)
-// TEMPLATE: EXE 0x60a0d6
-// (std::pop_heap)
-// TEMPLATE: EXE 0x60a108
-// (std::_Adjust_heap)
-// TEMPLATE: EXE 0x60a17b
-// (std::_Pop_heap_0)
-// TEMPLATE: EXE 0x60a1ea
-// (std::_Push_heap)
-// TEMPLATE: EXE 0x60a23b
-// (std::_Pop_heap)
-// TEMPLATE: EXE 0x609ad6
-// (std::max_element over the continent counts; it sits before SortBy in the original: first reference order)
-
-// TEMPLATE: EXE 0x6097cb
-// (std::vector<U2DRectangle<long> >::push_back)
-
-// TEMPLATE: EXE 0x6097f7
-// (std::vector<U2DRectangle<long> >::insert(iterator, const T&))
-
-// TEMPLATE: EXE 0x609847
-// (std::vector<U2DRectangle<long> >::insert(iterator, size_type, const T&))
-
-// TEMPLATE: EXE 0x609b5c
-// (std::fill over the 16-byte rectangle elements of ShowSelectionAreas's vector)
-
-// TEMPLATE: EXE 0x609b8a
-// (std::copy_backward over the same elements)

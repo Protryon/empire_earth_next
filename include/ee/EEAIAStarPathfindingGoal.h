@@ -13,17 +13,17 @@ class EEMap;
 
 class EEAIAStarPathfindingGoal : public EEAIAStarGoalBase<EEAIAStarStorage, EEMap>, public EEAIAStarPathfindingGoalBase {
 public:
-    EEAIAStarPathfindingGoal();             // 0x190bf
+    EEAIAStarPathfindingGoal();
     virtual ~EEAIAStarPathfindingGoal();    // 0x190ff (??_G 0x190e3 calls it)
-    void Reset();                           // 0x19124
+    void Reset();
     // +0x08 0x19138: the search is over (no open node left, the goal's neighbourhood reached, or the revs used up);
     // inMachine is the EEAIAStarMachineBase running it (EEAIAStarGoalBase<S, M>::Virtual08 takes it)
     virtual void SearchDone(EEAIAStarMachineBase* inMachine);
-    bool IsGoalNode(EEAIAStarNode* inNode); // 0x191d1
-    void GetPath(std::vector<U2DPoint<long> >& outPath);   // 0x1929e
-    void GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited);   // 0x19315
-    void GetPoints(std::vector<GE3DPoint>& outPath);  // 0x19388
-    void GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited);  // 0x19429
+    bool IsGoalNode(EEAIAStarNode* inNode);
+    void GetPath(std::vector<U2DPoint<long> >& outPath);
+    void GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited);
+    void GetPoints(std::vector<GE3DPoint>& outPath);
+    void GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited);
     // 0x19528 (the modifier's, else the default 0x19595): ee_astar path_goals::get_cost
     long GetCost(long inFromX, long inFromY, long inX, long inY);
     virtual bool Prepare();                 // +0x0c 0x19983 (both bases' slot; the second base's thunk 0x199f2)

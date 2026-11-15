@@ -46,7 +46,6 @@
 
 #include "ee/EECPAITargetPriority.h"
 
-// FUNCTION: EXE 0x406547
 // Creates the mech priest entry for a unit in the sub-group
 EECPASGUMechPriest::EECPASGUMechPriest(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : EECPASGUPriest(inUnit, inSubGroup)
@@ -54,10 +53,6 @@ EECPASGUMechPriest::EECPASGUMechPriest(EEComplexUnit* inUnit, EECPAttackSubGroup
     this->mType = kASGUKindMechPriest;
 }
 
-// SYNTHETIC: EXE 0x40656a
-// (the scalar deleting destructor; 0x1c bytes)
-
-// FUNCTION: EXE 0x406586
 // Creates an empty mech priest entry for the sub-group (no unit yet)
 EECPASGUMechPriest::EECPASGUMechPriest(EECPAttackSubGroup* inSubGroup)
     : EECPASGUPriest(inSubGroup)
@@ -65,15 +60,12 @@ EECPASGUMechPriest::EECPASGUMechPriest(EECPAttackSubGroup* inSubGroup)
     this->mType = kASGUKindMechPriest;
 }
 
-// FUNCTION: EXE 0x4065a5
 // Destroys the mech priest entry (base members only)
 EECPASGUMechPriest::~EECPASGUMechPriest()
 {
 }
 
-// ICF-FOLDED: EXE 0x40d21f
 // Updates the unit the plain sub-group unit way, skipping the priest's own update
-// (no address of its own: the same body as EECPASGUSea::Update, which ICF kept; [sib 57])
 void EECPASGUMechPriest::Update(unsigned long inTime)
 {
     EECPAttackSubGroupUnit::Update(inTime);

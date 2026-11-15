@@ -10,7 +10,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
-// FUNCTION: WON 0x007007b0
 // Draws the frame raised or sunken in one of three styles (3D, flat lobby frame, three-line); other
 // types draw nothing
 void MS3DFrame::Paint(Graphics& g) {

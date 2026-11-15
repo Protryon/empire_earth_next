@@ -37,7 +37,7 @@ struct EeScreensSeTriggerTab;
 
 class EESETriggerScreen : public EEUIFSEMainGroup {
 public:
-    EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);  // 0x17b0b7
+    EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);
     virtual ~EESETriggerScreen();           // +0x00 0x17bf97
     virtual void Update();                  // +0x04 0x17c1d9
     virtual void Leave();                   // +0x08 0x17c130 (leaves the tab: the full game view)
@@ -56,15 +56,15 @@ public:
     virtual void ShowAlphaSort();           // +0x38 0x17ca56
     virtual void RefreshScreen();           // +0x3c 0x17ca92
     // the event handlers (EESEEvents.cpp; provisional names after their events)
-    void AlphaSort();                       // 0x17c057
+    void AlphaSort();
     void SelectEntry();                     // 0x17c0ad (also after EESEEShowDebugIDs)
-    void DecPriority();                     // 0x17c2ae
-    void DeleteEntry();                     // 0x17c31b
-    void DuplicateEntry();                  // 0x17c411
-    void ShowTab(unsigned long inControlID);    // 0x17c467
-    void IncPriority();                     // 0x17c6e0
-    void NewEntry();                        // 0x17c790
-    void SelectName();                      // 0x17c92e
+    void DecPriority();
+    void DeleteEntry();
+    void DuplicateEntry();
+    void ShowTab(unsigned long inControlID);
+    void IncPriority();
+    void NewEntry();
+    void SelectName();
 
     EESETSBaseObject* GetScreen(long inIndex) const { return this->mScreens[inIndex]; }
     // 0x17c1e5: the factory (0 trigger, 1 condition, 2 effect, 3 object, 4 area; ret 0x10, `this` unused)

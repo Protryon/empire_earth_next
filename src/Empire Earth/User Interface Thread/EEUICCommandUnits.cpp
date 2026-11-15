@@ -30,13 +30,10 @@
 #include "ee/EEARust.h"
 #include "ee/EEUICCommandUnits.h"
 
-extern unsigned long& gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;
 extern GEViewport gU4E8F08;                 // 0x4e8f08 the game view viewport (provisional name)
 extern float& gCameraZoom;                   // 0x5317f0 (the arrow scale less 0.5) (provisional name)
 
-// FUNCTION: EXE 0x657881
-// FUNCTION: EXE 0x657a03
-// FUNCTION: EXE 0x657ece
 // Creates the main game view's right-drag command control, hidden, with its facing arrow: a textured quad model
 // (CreateModel) and the "Unit Facing Arrow" texture, clamped and alpha-blended (LoadTexture)
 EEUICCommandUnits::EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
@@ -93,10 +90,6 @@ EEUICCommandUnits::EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigne
     this->mModel->GetMaterial(0)->SetTexture(this->mTexture, gScreenIndex);
 }
 
-// SYNTHETIC: EXE 0x657955
-// (the scalar deleting destructor, emitted with the vtable; slot EEUICCommandUnits+0x0)
-
-// FUNCTION: EXE 0x657971
 // Destroys the command control, its arrow model and texture
 EEUICCommandUnits::~EEUICCommandUnits()
 {
@@ -105,12 +98,6 @@ EEUICCommandUnits::~EEUICCommandUnits()
     this->mTexture->Dereference();
 }
 
-// FUNCTION: EXE 0x6579a8
-// FUNCTION: EXE 0x6579e5
-// FUNCTION: EXE 0x657c4d
-// FUNCTION: EXE 0x657fa9
-// FUNCTION: EXE 0x658170
-// FUNCTION: EXE 0x65829c
 // ComputeAngle, CopyData, DrawPolygons, the drag, the release and StartCommand: ee_screens command_units.rs
 // (EE_SCREENS_CU_DO_*) over the arrow's, the view's, the selection's and the action's ops below
 long EEUICCommandUnits::Rust(uint32_t inWhich, const GE2DPoint* inLocation)

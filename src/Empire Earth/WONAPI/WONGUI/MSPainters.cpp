@@ -12,7 +12,6 @@
 #include "ee/wonapi/WONLobbyMSPainters.h"
 #include "ee/wonapi/WONGUIDraw.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00700450
 // Paints a popup menu background in the menu colour with a raised 3D border (highlight top and left, dark
 // shadow and shadow on the right and bottom)
 void MSPopup::Paint(Graphics& g)
@@ -20,7 +19,6 @@ void MSPopup::Paint(Graphics& g)
     Component::Paint(g);
     WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Popup,this->Width(),this->Height()));
 }
-// FUNCTION: WON 0x00700520
 // Fills the whole component with the system 3D face colour (dialog background)
 void MSDlgBack::Paint(Graphics& g)
 {

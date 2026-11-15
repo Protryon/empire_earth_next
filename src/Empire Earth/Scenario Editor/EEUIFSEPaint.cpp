@@ -62,7 +62,6 @@
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEMouse.h"
 
-// FUNCTION: EXE 0x5a3f10
 // Creates the paint area over the game view, with no paint action in progress
 EEUIFSEPaint::EEUIFSEPaint(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes,
                          unsigned long inId, const GE2DPoint& inLocation,
@@ -80,10 +79,6 @@ EEUIFSEPaint::EEUIFSEPaint(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes,
     this->SetAlwaysDirty(true);
 }
 
-// SYNTHETIC: EXE 0x5a3fb8
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x5a3fd4
 // Destroys the paint area, releasing the paint action in progress
 EEUIFSEPaint::~EEUIFSEPaint()
 {
@@ -92,7 +87,6 @@ EEUIFSEPaint::~EEUIFSEPaint()
     }
 }
 
-// FUNCTION: EXE 0x5a3ff7
 // Remembers the tile under the mouse as the last painted tile, if the mouse is on one
 void EEUIFSEPaint::StoreMouseTile()
 {
@@ -105,7 +99,6 @@ void EEUIFSEPaint::StoreMouseTile()
     }
 }
 
-// FUNCTION: EXE 0x5a4036
 // Repeats the mouse move at the current mouse position, then copies the control's data
 long EEUIFSEPaint::CopyData()
 {
@@ -113,7 +106,6 @@ long EEUIFSEPaint::CopyData()
     return UIControl::CopyData();
 }
 
-// FUNCTION: EXE 0x5a4054
 // Starts painting: captures the mouse inside the game view, creates the tab's paint action and paints the brush
 // square around the clicked tile
 long EEUIFSEPaint::MouseLButtonDown()
@@ -151,7 +143,6 @@ long EEUIFSEPaint::MouseLButtonDown()
     return 0;
 }
 
-// FUNCTION: EXE 0x5a41cd
 // Stops painting: releases the mouse and the paint action and restores the full-window mouse and scroll bounds
 long EEUIFSEPaint::MouseLButtonUp()
 {
@@ -166,7 +157,6 @@ long EEUIFSEPaint::MouseLButtonUp()
     return 0;
 }
 
-// FUNCTION: EXE 0x5a4265
 // While painting, paints the brush along the line from the last tile to the tile under the mouse; always
 // moves the brush highlight
 long EEUIFSEPaint::MouseMove(const GE2DPoint& inLocation)
@@ -212,20 +202,14 @@ long EEUIFSEPaint::MouseMove(const GE2DPoint& inLocation)
     return 0;
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUIFSEPaint::TabbedFrom()
 {
 }
 
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUIFSEPaint::TabbedTo()
 {
 }
 
-// ICF-FOLDED: EXE 0x5ad67e
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
 long EEUIFSEPaint::UpdateKeyboard()
 {
     return 0;

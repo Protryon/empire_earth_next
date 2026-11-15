@@ -37,21 +37,18 @@ EeWonUrl UrlIn(URLType inType, bool inAbsolute, const std::string& inAddress, co
     return u;
 }
 }
-// FUNCTION: WON 0x006d7a20
 // Parses an http, ftp or file URL into type, address and path; anything without a scheme is a local file path
 URL::URL(const std::string& inURL)
 {
     UrlOut o = {&this->mType, &this->mIsAbsolute, &this->mAddress, &this->mPath};
     ee_won_url_parse(reinterpret_cast<const uint8_t*>(inURL.data()), inURL.size(), UrlSink, &o);
 }
-// FUNCTION: WON 0x006d7d10
 // Returns the path as a local file path (backslashes)
 std::string URL::GetPathAsLocalFilePath() const
 {
     WONFile file(this->mPath);
     return file.GetFilePath();
 }
-// FUNCTION: WON 0x006d7e90
 // Resolves a relative URL against a base URL (fragments append to the base path, others replace its file part)
 void URL::CalcRelativeTo(const URL& inBase)
 {
@@ -63,7 +60,6 @@ void URL::CalcRelativeTo(const URL& inBase)
     this->mAddress = anAddress;
     this->mPath = aPath;
 }
-// FUNCTION: WON 0x006d8150
 // Builds the full URL text from scheme, address and path
 void URL::GetEntire(std::string& outString)
 {

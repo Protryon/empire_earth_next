@@ -13,7 +13,6 @@
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
-// FUNCTION: WON 0x007986d0
 // Handles TRANSPARENT (true gives the scrollbar a plain button as its scroll rectangle); passes other keys on
 bool WONScrollbarConfig::Virtual24(const std::string& key)
 {
@@ -26,7 +25,6 @@ bool WONScrollbarConfig::Virtual24(const std::string& key)
     } else return ScrollbarConfig::Virtual24(key);
     return true;
 }
-// FUNCTION: WON 0x00798b20
 // Lets the list header config handle the key first, then handles SETSTANDARDCOLUMN (column, title)
 bool WONHeaderControlConfig::Virtual24(const std::string& key)
 {
@@ -39,7 +37,6 @@ bool WONHeaderControlConfig::Virtual24(const std::string& key)
     } else return false;
     return true;
 }
-// FUNCTION: WON 0x00798c00
 // Handles the list control keys HEADERHEIGHT, NUMCOLUMNS, DYNAMICSIZECOLUMN, LISTFLAGS, SETSTANDARDCOLUMN
 // and SETCOLUMN; passes other keys to the scroll container config
 bool WONListCtrlConfig::Virtual24(const std::string& key)

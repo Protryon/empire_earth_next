@@ -149,14 +149,13 @@ extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain n
 #include "lle/UICheckBox.h"
 #include "ee/EESETSBaseObject.h"
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
-extern GEFont* gU531938;                    // 0x531938
+extern GEFont* gU531938;
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESEInstructions.h"
 extern unsigned long& gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
 extern bool gSightUpdatesEnabled;
 extern GEViewport gViewport;
 
-// FUNCTION: EXE 0x5a0315
 // Builds the brush size group (title and tiny to huge radio buttons, tiny checked) on the terrain and elevation tabs
 EEUIFSEBrushGroup::EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& inLocation,
                                    UIForm* inForm, GEFont* inFont)
@@ -225,7 +224,6 @@ EEUIFSEBrushGroup::EEUIFSEBrushGroup(unsigned long& ioIndex, const GE2DPoint& in
     this->mIsCentered = false;
 }
 
-// FUNCTION: EXE 0x5a074a
 // Destroys the brush group, deleting its five buttons and title
 EEUIFSEBrushGroup::~EEUIFSEBrushGroup()
 {
@@ -234,7 +232,6 @@ EEUIFSEBrushGroup::~EEUIFSEBrushGroup()
     delete this->mTitle;
 }
 
-// FUNCTION: EXE 0x5a0778
 // Sets the highlighted brush square around a map position, one tile larger to the top left when centered
 void EEUIFSEBrushGroup::SetHighlight(float inX, float inY, bool inIsCentered)
 {

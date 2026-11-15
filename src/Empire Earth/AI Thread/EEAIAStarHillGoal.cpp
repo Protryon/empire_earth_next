@@ -46,14 +46,12 @@
 #include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarHillGoal.h"
 
-// FUNCTION: EXE 0x416c0e
 // Creates the hill flood fill goal with no tiles and no continent; hill ids start at 1
 EEAIAStarHillGoal::EEAIAStarHillGoal()
     : mTileCount(0), mNextID(1), mContinentID(0)
 {
 }
 
-// FUNCTION: EXE 0x416c56
 // Stamps every closed and open node's tile with the current hill id and continent and collects those tiles
 void EEAIAStarHillGoal::CollectTiles()
 {
@@ -74,7 +72,6 @@ void EEAIAStarHillGoal::CollectTiles()
     }
 }
 
-// FUNCTION: EXE 0x416d04
 // Builds a hill of the current id and continent from the collected tiles, files it, marks its bounds dirty in
 // the storage, then starts the next id with no continent
 void EEAIAStarHillGoal::CreateHill()
@@ -93,7 +90,6 @@ void EEAIAStarHillGoal::CreateHill()
     this->mContinentID = 0;
 }
 
-// FUNCTION: EXE 0x416db8
 // Returns whether the fill takes a tile: not cliff, height level 4 or more, on the hill's continent (the first
 // tile picks it); counts the tile and adds its level to the sum
 bool EEAIAStarHillGoal::AcceptTile(unsigned long inX, unsigned long inY, long inStart)
@@ -111,18 +107,7 @@ bool EEAIAStarHillGoal::AcceptTile(unsigned long inX, unsigned long inY, long in
     return theResult;
 }
 
-// FUNCTION: EXE 0x4170a9
 // Destroys the goal (members only)
 EEAIAStarHillGoal::~EEAIAStarHillGoal()
 {
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x416e9d
-// TEMPLATE: EXE 0x416ed7
-// SYNTHETIC: EXE 0x41706b
-// SYNTHETIC: EXE 0x41708d
-// TEMPLATE: EXE 0x4170ca
-// TEMPLATE: EXE 0x4170f5
-// TEMPLATE: EXE 0x417112
-// TEMPLATE: EXE 0x417183

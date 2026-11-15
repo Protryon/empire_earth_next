@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONLobbyCore.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0075cf90
 // Makes the given saved user (or the LAN user for NULL) current and loads that user's preferences
 void LobbySetCurrentUser(LobbyUserInfo* user)
 {
@@ -25,7 +24,6 @@ void LobbySetCurrentUser(LobbyUserInfo* user)
     data->LoadUserPrefs();
 }
 
-// FUNCTION: WON 0x0075cfc0
 // The current user's ignored player names (none without lobby data), in their order
 size_t LobbyGetIgnoredNameCount()
 {
@@ -38,7 +36,6 @@ GUIString LobbyGetIgnoredNameAt(size_t inPos)
     return data!=NULL?data->IgnoredNames().KeyAt(inPos):gEmptyGUIString;
 }
 
-// FUNCTION: WON 0x0075d010
 // Returns whether a player name is on the current user's ignore list
 bool LobbyIsNameIgnored(const GUIString& name)
 {
@@ -47,7 +44,6 @@ bool LobbyIsNameIgnored(const GUIString& name)
     return data->IgnoredNames().Contains(name);
 }
 
-// FUNCTION: WON 0x0075d090
 // Returns whether a CD key id is in the saved blocked set (loaded and saved but never filled by the lobby)
 bool LobbyIsCDKeyBlocked(unsigned long id)
 {
@@ -56,7 +52,6 @@ bool LobbyIsCDKeyBlocked(unsigned long id)
     return data->BlockedCDKeyIds().Contains(id);
 }
 
-// FUNCTION: WON 0x0075d270
 // The current user's friends (none without lobby data), by user id
 size_t LobbyGetFriendCount()
 {
@@ -69,7 +64,6 @@ LobbyFriend* LobbyGetFriendAt(size_t inPos)
     return data!=NULL?data->Friends().At(inPos):NULL;
 }
 
-// FUNCTION: WON 0x0075d3f0
 // Returns the friend entry for a user id, or NULL if that user is not a friend
 LobbyFriend* LobbyFindFriend(unsigned long id)
 {
@@ -78,7 +72,6 @@ LobbyFriend* LobbyFindFriend(unsigned long id)
     return data->Friends().Get(id);
 }
 
-// FUNCTION: WON 0x0075d640
 // Returns the current LAN player name
 GUIString LobbyGetLanName()
 {
@@ -86,7 +79,6 @@ GUIString LobbyGetLanName()
     return data!=NULL?data->GetLanName():gEmptyGUIString;
 }
 
-// FUNCTION: WON 0x0075dc40
 // Returns the name of the server the user last joined
 GUIString LobbyGetLastServerName()
 {
@@ -94,7 +86,6 @@ GUIString LobbyGetLastServerName()
     return data!=NULL?data->GetLastServerName():gEmptyGUIString;
 }
 
-// FUNCTION: WON 0x0075dc60
 // Returns the name of the room the user last joined
 GUIString LobbyGetLastRoomName()
 {
@@ -102,7 +93,6 @@ GUIString LobbyGetLastRoomName()
     return data!=NULL?data->GetLastRoomName():gEmptyGUIString;
 }
 
-// FUNCTION: WON 0x0075e2d0
 // Returns the name of the lobby tab to open at start (Quick Play, LAN ...)
 GUIString LobbyGetTabSelect()
 {
@@ -110,7 +100,6 @@ GUIString LobbyGetTabSelect()
     return data!=NULL?data->GetTabSelect():gEmptyGUIString;
 }
 
-// FUNCTION: WON 0x0075e2f0
 // Returns whether chat profanity filtering is on
 bool LobbyGetFilterDirtyWords()
 {
@@ -118,7 +107,6 @@ bool LobbyGetFilterDirtyWords()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kFilterDirtyWords):false;
 }
 
-// FUNCTION: WON 0x0075e300
 // Returns whether the user is marked away automatically when idle
 bool LobbyGetDoAutoAFK()
 {
@@ -126,7 +114,6 @@ bool LobbyGetDoAutoAFK()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kDoAutoAFK):false;
 }
 
-// FUNCTION: WON 0x0075e310
 // Returns whether cross-promotion messages are shown
 bool LobbyGetCrossPromotion()
 {
@@ -134,7 +121,6 @@ bool LobbyGetCrossPromotion()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kCrossPromotion):false;
 }
 
-// FUNCTION: WON 0x0075e320
 // Returns whether lobby sound effects are on
 bool LobbyGetLobbySoundEffects()
 {
@@ -142,7 +128,6 @@ bool LobbyGetLobbySoundEffects()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kLobbySoundEffects):false;
 }
 
-// FUNCTION: WON 0x0075e330
 // Returns whether chat sound effects are on
 bool LobbyGetChatSoundEffects()
 {
@@ -150,7 +135,6 @@ bool LobbyGetChatSoundEffects()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kChatSoundEffects):false;
 }
 
-// FUNCTION: WON 0x0075e340
 // Returns whether staging-room sound effects are on
 bool LobbyGetStagingSoundEffects()
 {
@@ -158,7 +142,6 @@ bool LobbyGetStagingSoundEffects()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kStagingSoundEffects):false;
 }
 
-// FUNCTION: WON 0x0075e350
 // Returns whether lobby music is on
 bool LobbyGetLobbyMusic()
 {
@@ -166,7 +149,6 @@ bool LobbyGetLobbyMusic()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kLobbyMusic):false;
 }
 
-// FUNCTION: WON 0x0075e360
 // Returns whether confirmation dialogs are shown
 bool LobbyGetShowConfirmations()
 {
@@ -174,7 +156,6 @@ bool LobbyGetShowConfirmations()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kShowConfirmations):false;
 }
 
-// FUNCTION: WON 0x0075e370
 // Returns whether listed games are pinged automatically
 bool LobbyGetAutoPingGames()
 {
@@ -182,7 +163,6 @@ bool LobbyGetAutoPingGames()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kAutoPingGames):false;
 }
 
-// FUNCTION: WON 0x0075e380
 // Returns whether games already in progress appear in the game list
 bool LobbyGetShowGamesInProgress()
 {
@@ -190,7 +170,6 @@ bool LobbyGetShowGamesInProgress()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kShowGamesInProgress):false;
 }
 
-// FUNCTION: WON 0x0075e390
 // Returns whether the user hides their location from friends
 bool LobbyGetAnonymousToFriends()
 {
@@ -198,7 +177,6 @@ bool LobbyGetAnonymousToFriends()
     return data!=NULL?data->GetFlag(LobbyPersistentData::kAnonymousToFriends):false;
 }
 
-// FUNCTION: WON 0x0075e3a0
 // Returns the user's connection speed setting (50 without lobby data)
 unsigned short LobbyGetConnectionSpeed()
 {
@@ -207,7 +185,6 @@ unsigned short LobbyGetConnectionSpeed()
     return 50;
 }
 
-// FUNCTION: WON 0x0075e3c0
 // Returns the LAN broadcast port (8585 without lobby data)
 unsigned short LobbyGetLanBroadcastPort()
 {
@@ -216,7 +193,6 @@ unsigned short LobbyGetLanBroadcastPort()
     return 8585;
 }
 
-// FUNCTION: WON 0x0075e3e0
 // Returns the saved network adapter's IPv4 address (0 for the default)
 long LobbyGetNetworkAdapter()
 {
@@ -224,15 +200,3 @@ long LobbyGetNetworkAdapter()
     return data!=NULL?data->GetNetworkAdapter():0;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0076c580
-// (public: class std::_Tree<class WONAPI::GUIString,class WONAPI::GUIString,struct std::_Setk<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoCase,)
-// TEMPLATE: WON 0x0076ca70
-// (protected: void __thiscall std::_Tree<class WONAPI::GUIString,class WONAPI::GUIString,struct std::_Setk<class WONAPI::GUIString,struct WONAPI::GUIStri)
-// TEMPLATE: WON 0x0076cab0
-// (protected: struct std::_Tree<class WONAPI::GUIString,class WONAPI::GUIString,struct std::_Setk<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoC)
-// TEMPLATE: WON 0x0076cb00
-// (public: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,class WONAPI::SmartPtr<class WONAPI::LobbyFriend> >,struct std::_Mapk<uns)
-// TEMPLATE: WON 0x00767050
-// (public: __thiscall std::set<class WONAPI::GUIString,struct WONAPI::GUIStringLessNoCase,class std::allocator<class WONAPI::GUIString> >::set<class WONA)

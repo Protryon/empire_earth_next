@@ -22,7 +22,6 @@ void BytesSink(void* inContext, const uint8_t* inData, size_t inLength)
 }
 }
 namespace WONAPI {
-// FUNCTION: WON 0x006c6630
 // Creates a friend status query to a server address, with 3 retransmits and a 1 s message timeout
 RoutingGetUserStatusOp::RoutingGetUserStatusOp(const IPAddr& inAddress, UDPManager* inManager)
     : mStatus(ee_won_userstatus_new())
@@ -33,7 +32,6 @@ RoutingGetUserStatusOp::RoutingGetUserStatusOp(const IPAddr& inAddress, UDPManag
     this->SetMsgTimeout(1000);
 }
 RoutingGetUserStatusOp::~RoutingGetUserStatusOp() { ee_won_userstatus_free(this->mStatus); }
-// FUNCTION: WON 0x006c68c0
 // Adds a WON user id to query, with status 0 until the reply arrives
 void RoutingGetUserStatusOp::AddWONUserId(unsigned long inUserId) { ee_won_userstatus_add(this->mStatus, inUserId); }
 RoutingGetUserStatusOp::FriendStatusMap RoutingGetUserStatusOp::GetFriendStatusMap() const
@@ -48,7 +46,6 @@ void RoutingGetUserStatusOp::SetFriendStatusMap(const FriendStatusMap& inMap)
     for (FriendStatusMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i)
         ee_won_userstatus_put(this->mStatus, i->first, i->second);
 }
-// FUNCTION: WON 0x006c6970
 // Builds the user status datagram listing every queried WON id and starts the send/receive
 void RoutingGetUserStatusOp::RunHook()
 {
@@ -58,7 +55,6 @@ void RoutingGetUserStatusOp::RunHook()
     this->SetOutgoing(aMessage);
     UDPManagerSendRecvOp::RunHook();
 }
-// FUNCTION: WON 0x006c6ab0
 // Checks the status reply header and count and stores each user's status byte; returns the result (a reply cut
 // short is an unpack failure, what was read kept)
 WONStatus RoutingGetUserStatusOp::CheckResponse(ReadBuffer& inMessage)
@@ -70,15 +66,3 @@ WONStatus RoutingGetUserStatusOp::CheckResponse(ReadBuffer& inMessage)
     return aStatus;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006c6730
-// (public: virtual void * __thiscall WONAPI::RoutingGetUserStatusOp::`scalar deleting destructor'(unsigned int)    [??_GRoutingGetUserStatusOp@WONAPI@@UA)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006c6750
-// (public: virtual __thiscall WONAPI::RoutingGetUserStatusOp::~RoutingGetUserStatusOp(void)    [??1RoutingGetUserStatusOp@WONAPI@@UAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006c9f90
-// (protected: class std::_Tree<unsigned long,struct std::pair<unsigned long const ,unsigned char>,struct std::_Mapk<unsigned long,unsigned char,struct st)

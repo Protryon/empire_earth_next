@@ -34,25 +34,9 @@
 // Second unguarded lock chain at 0x23b664; independent technology-media readers use 0x564458.
 static EEDatabaseLock sUnitClassUpgradeLock;
 
-// FUNCTION: EXE 0x63b61a
-// FUNCTION: EXE 0x63b624
-// FUNCTION: EXE 0x63b64a
-// FUNCTION: EXE 0x63b656
-// (EEDatabase.h's sDatabaseLock: wrapper, ctor, registrar, dtor)
-
-// FUNCTION: EXE 0x63b664
-// The second unguarded EEDatabaseLock chain (0x564458): generated wrapper (10 bytes).
-// FUNCTION: EXE 0x63b66e
-// Generated ctor (38 bytes).
-// FUNCTION: EXE 0x63b694
-// Generated registrar (12 bytes).
-// FUNCTION: EXE 0x63b6a0
-// Generated dtor (14 bytes).
-
 static unsigned long sModel74Index;         // 0x564460 (GetAcknowledgeSound's round robin; provisional name)
 static unsigned long sModel7CIndex;         // 0x564464 (GetSelectionSound's; provisional name)
 
-// FUNCTION: EXE 0x63b6ae
 // Creates a player's copy of a unit class's stats, unnamed, with no media or buttons loaded
 EEUnitClassUpgrade::EEUnitClassUpgrade(EEUnitClass* inUnitClass)
 {
@@ -66,10 +50,6 @@ EEUnitClassUpgrade::EEUnitClassUpgrade(EEUnitClass* inUnitClass)
     this->Init();
 }
 
-// SYNTHETIC: EXE 0x63b70d
-// (EEUnitClassUpgrade's scalar deleting destructor)
-
-// FUNCTION: EXE 0x63b729
 // Destroys the copy, unloading its sounds and model while its media is loaded
 EEUnitClassUpgrade::~EEUnitClassUpgrade()
 {
@@ -92,14 +72,12 @@ EEUnitClassUpgrade::~EEUnitClassUpgrade()
     }
 }
 
-// FUNCTION: EXE 0x63b7a4
 // Raises another copy's improvements by this copy's levels above 1, moving its stats
 void EEUnitClassUpgrade::CopyUpgradeLevels(EEUnitClassUpgrade* inOther)
 {
     this->mImprovement.CopyLevelsTo(inOther, inOther->GetImprovement());
 }
 
-// FUNCTION: EXE 0x63b7c1
 // Writes the class name and media count to the dump file when the copy's media is still loaded
 void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 {
@@ -108,7 +86,6 @@ void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
         fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)this->mUnitClass->mName, this->mMediaCount);
 }
 
-// FUNCTION: EXE 0x63b806
 // Returns acknowledge sound inIndex; -1 alternates between the two (one turn shared by every class)
 EESoundObject* EEUnitClassUpgrade::GetAcknowledgeSound(long inIndex)
 {
@@ -119,14 +96,12 @@ EESoundObject* EEUnitClassUpgrade::GetAcknowledgeSound(long inIndex)
     return this->mAcknowledgeSounds[inIndex];
 }
 
-// FUNCTION: EXE 0x63b827
 // Returns the copy's improvement levels
 EEUnitClassImprovement* EEUnitClassUpgrade::GetImprovement()
 {
     return &this->mImprovement;
 }
 
-// FUNCTION: EXE 0x63b82b
 // Returns selection sound inIndex; -1 alternates between the two (one turn shared by every class)
 EESoundObject* EEUnitClassUpgrade::GetSelectionSound(long inIndex)
 {
@@ -137,28 +112,24 @@ EESoundObject* EEUnitClassUpgrade::GetSelectionSound(long inIndex)
     return this->mSelectionSounds[inIndex];
 }
 
-// FUNCTION: EXE 0x63b84c
 // Builds the upgrade button's " + n" help text for an improvement's next level
 void EEUnitClassUpgrade::GetImprovementGainText(UWideString& outText, long inImprovement, long inLevel)
 {
     this->mImprovement.GetGainText(this, inLevel, inImprovement, outText);
 }
 
-// FUNCTION: EXE 0x63b864
 // Returns an improvement's display name for this unit class
 void EEUnitClassUpgrade::GetImprovementName(UWideString& outName, long inImprovement)
 {
     this->mImprovement.GetName(this->mUnitClass, inImprovement, outName);
 }
 
-// FUNCTION: EXE 0x63b87a
 // Raises or lowers an improvement by inDelta levels, moving this copy's stats
 void EEUnitClassUpgrade::ChangeLevel(long inImprovement, long inDelta)
 {
     this->mImprovement.ChangeLevel(this->mUnitClass, this, inImprovement, inDelta);
 }
 
-// ICF-FOLDED: EXE 0x5f1f81
 // Returns the unit class this copy belongs to (the original folded it with EEComplexDoppelganger::GetTileX, the same
 // `mov eax,[ecx+0x60]`; written out so the member is read at this build's offset)
 EEUnitClass* EEUnitClassUpgrade::GetUnitClass()
@@ -166,7 +137,6 @@ EEUnitClass* EEUnitClassUpgrade::GetUnitClass()
     return this->mUnitClass;
 }
 
-// FUNCTION: EXE 0x63b891
 // Resets the copy to its unit class: media, button, stats and inverse speeds, area-effect templates and terrain mask
 // (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels
 void EEUnitClassUpgrade::Init()
@@ -188,7 +158,6 @@ void EEUnitClassUpgrade::Init()
     ee_units_upgrade_init_finish(this, this->mUnitClass);
 }
 
-// FUNCTION: EXE 0x63bbf9
 // Reads the copy's name and improvement levels (applied to its stats) from a saved game; returns the first read error
 long EEUnitClassUpgrade::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
@@ -198,7 +167,6 @@ long EEUnitClassUpgrade::Load(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x63bc29
 // Loads the class's buttons on the first request; later requests are counted and wait while the first one loads
 void EEUnitClassUpgrade::LoadButtons(EEPlayer* inPlayer)
 {
@@ -220,7 +188,6 @@ void EEUnitClassUpgrade::LoadButtons(EEPlayer* inPlayer)
     sUnitClassUpgradeLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63bcc3
 // On the first request loads the sounds and model chosen by inMediaFlags (dropping sounds that fail), the button,
 // the area-effect templates and the class's media; later requests are counted and wait while the first one loads
 void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
@@ -260,7 +227,6 @@ void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
     sDatabaseLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63be43
 // Writes the copy's name and improvement levels to the saved game; returns the first write error
 long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -270,7 +236,6 @@ long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMino
     return theResult;
 }
 
-// FUNCTION: EXE 0x63be6f
 // Replaces acknowledge sound inIndex; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetAcknowledgeSound(EESoundObject* inSound, long inIndex)
 {
@@ -285,7 +250,6 @@ void EEUnitClassUpgrade::SetAcknowledgeSound(EESoundObject* inSound, long inInde
     sDatabaseLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63bed9
 // Replaces the creation sound; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
 {
@@ -300,7 +264,6 @@ void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
     sDatabaseLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63bf3d
 // Replaces the death sound; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
 {
@@ -315,7 +278,6 @@ void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
     sDatabaseLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63bfa1
 // Replaces the model; while media is loaded, unloads the old model and loads the new one
 void EEUnitClassUpgrade::SetModel(EEModel* inModel)
 {
@@ -330,7 +292,6 @@ void EEUnitClassUpgrade::SetModel(EEModel* inModel)
     sDatabaseLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63c005
 // Sets the top speed and scales acceleration and turn rates (turret too) by its ratio to the class's; updates the
 // inverses
 void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
@@ -338,7 +299,6 @@ void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
     ee_units_upgrade_set_max_velocity(this, this->mUnitClass, inValue);   // New (R5b.4, round 28): ee_units stats.rs
 }
 
-// FUNCTION: EXE 0x63c09d
 // Replaces the button; while media is loaded, releases the old button and acquires the new one
 void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
 {
@@ -353,7 +313,6 @@ void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
     sDatabaseLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63c101
 // Sets the range and the projectile's launch speed to reach it at 45 degrees (a bomb: its top speed; a Roman
 // Legionnaire aims for its heal range; no projectile: 0)
 void EEUnitClassUpgrade::SetRange(float inValue)
@@ -361,7 +320,6 @@ void EEUnitClassUpgrade::SetRange(float inValue)
     ee_units_upgrade_set_range(this, this->mUnitClass, this->mUnitClass->mProjectileClass, inValue);   // New (R5b.4, round 28): ee_units improve.rs
 }
 
-// FUNCTION: EXE 0x63c185
 // Replaces selection sound inIndex; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetSelectionSound(EESoundObject* inSound, long inIndex)
 {
@@ -376,7 +334,6 @@ void EEUnitClassUpgrade::SetSelectionSound(EESoundObject* inSound, long inIndex)
     sDatabaseLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63c1ef
 // Drops one button request; the last one unloads the class's buttons
 void EEUnitClassUpgrade::UnloadButtons(EEPlayer* inPlayer)
 {
@@ -391,7 +348,6 @@ void EEUnitClassUpgrade::UnloadButtons(EEPlayer* inPlayer)
     sUnitClassUpgradeLock.mLock->Leave();
 }
 
-// FUNCTION: EXE 0x63c24f
 // Drops one media request; the last one unloads the sounds, model, button, area-effect templates and class media
 void EEUnitClassUpgrade::UnloadMedia(EEPlayer* inPlayer)
 {

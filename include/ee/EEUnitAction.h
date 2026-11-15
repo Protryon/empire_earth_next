@@ -18,7 +18,7 @@ public:
     static long GetActionID(const char* inName);        // 0x22c70b (0: unknown)
     static const char* GetActionName(unsigned long inAction);   // 0x22c75a ("" for an unknown id)
     static void* GetScript(const UString& inName);       // 0x22c7e0 (the script's handle; ee_units_script_find)
-    static void DeleteScripts();                        // 0x22cdb6
+    static void DeleteScripts();
 
 private:
     EEUnitAction();                         // made only by the Rust scripts

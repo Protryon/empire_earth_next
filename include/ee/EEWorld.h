@@ -40,7 +40,7 @@ extern std::vector<EEGameVariant*> gGameVariants;   // 0x4e7f78 (declared in ee/
 
 class EEWorld : public RTSWorld {
 public:
-    EEWorld();                              // 0x137ba3
+    EEWorld();
     virtual ~EEWorld();                     // +0x00 (??_G 0x137e2c; dtor 0x137e48)
     virtual void Clear();                   // +0x08 0x138551
     void RestartUnits();                    // 0x1388ee (before a scenario starts; provisional name)
@@ -93,7 +93,7 @@ public:
     // inline (out-of-line COMDAT 0xe4510 at the end of EEE2DMarchingIcons.cpp, after the unit's template COMDATs; 12
     // callers call it) (provisional name)
     unsigned long GetNumGhostUnits() { return this->mGhostUnits.size(); }
-    void AddGhostUnit(EEGhostUnit* inGhost);   // 0x137f68
+    void AddGhostUnit(EEGhostUnit* inGhost);
     void ActivateUnit(EEComplexUnit* inUnit);  // 0x13b8e8 (EEUnit::SetHitPoints: a dead unit of a +0x312 class) (provisional name)
     void DeactivateUnit(EEComplexUnit* inUnit);  // 0x13b965 (EEUnit::Remove) (provisional name)
     // port: the deactivations of units that had no id yet join the queue once their player has given them one
@@ -113,25 +113,25 @@ public:
     unsigned long GetNumTeams();            // 0x3f81e (mTeams.size(); EECPIntelligence 0x8120b calls it) (provisional name)
     // EEWorld.cpp's other members (provisional names)
     void AddTeam(const std::vector<unsigned long>& inPlayers);   // 0x137f7b (merges the teams none of inPlayers is at war with)
-    void AddAlliance(long inPlayer1, long inPlayer2);   // 0x138185
+    void AddAlliance(long inPlayer1, long inPlayer2);
     void ApplyShareBonus();                 // 0x138304 (the +0xb20 population bonus of the players)
     void ReplacePlayer(unsigned long inIndex, unsigned long inMajorVersion, unsigned long inMinorVersion, EEMap* inMap);   // 0x138919 (a human player through an FSMemoryFile)
-    void RebuildTeams();                    // 0x138e5e
-    void RemoveAllUnits();                  // 0x13900d
-    void DumpMedia(FSFileSpec& inFile, bool inLeaks);   // 0x13913e
+    void RebuildTeams();
+    void RemoveAllUnits();
+    void DumpMedia(FSFileSpec& inFile, bool inLeaks);
     void AddComputerPlayers(EEGameState* inState);   // 0x139264 (fills the free slots up to 17)
     void SetCamera(const GETransformation& inTransformation, bool inForce);   // 0x1394b2 (Virtual18's)
     void SetMap(EEMap* inMap);              // 0x13a1fb (deletes the old map through its vtable)
-    void CreateMiniMap(EEGameState* inState);   // 0x13a285
-    void CreatePlayers(EEGameState* inState);   // 0x13a312
+    void CreateMiniMap(EEGameState* inState);
+    void CreatePlayers(EEGameState* inState);
     void LoadMedia();                       // 0x13a719 (the shared effects and sounds; mMediaLoaded)
     void RecordStatistics();                // 0x13a845 (the end-of-game scores into mStatistics)
     void ClearContinents();                 // 0x13b6ab (gContinentManager.Clear(mMap))
-    void RebuildActiveUnits();              // 0x13b9db
-    void RefreshUnits();                    // 0x13bc1f
+    void RebuildActiveUnits();
+    void RefreshUnits();
     void RemovePlayerFromTeams(unsigned long inPlayer);  // 0x13bc81 (inPlayer leaves its teams)
-    void RemoveShareBonus();                // 0x13bd9d
-    void BreakAlliance(long inPlayer1, long inPlayer2);   // 0x13bf76
+    void RemoveShareBonus();
+    void BreakAlliance(long inPlayer1, long inPlayer2);
     void NotifyPlayersLoaded(unsigned long inMajorVersion, unsigned long inMinorVersion);  // 0x13c0cb (each player's VirtualA0)
     void MarkPlayerOut(unsigned long inPlayer);  // 0x13c2a2 (marks the player out: mObserverMode, its options slot type 2)
     void UnloadMedia();                     // 0x13c772 (LoadMedia's twin)
@@ -210,6 +210,6 @@ public:
     bool mUsingCarbon;                      // +0xba4 ("UsingCarbon")
 };
 
-extern EEWorld gWorld;                      // 0x530d40
+extern EEWorld gWorld;
 
 #endif

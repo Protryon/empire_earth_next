@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONLobbyLayout.h"
 #include "rust/ee_won.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00737370
 // Sets the four anchor components; a missing edge takes the opposite edge on the same axis, then the last
 // anchor supplied
 void PercentLayoutParam::SetBorders(Component* inLeft, Component* inTop, Component* inRight, Component* inBottom)
@@ -31,7 +30,6 @@ void PercentLayoutParam::SetBorders(Component* inLeft, Component* inTop, Compone
 #include "ee/wonapi/WONPercentLayout.h"
 
 namespace WONAPI {
-// FUNCTION: WON 0x007372c0
 // Sets the anchors, percentages and padding of a percentage layout
 void PercentLayoutParam::Init(Component *left,Component *top,Component *right,Component *bottom,int px,int py,int pw,int ph,int lp,int tp,int rp,int bp)
 {
@@ -39,7 +37,6 @@ void PercentLayoutParam::Init(Component *left,Component *top,Component *right,Co
     this->SetPercentages(px,py,pw,ph);
     this->SetPadding(lp,tp,rp,bp);
 }
-// FUNCTION: WON 0x007373f0
 // Sets the position and size percentages (negative = leave that coordinate alone)
 void PercentLayoutParam::SetPercentages(int thePercentX,int thePercentY,int thePercentWidth,int thePercentHeight)
 {
@@ -48,7 +45,6 @@ void PercentLayoutParam::SetPercentages(int thePercentX,int thePercentY,int theP
     this->pw=thePercentWidth;
     this->ph=thePercentHeight;
 }
-// FUNCTION: WON 0x00737410
 // Sets the padding applied inside each anchor edge
 void PercentLayoutParam::SetPadding(int theLeftPad,int theTopPad,int theRightPad,int theBottomPad)
 {
@@ -60,7 +56,6 @@ void PercentLayoutParam::SetPadding(int theLeftPad,int theTopPad,int theRightPad
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x00737320
 // Creates percentage layout parameters from four anchors, percentages and padding
 PercentLayoutParam::PercentLayoutParam(Component *left, Component *top, Component *right, Component *bottom, int px, int py, int pw, int ph, int lp, int tp, int rp, int bp)
 {
