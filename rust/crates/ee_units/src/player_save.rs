@@ -26,6 +26,8 @@
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
+use crate::player::{load_list, save_list, EeUnitsQueued};
+
 /// `EEPlayer`'s saved numbers (their C++ names and types).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -828,28 +830,80 @@ pub fn save<H: PlayerSaveHost + ?Sized>(h: &mut H, rec: Rec, major: u32, minor: 
 struct FfiHost {
     ctx: *mut c_void,
     f: EeUnitsPlayerSaveFn,
+    /// the player's queued improvements (player.rs): the QUEUED operations are answered here
+    queued: *mut EeUnitsQueued,
+}
+
+impl FfiHost {
+    fn prim(&mut self, op: i32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        // SAFETY: the C++ callback with its own context; io lives for the call
+        unsafe { (self.f)(self.ctx, op, 0, io) }
+    }
 }
 
 impl PlayerSaveHost for FfiHost {
     fn call(&mut self, op: i32, index: u32, io: &mut EeUnitsPlayerSaveIo) -> i32 {
+        if !self.queued.is_null() {
+            // SAFETY: the player's live queue; the C++ primitives never reach it
+            let q = unsafe { &mut *self.queued };
+            let nth = |q: &mut EeUnitsQueued| {
+                q.map.iter_mut().nth(index as usize).map(|(k, e)| (*k, e as *mut (f32, Vec<c_ulong>)))
+            };
+            match op {
+                EE_UNITS_PLAYER_SAVE_QUEUED_FLOAT => {
+                    io.f = q.entry(io.i as c_ulong).0;
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_SET_FLOAT => {
+                    q.entry(io.i as c_ulong).0 = io.f;
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_LOAD => {
+                    let list = &mut q.entry(io.i as c_ulong).1 as *mut Vec<c_ulong>;
+                    // SAFETY: the entry lives across the reads (nothing else touches the queue)
+                    return load_list(unsafe { &mut *list }, |op, io| self.prim(op, io));
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_COUNT => {
+                    io.i = q.map.len() as i64;
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_ENTRY => {
+                    if let Some((key, entry)) = nth(q) {
+                        io.i = key as i64;
+                        // SAFETY: the entry just found
+                        io.f = unsafe { (*entry).0 };
+                    }
+                    return OK;
+                }
+                EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE => {
+                    let Some((_, entry)) = nth(q) else { return OK };
+                    // SAFETY: as the load
+                    return save_list(unsafe { &(*entry).1 }, |op, io| self.prim(op, io));
+                }
+                _ => {}
+            }
+        }
         // SAFETY: the C++ callback with its own context; io lives for the call
         unsafe { (self.f)(self.ctx, op, index, io) }
     }
 }
 
-/// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base) and its C++ parts through `f`.
+/// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
+/// and its C++ parts through `f`.
 ///
 /// # Safety
-/// `rec` points to the player's live record; `f` is valid with `ctx` for the call.
+/// `rec` points to the player's live record, `queued` to its queue (or is null: `f` answers it); `f` is valid with
+/// `ctx` for the call.
 #[no_mangle]
 pub unsafe extern "C" fn ee_units_player_load(
     ctx: *mut c_void,
     f: EeUnitsPlayerSaveFn,
     rec: *mut EeUnitsPlayerSaved,
+    queued: *mut EeUnitsQueued,
     major: u32,
     minor: u32,
 ) -> i32 {
-    load(&mut FfiHost { ctx, f }, Rec::new(rec), major, minor)
+    load(&mut FfiHost { ctx, f, queued }, Rec::new(rec), major, minor)
 }
 
 /// `EEPlayer::Save`: as [`ee_units_player_load`].
@@ -861,10 +915,11 @@ pub unsafe extern "C" fn ee_units_player_save(
     ctx: *mut c_void,
     f: EeUnitsPlayerSaveFn,
     rec: *mut EeUnitsPlayerSaved,
+    queued: *mut EeUnitsQueued,
     major: u32,
     minor: u32,
 ) -> i32 {
-    save(&mut FfiHost { ctx, f }, Rec::new(rec), major, minor)
+    save(&mut FfiHost { ctx, f, queued }, Rec::new(rec), major, minor)
 }
 
 #[cfg(test)]

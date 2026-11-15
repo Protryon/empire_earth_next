@@ -116,10 +116,6 @@ struct EEPDereferencer {
 // (provisional name)
 static const float kPlayerHealInterval = EE_UNITS_PLAYER_HEAL_INTERVAL;   // (ee_units player_tick.rs)
 
-// the default tribute fee (0x4429bc, the unit's .rdata just before sPlayerEffects; ResetTechTree loads it as a dword)
-// (provisional name)
-static const float kTributeFee = 0.4f;
-
 // the effects every player loads (0x4429c0) (provisional name)
 static const unsigned long sPlayerEffects[3] = {271, 274, 275};
 
@@ -190,15 +186,7 @@ static void EEPlayerCaptureState(EEPlayer* inPlayer)
     theEvents.mHash = ee_units_events_digest(inPlayer->mEvents.mList);
     theEvents.Into(theRecord);
     EEPlayerDigest theQueued;
-    theQueued.U32((uint32_t)inPlayer->mQueuedImprovements.size());
-    for (std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator q = inPlayer->mQueuedImprovements.begin();
-         q != inPlayer->mQueuedImprovements.end(); ++q) {
-        theQueued.U32((uint32_t)q->first);
-        theQueued.F32(q->second.first);
-        theQueued.U32((uint32_t)q->second.second.size());
-        for (size_t i = 0; i < q->second.second.size(); i++)
-            theQueued.U32((uint32_t)q->second.second[i]);
-    }
+    theQueued.mHash = ee_units_queued_digest(inPlayer->mQueued);
     theQueued.Into(theRecord);
     EEPlayerDigest theFields;
     theFields.U32((uint32_t)inPlayer->mHackUnitClass);
@@ -351,6 +339,7 @@ EEPlayer::EEPlayer(const UWideString& inName, unsigned long inPlayerID)
 {
     this->mViewedUnit = NULL;
     this->mSelectedViewedUnit = NULL;
+    this->mQueued = ee_units_queued_new();
     this->Reset();
     this->mTechnologies->SetPlayerIndex(inPlayerID);
     this->mTechnologies->SetPlayer(this);
@@ -372,6 +361,7 @@ EEPlayer::EEPlayer()
 {
     this->mViewedUnit = NULL;
     this->mSelectedViewedUnit = NULL;
+    this->mQueued = ee_units_queued_new();
     this->Reset();
     this->mComputerPlayer = NULL;
     this->mHumanPlayer = NULL;
@@ -438,6 +428,7 @@ EEPlayer::~EEPlayer()
     delete this->mWonders;
     delete this->mConstructionSites;
     this->UnloadPlayerEffects();
+    ee_units_queued_free(this->mQueued);
 }
 
 // FUNCTION: EXE 0x562677
@@ -446,24 +437,112 @@ EECivilization::~EECivilization()
 {
 }
 
+// port (the player lane, round 1): the economy and the improvements are Rust (ee_units player.rs) over this host; the
+// player's members after the saved record are the Rust record EeUnitsPlayerFields, the queued improvements its
+// queue (mQueued)
+static int64_t EEPlayerHost(void* inPlayer, int32_t inOp, EeUnitsPlayerIo* io)
+{
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    int64_t* a = io->i;
+    EETechTreeNode* theNode = reinterpret_cast<EETechTreeNode*>(a[0]);
+    EEUnitClass* theClass = (uint64_t)a[0] < gUnitClassTable.size() ? gUnitClassTable[(size_t)a[0]] : NULL;
+    switch (inOp) {
+    case EE_UNITS_PLAYER_NODE: return (int64_t)reinterpret_cast<uintptr_t>(thePlayer->mTechnologies->Get((long)a[0]));
+    case EE_UNITS_PLAYER_NODE_INFO: {
+        RTSTechTreeNodeData* d = theNode->mData;
+        int64_t theInfo[8] = {d->mMakesUnit, d->mUnitClass, d->mCostResource, d->mRequiredStatistic, d->mRequiredStatisticValue,
+                              d->mKind, (int64_t)theNode->GetNumUnitClasses(), theNode->mIsResearched};
+        memcpy(a, theInfo, sizeof theInfo);
+        return 0;
+    }
+    case EE_UNITS_PLAYER_NODE_AVAILABLE: return theNode->GetIsAvailable();
+    case EE_UNITS_PLAYER_NODE_UNIT_CLASS: return theNode->GetUnitClass((unsigned long)a[1]);
+    case EE_UNITS_PLAYER_NODE_COST: return theNode->GetCost((long)a[1], (long)a[2], 1.0f);
+    case EE_UNITS_PLAYER_SCALE_COST: return thePlayer->ScaleCost((long)a[0]);
+    case EE_UNITS_PLAYER_METALLURGY: return gCivPowersManager.HasPower(thePlayer, kCivPowerMetallurgy);
+    case EE_UNITS_PLAYER_TAKE: thePlayer->TakeResource((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_ADD: thePlayer->AddResource((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_CLASS: {
+        if (theClass == NULL)
+            return 0;
+        int64_t theInfo[6] = {theClass->mTechnology, theClass->mWeight, theClass->GetPopulationCost(), theClass->mUnitType == kUnitTypeTeleporter,
+                              theClass->mAIKind == kAIKindHero, theClass->mImprovements != NULL};
+        memcpy(a, theInfo, sizeof theInfo);
+        return 1;
+    }
+    case EE_UNITS_PLAYER_EXTRA_POPULATION: return thePlayer->GetExtraPopulation((long)a[0]);
+    case EE_UNITS_PLAYER_POPULATION_LIMIT: return thePlayer->GetPopulationLimit(0);
+    case EE_UNITS_PLAYER_HERO_COUNT: return thePlayer->GetHeroCount(a[0] != 0, a[1] != 0);
+    case EE_UNITS_PLAYER_SCENARIO: return gWorld.mGameOptions.mIsScenarioGame;
+    case EE_UNITS_PLAYER_CAN_AFFORD: return thePlayer->CanAfford(theNode, (long)a[1], (long)a[2]);
+    case EE_UNITS_PLAYER_REASON: {
+        static const long kReasons[7] = {0, IDS_YOU_HAVE_ALREADY_BUILT_MAXIMUM, IDS_YOU_HAVE_REACHED_YOUR_POP_LIMIT, IDS_UNIT_EXCEEDS_POP_LIMIT,
+                                         IDS_NOT_ENOUGH_RESOURCES_FOR_CONSTRUCTION, IDS_NOT_ENOUGH_RESOURCES_TO_RESEARCH_THIS_TECHNOLOGY,
+                                         IDS_MAXIMUM_NUMBER_OF_IMPROVEMENTS_HAVE_BEEN};
+        gResource->GetString(kReasons[a[1]], *reinterpret_cast<UWideString*>(a[0]));
+        return 0;
+    }
+    case EE_UNITS_PLAYER_STATS_LOWER: thePlayer->mSavedGroups.Lower((long)a[0], (long)a[1]); return 0;
+    case EE_UNITS_PLAYER_IMPROVEMENT:
+    case EE_UNITS_PLAYER_IMPROVEMENT_COST:
+    case EE_UNITS_PLAYER_LEVEL: {
+        EEUnitClassImprovementTable* theTable = theClass != NULL ? theClass->mImprovements : NULL;
+        EEUnitClassUpgrade* theUpgrade = theClass != NULL ? thePlayer->mUnitClassUpgrades[(size_t)a[0]] : NULL;
+        long theImprovement = (long)a[1];
+        if (inOp == EE_UNITS_PLAYER_IMPROVEMENT) {
+            io->f[0] = theImprovement == 12 || theTable == NULL ? 0.0f : theTable->mEntries[theImprovement].mStepFactor;
+            io->f[1] = theTable != NULL ? theTable->mEntries[theImprovement].mCostFactor : 0.0f;
+        }
+        if (theUpgrade == NULL)
+            return 0;
+        EEUnitClassImprovement& theUp = theUpgrade->mImprovement;
+        if (inOp == EE_UNITS_PLAYER_IMPROVEMENT_COST)
+            return theUp.GetCost(theImprovement);
+        a[0] = theUp.GetLevel(theImprovement);
+        if (inOp == EE_UNITS_PLAYER_LEVEL)
+            return 1;
+        int64_t theInfo[6] = {theUp.CanUpgrade(theUpgrade->mUnitClass, theImprovement) == true, theUp.GetCost(theImprovement), theUp.mTotalCost,
+                              theUp.GetLevel(theImprovement), theTable != NULL ? theTable->GetMaxLevel() : 0,
+                              gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)};
+        memcpy(a, theInfo, sizeof theInfo);
+        return 1;
+    }
+    case EE_UNITS_PLAYER_IMPROVEMENT_TIME:
+        return a[1] ? (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(a[0])) : (long)gWorldTable.GetLongValue(EEWorldImprovementTime(a[0]));
+    case EE_UNITS_PLAYER_IS_LOCAL: return thePlayer == gWorld.GetCurrentPlayer();
+    case EE_UNITS_PLAYER_UPDATE_JIT: gUserInterface->UpdateJITManufacturing(); return 0;
+    case EE_UNITS_PLAYER_PAY_IMPROVEMENT: thePlayer->PayImprovement(theClass, (long)a[1]); return 0;
+    }
+    return 0;
+}
+
+// the Rust player's view of a player (ee_units player.rs)
+struct EEPlayerRefs : EeUnitsPlayerRefs {
+    EEPlayerRefs(const EEPlayer* inPlayer)
+    {
+        EEPlayer* thePlayer = const_cast<EEPlayer*>(inPlayer);
+        this->player = thePlayer;
+        this->host = &EEPlayerHost;
+        this->saved = thePlayer;
+        this->fields = thePlayer;
+        this->stats = thePlayer->mSavedGroups.mStats;
+    }
+    operator const EeUnitsPlayerRefs*() const { return this; }
+};
+
+// the improvement decisions (ee_units player.rs ee_units_player_improvement)
+static long EEPlayerImprovement(const EEPlayer* inPlayer, uint32_t inWhat, unsigned long inUnitType, long inImprovement, bool inFlag = false,
+                                bool inFlag2 = false, float inFraction = 0.0f, UWideString* outReason = NULL)
+{
+    return ee_units_player_improvement(EEPlayerRefs(inPlayer), inWhat, inUnitType, inImprovement, inFlag, inFlag2, inFraction, outReason);
+}
+
 // FUNCTION: EXE 0x562694
-// Queues an improvement for a unit type (at the front or back) if it can be bought, paying for it
-// unless told not to
-// NEAR: frame layout; the original keeps inUnitType in eax and the class in edi, ours spills it ([ebp-4])
+// Queues an improvement (front or back) when it can be bought, paying unless told not to (ee_units player.rs)
 void EEPlayer::QueueImprovement(unsigned long inUnitType, unsigned long inImprovement, bool inFront, bool inAlreadyPaid)
 {
     EEPlayerEconScope theScope;
-    [&]() {
-        EEUnitClass* theClass = gUnitClassTable[inUnitType];
-        if (theClass == NULL || !this->CanBuy(inUnitType, inImprovement, NULL))
-            return;
-        if (!inAlreadyPaid)
-            this->PayImprovement(theClass, inImprovement);
-        if (!inFront)
-            this->mQueuedImprovements[inUnitType].second.push_back(inImprovement);
-        else
-            this->mQueuedImprovements[inUnitType].second.insert(this->mQueuedImprovements[inUnitType].second.begin(), inImprovement);
-    }();
+    EEPlayerImprovement(this, 5, inUnitType, (long)inImprovement, inFront, inAlreadyPaid);
     theScope.Record(this, 16, 0, {(int32_t)inUnitType, (int32_t)inImprovement, inFront, inAlreadyPaid});
 }
 
@@ -534,41 +613,21 @@ void EEPlayer::AddAndRemoveUnitsFromSelectedGroup(std::vector<long>& inUnitIDs)
 }
 
 // FUNCTION: EXE 0x5628cb
-// Refunds a fraction of a technology's cost in each resource
+// Refunds a fraction of a technology's cost in each resource (ee_units player.rs)
 void EEPlayer::RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
     EEPlayerEconScope theScope;
-    [&]() {
-        for (unsigned long i = 2; i < 7; i++) {
-            long theAmount = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inFraction;
-            this->AddResource(i, theAmount);
-        }
-    }();
+    ee_units_player_cost(EEPlayerRefs(this), 5, inTechnology, inUnitType, 0, inFraction, NULL);
     theScope.Record(this, 8, 0, {EEPlayerNodeID(inTechnology), inUnitType, EEPlayerFloatBits(inFraction)});
 }
 
 // FUNCTION: EXE 0x562915
-// Refunds a fraction of the cost of a unit class's improvement at its current (queued) level
+// Refunds a fraction of a unit class improvement's cost at its queued level (ee_units player.rs)
 void EEPlayer::RefundImprovement(EEUnitClass* inClass, long inImprovement, float inFraction)
 {
     EEPlayerEconScope theScope;
-    [&]() {
-        long theTechnology = gUnitClassTable[inClass->mUnitType] ? gUnitClassTable[inClass->mUnitType]->mTechnology : 100000;
-        if (inClass == NULL || theTechnology == kTechNone)
-            return;
-        EETechTreeNode* theNode = this->mTechnologies->Get(theTechnology);
-        if (theNode == NULL || inClass->mImprovements == NULL)
-            return;
-        long theType = inClass->GetUnitType();
-        long theLevel;
-        float theFactor = inClass->mImprovements->mEntries[inImprovement].mCostFactor;
-        float theScale = this->GetImprovementLevel(theType, inImprovement) * theFactor;
-        for (unsigned long i = 2; i < 7; i++) {
-            long theCost = theNode->GetCost(i, 0, 1.0f) * theScale + 0.0001f;
-            long theAmount = this->ScaleCost(theCost) * inFraction;
-            this->AddResource(i, theAmount);
-        }
-    }();
+    if (inClass != NULL)
+        EEPlayerImprovement(this, 9, inClass->mUnitType, inImprovement, false, false, inFraction);
     theScope.Record(this, 9, 0, {inClass != NULL ? (int32_t)inClass->mUnitType : -1, inImprovement, EEPlayerFloatBits(inFraction)});
 }
 
@@ -854,41 +913,11 @@ void EEPlayer::RecountPopulation()
 }
 
 // FUNCTION: EXE 0x56384d
-// Returns whether an improvement for a unit type can be bought: allowed, within the improvement limits
-// counting the queue, and affordable; otherwise sets the reason text
+// Whether an improvement can be bought counting the queue (ee_units player.rs can_buy); else the reason text
 bool EEPlayer::CanBuy(long inUnitType, long inImprovement, UWideString* outText)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        bool theResult = false;
-        EEUnitClass* theClass = gUnitClassTable[inUnitType];
-        long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-        if (theClass != NULL && theTechnology != kTechNone) {
-            EEUnitClassImprovementTable* theTable = theClass->mImprovements;
-            EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-            EEUnitClassImprovement* theImprovement = &theUpgrade->mImprovement;
-            if ((inImprovement == 12 ? 0.0f : theTable->mEntries[inImprovement].mStepFactor) > 0.0f &&
-                theImprovement->CanUpgrade(theUpgrade->mUnitClass, inImprovement) == true) {
-                long theQueued = theImprovement->mTotalCost;
-                std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-                if (theIterator != this->mQueuedImprovements.end()) {
-                    const std::vector<unsigned long>& theQueue = this->mQueuedImprovements[inUnitType].second;
-                    for (unsigned long i = 0; i < theQueue.size(); i++)
-                        theQueued += theImprovement->GetCost(theQueue[i]);
-                }
-                if ((unsigned long)(theImprovement->GetCost(inImprovement) + theQueued) <=
-                    (unsigned long)gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax) &&
-                    this->GetImprovementLevel(inUnitType, inImprovement) <= theTable->GetMaxLevel()) {
-                    float theScale = theTable->mEntries[inImprovement].mCostFactor;
-                    long theLevel = this->GetImprovementLevel(inUnitType, inImprovement);
-                    theResult = this->CanAffordTechnology(theTechnology, theLevel * theScale, outText);
-                } else if (outText != NULL)
-                    gResource->GetString(IDS_MAXIMUM_NUMBER_OF_IMPROVEMENTS_HAVE_BEEN, *outText);
-            }
-        }
-        return theResult;
-    }();
-    return theScope.Record(this, 10, theCaptured, {inUnitType, inImprovement, outText != NULL}, outText);
+    return theScope.Record(this, 10, EEPlayerImprovement(this, 3, inUnitType, inImprovement, false, false, 0.0f, outText) != 0, {inUnitType, inImprovement, outText != NULL}, outText);
 }
 
 // FUNCTION: EXE 0x5639e8
@@ -906,107 +935,27 @@ bool EEPlayer::CanProduceUnitType(long inUnitType, long inArg, UWideString* outR
 }
 
 // FUNCTION: EXE 0x563a25
-// Returns whether a technology or unit can be produced: population, teleporter and wonder limits, cost
-// (optional) and a researched producer class; sets the reason text when not
+// Whether a technology or unit can be produced (ee_units player.rs can_produce); sets the reason text when not
 bool EEPlayer::CanProduce(long inTechnology, long inUnitClass, long inCount, bool inCheckCost, long inWonderMode, UWideString* outReason)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        EETechTreeNode* theNode = this->mTechnologies->Get(inTechnology);
-        bool theAllowed = false;
-        if (theNode != NULL && theNode->GetIsAvailable()) {
-            theAllowed = true;
-            if (theNode->mData->mMakesUnit) {
-                EEUnitClass* theClass = gUnitClassTable[theNode->mData->mUnitClass];
-                if (theClass != NULL) {
-                    if (theClass->mWeight == 0
-                        || theClass->GetPopulationCost() + this->mPopulationCount <= this->GetExtraPopulation(theNode->mData->mUnitClass) + this->GetPopulationLimit(0)
-                        || (this->mPopulationCount == this->GetPopulationLimit(0) - 1
-                            && theClass->GetPopulationCost() + this->mPopulationCount <= this->GetExtraPopulation(theNode->mData->mUnitClass) + this->GetPopulationLimit(0))) {
-                        theAllowed = true;
-                        if (theClass->mUnitType == kUnitTypeTeleporter) {
-                            theAllowed = this->mNumTeleporters < 1;
-                            if (!theAllowed && outReason != NULL)
-                                gResource->GetString(IDS_YOU_HAVE_ALREADY_BUILT_MAXIMUM, *outReason);
-                        }
-                        if (theAllowed == true && theClass->mAIKind == kAIKindHero && !gWorld.mGameOptions.mIsScenarioGame && inWonderMode != 0) {
-                            if (inWonderMode == 3)
-                                theAllowed = this->GetHeroCount(true, true) < this->mHeroLimit;
-                            else if (inWonderMode == 1)
-                                theAllowed = this->GetHeroCount(false, true) < this->mHeroLimit;
-                            else if (inWonderMode == 2)
-                                theAllowed = this->GetHeroCount(true, false) < this->mHeroLimit;
-                            if (!theAllowed && outReason != NULL)
-                                gResource->GetString(IDS_YOU_HAVE_REACHED_YOUR_POP_LIMIT, *outReason);
-                        }
-                    } else {
-                        theAllowed = false;
-                        if (outReason != NULL)
-                            gResource->GetString(IDS_UNIT_EXCEEDS_POP_LIMIT, *outReason);
-                    }
-                }
-            }
-            if (inCheckCost == true && theAllowed) {
-                theAllowed = this->CanAfford(theNode, inUnitClass, inCount);
-                if (!theAllowed && outReason != NULL) {
-                    if (theNode->mData->mMakesUnit)
-                        gResource->GetString(IDS_NOT_ENOUGH_RESOURCES_FOR_CONSTRUCTION, *outReason);
-                    else
-                        gResource->GetString(IDS_NOT_ENOUGH_RESOURCES_TO_RESEARCH_THIS_TECHNOLOGY, *outReason);
-                }
-            }
-            if (theAllowed) {
-                theAllowed = theNode->GetNumUnitClasses() > 0;
-                for (long i = theNode->GetNumUnitClasses() - 1; i >= 0 && !theAllowed; i--) {
-                    EEUnitClass* theClass = gUnitClassTable[theNode->GetUnitClass(i)];
-                    long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-                    EETechTreeNode* theClassNode = this->mTechnologies->Get(theTechnology);
-                    theAllowed = theClassNode != NULL ? theClassNode->mIsResearched : false;
-                }
-            }
-        }
-        return theAllowed;
-    }();
-    return theScope.Record(this, 1, theCaptured, {inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason != NULL}, outReason);
+    return theScope.Record(this, 1, ee_units_player_can_produce(EEPlayerRefs(this), inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason), {inTechnology, inUnitClass, inCount, inCheckCost, inWonderMode, outReason != NULL}, outReason);
 }
 
 // FUNCTION: EXE 0x563c6d
-// Returns whether a unit type's improvement is allowed and within the improvement limits, ignoring the queue
+// Whether an improvement is allowed and within the limits, ignoring the queue (ee_units player.rs)
 bool EEPlayer::CanImprove(long inUnitType, long inImprovement, UWideString* outReason)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        bool theResult = false;
-        EEUnitClass* theClass = gUnitClassTable[inUnitType];
-        long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-        if (theClass != NULL && theTechnology != kTechNone) {
-            EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-            long theQueued = theUpgrade->mImprovement.mTotalCost;
-            EEUnitClassImprovementTable* theTable = theClass->mImprovements;
-            if ((inImprovement != 12 ? theTable->mEntries[inImprovement].mStepFactor : 0.0f) > 0.0f
-                && theUpgrade->mImprovement.CanUpgrade(theUpgrade->mUnitClass, inImprovement) == true
-                && theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)
-                && theUpgrade->mImprovement.GetLevel(inImprovement) <= theTable->GetMaxLevel())
-                theResult = true;
-        }
-        return theResult;
-    }();
-    return theScope.Record(this, 11, theCaptured, {inUnitType, inImprovement, outReason != NULL}, outReason);
+    return theScope.Record(this, 11, EEPlayerImprovement(this, 2, inUnitType, inImprovement) != 0, {inUnitType, inImprovement, outReason != NULL}, outReason);
 }
 
 // FUNCTION: EXE 0x563d1f
-// Returns whether the player can afford a technology at a cost scale; sets the reason text when not
+// Whether the player can afford a technology at a cost scale (ee_units player.rs); sets the reason text when not
 bool EEPlayer::CanAffordTechnology(long inTechnology, float inScale, UWideString* outReason)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        EETechTreeNode* theNode = this->mTechnologies->Get(inTechnology);
-        bool theResult = this->CanAffordScaled(theNode, 0, inScale, 1);
-        if (!theResult && outReason != NULL)
-            gResource->GetString(IDS_NOT_ENOUGH_RESOURCES_FOR_CONSTRUCTION, *outReason);
-        return theResult;
-    }();
-    return theScope.Record(this, 5, theCaptured, {inTechnology, EEPlayerFloatBits(inScale), outReason != NULL}, outReason);
+    return theScope.Record(this, 5, ee_units_player_cost(EEPlayerRefs(this), 3, NULL, inTechnology, 0, inScale, outReason), {inTechnology, EEPlayerFloatBits(inScale), outReason != NULL}, outReason);
 }
 
 
@@ -1131,11 +1080,9 @@ void EEPlayer::ClearTowns()
 
 // FUNCTION: EXE 0x563f36
 // Drops every queued improvement of a unit type
-// NEAR: esi/edi swapped (end() and the map pointer); tried: end() first, an end local, an early return
 void EEPlayer::EraseQueuedImprovements(unsigned long inUnitType)
 {
-    if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end())
-        this->mQueuedImprovements.erase(this->mQueuedImprovements.find(inUnitType));
+    ee_units_queued_op(this->mQueued, 0, inUnitType, 0);
 }
 
 // FUNCTION: EXE 0x563f7e
@@ -1209,11 +1156,7 @@ void EEPlayer::UnitCompleted(EEComplexUnit* inUnit)
 // Moves the improvement queue of one unit type to another
 void EEPlayer::MoveQueuedImprovements(unsigned long inFrom, unsigned long inTo)
 {
-    if (this->mQueuedImprovements.find(inFrom) == this->mQueuedImprovements.end())
-        return;
-    this->mQueuedImprovements[inTo].first = this->mQueuedImprovements[inFrom].first;
-    this->mQueuedImprovements[inTo].second = this->mQueuedImprovements[inFrom].second;
-    this->mQueuedImprovements.erase(this->mQueuedImprovements.find(inFrom));
+    ee_units_queued_op(this->mQueued, 1, inFrom, inTo);
 }
 
 // FUNCTION: EXE 0x564223
@@ -1600,76 +1543,27 @@ void EEPlayer::GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType)
 }
 
 // FUNCTION: EXE 0x564ed7
-// Returns a unit type's level in an improvement counting the queued ones; -1 for an unknown class
+// A unit type's level in an improvement counting the queued ones; -1 without an upgrade (ee_units player.rs)
 long EEPlayer::GetImprovementLevel(unsigned long inUnitType, long inImprovement) const
 {
     EEPlayerEconScope theScope;
-    long theCaptured = [&]() -> long {
-        long theLevel = -1;
-        if (this->mUnitClassUpgrades[inUnitType] != NULL) {
-            EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-            theLevel = theUpgrade->mImprovement.GetLevel(inImprovement);
-            std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::const_iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-            if (theIterator != this->mQueuedImprovements.end()) {
-                const std::vector<unsigned long>& theQueue = theIterator->second.second;
-                for (unsigned long i = 0; i < theQueue.size(); i++)
-                    if (theQueue[i] == inImprovement)
-                        theLevel++;
-            }
-        }
-        return theLevel;
-    }();
-    return theScope.Record(this, 13, theCaptured, {(int32_t)inUnitType, inImprovement});
+    return theScope.Record(this, 13, EEPlayerImprovement(this, 0, inUnitType, inImprovement), {(int32_t)inUnitType, inImprovement});
 }
 
 // FUNCTION: EXE 0x564f4a
-// Counts a unit type's queued improvements of a kind, skipping the first queue entry
+// A unit type's queued improvements of a kind past the first (ee_units player.rs)
 long EEPlayer::CountQueuedImprovements(unsigned long inUnitType, long inImprovement) const
 {
     EEPlayerEconScope theScope;
-    long theCaptured = [&]() -> long {
-        long theCount = 0;
-        if (this->mUnitClassUpgrades[inUnitType] != NULL) {
-            std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::const_iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-            if (theIterator != this->mQueuedImprovements.end()) {
-                const std::vector<unsigned long>& theQueue = (*theIterator).second.second;
-                for (unsigned long i = 1; i < theQueue.size(); i++)
-                    if (theQueue[i] == inImprovement)
-                        theCount++;
-            }
-        }
-        return theCount;
-    }();
-    return theScope.Record(this, 14, theCaptured, {(int32_t)inUnitType, inImprovement});
+    return theScope.Record(this, 14, EEPlayerImprovement(this, 1, inUnitType, inImprovement), {(int32_t)inUnitType, inImprovement});
 }
 
 // FUNCTION: EXE 0x564fac
-// Returns whether a unit type's improvement has reached its limits, counting the queued improvements
-// NEAR: register choice; mUnitClassUpgrades[] through the out-of-line _Ptrit::operator+ 0x80ad in the original
+// Whether an improvement has reached its limits counting the queue (ee_units player.rs)
 bool EEPlayer::IsImprovementMaxed(unsigned long inUnitType, long inImprovement)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        bool theResult = true;
-        EEUnitClass* theClass = gUnitClassTable[inUnitType];
-        long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-        if (theClass != NULL && theTechnology != kTechNone) {
-            EEUnitClassImprovementTable* theTable = theClass->mImprovements;
-            EEUnitClassUpgrade* theUpgrade = this->GetUpgrade(inUnitType);
-            long theQueued = theUpgrade->mImprovement.mTotalCost;
-            std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-            if (theIterator != this->mQueuedImprovements.end()) {
-                const std::vector<unsigned long>& theQueue = (*theIterator).second.second;
-                for (unsigned long i = 0; i < theQueue.size(); i++)
-                    theQueued += theUpgrade->mImprovement.GetCost(theQueue[i]);
-            }
-            if (theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)
-                && this->GetImprovementLevel(inUnitType, inImprovement) <= theTable->GetMaxLevel())
-                theResult = false;
-        }
-        return theResult;
-    }();
-    return theScope.Record(this, 12, theCaptured, {(int32_t)inUnitType, inImprovement});
+    return theScope.Record(this, 12, EEPlayerImprovement(this, 4, inUnitType, inImprovement) != 0, {(int32_t)inUnitType, inImprovement});
 }
 
 // FUNCTION: EXE 0x5650a3
@@ -1763,60 +1657,19 @@ long EEPlayer::GetPopulationLimit(long inArg)
 }
 
 // FUNCTION: EXE 0x5652a0
-// Returns whether one resource alone (the node's cost resource or any of the five) covers
-// the cost, and the required statistic is reached
-// NEAR: the original keeps the result in the arg-1 slot byte (+0xb) and loads mResourceCaps[k] before the call
+// Whether one resource covers the cost and the required statistic is reached (ee_units player.rs)
 bool EEPlayer::CanAffordSingleResource(EETechTreeNode* inNode, long inUnitClass, long inCount)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        bool theResult = false;
-        long theResource = inNode->mData->mCostResource;
-        if (theResource != 0 && inNode->mData->mRequiredStatisticValue != 0) {
-            if (theResource != 1 && this->mResourceCaps[theResource] >= this->ScaleCost(inNode->GetCost(theResource, inUnitClass, 1.0f)) * inCount)
-                theResult = true;
-            else {
-                for (unsigned long i = 2; i < 7 && !theResult; i++) {
-                    long theAmount = this->mResourceCaps[i];
-                    theResult = theAmount >= this->ScaleCost(inNode->GetCost(i, inUnitClass, 1.0f)) * inCount;
-                    if (theResult || (i != 6 && i != 5) || !gCivPowersManager.HasPower(this, kCivPowerMetallurgy))
-                        continue;
-                    long theCost = this->ScaleCost((long)(inNode->GetCost(kResourceIron, inUnitClass, 1.0f) + 0.0001f)) * inCount;
-                    theCost += this->ScaleCost((long)(inNode->GetCost(kResourceGold, inUnitClass, 1.0f) + 0.0001f)) * inCount;
-                    if (this->mResourceCaps[kResourceIron] + this->mResourceCaps[kResourceGold] >= theCost)
-                        theResult = true;
-                }
-            }
-            if (theResult == true) {
-                if (this->mSavedGroups.GetLastValue(inNode->mData->mRequiredStatistic) < inNode->mData->mRequiredStatisticValue)
-                    theResult = false;
-            }
-        }
-        return theResult;
-    }();
-    return theScope.Record(this, 4, theCaptured, {EEPlayerNodeID(inNode), inUnitClass, inCount});
+    return theScope.Record(this, 4, ee_units_player_cost(EEPlayerRefs(this), 1, inNode, inUnitClass, inCount, 0.0f, NULL), {EEPlayerNodeID(inNode), inUnitClass, inCount});
 }
 
 // FUNCTION: EXE 0x56542e
-// Returns whether the player has every resource for a scaled cost (civ power 0x2e pools resources 5 and 6)
+// Whether every resource covers a scaled cost, metallurgy pooling iron and gold (ee_units player.rs)
 bool EEPlayer::CanAffordScaled(EETechTreeNode* inNode, long inUnitClass, float inScale, long inCount)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        bool theResult = true;
-        for (unsigned long i = 2; i < 7 && theResult; i++) {
-            long theAmount = this->mResourceCaps[i];
-            theResult = theAmount >= this->ScaleCost((long)(inNode->GetCost(i, inUnitClass, 1.0f) * inScale + 0.0001f)) * inCount;
-            if (theResult || (i != 6 && i != 5) || !gCivPowersManager.HasPower(this, kCivPowerMetallurgy))
-                continue;
-            long theCost = this->ScaleCost((long)(inNode->GetCost(kResourceIron, inUnitClass, 1.0f) * inScale + 0.0001f)) * inCount;
-            theCost += this->ScaleCost((long)(inNode->GetCost(kResourceGold, inUnitClass, 1.0f) * inScale + 0.0001f)) * inCount;
-            if (this->mResourceCaps[kResourceIron] + this->mResourceCaps[kResourceGold] >= theCost)
-                theResult = true;
-        }
-        return theResult;
-    }();
-    return theScope.Record(this, 3, theCaptured, {EEPlayerNodeID(inNode), inUnitClass, EEPlayerFloatBits(inScale), inCount});
+    return theScope.Record(this, 3, ee_units_player_cost(EEPlayerRefs(this), 0, inNode, inUnitClass, inCount, inScale, NULL), {EEPlayerNodeID(inNode), inUnitClass, EEPlayerFloatBits(inScale), inCount});
 }
 
 // FUNCTION: EXE 0x565561
@@ -1879,17 +1732,11 @@ unsigned long EEPlayer::GetNumWonderUnits() const
 }
 
 // FUNCTION: EXE 0x56566a
-// Returns whether the player can afford a technology in all resources or, failing that, from a single one
+// Whether the player can afford a technology in all resources or else from a single one (ee_units player.rs)
 bool EEPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        bool theResult = this->CanAffordScaled(inTechnology, inUnitType, 1.0f, inCount);
-        if (!theResult)
-            theResult = this->CanAffordSingleResource(inTechnology, inUnitType, inCount);   // was (inTechnology, inCount, 1)
-        return theResult;
-    }();
-    return theScope.Record(this, 2, theCaptured, {EEPlayerNodeID(inTechnology), inUnitType, inCount});
+    return theScope.Record(this, 2, ee_units_player_cost(EEPlayerRefs(this), 2, inTechnology, inUnitType, inCount, 1.0f, NULL), {EEPlayerNodeID(inTechnology), inUnitType, inCount});
 }
 
 // FUNCTION: EXE 0x56569c
@@ -1990,33 +1837,9 @@ void EEPlayer::Reset()
     *this->mTechnologies = gTechTree;
     for (long theAirport = 0; theAirport < 4; theAirport++)
         mAirTraffic[theAirport] = new EEAirTrafficControl(this);
-    this->mConversionFactor = 1.0f;
-    this->mNumHeroes = 0;
-    this->mHeroLimit = 1;
-    this->mNumHeroesInProduction = 0;
-    this->mTributeFee = kTributeFee;
-    this->mShareBonus = 0;
-    this->mPopulationLimitBonus = 0;
-    this->mBB44 = false;
-    this->mInstantBuild = false;
-    this->mJITManufacturing = false;
-    this->mLAF0 = 0;
-    this->mHealsUnits = false;
+    ee_units_player_fields_reset(this, gWorldTable.GetLongValue(kWorldStartingCitizensDefault),
+                                 gWorldTable.GetLongValue(kWorldGatherersPerResourceMax));   // (ee_units player.rs)
     this->mHealedUnitSet = NULL;
-    this->mMaxStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    this->mMiningLimit = gWorldTable.GetLongValue(kWorldGatherersPerResourceMax);
-    this->mAreaConversion = false;
-    this->mBehindFirewall = false;
-    this->mBB42 = false;
-    this->mShiftMode = false;
-    this->mLastAcknowledgementTime = 0;
-    this->mLastAcknowledgedGroup = 0;
-    this->mEarthquakeShaken = false;
-    this->mNumTeleporters = 0;
-    for (unsigned long theOther = 0; theOther <= 16; theOther++)
-        this->mDamageFrom[theOther] = 0;
-    this->mNumAttacks = 0;
-    this->mHackUnitClass = kNoUnitClass;
     this->mEvents.Clear(this);
     ee_units_player_reset(static_cast<EeUnitsPlayerSaved*>(this), (uint32_t)this->mPlayerID, 1);
     this->LoadPlayerEffects();
@@ -2084,7 +1907,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
 long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     EEPlayerSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
-    return ee_units_player_load(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this),
+    return ee_units_player_load(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
                                 (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
@@ -2232,15 +2055,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mGroups[inIndex]->Load(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_CIVFILE_LOAD:
         return thePlayer->mCivilizationFile.Load(theFile);
-    case EE_UNITS_PLAYER_SAVE_QUEUED_FLOAT:
-        io->f = thePlayer->mQueuedImprovements[(unsigned long)io->i].first;
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_QUEUED_SET_FLOAT:
-        thePlayer->mQueuedImprovements[(unsigned long)io->i].first = io->f;
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_LOAD:
-        return FSLoadVector(theFile, thePlayer->mQueuedImprovements[(unsigned long)io->i].second,
-                            UString("Queued Improvements"));
     case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_PUSH:
         thePlayer->mConstructionSiteIDs.push_back((long)io->i);
         return kErrorOK;
@@ -2307,20 +2121,6 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         return thePlayer->mGroups[inIndex]->Save(theMajor, theMinor, theFile);
     case EE_UNITS_PLAYER_SAVE_CIVFILE_SAVE:
         return thePlayer->mCivilizationFile.Save(theFile);
-    case EE_UNITS_PLAYER_SAVE_QUEUED_COUNT:
-        io->i = (int64_t)thePlayer->mQueuedImprovements.size();
-        return kErrorOK;
-    case EE_UNITS_PLAYER_SAVE_QUEUED_ENTRY:
-    case EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE: {
-        std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theEntry =
-            thePlayer->mQueuedImprovements.begin();
-        std::advance(theEntry, inIndex);
-        if (inOp == EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE)
-            return FSSaveVector(theFile, theEntry->second.second, UString("Queued Improvements"));
-        io->i = (int64_t)theEntry->first;
-        io->f = theEntry->second.first;
-        return kErrorOK;
-    }
     case EE_UNITS_PLAYER_SAVE_CONSTRUCTION_COUNT:
         io->i = (int64_t)thePlayer->mConstructionSites->GetSize();
         return kErrorOK;
@@ -2694,34 +2494,11 @@ void EEPlayer::RemovalsDone()
 }
 
 // FUNCTION: EXE 0x56870e
-// Cancels a queued improvement of a unit class (inFlag: never the one in progress) and refunds its cost
+// Cancels and refunds a queued improvement (inFlag: never the running one) (ee_units player.rs)
 void EEPlayer::RemoveQueuedImprovement(long inUnitType, long inImprovement, bool inFlag)
 {
     EEPlayerEconScope theScope;
-    [&]() {
-        std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator = this->mQueuedImprovements.find(inUnitType);
-        if (theIterator == this->mQueuedImprovements.end())
-            return;
-        std::vector<unsigned long>& theQueue = (*theIterator).second.second;
-        std::vector<unsigned long>::iterator theImprovement;
-        if (inFlag == true) {
-            if (theQueue.size() > 1)
-                theImprovement = std::find(theQueue.begin() + 1, theQueue.end(), inImprovement);
-            else
-                theImprovement = theQueue.end();
-        } else {
-            theImprovement = std::find(theQueue.begin(), theQueue.end(), inImprovement);
-        }
-        if (theImprovement == theQueue.end())
-            return;
-        bool theWasHead = theImprovement == theQueue.begin();   // the one in progress (was: the map's first entry)
-        theQueue.erase(theImprovement);
-        this->RefundImprovement(gUnitClassTable[inUnitType], inImprovement, 1.0f);
-        if (theWasHead)
-            this->mQueuedImprovements[inUnitType].first = 0.0f;
-        if (theQueue.size() == 0)
-            this->mQueuedImprovements.erase(theIterator);
-    }();
+    EEPlayerImprovement(this, 6, inUnitType, inImprovement, inFlag);
     theScope.Record(this, 17, 0, {inUnitType, inImprovement, inFlag});
 }
 
@@ -3093,9 +2870,6 @@ bool EEPlayer::AdoptTownPatrol(EETown* inTown)
 // (the GetAvailablePoints test is != 0 here; the original compares unsigned, jbe)
 long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator;
-    std::vector<unsigned long> theImprovements;
-    std::vector<long> theUnused;
     long theResult;
     unsigned long i;
     this->mCivilization.Reapply(this, inFirst, inSecond);
@@ -3141,18 +2915,7 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         this->mHerds[theHerd]->RepairPointers(inFirst, inSecond);
     this->RegisterHerds();
     theResult = this->mEvents.RepairEvents(this, inFirst, inSecond);
-    theIterator = this->mQueuedImprovements.begin();
-    while (theIterator != this->mQueuedImprovements.end()) {
-        theImprovements.clear();
-        theImprovements = (*theIterator).second.second;
-        (*theIterator).second.second.clear();
-        for (unsigned long k = 0; k < theImprovements.size(); k++)
-            this->QueueImprovement((*theIterator).first, theImprovements[k], false, true);
-        if ((*theIterator).second.second.size() > 0)
-            theIterator++;
-        else
-            theIterator = this->mQueuedImprovements.erase(theIterator);
-    }
+    EEPlayerImprovement(this, 10, 0, 0);   // the queued improvements queued again (ee_units player.rs requeue)
     this->mSelectedGroup->CopySelection(this->mActiveGroup);
     this->GetTechTree()->Get(kTechCapitol)->mIsAllowed = this->mNumCapitols == 0;
     if (this->GetTechTree()->Get(kTechSettlement)->GetIsObsolete())
@@ -3199,40 +2962,11 @@ void EEPlayer::EpochReached(long inEpoch)
 }
 
 // FUNCTION: EXE 0x56964a
-// Starts the timer of a unit class's next queued improvement if it can be done; returns true when its queue is empty
+// Starts the next queued improvement's timer; true when the queue is empty (ee_units player.rs advance)
 bool EEPlayer::AdvanceImprovement(unsigned long inUnitType)
 {
     EEPlayerEconScope theScope;
-    bool theCaptured = [&]() -> bool {
-        bool theResult = false;
-
-        if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end()) {
-            EEUnitClass* theClass = gUnitClassTable[inUnitType];
-            if (theClass != NULL && this->mQueuedImprovements[inUnitType].second.size() > 0) {
-                long theImprovement = *this->mQueuedImprovements[inUnitType].second.begin();
-                if (this->CanImprove(theClass->GetUnitType(), theImprovement, NULL) == true) {
-                if (this->mInstantBuild) {
-                    this->mQueuedImprovements[inUnitType].first = 1.0f;
-                } else {
-                    EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-                    if (theUpgrade->mImprovement.GetLevel(theImprovement) != 1) {
-                        float theTime = (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
-                        this->mQueuedImprovements[inUnitType].first = theTime;
-                    } else {
-                        float theTime = (long)gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
-                        this->mQueuedImprovements[inUnitType].first = theTime;
-                    }
-                }
-                if (this == gWorld.GetCurrentPlayer())
-                    gUserInterface->UpdateJITManufacturing();
-                }
-            } else {
-                theResult = true;
-            }
-        }
-        return theResult;
-    }();
-    return theScope.Record(this, 15, theCaptured, {(int32_t)inUnitType});
+    return theScope.Record(this, 15, EEPlayerImprovement(this, 7, inUnitType, 0) != 0, {(int32_t)inUnitType});
 }
 
 // FUNCTION: EXE 0x5697b4
@@ -3244,7 +2978,7 @@ void EEPlayer::ResetTechTree()
     this->mTechnologies->SetPlayer(this);
     this->mBB44 = false;
     this->mPopulationLimitBonus = 0;
-    this->mTributeFee = kTributeFee;
+    this->mTributeFee = EE_UNITS_PLAYER_TRIBUTE_FEE;
 }
 
 #include "lle/FSMemoryFile.h"
@@ -3359,7 +3093,7 @@ void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
 long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
-    return ee_units_player_save(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this),
+    return ee_units_player_save(&theContext, &EEPlayerSaveOperation, static_cast<EeUnitsPlayerSaved*>(this), this->mQueued,
                                 (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
@@ -3717,118 +3451,21 @@ void EEPlayer::TakeResource(long inIndex, long inAmount)
 }
 
 // FUNCTION: EXE 0x56b09e
-// Pays a technology's cost (scaled by inFraction); with civ power 0x2e resources 5 and 6 can cover each other
+// Pays a technology's cost scaled by inFraction (ee_units player.rs pay)
 void EEPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
     EEPlayerEconScope theScope;
-    [&]() {
-        unsigned long i; bool theInsufficient = false;
-        if (this->CanAffordSingleResource(inTechnology, inUnitType, 1) == true) {
-            if (inTechnology->mData->mCostResource == 1) {
-                for (i = 2; i < 7; i++) {
-                    long theCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                    if (this->mResourceCaps[i] >= theCost) {   // the first resource that covers it, as CanAffordSingleResource (was <=)
-                        this->TakeResource(i, theCost);
-                        break;
-                    }
-                }
-            } else {
-                long theCost = this->ScaleCost((long)(inTechnology->GetCost(inTechnology->mData->mCostResource, inUnitType, 1.0f) * inFraction));
-                unsigned long theResource = inTechnology->mData->mCostResource;
-                if (theCost > this->mResourceCaps[theResource]) {
-                    if ((theResource == 5 || theResource == 6) && this->mResourceCaps[kResourceGold] + this->mResourceCaps[kResourceIron] >= theCost
-                        && gCivPowersManager.HasPower(this, kCivPowerMetallurgy)) {
-                        if (this->mResourceCaps[kResourceGold] >= this->mResourceCaps[kResourceIron]) {
-                            this->TakeResource(kResourceGold, theCost - this->mResourceCaps[kResourceIron]);
-                            this->TakeResource(kResourceIron, this->mResourceCaps[kResourceIron]);
-                        } else {
-                            this->TakeResource(kResourceIron, theCost - this->mResourceCaps[kResourceGold]);
-                            this->TakeResource(kResourceGold, this->mResourceCaps[kResourceGold]);
-                        }
-                    }
-                } else
-                    this->TakeResource(theResource, theCost);
-            }
-            this->mSavedGroups.Lower(inTechnology->mData->mRequiredStatistic, inTechnology->mData->mRequiredStatisticValue);
-        } else {
-            bool theOnlyInterchangeable = true;
-            for (i = 2; i < 7; i++) {
-                long theCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                if (!(theCost > this->mResourceCaps[i]))
-                    continue;
-                theInsufficient = true;
-                if (i != 6 && i != 5) {
-                    theOnlyInterchangeable = false;
-                    break;
-                }
-            }
-            if (theInsufficient) {
-                if (theOnlyInterchangeable && gCivPowersManager.HasPower(this, kCivPowerMetallurgy)) {
-                    long theFood = this->ScaleCost((long)(inTechnology->GetCost(kResourceGold, inUnitType, 1.0f) * inFraction));
-                    long theWood = this->ScaleCost((long)(inTechnology->GetCost(kResourceIron, inUnitType, 1.0f) * inFraction));
-                    long theCost = theFood + theWood;
-                    if (this->mResourceCaps[kResourceGold] + this->mResourceCaps[kResourceIron] >= theCost) {
-                        if (this->mResourceCaps[kResourceGold] >= this->mResourceCaps[kResourceIron]) {
-                            this->TakeResource(kResourceGold, theCost - this->mResourceCaps[kResourceIron]);
-                            this->TakeResource(kResourceIron, this->mResourceCaps[kResourceIron]);
-                        } else {
-                            this->TakeResource(kResourceIron, theCost - this->mResourceCaps[kResourceGold]);
-                            this->TakeResource(kResourceGold, this->mResourceCaps[kResourceGold]);
-                        }
-                        for (i = 2; i < 7; i++) {
-                            if (i != 5 && i != 6) {
-                                long theOtherCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                                this->TakeResource(i, theOtherCost);
-                            }
-                        }
-                    }
-                }
-            } else {
-                for (i = 2; i < 7; i++) {
-                    long theCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                    if (theCost > this->mResourceCaps[i])
-                        return;
-                    this->TakeResource(i, theCost);
-                }
-            }
-        }
-    }();
+    ee_units_player_cost(EEPlayerRefs(this), 4, inTechnology, inUnitType, 0, inFraction, NULL);
     theScope.Record(this, 6, 0, {EEPlayerNodeID(inTechnology), inUnitType, EEPlayerFloatBits(inFraction)});
 }
 
 // FUNCTION: EXE 0x56b3f7
-// Pays the cost of a unit class improvement at its current level, resources 5 and 6 covering each other
+// Pays a unit class improvement at its queued level (ee_units player.rs pay_improvement)
 void EEPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 {
     EEPlayerEconScope theScope;
-    [&]() {
-        if (inClass == NULL)
-            return;
-        EEUnitClass* theClass = gUnitClassTable[inClass->mUnitType];
-        long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-        if (theTechnology == kTechNone)
-            return;
-        EETechTreeNode* theNode = this->mTechnologies->Get(theTechnology);
-        if (theNode == NULL || inClass->mImprovements == NULL)
-            return;
-        unsigned long theType = inClass->mUnitType;
-        float theScale = inClass->mImprovements->mEntries[inImprovement].mCostFactor;
-        theScale *= this->GetImprovementLevel(theType, inImprovement);
-        for (unsigned long i = 2; i < 7; i++) {
-            long theCost = this->ScaleCost((long)(theNode->GetCost(i, 0, 1.0f) * theScale + 0.0001f));
-            if (this->mResourceCaps[i] - theCost < 0) {
-                if (i == 6) {
-                    this->TakeResource(kResourceGold, theCost - this->mResourceCaps[kResourceIron]);
-                    this->TakeResource(i, this->mResourceCaps[kResourceIron]);
-                } else if (i == 5) {
-                    this->TakeResource(kResourceIron, theCost - this->mResourceCaps[kResourceGold]);
-                    this->TakeResource(i, this->mResourceCaps[kResourceGold]);
-                }
-            } else {
-                this->TakeResource(i, theCost);
-            }
-        }
-    }();
+    if (inClass != NULL)
+        EEPlayerImprovement(this, 8, inClass->mUnitType, inImprovement);
     theScope.Record(this, 7, 0, {inClass != NULL ? (int32_t)inClass->mUnitType : -1, inImprovement});
 }
 
@@ -4213,21 +3850,10 @@ void EEPlayer::RefreshTownGroups()
     }
 }
 
-// The context of UpdatePlayer's operations: the player and the queued improvements' walk
+// The context of UpdatePlayer's operations: the player
 struct EEPlayerTickContext {
     EEPlayer* mPlayer;
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator mQueued;
 };
-
-// The walk's entry: its key and float, or 0 at the end
-static int32_t EEPlayerQueuedEntry(EEPlayerTickContext& inContext, EeUnitsPlayerSaveIo* io)
-{
-    if (inContext.mQueued == inContext.mPlayer->mQueuedImprovements.end())
-        return 0;
-    io->i = (int64_t)(*inContext.mQueued).first;
-    io->f = (*inContext.mQueued).second.first;
-    return 1;
-}
 
 // The C++ parts of the player's tick (ee_units player_tick.rs): the groups, herds, air traffic, events, the queued
 // improvements' map and the units, by operation
@@ -4270,32 +3896,14 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
         thePlayer->UpdateAirTraffic();
         thePlayer->mEvents.TickEvents(thePlayer, gPhysics->mTickTime);
         return 0;
-    case EE_UNITS_PLAYER_TICK_QUEUED_FIRST:
-        theContext.mQueued = thePlayer->mQueuedImprovements.begin();
-        return EEPlayerQueuedEntry(theContext, io);
-    case EE_UNITS_PLAYER_TICK_QUEUED_NEXT:
-        theContext.mQueued++;
-        return EEPlayerQueuedEntry(theContext, io);
-    case EE_UNITS_PLAYER_TICK_QUEUED_ERASE:
-        theContext.mQueued = thePlayer->mQueuedImprovements.erase(theContext.mQueued);
-        return EEPlayerQueuedEntry(theContext, io);
-    case EE_UNITS_PLAYER_TICK_QUEUED_SET:
-        (*theContext.mQueued).second.first = io->f;
-        return 0;
     case EE_UNITS_PLAYER_TICK_TICK_TIME:
         io->f = gPhysics->GetTickTime();
         return 0;
-    case EE_UNITS_PLAYER_TICK_INSTANT_BUILD:
-        return thePlayer->mInstantBuild ? 1 : 0;
     case EE_UNITS_PLAYER_TICK_QUEUED_APPLY:
-        thePlayer->ApplyImprovement((*theContext.mQueued).first, (*theContext.mQueued).second.second.front(), false);
-        (*theContext.mQueued).second.second.erase((*theContext.mQueued).second.second.begin());
-        (*theContext.mQueued).second.first = 0.0f;
+        thePlayer->ApplyImprovement((long)io->i, (long)inIndex, false);
         return 0;
     case EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE:
         return thePlayer->AdvanceImprovement((unsigned long)io->i) ? 1 : 0;
-    case EE_UNITS_PLAYER_TICK_HEALS_UNITS:
-        return thePlayer->mHealsUnits == true ? 1 : 0;
     case EE_UNITS_PLAYER_TICK_TICK_MS:
         io->i = (int64_t)gPhysics->mTickTimeMs;
         return 0;
@@ -4329,10 +3937,8 @@ static int32_t EEPlayerTickOperation(void* inContext, int32_t inOp, uint32_t inI
 void EEPlayer::UpdatePlayer()
 {
     EEPlayerCaptureState(this);   // TEST ONLY (PLST)
-    EEPlayerTickContext theContext;
-    theContext.mPlayer = this;
-    theContext.mQueued = this->mQueuedImprovements.end();
-    ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this));
+    EEPlayerTickContext theContext = {this};
+    ee_units_player_update(&theContext, &EEPlayerTickOperation, static_cast<EeUnitsPlayerSaved*>(this), this);
 }
 
 // FUNCTION: EXE 0x56c1e1

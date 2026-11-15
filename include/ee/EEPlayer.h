@@ -681,8 +681,11 @@ public:
 
 // port (R5b.4): the saved numbers (mScenarioVariables, mEnemies, mTributes, mResourceCaps, mPopLimit, ... the 24
 // fields EEPlayer::Load and Save read and write as plain values) are the Rust record EeUnitsPlayerSaved
-// (ee_units player_save.rs) this class derives from, with their C++ names and types; the offsets below omit them
-class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved {
+// (ee_units player_save.rs) this class derives from, with their C++ names and types; the offsets below omit them.
+// port (the player lane, round 1): the other plain members (mHackUnitClass .. mJITManufacturing, mNumTeleporters) are
+// the Rust record EeUnitsPlayerFields (ee_units player.rs; their names and types kept), with the queued improvements
+// (mQueued, Rust's); the economy's and the improvements' bodies are Rust over EEPlayer.cpp's host
+class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved, public EeUnitsPlayerFields {
 public:
     // out of line in EEPlayer.cpp (EEHumanPlayer's ctors call them; its ??_G calls the dtor)
     EEPlayer();                             // 0x162048
@@ -854,18 +857,8 @@ public:
     // inline (out-of-line COMDATs after their first users in EEUICPortrait.cpp: 0x258cb8 / 0x2594e8): the improvement
     // being researched for inUnitType (0x10: none) and its progress (0.0 when absent; read as a float by 0x2594e8:
     // mQueuedImprovements's first is really a float) (provisional names)
-    long GetResearchedImprovement(unsigned long inUnitType)
-    {
-        if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end())
-            return this->mQueuedImprovements.find(inUnitType)->second.second[0];
-        return 0x10;
-    }
-    float GetImprovementProgress(unsigned long inUnitType)
-    {
-        if (this->mQueuedImprovements.find(inUnitType) != this->mQueuedImprovements.end())
-            return (*this->mQueuedImprovements.find(inUnitType)).second.first;
-        return 0.0f;
-    }
+    long GetResearchedImprovement(unsigned long inUnitType) { return (long)ee_units_queued_op(this->mQueued, 2, inUnitType, 0); }
+    float GetImprovementProgress(unsigned long inUnitType) { return ee_units_queued_timer(this->mQueued, inUnitType); }
     void RestartTowns();                    // 0x1680e4 (each town's UpdateNearWater; EEWorld::StartGame)
     void RegisterTowns();                   // 0x16513d (the towns re-registered with gContinentManager)
     void RegisterHerds();                   // 0x1650dc (player 0 before a scenario starts; provisional name)
@@ -1017,9 +1010,6 @@ public:
     std::vector<long> mWonderPowers;        // +0x8e8
     UReferenceContainer<EEComplexUnit*>* mWonders;       // +0x8f8 (Reset news one: vtable 0x4429d8)
     std::vector<long> mWonderIDs;           // +0x8fc
-    // +0x90c (node 0x28: per unit type (unsigned: `jb` in find 0x16ccf6) a long and the improvements queued
-    // (CountQueuedImprovements counts them from index 1; copy 0x16d323); types inferred; ctor 0x16d077)
-    std::map<unsigned long, std::pair<float, std::vector<unsigned long> > > mQueuedImprovements;  // (float: Save Write slot 0x7c, ComputeLoadDistance; FSSaveVector<unsigned long>)
     EEPPlayerEventList mEvents;             // +0x918 (RTTI EEPPlayerEventList, ctor 0x16e5b9; provisional name)
     EEGroup* mGroups[20];                   // +0x954 the saved (hot-key) groups, indexed by a byte (EEMSavedGroupClear
                                             // 0xc5117); Reset calls each one's slot +0x24
@@ -1039,33 +1029,8 @@ public:
     EETechnologyTable* mTechnologies;       // +0x9cc (provisional name; conscription 0xafe3b; Reset: new 0x554 bytes)
     RTSUnit* mViewedUnit;                   // +0x9d0 (Reset dereferences it)
     RTSUnit* mSelectedViewedUnit;           // +0x9d4 (a referenced unit: SetSelectedViewedUnit swaps it)
-    unsigned long mHackUnitClass;           // +0xa24 (kNoUnitClass: none (the original: 0x367); a gUnitClassTable index, compared unsigned: EEMLoadUnitData)
-    float mConversionFactor;                // +0xa2c (= 1)
-    float mTributeFee;                      // +0xa30 (the tribute fee: the diplomacy form loads it with fld)
-    long mMaxStartingCitizens;              // +0xa64
-    long mDamageFrom[17];                   // +0xa68 (a loop of 17 with the bytes at +0xb30)
-    long mNumAttacks;                       // +0xaac
-    long mLastAcknowledgementTime;          // +0xad8
-    long mLastAcknowledgedGroup;            // +0xadc
     long GetHeroLimit() const { return this->mHeroLimit; }
-    long mHeroLimit;                        // +0xae0
-    long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding 0x61ed5e: loaded into a temp before the GetResourceUsers call)
-    long mMiningLimit;                      // +0xae4
-    long mLAF0;                             // +0xaf0
-    long mShareBonus;                       // +0xb20
-    long mPopulationLimitBonus;             // +0xb24
-    long mNumHeroes;                        // +0xb28
-    long mNumHeroesInProduction;            // +0xb2c
-    bool mAreaConversion;                   // +0xb41
-    bool mBB42;                             // +0xb42
-    bool mBB44;                             // +0xb44
-    bool mInstantBuild;                     // +0xb45
-    bool mHealsUnits;                       // +0xb46
-    bool mBehindFirewall;                   // +0xb47
-    bool mEarthquakeShaken;                 // +0xb4c (EECalamityManager::Update clears it for players 1..)
-    bool mShiftMode;                        // +0xb4d EEMEnterShiftMode/EEMExitShiftMode (provisional name)
-    bool mJITManufacturing;                 // +0xb4e
-    long mNumTeleporters;                   // +0xb7c
+    long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding)
 };
 
 #endif

@@ -897,6 +897,93 @@ constexpr static const int32_t EE_UNITS_PHYSICS_SAVE_RTS_LOAD = 101;
 
 constexpr static const int32_t EE_UNITS_PHYSICS_SAVE_RTS_SAVE = 102;
 
+/// `kTributeFee`
+constexpr static const float EE_UNITS_PLAYER_TRIBUTE_FEE = 0.4;
+
+/// `kNoUnitClass`
+constexpr static const unsigned long EE_UNITS_PLAYER_NO_UNIT_CLASS = 4294967295;
+
+/// `kTechNone`
+constexpr static const long EE_UNITS_PLAYER_TECH_NONE = 100000;
+
+/// `mTechnologies->Get(i[0])` (the result: the node, 0 none)
+constexpr static const int32_t EE_UNITS_PLAYER_NODE = 1;
+
+/// node `i[0]`'s data into `i`: makes a unit, its unit class, the cost resource, the required statistic and value,
+/// the kind, the unit classes' count, researched
+constexpr static const int32_t EE_UNITS_PLAYER_NODE_INFO = 2;
+
+/// node `i[0]`'s `GetIsAvailable()` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_NODE_AVAILABLE = 3;
+
+/// node `i[0]`'s `GetUnitClass(i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_NODE_UNIT_CLASS = 4;
+
+/// node `i[0]`'s `GetCost(i[1], i[2], 1.0f)` (virtual; the TCST capture's)
+constexpr static const int32_t EE_UNITS_PLAYER_NODE_COST = 5;
+
+/// `ScaleCost(i[0])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_SCALE_COST = 6;
+
+/// `gCivPowersManager.HasPower(this, kCivPowerMetallurgy)`
+constexpr static const int32_t EE_UNITS_PLAYER_METALLURGY = 7;
+
+/// `TakeResource(i[0], i[1])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_TAKE = 8;
+
+/// `AddResource(i[0], i[1])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_ADD = 9;
+
+/// `gUnitClassTable[i[0]]` (the result 1 when there is one) into `i`: its technology, weight, population cost,
+/// whether it is the teleporter, a hero (its AI kind), whether it has improvements
+constexpr static const int32_t EE_UNITS_PLAYER_CLASS = 10;
+
+/// `GetExtraPopulation(i[0])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_EXTRA_POPULATION = 11;
+
+/// `GetPopulationLimit(0)` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_POPULATION_LIMIT = 12;
+
+/// `GetHeroCount(i[0], i[1])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_HERO_COUNT = 13;
+
+/// `gWorld.mGameOptions.mIsScenarioGame`
+constexpr static const int32_t EE_UNITS_PLAYER_SCENARIO = 14;
+
+/// `CanAfford(node i[0], i[1], i[2])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_CAN_AFFORD = 15;
+
+/// the reason text `i[1]` (1 the maximum built, 2 the hero limit, 3 the population limit, 4 the construction's
+/// resources, 5 the research's, 6 the improvements' maximum) into the `UWideString*` `i[0]`
+constexpr static const int32_t EE_UNITS_PLAYER_REASON = 16;
+
+/// `mSavedGroups.Lower(i[0], i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_STATS_LOWER = 17;
+
+/// unit type `i[0]`'s upgrade and class for improvement `i[1]` (the result 1 when the upgrade is there): `i` its
+/// `CanUpgrade`, `GetCost(i[1])`, `mTotalCost`, its level, the table's maximum level, the world's improvement
+/// points' maximum; `f` the step factor (0 for improvement 12 or without a table) and the cost factor
+constexpr static const int32_t EE_UNITS_PLAYER_IMPROVEMENT = 18;
+
+/// unit type `i[0]`'s upgrade's `GetCost(i[1])`
+constexpr static const int32_t EE_UNITS_PLAYER_IMPROVEMENT_COST = 19;
+
+/// unit type `i[0]`'s upgrade's level of improvement `i[1]` (the result 1 when the upgrade is there; the level in
+/// `i[0]`)
+constexpr static const int32_t EE_UNITS_PLAYER_LEVEL = 20;
+
+/// improvement `i[0]`'s time (`(long)` of the world table's `GetLongValue2` when `i[1]`, else `GetLongValue`)
+constexpr static const int32_t EE_UNITS_PLAYER_IMPROVEMENT_TIME = 21;
+
+/// whether the player is the local player
+constexpr static const int32_t EE_UNITS_PLAYER_IS_LOCAL = 22;
+
+/// `gUserInterface->UpdateJITManufacturing()`
+constexpr static const int32_t EE_UNITS_PLAYER_UPDATE_JIT = 23;
+
+/// `PayImprovement(gUnitClassTable[i[0]], i[1])` (virtual)
+constexpr static const int32_t EE_UNITS_PLAYER_PAY_IMPROVEMENT = 24;
+
 /// the sight at the event's location on for the player (`AddSharedSightAt`), and the local player's mini-map cell and
 /// terrain tile when it sees the player's sight
 constexpr static const int32_t EE_UNITS_EVENTS_SHOW = 1;
@@ -1123,33 +1210,14 @@ constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_KILL = 7;
 /// `UpdateAirTraffic()`, then `mEvents.TickEvents(this, gPhysics->mTickTime)`
 constexpr static const int32_t EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS = 8;
 
-/// the walk of `mQueuedImprovements`: to its first entry; the result 1 with the key in `io.i` and the float in
-/// `io.f`, 0 at the end
-constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_FIRST = 9;
-
-/// to the next entry (as FIRST)
-constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_NEXT = 10;
-
-/// the current entry erased, to the one after it (as FIRST)
-constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_ERASE = 11;
-
-/// the current entry's float `= io.f`
-constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_SET = 12;
-
 /// `gPhysics->GetTickTime()` into `io.f`
 constexpr static const int32_t EE_UNITS_PLAYER_TICK_TICK_TIME = 13;
 
-/// `mInstantBuild` (the result)
-constexpr static const int32_t EE_UNITS_PLAYER_TICK_INSTANT_BUILD = 14;
-
-/// `ApplyImprovement(key, the list's front, false)`, the front erased, the float 0
+/// `ApplyImprovement(io.i, index, false)` (the queue's first improvement of unit type `io.i`)
 constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_APPLY = 15;
 
 /// `AdvanceImprovement(io.i)` (the result)
 constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE = 16;
-
-/// `mHealsUnits` (the result)
-constexpr static const int32_t EE_UNITS_PLAYER_TICK_HEALS_UNITS = 17;
 
 /// `gPhysics->mTickTimeMs` into `io.i`
 constexpr static const int32_t EE_UNITS_PLAYER_TICK_TICK_MS = 18;
@@ -2712,6 +2780,9 @@ struct EeUnitsPlayerEvents;
 /// The 31 series (the C++ `mStats`).
 struct EeUnitsPlayerStats;
 
+/// The queued improvements: per unit type the running timer (`first`) and the improvements in order.
+struct EeUnitsQueued;
+
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {
   void *ctx;
@@ -3642,26 +3713,14 @@ struct EeUnitsPhysicsSaved {
   bool mResourceTimerPending;
 };
 
-/// One event (`EEPPlayerEvent`'s members).
-struct EeUnitsPlayerEvent {
-  /// `mSource` (the tile the event is about: the camera jumps there)
-  long source_x;
-  long source_y;
-  /// `mLocation` (an attack: the attacker's tile, where the sight is shared)
-  long x;
-  long y;
-  /// `mType`
-  long kind;
-  /// `mTimeRemaining` (ms)
-  float time;
-  /// `mTextID` (-1 none)
-  long text;
-  /// `mActive`
-  bool active;
+/// One host call's values: the arguments in `i`/`f`, the answers back in them.
+struct EeUnitsPlayerIo {
+  int64_t i[8];
+  float f[2];
 };
 
-/// The C++ host: `(list, player, op, event) -> the answer`.
-using EeUnitsEventsFn = int32_t(*)(void*, void*, int32_t, const EeUnitsPlayerEvent*);
+/// The C++ host: `(player, op, io) -> the answer`.
+using EeUnitsPlayerFn = int64_t(*)(void*, int32_t, EeUnitsPlayerIo*);
 
 /// `EEPlayer`'s saved numbers (their C++ names and types).
 struct EeUnitsPlayerSaved {
@@ -3697,6 +3756,70 @@ struct EeUnitsPlayerSaved {
   bool mCivilizationChosen;
   bool mCivUpgradesPurchased;
 };
+
+/// `EEPlayer`'s other members (their C++ names and types).
+struct EeUnitsPlayerFields {
+  /// `kNoUnitClass` (0xffffffff): none; a unit class table index
+  unsigned long mHackUnitClass;
+  float mConversionFactor;
+  /// the tribute fee (0.4)
+  float mTributeFee;
+  long mMaxStartingCitizens;
+  /// the damage taken from each player
+  long mDamageFrom[17];
+  long mNumAttacks;
+  long mLastAcknowledgementTime;
+  long mLastAcknowledgedGroup;
+  long mHeroLimit;
+  long mMiningLimit;
+  long mLAF0;
+  long mShareBonus;
+  long mPopulationLimitBonus;
+  long mNumHeroes;
+  long mNumHeroesInProduction;
+  long mNumTeleporters;
+  bool mAreaConversion;
+  bool mBB42;
+  bool mBB44;
+  bool mInstantBuild;
+  bool mHealsUnits;
+  bool mBehindFirewall;
+  bool mEarthquakeShaken;
+  bool mShiftMode;
+  bool mJITManufacturing;
+  /// the queued improvements (made by the constructors, freed by the destructor)
+  EeUnitsQueued *mQueued;
+};
+
+/// What a call needs: the player (the host's context), the host, the records and the statistics.
+struct EeUnitsPlayerRefs {
+  void *player;
+  EeUnitsPlayerFn host;
+  EeUnitsPlayerSaved *saved;
+  EeUnitsPlayerFields *fields;
+  const EeUnitsPlayerStats *stats;
+};
+
+/// One event (`EEPPlayerEvent`'s members).
+struct EeUnitsPlayerEvent {
+  /// `mSource` (the tile the event is about: the camera jumps there)
+  long source_x;
+  long source_y;
+  /// `mLocation` (an attack: the attacker's tile, where the sight is shared)
+  long x;
+  long y;
+  /// `mType`
+  long kind;
+  /// `mTimeRemaining` (ms)
+  float time;
+  /// `mTextID` (-1 none)
+  long text;
+  /// `mActive`
+  bool active;
+};
+
+/// The C++ host: `(list, player, op, event) -> the answer`.
+using EeUnitsEventsFn = int32_t(*)(void*, void*, int32_t, const EeUnitsPlayerEvent*);
 
 /// One point (`EEStatisticsPoint`: the value, the game time).
 struct EeUnitsStatPoint {
@@ -5163,6 +5286,86 @@ int32_t ee_units_physics_load(void *ctx,
 /// As [`ee_units_physics_load`].
 int32_t ee_units_physics_save(void *ctx, EeUnitsPlayerSaveFn f, EeUnitsPhysicsSaved *rec);
 
+/// The cost decisions: `what` 0 `CanAffordScaled(node, a, f, b)`, 1 `CanAffordSingleResource(node, a, b)`, 2
+/// `EEPlayer::CanAfford(node, a, b)`, 3 `CanAffordTechnology(a, f, reason)`, 4 `EEPlayer::Pay(node, a, f)`, 5
+/// `RefundTechnology(node, a, f)`.
+///
+/// # Safety
+/// As [`with`].
+bool ee_units_player_cost(const EeUnitsPlayerRefs *refs,
+                          uint32_t what,
+                          void *node,
+                          long a,
+                          long b,
+                          float f,
+                          void *reason);
+
+/// `EEPlayer::CanProduce` (see [`Player::can_produce`]).
+///
+/// # Safety
+/// As [`with`].
+bool ee_units_player_can_produce(const EeUnitsPlayerRefs *refs,
+                                 long tech,
+                                 long unit_class,
+                                 long count,
+                                 bool check_cost,
+                                 long wonder_mode,
+                                 void *reason);
+
+/// The improvement decisions on unit type `unit_type` and improvement `improvement`: `what` 0
+/// `GetImprovementLevel`, 1 `CountQueuedImprovements`, 2 `CanImprove`, 3 `CanBuy(reason)`, 4 `IsImprovementMaxed`,
+/// 5 `QueueImprovement(flag front, flag2 paid)`, 6 `RemoveQueuedImprovement(flag)`, 7 `AdvanceImprovement`, 8
+/// `PayImprovement`, 9 `RefundImprovement(f)`, 10 `RepairPointers`' requeue (the arguments unread).
+///
+/// # Safety
+/// As [`with`].
+long ee_units_player_improvement(const EeUnitsPlayerRefs *refs,
+                                 uint32_t what,
+                                 unsigned long unit_type,
+                                 long improvement,
+                                 bool flag,
+                                 bool flag2,
+                                 float f,
+                                 void *reason);
+
+/// A new, empty queue (the constructors').
+EeUnitsQueued *ee_units_queued_new();
+
+/// # Safety
+/// `queued` came from [`ee_units_queued_new`] (or is null) and is not used after.
+void ee_units_queued_free(EeUnitsQueued *queued);
+
+/// The queue's own operations on unit type `a`: `what` 0 `EraseQueuedImprovements`, 1 `MoveQueuedImprovements(a, b)`,
+/// 2 the portrait's improvement (the result: the first queued, 0x10 none).
+///
+/// # Safety
+/// `queued` is live.
+unsigned long ee_units_queued_op(EeUnitsQueued *queued,
+                                 uint32_t what,
+                                 unsigned long a,
+                                 unsigned long b);
+
+/// The portrait's progress of unit type `a` (its timer; 0 without an entry).
+///
+/// # Safety
+/// `queued` is live.
+float ee_units_queued_timer(const EeUnitsQueued *queued, unsigned long a);
+
+/// `Reset`'s stores into the record (see [`reset_fields`]).
+///
+/// # Safety
+/// `r` points to the record.
+void ee_units_player_fields_reset(EeUnitsPlayerFields *r,
+                                  long starting_citizens,
+                                  long mining_limit);
+
+/// TEST ONLY: the capture's digest of a queue (PLST): FNV-1a 64 of the count, then per entry its key, timer, count and
+/// improvements as words.
+///
+/// # Safety
+/// `queued` is live.
+uint64_t ee_units_queued_digest(const EeUnitsQueued *queued);
+
 /// A new, empty list.
 EeUnitsPlayerEvents *ee_units_events_new();
 
@@ -5218,13 +5421,16 @@ int32_t ee_units_events_file(EeUnitsPlayerEvents *events,
 /// `events` is live.
 uint64_t ee_units_events_digest(const EeUnitsPlayerEvents *events);
 
-/// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base) and its C++ parts through `f`.
+/// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base), the queue `queued` (answered here)
+/// and its C++ parts through `f`.
 ///
 /// # Safety
-/// `rec` points to the player's live record; `f` is valid with `ctx` for the call.
+/// `rec` points to the player's live record, `queued` to its queue (or is null: `f` answers it); `f` is valid with
+/// `ctx` for the call.
 int32_t ee_units_player_load(void *ctx,
                              EeUnitsPlayerSaveFn f,
                              EeUnitsPlayerSaved *rec,
+                             EeUnitsQueued *queued,
                              uint32_t major,
                              uint32_t minor);
 
@@ -5235,6 +5441,7 @@ int32_t ee_units_player_load(void *ctx,
 int32_t ee_units_player_save(void *ctx,
                              EeUnitsPlayerSaveFn f,
                              EeUnitsPlayerSaved *rec,
+                             EeUnitsQueued *queued,
                              uint32_t major,
                              uint32_t minor);
 
@@ -5315,7 +5522,10 @@ int32_t ee_units_stats_save(const EeUnitsPlayerStats *s,
 ///
 /// # Safety
 /// `rec` is the player's record (as [`update_player`]); `f` handles every operation with `ctx`.
-void ee_units_player_update(void *ctx, EeUnitsPlayerTickFn f, EeUnitsPlayerSaved *rec);
+void ee_units_player_update(void *ctx,
+                            EeUnitsPlayerTickFn f,
+                            EeUnitsPlayerSaved *rec,
+                            EeUnitsPlayerFields *fields);
 
 /// `EEPlayer::Reset`'s fields of the record (see [`reset`]).
 ///
