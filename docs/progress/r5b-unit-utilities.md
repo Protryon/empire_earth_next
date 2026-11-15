@@ -36,9 +36,13 @@ uu_ffi.rs, msvc_sort.rs; 2026-11-14):
   `EEGetTileInDirection`, `EEGetNearestFootprintTile`, `EEGetFanTiles`, `EEGetUnitsInFan`, `EEGetUnitsNearTile`,
   `EEFindOpenSpot`, `EEGetWallSideTiles` and the comparators only they used.
 
+**C++**: net -1,684 this round (the capture +189, the move -1,873); the file 6,380 -> 4,725 lines.
+
 **Gate**: UUTL (tools/sim_capture.py): the outermost call of 50 utilities per thread (kind, inputs, outputs) folded
 per physics tick, recorded on the unmodified C++ (oracle, late, space, calamity; seeds 2-3; two oracle runs equal).
-EE-UU-COUNT in each game's log gives the calls per kind.
+EE-UU-COUNT in each game's log gives the calls per kind. Final (merged with rust fffdedf4): oracle 2-7 identical, the four
+captures PASS, saveload matrix PASS (expect), Rust gate PASS, test-profile build 0/0, a sim_bench game to the time
+cap with both AIs alive.
 
 **Not reached by the gate games** (unit tests and review only): `EEGetEscapePoint` (stays C++), `EEIsTileUnblocked`
 and `EEGetBlockRing` as outermost calls (their bodies run nested), the walls' `EEDropDiagonalCorners`/
@@ -53,3 +57,8 @@ the scenario editor's placement (`EEEditorCanPlace`), the regions and footprint 
 escape point, the seabed depth, the path test (`EEHasPathToTarget`: a path request), `EEUpdateUnitTile`,
 `EEGetHelicopterPriestDestination`, the selection bounds, the functors (`EEForEachUnitOf`, `EEHitPointUpgrader`),
 `EEStepAsideFromSite`.
+
+**Next**: `EEGetEscapePoint` (needs a profile where computer units flee: no gate game calls it), `EEHasPathToTarget`
+over the path manager's request, the sound parameters once the camera is Rust, `EEPlanWall`/`EEBuildWall` (unit
+creation and payment through the host), the editor placement test; the target screens' tests once the goals' casts
+are Rust.

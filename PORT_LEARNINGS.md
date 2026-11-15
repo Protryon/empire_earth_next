@@ -21544,3 +21544,8 @@ to exist. Each class unit carried 30-40 lines of includes and comments and a 20-
   seeds 2-3 equal to every golden, UUTL among them (oracle 173 digests, late 174, space 175, calamity 191); 29 new
   Rust unit tests (with the copied sort's golden test). C++: EEFOFindNewTargetNearOldTarget.cpp 6,380 -> 4,725 lines
   with the 230-line test capture.
+- **Final gates (merged with rust fffdedf4):** build `--sim` 0/0; test-profile build 0/0; oracle seeds 2-7 identical; the
+  captures at seeds 2-3 of oracle (173 digests), late (174), space (175) and calamity (191) PASS; the saveload matrix
+  (`--settings all --seeds 2-3 --at 1000,1900 --expect`) PASS with the expect file's rows; the Rust gate PASS; a
+  sim_bench game (seed 5, Small, Hard, 2 AI) to the time cap with both computers alive (populations 39 and 45). C++ of
+  the round: net -1,684 (the capture +189, the move -1,873).
