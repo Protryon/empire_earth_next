@@ -5,7 +5,9 @@ use std::ffi::c_char;
 
 use ee_codec as _;
 use ee_fs as _;
-// the Input System's devices (ee_input/src/ffi.rs), called by Input System.cpp, ISKeyboard and ISMouse
+// the Input System's devices (ee_input/src/ffi.rs), called by Input System.cpp, ISKeyboard and ISMouse; its entry
+// points import the window layer's PlatMouseSetRelative (absent from a test binary)
+#[cfg(not(test))]
 use ee_input as _;
 // the Error System (ee_error): Filter.txt, ESVerify, the native error, the checksum sets
 use ee_error as _;
@@ -13,6 +15,8 @@ use ee_error as _;
 use ee_time as _;
 // the Thread System (ee_ts): the locks, the events, the threads and their registry
 use ee_ts as _;
+// the Utilities (ee_util): UGraph, U2DFractal, the shutdown list
+use ee_util as _;
 // the string classes' searches and tokenizers (ee_ustring)
 use ee_ustring as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp

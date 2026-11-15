@@ -57,14 +57,10 @@
 4eef6 4f08e Sound Engine/SEScore.cpp
 4f08e 532d9 Sound Engine/SESoundManager.cpp
 532d9 53675 Sound Engine/Sound Engine.cpp
-53675 53701 Thread System/Thread System.cpp
 53701 53819 Time Manager/Time Manager.cpp
-53e55 54203 Thread System/TSScheduler.cpp
-545ff 549b6 Utilities/U2DFractal.cpp
 549b6 56369 Utilities/U2DSparseArray.cpp
 56369 5662f Utilities/UDataCompression.cpp
 5662f 57218 Utilities/UEncryption.cpp
-5726b 58d38 Utilities/UGraph.cpp
 58d38 5c34a User Interface/UIBackground.cpp
 5c34a 5c84e User Interface/UIBackgroundTable.cpp
 5c84e 5d3a1 User Interface/UIBFull.cpp
