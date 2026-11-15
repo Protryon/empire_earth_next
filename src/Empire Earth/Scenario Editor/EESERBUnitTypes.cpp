@@ -586,7 +586,8 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     case EE_SCREENS_SEPL_RADIO: {
         UIRadioButton* t = new UIRadioButton(c.id, theText, theFont, theRect, inForm, c.index, 0, false, c.extra[0] != 0,
                                              false);
-        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (c.bg >= 0.0f && (c.flags & EE_SCREENS_SEPL_LABEL_BG)) t->GetTextLabel()->SetBgOpacity(c.bg);   // the elevation tab's
+        else if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
         if (theFg) SeplYellow(t->GetTextLabel()->GetGEText());
         theControl = t;
         break;

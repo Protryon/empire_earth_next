@@ -1635,6 +1635,38 @@ constexpr static const uint32_t EE_SCREENS_SEET_SHOW = 5;
 
 constexpr static const uint32_t EE_SCREENS_SEET_UPDATE_NAME = 6;
 
+/// `EeScreensSeplCtl::flags`: a radio button's or check box's background opacity (`bg`) is its text label's.
+constexpr static const uint32_t EE_SCREENS_SEPL_LABEL_BG = 1024;
+
+/// The paint area (`EEUIFSEPaintElevation`, id 0xa1, 0x400 x 0x25e at the top left, over the edge scroll and brush
+/// group, the two words at p2) at the index i0; group 2 -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_PAINT = 900;
+
+/// The elevation slider (`EEUIFSEESElevation`, id 0x9d) at (f0, f1), f2 high, the index i0, 0 .. 0x40 at 0x28,
+/// page 1, grey at 0.4 -> into p0; its value's strength (max - value - 0x18) returned.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_ELEVATION_SLIDER = 901;
+
+/// The strength slider (id 0xa2) at (f0, f1), 20 x f2, the index i0, 0 .. 0x10 at 10, page 1, grey at 0.4, its
+/// changes shown in the label p2 (`UIESliderChange(-4, 0x28)`) -> into p0.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_STRENGTH_SLIDER = 902;
+
+/// -> the screen font's height.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_FONT_HEIGHT = 903;
+
+/// The control p0 added to the form p1's group 2 / hidden.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_ADD = 904;
+
+/// -> whether the form p0 is its manager's current form; the mouse's position into f0, f1.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_MOUSE = 905;
+
+/// The brush highlight of the form p0 at the tile under (f0, f1) when the view holds it (shown), else hidden.
+constexpr static const uint32_t EE_SCREENS_SEEL_OP_HIGHLIGHT = 906;
+
+/// The tab's members (`ee_screens_seel_call`).
+constexpr static const uint32_t EE_SCREENS_SEEL_UPDATE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEEL_MOUSE_MOVE = 2;
+
 /// `EESEEHideUI`.
 constexpr static const uint32_t EE_SCREENS_SEE_HIDE_UI = 1;
 
@@ -8576,6 +8608,9 @@ struct EeScreensSeConditionScreen;
 /// The effect screen (opaque to C++).
 struct EeScreensSeEffectScreen;
 
+/// The elevation tab (opaque to C++).
+struct EeScreensSeElevation;
+
 /// The editor form (opaque to C++).
 struct EeScreensSeForm;
 
@@ -9376,6 +9411,28 @@ void ee_screens_seet_event(const EeScreensSeEffects *types,
                            uint32_t what,
                            uint32_t a,
                            uint32_t b);
+
+/// `EEUIFSEElevation`'s constructor: every control made on `form` from the control index `*index` (advanced), the
+/// paint area over the form's edge `scroll` and `brushes`. Freed by `ee_screens_seel_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeElevation *ee_screens_seel_new(void *form,
+                                          void *scroll,
+                                          void *brushes,
+                                          uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seel_new` (or is NULL) and is not used again.
+void ee_screens_seel_free(EeScreensSeElevation *tab);
+
+/// `Update` (`EE_SCREENS_SEEL_UPDATE`) or `MouseMove` at (`x`, `y`).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seel_new` (or is NULL).
+void ee_screens_seel_call(const EeScreensSeElevation *tab, uint32_t what, float x, float y);
 
 /// The form's object over the C++ `EEUIFScenarioEditor` `shell`, empty until `EE_SCREENS_SEFM_BUILD` (the shell
 /// stores it first: the build's controls call back into it). Freed by `ee_screens_sefm_free`.
