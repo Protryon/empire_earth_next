@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\...\EEALasso.h (RECONSTRUCTION; file path inferred). The lasso (rubber band)
 // selection action (RTTI EEALasso > EEAction; vtable 0x438c74, sizeof 0x10; ctor inline, dtor 0x289f out of line):
-// holds its EEMSelectUnits message (+0x0c, referenced). Requires ee/EEAction.h, ee/EEMessage.h.
+// holds its selection message (+0x0c, referenced; an EEMSelectUnits or a Select Patrol Group record). Requires ee/EEAction.h, ee/EEMessage.h.
 #ifndef EE_EEALASSO_H
 #define EE_EEALASSO_H
 
@@ -15,7 +15,7 @@ public:
     // 2: add and remove, 1: add; unit type 0xdf: select the patrol group inPatrolGroup) and posts the action
     void SelectUnits(const GERectangle& inRectangle, long inFlags, unsigned long inUnitType, long inPatrolGroup);
 
-    EEMSelectUnits* mMessage;               // +0x0c
+    EEMessage* mMessage;                    // +0x0c (the original's EEMSelectUnits*, also for the patrol group's)
 };
 
 #endif

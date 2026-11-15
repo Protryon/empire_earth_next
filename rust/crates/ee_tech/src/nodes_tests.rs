@@ -527,3 +527,40 @@ fn the_media_table_files_effects_by_unit_type() {
     assert!(is_latest_effect(&mut w, t, &table, 1000, 50, 6));
     assert!(is_latest_effect(&mut w, t, &table, 1000, 51, 6));
 }
+
+#[test]
+fn assignment_copies_each_kinds_fields() {
+    let src = EeTechNodeFields {
+        mIsResearched: true,
+        mIsObsolete: true,
+        mIsAvailable: true,
+        mPrerequisiteFlags: 6,
+        mIsAllowed: false,
+        mScenEditorObsoleted: true,
+        mIsUnitMediaLoaded: true,
+        mIsCountingSOL: true,
+        mEpoch: 3,
+        mObsoleteEpoch: 9,
+        mResearchDelay: 2,
+        mRequiredSOL: 4,
+        mFirstNodeID: 3001,
+        mCurrentSOL: 1,
+        mNextEpoch: 4,
+        mTitleID: 77,
+    };
+    let base = EeTechNodeFields { mIsAllowed: true, mIsCountingSOL: true, mTitleID: 5, ..Default::default() };
+    let mut node = base;
+    assign(&mut node, &src, false);
+    assert_eq!((node.mEpoch, node.mObsoleteEpoch, node.mResearchDelay, node.mPrerequisiteFlags), (3, 9, 2, 6));
+    assert!(node.mIsResearched && node.mIsObsolete && node.mIsAvailable && !node.mIsAllowed);
+    assert!(node.mScenEditorObsoleted && node.mIsUnitMediaLoaded && node.mIsCountingSOL);
+    assert_eq!(
+        (node.mRequiredSOL, node.mFirstNodeID, node.mCurrentSOL, node.mNextEpoch, node.mTitleID),
+        (0, 0, 0, 0, 5)
+    );
+    let mut epoch = base;
+    assign(&mut epoch, &src, true);
+    assert_eq!((epoch.mRequiredSOL, epoch.mFirstNodeID, epoch.mCurrentSOL, epoch.mNextEpoch), (4, 3001, 1, 4));
+    assert!(!epoch.mIsCountingSOL && !epoch.mScenEditorObsoleted && !epoch.mIsUnitMediaLoaded);
+    assert_eq!((epoch.mResearchDelay, epoch.mTitleID), (0, 5));
+}

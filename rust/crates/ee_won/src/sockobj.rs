@@ -482,12 +482,11 @@ fn peer_sockaddr(a: Addr) -> ee_plat_sys::constants::PlatSockAddrIn {
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_asyncsocket_new(
     socket: *mut c_void,
-    hooks: *const EeWonAsyncSocketHooks,
+    core: *const crate::cppcore::EeWonCoreHooks,
     kind: i32,
 ) -> *mut EeWonAsyncSocket {
-    // SAFETY: the caller's static table
-    let hooks = unsafe { &*hooks };
-    Box::into_raw(Box::new(EeWonAsyncSocket::new(socket, hooks, kind)))
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonAsyncSocket::new(socket, &crate::cppcore::NATIVE_SOCKET, kind)))
 }
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.

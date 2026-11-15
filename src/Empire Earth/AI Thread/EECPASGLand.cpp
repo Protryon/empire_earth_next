@@ -54,7 +54,7 @@
 #include "ee/EECPASGTransport.h"
 #include "ee/EECPASGLand.h"
 #include "ee/EECPASGAirTransport.h"
-#include "ee/EEUCTransport.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EEPathManager.h"
@@ -695,7 +695,7 @@ bool EECPASGLand::GetUncarriableUnits(std::vector<EEComplexUnit*>& outUnits)
         EECPAttackSubGroup* theGroup = dynamic_cast<EECPAttackSubGroup*>(this->mTransport);
         if (theGroup != NULL && theGroup->CountFightingUnits() > 0) {
             EEComplexUnit* theTransport = theGroup->GetUnitUnit(0);
-            EEUCTransport* theClass = dynamic_cast<EEUCTransport*>(theTransport->GetUnitClass());
+            EEUnitClass* theClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTransport->GetUnitClass());
             for (long i = this->mUnits.size() - 1; i >= 0; i--) {
                 if (!this->mUnits[i]->IsDone()) {
                     EEComplexUnit* theUnit = this->mUnits[i]->GetUnit();
@@ -705,7 +705,7 @@ bool EECPASGLand::GetUncarriableUnits(std::vector<EEComplexUnit*>& outUnits)
                     }
                 }
             }
-            theClass = dynamic_cast<EEUCTransport*>(theTransport->GetUnitClass());
+            theClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTransport->GetUnitClass());
             theClass->FilterLoadable(&theCandidates, theTransport, &outUnits);
             theResult = outUnits.size() != 0;
         }
@@ -926,7 +926,7 @@ bool EECPASGLand::HasIdleUnitToLoad()
                 for (long i = 0; i < (long)theTransport->GetNumUnits(); i++)
                     theTransports.push_back(theTransport->GetUnitUnit(i));
                 EEComplexUnit* theLast = theTransports.back();
-                dynamic_cast<EEUCTransport*>(theLast->GetUnitClass())->FilterLoadable(&theAvailable, theLast, &theRejected);
+                EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theLast->GetUnitClass())->FilterLoadable(&theAvailable, theLast, &theRejected);
             }
         }
         for (long i = theTransports.size() - 1; i >= 0; i--) {
@@ -1097,7 +1097,7 @@ void EECPASGLand::GetUnitsLeftBehind(std::vector<EEComplexUnit*>& outUnits)
                 for (long i = 0; i < (long)theTransport->GetNumUnits(); i++)
                     theTransports.push_back(theTransport->GetUnitUnit(i));
                 EEComplexUnit* theLast = theTransports.back();
-                dynamic_cast<EEUCTransport*>(theLast->GetUnitClass())->FilterLoadable(&theAvailable, theLast, &outUnits);
+                EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theLast->GetUnitClass())->FilterLoadable(&theAvailable, theLast, &outUnits);
             }
         }
         for (long i = theTransports.size() - 1; i >= 0; i--) {
@@ -1877,7 +1877,7 @@ bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
                 theAvailable.push_back(theUnit);
         }
         EEComplexUnit* theTransport = inTransports->back();
-        dynamic_cast<EEUCTransport*>(theTransport->GetUnitClass())->FilterLoadable(&theAvailable, theTransport, &theRejected);
+        EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTransport->GetUnitClass())->FilterLoadable(&theAvailable, theTransport, &theRejected);
         for (i = inTransports->size() - 1; i >= 0; i--) {
             theGroups.push_back(EECPAILoadGroup());
             EECPAILoadGroup& theCurrent = theGroups.back();

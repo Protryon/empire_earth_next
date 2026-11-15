@@ -28,6 +28,7 @@ ee_input = { path = "../ee_input" }
 ee_error = { path = "../ee_error" }
 ee_time = { path = "../ee_time" }
 ee_ts = { path = "../ee_ts" }
+ee_util = { path = "../ee_util" }
 ee_ustring = { path = "../ee_ustring" }
 ee_ge = { path = "../ee_ge" }
 ee_gfx = { path = "../ee_gfx" }

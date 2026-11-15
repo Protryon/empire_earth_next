@@ -11,28 +11,21 @@ pub mod draw_model;
 pub mod draw_terrain;
 pub mod filter;
 pub mod movie;
+pub mod movobj;
 pub mod raster;
 pub mod screen;
+pub mod scrobj;
 pub mod state;
 pub mod surface;
+pub mod surfobj;
 pub mod vertex;
 
 #[cfg(not(test))]
 mod draw_ffi;
 mod ffi;
 #[cfg(not(test))]
-mod filter_ffi;
-#[cfg(not(test))]
 pub mod gx;
 #[cfg(not(test))]
-mod movie_ffi;
-#[cfg(not(test))]
-mod raster_ffi;
-#[cfg(not(test))]
-mod screen_ffi;
-#[cfg(not(test))]
-mod state_ffi;
-#[cfg(not(test))]
-mod surface_ffi;
+pub mod rastobj;
 
 pub use vertex::{float_to_long, rgb_make, rgba, PolygonArray, StandardVertexArray, StdColorVertexArray};

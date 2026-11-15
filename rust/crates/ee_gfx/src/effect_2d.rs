@@ -3,7 +3,9 @@
 //! `EeGfxEffect2DHost` and draws through the rasterizer table (`raster.rs`). Kinds: 0x41 the command confirmation
 //! (`effect_confirm.rs`), 0x12 the shockwave (`effect_shockwave.rs`), the sprites of `effect_sprite.rs` (6, 7, 8, 9, 0xa,
 //! 0xe, 0x22, 0x2f), of `effect_parts.rs` (3, 4, 5, 0xb, 0xc, 0x14), of `effect_trail.rs` (0x16, 0x30) and the vortex
-//! (0x31, `effect_vortex.rs`). The ops are `EEE3DRust`'s (`EeGfxEffect3DOp`), the facts the same `EeGfxGraphicFacts`.
+//! (0x31, `effect_vortex.rs`); since the twenty-first round the marching icons (0xf, 0x10, `effect_icons.rs`), the light
+//! glow (0xd, `effect_glow.rs`), the battlefield decal (0x32) and the pooled 2D particle (0x2e, `effect_decal.rs`).
+//! The ops are `EEE3DRust`'s (`EeGfxEffect3DOp`), the facts the same `EeGfxGraphicFacts`.
 //!
 //! The record is reached through its raw pointer field by field: the C++ reads it (the position, the radius) during
 //! the host calls, so no Rust reference to it lives across one.
@@ -13,15 +15,24 @@ use std::ffi::c_void;
 use ee_ge::types::{Ge3DPoint, GeTransformation};
 
 use crate::effect_confirm::{confirm, EeGfxConfirmGoal, EeGfxConfirmUnit, EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION};
+use crate::effect_decal::{decal, decal_file, EE_GFX_EFFECT_KIND_DECAL, EE_GFX_EFFECT_KIND_PARTICLE_2D};
+use crate::effect_glow::{
+    glow, glow_file, EeGfxGlowArea, EeGfxGlowPlace, EeGfxGlowSetUp, EE_GFX_EFFECT_KIND_LIGHT_GLOW,
+};
+use crate::effect_icons::{marching, marching_file, EeGfxIconUnit};
 use crate::effect_orbit::EeGfxOrbital;
 use crate::effect_parts::{parts, parts_file, EeGfx2DPart, EeGfx2DPlace};
 use crate::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};
 use crate::effect_shockwave::{shockwave, shockwave_file};
 use crate::effect_sprite::{sprite, sprite_file, EeGfx2DPoint};
-use crate::effect_state::{EeGfxEffectRecord, EffectFile, EE_GFX_EFFECT_KIND_SHOCKWAVE};
+use crate::effect_state::{
+    EeGfxEffectRecord, EeGfxParticleTick, EffectFile, EE_GFX_EFFECT_KIND_CIRCULAR_ICONS, EE_GFX_EFFECT_KIND_SHOCKWAVE,
+    EE_GFX_EFFECT_KIND_SQUARE_ICONS,
+};
 use crate::effect_trail::{trail, trail_file};
 use crate::effect_vent::EeGfxFrames;
 use crate::effect_vortex::{vortex, vortex_file};
+use crate::ffi_effect::EeGfxParticleGround;
 use crate::raster::{EeGfxModel, Raster};
 
 /// The C++'s answers for an `EEE2DRust`.
@@ -106,7 +117,43 @@ pub struct EeGfxEffect2DHost {
     /// the kept graphic object's orbitals (`GetOrbitalCount`, `GetOrbital`: model, speed and angle)
     pub orbital_count: extern "C" fn(context: *mut c_void) -> u32,
     pub orbital: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxOrbital,
+    /// the marching icons': the unit as `IsIconShown` reads it; whether `player` has the area effect `kind` at (x, y)
+    /// (`gAEManager.HasEffect` with the unit's own list)
+    pub icon_unit: extern "C" fn(context: *mut c_void) -> EeGfxIconUnit,
+    pub area_effect: extern "C" fn(context: *mut c_void, kind: i32, x: f32, y: f32, player: u32) -> bool,
+    /// the unit's pending area effects (`mNumAreaEffects`), and its new count (`FnE123D` at 0)
+    pub area_effects: extern "C" fn(context: *mut c_void) -> i32,
+    pub set_area_effects: extern "C" fn(context: *mut c_void, count: i32),
+    /// the unit's type is in its player's active group (a town centre or capitol also with 0x23 or 0x29 there)
+    pub icons_selected: extern "C" fn(context: *mut c_void) -> bool,
+    /// the unit is the current player's and built
+    pub icons_owner: extern "C" fn(context: *mut c_void) -> bool,
+    /// `gWorld.GetNumGhostUnits()`
+    pub ghost_units: extern "C" fn(context: *mut c_void) -> u32,
+    /// the ground under a point on a map tile (`GetGroundPoint`; `has` false off the map)
+    pub ground_point: extern "C" fn(context: *mut c_void, at: Ge3DPoint) -> EeGfx2DPoint,
+    /// the light glow's: the set-up's unit (its light tags kept for the names), tag `index`'s name into `out` (its
+    /// length returned; `capacity` bytes written at most)
+    pub glow_set_up: extern "C" fn(context: *mut c_void) -> EeGfxGlowSetUp,
+    pub glow_tag_name: extern "C" fn(context: *mut c_void, index: u32, out: *mut u8, capacity: u32) -> u32,
+    /// the placing's unit (its tags, frame and scaled location kept), and tag `index`'s point
+    pub glow_place: extern "C" fn(context: *mut c_void) -> EeGfxGlowPlace,
+    pub glow_point: extern "C" fn(context: *mut c_void, index: u32) -> Ge3DPoint,
+    /// the visible terrain and the unit's tile; its visible rows
+    pub glow_area: extern "C" fn(context: *mut c_void) -> EeGfxGlowArea,
+    pub glow_rows: extern "C" fn(context: *mut c_void) -> u32,
+    /// the particle's move facts (`EEParticleTick` at the effect's position) and the terrain it bounces on
+    pub particle_tick: extern "C" fn(context: *mut c_void) -> EeGfxParticleTick,
+    pub particle_ground: extern "C" fn(context: *mut c_void) -> EeGfxParticleGround,
 }
+
+extern "C" fn no_tile(_context: *mut c_void, _x: u32, _y: u32) -> bool {
+    false
+}
+extern "C" fn no_z(_context: *mut c_void, _x: f32, _y: f32) -> f32 {
+    0.0
+}
+extern "C" fn no_normal(_context: *mut c_void, _x: f32, _y: f32, _normal: *mut Ge3DPoint) {}
 
 /// The world as the 2D effects ask it.
 pub trait Effect2DHost {
@@ -196,6 +243,61 @@ pub trait Effect2DHost {
     }
     fn orbital(&mut self, _index: u32) -> EeGfxOrbital {
         EeGfxOrbital { model: std::ptr::null_mut(), speed: 0.0, angle: 0.0 }
+    }
+    /// the marching icons' (the tests' other hosts answer no unit)
+    fn icon_unit(&mut self) -> EeGfxIconUnit {
+        EeGfxIconUnit::default()
+    }
+    fn area_effect(&mut self, _kind: i32, _x: f32, _y: f32, _player: u32) -> bool {
+        false
+    }
+    fn area_effects(&mut self) -> i32 {
+        0
+    }
+    fn set_area_effects(&mut self, _count: i32) {}
+    fn icons_selected(&mut self) -> bool {
+        false
+    }
+    fn icons_owner(&mut self) -> bool {
+        false
+    }
+    fn ghost_units(&mut self) -> u32 {
+        0
+    }
+    fn ground_point(&mut self, _at: Ge3DPoint) -> EeGfx2DPoint {
+        EeGfx2DPoint::default()
+    }
+    /// the light glow's
+    fn glow_set_up(&mut self) -> EeGfxGlowSetUp {
+        EeGfxGlowSetUp::default()
+    }
+    fn glow_tag_name(&mut self, _index: u32) -> Vec<u8> {
+        Vec::new()
+    }
+    fn glow_place(&mut self) -> EeGfxGlowPlace {
+        EeGfxGlowPlace::default()
+    }
+    fn glow_point(&mut self, _index: u32) -> Ge3DPoint {
+        Ge3DPoint::default()
+    }
+    fn glow_area(&mut self) -> EeGfxGlowArea {
+        EeGfxGlowArea::default()
+    }
+    fn glow_rows(&mut self) -> u32 {
+        0
+    }
+    /// the particle's
+    fn particle_tick(&mut self) -> EeGfxParticleTick {
+        EeGfxParticleTick::default()
+    }
+    fn particle_ground(&mut self) -> EeGfxParticleGround {
+        EeGfxParticleGround {
+            context: std::ptr::null_mut(),
+            is_valid_tile: no_tile,
+            is_space_tile: no_tile,
+            mesh_z: no_z,
+            mesh_normal: no_normal,
+        }
     }
 }
 
@@ -317,6 +419,61 @@ impl Effect2DHost for &EeGfxEffect2DHost {
     fn orbital(&mut self, index: u32) -> EeGfxOrbital {
         (self.orbital)(self.context, index)
     }
+    fn icon_unit(&mut self) -> EeGfxIconUnit {
+        (self.icon_unit)(self.context)
+    }
+    fn area_effect(&mut self, kind: i32, x: f32, y: f32, player: u32) -> bool {
+        (self.area_effect)(self.context, kind, x, y, player)
+    }
+    fn area_effects(&mut self) -> i32 {
+        (self.area_effects)(self.context)
+    }
+    fn set_area_effects(&mut self, count: i32) {
+        (self.set_area_effects)(self.context, count)
+    }
+    fn icons_selected(&mut self) -> bool {
+        (self.icons_selected)(self.context)
+    }
+    fn icons_owner(&mut self) -> bool {
+        (self.icons_owner)(self.context)
+    }
+    fn ghost_units(&mut self) -> u32 {
+        (self.ghost_units)(self.context)
+    }
+    fn ground_point(&mut self, at: Ge3DPoint) -> EeGfx2DPoint {
+        (self.ground_point)(self.context, at)
+    }
+    fn glow_set_up(&mut self) -> EeGfxGlowSetUp {
+        (self.glow_set_up)(self.context)
+    }
+    fn glow_tag_name(&mut self, index: u32) -> Vec<u8> {
+        let mut out = vec![0u8; 256];
+        let mut n = (self.glow_tag_name)(self.context, index, out.as_mut_ptr(), out.len() as u32) as usize;
+        if n > out.len() {
+            out.resize(n, 0);
+            n = (self.glow_tag_name)(self.context, index, out.as_mut_ptr(), out.len() as u32) as usize;
+        }
+        out.truncate(n.min(out.len()));
+        out
+    }
+    fn glow_place(&mut self) -> EeGfxGlowPlace {
+        (self.glow_place)(self.context)
+    }
+    fn glow_point(&mut self, index: u32) -> Ge3DPoint {
+        (self.glow_point)(self.context, index)
+    }
+    fn glow_area(&mut self) -> EeGfxGlowArea {
+        (self.glow_area)(self.context)
+    }
+    fn glow_rows(&mut self) -> u32 {
+        (self.glow_rows)(self.context)
+    }
+    fn particle_tick(&mut self) -> EeGfxParticleTick {
+        (self.particle_tick)(self.context)
+    }
+    fn particle_ground(&mut self) -> EeGfxParticleGround {
+        (self.particle_ground)(self.context)
+    }
 }
 
 /// One virtual of an `EEE2DRust` of the record's kind (0 for a kind without one).
@@ -334,10 +491,21 @@ pub unsafe fn effect2d<H: Effect2DHost, R: Raster>(
     // SAFETY: the function's contract
     match unsafe { (*r).kind } {
         EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION => unsafe { confirm(op, r, g, h, x) },
+        // the damage controller draws nothing (its queue's 10, 0x1020dc) and sets up nothing; its tick is the C++'s
+        crate::effect_state::EE_GFX_EFFECT_KIND_DAMAGED => {
+            if op == EeGfxEffect3DOp::Queue {
+                10
+            } else {
+                0
+            }
+        }
         EE_GFX_EFFECT_KIND_SHOCKWAVE => unsafe { shockwave(op, r, g, h, x) },
         3 | 4 | 5 | 0xb | 0xc | 0x14 => unsafe { parts(op, r, g, h, x) },
         0x16 | 0x30 => unsafe { trail(op, r, g, h, x) },
         0x31 => unsafe { vortex(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_SQUARE_ICONS | EE_GFX_EFFECT_KIND_CIRCULAR_ICONS => unsafe { marching(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_LIGHT_GLOW => unsafe { glow(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_DECAL | EE_GFX_EFFECT_KIND_PARTICLE_2D => unsafe { decal(op, r, g, h, x) },
         _ => unsafe { sprite(op, r, g, h, x) },
     }
 }
@@ -356,6 +524,13 @@ pub fn effect2d_file<H: Effect2DHost, F: EffectFile>(
         3 | 4 | 5 | 0xb | 0xc | 0x14 => parts_file(op == EeGfxEffect3DOp::Load, r, f, h),
         0x16 | 0x30 => trail_file(op == EeGfxEffect3DOp::Load, r, f, h),
         0x31 => vortex_file(op == EeGfxEffect3DOp::Load, r, f, h),
+        EE_GFX_EFFECT_KIND_SQUARE_ICONS | EE_GFX_EFFECT_KIND_CIRCULAR_ICONS => {
+            marching_file(op == EeGfxEffect3DOp::Load, r, f, h)
+        }
+        EE_GFX_EFFECT_KIND_LIGHT_GLOW => glow_file(op == EeGfxEffect3DOp::Load, r, f),
+        EE_GFX_EFFECT_KIND_DECAL | EE_GFX_EFFECT_KIND_PARTICLE_2D => {
+            decal_file(op == EeGfxEffect3DOp::Load, r, f, major, minor, h)
+        }
         _ => sprite_file(op == EeGfxEffect3DOp::Load, r, f, major, minor, h),
     }
 }

@@ -1,0 +1,174 @@
+== queue
+q connect WS_Success accept WS_Success
+server refs 1 client refs 1
+default refs 2
+queued: a refs 3 b refs 2 server refs 4 default refs 3 own refs 2
+started: a refs 4 b refs 2 server refs 4
+default completed WS_Success killed 0 op refs 5
+a done: a refs 1 b refs 4 server refs 5 default refs 2
+own completed WS_Success killed 0 op refs 5
+b done: a refs 1 b refs 1 server refs 5 own refs 1
+recv b destroyed
+recv a destroyed
+ops dropped: server refs 1
+repeat set: op refs 3 server refs 3 repeat refs 2
+repeat completed WS_Success killed 0 op refs 5
+repeat 1: op refs 1 server refs 5 repeat refs 2
+repeat op destroyed
+repeat completed WS_Success killed 0 op refs 4
+repeat 2: server refs 3 repeat refs 2
+fast queued: op refs 3 client refs 3 fast refs 3
+fast completed WS_Success killed 0 op refs 5
+repeat completed WS_Success killed 0 op refs 4
+fast done: op refs 1 client refs 3 fast refs 2
+fast op destroyed
+fast dropped: client refs 1 fast refs 1
+client default completed WS_Success killed 0 op refs 5
+repeat completed WS_Success killed 0 op refs 4
+fast 2 done: op refs 1 client refs 3 client default refs 3
+fast op 2 destroyed
+fast 3 behind: wait refs 4 op refs 2 client refs 4
+client default completed WS_Success killed 0 op refs 5
+client default completed WS_Success killed 0 op refs 5
+repeat completed WS_Success killed 0 op refs 4
+fast 3 done: wait refs 1 op refs 1 client refs 5
+fast op 3 destroyed
+client wait destroyed
+fast now: status WS_Success op refs 2 client refs 3 fast now refs 2
+fast now completed WS_Success killed 0 op refs 5
+repeat completed WS_Success killed 0 op refs 4
+fast now done: op refs 1 client refs 3 fast now refs 2
+fast now op destroyed
+server refs 3 client refs 1
+timer started: client refs 2
+timer cancelled: client refs 1
+close completed WS_Killed killed 0 op refs 2
+repeat completed WS_AsyncSocket_Shutdown killed 0 op refs 4
+timer fired: client refs 1 close refs 2 valid 0
+server after peer close: server refs 1 valid 0
+killed: server refs 1 client refs 1 default refs 1 repeat refs 1 close refs 1 client default refs 1
+accepted destroyed
+q client destroyed
+q listener destroyed
+queue pair dropped
+q2 connect WS_Success accept WS_Success
+close queued: op refs 3 server refs 6
+sent2 completed WS_Success killed 0 op refs 5
+repeat2 op destroyed
+close2 completed WS_Success killed 0 op refs 2
+repeat2 count 0
+closed: op refs 1 server refs 3 close2 refs 2 valid 0
+sent2 op destroyed
+timed close queued: op refs 3 client refs 5
+wait3 completed WS_Success killed 0 op refs 5
+close3 completed WS_Success killed 0 op refs 2
+timed close: op refs 1 client refs 3 close3 refs 2
+wait3 op destroyed
+q3 connect WS_Success accept WS_Success
+before close: run refs 4 queued refs 2 server refs 6
+rep completed WS_Killed killed 1 op refs 2
+run completed WS_Killed killed 1 op refs 3
+queued count 0 status WS_None
+after close: run refs 1 queued refs 1 server refs 3 rep refs 2
+queued op destroyed
+run op destroyed
+accepted destroyed
+q2 client destroyed
+q2 listener destroyed
+accepted destroyed
+q3 client destroyed
+q3 listener destroyed
+queue pairs dropped
+rep destroyed
+queued destroyed
+run destroyed
+wait3 destroyed
+close3 destroyed
+sent2 destroyed
+repeat2 destroyed
+close2 destroyed
+close destroyed
+fast now destroyed
+client default destroyed
+fast destroyed
+repeat destroyed
+own destroyed
+default destroyed
+== udp
+manager refs 1 default refs 2
+bind WS_Success
+bound: manager refs 2 socket refs 3
+auto: manager refs 2 socket refs 3
+udp default completed WS_Success killed 0 op refs 2
+auto recv: manager refs 2 socket refs 3 default refs 2
+addr queued: op refs 3 manager refs 2
+addr completed WS_Success killed 0 op refs 4
+addr done: op refs 1 manager refs 2 msg refs 1
+addr op destroyed
+cleaned: manager refs 2 socket refs 3
+server got WS_Success Mm
+sent: manager refs 2 socket refs 3
+request sent: op refs 3 manager refs 4 wait refs 3
+server got WS_Success a1
+request completed WS_Success killed 0 op refs 3
+request done: op refs 1 manager refs 3 wait 0
+request op destroyed
+request dropped: manager refs 2
+noreply completed WS_NoReply killed 0 op refs 5
+noreply done: op refs 3 manager refs 5
+server got WS_Success n
+server got WS_Success n
+own sent: op refs 3 socket refs 4 wait refs 3
+server got WS_Success o
+own completed WS_Success killed 0 op refs 3
+own done: op refs 1 socket 0
+own op destroyed
+self waiting: op refs 3 socket refs 3
+self completed WS_Success killed 0 op refs 3
+self done: op refs 1 socket 0 msg refs -1
+self op destroyed
+noreply op destroyed
+waiting: op refs 4 manager refs 2 socket refs 3
+wait completed WS_Killed killed 1 op refs 4
+closed: op refs 1 manager refs 1 socket 0
+wait op destroyed
+rebind WS_Success
+rebound: manager refs 2 socket refs 3
+closed again: manager refs 1
+manager destroyed
+udp peer destroyed
+udp server destroyed
+udp dropped
+wait destroyed
+self destroyed
+own destroyed
+noreply destroyed
+request destroyed
+addr destroyed
+udp default destroyed
+== machinery
+timer running: refs 2
+timed completed WS_TimedOut killed 0 op refs 3
+timer done: refs 1 status WS_TimedOut
+timer again: refs 2
+timer killed: refs 1 status WS_Killed
+timer destroyed
+queued: refs 2 status WS_Pending
+started: refs 2 status WS_Pending
+finished: refs 3 pending completion 1
+container completed WS_Success killed 0 op refs 3
+completed: refs 1
+queued op destroyed
+m connect WS_Success accept WS_Success
+on the thread: refs 3 in thread 1 socket refs 2
+thread recv completed WS_Killed killed 1 op refs 3
+killed: refs 1 in thread 0
+thread recv op destroyed
+accepted destroyed
+m client destroyed
+m listener destroyed
+machinery done
+thread recv destroyed
+container destroyed
+timed destroyed
+done

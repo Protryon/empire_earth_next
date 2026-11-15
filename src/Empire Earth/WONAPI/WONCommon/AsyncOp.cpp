@@ -12,6 +12,63 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONTimerThread.h"
+#include <string.h>
+#include "ee/wonapi/WONAPICore.h"
+#include "platform/PlatFile.h"
+#include "platform/PlatSocket.h"
+#ifdef _WIN32
+#include <sys/utime.h>
+#else
+#include <utime.h>
+#endif
+// The socket error codes WON reports are Winsock's; the platform layer reports them in that numbering everywhere
+static_assert(WS_WSAEINTR == PLAT_SOCK_EINTR, "Winsock numbering");
+static_assert(WS_WSAEBADF == PLAT_SOCK_EBADF, "Winsock numbering");
+static_assert(WS_WSAEACCES == PLAT_SOCK_EACCES, "Winsock numbering");
+static_assert(WS_WSAEFAULT == PLAT_SOCK_EFAULT, "Winsock numbering");
+static_assert(WS_WSAEINVAL == PLAT_SOCK_EINVAL, "Winsock numbering");
+static_assert(WS_WSAEMFILE == PLAT_SOCK_EMFILE, "Winsock numbering");
+static_assert(WS_WSAEWOULDBLOCK == PLAT_SOCK_EWOULDBLOCK, "Winsock numbering");
+static_assert(WS_WSAEINPROGRESS == PLAT_SOCK_EINPROGRESS, "Winsock numbering");
+static_assert(WS_WSAEALREADY == PLAT_SOCK_EALREADY, "Winsock numbering");
+static_assert(WS_WSAENOTSOCK == PLAT_SOCK_ENOTSOCK, "Winsock numbering");
+static_assert(WS_WSAEDESTADDRREQ == PLAT_SOCK_EDESTADDRREQ, "Winsock numbering");
+static_assert(WS_WSAEMSGSIZE == PLAT_SOCK_EMSGSIZE, "Winsock numbering");
+static_assert(WS_WSAEPROTOTYPE == PLAT_SOCK_EPROTOTYPE, "Winsock numbering");
+static_assert(WS_WSAENOPROTOOPT == PLAT_SOCK_ENOPROTOOPT, "Winsock numbering");
+static_assert(WS_WSAEPROTONOSUPPORT == PLAT_SOCK_EPROTONOSUPPORT, "Winsock numbering");
+static_assert(WS_WSAESOCKTNOSUPPORT == PLAT_SOCK_ESOCKTNOSUPPORT, "Winsock numbering");
+static_assert(WS_WSAEOPNOTSUPP == PLAT_SOCK_EOPNOTSUPP, "Winsock numbering");
+static_assert(WS_WSAEPFNOSUPPORT == PLAT_SOCK_EPFNOSUPPORT, "Winsock numbering");
+static_assert(WS_WSAEAFNOSUPPORT == PLAT_SOCK_EAFNOSUPPORT, "Winsock numbering");
+static_assert(WS_WSAEADDRINUSE == PLAT_SOCK_EADDRINUSE, "Winsock numbering");
+static_assert(WS_WSAEADDRNOTAVAIL == PLAT_SOCK_EADDRNOTAVAIL, "Winsock numbering");
+static_assert(WS_WSAENETDOWN == PLAT_SOCK_ENETDOWN, "Winsock numbering");
+static_assert(WS_WSAENETUNREACH == PLAT_SOCK_ENETUNREACH, "Winsock numbering");
+static_assert(WS_WSAENETRESET == PLAT_SOCK_ENETRESET, "Winsock numbering");
+static_assert(WS_WSAECONNABORTED == PLAT_SOCK_ECONNABORTED, "Winsock numbering");
+static_assert(WS_WSAECONNRESET == PLAT_SOCK_ECONNRESET, "Winsock numbering");
+static_assert(WS_WSAENOBUFS == PLAT_SOCK_ENOBUFS, "Winsock numbering");
+static_assert(WS_WSAEISCONN == PLAT_SOCK_EISCONN, "Winsock numbering");
+static_assert(WS_WSAENOTCONN == PLAT_SOCK_ENOTCONN, "Winsock numbering");
+static_assert(WS_WSAESHUTDOWN == PLAT_SOCK_ESHUTDOWN, "Winsock numbering");
+static_assert(WS_WSAETOOMANYREFS == PLAT_SOCK_ETOOMANYREFS, "Winsock numbering");
+static_assert(WS_WSAETIMEDOUT == PLAT_SOCK_ETIMEDOUT, "Winsock numbering");
+static_assert(WS_WSAECONNREFUSED == PLAT_SOCK_ECONNREFUSED, "Winsock numbering");
+static_assert(WS_WSAELOOP == PLAT_SOCK_ELOOP, "Winsock numbering");
+static_assert(WS_WSAENAMETOOLONG == PLAT_SOCK_ENAMETOOLONG, "Winsock numbering");
+static_assert(WS_WSAEHOSTDOWN == PLAT_SOCK_EHOSTDOWN, "Winsock numbering");
+static_assert(WS_WSAEHOSTUNREACH == PLAT_SOCK_EHOSTUNREACH, "Winsock numbering");
+static_assert(WS_WSAENOTEMPTY == PLAT_SOCK_ENOTEMPTY, "Winsock numbering");
+static_assert(WS_WSAEPROCLIM == PLAT_SOCK_EPROCLIM, "Winsock numbering");
+static_assert(WS_WSAEUSERS == PLAT_SOCK_EUSERS, "Winsock numbering");
+static_assert(WS_WSAEDQUOT == PLAT_SOCK_EDQUOT, "Winsock numbering");
+static_assert(WS_WSAESTALE == PLAT_SOCK_ESTALE, "Winsock numbering");
+static_assert(WS_WSAEREMOTE == PLAT_SOCK_EREMOTE, "Winsock numbering");
+static_assert(WS_WSASYSNOTREADY == PLAT_SOCK_SYSNOTREADY, "Winsock numbering");
+static_assert(WS_WSAVERNOTSUPPORTED == PLAT_SOCK_VERNOTSUPPORTED, "Winsock numbering");
+static_assert(WS_WSANOTINITIALISED == PLAT_SOCK_NOTINITIALISED, "Winsock numbering");
+static_assert(WS_WSAEDISCON == PLAT_SOCK_EDISCON, "Winsock numbering");
 namespace WONAPI {
 // The op is a Rust object (rust/crates/ee_won/src/opobj.rs EeWonAsyncOp): its state, lock, completion and
 // container, and every step below. These are the calls it makes back into the C++ (one table for every op and
@@ -57,68 +114,227 @@ static const EeWonAsyncOpHooks kAsyncOpHooks={HookRun,HookCleanup,HookCoreQueue,
                                              HookNewCompletion,HookCallback};
 const EeWonAsyncOpHooks* AsyncOpHooks() { return &kAsyncOpHooks; }
 
-// FUNCTION: WON 0x0069ef80
-// Creates an idle op with an infinite timeout, async run mode and no container or timer entry
-AsyncOp::AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),&kAsyncOpHooks); }
-// FUNCTION: WON 0x0069f000
-// Destroys the op: the completion's reference and the lock go with the Rust object
-AsyncOp::~AsyncOp() { ee_won_asyncop_free(this->mOp); }
-
-void AsyncOp::RunHook() {}
-void AsyncOp::CleanupHook() {}
-
-// Sets the op's container (NULL: WONAPICore's queue)
-void AsyncOp::SetContainer(AsyncOpContainer* inContainer)
+// ---- the library's core table (ee_won cppcore.rs): what the Rust objects' own calls still need the C++ for. The
+// queue socket's queued close: a socket op without a socket whose Continue succeeds (0x5c bytes, RTTI 44caac)
+class QueueCloseOp : public SocketOp {
+public:
+    QueueCloseOp() : SocketOp(NULL) {}
+    virtual WONStatus Continue() { return WS_Success; }
+};
+static void* CoreObjectOf(void* inObject,EeWonCoreObject inKind)
 {
-    ee_won_asyncop_set_container(this->mOp,inContainer,inContainer!=NULL ? inContainer->mContainer : NULL);
+    RefCount* anObject=static_cast<RefCount*>(inObject);
+    switch(inKind) {
+    case EeWonCoreObject::Op: return static_cast<AsyncOp*>(anObject)->GetOpObject();
+    case EeWonCoreObject::SocketOp: return static_cast<SocketOp*>(static_cast<AsyncOp*>(anObject))->GetSocketOpObject();
+    case EeWonCoreObject::Socket: return static_cast<AsyncSocket*>(anObject)->GetSocketObject();
+    case EeWonCoreObject::Queue: return static_cast<QueueSocket*>(static_cast<AsyncSocket*>(anObject))->GetQueueObject();
+    case EeWonCoreObject::UdpManager: return static_cast<UDPManager*>(anObject)->GetManagerObject();
+    case EeWonCoreObject::UdpRecv:
+        return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
+    case EeWonCoreObject::UdpSendRecv:
+        return static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(anObject))->GetUdpObject();
+    case EeWonCoreObject::ServerConn:
+        return static_cast<ServerConnection*>(static_cast<AsyncSocket*>(anObject))->GetConnObject();
+    }
+    return NULL;
 }
-// FUNCTION: WON 0x0069f1b0
-// Sets the op's timeout unless the op is already running
-void AsyncOp::SetTimeout(unsigned long timeout) { ee_won_asyncop_set_timeout(this->mOp,static_cast<uint32_t>(timeout)); }
-// FUNCTION: WON 0x0069f1d0
-// Sets whether an async run starts at once instead of being queued
-void AsyncOp::SetRunAsyncImmediately(bool flag) { ee_won_asyncop_set_run_async_immediately(this->mOp,flag); }
-// FUNCTION: WON 0x0069f1e0
-// Marks the op killed and, when asked, finishes it with the killed status
-void AsyncOp::Kill(bool finish) { ee_won_asyncop_kill(this->mOp,finish); }
-// FUNCTION: WON 0x0069f200
-// Queues the op on its container, or on the global WONAPI core queue when it has none
-void AsyncOp::QueueInOpContainer() { ee_won_asyncop_queue_in_container(this->mOp); }
-// FUNCTION: WON 0x0069f220
-// Finishes a running op with the given status and queues its completion for async runs
-void AsyncOp::Finish(WONStatus status) { ee_won_asyncop_finish(this->mOp,status); }
-// FUNCTION: WON 0x0069f2f0
-// Finishes the op with the given status even when it already finished, unless a completion is pending
-void AsyncOp::ForceFinish(WONStatus status) { ee_won_asyncop_force_finish(this->mOp,status); }
-// FUNCTION: WON 0x0069f3a0
-// Delivers a pending completion: drops the timer entry, runs the cleanup hook and calls the completion
-void AsyncOp::Complete() { ee_won_asyncop_complete(this->mOp); }
-// FUNCTION: WON 0x0069f4c0
-// Starts an async run: runs the hook and arms the timeout timer, or times out at once for a zero timeout
-void AsyncOp::StartRunAsync() { ee_won_asyncop_start_run_async(this->mOp); }
-// FUNCTION: WON 0x0069f500
-// Starts the op in the given mode and timeout (async queued/immediate, else blocking); returns its status
-WONStatus AsyncOp::Run(long mode,unsigned long timeout)
+static void* CoreSocketOpDuplicate(void* inOp)
 {
-    return ee_won_asyncop_run(this->mOp,static_cast<int32_t>(mode),static_cast<uint32_t>(timeout));
+    return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Duplicate();
 }
-// FUNCTION: WON 0x0069f610
-// Starts an idle op as a pure timer that fires after the given timeout
-void AsyncOp::RunAsTimer(unsigned long timeout) { ee_won_asyncop_run_as_timer(this->mOp,static_cast<uint32_t>(timeout)); }
-// FUNCTION: WON 0x0069f6d0
-// Runs the op asynchronously with the given timeout
-void AsyncOp::RunAsync(long timeout) { this->Run(1,timeout); }
-// FUNCTION: WON 0x0069f6e0
-// Runs the op blocking with the given timeout; returns true on success
-bool AsyncOp::RunBlock(unsigned long timeout) {return this->Run(2,timeout)==WS_Success;}
-// FUNCTION: WON 0x0069f700
-// Returns the time left before the op times out; 0 for async runs or once the timeout has passed
-unsigned long AsyncOp::TimeLeft() { return ee_won_asyncop_time_left(this->mOp); }
+static void* CoreNewOp() { return static_cast<RefCount*>(new AsyncOp); }
+static void* CoreNewSocketOp(EeWonCoreSocketOp inKind,void* inSocket,void* inBytes,const EeWonIpAddr* inAddr,
+                             uint16_t inSize)
+{
+    AsyncSocket* aSocket=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket));
+    SocketOp* anOp=NULL;
+    switch(inKind) {
+    case EeWonCoreSocketOp::Close: anOp=new CloseOp(aSocket); break;
+    case EeWonCoreSocketOp::QueueClose: anOp=new QueueCloseOp; anOp->SetRunAsyncImmediately(false); break;
+    case EeWonCoreSocketOp::RecvFrom: anOp=new RecvBytesFromOp(inSize,aSocket); break;
+    case EeWonCoreSocketOp::RecvMsg: anOp=new RecvMsgOp(aSocket); break;
+    case EeWonCoreSocketOp::SendMsg:
+        anOp=new SendMsgOp(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),aSocket);
+        break;
+    case EeWonCoreSocketOp::SendTo:
+        anOp=new SendBytesToOp(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes)),
+                               IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)),aSocket);
+        break;
+    }
+    return static_cast<RefCount*>(static_cast<AsyncOp*>(anOp));
+}
+static void* CoreNewQueueSocket(int32_t inType) { return static_cast<RefCount*>(new QueueSocket(inType)); }
+static void* CoreNewUdpRecvOp(const EeWonIpAddr* inAddr)
+{
+    UDPManagerRecvOp* anOp=inAddr!=NULL ? new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)))
+                                        : new UDPManagerRecvOp;
+    return static_cast<RefCount*>(anOp);
+}
+static long CoreUdpCheck(void* inOp,const uint8_t* inData,size_t inLength,bool* outThrew)
+{
+    *outThrew=false;
+    try {
+        ReadBuffer aMessage(inData,static_cast<unsigned long>(inLength));
+        return static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->CheckMessage(aMessage);
+    }
+    catch(ReadBufferException&) {
+        *outThrew=true;
+        return 0;
+    }
+}
+static long CoreBindLocal(void* inSocket,uint16_t inPort,bool inReuse)
+{
+    return static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket))->Fn2B0D90(inPort,inReuse);
+}
+static const EeWonByteBuffer* CoreBytesOf(void* inBuffer)
+{
+    return static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBuffer))->mBytes;
+}
+// ---- the socket op base's and the socket's calls (SocketRunHooks.cpp and AsyncSocket.cpp are deleted)
+static SocketOp* SockOp(void* inOp) { return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
+static long CoreSocketOpStart(void* inOp) { return SockOp(inOp)->Start(); }
+void SocketOp::HookAddToSocketThread(void* inOp) { WONAPICore::AddToSocketThread(SockOp(inOp)); }
+static void* CoreBytesAdopt(EeWonByteBuffer* inBytes)
+{
+    RefCount* aBuffer=new ByteBuffer(inBytes);
+    aBuffer->AddRef();
+    return aBuffer;
+}
+// the socket's transform chain on the message in *ioMessage (a reference held; the result's replaces it)
+static long CoreTransform(void* inSocket,void** ioMessage,bool inSend)
+{
+    ByteBufferPtr aMessage=static_cast<const ByteBuffer*>(static_cast<RefCount*>(*ioMessage));
+    AsyncSocket* aSocket=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket));
+    WONStatus aStatus=inSend ? aSocket->TransformSendMsg(aMessage) : aSocket->TransformRecvMsg(aMessage);
+    RefCount* aResult=const_cast<ByteBuffer*>(aMessage.get());
+    if(aResult!=NULL) aResult->AddRef();
+    if(*ioMessage!=NULL) static_cast<RefCount*>(*ioMessage)->Release();
+    *ioMessage=aResult;
+    return aStatus;
+}
+static void* CoreFileOpen(const uint8_t* inPath,size_t inLength,bool inBinary,bool inAppend)
+{
+    std::string aPath(reinterpret_cast<const char*>(inPath),inLength);
+    if(inBinary) return PlatFOpen(aPath.c_str(),inAppend ? "a+b" : "wb");
+    return PlatFOpen(aPath.c_str(),inAppend ? "a+" : "w");
+}
+static size_t CoreFileWrite(void* inFile,const uint8_t* inData,size_t inLength)
+{ return fwrite(inData,1,inLength,static_cast<FILE*>(inFile)); }
+static int32_t CoreFileClose(void* inFile) { return fclose(static_cast<FILE*>(inFile)); }
+static void CoreFileSetTime(const uint8_t* inPath,size_t inLength,int64_t inTime)
+{
+    std::string aPath(reinterpret_cast<const char*>(inPath),inLength);
+#ifdef _WIN32
+    struct _utimbuf aTime;
+#else
+    struct utimbuf aTime;   // POSIX's utime: the same fields
+#endif
+    aTime.actime=static_cast<time_t>(inTime);
+    aTime.modtime=static_cast<time_t>(inTime);
+#ifdef _WIN32
+    _utime(aPath.c_str(),&aTime);
+#else
+    utime(aPath.c_str(),&aTime);
+#endif
+}
+// a progress chunk: a RecvChunkOp of the receiving op with its completion, run in the op's mode
+static void CoreProgress(void* inOp,void* inCompletion)
+{
+    RecvBytesOp* anOp=static_cast<RecvBytesOp*>(SockOp(inOp));
+    SmartPtr<RecvChunkOp> aChunk=new RecvChunkOp(anOp);
+    aChunk->SetCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(static_cast<RefCount*>(inCompletion)));
+    long aMode=anOp->GetMode();
+    aChunk->Run(aMode,0);
+}
+// Accept (the virtual Duplicate): the accepted socket in *outSocket with a reference, on success only
+static long CoreAccept(void* inSocket,void** outSocket)
+{
+    SmartPtr<AsyncSocket> anAccepted;
+    WONStatus aStatus=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket))->Accept(anAccepted);
+    if(aStatus==0) {
+        RefCount* aResult=anAccepted.get();
+        if(aResult!=NULL) aResult->AddRef();
+        *outSocket=aResult;
+    }
+    return aStatus;
+}
+static void CoreSocketHook(void* inSocket,int32_t inWhich)
+{
+    AsyncSocket* aSocket=static_cast<AsyncSocket*>(static_cast<RefCount*>(inSocket));
+    if(inWhich==0) aSocket->OpenHook();
+    else if(inWhich==1) aSocket->CloseHook();
+    else aSocket->KillHook();
+}
+static long CoreTransformCall(void* inTransform,void* inMessage,bool inSend)
+{
+    MsgTransform* aTransform=static_cast<MsgTransform*>(inTransform);
+    ByteBufferPtr& aMessage=*static_cast<ByteBufferPtr*>(inMessage);
+    return inSend ? aTransform->Send(aMessage) : aTransform->Recv(aMessage);
+}
+static void CoreTransformFree(void* inTransform) { delete static_cast<MsgTransform*>(inTransform); }
+// leaves the socket thread if it was handed there
+void SocketOp::CleanupHook()
+{
+    if(this->IsInSocketThread()) WONAPICore::RemoveFromSocketThread(this);
+}
+bool SocketOp::mRunAsyncImmediatelyDef; // a zero byte at 565f08 in the original
+static uint32_t AddressOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mAddress; }
+static uint16_t PortOf(const IPAddr& inAddress) { return inAddress.GetSockAddrIn().mPort; }
+static IPAddr MakeAddr(uint32_t inAddress, uint16_t inPort)
+{
+    PlatSockAddrIn anAddress;
+    memset(&anAddress, 0, sizeof(anAddress));
+    anAddress.mFamily = PLAT_AF_INET;
+    anAddress.mAddress = inAddress;
+    anAddress.mPort = inPort;
+    return IPAddr(anAddress);
 }
 
-// No original address identified: WON SDK AsyncOp::RealTimeLeft
-namespace WONAPI {
-DWORD AsyncOp::RealTimeLeft() { return ee_won_asyncop_real_time_left(this->mOp); }
+// up to the time until writable or readable (no wait for 0 or a closed socket)
+void AsyncSocket::WaitForWrite(unsigned long inWaitTime)
+{ ee_won_asyncsocket_wait(this->mSock,PLAT_SOCKET_WAIT_WRITE,static_cast<uint32_t>(inWaitTime)); }
+void AsyncSocket::WaitForRead(unsigned long inWaitTime)
+{ ee_won_asyncsocket_wait(this->mSock,PLAT_SOCKET_WAIT_READ,static_cast<uint32_t>(inWaitTime)); }
+WONStatus AsyncSocket::SendTo(const void* inData,int inLength,const IPAddr& inAddress)
+{ return ee_won_asyncsocket_send_to(this->mSock,inData,inLength,AddressOf(inAddress),PortOf(inAddress)); }
+WONStatus AsyncSocket::RecvFrom(void* outData,int inLength,IPAddr* outAddress,int* outReceived)
+{
+    uint32_t anAddress=0;
+    uint16_t aPort=0;
+    bool aFrom=false;
+    WONStatus aStatus=ee_won_asyncsocket_recv_from(this->mSock,outData,inLength,&anAddress,&aPort,&aFrom,outReceived);
+    if(aFrom && outAddress!=NULL) *outAddress=MakeAddr(anAddress,aPort);
+    return aStatus;
+}
+WONStatus AsyncSocket::Bind(const IPAddr& inAddress,bool inReuse)
+{ return ee_won_asyncsocket_bind(this->mSock,AddressOf(inAddress),PortOf(inAddress),inReuse); }
+WONStatus AsyncSocket::Accept(SmartPtr<AsyncSocket>& outSocket)
+{
+    AutoCrit aCrit(this->GetDataLock());
+    PlatSocket aSocket=PLAT_SOCKET_INVALID;
+    uint32_t anAddress=0;
+    uint16_t aPort=0;
+    WONStatus aStatus=ee_won_asyncsocket_accept(this->mSock,&aSocket,&anAddress,&aPort);
+    if(aStatus!=0) return aStatus;
+    outSocket=this->Duplicate();
+    ee_won_asyncsocket_adopt(outSocket->mSock,aSocket,anAddress,aPort);
+    return 0;
+}
+static long CoreSocketOpContinue(void* inOp)
+{
+    return static_cast<SocketOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp)))->Continue();
+}
+static const EeWonCoreHooks kCoreHooks={HookRefAdd,HookRefRelease,HookCompletionCall,CoreObjectOf,
+                                        CoreSocketOpDuplicate,CoreNewOp,HookNewCompletion,CoreNewSocketOp,
+                                        CoreNewQueueSocket,CoreNewUdpRecvOp,CoreUdpCheck,
+                                        reinterpret_cast<void*>(&UDPManagerSendRecvOp::StaticCheckResponse),
+                                        CoreBindLocal,CoreBytesOf,CoreSocketOpContinue,CoreSocketOpStart,
+                                        &SocketOp::HookAddToSocketThread,CoreBytesAdopt,CoreTransform,CoreFileOpen,
+                                        CoreFileWrite,CoreFileClose,CoreFileSetTime,CoreProgress,CoreAccept,
+                                        CoreSocketHook,CoreTransformCall,CoreTransformFree};
+const EeWonCoreHooks* WonCore() { return &kCoreHooks; }
+
 }
 
 // Compiler-generated and header-inline functions this unit emits:
@@ -170,36 +386,4 @@ ThreadBase::ThreadBase()
     this->mThread=ee_won_thread_new(aBody);
 }
 
-// a due op times out; a purged one is killed; then the timer's reference goes
-static void TimerOpDue(void*,void* inOp)
-{
-    AsyncOp* anOp=static_cast<AsyncOp*>(inOp);
-    anOp->Finish(WS_TimedOut);
-    anOp->Release();
-}
-static void TimerOpPurged(void*,void* inOp)
-{
-    AsyncOp* anOp=static_cast<AsyncOp*>(inOp);
-    anOp->Kill(true);
-    anOp->Release();
-}
-TimerThread::TimerThread()
-{
-    EeWonTimerHooks aHooks={TimerOpDue,TimerOpPurged,NULL};
-    this->mTimer=ee_won_timer_thread_new(aHooks);
-}
-
-static void OpAddRef(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->AddRef(); }
-static void OpRelease(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Release(); }
-static bool OpIsPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->GetStatus()==WS_Pending; }
-static bool OpCompletionPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->IsCompletionPending(); }
-static void OpStartRunAsync(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->StartRunAsync(); }
-static void OpComplete(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Complete(); }
-static void OpKill(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Kill(true); }
-AsyncOpContainer::AsyncOpContainer()
-{
-    EeWonContainerHooks aHooks={OpAddRef,OpRelease,OpIsPending,OpCompletionPending,OpStartRunAsync,OpComplete,OpKill,
-                                NULL};
-    this->mContainer=ee_won_container_new(aHooks);
-}
 }

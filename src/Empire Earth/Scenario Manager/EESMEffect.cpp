@@ -26,10 +26,8 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
-#include "ee/EEUCAirplane.h"
-#include "ee/EEUCBuilding.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUCGate.h"
 #include "ee/EEPhysics.h"
 #include "lle/SESoundManager.h"
 #include "GEWindow.h"
@@ -370,7 +368,6 @@ void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlaye
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitCalamityClass.h"
-#include "ee/EEUCTransport.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
@@ -907,7 +904,7 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
             if (theUnit != theTarget)
                 inRun->mLoad.push_back(theUnit);
         }
-        dynamic_cast<EEUCTransport*>(theTarget->GetUnitClass())->FilterLoadable(&inRun->mLoad, theTarget->GetComplexUnit(),
+        EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(theTarget->GetUnitClass())->FilterLoadable(&inRun->mLoad, theTarget->GetComplexUnit(),
                                                                                 &inRun->mRejected);
         return 0;
     }
@@ -1147,7 +1144,7 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
         // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
         EEComplexUnit* theUnit = SMEComplex(a[0]);
         bool theLocked = a[1] != 0;
-        EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetUnitClass());
+        EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theUnit->GetUnitClass());
         if (theUnit->mIsLocked != theLocked)
             theUnit->mIsLocked = theLocked;
         EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);

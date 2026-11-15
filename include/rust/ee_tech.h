@@ -2321,6 +2321,12 @@ bool ee_tech_is_latest_effect(void *ctx,
                               int32_t unit_type,
                               int32_t kind);
 
+/// [`assign`] over the records' pointers (a self-assignment does nothing).
+///
+/// # Safety
+/// Both are live records.
+void ee_tech_node_assign(EeTechNodeFields *dst, const EeTechNodeFields *src, bool epoch);
+
 }  // extern "C"
 
 #endif  // EE_RUST_EE_TECH_H

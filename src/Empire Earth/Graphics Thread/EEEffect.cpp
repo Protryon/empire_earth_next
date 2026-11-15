@@ -100,6 +100,27 @@ EeGfxParticleGround EEParticleGround()
     return theGround;
 }
 
+// The move's world reads (both particles) (provisional name; from the deleted EEE2DParticle.cpp)
+EeGfxParticleTick EEParticleTick(EEGraphicEffect* inEffect, const GE3DPoint& inPosition)
+{
+    EeGfxParticleTick theTick;
+    const GEVector& theWind = gWorld.mWindDirection;
+    theTick.now = gPhysics->mGameClock;
+    theTick.game_over = gPhysics->mGameOver;
+    theTick.wind.x = theWind.GetX();
+    theTick.wind.y = theWind.GetY();
+    theTick.wind.z = theWind.GetZ();
+    theTick.position = *reinterpret_cast<const EeGe3DPoint*>(&inPosition);
+    theTick.duration = (uint32_t)inEffect->mDuration;
+    theTick.param4 = inEffect->mParam4;
+    theTick.param8 = inEffect->mParam8;
+    theTick.param9 = inEffect->GetParam9();
+    theTick.param10 = inEffect->GetParam10();
+    theTick.param11 = inEffect->mParam11;
+    theTick.flag2 = inEffect->mFlag2;
+    return theTick;
+}
+
 EeGfxEffectFile EEEffectFile(FSFile& inFile)
 {
     EeGfxEffectFile theFile = {&inFile, EEEffectFileOps::IsOpen, EEEffectFileOps::ReadU32, EEEffectFileOps::ReadI32,

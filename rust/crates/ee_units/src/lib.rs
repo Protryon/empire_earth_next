@@ -19,11 +19,13 @@
 //! The players' diplomacy tables (by player object) are `players`, the player's saved state and its Load/Save
 //! `player_save`, its tick and reset over that record `player_tick`; the turrets' turn `turret`. The goal classes moved whole (one C++ class,
 //! `EEUGRust`, every virtual one call) are `rust_goal` (the dispatch and the host) with `patrol`, `calamity`,
-//! `explore` and `unload`.
+//! `explore` and `unload`. The unit utilities (EEFOFindNewTargetNearOldTarget.cpp: the tile rings and directions,
+//! the units on tiles, the wall lines, the placement tests) are `uu_tiles` (the pure geometry) and `uu` over its host.
 
 pub mod actions;
 pub mod ai;
 pub mod animate;
+pub mod atc;
 pub mod atc_save;
 pub mod boarding;
 pub mod build;
@@ -34,6 +36,7 @@ pub mod ffi;
 pub mod gather;
 pub mod goals;
 pub mod group;
+pub mod group_save;
 pub mod hack;
 mod header_consts;
 pub mod host;
@@ -43,6 +46,7 @@ pub mod load;
 pub mod location;
 pub mod map_save;
 pub mod motion;
+pub mod msvc_sort;
 pub mod order;
 pub mod patrol;
 pub mod patrol_group;
@@ -68,13 +72,27 @@ pub mod stats;
 pub mod step;
 pub mod store;
 pub mod tick;
+pub mod town_save;
 pub mod turret;
+pub mod unit_bulk;
 pub mod unit_class_fields;
 pub mod unit_fields;
 pub mod unit_load;
 pub mod unit_save;
 pub mod unload;
 pub mod update;
+pub mod uu;
+pub mod uu_ffi;
+pub mod uu_host;
+pub mod uu_place;
+pub mod uu_spots;
+#[cfg(test)]
+mod uu_tests;
+pub mod uu_tiles;
+pub mod uu_world;
+#[cfg(test)]
+mod uu_world_tests;
 pub mod world;
+pub mod world_save;
 
 pub use registry::Registry;

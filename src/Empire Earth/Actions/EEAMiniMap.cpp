@@ -107,11 +107,11 @@ void EEAMiniMap::SendGroup()
     long theCount = theGroup->CountUnitsOfKind(2);
     if (theCount == theGroup->GetNumUnits() && (theGroup->mKindFlags & kUnitKindBuilding)) {
         gCommunications->ProcessLocalUserInput(
-            new EEMSetRallyGoal(theGroup->GetFirstUnit()->GetUnitID(), GE2DPoint(theX + 0.5f, theY + 0.5f), -1, theQueue),
+            new EEMRecord(kMessageSetRallyGoal, {GE2DPoint(theX + 0.5f, theY + 0.5f), -1, theGroup->GetFirstUnit()->GetUnitID(), theQueue}),
             kSlotNone);
     } else {
         gCommunications->ProcessLocalUserInput(
-            new EEMPathTo(theX + 0.5f, theY + 0.5f, theAngle, !theRun, theQueue), kSlotNone);
+            new EEMRecord(kMessagePathTo, {theAngle, theX + 0.5f, theY + 0.5f, !theRun, true, theQueue, false}), kSlotNone);
     }
 }
 

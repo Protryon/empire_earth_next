@@ -148,9 +148,8 @@ inline EESEERust* EESEENewUnitLimit(UITextLabel* inLabel, float inModifier, long
     return theEvent;
 }
 
-// the effect editors' events: kSEECAMGModifyObject (the EESETSETCreateAIMilitaryGroup, its "to add" and "added"
-// lists), kSEEMSDCameraScroll (the EESETSETMediaSendDialog, the EESETSEffectControls), kSEESAAAttribute (the
-// EESETSETSetAIAttribute, the EESETSEffectControls); each pointer passed as its own class's
+// the effect editors' events: kSEECAMGModifyObject, kSEEMSDCameraScroll, kSEESAAAttribute (the effect types,
+// EeScreensSeEffects of ee_screens editor_effects.rs, and the effect screen's EESETSEffectControls)
 inline EESEERust* EESEENewObjects(uint32_t inKind, void* inA, void* inB, void* inC = 0)
 {
     EESEERust* theEvent = new EESEERust(inKind);

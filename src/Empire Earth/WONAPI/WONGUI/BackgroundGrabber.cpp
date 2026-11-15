@@ -1,4 +1,8 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+// BackgroundGrabber (R6 WON round 37): the Rust grabber (rust/crates/ee_won/src/grabobj.rs) holds the captured image's
+// place, its clip, the flags, the translucent colour and level and the capture's order and runs every method (the
+// capture, the debug window, the tint, putting the background back); this is its host (the component, the Graphics,
+// the background image, the debug window) and the constructor and destructor.
 #include <windows.h>
 #include <string>
 #include <list>
@@ -14,214 +18,87 @@
 
 using namespace WONAPI;
 
-unsigned __int64 BackgroundGrabber::mImageOrderCounter = 0;
+typedef EeWonGrab Gb;
+static_assert(ComponentFlag_DebugBG == EE_WON_GRAB_FLAG_DEBUG_BG && ComponentFlag_Translucent == EE_WON_GRAB_FLAG_TRANSLUCENT,
+              "grabobj.rs flags");
+
+// the grabber's calls out, each a run of the original's statements
+extern "C" intptr_t ee_won_guicpp_grab_call(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    BackgroundGrabber* t = (BackgroundGrabber*)inMe;
+    Component* comp = (Component*)b;
+    Graphics* g = (Graphics*)b;
+    if (op != EeWonGuiOp::Grab)
+        return 0;
+    switch ((Gb)a) {
+    case Gb::LocalToRoot: comp->LocalToRoot(((int*)c)[0], ((int*)c)[1]); return 0;
+    case Gb::DrawImage: g->DrawImage(t->mBGImage.get(), (int)c, (int)d); return 0;
+    case Gb::Clip: {
+        int* r = (int*)c;
+        r[0] = g->mClipRect.x; r[1] = g->mClipRect.y; r[2] = g->mClipRect.width; r[3] = g->mClipRect.height;
+        return 0;
+    }
+    case Gb::CompSize: ((int*)c)[0] = comp->Width(); ((int*)c)[1] = comp->Height(); return 0;
+    case Gb::ImageSize:
+        if (t->mBGImage.get() == NULL)
+            return 0;
+        ((int*)c)[0] = t->mBGImage->GetWidth(); ((int*)c)[1] = t->mBGImage->GetHeight();
+        return 1;
+    case Gb::NewImage: t->mBGImage = comp->GetRoot()->CreateImage((int)c, (int)d); return 0;
+    case Gb::FlagSet: return comp->ComponentFlagSet((int)c) ? 1 : 0;
+    case Gb::DebugExists: return t->mDebugWindow.get() != NULL ? 1 : 0;
+    case Gb::DebugCreate: {
+        t->mDebugWindow = CreateNativeWindow();
+        t->mDebugWindow->SetParent(comp->GetRoot());
+        t->mDebugWindow->SetStyle(0x40);
+        WONRectangle aRect(0, 0, t->mBGImage->GetWidth(), t->mBGImage->GetHeight());
+        t->mDebugWindow->Create(aRect);
+        return 0;
+    }
+    case Gb::DebugShow: {
+        t->mDebugWindow->mRoot.get()->RemoveAllChildren();
+        t->mDebugWindow->AddComponent(new ImageComponent(t->mBGImage.get()));
+        int x = 0, y = 0;
+        comp->LocalToRoot(x, y);
+        WONRectangle aScreenRect;
+        comp->GetRoot()->GetRect(aScreenRect, false);
+        t->mDebugWindow->SetPosSize(x + aScreenRect.x, y + aScreenRect.y, -1, -1);
+        return 0;
+    }
+    case Gb::DebugInvalidate: t->mDebugWindow->mRoot.get()->Invalidate(); return 0;
+    case Gb::Capture: {
+        NativeImage* anImage = comp->GetRoot()->GetOffscreenImage();
+        int x = 0, y = 0;
+        comp->RootToChild(x, y);
+        t->mBGImage->GetGraphics().DrawImage(anImage, x, y);
+        return 0;
+    }
+    case Gb::BlendSupported: return g->BlendSupported() ? 1 : 0;
+    case Gb::Blend: {
+        const int* p = (const int*)d;
+        g->SetColor((int)c);
+        g->FillRectBlend(0, 0, p[0], p[1], p[2]);
+        return 0;
+    }
+    case Gb::Tint: {
+        SmartPtr<RawImage32> aRawImage = t->mBGImage->GetRaw();
+        ee_won_grab_tint((uint32_t*)aRawImage->mImageData, (size_t)aRawImage->GetWidth() * aRawImage->GetHeight(), (int)c, (int)d);
+        g->DrawImage(aRawImage.get(), 0, 0);
+        return 0;
+    }
+    default: return 0;
+    }
+}
 
 // FUNCTION: WON 0x00736000
-// Creates a grabber with no captured background and a half-strength translucent tint
+// Creates a grabber with no captured background and a half-strength translucent tint (the Rust grabber's state)
 BackgroundGrabber::BackgroundGrabber()
 {
-    this->mImageX = this->mImageY = 0;
-    this->mNeedPutBG = false;
-    this->mHaveBG = false;
-    this->mTranslucentColor = 0;
-    this->mTranslucentLevel = 4;
+    this->mRust = ee_won_grab_new(this, ee_won_guicpp_grab_call);
 }
 
-// FUNCTION: WON 0x00736060
-// Forgets the captured background
-void BackgroundGrabber::Clear()
+// Destroys the grabber: the Rust grabber goes, then the image and the debug window
+BackgroundGrabber::~BackgroundGrabber()
 {
-    this->mHaveBG = this->mNeedPutBG = false;
-}
-
-// FUNCTION: WON 0x00736070
-// Restores the captured background under the component when a repaint is pending, then forgets it
-void BackgroundGrabber::PrePaint(Component* theComponent, Graphics& g)
-{
-    if(!this->mHaveBG || !this->mNeedPutBG)
-        return;
-    int x = 0, y = 0;
-    theComponent->LocalToRoot(x,y);
-    g.DrawImage(this->mBGImage.get(),this->mImageX-x,this->mImageY-y);
-    this->mHaveBG = false;
-    this->mNeedPutBG = false;
-}
-
-// FUNCTION: WON 0x007360d0
-// Sets the tint colour and its strength in eighths
-void BackgroundGrabber::SetTranslucentColor(int theColor,int theLevel)
-{
-    this->mTranslucentLevel = theLevel;
-    this->mTranslucentColor = theColor;
-}
-
-#define COLOR_1_8(c) (((c)>>3)&0xff1f1f1f)
-#define COLOR_2_8(c) (((c)>>2)&0xff3f3f3f)
-#define COLOR_3_8(c) (COLOR_1_8(c)+COLOR_2_8(c))
-#define COLOR_4_8(c) (((c)>>1)&0xff7f7f7f)
-#define COLOR_5_8(c) (COLOR_4_8(c)+COLOR_1_8(c))
-#define COLOR_6_8(c) (COLOR_4_8(c)+COLOR_2_8(c))
-#define COLOR_7_8(c) (COLOR_4_8(c)+COLOR_3_8(c))
-//#define COLOR_7_8(c) ((c)-COLOR_1_8(c)) // doesn't work right because it rounds up
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-// FUNCTION: WON 0x007365b0
-// Returns a colour scaled to n/8 per channel (0 outside 1..7)
-static int GetColor8th(int theColor, int theNumerator)
-{
-	switch(theNumerator)
-	{
-		case 1: return COLOR_1_8(theColor);
-		case 2: return COLOR_2_8(theColor);
-		case 3: return COLOR_3_8(theColor);
-		case 4: return COLOR_4_8(theColor);
-		case 5: return COLOR_5_8(theColor);
-		case 6: return COLOR_6_8(theColor);
-		case 7: return COLOR_7_8(theColor);
-	}
-
-	return 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-// FUNCTION: WON 0x007360f0
-// Captures the screen under the component once and, for translucent components, tints it (blended fill or per-pixel)
-void BackgroundGrabber::Paint(Component *theComponent, Graphics &g)
-{
-	if(this->mHaveBG)
-		return;
-	this->mClipRect = g.mClipRect;
-	this->mImageOrder = BackgroundGrabber::mImageOrderCounter++;
-	int aWidth = theComponent->Width();
-	int aHeight = theComponent->Height();
-	if(this->mBGImage.get()==NULL || aWidth!=this->mBGImage->GetWidth() || aHeight!=this->mBGImage->GetHeight())
-	{
-		Window *aWindow = theComponent->GetRoot();
-		this->mBGImage = aWindow->CreateImage(aWidth, aHeight);
-
-		if(theComponent->ComponentFlagSet(ComponentFlag_DebugBG) && this->mDebugWindow.get()==NULL)
-		{
-			this->mDebugWindow = CreateNativeWindow();
-			this->mDebugWindow->SetParent(theComponent->GetRoot());
-			this->mDebugWindow->SetStyle(0x40);
-			WONRectangle aRect(0,0,this->mBGImage->GetWidth(),this->mBGImage->GetHeight());
-			this->mDebugWindow->Create(aRect);
-		}
-
-		if(this->mDebugWindow.get()!=NULL)
-		{
-			this->mDebugWindow->mRoot.get()->RemoveAllChildren();
-			this->mDebugWindow->AddComponent(new ImageComponent(this->mBGImage.get()));
-			int x=0,y=0;
-			theComponent->LocalToRoot(x,y);
-			WONRectangle aScreenRect;
-			theComponent->GetRoot()->GetRect(aScreenRect,false);
-			this->mDebugWindow->SetPosSize(x+aScreenRect.x,y+aScreenRect.y,-1,-1);
-		}
-
-	}
-
-	NativeImage *anImage = theComponent->GetRoot()->GetOffscreenImage();
-	int x = 0, y = 0;
-	theComponent->RootToChild(x,y);
-	this->mBGImage->GetGraphics().DrawImage(anImage, x, y);
-	this->mImageX = 0;//theComponent->Left();
-	this->mImageY = 0;//theComponent->Top();
-	theComponent->LocalToRoot(this->mImageX,this->mImageY);
-
-	if(this->mDebugWindow.get()!=NULL)
-		this->mDebugWindow->mRoot.get()->Invalidate();
-
-	this->mHaveBG = true;
-
-	if(theComponent->ComponentFlagSet(ComponentFlag_Translucent))
-	{
-
-		int aColor = GetColor8th(this->mTranslucentColor,8-this->mTranslucentLevel);
-		if(g.BlendSupported())
-		{
-			g.SetColor(this->mTranslucentColor);
-			g.FillRectBlend(0,0,theComponent->Width(),theComponent->Height(),(8-this->mTranslucentLevel)*255/8);
-			return;
-		}
-
-		SmartPtr<RawImage32> aRawImage = this->mBGImage->GetRaw();
-		int aNumPixels = aRawImage->GetWidth()*aRawImage->GetHeight();
-		DWORD *aPixels =aRawImage->mImageData;
-		DWORD *anEndPixels = aPixels+aNumPixels;
-		switch(this->mTranslucentLevel)
-		{
-		case 1:
-			do
-			{
-				*aPixels = COLOR_1_8(*aPixels) + aColor;
-			} while(++aPixels!=anEndPixels);
-			break;
-
-		case 2:
-			do
-			{
-				*aPixels = COLOR_2_8(*aPixels) + aColor;
-			} while(++aPixels!=anEndPixels);
-			break;
-
-		case 3:
-			do
-			{
-				*aPixels = COLOR_3_8(*aPixels) + aColor;
-			} while(++aPixels!=anEndPixels);
-			break;
-
-		case 4:
-			do
-			{
-				*aPixels = COLOR_4_8(*aPixels) + aColor;
-			} while(++aPixels!=anEndPixels);
-			break;
-
-		case 5:
-			do
-			{
-				*aPixels = COLOR_5_8(*aPixels) + aColor;
-			} while(++aPixels!=anEndPixels);
-			break;
-
-		case 6:
-			do
-			{
-				*aPixels = COLOR_6_8(*aPixels) + aColor;
-			} while(++aPixels!=anEndPixels);
-			break;
-
-		case 7:
-			do
-			{
-				*aPixels = COLOR_7_8(*aPixels) + aColor;
-			} while(++aPixels!=anEndPixels);
-			break;
-
-		}
-		g.DrawImage(aRawImage.get(),0,0);
-	}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-
-namespace WONAPI {
-// FUNCTION: WON 0x00736680
-// Marks a captured background to be restored before the next paint
-void BackgroundGrabber::Invalidate(Component *theComponent)
-{
-	if(this->mHaveBG)
-		this->mNeedPutBG = true;
-}
-}
-
-// Leaves the captured background as it is (empty; the linker folds this body into the identical one at
-// 0x006fa500)
-void BackgroundGrabber::SizeChanged(Component* theComponent)
-{
+    ee_won_grab_free(this->mRust);
 }

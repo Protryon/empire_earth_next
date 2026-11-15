@@ -77,7 +77,7 @@ void EEACalamity::Cast(const GE2DPoint& inLocation)
             theY = this->mY;
         }
     }
-    this->mMessage = new EEMCastCalamity(this->mCasterID, this->mTargetID, theX, theY, this->mTechnology);
+    this->mMessage = new EEMRecord(kMessageCastCalamity, {this->mCasterID, this->mTargetID, theX, theY, this->mTechnology});
     if (this->mTechnology != kTechConquistadorsSpell)
         EEOrderAtCursor(inLocation, theUnit);
     gUserInterface->PostAction(this);

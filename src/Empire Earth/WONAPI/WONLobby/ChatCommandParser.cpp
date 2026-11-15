@@ -122,30 +122,30 @@ void ChatCommandParser::SetInvitation(bool inInvitation)
 // Registers the localized names of every chat command (whisper, block, emote, ignore, ... alert, warn)
 void ChatCommandParser::InitCommands()
 {
- this->AddCommands(::ChatCommandLogic_Whisper_String,LobbyChatCommand_Whisper);
- this->AddCommands(::ChatCommandLogic_Block_String,LobbyChatCommand_Block);
- this->AddCommands(::ChatCommandLogic_Emote_String,LobbyChatCommand_Emote);
- this->AddCommands(::ChatCommandLogic_Ignore_String,LobbyChatCommand_Ignore);
- this->AddCommands(::ChatCommandLogic_Away_String,LobbyChatCommand_Away);
- this->AddCommands(::ChatCommandLogic_Invite_String,LobbyChatCommand_Invite);
- this->AddCommands(::ChatCommandLogic_Uninvite_String,LobbyChatCommand_Uninvite);
- this->AddCommands(::ChatCommandLogic_Reply_String,LobbyChatCommand_Reply);
- this->AddCommands(::ChatCommandLogic_Clear_String,LobbyChatCommand_Clear);
- this->AddCommands(::ChatCommandLogic_Help_String,LobbyChatCommand_Help);
- this->AddCommands(::ChatCommandLogic_ShowTeam_String,LobbyChatCommand_ShowTeam);
- this->AddCommands(::ChatCommandLogic_Moderator_String,LobbyChatCommand_Moderator);
- this->AddCommands(::ChatCommandLogic_ServerMute_String,LobbyChatCommand_ServerMute);
- this->AddCommands(::ChatCommandLogic_ServerBan_String,LobbyChatCommand_ServerBan);
- this->AddCommands(::ChatCommandLogic_Mute_String,LobbyChatCommand_Mute);
- this->AddCommands(::ChatCommandLogic_Ban_String,LobbyChatCommand_Ban);
- this->AddCommands(::ChatCommandLogic_Unmute_String,LobbyChatCommand_Unmute);
- this->AddCommands(::ChatCommandLogic_ServerUnmute_String,LobbyChatCommand_ServerUnmute);
- this->AddCommands(::ChatCommandLogic_Unban_String,LobbyChatCommand_Unban);
- this->AddCommands(::ChatCommandLogic_ServerUnban_String,LobbyChatCommand_ServerUnban);
- this->AddCommands(::ChatCommandLogic_Alert_String,LobbyChatCommand_Alert);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Whisper_String),LobbyChatCommand_Whisper);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Block_String),LobbyChatCommand_Block);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Emote_String),LobbyChatCommand_Emote);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Ignore_String),LobbyChatCommand_Ignore);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Away_String),LobbyChatCommand_Away);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Invite_String),LobbyChatCommand_Invite);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Uninvite_String),LobbyChatCommand_Uninvite);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Reply_String),LobbyChatCommand_Reply);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Clear_String),LobbyChatCommand_Clear);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Help_String),LobbyChatCommand_Help);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_ShowTeam_String),LobbyChatCommand_ShowTeam);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Moderator_String),LobbyChatCommand_Moderator);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerMute_String),LobbyChatCommand_ServerMute);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerBan_String),LobbyChatCommand_ServerBan);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Mute_String),LobbyChatCommand_Mute);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Ban_String),LobbyChatCommand_Ban);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Unmute_String),LobbyChatCommand_Unmute);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerUnmute_String),LobbyChatCommand_ServerUnmute);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Unban_String),LobbyChatCommand_Unban);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_ServerUnban_String),LobbyChatCommand_ServerUnban);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Alert_String),LobbyChatCommand_Alert);
  this->AddCommands(gEmptyWideString,LobbyChatCommand_StartShutdown);
  this->AddCommands(gEmptyWideString,LobbyChatCommand_AbortShutdown);
- this->AddCommands(::ChatCommandLogic_Warn_String,LobbyChatCommand_Warn);
+ this->AddCommands(LOBBY_STRING(ChatCommandLogic_Warn_String),LobbyChatCommand_Warn);
 }
 
 // FUNCTION: WON 0x7561b0
@@ -237,28 +237,28 @@ void ChatCommandParser::AddHelpEntry(int command,const GUIString& entry,GUIStrin
 static const GUIString& ChatHelpString(int command)
 {
  switch(command) {
- case LobbyChatCommand_Help: return ::ChatCommandLogic_HelpHelp_String;
- case LobbyChatCommand_Whisper: return ::ChatCommandLogic_WhisperHelp_String;
- case LobbyChatCommand_Reply: return ::ChatCommandLogic_ReplyHelp_String;
- case LobbyChatCommand_Emote: return ::ChatCommandLogic_EmoteHelp_String;
- case LobbyChatCommand_Ignore: return ::ChatCommandLogic_IgnoreHelp_String;
- case LobbyChatCommand_Clear: return ::ChatCommandLogic_ClearHelp_String;
- case LobbyChatCommand_ShowTeam: return ::ChatCommandLogic_ShowTeamHelp_String;
- case LobbyChatCommand_Block: return ::ChatCommandLogic_BlockHelp_String;
- case LobbyChatCommand_Away: return ::ChatCommandLogic_AwayHelp_String;
- case LobbyChatCommand_Invite: return ::ChatCommandLogic_InviteHelp_String;
- case LobbyChatCommand_Uninvite: return ::ChatCommandLogic_UninviteHelp_String;
- case LobbyChatCommand_Mute: return ::ChatCommandLogic_MuteHelp_String;
- case LobbyChatCommand_Unmute: return ::ChatCommandLogic_UnmuteHelp_String;
- case LobbyChatCommand_Ban: return ::ChatCommandLogic_BanHelp_String;
- case LobbyChatCommand_Unban: return ::ChatCommandLogic_UnbanHelp_String;
- case LobbyChatCommand_Moderator: return ::ChatCommandLogic_ModeratorHelp_String;
- case LobbyChatCommand_ServerMute: return ::ChatCommandLogic_ServerMuteHelp_String;
- case LobbyChatCommand_ServerUnmute: return ::ChatCommandLogic_ServerUnmuteHelp_String;
- case LobbyChatCommand_ServerBan: return ::ChatCommandLogic_ServerBanHelp_String;
- case LobbyChatCommand_ServerUnban: return ::ChatCommandLogic_ServerUnbanHelp_String;
- case LobbyChatCommand_Alert: return ::ChatCommandLogic_AlertHelp_String;
- default: return ::ChatCommandLogic_WarnHelp_String;
+ case LobbyChatCommand_Help: return LOBBY_STRING(ChatCommandLogic_HelpHelp_String);
+ case LobbyChatCommand_Whisper: return LOBBY_STRING(ChatCommandLogic_WhisperHelp_String);
+ case LobbyChatCommand_Reply: return LOBBY_STRING(ChatCommandLogic_ReplyHelp_String);
+ case LobbyChatCommand_Emote: return LOBBY_STRING(ChatCommandLogic_EmoteHelp_String);
+ case LobbyChatCommand_Ignore: return LOBBY_STRING(ChatCommandLogic_IgnoreHelp_String);
+ case LobbyChatCommand_Clear: return LOBBY_STRING(ChatCommandLogic_ClearHelp_String);
+ case LobbyChatCommand_ShowTeam: return LOBBY_STRING(ChatCommandLogic_ShowTeamHelp_String);
+ case LobbyChatCommand_Block: return LOBBY_STRING(ChatCommandLogic_BlockHelp_String);
+ case LobbyChatCommand_Away: return LOBBY_STRING(ChatCommandLogic_AwayHelp_String);
+ case LobbyChatCommand_Invite: return LOBBY_STRING(ChatCommandLogic_InviteHelp_String);
+ case LobbyChatCommand_Uninvite: return LOBBY_STRING(ChatCommandLogic_UninviteHelp_String);
+ case LobbyChatCommand_Mute: return LOBBY_STRING(ChatCommandLogic_MuteHelp_String);
+ case LobbyChatCommand_Unmute: return LOBBY_STRING(ChatCommandLogic_UnmuteHelp_String);
+ case LobbyChatCommand_Ban: return LOBBY_STRING(ChatCommandLogic_BanHelp_String);
+ case LobbyChatCommand_Unban: return LOBBY_STRING(ChatCommandLogic_UnbanHelp_String);
+ case LobbyChatCommand_Moderator: return LOBBY_STRING(ChatCommandLogic_ModeratorHelp_String);
+ case LobbyChatCommand_ServerMute: return LOBBY_STRING(ChatCommandLogic_ServerMuteHelp_String);
+ case LobbyChatCommand_ServerUnmute: return LOBBY_STRING(ChatCommandLogic_ServerUnmuteHelp_String);
+ case LobbyChatCommand_ServerBan: return LOBBY_STRING(ChatCommandLogic_ServerBanHelp_String);
+ case LobbyChatCommand_ServerUnban: return LOBBY_STRING(ChatCommandLogic_ServerUnbanHelp_String);
+ case LobbyChatCommand_Alert: return LOBBY_STRING(ChatCommandLogic_AlertHelp_String);
+ default: return LOBBY_STRING(ChatCommandLogic_WarnHelp_String);
  }
 }
 
@@ -277,7 +277,7 @@ GUIString ChatCommandParser::GetHelp(unsigned short clientId)
    isAdmin=client->IsAdmin();
   }
  }
- GUIString out=::ChatCommandLogic_HelpHeader_String;
+ GUIString out=LOBBY_STRING(ChatCommandLogic_HelpHeader_String);
  out.append(GUIString("<n>"));
  int32_t commands[32];
  size_t count=ee_won_chat_help((uint32_t)this->GetRoomFlags(),isModerator,isRoomCaptain,isGameCaptain,isAdmin,commands);

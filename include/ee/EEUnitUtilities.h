@@ -56,16 +56,12 @@ bool EEFindDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* i
 // 0x20da86: EECanConvert (ee/EEAreaUtilities.h)
 float EEGetAngleFromNorth(GE3DPoint* inFrom, GE3DPoint* inTo);
 float EEGetSeaHeading(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo);
-float EEGetUnitAngle(EEUnit* inFrom, EEUnit* inTo);
 bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget);
 // 0x243561 EEFindPlacement: declared in ee/EEUnit.h; the wrapper 0x24352f (no unit, inArg9 false) (provisional
 // name)
 bool EEFindPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, unsigned long inX, unsigned long inY, long inSize,
                      long inRings, bool inCorners, bool inFacePoint, bool inArg11, GETransformation* outTransformation,
                      EEComplexUnit* inTarget);
-// 0x24bb36: the tiles of ring inRing around the inSize square at (inX, inY)
-void EEGetRingTiles(long inX, long inY, long inSize, long inRing, long inCorners,
-                std::vector<U2DPoint<long> >& outTiles);
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);  // 0x246ea2 (names.txt binds it)
 char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, bool inIgnoreOwner);
 // EEBlockTakes 0x243c7d: ee/EEAreaUtilities.h
@@ -76,12 +72,8 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale);
 // 0x148992 (cdecl): inPoint in camera space (outScreen) and its depth provisional name and meaning
 void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth);
-extern float gF564518;                      // 0x564518 (sound: behind-the-camera falloff) (provisional name)
-extern float gF56451C;                      // 0x56451c (sound: off-screen falloff) (provisional name)
-extern float gF564520;                      // 0x564520 (sound: pan scale) (provisional name)
 void EEReplaceQueuedTechnology(EEPlayer* inPlayer, EEUnitClass* inClass, long inNewTechnology);
 EEUnit* EEMakeUnitCopy(EEComplexUnit* inUnit, unsigned long inPlayer, EEUnitClass* inClass);
-bool EEClearUnderBuilding(long inX, long inY, long inSize);  // (3 arguments: the callee reads +8..+0x10 only)
 // 0x23e530 / 0x23e598 (cdecl, before the range): the units on inTile in the way of a unit of inUnitType (outUnits) /
 // whether they may be pushed aside (provisional names)
 bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner, std::vector<EEUnit*>& outUnits);
@@ -96,7 +88,6 @@ void EECreateSpaceWallEnergyWall(EEComplexUnit* inUnit);  // 0x24f8c0 (after the
 void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit);  // 0x24f8f9 (after the range)
 long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2);
 long EEGetDirectionTo(EEUnit* inFrom, EEUnit* inTo);
-long EEGetTownCenterLastRing(long* outSize);
 long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);  // returns the count
 long EEGetUnitsOn(std::vector<EETileCoordinate>& inTiles, std::vector<EEUnit*>& outUnits);  // the same body (0x245a19 passes its EETileCoordinate tiles)
 EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit);
@@ -104,20 +95,12 @@ bool EECanTargetClass(EEComplexUnit* inUnit, EEUnitClass* inClass);
 void EEForEachPlayersUnit(EEUUUnitFunctor* inFunctor);
 // 0x2467bb with the types its body reads (ee/EEAreaUtilities.h declares EEUnit* first) (provisional name)
 float EEGetDistanceSquared(EEComplexUnit* inUnit, EEComplexUnit* inOther);
-void EEGetEnemiesAround(EEComplexUnit* inUnit, std::vector<EEUnit*>& outAttackers);
 long EETurnDirection(long inDirection, long inSteps, bool inClockwise);  // 0x24da82 (the definition and names.txt are (long, long, bool))
 void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance);  // 0x248ecc: the tile inDistance steps from inTile in inDirection (also in ee/EEE3DStorm.h)
 void EEMoveInDirection(const GE2DPoint& inFrom, GE2DPoint& outTo, long inDirection, long inDistance);
-// orders units by their angle from mUnit (std::sort 0x2509af from 0x246254) (provisional name)
-struct EEUUAngleLess {
-    EEUUAngleLess(EEComplexUnit* inUnit) : mUnit(inUnit) {}
-    bool operator()(EEUnit* inFirst, EEUnit* inSecond) const;
-    EEComplexUnit* mUnit;
-};
 bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint);
 void EEGetSquareRing(long inX, long inY, long inWidth, long inHeight, std::vector<U2DPoint<long> >& outTiles);
 bool EEIsCornerBlocked(unsigned long inX1, unsigned long inY1, unsigned long inX2, unsigned long inY2);
-float EEGetNearestFootprintTile(EEComplexUnit* inUnit, const GE3DPoint& inPoint, long* outX, long* outY);
 // Genuine generic game permutation at original4eef9; nominal PermuteValues identity inferred.
 // Independent callers prove vector<T*> instantiations, including nested region-vector pointers.
 // Body: element access through operator[] each time, one temporary for the swaps (U2DPoint: its zeroing ctor first),
@@ -163,27 +146,10 @@ bool EEIsSeenByOwnerOf(EEComplexUnit* inUnit, EEUnit* inOther);
 // name)
 long EEExtendWallLine(std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer, EEUnitClass* inClass,
                     std::vector<EETileCoordinate>& outTiles);
-bool EEFindOpenSpot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation);
-void EEGetWallSideTiles(EEComplexUnit* inUnit, EEComplexUnit* inTarget, std::vector<EETileCoordinate>& ioTiles);
-// Puts the tiles of path area mID first (std::stable_sort 0x250b65 from 0x248709; its operator() 0x23de5d is out of
-// line before the range) (provisional name)
-struct EEUUTileInPathArea {
-    EEUUTileInPathArea(unsigned short inID) : mID(inID) {}
-    bool operator()(const EETileCoordinate& inFirst, const EETileCoordinate& inSecond) const;   // 0x23de5d
-    unsigned short mID;
-};
-// Orders points by inUnit's distance to them (DistanceSquared2D; std::sort 0x250aa5 from 0x2481eb; its operator()
-// 0x23de0f is out of line before the range) (provisional name)
-struct EEUUPointNearerToUnit {
-    EEUUPointNearerToUnit(EEComplexUnit* inUnit) : mUnit(inUnit) {}
-    bool operator()(const GE2DPoint& inFirst, const GE2DPoint& inSecond) const;   // 0x23de0f
-    EEComplexUnit* mUnit;
-};
 // 0x24116b / 0x241504 with an EEUnit* target (0x248c7e passes its EEUnit*; ee/EEUnit.h declares EEComplexUnit*)
 void EEGetTilesAroundUnit(EEComplexUnit* inUnit, EEUnit* inTarget, long inArg3, long inArg4, bool inArg5, std::vector<EETileCoordinate>& outTiles);
 bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUnit, EEUnit* inTarget, bool inArg4, GE3DPoint& outLocation);
 float EEGetUnitRadius(EEComplexUnit* inUnit, EEComplexUnit* inOther);   // 0x248d05 with the types its body reads
-void EEGetTileInDirection(long inX, long inY, long* outX, long* outY, long inDirection, long inDistance);
 long EETurnAway(long inDirection, long inSpread);
 template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
@@ -199,27 +165,20 @@ void EEGetFootprintTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles)
 void EEGetTilesNearPoint(const GE3DPoint& inCenter, float inRadius, std::vector<U2DPoint<long> >& outTiles);  // the same body (0x248fe4's types)
 // the sort-and-unique template (0x211ebc; defined in EEUCGate.cpp's range) (provisional name)
 template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E inEqual);
-void EEGetFanTiles(const GE2DPoint& inCenter, float inRadius, float inFrom, float inTo, long inSteps, std::vector<U2DPoint<long> >& outTiles);
 EEUnit* EEGetWallAt(const EETileCoordinate& inTile, EEPlayer* inPlayer, long inUnitType);
-void EEExtendWall(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, EEPlayer* inPlayer, long inUnitType, std::vector<EETileCoordinate>& ioTiles);
 void EEGetWallLine(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, std::vector<EETileCoordinate>& outTiles);
 void EEGetWallLineXY(const GE2DPoint& inFrom, const GE2DPoint& inTo, std::vector<EETileCoordinate>& outTiles);
 void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<EETileCoordinate>* outTiles, bool inEnds, bool inThin);  // the same body over EETileCoordinate (0x24b794)
 long EEGetUnitsOnTiles(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);
 // (0x24b8ac EEGetPathLengthTo: ee/EEAreaUtilities.h)
-void EERemoveEdgeTiles(std::vector<U2DPoint<long> >& ioTiles);
 long EEGetUnitsOnTiles(std::vector<EETileCoordinate>& inTiles, std::vector<EEUnit*>& outUnits);  // the same body over EETileCoordinate (0x24c003)
 // 0x24c3df: the units on tile (inX, inY) (as ee/EEE3DEnergyWall.h declares it); returns their count
 long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits);
 // 0x2046fc (EEGhostUnit.cpp defines it): the wall ghosts of inTiles/inCorners for inPlayer
 void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>& inCorners, long inTechnology, EEPlayer* inPlayer,
                 float inRotation);
-long EEGetUnitsNearTile(const GE3DPoint& inCenter, float inRadius, std::vector<EEUnit*>& outUnits);
-long EEGetUnitsInFan(const GE2DPoint& inCenter, float inRadius, float inFrom, float inTo, long inSteps, std::vector<EEUnit*>& outUnits);
 // (0x250d71: EEGetUnitsInRectangle with ee/EEAreaUtilities.h's EEAnyUnit, the ee/EEUnitCollector.h template)
 EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnitType);
-long EEGetUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer, long inUnitType, std::vector<EEUnit*>& outUnits);
-long EEGetUnitsOfTypeOnTiles(std::vector<U2DPoint<long> >& inTiles, EEPlayer* inPlayer, long inUnitType, std::vector<EEUnit*>& outUnits);  // the same body over U2DPoint<long> (0x247bef)
 long EEGetWallUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, long inUnitType, std::vector<EEUnit*>& outUnits);
 float EEJitterHeading(float inAngle, float inMin, float inMax);
 class EEGhostUnit;

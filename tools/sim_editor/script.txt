@@ -647,3 +647,625 @@ form 97 113
 tab 4
 tscreenstate
 form 97 113
+# round 4 of the editor lane: the effect types (EESETSET*). Every type and action on the first effect: its controls
+# (group 13) after the change, values typed, the name refreshed (UpdateName), stored by selecting the second effect
+# and loaded back (Store, VirtualC, Show, Load), the controls and every effect again
+tab 4
+trigger 2
+newentry
+newentry
+tscreenstate
+tscreen select 0                   # effect type 1 action 0
+etype 1 0
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 1
+etype 1 1
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 2
+etype 1 2
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 3
+etype 1 3
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 4
+etype 1 4
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 5
+etype 1 5
+form 0 999 13
+ectl scen 2 1
+ectl ecombo 1 3
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 6
+etype 1 6
+form 0 999 13
+ectl scen 3 1
+ectl ecombo 0 4
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 7
+etype 1 7
+form 0 999 13
+ectl ecombo 1 2
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 8
+etype 1 8
+form 0 999 13
+ectl ecombo 0 3
+ectl ecombo 1 1
+ectl edit 0 12
+ctl e check 0 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 9
+etype 1 9
+form 0 999 13
+ectl player 0 2
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 10
+etype 1 10
+form 0 999 13
+ectl text 0 Class_Y
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 11
+etype 1 11
+form 0 999 13
+ectl edit 0 45
+ctl e check 0 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 1 action 12
+etype 1 12
+form 0 999 13
+ectl ecombo 0 2
+ectl ecombo 1 1
+ectl edit 0 7
+ctl e check 0 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 0
+etype 2 0
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 1
+etype 2 1
+form 0 999 13
+ctl e radio 1
+ctl e radio 3
+ectl scen 1 1
+ctl e check 1 1
+ctl e slide 0 30
+ctl e slide 1 60
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 2
+etype 2 2
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 3
+etype 2 3
+form 0 999 13
+ectl player 1 3
+ectl ecombo 1 2
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 4
+etype 2 4
+form 0 999 13
+ectl ecombo 1 25
+ctl e combo 2 1
+ectl edit 0 300
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 5
+etype 2 5
+form 0 999 13
+ectl ecombo 1 5
+ctl e radio 3
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 6
+etype 2 6
+form 0 999 13
+ectl edit 0 9
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 7
+etype 2 7
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 8
+etype 2 8
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 9
+etype 2 9
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 10
+etype 2 10
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 2 action 11
+etype 2 11
+form 0 999 13
+ctl e radio 1
+ectl scen 1 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 3 action 0
+etype 3 0
+form 0 999 13
+ectl scen 0 0
+ectl ecombo 1 2
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 4 action 0
+etype 4 0
+form 0 999 13
+ectl text 0 boom.wav
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 4 action 1
+etype 4 1
+form 0 999 13
+ectl ecombo 1 1
+ctl e radio 1
+ectl text 0 a_line
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 4 action 2
+etype 4 2
+form 0 999 13
+ectl player 0 2
+ectl edit 0 5
+ectl edit2 1 hello
+ectl text 0 talk.mp3
+ctl e slide 0 4
+ectl scen 1 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 4 action 3
+etype 4 3
+form 0 999 13
+ectl player 0 1
+ectl edit 0 3
+ectl edit2 0 chat_text
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 5 action 0
+etype 5 0
+form 0 999 13
+ctl e slide 0 9
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 5 action 1
+etype 5 1
+form 0 999 13
+ectl edit 0 120
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 5 action 2
+etype 5 2
+form 0 999 13
+ctl e combo 1 2
+ctl e radio 1
+ctl e combo 2 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 5 action 3
+etype 5 3
+form 0 999 13
+ctl e combo 1 1
+ctl e radio 0
+ctl e combo 2 0
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 5 action 4
+etype 5 4
+form 0 999 13
+ctl e slide 0 12
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 5 action 5
+etype 5 5
+form 0 999 13
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 5 action 6
+etype 5 6
+form 0 999 13
+ctl e check 0 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 6 action 0
+etype 6 0
+form 0 999 13
+ctl e radio 1
+ctl e radio 3
+ctl e radio 5
+ectl scen 1 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 6 action 1
+etype 6 1
+form 0 999 13
+ctl e list 0 0
+ctl e list 0 0
+ctl e check 0 1
+ctl e radio 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 6 action 2
+etype 6 2
+form 0 999 13
+ectl scen 1 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 6 action 3
+etype 6 3
+form 0 999 13
+ectl scen 1 2
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 6 action 4
+etype 6 4
+form 0 999 13
+ctl e radio 1
+ctl e combo 1 3
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 6 action 5
+etype 6 5
+form 0 999 13
+ctl e combo 1 4
+ctl e slide 0 3
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+tscreen select 0                   # effect type 6 action 6
+etype 6 6
+form 0 999 13
+ctl e combo 1 1
+ctl e combo 2 2
+ctl e combo 3 1
+erefresh
+tscreen select 1
+tscreen select 0
+form 0 999 13
+effectstate
+# round 4: a sub-tab entered with its stored selection past its list (ShowTab's fallback to the list's last line):
+# three conditions, the last selected, the trigger sub-tab entered, the last deleted behind it, the condition sub-tab
+# entered by ShowTab; then the second selected and deleted behind the area and trigger sub-tabs, entered by its radio
+tab 4
+trigger 1
+tscreen new
+tscreen new
+tscreen new
+tscreen select 2
+tscreenstate
+trigger 0
+sm delete 1 3
+trigger 1
+tscreenstate
+form 97 113
+tscreen select 1
+trigger 4
+trigger 0
+sm delete 1 2
+radio %101
+radio %99
+tscreenstate
+form 97 113
+# round 5 of the editor lane: the condition types (EESETSCT*). Every type on the first condition: its controls
+# (group 12) after the change, values set, the name refreshed (RefreshControls), stored by selecting the second
+# condition and loaded back (Store, Hide, Show, Load), the controls and every condition again; then the sub-tab left
+# and entered (Activate)
+tab 4
+trigger 1
+newentry
+newentry
+tscreenstate
+tscreen select 0                   # condition type 2: player attribute
+ctype 2
+form 0 999 12
+cctl player 0 2
+cctl combo 0 23
+cctl combo 1 3
+cctl edit 0 150
+ctl c radio 1
+cctl player 1 3
+cctl combo 2 40
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 3: player research
+ctype 3
+form 0 999 12
+cctl player 0 3
+cctl combo 0 5
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 4: trigger attribute
+ctype 4
+form 0 999 12
+cctl scen 0 1
+ctl c check 0 1
+ctl c check 1 1
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 5: diplomacy
+ctype 5
+form 0 999 12
+cctl player 0 2
+cctl player 1 4
+cctl combo 0 2
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 6: game
+ctype 6
+form 0 999 12
+ctl c check 0 1
+cctl combo 0 1
+ctl c check 1 1
+cctl edit 0 300
+cctl edit 1 100
+ctl c check 2 1
+ctl c slide 0 15
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 0                   # condition type 7: chat message
+ctype 7
+form 0 999 12
+cctl text 0 hello_there
+ui c
+crefresh
+tscreen select 1
+tscreen select 0
+form 0 999 12
+conditionstate
+tscreen select 1                   # the second: its type shown, then the first's (Load's type switch)
+ctype 5
+tscreen select 0
+ui c
+conditionstate
+trigger 0
+trigger 1
+ui c
+tscreenstate
+# round 5: the AI attribute's float slider dragged (its UIESliderChange's modifier: 1 / the behaviour's scale)
+tab 4
+trigger 2
+etype 6 5
+ctl e combo 1 2
+ui e
+ctl e slide 2 500
+ui e
+ctl e slide 2 7
+ui e
+ctl e combo 1 60
+ctl e slide 2 3
+ui e
+ctl e combo 1 10
+ctl e slide 2 50
+ui e
+ctl e combo 1 11
+ctl e slide 2 50
+ui e
+ctl e combo 1 12
+ctl e slide 2 50
+ui e
+# round 5: the condition and effect screens' own slots: the list's buttons on each (New, Duplicate, Up, Down, Sort,
+# Delete), a name and a description typed and stored (Store's texts), the sub-tab left and entered
+tab 4
+trigger 1
+tscreen select 1
+edit 0x7db Named_condition
+edit 0x963 condition_text
+tscreen select 0
+tscreen select 1
+conditionstate
+tscreen dup
+tscreenstate
+conditionstate
+tscreen up
+tscreen down
+tscreen sort
+tscreenstate
+conditionstate
+tscreen delete
+tscreenstate
+conditionstate
+form 97 113
+trigger 2
+tscreen select 1
+edit 0x7db Named_effect
+edit 0x963 effect_text
+tscreen select 0
+tscreen select 1
+effectstate
+tscreen new
+tscreen dup
+tscreenstate
+effectstate
+tscreen up
+tscreen down
+tscreen sort
+tscreenstate
+effectstate
+tscreen delete
+tscreenstate
+effectstate
+form 97 113
+ui e
+trigger 0
+trigger 2
+ui e
+tscreenstate
