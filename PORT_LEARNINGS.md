@@ -22899,3 +22899,20 @@ kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), t
 - **Deleted with no caller left:** `EEHasZeroCount`, `EEGetSeabedUnder`, `EEGetUnitAngle` and `EEUUAngleLess`,
   `EEGetEnemiesAround`, `EEClearUnderBuilding`, `EEIsEditorSpacingClear`, the sound falloff globals
   (`gF564520`, `gF56451C`, `gF564518`) and the blank runs round 1 left.
+- **The merge with rust moved the UUTL digests, not the game.** rust's R5b.4 round 31 retired the Original* group
+  command rechecks that ran beside the Rust bodies over the dry host; they called `EEGetFarmDropSites`,
+  `EEFindFreeFarm`, `EEGetFootprintTiles` and `EECanPlaceUnitOnTile` a second time, so those four kinds' outermost
+  calls halve (EE-UU-COUNT: no other kind's count changes) and every UUTL digest with them, while oracle seeds 2-7
+  stay identical and every other tag of the four captures equals its golden. The UUTL lines were re-recorded on the
+  merged tree in their own commit (a second capture run of oracle and calamity gave the same digests). A lane that
+  retires a caller of a noted utility should expect this: EE-UU-COUNT names the kinds.
+- **Gates (the move's commit):** build `--sim` 0/0; oracle seeds 2-3 identical; the captures at seeds 2-3 equal to
+  every golden, UUTL among them (oracle 173 digests, late 174, space 175, calamity 191); 14 new Rust unit tests.
+- **Final gates (merged with rust 42af0588):** build `--sim` 0/0; test-profile build 0/0; oracle seeds 2-7 identical;
+  the four captures at seeds 2-3 equal to every golden but UUTL (re-recorded from them), then a second run of
+  oracle (177 digests) and calamity (195) PASS; the saveload matrix (`--settings all --seeds
+  2-3 --at 1000,1900 --expect`) PASS; the Rust gate PASS (3,643 tests); a sim_bench game (seed 5, Small, Hard, 2 AI)
+  to the time cap with both computers alive (populations 39 and 45); under the harness lock the tour (`RESULT PASS
+  tour`, render and F3 checks ok) and an orders game (`ORDERS PASS`: gather, repair, queued repair, move;
+  `RESULT PASS random-game`). C++ of the round: net -741 (the capture +73, the move -814); the file 4,725 -> 3,996
+  lines.

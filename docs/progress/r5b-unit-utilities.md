@@ -37,6 +37,11 @@ lines.
 **Gate**: UUTL (tools/sim_capture.py, the outermost call of 85 utilities per thread: kind, inputs, outputs and, for
 the bodies that write to the world, their writes as events; folded per physics tick), recorded on the unmodified C++
 (oracle, late, space, calamity; seeds 2-3). EE-UU-COUNT in each game's log gives the calls per kind.
+The UUTL lines were re-recorded on the tree merged with rust 42af0588 (its retired group command rechecks
+halve four kinds' calls; the game unchanged). Final (merged): oracle 2-7 identical, the four captures equal but UUTL (re-recorded; a second oracle and
+calamity run PASS), saveload
+matrix PASS (expect), Rust gate PASS, test-profile build 0/0, a sim_bench game to the time cap with both AIs alive,
+the tour and an orders game PASS under the harness lock.
 
 **Not reached by the gate games** (unit tests and review only): the submarines' depth, the selection bounds, the
 facing radius, the angle from north, the footprint's visibility, the escape point, the path length, the Doppler
