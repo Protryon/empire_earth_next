@@ -137,6 +137,7 @@ pub mod reqops;
 pub mod resource;
 pub mod rootobj;
 pub mod routeconn;
+pub mod routelogic;
 pub mod routemsg;
 pub mod routeop;
 pub mod routing;

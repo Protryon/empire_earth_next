@@ -6987,6 +6987,430 @@ enum class EeWonRootCall : uint32_t {
   GetField,
 };
 
+/// The host's ops. `a`..`e` are pointers or integers as each op says; `L` is the shell (`RoutingLogic*`).
+enum class EeWonRouteLogicOp : uint32_t {
+  /// `((RefCount*)a)->AddRef()`.
+  AddRef = 1,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+  /// `delete (GUIString*)a`.
+  TextFree,
+  /// `((GUIString*)a)->length()`.
+  TextLength,
+  /// a list `a` the host made (`kind` b: 1 data objects, 2 directory entities, 3 a client iterator) deleted.
+  ListFree,
+  /// `L->mKilled`.
+  Killed = 10,
+  /// `(int)((AsyncOp*)a)->GetStatus()`.
+  OpStatus,
+  /// `((AsyncOp*)a)->IsKilled()`.
+  OpKilled,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  OpKill,
+  /// `((AsyncOp*)a)->Finish(WS_Success)`.
+  OpFinish,
+  /// `new AsyncOp`, held.
+  AsyncOpNew,
+  /// `L->RunOp((AsyncOp*)a, NULL, 0)`.
+  RunOp,
+  /// `LobbyRunOpWithStatus((AsyncOp*)a, LOBBY_STRING(b), LOBBY_STRING(c), d & 0xff, d >> 8)`.
+  RunWithStatus,
+  /// `time(NULL)`.
+  Now,
+  /// `WONTickCount()`.
+  Tick,
+  /// `GetLobbyWindow()->GetLastInputTick()`.
+  LastInputTick,
+  /// `LobbyBroadcastLobbyEvent(a, true)`.
+  BroadcastLobby,
+  /// a setting: 1 chat sounds, 2 staging sounds, 3 lobby sounds, 4 auto-ping games, 5 lobby music, 6 anonymous
+  /// to friends, 7 filter dirty words, 8 on the Internet screen, 9 the user cancelled the last status op.
+  Pref,
+  /// `LobbyPlaySound(LOBBY_SOUND(a).get())`.
+  Sound,
+  /// `LobbyMessageBox(LOBBY_STRING(a), LOBBY_STRING(b))`.
+  MessageBox,
+  /// `LobbyDoErrorDialog(LOBBY_STRING(a), (WONStatus)b)`.
+  ErrorDialog,
+  /// `LobbyDoYesNoDialog(LOBBY_STRING(a), LOBBY_STRING(b), true)`.
+  YesNo,
+  /// `GetLobbyConfig() != NULL`.
+  HasConfig,
+  /// `GetLobbyConfig()->mPingCeiling`, or -1 without a config.
+  ConfigPingCeiling,
+  /// `GetLobbyAuthContext()`.
+  AuthContext,
+  /// `((AuthContext*)a)->SetDoAutoRefresh(false)`.
+  AuthStopRefresh,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `GetMyLobbyClient()`.
+  MyClient,
+  /// `LobbyGetChatCommandParser()`.
+  Parser,
+  /// a lobby call: 1 `LobbyKillPings(NULL)`, 2 `LobbyGameDisconnected(b != 0)`, 3 `LobbyLeaveGame(b != 0)`
+  /// (its result), 4 `LobbyShowLobbyTab()`, 5 `LobbyHostGame()`, 6 `LobbyGetNumPingsToDo()`, 7 `LobbyLogout(false)`,
+  /// 8 `LobbyShowInternetScreen()`.
+  Lobby,
+  /// `LobbyHandleStagingMessage(((RoutingOp*)a)->GetData().get(), (LobbyClient*)b)`.
+  HandleStaging,
+  /// `LobbyClientLeftGame((LobbyClient*)a)`.
+  ClientLeftGame,
+  /// `LobbyClientKicked((LobbyClient*)a, b != 0)`.
+  ClientKicked,
+  /// `LobbyKickClient((LobbyClient*)a, b != 0)`.
+  KickClient,
+  /// `LobbyPingGame((LobbyGame*)a, false)`.
+  PingGame,
+  /// `LobbyJoinGame((LobbyGame*)a)`.
+  JoinGame,
+  /// `LobbySetClientBlocked((LobbyClient*)a, b != 0, 4)`.
+  SetBlocked,
+  /// `LobbySetClientIgnored((LobbyClient*)a, b != 0, 4)`.
+  SetIgnored,
+  /// `LobbySetLastRoom(((LobbyServer*)a)->GetName(), ((LobbyGroup*)b)->GetName())`.
+  SetLastRoom,
+  /// `LobbyGetReconnectId(((LobbyServer*)a)->GetAddress())`.
+  ReconnectId,
+  /// `LobbySetReconnectId(((LobbyServer*)a)->GetAddress(), b)`.
+  SetReconnectId,
+  /// `new ClientOptionsPopup` held by a `SmartPtr`, `Init(a, b, c)`, `LobbyOpenPopup(it, PopupFlag_StandardPopup,
+  /// -1, -1)`.
+  ClientOptions,
+  /// `new FriendOptionsPopup`, `Init(a, b)`, opened as `ClientOptions`.
+  FriendOptions,
+  /// a server's (`a`) value: 0 `GetClients().get()`, 1 `GetConnection().get()`, 2 `GetMyClient()`, 3
+  /// `GetMyClientId()`, 4 `GetName() == LobbyGetLastServerName()`, 5 `GetNumClients()`, 6
+  /// `HasAddress(GetLobbyConfig()->mLanguage)`, 7 `IsConnected()`, 8 `GetGroupCount()`, 9
+  /// `GetQueryingGroups()`, 10 `GetLastPing()`.
+  ServerNum = 50,
+  /// `((LobbyServer*)a)->FindClientByWONId(b)`.
+  ServerFindByWonId,
+  /// `((LobbyServer*)a)->GetGroup(b)`.
+  ServerGroup,
+  /// `((LobbyServer*)a)->GetClient(b)`.
+  ServerClient,
+  /// `((LobbyServer*)a)->GroupAt(b)`.
+  ServerGroupAt,
+  /// `((LobbyServer*)a)->AddClientToGroup((LobbyClient*)b, (unsigned char)c, (LobbyGroup*)d)`.
+  ServerAddClientToGroup,
+  /// `((LobbyServer*)a)->AddGroup(((RoutingOp*)b)->GetGroupInfo().get())`.
+  ServerAddGroup,
+  /// `((LobbyServer*)a)->AddClient(((RoutingOp*)b)->GetClientInfo().get())`.
+  ServerAddClient,
+  /// `((LobbyServer*)a)->RemoveGroup(b)`, held.
+  ServerRemoveGroup,
+  /// `((LobbyServer*)a)->RemoveClient(b)`, held.
+  ServerRemoveClient,
+  /// `((LobbyServer*)a)->RemoveClientFromGroup(b, (LobbyGroup*)c)`, held.
+  ServerRemoveClientFromGroup,
+  /// a server's (`a`) call: 1 `Disconnect()`, 2 `GetClients()->ClearInvited()`, 3 `UpdateFriends()`, 4
+  /// `ClearGroups()`, 5 `SetQueryingGroups(c != 0)`, 6 `SetLastPing(c)`, 7 `SetMyClientId(c)`, 8
+  /// `SetConnection((RoutingConnection*)c)`.
+  ServerDo,
+  /// `RoutingClientMap m; ((RoutingOp*)b)->GetClients(m); ((LobbyServer*)a)->SyncClients(m)`.
+  ServerSyncClients,
+  /// `RoutingGroupMap m; ((RoutingOp*)b)->GetGroups(m); ((LobbyServer*)a)->SyncGroups(m, c != 0)`.
+  ServerSyncGroups,
+  /// `((LobbyFriend*)a)->GetAddress() == ((LobbyServer*)b)->GetAddress()`.
+  FriendAtServer,
+  /// `L->mServerList`'s: 0 `GetCount()`, 1 `IsEmpty()`.
+  ListNum,
+  /// `L->mServerList->ServerAt(a)`.
+  ListAt,
+  /// `L->mServerList->AddressAt(a) == ((LobbyServer*)b)->GetAddress()`.
+  ListAddressIs,
+  /// a group's (`a`) value: 0 `GetId()`, 1 `IsGameGroup()`, 2 `IsPublicChatGroup()`, 3 `GetNumClients()`, 4
+  /// `IsPasswordProtected()`, 5 `IsAskToJoin()`, 6 `GetCaptainId()`, 7 `GetName().length()`, 8
+  /// `GetName() == LobbyGetLastRoomName()`, 9 `GetClients().get()`.
+  GroupNum,
+  /// `((LobbyGroup*)a)->FindClient(b)`.
+  GroupFindClient,
+  /// `((LobbyGroup*)a)->SetCaptain(b, (LobbyClient**)c)`.
+  GroupSetCaptain,
+  /// a client's (`a`) value: 0 `GetClientId()`, 1 `GetWONUserId()`, 2 `IsFriend()`, 3 `IsAnonymous()`, 4
+  /// `IsIgnored()`, 5 `IsBlocked()`, 6 `IsInChatGroup()`, 7 `GetChatGroupId()`, 8 `IsInGameGroup()`, 9
+  /// `GetGameGroupId()`, 10 `IsAway()`, 11 `IsModerator()`, 12 `IsAdmin()`, 13 `GetCDKeyId()`.
+  ClientNum,
+  /// a client's (`a`) call: 1 `SetMemberFlags((unsigned char)c, d != 0)`, 2 `SetClientFlags(c)`, 3
+  /// `SetIsFriend(c != 0)`, 4 `SetInvited(c != 0)`.
+  ClientDo,
+  /// `((LobbyClient*)a)->IsTeammate((LobbyClient*)b)`.
+  ClientIsTeammate,
+  /// a friend's (`a`) value: 0 `GetFlags()`, 1 `GetLastLocate()`, 2 `GetUserId()`, 3 `GetAnonymous()`, 4
+  /// `GetLastSearch()`, 5 `GetSearchStart()`.
+  FriendNum,
+  /// a friend's (`a`) call: 1 `SetAnonymous(c != 0)`, 2 `SetStatusFromClient((LobbyClient*)c)`, 3
+  /// `SetLocation(server c's address, its name, d)`, 4 `ClearLocation()`, 5 `StartLocate(c)`, 6
+  /// `SetLastSearch(c)`, 7 `EndLocate(c)`.
+  FriendDo,
+  /// `LobbyFindFriend(a)`.
+  FindFriend,
+  /// `LobbyAddFriend(((LobbyClient*)a)->GetName(), ((LobbyClient*)a)->GetWONUserId())`.
+  AddFriendOfClient,
+  /// `LobbyAddFriend(*(GUIString*)a, b)`.
+  AddFriendNamed,
+  /// `LobbyRemoveFriend(a)`.
+  RemoveFriend,
+  /// `LobbyGetFriendCount()`.
+  FriendCount,
+  /// `LobbyGetFriendAt(a)`.
+  FriendAt,
+  /// a game's (`a`) value: 0 `GetAskToJoin()`, 1 `GetInviteOnly()`, 2 `GetGameType()`, 3 `GetGroupId()`, 4
+  /// `GetIsHost()`, 5 `GetIsFiltered()`, 6 `GetHasPassword()`, 7 `CanJoin()`, 8 `GetPing()`, 9 `GetSkill()`.
+  GameNum,
+  /// a game's (`a`) call: 1 `SetGroupId(c)`, 2 `SetClients((LobbyClientList*)c)`, 3 `SetInvited(c != 0)`, 4
+  /// `ReadGroup((LobbyGroup*)c)`.
+  GameDo,
+  /// `((LobbyGame*)a)->ReadSummaryBuffer(((RoutingOp*)b)->GetData().get())`.
+  GameReadSummary,
+  /// `new GUIString(((LobbyGame*)a)->GetName())` (b 0) or its `GetPassword()` (b 1).
+  GameText,
+  /// `LobbyGame::CreateGame(LobbyGameType_Internet)`, held.
+  GameCreate,
+  /// `L->mGameList`'s call: 1 `Clear()`, 2 `Rewind()`, 3 `HasMore()`, 4 `Next()`, 5 `GetGame(b)`, 6
+  /// `AddGame((LobbyGame*)b)`, 7 `RemoveGame(b)` (held), 8 `GetOrCreateGame(b, (bool*)c)`.
+  GameList,
+  /// `((RoutingOp*)a)->Num(b)`.
+  RNum = 100,
+  /// `((RoutingOp*)a)->SetNum(b, c)`.
+  RSetNum,
+  /// `((RoutingOp*)a)->SetText(b, text c)`.
+  RSetText,
+  /// `((RoutingOp*)a)->DataType() == L->mGameDataType`.
+  RIsGameData,
+  /// `((RoutingOp*)a)->Recipients()`'s front, or -1 when empty.
+  RRecipient,
+  /// `((RoutingOp*)a)->mConnection.get()`.
+  RConnection,
+  /// `new RoutingOp((RoutingConnection*)a, (RoutingOpType)b)`, held.
+  RNew,
+  /// `((RoutingOp*)a)->GetDataObjects(list)` into a new list (held: `ListFree` kind 1); its size.
+  RDataObjects,
+  /// the data object `b` of list `a`: its `mLinkId`.
+  DataObjectLink,
+  /// `((LobbyGame*)a)->ReadSummaryBuffer(list b's object c's mData.get())`.
+  GameReadDataObject,
+  /// `(intptr_t)static_cast<RefCount*>(((SocketOp*)a)->GetSocket())`.
+  OpSocket,
+  /// `new RoutingConnection`, held.
+  ConnNew,
+  /// a connection's (`a`) call: 1 `SetAuth((AuthContext*)b, AUTH_TYPE_PERSISTENT)`, 2 the twenty notification
+  /// completions (`SetOpCompletion(type, new RoutingOpCompletion(code, L))`), 3 `SetCloseCompletion(new
+  /// LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, L))`, 4 `SubscribeDataObject(0xffff,
+  /// L->mGameDataType, false, new RoutingOpCompletion(21, L))`, 5 `IsConnected()`, 6 `AbortServerShutdown(NULL)`,
+  /// 7 `BecomeModerator(b != 0, NULL)`, 8 `LeaveGroup(b, NULL)`, 9 `CancelJoinGroup(b, true, NULL)`, 10
+  /// `ReplaceDataObject(b, L->mGameDataType, gEmptyWideString, NULL)`.
+  ConnDo,
+  /// `((RoutingConnection*)a)->SendData((const ByteBuffer*)b, 0, c, NULL)`.
+  ConnSendData,
+  /// `WriteBuffer w(0, true); ((LobbyGame*)b)->WriteSummary(w); ((RoutingConnection*)a)->CreateDataObject(true,
+  /// c, L->mGameDataType, gEmptyWideString, w.ToByteBuffer(true).get(), NULL)`.
+  ConnAdvertise,
+  /// `((RoutingConnection*)a)->SetClientFlags(b, c, d, e, NULL)`.
+  ConnSetClientFlags,
+  /// `((RoutingConnection*)a)->SetGroupFlags(b, c, d, 0, 0, NULL)`.
+  ConnSetGroupFlags,
+  /// `((RoutingConnection*)a)->BanClient(b & 0xffff, b >> 16 != 0, c, text d, e, NULL)`.
+  ConnBan,
+  /// `((RoutingConnection*)a)->MuteClient(b & 0xffff, b >> 16 != 0, c, text d, e, NULL)`.
+  ConnMute,
+  /// `((RoutingConnection*)a)->BanClientByWONId(b, false, 0, std::wstring(gEmptyWideString), c, NULL)`.
+  ConnBanByWonId,
+  /// `((RoutingConnection*)a)->MuteClientByWONId(b, false, 0, std::wstring(gEmptyWideString), c, NULL)`.
+  ConnMuteByWonId,
+  /// `((RoutingConnection*)a)->AcceptClient(b, c, d != 0, gEmptyWideString, NULL)`.
+  ConnAccept,
+  /// `((RoutingConnection*)a)->InviteClient(b, c, d != 0, text e, NULL)`.
+  ConnInvite,
+  /// `((RoutingConnection*)a)->SendChat(text b, c, d, NULL)`.
+  ConnSendChat,
+  /// `((RoutingConnection*)a)->SendChatTo(text b, c, the d ids at e (uint16_t), NULL)`.
+  ConnSendChatTo,
+  /// `((RoutingConnection*)a)->SendServerAlert(text b, NULL)`.
+  ConnAlert,
+  /// `((RoutingConnection*)a)->StartServerShutdown(text b, c, NULL)`.
+  ConnStartShutdown,
+  /// `new ServerConnectionConnectOp((RoutingConnection*)a, ((LobbyServer*)b)->GetAddress())`, held.
+  ConnectOpNew,
+  /// the parser's (`a`) value: 0 `GetRoomFlags()`, 1 `GetCommand()`, 2 `GetDuration()`, 3 `GetTarget()`, 4
+  /// `GetClients()`.
+  ParserNum = 140,
+  /// `new GUIString(((ChatCommandParser*)a)->GetText())`.
+  ParserText,
+  /// `((ChatCommandParser*)a)->SetInput(((LobbyClient*)b)->GetName())`.
+  ParserSetInput,
+  /// `new LobbyClientIterator((LobbyClientList*)a)` (held: `ListFree` kind 3).
+  IterNew,
+  /// the iterator's `HasMore()`.
+  IterHasMore,
+  /// the iterator's `Next()`.
+  IterNext,
+  /// an event's (`a`) member: 1 the accept's `mClient.get()`, 2 its `mAccepted`, 3 the friend action's
+  /// `mFriend.get()`, 4 its `mAction`, 5 its `mValue`, 6 the jump's `mGroupId`, 7 Quick Play's `mGameType`, 8 the
+  /// client action's `GetRoomSpec()`, 9 its `GetClient()`, 10 its `GetAction()`, 11 the join room's `mGroupId`, 12
+  /// the join friend's room `mFriend.get()`, 13 `mComponent`.
+  EventNum,
+  /// `L->GetServer(event a's mAddress)` (a create room, join room or query server groups event).
+  EventServer,
+  /// `((LobbyServer*)b)->GetAddress() == ((JumpToRoomEvent*)a)->mAddress`.
+  EventAddressIs,
+  /// `((LobbyGame*)a)->GetName() == ((JumpToRoomEvent*)b)->mRoomName`.
+  GameNameIsEvent,
+  /// the friend's (`a`) `GetAddress().IsValid()`.
+  FriendAddressValid,
+  /// `L->GetServer(((LobbyFriend*)a)->GetAddress())`.
+  FriendServer,
+  /// `LobbyDoDialog(dialog a)` (1 add friend, 2 admin action, 3 bad user, 4 create room, 5 password, 6 room).
+  DialogDo,
+  /// dialog a's `Reset`: create room `Reset(b != 0)`, password `Reset()`, admin action `Reset(b, (LobbyClient*)c)`,
+  /// add friend `Reset()`.
+  DialogReset,
+  /// a dialog's text, new: 1 the create room's `GetRoomName()`, 2 its `GetPassword()`, 3 the password's
+  /// `GetPassword()`, 4 the admin action's `GetExplanation()`, 5 the add friend's `GetName()`.
+  DialogText,
+  /// a dialog's value: 1 the admin action's `GetApplyToServer()`, 2 its `GetNumSeconds()`, 3 the room dialog's
+  /// `GetParent() != NULL`.
+  DialogNum,
+  /// `GetLobbyWindow()->EndDialog(-1, NULL, L->mRoomDialog.get())`.
+  RoomDialogEnd,
+  /// `RoutingBadUserList l; ((RoutingOp*)a)->GetBadUsers(l); L->mBadUserDialog->SetUserList(l, b != 0)`.
+  BadUserSet,
+  /// `L->mBadUserDialog->GetIds(ids)`, each pushed to sink `a` by `ee_won_routelogic_push`.
+  BadUserIds,
+  /// `ClientChangedEvent((LobbyClient*)a, b, c)`.
+  EvClientChanged = 170,
+  /// `GroupChangedEvent((LobbyGroup*)a, (LobbyServer*)b, c)`.
+  EvGroupChanged,
+  /// `FriendChangedEvent((LobbyFriend*)a, b)`.
+  EvFriendChanged,
+  /// `AnnounceFriendEvent((LobbyFriend*)a, b, c)`.
+  EvAnnounceFriend,
+  /// `AnnounceClientLocationEvent((LobbyClient*)a, chat group b's name, game group c's name (empty for NULL), d)`.
+  EvAnnounceClient,
+  /// `GameChangedEvent((LobbyGame*)a, b)`.
+  EvGameChanged,
+  /// `GroupInvitationEvent(4, game a's name, its group id, (LobbyClient*)b, c != 0, op d's comment, false)`.
+  EvInvitationRecv,
+  /// `GroupInvitationEvent(4, group a's name, its id, (LobbyClient*)b, c != 0, text d, true)`.
+  EvInvitationSent,
+  /// `GroupJoinAttemptEvent(6, (LobbyClient*)a, op b's comment)`.
+  EvJoinAttempt,
+  /// `RecvChatEvent(a, b, (LobbyClient*)c, op d's text, (LobbyClient*)e)`.
+  EvRecvChat,
+  /// `AlertEvent(4, a, a == 1 ? op b's time : 0, op b's text)`.
+  EvAlert,
+  /// `ClientModeratedEvent((LobbyClient*)a, b, the name of c (a group when d & 0x100, else a server), d & 0xff,
+  /// op e's time, true, op e's comment)`.
+  EvModerated,
+  /// `LeftRoomEvent(a, b != 0, c != 0)`.
+  EvLeftRoom,
+  /// `SyncGameListEvent(L->mGameList.get())`.
+  EvSyncGameList,
+  /// `JoinedRoomEvent(server a's name, group b's name, c, server a's my client id, group b's clients)`.
+  EvJoinedRoom,
+  /// `ServerChangedEvent((LobbyServer*)a, b)`.
+  EvServerChanged,
+  /// `SetChatInputEvent(2, client a's name, b, false)`.
+  EvSetChatInput,
+  /// `LobbySendEventTo(new ChatCommandErrorEvent(LOBBY_STRING(RoutingLogic_NotCaptain_String)), (Component*)a)`.
+  EvNotCaptain,
+  /// `LobbyGetUDPManager()`.
+  UdpManager = 200,
+  /// `new RoutingGetUserStatusOp(L->mServerList->AddressAt(a), (UDPManager*)b)`, held.
+  StatusOpNew,
+  /// `((RoutingGetUserStatusOp*)a)->AddWONUserId(b)`.
+  StatusOpAddId,
+  /// `((RoutingGetUserStatusOp*)a)->SetFriendStatusMap(the c ids at b, each 0)`.
+  StatusOpSetMap,
+  /// `L->RunOp((AsyncOp*)a, new LogicCompletion<RoutingLogic>(&RoutingLogic::GetUserStatusComplete, L), 10000)`.
+  StatusOpRun,
+  /// `L->mServerList->FindServer(((RoutingGetUserStatusOp*)a)->GetDestAddr())`.
+  StatusOpServer,
+  /// `((RoutingGetUserStatusOp*)a)->GetFriendStatusMap()`, each pair pushed to sink `b` (id, status).
+  StatusOpMap,
+  /// `LobbyGetAccountServers()`.
+  AccountServers,
+  /// the add-friend lookup: `GetUserIdFromNameOp` of text `b` on servers `a`, run behind its status box; its user
+  /// id (its status in `*(int*)c`).
+  UserIdLookup,
+  /// `LobbyGetServerList()`.
+  LobbyServerList,
+  /// `((LobbyServerList*)a)->FindServer(((RustServerOp*)b)->GetAddr())`.
+  ServerListFind,
+  /// a connection-less group list op over `RustServerOp` b's replies, its groups into server a
+  /// (`SyncGroups(m, false)`).
+  SyncGroupsOfQuery,
+  /// `RustServerOp::NewGroupListReq(server a's address, 0x29)` run tracked with
+  /// `LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone, L)`.
+  GroupQueryRun,
+  /// `LobbyGetRoomDirServers()`, held.
+  RoomDirServers,
+  /// `RustServerOp::NewGetDir(context a, config's mProductDirectory, 0x04000622, {"_C", "_L"})`, held, run behind
+  /// the getting-rooms status box.
+  DirOpRun,
+  /// op `a`'s `GetEntities(EE_WON_REQOP_DIR_LIST)` as a new list (held: `ListFree` kind 2); 1 if empty.
+  DirEntities,
+  /// `((ServerContext*)a)->NotifyFailed(((RustServerOp*)b)->GetCurAddr())`.
+  DirNotifyFailed,
+  /// `L->mServerList->UpdateFromDirectory(list a)`.
+  DirUpdate,
+};
+
+/// The calls into the object (`ee_won_routelogic_call`).
+enum class EeWonRouteLogicCall : uint32_t {
+  /// `HostGame((LobbyGame*)a)`: 0 or 1.
+  HostGame = 1,
+  /// `JoinGame((LobbyGame*)a)`.
+  JoinGame,
+  /// `GetClientList()`.
+  ClientList,
+  /// `GetMyClient()`.
+  MyClient,
+  /// `SendToCaptain(a)`.
+  SendToCaptain,
+  /// `BroadcastToGame(a)`.
+  BroadcastToGame,
+  /// `SendToClient((LobbyClient*)a, b)`.
+  SendToClient,
+  /// `AdvertiseGame((LobbyGame*)a)`.
+  Advertise,
+  /// `RemoveGameAdvertisement`.
+  RemoveAdvertisement,
+  /// `KickClient((LobbyClient*)a, b != 0)`.
+  KickClient,
+  /// `SetGameInProgress(a != 0)`.
+  SetGameInProgress,
+  /// `Reset()` (the idle check).
+  Reset,
+  /// `LeaveGame`.
+  LeaveGame,
+  /// `Suspend()`.
+  Suspend,
+  /// `Resume()`.
+  Resume,
+  /// `Logout()`.
+  Logout,
+  /// `EnterInternetScreen(a != 0)`.
+  EnterInternet,
+  /// `HandleControlEvent`: a 1 change room, 2 add friend, 3 anonymous check, 4 dirty-word check, 5 refresh
+  /// friends, 6 refresh the game list.
+  Control,
+  /// `HandleComponentEvent((ComponentEvent*)a)` of type `b`.
+  Event,
+  /// a routing notification `a` (1..21, `RoutingOpCompletion`'s code) on op `b`.
+  Notify,
+  /// `GetUserStatusComplete((AsyncOp*)a)`.
+  UserStatusDone,
+  /// `QueryServerGroupsDone((AsyncOp*)a)`.
+  GroupsDone,
+  /// `ConnectionClosed((AsyncOp*)a)`.
+  ConnectionClosed,
+  /// a member: 0 the current server, 1 the chat room, 2 the pending server, 3 the game room, 4 the wait op, 5
+  /// suppress idle, 6 idle, 7 have the game list, 8 want to be moderator, 9 the last server refresh.
+  Field,
+};
+
 /// The inward calls (the C++ shells' virtuals and methods).
 enum class EeWonScrollerCall : uint32_t {
   /// `MouseDown(a, b, c)`.
@@ -8833,6 +9257,9 @@ struct EeWonRoot;
 /// `RoutingConnection`'s op list, completions and steps.
 struct EeWonRouteConn;
 
+/// The Internet lobby's logic.
+struct EeWonRouteLogic;
+
 /// A routing op, as the C++ `RoutingOp` holds it.
 struct EeWonRouteOp;
 
@@ -10604,6 +11031,14 @@ struct EeWonRouteConnHooks {
   void (*server_close_hook)(void *conn);
   void (*server_kill_hook)(void *conn);
 };
+
+using EeWonRouteLogicHostFn = ptrdiff_t(*)(void *obj,
+                                           EeWonRouteLogicOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           ptrdiff_t c,
+                                           ptrdiff_t d,
+                                           ptrdiff_t e);
 
 /// A request's fields from the C++ (strings as UTF-16 LE bytes).
 struct EeWonRouteRequest {
@@ -17847,6 +18282,30 @@ void ee_won_routeconn_close_hook(const EeWonRouteConn *r);
 /// # Safety
 /// As `ee_won_routeconn_set_completion`.
 void ee_won_routeconn_kill_hook(const EeWonRouteConn *r);
+
+/// A new logic for the shell `obj` (the members as the constructor sets them).
+EeWonRouteLogic *ee_won_routelogic_new(void *obj, EeWonRouteLogicHostFn host);
+
+/// Frees a logic, giving back the references it holds.
+///
+/// # Safety
+/// `p` is NULL or from `ee_won_routelogic_new`, not used again.
+void ee_won_routelogic_free(EeWonRouteLogic *p);
+
+/// One of the logic's methods (`EeWonRouteLogicCall`).
+///
+/// # Safety
+/// `p` is from `ee_won_routelogic_new`; the arguments are what the call says.
+ptrdiff_t ee_won_routelogic_call(const EeWonRouteLogic *p,
+                                 EeWonRouteLogicCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b);
+
+/// Pushes a number to a sink an op was given (`BadUserIds`, `StatusOpMap`).
+///
+/// # Safety
+/// `sink` is the pointer the op was given.
+void ee_won_routelogic_push(void *sink, uint64_t value);
 
 /// A request's message into `sink`.
 ///

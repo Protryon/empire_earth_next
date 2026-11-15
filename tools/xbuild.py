@@ -614,6 +614,8 @@ WON_TESTS = {
     # PingLogic (with PingGameOp), AccountLogic and InitLogic as Rust objects (golden:
     # rust/crates/ee_won/src/golden_logics.txt)
     "won_logics_test": [],
+    # RoutingLogic as a Rust object (golden: rust/crates/ee_won/src/golden_routelogic.txt)
+    "won_routelogic_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
