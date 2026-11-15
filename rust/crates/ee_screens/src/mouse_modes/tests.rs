@@ -269,6 +269,9 @@ fn the_cinematic_keys() {
         [EE_SCREENS_MF_CINE_SCREENSHOT]
     );
     assert_eq!(cinematic(vec![key(EE_SCREENS_MF_KEY_F9, EE_SCREENS_MF_KEY_JUST_PRESSED)]), [] as [i64; 0]);
+    // held but not just pressed: neither F3 nor F9
+    let held = EE_SCREENS_MF_KEY_FOUND | EE_SCREENS_MF_KEY_HELD;
+    assert_eq!(cinematic(vec![key(EE_SCREENS_MF_KEY_F3, held), key(EE_SCREENS_MF_KEY_F9, held)]), [] as [i64; 0]);
 }
 
 #[test]

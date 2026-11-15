@@ -15,8 +15,8 @@ use crate::command_panel::{
 use crate::main_form::{
     EeScreensMainFormIo, EE_SCREENS_MF_FIELD_CURSOR_LOCKED, EE_SCREENS_MF_OP_CHAT_LOG_ERROR,
     EE_SCREENS_MF_OP_MAIN_BACKGROUND, EE_SCREENS_MF_OP_MAIN_ENTITY_GROUP, EE_SCREENS_MF_OP_PLAY_SOUND,
-    EE_SCREENS_MF_OP_REFRESH_MAIN_FORM, EE_SCREENS_MF_OP_SET_FIELD, EE_SCREENS_MF_OP_TEXT_GET,
-    EE_SCREENS_MF_OP_TEXT_STRING,
+    EE_SCREENS_MF_OP_REFRESH_MAIN_FORM, EE_SCREENS_MF_OP_RESOURCE, EE_SCREENS_MF_OP_SET_FIELD,
+    EE_SCREENS_MF_OP_TEXT_GET, EE_SCREENS_MF_OP_TEXT_STRING,
 };
 use crate::mouse_modes::{EE_SCREENS_MF_OP_MD_FIRST, EE_SCREENS_MF_OP_MD_POINTER, EE_SCREENS_MF_OP_MD_UI_STATE};
 
@@ -688,6 +688,19 @@ pub const EE_SCREENS_SB_DO_RIGHT_UP: u32 = 1;
 pub const EE_SCREENS_SB_DO_COPY_DATA: u32 = 2;
 pub const EE_SCREENS_SB_DO_HELP: u32 = 3;
 
+/// `kResourceGold` (`mResourceCaps`' index).
+pub const EE_SCREENS_SB_RESOURCE_GOLD: i64 = 5;
+
+/// `EEDecodeTradeButton` (0x26ddb7): a market button (0x5dc..=0x5e3: buy food, wood, stone, gold, then sell them)
+/// as its resource (`mResourceCaps`' index: 2, 3, 4, 6) and whether it sells; `None` for the others.
+pub fn decode_trade(button: i64) -> Option<(i64, bool)> {
+    if !(0x5dc..=0x5e3).contains(&button) {
+        return None;
+    }
+    let k = button - 0x5dc;
+    Some(([2, 3, 4, 6][(k & 3) as usize], k > 3))
+}
+
 /// One button op as the form's ops over `form` (the form's host): the shared ones as the form's own, the others as
 /// its status button part.
 pub fn form_op(
@@ -716,6 +729,27 @@ pub fn form_op(
         EE_SCREENS_SB_OP_CHAT_REASON => form(EE_SCREENS_MF_OP_CHAT_LOG_ERROR, 0, 0, &mut io),
         EE_SCREENS_SB_OP_REASON_STRING => form(EE_SCREENS_MF_OP_TEXT_STRING, a, 0, &mut io),
         EE_SCREENS_SB_OP_HELP_TEXT_READ => form(EE_SCREENS_MF_OP_TEXT_GET, b, a, &mut io),
+        EE_SCREENS_SB_OP_DECODE_TRADE => match decode_trade(a) {
+            Some((resource, sell)) => resource * 2 + sell as i64,
+            // (the original's outputs are unset then; the presses ask only the market's buttons)
+            None => {
+                if b == 0 {
+                    -1
+                } else {
+                    0
+                }
+            }
+        },
+        EE_SCREENS_SB_OP_CAN_AFFORD_TRADE => match decode_trade(a) {
+            // 100 of the resource to sell, or the gold the purchase costs (the price first)
+            Some((resource, true)) => (form(EE_SCREENS_MF_OP_RESOURCE, resource - 2, 0, &mut io) >= 100) as i64,
+            Some((resource, false)) => {
+                io.n[0] = 0;
+                let cost = form(EE_SCREENS_MF_OP_SB + EE_SCREENS_SB_OP_TRADE_PRICE, resource, 0, &mut io);
+                (form(EE_SCREENS_MF_OP_RESOURCE, EE_SCREENS_SB_RESOURCE_GOLD - 2, 0, &mut io) >= cost) as i64
+            }
+            None => 0,
+        },
         _ => {
             io.n[0] = c;
             form(EE_SCREENS_MF_OP_SB + op, a, b, &mut io)
@@ -774,6 +808,49 @@ mod form_tests {
         assert_eq!(ops(EE_SCREENS_SB_OP_HELP_TEXT_READ, 0x1000, 12, 0).0, [(EE_SCREENS_MF_OP_TEXT_GET, 12, 0x1000, 0)]);
     }
 
+    /// The button op's answer over a form host answering `answer(op, a)`.
+    fn answered(op: u32, a: i64, answer: impl Fn(u32, i64) -> i64) -> i64 {
+        form_op(&mut |op, a, _, _| answer(op, a), op, a, 0, 0)
+    }
+
+    #[test]
+    fn the_boundaries() {
+        // 100 to sell is enough; the gold equal to the price is enough
+        assert_eq!(answered(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, 0x5e0, |_, _| 100), 1);
+        assert_eq!(answered(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, 0x5e0, |_, _| 99), 0);
+        assert_eq!(answered(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, 0x5dc, |_, _| 70), 1);
+        let price = EE_SCREENS_MF_OP_SB + EE_SCREENS_SB_OP_TRADE_PRICE;
+        assert_eq!(answered(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, 0x5dc, |op, _| if op == price { 71 } else { 70 }), 0);
+        // a unit found but not answered true: not found
+        assert_eq!(answered(EE_SCREENS_SB_OP_FIRST_SELECTED, 0, |_, _| 2), 0);
+        assert_eq!(answered(EE_SCREENS_SB_OP_FIRST_SELECTED, 0, |_, _| 3), 1);
+    }
+
+    #[test]
+    fn the_market_buttons() {
+        assert_eq!(decode_trade(0x5db), None);
+        assert_eq!(decode_trade(0x5e4), None);
+        let all: Vec<_> = (0x5dc..=0x5e3).map(|b| decode_trade(b).unwrap()).collect();
+        assert_eq!(all, [(2, false), (3, false), (4, false), (6, false), (2, true), (3, true), (4, true), (6, true)]);
+        assert_eq!(ops(EE_SCREENS_SB_OP_DECODE_TRADE, 0x5e1, 0, 0), (vec![], 7));
+        assert_eq!(ops(EE_SCREENS_SB_OP_DECODE_TRADE, 7, 0, 0), (vec![], -1));
+        assert_eq!(ops(EE_SCREENS_SB_OP_DECODE_TRADE, 7, 1, 0), (vec![], 0));
+        // each form op answers op * 10 + 3: the resource (63 * 10 + 3) against 100, against the price
+        let sell = ops(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, 0x5e3, 0, 0);
+        assert_eq!(sell, (vec![(EE_SCREENS_MF_OP_RESOURCE, 4, 0, 0)], 1));
+        let buy = ops(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, 0x5dd, 0, 0);
+        assert_eq!(
+            buy.0,
+            [(EE_SCREENS_MF_OP_SB + EE_SCREENS_SB_OP_TRADE_PRICE, 3, 0, 0), (EE_SCREENS_MF_OP_RESOURCE, 3, 0, 0)]
+        );
+        assert_eq!(
+            buy.1,
+            ((EE_SCREENS_MF_OP_RESOURCE as i64 * 10 + 3)
+                >= ((EE_SCREENS_MF_OP_SB + EE_SCREENS_SB_OP_TRADE_PRICE) as i64 * 10 + 3)) as i64
+        );
+        assert_eq!(ops(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, 1, 0, 0), (vec![], 0));
+    }
+
     #[test]
     fn the_others_are_the_forms_button_part() {
         let shared = [
@@ -787,6 +864,8 @@ mod form_tests {
             EE_SCREENS_SB_OP_CHAT_REASON,
             EE_SCREENS_SB_OP_REASON_STRING,
             EE_SCREENS_SB_OP_HELP_TEXT_READ,
+            EE_SCREENS_SB_OP_DECODE_TRADE,
+            EE_SCREENS_SB_OP_CAN_AFFORD_TRADE,
         ];
         for op in (1..=EE_SCREENS_SB_OP_CLASS_NAME_ID).filter(|op| !shared.contains(op)) {
             let (log, r) = ops(op, -5, 6, 77);

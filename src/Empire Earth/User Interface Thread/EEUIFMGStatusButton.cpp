@@ -236,14 +236,6 @@ int64_t EEStatusButtonOp(EEUIFMGStatusButton* theButton, EEComplexUnit* inFirst,
         gUserInterface->AddChatLogEntry(theString, 0);
         break;
     }
-    case EE_SCREENS_SB_OP_CAN_AFFORD_TRADE: return EECanAffordTrade(inA);
-    case EE_SCREENS_SB_OP_DECODE_TRADE: {
-        long theResource;
-        bool theSell;
-        if (!EEDecodeTradeButton(inA, theResource, theSell) && inB == 0)   // (GetHelpString, b 1, ignores the result)
-            return -1;
-        return (int64_t)theResource * 2 + (theSell ? 1 : 0);
-    }
     case EE_SCREENS_SB_OP_SHIFT: return UIControl::ShiftKeyPressed();
     case EE_SCREENS_SB_OP_NODE_KIND: return theNode->mData->mKind;
     case EE_SCREENS_SB_OP_NODE_CLASS: return theNode->mData->mUnitClass;
