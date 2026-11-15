@@ -137,32 +137,32 @@ pub trait CalamityIo {
     fn io(&mut self, op: u32, value: *mut c_void) -> c_long;
 }
 
-fn read_ulong<H: CalamityIo>(h: &mut H, field: &mut c_ulong) -> c_long {
+pub(crate) fn read_ulong<H: CalamityIo>(h: &mut H, field: &mut c_ulong) -> c_long {
     h.io(EE_CALAMITY_IO_READ_ULONG, field as *mut c_ulong as *mut c_void)
 }
-fn read_long<H: CalamityIo>(h: &mut H, field: &mut c_long) -> c_long {
+pub(crate) fn read_long<H: CalamityIo>(h: &mut H, field: &mut c_long) -> c_long {
     h.io(EE_CALAMITY_IO_READ_LONG, field as *mut c_long as *mut c_void)
 }
-fn read_f32<H: CalamityIo>(h: &mut H, field: &mut f32) -> c_long {
+pub(crate) fn read_f32<H: CalamityIo>(h: &mut H, field: &mut f32) -> c_long {
     h.io(EE_CALAMITY_IO_READ_FLOAT, field as *mut f32 as *mut c_void)
 }
-fn read_bool<H: CalamityIo>(h: &mut H, field: &mut bool) -> c_long {
+pub(crate) fn read_bool<H: CalamityIo>(h: &mut H, field: &mut bool) -> c_long {
     // the byte crosses as 0 or 1 (the C++ reads into a `bool`)
     h.io(EE_CALAMITY_IO_READ_BOOL, field as *mut bool as *mut c_void)
 }
 fn part<H: CalamityIo>(h: &mut H, op: u32) -> c_long {
     h.io(op, std::ptr::null_mut())
 }
-fn write_ulong<H: CalamityIo>(h: &mut H, mut value: c_ulong) -> c_long {
+pub(crate) fn write_ulong<H: CalamityIo>(h: &mut H, mut value: c_ulong) -> c_long {
     h.io(EE_CALAMITY_IO_WRITE_ULONG, &mut value as *mut c_ulong as *mut c_void)
 }
-fn write_long<H: CalamityIo>(h: &mut H, mut value: c_long) -> c_long {
+pub(crate) fn write_long<H: CalamityIo>(h: &mut H, mut value: c_long) -> c_long {
     h.io(EE_CALAMITY_IO_WRITE_LONG, &mut value as *mut c_long as *mut c_void)
 }
-fn write_f32<H: CalamityIo>(h: &mut H, mut value: f32) -> c_long {
+pub(crate) fn write_f32<H: CalamityIo>(h: &mut H, mut value: f32) -> c_long {
     h.io(EE_CALAMITY_IO_WRITE_FLOAT, &mut value as *mut f32 as *mut c_void)
 }
-fn write_bool<H: CalamityIo>(h: &mut H, mut value: bool) -> c_long {
+pub(crate) fn write_bool<H: CalamityIo>(h: &mut H, mut value: bool) -> c_long {
     h.io(EE_CALAMITY_IO_WRITE_BOOL, &mut value as *mut bool as *mut c_void)
 }
 
@@ -284,7 +284,7 @@ pub struct EeCalamityIoFfi {
     pub call: Option<unsafe extern "C" fn(ctx: *mut c_void, op: u32, value: *mut c_void) -> c_long>,
 }
 
-struct FfiIo(EeCalamityIoFfi);
+pub(crate) struct FfiIo(pub(crate) EeCalamityIoFfi);
 
 impl CalamityIo for FfiIo {
     fn io(&mut self, op: u32, value: *mut c_void) -> c_long {

@@ -17,99 +17,99 @@ void ee_mixer_deactivated();
 
 bool ee_mixer_is_active();
 
-uint32_t ee_mixer_output_rate();
+unsigned long SPIMGetOutputRate();
 
-int32_t ee_mixer_create_channels(uint32_t count);
+long SPIMCreateChannels(unsigned long count, void *_info);
 
-int32_t ee_mixer_destroy_channels();
+long SPIMDestroyChannels();
 
-uint32_t ee_mixer_channel_count();
+unsigned long SPIMGetChannelCount();
 
-uint32_t ee_mixer_maximum_channel_count();
+unsigned long SPIMGetMaximumChannelCount();
 
-int32_t ee_mixer_is_channel_busy_playing(uint32_t channel);
+long SPIMIsChannelBusyPlaying(unsigned long channel);
 
-int32_t ee_mixer_play_channel(uint32_t channel);
+long SPIMPlayChannel(unsigned long channel);
 
-int32_t ee_mixer_stop_channel(uint32_t channel);
+long SPIMStopChannel(unsigned long channel);
 
-int32_t ee_mixer_stop_all_channels();
+long SPIMStopAllChannels();
 
 /// `SPIMSetChannelSample`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*` or NULL.
-int32_t ee_mixer_set_channel_sample(uint32_t channel, void *sample);
+long SPIMSetChannelSample(unsigned long channel, void *sample);
 
 /// `SPIMSetSampleLooping`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`.
-void ee_mixer_set_sample_looping(void *sample, bool looping);
+void SPIMSetSampleLooping(void *sample, bool looping);
 
 /// `SPIMSetSamplePan`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`.
-int32_t ee_mixer_set_sample_pan(void *sample, float pan);
+long SPIMSetSamplePan(void *sample, float pan);
 
 /// `SPIMSetSamplePitch`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`.
-int32_t ee_mixer_set_sample_pitch(void *sample, float pitch);
+long SPIMSetSamplePitch(void *sample, float pitch);
 
 /// `SPIMSetSampleVolume`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`.
-int32_t ee_mixer_set_sample_volume(void *sample, float volume);
+long SPIMSetSampleVolume(void *sample, float volume);
 
 /// `SPIMGetSampleOffset`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`.
-uint32_t ee_mixer_sample_offset(void *sample);
+unsigned long SPIMGetSampleOffset(void *sample);
 
 /// `SPIMSetSampleOffset`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`.
-int32_t ee_mixer_set_sample_offset(void *sample, uint32_t offset);
+long SPIMSetSampleOffset(void *sample, unsigned long offset);
 
 /// `SPIMGetSamplePlayBackTime`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`; `total` and `remaining` for a write.
-int32_t ee_mixer_sample_play_back_time(void *sample, int32_t *total, int32_t *remaining);
+long SPIMGetSamplePlayBackTime(void *sample, long *total, long *remaining);
 
 /// `SPIMDeleteWaveData`.
 ///
 /// # Safety
 /// `sample` is a live `SESample*`.
-void ee_mixer_delete_wave_data(void *sample);
+void SPIMDeleteWaveData(void *sample);
 
-float ee_mixer_volume();
+float SPIMGetVolume();
 
-int32_t ee_mixer_set_volume(float volume);
+long SPIMSetVolume(float volume);
 
-void ee_mixer_set_master_volume(float volume);
+void SPIMSetMasterVolume(float volume);
 
-void ee_mixer_set_muted(bool muted);
+void SPIMSetMuted(bool muted);
 
 /// `SPIMSetMusicSource`: `source` NULL clears; returns once the device thread is out of the old source.
 ///
 /// # Safety
 /// `source` adds `count` stereo float frames at `frames`.
-void ee_mixer_set_music_source(void (*source)(void *context, float *frames, unsigned long count),
-                               void *context);
+void SPIMSetMusicSource(void (*source)(void *context, float *frames, unsigned long count),
+                        void *context);
 
 /// `SPIMSetMovieSource`: as the music source.
 ///
 /// # Safety
-/// As `ee_mixer_set_music_source`.
-void ee_mixer_set_movie_source(void (*source)(void *context, float *frames, unsigned long count),
-                               void *context);
+/// As `SPIMSetMusicSource`.
+void SPIMSetMovieSource(void (*source)(void *context, float *frames, unsigned long count),
+                        void *context);
 
 /// The device thread's callback: mixes `count` stereo frames.
 ///
@@ -143,6 +143,27 @@ void ee_mixer_sample_info(const void *data,
 /// # Safety
 /// `data` is a pointer from `ee_mixer_sample_create`.
 void ee_mixer_sample_reference(const void *data);
+
+/// `SPIMGetCPUUsage`: not measured.
+float SPIMGetCPUUsage();
+
+/// `SPIMGetDirectSoundInterface`: no DirectSound.
+void *SPIMGetDirectSoundInterface();
+
+/// `SPIMGetHighestTimerDelay`: no mixing timer.
+long SPIMGetHighestTimerDelay();
+
+/// `SPIMMixAhead`: the device pulls the mix.
+long SPIMMixAhead();
+
+/// `SPIMProcessMessage`: no window messages to handle.
+bool SPIMProcessMessage();
+
+/// `SPIMSetLatency`: the device's own.
+long SPIMSetLatency(unsigned long _milliseconds);
+
+/// `PIMGetType`: ' snd'.
+unsigned long ee_mixer_pim_type();
 
 }  // extern "C"
 

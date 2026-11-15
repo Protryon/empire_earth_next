@@ -58,6 +58,10 @@ void ee_time_timer_proc(void *user);
 /// [`ee_time_shutdown`]).
 void ee_time_initialize();
 
+/// `TMInitialize`: [`ee_time_initialize`], then [`ee_time_shutdown`] registered with the engine's shutdown list
+/// (ee_util; always 0, `kErrorOK`).
+long ee_time_system_initialize();
+
 /// The Time Manager's shutdown (`URegisterShutdown`): the timer resolution restored.
 void ee_time_shutdown(bool _forced);
 

@@ -32,6 +32,7 @@
 #include "ee_ui.h"
 #include "ee_units.h"
 #include "ee_ustring.h"
+#include "ee_util.h"
 #include "ee_won.h"
 
 #endif  // EE_RUST_H

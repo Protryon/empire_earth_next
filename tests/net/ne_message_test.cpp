@@ -132,6 +132,55 @@ static NEMessage* Make(unsigned char inType, const uint32_t* v, const char* s0, 
     return theMessage;
 }
 
+// round 7's API for the Rust server and client, checked against the senders' (not traced: a failure is counted and
+// fails the run): the array constructor exports the bytes the sender's does; Value(i) is member i (its value
+// truncated as stored, a bool 0 or 1; the inputs' count; the block's address)
+static int sRustChecks, sRustFailures;
+static void RustCheck(bool inOK, const char* inWhat, unsigned char inType, uint32_t inIndex)
+{
+    sRustChecks++;
+    if (!inOK && sRustFailures++ < 10)
+        fprintf(stderr, "round 7 check failed: %s type %02x member %u\n", inWhat, inType, inIndex);
+}
+static void CheckRustApi(unsigned char inType, const uint32_t* v, NEMessage* inSent)
+{
+    NEMRecord* theSent = static_cast<NEMRecord*>(inSent);
+    size_t theValues = 0;
+    bool theStrings = false;
+    for (uint32_t i = 0; ee_netmsg_ne_field(inType, i).kind != EE_NETMSG_NE_FIELD_NONE; i++) {
+        EeNetMsgNeField f = ee_netmsg_ne_field(inType, i);
+        theStrings |= f.kind == EE_NETMSG_NE_FIELD_STRING;
+        if (f.kind == EE_NETMSG_NE_FIELD_INTEGER || f.kind == EE_NETMSG_NE_FIELD_BOOL) {
+            uint64_t theWant = f.kind == EE_NETMSG_NE_FIELD_BOOL ? v[theValues] != 0
+                             : f.size >= 4 ? v[theValues] : v[theValues] & ((1u << (8 * f.size)) - 1);
+            RustCheck(theSent->Value(i) == theWant, "value", inType, i);
+            theValues++;
+        } else if (f.kind == EE_NETMSG_NE_FIELD_INPUTS) {
+            RustCheck(theSent->Value(i) == theSent->GetNumberOfPlayerInputs(), "inputs", inType, i);
+        } else if (f.kind != EE_NETMSG_NE_FIELD_STRING) {
+            RustCheck(theSent->Value(i) == (uintptr_t)theSent->Field(i, f.size), "block", inType, i);
+        }
+    }
+    if (theStrings)
+        return;
+    NEMRecord* theRust = new NEMRecord(inType, v, theValues);
+    if (inType == kNetMessageXferMessage)
+        memcpy(theRust->Field(2, 0x400), theSent->Field(2, 0x400), 0x400);
+    theRust->SetForSpecificSlot(theSent->GetForSpecificSlot());
+    theRust->SetOriginatingSlot(theSent->GetOriginatingSlot());
+    unsigned long theID = 0;
+    if (theSent->GetSendToAllAndWaitMessageID(theID))
+        theRust->SetSendToAllAndWaitMessageID(theID);
+    unsigned char *a = NULL, *b = NULL;
+    unsigned long na = 0, nb = 0;
+    theSent->ExportMessage(&a, na);
+    theRust->ExportMessage(&b, nb);
+    RustCheck(na == nb && memcmp(a, b, na) == 0, "array constructor", inType, 0);
+    delete[] a;
+    delete[] b;
+    theRust->Dereference();
+}
+
 static long AddInput(NEMessage* inTick, NEMessage* inInput)
 {
     return static_cast<NEMRecord*>(inTick)->AddPlayerInput(inInput);
@@ -229,6 +278,7 @@ static void Senders()
             else
                 theMessage->SetSendToAllAndWaitMessageID(0x1234);   // no member: nothing happens
             Dump("sent", theMessage);
+            CheckRustApi(theType, v, theMessage);
             if (theType == kNetMessagePhysicsTick)
                 Line("    ticks per second %lu", LocalPerSecond(theMessage));
             unsigned char* theData = NULL;
@@ -372,6 +422,9 @@ int main(int argc, char** argv)
     Responses();
     PlayerInputs();
     Factory();
+    printf("ne_message_test: round 7 API: %d checks, %d failed\n", sRustChecks, sRustFailures);
+    if (sRustFailures != 0)
+        return 1;
     if (thePrint != NULL) {
         FILE* theFile = fopen(thePrint, "wb");
         fwrite(sTrace.data(), 1, sTrace.size(), theFile);

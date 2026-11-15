@@ -80,7 +80,6 @@
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EESETSEffectType.h"
 #include "ee/EESMArea.h"
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESMCondition.h"

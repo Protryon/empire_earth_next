@@ -289,8 +289,6 @@ GETM_PIN(GETerrainMesh::GETMRenderVertex, EeGeTmRenderVertex, mLinkedVisibility,
 static_assert(sizeof(GETerrainMesh::GETMPolygon) == sizeof(EeGeTmPolygon), "GETMPolygon");
 GETM_PIN(GETerrainMesh::GETMPolygon, EeGeTmPolygon, mAlpha, alpha);
 GETM_PIN(GETerrainMesh::GETMPolygon, EeGeTmPolygon, mUV, uv);
-static_assert(sizeof(GETerrainMesh::GETMMaterialView) == sizeof(EeGeTmMaterialView), "GETMMaterialView");
-GETM_PIN(GETerrainMesh::GETMMaterialView, EeGeTmMaterialView, mStrips, strips);
 static_assert(sizeof(GEColor) == 3 * sizeof(float) && sizeof(GE3DPlane) == sizeof(EeGe3DPlane), "GEColor, GE3DPlane");
 static_assert(GETM_VISIBLE_POINTS == EE_GE_TM_SIDE, "GETM_VISIBLE_POINTS");
 
@@ -438,7 +436,6 @@ float GETerrainMesh::GetZ(unsigned long inX, unsigned long inY) const { return e
 unsigned char GETerrainMesh::GetColorTableIndex(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->color_table_index; }
 GEVector* GETerrainMesh::GetVertexNormal(unsigned long inX, unsigned long inY) const { return (GEVector*)ee_ge_tm_point(this->mRust, inX, inY)->normal; }
 const GEColor& GETerrainMesh::GetVertexColor(unsigned long inX, unsigned long inY) const { return *reinterpret_cast<const GEColor*>(ee_ge_tm_vertex_color(this->mRust, inX, inY)); }
-const GEColor& GETerrainMesh::GetWaterColor(unsigned long, unsigned long) const { return *reinterpret_cast<const GEColor*>(ee_ge_tm_water_color(this->mRust)); }
 unsigned long GETerrainMesh::GetTextureSetID(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->texture_set_id; }
 unsigned char GETerrainMesh::GetWaterInfo(unsigned long inX, unsigned long inY) const { return ee_ge_tm_tile(this->mRust, inX, inY)->water_info; }
 bool GETerrainMesh::GetIsWaterTile(unsigned long inX, unsigned long inY) const { return (ee_ge_tm_tile(this->mRust, inX, inY)->water_info & kWaterInfoWaterMask) != 0; }
@@ -454,8 +451,6 @@ float GETerrainMesh::GetVisibleWaterTilePercentage() const { return ee_ge_tm_get
 unsigned long GETerrainMesh::GetGlobalWaterSetID() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::GlobalWaterSetId); }
 unsigned long GETerrainMesh::GetNumVisibleTiles() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::NumVisibleTiles); }
 unsigned long GETerrainMesh::GetNumVisibleTileRows() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileRows); }
-unsigned long GETerrainMesh::GetTerrainMaterialCount() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::TerrainMaterialCount); }
-unsigned long GETerrainMesh::GetWaterMaterialCount() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::WaterMaterialCount); }
 unsigned int GETerrainMesh::NumSpaceCliffTextures() { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceCliffTextureCount); }
 void GETerrainMesh::SetSpaceCliffTextures(std::vector<GETexture*>& inTextures) { ee_ge_tm_set_space_cliff_textures(this->mRust, (void* const*)inTextures.data(), inTextures.size()); }
 GETextureSet* GETerrainMesh::GetRegisteredTextureSet(unsigned long inID) const { return (GETextureSet*)ee_ge_tm_texture_set(this->mRust, inID); }
@@ -477,28 +472,3 @@ void GETerrainMesh::GetVisibleTileRow(unsigned long inIndex, long& outY, long& o
     outStartX = theRow[1];
     outEndX = theRow[2];
 }
-bool (&GETerrainMesh::GetTerrainPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]
-    { return *reinterpret_cast<bool(*)[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]>(ee_ge_tm_point_visibility(this->mRust, false)); }
-bool (&GETerrainMesh::GetWaterPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]
-    { return *reinterpret_cast<bool(*)[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]>(ee_ge_tm_point_visibility(this->mRust, true)); }
-GETerrainMesh::GETMRenderVertex (&GETerrainMesh::GetTerrainRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]
-    { return *reinterpret_cast<GETMRenderVertex(*)[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]>(ee_ge_tm_render_vertices(this->mRust, false)); }
-GETerrainMesh::GETMRenderVertex (&GETerrainMesh::GetWaterRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]
-    { return *reinterpret_cast<GETMRenderVertex(*)[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]>(ee_ge_tm_render_vertices(this->mRust, true)); }
-void GETerrainMesh::GetTerrainMaterialMap(std::vector<std::pair<GETexture*, unsigned long> >& outEntries) const
-{
-    std::vector<void*> theTextures(ee_ge_tm_get(this->mRust, EeGeTmVal::TerrainMaterialCount));
-    std::vector<unsigned long> theIndices(theTextures.size());
-    size_t theCount = ee_ge_tm_material_map(this->mRust, theTextures.data(), theIndices.data(), theTextures.size());
-    outEntries.clear();
-    for (size_t i = 0; i < theCount; i++)
-        outEntries.push_back(std::make_pair((GETexture*)theTextures[i], theIndices[i]));
-}
-void GETerrainMesh::GetMaterialView(bool inWater, unsigned long inIndex, GETMMaterialView& outView)
-    { ee_ge_tm_material(this->mRust, inWater, inIndex, reinterpret_cast<EeGeTmMaterialView*>(&outView)); }
-unsigned long GETerrainMesh::GetEdgeVertexCount() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::EdgeVertexCount); }
-GETerrainMesh::GETMRenderVertex* const* GETerrainMesh::GetEdgeRenderVertices() const { return (GETMRenderVertex* const*)ee_ge_tm_edge_vertices(this->mRust, false); }
-const GE3DPoint* GETerrainMesh::GetEdgeWorldPoints() const { return reinterpret_cast<const GE3DPoint*>(ee_ge_tm_edge_points(this->mRust, false)); }
-unsigned long GETerrainMesh::GetCliffVertexCount() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::CliffVertexCount); }
-GETerrainMesh::GETMRenderVertex* const* GETerrainMesh::GetCliffRenderVertices() const { return (GETMRenderVertex* const*)ee_ge_tm_edge_vertices(this->mRust, true); }
-const GE3DPoint* GETerrainMesh::GetCliffWorldPoints() const { return reinterpret_cast<const GE3DPoint*>(ee_ge_tm_edge_points(this->mRust, true)); }

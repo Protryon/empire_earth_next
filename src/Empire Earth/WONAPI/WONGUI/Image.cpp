@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyImageHelpers.h"
+#include "rust/ee_won.h"
 
 // Image, NativeImage and RawImage are one original object: the base destructor ~Image is defined first, so
 // VC6 knows it cannot throw and the derived destructors call it without the -1 EH state store.
@@ -261,23 +262,12 @@ unsigned char* RawImage1::StartRowTraversal(int row) {
 
 // FUNCTION: WON 0x00728f30
 // Creates a native image; with transparency on, first clears every pixel whose alpha is 0 and attaches
-// a mask of those pixels
+// a mask of those pixels (imgfilter.rs mask32)
 SmartPtr<NativeImage> RawImage32::GetNative(DisplayContext* context) {
     if(this->mDoTransparency) {
         int width=this->GetWidth(),height=this->GetHeight();
         SmartPtr<RawImage1> mask=new RawImage1(width,height);
-        for(int y=0;y<height;++y) {
-            mask->StartRowTraversal(y);
-            this->StartRowTraversal(y);
-            while(this->mRowPtr<this->mRowEnd) {
-                if((*this->mRowPtr&0xff000000)==0) {
-                    *this->mRowPtr=0;
-                    mask->SetRowPixel(true);
-                } else mask->SetRowPixel(false);
-                ++this->mRowPtr;
-                mask->NextRowPixel();
-            }
-        }
+        ee_won_imgf_mask32((uint32_t*)this->mImageData,width,height,mask->mImageData,mask->mBytesPerRow);
         SmartPtr<NativeImage> native=this->CreateNativeImage(context);
         native->SetTransparentMask(mask->GetMask(context).get());
         return native;
@@ -287,19 +277,13 @@ SmartPtr<NativeImage> RawImage32::GetNative(DisplayContext* context) {
 
 // FUNCTION: WON 0x00729460
 // Creates a native image and, when a transparent colour is set, attaches a mask of the pixels of that colour
+// (imgfilter.rs mask8)
 SmartPtr<NativeImage> RawImage8::GetNative(DisplayContext* context) {
     SmartPtr<NativeImage> native=this->CreateNativeImage(context);
     if(this->mTransparentColor!=-1) {
         SmartPtr<RawImage1> mask=new RawImage1(this->mWidth,this->mHeight);
-        for(int y=0;y<this->mHeight;++y) {
-            this->StartRowTraversal(y);
-            mask->StartRowTraversal(y);
-            while(this->mRowPtr<this->mRowEnd) {
-                mask->SetRowPixel(this->GetRowPixel()==this->mTransparentColor);
-                mask->NextRowPixel();
-                this->NextRowPixel();
-            }
-        }
+        ee_won_imgf_mask8(this->mImageData,this->mWidth,this->mHeight,this->mBytesPerRow,this->mTransparentColor,mask->mImageData,
+                          mask->mBytesPerRow);
         native->SetTransparentMask(mask->GetMask(context).get());
     }
     return native;

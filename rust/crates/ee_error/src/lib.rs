@@ -134,6 +134,18 @@ pub unsafe extern "C" fn ee_error_filter_passes(text: *const c_char) -> bool {
     filters().passes(CStr::from_ptr(text).to_bytes())
 }
 
+/// `ESInitialize`: [`ee_error_shutdown_hook`] registered with the engine's shutdown list (ee_util).
+#[no_mangle]
+pub extern "C" fn ee_error_initialize() {
+    ee_util::ee_util_register_shutdown(ee_error_shutdown_hook);
+}
+
+/// `ESShutdown` (a shutdown-list function): [`ee_error_shutdown`].
+#[no_mangle]
+pub extern "C" fn ee_error_shutdown_hook(_forced: bool) {
+    ee_error_shutdown();
+}
+
 /// The shutdown hook's part (`ESShutdown`): the filters freed.
 #[no_mangle]
 pub extern "C" fn ee_error_shutdown() {

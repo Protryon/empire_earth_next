@@ -53,9 +53,35 @@ pub const MSG_CLIENT_RECONNECTION_REQUEST: u8 = 0x37;
 pub const MSG_CLIENT_RECONNECTION_REQUEST_RESPONSE: u8 = 0x38;
 pub const MSG_CLIENT_REQUEST_PAUSE: u8 = 0x39;
 pub const MSG_SERVER_IS_ALIVE: u8 = 0x3a;
+// the messages the client makes
+pub const MSG_COMMUNICATIONS_TICK_RESPONSE: u8 = 0x27;
+pub const MSG_START_GAME_RESPONSE: u8 = 0x2e;
+pub const MSG_STOP_GAME_RESPONSE: u8 = 0x30;
+pub const MSG_PAUSE_GAME_RESPONSE: u8 = 0x34;
+pub const MSG_UNPAUSE_GAME_RESPONSE: u8 = 0x36;
+pub const MSG_XFER_STATUS: u8 = 0x3c;
+
+// the members the client reads (NEMRecord's numbering: ee_netmsg engine.rs's wire order)
+/// the tick's tick; the tick response's servers' tick; the start game's offset start time
+const TICK_CT: u32 = 0;
+const TICK_RESPONSE_SERVERS_TICK: u32 = 1;
+const START_GAME_OFFSET: u32 = 0;
+/// the connection response's error, send-to slot and tick
+const CONNECTION_ERROR: u32 = 0;
+const CONNECTION_SEND_TO_SLOT: u32 = 2;
+const CONNECTION_CT: u32 = 3;
+/// the reconnection response's new send-to slot and tick
+const RECONNECTION_SEND_TO_SLOT: u32 = 1;
+const RECONNECTION_CT: u32 = 2;
+/// the pause's or unpause's unique id
+const PAUSE_UNIQUE_ID: u32 = 0;
+/// the transfer message's id, data size and data (the block's address)
+const XFER_ID: u32 = 0;
+const XFER_DATA_SIZE: u32 = 1;
+const XFER_DATA: u32 = 2;
 
 pub use crate::comms::Comms;
-pub use crate::ffi_client::{EeNetClMsgField as MsgField, EeNetClMsgFlag as MsgFlag, EeNetClNewMsg as NewMsg};
+pub use crate::ffi_client::EeNetClMsgFlag as MsgFlag;
 pub use crate::ffi_comms::EeNetCommsField as BaseField;
 
 /// The client's calls out besides the queues' (`QHost`): the engine, the protocol and its connections, the messages,
@@ -96,8 +122,12 @@ pub trait ClientHost: QHost {
     fn msg_set_slot(&self, m: Msg, originating: bool, slot: u8);
     /// `GetSendToAllAndWaitMessageID(out)`
     fn msg_s2aw_id(&self, m: Msg, out: &mut u32) -> bool;
-    fn msg_get(&self, m: Msg, f: MsgField) -> usize;
-    fn msg_new(&self, kind: NewMsg, a: usize, b: usize, c: usize, d: usize) -> Msg;
+    /// an engine message's member `i` (`NEMRecord`'s numbering): its value (a block: its address)
+    fn msg_get(&self, m: Msg, i: u32) -> usize;
+    /// a new engine message of a type (`new NEMRecord(type, values)`): its fixed members in record order
+    fn msg_new(&self, message_type: u8, values: &[u32]) -> Msg;
+    /// an engine message from received bytes (`new NEMRecord(data)`: the transfer message)
+    fn msg_import(&self, data: usize) -> Msg;
     /// `NEMCommunicationsTickResponse::AddPlayerInput(input)`
     fn msg_add_input(&self, response: Msg, input: Msg) -> i32;
     /// `ExportMessage(&data, size)`: the export (C++ `new[]`, 0 none) and its size
@@ -729,12 +759,12 @@ impl<H: ClientHost> Client<H> {
                     if xfer_received > size {
                         self.host.verify(UNIT, 1038);
                     } else if xfer_received == size {
-                        let x = self.host.msg_new(NewMsg::XferMessage, xfer_buffer.as_ptr() as usize, 0, 0, 0);
+                        let x = self.host.msg_import(xfer_buffer.as_ptr() as usize);
                         xfer_buffer = Vec::new();
                         xfer_received = 0;
-                        match self.host.msg_get(x, MsgField::XferId) as u8 {
+                        match self.host.msg_get(x, XFER_ID) as u8 {
                             0 => {
-                                let data = self.host.msg_get(x, MsgField::XferData);
+                                let data = self.host.msg_get(x, XFER_DATA);
                                 // SAFETY: the message's data holds at least its id and size
                                 let head = unsafe { std::slice::from_raw_parts(data as *const u8, 8) };
                                 xfer_id = u32::from_le_bytes(head[0..4].try_into().unwrap());
@@ -742,31 +772,21 @@ impl<H: ClientHost> Client<H> {
                                 file = self.host.create_xfer_file(data + 8, file_size);
                                 if file == 0 {
                                     let slot = self.host.client_slot();
-                                    let s = self.host.msg_new(
-                                        NewMsg::XferStatus,
-                                        slot as usize,
-                                        percent_done as usize,
-                                        xfer_id as usize,
-                                        status_id as usize,
-                                    );
+                                    let values = [slot as u32, percent_done, xfer_id, status_id];
+                                    let s = self.host.msg_new(MSG_XFER_STATUS, &values);
                                     self.host.process_local_user_input(s, SLOT_SERVER);
                                 }
                             }
                             1 => {
                                 if file != 0 {
-                                    let data = self.host.msg_get(x, MsgField::XferData);
-                                    let n = self.host.msg_get(x, MsgField::XferDataSize) as u32;
+                                    let data = self.host.msg_get(x, XFER_DATA);
+                                    let n = self.host.msg_get(x, XFER_DATA_SIZE) as u32;
                                     self.host.fsfile_write(file, data, n, &mut received);
                                 } else {
                                     xfer_id = 0xffff;
                                     let slot = self.host.client_slot();
-                                    let s = self.host.msg_new(
-                                        NewMsg::XferStatus,
-                                        slot as usize,
-                                        percent_done as usize,
-                                        xfer_id as usize,
-                                        status_id as usize,
-                                    );
+                                    let values = [slot as u32, percent_done, xfer_id, status_id];
+                                    let s = self.host.msg_new(MSG_XFER_STATUS, &values);
                                     self.host.process_local_user_input(s, SLOT_SERVER);
                                 }
                             }
@@ -878,19 +898,20 @@ impl<H: ClientHost> Client<H> {
     fn new_tick_response(&self, tick: u32) -> Msg {
         let average = self.comms.get(BaseField::AveragePhysicsUpdateTime);
         let processed = self.comms.get(BaseField::CtsProcessed);
-        self.host.msg_new(NewMsg::TickResponse, processed as usize, tick as usize, average as usize, 0)
+        // the last tick processed, the servers' tick, the average physics tick time
+        self.host.msg_new(MSG_COMMUNICATIONS_TICK_RESPONSE, &[processed, tick, average])
     }
 
     /// `ProcessCommunicationsTickMessage`: a new tick handled and answered with the queued inputs (the answer kept);
     /// an old tick answered again (the kept answer when it was that tick's); nothing before the connection's reply.
     fn process_communications_tick_message(&self, m: Msg) {
-        let tick = self.host.msg_get(m, MsgField::TickCt) as u32;
+        let tick = self.host.msg_get(m, TICK_CT) as u32;
         let last = self.comms.get(BaseField::LastTickReceived);
         if last as i32 != -2 {
             let response;
             if tick <= last && last as i32 != -1 {
                 let kept = self.last_tick_response.load(SeqCst);
-                if kept == 0 || tick != self.host.msg_get(kept, MsgField::ServersTick) as u32 {
+                if kept == 0 || tick != self.host.msg_get(kept, TICK_RESPONSE_SERVERS_TICK) as u32 {
                     response = self.new_tick_response(tick);
                 } else {
                     response = kept;
@@ -930,52 +951,52 @@ impl<H: ClientHost> Client<H> {
         match self.host.msg_type(m) {
             MSG_STOP_GAME => {
                 self.host.handle_stop_game();
-                let r = self.host.msg_new(NewMsg::StopGameResponse, 0, 0, 0, 0);
+                let r = self.host.msg_new(MSG_STOP_GAME_RESPONSE, &[]);
                 self.send_a_message(r);
             }
             MSG_START_GAME => {
-                let offset = self.host.msg_get(m, MsgField::OffsetStartTime) as u32;
+                let offset = self.host.msg_get(m, START_GAME_OFFSET) as u32;
                 let time = self.host.handle_start_game(offset);
-                let r = self.host.msg_new(NewMsg::StartGameResponse, time as usize, 0, 0, 0);
+                let r = self.host.msg_new(MSG_START_GAME_RESPONSE, &[time]);
                 self.send_a_message(r);
                 self.host.handle_message(m);
             }
             MSG_COMMUNICATIONS_TICK => self.process_communications_tick_message(m),
             MSG_CLIENT_CONNECTION_REQUEST_RESPONSE => {
-                let slot = self.host.msg_get(m, MsgField::SendToSlot) as u8;
+                let slot = self.host.msg_get(m, CONNECTION_SEND_TO_SLOT) as u8;
                 if slot != SLOT_NONE {
-                    self.my_send_to_slot.store(self.host.msg_get(m, MsgField::SendToSlot) as u8, SeqCst);
+                    self.my_send_to_slot.store(self.host.msg_get(m, CONNECTION_SEND_TO_SLOT) as u8, SeqCst);
                     self.connect_for_xfer();
                 }
                 self.comms.set(BaseField::LastTickReceived, -2i32 as u32);
                 self.host.event_set(self.ev(EV_MAIN_END_CONNECT));
                 self.host.handle_message(m);
-                if self.host.msg_get(m, MsgField::ConnectionError) as i32 == CONNECTION_ACCEPTED {
-                    let ct = self.host.msg_get(m, MsgField::ConnectionCt) as u32;
+                if self.host.msg_get(m, CONNECTION_ERROR) as i32 == CONNECTION_ACCEPTED {
+                    let ct = self.host.msg_get(m, CONNECTION_CT) as u32;
                     self.comms.set(BaseField::LastTickReceived, ct.wrapping_sub(1));
                 }
             }
             MSG_WORLD_DATABASE_CHECKSUM => self.host.handle_message(m),
             MSG_SERVER_IS_ALIVE => self.host.msg_dereference(m),
             MSG_CLIENT_RECONNECTION_REQUEST_RESPONSE => {
-                let slot = self.host.msg_get(m, MsgField::NewSendToSlot) as u8;
+                let slot = self.host.msg_get(m, RECONNECTION_SEND_TO_SLOT) as u8;
                 if slot != SLOT_NONE {
-                    self.my_send_to_slot.store(self.host.msg_get(m, MsgField::NewSendToSlot) as u8, SeqCst);
+                    self.my_send_to_slot.store(self.host.msg_get(m, RECONNECTION_SEND_TO_SLOT) as u8, SeqCst);
                 }
                 self.host.handle_message(m);
-                let ct = self.host.msg_get(m, MsgField::ReconnectionCt) as u32;
+                let ct = self.host.msg_get(m, RECONNECTION_CT) as u32;
                 self.comms.set(BaseField::LastTickReceived, ct.wrapping_sub(1));
             }
             MSG_UNPAUSE_GAME => {
-                let id = self.host.msg_get(m, MsgField::UniqueId) as u32;
-                let r = self.host.msg_new(NewMsg::UnPauseGameResponse, id as usize, 0, 0, 0);
+                let id = self.host.msg_get(m, PAUSE_UNIQUE_ID) as u32;
+                let r = self.host.msg_new(MSG_UNPAUSE_GAME_RESPONSE, &[id]);
                 self.host.msg_set_slot(r, true, self.my_send_to_slot.load(SeqCst));
                 self.send_a_message(r);
                 self.comms.set(BaseField::IsGamePaused, 0);
             }
             MSG_PAUSE_GAME => {
-                let id = self.host.msg_get(m, MsgField::UniqueId) as u32;
-                let r = self.host.msg_new(NewMsg::PauseGameResponse, id as usize, 0, 0, 0);
+                let id = self.host.msg_get(m, PAUSE_UNIQUE_ID) as u32;
+                let r = self.host.msg_new(MSG_PAUSE_GAME_RESPONSE, &[id]);
                 self.host.msg_set_slot(r, true, self.my_send_to_slot.load(SeqCst));
                 self.send_a_message(r);
                 self.comms.set(BaseField::IsGamePaused, 1);

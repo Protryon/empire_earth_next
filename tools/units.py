@@ -27,8 +27,7 @@ PLATFORM_UNITS = [
                   "Platform/Common/PlatFontData.c"]
 OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]   # the converters are Rust (ee_openformats)
 # the DX7 renderer's C++ trampolines into Rust (ee_dx7, docs/RUST_PLAN.md R4.2): the classes' deleted bodies live there
-DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp",
-                   "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7DrawSeam.cpp"]
+DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp"]
 # the UI toolkit's C++ trampolines into Rust (ee_ui, docs/RUST_PLAN.md R6): the moved units' members live there
 UI_TRAMPOLINES = ["Low-Level Engine/User Interface/UITrampolines.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
@@ -39,6 +38,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/WONAPI/WONLobby/EELobbyGlueHost.cpp",
                        # the 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs)
                        "Empire Earth/Graphics Thread/EEE3DRust.cpp", "Empire Earth/Graphics Thread/EEE2DRust.cpp",
+                       # the host of the game's controls whose logic is Rust (ee_screens hud_ctl.rs; ee/EEUIRustControl.h)
+                       "Empire Earth/User Interface Thread/EEUIRustControl.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
@@ -93,6 +94,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Calamities/EECalamityCast.cpp",
                        # TEST ONLY: the calamity lane's capture records (ee/EECalamityCapture.h: CALI, CALK)
                        "Empire Earth/Calamities/EECalamityCapture.cpp",
+                       # TEST ONLY: the area effects' capture records (ee/EEAECapture.h: AETP, AEFX)
+                       "Empire Earth/Civilization Builder/EEAECapture.cpp",
                        # TEST ONLY: the game messages' capture records (ee/EEMessageCapture.h; RUST_PLAN R5b.4)
                        "Empire Earth/Communications/EEMessageCapture.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)

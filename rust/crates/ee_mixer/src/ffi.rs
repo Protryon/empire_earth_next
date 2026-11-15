@@ -1,7 +1,11 @@
 //! The C ABI of the mixer plug-in (called by the C++ shim, `Mixer.cpp`) and the `SESample` access through the shim's
 //! `ee_mixer_host_*`. Compiled out of `cargo test`.
 
-use std::ffi::{c_ulong, c_void};
+// `c_ulong`/`c_long` are the plug-in's `unsigned long`/`long`: 32 bits on Windows, 64 on LP64, so their casts are
+// needed on one of them
+#![allow(clippy::unnecessary_cast)]
+
+use std::ffi::{c_long, c_ulong, c_void};
 use std::slice;
 use std::sync::{Arc, OnceLock};
 
@@ -89,48 +93,48 @@ pub extern "C" fn ee_mixer_is_active() -> bool {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_output_rate() -> u32 {
-    mixer().output_rate()
+pub extern "C" fn SPIMGetOutputRate() -> c_ulong {
+    mixer().output_rate() as c_ulong
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_create_channels(count: u32) -> i32 {
-    mixer().create_channels(count)
+pub extern "C" fn SPIMCreateChannels(count: c_ulong, _info: *mut c_void) -> c_long {
+    mixer().create_channels(count as u32) as c_long
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_destroy_channels() -> i32 {
-    mixer().destroy_channels()
+pub extern "C" fn SPIMDestroyChannels() -> c_long {
+    mixer().destroy_channels() as c_long
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_channel_count() -> u32 {
-    mixer().channel_count()
+pub extern "C" fn SPIMGetChannelCount() -> c_ulong {
+    mixer().channel_count() as c_ulong
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_maximum_channel_count() -> u32 {
-    mixer().maximum_channel_count()
+pub extern "C" fn SPIMGetMaximumChannelCount() -> c_ulong {
+    mixer().maximum_channel_count() as c_ulong
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_is_channel_busy_playing(channel: u32) -> i32 {
-    mixer().is_channel_busy_playing(channel)
+pub extern "C" fn SPIMIsChannelBusyPlaying(channel: c_ulong) -> c_long {
+    mixer().is_channel_busy_playing(channel as u32) as c_long
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_play_channel(channel: u32) -> i32 {
-    mixer().play_channel(channel)
+pub extern "C" fn SPIMPlayChannel(channel: c_ulong) -> c_long {
+    mixer().play_channel(channel as u32) as c_long
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_stop_channel(channel: u32) -> i32 {
-    mixer().stop_channel(channel)
+pub extern "C" fn SPIMStopChannel(channel: c_ulong) -> c_long {
+    mixer().stop_channel(channel as u32) as c_long
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_stop_all_channels() -> i32 {
-    mixer().stop_all_channels()
+pub extern "C" fn SPIMStopAllChannels() -> c_long {
+    mixer().stop_all_channels() as c_long
 }
 
 /// `SPIMSetChannelSample`.
@@ -138,8 +142,8 @@ pub extern "C" fn ee_mixer_stop_all_channels() -> i32 {
 /// # Safety
 /// `sample` is a live `SESample*` or NULL.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_channel_sample(channel: u32, sample: *mut c_void) -> i32 {
-    mixer().set_channel_sample(channel, sample)
+pub unsafe extern "C" fn SPIMSetChannelSample(channel: c_ulong, sample: *mut c_void) -> c_long {
+    mixer().set_channel_sample(channel as u32, sample) as c_long
 }
 
 /// `SPIMSetSampleLooping`.
@@ -147,7 +151,7 @@ pub unsafe extern "C" fn ee_mixer_set_channel_sample(channel: u32, sample: *mut 
 /// # Safety
 /// `sample` is a live `SESample*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_sample_looping(sample: *mut c_void, looping: bool) {
+pub unsafe extern "C" fn SPIMSetSampleLooping(sample: *mut c_void, looping: bool) {
     mixer().set_sample_looping(sample, looping);
 }
 
@@ -156,8 +160,8 @@ pub unsafe extern "C" fn ee_mixer_set_sample_looping(sample: *mut c_void, loopin
 /// # Safety
 /// `sample` is a live `SESample*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_sample_pan(sample: *mut c_void, pan: f32) -> i32 {
-    mixer().set_sample_pan(sample, pan)
+pub unsafe extern "C" fn SPIMSetSamplePan(sample: *mut c_void, pan: f32) -> c_long {
+    mixer().set_sample_pan(sample, pan) as c_long
 }
 
 /// `SPIMSetSamplePitch`.
@@ -165,8 +169,8 @@ pub unsafe extern "C" fn ee_mixer_set_sample_pan(sample: *mut c_void, pan: f32) 
 /// # Safety
 /// `sample` is a live `SESample*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_sample_pitch(sample: *mut c_void, pitch: f32) -> i32 {
-    mixer().set_sample_pitch(sample, pitch)
+pub unsafe extern "C" fn SPIMSetSamplePitch(sample: *mut c_void, pitch: f32) -> c_long {
+    mixer().set_sample_pitch(sample, pitch) as c_long
 }
 
 /// `SPIMSetSampleVolume`.
@@ -174,8 +178,8 @@ pub unsafe extern "C" fn ee_mixer_set_sample_pitch(sample: *mut c_void, pitch: f
 /// # Safety
 /// `sample` is a live `SESample*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_sample_volume(sample: *mut c_void, volume: f32) -> i32 {
-    mixer().set_sample_volume(sample, volume)
+pub unsafe extern "C" fn SPIMSetSampleVolume(sample: *mut c_void, volume: f32) -> c_long {
+    mixer().set_sample_volume(sample, volume) as c_long
 }
 
 /// `SPIMGetSampleOffset`.
@@ -183,8 +187,8 @@ pub unsafe extern "C" fn ee_mixer_set_sample_volume(sample: *mut c_void, volume:
 /// # Safety
 /// `sample` is a live `SESample*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_sample_offset(sample: *mut c_void) -> u32 {
-    mixer().sample_offset(sample)
+pub unsafe extern "C" fn SPIMGetSampleOffset(sample: *mut c_void) -> c_ulong {
+    mixer().sample_offset(sample) as c_ulong
 }
 
 /// `SPIMSetSampleOffset`.
@@ -192,8 +196,8 @@ pub unsafe extern "C" fn ee_mixer_sample_offset(sample: *mut c_void) -> u32 {
 /// # Safety
 /// `sample` is a live `SESample*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_sample_offset(sample: *mut c_void, offset: u32) -> i32 {
-    mixer().set_sample_offset(sample, offset)
+pub unsafe extern "C" fn SPIMSetSampleOffset(sample: *mut c_void, offset: c_ulong) -> c_long {
+    mixer().set_sample_offset(sample, offset as u32) as c_long
 }
 
 /// `SPIMGetSamplePlayBackTime`.
@@ -201,17 +205,17 @@ pub unsafe extern "C" fn ee_mixer_set_sample_offset(sample: *mut c_void, offset:
 /// # Safety
 /// `sample` is a live `SESample*`; `total` and `remaining` for a write.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_sample_play_back_time(
+pub unsafe extern "C" fn SPIMGetSamplePlayBackTime(
     sample: *mut c_void,
-    total: *mut i32,
-    remaining: *mut i32,
-) -> i32 {
+    total: *mut c_long,
+    remaining: *mut c_long,
+) -> c_long {
     let (code, t, r) = mixer().sample_play_back_time(sample);
     unsafe {
-        *total = t;
-        *remaining = r;
+        *total = t as c_long;
+        *remaining = r as c_long;
     }
-    code
+    code as c_long
 }
 
 /// `SPIMDeleteWaveData`.
@@ -219,7 +223,7 @@ pub unsafe extern "C" fn ee_mixer_sample_play_back_time(
 /// # Safety
 /// `sample` is a live `SESample*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_delete_wave_data(sample: *mut c_void) {
+pub unsafe extern "C" fn SPIMDeleteWaveData(sample: *mut c_void) {
     let channel = unsafe { ee_mixer_host_mixer_channel(sample) };
     if channel != CHANNEL_NONE {
         mixer().stop_channel(channel);
@@ -233,22 +237,22 @@ pub unsafe extern "C" fn ee_mixer_delete_wave_data(sample: *mut c_void) {
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_volume() -> f32 {
+pub extern "C" fn SPIMGetVolume() -> f32 {
     mixer().volume()
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_set_volume(volume: f32) -> i32 {
-    mixer().set_volume(volume)
+pub extern "C" fn SPIMSetVolume(volume: f32) -> c_long {
+    mixer().set_volume(volume) as c_long
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_set_master_volume(volume: f32) {
+pub extern "C" fn SPIMSetMasterVolume(volume: f32) {
     mixer().set_master_volume(volume);
 }
 
 #[no_mangle]
-pub extern "C" fn ee_mixer_set_muted(muted: bool) {
+pub extern "C" fn SPIMSetMuted(muted: bool) {
     mixer().set_muted(muted);
 }
 
@@ -257,7 +261,7 @@ pub extern "C" fn ee_mixer_set_muted(muted: bool) {
 /// # Safety
 /// `source` adds `count` stereo float frames at `frames`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_music_source(
+pub unsafe extern "C" fn SPIMSetMusicSource(
     source: Option<unsafe extern "C" fn(context: *mut c_void, frames: *mut f32, count: c_ulong)>,
     context: *mut c_void,
 ) {
@@ -267,9 +271,9 @@ pub unsafe extern "C" fn ee_mixer_set_music_source(
 /// `SPIMSetMovieSource`: as the music source.
 ///
 /// # Safety
-/// As `ee_mixer_set_music_source`.
+/// As `SPIMSetMusicSource`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_mixer_set_movie_source(
+pub unsafe extern "C" fn SPIMSetMovieSource(
     source: Option<unsafe extern "C" fn(context: *mut c_void, frames: *mut f32, count: c_ulong)>,
     context: *mut c_void,
 ) {
@@ -333,4 +337,48 @@ pub unsafe extern "C" fn ee_mixer_sample_info(
 #[no_mangle]
 pub unsafe extern "C" fn ee_mixer_sample_reference(data: *const c_void) {
     unsafe { Arc::increment_strong_count(data as *const SampleData) };
+}
+
+// ---- the entry points with nothing to do on this device (the original's DirectSound tuning)
+
+/// `SPIMGetCPUUsage`: not measured.
+#[no_mangle]
+pub extern "C" fn SPIMGetCPUUsage() -> f32 {
+    0.0
+}
+
+/// `SPIMGetDirectSoundInterface`: no DirectSound.
+#[no_mangle]
+pub extern "C" fn SPIMGetDirectSoundInterface() -> *mut c_void {
+    std::ptr::null_mut()
+}
+
+/// `SPIMGetHighestTimerDelay`: no mixing timer.
+#[no_mangle]
+pub extern "C" fn SPIMGetHighestTimerDelay() -> c_long {
+    0
+}
+
+/// `SPIMMixAhead`: the device pulls the mix.
+#[no_mangle]
+pub extern "C" fn SPIMMixAhead() -> c_long {
+    0
+}
+
+/// `SPIMProcessMessage`: no window messages to handle.
+#[no_mangle]
+pub extern "C" fn SPIMProcessMessage() -> bool {
+    true
+}
+
+/// `SPIMSetLatency`: the device's own.
+#[no_mangle]
+pub extern "C" fn SPIMSetLatency(_milliseconds: c_ulong) -> c_long {
+    0
+}
+
+/// `PIMGetType`: ' snd'.
+#[no_mangle]
+pub extern "C" fn ee_mixer_pim_type() -> c_ulong {
+    0x20736e64
 }

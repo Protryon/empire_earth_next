@@ -9,14 +9,13 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 // FUNCTION: WON 0x00700a60
-// Returns the contained component's size plus a 20-pixel margin and the title height (20 x 20 when empty)
+// Returns the contained component's size plus a 20-pixel margin and the title height (20 x 20 when empty;
+// skinlay.rs)
 void MSEtchedFrameGroup::GetDesiredSize(int& width,int& height) {
-    if(this->mComponent.get()!=NULL) {
-        width=this->mComponent->Width()+20;
-        height=this->mComponent->Height()+this->mLabel->Height()+20;
-    } else width=height=20;
+    WONSkinLayout(this,EeWonSkinLayKind::EtchedSize,0,0,0,&width,&height);
 }
 // FUNCTION: WON 0x00700ab0
 // On first joining a parent, adds the title label 5 pixels in at the top and the contained component

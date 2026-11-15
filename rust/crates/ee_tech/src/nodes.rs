@@ -1654,6 +1654,44 @@ pub unsafe extern "C" fn ee_tech_is_latest_effect(
     is_latest_effect(&mut FfiHost { ctx, f }, Tree(t), &table, id, unit_type, kind)
 }
 
+/// `EETechTreeNode::operator=` (0x5cfde2, `epoch` false) and `EETechTreeEpoch::operator=` (0x5ceb26, `epoch` true):
+/// the record fields each copies (a node its flags, epochs, prerequisites, media flag, editor flag and delay; an epoch
+/// its flags, epochs, counters and prerequisites, its counting off). The C++ copies the pointers (the shared data, the
+/// button) and an epoch's nodes.
+pub fn assign(dst: &mut EeTechNodeFields, src: &EeTechNodeFields, epoch: bool) {
+    dst.mEpoch = src.mEpoch;
+    dst.mObsoleteEpoch = src.mObsoleteEpoch;
+    dst.mPrerequisiteFlags = src.mPrerequisiteFlags;
+    dst.mIsResearched = src.mIsResearched;
+    dst.mIsObsolete = src.mIsObsolete;
+    dst.mIsAvailable = src.mIsAvailable;
+    dst.mIsAllowed = src.mIsAllowed;
+    if epoch {
+        dst.mFirstNodeID = src.mFirstNodeID;
+        dst.mRequiredSOL = src.mRequiredSOL;
+        dst.mCurrentSOL = src.mCurrentSOL;
+        dst.mNextEpoch = src.mNextEpoch;
+        dst.mIsCountingSOL = false;
+    } else {
+        dst.mIsUnitMediaLoaded = src.mIsUnitMediaLoaded;
+        dst.mScenEditorObsoleted = src.mScenEditorObsoleted;
+        dst.mResearchDelay = src.mResearchDelay;
+    }
+}
+
+/// [`assign`] over the records' pointers (a self-assignment does nothing).
+///
+/// # Safety
+/// Both are live records.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_node_assign(dst: *mut EeTechNodeFields, src: *const EeTechNodeFields, epoch: bool) {
+    if std::ptr::eq(dst, src) {
+        return;
+    }
+    // SAFETY: the contract; distinct records
+    unsafe { assign(&mut *dst, &*src, epoch) }
+}
+
 #[cfg(test)]
 #[path = "nodes_tests.rs"]
 mod tests;

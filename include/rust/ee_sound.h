@@ -489,6 +489,18 @@ int32_t ee_sound_manager_mix_ahead(const EeSoundManager *m);
 /// `start` is the C++ start state.
 int32_t ee_sound_mixers_initialize(EeSoundMixerStart *start);
 
+/// `SEInitialize`: [`ee_sound_shutdown`] registered with the engine's shutdown list (ee_util), then the mixers.
+///
+/// # Safety
+/// As `ee_sound_mixers_initialize`.
+int32_t ee_sound_initialize(EeSoundMixerStart *start);
+
+/// `SEShutdown` (a shutdown-list function): every mixer deleted.
+///
+/// # Safety
+/// None beyond the engine's: the shutdown list calls it once the sound threads are done.
+void ee_sound_shutdown(bool _forced);
+
 /// `SEShutdown`'s mixers: the first one deleted until none is left.
 void ee_sound_mixers_delete_all();
 
