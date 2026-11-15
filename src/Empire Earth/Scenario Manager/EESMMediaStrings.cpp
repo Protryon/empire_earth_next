@@ -49,75 +49,30 @@ bool EESMMediaStrings::ListMediaFiles(const UWideString& inFile, std::vector<UWi
 bool EESMMediaStrings::GetMediaFile(const UWideString& inScenarioName, unsigned long inKind, UWideString& outFile,
                                     UWideString& outError, bool inCampaignPrefix)
 {
-    std::vector<UWideString> theTokens;
-    UWideString thePrefixedPath1;
-    UWideString thePrefixedPath2;
-    UWideString theName;
-    UWideString thePath1;
-    UWideString thePath2;
+    static const char* const kFolders[] = {"Movies\\", "Sounds\\", "Scenarios\\"};
+    static const char* const kExtensions[][2] = {{".bik", ".bik"}, {".wav", ".mp3"}, {".jpg", ".jpg"}};
+    const UWideString* theNames[] = {&this->mMovieFile, &this->mSoundFile, &this->mMapFile};
     UWideString theNoneString;
-    UWideString theFile1;
-    UWideString theFile2;
-    UWideString theScenario;
-    bool theResult = true;
-    switch (inKind) {
-    case 0:
-        theName = this->mMovieFile;
-        thePath1 = "Movies\\";
-        thePath2 = "Movies\\";
-        thePrefixedPath1 = "Movies\\";
-        thePrefixedPath2 = "Movies\\";
-        theFile1 = theName + ".bik";
-        theFile2 = theName + ".bik";
-        thePath1 += theFile1;
-        thePath2 += theFile2;
-        thePrefixedPath1 += gU52A280 + theFile1;
-        thePrefixedPath2 += gU52A280 + theFile2;
-        break;
-    case 1:
-        theName = this->mSoundFile;
-        thePath1 = "Sounds\\";
-        thePath2 = "Sounds\\";
-        thePrefixedPath1 = "Sounds\\";
-        thePrefixedPath2 = "Sounds\\";
-        theFile1 = theName + ".wav";
-        theFile2 = theName + ".mp3";
-        thePath1 += theFile1;
-        thePath2 += theFile2;
-        thePrefixedPath1 += gU52A280 + theFile1;
-        thePrefixedPath2 += gU52A280 + theFile2;
-        break;
-    case 2:
-        theName = this->mMapFile;
-        thePath1 = "Scenarios\\";
-        thePath2 = "Scenarios\\";
-        thePrefixedPath1 = "Scenarios\\";
-        thePrefixedPath2 = "Scenarios\\";
-        theFile1 = theName + ".jpg";
-        theFile2 = theName + ".jpg";
-        thePath1 += theFile1;
-        thePath2 += theFile2;
-        thePrefixedPath1 += gU52A280 + theFile1;
-        thePrefixedPath2 += gU52A280 + theFile2;
-        break;
-    }
     gResource->GetString(IDS_SE_MAP_NONE, theNoneString);
-    if (theName != theNoneString && theName != gEmptyString) {
-        if (gDataPath->FindFile(thePath1) == 0) {
-            outFile = inCampaignPrefix ? thePrefixedPath1 : thePath1;
-        } else if (gDataPath->FindFile(thePath2) == 0) {
-            outFile = inCampaignPrefix ? thePrefixedPath2 : thePath2;
-        } else {
-            ESVERIFY_AT(inScenarioName.Tokenize("/.\\", theTokens), 181);
-            ESVERIFY_AT(theTokens.size() == 3, 182);
-            theScenario = theTokens[1];
-            // Build the message as a string: sprintf into outError's own buffer overran it for long file
-            // names (and wrote into the shared empty string when outError was empty).
-            outError = theFile1 + "\n";
-            theResult = false;
+    if (inKind > 2 || *theNames[inKind] == theNoneString || *theNames[inKind] == gEmptyString)
+        return true;
+    UWideString theFolder = kFolders[inKind];
+    UWideString theFiles[2] = {*theNames[inKind] + kExtensions[inKind][0], *theNames[inKind] + kExtensions[inKind][1]};
+    for (int i = 0; i < 2; i++) {
+        // the first file found in the data path, as found or with the campaign's folder before its name
+        UWideString thePath = theFolder + theFiles[i];
+        if (gDataPath->FindFile(thePath) == 0) {
+            outFile = inCampaignPrefix ? theFolder + (gU52A280 + theFiles[i]) : thePath;
+            return true;
         }
     }
-    return theResult;
+    std::vector<UWideString> theTokens;
+    ESVERIFY_AT(inScenarioName.Tokenize("/.\\", theTokens), 181);
+    ESVERIFY_AT(theTokens.size() == 3, 182);
+    // Build the message as a string: sprintf into outError's own buffer overran it for long file names (and wrote
+    // into the shared empty string when outError was empty).
+    outError = theFiles[0] + "\n";
+    return false;
 }
 
 // FUNCTION: EXE 0x5c5e78
