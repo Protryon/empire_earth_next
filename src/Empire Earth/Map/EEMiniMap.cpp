@@ -56,22 +56,14 @@ extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; E
 //   object 0x9297d0  ctor (GEVector's three fldz) 0x11e378
 // The terrain light (EEMiniMap's ctor points it at (0, 1.5, 1), normalized) (provisional name)
 GEVector gMiniMapLight;
-// SYNTHETIC: EXE 0x51e36e   (wrapper)
-// SYNTHETIC: EXE 0x51e378   (ctor)
-// SYNTHETIC: EXE 0x51e391   (registrar)
-// SYNTHETIC: EXE 0x51e39d   (dtor: GEVector has an empty destructor)
 
 // chain at 0x51e39e (wrapper)
 //   object 0x9297c0  ctor (three constants) 0x11e3a8
 // The terrain colours' ambient term (GetPixelColor adds it) (provisional name)
 GEColor gMiniMapAmbient(0.102745101f, 0.132549018f, 0.188235298f);
-// SYNTHETIC: EXE 0x51e39e   (wrapper)
-// SYNTHETIC: EXE 0x51e3a8   (ctor)
-// SYNTHETIC: EXE 0x51e3c7   (registrar)
-// SYNTHETIC: EXE 0x51e3d3   (dtor: GEColor has an empty destructor)
 
 // the mini map's texture is 0x80 pixels square (0x441d50 .. 0x441d60: unit-local constants)
-const float kMiniMapSize = 128.0f;          // 0x441d50 (provisional name)
+const float kMiniMapSize = 128.0f;
 // SetMap's transformations, Refresh's view trapezoid and ProjectToGround are ee_gfx minimap.rs (RUST_PLAN R4.4; its
 // constants, .rdata 0x441d38..0x441d60, are there); the GE value classes pass as their #[repr(C)] mirrors
 static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GETransformation) == sizeof(EeGeTransformation) &&
@@ -93,7 +85,6 @@ static unsigned long EEMiniMapTerrainAt(GETerrainMesh& inMesh, unsigned long inX
     return inMesh.GetTextureSetID(inX - 1, inY - 1);
 }
 
-// FUNCTION: EXE 0x51e3d4
 // Creates the mini map for a screen and player, sizing the dot pools and attaching the map if one is given
 EEMiniMap::EEMiniMap(GEScreen* inScreen, EEMap* inMap, EEPlayer* inPlayer)
     : RTSMiniMap(inPlayer, inScreen)
@@ -116,16 +107,11 @@ EEMiniMap::EEMiniMap(GEScreen* inScreen, EEMap* inMap, EEPlayer* inPlayer)
         this->mU1015C[i] = 0;
 }
 
-// SYNTHETIC: EXE 0x51e4da
-// (the scalar deleting destructor, emitted with the vtable; slot EEMiniMap+0x0)
-
-// FUNCTION: EXE 0x51e4f6
 // Destroys the mini map (the base class frees its surfaces)
 EEMiniMap::~EEMiniMap()
 {
 }
 
-// FUNCTION: EXE 0x51e53b
 // Adds a building's remembered image as a dot in its mini map cell (gaia in its class colour, others in
 // the owner's shade; a resource dot heading the cell stays first); a wall also adds its next three segments
 void EEMiniMap::AddDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall)
@@ -185,7 +171,6 @@ void EEMiniMap::AddDoppelganger(EEDoppelganger* inDoppelganger, long inX, long i
     }
 }
 
-// FUNCTION: EXE 0x51e7b1
 // Redraws the camera's view outline when a map is attached
 void EEMiniMap::RefreshView()
 {
@@ -193,7 +178,6 @@ void EEMiniMap::RefreshView()
         this->Refresh();
 }
 
-// FUNCTION: EXE 0x51e7c0
 // Copies the 64 x 64 unit layer into the world texture and relocks it for drawing
 void EEMiniMap::UpdateWorldTexture()
 {
@@ -205,7 +189,6 @@ void EEMiniMap::UpdateWorldTexture()
     this->mPixelsPerRow = this->mUnitSurface->GetBytesPerRow() >> 1;
 }
 
-// FUNCTION: EXE 0x51e83a
 // Counts one sight source off the mini map cell holding a tile and redraws the cell
 void EEMiniMap::CountCellOff(long inX, long inY)
 {
@@ -218,7 +201,6 @@ void EEMiniMap::CountCellOff(long inX, long inY)
     this->RedrawCell(inY, inX);
 }
 
-// FUNCTION: EXE 0x51e8bf
 // Counts one sight source onto the mini map cell holding a tile (an unexplored cell starts at 2), redraws it
 void EEMiniMap::CountCellOn(long inX, long inY)
 {
@@ -235,7 +217,6 @@ void EEMiniMap::CountCellOn(long inX, long inY)
     this->RedrawCell(inY, inX);
 }
 
-// FUNCTION: EXE 0x51e956
 // Removes a building image's dot from its mini map cell (and a wall's next three segments)
 void EEMiniMap::RemoveDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall)
 {
@@ -287,7 +268,6 @@ void EEMiniMap::RemoveDoppelganger(EEDoppelganger* inDoppelganger, long inX, lon
     }
 }
 
-// FUNCTION: EXE 0x51eb87
 // Attaches a map: builds the map/pixel and map/cell transformations (rotated 45 degrees, centred) and the
 // map size of one pixel, then redraws the mini map
 // (the transformations: ee_gfx minimap.rs; its translation adds are written `-x + m03` / `m13 - y`, as here)
@@ -308,7 +288,6 @@ void EEMiniMap::SetMap(EEMap* inMap)
     this->mPixelsPerRow = this->mUnitSurface->GetBytesPerRow() >> 1;
 }
 
-// FUNCTION: EXE 0x51f0db
 // Counts a tile's sight into its mini map cell: explored-only tiles once, seen tiles once per viewer
 void EEMiniMap::TellTileVisibility(EETile* inTile, long inX, long inY)
 {
@@ -326,7 +305,6 @@ void EEMiniMap::TellTileVisibility(EETile* inTile, long inX, long inY)
     }
 }
 
-// FUNCTION: EXE 0x51f184
 // Adds a tile's building images and its living, visible units to the mini map
 // NEAR: the original calls vector<EEDoppelganger*>::begin 0x17a952 and _Ptrit::operator+ 0x80ad for mU18[i] out
 // of line; ours expands them
@@ -348,7 +326,6 @@ void EEMiniMap::TellTile(EETile* inTile, long inX, long inY)
     }
 }
 
-// FUNCTION: EXE 0x51f272
 // Computes a mini map pixel's terrain colour: the lit average of the map vertices under it plus ambient,
 // or the nearest vertex when none falls inside
 // NEAR: frame layout and slot order differ from the original
@@ -416,7 +393,6 @@ void EEMiniMap::GetPixelColor(long inX, long inY, GEColor& outColor)
     outColor.Normalize();
 }
 
-// FUNCTION: EXE 0x51f743
 // Clears the unit layer and all dots, then re-reads every tile's sight and contents diagonal by diagonal
 // NEAR: frame 0x24 vs 0x20: the original keeps x in ebx and shares the clear loop's slots
 void EEMiniMap::Redraw()
@@ -473,7 +449,6 @@ void EEMiniMap::Redraw()
         this->TellTile(theMap->GetTile(theHeight + i, i), theHeight + i, i);
 }
 
-// FUNCTION: EXE 0x51fa55
 // Recolours every player's dots after a colour change (units in player colour, buildings in shade)
 void EEMiniMap::Recolor()
 {
@@ -504,7 +479,6 @@ void EEMiniMap::Recolor()
     }
 }
 
-// FUNCTION: EXE 0x51fb2a
 // Redraws one cell: the first unit on a seen tile, else the first building image, else black,
 // dark or grey by its sight count
 void EEMiniMap::RedrawCell(long inX, long inY)
@@ -532,7 +506,6 @@ void EEMiniMap::RedrawCell(long inX, long inY)
         this->mPixels[this->mPixelsPerRow * inY + inX] = theNode->mData.mColor;
 }
 
-// FUNCTION: EXE 0x51fc62
 // Recomputes the camera's view trapezoid on the mini map (camera tilted 30 degrees, at least height 5),
 // shortening its sides to the width of its near edge (at least 32)
 // (the trapezoid: ee_gfx minimap.rs)
@@ -546,7 +519,6 @@ void EEMiniMap::Refresh()
     this->mCorner3 = *reinterpret_cast<const GE2DPoint*>(&theView.corners[3]);
 }
 
-// FUNCTION: EXE 0x5200df
 // Recomputes every terrain pixel of the mini map and flags the terrain texture changed
 void EEMiniMap::RedrawAll()
 {
@@ -556,7 +528,6 @@ void EEMiniMap::RedrawAll()
     this->mTerrainCriticalSection->Leave();
 }
 
-// FUNCTION: EXE 0x520115
 // Recomputes the terrain pixels covering a map rectangle and flags the terrain texture changed
 void EEMiniMap::RedrawRect(long inLeft, long inRight, long inBottom, long inTop)
 {
@@ -608,7 +579,6 @@ void EEMiniMap::RedrawRect(long inLeft, long inRight, long inBottom, long inTop)
     this->mTerrainCriticalSection->Leave();
 }
 
-// FUNCTION: EXE 0x5202f2
 // Recomputes the terrain colour of each pixel in a texture rectangle
 void EEMiniMap::RedrawPixels(long inLeft, long inRight, long inBottom, long inTop)
 {
@@ -626,7 +596,6 @@ void EEMiniMap::RedrawPixels(long inLeft, long inRight, long inBottom, long inTo
     this->mTerrainTexture->GetSurface()->Unlock();
 }
 
-// FUNCTION: EXE 0x5203b9
 // Moves a unit's dot between mini map cells (or just updates its position within a cell); -10000 means
 // not on the map. Classes without a mini map colour and other players' foundations get no dot
 // NEAR: the 1.0f push as in AddDoppelganger; slot order of mU38/the new cell
@@ -701,97 +670,3 @@ void EEMiniMap::MoveUnit(EEUnit* inUnit, long inOldX, long inOldY, long inX, lon
         }
     }
 }
-
-// TEMPLATE: EXE 0x5206c2
-// EEMiniMapUnitDot::operator== (Find's compare in MoveUnit)
-
-// TEMPLATE: EXE 0x5206f2
-// UMemoryPool<UListNode<EEMiniMapDot> >::SetSize
-
-// TEMPLATE: EXE 0x5207ff
-// UList<EEMiniMapDot>::Find
-
-// TEMPLATE: EXE 0x520826
-// UList<EEMiniMapDot>::Clear
-
-// TEMPLATE: EXE 0x52084b
-// UList<EEMiniMapDot>::InsertAfter (NEAR: the original stores node->mPrev before testing inPrevious->mNext)
-
-// TEMPLATE: EXE 0x5208a5
-// UList<EEMiniMapDot>::AddHead
-
-// TEMPLATE: EXE 0x5208df
-// UList<EEMiniMapDot>::Remove
-
-// TEMPLATE: EXE 0x520919
-// UMemoryPool<UListNode<EEMiniMapUnitDot> >::SetSize
-
-// TEMPLATE: EXE 0x520a26
-// UMemoryPool<...>::Release (ICF-folded)
-
-// TEMPLATE: EXE 0x520a83
-// UList<EEMiniMapUnitDot>::Clear
-
-// TEMPLATE: EXE 0x520aa8
-// UList<EEMiniMapUnitDot>::InsertAfter (NEAR: as 0x52084b)
-
-// TEMPLATE: EXE 0x520b01
-// UList<EEMiniMapUnitDot>::AddHead
-
-// TEMPLATE: EXE 0x520b3b
-// UList<EEMiniMapUnitDot>::Remove
-
-// SYNTHETIC: EXE 0x520b75
-// (the node pools' `$E` chain: UList<EEMiniMapDot>::sNodePool, then UList<EEMiniMapUnitDot>::sNodePool)
-// SYNTHETIC: EXE 0x520b89   (UList<EEMiniMapDot>::sNodePool `$D`: guarded ctor)
-// SYNTHETIC: EXE 0x520ba4   (registrar)
-// SYNTHETIC: EXE 0x520bb0   (UList<EEMiniMapUnitDot>::sNodePool `$D`)
-// SYNTHETIC: EXE 0x520bcb   (registrar)
-// SYNTHETIC: EXE 0x520bd7   (UList<EEMiniMapUnitDot>::sNodePool `$E`: guarded dtor)
-
-// TEMPLATE: EXE 0x520bfc
-// UMemoryPool<UListNode<EEMiniMapUnitDot> >::`scalar deleting destructor'
-
-// SYNTHETIC: EXE 0x520c1e   (UList<EEMiniMapDot>::sNodePool `$E`: guarded dtor)
-
-// TEMPLATE: EXE 0x520c43
-// UMemoryPool<UListNode<EEMiniMapDot> >::`scalar deleting destructor'
-
-// TEMPLATE: EXE 0x520c65
-// UMemoryPoolChunk<...>::`scalar deleting destructor' (ICF-folded)
-
-// TEMPLATE: EXE 0x520c8d
-// UMemoryPool<UListNode<EEMiniMapDot> >::UMemoryPool
-
-// TEMPLATE: EXE 0x520cc7
-// UMemoryPool<UListNode<EEMiniMapUnitDot> >::UMemoryPool
-
-// TEMPLATE: EXE 0x520d01
-// UMemoryPoolChunk<UListNode<EEMiniMapDot> >::UMemoryPoolChunk
-
-// TEMPLATE: EXE 0x520d6c
-// UMemoryPoolChunk<UListNode<EEMiniMapUnitDot> >::UMemoryPoolChunk
-
-// TEMPLATE: EXE 0x520dd8
-// UMemoryPool<UListNode<EEMiniMapDot> >::Delete
-
-// TEMPLATE: EXE 0x520e2e
-// UMemoryPool<UListNode<EEMiniMapDot> >::New
-
-// TEMPLATE: EXE 0x520f11
-// UMemoryPool<UListNode<EEMiniMapUnitDot> >::Delete
-
-// TEMPLATE: EXE 0x520f70
-// UMemoryPool<UListNode<EEMiniMapUnitDot> >::New
-
-// TEMPLATE: EXE 0x521059
-// UMemoryPool<UListNode<EEMiniMapDot> >::AddChunk
-
-// TEMPLATE: EXE 0x5210cc
-// UMemoryPool<UListNode<EEMiniMapUnitDot> >::AddChunk
-
-// TEMPLATE: EXE 0x52113f
-// EEColorTable::GetDarkColor
-
-// TEMPLATE: EXE 0x521168
-// EEColorTable::GetColor2

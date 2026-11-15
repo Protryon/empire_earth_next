@@ -42,7 +42,6 @@ typedef my_comp_master * my_master_ptr;
  * Support routines that do various essential calculations.
  */
 
-// FUNCTION: JPEG 0x1009463b
 LOCAL(void)
 initial_setup (j_compress_ptr cinfo)
 /* Do computations that are needed before master selection phase */
@@ -127,7 +126,6 @@ initial_setup (j_compress_ptr cinfo)
 
 #ifdef C_MULTISCAN_FILES_SUPPORTED
 
-// FUNCTION: JPEG 0x100947e1
 LOCAL(void)
 validate_script (j_compress_ptr cinfo)
 /* Verify that the scan script in cinfo->scan_info[] is valid; also
@@ -265,7 +263,6 @@ validate_script (j_compress_ptr cinfo)
 #endif /* C_MULTISCAN_FILES_SUPPORTED */
 
 
-// FUNCTION: JPEG 0x10094c95
 LOCAL(void)
 select_scan_parameters (j_compress_ptr cinfo)
 /* Set up the scan parameters for the current scan */
@@ -307,7 +304,6 @@ select_scan_parameters (j_compress_ptr cinfo)
 }
 
 
-// FUNCTION: JPEG 0x10094d70
 LOCAL(void)
 per_scan_setup (j_compress_ptr cinfo)
 /* Do computations that are needed before processing a JPEG scan */
@@ -401,7 +397,6 @@ per_scan_setup (j_compress_ptr cinfo)
  * required.
  */
 
-// FUNCTION: JPEG 0x10094b18
 METHODDEF(void)
 prepare_for_pass (j_compress_ptr cinfo)
 {
@@ -490,7 +485,6 @@ prepare_for_pass (j_compress_ptr cinfo)
  * In multi-pass processing, this routine is not used.
  */
 
-// FUNCTION: JPEG 0x10094f14
 METHODDEF(void)
 pass_startup (j_compress_ptr cinfo)
 {
@@ -505,7 +499,6 @@ pass_startup (j_compress_ptr cinfo)
  * Finish up at end of pass.
  */
 
-// FUNCTION: JPEG 0x10094f3f
 METHODDEF(void)
 finish_pass_master (j_compress_ptr cinfo)
 {
@@ -546,7 +539,6 @@ finish_pass_master (j_compress_ptr cinfo)
  * Initialize master compression control.
  */
 
-// FUNCTION: JPEG 0x10094590
 GLOBAL(void)
 jinit_c_master_control (j_compress_ptr cinfo, boolean transcode_only)
 {

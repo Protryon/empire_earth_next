@@ -54,17 +54,12 @@
 const float kEEFStaggeredLineSpacing = 1.5f;
 const float kEEFStaggeredLineDepth = 0.75f;
 
-// FUNCTION: EXE 0x4ddee7
 // Creates the staggered line formation (type 3, rows of 5 at 1.5 spacing, odd rows shifted, a gap row after every 5)
 EEFStaggeredLine::EEFStaggeredLine()
     : EEFLine(3, kEEFStaggeredLineSpacing, kEEFStaggeredLineDepth, 5, 5)
 {
 }
 
-// SYNTHETIC: EXE 0x4ddf13
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4ddf2f
 // Destroys the staggered line formation
 EEFStaggeredLine::~EEFStaggeredLine()
 {

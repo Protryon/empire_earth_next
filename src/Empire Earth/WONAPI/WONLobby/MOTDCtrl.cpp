@@ -15,10 +15,8 @@
 namespace WONAPI {
 MOTDCtrl::MOTDCtrl() : mNeedGenHTML(false) {}
 // The original stores its own vtable (0x7c0bff) before destroying the two paths, the browser and the base
-// FUNCTION: WON 0x007c0be0
 // Destroys the MOTD control, releasing both MOTD paths and the browser
 MOTDCtrl::~MOTDCtrl() {}
-// FUNCTION: WON 0x007c0cd0
 // Finds the MOTD page view in the layout and listens to broadcasts
 void MOTDCtrl::InitComponent(ComponentInit& inInit)
 {
@@ -27,7 +25,6 @@ void MOTDCtrl::InitComponent(ComponentInit& inInit)
     SafeGetComponent(static_cast<ComponentConfigInit&>(inInit).mConfig,this->mBrowser,"Browser",__FILE__,36);
     this->SubscribeToBroadcast(1);
 }
-// FUNCTION: WON 0x007c0d20
 // Builds and shows the MOTD page (system MOTD, then game MOTD) once both documents have arrived
 void MOTDCtrl::Paint(Graphics& inGraphics)
 {
@@ -43,7 +40,6 @@ void MOTDCtrl::Paint(Graphics& inGraphics)
     Container::Paint(inGraphics);
 }
 // Only the document type is checked, not whether the download succeeded
-// FUNCTION: WON 0x007c1050
 // Takes the system and game MOTD file paths from a finished MOTD download and repaints
 void MOTDCtrl::ShowMessage(RustServerOp* inOp)
 {
@@ -53,7 +49,6 @@ void MOTDCtrl::ShowMessage(RustServerOp* inOp)
     this->mGameMOTDPath=inOp->GetBytes(EE_WON_HTTPDOC_PATH,HTTPDocOwner_Game);
     this->Invalidate();
 }
-// FUNCTION: WON 0x007c1280
 // Handles got-HTTP-document broadcasts; passes every other event to the base component
 void MOTDCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 {
@@ -66,7 +61,6 @@ void MOTDCtrl::HandleComponentEvent(ComponentEvent* inEvent)
 // The ping ceiling (0x8df4cc) starts at 5000 and is taken from the lobby config while it is still 5000
 static unsigned long sLobbyPingCeiling=5000;
 // The text is always empty, so its branches never draw anything (as in the original)
-// FUNCTION: WON 0x007c12b0
 // Draws a ping as 1-10 green bars scaled by the config's ping ceiling, or the searching or failed icon
 void DrawLobbyPing(Graphics* inGraphics,unsigned short inPing,int inHeight,int inAlignment,int inWidth)
 {
@@ -112,15 +106,3 @@ void DrawLobbyPing(Graphics* inGraphics,unsigned short inPing,int inHeight,int i
     }
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c0b40
-// (public: __thiscall WONAPI::MOTDCtrl::MOTDCtrl(void)    [??0MOTDCtrl@WONAPI@@QAE@XZ])
-// TEMPLATE: WON 0x007c0bc0
-// (public: virtual void * __thiscall WONAPI::MOTDCtrl::`scalar deleting destructor'(unsigned int)    [??_GMOTDCtrl@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007c0fb0
-// (public: __thiscall WONAPI::HTMLDocumentGen::~HTMLDocumentGen(void))
-// TEMPLATE: WON 0x0071b370
-// (protected: void __thiscall std::vector<class WONAPI::SmartPtr<class WONAPI::HTMLDocument>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::HT)

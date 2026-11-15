@@ -89,7 +89,7 @@ public:
     bool ReadValue(unsigned char &theByte) { int anInt; bool aRet = this->ReadValue(anInt); if (aRet) theByte = (unsigned char)anInt; return aRet; }
     // true/yes/on/y/t/1 or false/no/off/n/f/0; another word is consumed and leaves the value
     bool ReadValue(bool& outValue) { return ee_won_parser_read_bool(this->Text(), this->Unit(), &this->mPos, &outValue); } //2a5550
-    bool ReadString(std::string& outString, bool inStopAtWhitespace) // 0x2a49f0
+    bool ReadString(std::string& outString, bool inStopAtWhitespace)
     {
         outString.erase();
         ee_won_parser_read_string(this->Text(), this->Unit(), &this->mPos, inStopAtWhitespace, AppendBytes, &outString);
@@ -136,7 +136,7 @@ private:
 // tables, the settings, what a parse leaves); the class keeps the room's client list and the target client.
 class ChatCommandParser : public RefCount {
 public:
-    ChatCommandParser();                  // 0x355750
+    ChatCommandParser();
     virtual ~ChatCommandParser();         // 0x3559f0; only virtual slot
     void InitCommands();
     void SetClientList(LobbyClientList* inClients, int inMatchThreshold);

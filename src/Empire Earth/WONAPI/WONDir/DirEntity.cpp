@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006f0190
 // Creates an empty directory entity (no type, times, CRC or addresses)
 DirEntity::DirEntity()
 {
@@ -26,12 +25,10 @@ DirEntity::DirEntity()
     this->mTouchId = 0;
     this->mReqUnique = false;
 }
-// FUNCTION: WON 0x006f0290
 // Destroys the entity, releasing its names, address, data objects and ACLs
 DirEntity::~DirEntity()
 {
 }
-// FUNCTION: WON 0x006f0400
 // Returns the service's network address as an IP address and port (empty when shorter than 6 bytes)
 IPAddr DirEntity::GetNetAddrAsIP() const
 {
@@ -41,13 +38,3 @@ IPAddr DirEntity::GetNetAddrAsIP() const
     return result;
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006f0270
-// (protected: virtual void * __thiscall WONAPI::DirEntity::`scalar deleting destructor'(unsigned int)    [??_GDirEntity@WONAPI@@MAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006f1d50
-// (public: __thiscall std::list<struct WONAPI::DirDataObject,class std::allocator<struct WONAPI::DirDataObject> >::~list<struct WONAPI::DirDataObject,cla)
-// TEMPLATE: WON 0x006f1e00
-// (public: class std::list<struct WONAPI::DirDataObject,class std::allocator<struct WONAPI::DirDataObject> >::iterator __thiscall std::list<struct WONAPI)

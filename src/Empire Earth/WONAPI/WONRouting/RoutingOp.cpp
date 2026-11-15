@@ -143,7 +143,6 @@ RoutingClientInfoPtr RoutingOp::GetClientInfo() const
     return c.mClient;
 }
 
-// FUNCTION: WON 0x006c6cb0
 // Returns a new group record filled from the group created notice
 RoutingGroupInfoPtr RoutingOp::GetGroupInfo() const
 {
@@ -157,7 +156,3 @@ RoutingGroupInfoPtr RoutingOp::GetGroupInfo() const
 }
 
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006c7b20
-// (public: virtual void * __thiscall WONAPI::RoutingOp::`scalar deleting destructor'(unsigned int)    [??_GRoutingOp@WONAPI@@UAEPAXI@Z])

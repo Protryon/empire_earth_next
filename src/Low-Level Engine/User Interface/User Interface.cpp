@@ -16,22 +16,21 @@
 static UIBackgroundTable sBackgroundTable;
 
 // the UI database file names (declared in lle/UIManager.h; UIManager::Create opens them)
-LLE_API UString gDbUIBackgroundFileName("DB\\dbuiback.dat");            // 0x1012ec70
-LLE_API UString gDbUIControlsFileName("DB\\dbuicontrols.dat");          // 0x1012ec60
-LLE_API UString gDbUIFormsFileName("DB\\dbuiforms.dat");                // 0x1012ec50
-LLE_API UString gDbUIControlEventsFileName("DB\\dbuicontrolevents.dat"); // 0x1012ec40
-LLE_API UString gDbUIFormEventsFileName("DB\\dbuiformevents.dat");      // 0x1012ec30
-LLE_API UString gDbUIFontsFileName("DB\\dbuifonts.dat");                // 0x1012ec20
-LLE_API UString gDbUIHotKeyFileName("DB\\dbuihotkey.dat");              // 0x1012ec10
+LLE_API UString gDbUIBackgroundFileName("DB\\dbuiback.dat");
+LLE_API UString gDbUIControlsFileName("DB\\dbuicontrols.dat");
+LLE_API UString gDbUIFormsFileName("DB\\dbuiforms.dat");
+LLE_API UString gDbUIControlEventsFileName("DB\\dbuicontrolevents.dat");
+LLE_API UString gDbUIFormEventsFileName("DB\\dbuiformevents.dat");
+LLE_API UString gDbUIFontsFileName("DB\\dbuifonts.dat");
+LLE_API UString gDbUIHotKeyFileName("DB\\dbuihotkey.dat");
 
 #include "lle/GEText.h"
 #include "lle/User Interface.h"
 
 static void UIShutdown(bool inForced);
 
-long gUIInitialized;                        // 0x1012ed00 (provisional name)
+long gUIInitialized;
 
-// FUNCTION: LLE 0x10082a85
 // Returns how many characters fit the pixel width (tab = 4 spaces), cutting at a space or newline; all if none fit
 unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont* inFont, unsigned long inWidth,
                                      bool inBreakAtSpace, bool inStopAtNewline)
@@ -82,7 +81,6 @@ unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont* inFont
     return theIndex;
 }
 
-// FUNCTION: LLE 0x10082c26
 // Marks the user interface initialized and registers its shutdown hook; always succeeds
 long UIInitialize()
 {
@@ -91,43 +89,8 @@ long UIInitialize()
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10082c3e
 // Shutdown hook: deletes every background table
 static void UIShutdown(bool inForced)
 {
     UIBackgroundTable::DeleteAll();
 }
-
-// Compiler-generated: the init chains (names in analysis/lle/names.txt)
-// SYNTHETIC: LLE 0x10082871
-// SYNTHETIC: LLE 0x1008287b
-// SYNTHETIC: LLE 0x10082885
-// SYNTHETIC: LLE 0x10082891
-// SYNTHETIC: LLE 0x100828a5
-// SYNTHETIC: LLE 0x100828af
-// SYNTHETIC: LLE 0x100828bf
-// SYNTHETIC: LLE 0x100828cb
-// SYNTHETIC: LLE 0x100828d5
-// SYNTHETIC: LLE 0x100828df
-// SYNTHETIC: LLE 0x100828ef
-// SYNTHETIC: LLE 0x100828fb
-// SYNTHETIC: LLE 0x10082905
-// SYNTHETIC: LLE 0x1008290f
-// SYNTHETIC: LLE 0x1008291f
-// SYNTHETIC: LLE 0x1008292b
-// SYNTHETIC: LLE 0x10082935
-// SYNTHETIC: LLE 0x1008293f
-// SYNTHETIC: LLE 0x1008294f
-// SYNTHETIC: LLE 0x1008295b
-// SYNTHETIC: LLE 0x10082965
-// SYNTHETIC: LLE 0x1008296f
-// SYNTHETIC: LLE 0x1008297f
-// SYNTHETIC: LLE 0x1008298b
-// SYNTHETIC: LLE 0x10082995
-// SYNTHETIC: LLE 0x1008299f
-// SYNTHETIC: LLE 0x100829af
-// SYNTHETIC: LLE 0x100829bb
-// SYNTHETIC: LLE 0x100829c5
-// SYNTHETIC: LLE 0x100829cf
-// SYNTHETIC: LLE 0x100829df
-// SYNTHETIC: LLE 0x100829eb

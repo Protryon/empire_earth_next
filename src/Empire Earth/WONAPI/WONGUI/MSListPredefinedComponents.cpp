@@ -13,7 +13,6 @@
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONLobbyWONListConfig.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00790020
 // Maps HEADER / MULTILISTAREA to the list control's header and list area with a new config for each;
 // other names go to the scroll container config
 bool MSListCtrlConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)

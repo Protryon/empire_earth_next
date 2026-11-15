@@ -23,15 +23,15 @@ private:
     ConfigParser(const ConfigParser&);
     ConfigParser& operator=(const ConfigParser&);
 public:
-    ConfigParser(); // 0x7b1d20
+    ConfigParser();
     // the process-wide line count (0x966b54) is ee_won's (rust/crates/ee_won/src/config.rs)
     static void ResetLineCount() { ee_won_config_reset_line_count(); }
     static int GetLineCount() { return ee_won_config_line_count(); }
     virtual ~ConfigParser(); // 0x7b1e10 (closes the file; the only virtual)
-    bool ReadToken(std::string&, bool inToEndLine=false, bool inSkip=false); // 0x7b3d70
-    bool ReadToken(std::wstring&, bool inToEndLine=false, bool inSkip=false); // 0x7b3d50
+    bool ReadToken(std::string&, bool inToEndLine=false, bool inSkip=false);
+    bool ReadToken(std::wstring&, bool inToEndLine=false, bool inSkip=false);
     void SetParent(ConfigParser*);
-    void SetError(const std::string&, bool); // 0x7b1fb0
+    void SetError(const std::string&, bool);
     void AddWarning(const std::string&);
     void CopyWarnings(ConfigParser&);
     const std::string& GetAbortReason();
@@ -87,9 +87,9 @@ public:
     enum DataType { Long, String, Binary, Other };
     // the key's block, path and open flag and every method are ee_won's (regkey.rs EeWonRegKey; RegKey.cpp is
     // deleted: net round 27)
-    RegKey(int inRoot, const std::string& inPath, bool, bool) // 0x6a4260
+    RegKey(int inRoot, const std::string& inPath, bool, bool)
         : mKey(ee_won_regkey_new(inRoot, B(inPath), inPath.size())) {}
-    virtual ~RegKey() { ee_won_regkey_free(this->mKey); } // 0x6a42e0
+    virtual ~RegKey() { ee_won_regkey_free(this->mKey); }
     GetResult GetValue(const std::string& inName, std::string& outValue) const // any value reads as a string
     { outValue.erase(); return this->Op(EE_WON_REGKEY_GET_VALUE, inName, &outValue) ? Ok : NotFound; }
     bool OpenSubKey(const std::string& inName, bool = false, bool = true) { return this->Op(EE_WON_REGKEY_OPEN_SUBKEY, inName) != 0; }
@@ -106,17 +106,17 @@ public:
     bool SetValue(const std::string& inName, const void* inData, unsigned long inLength) // as hex text
     { return this->Op(EE_WON_REGKEY_SET_BINARY, inName, NULL, NULL, static_cast<const uint8_t*>(inData), inLength) != 0; }
     bool DeleteValue(const std::string& inName) { return this->Op(EE_WON_REGKEY_DELETE_VALUE, inName) != 0; }
-    virtual bool DeleteSubKey(const std::string& inKey) { return this->Op(EE_WON_REGKEY_DELETE_SUBKEY, inKey) != 0; } // 0x6a4830
-    virtual bool DeleteSubKey(RegKey& inKey) { return ee_won_regkey_child(this->mKey, inKey.mKey, true, NULL, 0); } // 0x6a4870
+    virtual bool DeleteSubKey(const std::string& inKey) { return this->Op(EE_WON_REGKEY_DELETE_SUBKEY, inKey) != 0; }
+    virtual bool DeleteSubKey(RegKey& inKey) { return ee_won_regkey_child(this->mKey, inKey.mKey, true, NULL, 0); }
     // 0 and the value, 2 for a value that is no integer, 1 when missing (the value 0 then)
-    int QueryDWORD(const std::string& inName, DWORD& outValue) // 0x6a4680
+    int QueryDWORD(const std::string& inName, DWORD& outValue)
     { long long n = 0; int r = this->Op(EE_WON_REGKEY_QUERY_DWORD, inName, NULL, &n); outValue = (DWORD)n; return r; }
-    bool OpenNewKey(int inRoot, const std::string& inPath, bool, bool) // 0x6a4440
+    bool OpenNewKey(int inRoot, const std::string& inPath, bool, bool)
     { long long n = inRoot; return this->Op(EE_WON_REGKEY_OPEN_NEW, inPath, NULL, &n) != 0; }
-    void CloseKey() { ee_won_regkey_op(this->mKey, EE_WON_REGKEY_CLOSE, NULL, 0, NULL, 0, NULL, NULL, NULL); } // 0x6a4370
+    void CloseKey() { ee_won_regkey_op(this->mKey, EE_WON_REGKEY_CLOSE, NULL, 0, NULL, 0, NULL, NULL, NULL); }
     bool GetToBuf(const std::string& inName, std::string& outText) const { return this->Op(EE_WON_REGKEY_GET_TO_BUF, inName, &outText) != 0; }
     // 0, 2 wrong type, 4 empty (the caller's buffer left alone) or 1 missing
-    int QueryBinary(const std::string& inName, ConstSmartPtr<ByteBuffer>& outValue) // 0x6a46e0
+    int QueryBinary(const std::string& inName, ConstSmartPtr<ByteBuffer>& outValue)
     {
         std::string aBytes;
         int r = this->Op(EE_WON_REGKEY_QUERY_BINARY, inName, &aBytes);
@@ -148,11 +148,11 @@ enum LobbyStatus : int; enum LobbyRunMode : int; // (values only by number); Lob
 // This revision has no BigFileList after mInitError (later SDKs add one).
 class WONLobbyPrv : public RefCount {
 public:
-    WONLobbyPrv(); // 0x7628c0
+    WONLobbyPrv();
     virtual ~WONLobbyPrv(); // 0x7630a0 (scalar deleting destructor 0x763080)
-    bool Init(ResourceConfigTable*,void (*)(ComponentConfig*)); // 0x765ac0
-    void InitAuth(const std::wstring&,const char* = NULL); // 0x766010
-    void Destroy(); // 0x7660f0
+    bool Init(ResourceConfigTable*,void (*)(ComponentConfig*));
+    void InitAuth(const std::wstring&,const char* = NULL);
+    void Destroy();
     SmartPtr<LobbyPersistentData> mPersistentData; // 0x08
     SmartPtr<LobbyConfig> mConfig; // 0x0c
     SmartPtr<LobbyContainer> mLobbyContainer; // 0x10
@@ -199,6 +199,6 @@ extern SmartPtr<WONLobbyPrv> gLobbyData;     // 0x96630c (an intrusive SmartPtr)
 extern bool gLobbyUseLocalIP;                // 0x96634d; a config key writes it, nothing reads it
 void StringToUpperCaseInPlace(std::string&); // 0x6a69a0 (StringUtil.cpp)
 std::string WStringToString(const std::wstring&); // 0x6a6280 (StringUtil.cpp)
-std::wstring StringToWString(const std::string& inString); // 0x6a6130
+std::wstring StringToWString(const std::string& inString);
 }
 #endif

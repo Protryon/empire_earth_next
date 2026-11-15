@@ -216,7 +216,7 @@ GUIString LobbyGetLanName(); // 0x75d640 (0x68, or the empty string)
 size_t LobbyGetLanNameCount(); // the recent LAN names (0x75d660's map)
 GUIString LobbyGetLanNameAt(size_t inPos);
 void LobbyRemoveLanName(); // 0x75d770 (case-insensitive compare 0x728030)
-void LobbyResetFilters(); // 0x75df00
+void LobbyResetFilters();
 size_t LobbyGetDirectConnectCount(); // the saved direct connects (0x75d8e0's map), by address
 IPAddr LobbyGetDirectConnectAddressAt(size_t inPos);
 GUIString LobbyGetDirectConnectNameAt(size_t inPos);
@@ -228,8 +228,8 @@ void LobbySetCurrentUser(LobbyUserInfo* inUser); // 0x75cf90 (then reads the use
 class LobbyOptionSet {
 public:
     LobbyOptionSet() : mValues(EeWonLobbyKeyKind::InOrder, EeWonLobbyMapHooks()) {}
-    void Add(const GUIString& inValue); // 0x75baa0
-    bool Erase(const GUIString& inValue); // 0x75bc20
+    void Add(const GUIString& inValue);
+    bool Erase(const GUIString& inValue);
     void clear(); // as the SDK's ServerListFilterSet::clear
     size_t size() const { return this->mValues.size(); }
     bool empty() const { return this->mValues.empty(); }
@@ -249,20 +249,20 @@ class LobbyPersistentData : public RefCount {
 public:
     LobbyPersistentData(); // 0x75bcb0 (the original left mCurrentUserId unset before the reset; 0 here)
     ~LobbyPersistentData(); // the original's was implicit (0x75c2c0); frees the scalar state's object
-    std::string GetUserFileName(long inUserId); // 0x75e6e0 (provisional name)
-    long FindUnusedUserId();                  // 0x75e770 (provisional name)
+    std::string GetUserFileName(long inUserId);
+    long FindUnusedUserId();
     void PruneUsers(); // 0x75eb30 (drops the oldest users)
     // the files' layouts are ee_won's (persist.rs); the password's encryption stays here
     GUIString DecryptString(const uint8_t* inData, size_t inLength); // 0x75f190's decryption
     ByteBufferPtr EncryptString(const GUIString& inText); // 0x75f530's encryption (NULL when it fails)
     GUIString GetDefaultLanName(); // 0x75c520 (uses a CRC)
-    void RestoreDefaults(); // 0x75c720
-    void LoadGlobalPrefs(); // 0x75f7b0
-    void SaveGlobalPrefs(); // 0x75faf0
-    void LoadUserPrefs(); // 0x75fc70
-    void SaveUserPrefs(); // 0x760770
+    void RestoreDefaults();
+    void LoadGlobalPrefs();
+    void SaveGlobalPrefs();
+    void LoadUserPrefs();
+    void SaveUserPrefs();
     void PruneLanNames(); // 0x75e7e0 (keeps the 50 most recent LAN names)
-    void SelectRecentLanName(); // 0x75ea40
+    void SelectRecentLanName();
 
     // the members behind accessors (round 16; the Lobby* functions read them through these). The scalar state is a
     // Rust object (rust/crates/ee_won/src/prefsobj.rs EeWonLobbyPrefs: the current user, the flags, the connection
@@ -324,7 +324,7 @@ private:
     LobbyUserInfoMap mUsers;                   // 0x80
     LobbyReconnectInfoMap mReconnectInfoMap;   // 0x8c (LobbyReconnectInfo's two fields as the entry's numbers)
     Blowfish mEncryptKey;                      // 0x98..0x114c (0x10b4 bytes)
-    LobbyLanNameInfoMap mLanNameInfoMap;       // 0x114c
+    LobbyLanNameInfoMap mLanNameInfoMap;
     LobbyDirectConnectMap mDirectConnectMap;   // 0x1158 (0x1164 bytes in all)
 
 };

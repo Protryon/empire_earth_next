@@ -46,7 +46,7 @@ public:
     void PostLoadEvent(UReferenceCounter* inObject); // actual Post40B, ret4
     void PostShowLoadedObject(UReferenceCounter* inObject); // actual Post40C, ret4
     virtual void Close(); // actual inherited slot38, original19e68a; no added slot
-    virtual ~EEUIFScenarioEditor();         // 0x19e3f7 (??_G 0x19e3db)
+    virtual ~EEUIFScenarioEditor();
     virtual long CopyData();                // slot 0x3c 0x19e72c
     virtual long UpdateMouse();             // slot 0x30 0x1a0083
 protected:
@@ -66,13 +66,13 @@ public:
     // 0x19f757: clears +0x2b4, then slot +0x14 of the current tab's group; EESEAQuickSaveLoad after a quick
     // save/load (provisional name)
     void ResumeCurrentGroup();
-    void ClearSelection();                  // 0x19fa54 (provisional name)
+    void ClearSelection();
     // 0x19fab9: deselects the first selected unit (EESEADeleteUnit::Virtual4 after taking it)
     // (provisional name)
     void DeselectFirstUnit();
 
-    void SelectUnit(EEUnit* inUnit);        // 0x19e606 (provisional name)
-    void DeselectUnit(EEUnit* inUnit);      // 0x19fb84 (provisional name)
+    void SelectUnit(EEUnit* inUnit);
+    void DeselectUnit(EEUnit* inUnit);
     // 0x19f615: switches to tab inTab (stored at +0x2a8; EEUIFSEMainButton::Check; provisional name)
     EEUIFScenarioEditor(UIManager* inManager);   // 0x19d615 (EEUIManager::CreateScenarioEditor news 0x2b8 bytes)
     void SelectTab(unsigned char inFlag, long inTab);

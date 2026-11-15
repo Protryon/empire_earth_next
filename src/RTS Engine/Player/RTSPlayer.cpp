@@ -27,17 +27,12 @@ const UString RTSPlayer::sUnitCount("RTSPlayer-UnitCount");
 const UString RTSPlayer::sHashBucketLength("RTSPlayer-HashBucketLength");
 const UString RTSPlayer::sObserverMode("RTSPlayer-ObserverMode");
 
-// FUNCTION: EXE 0x56f095
 // Creates an empty player with no units
 RTSPlayer::RTSPlayer()
 {
     this->Reset();
 }
 
-// SYNTHETIC: EXE 0x56f112
-// (the scalar deleting destructor, emitted with the vtable; slot RTSPlayer+0x0)
-
-// FUNCTION: EXE 0x56f12e
 // Creates a named player with the given id; every player but player 0 keeps a visibility map
 RTSPlayer::RTSPlayer(const UWideString& inName, unsigned long inPlayerID)
 {
@@ -47,14 +42,12 @@ RTSPlayer::RTSPlayer(const UWideString& inName, unsigned long inPlayerID)
     this->mSaveVisMap = inPlayerID != 0;
 }
 
-// FUNCTION: EXE 0x56f1cf
 // Destroys the player
 RTSPlayer::~RTSPlayer()
 {
     EEUnitStoreClearPlayer(this);   // New (R5b.4): its list's records leave the unit store (ee/EEUnitStore.h)
 }
 
-// FUNCTION: EXE 0x56f1f3
 // Adds every pending unit to the player, optionally releasing the pending list afterwards
 void RTSPlayer::AddPendingUnits(bool inKeepID, bool inRelease)
 {
@@ -64,7 +57,6 @@ void RTSPlayer::AddPendingUnits(bool inKeepID, bool inRelease)
         this->ReleasePendingUnits();
 }
 
-// FUNCTION: EXE 0x56f233
 // Adds a unit to the player; unless it keeps its id, gives it a new unit id (player id in the top byte) and
 // puts its sight on its tile
 void RTSPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
@@ -78,7 +70,6 @@ void RTSPlayer::AddUnit(RTSUnit* inUnit, bool inKeepID)
     this->InsertUnit(inUnit);
 }
 
-// FUNCTION: EXE 0x56f27f
 // Takes every unit queued as killed out of the player's unit list and hash buckets, then invalidates and
 // releases it
 void RTSPlayer::RemoveKilledUnits()
@@ -109,7 +100,6 @@ void RTSPlayer::RemoveKilledUnits()
     this->mKilledUnits.clear();
 }
 
-// FUNCTION: EXE 0x56f35e
 // Releases and empties the pending units
 void RTSPlayer::ReleasePendingUnits()
 {
@@ -118,7 +108,6 @@ void RTSPlayer::ReleasePendingUnits()
     this->mPendingUnits.clear();
 }
 
-// FUNCTION: EXE 0x56f394
 // Adds the player's name, id, unit count and next unit id to the sync checksum
 void RTSPlayer::GetChecksum(ESChecksum& ioChecksum)
 {
@@ -128,7 +117,6 @@ void RTSPlayer::GetChecksum(ESChecksum& ioChecksum)
     ioChecksum.AddChecksum("RTSPlayer", theChecksum);
 }
 
-// FUNCTION: EXE 0x56f40f
 // Returns a pending unit by index, NULL past the end
 RTSUnit* RTSPlayer::GetPendingUnit(unsigned long inIndex)
 {
@@ -138,7 +126,6 @@ RTSUnit* RTSPlayer::GetPendingUnit(unsigned long inIndex)
     return theResult;
 }
 
-// FUNCTION: EXE 0x56f433
 // Finds one of the player's units by unit id in its hash bucket; NULL if none
 RTSUnit* RTSPlayer::GetUnit(unsigned long inUnitID)
 {
@@ -156,7 +143,6 @@ RTSUnit* RTSPlayer::GetUnit(unsigned long inUnitID)
     return theResult;
 }
 
-// FUNCTION: EXE 0x56f464
 // Clears the player's slot, unit list, ids, unit count and vision flags
 void RTSPlayer::Reset()
 {
@@ -171,7 +157,6 @@ void RTSPlayer::Reset()
     this->mObserverMode = false;
 }
 
-// FUNCTION: EXE 0x56f49e
 // Links a referenced unit into the player's unit list beside the other units of its hash bucket
 void RTSPlayer::InsertUnit(RTSUnit* inUnit)
 {
@@ -201,7 +186,6 @@ void RTSPlayer::InsertUnit(RTSUnit* inUnit)
     }
 }
 
-// FUNCTION: EXE 0x56f539
 // Reads the player's vision flags, ids, color (deriving the shade color), name, units and observer mode;
 // returns the first read error.
 // port (R5b.4, round 29): the body is Rust (ee_units rts_player_save.rs `load`) over the record this class derives
@@ -244,7 +228,6 @@ long RTSPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                                     (uint32_t)inMinorVersion);
 }
 
-// FUNCTION: EXE 0x56f6ae
 // Queues a unit for removal unless it is already queued (forced queues it again)
 void RTSPlayer::KillUnit(RTSUnit* inUnit, bool inForce)
 {
@@ -254,7 +237,6 @@ void RTSPlayer::KillUnit(RTSUnit* inUnit, bool inForce)
     }
 }
 
-// FUNCTION: EXE 0x56f6d3
 // Repairs the loaded pointers of every unit of the player; always succeeds
 long RTSPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
@@ -263,7 +245,6 @@ long RTSPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
     return 0;
 }
 
-// FUNCTION: EXE 0x56f6f8
 // Writes the player's vision flags, ids, color, name, unit count, units and observer mode; returns the first
 // write error (the body: ee_units rts_player_save.rs `save`)
 long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -272,7 +253,6 @@ long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
     return ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, this);
 }
 
-// FUNCTION: EXE 0x56f7b1
 // Writes each hash bucket's unit count and units (the first, then the rest from last to second); returns the first
 // write error
 long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -306,36 +286,6 @@ long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVer
     return theResult;
 }
 
-// Compiler-generated for this unit (template COMDATs; names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x56f866
-
-// SYNTHETIC: EXE 0x56ef03
-// SYNTHETIC: EXE 0x56ef0d
-// SYNTHETIC: EXE 0x56ef1e
-// SYNTHETIC: EXE 0x56ef2a
-// SYNTHETIC: EXE 0x56ef46
-// SYNTHETIC: EXE 0x56ef50
-// SYNTHETIC: EXE 0x56ef61
-// SYNTHETIC: EXE 0x56ef6d
-// SYNTHETIC: EXE 0x56ef89
-// SYNTHETIC: EXE 0x56ef93
-// SYNTHETIC: EXE 0x56efa4
-// SYNTHETIC: EXE 0x56efb0
-// SYNTHETIC: EXE 0x56efcc
-// SYNTHETIC: EXE 0x56efd6
-// SYNTHETIC: EXE 0x56efe7
-// SYNTHETIC: EXE 0x56eff3
-// SYNTHETIC: EXE 0x56f00f
-// SYNTHETIC: EXE 0x56f019
-// SYNTHETIC: EXE 0x56f02a
-// SYNTHETIC: EXE 0x56f036
-// SYNTHETIC: EXE 0x56f052
-// SYNTHETIC: EXE 0x56f05c
-// SYNTHETIC: EXE 0x56f06d
-// SYNTHETIC: EXE 0x56f079
-
-// ICF-FOLDED: EXE 0x4e123d
-// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
 void RTSPlayer::Clear()
 {
 }

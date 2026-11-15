@@ -24,7 +24,6 @@
 #include "ee/wonapi/WONCRC16.h"
 #include "ee/wonapi/EELobbySound.h"
 namespace WONAPI {
-// FUNCTION: WON 0x0075e620
 // Records the network adapter now in use (local host address), marking the global settings changed
 void LobbySaveNetworkAdapter()
 {
@@ -32,7 +31,6 @@ void LobbySaveNetworkAdapter()
     if(data!=NULL)
         data->SaveNetworkAdapter(WONAPI::IPAddr::GetLocalHost());
 }
-// FUNCTION: WON 0x0075dea0
 // Adds a value to the user's filter for a game list column
 void LobbyAddFilterValue(const GUIString& column,const GUIString& value)
 {
@@ -42,7 +40,6 @@ void LobbyAddFilterValue(const GUIString& column,const GUIString& value)
         data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
-// FUNCTION: WON 0x0075ded0
 // Removes a value from the user's filter for a game list column (an emptied column stays in the map)
 void LobbyRemoveFilterValue(const GUIString& column,const GUIString& value)
 {
@@ -52,7 +49,3 @@ void LobbyRemoveFilterValue(const GUIString& column,const GUIString& value)
     if(options.Erase(value)) data->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007670a0
-// (public: class WONAPI::LobbyOptionSet & __thiscall std::map<class WONAPI::GUIString,class WONAPI::LobbyOptionSet,struct WONAPI::GUIStringLessNoCase,cla)

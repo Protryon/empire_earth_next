@@ -33,7 +33,6 @@
 #include "rust/ee_tech.h"
 
 
-// FUNCTION: EXE 0x4b5c89
 // Creates an empty contagion helper with no calamity or functor (for loading)
 EEContagionHelper::EEContagionHelper() : EeContagionHelperFields()
 {
@@ -42,10 +41,6 @@ EEContagionHelper::EEContagionHelper() : EeContagionHelperFields()
     this->mFunctor = NULL;
 }
 
-// SYNTHETIC: EXE 0x4b5ccd
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b5ce9
 // Creates a contagion helper for the calamity that spreads with the functor, with no units and no id
 EEContagionHelper::EEContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity)
 {
@@ -56,7 +51,6 @@ EEContagionHelper::EEContagionHelper(EEContagionFunctor* inFunctor, EECalamity* 
     this->mCalamity = inCalamity;
 }
 
-// FUNCTION: EXE 0x4b5d3b
 // Destroys the helper, curing and releasing every unit it holds
 EEContagionHelper::~EEContagionHelper()
 {
@@ -66,7 +60,6 @@ EEContagionHelper::~EEContagionHelper()
     this->mCalamity = NULL;
 }
 
-// FUNCTION: EXE 0x4b5d88
 // Adds a live unit not yet held: references it, marks it with the class's calamity flags and infects it if asked;
 // returns whether it was added
 bool EEContagionHelper::AddUnit(EEUnit* inUnit, bool inNotify)
@@ -85,7 +78,6 @@ bool EEContagionHelper::AddUnit(EEUnit* inUnit, bool inNotify)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4b5e26
 // Writes the helper's id, spread timer, unit ids and calamity to the out-of-sync dump
 void EEContagionHelper::DumpOutOfSynch(FILE* inFile) const
 {
@@ -97,7 +89,6 @@ void EEContagionHelper::DumpOutOfSynch(FILE* inFile) const
     this->mCalamity->DumpOutOfSynch(inFile);
 }
 
-// FUNCTION: EXE 0x4b5eb0
 // Returns a sync checksum: unit ids, the calamity's checksum, the helper id and the spread timer's bit pattern (ee_tech
 // contagion_save.rs helper_checksum)
 long EEContagionHelper::GetOutOfSynchChecksum() const
@@ -108,7 +99,6 @@ long EEContagionHelper::GetOutOfSynchChecksum() const
     return ee_contagion_helper_checksum(this, theUnitIDs, this->mCalamity->GetOutOfSynchChecksum());
 }
 
-// FUNCTION: EXE 0x4b5ef9
 // Collects every unit in the square of the radius around the unit, unless the unit is inside a carrier
 void EEContagionHelper::GetUnitsInArea(float inRadius, EEComplexUnit* inUnit, std::vector<EEComplexUnit*>& outUnits)
 {
@@ -169,7 +159,6 @@ long EEContagionIoCall(void* inContext, uint32_t inOp, void* ioValue)
     return kErrorFailed;
 }
 
-// FUNCTION: EXE 0x4b5feb
 // Reads the helper from a saved game (unit ids, id, spread timer; the update timer from 0.231 on); returns the first
 // read error (ee_tech contagion_save.rs helper_load)
 long EEContagionHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -179,7 +168,6 @@ long EEContagionHelper::Load(unsigned long inMajorVersion, unsigned long inMinor
     return ee_contagion_helper_load(this, inMajorVersion, inMinorVersion, theFfi);
 }
 
-// FUNCTION: EXE 0x4b60f7
 // Removes the unit if held (curing it if asked); returns whether it was held
 bool EEContagionHelper::RemoveUnit(EEUnit* inUnit, bool inNotify)
 {
@@ -192,7 +180,6 @@ bool EEContagionHelper::RemoveUnit(EEUnit* inUnit, bool inNotify)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4b616e
 // Clears the unit's calamity flags, cures it if asked, releases it and erases it; returns the next position
 std::vector<EEUnit*>::iterator EEContagionHelper::RemoveUnit(std::vector<EEUnit*>::iterator inUnit, bool inNotify)
 {
@@ -204,7 +191,6 @@ std::vector<EEUnit*>::iterator EEContagionHelper::RemoveUnit(std::vector<EEUnit*
     return this->mUnits.erase(inUnit);
 }
 
-// FUNCTION: EXE 0x4b61ca
 // Turns the loaded unit ids back into referenced units with the calamity flags (an id that no longer resolves is
 // dropped)
 long EEContagionHelper::RestorePointers()
@@ -225,7 +211,6 @@ long EEContagionHelper::RestorePointers()
     return kErrorOK;
 }
 
-// FUNCTION: EXE 0x4b6233
 // Writes the helper's unit ids, id and both timers to the saved game; returns the first write error (ee_tech
 // contagion_save.rs helper_save)
 long EEContagionHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -235,27 +220,23 @@ long EEContagionHelper::Save(unsigned long inMajorVersion, unsigned long inMinor
     return ee_contagion_helper_save(this, theFfi);
 }
 
-// FUNCTION: EXE 0x4b62c9
 // Sets the calamity the helper spreads
 void EEContagionHelper::SetCalamity(EECalamity* inCalamity)
 {
     this->mCalamity = inCalamity;
 }
 
-// FUNCTION: EXE 0x4b62d3
 // Sets the functor that infects, damages and cures the units
 void EEContagionHelper::SetFunctor(EEContagionFunctor* inFunctor)
 {
     this->mFunctor = inFunctor;
 }
 
-// ICF-FOLDED: EXE 0x401c1c
 void EEContagionHelper::SetHelperID(long inHelperID)
 {
     this->mHelperID = inHelperID;
 }
 
-// FUNCTION: EXE 0x4b64e8
 // Replaces a held unit by its new unit without curing or infecting
 void EEContagionHelper::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 {
@@ -266,7 +247,6 @@ void EEContagionHelper::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
     }
 }
 
-// FUNCTION: EXE 0x4b6552
 // Spreads (or lets the functor update its units) every spread time, updates the functor, damages each live unit and
 // removes and cures the dead. The decisions are Rust (ee_tech contagion.rs: the timers, which near units a spread
 // infects, which held units are damaged or dropped); the helper, its units and the functor's calls stay here
@@ -391,12 +371,3 @@ void EEContagionHelperHost::Call(void* inContext, const EeContagionCall* inCall,
         break;
     }
 }
-
-// SYNTHETIC: EXE 0x4b5c03
-// SYNTHETIC: EXE 0x4b5c0d
-// SYNTHETIC: EXE 0x4b5c1e
-// SYNTHETIC: EXE 0x4b5c2a
-// SYNTHETIC: EXE 0x4b5c46
-// SYNTHETIC: EXE 0x4b5c50
-// SYNTHETIC: EXE 0x4b5c61
-// SYNTHETIC: EXE 0x4b5c6d

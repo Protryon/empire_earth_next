@@ -6,8 +6,8 @@
 
 class EEFLongLine : public EEFLine {
 public:
-    EEFLongLine();                      // 0xddc20
-    virtual ~EEFLongLine();              // 0xddc68 (??_G 0xddc4c)
+    EEFLongLine();
+    virtual ~EEFLongLine();
 };
 
 #endif

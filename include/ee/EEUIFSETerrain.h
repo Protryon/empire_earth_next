@@ -69,7 +69,7 @@ public:
     virtual long CopyData();                // +0x14 0x1aacf2
     virtual long DrawPolygons();            // +0x18 0x1aade1 (each line's texture)
     virtual long DrawTextA();               // +0x1c 0x1ab1a2 (the names)
-    void SetTexture(GETexture* inTexture, unsigned long inLine);   // 0x1ab15f
+    void SetTexture(GETexture* inTexture, unsigned long inLine);
 
     GEText* mText;                          // +0x134
     GEText* mCopyText;                      // +0x138

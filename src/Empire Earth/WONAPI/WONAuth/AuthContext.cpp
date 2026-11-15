@@ -23,7 +23,6 @@ static void* NewCertOp(void* inContext)
 {
     return static_cast<RefCount*>(static_cast<AsyncOp*>(new GetCertOp(static_cast<AuthContext*>(static_cast<RefCount*>(inContext)))));
 }
-// FUNCTION: WON 0x006ddb70
 // The context's Rust object (its calls over the core table: ee_won authcpp.rs) with the login secrets in the WON
 // directory, a new server list and the directory's verifier key
 void AuthContext::Init()
@@ -35,7 +34,6 @@ void AuthContext::Init()
     const std::string& aDir = WONAPICore::GetDefaultFileDirectory();
     ee_won_auth_verifier_init(WonBytes(aDir), aDir.size());
 }
-// FUNCTION: WON 0x006e06d0
 // The community's hash file: the running exe in the data root
 bool AuthContext::SetHashFile(const std::wstring& inCommunity)
 {
@@ -48,7 +46,6 @@ bool AuthContext::SetHashFile(const std::wstring& inCommunity)
 
 // WON SDK default registry path (no original address identified)
 const char* CDKey::mCDKeyPath = "SOFTWARE\\Sierra\\CDKeys";
-// FUNCTION: WON 0x006e3ac0
 // Loads and decrypts the product's key from a registry value; false when absent or invalid
 bool CDKey::LoadFromRegistry(long inRoot, const char* inPath)
 {

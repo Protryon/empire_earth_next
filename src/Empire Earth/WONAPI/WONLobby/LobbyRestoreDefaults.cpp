@@ -12,7 +12,6 @@
 namespace WONAPI {
 // Defined in LobbyPersistentData.cpp (0x75c900)
 extern LobbyPersistentData* GetLobbyPersistentData();
-// FUNCTION: WON 0x0075e6a0
 // Restores the default settings, marks the user settings changed and the global ones if sound, music or adapter changed
 void LobbyRestoreDefaults()
 {

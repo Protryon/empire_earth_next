@@ -10,7 +10,7 @@ class UIManager;
 
 class EEROUserInterface : public EERenderObject {
 public:
-    EEROUserInterface(UIManager* inManager);   // 0x11876d
+    EEROUserInterface(UIManager* inManager);
     virtual ~EEROUserInterface();           // +0x10 (??_G 0x118788; dtor 0x1187a4)
     virtual void FrameStarting();           // +0x00 0x1187af
     virtual void SceneStarting();           // +0x04 0x118802
@@ -21,6 +21,6 @@ public:
 };
 
 // the current player has a selection (EEROUserInterface::FrameStarting sets it, EEROUnits reads it; provisional name)
-extern bool gUnitPanelActive;               // 0x5297a0
+extern bool gUnitPanelActive;
 
 #endif

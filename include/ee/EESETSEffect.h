@@ -16,7 +16,7 @@ class UIForm;
 
 class EESETSEffect : public EESETSBaseObject {
 public:
-    EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);   // 0x182629
+    EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex);
     virtual ~EESETSEffect();                // +0x00 0x1829a4 (deletes the controls, the label, the combo, the types)
     virtual void Sort();                    // +0x04 0x182ac0 (the scenario manager's 0x1b02f6)
     virtual void MoveDown();                // +0x0c 0x182acb (the manager's 0x1b0cde(mL04 + 1))

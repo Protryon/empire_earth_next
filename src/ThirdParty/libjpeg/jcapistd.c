@@ -34,7 +34,6 @@
  * wrong thing.
  */
 
-// FUNCTION: JPEG 0x10087799
 GLOBAL(void)
 jpeg_start_compress (j_compress_ptr cinfo, boolean write_all_tables)
 {
@@ -74,7 +73,6 @@ jpeg_start_compress (j_compress_ptr cinfo, boolean write_all_tables)
  * when using a multiple-scanline buffer.
  */
 
-// FUNCTION: JPEG 0x10087805
 GLOBAL(JDIMENSION)
 jpeg_write_scanlines (j_compress_ptr cinfo, JSAMPARRAY scanlines,
 		      JDIMENSION num_lines)

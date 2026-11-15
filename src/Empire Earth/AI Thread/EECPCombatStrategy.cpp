@@ -12,7 +12,6 @@
 #include "ee/EECPUnitRequirement.h"
 #include "ee/EECPCombatStrategy.h"
 
-// FUNCTION: EXE 0x477084
 // Creates an empty strategy: no requirements, shares or unit counts, with favourites added
 EECPCombatStrategy::EECPCombatStrategy()
     : mAirShare(0.0f), mSeaShare(0.0f), mLandShare(0.0f), mSpaceShare(0.0f), mTownID(0), mContinentID(0), mNumUnits(0), mNumRemaining(0), mNumAir(0), mNumSea(0), mNumLand(0),
@@ -20,10 +19,6 @@ EECPCombatStrategy::EECPCombatStrategy()
 {
 }
 
-// SYNTHETIC: EXE 0x4770da
-// (the scalar deleting destructor)
-
-// FUNCTION: EXE 0x4770f6
 // Creates a copy of a strategy, requirements included
 EECPCombatStrategy::EECPCombatStrategy(const EECPCombatStrategy& inOther)
     : mRequirements(inOther.mRequirements), mAirShare(inOther.mAirShare), mSeaShare(inOther.mSeaShare), mLandShare(inOther.mLandShare),
@@ -33,13 +28,11 @@ EECPCombatStrategy::EECPCombatStrategy(const EECPCombatStrategy& inOther)
 {
 }
 
-// FUNCTION: EXE 0x47716d
 // Destroys the strategy and its requirements
 EECPCombatStrategy::~EECPCombatStrategy()
 {
 }
 
-// FUNCTION: EXE 0x47717b
 // Clears the requirements, shares and unit counts and turns favourites back on
 void EECPCombatStrategy::Reset()
 {
@@ -62,7 +55,6 @@ void EECPCombatStrategy::Reset()
 
 // NEAR (80.6): registers (the original keeps inOwn in edi, theTotal/theLeft in memory) and the theMissing == theWanted
 // test is not threaded past the `theWanted > count` branch in the original.
-// FUNCTION: EXE 0x4771be
 // Splits the strategy's units between air, sea, land and space by the configured shares (any rest goes to land);
 // the owned-unit correction divides integers and is always 0, so the shares are never scaled
 void EECPCombatStrategy::Calculate(EECPIntelligencePlayerFile* inOwn, EECPIntelligencePlayerFile* inOther)
@@ -147,7 +139,6 @@ void EECPCombatStrategy::Calculate(EECPIntelligencePlayerFile* inOwn, EECPIntell
         this->mNumLand += theLeft;
 }
 
-// FUNCTION: EXE 0x4773bf
 // Returns a new copy of the strategy
 EECPCombatStrategy* EECPCombatStrategy::Clone()
 {
@@ -169,12 +160,3 @@ EECPCombatStrategy* EECPCombatStrategy::Clone()
     theClone->mTownID = this->mTownID;
     return theClone;
 }
-
-// Compiler-generated for this unit (names in analysis/exe/names.txt):
-// TEMPLATE: EXE 0x477443
-// TEMPLATE: EXE 0x47748d
-// TEMPLATE: EXE 0x4775ff
-// TEMPLATE: EXE 0x477615
-// TEMPLATE: EXE 0x477650
-// TEMPLATE: EXE 0x4776bb
-// TEMPLATE: EXE 0x4776f4

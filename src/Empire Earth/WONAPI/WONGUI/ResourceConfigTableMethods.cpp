@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00793bb0
 // Returns the named resource group, creating it when absent; reports through alreadyExists whether it existed
 ResourceConfig* ResourceConfigTable::AddConfig(const std::string& name,bool* alreadyExists)
 {
@@ -26,8 +25,3 @@ ResourceConfig* ResourceConfigTable::AddConfig(const std::string& name,bool* alr
     return it->second.get();
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0079bfd0
-// (protected: class std::_Tree<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct std::pair<class std::basic_)
-// TEMPLATE: WON 0x007a2ad0

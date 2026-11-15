@@ -75,13 +75,11 @@
 #include "ee/EEStringIDs.h"
 extern unsigned short& gLagStatus;           // 0x5318d4 (cleared after a migration; provisional name)
 
-// FUNCTION: EXE 0x404a0b
 // Creates the host migration action
 EEAServerMigration::EEAServerMigration()
 {
 }
 
-// FUNCTION: EXE 0x404a1f
 // Migrates the game to a new host after the server drops: picks the next human, restarts as server or reconnects
 void EEAServerMigration::Virtual4()
 {
@@ -188,26 +186,6 @@ void EEAServerMigration::Virtual4()
     gLagStatus = 0;
 }
 
-// NEAR: exact with a user-declared empty virtual dtor in NEMClientReconnectionRequest (the original stores its own
-// vptr first)
-// FUNCTION: EXE 0x404f19
-// Destroys the client reconnection request and frees it when asked (scalar deleting destructor)
-// (NEMClientReconnectionRequest's ??_G: inline, first user)
-
-// FUNCTION: EXE 0x404f45
-// Inserts a key into the slot-to-slot map unless present; returns the position and whether it was added
-// (map<unsigned char, unsigned char>::insert: EEServer::SetSendToSlotForPlayer's, first user)
-
-// FUNCTION: EXE 0x404ffb
-// Destroys a logic_error exception
-// (std::logic_error's dtor)
-
-// FUNCTION: EXE 0x405017
-// Rotates the slot map's tree right around a node
-// (map<unsigned char, unsigned char>::_Rrotate)
-
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEAServerMigration::Virtual8()
 {
 }

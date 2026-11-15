@@ -59,7 +59,7 @@ public:
     { return ee_won_asyncop_run(this->mOp,static_cast<int32_t>(inMode),static_cast<uint32_t>(inTimeout)); }
 
     // an idle op: an infinite timeout, async, no container or timer entry
-    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); } // 0x29ef80
+    AsyncOp() { this->mOp=ee_won_asyncop_new(static_cast<void*>(this),AsyncOpHooks()); }
     virtual ~AsyncOp() { ee_won_asyncop_free(this->mOp); } // 0x29f000: the completion and lock go with it
     virtual void RunHook() {}
     virtual void CleanupHook() {}
@@ -91,7 +91,7 @@ public:
     // unless the op runs (29f1b0)
     void SetTimeout(unsigned long inTimeout) { ee_won_asyncop_set_timeout(this->mOp,static_cast<uint32_t>(inTimeout)); }
     bool RunBlock(unsigned long inTimeout) { return this->Run(2,inTimeout)==0; } // 29f6e0: whether it succeeded
-    void RunAsync(long inTimeout) { this->Run(1,inTimeout); } // 0x29f6d0
+    void RunAsync(long inTimeout) { this->Run(1,inTimeout); }
     // marks the op killed and, when asked, finishes it killed (0x29f1e0)
     void Kill(bool inFlag) { ee_won_asyncop_kill(this->mOp,inFlag); }
     // whether an async run starts at once instead of being queued (0x29f1d0)

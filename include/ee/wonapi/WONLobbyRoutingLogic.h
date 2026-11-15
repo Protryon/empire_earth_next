@@ -97,13 +97,13 @@ public:
     bool JoinChatRoom(LobbyServer* inServer, unsigned short inGroupId);
     void JoinRoom(JoinRoomEvent* inEvent);
     void JoinFriendsRoom(JoinFriendsRoomEvent* inEvent);
-    bool CanAddFriend(); // 0x7ec1e0
+    bool CanAddFriend();
     void QueryServerGroupsDone(AsyncOp*); // 0x7e9e60; group query completion
     void HandleQueryServerGroups(QueryServerGroupsEvent*); // 0x7ed4c0; starts a server group query
     void AddFriend(); // 0x7ec210; add-friend dialog and request
     void EnterInternetScreen(bool); // 0x7ed430; enters the internet screen
     void RefreshServerList(); // 0x7e9f60; refreshes the server list from the directory
-    void DoRoomDialog(); // 0x7e9a90
+    void DoRoomDialog();
     void EditBadUserList(bool, bool, int); // 0x7e9ab0; muted/banned user list dialog
     void DoAdminAction(int, int, LobbyClient*); // 0x7e9440; admin action dialog
     void ShowClientOptions(LobbyClient*, int);
@@ -111,16 +111,16 @@ public:
     void GetUserStatusComplete(AsyncOp*); // 0x7e7460; user status query completion
     void LocateFriend(LobbyFriend*, int); // locates one friend
     void LocateFriends(); // locates every friend
-    bool ConnectToServer(LobbyServer*, bool); // 0x7edd70
+    bool ConnectToServer(LobbyServer*, bool);
     bool CreateGroup(LobbyServer*, const GUIString&, const GUIString&,
-                     int, unsigned short&); // 0x7ed670
-    bool JoinGroup(LobbyServer*, int); // 0x7ed8b0
+                     int, unsigned short&);
+    bool JoinGroup(LobbyServer*, int);
 
-    virtual void Logout();    // 0x7eeed0
+    virtual void Logout();
     void HandleAnonymousModeChange(); // 0x7eb2f0; updates the anonymous flag
     void HandleDirtyWordFilterChange(); // 0x7eb320; updates the dirty-word filter flag
-    virtual void HandleControlEvent(int); // 0x7ea310
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7ea3a0
+    virtual void HandleControlEvent(int);
+    virtual void HandleComponentEvent(ComponentEvent*);
     time_t mLastServerRefresh; // 0x40, time(); compared signed at 0x7e9fb2; zeroed by the constructor
     std::string mGameDataType; // 0x44, "G" from the constructor
     SmartPtr<LobbyServerList> mServerList; // 0x54

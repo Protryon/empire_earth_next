@@ -24,7 +24,6 @@ static std::wstring SmartText(const uint32_t* inUnits, size_t inCount)
         s += static_cast<wchar_t>(inUnits[i]);
     return s;
 }
-// FUNCTION: WON 0x006bfb00
 // Creates the smart routing connection with the ignore file under the WON directory and the default chat commands
 SmartRoutingConnection::SmartRoutingConnection()
 {
@@ -79,7 +78,6 @@ bool SmartRoutingConnection::GetLastTargetMember(MemberInfo& out)
 { SMART_GET(EeWonSmartGet::LastMember, 0, 0, CopyMember, out); }
 bool SmartRoutingConnection::GetLastTargetClient(ClientInfo& out)
 { SMART_GET(EeWonSmartGet::LastClient, 0, 0, CopyClient, out); }
-// FUNCTION: WON 0x6c35a0
 // Finds the client a typed name refers to: exact, unique prefix, ambiguous or not found
 SmartRoutingConnection::MatchResult SmartRoutingConnection::FindClient(const std::wstring& inName, ClientInfo& out,
                                                                        bool& outFound)

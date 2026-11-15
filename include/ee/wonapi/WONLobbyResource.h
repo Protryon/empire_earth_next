@@ -28,45 +28,45 @@ class Image;
 // the shared, reference-counted text of a GUIString (0x10 bytes: `new` in 0x328450; ctor 0x327840 from a wide string)
 class GUIStringData : public RefCount {
 public:
-    explicit GUIStringData(unsigned short inCapacity); // 0x3274e0
-    virtual ~GUIStringData();               // 0x327980
+    explicit GUIStringData(unsigned short inCapacity);
+    virtual ~GUIStringData();
     GUIStringData(const wchar_t* inText);  // 0x327840 (WONAPI)
     GUIStringData(const char* inText);     // 0x3277e0 (WONAPI)
     GUIStringData(const char*,unsigned short); // bounded constructor (not identified in the original exe)
     GUIStringData(const wchar_t*,unsigned short); // bounded constructor (not identified in the original exe)
-    GUIStringData(const std::string& inText);      // 0x3278a0
-    GUIStringData(const std::wstring& inText);     // 0x327910
-    GUIStringData(const GUIStringData& theCopy);   // 0x327600
-    GUIStringData(const GUIStringData* inOther, unsigned short inStart, unsigned short inLength); // 0x3276f0
+    GUIStringData(const std::string& inText);
+    GUIStringData(const std::wstring& inText);
+    GUIStringData(const GUIStringData& theCopy);
+    GUIStringData(const GUIStringData* inOther, unsigned short inStart, unsigned short inLength);
     void Init(); // at 0x007274b0
     void AssignStr(const char*,int); //327a20 unsigned-byte widening
     void AssignWStr(const wchar_t*,int); //327ac0
     void assign(const GUIStringData*,unsigned short,unsigned short); //327c10
-    void resize(int inLength, bool inGrow) { this->Reserve(inLength,inGrow); this->mLength=inLength; this->mText[this->mLength]=0; } // 0x30a1d0
+    void resize(int inLength, bool inGrow) { this->Reserve(inLength,inGrow); this->mLength=inLength; this->mText[this->mLength]=0; }
     void Fill(int,unsigned short,unsigned short); // at 0x00727b60
-    int ToInt(unsigned short inStart) const; // 0x3281e0
+    int ToInt(unsigned short inStart) const;
     int find(int inChar, int inStart) const; // 0x328280; -1 if absent
-    int find(const GUIStringData* inText, int inStart) const; // 0x3282c0
-    int findNoCase(const GUIStringData* inText, int inStart) const; // 0x328340
+    int find(const GUIStringData* inText, int inStart) const;
+    int findNoCase(const GUIStringData* inText, int inStart) const;
     int rFind(int,int) const; // reverse character search, at 0x00728410
     int rFind(const GUIStringData*,int) const; // reverse substring search
     int findOneOf(const GUIStringData*,int) const;
     void erase(int,int);
     void insert(int,const GUIStringData*);
     int setAt(int,int);
-    void toUpper();                        // 0x3279d0
+    void toUpper();
     void toLowerCase(); // Latin-1 lower-casing
-    int Compare(const GUIStringData* inOther) const;    // 0x327fa0
+    int Compare(const GUIStringData* inOther) const;
     int compare(const char* theStr, int theOffset) const; // case-sensitive compare with narrow text, at 0x007280f0
     void append(int inChar) { this->resize(this->mLength + 1, true); this->mText[this->mLength - 1] = (wchar_t)inChar; } // inline (as used at 0x007022d0)
     // inline in the WON library (ChatCommandParser::AddHelpEntry 0x757800); the exe's lobby glue had an out-of-line
     // copy (0x292419) doing the same: Reserve, length, terminator, copy
     void append(const GUIStringData* inText, unsigned short inStart, unsigned short inLength)
     { int theLength = this->mLength; this->resize(theLength + inLength, true); memcpy(this->mText + theLength, inText->mText + inStart, inLength * sizeof(wchar_t)); }
-    int CompareNoCase(const GUIStringData* inOther) const;  // 0x328030
-    int CompareNoCase(const char* inText, int inOffset) const; // 0x328150
+    int CompareNoCase(const GUIStringData* inOther) const;
+    int CompareNoCase(const char* inText, int inOffset) const;
     std::string GetString() const;          // 0x327d90 (WONAPI, /GX): narrowed
-    std::wstring GetWString() const;        // 0x327f30
+    std::wstring GetWString() const;
 
     wchar_t* mText;                         // +0x08
     unsigned short mLength;                 // +0x0c
@@ -125,8 +125,8 @@ public:
     bool empty() const { return this->mData->mLength==0; }
     int operator[](int inPos) const { return this->mData->mText[inPos]; }
     unsigned short at(int inPos) const { return this->mData->mText[inPos]; }
-    GUIString substr(unsigned short inStart, unsigned short inLength) const; // 0x2f8b90
-    GUIString substr(unsigned short inStart) const; // 0x339c80
+    GUIString substr(unsigned short inStart, unsigned short inLength) const;
+    GUIString substr(unsigned short inStart) const;
     int find(int inChar, int inStart) const { return this->mData->find(inChar, inStart); }
     int find(const GUIString& inText, int inStart) const { return this->mData->find(inText.mData.get(), inStart); }
     int findNoCase(const GUIString& inText, int inStart) const { return this->mData->findNoCase(inText.mData.get(), inStart); }
@@ -280,7 +280,7 @@ class WONFile {
 public:
     // the path, its parts, the stat details and the cache flags are ee_won's (wonfile.rs EeWonFile; WONFile.cpp is
     // deleted: net round 27); the getters return copies
-    WONFile(const std::string& inPath) : mFile(ee_won_file_new(B(inPath), inPath.size())) {} // 0x2a7610
+    WONFile(const std::string& inPath) : mFile(ee_won_file_new(B(inPath), inPath.size())) {}
     WONFile(const WONFile& inFile) : mFile(ee_won_file_clone(inFile.mFile)) {}
     WONFile& operator=(const WONFile& inFile) { ee_won_file_assign(this->mFile, inFile.mFile); return *this; }
     ~WONFile() { ee_won_file_free(this->mFile); }
@@ -289,11 +289,11 @@ public:
     static WONFile GetWorkingDirectory() { return WONFile(ee_won_file_new(NULL, 0)); }
     bool SetWorkingDirectory() { return false; } // the game's working directory stays its data root
     static const char PATH_SEP = '\\';
-    void Reset() { this->Num(EE_WON_FILE_RESET); } // 0x2a76c0
-    void CalcFileInfo() { this->Num(EE_WON_FILE_CALC_INFO); } // 0x2a79f0
-    void CalcFileDirectory() { this->Num(EE_WON_FILE_CALC_DIRECTORY); } // 0x2a7a60
-    void CalcFullPath() { this->Num(EE_WON_FILE_CALC_FULL_PATH); } // 0x2a7c30
-    void CalcFileExtension() { this->Num(EE_WON_FILE_CALC_EXTENSION); } // 0x2a7d80
+    void Reset() { this->Num(EE_WON_FILE_RESET); }
+    void CalcFileInfo() { this->Num(EE_WON_FILE_CALC_INFO); }
+    void CalcFileDirectory() { this->Num(EE_WON_FILE_CALC_DIRECTORY); }
+    void CalcFullPath() { this->Num(EE_WON_FILE_CALC_FULL_PATH); }
+    void CalcFileExtension() { this->Num(EE_WON_FILE_CALC_EXTENSION); }
     bool SetReadOnly(bool inReadOnly) { return this->Num(EE_WON_FILE_SET_READ_ONLY, inReadOnly) != 0; }
     bool Exists() { return this->Num(EE_WON_FILE_EXISTS) != 0; }
     bool IsDir() { return this->Num(EE_WON_FILE_IS_DIR) != 0; }
@@ -302,12 +302,12 @@ public:
     std::string GetFileDirectory() { return this->Text(EE_WON_FILE_DIRECTORY); }
     std::string GetFileExtension() { return this->Text(EE_WON_FILE_EXTENSION); }
     std::string GetFullPath() { return this->Text(EE_WON_FILE_FULL_PATH); }
-    void SetFilePath(const std::string& inPath) { ee_won_file_op(this->mFile, EE_WON_FILE_SET_PATH, 0, B(inPath), inPath.size()); } // 0x2a7840
-    std::string GetFileName() { return this->Text(EE_WON_FILE_NAME); } // 0x2a7ff0
+    void SetFilePath(const std::string& inPath) { ee_won_file_op(this->mFile, EE_WON_FILE_SET_PATH, 0, B(inPath), inPath.size()); }
+    std::string GetFileName() { return this->Text(EE_WON_FILE_NAME); }
     std::string GetFileNameNoExtension() { return this->Text(EE_WON_FILE_NAME_NO_EXTENSION); } // the member as it is
-    long GetModifyTime() { return static_cast<long>(this->Num(EE_WON_FILE_MODIFY_TIME)); } // 0x2a8070
-    unsigned long GetSize() { return static_cast<unsigned long>(this->Num(EE_WON_FILE_SIZE)); } // 0x2a8050
-    bool Delete(bool inEvenIfReadOnly) { return this->Num(EE_WON_FILE_DELETE, inEvenIfReadOnly) != 0; } // 0x2a7960
+    long GetModifyTime() { return static_cast<long>(this->Num(EE_WON_FILE_MODIFY_TIME)); }
+    unsigned long GetSize() { return static_cast<unsigned long>(this->Num(EE_WON_FILE_SIZE)); }
+    bool Delete(bool inEvenIfReadOnly) { return this->Num(EE_WON_FILE_DELETE, inEvenIfReadOnly) != 0; }
     EeWonFile* mFile;
 private:
     explicit WONFile(EeWonFile* inFile) : mFile(inFile) {}

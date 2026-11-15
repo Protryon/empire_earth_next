@@ -20,14 +20,12 @@ long GEOrientation::Load(FSFile& inFile)
     return GERustFields(inFile, theFields, 3, inFile.GetIsOpen(), false, false);
 }
 
-// FUNCTION: LLE 0x10020d20
 // Wraps yaw, pitch and roll into the range -pi..pi
 void GEOrientation::Normalize()
 {
     ee_ge_orientation_normalize(GERust(*this));
 }
 
-// FUNCTION: LLE 0x10020dc6
 // Writes yaw, pitch and roll to a file; kErrorNotOpen when the file is not open
 long GEOrientation::Save(FSFile& inFile)
 {
