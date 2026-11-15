@@ -163,9 +163,9 @@ def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     game += [objs(j[1], j[2]) for j in units.lib_jobs(["exe"])]   # the game's own libraries (Lua)
     res = [rsrc_rebuild.compile_rc(units.EXE_RC, out / "rsrc"),
            rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
-    # the language strings are a generated table (LanguageStrings.cpp): it must be current and equal to rc.exe's
+    # the language strings are a generated table (ee_util language_strings.rs): it must be current and equal to rc.exe's
     import lang_strings
-    if lang_strings.OUT.read_bytes().decode("latin-1") != lang_strings.generate():
+    if lang_strings.OUT.read_bytes().decode("utf-8") != lang_strings.generate():
         sys.exit(f"{lang_strings.OUT} is stale: python -I tools/lang_strings.py")
     _, theRc = lang_strings.parse_rc()
     if {k: v for k, v in theRc.items() if v} != lang_strings.parse_res(res[1]):
