@@ -7,6 +7,652 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// the sender (`gWorld.GetPlayerBySlot` of the message's originating slot)
+constexpr static const uint32_t EE_NETMSG_OP_SENDER = 1;
+
+/// `gWorld.mPlayers[i0]`
+constexpr static const uint32_t EE_NETMSG_OP_PLAYER = 2;
+
+/// `gWorld.GetCurrentPlayer()`
+constexpr static const uint32_t EE_NETMSG_OP_CURRENT = 3;
+
+/// a's active group
+constexpr static const uint32_t EE_NETMSG_OP_GROUP = 4;
+
+/// a's saved group i0
+constexpr static const uint32_t EE_NETMSG_OP_SAVED_GROUP = 5;
+
+/// the group a's unit count
+constexpr static const uint32_t EE_NETMSG_OP_GROUP_COUNT = 6;
+
+/// the group a's unit i0
+constexpr static const uint32_t EE_NETMSG_OP_GROUP_UNIT = 7;
+
+/// the group a's first unit
+constexpr static const uint32_t EE_NETMSG_OP_GROUP_FIRST = 8;
+
+/// whether the group a holds the unit b
+constexpr static const uint32_t EE_NETMSG_OP_GROUP_CONTAINS = 9;
+
+/// the group a takes the unit b
+constexpr static const uint32_t EE_NETMSG_OP_GROUP_ADD = 10;
+
+/// the group a emptied
+constexpr static const uint32_t EE_NETMSG_OP_GROUP_CLEAR = 11;
+
+/// `gWorld.GetUnit(i0)`
+constexpr static const uint32_t EE_NETMSG_OP_UNIT = 12;
+
+/// the unit b's fact i0 (`EE_NETMSG_UNIT_*`), i1 an argument
+constexpr static const uint32_t EE_NETMSG_OP_UNIT_FACT = 13;
+
+/// the player a's fact i0 (`EE_NETMSG_PLAYER_*`), i1.. arguments
+constexpr static const uint32_t EE_NETMSG_OP_PLAYER_FACT = 14;
+
+/// the world's fact i0 (`EE_NETMSG_WORLD_*`)
+constexpr static const uint32_t EE_NETMSG_OP_WORLD_FACT = 15;
+
+/// a capture decision record (NMDC): kind i0, the count i1, the values i2..
+constexpr static const uint32_t EE_NETMSG_OP_DECISION = 16;
+
+/// a chat log line: the text i0 (`EE_NETMSG_TEXT_*`), the kind i1; none for an empty text when i2
+constexpr static const uint32_t EE_NETMSG_OP_CHAT_TEXT = 17;
+
+/// a sound played (`EE_NETMSG_SOUND_*`)
+constexpr static const uint32_t EE_NETMSG_OP_SOUND = 18;
+
+/// a body the C++ keeps (`EE_NETMSG_BODY_*`)
+constexpr static const uint32_t EE_NETMSG_OP_BODY = 19;
+
+/// a's selection from the ids at b (i1 of them): AddAndRemoveUnitsFromSelectedGroup (i0 0), AddUnitsToSelectedGroup
+/// (1), SelectUnits (2)
+constexpr static const uint32_t EE_NETMSG_OP_SELECT_LIST = 20;
+
+/// a's selection: RemoveUnitFromSelectedGroup(i1) (i0 0), AddUnitToSelectedGroup(i1, true) (1), SelectUnit(i1,
+/// true, true) (2), UnselectAllUnits (3)
+constexpr static const uint32_t EE_NETMSG_OP_SELECT = 21;
+
+/// the player a's resource i1: AddResource (i0 0) or TakeResource (1) of i2; the trade's tally (2:
+/// `mResourceTrade[i1 - 2] += i2`); a tribute (3: `AddTribute(i3, i1, i2)`)
+constexpr static const uint32_t EE_NETMSG_OP_RESOURCE = 22;
+
+/// the unit b: Kill(i0, 0, 0)
+constexpr static const uint32_t EE_NETMSG_OP_KILL = 23;
+
+/// the unit b of the player a: the disband's refund of f0, its effect, Kill(0, 0, 0)
+constexpr static const uint32_t EE_NETMSG_OP_DISBAND = 24;
+
+/// the unit b: the delete's refund (its technology at the world's delete factor)
+constexpr static const uint32_t EE_NETMSG_OP_DELETE_REFUND = 25;
+
+/// the unit b: an action (`EE_NETMSG_ACT_*`), i1.. arguments, a another object
+constexpr static const uint32_t EE_NETMSG_OP_UNIT_ACT = 26;
+
+/// the player a: an action (`EE_NETMSG_PACT_*`), i1.. arguments
+constexpr static const uint32_t EE_NETMSG_OP_PLAYER_ACT = 27;
+
+/// the world: an action (`EE_NETMSG_WACT_*`), i1.. arguments, f0.., the objects a and b
+constexpr static const uint32_t EE_NETMSG_OP_WORLD_ACT = 28;
+
+/// the lobby game option i0 set to i1 (2, the map type: to the message's string), under the write lock
+constexpr static const uint32_t EE_NETMSG_OP_OPTION = 29;
+
+/// the unit class a's fact i0 (`EE_NETMSG_CLASS_*`)
+constexpr static const uint32_t EE_NETMSG_OP_CLASS_FACT = 30;
+
+/// a tile of the map (i3, i4) and `EECanPlace(a, i0, &GE3DPoint(i1, i2, 0), i3, i4, 0, 0)` on it (false off it)
+constexpr static const uint32_t EE_NETMSG_OP_CAN_PLACE = 31;
+
+/// the selection framing (`EE_NETMSG_SEL_*`) of the player a: the communications object's fast-selection state
+constexpr static const uint32_t EE_NETMSG_OP_SELECTION = 32;
+
+/// the fast-selection lock entered (i1 1) or left (0)
+constexpr static const int64_t EE_NETMSG_SEL_LOCK = 0;
+
+/// `gWorld.mExecutingLocalSelection = i1`
+constexpr static const int64_t EE_NETMSG_SEL_MARK_LOCAL = 1;
+
+/// the communications object's current selection id
+constexpr static const int64_t EE_NETMSG_SEL_CURRENT_ID = 2;
+
+/// the player's last selection id (the communications object's per player)
+constexpr static const int64_t EE_NETMSG_SEL_LAST_ID = 3;
+
+/// the player's last selection id set to i1
+constexpr static const int64_t EE_NETMSG_SEL_SET_LAST_ID = 4;
+
+/// the player's selected group copies its active group (and its viewed unit)
+constexpr static const int64_t EE_NETMSG_SEL_COPY = 5;
+
+/// the player's selection undone (UnselectAllUnits, the selected group copies the active one)
+constexpr static const int64_t EE_NETMSG_SEL_RESET = 6;
+
+/// the player's JIT flag cleared (the interface refreshed for the local player)
+constexpr static const int64_t EE_NETMSG_SEL_JIT_OFF = 7;
+
+constexpr static const int64_t EE_NETMSG_UNIT_HIT_POINTS = 0;
+
+constexpr static const int64_t EE_NETMSG_UNIT_TYPE = 1;
+
+constexpr static const int64_t EE_NETMSG_UNIT_CATEGORY = 2;
+
+constexpr static const int64_t EE_NETMSG_UNIT_MAX_HIT_POINTS = 3;
+
+constexpr static const int64_t EE_NETMSG_UNIT_CAN_DISBAND = 4;
+
+constexpr static const int64_t EE_NETMSG_UNIT_IS_PACKED = 5;
+
+/// the class's packed (or unpacked) class
+constexpr static const int64_t EE_NETMSG_UNIT_PACKED_CLASS = 6;
+
+constexpr static const int64_t EE_NETMSG_UNIT_FLIGHT_TIME = 7;
+
+/// the class has a death-spawn class
+constexpr static const int64_t EE_NETMSG_UNIT_DEATH_SPAWN = 8;
+
+constexpr static const int64_t EE_NETMSG_UNIT_CAN_CHANGE_BEHAVIOR = 9;
+
+/// `mComplexUnit`
+constexpr static const int64_t EE_NETMSG_UNIT_COMPLEX = 10;
+
+/// `mTileNode != NULL`
+constexpr static const int64_t EE_NETMSG_UNIT_TILE_NODE = 11;
+
+/// `mPlayer`
+constexpr static const int64_t EE_NETMSG_UNIT_OWNER = 12;
+
+constexpr static const int64_t EE_NETMSG_UNIT_LAND_BUILDING = 13;
+
+constexpr static const int64_t EE_NETMSG_UNIT_PAID_FOR = 14;
+
+constexpr static const int64_t EE_NETMSG_UNIT_BUILT = 15;
+
+constexpr static const int64_t EE_NETMSG_UNIT_CAN_DELETE = 16;
+
+constexpr static const int64_t EE_NETMSG_UNIT_TILE_X = 17;
+
+constexpr static const int64_t EE_NETMSG_UNIT_TILE_Y = 18;
+
+constexpr static const int64_t EE_NETMSG_UNIT_DOMAINS = 19;
+
+/// the next unit of its player's chain
+constexpr static const int64_t EE_NETMSG_UNIT_NEXT = 20;
+
+/// `EEUnitCast<EEComplexUnit>`: the unit if it is a complex unit, else 0
+constexpr static const int64_t EE_NETMSG_UNIT_AS_COMPLEX = 21;
+
+/// whether unit set i1 holds the unit's type
+constexpr static const int64_t EE_NETMSG_UNIT_IN_SET = 22;
+
+constexpr static const int64_t EE_NETMSG_PLAYER_OBSERVER = 0;
+
+constexpr static const int64_t EE_NETMSG_PLAYER_CIV_CHOSEN = 1;
+
+constexpr static const int64_t EE_NETMSG_PLAYER_SLOT = 2;
+
+constexpr static const int64_t EE_NETMSG_PLAYER_CHAT_TYPE = 3;
+
+/// `mEnemies[i1]`
+constexpr static const int64_t EE_NETMSG_PLAYER_ENEMY = 4;
+
+/// `mSendChatMessage[i1]`
+constexpr static const int64_t EE_NETMSG_PLAYER_SENDS_CHAT = 5;
+
+constexpr static const int64_t EE_NETMSG_PLAYER_ID = 6;
+
+/// `mResourceCaps[i1]`
+constexpr static const int64_t EE_NETMSG_PLAYER_RESOURCE = 7;
+
+constexpr static const int64_t EE_NETMSG_PLAYER_FIRST_UNIT = 8;
+
+/// `EEGetTradePrice(a, i1, i2)` (it makes its own NMDC record)
+constexpr static const int64_t EE_NETMSG_PLAYER_TRADE_PRICE = 9;
+
+constexpr static const int64_t EE_NETMSG_WORLD_NUM_PLAYERS = 0;
+
+constexpr static const int64_t EE_NETMSG_WORLD_CURRENT_INDEX = 1;
+
+/// a selection is being replayed (the communications object's `mIsExecutingSelection`)
+constexpr static const int64_t EE_NETMSG_WORLD_EXECUTING_SELECTION = 2;
+
+constexpr static const int64_t EE_NETMSG_WORLD_IS_SERVER = 3;
+
+constexpr static const int64_t EE_NETMSG_WORLD_HAS_COMMUNICATIONS = 4;
+
+/// the client's send-to slot, 0xfe on the server
+constexpr static const int64_t EE_NETMSG_WORLD_LOCAL_SEND_SLOT = 5;
+
+/// the message's string's character count
+constexpr static const int64_t EE_NETMSG_WORLD_STRING_LENGTH = 6;
+
+/// a recorded game is playing back (on a client or the server)
+constexpr static const int64_t EE_NETMSG_WORLD_PLAYBACK = 7;
+
+constexpr static const int64_t EE_NETMSG_WORLD_COLLISION_SPHERE_MODE = 8;
+
+/// the server's humans less its dropped loaders
+constexpr static const int64_t EE_NETMSG_WORLD_LOADED_HUMANS = 9;
+
+/// the server's `mNumLoadResponses`
+constexpr static const int64_t EE_NETMSG_WORLD_LOAD_RESPONSES = 10;
+
+/// the server's humans
+constexpr static const int64_t EE_NETMSG_WORLD_HUMANS = 11;
+
+/// the options' write lock taken (1) or released and the lobby told (0)
+constexpr static const int64_t EE_NETMSG_WORLD_OPTIONS_LOCK = 12;
+
+constexpr static const int64_t EE_NETMSG_CLASS_TYPE = 0;
+
+constexpr static const int64_t EE_NETMSG_CLASS_TILE_SIZE = 1;
+
+/// ClearGoals(0), StartAction(idle), the class's ActionChanged
+constexpr static const int64_t EE_NETMSG_ACT_HALT = 0;
+
+constexpr static const int64_t EE_NETMSG_ACT_GO_FANATIC = 1;
+
+/// ToggleJITManufacturing, UpdateJITManufacturing
+constexpr static const int64_t EE_NETMSG_ACT_JIT = 2;
+
+/// ToggleJITManufacturing alone
+constexpr static const int64_t EE_NETMSG_ACT_JIT_TOGGLE = 3;
+
+/// RemoveResearch(i1, 0)
+constexpr static const int64_t EE_NETMSG_ACT_REMOVE_RESEARCH = 4;
+
+/// SetLocked(i1) on the gate and its second and fourth parts
+constexpr static const int64_t EE_NETMSG_ACT_LOCK_GATE = 5;
+
+/// queue i1's timer + 60 s when it holds goals
+constexpr static const int64_t EE_NETMSG_ACT_RALLY_TIME = 6;
+
+/// the behaviour `EEUnitBehavior::sTable[i1]` (when it differs)
+constexpr static const int64_t EE_NETMSG_ACT_BEHAVIOR = 7;
+
+/// the class's ReplantFarm(unit, the player a)
+constexpr static const int64_t EE_NETMSG_ACT_REPLANT = 8;
+
+/// SetHomeBase(a)
+constexpr static const int64_t EE_NETMSG_ACT_HOME_BASE = 9;
+
+/// SetFlightTime(0)
+constexpr static const int64_t EE_NETMSG_ACT_LAND = 10;
+
+/// the aircraft goes to (i1, i2): its queues cleared, the move in queues 0 and 1, 1 s on queue 1
+constexpr static const int64_t EE_NETMSG_ACT_SCRAMBLE = 11;
+
+/// replaced by the class a for the player i1 and packed
+constexpr static const int64_t EE_NETMSG_ACT_PACK = 12;
+
+/// replaced by the class a for the player i1 (the object i2), placed at its old tile, unpacked
+constexpr static const int64_t EE_NETMSG_ACT_UNPACK = 13;
+
+/// the class's inner (i1 9) or outer (10) collision sphere grown (i2 1) or shrunk by 0.05; the radius the inner's
+constexpr static const int64_t EE_NETMSG_ACT_SPHERE = 14;
+
+/// the radius the unit a's class's inner sphere
+constexpr static const int64_t EE_NETMSG_ACT_RADIUS = 15;
+
+/// shift mode i1 (and the mouse's for the local player)
+constexpr static const int64_t EE_NETMSG_PACT_SHIFT_MODE = 0;
+
+/// the whole map seen or not (the mini-map redrawn for the local player)
+constexpr static const int64_t EE_NETMSG_PACT_SEES_ALL = 1;
+
+constexpr static const int64_t EE_NETMSG_PACT_INCREMENT_EPIC = 2;
+
+/// the player's JIT flag toggled (the interface refreshed for the local player)
+constexpr static const int64_t EE_NETMSG_PACT_JIT = 3;
+
+/// ApplyCheatCode(i1, id, i2)
+constexpr static const int64_t EE_NETMSG_PACT_CHEAT = 4;
+
+constexpr static const int64_t EE_NETMSG_PACT_CHAT_TYPE = 5;
+
+/// `mSendChatMessage[i1] = i2`
+constexpr static const int64_t EE_NETMSG_PACT_SEND_CHAT = 6;
+
+/// statistics 0x14 and 0x15
+constexpr static const int64_t EE_NETMSG_PACT_REPORT = 7;
+
+constexpr static const int64_t EE_NETMSG_PACT_CLEAR_SAVED = 8;
+
+/// saved group i1 assigned the selection
+constexpr static const int64_t EE_NETMSG_PACT_ASSIGN_SAVED = 9;
+
+/// PlayAcknowledgement(the unit i1)
+constexpr static const int64_t EE_NETMSG_PACT_ACKNOWLEDGE = 10;
+
+constexpr static const int64_t EE_NETMSG_PACT_LOCK_CIV = 11;
+
+/// RemovePlayerFromGame(0, id), SetGameResult(2)
+constexpr static const int64_t EE_NETMSG_PACT_REMOVE = 12;
+
+/// RemoveQueuedImprovement(i1, i2, CountQueuedImprovements(i1, i2) != 0)
+constexpr static const int64_t EE_NETMSG_PACT_REMOVE_IMPROVEMENT = 13;
+
+/// the help string refreshed when it is the local player's id
+constexpr static const int64_t EE_NETMSG_PACT_UPDATE_HELP = 14;
+
+/// the JIT button refreshed when it is the local player
+constexpr static const int64_t EE_NETMSG_PACT_UPDATE_JIT = 15;
+
+/// the unit i1's patrol group selected
+constexpr static const int64_t EE_NETMSG_PACT_PATROL_GROUP = 16;
+
+constexpr static const int64_t EE_NETMSG_WACT_ATTACK_PLAYERS = 0;
+
+/// EEBuildGate at the point f0, f1 ((long) casts), i1..i3
+constexpr static const int64_t EE_NETMSG_WACT_BUILD_GATE = 1;
+
+constexpr static const int64_t EE_NETMSG_WACT_EDICT = 2;
+
+constexpr static const int64_t EE_NETMSG_WACT_END_CINEMATIC = 3;
+
+constexpr static const int64_t EE_NETMSG_WACT_GAME_SPEED = 4;
+
+/// the communications object's host migration ended
+constexpr static const int64_t EE_NETMSG_WACT_MIGRATING_OFF = 5;
+
+constexpr static const int64_t EE_NETMSG_WACT_LAG = 6;
+
+constexpr static const int64_t EE_NETMSG_WACT_LOAD_PERCENT = 7;
+
+/// the physics thread posted message i1
+constexpr static const int64_t EE_NETMSG_WACT_POST_PHYSICS = 8;
+
+constexpr static const int64_t EE_NETMSG_WACT_COLLISION_UNIT = 9;
+
+constexpr static const int64_t EE_NETMSG_WACT_COLLISION_FLAGS = 10;
+
+constexpr static const int64_t EE_NETMSG_WACT_ZOOM = 11;
+
+constexpr static const int64_t EE_NETMSG_WACT_RECORD_FRAMES = 12;
+
+/// the options' write lock: taken (i1 1), released and the lobby told (0)
+constexpr static const int64_t EE_NETMSG_WACT_OPTIONS_LOCK = 13;
+
+/// lobby slot i1's field i2 set to i3 (the ping: f0), the row refreshed
+constexpr static const int64_t EE_NETMSG_WACT_PLAYER_INFO = 14;
+
+/// the chat line posted (i1: it is our own)
+constexpr static const int64_t EE_NETMSG_WACT_POST_CHAT = 15;
+
+constexpr static const int64_t EE_NETMSG_WACT_TIMER_EXPIRED = 16;
+
+constexpr static const int64_t EE_NETMSG_WACT_START_GAME = 17;
+
+constexpr static const int64_t EE_NETMSG_WACT_CLEAR_SEND_TO_SLOTS = 18;
+
+constexpr static const int64_t EE_NETMSG_WACT_LOAD_RESPONSES = 19;
+
+/// the player i1's send-to slot the lobby slot i2's
+constexpr static const int64_t EE_NETMSG_WACT_SEND_TO_SLOT = 20;
+
+constexpr static const int64_t EE_NETMSG_WACT_ALL_LOADED = 21;
+
+/// the game log's chat line of the player a
+constexpr static const int64_t EE_NETMSG_WACT_CHAT_LOG = 22;
+
+/// the chat line of the player a shown with the texts i1, i2 (-1: none); the sound when a is not the player b
+constexpr static const int64_t EE_NETMSG_WACT_SHOW_CHAT = 23;
+
+constexpr static const int64_t EE_NETMSG_WACT_LAST_CHAT = 24;
+
+/// the tribute's chat line from a to b: the viewer i1, i2 resources (bytes of i3), the amounts i4..
+constexpr static const int64_t EE_NETMSG_WACT_TRIBUTE_TEXT = 25;
+
+constexpr static const int64_t EE_NETMSG_WACT_RESIGN_TEXT = 26;
+
+/// `gPhysics->FlushWorld()`
+constexpr static const int64_t EE_NETMSG_WACT_FLUSH = 27;
+
+constexpr static const int64_t EE_NETMSG_TEXT_RUNNING_OUT = 0;
+
+constexpr static const int64_t EE_NETMSG_TEXT_SELECTION_EXPIRED = 1;
+
+constexpr static const int64_t EE_NETMSG_TEXT_MAY_NOT_UNPACK = 2;
+
+constexpr static const int64_t EE_NETMSG_TEXT_SETUP_ALL = 3;
+
+constexpr static const int64_t EE_NETMSG_TEXT_SETUP_ALLIES = 4;
+
+constexpr static const int64_t EE_NETMSG_TEXT_SETUP_ENEMIES = 5;
+
+constexpr static const int64_t EE_NETMSG_TEXT_SETUP_CUSTOM = 6;
+
+constexpr static const int64_t EE_NETMSG_TEXT_OBSERVERS = 7;
+
+constexpr static const int64_t EE_NETMSG_TEXT_NONE = -1;
+
+constexpr static const int64_t EE_NETMSG_SOUND_CLOCK_TICK = 0;
+
+constexpr static const int64_t EE_NETMSG_SOUND_CASH_REGISTER = 1;
+
+constexpr static const int64_t EE_NETMSG_BODY_CIV_UPGRADES_PURCHASED = 0;
+
+constexpr static const int64_t EE_NETMSG_BODY_CIV_UPGRADES_REQUESTED = 1;
+
+constexpr static const int64_t EE_NETMSG_BODY_IMMEDIATE_CARGO_UNLOAD = 2;
+
+constexpr static const int64_t EE_NETMSG_BODY_IMPROVE_UNIT = 3;
+
+constexpr static const int64_t EE_NETMSG_BODY_LOAD_MAIN_SCREEN = 4;
+
+constexpr static const int64_t EE_NETMSG_BODY_LOAD_OR_SAVE_GAME = 5;
+
+constexpr static const int64_t EE_NETMSG_BODY_LOAD_UNIT_DATA = 6;
+
+constexpr static const int64_t EE_NETMSG_BODY_MIGRATION_SLOT_INFO = 7;
+
+constexpr static const int64_t EE_NETMSG_BODY_SAVED_GROUP_SELECT = 8;
+
+constexpr static const int64_t EE_NETMSG_BODY_SEND_FLARE = 9;
+
+constexpr static const int64_t EE_NETMSG_BODY_SET_DIPLOMATIC_STANCE = 10;
+
+constexpr static const int64_t EE_NETMSG_BODY_START_LOADING = 11;
+
+constexpr static const int64_t EE_NETMSG_BODY_CHANGE_FORMATION = 12;
+
+constexpr static const uint8_t EDICT_PROPOSAL = 65;
+
+constexpr static const uint8_t PAY_TRIBUTE = 68;
+
+constexpr static const uint8_t SELECT_UNIT = 72;
+
+constexpr static const uint8_t ADD_UNIT_TO_SELECTED_GROUP = 73;
+
+constexpr static const uint8_t REMOVE_UNIT_FROM_SELECTED_GROUP = 74;
+
+constexpr static const uint8_t UNSELECT_ALL_UNITS = 75;
+
+constexpr static const uint8_t ATTACK_UNIT = 76;
+
+constexpr static const uint8_t PATH_TO = 77;
+
+constexpr static const uint8_t SELECT_UNITS = 78;
+
+constexpr static const uint8_t ADD_UNITS_TO_SELECTED_GROUP = 79;
+
+constexpr static const uint8_t ADD_AND_REMOVE_UNITS_FROM_SELECTED_GROUP = 80;
+
+constexpr static const uint8_t GATHER_RESOURCE = 81;
+
+constexpr static const uint8_t RESEARCH_TECHNOLOGY = 82;
+
+constexpr static const uint8_t REMOVE_TECHNOLOGY = 83;
+
+constexpr static const uint8_t MAKE_WORLD_VISIBLE = 85;
+
+constexpr static const uint8_t BUILD_UNIT = 86;
+
+constexpr static const uint8_t REPAIR_UNIT = 87;
+
+constexpr static const uint8_t HALT_SELECTED_GROUP = 88;
+
+constexpr static const uint8_t BUILD_WALL = 89;
+
+constexpr static const uint8_t CHAT = 90;
+
+constexpr static const uint8_t KILL_UNIT = 92;
+
+constexpr static const uint8_t START_LOADING = 93;
+
+constexpr static const uint8_t START_LOADING_RESPONSE = 94;
+
+constexpr static const uint8_t GAME_SPEED = 95;
+
+constexpr static const uint8_t GAME_OPTIONS = 96;
+
+constexpr static const uint8_t DROPOFF_RESOURCE = 97;
+
+constexpr static const uint8_t TOGGLE_DAY_NIGHT = 98;
+
+constexpr static const uint8_t SNAP_TO_DAYLIGHT = 99;
+
+constexpr static const uint8_t LOAD_OR_SAVE_GAME = 100;
+
+constexpr static const uint8_t TOGGLE_COLLISION_DETECTION = 101;
+
+constexpr static const uint8_t SET_RALLY_GOAL = 102;
+
+constexpr static const uint8_t LOAD_TRANSPORT = 103;
+
+constexpr static const uint8_t UNLOAD_TRANSPORT = 104;
+
+constexpr static const uint8_t HACK_A_NEW_UNIT = 107;
+
+constexpr static const uint8_t INCREMENT_EPIC = 108;
+
+constexpr static const uint8_t RECORD_FRAMES = 109;
+
+constexpr static const uint8_t ZOOM_INFO = 111;
+
+constexpr static const uint8_t ATTACK_PLAYERS = 112;
+
+constexpr static const uint8_t LOAD_UNIT_DATA = 113;
+
+constexpr static const uint8_t ADD_PATROL_POINT = 114;
+
+constexpr static const uint8_t PATROL = 115;
+
+constexpr static const uint8_t SELECT_PATROL_GROUP = 116;
+
+constexpr static const uint8_t CAST_CALAMITY = 117;
+
+constexpr static const uint8_t ALWAYS_ADD_UNIT_TO_SELECTED_GROUP = 118;
+
+constexpr static const uint8_t IMPROVE_UNIT = 119;
+
+constexpr static const uint8_t CHANGE_FORMATION = 120;
+
+constexpr static const uint8_t EXPLORE = 121;
+
+constexpr static const uint8_t UPDATE_PING_STAT = 122;
+
+constexpr static const uint8_t LOAD_GARRISON = 123;
+
+constexpr static const uint8_t MIGRATION_SLOT_INFO = 124;
+
+constexpr static const uint8_t IN_GAME_CHAT = 125;
+
+constexpr static const uint8_t CIV_UPGRADES_REQUESTED = 126;
+
+constexpr static const uint8_t CIV_UPGRADES_PURCHASED = 127;
+
+constexpr static const uint8_t SET_AIRPORT_COMMAND = 128;
+
+constexpr static const uint8_t REPLANT_FARMS = 129;
+
+constexpr static const uint8_t SAVED_GROUP_ADD_SELECTION = 130;
+
+constexpr static const uint8_t SAVED_GROUP_CREATE = 131;
+
+constexpr static const uint8_t SAVED_GROUP_SELECT = 132;
+
+constexpr static const uint8_t CHEAT_CODE = 133;
+
+constexpr static const uint8_t BUILD_GATE = 134;
+
+constexpr static const uint8_t CLEAR_AIRPORT_COMMANDS = 135;
+
+constexpr static const uint8_t ENTER_SHIFT_MODE = 136;
+
+constexpr static const uint8_t EXIT_SHIFT_MODE = 137;
+
+constexpr static const uint8_t STOP_ACTIVE_GROUP = 138;
+
+constexpr static const uint8_t REMOVE_IMPROVEMENT = 139;
+
+constexpr static const uint8_t LOCK_UNLOCK = 140;
+
+constexpr static const uint8_t CHANGE_SELECTED_UNIT_COLLISION_SPHERE = 141;
+
+constexpr static const uint8_t INCREMENT_RALLY_TIMER = 142;
+
+constexpr static const uint8_t SMART_FARMERS = 143;
+
+constexpr static const uint8_t RETURN_TO_BASE = 144;
+
+constexpr static const uint8_t GAME_RESTARTING = 145;
+
+constexpr static const uint8_t HEAL_UNIT = 146;
+
+constexpr static const uint8_t SAVED_GROUP_CLEAR = 147;
+
+constexpr static const uint8_t LOAD_PERCENT = 148;
+
+constexpr static const uint8_t IMMEDIATE_CARGO_UNLOAD = 149;
+
+constexpr static const uint8_t SELECT_THESE_UNITS = 150;
+
+constexpr static const uint8_t LOAD_MAIN_SCREEN = 151;
+
+constexpr static const uint8_t LOAD_MAIN_SCREEN_RESPONSE = 152;
+
+constexpr static const uint8_t SET_DIPLOMATIC_STANCE = 153;
+
+constexpr static const uint8_t ADD_REMOVE_RESOURCES = 155;
+
+constexpr static const uint8_t SEND_FLARE = 156;
+
+constexpr static const uint8_t END_CINEMATIC = 157;
+
+constexpr static const uint8_t SET_UNIT_BEHAVIOR = 158;
+
+constexpr static const uint8_t ATTACK_GROUND = 159;
+
+constexpr static const uint8_t SCRAMBLE_AIRCRAFT = 160;
+
+constexpr static const uint8_t SELECT_PLAYER_CHAT_TYPE = 161;
+
+constexpr static const uint8_t SELECT_CUSTOM_PLAYER_FOR_CHAT = 162;
+
+constexpr static const uint8_t RESIGN = 163;
+
+constexpr static const uint8_t DISBAND = 164;
+
+constexpr static const uint8_t SELF_DESTRUCT = 165;
+
+constexpr static const uint8_t REPORT_STATISTICS = 166;
+
+constexpr static const uint8_t CIV_TIMER_EXPIRED = 167;
+
+constexpr static const uint8_t LAG_STATUS = 168;
+
+constexpr static const uint8_t FULL_GAME_OPTIONS = 169;
+
+constexpr static const uint8_t PLAYER_INFORMATION = 170;
+
+constexpr static const uint8_t PACK_UNPACK = 171;
+
+constexpr static const uint8_t GO_FANATIC = 172;
+
+constexpr static const uint8_t JIT_MANUFACTURING = 173;
+
+constexpr static const uint8_t EXCHANGE_RESOURCES = 174;
+
 /// `EEMAddPatrolPoint`
 constexpr static const uint32_t EE_NETMSG_ADD_PATROL_POINT = 0;
 
@@ -521,6 +1167,19 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
+/// One world call: the message (`EEMRecord*`), two objects (a player, a group, a unit: their addresses), integers
+/// and floats; the operation's answer is the host's return value (an object's address, a fact).
+struct EeNetMsgCall {
+  uint64_t message;
+  uint64_t a;
+  uint64_t b;
+  int64_t i[14];
+  float f[2];
+};
+
+/// The C++ host (EEMessage.cpp's `EENetMsgHost`).
+using EeNetMsgHostFn = int64_t(*)(uint32_t op, EeNetMsgCall *call);
+
 /// One step of `EEMExchangeResources` (ee/EEMessageExecute.h): whether it applies, the traded resource's amount
 /// (`cost`) and the gold's (`amount`).
 struct EeNetMsgExchangeStep {
@@ -587,6 +1246,22 @@ struct EeNetMsgRecordRules {
 };
 
 extern "C" {
+
+/// `EEMRecord::Execute` (`framing` 0), `EEMessage::ExecuteSelectionMessage` (1) or `ExecuteMessage` (2): the type's
+/// body over a copy of the message's record (64 bytes, written back when the body changed it: no Rust reference lives
+/// across the host's calls) and of its list (`list_len` bytes), with the C++ host.
+///
+/// # Safety
+/// `record` points to the record's bytes, `list` to `list_len` bytes (any pointer when 0); the host is EEMessage.cpp's.
+void ee_netmsg_execute(EeNetMsgHostFn host,
+                       void *message,
+                       uint8_t message_type,
+                       uint8_t slot,
+                       uint8_t fast_id,
+                       uint8_t *record,
+                       const uint8_t *list,
+                       size_t list_len,
+                       uint8_t framing);
 
 uint8_t ee_netmsg_selection_marks_local(uint8_t is_server, uint8_t is_local);
 
