@@ -24942,3 +24942,93 @@ hooks onto it and made the classes header-only.
 
 The merge of rust needed nothing: no conflict; `rust_build.py header` current; `rust_includes.py` added `rust/ee_won.h` to
 WONAuthContext.h (it had it only through WONRouting.h).
+
+## R5b.4 game messages, round 6: the game's server and client decisions in Rust over one host; their golden over a stand-in world; the capture's sweep payloads (ee_netmsg session.rs, capture.rs; branch rust-msg6, 2026-11-15)
+
+The lane widened from the messages to the game's communications (EEServer.cpp 1,229 lines, EEClient.cpp 854).
+
+| Commit | What | C++ (src + include/ee) |
+|---|---|---|
+| bbceebba | nettest: ne_protocol_test compiles again (it defined TSScheduler's statics, inline since ed678d8a) | tests only |
+| f55a7edb | EEMessage's codec and EEMRecord in their own unit (EEMRecord.cpp); EESendGroupCommand moved unchanged into EEMessage.cpp | +398 -391, net **+7** |
+| ac27d38e | `ee_session_test`: the server and client over a stand-in world; golden made by the original units | tests only |
+| 79106697 | the server's and client's decisions in Rust (session.rs) over EEServer.cpp's host | +641 -1,334, net **-693** |
+| 11395b56 | the capture's sweep payloads in Rust (capture.rs) | +16 -288, net **-272** |
+
+The round's own commits: net **-958** C++ (EEServer.cpp 1,229 -> 899 lines with the host, EEClient.cpp 854 -> 310,
+EEMessageCapture.cpp 751 -> 479; EEMRecord.cpp 263 new, EEMessage.cpp 1,406 -> 1,321 with EESendGroupCommand). Under
+the 1,500 aimed at: the server's and client's members are world, lobby and UI calls nearly line for line, so the
+host's operations (one per call kind) take back about half of what moved.
+
+- **The golden first, over a stand-in world.** No gate sends a refusal, boots a player or migrates a host, so the
+  server and client got a golden before the move: `tests/net/ee_session_test.cpp` (xbuild nettest) compiles the
+  units with `tests/net/ee_stand` first on the include path: every game and engine header they include is a
+  stand-in that includes `ee_stand/ee_world.h` (the world, the lobby's options, the players, the UI, WON, the
+  physics, the engine's server and client bases), each call a trace line, its answers from the driver's state. The
+  strings, the locks, NEMRecord (NEMessage.cpp) and EEMRecord (the new EEMRecord.cpp: why the class's half of
+  EEMessage.cpp became its own unit) are the real ones, so every message sent is traced by its exported bytes.
+  6,000 random calls over a random world (game states, load types, multiplayer or not, lobby slots, names that
+  match ignoring case or not, send-to maps, votes, WON present or not; 44,425 lines, 1.5 MB): join requests (the
+  host's and clients', over the wire and direct), boots, removals, system messages, filtered inputs (including the
+  host turned client: the server deleted, made again by the driver), local inputs, lobby inputs, votes, the
+  reconnect wait, laggers, slot info, transfer status, the client's states, messages, lost server, start game, with
+  the state that changed after each call. The golden (tests/net/golden_session.txt) was made by the original units,
+  kept as tests/net/orig_ee (EEServer.cpp and EEClient.cpp before the move, EESendGroupCommand already out) and
+  built as `ee_session_orig`; the moved units give the same trace (`ee_session_test`). A mutation (the lobby boot's
+  WON count skipped) changes 60 lines. The message's selection id byte is masked in the trace: EEMessage's
+  constructor leaves it uninitialised, so the original's trace differed run to run until it was.
+- **The design.** `ee_netmsg_session(host, frame, server, what, a, b, c, d)` runs one member; the C++ forwarders
+  (`EESession`) build a frame on their stack: the communications object, two `EEGameOptionsPlayer` registers (the
+  bodies' `thePlayer` and `theOther`) and the join request's player and version (a third, read-only register). The
+  host's operations are by kind (lock, fact, the object's member, register, send, message, UI, WON, sound, world,
+  engine, start), each one call of the original's in its order; the registers keep the names in C++ (copied,
+  compared ignoring case or exactly) so the Rust never holds a string. The server's and client's tick handling,
+  start of game, local input, slot info and dropped humans are one Rust function each with a server flag where the
+  two copies differed (the client's input filter reads GetMySendToSlot only when the input is not for every slot;
+  the server queues an input before referencing it, the client after).
+- **What stays C++.** The constructors, the connection response's senders, TakeConnectionRequest, RefuseClient,
+  SendFullPlayerInformation, SendPingStat, HandleXferStatus, HandleSlotUpdate, the getters, CreateXferFile (the
+  transfer's file), the timeout warning's text.
+- **Lessons.** The engine's sends are protected members of NESynchronousServer: the stand-in had them public, the
+  game did not compile; the host reaches them through a friend class of EEServer (a friend of the derived class may
+  call the base's protected members through a derived pointer). A cbindgen constant must be a literal: `const X: u32
+  = NMCU;` came out as `= NMCU;` in the header and broke every unit that includes it. Two builds of one worktree
+  must never overlap: a monitor that fired on a stale log's error started a second build over a running one.
+- **The capture's sweep.** The NMSW/NMCU/NMNE payloads (the patterns, the xorshift stream, the strings, the unit
+  lists, the engine types' shapes, the ticks' nested inputs) are made by `ee_netmsg::capture::Sweep` in the old
+  order; the C++ builds each (`EE_NETMSG_SWEEP_ITEM_GAME`/`ENGINE`) and commits the NMCU records whole. The capture
+  files are the same size and every NM* digest equals golden_cpp.txt.
+- **Behaviour changes.** None in a game (the oracle, the Lua AI's traces and checksums, the captures). The game
+  start's dead seed sum over the players' names is gone (it read the names and dropped the sum).
+- **What runs it.** Single-player games and EE-SIM: the local server's communications ticks, local inputs, and the
+  lobby inputs of the start. Only the LAN game: the acceptance of a join, the lobby's slots and options on the
+  wire, the loading, the client's side. Only the session golden: the refusals and the client's answers to them, the
+  boots and removals, the votes, the laggers' mask, the slot info, the migration's restart and the client's lost
+  server, the host turned client.
+- **Not moved.** EEWonNet.cpp (the game's side of WON: it calls SmartRoutingConnection, AsyncOp and the lobby's
+  windows, which the WON lanes are moving; no WON file was touched). The thirteen C++ Execute bodies. EEMessage and
+  EEMRecord as one class.
+- **Gates.** Per code commit: build `--sim` 0/0; `ee_session_test` equal to the golden; the oracle identical on seeds
+  2-3; the oracle capture at seeds 2-3 equal to golden_cpp.txt but UUTL (the same stale digests round 5 found on
+  `rust` itself, 78796ae3/6171a40b); EE-SIM with the Lua AI (`--engine next`, Small Hard, 1,200 s, seeds 2-3) equal
+  to the main checkout's EE-SIM in the AI trace (but the EE-AIPROF timing lines) and the checksum lines (1,372 each);
+  the Rust gate PASS (the session commit's first gate failed clippy's single-element loop, fixed before the commit).
+- **The merge of `rust`** (3114725d, 68 commits): golden_cpp*.txt and RUST_PLAN.md taken from `rust`; EEMessage.cpp's
+  three bodies round 5 had deleted kept deleted, and the host's lock/unlock reads the gate as
+  `EEUnitClassOfKind<EE_CLASS_KIND_GATE>` (EEUCGate went on `rust`); headers regenerated (`rust_build.py header`,
+  `rust_includes.py`: no change). The lead's RUST_PLAN history fix (fix_plan_history.sh) then rewrote the branch's
+  commits: the tree is byte-identical, the plan blob 81 KB. On the merged tree: build `--sim` 0/0 and the test-profile
+  build 0/0; the oracle identical on seeds 2-7; the captures at seeds 2-3 PASS (oracle 177 digests, late 178, space
+  179, calamity 195); the saveload matrix `--expect` PASS; nettest: msgmgr 20,000, queues 1,500, client 1,500, tune
+  20,000, server 1,500 sequences 0 differing, protocol and message equal; `ee_session_test` first differed: the
+  driver compared a deleted server's address with the new one's, and a new server reusing it dumped its state at
+  random; it compares a flag now, the golden re-recorded by the original units (44,289 lines), and the moved units
+  give it byte for byte; the Rust gate PASS. Under the harness lock: `lan_game.py` RESULT PASS lan-game (PT host
+  2933, joiner 2929); the Lua AI game (`--lobby 276=Boom --lobby 277=Boom`, Small Hard 32x, PT 40, seed 2) RESULT
+  PASS time-cap, alive [2, 3], units [5, 33, 33]; the tour RESULT PASS (render checks, F3); the legacy tour
+  (`game_session.py --exercise tour --seed 2`) STOP <windowed session complete>, the seed pin written (old 29593,
+  new 2); `--exercise random-game --box-select --orders`: PASS unseeded (the lead's command) and PASS with `--seed 2`
+  (gather, repair, repair-queued, move; box select 4 steps), but two runs failed: one with `--play-seconds 120`
+  (move: no mobile unit left) and one with `--seed 2` (gather: the scouted resource not picked from the view). The
+  seeded failure is the fixture's picker under load: the same seed passed on this build the next run and on `rust`'s
+  own test exe (built in a scratch worktree for the check); the 120 s variant was not repeated on `rust`.

@@ -100,6 +100,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + UI_TRAMPOLINES + GE_UNITS,
                        "Empire Earth/Civilization Builder/EEAECapture.cpp",
                        # TEST ONLY: the game messages' capture records (ee/EEMessageCapture.h; RUST_PLAN R5b.4)
                        "Empire Earth/Communications/EEMessageCapture.cpp",
+                       # the game messages' class: EEMessage's codec, EEMRecord (split from EEMessage.cpp)
+                       "Empire Earth/Communications/EEMRecord.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)
                        "Empire Earth/Units/EEUnitStore.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
