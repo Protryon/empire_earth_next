@@ -329,3 +329,321 @@ tab 5                              # Enter
 blank 40 40 3                      # a new map on the player tab: its Load
 form 0 99999 4
 players
+# editor screens round 2: the player combo's display mode after each player page (SelectPage shows it only on the
+# tech tree page)
+tab 5
+radio 0x12d                        # tech tree
+controls 0x149
+radio 0x15d                        # page 2
+controls 0x149
+radio 0x12d
+controls 0x149
+radio 0x170                        # AI settings
+controls 0x149
+radio 0x12d
+radio 0x12c                        # page 1
+controls 0x149
+radio 0x12d
+radio 0x15a                        # options
+controls 0x149
+# editor screens round 2: the trigger tab's object screen (EESETSObject, the form's controls 227..263): its two
+# modes, the generated names, the counts' clamp, the filter check boxes, two objects stored and loaded, the units
+# picked on the map, the list's buttons, the tab left and entered
+tab 4
+trigger 3
+form 227 263
+object
+tscreen new                        # the first object (none yet: the screen's group disabled)
+form 227 263
+object
+radio %229                        # object specification: owner, family, class, parent, counts
+form 227 263
+object
+changesel %238 3                   # a family (EESETSAComboBox::ChangeSelection: the generated name)
+object
+changesel %240 5                   # a class
+object
+changesel %236 2                   # an owner
+check %234 0                      # not dynamic
+changesel %240 0                   # any class: the family names it
+object
+changesel %238 0                   # any family: the owner names it
+object
+edit %231 3
+edit %233 2
+enter %233                        # Store (the counts clamped), the name
+form 230 234
+object
+buttonup %245                     # the filters: each check box's controls shown
+buttonup %247
+buttonup %250
+buttonup %258
+buttonup %260
+buttonup %262
+controls %245 %247 %250 %258 %260 %262
+form 245 263
+buttonup %250                     # a second click: the third state
+controls %250
+form 250 257
+changesel %251 4                   # an attribute, its range, percent
+edit %253 50
+edit %255 10
+check %257 1
+changesel %261 3                   # a state, the players
+changesel %259 1
+changesel %263 2
+changesel %248 2                   # near
+tscreen new                        # the first object stored, a second one
+object
+tscreen select 0                   # the first one loaded
+form 227 263
+object
+changesel %242 2                   # the second object as the parent: the name
+object
+tscreen select 1
+radio %228                        # select on map
+place 1 32 40.5 40.5 0
+place 1 32 41.5 40.5 1.5
+tsclick select @40,40              # EESETSAMouseClick: the unit list, the name
+form 243 244
+object
+tsclick add @41,40
+form 243 244
+object
+tscreen new                        # the units stored
+tscreen select 1
+form 227 263
+object
+tscreen dup
+object
+tscreen up
+object
+tscreen down
+object
+tscreen sort
+object
+tscreen name
+object
+tscreen delete
+object
+tab 0                              # left: Deactivate (the selection cleared)
+selection
+tab 4                              # entered: Activate
+form 227 263
+object
+# editor screens round 2: the trigger tab's trigger screen (EESETSTrigger, the form's controls 114..150): a trigger's
+# rows, operators (ChangeOperator), the rows' steps and removals, the timer, its store and load, the list's buttons
+tab 4
+trigger 0
+form 114 150
+triggerstate
+tscreen new
+form 114 150
+triggerstate
+changesel %128 2                   # the first condition, not, delay and effect (stored on the next change)
+check %126 1
+edit %132 15
+changesel %134 3
+check %146 1                       # on, the timer (its event shows the duration), looping, in cinematics
+check %147 1
+edit %148 30
+check %149 1
+check %150 1
+changesel %130 0                   # "and": ChangeOperator, a second condition row
+form 114 150
+triggerstate
+changesel %129 1
+check %127 1
+changesel %131 1                   # "or" on the second row: a third one, the rows one on
+form 114 150
+triggerstate
+changesel %136 1                   # the effects: "or", a second row, "and" on it
+changesel %135 2
+edit %133 7
+changesel %137 0
+form 114 150
+triggerstate
+fire %142                      # the condition rows one back
+form 119 125
+fire %143                      # and on
+fire %144
+fire %145
+form 114 150
+triggerstate
+fire %139                      # the second condition removed
+triggerstate
+fire %138                      # the first
+triggerstate
+fire %141                      # the effects
+fire %140
+form 114 150
+triggerstate
+check %147 0                       # the timer off: stored as 0
+tscreen new
+tscreen select 0
+form 114 150
+triggerstate
+tscreen dup
+triggerstate
+tscreen delete
+triggerstate
+tab 0
+tab 4
+form 114 150
+triggerstate
+# editor screens round 2: the unit tab (EESEUnit, the form's controls 55..73): the palettes, owners and sorts
+# relisting the classes (RefreshUnitList), the cargo of a selected transport (UpdateSelection, ShowCargo), the tab
+# left and entered
+tab 3
+form 55 73
+radio %60                       # air units (EEUIFSEBUnitType::Check, then the sort event)
+fire %60
+unitlist
+radio %62                       # structures
+fire %62
+unitlist
+radio %63                       # heroes
+fire %63
+unitlist
+radio %64                       # resources
+fire %64
+unitlist
+radio %56                          # world: the player combo hidden
+controls 0x149
+unitlist
+radio %61                       # naval units
+fire %61
+unitlist
+radio %57                          # players: the combo shown
+controls 0x149
+unitlist
+radio %68                          # by family
+unitlist
+radio %67                          # by epoch
+unitlist
+buttonup %59                       # land units
+unitlist
+radio %66                          # by name
+unitlist
+form 55 73
+blank 40 40 3
+ghost 1 209 42 40 0                # a trojan horse and two citizens boarding it
+placeghost 1
+ghost 1 32 44 41 1.0
+placeghost 1 @42,40
+ghost 1 32 44 42 1.0
+placeghost 1 @42,40
+select @42,40                      # the horse: its cargo listed
+form 55 73
+clear
+form 55 73
+tab 0                              # left
+controls 0x149
+tab 3                              # entered
+controls 0x149
+form 55 73
+# editor screens round 3: the unit tab's placement state (EESEUnit::SelectUnitType's unit, wall and gate tools, the
+# build tools' Build and Cancel calling PlaceWall/EndWall and PlaceGate/EndGate, a palette or owner change cancelling
+# them in RefreshUnitList, Leave ending the placement); the structures palette first
+tab 3
+radio %62
+fire %62
+unittab
+unitpick Airport                   # a plain structure: placing it
+unittab
+unitpick Palisades                 # a wall technology: the wall tool
+unittab
+unitbuild wall 36 44 36 38         # PlaceWall for the combo's player
+units
+unitbuild cancel                   # EndWall
+unittab
+unitpick Gate_-_Bamboo             # a gate: the gate tool
+unittab
+unitbuild gate 36 41 2             # PlaceGate on the wall
+units
+unitbuild cancel                   # EndGate
+unittab
+unitpick Barbed                    # a wall again, then the land palette: the tool cancelled, relisted
+unittab
+radio %59
+fire %59
+unittab
+unitlist
+unitpick 120mm                     # a land unit for the players
+unittab
+radio %56                          # World: relisted for gaia, the combo hidden
+controls 0x149
+unittab
+unitlist
+radio %64                          # resources for gaia
+fire %64
+unitlist
+unitpick B                         # the first resource starting with B
+unittab
+radio %57                          # Players again
+unittab
+tab 0                              # Leave: the placement ended
+unittab
+tab 3
+unittab
+form 55 73
+# editor screens round 3: the trigger tab itself (EESETriggerScreen): its list and sub-screens' selections after
+# each sub-tab, list button and Enter, a sub-tab through its radio's event, the hide-UI box (Disable, Enable), the
+# tab left and entered; then its own controls (the form's 97..113)
+tab 4
+tscreenstate
+trigger 0
+tscreenstate
+tscreen new
+tscreen new
+tscreenstate
+tscreen select 0
+tscreenstate
+tscreen down
+tscreenstate
+tscreen up
+tscreenstate
+tscreen up
+tscreenstate
+tscreen dup
+tscreenstate
+tscreen sort
+tscreenstate
+tscreen name
+tscreenstate
+tscreen delete
+tscreenstate
+trigger 1
+tscreenstate
+radio %101                         # the object sub-tab through its radio
+tscreenstate
+form 97 113
+tscreen new
+tscreenstate
+tscreen select 9
+tscreenstate
+check 0x12 1
+form 97 113
+check 0x12 0
+tscreenstate
+radio %99                          # the condition sub-tab
+tscreenstate
+tscreen new
+tscreen new
+tscreen new
+tscreenstate
+tscreen select 2                   # the last one deleted: the new last one selected
+tscreen delete
+tscreenstate
+tscreen select 0
+tscreen delete
+tscreenstate
+tscreen delete
+tscreenstate                       # empty: the name and buttons hidden
+form 103 113
+tab 0
+tscreenstate
+form 97 113
+tab 4
+tscreenstate
+form 97 113

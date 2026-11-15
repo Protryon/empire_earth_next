@@ -81,11 +81,11 @@ const UString EECPBuildManager::sData("EECPBuildManager-Data");
 bool EETileDistanceLess::operator()(const std::pair<EEAIContinent*, EETown*>& inFirst,
     const std::pair<EEAIContinent*, EETown*>& inSecond) const
 {
-    const U2DPoint<long>& theFirstCenter = inFirst.first->mHull.GetCenter();
+    const U2DPoint<long>& theFirstCenter = inFirst.first->GetHullCenter();
     EETileCoordinate theFirst;
     theFirst.mX = theFirstCenter.mX;
     theFirst.mY = theFirstCenter.mY;
-    const U2DPoint<long>& theSecondCenter = inSecond.first->mHull.GetCenter();
+    const U2DPoint<long>& theSecondCenter = inSecond.first->GetHullCenter();
     EETileCoordinate theSecond;
     theSecond.mX = theSecondCenter.mX;
     theSecond.mY = theSecondCenter.mY;
@@ -97,11 +97,11 @@ bool EETileDistanceLess::operator()(const std::pair<EEAIContinent*, EETown*>& in
 // Built without /Og, as 0x466b6d
 bool EETileDistanceLess::operator()(EEAIChokePoint* inFirst, EEAIChokePoint* inSecond) const
 {
-    const U2DPoint<long>& theFirstCenter = inFirst->mHull.GetCenter();
+    const U2DPoint<long>& theFirstCenter = inFirst->GetHullCenter();
     EETileCoordinate theFirst;
     theFirst.mX = theFirstCenter.mX;
     theFirst.mY = theFirstCenter.mY;
-    const U2DPoint<long>& theSecondCenter = inSecond->mHull.GetCenter();
+    const U2DPoint<long>& theSecondCenter = inSecond->GetHullCenter();
     EETileCoordinate theSecond;
     theSecond.mX = theSecondCenter.mX;
     theSecond.mY = theSecondCenter.mY;
@@ -551,8 +551,8 @@ void EECPBuildManager::CollectSiteTiles(char inKind)
     EEAIContinent* theContinent = gContinentManager.GetContinentAt(theCenter.mX, theCenter.mY);
     if (theContinent == NULL)
         return;
-    if (gContinentManager.mTileFlags[theKindID * gContinentManager.mFlagsWidth + theContinent->mID]) {
-        theKindContinent->GetShoreNextTo(theContinent->mID, theTiles);
+    if (gContinentManager.mTileFlags[theKindID * gContinentManager.mFlagsWidth + theContinent->GetID()]) {
+        theKindContinent->GetShoreNextTo(theContinent->GetID(), theTiles);
         theRegion = theTiles;
         for (std::vector<U2DPoint<long> >::iterator it = theRegion.begin(); it != theRegion.end(); it++) {
             EEGetSquareRingTiles(it->mX, it->mY, 1, theRing);
@@ -1086,13 +1086,13 @@ bool EECPBuildManager::FindSpaceSite(long inUnitClass, long inSize, EETileCoordi
                 EETileDistanceLess(this->mTownCenterTile.mX, this->mTownCenterTile.GetY()));
             for (std::vector<std::pair<EEAIContinent*, EETown*> >::iterator it = theContinents.begin();
                 it != theContinents.end(); it++) {
-                theTiles = it->first->mShoreTiles;
-                theCenter = it->second->mHull.GetCenter();
+                theTiles = it->first->GetShoreTiles();
+                theCenter = it->second->GetHullCenter();
                 std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(theCenter.mX, theCenter.GetY()));
                 theSites.insert(theSites.end(), theTiles.begin(), theTiles.end());
             }
         } else {
-            theTiles = gContinentManager.GetContinentAt(this->mTownCenterTile.GetX(), this->mTownCenterTile.GetY())->mShoreTiles;
+            theTiles = gContinentManager.GetContinentAt(this->mTownCenterTile.GetX(), this->mTownCenterTile.GetY())->GetShoreTiles();
             std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(this->mTownCenterTile.mX, this->mTownCenterTile.GetY()));
             std::vector<U2DPoint<long> > theOwn;
             for (EEUnit* theUnit = this->mPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -1181,8 +1181,8 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
                 EETileDistanceLess(this->mTownCenterTile.GetX(), this->mTownCenterTile.GetY()));
             for (std::vector<std::pair<EEAIContinent*, EETown*> >::iterator it = theContinents.begin();
                 it != theContinents.end() && !theResult; it++) {
-                theTiles = it->first->mShoreTiles;
-                theCenter = it->second->mHull.GetCenter();
+                theTiles = it->first->GetShoreTiles();
+                theCenter = it->second->GetHullCenter();
                 std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(theCenter.GetX(), theCenter.GetY()));
                 for (i = 0, theCount = theTiles.size(); i < theCount && !theResult; i++) {
                     theCenter = theTiles[i];
@@ -1284,14 +1284,14 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
                     bool theNearTown = false;
                     for (j = 0; j < this->GetPlayer()->GetNumTowns() && !theNearTown; j++) {
                         EETown* theTown = this->GetPlayer()->mTowns[j];
-                        theNearTown = theTown->mHull.GetCenter().DistanceToSquared(
-                            (*(theChokePoints.begin() + i))->mHull.GetCenter()) < 50;
+                        theNearTown = theTown->GetHullCenter().DistanceToSquared(
+                            (*(theChokePoints.begin() + i))->GetHullCenter()) < 50;
                     }
                     if (theNearTown) {
-                        theArea.mTop = theChokePoints[i]->mHull.GetBounds().mTop;
-                        theArea.mLeft = (*(theChokePoints.begin() + i))->mHull.GetBounds().mLeft;
-                        theArea.mBottom = (*(theChokePoints.begin() + i))->mHull.GetBounds().mBottom;
-                        theArea.mRight = (*(theChokePoints.begin() + i))->mHull.GetBounds().mRight;
+                        theArea.mTop = theChokePoints[i]->GetHullBounds().mTop;
+                        theArea.mLeft = (*(theChokePoints.begin() + i))->GetHullBounds().mLeft;
+                        theArea.mBottom = (*(theChokePoints.begin() + i))->GetHullBounds().mBottom;
+                        theArea.mRight = (*(theChokePoints.begin() + i))->GetHullBounds().mRight;
                         theArea.Grow(UMFloatToLong((*(this->GetPlayer()->mUnitClassUpgrades.begin() + inUnitClass))->GetRange() * 2.0f), true);
                         EEAnyUnit theFilter;
                         EEGetUnitsInRectangle(theArea, theUnits, theFilter, true);
@@ -1302,7 +1302,7 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
                             theTaken = theUnit->GetHitPoints() > 0 && theUnit->GetUnitClass()->GetUnitType() == inUnitClass;
                         }
                         if (!theTaken) {
-                            theChokePoints[i]->mTiles.BuildPointList(theRing, 1);
+                            theChokePoints[i]->GetTileSet().BuildPointList(theRing, 1);
                             std::sort(theRing.begin(), theRing.end(),
                                 EETileDistanceLess(this->mTownCenterTile.GetX(), this->mTownCenterTile.GetY()));
                             unsigned long m;

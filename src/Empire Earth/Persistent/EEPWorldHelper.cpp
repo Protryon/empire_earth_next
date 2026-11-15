@@ -338,10 +338,10 @@ static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io)
     }
     case EE_UNITS_WORLD_COMPLEX: return (int64_t)(uintptr_t)dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)io->a)));
     case EE_UNITS_WORLD_FORESTS: return EEPWorldFillAll(io, gContinentManager.mForests);
-    case EE_UNITS_WORLD_FOREST_RENEWAL: return (int64_t)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->mNextRenewal;
+    case EE_UNITS_WORLD_FOREST_RENEWAL: return (int64_t)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetNextRenewal();
     case EE_UNITS_WORLD_FOREST_TILES: {
         std::vector<U2DPoint<long> > theTiles;
-        reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->mTiles.BuildPointList(theTiles, 1);
+        reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetTileSet().BuildPointList(theTiles, 1);
         for (size_t t = 0; t < theTiles.size(); t++)
             EEPWorldFill(io, t, (uint64_t)(uint32_t)theTiles[t].mX | ((uint64_t)(uint32_t)theTiles[t].mY << 32));
         return (int64_t)theTiles.size();
@@ -352,8 +352,8 @@ static int64_t EEPWorldHost(void* inContext, int32_t inOp, EeUnitsWorldIo* io)
         theTile.mY = (long)io->b;
         return (int64_t)(uintptr_t)gContinentManager.GetForestAt(theTile);
     }
-    case EE_UNITS_WORLD_FOREST_SET_RENEWAL: reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->mNextRenewal = (unsigned long)io->b; return 0;
-    case EE_UNITS_WORLD_FOREST_SIZE: return (int64_t)(unsigned long)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->mTiles.Size();
+    case EE_UNITS_WORLD_FOREST_SET_RENEWAL: reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->SetNextRenewal((unsigned long)io->b); return 0;
+    case EE_UNITS_WORLD_FOREST_SIZE: return (int64_t)(unsigned long)reinterpret_cast<EEAIForest*>((uintptr_t)io->a)->GetNumTiles();
     case EE_UNITS_WORLD_AI_SCHEDULE:
         io->a = (int64_t)gArtificialIntelligence->mNextPlayer;
         io->b = (int64_t)gArtificialIntelligence->mNextUpdateTime;

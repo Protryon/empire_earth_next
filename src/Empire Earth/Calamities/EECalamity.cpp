@@ -285,88 +285,14 @@ long EECalamity::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_calamity_record_load(this, theFfi);
 }
 
-
 // FUNCTION: EXE 0x4ad85e
 // Writes the calamity to the saved game (target and caster as ids, -1 if none); returns the first write error
+// (ee_tech calamity_record.rs save)
 long EECalamity::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theUnitID = -1;
-    long theResult = this->mRectangle.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mTargetLocation.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = this->mShakeLocation.Save(outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = FSSaveVector(outFile, this->mEffectGeneration, EECalamity::mEffectGenerationStringID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theUnitID = this->mTargetUnit != NULL ? this->mTargetUnit->GetUnitID() : -1;
-    theResult = outFile.Write(theUnitID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((unsigned long)this->mClass->mID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mEpicenterFactor);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mFloatPlaceHolder1);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mFloatPlaceHolder2);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mHeight);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mIntPlaceHolder1);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mIntPlaceHolder2);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTimeAlive);
-    if (theResult != kErrorOK)
-        return theResult;
-    theUnitID = this->mCasterUnit != NULL ? this->mCasterUnit->GetUnitID() : -1;
-    theResult = outFile.Write(theUnitID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mPlayerNumber);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mDiscreteUpdateTime);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTimeElapsedSinceLastUpdate);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((long)this->mTilePlaceHolder1.mX);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write((long)this->mTilePlaceHolder1.mY);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mEffectHandle.mValue);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mBoolPlaceHolder1);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mBoolPlaceHolder2);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mInitialized);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mHasTargetLocation);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mHasTargetUnit);
-    return theResult;
+    EECalamityIo theIo = {this, &outFile, false};
+    EeCalamityIoFfi theFfi = {&theIo, &EECalamityIoCall};
+    return ee_calamity_record_save(this, theFfi);
 }
 
 // FUNCTION: EXE 0x4adaa3

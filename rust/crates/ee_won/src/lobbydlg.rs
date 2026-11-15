@@ -48,6 +48,8 @@ pub enum EeWonLobbyDlgKind {
     ChooseAdapter = 13,
     /// CreditsDialog (round 3): AccountLogic's credits, with the scrolling text it holds.
     Credits = 14,
+    /// EELobbyConnectDialog (round 5): the players' connection wait before a launch.
+    Connect = 15,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -99,6 +101,10 @@ pub enum EeWonLobbyDlgString {
     Ok = 8,
     /// `LobbyGlobal_Cancel_String` (round 2)
     Cancel = 9,
+    /// `gEELobbyConnectDialog_AbortLaunch` (round 5)
+    AbortLaunch = 10,
+    /// `gEELobbyConnectDialog_LeaveGame` (round 5)
+    LeaveGame = 11,
 }
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -313,6 +319,33 @@ pub enum EeWonLobbyDlgOp {
     ScrollAddLine,
     /// `this->GetDefaultFont()->GetStringWidth(t, 0, t.length())` of the string `a`.
     DefaultFontStringWidth,
+    // ---- round 5: EELobbyConnectDialog
+    /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
+    GameIsHost,
+    /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
+    GameSlot,
+    /// `((EELobbyPlayerSlot*)a)->Option(0)` (the slot's state).
+    SlotState,
+    /// `((ListArea*)a)->InsertItem(new ConnectListItem(((EELobbyPlayerSlot*)b)->GetName(), image, c & 0xff), -1)`,
+    /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
+    /// image is not the ready one.
+    ConnectInsert,
+    /// `LobbyDoDialog(this)`.
+    DoDialog,
+    /// `this->GetRootWindow()`.
+    RootWindow,
+    /// `((Window*)a)->EndDialog(b, this)`.
+    EndDialog,
+    /// `((ListArea*)a)->GetItem(b)`.
+    ListGetItem,
+    /// `((ConnectListItem*)a)->mSlot`.
+    ConnectItemSlot,
+    /// `((ConnectListItem*)a)->mImage = ` `GameUserListCtrl_Ready_Image` (`b` 0) or `ServerListCtrl_PingFailed_Image`.
+    ConnectItemSetImage,
+    /// `((ConnectListItem*)a)->mImage.mPtr != GameUserListCtrl_Ready_Image.mPtr` (0 or 1).
+    ConnectItemNotReady,
+    /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
+    ListRefresh,
 }
 
 /// The inward calls (the shells' methods).
@@ -348,7 +381,8 @@ pub enum EeWonLobbyDlgCall {
     /// AdminAction: `GetNumSeconds()`.
     NumSeconds,
     /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional,
-    /// 4 StatusDialog's start tick, 5 TOUDialog's need-to-rebuild flag, 6 BadUserDialog's simple flag.
+    /// 4 StatusDialog's start tick, 5 TOUDialog's need-to-rebuild flag, 6 BadUserDialog's simple flag, 7
+    /// EELobbyConnectDialog's running flag, 8 its ended flag.
     Field,
     /// StatusDialog: `SetText(*(GUIString*)a, *(GUIString*)b, c != 0)`; OkCancelDialog: `SetText(title a, body b,
     /// ((GUIString**)c)[0], ((GUIString**)c)[1])`.
@@ -373,6 +407,12 @@ pub enum EeWonLobbyDlgCall {
     ResetScrolling,
     /// CreditsDialog: `AddLine(*(const GUIString*)a, (Component*)b, (unsigned long)c)`.
     AddLine,
+    /// EELobbyConnectDialog: `Run((EELobbyGame*)a)` (0 or 1).
+    ConnectRun,
+    /// EELobbyConnectDialog: `End(a != 0)`.
+    ConnectEnd,
+    /// EELobbyConnectDialog: `SetConnected(a, b != 0)`.
+    ConnectSetConnected,
 }
 
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
@@ -481,6 +521,10 @@ static CHOOSE_ADAPTER: [EeWonLobbyDlgSlot; 2] = [
     slot!(c"AdapterList", c"ChooseNetworkAdapterDialog.cpp", 60, MultiList),
     slot!(c"ActivateButton", c"ChooseNetworkAdapterDialog.cpp", 61, Button),
 ];
+static CONNECT: [EeWonLobbyDlgSlot; 2] = [
+    slot!(c"ConnectList", c"EELobbyConnectDialog.cpp", 61, List),
+    slot!(c"CancelButton", c"EELobbyConnectDialog.cpp", 62, Button),
+];
 /// StatusDialog looked its frame up before its body.
 const STATUS_INIT_ORDER: [usize; 6] = [0, 1, 2, 3, 5, 4];
 /// OkCancelDialog looked up its title, close button, body, buttons, frame, then its body component.
@@ -506,6 +550,7 @@ pub fn slots(kind: EeWonLobbyDlgKind) -> &'static [EeWonLobbyDlgSlot] {
         EeWonLobbyDlgKind::BadUser => &BAD_USER,
         EeWonLobbyDlgKind::ChooseAdapter => &CHOOSE_ADAPTER,
         EeWonLobbyDlgKind::Credits => &CREDITS,
+        EeWonLobbyDlgKind::Connect => &CONNECT,
     }
 }
 
@@ -567,6 +612,11 @@ const BU_BOX: usize = 2;
 const BU_SIMPLE_BOX: usize = 3;
 const AD_LIST: usize = 0;
 const CD_CREDITS: usize = 0;
+const CN_LIST: usize = 0;
+const CN_CANCEL: usize = 1;
+/// The dialogs' OK (100001) and Cancel (100002) results.
+const DIALOG_OK: isize = 100001;
+const DIALOG_CANCEL: isize = 100002;
 /// `HTTPDocType_TOU` (WONRouting.h): the terms of use document.
 const HTTPDOC_TYPE_TOU: isize = 1;
 
@@ -592,6 +642,10 @@ pub struct EeWonLobbyDlg {
     is_simple: Cell<bool>,
     /// CreditsDialog's `mScrollingText` (its first member: released after the controls).
     scroll_text: Cell<isize>,
+    /// EELobbyConnectDialog's `mIsRunning` (false from its constructor).
+    running: Cell<bool>,
+    /// EELobbyConnectDialog's `mIsEnded` (unset by its constructor: false here).
+    ended: Cell<bool>,
 }
 
 impl EeWonLobbyDlg {
@@ -609,6 +663,8 @@ impl EeWonLobbyDlg {
             need_gen_html: Cell::new(false),
             is_simple: Cell::new(false),
             scroll_text: Cell::new(0),
+            running: Cell::new(false),
+            ended: Cell::new(false),
         }
     }
 
@@ -842,7 +898,8 @@ impl EeWonLobbyDlg {
             | EeWonLobbyDlgKind::OkCancel
             | EeWonLobbyDlgKind::Room
             | EeWonLobbyDlgKind::BadUser
-            | EeWonLobbyDlgKind::Credits => {}
+            | EeWonLobbyDlgKind::Credits
+            | EeWonLobbyDlgKind::Connect => {}
         }
     }
 
@@ -1018,6 +1075,8 @@ impl EeWonLobbyDlg {
                     4 => self.start_tick.get() as isize,
                     5 => self.need_gen_html.get() as isize,
                     6 => self.is_simple.get() as isize,
+                    7 => self.running.get() as isize,
+                    8 => self.ended.get() as isize,
                     _ => 0,
                 }
             }
@@ -1080,8 +1139,105 @@ impl EeWonLobbyDlg {
                 self.op(Op::ScrollReset, self.scroll_text.get(), 0, 0);
             }
             C::AddLine => self.credits_add_line(a, b, c as u32),
+            C::ConnectRun => {
+                if self.kind == EeWonLobbyDlgKind::Connect {
+                    return self.connect_run(a) as isize;
+                }
+            }
+            C::ConnectEnd => {
+                if self.kind == EeWonLobbyDlgKind::Connect {
+                    self.connect_end(a != 0)
+                }
+            }
+            C::ConnectSetConnected => {
+                if self.kind == EeWonLobbyDlgKind::Connect {
+                    self.connect_set_connected(a as u8, b != 0)
+                }
+            }
         }
         0
+    }
+
+    /// EELobbyConnectDialog::Run: the game's seated players listed (the host ready, the others searching); unless
+    /// all are ready, the dialog runs until every player connected (OK) or it is cancelled.
+    fn connect_run(&self, game: isize) -> bool {
+        if self.running.get() {
+            return false;
+        }
+        let mut all = true;
+        let host = self.op(Op::GameIsHost, game, 0, 0) != 0;
+        let text = if host { EeWonLobbyDlgString::AbortLaunch } else { EeWonLobbyDlgString::LeaveGame };
+        self.on(CN_CANCEL, Op::ButtonSetString, text as isize, 0);
+        self.on(CN_LIST, Op::ListBeginUpdate, 0, 0);
+        self.on(CN_LIST, Op::ListClear, 1, 0);
+        for i in 0..8 {
+            let slot = self.op(Op::GameSlot, game, i, 0);
+            if slot != 0 && self.op(Op::SlotState, slot, 0, 0) == 3 {
+                let searching = (i != 0) as isize;
+                if self.op(Op::ConnectInsert, self.ctl(CN_LIST), slot, i | searching << 8) != 0 {
+                    all = false;
+                }
+            }
+        }
+        self.on(CN_LIST, Op::ListEndUpdate, 0, 0);
+        if all {
+            return true;
+        }
+        self.on(CN_LIST, Op::RequestFocus, 0, 0);
+        self.ended.set(false);
+        self.running.set(true);
+        let result = self.me(Op::DoDialog, 0, 0);
+        self.running.set(false);
+        result == DIALOG_OK
+    }
+
+    /// EELobbyConnectDialog::End: the dialog closed as launched or cancelled.
+    fn connect_end(&self, ok: bool) {
+        let root = self.me(Op::RootWindow, 0, 0);
+        if root != 0 {
+            self.ended.set(true);
+            self.op(Op::EndDialog, root, if ok { DIALOG_OK } else { DIALOG_CANCEL }, 0);
+        }
+    }
+
+    /// EELobbyConnectDialog::SetConnected: the slot's line marked connected or failed; the launch goes ahead once
+    /// every listed player is connected.
+    fn connect_set_connected(&self, slot: u8, connected: bool) {
+        if !self.running.get() {
+            return;
+        }
+        let mut all = true;
+        // the original's SmartPtr<ListItem>
+        let mut changed = 0;
+        let mut i = 0;
+        while i < self.on(CN_LIST, Op::ListNumItems, 0, 0) as i32 {
+            let item = self.on(CN_LIST, Op::ListGetItem, i as isize, 0);
+            if self.op(Op::ConnectItemSlot, item, 0, 0) as u8 == slot {
+                self.op(Op::ConnectItemSetImage, item, (!connected) as isize, 0);
+                if changed != item {
+                    if changed != 0 {
+                        self.op(Op::Release, changed, 0, 0);
+                    }
+                    changed = item;
+                    if item != 0 {
+                        self.op(Op::AddRef, item, 0, 0);
+                    }
+                }
+            }
+            if self.op(Op::ConnectItemNotReady, item, 0, 0) != 0 {
+                all = false;
+            }
+            i += 1;
+        }
+        if changed != 0 {
+            self.on(CN_LIST, Op::ListRefresh, changed, 0);
+        }
+        if all {
+            self.connect_end(true);
+        }
+        if changed != 0 {
+            self.op(Op::Release, changed, 0, 0);
+        }
     }
 
     /// An op on the dialog itself.
@@ -1267,6 +1423,12 @@ pub fn ok_cancel_body_width(text_width: i32) -> i32 {
     } else {
         400
     }
+}
+
+/// The control `index` of a kind's table (member order; its name, file, line and type), NULL past its end.
+#[no_mangle]
+pub extern "C" fn ee_won_lobbydlg_slot(kind: EeWonLobbyDlgKind, index: u32) -> *const EeWonLobbyDlgSlot {
+    slots(kind).get(index as usize).map_or(std::ptr::null(), |s| s as *const _)
 }
 
 /// A new dialog object for the C++ `dialog` of `kind`.

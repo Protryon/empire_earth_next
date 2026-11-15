@@ -47,6 +47,7 @@ pub mod map_save;
 pub mod motion;
 pub mod order;
 pub mod patrol;
+pub mod patrol_group;
 pub mod physics;
 pub mod physics_save;
 pub mod player_save;

@@ -32,6 +32,7 @@
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 
@@ -170,7 +171,7 @@ struct Pair {
         this->mClient = new LogSocket((p + "client").c_str());
         Log(p + " bind " + St(this->mListener->Bind(IPAddr("127.0.0.1", 0), true)));
         Log(p + " listen " + St(this->mListener->Listen(5)));
-        Log(p + " connect " + St(this->mClient->Connect(IPAddr("127.0.0.1", this->mListener->GetLocalPort()), 5000)));
+        Log(p + " connect " + St(WonBlocking::Connect(this->mClient, IPAddr("127.0.0.1", this->mListener->GetLocalPort()), 5000)));
         this->mListener->WaitForAccept(5000);
         Log(p + " accept " + St(this->mListener->Accept(this->mServer)));
     }
@@ -393,61 +394,61 @@ static void BlockingOps()
     LOG2("recvmsg run ", N(aRecv->RunBlock(5000)), " " + St(aRecv->GetStatus()) + " " + Hex(aRecv->GetMsg()) + " " + Hex(aRecv->GetBytes()));
     s->SetLengthFieldSize(2);
     const unsigned char aMsgEsc[] = {0xff, 0xff, 7, 0, 0, 0, 'x', 'y', 'z'};
-    Log("sendbytes " + St(c->SendBytes(Bytes(aMsgEsc, sizeof(aMsgEsc)), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aMsgEsc, sizeof(aMsgEsc)), 5000)));
     ByteBufferPtr aGot;
-    LOG2("recvmsg esc ", St(s->RecvMsg(aGot, 5000)), " " + Hex(aGot));
+    LOG2("recvmsg esc ", St(WonBlocking::RecvMsg(s, aGot, 5000)), " " + Hex(aGot));
     s->SetLengthFieldSize(1);
     const unsigned char aMsg1[] = {3, 'q', 'r'};
-    Log("sendbytes " + St(c->SendBytes(Bytes(aMsg1, sizeof(aMsg1)), 5000)));
-    LOG2("recvmsg 1 ", St(s->RecvMsg(aGot, 5000)), " " + Hex(aGot));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aMsg1, sizeof(aMsg1)), 5000)));
+    LOG2("recvmsg 1 ", St(WonBlocking::RecvMsg(s, aGot, 5000)), " " + Hex(aGot));
     s->SetLengthFieldSize(4);
     const unsigned char aBad[] = {4, 0, 0, 0};
-    Log("sendbytes " + St(c->SendBytes(Bytes(aBad, sizeof(aBad)), 5000)));
-    Log("recvmsg bad " + St(s->RecvMsg(aGot, 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aBad, sizeof(aBad)), 5000)));
+    Log("recvmsg bad " + St(WonBlocking::RecvMsg(s, aGot, 5000)));
     s->SetLengthFieldSize(3);
-    Log("recvmsg field 3 " + St(s->RecvMsg(aGot, 5000)));
+    Log("recvmsg field 3 " + St(WonBlocking::RecvMsg(s, aGot, 5000)));
     s->SetLengthFieldSize(4);
     aGot = NULL;
-    LOG2("recvmsg none ", St(s->RecvMsg(aGot, 0)), " " + Hex(aGot));
-    LOG2("recvmsg short ", St(s->RecvMsg(aGot, 50)), " " + Hex(aGot));
+    LOG2("recvmsg none ", St(WonBlocking::RecvMsg(s, aGot, 0)), " " + Hex(aGot));
+    LOG2("recvmsg short ", St(WonBlocking::RecvMsg(s, aGot, 50)), " " + Hex(aGot));
 
     // with transforms on both sides
     c->AddMsgTransform(new TagTransform('t'));
     s->AddMsgTransform(new TagTransform('t'));
     const unsigned char aMsgT[] = {6, 0, 0, 0, 'h', 'i'};
-    Log("sendmsg transformed " + St(c->SendMsg(Bytes(aMsgT, sizeof(aMsgT)), 5000)));
-    LOG2("recvmsg transformed ", St(s->RecvMsg(aGot, 5000)), " " + Hex(aGot));
+    Log("sendmsg transformed " + St(WonBlocking::SendMsg(c, Bytes(aMsgT, sizeof(aMsgT)), 5000)));
+    LOG2("recvmsg transformed ", St(WonBlocking::RecvMsg(s, aGot, 5000)), " " + Hex(aGot));
     c->RemoveAllMsgTransforms();
     s->RemoveAllMsgTransforms();
 
     // lines and bytes
     const char aLines[] = "a\nb\r\nnext\r\n";
-    Log("sendbytes " + St(c->SendBytes(Bytes(aLines, sizeof(aLines) - 1), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aLines, sizeof(aLines) - 1), 5000)));
     SmartPtr<RecvCRMsgOp> aLine = new RecvCRMsgOp(s);
     LOG2("recvcr run ", N(aLine->RunBlock(5000)), " " + St(aLine->GetStatus()) + " " + Hex(aLine->GetMsg()));
-    LOG2("recvcr ", St(s->RecvCRMsg(aGot, 5000)), " " + Hex(aGot));
-    Log("recvcr none " + St(s->RecvCRMsg(aGot, 0)));
-    Log("sendbytes " + St(c->SendBytes(Bytes("par", 3), 5000)));
+    LOG2("recvcr ", St(WonBlocking::RecvCRMsg(s, aGot, 5000)), " " + Hex(aGot));
+    Log("recvcr none " + St(WonBlocking::RecvCRMsg(s, aGot, 0)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("par", 3), 5000)));
     LOG2("recvcr partial ", St(aLine->Run(OP_MODE_BLOCK, 100)), " " + Hex(aLine->GetMsg()));
-    Log("sendbytes " + St(c->SendBytes(Bytes("t\r\n", 3), 5000)));
-    LOG2("recvcr rest ", St(s->RecvCRMsg(aGot, 5000)), " " + Hex(aGot));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("t\r\n", 3), 5000)));
+    LOG2("recvcr rest ", St(WonBlocking::RecvCRMsg(s, aGot, 5000)), " " + Hex(aGot));
 
     // raw bytes with the progress completion every 3 bytes
     char aData[20];
     for (int i = 0; i < 20; i++)
         aData[i] = (char)('a' + i);
-    Log("sendbytes " + St(c->SendBytes(Bytes(aData, 20), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aData, 20), 5000)));
     SmartPtr<RecvBytesOp> aBytes = new RecvBytesOp(10, s);
     aBytes->SetProgressCompletion(new ProgressDone, 3);
     LOG2("recvbytes run ", N(aBytes->RunBlock(5000)), " " + St(aBytes->GetStatus()) + " " + Hex(aBytes->GetBytes()));
     SmartPtr<RecvBytesOp> aSkip = new RecvBytesOp(5, s);
     aSkip->SetSkipBytes(true);
     LOG2("recvbytes skip ", N(aSkip->RunBlock(5000)), " " + St(aSkip->GetStatus()) + " " + Hex(aSkip->GetBytes()));
-    LOG2("recvbytes ", St(s->RecvBytes(aGot, 5, 5000)), " " + Hex(aGot));
+    LOG2("recvbytes ", St(WonBlocking::RecvBytes(s, aGot, 5, 5000)), " " + Hex(aGot));
     // into a file
     const char* aPath = "won_sockobj_recv.bin";
     remove(aPath);
-    Log("sendbytes " + St(c->SendBytes(Bytes("filedata", 8), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("filedata", 8), 5000)));
     SmartPtr<RecvBytesOp> aFile = new RecvBytesOp(8, s);
     aFile->SetFilePath(aPath);
     LOG2("recvbytes file ", N(aFile->RunBlock(5000)), " " + St(aFile->GetStatus()) + " " + Hex(aFile->GetBytes()));
@@ -502,24 +503,24 @@ static void BlockingOps()
     ShowDup("sendbytesto", aTo);
     LOG2("recvbytesfrom again ", N(aFrom->RunBlock(50)), " " + St(aFrom->GetStatus()) + " " + Hex(aFrom->GetBytes()));
     IPAddr anAddr;
-    Log("sendbytesto " + St(u->SendBytesTo(Bytes("two", 3), IPAddr("127.0.0.1", v->GetLocalPort()), 5000)));
-    LOG2("recvbytesfrom ", St(v->RecvBytesFrom(aGot, 512, anAddr, 5000)), " " + Hex(aGot) + " " + Addr(anAddr));
+    Log("sendbytesto " + St(WonBlocking::SendBytesTo(u, Bytes("two", 3), IPAddr("127.0.0.1", v->GetLocalPort()), 5000)));
+    LOG2("recvbytesfrom ", St(WonBlocking::RecvBytesFrom(v, aGot, 512, anAddr, 5000)), " " + Hex(aGot) + " " + Addr(anAddr));
     // (a datagram longer than the buffer is the system's: WSAEMSGSIZE on Windows, cut on POSIX)
     u->Close();
     v->Close();
 
     // the peer closes
-    Log("sendbytes " + St(c->SendBytes(Bytes("tail", 4), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("tail", 4), 5000)));
     c->Close();
-    LOG2("recvbytes to close ", St(s->RecvBytes(aGot, 0, 5000)), " " + Hex(aGot));
-    Log("recvmsg after close " + St(s->RecvMsg(aGot, 5000)));
-    Log("sendmsg closed " + St(c->SendMsg(Bytes(aMsg4, sizeof(aMsg4)), 100)));
+    LOG2("recvbytes to close ", St(WonBlocking::RecvBytes(s, aGot, 0, 5000)), " " + Hex(aGot));
+    Log("recvmsg after close " + St(WonBlocking::RecvMsg(s, aGot, 5000)));
+    Log("sendmsg closed " + St(WonBlocking::SendMsg(c, Bytes(aMsg4, sizeof(aMsg4)), 100)));
     s->Close();
     unsigned short aClosedPort = p.mListener->GetLocalPort();
     p.mListener->Close();
     SmartPtr<BlockingSocket> aRefused = new BlockingSocket(0);
-    Log("connect refused " + St(aRefused->Connect(IPAddr("127.0.0.1", aClosedPort), 5000)));
-    Log("connect invalid " + St(aRefused->Connect(IPAddr(), 100)));
+    Log("connect refused " + St(WonBlocking::Connect(aRefused, IPAddr("127.0.0.1", aClosedPort), 5000)));
+    Log("connect invalid " + St(WonBlocking::Connect(aRefused, IPAddr(), 100)));
     Log("blocking ops done");
 }
 
@@ -548,10 +549,10 @@ static void AsyncOps()
     SmartPtr<RecvCRMsgOp> aLine = new RecvCRMsgOp(s);
     aLine->SetCompletion(aLines);
     aLine->RunAsync(60000);
-    Log("sendbytes " + St(c->SendBytes(Bytes("li", 2), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("li", 2), 5000)));
     sCore->Pump(20);
     Log("line count " + N(aLines->mCount));
-    Log("sendbytes " + St(c->SendBytes(Bytes("ne\r\n", 4), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("ne\r\n", 4), 5000)));
     PumpUntil(aLines, 1);
     Log("line " + Hex(aLine->GetMsg()));
 
@@ -597,7 +598,7 @@ static void Queues()
     }
     for (int i = 0; i < 3; i++) {
         unsigned char aMsg[] = {5, 0, 0, 0, (unsigned char)('0' + i)};
-        Log("sendbytes " + St(c->SendBytes(Bytes(aMsg, sizeof(aMsg)), 5000)));
+        Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aMsg, sizeof(aMsg)), 5000)));
         if (i == 1)
             PumpUntil(aOwn, 1);
         else
@@ -610,7 +611,7 @@ static void Queues()
     s->SetRepeatOp(new RecvMsgOp);
     for (int i = 0; i < 3; i++) {
         unsigned char aMsg[] = {6, 0, 0, 0, 'r', (unsigned char)('0' + i)};
-        Log("sendbytes " + St(c->SendBytes(Bytes(aMsg, sizeof(aMsg)), 5000)));
+        Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aMsg, sizeof(aMsg)), 5000)));
         PumpUntil(aRepeat, i + 1);
     }
 
@@ -656,7 +657,7 @@ static void Queues()
     PumpUntil(aClose2, 1);
     Log(Show("s2 queued close", s2));
     ByteBufferPtr aGot;
-    LOG2("c2 got ", St(c2->RecvBytes(aGot, 3, 5000)), " " + Hex(aGot));
+    LOG2("c2 got ", St(WonBlocking::RecvBytes(c2, aGot, 3, 5000)), " " + Hex(aGot));
 
     // the close timer: the socket closes when it fires and reports a kill
     Pair p3;
@@ -859,11 +860,11 @@ static void MoreOps()
     // the progress chunks see the bytes read so far
     SmartPtr<RecvBytesOp> aChunked = new RecvBytesOp(12, s);
     aChunked->SetProgressCompletion(new ChunkDone, 2);
-    Log("sendbytes " + St(c->SendBytes(Bytes("abcde", 5), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("abcde", 5), 5000)));
     LOG2("chunked part ", St(aChunked->Run(OP_MODE_BLOCK, 50)), " read " + N((long long)aChunked->GetBytesRead()));
-    Log("sendbytes " + St(c->SendBytes(Bytes("fghijklmnop", 11), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("fghijklmnop", 11), 5000)));
     LOG2("chunked run ", N(aChunked->RunBlock(5000)), " " + St(aChunked->GetStatus()) + " " + Hex(aChunked->GetBytes()));
-    LOG2("chunked rest ", St(s->RecvBytes(aBigGot, 4, 5000)), " " + Hex(aBigGot));
+    LOG2("chunked rest ", St(WonBlocking::RecvBytes(s, aBigGot, 4, 5000)), " " + Hex(aBigGot));
 
     // files: append, text mode on bytes without line ends, the modify time, the path
     const char* aPath = "won_sockobj_r15.bin";
@@ -876,7 +877,7 @@ static void MoreOps()
     anAppend->SetAppendFile(true);
     anAppend->SetFileModifyTime(1000000000);
     Log("path " + anAppend->GetFilePath());
-    Log("sendbytes " + St(c->SendBytes(Bytes("tail", 4), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("tail", 4), 5000)));
     LOG2("recv append ", N(anAppend->RunBlock(5000)), " " + St(anAppend->GetStatus()) + " " + Hex(anAppend->GetBytes()));
     Log("file " + FileText(aPath));
     struct stat aStat;
@@ -885,7 +886,7 @@ static void MoreOps()
     aText->SetFilePath(aPath);
     aText->SetBinaryFile(false);
     aText->SetProgressCompletion(new ChunkDone, 1);
-    Log("sendbytes " + St(c->SendBytes(Bytes("txt", 3), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("txt", 3), 5000)));
     LOG2("recv text ", N(aText->RunBlock(5000)), " " + St(aText->GetStatus()));
     Log("file " + FileText(aPath));
     remove(aPath);
@@ -893,36 +894,36 @@ static void MoreOps()
     // message lengths at the limits, a refusing transform on each side
     s->SetLengthFieldSize(2);
     const unsigned char aTwo[] = {2, 0};
-    Log("sendbytes " + St(c->SendBytes(Bytes(aTwo, 2), 5000)));
-    Log("recvmsg length 2 " + St(s->RecvMsg(aBigGot, 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aTwo, 2), 5000)));
+    Log("recvmsg length 2 " + St(WonBlocking::RecvMsg(s, aBigGot, 5000)));
     s->SetLengthFieldSize(4);
     const unsigned char aHuge[] = {0x00, 0xe8, 0x03, 0x00};
-    Log("sendbytes " + St(c->SendBytes(Bytes(aHuge, 4), 5000)));
-    Log("recvmsg 256000 " + St(s->RecvMsg(aBigGot, 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aHuge, 4), 5000)));
+    Log("recvmsg 256000 " + St(WonBlocking::RecvMsg(s, aBigGot, 5000)));
     const unsigned char aOk[] = {7, 0, 0, 0, 'o', 'k', '!'};
     c->AddMsgTransform(new RefuseTransform);
     SmartPtr<SendMsgOp> aRefused = new SendMsgOp(Bytes(aOk, sizeof(aOk)), c);
     LOG2("sendmsg refused ", N(aRefused->RunBlock(5000)), " " + St(aRefused->GetStatus()));
     c->RemoveAllMsgTransforms();
     s->AddMsgTransform(new RefuseTransform);
-    Log("sendmsg " + St(c->SendMsg(Bytes(aOk, sizeof(aOk)), 5000)));
+    Log("sendmsg " + St(WonBlocking::SendMsg(c, Bytes(aOk, sizeof(aOk)), 5000)));
     SmartPtr<RecvMsgOp> aRecvRefused = new RecvMsgOp(s);
     LOG2("recvmsg refused ", N(aRecvRefused->RunBlock(5000)), " " + St(aRecvRefused->GetStatus()) + " "
          + Hex(aRecvRefused->GetMsg()) + " " + Hex(aRecvRefused->GetBytes()));
     s->RemoveAllMsgTransforms();
     // a message whose body arrives later continues from the body
     const unsigned char aHead[] = {9, 0, 0, 0, 'l'};
-    Log("sendbytes " + St(c->SendBytes(Bytes(aHead, sizeof(aHead)), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes(aHead, sizeof(aHead)), 5000)));
     SmartPtr<RecvMsgOp> aLater = new RecvMsgOp(s);
     LOG2("recvmsg part ", St(aLater->Run(OP_MODE_BLOCK, 50)), " " + Hex(aLater->GetMsg()));
-    Log("sendbytes " + St(c->SendBytes(Bytes("ater", 4), 5000)));
+    Log("sendbytes " + St(WonBlocking::SendBytes(c, Bytes("ater", 4), 5000)));
     LOG2("recvmsg rest ", St(aLater->Run(OP_MODE_BLOCK, 5000)), " " + Hex(aLater->GetMsg()));
     // a message received async
     SmartPtr<Done> aMsgDone = new Done("msg");
     SmartPtr<RecvMsgOp> anAsyncMsg = new RecvMsgOp(s);
     anAsyncMsg->SetCompletion(aMsgDone);
     anAsyncMsg->RunAsync(60000);
-    Log("sendmsg " + St(c->SendMsg(Bytes(aOk, sizeof(aOk)), 5000)));
+    Log("sendmsg " + St(WonBlocking::SendMsg(c, Bytes(aOk, sizeof(aOk)), 5000)));
     PumpUntil(aMsgDone, 1);
 
     // connect and accept as ops: async with completions, an invalid address, a refusal
@@ -980,7 +981,7 @@ static void MoreOps()
     SmartPtr<RecvBytesFromOp> anAsyncFrom = new RecvBytesFromOp(16, v);
     anAsyncFrom->SetCompletion(aDgram);
     anAsyncFrom->RunAsync(60000);
-    Log("send " + St(u->SendBytes(Bytes("late", 4), 5000)));
+    Log("send " + St(WonBlocking::SendBytes(u, Bytes("late", 4), 5000)));
     PumpUntil(aDgram, 1);
     Log("dgram " + Hex(anAsyncFrom->GetBytes()) + " " + N(anAsyncFrom->GetAddr().GetPort() == u->GetLocalPort()));
     u->Close();
@@ -1041,11 +1042,11 @@ static void Answer(BlockingSocket* inServer, int inCount, bool inReply)
     for (int i = 0; i < inCount; i++) {
         ByteBufferPtr aGot;
         IPAddr aFrom;
-        WONStatus aStatus = inServer->RecvBytesFrom(aGot, 512, aFrom, 5000);
+        WONStatus aStatus = WonBlocking::RecvBytesFrom(inServer, aGot, 512, aFrom, 5000);
         Log("server got " + std::string(St(aStatus)) + " " + Hex(aGot));
         if (aStatus == WS_Success && inReply) {
             char aReply[2] = {(char)(aGot->data()[0] + 1), 'r'};
-            inServer->SendBytesTo(Bytes(aReply, 2), aFrom, 5000);
+            WonBlocking::SendBytesTo(inServer, Bytes(aReply, 2), aFrom, 5000);
         }
     }
 }
@@ -1084,7 +1085,7 @@ static void Udp()
     IPAddr aMgr("127.0.0.1", aPort);
     IPAddr aU("127.0.0.1", u->GetLocalPort());
     // nothing waits: the auto-receive op takes it with the default completion
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("hello", 5), aMgr, 5000))));
+    Log("send " + std::string(St(WonBlocking::SendBytesTo(u, Bytes("hello", 5), aMgr, 5000))));
     PumpFor(aDefault, 1);
     // an op for u's address with a check: a datagram it refuses goes to the auto-receive op
     Verifier aCheck = {'A', 'R', "addr op"};
@@ -1094,14 +1095,14 @@ static void Udp()
     anAddrOp->SetCompletion(anAddrDone);
     m->QueueOp(anAddrOp, 60000);
     LOG2("addr op status ", St(anAddrOp->GetStatus()), " verifier " + N(anAddrOp->HasVerifier()));
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("Bx", 2), aMgr, 5000))));
+    Log("send " + std::string(St(WonBlocking::SendBytesTo(u, Bytes("Bx", 2), aMgr, 5000))));
     PumpFor(aDefault, 2);
     // WS_ServerReq_Recv queues a new op for the address (no check: it takes the next datagram from there)
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("Ry", 2), aMgr, 5000))));
+    Log("send " + std::string(St(WonBlocking::SendBytesTo(u, Bytes("Ry", 2), aMgr, 5000))));
     PumpFor(aDefault, 3);
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("Az", 2), aMgr, 5000))));
+    Log("send " + std::string(St(WonBlocking::SendBytesTo(u, Bytes("Az", 2), aMgr, 5000))));
     PumpFor(anAddrDone, 1);
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("Cw", 2), aMgr, 5000))));
+    Log("send " + std::string(St(WonBlocking::SendBytesTo(u, Bytes("Cw", 2), aMgr, 5000))));
     PumpFor(aDefault, 4);
     // an address-less op with a check takes any sender's matching datagram (and keeps the sender)
     Verifier aAny = {'Q', 0, "any op"};
@@ -1110,7 +1111,7 @@ static void Udp()
     anAnyOp->SetMessageVerifier(&Verifier::Check, &aAny);
     anAnyOp->SetCompletion(anAnyDone);
     m->QueueOp(anAnyOp, 60000);
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("Qq", 2), aMgr, 5000))));
+    Log("send " + std::string(St(WonBlocking::SendBytesTo(u, Bytes("Qq", 2), aMgr, 5000))));
     PumpFor(anAnyDone, 1);
     // a timed-out op
     SmartPtr<UdpDone> aShortDone = new UdpDone("short");
@@ -1141,9 +1142,9 @@ static void Udp()
     aSR->RunAsync(60000);
     sCore->Pump(20);
     Answer(srv, 1, false);
-    srv->SendBytesTo(Bytes("zz", 2), aMgr, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("zz", 2), aMgr, 5000);
     PumpFor(aDefault, 5);
-    srv->SendBytesTo(Bytes("bb", 2), aMgr, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("bb", 2), aMgr, 5000);
     PumpFor(aSRDone, 1);
     Log("sendrecv dest " + Addr(aSR->GetDestAddr()));
     // no reply: one retransmit, then WS_NoReply
@@ -1177,7 +1178,7 @@ static void Udp()
     sCore->Pump(20);
     unsigned short aSelfPort = aSelf->GetSocket() != NULL ? aSelf->GetSocket()->GetLocalPort() : 0;
     Log("self socket " + Port(aSelfPort));
-    srv->SendBytesTo(Bytes("ss", 2), IPAddr("127.0.0.1", aSelfPort), 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("ss", 2), IPAddr("127.0.0.1", aSelfPort), 5000);
     PumpFor(aSelfDone, 1);
     Log("self socket gone " + N(aSelf->GetSocket() == NULL));
 
@@ -1199,7 +1200,7 @@ static void Udp()
     // a rebind with broadcast, then auto-receive off
     Log("rebind " + std::string(St(m->Bind(0, true))));
     m->SetAutoRecv(false);
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("lost", 4), IPAddr("127.0.0.1", m->GetSocket()->GetLocalPort()), 5000))));
+    Log("send " + std::string(St(WonBlocking::SendBytesTo(u, Bytes("lost", 4), IPAddr("127.0.0.1", m->GetSocket()->GetLocalPort()), 5000))));
     sCore->Pump(50);
     Log("default count " + N(aDefault->mCount));
     m->Close();
@@ -1271,14 +1272,14 @@ static void UdpOps()
     sCore->Pump(20);
     Log(RecvState("own recv running", anOwn));
     IPAddr anOwnAddr("127.0.0.1", anOwn->GetSocket() != NULL ? anOwn->GetSocket()->GetLocalPort() : 0);
-    u->SendBytesTo(Bytes("ok", 2), anOwnAddr, 5000);
+    WonBlocking::SendBytesTo(u, Bytes("ok", 2), anOwnAddr, 5000);
     sCore->Pump(30);
-    srv->SendBytesTo(Bytes("no", 2), anOwnAddr, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("no", 2), anOwnAddr, 5000);
     sCore->Pump(30);
-    srv->SendBytesTo(Bytes("o", 1), anOwnAddr, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("o", 1), anOwnAddr, 5000);
     sCore->Pump(30);
     Log(RecvState("own recv waiting", anOwn) + " completions " + N(anOwnDone->mCount));
-    srv->SendBytesTo(Bytes("ok", 2), anOwnAddr, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("ok", 2), anOwnAddr, 5000);
     PumpFor(anOwnDone, 1);
     Log(RecvState("own recv done", anOwn));
 
@@ -1294,7 +1295,7 @@ static void UdpOps()
     aGivenOp->SetCompletion(aGivenDone);
     aGivenOp->RunAsync(60000);
     sCore->Pump(20);
-    u->SendBytesTo(Bytes("Rr", 2), aGivenAddr, 5000);
+    WonBlocking::SendBytesTo(u, Bytes("Rr", 2), aGivenAddr, 5000);
     PumpFor(aGivenDone, 1);
     Log(RecvState("given done", aGivenOp) + " socket open " + N(aGiven->IsValid()));
     aGiven->Close();
@@ -1335,7 +1336,7 @@ static void UdpOps()
     for (int i = 0; i < 3; i++) {
         ByteBufferPtr aSent;
         IPAddr aSender;
-        WONStatus aStatus = srv->RecvBytesFrom(aSent, 512, aSender, 300);
+        WONStatus aStatus = WonBlocking::RecvBytesFrom(srv, aSent, 512, aSender, 300);
         Log("server got " + std::string(St(aStatus)) + " " + Hex(aSent));
     }
     aRetry->SetMsgTimeout(60000);
@@ -1345,16 +1346,16 @@ static void UdpOps()
     Log(SendRecvState("retry again running", aRetry));
     ByteBufferPtr aGot;
     IPAddr aFrom;
-    WONStatus aGotStatus = srv->RecvBytesFrom(aGot, 512, aFrom, 5000);
+    WONStatus aGotStatus = WonBlocking::RecvBytesFrom(srv, aGot, 512, aFrom, 5000);
     Log("server got " + std::string(St(aGotStatus)) + " " + Hex(aGot));
-    srv->SendBytesTo(Bytes("x", 1), aFrom, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("x", 1), aFrom, 5000);
     sCore->Pump(30);
-    srv->SendBytesTo(Bytes("xx", 2), aFrom, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("xx", 2), aFrom, 5000);
     sCore->Pump(30);
-    u->SendBytesTo(Bytes("ok", 2), aFrom, 5000);
+    WonBlocking::SendBytesTo(u, Bytes("ok", 2), aFrom, 5000);
     sCore->Pump(30);
     Log(SendRecvState("retry again waiting", aRetry) + " completions " + N(aRetryDone->mCount));
-    srv->SendBytesTo(Bytes("ok", 2), aFrom, 5000);
+    WonBlocking::SendBytesTo(srv, Bytes("ok", 2), aFrom, 5000);
     PumpFor(aRetryDone, 2);
     Log(SendRecvState("retry again", aRetry));
 
@@ -1396,7 +1397,7 @@ static void UdpOps()
     aMgrOp->RunAsync(60000);
     sCore->Pump(20);
     Log(RecvState("mgr recv running", aMgrOp));
-    u->SendBytesTo(Bytes("mg", 2), aMgr, 5000);
+    WonBlocking::SendBytesTo(u, Bytes("mg", 2), aMgr, 5000);
     PumpFor(aMgrDone, 1);
     Log(RecvState("mgr recv done", aMgrOp));
     aMgrOp->RunAsync(60000);

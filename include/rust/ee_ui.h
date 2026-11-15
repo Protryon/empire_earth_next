@@ -792,6 +792,34 @@ enum class EeUiOp : uint32_t {
   FontNew = 504,
   /// Font `a`'s `Dereference()`.
   FontRelease = 505,
+  /// *Pure*: the form's `GetControl(a)`.
+  CtlFormControl = 520,
+  /// *Pure*: the form's `GetControl(a)`'s left button flag.
+  CtlSlotLeftDown = 521,
+  /// *Pure*: the form's `GetControl(a)`'s right button flag.
+  CtlSlotRightDown = 522,
+  /// *Pure*: the form's `GetEntityGroupById(a)->GetIsEnabled()`.
+  CtlGroupEnabled = 523,
+  /// *Pure*: the manager's `GetCurrentForm()`.
+  CtlCurrentForm = 524,
+  /// *Pure*: the form's `GetKeyboardCaptured()`.
+  CtlKeyboardCaptured = 525,
+  /// *Pure*: the form's `GetMouseCaptured()`.
+  CtlMouseCaptured = 526,
+  /// The form's `SetKeyboardCaptured(control a)`.
+  CtlSetKeyboardCaptured = 527,
+  /// The form's `SetMouseCaptured(control a)`.
+  CtlSetMouseCaptured = 528,
+  /// The virtual `HideControl()`.
+  CtlHide = 529,
+  /// The manager's `AddDirtyRectangle(f, the form)`.
+  CtlAddDirty = 530,
+  /// The form's `Tab()`.
+  CtlTab = 531,
+  /// The manager's `AddEventToTrigger(event a, the form, this)`.
+  CtlAddEvent = 532,
+  /// The string table's `GetString(b, *(UWideString*)a)`.
+  CtlHelpString = 533,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1046,6 +1074,46 @@ enum class EeUiComboCall : uint32_t {
   SetListBoxAlwaysDirty = 28,
   /// The focus highlight's `SetColor(f[0..3])` (`SetListBoxSelectedBgColor`'s second half).
   SetSelectedColor = 29,
+};
+
+/// The inward calls (the C++ class's methods that forward here).
+enum class EeUiControlCall : uint32_t {
+  /// `UIControl::CopyData()` -> 0.
+  CopyData = 1,
+  /// `FireTriggerEvent(a)`.
+  FireTrigger = 2,
+  /// `GetHasKeyboardCapture()`.
+  HasKeyboardCapture = 3,
+  /// `GetHasMouseCapture()`.
+  HasMouseCapture = 4,
+  /// `UIControl::GetHelpString(*(UWideString*)a)` -> whether the control has one.
+  HelpString = 5,
+  /// `GetLeftMouseButtonDown()`.
+  LeftButtonDown = 6,
+  /// `GetRightMouseButtonDown()`.
+  RightButtonDown = 7,
+  /// `GetTriggerEvent(a)` -> the event or 0.
+  TriggerEvent = 8,
+  /// `UIControl::ReleaseCapturedKeyboard()`.
+  ReleaseKeyboard = 9,
+  /// `UIControl::ReleaseCapturedMouse()`.
+  ReleaseMouse = 10,
+  /// `SetBgRectangle(f)`.
+  SetBgRectangle = 11,
+  /// `UIControl::SetDirty(a != 0)`.
+  SetDirty = 12,
+  /// `UIControl::SetDisplayMode(a)`.
+  SetDisplayMode = 13,
+  /// `UIControl::SetLocation(f[0], f[1])`.
+  SetLocation = 14,
+  /// `UIControl::SetRectangle(f)`.
+  SetRectangle = 15,
+  /// `SetTriggerEvent(a, event b)`.
+  SetTrigger = 16,
+  /// `CaptureKeyboard()`.
+  CaptureKeyboard = 17,
+  /// `CaptureMouse()`.
+  CaptureMouse = 18,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1579,6 +1647,8 @@ enum class EeUiManagerCall : uint32_t {
   /// The constructor's work after `ee_ui_manager_new` (the C++ constructor's, once `mRust` is set: the host's ops
   /// read the manager through its forwarders).
   Init = 60,
+  /// The UI lock (`TSCriticalSection*`; the harness's bridge try-enters it).
+  UiLock = 61,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1971,6 +2041,9 @@ struct EeUiSlider;
 /// The Rust UIStatusBar.
 struct EeUiStatusBar;
 
+/// The trigger events (`std::map<unsigned long, UIEvent*>`): event id -> the event (referenced), in id order.
+struct EeUiTriggers;
+
 /// A whole object's host: `(the C++ object, op, a, b, c, d, f)` -> the op's result.
 using EeUiHostFn = ptrdiff_t(*)(void *obj,
                                 EeUiOp op,
@@ -1986,6 +2059,46 @@ struct EeUiRect {
   float left;
   float right;
   float top;
+};
+
+/// `UIControl`'s members (`include/lle/UIControl.h`), the C++ class's base.
+struct EeUiControlFields {
+  /// The C++ control (the host's object; `this` in the comparisons with the form's controls and captures).
+  void *mCpp;
+  /// The host of the calls out.
+  EeUiHostFn mHost;
+  /// The trigger events (owned; made by [`ee_ui_control_init`], freed by [`ee_ui_control_release`]).
+  EeUiTriggers *mTriggerEvents;
+  /// The background (`GERhombus*`, the C++ constructor's).
+  void *mBgRhombus;
+  /// The background as of the last `CopyData` (`GERhombus*`).
+  void *mCopiedBgRhombus;
+  /// The form (`UIForm*`).
+  void *mForm;
+  /// The hot key (`UIHotKey*`).
+  void *mHotKey;
+  EeUiRect mRectangle;
+  /// `mRectangle` as of the last `CopyData`.
+  EeUiRect mCopiedDrawRectangle;
+  /// `kDisplayModeHidden` 0, `kDisplayModeShown` 1.
+  unsigned long mDisplayMode;
+  unsigned long mControlType;
+  unsigned long mBorderType;
+  unsigned long mCopiedBorderType;
+  unsigned long mIndex;
+  unsigned long mId;
+  unsigned long mDrawCount;
+  unsigned long mBorderThickness;
+  unsigned long mStringTableID;
+  float mBorderOpacity;
+  float mCopiedBorderOpacity;
+  bool mIsDirty;
+  bool mLeftButtonDown;
+  bool mRightButtonDown;
+  bool mCopiedHasBgOpacity;
+  bool mUnknown9C;
+  bool mHasBgOpacity;
+  bool mAlwaysDirty;
 };
 
 /// `GE2DPoint`: x, y.
@@ -2390,6 +2503,37 @@ EeUiRect ee_ui_combo_text_rect(EeUiRect control, EeUiRect given, unsigned long d
 
 /// The constructor's list ([`combo::list_rect`]).
 EeUiRect ee_ui_combo_list_rect(EeUiRect control, float text_bottom, unsigned long max_height);
+
+/// The constructor's state of the record `rec` (the C++ control `cpp`'s base; its rhombi already made), the rectangle
+/// at `rect` (`GERectangle`'s four floats).
+///
+/// # Safety
+/// `rec` is the live base of `cpp`; `rect` four live floats.
+void ee_ui_control_init(EeUiControlFields *rec,
+                        void *cpp,
+                        EeUiHostFn host,
+                        unsigned long control_type,
+                        unsigned long id,
+                        const float *rect,
+                        void *form,
+                        unsigned long index,
+                        unsigned long border_thickness);
+
+/// The destructor's part: the trigger events released and the map freed (the C++ deletes the rhombi).
+///
+/// # Safety
+/// `rec` is a live record [`ee_ui_control_init`] set up.
+void ee_ui_control_release(EeUiControlFields *rec);
+
+/// One of UIControl's methods ([`EeUiControlCall`]).
+///
+/// # Safety
+/// `rec` is a live record [`ee_ui_control_init`] set up; `f` is NULL or four live floats.
+ptrdiff_t ee_ui_control_call(EeUiControlFields *rec,
+                             EeUiControlCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             float *f);
 
 /// A new Rust edit box for the C++ `edit` (its `UIControl` part constructed): `flags` bit 0 numbers only, bit 1
 /// multi-line, bit 2 a password box.

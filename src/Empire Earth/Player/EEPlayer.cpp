@@ -571,7 +571,7 @@ bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
         EEHerd* theHerd;
         if (theHerds.size() == 0) {
             theHerd = new EEHerd(this, theAnimal, ++gWorld.mHerdIDCounter);
-            theHerd->mSerial = ++gContinentManager.mLastSerial;
+            theHerd->SetSerial(++gContinentManager.mLastSerial);
             gContinentManager.AddArea(theHerd);
             theResult = theHerd->AddUnit(inUnit);
             if (theResult)
@@ -1371,7 +1371,7 @@ EETown* EEPlayer::GetNearestTown(const EETileLocation& inTile, EETileLocation& o
     long theDistance = 0;
     for (long i = this->mTowns.size() - 1; i >= 0; i--) {
         EETown* theCurrent = this->mTowns[i];
-        if (!(!theCurrent->mHull.BoundedContains(inTile))) {
+        if (!(!theCurrent->HullContains(inTile))) {
             theTown = this->mTowns[i];
             outTile = inTile;
             break;
@@ -1408,7 +1408,7 @@ EETown* EEPlayer::GetTownOf(EEUnit* inUnit)
     EETown* theTown = NULL;
     for (long i = this->GetNumTowns() - 1; i >= 0; i--) {
         EETown* theCandidate = this->mTowns[i];
-        if (theCandidate != NULL && theCandidate->mHull.BoundedContains(theTile)) {
+        if (theCandidate != NULL && theCandidate->HullContains(theTile)) {
             theTown = this->mTowns[i];
             break;
         }
@@ -1519,7 +1519,7 @@ void EEPlayer::RegisterHerds()
         if (this->mHerds[i] == NULL)
             continue;
         ++gContinentManager.mLastSerial;
-        this->mHerds[i]->mSerial = gContinentManager.mLastSerial;
+        this->mHerds[i]->SetSerial(gContinentManager.mLastSerial);
         gContinentManager.AddArea(this->mHerds[i]);
     }
 }
@@ -1532,7 +1532,7 @@ void EEPlayer::RegisterTowns()
         if (this->mTowns[i] == NULL)
             continue;
         ++gContinentManager.mLastSerial;
-        this->mTowns[i]->mSerial = gContinentManager.mLastSerial;
+        this->mTowns[i]->SetSerial(gContinentManager.mLastSerial);
         gContinentManager.AddArea(this->mTowns[i]);
     }
 }
@@ -2594,7 +2594,7 @@ void EEPlayer::RemoveUnitFromHerd(EEComplexUnit* inUnit)
         if (!theHerd->HasUnit(inUnit))
             continue;
         theHerd->RemoveUnit(inUnit);
-        if (theHerd->mTiles.Size() != 0)
+        if (theHerd->GetNumTiles() != 0)
             continue;
         gContinentManager.RemoveArea(theHerd);
         this->mHerds.erase(this->mHerds.begin() + i);
@@ -2657,7 +2657,7 @@ void EEPlayer::RemoveUnitFromTown(EEComplexUnit* inUnit)
         if (!theTown->Contains(theTile))
             continue;
         theTown->RemoveUnit(inUnit);
-        if (theTown->mTiles.Size() != 0)
+        if (theTown->GetNumTiles() != 0)
             continue;
         gContinentManager.RemoveArea(theTown);
         this->mTowns.erase(this->mTowns.begin() + i);
@@ -2737,7 +2737,7 @@ static int32_t EETownSaveHost(void* inContext, int32_t inOp, uint32_t inPlayer, 
         if (theTown == NULL)
             return 0;
         io->id = theTown->mTownID;
-        io->points = theTown->mHull.GetPointCount();
+        io->points = theTown->GetHullPointCount();
         for (long c = 0; c < 8; c++)
             io->counters[c] = *EETownCounter(theTown, c);
         io->near_water = theTown->mNearWater;
@@ -2745,8 +2745,8 @@ static int32_t EETownSaveHost(void* inContext, int32_t inOp, uint32_t inPlayer, 
         io->continent = theTown->mContinent;
         return 1;
     case EE_UNITS_TOWN_HULL_POINT:
-        io->x = theTown->mHull.GetPoint((unsigned long)io->prim.i)->GetX();
-        io->y = theTown->mHull.GetPoint((unsigned long)io->prim.i)->GetY();
+        io->x = theTown->GetHullPoint((unsigned long)io->prim.i).GetX();
+        io->y = theTown->GetHullPoint((unsigned long)io->prim.i).GetY();
         return 0;
     case EE_UNITS_TOWN_AREA:
         theContext.mArea.clear();
@@ -2785,7 +2785,7 @@ static int32_t EETownSaveHost(void* inContext, int32_t inOp, uint32_t inPlayer, 
         return 0;
     case EE_UNITS_TOWN_MAKE_COMMIT:
         for (size_t m = 0; m < theContext.mMade.size(); m++) {
-            theContext.mMade[m]->mSerial = ++gContinentManager.mLastSerial;
+            theContext.mMade[m]->SetSerial(++gContinentManager.mLastSerial);
             gContinentManager.AddArea(theContext.mMade[m]);
             thePlayer->mTownsByID.insert(std::pair<long, EETown*>(theContext.mMade[m]->mTownID, theContext.mMade[m]));
             thePlayer->mTowns.push_back(theContext.mMade[m]);
@@ -2867,9 +2867,9 @@ bool EEPlayer::AdoptTownPatrol(EETown* inTown)
             continue;
         for (unsigned long i = 0; i < theGroup->mPatrolPoints.size(); i++) {
             EEComplexUnit* thePoint = theGroup->mPatrolPoints[i];
-            for (unsigned long v = 0; v < inTown->mHull.GetPointCount(); v++) {
-                if (thePoint->GetTileX() == inTown->mHull.GetPoint(v)->GetX()
-                    && thePoint->GetTileY() == inTown->mHull.GetPoint(v)->GetY()) {
+            for (unsigned long v = 0; v < inTown->GetHullPointCount(); v++) {
+                if (thePoint->GetTileX() == inTown->GetHullPoint(v).GetX()
+                    && thePoint->GetTileY() == inTown->GetHullPoint(v).GetY()) {
                     inTown->mPatrolGroup = theGroup;
                     theGroup->Reference();
                     return true;
@@ -3885,7 +3885,7 @@ bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
                 theTowns.push_back(this->mTowns[i]);
         if (theTowns.size() == 0) {
             EETown* theTown = new EETown(this, ++gWorld.mTownIDCounter);
-            theTown->mSerial = ++gContinentManager.mLastSerial;
+            theTown->SetSerial(++gContinentManager.mLastSerial);
             gContinentManager.AddArea(theTown);
             theResult = theTown->AddUnit(inUnit);
             if (theResult) {
@@ -3898,11 +3898,11 @@ bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
             theResult = theTown->AddUnit(inUnit);
         } else {
             EETown* theTown = theTowns.back();
-            long theSize = theTown->mTiles.Size();
+            long theSize = theTown->GetNumTiles();
             for (long j = theTowns.size() - 2; j >= 0; j--) {
-                if (theSize < theTowns[j]->mTiles.Size()) {
+                if (theSize < theTowns[j]->GetNumTiles()) {
                     theTown = theTowns[j];
-                    theSize = theTown->mTiles.Size();
+                    theSize = theTown->GetNumTiles();
                 }
             }
             for (long k = theTowns.size() - 1; k >= 0; k--) {

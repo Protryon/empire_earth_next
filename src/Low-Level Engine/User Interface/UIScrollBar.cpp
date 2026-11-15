@@ -49,11 +49,11 @@ struct UIScrollBarRust {
             return r;
         switch (inOp) {
         case EeUiOp::CreateSlider:
-            return (intptr_t) new UISlider(s->GetId(), UIObjHost::Rect(f), (unsigned long)a, s->mForm, s->GetIndex(),
+            return (intptr_t) new UISlider(s->GetId(), UIObjHost::Rect(f), (unsigned long)a, s->GetForm(), s->GetIndex(),
                                            (unsigned long)b);
         case EeUiOp::CreateButton:
             return (intptr_t) new UIScrollButton(s->GetId(), reinterpret_cast<GEBitmap*>(a), reinterpret_cast<GEBitmap*>(b),
-                                                 GE2DPoint(f[0], f[1]), s->mForm, reinterpret_cast<UISlider*>(c),
+                                                 GE2DPoint(f[0], f[1]), s->GetForm(), reinterpret_cast<UISlider*>(c),
                                                  (unsigned long)d, s->GetIndex());
         case EeUiOp::PartButtonDown: reinterpret_cast<UIScrollButton*>(a)->ButtonDown(); break;
         case EeUiOp::SliderStyle: return theSlider->GetSliderStyle();

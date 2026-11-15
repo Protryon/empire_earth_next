@@ -68,8 +68,8 @@ extern "C" {
     fn ee_units_pm_host_mesh_ground(x: f32, y: f32) -> f32;
     fn ee_units_pm_host_adjust_dive_depth(obj: u64, io: *mut f32);
     fn ee_units_pm_host_effect(obj: u64, which: i32, x: f32, y: f32, z: f32);
-    fn ee_units_pm_host_docked(obj: u64) -> u8;
-    fn ee_units_pm_host_follow_carrier(obj: u64);
+    fn ee_units_pm_host_carrier_tag(carrier: u64, index: i32, out: *mut f32) -> i32;
+    fn ee_units_pm_host_route_dock_waypoint(obj: u64);
     fn ee_units_pm_host_gate_links(obj: u64, carrier: *mut u64, last: *mut u64) -> u8;
     fn ee_units_pm_host_kind_step(obj: u64, which: i32);
 }
@@ -447,11 +447,16 @@ impl PmHost for Game {
     fn land_ripple(&mut self, p: Ge3DPoint) {
         unsafe { ee_units_pm_host_effect(0, EFFECT_RIPPLE, p.x, p.y, p.z) }
     }
-    fn docked(&mut self, obj: u64) -> bool {
-        unsafe { ee_units_pm_host_docked(obj) != 0 }
+    fn carrier_tag_count(&mut self, carrier: u64) -> i32 {
+        unsafe { ee_units_pm_host_carrier_tag(carrier, -1, std::ptr::null_mut()) }
     }
-    fn follow_carrier(&mut self, obj: u64) {
-        unsafe { ee_units_pm_host_follow_carrier(obj) }
+    fn carrier_tag(&mut self, carrier: u64, index: i32) -> Ge3DPoint {
+        let mut p = [0.0f32; 3];
+        unsafe { ee_units_pm_host_carrier_tag(carrier, index, p.as_mut_ptr()) };
+        point(p)
+    }
+    fn route_dock_waypoint(&mut self, obj: u64) {
+        unsafe { ee_units_pm_host_route_dock_waypoint(obj) }
     }
     fn home_base(&mut self, obj: u64) -> u64 {
         unsafe { ee_units_pm_host_goal_unit(obj, WHICH_GOAL_HOME) }

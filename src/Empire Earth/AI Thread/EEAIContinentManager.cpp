@@ -154,32 +154,8 @@ inline EEAIPathSector* EEAIContinentManager::GetPathSectorByID(unsigned short in
     return this->mPathSectors[inID];
 }
 
-// 0x26d84/0x26dca/0x26e13/0x26ea4 (COMDATs; declared in ee/EEAIContinent.h, out of line in this unit's range: inline in
-// the real header)
-inline void EEAIContinent::AddChokePoint(long inIndex)
-{
-    this->mChokePoints.push_back(inIndex);
-    std::sort(this->mChokePoints.begin(), this->mChokePoints.end());
-}
-
-inline void EEAIContinent::AddForestID(unsigned short inID)
-{
-    this->mForestIDs.push_back(inID);
-    std::sort(this->mForestIDs.begin(), this->mForestIDs.end());
-}
-
-inline void EEAIContinent::AddHillID(unsigned short inID)
-{
-    this->mHillIDs.push_back(inID);
-    std::sort(this->mHillIDs.begin(), this->mHillIDs.end());
-}
-
-inline void EEAIContinent::RemoveForestID(unsigned short inID)
-{
-    std::vector<unsigned short>::iterator theID = std::lower_bound(this->mForestIDs.begin(), this->mForestIDs.end(), inID);
-    if (theID != this->mForestIDs.end() && *theID == inID)
-        this->mForestIDs.erase(theID);
-}
+// 0x26d84/0x26dca/0x26e13/0x26ea4: EEAIContinent's AddChokePoint, AddForestID, AddHillID and RemoveForestID (ee_astar
+// continent.rs, inline in ee/EEAIContinent.h)
 
 // 0x273c9/0x273f1: GetPathSubSectorAt/GetPathSubSectorID(long, long) are inline in ee/EEAIContinentManager.h
 
@@ -225,7 +201,7 @@ long EEAIGetTileKind(const EETileLocation& inTile)
     EETile* theTile = gWorld.mMap->GetTile(inTile.GetX(), inTile.GetY());
     if (!theTile)
         return 0;
-    unsigned char theKind = gContinentManager.GetContinentAt(inTile.GetX(), inTile.GetY())->mCategory;
+    unsigned char theKind = gContinentManager.GetContinentAt(inTile.GetX(), inTile.GetY())->GetCategory();
     long theFlag = gContinentManager.GetTileFlag(inTile.GetX(), inTile.GetY());
     std::vector<EeTileUnit> theUnits;
     EEAITileUnits(theTile, theUnits);
@@ -290,11 +266,11 @@ EEAIContinentManager::~EEAIContinentManager()
 // Registers a choke point under its index, adds it to its continent's choke point list and to the area map
 void EEAIContinentManager::AddChokePoint(EEAIChokePoint* inChokePoint)
 {
-    this->mChokePoints[inChokePoint->mIndex] = inChokePoint;
+    this->mChokePoints[inChokePoint->GetIndex()] = inChokePoint;
     const std::vector<EEAIContinent*>& theContinents = this->mContinents;
-    EEAIContinent* theContinent = theContinents[inChokePoint->mContinentID];
+    EEAIContinent* theContinent = theContinents[inChokePoint->GetContinentID()];
     if (theContinent)
-        theContinent->AddChokePoint(inChokePoint->mIndex);
+        theContinent->AddChokePoint(inChokePoint->GetIndex());
     this->AddArea(inChokePoint);
 }
 
@@ -327,7 +303,7 @@ void EEAIContinentManager::AddSectorTiles(std::vector<U2DPoint<long> >& ioTiles)
 void EEAIContinentManager::AddRectangleArea(EEAIRectangleArea* inArea)
 {
     EEAIRectangleArea* theArea = dynamic_cast<EEAIRectangleArea*>(inArea);
-    this->mRectangleAreas[theArea->mID] = theArea;
+    this->mRectangleAreas[theArea->GetID()] = theArea;
     theArea->UpdateContinents();
     this->AddArea(inArea);
 }
@@ -550,12 +526,12 @@ void EEAIContinentManager::CreateContinents(EEMap* inMap)
          theIt != theMachine.mGoal.mContinents.end(); ++theIt) {
         EEAIContinent* theContinent = theIt->second;
         if (theContinent->GetCategory() == kContinentCategoryWater)
-            this->mNumWaterTiles += theContinent->mTiles.Size();
+            this->mNumWaterTiles += theContinent->GetNumTiles();
         else if (theContinent->GetCategory() == kContinentCategorySpace)
-            this->mNumSpaceTiles += theContinent->mTiles.Size();
+            this->mNumSpaceTiles += theContinent->GetNumTiles();
         else
-            this->mNumLandTiles += theContinent->mTiles.Size();
-        theContinent->mSerial = ++this->mLastSerial;
+            this->mNumLandTiles += theContinent->GetNumTiles();
+        theContinent->SetSerial(++this->mLastSerial);
         this->AddArea(theContinent);
         this->mContinents[theIt->first] = theContinent;
     }
@@ -598,7 +574,7 @@ void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, 
     }
     std::vector<uint8_t> theCategories(this->mFlagsWidth);
     for (i = 0; i < theCategories.size(); i++)
-        theCategories[i] = i < this->mContinents.size() && this->mContinents[i] ? this->mContinents[i]->mCategory : 0;
+        theCategories[i] = i < this->mContinents.size() && this->mContinents[i] ? this->mContinents[i]->GetCategory() : 0;
     EeContinentGrid* theGrid = ee_astar_continent_grid_build((int32_t)theSize, theIDs.data(), theKinds.data(),
                                                               theTerrain.data(), theCategories.data(), (int32_t)this->mFlagsWidth);
     const uint16_t* theGridIDs = ee_astar_continent_grid_ids(theGrid, &theCount);
@@ -609,7 +585,7 @@ void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, 
         this->mTileFlags[i] = theFlags[i] != 0;
     const EeContinentNeighbor* theNeighbors = ee_astar_continent_grid_neighbors(theGrid, &theCount);
     for (i = 0; i < theCount; i++)
-        this->mContinents[theNeighbors[i].id]->mNeighbors.push_back(this->mContinents[theNeighbors[i].neighbor]);
+        this->mContinents[theNeighbors[i].id]->AddNeighbor(this->mContinents[theNeighbors[i].neighbor]);
     const EePoint* theShore = ee_astar_continent_grid_shore(theGrid, &theCount);
     for (i = 0; i < theCount; i++)
         this->mShoreTiles.push_back(U2DPoint<long>(theShore[i].x, theShore[i].y));
@@ -618,7 +594,7 @@ void EEAIContinentManager::CreateContinentGrid(EEAIContinentMachine& inMachine, 
         this->mIceShoreTiles.push_back(U2DPoint<long>(theShore[i].x, theShore[i].y));
     const EeContinentShore* theContinentShore = ee_astar_continent_grid_continent_shore(theGrid, &theCount);
     for (i = 0; i < theCount; i++)
-        this->mContinents[theContinentShore[i].id]->mShoreTiles.push_back(
+        this->mContinents[theContinentShore[i].id]->AddShoreTile(
             U2DPoint<long>(theContinentShore[i].tile.x, theContinentShore[i].tile.y));
     ee_astar_continent_grid_free(theGrid);
 }
@@ -642,11 +618,11 @@ void EEAIContinentManager::NumberContinentChains(EEMap* inMap, unsigned long inK
         EEAIContinent* theContinent = this->mContinents[i];
         if (!theContinent || theContinent->GetCategory() != kContinentCategoryLand)
             continue;
-        unsigned short theCount = inKind < 7 ? theContinent->mCounts[inKind] : 0;
+        unsigned short theCount = inKind < 7 ? theContinent->GetCount(inKind) : 0;
         if (theCount != 0)
             continue;
         unsigned short theID = theContinent->GetID();
-        theMachine.mGoal.mStartTile = theContinent->mHull.GetCenter();
+        theMachine.mGoal.mStartTile = theContinent->GetHullCenter();
         theMachine.mGoal.mGoalSector = theID;
         theMachine.mGoal.mStartContinent = theContinent;
         theMachine.mGoal.mStartCategory = theContinent->GetCategory();
@@ -690,12 +666,12 @@ void EEAIContinentManager::CreateHills(EEMap* inMap)
     for (std::map<unsigned short, EEAIHill*>::const_iterator theIt = theMachine.mGoal.mHills.begin();
          theIt != theMachine.mGoal.mHills.end(); ++theIt) {
         EEAIHill* theHill = theIt->second;
-        theHill->mSerial = ++this->mLastSerial;
-        this->mHills[theHill->mID] = theHill;
+        theHill->SetSerial(++this->mLastSerial);
+        this->mHills[theHill->GetID()] = theHill;
         const std::vector<EEAIContinent*>& theContinents = this->mContinents;
-        EEAIContinent* theContinent = theContinents[theHill->mContinentID];
+        EEAIContinent* theContinent = theContinents[theHill->GetContinentID()];
         if (theContinent)
-            theContinent->AddHillID(theHill->mID);
+            theContinent->AddHillID(theHill->GetID());
         this->AddArea(theHill);
     }
 }
@@ -791,18 +767,18 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
     std::map<unsigned short, EEAIPathArea*>::const_iterator theArea;
     for (theArea = theMachine.mGoal.mPathAreas.begin(); theArea != theMachine.mGoal.mPathAreas.end(); ++theArea) {
         EEAIPathArea* thePathArea = theArea->second;
-        thePathArea->mSerial = ++this->mLastSerial;
-        this->mPathAreas[thePathArea->mID] = thePathArea;
+        thePathArea->SetSerial(++this->mLastSerial);
+        this->mPathAreas[thePathArea->GetID()] = thePathArea;
         EEAIContinent* theContinent = this->GetContinentByID(thePathArea->GetContinentID());
         if (theContinent)
-            theContinent->AddPathAreaID(thePathArea->mID);
+            theContinent->AddPathAreaID(thePathArea->GetID());
         this->AddArea(thePathArea);
     }
     this->mForests.resize(theMachine.mGoal.mNextForestID, NULL);
     std::map<unsigned short, EEAIForest*>::const_iterator theForest;
     for (theForest = theMachine.mGoal.mForests.begin(); theForest != theMachine.mGoal.mForests.end(); ++theForest) {
         EEAIForest* theArea = theForest->second;
-        theArea->mSerial = ++this->mLastSerial;
+        theArea->SetSerial(++this->mLastSerial);
         this->mForests[theArea->GetID()] = theArea;
         EEAIContinent* theContinent = this->GetContinentsAt(theArea->GetContinentID());
         if (theContinent)
@@ -888,7 +864,7 @@ void EEAIContinentManager::CreatePathSectors(EEMap* inMap, EEAIAStarPathAreaStor
             EEAIPathSector* thePathSector = this->GetPathSector(theTile);
             if (thePathSector) {
                 theArea->AddSectorID(thePathSector->mID);
-                thePathSector->AddPathAreaID(theArea->mID);
+                thePathSector->AddPathAreaID(theArea->GetID());
             }
         }
     }
@@ -985,18 +961,18 @@ void EEAIContinentManager::CreateScenarioAreas(EEMap* inMap)
     for (size_t k = 0; k < theCount; k++) {
         const EeScenarioAreaPlan& theEntry = thePlan[k];
         EEAIRectangleArea* theArea = new EEAIRectangleArea;
-        theArea->mNumLandTiles = 0;
-        theArea->mNumWaterTiles = 0;
-        theArea->mNumSpaceTiles = 0;
-        theArea->mID = theEntry.id;
-        theArea->mSerial = ++this->mLastSerial;
-        theArea->mAreaType = kAIAreaRectangleArea;
-        theArea->mScenarioAreaID = theManager->mAreas[theEntry.index]->mID;
+        theArea->SetNumLandTiles(0);
+        theArea->SetNumWaterTiles(0);
+        theArea->SetNumSpaceTiles(0);
+        theArea->SetID(theEntry.id);
+        theArea->SetSerial(++this->mLastSerial);
+        theArea->SetAreaType(kAIAreaRectangleArea);
+        theArea->SetScenarioAreaID(theManager->mAreas[theEntry.index]->mID);
         theRect.mTop = theEntry.top;
         theRect.mBottom = theEntry.bottom;
         theRect.mLeft = theEntry.left;
         theRect.mRight = theEntry.right;
-        theArea->mRect = theRect;
+        theArea->SetRect(theRect);
         theTiles.clear();
         for (long x = theRect.mLeft; x <= theRect.mRight; x++) {
             for (long y = theRect.mTop; y <= theRect.mBottom; y++)
@@ -1061,11 +1037,11 @@ static EEAIPathArea* EEAIAreaTileAt(EEAIContinentManager& inManager, EEMap* inMa
     }
     outTile.area = theArea != NULL;
     if (theArea) {
-        outTile.id = theArea->mID;
+        outTile.id = theArea->GetID();
         outTile.continent = theArea->GetContinentID();
         outTile.kind = (int32_t)theArea->GetKind();
-        outTile.unit_id = (int32_t)theArea->mUnitID;
-        outTile.size = (int32_t)theArea->mTiles.Size();
+        outTile.unit_id = (int32_t)theArea->GetUnitID();
+        outTile.size = (int32_t)theArea->GetNumTiles();
         outTile.land_mass = theArea->GetLandMassID();
         outTile.water_body = theArea->GetWaterBodyID();
         outTile.space_region = theArea->GetSpaceRegionID();
@@ -1273,8 +1249,8 @@ EEAIChokePoint* EEAIContinentManager::GetChokePointAt(const EETileLocation& inTi
 {
     EEAIContinent* theContinent = this->GetContinentAt(inTile);
     EEAIChokePoint* theChokePoint = NULL;
-    if (theContinent && theContinent->mCategory == kContinentCategoryLand) {
-        const std::vector<long>& theIDs = theContinent->mChokePoints;
+    if (theContinent && theContinent->GetCategory() == kContinentCategoryLand) {
+        const std::vector<long>& theIDs = theContinent->GetChokePoints();
         const std::vector<EEAIChokePoint*>& theChokePoints = this->mChokePoints;
         for (long i = theIDs.size() - 1; i >= 0; i--) {
             theChokePoint = theChokePoints[theIDs[i]];
@@ -1296,8 +1272,8 @@ void EEAIContinentManager::GetChokePoints(std::vector<EEAIChokePoint*>& outChoke
     if (inClear)
         outChokePoints.clear();
     if (theContinent) {
-        for (i = theContinent->mChokePoints.size() - 1; i >= 0; i--) {
-            theChokePoint = this->mChokePoints[theContinent->mChokePoints[i]];
+        for (i = theContinent->GetChokePoints().size() - 1; i >= 0; i--) {
+            theChokePoint = this->mChokePoints[theContinent->GetChokePoints()[i]];
             if (theChokePoint)
                 outChokePoints.push_back(theChokePoint);
         }
@@ -1324,11 +1300,11 @@ EETileLocation EEAIContinentManager::GetNearestLandTile(const EETileLocation& in
     long theY = inTile.mY;
     long theDistance = 0;
     long theX = inTile.mX;
-    if (theContinent && theContinent->mCategory != kContinentCategoryLand) {
-        this->GetAdjacentIDs(theIDs, theContinent->mID);
+    if (theContinent && theContinent->GetCategory() != kContinentCategoryLand) {
+        this->GetAdjacentIDs(theIDs, theContinent->GetID());
         for (long i = theIDs.size() - 1; i >= 0; i--) {
             EEAIContinent* theOther = gContinentManager.GetContinentByID(theIDs[i]);
-            if (!theOther || theOther->mCategory != kContinentCategoryLand)
+            if (!theOther || theOther->GetCategory() != kContinentCategoryLand)
                 continue;
             theClosest = theOther->GetClosestPoint(inTile);
             if (theDistance != 0 && !(theClosest.DistanceSquared(inTile) < theDistance))
@@ -1376,7 +1352,7 @@ void EEAIContinentManager::GetContinentCenter(unsigned short inID, U2DPoint<long
     outPoint.mX = 0;
     outPoint.mY = 0;
     if (theContinent)
-        outPoint = theContinent->mHull.GetCenter();
+        outPoint = theContinent->GetHullCenter();
 }
 
 // FUNCTION: EXE 0x422635
@@ -1385,7 +1361,7 @@ void EEAIContinentManager::GetContinentTiles(unsigned short inID, std::vector<U2
 {
     EEAIContinent* theContinent = this->mContinents[inID];
     if (theContinent)
-        theContinent->mTiles.BuildPointList(outTiles, 1);
+        theContinent->GetTileSet().BuildPointList(outTiles, 1);
 }
 
 // FUNCTION: EXE 0x422658
@@ -1404,7 +1380,7 @@ unsigned short EEAIContinentManager::FindContinentID(long inX, long inY) const
 {
     EEAIContinent* theContinent = this->FindContinent(inX, inY);
     unsigned short theID;
-    theID = theContinent ? theContinent->mID : 0;
+    theID = theContinent ? theContinent->GetID() : 0;
     return theID;
 }
 
@@ -1456,7 +1432,7 @@ EEAIForest* EEAIContinentManager::GetForestAt(const EETileLocation& inTile)
     EEAIContinent* theContinent = this->GetContinentAt(inTile.GetX(), inTile.GetY());
     EEAIForest* theForest = NULL;
     if (theContinent) {
-        const std::vector<unsigned short>& theIDs = theContinent->mForestIDs;
+        const std::vector<unsigned short>& theIDs = theContinent->GetForestIDs();
         const std::vector<EEAIForest*>& theForests = this->mForests;
         for (long i = theIDs.size() - 1; i >= 0; i--) {
             theForest = theForests[theIDs[i]];
@@ -1475,7 +1451,7 @@ EEAIHill* EEAIContinentManager::GetHillAt(const EETileLocation& inTile)
     EEAIContinent* theContinent = this->GetContinentAt(inTile.GetX(), inTile.GetY());
     EEAIHill* theHill = NULL;
     if (theContinent) {
-        const std::vector<unsigned short>& theIDs = theContinent->mHillIDs;
+        const std::vector<unsigned short>& theIDs = theContinent->GetHillIDs();
         const std::vector<EEAIHill*>& theHills = this->mHills;
         for (long i = theIDs.size() - 1; i >= 0; i--) {
             theHill = theHills[theIDs[i]];
@@ -1508,7 +1484,7 @@ bool EEAIContinentManager::AreConnected(EEAIContinent* inFirst, EEAIContinent* i
         // compare the chains named so, as before)
         long theChain = ee_astar_connected_chain((int32_t)inFlags);
         if (theChain >= 0)
-            theResult = inFirst->mCounts[theChain] != 0 && inFirst->mCounts[theChain] == inSecond->mCounts[theChain];
+            theResult = inFirst->GetCount(theChain) != 0 && inFirst->GetCount(theChain) == inSecond->GetCount(theChain);
     }
     return theResult;
 }
@@ -1522,12 +1498,12 @@ long EEAIContinentManager::GetLargestContinent(long inKind)
     for (size_t i = 0; i < theSizes.size(); i++) {
         EEAIContinent* theContinent = this->mContinents[i];
         theSizes[i].present = theContinent != NULL;
-        theSizes[i].category = theContinent ? theContinent->mCategory : 0;
-        theSizes[i].size = theContinent ? (int32_t)theContinent->mTiles.Size() : 0;
+        theSizes[i].category = theContinent ? theContinent->GetCategory() : 0;
+        theSizes[i].size = theContinent ? (int32_t)theContinent->GetNumTiles() : 0;
     }
     long theBest = ee_astar_largest_continent(theSizes.data(), theSizes.size(), (int8_t)(char)inKind);
     if (theBest != -1)
-        theResult = this->mContinents[theBest]->mID;
+        theResult = this->mContinents[theBest]->GetID();
     return theResult;
 }
 
@@ -1610,13 +1586,13 @@ unsigned short EEAIContinentManager::GetContinent(const EETileCoordinate& inTile
     EEAIPathArea* theArea = this->GetPathAreaAt(inTile);
     if (theArea) {
         if (inKind == kAIPathWaterBody)
-            theResult = theArea->mWaterBodyID;
+            theResult = theArea->GetWaterBodyID();
         else if (inKind == kAIPathLandMass)
-            theResult = theArea->mLandMassID;
+            theResult = theArea->GetLandMassID();
         else if (inKind == kAIPathSpaceRegion)
-            theResult = theArea->mSpaceRegionID;
+            theResult = theArea->GetSpaceRegionID();
         else if (inKind == kAIPathNonSpace)
-            theResult = theArea->mSurfaceRegionID;
+            theResult = theArea->GetSurfaceRegionID();
     }
     return theResult;
 }
@@ -1703,9 +1679,9 @@ EEAIArea* EEAIContinentManager::GetRandomArea(long inKind, URandom& inRandom, un
     std::vector<EEAIArea*> theAreas;
     for (theIt = this->mAreas.begin(); theIt != this->mAreas.end(); ++theIt) {
         EEAIArea* theArea = theIt->second;
-        if (theArea && theArea->mAreaType == inKind &&
+        if (theArea && theArea->GetAreaType() == inKind &&
             (inContinent == 0 ||
-             gContinentManager.GetContinentID(theArea->mHull.GetCenter().GetX(), theArea->mHull.GetCenter().GetY()) == inContinent))
+             gContinentManager.GetContinentID(theArea->GetHullCenter().GetX(), theArea->GetHullCenter().GetY()) == inContinent))
             theAreas.push_back(theIt->second);
     }
     if (theAreas.size() != 0)
@@ -1816,7 +1792,7 @@ bool EEAIContinentManager::AllNeighborsOfKind(unsigned short inID, unsigned char
     const std::vector<EEAIContinent*>& theContinents = this->mContinents;
     for (long i = theIDs.size() - 1; i >= 0; i--) {
         EEAIContinent* theContinent = theContinents[theIDs[i]];
-        if (theContinent && theContinent->mCategory != inKind) {
+        if (theContinent && theContinent->GetCategory() != inKind) {
             theResult = false;
             break;
         }
@@ -1927,73 +1903,73 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
                                                         (int32_t)theWallID, theAround);
             if (thePlan.action == 1) {
                 theBest = theAreas[thePlan.target];
-                theBest->mTiles.BuildPointList(theTiles, 1);
-                theBest->mTiles.Insert(inTile);
+                theBest->GetTileSet().BuildPointList(theTiles, 1);
+                theBest->GetTileSet().Insert(inTile);
                 theTiles.push_back(inTile);
                 for (i = 0; i < thePlan.merged_count; i++) {
                     EEAIPathArea* theOther = theAreas[thePlan.merged[i]];
                     theMerged.push_back(theOther);
-                    theOther->mTiles.BuildPointList(theOtherTiles, 1);
+                    theOther->GetTileSet().BuildPointList(theOtherTiles, 1);
                     theTiles.insert(theTiles.end(), theOtherTiles.begin(), theOtherTiles.end());
                 }
                 theBest->Create(theTiles);
-                theNewID = theBest->mID;
+                theNewID = theBest->GetID();
             } else if (thePlan.action == 2) {
                 theSingle = theAreas[thePlan.target];
-                theSingle->mTiles.BuildPointList(theTiles, 1);
+                theSingle->GetTileSet().BuildPointList(theTiles, 1);
                 theTiles.push_back(inTile);
                 theSingle->Create(theTiles);
-                theNewID = theSingle->mID;
+                theNewID = theSingle->GetID();
             } else {
                 theSingle = new EEAIPathArea;
-                theSingle->mContinentID = gContinentManager.GetContinentID(inTile.GetX(), inTile.GetY());
-                theSingle->mKind = theKind;
-                theSingle->mID = this->NewPathAreaID();
-                theSingle->mSerial = ++this->mLastSerial;
+                theSingle->SetContinentID(gContinentManager.GetContinentID(inTile.GetX(), inTile.GetY()));
+                theSingle->SetKind(theKind);
+                theSingle->SetID(this->NewPathAreaID());
+                theSingle->SetSerial(++this->mLastSerial);
                 if (theKind == kAITileUnitObstacle)
-                    theSingle->mUnitID = EEAIGetTileWallID(inTile);
+                    theSingle->SetUnitID(EEAIGetTileWallID(inTile));
                 unsigned short theID;
                 if (theTile->GetTerrainType() == kTerrainSpace) {
                     theID = this->GetAdjacentAreaID(kAIPathSpaceRegion, inTile, theKind);
                     if (theID == 0)
                         theID = (unsigned short)this->mNextID12C++;
-                    theSingle->mSpaceRegionID = theID;
+                    theSingle->SetSpaceRegionID(theID);
                 } else {
                     theID = this->GetAdjacentAreaID(kAIPathNonSpace, inTile, theKind);
                     if (theID == 0)
                         theID = (unsigned short)this->mNextID130++;
-                    theSingle->mSurfaceRegionID = theID;
+                    theSingle->SetSurfaceRegionID(theID);
                 }
                 if (theTile->GetTerrainType() == kTerrainDeepWater) {
                     theID = this->GetAdjacentAreaID(kAIPathWaterBody, inTile, theKind);
                     if (theID == 0)
                         theID = (unsigned short)this->mNextID128++;
-                    theSingle->mWaterBodyID = theID;
+                    theSingle->SetWaterBodyID(theID);
                 } else if (theKind != kAITileForest) {
                     theID = this->GetAdjacentAreaID(kAIPathLandMass, inTile, theKind);
                     if (theID == 0)
                         theID = (unsigned short)this->mNextID124++;
-                    theSingle->mLandMassID = theID;
+                    theSingle->SetLandMassID(theID);
                     if ((theTile->GetTerrainType() == kTerrainDeepWater || theTile->GetTerrainType() == kTerrainShallowWater) &&
                         (theKind == kAITileWater || (theKind > kAITileMapEdge && theKind <= kAITileUnitObstacle))) {
                         theID = this->GetAdjacentAreaID(kAIPathWaterBody, inTile, theKind);
                         if (theID == 0)
                             theID = (unsigned short)this->mNextID128++;
-                        theSingle->mWaterBodyID = theID;
+                        theSingle->SetWaterBodyID(theID);
                     }
                 }
                 theTiles.push_back(inTile);
                 theSingle->Create(theTiles);
-                theID = theSingle->mID;
+                theID = theSingle->GetID();
                 if (theID >= this->mPathAreas.size())
                     this->mPathAreas.push_back(theSingle);
                 else
                     this->mPathAreas[theID] = theSingle;
-                theNewID = theSingle->mID;
+                theNewID = theSingle->GetID();
                 this->AddArea(theSingle);
                 EEAIContinent* theContinentArea = gContinentManager.GetContinentAt(inTile.GetX(), inTile.GetY());
                 if (theContinentArea)
-                    theContinentArea->AddPathAreaID(theSingle->mID);
+                    theContinentArea->AddPathAreaID(theSingle->GetID());
             }
         }
         // the merged areas hand their sectors and sub-sectors to theNewID
@@ -2001,43 +1977,43 @@ void EEAIContinentManager::RepairPathArea(const U2DPoint<long>& inTile)
             EEAIPathArea* theOld = theMerged[i];
             EEAIContinent* theOldContinent = gContinentManager.GetContinentByID(theOld->GetContinentID());
             if (theOldContinent)
-                theOldContinent->RemovePathAreaID(theOld->mID);
-            const std::vector<unsigned short>& theOldIDs = theOld->mSectorIDs;  // const iterators: the original calls insert 0x26cf3
+                theOldContinent->RemovePathAreaID(theOld->GetID());
+            const std::vector<unsigned short>& theOldIDs = theOld->GetSectorIDs();  // const iterators: the original calls insert 0x26cf3
             theSectorIDs.insert(theSectorIDs.end(), theOldIDs.begin(), theOldIDs.end());
-            for (j = theOld->mSectorIDs.size() - 1; j >= 0; j--) {
-                theSector = this->GetPathSectorByID(theOld->mSectorIDs[j]);
+            for (j = theOld->GetSectorIDs().size() - 1; j >= 0; j--) {
+                theSector = this->GetPathSectorByID(theOld->GetSectorIDs()[j]);
                 if (theSector) {
-                    theSector->RemovePathAreaID(theOld->mID);
+                    theSector->RemovePathAreaID(theOld->GetID());
                     theSector->AddPathAreaID(theNewID);
                 }
             }
             for (j = this->mPathSubSectors.size() - 1; j >= 0; j--) {
-                if (this->mPathSubSectors[j] && this->mPathSubSectors[j]->mPathAreaID == theOld->mID)
+                if (this->mPathSubSectors[j] && this->mPathSubSectors[j]->mPathAreaID == theOld->GetID())
                     this->GetPathSubSectorsAt(j)->mPathAreaID = theNewID;
             }
             this->RemoveArea(theOld);
-            this->mPathAreas[theOld->mID] = NULL;
-            this->mFreePathAreaIDs.push_back(theOld->mID);
+            this->mPathAreas[theOld->GetID()] = NULL;
+            this->mFreePathAreaIDs.push_back(theOld->GetID());
             delete theOld;
         }
         // inTile leaves its old area; an emptied area is deleted
         theArea->RemoveTile(inTile);
-        if (theArea->mTiles.Size() == 0) {
+        if (theArea->GetNumTiles() == 0) {
             EEAIContinent* theAreaContinent = gContinentManager.GetContinentsAt(theArea->GetContinentID());
             if (theAreaContinent)
-                theAreaContinent->RemovePathAreaID(theArea->mID);
-            for (j = theArea->mSectorIDs.size() - 1; j >= 0; j--) {
-                theSector = this->GetPathSectorsAt(theArea->mSectorIDs[j]);
+                theAreaContinent->RemovePathAreaID(theArea->GetID());
+            for (j = theArea->GetSectorIDs().size() - 1; j >= 0; j--) {
+                theSector = this->GetPathSectorsAt(theArea->GetSectorIDs()[j]);
                 if (theSector)
-                    theSector->RemovePathAreaID(theArea->mID);
+                    theSector->RemovePathAreaID(theArea->GetID());
             }
             for (j = this->mPathSubSectors.size() - 1; j >= 0; j--) {
-                if (this->mPathSubSectors[j] && this->mPathSubSectors[j]->mPathAreaID == theArea->mID)
+                if (this->mPathSubSectors[j] && this->mPathSubSectors[j]->mPathAreaID == theArea->GetID())
                     this->GetPathSubSectorsAt(j)->mPathAreaID = theNewID;
             }
             this->RemoveArea(theArea);
-            this->mPathAreas[theArea->mID] = NULL;
-            this->mFreePathAreaIDs.push_back(theArea->mID);
+            this->mPathAreas[theArea->GetID()] = NULL;
+            this->mFreePathAreaIDs.push_back(theArea->GetID());
             delete theArea;
         }
         // the new area joins inTile's sector and the merged areas' sectors
@@ -2146,10 +2122,10 @@ bool EEAIContinentManager::Rebuild()
             theTile.mY = (*(theSubSectors.begin() + i))->mLocation.mY;
             theSector = this->GetPathSector(theTile);
             if (theSector) {
-                theSector->AddPathAreaID(theArea->mID);
+                theSector->AddPathAreaID(theArea->GetID());
                 theArea->AddSectorID(theSector->mID);
             }
-            theSubSectors[i]->mPathAreaID = theArea->mID;
+            theSubSectors[i]->mPathAreaID = theArea->GetID();
         }
         theSubSectors[i]->mIsStale = false;
     }
@@ -2209,14 +2185,14 @@ static bool EEAIPruneChokeExists(void* inContext, size_t inChoke)
 
 static size_t EEAIPruneAreaCount(void* inContext, size_t inChoke)
 {
-    return EEAIPruneManager(inContext)->mChokePoints[inChoke]->mAreaSerials.size();
+    return EEAIPruneManager(inContext)->mChokePoints[inChoke]->GetAreaSerials().size();
 }
 
 // the choke point's inK-th area: -2 none, the continent's index when it is one of the continents, else -1
 static int32_t EEAIPruneArea(void* inContext, size_t inChoke, size_t inK)
 {
     EEAIContinentManager* theManager = EEAIPruneManager(inContext);
-    EEAIArea* theArea = theManager->GetArea(theManager->mChokePoints[inChoke]->mAreaSerials[inK]);
+    EEAIArea* theArea = theManager->GetArea(theManager->mChokePoints[inChoke]->GetAreaSerials()[inK]);
     if (!theArea)
         return -2;
     for (long i = theManager->mContinents.size() - 1; i >= 0; i--) {
@@ -2232,7 +2208,7 @@ static bool EEAIPruneNear(void* inContext, size_t inEdge, size_t inChoke, ptrdif
 {
     EEAIContinentManager* theManager = EEAIPruneManager(inContext);
     EEAIChokePoint* theChokePoint = theManager->mChokePoints[inChoke];
-    EEAIArea* theTarget = inK < 0 ? theChokePoint : theManager->GetArea(theChokePoint->mAreaSerials[inK]);
+    EEAIArea* theTarget = inK < 0 ? theChokePoint : theManager->GetArea(theChokePoint->GetAreaSerials()[inK]);
     U2DPoint<long> theThis;
     U2DPoint<long> theOther;
     theManager->mContinents[inEdge]->GetClosestPoints(theTarget, theThis, theOther);
@@ -2255,7 +2231,7 @@ void EEAIContinentManager::PruneChokePoints()
 {
     std::vector<int32_t> theCategories(this->mContinents.size());
     for (size_t i = 0; i < this->mContinents.size(); i++)
-        theCategories[i] = this->mContinents[i] ? (int32_t)this->mContinents[i]->mCategory : -1;
+        theCategories[i] = this->mContinents[i] ? (int32_t)this->mContinents[i]->GetCategory() : -1;
     EePruneCallbacks theCallbacks;
     theCallbacks.ctx = this;
     theCallbacks.choke_exists = EEAIPruneChokeExists;
@@ -2302,7 +2278,7 @@ void EEAIContinentManager::RemoveSubSectors(EEAIPathSector* inSector)
 // Removes inArea from the area map; returns whether it was there
 bool EEAIContinentManager::RemoveArea(EEAIArea* inArea)
 {
-    long theSerial = inArea->mSerial;
+    long theSerial = inArea->GetSerial();
     std::map<unsigned long, EEAIArea*>::iterator theArea = this->mAreas.find(theSerial);
     bool theResult = theArea != this->mAreas.end();
     if (theResult)
@@ -2408,7 +2384,7 @@ void EEAIContinentManager::RemoveForestTile(EEUnit* inUnit)
     }
     const std::vector<EEAIContinent*>& theContinents = this->mContinents;
     EEAIContinent* theContinent;
-    if (!(theForest->mTiles.Size() < 1) || (theContinent = theContinents[theForest->GetContinentID()]) == NULL)
+    if (!(theForest->GetNumTiles() < 1) || (theContinent = theContinents[theForest->GetContinentID()]) == NULL)
         return;
     theContinent->RemoveForestID(theForest->GetID());
     this->mForests[theForest->GetID()] = NULL;
@@ -2435,7 +2411,7 @@ void EEAIContinentManager::UpdateWallUnit(EEComplexUnit* inUnit, bool inNow)
 // Adds inArea to the area map under its serial
 void EEAIContinentManager::AddArea(EEAIArea* inArea)
 {
-    this->mAreas.insert(std::map<unsigned long, EEAIArea*>::value_type(inArea->mSerial, inArea));
+    this->mAreas.insert(std::map<unsigned long, EEAIArea*>::value_type(inArea->GetSerial(), inArea));
 }
 
 // FUNCTION: EXE 0x426fb3

@@ -77,11 +77,11 @@ intptr_t UIObjHost::List(UIControl* l, EeUiOp inOp, intptr_t a, intptr_t b, floa
         break;
     case EeUiOp::LineSetColor: theLine->SetColor(GEColor(f[0], f[1], f[2])); break;
     case EeUiOp::LineDraw: return l->GetRasterizer()->Draw(theLine, l->GetScreenIndex());
-    case EeUiOp::DrawCountDecrement: l->mDrawCount--; break;
+    case EeUiOp::DrawCountDecrement: l->UIControl::DrawTextA(); break;
     case EeUiOp::SetBgRectangle: l->SetBgRectangle(UIObjHost::Rect(f)); break;
     case EeUiOp::BaseMouseDoublePressed: return l->UIControl::MouseLButtonDoublePressed();
     case EeUiOp::CreateScrollBar:
-        return (intptr_t) new UIScrollBar(l->mId, GE2DPoint(f[0], f[1]), f[2], 1, l->mForm, l->mIndex,
+        return (intptr_t) new UIScrollBar(l->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, l->GetForm(), l->GetIndex(),
                                           l->GetBorderThickness());
     case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
     case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
@@ -107,7 +107,7 @@ long UILBString::DrawTextA()
     unsigned long theLineHeight = this->GetLineHeight();
     unsigned long i = 0;
     this->DrawScrollBarText();
-    this->mDrawCount--;
+    UIControl::DrawTextA();
     const GERectangle& theCtr = this->GetCopyTextRectangle();
     EeUiRect theCopy = {theCtr.mBottom, theCtr.mLeft, theCtr.mRight, theCtr.mTop};
     for (; i < this->GetDrawCount(); i++) {
@@ -116,7 +116,7 @@ long UILBString::DrawTextA()
         theRectangle = GERectangle(theRow.left, theRow.top, theRow.right, theRow.bottom);
         this->mCopiedText->SetLocation(GE2DPoint(theRectangle.mLeft, theRectangle.mTop));
         this->mCopiedText->SetText(this->mCopyLineArray[i]);
-        theResult = this->mForm->DrawClippedText(theRectangle, this->mCopiedText, this);
+        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mCopiedText, this);
     }
     return theResult;
 }

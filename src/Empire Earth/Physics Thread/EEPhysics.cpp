@@ -192,6 +192,7 @@ void EEPhysics::FlushWorld()
         if (gWorld.mPlayers[i] != NULL)
             gWorld.mPlayers[i]->AddPendingUnits(0, 1);
     }
+    gWorld.QueueBornDeactivations();   // port: the units given an id just now (EEWorld::DeactivateUnit)
     this->ProcessUnitSwaps();
     for (i = 0; i < theNumPlayers; i++) {
         if (gWorld.mPlayers[i] != NULL)
@@ -1081,16 +1082,16 @@ void EEPhysics::DrainInput()
             continue;
         }
         this->mServerMessages.pop_front();
-        NEMPhysicsTick* theTick = static_cast<NEMPhysicsTick*>(theMessage);
-        if (theTick->GetGenerateChecksum() == true) {
+        // the inputs that follow, the PTs to perform, the checksum and dump flags, the PTs per second (not on the wire)
+        NEMRecord* theTick = static_cast<NEMRecord*>(theMessage);
+        if (theTick->Get<bool>(2) == true) {
             if (gCommunications->IsServer() == true
                 || (gCommunications->IsClient() == true && static_cast<EEClient*>(gCommunications)->mHasLeftGame == 0)) {
-                bool theDump = theTick->GetDumpTheWorld();
+                bool theDump = theTick->Get<bool>(3);
                 unsigned long theChecksum = this->GetOutOfSynchChecksum(theDump, 1);
                 if (!theDump) {
                     unsigned long theTick2 = gCommunications->GetNumberOfCTsProcessedInPhysics();
-                    NEMWorldDatabaseChecksumResponse* theResponse =
-                        new NEMWorldDatabaseChecksumResponse(theTick2, theChecksum);
+                    NEMRecord* theResponse = new NEMRecord(kNetMessageWorldDatabaseChecksumResponse, {theTick2, theChecksum});
                     theResponse->SetOriginatingSlot(gWorld.GetCurrentPlayer()->mSlot);
                     if (gCommunications->IsClient())
                         gCommunications->ProcessLocalUserInput(theResponse, kSlotNone);
@@ -1104,10 +1105,10 @@ void EEPhysics::DrainInput()
         gCommunications->IncrementNumberOfCTsProcessedInPhysics();
         gCommunications->SetAveragePhysicsUpdateTime(this->mAveragePhysicsUpdateTime);
         gCommunications->SetAverageTimeBetweenPhysicsTicks(this->mAverageTimeBetweenPhysicsTicks);
-        this->mCurrentTick += theTick->GetPhysicsTicksToPerform();
-        this->mTicksToProcess = theTick->GetPhysicsTicksToPerform();
-        this->SetSpeed(1.0f / theTick->GetPhysicsTicksPerSecond());
-        unsigned long theCount = theTick->GetNumberOfPlayerInputs();
+        this->mCurrentTick += theTick->Get<unsigned char>(1);
+        this->mTicksToProcess = theTick->Get<unsigned char>(1);
+        this->SetSpeed(1.0f / theTick->Get<unsigned char>(4));
+        unsigned long theCount = theTick->Get<uint32_t>(0);
         theTick->Dereference();
         gCommunications->GetNumberOfCTsProcessedInPhysics();
         for (; theCount > 0; theCount--) {
@@ -1123,9 +1124,9 @@ void EEPhysics::DrainInput()
                 gEEMessageExecutedTestHook(theInput, 0);
             switch (theInput->GetType()) {
             case kNetMessageRemovePlayer: {
-                NEMRemovePlayer* theRemove = static_cast<NEMRemovePlayer*>(theInput);
-                gCommunications->ExecuteRemovePlayer(theRemove->GetPlayerIndex(), theRemove->GetWasBooted(),
-                                                      theRemove->GetPlayerIsOOS(), theRemove->GetGameIsExiting());
+                NEMRecord* theRemove = static_cast<NEMRecord*>(theInput);   // the player, out of synch, exiting, booted
+                gCommunications->ExecuteRemovePlayer(theRemove->Get<unsigned char>(0), theRemove->Get<bool>(3),
+                                                      theRemove->Get<bool>(1), theRemove->Get<bool>(2));
                 break;
             }
             case kMessageSelectUnit:

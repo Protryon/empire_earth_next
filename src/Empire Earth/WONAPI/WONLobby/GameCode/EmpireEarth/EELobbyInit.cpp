@@ -413,7 +413,7 @@ bool EELobbyRunConnectDialog()
         if (theFlag) {
             LobbySetGameInProgress(0);
             theGame->SendCancelConnect();
-        } else if (!theDialog->mIsEnded) {
+        } else if (!theDialog->IsEnded()) {
             theGame->SendConnectStatus(false);
             LobbyLeaveGame(false);
         }
@@ -462,7 +462,7 @@ static void EELobbySendConnectStatus(int inConnected)
 bool EELobbyIsConnectDialogRunning()
 {
     if (gEELobbyConnectDialog.mPtr != NULL)
-        return gEELobbyConnectDialog->mIsRunning;
+        return gEELobbyConnectDialog->IsRunning();
     return false;
 }
 

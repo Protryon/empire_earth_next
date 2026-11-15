@@ -24,12 +24,12 @@ long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow)
 long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow)
 {
     SEMixerStart theStart = {&inDirectory, inWindow, NULL};
-    return ee_mixers_initialize(&theStart);
+    return ee_sound_mixers_initialize(reinterpret_cast<EeSoundMixerStart*>(&theStart));
 }
 
 // FUNCTION: LLE 0x100535e2
 // Deletes every mixer (the first one until none is left: ee_sound mixers.rs)
 void SEShutdown(bool inForced)
 {
-    ee_mixers_delete_all();
+    ee_sound_mixers_delete_all();
 }
