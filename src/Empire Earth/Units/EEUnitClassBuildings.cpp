@@ -749,14 +749,10 @@ void EEUnitClass::UpdateArmed(EEComplexUnit* inUnit)
 // converts (the temple): 0x21005e..0x21013b (after EEUCBuilding.cpp; EEUCFortress.cpp follows). Unit flags: the exe's
 // module set. Its ctor is inline (EEUnitClass.cpp's factory); the slots pick the building's or the priest's handling
 // by command/event. RTTI gives EEUCBuildingPriest no EEUCBasicPriest base, so the priest half is the class's own copy
-// of EEUCBasicPriest's bodies (below the slots, no markers): identical source compiles to identical code, which LINK's
-// ICF folds into EEUCBasicPriest's (0x20d59f, 0x20d7f2, 0x20d998, 0x20dd0a, 0x20dd2d, 0x20dee4, 0x20df05, 0x20e16a, 0x20e274; names.txt
-// ICF aliases). Owner decision: no cast `this`.
-
-void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
-                              float& outPitch, float inFactor);
-
-static const float kBuildingPriestSoundFactor = 4.0f;   // EEUnitClass.cpp's kBasicPriestSoundFactor (0x446fe4)
+// of EEUCBasicPriest's bodies: identical source compiled to identical code, which LINK's ICF folded into
+// EEUCBasicPriest's (0x20d59f, 0x20d7f2, 0x20d998, 0x20dd0a, 0x20dd2d, 0x20dee4, 0x20df05, 0x20e16a, 0x20e274). With
+// one class the temple runs the basic priest's bodies themselves (R5b.4 round 32); only the update's copy is left
+// (PriestVirtualB8: the basic priest's update is a Rust sequence the temple does not run).
 
 // FUNCTION: EXE 0x6100c1
 // Answers a trigger as a building, except the conversion triggers, which the priest half answers
@@ -769,164 +765,13 @@ long EEUnitClass::BuildingPriestEvaluateCondition(EEComplexUnit* inUnit, unsigne
     case kTriggerConvertGoalStillValid:
     case kTriggerHasEnoughManaForConversion:
     case kTriggerAttackerIsLegalConversionTarget:
-        theResult = this->PriestVirtualA0(inUnit, inEvent);
+        theResult = this->BasicPriestEvaluateCondition(inUnit, inEvent);
         break;
     }
     return theResult;
 }
 
-// The priest half: copies of EEUCBasicPriest's conversion, action, trigger, media, update and tower-effect bodies
-// (no markers; see the header comment)
-void EEUnitClass::BuildingPriestUpdateConversion(EEComplexUnit* inUnit)
-{
-    if (inUnit->mPower < EEGetConversionCost(inUnit))
-        return;
-    EEComplexUnit* theTarget = EEAttackUnitCast(inUnit->GetGoal())->GetAttackTarget()->mComplexUnit;
-    if (theTarget->mPlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[theTarget->mPlayer->mPlayerID] == 0) {
-        inUnit->ReleaseConversionEffect();
-        inUnit->ClearGoals(0);
-        this->BuildingPriestHideConversionEffects(inUnit);
-        if (inUnit->mGoalState == NULL)
-            inUnit->StartAction(kActionIdle);
-        this->ActionChanged(inUnit);
-        return;
-    }
-    if (UIsNone32(inUnit->mConversionEffect.mValue)) {
-        EEEffectManager* theManager = gEffectManager;
-        EEEffectHandle theHandle;
-        if (theManager->CreateUnitEffect(theTarget, EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator), &theHandle, 0, 0, 0) == 0 &&
-            inUnit->mConversionEffect != theHandle)
-            inUnit->mConversionEffect = theHandle;
-        this->BuildingPriestShowConversionEffects(inUnit);
-        EETileLocation theFrom(inUnit->mTileX, inUnit->mTileY);
-        EETileLocation theTile(theTarget->mTileX, theTarget->mTileY);
-        theTarget->mPlayer->mEvents.AddPlayerEvent(theTile, theFrom, 1, theTarget->GetPlayer(), -1, false);
-    }
-    if (::gWorld.mInCinematic)
-        return;
-    if (gPhysics->mGameTime - inUnit->mConversionStartTime < (unsigned long)this->mMinConversionTime)
-        return;
-    EeCombatConversionIn theIn;
-    theIn.work_timer = (int32_t)inUnit->mWorkTimer;
-    theIn.tick_seconds = gPhysics->mTickSeconds;
-    theIn.resistance = theTarget->mStats->mConversionResistance;
-    theIn.adaptation = theIn.resistance == 1.0f && gCivPowersManager.HasPower(inUnit->GetPlayer(), kCivPowerAdaptation) &&
-                       !inUnit->mUnitClass->IsCrusader() && inUnit->mUnitClass->mCategory != kUnitCategoryBuildingPriest &&
-                       theTarget->mUnitClass->mUnitType == kUnitTypeTownCenter;
-    theIn.rate = inUnit->mStats->mConversionRate;
-    theIn.factor = theTarget->mPlayer->mConversionFactor;
-    EeCombatConversionOut theOut = EECombatConversion(theIn);
-    long theTime = theOut.timer;
-    if (theOut.due) {
-        if (gPhysics->mRandom.Generate() <= theOut.threshold &&
-            (theTarget->mTileNode == NULL || !theTarget->mComplexUnit->mIsDisabled || theTarget->mComplexUnit->IsProtected()))
-            this->BuildingPriestConvertTarget(inUnit, theTarget);
-        else
-            inUnit->SetWorkTimer(theOut.miss_timer);
-    } else
-        inUnit->SetWorkTimer(theTime);
-}
-
-void EEUnitClass::BuildingPriestConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
-{
-    std::vector<EEUnit*> theUnits;
-    GE3DPoint theLocation;
-    EEPlayer* theOldPlayer = inTarget->mPlayer;
-    inUnit->ReleaseConversionEffect();
-    this->BuildingPriestHideConversionEffects(inUnit);
-    EEComplexUnit* theConverted = EEConvertUnit(inTarget, inUnit->mPlayer->mPlayerID, 1);
-    EEUnitClassUpgrade* theStats = theConverted->mStats;
-    if (inUnit->mPlayer->mAreaConversion == true) {
-        theLocation.SetX(theConverted->mPhysicalModel.GetLocation().GetX());
-        theLocation.SetY(theConverted->mPhysicalModel.GetLocation().GetY());
-        theLocation.SetZ(theConverted->mPhysicalModel.GetLocation().GetZ());
-        EEGetUnitsNear(theLocation, gWorldTable.GetFloatValue(kWorldAreaConversionRadius), theUnits);
-        for (long i = theUnits.size() - 1; i >= 0; i--) {
-            EEUnit* theUnit = theUnits[i];
-            if (theUnit->mComplexUnit == NULL || ((EEMapTile*)theUnit->mTile)->IsSeenBy(inUnit->GetPlayer()) != true)
-                continue;
-            bool theFlag;
-            if (EECanConvert(inUnit, theUnit->mComplexUnit, theFlag))
-                EEConvertUnit(static_cast<EEComplexUnit*>(theUnit), inUnit->mPlayer->mPlayerID, 1);
-        }
-    }
-    inUnit->SetPower(inUnit->mPower - EEGetConversionCost(inUnit));
-    if (inUnit->mConversionStartTime != 0)
-        inUnit->mConversionStartTime = 0;
-    EESoundObject* theSound = theStats->mCreationSound;
-    if (theSound != NULL) {
-        EEPlayer* theCurrent = ::gWorld.mPlayers[::gWorld.mCurrentPlayer];
-        if (inUnit->mPlayer == theCurrent || theOldPlayer == theCurrent)
-            gSoundManager->Play(theSound->mSampleID, 1.0f, 0.0f, 1.0f, false, NULL);
-    }
-}
-
-void EEUnitClass::PriestVirtualA8(EEPlayer* inPlayer)
-{
-    EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Load(false);
-    this->BaseLoadMedia(inPlayer);
-}
-
-long EEUnitClass::PriestVirtualA0(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    long theResult = 0;
-    switch (inEvent) {
-    case kTriggerEnemyUnitConverted:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL) {
-                EEPlayer* thePlayer = theGoal->GetAttackTarget()->mPlayer;
-                if (thePlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[thePlayer->mPlayerID] == 0)
-                    theResult = 1;
-            }
-        }
-        break;
-    case kTriggerGoalIsConversion:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL && (!inUnit->mUnitClass->IsCrusader() || theGoal->IsConvertAttack()))
-                theResult = 1;
-        }
-        break;
-    case kTriggerGoalIsNotConversion: {
-        EEUnitGoal* theGoal = inUnit->mGoalState;
-        if (theGoal == NULL || theGoal->mKind != kGoalAttackUnit ||
-            (inUnit->mUnitClass->IsCrusader() && !static_cast<EEUGRust*>(theGoal)->IsConvertAttack()))
-            theResult = 1;
-        break;
-    }
-    case kTriggerConvertGoalStillValid:
-        if (inUnit->mGoalState != NULL) {
-            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
-            if (theGoal != NULL && theGoal->GetAttackTarget() != NULL &&
-                (theGoal->GetAttackTarget()->mTileNode == NULL || !theGoal->GetAttackTarget()->mComplexUnit->mIsDisabled ||
-                 theGoal->GetAttackTarget()->mComplexUnit->IsProtected()))
-                theResult = 1;
-        }
-        break;
-    case kTriggerHasEnoughManaForConversion:
-        if (inUnit->mLastAttacker != NULL && inUnit->mPower >= EEGetConversionCost(inUnit))
-            theResult = 1;
-        break;
-    case kTriggerAttackerIsLegalConversionTarget: {
-        bool theFlag;
-        if (inUnit->mLastAttacker != NULL && EECanConvert(inUnit, static_cast<EEComplexUnit*>(inUnit->mLastAttacker), theFlag))
-            theResult = 1;
-        break;
-    }
-    default:
-        theResult = this->BaseEvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    return theResult;
-}
-
-void EEUnitClass::PriestVirtualB4(EEPlayer* inPlayer)
-{
-    EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator)->Unload();
-    this->BaseUnloadMedia(inPlayer);
-}
-
+// The temple's copy of EEUCBasicPriest::Update (0x20df05)
 void EEUnitClass::PriestVirtualB8(EEComplexUnit* inUnit)
 {
     long theFrame = inUnit->mPhysicalModel.GetFrame();
@@ -958,7 +803,7 @@ void EEUnitClass::PriestVirtualB8(EEComplexUnit* inUnit)
         this->FireOnAttackFrame(inUnit, theAttack, theFrame);
         break;
     case kActionConvertEnemyUnit:
-        this->BuildingPriestUpdateConversion(inUnit);
+        this->BasicPriestUpdateConversion(inUnit);
         return;
     case kActionResourcesRotting:
         return;
@@ -970,43 +815,7 @@ void EEUnitClass::PriestVirtualB8(EEComplexUnit* inUnit)
     if (inUnit->mConversionStartTime != 0)
         inUnit->mConversionStartTime = 0;
     inUnit->ReleaseConversionEffect();
-    this->BuildingPriestHideConversionEffects(inUnit);
-}
-
-void EEUnitClass::BuildingPriestShowConversionEffects(EEComplexUnit* inUnit)
-{
-    if (this->mCategory != kUnitCategoryBuildingPriest || inUnit->mCloaked != 0)
-        return;
-    EEEffectHandle theHandle;
-    if (gEffectManager->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectPriestTowerSwirlEffect), &theHandle, 0, 0, 0) == 0)
-        inUnit->mCloaked = theHandle.mValue;
-    if (gEffectManager->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectPriestTowerSmokeGenerator), &theHandle, 0, 0, 0) == 0)
-        inUnit->SetGrowTime(theHandle.mValue);
-    EESoundObject* theSound = EESoundObject::Get(kSoundPriestTowerConvert);
-    GE3DPoint thePosition;
-    inUnit->GetPosition(thePosition);
-    float theVolume;
-    float thePan;
-    float thePitch;
-    EEComputeSoundParameters(theSound->mVolume, thePosition, theVolume, thePan, thePitch, kBuildingPriestSoundFactor);
-    gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, false, NULL);
-}
-
-void EEUnitClass::BuildingPriestHideConversionEffects(EEComplexUnit* inUnit)
-{
-    if (this->mCategory != kUnitCategoryBuildingPriest)
-        return;
-    EEEffectHandle theHandle;
-    if ((long)inUnit->mCloaked > 0) {
-        theHandle.mValue = inUnit->mCloaked;
-        gEffectManager->DestroyEffect(theHandle);
-        inUnit->mCloaked = 0;
-    }
-    if (!(inUnit->mGrowTime > 0))
-        return;
-    theHandle.mValue = inUnit->mGrowTime;
-    gEffectManager->DestroyEffect(theHandle);
-    inUnit->SetGrowTime(0);
+    this->BasicPriestHideConversionEffects(inUnit);
 }
 
 // ---- EEUCGate.cpp (until R5b.4 round 32; its class is now a kind of EEUnitClass).

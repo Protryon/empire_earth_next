@@ -569,11 +569,8 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->ReleaseConversionEffect();
         break;
     case EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS:
-        // (the temple is no basic priest: its own copy)
-        if (EEUnitClassOfKind<EE_CLASS_KIND_BUILDING_PRIEST>(theClass) != NULL)
-            theClass->BuildingPriestHideConversionEffects(theUnit);
-        else
-            theClass->BasicPriestHideConversionEffects(theUnit);
+        // (the temple's too: its copy was the basic priest's body)
+        theClass->BasicPriestHideConversionEffects(theUnit);
         break;
     case EE_UNITS_ACT_SET_CONVERSION_START:
         theUnit->mConversionStartTime = gPhysics->mGameTime;

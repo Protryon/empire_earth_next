@@ -1201,14 +1201,7 @@ public:
     void ReleaseUnit(EEComplexUnit* inUnit);
     void UpdateArmed(EEComplexUnit* inUnit);
     long BuildingPriestEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
-    void PriestVirtualA8(EEPlayer* inPlayer);
-    long PriestVirtualA0(EEComplexUnit* inUnit, unsigned long inEvent);
-    void PriestVirtualB4(EEPlayer* inPlayer);
     void PriestVirtualB8(EEComplexUnit* inUnit);
-    void BuildingPriestUpdateConversion(EEComplexUnit* inUnit);
-    void BuildingPriestConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget);
-    void BuildingPriestShowConversionEffects(EEComplexUnit* inUnit);
-    void BuildingPriestHideConversionEffects(EEComplexUnit* inUnit);
     void FortressUnitCreated(EEComplexUnit* inUnit);
     long FortressEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
     void FortressFindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);

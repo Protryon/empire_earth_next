@@ -545,7 +545,7 @@ void EEUnitClass::LoadMedia(EEPlayer* inPlayer)
 {
     uint64_t theKinds = EEUnitClassKinds(this);
     if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
-        this->PriestVirtualA8(inPlayer);
+        this->BasicPriestLoadMedia(inPlayer);
     else if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
         this->BasicPriestLoadMedia(inPlayer);
     else
@@ -655,7 +655,7 @@ void EEUnitClass::UnloadMedia(EEPlayer* inPlayer)
 {
     uint64_t theKinds = EEUnitClassKinds(this);
     if (theKinds & EE_CLASS_KIND_BUILDING_PRIEST)
-        this->PriestVirtualB4(inPlayer);
+        this->BasicPriestUnloadMedia(inPlayer);
     else if (theKinds & EE_CLASS_KIND_BASIC_PRIEST)
         this->BasicPriestUnloadMedia(inPlayer);
     else
