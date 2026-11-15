@@ -23637,3 +23637,95 @@ Round: -1,162 net for the moves (the TEST ONLY capture +143 aside). EESMEffect.c
   Task-Area placement and take-off-map, the tech add, the AI's task building, the calamity tile walk, the dialogue),
   `EEChangeUnit`'s random draws and per-attribute writes, `EESMCreateUnit`, the cinematics and `ShowDialogMessage`,
   `EEEvent`'s media effects, the condition's strings and the area's typed members, `Reset`'s built-ins, `Prepare`.
+
+## R5b.5, ninth round: EEChangeUnit and EEModifyUnitAttribute whole in Rust, Reset's and Prepare's lists, the dialog choice and the camera step (ee_scenario unit_change.rs, class_attribute.rs, lists.rs, round.rs; branch rust-triggers9, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 65037399 | SMCU, every `EEChangeUnit`'s and `EEModifyUnitAttribute`'s result (TEST ONLY) | +106 (test code) |
+| 194e68d1 | SMCU's golden from the unmodified C++ (seeds 2-7) | (golden file) |
+| 208d48b5 | `EEChangeUnit` in Rust (unit_change.rs; `EE_SCENARIO_WORLD_CU_*` on the context's unit) | +80 -153, net -73 |
+| ede2704c | Build Object's task choice in Rust (effect_ai.rs `build_task`) | +8 -22, net -14 |
+| fa117e3d | `Reset`'s lists and built-ins in Rust (lists.rs `reset`) | +18 -38, net -20 |
+| a0564b22 | `ShowDialogMessage`'s choice, `MoveCameraToStart`'s step in Rust (round.rs); the cinematic message filters as one helper | +48 -79, net -31 |
+| 03579e76 | `GetMediaFile` as one table, the built-in graphic objects' unload as one loop (C++ only) | +29 -89, net -60 |
+| 1179a2a2 | `EEModifyUnitAttribute` in Rust (class_attribute.rs `modify_unit_attribute`; `EE_SCENARIO_WORLD_CA_*`) | +107 -147, net -40 |
+| 0e4c84f2 | `Prepare`'s media choice in Rust (lists.rs `prepare_media`) | +28 -35, net -7 |
+
+Round: -245 net for the moves (the TEST ONLY capture +106 aside), far under the 1,500 asked.
+
+- **The measure.** After the eighth round the directory held 5,836 lines, of which the TEST ONLY capture 531, the
+  manager's address-only comments for its STL COMDATs about 420, and the rest world glue: the effect host (one
+  `case` per world call, each the original's statement), the stream and list hosts, the cinematics' camera saves,
+  `EEEvent`'s handlers (one setter each over ee_tech's decisions). What still held decisions: `EEChangeUnit` (155
+  lines: the draws and twenty attributes' clamps), `EEModifyUnitAttribute` (110), `Reset`'s built-ins, `Prepare`'s
+  loops, `ShowDialogMessage`'s choice, `MoveCameraToStart`'s arithmetic, Build Object's town-or-continent choice. Those
+  moved; each left a host op per statement, so the saving is the decisions and loops, not the statements (EESMEffect.cpp
+  grew 1,461 -> 1,610 with the two unit-change hosts, EESMObject.cpp fell 945 -> 696). The condition's strings and the
+  area's typed members were left: the editor reads them at 50+ sites in the editor lane's files, so a record would cost
+  more accessor lines than it saves and collide with that lane.
+- **The golden first.** SMCU (after every `EEChangeUnit` and `EEModifyUnitAttribute`): the arguments, the physics
+  seeds before and after, the unit's values after (looked up by id: a kill may free the unit; checksum, hit points,
+  resource, flight time, garrison, ammunition, scale, reload timer, power, rotting time, built and paused flags,
+  variables, command, goal queue sizes) or the player's upgrade after (armor, the 16 class attribute fields, the
+  animal AI flag), and the pending effects' saved bytes. Recorded at seeds 2-7 on the unmodified C++ (the merged tree,
+  all 71 SM digests equal to the golden first): seeds 3-7 reach it (23, 63, 28, 3 and 1,269 records; seed 2 none).
+- **EEChangeUnit.** The amount (a draw when a maximum is set, a second draw for a random amount, the percent range that
+  skips minimum..maximum: `1 + (inMaximum - inMinimum)` in unsigned long), then per attribute the reads, the clamp
+  (`unit_amount`) and the write. The C++ host answers on the context's unit (`EESMHostContext::mUnit`, so a unit just
+  made by a Create effect needs no id lookup); `EESMEffectWorld` hands the `CU` and `CA` ranges to their own functions
+  before it takes the context as an effect run's. One behaviour change on a crash path: a resource attribute of no
+  unit read the stats of NULL in the original; it does nothing now.
+- **EEModifyUnitAttribute.** The attribute's kind (int, hit points, flight time, float, armor, velocity, the animal
+  AI flag, camera focus) and the pending effect are Rust's; the Class-Attribute effect calls it directly (the two
+  world ops that called the C++ function are gone). The host keeps the upgrade's fields as one member-pointer table
+  (a `long` or a `float` from Reload Time+; armor apart), the class's bases as the percent reads them, the setters and
+  the line of sight's and the herds' walks.
+- **Reset, Prepare.** `Reset`'s six lists: each emptied (its elements deleted) just before its built-ins are made
+  through the list host (create, the name by `EE_SCENARIO_STRING_*`, the type, an area's anchor by the new
+  `EE_SCENARIO_LIST_OP_ANCHOR`, push), in the original's order, so the None object's `SetName` still renames against
+  the conditions then present. `Prepare`'s Create effects' player choices go through `choose_player_recorded` (the
+  SMCP records unchanged) and each load through `EE_SCENARIO_LIST_OP_MEDIA` at its place between the choices.
+- **The dialog and the camera.** `show_dialog`: the pause test, the message to show (in a cinematic the first
+  cinematic one) and `mIsShowingDialog`; `Update` calls it directly. `camera_step`: the step's f32 arithmetic as the
+  original (EE-SIM's scenarios move the camera; no capture reads the camera's focus: unit-tested only).
+- **Captures.** The scenario profile at seeds 2-7 of the final build against the unmodified C++'s run: every digest
+  of every tag equal (539) but one: seed 5's UUTL record count (8,091 against 8,092) in the second build (the same
+  moves but class attribute and Prepare) — UUTL counts the unit utilities' calls of every thread per physics tick, so
+  a call landing on the other side of a tick boundary adds a record.An unmodified rerun of seed 5 gave 8,077: the count is not deterministic in this profile. On the merged tree the
+  same: every digest equal but seed 5's UUTL count (8,082).
+- **Not reached by any retail scenario:** Build Object (unit-tested), the garrison, ammunition, pause, scale, power,
+  rotting and construction attributes (SMCU shows hit points, resources, flight time and the variables), most class
+  attributes (14 calls in all), `GetMediaFile` (the intro screens: a tour or a person), `Prepare` with a one-player
+  Create of an unselected object.
+- **For the editor lane:** no record field or accessor changed. `EEScenarioManager` keeps every member; the list host
+  gained two operations; `EESMEffect`, `EESMObject` and `EESMArea` are unchanged as types.
+- **The merge of `rust`: rebuilt on the rewritten history.** The lead had rewritten `rust` with `filter-branch`
+  (2026-11-14 22:48): a broken merge chain had grown `docs/RUST_PLAN.md` to 304 MB (42af0588) and then 3.36 GB
+  (a08e075e, 6ec693eb), and the round-8 head had merged 42af0588, this round's start a08e075e and 6ec693eb. Merging
+  the new `rust` (12 merge bases, the 3.36 GB blob on one side) crashed git 2.56 with a segmentation fault every time
+  (ort, `-s ort`, no renames; `-s resolve` refuses more than 8 trees; `git merge-tree` crashes the same way), and a
+  merge would have carried the giant blobs back into `rust`. So the branch was rebuilt (the old one kept as
+  `rust-triggers9-old`): round 8's four code commits (based on 52a31143, still in `rust`) as they were, one merge of
+  the new `rust` (the same EESMEffect.cpp adaptation as before: the gate and transport kinds of the collapsed unit
+  classes), then round 8's docs and this round's eleven commits cherry-picked unchanged (every file of the lane equal
+  to the old branch's). The worktree's 3.36 GB `docs/RUST_PLAN.md` went with it.
+- **Gates.** Before the rebuild, on the stacked commits: build `--sim` 0/0 after each group of moves (four builds),
+  `cargo test -p ee_scenario` (140 tests), oracle seeds 2-3 identical, the editor gate PASS (12,723 lines), the
+  scenario profile at seeds 2-7 twice (above). The Rust gate on that tree failed once in ee_gx's GPU timing test
+  (`device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`, under four simulations' load) and once in clippy (a
+  cast `c_long as i32` that is a no-op on Windows; now `as i32` and rustfmt, commit "rustfmt and one clippy cast").
+  On the rebuilt branch merged with `rust` 3114725d: `rust_build.py header` current, `rust_includes.py` changed
+  nothing; build `--sim` 0/0 (929 and 930 inputs); the test profile 0/0; the Rust gate PASS; the oracle seeds 2-7
+  identical; captures at seeds 2-3: oracle PASS (177), late (178), space (179), calamity (195); the scenario profile at
+  seeds 2-7 PASS (76 SM digests; all 539 equal to the unmodified C++ but seed 5's UUTL count); the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS; the editor
+  gate PASS (12,723 lines). Under the harness lock: the legacy scenario run (`game_session.py --exercise ai-game
+  --campaign learning --play-seconds 60`, `EE_HARNESS_OPEN_DATA` naming the main tree: `game_session.py` has no
+  `--data`, and the first try without the variable began building a tree in the worktree; stopped, the lock released,
+  the partial tree deleted): the Learning campaign's first scenario through the campaign and scenario-intro screens,
+  `STOP <windowed session complete> reached`, exit 0; the tour (`fixture_game.py --exercise tour --play-seconds 60`)
+  `RESULT PASS tour`.
+- **What is left** (docs/progress/r5b5-scenario-manager-and-triggers.md): world glue (the effect host's statement
+  blocks, `EESMCreateUnit`, the cinematics, `EEEvent`'s handlers, the stream and list hosts); the elements' strings and
+  lists. The next real saving is the element classes themselves as Rust records with C++ accessors, to be planned with
+  the editor lane.
