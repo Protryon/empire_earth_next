@@ -40,7 +40,7 @@
 // red background, and a level text
 EEUICPortrait::EEUICPortrait(UIForm* inForm, const GERectangle& inRectangle, unsigned long inId,
                              unsigned long inIndex, bool inShowLevel)
-    : UIControl(kControlTypeCustom, inId, inRectangle, inForm, inIndex, 0)
+    : EEUIRustControl(inId, inRectangle, inForm, inIndex, 0)
 {
     this->mPortrait = new GEBitmap;
     this->mPortrait->SetLocation(inRectangle.GetTopLeft());
@@ -148,14 +148,11 @@ void EEUICPortrait::SetUnit(EEUnit* inUnit)
 // Returns the player's improvement progress for a unit type
 // (EEPlayer::GetImprovementProgress, inline in EEPlayer.h; emitted after its first user)
 
-// The portrait's host (portrait.rs EE_SCREENS_PT_OP_*): units and nodes as handles, ioF the op's floats
-extern "C" int64_t ee_screenscpp_portrait(void* inPortrait, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+// The portrait's own ops (portrait.rs EE_SCREENS_PT_OP_*, EEUIRustControl's host the toolkit's): units and nodes as
+// handles, ioF the op's floats
+int64_t EEUICPortrait::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
-    return EEUICPortrait::HostOp(static_cast<EEUICPortrait*>(inPortrait), inOp, inA, inB, ioF);
-}
-
-int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
-{
+    EEUICPortrait* inPortrait = this;
     EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
     EETechTreeNode* theNode = reinterpret_cast<EETechTreeNode*>(inA);
     GERhombus* theBars[3] = {inPortrait->mFirstBar, inPortrait->mSecondBar, inPortrait->mBackground};
@@ -165,7 +162,7 @@ int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t 
     float theFloat;
     uint32_t theBits;
     NEMessage* theMessage = NULL;
-    switch (inOp) {
+    switch (inOp - EE_SCREENS_HC_CLASS) {
     case EE_SCREENS_PT_OP_HAS_UNIT: return inPortrait->mUnit != NULL;
     case EE_SCREENS_PT_OP_RELEASE:
         inPortrait->mButton->Release();
@@ -194,9 +191,6 @@ int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t 
         return theUnit->GetPlayer() == gWorld.GetCurrentPlayer();
     case EE_SCREENS_PT_OP_PRODUCTION:
         return theUnit->mProductionTime;
-    case EE_SCREENS_PT_OP_DIRTY:
-        inPortrait->SetDirty(true);
-        return 0;
     case EE_SCREENS_PT_OP_RESEARCHED:
         return theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
     case EE_SCREENS_PT_OP_RESEARCH:
@@ -210,11 +204,8 @@ int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t 
         return theBits;
     case EE_SCREENS_PT_OP_BUILD_TIME:
         return theNode->GetBuildTime();
-    case EE_SCREENS_PT_OP_RECT:
     case EE_SCREENS_PT_OP_BAR:
-    case EE_SCREENS_PT_OP_DRAW_RECT:
-        theRect = inOp == EE_SCREENS_PT_OP_RECT ? inPortrait->GetRectangle()
-                : inOp == EE_SCREENS_PT_OP_BAR  ? theBars[inA]->GetRectangle() : inPortrait->GetCopiedDrawRectangle();
+        theRect = theBars[inA]->GetRectangle();
         ioF[0] = theRect.GetLeft();
         ioF[1] = theRect.GetTop();
         ioF[2] = theRect.GetRight();
@@ -242,8 +233,6 @@ int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t 
     case EE_SCREENS_PT_OP_UPDATE_HELP:
         inPortrait->GetForm()->UpdateHelpString();
         return 0;
-    case EE_SCREENS_PT_OP_DRAW_BASE:
-        return inPortrait->UIControl::DrawPolygons();
     case EE_SCREENS_PT_OP_DRAW:
         if (inA == 0)
             return inPortrait->GetRasterizer()->Draw(inPortrait->mPortrait, inPortrait->GetScreenIndex());
