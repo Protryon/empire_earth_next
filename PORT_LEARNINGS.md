@@ -23619,3 +23619,102 @@ past it; the quarter is always one of the four).
 body: the kind-to-body table can be Rust once the remaining C++ bodies (citizens, priests, shots) are. Coverage of
 the transports' searches needs a capture profile with transport landings (an islands map with the AI's naval
 invasions).
+
+## R5b.4 game messages, round 5: the last eight classes as records, the Execute bodies and the dispatch in Rust over one host (ee_netmsg records.rs, bodies.rs; branch rust-msg5, 2026-11-14)
+
+The game messages lane's fifth round: every game message type is an `EEMRecord` now, and its `Execute` body is Rust
+(the dispatch, the reads, the decisions) over one C++ host of world calls.
+
+| Commit | What | C++ (src + include/ee) |
+|---|---|---|
+| 1bec3ac5 | the last eight classes as records: a list and a blob kind, members off the wire, the wait id and response rules | +250 -561, net **-311** |
+| 782551b9 | the Execute bodies, the dispatch and the physics' two framings in Rust (bodies.rs) over EEMessage.cpp's host | +520 -1849, net **-1329** |
+| 1bb6bb05 | the capture's sweep shapes from the Rust layouts; ee/EEMessageExecute.h folded into rust/ee_netmsg.h | +46 -207, net **-161** |
+| bc3192ef | merge of `rust` (42af0588, 94 commits): EELobbyInterface.cpp deleted there, its start sender (now in EELobbyGlueHost.cpp) converted to the record; headers current | |
+
+The round: net **-1,801** (EEMessage.cpp 2,907 -> 1,407 lines, ee/EEMessage.h 280 -> 150, EEMessageCapture.cpp
+897 -> 756; ee/EEMessageExecute.h gone).
+
+- **Lists, blobs, members off the wire.** `EEMRecord::mList` holds a type's one list (records of a size: the unit
+  ids' int32, the civilization upgrades) or its blob (the box selection's compressed buffer); the slots give it to the
+  codec as `EENetMsgRecords` and the blob slot did; the import copies them from where the codec found them (no room
+  is handed to the Rust). A sender passes a `std::vector<T>` in the initializer: each element's low bytes are one
+  record (the fixture's and the icon bar's `long` ids become the wire's int32, as the old constructor's loop did).
+  A record type may have members that never travel (`RecordType::locals`, after the wire's in the record): the box
+  selection's rectangle and unit type, which the scenario editor's lasso reads back (EESEARust.cpp: `Get<int32_t>(4)`,
+  and a copy of `Get<GERectangle>(3)` it hands ee_screens). The box selection's ids are decoded where they are
+  needed (Execute, the capture, the fixture's hook) instead of at import: the same bytes, the same ids.
+- **Rules by type.** `EEMRecord::GetSendToAllAndWaitMessageID`/`Set...` and `IsResponse` read the type's rule
+  (`ee_netmsg_record_rules`): Load or Save keeps its wait id in member 6 and is answered by 0x9a whose member 1 equals
+  its tick (member 3), as `NEMRecord`'s rules (the engine lane's).
+- **The legacy harness's seed pin.** It broke at `?Execute@EEMStartLoading@@UEAAXXZ` and wrote `[this+0x14]`; the
+  start's body is `void EEStartLoading(EEMRecord* m)` (not static: build.py's HARNESS_HOOKS keeps it out of line in the
+  test profile) and the seed is member 2 at record byte 1: game_session.py writes `layout.field('EEMRecord',
+  'mRecord') + 1` (layout.py's new `field`: a class with no VC6 counterpart).
+- **The bodies (bodies.rs).** `EEMRecord::Execute` and the physics' `ExecuteSelectionMessage`/`ExecuteMessage` call
+  `ee_netmsg_execute(host, message, type, slot, selection id, record, list, framing)`. The Rust works on a copy of the
+  64-byte record and of the list (no Rust reference lives across the host's calls back into C++) and writes the record
+  back only when a body changed it (Path To's moved point, the cheat unit's class, Load Percent's cap): a C++ body
+  that writes its record (the start's seed) is never overwritten. Each world call is one host operation
+  (`EE_NETMSG_OP_*`: the sender, a player, a group's units, a unit's or a player's or the world's fact by selector,
+  a unit's/player's/world's action by selector, a lobby option, a chat line by text index, a sound by index); the
+  host is one switch in EEMessage.cpp (`EENetMsgHost`, the world's actions in `EENetMsgWorldAct`). The bodies keep
+  the original's call order and reads (a loop that re-read `GetNumUnits()` each step still does: `each_unit`'s
+  `recount`), and the conversions the C++ made: `(long)` of a float stays C++ where the C++ consumed it (Build
+  Gate's tile) and is `c_long` (the 32-bit `cvttss2si` on Windows, 64-bit on LP64) where the Rust does (Build Unit's
+  tile for the units lane); member values cross as the old member type (a u32 assigned to a `long` member converts in
+  the C++ as the assignment did).
+- **The framing.** `execute_framed`: a selection takes the fast-selection lock, marks the world as executing the
+  local selection on a client for the local sender, runs the body, copies into the local selected group when its id
+  is current, records the sender's selection id, leaves the lock, clears the sender's JIT flag; a command runs when
+  its id is the sender's last one, else undoes the sender's selection. The three decisions and the bodies' six are
+  recorded by the capture's NMDC through the host (`EE_NETMSG_OP_DECISION`: the same kinds and values).
+- **The unit orders.** The 23 orders that were one call into ee_units (`ee_units_path_to`, ...) are `Order` values
+  the host runs. A first build declared the ee_units functions in an `extern "C"` block: the game linked (one static
+  library), but `cargo test -p ee_rust` did not (the rlibs link separately, ee_netmsg's references came after ee_units'
+  objects were passed over). The orders now go through a function `ee_rust_init` registers
+  (`ee_netmsg::bodies::register_unit_orders`, `#[cfg(not(test))]`, as the combat goals' registration): ee_netmsg
+  cannot depend on ee_units, whose host imports C++. cbindgen also emitted the extern block's functions
+  (`cbindgen:ignore` on the module was needed while it existed).
+- **The loading tallies.** Load Main Screen Response's and Start Loading Response's function statics (the slots that
+  answered, the count) are Rust statics; the locks are released before each host call.
+- **What stays C++ (13 bodies, `kNetMsgBodies`).** The civilization upgrades (purchased, requested), the immediate cargo
+  unload, the improvement, the main screen (the graphics thread's pause), the load or save request, the cheat class's
+  data, the migration slot, the saved group's selection (the screens), the flare, the diplomatic stance, the start
+  (the seed pin), the formation: world and string work with nothing to decide, where a host op per call would be
+  longer than the body.
+- **The capture's sweep shapes.** The NMSW rows (type, kind, prefix, suffix) and the NMNE rows (fixed bytes,
+  strings, inputs) were hand tables of the codec layouts; they are `ee_netmsg_sweep_shape` and
+  `ee_netmsg_engine_sweep_shape` now, each tested against the old table (the unit id list's unused prefix was 9, the
+  layout's 5), with the game types' order kept as a byte list (the old classes' order) and the engine's as type order.
+- **Behaviour changes.** None in a game's simulation (the oracle, the Lua AI's traces and the captures identical at
+  every commit). The box selection's ids are decoded from a zeroed 256-byte copy of the blob (the old member buffer
+  was not cleared for a short import: only malformed payloads differ). `ExecuteMessage`'s unused `GetMessageLabel()`
+  call is gone. The disband's cash register is looked up after the loop (a lookup).
+- **What runs it.** The oracle and captures run the AI's orders, the civ timer, the replant, the statistics, the shift
+  mode, the selection framing of every AI message; the Lua AI (`--engine next`) builds its orders on the stack and
+  runs them through `Execute`. Only the LAN game runs the lobby's options and slots, the loading tallies, the chat and
+  the start on the wire; the fixture's orders and box selection exercise the UI's senders. Not reached by any gate:
+  the edicts, End Cinematic, the cheat unit, the scenario editor's lasso, the civilization builder, the collision
+  debug messages, the playback messages, host migration.
+- **Gates.** Each code commit: build `--sim` 0/0, the Rust gate PASS (commit 2's first try failed to link `cargo test -p
+  ee_rust`: the extern block above; fixed before the commit), the oracle identical on seeds 2-3, EE-SIM with the Lua AI
+  (`--engine next`) identical to the unmodified build (rust fffdedf4's EE-SIM) on seeds 2-3, the oracle capture at
+  seeds 2-3 PASS (171 digests equal to golden_cpp.txt, NMIM/NMEX/NMSW/NMDC/NMNE/NMCU among them; no re-recording).
+  The harness self test passed after the harness edits (commit 1). After the merge of `rust` (42af0588): build
+  `--sim` 0/0 and the test-profile build 0/0; the oracle identical on seeds 2-7; the captures at seeds 2-3 (oracle,
+  late, space, calamity) equal to the goldens but UUTL in each profile: a rust head 42af0588 built alone (a scratch
+  worktree) gives the same UUTL digests (oracle seed 2 78796ae3.., seed 3 6171a40b..): the UUTL goldens are stale on
+  `rust` (rust-unitutil2's 6a4dcc01 re-records them after core31's merge), not this branch's. The saveload matrix
+  `--expect` PASS (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4,
+  space 1/4, calamity 4/4, next 0/4); nettest: five of the six programs equal (msgmgr 20,000 sequences, queues 1,500, client 1,500, tune
+  20,000, server 1,500, 0 differing); ne_protocol_test does not compile on `rust` itself (it still defines
+  `TSScheduler::CreateEvent`/`DestroyEvent`, inline in TSScheduler.h since ed678d8a). The Rust gate after the merge: one ee_won lib test failed under the
+  load of the captures (684 of 685), `cargo test -p ee_won --lib` alone passed 685/685. Under the harness lock:
+  `lan_game.py` RESULT PASS lan-game (PT host 3136, joiner 3137); the Lua AI game (`--lobby 276=Boom --lobby
+  277=Boom`, Small/Hard/32x/PT 40/seed 2) RESULT PASS ai-game outcome time-cap, alive_computers [2, 3], units
+  [5, 33, 33]; the tour RESULT PASS (render checks ok, F3 input check ok); `--exercise random-game --box-select
+  --orders` RESULT PASS (box select 4 steps match; orders gather, repair, repair-queued, move; patrol and attack
+  ground skipped by the map); the legacy tour (`game_session.py --exercise tour --seed 2`) STOP <windowed session
+  complete> reached, the seed pin armed at `?EEStartLoading@@YAXPEAVEEMRecord@@@Z` [rcx+0x21] and written (old 30471,
+  new 2).

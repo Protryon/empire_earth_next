@@ -555,7 +555,7 @@ void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vecto
     else
         theValid = true;
     if (theAllowed && theValid && thePlayer->mCivilization.CanAffordAll(inUpgrades)) {
-        EEMCivUpgradesPurchased* theMessage = new EEMCivUpgradesPurchased(inPlayer, inUpgrades, inName, theNameID);
+        EEMRecord* theMessage = new EEMRecord(kMessageCivUpgradesPurchased, {inPlayer, theNameID, inUpgrades, inName});
         if (gCommunications->GetIsMultiplayerSession())
             gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         else {

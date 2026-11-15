@@ -74,7 +74,7 @@ HARNESS_HOOKS = [
     ("Empire Earth/Player/EEPlayer.cpp", "void EEPlayer::SetGameResult(long inState)"),
     ("Empire Earth/Physics Thread/EEPhysics.cpp", "void EEPhysics::ReportStatistics()"),
     ("Empire Earth/Physics Thread/EEPhysics.cpp", "void EEPhysics::Tick()"),
-    ("Empire Earth/Communications/EEMessage.cpp", "void EEMStartLoading::Execute()"),
+    ("Empire Earth/Communications/EEMessage.cpp", "void EEStartLoading(EEMRecord* m)"),   # the start (EEMStartLoading::Execute)
     ("Empire Earth/Empire Earth/Empire Earth.cpp", "bool EECreateInstanceMutex()"),
     ("Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp",
      "bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& outPoint, bool inFlag)"),

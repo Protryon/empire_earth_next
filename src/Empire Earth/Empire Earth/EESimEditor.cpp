@@ -1356,7 +1356,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                                         : w[1] == "add" ? kMessageAddUnitsToSelectedGroup
                                                         : kMessageAddAndRemoveUnitsFromSelectedGroup;
                 EESEALasso* a = new EESEALasso;
-                a->mMessage = new EEMSelectUnits(GERectangle(F(2), F(3), F(4), F(5)), L(6), theType);
+                a->mMessage = EENewSelectUnits(GERectangle(F(2), F(3), F(4), F(5)), L(6), theType);
                 gUserInterface->PostAction(a);
                 a->Dereference();
             };
