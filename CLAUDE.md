@@ -147,7 +147,11 @@ Before merging or pushing any code change, all of these are required:
 
 - Harness self test, no game, about 1 minute: `python -I tools/harness/selftest/selftest.py`. Run it after any
   change under `tools/harness/`.
-- One harness session at a time on this machine. Don't run the gates while another agent uses the harness.
+- Harness slots: up to 3 live sessions run at once (`EE_HARNESS_SLOTS`), each in its own slot (its own mutex name,
+  TCP and WON lobby ports, stage and evidence: tools/harness/README.md "Harness slots"). Run every harness session
+  through `python -I tools/harness/slot.py run --owner <branch> -- <the session's command>`: it waits for a free slot
+  (`<main checkout>/build/harness.slot.K`, shared by all worktrees), runs the command with `EE_HARNESS_SLOT=K` and
+  releases the slot. `gates.sh` takes one itself; `slot.py status` lists the holders.
 - `--no-render` AI games skip most 3D draws, so their windows look garbled by design. Judge display only from the
   tours.
 
