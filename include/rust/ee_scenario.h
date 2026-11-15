@@ -181,6 +181,27 @@ constexpr static const int32_t EE_SCENARIO_CLASS_FORTRESS = 81;
 /// Added to a class field: the upgrade's class (`GetStats()->mUnitClass`) instead of the unit's.
 constexpr static const int32_t EE_SCENARIO_OF_STATS = 100;
 
+/// Whether player a has an upgrade of unit type b (`GetUpgrade(b) != NULL`; 1/0).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CA_UPGRADE = 193;
+
+/// Player a's upgrade of type b: attribute c's current value (a `long`, a `float`'s bits, the animal AI flag).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CA_VALUE = 194;
+
+/// Player a's upgrade of type b: attribute c's class base as the percent reads it (a `float`'s bits).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CA_BASE = 195;
+
+/// Player a's upgrade of type b: attribute c set to d (a `long` or a `float`'s bits; the range and velocity through
+/// their setters, the line of sight between its units' sight off and on, the animal AI flag into the herds too).
+constexpr static const uint32_t EE_SCENARIO_WORLD_CA_SET = 196;
+
+/// `AddV134Effect` of the Unit-Attribute effect for player a's upgrade of type b: attribute c, percent d, amount e,
+/// mode f.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CA_PENDING = 197;
+
+/// TEST ONLY: the SMCU record (kind 1) for player a (-1 none), type b (-1 no upgrade), attribute c (the percent flag
+/// in bit 32), amount d, mode e, the seed before f.
+constexpr static const uint32_t EE_SCENARIO_WORLD_CA_CAPTURE = 198;
+
 /// A `long` value clamped at 0 (reload time, work rate, objects carried, repair, carry amount, healing, power).
 constexpr static const uint32_t EE_SCENARIO_CA_INT = 0;
 
@@ -325,13 +346,6 @@ constexpr static const uint32_t EE_SCENARIO_WORLD_BEHAVIOR = 38;
 /// `EEChangeUnit(c, d, unit a (none for -1), e, 0, false, f)`: c the attribute, d the percent flag, e the amount,
 /// f the mode.
 constexpr static const uint32_t EE_SCENARIO_WORLD_CHANGE_UNIT = 39;
-
-/// `EEModifyUnitAttribute(c, d, player a, its upgrade of type b, e, f)`.
-constexpr static const uint32_t EE_SCENARIO_WORLD_MODIFY_TARGET = 40;
-
-/// `EEModifyUnitAttribute` with the effect's own player a and unit type b (no player for a < 0; no upgrade for a < 0
-/// or b 0).
-constexpr static const uint32_t EE_SCENARIO_WORLD_MODIFY_RAW = 41;
 
 /// Player a: `SetGameResult(b ? 1 : 2)`, `RemovePlayerFromGame(b, a)`.
 constexpr static const uint32_t EE_SCENARIO_WORLD_PLAYER_RESULT = 42;
@@ -1934,12 +1948,6 @@ struct EeScenarioRoundHost {
   int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
 };
 
-/// The new value: `value` for the int kinds and the flag, `fvalue` for the float kinds.
-struct EeScenarioClassValue {
-  long value;
-  float fvalue;
-};
-
 /// The C++ host of the lists (`EESMListOp` in EEScenarioManager.cpp): the manager's numbers and timed effects, and
 /// one operation callback (`EE_SCENARIO_LIST_OP_*`; `text` a NUL-terminated name for `SET_NAME` and `OUT_NAME`).
 struct EeScenarioListHost {
@@ -2317,15 +2325,6 @@ bool ee_scenario_create_units(const EeScenarioHost *host,
 void ee_scenario_effect_execute(const EeScenarioHost *host,
                                 const EeScenarioEffectFields *fields,
                                 bool cinematic);
-
-/// `EEModifyUnitAttribute`'s arithmetic (class_attribute.rs): the upgrade's new value.
-EeScenarioClassValue ee_scenario_class_value(uint32_t kind,
-                                             bool percent,
-                                             bool add,
-                                             long amount,
-                                             float base,
-                                             long current,
-                                             float fcurrent);
 
 /// `EEChangeUnit(attribute, percent, unit, minimum, maximum, random, mode)` (unit_change.rs) on the host context's
 /// unit.

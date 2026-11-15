@@ -12,6 +12,7 @@
 use std::os::raw::{c_long, c_ulong};
 
 use crate::aivar::{ai_variable, EeScenarioAiWrite};
+use crate::class_attribute::modify_unit_attribute;
 use crate::condition::{choose_player_recorded, shuffle};
 use crate::fields::EeScenarioEffectFields;
 use crate::host::*;
@@ -91,11 +92,6 @@ pub const EE_SCENARIO_WORLD_BEHAVIOR: u32 = 38;
 /// `EEChangeUnit(c, d, unit a (none for -1), e, 0, false, f)`: c the attribute, d the percent flag, e the amount,
 /// f the mode.
 pub const EE_SCENARIO_WORLD_CHANGE_UNIT: u32 = 39;
-/// `EEModifyUnitAttribute(c, d, player a, its upgrade of type b, e, f)`.
-pub const EE_SCENARIO_WORLD_MODIFY_TARGET: u32 = 40;
-/// `EEModifyUnitAttribute` with the effect's own player a and unit type b (no player for a < 0; no upgrade for a < 0
-/// or b 0).
-pub const EE_SCENARIO_WORLD_MODIFY_RAW: u32 = 41;
 
 // ---- the player effects ----
 /// Player a: `SetGameResult(b ? 1 : 2)`, `RemovePlayerFromGame(b, a)`.
@@ -980,13 +976,15 @@ fn change_attribute<H: Host>(h: &mut H, e: &EeScenarioEffectFields) {
                 }
             }
             for &(class, p) in &targets {
-                w(h, EE_SCENARIO_WORLD_MODIFY_TARGET, &[p, class, attr, percent, amount, mode]);
+                modify_unit_attribute(h, p, class, e.mAttribute, e.mUsesPercent, e.mAttributeAmount as c_long, e.mAttributeMode as c_long);
             }
         }
         _ => {
             if e.mAttribute >= ATTRIBUTE_CLASS_FIRST {
-                let args = [e.mAttributePlayer as i64, e.mAttributeUnitType as i64, attr, percent, amount, mode];
-                w(h, EE_SCENARIO_WORLD_MODIFY_RAW, &args);
+                // the effect's own player (none below 0) and its upgrade of the unit type (none for type 0)
+                let p = e.mAttributePlayer as i64;
+                let class = if p >= 0 && e.mAttributeUnitType != 0 { e.mAttributeUnitType as i64 } else { -1 };
+                modify_unit_attribute(h, p, class, e.mAttribute, e.mUsesPercent, e.mAttributeAmount as c_long, e.mAttributeMode as c_long);
             } else {
                 let id = if e.mAttributeUnit != NONE { e.mAttributeUnit as i64 } else { -1 };
                 w(h, EE_SCENARIO_WORLD_CHANGE_UNIT, &[id, attr, percent, amount, mode]);

@@ -361,8 +361,7 @@ void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPPatrolGroup.h"
 
-void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
-                EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode);   // EESMObject.cpp 0x1c8871
+#include "ee/EEHerd.h"
 
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EEAirTrafficControl.h"
@@ -1032,6 +1031,107 @@ int64_t SMEUnitsWorld(EESMEffectRun* inRun, uint32_t inOp, const int64_t* a)
     return 0;
 }
 
+// a class attribute's upgrade field by attribute from Reload Time+ (armor apart): a long's or a float's
+typedef EEUnitClassUpgrade SMEU;
+const struct { long SMEU::* mLong; float SMEU::* mFloat; } kSMEClassFields[] = {
+    {&SMEU::mReloadTime, NULL}, {NULL, &SMEU::mAttack}, {&SMEU::mWorkRate, NULL}, {&SMEU::mFlightTime, NULL},
+    {NULL, &SMEU::mLeadership}, {&SMEU::mMaxObjectCarry, NULL}, {&SMEU::mRepairRate, NULL}, {&SMEU::mMaxHitPoints, NULL},
+    {&SMEU::mCarryAmount, NULL}, {&SMEU::mHealingPoints, NULL}, {NULL, &SMEU::mRange}, {NULL, &SMEU::mLineOfSight},
+    {NULL, &SMEU::mMaxVelocity}, {&SMEU::mPower, NULL}, {NULL, NULL}, {NULL, &SMEU::mCameraFocus}};
+
+// EEModifyUnitAttribute's calls on player a[0]'s upgrade of unit type a[1] (class_attribute.rs
+// EE_SCENARIO_WORLD_CA_*), attribute a[2]: its value, its class's base, its change, the pending effect
+int64_t SMEClassAttributeWorld(uint32_t inOp, const int64_t* a)
+{
+    EEPlayer* thePlayer = a[0] >= 0 ? SMEPlayer(a[0]) : NULL;
+    EEUnitClassUpgrade* theUpgrade = thePlayer != NULL && a[1] >= 0 ? thePlayer->GetUpgrade((long)a[1]) : NULL;
+    if (inOp == EE_SCENARIO_WORLD_CA_UPGRADE)
+        return theUpgrade != NULL;
+    if (inOp == EE_SCENARIO_WORLD_CA_CAPTURE) {   // TEST ONLY: SMCU (ee/EEScenarioCapture.h)
+        long theArgs[7] = {(long)(uint32_t)a[2], (long)(a[2] >> 32), thePlayer != NULL ? (long)thePlayer->mPlayerID : -1,
+                           theUpgrade != NULL ? (long)theUpgrade->mUnitClass->mUnitType : -1, (long)a[3], (long)a[4], 0};
+        EESMCaptureUnitChange(1, theArgs, NULL, thePlayer, theUpgrade, (unsigned int)a[5]);
+        return 0;
+    }
+    if (inOp == EE_SCENARIO_WORLD_CA_PENDING) {
+        EESMEffect theEffect;
+        theEffect.mAttributeUnit = (unsigned long)-1;
+        theEffect.mType = kSMEffectObject;
+        theEffect.mObjectAction = kSMObjectActionUnitAttribute;
+        theEffect.mAttributeUnitType = theUpgrade->mUnitClass->GetUnitType();
+        theEffect.mAttributePlayer = thePlayer->GetPlayerID();
+        theEffect.mObject = 0;
+        theEffect.mAttribute = (unsigned long)a[2];
+        theEffect.mUsesPercent = a[3] != 0;
+        theEffect.mAttributeAmount = (unsigned long)a[4];
+        theEffect.mAttributeMode = (unsigned long)a[5];
+        gWorld.mScenarioManager->AddV134Effect(theEffect);
+        return 0;
+    }
+    EEUnitClass* theClass = theUpgrade->mUnitClass;
+    long theArmor = (long)a[2] - kSMUnitAttributeShockArmorPlus;   // 0..5 an armor
+    bool theIsArmor = theArmor >= 0 && theArmor < 6;
+    long SMEU::* theLong = theIsArmor ? NULL : kSMEClassFields[a[2] - kSMUnitAttributeReloadTimePlus].mLong;
+    float SMEU::* theFloat = theIsArmor ? NULL : kSMEClassFields[a[2] - kSMUnitAttributeReloadTimePlus].mFloat;
+    if (inOp == EE_SCENARIO_WORLD_CA_VALUE)
+        return theIsArmor ? SMEBits(theUpgrade->mArmor[theArmor]) : theLong != NULL ? (int64_t)(theUpgrade->*theLong)
+             : theFloat != NULL ? SMEBits(theUpgrade->*theFloat) : (int64_t)theUpgrade->mIsInitialized;
+    if (inOp == EE_SCENARIO_WORLD_CA_BASE) {
+        switch (a[2]) {
+        case kSMUnitAttributeReloadTimePlus: return SMEBits((float)theClass->mReloadTime);
+        case kSMUnitAttributeAttackPlus: return SMEBits((float)theClass->mAttack);
+        case kSMUnitAttributeWorkRatePlus: return SMEBits((float)theClass->mWorkRate);
+        case kSMUnitAttributeFlightTimePlus: return SMEBits((float)theClass->mFlightTime);
+        case kSMUnitAttributeLeadershipPlus: return SMEBits((float)theClass->mLeadership);
+        case kSMUnitAttributeMaxObjectsCarriedPlus: return SMEBits((float)theClass->mMaxObjectCarry);
+        case kSMUnitAttributeRepairPlus: return SMEBits((float)theClass->mRepairRate);
+        case kSMUnitAttributeHitPointsPlus: return SMEBits((float)theClass->mHitPoints);
+        case kSMUnitAttributeCarryAmountPlus: return SMEBits((float)theClass->mCarryAmount);
+        case kSMUnitAttributeContainerHealingHPPerSecPlus: return SMEBits((float)theClass->mHealingPoints);
+        case kSMUnitAttributeRangePlus: return SMEBits(theClass->GetRange());
+        case kSMUnitAttributeLineOfSightPlus: return SMEBits(theClass->GetLineOfSight());
+        case kSMUnitAttributeMaxVelocityPlus: return SMEBits(theClass->GetMaxVelocity());
+        case kSMUnitAttributePowerPlus: return SMEBits((float)theClass->mPower);
+        }
+        return SMEBits((float)theClass->mArmor[theArmor]);
+    }
+    switch (a[2]) {   // EE_SCENARIO_WORLD_CA_SET
+    case kSMUnitAttributeRangePlus: theUpgrade->SetRange(SMEFloat(a[3])); break;
+    case kSMUnitAttributeMaxVelocityPlus: theUpgrade->SetMaxVelocity(SMEFloat(a[3])); break;
+    case kSMUnitAttributeLineOfSightPlus: {
+        // the sight leaves the map before the change and comes back after it
+        std::vector<EEUnit*> theUnits;
+        for (EEUnit* theNode = thePlayer->mFirstUnit; theNode != NULL; theNode = static_cast<EEUnit*>(theNode->mNext)) {
+            if (theNode->mComplexUnit != NULL && theNode->mUnitClass == theClass) {
+                theNode->mComplexUnit->SightOffHere();
+                theUnits.push_back(theNode);
+            }
+        }
+        theUpgrade->mLineOfSight = SMEFloat(a[3]);
+        for (unsigned long i = 0; i < theUnits.size(); i++)
+            theUnits[i]->SightOnHere();
+        break;
+    }
+    case kSMUnitAttributeAnimalAIActivePlus: {
+        std::vector<EEHerd*> theHerds;
+        theUpgrade->mIsInitialized = a[3] != 0;
+        thePlayer->GetHerdsOfType(theHerds, theClass->mUnitType);
+        for (long j = (long)theHerds.size() - 1; j >= 0; --j)
+            theHerds[j]->mIsActive = theUpgrade->mIsInitialized;
+        break;
+    }
+    default:
+        if (theIsArmor)
+            theUpgrade->mArmor[theArmor] = SMEFloat(a[3]);
+        else if (theLong != NULL)
+            theUpgrade->*theLong = (long)a[3];
+        else
+            theUpgrade->*theFloat = SMEFloat(a[3]);
+        break;
+    }
+    return 0;
+}
+
 // EEChangeUnit's calls on the context's unit (ee_scenario unit_change.rs EE_SCENARIO_WORLD_CU_*): its values (the
 // statements' reads), the draws and each change's statement
 int64_t SMEChangeUnitWorld(EESMHostContext* inContext, uint32_t inOp, const int64_t* a)
@@ -1113,6 +1213,8 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
 {
     if (inOp >= EE_SCENARIO_WORLD_CU_RANDOM && inOp <= EE_SCENARIO_WORLD_CU_SET)   // EEChangeUnit's (no effect run)
         return SMEChangeUnitWorld(static_cast<EESMHostContext*>(inContext), inOp, a);
+    if (inOp >= EE_SCENARIO_WORLD_CA_UPGRADE && inOp <= EE_SCENARIO_WORLD_CA_CAPTURE)   // EEModifyUnitAttribute's
+        return SMEClassAttributeWorld(inOp, a);
     EESMEffectRun* theRun = static_cast<EESMEffectRun*>(static_cast<EESMHostContext*>(inContext));
     EESMEffect* theEffect = theRun->mEffect;
     EEScenarioManager* theManager = gWorld.mScenarioManager;
@@ -1242,17 +1344,6 @@ int64_t EESMEffectWorld(void* inContext, uint32_t inOp, const int64_t* a)
     case EE_SCENARIO_WORLD_CHANGE_UNIT:
         EEChangeUnit((unsigned long)a[1], a[2] != 0, SMEUnitOrNull(a[0]), (long)a[3], 0, false, (long)a[4]);
         return 0;
-    case EE_SCENARIO_WORLD_MODIFY_TARGET: {
-        EEPlayer* thePlayer = SMEPlayer(a[0]);
-        EEModifyUnitAttribute((unsigned long)a[2], a[3] != 0, thePlayer, thePlayer->GetUpgrade((long)a[1]), (long)a[4], (long)a[5]);
-        return 0;
-    }
-    case EE_SCENARIO_WORLD_MODIFY_RAW: {
-        EEUnitClassUpgrade* theUpgrade = a[0] >= 0 && a[1] != 0 ? SMEPlayer(a[0])->GetUpgrade((long)a[1]) : NULL;
-        EEPlayer* thePlayer = a[0] >= 0 ? SMEPlayer(a[0]) : NULL;
-        EEModifyUnitAttribute((unsigned long)a[2], a[3] != 0, thePlayer, theUpgrade, (long)a[4], (long)a[5]);
-        return 0;
-    }
 
     case EE_SCENARIO_WORLD_PLAYER_RESULT:
         SMEPlayer(a[0])->SetGameResult(a[1] != 0 ? 1 : 2);

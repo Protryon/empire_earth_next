@@ -304,8 +304,9 @@ fn class_attributes_go_once_to_each_type_and_player() {
     e.mObjectAction = 12;
     e.mAttribute = 25;
     e.mAttributeAmount = 5;
+    w.answers.insert(crate::class_attribute::EE_SCENARIO_WORLD_CA_UPGRADE, 1);
     execute(&mut w, &e, false);
-    let m = EE_SCENARIO_WORLD_MODIFY_TARGET;
+    let m = crate::class_attribute::EE_SCENARIO_WORLD_CA_PENDING;
     assert_eq!(of(&w, m), vec![format!("{m} 2 40 25 0 5"), format!("{m} 3 41 25 0 5")]);
 }
 
