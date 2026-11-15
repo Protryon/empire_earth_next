@@ -1,13 +1,8 @@
 use super::*;
 use std::cell::RefCell;
-use std::sync::Mutex;
 
 // The option types are read once per process (a static, as the original's): every test here holds this lock.
-static TYPES: Mutex<()> = Mutex::new(());
-
-fn lock() -> std::sync::MutexGuard<'static, ()> {
-    TYPES.lock().unwrap_or_else(|e| e.into_inner())
-}
+use super::testgame::lock;
 
 // ---- the golden replay: golden_eegame.txt, recorded by tests/won/won_eegame_test.cpp over the original
 // statements. Every op the Rust makes must be the next "op" line, answered by its "=" value ("threw": a read past

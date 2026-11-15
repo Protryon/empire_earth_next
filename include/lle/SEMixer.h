@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEMixer.h (RECONSTRUCTION; SEMixer.cpp 0x4e8aa..0x4eef6). A loaded mixer
 // plug-in (SPIM): its entry points, resolved by name when it is made, plus the conductor that plays scores through
 // it. Whole in Rust (rust/crates/ee_sound mixerobj.rs, the decisions mixers.rs; LLE lane round 6): an SEMixer* is an
-// EeSoundMixer*, made by SEInitializeMixers and deleted by SEShutdown; the registry and the active mixer are Rust's.
+// EeSoundMixer*, made by SEInitializeMixers and deleted by SEShutdown (ee_sound_shutdown); the registry and the active mixer are Rust's.
 // The members are defined in SEMixer.cpp. Requires lle/LowLevelEngine.h.
 #ifndef LLE_SEMIXER_H
 #define LLE_SEMIXER_H
@@ -14,7 +14,6 @@ class FSFileSpec;
 class GEWindow;
 
 long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow);   // Sound Engine.cpp; (provisional names)
-void SEShutdown(bool inForced);
 // port: the start's state while SEInitializeMixers walks the plug-in table (rust/crates/ee_sound mixerobj.rs
 // EeSoundMixerStart has its layout)
 struct SEMixerStart {
@@ -28,8 +27,6 @@ public:
     static SEMixer* GetActiveMixer();
     SEConductor& GetConductor();
     static unsigned long GetCount();
-    float GetCPUUsage();
-    IDirectSound* GetDirectSoundInterface();
     static long GetMixer(unsigned long inIndex, SEMixer*& outMixer);
     const UString& GetName();
     bool IsValid();

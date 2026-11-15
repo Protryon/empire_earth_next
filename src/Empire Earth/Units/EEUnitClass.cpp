@@ -164,11 +164,11 @@ static const float kWallRotations[4] = {0.0f, 3.1415927f, -1.5707964f, 1.5707964
 
 // SYNTHETIC: EXE 0x62f272
 // SYNTHETIC: EXE 0x62f277
-static float sCloakFadeRate = 1.0f / kCloakFadeTime;  // 0x5636a8: the cloak fade per millisecond (provisional name)
+[[maybe_unused]] static float sCloakFadeRate = 1.0f / kCloakFadeTime;  // 0x5636a8: the cloak fade per millisecond (provisional name; the fade is ee_units step.rs cloak_fade)
 
 // SYNTHETIC: EXE 0x62f286
 // SYNTHETIC: EXE 0x62f28b
-static float sCloakFadeOpacityRange = kCloakFadeMaxOpacity - kCloakFadeMinOpacity;  // 0x5636a4: the cloak fade's opacity range (provisional name)
+[[maybe_unused]] static float sCloakFadeOpacityRange = kCloakFadeMaxOpacity - kCloakFadeMinOpacity;  // 0x5636a4: the cloak fade's opacity range (provisional name)
 
 // SYNTHETIC: EXE 0x62f29e
 // SYNTHETIC: EXE 0x62f2a3
@@ -632,7 +632,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
             bool theCanLoad;
             if (theTraffic != NULL) {
                 theNeeded = inClass->mWeight;
-                theCanLoad = theTraffic->mUsedCargo + theNeeded <= theTraffic->mMaxCargo;
+                theCanLoad = theTraffic->GetUsedCargo() + theNeeded <= theTraffic->GetMaxCargo();
                 if (theCanLoad)
                     theCanLoad = theTraffic->GetFreeCargoWeight(inUnit) >= theNeeded;
             } else {
@@ -3578,70 +3578,6 @@ static uint32_t CloakBits(float inValue)
     return theBits;
 }
 
-// TEST ONLY (USTM): the original's timer statements (0x63978b) over the same values, as the decision's event codes
-// (a mini map move's code without its 0x100: the C++'s test is made where the event is applied)
-static void OriginalCamouflageEvents(unsigned long inTimer, unsigned long inSecond, bool inNoVital, long inTick,
-                                     EECamouflageNote& ioNote)
-{
-    unsigned long theSecond = inSecond;
-    unsigned long theRemaining = inTimer & 0x7fffffff;
-    if (theRemaining > 0) {
-        if (inNoVital) {
-            ioNote.Add(1u);
-            ioNote.Add(3u);
-            ioNote.Add(5u);
-            ioNote.Add(9u);
-            ioNote.Add(0u);
-            theSecond = 0;
-            ioNote.Add(10u);
-            ioNote.Add(0u);
-        } else {
-            long theTime = theRemaining - inTick;
-            if (theTime > 0) {
-                ioNote.Add(9u);
-                ioNote.Add((uint32_t)theTime);
-                ioNote.Add(7u);
-            } else {
-                ioNote.Add(9u);
-                ioNote.Add(0u);
-                ioNote.Add(8u);
-                ioNote.Add(4u);
-                ioNote.Add(6u);
-                theSecond = 0;
-                ioNote.Add(10u);
-                ioNote.Add(0u);
-                ioNote.Add(2u);
-            }
-        }
-    }
-    if (theSecond > 0) {
-        if (inNoVital) {
-            ioNote.Add(1u);
-            ioNote.Add(3u);
-            ioNote.Add(5u);
-            ioNote.Add(9u);
-            ioNote.Add(0u);
-            theSecond = 0;
-            ioNote.Add(10u);
-            ioNote.Add(0u);
-        } else {
-            long theTime = theSecond - inTick;
-            if (theTime > 0) {
-                theSecond = theTime;
-                ioNote.Add(10u);
-                ioNote.Add((uint32_t)theTime);
-            } else {
-                ioNote.Add(1u);
-                theSecond = 0;
-                ioNote.Add(10u);
-                ioNote.Add(0u);
-                ioNote.Add(3u);
-                ioNote.Add(5u);
-            }
-        }
-    }
-}
-
 // FUNCTION: EXE 0x63978b
 // Counts down a unit's camouflage timers (dropping them without vital buildings) and fades its cloak opacity
 void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
@@ -3657,20 +3593,15 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
     theNote.Add((uint32_t)gPhysics->mTickTimeMs);
     // New (R5b.4 leaf 6): the timers' decision is Rust over the unit store (ee_units step.rs camouflage); its events are
     // applied here in order (a mini map move only when the unit is then a cloaked enemy of the local player, the
-    // original's test). TEST ONLY: while the capture runs, the original's statements check the events (USTM)
+    // original's test). TEST ONLY: while the capture runs, USTM records them
     EeUnitsCamoEvent theEvents[EE_UNITS_CAMO_MAX_EVENTS];
     bool theNoVital = inUnit->mPlayer->mNumVitalBuildings < 1;
     unsigned long theTimerBefore = inUnit->mCamouflageTimer, theSecondBefore = inUnit->mU32C;
     uint32_t theCount = ee_units_step_camouflage(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
                                                  (uint32_t)theTimerBefore, (uint32_t)theSecondBefore, theNoVital ? 1 : 0,
                                                  gPhysics->mTickTimeMs, theEvents);
-    EECamouflageNote theCodes;   // TEST ONLY (USTM): the Rust events' codes, for the check
-    theCodes.mCount = 0;
     for (uint32_t i = 0; i < theCount; i++) {
         const EeUnitsCamoEvent& theEvent = theEvents[i];
-        theCodes.Add(theEvent.code);
-        if (theEvent.code == EE_UNITS_CAMO_SET_TIMER || theEvent.code == EE_UNITS_CAMO_SET_SECOND)
-            theCodes.Add(theEvent.value);
         switch (theEvent.code) {
         case EE_UNITS_CAMO_SHOW:
         case EE_UNITS_CAMO_HIDE: {
@@ -3709,15 +3640,6 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
             break;
         }
     }
-    if (theNoting) {   // TEST ONLY (USTM): the original's events over the same values
-        EECamouflageNote theOriginal;
-        theOriginal.mCount = 0;
-        OriginalCamouflageEvents(theTimerBefore, theSecondBefore, theNoVital, gPhysics->mTickTimeMs, theOriginal);
-        if (theOriginal.mCount != theCodes.mCount
-            || memcmp(theOriginal.mWords, theCodes.mWords, theCodes.mCount * sizeof(uint32_t)) != 0)
-            EEUnitStepDiffers("UpdateCamouflageTimer (the events)", inUnit->mUnitID, (long)theCodes.mCount,
-                              (long)theOriginal.mCount);
-    }
     if (theNoting) {   // TEST ONLY (USTM)
         theNote.Add((uint32_t)inUnit->mCamouflageTimer);
         theNote.Add((uint32_t)inUnit->mU32C);
@@ -3734,28 +3656,7 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
     // New (R5b.4 leaf 6): the fade is Rust (ee_units step.rs cloak_fade: the same f32 operations in order)
     theOpacity = ee_units_step_cloak_fade(theOpacityBefore, theCloaked ? 1 : 0, gPhysics->GetTickTime(), thePulse ? 1 : 0,
                                           gPhysics->mGameTime);
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same values
-        float theOriginal = theOpacityBefore;
-        if (!theCloaked) {
-            if (theOriginal < kCloakFadeMaxOpacity)
-                theOriginal = gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate + theOriginal;
-            if (theOriginal > kCloakFadeMaxOpacity)
-                theOriginal = kCloakFadeMaxOpacity;
-        } else {
-            if (theOriginal > kCloakFadeMinOpacity)
-                theOriginal = theOriginal - gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate;
-            if (theOriginal < kCloakFadeMinOpacity)
-                theOriginal = kCloakFadeMinOpacity;
-        }
-        if (thePulse) {
-            long theTime = gPhysics->mGameTime % 2000;
-            if (theTime >= 1000)
-                theTime = 1999 - theTime;
-            theOriginal = theTime * 0.00033333333f + 0.2f;
-        }
-        if (CloakBits(theOriginal) != CloakBits(theOpacity))
-            EEUnitStepDiffers("UpdateCamouflageTimer (the cloak fade's bits)", inUnit->mUnitID, (long)CloakBits(theOpacity),
-                              (long)CloakBits(theOriginal));
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         uint32_t theWords[6] = {CloakBits(theOpacityBefore), theCloaked ? 1u : 0u, CloakBits(gPhysics->GetTickTime()),
                                 thePulse ? 1u : 0u, (uint32_t)gPhysics->mGameTime, CloakBits(theOpacity)};
         EEUnitStepNote(kUnitStepCloakFade, inUnit->mUnitID, theWords, 6);
@@ -3783,7 +3684,7 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
                              (uint32_t)gPhysics->mTickTimeMs, (uint32_t)EEGetRules().mCombat.mPowerRegenerationInterval,
                              0, 0, 0, 0};
     // New (R5b.4 leaf 6): the regeneration is Rust over the unit store (ee_units step.rs regenerate_power); the
-    // writes are the holders'. TEST ONLY: while the capture runs, the original's statements check it (USTM)
+    // writes are the holders'. TEST ONLY: while the capture runs, USTM records it
     EeUnitsPowerIn theIn;
     theIn.regeneration = inUnit->mStats->mPowerRegeneration;
     theIn.max_power = inUnit->mStats->mPower;
@@ -3799,26 +3700,7 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
             inUnit->SetPower((long)theOut.power);
         inUnit->SetPowerRegenTimer((long)theOut.regen_timer);
     }
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same values
-        long thePower = (long)theWords[5];
-        bool theWrite = false, theSet = false;
-        long theRemaining = 0;
-        if (inUnit->mStats->mPowerRegeneration > 0 && !::gWorld.mInCinematic && !(this->IsLandBuilding() && !theWords[4])) {
-            theWrite = true;
-            theRemaining = (long)theWords[6] - gPhysics->mTickTimeMs;
-            if (theRemaining <= 0) {
-                long theValue = inUnit->mStats->mPowerRegeneration + thePower;
-                if (theValue > inUnit->mStats->mPower)
-                    theValue = inUnit->mStats->mPower;
-                thePower = theValue;
-                theSet = true;
-                theRemaining = EEGetRules().mCombat.mPowerRegenerationInterval;
-            }
-        }
-        if (theWrite != (theOut.write != 0) || theSet != (theOut.set_power != 0)
-            || (theSet && thePower != (long)theOut.power) || (theWrite && theRemaining != (long)theOut.regen_timer))
-            EEUnitStepDiffers("RegeneratePower (timer)", inUnit->mUnitID, theOut.write ? (long)theOut.regen_timer : -1,
-                              theWrite ? theRemaining : -1);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
         theWords[9] = theOut.write;
         theWords[10] = theOut.set_power;
         theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower : 0u;

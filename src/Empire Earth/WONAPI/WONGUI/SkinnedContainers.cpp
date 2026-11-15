@@ -1,4 +1,6 @@
-// Skinned combo box and scroll container: layout and frame painting (file name inferred)
+// Skinned combo box and scroll container: layout and frame painting (file name inferred); the host of the skins'
+// layouts (R6 WON round 37: rust/crates/ee_won/src/skinlay.rs lays out MSComboBox, MSScrollContainer, MSListCtrl,
+// WONComboBox, WONScrollContainer and WONListCtrl and sizes WONComboBox, MSEtchedFrameGroup and WONSimpleButton)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,67 +13,27 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "ee/wonapi/WONLobbyMSExtraConfig.h"
+#include "ee/wonapi/WONLobbySkinListControls.h"
+#include "ee/wonapi/WONLobbySkinFrame.h"
+#include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x00719A70
 // Returns the combo box's desired size: edit height + 2 (else 22), widest item + 10 + button (else 100) wide
+// (skinlay.rs)
 void WONComboBox::GetDesiredSize(int &width, int &height)
 {
-	if(this->mEdit.get()!=NULL)
-	{
-		this->mEdit->GetDesiredSize(width,height);
-		height+=2;
-//		if(mDrawFrame)
-//			height+=mFrame.mTop + mFrame.mBottom;
-	}
-	else 
-		height = 22;
-
-	if(this->mListArea.get()!=NULL && this->mListArea->GetNumItems()>0)
-	{
-		width = 10 + this->mListArea->GetTotalWidth();
-		if(this->mButton.get()!=NULL)
-			width += this->mButton->Width();
-	}
-	else
-		width = 100;
+	WONSkinLayout(this,EeWonSkinLayKind::WonComboSize,0,0,0,&width,&height);
 }
 
 // FUNCTION: WON 0x00719B00
 // Lays out the combo box: the edit fills the width left of the button, the button sits inside or beside the frame
+// (skinlay.rs)
 void WONComboBox::Virtual08()
 {
 	ComboBox::Virtual08();
-	int aTopPad = 0, aBottomPad = 0, aRightPad = 0, aLeftPad = 0;
-	if(this->mDrawFrame)
-	{
-		aLeftPad = this->mFrame.mLeft;
-		aTopPad = this->mFrame.mTop;
-		aBottomPad = this->mFrame.mBottom;
-		aRightPad = this->mFrame.mRight;
-	}
-
-	int anInputBoxHeight = this->Height(); //mEdit->mHeight;
-	int aButtonHeight = anInputBoxHeight-aBottomPad-aTopPad;
-	int aButtonWidth = this->mButton->Width();
-	if(!this->mButton->IsVisible())
-		aButtonWidth = 0;
-//	if(aButtonWidth>aButtonHeight)
-//		aButtonWidth = aButtonHeight;
- 
-	int anInputBoxWidth = this->Width()-aButtonWidth-aRightPad;
-
-
-	this->mEdit->SetLeftPad(aLeftPad + 2);
-	this->mEdit->SetPosSize(0,0,anInputBoxWidth,anInputBoxHeight);
-	
-	if(!this->mButton->IsVisible())
-		return;
-	if(this->mButtonInFrame)
-		this->mButton->SetPosSize(this->mEdit->Right(),aTopPad,aButtonWidth,aButtonHeight);
-	else
-		this->mButton->SetPosSize(this->Width()-aButtonWidth,0,aButtonWidth,this->Height());
-
+	WONSkinLayout(this,EeWonSkinLayKind::WonCombo);
 }
 
 // FUNCTION: WON 0x00719BF0
@@ -94,35 +56,11 @@ void WONComboBox::Paint(Graphics& g)
 
 // FUNCTION: WON 0x00719DF0
 // Lays out the visible scrollbars inside the frame and gives the rest, below the header, to the scroll area
+// (skinlay.rs)
 void WONScrollContainer::Virtual08()
 {
 	Container::Virtual08();
-	if(this->GetScrollArea()==NULL)
-		return;
-
-	bool horzOn = this->GetScrollbar(false)->IsVisible();
-	bool vertOn = this->GetScrollbar(true)->IsVisible();
-
-	int left = this->mFrame.mLeft, right = this->mFrame.mRight, top = this->mFrame.mTop, bottom = this->mFrame.mBottom;
-
-	int aScrollbarWidth = this->GetScrollbar(true)->Width();
-	int aScrollbarHeight = this->GetScrollbar(false)->Height();
-
-	int aScrollWidth = this->Width() - left - right;
-	if(vertOn)
-		aScrollWidth -= aScrollbarWidth;
-
-	int aScrollHeight = this->Height() - top - bottom;
-	if(horzOn)
-		aScrollHeight -= aScrollbarHeight;
-
-	if(vertOn)
-		this->GetScrollbar(true)->SetPosSize(this->Width()-aScrollbarWidth-right,top,aScrollbarWidth,aScrollHeight);
-
-	if(horzOn)
-		this->GetScrollbar(false)->SetPosSize(left,this->Height()-aScrollbarHeight-bottom,aScrollWidth,aScrollbarHeight);
-
-	this->GetScrollArea()->SetPosSize(left,this->mHeaderHeight+top,aScrollWidth,aScrollHeight-this->mHeaderHeight);
+	WONSkinLayout(this,EeWonSkinLayKind::WonScroll);
 }
 
 // FUNCTION: WON 0x00719FF0
@@ -143,4 +81,97 @@ void WONScrollContainer::Paint(Graphics &g)
 			this->GetScrollbar(true)->Left(),this->GetScrollbar(true)->Top()+this->GetScrollbar(true)->Height(),&aFrame,o,n); });
 	WONDrawRun(g,anOps,aSlots);
 }
+}
+
+// ---- the skins' layouts' host (skinlay.rs EeWonSkinLay): the receiver's parts and fields by the layout's kind, and the
+// calls each layout makes
+namespace WONAPI {
+typedef EeWonSkinLay SL;
+typedef EeWonSkinLayKind SK;
+typedef EeWonSkinPart SP;
+typedef EeWonSkinField SF;
+static intptr_t SkinFrameField(const WONFrame& f, intptr_t which)
+{
+    switch ((SF)which) {
+    case SF::FrameLeft: return f.mLeft;
+    case SF::FrameTop: return f.mTop;
+    case SF::FrameRight: return f.mRight;
+    case SF::FrameBottom: return f.mBottom;
+    default: return 0;
+    }
+}
+template <class C> static intptr_t SkinScrollPart(C* t, intptr_t which)
+{
+    switch ((SP)which) {
+    case SP::ScrollArea: return (intptr_t)static_cast<Component*>(t->GetScrollArea());
+    case SP::VertBar: return (intptr_t)static_cast<Component*>(t->GetScrollbar(true));
+    case SP::HorzBar: return (intptr_t)static_cast<Component*>(t->GetScrollbar(false));
+    default: return 0;
+    }
+}
+static intptr_t SkinPartOrField(Component* c, SK k, intptr_t which, bool part)
+{
+    switch (k) {
+    case SK::MsCombo: {
+        MSComboBox* t = static_cast<MSComboBox*>(c);
+        if (part) return (SP)which == SP::Button ? (intptr_t)static_cast<Component*>(t->mButton.get()) : (intptr_t)static_cast<Component*>(t->mEdit.get());
+        return t->mDrawFrame ? 1 : 0;
+    }
+    case SK::WonCombo: case SK::WonComboSize: {
+        WONComboBox* t = static_cast<WONComboBox*>(c);
+        if (part) return (SP)which == SP::Button ? (intptr_t)static_cast<Component*>(t->mButton.get())
+                       : (SP)which == SP::Edit ? (intptr_t)static_cast<Component*>(t->mEdit.get()) : (intptr_t)static_cast<Component*>(t->mListArea.get());
+        return (SF)which == SF::DrawFrame ? t->mDrawFrame : (SF)which == SF::ButtonInFrame ? t->mButtonInFrame : SkinFrameField(t->mFrame, which);
+    }
+    case SK::MsScroll: case SK::MsList: {
+        MSScrollContainer* t = static_cast<MSScrollContainer*>(c);
+        if (part) return (SP)which == SP::Header ? (intptr_t)static_cast<Component*>(static_cast<MSListCtrl*>(t)->mHeader.get()) : SkinScrollPart(t, which);
+        return (SF)which == SF::DrawFrame ? t->mDrawFrame : (SF)which == SF::Draw3DFrame ? t->mDraw3DFrame : t->mHeaderHeight;
+    }
+    case SK::WonScroll: case SK::WonList: case SK::WonListTextHeader: case SK::WonListHeader: {
+        WONScrollContainer* t = static_cast<WONScrollContainer*>(c);
+        if (part) return (SP)which == SP::Header ? (intptr_t)static_cast<Component*>(static_cast<WONListCtrl*>(t)->mHeader.get()) : SkinScrollPart(t, which);
+        return (SF)which == SF::HeaderHeight ? t->mHeaderHeight : SkinFrameField(t->mFrame, which);
+    }
+    case SK::EtchedSize: {
+        MSEtchedFrameGroup* t = static_cast<MSEtchedFrameGroup*>(c);
+        return !part ? 0 : (SP)which == SP::Label ? (intptr_t)static_cast<Component*>(t->mLabel.get()) : (intptr_t)t->mComponent.get();
+    }
+    default: return 0;
+    }
+}
+}
+
+using namespace WONAPI;
+extern "C" intptr_t ee_won_guicpp_skin_call(void* inMe, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    Component* m = (Component*)inMe;
+    Component* x = (Component*)b;
+    if (op != EeWonGuiOp::SkinLay) return 0;
+    switch ((SL)a) {
+    case SL::Part: return SkinPartOrField(m, (SK)b, c, true);
+    case SL::Field: return SkinPartOrField(m, (SK)b, c, false);
+    case SL::SetHeaderHeight: static_cast<WONScrollContainer*>(m)->mHeaderHeight = (int)b; return 0;
+    case SL::Width: return x->Width();
+    case SL::Height: return x->Height();
+    case SL::Left: return x->Left();
+    case SL::Top: return x->Top();
+    case SL::Right: return x->Right();
+    case SL::Visible: return x->IsVisible() ? 1 : 0;
+    case SL::SetPosSize: { const int* r = (const int*)c; x->SetPosSize(r[0], r[1], r[2], r[3]); return 0; }
+    case SL::DesiredSize: { int* wh = (int*)c; x->GetDesiredSize(wh[0], wh[1]); return 0; }
+    case SL::SetLeftPad: static_cast<InputBox*>(x)->SetLeftPad((int)c); return 0;
+    case SL::ListCount: return static_cast<ListArea*>(x)->GetNumItems();
+    case SL::ListTotalWidth: return static_cast<ListArea*>(x)->GetTotalWidth();
+    case SL::SetColumn: static_cast<WONListCtrl*>(m)->mHeader->SetColumn((int)b, *(const GUIString*)c, (int*)d); return 0;
+    case SL::SetColumnItem: static_cast<WONListCtrl*>(m)->mHeader->SetColumnItem((int)b, (Component*)c); return 0;
+    case SL::SetColumnWidth: static_cast<MultiListArea*>(static_cast<WONListCtrl*>(m)->GetScrollArea())->SetColumnWidth((int)b, (int)c, false); return 0;
+    case SL::Image: {
+        Image* i = static_cast<WONSimpleButton*>(m)->mImages[b].get();
+        if (i == NULL) return 0;
+        ((int*)c)[0] = i->mWidth; ((int*)c)[1] = i->mHeight;
+        return 1;
+    }
+    default: return 0;
+    }
 }

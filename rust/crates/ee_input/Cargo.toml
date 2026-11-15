@@ -7,3 +7,7 @@ publish.workspace = true
 # The Input System's device buffers (ISDeviceInput, ISHandleEvent) whole in Rust (LLE lane round 1).
 [lib]
 crate-type = ["rlib"]
+
+[dependencies]
+ee_time = { path = "../ee_time" }
+ee_util = { path = "../ee_util" }

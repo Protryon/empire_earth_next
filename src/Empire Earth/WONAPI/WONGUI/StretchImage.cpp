@@ -23,69 +23,13 @@ inline void CopyRawImageInfo(RawImage8* dst,RawImage8* src) { dst->mPalette=src-
 inline void CopyRawImageInfo(RawImage32* dst,RawImage32* src) { dst->mDoTransparency=src->mDoTransparency; }
 
 
-template <class ImageType, class PixelType> 
-// FUNCTION: WON 0x00755280
-// FUNCTION: WON 0x00755560
-// Copies a rectangle of pixels row by row between raw images (8-bit instance at 0x00755280, 32-bit at 0x00755560)
-static void CopyRawImage(ImageType *src, ImageType *dst, int destx, int desty, int x, int y, int width, int height)
-{
-	for(int i = 0; i<height; i++)
-	{
-		PixelType *aFromPixel = src->StartRowTraversal(y+i) + x;
-		PixelType *aToPixel = dst->StartRowTraversal(desty+i) + destx;
-		memcpy(aToPixel,aFromPixel,sizeof(PixelType)*width);
-	}
-}
+// The copies (CopyRawImage 0x00755280 / 0x00755560), the tiles (RawTileHorz 0x00755170 / 0x00755410, RawTileVert,
+// RawTileHorzVert) and the stretches (RawStretch 0x00755060 / 0x007552f0) are ee_won's: guidraw.rs stretch_filter
+// places them, imgfilter.rs stretch_run moves the pixels.
 
-// The tiles (RawTileHorz 0x00755170 / 0x00755410, RawTileVert, RawTileHorzVert) are copies in ee_won's plan
-// (guidraw.rs stretch_filter).
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-template <class ImageType, class PixelType> 
-// FUNCTION: WON 0x00755060
-// FUNCTION: WON 0x007552f0
-// Stretches a source rectangle into a destination rectangle by nearest pixel (8-bit 0x00755060, 32-bit 0x007552f0)
-static void RawStretch(ImageType *src, ImageType *dst, int x1, int x2, int y1, int y2, int tileLeft, int tileTop, int tileWidth, int tileHeight)
-{
-	int theNewWidth = x2 - x1;
-	int theNewHeight = y2 - y1;
-	if(theNewWidth<=0 || theNewHeight<=0)
-		return;
-
-
-	int cy = 0, oy = tileTop;
-	for(int y=0; y<theNewHeight; y++)
-	{
-		src->StartRowTraversal(oy);
-		src->mRowPtr += tileLeft;
-		dst->StartRowTraversal(y+y1);
-		dst->mRowPtr += x1;
-
-		PixelType curVal = *src->mRowPtr;
-
-		int cx = 0;
-		for(int x=0; x<theNewWidth; x++)
-		{
-			*dst->mRowPtr = curVal;
-			++dst->mRowPtr;
-			cx += tileWidth;
-			if(cx >= theNewWidth)
-			{
-				src->mRowPtr += cx/theNewWidth;
-				cx%=theNewWidth;
-				curVal = *src->mRowPtr;
-			}
-		}
-
-		cy += tileHeight;
-		if(cy >= theNewHeight)
-		{
-			oy += cy/theNewHeight;
-			cy%=theNewHeight;
-		}
-	}
-}
+// a raw image's pixels as imgfilter.rs walks them (an 8-bit image's rows mBytesPerRow apart, a 32-bit one's mWidth)
+static EeWonRawPixels StretchPx(RawImage8* i) { EeWonRawPixels p = {1,i->mImageData,i->mWidth,i->mHeight,i->mBytesPerRow}; return p; }
+static EeWonRawPixels StretchPx(RawImage32* i) { EeWonRawPixels p = {2,(uint8_t*)i->mImageData,i->mWidth,i->mHeight,i->mWidth*4}; return p; }
 
 // FUNCTION: WON 0x00749720
 // Deleting destructor of a stretch image (compiler-generated)
@@ -131,13 +75,8 @@ static SmartPtr<ImageType> DoFilter(ImageType *theImage, StretchImageFilter *the
 	ImageType *dst = newImage.get();
 	CopyRawImageInfo(dst,src);
 
-	for(const EeWonDrawOp* o = anOps.begin(); o!=anOps.end(); ++o)
-	{
-		if(o->kind==EE_WON_DRAW_COPY_PIXELS)
-			CopyRawImage<ImageType,PixelType>(o->a ? dst : src,dst,o->b,o->c,o->d,o->e,o->f,o->g);
-		else if(o->kind==EE_WON_DRAW_STRETCH_PIXELS)
-			RawStretch<ImageType,PixelType>(src,dst,o->a,o->b,o->c,o->d,o->e,o->f,o->g,o->h);
-	}
+	EeWonRawPixels aSrc = StretchPx(src), aDst = StretchPx(dst);
+	ee_won_imgf_stretch_run(&aSrc,&aDst,anOps.begin(),(size_t)(anOps.end()-anOps.begin()));
 
 	return newImage;
 

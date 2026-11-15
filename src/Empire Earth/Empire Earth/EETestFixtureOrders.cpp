@@ -496,24 +496,24 @@ void MessageHook(NEMessage* inMessage, int inPhase)
         sOrder.mUnits.clear();
         switch (sOrder.mKind) {
         case kOrderGather: {
-            EEMGatherResource* theMessage = static_cast<EEMGatherResource*>(inMessage);
-            sOrder.mTarget = theMessage->mTargetID;
-            sOrder.mQueued = theMessage->mIsQueued ? 1 : 0;
+            EEMRecord* theMessage = static_cast<EEMRecord*>(inMessage);
+            sOrder.mTarget = theMessage->Get<int32_t>(1);   // the target, queued
+            sOrder.mQueued = theMessage->Get<bool>(2) ? 1 : 0;
             break;
         }
         case kOrderRepair:
         case kOrderRepairQueued: {
-            EEMRepairUnit* theMessage = static_cast<EEMRepairUnit*>(inMessage);
-            sOrder.mTarget = theMessage->mTargetID;
-            sOrder.mQueued = theMessage->mIsQueued ? 1 : 0;
+            EEMRecord* theMessage = static_cast<EEMRecord*>(inMessage);
+            sOrder.mTarget = theMessage->Get<int32_t>(1);   // the target, queued
+            sOrder.mQueued = theMessage->Get<bool>(2) ? 1 : 0;
             break;
         }
         case kOrderPatrol:
-            sOrder.mTarget = static_cast<EEMPatrol*>(inMessage)->mTargetID;
+            sOrder.mTarget = static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1);   // the target
             break;
         case kOrderAttackGround:
-            sOrder.mX = static_cast<EEMAttackGround*>(inMessage)->mX;
-            sOrder.mY = static_cast<EEMAttackGround*>(inMessage)->mY;
+            sOrder.mX = static_cast<EEMRecord*>(inMessage)->Get<float>(1);   // x, y
+            sOrder.mY = static_cast<EEMRecord*>(inMessage)->Get<float>(2);
             break;
         default:
             break;
@@ -889,7 +889,7 @@ void Scout(int inKind, OrderPlan& ioPlan)
         theSelected = Selected(ioPlan.mUnits);
     }
     if (theSelected)
-        Post(new EEMPathTo((float)theX + 0.5f, (float)theY + 0.5f, 0.0f, false, false));
+        Post(new EEMRecord(kMessagePathTo, {0.0f, (float)theX + 0.5f, (float)theY + 0.5f, false, true, false, false}));
     bool theSeen = false;
     for (int k = 0; theSelected && k < 120 && !theSeen; k++) {
         Wait(500);

@@ -20,6 +20,8 @@ struct Replay {
     at: usize,
     dlg: *const EeWonLobbyDlg,
     failed: Option<String>,
+    // round 6: the connect dialog's game is a real one (the direct path); its ops are the "gop" lines
+    game: *mut crate::eegame::EeWonEeGame,
 }
 
 thread_local! {
@@ -54,16 +56,35 @@ fn peek_line() -> Option<&'static str> {
     })
 }
 
+fn replay_game_ops(op: crate::eegame::EeWonEeGameOp, a: isize, b: isize, c: isize, d: isize) -> isize {
+    expect(format!("gop {} {a} {b} {c} {d}", op as u32))
+}
+
 unsafe extern "C" fn replay_host(_dialog: *mut c_void, op: EeWonLobbyDlgOp, a: isize, b: isize, c: isize) -> isize {
-    let made = if op == EeWonLobbyDlgOp::Find {
-        // SAFETY: a Find's b is a slot of the table
-        let slot = unsafe { &*(b as *const EeWonLobbyDlgSlot) };
-        // SAFETY: static C strings
-        let file = unsafe { CStr::from_ptr(slot.file) }.to_str().unwrap();
-        format!("op {} {} {} {} {} {}", op as u32, a, slot_name(slot), file, slot.line, slot.ty as u32)
-    } else {
-        format!("op {} {} {} {}", op as u32, a, b, c)
-    };
+    if op == EeWonLobbyDlgOp::GameRust {
+        // a field read, not recorded
+        return REPLAY.with(|r| r.borrow().as_ref().unwrap().game) as isize;
+    }
+    let made =
+        if matches!(op, EeWonLobbyDlgOp::FindFirst | EeWonLobbyDlgOp::LoadSavedGame | EeWonLobbyDlgOp::FileDelete) {
+            // round 6: a string argument recorded as its text
+            // SAFETY: the op's NUL-terminated string
+            let text = unsafe { CStr::from_ptr(a as *const c_char) }.to_string_lossy().into_owned();
+            format!("op {} str:{} {} {}", op as u32, text, b, c)
+        } else if op == EeWonLobbyDlgOp::Find {
+            // SAFETY: a Find's b is a slot of the table
+            let slot = unsafe { &*(b as *const EeWonLobbyDlgSlot) };
+            // SAFETY: static C strings
+            let file = unsafe { CStr::from_ptr(slot.file) }.to_str().unwrap();
+            format!("op {} {} {} {} {} {}", op as u32, a, slot_name(slot), file, slot.line, slot.ty as u32)
+        } else {
+            format!("op {} {} {} {}", op as u32, a, b, c)
+        };
+    expect(made)
+}
+
+/// The next recorded op must be `made`: its answer, after the re-entry recorded behind it.
+fn expect(made: String) -> isize {
     let Some(line) = next_line() else {
         fail(format!("op past the end: {made}"));
         return 0;
@@ -73,7 +94,11 @@ unsafe extern "C" fn replay_host(_dialog: *mut c_void, op: EeWonLobbyDlgOp, a: i
         fail(format!("expected '{line}', the Rust made '{made}'"));
         return 0;
     }
-    let answer: isize = answer.parse().unwrap();
+    // round 6: an entry's text answered as its text (a NUL-terminated copy the replay keeps)
+    let answer: isize = match answer.strip_prefix("text:") {
+        Some(text) => std::ffi::CString::new(text).unwrap().into_raw() as isize,
+        None => answer.parse().unwrap(),
+    };
     if let Some(next) = peek_line() {
         if let Some(rest) = next.strip_prefix("reenter ") {
             next_line();
@@ -137,6 +162,7 @@ fn call_of(n: u32) -> EeWonLobbyDlgCall {
         C::ConnectRun,
         C::ConnectEnd,
         C::ConnectSetConnected,
+        C::FileListFiles,
     ][n as usize - 1]
 }
 
@@ -159,11 +185,13 @@ fn kind_of(n: u32) -> EeWonLobbyDlgKind {
         K::ChooseAdapter,
         K::Credits,
         K::Connect,
+        K::File,
     ][n as usize]
 }
 
 /// Replays every sequence; the number replayed.
 fn replay(golden: &'static str) -> Result<usize, String> {
+    let _l = crate::eegame::testgame::lock();
     let lines: Vec<&str> = golden.lines().filter(|l| !l.is_empty()).collect();
     let mut starts: Vec<usize> =
         lines.iter().enumerate().filter(|(_, l)| l.starts_with("seq ")).map(|(i, _)| i).collect();
@@ -172,13 +200,37 @@ fn replay(golden: &'static str) -> Result<usize, String> {
         let head: Vec<&str> = lines[w[0]].split(' ').collect();
         let kind = kind_of(head[3].parse().unwrap());
         // the C++ dialog's address as the golden's driver gave it (the ops on the dialog itself name it)
+        let game = crate::eegame::testgame::new(replay_game_ops);
         let dlg = ee_won_lobbydlg_new(0xD1A as *mut c_void, kind, Some(replay_host));
         REPLAY.with(|r| {
-            *r.borrow_mut() = Some(Replay { lines: lines[w[0] + 1..w[1]].to_vec(), at: 0, dlg, failed: None })
+            *r.borrow_mut() = Some(Replay { lines: lines[w[0] + 1..w[1]].to_vec(), at: 0, dlg, failed: None, game })
         });
+        let mut game_freed = false;
         while let Some(line) = next_line() {
             let t: Vec<&str> = line.split(' ').collect();
             match t[0] {
+                "call" if line.contains(" str:") => {
+                    // round 6: ListFiles' directory and extension recorded as their texts
+                    let parts: Vec<&str> = line.split(" str:").collect();
+                    let call: u32 = parts[0]["call ".len()..].parse().unwrap();
+                    let (ext, c) = parts[2].rsplit_once(' ').unwrap();
+                    let dir = std::ffi::CString::new(parts[1]).unwrap();
+                    let ext = std::ffi::CString::new(ext).unwrap();
+                    // SAFETY: the live object; the two strings outlive the call
+                    let r = unsafe {
+                        ee_won_lobbydlg_call(
+                            dlg,
+                            call_of(call),
+                            dir.as_ptr() as isize,
+                            ext.as_ptr() as isize,
+                            c.parse().unwrap(),
+                        )
+                    };
+                    let ret = next_line().unwrap_or("-");
+                    if ret != format!("ret {r}") {
+                        fail(format!("{line}: expected '{ret}', the Rust returned {r}"));
+                    }
+                }
                 "call" => {
                     let n: Vec<isize> = t[1..].iter().map(|x| x.parse().unwrap()).collect();
                     // SAFETY: the live object
@@ -190,12 +242,30 @@ fn replay(golden: &'static str) -> Result<usize, String> {
                 }
                 // SAFETY: the live object, freed once
                 "free" => unsafe { ee_won_lobbydlg_free(dlg) },
+                "gset" | "gslot" => {
+                    let n: Vec<isize> = t[1..].iter().map(|x| x.parse().unwrap()).collect();
+                    if t[0] == "gset" {
+                        crate::eegame::testgame::setup(game, &[(n[0], n[1])], &[]);
+                    } else {
+                        crate::eegame::testgame::setup(game, &[], &[(n[0], n[1], n[2])]);
+                    }
+                }
+                "gfree" => {
+                    game_freed = true;
+                    // SAFETY: the live game, freed once
+                    unsafe { crate::eegame::ee_won_eegame_free(game) }
+                }
                 _ => fail(format!("unexpected line '{line}'")),
             }
             let failed = REPLAY.with(|r| r.borrow().as_ref().unwrap().failed.clone());
             if let Some(f) = failed {
                 return Err(format!("{}: {f}", lines[w[0]]));
             }
+        }
+        if !game_freed {
+            // the other goldens make no game: it has no ops to free
+            // SAFETY: the live game, freed once
+            unsafe { crate::eegame::ee_won_eegame_free(game) }
         }
     }
     Ok(starts.len() - 1)
@@ -480,6 +550,27 @@ fn admin_action_reset_sets_the_reason_flag_per_action() {
 fn golden_replay_connect() {
     let n = replay(GOLDEN_EEDLG).unwrap();
     assert!(n >= 60, "{n} sequences");
+    // round 6: the file dialog's sequences too
+    assert!(GOLDEN_EEDLG.lines().any(|l| l.starts_with("seq ") && l.ends_with(" kind 16")));
+}
+
+#[test]
+fn the_file_dialog_lists_a_directorys_files_without_their_extension() {
+    let d = made(EeWonLobbyDlgKind::File);
+    // one file found whose name is 9 characters, then none
+    set_answer(|op, _| match op {
+        EeWonLobbyDlgOp::FindFirst => 0x6000,
+        EeWonLobbyDlgOp::FindNameLength => 9,
+        _ => 0,
+    });
+    clear_log();
+    call(d, EeWonLobbyDlgCall::FileListFiles, c"saves".as_ptr() as isize, c".ees".as_ptr() as isize);
+    let log = LOG.with(|l| l.borrow().clone());
+    // the name inserted without its 4 characters of extension, the search closed
+    assert!(log.iter().any(|x| x.0 == EeWonLobbyDlgOp::FileListInsert && x.3 == 5));
+    assert!(log.iter().any(|x| x.0 == EeWonLobbyDlgOp::FindClose));
+    assert_eq!(log.last().map(|x| x.0), Some(EeWonLobbyDlgOp::ListEndUpdate));
+    free(d);
 }
 
 #[test]

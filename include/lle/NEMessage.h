@@ -79,6 +79,7 @@ public:
     NEMRecord(unsigned char* inData);   // the factory's: the type at inData[1], then the import
     NEMRecord(unsigned char inType, std::initializer_list<NEMRecordValue> inValues = {},
               std::initializer_list<const char*> inStrings = {});
+    NEMRecord(unsigned char inType, const uint32_t* inValues, size_t inCount);   // the Rust's: fixed members only
     virtual ~NEMRecord();   // releases the players' inputs
     virtual bool GetCanSendWhilePaused() const;
     virtual bool GetCountsTowardsPlayerInputThrottle() const;
@@ -100,6 +101,8 @@ public:
     }
     template <class T> void Set(uint32_t inIndex, T inValue) { memcpy(this->Field(inIndex, sizeof(T)), (const void*)&inValue, sizeof(T)); }
     unsigned char* Field(uint32_t inIndex, size_t inSize) const;
+    // member inIndex for the Rust: its value zero-extended, the inputs' count, a block's address
+    uintptr_t Value(uint32_t inIndex) const;
     const UWideString& GetString(uint32_t inIndex) const;
     static unsigned long XferExportSize();   // the transfer message's (fixed) size
 
@@ -113,6 +116,8 @@ public:
     std::vector<NEMessage*> mPlayerInputs;
 
 private:
+    template <class V>
+    void Fill(const V* inValue, const V* inValuesEnd, const char* const* inString, const char* const* inStringsEnd);
     size_t CodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass, std::vector<EeNetMsgSlot>& outParts,
                       std::vector<unsigned char*>* outBuffers);
 };

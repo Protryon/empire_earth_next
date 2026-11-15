@@ -817,3 +817,85 @@ fn item_measures_and_menu_item_paint_are_the_originals() {
     }
     assert_eq!(cases, 400);
 }
+
+// ---- the image and rectangle components' paints (R6 WON round 37): `golden_compaint.txt`, recorded by
+// tests/won/won_compaint_test.cpp `--print` over the original ImageComponent.cpp statements, replayed through the
+// plans and a model of the driver's logged Graphics and image
+
+/// The driver's trace of a plan: each operation as its logged Graphics (and image, slot 0, `iw` x `ih`) logs it.
+fn compaint_trace(ops: &[EeWonDrawOp], mut iw: u16, mut ih: u16) -> String {
+    let mut t: Vec<String> = Vec::new();
+    for o in ops {
+        t.push(match o.kind {
+            EE_WON_DRAW_SET_COLOR => format!("color {:x}", o.a as u32),
+            EE_WON_DRAW_FILL_RECT => format!("fill {} {} {} {}", o.a, o.b, o.c, o.d),
+            EE_WON_DRAW_RECT => format!("rect {} {} {} {}", o.a, o.b, o.c, o.d),
+            EE_WON_DRAW_LINE => format!("line {} {} {} {}", o.a, o.b, o.c, o.d),
+            EE_WON_DRAW_IMAGE => format!("image {} {} {} {}", o.b, o.c, iw, ih),
+            EE_WON_DRAW_IMAGE_SIZE => {
+                iw = o.b as u16;
+                ih = o.c as u16;
+                format!("setsize {} {}", o.b, o.c)
+            }
+            EE_WON_DRAW_PUSH_CLIP => format!("push {} {} {} {}", o.a, o.b, o.c, o.d),
+            EE_WON_DRAW_POP_CLIP => "pop".to_string(),
+            k => format!("bad kind {k}"),
+        });
+    }
+    t.join("; ")
+}
+
+#[test]
+fn compaint_golden_replays() {
+    let text = include_str!("../golden_compaint.txt");
+    let mut n = 0;
+    for line in text.lines() {
+        let (head, want) = line.split_once(" | ").unwrap_or((line.trim_end_matches(" |"), ""));
+        let v: Vec<&str> = head.split(' ').collect();
+        let i = |k: usize| v[k].parse::<i64>().unwrap() as i32;
+        let got = match v[0] {
+            "image" => {
+                let (iw, ih) = (i(4), i(5));
+                compaint_trace(
+                    &image_component_paint(
+                        i(1) != 0,
+                        i(2) != 0,
+                        i(3) != 0,
+                        iw as u16 as i32,
+                        ih as u16 as i32,
+                        i(6),
+                        i(7),
+                    ),
+                    iw as u16,
+                    ih as u16,
+                )
+            }
+            "rect" => compaint_trace(&rectangle_paint(i(1), i(2), i(3), i(4)), 0, 0),
+            "rect3d" => compaint_trace(&rectangle_3d_paint(i(1) != 0, i(2), i(3), i(4), i(5), i(6), i(7)), 0, 0),
+            other => panic!("{other}"),
+        };
+        assert_eq!(got, want, "{line}");
+        n += 1;
+    }
+    assert_eq!(n, 400);
+}
+
+#[test]
+fn image_component_tiles_inside_a_clip_and_stops_on_an_empty_image() {
+    let t = compaint_trace(&image_component_paint(true, false, true, 10, 8, 15, 9), 10, 8);
+    assert_eq!(t, "push 0 0 15 9; image 0 0 10 8; image 0 8 10 8; image 10 0 10 8; image 10 8 10 8; pop");
+    // the original never left this loop; nothing is tiled
+    let t = compaint_trace(&image_component_paint(true, false, true, 0, 8, 15, 9), 0, 8);
+    assert_eq!(t, "push 0 0 15 9; pop");
+    // stretched: the size set first only when it differs
+    let t = compaint_trace(&image_component_paint(true, true, false, 15, 9, 15, 9), 15, 9);
+    assert_eq!(t, "image 0 0 15 9");
+    assert_eq!(compaint_trace(&image_component_paint(false, true, true, 1, 1, 5, 5), 1, 1), "");
+}
+
+#[test]
+fn rectangle_3d_frames_from_the_outside_in() {
+    let t = compaint_trace(&rectangle_3d_paint(false, 1, -1, 7, 9, 4, 3), 0, 0);
+    assert_eq!(t, "color 9; line 0 0 3 0; line 0 0 0 2; color 7; line 3 0 3 2; line 0 2 3 2");
+    assert_eq!(compaint_trace(&rectangle_paint(-1, -1, 4, 4), 0, 0), "");
+}

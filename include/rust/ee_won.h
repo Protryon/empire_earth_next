@@ -468,6 +468,11 @@ constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
 
+/// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;
+
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_TRANSLUCENT = 512;
+
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
 
@@ -2271,6 +2276,13 @@ constexpr static const int32_t EE_WON_SMART_ACT_BAN = 6;
 /// `BanClientByCDKeyId(group, on, seconds, text, value, NULL)`
 constexpr static const int32_t EE_WON_SMART_ACT_BAN_CDKEY = 7;
 
+/// `SurfaceFormat`.
+constexpr static const int32_t EE_WON_SURFACE_32 = 0;
+
+constexpr static const int32_t EE_WON_SURFACE_555 = 1;
+
+constexpr static const int32_t EE_WON_SURFACE_565 = 2;
+
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
@@ -3031,6 +3043,10 @@ enum class EeWonGuiOp : uint32_t {
   WbFont,
   /// `Button::CopyAttributes((Button*)a)`.
   WbBaseCopy,
+  /// a layout's call (`a` an `EeWonSkinLay`; `b`, `c`, `d` its arguments).
+  SkinLay = 620,
+  /// a grabber's call out (`a` an `EeWonGrab`; `b`, `c`, `d` its arguments).
+  Grab = 621,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3762,6 +3778,24 @@ enum class EeWonStageRoute {
   Net = 2,
   /// Handled locally and handed to the network logic too (the host's broadcast).
   LocalAndNet = 3,
+};
+
+/// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
+enum class EeWonGrabCall : uint32_t {
+  /// `Clear()`.
+  Clear = 1,
+  /// `PrePaint((Component*)a, *(Graphics*)b)`.
+  PrePaint,
+  /// `Paint((Component*)a, *(Graphics*)b)`.
+  Paint,
+  /// `SetTranslucentColor(a, b)`.
+  SetTranslucentColor,
+  /// `Invalidate((Component*)a)`.
+  Invalidate,
+  /// `SizeChanged((Component*)a)` (nothing).
+  SizeChanged,
+  /// `NeedDrawBG()` (0 or 1).
+  NeedDrawBG,
 };
 
 /// What `ButtonUp` does.
@@ -5685,6 +5719,32 @@ enum class EeWonScrollTextCall : uint32_t {
   Field,
 };
 
+/// Which method (`ee_won_skin_layout`'s `kind`).
+enum class EeWonSkinLayKind : uint32_t {
+  /// `MSComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  MsCombo = 1,
+  /// `MSScrollContainer::Virtual08` (after `Container::Virtual08`).
+  MsScroll,
+  /// `MSListCtrl::Virtual08`: the scroll container's, then the header.
+  MsList,
+  /// `WONComboBox::GetDesiredSize` (the size out).
+  WonComboSize,
+  /// `WONComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  WonCombo,
+  /// `WONScrollContainer::Virtual08` (after `Container::Virtual08`).
+  WonScroll,
+  /// `WONListCtrl::Virtual08`: the scroll container's, then the header.
+  WonList,
+  /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b, c)`.
+  WonListTextHeader,
+  /// `WONListCtrl::SetColumnHeader(a, (Component*)b, c)`.
+  WonListHeader,
+  /// `MSEtchedFrameGroup::GetDesiredSize` (the size out).
+  EtchedSize,
+  /// `WONSimpleButton::GetDesiredSize` (the size out).
+  SimpleButtonSize,
+};
+
 /// Which copy `ee_won_smart_get` makes.
 enum class EeWonSmartGet {
   /// `GetClient(a)`
@@ -5786,6 +5846,58 @@ enum class EeWonStagingCall : uint32_t {
   LeaveGame,
   NotifyStagingChange,
   NotifyPingChange,
+};
+
+/// A surface's field (`ee_won_surface_get`).
+enum class EeWonSurfaceField : uint32_t {
+  /// `GetSurfaceFormat()`.
+  Format = 1,
+  Width,
+  Height,
+  BytesPerRow,
+  PixelsPerRow,
+  /// `GetPixelSize()` (4 or 2).
+  PixelSize,
+  ClipX1,
+  ClipY1,
+  ClipX2,
+  ClipY2,
+  /// `GetColor()` (the pixel value: a 16-bit surface's converted colour).
+  Color,
+};
+
+/// A drawing method (`ee_won_surface_draw`; its arguments in the original's order).
+enum class EeWonSurfaceDraw : uint32_t {
+  /// `SetColor(a)`.
+  SetColor = 1,
+  /// `FillRect(a, b, c, d)`.
+  FillRect,
+  /// `DrawRect(a, b, c, d)`.
+  DrawRect,
+  /// `DrawHorzLine(a, b, c)` (x1, x2, y).
+  HorzLine,
+  /// `DrawVertLine(a, b, c)` (x, y1, y2).
+  VertLine,
+  /// `DrawLine(a, b, c, d)`.
+  Line,
+  /// `DrawCircle(a, b, c)`.
+  Circle,
+  /// `FillCircle(a, b, c)`.
+  FillCircle,
+  /// `DrawEllipse(a, b, c, d)`.
+  Ellipse,
+  /// `FillEllipse(a, b, c, d)`.
+  FillEllipse,
+  /// `DrawArc(a, b, c, d, e, f)`.
+  Arc,
+  /// `PutPixel(a, b)`.
+  PutPixel,
+  /// `SetPixel(a, b, c)`.
+  SetPixel,
+  /// `SetClipRect(a, b, c, d)`.
+  SetClipRect,
+  /// `ClearClipRect()`.
+  ClearClipRect,
 };
 
 /// The inward calls of the C++ `TabBar` shell.
@@ -7020,6 +7132,116 @@ enum class EeWonLobbyCtlPref : uint32_t {
   ConnectionSpeed,
 };
 
+/// The host's calls (`EeWonGuiOp::SkinLay`; `a` this, `b`, `c`, `d` its arguments; `k` the layout's kind).
+enum class EeWonSkinLay : uint32_t {
+  /// The receiver's part `c` (`EeWonSkinPart`) as the kind `b`'s class holds it.
+  Part = 1,
+  /// The receiver's field `c` (`EeWonSkinField`) as the kind `b`'s class holds it.
+  Field,
+  /// `mHeaderHeight = b`.
+  SetHeaderHeight,
+  /// `((Component*)b)->Width()`.
+  Width,
+  Height,
+  Left,
+  Top,
+  Right,
+  /// `IsVisible()` (0 or 1).
+  Visible,
+  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c`.
+  SetPosSize,
+  /// `((Component*)b)->GetDesiredSize(wh[0], wh[1])` with `wh` the two ints at `c`.
+  DesiredSize,
+  /// `((InputBox*)b)->SetLeftPad(c)`.
+  SetLeftPad,
+  /// `((ListArea*)b)->GetNumItems()`.
+  ListCount,
+  /// `((ListArea*)b)->GetTotalWidth()`.
+  ListTotalWidth,
+  /// `mHeader->SetColumn(b, *(const GUIString*)c, (int*)d)`.
+  SetColumn,
+  /// `mHeader->SetColumnItem(b, (Component*)c)`.
+  SetColumnItem,
+  /// `((MultiListArea*)GetScrollArea())->SetColumnWidth(b, c, false)`.
+  SetColumnWidth,
+  /// `mImages[b]`'s width and height into the two ints at `c` (0: no image, else 1).
+  Image,
+};
+
+/// A part of the receiver (`EeWonSkinLay::Part`): a `Component*`, 0 for none.
+enum class EeWonSkinPart : uint32_t {
+  /// A combo box's `mButton`.
+  Button = 1,
+  /// A combo box's `mEdit`.
+  Edit,
+  /// A combo box's `mListArea`.
+  ListArea,
+  /// A scroll container's `GetScrollArea()`.
+  ScrollArea,
+  /// `GetScrollbar(true)`.
+  VertBar,
+  /// `GetScrollbar(false)`.
+  HorzBar,
+  /// A list control's `mHeader`.
+  Header,
+  /// An etched group's `mLabel`.
+  Label,
+  /// An etched group's `mComponent`.
+  Contained,
+};
+
+/// A field of the receiver (`EeWonSkinLay::Field`).
+enum class EeWonSkinField : uint32_t {
+  DrawFrame = 1,
+  Draw3DFrame,
+  ButtonInFrame,
+  HeaderHeight,
+  /// `mFrame.mLeft` (the WON skin's frame).
+  FrameLeft,
+  FrameTop,
+  FrameRight,
+  FrameBottom,
+};
+
+/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments).
+enum class EeWonGrab : uint32_t {
+  /// `((Component*)b)->LocalToRoot(p[0], p[1])` with `p` the two ints at `c`.
+  LocalToRoot = 1,
+  /// `((Graphics*)b)->DrawImage(mBGImage, c, d)`.
+  DrawImage,
+  /// `((Graphics*)b)->mClipRect` into the `EeWonRect4` at `c`.
+  Clip,
+  /// `((Component*)b)->Width()` and `Height()` into the two ints at `c`.
+  CompSize,
+  /// whether `mBGImage` is set (0 or 1), its `GetWidth()` and `GetHeight()` into the two ints at `c` when it is.
+  ImageSize,
+  /// `mBGImage = ((Component*)b)->GetRoot()->CreateImage(c, d)`.
+  NewImage,
+  /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
+  FlagSet,
+  /// `mDebugWindow.get() != NULL` (0 or 1).
+  DebugExists,
+  /// the debug window made (`CreateNativeWindow()`, parent `((Component*)b)->GetRoot()`, style 0x40, created at
+  /// the background image's size).
+  DebugCreate,
+  /// the debug window shows the background image at the component's place on the screen (its root emptied, a new
+  /// ImageComponent of the image added, moved to the component's root point plus its window's screen corner).
+  DebugShow,
+  /// `mDebugWindow->mRoot->Invalidate()`.
+  DebugInvalidate,
+  /// the screen under the component: `x = y = 0`, `((Component*)b)->RootToChild(x, y)`,
+  /// `mBGImage->GetGraphics().DrawImage(b->GetRoot()->GetOffscreenImage(), x, y)`.
+  Capture,
+  /// `((Graphics*)b)->BlendSupported()` (0 or 1).
+  BlendSupported,
+  /// `g.SetColor(c); g.FillRectBlend(0, 0, w, h, alpha)` with `g` the Graphics `b` and `w`, `h`, `alpha` the
+  /// three ints at `d`.
+  Blend,
+  /// the background image's raw pixels tinted (`mBGImage->GetRaw()`, `ee_won_grab_tint(pixels, width * height,
+  /// c, d)`), then drawn: `((Graphics*)b)->DrawImage(raw, 0, 0)`.
+  Tint,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -7085,6 +7307,9 @@ struct EeWonFirewallOp;
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
+
+/// The Rust BackgroundGrabber.
+struct EeWonGrabber;
 
 /// An op of the Rust op base, as the C++ `RustServerOp` holds it.
 struct EeWonHostOp;
@@ -7215,6 +7440,9 @@ struct EeWonSplitter;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
+
+/// The Rust surface.
+struct EeWonSurface;
 
 /// The Rust TreeItem.
 struct EeWonTNode;
@@ -7840,6 +8068,25 @@ struct EeWonGetCertHooks {
   void (*clear_one_time)(void*, void*);
 };
 
+/// A rectangle (x, y, width, height).
+struct EeWonRect4 {
+  int32_t x;
+  int32_t y;
+  int32_t w;
+  int32_t h;
+};
+
+/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
+/// map's `int` key), its image's place, its clip rectangle and its image.
+struct EeWonRootGrab {
+  int32_t need;
+  int32_t order;
+  int32_t x;
+  int32_t y;
+  EeWonRect4 clip;
+  ptrdiff_t image;
+};
+
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
 /// the operand threw).
 struct EeWonExprHost {
@@ -7852,14 +8099,6 @@ struct EeWonExprHost {
 
 /// Whether item `i` (below the count) matches, read from the C++ list.
 using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
-
-/// A rectangle (x, y, width, height).
-struct EeWonRect4 {
-  int32_t x;
-  int32_t y;
-  int32_t w;
-  int32_t h;
-};
 
 /// Whether tab `i` (any int) is disabled, as `TabBar::Disabled`.
 using EeWonDisabledOf = bool(*)(const void *ctx, int32_t i);
@@ -9460,17 +9699,6 @@ struct EeWonItemClick {
   bool up;
   int32_t x;
   int32_t y;
-};
-
-/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
-/// map's `int` key), its image's place, its clip rectangle and its image.
-struct EeWonRootGrab {
-  int32_t need;
-  int32_t order;
-  int32_t x;
-  int32_t y;
-  EeWonRect4 clip;
-  ptrdiff_t image;
 };
 
 /// An input event's fields, as the C++ forwarder reads them (`KeyEvent`, `MouseEvent`, `SizeEvent`, `InputEvent`).
@@ -11971,6 +12199,31 @@ void ee_won_getcert_setup(EeWonGetCert *op,
                           size_t length,
                           void *block);
 
+/// A new grabber for the C++ `BackgroundGrabber` `me`.
+EeWonGrabber *ee_won_grab_new(void *me, EeWonGuiHostFn host);
+
+/// # Safety
+/// `g` is null or from `ee_won_grab_new`, not freed before.
+void ee_won_grab_free(EeWonGrabber *g);
+
+/// One of the shell's methods (`EeWonGrabCall`).
+///
+/// # Safety
+/// `g` is a live grabber.
+ptrdiff_t ee_won_grab_call(const EeWonGrabber *g, EeWonGrabCall c, ptrdiff_t a, ptrdiff_t b);
+
+/// The root container's read of the grabber's state into `q` (its `image` left as it was).
+///
+/// # Safety
+/// `g` is a live grabber, `q` points at an `EeWonRootGrab`.
+void ee_won_grab_read(const EeWonGrabber *g, EeWonRootGrab *q);
+
+/// The translucent pass over `n` pixels at `pixels` (`tint`).
+///
+/// # Safety
+/// `pixels` points at `n` pixels (or `n` is 0).
+void ee_won_grab_tint(uint32_t *pixels, size_t n, int32_t level, int32_t color);
+
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///
 /// # Safety
@@ -12434,6 +12687,39 @@ uint32_t ee_won_gui_sel_foreground(uint32_t background,
                                    uint32_t foreground,
                                    int32_t mode,
                                    uint32_t original);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_image_component(bool has,
+                                       bool stretch,
+                                       bool tile,
+                                       int32_t image_width,
+                                       int32_t image_height,
+                                       int32_t width,
+                                       int32_t height,
+                                       EeWonDrawOp *out,
+                                       size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle(int32_t solid,
+                                 int32_t outline,
+                                 int32_t width,
+                                 int32_t height,
+                                 EeWonDrawOp *out,
+                                 size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle_3d(bool up,
+                                    int32_t thickness,
+                                    int32_t solid,
+                                    int32_t light,
+                                    int32_t dark,
+                                    int32_t width,
+                                    int32_t height,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
 
 /// `move_cursor` over a `GUIString`'s units.
 ///
@@ -14123,6 +14409,37 @@ void ee_won_imgf_crop(const EeWonRawPixels *src,
                       int32_t y,
                       int32_t row_bytes,
                       int32_t height);
+
+/// `StretchImageFilter`'s pixel work over the plan's `n` operations at `ops` (`stretch_run`).
+///
+/// # Safety
+/// As `stretch_run`; `ops` points at `n` operations (or `n` is 0).
+void ee_won_imgf_stretch_run(const EeWonRawPixels *src,
+                             const EeWonRawPixels *dst,
+                             const EeWonDrawOp *ops,
+                             size_t n);
+
+/// RawImage32::GetNative's transparency pass (`mask32`).
+///
+/// # Safety
+/// As `mask32`.
+void ee_won_imgf_mask32(uint32_t *pixels,
+                        int32_t width,
+                        int32_t height,
+                        uint8_t *mask,
+                        int32_t pitch);
+
+/// RawImage8::GetNative's mask (`mask8`).
+///
+/// # Safety
+/// As `mask8`.
+void ee_won_imgf_mask8(const uint8_t *pixels,
+                       int32_t width,
+                       int32_t height,
+                       int32_t pixel_pitch,
+                       int32_t transparent,
+                       uint8_t *mask,
+                       int32_t pitch);
 
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
 EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
@@ -16609,6 +16926,19 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
+/// `layout` for the C++ (`w`, `h` null for a layout that has no size out).
+///
+/// # Safety
+/// `me` is the component `host` serves; `w` and `h` are null or point at ints.
+void ee_won_skin_layout(EeWonSkinLayKind kind,
+                        void *me,
+                        EeWonGuiHostFn host,
+                        int32_t a,
+                        ptrdiff_t b,
+                        int32_t c,
+                        int32_t *w,
+                        int32_t *h);
+
 /// A new model: the ignore file's path (`path_len` bytes), the C++'s `wchar_t` size.
 ///
 /// # Safety
@@ -17381,6 +17711,96 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+/// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
+EeWonSurface *ee_won_surface_new(int32_t format);
+
+/// `GetNewSurface(gDefaultSurfaceFormat)`.
+EeWonSurface *ee_won_surface_new_default();
+
+/// `SetDefaultSurfaceFormat(format)`.
+void ee_won_surface_set_default_format(int32_t format);
+
+/// `SURFACE_32_TO_555` / `SURFACE_32_TO_565` (`SurfaceColorFrom32`).
+uint32_t ee_won_surface_color_from32(uint32_t c, int32_t format);
+
+/// `SURFACE_555_TO_32` / `SURFACE_565_TO_32`.
+uint32_t ee_won_surface_color_to32(uint32_t p, int32_t format);
+
+/// The surface's destruction (its pixels freed).
+///
+/// # Safety
+/// `s` is null or from `ee_won_surface_new` / `ee_won_surface_duplicate`, not freed before.
+void ee_won_surface_free(EeWonSurface *s);
+
+/// `Create(width, height)`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_create(EeWonSurface *s, int32_t width, int32_t height);
+
+/// `Free()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_release(EeWonSurface *s);
+
+/// A field (`EeWonSurfaceField`).
+///
+/// # Safety
+/// `s` is a live surface.
+int32_t ee_won_surface_get(const EeWonSurface *s, EeWonSurfaceField f);
+
+/// `GetPixelsBase()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void *ee_won_surface_pixels(EeWonSurface *s);
+
+/// A drawing method (`EeWonSurfaceDraw` with its arguments in the original's order).
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_draw(EeWonSurface *s,
+                         EeWonSurfaceDraw op,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c,
+                         int32_t d,
+                         int32_t e,
+                         int32_t f);
+
+/// `GetPixel(x, y)`.
+///
+/// # Safety
+/// `s` is a live surface.
+uint32_t ee_won_surface_pixel(EeWonSurface *s, int32_t x, int32_t y);
+
+/// `CopySurface(src, mask, x, y, left, top, width, height)` (`mask` null: the copy without a mask).
+///
+/// # Safety
+/// `s` and `src` are live surfaces (possibly the same); `mask` is null or covers the source's rows.
+void ee_won_surface_copy(EeWonSurface *s,
+                         const EeWonSurface *src,
+                         const uint8_t *mask,
+                         int32_t x,
+                         int32_t y,
+                         int32_t left,
+                         int32_t top,
+                         int32_t width,
+                         int32_t height);
+
+/// `Duplicate()`: a new surface.
+///
+/// # Safety
+/// `s` is a live surface.
+EeWonSurface *ee_won_surface_duplicate(const EeWonSurface *s);
+
+/// The BITMAPINFO header's fields (`EeWonSurface::bitmap_info`) into `out` (eight ints).
+///
+/// # Safety
+/// `s` is a live surface, `out` points at eight ints.
+void ee_won_surface_bitmap_info(const EeWonSurface *s, int32_t *out);
 
 /// A new Rust TabBar for the C++ `component` over its container's Rust object `ct`, the bar of the control `ctrl`
 /// (NULL for none), its calls out through `host`.

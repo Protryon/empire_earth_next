@@ -2,13 +2,16 @@
 // effect sub-screen (RTTI EESETSEffect > EESETSBaseObject; vtable 0x443c78, sizeof 0x38, ctor 0x182629, ??_G
 // 0x182988, dtor 0x1829a4; EESETSEffect.cpp 0x182629..0x182dda), the twin
 // of EESETSCondition: it edits the scenario manager's effect mL04 + 1 (EEScenarioManager::GetEffect) through the
-// current effect type (mTypes[mType], ee/EESETSEffectType.h) and the shared controls (mControls). Layout from the
-// ctor's stores and `new`s; slot addresses from the vtable; provisional names. Requires ee/EESETSBaseObject.h.
+// current effect type (mType) and the shared controls (mControls). The seven effect types (the original's
+// mTypes[7] of EESETSEffectType) are one Rust object (ee_screens editor_effects.rs). Layout from the ctor's stores
+// and `new`s; slot addresses from the vtable; provisional names. Requires ee/EESETSBaseObject.h and
+// rust/ee_screens.h.
 #ifndef EE_EESETSEFFECT_H
 #define EE_EESETSEFFECT_H
 
+struct EeScreensSeEffects;
 class EESETSEffectControls;
-class EESETSEffectType;
+class EESMEffect;
 class GEFont;
 class UIComboBox;
 class UIForm;
@@ -37,9 +40,10 @@ public:
 
     void ChangeEffectAction();              // 0x182a3b (EESEEChangeEffectAction)
     void ChangeEffectType();                // 0x182a69 (EESEEChangeEffectType)
+    void TypeCall(unsigned long inSlot, EESMEffect* inEffect);   // the current type's slot (EE_SCREENS_SEET_*)
 
-    unsigned long mType;                    // +0x0c (the current mTypes index; 1 in the ctor)
-    EESETSEffectType* mTypes[7];            // +0x10 (0 NoEffect, 1 Object, 2 Player, 3 Trigger, 4 Media, 5 Game, 6 AI)
+    unsigned long mType;                    // +0x0c (the current type, kSMEffect*; 1 in the ctor)
+    EeScreensSeEffects* mTypes;             // the seven effect types (0 NoEffect, 1 Object, 2 Player, 3 Trigger, 4 Media, 5 Game, 6 AI)
     EESETSEffectControls* mControls;        // +0x2c (new 0xb8)
     UITextLabel* mTitleLabel;               // +0x30 (id 0x960, text 0x7690)
     UIComboBox* mTypeComboBox;              // +0x34 (id 0x961; six strings 0x7289..; trigger event 0x3eb)

@@ -4,9 +4,7 @@
 // module set.
 #include <windows.h>
 #include <stdio.h>
-#include <deque>
 #include <vector>
-#include <algorithm>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE3DPoint.h"
@@ -31,14 +29,71 @@ const UString EEAirTrafficControl::sData("EEAirTrafficControl Data");
 // SYNTHETIC: EXE 0x54e854   (registrar)
 // SYNTHETIC: EXE 0x54e860   (dtor)
 
+// port (R5b.4, round 30): the class is Rust's whole (ee_units atc.rs: the bodies in their order over this host;
+// atc_save.rs: Load and Save). The host is the units' reads and the world calls; the Rust state is borrowed anew
+// around each, as a call here may come back into the same control (a plane's Kill takes its weight off the used
+// cargo; a rerouted plane's ActionChanged queues it at its new airport).
+static int64_t EEATCHost(void* inContext, int32_t inOp, void* inUnit, void* inOther, EeUnitsAtcIo* io)
+{
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    EEComplexUnit* theOther = static_cast<EEComplexUnit*>(inOther);
+    switch (inOp) {
+    case EE_UNITS_ATC_WEIGHT: return theUnit->GetUnitClass()->mWeight;
+    case EE_UNITS_ATC_TRANSPORT_CAPACITY: return theUnit->GetUnitClass()->mTransportCapacity;
+    case EE_UNITS_ATC_REFERENCE: theUnit->Reference(); return 0;
+    case EE_UNITS_ATC_DEREFERENCE: theUnit->Dereference(); return 0;
+    case EE_UNITS_ATC_SET_CLEARANCE: theUnit->SetB342(io->a != 0); return 0;
+    case EE_UNITS_ATC_CLEARANCE: return theUnit->mIsClearanceGranted ? 1 : 0;
+    case EE_UNITS_ATC_HIT_POINTS: return theUnit->mHitPoints;
+    case EE_UNITS_ATC_CARGO_ROOM: return theUnit->mCargoRoom;
+    case EE_UNITS_ATC_IN_CARGO:
+        for (unsigned long i = 0; i < theUnit->GetNumCargoUnits(); i++)
+            if ((EEUnit*)theUnit->mCargo[i] == theOther)
+                return 1;
+        return 0;
+    case EE_UNITS_ATC_FAMILY: return theUnit->GetUnitClass()->mFamily;
+    case EE_UNITS_ATC_COMMAND_TYPE: return theUnit->GetCommandType();
+    case EE_UNITS_ATC_RELEASE_EXITING:   // ClearAirportQueue: the airport's exiting unit when it is the dropped plane
+        if (theUnit->mExitingUnitID != -1 && theOther == theUnit->FindPassenger(theUnit->mExitingUnitID))
+            theUnit->SetExitingUnitID(-1);
+        return 0;
+    case EE_UNITS_ATC_TILE: io->a = theUnit->mTileX; io->b = theUnit->mTileY; return 0;
+    case EE_UNITS_ATC_LOCATION: {
+        const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
+        io->p[0] = theLocation.GetX();
+        io->p[1] = theLocation.GetY();
+        io->p[2] = theLocation.GetZ();
+        return 0;
+    }
+    case EE_UNITS_ATC_AIR_TRAFFIC_TYPE: return theUnit->GetUnitClass()->mAirTrafficType;
+    case EE_UNITS_ATC_CRUISE_ALTITUDE: io->f = theUnit->GetUnitClass()->GetCruiseAltitude(); return 0;
+    case EE_UNITS_ATC_IN_CONTAINER: return theUnit->mContainer != NULL ? 1 : 0;
+    case EE_UNITS_ATC_KILL: theUnit->Kill(1, 0, 0); return 0;
+    case EE_UNITS_ATC_REROUTE:
+        theUnit->SetHomeBase(theOther);
+        theUnit->StartAction(kActionRequestLanding);
+        theUnit->GetUnitClass()->ActionChanged(theUnit);
+        return 0;
+    case EE_UNITS_ATC_IS_AIRCRAFT:
+        return theUnit->GetUnitClass()->mCategory == kUnitCategoryAirplane || theUnit->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship;
+    case EE_UNITS_ATC_HOME_BASE: return (int64_t)(intptr_t)theUnit->mHomeBase;
+    case EE_UNITS_ATC_UNIT_ID: return (int64_t)theUnit->GetUnitID();
+    case EE_UNITS_ATC_RESOLVE: return (int64_t)(intptr_t)EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((uint32_t)io->a));
+    case EE_UNITS_ATC_DUMP_LINE: fputs(static_cast<const char*>(inUnit), static_cast<FILE*>(inContext)); return 0;
+    }
+    return 0;
+}
+
+int64_t EEAirTrafficControl::Call(int32_t inCall, EEComplexUnit* inUnit, EEComplexUnit* inOther, long inValue)
+{
+    return ee_units_atc_call(this->mRust, NULL, &EEATCHost, inCall, inUnit, inOther, inValue);
+}
+
 // FUNCTION: EXE 0x54e87c
 // Creates the player's air traffic control with no airports and no air cargo capacity
 EEAirTrafficControl::EEAirTrafficControl(EEPlayer* inPlayer)
+    : mPlayer(inPlayer), mRust(ee_units_atc_new())
 {
-    this->mSlots.clear();
-    this->mPlayer = inPlayer;
-    this->mMaxCargo = 0;
-    this->mUsedCargo = 0;
 }
 
 // Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
@@ -48,292 +103,55 @@ EEAirTrafficControl::EEAirTrafficControl(EEPlayer* inPlayer)
 // Destroys the air traffic control, releasing every queued plane and every airport
 EEAirTrafficControl::~EEAirTrafficControl()
 {
-    std::deque<EEATCItem>::iterator theItem;
-    for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end(); ++theSlot) {
-        for (theItem = theSlot->mTakeoff.begin(); theItem != theSlot->mTakeoff.end(); ++theItem)
-            (*theItem).mUnit->Dereference();
-        for (theItem = theSlot->mLanding.begin(); theItem != theSlot->mLanding.end(); ++theItem)
-            (*theItem).mUnit->Dereference();
-        theSlot->mLanding.clear();
-        theSlot->mTakeoff.clear();
-        theSlot->mAirport->Dereference();
-    }
-    this->mSlots.clear();
+    ee_units_atc_free(this->mRust, NULL, &EEATCHost);
 }
 
 // FUNCTION: EXE 0x54e9a8
-// Adds the aircraft's weight to the player's used air cargo
-void EEAirTrafficControl::AddCargoWeight(EEComplexUnit* inUnit)
-{
-    this->mUsedCargo += inUnit->GetUnitClass()->mWeight;
-}
+void EEAirTrafficControl::AddCargoWeight(EEComplexUnit* inUnit) { this->Call(EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT, inUnit); }
 
 // FUNCTION: EXE 0x54e9bb
-// Registers an airport with empty landing and takeoff queues and adds its capacity to the player's air cargo
-void EEAirTrafficControl::AddAirport(EEComplexUnit* inAirport)
-{
-    EEATCAirport theSlot;
-    theSlot.mAirport = inAirport;
-    theSlot.mAirport->Reference();
-    this->mSlots.push_back(theSlot);
-    this->mMaxCargo += inAirport->GetUnitClass()->mTransportCapacity;
-}
+void EEAirTrafficControl::AddAirport(EEComplexUnit* inAirport) { this->Call(EE_UNITS_ATC_CALL_ADD_AIRPORT, inAirport); }
 
 // FUNCTION: EXE 0x54ea34
-// Requeues a plane to land at (kind 1) or take off from an airport, revoking its clearance; returns 0 when
-// queued, 7 when no landing room, 3 for an unknown airport or overused air cargo
 long EEAirTrafficControl::QueueRequest(EEComplexUnit* inAirport, EEComplexUnit* inUnit, long inKind)
 {
-    std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin();
-    EEATCItem theItem;
-    theItem.mUnit = NULL;
-    theItem.mKind = 0;
-    long theResult = 3;
-    if (!(this->mUsedCargo <= this->mMaxCargo) && inKind != 0)
-        return theResult;
-    while (theSlot != this->mSlots.end()) {
-        if (theSlot->mAirport == inAirport) {
-        this->RemoveFromEntry(theSlot, inUnit);
-        bool theFits;
-        if (inKind == 1) {
-            long theWeight = inUnit->GetUnitClass()->mWeight;
-            theFits = this->GetRoom(theSlot) - theWeight >= 0;
-        } else
-            theFits = true;
-        if (theFits) {
-            theItem.mKind = inKind;
-            theItem.mUnit = inUnit;
-            if (inKind == 1)
-                theSlot->mLanding.push_back(theItem);
-            else
-                theSlot->mTakeoff.push_back(theItem);
-            if (inUnit->mIsClearanceGranted)
-                inUnit->mIsClearanceGranted = false;
-            inUnit->Reference();
-            theResult = 0;
-        } else
-            theResult = 7;
-        break;
-        }
-        ++theSlot;
-    }
-    return theResult;
+    return (long)this->Call(EE_UNITS_ATC_CALL_QUEUE_REQUEST, inAirport, inUnit, inKind);
 }
 
 // FUNCTION: EXE 0x54eaf7
-// Returns an airport's free room, or -1 when the airport is not registered
 long EEAirTrafficControl::GetFreeCargoWeight(EEComplexUnit* inAirport)
 {
-    std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin();
-    long theResult = -1;
-    while (theSlot != this->mSlots.end()) {
-        if (theSlot->mAirport == inAirport) {
-            theResult = this->GetRoom(theSlot);
-            break;
-        }
-        ++theSlot;
-    }
-    return theResult;
+    return (long)this->Call(EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT, inAirport);
 }
 
-// FUNCTION: EXE 0x54eb2c
-// Returns an airport's free room, counting queued landings not yet inside and departures still inside
-long EEAirTrafficControl::GetRoom(std::vector<EEATCAirport>::iterator& inSlot)
-{
-    long theFree = inSlot->mAirport->mCargoRoom;
-    bool theHere = false;
-    for (std::deque<EEATCItem>::iterator theItem = inSlot->mLanding.begin(); inSlot->mLanding.end() != theItem; ++theItem) {
-        theHere = false;
-        for (unsigned long i = 0; i < inSlot->mAirport->mCargo.size() && !theHere; i++)
-            theHere = (EEUnit*)inSlot->mAirport->mCargo[i] == (*theItem).mUnit;
-        if (!theHere)
-            theFree -= (*theItem).mUnit->GetUnitClass()->mWeight;
-    }
-    for (std::deque<EEATCItem>::iterator theOther = inSlot->mTakeoff.begin(); theOther != inSlot->mTakeoff.end(); ++theOther) {
-        theHere = false;
-        for (unsigned long k = 0; k < inSlot->mAirport->GetNumCargoUnits() && !theHere; k++)
-            theHere = (EEUnit*)inSlot->mAirport->mCargo[k] == (*theOther).mUnit;
-        if (theHere)
-            theFree += (*theOther).mUnit->GetUnitClass()->mWeight;
-    }
-    return theFree;
-}
+// FUNCTION: EXE 0x54eb2c (GetRoom: ee_units atc.rs room)
 
 // FUNCTION: EXE 0x54ec8c
-// Removes the plane from the first takeoff queue holding it, revoking its clearance; returns whether found
 bool EEAirTrafficControl::RemoveFromTakeoffQueues(EEComplexUnit* inUnit)
 {
-    std::deque<EEATCItem>::iterator theItem;
-    bool theFound = false;
-    for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end() && !theFound; ++theSlot) {
-        theItem = theSlot->mTakeoff.begin();
-        while (theItem != theSlot->mTakeoff.end()) {
-            theFound = (*theItem).mUnit == inUnit;
-            if (theFound) {
-                if (inUnit->mIsClearanceGranted)
-                    inUnit->mIsClearanceGranted = false;
-                inUnit->Dereference();
-                theSlot->mTakeoff.erase(theItem, theItem + 1);
-                break;
-            }
-            ++theItem;
-        }
-    }
-    return theFound;
+    return this->Call(EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES, inUnit) != 0;
 }
 
 // FUNCTION: EXE 0x54ed30
-// Cancels an airport's queued takeoffs of idle planes of a kind (0 all, 1 fighters, 2 bombers, 3 atomic
-// bombers), clearing its exiting unit when it is one of them; returns whether any went
 bool EEAirTrafficControl::ClearAirportQueue(EEComplexUnit* inAirport, long inKind)
 {
-    std::deque<EEATCItem>::iterator theItem;
-    bool theResult = false;
-    bool theMatch = false;
-    bool theFound = false;
-    for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end() && !theFound; ++theSlot) {
-        theFound = theSlot->mAirport == inAirport;
-        if (!theFound)
-            continue;
-        theItem = theSlot->mTakeoff.begin();
-        while (theItem != theSlot->mTakeoff.end()) {
-            switch (inKind) {
-            case 0:
-                theMatch = true;
-                break;
-            case 1:
-                theMatch = (*theItem).mUnit->GetUnitClass()->mFamily == kUnitFamilyAircraft || (*theItem).mUnit->GetUnitClass()->mFamily == kUnitFamilySpaceFighter;
-                break;
-            case 2:
-                theMatch = (*theItem).mUnit->GetUnitClass()->mFamily == kUnitFamilyBomber;
-                break;
-            case 3:
-                theMatch = (*theItem).mUnit->GetUnitClass()->mFamily == kUnitFamilyAtomicBomber;
-                break;
-            }
-            if (theMatch && (*theItem).mUnit->GetCommandType() == kActionIdle) {
-                (*theItem).mUnit->SetB342(false);
-                (*theItem).mUnit->Dereference();
-                if (theSlot->mAirport->mExitingUnitID != -1) {
-                    if ((*theItem).mUnit == theSlot->mAirport->FindPassenger(theSlot->mAirport->mExitingUnitID))
-                        theSlot->mAirport->SetExitingUnitID(-1);
-                }
-                theItem = theSlot->mTakeoff.erase(theItem, theItem + 1);
-                theMatch = false;
-                theResult = true;
-            } else {
-                ++theItem;
-            }
-        }
-        break;
-    }
-    return theResult;
+    return this->Call(EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE, inAirport, NULL, inKind) != 0;
 }
 
-// NEAR: the original also calls the deque iterator's operator* after each erase and discards the result (a compiled-away
-// trace argument; EE_LOST_TRACE reaches 87.5 / 80.4 but not exact, so it is not used)
-// FUNCTION: EXE 0x54eed0
-// Drops the plane (every plane when NULL) from an airport's landing and takeoff queues
-void EEAirTrafficControl::RemoveFromEntry(std::vector<EEATCAirport>::iterator& inSlot, EEComplexUnit* inUnit)
-{
-    std::deque<EEATCItem>::iterator theItem;
-    theItem = inSlot->mLanding.begin();
-    while (theItem != inSlot->mLanding.end()) {
-        if (inUnit == NULL || (*theItem).mUnit == inUnit) {
-            (*theItem).mUnit->Dereference();
-            (*theItem).mUnit->SetB342(false);
-            theItem = inSlot->mLanding.erase(theItem);
-        } else {
-            ++theItem;
-        }
-    }
-    theItem = inSlot->mTakeoff.begin();
-    while (!(theItem == inSlot->mTakeoff.end())) {
-        if (inUnit == NULL || (*theItem).mUnit == inUnit) {
-            (*theItem).mUnit->Dereference();
-            (*theItem).mUnit->SetB342(false);
-            theItem = inSlot->mTakeoff.erase(theItem, theItem + 1);
-        } else {
-            ++theItem;
-        }
-    }
-}
-
-// NEAR: the original also calls the deque iterator's operator* after each erase and discards the result (a compiled-away
-// trace argument; EE_LOST_TRACE reaches 87.5 / 80.4 but not exact, so it is not used)
-// FUNCTION: EXE 0x54f033
-// Drops dead planes from an airport's landing and takeoff queues
-void EEAirTrafficControl::DropDeadPlanes(std::vector<EEATCAirport>::iterator& inSlot)
-{
-    std::deque<EEATCItem>::iterator theItem;
-    theItem = inSlot->mLanding.begin();
-    while (theItem != inSlot->mLanding.end()) {
-        if ((*theItem).mUnit->mHitPoints <= 0) {
-            (*theItem).mUnit->Dereference();
-            theItem = inSlot->mLanding.erase(theItem);
-        } else {
-            ++theItem;
-        }
-    }
-    theItem = inSlot->mTakeoff.begin();
-    while (!(theItem == inSlot->mTakeoff.end())) {
-        if ((*theItem).mUnit->mHitPoints <= 0) {
-            (*theItem).mUnit->Dereference();
-            theItem = inSlot->mTakeoff.erase(theItem, theItem + 1);
-        } else {
-            ++theItem;
-        }
-    }
-}
+// FUNCTION: EXE 0x54eed0 (RemoveFromEntry: atc.rs remove_from_entry)
+// FUNCTION: EXE 0x54f033 (DropDeadPlanes: atc.rs drop_dead_planes)
 
 // FUNCTION: EXE 0x54f15d
 // Writes the air cargo totals and every airport's landing and takeoff queues to the out-of-sync dump
 void EEAirTrafficControl::Dump(FILE* inFile)
 {
-    fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The max cargo weight is %ld\n", this->mMaxCargo);
-    fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The used cargo weight is %ld\n", this->mUsedCargo);
-    for (unsigned long i = 0; i < this->mSlots.size(); i++) {
-        fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Airport %ld ID is #%08lx\n", i, this->mSlots[i].mAirport->GetUnitID());
-        unsigned long j;
-        for (j = 0; j < this->mSlots[i].mLanding.size(); j++)
-            fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Landing Request %ld has a unit ID of #%08lx with a request of %ld\n",
-                    j, this->mSlots[i].mLanding[j].mUnit->GetUnitID(), this->mSlots[i].mLanding[j].mKind);
-        for (j = 0; j < this->mSlots[i].mTakeoff.size(); j++)
-            fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Takeoff Request %ld has a unit ID of #%08lx with a request of %ld\n",
-                    j, this->mSlots[i].mTakeoff[j].mUnit->GetUnitID(), this->mSlots[i].mTakeoff[j].mKind);
-    }
+    ee_units_atc_call(this->mRust, inFile, &EEATCHost, EE_UNITS_ATC_CALL_DUMP, NULL, NULL, 0);
 }
 
-// FUNCTION: EXE 0x54f32f
-// Lists the player's other airports that have free room, nearest first
-void EEAirTrafficControl::GetCandidates(EEComplexUnit* inAirport, std::vector<EEATCCandidate>& outCandidates)
-{
-    EEATCCandidate theCandidate;
-    theCandidate.mAirport = NULL;
-    theCandidate.mDistance = 0.0f;
-    theCandidate.mFree = 0;
-    outCandidates.clear();
-    for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end(); ++theSlot) {
-        long theFree = this->GetRoom(theSlot);
-        if (theFree <= 0 || inAirport == theSlot->mAirport)
-            continue;
-        theCandidate.mAirport = theSlot->mAirport;
-        theCandidate.mDistance = inAirport->GetTileDistanceSquared(theSlot->mAirport);
-        theCandidate.mFree = theFree;
-        outCandidates.push_back(theCandidate);
-    }
-    if (outCandidates.size() > 0)
-        std::sort(outCandidates.begin(), outCandidates.end());
-    for (unsigned long i = 0; i < outCandidates.size(); i++) {
-        outCandidates[i];
-        outCandidates[i];
-        outCandidates[i];
-        outCandidates[i];
-    }
-}
+// FUNCTION: EXE 0x54f32f (GetCandidates: atc.rs candidates)
 
 // FUNCTION: EXE 0x54f455
-// Returns the squared distance in tiles between the two units
+// Returns the squared distance in tiles between the two units (atc.rs tile_distance_squared for the air traffic)
 float EEUnit::GetTileDistanceSquared(EEUnit* inOther)
 {
     long theDeltaY = this->mTileY - inOther->mTileY;
@@ -342,496 +160,90 @@ float EEUnit::GetTileDistanceSquared(EEUnit* inOther)
 }
 
 // FUNCTION: EXE 0x54f47d
-// Returns a sync checksum of the air cargo totals, the airports and their queued planes and requests
-long EEAirTrafficControl::GetChecksum()
-{
-    long theSum = this->mUsedCargo + this->mMaxCargo;
-    for (unsigned long i = 0; i < this->mSlots.size(); i++) {
-        theSum += this->mSlots[i].mAirport->GetUnitID();
-        unsigned long j;
-        for (j = 0; j < this->mSlots[i].mLanding.size(); j++)
-            theSum += this->mSlots[i].mLanding[j].mUnit->GetUnitID() + this->mSlots[i].mLanding[j].mKind;
-        for (j = 0; j < this->mSlots[i].mTakeoff.size(); j++)
-            theSum += this->mSlots[i].mTakeoff[j].mUnit->GetUnitID() + this->mSlots[i].mTakeoff[j].mKind;
-    }
-    return theSum;
-}
+long EEAirTrafficControl::GetChecksum() { return (long)this->Call(EE_UNITS_ATC_CALL_CHECKSUM, NULL); }
 
 // FUNCTION: EXE 0x54f5fa
-// Returns the number of planes waiting to take off from an airport
 unsigned long EEAirTrafficControl::GetQueueLength(EEComplexUnit* inAirport)
 {
-    unsigned long theCount = 0;
-    for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end(); ++theSlot) {
-        if (theSlot->mAirport == inAirport) {
-            theCount = theSlot->mTakeoff.size();
-            break;
-        }
-    }
-    return theCount;
+    return (unsigned long)this->Call(EE_UNITS_ATC_CALL_QUEUE_LENGTH, inAirport);
 }
 
 // FUNCTION: EXE 0x54f61c
-// Returns the plane's place in its home airport's takeoff (0) or landing queue, or -1 when not queued
 long EEAirTrafficControl::GetQueuePosition(EEComplexUnit* inUnit, long inWhich)
 {
-    std::deque<EEATCItem>::iterator theItem;
-    long theIndex = -1;
-    for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end(); ++theSlot) {
-        if (theSlot->mAirport != inUnit->mHomeBase)
-            continue;
-        std::deque<EEATCItem>::iterator theEnd;
-        if (inWhich == 0) {
-            theItem = theSlot->mTakeoff.begin();
-            theEnd = theSlot->mTakeoff.end();
-        } else {
-            theItem = theSlot->mLanding.begin();
-            theEnd = theSlot->mLanding.end();
-        }
-        while (theItem != theEnd) {
-            theIndex++;
-            if ((*theItem).mUnit == inUnit)
-                break;
-            ++theItem;
-        }
-        if (theItem != theEnd)
-            return theIndex;
-        theIndex = -1;
-    }
-    return theIndex;
+    return (long)this->Call(EE_UNITS_ATC_CALL_QUEUE_POSITION, inUnit, NULL, inWhich);
 }
 
-// FUNCTION: EXE 0x54f6d8
-// Returns whether the plane is inside its airport
-bool EEAirTrafficControl::IsLandingDone(std::vector<EEATCAirport>::iterator& inSlot, EEComplexUnit* inUnit)
+// FUNCTION: EXE 0x54f6d8 (IsLandingDone: the plane's container, in atc.rs update_landings)
+// FUNCTION: EXE 0x54f6e9 (IsTakeOffDone: atc.rs is_takeoff_done)
+
+// The file's primitives for Load and Save (EESavePrimitive) and a unit's id for Save
+static int32_t EEATCFile(void* inFile, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
 {
-    return inUnit->mContainer != NULL ? true : false;
+    return EESavePrimitive(*static_cast<FSFile*>(inFile), inOp, io);
 }
 
-// NEAR: the comparison of the two heights
-// FUNCTION: EXE 0x54f6e9
-// Returns whether the plane has left the airport: outside it and either 5% of cruise altitude above it
-// (air traffic type 1) or more than sqrt(6) away
-bool EEAirTrafficControl::IsTakeOffDone(std::vector<EEATCAirport>::iterator& inSlot, EEComplexUnit* inUnit)
+static unsigned long EEATCUnitID(void* inUnit)
 {
-    return (inUnit->GetUnitClass()->mAirTrafficType == 1
-                ? !(inUnit->mPhysicalModel.GetLocation().GetZ() < inUnit->GetUnitClass()->GetCruiseAltitude() * 0.05f +
-                                                                     inSlot->mAirport->mPhysicalModel.GetLocation().GetZ())
-                : !(inSlot->mAirport->mPhysicalModel.GetLocation().DistanceSquaredTo(
-                        inUnit->mPhysicalModel.GetLocation()) <= 6.0f)) &&
-           inUnit->mContainer == NULL;
+    return static_cast<EEComplexUnit*>(inUnit)->GetUnitID();
 }
 
 // FUNCTION: EXE 0x54f75c
-// Reads the airports, their queued planes (as unit ids) and the air cargo totals; returns the first read error.
-// port (R5b.4, round 29): Load's and Save's bodies are Rust (ee_units atc_save.rs) over EEATCSaveOperation's parts
-struct EEATCSaveContext {
-    EEAirTrafficControl* mControl;
-    FSFile* mFile;
-    EEATCAirport mSlot;   // the airport being read (the original's local)
-};
-
-static int32_t EEATCSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
-{
-    EEATCSaveContext& theContext = *static_cast<EEATCSaveContext*>(inContext);
-    EEAirTrafficControl* theControl = theContext.mControl;
-    switch (inOp) {
-    case EE_UNITS_ATC_SAVE_CLEAR: theControl->mSlots.clear(); return 0;
-    case EE_UNITS_ATC_SAVE_SLOT_BEGIN:
-        theContext.mSlot.mAirport = reinterpret_cast<EEComplexUnit*>((unsigned long)io->i);
-        theContext.mSlot.mLanding.clear();
-        theContext.mSlot.mTakeoff.clear();
-        return 0;
-    case EE_UNITS_ATC_SAVE_ITEM_PUSH: {
-        EEATCItem theItem;
-        theItem.mUnit = reinterpret_cast<EEComplexUnit*>((unsigned long)io->i);
-        theItem.mKind = inIndex;
-        if (theItem.mKind == 1)
-            theContext.mSlot.mLanding.push_back(theItem);
-        else
-            theContext.mSlot.mTakeoff.push_back(theItem);
-        return 0;
-    }
-    case EE_UNITS_ATC_SAVE_SLOT_PUSH: theControl->mSlots.push_back(theContext.mSlot); return 0;
-    case EE_UNITS_ATC_SAVE_CARGO: io->i = inIndex == 0 ? theControl->mMaxCargo : theControl->mUsedCargo; return 0;
-    case EE_UNITS_ATC_SAVE_SET_CARGO: (inIndex == 0 ? theControl->mMaxCargo : theControl->mUsedCargo) = (long)io->i; return 0;
-    case EE_UNITS_ATC_SAVE_SLOT_COUNT: io->i = (int64_t)theControl->mSlots.size(); return 0;
-    case EE_UNITS_ATC_SAVE_SLOT_AIRPORT: io->i = (int64_t)theControl->mSlots[inIndex].mAirport->GetUnitID(); return 0;
-    case EE_UNITS_ATC_SAVE_QUEUE_COUNT: {
-        EEATCAirport& theSlot = theControl->mSlots[inIndex];
-        io->i = (int64_t)(io->b == 0 ? theSlot.mLanding.size() : theSlot.mTakeoff.size());
-        return 0;
-    }
-    case EE_UNITS_ATC_SAVE_ITEM: {
-        EEATCAirport& theSlot = theControl->mSlots[inIndex];
-        EEATCItem& theItem = io->b == 0 ? theSlot.mLanding[(size_t)io->i] : theSlot.mTakeoff[(size_t)io->i];
-        io->i = (int64_t)theItem.mUnit->GetUnitID();
-        uint32_t theKind = (uint32_t)theItem.mKind;
-        memcpy(&io->f, &theKind, sizeof(theKind));
-        return 0;
-    }
-    }
-    return EESavePrimitive(*theContext.mFile, inOp, io);
-}
-
+// Reads the airports, their queued planes (as unit ids) and the air cargo totals; returns the first read error
 long EEAirTrafficControl::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
-    EEATCSaveContext theContext = {this, inFile, EEATCAirport()};
-    return ee_units_atc_load(&theContext, &EEATCSaveOperation);
+    return ee_units_atc_load(this->mRust, inFile, &EEATCFile);
 }
 
 // FUNCTION: EXE 0x54f88d
-// Hands replaced aircraft's cargo weight and queue entries to their replacements; a replacement that is no
-// aircraft leaves every queue
+// Hands replaced aircraft's cargo weight and queue entries to their replacements
 void EEAirTrafficControl::ReplaceUnits(std::vector<EEPUnitSwap>& inSwaps)
 {
-    std::deque<EEATCItem>::iterator theItem;
-    for (std::vector<EEPUnitSwap>::iterator theSwap = inSwaps.begin(); theSwap != inSwaps.end(); ++theSwap) {
-        EEComplexUnit* theOld = theSwap->mOld;
-        EEComplexUnit* theNew = theSwap->mNew;
-        bool theOldIsAircraft = theOld->GetUnitClass()->mCategory == kUnitCategoryAirplane || theOld->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship;
-        bool theNewIsAircraft = theNew->GetUnitClass()->mCategory == kUnitCategoryAirplane || theNew->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship;
-        if (theOldIsAircraft)
-            this->RemoveCargoWeight(theOld);
-        if (theNewIsAircraft)
-            this->AddCargoWeight(theNew);
-        if (!theOldIsAircraft)
-            continue;
-        for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end(); ++theSlot) {
-            if (!theNewIsAircraft) {
-                this->RemoveFromEntry(theSlot, theOld);
-                continue;
-            }
-            for (theItem = theSlot->mLanding.begin(); theItem != theSlot->mLanding.end(); ++theItem) {
-                if ((*theItem).mUnit != theOld)
-                    continue;
-                (*theItem).mUnit->Dereference();
-                (*theItem).mUnit = theNew;
-                (*theItem).mUnit->Reference();
-            }
-            for (theItem = theSlot->mTakeoff.begin(); theItem != theSlot->mTakeoff.end(); ++theItem) {
-                if ((*theItem).mUnit != theOld)
-                    continue;
-                (*theItem).mUnit->Dereference();
-                (*theItem).mUnit = theNew;
-                (*theItem).mUnit->Reference();
-            }
-        }
+    std::vector<void*> theOld;
+    std::vector<void*> theNew;
+    for (size_t i = 0; i < inSwaps.size(); i++) {
+        theOld.push_back(inSwaps[i].mOld);
+        theNew.push_back(inSwaps[i].mNew);
     }
+    ee_units_atc_replace_units(this->mRust, NULL, &EEATCHost, theOld.data(), theNew.data(), theOld.size());
 }
 
-// FUNCTION: EXE 0x54fa2b
-// For a lost airport: destroys departing planes still low outside it and sends each landing plane to the
-// nearest airport with room, destroying it when there is none
-void EEAirTrafficControl::SendPlanesAway(std::vector<EEATCAirport>::iterator& inSlot)
-{
-    std::vector<EEATCCandidate> theCandidates;
-    std::deque<EEATCItem>::iterator theItem;
-    this->GetCandidates(inSlot->mAirport, theCandidates);
-    for (theItem = inSlot->mTakeoff.begin(); theItem != inSlot->mTakeoff.end(); ++theItem) {
-        EEComplexUnit* theUnit = (*theItem).mUnit;
-        if (theUnit->mPhysicalModel.GetLocation().GetZ() < theUnit->GetUnitClass()->GetCruiseAltitude() * 0.35f && theUnit->mContainer == NULL && theUnit->mHitPoints > 0)
-            theUnit->Kill(1, 0, 0);
-    }
-    for (theItem = inSlot->mLanding.begin(); theItem != inSlot->mLanding.end(); ++theItem) {
-        EEComplexUnit* theUnit = (*theItem).mUnit;
-        if (!(theUnit->mHitPoints > 0))
-            continue;
-        long theNeeded = theUnit->GetUnitClass()->mWeight;
-        EEComplexUnit* theTarget = NULL;
-        for (unsigned long i = 0; i < theCandidates.size() && theTarget == NULL; i++) {
-            if (theCandidates[i].mFree >= theNeeded)
-                theTarget = theCandidates[i].mAirport;
-        }
-        if (theTarget != NULL) {
-            (*theItem).mUnit->SetHomeBase(theTarget);
-            (*theItem).mUnit->StartAction(kActionRequestLanding);
-            (*theItem).mUnit->GetUnitClass()->ActionChanged((*theItem).mUnit);
-            theTarget = NULL;
-        } else {
-            (*theItem).mUnit->Kill(1, 0, 0);
-        }
-    }
-}
+// FUNCTION: EXE 0x54fa2b (SendPlanesAway: atc.rs send_planes_away)
 
 // FUNCTION: EXE 0x54fc39
-// Subtracts the aircraft's weight from the player's used air cargo
-void EEAirTrafficControl::RemoveCargoWeight(EEComplexUnit* inUnit)
-{
-    this->mUsedCargo -= inUnit->GetUnitClass()->mWeight;
-}
+void EEAirTrafficControl::RemoveCargoWeight(EEComplexUnit* inUnit) { this->Call(EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT, inUnit); }
 
 // FUNCTION: EXE 0x54fc4c
-// Unregisters an airport: drops its dead planes and capacity, sends its planes away and releases them
-void EEAirTrafficControl::RemoveAirport(EEComplexUnit* inAirport)
-{
-    std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin();
-    while (theSlot != this->mSlots.end()) {
-        EEComplexUnit* theAirport = theSlot->mAirport;
-        if (inAirport == theAirport) {
-            this->DropDeadPlanes(theSlot);
-            this->mMaxCargo -= theAirport->GetUnitClass()->mTransportCapacity;
-            this->SendPlanesAway(theSlot);
-            this->RemoveFromEntry(theSlot, NULL);
-            theAirport->Dereference();
-            theSlot = this->mSlots.erase(theSlot);
-        } else {
-            ++theSlot;
-        }
-    }
-}
+void EEAirTrafficControl::RemoveAirport(EEComplexUnit* inAirport) { this->Call(EE_UNITS_ATC_CALL_REMOVE_AIRPORT, inAirport); }
 
 // FUNCTION: EXE 0x54fcc1
-// Drops the plane from the given airport's queues
 void EEAirTrafficControl::RemovePlane(EEComplexUnit* inAirport, EEComplexUnit* inUnit)
 {
-    for (std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin(); theSlot != this->mSlots.end(); ++theSlot) {
-        if (theSlot->mAirport == inAirport) {
-            this->RemoveFromEntry(theSlot, inUnit);
-            return;
-        }
-    }
+    this->Call(EE_UNITS_ATC_CALL_REMOVE_PLANE, inAirport, inUnit);
 }
 
 // FUNCTION: EXE 0x54fcf4
-// Turns the loaded unit ids back into airports and planes, dropping those that no longer exist; returns 0
 long EEAirTrafficControl::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin();
-    while (theSlot != this->mSlots.end()) {
-        EEComplexUnit* theAirport = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(theSlot->mAirport)));
-        if (theAirport != NULL) {
-            theSlot->mAirport = theAirport;
-            theAirport->Reference();
-            std::deque<EEATCItem>::iterator theItem = theSlot->mLanding.begin();
-            while (theItem != theSlot->mLanding.end()) {
-                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID((*theItem).mUnit)));
-                if (theUnit != NULL) {
-                    (*theItem).mUnit = theUnit;
-                    theUnit->Reference();
-                    ++theItem;
-                } else {
-                    theItem = theSlot->mLanding.erase(theItem);
-                }
-            }
-            theItem = theSlot->mTakeoff.begin();
-            while (theItem != theSlot->mTakeoff.end()) {
-                EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID((*theItem).mUnit)));
-                if (theUnit != NULL) {
-                    (*theItem).mUnit = theUnit;
-                    theUnit->Reference();
-                    ++theItem;
-                } else {
-                    theItem = theSlot->mTakeoff.erase(theItem);
-                }
-            }
-            ++theSlot;
-        } else {
-            theSlot = this->mSlots.erase(theSlot);
-        }
-    }
-    return 0;
+    return (long)this->Call(EE_UNITS_ATC_CALL_REPAIR_POINTERS, NULL);
 }
 
 // FUNCTION: EXE 0x54fead
 // Writes the airports, their queued planes (unit id and request) and the air cargo totals; returns the first error
-// (the body: ee_units atc_save.rs `save`)
 long EEAirTrafficControl::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
-    EEATCSaveContext theContext = {this, inFile, EEATCAirport()};
-    return ee_units_atc_save(&theContext, &EEATCSaveOperation);
+    return ee_units_atc_save(this->mRust, inFile, &EEATCFile, &EEATCUnitID);
 }
 
 // FUNCTION: EXE 0x55014c
-// Returns the nearest other airport with room for the plane, or NULL (also when air cargo is overused)
 EEComplexUnit* EEAirTrafficControl::FindNearestAirport(EEComplexUnit* inUnit)
 {
-    std::vector<EEATCCandidate> theCandidates;
-    EEComplexUnit* theResult = NULL;
-    long theNeeded = inUnit->GetUnitClass()->mWeight;
-    if (this->mUsedCargo <= this->mMaxCargo) {
-        this->GetCandidates(inUnit, theCandidates);
-        for (unsigned long i = 0; i < theCandidates.size() && theResult == NULL; i++) {
-            if (theCandidates[i].mFree >= theNeeded)
-                theResult = theCandidates[i].mAirport;
-        }
-    }
-    return theResult;
+    return reinterpret_cast<EEComplexUnit*>((intptr_t)this->Call(EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT, inUnit));
 }
 
 // FUNCTION: EXE 0x5501d4
-// Advances every airport's landings, then its takeoffs unless a landing blocks them; a destroyed airport
-// is removed and its planes sent away
-void EEAirTrafficControl::Update()
-{
-    std::vector<EEATCAirport>::iterator theSlot = this->mSlots.begin();
-    while (theSlot != this->mSlots.end()) {
-        EEComplexUnit* theAirport = theSlot->mAirport;
-        bool theFlag = false;
-        if (theAirport->mHitPoints > 0) {
-            this->UpdateLandings(theSlot, &theFlag);
-            if (!theFlag)
-                this->UpdateTakeoffs(theSlot);
-            ++theSlot;
-        } else {
-            this->DropDeadPlanes(theSlot);
-            this->mMaxCargo -= theAirport->GetUnitClass()->mTransportCapacity;
-            this->SendPlanesAway(theSlot);
-            this->RemoveFromEntry(theSlot, NULL);
-            theAirport->Dereference();
-            theSlot = this->mSlots.erase(theSlot);
-        }
-    }
-}
+void EEAirTrafficControl::Update() { this->Call(EE_UNITS_ATC_CALL_UPDATE, NULL); }
 
-// Never lets a landing block takeoffs (always false). ICF-folded into 0x4bb118 (`xor al, al; ret 4`): the
-// original's call in UpdateLandings binds there (no own address)
-bool EEAirTrafficControl::BlocksTakeoffs(EEComplexUnit* inUnit)
-{
-    return false;
-}
-
-// FUNCTION: EXE 0x550277
-// Clears landing planes in queue order, redirecting or destroying one the overfull airport cannot take;
-// drops the first landed or dead plane and stops there, returning whether one was dropped
-bool EEAirTrafficControl::UpdateLandings(std::vector<EEATCAirport>::iterator& inSlot, bool* outFlag)
-{
-    std::vector<EEATCCandidate> theCandidates;
-    bool theDone = false;
-    std::deque<EEATCItem>::iterator theItem = inSlot->mLanding.begin();
-    while (theItem != inSlot->mLanding.end() && !theDone) {
-        EEComplexUnit* theUnit = (*theItem).mUnit;
-        long theWeight = (*theItem).mUnit->GetUnitClass()->mWeight;
-        if (theUnit->mHitPoints > 0) {
-            if (theUnit->mIsClearanceGranted != true)
-                theUnit->mIsClearanceGranted = true;
-            theDone = this->IsLandingDone(inSlot, theUnit);
-            if (!theDone) {
-                if (this->GetRoom(inSlot) < -theWeight) {
-                    this->GetCandidates(inSlot->mAirport, theCandidates);
-                    EEComplexUnit* theTarget = NULL;
-                    for (unsigned long i = 0; i < theCandidates.size() && theTarget == NULL; i++) {
-                        if (theCandidates[i].mFree >= theWeight)
-                            theTarget = theCandidates[i].mAirport;
-                    }
-                    if (theTarget != NULL) {
-                        if (this->QueueRequest(theTarget, (*theItem).mUnit, 1) == 0) {
-                            (*theItem).mUnit->SetHomeBase(theTarget);
-                            (*theItem).mUnit->StartAction(kActionRequestLanding);
-                            (*theItem).mUnit->GetUnitClass()->ActionChanged((*theItem).mUnit);
-                        } else {
-                            (*theItem).mUnit->Kill(1, 0, 0);
-                        }
-                    } else {
-                        (*theItem).mUnit->Kill(1, 0, 0);
-                    }
-                }
-                if (this->BlocksTakeoffs((*theItem).mUnit))
-                    *outFlag = true;
-                ++theItem;
-                continue;
-            }
-        } else {
-            theDone = true;
-        }
-        theUnit->Dereference();
-        theItem = inSlot->mLanding.erase(theItem, theItem + 1);
-    }
-    return theDone;
-}
-
-// FUNCTION: EXE 0x550487
-// Clears departing planes in queue order and drops each that has left or died; false at the first still leaving
-bool EEAirTrafficControl::UpdateTakeoffs(std::vector<EEATCAirport>::iterator& inSlot)
-{
-    bool theResult = false;
-    std::deque<EEATCItem>::iterator theItem;
-    theItem = inSlot->mTakeoff.begin();
-    while (theItem != inSlot->mTakeoff.end()) {
-        EEComplexUnit* theUnit = (*theItem).mUnit;
-        if (theUnit->mHitPoints > 0) {
-            if (theUnit->mIsClearanceGranted != true)
-                theUnit->mIsClearanceGranted = true;
-            theResult = this->IsTakeOffDone(inSlot, theUnit);
-        } else {
-            theResult = true;
-        }
-        if (!theResult)
-            break;
-        theUnit->Dereference();
-        if (theUnit->mIsClearanceGranted)
-            theUnit->mIsClearanceGranted = false;
-        theItem = inSlot->mTakeoff.erase(theItem, theItem + 1);
-    }
-    return theResult;
-}
-
-// Template COMDATs (std::vector / deque / sort over the types above), in address order:
-// TEMPLATE: EXE 0x54ea04
-// TEMPLATE: EXE 0x550549
-// TEMPLATE: EXE 0x55056b
-// TEMPLATE: EXE 0x5505f2
-// TEMPLATE: EXE 0x55061e
-// (template/inline COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x550691
-// TEMPLATE: EXE 0x5506cc
-// (template/inline COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5506f8
-// TEMPLATE: EXE 0x55083e
-// TEMPLATE: EXE 0x55093e
-// TEMPLATE: EXE 0x550964
-// TEMPLATE: EXE 0x5509bb
-// TEMPLATE: EXE 0x550a25
-// TEMPLATE: EXE 0x550a5d
-// TEMPLATE: EXE 0x550ab7
-// TEMPLATE: EXE 0x550afb
-// (template/inline COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x550b35
-// (template/inline COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x550b47
-// TEMPLATE: EXE 0x550b70
-// TEMPLATE: EXE 0x550e63
-// TEMPLATE: EXE 0x550e8a
-// TEMPLATE: EXE 0x550ec6
-// TEMPLATE: EXE 0x550ef1
-// TEMPLATE: EXE 0x550f08
-// TEMPLATE: EXE 0x550fb3
-// TEMPLATE: EXE 0x550fdc
-// TEMPLATE: EXE 0x551000
-// TEMPLATE: EXE 0x55102c
-// TEMPLATE: EXE 0x551049
-// TEMPLATE: EXE 0x551075
-// TEMPLATE: EXE 0x55108b
-// TEMPLATE: EXE 0x5510b8
-// TEMPLATE: EXE 0x5510ca
-// (already compiled by this unit)
-
-// TEMPLATE: EXE 0x5510f1
-// TEMPLATE: EXE 0x55121b
-// TEMPLATE: EXE 0x551240
-// TEMPLATE: EXE 0x551305
-// TEMPLATE: EXE 0x55133d
-// (template/inline COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x5516eb
-// TEMPLATE: EXE 0x551734
-// TEMPLATE: EXE 0x5517b7
-// TEMPLATE: EXE 0x551867
-// TEMPLATE: EXE 0x5518a1
-// TEMPLATE: EXE 0x5518d7
-// TEMPLATE: EXE 0x5519de
-// TEMPLATE: EXE 0x551a08
-// TEMPLATE: EXE 0x551a6a
-// (template/inline COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x551a8f
-// (template/inline COMDAT emitted by this unit)
-
-// TEMPLATE: EXE 0x551ab4
-// TEMPLATE: EXE 0x551b33
-// TEMPLATE: EXE 0x551b90
-// TEMPLATE: EXE 0x551be8
+// The original's BlocksTakeoffs (ICF-folded into 0x4bb118), UpdateLandings 0x550277 and UpdateTakeoffs 0x550487:
+// atc.rs update_landings and update_takeoffs. The std::vector / std::deque / sort COMDATs of the original's members
+// (0x54ea04, 0x550549..0x551be8) are gone with them.

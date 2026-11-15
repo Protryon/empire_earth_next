@@ -137,6 +137,41 @@ unsigned long ee_input_entity_index(const EeInputEntity *e);
 /// As `ee_input_entity_index`.
 const char *ee_input_entity_name(const EeInputEntity *e);
 
+/// `ISInitialize`: the system keyboard and mouse on the window's events. `names` is NULL (the English names) or one
+/// string per key code (`ee_input_keyboard_key_count`); `keyboard` and `mouse` are the C++ globals, set here and
+/// cleared by the shutdown. Always 0 (`kErrorOK`).
+///
+/// # Safety
+/// `names` as `ee_input_keyboard_create`'s; `keyboard` and `mouse` live for the process; `window` is NULL or the game
+/// window.
+long ee_input_initialize(void *window,
+                         const char *const *names,
+                         unsigned long double_press_delay,
+                         const EeInputKeyboard **keyboard,
+                         const EeInputMouse **mouse);
+
+/// `ISShutdown` (a shutdown-list function): the mouse and the keyboard suspended and destroyed, their globals
+/// cleared, then the devices.
+///
+/// # Safety
+/// The globals `ee_input_initialize` was given are still live (they are the C++ statics).
+void ee_input_shutdown(bool _forced);
+
+/// `ISKeyboard::Refresh` at the clock's time.
+void ee_input_keyboard_refresh_now(const EeInputKeyboard *k);
+
+/// `ISKeyboard::Resume` at the clock's time.
+void ee_input_keyboard_resume_now(const EeInputKeyboard *k);
+
+/// `ISMouse::Refresh` at the clock's time.
+void ee_input_mouse_refresh_now(const EeInputMouse *m);
+
+/// `ISMouse::Resume`: the window's pointer into relative mode, then the device acquired.
+void ee_input_mouse_resume_window(const EeInputMouse *m);
+
+/// `ISMouse::Suspend`: the device released, then the window's pointer out of relative mode.
+void ee_input_mouse_suspend_window(const EeInputMouse *m);
+
 }  // extern "C"
 
 #endif  // EE_RUST_EE_INPUT_H

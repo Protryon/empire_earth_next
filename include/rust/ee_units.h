@@ -363,35 +363,109 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
-/// `mSlots.clear()`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_CLEAR = 301;
+/// the unit's class's `mWeight`
+constexpr static const int32_t EE_UNITS_ATC_WEIGHT = 1;
 
-/// a new airport (the original's local `theSlot`): its airport the id `io.i`, its queues empty
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_BEGIN = 302;
+/// the unit's class's `mTransportCapacity`
+constexpr static const int32_t EE_UNITS_ATC_TRANSPORT_CAPACITY = 2;
 
-/// the item `io.i` (a unit id) of kind `index` into the new airport's landings (kind 1) or takeoffs
-constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM_PUSH = 303;
+/// `unit->Reference()`
+constexpr static const int32_t EE_UNITS_ATC_REFERENCE = 3;
 
-/// `mSlots.push_back(theSlot)`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_PUSH = 304;
+/// `unit->Dereference()`
+constexpr static const int32_t EE_UNITS_ATC_DEREFERENCE = 4;
 
-/// the cargo total `index` (0 `mMaxCargo`, 1 `mUsedCargo`) into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_CARGO = 305;
+/// `mIsClearanceGranted`, written only when it differs: = `io.a != 0`
+constexpr static const int32_t EE_UNITS_ATC_SET_CLEARANCE = 5;
 
-/// the cargo total `index` = `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SET_CARGO = 306;
+/// `mIsClearanceGranted`
+constexpr static const int32_t EE_UNITS_ATC_CLEARANCE = 6;
 
-/// `mSlots.size()` into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_COUNT = 307;
+/// `mHitPoints`
+constexpr static const int32_t EE_UNITS_ATC_HIT_POINTS = 7;
 
-/// airport `index`'s unit id into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_SLOT_AIRPORT = 308;
+/// the airport's `mCargoRoom`
+constexpr static const int32_t EE_UNITS_ATC_CARGO_ROOM = 8;
 
-/// airport `index`'s queue `io.b` (0 the landings, 1 the takeoffs): its length into `io.i`
-constexpr static const int32_t EE_UNITS_ATC_SAVE_QUEUE_COUNT = 309;
+/// whether `other` is in the airport `unit`'s `mCargo`
+constexpr static const int32_t EE_UNITS_ATC_IN_CARGO = 9;
 
-/// airport `index`'s queue `io.b`, item `io.i`: its unit's id into `io.i`, its kind into `io.f`'s bits
-constexpr static const int32_t EE_UNITS_ATC_SAVE_ITEM = 310;
+/// the unit's class's `mFamily`
+constexpr static const int32_t EE_UNITS_ATC_FAMILY = 10;
+
+/// `GetCommandType()`
+constexpr static const int32_t EE_UNITS_ATC_COMMAND_TYPE = 11;
+
+/// the airport `unit`'s exiting unit set to -1 when it is set and its passenger is the plane `other`
+constexpr static const int32_t EE_UNITS_ATC_RELEASE_EXITING = 12;
+
+/// `mTileX` into `io.a`, `mTileY` into `io.b`
+constexpr static const int32_t EE_UNITS_ATC_TILE = 13;
+
+/// the physical model's location: x, y, z into `io.p`
+constexpr static const int32_t EE_UNITS_ATC_LOCATION = 14;
+
+/// the unit's class's `mAirTrafficType`
+constexpr static const int32_t EE_UNITS_ATC_AIR_TRAFFIC_TYPE = 15;
+
+/// the unit's class's `GetCruiseAltitude()` into `io.f`
+constexpr static const int32_t EE_UNITS_ATC_CRUISE_ALTITUDE = 16;
+
+/// `mContainer != NULL`
+constexpr static const int32_t EE_UNITS_ATC_IN_CONTAINER = 17;
+
+/// `Kill(1, 0, 0)`
+constexpr static const int32_t EE_UNITS_ATC_KILL = 18;
+
+/// `SetHomeBase(other)`, `StartAction(kActionRequestLanding)`, the class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_ATC_REROUTE = 19;
+
+/// the unit's class is an airplane or a planet spaceship (by category)
+constexpr static const int32_t EE_UNITS_ATC_IS_AIRCRAFT = 20;
+
+/// `mHomeBase`
+constexpr static const int32_t EE_UNITS_ATC_HOME_BASE = 21;
+
+/// `GetUnitID()`
+constexpr static const int32_t EE_UNITS_ATC_UNIT_ID = 22;
+
+/// the complex unit of id `io.a` in the world (`EEUnitCast<EEComplexUnit>(gWorld.GetUnit(id))`), or null
+constexpr static const int32_t EE_UNITS_ATC_RESOLVE = 23;
+
+/// the dump's line: the NUL-terminated text at `unit`
+constexpr static const int32_t EE_UNITS_ATC_DUMP_LINE = 24;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_CARGO_WEIGHT = 1;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_CARGO_WEIGHT = 2;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_ADD_AIRPORT = 3;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_REQUEST = 4;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_FREE_CARGO_WEIGHT = 5;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_FROM_TAKEOFF_QUEUES = 6;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_CLEAR_AIRPORT_QUEUE = 7;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_DUMP = 8;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_CHECKSUM = 9;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_LENGTH = 10;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_QUEUE_POSITION = 11;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_AIRPORT = 12;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REMOVE_PLANE = 13;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_REPAIR_POINTERS = 14;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_FIND_NEAREST_AIRPORT = 15;
+
+constexpr static const int32_t EE_UNITS_ATC_CALL_UPDATE = 16;
 
 /// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
 constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
@@ -477,6 +551,21 @@ constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
 
 /// `kActionUnloadTransport` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
+
+/// `EEFormation::Create(io.i)`; when made, the old formation dereferenced and the new one the group's
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_FORMATION_SET = 320;
+
+/// `mUnits.push_back(id io.i)` (the id in the pointer, as the original)
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_PUSH_ID = 321;
+
+/// the formation's `mType` into `io.i`, 8 without one
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_KIND = 322;
+
+/// `mUnits.size()` into `io.i`
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_COUNT = 323;
+
+/// `GetUnitAt(index)->mUnitID` into `io.i`
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_UNIT_ID = 324;
 
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
@@ -1870,6 +1959,61 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
+/// `kErrorBeyondEnd`: an area read short.
+constexpr static const int32_t EE_UNITS_TOWN_BEYOND_END = 10;
+
+/// `gWorld.mTownIDCounter` (`i`); [`EE_UNITS_TOWN_SET_COUNTER`] sets it.
+constexpr static const int32_t EE_UNITS_TOWN_COUNTER = 300;
+
+constexpr static const int32_t EE_UNITS_TOWN_SET_COUNTER = 301;
+
+/// `gWorld.mNumPlayers` (`i`).
+constexpr static const int32_t EE_UNITS_TOWN_PLAYERS = 302;
+
+/// The player's town slots (`mTowns.size()`, 0 for no player) as the result.
+constexpr static const int32_t EE_UNITS_TOWN_SLOTS = 303;
+
+/// The town in slot `index`: 0 for none, else 1 with its id, hull vertex count, counters, flags and continent.
+constexpr static const int32_t EE_UNITS_TOWN_GET = 304;
+
+/// Vertex `io.i` of the hull of the town in slot `index` (`x`, `y`).
+constexpr static const int32_t EE_UNITS_TOWN_HULL_POINT = 305;
+
+/// The area of the town in slot `index` as `EEWriteAreaBytes` writes it (`bytes`, `len`: the host's, valid until
+/// its next call).
+constexpr static const int32_t EE_UNITS_TOWN_AREA = 306;
+
+/// Reads `len` bytes into `bytes` (the result the read's; `io.i` the bytes read); [`EE_UNITS_TOWN_WRITE_BYTES`]
+/// writes them.
+constexpr static const int32_t EE_UNITS_TOWN_READ_BYTES = 307;
+
+constexpr static const int32_t EE_UNITS_TOWN_WRITE_BYTES = 308;
+
+/// Makes a town of the player with the id, area (`bytes`, `len`), continent, counters and flags: 1, or 0 when the
+/// area cannot be read (nothing kept).
+constexpr static const int32_t EE_UNITS_TOWN_MAKE = 309;
+
+/// Deletes the towns made so far (one could not be read).
+constexpr static const int32_t EE_UNITS_TOWN_MAKE_DISCARD = 310;
+
+/// Gives the towns made their serials, areas, ids and slots, in the order made.
+constexpr static const int32_t EE_UNITS_TOWN_MAKE_COMMIT = 311;
+
+/// Sets the town in slot `index`'s id, counters and flags.
+constexpr static const int32_t EE_UNITS_TOWN_SET_SAVED = 312;
+
+/// Rebuilds the player's towns by id from its slots.
+constexpr static const int32_t EE_UNITS_TOWN_REINDEX = 313;
+
+/// Puts the player's towns in the order of the slots `bytes` lists (`len` i32s).
+constexpr static const int32_t EE_UNITS_TOWN_REORDER = 314;
+
+/// A debug line (`bytes`, `len`).
+constexpr static const int32_t EE_UNITS_TOWN_DEBUG = 315;
+
+/// `ResetEEComplexUnit`'s heading of no initial contact (0x446db4).
+constexpr static const float EE_UNITS_NO_HEADING = -10000.0;
+
 /// a section (`index`: `EE_UNITS_UNIT_LOAD_SECTION_*`), the result; io.b = 1 when the held units' loop left for
 /// `LoadLateVersions`; io.i carries the original's `theValue` (the citizen queue, the cargo, the held units) or
 /// `theState` (the unit variables) in and out
@@ -2345,6 +2489,176 @@ constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
 /// every next part's `SetRottingAwayTime(a)`
 constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
 
+/// `a` = whether the save has the part `HAS_*` (ee/EESaveGameFiles.h's predicates of the file's version)
+constexpr static const int32_t EE_UNITS_WORLD_HAS = 20;
+
+/// another system's part `PART_*` loaded (`b`: `EESaveHasTownAreas` for the towns); its result
+constexpr static const int32_t EE_UNITS_WORLD_PART_LOAD = 21;
+
+/// another system's part `PART_*` saved
+constexpr static const int32_t EE_UNITS_WORLD_PART_SAVE = 22;
+
+/// `EEAfterLoad` of [`ee_units_world_restore`] with the record at `a`
+constexpr static const int32_t EE_UNITS_WORLD_AFTER_LOAD = 23;
+
+/// `ESDebugOut` of the NUL-terminated text at `list`
+constexpr static const int32_t EE_UNITS_WORLD_DEBUG = 24;
+
+/// a unit's `mUnitID` (`a`: the unit)
+constexpr static const int32_t EE_UNITS_WORLD_UNIT_ID = 25;
+
+/// the world's unit chain (`gWorld.mUnits`, by `mTileNode->mNext`): its units
+constexpr static const int32_t EE_UNITS_WORLD_CHAIN = 30;
+
+/// `gWorld.GetUnit(a)`
+constexpr static const int32_t EE_UNITS_WORLD_UNIT = 31;
+
+/// the unit `a` is linked in the chain: a tile node, with a previous unit or the chain's first
+constexpr static const int32_t EE_UNITS_WORLD_IN_CHAIN = 32;
+
+/// the unit `a`'s `mTileX`
+constexpr static const int32_t EE_UNITS_WORLD_TILE_X = 33;
+
+/// `a->Link(b)`, `b` 0 for the chain's head (`&gWorld.mUnits`)
+constexpr static const int32_t EE_UNITS_WORLD_LINK = 34;
+
+/// the stepped units (`a` 0), the activation (1) or the deactivation queue (2): its units
+constexpr static const int32_t EE_UNITS_WORLD_STEP_LIST = 35;
+
+/// the complex unit of id `a` in the loaded game (`dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(a))`)
+constexpr static const int32_t EE_UNITS_WORLD_COMPLEX = 36;
+
+/// the unit `b` leaves list `a`: `Dereference`, for the stepped units a second one and `mActiveUnits.erase`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_DROP = 37;
+
+/// the unit `b` joins list `a`: `Reference`, for the stepped units a second one and `mActiveUnits[id]`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_ADD = 38;
+
+/// list `a` = the `cap` units at `list`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_SET = 39;
+
+/// the continent manager's forests (null entries kept)
+constexpr static const int32_t EE_UNITS_WORLD_FORESTS = 40;
+
+/// the forest `a`'s `mNextRenewal`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_RENEWAL = 41;
+
+/// the forest `a`'s tiles (`BuildPointList(.., 1)`), each `x | y << 32` as two 32-bit words
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_TILES = 42;
+
+/// `gContinentManager.GetForestAt(a, b)`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_AT = 43;
+
+/// the forest `a`'s `mNextRenewal` = `b`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_SET_RENEWAL = 44;
+
+/// the forest `a`'s `mTiles.Size()`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_SIZE = 45;
+
+/// the computer players' schedule: `a` = `mNextPlayer`, `b` = `mNextUpdateTime`, the answer the players' count
+constexpr static const int32_t EE_UNITS_WORLD_AI_SCHEDULE = 46;
+
+/// the schedule = `a`, `b`
+constexpr static const int32_t EE_UNITS_WORLD_AI_SET_SCHEDULE = 47;
+
+/// the map's tile count (`mSize * mSize`, 0 without a map)
+constexpr static const int32_t EE_UNITS_WORLD_TILE_COUNT = 48;
+
+/// tile `a`'s unit nodes (`mUnits`, by `mNext`): each node's unit (0 for none); none for a NULL tile
+constexpr static const int32_t EE_UNITS_WORLD_TILE_UNITS = 49;
+
+/// tile `a`'s node `b` holds the unit at `list[0]`
+constexpr static const int32_t EE_UNITS_WORLD_TILE_SET = 50;
+
+/// the map regions' order (`ee_combat_regions_order`), the 32-bit words
+constexpr static const int32_t EE_UNITS_WORLD_REGION_ORDER = 51;
+
+/// `ee_combat_regions_restore` of region `a` with the `cap` ids at `list`
+constexpr static const int32_t EE_UNITS_WORLD_REGION_RESTORE = 52;
+
+/// the units the ghosts are saved for (`EESaveGhosts`' gathering): the complex ones first, `a` = their count
+constexpr static const int32_t EE_UNITS_WORLD_GHOSTS = 53;
+
+/// the ghost unit `a` (complex when `b`): `v` = its id, class type (-1 without a class), player (-1 without one),
+/// hit points, tile x, tile y, built flag, resource type; `a` = its resource amount; `m` its placement
+constexpr static const int32_t EE_UNITS_WORLD_GHOST_FIELDS = 54;
+
+/// `Dereference` of the unit `a` (a made ghost at the first tick)
+constexpr static const int32_t EE_UNITS_WORLD_DEREFERENCE = 55;
+
+/// `gWorld.mNumPlayers`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_COUNT = 56;
+
+/// player `a`'s units (`mFirstUnit`, by `mNext`); none for a NULL player
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_UNITS = 57;
+
+/// player `a`'s `GetUnit(b)`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_UNIT = 58;
+
+/// player `a`'s list = the `cap` units at `list` (`mPrevious`, `mNext`, `mFirstUnit`, `mLastUnit`)
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_SET_LIST = 59;
+
+/// player `a`'s bucket `b`'s first = the unit at `list[0]`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_SET_BUCKET = 60;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_RUNNING_STATE = 1;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_REGION_ORDER = 2;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_EXPERIMENT_TIMERS = 3;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TOWNS = 4;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TOWN_AREAS = 5;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GHOSTS = 6;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GHOST_RESOURCES = 7;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GOAL_GHOSTS = 8;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_CONTINENT_REGIONS = 9;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_RESOURCE_STATE = 10;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_PLAYER_UNIT_ORDER = 11;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_PATH_SEARCHES = 12;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_ACTIVE_GROUPS = 13;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GRAPH_SEARCHES = 14;
+
+/// `gPathManager.LoadRunningState` / `SaveRunningState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_RUNNING = 1;
+
+/// `EEAELoadRunningState` / `EEAESaveRunningState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_AREA_EFFECTS = 2;
+
+/// `EECPLoadExperimentTimers` / `EECPSaveExperimentTimers`
+constexpr static const int64_t EE_UNITS_WORLD_PART_EXPERIMENT_TIMERS = 3;
+
+/// `EELoadTowns(file, b)` / `EESaveTowns`
+constexpr static const int64_t EE_UNITS_WORLD_PART_TOWNS = 4;
+
+/// `EELoadContinentRegions` / `EESaveContinentRegions`
+constexpr static const int64_t EE_UNITS_WORLD_PART_CONTINENT_REGIONS = 5;
+
+/// `EECPLoadResourceState` / `EECPSaveResourceState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_RESOURCE_STATE = 6;
+
+/// `gPathManager.LoadSearches` / `SaveSearches`
+constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_SEARCHES = 7;
+
+/// `EELoadActiveGroups` / `EESaveActiveGroups`
+constexpr static const int64_t EE_UNITS_WORLD_PART_ACTIVE_GROUPS = 8;
+
+/// `gPathManager.LoadGraphSearches` / `SaveGraphSearches`
+constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
+
+/// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
+struct EeUnitsAtc;
+
 /// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
 struct EeUnitsUpdateHost {
   void *ctx;
@@ -2457,6 +2771,18 @@ struct EeUnitsAnimateOut {
   uint32_t steps;
 };
 
+/// One host operation's values.
+struct EeUnitsAtcIo {
+  int64_t a;
+  int64_t b;
+  float f;
+  /// a location's x, y, z
+  float p[3];
+};
+
+/// The host: `(ctx, op, unit, other, io) -> the answer`.
+using EeUnitsAtcFn = int64_t(*)(void*, int32_t, void*, void*, EeUnitsAtcIo*);
+
 /// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
 struct EeUnitsPlayerSaveIo {
   int64_t i;
@@ -2466,6 +2792,9 @@ struct EeUnitsPlayerSaveIo {
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
 using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
+/// A unit's id (`GetUnitID()`).
+using EeUnitsAtcUnitIdFn = unsigned long(*)(void*);
 
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
@@ -3452,6 +3781,26 @@ struct EeUnitsTickHost {
   void (*step)(void *ctx, uint32_t index, uint32_t id);
 };
 
+/// One town as the host reads, writes or makes it.
+struct EeUnitsTownIo {
+  /// the file's primitives (player_save.rs's operations)
+  EeUnitsPlayerSaveIo prim;
+  long id;
+  uint32_t points;
+  /// mValue, mNumWalls, mL80, mNumWonders, mNumDocks, mNumAirports, mNumUnits, mReach
+  long counters[8];
+  uint8_t near_water;
+  uint8_t near_map_edge;
+  long continent;
+  long x;
+  long y;
+  uint8_t *bytes;
+  size_t len;
+};
+
+/// The host: `(ctx, op, player, index, io) -> result`.
+using EeUnitsTownFn = int32_t(*)(void*, int32_t, uint32_t, uint32_t, EeUnitsTownIo*);
+
 /// The unit's numbers for the tick.
 struct EeUnitsTurretsIn {
   /// true: the goal is an attack, heal or calamity goal and `target_x`, `target_y` its point; false: turn back
@@ -3479,6 +3828,56 @@ struct EeUnitsTurretPart {
   /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
   float angle;
 };
+
+/// The values `ResetEEComplexUnit` reads off the world and the unit's class and stats (each as the original
+/// computed it: the class's for a unit with a class, the stats' for one with a class and a player).
+struct EeUnitsComplexResetIn {
+  /// `mF220`: a random heading (`gPhysics->mRandom.Generate() * 6.2831855f`, drawn by the C++) or 6.2831855f
+  float heading;
+  /// `GetStats()->mReloadTime`, or 0
+  long reload_time;
+  /// `GetStats()->mPowerRegeneration`, or 0
+  long power_regeneration;
+  /// `GetUnitClass()->mInitialGarrisonCount`, or 0
+  long garrison_count;
+  /// `GetUnitClass()->mIsCloakable` (false without a class)
+  bool cloakable;
+  /// `!GetUnitClass()->IsLandBuilding()` (false without a class)
+  bool paid_for;
+};
+
+/// The maxima `CopyFrom` scales by: the replaced unit's (`other_*`) and this unit's (`GetUpgrade(type)->m*`), and
+/// whether the camouflage power lets the cloakable flag come over (both classes in its unit set).
+struct EeUnitsComplexCopyIn {
+  long other_max_hit_points;
+  long max_hit_points;
+  long other_power;
+  long power;
+  long other_flight_time;
+  long flight_time;
+  long other_reload_time;
+  long reload_time;
+  bool copy_cloakable;
+};
+
+/// The values of `OutOfSynchDump` that are not in the records.
+struct EeUnitsComplexDumpIn {
+  unsigned long player_id;
+  long tile_x;
+  long tile_y;
+  /// `mAngularVelocity`'s yaw, pitch and roll
+  float angular_velocity[3];
+  size_t build_queue;
+  size_t citizen_build_queue;
+  long collision_tile[2];
+  long frame;
+  float projectile_start[3];
+  /// `mPhysicalModel.GetLocation()`'s matrix, by row
+  float location[4][4];
+};
+
+/// The dump's write: `ctx` and the text's bytes (no terminator).
+using EeUnitsDumpWriteFn = void(*)(void *ctx, const char *text, size_t len);
 
 /// What the constructor looks up outside the row: the C++ fills it before [`fill`].
 struct EeUnitsUnitClassFillIn {
@@ -3522,6 +3921,38 @@ struct EeUnitsFinishLoadIn {
   long garrison_capacity;
   /// `mStats->mPower`
   long power;
+};
+
+/// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
+/// count) or reads (`cap` entries).
+struct EeUnitsWorldIo {
+  int64_t a;
+  int64_t b;
+  float f;
+  int64_t v[8];
+  float m[16];
+  uint64_t *list;
+  size_t cap;
+};
+
+/// The host: `(ctx, op, io) -> the answer`.
+using EeUnitsWorldFn = int64_t(*)(void*, int32_t, EeUnitsWorldIo*);
+
+/// A dead unit the living still hold, as saved (`EESavedGhost`).
+struct EeUnitsWorldGhost {
+  unsigned long id;
+  unsigned long unit_type;
+  unsigned long player;
+  long hit_points;
+  long tile_x;
+  long tile_y;
+  float placement[4][4];
+  /// 0.272: -1 before (the class's own)
+  unsigned long resource_type;
+  long resource_amount;
+  bool is_built;
+  /// 0.275: false for a simple unit; true before
+  bool is_complex;
 };
 
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
@@ -3611,17 +4042,70 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
 /// `input` and `out` are valid.
 void ee_units_animate(const EeUnitsAnimateIn *input, EeUnitsAnimateOut *out);
 
-/// `EEAirTrafficControl::Load` over the C++ parts in `f`.
-///
-/// # Safety
-/// `f` is valid with `ctx` for the call.
-int32_t ee_units_atc_load(void *ctx, EeUnitsPlayerSaveFn f);
+/// A new, empty air traffic control.
+EeUnitsAtc *ee_units_atc_new();
 
-/// `EEAirTrafficControl::Save`: as [`ee_units_atc_load`].
+/// The destructor's body over the host, then the state freed. Null does nothing.
 ///
 /// # Safety
-/// As [`ee_units_atc_load`].
-int32_t ee_units_atc_save(void *ctx, EeUnitsPlayerSaveFn f);
+/// `p` came from [`ee_units_atc_new`] and is not used again; `f` is valid with `ctx`.
+void ee_units_atc_free(EeUnitsAtc *p, void *ctx, EeUnitsAtcFn f);
+
+/// The maximum (0) or the used (1) air cargo.
+///
+/// # Safety
+/// `p` is a live state.
+long ee_units_atc_cargo(const EeUnitsAtc *p, int32_t which);
+
+/// The number of airports.
+///
+/// # Safety
+/// `p` is a live state.
+unsigned long ee_units_atc_slot_count(const EeUnitsAtc *p);
+
+/// Airport `index` (null past the end).
+///
+/// # Safety
+/// `p` is a live state.
+void *ee_units_atc_slot_airport(const EeUnitsAtc *p, unsigned long index);
+
+/// The class's methods by kind (the `EE_UNITS_ATC_CALL_*` values): `unit`, `other` and `value` their arguments.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx`.
+int64_t ee_units_atc_call(EeUnitsAtc *p,
+                          void *ctx,
+                          EeUnitsAtcFn f,
+                          int32_t call,
+                          void *unit,
+                          void *other,
+                          long value);
+
+/// `ReplaceUnits`: `count` (old, new) pairs at `olds` and `news`.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx`; `olds` and `news` hold `count` units each.
+void ee_units_atc_replace_units(EeUnitsAtc *p,
+                                void *ctx,
+                                EeUnitsAtcFn f,
+                                void *const *olds,
+                                void *const *news,
+                                size_t count);
+
+/// `EEAirTrafficControl::Load` into `p` over the file in `f`.
+///
+/// # Safety
+/// `p` is a live state; `f` is valid with `ctx` for the call.
+int32_t ee_units_atc_load(EeUnitsAtc *p, void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEAirTrafficControl::Save` of `p` over the file in `f`; `unit_id` gives each unit's id.
+///
+/// # Safety
+/// As [`ee_units_atc_load`]; `unit_id` is valid for every unit listed.
+int32_t ee_units_atc_save(const EeUnitsAtc *p,
+                          void *ctx,
+                          EeUnitsPlayerSaveFn f,
+                          EeUnitsAtcUnitIdFn unit_id);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
@@ -4005,6 +4489,18 @@ uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
 
 /// TEST ONLY: the mirrors held (the containers alive).
 uint32_t ee_units_goal_queue_count();
+
+/// `EEGroup::Load` over the group's parts and the file in `f`.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+int32_t ee_units_group_load(void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEGroup::Save`: as [`ee_units_group_load`].
+///
+/// # Safety
+/// As [`ee_units_group_load`].
+int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
@@ -4893,11 +5389,68 @@ float ee_units_step_cloak_fade(float opacity,
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 
+/// `EESaveTowns` over the C++ host.
+///
+/// # Safety
+/// `f` is callable with `ctx` as [`EeUnitsTownFn`] documents.
+int32_t ee_units_towns_save(void *ctx, EeUnitsTownFn f);
+
+/// `EELoadTowns` over the C++ host: on success the towns are pending (returns the read result; `*pending` 1 when
+/// they are).
+///
+/// # Safety
+/// As [`ee_units_towns_save`]; `pending` writable.
+int32_t ee_units_towns_load(void *ctx,
+                            EeUnitsTownFn f,
+                            bool areas,
+                            uint8_t *pending);
+
+/// The loaded game's own towns from here on (the pending towns dropped).
+void ee_units_towns_clear();
+
+/// `EEMakeSavedTowns` (`apply` false) or `EEApplySavedTowns` (`apply` true) for one player over the C++ host.
+///
+/// # Safety
+/// As [`ee_units_towns_save`].
+bool ee_units_towns_repair(void *ctx,
+                           EeUnitsTownFn f,
+                           uint32_t player,
+                           bool apply);
+
 /// `TurnTurrets` / `TurnTurretsBack` for one unit (see [`turn_turrets`]).
 ///
 /// # Safety
 /// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
 void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
+
+/// `ResetEEComplexUnit`'s record members.
+///
+/// # Safety
+/// `cx` is the unit's live record; `input` readable.
+void ee_units_complex_reset(EeUnitsComplexUnitFields *cx, const EeUnitsComplexResetIn *input);
+
+/// `CopyFrom`'s record copies: `block` 0 [`copy_first`] (with `input`), 1 [`copy_second`], 2 [`copy_third`].
+///
+/// # Safety
+/// `cx` and `other` are two live units' records (not the same); `input` readable for block 0.
+void ee_units_complex_copy(uint32_t block,
+                           EeUnitsComplexUnitFields *cx,
+                           const EeUnitsComplexUnitFields *other,
+                           const EeUnitsComplexCopyIn *input);
+
+/// `OutOfSynchDump`'s lines of `part` (see [`dump`]) written through `write`.
+///
+/// # Safety
+/// The records are the unit's, its class's and its stats' live records; `d` readable; `write` callable with `ctx`.
+void ee_units_complex_dump(uint32_t part,
+                           const EeUnitsRtsUnitFields *rts,
+                           const EeUnitsUnitFields *unit,
+                           const EeUnitsComplexUnitFields *cx,
+                           const EeUnitsUnitClassFields *class_,
+                           const EeUnitsUnitClassUpgradeFields *stats,
+                           const EeUnitsComplexDumpIn *d,
+                           EeUnitsDumpWriteFn write,
+                           void *ctx);
 
 /// `EEUnitClass::EEUnitClass`'s plain stores: `out` (the class's record base) set from the db row `row`
 /// (an `EEUnitClassRecord`, ee/EEUnitClassRecord.h, the layout ee_data's generated record asserts).
@@ -4952,6 +5505,39 @@ bool ee_units_update(int32_t kind,
                      uint32_t id,
                      uint64_t object,
                      const EeUnitsUpdateHost *host);
+
+/// `EEPWorldHelper::Load`'s running state over the host.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+void ee_units_world_load_live(void *ctx, EeUnitsWorldFn f);
+
+/// `EEPWorldHelper::Save`'s running state over the host.
+///
+/// # Safety
+/// As [`ee_units_world_load_live`].
+void ee_units_world_save_live(void *ctx, EeUnitsWorldFn f);
+
+/// The part `pending` (an `EE_UNITS_WORLD_AFTER_LOAD`'s `a`) put back, then freed.
+///
+/// # Safety
+/// `pending` is an `EE_UNITS_WORLD_AFTER_LOAD` record not restored before; `f` is valid with `ctx`.
+void ee_units_world_restore(void *pending, void *ctx, EeUnitsWorldFn f);
+
+/// The loaded ghost of id `id` into `out`: false when no record has the id.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_units_world_ghost_find(unsigned long id, EeUnitsWorldGhost *out);
+
+/// A unit made from a loaded ghost (one reference, dropped at the first tick).
+void ee_units_world_ghost_made(void *unit);
+
+/// The made ghost unit whose id `unit_id` answers `id`, or null.
+///
+/// # Safety
+/// `unit_id` is valid for every made unit.
+void *ee_units_world_ghost_made_find(unsigned long id, unsigned long (*unit_id)(void*));
 
 }  // extern "C"
 

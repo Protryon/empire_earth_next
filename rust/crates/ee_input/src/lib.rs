@@ -19,6 +19,7 @@ pub mod ffi;
 mod golden;
 #[cfg(test)]
 mod golden_keyboard;
+pub mod system;
 
 use std::collections::VecDeque;
 use std::os::raw::{c_long, c_ulong};

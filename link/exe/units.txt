@@ -144,10 +144,6 @@ dde43 dde94 Empire Earth/Formations/EEFShallowWedge.cpp
 dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
-de331 df57c Empire Earth/Graphics Thread/EEE2DBattlefieldAmbient.cpp
-e1a37 e28be Empire Earth/Graphics Thread/EEE2DLightGlow.cpp
-e3954 e4529 Empire Earth/Graphics Thread/EEE2DMarchingIcons.cpp
-e4729 e56d0 Empire Earth/Graphics Thread/EEE2DParticle.cpp
 ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
 ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
@@ -236,16 +232,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 17ef10 181792 Empire Earth/Scenario Editor/EESETSConditionType.cpp
 181792 182629 Empire Earth/Scenario Editor/EESETSEComboBox.cpp
 182629 182dda Empire Earth/Scenario Editor/EESETSEffect.cpp
-182dda 1843c7 Empire Earth/Scenario Editor/EESETSETAI.cpp
-1843c7 185d31 Empire Earth/Scenario Editor/EESETSETGame.cpp
-185d31 185f75 Empire Earth/Scenario Editor/EESETSETLogObject.cpp
-185f75 185fed Empire Earth/Scenario Editor/EESETSETMaintainObject.cpp
-185fed 186e1f Empire Earth/Scenario Editor/EESETSETMedia.cpp
-186e1f 18849c Empire Earth/Scenario Editor/EESETSETMSDCameraScrollChange.cpp
-18849c 189904 Empire Earth/Scenario Editor/EESETSETObject.cpp
-189904 18c72e Empire Earth/Scenario Editor/EESETSETPlayer.cpp
-18c72e 18e4a4 Empire Earth/Scenario Editor/EESETSETSAAAttributeChange.cpp
-18e4a4 18efb7 Empire Earth/Scenario Editor/EESETSETSetObjectStance.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp
 196ebe 197261 Empire Earth/Scenario Editor/EESETSUICBPlayer.cpp
@@ -392,13 +378,7 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 28d82d 28f0cb Empire Earth/Campaign/EECampaignEditorBehavior.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
-290578 2909a1 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyColorButton.cpp
-290e89 291463 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileDialog.cpp
 291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp
-294d62 296aaa Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInit.cpp
-296aaa 297ee7 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInterface.cpp
-297ee7 299838 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyMisc.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp
 29ce06 29cfda Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbySound.cpp
-29cfda 29d07a Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyTimeouts.cpp
 f4bf3 f5d94 Empire Earth/Graphics Thread/EEE3DParticle.cpp

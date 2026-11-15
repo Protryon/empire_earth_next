@@ -21,6 +21,20 @@ use std::cell::Cell;
 use std::ffi::{c_char, c_void, CStr};
 
 use crate::dialogs;
+use crate::eegame::{game_call, EeWonEeGameCall as GC};
+use std::cell::RefCell;
+
+/// A NUL-terminated string's bytes (none for NULL).
+///
+/// # Safety
+/// `p` is NULL or a NUL-terminated string.
+unsafe fn cstr_bytes(p: isize) -> Vec<u8> {
+    if p == 0 {
+        return Vec::new();
+    }
+    // SAFETY: the contract
+    unsafe { CStr::from_ptr(p as *const c_char) }.to_bytes().to_vec()
+}
 
 /// The dialog kinds (each one of the original classes).
 #[repr(u32)]
@@ -50,6 +64,8 @@ pub enum EeWonLobbyDlgKind {
     Credits = 14,
     /// EELobbyConnectDialog (round 5): the players' connection wait before a launch.
     Connect = 15,
+    /// EELobbyFileDialog (round 6): the game room's saved games, loaded or deleted.
+    File = 16,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -117,6 +133,8 @@ pub enum EeWonLobbyDlgEvent {
     ComboSelChanged = 3,
     /// `LobbyEvent_GotHTTPDocument` (round 3: a `GotHTTPDocumentEvent`, broadcast when a download finished)
     GotHttpDocument = 4,
+    /// `ComponentEvent_ListItemClicked` (round 6: a `ListItemClickedEvent`)
+    ListItemClicked = 5,
 }
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -322,11 +340,11 @@ pub enum EeWonLobbyDlgOp {
     // ---- round 5: EELobbyConnectDialog
     /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
     GameIsHost,
-    /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
-    GameSlot,
-    /// `((EELobbyPlayerSlot*)a)->Option(0)` (the slot's state).
-    SlotState,
-    /// `((ListArea*)a)->InsertItem(new ConnectListItem(((EELobbyPlayerSlot*)b)->GetName(), image, c & 0xff), -1)`,
+    /// `((EELobbyGame*)a)->mRust`: the game's Rust object, which this object calls directly (round 6: the slots'
+    /// states were ops through the C++ slot views).
+    GameRust,
+    /// `((ListArea*)a)->InsertItem(new ConnectListItem(GUIString(b), image, c & 0xff), -1)` (`b` the slot's name, a
+    /// `GUIStringData`),
     /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
     /// image is not the ready one.
     ConnectInsert,
@@ -344,6 +362,35 @@ pub enum EeWonLobbyDlgOp {
     ConnectItemSetImage,
     /// `((ConnectListItem*)a)->mImage.mPtr != GameUserListCtrl_Ready_Image.mPtr` (0 or 1).
     ConnectItemNotReady,
+    // ---- round 6: EELobbyFileDialog
+    /// `PlatFindFirst((const char*)a, &data)` into a new find record (the find and its data); NULL when nothing
+    /// was found (the record freed).
+    FindFirst,
+    /// `GUIString(data.mName).length()` of the find record `a`.
+    FindNameLength,
+    /// `GUIString theName(data.mName); theName.resize(c); ((ListArea*)a)->InsertString(theName, -1)` (`b` the
+    /// find record).
+    FileListInsert,
+    /// `PlatFindNext(find, &data) == PLAT_FILE_OK` of the find record `a` (0 or 1).
+    FindNext,
+    /// `PlatFindClose(find)` and the find record freed.
+    FindClose,
+    /// `static_cast<TextListItem*>(a)->mText.mData->GetString()`, NUL-terminated (valid until the next op).
+    ItemText,
+    /// `EELobbyLoadSavedGame((const char*)a)` (0 or 1).
+    LoadSavedGame,
+    /// `this->GetRoot()`.
+    Root,
+    /// `LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true)`.
+    FileAskDelete,
+    /// `WONFile theFile((const char*)a); theFile.Delete(true)`.
+    FileDelete,
+    /// `((ListArea*)a)->RemoveItem((ListItem*)b)`.
+    ListRemove,
+    /// `((ListItemClickedEvent*)a)->mDoubleClick` (0 or 1).
+    EventDoubleClick,
+    /// `((ListItemClickedEvent*)a)->mButton`.
+    EventButton,
     /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
     ListRefresh,
 }
@@ -413,6 +460,8 @@ pub enum EeWonLobbyDlgCall {
     ConnectEnd,
     /// EELobbyConnectDialog: `SetConnected(a, b != 0)`.
     ConnectSetConnected,
+    /// EELobbyFileDialog: `ListFiles(a, b)` (the directory and the extension, NUL-terminated).
+    FileListFiles,
 }
 
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
@@ -525,12 +574,20 @@ static CONNECT: [EeWonLobbyDlgSlot; 2] = [
     slot!(c"ConnectList", c"EELobbyConnectDialog.cpp", 61, List),
     slot!(c"CancelButton", c"EELobbyConnectDialog.cpp", 62, Button),
 ];
+static FILE: [EeWonLobbyDlgSlot; 4] = [
+    slot!(c"FileList", c"EELobbyFileDialog.cpp", 37, List),
+    slot!(c"DeleteButton", c"EELobbyFileDialog.cpp", 40, Button),
+    slot!(c"LoadButton", c"EELobbyFileDialog.cpp", 38, Button),
+    slot!(c"CancelButton", c"EELobbyFileDialog.cpp", 39, Button),
+];
 /// StatusDialog looked its frame up before its body.
 const STATUS_INIT_ORDER: [usize; 6] = [0, 1, 2, 3, 5, 4];
 /// OkCancelDialog looked up its title, close button, body, buttons, frame, then its body component.
 const OK_CANCEL_INIT_ORDER: [usize; 7] = [0, 4, 1, 2, 3, 6, 5];
 /// AdminActionDialog looked its title up last.
 const ADMIN_INIT_ORDER: [usize; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+/// EELobbyFileDialog looked its list, load, cancel, then delete button up.
+const FILE_INIT_ORDER: [usize; 4] = [0, 2, 3, 1];
 
 /// A kind's controls in member order (the order the `SmartPtr` members were destroyed in reverse).
 pub fn slots(kind: EeWonLobbyDlgKind) -> &'static [EeWonLobbyDlgSlot] {
@@ -551,6 +608,7 @@ pub fn slots(kind: EeWonLobbyDlgKind) -> &'static [EeWonLobbyDlgSlot] {
         EeWonLobbyDlgKind::ChooseAdapter => &CHOOSE_ADAPTER,
         EeWonLobbyDlgKind::Credits => &CREDITS,
         EeWonLobbyDlgKind::Connect => &CONNECT,
+        EeWonLobbyDlgKind::File => &FILE,
     }
 }
 
@@ -614,6 +672,9 @@ const AD_LIST: usize = 0;
 const CD_CREDITS: usize = 0;
 const CN_LIST: usize = 0;
 const CN_CANCEL: usize = 1;
+const FD_LIST: usize = 0;
+const FD_DELETE: usize = 1;
+const FD_LOAD: usize = 2;
 /// The dialogs' OK (100001) and Cancel (100002) results.
 const DIALOG_OK: isize = 100001;
 const DIALOG_CANCEL: isize = 100002;
@@ -646,6 +707,9 @@ pub struct EeWonLobbyDlg {
     running: Cell<bool>,
     /// EELobbyConnectDialog's `mIsEnded` (unset by its constructor: false here).
     ended: Cell<bool>,
+    /// EELobbyFileDialog's `mDirectory` and `mExtension` (`std::string`s: bytes).
+    directory: RefCell<Vec<u8>>,
+    extension: RefCell<Vec<u8>>,
 }
 
 impl EeWonLobbyDlg {
@@ -665,6 +729,8 @@ impl EeWonLobbyDlg {
             scroll_text: Cell::new(0),
             running: Cell::new(false),
             ended: Cell::new(false),
+            directory: RefCell::new(Vec::new()),
+            extension: RefCell::new(Vec::new()),
         }
     }
 
@@ -697,6 +763,7 @@ impl EeWonLobbyDlg {
             EeWonLobbyDlgKind::AdminAction => ADMIN_INIT_ORDER.to_vec(),
             EeWonLobbyDlgKind::Status => STATUS_INIT_ORDER.to_vec(),
             EeWonLobbyDlgKind::OkCancel => OK_CANCEL_INIT_ORDER.to_vec(),
+            EeWonLobbyDlgKind::File => FILE_INIT_ORDER.to_vec(),
             _ => (0..table.len()).collect(),
         };
         for i in order {
@@ -845,6 +912,7 @@ impl EeWonLobbyDlg {
             EeWonLobbyDlgKind::AdminAction if text_changed && component == self.ctl(AA_EXPLANATION) => {
                 self.check_input()
             }
+            EeWonLobbyDlgKind::File => self.file_event(event, kind, component),
             _ => {
                 self.op(Op::BaseEvent, event, 0, 0);
             }
@@ -899,7 +967,8 @@ impl EeWonLobbyDlg {
             | EeWonLobbyDlgKind::Room
             | EeWonLobbyDlgKind::BadUser
             | EeWonLobbyDlgKind::Credits
-            | EeWonLobbyDlgKind::Connect => {}
+            | EeWonLobbyDlgKind::Connect
+            | EeWonLobbyDlgKind::File => {}
         }
     }
 
@@ -1154,8 +1223,101 @@ impl EeWonLobbyDlg {
                     self.connect_set_connected(a as u8, b != 0)
                 }
             }
+            C::FileListFiles => {
+                if self.kind == EeWonLobbyDlgKind::File {
+                    // SAFETY: the caller's two NUL-terminated strings (the contract)
+                    let (dir, ext) = unsafe { (cstr_bytes(a), cstr_bytes(b)) };
+                    self.list_files(dir, ext);
+                }
+            }
         }
         0
+    }
+
+    // ---- EELobbyFileDialog
+
+    /// ListFiles: the directory's files with the extension, listed without it (the directory ends in a separator).
+    fn list_files(&self, mut dir: Vec<u8>, ext: Vec<u8>) {
+        let list = self.ctl(FD_LIST);
+        self.op(Op::ListBeginUpdate, list, 0, 0);
+        self.op(Op::ListClear, list, 1, 0);
+        if let Some(&last) = dir.last() {
+            if last != b'/' && last != b'\\' {
+                dir.push(b'\\');
+            }
+        }
+        let mut pattern = dir.clone();
+        pattern.push(b'*');
+        pattern.extend_from_slice(&ext);
+        pattern.push(0);
+        *self.directory.borrow_mut() = dir;
+        *self.extension.borrow_mut() = ext.clone();
+        let find = self.op(Op::FindFirst, pattern.as_ptr() as isize, 0, 0);
+        if find != 0 {
+            loop {
+                let length = self.op(Op::FindNameLength, find, 0, 0);
+                if length > ext.len() as isize {
+                    self.op(Op::FileListInsert, list, find, length - ext.len() as isize);
+                }
+                if self.op(Op::FindNext, find, 0, 0) == 0 {
+                    break;
+                }
+            }
+            self.op(Op::FindClose, find, 0, 0);
+        }
+        self.op(Op::ListEndUpdate, list, 0, 0);
+    }
+
+    /// GetSelectedFile: the selected entry's path (the directory, the name, the extension), empty without one; as
+    /// a NUL-terminated string.
+    fn selected_file(&self) -> Vec<u8> {
+        let item = self.op(Op::ListGetSel, self.ctl(FD_LIST), 0, 0);
+        let mut path = Vec::new();
+        if item != 0 {
+            let text = self.op(Op::ItemText, item, 0, 0);
+            // SAFETY: the op's NUL-terminated copy of the entry's text, read before the next op
+            let name = unsafe { cstr_bytes(text) };
+            path.extend_from_slice(&self.directory.borrow());
+            path.extend_from_slice(&name);
+            path.extend_from_slice(&self.extension.borrow());
+        }
+        path.push(0);
+        path
+    }
+
+    /// LoadSelectedFile: the saved game loaded; the dialog ends with OK when that worked.
+    fn load_selected_file(&self) {
+        let path = self.selected_file();
+        if path.len() > 1 && self.op(Op::LoadSavedGame, path.as_ptr() as isize, 0, 0) != 0 {
+            let root = self.me(Op::Root, 0, 0);
+            self.op(Op::EndDialog, root, DIALOG_OK, 0);
+        }
+    }
+
+    /// HandleComponentEvent: Delete (after a yes) removes the file and its entry; Load or a left double click
+    /// loads it; anything else (a refused delete too) goes to the dialog.
+    fn file_event(&self, event: isize, kind: u32, component: isize) {
+        if kind == EeWonLobbyDlgEvent::ButtonPressed as u32 {
+            if component == self.ctl(FD_DELETE) {
+                if self.op(Op::FileAskDelete, 0, 0, 0) == DIALOG_OK {
+                    let path = self.selected_file();
+                    self.op(Op::FileDelete, path.as_ptr() as isize, 0, 0);
+                    let list = self.ctl(FD_LIST);
+                    let item = self.op(Op::ListGetSel, list, 0, 0);
+                    self.op(Op::ListRemove, list, item, 0);
+                    return;
+                }
+            } else if component == self.ctl(FD_LOAD) {
+                self.load_selected_file();
+                return;
+            }
+        } else if kind == EeWonLobbyDlgEvent::ListItemClicked as u32 {
+            if self.op(Op::EventDoubleClick, event, 0, 0) != 0 && self.op(Op::EventButton, event, 0, 0) == 0 {
+                self.load_selected_file();
+            }
+            return;
+        }
+        self.op(Op::BaseEvent, event, 0, 0);
     }
 
     /// EELobbyConnectDialog::Run: the game's seated players listed (the host ready, the others searching); unless
@@ -1170,11 +1332,13 @@ impl EeWonLobbyDlg {
         self.on(CN_CANCEL, Op::ButtonSetString, text as isize, 0);
         self.on(CN_LIST, Op::ListBeginUpdate, 0, 0);
         self.on(CN_LIST, Op::ListClear, 1, 0);
+        // GetPlayerSlot(i) of 0..7 is never NULL
         for i in 0..8 {
-            let slot = self.op(Op::GameSlot, game, i, 0);
-            if slot != 0 && self.op(Op::SlotState, slot, 0, 0) == 3 {
+            let handle = self.op(Op::GameRust, game, 0, 0);
+            if game_call(handle, GC::SlotRawOption, i, 0, 0) == 3 {
                 let searching = (i != 0) as isize;
-                if self.op(Op::ConnectInsert, self.ctl(CN_LIST), slot, i | searching << 8) != 0 {
+                let name = game_call(handle, GC::SlotGetName, i, 0, 0);
+                if self.op(Op::ConnectInsert, self.ctl(CN_LIST), name, i | searching << 8) != 0 {
                     all = false;
                 }
             }
