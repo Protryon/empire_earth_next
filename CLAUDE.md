@@ -82,7 +82,7 @@ a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stand
 ## Building the data
 
 The game reads one loose `Data` folder next to the exe:
-- db tables as text (CSV/YAML, with an `id` on every row);
+- db tables as text (CSV/YAML, with an `id` on every row; the game never reads a `.dat` table);
 - the rules documents in `Data/db`: `combat.yaml`, `gameoptions.yaml`, `civbuilder.yaml`, `civpowers.yaml`,
   `aipersonalities.yaml`, `epochs.yaml`;
 - the computer players' Lua scripts and their manifest `ais.json` in `Data/ai`;
@@ -98,7 +98,6 @@ There is no `data.ssa` and no registry. Settings live in `config.yaml` next to t
 python -I tools/open_data.py build build/open_data/tree [--force]  # from the two installs (read only), ~4 min
 python -I tools/open_data.py sync build/open_data/tree             # Data/db, Data/ai from data/db, data/ai (seconds)
 python -I tools/open_data.py db-regen                              # data/db converted again from retail
-python -I tools/open_data.py build build/open_data/tree-binary --binary   # same tree, binary forms unconverted
 python -I tools/open_data.py pack build/ee_open_media-<sha>.zip --part media   # release part: all but Data/db
 python -I tools/open_data.py pack build/ee_open_db-<sha>.zip --part db         # release part: data/db, data/ai
 python -I tools/fetch_data.py [OUT] [--without textures-4x]      # media releases + the checkout's db (build/data)
@@ -137,11 +136,10 @@ Before merging or pushing any code change, all of these are required:
 1. `python -I build.py -j 10` and `python -I build.py -j 10 --test-profile windowed-software` both link (0/0).
 2. `python -I tools/eedata/eedata.py check` prints PASS. If tables, rules or the text compiler changed, `cppgate`
    must pass as well.
-3. `bash tools/gates.sh` (about 40 minutes, test profile; logs in `build/gates/`):
-   - a tour on the binary tree and on the open tree: menus, settings tour, input check, 120 s of play. Pass:
-     `STOP <windowed session complete> reached`;
-   - a seeded 2-AI Hard Small game to the time cap on both trees, played by the lobby's Classic (classic_lua since
-     stage 4). Pass: outcome `time-cap` with both AI players alive (e.g. PT ~12,000-12,600, units `[5, 28, 27]`).
+3. `bash tools/gates.sh` (about 20 minutes, test profile; logs in `build/gates/`), on the open tree (the game reads
+   only the text db tables; there is no binary tree since 2026-11-15):
+   - a tour: menus, settings tour, input check, 120 s of play. Pass: `STOP <windowed session complete> reached`;
+   - a seeded 2-AI Hard Small game to the time cap, played by the lobby's Classic (classic_lua since stage 4). Pass: outcome `time-cap` with both AI players alive (e.g. PT ~12,000-12,600, units `[5, 28, 27]`).
      PT and unit counts vary between runs and with machine load.
 
 - Harness self test, no game, about 1 minute: `python -I tools/harness/selftest/selftest.py`. Run it after any

@@ -2422,8 +2422,8 @@ Unused, with the evidence (all named `mUnused*`; the guessed meaning is in the n
 the data path, `EEDataText.cpp` compiles it to the binary record stream and serves it as an `FSMemoryFile`; the
 loaders are unchanged. Every record starts from the struct's base record (zero plus the defaults of unread fields),
 an unlisted row is the table's hole record (both generated into `EEDataTextSpecs.h`). A loose `Data\db\` file wins
-over the archive, and a text table over a loose .dat. A text that does not compile stops the game with its message
-(file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
+over the archive. Since 2026-11-15 the game reads only the text: a `.dat` table is never opened, and a table whose
+text is not on the path stops the game with its name, as does a text that does not compile (file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
 checksum adds the loose `Data\Db\*.csv`/`*.yaml` (clean text gives a different checksum than retail; every peer
 needs the same tables).
 

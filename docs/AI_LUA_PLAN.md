@@ -429,11 +429,9 @@ keyed `food`, `wood`, `stone`, `gold`, `iron`):
 **Classes and techs are named by their data ids:** dbobjects' `id` (`citizen`, `b_barracks`, `b_settlement`,
 `b_guard_tower_paleo`, `inf01_clubman`, `s02_fishing_boat_stone`) and dbtechtree's `id` for `research`. The id is
 the row's identity in the text tables (DATA_FORMATS §8.6), so a script keeps working when rows move, and a mod
-that adds a row gives its scripts a name for it. A data tree without the tables' text (the binary tree) has no ids:
-every class was then `dbobjects_<row>` (a tech `dbtechtree_<id>`), the form tools/eedata gives a row without a name, and
-boom found no class it knew (AI_RESEARCH §8.36); since 2026-11-09 a binary tree carries `Data/db/dbobjects.ids` and
-`dbtechtree.ids` (`key id` lines, the ids tools/eedata would give the rows; `open_data.py build --binary` writes them,
-`open_data.py ids TREE` adds them to an older tree), read with the .dat (EEDataTextFile.cpp `EEReadIdsFile`).
+that adds a row gives its scripts a name for it. A row without an id is `dbobjects_<row>` (a tech
+`dbtechtree_<id>`), the form tools/eedata gives a row without a name. (The binary tree, whose tables had no ids and
+needed `Data/db/*.ids` files, AI_RESEARCH §8.36, is gone since 2026-11-15: the game reads only the text tables.)
 `EECPNextClassByName` / `EECPNextClassName` (EECPNextLua.cpp) do the lookups, from the ids EEDbFindFile kept when
 it compiled the tables. `data/ai/lib/view.lua` has the helpers: `resources`, `cost(view, type)`, `buildings(view, type)`,
 `total(entry)`, `sum(amounts)`.

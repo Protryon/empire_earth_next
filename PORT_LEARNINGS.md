@@ -2143,3 +2143,8 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Data folder**: `tools/fetch_data.py` used to unpack into `data/`, which now holds tracked files (and a media
   release replacing the folder would have deleted them). It unpacks into `build/data` now and copies the checkout's
   `data/db` and `data/ai` in; the .gitignore ignores everything else under `data/`.
+- **No binary tables in the game**: with the text committed, the game's .dat path (EEDbFindFile's fallback to the
+  .dat, the binary tree's `*.ids` row names, the binary branch of the content dump) is gone, with `open_data.py build
+  --binary`, `tree-binary` and the gates' binary runs. A table whose text is missing stops the game with its name.
+  The retail .dat files are still read by tools/eedata (the conversion, `check`'s retail values, cppgate's dump of
+  the retail bytes through EEDataDump).
