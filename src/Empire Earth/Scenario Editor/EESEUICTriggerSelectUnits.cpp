@@ -61,8 +61,7 @@
 #include "ee/EEROEffects.h"
 #include "lle/GE3DPoint.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEALasso.h"
-#include "ee/EEAMouseClick.h"
+#include "ee/EEARust.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EESEUICTriggerSelectUnits.h"
 

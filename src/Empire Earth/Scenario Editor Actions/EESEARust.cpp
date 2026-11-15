@@ -98,7 +98,7 @@
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "lle/FSMemoryFile.h"
-#include "ee/EEAQuickSaveLoad.h"
+#include "ee/EEARust.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EESEUITechListBox.h"
 #include "ee/EETileCoordinate.h"
@@ -111,7 +111,6 @@
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EEAMouseClick.h"
 #include "lle/GERectangle.h"
 #include "ee/EESEARust.h"
 

@@ -44,7 +44,7 @@
 #include "rust/ee_screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
 #include "ee/EEWonNet.h"
 #include "ee/EEPSaveGameHeader.h"
-#include "ee/EEARemovePlayer.h"
+#include "ee/EEARust.h"
 #include "lle/UResourceFile.h"
 #include "ee/EETeam.h"
 #include "ee/EEClient.h"

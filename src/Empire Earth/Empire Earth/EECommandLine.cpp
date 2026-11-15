@@ -64,7 +64,7 @@
 #include "ee/EEServer.h"
 #include "ee/EEClient.h"
 #include "ee/EEAction.h"
-#include "ee/EEAJoinOrHostAGame.h"
+#include "ee/EEARust.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEScreenEvent.h"

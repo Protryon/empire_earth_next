@@ -86,7 +86,6 @@
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
 #include "ee/EEAction.h"
-#include "ee/EEAAddChatMessage.h"
 #include "ee/EEUIEProcessTimerExpired.h"
 #include "ee/EEMedia.h"
 #include "ee/EESoundObject.h"

@@ -29,7 +29,7 @@
 #include "lle/URandom.h"
 #include "lle/UString.h"
 #include "lle/UWideString.h"
-#include "ee/EEABuild.h"
+#include "ee/EEARust.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -480,12 +480,6 @@ void EESEInstructions::Store()
     theManager->mMediaStrings.mHints = theText;
     this->mHistoryEditBox->GetAllText(theText);
     theManager->mMediaStrings.mHistory = theText;
-}
-
-// FUNCTION: EXE 0x5720c6
-// Does nothing (the shared empty body; EESETSBaseObject::RefreshControls and EEPhysicsTrace bind here too)
-void EEABuild::Virtual8()
-{
 }
 
 // FUNCTION: EXE 0x5720c7

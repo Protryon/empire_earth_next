@@ -35,7 +35,7 @@
 #include "lle/FSFileSpec.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
-#include "ee/EEAJoinOrHostAGame.h"
+#include "ee/EEARust.h"
 #include "lle/GELine.h"
 #include "lle/GEFont.h"
 #include "lle/GEText.h"

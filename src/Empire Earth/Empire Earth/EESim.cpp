@@ -111,7 +111,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
-#include "ee/EEARemovePlayer.h"
 #include "ee/EEMessage.h"
 #include "ee/EEMessageCapture.h"
 #include "ee/EEUnitStore.h"

@@ -27,7 +27,7 @@
 #include "lle/GEMaterial.h"
 #include "lle/GEPolygonArray.h"
 #include "ee/EEAction.h"
-#include "ee/EEAMouseClick.h"
+#include "ee/EEARust.h"
 #include "ee/EEUICCommandUnits.h"
 
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4

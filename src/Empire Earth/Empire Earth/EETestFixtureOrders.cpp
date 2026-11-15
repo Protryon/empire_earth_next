@@ -146,7 +146,7 @@
 #include "ee/EETown.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitPicker.h"
-#include "ee/EEACenterCamera.h"
+#include "ee/EEARust.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEGraphics.h"

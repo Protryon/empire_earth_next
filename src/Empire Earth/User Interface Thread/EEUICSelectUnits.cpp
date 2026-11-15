@@ -21,8 +21,7 @@
 #include "ee/EEMouse.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEAction.h"
-#include "ee/EEAMouseClick.h"
-#include "ee/EEALasso.h"
+#include "ee/EEARust.h"
 #include "lle/GELine.h"
 #include "ee/EEUICSelectUnits.h"
 

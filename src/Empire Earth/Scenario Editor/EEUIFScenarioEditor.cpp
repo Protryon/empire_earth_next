@@ -92,7 +92,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEAScroll.h"
+#include "ee/EEARust.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESMArea.h"
 #include "ee/EEUnit.h"
@@ -101,8 +101,6 @@
 #include "ee/EESEPlayerScreen.h"
 #include "ee/EEMessage.h"
 #include "ee/EESETSConditionControls.h"
-#include "ee/EEALasso.h"
-#include "ee/EEAMouseClick.h"
 #include "ee/EESEALasso.h"
 #include "ee/EESEAMouseClick.h"
 #include "ee/EESETSAMouseClick.h"
@@ -558,7 +556,6 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
 #include "lle/UIComboBox.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIFullBackground.h"
-#include "ee/EEAScroll.h"
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEUIFSEBrushGroup.h"
@@ -923,14 +920,12 @@ extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain n
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEMiniMap.h"
 #include "lle/TMPoll.h"
-#include "ee/EEAScroll.h"
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicManager.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EESEARust.h"
 #include "lle/GEText.h"
 #include "ee/EEUIFSEPaint.h"
-#include "ee/EEAQuickSaveLoad.h"
 #include "ee/EEUIFSEMap.h"
 #include "ee/EEUIFSETerrain.h"
 #include "lle/UICheckBox.h"
@@ -939,7 +934,6 @@ extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's font
 extern GEFont* gU531938;                    // 0x531938
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESEInstructions.h"
-#include "ee/EESEAQuickSaveLoad.h"
 extern unsigned long& gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
 extern bool gSightUpdatesEnabled;
 extern GEViewport gViewport;

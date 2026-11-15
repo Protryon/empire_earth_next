@@ -78,6 +78,10 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        # deletion's 0x1a6b45..0x1a7331 (an EESEARust kind), the lasso's and the click's
                        # 0x1a7358..0x1a75e0 (their bodies inline over Rust: ee/EESEALasso.h, ee/EESEAMouseClick.h)
                        "Empire Earth/Scenario Editor Actions/EESEARust.cpp",
+                       # the host of the game's actions whole in Rust (ee/EEARust.h; ee_screens game_actions.rs): the
+                       # Actions units' ranges 0x1000..0x52f3 but EEAWonNet's, EEAQuickSaveLoad's 0x1a5529..0x1a5881
+                       # and EESEAQuickSaveLoad's 0x1aa70e..0x1aa723
+                       "Empire Earth/Actions/EEARust.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)

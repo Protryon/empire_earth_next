@@ -119,14 +119,13 @@ unsigned long EEMenuHeight();
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEABootClientFromCanceledGame.h"
+#include "ee/EEARust.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/RTSMousePointer.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EESETSEffectControls.h"
 #include "lle/FSMemoryFile.h"
-#include "ee/EEAQuickSaveLoad.h"
 // free functions of other units (declared where they are used, as their own units do) (provisional names)
 void DeleteEffectBatchBuffers();            // 0x102e1b (before the rasterizer is deactivated)
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFlag);  // 0x140306 (Empire Earth.cpp)
@@ -751,7 +750,6 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_QUICK_LOAD: {
         EEAQuickSaveLoad* theAction = reinterpret_cast<EEAQuickSaveLoad*>(inA);
         theAction->mIsLoad = true;
-        theAction->mGameState = &gGameState;
         gUserInterface->PostAction(theAction);
         theAction->Dereference();
         break;

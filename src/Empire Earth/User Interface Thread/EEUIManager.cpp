@@ -116,7 +116,7 @@
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEABootClientFromCanceledGame.h"
+#include "ee/EEARust.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/RTSMousePointer.h"

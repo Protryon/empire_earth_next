@@ -35,7 +35,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEAMiniMap.h"
+#include "ee/EEARust.h"
 #include "ee/EEUIMiniMap.h"
 #include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
 #include "rust/ee_gfx.h"

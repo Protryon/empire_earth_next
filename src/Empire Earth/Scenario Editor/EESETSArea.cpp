@@ -90,7 +90,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGraphics.h"
-#include "ee/EEAScroll.h"
+#include "ee/EEARust.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESEARust.h"
 #include "ee/EESMArea.h"
