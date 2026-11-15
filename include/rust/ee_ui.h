@@ -925,6 +925,34 @@ enum class EeUiOp : uint32_t {
   MoviePlaying = 613,
   /// Movie `a`'s `RenderFrame()` -> its result.
   MovieRender = 614,
+  /// The event's virtual `InitializeEvent()` -> its result.
+  EvInitialize = 630,
+  /// The event's virtual `UninitializeEvent()` -> its result.
+  EvUninitialize = 631,
+  /// The owner `b` of kind `a` (0 `UIControlsTable::GetUIControlsTable(b)`, 1 manager `c`'s `GetFormByID(b)`).
+  EvOwner = 632,
+  /// Owner `b` (of kind `a`)'s `AddEvent` of the event id `c` and type `d`.
+  EvAdd = 633,
+  /// *Pure*: entity `a` is a button (`GetType() == kControlTypeButton`).
+  GrpIsButton = 640,
+  /// *Pure*: control `a`'s display mode is `kDisplayModeShown`.
+  GrpShown = 641,
+  /// *Pure*: control `a`'s form is its manager's current form.
+  GrpOnCurrentForm = 642,
+  /// The manager's `AddDirtyRectangle` of control `a`'s rectangle on its form.
+  GrpAddDirty = 643,
+  /// Control `a`'s `HideControl()`.
+  GrpHide = 644,
+  /// Control `a`'s `SetDirty(true)`.
+  GrpSetDirty = 645,
+  /// *Pure*: control `a`'s form's `GetTabbingOn()`.
+  GrpTabbing = 646,
+  /// *Pure*: control `a`'s form's tab stop is its index.
+  GrpIsTabStop = 647,
+  /// Control `a`'s form's `Tab()`.
+  GrpTab = 648,
+  /// Hot key `a`'s `SetEnabled(b != 0)`.
+  GrpSetEnabled = 649,
 };
 
 /// The inward calls (each C++ class's methods forward here with their own call).
@@ -1378,6 +1406,14 @@ enum class EeUiEditCall : uint32_t {
   TabbedTo = 49,
 };
 
+/// UIEvent's inward calls on an event.
+enum class EeUiEventCall : uint32_t {
+  /// `Initialize()`: one more user, `InitializeEvent` on the first -> its result.
+  Initialize = 1,
+  /// `Uninitialize()`: one user less, `UninitializeEvent` when the last leaves -> its result.
+  Uninitialize = 2,
+};
+
 /// The statics ([`ee_ui_font_tables`]).
 enum class EeUiFontsCall : uint32_t {
   /// `Create(file a, manager b)` -> the last read's result.
@@ -1526,6 +1562,24 @@ enum class EeUiFormCall : uint32_t {
   UseGdiForText = 92,
   DrawToolTipShadow = 93,
   SetDrawToolTipShadow = 94,
+};
+
+/// UIEntityGroup's inward calls.
+enum class EeUiEntityGroupCall : uint32_t {
+  /// `Disable()`: the count 1, the shown buttons on the current form hidden (tabbing past them), the hot keys off.
+  Disable = 1,
+  /// `Enable()`: the count 0, the buttons redrawn, the hot keys on.
+  Enable = 2,
+  /// `AddEntity(a)` -> `kErrorOK`.
+  Add = 3,
+  /// `RemoveEntity(a)` -> `kErrorOK`, or `kErrorNotFound` when `a` is not a member.
+  Remove = 4,
+  /// `GetEntity(a)` (NULL past the end).
+  Entity = 5,
+  /// `GetEntityCount()`.
+  Count = 6,
+  /// `GetIsEnabled()`: the count is 0.
+  IsEnabled = 7,
 };
 
 /// The inward calls (the C++ class's methods that forward here).
@@ -2229,6 +2283,9 @@ struct EeUiControlsTable;
 /// The Rust UIEditBox.
 struct EeUiEdit;
 
+/// The Rust UIEntityGroup.
+struct EeUiEntityGroup;
+
 /// The Rust UIForm.
 struct EeUiForm;
 
@@ -2400,6 +2457,12 @@ struct EeUiControlFields {
   bool mUnknown9C;
   bool mHasBgOpacity;
   bool mAlwaysDirty;
+};
+
+/// `UIEvent`'s member (`include/lle/UIEvent.h`), the C++ class's private base.
+struct EeUiEventFields {
+  /// `Initialize`/`Uninitialize`'s nesting: the event is initialised while it is not 0.
+  unsigned long mInitializeCount;
 };
 
 /// `UIHotKey`'s members (`include/lle/UIHotKey.h`), the C++ class's base.
@@ -2887,6 +2950,24 @@ ptrdiff_t ee_ui_edit_call(const EeUiEdit *edit,
                           ptrdiff_t d,
                           float *f);
 
+/// One of UIEvent's methods on an event's record ([`EeUiEventCall`]); the host's object is the record.
+///
+/// # Safety
+/// `rec` is a live record (a C++ event's base) for the call; the host's object is live.
+long ee_ui_event_call(EeUiEventFields *rec,
+                      EeUiHostFn host,
+                      EeUiEventCall call);
+
+/// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1): the host's object is the
+/// file.
+///
+/// # Safety
+/// `file` is the C++ caller's live file; the host answers the file's and owners' ops.
+long ee_ui_event_create(void *file,
+                        EeUiHostFn host,
+                        int kind,
+                        void *manager);
+
 /// `UIFontTable`'s statics ([`EeUiFontsCall`]).
 ///
 /// # Safety
@@ -2934,6 +3015,23 @@ ptrdiff_t ee_ui_form_call(const EeUiForm *form,
                           ptrdiff_t a,
                           ptrdiff_t b,
                           float *f);
+
+/// A new Rust group for the C++ `group`.
+EeUiEntityGroup *ee_ui_entity_group_new(void *group, EeUiHostFn host);
+
+/// The destructor.
+///
+/// # Safety
+/// `group` came from `ee_ui_entity_group_new` (or is NULL) and is not used again.
+void ee_ui_entity_group_free(EeUiEntityGroup *group);
+
+/// One of UIEntityGroup's methods ([`EeUiEntityGroupCall`]).
+///
+/// # Safety
+/// `group` is live.
+ptrdiff_t ee_ui_entity_group_call(const EeUiEntityGroup *group,
+                                  EeUiEntityGroupCall call,
+                                  ptrdiff_t a);
 
 /// `UIHotKey()` over its record.
 ///
@@ -3201,27 +3299,6 @@ ptrdiff_t ee_ui_controls_table_call(const EeUiControlsTable *table,
 unsigned long ee_ui_controls_table_string_count(long begin,
                                                 long end);
 
-/// `UIEvent::CreateControlEvents` (`kind` 0, no manager) and `CreateFormEvents` (`kind` 1).
-long ee_ui_event_create(void *file, int kind, void *manager);
-
-/// `UIEvent::Initialize`.
-long ee_ui_event_initialize(unsigned long *count, void *event);
-
-/// `UIEvent::Uninitialize`.
-long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// `UIEntityGroup::Disable`'s loop (the C++ sets `mDisableCount` first).
-void ee_ui_group_disable(void *group);
-
-/// `UIEntityGroup::Enable`'s loop.
-void ee_ui_group_enable(void *group);
-
-/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
-/// select, -1 when none starts with the key.
-long ee_ui_string_list_find(void *list,
-                            const char *key,
-                            unsigned long selection);
-
 /// `UIGraph::CopyData`'s rectangles for the control's `rect` (the texts set through the host).
 EeUiGraphLayout ee_ui_graph_copy_layout(void *graph,
                                         EeUiRect rect,
@@ -3339,6 +3416,12 @@ void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigne
 /// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
 long ee_ui_control_update_mouse(void *control,
                                 const void *location);
+
+/// `UILBString::UpdateTranslatedKey`'s search: the typed key (a C string) and `mCurrentSelection` -> the line to
+/// select, -1 when none starts with the key.
+long ee_ui_string_list_find(void *list,
+                            const char *key,
+                            unsigned long selection);
 
 }  // extern "C"
 

@@ -888,6 +888,39 @@ pub enum EeUiOp {
     /// Movie `a`'s `RenderFrame()` -> its result.
     MovieRender = 614,
 
+    // ---- the events (R6 ui round 21, eventobj.rs): on the event's record, or on the events file (with the
+    // background table's file ops, 597..600)
+    /// The event's virtual `InitializeEvent()` -> its result.
+    EvInitialize = 630,
+    /// The event's virtual `UninitializeEvent()` -> its result.
+    EvUninitialize = 631,
+    /// The owner `b` of kind `a` (0 `UIControlsTable::GetUIControlsTable(b)`, 1 manager `c`'s `GetFormByID(b)`).
+    EvOwner = 632,
+    /// Owner `b` (of kind `a`)'s `AddEvent` of the event id `c` and type `d`.
+    EvAdd = 633,
+
+    // ---- the entity groups (R6 ui round 21, groupobj.rs): on entity a
+    /// *Pure*: entity `a` is a button (`GetType() == kControlTypeButton`).
+    GrpIsButton = 640,
+    /// *Pure*: control `a`'s display mode is `kDisplayModeShown`.
+    GrpShown = 641,
+    /// *Pure*: control `a`'s form is its manager's current form.
+    GrpOnCurrentForm = 642,
+    /// The manager's `AddDirtyRectangle` of control `a`'s rectangle on its form.
+    GrpAddDirty = 643,
+    /// Control `a`'s `HideControl()`.
+    GrpHide = 644,
+    /// Control `a`'s `SetDirty(true)`.
+    GrpSetDirty = 645,
+    /// *Pure*: control `a`'s form's `GetTabbingOn()`.
+    GrpTabbing = 646,
+    /// *Pure*: control `a`'s form's tab stop is its index.
+    GrpIsTabStop = 647,
+    /// Control `a`'s form's `Tab()`.
+    GrpTab = 648,
+    /// Hot key `a`'s `SetEnabled(b != 0)`.
+    GrpSetEnabled = 649,
+
 }
 
 impl EeUiOp {
@@ -1022,6 +1055,11 @@ impl EeUiOp {
                 | BgtEntryAlpha
                 | BgtEntryFormId
                 | MoviePlaying
+                | GrpIsButton
+                | GrpShown
+                | GrpOnCurrentForm
+                | GrpTabbing
+                | GrpIsTabStop
         )
     }
 
