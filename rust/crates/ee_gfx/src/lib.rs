@@ -27,13 +27,18 @@ pub mod beam;
 pub mod camera;
 pub mod capture;
 pub mod effect_2d;
+#[cfg(test)]
+mod effect_2d_mock;
 pub mod effect_additive;
 pub mod effect_aged;
 pub mod effect_beam;
 pub mod effect_confirm;
+pub mod effect_decal;
 pub mod effect_follow;
+pub mod effect_glow;
 pub mod effect_hurricane;
 pub mod effect_icon;
+pub mod effect_icons;
 pub mod effect_manager;
 pub mod effect_multi;
 pub mod effect_nuclear;

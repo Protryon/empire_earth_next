@@ -222,6 +222,10 @@ void ee_ts_dispatch_window_events();
 /// `TSInitialize` after C++ registered [`ee_ts_shutdown`]: registers the calling (main) thread.
 long ee_ts_initialize();
 
+/// `TSInitialize`: registers [`ee_ts_shutdown`] with the engine's shutdown list (ee_util), then the calling (main)
+/// thread (`kErrorFailed` when the registration fails, as the original; it never does).
+long ee_ts_system_initialize();
+
 /// The Thread System's shutdown (`URegisterShutdown`): destroys the calling thread's object.
 void ee_ts_shutdown(bool _forced);
 

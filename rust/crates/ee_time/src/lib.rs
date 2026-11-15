@@ -465,6 +465,14 @@ pub extern "C" fn ee_time_initialize() {
     TIME.initialize(&PlatClock);
 }
 
+/// `TMInitialize`: [`ee_time_initialize`], then [`ee_time_shutdown`] registered with the engine's shutdown list
+/// (ee_util; always 0, `kErrorOK`).
+#[no_mangle]
+pub extern "C" fn ee_time_system_initialize() -> std::ffi::c_long {
+    ee_time_initialize();
+    ee_util::ee_util_register_shutdown(ee_time_shutdown)
+}
+
 /// The Time Manager's shutdown (`URegisterShutdown`): the timer resolution restored.
 #[no_mangle]
 pub extern "C" fn ee_time_shutdown(_forced: bool) {

@@ -14,3 +14,7 @@ ee_data = { path = "../ee_data" }
 ee_astar = { path = "../ee_astar" }
 # GE3DPoint's squared distance (the cast calamity's range)
 ee_ge = { path = "../ee_ge" }
+
+[dev-dependencies]
+# the copied MSVC sort's golden inputs (msvc_sort.rs, as ee_sound's)
+ee_random = { path = "../ee_random" }

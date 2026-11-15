@@ -13,7 +13,6 @@
 
 class DX7_API DX7Screen : public GEScreen {
     friend class DX7Rasterizer;
-    friend class DX7TnLRasterizer;
 public:
     operator GXDirectDraw*() { return this->mDirectDraw; }
 

@@ -116,8 +116,8 @@ long EESEUICTriggerSelectUnits::MouseLButtonUp()
     if (this->mDragging)
     {
         this->mD1 = false;
-        theRectangle.SetTopLeft(this->mDragStart);
-        theRectangle.SetBottomRight(this->mDragEnd);
+        theRectangle.SetTopLeft(this->GetDragStart());
+        theRectangle.SetBottomRight(this->GetDragEnd());
         if (theRectangle.GetLeft() > theRectangle.GetRight())
         {
             theTemp = theRectangle.GetLeft();

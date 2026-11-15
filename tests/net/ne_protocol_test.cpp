@@ -1,5 +1,6 @@
 // NEProtocol over the TCP plug-in (LLE Network Engine round 2; round 5 made NEConnection and NEServer the plug-in's
-// handles, the protocol's members taking them): random calls through the engine's protocol over a stand-in plug-in (the ee_tcp_* functions below, each call a trace line with its
+// handles, the protocol's members taking them; round 7 moved the class whole to Rust, ee_net ffi_protocol.rs, driven
+// here through the test's adapter with the original's members, Proto): random calls through the engine's protocol over a stand-in plug-in (the ee_tcp_* functions below, each call a trace line with its
 // arguments and an answer from the trace's random stream). The protocol, its connections and servers are the
 // engine's units; the trace is compared with tests/net/golden_protocol.txt, which the original units made: the
 // original NEProtocol.cpp with its table of 30 entry points looked up in the TCP shim's PIMPlugin table, and the
@@ -27,18 +28,24 @@
 #endif
 #include "rust/ee_net_tcp.h"
 
+#ifdef NE_PROTOCOL_ORIG
 // NEProtocol's constructor and destructor are its friends' (NEInitialize, NEShutdown, the server): the test is the
 // server here (the game's server is not linked)
 class NESynchronousServer {
 public:
-#ifdef NE_PROTOCOL_ORIG
     static NEProtocol* New(PIMModule* inModule) { return new NEProtocol(inModule); }
-#else
-    static NEProtocol* New() { return new NEProtocol(); }
-#endif
     static void Delete(NEProtocol* inProtocol) { delete inProtocol; }
     static void ResetXfer(NEProtocol* inProtocol, NEServer* inServer) { inProtocol->ResetXfer(inServer); }
 };
+typedef NEProtocol Proto;
+static bool SameProtocol(NEProtocol* inFound, Proto* inProtocol) { return inFound == inProtocol; }
+#else
+#include "ne_protocol_members.h"
+static bool SameProtocol(NEProtocol* inFound, Proto* inProtocol)
+{
+    return reinterpret_cast<EeNetProtocol*>(inFound) == inProtocol->mRust;
+}
+#endif
 
 // ---- the engine functions the units call (the test links only the strings, events and locks)
 
@@ -397,10 +404,10 @@ static void Run(int inSteps)
     theFields->mIsValid = PIMFind(thePlugin, "PIMIsValid");
     theFields->mPlugin = thePlugin;
     Line("new");
-    NEProtocol* p = NESynchronousServer::New((PIMModule*)theFields);
+    Proto* p = NESynchronousServer::New((PIMModule*)theFields);
 #else
     Line("new");
-    NEProtocol* p = NESynchronousServer::New();
+    Proto* p = NESynchronousServer::New();
 #endif
     Line("count %lu name \"%s\" type %lu", NEProtocol::GetCount(), (const char*)p->GetName(), p->GetProtocolType());
     TSEvent* theEvents[3];
@@ -603,7 +610,7 @@ static void Run(int inSteps)
         default: {
             NEProtocol* theFound = NULL;
             r = NEProtocol::GetProtocol(Below(3), theFound);
-            Line("get_protocol = %ld %d", r, theFound == p);
+            Line("get_protocol = %ld %d", r, SameProtocol(theFound, p));
             continue;
         }
         }

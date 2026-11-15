@@ -14,8 +14,6 @@
 SEMixer* SEMixer::GetActiveMixer() { return reinterpret_cast<SEMixer*>(ee_sound_mixer_active()); }
 SEConductor& SEMixer::GetConductor() { return *reinterpret_cast<SEConductor*>(ee_sound_mixer_conductor(RUST)); }
 unsigned long SEMixer::GetCount() { return ee_sound_mixer_count(); }
-float SEMixer::GetCPUUsage() { return ee_sound_mixer_cpu_usage(RUST); }
-IDirectSound* SEMixer::GetDirectSoundInterface() { return static_cast<IDirectSound*>(ee_sound_mixer_direct_sound(RUST)); }
 // FUNCTION: LLE 0x1004ede9
 // the registered mixer with the given index; kErrorBeyondEnd past the last
 long SEMixer::GetMixer(unsigned long inIndex, SEMixer*& outMixer)

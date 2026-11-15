@@ -154,6 +154,21 @@ pub unsafe extern "C" fn ee_won_eeresource_row(index: usize, out: *mut EeWonEeRe
     true
 }
 
+/// The row of a global's name (`EE_LOBBY_STRING`: the lobby's code names a string by its original global), -1 when
+/// the table has none.
+///
+/// # Safety
+/// `name` is NULL or a NUL-terminated string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_eeresource_find(name: *const c_char) -> isize {
+    if name.is_null() {
+        return -1;
+    }
+    // SAFETY: the contract
+    let name = unsafe { CStr::from_ptr(name) };
+    EE_RESOURCES.iter().position(|r| r.name == name).map_or(-1, |i| i as isize)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -194,5 +209,17 @@ mod tests {
         assert!(!out.new_section);
         // SAFETY: a writable row
         assert!(!unsafe { ee_won_eeresource_row(73, &mut out) });
+    }
+
+    #[test]
+    fn a_global_is_found_by_its_name() {
+        // SAFETY: static C strings and NULL
+        unsafe {
+            assert_eq!(ee_won_eeresource_find(c"gEELobbyGameOptionsCtrl_Epoch1".as_ptr()), 0);
+            assert_eq!(ee_won_eeresource_find(c"gEELobbyInterface_LoadGameError".as_ptr()), 67);
+            assert_eq!(ee_won_eeresource_find(c"gEELobbyGame_EveryoneOnSameTeam".as_ptr()), 72);
+            assert_eq!(ee_won_eeresource_find(c"gEELobbyGame_Nothing".as_ptr()), -1);
+            assert_eq!(ee_won_eeresource_find(std::ptr::null()), -1);
+        }
     }
 }
