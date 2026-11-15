@@ -13,6 +13,8 @@
 //! - `ne_records`: the engine messages as one data class (`NEMRecord`): layout, flags, responses, labels; the
 //!   factory's builders by type;
 //! - `execute`: the `Execute` bodies' decisions (the selection id check, the resources), with their C ABI;
+//! - `session`: the game's lock-step server and client (`EEServer.cpp`, `EEClient.cpp`, round 6): the connection
+//!   handling, the lobby's slots, the votes, the migration, over one C++ host;
 //! - `bodies`: the record types' `Execute` bodies and the physics' two ways to run a message over the C++ host's world
 //!   calls (round 5), the unit orders through the units lane's bodies;
 //! - `ffi`: the C ABI.
@@ -26,6 +28,7 @@ pub mod ffi;
 pub mod ne_records;
 pub mod records;
 pub mod schema;
+pub mod session;
 pub mod units;
 
 #[cfg(test)]
