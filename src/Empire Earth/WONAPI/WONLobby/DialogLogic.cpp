@@ -176,12 +176,12 @@ static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a,
         static_cast<StatusDialog*>(aComp)->SetStatus(GetWONStatusString((WONStatus)b), false);
         return 0;
     case Op::SoundEffects: return LobbyGetLobbySoundEffects() ? 1 : 0;
-    case Op::PlayErrorSound: LobbyPlaySound(::LobbyGlobal_Error_Sound.get()); return 0;
+    case Op::PlayErrorSound: LobbyPlaySound(LOBBY_SOUND(LobbyGlobal_Error_Sound).get()); return 0;
     case Op::OkCancelSetText:
         static_cast<OkCancelDialog*>(aComp)->SetText(*reinterpret_cast<const GUIString*>(b),
                                                      *reinterpret_cast<const GUIString*>(c),
-                                                     d != 0 ? ::LobbyGlobal_Yes_String : ::LobbyGlobal_OK_String,
-                                                     d != 0 ? ::LobbyGlobal_No_String : ::LobbyGlobal_Cancel_String);
+                                                     d != 0 ? LOBBY_STRING(LobbyGlobal_Yes_String) : LOBBY_STRING(LobbyGlobal_OK_String),
+                                                     d != 0 ? LOBBY_STRING(LobbyGlobal_No_String) : LOBBY_STRING(LobbyGlobal_Cancel_String));
         return 0;
     case Op::RootWindowOf: return (intptr_t)aComp->GetRootWindow();
     case Op::InvalidateRect: {

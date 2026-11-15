@@ -74,7 +74,15 @@ impl EeWonCompletion {
     /// A C++ completion running `call`, made through `hooks` (null when the table has no maker); like a `new`
     /// object it holds no reference: its first holder takes one.
     pub fn make(hooks: &EeWonAsyncOpHooks, call: impl Fn(*mut c_void) + Send + Sync + 'static) -> *mut c_void {
-        let Some(h) = hooks.new_completion else {
+        Self::make_with(hooks.new_completion, call)
+    }
+
+    /// As [`make`](Self::make), through the maker given (the library's core table's, cppcore.rs).
+    pub fn make_with(
+        maker: Option<unsafe extern "C" fn(body: *mut EeWonCompletion) -> *mut c_void>,
+        call: impl Fn(*mut c_void) + Send + Sync + 'static,
+    ) -> *mut c_void {
+        let Some(h) = maker else {
             return null_mut();
         };
         let body = Box::into_raw(Box::new(EeWonCompletion { call: Box::new(call) }));

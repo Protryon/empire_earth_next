@@ -43,8 +43,7 @@
 #include "ee/EEAIPathSubSector.h"
 #include "ee/EEAIContinentManager.h"
 
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
 
@@ -156,7 +155,7 @@ bool EEAIPathSubSector::IsPassable(long inPlayer)
 {
     bool thePassable = false;
     EEComplexUnit* theGate = NULL;
-    EEUCGate* theGateClass = NULL;
+    EEUnitClass* theGateClass = NULL;
     U2DPoint<long> theTile;
     for (long i = this->mTiles.Size() - 1; i >= 0 && !thePassable; i--) {
         theTile = this->mTiles[i];
@@ -168,7 +167,7 @@ bool EEAIPathSubSector::IsPassable(long inPlayer)
             if (!theUnit || theUnit->GetUnitClass()->mCategory != kUnitCategoryGate)
                 continue;
             theGate = theUnit->mComplexUnit;
-            theGateClass = dynamic_cast<EEUCGate*>(theGate->GetUnitClass());
+            theGateClass = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(theGate->GetUnitClass());
             break;
         }
         if (!theGate || theGate->mHitPoints <= 0) {

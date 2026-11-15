@@ -7,6 +7,8 @@
 
 pub mod background;
 pub mod background_table;
+pub mod bgobj;
+pub mod bgtableobj;
 pub mod button;
 pub mod button_variants;
 pub mod buttonobj;
@@ -30,6 +32,7 @@ pub mod form_state;
 pub mod formobj;
 pub mod graph;
 pub mod hotkey;
+pub mod hotkeyobj;
 pub mod ime;
 pub mod label_fit;
 pub mod labelobj;
@@ -54,11 +57,7 @@ pub mod text;
 pub mod variantobj;
 pub mod wrap;
 
-// imports the C++ backgrounds' draws and moves (UI*Background.cpp, UIForm.cpp), absent from a test binary
-#[cfg(not(test))]
-mod background_ffi;
-// imports the C++ database files, the background array and the events' owners (UIBackgroundTable.cpp, UIEvent.cpp),
-// absent from a test binary
+// imports the C++ database files and the events' owners (UIEvent.cpp), absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
 // imports the C++ entity groups' entities and the string list's lines (UIEntityGroup.cpp, UILBString.cpp), absent
@@ -71,8 +70,7 @@ mod graph_ffi;
 // imports the C++ candidate list's walk (UIIMECandidate.cpp), absent from a test binary
 #[cfg(not(test))]
 mod ime_ffi;
-// imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
-#[cfg(not(test))]
+// the hot keys' name and order (UIHotKey.cpp, UIForm.cpp)
 mod hotkey_ffi;
 // imports nothing: the clipped text draw takes the C++'s draw as a function
 mod draw_ffi;

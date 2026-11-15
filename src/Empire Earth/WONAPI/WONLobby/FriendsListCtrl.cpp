@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyControls.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 // FUNCTION: WON 0x007bb000
 // Creates a friends list entry with no friend (a separator line until a friend is set)
@@ -90,12 +91,12 @@ void FriendsListCtrl::UpdateFriend(LobbyFriend* inFriend,FriendsListItem* inItem
     if((inFriend->GetFlags()&3)!=0&&!inFriend->GetAnonymous()) inItem->mSortGroup=2;
     else inItem->mSortGroup=0;
     Image* anImage;
-    if((inFriend->GetFlags()&4)!=0) anImage=::LobbyGlobal_Searching_Image;
+    if((inFriend->GetFlags()&4)!=0) anImage=LOBBY_IMAGE(LobbyGlobal_Searching_Image);
     else if(!inFriend->GetAnonymous()) {
-        if((inFriend->GetFlags()&2)!=0) anImage=::FriendsListCtrl_InGame_Image;
-        else if((inFriend->GetFlags()&1)!=0) anImage=::FriendsListCtrl_InChat_Image;
-        else anImage=::FriendsListCtrl_Unknown_Image;
-    } else anImage=::FriendsListCtrl_Unknown_Image;
+        if((inFriend->GetFlags()&2)!=0) anImage=LOBBY_IMAGE(FriendsListCtrl_InGame_Image);
+        else if((inFriend->GetFlags()&1)!=0) anImage=LOBBY_IMAGE(FriendsListCtrl_InChat_Image);
+        else anImage=LOBBY_IMAGE(FriendsListCtrl_Unknown_Image);
+    } else anImage=LOBBY_IMAGE(FriendsListCtrl_Unknown_Image);
     inItem->mImage=anImage;
     inItem->mText=inFriend->GetName();
     if((inFriend->GetFlags()&3)!=0&&!inFriend->GetAnonymous()) {

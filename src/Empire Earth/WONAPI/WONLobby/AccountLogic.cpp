@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONLobbyAccountLogic.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
+#include "rust/ee_won.h"
 using namespace WONAPI;
 namespace WONAPI {
 // FUNCTION: WON 0x7db2a0
@@ -51,7 +52,7 @@ bool AccountLogic::ShowTOU()
 bool AccountLogic::CheckLoginStatus()
 {
     if (LobbyGetVersionStatus() == WS_DBProxyServ_OutOfDate) {
-        if (LobbyDoYesNoDialog(::LobbyContainer_VersionOutOfDataTitle_String, ::LobbyContainer_VersionOutOfDataDetails_String, true) == 100001)
+        if (LobbyDoYesNoDialog(LOBBY_STRING(LobbyContainer_VersionOutOfDataTitle_String), LOBBY_STRING(LobbyContainer_VersionOutOfDataDetails_String), true) == 100001)
             LobbyExit(3);
         return false;
     }
@@ -106,7 +107,7 @@ void AccountLogic::HandleLostPassword(ComponentEvent* inEvent)
     WideAppendUtf16LE(aName, static_cast<GetLostPasswordEvent*>(inEvent)->mUserName);
     SmartPtr<RustServerOp> op = RustServerOp::NewRequest(
         ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(aName.data()), aName.size()), account);
-    LobbyRunOpWithStatus(op.get(), ::LobbyContainer_RetrievePasswordTitle_String, ::LobbyContainer_RetrievePasswordDetails_String, 0, 0);
+    LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_RetrievePasswordTitle_String), LOBBY_STRING(LobbyContainer_RetrievePasswordDetails_String), 0, 0);
 }
 // FUNCTION: WON 0x007db920
 // Asks the account server to e-mail the user names registered to the given address, behind a status box
@@ -119,7 +120,7 @@ void AccountLogic::HandleLostUsername(ComponentEvent* inEvent)
     const std::string& aEmail = static_cast<GetLostUserNameEvent*>(inEvent)->mEmail;
     SmartPtr<RustServerOp> op = RustServerOp::NewRequest(
         ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(aEmail.data()), aEmail.size()), account);
-    LobbyRunOpWithStatus(op.get(), ::LobbyContainer_RetrieveUsernameTitle_String, ::LobbyContainer_RetrieveUsernameDetails_String, 0, 0);
+    LobbyRunOpWithStatus(op.get(), LOBBY_STRING(LobbyContainer_RetrieveUsernameTitle_String), LOBBY_STRING(LobbyContainer_RetrieveUsernameDetails_String), 0, 0);
 }
 // FUNCTION: WON 0x007dbee0
 // Fetches our account's e-mail address and newsletter setting and broadcasts them
@@ -131,7 +132,7 @@ void AccountLogic::QueryAccount()
         return;
     SmartPtr<RustServerOp> op = RustServerOp::NewGetAccount(account,auth);
     op->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER,1);
-    LobbyRunOpWithStatus(op.get(),::LobbyContainer_QueryAccountTitle_String,::LobbyContainer_QueryAccountDetails_String,1,0);
+    LobbyRunOpWithStatus(op.get(),LOBBY_STRING(LobbyContainer_QueryAccountTitle_String),LOBBY_STRING(LobbyContainer_QueryAccountDetails_String),1,0);
     if (op->GetStatus() == WS_Success)
         LobbyBroadcastEvent(new QueryAccountResultEvent(op->GetBytes(EE_WON_REQOP_ACCOUNT_EMAIL),
                                                   op->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER,1) != 0),true);
@@ -148,7 +149,7 @@ void AccountLogic::HandleUpdateAccount(ComponentEvent* inEvent)
     UpdateAccountEvent* event = static_cast<UpdateAccountEvent*>(inEvent);
     SmartPtr<RustServerOp> op = RustServerOp::NewUpdateAccount(account,auth,event->mNewPassword,event->mEmail);
     op->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER,1 | (event->mNewsletter ? 0x10000 : 0));
-    LobbyRunOpWithStatus(op.get(),::LobbyContainer_UpdateAccountTitle_String,::LobbyContainer_UpdateAccountDetails_String,0,0);
+    LobbyRunOpWithStatus(op.get(),LOBBY_STRING(LobbyContainer_UpdateAccountTitle_String),LOBBY_STRING(LobbyContainer_UpdateAccountDetails_String),0,0);
 }
 
 } //WONAPI
@@ -170,7 +171,7 @@ void AccountLogic::HandleCreateAccount(ComponentEvent* inBaseEvent)
     CreateAccountEvent* event=static_cast<CreateAccountEvent*>(inBaseEvent);
     SmartPtr<RustServerOp> op=RustServerOp::NewCreateAccount(servers,event->mUserName,event->mPassword,event->mEmail,
                                                              event->mNewsletter,event->mMonth,event->mDay,event->mYear);
-    LobbyRunOpWithStatus(op.get(),::LobbyContainer_CreateAccountTitle_String,::LobbyContainer_CreateAccountDetails_String,0,0);
+    LobbyRunOpWithStatus(op.get(),LOBBY_STRING(LobbyContainer_CreateAccountTitle_String),LOBBY_STRING(LobbyContainer_CreateAccountDetails_String),0,0);
     if(op->GetStatus()==WS_Success) {
         LobbyUserInfo* user=LobbyAddUser(event->mUserName,"",false);
         if(user) LobbyGetTOUTimes(user->mValue04,user->mValue08);
@@ -212,13 +213,13 @@ void AccountLogic::HandleLogin(ComponentEvent* inBaseEvent)
     auth->SetUserName(event->mUserName);
     auth->SetPassword(event->mPassword);
     if(LobbyDoCDKeyCheck() && !LobbyIsCDKeyValid()) {
-        LobbyMessageBox(::AccountLogic_InvalidCDKeyTitle_String,::AccountLogic_InvalidCDKeyDetails_String);
+        LobbyMessageBox(LOBBY_STRING(AccountLogic_InvalidCDKeyTitle_String),LOBBY_STRING(AccountLogic_InvalidCDKeyDetails_String));
         return;
     }
     if(admin) auth->AddCommunity(std::wstring(L"Admin"));
     else auth->RemoveCommunity(std::wstring(L"Admin"));
     SmartPtr<GetCertOp> op=new GetCertOp(auth);
-    LobbyRunOpWithStatus(op.get(),::LobbyContainer_LoginTitle_String,::LobbyContainer_LoginDetails_String,1,0);
+    LobbyRunOpWithStatus(op.get(),LOBBY_STRING(LobbyContainer_LoginTitle_String),LOBBY_STRING(LobbyContainer_LoginDetails_String),1,0);
     if(op->GetStatus()!=WS_Success) return;
     auth->SetDoAutoRefresh(true);
     GUIString password(GetEmptyGUIStringData());

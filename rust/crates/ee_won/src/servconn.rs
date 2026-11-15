@@ -399,18 +399,21 @@ impl Drop for EeWonServerConn {
 
 // ---- the C ABI
 
-/// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+/// A new connection object for the C++ `conn`, on the socket's lock `lock`; its calls are answered in Rust over the
+/// library's `core` table but the two of `cpp` (cppcore.rs).
 ///
 /// # Safety
-/// `hooks` is a static table; `conn` and `lock` outlive the object.
+/// `core` and `cpp` are static tables; `conn` and `lock` outlive the object.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_servconn_new(
     conn: *mut c_void,
-    hooks: *const EeWonServerConnHooks,
+    core: *const crate::cppcore::EeWonCoreHooks,
+    cpp: *const crate::cppcore::EeWonServerConnCpp,
     lock: *mut c_void,
 ) -> *mut EeWonServerConn {
-    // SAFETY: the caller's static table
-    Box::into_raw(Box::new(EeWonServerConn::new(conn, unsafe { &*hooks }, lock.cast())))
+    crate::cppcore::bind(core);
+    crate::cppcore::bind_servconn(cpp);
+    Box::into_raw(Box::new(EeWonServerConn::new(conn, &crate::cppcore::NATIVE_SERVCONN, lock.cast())))
 }
 
 /// Frees the connection object (its references go).

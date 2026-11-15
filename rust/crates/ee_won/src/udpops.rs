@@ -486,15 +486,16 @@ fn boxed(a: EeWonIpAddr) -> *mut EeWonIpAddr {
 /// A receive op's object (`addr` null for any sender).
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table, `addr` null or a live value.
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (the op's calls are answered in Rust over it:
+/// cppcore.rs), `addr` null or a live value.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_udprecvop_new(
     op: *mut c_void,
-    hooks: *const EeWonUdpOpHooks,
+    core: *const crate::cppcore::EeWonCoreHooks,
     addr: *const EeWonIpAddr,
 ) -> *mut EeWonUdpRecvOp {
-    // SAFETY: the caller's static table
-    Box::into_raw(Box::new(EeWonUdpRecvOp::new(op, unsafe { &*hooks }, addr_of(addr))))
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonUdpRecvOp::new(op, &crate::cppcore::NATIVE_UDP_OP, addr_of(addr))))
 }
 /// Frees the object, its references given back.
 ///
@@ -648,14 +649,14 @@ pub unsafe extern "C" fn ee_won_udprecvop_run(r: *const EeWonUdpRecvOp) {
 /// A request op's object.
 ///
 /// # Safety
-/// `op` is the C++ op as `RefCount*`, `hooks` a static table.
+/// `op` is the C++ op as `RefCount*`, `core` the library's static table (as the receive op's).
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_udpsendrecvop_new(
     op: *mut c_void,
-    hooks: *const EeWonUdpOpHooks,
+    core: *const crate::cppcore::EeWonCoreHooks,
 ) -> *mut EeWonUdpSendRecvOp {
-    // SAFETY: the caller's static table
-    Box::into_raw(Box::new(EeWonUdpSendRecvOp::new(op, unsafe { &*hooks })))
+    crate::cppcore::bind(core);
+    Box::into_raw(Box::new(EeWonUdpSendRecvOp::new(op, &crate::cppcore::NATIVE_UDP_OP)))
 }
 /// Frees the object, its references given back.
 ///

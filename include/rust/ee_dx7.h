@@ -27,6 +27,106 @@ constexpr static const unsigned long CLIP_BOTTOM = 32;
 
 constexpr static const size_t LIGHT_SLOTS = 8;
 
+/// The calls the movie makes on C++ objects. `obj` is the object called; `a`, `b` as each says.
+enum class EeDx7MovieOp : uint32_t {
+  /// `TSScheduler::CreateCriticalSection(p)` (`ESVERIFY_AT(.. == keseOK, a)` when `a` is not 0): the section.
+  CsNew = 1,
+  /// `TSScheduler::DestroyCriticalSection(obj)`.
+  CsDelete,
+  /// `obj->Enter()`.
+  CsEnter,
+  /// `obj->Leave()`.
+  CsLeave,
+  /// `TSScheduler::CreateEvent(p, false)` (`ESVERIFY_AT(.. == keseOK, a)`): the event.
+  EventNew,
+  /// `TSScheduler::DestroyEvent(obj)`.
+  EventDelete,
+  /// `obj->Set()`.
+  EventSet,
+  /// `obj->Clear()`.
+  EventClear,
+  /// `obj->Wait(INFINITE)`.
+  EventWait,
+  /// `TSScheduler::CreateThread(p, the playback entry, obj)` (`ESVERIFY_AT(.. == keseOK, a)`; `obj` the object): the
+  /// thread.
+  ThreadNew,
+  /// `TSScheduler::DestroyThread(obj)`.
+  ThreadDelete,
+  /// `obj->SetPriority(a)`.
+  ThreadPriority,
+  /// `obj->Reference()` (the C++ movie).
+  MovieReference,
+  /// `obj->Dereference()` (the C++ movie).
+  MovieDereference,
+  /// `snprintf((char*)a, MAX_PATH, "%s%s%s", volume, directory, file)` of the `FSFileSpec*` `obj`.
+  FileName,
+  /// `UMGetFloatingPointPrecision()` (`a` 0) or `UMGetFloatingPointRoundingMode()` (`a` 1).
+  FpGet,
+  /// `UMSetFloatingPointPrecision(b)` (`a` 0) or `UMSetFloatingPointRoundingMode(b)` (`a` 1).
+  FpSet,
+  /// The `plm_t*` of the movie at the NUL-terminated path `a` (`PlatPathGetAttributes`, `PlatPathToNative`,
+  /// `plm_create_with_filename`), NULL when it cannot be opened.
+  Open,
+  /// `plm_set_video_decode_callback((plm_t*)obj, the frame entry, (void*)a)`.
+  InstallVideo,
+  /// `plm_set_audio_decode_callback((plm_t*)obj, the samples entry, (void*)a)`, then `plm_set_audio_lead_time` of
+  /// the `f64` whose bits are `b`.
+  InstallAudio,
+  /// `SEMixer::GetActiveMixer() ? GetOutputRate() : 0`.
+  MixerRate,
+  /// `SEMixer::GetActiveMixer()->SetMovieSource(the mixer entry, obj)`, or `(NULL, NULL)` when `obj` is NULL.
+  MixerSource,
+  /// `GERasterizer::GetActiveRasterizer()->GetScreen(a)`.
+  ActiveScreen,
+  /// `GERasterizer::GetActiveRasterizer()->GetSecondarySurface(a)`.
+  ActiveTarget,
+  /// `((GEScreen*)obj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)`.
+  ScreenCreateSurface,
+  /// `((uint32_t*)a)[0..4]` = the surface's pixel format, depth, width and height.
+  SurfaceInfo,
+  /// `obj->Lock()`.
+  SurfaceLock,
+  /// `obj->Unlock()`.
+  SurfaceUnlock,
+  /// `((void**)a)[0] = obj->GetMemoryAddress(); ((uintptr_t*)a)[1] = obj->GetBytesPerRow()`.
+  SurfaceMemory,
+  /// `obj->Reference()` (a surface).
+  SurfaceReference,
+  /// `obj->Dereference()` (a surface).
+  SurfaceDereference,
+  /// `obj->CopyTo((GESurface*)a, source, destination, false)`: `b` is 8 floats, the source and destination
+  /// rectangles (left, top, right, bottom).
+  SurfaceCopy,
+};
+
+/// The calls `DX7Screen` and `DX7Surface` make on C++ objects. `obj` is the object called; `a`, `b` as each says.
+enum class EeDx7ObjOp : uint32_t {
+  /// `new UString(*(const UString*)obj)`.
+  NameNew = 1,
+  /// `delete (UString*)obj`.
+  NameDelete,
+  /// `new DX7Surface((GXSurface*)obj, *(const GESurfaceDescription*)a, (DX7Screen*)b)`, as its `GESurface*`.
+  SurfaceNew,
+  /// The object of `static_cast<DX7Surface*>((GESurface*)obj)`.
+  SurfaceObject,
+  /// `obj->Reference()` (a surface).
+  SurfaceReference,
+  /// `obj->Dereference()` (a surface).
+  SurfaceDereference,
+  /// `obj->GetAllocatedSize()`.
+  SurfaceAllocatedSize,
+  /// `*(LogicalMetrics*)a`: the surface's logical-size members and its pixel size.
+  SurfaceMetrics,
+  /// `((DX7Screen*)obj)->CreateAWindow({0, 0}, 16, 16, "TestWindowClass", "", *(GEWindow**)a, 2, NULL)`.
+  ProbeWindow,
+  /// `((GEWindow*)obj)->GetOSRepresentation()`.
+  WindowOs,
+  /// `delete (GEWindow*)obj`.
+  WindowDelete,
+  /// `TSThread::DispatchWindowEvents()`.
+  DispatchEvents,
+};
+
 /// The calls the rasterizer makes on other C++ objects. `obj` is the object called; `a`, `b` as each says.
 enum class EeDx7RastOp : uint32_t {
   /// `new DX7Screen(NULL, (GXDirectDraw*)obj, (const char*)a, b & 1, b & 2)`, as its `GEScreen*`.
@@ -115,15 +215,20 @@ enum class EeDx7RastColor : uint32_t {
   Debug,
 };
 
+/// The movie.
+struct EeDx7Movie;
+
 /// The rasterizer.
 struct EeDx7Rasterizer;
 
+/// The screen.
+struct EeDx7Screen;
+
+/// The surface.
+struct EeDx7Surface;
+
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
-
-/// The decoded sound waiting for the mixer (`mSound`, `mSoundRead`, `mSoundCount`, `mSoundPosition`, `mSoundStep`):
-/// interleaved stereo at the movie's rate. C++ calls it under `mSoundAccess`.
-struct EeDx7SoundRing;
 
 /// A `GEVertexArray` of [`Dx7Vertex`]: no colour (reads give white, opacity 1; writes of colour and opacity are
 /// ignored).
@@ -131,6 +236,46 @@ struct EeDx7StandardVertexArray;
 
 /// A `GEVertexArray` of [`Dx7StdColorVertex`].
 struct EeDx7StdColorVertexArray;
+
+/// The host of the movie objects (several threads call it).
+using EeDx7MovieHostFn = ptrdiff_t(*)(EeDx7MovieOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
+
+/// The host of the screen and surface objects.
+using EeDx7ObjHostFn = ptrdiff_t(*)(EeDx7ObjOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
+
+/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
+struct EeDx7SurfaceDescription {
+  unsigned long mType;
+  unsigned long mPixelFormat;
+  unsigned long mSurfaceVolatility;
+  unsigned long mWidth;
+  unsigned long mHeight;
+  unsigned long m14;
+  long mMipLevelCount;
+  unsigned long mPixelDepth;
+  bool mIs3DRenderable;
+  bool mIsTransparencyEnabled;
+  bool mNoAlpha;
+};
+
+/// `GEVideoMode`, pinned by `DX7Trampolines.cpp`.
+struct EeDx7VideoMode {
+  unsigned long mWidth;
+  unsigned long mHeight;
+  unsigned long mRefreshRate;
+  unsigned long mBitCount;
+  unsigned long mPixelFormat;
+};
+
+/// What `CreateAWindow` makes of its style, display and origin: which platform call, its size and flags.
+struct EeDx7WindowParams {
+  bool create_at;
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  uint32_t flags;
+};
 
 /// A C++ object seen from Rust.
 using EeDx7Handle = void*;
@@ -182,69 +327,12 @@ struct Dx7StdColorVertex {
   float tv;
 };
 
-/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
-struct EeDx7SurfaceDescription {
-  unsigned long mType;
-  unsigned long mPixelFormat;
-  unsigned long mSurfaceVolatility;
-  unsigned long mWidth;
-  unsigned long mHeight;
-  unsigned long m14;
-  long mMipLevelCount;
-  unsigned long mPixelDepth;
-  bool mIs3DRenderable;
-  bool mIsTransparencyEnabled;
-  bool mNoAlpha;
-};
-
 /// The host: `owner` is the C++ `DX7Rasterizer` of the object calling.
 using EeDx7RastHostFn = ptrdiff_t(*)(void *owner,
                                      EeDx7RastOp op,
                                      void *obj,
                                      ptrdiff_t a,
                                      ptrdiff_t b);
-
-/// `sScreensCaptured` and `sFirstCaptureWasAttachedToDesktop`.
-struct EeDx7CaptureState {
-  uint32_t captured;
-  bool first_attached;
-};
-
-/// `GEVideoMode`, pinned by `DX7Trampolines.cpp`.
-struct EeDx7VideoMode {
-  unsigned long mWidth;
-  unsigned long mHeight;
-  unsigned long mRefreshRate;
-  unsigned long mBitCount;
-  unsigned long mPixelFormat;
-};
-
-/// What `CreateAWindow` makes of its style, display and origin: which platform call, its size and flags.
-struct EeDx7WindowParams {
-  bool create_at;
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-  uint32_t flags;
-};
-
-/// `GESurface`'s logical-size members and the surface's pixel size (`GetLogicalShift`, `SetLogicalSize`).
-struct EeDx7LogicalMetrics {
-  uint32_t logical_width;
-  uint32_t logical_height;
-  uint32_t pixel_width;
-  uint32_t pixel_height;
-  uint32_t logical_shift;
-};
-
-/// The result of `DX7Surface::Lock` (the C++ stores the rest in its fields when `locked`).
-struct EeDx7LockOutcome {
-  int32_t result;
-  void *memory;
-  int32_t pitch;
-  bool locked;
-};
 
 /// `GETransformation`: row-major, translation in the last column.
 using EeDx7Transform = float[4][4];
@@ -307,6 +395,175 @@ struct EeDx7LightParams {
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 extern "C" {
+
+/// `DX7Movie(inFile, inScreen)` (`rect` NULL) or `DX7Movie(inFile, inScreen, inRectangle, inLoop)` (`rect` a
+/// `GERectangle`): `file` is the `FSFileSpec*`, `owner` the C++ movie.
+EeDx7Movie *ee_dx7mv_new(EeDx7MovieHostFn host,
+                         void *owner,
+                         const void *file,
+                         unsigned long screen,
+                         const float *rect,
+                         bool looping);
+
+void ee_dx7mv_destroy(EeDx7Movie *p);
+
+/// The playback thread's entry (`PlayMovie`'s parameter is the object).
+unsigned long ee_dx7mv_play(EeDx7Movie *p);
+
+int32_t ee_dx7mv_render(EeDx7Movie *p);
+
+void ee_dx7mv_stop(EeDx7Movie *p);
+
+/// pl_mpeg's video callback (after `plm_frame_to_bgra`).
+void ee_dx7mv_frame(EeDx7Movie *p, const uint8_t *bgra, unsigned long stride);
+
+/// pl_mpeg's audio callback: `count` interleaved stereo frames.
+void ee_dx7mv_samples(EeDx7Movie *p, const float *samples, unsigned long count);
+
+/// The mixer's movie source (`SEMixer::SetMovieSource`'s context is the object).
+void ee_dx7mv_mix(void *p, float *out, unsigned long count);
+
+/// The name the game gave (NUL-terminated).
+const uint8_t *ee_dx7mv_filename(EeDx7Movie *p);
+
+/// The flags by number: 0 looping, 1 playing, 2 ready, 3 just started.
+bool ee_dx7mv_flag(EeDx7Movie *p, uint32_t which);
+
+/// The screen's fields and name (`name` a `UString*`); [`ee_dx7sc_start`] follows.
+EeDx7Screen *ee_dx7sc_new(EeDx7ObjHostFn host,
+                          void *owner,
+                          void *monitor,
+                          void *dd,
+                          const void *name,
+                          bool attached_to_desktop,
+                          bool shares_primary);
+
+void ee_dx7sc_start(EeDx7Screen *p);
+
+void ee_dx7sc_destroy(EeDx7Screen *p);
+
+/// `Capture` (`window` a `GEWindow*`).
+int32_t ee_dx7sc_capture(EeDx7Screen *p, void *window, bool exclusive);
+
+int32_t ee_dx7sc_release(EeDx7Screen *p, void *window);
+
+/// `CreateSurface`: the description is the C++ reference argument (its updates kept).
+int32_t ee_dx7sc_create_surface(EeDx7Screen *p, EeDx7SurfaceDescription *description, void **out);
+
+/// `GetDesktopRectangle`: a `GERectangle`.
+const float *ee_dx7sc_desktop_rectangle(EeDx7Screen *p);
+
+int32_t ee_dx7sc_restore_all(EeDx7Screen *p);
+
+int32_t ee_dx7sc_set_mode(EeDx7Screen *p, unsigned long index);
+
+/// `&mModes[index]` (unchecked, as the vector's index).
+const EeDx7VideoMode *ee_dx7sc_mode(EeDx7Screen *p, unsigned long index);
+
+/// `GetCurrentMode`: `&mModes[mCurrentModeIndex]`.
+const EeDx7VideoMode *ee_dx7sc_current_mode(EeDx7Screen *p);
+
+unsigned long ee_dx7sc_current_mode_index(EeDx7Screen *p);
+
+unsigned long ee_dx7sc_mode_count(EeDx7Screen *p);
+
+/// `*mName` (a `UString*`).
+const void *ee_dx7sc_name(EeDx7Screen *p);
+
+/// `mDirectDraw`.
+void *ee_dx7sc_direct_draw(EeDx7Screen *p);
+
+/// The flags by number: 0 attached to the desktop, 1 full screen, 2 shares the primary, 3 mag filter, 4 min filter,
+/// 5 32-bit device, 6 32-bit textures.
+bool ee_dx7sc_flag(EeDx7Screen *p,
+                   uint32_t which);
+
+/// `CreateAWindow`'s choice of platform call, size and flags (`sim`: the headless simulation).
+void ee_dx7sc_window_params(bool sim,
+                            uint32_t style,
+                            int32_t width,
+                            int32_t height,
+                            int32_t display_width,
+                            int32_t display_height,
+                            float x,
+                            float y,
+                            EeDx7WindowParams *out);
+
+/// `sScreens[index]` and `sScreens.size()`.
+void *ee_dx7sc_screen(unsigned long index);
+
+unsigned long ee_dx7sc_screen_count();
+
+EeDx7Surface *ee_dx7sf_new(EeDx7ObjHostFn host,
+                           void *owner,
+                           void *gx,
+                           const EeDx7SurfaceDescription *description,
+                           void *parent);
+
+void ee_dx7sf_destroy(EeDx7Surface *p);
+
+int32_t ee_dx7sf_attach(EeDx7Surface *p, void *surface);
+
+/// `rect`: a `GERectangle` or NULL (the whole surface); `color`: a `GEColor`.
+int32_t ee_dx7sf_clear(EeDx7Surface *p, const float *rect, const float *color, float alpha);
+
+int32_t ee_dx7sf_copy_to(EeDx7Surface *p,
+                         void *target,
+                         const float *source,
+                         const float *destination,
+                         bool transparent);
+
+int32_t ee_dx7sf_copy_with_filter(EeDx7Surface *p,
+                                  void *target,
+                                  const float *source,
+                                  const float *destination);
+
+int32_t ee_dx7sf_detach(EeDx7Surface *p, unsigned long index);
+
+int32_t ee_dx7sf_flip(EeDx7Surface *p, bool wait);
+
+unsigned long ee_dx7sf_allocated_size(EeDx7Surface *p);
+
+int32_t ee_dx7sf_lock(EeDx7Surface *p);
+
+int32_t ee_dx7sf_unlock(EeDx7Surface *p);
+
+int32_t ee_dx7sf_restore(EeDx7Surface *p);
+
+void ee_dx7sf_set_transparency_color(EeDx7Surface *p, const float *color);
+
+int32_t ee_dx7sf_text_lock(EeDx7Surface *p, bool lock);
+
+/// `GetRenderScale`: the GX surface's (1 without one).
+float ee_dx7sf_render_scale(EeDx7Surface *p);
+
+/// `GetWidth` (`height` false) / `GetHeight`: `set` and `shift` are the base's logical members.
+unsigned long ee_dx7sf_logical_size(EeDx7Surface *p,
+                                    unsigned long set,
+                                    unsigned long shift,
+                                    bool height);
+
+/// `mDescription` (`GetSurfaceDescription` and the getters of its fields).
+const EeDx7SurfaceDescription *ee_dx7sf_description(EeDx7Surface *p);
+
+/// `mTransparencyColor`, a `GEColor`.
+const float *ee_dx7sf_transparency(EeDx7Surface *p);
+
+/// `mAttachedSurfaces[index]`.
+void *ee_dx7sf_attached(EeDx7Surface *p, unsigned long index);
+
+unsigned long ee_dx7sf_attached_count(EeDx7Surface *p);
+
+/// `mSurface` (the `GXSurface*`).
+void *ee_dx7sf_gx(EeDx7Surface *p);
+
+void *ee_dx7sf_parent(EeDx7Surface *p);
+
+uint8_t *ee_dx7sf_memory(EeDx7Surface *p);
+
+unsigned long ee_dx7sf_bytes_per_row(EeDx7Surface *p);
+
+bool ee_dx7sf_text_locked(EeDx7Surface *p);
 
 long ee_dx7r_draw_bitmap(EeDx7Rasterizer *rast, unsigned long screen, EeDx7Handle bitmap);
 
@@ -521,61 +778,6 @@ void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
 
 uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
 
-/// The 32-bit path; pitches in pixels. `source_rect`/`destination_rect`: float pixels (see `Rect`).
-void ee_dx7_copy_with_filter_32(unsigned long format,
-                                const uint32_t *source,
-                                uint32_t source_pitch,
-                                uint32_t *destination,
-                                uint32_t destination_pitch,
-                                const float *source_rect,
-                                const float *destination_rect);
-
-/// The 16-bit path: as the 32-bit one (the original copy-pasted loop, words differ).
-void ee_dx7_copy_with_filter_16(unsigned long format,
-                                const uint16_t *source,
-                                uint32_t source_pitch,
-                                uint16_t *destination,
-                                uint32_t destination_pitch,
-                                const float *source_rect,
-                                const float *destination_rect);
-
-EeDx7SoundRing *ee_dx7m_ring_new();
-
-void ee_dx7m_ring_destroy(EeDx7SoundRing *ring);
-
-void ee_dx7m_ring_set_step(EeDx7SoundRing *ring, double step);
-
-/// `DecodedSamples`: `2 * inCount` interleaved floats.
-void ee_dx7m_ring_push(EeDx7SoundRing *ring, const float *samples, uint32_t count);
-
-/// `MixSound`: adds to `2 * count` floats.
-void ee_dx7m_ring_mix(EeDx7SoundRing *ring, float *out, uint32_t count);
-
-/// `DX7Movie::PlayMovie`: `movie` is the `DX7Movie*`, `filename` its file name (not NUL terminated in Rust).
-void ee_dx7m_play_movie(void *movie,
-                        const uint8_t *filename,
-                        size_t length,
-                        bool looping);
-
-/// `DX7Movie::RenderFrame`.
-int32_t ee_dx7m_render_frame(void *movie);
-
-/// `DecodedFrame`'s rows, through `GEPackBGRXRow`.
-void ee_dx7m_convert_frame(const uint8_t *bgra,
-                           uint32_t stride,
-                           uint8_t *destination,
-                           uint32_t pitch,
-                           uint32_t width,
-                           uint32_t height,
-                           unsigned long format);
-
-/// `CreateFrameBuffer`'s description.
-void ee_dx7m_frame_buffer_description(EeDx7SurfaceDescription *out,
-                                      uint32_t pixel_format,
-                                      uint32_t pixel_depth,
-                                      uint32_t width,
-                                      uint32_t height);
-
 /// `DX7Rasterizer(inName)`: `base` is the `GERasterizer`'s object.
 EeDx7Rasterizer *ee_dx7r_new(EeDx7RastHostFn host, void *owner, EeGeRasterizer *base, bool tnl);
 
@@ -666,77 +868,6 @@ void ee_dx7r_set_texture(EeDx7Rasterizer *p, void *texture, unsigned long screen
 void ee_dx7r_set_viewport(EeDx7Rasterizer *p, const void *viewport, unsigned long screen);
 
 int32_t ee_dx7r_show_scene(EeDx7Rasterizer *p, unsigned long screen);
-
-void ee_dx7sc_initialize(void *screen, void *dd);
-
-void ee_dx7sc_test_32bit_support(void *screen, void *dd);
-
-int32_t ee_dx7sc_capture(void *dd,
-                         void *window,
-                         bool to_clipboard,
-                         bool attached,
-                         EeDx7CaptureState *state,
-                         bool *full_screen);
-
-int32_t ee_dx7sc_release(void *dd, void *window, EeDx7CaptureState *state, bool *full_screen);
-
-int32_t ee_dx7sc_restore_all(void *dd);
-
-int32_t ee_dx7sc_set_mode(void *dd, bool full_screen, const EeDx7VideoMode *mode, bool *update);
-
-/// `DX7Screen::CreateSurface`: the description is copied in and out (the C++ reference argument's updates).
-int32_t ee_dx7sc_create_surface(void *screen,
-                                void *dd,
-                                EeDx7SurfaceDescription *description,
-                                void **out);
-
-void ee_dx7sc_window_params(bool sim,
-                            uint32_t style,
-                            int32_t width,
-                            int32_t height,
-                            int32_t display_width,
-                            int32_t display_height,
-                            float x,
-                            float y,
-                            EeDx7WindowParams *out);
-
-int32_t ee_dx7s_clear(void *s, uint32_t fill);
-
-int32_t ee_dx7s_clear_rect(void *s,
-                           const float *r,
-                           const EeDx7LogicalMetrics *metrics,
-                           uint32_t fill);
-
-int32_t ee_dx7s_copy_to(void *source,
-                        void *target,
-                        const float *source_rect,
-                        const EeDx7LogicalMetrics *source_metrics,
-                        const float *destination_rect,
-                        const EeDx7LogicalMetrics *target_metrics,
-                        bool transparent);
-
-/// `DX7PixelRectangle` for `CopyWithFilter`: `out` is 4 floats.
-void ee_dx7s_pixel_rect(const float *r, const EeDx7LogicalMetrics *metrics, float *out);
-
-int32_t ee_dx7s_flip(void *s, bool wait);
-
-void ee_dx7s_lock(void *s, EeDx7LockOutcome *out);
-
-int32_t ee_dx7s_unlock(void *s, bool *cleared);
-
-int32_t ee_dx7s_restore(void *s);
-
-int32_t ee_dx7s_attach(void *s, void *other);
-
-int32_t ee_dx7s_detach(void *s, void *other);
-
-void ee_dx7s_set_transparency_color(void *s, uint32_t color);
-
-uint32_t ee_dx7s_own_size(uint32_t pixel_depth, uint32_t height, uint32_t width);
-
-int32_t ee_dx7s_text_lock(bool *locked);
-
-int32_t ee_dx7s_text_unlock(bool *locked);
 
 }  // extern "C"
 

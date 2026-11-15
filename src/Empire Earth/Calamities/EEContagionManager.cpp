@@ -26,7 +26,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEEffect2D.h"
-#include "ee/EEEDamagedEffect.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEMap.h"
 #include "ee/EEMedia.h"
@@ -179,7 +178,7 @@ void EEContagionFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
         EEEffect* theEffect = gEffectManager->GetEffect(theEffectHandle);
         if (theEffect != NULL) {
             if (theEffect->mKind == kEffectDamaged)
-                (static_cast<EEEDamagedEffect*>(theEffect))->mIsFinished = true;
+                theEffect->mRecord->damaged.finished = true;   // the damage controller (0x3e, on EEE2DRust)
             else
                 gEffectManager->DestroyEffect(theEffectHandle);
         }
