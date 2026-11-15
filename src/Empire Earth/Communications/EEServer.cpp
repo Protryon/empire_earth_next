@@ -220,17 +220,17 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
             thePlayer.mIsReady = true;
         this->mSendToSlots.insert(std::map<unsigned char, unsigned char>::value_type((unsigned char)theIndex, inSlot));
         this->GetCurrentCommunicationsTick();
-        gCommunications->ProcessLocalUserInput(new EEMFullGameOptions(gGameOptions), inSlot);
+        gCommunications->ProcessLocalUserInput(EENewFullGameOptions(gGameOptions), inSlot);
         for (i = 0; i < 16; i++) {
             if (i != theIndex) theOther = gWorld.GetLobbyOptions().mPlayers[i]; else theOther = thePlayer;
             this->GetCurrentCommunicationsTick();
-            this->ProcessLocalUserInput(new EEMFullPlayerInformation(theOther), inSlot);
+            this->ProcessLocalUserInput(EENewFullPlayerInformation(theOther), inSlot);
             gUserInterface->PostLobbyUpdatePlayer(theOther.mSlot, 8);
         }
         for (i = 0; i < 16; i++) {
             unsigned char theSendSlot = this->GetSendToSlot((unsigned char)i);
             if (theSendSlot != kSlotNone) {
-                this->ProcessLocalUserInput(new EEMFullPlayerInformation(thePlayer), theSendSlot);
+                this->ProcessLocalUserInput(EENewFullPlayerInformation(thePlayer), theSendSlot);
                 gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
             }
         }
@@ -368,7 +368,7 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
                     thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
                     thePlayer.mEngine = kEECPChoiceClassic;   // port
                 }
-                EEMFullPlayerInformation* theInformation = new EEMFullPlayerInformation(thePlayer);
+                EEMRecord* theInformation = EENewFullPlayerInformation(thePlayer);
                 theInformation->SetOriginatingSlot(kSlotServer);
                 this->ProcessLocalUserInput(theInformation, kSlotNone);
                 gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
@@ -800,19 +800,21 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
     switch (inMessage->GetType()) {
     case kMessageFullPlayerInformation:
         if (inMessage->GetOriginatingSlot() != kSlotServer) {
-            EEMFullPlayerInformation* theUpdate = static_cast<EEMFullPlayerInformation*>(inMessage);
+            EEMRecord* theUpdate = static_cast<EEMRecord*>(inMessage);
+            // the record, in wire order: slot 1, type 2, loaded type 3, the name (mString), ping 5, colour 6, team 7,
+            // citizens 8, ready 9, local 10, mB42 11, engine 12
             gGameOptions.mLock->WriteLock();
-            thePlayer.mColor = theUpdate->mColor;
-            thePlayer.mType = theUpdate->mSlotType;
-            thePlayer.mTeam = theUpdate->mTeam;
-            thePlayer.mName = theUpdate->mName;
-            float thePing = theUpdate->mPing;
-            thePlayer.mStartingCitizens = theUpdate->mCitizenBonus;
-            thePlayer.mLoadedType = theUpdate->mLoadedType;
-            thePlayer.mIsReady = theUpdate->mIsReady;
-            thePlayer.mIsLocal = theUpdate->mIsLocal;
-            thePlayer.mB36 = theUpdate->mB42;
-            thePlayer.mSlot = theUpdate->mSlot;
+            thePlayer.mColor = theUpdate->Get<int32_t>(6);
+            thePlayer.mType = theUpdate->Get<int32_t>(2);
+            thePlayer.mTeam = theUpdate->Get<int32_t>(7);
+            thePlayer.mName = theUpdate->mString;
+            float thePing = theUpdate->Get<float>(5);
+            thePlayer.mStartingCitizens = theUpdate->Get<int32_t>(8);
+            thePlayer.mLoadedType = theUpdate->Get<int32_t>(3);
+            thePlayer.mIsReady = theUpdate->Get<bool>(9);
+            thePlayer.mIsLocal = theUpdate->Get<bool>(10);
+            thePlayer.mB36 = theUpdate->Get<bool>(11);
+            thePlayer.mSlot = theUpdate->Get<int32_t>(1);
             thePlayer.mTransferID = gGameOptions.mPlayers[thePlayer.mSlot].mTransferID;
             thePlayer.mEngine = gGameOptions.mPlayers[thePlayer.mSlot].mEngine;   // port: the host's choice
             thePlayer.mPing = thePing;
@@ -934,14 +936,14 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
         inMessage->Execute();
         break;
     case kMessagePlayerSlotInfo: {
-        EEMPlayerSlotInfo* theSlotInfo = static_cast<EEMPlayerSlotInfo*>(inMessage);
+        EEMRecord* theSlotInfo = static_cast<EEMRecord*>(inMessage);
         gWorld.mLock->WriteLock();
-        EEPlayer* thePlayer = gWorld.mPlayers[theSlotInfo->mPlayerID];
+        EEPlayer* thePlayer = gWorld.mPlayers[theSlotInfo->Get<unsigned char>(1)];   // the player, slot, firewall, address
         if (thePlayer != NULL) {
-            thePlayer->mSlot = theSlotInfo->mSlot;
+            thePlayer->mSlot = theSlotInfo->Get<unsigned char>(2);
             if (thePlayer->IsHuman()) {
-                static_cast<EEHumanPlayer*>(thePlayer)->SetName(theSlotInfo->mAddress);
-                thePlayer->mBehindFirewall = theSlotInfo->mIsBehindFirewall;
+                static_cast<EEHumanPlayer*>(thePlayer)->SetName(theSlotInfo->mString);
+                thePlayer->mBehindFirewall = theSlotInfo->Get<bool>(3);
             }
         }
         gWorld.mLock->WriteUnlock();
@@ -1077,16 +1079,15 @@ void EEServer::SendPlayerSlotInfo()
                 || (thePlayer.mType != 1 && thePlayer.mType != 2))
                 continue;
             unsigned char theSlot = this->GetSendToSlot(j);
-            EEMPlayerSlotInfo* theMessage;
+            EEMRecord* theMessage;
             if (theSlot == kSlotServer)
-                theMessage = new EEMPlayerSlotInfo(kSlotServer, theIndex, EEGetLocalAddress(theProtocol, gGamePreferences.mSettings.GetNetworkAdapter()),
-                                                   this->mBehindFirewall[theSlot]);
+                theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotServer, this->mBehindFirewall[theSlot], EEGetLocalAddress(theProtocol, gGamePreferences.mSettings.GetNetworkAdapter())});
             else if (theSlot == kSlotNone) {
                 theAddress = "";
-                theMessage = new EEMPlayerSlotInfo(kSlotNone, theIndex, theAddress, this->mBehindFirewall[theSlot]);
+                theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, kSlotNone, this->mBehindFirewall[theSlot], theAddress});
             } else {
                 this->GetClientAddress(theSlot, theAddress);
-                theMessage = new EEMPlayerSlotInfo(theSlot, theIndex, theAddress, this->mBehindFirewall[theSlot]);
+                theMessage = new EEMRecord(kMessagePlayerSlotInfo, {theIndex, theSlot, this->mBehindFirewall[theSlot], theAddress});
             }
             gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
             break;
@@ -1159,7 +1160,7 @@ void EEServer::SendFullPlayerInformation(unsigned char inPlayer, EEGameOptionsPl
     thePlayer.mSlot = inOptions.mSlot;
     thePlayer.mB36 = inOptions.mB36;
     thePlayer.mEngine = inOptions.mEngine;   // port
-    this->ProcessLocalUserInput(new EEMFullPlayerInformation(thePlayer), kSlotNone);
+    this->ProcessLocalUserInput(EENewFullPlayerInformation(thePlayer), kSlotNone);
     gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
 }
 

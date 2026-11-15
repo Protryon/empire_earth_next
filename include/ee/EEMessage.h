@@ -72,21 +72,24 @@ inline EEMessage* EEGameMessageCast(NEMessage* inMessage)
 // constructors converted it to the member's type (an integer truncated, a bool as != 0, a float, a point, a vector)
 struct EEMRecordValue {
     template <class T, typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, int>::type = 0>
-    EEMRecordValue(T inValue) : mInteger((long long)inValue), mIsFloat(false) {}
-    EEMRecordValue(double inValue) : mInteger(0), mIsFloat(true) { this->mFloats[0] = (float)inValue; }
+    EEMRecordValue(T inValue) : mInteger((long long)inValue), mIsFloat(false), mString(NULL) {}
+    EEMRecordValue(double inValue) : mInteger(0), mIsFloat(true), mString(NULL) { this->mFloats[0] = (float)inValue; }
     EEMRecordValue(const GE2DPoint& inPoint);
     EEMRecordValue(const GEVector& inVector);
+    EEMRecordValue(const UWideString& inString) : mInteger(0), mIsFloat(false), mString(&inString) {}   // round 4
 
     long long mInteger;
     float mFloats[3];
     bool mIsFloat;
+    const UWideString* mString;   // a string member's value (the sender's, alive for the constructor's call)
 };
 
-// New (game messages lane, round 3): the game messages whose members only their senders' constructors, their own
-// Execute and the capture touched (53 types: the census in PORT_LEARNINGS "R5b.4 game messages, round 3"). One class
-// carries any of them: its codec class's members after the selection id, packed in wire order in mRecord, the layout,
-// flags and label the Rust's (ee_netmsg records.rs). A sender passes the members in wire order:
-// new EEMRecord(kMessageCheatCode, {theCode, theParameter}); Execute runs the type's body (EEMessage.cpp).
+// New (game messages lane, rounds 3-4): one class carries every game message type but the few that keep a class
+// below (100 types: the census in PORT_LEARNINGS "R5b.4 game messages, round 3" and "round 4"): its codec class's
+// fixed members after the selection id, packed in wire order in mRecord, and its one string (if any) in mString; the
+// layout, flags and label are the Rust's (ee_netmsg records.rs). A sender passes the members in wire order:
+// new EEMRecord(kMessageCheatCode, {theCode, theParameter}); Execute runs the type's body (EEMessage.cpp); a reader
+// reads Get<T>(i) (i: the member's wire index, 1 = the first after the selection id) and says which in a comment.
 class EEMRecord : public EEMessage {
 public:
     EEMRecord(unsigned char* inData);   // the factory's: the type at inData[1], then the import
@@ -105,26 +108,16 @@ public:
     }
     template <class T> void Set(uint32_t inIndex, T inValue) { memcpy(this->Field(inIndex, sizeof(T)), (const void*)&inValue, sizeof(T)); }
     unsigned char* Field(uint32_t inIndex, size_t inSize) const;
+    virtual void ImportMessage(unsigned char* inData);   // the codec, then the string member's text
 
-    unsigned char mRecord[32];   // EE_NETMSG_RECORD_BYTES
+    unsigned char mRecord[64];   // EE_NETMSG_RECORD_BYTES
+    UWideString mString;         // the type's string member, if it has one (EE_NETMSG_RECORD_FIELD_STRING)
 };
 
-// A chat line (type 0x7d, vtable 0x43e0bc). sizeof 0x24.
-class EEMInGameChat : public EEMessage {
-public:
-    EEMInGameChat(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual ~EEMInGameChat() {}
-    EEMInGameChat(const UWideString& inText) : EEMessage(kMessageInGameChat, true) { this->mText = inText; }  // 0x1d3196
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    UWideString mText;                      // +0x10
-};
-
-// ---- the hot-key events (0x1e93df..0x1e9f40) ----
+// New (game messages lane, round 4): the lobby's two messages that copy a whole object (the old EEMFullGameOptions
+// and EEMFullPlayerInformation constructors), as records
+EEMRecord* EENewFullGameOptions(const EEGameOptions& inOptions);
+EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer);
 
 // ---- every message of EEMessage.cpp (0xb8cda..0xca90f), generated from the Export/Import bodies;
 // field names are provisional (m<type><offset>) unless proven ----
@@ -169,25 +162,6 @@ public:
         : EEMSelectUnits(inRectangle, inUnitType, inType) {}
     virtual void Execute();
     virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x43df80; sizeof 0x28
-class EEMChat : public EEMessage {
-public:
-    EEMChat(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline; out-of-line copy 0x1da661 after its first user EEUIELEChat::ProcessEvent
-    EEMChat(const unsigned char& inPlayer, const UWideString& inText) : EEMessage(kMessageChat, false), mPlayerID(inPlayer)
-    {
-        this->mText = inText;
-    }
-    virtual ~EEMChat() {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    UWideString mText;                      // +0x10
-    unsigned char mPlayerID;                // +0x24
 };
 
 // vtable 0x43dfb4; sizeof 0x3c; default ctor 0xba684, dtor 0xba6fd, ??_G 0xba6e1 (all inline, emitted here)
@@ -237,77 +211,6 @@ public:
     virtual char* GetMessageLabel() const;
 };
 
-// vtable 0x43e054; sizeof 0x54
-class EEMFullGameOptions : public EEMessage {
-public:
-    EEMFullGameOptions(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMFullGameOptions(const EEGameOptions& inOptions);   // 0xbe6c6 (the lobby sends gGameOptions)
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    UWideString mMapType;                   // +0x10
-    int32_t mGameSpeed;                     // +0x24
-    int32_t mLoadType;                      // +0x28
-    int32_t mMapSize;                       // +0x2c
-    int32_t mEpochStart;                    // +0x30
-    int32_t mEpochEnd;                      // +0x34
-    int32_t mVariant;                       // +0x38
-    int32_t mResources;                     // +0x3c
-    int32_t mUnitLimit;                     // +0x40
-    int32_t mWondersForVictory;             // +0x44
-    int32_t mDifficulty;                    // +0x48
-    bool mVictory;                          // +0x4c
-    bool mLockTeams;                        // +0x4d
-    bool mLockSpeed;                        // +0x4e
-    bool mRevealMap;                        // +0x4f
-    bool mCheatCodes;                       // +0x50
-    bool mRecordGames;                      // +0x51
-    bool mAllowCustomCivs;                  // +0x52
-    bool mB53;                              // +0x53
-};
-
-// vtable 0x43e124; sizeof 0x44
-class EEMFullPlayerInformation : public EEMessage {
-public:
-    EEMFullPlayerInformation(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMFullPlayerInformation(const EEGameOptionsPlayer& inPlayer);   // 0xc378e (the server sends a lobby slot)
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    UWideString mName;                      // +0x10
-    int32_t mSlotType;                      // +0x24
-    int32_t mLoadedType;                    // +0x28
-    float mPing;                            // +0x2c (the ping)
-    int32_t mSlot;                          // +0x30
-    int32_t mColor;                         // +0x34
-    int32_t mTeam;                          // +0x38
-    int32_t mCitizenBonus;                  // +0x3c
-    bool mIsLocal;                          // +0x40
-    bool mIsReady;                          // +0x41
-    bool mB42;                              // +0x42
-    int32_t mEngine;                        // port: EEGameOptionsPlayer::mEngine (ee/EECPEngine.h; 4 more payload bytes)
-};
-
-// vtable 0x43e020; sizeof 0x2c
-class EEMGameOptions : public EEMessage {
-public:
-    EEMGameOptions(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMGameOptions(long inOption, long inValue, const UWideString& inS14);  // 0xbebe1
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mOption;                        // +0x10
-    UWideString mMapType;                   // +0x14
-    uint32_t mValue;                        // +0x28 the value (unsigned: the flags are mL28 > 0 with seta)
-};
-
 // vtable 0x43e0f0; sizeof 0x34; import ctor 0xba957, ??_G 0xba9b9; Get/SetSendToAllAndWaitMessageID inline (0xba9a1/0xba9af)
 class EEMLoadOrSaveGame : public EEMessage {
 public:
@@ -337,24 +240,6 @@ public:
 // 4 starting citizens, 5 ready; port: 6 a computer slot's engine (ee/EECPEngine.h). The lobby redraws the row with
 // the field as LobbyShowPlayer's flags.
 const long kPlayerInfoEngine = 6;
-
-// vtable 0x43e158; sizeof 0x28
-class EEMPlayerSlotInfo : public EEMessage {
-public:
-    EEMPlayerSlotInfo(unsigned char* inData) { this->ImportMessage(inData); }
-    // 0xccee8 (EEServer.cpp; argument names are provisional)
-    EEMPlayerSlotInfo(unsigned char inSlot, unsigned char inPlayerID, const UWideString& inS10, bool inIsBehindFirewall)
-        : EEMessage(kMessagePlayerSlotInfo, true), mAddress(inS10), mPlayerID(inPlayerID), mSlot(inSlot), mIsBehindFirewall(inIsBehindFirewall) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void ImportMessage(unsigned char* inData);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Player Slot Info"; }
-
-    UWideString mAddress;                   // +0x10
-    unsigned char mPlayerID;                // +0x24
-    unsigned char mSlot;                    // +0x25
-    bool mIsBehindFirewall;                 // +0x26
-};
 
 // vtable 0x43e18c; sizeof 0x20; import ctor 0xbaaf1, ??_G 0xbab3d
 class EEMSelectTheseUnits : public EEMessage {

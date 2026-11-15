@@ -217,11 +217,16 @@ EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue>
     uint32_t theIndex = 1;
     for (const EEMRecordValue& theValue : inValues) {
         EeNetMsgRecordField theField = ee_netmsg_record_field(theClass, theIndex);
-        unsigned char* theTo = this->Field(theIndex++, theField.size);
+        unsigned char* theTo = theField.kind == EE_NETMSG_RECORD_FIELD_STRING ? NULL : this->Field(theIndex, theField.size);
+        theIndex++;
         float theFloat = theValue.mIsFloat ? theValue.mFloats[0] : (float)theValue.mInteger;
         long long theInteger = theValue.mIsFloat ? (long long)theValue.mFloats[0] : theValue.mInteger;
         bool theBool = theInteger != 0 || (theValue.mIsFloat && theValue.mFloats[0] != 0.0f);
         switch (theField.kind) {
+        case EE_NETMSG_RECORD_FIELD_STRING:   // the one string member (not in mRecord)
+            ESVERIFY_AT(theValue.mString != NULL, __LINE__);
+            this->mString = *theValue.mString;
+            break;
         case EE_NETMSG_RECORD_FIELD_INTEGER:
             memcpy(theTo, &theInteger, theField.size);   // little-endian: the low bytes
             break;
@@ -263,9 +268,47 @@ size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
     size_t theCount = 5;
     for (EeNetMsgRecordField theField; (theField = ee_netmsg_record_field(outClass, (uint32_t)theCount - 4)).kind != 0; theCount++) {
         EeNetMsgSlot theSlot = {this->mRecord + theField.offset, theField.size, 0, 0};
-        outSlots[theCount] = theSlot;
+        outSlots[theCount] = theField.kind == EE_NETMSG_RECORD_FIELD_STRING ? EENetMsgString(this->mString) : theSlot;
     }
     return theCount;
+}
+
+// the codec over the slots, then the string member's text from where the codec found it (UWideString::Import)
+void EEMRecord::ImportMessage(unsigned char* inPayloadPointer)
+{
+    ESVERIFY_AT(inPayloadPointer != NULL, __LINE__);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    uint32_t theClass;
+    size_t theCount = this->GetCodecSlots(theSlots, theClass);
+    ee_netmsg_import(theClass, inPayloadPointer, theSlots, theCount);
+    for (size_t i = 5; i < theCount; i++) {
+        if (ee_netmsg_record_field(theClass, (uint32_t)i - 4).kind == EE_NETMSG_RECORD_FIELD_STRING)
+            this->mString.Import(inPayloadPointer + theSlots[i].offset);
+    }
+}
+
+// FUNCTION: EXE 0x4be6c6 (the EEMFullGameOptions constructor)
+// The lobby's game options, whole (the server sends gGameOptions); the members in wire order
+EEMRecord* EENewFullGameOptions(const EEGameOptions& inOptions)
+{
+    return new EEMRecord(kMessageFullGameOptions,
+                         {inOptions.GetAllowCustomCivs(), inOptions.GetB407(), inOptions.GetCheatCodes(),
+                          inOptions.GetDifficulty(), inOptions.GetEpochEnd(), inOptions.GetGameSpeed(),
+                          inOptions.GetLoadType(), inOptions.GetVariant(), inOptions.GetLockSpeed(),
+                          inOptions.GetLockTeams(), inOptions.GetMapSize(), inOptions.GetRecordGames(),
+                          inOptions.GetResources(), inOptions.GetRevealMap(), inOptions.GetEpochStart(),
+                          inOptions.GetUnitLimit(), inOptions.GetVictory(), inOptions.GetWondersForVictory(),
+                          inOptions.GetMapType()});
+}
+
+// FUNCTION: EXE 0x4c378e (the EEMFullPlayerInformation constructor)
+// One lobby slot, whole (the server sends it to the players); the members in wire order
+EEMRecord* EENewFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
+{
+    return new EEMRecord(kMessageFullPlayerInformation,
+                         {inPlayer.mSlot, inPlayer.mType, inPlayer.mLoadedType, inPlayer.mName, inPlayer.mPing,
+                          inPlayer.mColor, inPlayer.mTeam, inPlayer.mStartingCitizens, inPlayer.mIsReady,
+                          inPlayer.mIsLocal, inPlayer.mB36, (int32_t)inPlayer.mEngine});   // the engine: port
 }
 
 // EEMSelectTheseUnits' slot list (its id list is read and written around the codec)
@@ -449,32 +492,14 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageAddUnitsToSelectedGroup:
         theMessage = new EEMAddUnitsToSelectedGroup(inMemory);
         break;
-    case kMessageChat:
-        theMessage = new EEMChat(inMemory);
-        break;
     case kMessageCivUpgradesPurchased:
         theMessage = new EEMCivUpgradesPurchased(inMemory);
         break;
     case kMessageCivUpgradesRequested:
         theMessage = new EEMCivUpgradesRequested(inMemory);
         break;
-    case kMessageFullGameOptions:
-        theMessage = new EEMFullGameOptions(inMemory);
-        break;
-    case kMessageGameOptions:
-        theMessage = new EEMGameOptions(inMemory);
-        break;
-    case kMessageInGameChat:
-        theMessage = new EEMInGameChat(inMemory);
-        break;
     case kMessageLoadOrSaveGame:
         theMessage = new EEMLoadOrSaveGame(inMemory);
-        break;
-    case kMessageFullPlayerInformation:
-        theMessage = new EEMFullPlayerInformation(inMemory);
-        break;
-    case kMessagePlayerSlotInfo:
-        theMessage = new EEMPlayerSlotInfo(inMemory);
         break;
     case kMessageSelectTheseUnits:
         theMessage = new EEMSelectTheseUnits(inMemory);
@@ -753,46 +778,18 @@ static void ExecuteChangeSelectedUnitCollisionSphere(EEMRecord* m)
 
 // FUNCTION: EXE 0x4bcd63
 // Posts a non-empty chat text to the chat log, marked as own when it came from the local slot
-void EEMChat::Execute()
+static void ExecuteChat(EEMRecord* m)
 {
-    if (gCommunications && this->mText.GetLength() > 0) {
+    if (gCommunications && m->mString.GetLength() > 0) {
         unsigned char theLocalSlot;
         if (gCommunications->IsClient() == true)
             theLocalSlot = static_cast<EEClient*>(gCommunications)->GetMySendToSlot();
         else
             theLocalSlot = 0xfe;
-        EEAction* theAction = new EEAAddChatMessage(this->mText, theLocalSlot == this->GetOriginatingSlot());
+        EEAction* theAction = new EEAAddChatMessage(m->mString, theLocalSlot == m->GetOriginatingSlot());
         gUserInterface->PostAction(theAction);
         theAction->Dereference();
     }
-}
-
-// EEMChat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMChat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CHAT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgString(this->mText);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4bce6d
-// Returns the Chat message's debug label
-char* EEMChat::GetMessageLabel() const
-{
-    return "Chat";
-}
-
-// FUNCTION: EXE 0x4bce73
-// Reads the Chat message (selection id, player, text) from a network buffer
-void EEMChat::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 3949);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CHAT, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mText.Import(inPayloadPointer + theSlots[6].offset);
 }
 
 // FUNCTION: EXE 0x4bced6
@@ -1031,206 +1028,96 @@ static void ExecuteExplore(EEMRecord* m)
     ee_units_explore(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup));
 }
 
-// FUNCTION: EXE 0x4be6c6
-// Creates a Full Game Options message holding a copy of every lobby game option
-EEMFullGameOptions::EEMFullGameOptions(const EEGameOptions& inOptions)
-    : EEMessage(kMessageFullGameOptions, false)
-{
-    this->mMapType = inOptions.GetMapType();
-    this->mGameSpeed = inOptions.GetGameSpeed();
-    this->mLoadType = inOptions.GetLoadType();
-    this->mMapSize = inOptions.GetMapSize();
-    this->mEpochStart = inOptions.GetEpochStart();
-    this->mEpochEnd = inOptions.GetEpochEnd();
-    this->mVariant = inOptions.GetVariant();
-    this->mResources = inOptions.GetResources();
-    this->mUnitLimit = inOptions.GetUnitLimit();
-    this->mWondersForVictory = inOptions.GetWondersForVictory();
-    this->mDifficulty = inOptions.GetDifficulty();
-    this->mVictory = inOptions.GetVictory();
-    this->mLockTeams = inOptions.GetLockTeams();
-    this->mLockSpeed = inOptions.GetLockSpeed();
-    this->mRevealMap = inOptions.GetRevealMap();
-    this->mCheatCodes = inOptions.GetCheatCodes();
-    this->mRecordGames = inOptions.GetRecordGames();
-    this->mAllowCustomCivs = inOptions.GetAllowCustomCivs();
-    this->mB53 = inOptions.GetB407();
-}
-
 // FUNCTION: EXE 0x4be7b7
 // Copies the received lobby game options into the game's options (except the B53 flag) and updates the lobby
-void EEMFullGameOptions::Execute()
+static void ExecuteFullGameOptions(EEMRecord* m)
 {
     gGameOptions.mLock->WriteLock();
-    gGameOptions.mLoadType = this->mLoadType;
-    gGameOptions.mMapType = this->mMapType;
-    gGameOptions.mMapSize = this->mMapSize;
-    gGameOptions.mResources = this->mResources;
-    gGameOptions.mEpochStart = this->mEpochStart;
-    gGameOptions.mEpochEnd = this->mEpochEnd;
-    gGameOptions.mUnitLimit = this->mUnitLimit;
-    gGameOptions.mWondersForVictory = this->mWondersForVictory;
-    gGameOptions.mVariant = this->mVariant;
-    gGameOptions.mDifficulty = this->mDifficulty;
-    gGameOptions.mGameSpeed = this->mGameSpeed;
-    gGameOptions.mRecordGames = this->mRecordGames;
-    gGameOptions.mAllowCustomCivs = this->mAllowCustomCivs;
-    gGameOptions.mRevealMap = this->mRevealMap;
-    gGameOptions.mLockTeams = this->mLockTeams;
-    gGameOptions.mLockSpeed = this->mLockSpeed;
-    gGameOptions.mCheatCodes = this->mCheatCodes;
-    gGameOptions.mVictory = this->mVictory;
+    gGameOptions.mLoadType = m->Get<int32_t>(7);
+    gGameOptions.mMapType = m->mString;
+    gGameOptions.mMapSize = m->Get<int32_t>(11);
+    gGameOptions.mResources = m->Get<int32_t>(13);
+    gGameOptions.mEpochStart = m->Get<int32_t>(15);
+    gGameOptions.mEpochEnd = m->Get<int32_t>(5);
+    gGameOptions.mUnitLimit = m->Get<int32_t>(16);
+    gGameOptions.mWondersForVictory = m->Get<int32_t>(18);
+    gGameOptions.mVariant = m->Get<int32_t>(8);
+    gGameOptions.mDifficulty = m->Get<int32_t>(4);
+    gGameOptions.mGameSpeed = m->Get<int32_t>(6);
+    gGameOptions.mRecordGames = m->Get<bool>(12);
+    gGameOptions.mAllowCustomCivs = m->Get<bool>(1);
+    gGameOptions.mRevealMap = m->Get<bool>(14);
+    gGameOptions.mLockTeams = m->Get<bool>(10);
+    gGameOptions.mLockSpeed = m->Get<bool>(9);
+    gGameOptions.mCheatCodes = m->Get<bool>(3);
+    gGameOptions.mVictory = m->Get<bool>(17);
     gGameOptions.mLock->WriteUnlock();
     gUserInterface->PostLobbyUpdateGameOptions();
-}
-
-// EEMFullGameOptions's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMFullGameOptions::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_FULL_GAME_OPTIONS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mAllowCustomCivs);
-    outSlots[6] = EENetMsgField(this->mB53);
-    outSlots[7] = EENetMsgField(this->mCheatCodes);
-    outSlots[8] = EENetMsgField(this->mDifficulty);
-    outSlots[9] = EENetMsgField(this->mEpochEnd);
-    outSlots[10] = EENetMsgField(this->mGameSpeed);
-    outSlots[11] = EENetMsgField(this->mLoadType);
-    outSlots[12] = EENetMsgField(this->mVariant);
-    outSlots[13] = EENetMsgField(this->mLockSpeed);
-    outSlots[14] = EENetMsgField(this->mLockTeams);
-    outSlots[15] = EENetMsgField(this->mMapSize);
-    outSlots[16] = EENetMsgField(this->mRecordGames);
-    outSlots[17] = EENetMsgField(this->mResources);
-    outSlots[18] = EENetMsgField(this->mRevealMap);
-    outSlots[19] = EENetMsgField(this->mEpochStart);
-    outSlots[20] = EENetMsgField(this->mUnitLimit);
-    outSlots[21] = EENetMsgField(this->mVictory);
-    outSlots[22] = EENetMsgField(this->mWondersForVictory);
-    outSlots[23] = EENetMsgString(this->mMapType);
-    return 24;
-}
-
-// FUNCTION: EXE 0x4bea5b
-// Returns the Full Game Options message's debug label
-char* EEMFullGameOptions::GetMessageLabel() const
-{
-    return "Full Game Options";
-}
-
-// FUNCTION: EXE 0x4bea61
-// Reads the Full Game Options message (selection id, every option, map type) from a network buffer
-void EEMFullGameOptions::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 6160);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_FULL_GAME_OPTIONS, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mMapType.Import(inPayloadPointer + theSlots[23].offset);
-}
-
-// FUNCTION: EXE 0x4bebe1
-// Creates a Game Options message that changes one lobby option to a value (or the map type)
-EEMGameOptions::EEMGameOptions(long inOption, long inValue, const UWideString& inS14)
-    : EEMessage(kMessageGameOptions, false)
-{
-    this->mOption = inOption;
-    this->mValue = inValue;
-    this->mMapType = inS14;
 }
 
 // FUNCTION: EXE 0x4bec38
 // Changes one lobby game option (0..17) to the message's value or map type and updates the lobby
-void EEMGameOptions::Execute()
+static void ExecuteGameOptions(EEMRecord* m)
 {
     gGameOptions.mLock->WriteLock();
-    switch (this->mOption) {
+    switch (m->Get<int32_t>(1)) {
     case 0:
-        gGameOptions.mLoadType = this->mValue;
+        gGameOptions.mLoadType = m->Get<uint32_t>(2);
         break;
     case 1:
-        gGameOptions.mMapSize = this->mValue;
+        gGameOptions.mMapSize = m->Get<uint32_t>(2);
         break;
     case 2:
-        gGameOptions.mMapType = this->mMapType;
+        gGameOptions.mMapType = m->mString;
         break;
     case 3:
-        gGameOptions.mResources = this->mValue;
+        gGameOptions.mResources = m->Get<uint32_t>(2);
         break;
     case 4:
-        gGameOptions.mEpochStart = this->mValue;
+        gGameOptions.mEpochStart = m->Get<uint32_t>(2);
         break;
     case 5:
-        gGameOptions.mEpochEnd = this->mValue;
+        gGameOptions.mEpochEnd = m->Get<uint32_t>(2);
         break;
     case 6:
-        gGameOptions.mUnitLimit = this->mValue;
+        gGameOptions.mUnitLimit = m->Get<uint32_t>(2);
         break;
     case 7:
-        gGameOptions.mWondersForVictory = this->mValue;
+        gGameOptions.mWondersForVictory = m->Get<uint32_t>(2);
         break;
     case 8:
-        gGameOptions.mVariant = this->mValue;
+        gGameOptions.mVariant = m->Get<uint32_t>(2);
         break;
     case 9:
-        gGameOptions.mDifficulty = this->mValue;
+        gGameOptions.mDifficulty = m->Get<uint32_t>(2);
         break;
     case 10:
-        gGameOptions.mGameSpeed = this->mValue;
+        gGameOptions.mGameSpeed = m->Get<uint32_t>(2);
         break;
     case 11:
-        gGameOptions.mRecordGames = this->mValue > 0;
+        gGameOptions.mRecordGames = m->Get<uint32_t>(2) > 0;
         break;
     case 12:
-        gGameOptions.mAllowCustomCivs = this->mValue > 0;
+        gGameOptions.mAllowCustomCivs = m->Get<uint32_t>(2) > 0;
         break;
     case 13:
-        gGameOptions.mRevealMap = this->mValue > 0;
+        gGameOptions.mRevealMap = m->Get<uint32_t>(2) > 0;
         break;
     case 14:
-        gGameOptions.mLockTeams = this->mValue > 0;
+        gGameOptions.mLockTeams = m->Get<uint32_t>(2) > 0;
         break;
     case 15:
-        gGameOptions.mLockSpeed = this->mValue > 0;
+        gGameOptions.mLockSpeed = m->Get<uint32_t>(2) > 0;
         break;
     case 16:
-        gGameOptions.mCheatCodes = this->mValue > 0;
+        gGameOptions.mCheatCodes = m->Get<uint32_t>(2) > 0;
         break;
     case 17:
-        gGameOptions.mVictory = this->mValue > 0;
+        gGameOptions.mVictory = m->Get<uint32_t>(2) > 0;
         break;
     }
     gGameOptions.mLock->WriteUnlock();
     gUserInterface->PostLobbyUpdateGameOptions();
-}
-
-// EEMGameOptions's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMGameOptions::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_GAME_OPTIONS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mOption);
-    outSlots[6] = EENetMsgField(this->mValue);
-    outSlots[7] = EENetMsgString(this->mMapType);
-    return 8;
-}
-
-// FUNCTION: EXE 0x4bee61
-// Returns the Game Options message's debug label
-char* EEMGameOptions::GetMessageLabel() const
-{
-    return "Game Options";
-}
-
-// FUNCTION: EXE 0x4bee67
-// Reads the Game Options message (selection id, option, value, map type) from a network buffer
-void EEMGameOptions::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 6423);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_GAME_OPTIONS, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mMapType.Import(inPayloadPointer + theSlots[7].offset);
 }
 
 // FUNCTION: EXE 0x4beedd
@@ -1335,13 +1222,13 @@ static void ExecuteImmediateCargoUnload(EEMRecord* m)
 // FUNCTION: EXE 0x4bfdd2
 // Shows a chat line in the local chat log if the sender's chat target (all, allies, enemies, chosen players)
 // includes the local player and observers only reach observers; plays the incoming-chat sound; records the text
-void EEMInGameChat::Execute()
+static void ExecuteInGameChat(EEMRecord* m)
 {
     UWideString theType;
-    EEPlayer* theSender = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* theSender = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EEPlayer* theLocal = gWorld.GetCurrentPlayer();
     if (theSender)   // port: the game log (ee/EEGameLog.h), every in-game chat line (notes typed while playing)
-        EEGameLogChat(theSender->mPlayerID, (const char*)this->mText);
+        EEGameLogChat(theSender->mPlayerID, (const char*)m->mString);
     if (theSender && theLocal) {
         if (theLocal == theSender
             || (theSender->mSlot != kSlotNone
@@ -1371,7 +1258,7 @@ void EEMInGameChat::Execute()
                     gResource->GetString(IDS_OBSERVERS, theType);
                 if (theType.GetLength() != 0)
                     theType = theType + " ";
-                gUserInterface->AddChatLogEntry(theSender->mColor, theSender->mName, theType + this->mText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
+                gUserInterface->AddChatLogEntry(theSender->mColor, theSender->mName, theType + m->mString, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
 
                 if (theSender != theLocal) {
                     EESoundObject* theSound = EESoundObject::Get(kSoundIncomingChatMessage);
@@ -1380,35 +1267,8 @@ void EEMInGameChat::Execute()
                 }
             }
         }
-        gWorld.mScenarioManager->mLastChatText = this->mText;
+        gWorld.mScenarioManager->mLastChatText = m->mString;
     }
-}
-
-// EEMInGameChat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMInGameChat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_IN_GAME_CHAT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgString(this->mText);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c004e
-// Returns the message's debug label "In Game Chat"
-char* EEMInGameChat::GetMessageLabel() const
-{
-    return "In Game Chat";
-}
-
-// FUNCTION: EXE 0x4c0054
-// Reads the chat message (header, selection id, text) from a received payload
-void EEMInGameChat::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 7731);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_IN_GAME_CHAT, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mText.Import(inPayloadPointer + theSlots[5].offset);
 }
 
 // FUNCTION: EXE 0x4c0150
@@ -1989,94 +1849,6 @@ static void ExecutePlayerInformation(EEMRecord* m)
     gGameOptions.mPlayers[m->Get<int32_t>(4)] = thePlayer;
     gGameOptions.mLock->WriteUnlock();
     gUserInterface->PostLobbyUpdatePlayer(m->Get<int32_t>(4), m->Get<int32_t>(2));
-}
-
-// FUNCTION: EXE 0x4c378e
-// Creates a full lobby record of one player slot from its game options (slot, type, name, ping, color, team ...)
-EEMFullPlayerInformation::EEMFullPlayerInformation(const EEGameOptionsPlayer& inPlayer)
-    : EEMessage(kMessageFullPlayerInformation, false)
-{
-    this->mSlot = inPlayer.mSlot;
-    this->mSlotType = inPlayer.mType;
-    this->mName = inPlayer.mName;
-    this->mPing = inPlayer.mPing;
-    this->mColor = inPlayer.mColor;
-    this->mTeam = inPlayer.mTeam;
-    this->mCitizenBonus = inPlayer.mStartingCitizens;
-    this->mIsReady = inPlayer.mIsReady;
-    this->mIsLocal = inPlayer.mIsLocal;
-    this->mLoadedType = inPlayer.mLoadedType;
-    this->mB42 = inPlayer.mB36;
-    this->mEngine = (int32_t)inPlayer.mEngine;   // port
-}
-
-void EEMFullPlayerInformation::Execute()
-{
-}
-
-// EEMFullPlayerInformation's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMFullPlayerInformation::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_FULL_PLAYER_INFORMATION;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mSlot);
-    outSlots[6] = EENetMsgField(this->mSlotType);
-    outSlots[7] = EENetMsgField(this->mLoadedType);
-    outSlots[8] = EENetMsgString(this->mName);
-    outSlots[9] = EENetMsgField(this->mPing);
-    outSlots[10] = EENetMsgField(this->mColor);
-    outSlots[11] = EENetMsgField(this->mTeam);
-    outSlots[12] = EENetMsgField(this->mCitizenBonus);
-    outSlots[13] = EENetMsgField(this->mIsReady);
-    outSlots[14] = EENetMsgField(this->mIsLocal);
-    outSlots[15] = EENetMsgField(this->mB42);
-    outSlots[16] = EENetMsgField(this->mEngine);
-    return 17;
-}
-
-// FUNCTION: EXE 0x4c396b
-// Returns the message's debug label "Full Player Information"
-char* EEMFullPlayerInformation::GetMessageLabel() const
-{
-    return "Full Player Information";
-}
-
-// FUNCTION: EXE 0x4c3971
-// Reads the full lobby player record (header, slot, types, name, ping, color, team, flags) from a received payload
-void EEMFullPlayerInformation::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 11227);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_FULL_PLAYER_INFORMATION, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mName.Import(inPayloadPointer + theSlots[8].offset);
-}
-
-void EEMPlayerSlotInfo::Execute()
-{
-}
-
-// EEMPlayerSlotInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMPlayerSlotInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_PLAYER_SLOT_INFO;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgField(this->mSlot);
-    outSlots[7] = EENetMsgField(this->mIsBehindFirewall);
-    outSlots[8] = EENetMsgString(this->mAddress);
-    return 9;
-}
-
-// FUNCTION: EXE 0x4c3b39
-// Reads the player slot info (header, selection id, player id, slot, firewall flag, address) from a received payload
-void EEMPlayerSlotInfo::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 11370);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_PLAYER_SLOT_INFO, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
-    this->mAddress.Import(inPayloadPointer + theSlots[8].offset);
 }
 
 // FUNCTION: EXE 0x4c3bbc
@@ -3044,6 +2816,7 @@ static const struct {
     {kMessageCastCalamity, ExecuteCastCalamity},
     {kMessageChangeFormation, ExecuteChangeFormation},
     {kMessageChangeSelectedUnitCollisionSphere, ExecuteChangeSelectedUnitCollisionSphere},
+    {kMessageChat, ExecuteChat},
     {kMessageCheatCode, ExecuteCheatCode},
     {kMessageCivTimerExpired, ExecuteCivTimerExpired},
     {kMessageClearAirportCommands, ExecuteClearAirportCommands},
@@ -3055,6 +2828,8 @@ static const struct {
     {kMessageExchangeResources, ExecuteExchangeResources},
     {kMessageExitShiftMode, ExecuteExitShiftMode},
     {kMessageExplore, ExecuteExplore},
+    {kMessageFullGameOptions, ExecuteFullGameOptions},
+    {kMessageGameOptions, ExecuteGameOptions},
     {kMessageGameRestarting, ExecuteGameRestarting},
     {kMessageGameSpeed, ExecuteGameSpeed},
     {kMessageGatherResource, ExecuteGatherResource},
@@ -3064,6 +2839,7 @@ static const struct {
     {kMessageHealUnit, ExecuteHealUnit},
     {kMessageImmediateCargoUnload, ExecuteImmediateCargoUnload},
     {kMessageImproveUnit, ExecuteImproveUnit},
+    {kMessageInGameChat, ExecuteInGameChat},
     {kMessageIncrementEpic, ExecuteIncrementEpic},
     {kMessageIncrementRallyTimer, ExecuteIncrementRallyTimer},
     {kMessageJITManufacturing, ExecuteJITManufacturing},

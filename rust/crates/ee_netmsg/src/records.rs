@@ -1,6 +1,7 @@
 //! The game messages without a C++ class of their own (RUST_PLAN R5b.4, game messages round 3): `EEMRecord`
-//! (ee/EEMessage.h) carries any of these types: its codec class's members after the selection id, packed in wire
-//! order in a byte record (every member of these classes is fixed: no string, record list or blob). The C++ asks here
+//! (ee/EEMessage.h) carries any of these types: its codec class's fixed members after the selection id, packed in
+//! wire order in a byte record, and at most one string (round 4: the chat lines, the lobby's options and slots),
+//! which the C++ object keeps beside the record (`mString`). No record list or blob. The C++ asks here
 //! for the layout, the type's two flags and its debug label. The classes these types had (`EEMCheatCode`,
 //! `EEMPayTribute`, ...) were touched only by their senders' constructors, their own `Execute` and the capture (which
 //! reads every message through its codec slots).
@@ -13,8 +14,9 @@ use std::ffi::c_char;
 pub const EE_NETMSG_RECORD_PAUSED: u8 = 1;
 /// A sender's message may be sent while the local player is out (`EEMessage::mCanSendWhenOut`; an imported one never).
 pub const EE_NETMSG_RECORD_WHEN_OUT: u8 = 2;
-/// The record's room: at least the largest record type's members after the selection id (`EEMPayTribute`'s 21 bytes).
-pub const EE_NETMSG_RECORD_BYTES: usize = 32;
+/// The record's room: at least the largest record type's fixed members after the selection id
+/// (`EEMFullGameOptions`' 48 bytes).
+pub const EE_NETMSG_RECORD_BYTES: usize = 64;
 
 const PAUSED: u8 = EE_NETMSG_RECORD_PAUSED;
 const WHEN_OUT: u8 = EE_NETMSG_RECORD_WHEN_OUT;
@@ -40,7 +42,7 @@ const fn rec_type(class: u32, message_type: u8, flags: u8, label: &'static str) 
 
 /// The record types, by codec class (a `rec` row: the class's one message type in `TYPES`; a `rec_type` row names
 /// its type).
-pub static RECORD_TYPES: [RecordType; 94] = [
+pub static RECORD_TYPES: [RecordType; 100] = [
     rec(EE_NETMSG_ADD_REMOVE_RESOURCES, PAUSED, "Add Remove Resources\0"),
     rec(EE_NETMSG_ATTACK_PLAYERS, 0, "Attack Players\0"),
     rec(EE_NETMSG_CAMERA_LOCATION_INFO, 0, "Camera Location\0"),
@@ -139,6 +141,13 @@ pub static RECORD_TYPES: [RecordType; 94] = [
     rec_type(EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP, 0x49, PAUSED | WHEN_OUT, "Add Unit To Selected Group\0"),
     rec_type(EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP, 0x76, PAUSED | WHEN_OUT, "Always Add Units To Selected Group\0"),
     rec_type(EE_NETMSG_END_CINEMATIC, 0x9d, 0, "End Cinematic\0"),
+    // round 4: the types with one string member
+    rec(EE_NETMSG_CHAT, 0, "Chat\0"),
+    rec(EE_NETMSG_FULL_GAME_OPTIONS, 0, "Full Game Options\0"),
+    rec(EE_NETMSG_FULL_PLAYER_INFORMATION, PAUSED, "Full Player Information\0"),
+    rec(EE_NETMSG_GAME_OPTIONS, 0, "Game Options\0"),
+    rec(EE_NETMSG_IN_GAME_CHAT, PAUSED | WHEN_OUT, "In Game Chat\0"),
+    rec(EE_NETMSG_PLAYER_SLOT_INFO, WHEN_OUT, "Player Slot Info\0"),
 ];
 
 /// The record type of a message type, if it is one: a row naming the type, else the row of the type's class.
@@ -172,6 +181,8 @@ pub const EE_NETMSG_RECORD_FIELD_FLOAT: u8 = 3;
 pub const EE_NETMSG_RECORD_FIELD_POINT: u8 = 4;
 /// A `GEVector` (three floats).
 pub const EE_NETMSG_RECORD_FIELD_VECTOR: u8 = 5;
+/// The type's string (`UWideString`; the C++ object's `mString`, not in the record: offset and size 0 of it).
+pub const EE_NETMSG_RECORD_FIELD_STRING: u8 = 6;
 
 /// Member `index` of a record class (1 = the first after the selection id).
 pub fn record_field(class_id: u32, index: u32) -> EeNetMsgRecordField {
@@ -188,6 +199,7 @@ pub fn record_field(class_id: u32, index: u32) -> EeNetMsgRecordField {
         Kind::F32 => EE_NETMSG_RECORD_FIELD_FLOAT,
         Kind::Point2 => EE_NETMSG_RECORD_FIELD_POINT,
         Kind::Vec3 => EE_NETMSG_RECORD_FIELD_VECTOR,
+        Kind::WStr => EE_NETMSG_RECORD_FIELD_STRING,
         _ => return none,
     };
     EeNetMsgRecordField { kind, offset: offset as u32, size: f.kind.fixed_size().unwrap_or(0) as u32 }
@@ -232,7 +244,10 @@ mod tests {
             if r.class != EE_NETMSG_CHANGE_FORMATION {
                 assert_eq!(c.import_fields, c.fields.len(), "{}", c.name);
             }
-            let size: usize = c.fields[1..].iter().map(|f| f.kind.fixed_size().expect(c.name)).sum();
+            let strings = c.fields[1..].iter().filter(|f| f.kind == Kind::WStr).count();
+            assert!(strings <= 1, "{}", c.name);
+            let size: usize =
+                c.fields[1..].iter().filter(|f| f.kind != Kind::WStr).map(|f| f.kind.fixed_size().expect(c.name)).sum();
             assert!(size <= EE_NETMSG_RECORD_BYTES, "{}", c.name);
             assert!(r.label.ends_with('\0') && !r.label[..r.label.len() - 1].contains('\0'));
             for i in 1..c.fields.len() as u32 {
@@ -290,7 +305,19 @@ mod tests {
         assert_eq!(ee_netmsg_record_flags(0x76), PAUSED | WHEN_OUT);
         assert_eq!(ee_netmsg_record_class(0x9d), EE_NETMSG_END_CINEMATIC);
         assert!(!TYPES.iter().any(|t| t.0 == 0x9d));
-        // EEMStartLoadingResponse (0x5e)
+        // the string types: EEMPlayerSlotInfo (0x6a) the player, slot, firewall, then the address; EEMFullPlayerInformation
+        // (0x5b) the name between the loaded type and the ping, which follows the three integers
+        let s = |i| record_field(EE_NETMSG_PLAYER_SLOT_INFO, i);
+        assert_eq!(s(3), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_BOOL, offset: 2, size: 1 });
+        assert_eq!(s(4), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_STRING, offset: 3, size: 0 });
+        assert_eq!(s(5).kind, EE_NETMSG_RECORD_FIELD_NONE);
+        let f = |i| record_field(EE_NETMSG_FULL_PLAYER_INFORMATION, i);
+        assert_eq!(f(4).kind, EE_NETMSG_RECORD_FIELD_STRING);
+        assert_eq!(f(5), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_FLOAT, offset: 12, size: 4 });
+        assert_eq!(ee_netmsg_record_flags(0x5b), PAUSED);
+        assert_eq!(ee_netmsg_record_flags(0x7d), PAUSED | WHEN_OUT); // EEMInGameChat
+        assert_eq!(record_field(EE_NETMSG_FULL_GAME_OPTIONS, 18).offset, 44); // the last fixed member
+                                                                              // EEMStartLoadingResponse (0x5e)
         assert_eq!(ee_netmsg_record_flags(0x5e), PAUSED | WHEN_OUT);
         // a type with a class of its own, and no type
         assert_eq!(ee_netmsg_record_class(0x4e), u32::MAX); // EEMSelectUnits
