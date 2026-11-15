@@ -1489,7 +1489,17 @@ TSFDEF void tsf_set_output(tsf* f, enum TSFOutputMode outputmode, int samplerate
 
 TSFDEF void tsf_set_volume(tsf* f, float global_volume)
 {
-	f->globalGainDB = (global_volume == 1.0f ? 0 : -tsf_gainToDecibels(1.0f / global_volume));
+	// (EE patch) The master volume changes the voices already sounding too, as the channel volume does and as
+	// the original's synth does: upstream set it for new notes only, so a fade-in from 0 left every note started during
+	// it silent to its end (held notes for many seconds) and a mute left the sounding notes playing. Volume 0 is
+	// -100 dB (silent, tsf_decibelsToGain), not -infinity, so a mute and its undo shift the voices by finite amounts.
+	float globalGainDB = (global_volume == 1.0f ? 0.0f : tsf_gainToDecibels(global_volume)), gainDBChange = globalGainDB - f->globalGainDB;
+	struct tsf_voice *v, *vEnd;
+	if (gainDBChange == 0.0f) return;
+	for (v = f->voices, vEnd = v + f->voiceNum; v != vEnd; v++)
+		if (v->playingPreset != -1)
+			v->noteGainDB += gainDBChange;
+	f->globalGainDB = globalGainDB;
 }
 
 TSFDEF int tsf_set_max_voices(tsf* f, int max_voices)
@@ -1570,7 +1580,9 @@ TSFDEF int tsf_note_on(tsf* f, int preset_index, int key, float vel)
 		voice->playingPreset = preset_index;
 		voice->playingKey = key;
 		voice->playIndex = voicePlayIndex;
-		voice->noteGainDB = f->globalGainDB - region->attenuation - tsf_gainToDecibels(1.0f / vel);
+		// (EE patch) DLS level 1 default velocity connection, as the original: 40 * log10(velocity), the concave curve
+		// (SF2's is 20 * log10). The velocity itself stays linear for the region's velocity range above.
+		voice->noteGainDB = f->globalGainDB - region->attenuation - 2.0f * tsf_gainToDecibels(1.0f / vel);
 
 		if (f->channels)
 		{

@@ -65,7 +65,7 @@ static const unsigned long kNextMaxOrders = 200;     // orders past this many in
 struct EECPNextNames {
     std::map<long, std::string> mNames;
     std::map<std::string, long> mKeys;
-    std::string mPrefix;        // "dbobjects_": the name of a key without an id (a binary tree), as tools/eedata ids.py
+    std::string mPrefix;        // "dbobjects_": the name of a key without an id, as tools/eedata ids.py
 };
 
 static EECPNextNames& EECPNextNamesOf(const char* inTable)
@@ -101,7 +101,7 @@ static long EECPNextKeyOf(EECPNextNames& inNames, const std::string& inName)
     std::map<std::string, long>::iterator it = inNames.mKeys.find(inName);
     if (it != inNames.mKeys.end())
         return it->second;
-    // "<table>_<key>": a row without an id in the data (or the binary tree's names)
+    // "<table>_<key>": a row without an id in the data
     if (inName.size() > inNames.mPrefix.size() && inName.compare(0, inNames.mPrefix.size(), inNames.mPrefix) == 0) {
         long theKey = 0;
         for (size_t i = inNames.mPrefix.size(); i < inName.size(); i++) {

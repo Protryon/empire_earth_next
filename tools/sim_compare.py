@@ -4,7 +4,7 @@
 
 BENCH_A and BENCH_B are tools/sim_bench.py output folders (build/sim/bench/<name>) of the same command on two
 machines, e.g. Windows (EE-SIM.exe) and Linux (ee-sim), with the same data (--data: the same release in both) and the
-same scripts (--ai-scripts ai at the same commit). For every run id in both: the EE-AI traces
+same scripts (--ai-scripts data/ai at the same commit). For every run id in both: the EE-AI traces
 (tools/harness/ai_trace.py compare: the decisions, the hash lines with the unit count and the random seed) and the
 reports (outcome, game time, the final players, every sample) without their wall-clock fields. Exit 0 when every
 common run is identical; else the first difference of each run that differs.

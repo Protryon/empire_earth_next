@@ -119,12 +119,12 @@ class FSPath;
 class FSFileSpec;
 class UString;
 
-// FSPath::FindFile for a db table: when the table's text form (the same name with .csv/.yaml) is on the path,
-// returns that text compiled to the binary db file as a new FSMemoryFile; otherwise the .dat as FindFile does.
-// A text form that does not compile stops the game with its error message.
+// FSPath::FindFile for a db table ("db\dbworld.dat"): the table's text form (the same name with .csv/.yaml) from
+// the path, compiled to the binary record stream, as a new FSMemoryFile. The .dat itself is never read: a table
+// whose text is not on the path, or a text that does not compile, stops the game with its message.
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
-// The row ids of dbobjects or dbtechtree by key (the unit class / the tech id), as the last load from text read them
-// (EEDbFindFile); false and empty when that table was loaded from its .dat (no ids).
+// The row ids of dbobjects or dbtechtree by key (the unit class / the tech id), as the last load read them
+// (EEDbFindFile); false and empty before the table is loaded.
 bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds);
 
 // Reads the rules documents (ee/EERules.h: db\combat.yaml ... and epochs.yaml's media) from the path into

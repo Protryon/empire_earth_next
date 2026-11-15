@@ -1,0 +1,72 @@
+# gameoptions: Empire Earth: The Art of Conquest rules (tools/eedata/rules.py; the game: EERules.cpp). The lobby's option lists and limits; an option is its entry's position.
+# A key left out keeps the game's default (the value written here).
+eedata: gameoptions
+format: 3
+map_sizes:
+  - id: tiny
+    name: 29700               # the lobby's text (a Language.rc string id)
+    tiles: 42
+    script_size: 0                # the random map scripts' size class (MapSize, 0 tiny .. 5 gigantic)
+  - id: small
+    name: 29701               # the lobby's text (a Language.rc string id)
+    tiles: 58
+    script_size: 1                # the random map scripts' size class (MapSize, 0 tiny .. 5 gigantic)
+  - id: medium
+    name: 29702               # the lobby's text (a Language.rc string id)
+    tiles: 75
+    script_size: 2                # the random map scripts' size class (MapSize, 0 tiny .. 5 gigantic)
+  - id: large
+    name: 29703               # the lobby's text (a Language.rc string id)
+    tiles: 105
+    script_size: 3                # the random map scripts' size class (MapSize, 0 tiny .. 5 gigantic)
+  - id: huge
+    name: 29704               # the lobby's text (a Language.rc string id)
+    tiles: 160
+    script_size: 4                # the random map scripts' size class (MapSize, 0 tiny .. 5 gigantic)
+  - id: gigantic
+    name: 29705               # the lobby's text (a Language.rc string id)
+    tiles: 220
+    script_size: 5                # the random map scripts' size class (MapSize, 0 tiny .. 5 gigantic)
+map_size_default: small
+speeds:
+  - id: slow
+    name: 30656
+    factor: game_speed_slow_normal.F
+  - id: normal
+    name: 31254
+    factor: game_speed_slow_normal.F2
+  - id: fast
+    name: 30657
+    factor: game_speed_fast_fastest.F
+  - id: very_fast
+    name: 31713
+    factor: game_speed_fast_fastest.F2
+speed_default: normal
+difficulties:                      # the damage table: the scale when exactly one side is "human" (EEPlayer::IsHuman)
+  - id: easy
+    name: 30269
+    ai_level: 0                    # the computer players' records: 0 easy, 1 medium, 2 hard
+    damage_scale_human_target: difficulty_damage_scale.F
+    damage_scale_human_attacker: difficulty_damage_scale.F2
+    ai_cheats: []                  # the computer players' cheats this difficulty keeps (docs/AI_RESEARCH.md; none: a fair game; any of cost, reveal, epochs, extra, popband, catchup, retire)
+  - id: medium
+    name: 30248
+    ai_level: 1                    # the computer players' records: 0 easy, 1 medium, 2 hard
+    damage_scale_human_target: 1.0
+    damage_scale_human_attacker: 1.0
+    ai_cheats: []                  # the computer players' cheats this difficulty keeps (docs/AI_RESEARCH.md; none: a fair game; any of cost, reveal, epochs, extra, popband, catchup, retire)
+  - id: hard
+    name: 30270
+    ai_level: 2                    # the computer players' records: 0 easy, 1 medium, 2 hard
+    damage_scale_human_target: difficulty_damage_scale.F2
+    damage_scale_human_attacker: difficulty_damage_scale.F
+    ai_cheats: []                  # the computer players' cheats this difficulty keeps (docs/AI_RESEARCH.md; none: a fair game; any of cost, reveal, epochs, extra, popband, catchup, retire)
+unit_limit:
+  minimum: unit_limit_range.L
+  maximum: unit_limit_range.L2
+  step: 50
+  default: unit_limit_default.L
+wonders_for_victory:
+  maximum: wonders_for_victory_max.L
+  default: 3
+defeat_without_recovery: true      # out with no citizens, no other units and no built town centre or capitol to train one (false: every vital unit and building gone, the original)

@@ -1,0 +1,10 @@
+#eedata dbweapontohit
+#format 3
+#rows 6
+row,id,label,mPercents[0],mPercents[1],mPercents[2],mPercents[3],mPercents[4],mPercents[5]
+0,shock,Defender: Shock,100,100,150,100,100,100
+1,arrow,Arrow,150,100,100,100,100,100
+2,pierce,Pierce,100,150,100,100,100,100
+3,gun,Gun,100,100,100,100,100,100
+4,laser,Laser,100,100,100,100,100,100
+5,missile,Missile,100,100,100,100,100,100

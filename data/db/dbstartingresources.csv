@@ -1,0 +1,10 @@
+#eedata dbstartingresources
+#format 3
+#rows 6
+row,id,label,mIndex,mNameID,mFood,mWood,mStone,mGold,mIron
+0,startingresources_0,,-1,0,0,0,0,0,0
+1,tournament_low,Tournament - Low,,7147,200,175,210,0,0
+2,tournament_defensive,Tournament - Defensive,,7151,200,175,500,0,0
+3,standard_low,Standard - Low,,7149,500,400,630,0,0
+4,standard_high,Standard - High,,7148,800,750,800,100,100
+5,death_match,Death Match,,7150,15000,15000,5000,10000,10000

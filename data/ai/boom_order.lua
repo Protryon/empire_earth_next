@@ -1,4 +1,4 @@
--- The "boom" AI (ai/ais.json boom): boom with the owner's build order (lib.build_order, AI_RESEARCH §8.51)
+-- The "boom" AI (data/ai/ais.json boom): boom with the owner's build order (lib.build_order, AI_RESEARCH §8.51)
 -- and the fishing grounds' guard (boom-defence's B4, §8.50: the towers' attack once a warship is seen, 2 guard
 -- warships, the boats' flight to a dock). The raid stays off; the 20-soldier reserve trains after the Copper advance
 -- (PLAN[3]); during the Bronze save half the guard's iron infantry share goes to ranged soldiers (iron_lean, §8.50).

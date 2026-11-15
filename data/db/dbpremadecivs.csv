@@ -1,0 +1,27 @@
+#eedata dbpremadecivs
+#format 3
+#rows 23
+row,id,mIndex,mFileName,mChecksum,mNameID,mEraNameID
+0,classical_greece,,Classical Greece,19926,31826,31816
+1,assyrian_empire,,Assyrian Empire,11480,31821,31816
+2,babylon,,Babylon,16216,31820,31816
+3,byzantine_rome,,Byzantine Rome,10254,31823,31816
+4,carthage,,Carthage,14777,31824,31816
+5,kingdom_of_israel,,Kingdom of Israel,15341,31833,31816
+6,austria,,Austria,14074,31822,31817
+7,england,,England,14175,31827,31817
+8,franks,,Franks,12254,31829,31817
+9,kingdom_of_italy,,Kingdom of Italy,12973,31834,31817
+10,ottoman_empire,,Ottoman Empire,15029,31836,31817
+11,spain,,Spain,19719,31839,31817
+12,france,,France,10826,31828,31818
+13,germany,,Germany,13049,31830,31818
+14,great_britain,,Great Britain,14937,31831,31818
+15,italy,,Italy,13264,31832,31818
+16,russia,,Russia,12469,31838,31818
+17,united_states,,United States,12184,31840,31818
+18,china,,China,16132,31825,31819
+19,novaya_russia,,Novaya Russia,14058,31835,31819
+20,rebel_forces,,Rebel Forces,11013,31837,31819
+21,japan,,Japan,16738,31750,31819
+22,korea,,Korea,18866,31751,31819

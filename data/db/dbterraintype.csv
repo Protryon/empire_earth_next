@@ -1,0 +1,72 @@
+#eedata dbterraintype
+#format 3
+#rows 68
+row,id,label,mID,mFirstColor,mLastColor,mNameID,mIsInEditor
+0,grass,Grass,,40,47,22000,1
+1,desert,Desert,,24,31,22001,1
+2,rock,Rock,,96,103,22002,1
+3,sand_coarse,Sand - Coarse,,120,127,22003,1
+4,ice,Ice,,88,95,22004,1
+5,snow_grass_patches,Snow - Grass Patches,,152,159,22005,1
+6,grass_tufts,Grass - Tufts,,64,71,22006,1
+7,cracked_mud,Cracked Mud,,81,88,22007,1
+8,color_grey,Color Grey,,244,244,22008,1
+9,dry_leaves,Dry Leaves,,32,39,22009,1
+10,sand_cracked,Sand - Cracked,,128,135,22010,1
+11,sand_fine,Sand - Fine,,105,111,22011,1
+12,smooth_stone,Smooth Stone,,59,61,22012,1
+13,beach,Beach,,8,15,22013,1
+14,brick,Brick,,161,168,22014,1
+15,pavement,Pavement,,16,23,22015,1
+16,asphalt_1,Asphalt 1,,0,7,22016,1
+17,snow_tufts,Snow - Tufts,,144,151,22017,1
+18,grass_patches,Grass - Patches,,80,87,21051,1
+19,sand_medium,Sand - Medium,,112,119,21052,1
+20,color_black,Color - Black,,255,255,21086,1
+21,color_olive,Color - Olive,,176,176,21054,1
+22,color_evergreen,Color - Evergreen,,183,183,21055,1
+23,color_pale_blue,Color - Pale Blue,,192,192,21056,1
+24,color_slate_blue,Color - Slate Blue,,199,199,21058,1
+25,color_orange_yellow,Color - Orange/Yellow,,215,215,21057,1
+26,color_pale_blue_slate_blue,Color - Pale Blue - Slate Blue,,192,199,21059,1
+27,color_light_brown_dark_brown,Color - Light Brown - Dark Brown,,200,207,21060,1
+28,color_white_orange_yellow,Color - White - Orange/Yellow,,208,215,21061,1
+29,color_light_brown,Color - Light Brown,,200,200,21062,1
+30,color_dark_brown,Color - Dark Brown,,207,207,21063,1
+31,color_light_maroon,Color - Light Maroon,,216,216,21064,1
+32,color_pink,Color - Pink,,249,249,21065,1
+33,color_red,Color - Red,,248,248,21066,1
+34,color_blue,Color - Blue,,250,250,21067,1
+35,color_light_maroon_dark_maroon,Color - Light Maroon - Dark Maroon,,216,223,21068,1
+36,color_violet_purple,Color - Violet - Purple,,224,231,21069,1
+37,color_rose_red_orange,Color - Rose - Red/Orange,,232,239,21070,1
+38,color_cyan,Color - Cyan,,251,251,21071,1
+39,color_green,Color - Green,,252,252,21072,1
+40,color_yellow,Color - Yellow,,253,253,21073,1
+41,color_olive_evergreen,Color - Olive - Evergreen,,176,183,21074,1
+42,color_violet,Color - Violet,,224,224,21075,1
+43,color_orange,Color - Orange,,254,254,21076,1
+44,stonework,Stonework,,160,167,21077,1
+45,color_pale_green_mint,Color - Pale Green - Mint,,184,191,21078,1
+46,color_purple,Color - Purple,,231,231,21079,1
+47,color_white_black,Color - White - Black,,240,247,21080,1
+48,grass_sparse,Grass - Sparse,,72,79,21081,1
+49,grass_tall,Grass - Tall,,56,63,21082,1
+50,color_white,Color - White,,240,240,21083,1
+51,ocean_water,Ocean Water,,168,175,21084,1
+52,snow,Snow,,136,143,21085,1
+53,grass_overgrown,Grass - Overgrown,,48,55,21053,1
+54,mars_ice_cliff,Mars - Ice Cliff,,0,7,5801,1
+55,mars_polar_cap,Mars - Polar Cap,,0,7,5802,1
+56,mars_red_craters,Mars - Red Craters,,81,88,5803,1
+57,mars_sand_dunes,Mars - Sand Dunes,,81,88,5804,1
+58,mars_brown_craters,Mars - Brown Craters,,81,88,5805,1
+59,mars_glacier,Mars - Glacier,,81,88,5806,1
+60,mars_lava_flow,Mars - Lava Flow,,81,88,5807,1
+61,mars_orange_rocky,Mars - Orange Rocky,,81,88,5808,1
+62,mars_red_rocky,Mars - Red Rocky,,81,88,5809,1
+63,mars_red_volcanic,Mars - Red Volcanic,,81,88,5810,1
+64,mars_snow_glacier,Mars - Snow Glacier,,81,88,5811,1
+65,mars_striations,Mars - Striations,,81,88,5812,1
+66,mars_water,Mars - Water,,81,88,5813,1
+67,space,Space,,0,7,21043,1

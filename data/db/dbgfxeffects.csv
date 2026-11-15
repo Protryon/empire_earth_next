@@ -1,0 +1,292 @@
+#eedata dbgfxeffects
+#format 3
+#rows 292
+row,id,label,mID,mKind,mTagPointKind,mMediaIndex,mStartSize,mHeight,mAlpha,mTime1,mTime2,mDuration,mIntParam1,mIntParam2,mIntParam3,mLinkedEffectIndex1,mLinkedEffectIndex2,mLinkedEffectIndex3,mNameStringId,mParam1,mParam2,mParam3,mParam4,mParam5,mParam6,mParam7,mParam8,mParam9,mParam10,mParam11,mEmitPositionSpread,mFlag1,mFlag2,mIsScenarioListed,mIsEmitFlat,mEndsWithUnitOrDuration,mDetailLevel
+0,none,None,,17,-1,-1,0.0005,0.5,0.0,0,0,5000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+1,hoolahoop_unit,Hoolahoop (unit),,14,21,hoolahoop,0.35,0.1,1.0,30,30,1300,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+2,water_splash,Water Splash,,27,21,splash1,0.05,0.75,1.0,1,1,3000,0,0,0,-1,-1,-1,8701,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+3,cannon_ball_trail,Cannon ball trail,,3,21,cannon_ball_trail_2,0.05,0.05,1.0,15,20000,5000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+4,naval_ripples,Naval Ripples,,34,21,naval_ripple,0.05,1.5,1.0,300,4000,5000,0,0,0,-1,-1,-1,8702,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+5,muzzle_flash_small,Muzzle Flash - Small,,9,21,muzzle_flash,0.08,0.08,1.0,0,20000,5000,0,0,0,-1,-1,-1,8703,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+6,not_in_use_hoolahoop,NOT IN USE HoolaHoop,,57,21,-1,0.1,0.1,0.0,0,0,0,30,0,0,-1,none,none,0,1.57,0.0,0.0,0.0,0.0001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,0
+7,fire_trail1,Fire Trail1,,0,21,cannon_ball_trail_2,0.05,0.05,1.0,15,20000,5000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+8,fire_2_unit_delete_rg,Fire 2 (unit) DELETE -rg,,5,21,fire_1_delete_rg,1.5,1.5,1.0,0,20000,5000,0,0,0,-1,-1,-1,8704,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+9,fire_3_unit_delete_rg,Fire 3 (unit) DELETE -rg,,5,21,fire_1_delete_rg,1.5,1.5,1.0,0,20000,5000,0,0,0,-1,-1,-1,8705,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+10,explosion_1,Explosion 1,,4,21,-1,2.0,2.0,1.0,0,20000,5000,0,0,0,-1,-1,-1,8706,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+11,explosion_2,Explosion 2,,4,21,-1,2.0,2.0,1.0,0,20000,5000,0,0,0,-1,-1,-1,8707,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+12,explosion,Explosion,,4,21,-1,2.0,2.0,1.0,0,20000,5000,0,0,0,-1,-1,-1,8708,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+13,land_ripple,Land Ripple,,34,21,naval_ripple,0.05,1.0,1.0,900,2500,5000,0,0,0,-1,-1,-1,8709,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+15,impact_sparks,Impact Sparks,,6,21,fire_trail_1,0.2,0.25,1.0,1,1,300,0,0,0,-1,-1,-1,8710,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,2
+16,impact_blood,Impact Blood,,7,21,blood,0.2,0.2,1.0,1,1,1,0,0,0,-1,-1,-1,8711,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,2
+17,missile_trail,Missile Trail,,3,21,missile_trail_1,0.03,0.03,1.0,15,20000,12000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+18,big_missile_trail,Big Missile Trail,,3,21,missile_trail_2,0.13,0.2,1.0,10,2,15000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+19,tracers_units,Tracers (units),,33,21,n3d_tracers,0.15,0.15,0.0,0,0,2600,0,0,0,impact_sparks,-1,-1,8712,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+20,plasma_pulse_unit,Plasma Pulse (unit),,10,21,n2d_plasma_pulse,0.08,0.08,1.0,10,4,3000,0,0,0,-1,-1,-1,8713,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+21,lightning_unit,Lightning (unit),,8,21,n2d_lightning,2.5,2.5,1.0,100,2,500,0,0,0,-1,-1,-1,8714,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+22,flame_throw_unit,Flame Throw (unit),,14,21,firetrail,0.3,0.2,1.0,15,15,1300,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+23,muzzle_smoke,Muzzle Smoke,,31,21,n3d_muzzle_smoke,0.05,0.05,1.0,100,2,4000,0,0,0,-1,-1,-1,8715,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+24,missile_exhaust,Missile Exhaust,,27,21,n3d_missle_exhaust,0.05,0.05,1.0,100,20000,5000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+25,shockwave_big_unit,Shockwave - Big (unit),,18,21,shockwave,0.05,4.0,1.0,1,1,3000,0,0,0,-1,-1,-1,8716,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+26,nano_muzzle_flash,Nano Muzzle Flash,,9,21,z_delete_3d_nano_muzzle_smoke,0.05,0.05,1.0,100,2,4000,0,0,0,-1,-1,-1,8717,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+27,laser_blue_small,Laser Blue/Small,,33,21,laser_blue,0.5,0.5,1.0,10,10,3000,0,0,0,impact_sparks,-1,-1,8718,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+28,earthquake_vortex,Earthquake - vortex,,26,21,earthquake,0.5,7.0,1.0,500,20000,70000,0,0,0,-1,-1,-1,8719,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+29,laser_red_large,Laser Red/Large,,33,21,laser_red,0.5,0.5,1.0,50,50,3000,0,0,0,impact_sparks,-1,-1,8720,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+30,laser_green_small,Laser Green/Small,,33,21,laser_green,0.2,0.2,1.0,10,10,3000,0,0,0,impact_sparks,-1,-1,8721,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+31,blue_pulse_ball_unit,Blue Pulse Ball (unit),,10,21,n2d_plasma_pulse,0.15,0.15,0.0,0,0,1600,0,0,0,-1,-1,-1,8722,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+32,laser_blue_large,Laser Blue/Large,,33,21,laser_blue,0.55,0.55,1.0,50,50,3000,0,0,0,impact_sparks,-1,-1,8723,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+33,laser_green_large,Laser Green/Large,,33,21,laser_green,0.35,0.35,1.0,10,10,3000,0,0,0,impact_sparks,-1,-1,8724,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+34,laser_red_small,Laser Red/Small,,33,21,laser_red,0.2,0.2,1.0,15,15,3000,0,0,0,impact_sparks,-1,-1,8725,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+35,volcano_effect,Volcano - effect,,32,21,volcano,0.05,2.5,1.0,10000,50,300000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+36,smoke_effect,Smoke - effect,,11,21,smoke_puff,0.25,2.5,0.9,0,0,30000,0,0,0,-1,-1,-1,8726,0.75,0.15,0.0003,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+37,earthquake_initial,Earthquake - initial,,26,21,earthquake,0.5,2.5,1.0,500,20000,300,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+38,lava_glow,Lava Glow,,13,21,lava_glow,2.3,2.3,1.0,3000,1,1,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+39,plague_small_unit,Plague (small) (unit),,35,21,vermin_small,0.62,0.62,1.0,1,1,300000,0,0,0,-1,-1,-1,8727,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+40,leprosy_small_unit,Leprosy (small) (unit),,35,21,flies_small,0.63,0.63,1.0,1,1,2000,0,0,0,-1,-1,-1,8728,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+41,hurricane_unit,Hurricane (unit),,36,21,hurricane,8.0,8.0,1.0,1,1,30000,0,0,0,-1,-1,-1,8729,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+42,attacking_flies,Attacking Flies,,37,21,flies_small,0.63,0.63,1.0,2000,0,5000,0,0,0,-1,-1,-1,8730,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+43,plague_med_unit,Plague (med) (unit),,35,21,vermin_med,0.85,0.85,1.0,1,1,300000,0,0,0,-1,-1,-1,8731,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+44,plague_large_unit,Plague (large) (unit),,35,21,vermin_large,1.1,1.1,1.0,1,1,300000,0,0,0,-1,-1,-1,8732,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+45,leprosy_med_unit,Leprosy (med) (unit),,35,21,flies_med,0.88,0.88,1.0,1,1,2000,0,0,0,-1,-1,-1,8733,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+46,leprosy_large_unit,Leprosy (large) (unit),,35,21,flies_large,1.13,1.13,1.0,1,1,2000,0,0,0,-1,-1,-1,8734,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+47,hurricane_lightning_unit,Hurricane Lightning (unit),,8,21,n2d_lightning,1.5,1.5,1.0,100,2,500,0,0,0,-1,-1,-1,8735,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+48,tank_shells_units,Tank Shells (units),,38,21,n3d_tank_shell,0.15,0.15,1.0,0,0,2600,0,0,0,-1,-1,-1,8736,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+49,firetrail_unit,Firetrail (unit),,14,21,firetrail,0.25,0.5,1.0,50,50,500,0,0,0,-1,-1,-1,8737,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+50,fireball_unit,Fireball (unit),,39,21,fireball,0.5,0.5,1.0,1,1,1,0,0,0,-1,-1,-1,8738,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+51,staticmorale_square,StaticMorale/Square,,15,21,area_effect_morale_bonus,0.0005,0.1,0.0,0,0,0,18,2,2,-1,-1,-1,0,10.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+52,hospital_range_3,Hospital Range 3,,15,21,area_effect_healing,0.0005,0.1,0.0,0,0,0,18,2,1,-1,-1,-1,0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+53,temple_range_8,Temple Range  8,,15,21,area_effect_calamity_protection,0.0005,0.1,0.0,0,0,0,18,2,3,-1,-1,-1,0,8.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+54,university_range_8,University Range  8,,15,21,z_delete_area_effect_conversion_protection,0.0005,0.1,0.0,0,0,0,18,2,4,-1,-1,-1,0,8.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+55,healing_circle_rng_4,Healing/Circle Rng 4,,16,21,area_effect_healing,0.0005,0.1,0.0,0,0,0,18,2,1,-1,-1,-1,8807,4.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+56,staticmorale_circle,StaticMorale/Circle,,16,21,area_effect_morale_bonus,0.0005,0.1,0.0,0,0,0,18,2,2,-1,-1,-1,0,10.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+57,plama_pulse_quick,Plama Pulse - quick,,33,21,plasma_mike,0.1,0.1,1.0,50,25,2500,0,0,0,impact_sparks,-1,-1,8781,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+58,buildingmorale_square_10,BuildingMorale/Square 10,,15,21,area_effect_morale_bonus,0.0005,0.1,0.0,0,0,0,18,2,5,-1,-1,-1,0,10.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+59,buildingmorale_circle,BuildingMorale/Circle,,16,21,area_effect_morale_bonus,0.0005,0.1,0.0,0,0,0,18,2,5,-1,-1,-1,0,10.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+60,heromorale_square_rng_5,HeroMorale/Square Rng 5,,15,21,area_effect_morale_bonus,0.0005,0.1,0.0,0,0,0,18,2,6,-1,-1,-1,0,5.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+61,heromorale_circle_rng_4,HeroMorale/Circle Rng 4,,16,21,area_effect_morale_bonus,0.0005,0.1,0.0,0,0,0,18,2,6,-1,-1,-1,0,4.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+62,tower_arrow,Tower (arrow),,38,21,arrow,0.1,0.1,0.6,0,0,800,0,0,0,none,none,none,8736,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+63,shockwave_unit,Shockwave (unit),,18,21,shockwave,0.05,1.5,1.0,1,1,2000,0,0,0,-1,-1,-1,8747,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+64,nuclear_explosion_unit,Nuclear Explosion(Unit),,40,21,nuke_fusion,3.5,25.0,1.0,1,1,6000,0,0,0,-1,-1,-1,8746,20000.0,1200.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+65,tower_stone,Tower (stone),,38,21,ball_stone,0.05,0.05,0.2,0,0,500,0,0,0,none,none,none,8736,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+66,upgraded_calamityimmune_square,Upgraded CalamityImmune/Square,,15,21,area_effect_calamity_protection,0.0005,0.1,0.0,0,0,0,18,2,3,-1,-1,-1,0,10.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+67,farm_effect_unit,Farm - effect (unit),,41,21,programmer_farm,0.1,0.3,1.0,0,0,0,3,0,0,-1,-1,-1,0,20.0,100.0,0.05,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+68,temple_range_10,Temple Range 10,,15,21,area_effect_calamity_protection,0.0005,0.1,0.0,0,0,0,18,2,3,-1,-1,-1,0,10.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+69,temple_range_12,Temple Range 12,,15,21,area_effect_calamity_protection,0.0005,0.1,0.0,0,0,0,18,2,3,-1,-1,-1,0,12.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+70,temple_range_14,Temple Range 14,,15,21,area_effect_calamity_protection,0.0005,0.1,0.0,0,0,0,18,2,3,-1,-1,-1,0,14.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+71,temple_range_16,Temple Range 16,,15,21,area_effect_calamity_protection,0.0005,0.1,0.0,0,0,0,18,2,3,-1,-1,-1,0,16.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+72,university_range_10,University Range 10,,15,21,z_delete_area_effect_conversion_protection,0.0005,0.1,0.0,0,0,0,18,2,4,-1,-1,-1,0,10.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+73,university_range_12,University Range 12,,15,21,z_delete_area_effect_conversion_protection,0.0005,0.1,0.0,0,0,0,18,2,4,-1,-1,-1,0,12.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+74,university_range_14,University Range 14,,15,21,z_delete_area_effect_conversion_protection,0.0005,0.1,0.0,0,0,0,18,2,4,-1,-1,-1,0,14.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+75,university_range_16,University Range 16,,15,21,z_delete_area_effect_conversion_protection,0.0005,0.1,0.0,0,0,0,18,2,4,-1,-1,-1,0,16.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+76,university_range_18,University Range 18,,15,21,z_delete_area_effect_conversion_protection,0.0005,0.1,0.0,0,0,0,18,2,4,-1,-1,-1,0,18.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+77,hospital_range_4,Hospital Range 4,,15,21,area_effect_healing,0.0005,0.1,0.0,0,0,0,18,2,1,-1,-1,-1,0,4.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+78,hospital_range_5,Hospital Range 5,,15,21,area_effect_healing,0.0005,0.1,0.0,0,0,0,18,2,1,-1,-1,-1,0,5.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+79,hospital_range_6,Hospital Range 6,,15,21,area_effect_healing,0.0005,0.1,0.0,0,0,0,18,2,1,-1,-1,-1,0,6.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+80,hospital_range_7,Hospital Range 7,,15,21,area_effect_healing,0.0005,0.1,0.0,0,0,0,18,2,1,-1,-1,-1,0,7.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+81,inf_muzzle_smoke_units,Inf Muzzle Smoke (units),,20,21,smoke_puff,0.05,0.75,0.08,75,75,8000,1,1,1,-1,-1,-1,8780,5.0,200.0,0.75,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+82,inf_muzzle_smoke_small_units,Inf Muzzle Smoke (small) (units),,20,21,smoke_puff,0.03,0.18,0.05,75,75,400,1,1,1,-1,-1,-1,8778,5.0,200.0,0.75,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+83,naval_muzzle_smoke_units,Naval Muzzle Smoke (units),,20,21,smoke_puff,0.25,1.0,0.2,75,75,10000,1,1,1,-1,-1,-1,8779,4.0,400.0,0.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+84,rain,Rain,,42,21,-1,0.0005,0.0005,0.0,0,0,120000,440,441,442,-1,-1,-1,8749,-30.0,25.0,0.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,2
+85,rain_splash,Rain splash,,34,21,naval_ripple,0.02,0.1,0.0,900,2500,2000,0,0,0,-1,-1,-1,8750,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,2
+86,horse_breath_units,Horse Breath (units),,22,21,smoke_puff,0.05,0.1,0.04,75,75,2600,444,443,1,-1,-1,-1,8777,4.25,1.15,0.75,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,2
+87,tower_cannonball,Tower (cannonball),,38,21,cannon_ball_mike,0.075,0.075,0.35,0,0,1000,0,0,0,none,none,none,8736,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+88,rain_land_ripple,Rain-Land Ripple,,17,21,splash1,0.05,0.15,1.0,0,0,200,200,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+89,rain_water_ripple,Rain-Water Ripple,,34,21,naval_ripple,0.05,0.5,1.0,600,4000,2500,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+90,smoke_generator_unit,Smoke Generator (unit),,43,21,-1,0.5,0.5,1.0,1000,1000,30000,0,0,0,smoke_effect,-1,-1,8776,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+91,damage_smoke_vehicle,Damage Smoke (vehicle),,44,21,-1,0.0005,0.5,0.0,300,1500,0,0,0,0,black_smoke,-1,-1,8739,0.2,0.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+92,black_smoke,Black Smoke,,11,21,smoke_puff,0.03,0.75,0.5,0,0,12000,0,0,0,none,-1,-1,8745,0.25,0.15,0.00017,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+93,light_glow_0_05,Light Glow 0.05,,13,21,light_glow,0.0005,0.03,0.0,500,0,0,0,0,0,none,-1,-1,8785,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+94,priest_conversion_indiator,Priest Conversion Indiator,,2,21,light_glow,0.1,0.15,0.0,200,0,0,0,0,0,none,-1,-1,8748,0.0,0.0,0.25,1.0,0.706,0.0,0.0025,0.7,0.7,0.0,0.0,0.0,0,0,1,0,0,0
+95,damage_smoke_aircraft,Damage Smoke (aircraft),,44,21,-1,0.0005,0.5,0.0,150,750,0,0,0,0,black_smoke,-1,-1,8744,0.1,0.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+96,basic_marching_line,Basic marching line,,45,21,marching_line,0.0005,0.13,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,1.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+97,graphical_waypoints,Graphical waypoints,,45,21,marching_line,0.0005,0.05,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,4.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+98,waypoint_indicator,Waypoint Indicator,,2,21,waypoint_circle,0.08,0.08,0.0,0,0,0,0,0,0,none,-1,-1,8774,0.0,0.0,-0.02,1.0,0.38,0.14,0.0005,1.0,1.0,0.0,0.0,0.0,1,1,1,0,0,0
+99,velocity_smoke,Velocity smoke,,12,21,smoke_puff,0.05,2.0,1.0,0,0,10000,3000,0,0,none,-1,-1,8773,0.4,0.1,0.00015,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+100,destruction_smoke,Destruction smoke,,30,21,-1,0.0005,4.0,0.0,100,100,1,50,0,0,smoke_particle_destruction,-1,-1,8743,1.5,0.4,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,1,0,0,1
+101,smoke_particle_destruction,Smoke Particle (destruction),,46,21,smoke_puff,0.5,2.0,0.0,0,0,20000,0,0,0,none,none,none,8742,1.0,0.8,0.1,0.05,0.87,0.788,0.682,0.0,50.0,0.0,0.6,0.0,0,0,0,0,0,1
+102,test_particle_emitter,Test Particle Emitter,,58,21,-1,0.0005,0.5,0.0,0,0,0,50,50,1,test_particle,none,none,0,0.0,0.2,0.0,0.2,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.15,0,0,0,0,0,0
+103,destruction_smoke_small,Destruction smoke (small),,30,21,-1,0.0005,2.0,0.0,100,100,1,50,0,0,smoke_particle_destruction,none,none,8741,1.0,0.8,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+104,smoke_generator_volcano,Smoke generator (volcano),,43,21,-1,0.5,0.5,0.0,1000,1000,30000,0,0,0,smoke_volcano,none,none,8740,0.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+105,smoke_volcano,Smoke (volcano),,11,21,smoke_puff,0.75,3.0,0.5,0,0,30000,0,0,0,none,none,none,8772,0.75,0.15,0.0002,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+107,light_glow_0_2,Light Glow 0.2,,13,21,light_glow,0.0005,0.08,0.0,1000,0,0,0,0,0,none,none,none,8771,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+108,test_particle,Test Particle,,46,21,firetrail,0.1,0.25,0.0,0,0,600,0,0,0,none,none,none,0,1.0,1.0,0.0,0.5,1.0,1.0,1.0,0.0,100.0,0.0,1.0,0.0,1,0,0,0,0,0
+109,fire_particle_volcano_projectiles,Fire Particle (volcano projectiles),,46,21,firetrail,0.25,0.1,0.0,0,0,350,0,0,0,none,none,none,0,1.0,1.0,0.0,0.2,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+110,fire_emitter_volcano_projectiles,Fire Emitter (volcano projectiles),,58,21,-1,0.0005,0.5,0.0,0,0,0,30,20,1,fire_particle_volcano_projectiles,none,none,8758,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.1,1,1,1,0,0,1
+111,smoke_particle_volcano_projectiles,Smoke Particle (volcano projectiles),,46,21,smoke_puff,0.2,0.35,0.0,0,0,2250,0,0,0,none,none,none,0,0.65,0.25,0.15,0.1,1.0,1.0,1.0,0.0,100.0,0.0,0.0,0.0,0,0,0,0,0,1
+112,smoke_emitter_volcano_projectiles,Smoke Emitter (volcano projectiles,,58,21,-1,0.0005,0.5,0.0,0,0,0,100,0,1,smoke_particle_volcano_projectiles,none,none,8770,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.1,1,1,1,0,0,1
+113,fire_trail_volcano_projectiles,Fire Trail (volcano projectiles),,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,fire_emitter_volcano_projectiles,smoke_emitter_volcano_projectiles,none,8782,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+114,smoke_particle_burning_debris,Smoke Particle (burning debris),,46,21,smoke_puff,0.1,0.2,0.0,0,0,2000,0,0,0,none,none,none,0,0.65,0.25,0.15,0.1,1.0,1.0,1.0,0.0,100.0,0.0,0.0,0.0,0,0,0,0,0,1
+115,smoke_emitter_burning_debris,Smoke Emitter (burning debris),,58,21,-1,0.0005,0.5,0.0,0,0,3500,100,0,1,smoke_particle_burning_debris,none,none,8768,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,2.0,0.0,0.5,0.0,0.08,0,1,1,0,0,1
+116,fire_particle_burning_debris,Fire Particle (burning debris),,46,21,fire_explosion,0.15,0.05,0.0,0,0,300,0,0,0,none,none,none,0,1.0,1.0,0.0,0.2,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,1
+117,fire_emitter_burning_debris,Fire Emitter (burning debris),,58,21,-1,0.0005,0.5,0.0,0,0,3500,30,20,1,fire_particle_burning_debris,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,2.0,0.0,0.5,0.0,0.08,0,1,0,0,0,1
+118,fire_trail_burning_debris,Fire Trail (burning debris),,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,fire_emitter_burning_debris,smoke_emitter_burning_debris,none,8767,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+119,debris_particle_burning_debris,Debris Particle (burning debris),,57,21,debris,0.03,0.03,0.0,0,0,3500,100,0,0,none,none,none,0,1.0,0.3,0.1,0.0,1.0,1.0,1.0,2.0,0.0,0.5,0.0,0.08,0,1,0,0,0,1
+120,debris_fire_trail_burning_debris,Debris Fire Trail (burning debris),,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,debris_particle_burning_debris,fire_trail_burning_debris,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.4,0,0,0,0,0,1
+121,debris_fire_trail_emitter_burning_debris,Debris Fire Trail Emitter (burning debris),,58,21,-1,0.0005,0.5,0.0,0,0,500,99999,0,1,debris_fire_trail_burning_debris,none,none,0,1.57,3.14,0.0,3.14,1.0,0.4,0.0,0.0,0.0,0.0,0.0,0.4,0,0,0,0,0,1
+122,death_debris_multi,Death Debris Multi,,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,debris_fire_trail_emitter_burning_debris,debris_fire_trail_emitter_burning_debris,none,8814,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+123,death_debris,Death Debris,,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,death_debris_multi,debris_fire_trail_emitter_burning_debris,none,8766,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+124,explosion_flash,Explosion Flash,,46,21,fire_explosion,0.15,2.5,0.0,0,0,1000,0,0,0,none,none,none,0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+125,explosion_flash_emitter,Explosion Flash Emitter,,58,21,-1,0.0005,0.5,0.0,0,0,1000,150,0,1,explosion_flash,-1,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.45,1,0,0,0,0,1
+126,explosion_combo,Explosion Combo,,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,explosion_flash_emitter,death_debris,-1,8765,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+127,graphical_waypoints_fighters,Graphical waypoints (fighters),,45,21,marching_line,0.0005,0.13,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,1.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+128,graphical_waypoints_bombers,Graphical waypoints (bombers),,45,21,marching_line,0.0005,0.13,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,1.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+129,graphical_waypoints_atomic_bombers,Graphical waypoints (atomic bombers),,45,21,marching_line,0.0005,0.13,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,1.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+130,temp_waypoint_indicator_fighters,Temp waypoint indicator (fighters),,60,21,waypoint_circle,0.25,0.25,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,0.0,0.02,0.133,0.333,0.067,0.0,0.75,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+131,temp_waypoint_indicator_bombers,Temp waypoint indicator (bombers),,60,21,waypoint_circle,0.25,0.25,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,0.0,0.02,0.294,0.208,0.067,0.0,0.75,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+132,temp_waypoint_indicator_atomic_bombers,Temp waypoint indicator (atomic bombers),,60,21,waypoint_circle,0.25,0.25,0.0,0,0,0,0,0,0,none,-1,-1,0,0.0,0.0,0.02,0.941,0.231,0.0,0.0,0.75,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+133,priest_hospital_healing_particle,Priest/Hospital healing particle,,46,21,light_glow,0.08,0.08,0.0,0,0,1000,0,0,0,none,none,none,0,1.0,1.0,0.1,0.0,0.0,1.0,0.0,1.0,0.0,0.0,2.0,0.0,1,0,0,0,0,0
+134,hospital_healing_effect_emitter,Hospital healing effect (emitter),,58,21,-1,0.0005,0.0005,0.0,0,0,2000,160,40,1,priest_hospital_healing_particle,none,none,8764,0.3,0.3,3.1415,6.283,3.0,0.3,0.0,0.0,0.0,0.0,0.0,0.0,1,0,1,0,0,0
+135,muzzle_smoke_sniper,Muzzle Smoke (sniper),,20,21,smoke_puff,0.05,0.75,0.08,75,75,8000,1,1,1,-1,-1,-1,8780,5.0,200.0,0.75,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+136,economy_bonus_particle,Economy bonus (particle),,46,21,dollar_bill,0.15,0.15,0.0,0,0,6000,1,0,0,none,none,none,0,0.8,1.0,0.2,0.05,0.5,1.0,0.5,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+137,economy_bonus_emitter,Economy bonus (emitter),,58,21,-1,0.0005,0.5,0.0,0,0,50,20,1,1,economy_bonus_particle,none,none,8763,0.5,0.5,3.1415,6.283,0.03,0.03,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+138,priest_healing_effect_emitter,Priest healing effect (emitter),,58,21,-1,0.0005,0.5,0.0,0,0,1000000,160,40,1,priest_hospital_healing_particle,none,none,8807,0.3,0.3,3.1415,6.283,3.0,0.3,0.0,0.0,0.0,0.0,0.0,0.0,1,0,1,0,0,0
+139,temple_immunity_particle,Temple Immunity (particle),,46,21,area_effect_calamity_protection,0.2,0.2,0.0,0,0,2000,1,0,0,none,none,none,0,0.8,1.0,0.2,0.75,0.5,1.0,0.5,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+140,temple_immunity_emitter,Temple Immunity (emitter),,58,5,-1,0.0005,0.5,0.0,0,0,40,25,1,1,temple_immunity_particle,none,none,8761,0.5,0.5,3.1415,6.283,0.03,0.03,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+141,morale_effect_emitter,Morale effect (emitter),,58,21,-1,0.0005,0.5,0.0,0,0,2000,15,1,1,morale_effect_particle,none,none,8760,0.5,0.5,3.1415,6.283,0.0,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+142,morale_effect_particle,Morale effect (particle),,46,21,area_effect_morale_bonus,0.2,0.2,0.0,0,0,1000,1,0,0,none,none,none,0,0.8,1.0,0.2,0.05,0.5,1.0,0.5,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+143,shockwave_emitter,Shockwave (emitter),,58,21,-1,0.0005,0.5,0.0,0,0,2000,1,0,1,shockwave_particle,none,none,8759,1.55,0.1,3.1415,6.3,1.0,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+144,shockwave_particle,Shockwave (particle),,46,21,light_glow,0.1,0.1,0.0,0,0,500,0,0,0,none,none,none,0,0.8,0.8,0.2,0.0,0.9,0.9,1.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,1
+145,missile_trail_particle,Missile Trail (particle),,46,21,smoke_puff,0.05,0.2,0.0,0,0,1500,0,0,0,none,none,none,0,0.7,0.9,0.2,0.05,1.0,1.0,1.0,0.0,0.0,0.0,4.0,0.0,0,0,0,0,0,1
+146,missile_trail_emitter_ed1,Missile Trail (emitter) ED1,,58,21,-1,0.0005,0.0005,0.0,0,0,0,30,0,1,missile_trail_particle,none,none,0,1.57,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,1
+147,smoke_particle_hot_springs,Smoke Particle (hot springs),,46,21,smoke_puff,0.1,0.2,0.0,0,0,4000,0,0,0,none,none,none,0,0.55,1.0,0.2,0.15,1.0,1.0,1.0,0.0,10.0,0.0,0.0,0.0,0,0,0,0,0,1
+148,smoke_emitter_hot_springs,Smoke Emitter (hot springs),,58,21,-1,0.0005,1.0,0.0,0,0,0,500,100,1,smoke_particle_hot_springs,none,none,8769,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.45,0,1,1,0,0,1
+149,calamity_teleport_out,Calamity - Teleport Out,,63,21,mp_teleport,1.0,1.0,0.0,0,0,6000,0,0,0,calamity_teleportation_emitter_1,calamity_teleportation_emitter_2,-1,8789,0.15,0.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+150,mech_priest_healing_beam,Mech Priest Healing Beam,,64,21,mech_heal,0.5,0.5,1.0,0,0,3000,0,0,0,-1,-1,-1,8754,0.0015,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,0
+151,calamity_time_warp_shot,Calamity - Time Warp (shot),,48,21,time_warp_attack,0.25,0.25,0.0,0,0,600,0,0,0,none,-1,-1,0,0.0,0.0,0.75,1.0,0.706,0.0,0.0025,0.7,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+152,calamity_shield_battery_shot,Calamity - Shield Battery (shot),,64,21,shield_battery_tracer,0.5,0.5,1.0,0,0,600,0,0,0,none,none,none,8784,0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+153,calamity_shield_battery_unit,Calamity - Shield Battery (unit),,69,21,shield_battery,0.5,0.5,1.0,0,0,1000000,0,0,0,none,none,none,8800,0.00025,0.05,0.25,0.01,0.4,0.9,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+154,calamity_inferno_unit_beam,Calamity - Inferno (unit beam),,64,21,calamity_inferno_beam,0.5,0.5,1.0,0,0,600,1,0,0,none,none,none,0,0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+155,calamity_inferno_area_effect,Calamity - Inferno (area effect),,18,21,calamity_inferno_impact,0.05,4.0,0.0,0,0,1250,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+156,calamity_pulse_cannon_shot,Calamity - Pulse Cannon (shot),,48,21,pulse_cannon_shot,0.25,0.25,0.0,0,0,600,0,0,0,none,none,none,8799,1.0,1.0,0.0,0.2,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+157,calamity_pulse_cannon_unit,Calamity - Pulse Cannon (unit),,47,21,pulse_cannon_unit_effect,0.0005,0.5,0.0,0,0,90000,0,20,0,none,none,none,8798,0.1,0.1,1.0,0.0,1e-6,0.0,0.0,2.0,0.0,0.5,0.0,1.5,0,1,1,0,0,0
+158,building_rubble_3m,Building rubble 3m,,57,21,building_rubble_3,3.0,3.0,0.0,0,0,1000000,1,0,0,none,none,none,0,1.0,1.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+159,building_rubble_emitter_3m,Building rubble emitter 3m,,58,21,-1,0.0005,1.0,0.0,0,0,500,1000,0,1,building_rubble_3m,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+160,building_rubble_and_smoke_3m,Building rubble and smoke 3m,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,destruction_smoke,building_rubble_emitter_3m,none,8797,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+161,building_rubble_1m,Building rubble 1m,,57,21,building_rubble_1,1.0,1.0,0.0,0,0,1000000,1,0,0,none,none,none,0,1.0,1.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+162,building_rubble_emitter_1m,Building rubble emitter 1m,,58,21,-1,0.0005,1.0,0.0,0,0,500,1000,0,1,building_rubble_1m,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+163,building_rubble_and_smoke_1m,Building rubble and smoke 1m,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,destruction_smoke_small,building_rubble_emitter_1m,none,8796,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+164,building_rubble_2m,Building rubble 2m,,57,21,building_rubble_2,2.0,2.0,0.0,0,0,1000000,1,0,0,none,none,none,0,1.0,1.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+165,building_rubble_4m,Building rubble 4m,,57,21,building_rubble_4,4.0,4.0,0.0,0,0,1000000,1,0,0,none,none,none,0,1.0,1.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+166,building_rubble_emitter_2m,Building rubble emitter 2m,,58,21,-1,0.0005,1.0,0.0,0,0,500,1000,0,1,building_rubble_2m,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+167,building_rubble_emitter_4m,Building rubble emitter 4m,,58,21,-1,0.0005,1.0,0.0,0,0,500,1000,0,1,building_rubble_4m,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+168,building_rubble_and_smoke_2m,Building rubble and smoke 2m,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,destruction_smoke_small,building_rubble_emitter_2m,none,8795,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+169,building_rubble_and_smoke_4m,Building rubble and smoke 4m,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,destruction_smoke_small,building_rubble_emitter_4m,none,8794,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+170,kickin_up_dust,Kickin up dust,,43,21,-1,0.2,0.4,1.0,100,100,200,0,0,0,dust_effect,none,none,8793,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+171,dust_effect,Dust - Effect,,11,21,smoke_puff,0.75,1.0,0.5,0,0,3000,0,0,0,none,none,none,0,0.75,0.15,0.0002,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+172,snow,Snow,,61,21,-1,0.0005,0.0005,0.0,0,0,120000,6,0,0,-1,-1,-1,8751,-0.7,10.0,0.04,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,2
+173,fire_particle_true_fire,Fire Particle (TRUE FIRE),,46,21,firetrail,0.28,0.2,0.0,0,0,1500,0,0,0,none,none,none,0,1.0,1.0,0.0,0.5,1.0,1.0,1.0,0.0,250.0,0.0,0.0,0.0,1,0,0,0,0,1
+174,fire_emitter,Fire Emitter,,58,5,fire_1_delete_rg,0.0005,1.0,0.0,0,0,0,175,25,1,fire_particle_true_fire,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.07,1,1,0,0,0,1
+175,fire_damage,Fire Damage,,62,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,fire_emitter,smoke_emitter_damage_smoke,none,8792,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+176,calamity_teleportation_emitter_1,Calamity - Teleportation (emitter #1),,58,21,-1,0.0005,0.5,0.0,0,0,6000,10,0,1,calamity_teleportation_particle_1,none,none,0,0.0,0.0,0.0,0.0,0.9,0.2,0.0,0.0,0.0,0.0,0.0,0.45,0,0,0,0,0,0
+177,calamity_teleportation_particle_1,Calamity - Teleportation (particle #1),,46,21,calamity_teleport_particles,0.06,0.06,0.0,0,0,750,0,0,0,none,none,none,0,0.8,1.0,0.2,0.0,0.2,0.2,0.8,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+178,smoke_particle_damage_smoke,Smoke Particle (Damage smoke),,46,21,smoke_puff,0.001,0.8,0.0,0,0,3000,0,0,0,none,none,none,0,0.65,0.15,0.05,0.75,1.0,1.0,1.0,0.0,250.0,0.0,0.0,0.0,0,0,0,0,0,1
+179,smoke_emitter_damage_smoke,Smoke Emitter (Damage smoke),,58,5,-1,0.0005,0.5,0.0,0,0,0,200,0,1,smoke_particle_damage_smoke,-1,none,8790,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.1,1,1,1,0,0,1
+180,calamity_teleport_in,Calamity - Teleport In,,63,21,mp_teleport,1.0,1.0,0.0,0,0,6000,0,0,0,calamity_teleportation_emitter_1,calamity_teleportation_emitter_2,-1,8802,0.15,0.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,1,0,0,0
+181,calamity_teleportation_emitter_2,Calamity - Teleportation (emitter #2),,58,21,-1,0.0005,0.5,0.0,0,0,6000,10,0,1,calamity_teleportation_particle_2,none,none,0,0.0,0.0,0.0,0.0,0.9,0.2,0.0,0.0,0.0,0.0,0.0,0.45,0,0,0,0,0,0
+182,calamity_teleportation_particle_2,Calamity - Teleportation (particle #2),,46,21,calamity_teleport_particles,0.06,0.06,0.0,0,0,750,0,0,0,none,none,none,0,0.8,1.0,0.2,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+183,laser_red_huge,Laser Red/Huge,,33,21,laser_red,0.5,0.5,1.0,100,100,900,0,0,0,impact_sparks,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+184,command_confirmation_move,Command Confirmation - Move,,65,21,command_confirmation,0.1,0.35,0.0,0,0,800,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+185,command_confirmation_attack,Command Confirmation - Attack,,65,21,command_confirmation,0.1,0.35,0.0,0,0,800,1,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+186,command_confirmation_gather_other,Command Confirmation - Gather / Other,,65,21,command_confirmation,0.1,0.35,0.0,0,0,800,2,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+187,disband_unit_particle,Disband Unit (particle),,46,21,dollar_bill,0.3,0.3,0.0,0,0,6000,1,0,0,none,none,none,0,0.75,1.0,0.2,0.05,0.5,1.0,0.5,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+188,disband_unit_emitter,Disband Unit (emitter),,58,21,-1,0.0005,0.5,0.0,0,0,50,9999,1,1,disband_unit_particle,none,none,8788,0.0,0.0,3.1415,6.283,0.888,0.03,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+189,flies_special,Flies (special),,33,21,flies_small,0.5,0.5,1.0,100,100,900,0,0,0,impact_sparks,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+190,calamity_nano_virus_unit,Calamity - Nano Virus (unit),,66,21,nano_virus_unit_infection,0.35,0.35,1.0,1,1,90000,0,0,0,-1,-1,-1,8786,0.00005,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,1,0,0,0
+191,calamity_nano_virus_attack_effect,Calamity - Nano Virus (attack effect),,64,21,nano_virus_tracer,0.5,0.5,1.0,0,0,1800,0,0,0,-1,-1,-1,8756,0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+192,calamity_inferno_unit_effect,Calamity - Inferno (unit effect),,6,21,inferno_sparks,0.25,0.25,1.0,1,1,300,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+193,anti_matter_storm_attack,Anti Matter Storm (attack),,64,21,anti_matter_storm_attack,0.5,0.5,1.0,0,0,600,0,0,0,none,none,none,8791,-0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+194,recycle,Recycle,,58,5,-1,0.0005,0.5,0.0,0,0,1000000,200,0,1,tower_shell,-1,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,3.0,0,0,0,0,0,0
+195,calamity_time_warp_out_vortex,Calamity - Time Warp (out - vortex),,18,21,time_warp_vortex,0.05,4.0,1.0,1,1,3000,0,0,0,-1,-1,-1,8752,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+196,calamity_pulse_cannon_area_effect,Calamity - Pulse Cannon (area effect),,18,21,pulse_cannon_impact,0.025,3.0,1.0,0,0,1250,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+197,calamity_time_warp_in_vortex,Calamity - Time Warp (in - vortex),,18,21,time_warp_vortex,0.05,4.0,1.0,1,1,3500,0,0,0,-1,-1,-1,8753,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,1,0,0,0
+198,anti_matter_storm_unit,Anti Matter Storm (unit),,36,21,anti_matter_storm_unit,2.0,2.0,1.0,1,1,30000,50,20,0,anti_matter_storm_explosions,-1,-1,8755,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+199,anti_matter_storm_explosions,Anti Matter Storm (explosions),,6,21,anti_matter_storm_sparks,0.25,0.25,1.0,1,1,100,0,0,0,-1,-1,-1,8710,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+200,tower_shell,Tower (shell),,38,21,n3d_tank_shell,0.25,0.25,0.5,0,0,1500,0,0,0,none,none,none,8736,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+201,calamity_time_warp_twinkle,Calamity - Time Warp (twinkle),,6,21,calamity_time_warp_twinkle,0.75,0.75,1.0,1,0,600,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+202,calamity_inferno_beam,Calamity - Inferno (beam),,64,21,calamity_inferno_beam,0.5,0.5,1.0,0,0,1000,0,0,0,none,none,none,8787,-0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+203,furies_mech_explosion,Furies Mech  Explosion,,24,21,n3d_explosion,0.0005,2.0,0.0,0,0,1000,0,0,0,none,none,none,8757,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+204,muzzle_flash_med,Muzzle Flash - Med,,9,21,muzzle_flash,0.2,0.2,1.0,0,20000,5000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+205,muzzle_flash_large,Muzzle Flash - Large,,9,21,muzzle_flash,0.4,0.4,1.0,0,20000,5000,0,0,0,-1,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+206,z_not_in_use_battlecry_spell_unit,z NOT IN USE BattleCry Spell (unit),,47,21,pulse_cannon_unit_effect,0.0005,0.5,0.0,0,0,90000,0,20,0,none,none,none,8783,0.1,0.1,1.0,0.0,1e-6,0.0,0.0,2.0,0.0,0.5,0.0,1.5,0,1,1,0,0,0
+207,aircraft_explosion,Aircraft Explosion,,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,aircraft_explosion_flash_emitter,death_debris,none,8801,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+208,aircraft_explosion_flash_emitter,Aircraft Explosion Flash emitter,,58,21,aircraft_explosion,0.0005,0.5,0.0,0,0,1000,100,0,1,explosion_flash,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.45,1,0,0,0,0,1
+209,command_confirmation_mouse_click_no_unit,Command Confirmation - Mouse Click No Unit,,65,21,command_confirmation,0.1,0.7,0.0,0,0,800,3,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+210,rally_flag_building,Rally Flag - Building,,2,21,rally_flag_normal,1.0,1.0,0.0,0,0,0,0,0,0,none,-1,-1,8804,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.0,0.0,1,1,1,0,0,0
+211,command_confirmation_mouse_click_unit,Command Confirmation - Mouse Click Unit,,65,21,command_confirmation,0.1,0.35,0.0,0,0,800,4,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+212,rally_flag_fighter,Rally Flag - Fighter,,2,21,rally_flag_fighter,1.0,1.0,0.0,0,0,0,0,0,0,none,-1,-1,8805,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.0,0.0,1,1,1,0,0,0
+213,rally_flag_bomber,Rally Flag - Bomber,,2,21,rally_flag_bomber,1.0,1.0,0.0,0,0,0,0,0,0,none,-1,-1,8803,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.0,0.0,1,1,1,0,0,0
+214,rally_flag_atomic_bomber,Rally Flag - Atomic Bomber,,2,21,rally_flag_atomic_bomber,1.0,1.0,0.0,0,0,0,0,0,0,none,-1,-1,8775,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.0,0.0,1,1,1,0,0,0
+215,projectile_3d_explosion,Projectile 3D Explosion,,24,21,n3d_explosion_bomb,0.0005,0.8,0.0,0,0,1000,0,0,0,-1,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+216,inferno_like_beam,Inferno-Like Beam,,64,21,calamity_inferno_beam,0.5,0.5,1.0,0,0,600,0,0,0,none,none,none,8787,-0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+217,generic_explosion_blastglow,Generic Explosion_BlastGlow,,46,21,light_glow,1.0,1.0,0.0,0,0,3000,1,0,0,none,none,none,0,1.0,1.0,0.0,0.0,1.0,1.0,0.65,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,1
+218,generic_explosion_blastglowemitter,Generic Explosion_BlastGlowEmitter,,58,21,-1,1.0,1.0,1.0,0,0,1000,5000,0,1,generic_explosion_blastglow,none,none,0,0.0,0.0,0.0,0.0,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+219,calamity_fire_damage,Calamity - Fire Damage,,62,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,fire_emitter,smoke_emitter_damage_smoke,none,8792,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+220,battlecry_particle,BattleCry Particle,,46,21,light_glow,0.08,0.08,0.0,0,0,1000,0,0,0,none,none,none,0,1.0,1.0,0.1,0.0,1.0,0.0,0.0,1.0,0.0,0.0,2.0,0.0,1,0,0,0,0,1
+221,battlecry_emitter,BattleCry Emitter,,58,21,-1,0.0005,0.5,0.0,0,0,90000,300,40,1,battlecry_particle,-1,-1,8806,0.3,0.3,3.1415,6.238,3.0,0.3,0.0,0.0,0.0,0.0,0.0,0.0,1,0,1,0,1,0
+222,debris_flat_artillery,Debris (flat) Artillery,,57,21,debris_flat,0.09,0.09,0.0,0,0,4000,0,0,0,none,none,none,0,1.0,0.0,0.0,0.0,0.15,0.15,0.15,1.0,0.0,0.3,2.0,0.0,0,0,0,0,0,2
+223,debris_emitter,Debris Emitter,,58,21,-1,0.0005,1.0,0.0,0,0,250,10000,0,15,debris_flat_artillery,none,none,0,1.57,3.14,0.0,3.14,2.0,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+224,fire_particle_small_explosion,Fire Particle (small explosion),,46,21,fire_explosion,0.3,1.3,0.0,0,0,1300,0,0,0,none,none,none,0,1.0,1.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,0
+225,smoke_particle_small_explosion,Smoke Particle (small explosion),,46,21,smoke_puff,0.3,0.8,0.0,0,0,9000,0,0,0,none,none,none,0,0.75,0.15,0.0,0.1,1.0,1.0,1.0,0.0,100.0,0.0,0.0,0.0,0,0,0,0,0,1
+226,explosion_small,Explosion - Small,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,explosion_small_intermediate,debris_emitter,none,8809,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+227,explosion_small_intermediate,Explosion (small -intermediate),,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,smoke_particle_small_explosion,fire_particle_small_explosion,none,8808,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+228,smoke_particle_disintegration,Smoke Particle (Disintegration),,46,21,smoke_puff,0.5,0.9,0.0,0,0,5000,0,0,0,none,none,none,0,0.7,0.8,0.0,0.05,1.0,1.0,1.0,0.0,75.0,0.0,0.0,0.0,0,0,0,0,0,0
+229,debris_disintegration_bombard,Debris (Disintegration) Bombard,,57,21,debris_flat,0.1,0.1,0.0,0,0,4000,0,0,0,none,none,none,0,1.0,0.0,0.0,0.0,0.65,0.65,0.65,1.0,0.0,0.3,2.0,0.0,0,0,0,0,0,2
+230,debris_emitter_disintegration,Debris Emitter (Disintegration),,58,21,-1,0.0005,1.0,0.0,0,0,250,10000,0,10,debris_disintegration_bombard,none,none,0,1.57,3.14,0.0,3.14,1.5,0.5,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,2
+231,disintegration,Disintegration,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,debris_emitter_disintegration,smoke_particle_disintegration,none,8815,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+232,debris_emitter_disintegration_area_effect,Debris Emitter (Disintegration area effect),,58,21,-1,0.0005,1.0,0.0,0,0,250,10000,0,10,debris_disintegration_bombard,none,none,0,1.57,3.14,0.0,3.14,3.0,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+233,smoke_emitter_disintegration_area_effect,Smoke Emitter (Disintegration area effect),,58,21,-1,0.0005,1.0,0.0,0,0,250,10000,0,8,smoke_particle_disintegration_area_effect,none,none,0,1.57,3.14,0.0,3.14,3.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+234,disintegration_area_effect,Disintegration (area effect),,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,disintegration_area_effect_intermediate,smoke_particle_disintegration,none,8813,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+235,smoke_particle_disintegration_area_effect,Smoke Particle (Disintegration area effect),,46,21,smoke_puff,0.5,0.9,0.0,0,0,5000,0,0,0,none,none,none,0,0.7,0.8,0.0,0.05,1.0,1.0,1.0,0.0,50.0,0.0,4.0,0.0,0,0,0,0,0,0
+236,disintegration_area_effect_intermediate,Disintegration (area effect -intermediate),,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,debris_emitter_disintegration_area_effect,smoke_emitter_disintegration_area_effect,none,8812,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+237,smoke_emitter_explosion_area_effect_artillery,Smoke Emitter (explosion  area effect) Artillery,,58,21,-1,0.0005,1.0,0.0,0,0,250,20,0,1,smoke_particle_small_explosion,aircraft_explosion,none,0,1.57,3.14,0.0,3.14,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,2.0,0,0,0,1,0,1
+238,fire_emitter_explosion_area_effect_artillery,Fire Emitter (explosion area effect) Artillery,,58,21,-1,0.0005,1.0,0.0,0,0,250,20,0,1,smoke_particle_disintegration_area_effect,aircraft_explosion,none,0,1.57,3.14,0.0,3.14,1e-6,0.0,0.0,0.0,0.0,0.0,0.0,2.0,0,0,0,1,0,1
+239,explosion_area_effect_intermediate,Explosion (area effect -intermediate),,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,explosion_small,smoke_emitter_explosion_area_effect_artillery,-1,8811,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+240,explosion_area_effect_ab,Explosion (area effect) AB,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,explosion_area_effect_intermediate,fire_emitter_explosion_area_effect_artillery,-1,8810,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,0
+241,tower_emitter,Tower (emitter),,58,21,-1,0.0005,0.5,0.0,0,0,0,10,10,1,missile_trail_particle,none,none,0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,1
+242,missile_trail_emitter_ed2,Missile Trail (emitter) ED2,,58,21,-1,0.0005,0.0005,0.0,0,0,0,30,0,1,missile_trail_particle,none,none,0,1.57,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,2
+243,mech_laser_new_1,Mech Laser NEW 1,,64,21,laser_new_1,0.5,0.5,1.0,0,0,1000,0,0,0,none,none,none,0,-0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+244,mech_laser_new_2,Mech Laser NEW 2,,64,21,laser_new_2,0.5,0.5,1.0,0,0,1000,0,0,0,none,none,none,0,-0.01,0.001,1.0,1.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+245,rally_flag_paratrooper,Rally Flag - Paratrooper,,2,21,rally_flag_paratrooper,1.0,1.0,0.0,0,0,0,0,0,0,none,-1,-1,8817,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.0,0.0,1,1,1,0,0,0
+246,laser_capital_ship,Laser - Capital ship,,33,21,laser_capital_ship,0.5,0.5,1.0,100,100,1500,0,0,0,impact_sparks,-1,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+247,priest_tower_swirl_effect,Priest Tower Swirl Effect,,2,21,priest_tower_swirl,2.5,2.5,1.0,0,0,100000,0,0,0,-1,-1,-1,0,0.0,0.0,-2.8,0.0,0.0,0.0,0.0,1.0,0.0,3000.0,0.0,0.0,1,0,0,0,0,0
+248,laser_corvette,Laser - Corvette,,33,21,laser_corvette,0.3,0.3,1.0,50,50,2000,0,0,0,impact_sparks,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+249,laser_space_turrets,Laser - Space Turrets,,64,21,laser_space_turret,0.5,0.5,1.0,10,10,750,0,0,0,none,none,none,0,-0.01,0.001,1.0,1.5,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+250,spacefighter_pulse_ball,Spacefighter Pulse Ball,,10,21,n2d_spacefighter_plasma_pulse_ball,0.1,0.1,0.0,0,0,1600,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+251,laser_space_transports,Laser - Space Transports,,33,21,laser_space_transport,0.25,0.25,1.0,10,10,1400,0,0,0,impact_sparks,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+252,capital_ship_pulse_ball,Capital ship Pulse Ball,,10,21,n2d_plasma_pulse,0.2,0.2,0.0,0,0,1600,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+253,fanaticism_effect,Fanaticism Effect,,2,21,light_glow,0.1,0.15,0.0,200,0,0,1000,0,0,none,none,none,0,0.9,0.0,0.0,0.6,0.5,0.5,0.0,0.0,1.0,0.0,0.0,0.0,0,0,1,0,0,0
+254,cloaking_capitol_effect,Cloaking Capitol Effect,,71,21,cloaking_plane_effect,10.0,10.0,1.0,0,0,45000,0,0,0,none,none,none,0,1000.0,0.0,0.7,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+255,priest_tower_smoke,Priest Tower Smoke,,11,21,smoke_puff_priest_tower,0.1,1.25,0.5,0,0,4000,0,0,0,-1,-1,-1,8745,0.7,0.2,0.00003,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,1
+256,priest_tower_smoke_generator,Priest Tower Smoke Generator,,44,21,-1,0.0005,0.5,0.0,250,250,0,0,0,0,priest_tower_smoke,none,none,8739,0.8,1.01,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+257,logic_bomb_building_freezup,Logic Bomb Building Freezup,,58,21,-1,0.0,1.0,0.0,0,0,1000000,30,20,1,logic_bomb_freezup_particle,none,none,0,0.0,3.14,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,1.5,0,0,0,0,0,1
+258,logic_bomb_freezup_particle,Logic Bomb Freezup Particle,,46,21,logic_bomb_freezup_particle,0.1,2.0,0.0,0,0,1000,1,0,0,none,none,none,0,1.0,1.0,0.0,0.0,1.0,1.0,1.0,-0.4,0.0,0.0,1.0,0.0,0,0,0,0,0,0
+259,battamb_shell_hole_1_or_2_or_3,BattAmb - Shell Hole 1 or 2 or 3,,50,21,battlefield_ambient_shell_hole_1,1.0,1.0,1.0,0,0,60000,0,1,0,battamb_shell_hole_2,battamb_shell_hole_3,none,0,1.0,1.0,0.6,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,2
+260,battamb_scorch_mark,BattAmb - Scorch Mark,,50,21,battlefield_ambient_scorch_mark_1,0.3,0.4,1.0,0,0,60000,1,1,0,none,none,none,0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,2
+261,battamb_blood_stain_1_or_2_or_3,BattAmb - Blood Stain 1 or 2 or 3,,50,21,battlefield_ambient_blood_stain_1,0.3,0.6,1.0,0,0,60000,2,1,0,battamb_blood_stain_2,battamb_blood_stain_3,none,0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,2
+262,battamb_shell_hole_2,BattAmb - Shell Hole 2,,50,21,battlefield_ambient_shell_hole_2,1.0,1.0,1.0,0,0,60000,0,1,0,none,none,none,0,1.0,1.0,0.6,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,2
+265,battamb_shell_hole_3,BattAmb - Shell Hole 3,,50,21,battlefield_ambient_shell_hole_3,1.0,1.0,1.0,0,0,60000,0,1,0,none,none,none,0,1.0,1.0,0.6,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,2
+266,battamb_blood_stain_2,BattAmb - Blood Stain 2,,50,21,battlefield_ambient_blood_stain_2,0.3,0.6,1.0,0,0,60000,2,1,0,none,none,none,0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,2
+267,battamb_blood_stain_3,BattAmb - Blood Stain 3,,50,21,battlefield_ambient_blood_stain_3,0.3,0.6,1.0,0,0,60000,2,1,0,none,none,none,0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,2
+268,battamb_shell_hole_1,BattAmb - Shell Hole 1,,50,21,battlefield_ambient_shell_hole_1,1.0,1.0,1.0,0,0,60000,0,1,0,none,none,none,0,1.0,1.0,0.6,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,2
+269,battamb_blood_stain_1,BattAmb - Blood Stain 1,,50,21,battlefield_ambient_blood_stain_1,0.3,0.6,1.0,0,0,60000,2,1,0,none,none,none,0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,1,0,0,0,2
+270,battamb_shell_hole_nuclear,BattAmb - Shell Hole Nuclear,,50,21,battlefield_ambient_shell_hole_1,1.0,1.0,0.0,0,0,60000,2,12,0,battamb_shell_hole_2,battamb_shell_hole_3,-1,0,1.0,1.0,0.6,0.3,2.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1,0,0,0,0,2
+271,space_citizen_mining_beam,Space Citizen Mining Beam,,51,21,laser_space_citizen_mining_beam,0.15,0.15,1.0,0,0,999999,9,72,76,impact_sparks_for_mining_beam,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+272,impact_sparks_for_mining_beam,Impact Sparks for Mining Beam,,6,21,space_citizen_mining_beam_impact_sparks,0.15,0.15,1.0,1,1,1000,0,0,0,none,none,none,8710,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+273,space_citizen_logging_beam,Space Citizen Logging Beam,,51,21,laser_space_citizen_mining_beam,0.15,0.15,1.0,1,1,999999,3,72,76,impact_sparks_for_mining_beam,none,none,0,0.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+274,space_gate_energy_wall,Space Gate Energy Wall,,52,21,space_energy_gate,0.0,1.0,0.0,0,0,0,0,0,0,none,none,none,0,1.0,0.1,0.5,3.0,1.0,0.2,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+275,space_wall_energy_wall,Space Wall Energy Wall,,52,21,space_energy_gate,0.0,1.0,0.0,0,0,0,0,0,0,none,none,none,0,1.0,0.2,0.5,1.0,1.0,0.2,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+276,impact_sparks_that_track_unit,Impact Sparks that Track Unit,,6,21,fire_trail_1,0.2,0.25,1.0,1,0,300,0,0,0,none,none,none,8710,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,1,0,0,2
+277,unused_space_damage_venting_spew_plume,(Unused) Space Damage Venting Spew Plume,,11,21,space_damage_venting_spew_sparks,0.03,0.75,0.5,0,0,3000,0,0,0,none,none,none,0,0.25,0.15,0.00017,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+278,space_damage_venting_spewer,Space Damage Venting Spewer,,53,21,spaceship_damage_venting_spew,0.2,0.5,0.0,300,1500,0,0,0,0,sparks_for_venting_spew,none,none,0,0.5,0.5,0.8,1.2,0.03,300.0,1000.0,0.1,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+279,explosion_underwater,Explosion - Underwater,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,fire_particle_small_explosion,debris_emitter,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+280,explosion_combo_with_shockwave,Explosion Combo with Shockwave,,59,21,-1,0.0005,0.5,0.0,0,0,0,0,0,0,explosion_flash_emitter,death_debris_multi,shockwave_for_spaceships,8765,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,1,0,0,1
+281,shockwave_for_spaceships,Shockwave for Spaceships,,18,21,shockwave_for_spaceships,0.05,3.5,1.0,0,0,2500,0,0,0,none,none,none,8716,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,1
+282,laser_dbod,Laser - DBOD,,64,21,laser_dbod,0.5,0.5,1.0,0,0,1000,0,0,0,explosion_combo,-1,none,0,-0.01,0.001,1.0,1.5,0.4,0.25,0.5,0.0,0.0,0.0,0.0,0.0,0,1,0,0,0,0
+283,sparks_for_venting_spew,Sparks for Venting Spew,,6,21,space_damage_venting_spew_sparks,0.15,0.25,1.0,1,1,500,1,0,0,none,none,none,8710,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,2
+284,market_ticket_tape,Market Ticket Tape,,2,21,market_effect,0.75,0.75,0.0,0,0,0,0,1,0,none,none,none,0,0.0,0.0,-0.95,0.0,0.0,0.0,0.0,1.0,1.0,0.0,0.25,0.0,1,0,1,0,0,0
+285,space_screen_flash_explo,Space Screen Flash Explo,,70,21,nuke_fusion,0.0,10.0,1.0,0,0,3000,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+286,space_shockwave_screen_flash,Space Shockwave & Screen Flash,,59,21,-1,0.0005,1.0,0.0,0,0,0,0,0,0,shockwave_for_spaceships,space_screen_flash_explo,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+287,space_full_grand_explosion,Space Full Grand Explosion,,59,21,-1,0.0,1.0,0.0,0,0,0,0,0,0,explosion_flash_emitter,death_debris_multi,space_shockwave_screen_flash,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+288,space_screen_flash_small,Space Screen Flash Small,,70,21,nuke_fusion,0.0,6.0,1.0,0,0,2000,0,0,0,none,none,none,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+289,explosion_combo_with_flash_small,Explosion Combo with Flash Small,,59,21,-1,0.0,1.0,0.0,0,0,0,0,0,0,explosion_flash_emitter,death_debris_multi,space_screen_flash_small,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+290,space_wonder_explosion,Space Wonder Explosion,,59,21,-1,0.0,1.0,0.0,0,0,0,0,0,0,explosion_flash_emitter,death_debris_multi,space_wonder_big_screen_flash,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0
+291,space_wonder_big_screen_flash,Space Wonder Big Screen Flash,,70,21,nuke_fusion,0.0,10.0,1.0,0,0,4000,0,0,0,none,none,-1,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,0,0,0,0,0

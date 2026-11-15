@@ -1,0 +1,12 @@
+#eedata dbunitbehavior
+#format 3
+#rows 8
+row,id,label,mIndex,mCanMoveFreely,mCanPursuePastInitialContactLOS,mCanTargetEnemies,mReturnsToInitialContactLocation,mCanFlee,mMeleeCanMoveFreely,mRangedCanMoveFreely
+0,scout,Scout,,1,0,0,0,1,0,0
+1,stand_ground,Stand Ground,,0,0,1,0,0,0,0
+2,guard,Guard,,0,1,1,1,0,1,0
+3,harass,Harass,,1,0,1,0,1,0,0
+4,cautious,Cautious,,1,0,1,0,0,0,0
+5,aggressive,Aggressive,,1,1,1,0,0,0,0
+6,healing_hero,Healing Hero,,1,0,0,0,0,0,0
+7,morale_hero,Morale Hero,,0,0,1,1,0,1,0

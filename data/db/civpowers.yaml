@@ -1,0 +1,72 @@
+# civpowers: Empire Earth: The Art of Conquest rules (tools/eedata/rules.py; the game: EERules.cpp). What granting a civ power does, after its mTechnology is researched.
+# A key left out keeps the game's default (the value written here).
+eedata: civpowers
+format: 3
+# effects: C++ primitives. research_if_researched (if_researched, tech), load_sound (sound), load_effect (effect),
+# pulse_sight (unit_type: a sight pulse of the power's mAmount around each), set_mining_limit (the power's
+# mMiningLimit), enable_camouflage, allow_tech (tech), disallow_tech (tech: also made obsolete).
+powers:
+  - power: flaming_arrows
+    effects:
+      - do: research_if_researched
+        if_researched: simple_bowman_research
+        tech: simple_bowman_flaming_research
+      - do: research_if_researched
+        if_researched: composite_bow_upgrade
+        tech: composite_bow_flaming_upgrade
+      - do: research_if_researched
+        if_researched: long_bow_upgrade
+        tech: long_bow_flaming_upgrade
+  - power: slavery
+    effects:
+      - do: load_sound
+        sound: slavery
+  - power: priest_tower
+    effects:
+      - do: load_sound
+        sound: priest_tower_convert
+      - do: load_effect
+        effect: priest_tower_swirl_effect
+      - do: load_effect
+        effect: priest_tower_smoke_generator
+  - power: crusaders
+    effects:
+      - do: research_if_researched
+        if_researched: shortsword_upgrade
+        tech: shortsword_upgrade_crusaders
+      - do: research_if_researched
+        if_researched: longsword_upgrade
+        tech: longsword_upgrade_crusaders
+      - do: research_if_researched
+        if_researched: knight_upgrade
+        tech: knight_upgrade_crusaders
+  - power: exploration
+    effects:
+      - do: pulse_sight
+        unit_type: b_town_center
+      - do: pulse_sight
+        unit_type: b_capitol
+  - power: advanced_mining
+    effects:
+      - do: set_mining_limit
+  - power: camouflage
+    effects:
+      - do: enable_camouflage
+  - power: bundeswehr
+    effects:
+      - do: load_sound
+        sound: lightning
+      - do: load_sound
+        sound: thunder_2
+      - do: load_effect
+        effect: lightning_unit
+      - do: load_effect
+        effect: dust_effect
+      - do: load_effect
+        effect: disintegration_area_effect_intermediate
+  - power: expansionism
+    effects:
+      - do: disallow_tech
+        tech: b_settlement
+      - do: allow_tech
+        tech: b_town_center

@@ -104,9 +104,13 @@ Not loaded although they are present or referenced:
   same files.
 * **The computer players' scripts** (port, docs/AI_LUA_PLAN.md §3.2): `Data\ai\*.lua` (and `Data\ai\lib\*.lua`),
   the next engine's Lua strategies, which `require("a.b")` finds as `Data\ai\a\b.lua`. They are not retail data:
-  the repository's `ai/` folder holds them, `tools/open_data.py build` copies them into a tree (`open_data.py ai
-  TREE` refreshes just them and records their hash as `ai` in `open_data.json`), and they ship in the db release
-  part. They are read through `PlatFOpen` from the data root, not through `gDataPath`, and are not in the
+  the repository's `data/ai` folder holds them, `tools/open_data.py build` copies them into a tree (`open_data.py sync
+  TREE` refreshes them and Data\db and records their hashes as `ai` and `db` in `open_data.json`), and the `v*`
+  release packages carry them.
+* **The db tables in git** (2026-11-15): the repository's `data/db` is `Data\db`: the 39 tables as text, epochs.yaml
+  and the five rules documents (section 8), text only. `tools/open_data.py build` copies it into a tree instead of
+  converting the retail tables; `open_data.py db-regen` converts retail again into it; `eedata.py check` (d) lists
+  every difference between the two. They are read through `PlatFOpen` from the data root, not through `gDataPath`, and are not in the
   multiplayer checksum: peers need the same scripts (the lockstep would diverge otherwise). TEST ONLY:
   `EE_AI_SCRIPTS=<absolute dir>` is read before `Data\ai`.
 * **Texture packs** (port): an optional `Data\Textures-4x\` next to `Data\Textures\` holds upscaled textures with
@@ -1988,7 +1992,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
   `u32 a = 10` (probably the number of groups; the highest group id is 10), `u32 n = 29`, then n x 132-byte records.
   The file is 3836 = 8 + 29 x 132 bytes. The game treats `a` as the count, so it reads 10 records that are shifted by
   4 bytes.
-* **Suggested:** CSV (only for completeness; editing it changes nothing in game).
+* **Text form (2026-11-15):** `dbrandommap.csv` (struct `EERandomMapRecord`, include/ee/EEDatabaseTables.h), the
+  29 records in their real layout: `mID`, `mGroup`, `mName`, `mElevationLow`, `mElevationHigh`, `mTerrain[4]`. The
+  text compiles to `u32 count` + records, without the retail file's leading group count (overlay `retail_header`;
+  `binfmt.without_retail_header` recognises the retail file by its length), so the loader now reads the 29 records
+  in step and drops them. Nothing reads a field (overlay `UNREAD_TABLES`: census asks no reader); editing it changes
+  nothing in game yet.
 
 | Off | Type | Field | Class | Comment | Observed |
 |---|---|---|---|---|---|
@@ -2005,7 +2014,10 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
   as "TerrainGrayTextures" in the converter log.
 * **Container (decoded from the data, parses exactly to the end):** `u32 count = 59`; per entry: one string (`u32 len`
   + bytes, no NUL, e.g. `textures\GWildGrass_1.sst`), then a 120-byte record.
-* **Suggested:** CSV.
+* **Text form (2026-11-15):** `dbterraingraytextures.csv` (struct `EETerrainGrayTextureRecord`,
+  include/ee/EEDatabaseTables.h; container `lead`, the lead string `mTextureName`): `mName`, `mID`, `mIndex`,
+  `mColor[3]`. Row 0 is the retail empty row (no names, index -1, the converter's 0xCC fill as its colour), kept as
+  is. No code reads it (overlay `UNREAD_TABLES`).
 
 | Off | Type | Field | Class | Comment |
 |---|---|---|---|---|
@@ -2221,8 +2233,9 @@ The text carries what the game reads, and nothing else:
 * **Gone:** exact mode, string tails, `~raw` fields, padding and `u_0x` fields, the hole template, the `#mode` and
   `#hole` directives, the junk bytes (text after a string's NUL, the converter's 0xCC fill). The files therefore
   differ from retail; every value the game reads does not (8.2).
-* **Tables without a text form:** dbrandommap (its loader throws every record away, 3.38) and dbterraingraytextures
-  (no AoC code opens it, 3.39). The game reads them from data.ssa as before. 37 tables have a text form.
+* **Tables read by nothing:** dbrandommap (its loader throws every record away, 3.38) and dbterraingraytextures
+  (no AoC code opens it, 3.39) have a text form since 2026-11-15 all the same, so `Data/db` is text only: every field
+  of theirs is carried (overlay `UNREAD_TABLES`). 39 tables have a text form.
 
 Format (`#format 3`; 8.6 adds the ids and references to format 2): one file per db file, named like it with `.csv` or `.yaml` (YAML: dbobjects, dbgraphics,
 dbtechtree, dbevents, dbcivilization). UTF-8, LF. CSV files start with `#eedata <table>`, `#format 3`, `#rows N`;
@@ -2409,8 +2422,8 @@ Unused, with the evidence (all named `mUnused*`; the guessed meaning is in the n
 the data path, `EEDataText.cpp` compiles it to the binary record stream and serves it as an `FSMemoryFile`; the
 loaders are unchanged. Every record starts from the struct's base record (zero plus the defaults of unread fields),
 an unlisted row is the table's hole record (both generated into `EEDataTextSpecs.h`). A loose `Data\db\` file wins
-over the archive, and a text table over a loose .dat. A text that does not compile stops the game with its message
-(file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
+over the archive. Since 2026-11-15 the game reads only the text: a `.dat` table is never opened, and a table whose
+text is not on the path stops the game with its name, as does a text that does not compile (file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
 checksum adds the loose `Data\Db\*.csv`/`*.yaml` (clean text gives a different checksum than retail; every peer
 needs the same tables).
 

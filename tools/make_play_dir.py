@@ -8,7 +8,8 @@ OUT gets:
   - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --exe for another);
   - the game data: Data (one loose tree: db tables as text, models as glTF, textures as PNG, the rest as shipped),
     Users, WONLobby.cfg and zzWONVersion.cfg, from --data: a tree made by `tools/open_data.py build` or the bundle
-    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing).
+    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing);
+    Data/db and Data/ai always from this checkout's data/db and data/ai.
     --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases, or the
     folder tools/fetch_data.py unzipped them into. No
     data.ssa and nothing of the original Empire Earth's install is needed or referenced;
@@ -62,7 +63,7 @@ def copy_data(data, out):
     made = out / "open_data.json"
     info = json.loads(made.read_text(encoding="utf-8")) if made.exists() else {}
     if info.get("binary"):
-        print("data: a --binary tree (db tables, models and textures in their binary forms)")
+        sys.exit("data: a --binary tree: the game reads only the text db tables now (python -I tools/open_data.py build)")
     return info
 
 
@@ -120,7 +121,8 @@ def main():
     ap.add_argument("out", type=pathlib.Path)
     ap.add_argument("--exe", type=pathlib.Path)
     ap.add_argument("--data", type=pathlib.Path, action="append",
-                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree); "
+                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree, "
+                         "else build/data-root when tools/fetch_data.py filled data/); "
                          "repeatable, each over the ones before")
     ap.add_argument("--movies", type=pathlib.Path, action="append", default=[],
                     help="a directory with .bik movies (repeatable)")
@@ -131,8 +133,11 @@ def main():
     exe = a.posix_exe or a.exe or ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"
     if not exe.exists():
         sys.exit(f"{exe} does not exist: build it first (python -I build.py)")
-    datas = a.data or [TREE]
-    if a.data is None and not (TREE / "open_data.json").exists():
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data   # noqa: E402
+    fetched = open_data.fetched_root()
+    datas = a.data or [TREE if (TREE / "open_data.json").exists() or fetched is None else fetched]
+    if a.data is None and datas == [TREE] and not (TREE / "open_data.json").exists():
         print(f"data: building {TREE} from the installs (tools/open_data.py build)", flush=True)
         r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "open_data.py"), "build", str(TREE), "--force"])
         if r.returncode:
@@ -153,13 +158,17 @@ def main():
     for data in datas:
         print(f"game data from {data}", flush=True)
         info = copy_data(data, out) or info
+    # the exe's own tables and scripts: this checkout's, whatever the data brought (a release lags)
+    open_data.refresh_scripts(out)
+    open_data.refresh_db(out)
+    print("Data/db and Data/ai from this checkout's data/db and data/ai", flush=True)
     if a.posix_exe:
         posix_files(exe, out)
     else:
         shutil.copy2(exe, out / "EE-AOC.exe")
     count = movies(out, a.movies)
     (out / "play.json").write_bytes((json.dumps(dict(
-        exe=str(exe), data=[str(d) for d in datas], data_binary=bool(info.get("binary")), movies=count,
+        exe=str(exe), data=[str(d) for d in datas], movies=count,
         made=time.strftime("%Y-%m-%d %H:%M:%S")), indent=2) + "\n").encode())
     print(f"ready in {time.time() - t0:.0f} s: run {out / ('run.sh' if a.posix_exe else 'EE-AOC.exe')}")
 

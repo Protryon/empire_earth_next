@@ -2,11 +2,12 @@ name: release
 
 # The game's binaries for the three platforms, attached to a GitHub release, whenever a version tag is pushed
 # (git tag v0.1.0 && git push origin v0.1.0) or by hand (Actions -> release -> Run workflow, with an existing tag).
-# Only v* tags: the data parts' releases (open-db-*, open-media-*, open-textures-4x-*) never start it.
+# Only v* tags: the media releases (open-media-*, open-textures-4x-*) never start it.
 #   Windows x86_64: EE-AOC.exe (build.py, as ci.yml), its .pdb as a separate asset
 #   Linux x86_64:   ee-aoc (tools/xbuild.py game, as posix.yml)
 #   macOS arm64:    Empire Earth AoC.app (tools/xbuild.py game), unsigned
-# No game data goes into these packages: the player adds the data parts (README "Building the data").
+# Each package carries Data/db and Data/ai from the checkout (the tables, the rules documents and the computer
+# players' scripts: they belong to this build); the player adds the media releases (README.txt).
 on:
   push:
     tags: ["v*"]
@@ -63,6 +64,7 @@ jobs:
           mkdir -p dist/pkg
           cp build/clang/exe/EE-AOC.exe dist/pkg/
           cp .github/release/README.txt dist/pkg/
+          mkdir -p dist/pkg/Data && cp -R data/db data/ai dist/pkg/Data/
           (cd dist/pkg && 7z a -tzip "../EE-AOC-$TAG-windows-x86_64.zip" .)
           (cd build/clang/exe && 7z a -tzip "../../../dist/EE-AOC-$TAG-windows-x86_64-pdb.zip" EE-AOC.pdb)
 
@@ -111,6 +113,7 @@ jobs:
           mkdir -p dist/ee-aoc
           cp build/xbuild/linux-x86_64/game/ee-aoc dist/ee-aoc/
           cp .github/release/README.txt dist/ee-aoc/
+          mkdir -p dist/ee-aoc/Data && cp -R data/db data/ai dist/ee-aoc/Data/
           # the symbols as a separate asset (as Windows' .pdb), the shipped program stripped
           objcopy --only-keep-debug dist/ee-aoc/ee-aoc dist/ee-aoc.debug
           strip --strip-debug dist/ee-aoc/ee-aoc
@@ -158,6 +161,8 @@ jobs:
           mkdir -p dist/pkg
           cp -R "build/xbuild/macos-arm64/game/Empire Earth AoC.app" dist/pkg/
           cp .github/release/README.txt dist/pkg/
+          mkdir -p "dist/pkg/Empire Earth AoC.app/Contents/Resources/Data"
+          cp -R data/db data/ai "dist/pkg/Empire Earth AoC.app/Contents/Resources/Data/"
           (cd dist/pkg && ditto -c -k --sequesterRsrc . "../EE-AOC-$TAG-macos-arm64.zip")
 
       - uses: actions/upload-artifact@v4
@@ -186,6 +191,6 @@ jobs:
           if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             pre=""; case "$TAG" in *-*) pre="--prerelease";; esac   # v0.1.0-rc1: a pre-release
             gh release create "$TAG" -R "$GITHUB_REPOSITORY" --verify-tag $pre --title "$TAG" --notes \
-              "Empire Earth: The Art of Conquest, built from source: Windows x86_64, Linux x86_64 and macOS arm64 (Apple Silicon). The game data is not included: see README.txt in each package."
+              "Empire Earth: The Art of Conquest, built from source: Windows x86_64, Linux x86_64 and macOS arm64 (Apple Silicon). Each package has the db tables and the AI scripts (Data/db, Data/ai); the media (models, textures, sounds) are not included: see README.txt in each package."
           fi
           gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber dist/*

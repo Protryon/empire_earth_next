@@ -1,0 +1,1142 @@
+#eedata dbbuttons
+#format 3
+#rows 1549
+row,id,label,mFileName,mID,mRow,mColumn,mPosition,mHotKey
+0,upgrade_citizen_nano,Upgrade Citizen - Nano,textures\but_citizen_15t,,0,0,0,c_key
+2,unload_transport,Unload Transport,textures\act_unloadtransport.sst,,0,0,46,d_key
+3,stop,Stop,textures\act_stop.sst,,0,0,46,p_key
+4,repair,Repair,textures\act_repair.sst,,0,0,46,-1
+5,timed_atomic_bomber_rally,Timed Atomic Bomber Rally,textures\act_timedatomic.sst,,0,0,46,-1
+6,attack_ground,Attack Ground,textures\act_attackground.sst,,0,0,46,t_key
+7,rally_point,Rally point,textures\act_rallypoint.sst,,0,0,46,i_key
+8,erect_wonder,Erect Wonder,textures\act_erectwonder.sst,,0,0,46,-1
+9,fighter_rally_point,Fighter Rally Point,textures\act_infinitefighter.sst,,0,0,46,z_key
+10,bomber_rally_point,Bomber Rally Point,textures\act_infinitebomber.sst,,0,0,46,x_key
+11,whoops,Whoops,textures\zut_smileyface_00T,,0,0,-1,-1
+12,atomic_bomber_rally_point,Atomic Bomber Rally Point,textures\act_infiniteatomic.sst,,0,0,46,v_key
+13,timed_rally,Timed Rally,textures\act_timedrallypoint.sst,,0,0,46,-1
+14,timed_fighter_rally,Timed Fighter Rally,textures\act_timedfighter.sst,,0,0,46,-1
+15,timed_bomber_rally,Timed Bomber Rally,textures\act_timedbomber.sst,,0,0,46,-1
+16,sentry,Sentry,textures\act_sentry.sst,,0,0,46,-1
+17,build,Build,textures\zut_smileyface_00T,,0,0,46,-1
+18,patrol,Patrol,textures\act_patrol.sst,,0,0,46,z_key
+19,replant_farms,Replant Farms,textures\act_replantfarms.sst,,0,0,46,r_key
+20,convert,Convert,textures\act_convert.sst,,0,0,46,c_key
+22,cancel,Cancel,textures\act_cancel,,0,0,46,p_key
+23,explore,Explore,textures\act_explore.sst,,0,0,46,l_key
+24,garrison_populate,Garrison (populate),textures\act_populate.sst,,0,0,46,g_key
+25,lock,Lock,textures\act_locked.sst,,0,0,46,l_key
+26,unlock,Unlock,textures\act_unlocked.sst,,0,0,46,u_key
+27,heal_mech,Heal (Mech),textures\mp_heal.sst,,0,0,46,e_key
+28,self_destruct,Self Destruct,textures\mp_selfdestruct.sst,,0,0,46,d_key
+29,set_unit_behavior,Set Unit Behavior,textures\UB_orders.sst,,0,0,46,b_key
+30,set_formation,Set Formation,textures\UB_orders.sst,,0,0,46,m_key
+31,disband,Disband,textures\act_repair.sst,,0,0,46,-1
+32,battle_cry_rommel,Battle Cry - Rommel,textures\but_battlecry.sst,,0,0,3,c_key
+33,battle_cry_schwarz,Battle Cry - Schwarz,textures\but_battlecry.sst,,0,0,3,c_key
+34,heal,Heal,textures\act_heal.sst,,0,0,46,e_key
+35,assimilate,Assimilate,textures\mp_hack.sst,,0,0,46,c_key
+38,paratrooper_rally_point,Paratrooper Rally Point,textures\act_paratrooper,,0,0,46,o_key
+40,fanaticism_spell,Fanaticism Spell,textures\but_fanaticism_15t,,0,0,4,f_key
+41,jit_manufacturing_on,JIT Manufacturing On,textures\but_jit_on_10t,,0,0,48,single_quote
+42,jit_manufacturing_off,JIT Manufacturing Off,textures\but_jit_off_10t,,0,0,48,semicolon_key
+51,dna_research,DNA Research,textures\but_dna research_11.sst,,0,0,0,-1
+52,vaccinations,Vaccinations,textures\but_vaccinations_11.sst,,0,0,3,-1
+53,mri,MRI,textures\but_mri_12.sst,,0,0,1,-1
+54,genetic_engineering,Genetic Engineering,textures\but_genetic engineering_13.sst,,0,0,0,-1
+55,cybernetics,Cybernetics,textures\but_cybernetics_14.sst,,0,0,2,-1
+56,sanitation,Sanitation,textures\but_sanitation_05.sst,,0,0,3,-1
+57,mystisim,Mystisim,textures\but_mysticism_01.sst,,0,0,3,-1
+58,sandals,Sandals,textures\but_sandals_01.sst,,0,0,4,-1
+59,ancestor_worship,Ancestor Worship,textures\but_ancestorworship_02.sst,,0,0,5,-1
+60,ceremonial_burial,Ceremonial Burial,textures\but_ceremonial burial_02.sst,,0,0,6,-1
+61,shamanism,Shamanism,textures\but_shamanism_02.sst,,0,0,7,-1
+62,mythology,Mythology,textures\but_mythology_03.sst,,0,0,8,-1
+63,polytheism,Polytheism,textures\but_polytheism_03.sst,,0,0,9,-1
+64,oracle,Oracle,textures\but_oracle_04.sst,,0,0,4,-1
+66,monotheism,Monotheism,textures\but_monotheism_04.sst,,0,0,5,-1
+67,sainthood,Sainthood,textures\but_sainthood_05.sst,,0,0,7,-1
+68,prophecy,Prophecy,textures\but_prophecy_05.sst,,0,0,3,-1
+69,excommunication,Excommunication,textures\but_excommunication_05.sst,,0,0,9,-1
+70,indulgences,Indulgences,textures\but_indulgences_06.sst,,0,0,8,-1
+71,inquisition,Inquisition,textures\but_inquisition_06.sst,,0,0,6,-1
+72,crusades,Crusades,textures\but_crusades_06.sst,,0,0,5,-1
+73,tarot,Tarot,textures\but_tarot_07.sst,,0,0,4,-1
+74,printing_press,Printing Press,textures\but_printing press_07.sst,,0,0,10,-1
+75,astrology,Astrology,textures\but_astrology_07.sst,,0,0,7,-1
+76,reformation,Reformation,textures\but_reformation_08.sst,,0,0,9,-1
+77,missionaries,Missionaries,textures\but_missionaries_08.sst,,0,0,11,-1
+78,occultism,Occultism,textures\but_occultism_08.sst,,0,0,3,-1
+79,religious_tolerance,Religious Tolerance,textures\but_religious tolerance_09.sst,,0,0,6,-1
+80,sunday_school,Sunday School,textures\but_sundayschool_09.sst,,0,0,5,-1
+81,radio_services,Radio Services,textures\but_radioservices_10.sst,,0,0,8,-1
+82,irrigation,Irrigation,textures\but_irrigation_04.sst,,0,0,1,-1
+83,wheeled_drawn_plow,Wheeled Drawn Plow,textures\but_wheeled drawn plow_06.sst,,0,0,1,-1
+84,enclosure,Enclosure,textures\but_enclosure_08.sst,,0,0,1,-1
+85,chemical_pesticides,Chemical Pesticides,textures\but_chemical pesticides_10.sst,,0,0,1,-1
+86,hydroponics,Hydroponics,textures\but_hydroponics_13.sst,,0,0,1,-1
+87,farm_tech6,Farm Tech6,textures\zut_smileyface_00T,,0,0,47,-1
+88,farm_tech7,Farm Tech7,textures\zut_smileyface_00T,,0,0,47,-1
+89,farm_tech8,Farm Tech8,textures\zut_smileyface_00T,,0,0,47,-1
+90,farm_tech9,Farm Tech9,textures\zut_smileyface_00T,,0,0,47,-1
+91,settlement_tech1,Settlement Tech1,textures\zut_smileyface_00T,,0,0,0,-1
+92,settlement_tech2,Settlement Tech2,textures\zut_smileyface_00T,,0,0,1,-1
+93,settlement_tech3,Settlement Tech3,textures\zut_smileyface_00T,,0,0,2,-1
+94,settlement_tech4,Settlement Tech4,textures\zut_smileyface_00T,,0,0,3,-1
+95,settlement_tech5,Settlement Tech5,textures\zut_smileyface_00T,,0,0,4,-1
+96,settlement_tech6,Settlement Tech6,textures\zut_smileyface_00T,,0,0,5,-1
+97,settlement_tech7,Settlement Tech7,textures\zut_smileyface_00T,,0,0,6,-1
+98,settlement_tech8,Settlement Tech8,textures\zut_smileyface_00T,,0,0,7,-1
+99,settlement_tech9,Settlement Tech9,textures\zut_smileyface_00T,,0,0,8,-1
+100,settlement_tech10,Settlement Tech10,textures\zut_smileyface_00T,,0,0,9,-1
+101,settlement_tech11,Settlement Tech11,textures\zut_smileyface_00T,,0,0,10,-1
+102,settlement_tech12,Settlement Tech12,textures\zut_smileyface_00T,,0,0,11,-1
+103,settlement_tech13,Settlement Tech13,textures\zut_smileyface_00T,,0,0,12,-1
+104,settlement_tech14,Settlement Tech14,textures\zut_smileyface_00T,,0,0,13,-1
+105,settlement_tech15,Settlement Tech15,textures\zut_smileyface_00T,,0,0,14,-1
+106,settlement_tech16,Settlement Tech16,textures\zut_smileyface_00T,,0,0,15,-1
+107,settlement_tech17,Settlement Tech17,textures\zut_smileyface_00T,,0,0,16,-1
+108,settlement_tech18,Settlement Tech18,textures\zut_smileyface_00T,,0,0,17,-1
+109,settlement_tech19,Settlement Tech19,textures\zut_smileyface_00T,,0,0,18,-1
+110,settlement_tech20,Settlement Tech20,textures\zut_smileyface_00T,,0,0,19,-1
+111,settlement_tech21,Settlement Tech21,textures\zut_smileyface_00T,,0,0,20,-1
+112,settlement_tech22,Settlement Tech22,textures\zut_smileyface_00T,,0,0,21,-1
+113,settlement_tech23,Settlement Tech23,textures\zut_smileyface_00T,,0,0,22,-1
+114,settlement_tech24,Settlement Tech24,textures\zut_smileyface_00T,,0,0,24,-1
+115,settlement_tech25,Settlement Tech25,textures\zut_smileyface_00T,,0,0,25,-1
+116,settlement_tech26,Settlement Tech26,textures\zut_smileyface_00T,,0,0,26,-1
+117,settlement_tech27,Settlement Tech27,textures\zut_smileyface_00T,,0,0,27,-1
+118,settlement_tech28,Settlement Tech28,textures\zut_smileyface_00T,,0,0,28,-1
+119,settlement_tech29,Settlement Tech29,textures\zut_smileyface_00T,,0,0,29,-1
+120,settlement_tech30,Settlement Tech30,textures\zut_smileyface_00T,,0,0,30,-1
+121,settlement_tech31,Settlement Tech31,textures\zut_smileyface_00T,,0,0,32,-1
+122,settlement_tech32,Settlement Tech32,textures\zut_smileyface_00T,,0,0,33,-1
+123,mine_delete,Mine (Delete),textures\zut_smileyface_00T,,0,0,5,e_key
+124,philosophy,Philosophy,textures\but_philosophy_04.sst,,0,0,1,-1
+127,law_schools,Law Schools,textures\but_law schools_06.sst,,0,0,1,-1
+128,commercial_law,Commercial Law,textures\but_commercial law_05.sst,,0,0,3,-1
+129,bullseye_lantern,Bullseye Lantern,textures\but_bullseye lantern_06.sst,,0,0,0,-1
+131,scientific_method,Scientific Method,textures\but_scientific method_08.sst,,0,0,1,-1
+132,concrete,Concrete,textures\but_reinforced concrete_08.sst,,0,0,2,-1
+133,digital_library,Digital Library,textures\but_digital library_13.sst,,0,0,1,-1
+134,gas_lamp,Gas Lamp,textures\but_gaslamp_09.sst,,0,0,0,-1
+135,civil_liberty,Civil Liberty,textures\but_civil liberties_10.sst,,0,0,1,-1
+136,building_codes,Building Codes,textures\but_building codes_12.sst,,0,0,2,-1
+149,stone_age_epoch_cap,Stone Age- Epoch cap,textures\zut_smileyface_00T,,0,0,17,-1
+150,gov_center_tech2,Gov. Center Tech2,textures\zut_smileyface_00T,,0,0,25,-1
+151,gov_center_tech3,Gov. Center Tech3,textures\zut_smileyface_00T,,0,0,26,-1
+152,gov_center_tech4,Gov. Center Tech4,textures\zut_smileyface_00T,,0,0,27,-1
+153,gov_center_tech5,Gov. Center Tech5,textures\zut_smileyface_00T,,0,0,28,-1
+154,gov_center_tech6,Gov. Center Tech6,textures\zut_smileyface_00T,,0,0,29,-1
+155,gov_center_tech7,Gov. Center Tech7,textures\zut_smileyface_00T,,0,0,30,-1
+156,gov_center_tech8,Gov. Center Tech8,textures\zut_smileyface_00T,,0,0,31,-1
+157,gov_center_tech9,Gov. Center Tech9,textures\zut_smileyface_00T,,0,0,32,-1
+158,gov_center_tech10,Gov. Center Tech10,textures\zut_smileyface_00T,,0,0,33,-1
+159,gov_center_tech11,Gov. Center Tech11,textures\zut_smileyface_00T,,0,0,34,-1
+160,gov_center_tech12,Gov. Center Tech12,textures\zut_smileyface_00T,,0,0,35,-1
+161,gov_center_tech13,Gov. Center Tech13,textures\zut_smileyface_00T,,0,0,36,-1
+162,gov_center_tech14,Gov. Center Tech14,textures\zut_smileyface_00T,,0,0,37,-1
+163,gov_center_tech15,Gov. Center Tech15,textures\zut_smileyface_00T,,0,0,38,-1
+164,gov_center_tech16,Gov. Center Tech16,textures\zut_smileyface_00T,,0,0,39,-1
+165,gov_center_tech17,Gov. Center Tech17,textures\zut_smileyface_00T,,0,0,40,-1
+166,gov_center_tech18,Gov. Center Tech18,textures\zut_smileyface_00T,,0,0,41,-1
+167,gov_center_tech19,Gov. Center Tech19,textures\zut_smileyface_00T,,0,0,42,-1
+168,gov_center_tech20,Gov. Center Tech20,textures\zut_smileyface_00T,,0,0,43,-1
+169,gov_center_tech21,Gov. Center Tech21,textures\zut_smileyface_00T,,0,0,44,-1
+170,gov_center_tech22,Gov. Center Tech22,textures\zut_smileyface_00T,,0,0,45,-1
+171,gov_center_tech23,Gov. Center Tech23,textures\zut_smileyface_00T,,0,0,46,-1
+172,gov_center_tech24,Gov. Center Tech24,textures\zut_smileyface_00T,,0,0,46,-1
+173,gov_center_tech25,Gov. Center Tech25,textures\zut_smileyface_00T,,0,0,46,-1
+174,gov_center_tech26,Gov. Center Tech26,textures\zut_smileyface_00T,,0,0,46,-1
+175,house_tech1,House Tech1,textures\zut_smileyface_00T,,0,0,0,-1
+176,house_tech2,House Tech2,textures\zut_smileyface_00T,,0,0,1,-1
+177,house_tech3,House Tech3,textures\zut_smileyface_00T,,0,0,2,-1
+178,house_tech4,House Tech4,textures\zut_smileyface_00T,,0,0,3,-1
+179,house_tech5,House Tech5,textures\zut_smileyface_00T,,0,0,4,-1
+180,house_tech6,House Tech6,textures\zut_smileyface_00T,,0,0,5,-1
+181,house_tech7,House Tech7,textures\zut_smileyface_00T,,0,0,6,-1
+182,house_tech8,House Tech8,textures\zut_smileyface_00T,,0,0,7,-1
+183,house_tech9,House Tech9,textures\zut_smileyface_00T,,0,0,8,-1
+184,c_47,C-47,textures\but_c47_10T.sst,,0,0,37,-1
+185,pegasus_heli_trans,Pegasus Heli Trans,textures\but_helipegesus_13T.sst,,0,0,10,-1
+186,b_17,B-17,textures\but_b17_10T.sst,,0,0,6,-1
+187,b_29,B-29,textures\but_b29_10T.sst,,0,0,7,-1
+188,b2_stealth,B2 Stealth,textures\but_b2_10T.sst,,0,0,6,-1
+189,b_52,B-52,textures\but_b52_10T.sst,,0,0,7,-1
+190,titan_bomber,Titan Bomber,textures\but_nanoatomicbomber_13T.sst,,0,0,7,-1
+191,albatross_dv_a,Albatross DV-A,textures\but_albatross_10T.sst,,0,0,36,-1
+192,corsair,Corsair,textures\but_corsair_10T.sst,,0,0,2,-1
+193,f_15,F-15,textures\but_f15_10T.sst,,0,0,4,-1
+194,fw_190a,FW 190A,textures\but_fw190_10T.sst,,0,0,39,-1
+195,me_109,ME 109,textures\but_me109_10T.sst,,0,0,3,-1
+196,me_110,ME 110,textures\but_me110_10T.sst,,0,0,40,-1
+197,me_262,ME 262,textures\but_me262_10T.sst,,0,0,3,-1
+198,p_38,P-38,textures\but_p38_10T.sst,,0,0,38,-1
+199,p_51,P-51,textures\but_p51_10T.sst,,0,0,4,-1
+200,sopwith_camel_se5a,Sopwith Camel (SE5a?),textures\but_sopwith_10T.sst,,0,0,4,-1
+201,spitfire,Spitfire,textures\but_spitfire_10T.sst,,0,0,4,-1
+202,typhoon,Typhoon,textures\but_typhoon_10T.sst,,0,0,8,-1
+203,apache_helicopter,Apache Helicopter,textures\but_apache_10T.sst,,0,0,11,-1
+204,helicopter_spectre,Helicopter Spectre,textures\but_helispectre_14T.sst,,0,0,11,-1
+205,helicopter_reaper,Helicopter Reaper,textures\but_reaper_14T.sst,,0,0,12,-1
+206,aa_gun_tower,AA Gun Tower,textures\but_aagun.sst,,0,0,20,a_key
+207,aa_gun_13_skywatcher_tower,AA Gun 13  - Skywatcher tower,textures\zut_smileyface_00T,,0,0,20,a_key
+208,ram_06,Ram 06,textures\but_ram_04T.sst,,0,0,2,r_key
+209,at_gun_2_120mm,AT Gun 2 - 120mm,textures\but_120mm_10T.sst,,0,0,8,e_key
+210,hercules_at_gun4,Hercules AT Gun4,textures\but_Hercules_12T.sst,,0,0,8,e_key
+211,chinook_heli_trans,Chinook Heli Trans,textures\but_helichinook_10T.sst,,0,0,10,-1
+212,rock_thrower,Rock Thrower,textures\but_rockthrower_02T.sst,,0,0,1,c_key
+213,slinger,Slinger,textures\but_slinger_02T.sst,,0,0,2,-1
+214,halberdier,Halberdier,textures\but_halberdier_08T.sst,,0,0,3,e_key
+215,hovercraft1,Hovercraft1,textures\but_hovercraft_13T.sst,,0,0,6,v_key
+216,hovercraft2,Hovercraft2,textures\zut_smileyface_00T,,0,0,6,v_key
+217,ram_04,Ram - 04,textures\but_ram_06T.sst,,0,0,2,r_key
+218,catapult,Catapult,textures\but_catapult_04T.sst,,0,0,3,t_key
+219,trebuchet,Trebuchet,textures\but_trebuchet_04T.sst,,0,0,3,t_key
+220,culverin,Culverin,textures\but_culverin_07T.sst,,0,0,5,c_key
+221,basilisk,Basilisk,textures\but_basilisk_07T.sst,,0,0,6,g_key
+222,artillery,Artillery,textures\but_artillery_10T.sst,,0,0,7,b_key
+223,mega_artillery,Mega-Artillery,textures\but_megaartillery_12T.sst,,0,0,7,b_key
+224,citizen_atomic,Citizen - Atomic,textures\but_citizen_10T.sst,,0,0,1,c_key
+225,siege_tower,Siege Tower,textures\but_siegetower_04T.sst,,0,0,4,w_key
+226,stone_thrower,Stone Thrower,textures\but_stonethrower_04T.sst,,0,0,1,s_key
+227,serpentine,Serpentine,textures\but_serpentine_09T.sst,,0,0,6,g_key
+228,bronze_cannon,Bronze Cannon,textures\but_bronzecannon_09T.sst,,0,0,5,c_key
+229,ion_cannon,Ion Cannon,textures\zut_smileyface_00T,,0,0,15,-1
+230,mech_minotaur,Mech Minotaur,textures\but_minotaur_13T.sst,,0,0,4,-1
+231,mech_hyperion,Mech Hyperion,textures\but_hyperion_13T.sst,,0,0,1,-1
+232,mech_furies,Mech Furies,textures\but_furies_13T.sst,,0,0,2,-1
+233,mech_apollo,Mech Apollo,textures\but_apollo_13T.sst,,0,0,1,-1
+234,mech_zeus,Mech Zeus,textures\but_zues_13T.sst,,0,0,5,-1
+235,mech_cyclops,Mech Cyclops,textures\but_cyclops_13T.sst,,0,0,3,-1
+236,mech_frogger,Mech Frogger,textures\zut_smileyface_00T,,0,0,11,-1
+237,mech_poseiden,Mech Poseiden,textures\but_posiedon_13T.sst,,0,0,5,-1
+238,mech_amphib,Mech Amphib,textures\zut_smileyface_00T,,0,0,12,-1
+239,mech_ares,Mech Ares,textures\but_aries_13T.sst,,0,0,2,-1
+240,aa_halftrack,AA Halftrack,textures\but_HalfTrack_10T.sst,,0,0,3,a_key
+241,m1,M1,textures\but_m1_10T.sst,,0,0,1,t_key
+242,panzer,Panzer,textures\but_panzer_10T.sst,,0,0,2,r_key
+243,ww_i_tank_mkv,WW I Tank MkV,textures\but_MKV_10T.sst,,0,0,1,t_key
+244,siege_works_info,Siege Works - Info,textures\zut_smileyface_00T,,0,0,10,c_key
+245,ww_iii_tank_leopard,WW III Tank  Leopard,textures\but_leopard_10T.sst,,0,0,2,r_key
+246,apc,APC    *****,textures\zut_smileyface_00T,,0,0,18,-1
+247,tank_gladiator,Tank Gladiator,textures\but_gladiator_10T.sst,,0,0,1,t_key
+248,tank_nano,Tank Nano,textures\but_hovertank_13T.sst,,0,0,34,r_key
+249,clubman,Clubman,textures\but_clubman_01T.sst,,0,0,2,s_key
+250,spearman,Spearman,textures\but_spearman_02T.sst,,0,0,3,e_key
+251,maceman,Maceman,textures\but_maceman_03T.sst,,0,0,2,s_key
+252,phalanx,Phalanx,textures\but_phalanx_04T.sst,,0,0,3,e_key
+253,short_sword,Short Sword,textures\but_roman legionnaire.sst,,0,0,2,s_key
+254,mortar_inf_11,Mortar Inf 11,textures\but_mortar_13T.sst,,0,0,4,r_key
+255,pole_arm,Pole Arm,textures\but_polearm_06T.sst,,0,0,3,e_key
+256,arquebus,Arquebus,textures\but_arquebus_07T.sst,,0,0,1,a_key
+257,musketeer,Musketeer,textures\but_musketeer_08T.sst,,0,0,1,a_key
+258,elite_guard,Elite Guard,textures\but_eliteguard_09T.sst,,0,0,7,g_key
+259,medic,Medic,textures\zut_smileyface_00T,,0,0,8,-1
+260,marine,Marine,textures\but_marine_10T.sst,,0,0,1,a_key
+261,flamethrower,Flamethrower,textures\but_flamethrowercamo_10T.sst,,0,0,9,f_key
+262,mortar08_upgrade,Mortar08 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+263,mortar_inf,Mortar Inf.,textures\but_mortar_10T.sst,,0,0,4,r_key
+264,stinger_soldier,Stinger Soldier,textures\but_stinger_10T.sst,,0,0,7,a_key
+265,bazooka_inf,Bazooka Inf.,textures\but_bazooka_10T.sst,,0,0,3,b_key
+266,machine_gun,Machine gun,textures\but_machinegun_10T.sst,,0,0,8,g_key
+267,laser_inf_11,Laser Inf 11,textures\but_sentinel_00T.sst,,0,0,1,a_key
+268,laser_inf_12,Laser Inf  12,textures\but_lasertrooper_13T.sst,,0,0,1,a_key
+269,simple_bowman,Simple Bowman,textures\but_simplearcher_03T.sst,,0,0,2,-1
+270,chariot_archer,Chariot Archer,textures\but_chariotarcher_04T.sst,,0,0,3,-1
+271,cavalry_archer,Cavalry Archer,textures\but_cavalryarcher_06T.sst,,0,0,3,-1
+272,composite_bow,Composite Bow,textures\but_compositearcher_05T.sst,,0,0,2,-1
+273,crossbow,Crossbow,textures\but_crossbow_06T.sst,,0,0,5,-1
+274,longbow,Longbow,textures\but_longbow_06T.sst,,0,0,2,-1
+275,missile1,Missile1,textures\zut_smileyface_00T,,0,0,0,-1
+276,missile2,Missile2,textures\zut_smileyface_00T,,0,0,1,-1
+277,missile3,Missile3,textures\zut_smileyface_00T,,0,0,2,-1
+278,missile4,Missile4,textures\zut_smileyface_00T,,0,0,3,-1
+279,missile5,Missile5,textures\zut_smileyface_00T,,0,0,4,-1
+280,missile6,Missile6,textures\zut_smileyface_00T,,0,0,5,-1
+281,missile7,Missile7,textures\zut_smileyface_00T,,0,0,6,-1
+282,missile8,Missile8,textures\zut_smileyface_00T,,0,0,7,-1
+283,missile9,Missile9,textures\zut_smileyface_00T,,0,0,8,-1
+284,missile10,Missile10,textures\zut_smileyface_00T,,0,0,9,-1
+285,horseman,Horseman,textures\but_horseman_03T.sst,,0,0,2,d_key
+286,cataphract,Cataphract,textures\but_cataphract_05T.sst,,0,0,2,d_key
+287,bronze_cav,Bronze Cav,textures\but_bronzecav_04T.sst,,0,0,3,e_key
+288,war_elephant,War Elephant,textures\but_warelephant_04T.sst,,0,0,4,f_key
+289,citizen_bronze,Citizen - Bronze,textures\but_citizen_04T.sst,,0,0,1,c_key
+290,knight,Knight,textures\but_knight_06T.sst,,0,0,3,e_key
+291,lancer,Lancer,textures\but_lancergun_07T.sst,,0,0,1,c_key
+292,priest02,Priest02,textures\but_priest_02T.sst,,0,0,1,e_key
+293,priest04,Priest04,textures\but_priest_04T.sst,,0,0,1,e_key
+294,priest07,Priest07,textures\but_priest_07T.sst,,0,0,1,e_key
+295,citizen_paleo,Citizen - Paleo,textures\but_citizen_01T.sst,,0,0,1,c_key
+296,citizen_stone,Citizen - Stone,textures\but_citizen_02T.sst,,0,0,1,c_key
+297,citizen_middle,Citizen - Middle,textures\but_citizen_06T.sst,,0,0,1,c_key
+298,hero_molly_ryan,Hero Molly Ryan,textures\but_infoheroone_13T.sst,,0,0,3,-1
+299,hero_molotov,Hero Molotov,textures\but_infoherotwo_13T.sst,,0,0,4,-1
+300,hero3_e1,Hero3 E1,textures\zut_smileyface_00T,,0,0,15,-1
+301,hero4_c2,Hero4 C2,textures\zut_smileyface_00T,,0,0,16,-1
+302,hero5_c2b,Hero5 C2b,textures\zut_smileyface_00T,,0,0,18,-1
+303,destroyer_12,Destroyer 12,textures\but_nano destroyer,,0,0,5,d_key
+304,emporer_cheops_e3,Emporer Cheops E3,textures\zut_smileyface_00T,,0,0,19,-1
+305,hero8_e4,Hero8 E4,textures\zut_smileyface_00T,,0,0,20,-1
+306,hero9_e5,Hero9 E5,textures\zut_smileyface_00T,,0,0,21,-1
+307,hero10_e6,Hero10 E6,textures\zut_smileyface_00T,,0,0,22,-1
+308,hero11_c7,Hero11 C7,textures\zut_smileyface_00T,,0,0,21,-1
+309,hero12_henry_v_c7b,Hero12 (Henry V) C7b,textures\zut_smileyface_00T,,0,0,22,-1
+310,hero13_gilgamesh_c3,Hero13 (Gilgamesh) C3,textures\but_gilgamesh_03T.sst,,0,0,4,-1
+311,hero14_sargon_c3b,Hero14 (Sargon) C3b,textures\but_sargon_03T.sst,,0,0,3,-1
+312,hero_isabella,Hero Isabella,textures\but_isabela_08T.sst,,0,0,3,-1
+313,naval_mine,Naval Mine,textures\button_navalmine.sst,,0,0,3,-1
+314,hero17_peter_the_great_c8b,Hero17 (Peter the Great) C8b,textures\zut_smileyface_00T,,0,0,46,-1
+315,unused2,Unused2,textures\zut_smileyface_00T,,0,0,46,-1
+316,hero19_hannibal_c4b,Hero19 (Hannibal) C4b,textures\but_hannibal_04T.sst,,0,0,4,-1
+317,hero20_alexander_c4,Hero20 (Alexander) C4,textures\but_alexanderthegreat_04T.sst,,0,0,3,-1
+318,hero21_c9b,Hero21 C9b,textures\zut_smileyface_00T,,0,0,46,-1
+319,unused1,Unused1,textures\zut_smileyface_00T,,0,0,46,-1
+320,hero23_e9,Hero23 E9,textures\zut_smileyface_00T,,0,0,46,-1
+321,unused,Unused,textures\zut_smileyface_00T,,0,0,46,-1
+322,hero25_charlemagne_c5,Hero25 (Charlemagne) C5,textures\but_charlemagne_05T.sst,,0,0,3,-1
+323,hero26_caesar_c5b,Hero26 (Caesar) C5b,textures\but_ceasar_04T.sst,,0,0,4,-1
+324,hero27_c11,Hero27 C11,textures\zut_smileyface_00T,,0,0,46,-1
+325,hero28_c11b,Hero28 C11b,textures\zut_smileyface_00T,,0,0,46,-1
+326,hero29_e11,Hero29 E11,textures\zut_smileyface_00T,,0,0,46,-1
+327,hero30_c12,Hero30 C12,textures\zut_smileyface_00T,,0,0,46,-1
+328,hero31_richard_the_lionheart_c6,Hero31(Richard the Lionheart) C6,textures\but_richard_06T.sst,,0,0,4,-1
+329,hero32_william_the_conquerer_c6b,Hero32 (William the Conquerer) C6b,textures\but_william_06T.sst,,0,0,3,-1
+330,hero33_c12b,Hero33 C12b,textures\zut_smileyface_00T,,0,0,46,-1
+331,hero34_e12,Hero34 E12,textures\zut_smileyface_00T,,0,0,46,-1
+333,fishing_boat_atomic,Fishing Boat - Atomic,textures\but_fishing boat_11.sst,,0,0,1,c_key
+334,hero37,Hero37,textures\zut_smileyface_00T,,0,0,46,-1
+335,hero38,Hero38,textures\zut_smileyface_00T,,0,0,46,-1
+336,hero39,Hero39,textures\zut_smileyface_00T,,0,0,46,-1
+337,bazooka_upgrade,Bazooka Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+338,hero41,Hero41,textures\zut_smileyface_00T,,0,0,46,-1
+339,hero42,Hero42,textures\zut_smileyface_00T,,0,0,46,-1
+340,hero43,Hero43,textures\zut_smileyface_00T,,0,0,46,-1
+341,hero44,Hero44,textures\zut_smileyface_00T,,0,0,46,-1
+342,hero45_elizabeth_e8,Hero45 (Elizabeth) E8,textures\but_elizabeth_08T.sst,,0,0,3,-1
+343,hero46,Hero46,textures\zut_smileyface_00T,,0,0,46,-1
+344,hero47,Hero47,textures\zut_smileyface_00T,,0,0,46,-1
+345,hero48,Hero48,textures\zut_smileyface_00T,,0,0,46,-1
+346,hero49_bismark_c9,Hero49 (Bismark) C9,textures\but_otto_09T.sst,,0,0,3,-1
+347,hero50,Hero50,textures\zut_smileyface_00T,,0,0,46,-1
+348,hero51,Hero51,textures\zut_smileyface_00T,,0,0,46,-1
+349,unused_2,Unused,textures\zut_smileyface_00T,,0,0,46,-1
+350,hero53,Hero53,textures\zut_smileyface_00T,,0,0,46,-1
+351,hero54,Hero54,textures\zut_smileyface_00T,,0,0,46,-1
+352,hero55_patton_c10b,Hero55 (Patton) C10b,textures\but_patton_10T.sst,,0,0,4,-1
+353,hero56_rommel_c10,Hero56 (Rommel) C10,textures\but_rommel_10T.sst,,0,0,3,-1
+354,hero57,Hero57,textures\zut_smileyface_00T,,0,0,46,-1
+355,hero58,Hero58,textures\zut_smileyface_00T,,0,0,46,-1
+356,hero59,Hero59,textures\zut_smileyface_00T,,0,0,46,-1
+357,hero60_elvis_e10,Hero60 (Elvis) E10,textures\zut_smileyface_00T,,0,0,12,-1
+358,hero6_e2,Hero6 E2,textures\zut_smileyface_00T,,0,0,46,-1
+359,hero62,Hero62,textures\zut_smileyface_00T,,0,0,46,-1
+360,hero63,Hero63,textures\zut_smileyface_00T,,0,0,46,-1
+361,hero64,Hero64,textures\zut_smileyface_00T,,0,0,46,-1
+362,hero65,Hero65,textures\zut_smileyface_00T,,0,0,46,-1
+363,hero66,Hero66,textures\zut_smileyface_00T,,0,0,46,-1
+364,hero_septimus,Hero Septimus,textures\but_nanoherotwo_14T.sst,,0,0,3,-1
+365,hero_cyborg_molotov,Hero Cyborg Molotov,textures\but_nanoheroone_14T.sst,,0,0,4,-1
+366,hero69,Hero69,textures\zut_smileyface_00T,,0,0,46,-1
+367,hero70,Hero70,textures\zut_smileyface_00T,,0,0,46,-1
+368,coffer_dam,Coffer Dam,textures\but_coffer dam_05.sst,,0,0,4,-1
+369,dry_dock,Dry Dock,textures\but_drydock_08.sst,,0,0,4,-1
+370,hero73,Hero73,textures\zut_smileyface_00T,,0,0,46,-1
+371,war_raft,War Raft,textures\but_stone age war raft_02.sst,,0,0,5,d_key
+372,galley_frigate,Galley (frigate),textures\zut_smileyface_00T,,0,0,5,d_key
+373,galley,Galley,textures\but_copper battleship_03.sst,,0,0,4,b_key
+374,trireme_battleship,Trireme (battleship),textures\but_byzantine battleship_05.sst,,0,0,4,b_key
+375,pentekontar_melee,Pentekontar - Melee,textures\zut_smileyface_00T,,0,0,6,r_key
+376,trireme_catapult,Trireme (catapult),textures\but_catapultship_04T.sst,,0,0,7,c_key
+377,pentekontar_frigate,Pentekontar (frigate),textures\but_bronze frigate_04.sst,,0,0,5,d_key
+378,trireme_septrireme,Trireme (Septrireme),textures\zut_smileyface_00T,,0,0,5,d_key
+379,decereme_battleship,Decereme (battleship),textures\but_middle age battleship_06.sst,,0,0,4,b_key
+380,galleon_frigate,Galleon (frigate),textures\but_frigate_07.sst,,0,0,5,d_key
+381,galleon_fire,Galleon (fire),textures\but_galleon_07.sst,,0,0,4,r_key
+382,henri,Henri,textures\but_imperial battleship_08.sst,,0,0,4,b_key
+383,henri_frigate,Henri (Frigate),textures\but_imperial frigate_08.sst,,0,0,5,d_key
+384,victory,Victory,textures\but_royal battleship_09.sst,,0,0,4,b_key
+385,victory_frigate,Victory (frigate),textures\but_royal frigate_09.sst,,0,0,5,d_key
+386,agincourt,Agincourt,textures\but_agincourt_09.sst,,0,0,4,-1
+387,warrington,Warrington,textures\but_warrington_11.sst,,0,0,5,d_key
+388,bismarck,Bismarck,textures\but_bismarck battleship_11.sst,,0,0,4,b_key
+389,aircraft_carrier_1,Aircraft Carrier 1,textures\but_aircraft carrier_10.sst,,0,0,2,c_key
+390,aircraft_carrier_2,Aircraft carrier 2,textures\but_aircraft carrier_13.sst,,0,0,2,c_key
+391,fishing_boat_stone,Fishing boat - Stone,textures\but_fishing boat_02.sst,,0,0,1,c_key
+392,fishing_boat_bronze,Fishing boat - Bronze,textures\but_fishing boat_04.sst,,0,0,1,c_key
+393,transport_stone_nav,Transport Stone(nav),textures\but_transport_02.sst,,0,0,2,t_key
+394,transport_copper_nav,Transport Copper (nav),textures\but_transport_03.sst,,0,0,2,t_key
+395,transport_imperial_nav,Transport Imperial (nav),textures\but_imperial transport_08.sst,,0,0,2,t_key
+396,transport_atomic_nav,Transport Atomic (nav),textures\but_transport_10.sst,,0,0,2,t_key
+397,transport_dark_nav,Transport Dark  (nav),textures\but_transport_05.sst,,0,0,2,t_key
+398,sub1,Sub1,textures\but_attack sub_10.sst,,0,0,1,s_key
+399,sub_2_nuc,Sub 2 Nuc,textures\but_nuc sub_11.sst,,0,0,3,r_key
+400,sub3,Sub3,textures\but_attack sub_11.sst,,0,0,1,s_key
+401,sub4,Sub4,textures\but_attack sub_12.sst,,0,0,1,s_key
+402,sub_5_nuc,Sub 5 Nuc,textures\but_nuc sub_12.sst,,0,0,3,r_key
+403,airfield_atomic,Airfield - Atomic,textures\zut_smileyface_00T,,0,0,8,q_key
+404,airfield_nano,Airfield - Nano,textures\zut_smileyface_00T,,0,0,8,-1
+405,archery_copper,Archery - Copper,textures\zut_smileyface_00T,,0,0,8,a_key
+406,trooper_shock_12,Trooper Shock 12,textures\zut_smileyface_00T,,0,0,24,-1
+407,scuba_repair,Scuba Repair,textures\but_scuba repairs_11.sst,,0,0,4,-1
+408,barracks_paleo,Barracks -Paleo,textures\zut_smileyface_00T,,0,0,7,b_key
+409,barracks_copper,Barracks - Copper,textures\zut_smileyface_00T,,0,0,7,b_key
+410,barracks_dark,Barracks - Dark,textures\zut_smileyface_00T,,0,0,7,b_key
+411,barracks_ren,Barracks - Ren,textures\zut_smileyface_00T,,0,0,7,b_key
+412,barracks_atomic,Barracks - Atomic,textures\zut_smileyface_00T,,0,0,7,b_key
+413,barracks_nano,Barracks - Nano,textures\zut_smileyface_00T,,0,0,7,b_key
+414,dock_paleo,Dock - Paleo,textures\zut_smileyface_00T,,0,0,6,d_key
+415,dock_middle,Dock - Middle,textures\zut_smileyface_00T,,0,0,6,d_key
+416,dock_copper,Dock - Copper,textures\zut_smileyface_00T,,0,0,6,d_key
+417,dock_bronze,Dock - Bronze,textures\zut_smileyface_00T,,0,0,6,d_key
+418,dock_dark,Dock - Dark,textures\zut_smileyface_00T,,0,0,6,d_key
+419,dock_imperial,Dock - Imperial,textures\zut_smileyface_00T,,0,0,6,d_key
+420,dock_atomic,Dock - Atomic,textures\zut_smileyface_00T,,0,0,6,d_key
+421,dock_nano,Dock - Nano,textures\zut_smileyface_00T,,0,0,6,d_key
+422,farm_copper,Farm - Copper,textures\zut_smileyface_00T,,0,0,-1,-1
+423,farm_information,Farm - Information,textures\zut_smileyface_00T,,0,0,-1,-1
+424,government_stone,Government - Stone,textures\zut_smileyface_00T,,0,0,18,o_key
+425,government_bronze,Government - Bronze,textures\zut_smileyface_00T,,0,0,18,o_key
+426,government_middle,Government - Middle,textures\zut_smileyface_00T,,0,0,18,o_key
+427,government_industrial,Government - Industrial,textures\zut_smileyface_00T,,0,0,18,o_key
+428,government_atomic,Government - Atomic,textures\zut_smileyface_00T,,0,0,18,o_key
+429,government_info,Government - Info,textures\zut_smileyface_00T,,0,0,18,o_key
+430,settlement_copper,Settlement - Copper,textures\zut_smileyface_00T,,0,0,2,n_key
+431,settlement_paleo,Settlement - Paleo,textures\zut_smileyface_00T,,0,0,2,n_key
+432,settlement_miidle,Settlement - Miidle,textures\zut_smileyface_00T,,0,0,2,n_key
+433,settlement_atomic,Settlement - Atomic,textures\zut_smileyface_00T,,0,0,2,n_key
+434,settlement_nano,Settlement - Nano,textures\zut_smileyface_00T,,0,0,2,n_key
+435,tower_bronze,Tower - Bronze,textures\zut_smileyface_00T,,0,0,4,r_key
+436,tower_middle,Tower - Middle,textures\zut_smileyface_00T,,0,0,4,r_key
+437,tower_imperial,Tower - Imperial,textures\zut_smileyface_00T,,0,0,4,r_key
+438,tower_information,Tower - Information,textures\zut_smileyface_00T,,0,0,4,r_key
+439,hospital_bronze,Hospital - Bronze,textures\zut_smileyface_00T,,0,0,13,z_key
+440,hospital_middle,Hospital - Middle,textures\zut_smileyface_00T,,0,0,13,z_key
+441,hospital_imperial,Hospital - Imperial,textures\zut_smileyface_00T,,0,0,13,z_key
+442,hospital_information,Hospital - Information,textures\zut_smileyface_00T,,0,0,13,z_key
+443,house_paleo,House - Paleo,textures\zut_smileyface_00T,,0,0,3,e_key
+444,house_copper,House - Copper,textures\zut_smileyface_00T,,0,0,3,e_key
+445,house_dark,House - Dark,textures\zut_smileyface_00T,,0,0,3,e_key
+446,house_rennaissance,House - Rennaissance,textures\zut_smileyface_00T,,0,0,3,e_key
+447,house_imperial,House - Imperial,textures\zut_smileyface_00T,,0,0,3,e_key
+448,house_information,House - Information,textures\zut_smileyface_00T,,0,0,3,e_key
+449,mech_factory_info,Mech Factory - Info,textures\zut_smileyface_00T,,0,0,23,m_key
+450,missile_base_atomic,Missile Base - Atomic,textures\but_missilebaseatomic.sst,,0,0,48,i_key
+451,missile_base_nano,Missile Base - Nano,textures\but_missilebasenano.sst,,0,0,48,i_key
+452,siege_works_bronze,Siege Works - Bronze,textures\zut_smileyface_00T,,0,0,10,c_key
+453,siege_works_renaissance,Siege Works - Renaissance,textures\zut_smileyface_00T,,0,0,10,c_key
+454,siege_works_middle,Siege Works - Middle,textures\zut_smileyface_00T,,0,0,10,c_key
+455,siege_works_atomic,Siege Works - Atomic,textures\zut_smileyface_00T,,0,0,10,c_key
+456,siege_works_nano,Siege Works - Nano,textures\zut_smileyface_00T,,0,0,10,c_key
+457,naval_yard_atomic,Naval Yard - Atomic,textures\zut_smileyface_00T,,0,0,22,v_key
+458,stable_copper,Stable - Copper,textures\zut_smileyface_00T,,0,0,9,s_key
+459,stable_rennaissance,Stable - Rennaissance,textures\zut_smileyface_00T,,0,0,9,s_key
+460,tank_factory_atomic,Tank Factory - Atomic,textures\zut_smileyface_00T,,0,0,9,f_key
+461,temple_middle,Temple - Middle,textures\zut_smileyface_00T,,0,0,12,y_key
+462,temple_stone,Temple - Stone,textures\zut_smileyface_00T,,0,0,12,y_key
+463,temple_copper,Temple - Copper,textures\zut_smileyface_00T,,0,0,12,y_key
+464,temple_dark,Temple - Dark,textures\zut_smileyface_00T,,0,0,12,y_key
+465,temple_rennaissance,Temple - Rennaissance,textures\zut_smileyface_00T,,0,0,12,y_key
+466,temple_industrial,Temple - Industrial,textures\zut_smileyface_00T,,0,0,12,y_key
+467,temple_information,Temple - Information,textures\zut_smileyface_00T,,0,0,12,y_key
+468,town_center_paleo,Town Center-Paleo,textures\zut_smileyface_00T,,0,0,-1,-1
+469,town_center_stone,Town Center-Stone,textures\zut_smileyface_00T,,0,0,-1,-1
+470,town_center_copper,Town Center-Copper,textures\zut_smileyface_00T,,0,0,-1,-1
+471,town_center_bronze,Town Center-Bronze,textures\zut_smileyface_00T,,0,0,-1,-1
+472,town_center_middle,Town Center-Middle,textures\zut_smileyface_00T,,0,0,-1,-1
+473,town_center_imperial,Town Center-Imperial,textures\zut_smileyface_00T,,0,0,-1,-1
+474,town_center_atomic,Town Center-Atomic,textures\zut_smileyface_00T,,0,0,-1,-1
+475,town_center_nano,Town Center-Nano,textures\zut_smileyface_00T,,0,0,-1,-1
+476,university_bronze,University - Bronze,textures\zut_smileyface_00T,,0,0,14,u_key
+477,university_middle,University - Middle,textures\zut_smileyface_00T,,0,0,14,u_key
+478,university_imperial,University - Imperial,textures\zut_smileyface_00T,,0,0,14,u_key
+479,university_nano,University - Nano,textures\zut_smileyface_00T,,0,0,14,u_key
+480,grenade_launcher,Grenade Launcher,textures\but_grenadelauncher_10T.sst,,0,0,3,b_key
+481,wall_bronze,Wall - Bronze,textures\zut_smileyface_00T,,0,0,5,w_key
+482,wall_middle,Wall - Middle,textures\zut_smileyface_00T,,0,0,5,w_key
+483,wall_imperial,Wall - Imperial,textures\zut_smileyface_00T,,0,0,5,w_key
+488,wonder_library_of_alexandria,Wonder-Library of Alexandria,textures\but_libraryofalexandria.sst,,0,0,31,-1
+489,wonder_lighthouse,Wonder-Lighthouse,textures\but_lighthouseofalexandria.sst,,0,0,28,-1
+490,wonder_tower_of_babylon,Wonder-Tower of Babylon,textures\but_babylontower.sst,,0,0,26,-1
+493,wonder_ishtar_gates,Wonder-Ishtar Gates,textures\but_ishtargates.sst,,0,0,30,-1
+496,wonder_coliseum,Wonder-Coliseum,textures\but_colliseum.sst,,0,0,27,-1
+501,wonder_time_machine,Wonder-Time Machine,textures\but_timemachine.sst,,0,0,25,-1
+502,air_transport_nano,Air Transport Nano,textures\zut_smileyface_00T,,0,0,47,-1
+503,fokker_dr1,Fokker DR1,textures\but_fokker_10T.sst,,0,0,3,-1
+507,talon_fighter,Talon Fighter,textures\but_talon_13T.sst,,0,0,3,-1
+508,phoenix_fighter,Phoenix Fighter,textures\but_pheonix_13T.sst,,0,0,3,-1
+509,tower_stone,Tower - Stone,textures\zut_smileyface_00T,,0,0,4,r_key
+510,wall_stone,Wall - Stone,textures\zut_smileyface_00T,,0,0,5,w_key
+511,wall_atomic,Wall - Atomic,textures\zut_smileyface_00T,,0,0,5,w_key
+512,gate,Gate,textures\zut_smileyface_00T,,0,0,16,-1
+513,barb_wire,Barb Wire,textures\button_barbwire.sst,,0,0,2,w_key
+514,tower_atomic,Tower - Atomic,textures\zut_smileyface_00T,,0,0,4,r_key
+515,tower_at,Tower - AT,textures\zut_smileyface_00T,,0,0,4,r_key
+516,tower_copper,Tower - Copper,textures\zut_smileyface_00T,,0,0,4,r_key
+517,wall_copper,Wall - Copper,textures\zut_smileyface_00T,,0,0,5,w_key
+518,trooper_missile_12,Trooper Missile 12,textures\zut_smileyface_00T,,0,0,23,-1
+519,royal_cuirassier,Royal Cuirassier,textures\but_royalcuirassier_07T.sst,,0,0,2,d_key
+520,trooper_missile_11,Trooper Missile 11,textures\but_missletrooper_13T.sst,,0,0,6,-1
+521,longsword,LongSword,textures\but_longswordsman_06T.sst,,0,0,2,s_key
+522,trees,Trees,textures\button_tree.sst,,0,0,0,-1
+523,ambients_forest,Ambients - Forest,textures\button_woodlands.sst,,0,0,0,-1
+524,hand_cannoneer,Hand Cannoneer,textures\but_mortar infantry.sst,,0,0,4,r_key
+525,decareme_catapult,Decareme (catapult),textures\but_catapultship_06T.sst,,0,0,7,c_key
+526,decereme_frigate,Decereme - Frigate,textures\but_middle age frigate_06.sst,,0,0,5,d_key
+527,xsp_tank_nano_2,xSP Tank Nano 2,textures\zut_smileyface_00T,,0,0,4,-1
+529,archery_dark,Archery - Dark,textures\zut_smileyface_00T,,0,0,8,a_key
+530,archery_renaissance,Archery - Renaissance,textures\zut_smileyface_00T,,0,0,8,a_key
+534,elephant_archer,Elephant Archer,textures\but_elephantarcher_04T.sst,,0,0,4,-1
+535,f_14,F-14,textures\but_f14_10T.sst,,0,0,2,-1
+536,government_copper,Government - Copper,textures\zut_smileyface_00T,,0,0,18,-1
+541,war_raft_upgrade_03,War Raft Upgrade 03,textures\but_upgrade unit.sst,,0,0,5,-1
+560,steel_mine,Steel Mine,textures\zut_smileyface_00T,,0,0,14,-1
+561,house_tech_10,House Tech 10,textures\zut_smileyface_00T,,0,0,9,-1
+563,house_tech11,House Tech11,textures\zut_smileyface_00T,,0,0,10,-1
+572,atom_manipulation_tech,Atom Manipulation Tech,textures\but_atom manipulation_14.sst,,0,0,7,-1
+589,hand_axe_tech,Hand Axe Tech,textures\but_handaxe_01.sst,,0,0,6,-1
+590,falconry_tech,Falconry Tech,textures\but_falconry_05.sst,,0,0,5,-1
+591,hardened_chisel,Hardened Chisel,textures\but_hardened chisel.sst,,0,0,8,-1
+592,hafts_tech,Hafts Tech,textures\but_hafts_02.sst,,0,0,9,-1
+593,fine_flaked_tools,Fine Flaked Tools,textures\but_fineflakedtools_02.sst,,0,0,5,-1
+594,metal_working_tech,Metal Working Tech,textures\but_metal casting_03.sst,,0,0,7,-1
+595,iron_saw_tech,Iron Saw Tech,textures\but_saw_04.sst,,0,0,6,-1
+596,dog,Dog,textures\but_domestication of dog_03.sst,,0,0,2,-1
+597,pully,Pully,textures\but_pulley_04.sst,,0,0,2,-1
+598,enviromental_law_tech,Enviromental Law Tech,textures\but_environmental laws_11.sst,,0,0,5,-1
+599,oil_lamp,Oil Lamp,textures\but_oillamp_03.sst,,0,0,0,-1
+600,shaft_mining,Shaft mining,textures\but_shaft mining_08.sst,,0,0,8,-1
+601,town_center_tech13,Town Center Tech13,textures\zut_smileyface_00T,,0,0,47,-1
+602,explosives_tech,Explosives Tech,textures\but_explosives_07.sst,,0,0,8,-1
+603,forestry_tech,Forestry Tech,textures\but_forestry_07.sst,,0,0,6,-1
+604,amalgamation_tech,Amalgamation Tech,textures\but_amalgamation_06.sst,,0,0,7,-1
+605,windlass_tech,Windlass Tech,textures\but_windlass_08.sst,,0,0,9,-1
+606,land_conservation_tech,Land Conservation Tech,textures\but_land conservation_08T.sst,,0,0,5,-1
+607,town_center_tech19,Town Center Tech19,textures\zut_smileyface_00T,,0,0,47,-1
+608,steam_engine_tech,Steam Engine Tech,textures\but_steam engine_09.sst,,0,0,7,-1
+609,town_center_tech21,Town Center Tech21,textures\zut_smileyface_00T,,0,0,47,-1
+610,mechanized_logging_tech,Mechanized Logging Tech,textures\but_mechanized logging_10.sst,,0,0,6,-1
+611,montgolfier_balloon,Montgolfier Balloon,textures\but_observationballoon_09T.sst,,0,0,11,-1
+612,hydraulic_mining_tech,Hydraulic Mining Tech,textures\but_hydraulic mining_11.sst,,0,0,7,-1
+614,hammer_drilling_rigs_tech,Hammer Drilling Rigs Tech,textures\but_hammer drilling rig_11.sst,,0,0,9,-1
+615,balistae,Balistae,textures\but_ballista_04T.sst,,0,0,1,s_key
+616,plague,Plague,textures\but_plague.sst,,0,0,9,e_key
+617,ambients_desert,Ambients - Desert,textures\button_desert.sst,,0,0,0,-1
+618,dino_bones,Dino Bones,textures\button_dinobones.sst,,0,0,0,-1
+619,famine_malaria,Famine (Malaria),textures\but_famine.sst,,0,0,5,s_key
+620,fire_calamity,Fire Calamity,textures\but_fire.sst,,0,0,6,f_key
+621,fish,Fish,textures\button_fish.sst,,0,0,0,-1
+622,poison_grain,Poison Grain,textures\zut_smileyface_00T,,0,0,8,-1
+623,ambients_beach,Ambients - Beach,textures\button_beach.sst,,0,0,0,-1
+624,flood,Flood,textures\zut_smileyface_00T,,0,0,2,-1
+625,earthquake,Earthquake,textures\but_earthquake.sst,,0,0,7,e_key
+626,hurricane,Hurricane,textures\but_hurricane.sst,,0,0,10,a_key
+627,volcano,Volcano,textures\but_volcano.sst,,0,0,8,v_key
+628,ambient_winter,Ambient - Winter,textures\button_arctic.sst,,0,0,0,-1
+630,javelin,Javelin,textures\but_javelin_03T.sst,,0,0,1,-1
+631,pilum,Pilum,textures\but_pilum_00t.sst,,0,0,1,-1
+632,trooper_shock_11,Trooper Shock 11,textures\but_sentinel_00T.sst,,0,0,7,-1
+633,a_10,A-10,textures\but_a10_10T.sst,,0,0,8,-1
+636,imperial_cuirrassier,Imperial Cuirrassier,textures\but_imperialcuirassier_09T.sst,,0,0,2,d_key
+637,dragoon,Dragoon,textures\but_dragoongun_09T.sst,,0,0,1,c_key
+638,fireboat_copper,Fireboat - Copper,textures\but_galley_03.sst,,0,0,6,r_key
+639,pentekontar,Pentekontar,textures\but_bronze battleship_04.sst,,0,0,4,b_key
+640,helicopter_sea_king,Helicopter Sea King,textures\but_seaking_10T.sst,,0,0,9,e_key
+641,helicopter_mg,Helicopter MG,textures\but_apacheMG_10T.sst,,0,0,12,-1
+642,dragons_teeth,Dragons Teeth,textures\button_tankobstacle.sst,,0,0,0,-1
+643,stealth_fighter,Stealth Fighter,textures\but_stealth_10T.sst,,0,0,3,-1
+644,wyvern_bomber,Wyvern Bomber,textures\but_bomber_13T.sst,,0,0,6,-1
+645,priest09,Priest09,textures\but_priest_10T.sst,,0,0,1,e_key
+646,priest11,Priest11,textures\but_priest_13T.sst,,0,0,1,e_key
+647,tank_factory_info,Tank Factory - Info,textures\zut_smileyface_00T,,0,0,9,f_key
+648,house_industrial,House - Industrial,textures\zut_smileyface_00T,,0,0,3,e_key
+649,house_middle,House - Middle,textures\zut_smileyface_00T,,0,0,3,e_key
+650,house_stone,House - Stone,textures\zut_smileyface_00T,,0,0,3,e_key
+651,house_bronze,House - Bronze,textures\zut_smileyface_00T,,0,0,3,e_key
+652,house_atomic,House - Atomic,textures\zut_smileyface_00T,,0,0,3,e_key
+653,house_nano,House - Nano,textures\zut_smileyface_00T,,0,0,3,e_key
+654,transport_nano_nav,Transport Nano (nav),textures\but_transport_13.sst,,0,0,2,t_key
+655,battleship_nano,Battleship - Nano,textures\but_leviathon battleship_13.sst,,0,0,4,b_key
+656,upgrade08,Upgrade08,textures\zut_smileyface_00T,,0,0,50,-1
+657,upgrade09,Upgrade09,textures\zut_smileyface_00T,,0,0,50,-1
+658,upgrade10,Upgrade10,textures\zut_smileyface_00T,,0,0,50,-1
+659,upgrade11,Upgrade11,textures\zut_smileyface_00T,,0,0,50,-1
+660,upgrade12,Upgrade12,textures\zut_smileyface_00T,,0,0,50,-1
+661,upgrade13,Upgrade13,textures\zut_smileyface_00T,,0,0,50,-1
+662,upgrade14,Upgrade14,textures\zut_smileyface_00T,,0,0,50,-1
+663,upgrade15,Upgrade15,textures\zut_smileyface_00T,,0,0,50,-1
+664,gotha,Gotha,textures\but_gotha_10T.sst,,0,0,6,-1
+665,heinkel,Heinkel,textures\but_he111_10T.sst,,0,0,6,-1
+666,stable_dark,Stable - Dark,textures\zut_smileyface_00T,,0,0,9,s_key
+667,mech_tempest,Mech Tempest,textures\but_tempest_13T.sst,,0,0,3,-1
+668,eagle,Eagle,textures\zut_smileyface_00T,,0,0,0,-1
+669,elephant,Elephant,textures\zut_smileyface_00T,,0,0,0,-1
+670,flies,Flies,textures\but_Flies.sst,,0,0,0,-1
+671,giraffe,Giraffe,textures\zut_smileyface_00T,,0,0,0,-1
+672,goat,Goat,textures\zut_smileyface_00T,,0,0,0,-1
+673,hippo,Hippo,textures\zut_smileyface_00T,,0,0,0,-1
+674,ostrich,Ostrich,textures\zut_smileyface_00T,,0,0,0,-1
+675,shark,Shark,textures\zut_smileyface_00T,,0,0,0,-1
+676,vermin,Vermin,textures\zut_smileyface_00T,,0,0,0,-1
+677,crusader,Crusader,textures\zut_smileyface_00T,,0,0,12,d_key
+679,maceman_upgrade,Maceman Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+680,shortsword_upgrade,ShortSword Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+681,longsword_upgrade,LongSword Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+682,phalanx_upgrade,Phalanx Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+683,pikeman_upgrade,Pikeman Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+684,halberdier_upgrade,Halberdier Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+685,musketeer_upgrade,Musketeer Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+686,grenadier_upgrade,Grenadier Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+687,marine_upgrade,Marine Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+688,trooperlaser_upgrade,TrooperLaser Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+689,trooperlaser12_upgrade,TrooperLaser12 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+690,mortar10_upgrade,Mortar10 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+691,composite_bow_upgrade,Composite Bow Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+692,long_bow_upgrade,Long Bow Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+693,pilum_upgrade,Pilum Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+694,cavalry_archer_upgrade,Cavalry Archer Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+695,fishing_boat_04_upgrade,Fishing Boat 04 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+696,fishing_boat_10_upgrade,Fishing Boat 10 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+697,nav_transport_3_upgrade,Nav Transport 3 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+698,nav_transport_5_upgrade,Nav Transport 5 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+699,nav_transport_8_upgrade,Nav Transport 8 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+700,nav_transport_10_upgrade,Nav Transport 10 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+701,nav_transport_12_upgrade,Nav Transport 12 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+702,galley_fire_04_upgrade,Galley- Fire 04 Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+703,pentakonter_04_upgrade,Pentakonter 04 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+704,trireme_05_upgrade,Trireme 05 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+705,decereme_06_upgrade,Decereme 06 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+706,galleon_07_upgrade,Galleon 07 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+707,henri_08_upgrade,Henri 08 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+708,xsp_persian_infantry,xSP Persian Infantry,textures\but_persianimmortal_00.sst,,0,0,34,-1
+709,victory_09_upgrade,Victory 09 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+710,bismarck_10_upgrade,Bismarck 10 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+711,battleship_11_upgrade,Battleship 11 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+712,pentakonter_frig_04_upgrade,Pentakonter Frig 04 Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+713,trireme_frig_05_upgrade,Trireme Frig 05 Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+714,galleon_frig_07_upgrade,Galleon Frig 07 Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+715,henri_frig_08_upgrade,Henri Frig 08 Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+716,victory_frig_09_upgrade,Victory Frig 09 Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+717,warrington_10_upgrade,Warrington 10 Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+718,frigate_11_upgrade,Frigate 11 Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+719,galley_fire_05_upgrade,Galley - Fire 05 Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+720,galley_fire_06_upgrade,Galley - Fire 06 Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+721,decereme_catapult_06_upgrade,Decereme Catapult 06 Upgrade,textures\but_upgrade unit.sst,,0,0,23,-1
+722,cruiser_13_upgrade,Cruiser 13 Upgrade,textures\but_upgrade unit.sst,,0,0,24,-1
+723,res_hot_springs,Res - Hot Springs,textures\zut_smileyface_00T,,0,0,46,-1
+724,uboat_11_upgrade,Uboat 11 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+725,uboat_12_upgrade,Uboat 12 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+726,aircraft_carrier_11_upgrade,Aircraft Carrier 11 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+727,nuc_sub_11_upgrade,Nuc Sub 11 Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+728,xsp_radar_instal,xSP Radar Instal.,textures\but_radardish.sst,,0,0,40,-1
+729,cataphract_upgrade,Cataphract Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+730,royal_cuirassier_upgrade,Royal Cuirassier Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+731,imperial_cuirassier_upgrade,Imperial Cuirassier Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+732,knight_upgrade,Knight Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+733,dragoon_upgrade,Dragoon Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+734,bombard,Bombard,textures\but_bombard_08T.sst,,0,0,7,b_key
+736,ballistae_upgrade,Ballistae Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+737,at_gun_12_upgrade,AT Gun 12 Upgrade,textures\but_upgrade unit.sst,,0,0,24,-1
+738,ram_6_upgrade,Ram 6 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+739,aa_gun_11_upgrade,AA Gun 11 Upgrade,textures\but_upgrade unit.sst,,0,0,12,-1
+740,trebuchet_upgrade,Trebuchet Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+741,siege_tower_06,Siege Tower 06,textures\but_siegetower_06T.sst,,0,0,4,w_key
+742,siege_tower_06_upgrade,Siege Tower 06 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+743,sepentine_upgrade,Sepentine Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+744,bronze_cannon_upgrade,Bronze Cannon Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+745,mortar_cannon_09_upgrade,Mortar Cannon 09 Upgrade,textures\but_upgrade unit.sst,,0,0,23,-1
+746,artillery_upgrade,Artillery Upgrade,textures\but_upgrade unit.sst,,0,0,23,-1
+747,mega_artillery_upgrade,Mega Artillery Upgrade,textures\but_upgrade unit.sst,,0,0,23,-1
+748,sherman_tank,Sherman Tank,textures\but_sherman_10T.sst,,0,0,1,-1
+749,prophet_atomic,Prophet - Atomic,textures\but_prophet_10T.sst,,0,0,2,r_key
+751,engineer,Engineer,textures\but_engineer_10T.sst,,0,0,44,v_key
+752,naval_mine_2,Naval Mine,textures\button_navalmine.sst,,0,0,0,-1
+753,xsp_moorish_infantry,xSP Moorish Infantry,textures\but_moorishinfantry_00T.sst,,0,0,36,-1
+754,tank_a7v_ww1,Tank A7V ww1,textures\but_A7V_10T.sst,,0,0,2,r_key
+755,xsp_spanish_pikeman,xSP Spanish Pikeman,textures\but_spanishpikeman_00T.sst,,0,0,39,-1
+756,atomic_epoch_ww2,Atomic Epoch - WW2,textures\but_epoch_11T.sst,,0,0,17,e_key
+757,atomic_epoch_modern,Atomic Epoch - Modern,textures\but_epoch_12T.sst,,0,0,17,e_key
+758,f14_upgrade,F14 Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+759,xsp_red_baron,xSP Red Baron,textures\but_redbaron_10T.sst,,0,0,47,-1
+760,artifact,Artifact,textures\but_artifact.sst,,0,0,47,-1
+761,dreadnought_upgrade,Dreadnought Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+763,tank_leopard_upgrade,Tank Leopard Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+764,sherman_upgrade,Sherman Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+765,m1_upgrade,M1 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+766,info_tank_upgrade,Info Tank Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+767,panzer_upgrade,Panzer Upgrade,textures\but_upgrade unit.sst,,0,0,18,t_key
+768,nano_tank1_upgrade,Nano Tank1 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+769,nano_tank2_upgrade,Nano Tank2 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+770,spitfire_upgrade,Spitfire Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+771,me262_upgrade,ME262 Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+772,f_15_upgrade,F-15 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+773,stealth_fighter_upgrade,Stealth Fighter Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+774,phoenix_fighter_upgrade,Phoenix Fighter Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+775,me109_upgrade,ME109 Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+776,heinkel_upgrade,Heinkel Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+777,b_52_upgrade,B-52 Upgrade,textures\but_upgrade unit.sst,,0,0,23,-1
+778,p51_upgrade,P51 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+779,b2_stealth_upgrade,B2 Stealth Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+780,titan_bomber_upgrade,Titan Bomber Upgrade,textures\but_upgrade unit.sst,,0,0,23,-1
+781,helicopte_spectre_upgrade,Helicopte Spectre Upgrade,textures\but_upgrade unit.sst,,0,0,27,-1
+782,helicopter_reapor_upgrade,Helicopter Reapor Upgrade,textures\but_upgrade unit.sst,,0,0,28,-1
+784,wyvern_bomber_upgrade,Wyvern Bomber Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+785,b_17_upgrade,B-17 Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+786,talon_fighter_upgrade,Talon Fighter Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+787,crude_oil,Crude Oil,textures\zut_smileyface_00T,,0,0,47,-1
+788,xsp_statue_of_nike,xSP Statue of Nike,textures\button_nikestatue.sst,,0,0,0,-1
+789,sp_barracks_invisible,SP Barracks Invisible,textures\zut_smileyface_00T,,0,0,7,-1
+790,xsp_german_staff_car,xSP German Staff Car,textures\but_staffcar.sst,,0,0,47,-1
+791,xsp_moorish_cavalry,xSP Moorish Cavalry,textures\but_moorishcav_00T.sst,,0,0,34,-1
+792,dreadnought,Dreadnought,textures\but_dreadnought_10.sst,,0,0,4,b_key
+793,earthquake_homer,Earthquake (Homer),textures\but_earthquake.sst,,0,0,5,-1
+794,plague_olmec,Plague (olmec),textures\but_plague.sst,,0,0,4,-1
+795,hurricane_olmec,Hurricane (olmec),textures\but_hurricane.sst,,0,0,5,-1
+796,rebellion_slave_revolt_olmec,Rebellion (Slave Revolt) (olmec),textures\zut_smileyface_00T,,0,0,6,-1
+797,fire_calamity_olmec,Fire Calamity (olmec),textures\but_fire.sst,,0,0,1,-1
+798,famine_leoprosy_olmec,Famine (Leoprosy) (olmec),textures\but_famine.sst,,0,0,0,-1
+799,volcano_olmec,Volcano (olmec),textures\but_volcano.sst,,0,0,3,-1
+800,earthquake_olmec,Earthquake (olmec),textures\but_earthquake.sst,,0,0,2,-1
+801,good_hope,Good Hope,textures\but_goodhope frigate_10.sst,,0,0,5,d_key
+802,xsp_court_jester,xSP Court Jester,textures\but_jester_06T.sst,,0,0,47,-1
+803,xsp_richthofen,xSP Richthofen,textures\zut_smileyface_00T,,0,0,47,-1
+804,xsp_wealthy_citizen_stone,xSP Wealthy Citizen - Stone,textures\but_wealthycitizen_02T.sst,,0,0,12,-1
+805,xsp_wealthy_citizen_bronze,xSP Wealthy Citizen - Bronze,textures\but_wealthycitizen_04T.sst,,0,0,12,-1
+806,xsp_wealthy_citizen_middle,xSP Wealthy Citizen - Middle,textures\but_wealthycitizen_06T.sst,,0,0,12,-1
+807,xsp_wealthy_citizen_atomic,xSP Wealthy Citizen - Atomic,textures\but_wealthycitizen_10T.sst,,0,0,12,-1
+808,french_grenadier,French Grenadier,textures\but_french grenadier.sst,,0,0,1,a_key
+809,xsp_flag_1,xSP Flag 1,textures\but_flag.sst,,0,0,47,-1
+810,xsp_flag_2,xSP Flag 2,textures\but_flag.sst,,0,0,47,-1
+811,pope,Pope,textures\but_pope_10T.sst,,0,0,47,-1
+812,prophet_bronze_homer,Prophet - Bronze - Homer,textures\but_prophet_04T.sst,,0,0,2,r_key
+813,earthquake_pope,Earthquake (pope),textures\but_earthquake.sst,,0,0,5,-1
+814,plague_pope,Plague (pope),textures\but_plague.sst,,0,0,7,-1
+815,hurricane_pope,Hurricane (pope),textures\but_hurricane.sst,,0,0,8,-1
+816,rebellion_slave_revolt_pope,Rebellion (Slave Revolt) (pope),textures\zut_smileyface_00T,,0,0,9,-1
+817,fire_calamity_pope,Fire Calamity (pope),textures\but_fire.sst,,0,0,4,-1
+818,famine_leoprosy_pope,Famine (Leoprosy) (pope),textures\but_famine.sst,,0,0,3,-1
+819,volcano_pope,Volcano (pope),textures\but_volcano.sst,,0,0,6,-1
+820,observation_balloon,Observation Balloon,textures\but_observationballoon_10T.sst,,0,0,11,-1
+821,child_citizen_stone,Child Citizen - Stone,textures\but_child_02T.sst,,0,0,47,-1
+822,child_citizen_bronze,Child Citizen - Bronze,textures\but_child_04T.sst,,0,0,47,-1
+823,xsp_cargo_truck,xSP Cargo Truck,textures\but_cargotruck_10T.sst,,0,0,33,-1
+824,child_citizen_middle,Child Citizen - Middle,textures\but_child_06T.sst,,0,0,47,-1
+825,child_citizen_atomic,Child Citizen - Atomic,textures\but_child_10T.sst,,0,0,47,-1
+826,sp_wall_right,SP Wall Right,textures\zut_smileyface_00T,,0,0,47,-1
+827,sp_wall_left,SP Wall Left,textures\zut_smileyface_00T,,0,0,47,-1
+828,sp_tower,SP Tower,textures\zut_smileyface_00T,,0,0,47,-1
+830,xsp_trojan_horse_unit,xSP Trojan Horse (unit),textures\but_trojanhorse_04T.sst,,0,0,33,-1
+831,xsp_british_infantry,xSP British Infantry,textures\but_british infantry.sst,,0,0,41,-1
+832,doughboy,Doughboy,textures\but_doughboy.sst,,0,0,1,a_key
+833,tiger,Tiger,textures\zut_smileyface_00T,,0,0,47,-1
+834,tent,Tent,textures\but_tent.sst,,0,0,47,-1
+835,xsp_statue_moai,xSP Statue Moai,textures\button_moastatue.sst,,0,0,0,-1
+836,xsp_statue_mounted,xSP Statue Mounted,textures\button_horsestatue.sst,,0,0,0,-1
+837,xsp_statue_olmec,xSP Statue Olmec,textures\button_olmecstatue.sst,,0,0,39,-1
+840,simple_bowman_upgrade,Simple Bowman Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+841,javelin_upgrade,Javelin Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+842,xsp_housecarl,xSP Housecarl,textures\but_viking_05T.sst,,0,0,37,-1
+843,helicopter_sea_king_ii,Helicopter Sea King II,textures\but_seaking_13T.sst,,0,0,9,e_key
+844,helicopter_sea_king_upgrade,Helicopter Sea King Upgrade,textures\but_upgrade unit.sst,,0,0,25,-1
+845,televangelism,Televangelism,textures\but_televangelism_11.sst,,0,0,9,-1
+846,religious_resurgence,Religious Resurgence,textures\but_religiousresurgence_12.sst,,0,0,6,-1
+847,virtual_services,Virtual Services,textures\but_virtualservices_13.sst,,0,0,8,-1
+848,xsp_grigor,xSP Grigor,textures\but_grigor_13T.sst,,0,0,47,-1
+849,super_war_raft,Super War Raft,textures\but_frigate_03.sst,,0,0,5,d_key
+851,fireboat_bronze,Fireboat - Bronze,textures\but_galley_04.sst,,0,0,6,r_key
+852,fireboat_dark,Fireboat - Dark,textures\but_galley_05.sst,,0,0,6,r_key
+853,fireboat_middle,Fireboat - Middle,textures\but_galley_06.sst,,0,0,6,r_key
+854,fireboat_ren,Fireboat - Ren.,textures\but_galley_07.sst,,0,0,6,r_key
+855,fireboat_imperial,Fireboat - Imperial,textures\but_galley_08.sst,,0,0,6,r_key
+856,fireboat_indust,Fireboat - Indust.,textures\but_galley_09.sst,,0,0,6,r_key
+857,galley_fire_07_upgrade,Galley - Fire 07 Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+858,battleship_upgrades,Battleship Upgrades,textures\but_upgrade unit.sst,,0,0,20,-1
+859,frigate_good_hope_upgrade,Frigate - Good Hope Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+860,super_pentakonter_frigate,Super Pentakonter Frigate,textures\but_byzantine frigate_05.sst,,0,0,5,d_key
+861,xsp_royal_guard,xSP Royal Guard,textures\but_shortsword_04T.sst,,0,0,35,-1
+862,xsp_black_robe,xSP Black Robe,textures\but_blackrobe_13T.sst,,0,0,45,-1
+863,mind_control,Mind Control,textures\but_mind control_14.sst,,0,0,12,-1
+864,granary_copper,Granary - Copper,textures\zut_smileyface_00T,,0,0,11,j_key
+865,granary_middle,Granary - Middle,textures\zut_smileyface_00T,,0,0,11,j_key
+866,granary_ww1,Granary - WW1,textures\zut_smileyface_00T,,0,0,11,j_key
+867,granary_info,Granary - Info,textures\zut_smileyface_00T,,0,0,11,j_key
+868,wall_info,Wall - Info,textures\zut_smileyface_00T,,0,0,5,w_key
+870,wall_and_tower_upgrade,Wall and Tower Upgrade,textures\but_upgrade wall and tower.sst,,0,0,10,-1
+875,volcano_haup,Volcano (haup),textures\but_volcano.sst,,0,0,6,-1
+876,rebellion_haup,Rebellion (haup),textures\zut_smileyface_00T,,0,0,9,-1
+877,fire_calamity_haup,Fire Calamity (haup),textures\but_fire.sst,,0,0,4,-1
+878,hurricane_haup,Hurricane (haup),textures\but_hurricane.sst,,0,0,8,-1
+879,plague_haup,Plague (haup),textures\but_plague.sst,,0,0,7,-1
+880,earthquake_haup,Earthquake (haup),textures\but_earthquake.sst,,0,0,5,-1
+881,famine_haup,Famine (haup),textures\but_famine.sst,,0,0,3,-1
+882,xsp_buckingham_palace,xSP Buckingham Palace,textures\but_buckinghampalace.sst,,0,0,47,-1
+883,female_citizen_stone,Female Citizen - Stone,textures\but_femcitizen_02T.sst,,0,0,-1,-1
+884,female_citizen_bronze,Female Citizen - Bronze,textures\but_femcitizen_04T.sst,,0,0,-1,-1
+885,female_citizen_middle,Female Citizen - Middle,textures\but_femcitizen_06T.sst,,0,0,-1,-1
+886,female_citizen_atomic,Female Citizen - Atomic,textures\but_femcitizen_10T.sst,,0,0,-1,-1
+887,zarchery_range,zArchery Range,textures\but_archery.sst,,0,0,8,-1
+888,zbarracks,zBarracks,textures\but_barracks.sst,,0,0,7,-1
+889,zbridge,zBridge,textures\genbut_bridge.sst,,0,0,-1,-1
+890,zdock,zDock,textures\but_dock.sst,,0,0,6,-1
+891,zfarm,zFarm,textures\but_granary.sst,,0,0,-1,-1
+892,zgate,zGate,textures\but_gate.sst,,0,0,16,-1
+893,zhospital,zHospital,textures\but_hospital.sst,,0,0,13,-1
+894,zhouse,zHouse,textures\but_house.sst,,0,0,3,-1
+895,zmech_factory,zMech Factory,textures\but_mech factory.sst,,0,0,23,-1
+896,znaval_yard,zNaval Yard,textures\but_naval yard.sst,,0,0,22,-1
+897,zsettlement,zSettlement,textures\but_settlement.sst,,0,0,2,-1
+898,zsiege_factory,zSiege Factory,textures\but_siege workshop.sst,,0,0,10,-1
+899,zstable,zStable,textures\but_stable.sst,,0,0,9,-1
+900,ztank_factory,zTank Factory,textures\but_tank factory.sst,,0,0,9,-1
+901,ztemple,zTemple,textures\but_temple.sst,,0,0,12,-1
+902,ztower,zTower,textures\but_tower.sst,,0,0,4,-1
+903,ztown_center,zTown Center,textures\but_town center.sst,,0,0,2,-1
+904,zuniversity,zUniversity,textures\but_university.sst,,0,0,14,-1
+905,zwall,zWall,textures\but_wall.sst,,0,0,5,w_key
+906,xsp_pericles,xSP Pericles,textures\but_pericles.sst,,0,0,0,-1
+907,xsp_black_prince,xSP Black Prince,textures\but_blackprince_06T.sst,,0,0,0,-1
+908,xsp_hector,xSP Hector,textures\but_hector_10T.sst,,0,0,0,-1
+909,xsp_mosque,xSP Mosque,textures\but_mosque.sst,,0,0,35,-1
+910,xsp_minaret,xSP Minaret,textures\but_mosque.sst,,0,0,0,-1
+911,xsp_spanish_cavalryman,xSP Spanish Cavalryman,textures\but_spanishcav_00T.sst,,0,0,35,-1
+912,xsp_wellington_hero,xSP Wellington (hero),textures\but_wellington_09T.sst,,0,0,0,-1
+913,xsp_persian_cavalry,xSP Persian Cavalry,textures\but_persiancav_00T.sst,,0,0,5,-1
+914,wolf,Wolf,textures\zut_smileyface_00T,,0,0,0,-1
+915,chicken,Chicken,textures\zut_smileyface_00T,,0,0,0,-1
+916,rock_thrower_archery,Rock Thrower (Archery),textures\zut_smileyface_00T,,0,0,1,-1
+917,horse,Horse,textures\zut_smileyface_00T,,0,0,0,-1
+918,animal,Animal,textures\button_animals.sst,,0,0,0,-1
+919,stone_mine,Stone Mine,textures\button_stone.sst,,0,0,0,-1
+920,gold_mine,Gold Mine,textures\button_gold.sst,,0,0,0,-1
+921,forage_bush,Forage Bush,textures\button_pumpkins.sst,,0,0,0,-1
+922,xsp_samurai,xSP Samurai,textures\but_samurai_00T.sst,,0,0,38,-1
+923,f_48_jackal,F-48 Jackal,textures\but_jackal_13T.sst,,0,0,4,-1
+924,f_48_upgrade,F-48 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+925,xsp_gas_light,xSP Gas Light,textures\but_streetlamp01.sst,,0,0,0,-1
+926,xsp_street_lamp,xSP Street Lamp,textures\button_streetlamp.sst,,0,0,0,-1
+927,paleo_gate,Paleo Gate,textures\but_gate.sst,,0,0,0,g_key
+928,f_96_upgrade,F 96 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+930,xsp_hauptmann_durer,xSP Hauptmann Durer,textures\but_hauptmanndurer_04T.sst,,0,0,33,-1
+931,xsp_german_infantry,xSP German Infantry,textures\but_germaninfantry_10T.sst,,0,0,42,-1
+932,copper_gate,Copper Gate,textures\but_gate.sst,,0,0,0,g_key
+933,bronze_gate,Bronze Gate,textures\but_gate.sst,,0,0,0,g_key
+934,middle_gate,Middle Gate,textures\but_gate.sst,,0,0,0,g_key
+935,imperial_gate,Imperial Gate,textures\but_gate.sst,,0,0,0,g_key
+936,ww1_gate,WW1 Gate,textures\but_gate.sst,,0,0,0,g_key
+937,info_gate,Info Gate,textures\but_gate.sst,,0,0,0,g_key
+938,stone_age_epoch,Stone Age- Epoch,textures\but_epoch_02T.sst,,0,0,17,e_key
+939,copper_age_epoch,Copper Age - Epoch,textures\but_epoch_03T.sst,,0,0,17,e_key
+940,bronze_age_epoch,Bronze Age - Epoch,textures\but_epoch_04T.sst,,0,0,17,e_key
+941,dark_age_epoch,Dark Age - Epoch,textures\but_epoch_05T.sst,,0,0,17,e_key
+942,middle_age_epoch,Middle Age - Epoch,textures\but_epoch_06T.sst,,0,0,17,e_key
+943,renaissance_age_epoch,Renaissance Age - Epoch,textures\but_epoch_07T.sst,,0,0,17,e_key
+944,imperial_age_epoch,Imperial Age - Epoch,textures\but_epoch_08T.sst,,0,0,17,e_key
+945,industrial_age_epoch,Industrial Age - Epoch,textures\but_epoch_09T.sst,,0,0,17,e_key
+946,atomic_age_epoch,Atomic Age - Epoch,textures\but_epoch_10T.sst,,0,0,17,e_key
+947,digitial_age_epoch,Digitial Age - Epoch,textures\but_epoch_13T.sst,,0,0,17,e_key
+948,nano_age_epoch,Nano Age - Epoch,textures\but_epoch_14T.sst,,0,0,17,e_key
+949,herbal_mechicines,Herbal Mechicines,textures\but_herbal medicines_03.sst,,0,0,0,-1
+950,hippocratic_oath,Hippocratic Oath,textures\but_hippocratic oath_04.sst,,0,0,1,-1
+951,anti_aging_pill,Anti Aging Pill,textures\but_antiaging pill_14.sst,,0,0,3,-1
+952,pharmacy,Pharmacy,textures\but_pharmacy_05.sst,,0,0,2,-1
+953,hospital_tech5,Hospital Tech5,textures\zut_smileyface_00T,,0,0,47,-1
+954,human_anatomy,Human Anatomy,textures\but_human anatomy_06.sst,,0,0,0,-1
+955,quarantine,Quarantine,textures\but_quarantine_07.sst,,0,0,1,-1
+956,orthopedics,Orthopedics,textures\but_orthopedics_08.sst,,0,0,2,-1
+957,chemical_drugs,Chemical Drugs,textures\but_chemical drugs_08.sst,,0,0,3,-1
+958,pasteurization,Pasteurization,textures\but_pasteurization_09.sst,,0,0,0,-1
+959,anesthesia,Anesthesia,textures\but_anesthesia_09.sst,,0,0,1,-1
+960,motorized_ambulence,Motorized Ambulence,textures\but_motorized ambulance_10.sst,,0,0,1,-1
+961,vitamins,Vitamins,textures\but_vitamins_10.sst,,0,0,2,-1
+963,xsp_ufo,xSP UFO,textures\but_ufo.sst,,0,0,0,-1
+965,doughboy_upgrade,Doughboy Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+972,tower_ren,Tower - Ren,textures\zut_smileyface_00T,,0,0,4,r_key
+974,wall_ren,Wall - Ren,textures\zut_smileyface_00T,,0,0,5,w_key
+977,ren_gate,Ren. Gate,textures\but_gate.sst,,0,0,0,g_key
+978,xsp_street_lamp_2,xSP Street Lamp 2,textures\but_streetlamp02.sst,,0,0,0,-1
+979,xsp_asian_pagoda,xSP Asian Pagoda,textures\but_asianpagoda.sst,,0,0,33,-1
+980,zgranary,zGranary,textures\but_granary.sst,,0,0,11,-1
+981,xsp_achilles,xSP Achilles,textures\but_achilles.sst,,0,0,0,-1
+982,xsp_grigor_ii,xSP Grigor II,textures\but_grigor2_14T.sst,,0,0,0,-1
+983,eiffel_tower,Eiffel Tower,textures\but_eiffeltower.sst,,0,0,1,-1
+984,hyperion_ii_upgrade,Hyperion II Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+985,apollo_ii_upgrade,Apollo II Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+986,cyclops_ii_upgrade,Cyclops II Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+987,minotaur_ii_upgrade,Minotaur II Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+989,hero_oliver_cromwell,Hero Oliver Cromwell,textures\but_olivercromwell_08T.sst,,0,0,4,-1
+990,hero50_napoleon_c9b,Hero50 (Napoleon) C9b,textures\but_napoleon_09T.sst,,0,0,4,-1
+991,xsp_road,xSP Road,textures\zut_smileyface_00T,,0,0,0,-1
+992,xsp_buddha,xSP Buddha,textures\button_buddahstatue.sst,,0,0,0,-1
+993,iron,Iron,textures\button_iron.sst,,0,0,0,-1
+994,shield_battery,Shield Battery,textures\mp_shieldbattery.sst,,0,0,2,-1
+995,pulse_cannon,Pulse Cannon,textures\mp_pulsebeam.sst,,0,0,3,-1
+996,time_warp,Time Warp,textures\mp_timewarp.sst,,0,0,6,-1
+997,teleport,Teleport,textures\mp_teleport.sst,,0,0,5,-1
+998,rock,Rock,textures\zut_smileyface_00T,,0,0,0,-1
+999,settlement_imperial,Settlement - Imperial,textures\zut_smileyface_00T,,0,0,2,n_key
+1000,hero_henryv,Hero HenryV,textures\but_henryV_07T.sst,,0,0,4,-1
+1001,xsp_german_officer,xSP German Officer,textures\but_rommel_10T.sst,,0,0,3,-1
+1002,female_citizen_paleo,Female Citizen - Paleo,textures\but_femcitizen_01T.sst,,0,0,-1,-1
+1003,xsp_greek_ruins,xSP Greek Ruins,textures\but_Ruins.sst,,0,0,0,-1
+1004,hercules_at_gun_upgrade,Hercules AT Gun Upgrade,textures\but_upgrade unit.sst,,0,0,24,-1
+1005,at_gun_10_upgrade,AT Gun 10 Upgrade,textures\but_upgrade unit.sst,,0,0,24,-1
+1008,temple_of_zeus,Temple of Zeus,textures\but_templeofzeus.sst,,0,0,29,-1
+1009,inferno,Inferno,textures\mp_inferno.sst,,0,0,5,-1
+1010,anti_matter_storm,Anti Matter Storm,textures\mp_antimatterstorm.sst,,0,0,6,-1
+1011,nano_virus,Nano Virus,textures\mp_nanovirus.sst,,0,0,4,-1
+1012,dolphin,Dolphin,textures\zut_smileyface_00T,,0,0,0,-1
+1013,f_31a_nebula,F-31a Nebula,textures\but_nebula_13T.sst,,0,0,4,-1
+1143,xsp_orthodox_church,xSP Orthodox Church,textures\button_orthodoxchurch.sst,,0,0,34,-1
+1144,xsp_el_cid,xSP El Cid,textures\but_elcid_06T.sst,,0,0,0,-1
+1145,xsp_incan_warrior,xSP Incan Warrior,textures\but_incanwarrior_03T.sst,,0,0,33,-1
+1146,xsp_german_mg,xSP German MG,textures\but_germanmachinegun_10T.sst,,0,0,43,-1
+1147,start_smoke,Start Smoke,textures\zut_smileyface_00T,,0,0,3,-1
+1148,thor_at_gun3,Thor AT Gun3,textures\but_Thor_13T.sst,,0,0,8,e_key
+1149,at_gun_157mm1,AT Gun - 157mm1,textures\but_57mm_10T.sst,,0,0,8,e_key
+1150,thor_at_gun3_upgrade,Thor AT Gun3 Upgrade,textures\but_upgrade unit.sst,,0,0,24,-1
+1151,chinese_pikeman,Chinese Pikeman,textures\but_chineseinfantry_00.sst,,0,0,33,-1
+1152,ashikagu_arquebus,Ashikagu Arquebus,textures\but_ashigaruarquebas_06T.sst,,0,0,40,-1
+1153,gun10_howitzer,Gun10 - Howitzer,textures\but_siegehowitzer_10T.sst,,0,0,6,g_key
+1154,gun12_paladin,Gun12 - Paladin,textures\but_nuonhowitzer_13T.sst,,0,0,6,-1
+1155,gun10_alpha_upgrade,Gun10 - Alpha Upgrade,textures\but_upgrade unit.sst,,0,0,22,g_key
+1156,gun12_beta_upgrade,Gun12 - Beta Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+1157,xsp_tower_of_london,xsp Tower of London,textures\but_toweroflondon.sst,,0,0,0,-1
+1158,xsp_castle_keep,xSP Castle Keep,textures\but_castlekeep.sst,,0,0,0,-1
+1159,dardo_cruiser,Dardo Cruiser,textures\but_cruiser_10.sst,,0,0,8,a_key
+1160,fanatic,Fanatic,textures\zut_smileyface_00T,,0,0,0,-1
+1161,xsp_pillbox,xSP Pillbox,textures\but_pillbox.sst,,0,0,3,-1
+1162,wonder_espionage_headquarters,Wonder-Espionage Headquarters,textures\but_radardish.sst,,5,5,47,-1
+1163,sagitarian_cruiser,Sagitarian Cruiser,textures\but_cruiser_13.sst,,0,0,8,a_key
+1164,xsp_tariq,xSP Tariq,textures\but_tariq_05T.sst,,0,0,0,-1
+1165,xsp_asian_house,xSP Asian House,textures\but_asianhouse.sst,,0,0,0,-1
+1166,field_medic_atomic,Field Medic - Atomic,textures\but_medic_10T.sst,,0,0,6,c_key
+1167,xsp_golden_hind,xSP Golden Hind,textures\but_golden hind_07.sst,,0,0,0,-1
+1168,hospital_copper,Hospital - Copper,textures\zut_smileyface_00T,,0,0,13,z_key
+1169,xsp_sopwith_triplane,xSP Sopwith Triplane,textures\but_sopwithtriplane_10T.sst,,0,0,35,-1
+1170,tank_centurion,Tank Centurion,textures\but_centurian_10T.sst,,0,0,1,r_key
+1171,zcapitol,zCapitol,textures\but_capitol.sst,,0,0,2,-1
+1172,zairport,zAirport,textures\but_airport.sst,,0,0,8,-1
+1173,field_medic_imperial,Field Medic - Imperial,textures\but_medic_08T.sst,,0,0,6,c_key
+1174,f_86,F-86,textures\but_f86sabre_10T.sst,,0,0,42,-1
+1175,mig_15,Mig-15,textures\but_mig15_10T.sst,,0,0,43,-1
+1176,mech_hades,Mech Hades,textures\but_hades_13T.sst,,0,0,4,-1
+1177,xsp_french_infantry,xsp French Infantry,textures\zut_smileyface_00T,,0,0,0,-1
+1178,field_medic_info,Field Medic - Info,textures\but_future medic_13T.sst,,0,0,6,-1
+1179,f_80,F-80,textures\but_f80shootingstar_10T.sst,,0,0,41,-1
+1180,zfortress,zFortress,textures\but_fortress.sst,,0,0,15,-1
+1181,fortress,Fortress,textures\but_fortress.sst,,0,0,15,-1
+1182,prophet_ren,Prophet - Ren,textures\but_prophet_06T.sst,,0,0,2,r_key
+1183,sharpshooter_imperial,Sharpshooter - Imperial,textures\but_sharpshooter_08T.sst,,0,0,5,-1
+1184,sharpshooter_atomic,Sharpshooter - Atomic,textures\but_sharpshooter_10T.sst,,0,0,5,-1
+1185,sharpshooter_upgrade,Sharpshooter Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+1186,prophet_stone,Prophet - Stone,textures\but_prophet_02T.sst,,0,0,2,r_key
+1188,zmech_lab,zMech Lab,textures\but_mech laboratory.sst,,0,0,24,-1
+1189,mech_hyperion_ii,Mech Hyperion II,textures\but_hyperion_14T.sst,,0,0,1,-1
+1190,mech_ares_ii,Mech Ares II,textures\but_aries_14T.sst,,0,0,2,-1
+1191,mech_cyclops_ii,Mech Cyclops II,textures\but_cyclops_14T.sst,,0,0,3,-1
+1192,mech_minotaur_ii,Mech Minotaur II,textures\but_minotaur_14T.sst,,0,0,4,-1
+1193,mech_zeus_ii_prototype,Mech Zeus II (prototype),textures\but_zues_14T.sst,,0,0,5,-1
+1194,comparative_anatomy,Comparative Anatomy,textures\but_comparitive anatomy_05.sst,,0,0,0,-1
+1195,remote_site_surgery,Remote Site Surgery,textures\zut_smileyface_00T,,0,0,1,-1
+1196,cruiser_10_upgrade,Cruiser 10 Upgrade,textures\but_upgrade unit.sst,,0,0,24,-1
+1197,cruiser_08,Cruiser 08,textures\but_gunboat cruiser_08.sst,,0,0,8,-1
+1198,balloon_upgrade,Balloon Upgrade,textures\but_upgrade unit.sst,,0,0,27,-1
+1199,oxygen_furnace_tech,Oxygen Furnace Tech,textures\but_basic oxygen furnace_11.sst,,0,0,8,-1
+1200,self_sufficiency_movement_tech,Self Sufficiency Movement Tech,textures\but_self sufficiency movement_14.sst,,0,0,5,-1
+1201,core_mining,Core Mining,textures\but_core mining_14.sst,,0,0,8,-1
+1202,alexander_upgrade,Alexander Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1203,hannibal_upgrade,Hannibal Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1204,charlemagne_upgrade,Charlemagne Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1205,julius_caesar_upgrade,Julius Caesar Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1206,william_upgrade,William Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1207,richard_upgrade,Richard Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1208,isabella_upgrade,Isabella Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1209,henry_upgrade,Henry Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1210,elizabeth_upgrade,Elizabeth Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1211,oliver_cromwell_upgrade,Oliver Cromwell Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1212,bismarck_upgrade,Bismarck Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1213,napoleon_upgrade,Napoleon Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1214,ww1_hero_1_upgrade,WW1 Hero 1 Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1215,ww1_hero_2_upgrade,WW1 Hero 2 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1216,info_hero_1_upgrade,Info Hero 1 Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1217,info_hero_2_upgrade,Info Hero 2 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1218,nano_hero_1_upgrade,Nano Hero 1 Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1219,nano_hero_2_upgrade,Nano Hero 2 Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1220,ren_fishing_boat,Ren. Fishing Boat,textures\but_fishing boat_08.sst,,0,0,1,-1
+1221,dig_fishing_boat,Dig. Fishing Boat,textures\but_fishing boat_13.sst,,0,0,1,-1
+1222,fishing_boat_07_upgrade,Fishing Boat 07 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+1223,fishing_boat_13_upgrade,Fishing Boat 13 Upgrade,textures\but_upgrade unit.sst,,0,0,17,-1
+1224,viking,Viking,textures\but_housecarl_09T.sst,,0,0,4,-1
+1225,barbarian,Barbarian,textures\but_barbarian_05T.sst,,0,0,5,-1
+1226,partisan,Partisan,textures\but_partisan_08T.sst,,0,0,2,-1
+1227,mech_amphib_temp,Mech Amphib (TEMP),textures\zut_smileyface_00T,,0,0,10,-1
+1228,mech_frogger_temp,Mech Frogger (TEMP),textures\zut_smileyface_00T,,0,0,9,-1
+1229,mech_hover_temp,Mech Hover (TEMP),textures\zut_smileyface_00T,,0,0,2,-1
+1230,mech_magneto_temp,Mech Magneto (TEMP),textures\zut_smileyface_00T,,0,0,8,-1
+1231,mech_moose_temp,Mech Moose (TEMP),textures\zut_smileyface_00T,,0,0,6,-1
+1232,mech_orbit_temp,Mech Orbit (TEMP),textures\zut_smileyface_00T,,0,0,11,-1
+1233,mech_probe_temp,Mech Probe (TEMP),textures\zut_smileyface_00T,,0,0,4,-1
+1234,mech_raptor_temp,Mech Raptor (TEMP),textures\zut_smileyface_00T,,0,0,3,-1
+1235,mech_shock_temp,Mech Shock (TEMP),textures\zut_smileyface_00T,,0,0,6,-1
+1236,mech_spidey_temp,Mech Spidey (TEMP),textures\zut_smileyface_00T,,0,0,7,-1
+1237,mech_tiny_temp,Mech Tiny (TEMP),textures\zut_smileyface_00T,,0,0,1,-1
+1238,pulse_cannon_temp,Pulse Cannon (TEMP),textures\zut_smileyface_00T,,0,0,2,-1
+1239,axeman,Axeman,textures\zut_smileyface_00T,,0,0,1,-1
+1240,longbow_green,Longbow Green,textures\zut_smileyface_00T,,0,0,1,-1
+1241,avenger,Avenger,textures\but_f66_13T.sst,,0,0,2,-1
+1242,avenger_upgrade,Avenger Upgrade,textures\but_upgrade unit.sst,,0,0,18,-1
+1246,pegasus_heli_trans_upgrade,Pegasus Heli Trans Upgrade,textures\but_upgrade unit.sst,,0,0,26,-1
+1247,battle_cry_richard,Battle Cry - Richard,textures\but_battlecry.sst,,0,0,3,c_key
+1248,battle_cry_gilga,Battle Cry - Gilga,textures\but_battlecry.sst,,0,0,3,c_key
+1249,battle_cry_alexander,Battle Cry - Alexander,textures\but_battlecry.sst,,0,0,3,c_key
+1250,battle_cry_caesar,Battle Cry - Caesar,textures\but_battlecry.sst,,0,0,3,c_key
+1251,battle_cry_henry,Battle Cry - Henry,textures\but_battlecry.sst,,0,0,3,c_key
+1252,battle_cry_bismarck,Battle Cry - Bismarck,textures\but_battlecry.sst,,0,0,3,c_key
+1253,battle_cry_pershing,Battle Cry - Pershing,textures\but_battlecry.sst,,0,0,3,c_key
+1254,battle_cry_dig_2,Battle Cry - Dig. 2,textures\but_battlecry.sst,,0,0,3,c_key
+1255,battle_cry_nano_1,Battle Cry - Nano 1,textures\but_battlecry.sst,,0,0,3,c_key
+1256,hero_pershing,Hero Pershing,textures\but_pershing_10T.sst,,0,0,3,-1
+1257,ww1_hero_2,WW1 Hero 2,textures\but_manfredvonrichtofen_10T.sst,,0,0,4,-1
+1258,ww3_hero_bresden,WW3 Hero - Bresden,textures\but_bresden_13T.sst,,0,0,3,-1
+1259,ww3_mcarthur,WW3 McArthur,textures\but_macarthur_10T.sst,,0,0,4,-1
+1260,rommel_upgrade,Rommel Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1261,patton_upgrade,Patton Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1262,ww3_hero_bresden_upgrade,WW3 Hero - Bresden  Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1263,ww3_mcarthur_upgrade,WW3 McArthur Upgrade,textures\but_upgrade unit.sst,,0,0,20,-1
+1264,log_guy,Log Guy,textures\but_logguy_03T.sst,,0,0,4,-1
+1265,xsp_black_robe_officer,xSP Black Robe Officer,textures\but_blackrobeofficer_13T.sst,,0,0,3,-1
+1266,xsp_spy,xSP Spy,textures\zut_smileyface_00T,,0,0,1,-1
+1277,xsp_companion_cavalry,xSP Companion Cavalry,textures\but_companioncav_04T.sst,,0,0,33,-1
+1278,a_10_upgrade,A-10 Upgrade,textures\but_upgrade unit.sst,,0,0,24,-1
+1279,battlecry_eliz,BattleCry - Eliz,textures\but_battlecry.sst,,0,0,3,c_key
+1280,skywatcher_aa_tank,Skywatcher AA Tank,textures\but_skywatcher_13T.sst,,0,0,3,-1
+1281,aatank_13_upgrade,AATank 13 Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1282,battle_cry_black_robe,Battle Cry - Black Robe,textures\but_battlecry.sst,,0,0,3,c_key
+1283,sp_lighthouse,SP Lighthouse,textures\but_modernlighthouse.sst,,0,0,36,-1
+1284,sp_radar_wonder,SP Radar Wonder,textures\but_radardish.sst,,0,0,37,-1
+1285,battlecry_pericles,Battlecry - Pericles,textures\but_battlecry.sst,,0,0,3,c_key
+1286,battlecry_hector,Battlecry - Hector,textures\but_battlecry.sst,,0,0,3,c_key
+1287,battlecry_black_prince,Battlecry - Black Prince,textures\but_battlecry.sst,,0,0,3,c_key
+1288,x_horseless_william,x Horseless William,textures\but_shortsword_04T.sst,,0,0,40,-1
+1289,flowers,Flowers,textures\zut_smileyface_00T,,0,0,46,-1
+1290,frigate_copper_upgrade,Frigate - Copper Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+1291,frigate_middle_upgrade,Frigate - Middle Upgrade,textures\but_upgrade unit.sst,,0,0,21,-1
+1292,galley_fire_08_upgrade,Galley - Fire 08 Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+1293,galley_fire_09_upgrade,Galley - Fire 09 Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+1294,battlecry_richthofen,BattleCry - Richthofen,textures\but_battlecry.sst,,0,0,3,c_key
+1295,battlecry_patton,BattleCry - Patton,textures\but_battlecry.sst,,0,0,3,c_key
+1296,battlecry_macarthur,BattleCry - MacArthur,textures\but_battlecry.sst,,0,0,3,-1
+1297,battlecry_molotov,BattleCry - Molotov,textures\but_battlecry.sst,,0,0,3,-1
+1298,battlecry_cyborg_molotov,BattleCry - Cyborg Molotov,textures\but_battlecry.sst,,0,0,3,-1
+1299,battlecry_gilgamesh,BattleCry - Gilgamesh,textures\but_battlecry.sst,,0,0,3,-1
+1300,battlecry_hannibal,BattleCry - Hannibal,textures\but_battlecry.sst,,0,0,3,-1
+1301,battlecry_caesar,BattleCry - Caesar,textures\but_battlecry.sst,,0,0,3,-1
+1302,battlecry_richard,BattleCry - Richard,textures\but_battlecry.sst,,0,0,3,-1
+1303,battlecry_henry,BattleCry - Henry,textures\but_battlecry.sst,,0,0,3,-1
+1304,battlecry_cromwell,BattleCry - Cromwell,textures\but_battlecry.sst,,0,0,3,-1
+1305,battlecry_napoleon,BattleCry - Napoleon,textures\but_battlecry.sst,,0,0,3,-1
+1306,medic_atomic_upgrade,Medic Atomic Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+1307,medic_digital_upgrade,Medic Digital Upgrade,textures\but_upgrade unit.sst,,0,0,22,-1
+1308,computer_panel,Computer Panel,textures\but_computer.sst,,0,0,0,-1
+1310,bundeswehr,Bundeswehr,textures\but_bundeswer_10T,,0,0,17,-1
+1311,flaming_arrows,Flaming Arrows,textures\but_flamingarrow_04t,,0,0,3,-1
+1312,space_age_epoch,Space Age - Epoch,textures\but_epoch_15T,,0,0,17,e_key
+1313,space_dock,Space Dock,textures\but_spacedock_15t,,0,0,6,d_key
+1314,capital_ship,Capital Ship,textures\but_spaceship_capitol_15t,,0,0,2,z_key
+1316,xsp_roman_legionnaire,xSP Roman Legionnaire,textures\but_roman_legionnaire_05t,,0,0,34,-1
+1317,xsp_pilum_attack,xSP Pilum Attack,textures\but_pilumattack_10,,0,0,6,-1
+1318,mining_unit,Mining Unit,textures\but_mining_15T,,0,0,4,m_key
+1319,spy_satellite,Spy Satellite,textures\but_satellite_15t,,0,0,5,-1
+1320,catalina,Catalina,textures\but_catalina_11t,,0,0,5,-1
+1321,wall_palisades,Wall - Palisades,textures\but_palisades_04t,,0,0,21,semicolon_key
+1322,paratrooper_plane,Paratrooper Plane,textures\but_paratrooper_plane_11t,,0,0,44,-1
+1323,scorpion,Scorpion,textures\but_stonethrower_04T.sst,,0,0,21,-1
+1324,transport_lst_nav,Transport LST(nav),textures\but_lst_11t,,0,0,9,-1
+1325,anti_missile_battery,Anti Missile Battery,textures\but_amb_15t,,0,0,10,-1
+1326,cyber_ninja,Cyber Ninja,textures\but_cyberninja_15t,,0,0,9,-1
+1327,priest_tower,Priest Tower,textures\but_priesttower,,0,0,45,forward_slash
+1328,radio_man,Radio Man,textures\but_radioman_15t,,0,0,24,-1
+1329,missile_base_cp,Missile Base (CP),textures\but_missilebase_14t,,0,0,47,backslash
+1330,icbm_cp,ICBM (CP),textures\BUT_ICBM_15T,,0,0,1,-1
+1331,space_carrier,Space Carrier,textures\but_spaceship_carrier_15t,,0,0,3,-1
+1332,space_transport,Space Transport,textures\but_spaceship_transport_15t,,0,0,4,-1
+1333,space_corvette,Space Corvette,textures\but_spaceship_corvette_15t,,0,0,5,-1
+1335,ess_mind_control,ESS Mind Control,textures\but_mindcontrol,,0,0,5,c_key
+1336,riot_police,Riot Police,textures\but_riotpolice_15t,,0,0,36,-1
+1337,ess_upgrade,ESS Upgrade,textures\but_mindcontrol,,0,0,36,-1
+1338,space_fighter,Space Fighter,textures\but_fighter_15t,,0,0,3,-1
+1339,space_turret,Space Turret,textures\but_turret_15t,,0,0,22,v_key
+1340,conscription,Conscription,textures\but_conscription_10t,,0,0,16,d_key
+1341,xsp_senator,xSP Senator,textures\but_senator,,0,0,12,-1
+1342,sas_explosive_expert,SAS Explosive Expert,textures\but_sasexplosives_11t,,0,0,11,-1
+1343,logic_bomb,Logic Bomb,textures\but_logicbomb_15t,,0,0,16,-1
+1344,sas_explosive_bomb,SAS Explosive Bomb,textures\but_sasplant_11t,,0,0,3,-1
+1345,capital_ship_weapon,Capital Ship Weapon,textures\but_DBOD,,0,0,3,-1
+1346,cloak_area,Cloak Area,textures\but_cloak,,0,0,12,-1
+1347,dauntless_dive_bomber,Dauntless Dive Bomber,textures\but_dauntless_13t,,0,0,17,-1
+1348,mitsubishi_zero_carrier,Mitsubishi Zero (Carrier),textures\but_zero_13,,0,0,34,-1
+1349,mistubishi_zero,Mistubishi Zero,textures\but_zero_13,,0,0,34,-1
+1350,dune_patrol,Dune Patrol,textures\but_marsbug_15t,,0,0,20,-1
+1351,faith_healing,Faith Healing,textures\but_faithhealing_10t,,0,0,6,-1
+1352,quantum_theology,Quantum Theology,textures\but_quantumtheology_15t,,0,0,3,-1
+1353,zero_g_engineer,Zero-G Engineer,textures\but_zeroengineering_15t,,0,0,7,-1
+1354,damage_control,Damage Control,textures\but_damagecontrol,,0,0,7,-1
+1355,japanese_flattop,Japanese Flattop,textures\but_flattop,,0,0,19,-1
+1356,teleporter,Teleporter,textures\but_timemachine.sst,,0,0,25,-1
+1357,tower_palisades,Tower - Palisades,textures\but_palisadestower_04t,,0,0,19,single_quote
+1358,watchman,Watchman,textures\but_sentinelmech_15t,,0,0,1,-1
+1359,wonder_orbital_space_station,Wonder-Orbital Space Station,textures\but_orbital_15t,,0,0,28,-1
+1360,standard_bearer,Standard Bearer,textures\but_standard_bearer,,0,0,35,-1
+1361,market,Market,textures\but_marketplace,,0,0,46,-1
+1362,robotic_farm_upgrade,Robotic Farm Upgrade,textures\but_farm_15t,,0,0,1,-1
+1363,conquistador_spell_reveal,Conquistador Spell - Reveal,textures\but_conquistador,,0,0,3,c_key
+1500,buy_food,Buy Food,textures\but_buyfood,,0,0,16,q_key
+1501,buy_wood,Buy Wood,textures\but_buywood,,0,0,17,w_key
+1502,buy_stone,Buy Stone,textures\but_buystone,,0,0,18,e_key
+1503,buy_iron,Buy Iron,textures\but_buyiron,,0,0,19,r_key
+1504,sell_food,Sell Food,textures\but_sellfood,,0,0,0,a_key
+1505,sell_wood,Sell Wood,textures\but_sellwood,,0,0,1,s_key
+1506,sell_stone,Sell Stone,textures\but_sellstone,,0,0,2,d_key
+1507,sell_iron,Sell Iron,textures\but_selliron,,0,0,3,f_key
+1508,wall_bamboo,Wall - Bamboo,textures\but_palisades_04t,,0,0,36,-1
+1509,tower_bamboo,Tower - Bamboo,textures\but_palisadestower_04t,,0,0,37,-1
+1510,meteor_storm,Meteor Storm,textures\but_meteor_storm,,0,0,10,a_key
+1511,ambient_crate,Ambient - Crate,textures\but_crates,,0,0,0,-1
+1512,ambient_obelisk,Ambient - Obelisk,textures\button_obelisk,,0,0,0,-1
+1513,ambient_pyramid,Ambient - Pyramid,textures\but_pyramid,,0,0,0,-1
+1514,ambient_sandbag,Ambient - Sandbag,textures\but_sandbags,,0,0,0,-1
+1515,ambient_ruined_temple,Ambient - Ruined Temple,textures\but_ruined_temple,,0,0,0,-1
+1516,ambient_ruined_mech_factory,Ambient - Ruined Mech Factory,textures\but_ruined_mech,,0,0,0,-1
+1517,ambient_ruined_tank_factory,Ambient - Ruined Tank Factory,textures\but_ruined_tank,,0,0,0,-1
+1518,ambient_ruined_house,Ambient - Ruined House,textures\but_ruined_house,,0,0,0,-1
+1519,roman_centurion,Roman Centurion,textures\but_CENTURION_04t,,0,0,30,-1
+1520,planetary_fighter,Planetary Fighter,textures\but_planetaryfighter_15,,0,0,14,-1
+1521,planetary_fighter_upgrade,Planetary Fighter Upgrade,textures\but_upgrade unit.sst,,0,0,19,-1
+1522,hero_khan_sun_do,Hero Khan Sun Do,textures\but_khansundo_15T,,0,0,3,-1
+1523,hero_hu_kwan_do,Hero Hu Kwan Do,textures\but_hukwando_15T,,0,0,4,-1
+1524,battlecry_kwan_sun_do,Battlecry - Kwan Sun Do,textures\but_battlecry.sst,,0,0,3,-1
+1525,space_hero_upgrade_khan,Space Hero Upgrade Khan,textures\but_upgrade unit.sst,,0,0,19,-1
+1526,space_hero_upgrade_hu,Space Hero Upgrade Hu,textures\but_upgrade unit.sst,,0,0,20,-1
+1527,transport_lst_ruined,Transport LST - Ruined,textures\but_lst_11t,,0,0,0,-1
+1528,mistubishi_zero_ruined,Mistubishi Zero - Ruined,textures\but_zero_ruin,,0,0,0,-1
+1529,mech_zeus_ruined,Mech Zeus - Ruined,textures\but_ruined_mech,,0,0,0,-1
+1530,m1_tank_ruined,M1 Tank - Ruined,textures\but_m1_10T.sst,,0,0,0,-1
+1531,cargo_truck_ruined,Cargo Truck - Ruined,textures\but_cargotruck_10T.sst,,0,0,0,-1
+1532,field_medic_wwii,Field Medic - WWII,textures\but_male_medic,,0,0,6,c_key
+1533,citizen_nano,Citizen - Nano,textures\but_citizen_15t,,0,0,1,c_key
+1534,female_citizen_nano,Female Citizen - Nano,textures\but_citizen_15t,,0,0,-1,-1
+1535,xsp_sulla,xSP Sulla,textures\but_sulla,,0,0,0,-1
+1536,xsp_titus,xSP Titus,textures\but_titus,,0,0,0,-1
+1537,xsp_marius,xSP Marius,textures\but_marius,,0,0,0,-1
+1538,ambients_carbon,Ambients - Carbon,textures\button_carbon,,0,0,0,-1
+1539,iwo_jima_hilltop,Iwo Jima Hilltop,textures\but_iwo_jima,,0,0,0,-1
+1540,statue_iwo_jima,Statue - Iwo Jima,textures\but_iwo_jima_statue,,0,0,0,-1
+1541,celtic_warrior,Celtic Warrior,textures\but_celtic_05t,,0,0,0,-1
+1542,call_for_paratroopers,Call For Paratroopers,textures\act_paratroopdrop_11T,,0,0,3,a_key
+1543,gallic_warrior,Gallic Warrior,textures\but_gallic,,0,0,0,-1
+1544,egyptian_warrior,Egyptian Warrior,textures\but_egyptian,,0,0,0,-1
+1545,oil_drum,Oil Drum,textures\button_barrel,,0,0,0,-1
+1546,hydroponics_lab,Hydroponics Lab,textures\but_hydro_lab,,0,0,0,-1
+1547,bulldog_ramsey,Bulldog Ramsey,textures\but_rommel_10T.sst,,0,0,4,-1
+1548,rice_paddy,Rice Paddy,textures\but_wild_rice,,0,0,0,-1

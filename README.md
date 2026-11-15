@@ -57,18 +57,29 @@ python -I tools/clang_build.py      # compile only, with a ranked error census (
 The game reads its data as one loose `Data` folder in its own directory: the contents of both retail `data.ssa`
 archives (*Art of Conquest* and the original *Empire Earth*) and the original game's loose data, merged in the game's
 search order, with the db tables as text (CSV/YAML), the models as glTF and the textures as PNG. Neither a `data.ssa`
-nor an installation of the original game is needed. `tools/open_data.py` makes that tree from the two installs (only
-read) and packs it as a bundle (it is derived from the retail game):
+nor an installation of the original game is needed.
+
+Two folders of that `Data` are in git: `data/db` is the game's `Data/db` (the db tables as text and the rules
+documents, what a mod tweaks) and `data/ai` is `Data/ai` (the computer players' Lua scripts and their manifest).
+`tools/open_data.py` makes the rest of the tree (the media) from the two installs (only read), copies `data/db` and
+`data/ai` into it, and packs it as a bundle (it is derived from the retail game):
 
 ```
 python -I tools/open_data.py build build/open_data/tree       # the tree (about 4 minutes; --binary: unconverted)
+python -I tools/open_data.py sync build/open_data/tree        # Data/db and Data/ai from data/db and data/ai (seconds)
+python -I tools/open_data.py db-regen                         # data/db converted again from retail (tools/eedata)
 python -I tools/open_data.py pack build/ee-aoc-data.zip       # the bundle: the tree, fonts/, README.txt
 ```
 
-The private releases ship it in three parts that unzip into one folder: the media (`pack --part media`: models, the
-original textures, sounds, music, fonts), the 4x textures (`Data/Textures-4x`, tools/upscale) and the db
-(`pack --part db`: the tables and the rules documents, the part that changes most). `python -I tools/fetch_data.py`
-pulls the newest of each into `data/` and skips the ones already current.
+`python -I tools/eedata/eedata.py check` compares `data/db` with a fresh conversion of retail and lists every
+difference. The media are too large for git: GitHub Releases hold them, in two parts, the media (`pack --part
+media`: models, the original textures, sounds, music, fonts) and the 4x textures (`Data/Textures-4x`,
+tools/upscale). `python -I tools/fetch_data.py` (a home-made git LFS) unpacks the newest of each straight into
+`data/`, beside `data/db` and `data/ai`, which it never touches; `data/.fetched.json` records each part's release
+and files, so a part already current is skipped and a newer one replaces only its own files. It also makes
+`build/data-root`, a data root whose `Data` is a link to `data/` (a junction on Windows), with the bundle's `Users`
+and `.cfg` files: run the game with `EE_DATA_ROOT=build/data-root`, and its logs and settings land there, not in
+the repository. The `v*` release packages carry `Data/db` and `Data/ai`; there is no db release.
 
 To play, prepare a directory with the exe, that data and the movies converted for the build's player (`--movies DIR`
 points at `.bik` files, e.g. an extracted retail disc; ffmpeg):
@@ -139,7 +150,7 @@ turns it off). It holds every player's state every 30 game seconds, human and co
 what they do, army, buildings, towers, stock, income and losses, with who caused them. Epoch times and the computer
 players' decision trace are in the same file, and every chat line with its game time: type notes
 in the chat while playing. `python -I tools/game_log.py [LOG]` summarises the newest one (under
-`data/` by default; `--data ROOT` for another data root, `--every MIN` for the timeline step). The log only reads the
+`build/data-root` by default; `--data ROOT` for another data root, `--every MIN` for the timeline step). The log only reads the
 game: a game plays the same with it on or off.
 
 `tools/harness/` is a headless live-game harness (ported from the reconstruction project): it stages a test build
@@ -191,19 +202,20 @@ adapter: Mesa's lavapipe (`mesa-vulkan-drivers`). The sim tools find it by defau
 ```
 sudo apt-get install -y git gh && gh auth login            # access to the private repository and its releases
 gh repo clone Protryon/empire_earth_next && cd empire_earth_next
-bash tools/setup_linux_bench.sh                            # packages, ports, build, data/ (release parts), smoke game
-python3 -I tools/sim_bench.py --name base --data open --ai-scripts ai --seeds 2-65 --jobs $(nproc)
+bash tools/setup_linux_bench.sh                            # packages, ports, build, media into data/, smoke game
+python3 -I tools/sim_bench.py --name base --data open --ai-scripts data/ai --seeds 2-65 --jobs $(nproc)
 python3 -I tools/ai_scorecard.py build/sim/bench/base
 ```
 
-`--data open` takes `build/open_data/tree` when there is one, else `data/` (tools/fetch_data.py, without the 4x
-textures). After a pull: `python3 -I tools/xbuild.py sim --incremental` (a header change: a full build), and
-`tools/fetch_data.py data --without textures-4x` when a db release changed. A crash prints `EE-SIM FAULT signal ...`
+`--data open` takes `build/open_data/tree` when there is one, else `build/data-root` (tools/fetch_data.py, without
+the 4x textures: `data/` with the media). Every run's stage gets this checkout's `data/db` and `data/ai`, so a pull needs no new data unless a
+media release changed (then `tools/fetch_data.py --without textures-4x`); after a pull:
+`python3 -I tools/xbuild.py sim --incremental` (a header change: a full build). A crash prints `EE-SIM FAULT signal ...`
 frames as `ee-sim(+0xOFFSET)` in the run's err.txt: `addr2line -f -C -e build/xbuild/linux-x86_64/game/ee-sim
 0xOFFSET`. The cross-platform check (the same seeds on Windows and Linux, the same data release and scripts):
 
 ```
-python -I tools/sim_bench.py --name xplat --data DATA --ai-scripts ai --seeds 2-9 --difficulty Medium   # each machine
+python -I tools/sim_bench.py --name xplat --data DATA --ai-scripts data/ai --seeds 2-9 --difficulty Medium   # each machine
 python -I tools/sim_compare.py WINDOWS_BENCH LINUX_BENCH     # build/sim/bench/xplat of each; exit 0: identical
 ```
 
@@ -217,7 +229,7 @@ The `upstream` remote is the `empire_earth` reconstruction. Its `fixes-all` bran
 No license is granted. Empire Earth is the property of its rights holders. The third-party libraries under
 `src/ThirdParty/` keep their own licenses.
 
-The "Age of AI" computer player (`ai/ageofai/`) is a Lua port of Grille's
+The "Age of AI" computer player (`data/ai/ageofai/`) is a Lua port of Grille's
 [Empire Earth: Age of AI](https://github.com/Grille/Empire-Earth-Age-of-AI) (GPL-3.0, Copyright Grille and the Age
-of AI contributors), ported with the author's permission; those files are GPL-3.0 (`ai/ageofai/LICENSE`), and
-`ai/ageofai/UPSTREAM` names the upstream commit they follow.
+of AI contributors), ported with the author's permission; those files are GPL-3.0 (`data/ai/ageofai/LICENSE`), and
+`data/ai/ageofai/UPSTREAM` names the upstream commit they follow.

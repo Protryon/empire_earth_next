@@ -1,0 +1,40 @@
+#eedata dbcalamity
+#format 3
+#rows 36
+row,id,label,mFloatParam1,mFloatParam2,mQuakeMinimumStrength,mQuakeStrength,mRange,mID,mClassEnum,mLifeTime,mGraphicEffectID1,mGraphicEffectID2,mGraphicEffectID3,mGraphicEffectID4,mUnitClassIndex,mIntParam1,mIntParam2,mIntParam3,mIntParam4,mIntParam5,mIntParam6,mBoolParam1,mIsCastByAllSelected,mIsBlockedByImmunity,mSoundID,mSecondarySoundID,mCost,mUnitSet,mNameID
+0,undefined,Undefined,1.0,2.0,0.0,0.0,6.0,,0,1,none,none,none,none,0,1,1,0,0,0,0,0,0,0,-1,-1,20,all_buildings,0
+1,global_warming,Global Warming,1.0,2.0,0.0,0.0,6.0,,1,60000,none,none,none,none,0,1,1,0,0,0,0,0,0,1,-1,-1,20,all_buildings,0
+2,iceage,IceAge,1.0,2.0,0.0,0.0,6.0,,2,60000,none,none,none,none,0,1,1,0,0,0,0,0,0,1,-1,-1,20,all_buildings,0
+3,earthquake,Earthquake,0.0,0.2,0.05,0.3,0.0,,3,60000,earthquake_vortex,earthquake_initial,none,none,0,5,30,7,20,700,6,0,0,1,earthquake,-1,50,all_buildings,9185
+4,hurricane,Hurricane,5.0,2.0,0.0,0.0,0.0,,4,80000,none,hurricane_unit,hurricane_lightning_unit,none,hurricane,100,1000,300,3,7,5,1,0,1,hurricane,-1,100,calamity_hurricane,9184
+5,slave_revolt,Slave Revolt,1.0,2.0,0.0,0.0,6.0,,5,5000,none,none,none,none,0,1,1,0,0,0,0,0,0,1,-1,-1,20,all_buildings,0
+6,rebellion,Rebellion,1.0,2.0,0.0,0.0,6.0,,6,5000,none,none,none,none,0,1,1,0,0,0,0,0,0,1,-1,-1,20,all_buildings,0
+7,plague,Plague,0.9,0.1,0.0,0.0,0.0,,7,300000,plague_small_unit,none,none,none,0,6,3000,0,0,0,0,0,0,1,rats,-1,100,calamity_plague_1,9181
+8,leprosy,Leprosy,1.0,2.0,0.0,0.0,0.0,,8,7000,attacking_flies,none,none,none,0,2,250,2000,0,0,0,0,0,1,flies,-1,100,calamity_pestilence,9158
+9,volcano,Volcano,1.0,1.0,0.0,0.0,0.0,,9,12000,volcano_effect,smoke_generator_volcano,lava_glow,lightning_unit,volcano,10,10,300,2,9,0,0,0,1,volcano_rumble,-1,60,all_buildings,9183
+10,fire,Fire,4.3,0.1,0.0,0.0,0.0,,10,70000,lightning_unit,calamity_fire_damage,none,none,0,1,50,65,4000,0,0,0,0,1,-1,-1,75,calamity_fire,9157
+11,asteroid,Asteroid,1.0,2.0,0.0,0.0,6.0,,11,8100,none,none,none,none,0,1,1,0,0,0,0,0,0,1,-1,-1,20,all_buildings,0
+12,flood,Flood,1.0,2.0,0.0,0.0,6.0,,12,60000,none,none,none,none,0,1,1,0,0,0,0,0,0,1,-1,-1,20,all_buildings,0
+13,shield_battery,Shield Battery,0.0,0.0,0.0,0.0,6.0,,13,45000,calamity_shield_battery_shot,none,none,none,0,2000,0,0,0,0,0,1,0,0,shield_battery,-1,50,calamity_positive_morale,9528
+14,ion_pulse_cannon,Ion Pulse Cannon,0.0,0.0,0.0,0.0,8.0,,17,90000,calamity_pulse_cannon_shot,calamity_pulse_cannon_area_effect,none,none,0,1,0,0,0,0,0,1,0,0,pulse_cannon,-1,100,calamity_negative_morale,9529
+15,time_warp,Time Warp,0.0,0.0,0.0,0.0,8.0,,14,90000,calamity_time_warp_shot,calamity_time_warp_out_vortex,calamity_time_warp_in_vortex,calamity_time_warp_twinkle,0,5,10000,0,0,0,0,0,0,0,teleport,teleport,35,calamity_timewarp,9530
+16,teleport,Teleport,0.5,0.0,0.0,0.0,10000.0,,15,14000,calamity_teleport_out,calamity_teleport_in,none,none,0,5,2000,0,0,0,0,0,0,0,teleport,teleport,25,all_buildings,9531
+17,resonator,Resonator,1.0,2.0,0.0,0.0,8.0,,16,2000,calamity_inferno_beam,calamity_inferno_unit_beam,calamity_inferno_unit_effect,none,0,1,7,700,0,0,0,0,0,0,resonator,-1,75,calamity_overthruster,9532
+18,anti_matter_storm,Anti Matter Storm,5.0,2.0,0.0,0.0,6.0,,4,80000,anti_matter_storm_attack,anti_matter_storm_unit,anti_matter_storm_attack,none,anti_matter_storm,100,1000,300,3,7,5,0,0,0,anti_matter_storm,-1,100,calamity_anti_matter_storm,9533
+19,mech_virus,Mech Virus,1.25,0.1,0.0,0.0,8.0,,7,90000,calamity_nano_virus_attack_effect,none,none,none,0,60,3000,0,0,0,0,0,0,0,sci_fi4,-1,80,calamity_computer_virus,9534
+20,battlecry_7,Battlecry! 7,0.0,0.0,0.0,0.0,7.0,,17,90000,none,none,none,none,0,1,0,0,0,0,0,0,0,0,battlecry,-1,75,calamity_negative_morale,9554
+21,battlecry_8,Battlecry! 8,0.0,0.0,0.0,0.0,8.0,,17,90000,none,none,none,none,0,1,0,0,0,0,0,0,0,0,battlecry,-1,75,calamity_negative_morale,9555
+22,battlecry_9,Battlecry! 9,0.0,0.0,0.0,0.0,9.0,,17,90000,none,none,none,none,0,1,0,0,0,0,0,0,0,0,battlecry,-1,75,calamity_negative_morale,9556
+23,flaming_arrows,Flaming Arrows,4.3,0.05,0.0,0.0,4.0,,18,70000,lightning_unit,calamity_fire_damage,none,none,0,1,5,10,4000,0,0,0,0,0,archerattack,-1,50,calamity_fire,32818
+24,fa_fire,FA Fire,4.3,0.05,0.0,0.0,0.0,,10,35000,none,calamity_fire_damage,none,none,0,0,10,30,2000,0,0,0,0,0,-1,-1,0,calamity_fire,9157
+25,pilum_attack,Pilum Attack,0.0,0.0,0.0,0.0,6.0,,18,0,none,none,none,none,0,0,0,0,0,0,0,0,0,0,archerattack,-1,50,calamity_pestilence,5505
+26,mind_control,Mind Control,0.0,0.0,0.0,0.0,7.0,,19,90000,calamity_time_warp_shot,smoke_particle_small_explosion,battlecry_emitter,none,0,1,0,0,0,0,0,0,0,0,ees_mind_control,-1,75,medic_healing_1,5507
+27,conscription,Conscription,0.0,0.0,0.0,0.0,7.0,,20,0,none,none,none,none,0,0,0,0,0,0,0,0,0,0,-1,-1,0,citizens_1,5510
+28,logic_bomb,Logic Bomb,0.0,0.0,0.0,0.0,7.0,,21,150000,calamity_time_warp_shot,explosion_area_effect_intermediate,logic_bomb_building_freezup,none,0,0,0,0,0,0,0,0,0,0,logic_bomb,-1,75,all_buildings,0
+29,planted_explosives,Planted Explosives,0.0,0.0,0.0,0.0,0.0,,22,1500,none,none,none,none,bomb_for_sas_explosive_expert,0,0,0,0,0,0,0,1,0,-1,-1,50,all_buildings,5208
+30,capital_ship_special,Capital Ship Special,0.0,0.0,0.0,0.0,8.0,,18,0,none,none,none,none,0,0,0,0,0,0,0,0,0,0,ostrich_death,-1,75,all_units_but_resources,0
+31,cloaking,Cloaking,0.0,0.0,0.0,0.0,8.0,,23,45000,cloaking_capitol_effect,none,none,none,0,0,0,0,0,0,0,0,0,0,cloaking_capitol,-1,75,all_units,0
+32,meteor_storm,Meteor Storm,6.0,0.0,0.0,0.0,0.0,,24,30000,none,none,none,none,meteor,0,200,1200,0,0,0,0,0,1,meteor,-1,75,0,4128
+33,line_of_sight,Line of Sight,5.0,0.0,0.0,0.0,3.0,,25,30000,none,none,none,none,0,0,0,0,0,0,0,0,0,0,-1,-1,50,0,0
+34,battlecry_centurion,Battlecry - Centurion,0.0,0.0,0.0,0.0,5.0,,17,60000,none,none,none,none,0,1,0,0,0,0,0,0,0,0,battlecry,-1,100,calamity_negative_morale,4186
+35,special_location,Special Location,0.0,0.0,0.0,0.0,8.0,,26,0,rally_flag_paratrooper,none,none,none,0,0,0,0,0,0,0,0,0,0,-1,-1,33,0,0

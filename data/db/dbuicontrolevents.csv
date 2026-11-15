@@ -1,0 +1,238 @@
+#eedata dbuicontrolevents
+#format 3
+#rows 252
+row,id,label,mEventID,mOwnerID,mEventType
+11,load_delete,Load Delete,11,loads_delete_button,1008
+12,save_delete,Save Delete,12,saves_delete_button,1008
+13,load_game,Load Game,13,load_button,1008
+14,save_game,Save Game,14,save_button,1008
+15,cancel_load,Cancel Load,15,loads_cancel_button,1008
+16,cancel_save,Cancel Save,16,saves_cancel_button,1008
+17,load_game_by_dbclick,Load Game By DbClick,17,load_file_list_box,1004
+18,save_game_by_enter,Save Game by Enter,18,save_as_game_edit_box,1009
+19,save_game_by_dblclick,Save Game By DblClick,19,save_file_list_box,1004
+20,save_game_change_focused_file,Save Game Change Focused File,20,save_file_list_box,1003
+22,srm_main_game_statistics,SRM Main Game Statistics,22,srm_not_used,1008
+23,srm_main_game_diplomacy,SRM Main Game Diplomacy,23,srmdiplomacy_alliances,1008
+24,srm_main_game_civ_builder,SRM Main Game Civ Builder,24,srmciv_selector_builder,1008
+25,srm_main_game_chat,SRM Main Game Chat,25,srmchat,1008
+26,srm_main_game_options,SRM Main Game Options,26,srmingame_options,1008
+27,srm_temp_box_load_unit,SRM Temp Box Load Unit,27,srmtemp_object_list,1003
+28,main_screen_option_single_player_button,Main Screen Option Single Player Button,28,single_player_button,1008
+30,main_screen_option_multi_player_button,Main Screen Option Multi Player Button,30,multiplayer_button,1008
+31,main_screen_option_exit_game,Main Screen Option Exit Game,31,exit_game_button,1008
+32,main_screen_learning_scenarios_button,Main Screen Learning Scenarios Button,32,game_settings_button,1008
+33,main_screen_test_button,Main Screen Test Button,33,test_form_button_credits_here,1008
+35,single_player_campaign,Single Player Campaign,35,sp_play_campaign_button,1008
+36,single_player_civ_campaign,Single Player Civ Campaign,36,sp_play_scenario_button,1008
+37,single_player_game_settings,Single Player Game Settings,37,sp_learning_scenarios_button,1008
+38,single_player_load_game,Single Player Load Game,38,sp_load_saved_game_button,1008
+39,single_player_main_menu,Single Player Main Menu,39,sp_main_menu_back_button,1008
+40,single_player_random_map,Single Player Random Map,40,sp_play_random_map_button,1008
+41,sp_load_load_game,SP_Load Load Game,41,sp_load_load_button,1008
+42,sp_load_load_game_by_dbclick,SP_Load Load Game By DbClick,42,sp_load_file_list_box,1004
+43,sp_load_cancel,SP_Load Cancel,43,sp_load_cancel_button,1008
+44,sp_load_delete,SP_Load Delete,44,sp_load_delete_button,1008
+45,game_settings_ok,Game Settings OK,45,gs_ok_button,1008
+46,game_settings_cancel,Game Settings Cancel,46,gs_cancel_button,1008
+47,game_settings_restore_default,Game Settings Restore Default,47,gs_restore_defaults_button,1008
+48,game_settings_video_tab,Game Settings Video Tab,48,gs_video_tab,1008
+49,game_settings_audio_tab,Game Settings Audio Tab,49,gs_audio_tab,1008
+50,game_settings_interface_tab,Game Settings Interface Tab,50,gs_interface_tab,1008
+51,cb_accept_change_name,CB Accept Change Name,51,cb_new_civ_ok_button,1008
+52,cb_save_game_name_selected,CB Save Game Name Selected,52,cb_save_civ_file_list_box,1003
+53,cb_accept_load_civilization,CB Accept Load Civilization,53,cb_load_civ_load_button,1008
+54,cb_save_civ_enter_pressed,CB Save Civ Enter Pressed,54,cb_save_civ_name_text_field,1009
+55,cb_purchased_upgrade_selected,CB Purchased upgrade selected,55,cb_purchased_bonuses_list_box,1010
+56,cb_potential_upgrade_selected,CB Potential upgrade selected,56,cb_available_bonuses_list_box,1010
+57,cb_upgrade_purchased,CB Upgrade purchased,57,cb_available_bonuses_list_box,1008
+58,cb_upgrade_returned,CB Upgrade returned,58,cb_purchased_bonuses_list_box,1008
+59,cb_update_controls,CB Update controls,59,cb_civ_name_main_title,0
+60,cb_accept_changes,CB Accept changes,60,cb_civ_accept_changes_button,1008
+61,cb_cancel_changes,CB Cancel changes,61,cb_civ_exit_button,1008
+62,cb_cancel_new_civ_dialog,CB Cancel New Civ Dialog,62,cb_new_civ_cancel_button,1008
+63,cb_show_save_civ_dialog,CB Show Save Civ Dialog,63,cb_civ_save_button,1008
+64,cb_cancel_save_civ_dialog,CB Cancel Save Civ Dialog,64,cb_save_civ_cancel_button,1008
+65,cb_show_load_civ_dialog,CB Show Load Civ Dialog,65,cb_load_civ_button,1008
+66,cb_cancel_load_civ_dialog,CB Cancel Load Civ Dialog,66,cb_load_civ_cancel_button,1008
+67,game_settings_graphics_quality_slider,Game Settings Graphics Quality Slider,67,gs_graphics_quality_slider,1000
+68,game_settings_zoom_check_box_on,Game Settings Zoom Check Box ON,68,gs_allow_zoom_check_box,1001
+69,game_settings_zoom_check_box_off,Game Settings Zoom Check Box OFF,69,gs_allow_zoom_check_box,1002
+70,game_settings_blood_check_box_on,Game Settings Blood Check Box ON,70,gs_show_blood_check_box,1001
+71,game_settings_blood_check_box_off,Game Settings Blood Check Box OFF,71,gs_show_blood_check_box,1002
+72,game_settings_video_card_combo_box,Game Settings Video Card Combo Box,72,gs_video_card_combo_box,1003
+73,game_settings_rendering_system,Game Settings Rendering System,73,gs_rendering_sys_list_box,1003
+74,game_settings_music_volume,Game Settings Music Volume,74,gs_music_volume_slider,1000
+75,game_settings_sound_volume,Game Settings Sound Volume,75,gs_sound_volume_slider,1000
+76,game_settings_music_quality_high,Game Settings Music Quality High,76,gs_music_qual_high_radio,1001
+77,game_settings_music_quality_low,Game Settings Music Quality Low,77,gs_music_qual_low_radio,1001
+78,game_settings_music_off,Game Settings Music Off,78,gs_music_off_radio_button,1001
+79,game_settings_max_sounds,Game Settings Max Sounds,79,gs_max_sounds_slider,1000
+80,game_settings_scroll_speed,Game Settings Scroll Speed,80,gs_side_scroll_speed_slider,1000
+81,game_settings_mouse_sensitivity,Game Settings Mouse Sensitivity,81,gs_mouse_sensitivity_slider,1000
+82,game_settings_mouse_orientation_left,Game Settings Mouse Orientation Left,82,gs_left_hand_mouse_radio,1008
+83,game_settings_mouse_orientation_right,Game Settings Mouse Orientation Right,83,gs_right_hand_mouse_radio,1008
+84,game_settings_test_sound_volume,Game Settings Test Sound Volume,84,gs_sound_volume_test_button,1008
+85,pc_back_to_single_player,PC Back to Single Player,85,pc_back_to_single_player_button,1008
+86,pc_campaign_i,PC Campaign I,86,pc_greek_campaign_i_button,1008
+87,pc_campaign_ii,PC Campaign II,87,pc_british_campaign_ii_button,1008
+88,pc_campaign_iii,PC Campaign III,88,pc_german_campaign_iii_button,1008
+89,pc_campaign_iv,PC Campaign IV,89,510,1008
+90,pc_play_saved_game,PC Play Saved Game,90,pc_play_saved_game_button,1008
+92,pc_custom_campaign,PC Custom Campaign,92,pc_custom_campaign_button,1008
+93,pc_learning_campaigns,PC Learning Campaigns,93,sp_learning_scenarios_button,1008
+94,si_back,SI Back,94,si_back_button,1008
+95,si_briefing,SI Briefing,95,si_briefing_button,1008
+96,si_hints,SI Hints,96,si_hints_button,1008
+97,si_history,SI History,97,si_history_button,1008
+98,si_map,SI Map,98,si_map_button,1008
+99,si_movie,SI Movie,99,si_movie_button,1008
+100,si_start,SI Start,100,si_start_game_play_button,1008
+101,sl_load_game,SL Load Game,101,sl_load_button,1008
+102,sl_load_load_game_by_dbclick,SL Load Load Game By DbClick,102,sl_load_file_list,1004
+103,sl_load_cancel,SL Load Cancel,103,sl_cancel_button,1008
+104,sl_load_delete,SL Load Delete,104,sl_delete_button,1008
+105,cb_display_delete_civ_dialog_in_load,CB Display Delete Civ Dialog (in load),105,cb_load_civ_delete_button,1008
+106,wns_cancel,WNS Cancel,106,wns_cancel_button,1008
+107,ds_adjust_command_sound_one,DS Adjust Command Sound One,107,ds_command_1_level,1000
+108,ds_adjust_command_sound_two,DS Adjust Command Sound Two,108,ds_command_2_level,1000
+109,ds_adjust_created_sound,DS Adjust Created Sound,109,ds_command_3_level,1000
+110,ds_adjust_dying_sound,DS Adjust Dying Sound,110,ds_command_4_level,1000
+111,ds_adjust_selected_sound_one,DS Adjust Selected Sound One,111,ds_command_5_level,1000
+112,ds_adjust_selected_sound_two,DS Adjust Selected Sound Two,112,ds_command_6_level,1000
+113,ds_adjust_attack_sound_one,DS Adjust Attack Sound One,113,ds_command_7_level,1000
+114,ds_adjust_attack_sound_two,DS Adjust Attack Sound Two,114,ds_command_8_level,1000
+115,ds_adjust_walk_sound_one,DS Adjust Walk Sound One,115,ds_command_9_level,1000
+116,ds_adjust_walk_sound_two,DS Adjust Walk Sound Two,116,ds_command_10_level,1000
+117,ds_hide_debug_sound_panel,DS Hide Debug Sound Panel,117,ds_ok_debug_sound_panel,1008
+118,cb_display_delete_civ_dialog_in_save,CB Display Delete Civ Dialog (in save),118,cb_save_civ_delete_button,1008
+119,cb_accept_change_name_2,CB Accept Change Name,119,cb_new_civ_name_text_field,1009
+120,cb_accept_load_civilization_2,CB Accept Load Civilization,120,cb_load_civ_file_list_box,1004
+121,cb_accept_save_civilization,CB Accept Save Civilization,121,cb_save_civ_save_button,1008
+122,srm_game_info_scenario_introduction,SRM Game Info (Scenario Introduction),122,srmgame_info_briefing,1008
+123,cb_show_change_name_dialog,CB Show Change Name Dialog,123,cb_new_civ_button,1008
+124,si_map_mouse_over,SI Map Mouse Over,124,si_map_button,1010
+125,si_map_mouse_out,SI Map Mouse Out,125,si_map_button,1011
+126,si_briefing_mouse_over,SI Briefing Mouse Over,126,si_briefing_button,1010
+127,si_briefing_mouse_out,SI Briefing Mouse Out,127,si_briefing_button,1011
+128,si_history_mouse_over,SI History Mouse Over,128,si_history_button,1010
+129,si_history_mouse_out,SI History Mouse Out,129,si_history_button,1011
+130,si_hints_mouse_over,SI Hints Mouse Over,130,si_hints_button,1010
+131,si_hints_mouse_out,SI Hints Mouse Out,131,si_hints_button,1011
+132,si_movie_mouse_over,SI Movie Mouse Over,132,si_movie_button,1010
+133,si_movie_mouse_out,SI Movie Mouse Out,133,si_movie_button,1011
+134,si_start_mouse_over,SI Start Mouse Over,134,si_start_game_play_button,1010
+135,si_start_mouse_out,SI Start Mouse Out,135,si_start_game_play_button,1011
+136,si_back_mouse_over,SI Back Mouse Over,136,si_back_button,1010
+137,si_back_mouse_out,SI Back Mouse Out,137,si_back_button,1011
+138,srm_idle_citizen,SRM Idle Citizen,138,srmidle_citizen_button,1008
+139,srm_idle_military,SRM Idle Military,139,srmidle_military_unit_button,1008
+140,srm_fighter_rally_timer,SRM Fighter Rally Timer,140,srmtimedfighterrally,1008
+141,srm_bomber_rally_timer,SRM Bomber Rally Timer,141,srmtimedbomberrally,1008
+142,srm_atomic_rally_timer,SRM Atomic Rally Timer,142,srmtimedatomicbomberrally,1008
+143,srm_chat_dialog_finished,SRM Chat Dialog Finished,143,srmdialogmessage,1012
+144,pgs_tab_summary,PGS Tab - Summary,144,pgs_tab_summary,1001
+145,pgs_tab_timeline,PGS Tab - Timeline,145,pgs_tab_time_line,1001
+146,pgs_tab_military,PGS Tab - Military,146,pgs_tab_military,1001
+147,pgs_tab_economy,PGS Tab - Economy,147,pgs_tab_economy,1001
+148,pgs_tab_epoch,PGS Tab - Epoch,148,pgs_tab_epoch,1001
+149,pgs_tab_society,PGS Tab - Society,149,pgs_tab_society,1001
+150,pgs_tab_misc,PGS Tab - Misc,150,pgs_tab_misc,1001
+151,pgs_exit_to_main_menu,PGS Exit to Main Menu,151,pgs_exit_button,1008
+152,pgs_player_1_check_box,PGS Player 1 Check Box,152,pgs_player_1_check_box,1001
+153,pgs_player_2_check_box,PGS Player 2 Check Box,153,pgs_player_2_check_box,1001
+154,pgs_player_3_check_box,PGS Player 3 Check Box,154,pgs_player_3_check_box,1001
+155,pgs_player_4_check_box,PGS Player 4 Check Box,155,pgs_player_4_check_box,1001
+156,pgs_player_5_check_box,PGS Player 5 Check Box,156,pgs_player_5_check_box,1001
+157,pgs_player_6_check_box,PGS Player 6 Check Box,157,pgs_player_6_check_box,1001
+158,pgs_player_7_check_box,PGS Player 7 Check Box,158,pgs_player_7_check_box,1001
+159,pgs_player_8_check_box,PGS Player 8 Check Box,159,pgs_player_8_check_box,1001
+160,pgs_player_9_check_box,PGS Player 9 Check Box,160,pgs_player_9_check_box,1001
+161,pgs_player_10_check_box,PGS Player 10 Check Box,161,pgs_player_10_check_box,1001
+162,pgs_player_11_check_box,PGS Player 11 Check Box,162,pgs_player_11_check_box,1001
+163,pgs_player_12_check_box,PGS Player 12 Check Box,163,pgs_player_12_check_box,1001
+164,pgs_player_13_check_box,PGS Player 13 Check Box,164,pgs_player_13_check_box,1001
+165,pgs_player_14_check_box,PGS Player 14 Check Box,165,pgs_player_14_check_box,1001
+166,pgs_player_15_check_box,PGS Player 15 Check Box,166,pgs_player_15_check_box,1001
+167,pgs_player_16_check_box,PGS Player 16 Check Box,167,pgs_player_16_check_box,1001
+168,pgs_player_1_uncheck_box,PGS Player 1 UnCheck Box,168,pgs_player_1_check_box,1002
+169,pgs_player_2_uncheck_box,PGS Player 2 UnCheck Box,169,pgs_player_2_check_box,1002
+170,pgs_player_3_uncheck_box,PGS Player 3 UnCheck Box,170,pgs_player_3_check_box,1002
+171,pgs_player_4_uncheck_box,PGS Player 4 UnCheck Box,171,pgs_player_4_check_box,1002
+172,pgs_player_5_uncheck_box,PGS Player 5 UnCheck Box,172,pgs_player_5_check_box,1002
+173,pgs_player_6_uncheck_box,PGS Player 6 UnCheck Box,173,pgs_player_6_check_box,1002
+174,pgs_player_7_uncheck_box,PGS Player 7 UnCheck Box,174,pgs_player_7_check_box,1002
+175,pgs_player_8_uncheck_box,PGS Player 8 UnCheck Box,175,pgs_player_8_check_box,1002
+176,pgs_player_9_uncheck_box,PGS Player 9 UnCheck Box,176,pgs_player_9_check_box,1002
+177,pgs_player_10_uncheck_box,PGS Player 10 UnCheck Box,177,pgs_player_10_check_box,1002
+178,pgs_player_11_uncheck_box,PGS Player 11 UnCheck Box,178,pgs_player_11_check_box,1002
+179,pgs_player_12_uncheck_box,PGS Player 12 UnCheck Box,179,pgs_player_12_check_box,1002
+180,pgs_player_13_uncheck_box,PGS Player 13 UnCheck Box,180,pgs_player_13_check_box,1002
+181,pgs_player_14_uncheck_box,PGS Player 14 UnCheck Box,181,pgs_player_14_check_box,1002
+182,pgs_player_15_uncheck_box,PGS Player 15 UnCheck Box,182,pgs_player_15_check_box,1002
+183,pgs_player_16_uncheck_box,PGS Player 16 UnCheck Box,183,pgs_player_16_check_box,1002
+184,pgs_next_graph,PGS Next Graph,184,pgs_next_graph,1008
+185,srm_hidden_unit_toggle,SRM Hidden Unit Toggle,185,srmhiddenunits,1008
+186,main_screen_open_ee_editor_sub_menu_screen,Main Screen: Open EE Editor Sub Menu Screen,186,game_tools_button,1008
+187,ee_editor_sub_menu_start_scenario_editor,EE Editor Sub Menu: Start Scenario Editor,187,eee_scenario_editor_button,1008
+188,ee_editor_sub_menu_main_menu,EE Editor Sub Menu: Main Menu,188,eee_return_to_main_button,1008
+189,ee_editor_sub_menu_start_campaign_editor,EE Editor Sub Menu: Start Campaign Editor,189,eee_campaign_editor_button,1008
+190,ce_add_scenario,CE: Add Scenario,190,ce_add_scenario_button,1008
+191,ce_delete_campaign,CE: Delete Campaign,191,ce_delete_campaign_button,1008
+192,ce_campaign_name_changed,CE: Campaign Name Changed,192,ce_campaign_name_edit_box,1003
+193,ce_campaign_save,CE: Campaign Save,193,ce_save_campaign_button,1008
+194,ce_campaign_selected,CE: Campaign Selected,194,ce_campaign_file_list_box,1003
+195,ce_move_scenario_up,CE: Move Scenario Up,195,ce_move_scen_up_button,1008
+196,ce_move_scenario_down,CE: Move Scenario Down,196,ce_move_scen_down_button,1008
+197,ce_remove_scenario,CE: Remove Scenario,197,ce_remove_scenario_button,1008
+198,ce_main_menu,CE: Main Menu,198,ce_back_button,1008
+199,ce_start_scenario_editor,CE: Start Scenario Editor,199,ce_scenario_editor_button,1008
+200,ce_password_entered,CE: Password entered,200,ce_campaign_password_edit_box,1009
+201,ce_password_ok_button_hit,CE: Password OK button hit,201,ce_password_ok_button,1007
+202,ce_campaign_new,CE: Campaign New,202,ce_new_campaign_button,1008
+204,srm_flare,SRM Flare,204,srmminimap_flare_button,1008
+205,srm_set_scout_behavior,SRM Set Scout Behavior,205,srm_behavior_scout,1008
+206,srm_set_stand_ground_behavior,SRM Set Stand Ground Behavior,206,srm_behavior_stand_ground,1008
+207,srm_set_guard_behavior,SRM Set Guard Behavior,207,srm_behavior_guard,1008
+209,srm_set_aggressive_behavior,SRM Set Aggressive Behavior,209,srm_behavior_aggressive,1008
+211,srm_large_civ_builder_alert,SRM Large Civ Builder Alert,211,srm_large_civ_builder_alert,1008
+212,srm_large_scen_briefing_alert,SRM Large Scen Briefing Alert,212,srm_large_scen_briefing_alert,1008
+213,chat_log_close,Chat Log Close,213,chat_log_close_button,1008
+214,game_settings_gq_radio_1_lowest,Game Settings GQ radio 1 Lowest,214,gs_gq_radio_1_lowest,1001
+215,game_settings_gq_radio_2,Game Settings GQ radio 2,215,gs_gq_radio_2,1001
+216,game_settings_gq_radio_3_middle,Game Settings GQ radio 3 Middle,216,gs_gq_radio_3_middle,1001
+217,game_settings_gq_radio_4,Game Settings GQ radio 4,217,gs_gq_radio_4,1001
+218,game_settings_gq_radio_5_highest,Game Settings GQ radio 5 Highest,218,gs_gq_radio_5_highest,1001
+219,game_settings_gq_radio_6_custom,Game Settings GQ radio 6 Custom,219,gs_gq_radio_6_custom,1001
+220,game_settings_model_detail_radio_high,Game Settings Model Detail Radio High,220,gs_model_detail_radio_high,1001
+221,game_settings_model_detail_radio_med,Game Settings Model Detail Radio Med,221,gs_model_detail_radio_med,1001
+222,game_settings_model_detail_radio_low,Game Settings Model Detail Radio Low,222,gs_model_detail_radio_low,1001
+223,game_settings_effects_detail_high,Game Settings Effects Detail High,223,gs_effects_detail_high,1001
+224,game_settings_effects_detail_med,Game Settings Effects Detail Med,224,gs_effects_detail_med,1001
+225,game_settings_effects_detail_low,Game Settings Effects Detail Low,225,gs_effects_detail_low,1001
+226,game_settings_hi_res_filter_checkbox_check,Game Settings Hi-Res Filter Checkbox Check,226,gs_hi_res_filter_checkbox,1001
+227,game_settings_hi_res_filter_checkbox_uncheck,Game Settings Hi-Res Filter Checkbox Uncheck,227,gs_hi_res_filter_checkbox,1002
+228,game_settings_hi_res_lighting_checkbox_check,Game Settings Hi-Res Lighting Checkbox Check,228,gs_hi_res_lighting_checkbox,1001
+229,game_settings_hi_res_lighting_checkbox_uncheck,Game Settings Hi-Res Lighting Checkbox Uncheck,229,gs_hi_res_lighting_checkbox,1002
+230,game_settings_hi_res_textures_checkbox_check,Game Settings Hi-Res Textures Checkbox Check,230,gs_hi_res_textures_checkbox,1001
+231,game_settings_hi_res_textures_checkbox_uncheck,Game Settings Hi-Res Textures Checkbox Uncheck,231,gs_hi_res_textures_checkbox,1002
+232,game_settings_smooth_animations_checkbox_check,Game Settings Smooth Animations Checkbox Check,232,gs_vsync_checkbox,1001
+233,game_settings_smooth_animations_checkbox_uncheck,Game Settings Smooth Animations Checkbox Uncheck,233,gs_vsync_checkbox,1002
+234,game_settings_shadows_checkbox_check,Game Settings Shadows Checkbox Check,234,gs_shadows_checkbox,1001
+235,game_settings_shadows_checkbox_uncheck,Game Settings Shadows Checkbox Uncheck,235,gs_shadows_checkbox,1002
+236,game_settings_clouds_checkbox_check,Game Settings Clouds Checkbox Check,236,gs_clouds_checkbox,1001
+237,game_settings_clouds_checkbox_uncheck,Game Settings Clouds Checkbox Uncheck,237,gs_clouds_checkbox,1002
+238,game_settings_weather_effects_checkbox_check,Game Settings Weather Effects Checkbox Check,238,gs_weather_effects_checkbox,1001
+239,game_settings_weather_effects_checkbox_uncheck,Game Settings Weather Effects Checkbox Uncheck,239,gs_weather_effects_checkbox,1002
+240,ee_editor_sub_menu_civ_builder_button,EE Editor Sub Menu: Civ Builder Button,240,eee_civ_builder_button,1008
+241,srm_set_formation_short_line,SRM Set Formation Short Line,241,srm_formation_short_line,1008
+242,srm_set_formation_long_line,SRM Set Formation Long Line,242,srm_formation_long_line,1008
+243,srm_set_formation_loose_line,SRM Set Formation Loose Line,243,srm_formation_loose_line,1008
+244,srm_set_formation_staggered_line,SRM Set Formation Staggered Line,244,srm_formation_staggered_line,1008
+245,srm_set_formation_deep_wedge,SRM Set Formation Deep Wedge,245,srm_formation_deep_wedge,1008
+246,srm_set_formation_shallow_wedge,SRM Set Formation Shallow Wedge,246,srm_formation_shallow_wedge,1008
+247,srm_set_formation_inward_circle,SRM Set Formation Inward Circle,247,srm_formation_inward_circle,1008
+248,srm_set_formation_outward_circle,SRM Set Formation Outward Circle,248,srm_formation_outward_circle,1008
+249,srm_display_chat_log,SRM Display Chat Log,249,srmprevious_messages,1008
+250,game_settings_antialias_checkbox_check,Game Settings AntiAlias Checkbox Check,250,gs_fullscreen_antialias_checkbox,1001
+251,game_settings_antialias_checkbox_uncheck,Game Settings AntiAlias Checkbox Uncheck,251,gs_fullscreen_antialias_checkbox,1002

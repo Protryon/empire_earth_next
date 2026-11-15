@@ -1,0 +1,96 @@
+#eedata dbuiback
+#format 3
+#rows 167
+row,id,mName,mTextureFile,mTopOffset,mBottomOffset,mLeftOffset,mRightOffset,mTileWidthPercent,mTileHeightPercent,mOpacity,mID,mBackgroundID,mFormID,mTextureTop,mTextureLeft,mTextureBottom,mTextureRight,mBackgroundType,mTopOffsetType,mBottomOffsetType,mLeftOffsetType,mRightOffsetType,mNumCols,mNumRows,mDrawPriority,mRed,mGreen,mBlue,mVisible,mHasAlpha,mAttribute1,mAttribute2,mAttribute3
+14,cb_main_form_background,CB Main Form Background,textures\civbuilder_back.sst,0.0,0.0,0.0,0.0,0.78125,0.78125,1.0,16,14,civbuilder_main_form,0,0,768,1024,2,0,3,0,3,4,3,1,0,0,0,1,0,0,0,0
+15,save_screen_background,Save Screen Background,textures\bkg_caesar_battle,0.0,0.0,0.0,0.0,0.78125,0.78125,1.0,18,15,in_game_scenario_save_game_screen,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+16,load_screen_background,Load Screen Background,textures\bkg_caesar_battle,0.0,0.0,0.0,0.0,0.78125,0.78125,1.0,19,16,in_game_scenario_load_game_screen,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+17,game_settings_full_background,Game Settings Full Background,textures\bkg_collage,0.0,0.0,0.0,0.0,1.0,1.0,1.0,20,17,game_settings_screen,0,0,768,1024,2,0,3,0,3,4,3,1,0,0,0,1,0,0,0,0
+18,diplomacy_background,Diplomacy Background,textures\EEGenericBack.sst,0.06258149,0.84745765,0.042033236,0.9599218,.inf,.inf,0.5,22,18,diplomacy_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,0,0
+19,game_tools_background,Game Tools Background,textures\bkg_boats_planes,0.0,0.0,0.0,0.0,1.0,1.0,1.0,24,19,game_tools_menu,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+20,choose_campaign_background,Choose Campaign Background,textures\formback.sst,0.0,0.0,0.0,0.0,1.0,1.0,1.0,25,20,choose_campaign_screen,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+34,main_screen_background,Main Screen Background,textures\bkg_title,0.0,0.0,0.0,0.0,1.0,1.0,1.0,48,34,main_menu_screen,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+35,sp_selection_screen_background,SP Selection Screen Background,textures\bkg_caesar_battle,0.0,0.0,0.0,0.0,1.0,1.0,1.0,49,35,single_player_menu,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+36,file_background_for_save_screen,File Background For Save Screen,textures\EEGenericBack.sst,0.18363939,0.9015025,0.12515645,0.8760951,.inf,.inf,0.7,50,36,in_game_scenario_save_game_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+37,sp_load_screen_background,SP Load Screen Background,textures\bkg_caesar_battle,0.0,0.0,0.0,0.0,0.78125,0.78125,1.0,51,37,single_player_load_game_screen,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+38,play_campaign_background,Play Campaign Background,textures\bkg_caesar_battle,0.0,0.0,0.0,0.0,1.0,1.0,1.0,52,38,play_campaign_form,0,0,768,1024,2,0,3,0,3,4,3,1,0,0,0,1,0,0,0,0
+39,campaign_screen_background,Campaign Screen Background,textures\formback.sst,0.0,0.0,0.0,0.0,1.0,1.0,1.0,53,39,campaign_screen,0,0,768,1024,2,0,3,0,3,4,3,0,0,0,0,1,0,0,0,0
+40,game_settings_generic_background,Game Settings generic Background,textures\EEGenericBack.sst,0.084745765,0.9387223,0.14662756,0.85826004,.inf,.inf,0.6,56,40,game_settings_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+41,cb_new_civ_background,CB New Civ Background,textures\EEGenericBack.sst,0.3338898,0.66611016,0.2503129,0.75093865,.inf,.inf,0.7,57,41,civbuilder_new_civilization_form,0,0,0,0,101,4,4,4,4,0,0,0,0,0,0,1,1,1,0,0
+42,cb_save_civ_background,CB Save Civ Background,textures\EEGenericBack.sst,0.25041735,0.7512521,0.2503129,0.75093865,.inf,.inf,0.7,58,42,civbuilder_save_civilization_form,0,0,0,0,101,4,4,4,4,0,0,0,0,0,0,1,1,1,0,0
+43,cb_load_civ_background,CB Load Civ Background,textures\EEGenericBack.sst,0.25041735,0.7512521,0.2503129,0.75093865,.inf,.inf,0.7,59,43,civbuilder_load_civilization_form,0,0,0,0,101,4,4,4,4,0,0,0,0,0,0,1,1,1,0,0
+44,chat_dialog_background,Chat Dialog Background,textures\EEGenericBack.sst,0.6327212,0.72621036,0.23028786,0.76971215,.inf,.inf,0.5,60,44,chat_in_game_pop_up_dialog,0,0,0,0,101,4,4,4,4,0,0,0,0,0,0,1,1,1,0,0
+69,game_settings_tab_background,Game Settings Tab  Background,textures\EEGenericBack.sst,0.011734028,0.07170796,0.21407625,0.7869013,.inf,.inf,1.0,74,69,game_settings_screen,0,0,0,0,101,4,4,4,4,0,0,3,0,0,0,1,1,1,0,0
+70,file_background_for_load_screen,File Background For Load Screen,textures\EEGenericBack.sst,0.12520868,0.9015025,0.12515645,0.8760951,.inf,.inf,0.7,75,70,in_game_scenario_load_game_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+71,sp_load_screen_file_background,SP Load Screen File Background,textures\EEGenericBack.sst,0.12520868,0.9015025,0.12515645,0.8760951,.inf,.inf,0.7,76,71,single_player_load_game_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+72,si_screen_lower_background,SI screen Lower Background,textures\EEGenericBack.sst,0.79799664,1.0,0.0,1.0,.inf,.inf,0.6,77,72,scenario_intro_screen_briefing_screen,0,0,0,0,101,4,4,4,4,0,0,5,0,0,0,1,1,1,1,0
+73,si_screen_upper_background,SI screen Upper Background,textures\EEGenericBack.sst,0.0,0.79632723,0.0,1.0,.inf,.inf,0.5,78,73,scenario_intro_screen_briefing_screen,0,0,0,0,101,4,4,4,4,0,0,3,0,0,0,1,1,0,0,0
+74,sl_background,SL Background,textures\bkg_caesar_battle,0.0,1.0,0.0,1.0,0.78125,0.78125,0.0,79,74,scenario_load_screen,0,0,768,1024,2,4,4,4,4,4,3,0,0,0,0,1,0,0,0,0
+75,sl_file_background,SL File Background,textures\EEGenericBack.sst,0.12520868,0.9015025,0.12515645,0.8760951,.inf,.inf,0.7,80,75,scenario_load_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+77,si_screen_full_background,SI screen Full Background,textures\bkg_cyber_ninja,0.0,1.0,0.0,1.0,0.78125,0.78125,1.0,82,77,scenario_intro_screen_briefing_screen,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+100,srm_unit_info_translucent_bg,SRM Unit Info Translucent BG,textures\ingamebackground_01b,0.72083336,0.94166666,0.0,0.17,3.090909,3.7857144,1.0,65,100,scott_main_game_form,142,168,212,256,5,4,4,4,4,0,0,1,0,0,0,0,1,0,0,0
+101,srm_minimap_bg_left,SRM Minimap BG Left,textures\EEGenericBack.sst,0.72333336,0.94166666,0.83125,0.83875,.inf,.inf,1.0,66,101,scott_main_game_form,0,0,0,0,101,4,4,4,4,0,0,1,0,0,0,1,1,0,0,0
+102,srm_epoch_translucent_bg,SRM Epoch Translucent BG,textures\EEGenericBack.sst,0.0025,0.026666667,0.3125,0.688125,.inf,.inf,0.35,67,102,scott_main_game_form,0,0,0,0,101,4,4,4,4,0,0,3,0,0,0,1,1,0,0,0
+103,srm_unit_icons_left,SRM Unit Icons Left,textures\ingamebackground_01b,0.94166666,1.0,0.0,0.125,1.0,1.0,1.0,37,103,scott_main_game_form,70,0,140,200,0,4,4,4,4,0,0,2,0,0,0,1,0,0,0,0
+104,srm_unit_icons_middle,SRM Unit Icons Middle,textures\ingamebackground_01b,0.94166666,1.0,0.125,0.375,2.0,1.0,1.0,38,104,scott_main_game_form,0,0,70,200,5,4,4,4,4,0,0,2,0,0,0,1,0,0,0,0
+105,srm_unit_icons_right,SRM Unit Icons Right,textures\ingamebackground_01b,0.94166666,1.0,0.375,0.5,-1.0,1.0,1.0,39,105,scott_main_game_form,70,199,140,-1,0,4,4,4,4,0,0,2,0,0,0,1,0,0,0,0
+106,srm_saved_groups_end,SRM Saved Groups End,textures\ingamebackground_01b,0.94166666,1.0,0.5,1.0,4.0,1.0,1.0,41,106,scott_main_game_form,0,0,70,200,5,4,4,4,4,0,0,2,0,0,0,1,0,0,0,0
+107,srm_saved_groups,SRM Saved Groups,textures\ingamebackground_01a,0.94166666,1.0,0.5,0.875625,8.710145,1.0,1.0,40,107,scott_main_game_form,129,186,199,255,5,4,4,4,4,0,0,3,0,0,0,0,1,0,0,0
+108,srm_top_bar_tileable,SRM Top Bar Tileable,textures\ingamebackground_01a,0.0,0.029166667,0.0,1.0,12.698413,1.0,1.0,42,108,scott_main_game_form,164,60,199,186,5,4,4,4,4,0,0,2,0,0,0,1,1,0,0,0
+109,srm_epoch_top_left_bookend,SRM Epoch Top Left Bookend,textures\ingamebackground_01a,0.0,0.029166667,0.235625,0.3125,0.96850395,1.0,1.0,43,109,scott_main_game_form,129,59,164,186,0,4,4,4,4,0,0,3,0,0,0,1,1,0,0,0
+110,srm_epoch_top_right_bookend,SRM Epoch Top Right Bookend,textures\ingamebackground_01a,0.0,0.029166667,0.688125,0.765,-0.96850395,1.0,1.0,44,110,scott_main_game_form,129,185,164,58,0,4,4,4,4,0,0,3,0,0,0,1,1,0,0,0
+111,srm_unit_info_top_edge,SRM Unit Info Top Edge,textures\ingamebackground_01a,0.715,0.72333336,0.0,0.16,1.0,1.0,1.0,45,111,scott_main_game_form,199,0,209,256,0,4,4,4,4,0,0,2,0,0,0,0,1,0,0,0
+112,srm_unit_info_top_bookend_right_edge,SRM Unit Info Top BookEnd Right Edge,textures\ingamebackground_01a,0.715,0.8491667,0.16,0.18625,1.05,1.0,1.0,46,112,scott_main_game_form,0,3,161,43,0,4,4,4,4,0,0,2,0,0,0,0,1,0,0,0
+113,srm_unit_info_bottom_bookend_right_edge,SRM Unit Info Bottom BookEnd  Right Edge,textures\ingamebackground_01a,0.8491667,0.94166666,0.16,0.18625,1.05,0.9910714,1.0,47,113,scott_main_game_form,0,53,112,93,0,4,4,4,4,0,0,3,0,0,0,0,1,0,0,0
+114,srm_minimap_bottom_bookend_left_edge,SRM Minimap Bottom BookEnd Left Edge,textures\ingamebackground_01a,0.8491667,0.94166666,0.81375,0.84,-1.05,0.9910714,0.0,63,114,scott_main_game_form,0,92,112,52,0,4,4,4,4,0,0,3,0,0,0,1,1,0,0,0
+115,srm_minimap_top_book_end_left_edge,SRM Minimap Top Book End Left Edge,textures\ingamebackground_01a,0.715,0.8491667,0.81375,0.84,-1.05,1.0,0.0,62,115,scott_main_game_form,0,42,161,2,0,4,4,4,4,0,0,2,0,0,0,1,1,0,0,0
+116,srm_minimap_top_edge,SRM Minimap Top Edge,textures\ingamebackground_01a,0.715,0.72333336,0.84,1.0,-1.0,1.0,0.0,61,116,scott_main_game_form,199,255,209,-1,0,4,4,4,4,0,0,2,0,0,0,1,1,0,0,0
+117,srm_resource_bar,SRM Resource Bar,textures\ingamebackground_01a,0.90416664,0.94166666,0.175,0.825625,6.1597633,1.0,0.0,64,117,scott_main_game_form,211,87,256,256,5,4,4,4,4,0,0,2,0,0,0,1,1,0,0,0
+118,srm_stone,SRM Stone,textures\ingamebackground_01a,0.9125,0.94166666,0.395625,0.42875,1.0192307,1.0,0.0,68,118,scott_main_game_form,0,95,35,147,0,4,4,4,4,0,0,4,0,0,0,1,1,0,0,0
+119,srm_gold,SRM Gold,textures\ingamebackground_01a,0.9125,0.94166666,0.505625,0.53875,1.0192307,1.0,0.0,69,119,scott_main_game_form,0,147,35,199,0,4,4,4,4,0,0,4,0,0,0,1,1,0,0,0
+120,srm_wood,SRM Wood,textures\ingamebackground_01a,0.9125,0.94166666,0.29125,0.324375,1.0192307,1.0,0.0,70,120,scott_main_game_form,0,199,35,251,0,4,4,4,4,0,0,4,0,0,0,1,1,0,0,0
+121,srm_food,SRM Food,textures\ingamebackground_01a,0.9125,0.94166666,0.1875,0.220625,1.0192307,1.0,0.0,71,121,scott_main_game_form,35,95,70,147,0,4,4,4,4,0,0,4,0,0,0,1,1,0,0,0
+122,srm_iron,SRM Iron,textures\ingamebackground_01a,0.9125,0.94166666,0.61125,0.644375,1.0192307,1.0,0.0,72,122,scott_main_game_form,35,147,70,199,0,4,4,4,4,0,0,4,0,0,0,1,1,0,0,0
+123,srm_population,SRM Population,textures\ingamebackground_01a,0.9125,0.94166666,0.72,0.753125,1.0192307,1.0,0.0,73,123,scott_main_game_form,35,199,70,251,0,4,4,4,4,0,0,4,0,0,0,1,1,0,0,0
+124,srm_no_unit_info_background,SRM No-Unit-Info Background,textures\ingamebackground_01a,0.90416664,0.94166666,0.0,0.175,1.75,1.0227273,0.0,81,124,scott_main_game_form,84,96,128,256,5,4,4,4,4,0,0,1,0,0,0,1,1,0,0,0
+125,wns_background,WNS Background,textures\formback.sst,0.0,1.0,0.0,1.0,1.0,1.0,1.0,83,125,won_net_stat_screen,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+126,si_screen_borders,SI screen Borders,textures\EEGenericBack.sst,0.0,1.0,0.0,1.0,.inf,.inf,0.0,84,126,scenario_intro_screen_briefing_screen,0,0,0,0,101,4,4,4,4,0,0,4,0,0,0,1,1,1,1,0
+127,wns_ad_banner_background,WNS Ad Banner Background,textures\EEGenericBack.sst,0.88787484,0.9830508,0.015640274,0.51906157,.inf,.inf,0.0,85,127,won_net_stat_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,0,1
+128,m_ss_options_background,M-SS Options Background,textures\EEGenericBack.sst,0.059973925,0.9113429,0.5083089,0.9921799,.inf,.inf,0.5,86,128,multi_single_setup_screen_lobby,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+129,si_screen_help_text_border,SI screen Help Text Border,textures\EEGenericBack.sst,0.7462437,0.79632723,0.37421778,0.62578225,.inf,.inf,0.6,87,129,scenario_intro_screen_briefing_screen,0,0,0,0,101,4,4,4,4,0,0,6,0,0,0,1,1,1,0,0
+130,ss_full_background,SS Full Background,textures\bkg_splash,0.0,0.0,0.0,0.0,1.0,1.0,0.0,88,130,splash_screen,0,0,768,1024,2,0,3,0,3,4,3,1,0,0,0,1,1,0,0,0
+131,ss_status_bar_background,SS Status Bar Background,textures\EEGenericBack.sst,0.8984375,0.9401042,0.39453125,0.60546875,.inf,.inf,0.5,89,131,splash_screen,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,0,1,1,0,0
+132,ss_multiplayer_connections,SS Multiplayer Connections,textures\EEGenericBack.sst,0.0,0.421875,0.7285156,0.99902344,.inf,.inf,0.5,90,132,splash_screen,0,0,0,0,101,4,4,4,4,0,0,3,0,0,0,0,1,0,0,0
+133,campign_editor_background,Campign Editor Background,textures\camped.sst,0.0,1.0,0.0,1.0,1.28,1.28,0.0,91,133,campaign_editor_form,0,0,600,800,2,4,4,4,4,4,3,0,0,0,0,1,0,0,0,0
+134,post_game_summary_graph_bg,Post Game Summary Graph Bg,textures\EEGenericBack.sst,0.08604954,0.9322034,0.029325513,0.9814272,.inf,.inf,0.6,92,134,post_game_summary_screen,0,0,0,0,101,4,4,4,4,0,0,4,0,0,0,1,1,1,1,0
+135,post_game_summary_victory_bg,Post Game Summary Victory Bg,textures\post game victory.sst,0.0,0.0,0.0,0.0,1.0,1.0,0.0,93,135,post_game_summary_screen,0,0,768,1024,2,0,3,0,3,4,3,1,0,0,0,1,1,0,0,0
+136,post_game_summary_tab_bg,Post Game Summary Tab Bg,textures\EEGenericBack.sst,0.0104302475,0.08083442,0.10752688,0.8934506,.inf,.inf,1.0,94,136,post_game_summary_screen,0,0,0,0,101,4,4,4,4,0,0,5,0,0,0,0,1,0,0,0
+137,multi_setup_screen_bg,Multi Setup Screen BG,textures\bkg_collage,0.0,1.0,0.0,1.0,1.0,1.0,0.0,95,137,multi_single_setup_screen_lobby,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+139,test_form_background,Test Form Background,textures\EEGenericBack.sst,0.15859766,0.5008347,0.2503129,0.75093865,.inf,.inf,1.0,97,139,test_form,0,0,0,0,101,4,4,4,4,0,0,1,75,75,75,1,1,1,0,0
+140,game_settings_graphics_set_bg,Game Settings Graphics Set BG,textures\EEGenericBack.sst,0.589309,0.9243807,0.2346041,0.7653959,.inf,.inf,0.4,98,140,game_settings_screen,0,0,0,0,101,4,4,4,4,0,0,4,0,0,0,1,1,1,0,0
+141,in_game_options_background,In-game Options background,textures\EEGenericBack_gold.sst,0.08347245,0.5175292,0.2252816,0.77597,.inf,.inf,0.0,99,141,in_game_options_form,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+142,post_game_summary_defeat_bg,Post Game Summary Defeat Bg,textures\post game defeat.sst,0.0,0.0,0.0,0.0,1.0,1.0,0.0,100,142,post_game_summary_screen,0,0,768,1024,2,0,3,0,3,4,3,2,0,0,0,1,1,0,0,0
+143,srm_minimap_bg_top,SRM Minimap BG Top,textures\EEGenericBack.sst,0.72333336,0.72583336,0.838125,1.0,.inf,.inf,1.0,101,143,scott_main_game_form,0,0,0,0,101,4,4,4,4,0,0,1,0,0,0,1,1,0,0,0
+144,srm_minimap_bg_right,SRM Minimap BG Right,textures\EEGenericBack.sst,0.72583336,0.93916667,0.99875,1.0,.inf,.inf,1.0,102,144,scott_main_game_form,0,0,0,0,101,4,4,4,4,0,0,1,0,0,0,1,1,0,0,0
+145,srm_minimap_bg_bottom,SRM Minimap BG Bottom,textures\EEGenericBack.sst,0.93833333,0.94166666,0.838125,1.0,.inf,.inf,1.0,103,145,scott_main_game_form,0,0,0,0,101,4,4,4,4,0,0,1,0,0,0,1,1,0,0,0
+146,chat_log_bg,Chat Log BG,textures\EEGenericBack.sst,0.08347245,0.6761269,0.10012516,0.9011264,.inf,.inf,0.75,105,146,chat_log_form,0,0,0,0,101,4,4,4,4,0,0,0,75,75,35,1,1,1,1,0
+147,multiplayer_slection_bg,Multiplayer Slection BG,textures\bkg_splash,0.0,1.0,0.0,1.0,1.0,1.0,0.0,106,147,multiplayer_menu_form,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+148,available_rooms_bg,Available Rooms BG,textures\bkg_collage,0.0,1.0,0.0,1.0,1.0,1.0,0.0,107,148,available_rooms_sierra_form,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+149,avaialble_games_bg,Avaialble Games BG,textures\bkg_collage,0.0,1.0,0.0,1.0,1.0,1.0,0.0,108,149,available_games_sierra_form,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+150,campaign_scenario_bg,Campaign Scenario BG,textures\bkg_boats_planes,0.0,1.0,0.0,1.0,1.0,1.0,0.0,109,150,campaign_scenario_select_form,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+151,srm_unit_behavior_buttons_bg,SRM Unit Behavior Buttons BG,textures\EEGenericBack.sst,0.7441667,0.7975,0.180625,0.340625,.inf,.inf,0.6,110,151,scott_main_game_form,0,0,0,0,101,4,4,4,4,0,0,5,0,0,0,0,1,0,0,0
+152,srm_formation_buttons_bg,SRM Formation Buttons BG,textures\EEGenericBack.sst,0.7441667,0.7975,0.220625,0.540625,.inf,.inf,0.6,111,152,scott_main_game_form,0,0,0,0,101,4,4,4,4,0,0,5,0,0,0,0,1,0,0,0
+153,choose_custom_campaign_bg,Choose Custom Campaign BG,textures\camped.sst,0.08347245,0.6761269,0.10012516,0.9011264,0.80125,0.5933333,0.75,112,153,choose_custom_campaign_form,0,0,600,800,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+154,choose_custom_campaign_border_bg,Choose Custom Campaign border bg,textures\EEGenericBack.sst,0.08347245,0.6761269,0.10012516,0.9011264,.inf,.inf,0.15,113,154,choose_custom_campaign_form,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+155,predefined_civ_form_border,Predefined Civ Form Border,textures\EEGenericBack_gold.sst,0.0,1.0,0.0,1.0,.inf,.inf,0.15,114,155,predefined_civ_form,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,1,0
+156,predefined_civ_form_bg,Predefined Civ Form BG,textures\camped.sst,0.0,1.0,0.0,1.0,1.0,1.0,0.75,115,156,predefined_civ_form,0,0,600,800,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+157,campaign_description_bg,Campaign Description BG,textures\EEGenericBack_gold.sst,0.60365057,0.988266,0.04398827,0.44965786,.inf,.inf,0.5,116,157,play_campaign_form,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,0,0
+158,create_sierra_account_bg,Create Sierra Account BG,textures\EEGenericBack.sst,0.15859766,0.7929883,0.2503129,0.75093865,.inf,.inf,1.0,117,158,create_sierra_account_form,0,0,0,0,101,4,4,4,4,0,0,1,75,75,75,1,1,1,0,0
+159,update_sierra_account_bg,Update Sierra Account BG,textures\EEGenericBack.sst,0.15859766,0.5843072,0.2503129,0.75093865,.inf,.inf,1.0,118,159,update_sierra_account_form,0,0,0,0,101,4,4,4,4,0,0,1,75,75,75,1,1,1,0,0
+160,select_server_bg,Select Server BG,textures\EEGenericBack.sst,0.15859766,0.6677796,0.2503129,0.75093865,.inf,.inf,1.0,119,160,select_server_form,0,0,0,0,101,4,4,4,4,0,0,1,75,75,75,1,1,1,0,0
+161,in_game_options_bg,In Game Options BG,textures\EEBackground.sst,0.0,0.0,0.0,0.0,1.25,1.25,0.0,120,161,in_game_options_form,0,0,480,640,2,0,3,0,3,3,2,1,0,0,0,1,0,0,0,0
+162,single_setup_screen_bg,Single Setup Screen BG,textures\bkg_caesar_battle,0.0,1.0,0.0,1.0,1.0,1.0,0.0,121,162,multi_single_setup_screen_lobby,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+163,avail_rooms_server_info_bg,Avail Rooms Server info BG,textures\EEGenericBack_gold.sst,0.81877446,0.863103,0.037145652,0.9599218,.inf,.inf,0.5,122,163,available_rooms_sierra_form,0,0,0,0,101,4,4,4,4,0,0,2,0,0,0,1,1,1,0,0
+164,demo_outro_forms_bg1,Demo Outro Forms BG1,textures\demo outro1.sst,0.0,1.0,0.0,1.0,1.0,1.0,1.0,123,164,demo_outro_form,0,0,768,1024,2,4,4,4,4,4,3,1,0,0,0,1,0,0,0,0
+165,demo_outro_forms_bg2,Demo Outro Forms BG2,textures\demo outro2.sst,0.0,1.0,0.0,1.0,1.0,1.0,1.0,124,165,demo_outro_form,0,0,768,1024,2,4,4,4,4,4,3,2,0,0,0,1,0,0,0,0
+166,demo_outro_forms_bg3,Demo Outro Forms BG3,textures\demo outro3.sst,0.0,1.0,0.0,1.0,1.0,1.0,1.0,125,166,demo_outro_form,0,0,768,1024,2,4,4,4,4,4,3,3,0,0,0,1,0,0,0,0

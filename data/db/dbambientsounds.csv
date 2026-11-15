@@ -1,0 +1,32 @@
+#eedata dbambientsounds
+#format 3
+#rows 28
+row,id,label,mIndex,mSoundID,mMaximumVolume,mStartVolume,mFadeUp,mFadeDown,mProbability,mIntervalSeconds
+0,ambientsounds_0,,-1,-1,0.0,0.0,0.0,0.0,0.0,0
+1,day_town,Day Town,,village,0.07,0.05,1.15,0.85,1.0,0
+2,angry_mob,Angry Mob,,crowd,0.08,0.05,1.15,0.85,1.0,0
+3,ocean,Ocean,,ocean,0.13,0.05,1.15,0.85,1.0,0
+4,forest,Forest,,jungle_ambient1,0.1,0.05,1.15,0.85,1.0,9
+5,forest_2,Forest 2,,jungle_ambient1,0.1,0.05,1.15,0.85,1.0,0
+6,grasslands,Grasslands,,jungle_ambient1,0.5,0.05,1.15,0.85,1.0,0
+7,night_time,Night Time,,ambient_night,0.7,0.05,1.0,0.85,1.0,0
+8,air_raid,Air Raid,,nuke_create,0.65,0.25,1.35,0.85,1.0,0
+9,rooster,Rooster,,rooster,0.3,0.3,1.15,0.85,1.0,40
+10,owl,Owl,,owl,0.2,0.2,1.15,0.85,0.06,14
+11,crow,Crow,,crows,0.2,0.2,1.15,0.85,0.06,9
+12,wind,Wind,,wind,0.18,0.18,1.15,0.85,0.06,12
+13,daytime,Daytime,,day_ambience,0.04,0.035,1.15,0.85,0.06,12
+14,wolf,Wolf,,wolf_howl,0.16,0.16,1.15,0.85,0.025,38
+15,hawk,Hawk,,eagleattack,0.2,0.2,1.15,0.85,0.06,17
+16,bird,Bird,,bird,0.08,0.08,1.15,0.85,0.25,9
+17,bird_2,Bird 2,,bird2,0.3,0.3,1.15,0.85,0.33,13
+18,dog,Dog,,dog_bark,0.1,0.1,1.15,0.85,0.16,19
+19,goat_sounds,Goat sounds,,sheep_command,0.15,0.15,1.15,0.85,0.06,15
+20,new_england_forest,New England Forest,,jungle_ambient1,0.1,0.05,1.15,0.85,1.0,9
+21,jungle_forest,Jungle Forest,,jungle_ambient2,0.1,0.05,1.15,0.85,1.0,9
+22,desert_forest,Desert Forest,,jungle_ambient1,0.1,0.05,1.15,0.85,1.0,9
+23,space_noise_1,Space Noise 1,,space_noise_1,0.5,0.3,1.15,0.85,0.15,9
+24,space_noise_2,Space Noise 2,,space_noise_2,0.5,0.3,1.15,0.85,0.1,11
+25,space_noise_3,Space Noise 3,,space_noise_3,0.5,0.3,1.15,0.85,0.05,15
+26,space_loop_1,Space Loop 1,,space_ambient_4,0.5,0.3,1.15,0.85,0.7,9
+27,space_loop_2,Space Loop 2,,space_ambient_5,0.5,0.3,1.15,0.85,0.3,9
