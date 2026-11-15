@@ -22970,3 +22970,89 @@ The area screen (`EESETSArea`, 484 lines: its mouse drawing is world and input c
 gate needs a way to give an area a rectangle first), the condition and effect controls' constructors
 (`EESETSCComboBox.cpp`, `EESETSEComboBox.cpp`: about 30 controls each, a table for the shared maker with three new
 kinds), the editor form (`EEUIFScenarioEditor`, 1,495 lines; accessors first), the unit tab's small control classes.
+
+## R6: UIBitmap, UIMovie, UIEvent, UIEntityGroup and the file lists whole in Rust (ee_ui mediaobj.rs, eventobj.rs, groupobj.rs, filelistobj.rs; branch rust-r6-ui21, 2026-11-14)
+
+Round 21 of the toolkit lane, aimed at 1,500 net C++ lines with whole classes from the round's list.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 1799fe4e | `UIBitmap` and `UIMovie` whole in Rust (`mediaobj.rs`); `UIMovie.cpp` gone | -83 |
+| 8c0caf7a | `UIEvent` and `UIEntityGroup` whole in Rust (`eventobj.rs`, `groupobj.rs`); `UIEvent.cpp`, `UIEntityGroup.cpp` gone | -177 |
+| 682e92d0 | `UIFileListBox` and `UIFileComboBox` whole in Rust (`filelistobj.rs`); `UIFileComboBox.cpp` gone | -151 |
+| 9a5d776d | `UIFileListBox.h` includes `rust/ee_ui.h` itself (`rust_includes.py` after the merge) | +1 |
+| (docs) | progress file, this section | (docs) |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 11,101 -> 10,690. Net C++ for the round is -411, well short of the 1,500 asked: the classes on the list were small (their logic was already Rust since rounds 7-9; what went was their C++ shells, units and the SYNTHETIC address lists), and the two larger ones left (`UIIMECandidate`, `UILBString`) were not started (see What is left).
+
+- **UIBitmap and UIMovie** (`mediaobj.rs`). The members are `EeUiBitmapFields` (the location, the bitmap, its copy) and
+  `EeUiMovieFields` (the movie), the classes' private bases; the host is passed with each call (the record keeps it
+  after `Init`), so no C++ constructor reaches a Rust allocation. The bitmap's calls out are the shared
+  `UIObjHost::Base`/`Media` ops; the movie's are `EeUiOp` 610..614 (`MoviePlaying` pure). Both classes' forwarders and
+  the one host struct (`UIMediaHost`) live in `UIBitmap.cpp`; copies are deleted (`= delete`): no caller copied them.
+- **UIEvent** (`eventobj.rs`). The count is `EeUiEventFields`, the private base, so the inline constructor and
+  `GetIsInitialized` (read by game events) stay in place. `UIEvent::HostOp` (a private static member, in
+  `UIManager.cpp` beside `LoadDatabase`, its caller) answers the virtuals on the record (630, 631), the events file
+  (the background table's file ops 597..600, the same answers) and the owners (632 the control table or form by id,
+  633 the owner's `AddEvent`). The database file's `ee_uicpp_file_*` moved to `UIHotKey.cpp` (the hot keys' reader
+  still calls them directly).
+- **UIEntityGroup** (`groupobj.rs`). A Rust object (`Vec` of entities, the disable count) held by pointer; the inline
+  constructor makes it with `UIEntityGroup::HostOp` (a private static, in `UIForm.cpp`, the friend that adds and
+  removes entities). The ops are on an entity (640..649; the five questions pure); an index past the end answers
+  NULL (the original read past the vector).
+- **The file lists** (`filelistobj.rs`). One object for both classes (`full_names` the combo box's); the host is a
+  template over the class (`UIFileListHost::Op<T>`), the list box's own `InsertLine`/`GetData` or the combo box's
+  list's. The directory search's two `FSFileSpec` locals are a C++ pair the Rust makes and frees around the loop
+  (`FlSearchNew`/`FlSearchDelete`, in the locals' order); names and lines come back by length then copy into a Rust
+  buffer (`mem` lines in the trace, the buffer address traced as 0); lines and file names go out as NUL-terminated
+  bytes traced as their FNV-1a hash (`replay.rs`). `FlDeleteFile` folds the lookup, the delete and the file's
+  `delete` into one op (found in `f[0]`): the original deleted the line before deleting the `FSFileSpec`, an order
+  nothing observes.
+- **Behaviour.** None changed on a defined path. A file name shorter than its four-byte extension matched nothing
+  in practice but was compared from before the name (`strlen - 4` wrapped); the Rust matches no extension. The
+  directory count is asked on every loop turn, as the original did.
+- **The goldens** (`build/ui21/*_driver.cpp` over round 20's `world.h`, the pure ops now a per-driver list). The
+  bitmap and file-list drivers' `orig` transcribe the units at a2454c26 over the world's ops; the event and group
+  drivers' `orig` call the base library's round-7/8 loops (`lib_orig.lib`) with the units' C++ callbacks in the
+  driver. 20,000 sequences (seed 7) and 2,000 (seed 1) each, orig = cur:
+
+  | Golden | seed 7 lines (sha256) | Mutations caught | Replayed by cargo |
+  |---|---|---|---|
+  | bitmap and movie (`bm_driver.cpp`) | 2,465,333 (78f151d3...) | 9 of 9 | 40 sequences, 5,608 lines |
+  | events (`ev_driver.cpp`) | 3,951,201 (379b63b5...) | 6 of 6 | 30 sequences, 6,266 lines |
+  | entity group (`grp_driver.cpp`) | 3,796,324 (e609f7bc...) | 7 of 7 | 30 sequences, 5,798 lines |
+  | file lists (`fl_driver.cpp`) | 1,487,562 (99fdc499...) | 9 of 10 | 40 sequences, 2,975 lines |
+
+  Mutations (sequences failing of 2,000): bitmap `Init` unreferenced 932; `Release` keeps the copy 1,185; the copied
+  location from the bottom 1,825; the old copy not released 1,073; `DrawPolygons` the base's result 999; `SetBitmap`
+  not dirty 1,131; the movie dirty when stopped 692; no stop 704; `DrawTextA` the base's result 671. Events:
+  `Initialize`'s virtual swapped 52; the count's bits from `f[1]` 2,000; the owner's kind always 0 1,568; id and
+  type swapped 1,853; no close 1,924; no manager 1,568. Group: `Disable` leaves the count 1,190; `Enable` sets 1 759;
+  `Remove` the last match 50; the hot key enabled on disable 1,381; shown not asked 861; removing a stranger OK
+  1,557; the wrong entity by index 1,126. File lists: the combo box without extensions 307; always appended 238; no
+  rewind 705; directories skipped 515; the extension at the start 298; deleting on after a delete 165; a found file's
+  failed delete taken as done 255; the path unreferenced 1,244; the release forgets the path 1,088; the tenth ("a
+  file not found counts as found") is equivalent: a failed lookup's result is not OK, so the line is kept either way.
+- **Lessons.**
+  - Splitting a batch into one commit per concern after the fact: snapshot the final tree, write each commit's
+    shared files (the op enum, `lib.rs`, the units list) by removing the later blocks, regenerate the header per
+    stage, commit by path; the last stage is the snapshot, so the built and gated tree is the branch head.
+  - A golden world that answers a count from persistent state (the event's count across sequences) reaches the
+    count's zero rarely (154 `InitializeEvent` calls in 20,000 sequences); the mutation that swaps that virtual still
+    failed 52 sequences, but a world that resets per sequence would cover it better.
+  - The editor gate failed once on the final tree (`view ... hidden` after step 80's check box, read before the UI
+    thread applied it) and passed on the rerun with the same exe: a timing race of the gate under load, not this
+    round's change.
+- **What runs it.** EE-SIM makes no form (the oracle unchanged); the editor gate makes the editor's forms, its
+  control and form events (`LoadDatabase`), its entity groups and its file combo box. **Only the tour shows** the
+  bitmap controls drawn, a movie control (the intro/briefing screens), the groups hiding buttons on screen and the
+  file lists filled from disk (load/save and the civilization builder's list).
+- **Gates.** Commit 1: `build.py -j 3 --sim` 0/0, the oracle seeds 2-3 identical, the editor gate PASS (11,673
+  lines), `ee_ui`'s tests and clippy. Commits 2 and 3 were written together and split afterwards (see Lessons): the
+  build, oracle and editor gate ran on commit 3's tree (= the snapshot; the editor gate's one timing failure above),
+  commit 2's tree was not linked on its own. On the result merged with `rust` (ad71341c; one conflict, PORT_LEARNINGS.md's end, both sides kept; `rust_build.py header` current; `rust_includes.py` added `rust/ee_ui.h` to `UIFileListBox.h`, 9a5d776d): build `--sim` 0/0, the oracle seeds 2-7 identical, the editor gate PASS (12,723 lines), the Rust gate PASS, the test-profile build 0/0. Harness (the lock taken per script): the fixture tour `RESULT PASS tour` (no GX errors), the orders game `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver) and `RESULT PASS random-game`, the legacy tour (`game_session.py --exercise tour --input-check --play-seconds 120`) `STOP <windowed session complete> reached`, `INPUT CHECK F3 paused False -> True -> False: ok`, physics ticks 135 -> 457. EE-SIM makes no form, so the sim_capture profiles were not run.
+- **What is left.** `UIIMECandidate` (its strings come from the window procedure's multibyte candidate list through
+  `UWideString::CopyString`'s character count; the walk wants its own golden; about 150 lines); `UILBString` (its two
+  texts, `DrawTextA`, `UpdateTranslatedKey`; about 60 lines; `UILBString.cpp` stays for `UIObjHost::List`);
+  `UIListBox<T>`'s lines; the whole objects' base ops from the record (every golden re-recorded); the game's eight
+  direct `UIControl` subclasses and `UIGraph`/`UILineGraph` (screens lane).
