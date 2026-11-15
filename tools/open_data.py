@@ -2,21 +2,29 @@
 
   python -I tools/open_data.py build OUT [--game DIR] [--base DIR] [--binary] [--force]
         OUT/Data: every file of both data.ssa archives and of both installs' loose Data, merged in the game's search
-        order; db tables as text (tools/eedata), models as glTF (tools/eemodel), textures as PNG (tools/eemodel);
-        OUT/Users (the install's), OUT/WONLobby.cfg, OUT/zzWONVersion.cfg, OUT/open_data.json (what was built).
-        --binary: the same tree with the binary forms (.dat, .cem, .sst/.tga) unconverted (a test variant).
+        order; models as glTF (tools/eemodel), textures as PNG (tools/eemodel); Data/db and Data/ai copied from the
+        repository's data/db (the tables as text and the rules documents, committed) and data/ai (the computer
+        players' scripts): the retail db folder is not used; OUT/Users (the install's), OUT/WONLobby.cfg,
+        OUT/zzWONVersion.cfg, OUT/open_data.json (what was built).
+        --binary: the same tree with the binary forms (.dat, .cem, .sst/.tga) unconverted (a test variant; its
+        Data/db is the retail .dat files).
   python -I tools/open_data.py pack OUT.zip [--part all|media|db] [--tree DIR] [--game DIR] [--base DIR]
         the bundle: the open tree (built into build/open_data/tree unless --tree names one), fonts/ (Liberation, with
         its LICENSE and AUTHORS) and README.txt. OUT must be under build/ or outside the repository.
         --part: the releases ship it in parts that unzip into one folder (tools/fetch_data.py pulls them):
           media  everything but Data/db and open_data.json: models, the original textures, sounds, music, scripts,
                  fonts (large; changes rarely)
-          db     Data/db, Data/ai and open_data.json: the tables, the rules documents and the computer players'
-                 scripts, the tweakables (small; republished whenever the data format or a script changes)
+          db     Data/db, Data/ai and open_data.json: the repository's data/db and data/ai (the tables, the rules
+                 documents and the computer players' scripts, the tweakables; small), for a game without a checkout
         The third part, Data/Textures-4x, comes from tools/upscale.
-  python -I tools/open_data.py ai TREE
-        refresh a built tree's Data/ai from the repository's data/ai (the AI manifest ais.json and the next engine's Lua
-        scripts; seconds, no rebuild) and record their hash in its open_data.json ("ai"). A build copies them too.
+  python -I tools/open_data.py sync TREE      (also: ai TREE)
+        refresh a built tree's Data/ai and (not on a --binary tree) Data/db from the repository's data/ai and data/db
+        in place (a copy; seconds, no rebuild) and record their hashes in its open_data.json ("ai", "db"). A build
+        copies them too; the harness and tools/sim.py never run a tree whose recorded hashes differ.
+  python -I tools/open_data.py db-regen [OUT] [--game DIR] [--base DIR]
+        convert the retail db tables (the same data path as a build) to text with tools/eedata, plus epochs.yaml and
+        the rules documents (rules.py), into OUT (default: the repository's data/db, replacing its tables). The
+        committed data/db is that conversion; eedata.py check reports every difference between the two.
   python -I tools/open_data.py ids TREE
         write a binary tree's Data/db/dbobjects.ids and dbtechtree.ids (the row ids the text tables would carry, from
         its .dat files; the computer players' scripts name classes and techs by them). A --binary build writes them.
@@ -55,6 +63,7 @@ import ssa       # noqa: E402
 
 TREE = ROOT / 'build' / 'open_data' / 'tree'
 AI_SCRIPTS = ROOT / 'data' / 'ai'   # the next engine's Lua scripts (docs/AI_LUA_PLAN.md 3.2): written here, not retail data
+DB_TEXT = ROOT / 'data' / 'db'      # the db tables as text and the rules documents (committed; db-regen converts retail)
 
 
 def converters_hash():
@@ -103,13 +112,80 @@ def refresh_scripts(tree):
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
     digest = scripts_hash()
-    meta = tree / 'open_data.json'
+    _record(tree, 'ai', digest)
+    return digest
+
+
+def db_files():
+    """The repository's data/db files a data tree gets: the text tables (*.csv, *.yaml: the tables, epochs.yaml and
+    the rules documents). Nothing else belongs there (eedata.py check)."""
+    return sorted([*DB_TEXT.glob('*.csv'), *DB_TEXT.glob('*.yaml')])
+
+
+def db_hash():
+    """A hash of the repository's data/db files (names and contents): a tree whose open_data.json records another one
+    has a stale Data/db (refresh_db copies it in seconds)."""
+    import hashlib
+    h = hashlib.sha256()
+    for p in db_files():
+        h.update(p.name.encode() + b'\0' + p.read_bytes().replace(b'\r\n', b'\n'))
+    return h.hexdigest()[:16]
+
+
+def refresh_db(tree):
+    """Data/db of a tree replaced by the repository's data/db (unlinked first, like refresh_scripts), its hash
+    recorded in open_data.json -> the hash. Not for a --binary tree (its Data/db is the retail .dat files)."""
+    tree = pathlib.Path(tree)
+    target = tree / 'Data' / 'db'
+    if not db_files():
+        sys.exit(f'{DB_TEXT}: no tables (a checkout without data/db?)')
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    for p in db_files():
+        (target / p.name).write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
+    digest = db_hash()
+    _record(tree, 'db', digest)
+    return digest
+
+
+def _record(tree, key, value):
+    meta = pathlib.Path(tree) / 'open_data.json'
     if meta.exists():
         report = json.loads(meta.read_text())
-        if report.get('ai') != digest:
-            report['ai'] = digest
+        if report.get(key) != value:
+            report[key] = value
             meta.write_bytes((json.dumps(report, indent=2) + '\n').encode())
-    return digest
+
+
+def tree_stale(tree):
+    """What of a built tree's Data/ai and Data/db differs from the repository (by the hashes its open_data.json
+    records) -> e.g. ['ai', 'db']; [] when current. A --binary tree's Data/db is retail: only its Data/ai counts."""
+    meta = pathlib.Path(tree) / 'open_data.json'
+    report = json.loads(meta.read_text()) if meta.exists() else {}
+    out = [] if report.get('ai') == scripts_hash() else ['ai']
+    if not report.get('binary') and report.get('db') != db_hash():
+        out.append('db')
+    return out
+
+
+def sync_fetched(root):
+    """A data root that tools/fetch_data.py made (bundles.json) gets this checkout's data/db and data/ai (sync), so a
+    game run straight from it (posix_game.py, play_posix.py) never plays stale tables -> what was refreshed."""
+    root = pathlib.Path(root)
+    if not (root / 'bundles.json').exists() or 'checkout' not in (root / 'bundles.json').read_text(encoding='utf-8'):
+        return []
+    return sync(root)
+
+
+def sync(tree):
+    """Data/ai and (an open tree) Data/db of a built tree refreshed from the repository -> what was refreshed."""
+    stale = tree_stale(tree)
+    if 'ai' in stale:
+        refresh_scripts(tree)
+    if 'db' in stale:
+        refresh_db(tree)
+    return stale
 
 
 FONTS = ROOT / 'toolchain' / 'fonts'
@@ -164,7 +240,7 @@ This part
 README_DB = """
 This part
   The db part: Data/db (the tables as text and the rules documents, what a mod tweaks), Data/ai (the computer
-  players' Lua scripts) and open_data.json. It needs
+  players' Lua scripts) and open_data.json: the source repository's data/db and data/ai. It needs
   the media part (ee_open_media-<sha>.zip: models, textures, sounds, fonts) in the same folder: unzip this one over
   it (tools/fetch_data.py in the source repository does that).
 """
@@ -303,21 +379,9 @@ def cmd_build(a, out=None):
                   shadowed={f'{k[1]} under {k[0]}': v for k, v in sorted(clashes.items())})
     converted = set()   # lower names replaced by an open form
     if not a.binary:
-        # db tables -> text (tools/eedata): every table has a text form
-        import tables
-        spec = db_tables()
-        (data / 'db').mkdir()
-        dbs = {}
-        for t in tables.binary_tables(spec):
-            name = f'db\\{t}.dat'
-            if name not in winner:
-                sys.exit(f'{name} is on no data path place')
-            dbs[t] = winner[name].read(name)
-        # all at once: the tables reference each other's rows by id (DATA_FORMATS.md 8.6)
-        for t, text in tables.export_tree(dbs, spec).items():   # + the rules documents (eedata rules.py)
-            (data / 'db' / f'{t}{tables.text_ext(spec, t)}').write_bytes(text)
-            converted.add(f'db\\{t}.dat')
-        print(f'db: {len(spec["tables"])} tables as text', flush=True)
+        # Data/db: the repository's data/db (the committed text tables; db-regen converts retail), none of the
+        # retail db folder (its .dat tables, the original converter's logs, a stray "copy of dbgamevariant.dat")
+        converted |= {low for low in winner if low.startswith('db\\')}
         # models -> glTF, textures -> PNG (tools/eemodel export: the same data path, resolved as the game does)
         import eemodel
         ns = argparse.Namespace(game=a.game, base=a.base, names=None)
@@ -357,6 +421,8 @@ def cmd_build(a, out=None):
         if not any(e.name.lower() == d.lower() for e in data.iterdir() if e.is_dir()):
             (data / d).mkdir()
     report['ai'] = refresh_scripts(out)   # the next engine's scripts (the repository's, not retail data)
+    if not a.binary:
+        report['db'] = refresh_db(out)    # the tables (the repository's text, not converted here)
     if a.binary:
         report['ids'] = write_row_ids(out)   # the scripts' names for the .dat rows (EEDbRowIds)
     report['copied'] = dict(sorted(copied.items()))
@@ -374,6 +440,45 @@ def cmd_build(a, out=None):
         print(f'  shadowed: {v} files of {k}', flush=True)
     print(f'tree: {report["files"]} files in {time.time() - t0:.0f} s -> {out}', flush=True)
     return out
+
+
+def cmd_db_regen(a):
+    """The retail db tables (the build's data path) -> text into OUT (default the repository's data/db): the tables,
+    epochs.yaml and the rules documents (tools/eedata export_tree). Text files OUT has and the conversion does not
+    make are removed (a table that was dropped)."""
+    import tables
+    out = pathlib.Path(a.out).resolve() if a.out else DB_TEXT
+    if out != DB_TEXT.resolve():
+        outside_repo(out)
+    dirs, plcs = places(a.game, a.base)
+    winner = {}
+    for p in plcs:
+        for low in p.names:
+            winner.setdefault(low, p)
+    spec = db_tables()
+    dbs = {}
+    for t in tables.binary_tables(spec):
+        name = f'db\\{t}.dat'
+        if name not in winner:
+            sys.exit(f'{name} is on no data path place')
+        dbs[t] = winner[name].read(name)
+    texts = tables.export_tree(dbs, spec)   # all at once: the tables reference each other's rows by id
+    out.mkdir(parents=True, exist_ok=True)
+    want = {f'{t}{tables.text_ext(spec, t)}': text for t, text in texts.items()}
+    changed = []
+    for old in [*out.glob('*.csv'), *out.glob('*.yaml')]:
+        if old.name not in want:
+            old.unlink()
+            changed.append(f'removed {old.name}')
+    for name, text in sorted(want.items()):
+        f = out / name
+        if not f.exists() or f.read_bytes() != text:
+            changed.append(('wrote ' if f.exists() else 'added ') + name)
+            f.write_bytes(text)
+    for c in changed:
+        print(f'  {c}')
+    print(f'{out}: {len(want)} files from retail, {len(changed)} changed')
+    return 0
 
 
 def folder_counts(root):
@@ -444,7 +549,7 @@ def pack_part(rel, part):
     if part == 'all':
         return True
     is_db = rel.parts[:2] in (('Data', 'db'), ('Data', 'ai')) or rel.as_posix() == 'open_data.json'
-    return (part == 'db') == is_db
+    return (part == 'db') == is_db   # (the repository's data/db and data/ai: cmd_pack syncs the tree first)
 
 
 def cmd_pack(a):
@@ -457,6 +562,7 @@ def cmd_pack(a):
         if not (tree / 'open_data.json').exists() or json.loads((tree / 'open_data.json').read_text())['binary']:
             a.force, a.binary = True, False
             cmd_build(a, out=tree)
+    sync(tree)   # Data/db and Data/ai: the repository's data/db and data/ai, as committed
     problems = check_tree(tree)
     if problems:
         sys.exit('the tree breaks the bundle rules:\n  ' + '\n  '.join(problems[:20]))
@@ -507,19 +613,27 @@ def main():
                            help='media: all but Data/db; db: Data/db and open_data.json (default all)')
     p = sub.add_parser('check')
     p.add_argument('dir')
-    p = sub.add_parser('ai')
-    p.add_argument('tree')
+    for name in ('sync', 'ai'):
+        p = sub.add_parser(name)
+        p.add_argument('tree')
+    p = sub.add_parser('db-regen')
+    p.add_argument('out', nargs='?')
+    p.add_argument('--game')
+    p.add_argument('--base')
     p = sub.add_parser('ids')
     p.add_argument('tree')
     a = ap.parse_args()
     if a.cmd == 'build':
         cmd_build(a)
         return 0
-    if a.cmd == 'ai':
+    if a.cmd in ('sync', 'ai'):
         if not (pathlib.Path(a.tree) / 'Data').is_dir():
             sys.exit(f'{a.tree}: no Data folder')
-        print(f'{a.tree}: Data/ai from {AI_SCRIPTS} ({refresh_scripts(a.tree)})')
+        done = sync(a.tree)
+        print(f'{a.tree}: ' + (', '.join(f'Data/{x} refreshed' for x in done) or 'Data/ai and Data/db current'))
         return 0
+    if a.cmd == 'db-regen':
+        return cmd_db_regen(a)
     if a.cmd == 'ids':
         if not (pathlib.Path(a.tree) / 'Data' / 'db' / 'dbobjects.dat').is_file():
             sys.exit(f'{a.tree}: no Data/db/dbobjects.dat (a binary tree)')

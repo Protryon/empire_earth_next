@@ -1,6 +1,6 @@
-"""Pull the game data from this repository's private releases: the three parts, unzipped into one folder.
+"""Pull the game data from this repository's releases into one folder, with this checkout's data/db and data/ai.
 
-  python -I tools/fetch_data.py [OUT] [--without textures-4x] [--tag PART=TAG ...] [--list]
+  python -I tools/fetch_data.py [OUT] [--without textures-4x] [--db checkout|release] [--tag PART=TAG ...] [--list]
 
 The data ships in three parts that unzip into one data root (next to the exe, or EE_DATA_ROOT):
   media        open-media-<sha>        ee_open_media-<sha>.zip    models, the original textures, sounds, music,
@@ -9,10 +9,16 @@ The data ships in three parts that unzip into one data root (next to the exe, or
                                                                   (tools/upscale; optional, 1.3 GB)
   db           open-db-<sha>           ee_open_db-<sha>.zip       Data/db: the tables and the rules documents, the
                                                                   tweakables (tools/open_data.py pack --part db)
-Each part is released on its own, so a format change republishes only the db part. OUT (default data/, gitignored)
-gets them in that order; OUT/bundles.json records which release each came from, and a part already at its newest
-release is skipped. A part's newest release is the latest one whose tag has the part's prefix (--tag pins one).
-Downloads are kept in build/data_cache. Needs the gh CLI, logged in with access to the repository.
+Each part is released on its own. OUT (default build/data) gets them in that order; OUT/bundles.json records which
+release each came from, and a part already at its newest release is skipped. A part's newest release is the latest
+one whose tag has the part's prefix (--tag pins one). Downloads are kept in build/data_cache. Needs the gh CLI.
+
+The db part: the tables and the scripts are in git (data/db, data/ai), so by default (--db checkout) OUT/Data/db and
+OUT/Data/ai are copies of this checkout's, refreshed on every run (tools/open_data.py sync: seconds), and the db
+release is not downloaded. --db release takes the release instead (a folder for a game built from another commit; a
+db release made before data/db was committed has no dbrandommap.csv / dbterraingraytextures.csv and does not load).
+OUT may not be the repository's data/ (it holds the committed data/db and data/ai; an old download there,
+data/Data and data/bundles.json, is ignored by git and can be deleted).
 """
 import argparse
 import json
@@ -76,7 +82,9 @@ def download(tag):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], epilog=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("out", nargs="?", default=str(ROOT / "data"))
+    ap.add_argument("out", nargs="?", default=str(ROOT / "build" / "data"))
+    ap.add_argument("--db", choices=("checkout", "release"), default="checkout",
+                    help="Data/db and Data/ai: this checkout's data/db and data/ai (default) or the db release")
     ap.add_argument("--without", action="append", default=[], choices=[p for p, _ in PARTS],
                     help="leave a part out (repeatable)")
     ap.add_argument("--tag", action="append", default=[], metavar="PART=TAG", help="pin a part to a release")
@@ -85,7 +93,8 @@ def main():
     pins = dict(t.split("=", 1) for t in a.tag)
     tags = releases()
     chosen = []
-    for part, prefix in PARTS:
+    parts = [(p, x) for p, x in PARTS if p != "db" or a.db == "release"]
+    for part, prefix in parts:
         tag = pins.get(part) or newest(tags, prefix)
         if tag is None:
             sys.exit(f"no release with a tag starting {prefix} ({part})")
@@ -93,10 +102,13 @@ def main():
     if a.list:
         for part, tag in chosen:
             print(f"{part:12} {tag}")
+        if a.db == "checkout":
+            print(f"{'db':12} checkout")   # data/db and data/ai of this checkout
         return 0
     out = pathlib.Path(a.out).resolve()
-    if out.is_relative_to(ROOT) and not (out.is_relative_to(ROOT / "build") or out.is_relative_to(ROOT / "data")):
-        sys.exit(f"{out} is inside the repository: use data/, build/ or a folder outside it")
+    if out.is_relative_to(ROOT) and not out.is_relative_to(ROOT / "build"):
+        sys.exit(f"{out} is inside the repository: use build/data (the default), another folder under build/ or one "
+                 f"outside it (data/ holds the committed data/db and data/ai)")
     record = out / "bundles.json"
     have = json.loads(record.read_text(encoding="utf-8")) if record.exists() else {}
     want = [(p, t) for p, t in chosen if p not in a.without]
@@ -115,8 +127,10 @@ def main():
         z = download(tag)
         if part == "textures-4x" and (out / "Data" / "Textures-4x").exists():
             shutil.rmtree(out / "Data" / "Textures-4x")   # a pack replaces the one before whole
-        if part == "db" and (out / "Data" / "db").exists():
-            shutil.rmtree(out / "Data" / "db")            # so a table the new release dropped goes too
+        if part == "db":
+            for sub in ("db", "ai"):                       # so a table or script the new release dropped goes too
+                if (out / "Data" / sub).exists():
+                    shutil.rmtree(out / "Data" / sub)
         print(f"{part:12} {tag}: unzipping into {out}", flush=True)
         with zipfile.ZipFile(z) as f:
             f.extractall(out)
@@ -124,6 +138,17 @@ def main():
         record.write_text(json.dumps(have, indent=2) + "\n", encoding="utf-8")
     if "textures-4x" in a.without and have.pop("textures-4x", None) and (out / "Data" / "Textures-4x").exists():
         shutil.rmtree(out / "Data" / "Textures-4x")
+    if a.db == "checkout":
+        sys.path.insert(0, str(ROOT / "tools"))
+        import open_data
+        meta = out / "open_data.json"
+        if not str(have.pop("db", "checkout")).startswith("checkout") and meta.exists():
+            meta.unlink()                                  # the db release's: it describes that release's tables
+        if not meta.exists():
+            meta.write_text(json.dumps(dict(made="tools/fetch_data.py", binary=False), indent=2) + "\n")
+        done = open_data.sync(out)
+        have["db"] = f"checkout (data/db {open_data.db_hash()}, data/ai {open_data.scripts_hash()})"
+        print(f"{'db':12} this checkout's data/db and data/ai" + (f": {', '.join(done)} refreshed" if done else " (current)"))
     record.write_text(json.dumps(have, indent=2) + "\n", encoding="utf-8")
     print(f"data ready in {out}: run the game with EE_DATA_ROOT={out} (or make_play_dir.py --data {out})")
     return 0

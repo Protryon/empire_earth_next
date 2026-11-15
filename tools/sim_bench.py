@@ -130,6 +130,7 @@ def tree_hash(data):
     h = hashlib.sha256()
     meta = tree / "open_data.json"
     h.update(meta.read_bytes() if meta.exists() else b"-")
+    h.update(sim.overlay_hash(tree).encode())   # the stage's Data/ai and Data/db: this checkout's (sim.stage_tree)
     for sub in sorted((tree / "Data").iterdir()):
         h.update(f"{sub.name.lower()}\0".encode())
         h.update((folder_hash(sub, sub.name.lower() in ("ai", "db")) if sub.is_dir() else file_hash(sub)).encode())

@@ -145,12 +145,15 @@ def data_tree(kind):
         if r.returncode:
             raise RuntimeError(f"open_data build failed:\n{r.stdout}{r.stderr}")
     elif tree.parent == OPEN_DATA:
-        # the next engine's scripts (the repository's data/ai): a changed script refreshes Data/ai, no rebuild
+        # the repository's data/ai (the scripts) and data/db (the tables): a change refreshes Data/ai or Data/db in
+        # place, no rebuild
         sys.path.insert(0, str(ROOT / "tools"))
         import open_data
-        if json.loads((tree / "open_data.json").read_text()).get("ai") != open_data.scripts_hash():
-            print(f"data: {tree}: refreshing Data/ai (tools/open_data.py ai)", flush=True)
-            open_data.refresh_scripts(tree)
+        stale = open_data.tree_stale(tree)
+        if stale:
+            print(f"data: {tree}: refreshing {', '.join('Data/' + x for x in stale)} (tools/open_data.py sync)",
+                  flush=True)
+            open_data.sync(tree)
     return tree
 
 
@@ -231,6 +234,14 @@ def stage(name, build, data=True, silent_audio=True):
         kind = "open" if os.environ.get("EE_HARNESS_OPEN_DATA") or (text_db and open_assets) else "binary"
         c = data_tree(kind)
         stage_tree(c, d)
+        if kind == "open" and c.parent != OPEN_DATA:
+            # a tree of someone else's (EE_HARNESS_OPEN_DATA): the stage gets this checkout's data/db and data/ai, so
+            # a run never plays a stale Data/db (our own trees are synced by data_tree)
+            sys.path.insert(0, str(ROOT / "tools"))
+            import open_data
+            open_data.refresh_scripts(d)
+            open_data.refresh_db(d)
+            print(f"data: Data/ai and Data/db from the checkout's data/ai and data/db", flush=True)
         print(f"data: the unified {kind} data tree {c} ({json.loads((c / 'open_data.json').read_text())['files']} files)",
               flush=True)
         if kind == "open":

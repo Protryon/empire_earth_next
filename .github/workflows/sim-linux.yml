@@ -73,10 +73,9 @@ jobs:
           path: build/data_cache
           key: data-${{ steps.tags.outputs.tags }}
 
-      - name: Data (media and db parts)
+      - name: Data (the media part; Data/db and Data/ai from the checkout)
         run: |
-          python -I tools/fetch_data.py data --without textures-4x
-          python -I tools/open_data.py ai data
+          python -I tools/fetch_data.py --without textures-4x
 
       - name: Simulations (each seed twice)
         run: |

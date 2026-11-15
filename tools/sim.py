@@ -18,8 +18,9 @@ classic; random; an AI's id from Data/ai/ais.json such as boom; or next for its 
 3.3) through the lobby's engine boxes: one for every seat, or a comma list by seat (seat 1 is player 2), taken in
 turn.
 
---ai-scripts DIR sets EE_AI_SCRIPTS (absolute): the next engine reads its Lua scripts from DIR before the tree's
-Data/ai (docs/AI_LUA_PLAN.md 3.2), e.g. --ai-scripts data/ai to play the checkout's scripts on an older tree.
+The stage's Data/ai and Data/db are always this checkout's data/ai and data/db (a binary tree keeps its retail
+Data/db), whatever the tree holds. --ai-scripts DIR sets EE_AI_SCRIPTS (absolute): the next engine reads its Lua
+scripts from DIR before Data/ai (docs/AI_LUA_PLAN.md 3.2), e.g. a test folder (tests/ai_units).
 
 --set doc.key=value overrides a rules document (db/<doc>.yaml); a value "[a, b]" replaces a list, e.g.
 --set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" (the original's cheats,
@@ -61,7 +62,7 @@ RULE_DOCS = ("combat", "gameoptions", "civbuilder", "civpowers", "aipersonalitie
 def data_tree(kind):
     """The data tree: 'binary' (build/open_data/tree-binary), 'open' (build/open_data/tree) or a directory. The main
     checkout's trees are used when this checkout has none (a worktree; they are only read); 'open' is last the
-    released data that tools/fetch_data.py pulls into data/ (a machine without the retail installs)."""
+    released data that tools/fetch_data.py pulls into build/data (a machine without the retail installs)."""
     if kind not in ("binary", "open"):
         tree = pathlib.Path(kind)
     else:
@@ -71,8 +72,8 @@ def data_tree(kind):
             main = pathlib.Path(subprocess.run(["git", "-C", str(ROOT), "worktree", "list", "--porcelain"],
                                                capture_output=True, text=True).stdout.split("\n")[0].split(" ", 1)[1])
             tree = main / "build" / "open_data" / name
-            if not (tree / "Data").is_dir() and kind == "open" and (main / "data" / "Data").is_dir():
-                tree = main / "data"
+            if not (tree / "Data").is_dir() and kind == "open" and (main / "build" / "data" / "Data").is_dir():
+                tree = main / "build" / "data"
     if not (tree / "Data").is_dir():
         sys.exit(f"{tree}: no Data folder (python -I tools/open_data.py build ...; without the retail installs: "
                  f"python -I tools/fetch_data.py, then --data open)")
@@ -81,21 +82,32 @@ def data_tree(kind):
     sys.path.insert(0, str(ROOT / "tools"))
     import open_data  # noqa: E402
     made = json.loads((tree / "open_data.json").read_text()).get("converters") if (tree / "open_data.json").exists() else None
-    if made != open_data.converters_hash():
+    if made is not None and made != open_data.converters_hash():   # (a fetched tree records no converters)
         print(f"sim: warning: {tree} was built by other converter code ({made} != {open_data.converters_hash()}) "
               f"or is being built", file=sys.stderr)
-    ai = json.loads((tree / "open_data.json").read_text()).get("ai") if (tree / "open_data.json").exists() else None
-    if ai != open_data.scripts_hash() and not os.environ.get("EE_AI_SCRIPTS"):
-        print(f"sim: warning: {tree}'s Data/ai is not this checkout's data/ai (python -I tools/open_data.py ai TREE, or "
-              f"--ai-scripts)", file=sys.stderr)
     return tree.resolve()
 
 
+def is_binary(tree):
+    meta = tree / "open_data.json"
+    return bool(json.loads(meta.read_text()).get("binary")) if meta.exists() else False
+
+
+def overlay_hash(tree):
+    """what stage_tree writes over a tree's Data/ai and Data/db: this checkout's data/ai and (not on a binary tree,
+    whose Data/db is the retail .dat files) data/db"""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data  # noqa: E402
+    return f"ai={open_data.scripts_hash()} db={'-' if is_binary(tree) else open_data.db_hash()}"
+
+
 def stage_tree(tree, d):
-    """Stage a data tree into d (once per tree): Data's files hard-linked, the written folders, Users and the root
-    files copied."""
+    """Stage a data tree into d (once per tree and checkout data): Data's files hard-linked, the written folders, Users
+    and the root files copied; then Data/ai and Data/db replaced by this checkout's data/ai and data/db (copies; a
+    binary tree keeps its retail Data/db), so a run never plays a stale tree's tables or scripts."""
     marker = d / "sim_stage.json"
-    want = dict(tree=str(tree), made=(tree / "open_data.json").read_text() if (tree / "open_data.json").exists() else "")
+    want = dict(tree=str(tree), made=(tree / "open_data.json").read_text() if (tree / "open_data.json").exists() else "",
+                checkout=overlay_hash(tree))
     if marker.exists() and json.loads(marker.read_text()) == want:
         return d
     if d.exists():
@@ -122,6 +134,10 @@ def stage_tree(tree, d):
             os.link(src, dst)
         except OSError:
             shutil.copy(src, dst)
+    import open_data  # noqa: E402  (overlay_hash put tools/ on the path)
+    open_data.refresh_scripts(d)
+    if not is_binary(tree):
+        open_data.refresh_db(d)
     marker.write_text(json.dumps(want))
     return d
 

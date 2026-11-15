@@ -80,6 +80,10 @@ class Game:
             (self.out / 'config.yaml').write_text(config_yaml.config_text(a.config))
         elif (self.out / 'config.yaml').exists():
             (self.out / 'config.yaml').unlink()
+        sys.path.insert(0, str(ROOT / 'tools'))
+        import open_data   # a fetch_data.py folder: this checkout's data/db and data/ai first
+        for x in open_data.sync_fetched(a.data):
+            self.note(f'DATA {a.data}: Data/{x} refreshed from the checkout')
         env = dict(os.environ, EE_TEST_UI=str(self.ui), EE_DATA_ROOT=str(pathlib.Path(a.data).resolve()),
                    EE_CONFIG=str(self.out / 'config.yaml'))
         self.log = open(self.out / 'game.log', 'wb')
@@ -422,7 +426,7 @@ def main():
                                                                                              'linux-x86_64')
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--exe', type=pathlib.Path, default=ROOT / 'build' / 'xbuild' / host / 'game' / 'ee-aoc')
-    ap.add_argument('--data', default=os.environ.get('EE_DATA_ROOT', str(ROOT / 'data')))
+    ap.add_argument('--data', default=os.environ.get('EE_DATA_ROOT', str(ROOT / 'build' / 'data')))
     ap.add_argument('--out', default=str(ROOT / 'build' / 'posix_game' / time.strftime('%Y%m%d-%H%M%S')))
     ap.add_argument('--exercise', choices=['menu', 'settings', 'ui-captures', 'random-game', 'ai-game'],
                     default='ai-game')
