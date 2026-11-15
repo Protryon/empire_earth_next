@@ -8,7 +8,8 @@ while it runs).
 Reports, per struct, the members with use sites and the members without (a member whose only use is the loader's
 copy into a class member that nothing reads still counts as read here: those dead copies are named mUnused* by
 hand, with the evidence in docs/DATA_FORMATS.md section 8). Fails when a member the text carries has no use site
-(an mUnused* member with use sites is listed: those must be the loader's copies into dead class members). Slow:
+(an mUnused* member with use sites is listed: those must be the loader's copies into dead class members); the
+tables in overlay.UNREAD_TABLES (kept as text, read by nothing) are left out. Slow:
 about 6 minutes at -j 2.
 """
 import collections
@@ -97,8 +98,12 @@ def run(a, spec):
     uses = sites(a.j)
     bad = 0
     rows = []
+    unread = {spec['tables'][n]['struct'] for n in overlay.UNREAD_TABLES}   # carried as text, read by nothing
     for sname, st in spec['structs'].items():
         if st['source'] is None:
+            continue
+        if sname in unread:
+            print(f'{sname}: a table the game reads no field of (overlay.UNREAD_TABLES): not asked for readers')
             continue
         for f in st['fields']:
             if f['cls'] == 'pad':

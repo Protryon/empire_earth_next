@@ -43,14 +43,14 @@ long EERandomMapTable::Load(FSFileSpec* inFile)
 {
     unsigned long theCount = 0;
     unsigned long theRead = 0;
-    char theRecord[0x84];
+    EERandomMapRecord theRecord;   // read and dropped
     inFile->Open(kFileAccessRead);
     long theResult = inFile->Read(theCount);
     if (theResult == kErrorOK) {
         EERandomMapTable::sTable.resize(theCount, NULL);
         for (unsigned long i = 0; i < theCount; i++) {
             EERandomMapTable* theTable = new EERandomMapTable;
-            theResult = inFile->Read(reinterpret_cast<unsigned char*>(theRecord), sizeof(theRecord), theRead);
+            theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
             EERandomMapTable::sTable[i] = theTable;
         }
     }

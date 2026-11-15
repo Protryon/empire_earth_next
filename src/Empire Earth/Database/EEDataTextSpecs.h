@@ -81,6 +81,8 @@ enum EEDTRecordSize {
     kEEDTSize_EEUCUpgradeRecord = 240,
     kEEDTSize_EEToHitRecord = 132,
     kEEDTSize_EEWorldTableEntry = 28,
+    kEEDTSize_EERandomMapRecord = 132,
+    kEEDTSize_EETerrainGrayTextureRecord = 120,
 };
 
 static const EEDTField kEEDTFields_EEAIUnitTargetingRecord[] = {
@@ -1029,6 +1031,20 @@ static const EEDTField kEEDTFields_EEWorldTableEntry[] = {
     {"mLongValue", 0x010, 1, kEEDT_s32},
     {"mLongValue2", 0x014, 1, kEEDT_u32},
 };
+static const EEDTField kEEDTFields_EERandomMapRecord[] = {
+    {"mID", 0x000, 1, kEEDT_s32},
+    {"mGroup", 0x004, 1, kEEDT_s32},
+    {"mName", 0x008, 100, kEEDT_str},
+    {"mElevationLow", 0x06c, 1, kEEDT_s32},
+    {"mElevationHigh", 0x070, 1, kEEDT_s32},
+    {"mTerrain", 0x074, 4, kEEDT_s32},
+};
+static const EEDTField kEEDTFields_EETerrainGrayTextureRecord[] = {
+    {"mName", 0x000, 100, kEEDT_str},
+    {"mID", 0x064, 1, kEEDT_s32},
+    {"mIndex", 0x068, 1, kEEDT_s32},
+    {"mColor", 0x06c, 3, kEEDT_s32},
+};
 
 static const EEDTStruct kEEDTStructs[] = {
     {"EEAIUnitTargetingRecord", 160, kEEDTFields_EEAIUnitTargetingRecord, sizeof(kEEDTFields_EEAIUnitTargetingRecord) / sizeof(EEDTField),
@@ -1163,6 +1179,10 @@ static const EEDTStruct kEEDTStructs[] = {
     {"EEToHitRecord", 132, kEEDTFields_EEToHitRecord, sizeof(kEEDTFields_EEToHitRecord) / sizeof(EEDTField),
      0},
     {"EEWorldTableEntry", 28, kEEDTFields_EEWorldTableEntry, sizeof(kEEDTFields_EEWorldTableEntry) / sizeof(EEDTField),
+     0},
+    {"EERandomMapRecord", 132, kEEDTFields_EERandomMapRecord, sizeof(kEEDTFields_EERandomMapRecord) / sizeof(EEDTField),
+     0},
+    {"EETerrainGrayTextureRecord", 120, kEEDTFields_EETerrainGrayTextureRecord, sizeof(kEEDTFields_EETerrainGrayTextureRecord) / sizeof(EEDTField),
      0},
 };
 
@@ -1450,6 +1470,7 @@ static const EEDTRowName kEEDTRows_dbworld[] = {
     {93, "jit_manufacturing_cost_factor_deathmatch", "mFloatValue"},
     {94, "deathmatch_jit_manufacturing_delay", "mLongValue"},
 };
+static const char* const kEEDTLead_dbterraingraytextures[] = {"mTextureName"};
 
 static const EEDTTable kEEDTTables[] = {
     {"dbaiunittargeting", kEEDTC_count, false, &kEEDTStructs[0], 0, 0, 0, false, 0, 0,
@@ -1732,6 +1753,12 @@ static const EEDTTable kEEDTTables[] = {
      0,
      0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0},
     {"dbworld", kEEDTC_count, false, &kEEDTStructs[35], 0, 0, 0, false, kEEDTRows_dbworld, 61,
+     0,
+     0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0},
+    {"dbrandommap", kEEDTC_count, false, &kEEDTStructs[36], 0, 0, 0, false, 0, 0,
+     0,
+     0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0},
+    {"dbterraingraytextures", kEEDTC_lead, false, &kEEDTStructs[37], kEEDTLead_dbterraingraytextures, 1, 0, false, 0, 0,
      0,
      0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0},
 };

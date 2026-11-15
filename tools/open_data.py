@@ -303,7 +303,7 @@ def cmd_build(a, out=None):
                   shadowed={f'{k[1]} under {k[0]}': v for k, v in sorted(clashes.items())})
     converted = set()   # lower names replaced by an open form
     if not a.binary:
-        # db tables -> text (tools/eedata): the 37 tables with a text form; the two without stay .dat
+        # db tables -> text (tools/eedata): every table has a text form
         import tables
         spec = db_tables()
         (data / 'db').mkdir()
