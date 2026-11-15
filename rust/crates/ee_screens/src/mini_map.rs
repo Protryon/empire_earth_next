@@ -267,5 +267,34 @@ pub fn mouse_move(h: &mut impl UiHost) -> i64 {
     0
 }
 
+/// The op as the shared control host's (`EEUIRustControl`, `ee_screenscpp_hud_ctl`): dirty and the mouse's release
+/// as its ops, the others as the class's own (`EE_SCREENS_HC_CLASS + op`, `RustOp`; the mouse's read into the op's
+/// floats, an [`EeScreensMiniMapMouse`]); with its a.
+pub fn hud_op(op: u32, a: i64) -> (u32, i64) {
+    use crate::hud_ctl::{EE_SCREENS_HC_CLASS, EE_SCREENS_HC_RELEASE_MOUSE, EE_SCREENS_HC_SET_DIRTY};
+    match op {
+        EE_SCREENS_MM_OP_DIRTY => (EE_SCREENS_HC_SET_DIRTY, 1),
+        EE_SCREENS_MM_OP_RELEASE => (EE_SCREENS_HC_RELEASE_MOUSE, a),
+        _ => (EE_SCREENS_HC_CLASS + op, a),
+    }
+}
+
+#[cfg(test)]
+mod hud_op_tests {
+    use super::*;
+    use crate::hud_ctl::*;
+
+    #[test]
+    fn dirty_and_the_release_are_the_hosts() {
+        assert_eq!(hud_op(EE_SCREENS_MM_OP_DIRTY, 0), (EE_SCREENS_HC_SET_DIRTY, 1));
+        assert_eq!(hud_op(EE_SCREENS_MM_OP_RELEASE, 0), (EE_SCREENS_HC_RELEASE_MOUSE, 0));
+        for op in [1, 2, 3, 4, 6, 7, 8, 9] {
+            assert_eq!(hud_op(op, 5), (EE_SCREENS_HC_CLASS + op, 5));
+        }
+        // the mouse's read is twelve floats (the host's floats)
+        assert_eq!(core::mem::size_of::<EeScreensMiniMapMouse>(), 12 * 4);
+    }
+}
+
 #[cfg(test)]
 mod tests;

@@ -9,11 +9,13 @@
 #ifndef EE_EEUIMINIMAP_H
 #define EE_EEUIMINIMAP_H
 
+#include "ee/EEUIRustControl.h"
+
 class EEAMiniMap;
 class EEMiniMap;
 class GEBitmap;
 
-class EEUIMiniMap : public UIControl {
+class EEUIMiniMap : public EEUIRustControl {
 public:
     // 0x275459 (ret 0x14)
     EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
@@ -30,18 +32,15 @@ public:
     // coordinates and sBounds from inMiniMap's transformations, gMiniMapTransformation = its +0x64 (provisional name)
     static void Update(EEMiniMap* inMiniMap);
     static GERectangle sBounds;
-    // the ee_screens mini_map.rs host of the left release and drag (EE_SCREENS_MM_OP_*; a member: the mouse state
-    // and CenterCamera are protected)
-    static int64_t HostOp(EEUIMiniMap* inMap, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);             // 0x565318 the map's corners in mini-map units (Update; one guard bit)
 protected:
+    // the ee_screens mini_map.rs host of the left release and drag (EE_SCREENS_MM_OP_*, EEUIRustControl's the
+    // toolkit's)
+    virtual int64_t RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
     virtual long MouseLButtonDown();        // +0x34 (ICF-folded 0x25ae3b: CaptureMouse, 0)
     virtual long MouseLButtonUp();          // +0x38 0x275f72
     virtual long MouseMove(const GE2DPoint& inLocation);    // +0x40 0x2760af
     virtual long MouseRButtonDown();        // +0x44 0x275e45
     virtual long MouseRButtonUp();          // +0x48 0x275523
-    virtual void TabbedTo() {}
-    virtual void TabbedFrom() {}
-    virtual long UpdateKeyboard() { return 0; }
     // 0x2760ec: centres the camera on the mini-map point under the mouse (EEAMiniMap mode 0) (provisional name)
     void CenterCamera();
 

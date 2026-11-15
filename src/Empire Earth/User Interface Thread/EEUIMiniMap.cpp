@@ -85,7 +85,7 @@ static void EEUIMiniMapMatrix(const GETransformation& inTransformation, float ou
 // Creates the mini map control with its click action, the map drawn inside its border
 EEUIMiniMap::EEUIMiniMap(const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inId,
                          unsigned long inBorderThickness)
-    : UIControl(kControlTypeCustom, inId, inRectangle, inForm, inIndex, inBorderThickness)
+    : EEUIRustControl(inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
     this->mAction = new EEAMiniMap;
     float theBorder = inBorderThickness;
@@ -308,23 +308,18 @@ long EEUIMiniMap::MouseMove(const GE2DPoint& inLocation)
     return (long)ee_screens_mini_map_mouse_move(this);
 }
 
-// The Rust's calls on the control, the mouse and the world (EE_SCREENS_MM_OP_*), each the original's
-extern "C" int64_t ee_screenscpp_mini_map(void* inMap, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+// The Rust's calls on the control, the mouse and the world (EE_SCREENS_MM_OP_*, EEUIRustControl's host the
+// toolkit's), each the original's; the mouse's read into the op's floats
+int64_t EEUIMiniMap::RustOp(uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
 {
-    return EEUIMiniMap::HostOp(static_cast<EEUIMiniMap*>(inMap), inOp, inA, inB, inC);
-}
-
-// (a member: the mouse state and CenterCamera are protected)
-int64_t EEUIMiniMap::HostOp(EEUIMiniMap* inMap, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
-{
-    switch (inOp) {
+    EEUIMiniMap* inMap = this;
+    switch (inOp - EE_SCREENS_HC_CLASS) {
     case EE_SCREENS_MM_OP_HAS_CAPTURE: return inMap->GetHasMouseCapture();
     case EE_SCREENS_MM_OP_LEFT_DOWN: return inMap->GetLeftMouseButtonDown();
     case EE_SCREENS_MM_OP_POINTER: return gMouse->mPointer;
     case EE_SCREENS_MM_OP_CENTER: inMap->CenterCamera(); break;
-    case EE_SCREENS_MM_OP_DIRTY: inMap->SetDirty(true); break;
     case EE_SCREENS_MM_OP_READ_MOUSE: {
-        EeScreensMiniMapMouse& theMouse = *reinterpret_cast<EeScreensMiniMapMouse*>(inC);
+        EeScreensMiniMapMouse& theMouse = *reinterpret_cast<EeScreensMiniMapMouse*>(ioF);
         const GERectangle& theRect = inMap->GetRectangle();
         theMouse.mouse[0] = inMap->GetForm()->GetMouseLocation().GetX();
         theMouse.mouse[1] = inMap->GetForm()->GetMouseLocation().GetY();
@@ -343,7 +338,6 @@ int64_t EEUIMiniMap::HostOp(EEUIMiniMap* inMap, uint32_t inOp, int64_t inA, int6
         gMouse->mPointer = 0;
         static_cast<EEUIFMainGame*>(inMap->GetForm())->SetUIState(0);
         break;
-    case EE_SCREENS_MM_OP_RELEASE: inMap->ReleaseCapturedMouse(); break;
     }
     return 0;
 }
