@@ -23654,3 +23654,92 @@ Round total: net -1,464. The Graphics Engine directory: 10,134 -> 8,752 lines; t
 - **Left in the plug-in**: DX7Rasterizer.cpp (852 lines: the forwarders, the draws' reads of GE objects, the rasterizer's
   host, about 300 address markers), DX7Trampolines.cpp (366: the vertex arrays' shells, the screen, surface and movie
   shells and hosts, the layout pins) and GX.cpp (137: the GX shims the splash screen and `tools/gx_test`/`sdl_test` call).
+
+## R6: the game screens, thirty-first round: the status button's host onto the main game form's; the keyboard modes, the status bar's mouse and the market buttons in Rust; the portrait, icon bar and mini map onto EEUIRustControl (ee_screens status_button.rs, mouse_modes.rs, upgrade.rs; branch rust-screens31, 2026-11-15)
+
+Round 30's "Left" taken in order: hosts merged where two answered the same calls, the last decisions of the status
+button's, status bar's and main form's C++ moved to Rust. Scope from this round: a second screens lane ("game screens
+B", `rust-screensb1`) owns `EEScreens.cpp`, `EEUserInterface.cpp`, `EEUIManager.cpp`, the error form, the generic
+background, the line graph and the non-WON events; this lane keeps the HUD.
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| f6349076 | the status button's host onto the main form's host; the keyboard modes and `UpdateMouse`/`UpdateKeyboard` in Rust | +96 -145, net -49 |
+| 9503ed29 | the status bar's five mouse handlers and `MoveIcon` in Rust over the improvement button's host | +39 -90, net -51 |
+| ef360f27 | the portrait and the unit icon bar onto `EEUIRustControl` | +23 -69, net -46 |
+| 4b41c46b | `EEDecodeTradeButton` and `EECanAffordTrade` in Rust (the button adapter); three more unit tests | +2 -58, net -56 |
+| 4355de6e | the mini map onto `EEUIRustControl` | +13 -20, net -7 |
+| 68924b88 | the touched units' dead includes | -15 |
+| a8dc8937 | the merge of `rust` | |
+
+Against 7628520d (round 30's head): +173 -397, **net -224** C++. Far short of the 1,500 asked; why under Left.
+
+- **The status button over the form's host.** The button's 75 ops were a host of their own
+  (`ee_screenscpp_status_button`, a press record holding the button, the unload's transport, `CanProduce`'s reason
+  and the help text). Ten of them the main game form's host already answered with the same statement (the pointer,
+  the UI state, the cursor lock, the group refresh, the sounds, the panel's entity group and background, the first
+  selected unit, the chat line, the resource strings, the held text's read): the Rust adapter
+  (`status_button.rs` `form_op`) sends those as the form's ops; the other 65 are the form host's button part
+  (`EEStatusButtonOp`, reached as `EE_SCREENS_MF_OP_SB + op`, c in io.n[0]), whose cases are the old ones with the
+  press's fields renamed (the transport is the form call's `mFirst`, the reason and the help text its held text,
+  which no press uses for both). The form call gained the button and the help string's result; the button's four
+  members reach Rust through `EEUIFMainGame::ButtonCall`. Equivalences to keep in mind: the form's `SET_FIELD`
+  answers the field (the adapter answers 0 for the cursor lock, as the old op), `MD_FIRST` answers found | non-null
+  << 1 (the adapter keeps the found bit), `TEXT_GET` takes (capacity, destination) where the old read took
+  (destination, capacity). The market buttons' decode and affordability then moved into the adapter too (their only
+  callers were these ops): the resource against 100, or the gold against the price (`TRADE_PRICE` first, as the
+  original).
+- **The keyboard modes and `UpdateMouse`.** As round 30's mouse modes: `mKeyboardTests[22]` (function pointers)
+  became `mKeyboardModes[22]` (2: the cinematic's), `EEModeKeyboardCinematic` and the two `return false` tests are
+  `mouse_modes.rs` `update_keyboard`/`cinematic_keys` (`EE_SCREENS_MF_OP_MD_KEY` reads a key's found, held and
+  just-pressed bits; `MD_CINEMATIC` posts the end-cinematic or pause event, asks the scenario manager's ending flag,
+  posts the screenshot). `UpdateMouse`'s order is kept: the unit hack at the mouse, the form's controls
+  (`UIForm::UpdateMouse`), then the mode and the mouse read again (`MD_MOUSE_AT`): a control's event may change the
+  interface state.
+- **The status bar's mouse** (`upgrade.rs` `bar_mouse`): five handlers and `MoveIcon` over five new ops of the
+  improvement button's host (the bar's fields, the mouse inside by the form's location or the move's, the handler
+  under the bar's, the icon's move); `GetCanUpgrade`, `MouseMove` and `MouseRButtonUp` under them are `upgrade.rs`'
+  own, called directly over the same call record (the old C++ made a fresh one; the ops they ask read neither the
+  location nor the out text, which the driver checks).
+- **Three controls onto `EEUIRustControl`.** The portrait, the icon bar and the mini map derive from it: the ops its
+  shared host answers with the same statement (dirty, the rectangle and the copied draw rectangle, the base's
+  `CopyData`/`DrawPolygons`, the mouse's release) are mapped in each FFI adapter (`hud_op`), the rest reach the
+  class's `RustOp` as `EE_SCREENS_HC_CLASS + op` (64: above the shared ops and the ping's and chat line's own); the
+  mini map's mouse read hands its record as the op's twelve floats. Their replay goldens are unchanged (the mapping is
+  below the hosts' traits); `build/sc31/check_rustctl.py` checks every kept case is the old host's text.
+- **The goldens.** `build/sc31/drv1` (commits 1 and 4): the old host's cases and members cut from 7628520d (the
+  status button's mapped and kept ops, `EECanAffordTrade`/`EEDecodeTradeButton`, `EEModeKeyboardCinematic`,
+  `UpdateKeyboard`, `UpdateMouse`) against the new path (`ee_screens_status_button_op` and the form member's keyboard
+  and mouse over the new host's cases cut from the working tree) in one fake world; each case 1-20 actions (button
+  ops with their argument shapes, keyboard and mouse updates; a press's or a help string's op set), each side in its
+  own process (the mouse modes keep thread-local shift states across calls: one process for both sides gave false
+  differences from the other side's history). Seeds 2, 3, 4, 7 x 10,000 cases (~440,000 actions): 0 differences.
+  `cut.py` also checks the 63 kept button ops are the old cases' text after the renames. Host mutations: 16 of 18
+  caught, 2 equivalent (a missing key answering only "found": the Rust needs the held or just-pressed bit; the first
+  unit's reset: a press's record is fresh). `build/sc31/drv2` (commit 2): the original handlers against `BarMouse`,
+  both reaching `upgrade.rs` through a fake host; seeds 2, 3, 4, 7 (3,000 / 10,000 cases, ~215,000 calls): 0
+  differences; 8 of 8 host mutations caught. Rust: 21 mutations of the new Rust (the adapter, the trades, the keyboard
+  and mouse, the bar, the controls' maps) against the unit tests, 18 caught at first; the three missed (the 100's
+  boundary, the found bit, a held but not just-pressed key) got tests and are caught (`build/sc31/rmutate.py`).
+- **Lessons.** (1) A mutation run leaves the last mutant's exe: rebuild the clean driver before trusting a later run
+  (round 30's lesson again: a seed run after the mutations showed 130 "differences", all the mutant's). (2) Rust state
+  kept across calls (thread-locals) needs one process per side in an A/B driver. (3) A fake's trace must log a
+  call-record field only where an op reads it: `MoveIcon`'s `GetCanUpgrade` ran in a fresh record in the original and
+  in the bar's record now, and the first driver flagged the location no op of it reads. (4) Merging two hosts saves
+  only the cases both answer with the same statement: ten of 75 here.
+- **Behaviour.** None intended.
+- **What runs it.** Every frame in a game: `UpdateMouse`/`UpdateKeyboard` (the tour, the orders game); the command
+  buttons' `CopyData` and help strings (the panel shows whenever a unit is selected: the orders game); the portrait,
+  the icon bar (with a selection) and the mini map (always) draw over `EEUIRustControl`'s host. EE-SIM builds no form:
+  the oracle and the editor gate are unchanged by construction. **Only a person reaches**: the cinematic's keys (no
+  gate plays a cinematic), the command buttons' presses and right clicks (no gate clicks one), the market's trades,
+  the status bar's presses (the improvement buttons), the icon bar's and portrait's clicks, the mini map's clicks.
+- **Gates.** GATES_TBD
+- **Left** (the HUD's C++ at 68924b88: `EEUIFMainGame.cpp` 1,723, of it the form's host ~680 with the unit hack's 110
+  and the cursor's 150; `EEUIFMGStatusButton.cpp` 590, the button part ~200; `EEUIFMGStatusBox.cpp` 566,
+  `EEUIFMGMainGroup.cpp` 496, `EEUIMiniMap.cpp` 407, `EEUIBUpgrade.cpp` 355, the portrait 274, the icon bar 228,
+  `EEUIFMGStatusBar.cpp` 199, `EEUIBSavedGroup.cpp` 209). Nearly all of it is host code: one line per call into a C++
+  object (bitmaps, texts, rhombi, sounds, the toolkit) or the world, which stays until those move. Decisions left:
+  the main group's `ShowCommands` (~95 lines, ~-60 over the main group's host), `EEUIBSavedGroup`'s presses, refresh
+  and portrait (~-50), the mini map's `MouseRButtonDown`/`CenterCamera` marshalling (~-20), the status button's and
+  status box's texture set-up (a shared helper). 1,500 lines a round are not in the HUD any more.
