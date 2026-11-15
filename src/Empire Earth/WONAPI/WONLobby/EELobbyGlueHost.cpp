@@ -535,7 +535,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::CurrentForm: return (intptr_t)gUIManager->GetCurrentForm();
     case Op::PopForm: gUIManager->Pop(); return 0;
     case Op::LobbyResume: LobbyResume(); return 0;
-    case Op::BoxDissolved: LobbyMessageBox(::RoutingLogic_GameDissolvedTitle_String, ::RoutingLogic_GameDissolvedDetails_String); return 0;
+    case Op::BoxDissolved: LobbyMessageBox(LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)); return 0;
     }
     return 0;
 }

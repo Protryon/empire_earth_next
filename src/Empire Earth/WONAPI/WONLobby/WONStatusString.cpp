@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 const char* WONStatusToString(WONStatus);
 }
@@ -33,94 +34,94 @@ GUIString GetWONStatusString(WONStatus status)
     GUIString aString;
     switch(status) {
     case -2803:
-        return ::WONStatus_UserExists_String;
+        return LOBBY_STRING(WONStatus_UserExists_String);
     case -2804:
-        return ::WONStatus_InvalidUserName_String;
+        return LOBBY_STRING(WONStatus_InvalidUserName_String);
     case -2805:
-        return ::WONStatus_CDKeyInUse_String;
+        return LOBBY_STRING(WONStatus_CDKeyInUse_String);
     case -2806:
-        return ::WONStatus_UserNotFound_String;
+        return LOBBY_STRING(WONStatus_UserNotFound_String);
     case -2808:
-        return ::WONStatus_KeyNotUsed_String;
+        return LOBBY_STRING(WONStatus_KeyNotUsed_String);
     case -2809:
-        return ::WONStatus_EMailPasswordDuplication_String;
+        return LOBBY_STRING(WONStatus_EMailPasswordDuplication_String);
     case -2810:
-        return ::WONStatus_AccountCreateDisabled_String;
+        return LOBBY_STRING(WONStatus_AccountCreateDisabled_String);
     case -2811:
-        return ::WONStatus_BadPassword_String;
+        return LOBBY_STRING(WONStatus_BadPassword_String);
     case -2812:
-        return ::WONStatus_AgeNotOldEnough_String;
+        return LOBBY_STRING(WONStatus_AgeNotOldEnough_String);
     case -2813:
-        return ::WONStatus_ItemHasDependencies_String;
+        return LOBBY_STRING(WONStatus_ItemHasDependencies_String);
     case -2814:
-        return ::WONStatus_OutOfDate_String;
+        return LOBBY_STRING(WONStatus_OutOfDate_String);
     case -2815:
-        return ::WONStatus_OutOfDateNoUpdate_String;
+        return LOBBY_STRING(WONStatus_OutOfDateNoUpdate_String);
     case -2816:
-        return ::WONStatus_ValidNotLatest_String;
+        return LOBBY_STRING(WONStatus_ValidNotLatest_String);
     case -2817:
-        return ::WONStatus_DataAlreadyExists_String;
+        return LOBBY_STRING(WONStatus_DataAlreadyExists_String);
     case -2800:
-        return ::WONStatus_DBError_String;
+        return LOBBY_STRING(WONStatus_DBError_String);
     case -2802:
     case -2801:
-        return GeneralStatusError(::WONStatus_DatabaseFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_DatabaseFailure_String),status);
     case -2552:
-        return ::WONStatus_JoinCanceled_String;
+        return LOBBY_STRING(WONStatus_JoinCanceled_String);
     case -2542:
-        return ::WONStatus_ServerFull_String;
+        return LOBBY_STRING(WONStatus_ServerFull_String);
     case -2551:
-        return ::WONStatus_GroupNameExceedsMaximum_String;
+        return LOBBY_STRING(WONStatus_GroupNameExceedsMaximum_String);
     case -2548:
-        return ::WONStatus_Throttled_String;
+        return LOBBY_STRING(WONStatus_Throttled_String);
     case -2532:
-        return ::WONStatus_MustBeModerator_String;
+        return LOBBY_STRING(WONStatus_MustBeModerator_String);
     case -2500:
-        return ::WONStatus_BlankNamesNotAllowed_String;
+        return LOBBY_STRING(WONStatus_BlankNamesNotAllowed_String);
     case -2501:
-        return ::WONStatus_CaptainRejectedYou_String;
+        return LOBBY_STRING(WONStatus_CaptainRejectedYou_String);
     case -2502:
-        return ::WONStatus_ClientAlreadyBanned_String;
+        return LOBBY_STRING(WONStatus_ClientAlreadyBanned_String);
     case -2504:
-        return ::WONStatus_ClientAlreadyInGroup_String;
+        return LOBBY_STRING(WONStatus_ClientAlreadyInGroup_String);
     case -2505:
-        return ::WONStatus_ClientAlreadyMuted_String;
+        return LOBBY_STRING(WONStatus_ClientAlreadyMuted_String);
     case -2507:
-        return ::WONStatus_ClientBanned_String;
+        return LOBBY_STRING(WONStatus_ClientBanned_String);
     case -2508:
-        return ::WONStatus_ClientDoesNotExist_String;
+        return LOBBY_STRING(WONStatus_ClientDoesNotExist_String);
     case -2509:
-        return ::WONStatus_ClientNotBanned_String;
+        return LOBBY_STRING(WONStatus_ClientNotBanned_String);
     case -2510:
-        return ::WONStatus_ClientNotInGroup_String;
+        return LOBBY_STRING(WONStatus_ClientNotInGroup_String);
     case -2511:
-        return ::WONStatus_ClientNotInvited_String;
+        return LOBBY_STRING(WONStatus_ClientNotInvited_String);
     case -2512:
-        return ::WONStatus_ClientNotMuted_String;
+        return LOBBY_STRING(WONStatus_ClientNotMuted_String);
     case -2514:
-        return ::WONStatus_ConnectFailure_String;
+        return LOBBY_STRING(WONStatus_ConnectFailure_String);
     case -2516:
-        return ::WONStatus_GroupAlreadyClaimed_String;
+        return LOBBY_STRING(WONStatus_GroupAlreadyClaimed_String);
     case -2517:
-        return ::WONStatus_GroupAlreadyExists_String;
+        return LOBBY_STRING(WONStatus_GroupAlreadyExists_String);
     case -2518:
-        return ::WONStatus_GroupClosed_String;
+        return LOBBY_STRING(WONStatus_GroupClosed_String);
     case -2519:
-        return ::WONStatus_GroupDeleted_String;
+        return LOBBY_STRING(WONStatus_GroupDeleted_String);
     case -2520:
-        return ::WONStatus_GroupDoesNotExist_String;
+        return LOBBY_STRING(WONStatus_GroupDoesNotExist_String);
     case -2521:
-        return ::WONStatus_GroupFull_String;
+        return LOBBY_STRING(WONStatus_GroupFull_String);
     case -2522:
-        return ::WONStatus_GuestNamesReserved_String;
+        return LOBBY_STRING(WONStatus_GuestNamesReserved_String);
     case -2524:
-        return ::WONStatus_InvalidPassword_String;
+        return LOBBY_STRING(WONStatus_InvalidPassword_String);
     case -2527:
-        return ::WONStatus_MustBeAdmin_String;
+        return LOBBY_STRING(WONStatus_MustBeAdmin_String);
     case -2529:
-        return ::WONStatus_MustBeCaptain_String;
+        return LOBBY_STRING(WONStatus_MustBeCaptain_String);
     case -2530:
-        return ::WONStatus_MustBeCaptainOrModerator_String;
+        return LOBBY_STRING(WONStatus_MustBeCaptainOrModerator_String);
     case -2550:
     case -2549:
     case -2547:
@@ -145,34 +146,34 @@ GUIString GetWONStatusString(WONStatus status)
     case -2513:
     case -2506:
     case -2503:
-        return GeneralStatusError(::WONStatus_ChatFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_ChatFailure_String),status);
     case -2807:
     case -1510:
     case -1501:
-        return ::WONStatus_InvalidCDKey_String;
+        return LOBBY_STRING(WONStatus_InvalidCDKey_String);
     case -1502:
-        return ::WONStatus_CDKeyBanned_String;
+        return LOBBY_STRING(WONStatus_CDKeyBanned_String);
     case -1503:
-        return ::WONStatus_CDKeyInUse_String;
+        return LOBBY_STRING(WONStatus_CDKeyInUse_String);
     case -1504:
-        return ::WONStatus_CRCFailed_String;
+        return LOBBY_STRING(WONStatus_CRCFailed_String);
     case -1505:
-        return ::WONStatus_UserExists_String;
+        return LOBBY_STRING(WONStatus_UserExists_String);
     case -1506:
-        return ::WONStatus_UserNotFound_String;
+        return LOBBY_STRING(WONStatus_UserNotFound_String);
     case -1507:
-        return ::WONStatus_BadPassword_String;
+        return LOBBY_STRING(WONStatus_BadPassword_String);
     case -1508:
-        return ::WONStatus_InvalidUserName_String;
+        return LOBBY_STRING(WONStatus_InvalidUserName_String);
     case -1509:
-        return ::WONStatus_BadCommunity_String;
+        return LOBBY_STRING(WONStatus_BadCommunity_String);
     case -1511:
-        return ::WONStatus_NotInCommunity_String;
+        return LOBBY_STRING(WONStatus_NotInCommunity_String);
     case -1512:
-        return ::WONStatus_UserSeqInUse_String;
+        return LOBBY_STRING(WONStatus_UserSeqInUse_String);
     case -1513:
     case -1500:
-        return GeneralStatusError(::WONStatus_AuthFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_AuthFailure_String),status);
     case -1224:
     case -1223:
     case -1222:
@@ -198,14 +199,14 @@ GUIString GetWONStatusString(WONStatus status)
     case -1202:
     case -1201:
     case -1200:
-        return GeneralStatusError(::WONStatus_DirFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_DirFailure_String),status);
     case -8:
-        return ::WONStatus_NotAuthorized_String;
+        return LOBBY_STRING(WONStatus_NotAuthorized_String);
     case -17:
-        return ::WONStatus_BehindFirewall_String;
+        return LOBBY_STRING(WONStatus_BehindFirewall_String);
     case -19:
     case -18:
-        return ::WONStatus_ExpiredCertificate_String;
+        return LOBBY_STRING(WONStatus_ExpiredCertificate_String);
     case -20:
     case -16:
     case -15:
@@ -221,11 +222,11 @@ GUIString GetWONStatusString(WONStatus status)
     case -4:
     case -2:
     case -1:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case -3:
-        return ::WONStatus_NotAllowed_String;
+        return LOBBY_STRING(WONStatus_NotAllowed_String);
     case WS_Success:
-        return ::WONStatus_Success_String;
+        return LOBBY_STRING(WONStatus_Success_String);
     case WS_WSAEINTR:
     case WS_WSAEBADF:
     case WS_WSAEACCES:
@@ -268,13 +269,13 @@ GUIString GetWONStatusString(WONStatus status)
     case WS_WSAEDQUOT:
     case WS_WSAESTALE:
     case WS_WSAEREMOTE:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case WS_WSAECONNREFUSED:
-        return ::WONStatus_ConnRefused_String;
+        return LOBBY_STRING(WONStatus_ConnRefused_String);
     case WS_TimedOut:
-        return ::WONStatus_TimedOut_String;
+        return LOBBY_STRING(WONStatus_TimedOut_String);
     case WS_Killed:
-        return ::WONStatus_Killed_String;
+        return LOBBY_STRING(WONStatus_Killed_String);
     case WS_Pending:
     case WS_Incomplete:
     case WS_None:
@@ -287,22 +288,22 @@ GUIString GetWONStatusString(WONStatus status)
     case WS_InvalidPublicKey:
     case WS_MessageUnpackFailure:
     case WS_AuthRequired:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case WS_InvalidAddress:
-        return ::WONStatus_InvalidAddress_String;
+        return LOBBY_STRING(WONStatus_InvalidAddress_String);
     case WS_NoReply:
     case WS_AsyncSocket_InvalidSocket:
     case WS_AsyncSocket_PartialSendTo:
     case WS_AsyncSocket_StreamNotAllowed:
     case WS_AsyncSocket_DatagramNotAllowed:
     case WS_AsyncSocket_Shutdown:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case WS_AsyncSocket_ConnectFailed:
-        return ::WONStatus_ConnRefused_String;
+        return LOBBY_STRING(WONStatus_ConnRefused_String);
     case WS_SocketOp_InvalidSocket:
     case WS_RecvMsg_InvalidLengthFieldSize:
     case WS_RecvMsg_InvalidMessageLength:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case WS_PeerAuthClient_Challenge1DecryptFailure:
     case WS_PeerAuthClient_Challenge1InvalidSecretLen:
     case WS_PeerAuthClient_Challenge1InvalidSecretKey:
@@ -332,7 +333,7 @@ GUIString GetWONStatusString(WONStatus status)
     case WS_PeerAuthServer_InvalidSecretA:
     case WS_PeerAuthServer_InvalidSecretB:
     case WS_PeerAuth_GetCertFailure:
-        return GeneralStatusError(::WONStatus_AuthFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_AuthFailure_String),status);
     case WS_ServerReq_FailedAllServers:
     case WS_ServerReq_NoServersSpecified:
     case WS_ServerReq_NeedAuthContext:
@@ -344,7 +345,7 @@ GUIString GetWONStatusString(WONStatus status)
     case WS_ServerReq_GetCertFailure:
     case WS_ServerReq_InvalidReplyHeader:
     case WS_ServerReq_UnpackFailure:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case WS_GetCert_PubKeyEncryptFailure:
     case WS_GetCert_InvalidPubKeyReply:
     case WS_GetCert_InvalidLoginReply:
@@ -368,39 +369,39 @@ GUIString GetWONStatusString(WONStatus status)
     case WS_AuthSession_DecryptBadLen:
     case WS_AuthSession_DecryptInvalidSequenceNum:
     case WS_AuthSession_DecryptUnpackFailure:
-        return GeneralStatusError(::WONStatus_AuthFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_AuthFailure_String),status);
     case WS_ServerConnection_RecvNotAllowedInAsyncMode:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case WS_FTP_InvalidResponse:
     case WS_FTP_StatusError:
     case WS_FTP_InvalidPasvResponse:
-        return GeneralStatusError(::WONStatus_FTPFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_FTPFailure_String),status);
     case WS_HTTP_InvalidHeader:
     case WS_HTTP_StatusError:
     case WS_HTTP_InvalidRedirect:
     case WS_HTTP_TooManyRedirects:
     case WS_HTTP_Redirected:
     case WS_HTTP_SendSuccess:
-        return GeneralStatusError(::WONStatus_HTTPFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_HTTPFailure_String),status);
     case WS_GetMOTD_SysNotFound:
     case WS_GetMOTD_GameNotFound:
-        return GeneralStatusError(::WONStatus_MOTDFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_MOTDFailure_String),status);
     case WS_BaseMsgRequest_NoRequest:
     case WS_BaseMsgRequest_UnpackFailure:
     case WS_BaseMsgRequest_BadHeaderType:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     case WS_RoutingOp_ReplyUnpackFailure:
     case WS_RoutingOp_DontWantReply:
     case WS_RoutingOp_NeedMoreReplies:
-        return GeneralStatusError(::WONStatus_RoutingFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_RoutingFailure_String),status);
     case WS_GameSpySupport_UnhandledError:
     case WS_GameSpySupport_WinSockError:
     case WS_GameSpySupport_BindError:
     case WS_GameSpySupport_DNSError:
     case WS_GameSpySupport_ConnError:
-        return GeneralStatusError(::WONStatus_GameSpyFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GameSpyFailure_String),status);
     default:
-        return GeneralStatusError(::WONStatus_GeneralFailure_String,status);
+        return GeneralStatusError(LOBBY_STRING(WONStatus_GeneralFailure_String),status);
     }
 }
 }
