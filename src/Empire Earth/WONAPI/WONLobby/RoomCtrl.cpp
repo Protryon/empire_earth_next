@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
+#include "rust/ee_won.h"
 using namespace WONAPI;
 // RoomListItem: an entry of the room tree (a server or one of its chat rooms), private to this file
 // FUNCTION: WON 0x007c19a0
@@ -41,7 +42,7 @@ int RoomListItem::Compare(const WONAPI::ListItem* inOther,WONAPI::ListArea*) con
 void RoomListItem::UpdateText(WONAPI::LobbyServer* inServer,WONAPI::LobbyGroup* inGroup)
 {
     char aCount[50];
-    if(this->mLoading) this->mText=::RoomCtrl_QueryingServer_String;
+    if(this->mLoading) this->mText=LOBBY_STRING(RoomCtrl_QueryingServer_String);
     else if(inGroup!=NULL)
     {
         sprintf(aCount," (%d)",inGroup->GetNumClients());
@@ -57,7 +58,7 @@ void RoomListItem::UpdateText(WONAPI::LobbyServer* inServer,WONAPI::LobbyGroup* 
             this->mText.append(aCount);
     }
     else this->mText.erase();
-    if(inGroup!=NULL && inGroup->IsPasswordProtected()) this->mImage=::RoomCtrl_Password_Image;
+    if(inGroup!=NULL && inGroup->IsPasswordProtected()) this->mImage=LOBBY_IMAGE(RoomCtrl_Password_Image);
     else this->mImage=NULL;
 }
 // FUNCTION: WON 0x007c1fd0

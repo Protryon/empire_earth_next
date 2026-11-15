@@ -96,21 +96,21 @@ void StagingLogic::HandleMessageBuffer(const ByteBuffer* inMessage, LobbyClient*
 // ---- the calls out
 
 static const GUIString* const kTexts[][2] = {
-    {&::RoutingLogic_GameDissolvedTitle_String, &::RoutingLogic_GameDissolvedDetails_String},
-    {&::RoutingLogic_AlreadyJoinedTitle_String, &::RoutingLogic_AlreadyInGame_String},
-    {&::GameStagingLogic_JoinGameErrorTitle_String, &::GameStagingLogic_NoPingReplyError_String},
-    {&::StagingLogic_DisconnectedTitle_String, &::StagingLogic_DisconnectedDetails_String},
-    {&::StagingLogic_BannedTitle_String, &::StagingLogic_BannedDetails_String},
-    {&::StagingLogic_KickedTitle_String, &::StagingLogic_KickedDetails_String},
-    {&::GameStagingLogic_ConnectWarningTitle1_String, &::GameStagingLogic_ConnectWarningDetails1_String},
-    {&::GameStagingLogic_ConnectWarningTitle2_String, &::GameStagingLogic_ConnectWarningDetails2_String},
-    {&::GameStagingLogic_ConnectWarningTitle3_String, &::GameStagingLogic_ConnectWarningDetails3_String},
-    {&::GameStagingLogic_DissolveGame_String, &::GameStagingLogic_DissolveGameConfirm_String},
-    {&::GameStagingLogic_LeaveGame_String, &::GameStagingLogic_LeaveGameConfirm_String},
-    {&::GameStagingLogic_VerifyingPingTitle_String, &::GameStagingLogic_VerifyingPingDetails_String},
-    {&::GameStagingLogic_GettingGameInfoTitle_String, &::GameStagingLogic_GettingGameInfoDetails_String},
-    {&::GameStagingLogic_JoinGameErrorTitle_String, &::LobbyGameStatus_InvalidPassword_String},
-    {&::LANLogic_RegisterTitle_String, &::LANLogic_InvalidSubnet_String},
+    {&LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), &LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)},
+    {&LOBBY_STRING(RoutingLogic_AlreadyJoinedTitle_String), &LOBBY_STRING(RoutingLogic_AlreadyInGame_String)},
+    {&LOBBY_STRING(GameStagingLogic_JoinGameErrorTitle_String), &LOBBY_STRING(GameStagingLogic_NoPingReplyError_String)},
+    {&LOBBY_STRING(StagingLogic_DisconnectedTitle_String), &LOBBY_STRING(StagingLogic_DisconnectedDetails_String)},
+    {&LOBBY_STRING(StagingLogic_BannedTitle_String), &LOBBY_STRING(StagingLogic_BannedDetails_String)},
+    {&LOBBY_STRING(StagingLogic_KickedTitle_String), &LOBBY_STRING(StagingLogic_KickedDetails_String)},
+    {&LOBBY_STRING(GameStagingLogic_ConnectWarningTitle1_String), &LOBBY_STRING(GameStagingLogic_ConnectWarningDetails1_String)},
+    {&LOBBY_STRING(GameStagingLogic_ConnectWarningTitle2_String), &LOBBY_STRING(GameStagingLogic_ConnectWarningDetails2_String)},
+    {&LOBBY_STRING(GameStagingLogic_ConnectWarningTitle3_String), &LOBBY_STRING(GameStagingLogic_ConnectWarningDetails3_String)},
+    {&LOBBY_STRING(GameStagingLogic_DissolveGame_String), &LOBBY_STRING(GameStagingLogic_DissolveGameConfirm_String)},
+    {&LOBBY_STRING(GameStagingLogic_LeaveGame_String), &LOBBY_STRING(GameStagingLogic_LeaveGameConfirm_String)},
+    {&LOBBY_STRING(GameStagingLogic_VerifyingPingTitle_String), &LOBBY_STRING(GameStagingLogic_VerifyingPingDetails_String)},
+    {&LOBBY_STRING(GameStagingLogic_GettingGameInfoTitle_String), &LOBBY_STRING(GameStagingLogic_GettingGameInfoDetails_String)},
+    {&LOBBY_STRING(GameStagingLogic_JoinGameErrorTitle_String), &LOBBY_STRING(LobbyGameStatus_InvalidPassword_String)},
+    {&LOBBY_STRING(LANLogic_RegisterTitle_String), &LOBBY_STRING(LANLogic_InvalidSubnet_String)},
 };
 
 static void AppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
@@ -182,7 +182,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         LobbyShowLoginScreen();
         LobbySaveGlobalPrefs(false);
         LobbySaveUserPrefs(false);
-        ::LobbyGlobal_SierraLogon_Sound->Stop();
+        LOBBY_SOUND(LobbyGlobal_SierraLogon_Sound)->Stop();
         return 0;
     case EeWonLobbyOp::StClientModerated:
         LobbyBroadcastEvent(new ClientModeratedEvent(cl, (int)inC, st->mGame->GetName(), (int)(inD >> 1), 0,
@@ -258,7 +258,7 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         try { g->HandleGameMessage((unsigned char)inC, *buf, reinterpret_cast<LobbyClient*>(inD)); return 0; }
         catch (ReadBufferException&) { return (intptr_t)EeWonLobbyResult::Threw; }
     case EeWonLobbyOp::GameShowStatus:
-        LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String, g->GetStatusString((short)inC));
+        LobbyMessageBox(LOBBY_STRING(GameStagingLogic_JoinGameErrorTitle_String), g->GetStatusString((short)inC));
         return 0;
     case EeWonLobbyOp::GamePingAndNotify:
         LobbyPingGame(g, true);
@@ -339,9 +339,9 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
         return anOp->IsKilled();
     }
     case EeWonLobbyOp::PlaySound:
-        LobbyPlaySound(inC == (intptr_t)EeWonLobbySound::PlayerJoined ? ::LobbyGlobal_PlayerJoined_Sound.get()
-                       : inC == (intptr_t)EeWonLobbySound::AllReady ? ::LobbyGlobal_AllReady_Sound.get()
-                       : ::LobbyGlobal_AllNotReady_Sound.get());
+        LobbyPlaySound(inC == (intptr_t)EeWonLobbySound::PlayerJoined ? LOBBY_SOUND(LobbyGlobal_PlayerJoined_Sound).get()
+                       : inC == (intptr_t)EeWonLobbySound::AllReady ? LOBBY_SOUND(LobbyGlobal_AllReady_Sound).get()
+                       : LOBBY_SOUND(LobbyGlobal_AllNotReady_Sound).get());
         return 0;
     case EeWonLobbyOp::StagingSoundEffects: return LobbyGetStagingSoundEffects();
     case EeWonLobbyOp::ShowConfirmations: return LobbyGetShowConfirmations();

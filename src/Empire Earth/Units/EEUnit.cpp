@@ -35,8 +35,7 @@
 #include "ee/EECameraControl.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EESoundObject.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEUnitRegions.h"
@@ -766,7 +765,7 @@ void EEUnit::TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNu
                 if (this->mUnitClass->mCategory != kUnitCategoryGate)
                     gEffectManager->CreateUnitEffect(this, theDamageEffect, NULL, false, 0, 0);
                 else {
-                    EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->mUnitClass);
+                    EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(this->mUnitClass);
                     gEffectManager->CreateUnitEffect(theGate->GetLastLinked(this->mComplexUnit),
                         this->mUnitClass->mDamageEffect, NULL, false, 0, 0);
                     gEffectManager->CreateUnitEffect(theGate->GetLastLinkedCarrier(this->mComplexUnit),

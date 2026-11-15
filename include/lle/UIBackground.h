@@ -1,11 +1,15 @@
 // C:\EEX\Low-Level Engine\User Interface\UIBackground.h (RECONSTRUCTION). Abstract base of a form's background
-// pieces. UIBackground.cpp holds the ctor and the out-of-line members (0x1005a76e..0x1005aa1b); the inline members
-// are emitted first by UIBackground.cpp's inline block (0x10058d9b..0x10058e86). Vtable 0x10098a4c: Close, Open,
-// RelayoutBackground, then three pure slots named from UIBFull/UIBitmapBackground. sizeof 0x44 (??_E stride).
-// Requires lle/UILayoutUtility.h.
+// pieces. Vtable 0x10098a4c: Close, Open, RelayoutBackground, then three pure slots named from
+// UIBFull/UIBitmapBackground. The original's sizeof was 0x44 (??_E stride). Requires lle/UILayoutUtility.h.
+//
+// The backgrounds are whole in Rust (rust/crates/ee_ui/src/bgobj.rs, R6 ui round 20): the members of every
+// background class are EeUiBackgroundFields, this class's protected base (the field names the members'; the game's
+// subclasses read mRectangle in place); every method forwards to Rust (UIBackground.cpp), which calls out through
+// UIBackgroundHost::Op. The virtuals stay virtual: the game overrides DrawBackground, Open and LoadBackground.
 #ifndef LLE_UIBACKGROUND_H
 #define LLE_UIBACKGROUND_H
 
+#include "rust/ee_ui.h"
 #include "lle/UILayoutUtility.h"
 
 class UIForm;
@@ -15,11 +19,13 @@ class UIForm;
 #undef GetForm
 #endif
 
-class LLE_API UIBackground {
-    friend struct UIBackgroundRust;         // UIBackground.cpp: the Rust moves' view (ee_ui background.rs)
+class LLE_API UIBackground : protected EeUiBackgroundFields {
+    friend struct UIBackgroundHost;         // UIBackground.cpp: the Rust object's calls out
 public:
     UIBackground(unsigned long inBackgroundID, const UILayoutUtility& inLayout, UIForm* inForm,
                  unsigned long inDrawPriority, bool inVisible);
+    UIBackground(const UIBackground&) = delete;
+    UIBackground& operator=(const UIBackground&) = delete;
     virtual ~UIBackground();
     virtual void Close();                   // slot 0x04
     virtual void Open();
@@ -29,18 +35,15 @@ public:
     virtual long UnloadBackground() = 0;    // slot 0x18
     unsigned long GetBackgroundID() const { return this->mBackgroundID; }
     unsigned long GetDrawPriority() const { return this->mDrawPriority; }
-    UIForm* GetForm() { return this->mForm; }
+    UIForm* GetForm() { return static_cast<UIForm*>(this->mForm); }
     bool GetIsVisible() const { return this->mIsVisible; }
-    const GERectangle& GetRectangle() const { return this->mRectangle; }
+    const GERectangle& GetRectangle() const { return *reinterpret_cast<const GERectangle*>(&this->mRectangle); }
     void SetRectangle(const GERectangle& inRectangle);
     void SetVisibility(bool inVisible);
 protected:
-    UILayoutUtility mLayout;                // +0x04
-    GERectangle mRectangle;                 // +0x24
-    unsigned long mBackgroundID;            // +0x34
-    unsigned long mDrawPriority;            // +0x38
-    UIForm* mForm;                          // +0x3c
-    bool mIsVisible;                        // +0x40
+    intptr_t Call(EeUiBgCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL)
+        { return ee_ui_bg_call(this, inCall, a, b, f); }
+    intptr_t CallRect(EeUiBgCall inCall, const GERectangle& inRectangle);
 };
 
 #endif

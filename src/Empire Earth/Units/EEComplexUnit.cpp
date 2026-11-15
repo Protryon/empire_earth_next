@@ -42,8 +42,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEUCLandable.h"
-#include "ee/EEUCTransport.h"
+#include "ee/EEUnitClassKinds.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEWUnitsOffMapInfo.h"
@@ -72,8 +71,6 @@
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EEGameSound.h"
-#include "ee/EEUCBuilding.h"
-#include "ee/EEUCGate.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEGroupPathRequest.h"
@@ -1191,60 +1188,14 @@ bool EEComplexUnit::UpdateHidden()
         if (!::gWorld.mInCinematic) {
             if ((this->mHiddenFlags & kHiddenFlagMoved) == kHiddenFlagMoved) {
                 EEMap* theMap = ::gWorld.mMap;
-                EETile* theTile = theMap->GetTile(this->GetTileX(), this->GetTileY());
                 unsigned char thePhase = ((gPhysics->mGameTime + 2) / 1000) % 3;
-                {
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
-                            continue;
-                        theUnit->mHiddenFlags |= kHiddenFlagHidden;
-                        theUnit->mHiddenFlags ^= (theUnit->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        if (theComplex == NULL)
-                            continue;
-                        while ((theComplex = theComplex->mNextPart) != 0) {
-                            theComplex->mHiddenFlags |= kHiddenFlagHidden;
-                            theComplex->mHiddenFlags ^= (theComplex->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        }
-                    }
-                }
-                theTile = theMap->GetTile(this->GetTileX(), this->GetTileY() - 1);
-                if (theTile != NULL) {
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
-                            continue;
-                        theUnit->mHiddenFlags |= kHiddenFlagHidden;
-                        theUnit->mHiddenFlags ^= (theUnit->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        if (theComplex == NULL)
-                            continue;
-                        while ((theComplex = theComplex->mNextPart) != 0) {
-                            theComplex->mHiddenFlags |= kHiddenFlagHidden;
-                            theComplex->mHiddenFlags ^= (theComplex->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        }
-                    }
-                }
-                theTile = theMap->GetTile(this->GetTileX() + 1, this->GetTileY() - 1);
-                if (theTile != NULL) {
-                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                        EEUnit* theUnit = theNode->mUnit;
-                        if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
-                            continue;
-                        theUnit->mHiddenFlags |= kHiddenFlagHidden;
-                        theUnit->mHiddenFlags ^= (theUnit->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-                        if (theComplex == NULL)
-                            continue;
-                        while ((theComplex = theComplex->mNextPart) != 0) {
-                            theComplex->mHiddenFlags |= kHiddenFlagHidden;
-                            theComplex->mHiddenFlags ^= (theComplex->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
-                        }
-                    }
-                }
-                theTile = theMap->GetTile(this->GetTileX() + 1, this->GetTileY());
-                if (theTile != NULL) {
+                // the obstacles on its tile and the tiles north, north-east and east of it are hidden behind it (the
+                // original's four copies of one walk; its own tile, first, is never NULL)
+                static const long kHideSteps[4][2] = {{0, 0}, {0, -1}, {1, -1}, {1, 0}};
+                for (long k = 0; k < 4; k++) {
+                    EETile* theTile = theMap->GetTile(this->GetTileX() + kHideSteps[k][0], this->GetTileY() + kHideSteps[k][1]);
+                    if (theTile == NULL)
+                        continue;
                     for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
                         EEUnit* theUnit = theNode->mUnit;
                         if (theUnit == this || !theUnit->GetUnitClass()->mIsObstacle)
@@ -1693,7 +1644,7 @@ bool EEComplexUnit::IsPassableBy(EEComplexUnit* inUnit)
             theCarrier = theCarrier->mPreviousPart;
         if (theCarrier != NULL && theCarrier->mIsDisabled && !theCarrier->IsProtected())
             return false;
-        EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->GetUnitClass());
+        EEUnitClass* theGate = EEUnitClassOfKind<EE_CLASS_KIND_GATE>(this->GetUnitClass());
         if (theGate->IsSidePart(this))
             return false;
         if ((this->mCommand ? this->mCommand->mType : 0) == kActionClosed) {
@@ -2845,9 +2796,9 @@ void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
     GETransformation theTransformation;
     GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
     long theEvent = -1;
-    EEUCTransport* theTransportClass = NULL;
+    EEUnitClass* theTransportClass = NULL;
     if (this->GetUnitClass()->IsTransport())
-        theTransportClass = EEUnitClassCast<EEUCTransport>(this->GetUnitClass());
+        theTransportClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(this->GetUnitClass());
     for (long i = this->mCargo.size() - 1; i >= 0; i--) {
         EEComplexUnit* theCargo = this->GetCargo(i);
         if (this->GetUnitClass()->IsTransport() && (theTransportClass == NULL
@@ -2949,9 +2900,9 @@ bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
     GE3DPoint thePoint(0.0f, 0.0f, 0.0f);
     EEUnitSet* theSet = gUnitSetManager.mSets.size() > 99 ? gUnitSetManager.mSets[99] : 0;
     bool theResult = false;
-    EEUCTransport* theTransportClass = NULL;
+    EEUnitClass* theTransportClass = NULL;
     if (this->GetUnitClass()->IsTransport())
-        theTransportClass = EEUnitClassCast<EEUCTransport>(this->GetUnitClass());
+        theTransportClass = EEUnitClassOfKind<EE_CLASS_KIND_TRANSPORT>(this->GetUnitClass());
     long theIndex = this->mCargo.size() - 1;
     while (theIndex >= 0 && this->GetCargo(theIndex) != inCargo)
         theIndex--;

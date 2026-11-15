@@ -1,7 +1,10 @@
 // C:\EEX\Low-Level Engine\User Interface\UITextureBackground.h (RECONSTRUCTION). A background drawn from a texture
-// file. Every member is inline: UIBFull.cpp (the first includer) emits them at 0x1005c84e..0x1005c9f9; there is no
-// code in UITextureBackground.cpp's own range in this stretch. Vtable 0x10098bb4. sizeof 0x78 (??_E stride).
-// Requires lle/UIBackground.h and the GETextureDescription definition.
+// file. Vtable 0x10098bb4; the original's sizeof was 0x78 (??_E stride). Requires lle/UIBackground.h and the
+// GETextureDescription definition.
+//
+// Whole in Rust (bgobj.rs, R6 ui round 20): the texture's rectangle, description and a copy of the file name are the
+// record's (EeUiBackgroundFields); the name stays a UString here for GetTextureFileName and the game's map
+// background.
 #ifndef LLE_UITEXTUREBACKGROUND_H
 #define LLE_UITEXTUREBACKGROUND_H
 
@@ -12,16 +15,20 @@ public:
     UITextureBackground(unsigned long inBackgroundID, const UString& inTextureFileName,
                         const GETextureDescription& inDescription, const GERectangle& inTextureRectangle,
                         const UILayoutUtility& inLayout, UIForm* inForm, unsigned long inDrawPriority, bool inVisible)
-        : UIBackground(inBackgroundID, inLayout, inForm, inDrawPriority, inVisible),
-          mTextureRectangle(inTextureRectangle), mTextureFileName(inTextureFileName), mTextureDescription(inDescription)
+        : UIBackground(inBackgroundID, inLayout, inForm, inDrawPriority, inVisible), mTextureFileName(inTextureFileName)
     {
+        ee_ui_bg_texture(this, reinterpret_cast<const float*>(&inTextureRectangle),
+                         reinterpret_cast<const EeUiTextureDescription*>(&inDescription), inTextureFileName);
     }
     virtual ~UITextureBackground() {}
     const UString& GetTextureFileName() const { return this->mTextureFileName; }
+    // the game's map background (EEUIBMapBackground::LoadBackground) describes the textures it cuts
+    void SetTextureDescription(const GETextureDescription& inDescription)
+        { this->mTextureDescription = *reinterpret_cast<const EeUiTextureDescription*>(&inDescription); }
+    void SetTextureRectangle(const GERectangle& inRectangle)
+        { this->mTextureRectangle = *reinterpret_cast<const EeUiRect*>(&inRectangle); }
 protected:
-    GERectangle mTextureRectangle;          // +0x44
-    UString mTextureFileName;               // +0x54
-    GETextureDescription mTextureDescription;   // +0x64
+    UString mTextureFileName;
 };
 
 #endif

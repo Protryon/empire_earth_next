@@ -68,13 +68,13 @@ UserListCtrl::~UserListCtrl() {}
 Image* GetLobbyClientIcon(LobbyClient* inClient,bool inMode)
 {
     if(inClient==NULL) return NULL;
-    if(inClient->IsIgnored()) return ::UserListCtrl_Ignored_Image.get();
-    if(inClient->IsBlocked()) return ::UserListCtrl_Blocked_Image.get();
-    if(inClient->IsMuted(inMode)) return ::UserListCtrl_Muted_Image.get();
-    if(inClient->IsAway()) return ::UserListCtrl_Away_Image.get();
-    if(inClient->IsAdmin()) return ::UserListCtrl_Admin_Image.get();
-    if(inClient->IsModerator()) return ::UserListCtrl_Moderator_Image.get();
-    return inClient->IsCaptain(inMode)?::UserListCtrl_Captain_Image.get() : ::UserListCtrl_Normal_Image.get();
+    if(inClient->IsIgnored()) return LOBBY_IMAGE(UserListCtrl_Ignored_Image).get();
+    if(inClient->IsBlocked()) return LOBBY_IMAGE(UserListCtrl_Blocked_Image).get();
+    if(inClient->IsMuted(inMode)) return LOBBY_IMAGE(UserListCtrl_Muted_Image).get();
+    if(inClient->IsAway()) return LOBBY_IMAGE(UserListCtrl_Away_Image).get();
+    if(inClient->IsAdmin()) return LOBBY_IMAGE(UserListCtrl_Admin_Image).get();
+    if(inClient->IsModerator()) return LOBBY_IMAGE(UserListCtrl_Moderator_Image).get();
+    return inClient->IsCaptain(inMode)?LOBBY_IMAGE(UserListCtrl_Captain_Image).get() : LOBBY_IMAGE(UserListCtrl_Normal_Image).get();
 }
 // FUNCTION: WON 0x007caa70
 // Fills an entry from a client: name, status icon, sort group, and bold for friends who are not anonymous
@@ -161,14 +161,14 @@ void UserListCtrl::UpdateButtons()
 {
     LobbyClient* client=this->GetSelectedClient();
     if(client==NULL) {
-        this->mIgnoreButton->SetText(::UserListCtrl_Ignore_String,true);
+        this->mIgnoreButton->SetText(LOBBY_STRING(UserListCtrl_Ignore_String),true);
         this->mIgnoreButton->SetEnabled(false);
         this->mWhisperButton->SetEnabled(false);
     } else {
         this->mWhisperButton->SetEnabled(true);
         this->mIgnoreButton->SetEnabled(true);
-        if(client->IsIgnored()) this->mIgnoreButton->SetText(::UserListCtrl_Unignore_String,true);
-        else this->mIgnoreButton->SetText(::UserListCtrl_Ignore_String,true);
+        if(client->IsIgnored()) this->mIgnoreButton->SetText(LOBBY_STRING(UserListCtrl_Unignore_String),true);
+        else this->mIgnoreButton->SetText(LOBBY_STRING(UserListCtrl_Ignore_String),true);
     }
 }
 // FUNCTION: WON 0x007cb200

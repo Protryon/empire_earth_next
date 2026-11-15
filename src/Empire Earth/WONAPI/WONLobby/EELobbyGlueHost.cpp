@@ -64,6 +64,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEGamePreferences.h"
+#include "ee/EEGameSound.h"
 #include "lle/FSRestorable.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
@@ -188,6 +189,54 @@ static intptr_t ColorHost(void*, EeWonEeColorOp inOp, intptr_t a, intptr_t b, in
 }
 
 // ---- the classes the lobby's factories make
+
+// ---- the lobby's sounds (EELobbySound.cpp: ee_won eesound.rs objects; each op one call on the game's managers)
+
+static intptr_t EELobbySoundHost(void*, EeWonEeSoundOp inOp, intptr_t a)
+{
+    typedef EeWonEeSoundOp Op;
+    switch (inOp) {
+    case Op::HasUiManager: return gUIManager != NULL;
+    case Op::MusicVolumeOn: gUIManager->SetMusicVolume(gGamePreferences.mSettings.GetMusicVolume()); return 0;
+    case Op::MusicVolumeOff: gUIManager->SetMusicVolume(0.0f); return 0;
+    case Op::HasSoundManager: return gSoundManager != NULL;
+    case Op::Unload: gSoundManager->Unload((unsigned long)a); return 0;
+    case Op::Play: return (intptr_t)(uint32_t)gSoundManager->Play((unsigned long)a, 1.0f, 0.0f, 1.0f, false, NULL);
+    case Op::Stop: gSoundManager->Stop((unsigned long)a, false); return 0;
+    case Op::Load: return (intptr_t)(uint32_t)gSoundManager->Load(reinterpret_cast<const char*>(a), 0, 1);
+    }
+    return 0;
+}
+
+// FUNCTION: EXE 0x69ce06
+EELobbyMusic::EELobbyMusic(const SoundDescriptor& inDescriptor)
+    : Sound(inDescriptor), mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Music, EELobbySoundHost, 0)) {}
+EELobbyMusic::~EELobbyMusic() { ee_won_eesound_free(this->mRust); }
+// FUNCTION: EXE 0x69ce46
+void EELobbyMusic::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
+// FUNCTION: EXE 0x69ce61
+void EELobbyMusic::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
+// FUNCTION: EXE 0x69ce78
+void EELobbyMusic::ResumeHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Resume, 0); }
+// FUNCTION: EXE 0x69ce7d
+EELobbySound::EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID)
+    : Sound(inDescriptor),
+      mRust(ee_won_eesound_new(this, EeWonEeSoundKind::Effect, EELobbySoundHost, (uint32_t)inSampleID)) {}
+// FUNCTION: EXE 0x69cebc
+EELobbySound::~EELobbySound() { ee_won_eesound_free(this->mRust); }
+// FUNCTION: EXE 0x69ceeb
+void EELobbySound::PlayHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Play, 0); }
+// FUNCTION: EXE 0x69cf1c
+void EELobbySound::StopHook() { ee_won_eesound_call(this->mRust, EeWonEeSoundCall::Stop, 0); }
+// FUNCTION: EXE 0x69cf40
+// Loads a lobby sound file into the engine's sound manager; returns NULL without a sound manager
+SoundPtr EELobbySoundDecoder::Decode(const SoundDescriptor& inDescriptor)
+{
+    int64_t aSample = ee_won_eesound_load(EELobbySoundHost, reinterpret_cast<const uint8_t*>(inDescriptor.mPath.c_str()));
+    if (aSample < 0)
+        return NULL;
+    return new EELobbySound(inDescriptor, (unsigned long)aSample);
+}
 
 // FUNCTION: EXE 0x694dbe
 // Creates the lobby config with the EEFileTransferPort key (default 8889)
@@ -535,7 +584,7 @@ static intptr_t GlueHost(EeWonEeGlueOp inOp, intptr_t a, intptr_t b, intptr_t c,
     case Op::CurrentForm: return (intptr_t)gUIManager->GetCurrentForm();
     case Op::PopForm: gUIManager->Pop(); return 0;
     case Op::LobbyResume: LobbyResume(); return 0;
-    case Op::BoxDissolved: LobbyMessageBox(::RoutingLogic_GameDissolvedTitle_String, ::RoutingLogic_GameDissolvedDetails_String); return 0;
+    case Op::BoxDissolved: LobbyMessageBox(LOBBY_STRING(RoutingLogic_GameDissolvedTitle_String), LOBBY_STRING(RoutingLogic_GameDissolvedDetails_String)); return 0;
     }
     return 0;
 }

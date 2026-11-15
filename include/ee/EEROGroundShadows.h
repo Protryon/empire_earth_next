@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEROGroundShadows.h (RECONSTRUCTION; file name inferred).
 // The ground shadows' render object (RTTI EEROGroundShadows > EERenderObject > RTSRenderObject, vtable 0x4413f0;
-// EEROGroundShadows.cpp 0x111dae..0x11251f). No members of its own. Requires ee/EERenderObject.h, ee/EERenderLists.h.
+// EEROGroundShadows.cpp 0x111dae..0x11251f; its draws are ee_gfx shadows.rs's). No members of its own. Requires ee/EERenderObject.h, ee/EERenderLists.h.
 #ifndef EE_EEROGROUNDSHADOWS_H
 #define EE_EEROGROUNDSHADOWS_H
 
@@ -15,9 +15,7 @@ public:
 
     static void CreateShadowModel();        // 0x111df8: the static "StaticShadow" quad (0x529098) (provisional name)
     static void ReleaseShadowModel();       // 0x112513 (provisional name)
-private:
-    void DrawShadows(EERenderShadowMap& inShadows);      // 0x1121c8 (provisional name)
-    void DrawUnitShadows(EERenderUnitMap& inUnits);      // 0x1122bb (provisional name)
+    // DrawShadows (0x1121c8), DrawUnitShadows (0x1122bb) and the space-tile test (0x11246b): ee_gfx shadows.rs
 };
 
 #endif

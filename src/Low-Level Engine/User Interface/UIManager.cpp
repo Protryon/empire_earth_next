@@ -2,7 +2,8 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x10078c81..0x1007ba37: the U2D key init chains, the implicit copy members and ??_E of UIStretchedTiledBackground
-// and UITBTiledBackground (UIManager.cpp is their first includer), the ctor, the dtor and the out-of-line members in
+// and UITBTiledBackground (UIManager.cpp was their first includer; both are UITiledBackground's tilings now), the
+// ctor, the dtor and the out-of-line members in
 // the original's order, then the vector/deque COMDATs. UIMovie.cpp starts at 0x1007ba37.
 #define LLE_UIMANAGER_CPP   // UIManager::sMouseWheel/sMouseLeftHanded are visible here (see UIManager.h)
 #include <windows.h>
@@ -46,9 +47,6 @@
 #include "lle/UIBFull.h"
 #include "lle/UIBitmapBackground.h"
 #include "lle/UITiledBackground.h"
-#include "lle/UILRTiledBackground.h"
-#include "lle/UITBTiledBackground.h"
-#include "lle/UIStretchedTiledBackground.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIHotKey.h"
 #include "lle/UIIMECandidate.h"
@@ -391,68 +389,8 @@ long UIManager::CloseIMECompositionString() { return (long)this->Call(EeUiManage
 long UIManager::CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
 
 // FUNCTION: LLE 0x1007a216
-// Creates every background in the UI background database on its form, by type (others via CreateUserDefinedBackground)
-// tiled backgrounds get the row's ID where every other type gets its background ID
-void UIManager::CreateBackgrounds()
-{
-    GETextureDescription theDescription;
-    theDescription.mPixelDepth = 16;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    unsigned long theCount = UIBackgroundTable::GetArraySize();
-    theDescription.mPixelDepth = this->GetUITextureBitDepth();
-    for (unsigned long i = 0; i < theCount; i++) {
-        UIBackgroundTable* theTable = UIBackgroundTable::GetUIBackgroundTable(i);
-        if (!theTable)
-            continue;
-        theDescription.mHasAlpha = theTable->GetHasAlpha();
-        UIForm* theForm = this->GetFormByID(theTable->GetFormID());
-        if (!theForm)
-            continue;   // no such form (GetFormByID used to return a garbage pointer here)
-        switch (theTable->GetBackgroundType()) {
-        case kBackgroundBitmap:
-            new UIBitmapBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                   theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                   theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundTiled:
-            // Fixed: passed the row ID (GetID) where every other case passes the background ID
-            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                  theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                  theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundFull:
-            new UIBFull(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                        theTable->GetTextureRect(), theTable->GetLayout(), theForm, theTable->GetDrawPriority(),
-                        theTable->GetNumCols(), theTable->GetNumRows(), theTable->GetVisible());
-            break;
-        case kBackgroundLRTiled:
-            new UILRTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                    theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                    theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundTBTiled:
-            new UITBTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                    theTable->GetTextureRect(), theTable->GetLayout(), theForm,
-                                    theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        case kBackgroundStretchedTiled:
-            new UIStretchedTiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
-                                           theTable->GetTextureRect(), theTable->GetTileWidthPercent(),
-                                           theTable->GetTileHeightPercent(), theTable->GetLayout(), theForm,
-                                           theTable->GetDrawPriority(), theTable->GetVisible());
-            break;
-        default:
-            this->CreateUserDefinedBackground(*theTable);
-            break;
-        }
-    }
-}
+// Creates every background in the UI background database on its form, by type (bgtableobj.rs)
+void UIManager::CreateBackgrounds() { UIBackgroundTable::CreateBackgrounds(this); }
 
 // FUNCTION: LLE 0x1007a438 (CreateBitmap): the Rust constructor's MgrBitmapCoords and BitmapSetScale.
 
